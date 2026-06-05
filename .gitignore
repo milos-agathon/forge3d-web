@@ -333,6 +333,9 @@ diag_out/
 # Generated outputs and diagnostics
 out/
 diag_out/
+crates/forge3d-web/node_modules/
+crates/forge3d-web/dist/
+crates/forge3d-web/pkg/
 
 # R9 audit: ensure docs and pytest artifacts ignored
 docs/_build/

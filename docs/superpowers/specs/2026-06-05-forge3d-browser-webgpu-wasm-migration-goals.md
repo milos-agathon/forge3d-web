@@ -37,8 +37,8 @@ These invariants apply to every phase after Phase 1:
 | 3 | PyO3/NumPy extraction | Done | 151 Python-bound staged files moved into `crates/forge3d-python/src/wrappers/legacy`; core boundary test; cargo checks passed |
 | 4 | Core wasm check passing | Done | `logs/phase4-core-wasm-check-no-default-features.txt`; `logs/phase4-core-wasm-banned-deps.txt`; `logs/phase4-core-tests.txt` |
 | 5 | GPU context ownership redesign | Done | `logs/phase5-*`; public `forge3d_core::gpu` async runtime; Python blocking helper |
-| 6 | Browser crate creation | Ready | Phase 5 async GPU ownership boundary is verified |
-| 7 | Minimal canvas clear | Pending | Not started |
+| 6 | Browser crate creation | Done | `logs/phase6-web-wasm-check.txt`; `logs/phase6-web-typecheck.txt`; `logs/phase6-web-tests.txt`; `logs/phase6-web-banned-deps.txt`; `logs/phase6-web-npm-audit.txt` |
+| 7 | Minimal canvas clear | Ready | Phase 6 browser crate skeleton and TypeScript facade are verified |
 | 8 | Terrain heightmap upload and render | Pending | Not started |
 | 9 | Camera and resize API | Pending | Not started |
 | 10 | Screenshot/readback | Pending | Not started |
@@ -477,7 +477,7 @@ rg -n "core::gpu::ctx\(|\bctx\(\)|OnceCell<GpuContext>|pollster::block_on" crate
 
 ## Phase 6: Browser Crate Creation
 
-**Status:** Pending
+**Status:** Done
 
 **Goal:** Create a wasm-bindgen browser crate with stable error mapping, TypeScript facade, and npm scripts.
 
@@ -522,6 +522,43 @@ npm run typecheck
 - `wgpu 0.19` browser surface APIs may require browser-specific adjustments.
 
 **Rollback boundary:** Adjust browser surface creation inside `forge3d-web`; do not change core APIs to satisfy wasm-bindgen quirks unless the core boundary is wrong.
+
+**Completion evidence (2026-06-05):**
+
+- Implemented the `forge3d-web` browser crate modules: `src/lib.rs`, `src/runtime.rs`, `src/error.rs`, `src/inputs.rs`, and `src/io.rs`.
+- Added wasm-bindgen exports for `Forge3DRuntime` and `Forge3DError`.
+- Added async `Forge3DRuntime.create(canvas, options)` for wasm32 browser builds with `HtmlCanvasElement` surface creation, Phase 5 core `GpuRuntime`/`GpuContext` usage, runtime option parsing, stable error mapping, and `dispose()`.
+- Added typed runtime options for `powerPreference`, initial `width`/`height`, `devicePixelRatio`, `clearColor`, `alphaMode`, `colorSpace`, and diagnostics.
+- Added the browser npm/TypeScript skeleton: `package.json`, `package-lock.json`, `tsconfig.json`, `vite.config.ts`, `src-ts/index.ts`, and `types/index.d.ts`.
+- Added Phase 6 Rust contract tests for required artifacts, public boundary exports, stable error mapping, runtime option validation, IO placeholder behavior, and browser-hostile token exclusion.
+- Added web generated-artifact ignore rules for `crates/forge3d-web/node_modules/`, `dist/`, and `pkg/`.
+
+**Verification evidence (2026-06-05):**
+
+```powershell
+cargo check -p forge3d-web --target wasm32-unknown-unknown
+# Result: exits 0. Full output: logs/phase6-web-wasm-check.txt
+
+cd crates/forge3d-web
+npm run typecheck
+# Result: exits 0. Full output: logs/phase6-web-typecheck.txt
+
+cd ..\..
+cargo test -p forge3d-web
+# Result: exits 0; 9 unit tests passed and 0 doc tests. Full output: logs/phase6-web-tests.txt
+
+cargo tree -p forge3d-web --target wasm32-unknown-unknown --edges normal | rg "pyo3|numpy|winit|pollster"
+# Result: no matches. Full output: logs/phase6-web-banned-deps.txt
+
+cd crates/forge3d-web
+npm audit
+# Result: exits 0; found 0 vulnerabilities. Full output: logs/phase6-web-npm-audit.txt
+```
+
+**Explicit non-claims:**
+
+- Phase 6 does not implement canvas clear rendering; that remains Phase 7.
+- Phase 6 does not implement terrain upload, camera/resize, screenshot/readback, browser IO sources, packaging dry-run, browser tests, or CI.
 
 ---
 

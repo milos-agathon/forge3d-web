@@ -1,0 +1,2 @@
+    Checking forge3d-web v1.26.0 (C:\Users\milos\forge3d-web\crates\forge3d-web)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.42s
