@@ -6,6 +6,9 @@ pub mod error;
 pub mod gpu;
 
 #[cfg(feature = "webgpu")]
+pub mod camera;
+
+#[cfg(feature = "webgpu")]
 pub mod terrain;
 
 pub const WORKSPACE_SPLIT_PHASE: u8 = 5;
@@ -144,6 +147,26 @@ mod tests {
         assert!(
             terrain_rs.is_file(),
             "Phase 8 terrain contract must live in src/terrain.rs rather than re-exposing staged legacy terrain/"
+        );
+    }
+
+    #[test]
+    fn phase9_core_camera_contract_is_exposed() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let lib_rs =
+            fs::read_to_string(root.join("src/lib.rs")).expect("failed to read core lib.rs");
+        let production_root = lib_rs
+            .split("#[cfg(test)]")
+            .next()
+            .expect("lib.rs must have production module declarations");
+
+        assert!(
+            production_root.contains("pub mod camera;"),
+            "Phase 9 must expose a narrow wasm-safe forge3d_core::camera module"
+        );
+        assert!(
+            root.join("src/camera/mod.rs").is_file(),
+            "Phase 9 camera contract must live in src/camera/mod.rs"
         );
     }
 

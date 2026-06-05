@@ -1,0 +1,12 @@
+
+> @forge3d/web@1.26.0 test:browser
+> playwright test
+
+
+Running 3 tests using 3 workers
+
+  ok 3 [chrome] › tests\playwright\clear.spec.ts:14:1 › clears the canvas through Forge3D WebGPU presentation (677ms)
+  ok 2 [chrome] › tests\playwright\camera_resize.spec.ts:17:1 › resizes canvas backing store by DPR and camera changes terrain pixels (725ms)
+  ok 1 [chrome] › tests\playwright\terrain.spec.ts:16:1 › renders synthetic terrain heightmap with visible variation (760ms)
+
+  3 passed (2.9s)

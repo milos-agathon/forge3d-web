@@ -1,0 +1,2 @@
+cargo tree -p forge3d-web --target wasm32-unknown-unknown --edges normal | rg "pyo3|numpy|winit|pollster"
+Result: no matches.

@@ -1,0 +1,2 @@
+cargo fmt --all -- --check
+Result: exits 0 with no stdout.

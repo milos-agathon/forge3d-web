@@ -5,12 +5,10 @@ use wasm_bindgen::prelude::*;
 use web_sys::HtmlCanvasElement;
 use wgpu::util::DeviceExt;
 
-#[cfg(target_arch = "wasm32")]
-use crate::error::map_core_error;
-use crate::error::{to_js_error, Forge3DErrorCode, WebError};
+use crate::error::{map_core_error, to_js_error, Forge3DErrorCode, WebError};
 #[cfg(target_arch = "wasm32")]
 use crate::inputs::RuntimeOptions;
-use crate::inputs::TerrainHeightmapOptions;
+use crate::inputs::{CameraOptions, ResizeOptions, TerrainHeightmapOptions};
 
 #[wasm_bindgen]
 pub struct Forge3DRuntime {
@@ -20,6 +18,7 @@ pub struct Forge3DRuntime {
     context: Option<GpuContext>,
     surface_state: Option<SurfaceState>,
     terrain: Option<TerrainRenderResources>,
+    camera: forge3d_core::camera::CameraInput,
     width: u32,
     height: u32,
     clear_color: [f32; 4],
@@ -57,6 +56,18 @@ impl Forge3DRuntime {
     pub fn set_terrain(&mut self, terrain: JsValue) -> Result<(), JsValue> {
         ensure_not_disposed_error(self).map_err(to_js_error)?;
         set_terrain_runtime(self, terrain).map_err(to_js_error)
+    }
+
+    #[wasm_bindgen(js_name = setCamera)]
+    pub fn set_camera(&mut self, camera: JsValue) -> Result<(), JsValue> {
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        set_camera_runtime(self, camera).map_err(to_js_error)
+    }
+
+    #[wasm_bindgen(js_name = resize)]
+    pub fn resize(&mut self, size: JsValue) -> Result<(), JsValue> {
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        resize_runtime(self, size).map_err(to_js_error)
     }
 
     #[wasm_bindgen(getter)]
@@ -145,6 +156,7 @@ async fn create_runtime(
         context: Some(context),
         surface_state: Some(surface_state),
         terrain: None,
+        camera: forge3d_core::camera::CameraInput::default(),
         width,
         height,
         clear_color: options.clear_color(),
@@ -329,15 +341,69 @@ fn set_terrain_runtime(runtime: &mut Forge3DRuntime, terrain: JsValue) -> Result
         context,
         surface_state.config.format,
         &terrain,
+        &runtime.camera,
+        runtime.width,
+        runtime.height,
     )?);
+    Ok(())
+}
+
+fn set_camera_runtime(runtime: &mut Forge3DRuntime, camera: JsValue) -> Result<(), WebError> {
+    let context = runtime.context.as_ref().ok_or_else(|| {
+        WebError::new(
+            Forge3DErrorCode::RuntimeDisposed,
+            "Runtime GPU context is not available",
+        )
+    })?;
+
+    let camera = CameraOptions::from_js_value(camera)?.validate()?;
+    if let Some(terrain) = runtime.terrain.as_ref() {
+        terrain.update_camera(context, &camera, runtime.width, runtime.height)?;
+    }
+    runtime.camera = camera;
+    Ok(())
+}
+
+fn resize_runtime(runtime: &mut Forge3DRuntime, size: JsValue) -> Result<(), WebError> {
+    let context = runtime.context.as_ref().ok_or_else(|| {
+        WebError::new(
+            Forge3DErrorCode::RuntimeDisposed,
+            "Runtime GPU context is not available",
+        )
+    })?;
+    let surface_state = runtime.surface_state.as_mut().ok_or_else(|| {
+        WebError::new(
+            Forge3DErrorCode::RuntimeDisposed,
+            "Runtime surface state is not available",
+        )
+    })?;
+
+    let (width, height) = ResizeOptions::from_js_value(size)?.pixel_size()?;
+    runtime.canvas.set_width(width);
+    runtime.canvas.set_height(height);
+    surface_state
+        .resize(context, width, height)
+        .map_err(map_core_error)?;
+    runtime.width = width;
+    runtime.height = height;
+
+    if let Some(terrain) = runtime.terrain.as_ref() {
+        terrain.update_camera(context, &runtime.camera, width, height)?;
+    }
     Ok(())
 }
 
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 struct TerrainVertex {
-    position: [f32; 2],
+    position: [f32; 3],
     uv: [f32; 2],
+}
+
+#[repr(C)]
+#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+struct CameraUniform {
+    view_projection: [[f32; 4]; 4],
 }
 
 struct TerrainRenderResources {
@@ -346,6 +412,7 @@ struct TerrainRenderResources {
     vertex_buffer: wgpu::Buffer,
     index_buffer: wgpu::Buffer,
     index_count: u32,
+    camera_buffer: wgpu::Buffer,
     #[allow(dead_code)]
     height_texture: wgpu::Texture,
     #[allow(dead_code)]
@@ -357,10 +424,21 @@ impl TerrainRenderResources {
         context: &GpuContext,
         surface_format: wgpu::TextureFormat,
         terrain: &forge3d_core::terrain::TerrainHeightmapInput,
+        camera: &forge3d_core::camera::CameraInput,
+        width: u32,
+        height: u32,
     ) -> Result<Self, WebError> {
         let (vertex_buffer, index_buffer, index_count) =
             create_terrain_mesh_buffers(context, terrain)?;
         let (height_texture, height_view) = create_height_texture(context, terrain);
+        let camera_uniform = create_camera_uniform(camera, width, height)?;
+        let camera_buffer = context
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("forge3d-web-terrain-camera-uniform"),
+                contents: bytemuck::bytes_of(&camera_uniform),
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            });
         let sampler = context.device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("forge3d-web-terrain-nearest-sampler"),
             address_mode_u: wgpu::AddressMode::ClampToEdge,
@@ -393,6 +471,16 @@ impl TerrainRenderResources {
                             ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::NonFiltering),
                             count: None,
                         },
+                        wgpu::BindGroupLayoutEntry {
+                            binding: 2,
+                            visibility: wgpu::ShaderStages::VERTEX,
+                            ty: wgpu::BindingType::Buffer {
+                                ty: wgpu::BufferBindingType::Uniform,
+                                has_dynamic_offset: false,
+                                min_binding_size: None,
+                            },
+                            count: None,
+                        },
                     ],
                 });
         let bind_group = context
@@ -408,6 +496,10 @@ impl TerrainRenderResources {
                     wgpu::BindGroupEntry {
                         binding: 1,
                         resource: wgpu::BindingResource::Sampler(&sampler),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: camera_buffer.as_entire_binding(),
                     },
                 ],
             });
@@ -441,10 +533,10 @@ impl TerrainRenderResources {
                             wgpu::VertexAttribute {
                                 offset: 0,
                                 shader_location: 0,
-                                format: wgpu::VertexFormat::Float32x2,
+                                format: wgpu::VertexFormat::Float32x3,
                             },
                             wgpu::VertexAttribute {
-                                offset: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
+                                offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
                                 shader_location: 1,
                                 format: wgpu::VertexFormat::Float32x2,
                             },
@@ -482,9 +574,24 @@ impl TerrainRenderResources {
             vertex_buffer,
             index_buffer,
             index_count,
+            camera_buffer,
             height_texture,
             sampler,
         })
+    }
+
+    fn update_camera(
+        &self,
+        context: &GpuContext,
+        camera: &forge3d_core::camera::CameraInput,
+        width: u32,
+        height: u32,
+    ) -> Result<(), WebError> {
+        let uniform = create_camera_uniform(camera, width, height)?;
+        context
+            .queue
+            .write_buffer(&self.camera_buffer, 0, bytemuck::bytes_of(&uniform));
+        Ok(())
     }
 }
 
@@ -507,7 +614,7 @@ fn create_terrain_mesh_buffers(
         for x in 0..width {
             let u = x as f32 / (width - 1) as f32;
             vertices.push(TerrainVertex {
-                position: [u * 1.8 - 0.9, 0.78 - v * 1.56],
+                position: [u * 2.0 - 1.0, 0.0, v * 2.0 - 1.0],
                 uv: [u, v],
             });
         }
@@ -589,6 +696,25 @@ fn create_height_texture(
     (texture, view)
 }
 
+fn create_camera_uniform(
+    camera: &forge3d_core::camera::CameraInput,
+    width: u32,
+    height: u32,
+) -> Result<CameraUniform, WebError> {
+    if height == 0 {
+        return Err(WebError::new(
+            Forge3DErrorCode::InvalidInput,
+            "camera aspect ratio height must be greater than zero",
+        ));
+    }
+    let aspect_ratio = width as f32 / height as f32;
+    Ok(CameraUniform {
+        view_projection: camera
+            .view_projection_matrix(aspect_ratio)
+            .map_err(map_core_error)?,
+    })
+}
+
 fn upload_r32float_texture(
     context: &GpuContext,
     texture: &wgpu::Texture,
@@ -640,8 +766,12 @@ fn align_copy_bytes_per_row(value: u32) -> u32 {
 
 const TERRAIN_SHADER: &str = r#"
 struct VertexInput {
-    @location(0) position: vec2<f32>,
+    @location(0) position: vec3<f32>,
     @location(1) uv: vec2<f32>,
+};
+
+struct CameraUniform {
+    view_projection: mat4x4<f32>,
 };
 
 struct VertexOutput {
@@ -652,12 +782,18 @@ struct VertexOutput {
 
 @group(0) @binding(0) var heightmap: texture_2d<f32>;
 @group(0) @binding(1) var nearest_sampler: sampler;
+@group(0) @binding(2) var<uniform> camera: CameraUniform;
 
 @vertex
 fn vs_main(input: VertexInput) -> VertexOutput {
     let height = textureSampleLevel(heightmap, nearest_sampler, input.uv, 0.0).r;
+    let world_position = vec3<f32>(
+        input.position.x,
+        input.position.y + height * 0.7,
+        input.position.z,
+    );
     var output: VertexOutput;
-    output.position = vec4<f32>(input.position.x, input.position.y + height * 0.34 - 0.12, 0.0, 1.0);
+    output.position = camera.view_projection * vec4<f32>(world_position, 1.0);
     output.height = height;
     output.uv = input.uv;
     return output;
@@ -706,6 +842,7 @@ mod tests {
             context: None,
             surface_state: None,
             terrain: None,
+            camera: forge3d_core::camera::CameraInput::default(),
             width: 1,
             height: 1,
             clear_color: [0.0, 0.0, 0.0, 1.0],
