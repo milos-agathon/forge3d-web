@@ -1,0 +1,4 @@
+
+> @forge3d/web@1.26.0 test:package
+> node tests/api/package-contract.mjs
+

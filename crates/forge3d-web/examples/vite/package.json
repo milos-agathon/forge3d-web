@@ -1,0 +1,15 @@
+{
+  "name": "forge3d-web-vite-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@forge3d/web": "file:../.."
+  },
+  "devDependencies": {
+    "typescript": "^6.0.3",
+    "vite": "^8.0.16"
+  }
+}

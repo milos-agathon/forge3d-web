@@ -22,10 +22,13 @@
   "scripts": {
     "build:wasm": "wasm-pack build . --target web --out-dir pkg --out-name forge3d_web",
     "build:ts": "tsc -p tsconfig.json",
-    "build": "npm run build:wasm && npm run build:ts",
+    "prepare-dist": "node scripts/prepare-dist.mjs",
+    "build:example": "npm --prefix examples/vite install --package-lock=false && npm --prefix examples/vite run build",
+    "build": "npm run build:wasm && npm run build:ts && npm run prepare-dist && npm run build:example",
     "dev": "vite --host 127.0.0.1 --port 57883 --strictPort",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.api.json",
     "test:api": "npm run typecheck && node tests/api/public-api-snapshot.mjs",
+    "test:package": "node tests/api/package-contract.mjs",
     "test:browser": "playwright test"
   },
   "devDependencies": {

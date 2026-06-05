@@ -43,9 +43,9 @@ These invariants apply to every phase after Phase 1:
 | 9 | Camera and resize API | Done | `logs/phase9-*`; Chrome Playwright resize/camera pixel test passes |
 | 10 | Screenshot/readback | Done | `logs/phase10-*`; Chrome-channel Playwright screenshot Blob test passes |
 | 11 | JS/TS API stabilization | Done | `logs/phase11-*`; API snapshot and consumer type test pass |
-| 12 | Browser IO abstraction | Ready | Phase 11 is Done |
-| 13 | Packaging | Pending | Not started |
-| 14 | Browser CI | Pending | Not started |
+| 12 | Browser IO abstraction | Done | `logs/phase12-*`; URL/Blob/File/ArrayBuffer terrain sources pass browser tests |
+| 13 | Packaging | Done | `logs/phase13-*`; npm build, Vite example build, package contract, dry-run pack, and typecheck pass |
+| 14 | Browser CI | Ready | Phase 13 is Done |
 | 15 | Native/Python compatibility restoration | Pending | Not started |
 | 16 | MVP release hardening | Pending | Not started |
 
@@ -1054,7 +1054,7 @@ npm run test:browser
 
 ## Phase 13: Packaging
 
-**Status:** Pending
+**Status:** Done
 
 **Goal:** Produce a publishable browser package with JS, wasm, TypeScript declarations, README, licenses, and a working Vite example.
 
@@ -1099,6 +1099,32 @@ npm run typecheck
 - Bundlers may fail to resolve the wasm asset path.
 
 **Rollback boundary:** Keep package API stable; adjust dist preparation and package exports only.
+
+**Completion evidence (2026-06-05):**
+
+- Finalized `crates/forge3d-web/package.json` as an ESM-only npm package with `dist/index.js`, `types/index.d.ts`, and `dist/forge3d_web_bg.wasm` exports.
+- Added `crates/forge3d-web/scripts/prepare-dist.mjs` to copy wasm-pack browser artifacts into `dist`, copy package license files from the repo root, and rewrite the published facade so `dist/index.js` loads `./forge3d_web.js` instead of the local-only `../pkg` path.
+- Added `crates/forge3d-web/README.md` with install instructions, browser support, WebGPU detection, wasm MIME guidance, CORS/Range guidance, public API summary, and MVP exclusions.
+- Added `crates/forge3d-web/examples/vite/**`, a package-consumer Vite example that imports `Forge3DRuntime` from `@forge3d/web`.
+- Added `crates/forge3d-web/tests/api/package-contract.mjs` and `npm run test:package` to assert package metadata, README guidance, Vite example import shape, dist wasm assets, local dist wasm bridge path, and `npm pack --dry-run` contents.
+- Updated ignore rules for generated web package/example build artifacts.
+
+**Verification evidence (2026-06-05):**
+
+```powershell
+cd crates\forge3d-web
+npm run build
+# Result: exits 0. Full output: logs/phase13-web-build.txt
+
+npm run test:package
+# Result: exits 0. Full output: logs/phase13-package-contract.txt
+
+npm pack --dry-run
+# Result: exits 0; dry run includes dist/index.js, dist/forge3d_web.js, dist/forge3d_web_bg.wasm, types/index.d.ts, README.md, LICENSE, and LICENSE-APACHE. Full output: logs/phase13-npm-pack-dry-run.txt
+
+npm run typecheck
+# Result: exits 0. Full output: logs/phase13-web-typecheck.txt
+```
 
 ---
 

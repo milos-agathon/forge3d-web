@@ -1,0 +1,23 @@
+npm notice
+npm notice package: @forge3d/web@1.26.0
+npm notice Tarball Contents
+npm notice 1.1kB LICENSE
+npm notice 10.5kB LICENSE-APACHE
+npm notice 2.4kB README.md
+npm notice 245.7kB dist/forge3d_web_bg.wasm
+npm notice 73.0kB dist/forge3d_web.js
+npm notice 2.4kB dist/index.d.ts
+npm notice 5.2kB dist/index.js
+npm notice 1.4kB package.json
+npm notice 4.8kB types/index.d.ts
+npm notice Tarball Details
+npm notice name: @forge3d/web
+npm notice version: 1.26.0
+npm notice filename: forge3d-web-1.26.0.tgz
+npm notice package size: 120.8 kB
+npm notice unpacked size: 346.4 kB
+npm notice shasum: f0a09271a6d767eedcbf00d9e96ac0e91bdb9956
+npm notice integrity: sha512-UqKeoto58KyAO[...]3Z27XfGbVj6vg==
+npm notice total files: 9
+npm notice
+forge3d-web-1.26.0.tgz
