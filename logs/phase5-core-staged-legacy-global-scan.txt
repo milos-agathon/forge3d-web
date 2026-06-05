@@ -1,0 +1,54 @@
+crates\forge3d-core\src\core\context.rs:36:    let ctx = ctx();
+crates\forge3d-core\src\core\gpu.rs:15:static CTX: OnceCell<GpuContext> = OnceCell::new();
+crates\forge3d-core\src\core\gpu.rs:47:pub fn ctx() -> &'static GpuContext {
+crates\forge3d-core\src\core\gpu.rs:53:        let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+crates\forge3d-core\src\core\gpu.rs:69:        let (device, queue) = pollster::block_on(adapter.request_device(
+crates\forge3d-core\src\core\gpu.rs:104:    let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+crates\forge3d-core\src\core\gpu.rs:116:    let (device, _queue) = pollster::block_on(adapter.request_device(
+crates\forge3d-core\src\core\gpu.rs:136:    let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+crates\forge3d-core\src\core\gpu.rs:147:    let (device, queue) = pollster::block_on(adapter.request_device(
+crates\forge3d-core\src\renderer\readback.rs:102:    pollster::block_on(receiver.receive())
+crates\forge3d-core\src\scene\private_impl\msaa.rs:3:        let g = crate::core::gpu::ctx();
+crates\forge3d-core\src\scene\private_impl\effects.rs:15:        let g = crate::core::gpu::ctx();
+crates\forge3d-core\src\scene\private_impl\effects.rs:57:            let max_groups = crate::core::gpu::ctx().device.limits().max_bind_groups;
+crates\forge3d-core\src\scene\private_impl\effects.rs:95:        let g = crate::core::gpu::ctx();
+crates\forge3d-core\src\scene\private_impl\effects.rs:145:        let g = crate::core::gpu::ctx();
+crates\forge3d-core\src\scene\private_impl\clouds.rs:20:        let g = crate::core::gpu::ctx();
+crates\forge3d-core\src\viewer\p5\gbuffer_dump.rs:144:            pollster::block_on(rx.receive()).ok_or_else(|| anyhow::anyhow!("map failed"))??;
+crates\forge3d-core\src\offscreen\brdf_tile\tests.rs:10:    let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+crates\forge3d-core\src\offscreen\brdf_tile\tests.rs:21:    let (device, queue) = match pollster::block_on(adapter.request_device(
+crates\forge3d-core\src\offscreen\brdf_tile\tests.rs:96:        pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default()));
+crates\forge3d-core\src\offscreen\brdf_tile\tests.rs:100:    let (device, queue) = match pollster::block_on(
+crates\forge3d-core\src\offscreen\brdf_tile\tests.rs:197:    let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+crates\forge3d-core\src\offscreen\brdf_tile\tests.rs:208:    let (device, queue) = match pollster::block_on(adapter.request_device(
+crates\forge3d-core\src\offscreen\brdf_tile\debug.rs:8:        let gpu_ctx = crate::core::gpu::ctx();
+crates\forge3d-core\src\offscreen\brdf_tile\debug.rs:65:    if let Some(Ok(())) = pollster::block_on(receiver.receive()) {
+crates\forge3d-core\src\terrain\accumulation.rs:336:            pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default()))
+crates\forge3d-core\src\terrain\accumulation.rs:341:            pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default(), None))
+crates\forge3d-core\src\core\sampler_modes.rs:171:        let g = ctx();
+crates\forge3d-core\src\core\texture_upload\types.rs:74:        let g = crate::core::gpu::ctx();
+crates\forge3d-core\src\core\texture_upload\hdr.rs:64:    let g = ctx();
+crates\forge3d-core\src\sdf\hybrid.rs:38:        ctx().device.create_buffer(&wgpu::BufferDescriptor {
+crates\forge3d-core\src\sdf\hybrid.rs:228:        let device = &ctx().device;
+crates\forge3d-core\src\sdf\hybrid.rs:252:            ctx()
+crates\forge3d-core\src\sdf\hybrid.rs:257:            ctx().queue.write_buffer(&nodes_buffer, 0, &nodes_data);
+crates\forge3d-core\src\sdf\hybrid.rs:276:        let device = &ctx().device;
+crates\forge3d-core\src\sdf\hybrid.rs:322:        ctx().queue.write_buffer(&vertices_buffer, 0, vertices_data);
+crates\forge3d-core\src\sdf\hybrid.rs:323:        ctx().queue.write_buffer(&indices_buffer, 0, indices_data);
+crates\forge3d-core\src\sdf\hybrid.rs:324:        ctx().queue.write_buffer(&bvh_buffer, 0, bvh_data);
+crates\forge3d-core\src\vector\gpu_extrusion\tests.rs:19:        match pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default()))
+crates\forge3d-core\src\vector\gpu_extrusion\tests.rs:24:    let (device, queue) = match pollster::block_on(
+crates\forge3d-core\src\vector\gpu_extrusion\tests.rs:65:    pollster::block_on(pos_receiver.receive()).unwrap().unwrap();
+crates\forge3d-core\src\vector\gpu_extrusion\tests.rs:66:    pollster::block_on(norm_receiver.receive())
+crates\forge3d-core\src\vector\gpu_extrusion\tests.rs:69:    pollster::block_on(uv_receiver.receive()).unwrap().unwrap();
+crates\forge3d-core\src\vector\gpu_extrusion\tests.rs:70:    pollster::block_on(index_receiver.receive())
+crates\forge3d-core\src\core\screen_space_effects.rs:10:use pollster::block_on;
+crates\forge3d-core\src\path_tracing\hybrid_compute\setup.rs:31:        let device = &ctx().device;
+crates\forge3d-core\src\path_tracing\hybrid_compute\render.rs:12:        let device = &ctx().device;
+crates\forge3d-core\src\path_tracing\hybrid_compute\render.rs:13:        let queue = &ctx().queue;
+crates\forge3d-core\src\path_tracing\compute\dispatch.rs:4:    let g = ctx();
+crates\forge3d-core\src\viewer\event_loop\runner.rs:61:                let v = pollster::block_on(Viewer::new(Arc::clone(&window), config.clone()));
+crates\forge3d-core\src\viewer\event_loop\runner.rs:259:                    let v = pollster::block_on(Viewer::new(Arc::clone(&window), config.clone()));
+crates\forge3d-core\src\path_tracing\compute\setup.rs:9:    let g = ctx();
+crates\forge3d-core\src\path_tracing\compute\readback.rs:91:    let g = ctx();
+crates\forge3d-core\src\viewer\state\viewer_helpers\gi\reexecute.rs:216:                    match pollster::block_on(timer.get_results()) {

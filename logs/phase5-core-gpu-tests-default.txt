@@ -1,0 +1,9 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.11s
+     Running unittests src\lib.rs (target\debug\deps\forge3d_core-e3cb65e272a41406.exe)
+
+running 2 tests
+test tests::phase5_gpu_runtime_api_is_public_without_legacy_singleton ... ok
+test tests::phase5_browser_gpu_sources_do_not_use_blocking_or_global_context ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+

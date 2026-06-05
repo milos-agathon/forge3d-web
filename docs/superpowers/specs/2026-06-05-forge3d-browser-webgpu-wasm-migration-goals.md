@@ -36,8 +36,8 @@ These invariants apply to every phase after Phase 1:
 | 2 | Workspace split | Done | Root workspace manifest; `crates/forge3d-*` manifests and roots; `cargo metadata --no-deps`; `cargo check -p forge3d-core --no-default-features`; `cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features`; `cargo check -p forge3d-web --target wasm32-unknown-unknown` |
 | 3 | PyO3/NumPy extraction | Done | 151 Python-bound staged files moved into `crates/forge3d-python/src/wrappers/legacy`; core boundary test; cargo checks passed |
 | 4 | Core wasm check passing | Done | `logs/phase4-core-wasm-check-no-default-features.txt`; `logs/phase4-core-wasm-banned-deps.txt`; `logs/phase4-core-tests.txt` |
-| 5 | GPU context ownership redesign | Ready | Phase 4 core no-default wasm boundary is verified |
-| 6 | Browser crate creation | Pending | Not started |
+| 5 | GPU context ownership redesign | Done | `logs/phase5-*`; public `forge3d_core::gpu` async runtime; Python blocking helper |
+| 6 | Browser crate creation | Ready | Phase 5 async GPU ownership boundary is verified |
 | 7 | Minimal canvas clear | Pending | Not started |
 | 8 | Terrain heightmap upload and render | Pending | Not started |
 | 9 | Camera and resize API | Pending | Not started |
@@ -374,7 +374,7 @@ cargo test -p forge3d-core
 
 ## Phase 5: GPU Context Ownership Redesign
 
-**Status:** Pending
+**Status:** Done
 
 **Goal:** Replace global GPU singleton usage with explicit runtime-owned GPU state that can work in browser async initialization.
 
@@ -421,6 +421,57 @@ rg -n "core::gpu::ctx\(|\bctx\(\)|OnceCell<GpuContext>|pollster::block_on" crate
 - Python `Scene.render_rgba()` behavior may need a wrapper-level compatibility shim.
 
 **Rollback boundary:** Keep a compatibility helper only in Python/native crates; do not restore the global singleton to browser paths.
+
+**Completion evidence (2026-06-05):**
+
+- Added the public `forge3d_core::gpu` module behind the `gpu`/`webgpu` feature gate.
+- Added `GpuRuntime`, `GpuContext`, and `GpuRuntimeOptions` in `crates/forge3d-core/src/gpu/runtime.rs`.
+- Added `SurfaceState`, `SurfaceStateDescriptor`, and surface configuration/resize validation in `crates/forge3d-core/src/gpu/surface.rs`.
+- Added `Forge3dError` and `Result` in `crates/forge3d-core/src/error.rs` so the async runtime has platform-neutral error reporting.
+- Updated the `forge3d-core` phase marker from `4` to `5`.
+- Added Phase 5 contract tests proving the public core root exposes `gpu` without re-exposing the legacy `core::gpu` singleton tree, and that browser-facing GPU runtime sources contain no global context or blocking `pollster::block_on` calls.
+- Added `crates/forge3d-python/src/gpu.rs::request_context_blocking()` as the compatibility blocking helper. This keeps `pollster` usage in the Python crate, not in core browser runtime paths.
+- Kept the staged legacy module tree unexposed from `forge3d-core/src/lib.rs`. A broad raw scan still finds singleton/blocking calls in inactive staged files such as `crates/forge3d-core/src/core/gpu.rs`, scene private implementation files, path tracing staging, viewer staging, and tests. Those files are not compiled by the public core root and remain follow-up material for later restoration phases.
+
+**Verification evidence (2026-06-05):**
+
+```powershell
+cargo test -p forge3d-core gpu --features webgpu
+# Result: exits 0; 5 tests passed. Full output: logs/phase5-core-gpu-tests-webgpu.txt
+
+cargo test -p forge3d-core gpu
+# Result: exits 0; 2 tests passed. Full output: logs/phase5-core-gpu-tests-default.txt
+
+cargo test -p forge3d-core
+# Result: exits 0; 5 unit tests passed and 0 doc tests. Full output: logs/phase5-core-tests.txt
+
+cargo check -p forge3d-core --features webgpu
+# Result: exits 0. Full output: logs/phase5-core-check-webgpu.txt
+
+cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features
+# Result: exits 0. Full output: logs/phase5-core-wasm-check-no-default-features.txt
+
+cargo tree -p forge3d-core --target wasm32-unknown-unknown --no-default-features --edges normal | rg "pyo3|numpy|winit|pollster"
+# Result: no matches. Full output: logs/phase5-core-wasm-banned-deps.txt
+
+cargo check -p forge3d-web --target wasm32-unknown-unknown
+# Result: exits 0. Full output: logs/phase5-web-wasm-check.txt
+
+cargo check -p forge3d-python
+# Result: exits 0. Full output: logs/phase5-python-check.txt
+
+rg -n "core::gpu::ctx\(|\bctx\(\)|OnceCell<GpuContext>|pollster::block_on" crates\forge3d-core\src\gpu crates\forge3d-core\src\error.rs
+# Result: no matches. Full output: logs/phase5-public-gpu-global-scan.txt
+
+rg -n "core::gpu::ctx\(|\bctx\(\)|OnceCell<GpuContext>|pollster::block_on" crates\forge3d-core\src
+# Result: exits 0 with documented inactive staged legacy matches. Full output: logs/phase5-core-staged-legacy-global-scan.txt
+```
+
+**Explicit non-claims:**
+
+- Phase 5 does not reconnect staged scene, terrain, renderer, readback, path tracing, or viewer files to the public core root.
+- Phase 5 does not restore Python API compatibility; Python wrapper restoration remains Phase 15.
+- The broad staged legacy scan is not clean yet because those inactive files still preserve old implementation bodies for later migration.
 
 ---
 
