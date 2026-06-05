@@ -14,9 +14,10 @@ default = ["extension-module"]
 extension-module = ["pyo3/extension-module"]
 async_readback = []
 weighted-oit = []
-enable-tbn = ["forge3d-core/enable-gpu-instancing"]
-enable-gpu-instancing = ["forge3d-core/enable-gpu-instancing"]
-copc_laz = ["forge3d-core/copc_laz"]
+images = []
+enable-tbn = []
+enable-gpu-instancing = []
+copc_laz = []
 
 [dependencies]
 forge3d-core = { path = "../forge3d-core", features = ["gpu", "native-io", "images"] }

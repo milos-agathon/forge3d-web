@@ -1,0 +1,5 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Checking forge3d-python v1.26.0 (C:\Users\milos\.config\superpowers\worktrees\forge3d-web\phase-15-native-python\crates\forge3d-python)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 3.26s
