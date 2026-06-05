@@ -1,0 +1,21 @@
+
+> @forge3d/web@1.26.0 test:browser
+> playwright test
+
+
+Running 6 tests using 6 workers
+
+Forge3D WebGPU diagnostics {
+  browserName: [32m'chromium'[39m,
+  hasNavigatorGpu: [33mtrue[39m,
+  adapterAvailable: [33mtrue[39m,
+  browserUserAgent: [32m'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/148.0.7778.96 Safari/537.36'[39m
+}
+  ok 3 [chrome] › tests\playwright\webgpu_diagnostics.spec.ts:3:1 › reports browser WebGPU diagnostics (554ms)
+  ok 6 [chrome] › tests\playwright\screenshot.spec.ts:17:1 › captures a PNG Blob screenshot and rejects after dispose (868ms)
+  ok 5 [chrome] › tests\playwright\terrain.spec.ts:16:1 › renders synthetic terrain heightmap with visible variation (970ms)
+  ok 4 [chrome] › tests\playwright\terrain_sources.spec.ts:18:1 › loads terrain heightmap bytes from browser source adapters (954ms)
+  ok 2 [chrome] › tests\playwright\clear.spec.ts:14:1 › clears the canvas through Forge3D WebGPU presentation (1.0s)
+  ok 1 [chrome] › tests\playwright\camera_resize.spec.ts:17:1 › resizes canvas backing store by DPR and camera changes terrain pixels (1.1s)
+
+  6 passed (5.4s)

@@ -358,6 +358,46 @@ mod tests {
     }
 
     #[test]
+    fn phase14_browser_ci_workflow_matches_required_commands() {
+        let repo_root = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .parent()
+            .and_then(Path::parent)
+            .expect("forge3d-web crate should live under crates/");
+        let workflow_path = repo_root.join(".github/workflows/web.yml");
+        assert!(
+            workflow_path.is_file(),
+            "missing Phase 14 browser CI workflow {}",
+            workflow_path.display()
+        );
+
+        let workflow = fs::read_to_string(&workflow_path)
+            .expect("failed to read Phase 14 browser CI workflow");
+
+        for expected in [
+            "runs-on: windows-latest",
+            "targets: wasm32-unknown-unknown",
+            "node-version: \"20\"",
+            "cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features",
+            "cargo check -p forge3d-web --target wasm32-unknown-unknown",
+            "wasm-pack build crates/forge3d-web --target web",
+            "npm ci",
+            "npm run typecheck",
+            "npm run build",
+            "npx playwright install chromium",
+            "npm run test:browser",
+            "FORGE3D_WEBGPU_REQUIRED: \"1\"",
+            "--enable-unsafe-webgpu",
+            "--use-angle=d3d11",
+            "navigator.gpu",
+        ] {
+            assert!(
+                workflow.contains(expected),
+                "Phase 14 browser CI workflow must include {expected}"
+            );
+        }
+    }
+
+    #[test]
     fn phase6_browser_crate_has_no_browser_hostile_public_surface_tokens() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
         let mut offenders = Vec::new();

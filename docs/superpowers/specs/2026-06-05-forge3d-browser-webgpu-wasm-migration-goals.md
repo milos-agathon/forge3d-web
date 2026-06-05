@@ -45,8 +45,8 @@ These invariants apply to every phase after Phase 1:
 | 11 | JS/TS API stabilization | Done | `logs/phase11-*`; API snapshot and consumer type test pass |
 | 12 | Browser IO abstraction | Done | `logs/phase12-*`; URL/Blob/File/ArrayBuffer terrain sources pass browser tests |
 | 13 | Packaging | Done | `logs/phase13-*`; npm build, Vite example build, package contract, dry-run pack, and typecheck pass |
-| 14 | Browser CI | Ready | Phase 13 is Done |
-| 15 | Native/Python compatibility restoration | Pending | Not started |
+| 14 | Browser CI | Done | `logs/phase14-*`; `.github/workflows/web.yml`; WebGPU diagnostics Playwright test |
+| 15 | Native/Python compatibility restoration | Ready | Phase 14 is Done |
 | 16 | MVP release hardening | Pending | Not started |
 
 ---
@@ -1130,7 +1130,7 @@ npm run typecheck
 
 ## Phase 14: Browser CI
 
-**Status:** Pending
+**Status:** Done
 
 **Goal:** Add CI jobs that prove wasm compilation, package build, typecheck, and browser render tests.
 
@@ -1177,6 +1177,48 @@ npm run test:browser
 - Hosted GPU/WebGPU availability may vary.
 
 **Rollback boundary:** Keep local browser tests; adjust CI browser channel/flags and diagnostics rather than removing the lane.
+
+**Completion evidence (2026-06-05):**
+
+- Added `.github/workflows/web.yml` with a Windows `wasm-and-browser` job for pull requests, pushes to `main`/`develop`, and manual dispatch.
+- The workflow installs the `wasm32-unknown-unknown` Rust target, uses Node 20 with the `crates/forge3d-web/package-lock.json` npm cache key, runs the required core/web wasm checks, installs web dependencies with `npm ci`, builds wasm with the local package `wasm-pack`, runs TypeScript typecheck, runs the full browser package build, installs Chromium for Playwright, and runs required browser tests with `FORGE3D_WEBGPU_REQUIRED="1"`.
+- Added `crates/forge3d-web/tests/playwright/webgpu_diagnostics.spec.ts` so the browser lane prints `navigator.gpu`, adapter availability, browser name, and user agent before render assertions.
+- Added a Phase 14 Rust contract test in `crates/forge3d-web/src/lib.rs` to lock the CI workflow artifact, required commands, Windows lane, WebGPU flags, and diagnostics.
+
+**Verification evidence (2026-06-05):**
+
+```powershell
+cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features
+# Result: exits 0. Full output: logs/phase14-core-wasm-no-default-check.txt
+
+cargo check -p forge3d-web --target wasm32-unknown-unknown
+# Result: exits 0. Full output: logs/phase14-web-wasm-check.txt
+
+cd crates\forge3d-web
+npm ci
+# Result: exits 0; 0 vulnerabilities. Full output: logs/phase14-web-npm-ci.txt
+
+cd ..\..
+wasm-pack build crates/forge3d-web --target web
+# Result: exits 0 through local node_modules PATH. Full output: logs/phase14-wasm-pack-build.txt
+
+cd crates\forge3d-web
+npm run typecheck
+# Result: exits 0. Full output: logs/phase14-web-typecheck.txt
+
+npm run build
+# Result: exits 0. Full output: logs/phase14-web-build.txt
+
+npm run test:api
+# Result: exits 0. Full output: logs/phase14-web-api-tests.txt
+
+npm run test:browser
+# Result: exits 0; 6 Chrome Playwright tests passed. Diagnostics reported navigator.gpu=true and adapterAvailable=true. Full output: logs/phase14-browser-tests.txt
+
+cd ..\..
+cargo test -p forge3d-web
+# Result: exits 0; 26 unit tests passed and 0 doc tests.
+```
 
 ---
 

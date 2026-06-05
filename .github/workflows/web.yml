@@ -1,0 +1,79 @@
+name: Web Runtime
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
+
+jobs:
+  wasm-and-browser:
+    name: Wasm And Browser Tests
+    runs-on: windows-latest
+    timeout-minutes: 25
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: crates/forge3d-web/package-lock.json
+
+      - name: Check core no-default wasm build
+        run: cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features
+
+      - name: Check web wasm build
+        run: cargo check -p forge3d-web --target wasm32-unknown-unknown
+
+      - name: Install web package dependencies
+        working-directory: crates/forge3d-web
+        run: npm ci
+
+      - name: Build wasm package
+        run: |
+          $env:PATH = "$pwd\crates\forge3d-web\node_modules\.bin;$env:PATH"
+          wasm-pack build crates/forge3d-web --target web
+
+      - name: Typecheck browser package
+        working-directory: crates/forge3d-web
+        run: npm run typecheck
+
+      - name: Build browser package
+        working-directory: crates/forge3d-web
+        run: npm run build
+
+      - name: Install Chromium for Playwright
+        working-directory: crates/forge3d-web
+        run: npx playwright install chromium
+
+      - name: Print WebGPU capability diagnostics
+        working-directory: crates/forge3d-web
+        env:
+          FORGE3D_WEBGPU_REQUIRED: "1"
+        run: |
+          echo "FORGE3D_WEBGPU_REQUIRED=$env:FORGE3D_WEBGPU_REQUIRED"
+          echo "Chrome channel uses Playwright Desktop Chrome with --enable-unsafe-webgpu --use-angle=d3d11"
+          echo "Playwright tests evaluate navigator.gpu before render assertions"
+          npm run test:browser -- --grep "reports browser WebGPU diagnostics"
+
+      - name: Browser render tests
+        working-directory: crates/forge3d-web
+        env:
+          FORGE3D_WEBGPU_REQUIRED: "1"
+        run: npm run test:browser
