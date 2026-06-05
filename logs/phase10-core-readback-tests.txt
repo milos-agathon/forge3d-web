@@ -1,0 +1,15 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on build directory
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.59s
+     Running unittests src\lib.rs (target\debug\deps\forge3d_core-f2d302fa2550f572.exe)
+
+running 4 tests
+test readback::tests::aligns_rows_to_webgpu_copy_alignment ... ok
+test readback::tests::rgba8_layout_uses_padded_rows_and_tight_row_size ... ok
+test readback::tests::unpad_rows_returns_tightly_packed_rgba ... ok
+test tests::phase10_core_readback_contract_is_exposed ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 16 filtered out; finished in 0.00s
+

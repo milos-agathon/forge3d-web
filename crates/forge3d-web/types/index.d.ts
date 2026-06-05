@@ -66,5 +66,6 @@ export declare class Forge3DRuntime {
   setCamera(camera: CameraInput): void;
   resize(size: ResizeInput): void;
   render(): void;
+  screenshot(): Promise<Blob>;
   dispose(): void;
 }

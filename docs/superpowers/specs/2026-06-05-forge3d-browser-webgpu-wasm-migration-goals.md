@@ -41,8 +41,8 @@ These invariants apply to every phase after Phase 1:
 | 7 | Minimal canvas clear | Done | `logs/phase7-*`; Chrome-channel Playwright pixel test passes |
 | 8 | Terrain heightmap upload and render | Done | `logs/phase8-*`; synthetic hill Chrome Playwright test passes |
 | 9 | Camera and resize API | Done | `logs/phase9-*`; Chrome Playwright resize/camera pixel test passes |
-| 10 | Screenshot/readback | Pending | Not started |
-| 11 | JS/TS API stabilization | Pending | Not started |
+| 10 | Screenshot/readback | Done | `logs/phase10-*`; Chrome-channel Playwright screenshot Blob test passes |
+| 11 | JS/TS API stabilization | Ready | Phase 10 is Done |
 | 12 | Browser IO abstraction | Pending | Not started |
 | 13 | Packaging | Pending | Not started |
 | 14 | Browser CI | Pending | Not started |
@@ -836,7 +836,7 @@ cargo tree -p forge3d-web --target wasm32-unknown-unknown --edges normal | rg "p
 
 ## Phase 10: Screenshot/Readback
 
-**Status:** Pending
+**Status:** Done
 
 **Goal:** Provide an async browser screenshot API that returns a PNG `Blob`.
 
@@ -879,6 +879,53 @@ npm run test:browser
 - Rust-side PNG encoding may increase wasm size or runtime cost.
 
 **Rollback boundary:** If Rust PNG is too heavy, keep public API and replace implementation with browser canvas/ImageData encoding.
+
+**Completion evidence (2026-06-05):**
+
+- Added `crates/forge3d-core/src/readback/mod.rs` with a narrow wasm-safe readback layout contract, WebGPU `COPY_BYTES_PER_ROW_ALIGNMENT` row padding, RGBA8 layout helpers, padded-buffer sizing, and row-unpadding tests.
+- Exposed `forge3d_core::readback` behind the existing `webgpu` feature gate and added a Phase 10 core contract test.
+- Added `Forge3DRuntime.screenshot()` in Rust and TypeScript. The runtime renders the current scene into an offscreen copyable WebGPU texture, copies it into a padded readback buffer, maps the buffer asynchronously, unpads rows, normalizes BGRA/RGBA canvas formats to RGBA, and uses browser `ImageData` plus `canvas.toBlob("image/png")` to return a PNG `Blob`.
+- Added disposed-runtime rejection for `screenshot()` through the existing `RUNTIME_DISPOSED` error path.
+- Added `crates/forge3d-web/examples/test-screenshot.html` and `crates/forge3d-web/tests/playwright/screenshot.spec.ts`; the browser test verifies `Blob.type === "image/png"`, nonzero PNG size, PNG signature bytes, exact screenshot dimensions, and disposed-runtime rejection.
+- Added `screenshot(): Promise<Blob>` to the TypeScript facade and hand-authored declarations.
+
+**Verification evidence (2026-06-05):**
+
+```powershell
+cargo fmt --all -- --check
+# Result: exits 0. Full output: logs/phase10-cargo-fmt-check.txt
+
+cargo test -p forge3d-core --features webgpu readback
+# Result: exits 0; 4 tests passed. Full output: logs/phase10-core-readback-tests.txt
+
+cargo test -p forge3d-web
+# Result: exits 0; 22 unit tests passed and 0 doc tests. Full output: logs/phase10-web-tests.txt
+
+cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features
+# Result: exits 0. Full output: logs/phase10-core-wasm-no-default-check.txt
+
+cargo check -p forge3d-web --target wasm32-unknown-unknown
+# Result: exits 0. Full output: logs/phase10-web-wasm-check.txt
+
+.\crates\forge3d-web\node_modules\.bin\wasm-pack.cmd build crates\forge3d-web --target web
+# Result: exits 0. Full output: logs/phase10-wasm-pack-build.txt
+
+cd crates\forge3d-web
+npm run typecheck
+# Result: exits 0. Full output: logs/phase10-web-typecheck.txt
+
+npm run test:browser
+# Result: exits 0; 4 Chrome Playwright tests passed. Full output: logs/phase10-browser-tests.txt
+
+cd ..\..
+cargo tree -p forge3d-web --target wasm32-unknown-unknown --edges normal | rg "pyo3|numpy|winit|pollster"
+# Result: no matches. Full tree: logs/phase10-web-cargo-tree.txt; no-match log: logs/phase10-web-banned-deps.txt
+```
+
+**Explicit non-claims:**
+
+- Phase 10 does not freeze the JS/TS API beyond adding `screenshot()`; full API stabilization remains Phase 11.
+- Phase 10 does not add URL/File/Blob/ArrayBuffer input adapters; browser IO abstraction remains Phase 12.
 
 ---
 

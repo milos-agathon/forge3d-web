@@ -206,6 +206,49 @@ mod tests {
     }
 
     #[test]
+    fn phase10_screenshot_artifacts_and_api_exist() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+
+        for required in [
+            "examples/test-screenshot.html",
+            "tests/playwright/screenshot.spec.ts",
+        ] {
+            assert!(
+                root.join(required).is_file(),
+                "missing Phase 10 screenshot artifact {required}"
+            );
+        }
+
+        let runtime_rs = fs::read_to_string(root.join("src/runtime.rs"))
+            .expect("failed to read forge3d-web runtime.rs");
+        for expected in [
+            "pub async fn screenshot(&mut self)",
+            "copy_texture_to_buffer",
+            "map_async",
+            "ImageData",
+            "to_blob_with_type",
+            "ensure_not_disposed_error(self).map_err(to_js_error)?",
+        ] {
+            assert!(
+                runtime_rs.contains(expected),
+                "runtime.rs must contain Phase 10 screenshot/readback code: {expected}"
+            );
+        }
+
+        let facade = fs::read_to_string(root.join("src-ts/index.ts"))
+            .expect("failed to read TypeScript facade");
+        let declarations = fs::read_to_string(root.join("types/index.d.ts"))
+            .expect("failed to read TypeScript declarations");
+
+        for text in [facade, declarations] {
+            assert!(
+                text.contains("screenshot(): Promise<Blob>"),
+                "TypeScript public API must expose screenshot(): Promise<Blob>"
+            );
+        }
+    }
+
+    #[test]
     fn phase6_browser_crate_has_no_browser_hostile_public_surface_tokens() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
         let mut offenders = Vec::new();

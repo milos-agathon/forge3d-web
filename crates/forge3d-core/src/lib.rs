@@ -11,6 +11,9 @@ pub mod camera;
 #[cfg(feature = "webgpu")]
 pub mod terrain;
 
+#[cfg(feature = "webgpu")]
+pub mod readback;
+
 pub const WORKSPACE_SPLIT_PHASE: u8 = 5;
 
 pub fn phase() -> u8 {
@@ -167,6 +170,26 @@ mod tests {
         assert!(
             root.join("src/camera/mod.rs").is_file(),
             "Phase 9 camera contract must live in src/camera/mod.rs"
+        );
+    }
+
+    #[test]
+    fn phase10_core_readback_contract_is_exposed() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let lib_rs =
+            fs::read_to_string(root.join("src/lib.rs")).expect("failed to read core lib.rs");
+        let production_root = lib_rs
+            .split("#[cfg(test)]")
+            .next()
+            .expect("lib.rs must have production module declarations");
+
+        assert!(
+            production_root.contains("pub mod readback;"),
+            "Phase 10 must expose a narrow wasm-safe forge3d_core::readback module"
+        );
+        assert!(
+            root.join("src/readback/mod.rs").is_file(),
+            "Phase 10 readback contract must live in src/readback/mod.rs"
         );
     }
 

@@ -27,9 +27,11 @@ wgpu.workspace = true
 console_error_panic_hook = { version = "0.1", optional = true }
 web-sys = { workspace = true, features = [
     "Blob",
+    "CanvasRenderingContext2d",
     "console",
     "Document",
     "HtmlCanvasElement",
+    "ImageData",
     "ImageBitmap",
     "Performance",
     "Request",

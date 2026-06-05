@@ -55,6 +55,7 @@ interface WasmRuntime {
   setCamera(camera: CameraInput): void;
   resize(size: ResizeInput): void;
   render(): void;
+  screenshot(): Promise<Blob>;
   dispose(): void;
 }
 
@@ -145,6 +146,14 @@ export class Forge3DRuntime {
   render(): void {
     try {
       this.#inner.render();
+    } catch (error) {
+      throw Forge3DError.from(error);
+    }
+  }
+
+  async screenshot(): Promise<Blob> {
+    try {
+      return await this.#inner.screenshot();
     } catch (error) {
       throw Forge3DError.from(error);
     }

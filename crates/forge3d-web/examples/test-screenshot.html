@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forge3D WebGPU Screenshot Test</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+      }
+
+      canvas {
+        display: block;
+        width: 77px;
+        height: 53px;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="forge3d-screenshot-canvas" width="77" height="53"></canvas>
+    <script type="module">
+      import { Forge3DError, Forge3DRuntime } from "../src-ts/index.ts";
+
+      const canvas = document.querySelector("#forge3d-screenshot-canvas");
+
+      function createHill(width, height) {
+        const heights = new Float32Array(width * height);
+        for (let y = 0; y < height; y += 1) {
+          const v = y / (height - 1);
+          for (let x = 0; x < width; x += 1) {
+            const u = x / (width - 1);
+            const dx = u - 0.52;
+            const dy = v - 0.48;
+            heights[y * width + x] = Math.max(0, 1 - Math.hypot(dx, dy) * 2.4);
+          }
+        }
+        return heights;
+      }
+
+      window.__forge3dScreenshotProbe = async () => {
+        if (!navigator.gpu) {
+          return {
+            supported: false,
+            type: "",
+            size: 0,
+            signature: [],
+            disposedCode: undefined,
+            width: 0,
+            height: 0
+          };
+        }
+
+        const runtime = await Forge3DRuntime.create(canvas, {
+          width: 77,
+          height: 53,
+          devicePixelRatio: 1,
+          clearColor: [0.03, 0.08, 0.13, 1.0]
+        });
+        runtime.setTerrain({
+          width: 19,
+          height: 17,
+          heights: createHill(19, 17)
+        });
+        runtime.setCamera({
+          position: [0.6, 1.2, 2.4],
+          target: [0, 0.18, 0],
+          up: [0, 1, 0],
+          fovYDegrees: 48,
+          near: 0.01,
+          far: 100
+        });
+
+        const blob = await runtime.screenshot();
+        const header = new Uint8Array(await blob.slice(0, 8).arrayBuffer());
+
+        runtime.dispose();
+        let disposedCode;
+        try {
+          await runtime.screenshot();
+        } catch (error) {
+          disposedCode =
+            error instanceof Forge3DError ? error.code : error?.code;
+        }
+
+        return {
+          supported: true,
+          type: blob.type,
+          size: blob.size,
+          signature: Array.from(header),
+          disposedCode,
+          width: runtime.width,
+          height: runtime.height
+        };
+      };
+    </script>
+  </body>
+</html>
