@@ -1,0 +1,43 @@
+[package]
+name = "forge3d-web"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "forge3d_web"
+crate-type = ["cdylib", "rlib"]
+
+[features]
+default = ["console_error_panic_hook"]
+
+[dependencies]
+forge3d-core = { path = "../forge3d-core", features = ["webgpu"] }
+bytemuck.workspace = true
+glam.workspace = true
+js-sys.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+serde-wasm-bindgen.workspace = true
+thiserror.workspace = true
+wasm-bindgen.workspace = true
+wasm-bindgen-futures.workspace = true
+wgpu.workspace = true
+console_error_panic_hook = { version = "0.1", optional = true }
+web-sys = { workspace = true, features = [
+    "Blob",
+    "console",
+    "Document",
+    "HtmlCanvasElement",
+    "ImageBitmap",
+    "Performance",
+    "Request",
+    "RequestInit",
+    "RequestMode",
+    "Response",
+    "Window",
+] }
+
+[dev-dependencies]
+wasm-bindgen-test = "0.3"

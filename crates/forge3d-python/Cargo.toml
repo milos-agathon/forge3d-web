@@ -1,0 +1,32 @@
+[package]
+name = "forge3d-python"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "_forge3d"
+crate-type = ["cdylib"]
+
+[features]
+default = ["extension-module"]
+extension-module = ["pyo3/extension-module"]
+async_readback = []
+weighted-oit = []
+enable-tbn = ["forge3d-core/enable-gpu-instancing"]
+enable-gpu-instancing = ["forge3d-core/enable-gpu-instancing"]
+copc_laz = ["forge3d-core/copc_laz"]
+
+[dependencies]
+forge3d-core = { path = "../forge3d-core", features = ["gpu", "native-io", "images"] }
+anyhow.workspace = true
+bytemuck.workspace = true
+glam.workspace = true
+numpy.workspace = true
+pollster.workspace = true
+pyo3.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+wgpu.workspace = true

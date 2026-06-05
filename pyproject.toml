@@ -103,6 +103,7 @@ all = [
 bindings = "pyo3" 
 python-source = "python"
 module-name = "forge3d._forge3d"
+manifest-path = "crates/forge3d-python/Cargo.toml"
 # Optimize for size and performance in release builds
 cargo-extra-args = "--profile release-lto"
 # Generate abi3 wheels for Python 3.10+ compatibility

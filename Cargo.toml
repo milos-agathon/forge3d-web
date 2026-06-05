@@ -1,116 +1,62 @@
-[package]
-name = "forge3d"
+[workspace]
+resolver = "2"
+members = [
+    "crates/forge3d-core",
+    "crates/forge3d-python",
+    "crates/forge3d-web",
+    "crates/forge3d-native-viewer",
+]
+
+[workspace.package]
 version = "1.26.0"
 edition = "2021"
-autoexamples = false
-description = "GPU-accelerated offline 3D map rendering with material/VT diagnostics, advanced labels, large-scene summaries, and reproducible bundles"
 license = "Apache-2.0 OR MIT"
-readme = "README.md"
 repository = "https://github.com/milos-agathon/forge3d"
 homepage = "https://forge3d.dev"
 documentation = "https://milos-agathon.github.io/forge3d/"
 
-[lib]
-name = "forge3d"
-# Build both a normal Rust library and a Python extension when requested.
-# The extension is only meaningful when feature `extension-module` is enabled.
-crate-type = ["lib", "cdylib"]
-
-# A2-BEGIN:cargo-features
-[features]
-# Keep defaults minimal so `cargo build` doesn't require Python linkage.
-default = ["images", "enable-gpu-instancing"]
-# Enable this when building the Python extension (maturin will pass this feature).
-extension-module = ["pyo3/extension-module"]
-# Optional async/double-buffered readback (R9)
-async_readback = ["dep:tokio"]
-terrain_spike = []
-weighted-oit = []
-wsI_bigbuf = []
-wsI_double_buf = []
-# Quiet cfg warnings in formats when unused
-exr = []
-# Workstream N: Advanced Rendering Systems
-enable-pbr = []
-enable-ibl = []
-enable-csm = []
-enable-tbn = []
-enable-normal-mapping = ["enable-tbn"]
-enable-hdr-offscreen = []
-enable-render-bundles = []
-# GPU instancing experimental flag (no-op stub for now)
-enable-gpu-instancing = []
-# P0-03: Renderer config plumbing (no shader/pipeline changes)
-enable-renderer-config = []
-# Workstream O: Resource & Memory Management
-enable-memory-pools = []
-enable-staging-rings = []
-# A14: AOV image format support
-images = ["dep:exr"]
-# P2.2: LAZ decompression in COPC reader
-copc_laz = ["dep:laz"]
-# P3: Cloud Optimized GeoTIFF streaming
-cog_streaming = ["dep:reqwest", "dep:async-trait", "dep:tokio", "dep:flate2"]
-# P3-reproject: On-the-fly CRS reprojection via PROJ
-proj = ["dep:proj"]
-# A2-END:cargo-features
-
-[dependencies]
-# Do NOT enable pyo3's extension-module by default; gate it via the Cargo feature above.
-# Enable `macros` so procedural attributes like #[pyclass], #[pymethods], and #[pyo3(signature=..)] work when the extension is built.
-pyo3  = { version = "0.21.2", features = ["abi3-py310", "macros", "multiple-pymethods"] }
-numpy = "0.21"
-ndarray = "0.15"
-wgpu = "0.19"
-winit = "0.29"
-pollster = "0.3"
-bytemuck = { version = "1", features = ["derive"] }
-image = { version = "0.25", default-features = false, features = ["png"] }
-tiff = "0.9"
-exr = { version = "1.72", optional = true }
-glam = "0.24"
-thiserror = "1"
-once_cell = "1"
-half = "2.3"
-lyon_tessellation = "1.0"
-lyon_path = "1.0"
-lyon_geom = "1.0"
-ttf-parser = "0.20"
-tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "sync"], optional = true }
-futures-intrusive = "0.5"
-env_logger = "0.10"
+[workspace.dependencies]
 anyhow = "1"
+async-trait = "0.1"
+bytemuck = { version = "1", features = ["derive"] }
+ed25519-dalek = { version = "2", features = ["std"] }
+env_logger = "0.10"
+exr = "1.72"
+flate2 = "1.0"
+futures-intrusive = "0.5"
+glam = "0.24"
+half = "2.3"
+image = { version = "0.25", default-features = false, features = ["png"] }
+js-sys = "0.3"
+las = { version = "0.8", features = ["laz"] }
+laz = "0.9"
 log = "0.4"
+lyon_geom = "1.0"
+lyon_path = "1.0"
+lyon_tessellation = "1.0"
+ndarray = "0.15"
+numpy = "0.21"
+once_cell = "1"
+pollster = "0.3"
+proj = "0.27"
+pyo3 = { version = "0.21.2", features = ["abi3-py310", "macros", "multiple-pymethods"] }
+reqwest = { version = "0.12", features = ["stream", "rustls-tls"] }
+rstar = "0.11"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
-gltf = { version = "1.3", features = ["import"] }
+serde-wasm-bindgen = "0.6"
 sha2 = "0.10"
-ed25519-dalek = { version = "2", features = ["std"] }
-rstar = "0.11"
-# P5: LAS/LAZ point cloud support
-las = { version = "0.8", features = ["laz"] }
-# P2.2: Direct laz crate for COPC chunk decompression (optional, feature-gated)
-laz = { version = "0.9", optional = true }
-# P3: COG streaming dependencies (optional)
-reqwest = { version = "0.12", features = ["stream", "rustls-tls"], optional = true }
-async-trait = { version = "0.1", optional = true }
-flate2 = { version = "1.0", optional = true }
-# P3-reproject: CRS transformation via PROJ (optional, feature-gated)
-proj = { version = "0.27", optional = true }
-
-[dev-dependencies]
+thiserror = "1"
+tiff = "0.9"
 tokio = { version = "1", features = ["macros", "rt", "rt-multi-thread", "sync"] }
-env_logger = "0.10"
-sha2 = "0.10"
+ttf-parser = "0.20"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+web-sys = "0.3"
+wgpu = "0.19"
+winit = "0.29"
 
-[[bin]]
-name = "policies"
-path = "bench/upload_policies/policies.rs"
-required-features = ["async_readback"]
-
-[lints.clippy]
-# Existing repo-wide backlog quarantined so `cargo clippy -- -D warnings`
-# can fail on newly introduced lints instead of the historical baseline.
+[workspace.lints.clippy]
 assign_op_pattern = "allow"
 bind_instead_of_map = "allow"
 clone_on_copy = "allow"
@@ -174,7 +120,6 @@ wrong_self_convention = "allow"
 codegen-units = 1
 lto = "thin"
 
-# Optimized profile for Python wheel builds
 [profile.release-lto]
 inherits = "release"
 lto = "fat"
