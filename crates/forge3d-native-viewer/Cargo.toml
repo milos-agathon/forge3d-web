@@ -14,6 +14,7 @@ forge3d-core = { path = "../forge3d-core", features = ["gpu", "native-io", "imag
 anyhow.workspace = true
 bytemuck.workspace = true
 glam.workspace = true
+image.workspace = true
 log.workspace = true
 pollster.workspace = true
 serde.workspace = true

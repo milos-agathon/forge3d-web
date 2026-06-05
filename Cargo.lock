@@ -577,6 +577,7 @@ dependencies = [
  "bytemuck",
  "forge3d-core",
  "glam",
+ "image",
  "log",
  "pollster",
  "serde",

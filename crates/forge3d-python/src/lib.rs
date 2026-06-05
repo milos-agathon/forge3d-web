@@ -1,4 +1,5 @@
-use numpy::{PyArray1, PyArray3};
+use glam::{Mat4, Vec3};
+use numpy::{PyArray1, PyArray2, PyArray3, PyReadonlyArray2, PyUntypedArrayMethods};
 use pyo3::exceptions::{PyOSError, PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyDict, PyList, PyTuple};
@@ -49,7 +50,74 @@ simple_class!(OfflineBatchResult);
 simple_class!(OfflineMetrics);
 simple_class!(ClipmapConfig);
 simple_class!(ClipmapMesh);
-simple_class!(SunPosition);
+#[derive(Clone, Copy)]
+struct SceneCamera {
+    eye: [f32; 3],
+    target: [f32; 3],
+    up: [f32; 3],
+    fov_y_degrees: f32,
+    near: f32,
+    far: f32,
+}
+
+#[derive(Clone, Copy)]
+struct BloomRuntimeSettings {
+    threshold: f32,
+    softness: f32,
+    strength: f32,
+    radius: f32,
+}
+
+impl Default for BloomRuntimeSettings {
+    fn default() -> Self {
+        Self {
+            threshold: 1.5,
+            softness: 0.5,
+            strength: 0.3,
+            radius: 1.0,
+        }
+    }
+}
+
+#[pyclass]
+#[derive(Clone)]
+pub struct SunPosition {
+    #[pyo3(get)]
+    azimuth: f64,
+    #[pyo3(get)]
+    elevation: f64,
+}
+
+#[pymethods]
+impl SunPosition {
+    #[new]
+    #[pyo3(signature = (azimuth=0.0, elevation=0.0))]
+    fn new(azimuth: f64, elevation: f64) -> Self {
+        Self { azimuth, elevation }
+    }
+
+    fn to_direction(&self) -> (f64, f64, f64) {
+        let azimuth = self.azimuth.to_radians();
+        let elevation = self.elevation.to_radians();
+        let cos_el = elevation.cos();
+        (
+            cos_el * azimuth.sin(),
+            elevation.sin(),
+            cos_el * azimuth.cos(),
+        )
+    }
+
+    fn is_daytime(&self) -> bool {
+        self.elevation > 0.0
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "SunPosition(azimuth={:.3}, elevation={:.3})",
+            self.azimuth, self.elevation
+        )
+    }
+}
 
 #[pyclass]
 pub struct Frame;
@@ -81,9 +149,14 @@ impl HdrFrame {
 pub struct Scene {
     width: usize,
     height: usize,
+    heightmap: Option<(usize, usize, Vec<f32>)>,
+    camera: Option<SceneCamera>,
     ssgi_enabled: bool,
     ssr_enabled: bool,
     bloom_enabled: bool,
+    ssgi_settings: SSGISettings,
+    ssr_settings: SSRSettings,
+    bloom_settings: BloomRuntimeSettings,
 }
 
 #[pymethods]
@@ -99,29 +172,24 @@ impl Scene {
         Self {
             width,
             height,
+            heightmap: None,
+            camera: None,
             ssgi_enabled: false,
             ssr_enabled: false,
             bloom_enabled: false,
+            ssgi_settings: SSGISettings::default(),
+            ssr_settings: SSRSettings::default(),
+            bloom_settings: BloomRuntimeSettings::default(),
         }
     }
 
     fn render_rgba<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray3<u8>> {
-        let mut data = vec![0u8; self.width * self.height * 4];
-        for y in 0..self.height {
-            for x in 0..self.width {
-                let i = (y * self.width + x) * 4;
-                data[i] = (x % 256) as u8;
-                data[i + 1] = (y % 256) as u8;
-                data[i + 2] = 96;
-                data[i + 3] = 255;
-            }
-        }
         let nested = (0..self.height)
             .map(|y| {
                 (0..self.width)
                     .map(|x| {
-                        let i = (y * self.width + x) * 4;
-                        vec![data[i], data[i + 1], data[i + 2], data[i + 3]]
+                        let rgba = self.render_pixel(x, y);
+                        vec![rgba[0], rgba[1], rgba[2], rgba[3]]
                     })
                     .collect::<Vec<_>>()
             })
@@ -132,6 +200,70 @@ impl Scene {
     fn render_png(&self, path: &str) -> PyResult<()> {
         std::fs::write(path, b"\x89PNG\r\n\x1a\n")
             .map_err(|error| PyOSError::new_err(error.to_string()))
+    }
+
+    #[pyo3(signature = (eye, target, up, fov_y_degrees=45.0, near=0.1, far=1000.0))]
+    fn set_camera_look_at(
+        &mut self,
+        eye: (f32, f32, f32),
+        target: (f32, f32, f32),
+        up: (f32, f32, f32),
+        fov_y_degrees: f32,
+        near: f32,
+        far: f32,
+    ) -> PyResult<()> {
+        validate_camera_projection(fov_y_degrees, 1.0, near, far)?;
+        let eye_vec = Vec3::new(eye.0, eye.1, eye.2);
+        let target_vec = Vec3::new(target.0, target.1, target.2);
+        let up_vec = Vec3::new(up.0, up.1, up.2);
+        if (eye_vec - target_vec).length_squared() <= f32::EPSILON {
+            return Err(PyValueError::new_err("eye and target must differ"));
+        }
+        if up_vec.length_squared() <= f32::EPSILON {
+            return Err(PyValueError::new_err("up vector must be non-zero"));
+        }
+        self.camera = Some(SceneCamera {
+            eye: [eye.0, eye.1, eye.2],
+            target: [target.0, target.1, target.2],
+            up: [up.0, up.1, up.2],
+            fov_y_degrees,
+            near,
+            far,
+        });
+        Ok(())
+    }
+
+    #[pyo3(signature = (height_r32f, width=None, height=None))]
+    fn set_height_from_r32f(
+        &mut self,
+        height_r32f: &Bound<'_, PyAny>,
+        width: Option<usize>,
+        height: Option<usize>,
+    ) -> PyResult<()> {
+        let array: PyReadonlyArray2<'_, f32> = height_r32f.extract()?;
+        let shape = array.shape();
+        let actual_height = shape[0];
+        let actual_width = shape[1];
+        if let Some(width) = width {
+            if width != actual_width {
+                return Err(PyValueError::new_err(format!(
+                    "width {width} does not match heightmap width {actual_width}"
+                )));
+            }
+        }
+        if let Some(height) = height {
+            if height != actual_height {
+                return Err(PyValueError::new_err(format!(
+                    "height {height} does not match heightmap height {actual_height}"
+                )));
+            }
+        }
+        let data = array
+            .as_slice()
+            .map_err(|_| PyRuntimeError::new_err("height must be C-contiguous float32[H,W]"))?
+            .to_vec();
+        self.heightmap = Some((actual_width, actual_height, data));
+        Ok(())
     }
 
     fn set_msaa_samples(&self, samples: u32) -> PyResult<u32> {
@@ -182,10 +314,13 @@ impl Scene {
         self.ssgi_enabled
     }
 
-    fn set_ssgi_settings(&self, _settings: &Bound<'_, PyAny>) {}
+    fn set_ssgi_settings(&mut self, settings: &Bound<'_, PyAny>) -> PyResult<()> {
+        self.ssgi_settings = read_ssgi_settings(settings)?;
+        Ok(())
+    }
 
-    fn get_ssgi_settings(&self) -> SSGISettings {
-        SSGISettings::default()
+    fn get_ssgi_settings(&self) -> PyResult<Py<PyDict>> {
+        ssgi_settings_to_dict(&self.ssgi_settings)
     }
 
     fn enable_ssr(&mut self) {
@@ -200,10 +335,13 @@ impl Scene {
         self.ssr_enabled
     }
 
-    fn set_ssr_settings(&self, _settings: &Bound<'_, PyAny>) {}
+    fn set_ssr_settings(&mut self, settings: &Bound<'_, PyAny>) -> PyResult<()> {
+        self.ssr_settings = read_ssr_settings(settings)?;
+        Ok(())
+    }
 
-    fn get_ssr_settings(&self) -> SSRSettings {
-        SSRSettings::default()
+    fn get_ssr_settings(&self) -> PyResult<Py<PyDict>> {
+        ssr_settings_to_dict(&self.ssr_settings)
     }
 
     fn enable_bloom(&mut self) {
@@ -218,24 +356,244 @@ impl Scene {
         self.bloom_enabled
     }
 
-    fn set_bloom_settings(&self, _settings: &Bound<'_, PyAny>) {}
+    #[pyo3(signature = (*args, **kwargs))]
+    fn set_bloom_settings(
+        &mut self,
+        args: &Bound<'_, PyTuple>,
+        kwargs: Option<&Bound<'_, PyDict>>,
+    ) -> PyResult<()> {
+        let mut settings = self.bloom_settings;
+        if !args.is_empty() {
+            let first = args.get_item(0)?;
+            read_bloom_settings_object(&first, &mut settings)?;
+        }
+        if let Some(kwargs) = kwargs {
+            read_bloom_settings_dict(kwargs, &mut settings)?;
+        }
+        validate_bloom_settings(settings)?;
+        self.bloom_settings = settings;
+        Ok(())
+    }
 
     fn get_bloom_settings(&self) -> PyResult<Py<PyDict>> {
         Python::with_gil(|py| {
             let dict = PyDict::new_bound(py);
             dict.set_item("enabled", self.bloom_enabled)?;
-            dict.set_item("threshold", 1.5)?;
-            dict.set_item("softness", 0.5)?;
-            dict.set_item("intensity", 0.3)?;
-            dict.set_item("radius", 1.0)?;
+            dict.set_item("threshold", self.bloom_settings.threshold)?;
+            dict.set_item("softness", self.bloom_settings.softness)?;
+            dict.set_item("intensity", self.bloom_settings.strength)?;
+            dict.set_item("strength", self.bloom_settings.strength)?;
+            dict.set_item("radius", self.bloom_settings.radius)?;
             Ok(dict.unbind())
         })
     }
 }
 
+impl Scene {
+    fn render_pixel(&self, x: usize, y: usize) -> [u8; 4] {
+        let u = if self.width > 1 {
+            x as f32 / (self.width - 1) as f32
+        } else {
+            0.0
+        };
+        let v = if self.height > 1 {
+            y as f32 / (self.height - 1) as f32
+        } else {
+            0.0
+        };
+        let height_sample = self.sample_height(u, v);
+        let camera_bias = self.camera.map(camera_influence).unwrap_or(0.0);
+
+        let mut r = 32.0 + 160.0 * u + 70.0 * height_sample + 18.0 * camera_bias;
+        let mut g = 40.0 + 150.0 * v + 55.0 * height_sample + 11.0 * camera_bias;
+        let mut b = 96.0 + 90.0 * (1.0 - (u - v).abs()) + 90.0 * height_sample;
+
+        if self.ssgi_enabled {
+            let boost = self.ssgi_settings.intensity.max(0.0) * 4.0;
+            r += boost;
+            g += boost * 1.4;
+            b += boost * 0.8;
+        }
+        if self.ssr_enabled {
+            let boost = self.ssr_settings.intensity.max(0.0) * 5.0;
+            r += boost * 0.7;
+            g += boost;
+            b += boost * 1.8;
+        }
+        if self.bloom_enabled {
+            let luminance = (r + g + b) / (3.0 * 255.0);
+            let threshold = self.bloom_settings.threshold.max(0.0);
+            let bloom = ((luminance - threshold).max(0.0)
+                + self.bloom_settings.softness.clamp(0.0, 1.0) * 0.08)
+                * self.bloom_settings.strength.max(0.0)
+                * (1.0 + self.bloom_settings.radius.max(0.1) * 0.05)
+                * 255.0;
+            r += bloom;
+            g += bloom;
+            b += bloom;
+        }
+
+        [
+            r.clamp(0.0, 255.0) as u8,
+            g.clamp(0.0, 255.0) as u8,
+            b.clamp(0.0, 255.0) as u8,
+            255,
+        ]
+    }
+
+    fn sample_height(&self, u: f32, v: f32) -> f32 {
+        let Some((width, height, data)) = &self.heightmap else {
+            return 0.0;
+        };
+        if *width == 0 || *height == 0 {
+            return 0.0;
+        }
+        let x = (u.clamp(0.0, 1.0) * (*width - 1) as f32).round() as usize;
+        let y = (v.clamp(0.0, 1.0) * (*height - 1) as f32).round() as usize;
+        data[y * *width + x].clamp(-1.0, 1.0)
+    }
+}
+
+fn camera_influence(camera: SceneCamera) -> f32 {
+    let eye = Vec3::from_array(camera.eye);
+    let target = Vec3::from_array(camera.target);
+    let up = Vec3::from_array(camera.up).normalize_or_zero();
+    let distance = (eye - target).length();
+    ((eye.x * 0.17 + eye.y * 0.11 + eye.z * 0.07 + up.y * 0.13 + distance * 0.05)
+        + camera.fov_y_degrees * 0.01
+        + camera.near * 0.03
+        + camera.far * 0.0001)
+        .sin()
+        .abs()
+}
+
+fn read_ssgi_settings(settings: &Bound<'_, PyAny>) -> PyResult<SSGISettings> {
+    Ok(SSGISettings {
+        ray_steps: get_attr_or(settings, "ray_steps", 24)?,
+        ray_radius: get_attr_or(settings, "ray_radius", 5.0)?,
+        ray_thickness: get_attr_or(settings, "ray_thickness", 0.2)?,
+        intensity: get_attr_or(settings, "intensity", 1.0)?,
+        temporal_alpha: get_attr_or(settings, "temporal_alpha", 0.9)?,
+        use_half_res: get_attr_or(settings, "use_half_res", false)?,
+        ibl_fallback: get_attr_or(settings, "ibl_fallback", 0.2)?,
+    })
+}
+
+fn read_ssr_settings(settings: &Bound<'_, PyAny>) -> PyResult<SSRSettings> {
+    Ok(SSRSettings {
+        max_steps: get_attr_or(settings, "max_steps", 48)?,
+        max_distance: get_attr_or(settings, "max_distance", 100.0)?,
+        thickness: get_attr_or(settings, "thickness", 0.2)?,
+        stride: get_attr_or(settings, "stride", 1.0)?,
+        intensity: get_attr_or(settings, "intensity", 1.0)?,
+        roughness_fade: get_attr_or(settings, "roughness_fade", 0.8)?,
+        edge_fade: get_attr_or(settings, "edge_fade", 0.2)?,
+        temporal_alpha: get_attr_or(settings, "temporal_alpha", 0.9)?,
+    })
+}
+
+fn get_attr_or<T>(obj: &Bound<'_, PyAny>, name: &str, default: T) -> PyResult<T>
+where
+    T: for<'py> FromPyObject<'py> + Clone,
+{
+    if let Ok(value) = obj.getattr(name) {
+        value.extract()
+    } else if let Ok(dict) = obj.downcast::<PyDict>() {
+        if let Some(value) = dict.get_item(name)? {
+            value.extract()
+        } else {
+            Ok(default)
+        }
+    } else {
+        Ok(default)
+    }
+}
+
+fn ssgi_settings_to_dict(settings: &SSGISettings) -> PyResult<Py<PyDict>> {
+    Python::with_gil(|py| {
+        let dict = PyDict::new_bound(py);
+        dict.set_item("ray_steps", settings.ray_steps)?;
+        dict.set_item("ray_radius", settings.ray_radius)?;
+        dict.set_item("ray_thickness", settings.ray_thickness)?;
+        dict.set_item("intensity", settings.intensity)?;
+        dict.set_item("temporal_alpha", settings.temporal_alpha)?;
+        dict.set_item("use_half_res", settings.use_half_res)?;
+        dict.set_item("ibl_fallback", settings.ibl_fallback)?;
+        Ok(dict.unbind())
+    })
+}
+
+fn ssr_settings_to_dict(settings: &SSRSettings) -> PyResult<Py<PyDict>> {
+    Python::with_gil(|py| {
+        let dict = PyDict::new_bound(py);
+        dict.set_item("max_steps", settings.max_steps)?;
+        dict.set_item("max_distance", settings.max_distance)?;
+        dict.set_item("thickness", settings.thickness)?;
+        dict.set_item("stride", settings.stride)?;
+        dict.set_item("intensity", settings.intensity)?;
+        dict.set_item("roughness_fade", settings.roughness_fade)?;
+        dict.set_item("edge_fade", settings.edge_fade)?;
+        dict.set_item("temporal_alpha", settings.temporal_alpha)?;
+        Ok(dict.unbind())
+    })
+}
+
+fn read_bloom_settings_object(
+    obj: &Bound<'_, PyAny>,
+    settings: &mut BloomRuntimeSettings,
+) -> PyResult<()> {
+    if let Ok(dict) = obj.downcast::<PyDict>() {
+        read_bloom_settings_dict(dict, settings)?;
+        return Ok(());
+    }
+    for key in ["threshold", "softness", "intensity", "strength", "radius"] {
+        if let Ok(value) = obj.getattr(key) {
+            apply_bloom_value(key, value.extract()?, settings)?;
+        }
+    }
+    Ok(())
+}
+
+fn read_bloom_settings_dict(
+    dict: &Bound<'_, PyDict>,
+    settings: &mut BloomRuntimeSettings,
+) -> PyResult<()> {
+    for key in ["threshold", "softness", "intensity", "strength", "radius"] {
+        if let Some(value) = dict.get_item(key)? {
+            apply_bloom_value(key, value.extract()?, settings)?;
+        }
+    }
+    Ok(())
+}
+
+fn apply_bloom_value(key: &str, value: f32, settings: &mut BloomRuntimeSettings) -> PyResult<()> {
+    match key {
+        "threshold" => settings.threshold = value,
+        "softness" => settings.softness = value,
+        "intensity" | "strength" => settings.strength = value,
+        "radius" => settings.radius = value,
+        _ => {}
+    }
+    Ok(())
+}
+
+fn validate_bloom_settings(settings: BloomRuntimeSettings) -> PyResult<()> {
+    if settings.threshold < 0.0 {
+        return Err(PyValueError::new_err("threshold must be non-negative"));
+    }
+    if !(0.0..=1.0).contains(&settings.softness) {
+        return Err(PyValueError::new_err("softness must be in [0, 1]"));
+    }
+    if settings.strength < 0.0 {
+        return Err(PyValueError::new_err("intensity must be non-negative"));
+    }
+    if settings.radius <= 0.0 {
+        return Err(PyValueError::new_err("radius must be positive"));
+    }
+    Ok(())
+}
+
 scene_noop_methods!(
-    set_camera_look_at,
-    set_height_from_r32f,
     enable_dof,
     disable_dof,
     dof_enabled,
@@ -661,6 +1019,7 @@ impl SdfSceneBuilder {
 }
 
 #[pyclass]
+#[derive(Clone)]
 pub struct SSGISettings {
     #[pyo3(get, set)]
     ray_steps: u32,
@@ -718,6 +1077,7 @@ impl SSGISettings {
 }
 
 #[pyclass]
+#[derive(Clone)]
 pub struct SSRSettings {
     #[pyo3(get, set)]
     max_steps: u32,
@@ -1286,6 +1646,452 @@ fn write_python_viewer_snapshot(command: &serde_json::Value) -> Result<(), Strin
     std::fs::write(path, b"\x89PNG\r\n\x1a\n").map_err(|error| error.to_string())
 }
 
+fn mat4_to_numpy<'py>(py: Python<'py>, mat: Mat4) -> PyResult<Bound<'py, PyArray2<f32>>> {
+    let cols = mat.to_cols_array_2d();
+    let rows = vec![
+        vec![cols[0][0], cols[1][0], cols[2][0], cols[3][0]],
+        vec![cols[0][1], cols[1][1], cols[2][1], cols[3][1]],
+        vec![cols[0][2], cols[1][2], cols[2][2], cols[3][2]],
+        vec![cols[0][3], cols[1][3], cols[2][3], cols[3][3]],
+    ];
+    Ok(PyArray2::from_vec2_bound(py, &rows)?)
+}
+
+fn matrix_from_py(array: PyReadonlyArray2<'_, f32>, name: &str) -> PyResult<Mat4> {
+    if array.shape() != [4, 4] {
+        return Err(PyValueError::new_err(format!(
+            "{name} must be float32[4,4]"
+        )));
+    }
+    let data = array
+        .as_slice()
+        .map_err(|_| PyRuntimeError::new_err(format!("{name} must be C-contiguous")))?;
+    Ok(Mat4::from_cols_array(&[
+        data[0], data[4], data[8], data[12], data[1], data[5], data[9], data[13], data[2], data[6],
+        data[10], data[14], data[3], data[7], data[11], data[15],
+    ]))
+}
+
+fn validate_camera_projection(
+    fov_y_degrees: f32,
+    aspect: f32,
+    near: f32,
+    far: f32,
+) -> PyResult<()> {
+    if fov_y_degrees <= 0.0 || fov_y_degrees >= 180.0 {
+        return Err(PyValueError::new_err("fov_y_degrees must be in (0, 180)"));
+    }
+    if aspect <= 0.0 {
+        return Err(PyValueError::new_err("aspect must be positive"));
+    }
+    if near <= 0.0 || far <= near {
+        return Err(PyValueError::new_err(
+            "near/far must satisfy 0 < near < far",
+        ));
+    }
+    Ok(())
+}
+
+#[pyfunction]
+fn camera_look_at<'py>(
+    py: Python<'py>,
+    eye: (f32, f32, f32),
+    target: (f32, f32, f32),
+    up: (f32, f32, f32),
+) -> PyResult<Bound<'py, PyArray2<f32>>> {
+    let eye = Vec3::new(eye.0, eye.1, eye.2);
+    let target = Vec3::new(target.0, target.1, target.2);
+    let up = Vec3::new(up.0, up.1, up.2);
+    if (eye - target).length_squared() <= f32::EPSILON {
+        return Err(PyValueError::new_err("eye and target must differ"));
+    }
+    if up.length_squared() <= f32::EPSILON {
+        return Err(PyValueError::new_err("up vector must be non-zero"));
+    }
+    mat4_to_numpy(py, Mat4::look_at_rh(eye, target, up))
+}
+
+#[pyfunction]
+#[pyo3(signature = (fov_y_degrees, aspect, near, far, clip_space="wgpu"))]
+fn camera_perspective<'py>(
+    py: Python<'py>,
+    fov_y_degrees: f32,
+    aspect: f32,
+    near: f32,
+    far: f32,
+    clip_space: &str,
+) -> PyResult<Bound<'py, PyArray2<f32>>> {
+    validate_camera_projection(fov_y_degrees, aspect, near, far)?;
+    let mat = match clip_space {
+        "wgpu" | "vulkan" | "d3d" | "metal" => {
+            Mat4::perspective_rh(fov_y_degrees.to_radians(), aspect, near, far)
+        }
+        "opengl" | "gl" => Mat4::perspective_rh_gl(fov_y_degrees.to_radians(), aspect, near, far),
+        other => {
+            return Err(PyValueError::new_err(format!(
+                "unsupported clip_space '{other}'"
+            )))
+        }
+    };
+    mat4_to_numpy(py, mat)
+}
+
+#[pyfunction]
+#[allow(clippy::too_many_arguments)]
+#[pyo3(signature = (left, right, bottom, top, near, far, clip_space="wgpu"))]
+fn camera_orthographic<'py>(
+    py: Python<'py>,
+    left: f32,
+    right: f32,
+    bottom: f32,
+    top: f32,
+    near: f32,
+    far: f32,
+    clip_space: &str,
+) -> PyResult<Bound<'py, PyArray2<f32>>> {
+    if right <= left || top <= bottom || far <= near {
+        return Err(PyValueError::new_err(
+            "orthographic bounds must satisfy left<right, bottom<top, near<far",
+        ));
+    }
+    let mat = match clip_space {
+        "wgpu" | "vulkan" | "d3d" | "metal" => {
+            Mat4::orthographic_rh(left, right, bottom, top, near, far)
+        }
+        "opengl" | "gl" => Mat4::orthographic_rh_gl(left, right, bottom, top, near, far),
+        other => {
+            return Err(PyValueError::new_err(format!(
+                "unsupported clip_space '{other}'"
+            )))
+        }
+    };
+    mat4_to_numpy(py, mat)
+}
+
+#[pyfunction]
+fn camera_view_proj<'py>(
+    py: Python<'py>,
+    view: PyReadonlyArray2<'_, f32>,
+    projection: PyReadonlyArray2<'_, f32>,
+) -> PyResult<Bound<'py, PyArray2<f32>>> {
+    let view = matrix_from_py(view, "view")?;
+    let projection = matrix_from_py(projection, "projection")?;
+    mat4_to_numpy(py, projection * view)
+}
+
+#[pyfunction]
+#[pyo3(signature = (focus_distance=10.0, f_stop=5.6, focal_length_mm=50.0))]
+fn camera_dof_params(
+    focus_distance: f32,
+    f_stop: f32,
+    focal_length_mm: f32,
+) -> PyResult<Py<PyDict>> {
+    if focus_distance <= 0.0 || f_stop <= 0.0 || focal_length_mm <= 0.0 {
+        return Err(PyValueError::new_err(
+            "focus_distance, f_stop, and focal_length_mm must be positive",
+        ));
+    }
+    Python::with_gil(|py| {
+        let dict = PyDict::new_bound(py);
+        dict.set_item("focus_distance", focus_distance)?;
+        dict.set_item("f_stop", f_stop)?;
+        dict.set_item("focal_length_mm", focal_length_mm)?;
+        Ok(dict.unbind())
+    })
+}
+
+#[pyfunction]
+#[pyo3(signature = (kind, params=None))]
+fn geometry_generate_primitive_py<'py>(
+    py: Python<'py>,
+    kind: &str,
+    params: Option<&Bound<'_, PyAny>>,
+) -> PyResult<Py<PyDict>> {
+    let size = params
+        .map(|value| get_attr_or(value, "size", 1.0))
+        .transpose()?
+        .unwrap_or(1.0);
+    let half = size * 0.5;
+    let (positions, indices): (Vec<[f32; 3]>, Vec<u32>) = match kind {
+        "cube" | "box" => (
+            vec![
+                [-half, -half, half],
+                [half, -half, half],
+                [half, half, half],
+                [-half, half, half],
+                [-half, -half, -half],
+                [half, -half, -half],
+                [half, half, -half],
+                [-half, half, -half],
+            ],
+            vec![
+                0, 1, 2, 0, 2, 3, 1, 5, 6, 1, 6, 2, 5, 4, 7, 5, 7, 6, 4, 0, 3, 4, 3, 7, 3, 2, 6, 3,
+                6, 7, 4, 5, 1, 4, 1, 0,
+            ],
+        ),
+        "plane" | "quad" => (
+            vec![
+                [-half, 0.0, -half],
+                [half, 0.0, -half],
+                [half, 0.0, half],
+                [-half, 0.0, half],
+            ],
+            vec![0, 1, 2, 0, 2, 3],
+        ),
+        other => {
+            return Err(PyValueError::new_err(format!(
+                "unsupported primitive kind '{other}'"
+            )))
+        }
+    };
+    let dict = PyDict::new_bound(py);
+    let position_rows = positions
+        .into_iter()
+        .map(|position| position.to_vec())
+        .collect::<Vec<_>>();
+    let positions = PyArray2::from_vec2_bound(py, &position_rows)?;
+    let indices = PyArray1::from_vec_bound(py, indices);
+    dict.set_item("positions", positions.clone())?;
+    dict.set_item("vertices", positions)?;
+    dict.set_item("indices", indices)?;
+    Ok(dict.unbind())
+}
+
+#[pyfunction]
+fn geometry_validate_mesh_py(mesh: &Bound<'_, PyDict>) -> PyResult<Py<PyDict>> {
+    let has_positions =
+        mesh.get_item("positions")?.is_some() || mesh.get_item("vertices")?.is_some();
+    let has_indices = mesh.get_item("indices")?.is_some();
+    Python::with_gil(|py| {
+        let dict = PyDict::new_bound(py);
+        dict.set_item("valid", has_positions && has_indices)?;
+        dict.set_item("has_positions", has_positions)?;
+        dict.set_item("has_indices", has_indices)?;
+        Ok(dict.unbind())
+    })
+}
+
+#[pyfunction]
+fn io_import_obj_py<'py>(py: Python<'py>, path: &str) -> PyResult<Py<PyDict>> {
+    let text =
+        std::fs::read_to_string(path).map_err(|error| PyOSError::new_err(error.to_string()))?;
+    let mut positions = Vec::<[f32; 3]>::new();
+    let mut indices = Vec::<u32>::new();
+    for (line_index, line) in text.lines().enumerate() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let mut parts = line.split_whitespace();
+        match parts.next() {
+            Some("v") => {
+                let x = parse_obj_f32(parts.next(), line_index)?;
+                let y = parse_obj_f32(parts.next(), line_index)?;
+                let z = parse_obj_f32(parts.next(), line_index)?;
+                positions.push([x, y, z]);
+            }
+            Some("f") => {
+                let face = parts
+                    .map(|part| parse_obj_index(part, positions.len(), line_index))
+                    .collect::<PyResult<Vec<_>>>()?;
+                if face.len() < 3 {
+                    return Err(PyValueError::new_err(format!(
+                        "OBJ face at line {} has fewer than 3 vertices",
+                        line_index + 1
+                    )));
+                }
+                for i in 1..face.len() - 1 {
+                    indices.extend_from_slice(&[face[0], face[i], face[i + 1]]);
+                }
+            }
+            _ => {}
+        }
+    }
+    let root = PyDict::new_bound(py);
+    let mesh = PyDict::new_bound(py);
+    let position_rows = positions
+        .into_iter()
+        .map(|position| position.to_vec())
+        .collect::<Vec<_>>();
+    mesh.set_item("positions", PyArray2::from_vec2_bound(py, &position_rows)?)?;
+    mesh.set_item("indices", PyArray1::from_vec_bound(py, indices))?;
+    root.set_item("mesh", mesh)?;
+    root.set_item("materials", PyList::empty_bound(py))?;
+    root.set_item("groups", PyDict::new_bound(py))?;
+    Ok(root.unbind())
+}
+
+fn parse_obj_f32(value: Option<&str>, line_index: usize) -> PyResult<f32> {
+    value
+        .ok_or_else(|| {
+            PyValueError::new_err(format!("missing OBJ coordinate at line {}", line_index + 1))
+        })?
+        .parse::<f32>()
+        .map_err(|error| {
+            PyValueError::new_err(format!(
+                "invalid OBJ coordinate at line {}: {error}",
+                line_index + 1
+            ))
+        })
+}
+
+fn parse_obj_index(value: &str, position_count: usize, line_index: usize) -> PyResult<u32> {
+    let raw = value.split('/').next().unwrap_or_default();
+    let index = raw.parse::<isize>().map_err(|error| {
+        PyValueError::new_err(format!(
+            "invalid OBJ index at line {}: {error}",
+            line_index + 1
+        ))
+    })?;
+    let zero_based = if index < 0 {
+        position_count as isize + index
+    } else {
+        index - 1
+    };
+    if zero_based < 0 || zero_based >= position_count as isize {
+        return Err(PyValueError::new_err(format!(
+            "OBJ index out of bounds at line {}",
+            line_index + 1
+        )));
+    }
+    Ok(zero_based as u32)
+}
+
+#[pyfunction]
+fn engine_info() -> PyResult<Py<PyDict>> {
+    Python::with_gil(|py| {
+        let dict = PyDict::new_bound(py);
+        dict.set_item("crate", "forge3d-python")?;
+        dict.set_item("phase", 15)?;
+        dict.set_item("renderer", "python compatibility CPU render path")?;
+        dict.set_item("core_boundary", "forge3d-core")?;
+        Ok(dict.unbind())
+    })
+}
+
+#[pyfunction]
+fn sun_position(latitude: f64, longitude: f64, datetime: &str) -> PyResult<SunPosition> {
+    let (year, month, day, hour, minute, second) = parse_iso_datetime(datetime)?;
+    sun_position_utc(latitude, longitude, year, month, day, hour, minute, second)
+}
+
+#[pyfunction]
+#[allow(clippy::too_many_arguments)]
+#[pyo3(signature = (latitude, longitude, year, month, day, hour, minute, second=0))]
+fn sun_position_utc(
+    latitude: f64,
+    longitude: f64,
+    year: i32,
+    month: u32,
+    day: u32,
+    hour: u32,
+    minute: u32,
+    second: u32,
+) -> PyResult<SunPosition> {
+    let latitude = latitude.clamp(-90.0, 90.0);
+    let longitude = longitude.clamp(-180.0, 180.0);
+    let day_of_year = day_of_year(year, month, day)?;
+    if hour > 23 || minute > 59 || second > 59 {
+        return Err(PyValueError::new_err("invalid UTC time"));
+    }
+    let fractional_hour = hour as f64 + minute as f64 / 60.0 + second as f64 / 3600.0;
+    let gamma = 2.0 * std::f64::consts::PI / 365.0
+        * (day_of_year as f64 - 1.0 + (fractional_hour - 12.0) / 24.0);
+    let equation_of_time = 229.18
+        * (0.000075 + 0.001868 * gamma.cos()
+            - 0.032077 * gamma.sin()
+            - 0.014615 * (2.0 * gamma).cos()
+            - 0.040849 * (2.0 * gamma).sin());
+    let declination = 0.006918 - 0.399912 * gamma.cos() + 0.070257 * gamma.sin()
+        - 0.006758 * (2.0 * gamma).cos()
+        + 0.000907 * (2.0 * gamma).sin()
+        - 0.002697 * (3.0 * gamma).cos()
+        + 0.00148 * (3.0 * gamma).sin();
+    let true_solar_time =
+        (fractional_hour * 60.0 + equation_of_time + 4.0 * longitude).rem_euclid(1440.0);
+    let hour_angle = if true_solar_time / 4.0 < 0.0 {
+        true_solar_time / 4.0 + 180.0
+    } else {
+        true_solar_time / 4.0 - 180.0
+    }
+    .to_radians();
+    let lat_rad = latitude.to_radians();
+    let cos_zenith = (lat_rad.sin() * declination.sin()
+        + lat_rad.cos() * declination.cos() * hour_angle.cos())
+    .clamp(-1.0, 1.0);
+    let zenith = cos_zenith.acos();
+    let elevation = 90.0 - zenith.to_degrees();
+    let azimuth = (hour_angle
+        .sin()
+        .atan2(hour_angle.cos() * lat_rad.sin() - declination.tan() * lat_rad.cos())
+        .to_degrees()
+        + 180.0)
+        .rem_euclid(360.0);
+    Ok(SunPosition { azimuth, elevation })
+}
+
+fn parse_iso_datetime(value: &str) -> PyResult<(i32, u32, u32, u32, u32, u32)> {
+    let (date, time) = value
+        .split_once('T')
+        .ok_or_else(|| PyValueError::new_err("datetime must use YYYY-MM-DDTHH:MM:SS"))?;
+    let mut date_parts = date.split('-');
+    let year = parse_datetime_part::<i32>(date_parts.next(), "year")?;
+    let month = parse_datetime_part::<u32>(date_parts.next(), "month")?;
+    let day = parse_datetime_part::<u32>(date_parts.next(), "day")?;
+    if date_parts.next().is_some() {
+        return Err(PyValueError::new_err("datetime date has too many parts"));
+    }
+    let time = time.trim_end_matches('Z');
+    let mut time_parts = time.split(':');
+    let hour = parse_datetime_part::<u32>(time_parts.next(), "hour")?;
+    let minute = parse_datetime_part::<u32>(time_parts.next(), "minute")?;
+    let second = parse_datetime_part::<u32>(time_parts.next(), "second")?;
+    if time_parts.next().is_some() {
+        return Err(PyValueError::new_err("datetime time has too many parts"));
+    }
+    Ok((year, month, day, hour, minute, second))
+}
+
+fn parse_datetime_part<T>(value: Option<&str>, name: &str) -> PyResult<T>
+where
+    T: std::str::FromStr,
+    T::Err: std::fmt::Display,
+{
+    value
+        .ok_or_else(|| PyValueError::new_err(format!("missing datetime {name}")))?
+        .parse::<T>()
+        .map_err(|error| PyValueError::new_err(format!("invalid datetime {name}: {error}")))
+}
+
+fn day_of_year(year: i32, month: u32, day: u32) -> PyResult<u32> {
+    let month_lengths = [
+        31,
+        if is_leap_year(year) { 29 } else { 28 },
+        31,
+        30,
+        31,
+        30,
+        31,
+        31,
+        30,
+        31,
+        30,
+        31,
+    ];
+    if month == 0 || month > 12 {
+        return Err(PyValueError::new_err("invalid UTC month"));
+    }
+    let max_day = month_lengths[(month - 1) as usize];
+    if day == 0 || day > max_day {
+        return Err(PyValueError::new_err("invalid UTC day"));
+    }
+    Ok(month_lengths[..(month - 1) as usize].iter().sum::<u32>() + day)
+}
+
+fn is_leap_year(year: i32) -> bool {
+    (year % 4 == 0 && year % 100 != 0) || year % 400 == 0
+}
+
 macro_rules! dummy_function {
     ($name:ident) => {
         #[pyfunction]
@@ -1297,31 +2103,20 @@ macro_rules! dummy_function {
 
 dummy_function!(open_viewer);
 dummy_function!(open_terrain_viewer);
-dummy_function!(sun_position);
-dummy_function!(sun_position_utc);
 dummy_function!(clipmap_generate_py);
-dummy_function!(engine_info);
 dummy_function!(hybrid_render);
 dummy_function!(configure_csm);
 dummy_function!(verify_license_signature);
 dummy_function!(license_public_key_hex);
-dummy_function!(geometry_generate_primitive_py);
 dummy_function!(geometry_generate_tangents_py);
 dummy_function!(geometry_weld_mesh_py);
 dummy_function!(geometry_subdivide_py);
-dummy_function!(geometry_validate_mesh_py);
 dummy_function!(geometry_displace_heightmap_py);
 dummy_function!(geometry_generate_tube_py);
 dummy_function!(geometry_generate_ribbon_py);
 dummy_function!(geometry_generate_thick_polyline_py);
 dummy_function!(geometry_extrude_polygon_py);
 dummy_function!(geometry_simplify_mesh_py);
-dummy_function!(camera_look_at);
-dummy_function!(camera_perspective);
-dummy_function!(camera_orthographic);
-dummy_function!(camera_view_proj);
-dummy_function!(camera_dof_params);
-dummy_function!(io_import_obj_py);
 dummy_function!(io_export_obj_py);
 dummy_function!(io_export_stl_py);
 dummy_function!(io_import_gltf_py);
