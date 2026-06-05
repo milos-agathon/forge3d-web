@@ -35,8 +35,8 @@ These invariants apply to every phase after Phase 1:
 | 1 | Baseline audit and reproduce wasm failure | Done | `docs/superpowers/audits/2026-06-04-forge3d-browser-webgpu-wasm-phase1-baseline-audit.md`; `logs/phase1-*` |
 | 2 | Workspace split | Done | Root workspace manifest; `crates/forge3d-*` manifests and roots; `cargo metadata --no-deps`; `cargo check -p forge3d-core --no-default-features`; `cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features`; `cargo check -p forge3d-web --target wasm32-unknown-unknown` |
 | 3 | PyO3/NumPy extraction | Done | 151 Python-bound staged files moved into `crates/forge3d-python/src/wrappers/legacy`; core boundary test; cargo checks passed |
-| 4 | Core wasm check passing | Ready | Phase 3 core Python boundary is clean |
-| 5 | GPU context ownership redesign | Pending | Not started |
+| 4 | Core wasm check passing | Done | `logs/phase4-core-wasm-check-no-default-features.txt`; `logs/phase4-core-wasm-banned-deps.txt`; `logs/phase4-core-tests.txt` |
+| 5 | GPU context ownership redesign | Ready | Phase 4 core no-default wasm boundary is verified |
 | 6 | Browser crate creation | Pending | Not started |
 | 7 | Minimal canvas clear | Pending | Not started |
 | 8 | Terrain heightmap upload and render | Pending | Not started |
@@ -300,7 +300,7 @@ cargo check -p forge3d-python
 
 ## Phase 4: Core Wasm Check Passing
 
-**Status:** Pending
+**Status:** Done
 
 **Goal:** Make `forge3d-core` compile for `wasm32-unknown-unknown` with no default features.
 
@@ -344,6 +344,31 @@ cargo tree -p forge3d-core --target wasm32-unknown-unknown --no-default-features
 - Over-broad gates may hide useful pure data types.
 
 **Rollback boundary:** Re-enable incorrectly gated modules behind native features; do not undo PyO3 extraction.
+
+**Completion evidence (2026-06-05):**
+
+- Added `crates/forge3d-core/src/feature_gates.rs` as the Phase 4 feature-gate manifest for optional core surfaces.
+- Updated `crates/forge3d-core/src/lib.rs` phase marker from `3` to `4`.
+- Added core tests that assert the feature-gate manifest covers the optional surfaces and that staged native/offline module roots are not compiled from the default core crate root.
+- Preserved the minimal default `forge3d-core` root so native IO, viewer, offline render, TCP, stdin, path-only filesystem loaders, PyO3, NumPy, winit, and blocking browser-hostile paths remain excluded from the no-default wasm build.
+
+**Verification evidence (2026-06-05):**
+
+```powershell
+cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features
+# Result: exits 0. Full output: logs/phase4-core-wasm-check-no-default-features.txt
+
+cargo tree -p forge3d-core --target wasm32-unknown-unknown --no-default-features --edges normal | rg "pyo3|numpy|winit|pollster"
+# Result: no matches. Full output: logs/phase4-core-wasm-banned-deps.txt
+
+cargo test -p forge3d-core
+# Result: exits 0; 3 unit tests passed. Full output: logs/phase4-core-tests.txt
+```
+
+**Explicit non-claims:**
+
+- Phase 4 does not reconnect the staged legacy modules to the core public API.
+- GPU context ownership redesign remains Phase 5.
 
 ---
 
