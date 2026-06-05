@@ -1,6 +1,11 @@
 pub mod feature_gates;
 
-pub const WORKSPACE_SPLIT_PHASE: u8 = 4;
+pub mod error;
+
+#[cfg(feature = "gpu")]
+pub mod gpu;
+
+pub const WORKSPACE_SPLIT_PHASE: u8 = 5;
 
 pub fn phase() -> u8 {
     WORKSPACE_SPLIT_PHASE
@@ -66,15 +71,56 @@ mod tests {
     fn default_core_root_does_not_expose_staged_native_or_offline_modules() {
         let lib_rs = fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("src/lib.rs"))
             .expect("failed to read core lib.rs");
+        let production_root = lib_rs
+            .split("#[cfg(test)]")
+            .next()
+            .expect("lib.rs must have production module declarations");
 
         for module_root in DEFAULT_WASM_INACTIVE_MODULE_ROOTS {
             let pub_mod = format!("pub mod {module_root};");
             let private_mod = format!("mod {module_root};");
             assert!(
-                !lib_rs.contains(&pub_mod) && !lib_rs.contains(&private_mod),
+                !production_root.contains(&pub_mod) && !production_root.contains(&private_mod),
                 "{module_root} must remain behind an explicit non-default gate before it is compiled from forge3d-core"
             );
         }
+    }
+
+    #[test]
+    fn phase5_gpu_runtime_api_is_public_without_legacy_singleton() {
+        let lib_rs = fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("src/lib.rs"))
+            .expect("failed to read core lib.rs");
+        let production_root = lib_rs
+            .split("#[cfg(test)]")
+            .next()
+            .expect("lib.rs must have production module declarations");
+
+        assert!(production_root.contains("pub mod gpu;"));
+        assert!(
+            !production_root.contains("pub mod core;"),
+            "legacy core::gpu singleton tree must not be re-exposed from forge3d-core"
+        );
+
+        let gpu_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/gpu");
+        for required in ["mod.rs", "runtime.rs", "surface.rs"] {
+            assert!(
+                gpu_dir.join(required).is_file(),
+                "missing Phase 5 GPU runtime artifact src/gpu/{required}"
+            );
+        }
+    }
+
+    #[test]
+    fn phase5_browser_gpu_sources_do_not_use_blocking_or_global_context() {
+        let gpu_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/gpu");
+        let mut offenders = Vec::new();
+        scan_for_browser_gpu_ownership_offenders(&gpu_dir, &mut offenders);
+
+        assert!(
+            offenders.is_empty(),
+            "browser-facing GPU runtime sources must not use global/blocking GPU state:\n{}",
+            offenders.join("\n")
+        );
     }
 
     fn scan_rs_files(dir: &Path, offenders: &mut Vec<String>) {
@@ -100,6 +146,41 @@ mod tests {
             let text = fs::read_to_string(&path)
                 .unwrap_or_else(|error| panic!("failed to read {}: {error}", path.display()));
             for token in BANNED_CORE_BOUNDARY_TOKENS {
+                if text.contains(token) {
+                    offenders.push(format!("{} contains {token}", path.display()));
+                }
+            }
+        }
+    }
+
+    fn scan_for_browser_gpu_ownership_offenders(dir: &Path, offenders: &mut Vec<String>) {
+        let entries = fs::read_dir(dir)
+            .unwrap_or_else(|error| panic!("failed to read {}: {error}", dir.display()));
+
+        for entry in entries {
+            let path = entry
+                .unwrap_or_else(|error| {
+                    panic!("failed to read entry in {}: {error}", dir.display())
+                })
+                .path();
+
+            if path.is_dir() {
+                scan_for_browser_gpu_ownership_offenders(&path, offenders);
+                continue;
+            }
+
+            if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
+                continue;
+            }
+
+            let text = fs::read_to_string(&path)
+                .unwrap_or_else(|error| panic!("failed to read {}: {error}", path.display()));
+            for token in [
+                concat!("OnceCell", "<GpuContext>"),
+                concat!("core::gpu", "::ctx"),
+                concat!("crate::core::gpu", "::ctx"),
+                concat!("pollster", "::block_on"),
+            ] {
                 if text.contains(token) {
                     offenders.push(format!("{} contains {token}", path.display()));
                 }

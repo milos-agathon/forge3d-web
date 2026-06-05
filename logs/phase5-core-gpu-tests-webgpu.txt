@@ -1,0 +1,13 @@
+   Compiling forge3d-core v1.26.0 (C:\Users\milos\forge3d-web\crates\forge3d-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.39s
+     Running unittests src\lib.rs (target\debug\deps\forge3d_core-4903fe119d8260d2.exe)
+
+running 5 tests
+test gpu::runtime::tests::gpu_runtime_options_default_to_browser_compatible_limits ... ok
+test gpu::surface::tests::surface_descriptor_defaults_to_fifo_presentation ... ok
+test gpu::surface::tests::surface_configuration_rejects_zero_size_before_touching_adapter ... ok
+test tests::phase5_gpu_runtime_api_is_public_without_legacy_singleton ... ok
+test tests::phase5_browser_gpu_sources_do_not_use_blocking_or_global_context ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 3 filtered out; finished in 0.00s
+
