@@ -284,8 +284,8 @@ cargo check -p forge3d-core --no-default-features
 cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features
 # Result: exits 0.
 
-cargo tree -p forge3d-core --target wasm32-unknown-unknown --no-default-features --edges normal | Select-Object -Skip 1 | rg "pyo3|numpy"
-# Result: no dependency matches. The root line is skipped because this worktree path contains "phase3-pyo3-numpy-extraction".
+cargo tree -p forge3d-core --target wasm32-unknown-unknown --no-default-features --edges normal | rg "pyo3|numpy"
+# Result: no dependency matches.
 
 cargo check -p forge3d-python
 # Result: exits 0.
