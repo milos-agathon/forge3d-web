@@ -27,6 +27,18 @@
 
       const canvas = document.querySelector("#forge3d-camera-resize-canvas");
 
+      async function screenshotPixels(runtime) {
+        const blob = await runtime.screenshot();
+        const bitmap = await createImageBitmap(blob);
+        const probe = document.createElement("canvas");
+        probe.width = bitmap.width;
+        probe.height = bitmap.height;
+        const context = probe.getContext("2d", { willReadFrequently: true });
+        context.drawImage(bitmap, 0, 0);
+        bitmap.close();
+        return context.getImageData(0, 0, probe.width, probe.height).data;
+      }
+
       function createRamp(width, height) {
         const heights = new Float32Array(width * height);
         for (let y = 0; y < height; y += 1) {
@@ -37,17 +49,6 @@
           }
         }
         return heights;
-      }
-
-      async function sampleCanvas() {
-        await new Promise((resolve) => requestAnimationFrame(resolve));
-
-        const probe = document.createElement("canvas");
-        probe.width = canvas.width;
-        probe.height = canvas.height;
-        const context = probe.getContext("2d", { willReadFrequently: true });
-        context.drawImage(canvas, 0, 0);
-        return context.getImageData(0, 0, probe.width, probe.height).data;
       }
 
       function pixelDifference(a, b) {
@@ -115,7 +116,7 @@
           far: 100
         });
         runtime.render();
-        const before = await sampleCanvas();
+        const before = await screenshotPixels(runtime);
 
         runtime.resize({ width: 96, height: 72, devicePixelRatio: 2 });
         const resizedWidth = canvas.width;
@@ -130,7 +131,7 @@
           far: 100
         });
         runtime.render();
-        const after = await sampleCanvas();
+        const after = await screenshotPixels(runtime);
 
         const changedPixels = pixelDifference(before, after);
         const width = runtime.width;

@@ -27,6 +27,18 @@
 
       const canvas = document.querySelector("#forge3d-terrain-canvas");
 
+      async function screenshotPixels(runtime) {
+        const blob = await runtime.screenshot();
+        const bitmap = await createImageBitmap(blob);
+        const probe = document.createElement("canvas");
+        probe.width = bitmap.width;
+        probe.height = bitmap.height;
+        const context = probe.getContext("2d", { willReadFrequently: true });
+        context.drawImage(bitmap, 0, 0);
+        bitmap.close();
+        return context.getImageData(0, 0, probe.width, probe.height).data;
+      }
+
       function createHill(width, height) {
         const heights = new Float32Array(width * height);
         for (let y = 0; y < height; y += 1) {
@@ -81,16 +93,9 @@
         });
         runtime.render();
 
-        await new Promise((resolve) => requestAnimationFrame(resolve));
-
         const width = canvas.width;
         const height = canvas.height;
-        const probe = document.createElement("canvas");
-        probe.width = width;
-        probe.height = height;
-        const context = probe.getContext("2d", { willReadFrequently: true });
-        context.drawImage(canvas, 0, 0);
-        const mapped = context.getImageData(0, 0, width, height).data;
+        const mapped = await screenshotPixels(runtime);
 
         let minLuma = 255;
         let maxLuma = 0;

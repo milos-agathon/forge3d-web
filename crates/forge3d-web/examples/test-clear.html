@@ -28,6 +28,18 @@
       const canvas = document.querySelector("#forge3d-clear-canvas");
       const clearColor = [0.2, 0.45, 0.8, 1.0];
 
+      async function screenshotPixels(runtime) {
+        const blob = await runtime.screenshot();
+        const bitmap = await createImageBitmap(blob);
+        const probe = document.createElement("canvas");
+        probe.width = bitmap.width;
+        probe.height = bitmap.height;
+        const context = probe.getContext("2d", { willReadFrequently: true });
+        context.drawImage(bitmap, 0, 0);
+        bitmap.close();
+        return context.getImageData(0, 0, probe.width, probe.height).data;
+      }
+
       window.__forge3dClearProbe = async () => {
         if (!navigator.gpu) {
           return { supported: false, nonBlackPixels: 0 };
@@ -41,16 +53,9 @@
         });
         runtime.render();
 
-        await new Promise((resolve) => requestAnimationFrame(resolve));
-
         const width = canvas.width;
         const height = canvas.height;
-        const probe = document.createElement("canvas");
-        probe.width = width;
-        probe.height = height;
-        const context = probe.getContext("2d", { willReadFrequently: true });
-        context.drawImage(canvas, 0, 0);
-        const mapped = context.getImageData(0, 0, width, height).data;
+        const mapped = await screenshotPixels(runtime);
         const bytesPerPixel = 4;
 
         let nonBlackPixels = 0;
