@@ -46,7 +46,7 @@ These invariants apply to every phase after Phase 1:
 | 12 | Browser IO abstraction | Done | `logs/phase12-*`; URL/Blob/File/ArrayBuffer terrain sources pass browser tests |
 | 13 | Packaging | Done | `logs/phase13-*`; npm build, Vite example build, package contract, dry-run pack, and typecheck pass |
 | 14 | Browser CI | Done | `logs/phase14-*`; `.github/workflows/web.yml`; WebGPU diagnostics Playwright test |
-| 15 | Native/Python compatibility restoration | Ready | Phase 14 is Done |
+| 15 | Native/Python compatibility restoration | Done | `logs/phase15-*`; maturin wheel build, compatible wheel install, smoke/API contracts, and native viewer cargo check pass |
 | 16 | MVP release hardening | Pending | Not started |
 
 ---
@@ -1224,7 +1224,7 @@ cargo test -p forge3d-web
 
 ## Phase 15: Native/Python Compatibility Restoration
 
-**Status:** Pending
+**Status:** Done
 
 **Goal:** Restore Python wheel builds, Python import/API contracts, and native viewer build behavior after crate separation.
 
@@ -1254,6 +1254,31 @@ python -m maturin build --manifest-path crates/forge3d-python/Cargo.toml --relea
 python scripts/install_compatible_wheel.py dist
 pytest tests/test_install_smoke.py tests/test_api_contracts.py -v --tb=short
 cargo check -p forge3d-native-viewer
+```
+
+**Completed work (2026-06-05):**
+
+- Replaced the placeholder `_forge3d` module in `crates/forge3d-python` with a PyO3 compatibility surface that restores the expected native classes, functions, package-level import behavior, and `Scene.render_rgba()` instance-method contract.
+- Kept the Python/native compatibility layer in `forge3d-python`, leaving core/web PyO3 and NumPy boundaries intact.
+- Verified `forge3d-native-viewer` still builds through its own crate.
+
+**Verification evidence (2026-06-05):**
+
+```powershell
+cargo check -p forge3d-python --features "extension-module,weighted-oit,enable-tbn,enable-gpu-instancing,copc_laz,images" 2>&1 | Tee-Object -FilePath logs\phase15-python-check.txt
+# Result: exits 0.
+
+python -m maturin build --manifest-path crates/forge3d-python/Cargo.toml --release --out dist 2>&1 | Tee-Object -FilePath logs\phase15-maturin-build.txt
+# Result: exits 0; built dist\forge3d-1.26.0-cp310-abi3-win_amd64.whl.
+
+python scripts/install_compatible_wheel.py dist 2>&1 | Tee-Object -FilePath logs\phase15-install-wheel.txt
+# Result: exits 0.
+
+pytest tests/test_install_smoke.py tests/test_api_contracts.py -v --tb=short 2>&1 | Tee-Object -FilePath logs\phase15-pytest.txt
+# Result: exits 0; 223 passed, 7 skipped.
+
+cargo check -p forge3d-native-viewer 2>&1 | Tee-Object -FilePath logs\phase15-native-viewer-check.txt
+# Result: exits 0.
 ```
 
 **Acceptance criteria:**
