@@ -33,9 +33,9 @@ These invariants apply to every phase after Phase 1:
 | Phase | Goal | Status | Evidence |
 |---|---|---|---|
 | 1 | Baseline audit and reproduce wasm failure | Done | `docs/superpowers/audits/2026-06-04-forge3d-browser-webgpu-wasm-phase1-baseline-audit.md`; `logs/phase1-*` |
-| 2 | Workspace split | Ready | Not started |
-| 3 | PyO3/NumPy extraction | Pending | Not started |
-| 4 | Core wasm check passing | Pending | Not started |
+| 2 | Workspace split | Done | Root workspace manifest; `crates/forge3d-*` manifests and roots; Phase 2 checks passed |
+| 3 | PyO3/NumPy extraction | Done | 151 Python-bound staged files moved into `crates/forge3d-python/src/wrappers/legacy`; core boundary test; cargo checks passed |
+| 4 | Core wasm check passing | Ready | Phase 3 core Python boundary is clean |
 | 5 | GPU context ownership redesign | Pending | Not started |
 | 6 | Browser crate creation | Pending | Not started |
 | 7 | Minimal canvas clear | Pending | Not started |
@@ -106,7 +106,7 @@ rg -n "\bwinit\b|pollster::block_on|\bpollster\b|std::fs|std::net|TcpListener|Tc
 
 ## Phase 2: Workspace Split
 
-**Status:** Ready
+**Status:** Done
 
 **Goal:** Convert the repository from one Rust package into a four-crate workspace without yet performing semantic PyO3 extraction.
 
@@ -164,11 +164,19 @@ cargo check -p forge3d-core --no-default-features
 
 **Rollback boundary:** Revert only the workspace split commit or changeset; do not mix with PyO3 extraction.
 
+**Completion evidence (2026-06-05):**
+
+- Root `Cargo.toml` is a resolver `2` workspace with members for `forge3d-core`, `forge3d-python`, `forge3d-web`, and `forge3d-native-viewer`.
+- Added crate manifests and minimal crate roots for all four Phase 2 crates.
+- Staged the legacy source tree under `crates/forge3d-core/src` for subsequent extraction.
+- Root `pyproject.toml` points maturin at `crates/forge3d-python/Cargo.toml`.
+- Phase 2 verification passed before Phase 3 began: `cargo metadata --no-deps`, `cargo check -p forge3d-core --no-default-features`, `cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features`, `cargo check -p forge3d-web --target wasm32-unknown-unknown`, `cargo check -p forge3d-python`, and `cargo check -p forge3d-native-viewer`.
+
 ---
 
 ## Phase 3: PyO3/NumPy Extraction
 
-**Status:** Pending
+**Status:** Done
 
 **Goal:** Move Python bindings out of `forge3d-core` and into `forge3d-python`.
 
@@ -221,6 +229,40 @@ cargo check -p forge3d-python
 - Behavior drift in existing Python APIs.
 
 **Rollback boundary:** Revert the PyO3 extraction changes while keeping the workspace shell from Phase 2.
+
+**Completion evidence (2026-06-05):**
+
+- Moved 151 staged Rust source files containing PyO3, NumPy, or Python boundary tokens from `crates/forge3d-core/src` into `crates/forge3d-python/src/wrappers/legacy`, preserving their relative paths for follow-up wrapper restoration.
+- Removed the remaining core-side Python wording/re-exports in `crates/forge3d-core/src/vector/api.rs` and the remaining NumPy-oriented comments in `crates/forge3d-core/src/offscreen/brdf_tile/tests.rs`.
+- Updated the phase marker exported by `forge3d-core` and the minimal `_forge3d` Python module from `2` to `3`.
+- Added `core_source_tree_has_no_python_boundary_tokens` in `crates/forge3d-core/src/lib.rs` to scan core Rust sources and fail if Python boundary tokens are reintroduced.
+
+**Verification evidence (2026-06-05):**
+
+```powershell
+rg -n "#\[pyclass|#\[pymethods|#\[pyfunction|pyo3|numpy|PyResult|PyObject|PyErr|Python<'|Bound<'_, Py|PyReadonlyArray|PyArray" crates\forge3d-core\src
+# Result: no matches.
+
+cargo test -p forge3d-core
+# Result: exits 0; 1 unit test passed.
+
+cargo check -p forge3d-core --no-default-features
+# Result: exits 0.
+
+cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features
+# Result: exits 0.
+
+cargo tree -p forge3d-core --target wasm32-unknown-unknown --no-default-features --edges normal | Select-Object -Skip 1 | rg "pyo3|numpy"
+# Result: no dependency matches. The root line is skipped because this worktree path contains "phase3-pyo3-numpy-extraction".
+
+cargo check -p forge3d-python
+# Result: exits 0.
+```
+
+**Explicit non-claims:**
+
+- The legacy wrapper files under `crates/forge3d-python/src/wrappers/legacy` are preserved for restoration and are not yet wired into the active Python module.
+- Full Python API compatibility remains Phase 15.
 
 ---
 
