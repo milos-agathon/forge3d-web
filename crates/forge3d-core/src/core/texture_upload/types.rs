@@ -71,7 +71,7 @@ impl HdrTexture {
     }
 
     pub fn create_sampler(&self, linear_filtering: bool) -> wgpu::Sampler {
-        let g = crate::core::gpu::ctx();
+        let g = crate::core::gpu::legacy_context_removed();
         let filter = if linear_filtering {
             wgpu::FilterMode::Linear
         } else {

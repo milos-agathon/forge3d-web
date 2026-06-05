@@ -161,11 +161,22 @@ def test_installed_project_urls_match_public_metadata():
 
 
 def test_installs_interactive_viewer_console_script():
-    """The wheel exposes the interactive viewer command via console_scripts."""
+    """The wheel keeps the legacy interactive viewer command via console_scripts."""
     entry_points = distribution("forge3d").entry_points
     assert any(
         ep.group == "console_scripts"
         and ep.name == "interactive_viewer"
+        and ep.value == "forge3d._viewer_entry:main"
+        for ep in entry_points
+    )
+
+
+def test_installs_forge3d_viewer_console_script():
+    """The wheel exposes the split-crate native viewer command via console_scripts."""
+    entry_points = distribution("forge3d").entry_points
+    assert any(
+        ep.group == "console_scripts"
+        and ep.name == "forge3d-viewer"
         and ep.value == "forge3d._viewer_entry:main"
         for ep in entry_points
     )

@@ -436,8 +436,8 @@ class TestViewerHandleValidation:
         for path in cleanup_paths:
             path.unlink(missing_ok=True)
 
-    def test_find_viewer_binary_prefers_newest_build(self, tmp_path, monkeypatch):
-        """The helper picks the newest built viewer binary instead of blindly preferring release."""
+    def test_find_viewer_binary_prefers_new_forge3d_viewer_build(self, tmp_path, monkeypatch):
+        """The helper prefers the split-crate forge3d-viewer binary when present."""
         root = tmp_path
         module_path = root / "python" / "forge3d" / "viewer.py"
         module_path.parent.mkdir(parents=True)
@@ -445,7 +445,7 @@ class TestViewerHandleValidation:
 
         suffix = ".exe" if sys.platform == "win32" else ""
         release_bin = root / "target" / "release" / f"interactive_viewer{suffix}"
-        debug_bin = root / "target" / "debug" / f"interactive_viewer{suffix}"
+        debug_bin = root / "target" / "debug" / f"forge3d-viewer{suffix}"
         release_bin.parent.mkdir(parents=True)
         debug_bin.parent.mkdir(parents=True)
         release_bin.write_text("release", encoding="utf-8")
@@ -467,8 +467,28 @@ class TestViewerHandleValidation:
         finally:
             monkeypatch.setattr(viewer_module, "__file__", original_module_file)
 
-    def test_find_viewer_binary_uses_installed_console_script(self, tmp_path, monkeypatch):
-        """Installed wheels resolve the console-script launcher beside the current interpreter."""
+    def test_find_viewer_binary_uses_installed_forge3d_viewer_script(self, tmp_path, monkeypatch):
+        """Installed wheels resolve the split-crate console launcher beside the interpreter."""
+        package_root = tmp_path / "site-packages" / "forge3d"
+        package_root.mkdir(parents=True)
+        module_path = package_root / "viewer.py"
+        module_path.write_text("# test module path\n", encoding="utf-8")
+
+        scripts_dir = tmp_path / "venv" / ("Scripts" if sys.platform == "win32" else "bin")
+        scripts_dir.mkdir(parents=True)
+        suffix = ".exe" if sys.platform == "win32" else ""
+        viewer_script = scripts_dir / f"forge3d-viewer{suffix}"
+        viewer_script.write_text("launcher", encoding="utf-8")
+        python_exe = scripts_dir / ("python.exe" if sys.platform == "win32" else "python")
+        python_exe.write_text("python", encoding="utf-8")
+
+        monkeypatch.setattr(viewer_module, "__file__", str(module_path))
+        monkeypatch.setattr(sys, "executable", str(python_exe))
+
+        assert _find_viewer_binary() == str(viewer_script)
+
+    def test_find_viewer_binary_keeps_interactive_viewer_fallback(self, tmp_path, monkeypatch):
+        """Legacy interactive_viewer launchers remain valid while packaging catches up."""
         package_root = tmp_path / "site-packages" / "forge3d"
         package_root.mkdir(parents=True)
         module_path = package_root / "viewer.py"

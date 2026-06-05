@@ -1,0 +1,10 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.16s
+     Running unittests src\lib.rs (target\debug\deps\forge3d_core-e3cb65e272a41406.exe)
+
+running 4 tests
+test tests::phase4_feature_gate_manifest_tracks_core_optional_surfaces ... ok
+test io::source::tests::byte_range_rejects_overflow ... ok
+test io::source::tests::little_endian_f32_decoder_validates_length_and_expected_count ... ok
+test io::source::tests::fake_source_reads_full_and_ranged_bytes ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 9 filtered out; finished in 0.00s

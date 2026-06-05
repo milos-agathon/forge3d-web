@@ -1,6 +1,6 @@
 impl Scene {
     pub(super) fn rebuild_msaa_state(&mut self) -> Result<(), String> {
-        let g = crate::core::gpu::ctx();
+        let g = crate::core::gpu::legacy_context_removed();
         let depth_format = if self.sample_count > 1 {
             Some(wgpu::TextureFormat::Depth32Float)
         } else {

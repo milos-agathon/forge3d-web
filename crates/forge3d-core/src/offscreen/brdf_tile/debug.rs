@@ -5,7 +5,7 @@ use super::request::PreparedBrdfTileRequest;
 pub(super) fn log_gpu_info_once() {
     static LOG_GPU_INFO: Once = Once::new();
     LOG_GPU_INFO.call_once(|| {
-        let gpu_ctx = crate::core::gpu::ctx();
+        let gpu_ctx = crate::core::gpu::legacy_context_removed();
         let adapter_info = gpu_ctx.adapter.get_info();
         log::info!(
             "[M0] GPU Adapter: {} ({})",

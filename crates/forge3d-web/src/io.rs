@@ -44,8 +44,12 @@ pub async fn load_terrain_heightmap_source(
     report_progress(&on_progress, 0, None, false)?;
     let bytes = read_browser_source_bytes(&source, range, &signal, &on_progress).await?;
     ensure_not_cancelled(&signal)?;
-    let heights =
-        bytes_to_f32_le(&bytes, Some(expected_count)).map_err(crate::error::map_core_error)?;
+    let heights = bytes_to_f32_le(&bytes, Some(expected_count)).map_err(|error| {
+        WebError::new(
+            Forge3DErrorCode::IoError,
+            format!("Terrain source body could not be decoded: {error}"),
+        )
+    })?;
 
     Ok(TerrainHeightmapOptions {
         width,

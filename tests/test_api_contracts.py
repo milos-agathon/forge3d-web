@@ -112,6 +112,7 @@ class TestNativeModuleSymbols:
         "global_memory_metrics",
         "verify_license_signature",
         "license_public_key_hex",
+        "run_interactive_viewer_cli",
         # P0.4: TBN mesh generation
         "mesh_generate_cube_tbn",
         "mesh_generate_plane_tbn",

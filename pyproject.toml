@@ -40,6 +40,7 @@ Documentation = "https://milos-agathon.github.io/forge3d/"
 "Bug Tracker" = "https://github.com/milos-agathon/forge3d/issues"
 
 [project.scripts]
+forge3d-viewer = "forge3d._viewer_entry:main"
 interactive_viewer = "forge3d._viewer_entry:main"
 
 [project.optional-dependencies]

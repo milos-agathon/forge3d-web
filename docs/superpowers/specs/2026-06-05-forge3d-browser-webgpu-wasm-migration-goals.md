@@ -17,6 +17,12 @@ This document is not a replacement for the implementation plan. It is the status
 - `Blocked`: Phase cannot start or finish until a named blocker is removed.
 - `Pending`: Phase is ordered but not yet ready because earlier phases are incomplete.
 
+Independent audit status values used in the Progress Summary:
+
+- `Full`: The phase requirements are implemented and verified against current repo state.
+- `Mostly Complete`: The central browser/MVP requirement is implemented, but specific evidence, coverage, or architectural requirements remain incomplete.
+- `Partial`: Some required pieces are present, but material deliverables or semantic behavior are missing.
+
 ## Global Invariants
 
 These invariants apply to every phase after Phase 1:
@@ -30,24 +36,26 @@ These invariants apply to every phase after Phase 1:
 
 ## Progress Summary
 
+Implementation completion update (2026-06-05): Status values below reflect the current repo state after closing the independent-audit gaps.
+
 | Phase | Goal | Status | Evidence |
 |---|---|---|---|
-| 1 | Baseline audit and reproduce wasm failure | Done | `docs/superpowers/audits/2026-06-04-forge3d-browser-webgpu-wasm-phase1-baseline-audit.md`; `logs/phase1-*` |
-| 2 | Workspace split | Done | Root workspace manifest; `crates/forge3d-*` manifests and roots; `cargo metadata --no-deps`; `cargo check -p forge3d-core --no-default-features`; `cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features`; `cargo check -p forge3d-web --target wasm32-unknown-unknown` |
-| 3 | PyO3/NumPy extraction | Done | 151 Python-bound staged files moved into `crates/forge3d-python/src/wrappers/legacy`; core boundary test; cargo checks passed |
-| 4 | Core wasm check passing | Done | `logs/phase4-core-wasm-check-no-default-features.txt`; `logs/phase4-core-wasm-banned-deps.txt`; `logs/phase4-core-tests.txt` |
-| 5 | GPU context ownership redesign | Done | `logs/phase5-*`; public `forge3d_core::gpu` async runtime; Python blocking helper |
-| 6 | Browser crate creation | Done | `logs/phase6-web-wasm-check.txt`; `logs/phase6-web-typecheck.txt`; `logs/phase6-web-tests.txt`; `logs/phase6-web-banned-deps.txt`; `logs/phase6-web-npm-audit.txt` |
-| 7 | Minimal canvas clear | Done | `logs/phase7-*`; Chrome-channel Playwright pixel test passes |
-| 8 | Terrain heightmap upload and render | Done | `logs/phase8-*`; synthetic hill Chrome Playwright test passes |
-| 9 | Camera and resize API | Done | `logs/phase9-*`; Chrome Playwright resize/camera pixel test passes |
-| 10 | Screenshot/readback | Done | `logs/phase10-*`; Chrome-channel Playwright screenshot Blob test passes |
-| 11 | JS/TS API stabilization | Done | `logs/phase11-*`; API snapshot and consumer type test pass |
-| 12 | Browser IO abstraction | Done | `logs/phase12-*`; URL/Blob/File/ArrayBuffer terrain sources pass browser tests |
-| 13 | Packaging | Done | `logs/phase13-*`; npm build, Vite example build, package contract, dry-run pack, and typecheck pass |
-| 14 | Browser CI | Done | `logs/phase14-*`; `.github/workflows/web.yml`; WebGPU diagnostics Playwright test |
-| 15 | Native/Python compatibility restoration | Done | `logs/phase15-*`; maturin wheel build, compatible wheel install, smoke/API contracts, and native viewer cargo check pass |
-| 16 | MVP release hardening | Done | `logs/phase16-*`; browser support matrix, release checklist, package contract, npm dry run, Python wheel/API contracts, and native viewer check |
+| 1 | Baseline audit and reproduce wasm failure | Full | Audit and all 10 Phase 1 logs exist; audit captures the `pyo3-ffi v0.21.2` wasm failure and missing libc symbols; no code movement claimed. |
+| 2 | Workspace split | Full | Four-member workspace exists; crate manifests and roots are present; rerun `cargo metadata --no-deps`, core native/wasm no-default checks, and web wasm check pass. |
+| 3 | PyO3/NumPy extraction | Full | Core source has no PyO3/NumPy boundary tokens; stale `crates/forge3d-core/src/py_*` roots were removed; top-level `crates/forge3d-python/src/py_module`, `py_functions`, and `py_types` artifacts now exist; `cargo test -p forge3d-core` and `cargo check -p forge3d-python` pass. |
+| 4 | Core wasm check passing | Full | `cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features` passes; wasm dependency scan has no `pyo3`, `numpy`, `winit`, or `pollster` matches; native/offline roots remain excluded from the default core crate root by contract tests. |
+| 5 | GPU context ownership redesign | Full | Active `forge3d_core::gpu` async runtime remains public; the old `OnceCell<GpuContext>` singleton and `core::gpu::ctx()` tokens were removed from core source; `phase5_core_source_tree_has_no_legacy_global_gpu_singleton` and GPU ownership tests pass. |
+| 6 | Browser crate creation | Full | Browser crate artifacts exist; `cargo check -p forge3d-web --target wasm32-unknown-unknown`, `npm run typecheck`, `cargo test -p forge3d-web`, and web banned-dependency scan pass. |
+| 7 | Minimal canvas clear | Full | Real WebGPU surface clear/render path is present; `wasm-pack` via `npm run build` and Chrome Playwright clear pixel test pass with nonblank canvas proof. |
+| 8 | Terrain heightmap upload and render | Full | Core now owns `TerrainMeshDescriptor` generation; `forge3d-web` uploads the core-generated mesh while retaining browser-owned WebGPU resources; synthetic hill browser tests and core/web terrain tests pass. |
+| 9 | Camera and resize API | Full | Core camera contract, TS API, runtime DPR resize/camera updates, and Chrome Playwright resize/camera pixel test pass. |
+| 10 | Screenshot/readback | Full | Core padded readback helpers and async browser screenshot path exist; Chrome Playwright verifies PNG `Blob`, PNG signature, dimensions, and disposed-runtime rejection. |
+| 11 | JS/TS API stabilization | Full | Hand-authored `types/index.d.ts`, private wasm bridge facade, API snapshot, strict consumer typecheck, and browser API docs all pass current tests. |
+| 12 | Browser IO abstraction | Full | URL/Blob/File/ArrayBuffer terrain source loading, progress callback, byte ranges, and abort cancellation pass; new Chrome Playwright negative test proves fetch, range, and malformed body failures map to `IO_ERROR`; `logs/phase12-*` evidence now exists. |
+| 13 | Packaging | Full | `npm run build`, Vite example build, package contract, `npm pack --dry-run`, and typecheck pass; dry-run tarball contains JS, wasm, declarations, README, docs, and licenses. |
+| 14 | Browser CI | Full | `.github/workflows/web.yml` has required Windows/Node/Rust/wasm-pack/typecheck/build/Playwright/WebGPU diagnostics commands; local workflow contract and diagnostics browser test pass. Remote GitHub Actions execution was not inspected. |
+| 15 | Native/Python compatibility restoration | Full | Wheel builds and force-installs; repo-local extension refreshed; Python smoke/API contracts pass (`225 passed, 7 skipped`); `_forge3d.run_interactive_viewer_cli` is registered; `forge3d-viewer` and legacy `interactive_viewer` console scripts are exposed; native viewer binary has READY/TCP/NDJSON close IPC coverage. |
+| 16 | MVP release hardening | Full | Release docs/package metadata remain locked; fmt, clippy, core/web/Python/native checks, browser tests, package contract, Vite build, and npm dry-run pack pass after closing Phase 12 and Phase 15 gaps. |
 
 ---
 

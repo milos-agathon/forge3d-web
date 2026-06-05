@@ -6,7 +6,7 @@ use once_cell::sync::OnceCell;
 
 use crate::accel::BvhHandle;
 use crate::core::error::RenderError;
-use crate::core::gpu::ctx;
+use crate::core::gpu::legacy_context_removed;
 use crate::sdf::SdfScene;
 
 // Re-export types from hybrid_types
@@ -35,7 +35,7 @@ pub struct HybridScene {
 fn dummy_storage_buffer() -> &'static wgpu::Buffer {
     static DUMMY: OnceCell<wgpu::Buffer> = OnceCell::new();
     DUMMY.get_or_init(|| {
-        ctx().device.create_buffer(&wgpu::BufferDescriptor {
+        legacy_context_removed().device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("hybrid-dummy-storage"),
             size: 4,
             usage: wgpu::BufferUsages::STORAGE,
@@ -225,7 +225,7 @@ impl HybridScene {
             return Ok(());
         }
 
-        let device = &ctx().device;
+        let device = &legacy_context_removed().device;
 
         // Convert SDF data to GPU-compatible format
         // Note: primitives may not be Pod; defer actual upload and create minimal buffers.
@@ -249,12 +249,12 @@ impl HybridScene {
 
         // Upload data if not empty
         if !primitives_data.is_empty() {
-            ctx()
+            legacy_context_removed()
                 .queue
                 .write_buffer(&primitives_buffer, 0, &primitives_data);
         }
         if !nodes_data.is_empty() {
-            ctx().queue.write_buffer(&nodes_buffer, 0, &nodes_data);
+            legacy_context_removed().queue.write_buffer(&nodes_buffer, 0, &nodes_data);
         }
 
         self.sdf_buffers = Some(SdfBuffers {
@@ -273,7 +273,7 @@ impl HybridScene {
             return Ok(());
         }
 
-        let device = &ctx().device;
+        let device = &legacy_context_removed().device;
 
         // Convert vertices to bytes
         let vertices_data = bytemuck::cast_slice(&self.vertices);
@@ -319,9 +319,9 @@ impl HybridScene {
         });
 
         // Upload data
-        ctx().queue.write_buffer(&vertices_buffer, 0, vertices_data);
-        ctx().queue.write_buffer(&indices_buffer, 0, indices_data);
-        ctx().queue.write_buffer(&bvh_buffer, 0, bvh_data);
+        legacy_context_removed().queue.write_buffer(&vertices_buffer, 0, vertices_data);
+        legacy_context_removed().queue.write_buffer(&indices_buffer, 0, indices_data);
+        legacy_context_removed().queue.write_buffer(&bvh_buffer, 0, bvh_data);
 
         self.mesh_buffers = Some(MeshBuffers {
             vertices_buffer,

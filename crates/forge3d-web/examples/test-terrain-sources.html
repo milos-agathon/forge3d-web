@@ -194,6 +194,96 @@
           cancelCode
         };
       };
+
+      function errorCode(error) {
+        return error instanceof Forge3DError ? error.code : error?.code;
+      }
+
+      async function captureSourceErrorCode(operation, timeoutLabel) {
+        let timer;
+        try {
+          await Promise.race([
+            operation(),
+            new Promise((_, reject) => {
+              timer = setTimeout(
+                () => reject(new Error(`${timeoutLabel}:TIMEOUT`)),
+                5000
+              );
+            })
+          ]);
+          return "NO_ERROR";
+        } catch (error) {
+          return errorCode(error) ?? error?.message ?? "UNKNOWN_ERROR";
+        } finally {
+          clearTimeout(timer);
+        }
+      }
+
+      async function captureRuntimeSourceErrorCode(operation, timeoutLabel) {
+        const runtime = await Forge3DRuntime.create(canvas, {
+          width: 64,
+          height: 64,
+          devicePixelRatio: 1,
+          clearColor: [0.01, 0.01, 0.01, 1.0]
+        });
+        const code = await captureSourceErrorCode(
+          () => operation(runtime),
+          timeoutLabel
+        );
+        if (!code.includes(":TIMEOUT")) {
+          runtime.dispose();
+        }
+        return code;
+      }
+
+      window.__forge3dTerrainSourceFailureProbe = async ({
+        fetchFailureUrl,
+        rangeFailureUrl,
+        bodyFailureUrl
+      }) => {
+        if (!navigator.gpu) {
+          return { supported: false };
+        }
+
+        const fetchFailureCode = await captureRuntimeSourceErrorCode(
+          (runtime) =>
+            runtime.setTerrainFromSource({
+              width: 2,
+              height: 2,
+              source: fetchFailureUrl
+            }),
+          "fetchFailure"
+        );
+
+        const rangeFailureCode = await captureRuntimeSourceErrorCode(
+          (runtime) =>
+            runtime.setTerrainFromSource({
+              width: 2,
+              height: 2,
+              source: rangeFailureUrl,
+              byteOffset: 4,
+              byteLength: 8
+            }),
+          "rangeFailure"
+        );
+
+        const bodyFailureCode = await captureRuntimeSourceErrorCode(
+          (runtime) =>
+            runtime.setTerrainFromSource({
+              width: 2,
+              height: 2,
+              source: bodyFailureUrl
+            }),
+          "bodyFailure"
+        );
+
+        return {
+          supported: true,
+          fetchFailureCode,
+          rangeFailureCode,
+          bodyFailureCode
+        };
+      };
     </script>
   </body>
 </html>

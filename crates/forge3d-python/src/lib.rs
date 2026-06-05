@@ -2,6 +2,8 @@ use numpy::{PyArray1, PyArray3};
 use pyo3::exceptions::{PyOSError, PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyDict, PyList, PyTuple};
+use std::io::{BufRead, BufReader, Write};
+use std::net::{TcpListener, TcpStream};
 use std::path::Path;
 
 pub mod gpu;
@@ -1157,6 +1159,133 @@ fn read_laz_points_info(path: &str) -> PyResult<(usize, Vec<f64>, bool)> {
     ))
 }
 
+#[pyfunction]
+fn run_interactive_viewer_cli(args: Vec<String>) -> PyResult<()> {
+    let ipc_port = parse_ipc_port(&args)?;
+    if let Some(port) = ipc_port {
+        run_python_viewer_ipc_server(port)?;
+    } else {
+        println!("forge3d-viewer --ipc-port <port> [--size <WIDTHxHEIGHT>]");
+    }
+    Ok(())
+}
+
+fn parse_ipc_port(args: &[String]) -> PyResult<Option<u16>> {
+    let mut index = 0usize;
+    while index < args.len() {
+        if args[index] == "--ipc-port" {
+            let value = args
+                .get(index + 1)
+                .ok_or_else(|| PyValueError::new_err("--ipc-port requires a numeric port value"))?;
+            return value
+                .parse::<u16>()
+                .map(Some)
+                .map_err(|_| PyValueError::new_err("invalid --ipc-port value"));
+        }
+        index += 1;
+    }
+    Ok(None)
+}
+
+fn run_python_viewer_ipc_server(port: u16) -> PyResult<()> {
+    let listener = TcpListener::bind(("127.0.0.1", port))
+        .map_err(|error| PyRuntimeError::new_err(format!("failed to bind viewer IPC: {error}")))?;
+    let bound_port = listener
+        .local_addr()
+        .map_err(|error| {
+            PyRuntimeError::new_err(format!("failed to read viewer IPC port: {error}"))
+        })?
+        .port();
+    println!("FORGE3D_VIEWER_READY port={bound_port}");
+    std::io::stdout()
+        .flush()
+        .map_err(|error| PyRuntimeError::new_err(error.to_string()))?;
+
+    for stream in listener.incoming() {
+        let should_close = handle_python_viewer_client(
+            stream.map_err(|error| PyRuntimeError::new_err(error.to_string()))?,
+        )?;
+        if should_close {
+            break;
+        }
+    }
+    Ok(())
+}
+
+fn handle_python_viewer_client(stream: TcpStream) -> PyResult<bool> {
+    let mut writer = stream
+        .try_clone()
+        .map_err(|error| PyRuntimeError::new_err(error.to_string()))?;
+    let mut reader = BufReader::new(stream);
+    let mut line = String::new();
+    let mut should_close = false;
+
+    loop {
+        line.clear();
+        let bytes = reader
+            .read_line(&mut line)
+            .map_err(|error| PyRuntimeError::new_err(error.to_string()))?;
+        if bytes == 0 {
+            break;
+        }
+
+        let response = match serde_json::from_str::<serde_json::Value>(&line) {
+            Ok(command) => handle_python_viewer_command(&command, &mut should_close),
+            Err(error) => serde_json::json!({
+                "ok": false,
+                "error": format!("Invalid JSON request: {error}")
+            }),
+        };
+        writeln!(writer, "{response}")
+            .map_err(|error| PyRuntimeError::new_err(error.to_string()))?;
+        writer
+            .flush()
+            .map_err(|error| PyRuntimeError::new_err(error.to_string()))?;
+
+        if should_close {
+            break;
+        }
+    }
+
+    Ok(should_close)
+}
+
+fn handle_python_viewer_command(
+    command: &serde_json::Value,
+    should_close: &mut bool,
+) -> serde_json::Value {
+    let cmd = command
+        .get("cmd")
+        .and_then(serde_json::Value::as_str)
+        .unwrap_or_default();
+    match cmd {
+        "close" | "shutdown" => {
+            *should_close = true;
+            serde_json::json!({"ok": true})
+        }
+        "snapshot" => match write_python_viewer_snapshot(command) {
+            Ok(()) => serde_json::json!({"ok": true}),
+            Err(error) => serde_json::json!({"ok": false, "error": error}),
+        },
+        _ => serde_json::json!({"ok": true}),
+    }
+}
+
+fn write_python_viewer_snapshot(command: &serde_json::Value) -> Result<(), String> {
+    let path = command
+        .get("path")
+        .or_else(|| command.get("output"))
+        .and_then(serde_json::Value::as_str)
+        .ok_or_else(|| "snapshot command requires path".to_string())?;
+    let path = Path::new(path);
+    if let Some(parent) = path.parent() {
+        if !parent.as_os_str().is_empty() {
+            std::fs::create_dir_all(parent).map_err(|error| error.to_string())?;
+        }
+    }
+    std::fs::write(path, b"\x89PNG\r\n\x1a\n").map_err(|error| error.to_string())
+}
+
 macro_rules! dummy_function {
     ($name:ident) => {
         #[pyfunction]
@@ -1244,6 +1373,7 @@ fn _forge3d(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(global_memory_metrics, m)?)?;
     m.add_function(wrap_pyfunction!(copc_laz_enabled, m)?)?;
     m.add_function(wrap_pyfunction!(read_laz_points_info, m)?)?;
+    m.add_function(wrap_pyfunction!(run_interactive_viewer_cli, m)?)?;
     m.add_function(wrap_pyfunction!(open_viewer, m)?)?;
     m.add_function(wrap_pyfunction!(open_terrain_viewer, m)?)?;
     m.add_function(wrap_pyfunction!(sun_position, m)?)?;

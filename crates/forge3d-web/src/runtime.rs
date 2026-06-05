@@ -861,60 +861,15 @@ fn create_terrain_mesh_buffers(
     context: &GpuContext,
     terrain: &forge3d_core::terrain::TerrainHeightmapInput,
 ) -> Result<(wgpu::Buffer, wgpu::Buffer, u32), WebError> {
-    if terrain.width < 2 || terrain.height < 2 {
-        return Err(WebError::new(
-            Forge3DErrorCode::InvalidInput,
-            "terrain width and height must be at least 2 to draw a mesh",
-        ));
-    }
-
-    let width = terrain.width as usize;
-    let height = terrain.height as usize;
-    let mut vertices = Vec::with_capacity(width * height);
-    for y in 0..height {
-        let v = y as f32 / (height - 1) as f32;
-        for x in 0..width {
-            let u = x as f32 / (width - 1) as f32;
-            vertices.push(TerrainVertex {
-                position: [u * 2.0 - 1.0, 0.0, v * 2.0 - 1.0],
-                uv: [u, v],
-            });
-        }
-    }
-
-    let index_capacity = (width - 1)
-        .checked_mul(height - 1)
-        .and_then(|count| count.checked_mul(6))
-        .ok_or_else(|| {
-            WebError::new(
-                Forge3DErrorCode::InvalidInput,
-                "terrain mesh index count overflowed",
-            )
-        })?;
-    if index_capacity > u32::MAX as usize {
-        return Err(WebError::new(
-            Forge3DErrorCode::InvalidInput,
-            "terrain mesh is too large for u32 indices",
-        ));
-    }
-
-    let mut indices = Vec::with_capacity(index_capacity);
-    for y in 0..(height - 1) {
-        for x in 0..(width - 1) {
-            let top_left = (y * width + x) as u32;
-            let top_right = top_left + 1;
-            let bottom_left = top_left + width as u32;
-            let bottom_right = bottom_left + 1;
-            indices.extend_from_slice(&[
-                top_left,
-                bottom_left,
-                top_right,
-                top_right,
-                bottom_left,
-                bottom_right,
-            ]);
-        }
-    }
+    let mesh = terrain.mesh_descriptor().map_err(map_core_error)?;
+    let vertices = mesh
+        .vertices
+        .iter()
+        .map(|vertex| TerrainVertex {
+            position: vertex.position,
+            uv: vertex.uv,
+        })
+        .collect::<Vec<_>>();
 
     let vertex_buffer = context
         .device
@@ -927,11 +882,11 @@ fn create_terrain_mesh_buffers(
         .device
         .create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("forge3d-web-terrain-indices"),
-            contents: bytemuck::cast_slice(&indices),
+            contents: bytemuck::cast_slice(&mesh.indices),
             usage: wgpu::BufferUsages::INDEX,
         });
 
-    Ok((vertex_buffer, index_buffer, indices.len() as u32))
+    Ok((vertex_buffer, index_buffer, mesh.indices.len() as u32))
 }
 
 fn create_height_texture(

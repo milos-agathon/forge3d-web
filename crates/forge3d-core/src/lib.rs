@@ -98,6 +98,27 @@ mod tests {
     }
 
     #[test]
+    fn phase3_python_binding_roots_live_in_python_crate_not_core() {
+        let core_root = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let workspace_root = core_root
+            .parent()
+            .and_then(Path::parent)
+            .expect("core crate must live under crates/ in the workspace");
+        let python_src = workspace_root.join("crates/forge3d-python/src");
+
+        for root in ["py_module", "py_functions", "py_types"] {
+            assert!(
+                !core_root.join("src").join(root).exists(),
+                "Phase 3 Python binding root src/{root} must not remain in forge3d-core"
+            );
+            assert!(
+                python_src.join(root).is_dir(),
+                "Phase 3 Python binding root {root} must exist in forge3d-python/src"
+            );
+        }
+    }
+
+    #[test]
     fn phase5_gpu_runtime_api_is_public_without_legacy_singleton() {
         let lib_rs = fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("src/lib.rs"))
             .expect("failed to read core lib.rs");
@@ -130,6 +151,19 @@ mod tests {
         assert!(
             offenders.is_empty(),
             "browser-facing GPU runtime sources must not use global/blocking GPU state:\n{}",
+            offenders.join("\n")
+        );
+    }
+
+    #[test]
+    fn phase5_core_source_tree_has_no_legacy_global_gpu_singleton() {
+        let src_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let mut offenders = Vec::new();
+        scan_for_legacy_global_gpu_tokens(&src_dir, &mut offenders);
+
+        assert!(
+            offenders.is_empty(),
+            "legacy global GPU singleton tokens must not remain in forge3d-core source:\n{}",
             offenders.join("\n")
         );
     }
@@ -252,6 +286,40 @@ mod tests {
                 concat!("core::gpu", "::ctx"),
                 concat!("crate::core::gpu", "::ctx"),
                 concat!("pollster", "::block_on"),
+            ] {
+                if text.contains(token) {
+                    offenders.push(format!("{} contains {token}", path.display()));
+                }
+            }
+        }
+    }
+
+    fn scan_for_legacy_global_gpu_tokens(dir: &Path, offenders: &mut Vec<String>) {
+        let entries = fs::read_dir(dir)
+            .unwrap_or_else(|error| panic!("failed to read {}: {error}", dir.display()));
+
+        for entry in entries {
+            let path = entry
+                .unwrap_or_else(|error| {
+                    panic!("failed to read entry in {}: {error}", dir.display())
+                })
+                .path();
+
+            if path.is_dir() {
+                scan_for_legacy_global_gpu_tokens(&path, offenders);
+                continue;
+            }
+
+            if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
+                continue;
+            }
+
+            let text = fs::read_to_string(&path)
+                .unwrap_or_else(|error| panic!("failed to read {}: {error}", path.display()));
+            for token in [
+                concat!("OnceCell", "<GpuContext>"),
+                concat!("crate::core::gpu", "::ctx"),
+                concat!("core::gpu", "::ctx"),
             ] {
                 if text.contains(token) {
                     offenders.push(format!("{} contains {token}", path.display()));
