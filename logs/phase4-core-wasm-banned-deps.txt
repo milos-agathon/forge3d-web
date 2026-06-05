@@ -1,0 +1,1 @@
+No matches for pyo3, numpy, winit, or pollster in forge3d-core wasm no-default dependency tree.
