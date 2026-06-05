@@ -297,6 +297,5 @@ fn test_brdf_tile_readback_png_compatible() {
         .any(|rgba| rgba[0] > 10 || rgba[1] > 10 || rgba[2] > 10);
     assert!(has_lighting, "rendered sphere should have visible lighting");
 
-    // Buffer is now suitable for PNG export via python/forge3d/__init__.py:numpy_to_png()
-    // In Python: numpy_to_png("output.png", buffer.reshape(height, width, 4))
+    // Buffer is now suitable for frontend-specific image export.
 }
