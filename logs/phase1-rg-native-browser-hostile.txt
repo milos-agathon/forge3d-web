@@ -1,0 +1,217 @@
+Cargo.toml:53:cog_streaming = ["dep:reqwest", "dep:async-trait", "dep:tokio", "dep:flate2"]
+Cargo.toml:65:winit = "0.29"
+Cargo.toml:66:pollster = "0.3"
+Cargo.toml:95:reqwest = { version = "0.12", features = ["stream", "rustls-tls"], optional = true }
+src\animation\render_queue.rs:6:use std::path::{Path, PathBuf};
+src\animation\render_queue.rs:14:    pub output_path: PathBuf,
+src\animation\render_queue.rs:32:    pub output_dir: PathBuf,
+src\animation\render_queue.rs:48:            output_dir: PathBuf::from("./frames"),
+src\animation\render_queue.rs:70:    pub fn frame_path(&self, frame: u32) -> PathBuf {
+src\animation\render_queue.rs:89:    pub output_dir: PathBuf,
+src\animation\render_queue.rs:95:    pub fn success(frames: u32, output_dir: PathBuf) -> Self {
+src\animation\render_queue.rs:104:    pub fn partial(rendered: u32, total: u32, output_dir: PathBuf, error: String) -> Self {
+src\animation\render_queue.rs:164:        std::fs::create_dir_all(&self.config.output_dir)
+src\export\svg.rs:146:/// std::fs::write("output.svg", svg)?;
+src\bundle\manifest.rs:5:use std::path::Path;
+src\bundle\manifest.rs:124:        let data = std::fs::read_to_string(path)?;
+src\bundle\manifest.rs:140:        std::fs::write(path, data)?;
+src\bundle\mod.rs:15:use std::path::Path;
+src\bundle\mod.rs:29:pub fn manifest_path(bundle_path: &Path) -> std::path::PathBuf {
+src\core\compressed_textures\load.rs:1:use std::path::Path;
+src\core\compressed_textures\load.rs:72:        let data = std::fs::read(path)
+src\core\compressed_textures\load.rs:96:        let data = std::fs::read(path)
+src\formats\hdr.rs:6:use std::fs::File;
+src\formats\hdr.rs:8:use std::path::Path;
+src\core\gpu.rs:53:        let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+src\core\gpu.rs:69:        let (device, queue) = pollster::block_on(adapter.request_device(
+src\core\gpu.rs:104:    let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+src\core\gpu.rs:116:    let (device, _queue) = pollster::block_on(adapter.request_device(
+src\core\gpu.rs:136:    let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+src\core\gpu.rs:147:    let (device, queue) = pollster::block_on(adapter.request_device(
+src\external_image\mod.rs:28:use std::path::Path;
+src\external_image\decode.rs:5:use std::fs::File;
+src\external_image\decode.rs:6:use std::path::Path;
+src\core\ibl.rs:6:use std::fs::{self, File};
+src\core\ibl.rs:8:use std::path::{Path, PathBuf};
+src\core\ibl.rs:162:    dir: PathBuf,
+src\core\ibl\cache.rs:54:    fn cache_path(&mut self) -> Option<PathBuf> {
+src\lib.rs:57:pub(crate) use std::path::Path;
+src\io\stl_write.rs:7:use std::fs::File;
+src\io\stl_write.rs:9:use std::path::Path;
+src\io\obj_write.rs:6:use std::fs::File;
+src\io\obj_write.rs:8:use std::path::{Path, PathBuf};
+src\io\obj_write.rs:66:            let mtl_path: PathBuf = obj_path
+src\io\obj_read.rs:7:use std::fs::File;
+src\io\obj_read.rs:9:use std::path::Path;
+src\viewer\viewer_struct.rs:13:use winit::keyboard::KeyCode;
+src\viewer\viewer_struct.rs:14:use winit::window::Window;
+src\viewer\viewer_struct.rs:141:    pub(crate) ibl_cache_dir: Option<std::path::PathBuf>,
+src\p5\ssr_analysis\mod.rs:10:use std::path::Path;
+src\pointcloud\ept.rs:8:use std::path::{Path, PathBuf};
+src\pointcloud\ept.rs:45:    base_path: PathBuf,
+src\pointcloud\ept.rs:57:        let content = std::fs::read_to_string(path)?;
+src\pointcloud\ept.rs:106:        let content = std::fs::read_to_string(&hier_path)?;
+src\pointcloud\ept.rs:124:    fn hierarchy_path(&self, key: &OctreeKey) -> PathBuf {
+src\pointcloud\ept.rs:130:    fn data_path(&self, key: &OctreeKey) -> PathBuf {
+src\pointcloud\ept.rs:200:        let data = std::fs::read(&path)?;
+src\p5\ssr.rs:5:use std::path::{Path, PathBuf};
+src\p5\ssr.rs:78:        let txt = std::fs::read_to_string(path)
+src\p5\ssr.rs:206:pub fn default_scene_path() -> PathBuf {
+src\p5\ssr.rs:207:    PathBuf::from(DEFAULT_SCENE_PATH)
+src\pointcloud\copc.rs:5:use std::path::Path;
+src\pointcloud\copc.rs:55:    path: std::path::PathBuf,
+src\pointcloud\copc.rs:75:        let mut file = std::fs::File::open(&path)?;
+src\pointcloud\copc.rs:113:        let mut file = std::fs::File::open(&self.path)?;
+src\pointcloud\copc.rs:228:        let mut file = std::fs::File::open(&self.path)?;
+src\p5\meta\mod.rs:15:use std::fs;
+src\p5\meta\mod.rs:17:use std::path::{Path, PathBuf};
+src\p5\meta\mod.rs:231:pub fn meta_path(out_dir: &Path) -> PathBuf {
+src\labels\atlas.rs:124:        let metrics_json = std::fs::read_to_string(metrics_json_path)
+src\loaders\ktx2\validation.rs:4:pub fn validate_ktx2_file<P: AsRef<std::path::Path>>(path: P) -> Result<bool, String> {
+src\loaders\ktx2\validation.rs:5:    let data = std::fs::read(path).map_err(|e| format!("Failed to read file: {}", e))?;
+src\core\screen_space_effects.rs:10:use pollster::block_on;
+src\loaders\ktx2\loader.rs:42:    pub fn load_from_file<P: AsRef<std::path::Path>>(
+src\loaders\ktx2\loader.rs:46:        let data = std::fs::read(path).map_err(|e| format!("Failed to read KTX2 file: {}", e))?;
+src\offscreen\brdf_tile\tests.rs:10:    let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+src\offscreen\brdf_tile\tests.rs:21:    let (device, queue) = match pollster::block_on(adapter.request_device(
+src\offscreen\brdf_tile\tests.rs:96:        pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default()));
+src\offscreen\brdf_tile\tests.rs:100:    let (device, queue) = match pollster::block_on(
+src\offscreen\brdf_tile\tests.rs:197:    let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+src\offscreen\brdf_tile\tests.rs:208:    let (device, queue) = match pollster::block_on(adapter.request_device(
+src\viewer\terrain\scene.rs:168:    pub(super) terrain_ibl_hdr_path: Option<std::path::PathBuf>,
+src\offscreen\brdf_tile\debug.rs:65:    if let Some(Ok(())) = pollster::block_on(receiver.receive()) {
+src\render\material_set\core.rs:2:use std::path::Path;
+src\render\material_set\core.rs:67:        .map(std::path::PathBuf::from)
+src\render\material_set\core.rs:68:        .unwrap_or_else(|_| std::path::PathBuf::from("assets/materials"));
+src\viewer\terrain\scene\terrain_load.rs:9:        use std::fs::File;
+src\viewer\terrain\scene\overlays.rs:17:        path: &std::path::Path,
+src\path_tracing\io.rs:12:use std::path::Path;
+src\path_tracing\io.rs:143:        std::fs::create_dir_all(output_dir).with_context(|| {
+src\py_types\aov.rs:315:        std::fs::create_dir_all(dir)
+src\py_types\aov.rs:413:    fn unique_temp_path(name: &str) -> std::path::PathBuf {
+src\py_types\aov.rs:472:        std::fs::remove_file(&path).ok();
+src\lighting\ibl_wrapper.rs:9:use std::path::{Path, PathBuf};
+src\lighting\ibl_wrapper.rs:45:    pub(crate) cache_dir: Option<PathBuf>,
+src\lighting\ibl_wrapper.rs:210:        self.cache_dir = path.map(PathBuf::from);
+src\viewer\mod.rs:3:// - Creates window with winit 0.29
+src\py_functions\vector\readback.rs:14:    let recv = pollster::block_on(receiver.receive())
+src\viewer\terrain\render\helpers.rs:134:    fn load_terrain_ibl(&mut self, path: &std::path::Path) -> anyhow::Result<()> {
+src\viewer\ipc\server.rs:5:use std::net::{TcpListener, TcpStream};
+src\viewer\ipc\server.rs:70:    let listener = TcpListener::bind(&addr)?;
+src\viewer\ipc\server.rs:120:fn handle_ipc_connection<F, G>(stream: TcpStream, cmd_sender: F, stats_getter: G)
+src\util\image_write.rs:8:use std::fs::File;
+src\util\image_write.rs:10:use std::path::Path;
+src\util\exr_write.rs:7:use std::path::Path;
+src\vector\api\extrusion.rs:28:        pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default()))
+src\vector\api\extrusion.rs:33:        pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default(), None))
+src\vector\api\extrusion.rs:97:    pollster::block_on(pos_receiver.receive())
+src\vector\api\extrusion.rs:105:    pollster::block_on(idx_receiver.receive())
+src\vector\api\extrusion.rs:113:    pollster::block_on(norm_receiver.receive())
+src\vector\api\extrusion.rs:121:    pollster::block_on(uv_receiver.receive())
+src\style\sprite.rs:9:use std::fs;
+src\style\sprite.rs:10:use std::path::Path;
+src\style\sprite.rs:155:        let path_2x = std::path::PathBuf::from(&path_2x_str);
+src\style\parser.rs:3:use std::fs;
+src\style\parser.rs:4:use std::path::Path;
+src\viewer\terrain\pbr_renderer\updates.rs:6:use std::path::PathBuf;
+src\viewer\terrain\pbr_renderer\updates.rs:33:            self.hdr_path = Some(PathBuf::from(p));
+src\viewer\terrain\pbr_renderer\types.rs:2:use std::path::PathBuf;
+src\viewer\terrain\pbr_renderer\types.rs:8:    pub hdr_path: Option<PathBuf>,
+src\vector\gpu_extrusion\tests.rs:19:        match pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default()))
+src\vector\gpu_extrusion\tests.rs:24:    let (device, queue) = match pollster::block_on(
+src\vector\gpu_extrusion\tests.rs:65:    pollster::block_on(pos_receiver.receive()).unwrap().unwrap();
+src\vector\gpu_extrusion\tests.rs:66:    pollster::block_on(norm_receiver.receive())
+src\vector\gpu_extrusion\tests.rs:69:    pollster::block_on(uv_receiver.receive()).unwrap().unwrap();
+src\vector\gpu_extrusion\tests.rs:70:    pollster::block_on(index_receiver.receive())
+src\viewer\init\viewer_new.rs:8:use winit::window::Window;
+src\viewer\event_loop\stdin_reader\spawn.rs:3:use winit::event_loop::EventLoopProxy;
+src\viewer\event_loop\stdin_reader\spawn.rs:13:        let stdin = std::io::stdin();
+src\tiles3d\traversal.rs:251:    use std::path::PathBuf;
+src\tiles3d\traversal.rs:284:        let tileset = Tileset::from_json(json, PathBuf::from(".")).unwrap();
+src\tiles3d\tileset.rs:7:use std::path::{Path, PathBuf};
+src\tiles3d\tileset.rs:52:    pub base_path: PathBuf,
+src\tiles3d\tileset.rs:61:        let content = std::fs::read_to_string(path)?;
+src\tiles3d\tileset.rs:67:            .unwrap_or_else(|| PathBuf::from("."));
+src\tiles3d\tileset.rs:73:    pub fn from_json(json_str: &str, base_path: PathBuf) -> Tiles3dResult<Self> {
+src\tiles3d\tileset.rs:94:    pub fn resolve_uri(&self, uri: &str) -> PathBuf {
+src\tiles3d\tileset.rs:96:            PathBuf::from(uri)
+src\tiles3d\tileset.rs:154:        let tileset = Tileset::from_json(json, PathBuf::from(".")).unwrap();
+src\tiles3d\tileset.rs:183:        let tileset = Tileset::from_json(json, PathBuf::from("/data")).unwrap();
+src\tiles3d\renderer.rs:6:use std::path::PathBuf;
+src\tiles3d\renderer.rs:131:    fn load_content_from_path(&self, path: &PathBuf) -> Tiles3dResult<TileContent> {
+src\tiles3d\renderer.rs:138:        let data = std::fs::read(path)?;
+src\viewer\init\device_init.rs:6:use winit::window::Window;
+src\tiles3d\pnts.rs:5:use std::path::Path;
+src\tiles3d\pnts.rs:227:    let data = std::fs::read(path)?;
+src\tiles3d\b3dm.rs:5:use std::path::Path;
+src\tiles3d\b3dm.rs:136:    let data = std::fs::read(path)?;
+src\viewer\terrain\overlay\stack\core.rs:36:        path: &std::path::Path,
+src\terrain\accumulation.rs:336:            pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions::default()))
+src\terrain\accumulation.rs:341:            pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor::default(), None))
+src\viewer\event_loop\runner.rs:8:use winit::event::{ElementState, Event, WindowEvent};
+src\viewer\event_loop\runner.rs:9:use winit::event_loop::{EventLoop, EventLoopBuilder, EventLoopProxy};
+src\viewer\event_loop\runner.rs:10:use winit::keyboard::{KeyCode, PhysicalKey};
+src\viewer\event_loop\runner.rs:11:use winit::window::WindowBuilder;
+src\viewer\event_loop\runner.rs:36:            .with_inner_size(winit::dpi::LogicalSize::new(
+src\viewer\event_loop\runner.rs:61:                let v = pollster::block_on(Viewer::new(Arc::clone(&window), config.clone()));
+src\viewer\event_loop\runner.rs:229:            .with_inner_size(winit::dpi::LogicalSize::new(
+src\viewer\event_loop\runner.rs:252:        elwt.set_control_flow(winit::event_loop::ControlFlow::Poll);
+src\viewer\event_loop\runner.rs:259:                    let v = pollster::block_on(Viewer::new(Arc::clone(&window), config.clone()));
+src\viewer\input\viewer_input.rs:6:use winit::event::*;
+src\viewer\input\viewer_input.rs:7:use winit::keyboard::{KeyCode, PhysicalKey};
+src\viewer\p5\cornell.rs:7:use std::fs;
+src\viewer\p5\cornell.rs:8:use std::path::Path;
+src\viewer\p5\gbuffer_dump.rs:7:use std::path::Path;
+src\viewer\p5\gbuffer_dump.rs:19:        use std::fs;
+src\viewer\p5\gbuffer_dump.rs:144:            pollster::block_on(rx.receive()).ok_or_else(|| anyhow::anyhow!("map failed"))??;
+src\viewer\p5\gbuffer_dump.rs:204:        std::fs::write(out_dir.join("p5_PASS.txt"), pass_txt).context("write PASS")?;
+src\viewer\p5\gbuffer_dump.rs:221:                "hzb_build": { "sha256": { "file": format!("{:x}", sha2::Sha256::digest(std::fs::read("shaders/hzb_build.wgsl").unwrap_or_default())) } },
+src\viewer\p5\gbuffer_dump.rs:222:                "ssao": { "sha256": { "file": format!("{:x}", sha2::Sha256::digest(std::fs::read("shaders/ssao.wgsl").unwrap_or_default())) } },
+src\viewer\p5\gbuffer_dump.rs:223:                "gbuffer_common": { "sha256": { "file": format!("{:x}", sha2::Sha256::digest(std::fs::read("shaders/gbuffer/common.wgsl").unwrap_or_default())) } },
+src\viewer\p5\gbuffer_dump.rs:224:                "gbuffer_pack": { "sha256": { "file": format!("{:x}", sha2::Sha256::digest(std::fs::read("shaders/gbuffer/pack.wgsl").unwrap_or_default())) } },
+src\viewer\p5\gbuffer_dump.rs:227:        std::fs::write(
+src\viewer\p5\ao.rs:7:use std::fs;
+src\viewer\p5\ao.rs:8:use std::path::Path;
+src\viewer\p5\gi_ablation.rs:7:use std::fs;
+src\viewer\p5\gi_ablation.rs:8:use std::path::Path;
+src\viewer\cmd\terrain_command.rs:279:                    std::path::Path::new(path),
+src\viewer\p5\ssgi_cornell.rs:8:use std::fs;
+src\viewer\p5\ssgi_cornell.rs:9:use std::path::Path;
+src\viewer\p5\ssgi_temporal.rs:7:use std::fs;
+src\viewer\p5\ssgi_temporal.rs:8:use std::path::Path;
+src\viewer\state\resize.rs:7:use winit::dpi::PhysicalSize;
+src\viewer\scene_review.rs:343:                    std::path::Path::new(&overlay.path),
+src\viewer\cmd\scene_command.rs:1:use std::path::{Path, PathBuf};
+src\viewer\cmd\scene_command.rs:296:                viewer.ibl_cache_dir = Some(PathBuf::from(cache_path));
+src\viewer\cmd\scene_command.rs:345:        return PathBuf::from("reports")
+src\viewer\state\viewer_helpers\readback.rs:1:use std::path::Path;
+src\viewer\state\mesh_upload.rs:5:use std::path::Path;
+src\viewer\p5\ssr_glossy.rs:7:use std::fs;
+src\viewer\p5\ssr_glossy.rs:8:use std::path::Path;
+src\viewer\state\viewer_helpers\ibl.rs:19:            ibl.configure_cache(cache_dir, std::path::Path::new(path))
+src\viewer\p5\ssr_thickness.rs:6:use std::fs;
+src\viewer\p5\ssr_thickness.rs:7:use std::path::Path;
+src\viewer\cmd\ipc_command.rs:175:                let _ = std::fs::OpenOptions::new()
+src\viewer\render\main_loop\geometry\mod.rs:75:            let _ = std::fs::OpenOptions::new()
+src\viewer\state\viewer_helpers\gi\reexecute.rs:216:                    match pollster::block_on(timer.get_results()) {
+src\viewer\render\main_loop\geometry\pass.rs:137:            let _ = std::fs::OpenOptions::new()
+src\viewer\state\viewer_helpers\core.rs:1:use std::path::Path;
+src\terrain\cog\range_reader.rs:9:    client: reqwest::Client,
+src\terrain\cog\range_reader.rs:29:        let client = reqwest::Client::builder()
+src\terrain\cog\range_reader.rs:44:            .get(reqwest::header::CONTENT_LENGTH)
+src\terrain\cog\range_reader.rs:60:        use std::fs;
+src\terrain\cog\range_reader.rs:65:            client: reqwest::Client::new(),
+src\terrain\cog\range_reader.rs:137:            .header(reqwest::header::RANGE, range_header)
+src\terrain\cog\range_reader.rs:142:            && response.status() != reqwest::StatusCode::PARTIAL_CONTENT
+src\terrain\cog\range_reader.rs:155:        use std::fs::File;
+src\terrain\cog\error.rs:43:impl From<reqwest::Error> for CogError {
+src\terrain\cog\error.rs:44:    fn from(e: reqwest::Error) -> Self {
+src\terrain\spike\constructor.rs:39:        let adapter = pollster::block_on(instance.request_adapter(&wgpu::RequestAdapterOptions {
+src\terrain\spike\constructor.rs:46:        let (device, queue) = pollster::block_on(adapter.request_device(
+src\scene\mod.rs:27:use std::path::PathBuf;
+src\renderer\readback.rs:102:    pollster::block_on(receiver.receive())
+src\scene\render_paths.rs:5:use std::path::PathBuf;
+src\scene\py_api\bloom.rs:109:    pub fn render_png(&mut self, path: PathBuf) -> PyResult<()> {
+src\terrain\renderer\viewer.rs:5:        use std::path::Path;
+src\terrain\renderer\viewer.rs:50:        use std::fs::File;
+src\scene\render_paths\png.rs:2:    pub(super) fn render_png_impl(&mut self, path: &PathBuf) -> PyResult<()> {

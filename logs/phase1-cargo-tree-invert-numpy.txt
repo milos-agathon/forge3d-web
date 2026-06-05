@@ -1,0 +1,2 @@
+numpy v0.21.0
+└── forge3d v1.26.0 (C:\Users\milos\forge3d-web)

@@ -1,0 +1,2 @@
+winit v0.29.15
+└── forge3d v1.26.0 (C:\Users\milos\forge3d-web)

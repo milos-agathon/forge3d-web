@@ -1,0 +1,196 @@
+   Compiling unicode-ident v1.0.24
+   Compiling proc-macro2 v1.0.106
+   Compiling quote v1.0.45
+   Compiling autocfg v1.5.0
+    Checking cfg-if v1.0.4
+   Compiling libm v0.2.16
+   Compiling rustversion v1.0.22
+   Compiling wasm-bindgen-shared v0.2.114
+   Compiling target-lexicon v0.12.16
+   Compiling bumpalo v3.20.2
+   Compiling once_cell v1.21.4
+   Compiling typenum v1.19.0
+   Compiling semver v1.0.27
+   Compiling version_check v0.9.5
+   Compiling parking_lot_core v0.9.12
+    Checking simd-adler32 v0.3.8
+    Checking smallvec v1.15.1
+   Compiling crc32fast v1.5.0
+    Checking memchr v2.8.0
+   Compiling cfg_aliases v0.1.1
+    Checking scopeguard v1.2.0
+    Checking bitflags v2.11.0
+    Checking adler2 v2.0.1
+    Checking byteorder v1.5.0
+   Compiling serde_core v1.0.228
+    Checking lock_api v0.4.14
+   Compiling zmij v1.0.21
+    Checking miniz_oxide v0.8.9
+    Checking futures-core v0.3.32
+   Compiling libc v0.2.183
+   Compiling heck v0.4.1
+    Checking log v0.4.29
+   Compiling serde_json v1.0.149
+    Checking arrayvec v0.7.6
+   Compiling serde v1.0.228
+   Compiling rustc_version v0.4.1
+    Checking slab v0.4.12
+   Compiling portable-atomic v1.13.1
+    Checking pin-project-lite v0.2.17
+    Checking futures-task v0.3.32
+    Checking aho-corasick v1.1.4
+    Checking fdeflate v0.3.7
+    Checking regex-syntax v0.8.10
+   Compiling generic-array v0.14.7
+    Checking zune-core v0.5.1
+    Checking futures-util v0.3.32
+   Compiling num-traits v0.2.19
+   Compiling matrixmultiply v0.3.10
+   Compiling memoffset v0.9.1
+   Compiling thiserror v1.0.69
+   Compiling heapless v0.7.17
+   Compiling curve25519-dalek v4.1.3
+    Checking itoa v1.0.18
+   Compiling inflections v1.1.1
+   Compiling zerocopy v0.8.47
+    Checking pxfm v0.1.28
+    Checking rawpointer v0.2.1
+    Checking parking_lot v0.12.5
+    Checking regex-automata v0.4.14
+    Checking zune-jpeg v0.5.14
+    Checking flate2 v1.1.9
+    Checking hash32 v0.2.1
+   Compiling winit v0.29.15
+   Compiling wgpu v0.19.4
+    Checking stable_deref_trait v1.2.1
+    Checking byteorder-lite v0.1.0
+    Checking subtle v2.6.1
+    Checking unindent v0.2.4
+    Checking zeroize v1.8.2
+    Checking raw-window-handle v0.6.2
+   Compiling pyo3-build-config v0.21.2
+   Compiling anyhow v1.0.102
+    Checking signature v2.2.0
+   Compiling indoc v2.0.7
+    Checking png v0.18.1
+    Checking jpeg-decoder v0.3.2
+    Checking cursor-icon v1.2.0
+    Checking ed25519 v2.2.3
+    Checking float_next_after v1.0.0
+    Checking humantime v2.3.0
+    Checking smol_str v0.2.2
+    Checking profiling v1.0.17
+   Compiling syn v2.0.117
+    Checking uuid v1.22.0
+    Checking rustc-hash v1.1.0
+    Checking lazy_static v1.5.0
+    Checking is-terminal v0.4.17
+   Compiling wasm-bindgen v0.2.114
+    Checking inventory v0.3.22
+    Checking termcolor v1.4.1
+    Checking weezl v0.1.12
+    Checking static_assertions v1.1.0
+    Checking urlencoding v2.1.3
+    Checking base64 v0.13.1
+    Checking atomic-waker v1.1.2
+    Checking futures-intrusive v0.5.0
+    Checking ttf-parser v0.20.0
+    Checking glam v0.24.2
+    Checking pollster v0.3.0
+    Checking tiff v0.9.1
+    Checking crypto-common v0.1.7
+    Checking block-buffer v0.10.4
+    Checking euclid v0.22.14
+    Checking num-integer v0.1.46
+    Checking num-complex v0.4.6
+    Checking laz v0.9.3
+    Checking rstar v0.11.0
+    Checking digest v0.10.7
+    Checking sha2 v0.10.9
+    Checking ndarray v0.15.6
+    Checking regex v1.12.3
+    Checking lyon_geom v1.0.19
+    Checking env_logger v0.10.2
+    Checking ed25519-dalek v2.2.0
+    Checking moxcms v0.8.1
+    Checking lyon_path v1.0.19
+   Compiling pyo3-ffi v0.21.2
+   Compiling pyo3 v0.21.2
+    Checking lyon_tessellation v1.0.20
+error[E0432]: unresolved import `libc::wchar_t`
+ --> C:\Users\milos\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pyo3-ffi-0.21.2\src\fileutils.rs:2:5
+  |
+2 | use libc::wchar_t;
+  |     ^^^^^^^^^^^^^ no `wchar_t` in the root
+
+error[E0432]: unresolved import `libc::size_t`
+ --> C:\Users\milos\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pyo3-ffi-0.21.2\src\longobject.rs:3:5
+  |
+3 | use libc::size_t;
+  |     ^^^^^^^^^^^^ no `size_t` in the root
+
+error[E0432]: unresolved import `libc::size_t`
+ --> C:\Users\milos\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pyo3-ffi-0.21.2\src\objimpl.rs:1:5
+  |
+1 | use libc::size_t;
+  |     ^^^^^^^^^^^^ no `size_t` in the root
+
+error[E0432]: unresolved import `libc::wchar_t`
+ --> C:\Users\milos\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pyo3-ffi-0.21.2\src\pylifecycle.rs:3:5
+  |
+3 | use libc::wchar_t;
+  |     ^^^^^^^^^^^^^ no `wchar_t` in the root
+
+error[E0432]: unresolved import `libc::size_t`
+ --> C:\Users\milos\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pyo3-ffi-0.21.2\src\pymem.rs:1:5
+  |
+1 | use libc::size_t;
+  |     ^^^^^^^^^^^^ no `size_t` in the root
+
+error[E0432]: unresolved import `libc::wchar_t`
+ --> C:\Users\milos\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pyo3-ffi-0.21.2\src\sysmodule.rs:2:5
+  |
+2 | use libc::wchar_t;
+  |     ^^^^^^^^^^^^^ no `wchar_t` in the root
+
+error[E0432]: unresolved import `libc::wchar_t`
+ --> C:\Users\milos\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pyo3-ffi-0.21.2\src\unicodeobject.rs:3:5
+  |
+3 | use libc::wchar_t;
+  |     ^^^^^^^^^^^^^ no `wchar_t` in the root
+
+error[E0412]: cannot find type `size_t` in crate `libc`
+   --> C:\Users\milos\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pyo3-ffi-0.21.2\src\object.rs:197:19
+    |
+197 |     nargsf: libc::size_t,
+    |                   ^^^^^^ not found in `libc`
+
+error[E0412]: cannot find type `uintptr_t` in crate `libc`
+ --> C:\Users\milos\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pyo3-ffi-0.21.2\src\pyport.rs:7:33
+  |
+7 | pub type Py_uintptr_t = ::libc::uintptr_t;
+  |                                 ^^^^^^^^^ not found in `libc`
+
+error[E0412]: cannot find type `intptr_t` in crate `libc`
+ --> C:\Users\milos\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pyo3-ffi-0.21.2\src\pyport.rs:8:32
+  |
+8 | pub type Py_intptr_t = ::libc::intptr_t;
+  |                                ^^^^^^^^ not found in `libc`
+
+error[E0412]: cannot find type `ssize_t` in crate `libc`
+ --> C:\Users\milos\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pyo3-ffi-0.21.2\src\pyport.rs:9:31
+  |
+9 | pub type Py_ssize_t = ::libc::ssize_t;
+  |                               ^^^^^^^ not found in `libc`
+
+error[E0412]: cannot find type `size_t` in crate `libc`
+  --> C:\Users\milos\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f\pyo3-ffi-0.21.2\src\pyport.rs:12:31
+   |
+12 | pub type Py_uhash_t = ::libc::size_t;
+   |                               ^^^^^^ not found in `libc`
+
+Some errors have detailed explanations: E0412, E0432.
+For more information about an error, try `rustc --explain E0412`.
+warning: pyo3-ffi@0.21.2: The output binary will link to libpython, but PYO3_CROSS_LIB_DIR environment variable is not set. Ensure that the target Python library directory is in the rustc native library search path.
+error: could not compile `pyo3-ffi` (lib) due to 12 previous errors
+warning: build failed, waiting for other jobs to finish...

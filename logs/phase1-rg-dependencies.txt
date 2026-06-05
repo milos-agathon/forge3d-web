@@ -1,0 +1,121 @@
+pyproject.toml:11:    "numpy>=1.21",
+pyproject.toml:18:classifiers = [
+pyproject.toml:103:bindings = "pyo3" 
+pyproject.toml:109:features = ["extension-module", "weighted-oit", "enable-tbn", "enable-gpu-instancing", "copc_laz"]
+Cargo.toml:24:extension-module = ["pyo3/extension-module"]
+Cargo.toml:51:copc_laz = ["dep:laz"]
+Cargo.toml:53:cog_streaming = ["dep:reqwest", "dep:async-trait", "dep:tokio", "dep:flate2"]
+Cargo.toml:59:# Do NOT enable pyo3's extension-module by default; gate it via the Cargo feature above.
+Cargo.toml:60:# Enable `macros` so procedural attributes like #[pyclass], #[pymethods], and #[pyo3(signature=..)] work when the extension is built.
+Cargo.toml:61:pyo3  = { version = "0.21.2", features = ["abi3-py310", "macros", "multiple-pymethods"] }
+Cargo.toml:62:numpy = "0.21"
+Cargo.toml:64:wgpu = "0.19"
+Cargo.toml:65:winit = "0.29"
+Cargo.toml:66:pollster = "0.3"
+Cargo.toml:69:tiff = "0.9"
+Cargo.toml:91:las = { version = "0.8", features = ["laz"] }
+Cargo.toml:92:# P2.2: Direct laz crate for COPC chunk decompression (optional, feature-gated)
+Cargo.toml:93:laz = { version = "0.9", optional = true }
+Cargo.toml:95:reqwest = { version = "0.12", features = ["stream", "rustls-tls"], optional = true }
+Cargo.lock:192: "lazy_static",
+Cargo.lock:193: "lazycell",
+Cargo.lock:395: "js-sys",
+Cargo.lock:397: "wasm-bindgen",
+Cargo.lock:914: "las",
+Cargo.lock:915: "laz",
+Cargo.lock:921: "numpy",
+Cargo.lock:923: "pollster",
+Cargo.lock:925: "pyo3",
+Cargo.lock:926: "reqwest",
+Cargo.lock:932: "tiff",
+Cargo.lock:935: "wgpu",
+Cargo.lock:936: "winit",
+Cargo.lock:1057: "js-sys",
+Cargo.lock:1060: "wasm-bindgen",
+Cargo.lock:1070: "js-sys",
+Cargo.lock:1074: "wasm-bindgen",
+Cargo.lock:1119: "js-sys",
+Cargo.lock:1121: "wasm-bindgen",
+Cargo.lock:1122: "web-sys",
+Cargo.lock:1135: "lazy_static",
+Cargo.lock:1484: "js-sys",
+Cargo.lock:1486: "wasm-bindgen",
+Cargo.lock:1763:name = "js-sys"
+Cargo.lock:1769: "wasm-bindgen",
+Cargo.lock:1790:name = "las"
+Cargo.lock:1797: "laz",
+Cargo.lock:1805:name = "laz"
+Cargo.lock:1815:name = "lazy_static"
+Cargo.lock:1821:name = "lazycell"
+Cargo.lock:2195:name = "numpy"
+Cargo.lock:2205: "pyo3",
+Cargo.lock:2422:name = "pollster"
+Cargo.lock:2524:name = "pyo3"
+Cargo.lock:2536: "pyo3-build-config",
+Cargo.lock:2537: "pyo3-ffi",
+Cargo.lock:2538: "pyo3-macros",
+Cargo.lock:2543:name = "pyo3-build-config"
+Cargo.lock:2553:name = "pyo3-ffi"
+Cargo.lock:2559: "pyo3-build-config",
+Cargo.lock:2563:name = "pyo3-macros"
+Cargo.lock:2569: "pyo3-macros-backend",
+Cargo.lock:2575:name = "pyo3-macros-backend"
+Cargo.lock:2582: "pyo3-build-config",
+Cargo.lock:2801:name = "reqwest"
+Cargo.lock:2819: "js-sys",
+Cargo.lock:2840: "wasm-bindgen",
+Cargo.lock:2841: "wasm-bindgen-futures",
+Cargo.lock:2843: "web-sys",
+Cargo.lock:3385:name = "tiff"
+Cargo.lock:3688: "js-sys",
+Cargo.lock:3689: "wasm-bindgen",
+Cargo.lock:3748:name = "wasm-bindgen"
+Cargo.lock:3756: "wasm-bindgen-macro",
+Cargo.lock:3757: "wasm-bindgen-shared",
+Cargo.lock:3761:name = "wasm-bindgen-futures"
+Cargo.lock:3768: "js-sys",
+Cargo.lock:3770: "wasm-bindgen",
+Cargo.lock:3771: "web-sys",
+Cargo.lock:3775:name = "wasm-bindgen-macro"
+Cargo.lock:3781: "wasm-bindgen-macro-support",
+Cargo.lock:3785:name = "wasm-bindgen-macro-support"
+Cargo.lock:3794: "wasm-bindgen-shared",
+Cargo.lock:3798:name = "wasm-bindgen-shared"
+Cargo.lock:3835: "js-sys",
+Cargo.lock:3836: "wasm-bindgen",
+Cargo.lock:3837: "wasm-bindgen-futures",
+Cargo.lock:3838: "web-sys",
+Cargo.lock:3914:name = "wayland-protocols-plasma"
+Cargo.lock:3963:name = "web-sys"
+Cargo.lock:3968: "js-sys",
+Cargo.lock:3969: "wasm-bindgen",
+Cargo.lock:3978: "js-sys",
+Cargo.lock:3979: "wasm-bindgen",
+Cargo.lock:3988: "js-sys",
+Cargo.lock:3989: "wasm-bindgen",
+Cargo.lock:4008:name = "wgpu"
+Cargo.lock:4016: "js-sys",
+Cargo.lock:4024: "wasm-bindgen",
+Cargo.lock:4025: "wasm-bindgen-futures",
+Cargo.lock:4026: "web-sys",
+Cargo.lock:4027: "wgpu-core",
+Cargo.lock:4028: "wgpu-hal",
+Cargo.lock:4029: "wgpu-types",
+Cargo.lock:4033:name = "wgpu-core"
+Cargo.lock:4053: "web-sys",
+Cargo.lock:4054: "wgpu-hal",
+Cargo.lock:4055: "wgpu-types",
+Cargo.lock:4059:name = "wgpu-hal"
+Cargo.lock:4079: "js-sys",
+Cargo.lock:4097: "wasm-bindgen",
+Cargo.lock:4098: "web-sys",
+Cargo.lock:4099: "wgpu-types",
+Cargo.lock:4104:name = "wgpu-types"
+Cargo.lock:4110: "js-sys",
+Cargo.lock:4111: "web-sys",
+Cargo.lock:4550:name = "winit"
+Cargo.lock:4566: "js-sys",
+Cargo.lock:4583: "wasm-bindgen",
+Cargo.lock:4584: "wasm-bindgen-futures",
+Cargo.lock:4588: "wayland-protocols-plasma",
+Cargo.lock:4589: "web-sys",

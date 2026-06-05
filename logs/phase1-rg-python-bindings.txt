@@ -1,0 +1,1816 @@
+pyproject.toml:103:bindings = "pyo3" 
+Cargo.toml:24:extension-module = ["pyo3/extension-module"]
+Cargo.toml:59:# Do NOT enable pyo3's extension-module by default; gate it via the Cargo feature above.
+Cargo.toml:60:# Enable `macros` so procedural attributes like #[pyclass], #[pymethods], and #[pyo3(signature=..)] work when the extension is built.
+Cargo.toml:61:pyo3  = { version = "0.21.2", features = ["abi3-py310", "macros", "multiple-pymethods"] }
+tests\test_api_contracts.py:360:    If someone accidentally removes a large block of #[pymethods], this
+src\animation\mod.rs:11:use pyo3::{prelude::*, types::PyAny};
+src\animation\mod.rs:55:#[pymethods]
+src\animation\mod.rs:58:    #[pyo3(signature = (time, phi, theta, radius, fov, target=None))]
+src\animation\mod.rs:144:#[pymethods]
+src\animation\mod.rs:357:#[pymethods]
+src\animation\mod.rs:365:    #[pyo3(name = "add_keyframe", signature = (time, phi, theta, radius, fov, target=None))]
+src\animation\mod.rs:386:    #[pyo3(name = "get_keyframes")]
+src\animation\mod.rs:387:    pub fn get_keyframes_py(&self, py: Python<'_>) -> PyResult<Vec<Py<CameraKeyframe>>> {
+src\animation\mod.rs:396:    #[pyo3(name = "replace_keyframes")]
+src\animation\mod.rs:397:    pub fn replace_keyframes_py(&mut self, keyframes: &Bound<'_, PyAny>) -> PyResult<()> {
+src\animation\mod.rs:409:    #[pyo3(name = "clear_keyframes")]
+src\animation\mod.rs:432:    #[pyo3(name = "evaluate")]
+src\lib.rs:17:pub(crate) use numpy::{IntoPyArray, PyArray1, PyArray3, PyArrayMethods, PyReadonlyArrayDyn};
+src\lib.rs:19:pub(crate) use pyo3::types::PyDict;
+src\lib.rs:21:pub(crate) use pyo3::{
+src\lib.rs:217:fn _forge3d(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
+src\geo\reproject.rs:160:#[pyo3::pyfunction]
+src\geo\reproject.rs:161:#[pyo3(name = "proj_available")]
+src\geo\reproject.rs:168:#[pyo3::pyfunction]
+src\geo\reproject.rs:169:#[pyo3(name = "reproject_coords")]
+src\geo\reproject.rs:174:) -> pyo3::PyResult<Vec<[f64; 2]>> {
+src\geo\reproject.rs:176:        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))
+src\import\osm_buildings.rs:168:use numpy::{PyReadonlyArray2, PyUntypedArrayMethods};
+src\import\osm_buildings.rs:170:use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict};
+src\import\osm_buildings.rs:188:#[pyfunction(signature = (features, default_height=10.0, height_key=None))]
+src\import\osm_buildings.rs:193:) -> PyResult<PyObject> {
+src\import\osm_buildings.rs:235:#[pyfunction(signature = (geojson, default_height=10.0, height_key=None))]
+src\import\osm_buildings.rs:240:) -> PyResult<PyObject> {
+src\import\osm_buildings.rs:290:        let mut push_ring = |ring_coords: &JsonValue| -> PyResult<()> {
+src\import\osm_buildings.rs:348:#[pyfunction(signature = (properties_json))]
+src\import\osm_buildings.rs:349:pub fn infer_roof_type_py(properties_json: &str) -> PyResult<String> {
+src\colormap\mod.rs:50:/// PyO3-friendly error helper (always compiled; crate already depends on pyo3).
+src\colormap\mod.rs:51:pub fn py_err_unknown(name: &str) -> pyo3::PyErr {
+src\colormap\mod.rs:52:    pyo3::exceptions::PyRuntimeError::new_err(format!(
+src\colormap\mod.rs:60:#[pyo3::prelude::pyfunction]
+src\geometry\array_convert.rs:5:use numpy::PyReadonlyArray2;
+src\colormap\colormap1d.rs:6:use pyo3::exceptions::{PyRuntimeError, PyValueError};
+src\colormap\colormap1d.rs:8:use pyo3::prelude::*;
+src\colormap\colormap1d.rs:15:#[pyclass(module = "forge3d._forge3d", name = "Colormap1D")]
+src\colormap\colormap1d.rs:24:#[pymethods]
+src\colormap\colormap1d.rs:32:    #[pyo3(signature = (stops, domain))]
+src\colormap\colormap1d.rs:37:    ) -> PyResult<Self> {
+src\colormap\colormap1d.rs:65:            .collect::<PyResult<_>>()?;
+src\colormap\colormap1d.rs:102:fn parse_html_color(hex: &str) -> PyResult<[u8; 4]> {
+src\colormap\colormap1d.rs:125:) -> PyResult<Vec<u8>> {
+src\geometry\mesh_python.rs:7:use numpy::{PyArray1, PyArray2, PyReadonlyArray1, PyReadonlyArray2, PyUntypedArrayMethods};
+src\geometry\mesh_python.rs:8:use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict};
+src\geometry\mesh_python.rs:11:pub fn mesh_to_python<'py>(py: Python<'py>, mesh: &MeshBuffers) -> PyResult<PyObject> {
+src\geometry\mesh_python.rs:47:pub fn mesh_from_python(mesh: &Bound<'_, PyDict>) -> PyResult<MeshBuffers> {
+src\geometry\mesh_python.rs:52:pub fn mesh_from_python_dict(mesh: &PyDict) -> PyResult<MeshBuffers> {
+src\geometry\mesh_python.rs:138:/// Map geometry error to PyResult
+src\geometry\mesh_python.rs:139:pub fn map_geometry_err<T>(result: GeometryResult<T>) -> PyResult<T> {
+src\geometry\py_bindings.rs:12:use numpy::{PyArray1, PyReadonlyArray2, PyUntypedArrayMethods};
+src\geometry\py_bindings.rs:13:use pyo3::{
+src\geometry\py_bindings.rs:19:#[pyfunction]
+src\geometry\py_bindings.rs:25:) -> PyResult<PyObject> {
+src\geometry\py_bindings.rs:46:#[pyfunction]
+src\geometry\py_bindings.rs:51:) -> PyResult<PyObject> {
+src\geometry\py_bindings.rs:100:#[pyfunction]
+src\geometry\py_bindings.rs:105:) -> PyResult<PyObject> {
+src\geometry\py_bindings.rs:160:#[pyfunction]
+src\geometry\py_bindings.rs:167:) -> PyResult<PyObject> {
+src\geometry\py_bindings.rs:211:#[pyfunction]
+src\geometry\py_bindings.rs:216:) -> PyResult<(PyObject, (f32, f32, f32))> {
+src\geometry\py_bindings.rs:226:#[pyfunction]
+src\geometry\py_bindings.rs:232:) -> PyResult<(PyObject, bool)> {
+src\geometry\py_bindings.rs:247:#[pyfunction]
+src\geometry\py_bindings.rs:252:) -> PyResult<(PyObject, bool)> {
+src\geometry\py_bindings.rs:259:#[pyfunction]
+src\geometry\py_bindings.rs:265:) -> PyResult<(PyObject, bool)> {
+src\geometry\py_bindings.rs:272:#[pyfunction]
+src\geometry\py_bindings.rs:275:) -> PyResult<Option<((f32, f32, f32), (f32, f32, f32))>> {
+src\geometry\py_bindings.rs:281:#[pyfunction]
+src\geometry\py_bindings.rs:286:) -> PyResult<PyObject> {
+src\geometry\grid.rs:8:use numpy::{PyArray1, PyArray2, ToPyArray};
+src\geometry\grid.rs:9:use pyo3::prelude::*;
+src\geometry\grid.rs:10:use pyo3::Bound;
+src\geometry\grid.rs:86:#[pyfunction]
+src\geometry\grid.rs:87:#[pyo3(text_signature = "(nx, nz, spacing=(1.0,1.0), origin='center')")]
+src\geometry\grid.rs:94:) -> pyo3::PyResult<(
+src\geometry\grid.rs:100:        return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\geometry\grid.rs:112:            return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\geometry\grid.rs:129:        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+src\geometry\grid.rs:131:        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+src\geometry\py_advanced.rs:7:use numpy::{PyArray2, PyReadonlyArray1, PyReadonlyArray2, PyUntypedArrayMethods};
+src\geometry\py_advanced.rs:8:use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict};
+src\geometry\py_advanced.rs:10:#[pyfunction]
+src\geometry\py_advanced.rs:17:) -> PyResult<PyObject> {
+src\geometry\py_advanced.rs:43:#[pyfunction]
+src\geometry\py_advanced.rs:50:) -> PyResult<PyObject> {
+src\geometry\py_advanced.rs:60:#[pyfunction]
+src\geometry\py_advanced.rs:66:) -> PyResult<PyObject> {
+src\geometry\py_advanced.rs:72:#[pyfunction]
+src\geometry\py_advanced.rs:81:) -> PyResult<PyObject> {
+src\geometry\py_advanced.rs:104:#[pyfunction]
+src\geometry\py_advanced.rs:112:) -> PyResult<PyObject> {
+src\geometry\py_advanced.rs:125:#[pyfunction]
+src\geometry\py_advanced.rs:129:) -> PyResult<PyObject> {
+src\geometry\py_advanced.rs:137:#[pyfunction]
+src\geometry\py_advanced.rs:138:pub fn geometry_attach_tangents_py(py: Python<'_>, mesh: &Bound<'_, PyDict>) -> PyResult<PyObject> {
+src\geometry\py_advanced.rs:145:#[pyfunction(signature = (
+src\geometry\py_advanced.rs:161:) -> PyResult<PyObject> {
+src\geometry\thick_polyline.rs:49:use numpy::{PyReadonlyArray2, PyUntypedArrayMethods};
+src\geometry\thick_polyline.rs:51:use pyo3::{exceptions::PyValueError, prelude::*};
+src\geometry\thick_polyline.rs:55:#[pyfunction]
+src\geometry\thick_polyline.rs:63:) -> PyResult<PyObject> {
+src\geometry\transforms.rs:8:use numpy::PyArray2;
+src\geometry\transforms.rs:9:use pyo3::prelude::*;
+src\geometry\transforms.rs:10:use pyo3::Bound;
+src\geometry\transforms.rs:13:#[pyfunction]
+src\geometry\transforms.rs:14:#[pyo3(text_signature = "(tx, ty, tz)")]
+src\geometry\transforms.rs:20:) -> PyResult<Bound<'py, PyArray2<f32>>> {
+src\geometry\transforms.rs:27:#[pyfunction]
+src\geometry\transforms.rs:28:#[pyo3(text_signature = "(degrees)")]
+src\geometry\transforms.rs:29:pub fn rotate_x<'py>(py: Python<'py>, degrees: f32) -> PyResult<Bound<'py, PyArray2<f32>>> {
+src\geometry\transforms.rs:36:#[pyfunction]
+src\geometry\transforms.rs:37:#[pyo3(text_signature = "(degrees)")]
+src\geometry\transforms.rs:38:pub fn rotate_y<'py>(py: Python<'py>, degrees: f32) -> PyResult<Bound<'py, PyArray2<f32>>> {
+src\geometry\transforms.rs:45:#[pyfunction]
+src\geometry\transforms.rs:46:#[pyo3(text_signature = "(degrees)")]
+src\geometry\transforms.rs:47:pub fn rotate_z<'py>(py: Python<'py>, degrees: f32) -> PyResult<Bound<'py, PyArray2<f32>>> {
+src\geometry\transforms.rs:54:#[pyfunction]
+src\geometry\transforms.rs:55:#[pyo3(text_signature = "(sx, sy, sz)")]
+src\geometry\transforms.rs:61:) -> PyResult<Bound<'py, PyArray2<f32>>> {
+src\geometry\transforms.rs:68:#[pyfunction]
+src\geometry\transforms.rs:69:#[pyo3(text_signature = "(s)")]
+src\geometry\transforms.rs:70:pub fn scale_uniform<'py>(py: Python<'py>, s: f32) -> PyResult<Bound<'py, PyArray2<f32>>> {
+src\geometry\transforms.rs:77:#[pyfunction]
+src\geometry\transforms.rs:78:#[pyo3(text_signature = "(translation, rotation_degrees, scale)")]
+src\geometry\transforms.rs:84:) -> PyResult<Bound<'py, PyArray2<f32>>> {
+src\geometry\transforms.rs:103:#[pyfunction]
+src\geometry\transforms.rs:104:#[pyo3(text_signature = "(position, target, up)")]
+src\geometry\transforms.rs:110:) -> PyResult<Bound<'py, PyArray2<f32>>> {
+src\geometry\transforms.rs:140:#[pyfunction]
+src\geometry\transforms.rs:141:#[pyo3(text_signature = "(left, right)")]
+src\geometry\transforms.rs:144:    left: &pyo3::types::PyAny,
+src\geometry\transforms.rs:145:    right: &pyo3::types::PyAny,
+src\geometry\transforms.rs:146:) -> PyResult<Bound<'py, PyArray2<f32>>> {
+src\geometry\transforms.rs:158:#[pyfunction]
+src\geometry\transforms.rs:159:#[pyo3(text_signature = "(matrix)")]
+src\geometry\transforms.rs:162:    matrix: &pyo3::types::PyAny,
+src\geometry\transforms.rs:163:) -> PyResult<Bound<'py, PyArray2<f32>>> {
+src\geometry\transforms.rs:181:#[pyfunction]
+src\geometry\transforms.rs:182:#[pyo3(text_signature = "(model_matrix)")]
+src\geometry\transforms.rs:185:    model_matrix: &pyo3::types::PyAny,
+src\geometry\transforms.rs:186:) -> PyResult<Bound<'py, PyArray2<f32>>> {
+src\geometry\transforms.rs:198:fn mat4_to_numpy<'py>(py: Python<'py>, mat: Mat4) -> PyResult<Bound<'py, PyArray2<f32>>> {
+src\geometry\transforms.rs:222:fn numpy_to_mat4(array: &pyo3::types::PyAny) -> PyResult<Mat4> {
+src\geometry\transforms.rs:223:    use numpy::PyReadonlyArray2;
+src\geometry\transforms.rs:224:    use numpy::PyUntypedArrayMethods;
+src\geometry\transforms.rs:231:        return Err(pyo3::exceptions::PyRuntimeError::new_err(format!(
+src\geometry\transforms.rs:239:        return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\import\building_materials.rs:437:use pyo3::{exceptions::PyValueError, prelude::*};
+src\import\building_materials.rs:441:#[pyfunction(signature = (tags_json))]
+src\import\building_materials.rs:442:pub fn material_from_tags_py(tags_json: &str) -> PyResult<PyObject> {
+src\import\building_materials.rs:449:        let dict = pyo3::types::PyDict::new_bound(py);
+src\import\building_materials.rs:461:#[pyfunction]
+src\import\building_materials.rs:466:        let dict = pyo3::types::PyDict::new_bound(py);
+src\import\cityjson\bindings.rs:1:use pyo3::{exceptions::PyValueError, prelude::*, types::PyBytes};
+src\import\cityjson\bindings.rs:6:#[pyfunction]
+src\import\cityjson\bindings.rs:7:pub fn parse_cityjson_py(data: &Bound<'_, PyBytes>) -> PyResult<PyObject> {
+src\import\cityjson\bindings.rs:13:        let result = pyo3::types::PyDict::new_bound(py);
+src\import\cityjson\bindings.rs:14:        let meta_dict = pyo3::types::PyDict::new_bound(py);
+src\import\cityjson\bindings.rs:27:        let buildings_list = pyo3::types::PyList::empty_bound(py);
+src\import\cityjson\bindings.rs:29:            let bdict = pyo3::types::PyDict::new_bound(py);
+src\import\cityjson\bindings.rs:41:            let mat_dict = pyo3::types::PyDict::new_bound(py);
+src\labels\py_bindings.rs:5:use pyo3::prelude::*;
+src\labels\py_bindings.rs:11:#[pyclass(module = "forge3d._forge3d", name = "LabelFlags")]
+src\labels\py_bindings.rs:14:    #[pyo3(get, set)]
+src\labels\py_bindings.rs:16:    #[pyo3(get, set)]
+src\labels\py_bindings.rs:18:    #[pyo3(get, set)]
+src\labels\py_bindings.rs:23:#[pymethods]
+src\labels\py_bindings.rs:26:    #[pyo3(signature = (underline=false, small_caps=false, leader=false))]
+src\labels\py_bindings.rs:67:#[pyclass(module = "forge3d._forge3d", name = "LabelStyle")]
+src\labels\py_bindings.rs:70:    #[pyo3(get, set)]
+src\labels\py_bindings.rs:72:    #[pyo3(get, set)]
+src\labels\py_bindings.rs:74:    #[pyo3(get, set)]
+src\labels\py_bindings.rs:76:    #[pyo3(get, set)]
+src\labels\py_bindings.rs:78:    #[pyo3(get, set)]
+src\labels\py_bindings.rs:80:    #[pyo3(get, set)]
+src\labels\py_bindings.rs:82:    #[pyo3(get, set)]
+src\labels\py_bindings.rs:84:    #[pyo3(get, set)]
+src\labels\py_bindings.rs:86:    #[pyo3(get, set)]
+src\labels\py_bindings.rs:88:    #[pyo3(get, set)]
+src\labels\py_bindings.rs:90:    #[pyo3(get, set)]
+src\labels\py_bindings.rs:92:    #[pyo3(get, set)]
+src\labels\py_bindings.rs:94:    #[pyo3(get, set)]
+src\labels\py_bindings.rs:96:    #[pyo3(get, set)]
+src\labels\py_bindings.rs:101:#[pymethods]
+src\labels\py_bindings.rs:104:    #[pyo3(signature = (
+src\lighting\ibl_wrapper.rs:8:use pyo3::prelude::*;
+src\lighting\ibl_wrapper.rs:34:#[pyclass(module = "forge3d._forge3d", name = "IBL")]
+src\lighting\ibl_wrapper.rs:48:#[pymethods]
+src\lighting\ibl_wrapper.rs:64:    #[pyo3(signature = (path, intensity=1.0, rotate_deg=0.0, quality="auto"))]
+src\lighting\ibl_wrapper.rs:65:    pub fn from_hdr(path: &str, intensity: f32, rotate_deg: f32, quality: &str) -> PyResult<Self> {
+src\lighting\ibl_wrapper.rs:68:            return Err(pyo3::exceptions::PyValueError::new_err(
+src\lighting\ibl_wrapper.rs:84:                return Err(pyo3::exceptions::PyValueError::new_err(format!(
+src\lighting\ibl_wrapper.rs:93:            pyo3::exceptions::PyIOError::new_err(format!(
+src\lighting\ibl_wrapper.rs:101:            return Err(pyo3::exceptions::PyValueError::new_err(
+src\lighting\ibl_wrapper.rs:142:    pub fn set_intensity(&mut self, value: f32) -> PyResult<()> {
+src\lighting\ibl_wrapper.rs:144:            return Err(pyo3::exceptions::PyValueError::new_err(
+src\lighting\ibl_wrapper.rs:192:    #[pyo3(text_signature = "($self, resolution)")]
+src\lighting\ibl_wrapper.rs:193:    pub fn set_base_resolution(&mut self, resolution: u32) -> PyResult<()> {
+src\lighting\ibl_wrapper.rs:202:    #[pyo3(text_signature = "($self)")]
+src\lighting\ibl_wrapper.rs:207:    #[pyo3(signature = (path=None))]
+src\lighting\ibl_wrapper.rs:208:    #[pyo3(text_signature = "($self, path=None)")]
+src\lighting\ibl_wrapper.rs:209:    pub fn set_cache_dir(&mut self, path: Option<&str>) -> PyResult<()> {
+src\lighting\ibl_wrapper.rs:217:    #[pyo3(text_signature = "($self)")]
+src\lighting\ibl_wrapper.rs:229:    #[pyo3(text_signature = "($self, quality)")]
+src\lighting\ibl_wrapper.rs:230:    pub fn configure_quality(&mut self, quality: &str) -> PyResult<()> {
+src\lighting\ibl_wrapper.rs:238:                return Err(pyo3::exceptions::PyValueError::new_err(format!(
+src\lighting\py_bindings\gi.rs:2:use pyo3::exceptions::PyValueError;
+src\lighting\py_bindings\gi.rs:3:use pyo3::prelude::*;
+src\lighting\py_bindings\gi.rs:6:#[pyclass(module = "forge3d._forge3d", name = "GiSettings")]
+src\lighting\py_bindings\gi.rs:9:    #[pyo3(get, set)]
+src\lighting\py_bindings\gi.rs:11:    #[pyo3(get, set)]
+src\lighting\py_bindings\gi.rs:13:    #[pyo3(get, set)]
+src\lighting\py_bindings\gi.rs:18:#[pymethods]
+src\lighting\py_bindings\gi.rs:21:    #[pyo3(signature = (technique="IBL", ibl_intensity=1.0, ibl_rotation=0.0))]
+src\lighting\py_bindings\gi.rs:22:    pub fn new(technique: &str, ibl_intensity: f32, ibl_rotation: f32) -> PyResult<Self> {
+src\lighting\py_bindings\gi.rs:32:    pub fn to_native(&self) -> PyResult<GiSettings> {
+src\lighting\py_bindings\material.rs:2:use pyo3::exceptions::PyValueError;
+src\lighting\py_bindings\material.rs:3:use pyo3::prelude::*;
+src\lighting\py_bindings\material.rs:6:#[pyclass(module = "forge3d._forge3d", name = "MaterialShading")]
+src\lighting\py_bindings\material.rs:9:    #[pyo3(get, set)]
+src\lighting\py_bindings\material.rs:11:    #[pyo3(get, set)]
+src\lighting\py_bindings\material.rs:13:    #[pyo3(get, set)]
+src\lighting\py_bindings\material.rs:15:    #[pyo3(get, set)]
+src\lighting\py_bindings\material.rs:17:    #[pyo3(get, set)]
+src\lighting\py_bindings\material.rs:19:    #[pyo3(get, set)]
+src\lighting\py_bindings\material.rs:21:    #[pyo3(get, set)]
+src\lighting\py_bindings\material.rs:26:#[pymethods]
+src\lighting\py_bindings\material.rs:29:    #[pyo3(signature = (brdf="CookTorranceGgx", roughness=0.5, metallic=0.0, sheen=0.0, clearcoat=0.0, subsurface=0.0, anisotropy=0.0))]
+src\lighting\py_bindings\material.rs:38:    ) -> PyResult<Self> {
+src\lighting\py_bindings\material.rs:53:    pub fn lambert(roughness: f32) -> PyResult<Self> {
+src\lighting\py_bindings\material.rs:58:    pub fn phong(roughness: f32, metallic: f32) -> PyResult<Self> {
+src\lighting\py_bindings\material.rs:69:    ) -> PyResult<Self> {
+src\lighting\py_bindings\material.rs:82:    pub fn anisotropic(brdf: &str, roughness: f32, anisotropy: f32) -> PyResult<Self> {
+src\lighting\py_bindings\material.rs:88:    pub fn to_native(&self) -> PyResult<MaterialShading> {
+src\lighting\py_bindings\atmosphere.rs:2:use pyo3::exceptions::PyValueError;
+src\lighting\py_bindings\atmosphere.rs:3:use pyo3::prelude::*;
+src\lighting\py_bindings\atmosphere.rs:6:#[pyclass(module = "forge3d._forge3d", name = "Atmosphere")]
+src\lighting\py_bindings\atmosphere.rs:9:    #[pyo3(get, set)]
+src\lighting\py_bindings\atmosphere.rs:11:    #[pyo3(get, set)]
+src\lighting\py_bindings\atmosphere.rs:13:    #[pyo3(get, set)]
+src\lighting\py_bindings\atmosphere.rs:18:#[pymethods]
+src\lighting\py_bindings\atmosphere.rs:21:    #[pyo3(signature = (fog_density=0.0, exposure=1.0, sky_model="Off"))]
+src\lighting\py_bindings\atmosphere.rs:22:    pub fn new(fog_density: f32, exposure: f32, sky_model: &str) -> PyResult<Self> {
+src\lighting\py_bindings\atmosphere.rs:32:    pub fn to_native(&self) -> PyResult<Atmosphere> {
+src\lighting\py_bindings\screen_space.rs:2:use pyo3::exceptions::PyValueError;
+src\lighting\py_bindings\screen_space.rs:3:use pyo3::prelude::*;
+src\lighting\py_bindings\screen_space.rs:6:#[pyclass(module = "forge3d._forge3d", name = "SSAOSettings")]
+src\lighting\py_bindings\screen_space.rs:9:    #[pyo3(get, set)]
+src\lighting\py_bindings\screen_space.rs:11:    #[pyo3(get, set)]
+src\lighting\py_bindings\screen_space.rs:13:    #[pyo3(get, set)]
+src\lighting\py_bindings\screen_space.rs:15:    #[pyo3(get, set)]
+src\lighting\py_bindings\screen_space.rs:17:    #[pyo3(get, set)]
+src\lighting\py_bindings\screen_space.rs:19:    #[pyo3(get, set)]
+src\lighting\py_bindings\screen_space.rs:21:    #[pyo3(get, set)]
+src\lighting\py_bindings\screen_space.rs:23:    #[pyo3(get, set)]
+src\lighting\py_bindings\screen_space.rs:28:#[pymethods]
+src\lighting\py_bindings\screen_space.rs:31:    #[pyo3(signature = (radius=0.5, intensity=1.0, bias=0.025, sample_count=16, spiral_turns=7.0, technique="SSAO", blur_radius=2, temporal_alpha=0.0))]
+src\lighting\py_bindings\screen_space.rs:41:    ) -> PyResult<Self> {
+src\lighting\py_bindings\screen_space.rs:55:    pub fn ssao(radius: f32, intensity: f32) -> PyResult<Self> {
+src\lighting\py_bindings\screen_space.rs:69:    pub fn gtao(radius: f32, intensity: f32) -> PyResult<Self> {
+src\lighting\py_bindings\screen_space.rs:84:    pub fn to_native(&self) -> PyResult<SSAOSettings> {
+src\lighting\py_bindings\screen_space.rs:113:#[pyclass(module = "forge3d._forge3d", name = "SSGISettings")]
+src\lighting\py_bindings\screen_space.rs:116:    #[pyo3(get, set)]
+src\lighting\py_bindings\screen_space.rs:118:    #[pyo3(get, set)]
+src\lighting\py_bindings\screen_space.rs:120:    #[pyo3(get, set)]
+src\lighting\py_bindings\screen_space.rs:122:    #[pyo3(get, set)]
+src\lighting\py_bindings\screen_space.rs:124:    #[pyo3(get, set)]
+src\lighting\py_bindings\screen_space.rs:126:    #[pyo3(get, set)]
+src\lighting\py_bindings\screen_space.rs:128:    #[pyo3(get, set)]
+src\lighting\py_bindings\screen_space.rs:133:#[pymethods]
+src\lighting\py_bindings\screen_space.rs:136:    #[pyo3(signature = (ray_steps=24, ray_radius=5.0, ray_thickness=0.5, intensity=1.0, temporal_alpha=0.0, use_half_res=true, ibl_fallback=0.3))]
+src\lighting\py_bindings\screen_space.rs:145:    ) -> PyResult<Self> {
+src\lighting\py_bindings\screen_space.rs:159:    pub fn to_native(&self) -> PyResult<SSGISettings> {
+src\lighting\py_bindings\screen_space.rs:177:#[pyclass(module = "forge3d._forge3d", name = "SSRSettings")]
+src\lighting\py_bindings\screen_space.rs:180:    #[pyo3(get, set)]
+src\lighting\py_bindings\screen_space.rs:182:    #[pyo3(get, set)]
+src\lighting\py_bindings\screen_space.rs:184:    #[pyo3(get, set)]
+src\lighting\py_bindings\screen_space.rs:186:    #[pyo3(get, set)]
+src\lighting\py_bindings\screen_space.rs:188:    #[pyo3(get, set)]
+src\lighting\py_bindings\screen_space.rs:190:    #[pyo3(get, set)]
+src\lighting\py_bindings\screen_space.rs:192:    #[pyo3(get, set)]
+src\lighting\py_bindings\screen_space.rs:194:    #[pyo3(get, set)]
+src\lighting\py_bindings\screen_space.rs:199:#[pymethods]
+src\lighting\py_bindings\screen_space.rs:202:    #[pyo3(signature = (max_steps=48, max_distance=50.0, thickness=0.5, stride=1.0, intensity=1.0, roughness_fade=0.8, edge_fade=0.1, temporal_alpha=0.0))]
+src\lighting\py_bindings\screen_space.rs:212:    ) -> PyResult<Self> {
+src\lighting\py_bindings\screen_space.rs:227:    pub fn to_native(&self) -> PyResult<SSRSettings> {
+src\io\stl_write.rs:100:use pyo3::prelude::*;
+src\io\stl_write.rs:102:use pyo3::types::PyDict;
+src\io\stl_write.rs:105:#[pyfunction]
+src\io\stl_write.rs:110:) -> PyResult<bool> {
+src\lighting\py_bindings\shadow.rs:2:use pyo3::exceptions::PyValueError;
+src\lighting\py_bindings\shadow.rs:3:use pyo3::prelude::*;
+src\lighting\py_bindings\shadow.rs:6:#[pyclass(module = "forge3d._forge3d", name = "ShadowSettings")]
+src\lighting\py_bindings\shadow.rs:9:    #[pyo3(get, set)]
+src\lighting\py_bindings\shadow.rs:11:    #[pyo3(get, set)]
+src\lighting\py_bindings\shadow.rs:13:    #[pyo3(get, set)]
+src\lighting\py_bindings\shadow.rs:15:    #[pyo3(get, set)]
+src\lighting\py_bindings\shadow.rs:17:    #[pyo3(get, set)]
+src\lighting\py_bindings\shadow.rs:19:    #[pyo3(get, set)]
+src\lighting\py_bindings\shadow.rs:21:    #[pyo3(get, set)]
+src\lighting\py_bindings\shadow.rs:23:    #[pyo3(get, set)]
+src\lighting\py_bindings\shadow.rs:25:    #[pyo3(get, set)]
+src\lighting\py_bindings\shadow.rs:30:#[pymethods]
+src\lighting\py_bindings\shadow.rs:33:    #[pyo3(signature = (
+src\lighting\py_bindings\shadow.rs:54:    ) -> PyResult<Self> {
+src\lighting\py_bindings\shadow.rs:70:    pub fn memory_mb(&self) -> PyResult<f64> {
+src\lighting\py_bindings\shadow.rs:77:    pub fn to_native(&self) -> PyResult<ShadowSettings> {
+src\lighting\py_bindings\light.rs:2:use pyo3::exceptions::PyValueError;
+src\lighting\py_bindings\light.rs:3:use pyo3::prelude::*;
+src\lighting\py_bindings\light.rs:4:use pyo3::types::{PyDict, PyList};
+src\lighting\py_bindings\light.rs:6:fn extract_f32_array<const N: usize>(obj: &PyAny, name: &str) -> PyResult<[f32; N]> {
+src\lighting\py_bindings\light.rs:28:#[pyclass(module = "forge3d._forge3d", name = "Light")]
+src\lighting\py_bindings\light.rs:31:    #[pyo3(get, set)]
+src\lighting\py_bindings\light.rs:33:    #[pyo3(get, set)]
+src\lighting\py_bindings\light.rs:35:    #[pyo3(get, set)]
+src\lighting\py_bindings\light.rs:37:    #[pyo3(get, set)]
+src\lighting\py_bindings\light.rs:39:    #[pyo3(get, set)]
+src\lighting\py_bindings\light.rs:41:    #[pyo3(get, set)]
+src\lighting\py_bindings\light.rs:43:    #[pyo3(get, set)]
+src\lighting\py_bindings\light.rs:45:    #[pyo3(get, set)]
+src\lighting\py_bindings\light.rs:47:    #[pyo3(get, set)]
+src\lighting\py_bindings\light.rs:49:    #[pyo3(get, set)]
+src\lighting\py_bindings\light.rs:51:    #[pyo3(get, set)]
+src\lighting\py_bindings\light.rs:53:    #[pyo3(get, set)]
+src\lighting\py_bindings\light.rs:55:    #[pyo3(get, set)]
+src\lighting\py_bindings\light.rs:60:#[pymethods]
+src\lighting\py_bindings\light.rs:63:    #[pyo3(signature = (light_type="Directional", intensity=3.0, color=None, azimuth=135.0, elevation=35.0, position=None, direction=None, range=2000.0, spot_inner=20.0, spot_outer=35.0, env_texture_index=0, area_width=1.0, area_height=1.0))]
+src\lighting\py_bindings\light.rs:78:    ) -> PyResult<Self> {
+src\lighting\py_bindings\light.rs:114:    pub fn to_native(&self) -> PyResult<Light> {
+src\lighting\py_bindings\light.rs:159:pub fn parse_light_dict(_py: Python, dict: &PyAny) -> PyResult<Light> {
+src\io\obj_write.rs:212:use numpy::PyReadonlyArray1;
+src\io\obj_write.rs:214:use pyo3::{
+src\io\obj_write.rs:220:#[pyfunction]
+src\io\obj_write.rs:228:) -> PyResult<()> {
+src\io\obj_write.rs:278:    ) -> PyResult<HashMap<String, Vec<u32>>> {
+src\lighting\py_bindings\sky.rs:2:use pyo3::exceptions::PyValueError;
+src\lighting\py_bindings\sky.rs:3:use pyo3::prelude::*;
+src\lighting\py_bindings\sky.rs:6:#[pyclass(module = "forge3d._forge3d", name = "SkySettings")]
+src\lighting\py_bindings\sky.rs:9:    #[pyo3(get, set)]
+src\lighting\py_bindings\sky.rs:11:    #[pyo3(get, set)]
+src\lighting\py_bindings\sky.rs:13:    #[pyo3(get, set)]
+src\lighting\py_bindings\sky.rs:15:    #[pyo3(get, set)]
+src\lighting\py_bindings\sky.rs:17:    #[pyo3(get, set)]
+src\lighting\py_bindings\sky.rs:19:    #[pyo3(get, set)]
+src\lighting\py_bindings\sky.rs:24:#[pymethods]
+src\lighting\py_bindings\sky.rs:27:    #[pyo3(signature = (sun_direction=[0.3, 0.8, 0.5], turbidity=2.5, ground_albedo=0.2, model="hosek-wilkie", sun_intensity=20.0, exposure=1.0))]
+src\lighting\py_bindings\sky.rs:35:    ) -> PyResult<Self> {
+src\lighting\py_bindings\sky.rs:47:    pub fn preetham(turbidity: f32, ground_albedo: f32) -> PyResult<Self> {
+src\lighting\py_bindings\sky.rs:59:    pub fn hosek_wilkie(turbidity: f32, ground_albedo: f32) -> PyResult<Self> {
+src\lighting\py_bindings\sky.rs:82:    pub fn to_native(&self) -> PyResult<SkySettings> {
+src\lighting\py_bindings\sun_position.rs:1:use pyo3::exceptions::PyValueError;
+src\lighting\py_bindings\sun_position.rs:2:use pyo3::prelude::*;
+src\lighting\py_bindings\sun_position.rs:5:#[pyclass(module = "forge3d._forge3d", name = "SunPosition")]
+src\lighting\py_bindings\sun_position.rs:8:    #[pyo3(get)]
+src\lighting\py_bindings\sun_position.rs:10:    #[pyo3(get)]
+src\lighting\py_bindings\sun_position.rs:15:#[pymethods]
+src\lighting\py_bindings\sun_position.rs:40:#[pyfunction]
+src\lighting\py_bindings\sun_position.rs:41:#[pyo3(signature = (latitude, longitude, datetime_utc))]
+src\lighting\py_bindings\sun_position.rs:42:pub fn sun_position(latitude: f64, longitude: f64, datetime_utc: &str) -> PyResult<PySunPosition> {
+src\lighting\py_bindings\sun_position.rs:53:#[pyfunction]
+src\lighting\py_bindings\sun_position.rs:54:#[pyo3(signature = (latitude, longitude, year, month, day, hour, minute, second=0))]
+src\io\obj_read.rs:329:use pyo3::prelude::*;
+src\io\obj_read.rs:332:#[pyfunction]
+src\io\obj_read.rs:333:pub fn io_import_obj_py(py: Python<'_>, path: &str) -> PyResult<PyObject> {
+src\io\obj_read.rs:336:    let out = pyo3::types::PyDict::new_bound(py);
+src\io\obj_read.rs:341:    let materials = pyo3::types::PyList::empty_bound(py);
+src\io\obj_read.rs:343:        let md = pyo3::types::PyDict::new_bound(py);
+src\io\obj_read.rs:371:    let groups = pyo3::types::PyDict::new_bound(py);
+src\io\obj_read.rs:373:        let arr = numpy::PyArray1::<u32>::from_vec_bound(py, tris.clone());
+src\io\obj_read.rs:380:    let g_groups = pyo3::types::PyDict::new_bound(py);
+src\io\obj_read.rs:382:        let arr = numpy::PyArray1::<u32>::from_vec_bound(py, tris.clone());
+src\io\obj_read.rs:388:    let o_groups = pyo3::types::PyDict::new_bound(py);
+src\io\obj_read.rs:390:        let arr = numpy::PyArray1::<u32>::from_vec_bound(py, tris.clone());
+src\lighting\py_bindings\volumetrics.rs:2:use pyo3::exceptions::PyValueError;
+src\lighting\py_bindings\volumetrics.rs:3:use pyo3::prelude::*;
+src\lighting\py_bindings\volumetrics.rs:6:#[pyclass(module = "forge3d._forge3d", name = "VolumetricSettings")]
+src\lighting\py_bindings\volumetrics.rs:9:    #[pyo3(get, set)]
+src\lighting\py_bindings\volumetrics.rs:11:    #[pyo3(get, set)]
+src\lighting\py_bindings\volumetrics.rs:13:    #[pyo3(get, set)]
+src\lighting\py_bindings\volumetrics.rs:15:    #[pyo3(get, set)]
+src\lighting\py_bindings\volumetrics.rs:17:    #[pyo3(get, set)]
+src\lighting\py_bindings\volumetrics.rs:19:    #[pyo3(get, set)]
+src\lighting\py_bindings\volumetrics.rs:21:    #[pyo3(get, set)]
+src\lighting\py_bindings\volumetrics.rs:23:    #[pyo3(get, set)]
+src\lighting\py_bindings\volumetrics.rs:25:    #[pyo3(get, set)]
+src\lighting\py_bindings\volumetrics.rs:27:    #[pyo3(get, set)]
+src\lighting\py_bindings\volumetrics.rs:29:    #[pyo3(get, set)]
+src\lighting\py_bindings\volumetrics.rs:31:    #[pyo3(get, set)]
+src\lighting\py_bindings\volumetrics.rs:33:    #[pyo3(get, set)]
+src\lighting\py_bindings\volumetrics.rs:35:    #[pyo3(get, set)]
+src\lighting\py_bindings\volumetrics.rs:40:#[pymethods]
+src\lighting\py_bindings\volumetrics.rs:43:    #[pyo3(signature = (
+src\lighting\py_bindings\volumetrics.rs:74:    ) -> PyResult<Self> {
+src\lighting\py_bindings\volumetrics.rs:94:    pub fn with_god_rays(density: f32, phase_g: f32) -> PyResult<Self> {
+src\lighting\py_bindings\volumetrics.rs:114:    pub fn uniform_fog(density: f32) -> PyResult<Self> {
+src\lighting\py_bindings\volumetrics.rs:135:    pub fn to_native(&self) -> PyResult<VolumetricSettings> {
+src\io\gltf_read.rs:90:use pyo3::prelude::*;
+src\io\gltf_read.rs:93:#[pyfunction]
+src\io\gltf_read.rs:94:pub fn io_import_gltf_py(py: Python<'_>, path: &str) -> PyResult<PyObject> {
+src\camera\validation.rs:7:use pyo3::prelude::*;
+src\camera\validation.rs:24:pub fn validate_vec3_finite(v: Vec3, _param_name: &str) -> PyResult<()> {
+src\camera\validation.rs:26:        return Err(pyo3::exceptions::PyRuntimeError::new_err(ERROR_VECFINITE));
+src\camera\validation.rs:32:pub fn validate_fovy(fovy_deg: f32) -> PyResult<()> {
+src\camera\validation.rs:34:        return Err(pyo3::exceptions::PyRuntimeError::new_err(ERROR_FOVY));
+src\camera\validation.rs:40:pub fn validate_near(znear: f32) -> PyResult<()> {
+src\camera\validation.rs:42:        return Err(pyo3::exceptions::PyRuntimeError::new_err(ERROR_NEAR));
+src\camera\validation.rs:48:pub fn validate_far(zfar: f32, znear: f32) -> PyResult<()> {
+src\camera\validation.rs:50:        return Err(pyo3::exceptions::PyRuntimeError::new_err(ERROR_FAR));
+src\camera\validation.rs:56:pub fn validate_aspect(aspect: f32) -> PyResult<()> {
+src\camera\validation.rs:58:        return Err(pyo3::exceptions::PyRuntimeError::new_err(ERROR_ASPECT));
+src\camera\validation.rs:64:pub fn validate_clip_space(clip_space: &str) -> PyResult<()> {
+src\camera\validation.rs:67:        _ => Err(pyo3::exceptions::PyRuntimeError::new_err(ERROR_CLIP)),
+src\camera\validation.rs:72:pub fn validate_up_not_colinear(eye: Vec3, target: Vec3, up: Vec3) -> PyResult<()> {
+src\camera\validation.rs:79:        return Err(pyo3::exceptions::PyRuntimeError::new_err(ERROR_UPCOLINEAR));
+src\camera\validation.rs:85:pub fn validate_ortho_left_right(left: f32, right: f32) -> PyResult<()> {
+src\camera\validation.rs:87:        return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\camera\validation.rs:95:pub fn validate_ortho_bottom_top(bottom: f32, top: f32) -> PyResult<()> {
+src\camera\validation.rs:97:        return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\camera\validation.rs:105:pub fn validate_aperture(aperture: f32) -> PyResult<()> {
+src\camera\validation.rs:107:        return Err(pyo3::exceptions::PyRuntimeError::new_err(ERROR_APERTURE));
+src\camera\validation.rs:113:pub fn validate_focus_distance(focus_distance: f32) -> PyResult<()> {
+src\camera\validation.rs:115:        return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\camera\validation.rs:123:pub fn validate_focal_length(focal_length: f32) -> PyResult<()> {
+src\camera\validation.rs:125:        return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\camera\validation.rs:140:) -> PyResult<()> {
+src\camera\mod.rs:10:use numpy::PyArray2;
+src\camera\mod.rs:11:use pyo3::prelude::*;
+src\camera\mod.rs:12:use pyo3::Bound;
+src\camera\mod.rs:41:fn mat4_to_numpy<'py>(py: Python<'py>, mat: Mat4) -> PyResult<Bound<'py, PyArray2<f32>>> {
+src\camera\mod.rs:63:#[pyfunction]
+src\camera\mod.rs:64:#[pyo3(text_signature = "(eye, target, up)")]
+src\camera\mod.rs:70:) -> PyResult<Bound<'py, PyArray2<f32>>> {
+src\camera\mod.rs:86:#[pyfunction]
+src\camera\mod.rs:87:#[pyo3(text_signature = "(fovy_deg, aspect, znear, zfar, clip_space='wgpu')")]
+src\camera\mod.rs:95:) -> PyResult<Bound<'py, PyArray2<f32>>> {
+src\camera\mod.rs:120:#[pyfunction]
+src\camera\mod.rs:121:#[pyo3(text_signature = "(left, right, bottom, top, znear, zfar, clip_space='wgpu')")]
+src\camera\mod.rs:131:) -> PyResult<Bound<'py, PyArray2<f32>>> {
+src\camera\mod.rs:174:#[pyfunction]
+src\camera\mod.rs:175:#[pyo3(text_signature = "(eye, target, up, fovy_deg, aspect, znear, zfar, clip_space='wgpu')")]
+src\camera\mod.rs:186:) -> PyResult<Bound<'py, PyArray2<f32>>> {
+src\camera\dof.rs:10:use pyo3::prelude::*;
+src\camera\dof.rs:13:#[pyfunction]
+src\camera\dof.rs:14:#[pyo3(
+src\camera\dof.rs:23:) -> PyResult<(f32, f32, f32, bool, f32)> {
+src\camera\dof.rs:33:        return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\camera\dof.rs:48:#[pyfunction]
+src\camera\dof.rs:49:#[pyo3(text_signature = "(f_stop)")]
+src\camera\dof.rs:50:pub fn camera_f_stop_to_aperture(f_stop: f32) -> PyResult<f32> {
+src\camera\dof.rs:52:        return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\camera\dof.rs:60:#[pyfunction]
+src\camera\dof.rs:61:#[pyo3(text_signature = "(aperture)")]
+src\camera\dof.rs:62:pub fn camera_aperture_to_f_stop(aperture: f32) -> PyResult<f32> {
+src\camera\dof.rs:68:#[pyfunction]
+src\camera\dof.rs:69:#[pyo3(text_signature = "(focal_length, f_stop, circle_of_confusion=0.03)")]
+src\camera\dof.rs:74:) -> PyResult<f32> {
+src\camera\dof.rs:77:        return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\camera\dof.rs:84:        return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\camera\dof.rs:93:#[pyfunction]
+src\camera\dof.rs:94:#[pyo3(text_signature = "(focal_length, f_stop, focus_distance, circle_of_confusion=0.03)")]
+src\camera\dof.rs:100:) -> PyResult<(f32, f32)> {
+src\camera\dof.rs:104:        return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\camera\dof.rs:111:        return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\camera\dof.rs:129:#[pyfunction]
+src\camera\dof.rs:130:#[pyo3(text_signature = "(depth, focal_length, aperture, focus_distance, sensor_size=36.0)")]
+src\camera\dof.rs:137:) -> PyResult<f32> {
+src\camera\dof.rs:139:        return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\camera\dof.rs:149:        return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\camera\dof.rs:173:) -> PyResult<CameraDofParams> {
+src\py_module\functions.rs:13:pub(crate) fn register_py_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
+src\mesh\tbn.rs:9:use pyo3::prelude::*;
+src\mesh\tbn.rs:11:use pyo3::types::PyDict;
+src\mesh\tbn.rs:398:) -> PyResult<PyObject> {
+src\mesh\tbn.rs:421:        .collect::<PyResult<Vec<_>>>()?;
+src\mesh\tbn.rs:452:        .collect::<PyResult<Vec<_>>>()?;
+src\mesh\tbn.rs:460:#[pyfunction]
+src\mesh\tbn.rs:461:pub fn mesh_generate_cube_tbn(py: Python<'_>) -> PyResult<PyObject> {
+src\mesh\tbn.rs:468:#[pyfunction]
+src\mesh\tbn.rs:469:#[pyo3(signature = (width, height))]
+src\mesh\tbn.rs:470:pub fn mesh_generate_plane_tbn(py: Python<'_>, width: u32, height: u32) -> PyResult<PyObject> {
+src\mesh\tbn.rs:472:        return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\stats.rs:2:use pyo3::types::PyDict;
+src\scene\stats.rs:3:use pyo3::{PyObject, PyResult, Python};
+src\scene\stats.rs:6:    pub(super) fn get_stats_impl(&self, py: Python<'_>) -> PyResult<PyObject> {
+src\py_module\functions\rendering.rs:3:pub(super) fn register_rendering_py_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
+src\py_module\functions\license.rs:3:pub(super) fn register_license_py_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
+src\py_module\functions\license.rs:22:#[pyfunction]
+src\py_module\functions\license.rs:23:#[pyo3(signature = (message, signature))]
+src\py_module\functions\license.rs:29:#[pyfunction]
+src\py_module\functions\io_import.rs:3:pub(super) fn register_io_import_py_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
+src\py_module\functions\interactive.rs:3:pub(super) fn register_interactive_py_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
+src\py_module\functions\geometry.rs:3:pub(super) fn register_geometry_py_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
+src\py_module\functions\diagnostics.rs:3:pub(super) fn register_diagnostics_py_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
+src\py_module\functions\camera.rs:3:pub(super) fn register_camera_py_functions(m: &Bound<'_, PyModule>) -> PyResult<()> {
+src\py_module\classes.rs:5:pub(crate) fn register_py_classes(m: &Bound<'_, PyModule>) -> PyResult<()> {
+src\scene\render_paths.rs:3:use numpy::IntoPyArray;
+src\scene\render_paths.rs:4:use pyo3::{Bound, PyResult};
+src\converters\multipolygonz_to_obj.rs:81:use numpy::{PyReadonlyArray2, PyUntypedArrayMethods};
+src\converters\multipolygonz_to_obj.rs:83:use pyo3::prelude::*;
+src\converters\multipolygonz_to_obj.rs:85:use pyo3::types::PyList;
+src\converters\multipolygonz_to_obj.rs:88:#[pyfunction]
+src\converters\multipolygonz_to_obj.rs:92:) -> PyResult<PyObject> {
+src\converters\multipolygonz_to_obj.rs:98:            return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\render_paths\shared.rs:18:    fn readback_color_pixels(&self, readback_label: &str, copy_label: &str) -> PyResult<Vec<u8>> {
+src\scene\render_paths\rgba.rs:4:        py: pyo3::Python<'py>,
+src\scene\render_paths\rgba.rs:5:    ) -> PyResult<Bound<'py, numpy::PyArray3<u8>>> {
+src\scene\render_paths\rgba.rs:19:            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+src\scene\render_paths\rgba.rs:23:    fn encode_rgba_frame(&mut self, encoder: &mut wgpu::CommandEncoder) -> PyResult<()> {
+src\scene\render_paths\rgba.rs:243:                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))?;
+src\scene\render_paths\png.rs:2:    pub(super) fn render_png_impl(&mut self, path: &PathBuf) -> PyResult<()> {
+src\scene\render_paths\png.rs:16:            .ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("Invalid image buffer"))?;
+src\scene\render_paths\png.rs:18:            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+src\scene\render_paths\png.rs:22:    fn encode_png_frame(&mut self, encoder: &mut wgpu::CommandEncoder) -> PyResult<()> {
+src\scene\render_paths\png.rs:248:                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))?;
+src\scene\render_paths\helpers.rs:1:fn reflection_err(error: String) -> pyo3::PyErr {
+src\scene\render_paths\helpers.rs:2:    pyo3::exceptions::PyRuntimeError::new_err(format!("Reflection rendering failed: {}", error))
+src\scene\render_paths\helpers.rs:5:fn cloud_shadow_err(error: String) -> pyo3::PyErr {
+src\scene\render_paths\helpers.rs:6:    pyo3::exceptions::PyRuntimeError::new_err(format!("Cloud shadow generation failed: {}", error))
+src\scene\render_paths\helpers.rs:9:fn cloud_render_err(error: String) -> pyo3::PyErr {
+src\scene\render_paths\helpers.rs:10:    pyo3::exceptions::PyRuntimeError::new_err(format!("Cloud rendering failed: {}", error))
+src\scene\render_paths\helpers.rs:13:fn dof_err(error: String) -> pyo3::PyErr {
+src\scene\render_paths\helpers.rs:14:    pyo3::exceptions::PyRuntimeError::new_err(format!(
+src\py_functions\viewer.rs:3:#[pyfunction]
+src\py_functions\viewer.rs:4:#[pyo3(signature = (
+src\py_functions\viewer.rs:27:) -> PyResult<()> {
+src\py_functions\viewer.rs:32:        return Err(pyo3::exceptions::PyValueError::new_err(
+src\py_functions\viewer.rs:40:                return Err(pyo3::exceptions::PyValueError::new_err(
+src\py_functions\viewer.rs:46:            return Err(pyo3::exceptions::PyValueError::new_err(
+src\py_functions\viewer.rs:91:        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("Viewer error: {}", e)))
+src\py_functions\viewer.rs:101:#[pyfunction]
+src\py_functions\viewer.rs:102:#[pyo3(signature = (
+src\py_functions\viewer.rs:124:) -> PyResult<()> {
+src\py_functions\viewer.rs:136:                return Err(pyo3::exceptions::PyValueError::new_err(
+src\py_functions\viewer.rs:142:            return Err(pyo3::exceptions::PyValueError::new_err(
+src\py_functions\viewer.rs:179:        pyo3::exceptions::PyRuntimeError::new_err(format!("Terrain viewer error: {}", e))
+src\py_functions\viewer.rs:183:#[pyfunction]
+src\py_functions\viewer.rs:184:#[pyo3(signature = (args=None))]
+src\py_functions\viewer.rs:188:) -> PyResult<()> {
+src\py_functions\viewer.rs:194:            pyo3::exceptions::PyRuntimeError::new_err(format!("interactive_viewer error: {}", e))
+src\py_functions\frame.rs:4:#[pyfunction]
+src\py_functions\frame.rs:9:) -> PyResult<Py<Frame>> {
+src\py_functions\frame.rs:32:#[pyfunction]
+src\py_functions\frame.rs:33:#[pyo3(signature = (path, array, channel_prefix=None))]
+src\py_functions\frame.rs:38:) -> PyResult<()> {
+src\py_functions\diagnostics.rs:3:#[pyfunction]
+src\py_functions\diagnostics.rs:4:pub(crate) fn engine_info(py: Python<'_>) -> PyResult<Py<PyDict>> {
+src\py_functions\diagnostics.rs:19:#[pyfunction]
+src\py_functions\diagnostics.rs:20:pub(crate) fn report_device(py: Python<'_>) -> PyResult<Py<PyDict>> {
+src\py_functions\diagnostics.rs:29:#[pyfunction]
+src\py_functions\diagnostics.rs:30:pub(crate) fn c5_build_framegraph_report(py: Python<'_>) -> PyResult<Py<PyDict>> {
+src\py_functions\diagnostics.rs:107:#[pyfunction]
+src\py_functions\diagnostics.rs:108:pub(crate) fn c6_mt_record_demo(py: Python<'_>) -> PyResult<Py<PyDict>> {
+src\py_functions\diagnostics.rs:150:        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+src\py_functions\diagnostics.rs:162:#[pyfunction]
+src\py_functions\diagnostics.rs:163:pub(crate) fn c7_async_compute_demo(py: Python<'_>) -> PyResult<Py<PyDict>> {
+src\py_functions\diagnostics.rs:213:#[pyfunction]
+src\py_functions\diagnostics.rs:214:pub(crate) fn enumerate_adapters(_py: Python<'_>) -> PyResult<Vec<PyObject>> {
+src\py_functions\diagnostics.rs:221:#[pyfunction]
+src\py_functions\diagnostics.rs:222:pub(crate) fn global_memory_metrics(py: Python<'_>) -> PyResult<PyObject> {
+src\py_functions\diagnostics.rs:244:#[pyfunction]
+src\py_functions\diagnostics.rs:245:pub(crate) fn device_probe(py: Python<'_>, backend: Option<String>) -> PyResult<PyObject> {
+src\py_functions\csm.rs:3:#[pyfunction]
+src\py_functions\csm.rs:14:) -> PyResult<()> {
+src\py_functions\csm.rs:37:#[pyfunction]
+src\py_functions\csm.rs:38:pub(crate) fn set_csm_enabled(enabled: bool) -> PyResult<()> {
+src\py_functions\csm.rs:45:#[pyfunction]
+src\py_functions\csm.rs:46:pub(crate) fn set_csm_light_direction(direction: (f32, f32, f32)) -> PyResult<()> {
+src\py_functions\csm.rs:53:#[pyfunction]
+src\py_functions\csm.rs:54:pub(crate) fn set_csm_pcf_kernel(kernel_size: u32) -> PyResult<()> {
+src\py_functions\csm.rs:63:#[pyfunction]
+src\py_functions\csm.rs:68:) -> PyResult<()> {
+src\py_functions\csm.rs:77:#[pyfunction]
+src\py_functions\csm.rs:78:pub(crate) fn set_csm_debug_mode(mode: u32) -> PyResult<()> {
+src\py_functions\csm.rs:85:#[pyfunction]
+src\py_functions\csm.rs:86:pub(crate) fn get_csm_cascade_info() -> PyResult<Vec<(f32, f32, f32)>> {
+src\py_functions\csm.rs:92:#[pyfunction]
+src\py_functions\csm.rs:93:pub(crate) fn validate_csm_peter_panning() -> PyResult<bool> {
+src\py_functions\brdf\wrappers.rs:4:#[pyfunction]
+src\py_functions\brdf\wrappers.rs:5:#[pyo3(signature = (
+src\py_functions\brdf\wrappers.rs:52:) -> PyResult<Bound<'py, PyArray3<u8>>> {
+src\py_functions\brdf\wrappers.rs:94:#[pyfunction]
+src\py_functions\brdf\wrappers.rs:95:#[pyo3(signature = (
+src\py_functions\brdf\wrappers.rs:145:) -> PyResult<Bound<'py, PyArray3<u8>>> {
+src\py_functions\brdf\render.rs:40:) -> PyResult<Bound<'py, PyArray3<u8>>> {
+src\py_functions\path_tracing\gpu.rs:3:#[pyfunction]
+src\py_functions\path_tracing\gpu.rs:12:) -> PyResult<Py<PyAny>> {
+src\py_functions\path_tracing\gpu.rs:19:                .downcast::<pyo3::types::PyDict>()
+src\py_functions\path_tracing\hybrid.rs:3:#[pyfunction]
+src\py_functions\path_tracing\hybrid.rs:10:) -> PyResult<Py<PyAny>> {
+src\py_functions\path_tracing\hybrid.rs:11:    fn py_any_to_vec3(obj: &Bound<'_, PyAny>) -> PyResult<Vec3> {
+src\py_functions\path_tracing\hybrid.rs:48:        let update_vec3 = |key: &str, out: &mut Vec3| -> PyResult<()> {
+src\py_functions\path_tracing\hybrid.rs:62:        let update_f32 = |key: &str, out: &mut f32| -> PyResult<()> {
+src\py_functions\vector\render.rs:85:) -> PyResult<UploadedVectorScene> {
+src\py_functions\vector\render.rs:126:) -> PyResult<()> {
+src\py_functions\vector\render.rs:165:) -> PyResult<()> {
+src\py_functions\path_tracing\gpu_mesh.rs:3:#[pyfunction]
+src\py_functions\path_tracing\gpu_mesh.rs:19:) -> PyResult<Py<PyAny>> {
+src\py_functions\path_tracing\gpu_mesh.rs:20:    use numpy::{PyArray1, PyReadonlyArray2};
+src\py_functions\path_tracing\gpu_mesh.rs:21:    use pyo3::exceptions::{PyRuntimeError, PyValueError};
+src\py_functions\vector\inputs.rs:4:pub(super) fn extract_xy_list(list: Option<&Bound<'_, PyAny>>) -> PyResult<Vec<glam::Vec2>> {
+src\py_functions\vector\inputs.rs:17:pub(super) fn extract_rgba_list(list: Option<&Bound<'_, PyAny>>) -> PyResult<Vec<[f32; 4]>> {
+src\py_functions\vector\inputs.rs:30:pub(super) fn extract_f32_list(list: Option<&Bound<'_, PyAny>>) -> PyResult<Vec<f32>> {
+src\py_functions\vector\inputs.rs:38:pub(super) fn extract_polylines(list: Option<&Bound<'_, PyAny>>) -> PyResult<Vec<Vec<glam::Vec2>>> {
+src\py_functions\vector\readback.rs:2:use numpy::PyArray1;
+src\py_functions\vector\readback.rs:8:) -> PyResult<()> {
+src\py_functions\vector\readback.rs:39:) -> PyResult<Vec<u8>> {
+src\py_functions\vector\readback.rs:99:) -> PyResult<Py<PyAny>> {
+src\py_functions\vector\readback.rs:125:) -> PyResult<Py<PyAny>> {
+src\py_functions\vector\readback.rs:189:) -> PyResult<u32> {
+src\py_functions\pointcloud.rs:8:#[pyfunction]
+src\py_functions\pointcloud.rs:9:#[pyo3(name = "read_laz_points_info")]
+src\py_functions\pointcloud.rs:10:pub(crate) fn read_laz_points_info_py(path: &str) -> PyResult<(u64, Vec<f64>, bool)> {
+src\py_functions\pointcloud.rs:14:        .map_err(|e| pyo3::exceptions::PyIOError::new_err(format!("{}", e)))?;
+src\py_functions\pointcloud.rs:21:        let pt = result.map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("{}", e)))?;
+src\py_functions\pointcloud.rs:35:#[pyfunction]
+src\py_functions\pointcloud.rs:36:#[pyo3(name = "copc_laz_enabled")]
+src\py_functions\vector\demo.rs:6:#[pyfunction]
+src\py_functions\vector\demo.rs:11:) -> PyResult<(Py<PyAny>, u32)> {
+src\py_functions\vector\polygon_fill.rs:5:    exteriors: Vec<numpy::PyReadonlyArray2<'_, f64>>,
+src\py_functions\vector\polygon_fill.rs:6:    holes: Option<Vec<Vec<numpy::PyReadonlyArray2<'_, f64>>>>,
+src\py_functions\vector\polygon_fill.rs:7:) -> PyResult<Vec<PolygonDef>> {
+src\py_functions\vector\polygon_fill.rs:128:#[pyfunction]
+src\py_functions\vector\polygon_fill.rs:133:    exteriors: Vec<numpy::PyReadonlyArray2<'_, f64>>,
+src\py_functions\vector\polygon_fill.rs:134:    holes: Option<Vec<Vec<numpy::PyReadonlyArray2<'_, f64>>>>,
+src\py_functions\vector\polygon_fill.rs:138:) -> PyResult<Py<PyAny>> {
+src\py_functions\vector\basic.rs:3:#[pyfunction]
+src\py_functions\vector\basic.rs:4:pub(crate) fn set_point_shape_mode(mode: u32) -> PyResult<()> {
+src\py_functions\vector\basic.rs:10:#[pyfunction]
+src\py_functions\vector\basic.rs:11:pub(crate) fn set_point_lod_threshold(threshold: f32) -> PyResult<()> {
+src\py_functions\vector\basic.rs:17:#[pyfunction]
+src\py_functions\vector\basic.rs:18:pub(crate) fn is_weighted_oit_available() -> PyResult<bool> {
+src\py_functions\vector\oit.rs:4:#[pyfunction]
+src\py_functions\vector\oit.rs:15:) -> PyResult<Py<PyAny>> {
+src\py_functions\vector\pick.rs:3:#[pyfunction]
+src\py_functions\vector\pick.rs:11:) -> PyResult<Py<PyAny>> {
+src\py_functions\vector\pick.rs:70:#[pyfunction]
+src\py_functions\vector\pick.rs:82:) -> PyResult<(Py<PyAny>, Py<PyAny>)> {
+src\terrain\spike.rs:8:#[pyclass(module = "forge3d._forge3d", name = "TerrainSpike")]
+tests\test_mapscene_render_png.py:241:    PanicException.__module__ = "pyo3_runtime"
+src\scene\py_api\water_surface.rs:4:#[pymethods]
+src\scene\py_api\water_surface.rs:7:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\water_surface.rs:8:    pub fn enable_water_surface(&mut self) -> PyResult<()> {
+src\scene\py_api\water_surface.rs:23:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\water_surface.rs:29:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\water_surface.rs:34:    #[pyo3(text_signature = "($self, mode)")]
+src\scene\py_api\water_surface.rs:35:    pub fn set_water_surface_mode(&mut self, mode: &str) -> PyResult<()> {
+src\scene\py_api\water_surface.rs:43:                    _ => return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\water_surface.rs:50:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\water_surface.rs:56:    #[pyo3(text_signature = "($self, height)")]
+src\scene\py_api\water_surface.rs:57:    pub fn set_water_surface_height(&mut self, height: f32) -> PyResult<()> {
+src\scene\py_api\water_surface.rs:62:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\water_surface.rs:68:    #[pyo3(text_signature = "($self, size)")]
+src\scene\py_api\water_surface.rs:69:    pub fn set_water_surface_size(&mut self, size: f32) -> PyResult<()> {
+src\scene\py_api\water_surface.rs:74:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\water_surface.rs:80:    #[pyo3(text_signature = "($self, r, g, b)")]
+src\scene\py_api\water_surface.rs:81:    pub fn set_water_base_color(&mut self, r: f32, g: f32, b: f32) -> PyResult<()> {
+src\scene\py_api\water_surface.rs:86:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\water_surface.rs:92:    #[pyo3(text_signature = "($self, hue_shift)")]
+src\scene\py_api\water_surface.rs:93:    pub fn set_water_hue_shift(&mut self, hue_shift: f32) -> PyResult<()> {
+src\scene\py_api\water_surface.rs:98:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\water_surface.rs:104:    #[pyo3(text_signature = "($self, r, g, b, strength)")]
+src\scene\py_api\water_surface.rs:105:    pub fn set_water_tint(&mut self, r: f32, g: f32, b: f32, strength: f32) -> PyResult<()> {
+src\scene\py_api\water_surface.rs:110:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\water_surface.rs:116:    #[pyo3(text_signature = "($self, alpha)")]
+src\scene\py_api\water_surface.rs:117:    pub fn set_water_alpha(&mut self, alpha: f32) -> PyResult<()> {
+src\scene\py_api\water_surface.rs:122:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\water_surface.rs:128:    #[pyo3(text_signature = "($self, amplitude, frequency, speed)")]
+src\scene\py_api\water_surface.rs:134:    ) -> PyResult<()> {
+src\scene\py_api\water_surface.rs:139:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\water_surface.rs:145:    #[pyo3(text_signature = "($self, direction_x, direction_y)")]
+src\scene\py_api\water_surface.rs:146:    pub fn set_water_flow_direction(&mut self, direction_x: f32, direction_y: f32) -> PyResult<()> {
+src\scene\py_api\water_surface.rs:151:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\water_surface.rs:157:    #[pyo3(
+src\scene\py_api\water_surface.rs:166:    ) -> PyResult<()> {
+src\scene\py_api\water_surface.rs:176:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\water_surface.rs:182:    #[pyo3(text_signature = "($self, preset)")]
+src\scene\py_api\water_surface.rs:183:    pub fn set_water_preset(&mut self, preset: &str) -> PyResult<()> {
+src\scene\py_api\water_surface.rs:190:                    return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\water_surface.rs:198:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\water_surface.rs:204:    #[pyo3(text_signature = "($self, delta_time)")]
+src\scene\py_api\water_surface.rs:205:    pub fn update_water_animation(&mut self, delta_time: f32) -> PyResult<()> {
+src\scene\py_api\water_surface.rs:210:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\water_surface.rs:216:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\water_surface.rs:217:    pub fn get_water_surface_params(&self) -> PyResult<(f32, f32, f32, f32)> {
+src\scene\py_api\water_surface.rs:221:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\text_mesh.rs:4:#[pymethods]
+src\scene\py_api\text_mesh.rs:9:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\text_mesh.rs:10:    pub fn enable_text_meshes(&mut self) -> PyResult<()> {
+src\scene\py_api\text_mesh.rs:15:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\text_mesh.rs:16:    pub fn disable_text_meshes(&mut self) -> PyResult<()> {
+src\scene\py_api\text_mesh.rs:21:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\text_mesh.rs:22:    pub fn clear_text_meshes(&mut self) -> PyResult<()> {
+src\scene\py_api\text_mesh.rs:30:    #[pyo3(
+src\scene\py_api\text_mesh.rs:35:        _py: pyo3::Python<'_>,
+src\scene\py_api\text_mesh.rs:37:        font: &pyo3::types::PyAny,
+src\scene\py_api\text_mesh.rs:49:    ) -> PyResult<()> {
+src\scene\py_api\text_mesh.rs:56:                    pyo3::exceptions::PyTypeError::new_err("font array must be C-contiguous uint8")
+src\scene\py_api\text_mesh.rs:60:            return Err(pyo3::exceptions::PyTypeError::new_err(
+src\scene\py_api\text_mesh.rs:82:                    pyo3::exceptions::PyRuntimeError::new_err(format!(
+src\scene\py_api\text_mesh.rs:134:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\text_mesh.rs:135:    pub fn get_text_mesh_stats(&self) -> PyResult<(usize, u64, u64)> {
+src\scene\py_api\text_mesh.rs:146:    #[pyo3(text_signature = "($self, index, position, rotation_deg, scale=None, scale_xyz=None)")]
+src\scene\py_api\text_mesh.rs:154:    ) -> PyResult<()> {
+src\scene\py_api\text_mesh.rs:156:            return Err(pyo3::exceptions::PyIndexError::new_err(
+src\scene\py_api\text_mesh.rs:178:    #[pyo3(text_signature = "($self, index, r, g, b, a)")]
+src\scene\py_api\text_mesh.rs:186:    ) -> PyResult<()> {
+src\scene\py_api\text_mesh.rs:188:            return Err(pyo3::exceptions::PyIndexError::new_err(
+src\scene\py_api\text_mesh.rs:198:    #[pyo3(text_signature = "($self, index, dx, dy, dz, intensity)")]
+src\scene\py_api\text_mesh.rs:206:    ) -> PyResult<()> {
+src\scene\py_api\text_mesh.rs:208:            return Err(pyo3::exceptions::PyIndexError::new_err(
+src\scene\py_api\text_mesh.rs:219:    #[pyo3(text_signature = "($self, index, metallic, roughness)")]
+src\scene\py_api\text_mesh.rs:225:    ) -> PyResult<()> {
+src\scene\py_api\text_mesh.rs:227:            return Err(pyo3::exceptions::PyIndexError::new_err(
+src\scene\py_api\stats.rs:4:#[pymethods]
+src\scene\py_api\stats.rs:6:    pub fn get_stats(&self, py: Python<'_>) -> PyResult<PyObject> {
+src\core\error.rs:6:use pyo3::exceptions::PyRuntimeError;
+src\core\error.rs:7:use pyo3::prelude::*;
+src\scene\py_api\ssr.rs:4:#[pymethods]
+src\scene\py_api\ssr.rs:9:    #[pyo3(text_signature = "()")]
+src\scene\py_api\ssr.rs:10:    pub fn enable_ssr(&mut self) -> PyResult<()> {
+src\scene\py_api\ssr.rs:16:    #[pyo3(text_signature = "()")]
+src\scene\py_api\ssr.rs:17:    pub fn disable_ssr(&mut self) -> PyResult<()> {
+src\scene\py_api\ssr.rs:23:    #[pyo3(text_signature = "()")]
+src\scene\py_api\ssr.rs:34:    #[pyo3(text_signature = "($self, settings)")]
+src\scene\py_api\ssr.rs:38:    ) -> PyResult<()> {
+src\scene\py_api\ssr.rs:45:    #[pyo3(text_signature = "()")]
+src\scene\py_api\ssr.rs:46:    pub fn get_ssr_settings(&self, py: Python<'_>) -> PyResult<PyObject> {
+src\scene\py_api\ssr.rs:47:        let dict = pyo3::types::PyDict::new(py);
+src\scene\py_api\ssgi.rs:4:#[pymethods]
+src\scene\py_api\ssgi.rs:9:    #[pyo3(text_signature = "()")]
+src\scene\py_api\ssgi.rs:10:    pub fn enable_ssgi(&mut self) -> PyResult<()> {
+src\scene\py_api\ssgi.rs:16:    #[pyo3(text_signature = "()")]
+src\scene\py_api\ssgi.rs:17:    pub fn disable_ssgi(&mut self) -> PyResult<()> {
+src\scene\py_api\ssgi.rs:23:    #[pyo3(text_signature = "()")]
+src\scene\py_api\ssgi.rs:34:    #[pyo3(text_signature = "($self, settings)")]
+src\scene\py_api\ssgi.rs:38:    ) -> PyResult<()> {
+src\scene\py_api\ssgi.rs:45:    #[pyo3(text_signature = "()")]
+src\scene\py_api\ssgi.rs:46:    pub fn get_ssgi_settings(&self, py: Python<'_>) -> PyResult<PyObject> {
+src\scene\py_api\ssgi.rs:47:        let dict = pyo3::types::PyDict::new(py);
+src\terrain\spike\tiling.rs:3:#[pymethods]
+src\terrain\spike\tiling.rs:6:    #[pyo3(
+src\terrain\spike\tiling.rs:17:    ) -> PyResult<()> {
+src\terrain\spike\tiling.rs:36:    #[pyo3(
+src\terrain\spike\tiling.rs:47:    ) -> PyResult<()> {
+src\terrain\spike\tiling.rs:60:    #[pyo3(
+src\terrain\spike\tiling.rs:71:    ) -> PyResult<Vec<(u32, u32, u32)>> {
+src\terrain\spike\tiling.rs:75:            pyo3::exceptions::PyRuntimeError::new_err(
+src\terrain\spike\tiling.rs:101:    #[pyo3(text_signature = "($self, lod, x, y)")]
+src\terrain\spike\tiling.rs:102:    pub fn load_tile(&mut self, lod: u32, x: u32, y: u32) -> PyResult<()> {
+src\terrain\spike\tiling.rs:104:            pyo3::exceptions::PyRuntimeError::new_err(
+src\terrain\spike\tiling.rs:111:            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to load tile: {}", e))
+src\terrain\spike\tiling.rs:118:    #[pyo3(text_signature = "($self)")]
+src\terrain\spike\tiling.rs:121:        py: pyo3::Python<'py>,
+src\terrain\spike\tiling.rs:122:    ) -> PyResult<pyo3::Bound<'py, pyo3::types::PyDict>> {
+src\terrain\spike\tiling.rs:124:            pyo3::exceptions::PyRuntimeError::new_err(
+src\terrain\spike\tiling.rs:130:        let dict = pyo3::types::PyDict::new_bound(py);
+src\terrain\spike\tiling.rs:140:    #[pyo3(
+src\terrain\spike\tiling.rs:151:    ) -> PyResult<Vec<(u32, u32, u32)>> {
+src\scene\py_api\soft_light.rs:4:#[pymethods]
+src\scene\py_api\soft_light.rs:7:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\soft_light.rs:8:    pub fn enable_soft_light_radius(&mut self) -> PyResult<()> {
+src\scene\py_api\soft_light.rs:18:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\soft_light.rs:24:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\soft_light.rs:29:    #[pyo3(text_signature = "($self, x, y, z)")]
+src\scene\py_api\soft_light.rs:30:    pub fn set_soft_light_position(&mut self, x: f32, y: f32, z: f32) -> PyResult<()> {
+src\scene\py_api\soft_light.rs:35:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\soft_light.rs:41:    #[pyo3(text_signature = "($self, intensity)")]
+src\scene\py_api\soft_light.rs:42:    pub fn set_soft_light_intensity(&mut self, intensity: f32) -> PyResult<()> {
+src\scene\py_api\soft_light.rs:47:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\soft_light.rs:53:    #[pyo3(text_signature = "($self, r, g, b)")]
+src\scene\py_api\soft_light.rs:54:    pub fn set_soft_light_color(&mut self, r: f32, g: f32, b: f32) -> PyResult<()> {
+src\scene\py_api\soft_light.rs:59:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\soft_light.rs:65:    #[pyo3(text_signature = "($self, radius)")]
+src\scene\py_api\soft_light.rs:66:    pub fn set_light_inner_radius(&mut self, radius: f32) -> PyResult<()> {
+src\scene\py_api\soft_light.rs:71:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\soft_light.rs:77:    #[pyo3(text_signature = "($self, radius)")]
+src\scene\py_api\soft_light.rs:78:    pub fn set_light_outer_radius(&mut self, radius: f32) -> PyResult<()> {
+src\scene\py_api\soft_light.rs:83:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\soft_light.rs:89:    #[pyo3(text_signature = "($self, exponent)")]
+src\scene\py_api\soft_light.rs:90:    pub fn set_light_falloff_exponent(&mut self, exponent: f32) -> PyResult<()> {
+src\scene\py_api\soft_light.rs:95:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\soft_light.rs:101:    #[pyo3(text_signature = "($self, softness)")]
+src\scene\py_api\soft_light.rs:102:    pub fn set_light_edge_softness(&mut self, softness: f32) -> PyResult<()> {
+src\scene\py_api\soft_light.rs:107:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\soft_light.rs:113:    #[pyo3(text_signature = "($self, mode)")]
+src\scene\py_api\soft_light.rs:114:    pub fn set_light_falloff_mode(&mut self, mode: &str) -> PyResult<()> {
+src\scene\py_api\soft_light.rs:122:                    return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\soft_light.rs:130:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\soft_light.rs:136:    #[pyo3(text_signature = "($self, softness)")]
+src\scene\py_api\soft_light.rs:137:    pub fn set_light_shadow_softness(&mut self, softness: f32) -> PyResult<()> {
+src\scene\py_api\soft_light.rs:142:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\soft_light.rs:148:    #[pyo3(text_signature = "($self, preset)")]
+src\scene\py_api\soft_light.rs:149:    pub fn set_light_preset(&mut self, preset: &str) -> PyResult<()> {
+src\scene\py_api\soft_light.rs:157:                _ => return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\soft_light.rs:164:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\soft_light.rs:170:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\soft_light.rs:171:    pub fn get_light_effective_range(&self) -> PyResult<f32> {
+src\scene\py_api\soft_light.rs:175:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\soft_light.rs:181:    #[pyo3(text_signature = "($self, x, y, z)")]
+src\scene\py_api\soft_light.rs:182:    pub fn light_affects_point(&self, x: f32, y: f32, z: f32) -> PyResult<bool> {
+src\scene\py_api\soft_light.rs:186:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\terrain\spike\terrain_ops.rs:3:#[pymethods]
+src\terrain\spike\terrain_ops.rs:6:    #[pyo3(text_signature = "($self, morph, coarse_factor=None)")]
+src\terrain\spike\terrain_ops.rs:7:    pub fn set_lod_morph(&mut self, morph: f32, coarse_factor: Option<f32>) -> PyResult<()> {
+src\terrain\spike\terrain_ops.rs:12:                return Err(pyo3::exceptions::PyValueError::new_err(
+src\terrain\spike\terrain_ops.rs:30:    #[pyo3(text_signature = "($self, depth)")]
+src\terrain\spike\terrain_ops.rs:31:    pub fn set_skirt_depth(&mut self, depth: f32) -> PyResult<()> {
+src\terrain\spike\terrain_ops.rs:33:            return Err(pyo3::exceptions::PyValueError::new_err(
+src\terrain\spike\terrain_ops.rs:49:    #[pyo3(text_signature = "($self, mask)")]
+src\terrain\spike\terrain_ops.rs:50:    pub fn set_skirt_mask(&mut self, mask: u32) -> PyResult<()> {
+src\terrain\spike\terrain_ops.rs:64:    #[pyo3(text_signature = "($self, left, right, bottom, top)")]
+src\terrain\spike\terrain_ops.rs:71:    ) -> PyResult<()> {
+src\terrain\spike\terrain_ops.rs:88:    #[pyo3(text_signature = "($self)")]
+src\terrain\spike\terrain_ops.rs:93:    #[pyo3(text_signature = "($self, eye, target, up, fovy_deg, znear, zfar)")]
+src\terrain\spike\terrain_ops.rs:102:    ) -> PyResult<()> {
+src\terrain\spike\terrain_ops.rs:133:    #[pyo3(text_signature = "($self)")]
+src\terrain\spike\terrain_ops.rs:136:        py: pyo3::Python<'py>,
+src\terrain\spike\terrain_ops.rs:137:    ) -> pyo3::PyResult<pyo3::Bound<'py, numpy::PyArray1<f32>>> {
+src\terrain\spike\terrain_ops.rs:141:        Ok(numpy::PyArray1::from_slice_bound(py, &uniform_lanes))
+src\terrain\spike\terrain_ops.rs:145:    #[pyo3(text_signature = "($self)")]
+src\terrain\spike\terrain_ops.rs:148:        py: pyo3::Python<'py>,
+src\terrain\spike\terrain_ops.rs:149:    ) -> pyo3::PyResult<pyo3::Bound<'py, pyo3::types::PyDict>> {
+src\terrain\spike\terrain_ops.rs:153:        let dict = pyo3::types::PyDict::new_bound(py);
+src\scene\py_api\shoreline.rs:4:#[pymethods]
+src\scene\py_api\shoreline.rs:7:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\shoreline.rs:8:    pub fn enable_shoreline_foam(&mut self) -> PyResult<()> {
+src\scene\py_api\shoreline.rs:13:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\shoreline.rs:19:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\shoreline.rs:20:    pub fn disable_shoreline_foam(&mut self) -> PyResult<()> {
+src\scene\py_api\shoreline.rs:25:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\shoreline.rs:31:    #[pyo3(text_signature = "($self, width_px, intensity, noise_scale)")]
+src\scene\py_api\shoreline.rs:37:    ) -> PyResult<()> {
+src\scene\py_api\shoreline.rs:42:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\shoreline.rs:51:    #[pyo3(text_signature = "($self, mask)")]
+src\scene\py_api\shoreline.rs:52:    pub fn set_water_mask(&mut self, _py: pyo3::Python<'_>, mask: &pyo3::PyAny) -> PyResult<()> {
+src\scene\py_api\shoreline.rs:71:                return Err(pyo3::exceptions::PyTypeError::new_err(
+src\scene\py_api\shoreline.rs:81:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\shoreline.rs:93:    #[pyo3(text_signature = "($self, mode)")]
+src\scene\py_api\shoreline.rs:94:    pub fn set_water_surface_debug_mode(&mut self, mode: u32) -> PyResult<()> {
+src\scene\py_api\shoreline.rs:99:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\terrain\spike\render.rs:3:#[pymethods]
+src\terrain\spike\render.rs:5:    #[pyo3(text_signature = "($self, path)")]
+src\terrain\spike\render.rs:6:    pub fn render_png(&mut self, path: String) -> PyResult<()> {
+src\terrain\spike\render.rs:104:            pyo3::exceptions::PyRuntimeError::new_err(format!(
+src\terrain\spike\render.rs:167:            .ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("Invalid image buffer"))?;
+src\terrain\spike\render.rs:169:            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+src\scene\py_api\reflections.rs:4:#[pymethods]
+src\scene\py_api\reflections.rs:7:    #[pyo3(text_signature = "($self, quality='medium')")]
+src\scene\py_api\reflections.rs:8:    pub fn enable_reflections(&mut self, quality: Option<&str>) -> PyResult<()> {
+src\scene\py_api\reflections.rs:15:                return Err(pyo3::exceptions::PyValueError::new_err(format!(
+src\scene\py_api\reflections.rs:48:    #[pyo3(text_signature = "()")]
+src\scene\py_api\reflections.rs:58:    #[pyo3(text_signature = "($self, normal, point, size)")]
+src\scene\py_api\reflections.rs:64:    ) -> PyResult<()> {
+src\scene\py_api\reflections.rs:66:            return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\reflections.rs:71:            return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\reflections.rs:84:    #[pyo3(text_signature = "($self, intensity)")]
+src\scene\py_api\reflections.rs:85:    pub fn set_reflection_intensity(&mut self, intensity: f32) -> PyResult<()> {
+src\scene\py_api\reflections.rs:87:            return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\reflections.rs:92:            return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\reflections.rs:102:    #[pyo3(text_signature = "($self, power)")]
+src\scene\py_api\reflections.rs:103:    pub fn set_reflection_fresnel_power(&mut self, power: f32) -> PyResult<()> {
+src\scene\py_api\reflections.rs:105:            return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\reflections.rs:110:            return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\reflections.rs:115:            return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\reflections.rs:125:    #[pyo3(text_signature = "($self, start, end)")]
+src\scene\py_api\reflections.rs:126:    pub fn set_reflection_distance_fade(&mut self, start: f32, end: f32) -> PyResult<()> {
+src\scene\py_api\reflections.rs:128:            return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\reflections.rs:133:            return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\reflections.rs:138:            return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\reflections.rs:148:    #[pyo3(text_signature = "($self, mode)")]
+src\scene\py_api\reflections.rs:149:    pub fn set_reflection_debug_mode(&mut self, mode: u32) -> PyResult<()> {
+src\scene\py_api\reflections.rs:151:            return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\reflections.rs:156:            return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\reflections.rs:161:            return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\reflections.rs:171:    #[pyo3(text_signature = "()")]
+src\scene\py_api\reflections.rs:172:    pub fn reflection_performance_info(&self) -> PyResult<(f32, bool)> {
+src\scene\py_api\reflections.rs:174:            return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\reflections.rs:179:            return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\terrain\spike\overlay_stream.rs:3:#[pymethods]
+src\terrain\spike\overlay_stream.rs:6:    #[pyo3(
+src\terrain\spike\overlay_stream.rs:19:    ) -> PyResult<Vec<(u32, u32, u32)>> {
+src\terrain\spike\overlay_stream.rs:22:            pyo3::exceptions::PyRuntimeError::new_err(
+src\terrain\spike\overlay_stream.rs:27:            pyo3::exceptions::PyRuntimeError::new_err(
+src\terrain\spike\overlay_stream.rs:32:            pyo3::exceptions::PyRuntimeError::new_err(
+src\terrain\spike\overlay_stream.rs:89:                    .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))?;
+src\terrain\spike\overlay_stream.rs:142:    #[pyo3(text_signature = "($self)")]
+src\terrain\spike\overlay_stream.rs:143:    pub fn enable_page_table(&mut self) -> PyResult<()> {
+src\terrain\spike\overlay_stream.rs:145:            pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\rect_area_lights.rs:4:#[pymethods]
+src\scene\py_api\rect_area_lights.rs:7:    #[pyo3(text_signature = "($self, max_lights=16)")]
+src\scene\py_api\rect_area_lights.rs:8:    pub fn enable_ltc_rect_area_lights(&mut self, max_lights: Option<usize>) -> PyResult<()> {
+src\scene\py_api\rect_area_lights.rs:17:            pyo3::exceptions::PyRuntimeError::new_err(format!(
+src\scene\py_api\rect_area_lights.rs:29:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\rect_area_lights.rs:35:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\rect_area_lights.rs:40:    #[pyo3(text_signature = "($self, x, y, z, width, height, r, g, b, intensity)")]
+src\scene\py_api\rect_area_lights.rs:52:    ) -> PyResult<usize> {
+src\scene\py_api\rect_area_lights.rs:64:                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))?;
+src\scene\py_api\rect_area_lights.rs:68:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\rect_area_lights.rs:74:    #[pyo3(
+src\scene\py_api\rect_area_lights.rs:89:    ) -> PyResult<usize> {
+src\scene\py_api\rect_area_lights.rs:104:                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))?;
+src\scene\py_api\rect_area_lights.rs:108:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\rect_area_lights.rs:114:    #[pyo3(text_signature = "($self, light_id)")]
+src\scene\py_api\rect_area_lights.rs:115:    pub fn remove_rect_area_light(&mut self, light_id: usize) -> PyResult<()> {
+src\scene\py_api\rect_area_lights.rs:119:                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))?;
+src\scene\py_api\rect_area_lights.rs:122:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\rect_area_lights.rs:128:    #[pyo3(text_signature = "($self, light_id, x, y, z, width, height, r, g, b, intensity)")]
+src\scene\py_api\rect_area_lights.rs:141:    ) -> PyResult<()> {
+src\scene\py_api\rect_area_lights.rs:153:                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))?;
+src\scene\py_api\rect_area_lights.rs:157:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\rect_area_lights.rs:163:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\rect_area_lights.rs:164:    pub fn get_rect_area_light_count(&self) -> PyResult<usize> {
+src\scene\py_api\rect_area_lights.rs:168:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\rect_area_lights.rs:174:    #[pyo3(text_signature = "($self, intensity)")]
+src\scene\py_api\rect_area_lights.rs:175:    pub fn set_ltc_global_intensity(&mut self, intensity: f32) -> PyResult<()> {
+src\scene\py_api\rect_area_lights.rs:180:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\rect_area_lights.rs:186:    #[pyo3(text_signature = "($self, enabled)")]
+src\scene\py_api\rect_area_lights.rs:187:    pub fn set_ltc_approximation_enabled(&mut self, enabled: bool) -> PyResult<()> {
+src\scene\py_api\rect_area_lights.rs:192:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\rect_area_lights.rs:198:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\rect_area_lights.rs:199:    pub fn get_ltc_uniforms(&self) -> PyResult<(u32, f32, bool)> {
+src\scene\py_api\rect_area_lights.rs:208:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\terrain\spike\height_mosaic.rs:3:#[pymethods]
+src\terrain\spike\height_mosaic.rs:6:    #[pyo3(
+src\terrain\spike\height_mosaic.rs:16:    ) -> PyResult<()> {
+src\terrain\spike\height_mosaic.rs:86:    #[pyo3(
+src\terrain\spike\height_mosaic.rs:99:    ) -> PyResult<Vec<(u32, u32, u32)>> {
+src\terrain\spike\height_mosaic.rs:103:            pyo3::exceptions::PyRuntimeError::new_err(
+src\terrain\spike\height_mosaic.rs:108:            pyo3::exceptions::PyRuntimeError::new_err(
+src\terrain\spike\height_mosaic.rs:160:                            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))?;
+src\terrain\spike\height_mosaic.rs:167:                            return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\terrain\spike\height_mosaic.rs:173:                            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))?;
+src\terrain\spike\height_mosaic.rs:201:                                    .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))?;
+src\terrain\spike\height_mosaic.rs:266:            return Err(pyo3::exceptions::PyRuntimeError::new_err(format!(
+src\scene\py_api\raster_overlay.rs:4:#[pymethods]
+src\scene\py_api\raster_overlay.rs:8:        image: &pyo3::types::PyAny,
+src\scene\py_api\raster_overlay.rs:12:    ) -> PyResult<()> {
+src\scene\py_api\raster_overlay.rs:14:        let (h, w, c, data) = if let Ok(arr) = image.extract::<numpy::PyReadonlyArray3<u8>>() {
+src\scene\py_api\raster_overlay.rs:17:                return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\raster_overlay.rs:25:                return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\raster_overlay.rs:31:            return Err(pyo3::exceptions::PyTypeError::new_err(
+src\scene\py_api\raster_overlay.rs:122:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\raster_overlay.rs:123:    pub fn disable_overlay(&mut self) -> PyResult<()> {
+src\scene\py_api\raster_overlay.rs:133:    #[pyo3(text_signature = "($self, alpha)")]
+src\scene\py_api\raster_overlay.rs:134:    pub fn set_overlay_alpha(&mut self, alpha: f32) -> PyResult<()> {
+src\scene\py_api\raster_overlay.rs:145:    #[pyo3(text_signature = "($self, alpha=0.35)")]
+src\scene\py_api\raster_overlay.rs:146:    pub fn enable_altitude_overlay(&mut self, alpha: Option<f32>) -> PyResult<()> {
+src\scene\py_api\raster_overlay.rs:158:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\raster_overlay.rs:159:    pub fn disable_altitude_overlay(&mut self) -> PyResult<()> {
+src\scene\py_api\raster_overlay.rs:168:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\raster_overlay.rs:169:    pub fn disable_terrain(&mut self) -> PyResult<()> {
+src\scene\py_api\raster_overlay.rs:174:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\raster_overlay.rs:175:    pub fn enable_terrain(&mut self) -> PyResult<()> {
+src\scene\py_api\raster_overlay.rs:180:    #[pyo3(text_signature = "($self, alpha)")]
+src\scene\py_api\raster_overlay.rs:181:    pub fn set_altitude_overlay_alpha(&mut self, alpha: f32) -> PyResult<()> {
+src\scene\py_api\raster_overlay.rs:191:    #[pyo3(text_signature = "($self, interval, thickness_mul=1.0, r=0.0, g=0.0, b=0.0, a=0.75)")]
+src\scene\py_api\raster_overlay.rs:200:    ) -> PyResult<()> {
+src\scene\py_api\raster_overlay.rs:216:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\raster_overlay.rs:217:    pub fn disable_gpu_contours(&mut self) -> PyResult<()> {
+src\terrain\spike\constructor.rs:3:#[pymethods]
+src\terrain\spike\constructor.rs:6:    #[pyo3(text_signature = "(width, height, grid=128, colormap='viridis')")]
+src\terrain\spike\constructor.rs:12:    ) -> PyResult<Self> {
+src\terrain\spike\constructor.rs:19:            return Err(pyo3::exceptions::PyRuntimeError::new_err(format!(
+src\terrain\spike\constructor.rs:27:            pyo3::exceptions::PyRuntimeError::new_err(format!(
+src\terrain\spike\constructor.rs:44:        .ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("No suitable GPU adapter"))?;
+src\terrain\spike\constructor.rs:54:        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+src\terrain\spike\constructor.rs:174:            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+src\scene\py_api\point_spot_lights_update.rs:4:#[pymethods]
+src\scene\py_api\point_spot_lights_update.rs:6:    pub fn set_light_position(&mut self, light_id: u32, x: f32, y: f32, z: f32) -> PyResult<()> {
+src\scene\py_api\point_spot_lights_update.rs:12:                Err(pyo3::exceptions::PyValueError::new_err(format!(
+src\scene\py_api\point_spot_lights_update.rs:18:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\point_spot_lights_update.rs:24:    #[pyo3(text_signature = "($self, light_id, dir_x, dir_y, dir_z)")]
+src\scene\py_api\point_spot_lights_update.rs:31:    ) -> PyResult<()> {
+src\scene\py_api\point_spot_lights_update.rs:37:                Err(pyo3::exceptions::PyValueError::new_err(format!(
+src\scene\py_api\point_spot_lights_update.rs:43:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\point_spot_lights_update.rs:49:    #[pyo3(text_signature = "($self, light_id, r, g, b)")]
+src\scene\py_api\point_spot_lights_update.rs:50:    pub fn set_light_color(&mut self, light_id: u32, r: f32, g: f32, b: f32) -> PyResult<()> {
+src\scene\py_api\point_spot_lights_update.rs:56:                Err(pyo3::exceptions::PyValueError::new_err(format!(
+src\scene\py_api\point_spot_lights_update.rs:62:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\point_spot_lights_update.rs:68:    #[pyo3(text_signature = "($self, light_id, intensity)")]
+src\scene\py_api\point_spot_lights_update.rs:69:    pub fn set_light_intensity(&mut self, light_id: u32, intensity: f32) -> PyResult<()> {
+src\scene\py_api\point_spot_lights_update.rs:75:                Err(pyo3::exceptions::PyValueError::new_err(format!(
+src\scene\py_api\point_spot_lights_update.rs:81:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\point_spot_lights_update.rs:87:    #[pyo3(text_signature = "($self, light_id, range)")]
+src\scene\py_api\point_spot_lights_update.rs:88:    pub fn set_light_range(&mut self, light_id: u32, range: f32) -> PyResult<()> {
+src\scene\py_api\point_spot_lights_update.rs:94:                Err(pyo3::exceptions::PyValueError::new_err(format!(
+src\scene\py_api\point_spot_lights_update.rs:100:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\point_spot_lights_update.rs:106:    #[pyo3(text_signature = "($self, light_id, inner_cone_deg, outer_cone_deg)")]
+src\scene\py_api\point_spot_lights_update.rs:112:    ) -> PyResult<()> {
+src\scene\py_api\point_spot_lights_update.rs:118:                Err(pyo3::exceptions::PyValueError::new_err(format!(
+src\scene\py_api\point_spot_lights_update.rs:124:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\point_spot_lights_update.rs:130:    #[pyo3(text_signature = "($self, light_id, softness)")]
+src\scene\py_api\point_spot_lights_update.rs:131:    pub fn set_spot_light_penumbra(&mut self, light_id: u32, softness: f32) -> PyResult<()> {
+src\scene\py_api\point_spot_lights_update.rs:137:                Err(pyo3::exceptions::PyValueError::new_err(format!(
+src\scene\py_api\point_spot_lights_update.rs:143:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\point_spot_lights_update.rs:149:    #[pyo3(text_signature = "($self, light_id, enabled)")]
+src\scene\py_api\point_spot_lights_update.rs:150:    pub fn set_light_shadows(&mut self, light_id: u32, enabled: bool) -> PyResult<()> {
+src\scene\py_api\point_spot_lights_update.rs:156:                Err(pyo3::exceptions::PyValueError::new_err(format!(
+src\scene\py_api\point_spot_lights_update.rs:162:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\point_spot_lights_update.rs:168:    #[pyo3(text_signature = "($self, r, g, b, intensity)")]
+src\scene\py_api\point_spot_lights_update.rs:169:    pub fn set_ambient_lighting(&mut self, r: f32, g: f32, b: f32, intensity: f32) -> PyResult<()> {
+src\scene\py_api\point_spot_lights_update.rs:174:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\point_spot_lights_update.rs:180:    #[pyo3(text_signature = "($self, quality)")]
+src\scene\py_api\point_spot_lights_update.rs:181:    pub fn set_shadow_quality(&mut self, quality: &str) -> PyResult<()> {
+src\scene\py_api\point_spot_lights_update.rs:189:                    return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\point_spot_lights_update.rs:197:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\point_spot_lights_update.rs:203:    #[pyo3(text_signature = "($self, mode)")]
+src\scene\py_api\point_spot_lights_update.rs:204:    pub fn set_lighting_debug_mode(&mut self, mode: &str) -> PyResult<()> {
+src\scene\py_api\point_spot_lights_update.rs:211:                    return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\point_spot_lights_update.rs:219:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\terrain\spike\async_loader.rs:3:#[pymethods]
+src\terrain\spike\async_loader.rs:6:    #[pyo3(
+src\terrain\spike\async_loader.rs:18:    ) -> PyResult<()> {
+src\terrain\spike\async_loader.rs:20:            pyo3::exceptions::PyRuntimeError::new_err(
+src\terrain\spike\async_loader.rs:31:                return Err(pyo3::exceptions::PyRuntimeError::new_err(format!(
+src\terrain\spike\async_loader.rs:68:    #[pyo3(text_signature = "($self)")]
+src\terrain\spike\async_loader.rs:69:    pub fn debug_async_loader_stats(&self) -> PyResult<(usize, usize, usize)> {
+src\terrain\spike\async_loader.rs:78:    #[pyo3(text_signature = "($self)")]
+src\terrain\spike\async_loader.rs:81:    ) -> PyResult<(usize, usize, usize, usize, usize, usize)> {
+src\terrain\spike\async_loader.rs:90:    #[pyo3(text_signature = "($self)")]
+src\terrain\spike\async_loader.rs:91:    pub fn debug_async_overlay_loader_stats(&self) -> PyResult<(usize, usize, usize)> {
+src\terrain\spike\async_loader.rs:100:    #[pyo3(text_signature = "($self)")]
+src\terrain\spike\async_loader.rs:103:    ) -> PyResult<(usize, usize, usize, usize, usize, usize)> {
+src\terrain\spike\async_loader.rs:113:    #[pyo3(text_signature = "($self, tile_px, tiles_x, tiles_y, srgb=True, filter_linear=True)")]
+src\terrain\spike\async_loader.rs:121:    ) -> PyResult<()> {
+src\terrain\spike\async_loader.rs:163:    #[pyo3(
+src\terrain\spike\async_loader.rs:173:    ) -> PyResult<()> {
+src\terrain\spike\async_loader.rs:175:            pyo3::exceptions::PyRuntimeError::new_err(
+src\terrain\spike\async_loader.rs:186:                return Err(pyo3::exceptions::PyRuntimeError::new_err(format!(
+src\scene\py_api\instanced_mesh.rs:4:#[pymethods]
+src\scene\py_api\instanced_mesh.rs:10:    #[pyo3(
+src\scene\py_api\instanced_mesh.rs:22:    ) -> PyResult<usize> {
+src\scene\py_api\instanced_mesh.rs:25:            return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\instanced_mesh.rs:31:            return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\instanced_mesh.rs:37:            return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\instanced_mesh.rs:146:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\instanced_mesh.rs:147:    pub fn clear_instanced_meshes(&mut self) -> PyResult<()> {
+src\scene\py_api\instanced_mesh.rs:153:    #[pyo3(text_signature = "($self, batch_index, transforms)")]
+src\scene\py_api\instanced_mesh.rs:158:    ) -> PyResult<()> {
+src\scene\py_api\instanced_mesh.rs:160:            return Err(pyo3::exceptions::PyIndexError::new_err(
+src\scene\py_api\instanced_mesh.rs:166:            return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\point_spot_lights_query.rs:4:#[pymethods]
+src\scene\py_api\point_spot_lights_query.rs:6:    pub fn get_light_count(&self) -> PyResult<usize> {
+src\scene\py_api\point_spot_lights_query.rs:10:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\point_spot_lights_query.rs:16:    #[pyo3(text_signature = "($self, light_id, x, y, z)")]
+src\scene\py_api\point_spot_lights_query.rs:23:    ) -> PyResult<bool> {
+src\scene\py_api\point_spot_lights_query.rs:28:                Err(pyo3::exceptions::PyValueError::new_err(format!(
+src\scene\py_api\point_spot_lights_query.rs:34:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\bloom.rs:4:#[pymethods]
+src\scene\py_api\bloom.rs:9:    #[pyo3(text_signature = "()")]
+src\scene\py_api\bloom.rs:10:    pub fn enable_bloom(&mut self) -> PyResult<()> {
+src\scene\py_api\bloom.rs:17:    #[pyo3(text_signature = "()")]
+src\scene\py_api\bloom.rs:18:    pub fn disable_bloom(&mut self) -> PyResult<()> {
+src\scene\py_api\bloom.rs:25:    #[pyo3(text_signature = "()")]
+src\scene\py_api\bloom.rs:42:    #[pyo3(text_signature = "($self, threshold=1.5, softness=0.5, strength=0.3, radius=1.0)")]
+src\scene\py_api\bloom.rs:49:    ) -> PyResult<()> {
+src\scene\py_api\bloom.rs:52:                return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\bloom.rs:60:                return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\bloom.rs:68:                return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\bloom.rs:76:                return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\bloom.rs:86:    #[pyo3(text_signature = "()")]
+src\scene\py_api\bloom.rs:87:    pub fn get_bloom_settings(&self, py: Python<'_>) -> PyResult<PyObject> {
+src\scene\py_api\bloom.rs:88:        let dict = pyo3::types::PyDict::new(py);
+src\scene\py_api\bloom.rs:108:    #[pyo3(text_signature = "($self, path)")]
+src\scene\py_api\bloom.rs:109:    pub fn render_png(&mut self, path: PathBuf) -> PyResult<()> {
+src\scene\py_api\bloom.rs:112:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\bloom.rs:115:        py: pyo3::Python<'py>,
+src\scene\py_api\bloom.rs:116:    ) -> pyo3::PyResult<pyo3::Bound<'py, numpy::PyArray3<u8>>> {
+src\scene\py_api\bloom.rs:120:    #[pyo3(text_signature = "($self, samples)")]
+src\scene\py_api\bloom.rs:121:    pub fn set_msaa_samples(&mut self, samples: u32) -> PyResult<u32> {
+src\scene\py_api\bloom.rs:124:            return Err(pyo3::exceptions::PyRuntimeError::new_err(format!(
+src\scene\py_api\bloom.rs:134:            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+src\scene\py_api\bloom.rs:137:                return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\bloom.rs:142:                return Err(pyo3::exceptions::PyRuntimeError::new_err(format!(
+src\scene\py_api\bloom.rs:151:            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))?;
+src\scene\py_api\bloom.rs:154:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\bloom.rs:157:        py: pyo3::Python<'py>,
+src\scene\py_api\bloom.rs:158:    ) -> pyo3::PyResult<pyo3::Bound<'py, numpy::PyArray1<f32>>> {
+src\scene\py_api\bloom.rs:161:        Ok(numpy::PyArray1::from_vec_bound(py, fl.to_vec()))
+src\scene\py_api\bloom.rs:164:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\dof.rs:4:#[pymethods]
+src\scene\py_api\dof.rs:7:    #[pyo3(text_signature = "($self, quality='medium')")]
+src\scene\py_api\dof.rs:8:    pub fn enable_dof(&mut self, quality: Option<&str>) -> PyResult<()> {
+src\scene\py_api\dof.rs:15:                return Err(pyo3::exceptions::PyValueError::new_err(format!(
+src\scene\py_api\dof.rs:31:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\dof.rs:36:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\dof.rs:41:    #[pyo3(text_signature = "($self, aperture, focus_distance, focal_length)")]
+src\scene\py_api\dof.rs:47:    ) -> PyResult<()> {
+src\scene\py_api\dof.rs:62:    #[pyo3(text_signature = "($self, f_stop)")]
+src\scene\py_api\dof.rs:63:    pub fn set_dof_f_stop(&mut self, f_stop: f32) -> PyResult<()> {
+src\scene\py_api\dof.rs:73:    #[pyo3(text_signature = "($self, distance)")]
+src\scene\py_api\dof.rs:74:    pub fn set_dof_focus_distance(&mut self, distance: f32) -> PyResult<()> {
+src\scene\py_api\dof.rs:76:            return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\dof.rs:89:    #[pyo3(text_signature = "($self, focal_length)")]
+src\scene\py_api\dof.rs:90:    pub fn set_dof_focal_length(&mut self, focal_length: f32) -> PyResult<()> {
+src\scene\py_api\dof.rs:92:            return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\dof.rs:105:    #[pyo3(text_signature = "($self, rotation)")]
+src\scene\py_api\dof.rs:106:    pub fn set_dof_bokeh_rotation(&mut self, rotation: f32) -> PyResult<()> {
+src\scene\py_api\dof.rs:111:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\dof.rs:117:    #[pyo3(text_signature = "($self, near_range, far_range)")]
+src\scene\py_api\dof.rs:118:    pub fn set_dof_transition_ranges(&mut self, near_range: f32, far_range: f32) -> PyResult<()> {
+src\scene\py_api\dof.rs:123:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\dof.rs:129:    #[pyo3(text_signature = "($self, bias)")]
+src\scene\py_api\dof.rs:130:    pub fn set_dof_coc_bias(&mut self, bias: f32) -> PyResult<()> {
+src\scene\py_api\dof.rs:135:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\dof.rs:141:    #[pyo3(text_signature = "($self, method)")]
+src\scene\py_api\dof.rs:142:    pub fn set_dof_method(&mut self, method: &str) -> PyResult<()> {
+src\scene\py_api\dof.rs:147:                return Err(pyo3::exceptions::PyValueError::new_err(format!(
+src\scene\py_api\dof.rs:158:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\dof.rs:164:    #[pyo3(text_signature = "($self, mode)")]
+src\scene\py_api\dof.rs:165:    pub fn set_dof_debug_mode(&mut self, mode: u32) -> PyResult<()> {
+src\scene\py_api\dof.rs:170:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\dof.rs:176:    #[pyo3(text_signature = "($self, show)")]
+src\scene\py_api\dof.rs:177:    pub fn set_dof_show_coc(&mut self, show: bool) -> PyResult<()> {
+src\scene\py_api\dof.rs:182:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\dof.rs:188:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\ibl.rs:4:#[pymethods]
+src\scene\py_api\ibl.rs:7:    #[pyo3(text_signature = "($self, quality='medium')")]
+src\scene\py_api\ibl.rs:8:    pub fn enable_ibl(&mut self, quality: Option<&str>) -> PyResult<()> {
+src\scene\py_api\ibl.rs:17:                return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\ibl.rs:28:            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))?;
+src\scene\py_api\ibl.rs:36:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\ibl.rs:42:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\ibl.rs:47:    #[pyo3(text_signature = "($self, quality)")]
+src\scene\py_api\ibl.rs:48:    pub fn set_ibl_quality(&mut self, quality: &str) -> PyResult<()> {
+src\scene\py_api\ibl.rs:56:                    return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\ibl.rs:68:                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))?;
+src\scene\py_api\ibl.rs:72:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\ibl.rs:78:    #[pyo3(text_signature = "($self, hdr_data, width, height)")]
+src\scene\py_api\ibl.rs:84:    ) -> PyResult<()> {
+src\scene\py_api\ibl.rs:89:                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))?;
+src\scene\py_api\ibl.rs:94:                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))?;
+src\scene\py_api\ibl.rs:98:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\ibl.rs:104:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\ibl.rs:105:    pub fn generate_ibl_textures(&mut self) -> PyResult<()> {
+src\scene\py_api\ibl.rs:112:                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))?;
+src\scene\py_api\ibl.rs:117:                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))?;
+src\scene\py_api\ibl.rs:122:                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))?;
+src\scene\py_api\ibl.rs:126:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\ibl.rs:132:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\ibl.rs:133:    pub fn get_ibl_quality(&self) -> PyResult<String> {
+src\scene\py_api\ibl.rs:143:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\ibl.rs:149:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\ibl.rs:150:    pub fn is_ibl_initialized(&self) -> PyResult<bool> {
+src\scene\py_api\ibl.rs:154:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\ibl.rs:160:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\ibl.rs:161:    pub fn get_ibl_texture_info(&self) -> PyResult<(String, String, String)> {
+src\scene\py_api\ibl.rs:195:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\ibl.rs:202:    #[pyo3(text_signature = "($self, metallic, roughness, r, g, b)")]
+src\scene\py_api\ibl.rs:210:    ) -> PyResult<(f32, f32, f32)> {
+src\scene\py_api\ibl.rs:212:            return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\ibl.rs:230:    #[pyo3(text_signature = "($self, n_dot_v, roughness)")]
+src\scene\py_api\ibl.rs:231:    pub fn sample_brdf_lut(&self, n_dot_v: f32, roughness: f32) -> PyResult<(f32, f32)> {
+src\scene\py_api\ibl.rs:233:            return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\terrain\spike\analysis.rs:3:#[pymethods]
+src\terrain\spike\analysis.rs:6:    #[pyo3(
+src\terrain\spike\analysis.rs:21:    ) -> PyResult<(f32, f32, bool)> {
+src\terrain\spike\analysis.rs:26:            pyo3::exceptions::PyRuntimeError::new_err(
+src\terrain\spike\analysis.rs:60:    #[pyo3(
+src\terrain\spike\analysis.rs:76:    ) -> PyResult<(u32, u32, u32)> {
+src\terrain\spike\analysis.rs:81:            pyo3::exceptions::PyRuntimeError::new_err(
+src\terrain\spike\analysis.rs:123:    #[pyo3(text_signature = "($self, full_res_tiles, lod_tiles, base_triangles_per_tile=1000)")]
+src\terrain\spike\analysis.rs:129:    ) -> PyResult<f32> {
+src\terrain\spike\analysis.rs:149:    #[pyo3(text_signature = "($self, heights, width, height, dx=1.0, dy=1.0)")]
+src\terrain\spike\analysis.rs:152:        py: pyo3::Python<'py>,
+src\terrain\spike\analysis.rs:153:        heights: numpy::PyReadonlyArray1<f32>,
+src\terrain\spike\analysis.rs:158:    ) -> pyo3::PyResult<(
+src\terrain\spike\analysis.rs:159:        pyo3::Bound<'py, numpy::PyArray1<f32>>,
+src\terrain\spike\analysis.rs:160:        pyo3::Bound<'py, numpy::PyArray1<f32>>,
+src\terrain\spike\analysis.rs:163:        use numpy::PyUntypedArrayMethods;
+src\terrain\spike\analysis.rs:167:            return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\terrain\spike\analysis.rs:176:            return Err(pyo3::exceptions::PyRuntimeError::new_err(format!(
+src\terrain\spike\analysis.rs:190:            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))?;
+src\terrain\spike\analysis.rs:212:    #[pyo3(signature = (heights, width, height, /, dx=1.0, dy=1.0, *, levels))]
+src\terrain\spike\analysis.rs:215:        py: pyo3::Python<'py>,
+src\terrain\spike\analysis.rs:216:        heights: numpy::PyReadonlyArray1<f32>,
+src\terrain\spike\analysis.rs:222:    ) -> pyo3::PyResult<pyo3::Bound<'py, pyo3::types::PyDict>> {
+src\terrain\spike\analysis.rs:224:        use numpy::PyUntypedArrayMethods;
+src\terrain\spike\analysis.rs:228:            return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\terrain\spike\analysis.rs:237:            return Err(pyo3::exceptions::PyRuntimeError::new_err(format!(
+src\terrain\spike\analysis.rs:247:            return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\terrain\spike\analysis.rs:264:        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))?;
+src\terrain\spike\analysis.rs:267:        let dict = pyo3::types::PyDict::new_bound(py);
+src\terrain\spike\analysis.rs:272:        let polylines_list = pyo3::types::PyList::empty_bound(py);
+src\terrain\spike\analysis.rs:274:            let polyline_dict = pyo3::types::PyDict::new_bound(py);
+src\terrain\spike\analysis.rs:287:                        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+src\scene\py_api\clouds.rs:4:#[pymethods]
+src\scene\py_api\clouds.rs:7:    #[pyo3(text_signature = "($self, quality='medium')")]
+src\scene\py_api\clouds.rs:8:    pub fn enable_clouds(&mut self, quality: Option<&str>) -> PyResult<()> {
+src\scene\py_api\clouds.rs:15:                return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\clouds.rs:30:            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e))?;
+src\scene\py_api\clouds.rs:40:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\clouds.rs:46:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\clouds.rs:51:    #[pyo3(text_signature = "($self, density)")]
+src\scene\py_api\clouds.rs:52:    pub fn set_realtime_cloud_density(&mut self, density: f32) -> PyResult<()> {
+src\scene\py_api\clouds.rs:57:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\clouds.rs:63:    #[pyo3(text_signature = "($self, coverage)")]
+src\scene\py_api\clouds.rs:64:    pub fn set_realtime_cloud_coverage(&mut self, coverage: f32) -> PyResult<()> {
+src\scene\py_api\clouds.rs:69:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\clouds.rs:75:    #[pyo3(text_signature = "($self, scale)")]
+src\scene\py_api\clouds.rs:76:    pub fn set_realtime_cloud_scale(&mut self, scale: f32) -> PyResult<()> {
+src\scene\py_api\clouds.rs:81:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\clouds.rs:87:    #[pyo3(text_signature = "($self, direction_x, direction_y, strength)")]
+src\scene\py_api\clouds.rs:93:    ) -> PyResult<()> {
+src\scene\py_api\clouds.rs:99:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\clouds.rs:105:    #[pyo3(text_signature = "($self, preset)")]
+src\scene\py_api\clouds.rs:106:    pub fn set_realtime_cloud_animation_preset(&mut self, preset: &str) -> PyResult<()> {
+src\scene\py_api\clouds.rs:114:                    return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\clouds.rs:122:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\clouds.rs:128:    #[pyo3(text_signature = "($self, mode)")]
+src\scene\py_api\clouds.rs:129:    pub fn set_cloud_render_mode(&mut self, mode: &str) -> PyResult<()> {
+src\scene\py_api\clouds.rs:136:                    return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\clouds.rs:144:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\clouds.rs:150:    #[pyo3(text_signature = "($self, delta_time)")]
+src\scene\py_api\clouds.rs:151:    pub fn update_realtime_cloud_animation(&mut self, delta_time: f32) -> PyResult<()> {
+src\scene\py_api\clouds.rs:156:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\clouds.rs:162:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\clouds.rs:163:    pub fn get_clouds_params(&self) -> PyResult<(f32, f32, f32, f32)> {
+src\scene\py_api\clouds.rs:169:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\point_spot_lights_core.rs:4:#[pymethods]
+src\scene\py_api\point_spot_lights_core.rs:7:    #[pyo3(text_signature = "($self, max_lights=32)")]
+src\scene\py_api\point_spot_lights_core.rs:8:    pub fn enable_point_spot_lights(&mut self, max_lights: Option<usize>) -> PyResult<()> {
+src\scene\py_api\point_spot_lights_core.rs:20:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\point_spot_lights_core.rs:26:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\point_spot_lights_core.rs:31:    #[pyo3(text_signature = "($self, x, y, z, r, g, b, intensity, range)")]
+src\scene\py_api\point_spot_lights_core.rs:42:    ) -> PyResult<u32> {
+src\scene\py_api\point_spot_lights_core.rs:53:                Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\point_spot_lights_core.rs:60:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\point_spot_lights_core.rs:66:    #[pyo3(
+src\scene\py_api\point_spot_lights_core.rs:85:    ) -> PyResult<u32> {
+src\scene\py_api\point_spot_lights_core.rs:100:                Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\point_spot_lights_core.rs:107:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\point_spot_lights_core.rs:113:    #[pyo3(text_signature = "($self, preset, x, y, z)")]
+src\scene\py_api\point_spot_lights_core.rs:114:    pub fn add_light_preset(&mut self, preset: &str, x: f32, y: f32, z: f32) -> PyResult<u32> {
+src\scene\py_api\point_spot_lights_core.rs:125:                _ => return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\point_spot_lights_core.rs:134:                Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\point_spot_lights_core.rs:141:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\point_spot_lights_core.rs:147:    #[pyo3(text_signature = "($self, light_id)")]
+src\scene\py_api\point_spot_lights_core.rs:148:    pub fn remove_light(&mut self, light_id: u32) -> PyResult<bool> {
+src\scene\py_api\point_spot_lights_core.rs:152:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\point_spot_lights_core.rs:158:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\point_spot_lights_core.rs:159:    pub fn clear_all_lights(&mut self) -> PyResult<()> {
+src\scene\py_api\point_spot_lights_core.rs:164:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\base.rs:4:#[pymethods]
+src\scene\py_api\base.rs:7:    #[pyo3(text_signature = "(width, height, grid=128, colormap='viridis')")]
+src\scene\py_api\base.rs:13:    ) -> PyResult<Self> {
+src\scene\py_api\base.rs:17:    #[pyo3(text_signature = "($self, eye, target, up, fovy_deg, znear, zfar)")]
+src\scene\py_api\base.rs:26:    ) -> PyResult<()> {
+src\scene\py_api\base.rs:51:    #[pyo3(text_signature = "($self, height_r32f)")]
+src\scene\py_api\base.rs:52:    pub fn set_height_from_r32f(&mut self, height_r32f: &pyo3::types::PyAny) -> PyResult<()> {
+src\scene\py_api\base.rs:56:    #[pyo3(text_signature = "()")]
+src\scene\py_api\base.rs:61:    #[pyo3(text_signature = "(, enabled)")]
+src\scene\py_api\base.rs:62:    pub fn set_ssao_enabled(&mut self, enabled: bool) -> PyResult<bool> {
+src\scene\py_api\base.rs:67:    #[pyo3(text_signature = "(, radius, intensity, bias=0.025)")]
+src\scene\py_api\base.rs:68:    pub fn set_ssao_parameters(&mut self, radius: f32, intensity: f32, bias: f32) -> PyResult<()> {
+src\scene\py_api\base.rs:74:    #[pyo3(text_signature = "()")]
+src\scene\py_api\cloud_shadows.rs:4:#[pymethods]
+src\scene\py_api\cloud_shadows.rs:7:    #[pyo3(text_signature = "($self, quality='medium')")]
+src\scene\py_api\cloud_shadows.rs:8:    pub fn enable_cloud_shadows(&mut self, quality: Option<&str>) -> PyResult<()> {
+src\scene\py_api\cloud_shadows.rs:15:                return Err(pyo3::exceptions::PyValueError::new_err(format!(
+src\scene\py_api\cloud_shadows.rs:32:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\cloud_shadows.rs:37:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\cloud_shadows.rs:42:    #[pyo3(text_signature = "($self, speed_x, speed_y)")]
+src\scene\py_api\cloud_shadows.rs:43:    pub fn set_cloud_speed(&mut self, speed_x: f32, speed_y: f32) -> PyResult<()> {
+src\scene\py_api\cloud_shadows.rs:48:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\cloud_shadows.rs:54:    #[pyo3(text_signature = "($self, scale)")]
+src\scene\py_api\cloud_shadows.rs:55:    pub fn set_cloud_scale(&mut self, scale: f32) -> PyResult<()> {
+src\scene\py_api\cloud_shadows.rs:69:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\cloud_shadows.rs:75:    #[pyo3(text_signature = "($self, density)")]
+src\scene\py_api\cloud_shadows.rs:76:    pub fn set_cloud_density(&mut self, density: f32) -> PyResult<()> {
+src\scene\py_api\cloud_shadows.rs:90:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\cloud_shadows.rs:96:    #[pyo3(text_signature = "($self, coverage)")]
+src\scene\py_api\cloud_shadows.rs:97:    pub fn set_cloud_coverage(&mut self, coverage: f32) -> PyResult<()> {
+src\scene\py_api\cloud_shadows.rs:111:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\cloud_shadows.rs:117:    #[pyo3(text_signature = "($self, intensity)")]
+src\scene\py_api\cloud_shadows.rs:118:    pub fn set_cloud_shadow_intensity(&mut self, intensity: f32) -> PyResult<()> {
+src\scene\py_api\cloud_shadows.rs:123:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\cloud_shadows.rs:129:    #[pyo3(text_signature = "($self, softness)")]
+src\scene\py_api\cloud_shadows.rs:130:    pub fn set_cloud_shadow_softness(&mut self, softness: f32) -> PyResult<()> {
+src\scene\py_api\cloud_shadows.rs:135:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\cloud_shadows.rs:141:    #[pyo3(text_signature = "($self, direction, strength)")]
+src\scene\py_api\cloud_shadows.rs:142:    pub fn set_cloud_wind(&mut self, direction: f32, strength: f32) -> PyResult<()> {
+src\scene\py_api\cloud_shadows.rs:157:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\cloud_shadows.rs:163:    #[pyo3(text_signature = "($self, x, y, strength)")]
+src\scene\py_api\cloud_shadows.rs:164:    pub fn set_cloud_wind_vector(&mut self, x: f32, y: f32, strength: f32) -> PyResult<()> {
+src\scene\py_api\cloud_shadows.rs:180:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\cloud_shadows.rs:186:    #[pyo3(text_signature = "($self, frequency, amplitude)")]
+src\scene\py_api\cloud_shadows.rs:187:    pub fn set_cloud_noise_params(&mut self, frequency: f32, amplitude: f32) -> PyResult<()> {
+src\scene\py_api\cloud_shadows.rs:192:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\cloud_shadows.rs:198:    #[pyo3(text_signature = "($self, preset_name)")]
+src\scene\py_api\cloud_shadows.rs:199:    pub fn set_cloud_animation_preset(&mut self, preset_name: &str) -> PyResult<()> {
+src\scene\py_api\cloud_shadows.rs:221:                    return Err(pyo3::exceptions::PyValueError::new_err(format!(
+src\scene\py_api\cloud_shadows.rs:234:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\cloud_shadows.rs:240:    #[pyo3(text_signature = "($self, delta_time)")]
+src\scene\py_api\cloud_shadows.rs:241:    pub fn update_cloud_animation(&mut self, delta_time: f32) -> PyResult<()> {
+src\scene\py_api\cloud_shadows.rs:255:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\cloud_shadows.rs:261:    #[pyo3(text_signature = "($self, mode)")]
+src\scene\py_api\cloud_shadows.rs:262:    pub fn set_cloud_debug_mode(&mut self, mode: u32) -> PyResult<()> {
+src\scene\py_api\cloud_shadows.rs:267:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\cloud_shadows.rs:273:    #[pyo3(text_signature = "($self, show)")]
+src\scene\py_api\cloud_shadows.rs:274:    pub fn set_cloud_show_clouds_only(&mut self, show: bool) -> PyResult<()> {
+src\scene\py_api\cloud_shadows.rs:279:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\cloud_shadows.rs:285:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\cloud_shadows.rs:286:    pub fn get_cloud_params(&self) -> PyResult<(f32, f32, f32, f32)> {
+src\scene\py_api\cloud_shadows.rs:290:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\ground_plane.rs:4:#[pymethods]
+src\scene\py_api\ground_plane.rs:7:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\ground_plane.rs:8:    pub fn enable_ground_plane(&mut self) -> PyResult<()> {
+src\scene\py_api\ground_plane.rs:23:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\ground_plane.rs:29:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\ground_plane.rs:34:    #[pyo3(text_signature = "($self, mode)")]
+src\scene\py_api\ground_plane.rs:35:    pub fn set_ground_plane_mode(&mut self, mode: &str) -> PyResult<()> {
+src\scene\py_api\ground_plane.rs:43:                    return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\ground_plane.rs:51:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\ground_plane.rs:57:    #[pyo3(text_signature = "($self, height)")]
+src\scene\py_api\ground_plane.rs:58:    pub fn set_ground_plane_height(&mut self, height: f32) -> PyResult<()> {
+src\scene\py_api\ground_plane.rs:63:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\ground_plane.rs:69:    #[pyo3(text_signature = "($self, size)")]
+src\scene\py_api\ground_plane.rs:70:    pub fn set_ground_plane_size(&mut self, size: f32) -> PyResult<()> {
+src\scene\py_api\ground_plane.rs:75:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\ground_plane.rs:81:    #[pyo3(text_signature = "($self, major_spacing, minor_spacing)")]
+src\scene\py_api\ground_plane.rs:86:    ) -> PyResult<()> {
+src\scene\py_api\ground_plane.rs:91:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\ground_plane.rs:97:    #[pyo3(text_signature = "($self, major_width, minor_width)")]
+src\scene\py_api\ground_plane.rs:102:    ) -> PyResult<()> {
+src\scene\py_api\ground_plane.rs:107:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\ground_plane.rs:113:    #[pyo3(text_signature = "($self, r, g, b, alpha)")]
+src\scene\py_api\ground_plane.rs:114:    pub fn set_ground_plane_color(&mut self, r: f32, g: f32, b: f32, alpha: f32) -> PyResult<()> {
+src\scene\py_api\ground_plane.rs:119:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\ground_plane.rs:125:    #[pyo3(
+src\scene\py_api\ground_plane.rs:138:    ) -> PyResult<()> {
+src\scene\py_api\ground_plane.rs:145:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\ground_plane.rs:151:    #[pyo3(text_signature = "($self, z_bias)")]
+src\scene\py_api\ground_plane.rs:152:    pub fn set_ground_plane_z_bias(&mut self, z_bias: f32) -> PyResult<()> {
+src\scene\py_api\ground_plane.rs:157:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\ground_plane.rs:163:    #[pyo3(text_signature = "($self, preset)")]
+src\scene\py_api\ground_plane.rs:164:    pub fn set_ground_plane_preset(&mut self, preset: &str) -> PyResult<()> {
+src\scene\py_api\ground_plane.rs:173:                    return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\ground_plane.rs:181:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\ground_plane.rs:187:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\ground_plane.rs:188:    pub fn get_ground_plane_params(&self) -> PyResult<(f32, f32, f32, f32)> {
+src\scene\py_api\ground_plane.rs:192:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\oit.rs:4:#[pymethods]
+src\scene\py_api\oit.rs:8:    #[pyo3(text_signature = "($self, mode, quality)")]
+src\scene\py_api\oit.rs:13:    ) -> PyResult<()> {
+src\scene\py_api\oit.rs:24:                return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\oit.rs:37:                return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\oit.rs:51:            pyo3::exceptions::PyRuntimeError::new_err(format!(
+src\scene\py_api\oit.rs:67:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\oit.rs:68:    pub fn disable_dual_source_oit(&mut self) -> PyResult<()> {
+src\scene\py_api\oit.rs:74:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\oit.rs:79:    #[pyo3(text_signature = "($self, mode)")]
+src\scene\py_api\oit.rs:80:    pub fn set_dual_source_oit_mode(&mut self, mode: &str) -> PyResult<()> {
+src\scene\py_api\oit.rs:87:                _ => return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\oit.rs:95:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\oit.rs:101:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\oit.rs:102:    pub fn get_dual_source_oit_mode(&self) -> PyResult<String> {
+src\scene\py_api\oit.rs:112:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\oit.rs:118:    #[pyo3(text_signature = "($self, quality)")]
+src\scene\py_api\oit.rs:119:    pub fn set_dual_source_oit_quality(&mut self, quality: &str) -> PyResult<()> {
+src\scene\py_api\oit.rs:127:                    return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\oit.rs:136:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\oit.rs:142:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\oit.rs:143:    pub fn get_dual_source_oit_quality(&self) -> PyResult<String> {
+src\scene\py_api\oit.rs:153:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\oit.rs:159:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\oit.rs:160:    pub fn is_dual_source_supported(&self) -> PyResult<bool> {
+src\scene\py_api\oit.rs:179:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\oit.rs:180:    pub fn get_dual_source_oit_stats(&self) -> PyResult<(u64, u64, u64, f32, f32, f32)> {
+src\scene\py_api\oit.rs:192:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\oit.rs:211:    #[pyo3(text_signature = "($self, mode='auto')")]
+src\scene\py_api\oit.rs:212:    pub fn enable_oit(&mut self, mode: Option<&str>) -> PyResult<()> {
+src\scene\py_api\oit.rs:224:                return Err(pyo3::exceptions::PyValueError::new_err(format!(
+src\scene\py_api\oit.rs:235:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\oit.rs:242:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\oit.rs:248:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\oit.rs:266:    #[pyo3(
+src\scene\py_api\oit.rs:275:    ) -> PyResult<()> {
+src\scene\py_api\oit.rs:280:            Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\terrain\render_params.rs:6:use pyo3::exceptions::PyValueError;
+src\terrain\render_params.rs:8:use pyo3::prelude::*;
+src\scene\py_api\native_text.rs:4:#[pymethods]
+src\scene\py_api\native_text.rs:9:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\native_text.rs:10:    pub fn enable_native_text(&mut self) -> PyResult<()> {
+src\scene\py_api\native_text.rs:20:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\native_text.rs:21:    pub fn disable_native_text(&mut self) -> PyResult<()> {
+src\scene\py_api\native_text.rs:31:    #[pyo3(text_signature = "($self, alpha)")]
+src\scene\py_api\native_text.rs:32:    pub fn set_native_text_alpha(&mut self, alpha: f32) -> PyResult<()> {
+src\scene\py_api\native_text.rs:42:    #[pyo3(text_signature = "($self, x, y, w, h, r, g, b, a)")]
+src\scene\py_api\native_text.rs:53:    ) -> PyResult<()> {
+src\scene\py_api\native_text.rs:76:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\native_text.rs:77:    pub fn clear_native_text(&mut self) -> PyResult<()> {
+src\scene\py_api\native_text.rs:85:    #[pyo3(text_signature = "($self, x, y, w, h, u0, v0, u1, v1, r, g, b, a)")]
+src\scene\py_api\native_text.rs:100:    ) -> PyResult<()> {
+src\scene\py_api\native_text.rs:123:    #[pyo3(text_signature = "($self, atlas, channels=3, smoothing=1.0)")]
+src\scene\py_api\native_text.rs:126:        atlas: &pyo3::PyAny,
+src\scene\py_api\native_text.rs:129:    ) -> PyResult<()> {
+src\scene\py_api\native_text.rs:133:                return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\native_text.rs:141:                return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\native_text.rs:147:            return Err(pyo3::exceptions::PyTypeError::new_err(
+src\scene\py_api\native_overlays.rs:4:#[pymethods]
+src\scene\py_api\native_overlays.rs:9:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\native_overlays.rs:10:    pub fn enable_native_overlays(&mut self) -> PyResult<()> {
+src\scene\py_api\native_overlays.rs:12:            return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\native_overlays.rs:23:    #[pyo3(text_signature = "($self)")]
+src\scene\py_api\native_overlays.rs:24:    pub fn disable_native_overlays(&mut self) -> PyResult<()> {
+src\scene\py_api\native_overlays.rs:26:            return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\native_overlays.rs:37:    #[pyo3(text_signature = "($self, alpha)")]
+src\scene\py_api\native_overlays.rs:38:    pub fn set_native_overlay_alpha(&mut self, alpha: f32) -> PyResult<()> {
+src\scene\py_api\native_overlays.rs:40:            return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\native_overlays.rs:50:    #[pyo3(text_signature = "($self, enabled)")]
+src\scene\py_api\native_overlays.rs:51:    pub fn set_native_altitude_overlay_enabled(&mut self, enabled: bool) -> PyResult<()> {
+src\scene\py_api\native_overlays.rs:53:            return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\py_api\native_overlays.rs:68:    #[pyo3(text_signature = "($self, image)")]
+src\scene\py_api\native_overlays.rs:69:    pub fn set_native_overlay_texture(&mut self, image: &pyo3::PyAny) -> PyResult<()> {
+src\scene\py_api\native_overlays.rs:74:                return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\native_overlays.rs:82:                return Err(pyo3::exceptions::PyValueError::new_err(
+src\scene\py_api\native_overlays.rs:88:            return Err(pyo3::exceptions::PyTypeError::new_err(
+src\scene\py_api\native_overlays.rs:94:            return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\core\device_caps.rs:6:use pyo3::prelude::*;
+src\core\device_caps.rs:7:use pyo3::types::PyDict;
+src\core\device_caps.rs:53:    pub fn from_current_device() -> PyResult<Self> {
+src\core\device_caps.rs:151:    pub fn to_py_dict(&self, py: Python<'_>) -> PyResult<Py<PyDict>> {
+src\scene\mod.rs:23:use numpy::{PyReadonlyArray1, PyReadonlyArray2, PyReadonlyArray3, PyUntypedArrayMethods};
+src\scene\mod.rs:25:use pyo3::{prelude::*, types::PyBytes};
+src\scene\core.rs:6:use numpy::{PyReadonlyArray2, PyUntypedArrayMethods};
+src\scene\core.rs:7:use pyo3::{types::PyAny, PyResult};
+src\terrain\cog\py_bindings.rs:3:use pyo3::exceptions::PyRuntimeError;
+src\terrain\cog\py_bindings.rs:4:use pyo3::prelude::*;
+src\terrain\cog\py_bindings.rs:11:#[pyclass(module = "forge3d._forge3d", name = "CogDataset")]
+src\terrain\cog\py_bindings.rs:17:#[pymethods]
+src\terrain\cog\py_bindings.rs:25:    #[pyo3(signature = (url, cache_size_mb=256))]
+src\terrain\cog\py_bindings.rs:26:    pub fn new(url: &str, cache_size_mb: u32) -> PyResult<Self> {
+src\terrain\cog\py_bindings.rs:71:    #[pyo3(signature = (x, y, lod=0))]
+src\terrain\cog\py_bindings.rs:78:    ) -> PyResult<pyo3::Bound<'py, numpy::PyArray2<f32>>> {
+src\terrain\cog\py_bindings.rs:99:            numpy::PyArray2::from_vec2_bound(py, &vec_to_2d(&heights, tile_height, tile_width))
+src\terrain\cog\py_bindings.rs:135:    #[pyo3(signature = (level=0))]
+src\terrain\cog\py_bindings.rs:136:    pub fn ifd_info(&self, level: u32) -> PyResult<HashMap<String, u32>> {
+src\terrain\cog\py_bindings.rs:174:pub fn register_cog_bindings(m: &pyo3::Bound<'_, pyo3::types::PyModule>) -> PyResult<()> {
+src\scene\core\height.rs:2:    pub(super) fn set_height_from_r32f_impl(&mut self, height_r32f: &PyAny) -> PyResult<()> {
+src\scene\core\height.rs:6:            pyo3::exceptions::PyRuntimeError::new_err("height must be C-contiguous float32[H,W]")
+src\scene\core\constructor.rs:7:    ) -> PyResult<Self> {
+src\scene\core\constructor.rs:41:                return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\scene\core\constructor.rs:67:            return Err(pyo3::exceptions::PyRuntimeError::new_err(format!(
+src\scene\core\constructor.rs:74:            .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+src\scene\core\constructor.rs:77:                .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(e.to_string()))?;
+src\renderer.rs:8:use pyo3::exceptions::PyValueError;
+src\renderer.rs:9:use pyo3::prelude::*;
+src\renderer.rs:41:    pub fn set_height_range(&mut self, min: f32, max: f32) -> PyResult<()> {
+src\terrain\render_params\py_api.rs:3:#[pymethods]
+src\terrain\render_params\py_api.rs:6:    #[pyo3(signature = (params))]
+src\terrain\render_params\py_api.rs:7:    pub fn new(py: Python<'_>, params: Bound<'_, PyAny>) -> PyResult<Self> {
+src\terrain\render_params\private_impl.rs:13:    pub(crate) fn from_python_params(py: Python<'_>, params: Bound<'_, PyAny>) -> PyResult<Self> {
+src\terrain\render_params\parse.rs:3:pub(crate) fn tuple_to_u32_pair(value: &PyAny, name: &str) -> PyResult<(u32, u32)> {
+src\terrain\render_params\parse.rs:20:pub(crate) fn tuple_to_f32_pair(value: &PyAny, name: &str) -> PyResult<(f32, f32)> {
+src\terrain\render_params\parse.rs:37:pub(crate) fn list_to_vec3(value: &PyAny, name: &str) -> PyResult<[f32; 3]> {
+src\terrain\render_params\parse.rs:60:pub(crate) fn to_finite_f32(value: &PyAny, name: &str) -> PyResult<f32> {
+src\terrain\render_params\parse.rs:76:) -> PyResult<Vec<Py<crate::core::overlay_layer::OverlayLayer>>> {
+src\terrain\render_params\parse.rs:96:pub(crate) fn parse_filter_mode(value: &str, field: &str) -> PyResult<FilterModeNative> {
+src\terrain\render_params\parse.rs:108:pub(crate) fn parse_address_mode(value: &str, field: &str) -> PyResult<AddressModeNative> {
+src\core\overlay_layer.rs:6:use pyo3::exceptions::PyValueError;
+src\core\overlay_layer.rs:8:use pyo3::prelude::*;
+src\core\overlay_layer.rs:38:fn parse_blend_mode(value: &str) -> PyResult<OverlayBlendMode> {
+src\core\overlay_layer.rs:52:#[pyclass(module = "forge3d._forge3d", name = "OverlayLayer")]
+src\core\overlay_layer.rs:63:#[pymethods]
+src\core\overlay_layer.rs:67:    #[pyo3(signature = (colormap, strength=1.0, offset=0.0, blend_mode="Alpha", domain=(0.0, 1.0)))]
+src\core\overlay_layer.rs:74:    ) -> PyResult<Self> {
+src\core\session.rs:6:use pyo3::exceptions::PyNotImplementedError;
+src\core\session.rs:8:use pyo3::prelude::*;
+src\core\session.rs:14:#[pyclass(module = "forge3d._forge3d", name = "Session")]
+src\core\session.rs:21:#[pymethods]
+src\core\session.rs:29:    #[pyo3(signature = (window=false, backend=None))]
+src\core\session.rs:30:    pub fn new(window: bool, backend: Option<&str>) -> PyResult<Self> {
+src\core\session.rs:53:    pub fn info(&self) -> PyResult<String> {
+src\core\session.rs:63:    pub fn adapter_name(&self) -> PyResult<String> {
+src\core\session.rs:69:    pub fn backend(&self) -> PyResult<String> {
+src\core\session.rs:75:    pub fn device_type(&self) -> PyResult<String> {
+src\core\session.rs:80:    fn __repr__(&self) -> PyResult<String> {
+src\terrain\clipmap\py_bindings.rs:7:use numpy::{PyArray1, PyArray2};
+src\terrain\clipmap\py_bindings.rs:8:use pyo3::prelude::*;
+src\terrain\clipmap\py_bindings.rs:11:#[pyclass(name = "ClipmapConfig")]
+src\terrain\clipmap\py_bindings.rs:17:#[pymethods]
+src\terrain\clipmap\py_bindings.rs:20:    #[pyo3(signature = (ring_count=4, ring_resolution=64, center_resolution=None, skirt_depth=10.0, morph_range=0.3))]
+src\terrain\clipmap\py_bindings.rs:76:#[pyclass(name = "ClipmapMesh")]
+src\terrain\clipmap\py_bindings.rs:85:#[pymethods]
+src\terrain\clipmap\py_bindings.rs:118:    fn positions<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray2<f32>>> {
+src\terrain\clipmap\py_bindings.rs:128:    fn uvs<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray2<f32>>> {
+src\terrain\clipmap\py_bindings.rs:138:    fn morph_data<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray2<f32>>> {
+src\terrain\clipmap\py_bindings.rs:163:#[pyfunction]
+src\terrain\clipmap\py_bindings.rs:164:#[pyo3(signature = (config, center, terrain_extent))]
+src\terrain\clipmap\py_bindings.rs:169:) -> PyResult<PyClipmapMesh> {
+src\terrain\clipmap\py_bindings.rs:187:#[pyfunction]
+src\terrain\clipmap\py_bindings.rs:193:pub fn register_clipmap_bindings(m: &Bound<'_, PyModule>) -> PyResult<()> {
+src\terrain\render_params\decode_vt.rs:2:use pyo3::prelude::*;
+src\terrain\render_params\decode_vt.rs:73:                                    Err(PyErr::new::<pyo3::exceptions::PyValueError, _>(""))
+src\terrain\render_params\decode_lighting.rs:4:pub(super) fn parse_light_settings(light: &Bound<'_, PyAny>) -> PyResult<LightSettingsNative> {
+src\terrain\render_params\decode_lighting.rs:52:) -> PyResult<TriplanarSettingsNative> {
+src\terrain\render_params\decode_lighting.rs:66:pub(super) fn parse_pom_settings(pom: &Bound<'_, PyAny>) -> PyResult<PomSettingsNative> {
+src\terrain\render_params\decode_lighting.rs:78:pub(super) fn parse_lod_settings(lod: &Bound<'_, PyAny>) -> PyResult<LodSettingsNative> {
+src\terrain\render_params\decode_lighting.rs:86:pub(super) fn parse_clamp_settings(clamp: &Bound<'_, PyAny>) -> PyResult<ClampSettingsNative> {
+src\terrain\render_params\decode_lighting.rs:113:) -> PyResult<SamplingSettingsNative> {
+src\terrain\render_params\decode_lighting.rs:146:pub(super) fn parse_shadow_settings(shadows: &Bound<'_, PyAny>) -> PyResult<ShadowSettingsNative> {
+src\terrain\render_params\decode_core.rs:36:pub(super) fn parse_core_params(params: &Bound<'_, PyAny>) -> PyResult<CoreTerrainParams> {
+src\terrain\render_params\core.rs:35:#[pyclass(module = "forge3d._forge3d", name = "TerrainRenderParams")]
+src\terrain\renderer.rs:20:use numpy::PyReadonlyArray2;
+src\terrain\renderer.rs:21:use pyo3::exceptions::PyRuntimeError;
+src\terrain\renderer.rs:22:use pyo3::prelude::*;
+src\terrain\mod.rs:89:use numpy::IntoPyArray;
+src\terrain\mod.rs:90:use pyo3::prelude::*;
+src\terrain\mesh.rs:174:// T11-BEGIN:pyo3-wrapper
+src\terrain\mesh.rs:175:use numpy::{PyArray1, PyArray2};
+src\terrain\mesh.rs:176:use pyo3::prelude::*;
+src\terrain\mesh.rs:177:use pyo3::Bound;
+src\terrain\mesh.rs:179:#[pyfunction]
+src\terrain\mesh.rs:180:#[pyo3(text_signature = "(nx, nz, spacing=(1.0,1.0), origin='center')")]
+src\terrain\mesh.rs:193:) -> PyResult<(
+src\terrain\mesh.rs:200:        return Err(pyo3::exceptions::PyValueError::new_err(
+src\terrain\mesh.rs:207:        return Err(pyo3::exceptions::PyValueError::new_err(
+src\terrain\mesh.rs:214:        return Err(pyo3::exceptions::PyValueError::new_err(
+src\terrain\mesh.rs:235:    let xy_array = numpy::PyArray2::from_vec2_bound(
+src\terrain\mesh.rs:242:    let uv_array = numpy::PyArray2::from_vec2_bound(
+src\terrain\mesh.rs:256:    let idx_array = numpy::PyArray1::from_vec_bound(py, indices_u32);
+src\terrain\mesh.rs:260:// T11-END:pyo3-wrapper
+src\terrain\renderer\aov.rs:392:        heightmap: numpy::PyReadonlyArray2<'_, f32>,
+src\terrain\renderer\aov.rs:393:        water_mask: Option<numpy::PyReadonlyArray2<'_, f32>>,
+src\render\material_set\py_api.rs:1:use pyo3::prelude::*;
+src\render\material_set\py_api.rs:6:#[pymethods]
+src\render\material_set\py_api.rs:18:    #[pyo3(signature = (triplanar_scale=6.0, normal_strength=1.0, blend_sharpness=4.0))]
+src\render\material_set\py_api.rs:23:    ) -> PyResult<Self> {
+src\render\material_set\py_api.rs:64:    #[pyo3(signature = (base_color, metallic, roughness, triplanar_scale=1.0, normal_strength=0.0, blend_sharpness=1.0))]
+src\render\material_set\py_api.rs:72:    ) -> PyResult<Self> {
+src\render\material_set\py_api.rs:75:            return Err(pyo3::exceptions::PyValueError::new_err(
+src\render\material_set\py_api.rs:80:            return Err(pyo3::exceptions::PyValueError::new_err(
+src\render\material_set\py_api.rs:138:) -> PyResult<()> {
+src\render\material_set\py_api.rs:140:        return Err(pyo3::exceptions::PyValueError::new_err(
+src\render\material_set\py_api.rs:145:        return Err(pyo3::exceptions::PyValueError::new_err(
+src\render\material_set\py_api.rs:150:        return Err(pyo3::exceptions::PyValueError::new_err(
+src\terrain\renderer\core.rs:151:#[pyclass(module = "forge3d._forge3d", name = "TerrainRenderer")]
+src\render\instancing.rs:10:use numpy::{PyArray1, PyArrayMethods};
+src\render\instancing.rs:12:use numpy::{PyReadonlyArray2, PyUntypedArrayMethods};
+src\render\instancing.rs:14:use pyo3::{exceptions::PyValueError, prelude::*, types::PyDict};
+src\render\instancing.rs:30:#[pyfunction]
+src\render\instancing.rs:35:) -> PyResult<PyObject> {
+src\render\instancing.rs:92:#[pyfunction]
+src\render\instancing.rs:93:pub fn gpu_instancing_available_py() -> PyResult<bool> {
+src\render\instancing.rs:101:#[pyfunction]
+src\render\instancing.rs:106:) -> PyResult<bool> {
+src\render\instancing.rs:113:#[pyfunction]
+src\render\instancing.rs:118:) -> PyResult<PyObject> {
+src\render\instancing.rs:124:#[pyfunction]
+src\render\instancing.rs:131:) -> PyResult<Py<PyAny>> {
+src\render\material_set\core.rs:1:use pyo3::prelude::*;
+src\render\material_set\core.rs:10:#[pyclass(module = "forge3d._forge3d", name = "MaterialSet")]
+src\py_types\hdr_frame.rs:4:#[pyclass(module = "forge3d._forge3d", name = "HdrFrame")]
+src\py_types\hdr_frame.rs:53:#[pymethods]
+src\py_types\hdr_frame.rs:56:    fn py_new() -> PyResult<Self> {
+src\py_types\hdr_frame.rs:67:    fn to_numpy_f32<'py>(&self, py: Python<'py>) -> PyResult<&'py PyArray3<f32>> {
+src\py_types\hdr_frame.rs:79:    fn save(&self, py: Python<'_>, path: &str) -> PyResult<()> {
+src\terrain\renderer\offline.rs:6:use numpy::{PyReadonlyArray2, PyReadonlyArray3, PyUntypedArrayMethods};
+src\terrain\renderer\offline.rs:1411:#[pymethods]
+src\terrain\renderer\offline.rs:1413:    #[pyo3(signature = (
+src\terrain\renderer\offline.rs:1429:    ) -> PyResult<()> {
+src\terrain\renderer\offline.rs:1467:    #[pyo3(signature = (sample_count))]
+src\terrain\renderer\offline.rs:1472:    ) -> PyResult<Py<crate::OfflineBatchResult>> {
+src\terrain\renderer\offline.rs:1489:        let work_result = (|| -> PyResult<()> {
+src\terrain\renderer\offline.rs:1514:    #[pyo3(signature = (target_variance, tile_size=DEFAULT_METRIC_TILE_SIZE))]
+src\terrain\renderer\offline.rs:1520:    ) -> PyResult<Py<crate::OfflineMetrics>> {
+src\terrain\renderer\offline.rs:1543:        let metrics_result = (|| -> PyResult<crate::OfflineMetrics> {
+src\terrain\renderer\offline.rs:1651:    #[pyo3(signature = ())]
+src\terrain\renderer\offline.rs:1655:    ) -> PyResult<(Py<crate::HdrFrame>, Py<crate::AovFrame>)> {
+src\terrain\renderer\offline.rs:1833:    #[pyo3(signature = (data, size))]
+src\terrain\renderer\offline.rs:1839:    ) -> PyResult<Py<crate::HdrFrame>> {
+src\terrain\renderer\offline.rs:1881:    #[pyo3(signature = (hdr_frame))]
+src\terrain\renderer\offline.rs:1886:    ) -> PyResult<Py<crate::Frame>> {
+src\terrain\renderer\offline.rs:1944:    #[pyo3(signature = ())]
+src\terrain\renderer\offline.rs:1945:    pub fn end_offline_accumulation(&mut self) -> PyResult<()> {
+src\py_types\frame.rs:4:#[pyclass(module = "forge3d._forge3d", name = "Frame")]
+src\py_types\frame.rs:93:#[pymethods]
+src\py_types\frame.rs:96:    fn py_new() -> PyResult<Self> {
+src\py_types\frame.rs:111:    fn save(&self, path: &str) -> PyResult<()> {
+src\py_types\frame.rs:183:    fn to_numpy<'py>(&self, py: Python<'py>) -> PyResult<&'py PyArray3<u8>> {
+src\py_types\aov.rs:4:#[pyclass(module = "forge3d._forge3d", name = "AovFrame")]
+src\py_types\aov.rs:218:    fn write_png_bytes(&self, path: &str, data: &[u8]) -> PyResult<()> {
+src\py_types\aov.rs:225:#[pymethods]
+src\py_types\aov.rs:228:    fn py_new() -> PyResult<Self> {
+src\py_types\aov.rs:254:    fn albedo<'py>(&self, py: Python<'py>) -> PyResult<&'py numpy::PyArray3<f32>> {
+src\py_types\aov.rs:264:    fn normal<'py>(&self, py: Python<'py>) -> PyResult<&'py numpy::PyArray3<f32>> {
+src\py_types\aov.rs:274:    fn depth<'py>(&self, py: Python<'py>) -> PyResult<&'py numpy::PyArray2<f32>> {
+src\py_types\aov.rs:286:    fn save_albedo(&self, path: &str) -> PyResult<()> {
+src\py_types\aov.rs:294:    fn save_normal(&self, path: &str) -> PyResult<()> {
+src\py_types\aov.rs:305:    fn save_depth(&self, path: &str) -> PyResult<()> {
+src\py_types\aov.rs:313:    fn save_all(&self, output_dir: &str, base_name: &str) -> PyResult<()> {
+src\py_types\aov.rs:334:    fn save_exr(&self, path: &str, beauty_frame: &crate::Frame) -> PyResult<()> {
+src\py_types\aov.rs:388:    fn save_exr(&self, _path: &str, _beauty_frame: &crate::Frame) -> PyResult<()> {
+src\py_types\picking.rs:5:#[pyclass(module = "forge3d._forge3d", name = "PickResult")]
+src\py_types\picking.rs:7:    #[pyo3(get)]
+src\py_types\picking.rs:9:    #[pyo3(get)]
+src\py_types\picking.rs:11:    #[pyo3(get)]
+src\py_types\picking.rs:13:    #[pyo3(get)]
+src\py_types\picking.rs:15:    #[pyo3(get)]
+src\py_types\picking.rs:20:#[pymethods]
+src\py_types\picking.rs:56:#[pyclass(module = "forge3d._forge3d", name = "TerrainQueryResult")]
+src\py_types\picking.rs:58:    #[pyo3(get)]
+src\py_types\picking.rs:60:    #[pyo3(get)]
+src\py_types\picking.rs:62:    #[pyo3(get)]
+src\py_types\picking.rs:64:    #[pyo3(get)]
+src\py_types\picking.rs:66:    #[pyo3(get)]
+src\py_types\picking.rs:71:#[pymethods]
+src\py_types\picking.rs:107:#[pyclass(module = "forge3d._forge3d", name = "RichPickResult")]
+src\py_types\picking.rs:110:    #[pyo3(get)]
+src\py_types\picking.rs:112:    #[pyo3(get)]
+src\py_types\picking.rs:114:    #[pyo3(get)]
+src\py_types\picking.rs:116:    #[pyo3(get)]
+src\py_types\picking.rs:118:    #[pyo3(get)]
+src\py_types\picking.rs:120:    #[pyo3(get)]
+src\py_types\picking.rs:122:    #[pyo3(get)]
+src\py_types\picking.rs:124:    #[pyo3(get)]
+src\py_types\picking.rs:129:#[pymethods]
+src\py_types\picking.rs:183:#[pyclass(module = "forge3d._forge3d", name = "LassoState")]
+src\py_types\picking.rs:186:    #[pyo3(get)]
+src\py_types\picking.rs:191:#[pymethods]
+src\py_types\picking.rs:194:    #[pyo3(signature = (state="inactive"))]
+src\py_types\picking.rs:244:#[pyclass(module = "forge3d._forge3d", name = "HeightfieldHit")]
+src\py_types\picking.rs:247:    #[pyo3(get)]
+src\py_types\picking.rs:249:    #[pyo3(get)]
+src\py_types\picking.rs:251:    #[pyo3(get)]
+src\py_types\picking.rs:253:    #[pyo3(get)]
+src\py_types\picking.rs:255:    #[pyo3(get)]
+src\py_types\picking.rs:257:    #[pyo3(get)]
+src\py_types\picking.rs:259:    #[pyo3(get)]
+src\py_types\picking.rs:264:#[pymethods]
+src\py_types\styles.rs:5:#[pyclass(module = "forge3d._forge3d", name = "SelectionStyle")]
+src\py_types\styles.rs:8:    #[pyo3(get, set)]
+src\py_types\styles.rs:10:    #[pyo3(get, set)]
+src\py_types\styles.rs:12:    #[pyo3(get, set)]
+src\py_types\styles.rs:14:    #[pyo3(get, set)]
+src\py_types\styles.rs:16:    #[pyo3(get, set)]
+src\py_types\styles.rs:21:#[pymethods]
+src\py_types\styles.rs:24:    #[pyo3(signature = (color=(1.0, 0.8, 0.0, 0.5), outline=false, outline_width=2.0, glow=false, glow_intensity=0.5))]
+src\py_types\styles.rs:77:#[pyclass(module = "forge3d._forge3d", name = "HighlightStyle")]
+src\py_types\styles.rs:80:    #[pyo3(get, set)]
+src\py_types\styles.rs:82:    #[pyo3(get, set)]
+src\py_types\styles.rs:84:    #[pyo3(get, set)]
+src\py_types\styles.rs:86:    #[pyo3(get, set)]
+src\py_types\styles.rs:88:    #[pyo3(get, set)]
+src\py_types\styles.rs:90:    #[pyo3(get, set)]
+src\py_types\styles.rs:95:#[pymethods]
+src\py_types\styles.rs:98:    #[pyo3(signature = (
+src\py_types\offline.rs:4:#[pyclass(module = "forge3d._forge3d", name = "OfflineBatchResult")]
+src\py_types\offline.rs:19:    fn value_for_key<'py>(&self, py: Python<'py>, key: &str) -> PyResult<PyObject> {
+src\py_types\offline.rs:29:    fn as_dict_impl(&self, py: Python<'_>) -> PyResult<PyObject> {
+src\py_types\offline.rs:38:#[pymethods]
+src\py_types\offline.rs:41:    fn py_new() -> PyResult<Self> {
+src\py_types\offline.rs:57:    fn __getitem__(&self, py: Python<'_>, key: &str) -> PyResult<PyObject> {
+src\py_types\offline.rs:61:    fn as_dict(&self, py: Python<'_>) -> PyResult<PyObject> {
+src\py_types\offline.rs:74:#[pyclass(module = "forge3d._forge3d", name = "OfflineMetrics")]
+src\py_types\offline.rs:101:    fn value_for_key<'py>(&self, py: Python<'py>, key: &str) -> PyResult<PyObject> {
+src\py_types\offline.rs:114:    fn as_dict_impl(&self, py: Python<'_>) -> PyResult<PyObject> {
+src\py_types\offline.rs:126:#[pymethods]
+src\py_types\offline.rs:129:    fn py_new() -> PyResult<Self> {
+src\py_types\offline.rs:160:    fn __getitem__(&self, py: Python<'_>, key: &str) -> PyResult<PyObject> {
+src\py_types\offline.rs:164:    fn as_dict(&self, py: Python<'_>) -> PyResult<PyObject> {
+src\py_types\pointcloud.rs:7:#[pyclass(module = "forge3d._forge3d", name = "PointBuffer")]
+src\py_types\pointcloud.rs:13:#[pymethods]
+src\py_types\pointcloud.rs:20:    #[pyo3(signature = (positions, colors = None))]
+src\py_types\pointcloud.rs:21:    fn new(positions: Vec<f32>, colors: Option<Vec<u8>>) -> PyResult<Self> {
+src\py_types\pointcloud.rs:78:    #[pyo3(signature = (bounds_min, bounds_max))]
+src\py_types\screen_space_gi.rs:5:#[pyclass(module = "forge3d._forge3d", name = "ScreenSpaceGI")]
+src\py_types\screen_space_gi.rs:13:#[pymethods]
+src\py_types\screen_space_gi.rs:16:    #[pyo3(signature = (width=1280, height=720))]
+src\py_types\screen_space_gi.rs:17:    pub fn new(width: u32, height: u32) -> PyResult<Self> {
+src\py_types\screen_space_gi.rs:33:    pub fn enable_ssao(&mut self) -> PyResult<()> {
+src\py_types\screen_space_gi.rs:44:    pub fn enable_ssgi(&mut self) -> PyResult<()> {
+src\py_types\screen_space_gi.rs:55:    pub fn enable_ssr(&mut self) -> PyResult<()> {
+src\py_types\screen_space_gi.rs:66:    pub fn disable(&mut self, effect: &str) -> PyResult<()> {
+src\py_types\screen_space_gi.rs:79:    pub fn resize(&mut self, width: u32, height: u32) -> PyResult<()> {
+src\py_types\screen_space_gi.rs:91:    pub fn execute(&mut self) -> PyResult<()> {
+src\terrain\renderer\resources\ao.rs:4:    pub fn light_debug_info(&self) -> PyResult<String> {
+src\terrain\renderer\probes.rs:5:use pyo3::Python;
+src\terrain\renderer\py_api.rs:3:use numpy::PyUntypedArrayMethods;
+src\terrain\renderer\py_api.rs:5:#[pymethods]
+src\terrain\renderer\py_api.rs:8:    pub fn new(session: &crate::core::session::Session) -> PyResult<Self> {
+src\terrain\renderer\py_api.rs:22:    #[pyo3(signature = (lights))]
+src\terrain\renderer\py_api.rs:24:    fn set_lights(&self, py: Python, lights: &PyAny) -> PyResult<()> {
+src\terrain\renderer\py_api.rs:25:        use pyo3::types::PyList;
+src\terrain\renderer\py_api.rs:63:    #[pyo3(signature = () )]
+src\terrain\renderer\py_api.rs:64:    fn light_debug_info(&self) -> PyResult<String> {
+src\terrain\renderer\py_api.rs:68:    #[pyo3(signature = (material_set, env_maps, params, heightmap, target=None, water_mask=None, time_seconds=0.0))]
+src\terrain\renderer\py_api.rs:79:    ) -> PyResult<Py<crate::Frame>> {
+src\terrain\renderer\py_api.rs:111:    #[pyo3(signature = (material_set, env_maps, params, heightmap, water_mask=None, time_seconds=0.0))]
+src\terrain\renderer\py_api.rs:121:    ) -> PyResult<(Py<crate::Frame>, Py<crate::AovFrame>)> {
+src\terrain\renderer\py_api.rs:155:    #[pyo3(signature = (batches))]
+src\terrain\renderer\py_api.rs:156:    pub fn set_scatter_batches(&mut self, batches: &PyAny) -> PyResult<()> {
+src\terrain\renderer\py_api.rs:157:        use pyo3::types::{PyDict, PyList};
+src\terrain\renderer\py_api.rs:326:            let transforms_array: numpy::PyReadonlyArray2<'_, f32> =
+src\terrain\renderer\py_api.rs:472:                .map(|value| -> PyResult<crate::terrain::scatter::HlodConfig> {
+src\terrain\renderer\py_api.rs:544:    #[pyo3(signature = ())]
+src\terrain\renderer\py_api.rs:545:    pub fn clear_scatter_batches(&mut self) -> PyResult<()> {
+src\terrain\renderer\py_api.rs:551:    #[pyo3(signature = ())]
+src\terrain\renderer\py_api.rs:552:    pub fn get_scatter_stats(&self, py: Python<'_>) -> PyResult<PyObject> {
+src\terrain\renderer\py_api.rs:554:        let dict = pyo3::types::PyDict::new(py);
+src\terrain\renderer\py_api.rs:568:    #[pyo3(signature = ())]
+src\terrain\renderer\py_api.rs:569:    pub fn get_scatter_memory_report(&self, py: Python<'_>) -> PyResult<PyObject> {
+src\terrain\renderer\py_api.rs:571:        let dict = pyo3::types::PyDict::new(py);
+src\terrain\renderer\py_api.rs:584:    #[pyo3(signature = ())]
+src\terrain\renderer\py_api.rs:585:    pub fn get_probe_memory_report(&self, py: Python<'_>) -> PyResult<PyObject> {
+src\terrain\renderer\py_api.rs:586:        let dict = pyo3::types::PyDict::new(py);
+src\terrain\renderer\py_api.rs:603:    #[pyo3(signature = ())]
+src\terrain\renderer\py_api.rs:604:    pub fn get_reflection_probe_memory_report(&self, py: Python<'_>) -> PyResult<PyObject> {
+src\terrain\renderer\py_api.rs:605:        let dict = pyo3::types::PyDict::new(py);
+src\terrain\renderer\py_api.rs:632:    #[pyo3(
+src\terrain\renderer\py_api.rs:642:    ) -> PyResult<()> {
+src\terrain\renderer\py_api.rs:643:        use pyo3::prelude::*;
+src\terrain\renderer\py_api.rs:651:            return Err(PyErr::new::<pyo3::exceptions::PyTypeError, _>(
+src\terrain\renderer\py_api.rs:663:            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+src\terrain\renderer\py_api.rs:671:            .map_err(|e| PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(e))
+src\terrain\renderer\py_api.rs:674:    #[pyo3(text_signature = "(self)")]
+src\terrain\renderer\py_api.rs:675:    fn clear_material_vt_sources(&self) -> PyResult<()> {
+src\terrain\renderer\py_api.rs:677:            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+src\terrain\renderer\py_api.rs:686:    #[pyo3(text_signature = "(self)")]
+src\terrain\renderer\py_api.rs:687:    fn get_material_vt_stats(&self) -> PyResult<std::collections::HashMap<String, f32>> {
+src\terrain\renderer\py_api.rs:689:            PyErr::new::<pyo3::exceptions::PyRuntimeError, _>(format!(
+src\terrain\renderer\py_api.rs:698:    pub fn get_config(&self) -> PyResult<String> {
+src\terrain\renderer\upload.rs:101:        pyo3::Python::with_gil(|py| {
+src\sdf\py.rs:2:use pyo3::exceptions::PyRuntimeError;
+src\sdf\py.rs:3:use pyo3::prelude::*;
+src\sdf\py.rs:4:use pyo3::types::PyType;
+src\sdf\py.rs:18:#[pymethods]
+src\sdf\py.rs:114:#[pymethods]
+src\sdf\py.rs:162:    fn take_builder(&mut self) -> PyResult<SdfSceneBuilder> {
+src\sdf\py.rs:174:#[pymethods]
+src\sdf\py.rs:188:    ) -> PyResult<u32> {
+src\sdf\py.rs:201:    ) -> PyResult<u32> {
+src\sdf\py.rs:214:    ) -> PyResult<u32> {
+src\sdf\py.rs:226:    ) -> PyResult<u32> {
+src\sdf\py.rs:240:    ) -> PyResult<u32> {
+src\sdf\py.rs:253:    ) -> PyResult<u32> {
+src\sdf\py.rs:267:    ) -> PyResult<u32> {
+src\sdf\py.rs:281:    ) -> PyResult<u32> {
+src\sdf\py.rs:289:    pub fn union(&mut self, left: u32, right: u32, material_id: u32) -> PyResult<u32> {
+src\sdf\py.rs:302:    ) -> PyResult<u32> {
+src\sdf\py.rs:309:    pub fn subtract(&mut self, left: u32, right: u32, material_id: u32) -> PyResult<u32> {
+src\sdf\py.rs:316:    pub fn intersect(&mut self, left: u32, right: u32, material_id: u32) -> PyResult<u32> {
+src\sdf\py.rs:323:    pub fn build(&mut self) -> PyResult<PySdfScene> {
+src\uv\unwrap.rs:7:use pyo3::{prelude::*, types::PyDict};
+src\uv\unwrap.rs:84:#[pyfunction]
+src\uv\unwrap.rs:89:) -> PyResult<PyObject> {
+src\uv\unwrap.rs:97:#[pyfunction]
+src\uv\unwrap.rs:98:pub fn uv_spherical_unwrap_py(py: Python<'_>, mesh: &Bound<'_, PyDict>) -> PyResult<PyObject> {
+src\vector\api\extrusion.rs:5:use numpy::{PyArray1, PyReadonlyArray2, ToPyArray};
+src\vector\api\extrusion.rs:6:use pyo3::prelude::*;
+src\vector\api\extrusion.rs:8:#[pyfunction]
+src\vector\api\extrusion.rs:9:#[pyo3(text_signature = "(polygons, height)")]
+src\vector\api\extrusion.rs:14:) -> PyResult<(
+src\vector\api\extrusion.rs:21:        return Err(pyo3::exceptions::PyValueError::new_err(
+src\vector\api\extrusion.rs:30:                pyo3::exceptions::PyRuntimeError::new_err("Failed to find an appropriate adapter")
+src\vector\api\extrusion.rs:35:                pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to create device: {}", e))
+src\vector\api\extrusion.rs:52:        .map_err(pyo3::exceptions::PyRuntimeError::new_err)?;
+src\vector\api\extrusion.rs:58:        return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\vector\api\extrusion.rs:98:        .ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("Vertex map cancelled"))?
+src\vector\api\extrusion.rs:100:            pyo3::exceptions::PyRuntimeError::new_err(format!(
+src\vector\api\extrusion.rs:106:        .ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("Index map cancelled"))?
+src\vector\api\extrusion.rs:108:            pyo3::exceptions::PyRuntimeError::new_err(format!(
+src\vector\api\extrusion.rs:114:        .ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("Normal map cancelled"))?
+src\vector\api\extrusion.rs:116:            pyo3::exceptions::PyRuntimeError::new_err(format!(
+src\vector\api\extrusion.rs:122:        .ok_or_else(|| pyo3::exceptions::PyRuntimeError::new_err("UV map cancelled"))?
+src\vector\api\extrusion.rs:124:            pyo3::exceptions::PyRuntimeError::new_err(format!("Failed to map uvs buffer: {}", e))
+src\vector\api\extrusion.rs:167:#[pyfunction]
+src\vector\api\extrusion.rs:168:#[pyo3(text_signature = "(polygon, height)")]
+src\vector\api\extrusion.rs:173:) -> PyResult<(
+src\vector\api\py.rs:5:use numpy::{PyReadonlyArray2, PyUntypedArrayMethods};
+src\vector\api\py.rs:6:use pyo3::prelude::*;
+src\vector\api\py.rs:11:/// `PyReadonlyArray2<'py, T>` (owned pyo3 handles). Do not use `&PyReadonlyArray2<T>`
+src\vector\api\py.rs:12:/// in #[pyfunction] signatures because pyo3 cannot extract references from Python call sites.
+src\vector\api\py.rs:52:fn with_global_api<F, T>(f: F) -> PyResult<T>
+src\vector\api\py.rs:57:        pyo3::exceptions::PyRuntimeError::new_err("Failed to acquire vector API lock")
+src\vector\api\py.rs:70:#[pyfunction]
+src\vector\api\py.rs:71:#[pyo3(
+src\vector\api\py.rs:81:) -> PyResult<Vec<u32>> {
+src\vector\api\py.rs:109:#[pyfunction]
+src\vector\api\py.rs:110:#[pyo3(text_signature = "(path_coords, stroke_color=None, stroke_width=1.0)")]
+src\vector\api\py.rs:116:) -> PyResult<Vec<u32>> {
+src\vector\api\py.rs:118:        return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\vector\api\py.rs:125:        return Err(pyo3::exceptions::PyRuntimeError::new_err(format!(
+src\vector\api\py.rs:138:            return Err(pyo3::exceptions::PyRuntimeError::new_err(format!(
+src\vector\api\py.rs:163:#[pyfunction]
+src\vector\api\py.rs:164:#[pyo3(text_signature = "(positions, fill_color=None, point_size=4.0)")]
+src\vector\api\py.rs:170:) -> PyResult<Vec<u32>> {
+src\vector\api\py.rs:172:        return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\vector\api\py.rs:179:        return Err(pyo3::exceptions::PyRuntimeError::new_err(format!(
+src\vector\api\py.rs:192:            return Err(pyo3::exceptions::PyRuntimeError::new_err(format!(
+src\vector\api\py.rs:215:#[pyfunction]
+src\vector\api\py.rs:216:#[pyo3(
+src\vector\api\py.rs:227:) -> PyResult<u32> {
+src\vector\api\py.rs:229:        return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\vector\api\py.rs:236:        return Err(pyo3::exceptions::PyRuntimeError::new_err(format!(
+src\vector\api\py.rs:249:            return Err(pyo3::exceptions::PyRuntimeError::new_err(format!(
+src\vector\api\py.rs:259:        return Err(pyo3::exceptions::PyRuntimeError::new_err(
+src\vector\api\py.rs:266:        return Err(pyo3::exceptions::PyRuntimeError::new_err(format!(
+src\vector\api\py.rs:298:#[pyfunction]
+src\vector\api\py.rs:299:#[pyo3(text_signature = "()")]
+src\vector\api\py.rs:300:pub fn clear_vectors_py() -> PyResult<()> {
+src\vector\api\py.rs:307:#[pyfunction]
+src\vector\api\py.rs:308:#[pyo3(text_signature = "()")]
+src\vector\api\py.rs:309:pub fn get_vector_counts_py() -> PyResult<(usize, usize, usize, usize)> {

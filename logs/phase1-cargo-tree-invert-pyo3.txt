@@ -1,0 +1,4 @@
+pyo3 v0.21.2
+├── forge3d v1.26.0 (C:\Users\milos\forge3d-web)
+└── numpy v0.21.0
+    └── forge3d v1.26.0 (C:\Users\milos\forge3d-web)

@@ -1,0 +1,871 @@
+# Forge3D Browser WebGPU/WASM Migration Goals Spec
+
+Source plan: `docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md`
+
+Created: 2026-06-05
+
+## Purpose
+
+This spec turns Section 18, "Step-By-Step Migration Phases", into a progress-traceable contract for each migration goal. Each phase has a status, precise deliverables, verification commands, acceptance criteria, rollback boundary, and evidence expectations.
+
+This document is not a replacement for the implementation plan. It is the status ledger and per-phase definition of done.
+
+## Status Legend
+
+- `Done`: Phase deliverables are complete and evidence is recorded.
+- `Ready`: Phase can start once its prerequisites are satisfied.
+- `Blocked`: Phase cannot start or finish until a named blocker is removed.
+- `Pending`: Phase is ordered but not yet ready because earlier phases are incomplete.
+
+## Global Invariants
+
+These invariants apply to every phase after Phase 1:
+
+- Preserve the Python package import contract: `import forge3d` and `forge3d._forge3d` must remain the user-facing Python extension path after Python restoration.
+- Do not introduce PyO3 or NumPy into `forge3d-core`.
+- Do not introduce `winit`, stdin, TCP IPC, native filesystem-only public APIs, or blocking browser runtime behavior into `forge3d-web`.
+- Keep `wgpu = 0.19` until browser CI and MVP tests are stable.
+- Keep changes phase-scoped. Do not combine rollback boundaries across phases unless a later spec revision explicitly says so.
+- Record every phase verification command and its output location before marking the phase `Done`.
+
+## Progress Summary
+
+| Phase | Goal | Status | Evidence |
+|---|---|---|---|
+| 1 | Baseline audit and reproduce wasm failure | Done | `docs/superpowers/audits/2026-06-04-forge3d-browser-webgpu-wasm-phase1-baseline-audit.md`; `logs/phase1-*` |
+| 2 | Workspace split | Ready | Not started |
+| 3 | PyO3/NumPy extraction | Pending | Not started |
+| 4 | Core wasm check passing | Pending | Not started |
+| 5 | GPU context ownership redesign | Pending | Not started |
+| 6 | Browser crate creation | Pending | Not started |
+| 7 | Minimal canvas clear | Pending | Not started |
+| 8 | Terrain heightmap upload and render | Pending | Not started |
+| 9 | Camera and resize API | Pending | Not started |
+| 10 | Screenshot/readback | Pending | Not started |
+| 11 | JS/TS API stabilization | Pending | Not started |
+| 12 | Browser IO abstraction | Pending | Not started |
+| 13 | Packaging | Pending | Not started |
+| 14 | Browser CI | Pending | Not started |
+| 15 | Native/Python compatibility restoration | Pending | Not started |
+| 16 | MVP release hardening | Pending | Not started |
+
+---
+
+## Phase 1: Baseline Audit And Reproduce Wasm Failure
+
+**Status:** Done
+
+**Goal:** Prove and document the current wasm build failure and the dependency/API surface that causes it.
+
+**Prerequisites:** Existing single-crate repository before migration.
+
+**Scope:**
+
+- Inspect `Cargo.toml`, `pyproject.toml`, `src/lib.rs`, and `src/core/gpu.rs`.
+- Reproduce the wasm check failure without moving code.
+- Inventory PyO3, NumPy, winit, pollster, filesystem, TCP, stdin, and native path usage.
+- Store raw command evidence under `logs/`.
+- Store the human-readable audit under `docs/superpowers/audits/`.
+
+**Required artifacts:**
+
+- `docs/superpowers/audits/2026-06-04-forge3d-browser-webgpu-wasm-phase1-baseline-audit.md`
+- `logs/phase1-wasm-check-no-default-features.txt`
+- `logs/phase1-cargo-tree-wasm-no-default-features.txt`
+- `logs/phase1-cargo-tree-invert-pyo3.txt`
+- `logs/phase1-cargo-tree-invert-numpy.txt`
+- `logs/phase1-cargo-tree-invert-winit.txt`
+- `logs/phase1-rg-dependencies.txt`
+- `logs/phase1-rg-python-bindings.txt`
+- `logs/phase1-python-binding-files.txt`
+- `logs/phase1-rg-native-browser-hostile.txt`
+- `logs/phase1-native-browser-hostile-files.txt`
+
+**Verification commands:**
+
+```powershell
+cargo check --target wasm32-unknown-unknown --no-default-features
+cargo tree --target wasm32-unknown-unknown --no-default-features
+cargo tree --target wasm32-unknown-unknown --no-default-features -i pyo3
+cargo tree --target wasm32-unknown-unknown --no-default-features -i numpy
+cargo tree --target wasm32-unknown-unknown --no-default-features -i winit
+rg -n "#\[pyclass|#\[pymethods|#\[pyfunction|pyo3|numpy::|PyResult" src Cargo.toml pyproject.toml tests
+rg -n "\bwinit\b|pollster::block_on|\bpollster\b|std::fs|std::net|TcpListener|TcpStream|stdin\(|io::stdin|PathBuf|std::path::Path|reqwest" src Cargo.toml pyproject.toml tests
+```
+
+**Acceptance criteria:**
+
+- The wasm check failure is captured as `pyo3-ffi v0.21.2`.
+- Missing symbols include `libc::wchar_t`, `libc::size_t`, `libc::uintptr_t`, `libc::intptr_t`, and `libc::ssize_t`.
+- The audit explains that `pyo3` and `numpy` are unconditional root dependencies and still compile with `--no-default-features`.
+- No Rust code is moved in this phase.
+
+**Rollback boundary:** Remove only the Phase 1 audit note and Phase 1 log files.
+
+---
+
+## Phase 2: Workspace Split
+
+**Status:** Ready
+
+**Goal:** Convert the repository from one Rust package into a four-crate workspace without yet performing semantic PyO3 extraction.
+
+**Prerequisites:** Phase 1 is `Done`.
+
+**Scope:**
+
+- Convert root `Cargo.toml` into a workspace manifest.
+- Create `crates/forge3d-core`.
+- Create `crates/forge3d-python`.
+- Create `crates/forge3d-web`.
+- Create `crates/forge3d-native-viewer`.
+- Copy current `src/` into `crates/forge3d-core/src/` as temporary staging.
+- Add minimal crate roots so workspace metadata resolves.
+- Keep root `pyproject.toml` pointed at the eventual Python extension crate path only if that crate has a buildable manifest.
+
+**Required artifacts:**
+
+- Root `Cargo.toml` with `[workspace]`, resolver `2`, four members, `[workspace.package]`, and `[workspace.dependencies]`.
+- `crates/forge3d-core/Cargo.toml`
+- `crates/forge3d-core/src/lib.rs`
+- `crates/forge3d-python/Cargo.toml`
+- `crates/forge3d-python/src/lib.rs`
+- `crates/forge3d-web/Cargo.toml`
+- `crates/forge3d-web/src/lib.rs`
+- `crates/forge3d-native-viewer/Cargo.toml`
+- `crates/forge3d-native-viewer/src/lib.rs`
+- `crates/forge3d-native-viewer/src/main.rs`
+
+**Dependency contract:**
+
+- `forge3d-core` owns shared Rust internals and may temporarily contain unextracted code in this phase.
+- `forge3d-python` owns `pyo3`, `numpy`, and `pollster`.
+- `forge3d-web` owns `wasm-bindgen`, `web-sys`, `js-sys`, and `serde-wasm-bindgen`.
+- `forge3d-native-viewer` owns `winit`, native event loop, stdin, and TCP IPC.
+
+**Verification commands:**
+
+```powershell
+cargo metadata --no-deps
+cargo check -p forge3d-core --no-default-features
+```
+
+**Acceptance criteria:**
+
+- `cargo metadata --no-deps` exits `0`.
+- `cargo check -p forge3d-core --no-default-features` exits `0` or fails only on known temporary staging gates explicitly documented in the Phase 2 evidence note.
+- Workspace package names are stable: `forge3d-core`, `forge3d-python`, `forge3d-web`, `forge3d-native-viewer`.
+- No Python package compatibility work is claimed complete in this phase.
+
+**Risks:**
+
+- Mechanical moves may break relative module paths.
+- `Cargo.lock` churn may obscure the phase boundary.
+
+**Rollback boundary:** Revert only the workspace split commit or changeset; do not mix with PyO3 extraction.
+
+---
+
+## Phase 3: PyO3/NumPy Extraction
+
+**Status:** Pending
+
+**Goal:** Move Python bindings out of `forge3d-core` and into `forge3d-python`.
+
+**Prerequisites:** Phase 2 is `Done`.
+
+**Scope:**
+
+- Move `src/py_module/**`, `src/py_functions/**`, and `src/py_types/**` into `crates/forge3d-python/src/`.
+- Move embedded PyO3 binding modules into `crates/forge3d-python/src/wrappers/`.
+- Convert core `#[pyclass]` structs into plain Rust structs.
+- Add Python wrapper structs that own or reference core structs.
+- Move NumPy conversion and `PyResult` error mapping into Python-only modules.
+- Update root `pyproject.toml` to build with `manifest-path = "crates/forge3d-python/Cargo.toml"`.
+
+**Required artifacts:**
+
+- `crates/forge3d-python/src/py_module/**`
+- `crates/forge3d-python/src/py_functions/**`
+- `crates/forge3d-python/src/py_types/**`
+- `crates/forge3d-python/src/wrappers/**`
+- Core modules with PyO3 attributes removed.
+- Python wrappers for at least `Scene`, `TerrainRenderer`, `PointBuffer`, animation structs, labels bindings, SDF bindings, and COG bindings where those APIs currently exist.
+
+**Dependency contract:**
+
+- `cargo tree -p forge3d-core --target wasm32-unknown-unknown --no-default-features` must not contain `pyo3` or `numpy`.
+- `forge3d-python` may depend on `forge3d-core`, `pyo3`, `numpy`, `pollster`, and Python-only conversion crates.
+
+**Verification commands:**
+
+```powershell
+cargo tree -p forge3d-core --target wasm32-unknown-unknown --no-default-features | rg "pyo3|numpy"
+cargo check -p forge3d-python
+```
+
+**Expected verification result:**
+
+- The `rg "pyo3|numpy"` command returns no matches for `forge3d-core`.
+- `cargo check -p forge3d-python` exits `0` or produces only documented wrapper migration failures that are fixed before this phase can be marked `Done`.
+
+**Acceptance criteria:**
+
+- No `#[pyclass]`, `#[pymethods]`, `#[pyfunction]`, `pyo3`, `numpy::`, or `PyResult` usage remains in `crates/forge3d-core/src`.
+- Python-facing wrappers compile from `crates/forge3d-python`.
+- `pyproject.toml` points maturin at `crates/forge3d-python/Cargo.toml`.
+
+**Risks:**
+
+- Many embedded `PyResult` callsites may require explicit core error types first.
+- Behavior drift in existing Python APIs.
+
+**Rollback boundary:** Revert the PyO3 extraction changes while keeping the workspace shell from Phase 2.
+
+---
+
+## Phase 4: Core Wasm Check Passing
+
+**Status:** Pending
+
+**Goal:** Make `forge3d-core` compile for `wasm32-unknown-unknown` with no default features.
+
+**Prerequisites:** Phase 3 is `Done`.
+
+**Scope:**
+
+- Gate native IO, viewer, offline render, direct filesystem, stdin, TCP, and native-only modules behind explicit features.
+- Keep pure data/model modules available with `default = []`.
+- Ensure browser-usable core modules do not call `pollster::block_on`.
+- Ensure `forge3d-core` does not compile `pyo3`, `numpy`, `winit`, native viewer modules, TCP IPC, stdin code, or path-only public native filesystem loaders for the target check.
+
+**Required artifacts:**
+
+- `crates/forge3d-core/Cargo.toml` feature gates.
+- `crates/forge3d-core/src/lib.rs` module gates.
+- Feature-gated native IO modules.
+- A Phase 4 evidence log under `logs/phase4-*`.
+
+**Verification commands:**
+
+```powershell
+cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features
+cargo tree -p forge3d-core --target wasm32-unknown-unknown --no-default-features | rg "pyo3|numpy|winit|pollster"
+```
+
+**Expected verification result:**
+
+- The `cargo check` command exits `0`.
+- The `cargo tree | rg ...` command returns no matches.
+
+**Acceptance criteria:**
+
+- `forge3d-core/default = []` is a valid wasm compilation path.
+- Any remaining native-only behavior is behind an explicit non-default feature.
+- Browser MVP work can safely depend on `forge3d-core` without pulling Python or native viewer dependencies.
+
+**Risks:**
+
+- Some modules may compile on wasm but still expose unusable browser APIs.
+- Over-broad gates may hide useful pure data types.
+
+**Rollback boundary:** Re-enable incorrectly gated modules behind native features; do not undo PyO3 extraction.
+
+---
+
+## Phase 5: GPU Context Ownership Redesign
+
+**Status:** Pending
+
+**Goal:** Replace global GPU singleton usage with explicit runtime-owned GPU state that can work in browser async initialization.
+
+**Prerequisites:** Phase 4 is `Done`.
+
+**Scope:**
+
+- Add `GpuRuntime`, `GpuContext`, and `SurfaceState`.
+- Remove browser-relevant dependencies on `crate::core::gpu::ctx()`.
+- Replace `pollster::block_on` in core browser paths with async APIs.
+- Move blocking request/readback helpers into `forge3d-python` or `forge3d-native-viewer`.
+- Update render paths to receive `GpuContext` or renderer-owned context.
+
+**Required artifacts:**
+
+- `crates/forge3d-core/src/gpu/mod.rs`
+- `crates/forge3d-core/src/gpu/runtime.rs`
+- `crates/forge3d-core/src/gpu/surface.rs`
+- Updated scene, terrain, renderer, and readback callsites.
+- Compatibility blocking helper in Python or native crate only.
+
+**Verification commands:**
+
+```powershell
+cargo test -p forge3d-core gpu
+rg -n "core::gpu::ctx\(|\bctx\(\)|OnceCell<GpuContext>|pollster::block_on" crates/forge3d-core/src
+```
+
+**Expected verification result:**
+
+- GPU tests pass.
+- No browser-relevant core module uses the singleton or `pollster::block_on`.
+- Any remaining `pollster::block_on` matches are test-only or native-feature-only and documented.
+
+**Acceptance criteria:**
+
+- Core GPU state can be owned by a runtime object instead of a process-global singleton.
+- Browser runtime can request adapter/device asynchronously.
+- Python/native blocking behavior is isolated outside core browser paths.
+
+**Risks:**
+
+- Many render callsites may assume global state.
+- Python `Scene.render_rgba()` behavior may need a wrapper-level compatibility shim.
+
+**Rollback boundary:** Keep a compatibility helper only in Python/native crates; do not restore the global singleton to browser paths.
+
+---
+
+## Phase 6: Browser Crate Creation
+
+**Status:** Pending
+
+**Goal:** Create a wasm-bindgen browser crate with stable error mapping, TypeScript facade, and npm scripts.
+
+**Prerequisites:** Phase 5 is `Done`.
+
+**Scope:**
+
+- Implement `crates/forge3d-web/src/lib.rs`.
+- Implement `crates/forge3d-web/src/runtime.rs`.
+- Implement `crates/forge3d-web/src/error.rs`.
+- Implement initial `crates/forge3d-web/src/inputs.rs`.
+- Implement initial `crates/forge3d-web/src/io.rs`.
+- Add `crates/forge3d-web/package.json`.
+- Add `crates/forge3d-web/tsconfig.json`.
+- Add `crates/forge3d-web/vite.config.ts`.
+- Add `crates/forge3d-web/src-ts/index.ts`.
+- Add `crates/forge3d-web/types/index.d.ts`.
+
+**Required public API skeleton:**
+
+- `Forge3DRuntime.create(canvas, options)`
+- `Forge3DRuntime.dispose()`
+- `Forge3DError`
+- Typed runtime options for adapter preference, clear color, and initial size.
+
+**Verification commands:**
+
+```powershell
+cargo check -p forge3d-web --target wasm32-unknown-unknown
+cd crates/forge3d-web
+npm run typecheck
+```
+
+**Acceptance criteria:**
+
+- `forge3d-web` compiles to wasm.
+- TypeScript facade typechecks.
+- `forge3d-web` has no `pyo3`, `numpy`, `winit`, `pollster`, `std::net`, stdin, or public `std::fs` browser APIs.
+
+**Risks:**
+
+- `wgpu 0.19` browser surface APIs may require browser-specific adjustments.
+
+**Rollback boundary:** Adjust browser surface creation inside `forge3d-web`; do not change core APIs to satisfy wasm-bindgen quirks unless the core boundary is wrong.
+
+---
+
+## Phase 7: Minimal Canvas Clear
+
+**Status:** Pending
+
+**Goal:** Render a deterministic clear color to an `HtmlCanvasElement` through the browser WebGPU runtime.
+
+**Prerequisites:** Phase 6 is `Done`.
+
+**Scope:**
+
+- Implement async runtime creation against a visible `HtmlCanvasElement`.
+- Configure WebGPU surface for the canvas.
+- Implement DPR-aware initial size and resize enough for the clear path.
+- Implement clear-color render pass.
+- Add browser test page and Playwright test that proves nonblank pixels.
+
+**Required artifacts:**
+
+- `crates/forge3d-web/src/runtime.rs`
+- `crates/forge3d-core/src/render/**` clear helpers if shared logic is needed.
+- `crates/forge3d-web/tests/playwright/**`
+- `crates/forge3d-web/examples/test-clear.html` or equivalent served test fixture.
+
+**Verification commands:**
+
+```powershell
+wasm-pack build crates/forge3d-web --target web
+cd crates/forge3d-web
+npm run test:browser
+```
+
+**Acceptance criteria:**
+
+- Playwright detects more than 100 nonblack pixels or an equivalent deterministic threshold.
+- Runtime creation is async.
+- Clear render uses WebGPU presentation to canvas, not a mocked DOM-only pixel write.
+
+**Risks:**
+
+- Local and CI WebGPU availability may differ.
+
+**Rollback boundary:** Keep capability probe diagnostics; do not weaken the pixel proof into only checking `navigator.gpu`.
+
+---
+
+## Phase 8: Terrain Heightmap Upload And Render
+
+**Status:** Pending
+
+**Goal:** Upload a typed-array terrain heightmap from JavaScript and render visible terrain variation in browser.
+
+**Prerequisites:** Phase 7 is `Done`.
+
+**Scope:**
+
+- Add `TerrainHeightmapInput` validation.
+- Accept `Float32Array` data with explicit width and height.
+- Reject wrong lengths, zero dimensions, and non-finite values.
+- Upload terrain as `R32Float` or a fallback representation accepted by browser adapters.
+- Draw a terrain mesh using core render resources.
+- Add a synthetic hill browser pixel test.
+
+**Required artifacts:**
+
+- `crates/forge3d-core/src/terrain/**`
+- `crates/forge3d-web/src/inputs.rs`
+- `crates/forge3d-web/src/runtime.rs`
+- `crates/forge3d-web/types/index.d.ts`
+- `crates/forge3d-web/tests/playwright/**`
+
+**Verification commands:**
+
+```powershell
+wasm-pack build crates/forge3d-web --target web
+cd crates/forge3d-web
+npm run typecheck
+npm run test:browser
+```
+
+**Acceptance criteria:**
+
+- Browser test renders a synthetic hill with measurable height/color variation.
+- Invalid typed arrays fail with `Forge3DError("INVALID_INPUT")`.
+- Rendering path handles missing `FLOAT32_FILTERABLE` by using a nearest-sampling or non-filtered fallback.
+
+**Risks:**
+
+- Browser adapters may not support the same float texture filtering as native adapters.
+
+**Rollback boundary:** Keep terrain upload API shape; swap internal texture strategy if browser support requires it.
+
+---
+
+## Phase 9: Camera And Resize API
+
+**Status:** Pending
+
+**Goal:** Expose stable camera controls and explicit DPR-aware resize behavior for browser runtime.
+
+**Prerequisites:** Phase 8 is `Done`.
+
+**Scope:**
+
+- Add `setCamera` API.
+- Validate finite camera position, target, up vector, field of view, near plane, and far plane.
+- Add explicit resize API using CSS width, CSS height, and DPR.
+- Reconfigure surface on resize.
+- Update projection matrices after resize and camera changes.
+- Add browser resize and camera-change pixel tests.
+
+**Required artifacts:**
+
+- `crates/forge3d-core/src/camera/**`
+- `crates/forge3d-web/src/runtime.rs`
+- `crates/forge3d-web/types/index.d.ts`
+- `crates/forge3d-web/tests/playwright/**`
+
+**Verification commands:**
+
+```powershell
+cd crates/forge3d-web
+npm run typecheck
+npm run test:browser
+```
+
+**Acceptance criteria:**
+
+- Canvas backing dimensions match CSS dimensions multiplied by DPR.
+- Camera changes alter rendered terrain pixels in a deterministic test.
+- Invalid camera inputs fail with `Forge3DError("INVALID_INPUT")`.
+
+**Risks:**
+
+- CSS size, canvas backing size, and surface config size can diverge.
+
+**Rollback boundary:** Keep the public API explicit; do not infer DPR from global browser state in a way tests cannot control.
+
+---
+
+## Phase 10: Screenshot/Readback
+
+**Status:** Pending
+
+**Goal:** Provide an async browser screenshot API that returns a PNG `Blob`.
+
+**Prerequisites:** Phase 9 is `Done`.
+
+**Scope:**
+
+- Add async padded GPU readback path.
+- Respect `COPY_BYTES_PER_ROW_ALIGNMENT`.
+- Encode readback pixels as PNG.
+- Return a browser `Blob` with PNG MIME type.
+- Reject screenshots after `dispose()`.
+- Add browser screenshot test.
+
+**Required artifacts:**
+
+- `crates/forge3d-core/src/readback/**`
+- `crates/forge3d-web/src/runtime.rs`
+- `crates/forge3d-web/types/index.d.ts`
+- `crates/forge3d-web/tests/playwright/**`
+
+**Verification commands:**
+
+```powershell
+cargo test -p forge3d-core readback
+cd crates/forge3d-web
+npm run typecheck
+npm run test:browser
+```
+
+**Acceptance criteria:**
+
+- `await runtime.screenshot()` returns a `Blob`.
+- Blob type is `image/png`.
+- Blob size is greater than zero.
+- Readback handles row padding correctly.
+
+**Risks:**
+
+- Rust-side PNG encoding may increase wasm size or runtime cost.
+
+**Rollback boundary:** If Rust PNG is too heavy, keep public API and replace implementation with browser canvas/ImageData encoding.
+
+---
+
+## Phase 11: JS/TS API Stabilization
+
+**Status:** Pending
+
+**Goal:** Freeze the public browser API names, types, handles, error codes, and lifetime rules behind a stable TypeScript facade.
+
+**Prerequisites:** Phase 10 is `Done`.
+
+**Scope:**
+
+- Hand-author `types/index.d.ts`.
+- Keep wasm-bindgen generated names behind `src-ts/index.ts`.
+- Document object lifetimes and disposed-runtime behavior.
+- Stabilize terrain, camera, resize, render, screenshot, and dispose signatures.
+- Add API snapshot or type-level tests.
+
+**Required artifacts:**
+
+- `crates/forge3d-web/types/index.d.ts`
+- `crates/forge3d-web/src-ts/index.ts`
+- `crates/forge3d-web/tests/**` API snapshot or type tests.
+- Browser API docs examples.
+
+**Verification commands:**
+
+```powershell
+cd crates/forge3d-web
+npm run typecheck
+npm run test:browser
+```
+
+**Acceptance criteria:**
+
+- Public TypeScript API matches the source plan's MVP surface.
+- Generated wasm-bindgen internals do not leak as the primary user API.
+- Error codes are stable and documented.
+
+**Risks:**
+
+- wasm-bindgen generated exports may drift across builds.
+
+**Rollback boundary:** Keep the stable facade separate from generated JS and adjust only the facade adapter if generated names change.
+
+---
+
+## Phase 12: Browser IO Abstraction
+
+**Status:** Pending
+
+**Goal:** Add browser-compatible byte source abstractions for URL, File, Blob, and ArrayBuffer terrain inputs.
+
+**Prerequisites:** Phase 11 is `Done`.
+
+**Scope:**
+
+- Add core `ByteSource` trait or equivalent async byte-source abstraction.
+- Add browser adapters for URL/fetch, `File`, `Blob`, and `ArrayBuffer`.
+- Add progress and cancellation mapping.
+- Map CORS, range, fetch, and cancellation failures to stable browser error codes.
+- Add unit tests with fake sources and browser fetch tests.
+
+**Required artifacts:**
+
+- `crates/forge3d-core/src/io/mod.rs`
+- `crates/forge3d-core/src/io/source.rs`
+- `crates/forge3d-web/src/io.rs`
+- `crates/forge3d-web/types/index.d.ts`
+- `crates/forge3d-web/tests/playwright/**`
+
+**Verification commands:**
+
+```powershell
+cargo test -p forge3d-core io
+cd crates/forge3d-web
+npm run typecheck
+npm run test:browser
+```
+
+**Acceptance criteria:**
+
+- URL terrain input works in browser test.
+- Blob/File/ArrayBuffer inputs work or have explicit unsupported errors tied to this phase's scope.
+- CORS/fetch/range failures map to documented `IO_ERROR` or `REQUEST_CANCELLED` codes.
+
+**Risks:**
+
+- Range request availability depends on server headers.
+
+**Rollback boundary:** Keep core byte-source abstraction and replace only browser adapter behavior if fetch constraints require it.
+
+---
+
+## Phase 13: Packaging
+
+**Status:** Pending
+
+**Goal:** Produce a publishable browser package with JS, wasm, TypeScript declarations, README, licenses, and a working Vite example.
+
+**Prerequisites:** Phase 12 is `Done`.
+
+**Scope:**
+
+- Finalize `crates/forge3d-web/package.json`.
+- Build wasm into package `dist`.
+- Build TypeScript facade into package `dist`.
+- Copy or reference licenses.
+- Add package README with browser support, MIME, CORS, and MVP exclusions.
+- Add Vite example that imports from package entrypoint.
+- Add dry-run packaging verification.
+
+**Required artifacts:**
+
+- `crates/forge3d-web/package.json`
+- `crates/forge3d-web/scripts/prepare-dist.mjs`
+- `crates/forge3d-web/README.md`
+- `crates/forge3d-web/examples/vite/**`
+- `crates/forge3d-web/dist/**` generated during verification, not necessarily committed unless release policy requires it.
+
+**Verification commands:**
+
+```powershell
+wasm-pack build crates/forge3d-web --target web
+cd crates/forge3d-web
+npm run build
+npm pack --dry-run
+npm run typecheck
+```
+
+**Acceptance criteria:**
+
+- Dry-run package contains JS, wasm, `.d.ts`, README, and license files.
+- Vite example builds against the package entrypoint.
+- Published API is ESM-only as specified.
+
+**Risks:**
+
+- Bundlers may fail to resolve the wasm asset path.
+
+**Rollback boundary:** Keep package API stable; adjust dist preparation and package exports only.
+
+---
+
+## Phase 14: Browser CI
+
+**Status:** Pending
+
+**Goal:** Add CI jobs that prove wasm compilation, package build, typecheck, and browser render tests.
+
+**Prerequisites:** Phase 13 is `Done`.
+
+**Scope:**
+
+- Add `.github/workflows/web.yml`.
+- Install Rust wasm target.
+- Install Node 20.
+- Install npm dependencies for `crates/forge3d-web`.
+- Build/check `forge3d-core` and `forge3d-web`.
+- Run `wasm-pack build`.
+- Run TypeScript typecheck.
+- Install Chromium for Playwright.
+- Run required browser render tests with WebGPU diagnostics.
+
+**Required artifacts:**
+
+- `.github/workflows/web.yml`
+- Playwright tests used by CI.
+- CI documentation if required by repository conventions.
+
+**Verification commands:**
+
+```powershell
+cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features
+cargo check -p forge3d-web --target wasm32-unknown-unknown
+wasm-pack build crates/forge3d-web --target web
+cd crates/forge3d-web
+npm ci
+npm run typecheck
+npm run test:browser
+```
+
+**Acceptance criteria:**
+
+- GitHub Actions web job is present and matches local required commands.
+- CI requires a Windows Chromium lane for the MVP pixel test.
+- Capability diagnostics make WebGPU failures distinguishable from test logic failures.
+
+**Risks:**
+
+- Hosted GPU/WebGPU availability may vary.
+
+**Rollback boundary:** Keep local browser tests; adjust CI browser channel/flags and diagnostics rather than removing the lane.
+
+---
+
+## Phase 15: Native/Python Compatibility Restoration
+
+**Status:** Pending
+
+**Goal:** Restore Python wheel builds, Python import/API contracts, and native viewer build behavior after crate separation.
+
+**Prerequisites:** Phase 14 is `Done`.
+
+**Scope:**
+
+- Reconnect Python wrappers to core.
+- Build `forge3d._forge3d` from `crates/forge3d-python`.
+- Preserve package-level Python exports in `python/forge3d`.
+- Preserve `Scene.render_rgba()` as a Python-only blocking convenience API.
+- Restore native viewer binary under `forge3d-native-viewer`.
+- Ensure native viewer owns winit, stdin, TCP IPC, and desktop snapshot plumbing.
+
+**Required artifacts:**
+
+- `crates/forge3d-python/**`
+- `crates/forge3d-native-viewer/**`
+- Root `pyproject.toml`
+- `python/forge3d/**`
+- Python smoke and API contract tests.
+
+**Verification commands:**
+
+```powershell
+python -m maturin build --manifest-path crates/forge3d-python/Cargo.toml --release --out dist
+python scripts/install_compatible_wheel.py dist
+pytest tests/test_install_smoke.py tests/test_api_contracts.py -v --tb=short
+cargo check -p forge3d-native-viewer
+```
+
+**Acceptance criteria:**
+
+- Built wheel exposes `forge3d._forge3d`.
+- Existing install smoke tests pass.
+- Existing API contract tests pass or intentional changes are explicitly documented and covered by updated tests.
+- Native viewer code lives outside core/web paths.
+
+**Risks:**
+
+- Wrapper behavior drift from moving PyO3 classes.
+
+**Rollback boundary:** Revert compatibility changes module-by-module while preserving already verified core/web boundaries.
+
+---
+
+## Phase 16: MVP Release Hardening
+
+**Status:** Pending
+
+**Goal:** Prepare the browser WebGPU/WASM MVP for prerelease with complete docs, release notes, examples, package metadata, and full verification.
+
+**Prerequisites:** Phase 15 is `Done`.
+
+**Scope:**
+
+- Update browser README.
+- Add browser support matrix.
+- Document wasm MIME requirements.
+- Document CORS and Range guidance.
+- Document cache header guidance.
+- Document MVP exclusions.
+- Update changelog.
+- Run full CI-equivalent verification locally.
+- Produce npm package dry run.
+- Produce Python wheel build.
+
+**Required artifacts:**
+
+- `crates/forge3d-web/README.md`
+- Browser support matrix documentation.
+- Release checklist documentation.
+- `CHANGELOG.md`
+- Package metadata updates.
+- Example updates.
+
+**Verification commands:**
+
+```powershell
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets --features default -- -D warnings
+cargo test -p forge3d-core
+cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features
+cargo check -p forge3d-web --target wasm32-unknown-unknown
+wasm-pack build crates/forge3d-web --target web
+cd crates/forge3d-web
+npm ci
+npm run typecheck
+npm run test:browser
+npm pack --dry-run
+cd ..\..
+python -m maturin build --manifest-path crates/forge3d-python/Cargo.toml --release --out dist
+python scripts/install_compatible_wheel.py dist
+pytest tests/test_install_smoke.py tests/test_api_contracts.py -v --tb=short
+cargo check -p forge3d-native-viewer
+```
+
+**Acceptance criteria:**
+
+- Full CI-equivalent verification passes.
+- Browser package dry run contains expected assets.
+- Python wheel build and API contracts pass.
+- Release docs state browser support, MIME requirements, CORS/Range guidance, cache headers, and MVP exclusions.
+- Post-MVP features remain behind explicit unsupported errors or documentation, not silent partial behavior.
+
+**Risks:**
+
+- Scope creep toward Python/native feature parity.
+
+**Rollback boundary:** Keep post-MVP features out of the MVP release; remove or gate incomplete APIs rather than broadening release scope.
