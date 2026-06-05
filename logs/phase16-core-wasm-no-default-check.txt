@@ -1,0 +1,2 @@
+    Checking forge3d-core v1.26.0 (C:\Users\milos\.config\superpowers\worktrees\forge3d-web\phase-16-release-hardening\crates\forge3d-core)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.32s

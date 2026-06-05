@@ -2,6 +2,7 @@
 name = "forge3d-web"
 version.workspace = true
 edition.workspace = true
+description = "Browser-only Forge3D WebGPU/WASM runtime for terrain rendering"
 license.workspace = true
 repository.workspace = true
 

@@ -753,6 +753,7 @@ impl Default for SSRSettings {
 #[pymethods]
 impl SSRSettings {
     #[new]
+    #[allow(clippy::too_many_arguments)]
     #[pyo3(signature = (max_steps=48, max_distance=100.0, thickness=0.2, stride=1.0, intensity=1.0, roughness_fade=0.8, edge_fade=0.2, temporal_alpha=0.9))]
     fn new(
         max_steps: u32,
@@ -836,6 +837,7 @@ pub struct LabelStyle {
 #[pymethods]
 impl LabelStyle {
     #[new]
+    #[allow(clippy::too_many_arguments)]
     #[pyo3(signature = (size=14.0, color=(0.1, 0.1, 0.1, 1.0), halo_color=(1.0, 1.0, 1.0, 0.8), halo_width=1.5, priority=0, min_depth=0.0, max_depth=1.0, depth_fade=0.0, min_zoom=0.0, max_zoom=3.4028235e38, rotation=0.0, offset=(0.0, 0.0), flags=None, horizon_fade_angle=5.0))]
     fn new(
         size: f32,
@@ -1010,7 +1012,7 @@ fn mesh_result(
 }
 
 fn pythonize_json(py: Python<'_>, values: Vec<serde_json::Value>) -> PyResult<Py<PyAny>> {
-    Ok(serde_wasm_like_to_py(py, serde_json::Value::Array(values))?)
+    serde_wasm_like_to_py(py, serde_json::Value::Array(values))
 }
 
 fn serde_wasm_like_to_py(py: Python<'_>, value: serde_json::Value) -> PyResult<Py<PyAny>> {

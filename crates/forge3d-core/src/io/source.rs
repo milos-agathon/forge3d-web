@@ -80,6 +80,11 @@ impl ByteRange {
 pub trait ByteSource {
     fn kind(&self) -> ByteSourceKind;
     fn len(&self) -> Option<u64>;
+
+    fn is_empty(&self) -> bool {
+        self.len() == Some(0)
+    }
+
     async fn read_range(&self, range: Option<ByteRange>) -> Result<Vec<u8>>;
 
     async fn read_all(&self) -> Result<Vec<u8>> {
@@ -158,12 +163,15 @@ mod tests {
     #[test]
     fn fake_source_reads_full_and_ranged_bytes() {
         let source = InMemoryByteSource::new(vec![1, 2, 3, 4, 5, 6]);
+        let empty = InMemoryByteSource::new(Vec::new());
 
         let full = pollster::block_on(source.read_range(None)).unwrap();
         let ranged =
             pollster::block_on(source.read_range(Some(ByteRange::new(2, Some(3)).unwrap())))
                 .unwrap();
 
+        assert!(!source.is_empty());
+        assert!(empty.is_empty());
         assert_eq!(full, vec![1, 2, 3, 4, 5, 6]);
         assert_eq!(ranged, vec![3, 4, 5]);
     }

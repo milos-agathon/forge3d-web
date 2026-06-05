@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 This project adheres to [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and follows SemVer (pre-1.0 may include breaking changes).
 
 ## [Unreleased]
+### Added
+- Hardened the browser WebGPU/WASM MVP prerelease with npm metadata, package release docs, a browser support matrix, a release checklist, Vite example documentation, and release-hardening package contract tests.
 
 ## [1.26.0] - 2026-05-18
 ### Added

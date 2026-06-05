@@ -47,7 +47,7 @@ These invariants apply to every phase after Phase 1:
 | 13 | Packaging | Done | `logs/phase13-*`; npm build, Vite example build, package contract, dry-run pack, and typecheck pass |
 | 14 | Browser CI | Done | `logs/phase14-*`; `.github/workflows/web.yml`; WebGPU diagnostics Playwright test |
 | 15 | Native/Python compatibility restoration | Done | `logs/phase15-*`; maturin wheel build, compatible wheel install, smoke/API contracts, and native viewer cargo check pass |
-| 16 | MVP release hardening | Pending | Not started |
+| 16 | MVP release hardening | Done | `logs/phase16-*`; browser support matrix, release checklist, package contract, npm dry run, Python wheel/API contracts, and native viewer check |
 
 ---
 
@@ -1298,7 +1298,7 @@ cargo check -p forge3d-native-viewer 2>&1 | Tee-Object -FilePath logs\phase15-na
 
 ## Phase 16: MVP Release Hardening
 
-**Status:** Pending
+**Status:** Done
 
 **Goal:** Prepare the browser WebGPU/WASM MVP for prerelease with complete docs, release notes, examples, package metadata, and full verification.
 
@@ -1306,16 +1306,13 @@ cargo check -p forge3d-native-viewer 2>&1 | Tee-Object -FilePath logs\phase15-na
 
 **Scope:**
 
-- Update browser README.
-- Add browser support matrix.
-- Document wasm MIME requirements.
-- Document CORS and Range guidance.
-- Document cache header guidance.
-- Document MVP exclusions.
-- Update changelog.
-- Run full CI-equivalent verification locally.
-- Produce npm package dry run.
-- Produce Python wheel build.
+- Completed 2026-06-05: updated browser README with support matrix, release checklist, cache header, MIME, CORS/Range, package verification, and MVP exclusion guidance.
+- Completed 2026-06-05: added `crates/forge3d-web/docs/support-matrix.md` with required Chrome/Chromium support, best-effort Chromium surfaces, unsupported Firefox/Safari/mobile/WebGL/Node/OffscreenCanvas surfaces, and deployment requirements.
+- Completed 2026-06-05: added `crates/forge3d-web/docs/release-checklist.md` with Rust/wasm, npm package, browser, Python wheel, Python API contract, and native viewer gates.
+- Completed 2026-06-05: hardened `@forge3d/web` package metadata with repository, issue tracker, homepage, keywords, Node engine floor, docs package allowlist, and side-effect declaration.
+- Completed 2026-06-05: added `crates/forge3d-web/examples/vite/README.md` for package-consumer build, WebGPU detection, and wasm serving requirements.
+- Completed 2026-06-05: added `crates/forge3d-web/tests/api/release-hardening.mjs` and wired it into `npm run test:package`.
+- Completed 2026-06-05: updated `CHANGELOG.md` and this migration status ledger.
 
 **Required artifacts:**
 
@@ -1360,3 +1357,74 @@ cargo check -p forge3d-native-viewer
 - Scope creep toward Python/native feature parity.
 
 **Rollback boundary:** Keep post-MVP features out of the MVP release; remove or gate incomplete APIs rather than broadening release scope.
+
+**Completion evidence (2026-06-05):**
+
+- Browser package README now links the support matrix and release checklist and documents WebGPU detection, wasm MIME type, CORS/Range behavior, cache invalidation for wasm assets, public API, release commands, and MVP exclusions.
+- `crates/forge3d-web/docs/support-matrix.md` records the required Chrome/Chromium lane and unsupported browser/runtime surfaces.
+- `crates/forge3d-web/docs/release-checklist.md` records the prerelease command set for Rust/wasm, web package, Python wheel/API contracts, and native viewer compatibility.
+- `crates/forge3d-web/package.json` includes release-ready npm metadata and ships `docs/` in the package allowlist.
+- `crates/forge3d-web/tests/api/release-hardening.mjs` locks the Phase 16 docs and metadata contract, and `crates/forge3d-web/tests/api/package-contract.mjs` verifies release docs are included in the npm dry-run package.
+- `CHANGELOG.md` has an `Unreleased` entry for browser WebGPU/WASM MVP prerelease hardening.
+
+**Verification evidence (2026-06-05):**
+
+```powershell
+cd crates\forge3d-web
+node tests/api/release-hardening.mjs
+# Result: exits 0. Full output: logs/phase16-release-hardening-test.txt
+
+npm run test:package
+# Result: exits 0. Full output: logs/phase16-package-contract.txt
+
+npm pack --dry-run
+# Result: exits 0. Full output: logs/phase16-npm-pack-dry-run.txt
+
+cd ..\..
+cargo fmt --all -- --check
+# Result: exits 0. Full output: logs/phase16-cargo-fmt-check.txt
+
+cargo clippy --workspace --all-targets --features default -- -D warnings
+# Result: exits 0. Full output: logs/phase16-cargo-clippy.txt
+
+cargo test -p forge3d-core
+# Result: exits 0. Full output: logs/phase16-core-tests.txt
+
+cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features
+# Result: exits 0. Full output: logs/phase16-core-wasm-no-default-check.txt
+
+cargo check -p forge3d-web --target wasm32-unknown-unknown
+# Result: exits 0. Full output: logs/phase16-web-wasm-check.txt
+
+wasm-pack build crates/forge3d-web --target web
+# Result: exits 0. Full output: logs/phase16-wasm-pack-build.txt
+
+cd crates\forge3d-web
+npm ci
+# Result: exits 0. Full output: logs/phase16-web-npm-ci.txt
+
+npm run typecheck
+# Result: exits 0. Full output: logs/phase16-web-typecheck.txt
+
+npm run build
+# Result: exits 0. Full output: logs/phase16-web-build.txt
+
+npm run test:api
+# Result: exits 0. Full output: logs/phase16-web-api-tests.txt
+
+npm run test:browser
+# Result: exits 0. Full output: logs/phase16-browser-tests.txt
+
+cd ..\..
+python -m maturin build --manifest-path crates/forge3d-python/Cargo.toml --release --out dist
+# Result: exits 0. Full output: logs/phase16-maturin-build.txt
+
+python -m pip install --force-reinstall --no-deps .\dist\forge3d-1.26.0-cp310-abi3-win_amd64.whl
+# Result: exits 0. Full output: logs/phase16-install-wheel.txt
+
+pytest tests/test_install_smoke.py tests/test_api_contracts.py -v --tb=short
+# Result: exits 0. Full output: logs/phase16-pytest.txt
+
+cargo check -p forge3d-native-viewer
+# Result: exits 0. Full output: logs/phase16-native-viewer-check.txt
+```

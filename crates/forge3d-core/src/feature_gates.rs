@@ -50,7 +50,6 @@ pub const DEFAULT_WASM_INACTIVE_MODULE_ROOTS: &[&str] = &[
     "formats",
     "geo",
     "import",
-    "io",
     "loaders",
     "offscreen",
     "passes",
@@ -62,12 +61,11 @@ pub const DEFAULT_WASM_INACTIVE_MODULE_ROOTS: &[&str] = &[
     "py_types",
     "renderer",
     "scene",
-    "terrain",
     "tiles3d",
     "util",
     "viewer",
 ];
 
 pub fn phase4_core_wasm_boundary() -> &'static str {
-    "forge3d-core default wasm builds expose only pure crate metadata and gate staged native/offline modules"
+    "forge3d-core default wasm builds expose browser-safe contracts and gate staged native/offline modules"
 }
