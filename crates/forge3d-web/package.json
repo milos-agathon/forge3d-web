@@ -2,10 +2,31 @@
   "name": "@forge3d/web",
   "version": "1.26.0",
   "type": "module",
-  "description": "Forge3D browser WebGPU/WASM runtime",
+  "description": "Browser-only Forge3D WebGPU/WASM runtime for terrain rendering",
   "license": "Apache-2.0 OR MIT",
+  "homepage": "https://forge3d.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/milos-agathon/forge3d.git",
+    "directory": "crates/forge3d-web"
+  },
+  "bugs": {
+    "url": "https://github.com/milos-agathon/forge3d/issues"
+  },
+  "keywords": [
+    "webgpu",
+    "wasm",
+    "terrain",
+    "geospatial",
+    "visualization"
+  ],
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "sideEffects": false,
   "files": [
     "dist",
+    "docs",
     "types",
     "README.md",
     "LICENSE",
@@ -28,7 +49,8 @@
     "dev": "vite --host 127.0.0.1 --port 57883 --strictPort",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.api.json",
     "test:api": "npm run typecheck && node tests/api/public-api-snapshot.mjs",
-    "test:package": "node tests/api/package-contract.mjs",
+    "test:release-hardening": "node tests/api/release-hardening.mjs",
+    "test:package": "npm run test:release-hardening && node tests/api/package-contract.mjs",
     "test:browser": "playwright test"
   },
   "devDependencies": {

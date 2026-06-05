@@ -169,12 +169,12 @@ async fn read_blob(
     };
 
     let promise = target.array_buffer();
-    let buffer = await_browser_io(promise.into(), signal, "Blob read failed").await?;
+    let buffer = await_browser_io(promise, signal, "Blob read failed").await?;
     let buffer = buffer.dyn_into::<js_sys::ArrayBuffer>().map_err(|error| {
         WebError::with_details(
             Forge3DErrorCode::IoError,
             "Blob did not resolve to an ArrayBuffer",
-            error.into(),
+            error,
         )
     })?;
     let bytes = js_sys::Uint8Array::new(&buffer).to_vec();
@@ -212,7 +212,7 @@ async fn read_url(
         )
     })?;
     let response = await_browser_io(
-        window.fetch_with_request(&request).into(),
+        window.fetch_with_request(&request),
         signal,
         "Fetch request failed",
     )
@@ -221,7 +221,7 @@ async fn read_url(
         WebError::with_details(
             Forge3DErrorCode::IoError,
             "Fetch did not resolve to a Response",
-            error.into(),
+            error,
         )
     })?;
 
@@ -254,7 +254,7 @@ async fn read_url(
         WebError::with_details(
             Forge3DErrorCode::IoError,
             "Fetch body did not resolve to an ArrayBuffer",
-            error.into(),
+            error,
         )
     })?;
     let bytes = js_sys::Uint8Array::new(&buffer).to_vec();

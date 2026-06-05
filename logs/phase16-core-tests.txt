@@ -1,0 +1,25 @@
+   Compiling forge3d-core v1.26.0 (C:\Users\milos\.config\superpowers\worktrees\forge3d-web\phase-16-release-hardening\crates\forge3d-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.76s
+     Running unittests src\lib.rs (target\debug\deps\forge3d_core-e3cb65e272a41406.exe)
+
+running 11 tests
+test io::source::tests::byte_range_rejects_overflow ... ok
+test io::source::tests::little_endian_f32_decoder_validates_length_and_expected_count ... ok
+test io::source::tests::fake_source_reads_full_and_ranged_bytes ... ok
+test tests::phase4_feature_gate_manifest_tracks_core_optional_surfaces ... ok
+test tests::phase10_core_readback_contract_is_exposed ... ok
+test tests::default_core_root_does_not_expose_staged_native_or_offline_modules ... ok
+test tests::phase8_core_terrain_heightmap_contract_is_exposed ... ok
+test tests::phase9_core_camera_contract_is_exposed ... ok
+test tests::phase5_gpu_runtime_api_is_public_without_legacy_singleton ... ok
+test tests::phase5_browser_gpu_sources_do_not_use_blocking_or_global_context ... ok
+test tests::core_source_tree_has_no_python_boundary_tokens ... ok
+
+test result: ok. 11 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.54s
+
+   Doc-tests forge3d_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -12,6 +12,7 @@ assertEqual(packageJson.exports["."].import, "./dist/index.js", "package entrypo
 assertEqual(packageJson.exports["."].types, "./types/index.d.ts", "package entrypoint must use hand-authored types");
 assertEqual(packageJson.exports["./wasm"], "./dist/forge3d_web_bg.wasm", "wasm export must point at packaged dist asset");
 assertIncludes(packageJson.files, "dist", "package files must include dist");
+assertIncludes(packageJson.files, "docs", "package files must include docs");
 assertIncludes(packageJson.files, "types", "package files must include types");
 assertIncludes(packageJson.files, "README.md", "package files must include README");
 assertIncludes(packageJson.files, "LICENSE", "package files must include MIT license");
@@ -21,6 +22,8 @@ assertIncludes(packageJson.scripts.build, "prepare-dist", "build must prepare pu
 for (const relative of [
   "scripts/prepare-dist.mjs",
   "README.md",
+  "docs/support-matrix.md",
+  "docs/release-checklist.md",
   "LICENSE",
   "LICENSE-APACHE",
   "examples/vite/package.json",
@@ -64,6 +67,8 @@ for (const expected of [
   "dist/index.js",
   "dist/forge3d_web.js",
   "dist/forge3d_web_bg.wasm",
+  "docs/support-matrix.md",
+  "docs/release-checklist.md",
   "types/index.d.ts",
   "README.md",
   "LICENSE",

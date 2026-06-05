@@ -1,0 +1,8 @@
+
+> @forge3d/web@1.26.0 test:package
+> npm run test:release-hardening && node tests/api/package-contract.mjs
+
+
+> @forge3d/web@1.26.0 test:release-hardening
+> node tests/api/release-hardening.mjs
+

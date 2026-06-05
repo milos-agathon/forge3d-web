@@ -1,0 +1,8 @@
+
+> @forge3d/web@1.26.0 test:api
+> npm run typecheck && node tests/api/public-api-snapshot.mjs
+
+
+> @forge3d/web@1.26.0 typecheck
+> tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.api.json
+

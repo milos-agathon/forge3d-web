@@ -1,0 +1,3 @@
+    Checking forge3d-web v1.26.0 (C:\Users\milos\.config\superpowers\worktrees\forge3d-web\phase-16-release-hardening\crates\forge3d-web)
+    Checking forge3d-python v1.26.0 (C:\Users\milos\.config\superpowers\worktrees\forge3d-web\phase-16-release-hardening\crates\forge3d-python)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 4.28s
