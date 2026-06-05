@@ -1,0 +1,4 @@
+
+> @forge3d/web@1.26.0 typecheck
+> tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.api.json
+

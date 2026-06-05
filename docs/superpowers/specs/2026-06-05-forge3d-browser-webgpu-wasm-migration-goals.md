@@ -42,8 +42,8 @@ These invariants apply to every phase after Phase 1:
 | 8 | Terrain heightmap upload and render | Done | `logs/phase8-*`; synthetic hill Chrome Playwright test passes |
 | 9 | Camera and resize API | Done | `logs/phase9-*`; Chrome Playwright resize/camera pixel test passes |
 | 10 | Screenshot/readback | Done | `logs/phase10-*`; Chrome-channel Playwright screenshot Blob test passes |
-| 11 | JS/TS API stabilization | Ready | Phase 10 is Done |
-| 12 | Browser IO abstraction | Pending | Not started |
+| 11 | JS/TS API stabilization | Done | `logs/phase11-*`; API snapshot and consumer type test pass |
+| 12 | Browser IO abstraction | Ready | Phase 11 is Done |
 | 13 | Packaging | Pending | Not started |
 | 14 | Browser CI | Pending | Not started |
 | 15 | Native/Python compatibility restoration | Pending | Not started |
@@ -931,7 +931,7 @@ cargo tree -p forge3d-web --target wasm32-unknown-unknown --edges normal | rg "p
 
 ## Phase 11: JS/TS API Stabilization
 
-**Status:** Pending
+**Status:** Done
 
 **Goal:** Freeze the public browser API names, types, handles, error codes, and lifetime rules behind a stable TypeScript facade.
 
@@ -949,14 +949,18 @@ cargo tree -p forge3d-web --target wasm32-unknown-unknown --edges normal | rg "p
 
 - `crates/forge3d-web/types/index.d.ts`
 - `crates/forge3d-web/src-ts/index.ts`
-- `crates/forge3d-web/tests/**` API snapshot or type tests.
-- Browser API docs examples.
+- `crates/forge3d-web/tests/api/public-api-consumer.ts`
+- `crates/forge3d-web/tests/api/public-api-snapshot.mjs`
+- `crates/forge3d-web/tests/api/index.d.ts.snapshot`
+- `crates/forge3d-web/tsconfig.api.json`
+- `crates/forge3d-web/docs/browser-api.md`
 
 **Verification commands:**
 
 ```powershell
 cd crates/forge3d-web
 npm run typecheck
+npm run test:api
 npm run test:browser
 ```
 
@@ -971,6 +975,33 @@ npm run test:browser
 - wasm-bindgen generated exports may drift across builds.
 
 **Rollback boundary:** Keep the stable facade separate from generated JS and adjust only the facade adapter if generated names change.
+
+**Completion evidence (2026-06-05):**
+
+- Added JSDoc to the hand-authored `crates/forge3d-web/types/index.d.ts` so the stable MVP browser API documents runtime creation, terrain, camera, resize, render, screenshot, dispose, diagnostics, and error behavior.
+- Added `crates/forge3d-web/tests/api/index.d.ts.snapshot` as the public declaration lock and `crates/forge3d-web/tests/api/public-api-snapshot.mjs` to reject declaration drift or leaked wasm-bindgen/generated bridge details such as `WasmRuntime`, `WasmBridge`, `__wbg`, `free()`, and `../pkg/`.
+- Added `crates/forge3d-web/tests/api/public-api-consumer.ts` plus `crates/forge3d-web/tsconfig.api.json` as a strict consumer type-level test for `Forge3DRuntime.create`, `setTerrain`, `setCamera`, `resize`, `render`, `screenshot`, `dispose`, runtime properties, `Forge3DError`, and `Forge3DErrorCode`.
+- Updated `crates/forge3d-web/package.json` so `npm run typecheck` also compiles the API consumer test and `npm run test:api` runs the typecheck plus snapshot/doc guard.
+- Added `crates/forge3d-web/docs/browser-api.md` documenting public API examples, lifetime rules, copied typed-array behavior, disposed-runtime behavior, and stable error codes.
+- Added Rust artifact guards in `crates/forge3d-web/src/lib.rs` so Phase 11 docs and API contract tests are covered by `cargo test -p forge3d-web`.
+
+**Verification evidence (2026-06-05):**
+
+```powershell
+cd crates/forge3d-web
+npm run test:api
+# Result: exits 0. Full output: logs/phase11-web-api-tests.txt
+
+npm run typecheck
+# Result: exits 0. Full output: logs/phase11-web-typecheck.txt
+
+npm run test:browser
+# Result: exits 0; Chrome Playwright tests passed. Full output: logs/phase11-browser-tests.txt
+
+cd ../..
+cargo test -p forge3d-web
+# Result: exits 0. Full output: logs/phase11-web-cargo-tests.txt
+```
 
 ---
 

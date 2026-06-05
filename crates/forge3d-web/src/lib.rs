@@ -249,6 +249,59 @@ mod tests {
     }
 
     #[test]
+    fn phase11_public_api_stabilization_artifacts_exist() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+
+        for required in [
+            "docs/browser-api.md",
+            "tests/api/public-api-consumer.ts",
+            "tests/api/public-api-snapshot.mjs",
+            "tests/api/index.d.ts.snapshot",
+            "tsconfig.api.json",
+        ] {
+            assert!(
+                root.join(required).is_file(),
+                "missing Phase 11 API stabilization artifact {required}"
+            );
+        }
+    }
+
+    #[test]
+    fn phase11_public_api_contract_documents_lifetimes_and_errors() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let docs = fs::read_to_string(root.join("docs/browser-api.md"))
+            .expect("failed to read browser API docs");
+        let snapshot = fs::read_to_string(root.join("tests/api/index.d.ts.snapshot"))
+            .expect("failed to read TypeScript API snapshot");
+
+        for expected in [
+            "Forge3DRuntime.create(canvas, options)",
+            "## Lifetime Rules",
+            "## Error Codes",
+            "RUNTIME_DISPOSED",
+            "INVALID_INPUT",
+        ] {
+            assert!(
+                docs.contains(expected),
+                "browser API docs must document {expected}"
+            );
+        }
+
+        for forbidden in [
+            "WasmRuntime",
+            "WasmBridge",
+            "wasm_bindgen",
+            "__wbg",
+            "../pkg/",
+        ] {
+            assert!(
+                !snapshot.contains(forbidden),
+                "public TypeScript snapshot must not leak generated wasm detail {forbidden}"
+            );
+        }
+    }
+
+    #[test]
     fn phase6_browser_crate_has_no_browser_hostile_public_surface_tokens() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
         let mut offenders = Vec::new();
