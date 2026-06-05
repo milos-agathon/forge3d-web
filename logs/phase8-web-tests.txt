@@ -1,0 +1,31 @@
+   Compiling forge3d-core v1.26.0 (C:\Users\milos\forge3d-web\crates\forge3d-core)
+   Compiling forge3d-web v1.26.0 (C:\Users\milos\forge3d-web\crates\forge3d-web)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 3.42s
+     Running unittests src\lib.rs (target\debug\deps\forge3d_web-16b1df85c2463f56.exe)
+
+running 16 tests
+test error::tests::maps_core_errors_to_stable_browser_codes ... ok
+test inputs::tests::runtime_options_default_to_browser_mvp_values ... ok
+test inputs::tests::runtime_options_compute_dpr_scaled_pixel_size ... ok
+test inputs::tests::runtime_options_reject_zero_dimensions ... ok
+test io::tests::phase6_browser_io_skeleton_reports_future_source_support ... ok
+test inputs::tests::terrain_heightmap_options_reject_non_finite_values ... ok
+test runtime::tests::runtime_dispose_guard_uses_stable_error_code ... ok
+test inputs::tests::terrain_heightmap_options_reject_wrong_lengths ... ok
+test tests::phase8_terrain_heightmap_artifacts_exist ... ok
+test tests::phase7_canvas_clear_artifacts_exist ... ok
+test tests::phase6_browser_crate_exports_runtime_and_error_boundary ... ok
+test tests::phase8_typescript_surface_exposes_set_terrain ... ok
+test tests::phase7_runtime_contains_real_webgpu_clear_pass ... ok
+test tests::phase6_browser_crate_artifacts_exist ... ok
+test tests::phase8_runtime_contains_terrain_upload_and_draw_path ... ok
+test tests::phase6_browser_crate_has_no_browser_hostile_public_surface_tokens ... ok
+
+test result: ok. 16 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+   Doc-tests forge3d_web
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

@@ -1,0 +1,11 @@
+
+> @forge3d/web@1.26.0 test:browser
+> playwright test
+
+
+Running 2 tests using 2 workers
+
+  ok 1 [chrome] › tests\playwright\clear.spec.ts:14:1 › clears the canvas through Forge3D WebGPU presentation (591ms)
+  ok 2 [chrome] › tests\playwright\terrain.spec.ts:16:1 › renders synthetic terrain heightmap with visible variation (718ms)
+
+  2 passed (2.8s)

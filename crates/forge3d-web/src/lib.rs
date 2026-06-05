@@ -97,6 +97,62 @@ mod tests {
     }
 
     #[test]
+    fn phase8_terrain_heightmap_artifacts_exist() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+
+        for required in [
+            "examples/test-terrain-hill.html",
+            "tests/playwright/terrain.spec.ts",
+        ] {
+            assert!(
+                root.join(required).is_file(),
+                "missing Phase 8 terrain artifact {required}"
+            );
+        }
+    }
+
+    #[test]
+    fn phase8_runtime_contains_terrain_upload_and_draw_path() {
+        let runtime_rs =
+            fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("src/runtime.rs"))
+                .expect("failed to read forge3d-web runtime.rs");
+
+        for expected in [
+            "pub fn set_terrain(&mut self, terrain: JsValue)",
+            "TerrainRenderResources",
+            "TextureFormat::R32Float",
+            "FilterMode::Nearest",
+            "render_pass.draw_indexed",
+        ] {
+            assert!(
+                runtime_rs.contains(expected),
+                "runtime.rs must contain Phase 8 terrain code: {expected}"
+            );
+        }
+    }
+
+    #[test]
+    fn phase8_typescript_surface_exposes_set_terrain() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let facade = fs::read_to_string(root.join("src-ts/index.ts"))
+            .expect("failed to read TypeScript facade");
+        let declarations = fs::read_to_string(root.join("types/index.d.ts"))
+            .expect("failed to read TypeScript declarations");
+
+        for text in [facade, declarations] {
+            for expected in [
+                "TerrainHeightmapInput",
+                "setTerrain(terrain: TerrainHeightmapInput): void",
+            ] {
+                assert!(
+                    text.contains(expected),
+                    "TypeScript public API must expose {expected}"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn phase6_browser_crate_has_no_browser_hostile_public_surface_tokens() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
         let mut offenders = Vec::new();

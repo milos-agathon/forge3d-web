@@ -5,6 +5,9 @@ pub mod error;
 #[cfg(feature = "gpu")]
 pub mod gpu;
 
+#[cfg(feature = "webgpu")]
+pub mod terrain;
+
 pub const WORKSPACE_SPLIT_PHASE: u8 = 5;
 
 pub fn phase() -> u8 {
@@ -120,6 +123,27 @@ mod tests {
             offenders.is_empty(),
             "browser-facing GPU runtime sources must not use global/blocking GPU state:\n{}",
             offenders.join("\n")
+        );
+    }
+
+    #[test]
+    fn phase8_core_terrain_heightmap_contract_is_exposed() {
+        let lib_rs = fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("src/lib.rs"))
+            .expect("failed to read core lib.rs");
+        let production_root = lib_rs
+            .split("#[cfg(test)]")
+            .next()
+            .expect("lib.rs must have production module declarations");
+
+        assert!(
+            production_root.contains("pub mod terrain;"),
+            "Phase 8 must expose a narrow wasm-safe forge3d_core::terrain module"
+        );
+
+        let terrain_rs = Path::new(env!("CARGO_MANIFEST_DIR")).join("src/terrain.rs");
+        assert!(
+            terrain_rs.is_file(),
+            "Phase 8 terrain contract must live in src/terrain.rs rather than re-exposing staged legacy terrain/"
         );
     }
 

@@ -31,6 +31,12 @@ export interface Forge3DRuntimeOptions {
   diagnostics?: boolean;
 }
 
+export interface TerrainHeightmapInput {
+  width: number;
+  height: number;
+  heights: Float32Array;
+}
+
 export declare class Forge3DRuntime {
   static create(
     canvas: HTMLCanvasElement,
@@ -41,6 +47,7 @@ export declare class Forge3DRuntime {
   readonly height: number;
   readonly diagnosticsEnabled: boolean;
   clearColor(): [number, number, number, number];
+  setTerrain(terrain: TerrainHeightmapInput): void;
   render(): void;
   dispose(): void;
 }

@@ -1,0 +1,40 @@
+   Compiling syn v2.0.117
+   Compiling windows-interface v0.59.3
+   Compiling windows-implement v0.60.2
+   Compiling zerocopy-derive v0.8.47
+   Compiling thiserror-impl v2.0.18
+   Compiling bytemuck_derive v1.10.2
+   Compiling serde_derive v1.0.228
+   Compiling thiserror-impl v1.0.69
+   Compiling async-trait v0.1.89
+   Compiling windows-core v0.62.2
+   Compiling thiserror v1.0.69
+   Compiling thiserror v2.0.18
+   Compiling bytemuck v1.25.0
+   Compiling windows-numerics v0.3.1
+   Compiling windows-collections v0.3.2
+   Compiling windows-future v0.3.2
+   Compiling zerocopy v0.8.47
+   Compiling wgpu-types v29.0.3
+   Compiling windows v0.62.2
+   Compiling serde v1.0.228
+   Compiling half v2.7.1
+   Compiling naga v29.0.3
+   Compiling gpu-allocator v0.28.0
+   Compiling wgpu-naga-bridge v29.0.3
+   Compiling wgpu-hal v29.0.3
+   Compiling wgpu-core-deps-windows-linux-android v29.0.3
+   Compiling wgpu-core v29.0.3
+   Compiling wgpu v29.0.3
+   Compiling forge3d-core v1.26.0 (C:\Users\milos\forge3d-web\crates\forge3d-core)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 25.20s
+     Running unittests src\lib.rs (target\debug\deps\forge3d_core-f2d302fa2550f572.exe)
+
+running 4 tests
+test terrain::tests::terrain_heightmap_tracks_min_and_max_height ... ok
+test terrain::tests::terrain_heightmap_rejects_non_finite_samples ... ok
+test terrain::tests::terrain_heightmap_rejects_length_mismatch ... ok
+test tests::phase8_core_terrain_heightmap_contract_is_exposed ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out; finished in 0.00s
+
