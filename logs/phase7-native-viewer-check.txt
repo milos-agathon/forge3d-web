@@ -1,3 +1,0 @@
-    Checking forge3d-core v1.26.0 (C:\Users\milos\forge3d-web\crates\forge3d-core)
-    Checking forge3d-native-viewer v1.26.0 (C:\Users\milos\forge3d-web\crates\forge3d-native-viewer)
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.53s

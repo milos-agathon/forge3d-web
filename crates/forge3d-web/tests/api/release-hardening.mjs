@@ -57,15 +57,25 @@ const checklist = readText(join(packageRoot, "docs", "release-checklist.md"));
 for (const expected of [
   "npm ci",
   "$env:PATH = \"$pwd\\crates\\forge3d-web\\node_modules\\.bin;$env:PATH\"",
+  "cargo clippy -p forge3d-core --target wasm32-unknown-unknown --no-default-features -- -D warnings",
+  "cargo clippy -p forge3d-web --target wasm32-unknown-unknown -- -D warnings",
   "cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features",
   "cargo check -p forge3d-web --target wasm32-unknown-unknown",
   ".\\crates\\forge3d-web\\node_modules\\.bin\\wasm-pack.cmd build crates/forge3d-web --target web",
   "npm run build",
   "npm run test:package",
-  "npm pack --dry-run",
-  "python -m maturin build --manifest-path crates/forge3d-python/Cargo.toml --release --out dist"
+  "npm pack --dry-run"
 ]) {
   assertIncludes(checklist, expected, `release checklist missing: ${expected}`);
+}
+
+for (const forbidden of [
+  "maturin",
+  "forge3d-python",
+  "forge3d-native-viewer",
+  "pytest tests/test_install_smoke.py"
+]) {
+  assert(!checklist.includes(forbidden), `release checklist must not include browser-removed gate: ${forbidden}`);
 }
 
 assert(
@@ -87,7 +97,8 @@ const changelog = readText(join(repoRoot, "CHANGELOG.md"));
 assertIncludes(changelog, "Hardened the browser WebGPU/WASM MVP prerelease", "changelog must describe Phase 16 release hardening");
 
 const plan = readText(join(repoRoot, "docs", "superpowers", "plans", "2026-06-04-forge3d-browser-webgpu-wasm-runtime.md"));
-assertIncludes(plan, "| 16 | MVP release hardening (Done) |", "Phase 16 plan row must be marked done");
+assertIncludes(plan, "browser/npm/WASM-only repository", "plan must declare browser-only repository scope");
+assertIncludes(plan, "Python/PyO3, maturin, native desktop viewers", "plan must mark Python/native surfaces out of scope");
 
 function readJson(path) {
   return JSON.parse(readText(path));

@@ -2,7 +2,7 @@
 
 Run this checklist from the repository root unless a command explicitly changes
 directory. The checklist mirrors the Phase 16 release gate for the browser
-WebGPU/WASM MVP and keeps Python/native compatibility in scope.
+WebGPU/WASM MVP.
 
 ## Clean Setup
 
@@ -16,7 +16,8 @@ cd ../..
 
 ```powershell
 cargo fmt --all -- --check
-cargo clippy --workspace --all-targets --features default -- -D warnings
+cargo clippy -p forge3d-core --target wasm32-unknown-unknown --no-default-features -- -D warnings
+cargo clippy -p forge3d-web --target wasm32-unknown-unknown -- -D warnings
 cargo test -p forge3d-core
 cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features
 cargo check -p forge3d-web --target wasm32-unknown-unknown
@@ -41,15 +42,6 @@ cd ../..
 package artifact contract. The dry run must include `dist/index.js`,
 `dist/forge3d_web.js`, `dist/forge3d_web_bg.wasm`, `types/index.d.ts`,
 `README.md`, `LICENSE`, and `LICENSE-APACHE`.
-
-## Python And Native Compatibility Gates
-
-```powershell
-python -m maturin build --manifest-path crates/forge3d-python/Cargo.toml --release --out dist
-python -m pip install --force-reinstall --no-deps .\dist\forge3d-1.26.0-cp310-abi3-win_amd64.whl
-pytest tests/test_install_smoke.py tests/test_api_contracts.py -v --tb=short
-cargo check -p forge3d-native-viewer
-```
 
 ## Release Notes
 

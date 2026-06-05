@@ -17,28 +17,10 @@ crate-type = ["lib"]
 default = []
 gpu = ["dep:wgpu", "dep:bytemuck"]
 webgpu = ["gpu"]
-native-io = ["dep:image", "dep:tiff"]
-copc = ["native-io", "dep:las"]
-copc_laz = ["copc", "dep:laz"]
-gltf = ["dep:gltf"]
-images = ["dep:image"]
-enable-gpu-instancing = []
 
 [dependencies]
-anyhow.workspace = true
 async-trait.workspace = true
 bytemuck = { workspace = true, optional = true }
 glam.workspace = true
-image = { workspace = true, optional = true }
-las = { workspace = true, optional = true }
-laz = { workspace = true, optional = true }
-log.workspace = true
-serde.workspace = true
-serde_json.workspace = true
 thiserror.workspace = true
-tiff = { workspace = true, optional = true }
 wgpu = { workspace = true, optional = true }
-gltf = { version = "1.3", features = ["import"], optional = true }
-
-[dev-dependencies]
-pollster.workspace = true

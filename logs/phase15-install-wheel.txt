@@ -1,7 +1,0 @@
-Processing .\dist\forge3d-1.26.0-cp310-abi3-win_amd64.whl
-Requirement already satisfied: numpy>=1.21 in C:\Users\milos\AppData\Local\Programs\Python\Python313\Lib\site-packages (from forge3d==1.26.0) (2.4.4)
-forge3d is already installed with the same version as the provided wheel. Use --force-reinstall to force an installation of the wheel.
-
-[notice] A new release of pip is available: 26.0.1 -> 26.1.2
-[notice] To update, run: python.exe -m pip install --upgrade pip
-Installing wheel: dist\forge3d-1.26.0-cp310-abi3-win_amd64.whl

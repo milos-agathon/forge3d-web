@@ -8,6 +8,9 @@ This project adheres to [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Added
 - Hardened the browser WebGPU/WASM MVP prerelease with npm metadata, package release docs, a browser support matrix, a release checklist, Vite example documentation, and release-hardening package contract tests.
 
+### Changed
+- Narrowed the repository to browser/npm/WASM scope by removing Python/native surfaces, legacy root source, old examples/docs/assets, and generated local artifacts.
+
 ## [1.26.0] - 2026-05-18
 ### Added
 - Implemented Spec 006 P2 material, virtual-texture, and large-scene polish: deterministic VT family validation, textured-building material diagnostics, advanced static label planning, and large-scene resource summaries.

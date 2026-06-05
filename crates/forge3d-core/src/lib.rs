@@ -61,19 +61,10 @@ mod tests {
             .map(|gate| gate.feature)
             .collect::<Vec<_>>();
 
-        for expected in [
-            "gpu",
-            "webgpu",
-            "native-io",
-            "copc",
-            "copc_laz",
-            "gltf",
-            "images",
-            "enable-gpu-instancing",
-        ] {
+        for expected in ["gpu", "webgpu"] {
             assert!(
                 features.contains(&expected),
-                "missing Phase 4 feature-gate manifest entry for {expected}"
+                "missing browser-only core feature-gate manifest entry for {expected}"
             );
         }
     }
@@ -98,24 +89,23 @@ mod tests {
     }
 
     #[test]
-    fn phase3_python_binding_roots_live_in_python_crate_not_core() {
+    fn removed_python_binding_roots_do_not_exist_in_browser_only_workspace() {
         let core_root = Path::new(env!("CARGO_MANIFEST_DIR"));
         let workspace_root = core_root
             .parent()
             .and_then(Path::parent)
             .expect("core crate must live under crates/ in the workspace");
-        let python_src = workspace_root.join("crates/forge3d-python/src");
 
         for root in ["py_module", "py_functions", "py_types"] {
             assert!(
                 !core_root.join("src").join(root).exists(),
-                "Phase 3 Python binding root src/{root} must not remain in forge3d-core"
-            );
-            assert!(
-                python_src.join(root).is_dir(),
-                "Phase 3 Python binding root {root} must exist in forge3d-python/src"
+                "Python binding root src/{root} must not remain in forge3d-core"
             );
         }
+        assert!(
+            !workspace_root.join("crates/forge3d-python").exists(),
+            "forge3d-python must not exist in the browser/npm/WASM-only workspace"
+        );
     }
 
     #[test]

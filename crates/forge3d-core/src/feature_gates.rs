@@ -13,59 +13,51 @@ pub const CORE_FEATURE_GATES: &[CoreFeatureGate] = &[
         feature: "webgpu",
         purpose: "browser-audited GPU paths built on top of gpu",
     },
-    CoreFeatureGate {
-        feature: "native-io",
-        purpose: "native file decoders and filesystem adapters",
-    },
-    CoreFeatureGate {
-        feature: "copc",
-        purpose: "COPC point-cloud readers that depend on native IO",
-    },
-    CoreFeatureGate {
-        feature: "copc_laz",
-        purpose: "LAZ decompression support for COPC data",
-    },
-    CoreFeatureGate {
-        feature: "gltf",
-        purpose: "glTF import support",
-    },
-    CoreFeatureGate {
-        feature: "images",
-        purpose: "image decoding helpers",
-    },
-    CoreFeatureGate {
-        feature: "enable-gpu-instancing",
-        purpose: "instanced mesh GPU feature surface",
-    },
 ];
 
 pub const DEFAULT_WASM_INACTIVE_MODULE_ROOTS: &[&str] = &[
+    "accel",
     "animation",
     "bin",
     "bundle",
     "cli",
+    "colormap",
     "converters",
     "core",
+    "export",
     "external_image",
     "formats",
     "geo",
+    "geometry",
     "import",
+    "labels",
+    "license",
+    "lighting",
     "loaders",
+    "mesh",
     "offscreen",
+    "p5",
     "passes",
     "path_tracing",
+    "picking",
     "pipeline",
     "pointcloud",
     "py_functions",
     "py_module",
     "py_types",
-    "renderer",
+    "render",
     "scene",
+    "sdf",
+    "shaders",
+    "shadows",
+    "style",
     "tiles3d",
     "util",
+    "uv",
+    "vector",
     "viewer",
 ];
 
 pub fn phase4_core_wasm_boundary() -> &'static str {
-    "forge3d-core default wasm builds expose browser-safe contracts and gate staged native/offline modules"
+    "forge3d-core exposes only browser-safe contracts for the browser/npm/WASM workspace"
 }

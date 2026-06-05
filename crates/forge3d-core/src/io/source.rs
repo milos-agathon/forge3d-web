@@ -152,6 +152,10 @@ pub fn bytes_to_f32_le(bytes: &[u8], expected_count: Option<usize>) -> Result<Ve
 #[cfg(test)]
 mod tests {
     use super::{bytes_to_f32_le, ByteRange, ByteSource, InMemoryByteSource};
+    use std::future::Future;
+    use std::pin::Pin;
+    use std::sync::Arc;
+    use std::task::{Context, Poll, Wake, Waker};
 
     #[test]
     fn byte_range_rejects_overflow() {
@@ -165,10 +169,9 @@ mod tests {
         let source = InMemoryByteSource::new(vec![1, 2, 3, 4, 5, 6]);
         let empty = InMemoryByteSource::new(Vec::new());
 
-        let full = pollster::block_on(source.read_range(None)).unwrap();
-        let ranged =
-            pollster::block_on(source.read_range(Some(ByteRange::new(2, Some(3)).unwrap())))
-                .unwrap();
+        let full = block_on_ready(source.read_range(None)).unwrap();
+        let ranged = block_on_ready(source.read_range(Some(ByteRange::new(2, Some(3)).unwrap())))
+            .unwrap();
 
         assert!(!source.is_empty());
         assert!(empty.is_empty());
@@ -185,5 +188,20 @@ mod tests {
 
         assert_eq!(values, vec![0.0, 1.0]);
         assert!(error.to_string().contains("multiple of 4"));
+    }
+
+    fn block_on_ready<F: Future>(future: F) -> F::Output {
+        struct NoopWake;
+        impl Wake for NoopWake {
+            fn wake(self: Arc<Self>) {}
+        }
+
+        let waker = Waker::from(Arc::new(NoopWake));
+        let mut context = Context::from_waker(&waker);
+        let mut future = Box::pin(future);
+        match Pin::new(&mut future).poll(&mut context) {
+            Poll::Ready(value) => value,
+            Poll::Pending => panic!("test future unexpectedly pending"),
+        }
     }
 }

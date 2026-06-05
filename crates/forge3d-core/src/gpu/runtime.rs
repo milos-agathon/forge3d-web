@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::rc::Rc;
 
 use crate::error::{Forge3dError, Result};
 
@@ -23,13 +23,13 @@ impl Default for GpuRuntimeOptions {
 
 #[derive(Debug, Clone)]
 pub struct GpuRuntime {
-    pub instance: Arc<wgpu::Instance>,
+    pub instance: Rc<wgpu::Instance>,
 }
 
 impl GpuRuntime {
     pub fn new(instance: wgpu::Instance) -> Self {
         Self {
-            instance: Arc::new(instance),
+            instance: Rc::new(instance),
         }
     }
 
@@ -63,18 +63,18 @@ impl GpuRuntime {
             })?;
 
         Ok(GpuContext {
-            adapter: Arc::new(adapter),
-            device: Arc::new(device),
-            queue: Arc::new(queue),
+            adapter: Rc::new(adapter),
+            device: Rc::new(device),
+            queue: Rc::new(queue),
         })
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct GpuContext {
-    pub adapter: Arc<wgpu::Adapter>,
-    pub device: Arc<wgpu::Device>,
-    pub queue: Arc<wgpu::Queue>,
+    pub adapter: Rc<wgpu::Adapter>,
+    pub device: Rc<wgpu::Device>,
+    pub queue: Rc<wgpu::Queue>,
 }
 
 #[cfg(test)]
