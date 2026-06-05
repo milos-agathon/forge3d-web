@@ -43,6 +43,12 @@ impl Forge3DRuntime {
         self.disposed = true;
     }
 
+    #[wasm_bindgen(js_name = render)]
+    pub fn render(&mut self) -> Result<(), JsValue> {
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        render_runtime(self).map_err(to_js_error)
+    }
+
     #[wasm_bindgen(getter)]
     pub fn disposed(&self) -> bool {
         self.disposed
@@ -95,10 +101,9 @@ async fn create_runtime(
     canvas.set_width(width);
     canvas.set_height(height);
 
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
-        backends: wgpu::Backends::BROWSER_WEBGPU,
-        ..Default::default()
-    });
+    let mut instance_descriptor = wgpu::InstanceDescriptor::new_without_display_handle();
+    instance_descriptor.backends = wgpu::Backends::BROWSER_WEBGPU;
+    let instance = wgpu::Instance::new(instance_descriptor);
     let gpu_runtime = GpuRuntime::new(instance);
     let surface = gpu_runtime
         .instance
@@ -201,6 +206,89 @@ fn surface_descriptor(
     descriptor.alpha_mode = alpha_mode;
     descriptor.view_formats = vec![format];
     Ok(descriptor)
+}
+
+fn render_runtime(runtime: &mut Forge3DRuntime) -> Result<(), WebError> {
+    let context = runtime.context.as_ref().ok_or_else(|| {
+        WebError::new(
+            Forge3DErrorCode::RuntimeDisposed,
+            "Runtime GPU context is not available",
+        )
+    })?;
+    let surface_state = runtime.surface_state.as_mut().ok_or_else(|| {
+        WebError::new(
+            Forge3DErrorCode::RuntimeDisposed,
+            "Runtime surface state is not available",
+        )
+    })?;
+
+    let frame = {
+        let surface = &surface_state.surface;
+        surface.get_current_texture()
+    };
+    let frame = match frame {
+        wgpu::CurrentSurfaceTexture::Success(frame) => frame,
+        wgpu::CurrentSurfaceTexture::Suboptimal(frame) => frame,
+        wgpu::CurrentSurfaceTexture::Timeout | wgpu::CurrentSurfaceTexture::Occluded => {
+            return Err(WebError::new(
+                Forge3DErrorCode::RequestCancelled,
+                "Surface texture is not currently available",
+            ));
+        }
+        wgpu::CurrentSurfaceTexture::Outdated => {
+            surface_state.configure(context);
+            return Err(WebError::new(
+                Forge3DErrorCode::SurfaceOutdated,
+                "Surface outdated",
+            ));
+        }
+        wgpu::CurrentSurfaceTexture::Lost => {
+            surface_state.configure(context);
+            return Err(WebError::new(Forge3DErrorCode::SurfaceLost, "Surface lost"));
+        }
+        wgpu::CurrentSurfaceTexture::Validation => {
+            return Err(WebError::new(
+                Forge3DErrorCode::SurfaceCreateFailed,
+                "Surface texture validation failed",
+            ));
+        }
+    };
+    let view = frame
+        .texture
+        .create_view(&wgpu::TextureViewDescriptor::default());
+    let mut encoder = context
+        .device
+        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+            label: Some("forge3d-web-clear-encoder"),
+        });
+
+    {
+        let _clear_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some("forge3d-web-clear-pass"),
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view: &view,
+                depth_slice: None,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(wgpu::Color {
+                        r: runtime.clear_color[0] as f64,
+                        g: runtime.clear_color[1] as f64,
+                        b: runtime.clear_color[2] as f64,
+                        a: runtime.clear_color[3] as f64,
+                    }),
+                    store: wgpu::StoreOp::Store,
+                },
+            })],
+            depth_stencil_attachment: None,
+            occlusion_query_set: None,
+            timestamp_writes: None,
+            multiview_mask: None,
+        });
+    }
+
+    context.queue.submit(std::iter::once(encoder.finish()));
+    frame.present();
+    Ok(())
 }
 
 fn install_panic_hook() {

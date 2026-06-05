@@ -25,15 +25,3 @@ pub enum Forge3dError {
 }
 
 pub type Result<T> = std::result::Result<T, Forge3dError>;
-
-#[cfg(feature = "gpu")]
-impl From<wgpu::SurfaceError> for Forge3dError {
-    fn from(error: wgpu::SurfaceError) -> Self {
-        match error {
-            wgpu::SurfaceError::Lost => Self::SurfaceLost,
-            wgpu::SurfaceError::Outdated => Self::SurfaceOutdated,
-            wgpu::SurfaceError::OutOfMemory => Self::OutOfMemory,
-            wgpu::SurfaceError::Timeout => Self::Cancelled,
-        }
-    }
-}

@@ -30,6 +30,7 @@ interface WasmRuntime {
   readonly height: number;
   readonly diagnosticsEnabled: boolean;
   clearColor(): number[];
+  render(): void;
   dispose(): void;
 }
 
@@ -39,6 +40,7 @@ interface WasmRuntimeConstructor {
 
 interface WasmBridge {
   Forge3DRuntime: WasmRuntimeConstructor;
+  default?: (moduleOrPath?: unknown) => Promise<unknown>;
 }
 
 export class Forge3DError extends Error {
@@ -116,6 +118,14 @@ export class Forge3DRuntime {
     return [color[0] ?? 0, color[1] ?? 0, color[2] ?? 0, color[3] ?? 1];
   }
 
+  render(): void {
+    try {
+      this.#inner.render();
+    } catch (error) {
+      throw Forge3DError.from(error);
+    }
+  }
+
   dispose(): void {
     this.#inner.dispose();
   }
@@ -131,7 +141,9 @@ async function loadWasmBridge(): Promise<WasmBridge> {
 async function importWasmBridge(): Promise<WasmBridge> {
   const modulePath = "../pkg/forge3d_web.js";
   const module = await import(/* @vite-ignore */ modulePath);
-  return module as WasmBridge;
+  const bridge = module as WasmBridge;
+  await bridge.default?.();
+  return bridge;
 }
 
 function normalizeRuntimeOptions(

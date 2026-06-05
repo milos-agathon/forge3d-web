@@ -41,5 +41,6 @@ export declare class Forge3DRuntime {
   readonly height: number;
   readonly diagnosticsEnabled: boolean;
   clearColor(): [number, number, number, number];
+  render(): void;
   dispose(): void;
 }

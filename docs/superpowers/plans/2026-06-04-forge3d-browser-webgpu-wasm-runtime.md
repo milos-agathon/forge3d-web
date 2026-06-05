@@ -6,7 +6,7 @@
 
 **Architecture:** `forge3d-core` becomes the PyO3-free rendering/data/model layer. `forge3d-python` owns maturin/PyO3/NumPy and blocking Python convenience APIs. `forge3d-web` owns wasm-bindgen, canvas-backed WebGPU presentation, browser IO, TypeScript declarations, npm packaging, and Playwright browser tests. `forge3d-native-viewer` owns `winit`, stdin, TCP IPC, and native window/event-loop behavior.
 
-**Tech Stack:** Rust 2021, `wgpu = 0.19` initially, `wasm-bindgen`, `web-sys`, `js-sys`, `serde`, `serde-wasm-bindgen`, TypeScript, Vite examples, Playwright, maturin/PyO3 for Python only.
+**Tech Stack:** Rust 2021, `wgpu = 29.0.3` after Phase 7 browser compatibility work, `wasm-bindgen`, `web-sys`, `js-sys`, `serde`, `serde-wasm-bindgen`, TypeScript, Vite examples, Playwright, maturin/PyO3 for Python only.
 
 ---
 
@@ -41,10 +41,10 @@ Required crates:
 - `forge3d-web`: wasm-bindgen crate and npm package source. It receives `HtmlCanvasElement`, creates/configures browser WebGPU surface state asynchronously, exposes `Forge3DRuntime`, translates JS-native data into core buffers, and owns browser fetch/File/Blob/ImageBitmap adapters.
 - `forge3d-native-viewer`: desktop viewer crate. It owns `winit`, native event loops, native input, stdin command reader, TCP IPC, and native snapshot plumbing. It depends on `forge3d-core`, never the reverse.
 
-Initial `wgpu` sequencing:
+`wgpu` sequencing:
 
-- Keep `wgpu = 0.19` during the split and MVP. This keeps the dependency graph and shader behavior stable while proving crate boundaries, wasm build, canvas clear, terrain upload, TypeScript packaging, and browser tests.
-- Add a separate `wgpu-modernization` phase after browser CI exists. The upgrade is then measured by the Playwright pixel tests, Rust shader audit, and Python/native compatibility checks.
+- Phase 7 modernized the active workspace dependency to `wgpu = 29.0.3`. The originally planned `wgpu = 0.19` path compiled to wasm but failed current Chrome `requestDevice()` because the generated WebGPU descriptor used the obsolete `maxInterStageShaderComponents` limit name.
+- Keep future `wgpu` changes measured by the Playwright pixel tests, Rust shader audit, and Python/native compatibility checks.
 
 ## 3. Workspace And Crate Layout
 
@@ -152,7 +152,7 @@ thiserror = "1"
 wasm-bindgen = "0.2"
 wasm-bindgen-futures = "0.4"
 web-sys = "0.3"
-wgpu = "0.19"
+wgpu = "29.0.3"
 winit = "0.29"
 ```
 
@@ -1360,8 +1360,9 @@ Playwright WebGPU launch:
 import { chromium, expect, test } from "@playwright/test";
 
 test.use({
+  channel: "chrome",
   launchOptions: {
-    args: ["--enable-unsafe-webgpu"]
+    args: ["--enable-unsafe-webgpu", "--use-angle=d3d11"]
   }
 });
 
@@ -1369,7 +1370,7 @@ test("clears canvas through Forge3D WebGPU runtime", async ({ page }) => {
   await page.goto("/examples/test-clear.html");
   const supported = await page.evaluate(() => Boolean(navigator.gpu));
   expect(supported).toBeTruthy();
-  const pixels = await page.evaluate(() => window.__forge3dReadProbe());
+  const pixels = await page.evaluate(() => window.__forge3dClearProbe());
   expect(pixels.nonBlackPixels).toBeGreaterThan(100);
 });
 ```
@@ -1386,7 +1387,7 @@ Progress-tracking spec: `docs/superpowers/specs/2026-06-05-forge3d-browser-webgp
 | 4 | Core wasm check passing (Done) | `crates/forge3d-core/src/lib.rs`, `crates/forge3d-core/src/feature_gates.rs`, feature gates | Completed 2026-06-05: default core root stays minimal; optional/native surfaces are documented in a feature-gate manifest; tests assert staged native/offline module roots are not exposed from the default root | `cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features`; `cargo tree -p forge3d-core --target wasm32-unknown-unknown --no-default-features --edges normal \| rg "pyo3\|numpy\|winit\|pollster"`; `cargo test -p forge3d-core` | Commands pass and exclude PyO3, NumPy, winit, TCP, stdin, and pollster from the no-default wasm dependency tree | Some modules compile on wasm but are unusable | Re-enable module behind native feature |
 | 5 | GPU context ownership redesign (Done) | `crates/forge3d-core/src/gpu`, `crates/forge3d-core/src/error.rs`, `crates/forge3d-python/src/gpu.rs`, docs/logs | Completed 2026-06-05: added async `GpuRuntime`, `GpuContext`, `SurfaceState`, core error mapping, public GPU module gate, Phase 5 contract tests, and Python-only blocking helper; inactive staged legacy singleton/blocking files remain unexposed and documented | `cargo test -p forge3d-core gpu --features webgpu`; `cargo test -p forge3d-core gpu`; `cargo check -p forge3d-core --features webgpu`; `cargo check -p forge3d-web --target wasm32-unknown-unknown`; `cargo check -p forge3d-python`; scoped/broad `rg` scans | Browser-facing public core GPU runtime has no global singleton or blocking path; web crate still compiles to wasm; Python/native blocking compatibility is outside core | Staged legacy files still contain old singleton/blocking bodies for later restoration | Keep compatibility helper in Python crate only; public core root does not re-expose legacy `core::gpu` |
 | 6 | Browser crate creation (Done) | `crates/forge3d-web/src`, `package.json`, `types/index.d.ts` | Completed 2026-06-05: added wasm-bindgen runtime/error/input/io modules, async `Forge3DRuntime.create(canvas, options)`, `dispose()`, stable JS error mapping, TS facade/declarations, npm scripts, lockfile, artifact ignore rules, and Phase 6 contract tests | `cargo check -p forge3d-web --target wasm32-unknown-unknown`; `npm run typecheck`; `cargo test -p forge3d-web`; `cargo tree -p forge3d-web --target wasm32-unknown-unknown --edges normal \| rg "pyo3\|numpy\|winit\|pollster"`; `npm audit` | Web crate compiles to wasm; TypeScript facade typechecks; npm audit reports 0 vulnerabilities; web wasm tree excludes PyO3, NumPy, winit, and pollster | wgpu 0.19 API mismatch | Adjust browser surface code within web crate |
-| 7 | Minimal canvas clear | `forge3d-web/src/runtime.rs`, `forge3d-core/src/render` | Implement async create, resize, clear-color render to canvas | `wasm-pack build`; `npm run test:browser` | Playwright detects nonblank colored canvas | CI WebGPU availability | Run required lane on Windows; add clear browser capability probe |
+| 7 | Minimal canvas clear (Done) | `crates/forge3d-web/src/runtime.rs`, `crates/forge3d-web/src-ts/index.ts`, `crates/forge3d-web/examples/test-clear.html`, `crates/forge3d-web/tests/playwright/clear.spec.ts`, `crates/forge3d-core/src/gpu/runtime.rs`, `Cargo.toml` | Completed 2026-06-05: added `Forge3DRuntime.render()`, real WebGPU clear pass, TS facade/declarations, Vite-served browser fixture, Chrome-channel Playwright pixel test, Phase 7 contract tests, `wgpu = 29.0.3` compatibility update, and Phase 7 evidence logs | `wasm-pack build crates/forge3d-web --target web`; `npm run test:browser`; `cargo test -p forge3d-web`; `cargo check -p forge3d-web --target wasm32-unknown-unknown`; `npm run typecheck`; compatibility checks for core/python/native | Playwright detects nonblank colored canvas through WebGPU presentation; runtime creation remains async; web wasm dependency tree excludes PyO3, NumPy, winit, and pollster | CI WebGPU availability; Chrome/Dawn backend differences | Run required lane on Windows Chrome with `--enable-unsafe-webgpu --use-angle=d3d11`; keep clear browser capability probe |
 | 8 | Terrain heightmap upload and render | `forge3d-core/src/terrain`, `forge3d-web/src/inputs.rs`, `types/index.d.ts` | Add `TerrainHeightmapInput` validation, typed-array copy, R32Float upload, terrain mesh draw | Browser pixel test with synthetic hill | Terrain renders with height/color variation | Float texture filter support | Use nearest sampling fallback when `FLOAT32_FILTERABLE` absent |
 | 9 | Camera and resize API | `forge3d-core/src/camera`, `forge3d-web/src/runtime.rs` | Add `setCamera`, DPR-aware resize, surface reconfigure, projection updates | Playwright resize test; TS API test | Canvas dimensions match DPR and camera changes pixels | CSS/backing size confusion | Keep API explicit: CSS width/height plus DPR |
 | 10 | Screenshot/readback | `forge3d-core/src/readback`, `forge3d-web/src/runtime.rs` | Add async padded readback and PNG blob creation | Browser screenshot test checks Blob type and nonzero size | `await runtime.screenshot()` returns PNG Blob | PNG encoding size/perf | Use browser `ImageData`/canvas encoding if Rust PNG path is too heavy |
@@ -1434,14 +1435,14 @@ MVP excludes:
 6. Worker-based COPC/EPT metadata parsing.
 7. 3D Tiles URL loader and b3dm/pnts rendering.
 8. COG/raster range requests.
-9. `wgpu` upgrade after browser CI and shader audit are stable.
+9. Continued `wgpu` compatibility audits as browser CI and shader coverage expand.
 10. Optional `OffscreenCanvas` runtime.
 
 ## 21. Risks And Mitigations
 
 - **Engineering estimates.** Prototype canvas clear and terrain upload: 2-4 engineer-weeks after workspace split. Stable JS API, npm package, screenshot, and browser CI: 4-8 additional engineer-weeks. Python/native compatibility restoration after the split: 3-6 engineer-weeks depending on how many PyO3 wrappers move cleanly. Feature parity with Python/native viewer: multiple quarters because COPC/EPT/tiles/raster/style/viewer workflows require browser IO, workers, LOD/cache policy, and shader compatibility work.
 - **PyO3 is spread through core-like modules.** Mitigate with `rg` inventory, wrapper-by-wrapper extraction, and `cargo tree` proof.
-- **`wgpu` 0.19 browser surface API differences.** Keep all browser surface creation inside `forge3d-web`; compiler errors stay local.
+- **Browser `wgpu`/Dawn compatibility drift.** Phase 7 moved active crates to `wgpu = 29.0.3` after current Chrome rejected the `wgpu 0.19` device descriptor. Keep all browser surface creation inside `forge3d-web`; compiler errors stay local.
 - **Shader/browser incompatibilities.** Start with clear and terrain MVP; audit advanced effects before enabling them in web.
 - **CI WebGPU variability.** Use a Windows Chromium required lane, browser capability diagnostics, and pixel probes.
 - **Python behavior drift.** Keep `tests/test_api_contracts.py` and import smoke tests required after each wrapper migration.

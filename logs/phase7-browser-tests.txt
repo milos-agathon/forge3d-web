@@ -1,0 +1,10 @@
+
+> @forge3d/web@1.26.0 test:browser
+> playwright test
+
+
+Running 1 test using 1 worker
+
+  ok 1 [chrome] › tests\playwright\clear.spec.ts:14:1 › clears the canvas through Forge3D WebGPU presentation (562ms)
+
+  1 passed (2.5s)

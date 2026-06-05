@@ -336,6 +336,7 @@ diag_out/
 crates/forge3d-web/node_modules/
 crates/forge3d-web/dist/
 crates/forge3d-web/pkg/
+crates/forge3d-web/test-results/
 
 # R9 audit: ensure docs and pytest artifacts ignored
 docs/_build/

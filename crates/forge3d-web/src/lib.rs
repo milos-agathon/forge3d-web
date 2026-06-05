@@ -61,6 +61,42 @@ mod tests {
     }
 
     #[test]
+    fn phase7_canvas_clear_artifacts_exist() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+
+        for required in [
+            "playwright.config.ts",
+            "examples/test-clear.html",
+            "tests/playwright/clear.spec.ts",
+        ] {
+            assert!(
+                root.join(required).is_file(),
+                "missing Phase 7 canvas clear artifact {required}"
+            );
+        }
+    }
+
+    #[test]
+    fn phase7_runtime_contains_real_webgpu_clear_pass() {
+        let runtime_rs =
+            fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("src/runtime.rs"))
+                .expect("failed to read forge3d-web runtime.rs");
+
+        for expected in [
+            "pub fn render(&mut self)",
+            "surface.get_current_texture()",
+            "wgpu::LoadOp::Clear",
+            "frame.present()",
+            "ensure_not_disposed_error(self).map_err(to_js_error)?",
+        ] {
+            assert!(
+                runtime_rs.contains(expected),
+                "runtime.rs must contain Phase 7 clear-render code: {expected}"
+            );
+        }
+    }
+
+    #[test]
     fn phase6_browser_crate_has_no_browser_hostile_public_surface_tokens() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
         let mut offenders = Vec::new();

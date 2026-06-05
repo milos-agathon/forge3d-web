@@ -46,17 +46,17 @@ impl GpuRuntime {
                 force_fallback_adapter: false,
             })
             .await
-            .ok_or(Forge3dError::AdapterUnavailable)?;
+            .map_err(|_| Forge3dError::AdapterUnavailable)?;
 
         let (device, queue) = adapter
-            .request_device(
-                &wgpu::DeviceDescriptor {
-                    label: options.label.as_deref(),
-                    required_features: options.required_features,
-                    required_limits: options.required_limits.clone(),
-                },
-                None,
-            )
+            .request_device(&wgpu::DeviceDescriptor {
+                label: options.label.as_deref(),
+                required_features: options.required_features,
+                required_limits: options.required_limits.clone(),
+                experimental_features: wgpu::ExperimentalFeatures::disabled(),
+                memory_hints: wgpu::MemoryHints::Performance,
+                trace: wgpu::Trace::Off,
+            })
             .await
             .map_err(|error| Forge3dError::DeviceRequest {
                 message: error.to_string(),

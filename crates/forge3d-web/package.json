@@ -23,9 +23,12 @@
     "build:wasm": "wasm-pack build . --target web --out-dir pkg --out-name forge3d_web",
     "build:ts": "tsc -p tsconfig.json",
     "build": "npm run build:wasm && npm run build:ts",
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "dev": "vite --host 127.0.0.1 --port 57883 --strictPort",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test:browser": "playwright test"
   },
   "devDependencies": {
+    "@playwright/test": "^1.56.1",
     "typescript": "^6.0.3",
     "vite": "^8.0.16",
     "wasm-pack": "^0.15.0"

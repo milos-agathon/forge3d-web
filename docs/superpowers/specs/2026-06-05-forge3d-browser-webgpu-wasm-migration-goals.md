@@ -24,7 +24,7 @@ These invariants apply to every phase after Phase 1:
 - Preserve the Python package import contract: `import forge3d` and `forge3d._forge3d` must remain the user-facing Python extension path after Python restoration.
 - Do not introduce PyO3 or NumPy into `forge3d-core`.
 - Do not introduce `winit`, stdin, TCP IPC, native filesystem-only public APIs, or blocking browser runtime behavior into `forge3d-web`.
-- Keep `wgpu = 0.19` until browser CI and MVP tests are stable.
+- Keep browser `wgpu` changes measured by wasm checks, Playwright pixel tests, and Python/native compatibility checks. Phase 7 modernized the active workspace dependency to `wgpu = 29.0.3` because current Chrome rejects the older `wgpu 0.19` WebGPU limit descriptor.
 - Keep changes phase-scoped. Do not combine rollback boundaries across phases unless a later spec revision explicitly says so.
 - Record every phase verification command and its output location before marking the phase `Done`.
 
@@ -38,7 +38,7 @@ These invariants apply to every phase after Phase 1:
 | 4 | Core wasm check passing | Done | `logs/phase4-core-wasm-check-no-default-features.txt`; `logs/phase4-core-wasm-banned-deps.txt`; `logs/phase4-core-tests.txt` |
 | 5 | GPU context ownership redesign | Done | `logs/phase5-*`; public `forge3d_core::gpu` async runtime; Python blocking helper |
 | 6 | Browser crate creation | Done | `logs/phase6-web-wasm-check.txt`; `logs/phase6-web-typecheck.txt`; `logs/phase6-web-tests.txt`; `logs/phase6-web-banned-deps.txt`; `logs/phase6-web-npm-audit.txt` |
-| 7 | Minimal canvas clear | Ready | Phase 6 browser crate skeleton and TypeScript facade are verified |
+| 7 | Minimal canvas clear | Done | `logs/phase7-*`; Chrome-channel Playwright pixel test passes |
 | 8 | Terrain heightmap upload and render | Pending | Not started |
 | 9 | Camera and resize API | Pending | Not started |
 | 10 | Screenshot/readback | Pending | Not started |
@@ -564,7 +564,7 @@ npm audit
 
 ## Phase 7: Minimal Canvas Clear
 
-**Status:** Pending
+**Status:** Done
 
 **Goal:** Render a deterministic clear color to an `HtmlCanvasElement` through the browser WebGPU runtime.
 
@@ -604,6 +604,53 @@ npm run test:browser
 - Local and CI WebGPU availability may differ.
 
 **Rollback boundary:** Keep capability probe diagnostics; do not weaken the pixel proof into only checking `navigator.gpu`.
+
+**Completion evidence (2026-06-05):**
+
+- Added `Forge3DRuntime.render()` in `crates/forge3d-web/src/runtime.rs` with a real WebGPU frame acquisition, clear-color render pass, queue submit, and `frame.present()`.
+- Added TypeScript facade and declaration support for `runtime.render()`.
+- Added `crates/forge3d-web/examples/test-clear.html` and `crates/forge3d-web/tests/playwright/clear.spec.ts`; the test samples the presented canvas bitmap and requires more than 100 nonblack pixels.
+- Added `crates/forge3d-web/playwright.config.ts` using installed Chrome with `--enable-unsafe-webgpu --use-angle=d3d11`, matching the Windows Chrome lane requirement.
+- Modernized the active workspace `wgpu` dependency to `29.0.3` and updated the small active GPU runtime/surface-status code needed for current Chrome WebGPU compatibility.
+
+**Verification evidence (2026-06-05):**
+
+```powershell
+cargo test -p forge3d-web
+# Result: exits 0; 11 unit tests passed and 0 doc tests. Full output: logs/phase7-web-tests.txt
+
+cargo check -p forge3d-web --target wasm32-unknown-unknown
+# Result: exits 0. Full output: logs/phase7-web-wasm-check.txt
+
+.\crates\forge3d-web\node_modules\.bin\wasm-pack.cmd build crates/forge3d-web --target web
+# Result: exits 0. Full output: logs/phase7-wasm-pack-build.txt
+
+cd crates\forge3d-web
+npm run typecheck
+# Result: exits 0. Full output: logs/phase7-web-typecheck.txt
+
+npm run test:browser
+# Result: exits 0; 1 Chrome Playwright test passed. Full output: logs/phase7-browser-tests.txt
+
+npm audit
+# Result: exits 0; found 0 vulnerabilities. Full output: logs/phase7-web-npm-audit.txt
+
+cd ..\..
+cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features
+# Result: exits 0. Full output: logs/phase7-core-wasm-no-default-check.txt
+
+cargo test -p forge3d-core
+# Result: exits 0. Full output: logs/phase7-core-tests.txt
+
+cargo check -p forge3d-python
+# Result: exits 0. Full output: logs/phase7-python-check.txt
+
+cargo check -p forge3d-native-viewer
+# Result: exits 0. Full output: logs/phase7-native-viewer-check.txt
+
+cargo tree -p forge3d-web --target wasm32-unknown-unknown --edges normal | rg "pyo3|numpy|winit|pollster"
+# Result: no matches. Full output: logs/phase7-web-banned-deps.txt
+```
 
 ---
 
