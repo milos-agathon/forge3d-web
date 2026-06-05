@@ -25,6 +25,18 @@ runtime.setTerrain({
   heights: new Float32Array([0, 1, 1, 0])
 });
 
+await runtime.setTerrainFromSource({
+  width: 2,
+  height: 2,
+  source: new Blob([
+    new Float32Array([0, 1, 1, 0]).buffer
+  ], { type: "application/octet-stream" }),
+  signal: new AbortController().signal,
+  onProgress: ({ loaded, total, done }) => {
+    console.log({ loaded, total, done });
+  }
+});
+
 runtime.setCamera({
   position: [2, 2, 3],
   target: [0, 0, 0],
@@ -49,6 +61,7 @@ The stable MVP surface is:
 
 - `Forge3DRuntime.create(canvas, options): Promise<Forge3DRuntime>`
 - `runtime.setTerrain(terrain): void`
+- `runtime.setTerrainFromSource(terrain): Promise<void>`
 - `runtime.setCamera(camera): void`
 - `runtime.resize(size): void`
 - `runtime.render(): void`
@@ -71,6 +84,26 @@ resources, including `setTerrain(terrain)`, `setCamera(camera)`, `resize(size)`,
 
 Typed-array inputs are copied into runtime-owned WebGPU resources. Callers may
 reuse or release the original `Float32Array` after `setTerrain(terrain)` returns.
+Byte-source terrain inputs are asynchronously read before the same terrain
+validation and GPU upload path is used.
+
+## Browser IO
+
+`runtime.setTerrainFromSource(terrain)` accepts little-endian f32 heightmap bytes
+from these browser-native sources:
+
+- URL string or `URL` object read through `fetch`
+- `Blob`
+- `File`
+- `ArrayBuffer`
+
+The source must contain exactly `width * height` f32 values unless
+`byteOffset`/`byteLength` selects that byte range. URL range requests map
+`byteOffset`/`byteLength` to a `Range` header; servers may ignore or reject
+range headers, in which case failures are surfaced through the stable error
+codes below. `signal` accepts an `AbortSignal`; aborted reads reject with
+`REQUEST_CANCELLED`. Browser fetch, CORS, body-read, Blob slicing, and range
+failures reject with `IO_ERROR` unless the request was aborted.
 
 ## Error Codes
 
@@ -90,6 +123,7 @@ The facade normalizes generated wasm and browser errors into these stable codes:
 - `SHADER_COMPILATION_FAILED`
 - `RUNTIME_DISPOSED`
 
-Invalid dimensions, non-finite camera values, unsupported runtime options, and
-wrong typed-array lengths use `INVALID_INPUT`. Browser IO phases may use
-`IO_ERROR` and `REQUEST_CANCELLED`.
+Invalid dimensions, non-finite camera values, unsupported runtime options,
+wrong typed-array lengths, and invalid byte ranges use `INVALID_INPUT`. Browser
+IO uses `IO_ERROR` for fetch/CORS/body/range failures and `REQUEST_CANCELLED`
+for aborted source reads.

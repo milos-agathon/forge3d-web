@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forge3D Terrain Source Test</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+      }
+
+      canvas {
+        display: block;
+        width: 128px;
+        height: 96px;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="forge3d-source-canvas" width="128" height="96"></canvas>
+    <script type="module">
+      import { Forge3DError, Forge3DRuntime } from "../src-ts/index.ts";
+
+      const canvas = document.querySelector("#forge3d-source-canvas");
+
+      function createHill(width, height) {
+        const heights = new Float32Array(width * height);
+        for (let y = 0; y < height; y += 1) {
+          const v = y / (height - 1);
+          for (let x = 0; x < width; x += 1) {
+            const u = x / (width - 1);
+            const dx = u - 0.5;
+            const dy = v - 0.5;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            heights[y * width + x] = Math.max(0, 1 - distance * 2.4);
+          }
+        }
+        return heights;
+      }
+
+      function bytesForHeights(heights) {
+        return new Uint8Array(
+          heights.buffer.slice(
+            heights.byteOffset,
+            heights.byteOffset + heights.byteLength
+          )
+        );
+      }
+
+      function bytesToDataUrl(bytes) {
+        let binary = "";
+        for (const byte of bytes) {
+          binary += String.fromCharCode(byte);
+        }
+        return `data:application/octet-stream;base64,${btoa(binary)}`;
+      }
+
+      function pixelProbe() {
+        const width = canvas.width;
+        const height = canvas.height;
+        const probe = document.createElement("canvas");
+        probe.width = width;
+        probe.height = height;
+        const context = probe.getContext("2d", { willReadFrequently: true });
+        context.drawImage(canvas, 0, 0);
+        const mapped = context.getImageData(0, 0, width, height).data;
+
+        let minLuma = 255;
+        let maxLuma = 0;
+        let variedPixels = 0;
+        for (let offset = 0; offset < mapped.length; offset += 4) {
+          const r = mapped[offset];
+          const g = mapped[offset + 1];
+          const b = mapped[offset + 2];
+          const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+          if (r > 12 || g > 12 || b > 12) {
+            variedPixels += 1;
+            minLuma = Math.min(minLuma, luma);
+            maxLuma = Math.max(maxLuma, luma);
+          }
+        }
+
+        return {
+          width,
+          height,
+          variedPixels,
+          lumaRange: maxLuma - minLuma
+        };
+      }
+
+      window.__forge3dTerrainSourcesProbe = async () => {
+        if (!navigator.gpu) {
+          return {
+            supported: false,
+            width: 0,
+            height: 0,
+            variedPixels: 0,
+            lumaRange: 0,
+            sourceNames: [],
+            progressDoneCount: 0,
+            cancelCode: undefined
+          };
+        }
+
+        const width = 17;
+        const height = 17;
+        const bytes = bytesForHeights(createHill(width, height));
+        const padded = new Uint8Array(bytes.length + 8);
+        padded.set(bytes, 8);
+
+        const sources = [
+          {
+            name: "ArrayBuffer",
+            source: padded.buffer,
+            byteOffset: 8,
+            byteLength: bytes.length
+          },
+          {
+            name: "Blob",
+            source: new Blob([bytes], { type: "application/octet-stream" })
+          },
+          {
+            name: "File",
+            source: new File([bytes], "terrain.bin", {
+              type: "application/octet-stream"
+            })
+          },
+          {
+            name: "Url",
+            source: bytesToDataUrl(bytes)
+          }
+        ];
+
+        const runtime = await Forge3DRuntime.create(canvas, {
+          width: 128,
+          height: 96,
+          devicePixelRatio: 1,
+          clearColor: [0.01, 0.01, 0.01, 1.0]
+        });
+        runtime.setCamera({
+          position: [1.7, 1.35, 2.15],
+          target: [0, 0.18, 0],
+          up: [0, 1, 0],
+          fovYDegrees: 45,
+          near: 0.1,
+          far: 100
+        });
+
+        const sourceNames = [];
+        const progressEvents = [];
+        for (const item of sources) {
+          await runtime.setTerrainFromSource({
+            width,
+            height,
+            source: item.source,
+            byteOffset: item.byteOffset,
+            byteLength: item.byteLength,
+            onProgress: (progress) => {
+              progressEvents.push({ source: item.name, ...progress });
+            }
+          });
+          sourceNames.push(item.name);
+        }
+
+        let cancelCode;
+        const controller = new AbortController();
+        controller.abort();
+        try {
+          await runtime.setTerrainFromSource({
+            width,
+            height,
+            source: bytesToDataUrl(bytes),
+            signal: controller.signal
+          });
+        } catch (error) {
+          cancelCode =
+            error instanceof Forge3DError ? error.code : error?.code;
+        }
+
+        runtime.render();
+        await new Promise((resolve) => requestAnimationFrame(resolve));
+        const pixels = pixelProbe();
+        runtime.dispose();
+
+        return {
+          supported: true,
+          ...pixels,
+          sourceNames,
+          progressDoneCount: progressEvents.filter((event) => event.done).length,
+          cancelCode
+        };
+      };
+    </script>
+  </body>
+</html>

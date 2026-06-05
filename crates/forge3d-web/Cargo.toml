@@ -30,6 +30,8 @@ web-sys = { workspace = true, features = [
     "CanvasRenderingContext2d",
     "console",
     "Document",
+    "File",
+    "Headers",
     "HtmlCanvasElement",
     "ImageData",
     "ImageBitmap",

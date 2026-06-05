@@ -302,6 +302,62 @@ mod tests {
     }
 
     #[test]
+    fn phase12_browser_io_artifacts_and_api_exist() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+
+        for required in [
+            "examples/test-terrain-sources.html",
+            "tests/playwright/terrain_sources.spec.ts",
+        ] {
+            assert!(
+                root.join(required).is_file(),
+                "missing Phase 12 browser IO artifact {required}"
+            );
+        }
+
+        let runtime_rs = fs::read_to_string(root.join("src/runtime.rs"))
+            .expect("failed to read forge3d-web runtime.rs");
+        let io_rs =
+            fs::read_to_string(root.join("src/io.rs")).expect("failed to read forge3d-web io.rs");
+        let declarations = fs::read_to_string(root.join("types/index.d.ts"))
+            .expect("failed to read TypeScript declarations");
+
+        for expected in [
+            "pub async fn set_terrain_from_source",
+            "load_terrain_heightmap_source",
+        ] {
+            assert!(
+                runtime_rs.contains(expected),
+                "runtime.rs must expose Phase 12 async terrain source API: {expected}"
+            );
+        }
+
+        for expected in [
+            "ArrayBuffer",
+            "Blob",
+            "File",
+            "read_url",
+            "RequestCancelled",
+        ] {
+            assert!(
+                io_rs.contains(expected),
+                "io.rs must implement Phase 12 browser byte-source behavior: {expected}"
+            );
+        }
+
+        for expected in [
+            "TerrainHeightmapSourceInput",
+            "TerrainSourceProgress",
+            "setTerrainFromSource(terrain: TerrainHeightmapSourceInput): Promise<void>",
+        ] {
+            assert!(
+                declarations.contains(expected),
+                "TypeScript public API must expose Phase 12 item {expected}"
+            );
+        }
+    }
+
+    #[test]
     fn phase6_browser_crate_has_no_browser_hostile_public_surface_tokens() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
         let mut offenders = Vec::new();

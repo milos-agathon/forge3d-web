@@ -51,6 +51,35 @@ export interface TerrainHeightmapInput {
   heights: Float32Array;
 }
 
+/** Progress event for browser terrain byte-source reads. */
+export interface TerrainSourceProgress {
+  /** Bytes loaded by the current source read. */
+  loaded: number;
+  /** Total bytes when known from Blob size, ArrayBuffer length, or HTTP headers. */
+  total?: number;
+  /** True when the source has been fully read. */
+  done: boolean;
+}
+
+/** Browser byte sources accepted by async terrain loading. */
+export type TerrainByteSource = string | URL | File | Blob | ArrayBuffer;
+
+/** Async browser byte-source input for little-endian f32 terrain heightmaps. */
+export interface TerrainHeightmapSourceInput {
+  width: number;
+  height: number;
+  /** URL, File, Blob, or ArrayBuffer containing little-endian f32 height values. */
+  source: TerrainByteSource;
+  /** Optional byte offset into Blob or ArrayBuffer sources, or Range start for URLs. */
+  byteOffset?: number;
+  /** Optional byte length for Blob or ArrayBuffer sources, or Range length for URLs. */
+  byteLength?: number;
+  /** AbortSignal mapped to REQUEST_CANCELLED when triggered. */
+  signal?: AbortSignal;
+  /** Completion/progress callback. URL and Blob reads currently report completion. */
+  onProgress?: (progress: TerrainSourceProgress) => void;
+}
+
 /** Camera parameters used to build the terrain view-projection matrix. */
 export interface CameraInput {
   position: [number, number, number];
@@ -93,6 +122,7 @@ export declare class Forge3DRuntime {
   readonly diagnosticsEnabled: boolean;
   clearColor(): [number, number, number, number];
   setTerrain(terrain: TerrainHeightmapInput): void;
+  setTerrainFromSource(terrain: TerrainHeightmapSourceInput): Promise<void>;
   setCamera(camera: CameraInput): void;
   resize(size: ResizeInput): void;
   render(): void;

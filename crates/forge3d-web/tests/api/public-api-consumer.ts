@@ -5,7 +5,9 @@ import {
   type Forge3DErrorCode,
   type Forge3DRuntimeOptions,
   type ResizeInput,
-  type TerrainHeightmapInput
+  type TerrainHeightmapInput,
+  type TerrainHeightmapSourceInput,
+  type TerrainSourceProgress
 } from "../../src-ts/index";
 
 declare const canvas: HTMLCanvasElement;
@@ -26,6 +28,19 @@ const terrain = {
   height: 2,
   heights: new Float32Array([0, 1, 1, 0])
 } satisfies TerrainHeightmapInput;
+
+const sourceTerrain = {
+  width: 2,
+  height: 2,
+  source: new ArrayBuffer(16),
+  signal: new AbortController().signal,
+  onProgress: (progress: TerrainSourceProgress) => {
+    const loaded: number = progress.loaded;
+    const total: number | undefined = progress.total;
+    const done: boolean = progress.done;
+    void [loaded, total, done];
+  }
+} satisfies TerrainHeightmapSourceInput;
 
 const camera = {
   position: [1, 2, 3],
@@ -51,6 +66,7 @@ async function exercisePublicApi(): Promise<void> {
   const color: [number, number, number, number] = runtime.clearColor();
 
   runtime.setTerrain(terrain);
+  await runtime.setTerrainFromSource(sourceTerrain);
   runtime.setCamera(camera);
   runtime.resize(resize);
   runtime.render();

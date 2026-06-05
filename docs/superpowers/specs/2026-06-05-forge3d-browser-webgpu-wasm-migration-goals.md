@@ -1007,7 +1007,7 @@ cargo test -p forge3d-web
 
 ## Phase 12: Browser IO Abstraction
 
-**Status:** Pending
+**Status:** Done
 
 **Goal:** Add browser-compatible byte source abstractions for URL, File, Blob, and ArrayBuffer terrain inputs.
 
@@ -1015,11 +1015,11 @@ cargo test -p forge3d-web
 
 **Scope:**
 
-- Add core `ByteSource` trait or equivalent async byte-source abstraction.
-- Add browser adapters for URL/fetch, `File`, `Blob`, and `ArrayBuffer`.
-- Add progress and cancellation mapping.
-- Map CORS, range, fetch, and cancellation failures to stable browser error codes.
-- Add unit tests with fake sources and browser fetch tests.
+- Completed 2026-06-05: added core `ByteSource`/`ByteRange` contracts plus little-endian f32 byte decoding.
+- Completed 2026-06-05: added browser adapters for URL/fetch, `File`, `Blob`, and `ArrayBuffer` terrain heightmap bytes.
+- Completed 2026-06-05: added progress callback and `AbortSignal` cancellation mapping.
+- Completed 2026-06-05: mapped fetch/CORS/body/range failures to `IO_ERROR` and aborts to `REQUEST_CANCELLED`.
+- Completed 2026-06-05: added fake source unit tests, API contract coverage, and browser tests for all source adapters.
 
 **Required artifacts:**
 
@@ -1040,9 +1040,9 @@ npm run test:browser
 
 **Acceptance criteria:**
 
-- URL terrain input works in browser test.
-- Blob/File/ArrayBuffer inputs work or have explicit unsupported errors tied to this phase's scope.
-- CORS/fetch/range failures map to documented `IO_ERROR` or `REQUEST_CANCELLED` codes.
+- URL terrain input works in `tests/playwright/terrain_sources.spec.ts` via a fetch-backed data URL.
+- Blob/File/ArrayBuffer terrain inputs work in the same browser test.
+- CORS/fetch/range/body failures map to documented `IO_ERROR`; aborted reads map to `REQUEST_CANCELLED`.
 
 **Risks:**
 

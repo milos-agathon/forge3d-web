@@ -2,6 +2,8 @@ pub mod feature_gates;
 
 pub mod error;
 
+pub mod io;
+
 #[cfg(feature = "gpu")]
 pub mod gpu;
 

@@ -30,6 +30,24 @@ export interface TerrainHeightmapInput {
   heights: Float32Array;
 }
 
+export interface TerrainSourceProgress {
+  loaded: number;
+  total?: number;
+  done: boolean;
+}
+
+export type TerrainByteSource = string | URL | File | Blob | ArrayBuffer;
+
+export interface TerrainHeightmapSourceInput {
+  width: number;
+  height: number;
+  source: TerrainByteSource;
+  byteOffset?: number;
+  byteLength?: number;
+  signal?: AbortSignal;
+  onProgress?: (progress: TerrainSourceProgress) => void;
+}
+
 export interface CameraInput {
   position: [number, number, number];
   target: [number, number, number];
@@ -52,6 +70,7 @@ interface WasmRuntime {
   readonly diagnosticsEnabled: boolean;
   clearColor(): number[];
   setTerrain(terrain: TerrainHeightmapInput): void;
+  setTerrainFromSource(terrain: TerrainHeightmapSourceInput): Promise<void>;
   setCamera(camera: CameraInput): void;
   resize(size: ResizeInput): void;
   render(): void;
@@ -167,6 +186,18 @@ export class Forge3DRuntime {
     }
   }
 
+  async setTerrainFromSource(
+    terrain: TerrainHeightmapSourceInput
+  ): Promise<void> {
+    try {
+      await this.#inner.setTerrainFromSource(
+        normalizeTerrainHeightmapSourceInput(terrain)
+      );
+    } catch (error) {
+      throw Forge3DError.from(error);
+    }
+  }
+
   setCamera(camera: CameraInput): void {
     try {
       this.#inner.setCamera(normalizeCameraInput(camera));
@@ -217,6 +248,29 @@ function normalizeTerrainHeightmapInput(
     height: terrain.height,
     heights: terrain.heights
   };
+}
+
+function normalizeTerrainHeightmapSourceInput(
+  terrain: TerrainHeightmapSourceInput
+): TerrainHeightmapSourceInput {
+  const normalized: TerrainHeightmapSourceInput = {
+    width: terrain.width,
+    height: terrain.height,
+    source: terrain.source
+  };
+  if (terrain.byteOffset !== undefined) {
+    normalized.byteOffset = terrain.byteOffset;
+  }
+  if (terrain.byteLength !== undefined) {
+    normalized.byteLength = terrain.byteLength;
+  }
+  if (terrain.signal !== undefined) {
+    normalized.signal = terrain.signal;
+  }
+  if (terrain.onProgress !== undefined) {
+    normalized.onProgress = terrain.onProgress;
+  }
+  return normalized;
 }
 
 function normalizeCameraInput(camera: CameraInput): CameraInput {

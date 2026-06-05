@@ -65,6 +65,16 @@ impl Forge3DRuntime {
         set_terrain_runtime(self, terrain).map_err(to_js_error)
     }
 
+    #[wasm_bindgen(js_name = setTerrainFromSource)]
+    pub async fn set_terrain_from_source(&mut self, terrain: JsValue) -> Result<(), JsValue> {
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        let terrain = crate::io::load_terrain_heightmap_source(terrain)
+            .await
+            .map_err(to_js_error)?;
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        set_terrain_options_runtime(self, terrain).map_err(to_js_error)
+    }
+
     #[wasm_bindgen(js_name = setCamera)]
     pub fn set_camera(&mut self, camera: JsValue) -> Result<(), JsValue> {
         ensure_not_disposed_error(self).map_err(to_js_error)?;
@@ -567,6 +577,14 @@ async fn png_blob_from_rgba(width: u32, height: u32, rgba: Vec<u8>) -> Result<Bl
 }
 
 fn set_terrain_runtime(runtime: &mut Forge3DRuntime, terrain: JsValue) -> Result<(), WebError> {
+    let terrain = TerrainHeightmapOptions::from_js_value(terrain)?;
+    set_terrain_options_runtime(runtime, terrain)
+}
+
+fn set_terrain_options_runtime(
+    runtime: &mut Forge3DRuntime,
+    terrain: TerrainHeightmapOptions,
+) -> Result<(), WebError> {
     let context = runtime.context.as_ref().ok_or_else(|| {
         WebError::new(
             Forge3DErrorCode::RuntimeDisposed,
@@ -580,7 +598,7 @@ fn set_terrain_runtime(runtime: &mut Forge3DRuntime, terrain: JsValue) -> Result
         )
     })?;
 
-    let terrain = TerrainHeightmapOptions::from_js_value(terrain)?.validate()?;
+    let terrain = terrain.validate()?;
     runtime.terrain = Some(TerrainRenderResources::new(
         context,
         surface_state.config.format,

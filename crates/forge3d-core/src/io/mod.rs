@@ -1,8 +1,6 @@
-//! IO module aggregating mesh import/export helpers.
+//! Browser-safe IO contracts.
 //!
-//! Workstream F Phase 2 introduces OBJ (F4/F5) and PLY (F13) pipelines.
+//! Native import/export loaders remain staged outside the public default core
+//! root until the native-io split is restored.
 
-pub mod gltf_read;
-pub mod obj_read;
-pub mod obj_write;
-pub mod stl_write;
+pub mod source;
