@@ -20,7 +20,8 @@ cargo clippy --workspace --all-targets --features default -- -D warnings
 cargo test -p forge3d-core
 cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features
 cargo check -p forge3d-web --target wasm32-unknown-unknown
-wasm-pack build crates/forge3d-web --target web
+$env:PATH = "$pwd\crates\forge3d-web\node_modules\.bin;$env:PATH"
+.\crates\forge3d-web\node_modules\.bin\wasm-pack.cmd build crates/forge3d-web --target web
 ```
 
 ## Web Package Gates

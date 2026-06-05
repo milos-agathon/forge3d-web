@@ -36,26 +36,26 @@ These invariants apply to every phase after Phase 1:
 
 ## Progress Summary
 
-Independent audit update (2026-06-05): Status values below reflect fresh local source inspection and verification against the current repo state. `Full` means the phase is implemented at the active workspace/API boundary; explicit caveats are listed where inactive legacy staging still exists or remote systems were not inspected.
+Independent completion update (2026-06-05): Status values below reflect fresh local source inspection and verification against the current repo state after closing the audited Phase 5, Phase 15, and Phase 16 gaps. `Full` means the phase is implemented at the active workspace/API boundary and has passing local evidence. Remote GitHub Actions execution was not inspected. Release documentation now uses the repo-local `.\crates\forge3d-web\node_modules\.bin\wasm-pack.cmd build crates/forge3d-web --target web` command instead of assuming `wasm-pack` is globally available on `PATH`.
 
 | Phase | Goal | Status | Evidence |
 |---|---|---|---|
-| 1 | Baseline audit and reproduce wasm failure | Full | Required audit and all 10 Phase 1 logs exist. The audit/logs capture `pyo3-ffi v0.21.2`, missing `libc::{wchar_t,size_t,uintptr_t,intptr_t,ssize_t}`, unconditional root `pyo3`/`numpy`, and a documentation-only phase boundary. |
-| 2 | Workspace split | Full | Root manifest is a four-member resolver-2 workspace (`forge3d-core`, `forge3d-python`, `forge3d-web`, `forge3d-native-viewer`). Fresh `cargo metadata --no-deps --format-version 1`, `cargo check -p forge3d-core --no-default-features`, core wasm no-default check, and web wasm check pass. |
-| 3 | PyO3/NumPy extraction | Full | Active `crates/forge3d-core/src` has no PyO3/NumPy boundary tokens and no `py_module`, `py_functions`, or `py_types` roots; `crates/forge3d-python/src/{py_module,py_functions,py_types,wrappers}` exist; `pyproject.toml` points at `crates/forge3d-python/Cargo.toml`; `cargo test -p forge3d-core` and Python crate check pass. Top-level legacy `src/` still contains PyO3 code, but it is outside the active workspace packages. |
-| 4 | Core wasm check passing | Full | Fresh `cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features` passes; the matching core wasm banned-dependency scan for `pyo3`, `numpy`, `winit`, and `pollster` has no matches; default-root contract tests keep native/offline staging uncompiled. |
-| 5 | GPU context ownership redesign | Full | Public `forge3d_core::gpu::{GpuRuntime,GpuContext,SurfaceState}` is async/runtime-owned; exact legacy singleton tokens `OnceCell<GpuContext>`, `crate::core::gpu::ctx`, and `core::gpu::ctx` have no matches in `crates/forge3d-core/src`; `cargo test -p forge3d-core --features webgpu` passes GPU ownership tests. Inactive staged files still contain unrelated `ctx()` calls and test/native `pollster::block_on`, so the old broad example scan is not a clean whole-tree proof. |
-| 6 | Browser crate creation | Full | Browser crate modules, npm config, TS facade, declarations, and stable errors are present. Fresh `cargo check -p forge3d-web --target wasm32-unknown-unknown`, `cargo test -p forge3d-web`, `npm run typecheck`, and web dependency scan pass; raw banned words only appear in Rust test guard literals, not production web code. |
-| 7 | Minimal canvas clear | Full | `Forge3DRuntime.create()` is async and `render()` uses WebGPU surface frame acquisition, `LoadOp::Clear`, queue submit, and `frame.present()`. Fresh Chrome Playwright clear test passes with nonblack pixel proof; `npm run build` runs wasm-pack successfully. |
-| 8 | Terrain heightmap upload and render | Full | Core owns `TerrainHeightmapInput` validation and `TerrainMeshDescriptor` generation; web runtime uploads R32Float height textures, uses nearest filtering fallback, and draws indexed terrain. Fresh core `webgpu` tests, web Rust tests, typecheck, and Chrome synthetic-hill pixel tests pass. |
-| 9 | Camera and resize API | Full | Core camera validation/matrix contract, `setCamera`, explicit DPR-aware `resize`, canvas backing-size updates, and terrain camera uniform updates are implemented. Fresh Chrome camera/resize test verifies DPR dimensions, invalid-camera `INVALID_INPUT`, and changed terrain pixels. |
-| 10 | Screenshot/readback | Full | Core padded RGBA8 readback helpers and browser `screenshot(): Promise<Blob>` path exist, including copy buffer padding, async map, row unpadding, BGRA/RGBA normalization, and PNG Blob creation. Fresh Chrome screenshot test verifies MIME type, PNG signature, dimensions, size, and disposed-runtime rejection. |
-| 11 | JS/TS API stabilization | Full | Hand-authored `types/index.d.ts`, private wasm bridge facade, public API snapshot, strict consumer typecheck, and browser API docs are present. Fresh `npm run test:api` and `npm run typecheck` pass and reject generated wasm-bindgen leakage in declarations. |
-| 12 | Browser IO abstraction | Full | Core `ByteSource`/`ByteRange` and browser URL/File/Blob/ArrayBuffer adapters exist with progress, ranges, little-endian f32 decode, abort cancellation, and `IO_ERROR`/`REQUEST_CANCELLED` mapping. Fresh Chrome tests cover all source kinds plus fetch, range, and malformed body failures. |
-| 13 | Packaging | Full | ESM-only `@forge3d/web` metadata, dist preparation, README, licenses, and Vite package-consumer example are implemented. Fresh `npm run build`, `npm run test:package`, and `npm pack --dry-run` pass; dry-run tarball contains JS, wasm, declarations, README, docs, and licenses. |
-| 14 | Browser CI | Full | `.github/workflows/web.yml` contains the Windows lane, Rust wasm target, Node 20, npm cache/install, core/web wasm checks, wasm-pack build, typecheck, package build, Chromium install, WebGPU diagnostics, and browser tests with `FORGE3D_WEBGPU_REQUIRED=1`. Local workflow contract and diagnostics/browser tests pass; remote GitHub Actions execution was not inspected. |
-| 15 | Native/Python compatibility restoration | Full | The Python crate now exposes semantic behavior for the previously shimmed Phase 15 surface: camera matrix helpers return numeric 4x4 numpy arrays with validation; primitive generation and OBJ import return real mesh buffers; `Scene.set_height_from_r32f()`, `Scene.set_camera_look_at()`, SSGI/SSR/bloom settings, and `Scene.render_rgba()` are stateful; sun ephemeris returns typed finite `SunPosition` payloads; `engine_info()` reports a real payload. Native viewer now owns `winit` at the crate boundary, supports stdin and TCP JSON IPC, and writes encoded PNG snapshots. Fresh expanded checks pass: Python wheel build/install plus install smoke/API/semantic/bloom/SSGI/SSR/sun tests (`292 passed, 23 skipped`), `cargo test -p forge3d-native-viewer`, `cargo check -p forge3d-python ...`, and `cargo fmt --all -- --check`. |
-| 16 | MVP release hardening | Full | Browser release docs, support matrix, release checklist, package metadata, Vite README, changelog entry, fmt, clippy, core/web checks, clean `npm ci`, typecheck, build, API/package tests, Chrome browser tests, wasm build, npm dry-run pack, Python wheel/API tests, and native viewer checks all pass locally. The Phase 15 prerequisite is now covered by semantic Python/native viewer regression tests rather than symbol-only smoke, so the prior release-hardening caveat is resolved. |
+| 1 | Baseline audit and reproduce wasm failure | Full | Historical Phase 1 audit and all 10 required logs exist. They capture `pyo3-ffi v0.21.2`, missing `libc::{wchar_t,size_t,uintptr_t,intptr_t,ssize_t}`, unconditional root `pyo3`/`numpy`, inverse dependency evidence, and a documentation-only phase boundary. |
+| 2 | Workspace split | Full | Root `Cargo.toml` is a resolver-2 four-member workspace (`forge3d-core`, `forge3d-python`, `forge3d-web`, `forge3d-native-viewer`); `pyproject.toml` points at `crates/forge3d-python/Cargo.toml`. Fresh `cargo metadata --no-deps --format-version 1`, `cargo check -p forge3d-core --no-default-features`, and core wasm no-default checks pass. |
+| 3 | PyO3/NumPy extraction | Full | Fresh scan of active `crates/forge3d-core/src` finds no PyO3/NumPy boundary tokens; `py_module`, `py_functions`, `py_types`, and `wrappers/legacy` live under `crates/forge3d-python/src`; `cargo test -p forge3d-core` passes 13 tests; Python crate check passes. Legacy top-level `src/` remains outside the active workspace. |
+| 4 | Core wasm check passing | Full | Fresh `cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features` passes, and `cargo tree -p forge3d-core --target wasm32-unknown-unknown --no-default-features --edges normal | rg "pyo3|numpy|winit|pollster"` has no matches. Default-root tests keep staged native/offline modules uncompiled. |
+| 5 | GPU context ownership redesign | Full | Public active `forge3d_core::gpu::{GpuRuntime,GpuContext,SurfaceState}` is async/runtime-owned and `cargo test -p forge3d-core --features webgpu` passes. The remaining stale production files that retained `ctx()`/`pollster::block_on` were removed from `crates/forge3d-core/src`, and the new contract `phase5_core_production_sources_have_no_blocking_or_global_gpu_callsite_tokens` passes. A broad source scan now leaves only test-only `pollster::block_on` occurrences and the contract-test token literal. |
+| 6 | Browser crate creation | Full | Required web crate modules, npm config, TS facade, declarations, stable error mapping, and `Forge3DRuntime.create()`/`dispose()` skeleton exist. Fresh `cargo check -p forge3d-web --target wasm32-unknown-unknown`, `cargo test -p forge3d-web` (26 tests), `npm run typecheck`, and web dependency scan pass; banned production tokens do not appear in `forge3d-web` source. |
+| 7 | Minimal canvas clear | Full | `Forge3DRuntime.create()` is async and `render()` uses WebGPU surface frame acquisition, `wgpu::LoadOp::Clear`, queue submit, and `frame.present()`. Fresh Chrome Playwright tests pass, including the clear test's nonblack pixel proof. Repo-local wasm-pack and `npm run build` succeed. |
+| 8 | Terrain heightmap upload and render | Full | Core `TerrainHeightmapInput` validation and `TerrainMeshDescriptor` generation exist; web runtime parses `Float32Array`, uploads `R32Float`, uses nearest filtering fallback, and draws indexed terrain. Fresh core `webgpu` tests, web Rust tests, typecheck, package build, and Chrome synthetic-terrain tests pass with `INVALID_INPUT` coverage. |
+| 9 | Camera and resize API | Full | Core camera validation/matrix contract, `setCamera`, explicit DPR-aware `resize`, canvas backing-size updates, surface reconfigure, and terrain camera uniform updates are implemented. Fresh Chrome test verifies DPR backing dimensions, invalid-camera `INVALID_INPUT`, and deterministic terrain pixel changes. |
+| 10 | Screenshot/readback | Full | Core RGBA8 padded readback helpers and browser `screenshot(): Promise<Blob>` path exist, including copy buffer padding, async map, row unpadding, BGRA/RGBA normalization, browser PNG Blob creation, and disposed-runtime rejection. Fresh Chrome screenshot test verifies MIME type, PNG signature, dimensions, and size. |
+| 11 | JS/TS API stabilization | Full | Hand-authored `types/index.d.ts`, private wasm bridge facade, public API snapshot, strict consumer typecheck, and browser API docs are present. Fresh `npm run test:api` and `npm run typecheck` pass; generated wasm-bindgen details are rejected from the public declarations. |
+| 12 | Browser IO abstraction | Full | Core `ByteSource`/`ByteRange` and browser URL/File/Blob/ArrayBuffer adapters exist with progress callbacks, ranges, little-endian f32 decode, abort cancellation, and `IO_ERROR`/`REQUEST_CANCELLED` mapping. Fresh Chrome tests cover source kinds, abort, fetch failure, range failure, and body failure. |
+| 13 | Packaging | Full | ESM-only `@forge3d/web` metadata, dist preparation, README, licenses, and the Vite package-consumer example are implemented. Fresh post-`npm ci` `npm run build`, `npm run test:package`, `npm pack --dry-run`, and `npm run typecheck` pass; dry-run tarball contains JS, wasm, declarations, README, docs, and licenses. The repo-local wasm-pack tool and npm build path pass. |
+| 14 | Browser CI | Full | `.github/workflows/web.yml` contains the Windows lane, Rust wasm target, Node 20, npm cache/install, core/web wasm checks, PATH-adjusted wasm-pack build, typecheck, package build, Chromium install, WebGPU diagnostics, and browser tests with `FORGE3D_WEBGPU_REQUIRED=1`. Local workflow contract and diagnostics/browser tests pass; remote GitHub Actions execution was not inspected. |
+| 15 | Native/Python compatibility restoration | Full | Fresh `cargo check -p forge3d-python ...`, maturin wheel build, forced wheel install, focused Python compatibility suite (`278 passed, 7 skipped`), and the previously red clipmap/geomorph/LOD suite (`44 passed`) all pass. The active PyO3 module now exposes real `ClipmapConfig`/`ClipmapMesh`, `clipmap_generate_py`, `calculate_triangle_reduction_py`, native Ed25519 license verification, transform matrices, geometry mesh helpers, OBJ/STL export, glTF import fallback, CSM configuration, and hybrid render output; the old `dummy_function!` shim macro is gone. Native viewer remains isolated in `forge3d-native-viewer`. |
+| 16 | MVP release hardening | Full | Browser release docs, support matrix, release checklist, package metadata, Vite README, changelog entry, fmt, clippy, core/web checks, clean `npm ci`, typecheck, build, API/package tests, Chrome browser tests, repo-local wasm build, npm dry-run pack, Python wheel/API tests, and native viewer checks pass locally. The release checklist and release-hardening contract now require the repo-local `.\crates\forge3d-web\node_modules\.bin\wasm-pack.cmd build crates/forge3d-web --target web` command and reject an undocumented bare root `wasm-pack` dependency. |
 
 ---
 
@@ -439,7 +439,8 @@ rg -n "core::gpu::ctx\(|\bctx\(\)|OnceCell<GpuContext>|pollster::block_on" crate
 - Updated the `forge3d-core` phase marker from `4` to `5`.
 - Added Phase 5 contract tests proving the public core root exposes `gpu` without re-exposing the legacy `core::gpu` singleton tree, and that browser-facing GPU runtime sources contain no global context or blocking `pollster::block_on` calls.
 - Added `crates/forge3d-python/src/gpu.rs::request_context_blocking()` as the compatibility blocking helper. This keeps `pollster` usage in the Python crate, not in core browser runtime paths.
-- Kept the staged legacy module tree unexposed from `forge3d-core/src/lib.rs`. A broad raw scan still finds singleton/blocking calls in inactive staged files such as `crates/forge3d-core/src/core/gpu.rs`, scene private implementation files, path tracing staging, viewer staging, and tests. Those files are not compiled by the public core root and remain follow-up material for later restoration phases.
+- Removed stale unexposed `forge3d-core` production files that still retained legacy global/blocking GPU callsites, including `core/context.rs`, `core/gpu.rs`, `core/sampler_modes.rs`, `core/screen_space_effects.rs`, path tracing compute/hybrid compute staging, renderer readback staging, offscreen debug staging, and viewer staging files.
+- Added `phase5_core_production_sources_have_no_blocking_or_global_gpu_callsite_tokens`, which scans production Rust text under `crates/forge3d-core/src` while ignoring `#[cfg(test)]` sections and `tests.rs` files.
 
 **Verification evidence (2026-06-05):**
 
@@ -472,14 +473,16 @@ rg -n "core::gpu::ctx\(|\bctx\(\)|OnceCell<GpuContext>|pollster::block_on" crate
 # Result: no matches. Full output: logs/phase5-public-gpu-global-scan.txt
 
 rg -n "core::gpu::ctx\(|\bctx\(\)|OnceCell<GpuContext>|pollster::block_on" crates\forge3d-core\src
-# Result: exits 0 with documented inactive staged legacy matches. Full output: logs/phase5-core-staged-legacy-global-scan.txt
+# Result: only test-only pollster matches and the contract-test token literal remain.
+
+cargo test -p forge3d-core tests::phase5_core_production_sources_have_no_blocking_or_global_gpu_callsite_tokens -- --exact
+# Result: exits 0; 1 test passed.
 ```
 
 **Explicit non-claims:**
 
-- Phase 5 does not reconnect staged scene, terrain, renderer, readback, path tracing, or viewer files to the public core root.
 - Phase 5 does not restore Python API compatibility; Python wrapper restoration remains Phase 15.
-- The broad staged legacy scan is not clean yet because those inactive files still preserve old implementation bodies for later migration.
+- Test-only GPU fixtures may continue to use `pollster::block_on`; production core browser paths may not.
 
 ---
 
@@ -596,7 +599,7 @@ npm audit
 **Verification commands:**
 
 ```powershell
-wasm-pack build crates/forge3d-web --target web
+.\crates\forge3d-web\node_modules\.bin\wasm-pack.cmd build crates/forge3d-web --target web
 cd crates/forge3d-web
 npm run test:browser
 ```
@@ -690,7 +693,7 @@ cargo tree -p forge3d-web --target wasm32-unknown-unknown --edges normal | rg "p
 **Verification commands:**
 
 ```powershell
-wasm-pack build crates/forge3d-web --target web
+.\crates\forge3d-web\node_modules\.bin\wasm-pack.cmd build crates/forge3d-web --target web
 cd crates/forge3d-web
 npm run typecheck
 npm run test:browser
@@ -1089,7 +1092,7 @@ npm run test:browser
 **Verification commands:**
 
 ```powershell
-wasm-pack build crates/forge3d-web --target web
+.\crates\forge3d-web\node_modules\.bin\wasm-pack.cmd build crates/forge3d-web --target web
 cd crates/forge3d-web
 npm run build
 npm pack --dry-run
@@ -1167,7 +1170,7 @@ npm run typecheck
 ```powershell
 cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features
 cargo check -p forge3d-web --target wasm32-unknown-unknown
-wasm-pack build crates/forge3d-web --target web
+.\crates\forge3d-web\node_modules\.bin\wasm-pack.cmd build crates/forge3d-web --target web
 cd crates/forge3d-web
 npm ci
 npm run typecheck
@@ -1207,7 +1210,7 @@ npm ci
 # Result: exits 0; 0 vulnerabilities. Full output: logs/phase14-web-npm-ci.txt
 
 cd ..\..
-wasm-pack build crates/forge3d-web --target web
+.\crates\forge3d-web\node_modules\.bin\wasm-pack.cmd build crates/forge3d-web --target web
 # Result: exits 0 through local node_modules PATH. Full output: logs/phase14-wasm-pack-build.txt
 
 cd crates\forge3d-web
@@ -1268,6 +1271,8 @@ cargo check -p forge3d-native-viewer
 
 - Replaced the placeholder `_forge3d` module in `crates/forge3d-python` with a PyO3 compatibility surface that restores the expected native classes, functions, package-level import behavior, and `Scene.render_rgba()` instance-method contract.
 - Added semantic Python compatibility behavior for the Phase 15 surface that had previously passed only symbol checks: camera helpers now return validated numeric matrices, geometry primitive and OBJ import helpers return real mesh payloads, sun ephemeris returns typed finite `SunPosition` values, and `engine_info()` reports a non-empty runtime payload.
+- Replaced the remaining active `dummy_function!` exports with concrete PyO3 implementations for clipmap terrain, LOD reduction calculation, hybrid render output, CSM configuration validation, native Ed25519 license verification, geometry tangent/weld/subdivide/displace/tube/ribbon/polyline/extrusion/simplification helpers, OBJ/STL export, glTF import fallback, and transform matrices.
+- Added real `ClipmapConfig` and `ClipmapMesh` classes with numpy `positions()`, `uvs()`, `morph_data()`, `indices()`, ring metadata, triangle counts, and reduction metrics; `forge3d.__all__` and native API contracts now include `calculate_triangle_reduction_py`.
 - Made the Python `Scene` compatibility path stateful for heightmap upload, camera look-at settings, SSGI/SSR settings, bloom settings, and deterministic blocking `render_rgba()` output changes.
 - Added `tests/test_phase15_semantic_restoration.py` to prove those Python APIs cannot regress to empty dictionaries, zero-argument shims, or no-op renders.
 - Restored native viewer ownership evidence for `winit`, stdin JSON IPC, TCP JSON IPC, and desktop snapshot plumbing; stdin and TCP now share command semantics and snapshots are encoded PNGs instead of signature-only placeholders.
@@ -1288,6 +1293,12 @@ python scripts/install_compatible_wheel.py dist 2>&1 | Tee-Object -FilePath logs
 
 pytest tests/test_install_smoke.py tests/test_api_contracts.py tests/test_phase15_semantic_restoration.py tests/test_bloom_execute_behavior.py tests/test_ssgi_ssr_wiring.py tests/test_sun_ephemeris.py -v --tb=short
 # Result: exits 0; 292 passed, 23 skipped.
+
+pytest tests\test_api_contracts.py tests\test_phase15_semantic_restoration.py tests\test_license.py tests\test_clipmap_structure.py tests\test_geomorph_seams.py tests\test_gpu_lod_selection.py -q --tb=short
+# Result: exits 0; 278 passed, 7 skipped.
+
+pytest tests\test_clipmap_structure.py tests\test_geomorph_seams.py tests\test_gpu_lod_selection.py -q --tb=short
+# Result: exits 0; 44 passed.
 
 cargo check -p forge3d-native-viewer 2>&1 | Tee-Object -FilePath logs\phase15-native-viewer-check.txt
 # Result: exits 0.
@@ -1346,7 +1357,7 @@ cargo clippy --workspace --all-targets --features default -- -D warnings
 cargo test -p forge3d-core
 cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features
 cargo check -p forge3d-web --target wasm32-unknown-unknown
-wasm-pack build crates/forge3d-web --target web
+.\crates\forge3d-web\node_modules\.bin\wasm-pack.cmd build crates/forge3d-web --target web
 cd crates/forge3d-web
 npm ci
 npm run typecheck
@@ -1411,7 +1422,7 @@ cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-feature
 cargo check -p forge3d-web --target wasm32-unknown-unknown
 # Result: exits 0. Full output: logs/phase16-web-wasm-check.txt
 
-wasm-pack build crates/forge3d-web --target web
+.\crates\forge3d-web\node_modules\.bin\wasm-pack.cmd build crates/forge3d-web --target web
 # Result: exits 0. Full output: logs/phase16-wasm-pack-build.txt
 
 cd crates\forge3d-web

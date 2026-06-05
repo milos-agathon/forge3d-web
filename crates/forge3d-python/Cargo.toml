@@ -23,6 +23,7 @@ copc_laz = []
 forge3d-core = { path = "../forge3d-core", features = ["gpu", "native-io", "images"] }
 anyhow.workspace = true
 bytemuck.workspace = true
+ed25519-dalek.workspace = true
 glam.workspace = true
 numpy.workspace = true
 pollster.workspace = true

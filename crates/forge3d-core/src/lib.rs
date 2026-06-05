@@ -169,6 +169,19 @@ mod tests {
     }
 
     #[test]
+    fn phase5_core_production_sources_have_no_blocking_or_global_gpu_callsite_tokens() {
+        let src_dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
+        let mut offenders = Vec::new();
+        scan_for_phase5_production_gpu_callsite_tokens(&src_dir, &mut offenders);
+
+        assert!(
+            offenders.is_empty(),
+            "Phase 5 production callsites must not retain legacy global/blocking GPU tokens:\n{}",
+            offenders.join("\n")
+        );
+    }
+
+    #[test]
     fn phase8_core_terrain_heightmap_contract_is_exposed() {
         let lib_rs = fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR")).join("src/lib.rs"))
             .expect("failed to read core lib.rs");
@@ -322,6 +335,47 @@ mod tests {
                 concat!("core::gpu", "::ctx"),
             ] {
                 if text.contains(token) {
+                    offenders.push(format!("{} contains {token}", path.display()));
+                }
+            }
+        }
+    }
+
+    fn scan_for_phase5_production_gpu_callsite_tokens(dir: &Path, offenders: &mut Vec<String>) {
+        let entries = fs::read_dir(dir)
+            .unwrap_or_else(|error| panic!("failed to read {}: {error}", dir.display()));
+
+        for entry in entries {
+            let path = entry
+                .unwrap_or_else(|error| {
+                    panic!("failed to read entry in {}: {error}", dir.display())
+                })
+                .path();
+
+            if path.is_dir() {
+                scan_for_phase5_production_gpu_callsite_tokens(&path, offenders);
+                continue;
+            }
+
+            if path.extension().and_then(|ext| ext.to_str()) != Some("rs") {
+                continue;
+            }
+
+            if path.file_name().and_then(|name| name.to_str()) == Some("tests.rs") {
+                continue;
+            }
+
+            let text = fs::read_to_string(&path)
+                .unwrap_or_else(|error| panic!("failed to read {}: {error}", path.display()));
+            let production_text = text.split("#[cfg(test)]").next().unwrap_or(&text);
+
+            for token in [
+                concat!("core::gpu", "::ctx("),
+                concat!("crate::core::gpu", "::ctx("),
+                "ctx()",
+                concat!("pollster", "::block_on"),
+            ] {
+                if production_text.contains(token) {
                     offenders.push(format!("{} contains {token}", path.display()));
                 }
             }

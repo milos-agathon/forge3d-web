@@ -106,6 +106,7 @@ class TestNativeModuleSymbols:
         "sun_position",
         "sun_position_utc",
         "clipmap_generate_py",
+        "calculate_triangle_reduction_py",
         "engine_info",
         "hybrid_render",
         "configure_csm",

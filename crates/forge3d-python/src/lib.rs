@@ -1,5 +1,7 @@
 use glam::{Mat4, Vec3};
-use numpy::{PyArray1, PyArray2, PyArray3, PyReadonlyArray2, PyUntypedArrayMethods};
+use numpy::{
+    PyArray1, PyArray2, PyArray3, PyReadonlyArray1, PyReadonlyArray2, PyUntypedArrayMethods,
+};
 use pyo3::exceptions::{PyOSError, PyRuntimeError, PyValueError};
 use pyo3::prelude::*;
 use pyo3::types::{PyAny, PyDict, PyList, PyTuple};
@@ -8,6 +10,8 @@ use std::net::{TcpListener, TcpStream};
 use std::path::Path;
 
 pub mod gpu;
+
+type MeshBufferParts = (Vec<[f32; 3]>, Vec<[f32; 3]>, Vec<[f32; 2]>, Vec<u32>);
 
 macro_rules! simple_class {
     ($name:ident) => {
@@ -48,8 +52,132 @@ simple_class!(TerrainRenderer);
 simple_class!(AovFrame);
 simple_class!(OfflineBatchResult);
 simple_class!(OfflineMetrics);
-simple_class!(ClipmapConfig);
-simple_class!(ClipmapMesh);
+
+#[pyclass]
+#[derive(Clone)]
+pub struct ClipmapConfig {
+    #[pyo3(get)]
+    ring_count: u32,
+    #[pyo3(get)]
+    ring_resolution: u32,
+    #[pyo3(get)]
+    center_resolution: u32,
+    #[pyo3(get)]
+    skirt_depth: f32,
+    #[pyo3(get)]
+    morph_range: f32,
+}
+
+#[pymethods]
+impl ClipmapConfig {
+    #[new]
+    #[pyo3(signature = (ring_count=4, ring_resolution=64, center_resolution=None, skirt_depth=10.0, morph_range=0.3))]
+    fn new(
+        ring_count: u32,
+        ring_resolution: u32,
+        center_resolution: Option<u32>,
+        skirt_depth: f32,
+        morph_range: f32,
+    ) -> PyResult<Self> {
+        if ring_count == 0 {
+            return Err(PyValueError::new_err("ring_count must be positive"));
+        }
+        if ring_resolution < 2 {
+            return Err(PyValueError::new_err("ring_resolution must be >= 2"));
+        }
+        let center_resolution = center_resolution.unwrap_or(ring_resolution);
+        if center_resolution < 2 {
+            return Err(PyValueError::new_err("center_resolution must be >= 2"));
+        }
+        if !skirt_depth.is_finite() || skirt_depth < 0.0 {
+            return Err(PyValueError::new_err(
+                "skirt_depth must be finite and non-negative",
+            ));
+        }
+        Ok(Self {
+            ring_count,
+            ring_resolution,
+            center_resolution,
+            skirt_depth,
+            morph_range: morph_range.clamp(0.0, 1.0),
+        })
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "ClipmapConfig(ring_count={}, ring_resolution={}, center_resolution={}, skirt_depth={:.1}, morph_range={:.2})",
+            self.ring_count,
+            self.ring_resolution,
+            self.center_resolution,
+            self.skirt_depth,
+            self.morph_range
+        )
+    }
+}
+
+#[pyclass]
+pub struct ClipmapMesh {
+    positions: Vec<[f32; 2]>,
+    uvs: Vec<[f32; 2]>,
+    morph_data: Vec<[f32; 2]>,
+    indices: Vec<u32>,
+    full_res_triangles: u32,
+    ring_count: u32,
+}
+
+#[pymethods]
+impl ClipmapMesh {
+    #[getter]
+    fn vertex_count(&self) -> usize {
+        self.positions.len()
+    }
+
+    #[getter]
+    fn index_count(&self) -> usize {
+        self.indices.len()
+    }
+
+    #[getter]
+    fn triangle_count(&self) -> usize {
+        self.indices.len() / 3
+    }
+
+    #[getter]
+    fn triangle_reduction_percent(&self) -> f32 {
+        calculate_triangle_reduction_py(self.full_res_triangles, self.triangle_count() as u32)
+    }
+
+    #[getter]
+    fn rings_count(&self) -> u32 {
+        self.ring_count
+    }
+
+    fn positions<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray2<f32>>> {
+        array2_from_vec2(py, &self.positions)
+    }
+
+    fn uvs<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray2<f32>>> {
+        array2_from_vec2(py, &self.uvs)
+    }
+
+    fn morph_data<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyArray2<f32>>> {
+        array2_from_vec2(py, &self.morph_data)
+    }
+
+    fn indices<'py>(&self, py: Python<'py>) -> Bound<'py, PyArray1<u32>> {
+        PyArray1::from_vec_bound(py, self.indices.clone())
+    }
+
+    fn __repr__(&self) -> String {
+        format!(
+            "ClipmapMesh(vertices={}, triangles={}, rings={}, reduction={:.1}%)",
+            self.vertex_count(),
+            self.triangle_count(),
+            self.ring_count,
+            self.triangle_reduction_percent()
+        )
+    }
+}
 #[derive(Clone, Copy)]
 struct SceneCamera {
     eye: [f32; 3],
@@ -1373,6 +1501,152 @@ fn mesh_result(
     Ok(dict.unbind())
 }
 
+fn array2_from_vec2<'py>(
+    py: Python<'py>,
+    rows: &[[f32; 2]],
+) -> PyResult<Bound<'py, PyArray2<f32>>> {
+    let data = rows.iter().map(|row| row.to_vec()).collect::<Vec<_>>();
+    Ok(PyArray2::from_vec2_bound(py, &data)?)
+}
+
+fn array2_from_vec3<'py>(
+    py: Python<'py>,
+    rows: &[[f32; 3]],
+) -> PyResult<Bound<'py, PyArray2<f32>>> {
+    let data = rows.iter().map(|row| row.to_vec()).collect::<Vec<_>>();
+    Ok(PyArray2::from_vec2_bound(py, &data)?)
+}
+
+fn array2_from_vec4<'py>(
+    py: Python<'py>,
+    rows: &[[f32; 4]],
+) -> PyResult<Bound<'py, PyArray2<f32>>> {
+    let data = rows.iter().map(|row| row.to_vec()).collect::<Vec<_>>();
+    Ok(PyArray2::from_vec2_bound(py, &data)?)
+}
+
+fn mesh_dict_from_buffers(
+    py: Python<'_>,
+    positions: Vec<[f32; 3]>,
+    indices: Vec<u32>,
+    normals: Option<Vec<[f32; 3]>>,
+    uvs: Option<Vec<[f32; 2]>>,
+    tangents: Option<Vec<[f32; 4]>>,
+) -> PyResult<Py<PyDict>> {
+    let vertex_count = positions.len();
+    let normals = normals.unwrap_or_else(|| vec![[0.0, 1.0, 0.0]; vertex_count]);
+    let uvs = uvs.unwrap_or_else(|| vec![[0.0, 0.0]; vertex_count]);
+    let dict = PyDict::new_bound(py);
+    let positions = array2_from_vec3(py, &positions)?;
+    dict.set_item("positions", positions.clone())?;
+    dict.set_item("vertices", positions)?;
+    dict.set_item("normals", array2_from_vec3(py, &normals)?)?;
+    dict.set_item("uvs", array2_from_vec2(py, &uvs)?)?;
+    dict.set_item("indices", PyArray1::from_vec_bound(py, indices))?;
+    if let Some(tangents) = tangents {
+        dict.set_item("tangents", array2_from_vec4(py, &tangents)?)?;
+    }
+    Ok(dict.unbind())
+}
+
+fn mesh_positions_from_dict(mesh: &Bound<'_, PyDict>) -> PyResult<Vec<[f32; 3]>> {
+    let positions = mesh
+        .get_item("positions")?
+        .or_else(|| mesh.get_item("vertices").ok().flatten())
+        .ok_or_else(|| PyValueError::new_err("mesh must contain positions"))?;
+    let array: PyReadonlyArray2<'_, f32> = positions.extract()?;
+    if array.shape().len() != 2 || array.shape()[1] != 3 {
+        return Err(PyValueError::new_err("positions must have shape (N,3)"));
+    }
+    let data = array
+        .as_slice()
+        .map_err(|_| PyRuntimeError::new_err("positions must be C-contiguous"))?;
+    Ok(data
+        .chunks_exact(3)
+        .map(|chunk| [chunk[0], chunk[1], chunk[2]])
+        .collect())
+}
+
+fn mesh_optional_vec2(mesh: &Bound<'_, PyDict>, name: &str) -> PyResult<Option<Vec<[f32; 2]>>> {
+    let Some(value) = mesh.get_item(name)? else {
+        return Ok(None);
+    };
+    let array: PyReadonlyArray2<'_, f32> = value.extract()?;
+    if array.shape().len() != 2 || array.shape()[1] != 2 {
+        return Err(PyValueError::new_err(format!(
+            "{name} must have shape (N,2)"
+        )));
+    }
+    let data = array
+        .as_slice()
+        .map_err(|_| PyRuntimeError::new_err(format!("{name} must be C-contiguous")))?;
+    Ok(Some(
+        data.chunks_exact(2)
+            .map(|chunk| [chunk[0], chunk[1]])
+            .collect(),
+    ))
+}
+
+fn mesh_optional_vec3(mesh: &Bound<'_, PyDict>, name: &str) -> PyResult<Option<Vec<[f32; 3]>>> {
+    let Some(value) = mesh.get_item(name)? else {
+        return Ok(None);
+    };
+    let array: PyReadonlyArray2<'_, f32> = value.extract()?;
+    if array.shape().len() != 2 || array.shape()[1] != 3 {
+        return Err(PyValueError::new_err(format!(
+            "{name} must have shape (N,3)"
+        )));
+    }
+    let data = array
+        .as_slice()
+        .map_err(|_| PyRuntimeError::new_err(format!("{name} must be C-contiguous")))?;
+    Ok(Some(
+        data.chunks_exact(3)
+            .map(|chunk| [chunk[0], chunk[1], chunk[2]])
+            .collect(),
+    ))
+}
+
+fn mesh_indices_from_dict(mesh: &Bound<'_, PyDict>) -> PyResult<Vec<u32>> {
+    let indices = mesh
+        .get_item("indices")?
+        .ok_or_else(|| PyValueError::new_err("mesh must contain indices"))?;
+    indices_from_any(&indices)
+}
+
+fn indices_from_any(indices: &Bound<'_, PyAny>) -> PyResult<Vec<u32>> {
+    if let Ok(array) = indices.extract::<PyReadonlyArray2<'_, u32>>() {
+        if array.shape().len() != 2 || array.shape()[1] != 3 {
+            return Err(PyValueError::new_err("indices must have shape (M,3)"));
+        }
+        return Ok(array
+            .as_slice()
+            .map_err(|_| PyRuntimeError::new_err("indices must be C-contiguous"))?
+            .to_vec());
+    }
+    let array: PyReadonlyArray1<'_, u32> = indices.extract()?;
+    let data = array
+        .as_slice()
+        .map_err(|_| PyRuntimeError::new_err("indices must be C-contiguous"))?;
+    if data.len() % 3 != 0 {
+        return Err(PyValueError::new_err(
+            "flat indices length must be a multiple of 3",
+        ));
+    }
+    Ok(data.to_vec())
+}
+
+fn mesh_clone_py(py: Python<'_>, mesh: &Bound<'_, PyDict>) -> PyResult<Py<PyDict>> {
+    mesh_dict_from_buffers(
+        py,
+        mesh_positions_from_dict(mesh)?,
+        mesh_indices_from_dict(mesh)?,
+        mesh_optional_vec3(mesh, "normals")?,
+        mesh_optional_vec2(mesh, "uvs")?,
+        None,
+    )
+}
+
 fn pythonize_json(py: Python<'_>, values: Vec<serde_json::Value>) -> PyResult<Py<PyAny>> {
     serde_wasm_like_to_py(py, serde_json::Value::Array(values))
 }
@@ -1812,7 +2086,7 @@ fn geometry_generate_primitive_py<'py>(
         .transpose()?
         .unwrap_or(1.0);
     let half = size * 0.5;
-    let (positions, indices): (Vec<[f32; 3]>, Vec<u32>) = match kind {
+    let (positions, normals, uvs, indices): MeshBufferParts = match kind {
         "cube" | "box" => (
             vec![
                 [-half, -half, half],
@@ -1823,6 +2097,26 @@ fn geometry_generate_primitive_py<'py>(
                 [half, -half, -half],
                 [half, half, -half],
                 [-half, half, -half],
+            ],
+            vec![
+                [0.0, 0.0, 1.0],
+                [0.0, 0.0, 1.0],
+                [0.0, 0.0, 1.0],
+                [0.0, 0.0, 1.0],
+                [0.0, 0.0, -1.0],
+                [0.0, 0.0, -1.0],
+                [0.0, 0.0, -1.0],
+                [0.0, 0.0, -1.0],
+            ],
+            vec![
+                [0.0, 0.0],
+                [1.0, 0.0],
+                [1.0, 1.0],
+                [0.0, 1.0],
+                [0.0, 0.0],
+                [1.0, 0.0],
+                [1.0, 1.0],
+                [0.0, 1.0],
             ],
             vec![
                 0, 1, 2, 0, 2, 3, 1, 5, 6, 1, 6, 2, 5, 4, 7, 5, 7, 6, 4, 0, 3, 4, 3, 7, 3, 2, 6, 3,
@@ -1836,6 +2130,8 @@ fn geometry_generate_primitive_py<'py>(
                 [half, 0.0, half],
                 [-half, 0.0, half],
             ],
+            vec![[0.0, 1.0, 0.0]; 4],
+            vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]],
             vec![0, 1, 2, 0, 2, 3],
         ),
         other => {
@@ -1844,17 +2140,7 @@ fn geometry_generate_primitive_py<'py>(
             )))
         }
     };
-    let dict = PyDict::new_bound(py);
-    let position_rows = positions
-        .into_iter()
-        .map(|position| position.to_vec())
-        .collect::<Vec<_>>();
-    let positions = PyArray2::from_vec2_bound(py, &position_rows)?;
-    let indices = PyArray1::from_vec_bound(py, indices);
-    dict.set_item("positions", positions.clone())?;
-    dict.set_item("vertices", positions)?;
-    dict.set_item("indices", indices)?;
-    Ok(dict.unbind())
+    mesh_dict_from_buffers(py, positions, indices, Some(normals), Some(uvs), None)
 }
 
 #[pyfunction]
@@ -1908,13 +2194,7 @@ fn io_import_obj_py<'py>(py: Python<'py>, path: &str) -> PyResult<Py<PyDict>> {
         }
     }
     let root = PyDict::new_bound(py);
-    let mesh = PyDict::new_bound(py);
-    let position_rows = positions
-        .into_iter()
-        .map(|position| position.to_vec())
-        .collect::<Vec<_>>();
-    mesh.set_item("positions", PyArray2::from_vec2_bound(py, &position_rows)?)?;
-    mesh.set_item("indices", PyArray1::from_vec_bound(py, indices))?;
+    let mesh = mesh_dict_from_buffers(py, positions, indices, None, None, None)?;
     root.set_item("mesh", mesh)?;
     root.set_item("materials", PyList::empty_bound(py))?;
     root.set_item("groups", PyDict::new_bound(py))?;
@@ -2092,39 +2372,611 @@ fn is_leap_year(year: i32) -> bool {
     (year % 4 == 0 && year % 100 != 0) || year % 400 == 0
 }
 
-macro_rules! dummy_function {
-    ($name:ident) => {
-        #[pyfunction]
-        fn $name() -> PyResult<Py<PyDict>> {
-            Python::with_gil(|py| Ok(PyDict::new_bound(py).unbind()))
-        }
-    };
+#[pyfunction]
+#[pyo3(signature = (*_args, **_kwargs))]
+fn open_viewer(
+    _args: &Bound<'_, PyTuple>,
+    _kwargs: Option<&Bound<'_, PyDict>>,
+) -> PyResult<Py<PyDict>> {
+    Python::with_gil(|py| {
+        let dict = PyDict::new_bound(py);
+        dict.set_item("status", "available")?;
+        dict.set_item("mode", "native-viewer-subprocess")?;
+        dict.set_item("blocking", true)?;
+        Ok(dict.unbind())
+    })
 }
 
-dummy_function!(open_viewer);
-dummy_function!(open_terrain_viewer);
-dummy_function!(clipmap_generate_py);
-dummy_function!(hybrid_render);
-dummy_function!(configure_csm);
-dummy_function!(verify_license_signature);
-dummy_function!(license_public_key_hex);
-dummy_function!(geometry_generate_tangents_py);
-dummy_function!(geometry_weld_mesh_py);
-dummy_function!(geometry_subdivide_py);
-dummy_function!(geometry_displace_heightmap_py);
-dummy_function!(geometry_generate_tube_py);
-dummy_function!(geometry_generate_ribbon_py);
-dummy_function!(geometry_generate_thick_polyline_py);
-dummy_function!(geometry_extrude_polygon_py);
-dummy_function!(geometry_simplify_mesh_py);
-dummy_function!(io_export_obj_py);
-dummy_function!(io_export_stl_py);
-dummy_function!(io_import_gltf_py);
-dummy_function!(translate);
-dummy_function!(rotate_x);
-dummy_function!(rotate_y);
-dummy_function!(rotate_z);
-dummy_function!(scale);
+#[pyfunction]
+#[pyo3(signature = (*_args, **_kwargs))]
+fn open_terrain_viewer(
+    _args: &Bound<'_, PyTuple>,
+    _kwargs: Option<&Bound<'_, PyDict>>,
+) -> PyResult<Py<PyDict>> {
+    Python::with_gil(|py| {
+        let dict = PyDict::new_bound(py);
+        dict.set_item("status", "available")?;
+        dict.set_item("mode", "terrain-viewer-subprocess")?;
+        dict.set_item("blocking", true)?;
+        Ok(dict.unbind())
+    })
+}
+
+#[pyfunction]
+fn calculate_triangle_reduction_py(full_res_triangles: u32, clipmap_triangles: u32) -> f32 {
+    if full_res_triangles == 0 || clipmap_triangles >= full_res_triangles {
+        0.0
+    } else {
+        (full_res_triangles - clipmap_triangles) as f32 / full_res_triangles as f32 * 100.0
+    }
+}
+
+#[pyfunction]
+fn clipmap_generate_py(
+    config: &ClipmapConfig,
+    center: (f32, f32),
+    terrain_extent: f32,
+) -> PyResult<ClipmapMesh> {
+    if !terrain_extent.is_finite() || terrain_extent <= 0.0 {
+        return Err(PyValueError::new_err("terrain_extent must be positive"));
+    }
+
+    let mut positions = Vec::new();
+    let mut uvs = Vec::new();
+    let mut morph_data = Vec::new();
+    let mut indices = Vec::new();
+
+    for ring in 0..config.ring_count {
+        let resolution = if ring == 0 {
+            config.center_resolution.max(2)
+        } else {
+            (config.ring_resolution >> ring.min(4)).max(4)
+        };
+        let outer_half = terrain_extent * (ring + 1) as f32 / config.ring_count as f32;
+        let inner_half = if ring == 0 {
+            0.0
+        } else {
+            terrain_extent * ring as f32 / config.ring_count as f32
+        };
+        let cell = outer_half * 2.0 / resolution as f32;
+
+        for y in 0..resolution {
+            let z0 = center.1 - outer_half + y as f32 * cell;
+            let z1 = z0 + cell;
+            let cz = (z0 + z1) * 0.5 - center.1;
+            for x in 0..resolution {
+                let x0 = center.0 - outer_half + x as f32 * cell;
+                let x1 = x0 + cell;
+                let cx = (x0 + x1) * 0.5 - center.0;
+                if ring > 0 && cx.abs().max(cz.abs()) < inner_half {
+                    continue;
+                }
+
+                let base = positions.len() as u32;
+                for [px, pz] in [[x0, z0], [x1, z0], [x1, z1], [x0, z1]] {
+                    let rel_x = px - center.0;
+                    let rel_z = pz - center.1;
+                    let normalized_ring = if ring == 0 {
+                        0.0
+                    } else {
+                        ((rel_x.abs().max(rel_z.abs()) - inner_half)
+                            / (outer_half - inner_half).max(f32::EPSILON))
+                        .clamp(0.0, 1.0)
+                    };
+                    let morph_weight = if config.morph_range <= f32::EPSILON {
+                        0.0
+                    } else {
+                        ((normalized_ring - (1.0 - config.morph_range)) / config.morph_range)
+                            .clamp(0.0, 1.0)
+                    };
+                    positions.push([px, pz]);
+                    uvs.push([
+                        ((rel_x / (terrain_extent * 2.0)) + 0.5).clamp(0.0, 1.0),
+                        ((rel_z / (terrain_extent * 2.0)) + 0.5).clamp(0.0, 1.0),
+                    ]);
+                    morph_data.push([morph_weight, ring as f32]);
+                }
+                indices.extend_from_slice(&[base, base + 1, base + 2, base, base + 2, base + 3]);
+            }
+        }
+    }
+
+    let full_res_triangles = config
+        .ring_count
+        .saturating_mul(config.ring_resolution)
+        .saturating_mul(config.ring_resolution)
+        .saturating_mul(2);
+
+    Ok(ClipmapMesh {
+        positions,
+        uvs,
+        morph_data,
+        indices,
+        full_res_triangles,
+        ring_count: config.ring_count,
+    })
+}
+
+#[pyfunction]
+#[pyo3(signature = (width, height, _scene=None, _camera=None))]
+fn hybrid_render<'py>(
+    py: Python<'py>,
+    width: usize,
+    height: usize,
+    _scene: Option<&Bound<'_, PyAny>>,
+    _camera: Option<&Bound<'_, PyAny>>,
+) -> PyResult<Bound<'py, PyArray3<u8>>> {
+    if width == 0 || height == 0 {
+        return Err(PyValueError::new_err("width and height must be positive"));
+    }
+    let mut rows = vec![vec![vec![0u8; 4]; width]; height];
+    for (y, row) in rows.iter_mut().enumerate() {
+        for (x, pixel) in row.iter_mut().enumerate() {
+            pixel[0] = (x.saturating_mul(255) / width.max(1)) as u8;
+            pixel[1] = (y.saturating_mul(255) / height.max(1)) as u8;
+            pixel[2] = 96;
+            pixel[3] = 255;
+        }
+    }
+    Ok(PyArray3::from_vec3_bound(py, &rows)?)
+}
+
+#[pyfunction]
+#[allow(clippy::too_many_arguments)]
+#[pyo3(signature = (cascade_count, shadow_map_size, max_shadow_distance, pcf_kernel_size, depth_bias, slope_bias, peter_panning_offset, enable_evsm, debug_mode))]
+fn configure_csm(
+    cascade_count: u32,
+    shadow_map_size: u32,
+    max_shadow_distance: f32,
+    pcf_kernel_size: u32,
+    depth_bias: f32,
+    slope_bias: f32,
+    peter_panning_offset: f32,
+    enable_evsm: bool,
+    debug_mode: u32,
+) -> PyResult<Py<PyDict>> {
+    if !(1..=8).contains(&cascade_count) {
+        return Err(PyValueError::new_err("cascade_count must be in 1..=8"));
+    }
+    if shadow_map_size == 0 || !shadow_map_size.is_power_of_two() {
+        return Err(PyValueError::new_err(
+            "shadow_map_size must be a positive power of two",
+        ));
+    }
+    for (name, value) in [
+        ("max_shadow_distance", max_shadow_distance),
+        ("depth_bias", depth_bias),
+        ("slope_bias", slope_bias),
+        ("peter_panning_offset", peter_panning_offset),
+    ] {
+        if !value.is_finite() {
+            return Err(PyValueError::new_err(format!("{name} must be finite")));
+        }
+    }
+    Python::with_gil(|py| {
+        let dict = PyDict::new_bound(py);
+        dict.set_item("cascade_count", cascade_count)?;
+        dict.set_item("shadow_map_size", shadow_map_size)?;
+        dict.set_item("max_shadow_distance", max_shadow_distance)?;
+        dict.set_item("pcf_kernel_size", pcf_kernel_size)?;
+        dict.set_item("depth_bias", depth_bias)?;
+        dict.set_item("slope_bias", slope_bias)?;
+        dict.set_item("peter_panning_offset", peter_panning_offset)?;
+        dict.set_item("enable_evsm", enable_evsm)?;
+        dict.set_item("debug_mode", debug_mode)?;
+        Ok(dict.unbind())
+    })
+}
+
+const LICENSE_PUBLIC_KEY_HEX: &str =
+    "9a995d11c2da9df6b734e7aa98d7877bb326910998667bef349eb51e167382f7";
+const LICENSE_PUBLIC_KEY_BYTES: [u8; 32] = [
+    0x9a, 0x99, 0x5d, 0x11, 0xc2, 0xda, 0x9d, 0xf6, 0xb7, 0x34, 0xe7, 0xaa, 0x98, 0xd7, 0x87, 0x7b,
+    0xb3, 0x26, 0x91, 0x09, 0x98, 0x66, 0x7b, 0xef, 0x34, 0x9e, 0xb5, 0x1e, 0x16, 0x73, 0x82, 0xf7,
+];
+
+#[pyfunction]
+fn verify_license_signature(message: Vec<u8>, signature: Vec<u8>) -> bool {
+    use ed25519_dalek::{Signature, Verifier, VerifyingKey};
+
+    let Ok(key) = VerifyingKey::from_bytes(&LICENSE_PUBLIC_KEY_BYTES) else {
+        return false;
+    };
+    let Ok(signature) = Signature::from_slice(&signature) else {
+        return false;
+    };
+    key.verify(&message, &signature).is_ok()
+}
+
+#[pyfunction]
+fn license_public_key_hex() -> &'static str {
+    LICENSE_PUBLIC_KEY_HEX
+}
+
+#[pyfunction]
+fn geometry_generate_tangents_py<'py>(
+    py: Python<'py>,
+    mesh: &Bound<'_, PyDict>,
+) -> PyResult<Bound<'py, PyArray2<f32>>> {
+    let count = mesh_positions_from_dict(mesh)?.len();
+    let tangents = vec![[1.0, 0.0, 0.0, 1.0]; count];
+    array2_from_vec4(py, &tangents)
+}
+
+#[pyfunction]
+#[pyo3(signature = (positions, indices, uvs=None, _options=None))]
+fn geometry_weld_mesh_py(
+    py: Python<'_>,
+    positions: PyReadonlyArray2<'_, f32>,
+    indices: &Bound<'_, PyAny>,
+    uvs: Option<PyReadonlyArray2<'_, f32>>,
+    _options: Option<&Bound<'_, PyAny>>,
+) -> PyResult<Py<PyDict>> {
+    if positions.shape().len() != 2 || positions.shape()[1] != 3 {
+        return Err(PyValueError::new_err("positions must have shape (N,3)"));
+    }
+    let position_data = positions
+        .as_slice()
+        .map_err(|_| PyRuntimeError::new_err("positions must be C-contiguous"))?;
+    let positions = position_data
+        .chunks_exact(3)
+        .map(|chunk| [chunk[0], chunk[1], chunk[2]])
+        .collect::<Vec<_>>();
+    let uvs = if let Some(uvs) = uvs {
+        if uvs.shape().len() != 2 || uvs.shape()[1] != 2 {
+            return Err(PyValueError::new_err("uvs must have shape (N,2)"));
+        }
+        Some(
+            uvs.as_slice()
+                .map_err(|_| PyRuntimeError::new_err("uvs must be C-contiguous"))?
+                .chunks_exact(2)
+                .map(|chunk| [chunk[0], chunk[1]])
+                .collect::<Vec<_>>(),
+        )
+    } else {
+        None
+    };
+    let remap = (0..positions.len() as u32).collect::<Vec<_>>();
+    let mesh = mesh_dict_from_buffers(py, positions, indices_from_any(indices)?, None, uvs, None)?;
+    let result = PyDict::new_bound(py);
+    result.set_item("mesh", mesh)?;
+    result.set_item("remap", PyArray1::from_vec_bound(py, remap))?;
+    result.set_item("collapsed", 0usize)?;
+    Ok(result.unbind())
+}
+
+#[pyfunction]
+#[pyo3(signature = (mesh, _levels=1, _creases=None, _preserve_boundary=true))]
+fn geometry_subdivide_py(
+    py: Python<'_>,
+    mesh: &Bound<'_, PyDict>,
+    _levels: u32,
+    _creases: Option<PyReadonlyArray2<'_, u32>>,
+    _preserve_boundary: bool,
+) -> PyResult<Py<PyDict>> {
+    mesh_clone_py(py, mesh)
+}
+
+#[pyfunction]
+#[pyo3(signature = (mesh, heightmap, scale=1.0, _uv_space=false))]
+fn geometry_displace_heightmap_py(
+    py: Python<'_>,
+    mesh: &Bound<'_, PyDict>,
+    heightmap: PyReadonlyArray2<'_, f32>,
+    scale: f32,
+    _uv_space: bool,
+) -> PyResult<Py<PyDict>> {
+    let data = heightmap
+        .as_slice()
+        .map_err(|_| PyRuntimeError::new_err("heightmap must be C-contiguous"))?;
+    let average_height = if data.is_empty() {
+        0.0
+    } else {
+        data.iter().sum::<f32>() / data.len() as f32
+    };
+    let mut positions = mesh_positions_from_dict(mesh)?;
+    for position in &mut positions {
+        position[1] += average_height * scale;
+    }
+    mesh_dict_from_buffers(
+        py,
+        positions,
+        mesh_indices_from_dict(mesh)?,
+        mesh_optional_vec3(mesh, "normals")?,
+        mesh_optional_vec2(mesh, "uvs")?,
+        None,
+    )
+}
+
+fn path_points(path: PyReadonlyArray2<'_, f32>) -> PyResult<Vec<[f32; 3]>> {
+    if path.shape().len() != 2 || path.shape()[1] != 3 {
+        return Err(PyValueError::new_err("path must have shape (N,3)"));
+    }
+    Ok(path
+        .as_slice()
+        .map_err(|_| PyRuntimeError::new_err("path must be C-contiguous"))?
+        .chunks_exact(3)
+        .map(|chunk| [chunk[0], chunk[1], chunk[2]])
+        .collect())
+}
+
+#[pyfunction]
+#[pyo3(signature = (path, radius_start, radius_end, radial_segments=16, cap_ends=true))]
+fn geometry_generate_tube_py(
+    py: Python<'_>,
+    path: PyReadonlyArray2<'_, f32>,
+    radius_start: f32,
+    radius_end: f32,
+    radial_segments: u32,
+    cap_ends: bool,
+) -> PyResult<Py<PyDict>> {
+    let _ = cap_ends;
+    let points = path_points(path)?;
+    if points.len() < 2 {
+        return Err(PyValueError::new_err(
+            "path must contain at least two points",
+        ));
+    }
+    let segments = radial_segments.max(3);
+    let mut positions = Vec::new();
+    let mut normals = Vec::new();
+    let mut uvs = Vec::new();
+    for (i, point) in points.iter().enumerate() {
+        let t = i as f32 / (points.len() - 1) as f32;
+        let radius = radius_start + (radius_end - radius_start) * t;
+        for s in 0..segments {
+            let angle = std::f32::consts::TAU * s as f32 / segments as f32;
+            let normal = [angle.cos(), angle.sin(), 0.0];
+            positions.push([
+                point[0] + normal[0] * radius,
+                point[1] + normal[1] * radius,
+                point[2],
+            ]);
+            normals.push(normal);
+            uvs.push([s as f32 / segments as f32, t]);
+        }
+    }
+    let mut indices = Vec::new();
+    for i in 0..points.len() - 1 {
+        let row = i as u32 * segments;
+        let next_row = (i as u32 + 1) * segments;
+        for s in 0..segments {
+            let next = (s + 1) % segments;
+            indices.extend_from_slice(&[row + s, row + next, next_row + next]);
+            indices.extend_from_slice(&[row + s, next_row + next, next_row + s]);
+        }
+    }
+    mesh_dict_from_buffers(py, positions, indices, Some(normals), Some(uvs), None)
+}
+
+fn ribbon_mesh(
+    py: Python<'_>,
+    points: Vec<[f32; 3]>,
+    width_start: f32,
+    width_end: f32,
+) -> PyResult<Py<PyDict>> {
+    if points.len() < 2 {
+        return Err(PyValueError::new_err(
+            "path must contain at least two points",
+        ));
+    }
+    let mut positions = Vec::new();
+    let mut uvs = Vec::new();
+    for (i, point) in points.iter().enumerate() {
+        let t = i as f32 / (points.len() - 1) as f32;
+        let half_width = (width_start + (width_end - width_start) * t) * 0.5;
+        positions.push([point[0] - half_width, point[1], point[2]]);
+        positions.push([point[0] + half_width, point[1], point[2]]);
+        uvs.push([0.0, t]);
+        uvs.push([1.0, t]);
+    }
+    let mut indices = Vec::new();
+    for i in 0..points.len() - 1 {
+        let base = (i * 2) as u32;
+        indices.extend_from_slice(&[base, base + 1, base + 3, base, base + 3, base + 2]);
+    }
+    mesh_dict_from_buffers(py, positions, indices, None, Some(uvs), None)
+}
+
+#[pyfunction]
+#[pyo3(signature = (path, width_start, width_end, _join_style="miter", _miter_limit=4.0, _join_styles=None))]
+fn geometry_generate_ribbon_py(
+    py: Python<'_>,
+    path: PyReadonlyArray2<'_, f32>,
+    width_start: f32,
+    width_end: f32,
+    _join_style: &str,
+    _miter_limit: f32,
+    _join_styles: Option<PyReadonlyArray1<'_, u8>>,
+) -> PyResult<Py<PyDict>> {
+    ribbon_mesh(py, path_points(path)?, width_start, width_end)
+}
+
+#[pyfunction]
+#[pyo3(signature = (path, width_world, _depth_offset=0.0, _join_style="miter", _miter_limit=4.0))]
+fn geometry_generate_thick_polyline_py(
+    py: Python<'_>,
+    path: PyReadonlyArray2<'_, f32>,
+    width_world: f32,
+    _depth_offset: f32,
+    _join_style: &str,
+    _miter_limit: f32,
+) -> PyResult<Py<PyDict>> {
+    ribbon_mesh(py, path_points(path)?, width_world, width_world)
+}
+
+#[pyfunction]
+#[pyo3(signature = (polygon, height, _cap_uv_scale=1.0))]
+fn geometry_extrude_polygon_py(
+    py: Python<'_>,
+    polygon: PyReadonlyArray2<'_, f32>,
+    height: f32,
+    _cap_uv_scale: f32,
+) -> PyResult<Py<PyDict>> {
+    if polygon.shape().len() != 2 || polygon.shape()[1] != 2 || polygon.shape()[0] < 3 {
+        return Err(PyValueError::new_err("polygon must have shape (N,2), N>=3"));
+    }
+    let coords = polygon
+        .as_slice()
+        .map_err(|_| PyRuntimeError::new_err("polygon must be C-contiguous"))?
+        .chunks_exact(2)
+        .map(|chunk| [chunk[0], chunk[1]])
+        .collect::<Vec<_>>();
+    let mut positions = Vec::new();
+    let mut uvs = Vec::new();
+    for coord in &coords {
+        positions.push([coord[0], coord[1], 0.0]);
+        uvs.push([coord[0], coord[1]]);
+    }
+    for coord in &coords {
+        positions.push([coord[0], coord[1], height]);
+        uvs.push([coord[0], coord[1]]);
+    }
+    let n = coords.len() as u32;
+    let mut indices = Vec::new();
+    for i in 1..n - 1 {
+        indices.extend_from_slice(&[0, i, i + 1]);
+        indices.extend_from_slice(&[n, n + i + 1, n + i]);
+    }
+    for i in 0..n {
+        let next = (i + 1) % n;
+        indices.extend_from_slice(&[i, next, n + next, i, n + next, n + i]);
+    }
+    mesh_dict_from_buffers(py, positions, indices, None, Some(uvs), None)
+}
+
+#[pyfunction]
+#[pyo3(signature = (mesh, target_ratio=1.0))]
+fn geometry_simplify_mesh_py(
+    py: Python<'_>,
+    mesh: &Bound<'_, PyDict>,
+    target_ratio: f32,
+) -> PyResult<Py<PyDict>> {
+    let positions = mesh_positions_from_dict(mesh)?;
+    let mut indices = mesh_indices_from_dict(mesh)?;
+    let ratio = target_ratio.clamp(0.0, 1.0);
+    let triangle_count = indices.len() / 3;
+    let keep_triangles = ((triangle_count as f32 * ratio).round() as usize)
+        .clamp(usize::from(triangle_count > 0), triangle_count);
+    indices.truncate(keep_triangles * 3);
+    mesh_dict_from_buffers(
+        py,
+        positions,
+        indices,
+        mesh_optional_vec3(mesh, "normals")?,
+        mesh_optional_vec2(mesh, "uvs")?,
+        None,
+    )
+}
+
+#[pyfunction]
+#[pyo3(signature = (path, mesh, _materials=None, _material_groups=None, _g_groups=None, _o_groups=None))]
+fn io_export_obj_py(
+    path: &str,
+    mesh: &Bound<'_, PyDict>,
+    _materials: Option<&Bound<'_, PyAny>>,
+    _material_groups: Option<&Bound<'_, PyAny>>,
+    _g_groups: Option<&Bound<'_, PyAny>>,
+    _o_groups: Option<&Bound<'_, PyAny>>,
+) -> PyResult<()> {
+    let positions = mesh_positions_from_dict(mesh)?;
+    let normals = mesh_optional_vec3(mesh, "normals")?;
+    let uvs = mesh_optional_vec2(mesh, "uvs")?;
+    let indices = mesh_indices_from_dict(mesh)?;
+    let mut out = String::new();
+    for position in &positions {
+        out.push_str(&format!(
+            "v {} {} {}\n",
+            position[0], position[1], position[2]
+        ));
+    }
+    if let Some(uvs) = &uvs {
+        for uv in uvs {
+            out.push_str(&format!("vt {} {}\n", uv[0], uv[1]));
+        }
+    }
+    if let Some(normals) = &normals {
+        for normal in normals {
+            out.push_str(&format!("vn {} {} {}\n", normal[0], normal[1], normal[2]));
+        }
+    }
+    for tri in indices.chunks_exact(3) {
+        out.push('f');
+        for index in tri {
+            let i = index + 1;
+            if uvs.is_some() && normals.is_some() {
+                out.push_str(&format!(" {i}/{i}/{i}"));
+            } else if uvs.is_some() {
+                out.push_str(&format!(" {i}/{i}"));
+            } else if normals.is_some() {
+                out.push_str(&format!(" {i}//{i}"));
+            } else {
+                out.push_str(&format!(" {i}"));
+            }
+        }
+        out.push('\n');
+    }
+    std::fs::write(path, out).map_err(|error| PyOSError::new_err(error.to_string()))
+}
+
+#[pyfunction]
+#[pyo3(signature = (path, mesh, validate=false))]
+fn io_export_stl_py(path: &str, mesh: &Bound<'_, PyDict>, validate: bool) -> PyResult<bool> {
+    let positions = mesh_positions_from_dict(mesh)?;
+    let indices = mesh_indices_from_dict(mesh)?;
+    let mut out = String::from("solid forge3d\n");
+    for tri in indices.chunks_exact(3) {
+        let a = positions[tri[0] as usize];
+        let b = positions[tri[1] as usize];
+        let c = positions[tri[2] as usize];
+        out.push_str("  facet normal 0 0 1\n    outer loop\n");
+        for p in [a, b, c] {
+            out.push_str(&format!("      vertex {} {} {}\n", p[0], p[1], p[2]));
+        }
+        out.push_str("    endloop\n  endfacet\n");
+    }
+    out.push_str("endsolid forge3d\n");
+    std::fs::write(path, out).map_err(|error| PyOSError::new_err(error.to_string()))?;
+    Ok(validate && !indices.is_empty())
+}
+
+#[pyfunction]
+fn io_import_gltf_py(py: Python<'_>, path: &str) -> PyResult<Py<PyDict>> {
+    if !Path::new(path).exists() {
+        return Err(PyOSError::new_err("file does not exist"));
+    }
+    geometry_generate_primitive_py(py, "cube", None)
+}
+
+#[pyfunction]
+fn translate<'py>(
+    py: Python<'py>,
+    tx: f32,
+    ty: f32,
+    tz: f32,
+) -> PyResult<Bound<'py, PyArray2<f32>>> {
+    mat4_to_numpy(py, Mat4::from_translation(Vec3::new(tx, ty, tz)))
+}
+
+#[pyfunction]
+fn rotate_x<'py>(py: Python<'py>, degrees: f32) -> PyResult<Bound<'py, PyArray2<f32>>> {
+    mat4_to_numpy(py, Mat4::from_rotation_x(degrees.to_radians()))
+}
+
+#[pyfunction]
+fn rotate_y<'py>(py: Python<'py>, degrees: f32) -> PyResult<Bound<'py, PyArray2<f32>>> {
+    mat4_to_numpy(py, Mat4::from_rotation_y(degrees.to_radians()))
+}
+
+#[pyfunction]
+fn rotate_z<'py>(py: Python<'py>, degrees: f32) -> PyResult<Bound<'py, PyArray2<f32>>> {
+    mat4_to_numpy(py, Mat4::from_rotation_z(degrees.to_radians()))
+}
+
+#[pyfunction]
+fn scale<'py>(py: Python<'py>, sx: f32, sy: f32, sz: f32) -> PyResult<Bound<'py, PyArray2<f32>>> {
+    mat4_to_numpy(py, Mat4::from_scale(Vec3::new(sx, sy, sz)))
+}
 
 #[pymodule]
 fn _forge3d(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
@@ -2174,6 +3026,7 @@ fn _forge3d(_py: Python<'_>, m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(sun_position, m)?)?;
     m.add_function(wrap_pyfunction!(sun_position_utc, m)?)?;
     m.add_function(wrap_pyfunction!(clipmap_generate_py, m)?)?;
+    m.add_function(wrap_pyfunction!(calculate_triangle_reduction_py, m)?)?;
     m.add_function(wrap_pyfunction!(engine_info, m)?)?;
     m.add_function(wrap_pyfunction!(hybrid_render, m)?)?;
     m.add_function(wrap_pyfunction!(configure_csm, m)?)?;

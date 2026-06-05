@@ -480,6 +480,11 @@ __all__ = [
     "SunPosition",
     "sun_position",
     "sun_position_utc",
+    # P2.1/M5: Clipmap terrain
+    "ClipmapConfig",
+    "ClipmapMesh",
+    "clipmap_generate_py",
+    "calculate_triangle_reduction_py",
     # Configuration
     "RendererConfig",
     "TerrainRenderParamsConfig",

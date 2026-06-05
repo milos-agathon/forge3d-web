@@ -56,8 +56,10 @@ for (const expected of [
 const checklist = readText(join(packageRoot, "docs", "release-checklist.md"));
 for (const expected of [
   "npm ci",
+  "$env:PATH = \"$pwd\\crates\\forge3d-web\\node_modules\\.bin;$env:PATH\"",
   "cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features",
   "cargo check -p forge3d-web --target wasm32-unknown-unknown",
+  ".\\crates\\forge3d-web\\node_modules\\.bin\\wasm-pack.cmd build crates/forge3d-web --target web",
   "npm run build",
   "npm run test:package",
   "npm pack --dry-run",
@@ -65,6 +67,11 @@ for (const expected of [
 ]) {
   assertIncludes(checklist, expected, `release checklist missing: ${expected}`);
 }
+
+assert(
+  !checklist.includes("\nwasm-pack build crates/forge3d-web --target web\n"),
+  "release checklist must not rely on bare wasm-pack being available on PATH"
+);
 
 const viteReadme = readText(join(packageRoot, "examples", "vite", "README.md"));
 for (const expected of [
