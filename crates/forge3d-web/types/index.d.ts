@@ -37,6 +37,21 @@ export interface TerrainHeightmapInput {
   heights: Float32Array;
 }
 
+export interface CameraInput {
+  position: [number, number, number];
+  target: [number, number, number];
+  up: [number, number, number];
+  fovYDegrees: number;
+  near: number;
+  far: number;
+}
+
+export interface ResizeInput {
+  width: number;
+  height: number;
+  devicePixelRatio: number;
+}
+
 export declare class Forge3DRuntime {
   static create(
     canvas: HTMLCanvasElement,
@@ -48,6 +63,8 @@ export declare class Forge3DRuntime {
   readonly diagnosticsEnabled: boolean;
   clearColor(): [number, number, number, number];
   setTerrain(terrain: TerrainHeightmapInput): void;
+  setCamera(camera: CameraInput): void;
+  resize(size: ResizeInput): void;
   render(): void;
   dispose(): void;
 }

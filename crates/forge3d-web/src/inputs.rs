@@ -144,6 +144,95 @@ impl TerrainHeightmapOptions {
     }
 }
 
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct CameraOptions {
+    pub position: [f32; 3],
+    pub target: [f32; 3],
+    pub up: [f32; 3],
+    pub fov_y_degrees: f32,
+    pub near: f32,
+    pub far: f32,
+}
+
+impl CameraOptions {
+    pub fn from_js_value(value: JsValue) -> Result<Self, WebError> {
+        if value.is_undefined() || value.is_null() {
+            return Err(WebError::new(
+                Forge3DErrorCode::InvalidInput,
+                "camera input must be an object",
+            ));
+        }
+
+        serde_wasm_bindgen::from_value(value).map_err(|error| {
+            WebError::new(
+                Forge3DErrorCode::InvalidInput,
+                format!("Invalid camera input: {error}"),
+            )
+        })
+    }
+
+    pub fn validate(&self) -> Result<forge3d_core::camera::CameraInput, WebError> {
+        forge3d_core::camera::CameraInput::new(
+            self.position,
+            self.target,
+            self.up,
+            self.fov_y_degrees,
+            self.near,
+            self.far,
+        )
+        .map_err(crate::error::map_core_error)
+    }
+}
+
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct ResizeOptions {
+    pub width: u32,
+    pub height: u32,
+    pub device_pixel_ratio: f64,
+}
+
+impl ResizeOptions {
+    pub fn from_js_value(value: JsValue) -> Result<Self, WebError> {
+        if value.is_undefined() || value.is_null() {
+            return Err(WebError::new(
+                Forge3DErrorCode::InvalidInput,
+                "resize input must be an object",
+            ));
+        }
+
+        let options: Self = serde_wasm_bindgen::from_value(value).map_err(|error| {
+            WebError::new(
+                Forge3DErrorCode::InvalidInput,
+                format!("Invalid resize input: {error}"),
+            )
+        })?;
+        options.validate()?;
+        Ok(options)
+    }
+
+    pub fn pixel_size(&self) -> Result<(u32, u32), WebError> {
+        self.validate()?;
+        Ok((
+            scaled_dimension("width", self.width, self.device_pixel_ratio)?,
+            scaled_dimension("height", self.height, self.device_pixel_ratio)?,
+        ))
+    }
+
+    fn validate(&self) -> Result<(), WebError> {
+        validate_positive_dimension("width", self.width)?;
+        validate_positive_dimension("height", self.height)?;
+        if !self.device_pixel_ratio.is_finite() || self.device_pixel_ratio <= 0.0 {
+            return Err(WebError::new(
+                Forge3DErrorCode::InvalidInput,
+                "devicePixelRatio must be finite and greater than zero",
+            ));
+        }
+        Ok(())
+    }
+}
+
 impl Default for RuntimeOptions {
     fn default() -> Self {
         Self {
@@ -262,7 +351,10 @@ fn read_u32_property(value: &JsValue, name: &str) -> Result<u32, WebError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{AlphaModeOption, PowerPreferenceOption, RuntimeOptions, TerrainHeightmapOptions};
+    use super::{
+        AlphaModeOption, CameraOptions, PowerPreferenceOption, ResizeOptions, RuntimeOptions,
+        TerrainHeightmapOptions,
+    };
 
     #[test]
     fn runtime_options_default_to_browser_mvp_values() {
@@ -328,5 +420,47 @@ mod tests {
 
         assert_eq!(error.code().as_str(), "INVALID_INPUT");
         assert!(error.message().contains("finite"));
+    }
+
+    #[test]
+    fn camera_options_reject_non_finite_values() {
+        let options = CameraOptions {
+            position: [0.0, f32::NAN, 2.0],
+            target: [0.0, 0.0, 0.0],
+            up: [0.0, 1.0, 0.0],
+            fov_y_degrees: 45.0,
+            near: 0.01,
+            far: 100.0,
+        };
+
+        let error = options.validate().unwrap_err();
+
+        assert_eq!(error.code().as_str(), "INVALID_INPUT");
+        assert!(error.message().contains("position"));
+    }
+
+    #[test]
+    fn resize_options_compute_dpr_scaled_pixel_size() {
+        let options = ResizeOptions {
+            width: 96,
+            height: 72,
+            device_pixel_ratio: 2.0,
+        };
+
+        assert_eq!(options.pixel_size().unwrap(), (192, 144));
+    }
+
+    #[test]
+    fn resize_options_reject_non_finite_dpr() {
+        let options = ResizeOptions {
+            width: 96,
+            height: 72,
+            device_pixel_ratio: f64::INFINITY,
+        };
+
+        assert_eq!(
+            options.pixel_size().unwrap_err().code().as_str(),
+            "INVALID_INPUT"
+        );
     }
 }

@@ -153,6 +153,59 @@ mod tests {
     }
 
     #[test]
+    fn phase9_camera_and_resize_artifacts_exist() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+
+        for required in [
+            "examples/test-camera-resize.html",
+            "tests/playwright/camera_resize.spec.ts",
+        ] {
+            assert!(
+                root.join(required).is_file(),
+                "missing Phase 9 camera/resize artifact {required}"
+            );
+        }
+    }
+
+    #[test]
+    fn phase9_runtime_and_typescript_surface_expose_camera_and_resize() {
+        let root = Path::new(env!("CARGO_MANIFEST_DIR"));
+        let runtime_rs = fs::read_to_string(root.join("src/runtime.rs"))
+            .expect("failed to read forge3d-web runtime.rs");
+        let facade = fs::read_to_string(root.join("src-ts/index.ts"))
+            .expect("failed to read TypeScript facade");
+        let declarations = fs::read_to_string(root.join("types/index.d.ts"))
+            .expect("failed to read TypeScript declarations");
+
+        for expected in [
+            "pub fn set_camera(&mut self, camera: JsValue)",
+            "pub fn resize(&mut self, size: JsValue)",
+            ".resize(context, width, height)",
+            "CameraOptions::from_js_value",
+            "ResizeOptions::from_js_value",
+        ] {
+            assert!(
+                runtime_rs.contains(expected),
+                "runtime.rs must contain Phase 9 camera/resize code: {expected}"
+            );
+        }
+
+        for text in [facade, declarations] {
+            for expected in [
+                "CameraInput",
+                "ResizeInput",
+                "setCamera(camera: CameraInput): void",
+                "resize(size: ResizeInput): void",
+            ] {
+                assert!(
+                    text.contains(expected),
+                    "TypeScript public API must expose {expected}"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn phase6_browser_crate_has_no_browser_hostile_public_surface_tokens() {
         let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("src");
         let mut offenders = Vec::new();

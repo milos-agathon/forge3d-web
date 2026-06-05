@@ -30,6 +30,21 @@ export interface TerrainHeightmapInput {
   heights: Float32Array;
 }
 
+export interface CameraInput {
+  position: [number, number, number];
+  target: [number, number, number];
+  up: [number, number, number];
+  fovYDegrees: number;
+  near: number;
+  far: number;
+}
+
+export interface ResizeInput {
+  width: number;
+  height: number;
+  devicePixelRatio: number;
+}
+
 interface WasmRuntime {
   readonly disposed: boolean;
   readonly width: number;
@@ -37,6 +52,8 @@ interface WasmRuntime {
   readonly diagnosticsEnabled: boolean;
   clearColor(): number[];
   setTerrain(terrain: TerrainHeightmapInput): void;
+  setCamera(camera: CameraInput): void;
+  resize(size: ResizeInput): void;
   render(): void;
   dispose(): void;
 }
@@ -141,6 +158,22 @@ export class Forge3DRuntime {
     }
   }
 
+  setCamera(camera: CameraInput): void {
+    try {
+      this.#inner.setCamera(normalizeCameraInput(camera));
+    } catch (error) {
+      throw Forge3DError.from(error);
+    }
+  }
+
+  resize(size: ResizeInput): void {
+    try {
+      this.#inner.resize(normalizeResizeInput(size));
+    } catch (error) {
+      throw Forge3DError.from(error);
+    }
+  }
+
   dispose(): void {
     this.#inner.dispose();
   }
@@ -174,6 +207,25 @@ function normalizeTerrainHeightmapInput(
     width: terrain.width,
     height: terrain.height,
     heights: terrain.heights
+  };
+}
+
+function normalizeCameraInput(camera: CameraInput): CameraInput {
+  return {
+    position: [camera.position[0], camera.position[1], camera.position[2]],
+    target: [camera.target[0], camera.target[1], camera.target[2]],
+    up: [camera.up[0], camera.up[1], camera.up[2]],
+    fovYDegrees: camera.fovYDegrees,
+    near: camera.near,
+    far: camera.far
+  };
+}
+
+function normalizeResizeInput(size: ResizeInput): ResizeInput {
+  return {
+    width: size.width,
+    height: size.height,
+    devicePixelRatio: size.devicePixelRatio
   };
 }
 

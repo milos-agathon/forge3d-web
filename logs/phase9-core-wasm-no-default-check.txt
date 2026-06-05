@@ -1,0 +1,6 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Checking forge3d-core v1.26.0 (C:\Users\milos\forge3d-web\crates\forge3d-core)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.59s

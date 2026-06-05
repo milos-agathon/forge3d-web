@@ -1,0 +1,15 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on build directory
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.73s
+     Running unittests src\lib.rs (target\debug\deps\forge3d_core-f2d302fa2550f572.exe)
+
+running 4 tests
+test camera::tests::camera_default_produces_finite_view_projection_matrix ... ok
+test camera::tests::camera_rejects_invalid_clip_planes ... ok
+test camera::tests::camera_rejects_non_finite_position ... ok
+test tests::phase9_core_camera_contract_is_exposed ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 12 filtered out; finished in 0.00s
+

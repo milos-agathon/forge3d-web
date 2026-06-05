@@ -40,7 +40,7 @@ These invariants apply to every phase after Phase 1:
 | 6 | Browser crate creation | Done | `logs/phase6-web-wasm-check.txt`; `logs/phase6-web-typecheck.txt`; `logs/phase6-web-tests.txt`; `logs/phase6-web-banned-deps.txt`; `logs/phase6-web-npm-audit.txt` |
 | 7 | Minimal canvas clear | Done | `logs/phase7-*`; Chrome-channel Playwright pixel test passes |
 | 8 | Terrain heightmap upload and render | Done | `logs/phase8-*`; synthetic hill Chrome Playwright test passes |
-| 9 | Camera and resize API | Pending | Not started |
+| 9 | Camera and resize API | Done | `logs/phase9-*`; Chrome Playwright resize/camera pixel test passes |
 | 10 | Screenshot/readback | Pending | Not started |
 | 11 | JS/TS API stabilization | Pending | Not started |
 | 12 | Browser IO abstraction | Pending | Not started |
@@ -747,7 +747,7 @@ cargo tree -p forge3d-web --target wasm32-unknown-unknown --edges normal | rg "p
 
 ## Phase 9: Camera And Resize API
 
-**Status:** Pending
+**Status:** Done
 
 **Goal:** Expose stable camera controls and explicit DPR-aware resize behavior for browser runtime.
 
@@ -788,6 +788,49 @@ npm run test:browser
 - CSS size, canvas backing size, and surface config size can diverge.
 
 **Rollback boundary:** Keep the public API explicit; do not infer DPR from global browser state in a way tests cannot control.
+
+**Completion evidence (2026-06-05):**
+
+- Added `crates/forge3d-core/src/camera/mod.rs` with wasm-safe `CameraInput` validation for finite position, target, up vector, field of view, near plane, far plane, non-zero up vector, distinct position/target, and view-projection matrix generation.
+- Exposed `forge3d_core::camera` behind the existing `webgpu` feature gate and added Phase 9 core contract tests.
+- Added `CameraOptions` and `ResizeOptions` parsing in `crates/forge3d-web/src/inputs.rs`, mapping invalid browser inputs to `Forge3DError("INVALID_INPUT")`.
+- Added `Forge3DRuntime.setCamera()` and `Forge3DRuntime.resize()` in Rust and TypeScript. Resize uses explicit CSS width, CSS height, and `devicePixelRatio`, sets the canvas backing dimensions, reconfigures `SurfaceState`, updates runtime dimensions, and refreshes terrain camera uniforms.
+- Updated the browser terrain pipeline from fixed clip-space vertices to world-space terrain transformed by a camera uniform, so camera changes alter rendered terrain pixels.
+- Added `CameraInput` and `ResizeInput` to the TypeScript facade and hand-authored declarations.
+- Added `crates/forge3d-web/examples/test-camera-resize.html` and `crates/forge3d-web/tests/playwright/camera_resize.spec.ts`; the browser test verifies DPR backing dimensions, invalid camera error mapping, and deterministic camera-driven pixel changes.
+
+**Verification evidence (2026-06-05):**
+
+```powershell
+cargo fmt --all -- --check
+# Result: exits 0. Full output: logs/phase9-cargo-fmt-check.txt
+
+cargo test -p forge3d-core --features webgpu camera
+# Result: exits 0; 4 tests passed. Full output: logs/phase9-core-camera-tests.txt
+
+cargo test -p forge3d-web
+# Result: exits 0; 21 unit tests passed and 0 doc tests. Full output: logs/phase9-web-tests.txt
+
+cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features
+# Result: exits 0. Full output: logs/phase9-core-wasm-no-default-check.txt
+
+cargo check -p forge3d-web --target wasm32-unknown-unknown
+# Result: exits 0. Full output: logs/phase9-web-wasm-check.txt
+
+.\crates\forge3d-web\node_modules\.bin\wasm-pack.cmd build crates\forge3d-web --target web
+# Result: exits 0. Full output: logs/phase9-wasm-pack-build.txt
+
+cd crates\forge3d-web
+npm run typecheck
+# Result: exits 0. Full output: logs/phase9-web-typecheck.txt
+
+npm run test:browser
+# Result: exits 0; 3 Chrome Playwright tests passed. Full output: logs/phase9-browser-tests.txt
+
+cd ..\..
+cargo tree -p forge3d-web --target wasm32-unknown-unknown --edges normal | rg "pyo3|numpy|winit|pollster"
+# Result: no matches. Full tree: logs/phase9-web-cargo-tree.txt; no-match log: logs/phase9-web-banned-deps.txt
+```
 
 ---
 
