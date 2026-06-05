@@ -24,7 +24,8 @@
     "build:ts": "tsc -p tsconfig.json",
     "build": "npm run build:wasm && npm run build:ts",
     "dev": "vite --host 127.0.0.1 --port 57883 --strictPort",
-    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.api.json",
+    "test:api": "npm run typecheck && node tests/api/public-api-snapshot.mjs",
     "test:browser": "playwright test"
   },
   "devDependencies": {
