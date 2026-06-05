@@ -39,7 +39,7 @@ These invariants apply to every phase after Phase 1:
 | 5 | GPU context ownership redesign | Done | `logs/phase5-*`; public `forge3d_core::gpu` async runtime; Python blocking helper |
 | 6 | Browser crate creation | Done | `logs/phase6-web-wasm-check.txt`; `logs/phase6-web-typecheck.txt`; `logs/phase6-web-tests.txt`; `logs/phase6-web-banned-deps.txt`; `logs/phase6-web-npm-audit.txt` |
 | 7 | Minimal canvas clear | Done | `logs/phase7-*`; Chrome-channel Playwright pixel test passes |
-| 8 | Terrain heightmap upload and render | Pending | Not started |
+| 8 | Terrain heightmap upload and render | Done | `logs/phase8-*`; synthetic hill Chrome Playwright test passes |
 | 9 | Camera and resize API | Pending | Not started |
 | 10 | Screenshot/readback | Pending | Not started |
 | 11 | JS/TS API stabilization | Pending | Not started |
@@ -656,7 +656,7 @@ cargo tree -p forge3d-web --target wasm32-unknown-unknown --edges normal | rg "p
 
 ## Phase 8: Terrain Heightmap Upload And Render
 
-**Status:** Pending
+**Status:** Done
 
 **Goal:** Upload a typed-array terrain heightmap from JavaScript and render visible terrain variation in browser.
 
@@ -699,6 +699,49 @@ npm run test:browser
 - Browser adapters may not support the same float texture filtering as native adapters.
 
 **Rollback boundary:** Keep terrain upload API shape; swap internal texture strategy if browser support requires it.
+
+**Completion evidence (2026-06-05):**
+
+- Added `crates/forge3d-core/src/terrain.rs` with the narrow wasm-safe `TerrainHeightmapInput` validation contract and kept the staged legacy terrain directory unexposed from the active core root.
+- Added JS terrain parsing in `crates/forge3d-web/src/inputs.rs` for `{ width, height, heights: Float32Array }`, with wrong lengths, zero dimensions, and non-finite values mapped to `Forge3DError("INVALID_INPUT")`.
+- Added `Forge3DRuntime.setTerrain()` in Rust and TypeScript, with hand-authored `TerrainHeightmapInput` declarations.
+- Added WebGPU terrain resources in `crates/forge3d-web/src/runtime.rs`: R32Float height texture upload, nearest non-filtering sampler fallback, terrain mesh vertex/index buffers, WGSL shader, render pipeline, and `draw_indexed` path.
+- Added `crates/forge3d-web/examples/test-terrain-hill.html` and `crates/forge3d-web/tests/playwright/terrain.spec.ts`; the browser test verifies invalid input error mapping and measurable color variation from a synthetic hill.
+
+**Verification evidence (2026-06-05):**
+
+```powershell
+cargo test -p forge3d-core --features webgpu terrain_heightmap
+# Result: exits 0; 4 tests passed. Full output: logs/phase8-core-terrain-tests.txt
+
+cargo test -p forge3d-web
+# Result: exits 0; 16 unit tests passed and 0 doc tests. Full output: logs/phase8-web-tests.txt
+
+cargo check -p forge3d-web --target wasm32-unknown-unknown
+# Result: exits 0. Full output: logs/phase8-web-wasm-check.txt
+
+.\crates\forge3d-web\node_modules\.bin\wasm-pack.cmd build crates\forge3d-web --target web
+# Result: exits 0. Full output: logs/phase8-wasm-pack-build.txt
+
+cd crates\forge3d-web
+npm run typecheck
+# Result: exits 0. Full output: logs/phase8-web-typecheck.txt
+
+npm run test:browser
+# Result: exits 0; 2 Chrome Playwright tests passed. Full output: logs/phase8-browser-tests.txt
+
+cd ..\..
+cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features
+# Result: exits 0. Full output: logs/phase8-core-wasm-no-default-check.txt
+
+cargo tree -p forge3d-web --target wasm32-unknown-unknown --edges normal | rg "pyo3|numpy|winit|pollster"
+# Result: no matches. Full tree: logs/phase8-web-cargo-tree.txt; empty match log: logs/phase8-web-banned-deps.txt
+```
+
+**Explicit non-claims:**
+
+- Phase 8 does not add camera controls, DPR resize API, screenshots/readback, browser IO sources, packaging dry-run, CI, or Python/native compatibility restoration.
+- Terrain rendering is the browser MVP path only; the staged native/offline terrain renderer remains outside the active core root.
 
 ---
 

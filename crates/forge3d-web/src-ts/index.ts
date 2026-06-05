@@ -24,12 +24,19 @@ export interface Forge3DRuntimeOptions {
   diagnostics?: boolean;
 }
 
+export interface TerrainHeightmapInput {
+  width: number;
+  height: number;
+  heights: Float32Array;
+}
+
 interface WasmRuntime {
   readonly disposed: boolean;
   readonly width: number;
   readonly height: number;
   readonly diagnosticsEnabled: boolean;
   clearColor(): number[];
+  setTerrain(terrain: TerrainHeightmapInput): void;
   render(): void;
   dispose(): void;
 }
@@ -126,6 +133,14 @@ export class Forge3DRuntime {
     }
   }
 
+  setTerrain(terrain: TerrainHeightmapInput): void {
+    try {
+      this.#inner.setTerrain(normalizeTerrainHeightmapInput(terrain));
+    } catch (error) {
+      throw Forge3DError.from(error);
+    }
+  }
+
   dispose(): void {
     this.#inner.dispose();
   }
@@ -150,6 +165,16 @@ function normalizeRuntimeOptions(
   options: Forge3DRuntimeOptions
 ): Forge3DRuntimeOptions {
   return { ...options };
+}
+
+function normalizeTerrainHeightmapInput(
+  terrain: TerrainHeightmapInput
+): TerrainHeightmapInput {
+  return {
+    width: terrain.width,
+    height: terrain.height,
+    heights: terrain.heights
+  };
 }
 
 function isErrorLike(value: unknown): value is {

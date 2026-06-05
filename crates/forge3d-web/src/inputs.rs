@@ -1,5 +1,6 @@
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
 
 use crate::error::{Forge3DErrorCode, WebError};
 
@@ -95,6 +96,54 @@ impl RuntimeOptions {
     }
 }
 
+#[derive(Debug, Clone)]
+pub struct TerrainHeightmapOptions {
+    pub width: u32,
+    pub height: u32,
+    pub heights: Vec<f32>,
+}
+
+impl TerrainHeightmapOptions {
+    pub fn from_js_value(value: JsValue) -> Result<Self, WebError> {
+        if value.is_undefined() || value.is_null() {
+            return Err(WebError::new(
+                Forge3DErrorCode::InvalidInput,
+                "terrain input must be an object",
+            ));
+        }
+
+        let width = read_u32_property(&value, "width")?;
+        let height = read_u32_property(&value, "height")?;
+        let heights_value = js_sys::Reflect::get(&value, &JsValue::from_str("heights"))
+            .map_err(|_| WebError::new(Forge3DErrorCode::InvalidInput, "missing heights"))?;
+        let heights_array = heights_value
+            .dyn_into::<js_sys::Float32Array>()
+            .map_err(|_| {
+                WebError::new(
+                    Forge3DErrorCode::InvalidInput,
+                    "heights must be a Float32Array",
+                )
+            })?;
+        let mut heights = vec![0.0; heights_array.length() as usize];
+        heights_array.copy_to(&mut heights);
+
+        Ok(Self {
+            width,
+            height,
+            heights,
+        })
+    }
+
+    pub fn validate(&self) -> Result<forge3d_core::terrain::TerrainHeightmapInput, WebError> {
+        forge3d_core::terrain::TerrainHeightmapInput::new(
+            self.width,
+            self.height,
+            self.heights.clone(),
+        )
+        .map_err(crate::error::map_core_error)
+    }
+}
+
 impl Default for RuntimeOptions {
     fn default() -> Self {
         Self {
@@ -187,9 +236,33 @@ fn scaled_dimension(field: &str, value: u32, ratio: f64) -> Result<u32, WebError
     Ok(scaled as u32)
 }
 
+fn read_u32_property(value: &JsValue, name: &str) -> Result<u32, WebError> {
+    let property = js_sys::Reflect::get(value, &JsValue::from_str(name)).map_err(|_| {
+        WebError::new(
+            Forge3DErrorCode::InvalidInput,
+            format!("missing terrain {name}"),
+        )
+    })?;
+    let number = property.as_f64().ok_or_else(|| {
+        WebError::new(
+            Forge3DErrorCode::InvalidInput,
+            format!("terrain {name} must be a number"),
+        )
+    })?;
+
+    if !number.is_finite() || number.fract() != 0.0 || number < 0.0 || number > u32::MAX as f64 {
+        return Err(WebError::new(
+            Forge3DErrorCode::InvalidInput,
+            format!("terrain {name} must be a non-negative integer"),
+        ));
+    }
+
+    Ok(number as u32)
+}
+
 #[cfg(test)]
 mod tests {
-    use super::{AlphaModeOption, PowerPreferenceOption, RuntimeOptions};
+    use super::{AlphaModeOption, PowerPreferenceOption, RuntimeOptions, TerrainHeightmapOptions};
 
     #[test]
     fn runtime_options_default_to_browser_mvp_values() {
@@ -227,5 +300,33 @@ mod tests {
             options.pixel_size(1, 1).unwrap_err().code().as_str(),
             "INVALID_INPUT"
         );
+    }
+
+    #[test]
+    fn terrain_heightmap_options_reject_wrong_lengths() {
+        let options = TerrainHeightmapOptions {
+            width: 3,
+            height: 2,
+            heights: vec![0.0, 0.1, 0.2, 0.3, 0.4],
+        };
+
+        let error = options.validate().unwrap_err();
+
+        assert_eq!(error.code().as_str(), "INVALID_INPUT");
+        assert!(error.message().contains("width * height"));
+    }
+
+    #[test]
+    fn terrain_heightmap_options_reject_non_finite_values() {
+        let options = TerrainHeightmapOptions {
+            width: 2,
+            height: 2,
+            heights: vec![0.0, f32::NAN, 0.5, 1.0],
+        };
+
+        let error = options.validate().unwrap_err();
+
+        assert_eq!(error.code().as_str(), "INVALID_INPUT");
+        assert!(error.message().contains("finite"));
     }
 }

@@ -1,0 +1,110 @@
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+forge3d-web v1.26.0 (C:\Users\milos\forge3d-web\crates\forge3d-web)
+├── bytemuck v1.25.0
+│   └── bytemuck_derive v1.10.2 (proc-macro)
+│       ├── proc-macro2 v1.0.106
+│       │   └── unicode-ident v1.0.24
+│       ├── quote v1.0.45
+│       │   └── proc-macro2 v1.0.106 (*)
+│       └── syn v2.0.117
+│           ├── proc-macro2 v1.0.106 (*)
+│           ├── quote v1.0.45 (*)
+│           └── unicode-ident v1.0.24
+├── console_error_panic_hook v0.1.7
+│   ├── cfg-if v1.0.4
+│   └── wasm-bindgen v0.2.114
+│       ├── cfg-if v1.0.4
+│       ├── once_cell v1.21.4
+│       ├── wasm-bindgen-macro v0.2.114 (proc-macro)
+│       │   ├── quote v1.0.45 (*)
+│       │   └── wasm-bindgen-macro-support v0.2.114
+│       │       ├── bumpalo v3.20.2
+│       │       ├── proc-macro2 v1.0.106 (*)
+│       │       ├── quote v1.0.45 (*)
+│       │       ├── syn v2.0.117 (*)
+│       │       └── wasm-bindgen-shared v0.2.114
+│       │           └── unicode-ident v1.0.24
+│       └── wasm-bindgen-shared v0.2.114
+│           └── unicode-ident v1.0.24
+├── forge3d-core v1.26.0 (C:\Users\milos\forge3d-web\crates\forge3d-core)
+│   ├── anyhow v1.0.102
+│   ├── async-trait v0.1.89 (proc-macro)
+│   │   ├── proc-macro2 v1.0.106 (*)
+│   │   ├── quote v1.0.45 (*)
+│   │   └── syn v2.0.117 (*)
+│   ├── bytemuck v1.25.0 (*)
+│   ├── glam v0.24.2
+│   ├── log v0.4.29
+│   ├── serde v1.0.228
+│   │   ├── serde_core v1.0.228
+│   │   └── serde_derive v1.0.228 (proc-macro)
+│   │       ├── proc-macro2 v1.0.106 (*)
+│   │       ├── quote v1.0.45 (*)
+│   │       └── syn v2.0.117 (*)
+│   ├── serde_json v1.0.149
+│   │   ├── itoa v1.0.18
+│   │   ├── memchr v2.8.0
+│   │   ├── serde_core v1.0.228
+│   │   └── zmij v1.0.21
+│   ├── thiserror v1.0.69
+│   │   └── thiserror-impl v1.0.69 (proc-macro)
+│   │       ├── proc-macro2 v1.0.106 (*)
+│   │       ├── quote v1.0.45 (*)
+│   │       └── syn v2.0.117 (*)
+│   └── wgpu v29.0.3
+│       ├── arrayvec v0.7.6
+│       ├── bitflags v2.11.0
+│       ├── bytemuck v1.25.0 (*)
+│       ├── cfg-if v1.0.4
+│       ├── document-features v0.2.12 (proc-macro)
+│       │   └── litrs v1.0.0
+│       ├── hashbrown v0.16.1
+│       │   └── foldhash v0.2.0
+│       ├── js-sys v0.3.91
+│       │   ├── once_cell v1.21.4
+│       │   └── wasm-bindgen v0.2.114 (*)
+│       ├── log v0.4.29
+│       ├── parking_lot v0.12.5
+│       │   ├── lock_api v0.4.14
+│       │   │   └── scopeguard v1.2.0
+│       │   └── parking_lot_core v0.9.12
+│       │       ├── cfg-if v1.0.4
+│       │       └── smallvec v1.15.1
+│       ├── profiling v1.0.17
+│       ├── raw-window-handle v0.6.2
+│       ├── static_assertions v1.1.0
+│       ├── wasm-bindgen v0.2.114 (*)
+│       ├── wasm-bindgen-futures v0.4.64
+│       │   ├── cfg-if v1.0.4
+│       │   ├── futures-util v0.3.32
+│       │   │   ├── futures-core v0.3.32
+│       │   │   ├── futures-task v0.3.32
+│       │   │   ├── pin-project-lite v0.2.17
+│       │   │   └── slab v0.4.12
+│       │   ├── js-sys v0.3.91 (*)
+│       │   ├── once_cell v1.21.4
+│       │   └── wasm-bindgen v0.2.114 (*)
+│       ├── web-sys v0.3.91
+│       │   ├── js-sys v0.3.91 (*)
+│       │   └── wasm-bindgen v0.2.114 (*)
+│       └── wgpu-types v29.0.3
+│           ├── bitflags v2.11.0
+│           ├── bytemuck v1.25.0 (*)
+│           ├── js-sys v0.3.91 (*)
+│           ├── log v0.4.29
+│           ├── raw-window-handle v0.6.2
+│           └── web-sys v0.3.91 (*)
+├── glam v0.24.2
+├── js-sys v0.3.91 (*)
+├── serde v1.0.228 (*)
+├── serde-wasm-bindgen v0.6.5
+│   ├── js-sys v0.3.91 (*)
+│   ├── serde v1.0.228 (*)
+│   └── wasm-bindgen v0.2.114 (*)
+├── serde_json v1.0.149 (*)
+├── thiserror v1.0.69 (*)
+├── wasm-bindgen v0.2.114 (*)
+├── wasm-bindgen-futures v0.4.64 (*)
+├── web-sys v0.3.91 (*)
+└── wgpu v29.0.3 (*)
