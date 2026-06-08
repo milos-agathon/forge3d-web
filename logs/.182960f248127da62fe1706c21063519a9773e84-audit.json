@@ -6,9 +6,24 @@
     "auditLog": "c:\\Users\\milos\\forge3d-web\\logs\\.182960f248127da62fe1706c21063519a9773e84-audit.json",
     "files": [
         {
-            "date": 1780687737393,
+            "date": 1780606768862,
+            "name": "c:\\Users\\milos\\forge3d-web\\logs\\mcp-puppeteer-2026-06-04.log",
+            "hash": "72f82ccb058d2ecdd65af61b9c001b3ae207d5f03ab4a41d39363287c97eed23"
+        },
+        {
+            "date": 1780642521129,
             "name": "c:\\Users\\milos\\forge3d-web\\logs\\mcp-puppeteer-2026-06-05.log",
-            "hash": "014e21a356d72f56d0465435f1606bc5777fde1e1645bd1481abeb8335449303"
+            "hash": "fe7e2c34068507f91dcbfacc8fd4289b7d00568e5a25d9c886c3acc718d7d9e9"
+        },
+        {
+            "date": 1780834448138,
+            "name": "c:\\Users\\milos\\forge3d-web\\logs\\mcp-puppeteer-2026-06-07.log",
+            "hash": "8998719ba0de5323918e483d574c5e2b5d1a1732264106400d10bc9f6e609631"
+        },
+        {
+            "date": 1780917682224,
+            "name": "c:\\Users\\milos\\forge3d-web\\logs\\mcp-puppeteer-2026-06-08.log",
+            "hash": "95477f6207eca3eceb35694500d56b32aed1422a91e8383c1c56fbf4363dfe30"
         }
     ],
     "hashType": "sha256"

@@ -16,25 +16,32 @@ const runtime = await Forge3DRuntime.create(canvas, {
   powerPreference: "high-performance",
   clearColor: [0.04, 0.06, 0.08, 1],
   alphaMode: "premultiplied",
-  colorSpace: "srgb"
+  colorSpace: "srgb",
 });
 
 runtime.setTerrain({
   width: 2,
   height: 2,
-  heights: new Float32Array([0, 1, 1, 0])
+  heights: new Float32Array([0, 1, 1, 0]),
+  colorRamp: {
+    stops: [
+      { position: 0, color: [199 / 255, 208 / 255, 177 / 255] },
+      { position: 0.5, color: [252 / 255, 232 / 255, 171 / 255] },
+      { position: 1, color: [116 / 255, 94 / 255, 55 / 255] },
+    ],
+  },
 });
 
 await runtime.setTerrainFromSource({
   width: 2,
   height: 2,
-  source: new Blob([
-    new Float32Array([0, 1, 1, 0]).buffer
-  ], { type: "application/octet-stream" }),
+  source: new Blob([new Float32Array([0, 1, 1, 0]).buffer], {
+    type: "application/octet-stream",
+  }),
   signal: new AbortController().signal,
   onProgress: ({ loaded, total, done }) => {
     console.log({ loaded, total, done });
-  }
+  },
 });
 
 runtime.setCamera({
@@ -43,13 +50,13 @@ runtime.setCamera({
   up: [0, 1, 0],
   fovYDegrees: 45,
   near: 0.1,
-  far: 100
+  far: 100,
 });
 
 runtime.resize({
   width: 800,
   height: 450,
-  devicePixelRatio: window.devicePixelRatio
+  devicePixelRatio: window.devicePixelRatio,
 });
 
 runtime.render();
@@ -86,6 +93,9 @@ Typed-array inputs are copied into runtime-owned WebGPU resources. Callers may
 reuse or release the original `Float32Array` after `setTerrain(terrain)` returns.
 Byte-source terrain inputs are asynchronously read before the same terrain
 validation and GPU upload path is used.
+
+`setTerrain(terrain)` accepts an optional `colorRamp` with 2-8 ordered stops.
+Stop positions and RGB channels use normalized `0..1` values.
 
 ## Browser IO
 

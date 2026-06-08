@@ -101,6 +101,7 @@ pub struct TerrainHeightmapOptions {
     pub width: u32,
     pub height: u32,
     pub heights: Vec<f32>,
+    pub color_ramp: TerrainColorRampOptions,
 }
 
 impl TerrainHeightmapOptions {
@@ -126,21 +127,114 @@ impl TerrainHeightmapOptions {
             })?;
         let mut heights = vec![0.0; heights_array.length() as usize];
         heights_array.copy_to(&mut heights);
+        let color_ramp_value = js_sys::Reflect::get(&value, &JsValue::from_str("colorRamp"))
+            .map_err(|_| WebError::new(Forge3DErrorCode::InvalidInput, "invalid colorRamp"))?;
+        let color_ramp = TerrainColorRampOptions::from_js_value(color_ramp_value)?;
 
         Ok(Self {
             width,
             height,
             heights,
+            color_ramp,
         })
     }
 
     pub fn validate(&self) -> Result<forge3d_core::terrain::TerrainHeightmapInput, WebError> {
+        self.color_ramp.validate()?;
         forge3d_core::terrain::TerrainHeightmapInput::new(
             self.width,
             self.height,
             self.heights.clone(),
         )
         .map_err(crate::error::map_core_error)
+    }
+}
+
+#[derive(Debug, Clone, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TerrainColorRampOptions {
+    pub stops: Vec<TerrainColorStopOptions>,
+}
+
+impl TerrainColorRampOptions {
+    pub fn from_js_value(value: JsValue) -> Result<Self, WebError> {
+        let ramp = if value.is_undefined() || value.is_null() {
+            Self::default()
+        } else {
+            serde_wasm_bindgen::from_value(value).map_err(|error| {
+                WebError::new(
+                    Forge3DErrorCode::InvalidInput,
+                    format!("Invalid colorRamp input: {error}"),
+                )
+            })?
+        };
+        ramp.validate()?;
+        Ok(ramp)
+    }
+
+    pub fn validate(&self) -> Result<(), WebError> {
+        if self.stops.len() < 2 || self.stops.len() > 8 {
+            return Err(WebError::new(
+                Forge3DErrorCode::InvalidInput,
+                "colorRamp.stops must contain between 2 and 8 stops",
+            ));
+        }
+        let mut previous = f32::NEG_INFINITY;
+        for (index, stop) in self.stops.iter().enumerate() {
+            if !stop.position.is_finite() || !(0.0..=1.0).contains(&stop.position) {
+                return Err(WebError::new(
+                    Forge3DErrorCode::InvalidInput,
+                    format!("colorRamp.stops[{index}].position must be finite and in [0, 1]"),
+                ));
+            }
+            if stop.position < previous {
+                return Err(WebError::new(
+                    Forge3DErrorCode::InvalidInput,
+                    "colorRamp.stops positions must be ordered",
+                ));
+            }
+            for (channel_index, channel) in stop.color.iter().enumerate() {
+                if !channel.is_finite() || !(0.0..=1.0).contains(channel) {
+                    return Err(WebError::new(
+                        Forge3DErrorCode::InvalidInput,
+                        format!(
+                            "colorRamp.stops[{index}].color[{channel_index}] must be finite and in [0, 1]"
+                        ),
+                    ));
+                }
+            }
+            previous = stop.position;
+        }
+        Ok(())
+    }
+}
+
+impl Default for TerrainColorRampOptions {
+    fn default() -> Self {
+        Self {
+            stops: vec![
+                TerrainColorStopOptions::new(0.0, [199.0 / 255.0, 208.0 / 255.0, 177.0 / 255.0]),
+                TerrainColorStopOptions::new(0.1667, [211.0 / 255.0, 226.0 / 255.0, 193.0 / 255.0]),
+                TerrainColorStopOptions::new(0.3333, [247.0 / 255.0, 244.0 / 255.0, 201.0 / 255.0]),
+                TerrainColorStopOptions::new(0.5, [252.0 / 255.0, 232.0 / 255.0, 171.0 / 255.0]),
+                TerrainColorStopOptions::new(0.6667, [227.0 / 255.0, 183.0 / 255.0, 112.0 / 255.0]),
+                TerrainColorStopOptions::new(0.8333, [185.0 / 255.0, 137.0 / 255.0, 53.0 / 255.0]),
+                TerrainColorStopOptions::new(1.0, [116.0 / 255.0, 94.0 / 255.0, 55.0 / 255.0]),
+            ],
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TerrainColorStopOptions {
+    pub position: f32,
+    pub color: [f32; 3],
+}
+
+impl TerrainColorStopOptions {
+    fn new(position: f32, color: [f32; 3]) -> Self {
+        Self { position, color }
     }
 }
 
@@ -353,7 +447,7 @@ fn read_u32_property(value: &JsValue, name: &str) -> Result<u32, WebError> {
 mod tests {
     use super::{
         AlphaModeOption, CameraOptions, PowerPreferenceOption, ResizeOptions, RuntimeOptions,
-        TerrainHeightmapOptions,
+        TerrainColorRampOptions, TerrainColorStopOptions, TerrainHeightmapOptions,
     };
 
     #[test]
@@ -400,6 +494,7 @@ mod tests {
             width: 3,
             height: 2,
             heights: vec![0.0, 0.1, 0.2, 0.3, 0.4],
+            color_ramp: TerrainColorRampOptions::default(),
         };
 
         let error = options.validate().unwrap_err();
@@ -414,12 +509,51 @@ mod tests {
             width: 2,
             height: 2,
             heights: vec![0.0, f32::NAN, 0.5, 1.0],
+            color_ramp: TerrainColorRampOptions::default(),
         };
 
         let error = options.validate().unwrap_err();
 
         assert_eq!(error.code().as_str(), "INVALID_INPUT");
         assert!(error.message().contains("finite"));
+    }
+
+    #[test]
+    fn terrain_color_ramp_defaults_to_faa_vfr_contour_stops() {
+        let ramp = TerrainColorRampOptions::default();
+
+        assert_eq!(ramp.stops.len(), 7);
+        assert_eq!(ramp.stops[0].position, 0.0);
+        assert_eq!(
+            ramp.stops[0].color,
+            [199.0 / 255.0, 208.0 / 255.0, 177.0 / 255.0]
+        );
+        assert_eq!(ramp.stops[6].position, 1.0);
+        assert_eq!(
+            ramp.stops[6].color,
+            [116.0 / 255.0, 94.0 / 255.0, 55.0 / 255.0]
+        );
+    }
+
+    #[test]
+    fn terrain_color_ramp_rejects_unordered_stops() {
+        let ramp = TerrainColorRampOptions {
+            stops: vec![
+                TerrainColorStopOptions {
+                    position: 0.75,
+                    color: [1.0, 1.0, 1.0],
+                },
+                TerrainColorStopOptions {
+                    position: 0.25,
+                    color: [0.0, 0.0, 0.0],
+                },
+            ],
+        };
+
+        let error = ramp.validate().unwrap_err();
+
+        assert_eq!(error.code().as_str(), "INVALID_INPUT");
+        assert!(error.message().contains("ordered"));
     }
 
     #[test]

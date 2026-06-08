@@ -28,6 +28,16 @@ export interface TerrainHeightmapInput {
   width: number;
   height: number;
   heights: Float32Array;
+  colorRamp?: TerrainColorRampInput;
+}
+
+export interface TerrainColorRampInput {
+  stops: TerrainColorStopInput[];
+}
+
+export interface TerrainColorStopInput {
+  position: number;
+  color: [number, number, number];
 }
 
 export interface TerrainSourceProgress {
@@ -107,13 +117,13 @@ export class Forge3DError extends Error {
       return new Forge3DError(
         normalizeErrorCode(value.code),
         value.message,
-        value.details
+        value.details,
       );
     }
 
     return new Forge3DError(
       "WEBGPU_UNAVAILABLE",
-      value instanceof Error ? value.message : String(value)
+      value instanceof Error ? value.message : String(value),
     );
   }
 }
@@ -127,13 +137,13 @@ export class Forge3DRuntime {
 
   static async create(
     canvas: HTMLCanvasElement,
-    options: Forge3DRuntimeOptions = {}
+    options: Forge3DRuntimeOptions = {},
   ): Promise<Forge3DRuntime> {
     const bridge = await loadWasmBridge();
     try {
       const runtime = await bridge.Forge3DRuntime.create(
         canvas,
-        normalizeRuntimeOptions(options)
+        normalizeRuntimeOptions(options),
       );
       return new Forge3DRuntime(runtime);
     } catch (error) {
@@ -187,11 +197,11 @@ export class Forge3DRuntime {
   }
 
   async setTerrainFromSource(
-    terrain: TerrainHeightmapSourceInput
+    terrain: TerrainHeightmapSourceInput,
   ): Promise<void> {
     try {
       await this.#inner.setTerrainFromSource(
-        normalizeTerrainHeightmapSourceInput(terrain)
+        normalizeTerrainHeightmapSourceInput(terrain),
       );
     } catch (error) {
       throw Forge3DError.from(error);
@@ -235,28 +245,37 @@ async function importWasmBridge(): Promise<WasmBridge> {
 }
 
 function normalizeRuntimeOptions(
-  options: Forge3DRuntimeOptions
+  options: Forge3DRuntimeOptions,
 ): Forge3DRuntimeOptions {
   return { ...options };
 }
 
 function normalizeTerrainHeightmapInput(
-  terrain: TerrainHeightmapInput
+  terrain: TerrainHeightmapInput,
 ): TerrainHeightmapInput {
-  return {
+  const normalized: TerrainHeightmapInput = {
     width: terrain.width,
     height: terrain.height,
-    heights: terrain.heights
+    heights: terrain.heights,
   };
+  if (terrain.colorRamp !== undefined) {
+    normalized.colorRamp = {
+      stops: terrain.colorRamp.stops.map((stop) => ({
+        position: stop.position,
+        color: [stop.color[0], stop.color[1], stop.color[2]],
+      })),
+    };
+  }
+  return normalized;
 }
 
 function normalizeTerrainHeightmapSourceInput(
-  terrain: TerrainHeightmapSourceInput
+  terrain: TerrainHeightmapSourceInput,
 ): TerrainHeightmapSourceInput {
   const normalized: TerrainHeightmapSourceInput = {
     width: terrain.width,
     height: terrain.height,
-    source: terrain.source
+    source: terrain.source,
   };
   if (terrain.byteOffset !== undefined) {
     normalized.byteOffset = terrain.byteOffset;
@@ -280,7 +299,7 @@ function normalizeCameraInput(camera: CameraInput): CameraInput {
     up: [camera.up[0], camera.up[1], camera.up[2]],
     fovYDegrees: camera.fovYDegrees,
     near: camera.near,
-    far: camera.far
+    far: camera.far,
   };
 }
 
@@ -288,7 +307,7 @@ function normalizeResizeInput(size: ResizeInput): ResizeInput {
   return {
     width: size.width,
     height: size.height,
-    devicePixelRatio: size.devicePixelRatio
+    devicePixelRatio: size.devicePixelRatio,
   };
 }
 
@@ -328,5 +347,5 @@ const ERROR_CODES = new Set<Forge3DErrorCode>([
   "IO_ERROR",
   "REQUEST_CANCELLED",
   "SHADER_COMPILATION_FAILED",
-  "RUNTIME_DISPOSED"
+  "RUNTIME_DISPOSED",
 ]);

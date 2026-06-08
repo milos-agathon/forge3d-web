@@ -9,7 +9,9 @@ use wgpu::util::DeviceExt;
 use crate::error::{map_core_error, to_js_error, Forge3DErrorCode, WebError};
 #[cfg(target_arch = "wasm32")]
 use crate::inputs::RuntimeOptions;
-use crate::inputs::{CameraOptions, ResizeOptions, TerrainHeightmapOptions};
+use crate::inputs::{
+    CameraOptions, ResizeOptions, TerrainColorRampOptions, TerrainHeightmapOptions,
+};
 
 #[wasm_bindgen]
 pub struct Forge3DRuntime {
@@ -598,11 +600,13 @@ fn set_terrain_options_runtime(
         )
     })?;
 
+    let color_ramp = terrain.color_ramp.clone();
     let terrain = terrain.validate()?;
     runtime.terrain = Some(TerrainRenderResources::new(
         context,
         surface_state.config.format,
         &terrain,
+        &color_ramp,
         &runtime.camera,
         runtime.width,
         runtime.height,
@@ -668,6 +672,30 @@ struct CameraUniform {
     view_projection: [[f32; 4]; 4],
 }
 
+const MAX_COLOR_RAMP_STOPS: usize = 8;
+
+#[repr(C)]
+#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+struct ColorRampUniform {
+    stops: [[f32; 4]; MAX_COLOR_RAMP_STOPS],
+    stop_count: u32,
+    _padding: [u32; 3],
+}
+
+impl ColorRampUniform {
+    fn from_options(options: &TerrainColorRampOptions) -> Self {
+        let mut stops = [[0.0; 4]; MAX_COLOR_RAMP_STOPS];
+        for (index, stop) in options.stops.iter().take(MAX_COLOR_RAMP_STOPS).enumerate() {
+            stops[index] = [stop.color[0], stop.color[1], stop.color[2], stop.position];
+        }
+        Self {
+            stops,
+            stop_count: options.stops.len().min(MAX_COLOR_RAMP_STOPS) as u32,
+            _padding: [0; 3],
+        }
+    }
+}
+
 struct TerrainRenderResources {
     pipeline: wgpu::RenderPipeline,
     bind_group: wgpu::BindGroup,
@@ -675,6 +703,8 @@ struct TerrainRenderResources {
     index_buffer: wgpu::Buffer,
     index_count: u32,
     camera_buffer: wgpu::Buffer,
+    #[allow(dead_code)]
+    color_ramp_buffer: wgpu::Buffer,
     #[allow(dead_code)]
     height_texture: wgpu::Texture,
     #[allow(dead_code)]
@@ -686,6 +716,7 @@ impl TerrainRenderResources {
         context: &GpuContext,
         surface_format: wgpu::TextureFormat,
         terrain: &forge3d_core::terrain::TerrainHeightmapInput,
+        color_ramp: &TerrainColorRampOptions,
         camera: &forge3d_core::camera::CameraInput,
         width: u32,
         height: u32,
@@ -694,6 +725,7 @@ impl TerrainRenderResources {
             create_terrain_mesh_buffers(context, terrain)?;
         let (height_texture, height_view) = create_height_texture(context, terrain);
         let camera_uniform = create_camera_uniform(camera, width, height)?;
+        let color_ramp_uniform = ColorRampUniform::from_options(color_ramp);
         let camera_buffer = context
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -701,6 +733,14 @@ impl TerrainRenderResources {
                 contents: bytemuck::bytes_of(&camera_uniform),
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             });
+        let color_ramp_buffer =
+            context
+                .device
+                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("forge3d-web-terrain-color-ramp-uniform"),
+                    contents: bytemuck::bytes_of(&color_ramp_uniform),
+                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                });
         let sampler = context.device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("forge3d-web-terrain-nearest-sampler"),
             address_mode_u: wgpu::AddressMode::ClampToEdge,
@@ -743,6 +783,16 @@ impl TerrainRenderResources {
                             },
                             count: None,
                         },
+                        wgpu::BindGroupLayoutEntry {
+                            binding: 3,
+                            visibility: wgpu::ShaderStages::FRAGMENT,
+                            ty: wgpu::BindingType::Buffer {
+                                ty: wgpu::BufferBindingType::Uniform,
+                                has_dynamic_offset: false,
+                                min_binding_size: None,
+                            },
+                            count: None,
+                        },
                     ],
                 });
         let bind_group = context
@@ -762,6 +812,10 @@ impl TerrainRenderResources {
                     wgpu::BindGroupEntry {
                         binding: 2,
                         resource: camera_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: color_ramp_buffer.as_entire_binding(),
                     },
                 ],
             });
@@ -837,6 +891,7 @@ impl TerrainRenderResources {
             index_buffer,
             index_count,
             camera_buffer,
+            color_ramp_buffer,
             height_texture,
             sampler,
         })
@@ -991,6 +1046,12 @@ struct CameraUniform {
     view_projection: mat4x4<f32>,
 };
 
+struct ColorRampUniform {
+    stops: array<vec4<f32>, 8>,
+    stop_count: u32,
+    padding: vec3<u32>,
+};
+
 struct VertexOutput {
     @builtin(position) position: vec4<f32>,
     @location(0) height: f32,
@@ -1000,6 +1061,7 @@ struct VertexOutput {
 @group(0) @binding(0) var heightmap: texture_2d<f32>;
 @group(0) @binding(1) var nearest_sampler: sampler;
 @group(0) @binding(2) var<uniform> camera: CameraUniform;
+@group(0) @binding(3) var<uniform> color_ramp: ColorRampUniform;
 
 @vertex
 fn vs_main(input: VertexInput) -> VertexOutput {
@@ -1018,13 +1080,25 @@ fn vs_main(input: VertexInput) -> VertexOutput {
 
 @fragment
 fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
-    let low = vec3<f32>(0.05, 0.22, 0.48);
-    let mid = vec3<f32>(0.18, 0.55, 0.28);
-    let high = vec3<f32>(0.92, 0.86, 0.56);
     let t = clamp(input.height, 0.0, 1.0);
-    let lower = mix(low, mid, smoothstep(0.0, 0.55, t));
-    let color = mix(lower, high, smoothstep(0.45, 1.0, t));
-    return vec4<f32>(color, 1.0);
+    return vec4<f32>(sample_color_ramp(t), 1.0);
+}
+
+fn sample_color_ramp(t: f32) -> vec3<f32> {
+    var previous = color_ramp.stops[0];
+    for (var i: u32 = 1u; i < 8u; i = i + 1u) {
+        if (i >= color_ramp.stop_count) {
+            return previous.xyz;
+        }
+        let next = color_ramp.stops[i];
+        if (t <= next.w) {
+            let span = max(next.w - previous.w, 0.0001);
+            let local_t = clamp((t - previous.w) / span, 0.0, 1.0);
+            return mix(previous.xyz, next.xyz, smoothstep(0.0, 1.0, local_t));
+        }
+        previous = next;
+    }
+    return previous.xyz;
 }
 "#;
 

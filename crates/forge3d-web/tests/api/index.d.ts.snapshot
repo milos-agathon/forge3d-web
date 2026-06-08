@@ -49,6 +49,18 @@ export interface TerrainHeightmapInput {
   height: number;
   /** Must contain exactly width * height finite float values. */
   heights: Float32Array;
+  /** Optional terrain color ramp used by the WebGPU surface shader. */
+  colorRamp?: TerrainColorRampInput;
+}
+
+export interface TerrainColorRampInput {
+  /** Ordered color stops. Positions and RGB channels are normalized to 0..1. */
+  stops: TerrainColorStopInput[];
+}
+
+export interface TerrainColorStopInput {
+  position: number;
+  color: [number, number, number];
 }
 
 /** Progress event for browser terrain byte-source reads. */
@@ -110,7 +122,7 @@ export interface ResizeInput {
 export declare class Forge3DRuntime {
   static create(
     canvas: HTMLCanvasElement,
-    options?: Forge3DRuntimeOptions
+    options?: Forge3DRuntimeOptions,
   ): Promise<Forge3DRuntime>;
   /** True after dispose() has been called. */
   readonly disposed: boolean;

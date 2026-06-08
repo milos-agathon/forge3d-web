@@ -21,6 +21,8 @@ for (const expected of [
   "export declare class Forge3DError extends Error",
   "export interface Forge3DRuntimeOptions",
   "export interface TerrainHeightmapInput",
+  "export interface TerrainColorRampInput",
+  "export interface TerrainColorStopInput",
   "export interface TerrainSourceProgress",
   "export type TerrainByteSource",
   "export interface TerrainHeightmapSourceInput",

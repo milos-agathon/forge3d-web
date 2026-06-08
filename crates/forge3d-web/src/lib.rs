@@ -122,6 +122,8 @@ mod tests {
             "TerrainRenderResources",
             "TextureFormat::R32Float",
             "FilterMode::Nearest",
+            "ColorRampUniform",
+            "sample_color_ramp",
             "render_pass.draw_indexed",
         ] {
             assert!(
@@ -142,6 +144,8 @@ mod tests {
         for text in [facade, declarations] {
             for expected in [
                 "TerrainHeightmapInput",
+                "TerrainColorRampInput",
+                "colorRamp?: TerrainColorRampInput",
                 "setTerrain(terrain: TerrainHeightmapInput): void",
             ] {
                 assert!(

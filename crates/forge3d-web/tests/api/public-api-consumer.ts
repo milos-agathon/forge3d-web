@@ -5,9 +5,10 @@ import {
   type Forge3DErrorCode,
   type Forge3DRuntimeOptions,
   type ResizeInput,
+  type TerrainColorRampInput,
   type TerrainHeightmapInput,
   type TerrainHeightmapSourceInput,
-  type TerrainSourceProgress
+  type TerrainSourceProgress,
 } from "../../src-ts/index";
 
 declare const canvas: HTMLCanvasElement;
@@ -20,13 +21,20 @@ const options = {
   clearColor: [0.1, 0.2, 0.3, 1.0],
   alphaMode: "premultiplied",
   colorSpace: "srgb",
-  diagnostics: true
+  diagnostics: true,
 } satisfies Forge3DRuntimeOptions;
 
 const terrain = {
   width: 2,
   height: 2,
-  heights: new Float32Array([0, 1, 1, 0])
+  heights: new Float32Array([0, 1, 1, 0]),
+  colorRamp: {
+    stops: [
+      { position: 0, color: [199 / 255, 208 / 255, 177 / 255] },
+      { position: 0.5, color: [252 / 255, 232 / 255, 171 / 255] },
+      { position: 1, color: [116 / 255, 94 / 255, 55 / 255] },
+    ],
+  } satisfies TerrainColorRampInput,
 } satisfies TerrainHeightmapInput;
 
 const sourceTerrain = {
@@ -39,7 +47,7 @@ const sourceTerrain = {
     const total: number | undefined = progress.total;
     const done: boolean = progress.done;
     void [loaded, total, done];
-  }
+  },
 } satisfies TerrainHeightmapSourceInput;
 
 const camera = {
@@ -48,13 +56,13 @@ const camera = {
   up: [0, 1, 0],
   fovYDegrees: 45,
   near: 0.1,
-  far: 100
+  far: 100,
 } satisfies CameraInput;
 
 const resize = {
   width: 640,
   height: 360,
-  devicePixelRatio: 1.5
+  devicePixelRatio: 1.5,
 } satisfies ResizeInput;
 
 async function exercisePublicApi(): Promise<void> {
@@ -78,7 +86,7 @@ async function exercisePublicApi(): Promise<void> {
 }
 
 const error = new Forge3DError("INVALID_INPUT", "Invalid terrain input", {
-  field: "heights"
+  field: "heights",
 });
 const code: Forge3DErrorCode = Forge3DError.from(error).code;
 

@@ -4,7 +4,7 @@ use wasm_bindgen_futures::JsFuture;
 use web_sys::{Blob, Request, RequestInit, RequestMode, Response};
 
 use crate::error::{Forge3DErrorCode, WebError};
-use crate::inputs::TerrainHeightmapOptions;
+use crate::inputs::{TerrainColorRampOptions, TerrainHeightmapOptions};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum BrowserByteSourceKind {
@@ -36,6 +36,9 @@ pub async fn load_terrain_heightmap_source(
         })?;
     let source = read_required_property(&input, "source")?;
     let range = read_optional_byte_range(&input)?;
+    let color_ramp = TerrainColorRampOptions::from_js_value(
+        read_optional_property(&input, "colorRamp")?.unwrap_or(JsValue::UNDEFINED),
+    )?;
     let signal = read_optional_property(&input, "signal")?.unwrap_or(JsValue::UNDEFINED);
     let on_progress = read_optional_property(&input, "onProgress")?
         .and_then(|value| value.dyn_into::<js_sys::Function>().ok());
@@ -55,6 +58,7 @@ pub async fn load_terrain_heightmap_source(
         width,
         height,
         heights,
+        color_ramp,
     })
 }
 
