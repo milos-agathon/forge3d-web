@@ -214,7 +214,7 @@ checksum = "77ce24cb58228fbb8aa041425bb1050850ac19177686ea6e0f41a70416f56fdb"
 
 [[package]]
 name = "forge3d-core"
-version = "1.26.0"
+version = "1.26.1"
 dependencies = [
  "async-trait",
  "bytemuck",
@@ -225,7 +225,7 @@ dependencies = [
 
 [[package]]
 name = "forge3d-web"
-version = "1.26.0"
+version = "1.26.1"
 dependencies = [
  "bytemuck",
  "console_error_panic_hook",

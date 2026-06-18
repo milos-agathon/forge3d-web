@@ -679,7 +679,11 @@ const MAX_COLOR_RAMP_STOPS: usize = 8;
 struct ColorRampUniform {
     stops: [[f32; 4]; MAX_COLOR_RAMP_STOPS],
     stop_count: u32,
-    _padding: [u32; 3],
+    // WGSL uniform layout aligns the following vec3<u32> member to 16 bytes
+    // and then rounds the whole struct to the same alignment: 128 + 4 + 12 + 12 + 4 = 160.
+    _stop_count_alignment_padding: [u32; 3],
+    _wgsl_vec3_padding: [u32; 3],
+    _struct_alignment_padding: u32,
 }
 
 impl ColorRampUniform {
@@ -691,7 +695,9 @@ impl ColorRampUniform {
         Self {
             stops,
             stop_count: options.stops.len().min(MAX_COLOR_RAMP_STOPS) as u32,
-            _padding: [0; 3],
+            _stop_count_alignment_padding: [0; 3],
+            _wgsl_vec3_padding: [0; 3],
+            _struct_alignment_padding: 0,
         }
     }
 }
@@ -1124,6 +1130,11 @@ pub fn ensure_not_disposed_error(runtime: &Forge3DRuntime) -> Result<(), WebErro
 #[cfg(test)]
 mod tests {
     use super::ensure_not_disposed_error;
+
+    #[test]
+    fn color_ramp_uniform_matches_wgsl_uniform_layout_size() {
+        assert_eq!(std::mem::size_of::<super::ColorRampUniform>(), 160);
+    }
 
     #[test]
     fn runtime_dispose_guard_uses_stable_error_code() {

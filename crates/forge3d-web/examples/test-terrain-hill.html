@@ -55,6 +55,15 @@
         return heights;
       }
 
+      const testColorRamp = {
+        stops: [
+          { position: 0.0, color: [0.05, 0.08, 0.16] },
+          { position: 0.35, color: [0.22, 0.58, 0.35] },
+          { position: 0.72, color: [0.82, 0.68, 0.38] },
+          { position: 1.0, color: [0.98, 0.95, 0.84] }
+        ]
+      };
+
       window.__forge3dTerrainProbe = async () => {
         if (!navigator.gpu) {
           return {
@@ -89,7 +98,8 @@
         runtime.setTerrain({
           width: 33,
           height: 33,
-          heights: createHill(33, 33)
+          heights: createHill(33, 33),
+          colorRamp: testColorRamp
         });
         runtime.render();
 
@@ -99,13 +109,16 @@
 
         let minLuma = 255;
         let maxLuma = 0;
+        let visibleNonTransparentPixels = 0;
         let variedPixels = 0;
         for (let offset = 0; offset < mapped.length; offset += 4) {
           const r = mapped[offset];
           const g = mapped[offset + 1];
           const b = mapped[offset + 2];
+          const a = mapped[offset + 3];
           const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-          if (r > 12 || g > 12 || b > 12) {
+          if (a > 0 && (r > 12 || g > 12 || b > 12)) {
+            visibleNonTransparentPixels += 1;
             variedPixels += 1;
             minLuma = Math.min(minLuma, luma);
             maxLuma = Math.max(maxLuma, luma);
@@ -117,6 +130,7 @@
           supported: true,
           width,
           height,
+          visibleNonTransparentPixels,
           variedPixels,
           lumaRange: maxLuma - minLuma,
           invalidCode
