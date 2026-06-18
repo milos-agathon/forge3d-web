@@ -20,6 +20,7 @@ pub struct Forge3DRuntime {
     gpu_runtime: Option<GpuRuntime>,
     context: Option<GpuContext>,
     surface_state: Option<SurfaceState>,
+    depth_attachment: Option<DepthAttachment>,
     terrain: Option<TerrainRenderResources>,
     camera: forge3d_core::camera::CameraInput,
     width: u32,
@@ -45,6 +46,7 @@ impl Forge3DRuntime {
         self.surface_state = None;
         self.context = None;
         self.gpu_runtime = None;
+        self.depth_attachment = None;
         self.terrain = None;
         self.disposed = true;
     }
@@ -168,12 +170,14 @@ async fn create_runtime(
 
     let descriptor = surface_descriptor(&surface, &context, &options, width, height)?;
     let surface_state = SurfaceState::new(surface, &context, descriptor).map_err(map_core_error)?;
+    let depth_attachment = DepthAttachment::new(&context, width, height);
 
     Ok(Forge3DRuntime {
         canvas,
         gpu_runtime: Some(gpu_runtime),
         context: Some(context),
         surface_state: Some(surface_state),
+        depth_attachment: Some(depth_attachment),
         terrain: None,
         camera: forge3d_core::camera::CameraInput::default(),
         width,
@@ -391,6 +395,18 @@ fn encode_scene_render_pass(
     view: &wgpu::TextureView,
     label: &'static str,
 ) {
+    let depth_stencil_attachment =
+        runtime
+            .depth_attachment
+            .as_ref()
+            .map(|depth| wgpu::RenderPassDepthStencilAttachment {
+                view: &depth.view,
+                depth_ops: Some(wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(1.0),
+                    store: wgpu::StoreOp::Discard,
+                }),
+                stencil_ops: None,
+            });
     let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
         label: Some(label),
         color_attachments: &[Some(wgpu::RenderPassColorAttachment {
@@ -407,7 +423,7 @@ fn encode_scene_render_pass(
                 store: wgpu::StoreOp::Store,
             },
         })],
-        depth_stencil_attachment: None,
+        depth_stencil_attachment,
         occlusion_query_set: None,
         timestamp_writes: None,
         multiview_mask: None,
@@ -607,6 +623,7 @@ fn set_terrain_options_runtime(
         surface_state.config.format,
         &terrain,
         &color_ramp,
+        runtime.clear_color,
         &runtime.camera,
         runtime.width,
         runtime.height,
@@ -652,6 +669,7 @@ fn resize_runtime(runtime: &mut Forge3DRuntime, size: JsValue) -> Result<(), Web
         .map_err(map_core_error)?;
     runtime.width = width;
     runtime.height = height;
+    runtime.depth_attachment = Some(DepthAttachment::new(context, width, height));
 
     if let Some(terrain) = runtime.terrain.as_ref() {
         terrain.update_camera(context, &runtime.camera, width, height)?;
@@ -666,6 +684,35 @@ struct TerrainVertex {
     uv: [f32; 2],
 }
 
+const DEPTH_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Depth24Plus;
+
+struct DepthAttachment {
+    #[allow(dead_code)]
+    texture: wgpu::Texture,
+    view: wgpu::TextureView,
+}
+
+impl DepthAttachment {
+    fn new(context: &GpuContext, width: u32, height: u32) -> Self {
+        let texture = context.device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("forge3d-web-terrain-depth"),
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: DEPTH_FORMAT,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            view_formats: &[],
+        });
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        Self { texture, view }
+    }
+}
+
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 struct CameraUniform {
@@ -673,21 +720,21 @@ struct CameraUniform {
 }
 
 const MAX_COLOR_RAMP_STOPS: usize = 8;
+const TERRAIN_SKIRT_DEPTH: f32 = 0.24;
 
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 struct ColorRampUniform {
     stops: [[f32; 4]; MAX_COLOR_RAMP_STOPS],
     stop_count: u32,
-    // WGSL uniform layout aligns the following vec3<u32> member to 16 bytes
-    // and then rounds the whole struct to the same alignment: 128 + 4 + 12 + 12 + 4 = 160.
+    // WGSL uniform layout aligns the following vec3<u32> member to 16 bytes:
+    // 128 bytes of stops + 4 stop-count bytes + 12 padding bytes + 16 clear-color bytes.
     _stop_count_alignment_padding: [u32; 3],
-    _wgsl_vec3_padding: [u32; 3],
-    _struct_alignment_padding: u32,
+    clear_color: [f32; 4],
 }
 
 impl ColorRampUniform {
-    fn from_options(options: &TerrainColorRampOptions) -> Self {
+    fn from_options(options: &TerrainColorRampOptions, clear_color: [f32; 4]) -> Self {
         let mut stops = [[0.0; 4]; MAX_COLOR_RAMP_STOPS];
         for (index, stop) in options.stops.iter().take(MAX_COLOR_RAMP_STOPS).enumerate() {
             stops[index] = [stop.color[0], stop.color[1], stop.color[2], stop.position];
@@ -696,8 +743,7 @@ impl ColorRampUniform {
             stops,
             stop_count: options.stops.len().min(MAX_COLOR_RAMP_STOPS) as u32,
             _stop_count_alignment_padding: [0; 3],
-            _wgsl_vec3_padding: [0; 3],
-            _struct_alignment_padding: 0,
+            clear_color,
         }
     }
 }
@@ -723,6 +769,7 @@ impl TerrainRenderResources {
         surface_format: wgpu::TextureFormat,
         terrain: &forge3d_core::terrain::TerrainHeightmapInput,
         color_ramp: &TerrainColorRampOptions,
+        clear_color: [f32; 4],
         camera: &forge3d_core::camera::CameraInput,
         width: u32,
         height: u32,
@@ -731,7 +778,7 @@ impl TerrainRenderResources {
             create_terrain_mesh_buffers(context, terrain)?;
         let (height_texture, height_view) = create_height_texture(context, terrain);
         let camera_uniform = create_camera_uniform(camera, width, height)?;
-        let color_ramp_uniform = ColorRampUniform::from_options(color_ramp);
+        let color_ramp_uniform = ColorRampUniform::from_options(color_ramp, clear_color);
         let camera_buffer = context
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -884,7 +931,13 @@ impl TerrainRenderResources {
                     polygon_mode: wgpu::PolygonMode::Fill,
                     conservative: false,
                 },
-                depth_stencil: None,
+                depth_stencil: Some(wgpu::DepthStencilState {
+                    format: DEPTH_FORMAT,
+                    depth_write_enabled: Some(true),
+                    depth_compare: Some(wgpu::CompareFunction::LessEqual),
+                    stencil: wgpu::StencilState::default(),
+                    bias: wgpu::DepthBiasState::default(),
+                }),
                 multisample: wgpu::MultisampleState::default(),
                 multiview_mask: None,
                 cache: None,
@@ -923,7 +976,7 @@ fn create_terrain_mesh_buffers(
     terrain: &forge3d_core::terrain::TerrainHeightmapInput,
 ) -> Result<(wgpu::Buffer, wgpu::Buffer, u32), WebError> {
     let mesh = terrain.mesh_descriptor().map_err(map_core_error)?;
-    let vertices = mesh
+    let mut vertices = mesh
         .vertices
         .iter()
         .map(|vertex| TerrainVertex {
@@ -931,6 +984,8 @@ fn create_terrain_mesh_buffers(
             uv: vertex.uv,
         })
         .collect::<Vec<_>>();
+    let mut indices = mesh.indices;
+    append_terrain_edge_skirts(&mut vertices, &mut indices, terrain.width, terrain.height)?;
 
     let vertex_buffer = context
         .device
@@ -943,11 +998,107 @@ fn create_terrain_mesh_buffers(
         .device
         .create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("forge3d-web-terrain-indices"),
-            contents: bytemuck::cast_slice(&mesh.indices),
+            contents: bytemuck::cast_slice(&indices),
             usage: wgpu::BufferUsages::INDEX,
         });
 
-    Ok((vertex_buffer, index_buffer, mesh.indices.len() as u32))
+    Ok((vertex_buffer, index_buffer, indices.len() as u32))
+}
+
+fn append_terrain_edge_skirts(
+    vertices: &mut Vec<TerrainVertex>,
+    indices: &mut Vec<u32>,
+    width: u32,
+    height: u32,
+) -> Result<(), WebError> {
+    if width < 2 || height < 2 {
+        return Ok(());
+    }
+
+    let width_usize = width as usize;
+    let height_usize = height as usize;
+    append_horizontal_skirt(vertices, indices, 0, width_usize, false)?;
+    append_horizontal_skirt(vertices, indices, height_usize - 1, width_usize, true)?;
+    append_vertical_skirt(vertices, indices, 0, width_usize, height_usize, true)?;
+    append_vertical_skirt(
+        vertices,
+        indices,
+        width_usize - 1,
+        width_usize,
+        height_usize,
+        false,
+    )?;
+    Ok(())
+}
+
+fn append_horizontal_skirt(
+    vertices: &mut Vec<TerrainVertex>,
+    indices: &mut Vec<u32>,
+    row: usize,
+    width: usize,
+    reverse: bool,
+) -> Result<(), WebError> {
+    let skirt_indices = (0..width)
+        .map(|column| push_skirt_vertex(vertices, row * width + column))
+        .collect::<Result<Vec<_>, _>>()?;
+    for column in 0..(width - 1) {
+        let a = (row * width + column) as u32;
+        let b = (row * width + column + 1) as u32;
+        let a_skirt = skirt_indices[column];
+        let b_skirt = skirt_indices[column + 1];
+        if reverse {
+            indices.extend_from_slice(&[a, b, a_skirt, b, b_skirt, a_skirt]);
+        } else {
+            indices.extend_from_slice(&[a, a_skirt, b, b, a_skirt, b_skirt]);
+        }
+    }
+    Ok(())
+}
+
+fn append_vertical_skirt(
+    vertices: &mut Vec<TerrainVertex>,
+    indices: &mut Vec<u32>,
+    column: usize,
+    width: usize,
+    height: usize,
+    reverse: bool,
+) -> Result<(), WebError> {
+    let skirt_indices = (0..height)
+        .map(|row| push_skirt_vertex(vertices, row * width + column))
+        .collect::<Result<Vec<_>, _>>()?;
+    for row in 0..(height - 1) {
+        let a = (row * width + column) as u32;
+        let b = ((row + 1) * width + column) as u32;
+        let a_skirt = skirt_indices[row];
+        let b_skirt = skirt_indices[row + 1];
+        if reverse {
+            indices.extend_from_slice(&[a, b, a_skirt, b, b_skirt, a_skirt]);
+        } else {
+            indices.extend_from_slice(&[a, a_skirt, b, b, a_skirt, b_skirt]);
+        }
+    }
+    Ok(())
+}
+
+fn push_skirt_vertex(
+    vertices: &mut Vec<TerrainVertex>,
+    source_index: usize,
+) -> Result<u32, WebError> {
+    let mut vertex = *vertices.get(source_index).ok_or_else(|| {
+        WebError::new(
+            Forge3DErrorCode::InvalidInput,
+            "terrain skirt source vertex is out of range",
+        )
+    })?;
+    vertex.position[1] -= TERRAIN_SKIRT_DEPTH;
+    let index = u32::try_from(vertices.len()).map_err(|_| {
+        WebError::new(
+            Forge3DErrorCode::InvalidInput,
+            "terrain skirt mesh is too large for u32 indices",
+        )
+    })?;
+    vertices.push(vertex);
+    Ok(index)
 }
 
 fn create_height_texture(
@@ -1055,7 +1206,7 @@ struct CameraUniform {
 struct ColorRampUniform {
     stops: array<vec4<f32>, 8>,
     stop_count: u32,
-    padding: vec3<u32>,
+    clear_color: vec4<f32>,
 };
 
 struct VertexOutput {
@@ -1069,12 +1220,16 @@ struct VertexOutput {
 @group(0) @binding(2) var<uniform> camera: CameraUniform;
 @group(0) @binding(3) var<uniform> color_ramp: ColorRampUniform;
 
+const TERRAIN_HEIGHT_SCALE: f32 = 0.7;
+
 @vertex
 fn vs_main(input: VertexInput) -> VertexOutput {
     let height = textureSampleLevel(heightmap, nearest_sampler, input.uv, 0.0).r;
+    let edge_fade = terrain_edge_fade(input.uv);
+    let height_scale = TERRAIN_HEIGHT_SCALE * mix(0.08, 1.0, edge_fade);
     let world_position = vec3<f32>(
         input.position.x,
-        input.position.y + height * 0.7,
+        input.position.y + height * height_scale,
         input.position.z,
     );
     var output: VertexOutput;
@@ -1087,7 +1242,11 @@ fn vs_main(input: VertexInput) -> VertexOutput {
 @fragment
 fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
     let t = clamp(input.height, 0.0, 1.0);
-    return vec4<f32>(sample_color_ramp(t), 1.0);
+    let base_color = sample_color_ramp(t);
+    let normal = terrain_normal(input.uv);
+    let shaded = shade_relief(base_color, normal);
+    let edge_fade = terrain_edge_fade(input.uv);
+    return vec4<f32>(mix(color_ramp.clear_color.xyz, shaded, edge_fade), 1.0);
 }
 
 fn sample_color_ramp(t: f32) -> vec3<f32> {
@@ -1105,6 +1264,42 @@ fn sample_color_ramp(t: f32) -> vec3<f32> {
         previous = next;
     }
     return previous.xyz;
+}
+
+fn terrain_normal(uv: vec2<f32>) -> vec3<f32> {
+    let dimensions = textureDimensions(heightmap);
+    let max_texel = vec2<i32>(i32(dimensions.x) - 1, i32(dimensions.y) - 1);
+    let scaled_uv = uv * vec2<f32>(f32(dimensions.x - 1u), f32(dimensions.y - 1u));
+    let center = vec2<i32>(i32(round(scaled_uv.x)), i32(round(scaled_uv.y)));
+    let left = height_at(center + vec2<i32>(-1, 0), max_texel);
+    let right = height_at(center + vec2<i32>(1, 0), max_texel);
+    let up = height_at(center + vec2<i32>(0, -1), max_texel);
+    let down = height_at(center + vec2<i32>(0, 1), max_texel);
+    let x_spacing = 2.0 / max(f32(dimensions.x - 1u), 1.0);
+    let z_spacing = 2.0 / max(f32(dimensions.y - 1u), 1.0);
+    let tangent_x = vec3<f32>(2.0 * x_spacing, (right - left) * TERRAIN_HEIGHT_SCALE, 0.0);
+    let tangent_z = vec3<f32>(0.0, (down - up) * TERRAIN_HEIGHT_SCALE, 2.0 * z_spacing);
+    return normalize(cross(tangent_z, tangent_x));
+}
+
+fn height_at(texel: vec2<i32>, max_texel: vec2<i32>) -> f32 {
+    return textureLoad(heightmap, clamp(texel, vec2<i32>(0, 0), max_texel), 0).r;
+}
+
+fn terrain_edge_fade(uv: vec2<f32>) -> f32 {
+    let edge_distance = min(min(uv.x, uv.y), min(1.0 - uv.x, 1.0 - uv.y));
+    return smoothstep(0.0, 0.35, edge_distance);
+}
+
+fn shade_relief(color: vec3<f32>, normal: vec3<f32>) -> vec3<f32> {
+    let key_light = normalize(vec3<f32>(-0.48, 0.78, 0.40));
+    let fill_light = normalize(vec3<f32>(0.55, 0.45, -0.35));
+    let diffuse = max(dot(normal, key_light), 0.0);
+    let fill = max(dot(normal, fill_light), 0.0) * 0.12;
+    let slope = clamp(1.0 - normal.y, 0.0, 1.0);
+    let shade = clamp(0.50 + diffuse * 0.56 + fill + slope * 0.12, 0.42, 1.22);
+    let highlight = vec3<f32>(1.0, 0.94, 0.82) * max(diffuse - 0.72, 0.0) * 0.08;
+    return clamp(color * shade + highlight, vec3<f32>(0.0), vec3<f32>(1.0));
 }
 "#;
 
@@ -1137,12 +1332,45 @@ mod tests {
     }
 
     #[test]
+    fn terrain_edge_skirts_extend_boundary_vertices_below_surface() {
+        let mut vertices = vec![
+            super::TerrainVertex {
+                position: [-1.0, 0.0, -1.0],
+                uv: [0.0, 0.0],
+            },
+            super::TerrainVertex {
+                position: [1.0, 0.0, -1.0],
+                uv: [1.0, 0.0],
+            },
+            super::TerrainVertex {
+                position: [-1.0, 0.0, 1.0],
+                uv: [0.0, 1.0],
+            },
+            super::TerrainVertex {
+                position: [1.0, 0.0, 1.0],
+                uv: [1.0, 1.0],
+            },
+        ];
+        let mut indices = vec![0, 2, 1, 1, 2, 3];
+
+        super::append_terrain_edge_skirts(&mut vertices, &mut indices, 2, 2).unwrap();
+
+        assert_eq!(vertices.len(), 12);
+        assert_eq!(indices.len(), 30);
+        assert!(vertices[4..]
+            .iter()
+            .all(|vertex| (vertex.position[1] + super::TERRAIN_SKIRT_DEPTH).abs() < 0.0001));
+        assert_eq!(vertices[4].uv, [0.0, 0.0]);
+    }
+
+    #[test]
     fn runtime_dispose_guard_uses_stable_error_code() {
         let runtime = super::Forge3DRuntime {
             canvas: wasm_bindgen::JsCast::unchecked_into(wasm_bindgen::JsValue::NULL),
             gpu_runtime: None,
             context: None,
             surface_state: None,
+            depth_attachment: None,
             terrain: None,
             camera: forge3d_core::camera::CameraInput::default(),
             width: 1,

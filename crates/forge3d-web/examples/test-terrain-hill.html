@@ -55,6 +55,22 @@
         return heights;
       }
 
+      function createRaisedTerrainPatch(width, height) {
+        const heights = new Float32Array(width * height);
+        for (let y = 0; y < height; y += 1) {
+          const v = y / (height - 1);
+          for (let x = 0; x < width; x += 1) {
+            const u = x / (width - 1);
+            const dx = u - 0.5;
+            const dy = v - 0.5;
+            const ridge = Math.max(0, 1 - Math.hypot(dx * 1.0, dy * 1.15) * 2.0);
+            const ripple = Math.sin(x * 0.75) * Math.cos(y * 0.45) * 0.06;
+            heights[y * width + x] = Math.max(0.18, Math.min(1, ridge * ridge + ripple + 0.18));
+          }
+        }
+        return heights;
+      }
+
       const testColorRamp = {
         stops: [
           { position: 0.0, color: [0.05, 0.08, 0.16] },
@@ -134,6 +150,151 @@
           variedPixels,
           lumaRange: maxLuma - minLuma,
           invalidCode
+        };
+      };
+
+      window.__forge3dReliefShadingProbe = async () => {
+        if (!navigator.gpu) {
+          return {
+            supported: false,
+            visibleTerrainPixels: 0,
+            terrainLumaRange: 0,
+            terrainLumaStdDev: 0
+          };
+        }
+
+        const runtime = await Forge3DRuntime.create(canvas, {
+          width: 128,
+          height: 96,
+          devicePixelRatio: 1,
+          clearColor: [0.01, 0.01, 0.01, 1.0]
+        });
+        runtime.setTerrain({
+          width: 33,
+          height: 33,
+          heights: createHill(33, 33),
+          colorRamp: {
+            stops: [
+              { position: 0.0, color: [0.38, 0.58, 0.3] },
+              { position: 1.0, color: [0.38, 0.58, 0.3] }
+            ]
+          }
+        });
+        runtime.render();
+
+        const mapped = await screenshotPixels(runtime);
+        let maxLuma = 0;
+        let minLuma = 255;
+        let lumaSum = 0;
+        let lumaSquaredSum = 0;
+        let visibleTerrainPixels = 0;
+        for (let offset = 0; offset < mapped.length; offset += 4) {
+          const r = mapped[offset];
+          const g = mapped[offset + 1];
+          const b = mapped[offset + 2];
+          const a = mapped[offset + 3];
+          const looksLikeTerrain = a > 0 && g > 70 && r > 45 && b > 25 && g > b + 25;
+          if (!looksLikeTerrain) continue;
+          const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+          visibleTerrainPixels += 1;
+          lumaSum += luma;
+          lumaSquaredSum += luma * luma;
+          minLuma = Math.min(minLuma, luma);
+          maxLuma = Math.max(maxLuma, luma);
+        }
+
+        runtime.dispose();
+        const meanLuma = visibleTerrainPixels > 0 ? lumaSum / visibleTerrainPixels : 0;
+        const variance =
+          visibleTerrainPixels > 0
+            ? lumaSquaredSum / visibleTerrainPixels - meanLuma * meanLuma
+            : 0;
+        return {
+          supported: true,
+          visibleTerrainPixels,
+          terrainLumaRange: visibleTerrainPixels > 0 ? maxLuma - minLuma : 0,
+          terrainLumaStdDev: Math.sqrt(Math.max(0, variance))
+        };
+      };
+
+      window.__forge3dTerrainEdgeProbe = async () => {
+        if (!navigator.gpu) {
+          return {
+            supported: false,
+            visibleTerrainPixels: 0,
+            outerFrameTerrainShare: 0,
+            rightFrameContactRows: 0,
+            bottomFrameContactColumns: 0
+          };
+        }
+
+        const runtime = await Forge3DRuntime.create(canvas, {
+          width: 192,
+          height: 128,
+          devicePixelRatio: 1,
+          clearColor: [169 / 255, 197 / 255, 212 / 255, 1.0]
+        });
+        runtime.setTerrain({
+          width: 49,
+          height: 49,
+          heights: createRaisedTerrainPatch(49, 49),
+          colorRamp: {
+            stops: [
+              { position: 0.0, color: [0.38, 0.58, 0.3] },
+              { position: 1.0, color: [0.38, 0.58, 0.3] }
+            ]
+          }
+        });
+        runtime.setCamera({
+          position: [1.05, 0.62, 1.35],
+          target: [0.0, 0.16, 0.03],
+          up: [0.0, 1.0, 0.0],
+          fovYDegrees: 38,
+          near: 0.01,
+          far: 100
+        });
+        runtime.render();
+
+        const mapped = await screenshotPixels(runtime);
+        const width = canvas.width;
+        const height = canvas.height;
+        const bottomColumns = new Set();
+        const rightRows = new Set();
+        let visibleTerrainPixels = 0;
+        let outerFrameTerrainPixels = 0;
+        const isTerrainPixel = (offset) => {
+          const red = mapped[offset];
+          const green = mapped[offset + 1];
+          const blue = mapped[offset + 2];
+          const alpha = mapped[offset + 3];
+          if (alpha < 250) return false;
+          const luma = 0.2126 * red + 0.7152 * green + 0.0722 * blue;
+          const skyDistance =
+            Math.abs(red - 169) + Math.abs(green - 197) + Math.abs(blue - 212);
+          return luma > 18 && skyDistance > 58 && !(blue > red + 18 && blue > green + 12);
+        };
+
+        for (let y = 0; y < height; y += 1) {
+          for (let x = 0; x < width; x += 1) {
+            const offset = (y * width + x) * 4;
+            if (!isTerrainPixel(offset)) continue;
+            visibleTerrainPixels += 1;
+            if (x >= width - 6) rightRows.add(y);
+            if (y >= height - 6) bottomColumns.add(x);
+            if (x < 6 || x >= width - 6 || y < 6 || y >= height - 6) {
+              outerFrameTerrainPixels += 1;
+            }
+          }
+        }
+
+        runtime.dispose();
+        return {
+          supported: true,
+          visibleTerrainPixels,
+          outerFrameTerrainShare:
+            visibleTerrainPixels > 0 ? outerFrameTerrainPixels / visibleTerrainPixels : 0,
+          rightFrameContactRows: rightRows.size,
+          bottomFrameContactColumns: bottomColumns.size
         };
       };
     </script>

@@ -11,6 +11,14 @@ This project adheres to [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ### Changed
 - Narrowed the repository to browser/npm/WASM scope by removing Python/native surfaces, legacy root source, old examples/docs/assets, and generated local artifacts.
 
+## [1.26.3] - 2026-06-18
+### Fixed
+- Added browser WebGPU terrain edge skirts and opaque clear-color edge blending to reduce rectangular slab artifacts in oblique terrain views while preserving relief shading and color ramps.
+
+## [1.26.2] - 2026-06-18
+### Fixed
+- Added WebGPU depth testing and normals-based terrain relief shading so browser terrain renders with visible surface definition even when elevation colors are constant.
+
 ## [1.26.1] - 2026-06-18
 ### Fixed
 - Fixed the browser WebGPU terrain color-ramp uniform upload so its buffer size matches the WGSL uniform layout required by the terrain shader.

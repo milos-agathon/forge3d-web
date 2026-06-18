@@ -1,6 +1,6 @@
 {
   "name": "@forge3d/web",
-  "version": "1.26.1",
+  "version": "1.26.3",
   "type": "module",
   "description": "Browser-only Forge3D WebGPU/WASM runtime for terrain rendering",
   "license": "Apache-2.0 OR MIT",
