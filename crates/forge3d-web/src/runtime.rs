@@ -764,6 +764,7 @@ struct TerrainRenderResources {
 }
 
 impl TerrainRenderResources {
+    #[allow(clippy::too_many_arguments)]
     fn new(
         context: &GpuContext,
         surface_format: wgpu::TextureFormat,

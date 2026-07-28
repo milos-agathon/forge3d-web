@@ -124,7 +124,7 @@ impl ByteSource for InMemoryByteSource {
 }
 
 pub fn bytes_to_f32_le(bytes: &[u8], expected_count: Option<usize>) -> Result<Vec<f32>> {
-    if bytes.len() % std::mem::size_of::<f32>() != 0 {
+    if !bytes.len().is_multiple_of(std::mem::size_of::<f32>()) {
         return Err(Forge3dError::InvalidInput {
             field: "source".to_string(),
             message: "height bytes length must be a multiple of 4".to_string(),
@@ -170,8 +170,8 @@ mod tests {
         let empty = InMemoryByteSource::new(Vec::new());
 
         let full = block_on_ready(source.read_range(None)).unwrap();
-        let ranged = block_on_ready(source.read_range(Some(ByteRange::new(2, Some(3)).unwrap())))
-            .unwrap();
+        let ranged =
+            block_on_ready(source.read_range(Some(ByteRange::new(2, Some(3)).unwrap()))).unwrap();
 
         assert!(!source.is_empty());
         assert!(empty.is_empty());

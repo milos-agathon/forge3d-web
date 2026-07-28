@@ -1,7 +1,10 @@
 export type Forge3DErrorCode =
   | "WEBGPU_UNAVAILABLE"
   | "WEBGPU_ADAPTER_UNAVAILABLE"
+  | "INSECURE_CONTEXT"
+  | "WASM_LOAD_FAILED"
   | "DEVICE_REQUEST_FAILED"
+  | "DEVICE_LOST"
   | "SURFACE_CREATE_FAILED"
   | "SURFACE_LOST"
   | "SURFACE_OUTDATED"
@@ -11,10 +14,13 @@ export type Forge3DErrorCode =
   | "IO_ERROR"
   | "REQUEST_CANCELLED"
   | "SHADER_COMPILATION_FAILED"
+  | "INTERNAL_ERROR"
+  | "RESOURCE_LIMIT_EXCEEDED"
   | "RUNTIME_DISPOSED";
 
 export interface Forge3DRuntimeOptions {
-  powerPreference?: "low-power" | "high-performance";
+  powerPreference?: "none" | "low-power" | "high-performance";
+  wasmUrl?: string | URL;
   width?: number;
   height?: number;
   devicePixelRatio?: number;
@@ -22,6 +28,101 @@ export interface Forge3DRuntimeOptions {
   alphaMode?: "opaque" | "premultiplied";
   colorSpace?: "srgb";
   diagnostics?: boolean;
+}
+
+export interface Forge3DRuntimeCapabilities {
+  deviceState: "ready" | "lost" | "disposed";
+  maxTextureDimension2D: number;
+  maxBufferSize: number;
+  surfaceFormat: string;
+}
+
+export type ViewerStatus =
+  | "initializing"
+  | "ready"
+  | "recovering"
+  | "failed"
+  | "disposed";
+
+export type ViewerResourcePreset = "desktop" | "mobile";
+
+export interface OrbitView {
+  target: [number, number, number];
+  distance: number;
+  yawDegrees: number;
+  pitchDegrees: number;
+  fovYDegrees: number;
+  near: number;
+  far: number;
+}
+
+export interface OrbitControlsOptions {
+  enabled?: boolean;
+  keyboard?: boolean;
+  orbitSpeed?: number;
+  panSpeed?: number;
+  zoomSpeed?: number;
+  minDistance?: number;
+  maxDistance?: number;
+  minPitchDegrees?: number;
+  maxPitchDegrees?: number;
+}
+
+export interface ViewerResizeOptions {
+  maxDevicePixelRatio?: number;
+}
+
+export interface ViewerRecoveryOptions {
+  deviceLoss?: "none" | "once";
+}
+
+export interface ViewerResourceBudget {
+  maxTerrainSamples: number;
+  maxSourceBytes: number;
+  maxCanvasPixels: number;
+  maxScreenshotPixels: number;
+}
+
+export interface ViewerResourceOptions {
+  preset?: ViewerResourcePreset;
+  budget?: Partial<ViewerResourceBudget>;
+}
+
+export interface ViewerCapabilities extends Forge3DRuntimeCapabilities {
+  secureContext: true;
+  webgpuAvailable: true;
+}
+
+export interface ViewerDiagnostics {
+  generation: number;
+  renderRequests: number;
+  submittedFrames: number;
+  skippedFrames: number;
+  activePointers: number;
+  ownedListeners: number;
+  activeObservers: number;
+  activeRuntimes: number;
+  pendingAnimationFrame: boolean;
+  recoveryAttempts: number;
+  screenshotInFlight: boolean;
+  effectiveResourceBudget: ViewerResourceBudget;
+  effectiveMaxDevicePixelRatio: number;
+}
+
+export interface ViewerStatusChange {
+  previous: ViewerStatus;
+  current: ViewerStatus;
+}
+
+export interface Forge3DViewerOptions {
+  runtime?: Forge3DRuntimeOptions;
+  initialView?: OrbitView;
+  controls?: false | OrbitControlsOptions;
+  resize?: false | ViewerResizeOptions;
+  recovery?: ViewerRecoveryOptions;
+  resources?: ViewerResourceOptions;
+  onStatusChange?: (change: ViewerStatusChange) => void;
+  onError?: (error: Forge3DError) => void;
 }
 
 export interface TerrainHeightmapInput {
@@ -337,7 +438,10 @@ function normalizeErrorCode(code: unknown): Forge3DErrorCode {
 const ERROR_CODES = new Set<Forge3DErrorCode>([
   "WEBGPU_UNAVAILABLE",
   "WEBGPU_ADAPTER_UNAVAILABLE",
+  "INSECURE_CONTEXT",
+  "WASM_LOAD_FAILED",
   "DEVICE_REQUEST_FAILED",
+  "DEVICE_LOST",
   "SURFACE_CREATE_FAILED",
   "SURFACE_LOST",
   "SURFACE_OUTDATED",
@@ -347,5 +451,7 @@ const ERROR_CODES = new Set<Forge3DErrorCode>([
   "IO_ERROR",
   "REQUEST_CANCELLED",
   "SHADER_COMPILATION_FAILED",
+  "INTERNAL_ERROR",
+  "RESOURCE_LIMIT_EXCEEDED",
   "RUNTIME_DISPOSED",
 ]);

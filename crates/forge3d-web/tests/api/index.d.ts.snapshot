@@ -5,7 +5,10 @@
 export type Forge3DErrorCode =
   | "WEBGPU_UNAVAILABLE"
   | "WEBGPU_ADAPTER_UNAVAILABLE"
+  | "INSECURE_CONTEXT"
+  | "WASM_LOAD_FAILED"
   | "DEVICE_REQUEST_FAILED"
+  | "DEVICE_LOST"
   | "SURFACE_CREATE_FAILED"
   | "SURFACE_LOST"
   | "SURFACE_OUTDATED"
@@ -15,6 +18,8 @@ export type Forge3DErrorCode =
   | "IO_ERROR"
   | "REQUEST_CANCELLED"
   | "SHADER_COMPILATION_FAILED"
+  | "INTERNAL_ERROR"
+  | "RESOURCE_LIMIT_EXCEEDED"
   | "RUNTIME_DISPOSED";
 
 /** Error thrown by the stable browser facade. */
@@ -28,7 +33,9 @@ export declare class Forge3DError extends Error {
 /** Options used during async WebGPU runtime creation. */
 export interface Forge3DRuntimeOptions {
   /** Browser WebGPU adapter preference. */
-  powerPreference?: "low-power" | "high-performance";
+  powerPreference?: "none" | "low-power" | "high-performance";
+  /** Optional facade-owned wasm-bindgen asset URL. */
+  wasmUrl?: string | URL;
   /** Canvas backing width in CSS pixels before applying devicePixelRatio. */
   width?: number;
   /** Canvas backing height in CSS pixels before applying devicePixelRatio. */
@@ -41,6 +48,114 @@ export interface Forge3DRuntimeOptions {
   colorSpace?: "srgb";
   /** Enables runtime diagnostics exposed through diagnosticsEnabled. */
   diagnostics?: boolean;
+}
+
+/** Observable low-level WebGPU runtime limits and device state. */
+export interface Forge3DRuntimeCapabilities {
+  deviceState: "ready" | "lost" | "disposed";
+  maxTextureDimension2D: number;
+  maxBufferSize: number;
+  surfaceFormat: string;
+}
+
+/** High-level interactive viewer lifecycle state. */
+export type ViewerStatus =
+  | "initializing"
+  | "ready"
+  | "recovering"
+  | "failed"
+  | "disposed";
+
+/** Viewer resource-policy preset. */
+export type ViewerResourcePreset = "desktop" | "mobile";
+
+/** Y-up orbit camera state. */
+export interface OrbitView {
+  target: [number, number, number];
+  distance: number;
+  yawDegrees: number;
+  pitchDegrees: number;
+  fovYDegrees: number;
+  near: number;
+  far: number;
+}
+
+/** Optional orbit, pan, zoom, and keyboard control settings. */
+export interface OrbitControlsOptions {
+  enabled?: boolean;
+  keyboard?: boolean;
+  orbitSpeed?: number;
+  panSpeed?: number;
+  zoomSpeed?: number;
+  minDistance?: number;
+  maxDistance?: number;
+  minPitchDegrees?: number;
+  maxPitchDegrees?: number;
+}
+
+/** Automatic resize policy. */
+export interface ViewerResizeOptions {
+  maxDevicePixelRatio?: number;
+}
+
+/** Unexpected device-loss recovery policy. */
+export interface ViewerRecoveryOptions {
+  deviceLoss?: "none" | "once";
+}
+
+/** Effective high-level viewer allocation ceilings. */
+export interface ViewerResourceBudget {
+  maxTerrainSamples: number;
+  maxSourceBytes: number;
+  maxCanvasPixels: number;
+  maxScreenshotPixels: number;
+}
+
+/** Viewer resource preset and optional validated budget overrides. */
+export interface ViewerResourceOptions {
+  preset?: ViewerResourcePreset;
+  budget?: Partial<ViewerResourceBudget>;
+}
+
+/** Viewer capabilities after secure WebGPU initialization succeeds. */
+export interface ViewerCapabilities extends Forge3DRuntimeCapabilities {
+  secureContext: true;
+  webgpuAvailable: true;
+}
+
+/** Owned-resource and render-scheduler diagnostics. */
+export interface ViewerDiagnostics {
+  generation: number;
+  renderRequests: number;
+  submittedFrames: number;
+  skippedFrames: number;
+  activePointers: number;
+  ownedListeners: number;
+  activeObservers: number;
+  activeRuntimes: number;
+  pendingAnimationFrame: boolean;
+  recoveryAttempts: number;
+  screenshotInFlight: boolean;
+  effectiveResourceBudget: ViewerResourceBudget;
+  effectiveMaxDevicePixelRatio: number;
+}
+
+/** A single actual viewer lifecycle transition. */
+export interface ViewerStatusChange {
+  previous: ViewerStatus;
+  current: ViewerStatus;
+}
+
+/** Options used during async interactive viewer creation. */
+export interface Forge3DViewerOptions {
+  runtime?: Forge3DRuntimeOptions;
+  initialView?: OrbitView;
+  controls?: false | OrbitControlsOptions;
+  resize?: false | ViewerResizeOptions;
+  recovery?: ViewerRecoveryOptions;
+  resources?: ViewerResourceOptions;
+  onStatusChange?: (change: ViewerStatusChange) => void;
+  onError?: (error: Forge3DError) => void;
 }
 
 /** Float32 heightmap input for the MVP terrain renderer. */
@@ -133,9 +248,36 @@ export declare class Forge3DRuntime {
   /** Whether diagnostics were enabled at creation time. */
   readonly diagnosticsEnabled: boolean;
   clearColor(): [number, number, number, number];
+  getCapabilities(): Forge3DRuntimeCapabilities;
   setTerrain(terrain: TerrainHeightmapInput): void;
   setTerrainFromSource(terrain: TerrainHeightmapSourceInput): Promise<void>;
   setCamera(camera: CameraInput): void;
+  resize(size: ResizeInput): void;
+  render(): void;
+  screenshot(): Promise<Blob>;
+  dispose(): void;
+}
+
+/**
+ * High-level, invalidation-driven interactive terrain viewer.
+ *
+ * The viewer owns controls, resize observation, scheduling, and one optional
+ * device-loss recovery. dispose() synchronously releases all owned resources.
+ */
+export declare class Forge3DViewer {
+  static create(
+    canvas: HTMLCanvasElement,
+    options?: Forge3DViewerOptions,
+  ): Promise<Forge3DViewer>;
+  readonly disposed: boolean;
+  readonly status: ViewerStatus;
+  getView(): OrbitView;
+  getCapabilities(): ViewerCapabilities;
+  getDiagnostics(): ViewerDiagnostics;
+  setTerrain(terrain: TerrainHeightmapInput): void;
+  setTerrainFromSource(terrain: TerrainHeightmapSourceInput): Promise<void>;
+  setView(view: OrbitView): void;
+  resetView(): void;
   resize(size: ResizeInput): void;
   render(): void;
   screenshot(): Promise<Blob>;
