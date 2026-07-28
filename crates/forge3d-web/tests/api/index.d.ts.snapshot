@@ -253,7 +253,7 @@ export declare class Forge3DRuntime {
   setTerrainFromSource(terrain: TerrainHeightmapSourceInput): Promise<void>;
   setCamera(camera: CameraInput): void;
   resize(size: ResizeInput): void;
-  render(): void;
+  render(): boolean;
   screenshot(): Promise<Blob>;
   dispose(): void;
 }

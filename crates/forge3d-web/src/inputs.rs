@@ -96,7 +96,7 @@ impl RuntimeOptions {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct TerrainHeightmapOptions {
     pub width: u32,
     pub height: u32,
@@ -104,8 +104,37 @@ pub struct TerrainHeightmapOptions {
     pub color_ramp: TerrainColorRampOptions,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TerrainPhysicalLimits {
+    pub max_texture_dimension_2d: u32,
+    pub max_buffer_size: u64,
+}
+
+impl TerrainPhysicalLimits {
+    pub fn from_device(device: &wgpu::Device) -> Self {
+        let limits = device.limits();
+        Self {
+            max_texture_dimension_2d: limits.max_texture_dimension_2d,
+            max_buffer_size: limits.max_buffer_size,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct TerrainAllocation {
+    pub sample_count: usize,
+    pub sample_bytes: u64,
+    pub vertex_count: u64,
+    pub vertex_bytes: u64,
+    pub index_count: u64,
+    pub index_bytes: u64,
+}
+
 impl TerrainHeightmapOptions {
-    pub fn from_js_value(value: JsValue) -> Result<Self, WebError> {
+    pub fn from_js_value_with_limits(
+        value: JsValue,
+        limits: TerrainPhysicalLimits,
+    ) -> Result<Self, WebError> {
         if value.is_undefined() || value.is_null() {
             return Err(WebError::new(
                 Forge3DErrorCode::InvalidInput,
@@ -125,11 +154,13 @@ impl TerrainHeightmapOptions {
                     "heights must be a Float32Array",
                 )
             })?;
-        let mut heights = vec![0.0; heights_array.length() as usize];
-        heights_array.copy_to(&mut heights);
+        validate_terrain_allocation(width, height, heights_array.length() as usize, limits)?;
         let color_ramp_value = js_sys::Reflect::get(&value, &JsValue::from_str("colorRamp"))
             .map_err(|_| WebError::new(Forge3DErrorCode::InvalidInput, "invalid colorRamp"))?;
         let color_ramp = TerrainColorRampOptions::from_js_value(color_ramp_value)?;
+
+        let mut heights = vec![0.0; heights_array.length() as usize];
+        heights_array.copy_to(&mut heights);
 
         Ok(Self {
             width,
@@ -139,15 +170,131 @@ impl TerrainHeightmapOptions {
         })
     }
 
-    pub fn validate(&self) -> Result<forge3d_core::terrain::TerrainHeightmapInput, WebError> {
+    pub fn validate(self) -> Result<forge3d_core::terrain::TerrainHeightmapInput, WebError> {
         self.color_ramp.validate()?;
-        forge3d_core::terrain::TerrainHeightmapInput::new(
-            self.width,
-            self.height,
-            self.heights.clone(),
-        )
-        .map_err(crate::error::map_core_error)
+        forge3d_core::terrain::TerrainHeightmapInput::new(self.width, self.height, self.heights)
+            .map_err(crate::error::map_core_error)
     }
+}
+
+pub fn validate_terrain_allocation(
+    width: u32,
+    height: u32,
+    heights_length: usize,
+    limits: TerrainPhysicalLimits,
+) -> Result<TerrainAllocation, WebError> {
+    if width == 0 || height == 0 {
+        return Err(WebError::new(
+            Forge3DErrorCode::InvalidInput,
+            "terrain width and height must be greater than zero",
+        ));
+    }
+    if width < 2 || height < 2 {
+        return Err(WebError::new(
+            Forge3DErrorCode::InvalidInput,
+            "terrain width and height must be at least 2 to draw a mesh",
+        ));
+    }
+    if width > limits.max_texture_dimension_2d || height > limits.max_texture_dimension_2d {
+        return Err(WebError::new(
+            Forge3DErrorCode::ResourceLimitExceeded,
+            format!(
+                "terrain dimensions {width}x{height} exceed maxTextureDimension2D {}",
+                limits.max_texture_dimension_2d
+            ),
+        ));
+    }
+
+    let sample_count_u64 = u64::from(width)
+        .checked_mul(u64::from(height))
+        .ok_or_else(|| resource_overflow("terrain sample count"))?;
+    let sample_count =
+        usize::try_from(sample_count_u64).map_err(|_| resource_overflow("terrain sample count"))?;
+    if heights_length != sample_count {
+        return Err(WebError::new(
+            Forge3DErrorCode::InvalidInput,
+            format!("heights length must equal width * height ({sample_count})"),
+        ));
+    }
+    let sample_bytes = sample_count_u64
+        .checked_mul(std::mem::size_of::<f32>() as u64)
+        .ok_or_else(|| resource_overflow("terrain sample bytes"))?;
+
+    let skirt_vertices = u64::from(width)
+        .checked_mul(2)
+        .and_then(|value| value.checked_add(u64::from(height).checked_mul(2)?))
+        .ok_or_else(|| resource_overflow("terrain skirt vertex count"))?;
+    let vertex_count = sample_count_u64
+        .checked_add(skirt_vertices)
+        .ok_or_else(|| resource_overflow("terrain vertex count"))?;
+    if vertex_count > u64::from(u32::MAX) {
+        return Err(WebError::new(
+            Forge3DErrorCode::ResourceLimitExceeded,
+            "terrain mesh exceeds the u32 vertex-index address space",
+        ));
+    }
+    let vertex_bytes = vertex_count
+        .checked_mul((std::mem::size_of::<[f32; 3]>() + std::mem::size_of::<[f32; 2]>()) as u64)
+        .ok_or_else(|| resource_overflow("terrain vertex bytes"))?;
+
+    let cells = u64::from(width - 1)
+        .checked_mul(u64::from(height - 1))
+        .ok_or_else(|| resource_overflow("terrain cell count"))?;
+    let base_indices = cells
+        .checked_mul(6)
+        .ok_or_else(|| resource_overflow("terrain index count"))?;
+    let skirt_edges = u64::from(width - 1)
+        .checked_mul(2)
+        .and_then(|value| value.checked_add(u64::from(height - 1).checked_mul(2)?))
+        .ok_or_else(|| resource_overflow("terrain skirt edge count"))?;
+    let index_count = skirt_edges
+        .checked_mul(6)
+        .and_then(|value| value.checked_add(base_indices))
+        .ok_or_else(|| resource_overflow("terrain index count"))?;
+    if index_count > u64::from(u32::MAX) {
+        return Err(WebError::new(
+            Forge3DErrorCode::ResourceLimitExceeded,
+            "terrain mesh has more indices than a single u32 draw range can address",
+        ));
+    }
+    let index_bytes = index_count
+        .checked_mul(std::mem::size_of::<u32>() as u64)
+        .ok_or_else(|| resource_overflow("terrain index bytes"))?;
+
+    if vertex_bytes > limits.max_buffer_size {
+        return Err(WebError::new(
+            Forge3DErrorCode::ResourceLimitExceeded,
+            format!(
+                "terrain vertex buffer requires {vertex_bytes} bytes but maxBufferSize is {}",
+                limits.max_buffer_size
+            ),
+        ));
+    }
+    if index_bytes > limits.max_buffer_size {
+        return Err(WebError::new(
+            Forge3DErrorCode::ResourceLimitExceeded,
+            format!(
+                "terrain index buffer requires {index_bytes} bytes but maxBufferSize is {}",
+                limits.max_buffer_size
+            ),
+        ));
+    }
+
+    Ok(TerrainAllocation {
+        sample_count,
+        sample_bytes,
+        vertex_count,
+        vertex_bytes,
+        index_count,
+        index_bytes,
+    })
+}
+
+fn resource_overflow(resource: &str) -> WebError {
+    WebError::new(
+        Forge3DErrorCode::ResourceLimitExceeded,
+        format!("{resource} overflowed"),
+    )
 }
 
 #[derive(Debug, Clone, Deserialize, PartialEq)]
@@ -161,6 +308,7 @@ impl TerrainColorRampOptions {
         let ramp = if value.is_undefined() || value.is_null() {
             Self::default()
         } else {
+            validate_color_ramp_shape_before_deserialize(&value)?;
             serde_wasm_bindgen::from_value(value).map_err(|error| {
                 WebError::new(
                     Forge3DErrorCode::InvalidInput,
@@ -207,6 +355,35 @@ impl TerrainColorRampOptions {
         }
         Ok(())
     }
+}
+
+fn validate_color_ramp_shape_before_deserialize(value: &JsValue) -> Result<(), WebError> {
+    if !value.is_object() {
+        return Err(WebError::new(
+            Forge3DErrorCode::InvalidInput,
+            "colorRamp must be an object",
+        ));
+    }
+    let stops = js_sys::Reflect::get(value, &JsValue::from_str("stops")).map_err(|_| {
+        WebError::new(
+            Forge3DErrorCode::InvalidInput,
+            "colorRamp.stops could not be read",
+        )
+    })?;
+    if !js_sys::Array::is_array(&stops) {
+        return Err(WebError::new(
+            Forge3DErrorCode::InvalidInput,
+            "colorRamp.stops must be an array",
+        ));
+    }
+    let length = js_sys::Array::from(&stops).length();
+    if !(2..=8).contains(&length) {
+        return Err(WebError::new(
+            Forge3DErrorCode::InvalidInput,
+            "colorRamp.stops must contain between 2 and 8 stops",
+        ));
+    }
+    Ok(())
 }
 
 impl Default for TerrainColorRampOptions {
@@ -450,6 +627,7 @@ mod tests {
     use super::{
         AlphaModeOption, CameraOptions, PowerPreferenceOption, ResizeOptions, RuntimeOptions,
         TerrainColorRampOptions, TerrainColorStopOptions, TerrainHeightmapOptions,
+        TerrainPhysicalLimits,
     };
 
     #[test]
@@ -526,6 +704,42 @@ mod tests {
 
         assert_eq!(error.code().as_str(), "INVALID_INPUT");
         assert!(error.message().contains("finite"));
+    }
+
+    #[test]
+    fn terrain_allocation_rejects_physical_limits_before_copy_or_mesh_creation() {
+        let limits = TerrainPhysicalLimits {
+            max_texture_dimension_2d: 1024,
+            max_buffer_size: 64 * 1024,
+        };
+
+        let dimension_error =
+            super::validate_terrain_allocation(2048, 2, 4096, limits).unwrap_err();
+        assert_eq!(dimension_error.code().as_str(), "RESOURCE_LIMIT_EXCEEDED");
+
+        let buffer_error =
+            super::validate_terrain_allocation(100, 100, 10_000, limits).unwrap_err();
+        assert_eq!(buffer_error.code().as_str(), "RESOURCE_LIMIT_EXCEEDED");
+    }
+
+    #[test]
+    fn terrain_allocation_computes_skirted_mesh_bytes_with_checked_arithmetic() {
+        let allocation = super::validate_terrain_allocation(
+            2,
+            2,
+            4,
+            TerrainPhysicalLimits {
+                max_texture_dimension_2d: 8192,
+                max_buffer_size: u64::MAX,
+            },
+        )
+        .unwrap();
+
+        assert_eq!(allocation.sample_bytes, 16);
+        assert_eq!(allocation.vertex_count, 12);
+        assert_eq!(allocation.vertex_bytes, 240);
+        assert_eq!(allocation.index_count, 30);
+        assert_eq!(allocation.index_bytes, 120);
     }
 
     #[test]

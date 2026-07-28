@@ -66,13 +66,28 @@ jobs:
         working-directory: crates/forge3d-web
         run: npx playwright install chromium
 
+      - name: Test clean installed tarball in Chrome
+        working-directory: crates/forge3d-web
+        env:
+          FORGE3D_EVIDENCE_DIR: test-results/browser-gate
+        run: npm run test:package-consumer
+
+      - name: Upload exact-tarball browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forge3d-web-browser-gate
+          path: crates/forge3d-web/test-results/browser-gate
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Print WebGPU capability diagnostics
         working-directory: crates/forge3d-web
         env:
           FORGE3D_WEBGPU_REQUIRED: "1"
         run: |
           echo "FORGE3D_WEBGPU_REQUIRED=$env:FORGE3D_WEBGPU_REQUIRED"
-          echo "Chrome channel uses Playwright Desktop Chrome with --enable-unsafe-webgpu --use-angle=d3d11"
+          echo "Chrome channel uses the installed browser UA with --enable-unsafe-webgpu --use-angle=d3d11"
           echo "Playwright tests evaluate navigator.gpu before render assertions"
           npm run test:browser -- --grep "reports browser WebGPU diagnostics"
 
@@ -81,3 +96,12 @@ jobs:
         env:
           FORGE3D_WEBGPU_REQUIRED: "1"
         run: npm run test:browser
+
+      - name: Upload source-browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: forge3d-web-source-browser-evidence
+          path: crates/forge3d-web/test-results/**/browser-evidence.json
+          if-no-files-found: error
+          retention-days: 30

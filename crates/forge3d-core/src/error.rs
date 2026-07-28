@@ -4,6 +4,12 @@ pub enum Forge3dError {
     AdapterUnavailable,
     #[error("Device request failed: {message}")]
     DeviceRequest { message: String },
+    #[error("GPU device lost: {message}")]
+    DeviceLost { message: String },
+    #[error("Internal GPU error: {message}")]
+    Internal { message: String },
+    #[error("Resource limit exceeded for {resource}: {message}")]
+    ResourceLimitExceeded { resource: String, message: String },
     #[error("Unsupported feature: {feature}")]
     UnsupportedFeature { feature: String },
     #[error("Invalid input {field}: {message}")]

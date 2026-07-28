@@ -59,6 +59,7 @@ for (const expected of [
   "setView(view: OrbitView): void",
   "resetView(): void",
   "resize(size: ResizeInput): void",
+  "render(): boolean",
   "render(): void",
   "screenshot(): Promise<Blob>",
   "dispose(): void"
@@ -102,8 +103,11 @@ for (const expected of [
   "interface WasmBridge",
   "const modulePath = \"../pkg/forge3d_web.js\"",
   "export class Forge3DRuntime",
-  "options.wasmUrl !== undefined",
+  "@forge3d/web.wasm-bridge-coordinator",
+  "fetchValidatedWasm",
   "const { wasmUrl: _wasmUrl, ...runtimeOptions } = options",
+  "const fallback = \"INTERNAL_ERROR\"",
+  "export { Forge3DViewer } from \"./viewer.js\"",
   "export interface Forge3DRuntimeCapabilities",
   "export type ViewerStatus",
   "export interface OrbitView",
@@ -114,9 +118,9 @@ for (const expected of [
 
 for (const expected of [
   "## Public API",
-  "Declaration-only staging boundary",
-  "## Frozen Downstream API (FND-01..FND-07)",
-  "not current FND-00 behavior",
+  "## Interactive Viewer API",
+  "implements the frozen high-level surface",
+  "The facade loads `wasmUrl`",
   "FND-01",
   "## Frozen Viewer Defaults",
   "## Interaction And Automatic Redraw",
@@ -138,7 +142,7 @@ for (const expected of [
   "Shift+arrows pan",
   "`+`/`-` zoom",
   "Home",
-  "not independently",
+  "code completion alone is not",
   "initializing -> ready",
   "failed -> disposed",
   "one active terrain source load",
@@ -168,17 +172,12 @@ for (const expected of [
 const currentRuntimeSurface = sectionBetween(
   docs,
   "`Forge3DRuntime` remains the low-level immediate-render primitive.",
-  "## Frozen Downstream API (FND-01..FND-07)",
+  "## Interactive Viewer API",
 );
-assertNotIncludes(
+assertIncludes(
   currentRuntimeSurface,
   "getCapabilities",
-  "current runtime surface must not claim staged getCapabilities",
-);
-assertNotIncludes(
-  docs,
-  "The facade loads `wasmUrl`",
-  "browser API docs must label coordinator behavior as future FND-01 work",
+  "current runtime surface must document getCapabilities",
 );
 
 function readText(path) {

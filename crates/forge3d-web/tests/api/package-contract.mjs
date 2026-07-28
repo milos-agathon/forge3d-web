@@ -1,11 +1,14 @@
 import { execSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
 
 const root = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 
 const packageJson = readJson(join(root, "package.json"));
+const consumerHarness = readText(
+  join(root, "scripts", "build-browser-test-package.mjs"),
+);
 
 assertEqual(packageJson.type, "module", "package must be ESM-only");
 assertEqual(packageJson.exports["."].import, "./dist/index.js", "package entrypoint must use dist/index.js");
@@ -18,9 +21,35 @@ assertIncludes(packageJson.files, "README.md", "package files must include READM
 assertIncludes(packageJson.files, "LICENSE", "package files must include MIT license");
 assertIncludes(packageJson.files, "LICENSE-APACHE", "package files must include Apache license");
 assertIncludes(packageJson.scripts.build, "prepare-dist", "build must prepare publishable dist artifacts");
+assertEqual(
+  packageJson.scripts["test:package-consumer"],
+  "node scripts/build-browser-test-package.mjs",
+  "package consumer command must use the shared tarball harness",
+);
+for (const expected of [
+  "chromium.launch",
+  "page.goto",
+  "viewer.screenshot()",
+  "viewer.resize",
+  "viewer.dispose()",
+  "pointerType: \"touch\"",
+  "wheel:",
+  "verifyUnsupportedUi",
+  "validateBrowserEvidence(evidence)",
+  "--porcelain=v1",
+  "FORGE3D_EVIDENCE_DIR",
+  "copyFileSync(tarball",
+]) {
+  assertIncludes(
+    consumerHarness,
+    expected,
+    `package consumer browser gate missing ${expected}`,
+  );
+}
 
 for (const relative of [
   "scripts/prepare-dist.mjs",
+  "scripts/build-browser-test-package.mjs",
   "README.md",
   "docs/support-matrix.md",
   "docs/release-checklist.md",
@@ -28,7 +57,14 @@ for (const relative of [
   "LICENSE-APACHE",
   "examples/vite/package.json",
   "examples/vite/index.html",
-  "examples/vite/src/main.ts"
+  "examples/vite/src/main.ts",
+  "examples/test-interactive-viewer.html",
+  "tests/browser/browser-evidence.schema.json",
+  "tests/browser/evidence-validator.mjs",
+  "tests/browser/viewer-benchmark.ts",
+  "tests/browser/benchmark/benchmark-manifest-v1.json",
+  "tests/browser/benchmark/benchmark-terrain-v1.f32le",
+  "tests/browser/benchmark/benchmark-trace-v1.json"
 ]) {
   assert(existsSync(join(root, relative)), `missing package artifact: ${relative}`);
 }
@@ -56,6 +92,18 @@ assert(existsSync(distWasmPath), "dist/forge3d_web_bg.wasm must exist after npm 
 const distIndex = readText(distIndexPath);
 assertIncludes(distIndex, "\"./forge3d_web.js\"", "dist facade must load packaged wasm bridge locally");
 assertNotIncludes(distIndex, "../pkg/forge3d_web.js", "dist facade must not reference unpublished pkg directory");
+const packagedFacade = await import(
+  `${pathToFileURL(distIndexPath).href}?contract=${Date.now()}`
+);
+for (const forbidden of [
+  "setDeviceLostHandler",
+  "simulateDeviceLossForTesting",
+]) {
+  assert(
+    !(forbidden in packagedFacade.Forge3DRuntime.prototype),
+    `packaged runtime prototype must not expose ${forbidden}`,
+  );
+}
 
 const dryRun = execSync("npm pack --dry-run --json", {
   cwd: root,

@@ -1,0 +1,258 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/browser-evidence-v3.json",
+  "title": "Forge3D browser evidence v3",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "sourceRevision",
+    "artifact",
+    "project",
+    "lane",
+    "browser",
+    "os",
+    "architecture",
+    "deviceId",
+    "headed",
+    "secureContext",
+    "launchArguments",
+    "adapter",
+    "runtimeResult",
+    "frameCounters",
+    "interactionAssertions",
+    "normalizedErrorCodes",
+    "benchmark"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 3 },
+    "sourceRevision": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["commit", "worktreeClean"],
+      "properties": {
+        "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "worktreeClean": { "type": "boolean" }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "sha256"],
+      "properties": {
+        "kind": { "enum": ["npm-tarball", "wasm-module"] },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "project": { "type": "string", "minLength": 1 },
+    "lane": { "type": "string", "minLength": 1 },
+    "browser": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "channel", "userAgent"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "channel": { "type": "string", "minLength": 1 },
+        "userAgent": { "type": "string", "minLength": 1 }
+      }
+    },
+    "os": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version", "build"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 },
+        "build": { "type": "string", "minLength": 1 }
+      }
+    },
+    "architecture": { "type": "string", "minLength": 1 },
+    "deviceId": { "type": "string", "minLength": 1 },
+    "headed": { "type": "boolean" },
+    "secureContext": { "type": "boolean" },
+    "launchArguments": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "adapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["available", "fallback", "limits"],
+      "properties": {
+        "available": { "type": "boolean" },
+        "fallback": { "type": ["boolean", "null"] },
+        "identity": { "type": ["string", "null"] },
+        "limits": {
+          "type": "object",
+          "additionalProperties": { "type": "number", "minimum": 0 }
+        }
+      }
+    },
+    "runtimeResult": {
+      "enum": ["PASS", "PROBE", "FAIL", "INFRA_ERROR"]
+    },
+    "frameCounters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["renderRequests", "submittedFrames", "skippedFrames"],
+      "properties": {
+        "renderRequests": { "type": "integer", "minimum": 0 },
+        "submittedFrames": { "type": "integer", "minimum": 0 },
+        "skippedFrames": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "interactionAssertions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mouse", "wheel", "touch", "keyboard", "resize", "disposal"],
+      "properties": {
+        "mouse": { "type": "boolean" },
+        "wheel": { "type": "boolean" },
+        "touch": { "type": "boolean" },
+        "keyboard": { "type": "boolean" },
+        "resize": { "type": "boolean" },
+        "disposal": { "type": "boolean" }
+      }
+    },
+    "normalizedErrorCodes": {
+      "type": "array",
+      "items": {
+        "enum": [
+          "WEBGPU_UNAVAILABLE",
+          "WEBGPU_ADAPTER_UNAVAILABLE",
+          "INSECURE_CONTEXT",
+          "WASM_LOAD_FAILED",
+          "DEVICE_REQUEST_FAILED",
+          "DEVICE_LOST",
+          "SURFACE_CREATE_FAILED",
+          "SURFACE_LOST",
+          "SURFACE_OUTDATED",
+          "OUT_OF_MEMORY",
+          "UNSUPPORTED_FEATURE",
+          "INVALID_INPUT",
+          "IO_ERROR",
+          "REQUEST_CANCELLED",
+          "SHADER_COMPILATION_FAILED",
+          "INTERNAL_ERROR",
+          "RESOURCE_LIMIT_EXCEEDED",
+          "RUNTIME_DISPOSED"
+        ]
+      }
+    },
+    "benchmark": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "manifestSha256",
+        "terrainSha256",
+        "traceSha256",
+        "canvasCssWidth",
+        "canvasCssHeight",
+        "backingWidth",
+        "backingHeight",
+        "devicePixelRatio",
+        "browserZoomBefore",
+        "browserZoomAfter",
+        "viewportScaleBefore",
+        "viewportScaleAfter",
+        "traceVersion",
+        "visibilityStateBefore",
+        "visibilityStateAfter",
+        "documentHasFocusBefore",
+        "documentHasFocusAfter",
+        "visibilityChangeCount",
+        "windowBlurCount",
+        "thermalStateBefore",
+        "thermalStateAfter",
+        "thermalSignalProvenance",
+        "lowPowerModeBefore",
+        "lowPowerModeAfter",
+        "lowPowerSignalProvenance",
+        "warmupSamples",
+        "measurementSamples",
+        "rafTimestampsMs",
+        "rafIntervalsMs",
+        "traceSamplesApplied",
+        "catchUpSamples",
+        "submittedFramesBefore",
+        "submittedFramesAfter",
+        "submittedFramesDelta",
+        "skippedFramesBefore",
+        "skippedFramesAfter",
+        "skippedFramesDelta",
+        "measuredDurationMs",
+        "framesPerSecond",
+        "p95RafIntervalMs"
+      ],
+      "properties": {
+        "id": { "const": "forge3d-viewer-benchmark-v1" },
+        "manifestSha256": {
+          "const": "17493b8dc4ca3f1c43b7dc9ffbe50400d0980de20d6bb3c6a564f457eb4c6a4f"
+        },
+        "terrainSha256": {
+          "const": "f7ac944a3dc3736384f1082bec5f850b45d88c36ca675e9c543d945d8741e5c6"
+        },
+        "traceSha256": {
+          "const": "bcef9611960ee1b0f25be529d416135ca65ec2d0571049eca1b282e6e9ad905d"
+        },
+        "canvasCssWidth": { "const": 320 },
+        "canvasCssHeight": { "const": 320 },
+        "backingWidth": { "const": 640 },
+        "backingHeight": { "const": 640 },
+        "devicePixelRatio": { "const": 2 },
+        "browserZoomBefore": { "type": "number", "exclusiveMinimum": 0 },
+        "browserZoomAfter": { "type": "number", "exclusiveMinimum": 0 },
+        "viewportScaleBefore": { "type": "number", "exclusiveMinimum": 0 },
+        "viewportScaleAfter": { "type": "number", "exclusiveMinimum": 0 },
+        "traceVersion": { "const": 1 },
+        "visibilityStateBefore": { "type": "string" },
+        "visibilityStateAfter": { "type": "string" },
+        "documentHasFocusBefore": { "type": "boolean" },
+        "documentHasFocusAfter": { "type": "boolean" },
+        "visibilityChangeCount": { "type": "integer", "minimum": 0 },
+        "windowBlurCount": { "type": "integer", "minimum": 0 },
+        "thermalStateBefore": {
+          "enum": ["nominal", "fair", "serious", "critical", "unavailable"]
+        },
+        "thermalStateAfter": {
+          "enum": ["nominal", "fair", "serious", "critical", "unavailable"]
+        },
+        "thermalSignalProvenance": { "type": "string", "minLength": 1 },
+        "lowPowerModeBefore": {
+          "enum": [false, true, "unavailable"]
+        },
+        "lowPowerModeAfter": {
+          "enum": [false, true, "unavailable"]
+        },
+        "lowPowerSignalProvenance": { "type": "string", "minLength": 1 },
+        "warmupSamples": { "const": 120 },
+        "measurementSamples": { "const": 600 },
+        "rafTimestampsMs": {
+          "type": "array",
+          "minItems": 601,
+          "maxItems": 601,
+          "items": { "type": "number", "minimum": 0 }
+        },
+        "rafIntervalsMs": {
+          "type": "array",
+          "minItems": 600,
+          "maxItems": 600,
+          "items": { "type": "number", "minimum": 0 }
+        },
+        "traceSamplesApplied": { "const": 600 },
+        "catchUpSamples": { "const": 0 },
+        "submittedFramesBefore": { "type": "integer", "minimum": 0 },
+        "submittedFramesAfter": { "type": "integer", "minimum": 0 },
+        "submittedFramesDelta": { "const": 600 },
+        "skippedFramesBefore": { "type": "integer", "minimum": 0 },
+        "skippedFramesAfter": { "type": "integer", "minimum": 0 },
+        "skippedFramesDelta": { "const": 0 },
+        "measuredDurationMs": { "type": "number", "exclusiveMinimum": 0 },
+        "framesPerSecond": { "type": "number", "minimum": 0 },
+        "p95RafIntervalMs": { "type": "number", "minimum": 0 }
+      }
+    }
+  }
+}

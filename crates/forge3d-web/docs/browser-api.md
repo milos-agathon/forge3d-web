@@ -1,21 +1,23 @@
 # Forge3D Browser API
 
-This document freezes the FND-00 browser API exposed by `@forge3d/web`.
+This document defines the browser API exposed by `@forge3d/web`.
 Application code should import from the package entrypoint, not from wasm-pack
 generated files under `pkg/`.
 
-> **Declaration-only staging boundary:** FND-00 freezes the future viewer
-> contract but does not implement or export `Forge3DViewer` or
-> `Forge3DRuntime.getCapabilities()` in the emitted JavaScript facade.
-> Lifecycle, invalidation, concurrency, callback, recovery, and cleanup behavior
-> is not runtime-tested in this task. This viewer contract is not independently
-> releasable until its owning FND-01..FND-07 implementation and behavioral tests
-> land.
+The shared FND-01..FND-07 implementation exports the interactive viewer,
+recoverable low-level runtime, deterministic input controls, bounded resource
+policy, and engine-neutral test harness. Browser-family support remains subject
+to its own branded and physical release evidence; code completion alone is not
+a platform support claim.
 
 ## Public API
 
 ```ts
-import { Forge3DRuntime, Forge3DError } from "@forge3d/web";
+import {
+  Forge3DRuntime,
+  Forge3DViewer,
+  Forge3DError,
+} from "@forge3d/web";
 
 const runtime = await Forge3DRuntime.create(canvas, {
   width: 640,
@@ -70,6 +72,18 @@ runtime.resize({
 runtime.render();
 const pngBlob = await runtime.screenshot();
 runtime.dispose();
+
+const viewer = await Forge3DViewer.create(canvas, {
+  resources: { preset: "desktop" },
+  recovery: { deviceLoss: "once" },
+});
+viewer.setTerrain({
+  width: 2,
+  height: 2,
+  heights: new Float32Array([0, 1, 1, 0]),
+});
+viewer.render(); // invalidates; the viewer submits at most one frame per RAF
+viewer.dispose();
 ```
 
 `Forge3DRuntime` remains the low-level immediate-render primitive. Its stable
@@ -80,17 +94,18 @@ surface is:
 - `runtime.setTerrainFromSource(terrain): Promise<void>`
 - `runtime.setCamera(camera): void`
 - `runtime.resize(size): void`
-- `runtime.render(): void`
+- `runtime.render(): boolean` (`true` only when commands were submitted and
+  presented; `false` for a timeout/occluded surface)
 - `runtime.screenshot(): Promise<Blob>`
 - `runtime.dispose(): void`
 - `runtime.disposed`, `runtime.width`, `runtime.height`, and `runtime.diagnosticsEnabled`
 - `runtime.clearColor(): [number, number, number, number]`
+- `runtime.getCapabilities(): Forge3DRuntimeCapabilities`
 - `Forge3DError` with stable `code`, `message`, and optional `details`
 
-## Frozen Downstream API (FND-01..FND-07)
+## Interactive Viewer API
 
-The following additions are frozen for downstream implementation; they are not
-part of the emitted runtime surface in FND-00:
+The emitted facade implements the frozen high-level surface:
 
 - `runtime.getCapabilities(): Forge3DRuntimeCapabilities`
 - `Forge3DViewer.create(canvas, options): Promise<Forge3DViewer>`
@@ -104,13 +119,12 @@ part of the emitted runtime surface in FND-00:
 `Forge3DRuntimeOptions.powerPreference` accepts `"none"`, `"low-power"`, or
 `"high-performance"`. Omission still means `"high-performance"` for direct
 low-level runtime consumers, and Rust now accepts the explicit `"none"` value.
-The future viewer will pass internal value `"none"` when its caller omits the
+The viewer passes internal value `"none"` when its caller omits the
 option.
 
-`Forge3DRuntimeOptions.wasmUrl` is frozen as a string or `URL`, but custom asset
-loading belongs to FND-01. In the declaration-only stage, supplying it rejects
-explicitly with `WASM_LOAD_FAILED`; it is stripped from the Rust options
-boundary and can never fail as an unknown Rust field.
+`Forge3DRuntimeOptions.wasmUrl` accepts a string or `URL`. The facade fetches
+and validates the asset before wasm-bindgen initialization; it is stripped from
+the Rust options boundary and can never fail as an unknown Rust field.
 
 ## Frozen Viewer Defaults
 
@@ -171,15 +185,13 @@ In `failed`, `status`, `disposed`, all three getters, and `dispose()` remain
 legal. Operational methods throw or reject the retained terminal
 `Forge3DError`. Disposal transitions `failed -> disposed`.
 
-The following is frozen FND-01 behavior, not current FND-00 behavior. FND-01
-will make the facade load `wasmUrl`, defaulting to
+The facade loads `wasmUrl`, defaulting to
 `new URL("./forge3d_web_bg.wasm", import.meta.url)`, as a successful
 `application/wasm` response. A versioned coordinator under a stable
-`Symbol.for` key on the current Window realm's `globalThis` will make the first
+`Symbol.for` key on the current Window realm's `globalThis` makes the first
 in-flight canonical URL a singleton across duplicate facade bundles. Same-URL
-callers will join the promise; a different URL will reject with
-`INVALID_INPUT`; success will fix that URL for the realm; and an owning failure
-will release it for retry.
+callers join the promise; a different URL rejects with `INVALID_INPUT`; success
+fixes that URL for the realm; and an owning failure releases it for retry.
 
 ## Concurrency And Cleanup
 

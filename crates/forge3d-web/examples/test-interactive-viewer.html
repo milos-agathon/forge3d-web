@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forge3D interactive viewer package fixture</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font: 14px/1.4 system-ui, sans-serif;
+      }
+      body {
+        margin: 0;
+        background: #10141b;
+        color: #e7edf5;
+      }
+      main {
+        display: grid;
+        gap: 0.75rem;
+        padding: 1rem;
+        width: min-content;
+      }
+      canvas {
+        width: 320px;
+        height: 320px;
+        border: 1px solid #4d6079;
+        outline: none;
+      }
+      canvas:focus {
+        border-color: #9dd7ff;
+      }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+      }
+      #unsupported[hidden] {
+        display: none;
+      }
+      #unsupported {
+        padding: 0.75rem;
+        background: #54242b;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <canvas id="viewer" width="320" height="320" tabindex="0"></canvas>
+      <div class="controls">
+        <button id="create" type="button">Create viewer</button>
+        <button id="resize" type="button">Resize</button>
+        <button id="dispose" type="button">Dispose</button>
+      </div>
+      <output id="status">idle</output>
+      <p id="unsupported" role="alert" hidden>
+        This browser does not expose a usable WebGPU adapter.
+      </p>
+    </main>
+    <script type="module">
+      import { Forge3DViewer } from "../src-ts/index.ts";
+
+      const canvas = document.querySelector("#viewer");
+      const status = document.querySelector("#status");
+      const unsupported = document.querySelector("#unsupported");
+      let viewer;
+
+      async function create(options = {}) {
+        if (viewer && !viewer.disposed) {
+          return viewer;
+        }
+        if (!navigator.gpu || !(await navigator.gpu.requestAdapter())) {
+          unsupported.hidden = false;
+          status.value = "unsupported";
+          throw new Error("WEBGPU_UNAVAILABLE");
+        }
+        viewer = await Forge3DViewer.create(canvas, {
+          ...options,
+          onStatusChange(change) {
+            status.value = change.current;
+            options.onStatusChange?.(change);
+          },
+          onError(error) {
+            status.value = error.code;
+            options.onError?.(error);
+          }
+        });
+        viewer.setTerrain(makeTerrain(64, 64));
+        canvas.focus();
+        return viewer;
+      }
+
+      function makeTerrain(width, height) {
+        const heights = new Float32Array(width * height);
+        for (let y = 0; y < height; y += 1) {
+          for (let x = 0; x < width; x += 1) {
+            heights[y * width + x] =
+              Math.sin((x / (width - 1)) * Math.PI) *
+              Math.sin((y / (height - 1)) * Math.PI);
+          }
+        }
+        return { width, height, heights };
+      }
+
+      function dispose() {
+        viewer?.dispose();
+        status.value = viewer?.status ?? "idle";
+      }
+
+      document.querySelector("#create").addEventListener("click", () => {
+        create().catch((error) => {
+          status.value = error.code ?? error.message;
+        });
+      });
+      document.querySelector("#resize").addEventListener("click", () => {
+        if (!viewer || viewer.disposed) {
+          return;
+        }
+        const width = canvas.width === 320 ? 240 : 320;
+        canvas.style.width = `${width}px`;
+        viewer.resize({ width, height: 320, devicePixelRatio: 1 });
+      });
+      document.querySelector("#dispose").addEventListener("click", dispose);
+
+      window.__forge3dInteractiveViewer = {
+        canvas,
+        create,
+        dispose,
+        get viewer() {
+          return viewer;
+        },
+        get supported() {
+          return !unsupported.hidden ? false : undefined;
+        },
+        packageSha256: null
+      };
+    </script>
+  </body>
+</html>

@@ -3,8 +3,13 @@ use wasm_bindgen::prelude::*;
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Forge3DErrorCode {
     WebGpuUnavailable,
+    InsecureContext,
+    WasmLoadFailed,
     WebGpuAdapterUnavailable,
     DeviceRequestFailed,
+    DeviceLost,
+    InternalError,
+    ResourceLimitExceeded,
     SurfaceCreateFailed,
     SurfaceLost,
     SurfaceOutdated,
@@ -21,8 +26,13 @@ impl Forge3DErrorCode {
     pub fn as_str(self) -> &'static str {
         match self {
             Self::WebGpuUnavailable => "WEBGPU_UNAVAILABLE",
+            Self::InsecureContext => "INSECURE_CONTEXT",
+            Self::WasmLoadFailed => "WASM_LOAD_FAILED",
             Self::WebGpuAdapterUnavailable => "WEBGPU_ADAPTER_UNAVAILABLE",
             Self::DeviceRequestFailed => "DEVICE_REQUEST_FAILED",
+            Self::DeviceLost => "DEVICE_LOST",
+            Self::InternalError => "INTERNAL_ERROR",
+            Self::ResourceLimitExceeded => "RESOURCE_LIMIT_EXCEEDED",
             Self::SurfaceCreateFailed => "SURFACE_CREATE_FAILED",
             Self::SurfaceLost => "SURFACE_LOST",
             Self::SurfaceOutdated => "SURFACE_OUTDATED",
@@ -150,6 +160,16 @@ pub fn map_core_error(error: forge3d_core::error::Forge3dError) -> WebError {
         Forge3dError::DeviceRequest { message } => {
             WebError::new(Forge3DErrorCode::DeviceRequestFailed, message)
         }
+        Forge3dError::DeviceLost { message } => {
+            WebError::new(Forge3DErrorCode::DeviceLost, message)
+        }
+        Forge3dError::Internal { message } => {
+            WebError::new(Forge3DErrorCode::InternalError, message)
+        }
+        Forge3dError::ResourceLimitExceeded { resource, message } => WebError::new(
+            Forge3DErrorCode::ResourceLimitExceeded,
+            format!("{resource}: {message}"),
+        ),
         Forge3dError::UnsupportedFeature { feature } => WebError::new(
             Forge3DErrorCode::UnsupportedFeature,
             format!("Unsupported feature: {feature}"),
@@ -195,5 +215,16 @@ mod tests {
 
         let error = map_core_error(forge3d_core::error::Forge3dError::RuntimeDisposed);
         assert_eq!(error.code(), Forge3DErrorCode::RuntimeDisposed);
+
+        let error = map_core_error(forge3d_core::error::Forge3dError::DeviceLost {
+            message: "test loss".to_string(),
+        });
+        assert_eq!(error.code().as_str(), "DEVICE_LOST");
+
+        let error = map_core_error(forge3d_core::error::Forge3dError::ResourceLimitExceeded {
+            resource: "terrain".to_string(),
+            message: "too large".to_string(),
+        });
+        assert_eq!(error.code().as_str(), "RESOURCE_LIMIT_EXCEEDED");
     }
 }
