@@ -1,0 +1,95 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/broker-lifecycle.schema.json",
+  "title": "Forge3D browser lab broker ledger record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "protocolVersion",
+    "authorizationDigest",
+    "runId",
+    "jobId",
+    "targetSha",
+    "hostAssetId",
+    "controllerIdentity",
+    "runnerId",
+    "runnerName",
+    "customLabels",
+    "workFolder",
+    "state",
+    "issuedAt",
+    "authorizationExpiresAt",
+    "startDeadline",
+    "onlineAt",
+    "assignmentDeadline",
+    "everOnline",
+    "everBusy",
+    "lastRunnerObservation",
+    "lastJobObservation",
+    "localStopEvidence",
+    "deletionResult",
+    "cancellationResult",
+    "cleanupDecision"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "protocolVersion": { "const": "forge3d-browser-lab-broker/v1" },
+    "authorizationDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "runId": { "type": "integer", "minimum": 1 },
+    "jobId": { "type": "integer", "minimum": 1 },
+    "targetSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "hostAssetId": {
+      "type": "string",
+      "pattern": "^FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+$"
+    },
+    "controllerIdentity": {
+      "type": "string",
+      "pattern": "^controller:FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+$"
+    },
+    "runnerId": { "type": "integer", "minimum": 1 },
+    "runnerName": { "type": "string", "minLength": 1 },
+    "customLabels": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "workFolder": { "const": "_work" },
+    "state": {
+      "enum": [
+        "issued",
+        "online_unassigned",
+        "assigned",
+        "busy",
+        "assignment_timeout",
+        "terminal",
+        "deleted",
+        "already_absent",
+        "quarantined"
+      ]
+    },
+    "issuedAt": { "type": "string", "minLength": 1 },
+    "authorizationExpiresAt": { "type": "string", "minLength": 1 },
+    "startDeadline": { "type": "string", "minLength": 1 },
+    "onlineAt": { "type": ["null", "string"] },
+    "assignmentDeadline": { "type": ["null", "string"] },
+    "everOnline": { "type": "boolean" },
+    "everBusy": { "type": "boolean" },
+    "lastRunnerObservation": { "type": ["null", "object"] },
+    "lastJobObservation": { "type": ["null", "object"] },
+    "localStopEvidence": { "type": ["null", "object"] },
+    "deletionResult": {
+      "type": ["null", "string"],
+      "enum": [null, "deleted", "already_absent"]
+    },
+    "cancellationResult": {
+      "type": ["null", "string"],
+      "enum": [null, "cancelled"]
+    },
+    "cleanupDecision": { "type": ["null", "string"] }
+  }
+}

@@ -38,6 +38,13 @@ rendering. Browser-family support is not independently release-ready until the
 required branded and physical release matrix passes; shared code completion is
 not a platform support claim.
 
+The INF-00 repository trust, fixed inventory, controller, runner-distribution,
+and JIT-broker contracts are checked in but remain in explicit provisioning
+state. They do not report `LAB_INFRA_READY` until the protected-main canary,
+four physical controller keys, runner-absence observation, and clean one-job
+JIT canaries pass. See `docs/browser-lab-runbook.md` for the activation and
+custody procedure.
+
 ## Browser Support
 
 Forge3D Web requires browser WebGPU support through `navigator.gpu`. The MVP verification lane targets current Chrome/Chromium with WebGPU enabled. Applications should feature-detect WebGPU before creating the runtime and present their own fallback UI when it is unavailable.
@@ -78,7 +85,9 @@ The MVP does not include Python APIs, native windows, TCP or stdin control, COPC
 
 ## Release Verification
 
-See `docs/release-checklist.md` for the full prerelease checklist. At minimum, package verification runs:
+See `docs/release-checklist.md` for the full prerelease checklist and
+`docs/browser-lab-runbook.md` for physical-laboratory activation. At minimum,
+package verification runs:
 
 ```bash
 npm run typecheck

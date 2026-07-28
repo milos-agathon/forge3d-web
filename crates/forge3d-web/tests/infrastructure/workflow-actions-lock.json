@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-07-28",
+  "actions": [
+    {
+      "repository": "actions/attest",
+      "path": "",
+      "commit": "f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6",
+      "upstreamVersion": "v4.2.0",
+      "reviewedAt": "2026-07-28"
+    },
+    {
+      "repository": "actions/checkout",
+      "path": "",
+      "commit": "11d5960a326750d5838078e36cf38b85af677262",
+      "upstreamVersion": "v4.4.0",
+      "reviewedAt": "2026-07-28"
+    },
+    {
+      "repository": "actions/setup-node",
+      "path": "",
+      "commit": "49933ea5288caeca8642d1e84afbd3f7d6820020",
+      "upstreamVersion": "v4.4.0",
+      "reviewedAt": "2026-07-28"
+    },
+    {
+      "repository": "actions/upload-artifact",
+      "path": "",
+      "commit": "ea165f8d65b6e75b540449e92b4886f43607fa02",
+      "upstreamVersion": "v4.6.2",
+      "reviewedAt": "2026-07-28"
+    },
+    {
+      "repository": "dtolnay/rust-toolchain",
+      "path": "",
+      "commit": "4cda84d5c5c54efe2404f9d843567869ab1699d4",
+      "upstreamVersion": "stable",
+      "reviewedAt": "2026-07-28"
+    }
+  ]
+}

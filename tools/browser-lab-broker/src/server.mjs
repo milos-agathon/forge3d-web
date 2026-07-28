@@ -1,0 +1,162 @@
+import { readFileSync } from "node:fs";
+import { createServer } from "node:https";
+import { fileURLToPath } from "node:url";
+
+import { FileAuthorizationVerifier } from "./authorization-verifier.mjs";
+import { BrowserLabBroker } from "./broker.mjs";
+import {
+  GitHubAppTokenProvider,
+  GitHubRepositoryClient,
+} from "./github-client.mjs";
+import { JsonFileLedger } from "./ledger.mjs";
+
+export function createBrokerServer({ broker, tls }) {
+  return createServer(
+    {
+      key: tls.key,
+      cert: tls.cert,
+      ca: tls.ca,
+      requestCert: true,
+      rejectUnauthorized: true,
+      minVersion: "TLSv1.3",
+    },
+    async (request, response) => {
+      response.setHeader("Content-Type", "application/json");
+      response.setHeader("Cache-Control", "no-store");
+      response.setHeader("Strict-Transport-Security", "max-age=31536000");
+      try {
+        if (
+          request.method !== "POST" ||
+          !["/v1/jit-config", "/v1/cleanup-runner"].includes(request.url)
+        ) {
+          response.writeHead(404);
+          response.end(JSON.stringify({ error: "not_found" }));
+          return;
+        }
+        if (!request.socket.authorized) {
+          throw new Error("mTLS client certificate is not authorized");
+        }
+        const mtlsIdentity = request.socket.getPeerCertificate()?.subject?.CN;
+        if (!/^controller:FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+$/u.test(mtlsIdentity ?? "")) {
+          throw new Error("mTLS certificate CN is not a checked controller identity");
+        }
+        const body = JSON.parse(await readRequestBody(request));
+        const result =
+          request.url === "/v1/jit-config"
+            ? await broker.issueJitConfig(body, { mtlsIdentity })
+            : await broker.cleanupRunner(body, { mtlsIdentity });
+        audit({
+          operation: request.url.slice(4),
+          authorizationDigest: body.authorizationDigest,
+          controllerIdentity: mtlsIdentity,
+          resultState: result.state ?? "issued",
+        });
+        response.writeHead(200);
+        response.end(JSON.stringify(result));
+      } catch (error) {
+        audit({
+          operation: request.url,
+          resultState: "rejected",
+          error: String(error.message ?? error),
+        });
+        response.writeHead(400);
+        response.end(JSON.stringify({ error: "request_rejected" }));
+      }
+    },
+  );
+}
+
+async function readRequestBody(request) {
+  const chunks = [];
+  let size = 0;
+  for await (const chunk of request) {
+    size += chunk.length;
+    if (size > 32 * 1024) throw new Error("broker request exceeds 32 KiB");
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+function audit(value) {
+  process.stdout.write(`${JSON.stringify({ at: new Date().toISOString(), ...value })}\n`);
+}
+
+function requiredEnvironment(name) {
+  const value = process.env[name];
+  if (!value) throw new Error(`${name} is required`);
+  return value;
+}
+
+function loadJson(path) {
+  return JSON.parse(readFileSync(path, "utf8"));
+}
+
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  const matrix = loadJson(requiredEnvironment("BROKER_HARDWARE_MATRIX"));
+  const browserPolicy = loadJson(requiredEnvironment("BROKER_BROWSER_POLICY"));
+  const repositoryTrustPolicy = loadJson(
+    requiredEnvironment("BROKER_REPOSITORY_TRUST_POLICY"),
+  );
+  const workflowActionsLock = loadJson(
+    requiredEnvironment("BROKER_WORKFLOW_ACTIONS_LOCK"),
+  );
+  if (
+    matrix.provisioningState !== "active" ||
+    browserPolicy.provisioningState !== "active"
+  ) {
+    throw new Error("broker cannot start before checked lab canaries are active");
+  }
+  const tokenProvider = new GitHubAppTokenProvider({
+    appId: requiredEnvironment("BROKER_GITHUB_APP_ID"),
+    installationId: requiredEnvironment("BROKER_GITHUB_INSTALLATION_ID"),
+    privateKeyPath: requiredEnvironment("BROKER_GITHUB_PRIVATE_KEY_PATH"),
+    apiBase: process.env.GITHUB_API_URL,
+  });
+  const github = new GitHubRepositoryClient({
+    tokenProvider,
+    apiBase: process.env.GITHUB_API_URL,
+  });
+  const ledger = new JsonFileLedger(requiredEnvironment("BROKER_LEDGER_PATH"));
+  const authorizationVerifier = new FileAuthorizationVerifier({
+    directory: requiredEnvironment("BROKER_AUTHORIZATION_DIRECTORY"),
+    github,
+    repositoryTrustPolicy,
+    workflowActionsLock,
+  });
+  const broker = new BrowserLabBroker({
+    matrix,
+    browserPolicy,
+    ledger,
+    authorizationVerifier,
+    github,
+  });
+  const server = createBrokerServer({
+    broker,
+    tls: {
+      key: readFileSync(requiredEnvironment("BROKER_TLS_KEY_PATH")),
+      cert: readFileSync(requiredEnvironment("BROKER_TLS_CERT_PATH")),
+      ca: readFileSync(requiredEnvironment("BROKER_TLS_CA_PATH")),
+    },
+  });
+  const interval = setInterval(async () => {
+    for (const record of ledger.list()) {
+      try {
+        await broker.watchdogTick(record.authorizationDigest, {
+          controllerReachable: false,
+        });
+      } catch (error) {
+        audit({
+          operation: "watchdog",
+          authorizationDigest: record.authorizationDigest,
+          resultState: "rejected",
+          error: String(error.message ?? error),
+        });
+      }
+    }
+  }, 5_000);
+  interval.unref();
+  server.listen(
+    Number(process.env.BROKER_PORT ?? "8443"),
+    process.env.BROKER_HOST ?? "127.0.0.1",
+  );
+}

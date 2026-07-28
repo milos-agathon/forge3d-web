@@ -1,0 +1,35 @@
+[Unit]
+Description=Forge3D browser-lab JIT registration broker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=forge3d-broker
+Group=forge3d-broker
+EnvironmentFile=/etc/forge3d/browser-lab-broker.env
+WorkingDirectory=/opt/forge3d/browser-lab-broker
+ExecStart=/usr/bin/node /opt/forge3d/browser-lab-broker/src/server.mjs
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectKernelLogs=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+RestrictRealtime=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+CapabilityBoundingSet=
+SystemCallArchitectures=native
+ReadOnlyPaths=/opt/forge3d/browser-lab-broker /etc/forge3d
+ReadWritePaths=/var/lib/forge3d-browser-lab-broker
+
+[Install]
+WantedBy=multi-user.target

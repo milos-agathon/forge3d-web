@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "runnerVersion": "2.336.0",
+  "canaryState": "pending",
+  "paths": [
+    {
+      "pattern": "_diag/**",
+      "kind": "tree",
+      "purpose": "GitHub Actions runner and worker diagnostics retained before wipe",
+      "evidence": "Pending otherwise-clean v2.336.0 JIT canary on every host"
+    },
+    {
+      "pattern": "_work/**",
+      "kind": "tree",
+      "purpose": "One-job ephemeral work root",
+      "evidence": "Pending otherwise-clean v2.336.0 JIT canary on every host"
+    },
+    {
+      "pattern": ".credentials",
+      "kind": "file",
+      "purpose": "Ephemeral JIT listener credential",
+      "evidence": "Pending otherwise-clean v2.336.0 JIT canary on every host"
+    },
+    {
+      "pattern": ".credentials_rsaparams",
+      "kind": "file",
+      "purpose": "Ephemeral JIT listener key parameters",
+      "evidence": "Pending otherwise-clean v2.336.0 JIT canary on every host"
+    },
+    {
+      "pattern": ".runner",
+      "kind": "file",
+      "purpose": "Ephemeral JIT runner identity",
+      "evidence": "Pending otherwise-clean v2.336.0 JIT canary on every host"
+    },
+    {
+      "pattern": ".env",
+      "kind": "file",
+      "purpose": "Runner-generated environment capture",
+      "evidence": "Pending otherwise-clean v2.336.0 JIT canary on every host"
+    },
+    {
+      "pattern": ".path",
+      "kind": "file",
+      "purpose": "Runner-generated path capture",
+      "evidence": "Pending otherwise-clean v2.336.0 JIT canary on every host"
+    }
+  ]
+}

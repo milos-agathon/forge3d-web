@@ -59,7 +59,8 @@
     "test:api": "npm run typecheck && node tests/api/public-api-snapshot.mjs && node tests/api/emitted-facade-stage.mjs",
     "test:release-hardening": "node tests/api/release-hardening.mjs",
     "test:browser-harness": "node --test tests/browser/benchmark/benchmark-golden.test.mjs tests/browser/evidence-validator.test.mjs tests/browser/resource-assertions.test.mjs",
-    "test:package": "npm run test:release-hardening && npm run test:browser-harness && node tests/api/package-contract.mjs",
+    "test:infrastructure": "node --test tests/infrastructure/*.test.mjs ../../tools/browser-lab-broker/test/*.test.mjs",
+    "test:package": "npm run test:release-hardening && npm run test:browser-harness && npm run test:infrastructure && node tests/api/package-contract.mjs",
     "test:package-consumer": "node scripts/build-browser-test-package.mjs",
     "test:unit": "vitest run",
     "test:browser": "playwright test"

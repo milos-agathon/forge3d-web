@@ -1,0 +1,195 @@
+{
+  "schemaVersion": 1,
+  "matrixId": "forge3d-browser-lab-v1",
+  "provisioningState": "provisioning",
+  "hosts": [
+    {
+      "assetId": "FW-MAC-M2-01",
+      "model": "Mac mini (2023)",
+      "cpu": "Apple M2",
+      "gpu": "Apple M2 integrated GPU",
+      "ramGiB": 16,
+      "os": {
+        "family": "macOS",
+        "baseline": "macOS 26 latest security patch"
+      },
+      "displayServer": "WindowServer",
+      "requiredLabels": ["forge3d-web", "hw-mac-m2"],
+      "attachedAssetIds": [
+        "FW-TRACKPAD-01",
+        "FW-AND-QCOM-01",
+        "FW-AND-MALI-01",
+        "FW-AND-PEN-01",
+        "FW-IOS-OLD-01",
+        "FW-IOS-NEW-01",
+        "FW-IPAD-01"
+      ],
+      "requiredBrowserLanes": [
+        "chrome-macos-m2",
+        "edge-macos-m2",
+        "safari-macos-m2",
+        "firefox-macos-m2",
+        "mobile-usb-controller"
+      ],
+      "controller": {
+        "identity": "controller:FW-MAC-M2-01",
+        "state": "unprovisioned",
+        "signingKeyId": null,
+        "publicJwk": null
+      },
+      "state": "maintenance",
+      "maintenanceReason": "INF-00 bootstrap: physical custody and controller key are not yet attested"
+    },
+    {
+      "assetId": "FW-WIN-I12-01",
+      "model": "Intel NUC 12 Pro NUC12WSHi5",
+      "cpu": "Intel Core i5-1240P",
+      "gpu": "Intel Iris Xe",
+      "ramGiB": 32,
+      "os": {
+        "family": "Windows",
+        "baseline": "Windows 11 25H2 latest security patch"
+      },
+      "displayServer": "Desktop Window Manager",
+      "requiredLabels": ["forge3d-web", "hw-win-intel12"],
+      "attachedAssetIds": [],
+      "requiredBrowserLanes": [
+        "chrome-windows-intel12",
+        "edge-windows-intel12",
+        "firefox-windows-intel12"
+      ],
+      "controller": {
+        "identity": "controller:FW-WIN-I12-01",
+        "state": "unprovisioned",
+        "signingKeyId": null,
+        "publicJwk": null
+      },
+      "state": "maintenance",
+      "maintenanceReason": "INF-00 bootstrap: physical custody and controller key are not yet attested"
+    },
+    {
+      "assetId": "FW-LNX-I12-01",
+      "model": "Intel NUC 12 Pro NUC12WSHi5",
+      "cpu": "Intel Core i5-1240P",
+      "gpu": "Intel Iris Xe",
+      "ramGiB": 32,
+      "os": {
+        "family": "Ubuntu",
+        "baseline": "Ubuntu 24.04 LTS latest security patch"
+      },
+      "displayServer": "GNOME Wayland",
+      "requiredLabels": ["forge3d-web", "hw-linux-intel12"],
+      "attachedAssetIds": [],
+      "requiredBrowserLanes": [
+        "chrome-linux-intel12",
+        "edge-linux-intel12"
+      ],
+      "controller": {
+        "identity": "controller:FW-LNX-I12-01",
+        "state": "unprovisioned",
+        "signingKeyId": null,
+        "publicJwk": null
+      },
+      "state": "maintenance",
+      "maintenanceReason": "INF-00 bootstrap: physical custody and controller key are not yet attested"
+    },
+    {
+      "assetId": "FW-LNX-NV-01",
+      "model": "Lenovo ThinkStation P360 Tower",
+      "cpu": "Intel Core i7-12700",
+      "gpu": "NVIDIA GeForce RTX 3070 8 GB",
+      "ramGiB": 32,
+      "os": {
+        "family": "Ubuntu",
+        "baseline": "Ubuntu 24.04 LTS latest security patch"
+      },
+      "displayServer": "GNOME Wayland",
+      "requiredLabels": ["forge3d-web", "hw-linux-rtx3070"],
+      "attachedAssetIds": [],
+      "requiredBrowserLanes": [
+        "chrome-linux-rtx3070",
+        "edge-linux-rtx3070"
+      ],
+      "controller": {
+        "identity": "controller:FW-LNX-NV-01",
+        "state": "unprovisioned",
+        "signingKeyId": null,
+        "publicJwk": null
+      },
+      "state": "maintenance",
+      "maintenanceReason": "INF-00 bootstrap: physical custody and controller key are not yet attested"
+    }
+  ],
+  "assets": [
+    {
+      "assetId": "FW-TRACKPAD-01",
+      "kind": "trackpad",
+      "model": "Apple Magic Trackpad USB-C (2024), A3120",
+      "hostAssetId": "FW-MAC-M2-01",
+      "appiumId": null,
+      "osBaseline": null,
+      "companion": "Direct USB-C cable for pairing and charging; Bluetooth for gestures",
+      "state": "maintenance"
+    },
+    {
+      "assetId": "FW-AND-QCOM-01",
+      "kind": "android",
+      "model": "Samsung Galaxy S23 SM-S911B, Snapdragon 8 Gen 2",
+      "hostAssetId": "FW-MAC-M2-01",
+      "appiumId": "android-qualcomm-s23",
+      "osBaseline": "Current vendor-supported Android release",
+      "companion": null,
+      "state": "maintenance"
+    },
+    {
+      "assetId": "FW-AND-MALI-01",
+      "kind": "android",
+      "model": "Google Pixel 8, Tensor G3 / Mali-G715",
+      "hostAssetId": "FW-MAC-M2-01",
+      "appiumId": "android-mali-pixel8",
+      "osBaseline": "Current vendor-supported Android release",
+      "companion": null,
+      "state": "maintenance"
+    },
+    {
+      "assetId": "FW-AND-PEN-01",
+      "kind": "android",
+      "model": "Samsung Galaxy Tab S9 Wi-Fi SM-X710, Snapdragon 8 Gen 2",
+      "hostAssetId": "FW-MAC-M2-01",
+      "appiumId": "android-pen-tabs9",
+      "osBaseline": "Current vendor-supported Android release",
+      "companion": "In-box Samsung S Pen",
+      "state": "maintenance"
+    },
+    {
+      "assetId": "FW-IOS-OLD-01",
+      "kind": "ios",
+      "model": "Apple iPhone 11",
+      "hostAssetId": "FW-MAC-M2-01",
+      "appiumId": "ios-iphone11",
+      "osBaseline": "iOS 26 latest security patch",
+      "companion": null,
+      "state": "maintenance"
+    },
+    {
+      "assetId": "FW-IOS-NEW-01",
+      "kind": "ios",
+      "model": "Apple iPhone 17 Pro",
+      "hostAssetId": "FW-MAC-M2-01",
+      "appiumId": "ios-iphone17pro",
+      "osBaseline": "iOS 26 latest security patch",
+      "companion": null,
+      "state": "maintenance"
+    },
+    {
+      "assetId": "FW-IPAD-01",
+      "kind": "ipados",
+      "model": "Apple iPad Air 11-inch (M2)",
+      "hostAssetId": "FW-MAC-M2-01",
+      "appiumId": "ipados-air11-m2",
+      "osBaseline": "iPadOS 26 latest security patch",
+      "companion": "Paired Apple Pencil Pro",
+      "state": "maintenance"
+    }
+  ]
+}

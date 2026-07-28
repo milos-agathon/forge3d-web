@@ -1,0 +1,188 @@
+name: Browser Lab Broker Package
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/browser-lab-broker.yml"
+      - "crates/forge3d-web/scripts/**"
+      - "crates/forge3d-web/tests/infrastructure/**"
+      - "tools/browser-lab-broker/**"
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  observe-broker-package-trust:
+    name: Browser Lab Broker / Observe Package Trust
+    runs-on: ubuntu-latest
+    environment: forge3d-trust-observer
+    permissions:
+      actions: read
+      artifact-metadata: write
+      attestations: write
+      contents: read
+      id-token: write
+    outputs:
+      observation_artifact_id: ${{ steps.upload-observation.outputs.artifact-id }}
+      observation_artifact_name: ${{ steps.emit-observation.outputs.artifact-name }}
+      observation_artifact_digest: ${{ steps.upload-observation.outputs.artifact-digest }}
+      observation_content_sha256: ${{ steps.emit-observation.outputs.content-sha256 }}
+
+    steps:
+      - name: Check out protected observer code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+
+      - name: Mint short-lived trust-observer token
+        id: observer-token
+        working-directory: crates/forge3d-web
+        env:
+          TRUST_OBSERVER_APP_ID: ${{ secrets.TRUST_OBSERVER_APP_ID }}
+          TRUST_OBSERVER_INSTALLATION_ID: ${{ secrets.TRUST_OBSERVER_INSTALLATION_ID }}
+          TRUST_OBSERVER_PRIVATE_KEY: ${{ secrets.TRUST_OBSERVER_PRIVATE_KEY }}
+        run: node scripts/mint-github-app-token.mjs
+
+      - name: Verify live protected-main trust
+        working-directory: crates/forge3d-web
+        env:
+          GITHUB_TOKEN: ${{ steps.observer-token.outputs.token }}
+        run: node scripts/verify-repository-trust.mjs > repository-trust-verification.json
+
+      - name: Emit canonical repository trust observation
+        id: emit-observation
+        working-directory: crates/forge3d-web
+        run: |
+          node scripts/emit-repository-trust-observation.mjs \
+            --verification repository-trust-verification.json \
+            --operation package-broker \
+            --consumer package-broker@forge3d-browser-lab \
+            --workflow-path .github/workflows/browser-lab-broker.yml \
+            --workflow-ref refs/heads/main \
+            --workflow-sha "${{ github.workflow_sha }}" \
+            --run-id "${{ github.run_id }}" \
+            --run-attempt "${{ github.run_attempt }}" \
+            --candidate-sha "${{ github.sha }}" \
+            --target-sha "${{ github.sha }}" \
+            --output repository-trust-observation.json
+          artifact_name="repository-trust-${{ github.run_id }}-${{ github.run_attempt }}-package-broker"
+          content_sha256="$(sha256sum repository-trust-observation.json | cut -d ' ' -f 1)"
+          echo "artifact-name=${artifact_name}" >> "$GITHUB_OUTPUT"
+          echo "content-sha256=${content_sha256}" >> "$GITHUB_OUTPUT"
+
+      - name: Revoke trust-observer token
+        if: always()
+        working-directory: crates/forge3d-web
+        env:
+          OBSERVER_TOKEN: ${{ steps.observer-token.outputs.token }}
+        run: |
+          node --input-type=module --eval '
+            const response = await fetch("https://api.github.com/installation/token", {
+              method: "DELETE",
+              headers: {
+                Accept: "application/vnd.github+json",
+                Authorization: `Bearer ${process.env.OBSERVER_TOKEN}`,
+                "X-GitHub-Api-Version": "2022-11-28"
+              }
+            });
+            if (response.status !== 204) {
+              throw new Error(`observer token revocation failed with HTTP ${response.status}`);
+            }
+          '
+
+      - name: Upload exact trust observation
+        id: upload-observation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ${{ steps.emit-observation.outputs.artifact-name }}
+          path: crates/forge3d-web/repository-trust-observation.json
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 1
+
+      - name: Attest GitHub-hosted trust observation
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-path: crates/forge3d-web/repository-trust-observation.json
+
+  package-broker:
+    name: Browser Lab Broker / Package
+    needs: observe-broker-package-trust
+    runs-on: ubuntu-latest
+    environment: forge3d-browser-lab
+    permissions:
+      actions: read
+      artifact-metadata: write
+      attestations: write
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Check out exact protected source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Verify observer artifact by exact ID
+        working-directory: crates/forge3d-web
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          OBSERVATION_ARTIFACT_ID: ${{ needs.observe-broker-package-trust.outputs.observation_artifact_id }}
+          OBSERVATION_ARTIFACT_NAME: ${{ needs.observe-broker-package-trust.outputs.observation_artifact_name }}
+          OBSERVATION_ARTIFACT_DIGEST: ${{ needs.observe-broker-package-trust.outputs.observation_artifact_digest }}
+          OBSERVATION_CONTENT_SHA256: ${{ needs.observe-broker-package-trust.outputs.observation_content_sha256 }}
+          EXPECTED_OPERATION: package-broker
+          EXPECTED_CONSUMER_JOB: package-broker
+          EXPECTED_CONSUMER_ENVIRONMENT: forge3d-browser-lab
+          EXPECTED_TARGET_SHA: ${{ github.sha }}
+          EXPECTED_CANDIDATE_SHA: ${{ github.sha }}
+          EXPECTED_CURRENT_MAIN_SHA: ${{ github.sha }}
+          EXPECTED_WORKFLOW_PATH: .github/workflows/browser-lab-broker.yml
+        run: node scripts/verify-repository-trust-observation.mjs
+
+      - name: Test audited broker
+        working-directory: tools/browser-lab-broker
+        run: npm test
+
+      - name: Build broker and configuration archive
+        run: |
+          mkdir -p broker-package/config broker-package/package
+          npm pack tools/browser-lab-broker \
+            --pack-destination broker-package/package \
+            --cache "${RUNNER_TEMP}/npm-cache"
+          cp crates/forge3d-web/tests/infrastructure/browser-policy.json broker-package/config/
+          cp crates/forge3d-web/tests/infrastructure/broker-lifecycle.schema.json broker-package/config/
+          cp crates/forge3d-web/tests/infrastructure/broker-protocol.schema.json broker-package/config/
+          cp crates/forge3d-web/tests/infrastructure/hardware-matrix.json broker-package/config/
+          cp crates/forge3d-web/tests/infrastructure/repository-trust-policy.json broker-package/config/
+          cp crates/forge3d-web/tests/infrastructure/runner-distribution-manifest.json broker-package/config/
+          cp crates/forge3d-web/tests/infrastructure/runner-transient-path-policy.json broker-package/config/
+          cp crates/forge3d-web/tests/infrastructure/workflow-actions-lock.json broker-package/config/
+          tar -czf browser-lab-broker.tar.gz broker-package
+          node tools/browser-lab-broker/scripts/create-package-manifest.mjs \
+            --repository-root . \
+            --archive browser-lab-broker.tar.gz \
+            --target-sha "${{ github.sha }}" \
+            --workflow-sha "${{ github.workflow_sha }}" \
+            --output broker-package-manifest.json
+
+      - name: Upload broker package
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: browser-lab-broker-${{ github.sha }}
+          path: |
+            browser-lab-broker.tar.gz
+            broker-package-manifest.json
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 30
+
+      - name: Attest broker archive and package manifest
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-path: |
+            browser-lab-broker.tar.gz
+            broker-package-manifest.json

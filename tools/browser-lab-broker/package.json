@@ -1,0 +1,19 @@
+{
+  "name": "@forge3d/browser-lab-broker",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Authorization-bound one-job JIT runner broker for the Forge3D browser laboratory",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "files": [
+    "src",
+    "services",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "start": "node src/server.mjs"
+  }
+}

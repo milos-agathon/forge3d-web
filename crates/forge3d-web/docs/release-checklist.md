@@ -15,6 +15,14 @@ change only after the required branded and physical exact-head release matrix
 passes. This blocker does not withdraw the existing low-level
 `Forge3DRuntime` MVP.
 
+INF-00 code completion is also separate from live laboratory readiness.
+`tests/infrastructure/repository-trust-policy.json`,
+`hardware-matrix.json`, `browser-policy.json`, and
+`runner-transient-path-policy.json` intentionally remain in pending states
+until the administrator and physical-controller steps in
+`docs/browser-lab-runbook.md` are evidenced. A pending policy must fail closed;
+it cannot be treated as a skipped or successful physical gate.
+
 ## Clean Setup
 
 ```powershell
@@ -44,6 +52,7 @@ npm run typecheck
 npm run build
 npm run test:unit
 npm run test:api
+npm run test:infrastructure
 npm run test:package
 $env:FORGE3D_PACKAGE_GATE_MODE = "required"
 npm run test:package-consumer
@@ -96,5 +105,8 @@ record under Playwright `test-results/`; CI uploads that record separately.
 - Confirm `docs/support-matrix.md` states browser support, unsupported
   surfaces, MIME, CORS/Range, and cache requirements.
 - Confirm `README.md` links this checklist and the support matrix.
+- Confirm `docs/browser-lab-runbook.md` and every checked infrastructure
+  policy agree on the repository, trust epoch, controller keys, runner
+  version, archive digests, protocol versions, and provisioning state.
 - Confirm post-MVP features remain documented as unsupported rather than
   partially exposed through the browser API.
