@@ -115,6 +115,9 @@ for (const expected of [
 for (const expected of [
   "## Public API",
   "Declaration-only staging boundary",
+  "## Frozen Downstream API (FND-01..FND-07)",
+  "not current FND-00 behavior",
+  "FND-01",
   "## Frozen Viewer Defaults",
   "## Interaction And Automatic Redraw",
   "## Viewer Lifecycle And Recovery",
@@ -162,12 +165,37 @@ for (const expected of [
   assertIncludes(docs, expected, `browser API docs missing: ${expected}`);
 }
 
+const currentRuntimeSurface = sectionBetween(
+  docs,
+  "`Forge3DRuntime` remains the low-level immediate-render primitive.",
+  "## Frozen Downstream API (FND-01..FND-07)",
+);
+assertNotIncludes(
+  currentRuntimeSurface,
+  "getCapabilities",
+  "current runtime surface must not claim staged getCapabilities",
+);
+assertNotIncludes(
+  docs,
+  "The facade loads `wasmUrl`",
+  "browser API docs must label coordinator behavior as future FND-01 work",
+);
+
 function readText(path) {
   return readFileSync(path, "utf8");
 }
 
 function normalize(text) {
   return text.replace(/\r\n/g, "\n").trimEnd();
+}
+
+function sectionBetween(text, start, end) {
+  const startIndex = text.indexOf(start);
+  const endIndex = text.indexOf(end, startIndex + start.length);
+  if (startIndex < 0 || endIndex < 0) {
+    throw new Error(`missing documentation section boundary: ${start} -> ${end}`);
+  }
+  return text.slice(startIndex, endIndex);
 }
 
 function assertEqual(actual, expected, message) {

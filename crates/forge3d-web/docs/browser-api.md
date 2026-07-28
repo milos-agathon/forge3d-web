@@ -76,7 +76,6 @@ runtime.dispose();
 surface is:
 
 - `Forge3DRuntime.create(canvas, options): Promise<Forge3DRuntime>`
-- `runtime.getCapabilities(): Forge3DRuntimeCapabilities`
 - `runtime.setTerrain(terrain): void`
 - `runtime.setTerrainFromSource(terrain): Promise<void>`
 - `runtime.setCamera(camera): void`
@@ -88,9 +87,12 @@ surface is:
 - `runtime.clearColor(): [number, number, number, number]`
 - `Forge3DError` with stable `code`, `message`, and optional `details`
 
-The following high-level interactive surface is frozen for downstream
-implementation; it is not an emitted runtime surface in FND-00:
+## Frozen Downstream API (FND-01..FND-07)
 
+The following additions are frozen for downstream implementation; they are not
+part of the emitted runtime surface in FND-00:
+
+- `runtime.getCapabilities(): Forge3DRuntimeCapabilities`
 - `Forge3DViewer.create(canvas, options): Promise<Forge3DViewer>`
 - `viewer.status`, `viewer.disposed`, `viewer.getView()`,
   `viewer.getCapabilities()`, and `viewer.getDiagnostics()`
@@ -169,13 +171,15 @@ In `failed`, `status`, `disposed`, all three getters, and `dispose()` remain
 legal. Operational methods throw or reject the retained terminal
 `Forge3DError`. Disposal transitions `failed -> disposed`.
 
-The facade loads `wasmUrl`, which defaults to
+The following is frozen FND-01 behavior, not current FND-00 behavior. FND-01
+will make the facade load `wasmUrl`, defaulting to
 `new URL("./forge3d_web_bg.wasm", import.meta.url)`, as a successful
 `application/wasm` response. A versioned coordinator under a stable
-`Symbol.for` key on the current Window realm's `globalThis` makes the first
+`Symbol.for` key on the current Window realm's `globalThis` will make the first
 in-flight canonical URL a singleton across duplicate facade bundles. Same-URL
-callers join the promise; a different URL rejects with `INVALID_INPUT`; success
-fixes that URL for the realm; and an owning failure releases it for retry.
+callers will join the promise; a different URL will reject with
+`INVALID_INPUT`; success will fix that URL for the realm; and an owning failure
+will release it for retry.
 
 ## Concurrency And Cleanup
 
