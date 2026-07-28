@@ -156,12 +156,14 @@ export class GitHubRepositoryClient {
   }
 
   async cancelRun(runId) {
-    await this.request(
-      "POST",
-      `${this.repositoryPath}/actions/runs/${runId}/cancel`,
-      null,
-      [202],
-    );
+    return (
+      await this.request(
+        "POST",
+        `${this.repositoryPath}/actions/runs/${runId}/cancel`,
+        null,
+        [202, 409],
+      )
+    ).status;
   }
 
   async getRun(runId) {

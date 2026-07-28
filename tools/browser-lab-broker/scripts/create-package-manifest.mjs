@@ -27,6 +27,7 @@ export function createBrokerPackageManifest({
     "crates/forge3d-web/tests/infrastructure/browser-policy.json",
     "crates/forge3d-web/tests/infrastructure/broker-lifecycle.schema.json",
     "crates/forge3d-web/tests/infrastructure/broker-protocol.schema.json",
+    "crates/forge3d-web/tests/infrastructure/controller-health-endpoints.json",
     "crates/forge3d-web/tests/infrastructure/hardware-matrix.json",
     "crates/forge3d-web/tests/infrastructure/repository-trust-policy.json",
     "crates/forge3d-web/tests/infrastructure/runner-distribution-manifest.json",

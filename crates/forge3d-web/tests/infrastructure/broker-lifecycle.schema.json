@@ -28,8 +28,14 @@
     "lastRunnerObservation",
     "lastJobObservation",
     "localStopEvidence",
+    "workRootWipeEvidence",
     "deletionResult",
     "cancellationResult",
+    "cancellationRequestedAt",
+    "quarantineRequired",
+    "controllerUnreachableAt",
+    "quarantinedAt",
+    "quarantineReleasedAt",
     "cleanupDecision"
   ],
   "properties": {
@@ -82,14 +88,30 @@
     "lastRunnerObservation": { "type": ["null", "object"] },
     "lastJobObservation": { "type": ["null", "object"] },
     "localStopEvidence": { "type": ["null", "object"] },
+    "workRootWipeEvidence": {
+      "type": ["null", "object"],
+      "additionalProperties": false,
+      "required": ["attempted", "wiped", "workFolder", "observedAt"],
+      "properties": {
+        "attempted": { "const": true },
+        "wiped": { "type": "boolean" },
+        "workFolder": { "const": "_work" },
+        "observedAt": { "type": "string", "minLength": 1 }
+      }
+    },
     "deletionResult": {
       "type": ["null", "string"],
       "enum": [null, "deleted", "already_absent"]
     },
     "cancellationResult": {
       "type": ["null", "string"],
-      "enum": [null, "cancelled"]
+      "enum": [null, "pending", "cancelled"]
     },
+    "cancellationRequestedAt": { "type": ["null", "string"] },
+    "quarantineRequired": { "type": "boolean" },
+    "controllerUnreachableAt": { "type": ["null", "string"] },
+    "quarantinedAt": { "type": ["null", "string"] },
+    "quarantineReleasedAt": { "type": ["null", "string"] },
     "cleanupDecision": { "type": ["null", "string"] }
   }
 }

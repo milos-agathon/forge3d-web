@@ -116,6 +116,52 @@ test("action verifier rejects movable, local, unreviewed, and container referenc
   );
   assert.throws(
     () => verifyWorkflowText("jobs:\n  one:\n    container: node:20\n", "fixture.yml", lockedActions),
-    /sha256 digest/u,
+    /literal sha256 digest/u,
+  );
+  assert.throws(
+    () =>
+      verifyWorkflowText(
+        "jobs:\n  one:\n    services:\n      redis:\n        image: ${{ inputs.redis_image }}\n",
+        "fixture.yml",
+        lockedActions,
+      ),
+    /literal sha256 digest/u,
+  );
+  assert.throws(
+    () =>
+      verifyWorkflowText(
+        [
+          "service: &service",
+          "  image: redis:latest",
+          "jobs:",
+          "  one:",
+          "    services:",
+          "      redis: *service",
+          "",
+        ].join("\n"),
+        "fixture.yml",
+        lockedActions,
+      ),
+    /YAML aliases are forbidden/u,
+  );
+});
+
+test("action verifier structurally accepts only digest-pinned job and service images", () => {
+  const digest = "a".repeat(64);
+  assert.doesNotThrow(() =>
+    verifyWorkflowText(
+      [
+        "jobs:",
+        "  one:",
+        "    container:",
+        `      image: ghcr.io/example/build@sha256:${digest}`,
+        "    services:",
+        "      redis:",
+        `        image: redis@sha256:${digest}`,
+        "",
+      ].join("\n"),
+      "fixture.yml",
+      lockedActions,
+    ),
   );
 });

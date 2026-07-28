@@ -10,11 +10,12 @@ import {
 } from "./protocol.mjs";
 
 const terminalStates = new Set([
-  "terminal",
   "deleted",
   "already_absent",
   "quarantined",
 ]);
+const CANCELLATION_POLL_ATTEMPTS = 30;
+const CANCELLATION_POLL_INTERVAL_MS = 1_000;
 
 export class BrowserLabBroker {
   constructor({
@@ -24,6 +25,9 @@ export class BrowserLabBroker {
     authorizationVerifier,
     github,
     now = () => new Date(),
+    sleep = wait,
+    cancellationPollAttempts = CANCELLATION_POLL_ATTEMPTS,
+    cancellationPollIntervalMs = CANCELLATION_POLL_INTERVAL_MS,
   }) {
     this.matrix = matrix;
     this.browserPolicy = browserPolicy;
@@ -31,6 +35,9 @@ export class BrowserLabBroker {
     this.authorizationVerifier = authorizationVerifier;
     this.github = github;
     this.now = now;
+    this.sleep = sleep;
+    this.cancellationPollAttempts = cancellationPollAttempts;
+    this.cancellationPollIntervalMs = cancellationPollIntervalMs;
   }
 
   async issueJitConfig(request, { mtlsIdentity }) {
@@ -42,6 +49,7 @@ export class BrowserLabBroker {
     const authorization = await this.authorizationVerifier.verify({
       digest: request.authorizationDigest,
       controllerAssetId: request.controller.assetId,
+      mode: "issuance",
     });
     const host = verifyControllerRequest({
       request,
@@ -50,6 +58,7 @@ export class BrowserLabBroker {
       expectedHostAssetId: authorization.hostAssetId,
     });
     this.verifyAuthorization(authorization);
+    this.assertHostNotQuarantined(host.assetId);
     const derived = deriveJitRequest(authorization, host);
     const response = await this.github.generateJitConfig(derived);
     const issued = verifyReturnedRunner(response, derived);
@@ -86,8 +95,14 @@ export class BrowserLabBroker {
         lastRunnerObservation: null,
         lastJobObservation: { status: authorization.jobStatus },
         localStopEvidence: null,
+        workRootWipeEvidence: null,
         deletionResult: null,
         cancellationResult: null,
+        cancellationRequestedAt: null,
+        quarantineRequired: false,
+        controllerUnreachableAt: null,
+        quarantinedAt: null,
+        quarantineReleasedAt: null,
         cleanupDecision: null,
       });
     } catch (error) {
@@ -114,8 +129,7 @@ export class BrowserLabBroker {
     const authorization = await this.authorizationVerifier.verify({
       digest: request.authorizationDigest,
       controllerAssetId: request.controller.assetId,
-      allowExpired: true,
-      allowRegisteredRunners: true,
+      mode: "cleanup",
     });
     if (
       authorization.runId !== record.runId ||
@@ -131,29 +145,113 @@ export class BrowserLabBroker {
       mtlsIdentity,
       expectedHostAssetId: record.hostAssetId,
     });
-    return this.performCleanup(record, request.reason, request.listenerStop);
+    const cleaned =
+      request.reason === "quarantine-release"
+        ? await this.releaseHostQuarantine(
+            record,
+            request.listenerStop,
+            request.workRootWipe,
+          )
+        : await this.performCleanup(
+            record,
+            request.reason,
+            request.listenerStop,
+          );
+    return cleanupResponse(cleaned);
   }
 
   async watchdogTick(digest, { controllerReachable = true } = {}) {
-    const record = this.requireRecord(digest);
+    let record = this.requireRecord(digest);
+    if (record.cancellationResult === "pending") {
+      return this.completePendingCancellation(record, {
+        pollUntilTerminal: false,
+      });
+    }
     if (terminalStates.has(record.state)) return record;
     const [runner, job] = await Promise.all([
       this.github.getRunner(record.runnerId),
       this.github.getJob(record.jobId),
     ]);
     const now = this.now();
+    const controllerLoss = controllerLossChanges(
+      record,
+      controllerReachable,
+      now,
+    );
+    if (Object.keys(controllerLoss).length > 0) {
+      record = this.ledger.update(digest, controllerLoss);
+    }
+    const jobObservation = summarizeJob(job, now);
     if (!runner) {
-      return this.ledger.update(digest, {
-        state: "already_absent",
-        lastRunnerObservation: { absent: true, observedAt: now.toISOString() },
-        lastJobObservation: summarizeJob(job, now),
-        cleanupDecision: "runner already absent",
+      const absent = this.ledger.update(digest, {
+        lastRunnerObservation: {
+          absent: true,
+          observedAt: now.toISOString(),
+        },
+        lastJobObservation: jobObservation,
       });
+      if (job.status === "completed") {
+        const terminal = this.ledger.update(digest, {
+          state: "terminal",
+          lastRunnerObservation: absent.lastRunnerObservation,
+          lastJobObservation: jobObservation,
+        });
+        return this.performCleanup(terminal, "terminal", null);
+      }
+      if (job.status === "in_progress") {
+        return this.ledger.update(digest, {
+          state: "busy",
+          everBusy: true,
+          lastRunnerObservation: absent.lastRunnerObservation,
+          lastJobObservation: jobObservation,
+        });
+      }
+      const startDeadlineElapsed =
+        !absent.everOnline &&
+        now.getTime() >= Date.parse(absent.startDeadline);
+      const assignmentDeadlineElapsed =
+        absent.assignmentDeadline !== null &&
+        now.getTime() >= Date.parse(absent.assignmentDeadline);
+      if (
+        job.status === "queued" &&
+        absent.quarantineRequired === true &&
+        (startDeadlineElapsed || assignmentDeadlineElapsed)
+      ) {
+        const phase = absent.everOnline
+          ? "assignment deadline"
+          : "start deadline";
+        return this.watchdogQuarantine(absent, { phase });
+      }
+      if (startDeadlineElapsed) {
+        return this.ledger.update(digest, {
+          state: "assignment_timeout",
+          cleanupDecision:
+            "runner absent at start deadline; awaiting authenticated cleanup or watchdog quarantine",
+        });
+      }
+      return absent;
     }
     validateRunnerIdentity(runner, record);
     const runnerObservation = summarizeRunner(runner, now);
-    const jobObservation = summarizeJob(job, now);
-    if (runner.busy || job.status === "in_progress") {
+    if (job.status === "completed") {
+      const terminal = this.ledger.update(digest, {
+        state: "terminal",
+        everOnline: record.everOnline || runner.status === "online",
+        lastRunnerObservation: runnerObservation,
+        lastJobObservation: jobObservation,
+      });
+      return this.performCleanup(terminal, "terminal", null);
+    }
+    if (runner.busy && job.status === "queued") {
+      return this.ledger.update(digest, {
+        state: "assigned",
+        everOnline: true,
+        everBusy: true,
+        lastRunnerObservation: runnerObservation,
+        lastJobObservation: jobObservation,
+      });
+    }
+    if (job.status === "in_progress") {
       return this.ledger.update(digest, {
         state: "busy",
         everOnline: true,
@@ -162,15 +260,23 @@ export class BrowserLabBroker {
         lastJobObservation: jobObservation,
       });
     }
-    if (job.status === "completed") {
-      return this.ledger.update(digest, {
-        state: "terminal",
-        everOnline: record.everOnline || runner.status === "online",
+    if (
+      record.quarantineRequired === true &&
+      record.assignmentDeadline !== null &&
+      now.getTime() >= Date.parse(record.assignmentDeadline) &&
+      runner.busy === false &&
+      job.status === "queued"
+    ) {
+      const elapsed = this.ledger.update(digest, {
         lastRunnerObservation: runnerObservation,
         lastJobObservation: jobObservation,
       });
+      return this.watchdogQuarantine(elapsed, {
+        phase: "assignment deadline",
+      });
     }
     if (runner.status === "online" && job.status === "queued") {
+      const firstOnlineUnassigned = record.onlineAt === null;
       const onlineAt = record.onlineAt ?? now.toISOString();
       const assignmentDeadline =
         record.assignmentDeadline ??
@@ -189,10 +295,17 @@ export class BrowserLabBroker {
         lastJobObservation: jobObservation,
       });
       if (
-        !controllerReachable &&
-        now.getTime() >= Date.parse(assignmentDeadline)
+        updated.quarantineRequired === true &&
+        ((!record.everOnline &&
+          now.getTime() >= Date.parse(record.startDeadline)) ||
+          (!firstOnlineUnassigned &&
+            now.getTime() >= Date.parse(assignmentDeadline)))
       ) {
-        return this.watchdogQuarantine(updated);
+        return this.watchdogQuarantine(updated, {
+          phase: record.everOnline
+            ? "assignment deadline"
+            : "start deadline",
+        });
       }
       return updated;
     }
@@ -200,11 +313,17 @@ export class BrowserLabBroker {
       now.getTime() >= Date.parse(record.startDeadline) &&
       !record.everOnline
     ) {
-      return this.ledger.update(digest, {
+      const timedOut = this.ledger.update(digest, {
         state: "assignment_timeout",
         lastRunnerObservation: runnerObservation,
         lastJobObservation: jobObservation,
       });
+      if (timedOut.quarantineRequired === true && job.status === "queued") {
+        return this.watchdogQuarantine(timedOut, {
+          phase: "start deadline",
+        });
+      }
+      return timedOut;
     }
     return this.ledger.update(digest, {
       lastRunnerObservation: runnerObservation,
@@ -213,31 +332,50 @@ export class BrowserLabBroker {
   }
 
   async performCleanup(record, reason, listenerStop) {
+    if (record.cancellationResult === "pending") {
+      return this.completePendingCancellation(record, {
+        pollUntilTerminal: true,
+      });
+    }
     const [runner, job] = await Promise.all([
       this.github.getRunner(record.runnerId),
       this.github.getJob(record.jobId),
     ]);
     const now = this.now();
+    const quarantineChanges = quarantineStateChanges(record, now);
     if (!runner) {
-      if (
-        reason === "online-unassigned" &&
-        job.status === "queued" &&
-        listenerStop?.stopped === true
-      ) {
-        await this.cancelAndVerify(record.runId);
-        return this.ledger.update(record.authorizationDigest, {
-          state: "deleted",
+      if (reason === "online-unassigned") {
+        const predicate = cleanupPredicate({
+          reason,
+          record,
+          runner: null,
+          job,
+          listenerStop,
+          now,
+        });
+        if (!predicate.allowed) throw new Error(predicate.reason);
+        const pending = this.ledger.update(record.authorizationDigest, {
+          state:
+            record.quarantineRequired === true ? "quarantined" : "deleted",
           localStopEvidence: listenerStop,
           deletionResult: record.deletionResult ?? "already_absent",
-          cancellationResult: "cancelled",
+          cancellationResult: "pending",
+          ...quarantineChanges,
           cleanupDecision:
-            "runner already absent; exact queued run cancellation completed",
+            `${predicate.reason}; exact runner already absent; exact queued run cancellation pending`,
+        });
+        return this.completePendingCancellation(pending, {
+          pollUntilTerminal: true,
         });
       }
       return this.ledger.update(record.authorizationDigest, {
-        state: "already_absent",
+        state:
+          record.quarantineRequired === true
+            ? "quarantined"
+            : "already_absent",
         localStopEvidence: listenerStop,
         deletionResult: "already_absent",
+        ...quarantineChanges,
         cleanupDecision: `${reason}: runner already absent`,
       });
     }
@@ -258,79 +396,145 @@ export class BrowserLabBroker {
     if (await this.github.getRunner(record.runnerId)) {
       throw new Error("exact runner ID still exists after deletion");
     }
-    this.ledger.update(record.authorizationDigest, {
-      state:
-        reason === "online-unassigned" ? "assignment_timeout" : "deleted",
+    const deleted = this.ledger.update(record.authorizationDigest, {
+      state: record.quarantineRequired === true ? "quarantined" : "deleted",
       localStopEvidence: listenerStop,
       deletionResult: "deleted",
-      cleanupDecision: predicate.reason,
+      cancellationResult:
+        reason === "online-unassigned" ? "pending" : null,
+      ...quarantineChanges,
+      cleanupDecision:
+        reason === "online-unassigned"
+          ? `${predicate.reason}; exact queued run cancellation pending`
+          : predicate.reason,
     });
-    let cancellationResult = null;
     if (reason === "online-unassigned") {
-      await this.cancelAndVerify(record.runId);
-      cancellationResult = "cancelled";
+      return this.completePendingCancellation(deleted, {
+        pollUntilTerminal: true,
+      });
     }
-    return this.ledger.update(record.authorizationDigest, {
-      state: "deleted",
-      localStopEvidence: listenerStop,
-      deletionResult: "deleted",
-      cancellationResult,
-      cleanupDecision: predicate.reason,
-    });
+    return deleted;
   }
 
-  async watchdogQuarantine(record) {
+  async watchdogQuarantine(record, { phase = "assignment deadline" } = {}) {
     const [runner, job] = await Promise.all([
       this.github.getRunner(record.runnerId),
       this.github.getJob(record.jobId),
     ]);
-    if (!runner) {
-      if (
-        record.deletionResult === "deleted" &&
-        record.cancellationResult !== "cancelled" &&
-        job.status === "queued"
-      ) {
-        await this.cancelAndVerify(record.runId);
-        return this.ledger.update(record.authorizationDigest, {
-          state: "quarantined",
-          cancellationResult: "cancelled",
-          cleanupDecision:
-            "runner previously deleted; exact queued run cancelled; host quarantined",
-        });
-      }
-      return this.ledger.update(record.authorizationDigest, {
-        state: "quarantined",
-        deletionResult: "already_absent",
-        cleanupDecision: "controller unreachable; runner absent; host quarantined",
-      });
-    }
-    validateRunnerIdentity(runner, record);
-    if (runner.busy || job.status !== "queued") {
+    if (job.status !== "queued" || runner?.busy) {
       throw new Error("watchdog cannot delete a busy runner or non-queued job");
     }
-    await this.github.deleteRunner(record.runnerId);
-    this.ledger.update(record.authorizationDigest, {
-      state: "assignment_timeout",
-      deletionResult: "deleted",
-      cleanupDecision:
-        "controller unreachable; exact runner deleted; bound run cancellation pending",
-    });
-    await this.cancelAndVerify(record.runId);
-    return this.ledger.update(record.authorizationDigest, {
+    let deletionResult = record.deletionResult ?? "already_absent";
+    if (runner) {
+      validateRunnerIdentity(runner, record);
+      await this.github.deleteRunner(record.runnerId);
+      if (await this.github.getRunner(record.runnerId)) {
+        throw new Error("exact runner ID still exists after watchdog deletion");
+      }
+      deletionResult = "deleted";
+    }
+    const pending = this.ledger.update(record.authorizationDigest, {
       state: "quarantined",
-      deletionResult: "deleted",
-      cancellationResult: "cancelled",
+      deletionResult,
+      cancellationResult: "pending",
+      quarantineRequired: true,
+      controllerUnreachableAt:
+        record.controllerUnreachableAt ?? this.now().toISOString(),
+      quarantinedAt: record.quarantinedAt ?? this.now().toISOString(),
       cleanupDecision:
-        "controller unreachable after assignment deadline; exact runner/run severed; host quarantined",
+        `controller unreachable after ${phase}; exact runner deleted or absent; bound run cancellation pending; host quarantined`,
+    });
+    return this.completePendingCancellation(pending, {
+      pollUntilTerminal: false,
     });
   }
 
-  async cancelAndVerify(runId) {
-    await this.github.cancelRun(runId);
-    const run = await this.github.getRun(runId);
-    if (run.status !== "completed" || run.conclusion !== "cancelled") {
-      throw new Error("bound workflow run did not reach cancelled terminal state");
+  async completePendingCancellation(
+    record,
+    { pollUntilTerminal = false } = {},
+  ) {
+    let pending = record;
+    let run = await this.github.getRun(record.runId);
+    if (verifyCancelledRun(run, record.runId)) {
+      return this.finalizeCancellation(pending);
     }
+    if (
+      pending.cancellationRequestedAt === null ||
+      pending.cancellationRequestedAt === undefined
+    ) {
+      await this.github.cancelRun(record.runId);
+      pending = this.ledger.update(record.authorizationDigest, {
+        cancellationRequestedAt: this.now().toISOString(),
+      });
+      run = await this.github.getRun(record.runId);
+      if (verifyCancelledRun(run, record.runId)) {
+        return this.finalizeCancellation(pending);
+      }
+    }
+    if (!pollUntilTerminal) return pending;
+    for (
+      let attempt = 0;
+      attempt < this.cancellationPollAttempts;
+      attempt += 1
+    ) {
+      await this.sleep(this.cancellationPollIntervalMs);
+      run = await this.github.getRun(record.runId);
+      if (verifyCancelledRun(run, record.runId)) {
+        return this.finalizeCancellation(pending);
+      }
+    }
+    throw new Error("bound workflow run cancellation remains pending");
+  }
+
+  finalizeCancellation(record) {
+    return this.ledger.update(record.authorizationDigest, {
+      state: record.state === "quarantined" ? "quarantined" : "deleted",
+      cancellationResult: "cancelled",
+      cleanupDecision: (record.cleanupDecision ??
+        "exact bound run cancellation pending").replace(
+        "cancellation pending",
+        "cancellation completed",
+      ),
+    });
+  }
+
+  async releaseHostQuarantine(record, listenerStop, workRootWipe) {
+    const now = this.now();
+    if (
+      record.state !== "quarantined" ||
+      record.quarantineRequired !== true ||
+      record.cancellationResult === "pending"
+    ) {
+      throw new Error("host does not have a releasable quarantine record");
+    }
+    const quarantineTime = Date.parse(record.quarantinedAt);
+    if (
+      listenerStop?.stopped !== true ||
+      workRootWipe?.wiped !== true ||
+      workRootWipe.workFolder !== record.workFolder ||
+      !Number.isFinite(quarantineTime) ||
+      Date.parse(listenerStop.observedAt) <= quarantineTime ||
+      Date.parse(workRootWipe.observedAt) <= quarantineTime ||
+      Date.parse(listenerStop.observedAt) > now.getTime() ||
+      Date.parse(workRootWipe.observedAt) > now.getTime()
+    ) {
+      throw new Error(
+        "quarantine release proof must postdate quarantine and prove listener stop plus exact work-root wipe",
+      );
+    }
+    if (await this.github.getRunner(record.runnerId)) {
+      throw new Error("quarantined runner must be absent before host release");
+    }
+    return this.ledger.update(record.authorizationDigest, {
+      state:
+        record.deletionResult === "deleted" ? "deleted" : "already_absent",
+      localStopEvidence: listenerStop,
+      workRootWipeEvidence: workRootWipe,
+      quarantineRequired: false,
+      quarantineReleasedAt: now.toISOString(),
+      cleanupDecision:
+        "authenticated controller proved listener stopped and exact work root wiped; host quarantine released",
+    });
   }
 
   verifyAuthorization(authorization) {
@@ -351,6 +555,22 @@ export class BrowserLabBroker {
     const record = this.ledger.get(digest);
     if (!record) throw new Error("authorization has no broker issuance record");
     return record;
+  }
+
+  assertHostNotQuarantined(hostAssetId) {
+    const blocking = this.ledger.list().find(
+      (record) =>
+        record.hostAssetId === hostAssetId &&
+        (record.quarantineRequired === true ||
+          (record.state === "quarantined" &&
+            (record.quarantineReleasedAt === null ||
+              record.quarantineReleasedAt === undefined))),
+    );
+    if (blocking) {
+      throw new Error(
+        `host ${hostAssetId} is quarantined by issuance ${blocking.authorizationDigest}`,
+      );
+    }
   }
 }
 
@@ -376,7 +596,7 @@ function cleanupPredicate({ reason, record, runner, job, listenerStop, now }) {
     reason === "online-unassigned" &&
     record.state === "online_unassigned" &&
     record.everBusy === false &&
-    runner.busy === false &&
+    (runner === null || runner.busy === false) &&
     job.status === "queued" &&
     listenerStop?.attempted === true &&
     listenerStop.stopped === true &&
@@ -391,6 +611,18 @@ function cleanupPredicate({ reason, record, runner, job, listenerStop, now }) {
   return {
     allowed: false,
     reason: `${reason} cleanup predicate was not satisfied`,
+  };
+}
+
+function cleanupResponse(record) {
+  return {
+    authorizationDigest: record.authorizationDigest,
+    runnerId: record.runnerId,
+    runnerName: record.runnerName,
+    state: record.state,
+    deletionResult: record.deletionResult,
+    cancellationResult: record.cancellationResult,
+    cleanupDecision: record.cleanupDecision,
   };
 }
 
@@ -411,4 +643,36 @@ function summarizeJob(job, now) {
     conclusion: job.conclusion ?? null,
     observedAt: now.toISOString(),
   };
+}
+
+function controllerLossChanges(record, controllerReachable, now) {
+  if (controllerReachable || record.quarantineRequired === true) return {};
+  return {
+    quarantineRequired: true,
+    controllerUnreachableAt:
+      record.controllerUnreachableAt ?? now.toISOString(),
+  };
+}
+
+function quarantineStateChanges(record, now) {
+  if (record.quarantineRequired !== true) return {};
+  return {
+    quarantineRequired: true,
+    quarantinedAt: record.quarantinedAt ?? now.toISOString(),
+  };
+}
+
+function verifyCancelledRun(run, runId) {
+  if (run.id !== runId) {
+    throw new Error("workflow run response does not match the ledger-bound run");
+  }
+  if (run.status !== "completed") return false;
+  if (run.conclusion !== "cancelled") {
+    throw new Error("ledger-bound workflow run completed without cancellation");
+  }
+  return true;
+}
+
+function wait(milliseconds) {
+  return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }

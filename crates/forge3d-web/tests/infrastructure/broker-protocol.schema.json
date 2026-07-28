@@ -106,6 +106,20 @@
         }
       }
     },
+    "workRootWipe": {
+      "type": ["null", "object"],
+      "additionalProperties": false,
+      "required": ["attempted", "wiped", "workFolder", "observedAt"],
+      "properties": {
+        "attempted": { "const": true },
+        "wiped": { "type": "boolean" },
+        "workFolder": { "const": "_work" },
+        "observedAt": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T"
+        }
+      }
+    },
     "cleanupRequest": {
       "type": "object",
       "additionalProperties": false,
@@ -116,6 +130,7 @@
         "controller",
         "reason",
         "listenerStop",
+        "workRootWipe",
         "signature"
       ],
       "properties": {
@@ -136,15 +151,18 @@
             "terminal",
             "launch-failure",
             "start-timeout",
-            "online-unassigned"
+            "online-unassigned",
+            "quarantine-release"
           ]
         },
         "listenerStop": { "$ref": "#/$defs/listenerStop" },
+        "workRootWipe": { "$ref": "#/$defs/workRootWipe" },
         "signature": { "$ref": "#/$defs/signature" }
       }
     },
     "cleanupResponse": {
       "type": "object",
+      "additionalProperties": false,
       "required": [
         "authorizationDigest",
         "runnerId",

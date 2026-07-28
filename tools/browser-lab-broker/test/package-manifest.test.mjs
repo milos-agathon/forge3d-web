@@ -29,7 +29,7 @@ test("binds broker archive, exact source, configuration, and protocols", () => {
     );
     assert.match(manifest.archive.sha256, /^[0-9a-f]{64}$/u);
     assert.match(manifest.configurationSha256, /^[0-9a-f]{64}$/u);
-    assert.equal(manifest.configuration.length, 8);
+    assert.equal(manifest.configuration.length, 9);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

@@ -2,6 +2,15 @@ import { readFileSync, readdirSync, statSync } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  LineCounter,
+  isAlias,
+  isMap,
+  isScalar,
+  isSeq,
+  parseDocument,
+} from "yaml";
+
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const repositoryRoot = resolve(packageRoot, "..", "..");
 const lockPath = join(
@@ -48,56 +57,174 @@ export function verifyWorkflowActionPins({
 
 export function verifyWorkflowText(text, source, lockedActions) {
   const references = [];
-  const lines = text.split(/\r?\n/u);
-  for (let index = 0; index < lines.length; index += 1) {
-    const line = lines[index];
-    const usesMatch = line.match(/^\s*(?:-\s*)?uses:\s*([^#\s]+)(?:\s+#.*)?$/u);
-    if (usesMatch) {
-      const uses = unquote(usesMatch[1]);
-      if (uses.startsWith("./") || uses.startsWith("docker://")) {
-        throw new Error(
-          `${source}:${index + 1} local and docker action references are forbidden`,
-        );
-      }
-      if (uses.includes("${{")) {
-        throw new Error(
-          `${source}:${index + 1} action references cannot contain expressions`,
-        );
-      }
-      const match = uses.match(
-        /^([^/@\s]+\/[^/@\s]+)(\/[^@\s]+)?@([0-9a-f]{40})$/u,
-      );
-      if (!match) {
-        throw new Error(
-          `${source}:${index + 1} action must use a full lowercase commit SHA: ${uses}`,
-        );
-      }
-      const repository = match[1];
-      const actionPath = match[2]?.slice(1) ?? "";
-      const commit = match[3];
-      const key = actionKey(repository, actionPath);
-      const locked = lockedActions.get(key);
-      if (!locked) {
-        throw new Error(`${source}:${index + 1} action is not reviewed in lockfile: ${key}`);
-      }
-      if (locked.commit !== commit) {
-        throw new Error(
-          `${source}:${index + 1} action commit disagrees with lockfile: ${key}`,
-        );
-      }
-      references.push({ source, line: index + 1, repository, path: actionPath, commit });
-    }
-
-    const imageMatch = line.match(
-      /^\s*(?:container|image):\s*["']?([^"'#\s]+)["']?(?:\s+#.*)?$/u,
+  const lineCounter = new LineCounter();
+  const document = parseDocument(text, {
+    lineCounter,
+    uniqueKeys: true,
+  });
+  if (document.errors.length > 0) {
+    throw new Error(
+      `${source} is not valid unambiguous YAML: ${document.errors[0].message}`,
     );
-    if (imageMatch && !/@sha256:[0-9a-f]{64}$/u.test(imageMatch[1])) {
-      throw new Error(
-        `${source}:${index + 1} job and service container images must use a sha256 digest`,
-      );
+  }
+  collectActionReferences(
+    document.contents,
+    source,
+    lockedActions,
+    lineCounter,
+    references,
+  );
+  const jobs = mapValue(document.contents, "jobs");
+  if (jobs !== undefined) {
+    if (!isMap(jobs)) {
+      throw new Error(`${source} workflow jobs must be a mapping`);
+    }
+    for (const jobPair of jobs.items) {
+      if (!isMap(jobPair.value)) continue;
+      verifyJobContainerImages(jobPair.value, source, lineCounter);
     }
   }
   return references;
+}
+
+function collectActionReferences(
+  node,
+  source,
+  lockedActions,
+  lineCounter,
+  references,
+) {
+  if (isAlias(node)) {
+    throw new Error(
+      `${source}:${nodeLine(node, lineCounter)} YAML aliases are forbidden in pinned workflow and action files`,
+    );
+  }
+  if (isMap(node)) {
+    for (const pair of node.items) {
+      if (scalarValue(pair.key) === "uses") {
+        const line = nodeLine(pair.value ?? pair.key, lineCounter);
+        const uses = requireStringScalar(
+          pair.value,
+          `${source}:${line} action reference`,
+        );
+        if (uses.startsWith("./") || uses.startsWith("docker://")) {
+          throw new Error(
+            `${source}:${line} local and docker action references are forbidden`,
+          );
+        }
+        if (uses.includes("${{")) {
+          throw new Error(
+            `${source}:${line} action references cannot contain expressions`,
+          );
+        }
+        const match = uses.match(
+          /^([^/@\s]+\/[^/@\s]+)(\/[^@\s]+)?@([0-9a-f]{40})$/u,
+        );
+        if (!match) {
+          throw new Error(
+            `${source}:${line} action must use a full lowercase commit SHA: ${uses}`,
+          );
+        }
+        const repository = match[1];
+        const actionPath = match[2]?.slice(1) ?? "";
+        const commit = match[3];
+        const key = actionKey(repository, actionPath);
+        const locked = lockedActions.get(key);
+        if (!locked) {
+          throw new Error(
+            `${source}:${line} action is not reviewed in lockfile: ${key}`,
+          );
+        }
+        if (locked.commit !== commit) {
+          throw new Error(
+            `${source}:${line} action commit disagrees with lockfile: ${key}`,
+          );
+        }
+        references.push({
+          source,
+          line,
+          repository,
+          path: actionPath,
+          commit,
+        });
+      }
+      collectActionReferences(
+        pair.value,
+        source,
+        lockedActions,
+        lineCounter,
+        references,
+      );
+    }
+  } else if (isSeq(node)) {
+    for (const item of node.items) {
+      collectActionReferences(
+        item,
+        source,
+        lockedActions,
+        lineCounter,
+        references,
+      );
+    }
+  }
+}
+
+function verifyJobContainerImages(job, source, lineCounter) {
+  const container = mapValue(job, "container");
+  if (container !== undefined) {
+    const image = isMap(container) ? mapValue(container, "image") : container;
+    verifyContainerImage(image, source, lineCounter);
+  }
+  const services = mapValue(job, "services");
+  if (services === undefined) return;
+  if (!isMap(services)) {
+    throw new Error(`${source} job services must be a mapping`);
+  }
+  for (const servicePair of services.items) {
+    if (!isMap(servicePair.value)) {
+      throw new Error(
+        `${source}:${nodeLine(servicePair.value ?? servicePair.key, lineCounter)} service configuration must be a mapping`,
+      );
+    }
+    verifyContainerImage(
+      mapValue(servicePair.value, "image"),
+      source,
+      lineCounter,
+    );
+  }
+}
+
+function verifyContainerImage(node, source, lineCounter) {
+  const line = nodeLine(node, lineCounter);
+  const image = requireStringScalar(
+    node,
+    `${source}:${line} container image`,
+  );
+  if (!/^[^@\s]+@sha256:[0-9a-f]{64}$/u.test(image)) {
+    throw new Error(
+      `${source}:${line} job and service container images must use a literal sha256 digest`,
+    );
+  }
+}
+
+function mapValue(node, key) {
+  if (!isMap(node)) return undefined;
+  return node.items.find((pair) => scalarValue(pair.key) === key)?.value;
+}
+
+function scalarValue(node) {
+  return isScalar(node) ? node.value : undefined;
+}
+
+function requireStringScalar(node, label) {
+  if (!isScalar(node) || typeof node.value !== "string") {
+    throw new Error(`${label} must be a scalar string`);
+  }
+  return node.value;
+}
+
+function nodeLine(node, lineCounter) {
+  return lineCounter.linePos(node?.range?.[0] ?? 0).line;
 }
 
 function findCheckedYamlFiles(root) {
@@ -133,16 +260,6 @@ function actionKey(repository, path) {
 
 function repositoryPath(root, path) {
   return relative(root, path).replaceAll("\\", "/");
-}
-
-function unquote(value) {
-  if (
-    (value.startsWith("\"") && value.endsWith("\"")) ||
-    (value.startsWith("'") && value.endsWith("'"))
-  ) {
-    return value.slice(1, -1);
-  }
-  return value;
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

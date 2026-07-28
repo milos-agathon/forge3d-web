@@ -99,6 +99,13 @@ test("packager consumes all four values only through needs and uses exact-ID ver
   assert.match(packager, /actions\/attest@[0-9a-f]{40}/u);
 });
 
+test("packager includes the checked controller health endpoint configuration", () => {
+  assert.match(
+    packager,
+    /cp crates\/forge3d-web\/tests\/infrastructure\/controller-health-endpoints\.json broker-package\/config\//u,
+  );
+});
+
 function jobBlock(text, startId, nextId) {
   const start = text.indexOf(`  ${startId}:`);
   assert.notEqual(start, -1, `missing job ${startId}`);

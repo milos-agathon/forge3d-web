@@ -26,9 +26,12 @@ export class FileAuthorizationVerifier {
   async verify({
     digest,
     controllerAssetId,
-    allowExpired = false,
-    allowRegisteredRunners = false,
+    mode = "issuance",
   }) {
+    if (!["issuance", "cleanup"].includes(mode)) {
+      throw new Error("authorization verification mode is invalid");
+    }
+    const cleanup = mode === "cleanup";
     if (!/^[0-9a-f]{64}$/u.test(digest ?? "")) {
       throw new Error("authorization digest is invalid");
     }
@@ -53,7 +56,7 @@ export class FileAuthorizationVerifier {
       authorization.hostAssetId !== controllerAssetId ||
       authorization.operation !== "run-hardware-job" ||
       authorization.jobStatus !== "queued" ||
-      (!allowExpired && Date.parse(authorization.expiresAt) <= this.now().getTime()) ||
+      (!cleanup && Date.parse(authorization.expiresAt) <= this.now().getTime()) ||
       authorization.policySha256 !== sha256Canonical(this.repositoryTrustPolicy) ||
       authorization.workflowActionsLockSha256 !==
         sha256Canonical(this.workflowActionsLock)
@@ -69,16 +72,17 @@ export class FileAuthorizationVerifier {
       github: this.github,
       policy: this.repositoryTrustPolicy,
       targetSha: authorization.targetSha,
-      allowRegisteredRunners,
+      allowRegisteredRunners: cleanup,
+      requireCurrentTarget: !cleanup,
     });
     const job = await this.github.getJob(authorization.jobId);
     if (
       job.id !== authorization.jobId ||
       job.run_id !== authorization.runId ||
-      job.status !== "queued" ||
+      (!cleanup && job.status !== "queued") ||
       job.head_sha !== undefined && job.head_sha !== authorization.targetSha
     ) {
-      throw new Error("live queued job does not match runner authorization");
+      throw new Error("live job does not match runner authorization");
     }
     return authorization;
   }
@@ -89,6 +93,7 @@ export async function verifyLiveRepositoryTrust({
   policy,
   targetSha,
   allowRegisteredRunners = false,
+  requireCurrentTarget = true,
 }) {
   if (
     policy.bootstrapState !== "active" ||
@@ -107,7 +112,7 @@ export async function verifyLiveRepositoryTrust({
     repository.full_name !== policy.repository.fullName ||
     repository.default_branch !== policy.repository.defaultBranch ||
     branch.protected !== true ||
-    branch.commit?.sha !== targetSha
+    (requireCurrentTarget && branch.commit?.sha !== targetSha)
   ) {
     throw new Error("live repository/default-branch identity does not match authorization");
   }

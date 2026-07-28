@@ -10,6 +10,7 @@ const root = dirname(fileURLToPath(import.meta.url));
 
 for (const name of [
   "browser-policy",
+  "controller-health-endpoints",
   "hardware-matrix",
   "repository-trust-policy",
   "runner-distribution-manifest",
@@ -68,6 +69,57 @@ test("broker protocol schema accepts only a frozen JIT request shape", () => {
   assert.throws(() => assertJsonSchema(request, schema), /oneOf/u);
 });
 
+test("broker protocol freezes signed quarantine recovery evidence", () => {
+  const request = {
+    protocolVersion: "forge3d-browser-lab-cleanup/v1",
+    authorizationDigest: "a".repeat(64),
+    requestNonce: "b".repeat(32),
+    controller: {
+      assetId: "FW-LNX-NV-01",
+      identity: "controller:FW-LNX-NV-01",
+      signingKeyId: "controller-fw-lnx-nv-01-p256-v1",
+    },
+    reason: "quarantine-release",
+    listenerStop: {
+      attempted: true,
+      stopped: true,
+      processId: 1234,
+      observedAt: "2026-07-28T12:05:00.000Z",
+    },
+    workRootWipe: {
+      attempted: true,
+      wiped: true,
+      workFolder: "_work",
+      observedAt: "2026-07-28T12:05:01.000Z",
+    },
+    signature: {
+      algorithm: "SHA256withECDSA",
+      signingKeyId: "controller-fw-lnx-nv-01-p256-v1",
+      value: "base64url",
+    },
+  };
+  const schema = readJson("broker-protocol.schema.json");
+  assertJsonSchema(request, schema);
+  delete request.workRootWipe;
+  assert.throws(() => assertJsonSchema(request, schema), /oneOf/u);
+});
+
+test("broker protocol rejects internal ledger fields in cleanup responses", () => {
+  const response = {
+    authorizationDigest: "a".repeat(64),
+    runnerId: 3,
+    runnerName: `FW-LNX-NV-01-${"c".repeat(32)}`,
+    state: "deleted",
+    deletionResult: "deleted",
+    cancellationResult: null,
+    cleanupDecision: "authorized job is terminal",
+  };
+  const schema = readJson("broker-protocol.schema.json");
+  assertJsonSchema(response, schema);
+  response.runId = 1;
+  assert.throws(() => assertJsonSchema(response, schema), /oneOf/u);
+});
+
 test("broker lifecycle schema freezes cleanup and redacted-ledger fields", () => {
   const record = {
     schemaVersion: 1,
@@ -97,11 +149,24 @@ test("broker lifecycle schema freezes cleanup and redacted-ledger fields", () =>
     lastRunnerObservation: null,
     lastJobObservation: { status: "queued" },
     localStopEvidence: null,
+    workRootWipeEvidence: null,
     deletionResult: null,
     cancellationResult: null,
+    cancellationRequestedAt: null,
+    quarantineRequired: false,
+    controllerUnreachableAt: null,
+    quarantinedAt: null,
+    quarantineReleasedAt: null,
     cleanupDecision: null,
   };
   const schema = readJson("broker-lifecycle.schema.json");
+  assertJsonSchema(record, schema);
+  record.state = "quarantined";
+  record.cancellationResult = "pending";
+  record.cancellationRequestedAt = "2026-07-28T12:01:35.000Z";
+  record.quarantineRequired = true;
+  record.controllerUnreachableAt = "2026-07-28T12:01:30.000Z";
+  record.quarantinedAt = "2026-07-28T12:01:35.000Z";
   assertJsonSchema(record, schema);
   record.encodedJitConfig = "forbidden";
   assert.throws(() => assertJsonSchema(record, schema), /additional property/u);

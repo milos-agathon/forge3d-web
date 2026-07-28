@@ -112,8 +112,47 @@ test("terminal cleanup deletes only the ledger runner without cancelling a run",
     { mtlsIdentity: controller.identity },
   );
   assert.equal(result.state, "deleted");
+  assert.deepEqual(Object.keys(result).sort(), [
+    "authorizationDigest",
+    "cancellationResult",
+    "cleanupDecision",
+    "deletionResult",
+    "runnerId",
+    "runnerName",
+    "state",
+  ]);
+  assert.equal("runId" in result, false);
   assert.deepEqual(context.github.deleteCalls, [1001]);
   assert.deepEqual(context.github.cancelCalls, []);
+  assert.deepEqual(context.verificationModes, ["issuance", "cleanup"]);
+});
+
+test("watchdog exact-ID deletes a runner as soon as its job completes", async () => {
+  const context = makeContext();
+  await issue(context);
+  context.github.job.status = "completed";
+  context.github.job.conclusion = "success";
+  const result = await context.broker.watchdogTick(digest);
+  assert.equal(result.state, "deleted");
+  assert.equal(result.deletionResult, "deleted");
+  assert.deepEqual(context.github.deleteCalls, [1001]);
+  assert.deepEqual(context.github.cancelCalls, []);
+});
+
+test("watchdog retries exact-ID deletion from a persisted terminal state", async () => {
+  const context = makeContext();
+  await issue(context);
+  context.github.job.status = "completed";
+  context.github.job.conclusion = "success";
+  context.github.failNextDeletion = true;
+  await assert.rejects(
+    context.broker.watchdogTick(digest),
+    /synthetic deletion failure/u,
+  );
+  assert.equal(context.ledger.get(digest).state, "terminal");
+  const recovered = await context.broker.watchdogTick(digest);
+  assert.equal(recovered.state, "deleted");
+  assert.deepEqual(context.github.deleteCalls, [1001]);
 });
 
 test("launch failure and start timeout use exact-ID cleanup before online", async () => {
@@ -158,6 +197,26 @@ test("online-unassigned cleanup requires stopped listener and queued non-busy jo
   assert.equal(result.cancellationResult, "cancelled");
   assert.deepEqual(context.github.deleteCalls, [1001]);
   assert.deepEqual(context.github.cancelCalls, [2001]);
+});
+
+test("absent runner cannot bypass the online-unassigned cleanup predicate", async () => {
+  const context = makeContext();
+  await issue(context);
+  context.github.deleted = true;
+  await assert.rejects(
+    context.broker.cleanupRunner(
+      makeCleanupRequest({
+        reason: "online-unassigned",
+        nonce: "a".repeat(32),
+        listenerStop: stopProof(context),
+      }),
+      { mtlsIdentity: controller.identity },
+    ),
+    /online-unassigned cleanup predicate was not satisfied/u,
+  );
+  assert.equal(context.ledger.get(digest).state, "issued");
+  assert.deepEqual(context.github.deleteCalls, []);
+  assert.deepEqual(context.github.cancelCalls, []);
 });
 
 test("busy or no-longer-queued controls permit neither deletion nor cancellation", async () => {
@@ -231,8 +290,9 @@ test("retries bound-run cancellation after exact runner deletion", async () => {
     /synthetic cancellation failure/u,
   );
   const pending = context.ledger.get(digest);
-  assert.equal(pending.state, "assignment_timeout");
+  assert.equal(pending.state, "deleted");
   assert.equal(pending.deletionResult, "deleted");
+  assert.equal(pending.cancellationResult, "pending");
   assert.equal(context.github.deleted, true);
 
   const recovered = await context.broker.cleanupRunner(
@@ -267,6 +327,302 @@ test("watchdog severs exact runner/run and quarantines an unreachable controller
   assert.deepEqual(context.github.cancelCalls, [2001]);
 });
 
+test("accepted cancellation advances once per watchdog cycle until terminal", async () => {
+  const context = makeContext();
+  await issue(context);
+  await context.broker.watchdogTick(digest);
+  context.advance(91_000);
+  context.github.queuedRunReadsAfterCancel = 2;
+  const first = await context.broker.watchdogTick(digest, {
+    controllerReachable: false,
+  });
+  assert.equal(first.state, "quarantined");
+  assert.equal(first.cancellationResult, "pending");
+  assert.equal(context.sleepCalls.length, 0);
+  const second = await context.broker.watchdogTick(digest);
+  assert.equal(second.cancellationResult, "pending");
+  const terminal = await context.broker.watchdogTick(digest);
+  assert.equal(terminal.cancellationResult, "cancelled");
+  assert.deepEqual(context.github.cancelCalls, [2001]);
+  assert.ok(context.github.getRunCalls >= 4);
+});
+
+test("pending cancellation survives runner deletion and completes on a later tick", async () => {
+  const context = makeContext();
+  await issue(context);
+  await context.broker.watchdogTick(digest);
+  context.advance(91_000);
+  context.github.queuedRunReadsAfterCancel = 100;
+  await context.broker.watchdogTick(digest, {
+    controllerReachable: false,
+  });
+  const pending = context.ledger.get(digest);
+  assert.equal(pending.state, "quarantined");
+  assert.equal(pending.deletionResult, "deleted");
+  assert.equal(pending.cancellationResult, "pending");
+  context.github.queuedRunReadsAfterCancel = 0;
+  const recovered = await context.broker.watchdogTick(digest, {
+    controllerReachable: false,
+  });
+  assert.equal(recovered.state, "quarantined");
+  assert.equal(recovered.cancellationResult, "cancelled");
+  assert.deepEqual(context.github.cancelCalls, [2001]);
+});
+
+test("early runner absence remains nonterminal until watchdog quarantine is decidable", async () => {
+  const context = makeContext();
+  await issue(context);
+  context.github.deleted = true;
+  const first = await context.broker.watchdogTick(digest, {
+    controllerReachable: true,
+  });
+  assert.equal(first.state, "issued");
+  assert.equal(first.lastRunnerObservation.absent, true);
+  context.advance(121_000);
+  const quarantined = await context.broker.watchdogTick(digest, {
+    controllerReachable: false,
+  });
+  assert.equal(quarantined.state, "quarantined");
+  assert.equal(quarantined.deletionResult, "already_absent");
+  assert.equal(quarantined.cancellationResult, "cancelled");
+  assert.deepEqual(context.github.deleteCalls, []);
+  assert.deepEqual(context.github.cancelCalls, [2001]);
+});
+
+test("controller loss while busy remains quarantined after terminal cleanup", async () => {
+  const context = makeContext();
+  await issue(context);
+  context.github.runner.busy = true;
+  context.github.job.status = "in_progress";
+  const busy = await context.broker.watchdogTick(digest, {
+    controllerReachable: false,
+  });
+  assert.equal(busy.state, "busy");
+  assert.equal(busy.quarantineRequired, true);
+  assert.ok(busy.controllerUnreachableAt);
+  context.github.runner.busy = false;
+  context.github.job.status = "completed";
+  context.github.job.conclusion = "success";
+  const terminal = await context.broker.watchdogTick(digest, {
+    controllerReachable: true,
+  });
+  assert.equal(terminal.state, "quarantined");
+  assert.equal(terminal.quarantineRequired, true);
+  assert.ok(terminal.quarantinedAt);
+  assert.deepEqual(context.github.deleteCalls, [1001]);
+  assert.deepEqual(context.github.cancelCalls, []);
+});
+
+test("quarantined host blocks new issuance until signed stop and wipe recovery", async () => {
+  const context = makeContext();
+  await issue(context);
+  await context.broker.watchdogTick(digest);
+  context.advance(91_000);
+  const quarantined = await context.broker.watchdogTick(digest, {
+    controllerReachable: false,
+  });
+  assert.equal(quarantined.state, "quarantined");
+  assert.equal(quarantined.quarantineRequired, true);
+
+  const nextDigest = "d".repeat(64);
+  context.addAuthorization(nextDigest, {
+    runId: 2002,
+    jobId: 3002,
+    runnerNonce: "c".repeat(32),
+  });
+  await assert.rejects(
+    context.broker.issueJitConfig(
+      makeJitRequest("e".repeat(32), nextDigest),
+      { mtlsIdentity: controller.identity },
+    ),
+    /host .* is quarantined/u,
+  );
+  assert.equal(context.github.generateCalls.length, 1);
+
+  await assert.rejects(
+    context.broker.cleanupRunner(
+      makeCleanupRequest({
+        reason: "quarantine-release",
+        nonce: "f".repeat(32),
+        listenerStop: stopProof(context),
+      }),
+      { mtlsIdentity: controller.identity },
+    ),
+    /requires listener-stop and work-root-wipe proof/u,
+  );
+  const staleObservedAt = new Date(
+    context.now().getTime() - 1_000,
+  ).toISOString();
+  await assert.rejects(
+    context.broker.cleanupRunner(
+      makeCleanupRequest({
+        reason: "quarantine-release",
+        nonce: "3".repeat(32),
+        listenerStop: {
+          ...stopProof(context),
+          observedAt: staleObservedAt,
+        },
+        workRootWipe: {
+          ...workRootWipeProof(context),
+          observedAt: staleObservedAt,
+        },
+      }),
+      { mtlsIdentity: controller.identity },
+    ),
+    /proof must postdate quarantine/u,
+  );
+  context.advance(1_000);
+  const released = await context.broker.cleanupRunner(
+    makeCleanupRequest({
+      reason: "quarantine-release",
+      nonce: "1".repeat(32),
+      listenerStop: stopProof(context),
+      workRootWipe: workRootWipeProof(context),
+    }),
+    { mtlsIdentity: controller.identity },
+  );
+  assert.equal(released.state, "deleted");
+  const releasedRecord = context.ledger.get(digest);
+  assert.equal(releasedRecord.quarantineRequired, false);
+  assert.equal(releasedRecord.workRootWipeEvidence.wiped, true);
+  assert.ok(releasedRecord.quarantineReleasedAt);
+
+  await context.broker.issueJitConfig(
+    makeJitRequest("2".repeat(32), nextDigest),
+    { mtlsIdentity: controller.identity },
+  );
+  assert.equal(context.github.generateCalls.length, 2);
+});
+
+test("queued runner assignment is persisted separately from active work", async () => {
+  const context = makeContext();
+  await issue(context);
+  context.github.runner.busy = true;
+  context.github.job.status = "queued";
+  const assigned = await context.broker.watchdogTick(digest);
+  assert.equal(assigned.state, "assigned");
+  context.github.job.status = "in_progress";
+  const busy = await context.broker.watchdogTick(digest);
+  assert.equal(busy.state, "busy");
+});
+
+test("offline non-busy runner is quarantined after the assignment deadline", async () => {
+  const context = makeContext();
+  await issue(context);
+  const online = await context.broker.watchdogTick(digest, {
+    controllerReachable: false,
+  });
+  assert.equal(online.state, "online_unassigned");
+  context.github.runner.status = "offline";
+  context.advance(91_000);
+  const quarantined = await context.broker.watchdogTick(digest, {
+    controllerReachable: false,
+  });
+  assert.equal(quarantined.state, "quarantined");
+  assert.equal(quarantined.cancellationResult, "cancelled");
+  assert.deepEqual(context.github.deleteCalls, [1001]);
+  assert.deepEqual(context.github.cancelCalls, [2001]);
+});
+
+test("re-queued assigned runner disappearance uses the persisted deadline", async () => {
+  const context = makeContext();
+  await issue(context);
+  await context.broker.watchdogTick(digest, {
+    controllerReachable: false,
+  });
+  context.github.runner.busy = true;
+  const assigned = await context.broker.watchdogTick(digest, {
+    controllerReachable: false,
+  });
+  assert.equal(assigned.state, "assigned");
+  assert.ok(assigned.assignmentDeadline);
+  context.advance(91_000);
+  context.github.deleted = true;
+  const quarantined = await context.broker.watchdogTick(digest, {
+    controllerReachable: false,
+  });
+  assert.equal(quarantined.state, "quarantined");
+  assert.equal(quarantined.deletionResult, "already_absent");
+  assert.equal(quarantined.cancellationResult, "cancelled");
+  assert.deepEqual(context.github.cancelCalls, [2001]);
+});
+
+test("re-queued busy runner offline uses the persisted deadline", async () => {
+  const context = makeContext();
+  await issue(context);
+  await context.broker.watchdogTick(digest, {
+    controllerReachable: false,
+  });
+  context.github.runner.busy = true;
+  context.github.job.status = "in_progress";
+  const busy = await context.broker.watchdogTick(digest, {
+    controllerReachable: false,
+  });
+  assert.equal(busy.state, "busy");
+  assert.ok(busy.assignmentDeadline);
+  context.advance(91_000);
+  context.github.runner.busy = false;
+  context.github.runner.status = "offline";
+  context.github.job.status = "queued";
+  const quarantined = await context.broker.watchdogTick(digest, {
+    controllerReachable: false,
+  });
+  assert.equal(quarantined.state, "quarantined");
+  assert.equal(quarantined.deletionResult, "deleted");
+  assert.equal(quarantined.cancellationResult, "cancelled");
+  assert.deepEqual(context.github.deleteCalls, [1001]);
+  assert.deepEqual(context.github.cancelCalls, [2001]);
+});
+
+test("unexpected live runner label fails closed before cleanup", async () => {
+  const context = makeContext();
+  await issue(context);
+  context.github.runner.labels.push("unreviewed-routing-label");
+  context.github.job.status = "completed";
+  context.github.job.conclusion = "success";
+  await assert.rejects(
+    context.broker.watchdogTick(digest),
+    /labels disagree with issuance ledger/u,
+  );
+  assert.deepEqual(context.github.deleteCalls, []);
+  assert.deepEqual(context.github.cancelCalls, []);
+});
+
+test("watchdog never deletes an unassigned runner while its controller is reachable", async () => {
+  const context = makeContext();
+  await issue(context);
+  await context.broker.watchdogTick(digest, {
+    controllerReachable: true,
+  });
+  context.advance(91_000);
+  const healthy = await context.broker.watchdogTick(digest, {
+    controllerReachable: true,
+  });
+  assert.equal(healthy.state, "online_unassigned");
+  assert.deepEqual(context.github.deleteCalls, []);
+  assert.deepEqual(context.github.cancelCalls, []);
+});
+
+test("watchdog deletes, cancels, and quarantines when controller disappears before runner online", async () => {
+  const context = makeContext();
+  await issue(context);
+  context.github.runner.status = "offline";
+  context.advance(121_000);
+  const reachable = await context.broker.watchdogTick(digest, {
+    controllerReachable: true,
+  });
+  assert.equal(reachable.state, "assignment_timeout");
+  assert.deepEqual(context.github.deleteCalls, []);
+  const quarantined = await context.broker.watchdogTick(digest, {
+    controllerReachable: false,
+  });
+  assert.equal(quarantined.state, "quarantined");
+  assert.equal(quarantined.deletionResult, "deleted");
+  assert.equal(quarantined.cancellationResult, "cancelled");
+  assert.deepEqual(context.github.deleteCalls, [1001]);
+  assert.deepEqual(context.github.cancelCalls, [2001]);
+});
+
 function makeContext() {
   let clock = new Date("2026-07-28T12:00:00.000Z");
   const now = () => new Date(clock);
@@ -288,11 +644,17 @@ function makeContext() {
     runnerNonce: "b".repeat(32),
     expiresAt: "2026-07-28T12:30:00.000Z",
   };
+  const authorizations = new Map([[digest, authorization]]);
+  const verificationModes = [];
+  const sleepCalls = [];
   const authorizationVerifier = {
-    async verify({ digest: supplied, controllerAssetId }) {
-      assert.equal(supplied, digest);
+    async verify({ digest: supplied, controllerAssetId, mode }) {
       assert.equal(controllerAssetId, controller.assetId);
-      return structuredClone(authorization);
+      assert.ok(["issuance", "cleanup"].includes(mode));
+      verificationModes.push(mode);
+      const matched = authorizations.get(supplied);
+      assert.ok(matched, `unexpected authorization digest ${supplied}`);
+      return structuredClone(matched);
     },
   };
   const matrix = {
@@ -322,12 +684,25 @@ function makeContext() {
     authorizationVerifier,
     github,
     now,
+    sleep: async (milliseconds) => {
+      sleepCalls.push(milliseconds);
+    },
+    cancellationPollAttempts: 3,
+    cancellationPollIntervalMs: 1,
   });
   return {
     broker,
     ledger,
     github,
     now,
+    verificationModes,
+    sleepCalls,
+    addAuthorization(authorizationDigest, overrides = {}) {
+      authorizations.set(authorizationDigest, {
+        ...structuredClone(authorization),
+        ...structuredClone(overrides),
+      });
+    },
     advance(milliseconds) {
       clock = new Date(clock.getTime() + milliseconds);
     },
@@ -340,16 +715,24 @@ async function issue(context) {
   });
 }
 
-function makeJitRequest(nonce = "0".repeat(32)) {
+function makeJitRequest(
+  nonce = "0".repeat(32),
+  authorizationDigest = digest,
+) {
   return signRequest({
     protocolVersion: BROKER_PROTOCOL_VERSION,
-    authorizationDigest: digest,
+    authorizationDigest,
     requestNonce: nonce,
     controller,
   });
 }
 
-function makeCleanupRequest({ reason, nonce, listenerStop = null }) {
+function makeCleanupRequest({
+  reason,
+  nonce,
+  listenerStop = null,
+  workRootWipe = null,
+}) {
   return signRequest({
     protocolVersion: CLEANUP_PROTOCOL_VERSION,
     authorizationDigest: digest,
@@ -357,6 +740,7 @@ function makeCleanupRequest({ reason, nonce, listenerStop = null }) {
     controller,
     reason,
     listenerStop,
+    workRootWipe,
   });
 }
 
@@ -390,6 +774,15 @@ function stopProof(context) {
   };
 }
 
+function workRootWipeProof(context) {
+  return {
+    attempted: true,
+    wiped: true,
+    workFolder: "_work",
+    observedAt: context.now().toISOString(),
+  };
+}
+
 class MockGitHub {
   constructor() {
     this.runner = null;
@@ -406,11 +799,16 @@ class MockGitHub {
     this.cancelCalls = [];
     this.registrationTokenCalls = 0;
     this.extraLabels = ["self-hosted", "Linux", "X64"];
+    this.failNextDeletion = false;
     this.failNextCancellation = false;
+    this.cancellationAccepted = false;
+    this.queuedRunReadsAfterCancel = 0;
+    this.getRunCalls = 0;
   }
 
   async generateJitConfig(body) {
     this.generateCalls.push(structuredClone(body));
+    this.deleted = false;
     this.runner = {
       id: 1001,
       name: body.name,
@@ -434,6 +832,10 @@ class MockGitHub {
 
   async deleteRunner(id) {
     assert.equal(id, 1001);
+    if (this.failNextDeletion) {
+      this.failNextDeletion = false;
+      throw new Error("synthetic deletion failure");
+    }
     this.deleteCalls.push(id);
     this.deleted = true;
   }
@@ -450,11 +852,19 @@ class MockGitHub {
       throw new Error("synthetic cancellation failure");
     }
     this.cancelCalls.push(id);
-    this.run = { id, status: "completed", conclusion: "cancelled" };
+    this.cancellationAccepted = true;
   }
 
   async getRun(id) {
     assert.equal(id, 2001);
+    this.getRunCalls += 1;
+    if (this.cancellationAccepted) {
+      if (this.queuedRunReadsAfterCancel > 0) {
+        this.queuedRunReadsAfterCancel -= 1;
+      } else {
+        this.run = { id, status: "completed", conclusion: "cancelled" };
+      }
+    }
     return structuredClone(this.run);
   }
 }

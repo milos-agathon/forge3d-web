@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 
 import { FileAuthorizationVerifier } from "./authorization-verifier.mjs";
 import { BrowserLabBroker } from "./broker.mjs";
+import { ControllerReachabilityMonitor } from "./controller-reachability.mjs";
 import {
   GitHubAppTokenProvider,
   GitHubRepositoryClient,
@@ -66,6 +67,43 @@ export function createBrokerServer({ broker, tls }) {
   );
 }
 
+export async function runWatchdogCycle({
+  broker,
+  ledger,
+  controllerReachability,
+  auditLog = audit,
+  inFlight = new Set(),
+}) {
+  await Promise.all(
+    ledger.list().map(async (record) => {
+      if (inFlight.has(record.authorizationDigest)) return;
+      inFlight.add(record.authorizationDigest);
+      try {
+        const controllerReachable =
+          controllerProbeNotRequired(record)
+            ? true
+            : await controllerReachability.isReachable(record);
+        await broker.watchdogTick(record.authorizationDigest, {
+          controllerReachable,
+        });
+      } catch (error) {
+        auditLog({
+          operation: "watchdog",
+          authorizationDigest: record.authorizationDigest,
+          resultState: "rejected",
+          error: String(error.message ?? error),
+        });
+      } finally {
+        inFlight.delete(record.authorizationDigest);
+      }
+    }),
+  );
+}
+
+function controllerProbeNotRequired(record) {
+  return ["deleted", "already_absent", "quarantined"].includes(record.state);
+}
+
 async function readRequestBody(request) {
   const chunks = [];
   let size = 0;
@@ -123,6 +161,23 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     repositoryTrustPolicy,
     workflowActionsLock,
   });
+  const controllerReachability = new ControllerReachabilityMonitor({
+    matrix,
+    configuration: loadJson(
+      requiredEnvironment("BROKER_CONTROLLER_HEALTH_ENDPOINTS"),
+    ),
+    tls: {
+      key: readFileSync(
+        requiredEnvironment("BROKER_CONTROLLER_HEALTH_CLIENT_KEY_PATH"),
+      ),
+      cert: readFileSync(
+        requiredEnvironment("BROKER_CONTROLLER_HEALTH_CLIENT_CERT_PATH"),
+      ),
+      ca: readFileSync(
+        requiredEnvironment("BROKER_CONTROLLER_HEALTH_CA_PATH"),
+      ),
+    },
+  });
   const broker = new BrowserLabBroker({
     matrix,
     browserPolicy,
@@ -138,21 +193,20 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       ca: readFileSync(requiredEnvironment("BROKER_TLS_CA_PATH")),
     },
   });
-  const interval = setInterval(async () => {
-    for (const record of ledger.list()) {
-      try {
-        await broker.watchdogTick(record.authorizationDigest, {
-          controllerReachable: false,
-        });
-      } catch (error) {
-        audit({
-          operation: "watchdog",
-          authorizationDigest: record.authorizationDigest,
-          resultState: "rejected",
-          error: String(error.message ?? error),
-        });
-      }
-    }
+  const watchdogInFlight = new Set();
+  const interval = setInterval(() => {
+    void runWatchdogCycle({
+      broker,
+      ledger,
+      controllerReachability,
+      inFlight: watchdogInFlight,
+    }).catch((error) => {
+      audit({
+        operation: "watchdog-cycle",
+        resultState: "rejected",
+        error: String(error.message ?? error),
+      });
+    });
   }, 5_000);
   interval.unref();
   server.listen(

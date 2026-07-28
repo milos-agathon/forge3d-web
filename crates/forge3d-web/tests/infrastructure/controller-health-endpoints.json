@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "timeoutMs": 2000,
+  "unreachableThreshold": 3,
+  "controllers": [
+    {
+      "assetId": "FW-MAC-M2-01",
+      "identity": "controller:FW-MAC-M2-01",
+      "url": "https://fw-mac-m2-01.controller.browser-lab.internal:9443/v1/health"
+    },
+    {
+      "assetId": "FW-WIN-I12-01",
+      "identity": "controller:FW-WIN-I12-01",
+      "url": "https://fw-win-i12-01.controller.browser-lab.internal:9443/v1/health"
+    },
+    {
+      "assetId": "FW-LNX-I12-01",
+      "identity": "controller:FW-LNX-I12-01",
+      "url": "https://fw-lnx-i12-01.controller.browser-lab.internal:9443/v1/health"
+    },
+    {
+      "assetId": "FW-LNX-NV-01",
+      "identity": "controller:FW-LNX-NV-01",
+      "url": "https://fw-lnx-nv-01.controller.browser-lab.internal:9443/v1/health"
+    }
+  ]
+}

@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/controller-health-endpoints.schema.json",
+  "title": "Forge3D browser-lab controller health endpoints",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "timeoutMs",
+    "unreachableThreshold",
+    "controllers"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "timeoutMs": {
+      "type": "integer",
+      "minimum": 250,
+      "maximum": 5000
+    },
+    "unreachableThreshold": {
+      "type": "integer",
+      "minimum": 2,
+      "maximum": 12
+    },
+    "controllers": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["assetId", "identity", "url"],
+        "properties": {
+          "assetId": {
+            "enum": [
+              "FW-MAC-M2-01",
+              "FW-WIN-I12-01",
+              "FW-LNX-I12-01",
+              "FW-LNX-NV-01"
+            ]
+          },
+          "identity": {
+            "type": "string",
+            "pattern": "^controller:FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+$"
+          },
+          "url": {
+            "type": "string",
+            "pattern": "^https://[^/?#]+:9443/v1/health$"
+          }
+        }
+      }
+    }
+  }
+}

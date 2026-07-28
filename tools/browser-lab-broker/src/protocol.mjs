@@ -10,12 +10,22 @@ export const FIXED_REPOSITORY = Object.freeze({
 });
 export const FIXED_RUNNER_GROUP_ID = 1;
 export const FIXED_WORK_FOLDER = "_work";
+const GITHUB_PLATFORM_LABELS = new Set([
+  "self-hosted",
+  "Linux",
+  "Windows",
+  "macOS",
+  "X64",
+  "ARM64",
+  "ARM",
+]);
 
 const cleanupReasons = new Set([
   "terminal",
   "launch-failure",
   "start-timeout",
   "online-unassigned",
+  "quarantine-release",
 ]);
 
 export function validateJitRequest(request) {
@@ -39,6 +49,7 @@ export function validateCleanupRequest(request) {
     "controller",
     "reason",
     "listenerStop",
+    "workRootWipe",
     "signature",
   ]);
   assertEqual(
@@ -66,6 +77,37 @@ export function validateCleanupRequest(request) {
     ) {
       throw new Error("cleanup listener-stop proof is invalid");
     }
+  }
+  if (request.workRootWipe !== null) {
+    assertExactKeys(request.workRootWipe, [
+      "attempted",
+      "wiped",
+      "workFolder",
+      "observedAt",
+    ]);
+    if (
+      request.workRootWipe.attempted !== true ||
+      typeof request.workRootWipe.wiped !== "boolean" ||
+      request.workRootWipe.workFolder !== FIXED_WORK_FOLDER ||
+      !Number.isFinite(Date.parse(request.workRootWipe.observedAt))
+    ) {
+      throw new Error("cleanup work-root-wipe proof is invalid");
+    }
+  }
+  if (
+    request.reason === "quarantine-release" &&
+    (request.listenerStop?.stopped !== true ||
+      request.workRootWipe?.wiped !== true)
+  ) {
+    throw new Error(
+      "quarantine release requires listener-stop and work-root-wipe proof",
+    );
+  }
+  if (
+    request.reason !== "quarantine-release" &&
+    request.workRootWipe !== null
+  ) {
+    throw new Error("work-root-wipe proof is only valid for quarantine release");
   }
   return request;
 }
@@ -159,17 +201,8 @@ export function verifyReturnedRunner(response, derived) {
       throw new Error(`GitHub JIT response is missing custom label ${required}`);
     }
   }
-  const platformLabels = new Set([
-    "self-hosted",
-    "Linux",
-    "Windows",
-    "macOS",
-    "X64",
-    "ARM64",
-    "ARM",
-  ]);
   for (const label of labels) {
-    if (!derived.labels.includes(label) && !platformLabels.has(label)) {
+    if (!derived.labels.includes(label) && !GITHUB_PLATFORM_LABELS.has(label)) {
       throw new Error(`GitHub JIT response contains unexpected label ${label}`);
     }
   }
@@ -185,10 +218,16 @@ export function validateRunnerIdentity(runner, record) {
   const labels = (runner.labels ?? []).map((label) =>
     typeof label === "string" ? label : label.name,
   );
+  const unexpectedLabel = labels.find(
+    (label) =>
+      !record.customLabels.includes(label) &&
+      !GITHUB_PLATFORM_LABELS.has(label),
+  );
   if (
     runner.id !== record.runnerId ||
     runner.name !== record.runnerName ||
-    record.customLabels.some((label) => !labels.includes(label))
+    record.customLabels.some((label) => !labels.includes(label)) ||
+    unexpectedLabel !== undefined
   ) {
     throw new Error("live runner ID, name, or labels disagree with issuance ledger");
   }
