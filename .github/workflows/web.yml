@@ -43,7 +43,14 @@ jobs:
 
       - name: Install web package dependencies
         working-directory: crates/forge3d-web
-        run: npm ci
+        run: |
+          npm ci --registry=https://registry.npmjs.org
+          if ($LASTEXITCODE -ne 0) {
+            throw "npm ci failed with exit code $LASTEXITCODE"
+          }
+          if (-not (Test-Path node_modules/.bin/wasm-pack.cmd)) {
+            throw "npm ci completed without installing the wasm-pack command shim"
+          }
 
       - name: Build wasm package
         working-directory: crates/forge3d-web

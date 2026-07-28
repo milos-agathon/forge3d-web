@@ -6,6 +6,7 @@ const packageRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const repoRoot = join(packageRoot, "..", "..");
 
 const packageJson = readJson(join(packageRoot, "package.json"));
+const packageLock = readText(join(packageRoot, "package-lock.json"));
 
 assertEqual(packageJson.description, "Browser-only Forge3D WebGPU/WASM runtime for terrain rendering", "package description must match the browser MVP");
 assertEqual(packageJson.repository?.type, "git", "package repository type must be declared");
@@ -26,6 +27,7 @@ for (const keyword of ["webgpu", "wasm", "terrain", "geospatial", "visualization
 
 assertIncludes(packageJson.scripts["test:package"], "release-hardening", "package test script must include release hardening checks");
 assertIncludes(packageJson.files, "docs", "package files must include release docs");
+assert(!packageLock.includes("jfrog.booking.com"), "package lock must not depend on a private registry");
 
 for (const relative of [
   "docs/support-matrix.md",
@@ -92,6 +94,8 @@ for (const expected of [
 }
 
 const webWorkflow = readText(join(repoRoot, ".github", "workflows", "web.yml"));
+assertIncludes(webWorkflow, "npm ci --registry=https://registry.npmjs.org", "required web workflow must install from the public npm registry");
+assertIncludes(webWorkflow, "Test-Path node_modules/.bin/wasm-pack.cmd", "required web workflow must reject incomplete npm installs");
 assertIncludes(webWorkflow, "run: npm run build:wasm", "required web workflow must invoke the pinned wasm-pack npm script");
 assertIncludes(webWorkflow, "run: npm run test:api", "required web workflow must enforce the API snapshot");
 assertIncludes(webWorkflow, "run: npm run test:package", "required web workflow must enforce package staging metadata");
