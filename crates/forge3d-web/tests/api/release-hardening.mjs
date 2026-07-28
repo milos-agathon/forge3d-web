@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
 import { resolveCommandInvocation } from "../../scripts/command-executable.mjs";
+import { resolvePackageGateMode } from "../../scripts/package-gate-mode.mjs";
 
 const packageRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const repoRoot = join(packageRoot, "..", "..");
@@ -46,6 +47,14 @@ const windowsGit = resolveCommandInvocation("git", ["status"], {
 });
 assertEqual(windowsGit.command, "git", "native Windows executables must remain unchanged");
 assertEqual(JSON.stringify(windowsGit.args), JSON.stringify(["status"]), "native executable arguments must remain unchanged");
+assertEqual(resolvePackageGateMode(undefined), "required", "package gate must default to required evidence");
+assertEqual(resolvePackageGateMode("required"), "required", "package gate must accept required evidence mode");
+assertEqual(resolvePackageGateMode("probe"), "probe", "package gate must accept hosted probe mode");
+assertThrows(
+  () => resolvePackageGateMode("pass"),
+  /must be either required or probe/,
+  "package gate must reject unknown evidence modes",
+);
 
 for (const relative of [
   "docs/support-matrix.md",
@@ -75,7 +84,7 @@ for (const expected of [
   "| Firefox | Unsupported |",
   "| Safari | Unsupported |",
   "| WebGL fallback | Unsupported |",
-  "FORGE3D_WEBGPU_REQUIRED=1"
+  '$env:FORGE3D_WEBGPU_REQUIRED = "1"'
 ]) {
   assertIncludes(supportMatrix, expected, `support matrix missing: ${expected}`);
 }
@@ -114,6 +123,7 @@ for (const expected of [
 const webWorkflow = readText(join(repoRoot, ".github", "workflows", "web.yml"));
 assertIncludes(webWorkflow, "npm ci --registry=https://registry.npmjs.org", "required web workflow must install from the public npm registry");
 assertIncludes(webWorkflow, "Test-Path node_modules/.bin/wasm-pack.cmd", "required web workflow must reject incomplete npm installs");
+assertIncludes(webWorkflow, "FORGE3D_PACKAGE_GATE_MODE: probe", "hosted web workflow must not claim fallback hardware as release evidence");
 assertIncludes(webWorkflow, "run: npm run build:wasm", "required web workflow must invoke the pinned wasm-pack npm script");
 assertIncludes(webWorkflow, "run: npm run test:api", "required web workflow must enforce the API snapshot");
 assertIncludes(webWorkflow, "run: npm run test:package", "required web workflow must enforce package staging metadata");
@@ -178,4 +188,16 @@ function assertIncludes(value, expected, message) {
   if (!value.includes(expected)) {
     throw new Error(message);
   }
+}
+
+function assertThrows(callback, expected, message) {
+  try {
+    callback();
+  } catch (error) {
+    if (expected.test(String(error?.message ?? error))) {
+      return;
+    }
+    throw error;
+  }
+  throw new Error(message);
 }

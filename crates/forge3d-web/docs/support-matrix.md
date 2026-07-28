@@ -8,7 +8,7 @@ surfaces, and deployment assumptions that application owners must satisfy.
 
 | Surface | MVP status | Notes |
 |---|---|---|
-| Chrome/Chromium on Windows | Required | CI and local release verification run Chrome/Chromium with WebGPU enabled and `FORGE3D_WEBGPU_REQUIRED=1`. |
+| Chrome/Chromium on Windows | Required | Hosted CI exercises the exact tarball as `PROBE` when only a fallback adapter is available. Promotion requires a branded, physical, non-fallback Windows run. |
 | Chrome/Chromium on macOS/Linux | Best effort | Expected to work when `navigator.gpu` is available, but not required for the MVP release gate. |
 | Edge | Best effort | Chromium-based Edge should follow Chrome WebGPU behavior, but the required lane remains Chrome/Chromium. |
 | Firefox | Unsupported | WebGPU availability and behavior are not part of the MVP contract. |
@@ -38,10 +38,11 @@ surfaces, and deployment assumptions that application owners must satisfy.
 The required browser lane is the web CI workflow plus local release checklist:
 
 ```powershell
+$env:FORGE3D_PACKAGE_GATE_MODE = "required"
 $env:FORGE3D_WEBGPU_REQUIRED = "1"
+npm run test:package-consumer
 npm run test:browser
 ```
 
 If `navigator.gpu` or adapter acquisition fails in that lane, the release is
 blocked until the environment issue is documented or the runtime issue is fixed.
-

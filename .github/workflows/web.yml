@@ -76,6 +76,7 @@ jobs:
         working-directory: crates/forge3d-web
         env:
           FORGE3D_EVIDENCE_DIR: test-results/browser-gate
+          FORGE3D_PACKAGE_GATE_MODE: probe
         run: npm run test:package-consumer
 
       - name: Upload exact-tarball browser evidence

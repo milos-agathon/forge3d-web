@@ -45,6 +45,7 @@ npm run build
 npm run test:unit
 npm run test:api
 npm run test:package
+$env:FORGE3D_PACKAGE_GATE_MODE = "required"
 npm run test:package-consumer
 npm run test:browser
 npm pack --dry-run
@@ -69,6 +70,12 @@ unsupported-browser UI, screenshot readback, resize, and leak-free disposal.
 It then runs the frozen benchmark and passes the complete exact-tarball evidence
 record through the shared fail-closed validator. It is not an HTTP-only asset
 smoke test.
+Hosted CI sets `FORGE3D_PACKAGE_GATE_MODE=probe` because its virtual Windows
+runner may expose only a fallback adapter. That lane still builds, packs,
+installs, serves, and exercises the exact tarball, but records `PROBE`, omits
+the performance benchmark, and cannot satisfy release promotion. Required
+release execution defaults to `FORGE3D_PACKAGE_GATE_MODE=required` and still
+fails closed on fallback hardware.
 Release browser evidence must validate against
 `tests/browser/browser-evidence.schema.json`; a required lane may not pass with
 an unavailable adapter, a probe-only result, or a source-WASM digest in place

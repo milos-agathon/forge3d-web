@@ -25,9 +25,11 @@ import ts from "typescript";
 
 import { validateBrowserEvidence } from "../tests/browser/evidence-validator.mjs";
 import { resolveCommandInvocation } from "./command-executable.mjs";
+import { resolvePackageGateMode } from "./package-gate-mode.mjs";
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const repositoryRoot = resolve(packageRoot, "..", "..");
+const evidenceMode = resolvePackageGateMode();
 const evidenceDirectory = resolve(
   packageRoot,
   process.env.FORGE3D_EVIDENCE_DIR ?? "test-results/browser-gate",
@@ -143,6 +145,7 @@ try {
     tarball: basename(tarball),
     packageSha256,
     fixture: "test-interactive-viewer.html",
+    evidenceMode,
   };
   writeFileSync(
     join(consumerDirectory, "package-evidence.json"),
@@ -186,6 +189,7 @@ try {
       packageSha256,
       commit,
       runViewerBenchmark,
+      evidenceMode,
     );
     const browserEvidenceJson = JSON.stringify(browserResult, null, 2);
     writeFileSync(join(consumerDirectory, "browser-gate.json"), browserEvidenceJson);
@@ -211,6 +215,7 @@ try {
         installedFromAbsoluteTarball: true,
         fixtureServedFromConsumer: true,
         browserGatePassed: true,
+        evidenceMode,
       },
       null,
       2,
@@ -225,6 +230,7 @@ async function runInstalledPackageBrowserGate(
   packageSha256,
   commit,
   runViewerBenchmark,
+  evidenceMode,
 ) {
   const launchArguments = ["--enable-unsafe-webgpu"];
   if (process.platform === "win32") {
@@ -281,7 +287,7 @@ async function runInstalledPackageBrowserGate(
     if (!adapter.available) {
       throw new Error("installed-package browser gate found no WebGPU adapter");
     }
-    if (adapter.fallback !== false) {
+    if (evidenceMode === "required" && adapter.fallback !== false) {
       throw new Error("installed-package browser gate used a fallback adapter");
     }
 
@@ -406,13 +412,16 @@ async function runInstalledPackageBrowserGate(
     if (pageErrors.length > 0) {
       throw new Error(`installed-package page errors: ${pageErrors.join("; ")}`);
     }
-    const benchmark = await runViewerBenchmark(page, {
-      browserZoom: 1,
-      thermalState: "unavailable",
-      thermalSignalProvenance: "browser API unavailable",
-      lowPowerMode: "unavailable",
-      lowPowerSignalProvenance: "browser API unavailable",
-    });
+    const benchmark =
+      evidenceMode === "required"
+        ? await runViewerBenchmark(page, {
+            browserZoom: 1,
+            thermalState: "unavailable",
+            thermalSignalProvenance: "browser API unavailable",
+            lowPowerMode: "unavailable",
+            lowPowerSignalProvenance: "browser API unavailable",
+          })
+        : null;
     const frameCounters = await page.evaluate(() =>
       window.__forge3dInteractiveViewer.viewer.getDiagnostics(),
     );
@@ -431,7 +440,7 @@ async function runInstalledPackageBrowserGate(
         sha256: packageSha256,
       },
       project: "installed-tarball-chrome",
-      lane: "required",
+      lane: evidenceMode,
       browser: {
         name: "chromium",
         version: browser.version(),
@@ -449,7 +458,7 @@ async function runInstalledPackageBrowserGate(
       secureContext: browserEnvironment.secureContext,
       launchArguments,
       adapter,
-      runtimeResult: "PASS",
+      runtimeResult: evidenceMode === "required" ? "PASS" : "PROBE",
       frameCounters: {
         renderRequests: frameCounters.renderRequests,
         submittedFrames: frameCounters.submittedFrames,
@@ -459,7 +468,14 @@ async function runInstalledPackageBrowserGate(
       normalizedErrorCodes: [],
       benchmark,
     };
-    validateBrowserEvidence(evidence);
+    if (evidenceMode === "required") {
+      validateBrowserEvidence(evidence);
+    } else {
+      validateBrowserEvidence(evidence, {
+        requireBenchmark: false,
+        requireReleaseArtifact: true,
+      });
+    }
     await verifyUnsupportedUi(browser, origin);
     if (pageErrors.length > 0) {
       throw new Error(`installed-package page errors: ${pageErrors.join("; ")}`);
