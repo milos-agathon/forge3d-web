@@ -24,6 +24,7 @@ import { chromium } from "@playwright/test";
 import ts from "typescript";
 
 import { validateBrowserEvidence } from "../tests/browser/evidence-validator.mjs";
+import { resolveCommand } from "./command-executable.mjs";
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const repositoryRoot = resolve(packageRoot, "..", "..");
@@ -508,7 +509,7 @@ async function verifyUnsupportedUi(browser, origin) {
 }
 
 function run(command, args, cwd, capture = false) {
-  const result = spawnSync(command, args, {
+  const result = spawnSync(resolveCommand(command), args, {
     cwd,
     encoding: "utf8",
     stdio: capture ? ["ignore", "pipe", "inherit"] : "inherit",

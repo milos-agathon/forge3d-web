@@ -2,6 +2,8 @@ import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
+import { resolveCommand } from "../../scripts/command-executable.mjs";
+
 const packageRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const repoRoot = join(packageRoot, "..", "..");
 
@@ -28,6 +30,9 @@ for (const keyword of ["webgpu", "wasm", "terrain", "geospatial", "visualization
 assertIncludes(packageJson.scripts["test:package"], "release-hardening", "package test script must include release hardening checks");
 assertIncludes(packageJson.files, "docs", "package files must include release docs");
 assert(!packageLock.includes("jfrog.booking.com"), "package lock must not depend on a private registry");
+assertEqual(resolveCommand("npm", "win32"), "npm.cmd", "Windows npm subprocesses must resolve the command shim");
+assertEqual(resolveCommand("npm", "darwin"), "npm", "non-Windows npm subprocesses must remain unchanged");
+assertEqual(resolveCommand("git", "win32"), "git", "native Windows executables must remain unchanged");
 
 for (const relative of [
   "docs/support-matrix.md",
