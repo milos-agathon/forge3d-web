@@ -1,6 +1,4 @@
-export function resolvePackageGateMode(
-  value = process.env.FORGE3D_PACKAGE_GATE_MODE,
-) {
+export function resolvePackageGateMode(value) {
   const mode = value ?? "required";
   if (mode !== "required" && mode !== "probe") {
     throw new Error(

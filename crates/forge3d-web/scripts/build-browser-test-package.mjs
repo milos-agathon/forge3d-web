@@ -29,7 +29,9 @@ import { resolvePackageGateMode } from "./package-gate-mode.mjs";
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const repositoryRoot = resolve(packageRoot, "..", "..");
-const evidenceMode = resolvePackageGateMode();
+const evidenceMode = resolvePackageGateMode(
+  process.env.FORGE3D_PACKAGE_GATE_MODE,
+);
 const evidenceDirectory = resolve(
   packageRoot,
   process.env.FORGE3D_EVIDENCE_DIR ?? "test-results/browser-gate",
