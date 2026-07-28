@@ -245,6 +245,7 @@ export class BrowserLabBroker {
     if (runner.busy && job.status === "queued") {
       return this.ledger.update(digest, {
         state: "assigned",
+        ...assignmentWindow(record, now),
         everOnline: true,
         everBusy: true,
         lastRunnerObservation: runnerObservation,
@@ -254,6 +255,7 @@ export class BrowserLabBroker {
     if (job.status === "in_progress") {
       return this.ledger.update(digest, {
         state: "busy",
+        ...assignmentWindow(record, now),
         everOnline: true,
         everBusy: true,
         lastRunnerObservation: runnerObservation,
@@ -277,15 +279,7 @@ export class BrowserLabBroker {
     }
     if (runner.status === "online" && job.status === "queued") {
       const firstOnlineUnassigned = record.onlineAt === null;
-      const onlineAt = record.onlineAt ?? now.toISOString();
-      const assignmentDeadline =
-        record.assignmentDeadline ??
-        new Date(
-          Math.min(
-            Date.parse(record.authorizationExpiresAt),
-            Date.parse(onlineAt) + 90 * 1000,
-          ),
-        ).toISOString();
+      const { onlineAt, assignmentDeadline } = assignmentWindow(record, now);
       const updated = this.ledger.update(digest, {
         state: "online_unassigned",
         onlineAt,
@@ -643,6 +637,19 @@ function summarizeJob(job, now) {
     conclusion: job.conclusion ?? null,
     observedAt: now.toISOString(),
   };
+}
+
+function assignmentWindow(record, now) {
+  const onlineAt = record.onlineAt ?? now.toISOString();
+  const assignmentDeadline =
+    record.assignmentDeadline ??
+    new Date(
+      Math.min(
+        Date.parse(record.authorizationExpiresAt),
+        Date.parse(onlineAt) + 90 * 1000,
+      ),
+    ).toISOString();
+  return { onlineAt, assignmentDeadline };
 }
 
 function controllerLossChanges(record, controllerReachable, now) {

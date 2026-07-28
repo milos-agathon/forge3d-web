@@ -501,9 +501,63 @@ test("queued runner assignment is persisted separately from active work", async 
   context.github.job.status = "queued";
   const assigned = await context.broker.watchdogTick(digest);
   assert.equal(assigned.state, "assigned");
+  assert.equal(
+    Date.parse(assigned.assignmentDeadline) - context.now().getTime(),
+    90_000,
+  );
   context.github.job.status = "in_progress";
   const busy = await context.broker.watchdogTick(digest);
   assert.equal(busy.state, "busy");
+});
+
+test("first-observed assignment gets an escape deadline before disappearance", async () => {
+  const context = makeContext();
+  await issue(context);
+  context.github.runner.busy = true;
+  const assigned = await context.broker.watchdogTick(digest, {
+    controllerReachable: false,
+  });
+  assert.equal(assigned.state, "assigned");
+  assert.equal(
+    Date.parse(assigned.assignmentDeadline) - context.now().getTime(),
+    90_000,
+  );
+  context.advance(91_000);
+  context.github.deleted = true;
+  const quarantined = await context.broker.watchdogTick(digest, {
+    controllerReachable: false,
+  });
+  assert.equal(quarantined.state, "quarantined");
+  assert.equal(quarantined.deletionResult, "already_absent");
+  assert.equal(quarantined.cancellationResult, "cancelled");
+  assert.deepEqual(context.github.cancelCalls, [2001]);
+});
+
+test("first-observed active job gets an escape deadline before requeue", async () => {
+  const context = makeContext();
+  await issue(context);
+  context.github.runner.busy = true;
+  context.github.job.status = "in_progress";
+  const busy = await context.broker.watchdogTick(digest, {
+    controllerReachable: false,
+  });
+  assert.equal(busy.state, "busy");
+  assert.equal(
+    Date.parse(busy.assignmentDeadline) - context.now().getTime(),
+    90_000,
+  );
+  context.advance(91_000);
+  context.github.runner.busy = false;
+  context.github.runner.status = "offline";
+  context.github.job.status = "queued";
+  const quarantined = await context.broker.watchdogTick(digest, {
+    controllerReachable: false,
+  });
+  assert.equal(quarantined.state, "quarantined");
+  assert.equal(quarantined.deletionResult, "deleted");
+  assert.equal(quarantined.cancellationResult, "cancelled");
+  assert.deepEqual(context.github.deleteCalls, [1001]);
+  assert.deepEqual(context.github.cancelCalls, [2001]);
 });
 
 test("offline non-busy runner is quarantined after the assignment deadline", async () => {
