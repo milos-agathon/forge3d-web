@@ -345,6 +345,7 @@ impl Default for RuntimeOptions {
 #[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "kebab-case")]
 pub enum PowerPreferenceOption {
+    None,
     LowPower,
     HighPerformance,
 }
@@ -352,6 +353,7 @@ pub enum PowerPreferenceOption {
 impl PowerPreferenceOption {
     pub fn to_wgpu(self) -> wgpu::PowerPreference {
         match self {
+            Self::None => wgpu::PowerPreference::None,
             Self::LowPower => wgpu::PowerPreference::LowPower,
             Self::HighPerformance => wgpu::PowerPreference::HighPerformance,
         }
@@ -461,6 +463,14 @@ mod tests {
         assert_eq!(options.alpha_mode, AlphaModeOption::Premultiplied);
         assert_eq!(options.clear_color(), [0.0, 0.0, 0.0, 1.0]);
         assert!(!options.diagnostics);
+    }
+
+    #[test]
+    fn runtime_options_support_explicit_no_power_preference() {
+        assert_eq!(
+            PowerPreferenceOption::None.to_wgpu(),
+            wgpu::PowerPreference::None
+        );
     }
 
     #[test]

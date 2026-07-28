@@ -4,6 +4,15 @@ Run this checklist from the repository root unless a command explicitly changes
 directory. The checklist mirrors the Phase 16 release gate for the browser
 WebGPU/WASM MVP.
 
+## Interactive Viewer Release Blocker
+
+The FND-00 interactive viewer contract is declaration-only. Do not publish or
+promote it as runtime functionality while
+`package.json#forge3d.interactiveViewer.releaseReady` is `false`.
+`Forge3DViewer`, `Forge3DRuntime.getCapabilities()`, and their behavioral tests
+must land through FND-01..FND-07 before that flag can change through review.
+This blocker does not withdraw the existing low-level `Forge3DRuntime` MVP.
+
 ## Clean Setup
 
 ```powershell

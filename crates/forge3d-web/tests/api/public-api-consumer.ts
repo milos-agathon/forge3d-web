@@ -1,3 +1,10 @@
+/**
+ * Compile-only consumer for the frozen FND-00 declarations.
+ *
+ * Executable viewer behavior is intentionally not claimed here. The emitted
+ * facade staging test proves that Forge3DViewer and getCapabilities remain
+ * unavailable until their owning FND-01..FND-07 implementation tasks land.
+ */
 import {
   Forge3DError,
   Forge3DRuntime,
@@ -161,7 +168,7 @@ const resize = {
   devicePixelRatio: 1.5,
 } satisfies ResizeInput;
 
-async function exercisePublicApi(): Promise<void> {
+async function compileRuntimeDeclarations(): Promise<void> {
   const runtime = await Forge3DRuntime.create(canvas, options);
   const width: number = runtime.width;
   const height: number = runtime.height;
@@ -191,7 +198,7 @@ async function exercisePublicApi(): Promise<void> {
   ];
 }
 
-async function exerciseViewerContract(): Promise<void> {
+async function compileViewerDeclarations(): Promise<void> {
   const viewer = await Forge3DViewer.create(canvas, viewerOptions);
   const status: ViewerStatus = viewer.status;
   const disposed: boolean = viewer.disposed;
@@ -261,8 +268,8 @@ const allViewerStatuses = [
   "disposed",
 ] satisfies ViewerStatus[];
 
-void exercisePublicApi;
-void exerciseViewerContract;
+void compileRuntimeDeclarations;
+void compileViewerDeclarations;
 void code;
 void addedErrorCodes;
 void allViewerStatuses;

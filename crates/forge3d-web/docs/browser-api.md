@@ -4,6 +4,14 @@ This document freezes the FND-00 browser API exposed by `@forge3d/web`.
 Application code should import from the package entrypoint, not from wasm-pack
 generated files under `pkg/`.
 
+> **Declaration-only staging boundary:** FND-00 freezes the future viewer
+> contract but does not implement or export `Forge3DViewer` or
+> `Forge3DRuntime.getCapabilities()` in the emitted JavaScript facade.
+> Lifecycle, invalidation, concurrency, callback, recovery, and cleanup behavior
+> is not runtime-tested in this task. This viewer contract is not independently
+> releasable until its owning FND-01..FND-07 implementation and behavioral tests
+> land.
+
 ## Public API
 
 ```ts
@@ -80,7 +88,8 @@ surface is:
 - `runtime.clearColor(): [number, number, number, number]`
 - `Forge3DError` with stable `code`, `message`, and optional `details`
 
-The high-level interactive surface is frozen as:
+The following high-level interactive surface is frozen for downstream
+implementation; it is not an emitted runtime surface in FND-00:
 
 - `Forge3DViewer.create(canvas, options): Promise<Forge3DViewer>`
 - `viewer.status`, `viewer.disposed`, `viewer.getView()`,
@@ -92,10 +101,14 @@ The high-level interactive surface is frozen as:
 
 `Forge3DRuntimeOptions.powerPreference` accepts `"none"`, `"low-power"`, or
 `"high-performance"`. Omission still means `"high-performance"` for direct
-low-level runtime consumers. When the viewer caller omits it, the viewer passes
-the internal value `"none"`. `Forge3DRuntimeOptions.wasmUrl` accepts a string or
-`URL`; it is owned and removed by the TypeScript facade before Rust option
-deserialization.
+low-level runtime consumers, and Rust now accepts the explicit `"none"` value.
+The future viewer will pass internal value `"none"` when its caller omits the
+option.
+
+`Forge3DRuntimeOptions.wasmUrl` is frozen as a string or `URL`, but custom asset
+loading belongs to FND-01. In the declaration-only stage, supplying it rejects
+explicitly with `WASM_LOAD_FAILED`; it is stripped from the Rust options
+boundary and can never fail as an unknown Rust field.
 
 ## Frozen Viewer Defaults
 
@@ -125,8 +138,9 @@ value passes finite-positive-integer validation.
 The orbit controller is Y-up. Mouse left-drag orbits; middle- or right-drag
 pans; wheel and trackpad input zoom. One touch or pen pointer orbits. Two
 pointers pan and pinch-zoom. While the canvas has focus, the keyboard can orbit,
-pan, zoom, and reset. Low-level `Forge3DRuntime.setCamera()` continues to accept
-arbitrary camera values and is not constrained to orbit-camera input.
+pan, zoom, and reset: arrows orbit, Shift+arrows pan, `+`/`-` zoom, and Home
+resets. Low-level `Forge3DRuntime.setCamera()` continues to accept arbitrary
+camera values and is not constrained to orbit-camera input.
 
 `Forge3DViewer.render()` marks the viewer dirty and schedules at most one
 animation frame; it does not submit synchronously. `setTerrain()`, a successfully

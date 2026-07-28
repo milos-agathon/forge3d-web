@@ -102,6 +102,8 @@ for (const expected of [
   "interface WasmBridge",
   "const modulePath = \"../pkg/forge3d_web.js\"",
   "export class Forge3DRuntime",
+  "options.wasmUrl !== undefined",
+  "const { wasmUrl: _wasmUrl, ...runtimeOptions } = options",
   "export interface Forge3DRuntimeCapabilities",
   "export type ViewerStatus",
   "export interface OrbitView",
@@ -112,6 +114,7 @@ for (const expected of [
 
 for (const expected of [
   "## Public API",
+  "Declaration-only staging boundary",
   "## Frozen Viewer Defaults",
   "## Interaction And Automatic Redraw",
   "## Viewer Lifecycle And Recovery",
@@ -128,6 +131,11 @@ for (const expected of [
   "RUNTIME_DISPOSED",
   "RESOURCE_LIMIT_EXCEEDED",
   "Y-up",
+  "arrows orbit",
+  "Shift+arrows pan",
+  "`+`/`-` zoom",
+  "Home",
+  "not independently",
   "initializing -> ready",
   "failed -> disposed",
   "one active terrain source load",

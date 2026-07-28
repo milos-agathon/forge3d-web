@@ -30,6 +30,8 @@ export interface Forge3DRuntimeOptions {
   diagnostics?: boolean;
 }
 
+type WasmRuntimeOptions = Omit<Forge3DRuntimeOptions, "wasmUrl">;
+
 export interface Forge3DRuntimeCapabilities {
   deviceState: "ready" | "lost" | "disposed";
   maxTextureDimension2D: number;
@@ -240,6 +242,13 @@ export class Forge3DRuntime {
     canvas: HTMLCanvasElement,
     options: Forge3DRuntimeOptions = {},
   ): Promise<Forge3DRuntime> {
+    if (options.wasmUrl !== undefined) {
+      throw new Forge3DError(
+        "WASM_LOAD_FAILED",
+        "Custom wasmUrl loading is unavailable in the FND-00 declaration-only stage",
+      );
+    }
+
     const bridge = await loadWasmBridge();
     try {
       const runtime = await bridge.Forge3DRuntime.create(
@@ -347,8 +356,9 @@ async function importWasmBridge(): Promise<WasmBridge> {
 
 function normalizeRuntimeOptions(
   options: Forge3DRuntimeOptions,
-): Forge3DRuntimeOptions {
-  return { ...options };
+): WasmRuntimeOptions {
+  const { wasmUrl: _wasmUrl, ...runtimeOptions } = options;
+  return runtimeOptions;
 }
 
 function normalizeTerrainHeightmapInput(

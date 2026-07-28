@@ -29,6 +29,15 @@ npm install @forge3d/web
 
 The package is ESM-only and ships a JavaScript facade, a WebAssembly module, and hand-authored TypeScript declarations.
 
+## Interactive Viewer Contract Status
+
+FND-00 freezes declarations for the future `Forge3DViewer` API, but the emitted
+facade does not yet export `Forge3DViewer` or implement
+`Forge3DRuntime.getCapabilities()`. The viewer contract is declaration-only,
+has no runtime behavior claim, and is not independently release-ready until
+FND-01..FND-07 and their behavioral tests land. The existing low-level
+`Forge3DRuntime` MVP remains the usable runtime surface.
+
 ## Browser Support
 
 Forge3D Web requires browser WebGPU support through `navigator.gpu`. The MVP verification lane targets current Chrome/Chromium with WebGPU enabled. Applications should feature-detect WebGPU before creating the runtime and present their own fallback UI when it is unavailable.
@@ -54,7 +63,8 @@ Cache `.wasm` assets with immutable content hashing, or invalidate the wasm asse
 - `screenshot()`
 - `dispose()`
 
-See `docs/browser-api.md` for the stable TypeScript API and error codes.
+See `docs/browser-api.md` for the stable TypeScript contract, its explicit
+declaration-only viewer boundary, and error codes.
 
 ## MVP Scope And Exclusions
 

@@ -50,13 +50,17 @@ jobs:
           $env:PATH = "$pwd\crates\forge3d-web\node_modules\.bin;$env:PATH"
           wasm-pack build crates/forge3d-web --target web
 
-      - name: Typecheck browser package
+      - name: Test browser API contract
         working-directory: crates/forge3d-web
-        run: npm run typecheck
+        run: npm run test:api
 
       - name: Build browser package
         working-directory: crates/forge3d-web
         run: npm run build
+
+      - name: Test browser package contract
+        working-directory: crates/forge3d-web
+        run: npm run test:package
 
       - name: Install Chromium for Playwright
         working-directory: crates/forge3d-web
