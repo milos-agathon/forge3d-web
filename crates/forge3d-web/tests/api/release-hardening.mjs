@@ -102,6 +102,7 @@ for (const expected of [
   ".\\crates\\forge3d-web\\node_modules\\.bin\\wasm-pack.cmd build crates/forge3d-web --target web",
   "npm run build",
   "npm run test:package",
+  'FORGE3D_SOURCE_BENCHMARK_MODE = "required"',
   "npm pack --dry-run"
 ]) {
   assertIncludes(checklist, expected, `release checklist missing: ${expected}`);
@@ -124,6 +125,7 @@ const webWorkflow = readText(join(repoRoot, ".github", "workflows", "web.yml"));
 assertIncludes(webWorkflow, "npm ci --registry=https://registry.npmjs.org", "required web workflow must install from the public npm registry");
 assertIncludes(webWorkflow, "Test-Path node_modules/.bin/wasm-pack.cmd", "required web workflow must reject incomplete npm installs");
 assertIncludes(webWorkflow, "FORGE3D_PACKAGE_GATE_MODE: probe", "hosted web workflow must not claim fallback hardware as release evidence");
+assertIncludes(webWorkflow, "FORGE3D_SOURCE_BENCHMARK_MODE: probe", "hosted web workflow must not benchmark fallback hardware as release evidence");
 assertIncludes(webWorkflow, "run: npm run build:wasm", "required web workflow must invoke the pinned wasm-pack npm script");
 assertIncludes(webWorkflow, "run: npm run test:api", "required web workflow must enforce the API snapshot");
 assertIncludes(webWorkflow, "run: npm run test:package", "required web workflow must enforce package staging metadata");

@@ -39,6 +39,7 @@ The required browser lane is the web CI workflow plus local release checklist:
 
 ```powershell
 $env:FORGE3D_PACKAGE_GATE_MODE = "required"
+$env:FORGE3D_SOURCE_BENCHMARK_MODE = "required"
 $env:FORGE3D_WEBGPU_REQUIRED = "1"
 npm run test:package-consumer
 npm run test:browser

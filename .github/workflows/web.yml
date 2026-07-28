@@ -101,6 +101,7 @@ jobs:
         working-directory: crates/forge3d-web
         env:
           FORGE3D_WEBGPU_REQUIRED: "1"
+          FORGE3D_SOURCE_BENCHMARK_MODE: probe
         run: npm run test:browser
 
       - name: Upload source-browser evidence

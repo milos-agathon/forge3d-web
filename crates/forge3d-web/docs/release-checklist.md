@@ -47,6 +47,7 @@ npm run test:api
 npm run test:package
 $env:FORGE3D_PACKAGE_GATE_MODE = "required"
 npm run test:package-consumer
+$env:FORGE3D_SOURCE_BENCHMARK_MODE = "required"
 npm run test:browser
 npm pack --dry-run
 cd ../..
@@ -76,6 +77,11 @@ installs, serves, and exercises the exact tarball, but records `PROBE`, omits
 the performance benchmark, and cannot satisfy release promotion. Required
 release execution defaults to `FORGE3D_PACKAGE_GATE_MODE=required` and still
 fails closed on fallback hardware.
+Hosted CI likewise sets `FORGE3D_SOURCE_BENCHMARK_MODE=probe`: the source
+browser test persists schema-valid environment and interaction evidence but
+does not run or label software-renderer timing as a real-GPU benchmark.
+Required source execution defaults to `required`, runs all 600 measured
+samples, and rejects fallback adapters.
 Release browser evidence must validate against
 `tests/browser/browser-evidence.schema.json`; a required lane may not pass with
 an unavailable adapter, a probe-only result, or a source-WASM digest in place

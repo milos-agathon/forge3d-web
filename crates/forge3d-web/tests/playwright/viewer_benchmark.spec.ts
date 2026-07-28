@@ -10,6 +10,7 @@ import {
   test,
 } from "../browser/webgpu-fixture";
 import { validateBrowserEvidence } from "../browser/evidence-validator.mjs";
+import { resolveEvidenceMode } from "../browser/evidence-mode";
 import { runViewerBenchmark } from "../browser/viewer-benchmark";
 
 test("validates complete evidence from the frozen real-GPU benchmark", async ({
@@ -19,15 +20,27 @@ test("validates complete evidence from the frozen real-GPU benchmark", async ({
 }, testInfo) => {
   test.setTimeout(60_000);
   skipRenderAssertionsWhenProbing(webgpuAvailability);
-  const interactionAssertions = await exerciseRequiredInteractions(page);
+  const evidenceMode = resolveEvidenceMode(
+    process.env.FORGE3D_SOURCE_BENCHMARK_MODE,
+  );
   const adapter = await readAdapterEvidence(page);
-  const benchmark = await runViewerBenchmark(page, {
-    browserZoom: 1,
-    thermalState: "unavailable",
-    thermalSignalProvenance: "browser API unavailable",
-    lowPowerMode: "unavailable",
-    lowPowerSignalProvenance: "browser API unavailable",
-  });
+  if (evidenceMode === "required") {
+    expect(
+      adapter.fallback,
+      "required source benchmark must use a non-fallback adapter",
+    ).toBe(false);
+  }
+  const interactionAssertions = await exerciseRequiredInteractions(page);
+  const benchmark =
+    evidenceMode === "required"
+      ? await runViewerBenchmark(page, {
+          browserZoom: 1,
+          thermalState: "unavailable",
+          thermalSignalProvenance: "browser API unavailable",
+          lowPowerMode: "unavailable",
+          lowPowerSignalProvenance: "browser API unavailable",
+        })
+      : null;
   const frameCounters = await page.evaluate(() =>
     window.__forge3dInteractiveViewer.viewer.getDiagnostics(),
   );
@@ -57,7 +70,7 @@ test("validates complete evidence from the frozen real-GPU benchmark", async ({
       sha256: wasmSha256,
     },
     project: "source-chrome",
-    lane: "required",
+    lane: evidenceMode,
     browser: {
       name: "chromium",
       version: browser.version(),
@@ -78,7 +91,7 @@ test("validates complete evidence from the frozen real-GPU benchmark", async ({
       ...(process.platform === "win32" ? ["--use-angle=d3d11"] : []),
     ],
     adapter,
-    runtimeResult: "PASS",
+    runtimeResult: evidenceMode === "required" ? "PASS" : "PROBE",
     frameCounters: {
       renderRequests: frameCounters.renderRequests,
       submittedFrames: frameCounters.submittedFrames,
@@ -96,7 +109,10 @@ test("validates complete evidence from the frozen real-GPU benchmark", async ({
     contentType: "application/json",
   });
   expect(
-    validateBrowserEvidence(record, { requireReleaseArtifact: false }),
+    validateBrowserEvidence(record, {
+      requireBenchmark: evidenceMode === "required",
+      requireReleaseArtifact: false,
+    }),
   ).toBe(record);
 });
 
