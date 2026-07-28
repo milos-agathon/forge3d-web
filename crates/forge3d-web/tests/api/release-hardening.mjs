@@ -14,6 +14,10 @@ assertEqual(packageJson.repository?.directory, "crates/forge3d-web", "package re
 assertEqual(packageJson.bugs?.url, "https://github.com/milos-agathon/forge3d/issues", "package issue tracker must be declared");
 assertEqual(packageJson.homepage, "https://forge3d.dev", "package homepage must be declared");
 assertEqual(packageJson.engines?.node, ">=20.19.0", "package Node support floor must match Vite/CI");
+assertEqual(packageJson.forge3d?.interactiveViewer?.contractStage, "declaration-only", "viewer contract stage must remain explicit");
+assertEqual(packageJson.forge3d?.interactiveViewer?.runtimeAvailable, false, "viewer runtime must not be claimed before implementation");
+assertEqual(packageJson.forge3d?.interactiveViewer?.releaseReady, false, "viewer contract must remain release-blocked");
+assertEqual(packageJson.forge3d?.interactiveViewer?.implementationTasks, "FND-01..FND-07", "viewer implementation ownership must stay explicit");
 assert(packageJson.sideEffects === false, "package must declare sideEffects false for ESM consumers");
 
 for (const keyword of ["webgpu", "wasm", "terrain", "geospatial", "visualization"]) {
@@ -33,6 +37,9 @@ for (const relative of [
 
 const readme = readText(join(packageRoot, "README.md"));
 for (const expected of [
+  "## Interactive Viewer Contract Status",
+  "declaration-only",
+  "not independently release-ready",
   "See `docs/support-matrix.md`",
   "See `docs/release-checklist.md`",
   "Cache `.wasm` assets with immutable content hashing",
@@ -55,6 +62,8 @@ for (const expected of [
 
 const checklist = readText(join(packageRoot, "docs", "release-checklist.md"));
 for (const expected of [
+  "## Interactive Viewer Release Blocker",
+  "package.json#forge3d.interactiveViewer.releaseReady",
   "npm ci",
   "$env:PATH = \"$pwd\\crates\\forge3d-web\\node_modules\\.bin;$env:PATH\"",
   "cargo clippy -p forge3d-core --target wasm32-unknown-unknown --no-default-features -- -D warnings",
@@ -68,6 +77,23 @@ for (const expected of [
 ]) {
   assertIncludes(checklist, expected, `release checklist missing: ${expected}`);
 }
+
+const browserApi = readText(join(packageRoot, "docs", "browser-api.md"));
+for (const expected of [
+  "Declaration-only staging boundary",
+  "does not implement or export `Forge3DViewer`",
+  "not independently",
+  "arrows orbit",
+  "Shift+arrows pan",
+  "`+`/`-` zoom",
+  "Home"
+]) {
+  assertIncludes(browserApi, expected, `browser API staging contract missing: ${expected}`);
+}
+
+const webWorkflow = readText(join(repoRoot, ".github", "workflows", "web.yml"));
+assertIncludes(webWorkflow, "run: npm run test:api", "required web workflow must enforce the API snapshot");
+assertIncludes(webWorkflow, "run: npm run test:package", "required web workflow must enforce package staging metadata");
 
 for (const forbidden of [
   "maturin",

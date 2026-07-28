@@ -23,6 +23,14 @@
   "engines": {
     "node": ">=20.19.0"
   },
+  "forge3d": {
+    "interactiveViewer": {
+      "contractStage": "declaration-only",
+      "runtimeAvailable": false,
+      "releaseReady": false,
+      "implementationTasks": "FND-01..FND-07"
+    }
+  },
   "sideEffects": false,
   "files": [
     "dist",
@@ -48,7 +56,7 @@
     "build": "npm run build:wasm && npm run build:ts && npm run prepare-dist && npm run build:example",
     "dev": "vite --host 127.0.0.1 --port 57883 --strictPort",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.api.json",
-    "test:api": "npm run typecheck && node tests/api/public-api-snapshot.mjs",
+    "test:api": "npm run typecheck && node tests/api/public-api-snapshot.mjs && node tests/api/emitted-facade-stage.mjs",
     "test:release-hardening": "node tests/api/release-hardening.mjs",
     "test:package": "npm run test:release-hardening && node tests/api/package-contract.mjs",
     "test:browser": "playwright test"
