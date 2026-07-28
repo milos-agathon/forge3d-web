@@ -9,7 +9,7 @@ const repositoryRoot = resolve(packageRoot, "..", "..");
 const workflow = readFileSync(
   join(repositoryRoot, ".github", "workflows", "browser-lab-broker.yml"),
   "utf8",
-);
+).replace(/\r\n/gu, "\n");
 const observer = jobBlock(
   workflow,
   "observe-broker-package-trust",

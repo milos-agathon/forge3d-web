@@ -3,6 +3,7 @@ import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import { createBrokerPackageManifest } from "../scripts/create-package-manifest.mjs";
 
@@ -12,7 +13,7 @@ test("binds broker archive, exact source, configuration, and protocols", () => {
     const archive = join(directory, "browser-lab-broker.tar.gz");
     writeFileSync(archive, "archive fixture");
     const repositoryRoot = resolve(
-      new URL("../../..", import.meta.url).pathname,
+      fileURLToPath(new URL("../../..", import.meta.url)),
     );
     const manifest = createBrokerPackageManifest({
       repositoryRoot,

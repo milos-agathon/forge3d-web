@@ -13,7 +13,7 @@ import { verifyWebWorkflowContract } from "../../scripts/verify-web-workflow-con
 const packageRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const repositoryRoot = resolve(packageRoot, "..", "..");
 const workflowPath = join(repositoryRoot, ".github", "workflows", "web.yml");
-const workflowText = readFileSync(workflowPath, "utf8");
+const workflowText = readFileSync(workflowPath, "utf8").replace(/\r\n/gu, "\n");
 const lock = JSON.parse(
   readFileSync(
     join(packageRoot, "tests", "infrastructure", "workflow-actions-lock.json"),

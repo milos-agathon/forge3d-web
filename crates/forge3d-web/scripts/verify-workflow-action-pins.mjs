@@ -35,11 +35,13 @@ export function verifyWorkflowActionPins({
   const references = [];
   for (const path of checkedFiles) {
     const text = readFileSync(path, "utf8");
-    references.push(...verifyWorkflowText(text, relative(root, path), lockedActions));
+    references.push(
+      ...verifyWorkflowText(text, repositoryPath(root, path), lockedActions),
+    );
   }
 
   return {
-    checkedFiles: checkedFiles.map((path) => relative(root, path)),
+    checkedFiles: checkedFiles.map((path) => repositoryPath(root, path)),
     references,
   };
 }
@@ -127,6 +129,10 @@ function walk(directory, files) {
 
 function actionKey(repository, path) {
   return path ? `${repository}/${path}` : repository;
+}
+
+function repositoryPath(root, path) {
+  return relative(root, path).replaceAll("\\", "/");
 }
 
 function unquote(value) {
