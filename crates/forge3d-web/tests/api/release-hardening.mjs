@@ -10,6 +10,9 @@ const repoRoot = join(packageRoot, "..", "..");
 
 const packageJson = readJson(join(packageRoot, "package.json"));
 const packageLock = readText(join(packageRoot, "package-lock.json"));
+const infrastructureTestRunner = readText(
+  join(packageRoot, "scripts", "run-infrastructure-tests.mjs"),
+);
 
 assertEqual(packageJson.description, "Browser-only Forge3D WebGPU/WASM runtime for terrain rendering", "package description must match the browser MVP");
 assertEqual(packageJson.repository?.type, "git", "package repository type must be declared");
@@ -30,7 +33,26 @@ for (const keyword of ["webgpu", "wasm", "terrain", "geospatial", "visualization
 
 assertIncludes(packageJson.scripts["test:package"], "release-hardening", "package test script must include release hardening checks");
 assertIncludes(packageJson.scripts["test:package"], "test:infrastructure", "package test script must include infrastructure contracts");
-assertIncludes(packageJson.scripts["test:infrastructure"], "browser-lab-broker", "infrastructure tests must include the audited broker");
+assertEqual(
+  packageJson.scripts["test:infrastructure"],
+  "node scripts/run-infrastructure-tests.mjs",
+  "infrastructure tests must use the cross-platform test runner",
+);
+assertIncludes(
+  infrastructureTestRunner,
+  '"browser-lab-broker", "test"',
+  "infrastructure test runner must include the audited broker",
+);
+assertIncludes(
+  infrastructureTestRunner,
+  'entry.name.endsWith(".test.mjs")',
+  "infrastructure test runner must select only test modules",
+);
+assertIncludes(
+  infrastructureTestRunner,
+  'spawnSync(process.execPath, ["--test", ...testFiles]',
+  "infrastructure test runner must avoid shell-dependent glob expansion",
+);
 assertIncludes(packageJson.files, "docs", "package files must include release docs");
 assert(!packageLock.includes("jfrog.booking.com"), "package lock must not depend on a private registry");
 const windowsNpm = resolveCommandInvocation("npm", ["run", "build"], {
