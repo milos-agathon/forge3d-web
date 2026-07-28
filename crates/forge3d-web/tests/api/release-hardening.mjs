@@ -92,9 +92,14 @@ for (const expected of [
 }
 
 const webWorkflow = readText(join(repoRoot, ".github", "workflows", "web.yml"));
+assertIncludes(webWorkflow, "run: npm run build:wasm", "required web workflow must invoke the pinned wasm-pack npm script");
 assertIncludes(webWorkflow, "run: npm run test:api", "required web workflow must enforce the API snapshot");
 assertIncludes(webWorkflow, "run: npm run test:package", "required web workflow must enforce package staging metadata");
 assertIncludes(webWorkflow, "run: npm run test:package-consumer", "required web workflow must execute the installed tarball in Chrome");
+assert(
+  !webWorkflow.split("\n").some((line) => /^\s*wasm-pack\s+build\b/.test(line)),
+  "required web workflow must not rely on bare wasm-pack being available on PATH"
+);
 
 for (const forbidden of [
   "maturin",

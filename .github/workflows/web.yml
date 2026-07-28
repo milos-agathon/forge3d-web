@@ -46,9 +46,8 @@ jobs:
         run: npm ci
 
       - name: Build wasm package
-        run: |
-          $env:PATH = "$pwd\crates\forge3d-web\node_modules\.bin;$env:PATH"
-          wasm-pack build crates/forge3d-web --target web
+        working-directory: crates/forge3d-web
+        run: npm run build:wasm
 
       - name: Test browser API contract
         working-directory: crates/forge3d-web
@@ -73,7 +72,6 @@ jobs:
         run: npm run test:package-consumer
 
       - name: Upload exact-tarball browser evidence
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: forge3d-web-browser-gate
@@ -98,7 +96,6 @@ jobs:
         run: npm run test:browser
 
       - name: Upload source-browser evidence
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: forge3d-web-source-browser-evidence
