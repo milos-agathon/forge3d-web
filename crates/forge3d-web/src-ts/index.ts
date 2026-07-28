@@ -1,3 +1,5 @@
+import { registerRuntimeInternals } from "./runtime-internals.js";
+
 export type Forge3DErrorCode =
   | "WEBGPU_UNAVAILABLE"
   | "WEBGPU_ADAPTER_UNAVAILABLE"
@@ -182,11 +184,16 @@ interface WasmRuntime {
   readonly height: number;
   readonly diagnosticsEnabled: boolean;
   clearColor(): number[];
+  getCapabilities(): Forge3DRuntimeCapabilities;
+  setDeviceLostCallback?(
+    callback: ((error: unknown) => void) | undefined,
+  ): void;
+  simulateDeviceLossForTesting?(): void;
   setTerrain(terrain: TerrainHeightmapInput): void;
   setTerrainFromSource(terrain: TerrainHeightmapSourceInput): Promise<void>;
   setCamera(camera: CameraInput): void;
   resize(size: ResizeInput): void;
-  render(): void;
+  render(): boolean;
   screenshot(): Promise<Blob>;
   dispose(): void;
 }
@@ -197,8 +204,28 @@ interface WasmRuntimeConstructor {
 
 interface WasmBridge {
   Forge3DRuntime: WasmRuntimeConstructor;
-  default?: (moduleOrPath?: unknown) => Promise<unknown>;
+  loadTerrainHeightmapSource(
+    terrain: TerrainHeightmapSourceInput,
+    maxTextureDimension2D: number,
+    maxBufferSize: number,
+  ): Promise<TerrainHeightmapInput>;
+  default?: (options?: { module_or_path: unknown }) => Promise<unknown>;
 }
+
+interface WasmBridgeCoordinatorRecord {
+  selectedUrl: string;
+  promise: Promise<WasmBridge>;
+  state: "pending" | "ready";
+}
+
+interface WasmBridgeCoordinator {
+  schemaVersion: 1;
+  record?: WasmBridgeCoordinatorRecord;
+}
+
+const WASM_COORDINATOR_KEY = Symbol.for(
+  "@forge3d/web.wasm-bridge-coordinator",
+);
 
 export class Forge3DError extends Error {
   readonly code: Forge3DErrorCode;
@@ -225,7 +252,7 @@ export class Forge3DError extends Error {
     }
 
     return new Forge3DError(
-      "WEBGPU_UNAVAILABLE",
+      "INTERNAL_ERROR",
       value instanceof Error ? value.message : String(value),
     );
   }
@@ -233,125 +260,481 @@ export class Forge3DError extends Error {
 
 export class Forge3DRuntime {
   readonly #inner: WasmRuntime;
+  readonly #loadTerrainHeightmapSource: WasmBridge["loadTerrainHeightmapSource"];
+  readonly #diagnosticsEnabled: boolean;
+  readonly #clearColor: [number, number, number, number];
+  #lastCapabilities: Forge3DRuntimeCapabilities;
+  #deviceLostHandler: ((error: unknown) => void) | undefined;
+  #width: number;
+  #height: number;
+  #disposeRequested = false;
+  #nativeDisposed = false;
+  #screenshotPromise: Promise<Blob> | undefined;
+  #pendingMutations: Array<() => void> = [];
 
-  private constructor(inner: WasmRuntime) {
+  private constructor(
+    inner: WasmRuntime,
+    loadTerrainHeightmapSource: WasmBridge["loadTerrainHeightmapSource"],
+  ) {
     this.#inner = inner;
+    this.#loadTerrainHeightmapSource = loadTerrainHeightmapSource;
+    this.#deviceLostHandler = undefined;
+    this.#width = inner.width;
+    this.#height = inner.height;
+    this.#diagnosticsEnabled = inner.diagnosticsEnabled;
+    const clearColor = inner.clearColor();
+    this.#clearColor = [
+      clearColor[0] ?? 0,
+      clearColor[1] ?? 0,
+      clearColor[2] ?? 0,
+      clearColor[3] ?? 1,
+    ];
+    this.#lastCapabilities = normalizeCapabilities(inner.getCapabilities());
+    this.#inner.setDeviceLostCallback?.((error) => {
+      const normalized = Forge3DError.from(error);
+      this.#lastCapabilities = {
+        ...this.#lastCapabilities,
+        deviceState: "lost",
+      };
+      this.#deviceLostHandler?.(
+        normalized.code === "DEVICE_LOST"
+          ? normalized
+          : new Forge3DError("DEVICE_LOST", normalized.message, normalized.details),
+      );
+    });
+    registerRuntimeInternals(this, {
+      setDeviceLostHandler: (handler) => {
+        this.#deviceLostHandler = handler;
+      },
+      simulateDeviceLossForTests: () => {
+        this.#assertNotDisposed();
+        if (
+          !this.#diagnosticsEnabled ||
+          this.#inner.simulateDeviceLossForTesting === undefined
+        ) {
+          throw new Forge3DError(
+            "UNSUPPORTED_FEATURE",
+            "Device-loss simulation requires diagnostics: true",
+          );
+        }
+        try {
+          this.#inner.simulateDeviceLossForTesting();
+        } catch (error) {
+          throw Forge3DError.from(error);
+        }
+      },
+    });
   }
 
   static async create(
     canvas: HTMLCanvasElement,
     options: Forge3DRuntimeOptions = {},
   ): Promise<Forge3DRuntime> {
-    if (options.wasmUrl !== undefined) {
+    if (globalThis.isSecureContext === false) {
       throw new Forge3DError(
-        "WASM_LOAD_FAILED",
-        "Custom wasmUrl loading is unavailable in the FND-00 declaration-only stage",
+        "INSECURE_CONTEXT",
+        "WebGPU requires a secure context",
       );
     }
 
-    const bridge = await loadWasmBridge();
     try {
+      const bridge = await loadWasmBridge(options.wasmUrl);
       const runtime = await bridge.Forge3DRuntime.create(
         canvas,
         normalizeRuntimeOptions(options),
       );
-      return new Forge3DRuntime(runtime);
+      return new Forge3DRuntime(
+        runtime,
+        bridge.loadTerrainHeightmapSource,
+      );
     } catch (error) {
       throw Forge3DError.from(error);
     }
   }
 
   get disposed(): boolean {
-    return this.#inner.disposed;
+    return this.#disposeRequested;
   }
 
   get width(): number {
-    return this.#inner.width;
+    return this.#width;
   }
 
   get height(): number {
-    return this.#inner.height;
+    return this.#height;
   }
 
   get diagnosticsEnabled(): boolean {
-    return this.#inner.diagnosticsEnabled;
+    return this.#diagnosticsEnabled;
   }
 
   clearColor(): [number, number, number, number] {
-    const color = this.#inner.clearColor();
-    return [color[0] ?? 0, color[1] ?? 0, color[2] ?? 0, color[3] ?? 1];
+    return [...this.#clearColor];
   }
 
-  render(): void {
+  getCapabilities(): Forge3DRuntimeCapabilities {
+    if (!this.disposed && this.#screenshotPromise === undefined) {
+      this.#lastCapabilities = normalizeCapabilities(
+        this.#inner.getCapabilities(),
+      );
+    }
+    return {
+      ...this.#lastCapabilities,
+      deviceState: this.disposed
+        ? "disposed"
+        : this.#lastCapabilities.deviceState,
+    };
+  }
+
+  render(): boolean {
+    this.#assertNotDisposed();
+    if (this.#screenshotPromise !== undefined) {
+      return false;
+    }
     try {
-      this.#inner.render();
+      return (
+        this.#inner.render as unknown as () => boolean
+      )();
     } catch (error) {
       throw Forge3DError.from(error);
     }
   }
 
   async screenshot(): Promise<Blob> {
-    try {
-      return await this.#inner.screenshot();
-    } catch (error) {
-      throw Forge3DError.from(error);
+    this.#assertNotDisposed();
+    if (this.#screenshotPromise !== undefined) {
+      return this.#screenshotPromise;
     }
+    const native = this.#inner.screenshot();
+    const result = native.then(
+      (blob) => {
+        this.#assertNotDisposed();
+        return blob;
+      },
+      (error: unknown) => {
+        this.#assertNotDisposed();
+        throw Forge3DError.from(error);
+      },
+    );
+    this.#screenshotPromise = result;
+    void result.then(
+      () => this.#completeScreenshotSafely(result),
+      () => this.#completeScreenshotSafely(result),
+    );
+    return result;
   }
 
   setTerrain(terrain: TerrainHeightmapInput): void {
-    try {
-      this.#inner.setTerrain(normalizeTerrainHeightmapInput(terrain));
-    } catch (error) {
-      throw Forge3DError.from(error);
-    }
+    this.#assertNotDisposed();
+    const normalized = normalizeTerrainHeightmapInput(terrain);
+    this.#runOrQueue(() => this.#inner.setTerrain(normalized));
   }
 
   async setTerrainFromSource(
     terrain: TerrainHeightmapSourceInput,
   ): Promise<void> {
     try {
-      await this.#inner.setTerrainFromSource(
+      const decoded = await this.#loadTerrainHeightmapSource(
         normalizeTerrainHeightmapSourceInput(terrain),
+        this.#lastCapabilities.maxTextureDimension2D,
+        this.#lastCapabilities.maxBufferSize,
       );
+      if (this.disposed) {
+        throw new Forge3DError(
+          "RUNTIME_DISPOSED",
+          "Runtime was disposed during terrain source loading",
+        );
+      }
+      if (this.#screenshotPromise !== undefined) {
+        await this.#screenshotPromise.catch(() => undefined);
+        this.#assertNotDisposed();
+      }
+      this.#inner.setTerrain(decoded);
     } catch (error) {
       throw Forge3DError.from(error);
     }
   }
 
   setCamera(camera: CameraInput): void {
-    try {
-      this.#inner.setCamera(normalizeCameraInput(camera));
-    } catch (error) {
-      throw Forge3DError.from(error);
-    }
+    this.#assertNotDisposed();
+    const normalized = normalizeCameraInput(camera);
+    this.#runOrQueue(() => this.#inner.setCamera(normalized));
   }
 
   resize(size: ResizeInput): void {
+    this.#assertNotDisposed();
+    const normalized = normalizeResizeInput(size);
+    this.#runOrQueue(() => {
+      this.#inner.resize(normalized);
+      this.#width = Math.round(normalized.width * normalized.devicePixelRatio);
+      this.#height = Math.round(normalized.height * normalized.devicePixelRatio);
+    });
+  }
+
+  dispose(): void {
+    if (this.#disposeRequested) {
+      return;
+    }
+    this.#disposeRequested = true;
+    this.#deviceLostHandler = undefined;
+    this.#pendingMutations = [];
+    if (this.#screenshotPromise !== undefined) {
+      this.#lastCapabilities = {
+        ...this.#lastCapabilities,
+        deviceState: "disposed",
+      };
+      return;
+    }
+    this.#finalizeDispose();
+  }
+
+  #assertNotDisposed(): void {
+    if (this.#disposeRequested) {
+      throw new Forge3DError("RUNTIME_DISPOSED", "Runtime is disposed");
+    }
+  }
+
+  #runOrQueue(operation: () => void): void {
+    if (this.#screenshotPromise !== undefined) {
+      this.#pendingMutations.push(operation);
+      return;
+    }
     try {
-      this.#inner.resize(normalizeResizeInput(size));
+      operation();
     } catch (error) {
       throw Forge3DError.from(error);
     }
   }
 
-  dispose(): void {
+  #completeScreenshot(promise: Promise<Blob>): void {
+    if (this.#screenshotPromise !== promise) {
+      return;
+    }
+    this.#screenshotPromise = undefined;
+    if (this.#disposeRequested) {
+      this.#finalizeDispose();
+      return;
+    }
+    const mutations = this.#pendingMutations.splice(0);
+    for (const mutation of mutations) {
+      try {
+        mutation();
+      } catch (error) {
+        const normalized = Forge3DError.from(error);
+        if (normalized.code === "DEVICE_LOST") {
+          this.#deviceLostHandler?.(normalized);
+        } else {
+          reportUnhandledRuntimeError(normalized);
+        }
+      }
+    }
+  }
+
+  #completeScreenshotSafely(promise: Promise<Blob>): void {
+    try {
+      this.#completeScreenshot(promise);
+    } catch (error) {
+      reportUnhandledRuntimeError(Forge3DError.from(error));
+    }
+  }
+
+  #finalizeDispose(): void {
+    if (this.#nativeDisposed) {
+      return;
+    }
+    this.#nativeDisposed = true;
+    this.#inner.setDeviceLostCallback?.(undefined);
     this.#inner.dispose();
+    this.#lastCapabilities = {
+      ...this.#lastCapabilities,
+      deviceState: "disposed",
+    };
   }
 }
 
-let bridgePromise: Promise<WasmBridge> | undefined;
-
-async function loadWasmBridge(): Promise<WasmBridge> {
-  bridgePromise ??= importWasmBridge();
-  return bridgePromise;
+function reportUnhandledRuntimeError(error: Forge3DError): void {
+  const reportError = (
+    globalThis as typeof globalThis & {
+      reportError?: (value: unknown) => void;
+    }
+  ).reportError;
+  if (typeof reportError === "function") {
+    queueMicrotask(() => reportError(error));
+    return;
+  }
+  console.error(error);
 }
 
-async function importWasmBridge(): Promise<WasmBridge> {
+function loadWasmBridge(wasmUrl?: string | URL): Promise<WasmBridge> {
+  let selectedUrl: string;
+  try {
+    const canonicalUrl = new URL(
+      wasmUrl ?? "./forge3d_web_bg.wasm",
+      import.meta.url,
+    );
+    canonicalUrl.hash = "";
+    selectedUrl = canonicalUrl.href;
+  } catch (error) {
+    return Promise.reject(
+      new Forge3DError("INVALID_INPUT", "wasmUrl must be a valid URL", error),
+    );
+  }
+
+  let coordinator: WasmBridgeCoordinator;
+  try {
+    coordinator = getWasmBridgeCoordinator();
+  } catch (error) {
+    return Promise.reject(Forge3DError.from(error));
+  }
+  const existing = coordinator.record;
+  if (existing !== undefined) {
+    if (existing.selectedUrl !== selectedUrl) {
+      return Promise.reject(
+        new Forge3DError(
+          "INVALID_INPUT",
+          `This Window realm already selected a different Forge3D WASM URL`,
+          { requestedUrl: selectedUrl, selectedUrl: existing.selectedUrl },
+        ),
+      );
+    }
+    return existing.promise;
+  }
+
+  let resolveBridge!: (bridge: WasmBridge) => void;
+  let rejectBridge!: (reason: unknown) => void;
+  const promise = new Promise<WasmBridge>((resolve, reject) => {
+    resolveBridge = resolve;
+    rejectBridge = reject;
+  });
+  const record: WasmBridgeCoordinatorRecord = {
+    selectedUrl,
+    promise,
+    state: "pending",
+  };
+  coordinator.record = record;
+
+  void importWasmBridge(selectedUrl).then(
+    (bridge) => {
+      if (coordinator.record?.promise === promise) {
+        coordinator.record.state = "ready";
+      }
+      resolveBridge(bridge);
+    },
+    (error) => {
+      if (coordinator.record?.promise === promise) {
+        delete coordinator.record;
+      }
+      rejectBridge(
+        error instanceof Forge3DError
+          ? error
+          : new Forge3DError(
+              "WASM_LOAD_FAILED",
+              "Failed to load the Forge3D WASM bridge",
+              error,
+            ),
+      );
+    },
+  );
+  return promise;
+}
+
+function getWasmBridgeCoordinator(): WasmBridgeCoordinator {
+  const realm = globalThis as typeof globalThis & {
+    [WASM_COORDINATOR_KEY]?: unknown;
+  };
+  if (Object.prototype.hasOwnProperty.call(realm, WASM_COORDINATOR_KEY)) {
+    const value = realm[WASM_COORDINATOR_KEY];
+    if (!isWasmBridgeCoordinator(value)) {
+      throw new Forge3DError(
+        "INTERNAL_ERROR",
+        "The Forge3D WASM coordinator has an incompatible schema",
+      );
+    }
+    return value;
+  }
+
+  const coordinator: WasmBridgeCoordinator = { schemaVersion: 1 };
+  Object.defineProperty(realm, WASM_COORDINATOR_KEY, {
+    value: coordinator,
+    enumerable: false,
+    configurable: false,
+    writable: false,
+  });
+  return coordinator;
+}
+
+function isWasmBridgeCoordinator(value: unknown): value is WasmBridgeCoordinator {
+  if (
+    typeof value !== "object" ||
+    value === null ||
+    (value as { schemaVersion?: unknown }).schemaVersion !== 1
+  ) {
+    return false;
+  }
+  const record = (value as { record?: unknown }).record;
+  return (
+    record === undefined ||
+    (typeof record === "object" &&
+      record !== null &&
+      typeof (record as { selectedUrl?: unknown }).selectedUrl === "string" &&
+      (record as { promise?: unknown }).promise instanceof Promise &&
+      ((record as { state?: unknown }).state === "pending" ||
+        (record as { state?: unknown }).state === "ready"))
+  );
+}
+
+async function importWasmBridge(selectedUrl: string): Promise<WasmBridge> {
   const modulePath = "../pkg/forge3d_web.js";
-  const module = await import(/* @vite-ignore */ modulePath);
-  const bridge = module as WasmBridge;
-  await bridge.default?.();
-  return bridge;
+  try {
+    const [module, response] = await Promise.all([
+      import(/* @vite-ignore */ modulePath),
+      fetchValidatedWasm(selectedUrl),
+    ]);
+    const bridge = module as WasmBridge;
+    await bridge.default?.({ module_or_path: response });
+    return bridge;
+  } catch (error) {
+    throw error instanceof Forge3DError
+      ? error
+      : new Forge3DError(
+          "WASM_LOAD_FAILED",
+          `Failed to initialize Forge3D WASM from ${selectedUrl}`,
+          error,
+        );
+  }
+}
+
+async function fetchValidatedWasm(selectedUrl: string): Promise<Response> {
+  let response: Response;
+  try {
+    response = await fetch(selectedUrl);
+  } catch (error) {
+    throw new Forge3DError(
+      "WASM_LOAD_FAILED",
+      `Failed to fetch Forge3D WASM from ${selectedUrl}`,
+      error,
+    );
+  }
+  if (!response.ok) {
+    throw new Forge3DError(
+      "WASM_LOAD_FAILED",
+      `Forge3D WASM request failed with HTTP ${response.status}`,
+      { status: response.status, url: selectedUrl },
+    );
+  }
+  const mediaType = response.headers
+    .get("content-type")
+    ?.split(";", 1)[0]
+    ?.trim()
+    .toLowerCase();
+  if (mediaType !== "application/wasm") {
+    throw new Forge3DError(
+      "WASM_LOAD_FAILED",
+      "Forge3D WASM must be served as application/wasm",
+      { mediaType: mediaType ?? null, url: selectedUrl },
+    );
+  }
+  return response;
 }
 
 function normalizeRuntimeOptions(
@@ -370,8 +753,19 @@ function normalizeTerrainHeightmapInput(
     heights: terrain.heights,
   };
   if (terrain.colorRamp !== undefined) {
+    const stops = terrain.colorRamp.stops;
+    if (
+      !Array.isArray(stops) ||
+      stops.length < 2 ||
+      stops.length > 8
+    ) {
+      throw new Forge3DError(
+        "INVALID_INPUT",
+        "colorRamp.stops must contain between 2 and 8 stops",
+      );
+    }
     normalized.colorRamp = {
-      stops: terrain.colorRamp.stops.map((stop) => ({
+      stops: stops.map((stop) => ({
         position: stop.position,
         color: [stop.color[0], stop.color[1], stop.color[2]],
       })),
@@ -422,6 +816,17 @@ function normalizeResizeInput(size: ResizeInput): ResizeInput {
   };
 }
 
+function normalizeCapabilities(
+  capabilities: Forge3DRuntimeCapabilities,
+): Forge3DRuntimeCapabilities {
+  return {
+    deviceState: capabilities.deviceState,
+    maxTextureDimension2D: capabilities.maxTextureDimension2D,
+    maxBufferSize: capabilities.maxBufferSize,
+    surfaceFormat: capabilities.surfaceFormat,
+  };
+}
+
 function isErrorLike(value: unknown): value is {
   code?: unknown;
   message: string;
@@ -436,7 +841,7 @@ function isErrorLike(value: unknown): value is {
 }
 
 function normalizeErrorCode(code: unknown): Forge3DErrorCode {
-  const fallback = "WEBGPU_UNAVAILABLE";
+  const fallback = "INTERNAL_ERROR";
   if (typeof code !== "string") {
     return fallback;
   }
@@ -465,3 +870,5 @@ const ERROR_CODES = new Set<Forge3DErrorCode>([
   "RESOURCE_LIMIT_EXCEEDED",
   "RUNTIME_DISPOSED",
 ]);
+
+export { Forge3DViewer } from "./viewer.js";

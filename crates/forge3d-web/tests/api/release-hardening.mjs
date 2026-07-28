@@ -2,10 +2,14 @@ import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 
+import { resolveCommandInvocation } from "../../scripts/command-executable.mjs";
+import { resolvePackageGateMode } from "../../scripts/package-gate-mode.mjs";
+
 const packageRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const repoRoot = join(packageRoot, "..", "..");
 
 const packageJson = readJson(join(packageRoot, "package.json"));
+const packageLock = readText(join(packageRoot, "package-lock.json"));
 
 assertEqual(packageJson.description, "Browser-only Forge3D WebGPU/WASM runtime for terrain rendering", "package description must match the browser MVP");
 assertEqual(packageJson.repository?.type, "git", "package repository type must be declared");
@@ -14,9 +18,9 @@ assertEqual(packageJson.repository?.directory, "crates/forge3d-web", "package re
 assertEqual(packageJson.bugs?.url, "https://github.com/milos-agathon/forge3d/issues", "package issue tracker must be declared");
 assertEqual(packageJson.homepage, "https://forge3d.dev", "package homepage must be declared");
 assertEqual(packageJson.engines?.node, ">=20.19.0", "package Node support floor must match Vite/CI");
-assertEqual(packageJson.forge3d?.interactiveViewer?.contractStage, "declaration-only", "viewer contract stage must remain explicit");
-assertEqual(packageJson.forge3d?.interactiveViewer?.runtimeAvailable, false, "viewer runtime must not be claimed before implementation");
-assertEqual(packageJson.forge3d?.interactiveViewer?.releaseReady, false, "viewer contract must remain release-blocked");
+assertEqual(packageJson.forge3d?.interactiveViewer?.contractStage, "verification-incomplete", "viewer foundation stage must remain evidence-bound");
+assertEqual(packageJson.forge3d?.interactiveViewer?.runtimeAvailable, true, "implemented viewer runtime must be declared");
+assertEqual(packageJson.forge3d?.interactiveViewer?.releaseReady, false, "viewer support must remain release-matrix blocked");
 assertEqual(packageJson.forge3d?.interactiveViewer?.implementationTasks, "FND-01..FND-07", "viewer implementation ownership must stay explicit");
 assert(packageJson.sideEffects === false, "package must declare sideEffects false for ESM consumers");
 
@@ -26,6 +30,31 @@ for (const keyword of ["webgpu", "wasm", "terrain", "geospatial", "visualization
 
 assertIncludes(packageJson.scripts["test:package"], "release-hardening", "package test script must include release hardening checks");
 assertIncludes(packageJson.files, "docs", "package files must include release docs");
+assert(!packageLock.includes("jfrog.booking.com"), "package lock must not depend on a private registry");
+const windowsNpm = resolveCommandInvocation("npm", ["run", "build"], {
+  operatingSystem: "win32",
+  nodeExecutable: "C:\\node.exe",
+  npmExecutable: "C:\\npm-cli.js",
+});
+assertEqual(windowsNpm.command, "C:\\node.exe", "Windows npm subprocesses must use the Node executable");
+assertEqual(
+  JSON.stringify(windowsNpm.args),
+  JSON.stringify(["C:\\npm-cli.js", "run", "build"]),
+  "Windows npm subprocesses must pass the npm CLI and original arguments directly",
+);
+const windowsGit = resolveCommandInvocation("git", ["status"], {
+  operatingSystem: "win32",
+});
+assertEqual(windowsGit.command, "git", "native Windows executables must remain unchanged");
+assertEqual(JSON.stringify(windowsGit.args), JSON.stringify(["status"]), "native executable arguments must remain unchanged");
+assertEqual(resolvePackageGateMode(undefined), "required", "package gate must default to required evidence");
+assertEqual(resolvePackageGateMode("required"), "required", "package gate must accept required evidence mode");
+assertEqual(resolvePackageGateMode("probe"), "probe", "package gate must accept hosted probe mode");
+assertThrows(
+  () => resolvePackageGateMode("pass"),
+  /must be either required or probe/,
+  "package gate must reject unknown evidence modes",
+);
 
 for (const relative of [
   "docs/support-matrix.md",
@@ -37,8 +66,8 @@ for (const relative of [
 
 const readme = readText(join(packageRoot, "README.md"));
 for (const expected of [
-  "## Interactive Viewer Contract Status",
-  "declaration-only",
+  "## Interactive Viewer Status",
+  "FND-01..FND-07",
   "not independently release-ready",
   "See `docs/support-matrix.md`",
   "See `docs/release-checklist.md`",
@@ -55,7 +84,7 @@ for (const expected of [
   "| Firefox | Unsupported |",
   "| Safari | Unsupported |",
   "| WebGL fallback | Unsupported |",
-  "FORGE3D_WEBGPU_REQUIRED=1"
+  '$env:FORGE3D_WEBGPU_REQUIRED = "1"'
 ]) {
   assertIncludes(supportMatrix, expected, `support matrix missing: ${expected}`);
 }
@@ -73,6 +102,7 @@ for (const expected of [
   ".\\crates\\forge3d-web\\node_modules\\.bin\\wasm-pack.cmd build crates/forge3d-web --target web",
   "npm run build",
   "npm run test:package",
+  'FORGE3D_SOURCE_BENCHMARK_MODE = "required"',
   "npm pack --dry-run"
 ]) {
   assertIncludes(checklist, expected, `release checklist missing: ${expected}`);
@@ -80,9 +110,9 @@ for (const expected of [
 
 const browserApi = readText(join(packageRoot, "docs", "browser-api.md"));
 for (const expected of [
-  "Declaration-only staging boundary",
-  "does not implement or export `Forge3DViewer`",
-  "not independently",
+  "## Interactive Viewer API",
+  "implements the frozen high-level surface",
+  "code completion alone is not",
   "arrows orbit",
   "Shift+arrows pan",
   "`+`/`-` zoom",
@@ -92,8 +122,18 @@ for (const expected of [
 }
 
 const webWorkflow = readText(join(repoRoot, ".github", "workflows", "web.yml"));
+assertIncludes(webWorkflow, "npm ci --registry=https://registry.npmjs.org", "required web workflow must install from the public npm registry");
+assertIncludes(webWorkflow, "Test-Path node_modules/.bin/wasm-pack.cmd", "required web workflow must reject incomplete npm installs");
+assertIncludes(webWorkflow, "FORGE3D_PACKAGE_GATE_MODE: probe", "hosted web workflow must not claim fallback hardware as release evidence");
+assertIncludes(webWorkflow, "FORGE3D_SOURCE_BENCHMARK_MODE: probe", "hosted web workflow must not benchmark fallback hardware as release evidence");
+assertIncludes(webWorkflow, "run: npm run build:wasm", "required web workflow must invoke the pinned wasm-pack npm script");
 assertIncludes(webWorkflow, "run: npm run test:api", "required web workflow must enforce the API snapshot");
 assertIncludes(webWorkflow, "run: npm run test:package", "required web workflow must enforce package staging metadata");
+assertIncludes(webWorkflow, "run: npm run test:package-consumer", "required web workflow must execute the installed tarball in Chrome");
+assert(
+  !webWorkflow.split("\n").some((line) => /^\s*wasm-pack\s+build\b/.test(line)),
+  "required web workflow must not rely on bare wasm-pack being available on PATH"
+);
 
 for (const forbidden of [
   "maturin",
@@ -150,4 +190,16 @@ function assertIncludes(value, expected, message) {
   if (!value.includes(expected)) {
     throw new Error(message);
   }
+}
+
+function assertThrows(callback, expected, message) {
+  try {
+    callback();
+  } catch (error) {
+    if (expected.test(String(error?.message ?? error))) {
+      return;
+    }
+    throw error;
+  }
+  throw new Error(message);
 }

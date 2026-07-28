@@ -29,14 +29,14 @@ npm install @forge3d/web
 
 The package is ESM-only and ships a JavaScript facade, a WebAssembly module, and hand-authored TypeScript declarations.
 
-## Interactive Viewer Contract Status
+## Interactive Viewer Status
 
-FND-00 freezes declarations for the future `Forge3DViewer` API, but the emitted
-facade does not yet export `Forge3DViewer` or implement
-`Forge3DRuntime.getCapabilities()`. The viewer contract is declaration-only,
-has no runtime behavior claim, and is not independently release-ready until
-FND-01..FND-07 and their behavioral tests land. The existing low-level
-`Forge3DRuntime` MVP remains the usable runtime surface.
+The emitted facade exports `Forge3DViewer` and implements the shared
+FND-01..FND-07 interaction, lifecycle, recovery, resource-budget, and test
+foundation. `Forge3DRuntime` remains available for immediate low-level
+rendering. Browser-family support is not independently release-ready until the
+required branded and physical release matrix passes; shared code completion is
+not a platform support claim.
 
 ## Browser Support
 
@@ -55,6 +55,10 @@ Cache `.wasm` assets with immutable content hashing, or invalidate the wasm asse
 ## Public API
 
 - `Forge3DRuntime.create(canvas, options)`
+- `Forge3DRuntime.getCapabilities()`
+- `Forge3DViewer.create(canvas, options)`
+- viewer orbit, pan, zoom, automatic resize, invalidation rendering, recovery,
+  diagnostics, resource budgets, screenshots, and deterministic disposal
 - `setTerrain({ width, height, heights })`
 - `setTerrainFromSource({ width, height, source, byteOffset, byteLength, signal, onProgress })`
 - `setCamera(camera)`
@@ -63,8 +67,8 @@ Cache `.wasm` assets with immutable content hashing, or invalidate the wasm asse
 - `screenshot()`
 - `dispose()`
 
-See `docs/browser-api.md` for the stable TypeScript contract, its explicit
-declaration-only viewer boundary, and error codes.
+See `docs/browser-api.md` for the stable TypeScript contract, lifecycle rules,
+and error codes.
 
 ## MVP Scope And Exclusions
 
@@ -81,6 +85,7 @@ npm run typecheck
 npm run build
 npm run test:api
 npm run test:package
+npm run test:package-consumer
 npm run test:browser
 npm pack --dry-run
 ```

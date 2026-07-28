@@ -43,12 +43,18 @@ jobs:
 
       - name: Install web package dependencies
         working-directory: crates/forge3d-web
-        run: npm ci
+        run: |
+          npm ci --registry=https://registry.npmjs.org
+          if ($LASTEXITCODE -ne 0) {
+            throw "npm ci failed with exit code $LASTEXITCODE"
+          }
+          if (-not (Test-Path node_modules/.bin/wasm-pack.cmd)) {
+            throw "npm ci completed without installing the wasm-pack command shim"
+          }
 
       - name: Build wasm package
-        run: |
-          $env:PATH = "$pwd\crates\forge3d-web\node_modules\.bin;$env:PATH"
-          wasm-pack build crates/forge3d-web --target web
+        working-directory: crates/forge3d-web
+        run: npm run build:wasm
 
       - name: Test browser API contract
         working-directory: crates/forge3d-web
@@ -66,13 +72,28 @@ jobs:
         working-directory: crates/forge3d-web
         run: npx playwright install chromium
 
+      - name: Test clean installed tarball in Chrome
+        working-directory: crates/forge3d-web
+        env:
+          FORGE3D_EVIDENCE_DIR: test-results/browser-gate
+          FORGE3D_PACKAGE_GATE_MODE: probe
+        run: npm run test:package-consumer
+
+      - name: Upload exact-tarball browser evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: forge3d-web-browser-gate
+          path: crates/forge3d-web/test-results/browser-gate
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Print WebGPU capability diagnostics
         working-directory: crates/forge3d-web
         env:
           FORGE3D_WEBGPU_REQUIRED: "1"
         run: |
           echo "FORGE3D_WEBGPU_REQUIRED=$env:FORGE3D_WEBGPU_REQUIRED"
-          echo "Chrome channel uses Playwright Desktop Chrome with --enable-unsafe-webgpu --use-angle=d3d11"
+          echo "Chrome channel uses the installed browser UA with --enable-unsafe-webgpu --use-angle=d3d11"
           echo "Playwright tests evaluate navigator.gpu before render assertions"
           npm run test:browser -- --grep "reports browser WebGPU diagnostics"
 
@@ -80,4 +101,13 @@ jobs:
         working-directory: crates/forge3d-web
         env:
           FORGE3D_WEBGPU_REQUIRED: "1"
+          FORGE3D_SOURCE_BENCHMARK_MODE: probe
         run: npm run test:browser
+
+      - name: Upload source-browser evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: forge3d-web-source-browser-evidence
+          path: crates/forge3d-web/test-results/**/browser-evidence.json
+          if-no-files-found: error
+          retention-days: 30

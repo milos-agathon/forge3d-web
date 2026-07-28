@@ -25,8 +25,8 @@
   },
   "forge3d": {
     "interactiveViewer": {
-      "contractStage": "declaration-only",
-      "runtimeAvailable": false,
+      "contractStage": "verification-incomplete",
+      "runtimeAvailable": true,
       "releaseReady": false,
       "implementationTasks": "FND-01..FND-07"
     }
@@ -58,13 +58,17 @@
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.api.json",
     "test:api": "npm run typecheck && node tests/api/public-api-snapshot.mjs && node tests/api/emitted-facade-stage.mjs",
     "test:release-hardening": "node tests/api/release-hardening.mjs",
-    "test:package": "npm run test:release-hardening && node tests/api/package-contract.mjs",
+    "test:browser-harness": "node --test tests/browser/benchmark/benchmark-golden.test.mjs tests/browser/evidence-validator.test.mjs tests/browser/resource-assertions.test.mjs",
+    "test:package": "npm run test:release-hardening && npm run test:browser-harness && node tests/api/package-contract.mjs",
+    "test:package-consumer": "node scripts/build-browser-test-package.mjs",
+    "test:unit": "vitest run",
     "test:browser": "playwright test"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
     "typescript": "^6.0.3",
     "vite": "^8.0.16",
+    "vitest": "4.0.18",
     "wasm-pack": "^0.15.0"
   }
 }

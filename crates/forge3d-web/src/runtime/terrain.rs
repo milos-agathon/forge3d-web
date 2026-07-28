@@ -1,605 +1,28 @@
-#[cfg(target_arch = "wasm32")]
-use forge3d_core::gpu::GpuRuntimeOptions;
-use forge3d_core::gpu::{GpuContext, GpuRuntime, SurfaceState};
-use wasm_bindgen::{closure::Closure, prelude::*, Clamped, JsCast};
-use wasm_bindgen_futures::JsFuture;
-use web_sys::{Blob, CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
+use forge3d_core::gpu::GpuContext;
+use wasm_bindgen::prelude::*;
 use wgpu::util::DeviceExt;
 
-use crate::error::{map_core_error, to_js_error, Forge3DErrorCode, WebError};
-#[cfg(target_arch = "wasm32")]
-use crate::inputs::RuntimeOptions;
+use super::Forge3DRuntime;
+use crate::error::{map_core_error, Forge3DErrorCode, WebError};
 use crate::inputs::{
     CameraOptions, ResizeOptions, TerrainColorRampOptions, TerrainHeightmapOptions,
 };
 
-#[wasm_bindgen]
-pub struct Forge3DRuntime {
-    #[allow(dead_code)]
-    canvas: HtmlCanvasElement,
-    gpu_runtime: Option<GpuRuntime>,
-    context: Option<GpuContext>,
-    surface_state: Option<SurfaceState>,
-    depth_attachment: Option<DepthAttachment>,
-    terrain: Option<TerrainRenderResources>,
-    camera: forge3d_core::camera::CameraInput,
-    width: u32,
-    height: u32,
-    clear_color: [f32; 4],
-    diagnostics_enabled: bool,
-    disposed: bool,
-}
-
-#[wasm_bindgen]
-impl Forge3DRuntime {
-    #[wasm_bindgen(js_name = create)]
-    pub async fn create(
-        canvas: HtmlCanvasElement,
-        options: JsValue,
-    ) -> Result<Forge3DRuntime, JsValue> {
-        install_panic_hook();
-        create_runtime(canvas, options).await.map_err(to_js_error)
-    }
-
-    #[wasm_bindgen(js_name = dispose)]
-    pub fn dispose(&mut self) {
-        self.surface_state = None;
-        self.context = None;
-        self.gpu_runtime = None;
-        self.depth_attachment = None;
-        self.terrain = None;
-        self.disposed = true;
-    }
-
-    #[wasm_bindgen(js_name = render)]
-    pub fn render(&mut self) -> Result<(), JsValue> {
-        ensure_not_disposed_error(self).map_err(to_js_error)?;
-        render_runtime(self).map_err(to_js_error)
-    }
-
-    #[wasm_bindgen(js_name = screenshot)]
-    pub async fn screenshot(&mut self) -> Result<Blob, JsValue> {
-        ensure_not_disposed_error(self).map_err(to_js_error)?;
-        screenshot_runtime(self).await.map_err(to_js_error)
-    }
-
-    #[wasm_bindgen(js_name = setTerrain)]
-    pub fn set_terrain(&mut self, terrain: JsValue) -> Result<(), JsValue> {
-        ensure_not_disposed_error(self).map_err(to_js_error)?;
-        set_terrain_runtime(self, terrain).map_err(to_js_error)
-    }
-
-    #[wasm_bindgen(js_name = setTerrainFromSource)]
-    pub async fn set_terrain_from_source(&mut self, terrain: JsValue) -> Result<(), JsValue> {
-        ensure_not_disposed_error(self).map_err(to_js_error)?;
-        let terrain = crate::io::load_terrain_heightmap_source(terrain)
-            .await
-            .map_err(to_js_error)?;
-        ensure_not_disposed_error(self).map_err(to_js_error)?;
-        set_terrain_options_runtime(self, terrain).map_err(to_js_error)
-    }
-
-    #[wasm_bindgen(js_name = setCamera)]
-    pub fn set_camera(&mut self, camera: JsValue) -> Result<(), JsValue> {
-        ensure_not_disposed_error(self).map_err(to_js_error)?;
-        set_camera_runtime(self, camera).map_err(to_js_error)
-    }
-
-    #[wasm_bindgen(js_name = resize)]
-    pub fn resize(&mut self, size: JsValue) -> Result<(), JsValue> {
-        ensure_not_disposed_error(self).map_err(to_js_error)?;
-        resize_runtime(self, size).map_err(to_js_error)
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn disposed(&self) -> bool {
-        self.disposed
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn width(&self) -> u32 {
-        self.width
-    }
-
-    #[wasm_bindgen(getter)]
-    pub fn height(&self) -> u32 {
-        self.height
-    }
-
-    #[wasm_bindgen(js_name = clearColor)]
-    pub fn clear_color(&self) -> js_sys::Array {
-        self.clear_color
-            .iter()
-            .map(|channel| JsValue::from_f64(*channel as f64))
-            .collect()
-    }
-
-    #[wasm_bindgen(getter, js_name = diagnosticsEnabled)]
-    pub fn diagnostics_enabled(&self) -> bool {
-        self.diagnostics_enabled
-    }
-}
-
-#[cfg(target_arch = "wasm32")]
-async fn create_runtime(
-    canvas: HtmlCanvasElement,
-    options: JsValue,
-) -> Result<Forge3DRuntime, WebError> {
-    if web_sys::window()
-        .and_then(|window| {
-            js_sys::Reflect::get(&window.navigator(), &JsValue::from_str("gpu")).ok()
-        })
-        .filter(|gpu| !gpu.is_undefined() && !gpu.is_null())
-        .is_none()
-    {
-        return Err(WebError::new(
-            Forge3DErrorCode::WebGpuUnavailable,
-            "navigator.gpu is not available",
-        ));
-    }
-
-    let options = RuntimeOptions::from_js_value(options)?;
-    let (width, height) = options.pixel_size(canvas.width(), canvas.height())?;
-    canvas.set_width(width);
-    canvas.set_height(height);
-
-    let mut instance_descriptor = wgpu::InstanceDescriptor::new_without_display_handle();
-    instance_descriptor.backends = wgpu::Backends::BROWSER_WEBGPU;
-    let instance = wgpu::Instance::new(instance_descriptor);
-    let gpu_runtime = GpuRuntime::new(instance);
-    let surface = gpu_runtime
-        .instance
-        .create_surface(wgpu::SurfaceTarget::Canvas(canvas.clone()))
-        .map_err(|error| {
-            WebError::new(
-                Forge3DErrorCode::SurfaceCreateFailed,
-                format!("Failed to create WebGPU surface: {error}"),
-            )
-        })?;
-
-    let context_options = GpuRuntimeOptions {
-        power_preference: options.power_preference.to_wgpu(),
-        required_features: wgpu::Features::empty(),
-        required_limits: wgpu::Limits::downlevel_webgl2_defaults(),
-        label: Some("forge3d-web-device".to_string()),
-    };
-    let context = gpu_runtime
-        .request_context(Some(&surface), &context_options)
-        .await
-        .map_err(map_core_error)?;
-
-    let descriptor = surface_descriptor(&surface, &context, &options, width, height)?;
-    let surface_state = SurfaceState::new(surface, &context, descriptor).map_err(map_core_error)?;
-    let depth_attachment = DepthAttachment::new(&context, width, height);
-
-    Ok(Forge3DRuntime {
-        canvas,
-        gpu_runtime: Some(gpu_runtime),
-        context: Some(context),
-        surface_state: Some(surface_state),
-        depth_attachment: Some(depth_attachment),
-        terrain: None,
-        camera: forge3d_core::camera::CameraInput::default(),
-        width,
-        height,
-        clear_color: options.clear_color(),
-        diagnostics_enabled: options.diagnostics,
-        disposed: false,
-    })
-}
-
-#[cfg(not(target_arch = "wasm32"))]
-async fn create_runtime(
-    canvas: HtmlCanvasElement,
-    options: JsValue,
-) -> Result<Forge3DRuntime, WebError> {
-    let _ = (canvas, options);
-    Err(WebError::new(
-        Forge3DErrorCode::WebGpuUnavailable,
-        "forge3d-web runtime creation is only available for wasm32 browser builds",
-    ))
-}
-
-#[cfg(target_arch = "wasm32")]
-fn surface_descriptor(
-    surface: &wgpu::Surface<'static>,
-    context: &GpuContext,
-    options: &RuntimeOptions,
-    width: u32,
-    height: u32,
-) -> Result<forge3d_core::gpu::SurfaceStateDescriptor, WebError> {
-    let caps = surface.get_capabilities(&context.adapter);
-    let format = caps
-        .formats
-        .iter()
-        .copied()
-        .find(|format| format.is_srgb())
-        .or_else(|| caps.formats.first().copied())
-        .ok_or_else(|| {
-            WebError::new(
-                Forge3DErrorCode::SurfaceCreateFailed,
-                "WebGPU surface reported no texture formats",
-            )
-        })?;
-    let present_mode = caps
-        .present_modes
-        .iter()
-        .copied()
-        .find(|mode| *mode == wgpu::PresentMode::Fifo)
-        .or_else(|| caps.present_modes.first().copied())
-        .ok_or_else(|| {
-            WebError::new(
-                Forge3DErrorCode::SurfaceCreateFailed,
-                "WebGPU surface reported no present modes",
-            )
-        })?;
-    let preferred_alpha = options.alpha_mode.preferred_wgpu();
-    let alpha_mode = caps
-        .alpha_modes
-        .iter()
-        .copied()
-        .find(|mode| *mode == preferred_alpha)
-        .or_else(|| caps.alpha_modes.first().copied())
-        .ok_or_else(|| {
-            WebError::new(
-                Forge3DErrorCode::SurfaceCreateFailed,
-                "WebGPU surface reported no alpha modes",
-            )
-        })?;
-
-    let mut descriptor = forge3d_core::gpu::SurfaceStateDescriptor::new(width, height, format);
-    descriptor.present_mode = present_mode;
-    descriptor.alpha_mode = alpha_mode;
-    descriptor.view_formats = vec![format];
-    Ok(descriptor)
-}
-
-fn render_runtime(runtime: &mut Forge3DRuntime) -> Result<(), WebError> {
-    let context = runtime.context.as_ref().ok_or_else(|| {
-        WebError::new(
-            Forge3DErrorCode::RuntimeDisposed,
-            "Runtime GPU context is not available",
-        )
-    })?;
-    let surface_state = runtime.surface_state.as_mut().ok_or_else(|| {
-        WebError::new(
-            Forge3DErrorCode::RuntimeDisposed,
-            "Runtime surface state is not available",
-        )
-    })?;
-
-    let frame = {
-        let surface = &surface_state.surface;
-        surface.get_current_texture()
-    };
-    let frame = match frame {
-        wgpu::CurrentSurfaceTexture::Success(frame) => frame,
-        wgpu::CurrentSurfaceTexture::Suboptimal(frame) => frame,
-        wgpu::CurrentSurfaceTexture::Timeout | wgpu::CurrentSurfaceTexture::Occluded => {
-            return Err(WebError::new(
-                Forge3DErrorCode::RequestCancelled,
-                "Surface texture is not currently available",
-            ));
-        }
-        wgpu::CurrentSurfaceTexture::Outdated => {
-            surface_state.configure(context);
-            return Err(WebError::new(
-                Forge3DErrorCode::SurfaceOutdated,
-                "Surface outdated",
-            ));
-        }
-        wgpu::CurrentSurfaceTexture::Lost => {
-            surface_state.configure(context);
-            return Err(WebError::new(Forge3DErrorCode::SurfaceLost, "Surface lost"));
-        }
-        wgpu::CurrentSurfaceTexture::Validation => {
-            return Err(WebError::new(
-                Forge3DErrorCode::SurfaceCreateFailed,
-                "Surface texture validation failed",
-            ));
-        }
-    };
-    let view = frame
-        .texture
-        .create_view(&wgpu::TextureViewDescriptor::default());
-    let mut encoder = context
-        .device
-        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("forge3d-web-clear-encoder"),
-        });
-
-    encode_scene_render_pass(runtime, &mut encoder, &view, "forge3d-web-clear-pass");
-
-    context.queue.submit(std::iter::once(encoder.finish()));
-    frame.present();
-    Ok(())
-}
-
-async fn screenshot_runtime(runtime: &mut Forge3DRuntime) -> Result<Blob, WebError> {
-    let context = runtime.context.as_ref().ok_or_else(|| {
-        WebError::new(
-            Forge3DErrorCode::RuntimeDisposed,
-            "Runtime GPU context is not available",
-        )
-    })?;
-    let surface_state = runtime.surface_state.as_ref().ok_or_else(|| {
-        WebError::new(
-            Forge3DErrorCode::RuntimeDisposed,
-            "Runtime surface state is not available",
-        )
-    })?;
-    let format = surface_state.config.format;
-    let layout = forge3d_core::readback::rgba8_layout(runtime.width, runtime.height)
-        .map_err(map_core_error)?;
-
-    let texture = context.device.create_texture(&wgpu::TextureDescriptor {
-        label: Some("forge3d-web-screenshot-texture"),
-        size: wgpu::Extent3d {
-            width: runtime.width,
-            height: runtime.height,
-            depth_or_array_layers: 1,
+pub(super) fn set_terrain_runtime(
+    runtime: &mut Forge3DRuntime,
+    terrain: JsValue,
+) -> Result<(), WebError> {
+    let terrain = TerrainHeightmapOptions::from_js_value_with_limits(
+        terrain,
+        crate::inputs::TerrainPhysicalLimits {
+            max_texture_dimension_2d: runtime.max_texture_dimension_2d,
+            max_buffer_size: runtime.max_buffer_size,
         },
-        mip_level_count: 1,
-        sample_count: 1,
-        dimension: wgpu::TextureDimension::D2,
-        format,
-        usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
-        view_formats: &[],
-    });
-    let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-    let readback = context.device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("forge3d-web-screenshot-readback"),
-        size: layout.buffer_size,
-        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
-        mapped_at_creation: false,
-    });
-    let mut encoder = context
-        .device
-        .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("forge3d-web-screenshot-encoder"),
-        });
-
-    encode_scene_render_pass(runtime, &mut encoder, &view, "forge3d-web-screenshot-pass");
-    encoder.copy_texture_to_buffer(
-        wgpu::TexelCopyTextureInfo {
-            texture: &texture,
-            mip_level: 0,
-            origin: wgpu::Origin3d::ZERO,
-            aspect: wgpu::TextureAspect::All,
-        },
-        wgpu::TexelCopyBufferInfo {
-            buffer: &readback,
-            layout: wgpu::TexelCopyBufferLayout {
-                offset: 0,
-                bytes_per_row: Some(layout.padded_bytes_per_row),
-                rows_per_image: Some(runtime.height),
-            },
-        },
-        wgpu::Extent3d {
-            width: runtime.width,
-            height: runtime.height,
-            depth_or_array_layers: 1,
-        },
-    );
-
-    context.queue.submit(std::iter::once(encoder.finish()));
-    let padded = map_readback_buffer(context, &readback, layout.buffer_size).await?;
-    let rgba = forge3d_core::readback::unpad_rows(&padded, layout).map_err(map_core_error)?;
-    let rgba = normalize_readback_to_rgba(rgba, format)?;
-    png_blob_from_rgba(runtime.width, runtime.height, rgba).await
-}
-
-fn encode_scene_render_pass(
-    runtime: &Forge3DRuntime,
-    encoder: &mut wgpu::CommandEncoder,
-    view: &wgpu::TextureView,
-    label: &'static str,
-) {
-    let depth_stencil_attachment =
-        runtime
-            .depth_attachment
-            .as_ref()
-            .map(|depth| wgpu::RenderPassDepthStencilAttachment {
-                view: &depth.view,
-                depth_ops: Some(wgpu::Operations {
-                    load: wgpu::LoadOp::Clear(1.0),
-                    store: wgpu::StoreOp::Discard,
-                }),
-                stencil_ops: None,
-            });
-    let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-        label: Some(label),
-        color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-            view,
-            depth_slice: None,
-            resolve_target: None,
-            ops: wgpu::Operations {
-                load: wgpu::LoadOp::Clear(wgpu::Color {
-                    r: runtime.clear_color[0] as f64,
-                    g: runtime.clear_color[1] as f64,
-                    b: runtime.clear_color[2] as f64,
-                    a: runtime.clear_color[3] as f64,
-                }),
-                store: wgpu::StoreOp::Store,
-            },
-        })],
-        depth_stencil_attachment,
-        occlusion_query_set: None,
-        timestamp_writes: None,
-        multiview_mask: None,
-    });
-
-    if let Some(terrain) = runtime.terrain.as_ref() {
-        render_pass.set_pipeline(&terrain.pipeline);
-        render_pass.set_bind_group(0, &terrain.bind_group, &[]);
-        render_pass.set_vertex_buffer(0, terrain.vertex_buffer.slice(..));
-        render_pass.set_index_buffer(terrain.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
-        render_pass.draw_indexed(0..terrain.index_count, 0, 0..1);
-    }
-}
-
-async fn map_readback_buffer(
-    context: &GpuContext,
-    buffer: &wgpu::Buffer,
-    size: u64,
-) -> Result<Vec<u8>, WebError> {
-    let slice = buffer.slice(..);
-    let promise = js_sys::Promise::new(&mut |resolve, reject| {
-        slice.map_async(wgpu::MapMode::Read, move |result| match result {
-            Ok(()) => {
-                let _ = resolve.call0(&JsValue::NULL);
-            }
-            Err(error) => {
-                let _ = reject.call1(&JsValue::NULL, &JsValue::from_str(&error.to_string()));
-            }
-        });
-    });
-    let _ = context.device.poll(wgpu::PollType::Poll);
-
-    JsFuture::from(promise).await.map_err(|error| {
-        WebError::with_details(
-            Forge3DErrorCode::IoError,
-            "Screenshot readback mapping failed",
-            error,
-        )
-    })?;
-
-    let data = {
-        let mapped = buffer.slice(0..size).get_mapped_range();
-        mapped.to_vec()
-    };
-    buffer.unmap();
-    Ok(data)
-}
-
-fn normalize_readback_to_rgba(
-    mut pixels: Vec<u8>,
-    format: wgpu::TextureFormat,
-) -> Result<Vec<u8>, WebError> {
-    match format {
-        wgpu::TextureFormat::Rgba8Unorm | wgpu::TextureFormat::Rgba8UnormSrgb => Ok(pixels),
-        wgpu::TextureFormat::Bgra8Unorm | wgpu::TextureFormat::Bgra8UnormSrgb => {
-            for pixel in pixels.chunks_exact_mut(4) {
-                pixel.swap(0, 2);
-            }
-            Ok(pixels)
-        }
-        _ => Err(WebError::new(
-            Forge3DErrorCode::UnsupportedFeature,
-            format!("Screenshots do not support surface format {format:?}"),
-        )),
-    }
-}
-
-async fn png_blob_from_rgba(width: u32, height: u32, rgba: Vec<u8>) -> Result<Blob, WebError> {
-    let document = web_sys::window()
-        .and_then(|window| window.document())
-        .ok_or_else(|| WebError::new(Forge3DErrorCode::IoError, "Document is not available"))?;
-    let canvas = document
-        .create_element("canvas")
-        .map_err(|error| {
-            WebError::with_details(
-                Forge3DErrorCode::IoError,
-                "Failed to create screenshot encoding canvas",
-                error,
-            )
-        })?
-        .dyn_into::<HtmlCanvasElement>()
-        .map_err(|error| {
-            WebError::with_details(
-                Forge3DErrorCode::IoError,
-                "Created element is not a canvas",
-                error.into(),
-            )
-        })?;
-    canvas.set_width(width);
-    canvas.set_height(height);
-
-    let context = canvas
-        .get_context("2d")
-        .map_err(|error| {
-            WebError::with_details(
-                Forge3DErrorCode::IoError,
-                "Failed to request 2D canvas context",
-                error,
-            )
-        })?
-        .ok_or_else(|| {
-            WebError::new(
-                Forge3DErrorCode::IoError,
-                "2D canvas context is unavailable",
-            )
-        })?
-        .dyn_into::<CanvasRenderingContext2d>()
-        .map_err(|error| {
-            WebError::with_details(
-                Forge3DErrorCode::IoError,
-                "Canvas context is not CanvasRenderingContext2D",
-                error.into(),
-            )
-        })?;
-    let image_data = ImageData::new_with_u8_clamped_array_and_sh(Clamped(&rgba), width, height)
-        .map_err(|error| {
-            WebError::with_details(
-                Forge3DErrorCode::IoError,
-                "Failed to create ImageData for screenshot",
-                error,
-            )
-        })?;
-    context
-        .put_image_data(&image_data, 0.0, 0.0)
-        .map_err(|error| {
-            WebError::with_details(
-                Forge3DErrorCode::IoError,
-                "Failed to write screenshot pixels to canvas",
-                error,
-            )
-        })?;
-
-    let promise = js_sys::Promise::new(&mut |resolve, reject| {
-        let reject_for_callback = reject.clone();
-        let callback = Closure::once(move |blob: Option<Blob>| match blob {
-            Some(blob) => {
-                let _ = resolve.call1(&JsValue::NULL, &blob);
-            }
-            None => {
-                let _ = reject_for_callback.call1(
-                    &JsValue::NULL,
-                    &JsValue::from_str("Browser returned no PNG Blob"),
-                );
-            }
-        });
-
-        if let Err(error) = canvas.to_blob_with_type(callback.as_ref().unchecked_ref(), "image/png")
-        {
-            let _ = reject.call1(&JsValue::NULL, &error);
-        } else {
-            callback.forget();
-        }
-    });
-
-    let blob = JsFuture::from(promise).await.map_err(|error| {
-        WebError::with_details(
-            Forge3DErrorCode::IoError,
-            "Browser PNG encoding failed",
-            error,
-        )
-    })?;
-    blob.dyn_into::<Blob>().map_err(|error| {
-        WebError::with_details(
-            Forge3DErrorCode::IoError,
-            "Browser PNG encoder did not return a Blob",
-            error,
-        )
-    })
-}
-
-fn set_terrain_runtime(runtime: &mut Forge3DRuntime, terrain: JsValue) -> Result<(), WebError> {
-    let terrain = TerrainHeightmapOptions::from_js_value(terrain)?;
+    )?;
     set_terrain_options_runtime(runtime, terrain)
 }
 
-fn set_terrain_options_runtime(
+pub(super) fn set_terrain_options_runtime(
     runtime: &mut Forge3DRuntime,
     terrain: TerrainHeightmapOptions,
 ) -> Result<(), WebError> {
@@ -631,7 +54,10 @@ fn set_terrain_options_runtime(
     Ok(())
 }
 
-fn set_camera_runtime(runtime: &mut Forge3DRuntime, camera: JsValue) -> Result<(), WebError> {
+pub(super) fn set_camera_runtime(
+    runtime: &mut Forge3DRuntime,
+    camera: JsValue,
+) -> Result<(), WebError> {
     let context = runtime.context.as_ref().ok_or_else(|| {
         WebError::new(
             Forge3DErrorCode::RuntimeDisposed,
@@ -647,7 +73,7 @@ fn set_camera_runtime(runtime: &mut Forge3DRuntime, camera: JsValue) -> Result<(
     Ok(())
 }
 
-fn resize_runtime(runtime: &mut Forge3DRuntime, size: JsValue) -> Result<(), WebError> {
+pub(super) fn resize_runtime(runtime: &mut Forge3DRuntime, size: JsValue) -> Result<(), WebError> {
     let context = runtime.context.as_ref().ok_or_else(|| {
         WebError::new(
             Forge3DErrorCode::RuntimeDisposed,
@@ -662,6 +88,15 @@ fn resize_runtime(runtime: &mut Forge3DRuntime, size: JsValue) -> Result<(), Web
     })?;
 
     let (width, height) = ResizeOptions::from_js_value(size)?.pixel_size()?;
+    if width > runtime.max_texture_dimension_2d || height > runtime.max_texture_dimension_2d {
+        return Err(WebError::new(
+            Forge3DErrorCode::ResourceLimitExceeded,
+            format!(
+                "canvas dimensions {width}x{height} exceed maxTextureDimension2D {}",
+                runtime.max_texture_dimension_2d
+            ),
+        ));
+    }
     runtime.canvas.set_width(width);
     runtime.canvas.set_height(height);
     surface_state
@@ -679,21 +114,21 @@ fn resize_runtime(runtime: &mut Forge3DRuntime, size: JsValue) -> Result<(), Web
 
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-struct TerrainVertex {
-    position: [f32; 3],
-    uv: [f32; 2],
+pub(super) struct TerrainVertex {
+    pub(super) position: [f32; 3],
+    pub(super) uv: [f32; 2],
 }
 
 const DEPTH_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Depth24Plus;
 
-struct DepthAttachment {
+pub(super) struct DepthAttachment {
     #[allow(dead_code)]
     texture: wgpu::Texture,
-    view: wgpu::TextureView,
+    pub(super) view: wgpu::TextureView,
 }
 
 impl DepthAttachment {
-    fn new(context: &GpuContext, width: u32, height: u32) -> Self {
+    pub(super) fn new(context: &GpuContext, width: u32, height: u32) -> Self {
         let texture = context.device.create_texture(&wgpu::TextureDescriptor {
             label: Some("forge3d-web-terrain-depth"),
             size: wgpu::Extent3d {
@@ -720,11 +155,11 @@ struct CameraUniform {
 }
 
 const MAX_COLOR_RAMP_STOPS: usize = 8;
-const TERRAIN_SKIRT_DEPTH: f32 = 0.24;
+pub(super) const TERRAIN_SKIRT_DEPTH: f32 = 0.24;
 
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-struct ColorRampUniform {
+pub(super) struct ColorRampUniform {
     stops: [[f32; 4]; MAX_COLOR_RAMP_STOPS],
     stop_count: u32,
     // WGSL uniform layout aligns the following vec3<u32> member to 16 bytes:
@@ -748,12 +183,16 @@ impl ColorRampUniform {
     }
 }
 
-struct TerrainRenderResources {
-    pipeline: wgpu::RenderPipeline,
-    bind_group: wgpu::BindGroup,
-    vertex_buffer: wgpu::Buffer,
-    index_buffer: wgpu::Buffer,
-    index_count: u32,
+pub(super) struct TerrainRenderResources {
+    pub(super) pipeline: wgpu::RenderPipeline,
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    pipeline_layout: wgpu::PipelineLayout,
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    shader: wgpu::ShaderModule,
+    pub(super) bind_group: wgpu::BindGroup,
+    pub(super) vertex_buffer: wgpu::Buffer,
+    pub(super) index_buffer: wgpu::Buffer,
+    pub(super) index_count: u32,
     camera_buffer: wgpu::Buffer,
     #[allow(dead_code)]
     color_ramp_buffer: wgpu::Buffer,
@@ -946,6 +385,8 @@ impl TerrainRenderResources {
 
         Ok(Self {
             pipeline,
+            pipeline_layout,
+            shader,
             bind_group,
             vertex_buffer,
             index_buffer,
@@ -970,6 +411,83 @@ impl TerrainRenderResources {
             .write_buffer(&self.camera_buffer, 0, bytemuck::bytes_of(&uniform));
         Ok(())
     }
+
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    pub(super) fn rebuild_pipeline(
+        &mut self,
+        context: &GpuContext,
+        surface_format: wgpu::TextureFormat,
+    ) {
+        self.pipeline = create_terrain_render_pipeline(
+            &context.device,
+            surface_format,
+            &self.pipeline_layout,
+            &self.shader,
+        );
+    }
+}
+
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+pub(super) fn create_terrain_render_pipeline(
+    device: &wgpu::Device,
+    surface_format: wgpu::TextureFormat,
+    pipeline_layout: &wgpu::PipelineLayout,
+    shader: &wgpu::ShaderModule,
+) -> wgpu::RenderPipeline {
+    device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+        label: Some("forge3d-web-terrain-pipeline"),
+        layout: Some(pipeline_layout),
+        vertex: wgpu::VertexState {
+            module: shader,
+            entry_point: Some("vs_main"),
+            compilation_options: wgpu::PipelineCompilationOptions::default(),
+            buffers: &[wgpu::VertexBufferLayout {
+                array_stride: std::mem::size_of::<TerrainVertex>() as wgpu::BufferAddress,
+                step_mode: wgpu::VertexStepMode::Vertex,
+                attributes: &[
+                    wgpu::VertexAttribute {
+                        offset: 0,
+                        shader_location: 0,
+                        format: wgpu::VertexFormat::Float32x3,
+                    },
+                    wgpu::VertexAttribute {
+                        offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
+                        shader_location: 1,
+                        format: wgpu::VertexFormat::Float32x2,
+                    },
+                ],
+            }],
+        },
+        fragment: Some(wgpu::FragmentState {
+            module: shader,
+            entry_point: Some("fs_main"),
+            compilation_options: wgpu::PipelineCompilationOptions::default(),
+            targets: &[Some(wgpu::ColorTargetState {
+                format: surface_format,
+                blend: None,
+                write_mask: wgpu::ColorWrites::ALL,
+            })],
+        }),
+        primitive: wgpu::PrimitiveState {
+            topology: wgpu::PrimitiveTopology::TriangleList,
+            strip_index_format: None,
+            front_face: wgpu::FrontFace::Ccw,
+            cull_mode: None,
+            unclipped_depth: false,
+            polygon_mode: wgpu::PolygonMode::Fill,
+            conservative: false,
+        },
+        depth_stencil: Some(wgpu::DepthStencilState {
+            format: DEPTH_FORMAT,
+            depth_write_enabled: Some(true),
+            depth_compare: Some(wgpu::CompareFunction::LessEqual),
+            stencil: wgpu::StencilState::default(),
+            bias: wgpu::DepthBiasState::default(),
+        }),
+        multisample: wgpu::MultisampleState::default(),
+        multiview_mask: None,
+        cache: None,
+    })
 }
 
 fn create_terrain_mesh_buffers(
@@ -1006,7 +524,7 @@ fn create_terrain_mesh_buffers(
     Ok((vertex_buffer, index_buffer, indices.len() as u32))
 }
 
-fn append_terrain_edge_skirts(
+pub(super) fn append_terrain_edge_skirts(
     vertices: &mut Vec<TerrainVertex>,
     indices: &mut Vec<u32>,
     width: u32,
@@ -1153,8 +671,8 @@ fn upload_r32float_texture(
     let row_bytes = terrain.width * std::mem::size_of::<f32>() as u32;
     let padded_row_bytes = align_copy_bytes_per_row(row_bytes);
     let source = bytemuck::cast_slice::<f32, u8>(&terrain.heights);
-    let upload = if padded_row_bytes == row_bytes {
-        source.to_vec()
+    let upload: std::borrow::Cow<'_, [u8]> = if padded_row_bytes == row_bytes {
+        std::borrow::Cow::Borrowed(source)
     } else {
         let mut padded = vec![0u8; (padded_row_bytes * terrain.height) as usize];
         for y in 0..terrain.height {
@@ -1165,7 +683,7 @@ fn upload_r32float_texture(
             padded[destination_start..destination_end]
                 .copy_from_slice(&source[source_start..source_end]);
         }
-        padded
+        std::borrow::Cow::Owned(padded)
     };
 
     context.queue.write_texture(
@@ -1194,7 +712,7 @@ fn align_copy_bytes_per_row(value: u32) -> u32 {
     value.div_ceil(alignment) * alignment
 }
 
-const TERRAIN_SHADER: &str = r#"
+pub(super) const TERRAIN_SHADER: &str = r#"
 struct VertexInput {
     @location(0) position: vec3<f32>,
     @location(1) uv: vec2<f32>,
@@ -1303,85 +821,3 @@ fn shade_relief(color: vec3<f32>, normal: vec3<f32>) -> vec3<f32> {
     return clamp(color * shade + highlight, vec3<f32>(0.0), vec3<f32>(1.0));
 }
 "#;
-
-fn install_panic_hook() {
-    #[cfg(feature = "console_error_panic_hook")]
-    console_error_panic_hook::set_once();
-}
-
-pub fn ensure_not_disposed(runtime: &Forge3DRuntime) -> Result<(), JsValue> {
-    ensure_not_disposed_error(runtime).map_err(to_js_error)
-}
-
-pub fn ensure_not_disposed_error(runtime: &Forge3DRuntime) -> Result<(), WebError> {
-    if runtime.disposed {
-        return Err(WebError::new(
-            Forge3DErrorCode::RuntimeDisposed,
-            "Runtime has been disposed",
-        ));
-    }
-    Ok(())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::ensure_not_disposed_error;
-
-    #[test]
-    fn color_ramp_uniform_matches_wgsl_uniform_layout_size() {
-        assert_eq!(std::mem::size_of::<super::ColorRampUniform>(), 160);
-    }
-
-    #[test]
-    fn terrain_edge_skirts_extend_boundary_vertices_below_surface() {
-        let mut vertices = vec![
-            super::TerrainVertex {
-                position: [-1.0, 0.0, -1.0],
-                uv: [0.0, 0.0],
-            },
-            super::TerrainVertex {
-                position: [1.0, 0.0, -1.0],
-                uv: [1.0, 0.0],
-            },
-            super::TerrainVertex {
-                position: [-1.0, 0.0, 1.0],
-                uv: [0.0, 1.0],
-            },
-            super::TerrainVertex {
-                position: [1.0, 0.0, 1.0],
-                uv: [1.0, 1.0],
-            },
-        ];
-        let mut indices = vec![0, 2, 1, 1, 2, 3];
-
-        super::append_terrain_edge_skirts(&mut vertices, &mut indices, 2, 2).unwrap();
-
-        assert_eq!(vertices.len(), 12);
-        assert_eq!(indices.len(), 30);
-        assert!(vertices[4..]
-            .iter()
-            .all(|vertex| (vertex.position[1] + super::TERRAIN_SKIRT_DEPTH).abs() < 0.0001));
-        assert_eq!(vertices[4].uv, [0.0, 0.0]);
-    }
-
-    #[test]
-    fn runtime_dispose_guard_uses_stable_error_code() {
-        let runtime = super::Forge3DRuntime {
-            canvas: wasm_bindgen::JsCast::unchecked_into(wasm_bindgen::JsValue::NULL),
-            gpu_runtime: None,
-            context: None,
-            surface_state: None,
-            depth_attachment: None,
-            terrain: None,
-            camera: forge3d_core::camera::CameraInput::default(),
-            width: 1,
-            height: 1,
-            clear_color: [0.0, 0.0, 0.0, 1.0],
-            diagnostics_enabled: false,
-            disposed: true,
-        };
-
-        let error = ensure_not_disposed_error(&runtime).unwrap_err();
-        assert_eq!(error.code().as_str(), "RUNTIME_DISPOSED");
-    }
-}

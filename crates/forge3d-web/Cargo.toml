@@ -40,6 +40,8 @@ web-sys = { workspace = true, features = [
     "Request",
     "RequestInit",
     "RequestMode",
+    "ReadableStream",
+    "ReadableStreamDefaultReader",
     "Response",
     "Window",
 ] }
