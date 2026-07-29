@@ -10,12 +10,34 @@ const workflow = readFileSync(
   join(repositoryRoot, ".github", "workflows", "browser-lab-broker.yml"),
   "utf8",
 ).replace(/\r\n/gu, "\n");
+const bootstrapGate = jobBlock(
+  workflow,
+  "broker-package-bootstrap",
+  "observe-broker-package-trust",
+);
 const observer = jobBlock(
   workflow,
   "observe-broker-package-trust",
   "package-broker",
 );
 const packager = jobBlock(workflow, "package-broker", null);
+
+test("pending repository trust gates privileged packaging without credentials", () => {
+  assert.match(bootstrapGate, /runs-on: ubuntu-latest/u);
+  assert.match(bootstrapGate, /contents: read/u);
+  assert.match(bootstrapGate, /ref: \$\{\{ github\.workflow_sha \}\}/u);
+  assert.match(
+    bootstrapGate,
+    /node scripts\/resolve-broker-package-bootstrap\.mjs/u,
+  );
+  assert.equal(bootstrapGate.includes("environment:"), false);
+  assert.equal(bootstrapGate.includes("secrets."), false);
+  assert.match(observer, /needs: broker-package-bootstrap/u);
+  assert.match(
+    observer,
+    /if: needs\.broker-package-bootstrap\.outputs\.package_enabled == 'true'/u,
+  );
+});
 
 test("observer exposes only the exact four non-secret handoff outputs", () => {
   const outputs = observer
@@ -66,6 +88,10 @@ test("only the GitHub-hosted observer job can reference observer credentials", (
 });
 
 test("observer upload is immutable, exact-name, error-on-missing, and attested", () => {
+  assert.match(
+    observer,
+    /if: always\(\) && steps\.observer-token\.outputs\.token != ''/u,
+  );
   assert.match(observer, /id: upload-observation/u);
   assert.match(
     observer,
