@@ -1,0 +1,21 @@
+[Unit]
+Description=Forge3D browser lab controller
+After=network-online.target graphical-session.target
+Wants=network-online.target graphical-session.target
+
+[Service]
+Type=simple
+User=forge3d-lab-controller
+Group=forge3d-lab-controller
+ExecStart=/usr/bin/node /opt/forge3d/browser-lab-controller/src/controller-health-service.mjs
+WorkingDirectory=/var/lib/forge3d-browser-lab
+EnvironmentFile=/etc/forge3d/browser-lab-controller.env
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ReadWritePaths=/var/lib/forge3d-browser-lab /var/log/forge3d-browser-lab
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical.target

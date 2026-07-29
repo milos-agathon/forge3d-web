@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/manual-evidence-intake.schema.json",
+  "title": "Forge3D draft manual-evidence intake",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "repository",
+    "prepareWorkflow",
+    "prepareRun",
+    "trustedSha",
+    "packageRunId",
+    "packageSha256",
+    "checklistId",
+    "checklistSha256",
+    "stepIds",
+    "assetId",
+    "hostId",
+    "expectedTester",
+    "mediaChallenge",
+    "supportClaim",
+    "createdAt",
+    "expiresAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "repository": { "const": "milos-agathon/forge3d-web" },
+    "prepareWorkflow": {
+      "const": ".github/workflows/prepare-browser-manual-evidence.yml"
+    },
+    "prepareRun": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "attempt", "workflowSha"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "attempt": { "type": "integer", "minimum": 1 },
+        "workflowSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+      }
+    },
+    "trustedSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "packageRunId": { "type": "integer", "minimum": 1 },
+    "packageSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "checklistId": {
+      "enum": [
+        "infrastructure-manual-canary",
+        "mobile-multitouch",
+        "safari-trackpad"
+      ]
+    },
+    "checklistSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "stepIds": {
+      "type": "array",
+      "minItems": 4,
+      "items": { "type": "string", "pattern": "^[A-Z0-9_]+$" }
+    },
+    "assetId": { "type": "string", "pattern": "^FW-[A-Z0-9-]+$" },
+    "hostId": { "const": "FW-MAC-M2-01" },
+    "expectedTester": { "type": "string", "minLength": 1 },
+    "mediaChallenge": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
+    "supportClaim": { "type": "boolean" },
+    "createdAt": { "type": "string", "minLength": 20 },
+    "expiresAt": { "type": "string", "minLength": 20 }
+  }
+}

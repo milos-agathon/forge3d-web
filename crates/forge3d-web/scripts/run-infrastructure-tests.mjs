@@ -7,6 +7,7 @@ const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const testDirectories = [
   resolve(packageRoot, "tests", "infrastructure"),
   resolve(packageRoot, "..", "..", "tools", "browser-lab-broker", "test"),
+  resolve(packageRoot, "..", "..", "tools", "browser-lab-controller", "test"),
 ];
 const testFiles = testDirectories
   .flatMap((directory) =>

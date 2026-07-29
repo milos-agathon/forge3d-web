@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.forge3d.browser-lab-controller</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/local/bin/node</string>
+    <string>/Library/Application Support/Forge3D/browser-lab-controller/src/controller-health-service.mjs</string>
+  </array>
+  <key>WorkingDirectory</key>
+  <string>/Library/Application Support/Forge3D/browser-lab</string>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <dict><key>SuccessfulExit</key><false/></dict>
+  <key>StandardOutPath</key>
+  <string>/Library/Logs/Forge3D/browser-lab-controller.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Library/Logs/Forge3D/browser-lab-controller-error.log</string>
+</dict>
+</plist>

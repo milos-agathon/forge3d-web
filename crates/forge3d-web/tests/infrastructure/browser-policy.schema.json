@@ -12,6 +12,11 @@
     "jitWorkFolder",
     "brokerProtocolVersion",
     "cleanupProtocolVersion",
+    "acceptanceWindowHours",
+    "headedSessionRequired",
+    "prohibitedLaunchArguments",
+    "channels",
+    "tools",
     "archives",
     "runnerDistributionManifestSha256",
     "runnerTransientPathPolicySha256"
@@ -24,6 +29,75 @@
     "jitWorkFolder": { "const": "_work" },
     "brokerProtocolVersion": { "const": "forge3d-browser-lab-broker/v1" },
     "cleanupProtocolVersion": { "const": "forge3d-browser-lab-cleanup/v1" },
+    "acceptanceWindowHours": { "const": 24 },
+    "headedSessionRequired": { "const": true },
+    "prohibitedLaunchArguments": {
+      "type": "array",
+      "minItems": 12,
+      "items": {
+        "type": "string",
+        "pattern": "^--[a-z0-9-]+$"
+      }
+    },
+    "channels": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "browser",
+          "channel",
+          "classification",
+          "minimumMajor",
+          "automation"
+        ],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "browser": {
+            "enum": ["chrome", "edge", "safari", "firefox"]
+          },
+          "channel": {
+            "enum": [
+              "stable",
+              "beta",
+              "technology-preview",
+              "release",
+              "nightly"
+            ]
+          },
+          "classification": { "enum": ["required", "probe"] },
+          "minimumMajor": { "type": "integer", "minimum": 26 },
+          "automation": {
+            "enum": ["playwright", "safaridriver", "selenium"]
+          }
+        }
+      }
+    },
+    "tools": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "playwright",
+        "selenium",
+        "geckodriver",
+        "appium",
+        "appiumUiAutomator2",
+        "appiumXcuitest",
+        "safaridriverPath"
+      ],
+      "properties": {
+        "playwright": { "$ref": "#/$defs/version" },
+        "selenium": { "$ref": "#/$defs/version" },
+        "geckodriver": { "$ref": "#/$defs/version" },
+        "appium": { "$ref": "#/$defs/version" },
+        "appiumUiAutomator2": { "$ref": "#/$defs/version" },
+        "appiumXcuitest": { "$ref": "#/$defs/version" },
+        "safaridriverPath": { "const": "/usr/bin/safaridriver" }
+      }
+    },
     "archives": {
       "type": "array",
       "minItems": 3,
@@ -53,6 +127,12 @@
     "runnerTransientPathPolicySha256": {
       "type": "string",
       "pattern": "^[0-9a-f]{64}$"
+    }
+  },
+  "$defs": {
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
     }
   }
 }

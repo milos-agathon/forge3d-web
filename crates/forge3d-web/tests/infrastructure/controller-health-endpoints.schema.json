@@ -29,7 +29,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["assetId", "identity", "url"],
+        "required": ["assetId", "identity", "url", "receiptUrlTemplate"],
         "properties": {
           "assetId": {
             "enum": [
@@ -46,6 +46,10 @@
           "url": {
             "type": "string",
             "pattern": "^https://[^/?#]+:9443/v1/health$"
+          },
+          "receiptUrlTemplate": {
+            "type": "string",
+            "pattern": "^https://[^/?#]+:9443/v1/receipts/\\{run_id\\}/\\{run_attempt\\}/host-lab-canary$"
           }
         }
       }

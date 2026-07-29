@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/https-origin-policy.schema.json",
+  "title": "Forge3D browser-lab HTTPS origin policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "provider", "pathPattern", "hosts"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "provider": { "const": "cloudflare-tunnel" },
+    "pathPattern": {
+      "const": "^/runs/[1-9][0-9]*/[1-9][0-9]*/[0-9a-f]{32}/$"
+    },
+    "hosts": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["hostAssetId", "applicationHost", "assetHost"],
+        "properties": {
+          "hostAssetId": {
+            "enum": [
+              "FW-MAC-M2-01",
+              "FW-WIN-I12-01",
+              "FW-LNX-I12-01",
+              "FW-LNX-NV-01"
+            ]
+          },
+          "applicationHost": {
+            "type": "string",
+            "pattern": "^[a-z0-9-]+\\.webgpu-ci\\.forge3d\\.dev$"
+          },
+          "assetHost": {
+            "type": "string",
+            "pattern": "^assets-[a-z0-9-]+\\.webgpu-ci\\.forge3d\\.dev$"
+          }
+        }
+      }
+    }
+  }
+}

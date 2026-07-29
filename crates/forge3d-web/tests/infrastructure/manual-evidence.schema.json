@@ -1,0 +1,114 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/manual-evidence.schema.json",
+  "title": "Forge3D authenticated manual evidence",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "repository",
+    "workflow",
+    "run",
+    "trustedSha",
+    "packageSha256",
+    "labInfrastructureDigest",
+    "checklistId",
+    "stepResults",
+    "assetId",
+    "actor",
+    "approver",
+    "intakeReleaseId",
+    "manualSessionRunId",
+    "manualSessionJobId",
+    "authorizationSha256",
+    "controllerSignatureSha256",
+    "routeBasePath",
+    "mediaChallenge",
+    "media",
+    "createdAt",
+    "expiresAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "repository": { "const": "milos-agathon/forge3d-web" },
+    "workflow": {
+      "const": ".github/workflows/submit-browser-manual-evidence.yml"
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "attempt", "workflowSha"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "attempt": { "type": "integer", "minimum": 1 },
+        "workflowSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+      }
+    },
+    "trustedSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "packageSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "labInfrastructureDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "checklistId": { "enum": ["mobile-multitouch", "safari-trackpad"] },
+    "stepResults": {
+      "type": "object",
+      "minProperties": 4,
+      "additionalProperties": { "enum": ["pass", "fail"] }
+    },
+    "assetId": { "type": "string", "pattern": "^FW-[A-Z0-9-]+$" },
+    "actor": { "type": "string", "minLength": 1 },
+    "approver": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "login"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "login": { "type": "string", "minLength": 1 }
+      }
+    },
+    "intakeReleaseId": { "type": "integer", "minimum": 1 },
+    "manualSessionRunId": { "type": "integer", "minimum": 1 },
+    "manualSessionJobId": { "type": "integer", "minimum": 1 },
+    "authorizationSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "controllerSignatureSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "routeBasePath": {
+      "type": "string",
+      "pattern": "^/runs/[1-9][0-9]*/[1-9][0-9]*/[0-9a-f]{32}/$"
+    },
+    "mediaChallenge": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
+    "media": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "name",
+          "uploader",
+          "size",
+          "mimeType",
+          "createdAt",
+          "apiSha256",
+          "sha256"
+        ],
+        "properties": {
+          "id": { "type": "integer", "minimum": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "uploader": { "type": "string", "minLength": 1 },
+          "size": { "type": "integer", "minimum": 1 },
+          "mimeType": { "type": "string", "minLength": 1 },
+          "createdAt": { "type": "string", "minLength": 20 },
+          "apiSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+        }
+      }
+    },
+    "createdAt": { "type": "string", "minLength": 20 },
+    "expiresAt": { "type": "string", "minLength": 20 }
+  }
+}

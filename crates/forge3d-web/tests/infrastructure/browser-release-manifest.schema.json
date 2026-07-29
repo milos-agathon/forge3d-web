@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/browser-release-manifest.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "supportClaim",
+    "targetSha",
+    "tag",
+    "preflightSha256",
+    "assets",
+    "releaseVerification",
+    "publishedAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "supportClaim": { "type": "boolean" },
+    "targetSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "tag": { "type": "string", "minLength": 1 },
+    "preflightSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "assets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "sha256", "verified"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "verified": { "const": true }
+        }
+      }
+    },
+    "releaseVerification": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["releaseVerified", "allAssetsVerified", "outputSha256"],
+      "properties": {
+        "releaseVerified": { "const": true },
+        "allAssetsVerified": { "const": true },
+        "outputSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "publishedAt": { "type": "string", "minLength": 20 }
+  }
+}

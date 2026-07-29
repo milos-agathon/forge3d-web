@@ -1,0 +1,1043 @@
+name: Browser Hardware
+
+on:
+  workflow_dispatch:
+    inputs:
+      lane:
+        description: Checked browser or infrastructure lane
+        required: true
+        type: choice
+        options:
+          - infrastructure-canary
+          - chrome-macos-m2
+          - edge-macos-m2
+          - safari-macos-m2
+          - firefox-macos-m2
+          - mobile-usb-controller
+          - chrome-windows-intel12
+          - edge-windows-intel12
+          - firefox-windows-intel12
+          - chrome-linux-intel12
+          - edge-linux-intel12
+          - chrome-linux-rtx3070
+          - edge-linux-rtx3070
+          - manual-mobile-multitouch
+          - manual-safari-trackpad
+      assetId:
+        description: Fixed public asset ID
+        required: true
+        type: choice
+        options:
+          - FW-MAC-M2-01
+          - FW-WIN-I12-01
+          - FW-LNX-I12-01
+          - FW-LNX-NV-01
+          - FW-TRACKPAD-01
+          - FW-AND-QCOM-01
+          - FW-AND-MALI-01
+          - FW-AND-PEN-01
+          - FW-IOS-OLD-01
+          - FW-IOS-NEW-01
+          - FW-IPAD-01
+      required:
+        description: Required support lane
+        required: true
+        type: boolean
+        default: true
+      trusted_sha:
+        description: Full protected-main candidate SHA
+        required: true
+        type: string
+      packageRunId:
+        description: Exact successful Browser Package run ID
+        required: true
+        type: string
+      labReadinessRunId:
+        description: Exact passing laboratory-readiness run ID
+        required: false
+        type: string
+      canaryMode:
+        description: Infrastructure canary mode only
+        required: false
+        type: choice
+        options:
+          - ""
+          - host
+          - manual
+      intakeReleaseId:
+        description: Exact draft manual-evidence intake release ID
+        required: false
+        type: string
+
+permissions: {}
+
+jobs:
+  observe-hardware-trust:
+    name: Browser Hardware / Observe Trusted Candidate
+    runs-on: ubuntu-latest
+    environment: forge3d-trust-observer
+    permissions:
+      actions: read
+      artifact-metadata: write
+      attestations: write
+      checks: read
+      contents: read
+      id-token: write
+    outputs:
+      observation_artifact_id: ${{ steps.upload-observation.outputs.artifact-id }}
+      observation_artifact_name: ${{ steps.emit-observation.outputs.artifact-name }}
+      observation_artifact_digest: ${{ steps.upload-observation.outputs.artifact-digest }}
+      observation_content_sha256: ${{ steps.emit-observation.outputs.content-sha256 }}
+
+    steps:
+      - name: Reject workflow dispatch outside protected main
+        if: github.ref != 'refs/heads/main'
+        run: exit 1
+
+      - name: Check out protected observer code
+        if: github.ref == 'refs/heads/main'
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+
+      - name: Mint short-lived trust-observer token
+        id: observer-token
+        working-directory: crates/forge3d-web
+        env:
+          TRUST_OBSERVER_APP_ID: ${{ secrets.TRUST_OBSERVER_APP_ID }}
+          TRUST_OBSERVER_INSTALLATION_ID: ${{ secrets.TRUST_OBSERVER_INSTALLATION_ID }}
+          TRUST_OBSERVER_PRIVATE_KEY: ${{ secrets.TRUST_OBSERVER_PRIVATE_KEY }}
+        run: node scripts/mint-github-app-token.mjs
+
+      - name: Verify live protected-main policy and exact checks
+        working-directory: crates/forge3d-web
+        env:
+          GITHUB_TOKEN: ${{ steps.observer-token.outputs.token }}
+        run: node scripts/verify-repository-trust.mjs > repository-trust-verification.json
+
+      - name: Emit candidate-bound observation
+        id: emit-observation
+        working-directory: crates/forge3d-web
+        run: |
+          node scripts/emit-repository-trust-observation.mjs \
+            --verification repository-trust-verification.json \
+            --operation promote-hardware \
+            --consumer promote-hardware@none \
+            --workflow-path .github/workflows/browser-hardware.yml \
+            --workflow-ref refs/heads/main \
+            --workflow-sha "${{ github.workflow_sha }}" \
+            --run-id "${{ github.run_id }}" \
+            --run-attempt "${{ github.run_attempt }}" \
+            --candidate-sha "${{ inputs.trusted_sha }}" \
+            --target-sha "${{ inputs.trusted_sha }}" \
+            --output repository-trust-observation.json
+          artifact_name="repository-trust-${{ github.run_id }}-${{ github.run_attempt }}-promote-hardware"
+          content_sha256="$(sha256sum repository-trust-observation.json | cut -d ' ' -f 1)"
+          echo "artifact-name=${artifact_name}" >> "$GITHUB_OUTPUT"
+          echo "content-sha256=${content_sha256}" >> "$GITHUB_OUTPUT"
+
+      - name: Revoke trust-observer token
+        if: always() && steps.observer-token.outputs.token != ''
+        working-directory: crates/forge3d-web
+        env:
+          OBSERVER_TOKEN: ${{ steps.observer-token.outputs.token }}
+        run: |
+          node --input-type=module --eval '
+            const response = await fetch("https://api.github.com/installation/token", {
+              method: "DELETE",
+              headers: { Accept: "application/vnd.github+json", Authorization: `Bearer ${process.env.OBSERVER_TOKEN}`, "X-GitHub-Api-Version": "2022-11-28" }
+            });
+            if (response.status !== 204) throw new Error(`token revocation failed: ${response.status}`);
+          '
+
+      - name: Upload exact observation
+        id: upload-observation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ${{ steps.emit-observation.outputs.artifact-name }}
+          path: crates/forge3d-web/repository-trust-observation.json
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 1
+
+      - name: Attest GitHub-hosted observation
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-path: crates/forge3d-web/repository-trust-observation.json
+
+  promote-hardware:
+    name: Browser Hardware / Promote Trusted Artifact
+    needs: observe-hardware-trust
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      artifact-metadata: write
+      attestations: write
+      checks: read
+      contents: read
+      id-token: write
+    outputs:
+      host_id: ${{ steps.promotion-outputs.outputs.host-id }}
+      hardware_label: ${{ steps.promotion-outputs.outputs.hardware-label }}
+      nonce_label: ${{ steps.promotion-outputs.outputs.nonce-label }}
+      runner_nonce: ${{ steps.promotion-outputs.outputs.runner-nonce }}
+      promotion_artifact_id: ${{ steps.upload-promotion.outputs.artifact-id }}
+      promotion_artifact_name: ${{ steps.promotion-outputs.outputs.artifact-name }}
+      promotion_artifact_digest: ${{ steps.upload-promotion.outputs.artifact-digest }}
+
+    steps:
+      - name: Check out protected validation code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.workflow_sha }}
+          path: validation
+          persist-credentials: false
+
+      - name: Verify exact-ID observer handoff before target source
+        working-directory: validation/crates/forge3d-web
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          OBSERVATION_ARTIFACT_ID: ${{ needs.observe-hardware-trust.outputs.observation_artifact_id }}
+          OBSERVATION_ARTIFACT_NAME: ${{ needs.observe-hardware-trust.outputs.observation_artifact_name }}
+          OBSERVATION_ARTIFACT_DIGEST: ${{ needs.observe-hardware-trust.outputs.observation_artifact_digest }}
+          OBSERVATION_CONTENT_SHA256: ${{ needs.observe-hardware-trust.outputs.observation_content_sha256 }}
+          EXPECTED_OPERATION: promote-hardware
+          EXPECTED_CONSUMER_JOB: promote-hardware
+          EXPECTED_CONSUMER_ENVIRONMENT: none
+          EXPECTED_TARGET_SHA: ${{ inputs.trusted_sha }}
+          EXPECTED_CANDIDATE_SHA: ${{ inputs.trusted_sha }}
+          EXPECTED_CURRENT_MAIN_SHA: ${{ github.sha }}
+          EXPECTED_WORKFLOW_PATH: .github/workflows/browser-hardware.yml
+        run: node scripts/verify-repository-trust-observation.mjs
+
+      - name: Check out only the validated base-repository target
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          repository: milos-agathon/forge3d-web
+          ref: ${{ inputs.trusted_sha }}
+          path: source
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify strict post-epoch reachability and workflow definition
+        shell: bash
+        working-directory: source
+        run: |
+          epoch="$(node -p "require('./crates/forge3d-web/tests/infrastructure/repository-trust-policy.json').trustEpochSha")"
+          test "${#epoch}" -eq 40
+          test "${{ inputs.trusted_sha }}" != "${epoch}"
+          test "${{ github.workflow_sha }}" != "${epoch}"
+          git merge-base --is-ancestor "${epoch}" "${{ inputs.trusted_sha }}"
+          git merge-base --is-ancestor "${epoch}" "${{ github.workflow_sha }}"
+          git merge-base --is-ancestor "${{ inputs.trusted_sha }}" "${{ github.sha }}"
+          git merge-base --is-ancestor "${{ github.workflow_sha }}" "${{ github.sha }}"
+
+      - name: Resolve exact successful package run and artifact
+        id: package
+        working-directory: source/crates/forge3d-web
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/resolve-hardware-promotion.mjs \
+            --package-run-id "${{ inputs.packageRunId }}" \
+            --trusted-sha "${{ inputs.trusted_sha }}" \
+            --output package-run.json
+
+      - name: Download package only by resolved artifact ID
+        shell: bash
+        working-directory: source/crates/forge3d-web
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${{ steps.package.outputs.package-artifact-id }}/zip" > package.zip
+          actual="$(sha256sum package.zip | cut -d ' ' -f 1)"
+          expected="${{ steps.package.outputs.package-artifact-digest }}"
+          test "${actual}" = "${expected#sha256:}"
+          mkdir promoted-package
+          unzip -q package.zip -d promoted-package
+          test "$(find promoted-package -name browser-package-manifest.json -type f | wc -l)" -eq 1
+          gh attestation verify promoted-package/browser-package-manifest.json \
+            --repo milos-agathon/forge3d-web \
+            --signer-workflow milos-agathon/forge3d-web/.github/workflows/browser-package.yml \
+            --source-ref refs/heads/main \
+            --source-digest "${{ inputs.trusted_sha }}" \
+            --deny-self-hosted-runners
+
+      - name: Resolve and verify exact manual intake
+        if: inputs.intakeReleaseId != ''
+        shell: bash
+        working-directory: source/crates/forge3d-web
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INTAKE_RELEASE_ID: ${{ inputs.intakeReleaseId }}
+          TRUSTED_SHA: ${{ inputs.trusted_sha }}
+          PACKAGE_RUN_ID: ${{ inputs.packageRunId }}
+          DISPATCH_LANE: ${{ inputs.lane }}
+          DISPATCH_ASSET_ID: ${{ inputs.assetId }}
+          CANARY_MODE: ${{ inputs.canaryMode }}
+        run: |
+          gh api "/repos/${GITHUB_REPOSITORY}/releases/${INTAKE_RELEASE_ID}" > intake-release-api.json
+          intake_asset_id="$(node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            const release = JSON.parse(readFileSync("intake-release-api.json", "utf8"));
+            const matches = release.assets.filter((asset) => asset.name === "intake-manifest.json");
+            if (matches.length !== 1) throw new Error("expected exactly one intake-manifest.json asset");
+            process.stdout.write(String(matches[0].id));
+          ')"
+          gh api \
+            -H "Accept: application/octet-stream" \
+            "/repos/${GITHUB_REPOSITORY}/releases/assets/${intake_asset_id}" \
+            > intake-manifest.json
+          gh attestation verify intake-manifest.json \
+            --repo milos-agathon/forge3d-web \
+            --signer-workflow milos-agathon/forge3d-web/.github/workflows/prepare-browser-manual-evidence.yml \
+            --source-ref refs/heads/main \
+            --source-digest "$(node -p "require('./intake-manifest.json').prepareRun.workflowSha")" \
+            --deny-self-hosted-runners
+          node --input-type=module --eval '
+            import { createHash } from "node:crypto";
+            import { readFileSync, writeFileSync } from "node:fs";
+            const releaseApi = JSON.parse(readFileSync("intake-release-api.json", "utf8"));
+            const intake = JSON.parse(readFileSync("intake-manifest.json", "utf8"));
+            const intakeBytes = readFileSync("intake-manifest.json");
+            const digest = createHash("sha256").update(intakeBytes).digest("hex");
+            const input = {
+              release: {
+                id: releaseApi.id,
+                draft: releaseApi.draft,
+                tagName: releaseApi.tag_name,
+                targetCommitish: releaseApi.target_commitish
+              },
+              intakeAsset: { name: "intake-manifest.json", sha256: digest },
+              intake,
+              attestation: {
+                repository: "milos-agathon/forge3d-web",
+                signerWorkflow: "milos-agathon/forge3d-web/.github/workflows/prepare-browser-manual-evidence.yml",
+                sourceRef: "refs/heads/main",
+                sourceDigest: intake.prepareRun.workflowSha,
+                denySelfHostedRunners: true,
+                subjectSha256: digest
+              },
+              dispatch: {
+                intakeReleaseId: Number(process.env.INTAKE_RELEASE_ID),
+                trustedSha: process.env.TRUSTED_SHA,
+                packageRunId: Number(process.env.PACKAGE_RUN_ID),
+                lane: process.env.DISPATCH_LANE,
+                canaryMode: process.env.CANARY_MODE || null,
+                assetId: process.env.DISPATCH_ASSET_ID,
+                hostId: "FW-MAC-M2-01"
+              },
+              packageManifest: JSON.parse(readFileSync("promoted-package/browser-package-manifest.json", "utf8")),
+              actor: process.env.GITHUB_ACTOR
+            };
+            writeFileSync("manual-intake-verification-input.json", JSON.stringify(input));
+          '
+          node scripts/resolve-manual-intake.mjs \
+            --input manual-intake-verification-input.json \
+            --intake intake-manifest.json \
+            --output manual-session-promotion.json
+
+      - name: Verify exact laboratory gate before any product lane
+        if: inputs.labReadinessRunId != ''
+        shell: bash
+        working-directory: source/crates/forge3d-web
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LAB_READINESS_RUN_ID: ${{ inputs.labReadinessRunId }}
+          TRUSTED_SHA: ${{ inputs.trusted_sha }}
+          PACKAGE_RUN_ID: ${{ inputs.packageRunId }}
+        run: |
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${LAB_READINESS_RUN_ID}" > lab-readiness-run.json
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${LAB_READINESS_RUN_ID}/jobs?per_page=100" > lab-readiness-jobs.json
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${LAB_READINESS_RUN_ID}/artifacts?per_page=100" > lab-readiness-artifacts.json
+          node --input-type=module --eval '
+            import { readFileSync, writeFileSync } from "node:fs";
+            const run = JSON.parse(readFileSync("lab-readiness-run.json", "utf8"));
+            const jobs = JSON.parse(readFileSync("lab-readiness-jobs.json", "utf8")).jobs;
+            const artifacts = JSON.parse(readFileSync("lab-readiness-artifacts.json", "utf8")).artifacts;
+            if (
+              run.path !== ".github/workflows/browser-lab-infrastructure-readiness.yml" ||
+              run.head_sha !== process.env.TRUSTED_SHA ||
+              run.head_branch !== "main" ||
+              run.status !== "completed" ||
+              run.conclusion !== "success" ||
+              jobs.filter((job) =>
+                job.name === "browser-lab-infrastructure-readiness" &&
+                job.conclusion === "success"
+              ).length !== 1
+            ) throw new Error("laboratory readiness run/job is invalid");
+            const matches = artifacts.filter((artifact) =>
+              artifact.name === "browser-lab-infrastructure-readiness"
+            );
+            if (matches.length !== 1 || matches[0].expired) throw new Error("laboratory readiness artifact mismatch");
+            writeFileSync("lab-readiness-artifact.json", JSON.stringify(matches[0]));
+          '
+          artifact_id="$(node -p "require('./lab-readiness-artifact.json').id")"
+          expected="$(node -p "require('./lab-readiness-artifact.json').digest")"
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > lab-readiness.zip
+          test "$(sha256sum lab-readiness.zip | cut -d ' ' -f 1)" = "${expected#sha256:}"
+          mkdir lab-readiness
+          unzip -q lab-readiness.zip -d lab-readiness
+          test "$(find lab-readiness -name browser-lab-infrastructure-readiness.json -type f | wc -l)" -eq 1
+          manifest="$(find lab-readiness -name browser-lab-infrastructure-readiness.json -type f)"
+          gh attestation verify "${manifest}" \
+            --repo milos-agathon/forge3d-web \
+            --signer-workflow milos-agathon/forge3d-web/.github/workflows/browser-lab-infrastructure-readiness.yml \
+            --source-ref refs/heads/main \
+            --source-digest "${TRUSTED_SHA}" \
+            --deny-self-hosted-runners
+          node --input-type=module --eval '
+            import { readFileSync, writeFileSync } from "node:fs";
+            import { verifyLabReadinessForPromotion } from "./scripts/compute-lab-readiness.mjs";
+            const api = JSON.parse(readFileSync("lab-readiness-run.json", "utf8"));
+            const digest = verifyLabReadinessForPromotion({
+              manifest: JSON.parse(readFileSync(process.argv[1], "utf8")),
+              readinessRun: {
+                id: api.id,
+                path: api.path,
+                headSha: api.head_sha,
+                headBranch: api.head_branch,
+                conclusion: api.conclusion
+              },
+              dispatch: {
+                trustedSha: process.env.TRUSTED_SHA,
+                packageRunId: Number(process.env.PACKAGE_RUN_ID),
+                labReadinessRunId: Number(process.env.LAB_READINESS_RUN_ID)
+              },
+              packageManifest: JSON.parse(readFileSync("promoted-package/browser-package-manifest.json", "utf8")),
+              attestation: {
+                repository: "milos-agathon/forge3d-web",
+                signerWorkflow: "milos-agathon/forge3d-web/.github/workflows/browser-lab-infrastructure-readiness.yml",
+                sourceRef: "refs/heads/main",
+                sourceDigest: process.env.TRUSTED_SHA,
+                denySelfHostedRunners: true
+              }
+            });
+            writeFileSync(process.env.GITHUB_ENV, `FORGE3D_VERIFIED_LAB_DIGEST=${digest}\n`, { flag: "a" });
+          ' "${manifest}"
+
+      - name: Create authorization-bound promotion
+        shell: bash
+        working-directory: source/crates/forge3d-web
+        env:
+          DISPATCH_LANE: ${{ inputs.lane }}
+          DISPATCH_ASSET_ID: ${{ inputs.assetId }}
+          DISPATCH_REQUIRED: ${{ inputs.required }}
+          TRUSTED_SHA: ${{ inputs.trusted_sha }}
+          PACKAGE_RUN_ID: ${{ inputs.packageRunId }}
+          LAB_READINESS_RUN_ID: ${{ inputs.labReadinessRunId }}
+          CANARY_MODE: ${{ inputs.canaryMode }}
+          INTAKE_RELEASE_ID: ${{ inputs.intakeReleaseId }}
+          WORKFLOW_SHA: ${{ github.workflow_sha }}
+        run: |
+          manifest_sha="$(sha256sum promoted-package/browser-package-manifest.json | cut -d ' ' -f 1)"
+          node --input-type=module --eval '
+            import { readFileSync, writeFileSync } from "node:fs";
+            const policy = JSON.parse(readFileSync("tests/infrastructure/repository-trust-policy.json", "utf8"));
+            const input = {
+              dispatch: {
+                lane: process.env.DISPATCH_LANE,
+                assetId: process.env.DISPATCH_ASSET_ID,
+                required: process.env.DISPATCH_REQUIRED,
+                trustedSha: process.env.TRUSTED_SHA,
+                packageRunId: process.env.PACKAGE_RUN_ID,
+                labReadinessRunId: process.env.LAB_READINESS_RUN_ID,
+                canaryMode: process.env.CANARY_MODE,
+                intakeReleaseId: process.env.INTAKE_RELEASE_ID
+              },
+              trustEpochSha: policy.trustEpochSha,
+              workflowSha: process.env.WORKFLOW_SHA,
+              packageManifestSha256: process.argv[1],
+              labInfrastructureDigest: process.env.LAB_READINESS_RUN_ID ? process.env.FORGE3D_VERIFIED_LAB_DIGEST : null,
+              manualSession: process.env.INTAKE_RELEASE_ID
+                ? JSON.parse(readFileSync("manual-session-promotion.json", "utf8"))
+                : null
+            };
+            writeFileSync("promotion-input.json", JSON.stringify(input));
+          ' "${manifest_sha}"
+          node scripts/hardware-orchestration.mjs \
+            --operation promote \
+            --input promotion-input.json \
+            --output promoted-package/hardware-promotion.json
+
+      - name: Export only derived routing outputs
+        id: promotion-outputs
+        working-directory: source/crates/forge3d-web
+        run: |
+          node --input-type=module --eval '
+            import { readFileSync, writeFileSync } from "node:fs";
+            const value = JSON.parse(readFileSync("promoted-package/hardware-promotion.json", "utf8"));
+            writeFileSync(process.env.GITHUB_OUTPUT, [
+              `host-id=${value.hostId}`,
+              `hardware-label=${value.hardwareLabel}`,
+              `nonce-label=${value.nonceLabel}`,
+              `runner-nonce=${value.runnerNonce}`,
+              `artifact-name=hardware-promotion-${process.env.GITHUB_RUN_ID}-${process.env.GITHUB_RUN_ATTEMPT}`,
+              ""
+            ].join("\n"), { flag: "a" });
+          '
+
+      - name: Upload run-scoped promoted package and harness
+        id: upload-promotion
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ${{ steps.promotion-outputs.outputs.artifact-name }}
+          path: source/crates/forge3d-web/promoted-package/
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 90
+
+      - name: Attest copied package, harness, and promotion manifest
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-path: source/crates/forge3d-web/promoted-package/*
+
+  authorize-runner:
+    name: Browser Hardware / Authorize JIT Runner
+    needs: promote-hardware
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      artifact-metadata: write
+      attestations: write
+      contents: read
+      id-token: write
+    outputs:
+      authorization_artifact_id: ${{ steps.upload-authorization.outputs.artifact-id }}
+      authorization_artifact_digest: ${{ steps.upload-authorization.outputs.artifact-digest }}
+      authorization_sha256: ${{ steps.authorize.outputs.authorization-sha256 }}
+
+    steps:
+      - name: Check out protected authorization code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+
+      - name: Download promotion by exact artifact ID
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${{ needs.promote-hardware.outputs.promotion_artifact_id }}/zip" > promotion.zip
+          actual="$(sha256sum promotion.zip | cut -d ' ' -f 1)"
+          expected="${{ needs.promote-hardware.outputs.promotion_artifact_digest }}"
+          test "${actual}" = "${expected#sha256:}"
+          mkdir promotion
+          unzip -q promotion.zip -d promotion
+          gh attestation verify promotion/hardware-promotion.json \
+            --repo milos-agathon/forge3d-web \
+            --signer-workflow milos-agathon/forge3d-web/.github/workflows/browser-hardware.yml \
+            --source-ref refs/heads/main \
+            --source-digest "${{ github.workflow_sha }}" \
+            --deny-self-hosted-runners
+          if test -n "${{ inputs.intakeReleaseId }}"; then
+            challenge="$(node -p "require('./promotion/hardware-promotion.json').manualSession.mediaChallenge")"
+            test "${#challenge}" -eq 32
+            echo "FORGE3D_MANUAL_MEDIA_CHALLENGE=${challenge}" >> "${GITHUB_ENV}"
+          fi
+
+      - name: Poll waiting approval and bind exactly one queued job
+        id: authorize
+        working-directory: crates/forge3d-web
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/authorize-hardware-runner.mjs \
+            --promotion ../../../promotion/hardware-promotion.json \
+            --browser-policy tests/infrastructure/browser-policy.json \
+            --output runner-authorization.json
+
+      - name: Upload exact runner authorization
+        id: upload-authorization
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: runner-authorization-${{ needs.promote-hardware.outputs.runner_nonce }}
+          path: crates/forge3d-web/runner-authorization.json
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 1
+
+      - name: Attest GitHub-hosted runner authorization
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-path: crates/forge3d-web/runner-authorization.json
+
+  hardware:
+    name: Browser Hardware / Ephemeral Execution
+    needs: promote-hardware
+    runs-on:
+      - forge3d-web
+      - ${{ needs.promote-hardware.outputs.hardware_label }}
+      - ${{ needs.promote-hardware.outputs.nonce_label }}
+    environment: forge3d-browser-lab
+    timeout-minutes: ${{ (contains(inputs.lane, 'manual-') || inputs.canaryMode == 'manual') && 45 || 30 }}
+    concurrency:
+      group: forge3d-browser-host-${{ needs.promote-hardware.outputs.host_id }}
+      cancel-in-progress: false
+    env:
+      FORGE3D_CONTROLLER_JOB_ROOT: ${{ runner.temp }}/forge3d-controller-job
+    permissions:
+      actions: read
+      attestations: read
+      contents: read
+    outputs:
+      evidence_artifact_id: ${{ steps.upload-hardware-evidence.outputs.artifact-id }}
+      evidence_artifact_digest: ${{ steps.upload-hardware-evidence.outputs.artifact-digest }}
+
+    steps:
+      - name: Refuse any repository source checkout
+        shell: bash
+        run: test ! -d .git
+
+      - name: Download exact promoted package artifact
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${{ needs.promote-hardware.outputs.promotion_artifact_id }}/zip" > promotion.zip
+          actual="$(sha256sum promotion.zip | cut -d ' ' -f 1)"
+          expected="${{ needs.promote-hardware.outputs.promotion_artifact_digest }}"
+          test "${actual}" = "${expected#sha256:}"
+          mkdir promotion
+          unzip -q promotion.zip -d promotion
+          gh attestation verify promotion/hardware-promotion.json \
+            --repo milos-agathon/forge3d-web \
+            --signer-workflow milos-agathon/forge3d-web/.github/workflows/browser-hardware.yml \
+            --source-ref refs/heads/main \
+            --source-digest "${{ github.workflow_sha }}" \
+            --deny-self-hosted-runners
+
+      - name: Install exact tarball in a fresh consumer
+        shell: bash
+        run: |
+          tarball="$(find promotion -maxdepth 1 -name '*.tgz' -type f)"
+          test -n "${tarball}"
+          expected="$(node -p "JSON.parse(require('fs').readFileSync('promotion/browser-package-manifest.json')).packageSha256")"
+          test "$(sha256sum "${tarball}" | cut -d ' ' -f 1)" = "${expected}"
+          mkdir consumer
+          tar -xzf promotion/consumer-fixture.tar.gz -C consumer
+          npm --prefix consumer install --no-save "${tarball}"
+          node promotion/materialize-browser-fixture.mjs \
+            --consumer consumer \
+            --package-sha256 "${expected}"
+
+      - name: Run only the signed browser-neutral harness
+        shell: bash
+        run: |
+          test -f "${FORGE3D_CONTROLLER_JOB_ROOT}/adapter-evidence.json"
+          test -f "${FORGE3D_CONTROLLER_JOB_ROOT}/assertion-result.json"
+          node consumer/hardware/run-browser-lane.mjs \
+            --lane "${{ inputs.lane }}" \
+            --driver "${FORGE3D_CONTROLLER_DRIVER}" \
+            --binding "${FORGE3D_CONTROLLER_JOB_ROOT}/binding.json" \
+            --adapter-evidence "${FORGE3D_CONTROLLER_JOB_ROOT}/adapter-evidence.json" \
+            --assertion-result "${FORGE3D_CONTROLLER_JOB_ROOT}/assertion-result.json" \
+            --output "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/browser-hardware-evidence.json"
+
+      - name: Require controller-signed record for a manual session
+        if: contains(inputs.lane, 'manual-') || inputs.canaryMode == 'manual'
+        shell: bash
+        run: |
+          test -f "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/signed-manual-session.json"
+          test -f "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/session-watermark.json"
+          node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            const watermark = JSON.parse(readFileSync(
+              `${process.env.FORGE3D_CONTROLLER_JOB_ROOT}/evidence/session-watermark.json`,
+              "utf8"
+            ));
+            if (
+              watermark.nonDismissable !== true ||
+              watermark.overlayTarget !== "viewer-shell-not-canvas" ||
+              watermark.mediaChallenge !== process.env.FORGE3D_MANUAL_MEDIA_CHALLENGE
+            ) throw new Error("manual session watermark proof is invalid");
+          '
+
+      - name: Emit automated release-matrix source from verified evidence
+        if: inputs.lane != 'infrastructure-canary' && !contains(inputs.lane, 'manual-')
+        shell: bash
+        run: |
+          node --input-type=module --eval '
+            import { readFileSync, writeFileSync } from "node:fs";
+            writeFileSync(
+              `${process.env.FORGE3D_CONTROLLER_JOB_ROOT}/matrix-record-input.json`,
+              JSON.stringify({
+                promotion: JSON.parse(readFileSync("promotion/hardware-promotion.json", "utf8")),
+                evidence: JSON.parse(readFileSync(
+                  `${process.env.FORGE3D_CONTROLLER_JOB_ROOT}/evidence/browser-hardware-evidence.json`,
+                  "utf8"
+                )),
+                run: { id: Number(process.env.GITHUB_RUN_ID) }
+              })
+            );
+          '
+          node promotion/create-browser-matrix-record.mjs \
+            automated \
+            "${FORGE3D_CONTROLLER_JOB_ROOT}/matrix-record-input.json" \
+            "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/browser-matrix-record-source.json"
+
+      - name: Restore updates, stop browser drivers, Appium, fixtures, and tunnels
+        if: always()
+        shell: bash
+        run: node "${FORGE3D_CONTROLLER_JOB_ROOT}/cleanup-hardware-job.mjs"
+
+      - name: Upload hardware evidence and cleanup diagnostics
+        if: always()
+        id: upload-hardware-evidence
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: browser-hardware-${{ github.run_id }}-${{ github.run_attempt }}-${{ inputs.assetId }}-${{ inputs.lane }}
+          path: ${{ runner.temp }}/forge3d-controller-job/evidence/
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 90
+
+  finalize-hardware-evidence:
+    name: Browser Hardware / Finalize Automated Evidence
+    if: >-
+      always() &&
+      needs.hardware.result == 'success' &&
+      !contains(inputs.lane, 'manual-') &&
+      inputs.canaryMode != 'manual'
+    needs:
+      - promote-hardware
+      - authorize-runner
+      - hardware
+    runs-on: ubuntu-latest
+    environment: forge3d-trust-observer
+    permissions:
+      actions: read
+      artifact-metadata: write
+      attestations: write
+      contents: read
+      id-token: write
+    outputs:
+      finalized_artifact_id: ${{ steps.upload-finalized.outputs.artifact-id }}
+      finalized_artifact_digest: ${{ steps.upload-finalized.outputs.artifact-digest }}
+
+    steps:
+      - name: Check out protected validation code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+
+      - name: Download exact self-hosted evidence by artifact ID
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${{ needs.hardware.outputs.evidence_artifact_id }}/zip" > hardware-evidence.zip
+          expected="${{ needs.hardware.outputs.evidence_artifact_digest }}"
+          test "$(sha256sum hardware-evidence.zip | cut -d ' ' -f 1)" = "${expected#sha256:}"
+          mkdir finalized-hardware-evidence
+          unzip -q hardware-evidence.zip -d finalized-hardware-evidence
+          test "$(find finalized-hardware-evidence -name browser-hardware-evidence.json -type f | wc -l)" -eq 1
+          if test "${{ inputs.lane }}" != "infrastructure-canary"; then
+            test "$(find finalized-hardware-evidence -name browser-matrix-record-source.json -type f | wc -l)" -eq 1
+          fi
+
+      - name: Download exact authorization and controller receipt
+        if: inputs.lane == 'infrastructure-canary'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CONTROLLER_MTLS_CERT: ${{ secrets.BROWSER_LAB_MTLS_CERT }}
+          CONTROLLER_MTLS_KEY: ${{ secrets.BROWSER_LAB_MTLS_KEY }}
+          CONTROLLER_MTLS_CA: ${{ secrets.BROWSER_LAB_MTLS_CA }}
+          HOST_ID: ${{ needs.promote-hardware.outputs.host_id }}
+        run: |
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${{ needs.authorize-runner.outputs.authorization_artifact_id }}/zip" > authorization.zip
+          expected="${{ needs.authorize-runner.outputs.authorization_artifact_digest }}"
+          test "$(sha256sum authorization.zip | cut -d ' ' -f 1)" = "${expected#sha256:}"
+          mkdir authorization
+          unzip -q authorization.zip -d authorization
+          gh attestation verify authorization/runner-authorization.json \
+            --repo milos-agathon/forge3d-web \
+            --signer-workflow milos-agathon/forge3d-web/.github/workflows/browser-hardware.yml \
+            --source-ref refs/heads/main \
+            --source-digest "${{ github.workflow_sha }}" \
+            --deny-self-hosted-runners
+
+          install -m 600 /dev/null "${RUNNER_TEMP}/controller-client.crt"
+          install -m 600 /dev/null "${RUNNER_TEMP}/controller-client.key"
+          install -m 600 /dev/null "${RUNNER_TEMP}/controller-ca.crt"
+          printf '%s' "${CONTROLLER_MTLS_CERT}" > "${RUNNER_TEMP}/controller-client.crt"
+          printf '%s' "${CONTROLLER_MTLS_KEY}" > "${RUNNER_TEMP}/controller-client.key"
+          printf '%s' "${CONTROLLER_MTLS_CA}" > "${RUNNER_TEMP}/controller-ca.crt"
+          receipt_url="$(node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            const endpoints = JSON.parse(readFileSync(
+              "crates/forge3d-web/tests/infrastructure/controller-health-endpoints.json",
+              "utf8"
+            ));
+            const endpoint = endpoints.controllers.find(
+              (candidate) => candidate.assetId === process.env.HOST_ID
+            );
+            if (!endpoint) throw new Error("checked controller endpoint is missing");
+            process.stdout.write(endpoint.receiptUrlTemplate
+              .replace("{run_id}", process.env.GITHUB_RUN_ID)
+              .replace("{run_attempt}", process.env.GITHUB_RUN_ATTEMPT));
+          ')"
+          curl --fail --silent --show-error \
+            --retry 60 --retry-delay 5 --retry-all-errors \
+            --cert "${RUNNER_TEMP}/controller-client.crt" \
+            --key "${RUNNER_TEMP}/controller-client.key" \
+            --cacert "${RUNNER_TEMP}/controller-ca.crt" \
+            "${receipt_url}" \
+            > finalized-hardware-evidence/signed-controller-receipt.json
+          test -s finalized-hardware-evidence/signed-controller-receipt.json
+
+      - name: Resolve exact completed hardware job
+        if: inputs.lane == 'infrastructure-canary'
+        shell: bash
+        working-directory: crates/forge3d-web
+        env:
+          GH_TOKEN: ${{ github.token }}
+          AUTHORIZATION_SHA256: ${{ needs.authorize-runner.outputs.authorization_sha256 }}
+        run: |
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/attempts/${GITHUB_RUN_ATTEMPT}/jobs?per_page=100" > workflow-jobs.json
+          node --input-type=module --eval '
+            import { readFileSync, writeFileSync } from "node:fs";
+            const authorization = JSON.parse(readFileSync(
+              "../../authorization/runner-authorization.json", "utf8"
+            ));
+            const jobs = JSON.parse(readFileSync("workflow-jobs.json", "utf8")).jobs;
+            const hardwareJob = jobs.find(
+              (job) => job.id === authorization.queuedHardwareJob.id
+            );
+            if (!hardwareJob) throw new Error("exact hardware job is missing");
+            writeFileSync("host-canary-finalizer-input.json", JSON.stringify({
+              signedRecord: JSON.parse(readFileSync(
+                "../../finalized-hardware-evidence/signed-controller-receipt.json",
+                "utf8"
+              )),
+              authorization: {
+                record: authorization,
+                sha256: process.env.AUTHORIZATION_SHA256
+              },
+              hardwareJob,
+              matrix: JSON.parse(readFileSync(
+                "tests/infrastructure/hardware-matrix.json", "utf8"
+              )),
+              finalizer: {
+                workflowSha: process.env.GITHUB_WORKFLOW_SHA,
+                run: {
+                  id: Number(process.env.GITHUB_RUN_ID),
+                  attempt: Number(process.env.GITHUB_RUN_ATTEMPT)
+                },
+                job: "finalize-hardware-evidence",
+                environment: "forge3d-trust-observer",
+                observedAt: new Date().toISOString()
+              }
+            }));
+          '
+
+      - name: Mint short-lived Administration-read observer token
+        if: inputs.lane == 'infrastructure-canary'
+        id: host-observer-token
+        working-directory: crates/forge3d-web
+        env:
+          TRUST_OBSERVER_APP_ID: ${{ secrets.TRUST_OBSERVER_APP_ID }}
+          TRUST_OBSERVER_INSTALLATION_ID: ${{ secrets.TRUST_OBSERVER_INSTALLATION_ID }}
+          TRUST_OBSERVER_PRIVATE_KEY: ${{ secrets.TRUST_OBSERVER_PRIVATE_KEY }}
+        run: node scripts/mint-github-app-token.mjs
+
+      - name: Finalize controller-signed host canary
+        if: inputs.lane == 'infrastructure-canary'
+        working-directory: crates/forge3d-web
+        env:
+          TRUST_OBSERVER_TOKEN: ${{ steps.host-observer-token.outputs.token }}
+        run: |
+          node scripts/finalize-host-lab-canary.mjs \
+            host-canary-finalizer-input.json \
+            ../../finalized-hardware-evidence/lab-host-canary.json
+
+      - name: Revoke host observer token and remove mTLS material
+        if: always() && inputs.lane == 'infrastructure-canary'
+        working-directory: crates/forge3d-web
+        env:
+          OBSERVER_TOKEN: ${{ steps.host-observer-token.outputs.token }}
+        run: |
+          if test -n "${OBSERVER_TOKEN}"; then
+            node --input-type=module --eval '
+              const response = await fetch("https://api.github.com/installation/token", {
+                method: "DELETE",
+                headers: { Accept: "application/vnd.github+json", Authorization: `Bearer ${process.env.OBSERVER_TOKEN}`, "X-GitHub-Api-Version": "2022-11-28" }
+              });
+              if (response.status !== 204) throw new Error(`token revocation failed: ${response.status}`);
+            '
+          fi
+          rm -f \
+            "${RUNNER_TEMP}/controller-client.crt" \
+            "${RUNNER_TEMP}/controller-client.key" \
+            "${RUNNER_TEMP}/controller-ca.crt"
+
+      - name: Attest copied automated evidence on GitHub-hosted runner
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-path: finalized-hardware-evidence/**/*.json
+
+      - name: Upload finalized automated evidence
+        id: upload-finalized
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: finalized-browser-hardware-${{ github.run_id }}-${{ github.run_attempt }}
+          path: finalized-hardware-evidence/
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 90
+
+  finalize-manual-session:
+    name: Browser Hardware / Finalize Manual Session
+    if: >-
+      always() &&
+      (contains(inputs.lane, 'manual-') || inputs.canaryMode == 'manual')
+    needs:
+      - promote-hardware
+      - authorize-runner
+      - hardware
+    runs-on: ubuntu-latest
+    environment: forge3d-trust-observer
+    permissions:
+      actions: read
+      artifact-metadata: write
+      attestations: write
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Reject workflow dispatch outside protected main
+        if: github.ref != 'refs/heads/main'
+        run: exit 1
+
+      - name: Check out protected finalizer code only
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+
+      - name: Download exact authorization and signed-session artifacts
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${{ needs.authorize-runner.outputs.authorization_artifact_id }}/zip" > authorization.zip
+          expected="${{ needs.authorize-runner.outputs.authorization_artifact_digest }}"
+          test "$(sha256sum authorization.zip | cut -d ' ' -f 1)" = "${expected#sha256:}"
+          mkdir authorization
+          unzip -q authorization.zip -d authorization
+          gh attestation verify authorization/runner-authorization.json \
+            --repo milos-agathon/forge3d-web \
+            --signer-workflow milos-agathon/forge3d-web/.github/workflows/browser-hardware.yml \
+            --source-ref refs/heads/main \
+            --source-digest "${{ github.workflow_sha }}" \
+            --deny-self-hosted-runners
+
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${{ needs.hardware.outputs.evidence_artifact_id }}/zip" > evidence.zip
+          expected="${{ needs.hardware.outputs.evidence_artifact_digest }}"
+          test "$(sha256sum evidence.zip | cut -d ' ' -f 1)" = "${expected#sha256:}"
+          mkdir hardware-evidence
+          unzip -q evidence.zip -d hardware-evidence
+          test "$(find hardware-evidence -name signed-manual-session.json -type f | wc -l)" -eq 1
+
+      - name: Resolve exact hardware workflow job
+        shell: bash
+        working-directory: crates/forge3d-web
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_AUTHORIZATION_SHA256: ${{ needs.authorize-runner.outputs.authorization_sha256 }}
+        run: |
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/attempts/${GITHUB_RUN_ATTEMPT}/jobs?per_page=100" > workflow-jobs.json
+          node --input-type=module --eval '
+            import { readFileSync, writeFileSync } from "node:fs";
+            const signedSessionPath = process.argv[1];
+            const signedSession = JSON.parse(readFileSync(signedSessionPath, "utf8"));
+            const jobs = JSON.parse(readFileSync("workflow-jobs.json", "utf8")).jobs;
+            const matches = jobs.filter((job) => job.id === signedSession.record.hardwareJobId);
+            if (matches.length !== 1) throw new Error("signed hardware job ID does not resolve exactly once");
+            const input = {
+              signedSession,
+              authorization: {
+                record: JSON.parse(readFileSync("../../authorization/runner-authorization.json", "utf8")),
+                sha256: process.env.EXPECTED_AUTHORIZATION_SHA256
+              },
+              hardwareJob: matches[0],
+              matrix: JSON.parse(readFileSync("tests/infrastructure/hardware-matrix.json", "utf8")),
+              finalizer: {
+                workflowSha: process.env.GITHUB_WORKFLOW_SHA,
+                run: {
+                  id: Number(process.env.GITHUB_RUN_ID),
+                  attempt: Number(process.env.GITHUB_RUN_ATTEMPT)
+                },
+                job: "finalize-manual-session",
+                environment: "forge3d-trust-observer",
+                observedAt: new Date().toISOString()
+              }
+            };
+            writeFileSync("manual-finalizer-input.json", JSON.stringify(input));
+          ' "$(find ../../hardware-evidence -name signed-manual-session.json -type f)"
+
+      - name: Mint short-lived Administration-read observer token
+        id: observer-token
+        working-directory: crates/forge3d-web
+        env:
+          TRUST_OBSERVER_APP_ID: ${{ secrets.TRUST_OBSERVER_APP_ID }}
+          TRUST_OBSERVER_INSTALLATION_ID: ${{ secrets.TRUST_OBSERVER_INSTALLATION_ID }}
+          TRUST_OBSERVER_PRIVATE_KEY: ${{ secrets.TRUST_OBSERVER_PRIVATE_KEY }}
+        run: node scripts/mint-github-app-token.mjs
+
+      - name: Verify signature, job tuple, cleanup, and exact runner absence
+        working-directory: crates/forge3d-web
+        env:
+          TRUST_OBSERVER_TOKEN: ${{ steps.observer-token.outputs.token }}
+        run: |
+          node scripts/finalize-manual-session.mjs \
+            manual-finalizer-input.json \
+            manual-session-finalizer.json
+
+      - name: Revoke trust-observer token
+        if: always() && steps.observer-token.outputs.token != ''
+        working-directory: crates/forge3d-web
+        env:
+          OBSERVER_TOKEN: ${{ steps.observer-token.outputs.token }}
+        run: |
+          node --input-type=module --eval '
+            const response = await fetch("https://api.github.com/installation/token", {
+              method: "DELETE",
+              headers: { Accept: "application/vnd.github+json", Authorization: `Bearer ${process.env.OBSERVER_TOKEN}`, "X-GitHub-Api-Version": "2022-11-28" }
+            });
+            if (response.status !== 204) throw new Error(`token revocation failed: ${response.status}`);
+          '
+
+      - name: Upload failure diagnostics without acceptable attestation
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: manual-session-finalizer-diagnostic-${{ github.run_id }}-${{ github.run_attempt }}
+          path: crates/forge3d-web/manual-finalizer-input.json
+          if-no-files-found: warn
+          overwrite: false
+          retention-days: 90
+
+      - name: Attest signed session and successful finalizer record
+        if: success()
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-path: |
+            hardware-evidence/**/signed-manual-session.json
+            crates/forge3d-web/manual-session-finalizer.json
+
+      - name: Upload acceptable finalized session
+        if: success()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: finalized-manual-session-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            hardware-evidence/**/signed-manual-session.json
+            crates/forge3d-web/manual-session-finalizer.json
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 90

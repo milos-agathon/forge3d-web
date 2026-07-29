@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<service>
+  <id>forge3d-browser-lab-controller</id>
+  <name>Forge3D Browser Lab Controller</name>
+  <description>Authorization-bound one-job JIT runner controller.</description>
+  <executable>C:\Program Files\nodejs\node.exe</executable>
+  <arguments>"C:\ProgramData\Forge3D\browser-lab-controller\src\controller-health-service.mjs"</arguments>
+  <workingdirectory>C:\ProgramData\Forge3D\browser-lab</workingdirectory>
+  <logpath>C:\ProgramData\Forge3D\browser-lab\logs</logpath>
+  <startmode>Automatic</startmode>
+  <onfailure action="restart" delay="5 sec"/>
+  <stoptimeout>30 sec</stoptimeout>
+</service>

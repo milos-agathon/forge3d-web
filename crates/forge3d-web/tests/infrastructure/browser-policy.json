@@ -6,6 +6,89 @@
   "jitWorkFolder": "_work",
   "brokerProtocolVersion": "forge3d-browser-lab-broker/v1",
   "cleanupProtocolVersion": "forge3d-browser-lab-cleanup/v1",
+  "acceptanceWindowHours": 24,
+  "headedSessionRequired": true,
+  "prohibitedLaunchArguments": [
+    "--disable-gpu",
+    "--disable-gpu-compositing",
+    "--enable-unsafe-webgpu",
+    "--ignore-gpu-blocklist",
+    "--ignore-certificate-errors",
+    "--use-angle",
+    "--use-gl",
+    "--use-vulkan",
+    "--use-webgpu-adapter",
+    "--use-webgpu-power-preference",
+    "--disable-software-rasterizer",
+    "--enable-webgpu-developer-features"
+  ],
+  "channels": [
+    {
+      "id": "chrome-stable",
+      "browser": "chrome",
+      "channel": "stable",
+      "classification": "required",
+      "minimumMajor": 113,
+      "automation": "playwright"
+    },
+    {
+      "id": "chrome-beta",
+      "browser": "chrome",
+      "channel": "beta",
+      "classification": "probe",
+      "minimumMajor": 113,
+      "automation": "playwright"
+    },
+    {
+      "id": "edge-stable",
+      "browser": "edge",
+      "channel": "stable",
+      "classification": "required",
+      "minimumMajor": 113,
+      "automation": "playwright"
+    },
+    {
+      "id": "safari-stable",
+      "browser": "safari",
+      "channel": "stable",
+      "classification": "required",
+      "minimumMajor": 26,
+      "automation": "safaridriver"
+    },
+    {
+      "id": "safari-technology-preview",
+      "browser": "safari",
+      "channel": "technology-preview",
+      "classification": "probe",
+      "minimumMajor": 26,
+      "automation": "safaridriver"
+    },
+    {
+      "id": "firefox-release",
+      "browser": "firefox",
+      "channel": "release",
+      "classification": "required",
+      "minimumMajor": 141,
+      "automation": "selenium"
+    },
+    {
+      "id": "firefox-nightly",
+      "browser": "firefox",
+      "channel": "nightly",
+      "classification": "probe",
+      "minimumMajor": 142,
+      "automation": "selenium"
+    }
+  ],
+  "tools": {
+    "playwright": "1.56.1",
+    "selenium": "4.35.0",
+    "geckodriver": "0.36.0",
+    "appium": "3.0.2",
+    "appiumUiAutomator2": "5.0.0",
+    "appiumXcuitest": "10.0.0",
+    "safaridriverPath": "/usr/bin/safaridriver"
+  },
   "archives": [
     {
       "platform": "linux-x64",
