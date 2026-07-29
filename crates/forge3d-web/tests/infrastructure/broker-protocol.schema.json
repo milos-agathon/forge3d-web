@@ -1,0 +1,192 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/broker-protocol.schema.json",
+  "title": "Forge3D browser lab broker protocol",
+  "oneOf": [
+    { "$ref": "#/$defs/jitRequest" },
+    { "$ref": "#/$defs/jitResponse" },
+    { "$ref": "#/$defs/cleanupRequest" },
+    { "$ref": "#/$defs/cleanupResponse" }
+  ],
+  "$defs": {
+    "controller": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["assetId", "identity", "signingKeyId"],
+      "properties": {
+        "assetId": {
+          "type": "string",
+          "pattern": "^FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+$"
+        },
+        "identity": {
+          "type": "string",
+          "pattern": "^controller:FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+$"
+        },
+        "signingKeyId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "signingKeyId", "value"],
+      "properties": {
+        "algorithm": { "const": "SHA256withECDSA" },
+        "signingKeyId": { "type": "string", "minLength": 1 },
+        "value": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9_-]+$"
+        }
+      }
+    },
+    "jitRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocolVersion",
+        "authorizationDigest",
+        "requestNonce",
+        "controller",
+        "signature"
+      ],
+      "properties": {
+        "protocolVersion": {
+          "const": "forge3d-browser-lab-broker/v1"
+        },
+        "authorizationDigest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "requestNonce": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "controller": { "$ref": "#/$defs/controller" },
+        "signature": { "$ref": "#/$defs/signature" }
+      }
+    },
+    "jitResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocolVersion",
+        "authorizationDigest",
+        "runnerId",
+        "runnerName",
+        "encodedJitConfig",
+        "startDeadline"
+      ],
+      "properties": {
+        "protocolVersion": {
+          "const": "forge3d-browser-lab-broker/v1"
+        },
+        "authorizationDigest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "runnerId": { "type": "integer", "minimum": 1 },
+        "runnerName": { "type": "string", "minLength": 1 },
+        "encodedJitConfig": { "type": "string", "minLength": 20 },
+        "startDeadline": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T"
+        }
+      }
+    },
+    "listenerStop": {
+      "type": ["null", "object"],
+      "additionalProperties": false,
+      "required": ["attempted", "stopped", "processId", "observedAt"],
+      "properties": {
+        "attempted": { "const": true },
+        "stopped": { "type": "boolean" },
+        "processId": { "type": "integer", "minimum": 1 },
+        "observedAt": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T"
+        }
+      }
+    },
+    "workRootWipe": {
+      "type": ["null", "object"],
+      "additionalProperties": false,
+      "required": ["attempted", "wiped", "workFolder", "observedAt"],
+      "properties": {
+        "attempted": { "const": true },
+        "wiped": { "type": "boolean" },
+        "workFolder": { "const": "_work" },
+        "observedAt": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T"
+        }
+      }
+    },
+    "cleanupRequest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "protocolVersion",
+        "authorizationDigest",
+        "requestNonce",
+        "controller",
+        "reason",
+        "listenerStop",
+        "workRootWipe",
+        "signature"
+      ],
+      "properties": {
+        "protocolVersion": {
+          "const": "forge3d-browser-lab-cleanup/v1"
+        },
+        "authorizationDigest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "requestNonce": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "controller": { "$ref": "#/$defs/controller" },
+        "reason": {
+          "enum": [
+            "terminal",
+            "launch-failure",
+            "start-timeout",
+            "online-unassigned",
+            "quarantine-release"
+          ]
+        },
+        "listenerStop": { "$ref": "#/$defs/listenerStop" },
+        "workRootWipe": { "$ref": "#/$defs/workRootWipe" },
+        "signature": { "$ref": "#/$defs/signature" }
+      }
+    },
+    "cleanupResponse": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authorizationDigest",
+        "runnerId",
+        "runnerName",
+        "state",
+        "deletionResult",
+        "cancellationResult",
+        "cleanupDecision"
+      ],
+      "properties": {
+        "authorizationDigest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "runnerId": { "type": "integer", "minimum": 1 },
+        "runnerName": { "type": "string", "minLength": 1 },
+        "state": { "enum": ["deleted", "already_absent", "quarantined"] },
+        "deletionResult": { "enum": ["deleted", "already_absent"] },
+        "cancellationResult": {
+          "type": ["null", "string"],
+          "enum": [null, "cancelled"]
+        },
+        "cleanupDecision": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

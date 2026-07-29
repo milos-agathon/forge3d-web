@@ -1,12 +1,33 @@
 export function assertJsonSchema(value, schema, path = "$") {
   const errors = [];
-  validate(value, schema, path, errors);
+  validate(value, schema, path, errors, schema);
   if (errors.length > 0) {
     throw new Error(`JSON schema validation failed:\n${errors.join("\n")}`);
   }
 }
 
-function validate(value, schema, path, errors) {
+function validate(value, schema, path, errors, rootSchema) {
+  if (schema.$ref !== undefined) {
+    validate(value, resolveReference(schema.$ref, rootSchema), path, errors, rootSchema);
+    return;
+  }
+
+  if (schema.oneOf !== undefined) {
+    const matches = schema.oneOf.filter((candidate) => {
+      const candidateErrors = [];
+      validate(value, candidate, path, candidateErrors, rootSchema);
+      return candidateErrors.length === 0;
+    });
+    if (matches.length !== 1) {
+      errors.push(`${path}: expected exactly one oneOf schema to match`);
+    }
+    return;
+  }
+
+  for (const candidate of schema.allOf ?? []) {
+    validate(value, candidate, path, errors, rootSchema);
+  }
+
   if (schema.const !== undefined && !Object.is(value, schema.const)) {
     errors.push(`${path}: expected constant ${JSON.stringify(schema.const)}`);
     return;
@@ -59,7 +80,7 @@ function validate(value, schema, path, errors) {
     }
     if (schema.items) {
       value.forEach((item, index) =>
-        validate(item, schema.items, `${path}[${index}]`, errors),
+        validate(item, schema.items, `${path}[${index}]`, errors, rootSchema),
       );
     }
     return;
@@ -78,14 +99,35 @@ function validate(value, schema, path, errors) {
     for (const key of keys) {
       const propertySchema = schema.properties?.[key];
       if (propertySchema) {
-        validate(value[key], propertySchema, `${path}.${key}`, errors);
+        validate(value[key], propertySchema, `${path}.${key}`, errors, rootSchema);
       } else if (schema.additionalProperties === false) {
         errors.push(`${path}.${key}: additional property is not allowed`);
       } else if (isObject(schema.additionalProperties)) {
-        validate(value[key], schema.additionalProperties, `${path}.${key}`, errors);
+        validate(
+          value[key],
+          schema.additionalProperties,
+          `${path}.${key}`,
+          errors,
+          rootSchema,
+        );
       }
     }
   }
+}
+
+function resolveReference(reference, rootSchema) {
+  if (!reference.startsWith("#/")) {
+    throw new Error(`Only local JSON schema references are supported: ${reference}`);
+  }
+  let value = rootSchema;
+  for (const encoded of reference.slice(2).split("/")) {
+    const key = encoded.replaceAll("~1", "/").replaceAll("~0", "~");
+    value = value?.[key];
+  }
+  if (!value || typeof value !== "object") {
+    throw new Error(`JSON schema reference does not resolve: ${reference}`);
+  }
+  return value;
 }
 
 function matchesType(value, type) {

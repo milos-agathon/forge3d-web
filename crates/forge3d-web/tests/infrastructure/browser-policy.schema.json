@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/browser-policy.schema.json",
+  "title": "Forge3D browser lab runner policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "provisioningState",
+    "runnerVersion",
+    "repositoryJitRunnerGroupId",
+    "jitWorkFolder",
+    "brokerProtocolVersion",
+    "cleanupProtocolVersion",
+    "archives",
+    "runnerDistributionManifestSha256",
+    "runnerTransientPathPolicySha256"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "provisioningState": { "enum": ["pending-jit-canary", "active"] },
+    "runnerVersion": { "const": "2.336.0" },
+    "repositoryJitRunnerGroupId": { "const": 1 },
+    "jitWorkFolder": { "const": "_work" },
+    "brokerProtocolVersion": { "const": "forge3d-browser-lab-broker/v1" },
+    "cleanupProtocolVersion": { "const": "forge3d-browser-lab-cleanup/v1" },
+    "archives": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["platform", "fileName", "url", "sha256"],
+        "properties": {
+          "platform": { "enum": ["linux-x64", "osx-arm64", "win-x64"] },
+          "fileName": { "type": "string", "minLength": 1 },
+          "url": {
+            "type": "string",
+            "pattern": "^https://github\\.com/actions/runner/releases/download/v2\\.336\\.0/"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    },
+    "runnerDistributionManifestSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "runnerTransientPathPolicySha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    }
+  }
+}

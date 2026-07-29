@@ -10,6 +10,9 @@ const repoRoot = join(packageRoot, "..", "..");
 
 const packageJson = readJson(join(packageRoot, "package.json"));
 const packageLock = readText(join(packageRoot, "package-lock.json"));
+const infrastructureTestRunner = readText(
+  join(packageRoot, "scripts", "run-infrastructure-tests.mjs"),
+);
 
 assertEqual(packageJson.description, "Browser-only Forge3D WebGPU/WASM runtime for terrain rendering", "package description must match the browser MVP");
 assertEqual(packageJson.repository?.type, "git", "package repository type must be declared");
@@ -29,6 +32,27 @@ for (const keyword of ["webgpu", "wasm", "terrain", "geospatial", "visualization
 }
 
 assertIncludes(packageJson.scripts["test:package"], "release-hardening", "package test script must include release hardening checks");
+assertIncludes(packageJson.scripts["test:package"], "test:infrastructure", "package test script must include infrastructure contracts");
+assertEqual(
+  packageJson.scripts["test:infrastructure"],
+  "node scripts/run-infrastructure-tests.mjs",
+  "infrastructure tests must use the cross-platform test runner",
+);
+assertIncludes(
+  infrastructureTestRunner,
+  '"browser-lab-broker", "test"',
+  "infrastructure test runner must include the audited broker",
+);
+assertIncludes(
+  infrastructureTestRunner,
+  'entry.name.endsWith(".test.mjs")',
+  "infrastructure test runner must select only test modules",
+);
+assertIncludes(
+  infrastructureTestRunner,
+  'spawnSync(process.execPath, ["--test", ...testFiles]',
+  "infrastructure test runner must avoid shell-dependent glob expansion",
+);
 assertIncludes(packageJson.files, "docs", "package files must include release docs");
 assert(!packageLock.includes("jfrog.booking.com"), "package lock must not depend on a private registry");
 const windowsNpm = resolveCommandInvocation("npm", ["run", "build"], {
@@ -64,6 +88,17 @@ for (const relative of [
   assert(existsSync(join(packageRoot, relative)), `missing release document: ${relative}`);
 }
 
+for (const relative of [
+  "docs/browser-lab-runbook.md",
+  "tests/infrastructure/browser-policy.json",
+  "tests/infrastructure/hardware-matrix.json",
+  "tests/infrastructure/repository-trust-policy.json",
+  "tests/infrastructure/runner-distribution-manifest.json",
+  "tests/infrastructure/workflow-actions-lock.json",
+]) {
+  assert(existsSync(join(packageRoot, relative)), `missing INF-00 contract: ${relative}`);
+}
+
 const readme = readText(join(packageRoot, "README.md"));
 for (const expected of [
   "## Interactive Viewer Status",
@@ -71,6 +106,7 @@ for (const expected of [
   "not independently release-ready",
   "See `docs/support-matrix.md`",
   "See `docs/release-checklist.md`",
+  "See `docs/browser-lab-runbook.md`",
   "Cache `.wasm` assets with immutable content hashing",
   "npm run test:package"
 ]) {
@@ -102,6 +138,7 @@ for (const expected of [
   ".\\crates\\forge3d-web\\node_modules\\.bin\\wasm-pack.cmd build crates/forge3d-web --target web",
   "npm run build",
   "npm run test:package",
+  "npm run test:infrastructure",
   'FORGE3D_SOURCE_BENCHMARK_MODE = "required"',
   "npm pack --dry-run"
 ]) {

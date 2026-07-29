@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/hardware-matrix.schema.json",
+  "title": "Forge3D fixed browser laboratory inventory",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "matrixId", "provisioningState", "hosts", "assets"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "matrixId": { "const": "forge3d-browser-lab-v1" },
+    "provisioningState": {
+      "enum": ["provisioning", "active"]
+    },
+    "hosts": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "assetId",
+          "model",
+          "cpu",
+          "gpu",
+          "ramGiB",
+          "os",
+          "displayServer",
+          "requiredLabels",
+          "attachedAssetIds",
+          "requiredBrowserLanes",
+          "controller",
+          "state",
+          "maintenanceReason"
+        ],
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "pattern": "^FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+$"
+          },
+          "model": { "type": "string", "minLength": 1 },
+          "cpu": { "type": "string", "minLength": 1 },
+          "gpu": { "type": "string", "minLength": 1 },
+          "ramGiB": { "type": "integer", "minimum": 16 },
+          "os": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["family", "baseline"],
+            "properties": {
+              "family": { "enum": ["macOS", "Windows", "Ubuntu"] },
+              "baseline": { "type": "string", "minLength": 1 }
+            }
+          },
+          "displayServer": { "type": "string", "minLength": 1 },
+          "requiredLabels": {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "attachedAssetIds": {
+            "type": "array",
+            "items": { "type": "string", "pattern": "^FW-[A-Z0-9-]+$" }
+          },
+          "requiredBrowserLanes": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "minLength": 1 }
+          },
+          "controller": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "identity",
+              "state",
+              "signingKeyId",
+              "publicJwk"
+            ],
+            "properties": {
+              "identity": {
+                "type": "string",
+                "pattern": "^controller:FW-[A-Z0-9-]+$"
+              },
+              "state": { "enum": ["unprovisioned", "online"] },
+              "signingKeyId": { "type": ["null", "string"] },
+              "publicJwk": { "type": ["null", "object"] }
+            }
+          },
+          "state": { "enum": ["maintenance", "active"] },
+          "maintenanceReason": { "type": ["null", "string"] }
+        }
+      }
+    },
+    "assets": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "assetId",
+          "kind",
+          "model",
+          "hostAssetId",
+          "appiumId",
+          "osBaseline",
+          "companion",
+          "state"
+        ],
+        "properties": {
+          "assetId": {
+            "type": "string",
+            "pattern": "^FW-[A-Z0-9-]+$"
+          },
+          "kind": {
+            "enum": ["trackpad", "android", "ios", "ipados"]
+          },
+          "model": { "type": "string", "minLength": 1 },
+          "hostAssetId": { "const": "FW-MAC-M2-01" },
+          "appiumId": { "type": ["null", "string"] },
+          "osBaseline": { "type": ["null", "string"] },
+          "companion": { "type": ["null", "string"] },
+          "state": { "enum": ["maintenance", "active"] }
+        }
+      }
+    }
+  }
+}

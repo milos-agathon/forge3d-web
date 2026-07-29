@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/repository-trust-policy.schema.json",
+  "title": "Forge3D repository trust policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "repository",
+    "bootstrapState",
+    "trustEpochSha",
+    "branchProtection",
+    "actionsShaPinning",
+    "trustObserverApp",
+    "registrationBrokerApp"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "owner", "name", "fullName", "defaultBranch"],
+      "properties": {
+        "id": { "const": 1259761852 },
+        "owner": { "const": "milos-agathon" },
+        "name": { "const": "forge3d-web" },
+        "fullName": { "const": "milos-agathon/forge3d-web" },
+        "defaultBranch": { "const": "main" }
+      }
+    },
+    "bootstrapState": {
+      "enum": ["pending-protection-canary", "active"]
+    },
+    "trustEpochSha": {
+      "type": ["null", "string"],
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "branchProtection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requiredStatusChecks",
+        "requiredPullRequestReviews",
+        "requiredConversationResolution",
+        "enforceAdmins",
+        "allowForcePushes",
+        "allowDeletions",
+        "bypassActors"
+      ],
+      "properties": {
+        "requiredStatusChecks": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["strict", "checks"],
+          "properties": {
+            "strict": { "const": true },
+            "checks": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["context", "sourceAppSlug", "sourceAppId"],
+                "properties": {
+                  "context": { "type": "string", "minLength": 1 },
+                  "sourceAppSlug": { "const": "github-actions" },
+                  "sourceAppId": { "const": 15368 }
+                }
+              }
+            }
+          }
+        },
+        "requiredPullRequestReviews": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "requiredApprovingReviewCount",
+            "dismissStaleReviews",
+            "requireLastPushApproval"
+          ],
+          "properties": {
+            "requiredApprovingReviewCount": { "const": 1 },
+            "dismissStaleReviews": { "const": true },
+            "requireLastPushApproval": { "const": true }
+          }
+        },
+        "requiredConversationResolution": { "const": true },
+        "enforceAdmins": { "const": true },
+        "allowForcePushes": { "const": false },
+        "allowDeletions": { "const": false },
+        "bypassActors": {
+          "type": "array",
+          "maxItems": 0,
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "actionsShaPinning": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requiredWhenAvailable", "staticGateRequired"],
+      "properties": {
+        "requiredWhenAvailable": { "const": true },
+        "staticGateRequired": { "const": true }
+      }
+    },
+    "trustObserverApp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["installationScope", "permissions"],
+      "properties": {
+        "installationScope": { "const": "milos-agathon/forge3d-web" },
+        "permissions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "administration",
+            "actions",
+            "attestations",
+            "metadata"
+          ],
+          "properties": {
+            "administration": { "const": "read" },
+            "actions": { "const": "read" },
+            "attestations": { "const": "read" },
+            "metadata": { "const": "read" }
+          }
+        }
+      }
+    },
+    "registrationBrokerApp": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["installationScope", "permissions"],
+      "properties": {
+        "installationScope": { "const": "milos-agathon/forge3d-web" },
+        "permissions": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["administration", "actions", "metadata"],
+          "properties": {
+            "administration": { "const": "write" },
+            "actions": { "const": "write" },
+            "metadata": { "const": "read" }
+          }
+        }
+      }
+    }
+  }
+}

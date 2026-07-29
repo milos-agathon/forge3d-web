@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "repository": {
+    "id": 1259761852,
+    "owner": "milos-agathon",
+    "name": "forge3d-web",
+    "fullName": "milos-agathon/forge3d-web",
+    "defaultBranch": "main"
+  },
+  "bootstrapState": "pending-protection-canary",
+  "trustEpochSha": null,
+  "branchProtection": {
+    "requiredStatusChecks": {
+      "strict": true,
+      "checks": [
+        {
+          "context": "Web Runtime / Build And Contract Tests",
+          "sourceAppSlug": "github-actions",
+          "sourceAppId": 15368
+        },
+        {
+          "context": "Web Runtime / Browser Preflight",
+          "sourceAppSlug": "github-actions",
+          "sourceAppId": 15368
+        }
+      ]
+    },
+    "requiredPullRequestReviews": {
+      "requiredApprovingReviewCount": 1,
+      "dismissStaleReviews": true,
+      "requireLastPushApproval": true
+    },
+    "requiredConversationResolution": true,
+    "enforceAdmins": true,
+    "allowForcePushes": false,
+    "allowDeletions": false,
+    "bypassActors": []
+  },
+  "actionsShaPinning": {
+    "requiredWhenAvailable": true,
+    "staticGateRequired": true
+  },
+  "trustObserverApp": {
+    "installationScope": "milos-agathon/forge3d-web",
+    "permissions": {
+      "administration": "read",
+      "actions": "read",
+      "attestations": "read",
+      "metadata": "read"
+    }
+  },
+  "registrationBrokerApp": {
+    "installationScope": "milos-agathon/forge3d-web",
+    "permissions": {
+      "administration": "write",
+      "actions": "write",
+      "metadata": "read"
+    }
+  }
+}

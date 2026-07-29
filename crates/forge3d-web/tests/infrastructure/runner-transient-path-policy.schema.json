@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/runner-transient-path-policy.schema.json",
+  "title": "Forge3D runner transient path policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "runnerVersion", "canaryState", "paths"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "runnerVersion": { "const": "2.336.0" },
+    "canaryState": { "enum": ["pending", "verified"] },
+    "paths": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["pattern", "kind", "purpose", "evidence"],
+        "properties": {
+          "pattern": { "type": "string", "minLength": 1 },
+          "kind": { "enum": ["tree", "file"] },
+          "purpose": { "type": "string", "minLength": 1 },
+          "evidence": { "type": "string", "minLength": 1 }
+        }
+      }
+    }
+  }
+}

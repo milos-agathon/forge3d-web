@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "provisioningState": "pending-jit-canary",
+  "runnerVersion": "2.336.0",
+  "repositoryJitRunnerGroupId": 1,
+  "jitWorkFolder": "_work",
+  "brokerProtocolVersion": "forge3d-browser-lab-broker/v1",
+  "cleanupProtocolVersion": "forge3d-browser-lab-cleanup/v1",
+  "archives": [
+    {
+      "platform": "linux-x64",
+      "fileName": "actions-runner-linux-x64-2.336.0.tar.gz",
+      "url": "https://github.com/actions/runner/releases/download/v2.336.0/actions-runner-linux-x64-2.336.0.tar.gz",
+      "sha256": "04cf0be1aff4c3ec3554466c39124ca250e3effd8873bb7e8d68535aa9505d5d"
+    },
+    {
+      "platform": "osx-arm64",
+      "fileName": "actions-runner-osx-arm64-2.336.0.tar.gz",
+      "url": "https://github.com/actions/runner/releases/download/v2.336.0/actions-runner-osx-arm64-2.336.0.tar.gz",
+      "sha256": "8e8839c49b7060b6b2154f4931f815df330c27f167d53ef2239ee3dfce28b079"
+    },
+    {
+      "platform": "win-x64",
+      "fileName": "actions-runner-win-x64-2.336.0.zip",
+      "url": "https://github.com/actions/runner/releases/download/v2.336.0/actions-runner-win-x64-2.336.0.zip",
+      "sha256": "d59123a43003e357b0805b5d0f611d0bd2f65ab67d51bd070dd4e7a0f685c162"
+    }
+  ],
+  "runnerDistributionManifestSha256": "69da5ee8e06839a5f0ea4b6222f8609a29e0ba85aa8e173b91561170e7ef36fe",
+  "runnerTransientPathPolicySha256": "74b482253d2fed53635e8d44977e4802d86f30024be791fad2395c3dac200949"
+}
