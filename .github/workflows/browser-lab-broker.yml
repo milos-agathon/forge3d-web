@@ -13,8 +13,32 @@ on:
 permissions: {}
 
 jobs:
+  broker-package-bootstrap:
+    name: Browser Lab Broker / Bootstrap Gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      package_enabled: ${{ steps.activation.outputs.package-enabled }}
+
+    steps:
+      - name: Check out exact bootstrap policy
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+
+      - name: Resolve protected-main package activation
+        id: activation
+        working-directory: crates/forge3d-web
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+        run: node scripts/resolve-broker-package-bootstrap.mjs
+
   observe-broker-package-trust:
     name: Browser Lab Broker / Observe Package Trust
+    needs: broker-package-bootstrap
+    if: needs.broker-package-bootstrap.outputs.package_enabled == 'true'
     runs-on: ubuntu-latest
     environment: forge3d-trust-observer
     permissions:
@@ -73,7 +97,7 @@ jobs:
           echo "content-sha256=${content_sha256}" >> "$GITHUB_OUTPUT"
 
       - name: Revoke trust-observer token
-        if: always()
+        if: always() && steps.observer-token.outputs.token != ''
         working-directory: crates/forge3d-web
         env:
           OBSERVER_TOKEN: ${{ steps.observer-token.outputs.token }}
