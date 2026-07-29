@@ -154,8 +154,7 @@ function fileResponse({ fixtureRoot, route, request, headers }) {
   const relativePath = relative(root, path);
   if (
     relativePath.startsWith("..") ||
-    isAbsolute(relativePath) ||
-    relativePath.includes("\\")
+    isAbsolute(relativePath)
   ) {
     throw new Error("fixture route escaped its root");
   }

@@ -9,7 +9,7 @@ const repositoryRoot = resolve(packageRoot, "..", "..");
 const workflow = readFileSync(
   join(repositoryRoot, ".github", "workflows", "prepare-browser-manual-evidence.yml"),
   "utf8",
-);
+).replace(/\r\n?/gu, "\n");
 const observer = jobBlock(workflow, "observe-manual-intake-trust", "prepare-manual-intake");
 const prepare = jobBlock(workflow, "prepare-manual-intake", null);
 

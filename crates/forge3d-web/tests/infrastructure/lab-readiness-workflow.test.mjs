@@ -9,7 +9,7 @@ const workflow = readFileSync(
     "../../../../.github/workflows/browser-lab-infrastructure-readiness.yml",
   ),
   "utf8",
-);
+).replace(/\r\n?/gu, "\n");
 const observer = block(
   "observe-lab-readiness-trust",
   "browser-lab-infrastructure-readiness",
