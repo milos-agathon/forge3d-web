@@ -132,11 +132,12 @@ export class BrowserLabBroker {
     if (
       this.provisioningMode === "initial-host-canary" &&
       (authorization.lane !== "infrastructure-canary" ||
+        authorization.targetAssetId !== authorization.hostAssetId ||
         authorization.hasLabReadiness !== false ||
         authorization.hasManualSession !== false)
     ) {
       throw new Error(
-        "initial host-canary mode accepts only non-manual infrastructure-canary authorization",
+        "initial host-canary mode accepts only host-bound non-manual infrastructure-canary authorization",
       );
     }
   }

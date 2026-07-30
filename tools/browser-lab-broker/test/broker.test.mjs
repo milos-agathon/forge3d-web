@@ -46,7 +46,7 @@ test("derives one exact JIT runner and never persists encoded configuration", as
   assert.equal(context.github.registrationTokenCalls, 0);
 });
 
-test("initial host-canary mode rejects product and manual-session issuance", async () => {
+test("initial host-canary mode accepts only a host-bound canary", async () => {
   const product = makeContext({
     provisioningMode: "initial-host-canary",
     authorization: {
@@ -57,7 +57,7 @@ test("initial host-canary mode rejects product and manual-session issuance", asy
   });
   await assert.rejects(
     issue(product),
-    /initial host-canary mode accepts only non-manual infrastructure-canary/u,
+    /initial host-canary mode accepts only host-bound non-manual infrastructure-canary/u,
   );
   assert.deepEqual(product.github.generateCalls, []);
 
@@ -71,14 +71,30 @@ test("initial host-canary mode rejects product and manual-session issuance", asy
   });
   await assert.rejects(
     issue(manual),
-    /initial host-canary mode accepts only non-manual infrastructure-canary/u,
+    /initial host-canary mode accepts only host-bound non-manual infrastructure-canary/u,
   );
   assert.deepEqual(manual.github.generateCalls, []);
+
+  const attachedAsset = makeContext({
+    provisioningMode: "initial-host-canary",
+    authorization: {
+      lane: "infrastructure-canary",
+      targetAssetId: "FW-AND-QCOM-01",
+      hasLabReadiness: false,
+      hasManualSession: false,
+    },
+  });
+  await assert.rejects(
+    issue(attachedAsset),
+    /initial host-canary mode accepts only host-bound non-manual infrastructure-canary/u,
+  );
+  assert.deepEqual(attachedAsset.github.generateCalls, []);
 
   const hostCanary = makeContext({
     provisioningMode: "initial-host-canary",
     authorization: {
       lane: "infrastructure-canary",
+      targetAssetId: controller.assetId,
       hasLabReadiness: false,
       hasManualSession: false,
     },
@@ -738,6 +754,7 @@ function makeContext({
     runId: 2001,
     jobId: 3001,
     jobStatus: "queued",
+    targetAssetId: controller.assetId,
     hostAssetId: controller.assetId,
     hwLabel: "hw-linux-rtx3070",
     runnerNonce: "b".repeat(32),

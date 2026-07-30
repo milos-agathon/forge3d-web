@@ -44,6 +44,7 @@ test("issuance accepts the current canonical runner-authorization schema", async
       mode: "issuance",
     });
     assert.equal(authorization.jobId, 3001);
+    assert.equal(authorization.targetAssetId, "FW-LNX-NV-01");
     assert.equal(authorization.hostAssetId, "FW-LNX-NV-01");
     assert.equal(authorization.hwLabel, "hw-linux-rtx3070");
     assert.equal(authorization.lane, "chrome-linux-rtx3070");
