@@ -26,6 +26,7 @@ import ts from "typescript";
 
 import { validateBrowserEvidence } from "../tests/browser/evidence-validator.mjs";
 import { resolveCommandInvocation } from "./command-executable.mjs";
+import { resolveInstalledTarballBrowserProfile } from "./installed-tarball-browser-profile.mjs";
 import { resolvePackageGateMode } from "./package-gate-mode.mjs";
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -33,6 +34,11 @@ const repositoryRoot = resolve(packageRoot, "..", "..");
 const evidenceMode = resolvePackageGateMode(
   process.env.FORGE3D_PACKAGE_GATE_MODE,
 );
+const browserProfile = resolveInstalledTarballBrowserProfile({
+  evidenceMode,
+  browserChannel: process.env.FORGE3D_BROWSER_CHANNEL,
+  operatingSystem: process.platform,
+});
 const evidenceDirectory = resolve(
   packageRoot,
   process.env.FORGE3D_EVIDENCE_DIR ?? "test-results/browser-gate",
@@ -192,7 +198,7 @@ try {
       packageSha256,
       commit,
       runViewerBenchmark,
-      evidenceMode,
+      browserProfile,
     );
     const browserEvidenceJson = JSON.stringify(browserResult, null, 2);
     writeFileSync(join(consumerDirectory, "browser-gate.json"), browserEvidenceJson);
@@ -275,17 +281,14 @@ async function runInstalledPackageBrowserGate(
   packageSha256,
   commit,
   runViewerBenchmark,
-  evidenceMode,
+  browserProfile,
 ) {
-  const launchArguments = ["--enable-unsafe-webgpu"];
-  if (process.platform === "win32") {
-    launchArguments.push("--use-angle=d3d11");
-  }
-  const channel = process.env.FORGE3D_BROWSER_CHANNEL ?? "chrome";
   const browser = await chromium.launch({
-    ...(channel === "bundled" ? {} : { channel }),
+    ...(browserProfile.playwrightChannel === null
+      ? {}
+      : { channel: browserProfile.playwrightChannel }),
     headless: process.env.FORGE3D_HEADED !== "1",
-    args: launchArguments,
+    args: browserProfile.launchArguments,
   });
   const page = await browser.newPage({ viewport: { width: 900, height: 700 } });
   const pageErrors = [];
@@ -333,7 +336,7 @@ async function runInstalledPackageBrowserGate(
     if (!adapter.available) {
       throw new Error("installed-package browser gate found no WebGPU adapter");
     }
-    if (evidenceMode === "required" && adapter.fallback !== false) {
+    if (browserProfile.lane === "required" && adapter.fallback !== false) {
       throw new Error("installed-package browser gate used a fallback adapter");
     }
 
@@ -459,7 +462,7 @@ async function runInstalledPackageBrowserGate(
       throw new Error(`installed-package page errors: ${pageErrors.join("; ")}`);
     }
     const benchmark =
-      evidenceMode === "required"
+      browserProfile.lane === "required"
         ? await runViewerBenchmark(page, {
             browserZoom: 1,
             thermalState: "unavailable",
@@ -485,12 +488,12 @@ async function runInstalledPackageBrowserGate(
         kind: "npm-tarball",
         sha256: packageSha256,
       },
-      project: "installed-tarball-chrome",
-      lane: evidenceMode,
+      project: browserProfile.project,
+      lane: browserProfile.lane,
       browser: {
-        name: "chromium",
+        name: browserProfile.browserName,
         version: browser.version(),
-        channel: process.env.FORGE3D_BROWSER_CHANNEL ?? "stable",
+        channel: browserProfile.browserChannel,
         userAgent: browserEnvironment.userAgent,
       },
       os: {
@@ -502,9 +505,9 @@ async function runInstalledPackageBrowserGate(
       deviceId: hostname(),
       headed: process.env.FORGE3D_HEADED === "1",
       secureContext: browserEnvironment.secureContext,
-      launchArguments,
+      launchArguments: [...browserProfile.launchArguments],
       adapter,
-      runtimeResult: evidenceMode === "required" ? "PASS" : "PROBE",
+      runtimeResult: browserProfile.runtimeResult,
       frameCounters: {
         renderRequests: frameCounters.renderRequests,
         submittedFrames: frameCounters.submittedFrames,
@@ -514,7 +517,7 @@ async function runInstalledPackageBrowserGate(
       normalizedErrorCodes: [],
       benchmark,
     };
-    if (evidenceMode === "required") {
+    if (browserProfile.lane === "required") {
       validateBrowserEvidence(evidence);
     } else {
       validateBrowserEvidence(evidence, {
@@ -528,7 +531,7 @@ async function runInstalledPackageBrowserGate(
     }
     return {
       packageSha256,
-      launchArguments,
+      launchArguments: [...browserProfile.launchArguments],
       adapter,
       interactionAssertions,
       screenshots: true,

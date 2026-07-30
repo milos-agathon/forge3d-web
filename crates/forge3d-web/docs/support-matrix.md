@@ -8,9 +8,9 @@ surfaces, and deployment assumptions that application owners must satisfy.
 
 | Surface | MVP status | Notes |
 |---|---|---|
-| Chrome/Chromium on Windows | Required | Hosted CI exercises the exact tarball as `PROBE` when only a fallback adapter is available. Promotion requires a branded, physical, non-fallback Windows run. |
+| Chrome/Chromium on Windows | Required | Required source and exact-tarball configurations use unflagged branded Chrome. Hosted CI exercises the exact tarball in flagged bundled Chromium as `PROBE` when only a fallback adapter is available. Promotion still requires a branded, physical, non-fallback Windows run. |
 | Chrome/Chromium on macOS/Linux | Best effort | Expected to work when `navigator.gpu` is available, but not required for the MVP release gate. |
-| Edge | Best effort | Chromium-based Edge should follow Chrome WebGPU behavior, but the required lane remains Chrome/Chromium. |
+| Edge | Best effort | `test:browser:edge` is an unflagged branded required-mode configuration, but the current Edge support tier remains best effort until the required evidence exists. |
 | Firefox | Unsupported | WebGPU availability and behavior are not part of the MVP contract. |
 | Safari | Unsupported | Safari WebGPU is not part of the MVP contract. |
 | Mobile browsers | Unsupported | Touch UX, memory ceilings, and browser WebGPU variability are post-MVP work. |
@@ -33,6 +33,22 @@ surfaces, and deployment assumptions that application owners must satisfy.
 - Applications must check `navigator.gpu` before calling
   `Forge3DRuntime.create(canvas, options)`.
 
+## Browser Test Configurations
+
+The default `npm run test:browser` command aliases
+`npm run test:browser:chromium`. Both select bundled Playwright Chromium with
+the explicit unsafe-WebGPU preflight flag and, on Windows, the D3D11 ANGLE
+flag. This is flagged preflight evidence only and can establish at most
+`ENGINE_PASS`; it cannot establish branded Chrome or Edge support.
+
+`npm run test:browser:chrome` and `npm run test:browser:edge` select the
+installed branded Chrome and Edge channels without unsafe WebGPU,
+GPU-blocklist, Vulkan-enable, or ANGLE-forcing flags. These normal branded
+configurations use required evidence mode by default and fail if
+`navigator.gpu` or adapter acquisition is unavailable. Their presence does not
+claim that either branded run has passed or change any support tier in this
+matrix.
+
 ## Required Release Lane
 
 The required browser lane is the web CI workflow plus local release checklist:
@@ -42,7 +58,7 @@ $env:FORGE3D_PACKAGE_GATE_MODE = "required"
 $env:FORGE3D_SOURCE_BENCHMARK_MODE = "required"
 $env:FORGE3D_WEBGPU_REQUIRED = "1"
 npm run test:package-consumer
-npm run test:browser
+npm run test:browser:chrome
 ```
 
 If `navigator.gpu` or adapter acquisition fails in that lane, the release is

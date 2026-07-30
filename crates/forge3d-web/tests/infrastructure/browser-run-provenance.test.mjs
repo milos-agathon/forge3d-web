@@ -73,6 +73,149 @@ test("Chromium provenance comes from the live CDP browser command line", async (
   assert.equal(detached, true);
 });
 
+test("Chromium provenance falls back to the exact live process arguments when CDP denies command-line access", async () => {
+  let detached = false;
+  const readPaths = [];
+  const result = await observeChromiumLaunch(
+    {
+      newBrowserCDPSession: async () => ({
+        send: async (method) => {
+          if (method === "SystemInfo.getProcessInfo") {
+            return { processInfo: [{ type: "browser", id: 4312 }] };
+          }
+          throw new Error(
+            "Command line not returned because --enable-automation not set",
+          );
+        },
+        detach: async () => {
+          detached = true;
+        },
+      }),
+    },
+    {
+      platform: "linux",
+      readFile: (path) => {
+        readPaths.push(path);
+        return Buffer.from(
+          [
+            "/usr/bin/chromium",
+            "--enable-unsafe-webgpu",
+            "--user-data-dir=/tmp/playwright profile",
+            "",
+          ].join("\0"),
+        );
+      },
+    },
+  );
+  assert.deepEqual(readPaths, ["/proc/4312/cmdline"]);
+  assert.deepEqual(result, {
+    effectiveLaunchArguments: [
+      "--enable-unsafe-webgpu",
+      "--user-data-dir=/tmp/playwright profile",
+    ],
+    launchArgumentsObserved: true,
+    launchArgumentSource: "linux-live-browser-process",
+    browserProcessId: 4312,
+  });
+  assert.equal(detached, true);
+});
+
+test("macOS Chromium fallback strips the exact executable path with spaces and retains positional arguments", async () => {
+  const executable =
+    "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
+  const invocations = [];
+  const result = await observeChromiumLaunch(
+    {
+      newBrowserCDPSession: async () => ({
+        send: async (method) => {
+          if (method === "SystemInfo.getProcessInfo") {
+            return { processInfo: [{ type: "browser", id: 9912 }] };
+          }
+          throw new Error(
+            "Command line not returned because --enable-automation not set",
+          );
+        },
+        detach: async () => {},
+      }),
+    },
+    {
+      platform: "darwin",
+      execute: (command, args) => {
+        invocations.push([command, args]);
+        if (args.at(-1) === "comm=") return executable;
+        return `${executable} --headless "--user-data-dir=/tmp/profile with spaces" about:blank`;
+      },
+    },
+  );
+  assert.deepEqual(invocations, [
+    ["ps", ["-ww", "-p", "9912", "-o", "comm="]],
+    ["ps", ["-ww", "-p", "9912", "-o", "command="]],
+  ]);
+  assert.deepEqual(result, {
+    effectiveLaunchArguments: [
+      "--headless",
+      "--user-data-dir=/tmp/profile with spaces",
+      "about:blank",
+    ],
+    launchArgumentsObserved: true,
+    launchArgumentSource: "darwin-live-browser-process",
+    browserProcessId: 9912,
+  });
+});
+
+test("macOS Chromium fallback fails closed when executable and command observations disagree", async () => {
+  await assert.rejects(
+    () =>
+      observeChromiumLaunch(
+        {
+          newBrowserCDPSession: async () => ({
+            send: async (method) => {
+              if (method === "SystemInfo.getProcessInfo") {
+                return { processInfo: [{ type: "browser", id: 9912 }] };
+              }
+              throw new Error(
+                "Command line not returned because --enable-automation not set",
+              );
+            },
+            detach: async () => {},
+          }),
+        },
+        {
+          platform: "darwin",
+          execute: (_command, args) =>
+            args.at(-1) === "comm="
+              ? "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+              : "/Applications/Other.app/Contents/MacOS/Other --headless",
+        },
+      ),
+    /both CDP and the live browser process/u,
+  );
+});
+
+test("Chromium provenance fails closed when neither CDP nor a live browser PID can prove arguments", async () => {
+  let detached = false;
+  await assert.rejects(
+    () =>
+      observeChromiumLaunch({
+        newBrowserCDPSession: async () => ({
+          send: async (method) => {
+            if (method === "SystemInfo.getProcessInfo") {
+              return { processInfo: [] };
+            }
+            throw new Error(
+              "Command line not returned because --enable-automation not set",
+            );
+          },
+          detach: async () => {
+            detached = true;
+          },
+        }),
+      }),
+    /did not expose a live browser process ID/u,
+  );
+  assert.equal(detached, true);
+});
+
 test("checked automation version is read from the installed package record", () => {
   const directory = mkdtempSync(join(tmpdir(), "forge3d-playwright-version-"));
   try {
@@ -175,6 +318,16 @@ test("run provenance rejects placeholder drivers and prohibited observed flags",
   const result = validateBrowserRunProvenance(request);
   assert.equal(result.driver.version, "1.56.1");
   assert.equal(result.system.osBuild, inventory.osBuild);
+  assert.equal(
+    validateBrowserRunProvenance({
+      ...request,
+      session: {
+        ...request.session,
+        launchArgumentSource: "win32-live-browser-process",
+      },
+    }).launchObservation.source,
+    "win32-live-browser-process",
+  );
   assert.throws(
     () =>
       validateBrowserRunProvenance({
@@ -193,5 +346,16 @@ test("run provenance rejects placeholder drivers and prohibited observed flags",
         },
       }),
     /prohibited browser launch arguments/u,
+  );
+  assert.throws(
+    () =>
+      validateBrowserRunProvenance({
+        ...request,
+        session: {
+          ...request.session,
+          launchArgumentSource: "linux-live-browser-process",
+        },
+      }),
+    /exact runtime provenance/u,
   );
 });

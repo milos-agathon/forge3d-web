@@ -9,9 +9,16 @@ import {
   skipRenderAssertionsWhenProbing,
   test,
 } from "../browser/webgpu-fixture";
+import {
+  configuredLaunchArgumentsObserved,
+  launchFlagPresence,
+  launchFlagsPresent,
+  preflightLaunchIdentityConsistent,
+  resolveSourceBenchmarkEvidenceMode,
+} from "../browser/playwright-project-metadata";
 import { validateBrowserEvidence } from "../browser/evidence-validator.mjs";
-import { resolveEvidenceMode } from "../browser/evidence-mode";
 import { runViewerBenchmark } from "../browser/viewer-benchmark";
+import { observeChromiumLaunch } from "../../scripts/browser-launch-provenance.mjs";
 
 test("validates complete evidence from the frozen real-GPU benchmark", async ({
   browser,
@@ -20,9 +27,55 @@ test("validates complete evidence from the frozen real-GPU benchmark", async ({
 }, testInfo) => {
   test.setTimeout(60_000);
   skipRenderAssertionsWhenProbing(webgpuAvailability);
-  const evidenceMode = resolveEvidenceMode(
+  const project = webgpuAvailability.project;
+  const evidenceMode = resolveSourceBenchmarkEvidenceMode(
+    project,
     process.env.FORGE3D_SOURCE_BENCHMARK_MODE,
   );
+  const launch = await observeChromiumLaunch(browser);
+  const configuredLaunchArguments = [...project.launchArgs];
+  const effectiveLaunchArguments = [
+    ...launch.effectiveLaunchArguments,
+  ];
+  const launchDiagnostics = {
+    project: project.project,
+    declaredBrowser: project.browserName,
+    declaredChannel: project.channel,
+    declaredLane: project.lane,
+    configuredLaunchArguments,
+    effectiveLaunchArguments,
+    launchArgumentsObserved: launch.launchArgumentsObserved,
+    launchArgumentSource: launch.launchArgumentSource,
+    flagPresence: launchFlagPresence(
+      configuredLaunchArguments,
+      effectiveLaunchArguments,
+    ),
+    configuredLaunchFlagsPresent:
+      launchFlagsPresent(configuredLaunchArguments),
+    effectiveLaunchFlagsPresent:
+      launchFlagsPresent(effectiveLaunchArguments),
+    configuredArgumentsObserved:
+      configuredLaunchArgumentsObserved(
+        configuredLaunchArguments,
+        effectiveLaunchArguments,
+      ),
+    preflightIdentityConsistent:
+      preflightLaunchIdentityConsistent(
+        project,
+        configuredLaunchArguments,
+        effectiveLaunchArguments,
+      ),
+  };
+  await testInfo.attach("forge3d-source-launch-diagnostics.json", {
+    body: JSON.stringify(launchDiagnostics, null, 2),
+    contentType: "application/json",
+  });
+  expect(launchDiagnostics.launchArgumentsObserved).toBe(true);
+  expect(launchDiagnostics.configuredArgumentsObserved).toBe(true);
+  expect(
+    launchDiagnostics.preflightIdentityConsistent,
+    "source evidence with WebGPU-enabling flags must identify chromium-preflight",
+  ).toBe(true);
   const adapter = await readAdapterEvidence(page);
   if (evidenceMode === "required") {
     expect(
@@ -69,12 +122,12 @@ test("validates complete evidence from the frozen real-GPU benchmark", async ({
       kind: "wasm-module",
       sha256: wasmSha256,
     },
-    project: "source-chrome",
+    project: project.project,
     lane: evidenceMode,
     browser: {
-      name: "chromium",
+      name: project.browserName,
       version: browser.version(),
-      channel: "stable",
+      channel: project.channel,
       userAgent,
     },
     os: {
@@ -85,11 +138,8 @@ test("validates complete evidence from the frozen real-GPU benchmark", async ({
     architecture: arch(),
     deviceId: hostname(),
     headed: process.env.FORGE3D_HEADED === "1",
-    secureContext: true,
-    launchArguments: [
-      "--enable-unsafe-webgpu",
-      ...(process.platform === "win32" ? ["--use-angle=d3d11"] : []),
-    ],
+    secureContext: webgpuAvailability.secureContext,
+    launchArguments: effectiveLaunchArguments,
     adapter,
     runtimeResult: evidenceMode === "required" ? "PASS" : "PROBE",
     frameCounters: {

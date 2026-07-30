@@ -2,32 +2,74 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
-export async function observeChromiumLaunch(browser) {
+export async function observeChromiumLaunch(
+  browser,
+  {
+    platform = process.platform,
+    execute = execFileSync,
+    readFile = readFileSync,
+  } = {},
+) {
   const session = await browser.newBrowserCDPSession();
   try {
-    const commandLine = await session.send("Browser.getBrowserCommandLine");
-    if (
-      !Array.isArray(commandLine.arguments) ||
-      commandLine.arguments.length < 1 ||
-      commandLine.arguments.some((value) => typeof value !== "string")
-    ) {
-      throw new Error("Chromium CDP did not return its effective command line");
-    }
     const processInfo = await session
       .send("SystemInfo.getProcessInfo")
       .catch(() => ({ processInfo: [] }));
     const browserProcess = processInfo.processInfo?.find(
       ({ type }) => type === "browser",
     );
-    return {
-      effectiveLaunchArguments: commandLine.arguments.slice(1),
-      launchArgumentsObserved: true,
-      launchArgumentSource: "chromium-cdp-browser-command-line",
-      browserProcessId: browserProcess?.id ?? null,
-    };
+    try {
+      const commandLine = await session.send("Browser.getBrowserCommandLine");
+      if (
+        !Array.isArray(commandLine.arguments) ||
+        commandLine.arguments.length < 1 ||
+        commandLine.arguments.some((value) => typeof value !== "string")
+      ) {
+        throw new Error(
+          "Chromium CDP did not return its effective command line",
+        );
+      }
+      return {
+        effectiveLaunchArguments: commandLine.arguments.slice(1),
+        launchArgumentsObserved: true,
+        launchArgumentSource: "chromium-cdp-browser-command-line",
+        browserProcessId: browserProcess?.id ?? null,
+      };
+    } catch (cdpError) {
+      const processId = Number(browserProcess?.id);
+      if (!Number.isInteger(processId) || processId < 1) {
+        throw new Error(
+          "Chromium CDP command-line observation failed and did not expose a live browser process ID",
+          { cause: cdpError },
+        );
+      }
+      try {
+        return observeProcessLaunch({
+          processId,
+          platform,
+          execute,
+          readFile,
+        });
+      } catch (processError) {
+        throw new AggregateError(
+          [cdpError, processError],
+          "Chromium launch provenance failed through both CDP and the live browser process",
+        );
+      }
+    }
   } finally {
     await session.detach();
   }
+}
+
+export function isLiveChromiumLaunchArgumentSource(
+  source,
+  platform = process.platform,
+) {
+  return (
+    source === "chromium-cdp-browser-command-line" ||
+    source === `${platform}-live-browser-process`
+  );
 }
 
 export function observeWebDriverLaunch({
@@ -164,12 +206,36 @@ function observeProcessLaunch({ processId, platform, execute, readFile }) {
       readFile(`/proc/${processId}/cmdline`),
     );
   } else if (platform === "darwin") {
-    tokens = splitObservedCommandLine(
-      execute("ps", ["-ww", "-p", String(processId), "-o", "command="], {
+    const executable = execute(
+      "ps",
+      ["-ww", "-p", String(processId), "-o", "comm="],
+      {
         encoding: "utf8",
-      }).trim(),
-      platform,
-    );
+      },
+    ).trim();
+    const commandLine = execute(
+      "ps",
+      ["-ww", "-p", String(processId), "-o", "command="],
+      {
+        encoding: "utf8",
+      },
+    ).trim();
+    if (
+      executable === "" ||
+      (commandLine !== executable &&
+        !commandLine.startsWith(`${executable} `))
+    ) {
+      throw new Error(
+        "macOS browser command line does not match its observed executable path",
+      );
+    }
+    const argumentText = commandLine.slice(executable.length).trimStart();
+    tokens = [
+      executable,
+      ...(argumentText === ""
+        ? []
+        : splitObservedCommandLine(argumentText, platform)),
+    ];
   } else {
     throw new Error(`unsupported browser process platform: ${platform}`);
   }

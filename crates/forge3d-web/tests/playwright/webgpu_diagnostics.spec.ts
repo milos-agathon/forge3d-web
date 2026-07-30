@@ -1,24 +1,53 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../browser/webgpu-fixture";
+import { isLiveChromiumLaunchArgumentSource } from "../../scripts/browser-launch-provenance.mjs";
 
-test("reports browser WebGPU diagnostics", async ({ browserName, page }) => {
-  await page.goto("/examples/test-clear.html");
-
-  const diagnostics = await page.evaluate(async () => {
-    const gpu = navigator.gpu;
-    const adapter = gpu ? await gpu.requestAdapter() : null;
-
-    return {
-      hasNavigatorGpu: Boolean(gpu),
-      adapterAvailable: Boolean(adapter),
-      browserUserAgent: navigator.userAgent
-    };
+test("reports browser WebGPU diagnostics", async ({
+  webgpuDiagnostics: diagnostics,
+}) => {
+  expect(diagnostics.project.project).toBeTruthy();
+  expect(diagnostics.project.browserName).toBeTruthy();
+  expect(diagnostics.project.channel).toBeTruthy();
+  expect(diagnostics.project.lane).toBeTruthy();
+  expect(diagnostics.browserVersion).toBeTruthy();
+  expect(diagnostics.userAgent).toBeTruthy();
+  expect(diagnostics.secureContext).toBe(true);
+  expect(diagnostics.hasNavigatorGpu).toBe(true);
+  expect(diagnostics.adapterAvailable).toBe(true);
+  expect(diagnostics.adapter.requestAttempted).toBe(true);
+  expect(diagnostics.adapter.acquired).toBe(true);
+  expect(diagnostics.adapter.limits.maxTextureDimension2D).toBeGreaterThan(0);
+  expect(diagnostics.adapter.limits.maxBufferSize).toBeGreaterThan(0);
+  expect(diagnostics.viewerRuntime).toMatchObject({
+    attempted: true,
+    created: true,
+    status: "ready",
+    deviceState: "ready",
+    disposedStatus: "disposed",
+    activeRuntimesAfterDispose: 0,
+    error: null,
   });
-
-  console.info("Forge3D WebGPU diagnostics", {
-    browserName,
-    ...diagnostics
-  });
-
-  expect(diagnostics.hasNavigatorGpu).toBeTruthy();
-  expect(diagnostics.adapterAvailable).toBeTruthy();
+  expect(diagnostics.launch.configuredArguments).toEqual(
+    diagnostics.project.launchArgs,
+  );
+  expect(diagnostics.launch.observed).toBe(true);
+  expect(diagnostics.launch.effectiveArguments.length).toBeGreaterThan(0);
+  expect(
+    isLiveChromiumLaunchArgumentSource(
+      diagnostics.launch.observationSource,
+    ),
+  ).toBe(true);
+  expect(
+    diagnostics.launch.configuredLaunchFlagsPresent,
+  ).toBe(
+    Object.values(diagnostics.launch.flagPresence).some(
+      ({ configured }) => configured,
+    ),
+  );
+  expect(
+    diagnostics.launch.effectiveLaunchFlagsPresent,
+  ).toBe(
+    Object.values(diagnostics.launch.flagPresence).some(
+      ({ observed }) => observed,
+    ),
+  );
 });
