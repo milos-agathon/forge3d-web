@@ -61,6 +61,8 @@ test("validates complete evidence from the frozen real-GPU benchmark", async ({
       launch.configuredArgumentsObserved,
     preflightIdentityConsistent:
       launch.preflightIdentityConsistent,
+    sourceObservationConsistent:
+      launch.sourceObservationConsistent,
   };
   await testInfo.attach("forge3d-source-launch-diagnostics.json", {
     body: JSON.stringify(launchDiagnostics, null, 2),
@@ -69,20 +71,25 @@ test("validates complete evidence from the frozen real-GPU benchmark", async ({
   expect(launchDiagnostics.actualEngine).toBe(
     launchDiagnostics.declaredEngine,
   );
-  if (launchDiagnostics.declaredEngine === "chromium") {
+  if (project.launchObservation === "chromium-live") {
     expect(launchDiagnostics.launchArgumentsObserved).toBe(true);
     expect(launchDiagnostics.provenance).toBe("live-browser");
+    expect(launchDiagnostics.configuredArgumentsObserved).toBe(true);
   } else {
     expect(launchDiagnostics.launchArgumentsObserved).toBe(false);
     expect(launchDiagnostics.provenance).toBe(
       "project-configuration",
     );
     expect(launchDiagnostics.effectiveLaunchArguments).toEqual([]);
+    expect(launchDiagnostics.configuredArgumentsObserved).toBe(false);
   }
-  expect(launchDiagnostics.configuredArgumentsObserved).toBe(true);
   expect(
     launchDiagnostics.preflightIdentityConsistent,
     "source evidence with WebGPU-enabling flags must identify chromium-preflight",
+  ).toBe(true);
+  expect(
+    launchDiagnostics.sourceObservationConsistent,
+    "source launch observation must match the executing project's declared proof mode",
   ).toBe(true);
   const adapter = await readAdapterEvidence(page);
   if (evidenceMode === "required") {

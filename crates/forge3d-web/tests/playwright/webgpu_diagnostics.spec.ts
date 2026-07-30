@@ -1,5 +1,4 @@
 import { expect, test } from "../browser/webgpu-fixture";
-import { isLiveChromiumLaunchArgumentSource } from "../../scripts/browser-launch-provenance.mjs";
 
 test("reports browser WebGPU diagnostics", async ({
   webgpuDiagnostics: diagnostics,
@@ -33,18 +32,28 @@ test("reports browser WebGPU diagnostics", async ({
     diagnostics.launch.declaredEngine,
   );
   expect(diagnostics.launch.error).toBeNull();
-  expect(diagnostics.launch.configuredArgumentsObserved).toBe(true);
   expect(diagnostics.launch.preflightIdentityConsistent).toBe(true);
+  expect(diagnostics.launch.sourceObservationConsistent).toBe(true);
+  if (diagnostics.project.launchObservation === "chromium-live") {
+    expect(diagnostics.launch.observed).toBe(true);
+    expect(diagnostics.launch.configuredArgumentsObserved).toBe(true);
+    expect(diagnostics.launch.provenance).toBe("live-browser");
+    expect(
+      diagnostics.launch.effectiveArguments.length,
+    ).toBeGreaterThan(0);
+  } else {
+    expect(diagnostics.launch.observed).toBe(false);
+    expect(diagnostics.launch.configuredArgumentsObserved).toBe(false);
+    expect(diagnostics.launch.provenance).toBe(
+      "project-configuration",
+    );
+    expect(diagnostics.launch.observationSource).toBe(
+      "playwright-project-configuration",
+    );
+    expect(diagnostics.launch.effectiveArguments).toEqual([]);
+    expect(diagnostics.launch.browserProcessId).toBeNull();
+  }
   if (diagnostics.launch.declaredEngine === "firefox") {
-    expect(diagnostics.launch).toMatchObject({
-      actualEngine: "firefox",
-      provenance: "project-configuration",
-      configuredArguments: [],
-      effectiveArguments: [],
-      observationSource: "playwright-project-configuration",
-      observed: false,
-      browserProcessId: null,
-    });
     if (diagnostics.project.project === "firefox-preflight") {
       expect(diagnostics.launch).toMatchObject({
         preferenceMode: "default",
@@ -59,16 +68,6 @@ test("reports browser WebGPU diagnostics", async ({
       });
     }
   } else {
-    expect(diagnostics.launch.observed).toBe(true);
-    expect(diagnostics.launch.provenance).toBe("live-browser");
-    expect(
-      diagnostics.launch.effectiveArguments.length,
-    ).toBeGreaterThan(0);
-    expect(
-      isLiveChromiumLaunchArgumentSource(
-        diagnostics.launch.observationSource,
-      ),
-    ).toBe(true);
     expect(diagnostics.launch.preferenceMode).toBeNull();
     expect(diagnostics.launch.firefoxUserPrefs).toBeNull();
     expect(diagnostics.launch.supportLevel).toBeNull();

@@ -29,6 +29,7 @@ describe("Playwright browser project configuration", () => {
         "chrome-stable",
         "edge-stable",
         "firefox-preflight",
+        "webkit-preflight",
       ];
       if (hasExperimentalFirefox) {
         expectedProjects.push("firefox-nightly-experimental");
@@ -46,6 +47,7 @@ describe("Playwright browser project configuration", () => {
         browserName: "chromium",
         channel: "playwright",
         lane: "preflight",
+        launchObservation: "chromium-live",
         webgpuRequired: true,
         launchArgs: expectedArgs,
       });
@@ -61,6 +63,7 @@ describe("Playwright browser project configuration", () => {
         browserName: "chrome",
         channel: "chrome",
         lane: "branded",
+        launchObservation: "chromium-live",
         webgpuRequired: true,
         launchArgs: [],
       });
@@ -76,6 +79,22 @@ describe("Playwright browser project configuration", () => {
         browserName: "edge",
         channel: "msedge",
         lane: "branded",
+        launchObservation: "chromium-live",
+        webgpuRequired: true,
+        launchArgs: [],
+      });
+
+      const webkit = projectNamed(projects, "webkit-preflight");
+      expect(webkit.use).toEqual({
+        browserName: "webkit",
+      });
+      expect(webkit.use).not.toHaveProperty("launchOptions");
+      expect(webkit.metadata?.forge3dBrowser).toEqual({
+        project: webkit.name,
+        browserName: "webkit",
+        channel: "playwright",
+        lane: "preflight",
+        launchObservation: "project-configuration",
         webgpuRequired: true,
         launchArgs: [],
       });
@@ -90,6 +109,7 @@ describe("Playwright browser project configuration", () => {
         browserName: "firefox",
         channel: "playwright",
         lane: "preflight",
+        launchObservation: "project-configuration",
         webgpuRequired: true,
         launchArgs: [],
         preferenceMode: "default",
@@ -118,6 +138,7 @@ describe("Playwright browser project configuration", () => {
         browserName: "firefox",
         channel: "playwright",
         lane: "experimental",
+        launchObservation: "project-configuration",
         webgpuRequired: false,
         launchArgs: [],
         preferenceMode: "override",
@@ -156,6 +177,8 @@ describe("Playwright browser project configuration", () => {
       "test:browser:edge": "playwright test --project=edge-stable",
       "test:browser:firefox-preflight":
         "playwright test --project=firefox-preflight",
+      "test:browser:webkit":
+        "playwright test --project=webkit-preflight",
     });
     expect(packageJson.scripts).not.toHaveProperty(
       "test:browser:firefox-nightly-experimental",

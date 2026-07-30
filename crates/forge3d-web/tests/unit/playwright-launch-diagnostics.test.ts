@@ -9,6 +9,7 @@ const firefox: Forge3DBrowserProjectMetadata = {
   browserName: "firefox",
   channel: "playwright",
   lane: "preflight",
+  launchObservation: "project-configuration",
   webgpuRequired: true,
   launchArgs: [],
   preferenceMode: "default",
@@ -21,8 +22,19 @@ const chromium: Forge3DBrowserProjectMetadata = {
   browserName: "chromium",
   channel: "playwright",
   lane: "preflight",
+  launchObservation: "chromium-live",
   webgpuRequired: true,
   launchArgs: ["--enable-unsafe-webgpu"],
+};
+
+const webkit: Forge3DBrowserProjectMetadata = {
+  project: "webkit-preflight",
+  browserName: "webkit",
+  channel: "playwright",
+  lane: "preflight",
+  launchObservation: "project-configuration",
+  webgpuRequired: true,
+  launchArgs: [],
 };
 
 function browser(engine: string) {
@@ -60,8 +72,39 @@ describe("Playwright launch diagnostics", () => {
       supportLevel: "ENGINE_PASS",
       configuredLaunchFlagsPresent: false,
       effectiveLaunchFlagsPresent: false,
-      configuredArgumentsObserved: true,
+      configuredArgumentsObserved: false,
       preflightIdentityConsistent: true,
+      sourceObservationConsistent: true,
+    });
+  });
+
+  it("records honest WebKit project configuration without Firefox labels", async () => {
+    let observerCalls = 0;
+    const diagnostics = await collectPlaywrightLaunchDiagnostics(
+      browser("webkit"),
+      webkit,
+      async () => {
+        observerCalls += 1;
+        throw new Error("WebKit must not call the Chromium observer");
+      },
+    );
+
+    expect(observerCalls).toBe(0);
+    expect(diagnostics).toMatchObject({
+      declaredEngine: "webkit",
+      actualEngine: "webkit",
+      provenance: "project-configuration",
+      configuredArguments: [],
+      effectiveArguments: [],
+      observationSource: "playwright-project-configuration",
+      observed: false,
+      browserProcessId: null,
+      preferenceMode: null,
+      firefoxUserPrefs: null,
+      supportLevel: null,
+      configuredArgumentsObserved: false,
+      preflightIdentityConsistent: true,
+      sourceObservationConsistent: true,
     });
   });
 
@@ -111,6 +154,7 @@ describe("Playwright launch diagnostics", () => {
       browserProcessId: 4312,
       configuredArgumentsObserved: true,
       preflightIdentityConsistent: true,
+      sourceObservationConsistent: true,
     });
     expect(
       serializePlaywrightLaunchArguments(chromium, diagnostics),
@@ -135,6 +179,6 @@ describe("Playwright launch diagnostics", () => {
           browserProcessId: null,
         }),
       ),
-    ).rejects.toThrow(/requires live Chromium launch provenance/u);
+    ).rejects.toThrow(/launch evidence inconsistent with chromium-live/u);
   });
 });

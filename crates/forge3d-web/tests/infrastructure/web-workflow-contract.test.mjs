@@ -69,7 +69,7 @@ function verifyHostedEnginePreflightContract(text) {
     );
   }
 
-  const browserCommands = text
+  const browserCommands = browserPreflight
     .split(/\r?\n/u)
     .map((line) => line.trim())
     .filter((line) => /\bnpm run test:browser(?:\b|:)/u.test(line));
@@ -231,11 +231,15 @@ test("web workflow exposes exactly the two immutable required checks", () => {
   const contract = verifyWebWorkflowContract();
   assert.deepEqual(contract.triggers, ["pull_request", "push"]);
   assert.deepEqual(
-    contract.jobs.map((job) => job.name).sort(),
+    contract.requiredChecks.map((job) => job.name).sort(),
     [
       "Web Runtime / Browser Preflight",
       "Web Runtime / Build And Contract Tests",
     ],
+  );
+  assert.deepEqual(
+    contract.nonBlockingChecks.map((job) => job.name),
+    ["Web Runtime / Playwright WebKit Engine Preflight"],
   );
 });
 
@@ -246,6 +250,7 @@ test("web workflow pins the package job to Windows and source-browser preflight 
     {
       "build-and-contract": "windows-latest",
       "browser-preflight": "macos-15",
+      "webkit-engine-preflight": "macos-latest",
     },
   );
 });
@@ -361,7 +366,7 @@ test("hosted Firefox preflight rejects generic commands, preference overrides, a
             step,
             step.replace('          FORGE3D_HEADED: "1"\n', ""),
           ),
-        ),
+      ),
       new RegExp(`Firefox ${name} step must include FORGE3D_HEADED: "1"`, "u"),
     );
   }
@@ -392,6 +397,185 @@ test("hosted Firefox preflight rejects generic commands, preference overrides, a
         ),
       ),
     /Firefox evidence must upload immediately after the full Firefox run/u,
+  );
+});
+
+test("Playwright WebKit engine preflight is the only non-blocking web job", () => {
+  const contract = verifyWebWorkflowContract();
+  assert.deepEqual(
+    contract.jobs.map(({ id, continueOnError }) => [
+      id,
+      continueOnError === true,
+    ]),
+    [
+      ["build-and-contract", false],
+      ["browser-preflight", false],
+      ["webkit-engine-preflight", true],
+    ],
+  );
+});
+
+test("Playwright WebKit engine preflight rejects blocking or wrong-host execution", () => {
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace("    continue-on-error: true\n", ""),
+      ),
+    /continue-on-error: true/u,
+  );
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace(
+          "    runs-on: macos-latest\n    continue-on-error: true",
+          "    runs-on: windows-latest\n    continue-on-error: true",
+        ),
+      ),
+    /webkit-engine-preflight runner must remain macos-latest/u,
+  );
+});
+
+test("Playwright WebKit engine preflight rejects the wrong project or engine wording", () => {
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace(
+          "run: npm run test:browser:webkit",
+          "run: npm run test:browser:chromium",
+        ),
+      ),
+    /test:browser:webkit/u,
+  );
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replaceAll("Playwright WebKit", "WebKit"),
+      ),
+    /display name must remain immutable|Playwright WebKit/u,
+  );
+});
+
+test("Playwright WebKit engine preflight rejects Chromium flags and support claims", () => {
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace(
+          "        run: npm run test:browser:webkit -- --reporter=json",
+          "        run: npm run test:browser:webkit -- --reporter=json --enable-unsafe-webgpu",
+        ),
+      ),
+    /test:browser:webkit|Chromium launch flags/u,
+  );
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace(
+          "      - name: Run Playwright WebKit engine preflight",
+          "      - name: Run Playwright WebKit engine preflight for Safari BRANDED_PASS",
+        ),
+      ),
+    /Safari or branded evidence/u,
+  );
+});
+
+test("Playwright WebKit report and classifier steps are mandatory", () => {
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace(
+          "          PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/webkit-preflight-actual.json\n",
+          "",
+        ),
+      ),
+    /webkit-preflight-actual\.json/u,
+  );
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace(
+          "        run: npm run classify:browser:webkit",
+          "        run: echo classification unavailable",
+        ),
+      ),
+    /classify:browser:webkit/u,
+  );
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace(
+          "run: npx playwright test --list --project=webkit-preflight --reporter=json",
+          "run: npx playwright test --list --project=webkit-preflight --reporter=json --grep camera",
+        ),
+      ),
+    /complete and unfiltered/u,
+  );
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace(
+          "PLAYWRIGHT_JSON_OUTPUT_FILE: ${{ runner.temp }}/forge3d-web-webkit-preflight-expected.json",
+          "PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/forge3d-web-webkit-preflight-expected.json",
+        ),
+      ),
+    /PLAYWRIGHT_JSON_OUTPUT_FILE/u,
+  );
+  for (const replacement of [
+    "test-results/webkit-preflight-expected.json",
+    "crates/forge3d-web/webkit-preflight-expected.json",
+  ]) {
+    assert.throws(
+      () =>
+        verifyWebWorkflowContract(
+          workflowText.replaceAll(
+            "${{ runner.temp }}/forge3d-web-webkit-preflight-expected.json",
+            replacement,
+          ),
+        ),
+      /runner\.temp/u,
+    );
+  }
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace(
+          "        id: classify-webkit\n",
+          "        id: classify-webkit\n        continue-on-error: true\n",
+        ),
+      ),
+    /classifier step cannot continue on error/u,
+  );
+});
+
+test("Playwright WebKit raw failure is classified but cannot unlock ENGINE_PASS", () => {
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace(
+          "        continue-on-error: true\n        working-directory: crates/forge3d-web\n        env:\n          FORGE3D_WEBGPU_REQUIRED",
+          "        working-directory: crates/forge3d-web\n        env:\n          FORGE3D_WEBGPU_REQUIRED",
+        ),
+      ),
+    /raw Playwright WebKit test step must include continue-on-error: true/u,
+  );
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace(
+          "if: steps.webkit-tests.outcome == 'success' && steps.classify-webkit.outcome == 'success' && steps.classify-webkit.outputs.engine_pass_eligible == 'true' && steps.classify-webkit.outputs.classification == 'ENGINE_PASS'",
+          "if: success()",
+        ),
+      ),
+    /ENGINE_PASS upload must include if: steps\.webkit-tests\.outcome/u,
+  );
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace(
+          "name: forge3d-web-playwright-webkit-ENGINE_PASS",
+          "name: forge3d-web-playwright-webkit-NOT_PROVEN",
+        ),
+      ),
+    /ENGINE_PASS|raw-success-gated/u,
   );
 });
 

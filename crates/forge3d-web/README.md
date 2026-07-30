@@ -70,6 +70,16 @@ as a probe. Its separately labelled artifact can establish at most
 `ENGINE_PASS`; it is not branded Firefox, physical-browser, or exact
 npm-tarball evidence and does not promote Firefox from `Unsupported`.
 
+`npm run test:browser:webkit` selects the bundled Playwright WebKit engine with
+no Chromium launch arguments. Hosted CI runs it only as a non-blocking macOS
+engine preflight with a structured JSON report. Raw suite success is required
+for the `ENGINE_PASS` artifact. When the complete suite runs and every expected
+test fails at exactly the missing-`navigator.gpu` capability boundary, the
+optional check reports `NOT_PROVEN` and uploads no artifact; incomplete,
+malformed, mixed, or unexpected reports fail the optional check. Playwright
+WebKit is not shipping Safari: this preflight cannot establish Safari support,
+and Safari remains unsupported/`NOT_PROVEN`.
+
 See `docs/support-matrix.md` for the browser support matrix, unsupported surfaces, and release-lane requirements.
 
 ## MIME, CORS, And Range Requirements

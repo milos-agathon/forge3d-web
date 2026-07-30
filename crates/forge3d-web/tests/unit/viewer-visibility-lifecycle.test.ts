@@ -35,6 +35,21 @@ describe("viewer visibility lifecycle mode", () => {
     });
   });
 
+  it("keeps headed WebKit lifecycle evidence explicitly synthetic", () => {
+    expect(
+      resolveViewerVisibilityLifecycleMode({
+        headed: true,
+        browserEngine: "webkit",
+      }),
+    ).toEqual({
+      mode: "deterministic-synthetic-document-visibility",
+      visibilityStateSource: "deterministic-synthetic-document-override",
+      actualDocumentVisibilityTransitions: false,
+      physicalSupportEvidence: false,
+      supportPromotionEligible: false,
+    });
+  });
+
   it("keeps headless Chromium lifecycle evidence explicitly synthetic", () => {
     expect(
       resolveViewerVisibilityLifecycleMode({
@@ -50,7 +65,7 @@ describe("viewer visibility lifecycle mode", () => {
     });
   });
 
-  it.each([undefined, "webkit", "firefoxx"])(
+  it.each([undefined, "firefoxx", "safari"])(
     "fails closed for unknown headed engine %s",
     (browserEngine) => {
       expect(() =>
@@ -58,7 +73,7 @@ describe("viewer visibility lifecycle mode", () => {
           headed: true,
           browserEngine,
         }),
-      ).toThrow(/browser engine must be chromium or firefox/u);
+      ).toThrow(/browser engine must be chromium, firefox, or webkit/u);
     },
   );
 

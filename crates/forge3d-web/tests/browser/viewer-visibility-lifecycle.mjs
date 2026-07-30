@@ -16,10 +16,11 @@ export function resolveViewerVisibilityLifecycleMode({
     case "chromium":
       return createViewerVisibilityLifecycleClassification(headed);
     case "firefox":
+    case "webkit":
       return createViewerVisibilityLifecycleClassification(false);
     default:
       throw new Error(
-        `visibility lifecycle browser engine must be chromium or firefox; got ${String(browserEngine)}`,
+        `visibility lifecycle browser engine must be chromium, firefox, or webkit; got ${String(browserEngine)}`,
       );
   }
 }

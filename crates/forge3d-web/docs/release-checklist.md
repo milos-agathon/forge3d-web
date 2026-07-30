@@ -85,12 +85,12 @@ Before disposal, the source and installed-package gates run the same 30-cycle
 visibility lifecycle exercise. Non-headed execution records an explicitly
 labelled deterministic synthetic visibility mode. With `FORGE3D_HEADED=1`,
 Chromium projects use a second real tab and require actual document visibility
-transitions. The Playwright Firefox preflight remains headed but uses the
-explicitly labelled synthetic lifecycle because that automated lane did not
-yield real background-tab visibility; this says nothing about branded or
-physical Firefox behavior. The result records whether actual document transitions
-occurred, is retained separately from the unchanged v3 browser evidence record,
-and is never sufficient by itself for support promotion.
+transitions. The Playwright Firefox and WebKit preflights use the explicitly
+labelled synthetic lifecycle because those automated engine lanes do not yield
+real background-tab visibility; this says nothing about branded or physical
+Firefox or shipping Safari behavior. The result records whether actual document
+transitions occurred, is retained separately from the unchanged v3 browser
+evidence record, and is never sufficient by itself for support promotion.
 It then runs the frozen benchmark and passes the complete exact-tarball evidence
 record through the shared fail-closed validator. It is not an HTTP-only asset
 smoke test.
@@ -121,6 +121,20 @@ That flagged configuration is preflight/`ENGINE_PASS` evidence only; it cannot
 establish branded Chrome or Edge support. The hosted probe persists
 schema-valid environment and interaction evidence but does not run or label
 software-renderer timing as a real-GPU benchmark.
+The sibling `Playwright WebKit Engine Preflight` job runs on hosted macOS with
+literal job-level `continue-on-error: true`, installs only Playwright WebKit,
+builds the browser package, and runs the complete `test:browser:webkit` suite
+with `FORGE3D_WEBGPU_REQUIRED=1` and
+`FORGE3D_SOURCE_BENCHMARK_MODE=probe`. It passes no Chromium launch arguments.
+The raw test step always writes a structured JSON report. Only raw suite success
+that agrees with the complete expected inventory uploads
+`forge3d-web-playwright-webkit-ENGINE_PASS`. A nonzero run may leave the optional
+check green only when every expected test executes and fails at exactly the
+missing-`navigator.gpu` capability boundary; the job summary then says
+`NOT_PROVEN` and no WebKit artifact is uploaded. Missing, malformed, zero-test,
+incomplete, extra, mixed, unexpected, or raw-result-disagreeing reports fail the
+optional check. This engine preflight is not shipping Safari, branded-browser,
+exact-tarball, or physical GPU evidence. Safari remains unsupported/`NOT_PROVEN`.
 `test:browser:chrome` and `test:browser:edge` select the installed branded
 channels without unsafe WebGPU, GPU-blocklist, Vulkan-enable, or ANGLE-forcing
 flags. Their normal configurations use required evidence mode and fail when

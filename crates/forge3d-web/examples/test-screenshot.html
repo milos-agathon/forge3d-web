@@ -27,6 +27,66 @@
 
       const canvas = document.querySelector("#forge3d-screenshot-canvas");
 
+      async function screenshotPixels(runtime) {
+        const blob = await runtime.screenshot();
+        const bitmap = await createImageBitmap(blob);
+        const probe = document.createElement("canvas");
+        probe.width = bitmap.width;
+        probe.height = bitmap.height;
+        const context = probe.getContext("2d", { willReadFrequently: true });
+        context.drawImage(bitmap, 0, 0);
+        bitmap.close();
+        return {
+          blob,
+          pixels: context.getImageData(
+            0,
+            0,
+            probe.width,
+            probe.height
+          ).data
+        };
+      }
+
+      function lumaMetrics(pixels) {
+        let minLuma = 255;
+        let maxLuma = 0;
+        let visiblePixels = 0;
+        for (let offset = 0; offset < pixels.length; offset += 4) {
+          if (pixels[offset + 3] === 0) {
+            continue;
+          }
+          const luma =
+            0.2126 * pixels[offset] +
+            0.7152 * pixels[offset + 1] +
+            0.0722 * pixels[offset + 2];
+          minLuma = Math.min(minLuma, luma);
+          maxLuma = Math.max(maxLuma, luma);
+          visiblePixels += 1;
+        }
+        return {
+          range: visiblePixels === 0 ? 0 : maxLuma - minLuma,
+          visiblePixels
+        };
+      }
+
+      function changedPixels(before, after) {
+        const length = Math.min(before.length, after.length);
+        let changed = 0;
+        for (let offset = 0; offset < length; offset += 4) {
+          const delta =
+            Math.abs(before[offset] - after[offset]) +
+            Math.abs(before[offset + 1] - after[offset + 1]) +
+            Math.abs(before[offset + 2] - after[offset + 2]);
+          if (delta > 35) {
+            changed += 1;
+          }
+        }
+        return {
+          changed,
+          compared: Math.floor(length / 4)
+        };
+      }
+
       function createHill(width, height) {
         const heights = new Float32Array(width * height);
         for (let y = 0; y < height; y += 1) {
@@ -50,7 +110,12 @@
             signature: [],
             disposedCode: undefined,
             width: 0,
-            height: 0
+            height: 0,
+            beforeLumaRange: 0,
+            afterLumaRange: 0,
+            visiblePixels: 0,
+            changedPixels: 0,
+            comparedPixels: 0
           };
         }
 
@@ -73,9 +138,26 @@
           near: 0.01,
           far: 100
         });
+        runtime.render();
 
-        const blob = await runtime.screenshot();
-        const header = new Uint8Array(await blob.slice(0, 8).arrayBuffer());
+        const before = await screenshotPixels(runtime);
+        const beforeLuma = lumaMetrics(before.pixels);
+
+        runtime.setCamera({
+          position: [1.5, 0.9, 2.0],
+          target: [0.12, 0.16, 0],
+          up: [0, 1, 0],
+          fovYDegrees: 48,
+          near: 0.01,
+          far: 100
+        });
+        runtime.render();
+        const after = await screenshotPixels(runtime);
+        const afterLuma = lumaMetrics(after.pixels);
+        const difference = changedPixels(before.pixels, after.pixels);
+        const header = new Uint8Array(
+          await after.blob.slice(0, 8).arrayBuffer()
+        );
 
         runtime.dispose();
         let disposedCode;
@@ -88,12 +170,20 @@
 
         return {
           supported: true,
-          type: blob.type,
-          size: blob.size,
+          type: after.blob.type,
+          size: after.blob.size,
           signature: Array.from(header),
           disposedCode,
           width: runtime.width,
-          height: runtime.height
+          height: runtime.height,
+          beforeLumaRange: beforeLuma.range,
+          afterLumaRange: afterLuma.range,
+          visiblePixels: Math.min(
+            beforeLuma.visiblePixels,
+            afterLuma.visiblePixels
+          ),
+          changedPixels: difference.changed,
+          comparedPixels: difference.compared
         };
       };
     </script>

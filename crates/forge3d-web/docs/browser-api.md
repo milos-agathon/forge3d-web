@@ -182,12 +182,12 @@ The shared 30-cycle source-browser and installed-package lifecycle exercise is
 hermetic by default: it uses an explicitly labelled deterministic synthetic
 `document.visibilityState` override. With `FORGE3D_HEADED=1`, Chromium projects
 instead use a second real browser tab and require actual
-`document.visibilityState` transitions. The Playwright Firefox preflight keeps
-the browser process headed, but its lifecycle exercise uses the explicitly
-labelled synthetic mode because that automated lane did not yield real
-background-tab visibility. This does not describe branded or physical Firefox.
-The lifecycle record states whether actual document transitions occurred and
-always marks itself as non-promotional. Synthetic proof establishes
+`document.visibilityState` transitions. The Playwright Firefox and WebKit
+preflights use the explicitly labelled synthetic mode because those automated
+engine lanes do not yield real background-tab visibility. This does not
+describe branded or physical Firefox or shipping Safari. The lifecycle record
+states whether actual document transitions occurred and always marks itself as
+non-promotional. Synthetic proof establishes
 source/package behavior only; even a headed result must be incorporated into the separately attested branded, physical browser
 and GPU matrix before it can contribute to a support claim.
 

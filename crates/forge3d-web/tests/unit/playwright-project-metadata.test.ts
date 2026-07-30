@@ -15,6 +15,7 @@ const chrome = {
   browserName: "chrome",
   channel: "chrome",
   lane: "branded",
+  launchObservation: "chromium-live",
   webgpuRequired: false,
   launchArgs: [],
 } as const;
@@ -24,6 +25,7 @@ const preflight = {
   browserName: "chromium",
   channel: "playwright",
   lane: "preflight",
+  launchObservation: "chromium-live",
   webgpuRequired: false,
   launchArgs: ["--enable-unsafe-webgpu", "--use-angle=d3d11"],
 } as const;
@@ -33,6 +35,7 @@ const firefoxPreflight = {
   browserName: "firefox",
   channel: "playwright",
   lane: "preflight",
+  launchObservation: "project-configuration",
   webgpuRequired: true,
   launchArgs: [],
   preferenceMode: "default",
@@ -45,6 +48,7 @@ const firefoxExperimental = {
   browserName: "firefox",
   channel: "playwright",
   lane: "experimental",
+  launchObservation: "project-configuration",
   webgpuRequired: false,
   launchArgs: [],
   preferenceMode: "override",
@@ -52,6 +56,16 @@ const firefoxExperimental = {
     "dom.webgpu.enabled": true,
   },
   supportLevel: "NOT_PROVEN",
+} as const;
+
+const webkit = {
+  project: "webkit-preflight",
+  browserName: "webkit",
+  channel: "playwright",
+  lane: "preflight",
+  launchObservation: "project-configuration",
+  webgpuRequired: true,
+  launchArgs: [],
 } as const;
 
 describe("Playwright browser diagnostics metadata", () => {
@@ -111,6 +125,11 @@ describe("Playwright browser diagnostics metadata", () => {
         forge3dBrowser: preflight,
       }),
     ).toEqual(preflight);
+    expect(
+      readForge3DBrowserProjectMetadata({
+        forge3dBrowser: webkit,
+      }),
+    ).toEqual(webkit);
     expect(() =>
       readForge3DBrowserProjectMetadata({
         forge3dBrowser: {
@@ -176,6 +195,25 @@ describe("Playwright browser diagnostics metadata", () => {
         }),
       ).toThrow(/Firefox preference or support metadata is inconsistent/u);
     }
+  });
+
+  it("rejects Chromium launch proof or launch arguments for WebKit", () => {
+    expect(() =>
+      readForge3DBrowserProjectMetadata({
+        forge3dBrowser: {
+          ...webkit,
+          launchObservation: "chromium-live",
+        },
+      }),
+    ).toThrow(/project identity is inconsistent/u);
+    expect(() =>
+      readForge3DBrowserProjectMetadata({
+        forge3dBrowser: {
+          ...webkit,
+          launchArgs: ["--enable-unsafe-webgpu"],
+        },
+      }),
+    ).toThrow(/project identity is inconsistent/u);
   });
 
   it("reports configured and observed flag presence without hiding preflight", () => {

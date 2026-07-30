@@ -12,7 +12,8 @@ surfaces, and deployment assumptions that application owners must satisfy.
 | Chrome/Chromium on macOS/Linux | Best effort | Expected to work when `navigator.gpu` is available, but not required for the MVP release gate. |
 | Edge | Best effort | `test:browser:edge` is an unflagged branded required-mode configuration, but the current Edge support tier remains best effort until the required evidence exists. |
 | Firefox | Unsupported | `test:browser:firefox-preflight` exercises Playwright's patched Firefox in headed mode on GitHub-hosted Apple Silicon with default preferences and no Chromium flags. A passing run is `ENGINE_PASS` source-browser evidence only, not branded Firefox, physical-browser, exact-tarball, or support evidence. |
-| Safari | Unsupported | Safari WebGPU is not part of the MVP contract. |
+| Playwright WebKit test engine | Engine preflight only | The non-blocking macOS `test:browser:webkit` lane uses no Chromium flags and may produce `ENGINE_PASS` only after the complete suite succeeds. Playwright WebKit is not shipping Safari and cannot establish a Safari support row. |
+| Safari | Unsupported | `NOT_PROVEN`: neither Playwright WebKit nor structural CI is shipping Safari evidence. Safari WebGPU is not part of the MVP contract. |
 | Mobile browsers | Unsupported | Touch UX, memory ceilings, and browser WebGPU variability are post-MVP work. |
 | WebGL fallback | Unsupported | Applications must feature-detect WebGPU and provide their own fallback UI. |
 | Node.js rendering | Unsupported | The package is browser-only and requires an `HTMLCanvasElement`. |
@@ -57,6 +58,17 @@ behavior into a skip. It also sets
 `FORGE3D_SOURCE_BENCHMARK_MODE=probe`, keeping the resulting artifact at
 `ENGINE_PASS` rather than branded, physical, exact-tarball, or release-support
 evidence. The Firefox row remains `Unsupported`.
+
+`npm run test:browser:webkit` selects bundled Playwright WebKit without
+Chromium unsafe-WebGPU, GPU-blocklist, Vulkan-enable, or ANGLE-forcing
+arguments. Its hosted macOS job is explicitly non-blocking engine preflight.
+Only raw success from a complete structured Playwright report uploads the
+artifact named `forge3d-web-playwright-webkit-ENGINE_PASS`. A complete run in
+which every expected test fails at exactly the missing-`navigator.gpu`
+capability boundary reports `NOT_PROVEN` and uploads no artifact. Missing,
+malformed, incomplete, mixed, or unexpected reports fail the optional check.
+This engine result is not branded or physical Safari evidence, so Safari
+remains unsupported/`NOT_PROVEN`.
 
 ## Required Release Lane
 

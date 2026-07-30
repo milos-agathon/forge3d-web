@@ -1,7 +1,6 @@
-import {
-  isLiveChromiumLaunchArgumentSource,
-  observeChromiumLaunch,
-} from "../../scripts/browser-launch-provenance.mjs";
+import type { Browser } from "@playwright/test";
+
+import { observeChromiumLaunch } from "../../scripts/browser-launch-provenance.mjs";
 import {
   configuredLaunchArgumentsObserved,
   launchFlagPresence,
@@ -9,6 +8,10 @@ import {
   preflightLaunchIdentityConsistent,
   type Forge3DBrowserProjectMetadata,
 } from "./playwright-project-metadata";
+import {
+  observeSourceBrowserLaunch,
+  sourceLaunchObservationConsistent,
+} from "./source-launch-observation";
 
 interface PlaywrightBrowserIdentity {
   browserType(): {
@@ -28,7 +31,7 @@ type ChromiumLaunchObserver = (
 ) => Promise<ChromiumLaunchObservation>;
 
 export interface PlaywrightLaunchDiagnostics {
-  declaredEngine: "chromium" | "firefox";
+  declaredEngine: "chromium" | "firefox" | "webkit";
   actualEngine: string;
   provenance: "live-browser" | "project-configuration";
   configuredArguments: string[];
@@ -44,6 +47,7 @@ export interface PlaywrightLaunchDiagnostics {
   effectiveLaunchFlagsPresent: boolean;
   configuredArgumentsObserved: boolean;
   preflightIdentityConsistent: boolean;
+  sourceObservationConsistent: boolean;
 }
 
 export async function collectPlaywrightLaunchDiagnostics(
@@ -52,7 +56,11 @@ export async function collectPlaywrightLaunchDiagnostics(
   observeChromium: ChromiumLaunchObserver = observeChromiumLaunch,
 ): Promise<PlaywrightLaunchDiagnostics> {
   const declaredEngine =
-    project.browserName === "firefox" ? "firefox" : "chromium";
+    project.browserName === "firefox"
+      ? "firefox"
+      : project.browserName === "webkit"
+        ? "webkit"
+        : "chromium";
   const actualEngine = browser.browserType().name();
   if (actualEngine !== declaredEngine) {
     throw new Error(
@@ -61,48 +69,42 @@ export async function collectPlaywrightLaunchDiagnostics(
   }
 
   const configuredArguments = [...project.launchArgs];
-  if (declaredEngine === "firefox") {
-    return completeDiagnostics({
-      project,
-      declaredEngine,
-      actualEngine,
-      provenance: "project-configuration",
-      configuredArguments,
-      effectiveArguments: [],
-      observationSource: "playwright-project-configuration",
-      observed: false,
-      browserProcessId: null,
-      preferenceMode: project.preferenceMode ?? null,
-      firefoxUserPrefs:
-        project.firefoxUserPrefs === undefined
-          ? null
-          : { ...project.firefoxUserPrefs },
-      supportLevel: project.supportLevel ?? null,
-    });
-  }
-
-  const launch = await observeChromium(browser);
-  if (
-    launch.launchArgumentsObserved !== true ||
-    !isLiveChromiumLaunchArgumentSource(launch.launchArgumentSource)
-  ) {
+  const launch = await observeSourceBrowserLaunch(
+    browser as Browser,
+    project,
+    observeChromium as Parameters<
+      typeof observeSourceBrowserLaunch
+    >[2],
+  );
+  const observationConsistent = sourceLaunchObservationConsistent(
+    project,
+    launch,
+  );
+  if (!observationConsistent) {
     throw new Error(
-      `Playwright project ${project.project} requires live Chromium launch provenance`,
+      `Playwright project ${project.project} produced launch evidence inconsistent with ${project.launchObservation}`,
     );
   }
+  const liveObservation = project.launchObservation === "chromium-live";
   return completeDiagnostics({
     project,
     declaredEngine,
     actualEngine,
-    provenance: "live-browser",
+    provenance: liveObservation
+      ? "live-browser"
+      : "project-configuration",
     configuredArguments,
     effectiveArguments: [...launch.effectiveLaunchArguments],
     observationSource: launch.launchArgumentSource,
-    observed: true,
+    observed: launch.launchArgumentsObserved,
     browserProcessId: launch.browserProcessId,
-    preferenceMode: null,
-    firefoxUserPrefs: null,
-    supportLevel: null,
+    preferenceMode: project.preferenceMode ?? null,
+    firefoxUserPrefs:
+      project.firefoxUserPrefs === undefined
+        ? null
+        : { ...project.firefoxUserPrefs },
+    supportLevel: project.supportLevel ?? null,
+    sourceObservationConsistent: observationConsistent,
   });
 }
 
@@ -119,9 +121,10 @@ function completeDiagnostics({
   preferenceMode,
   firefoxUserPrefs,
   supportLevel,
+  sourceObservationConsistent,
 }: {
   project: Forge3DBrowserProjectMetadata;
-  declaredEngine: "chromium" | "firefox";
+  declaredEngine: "chromium" | "firefox" | "webkit";
   actualEngine: string;
   provenance: "live-browser" | "project-configuration";
   configuredArguments: string[];
@@ -132,6 +135,7 @@ function completeDiagnostics({
   preferenceMode: "default" | "override" | null;
   firefoxUserPrefs: Record<string, boolean> | null;
   supportLevel: "ENGINE_PASS" | "NOT_PROVEN" | null;
+  sourceObservationConsistent: boolean;
 }): PlaywrightLaunchDiagnostics {
   return {
     declaredEngine,
@@ -154,6 +158,7 @@ function completeDiagnostics({
     effectiveLaunchFlagsPresent:
       launchFlagsPresent(effectiveArguments),
     configuredArgumentsObserved:
+      observed &&
       configuredLaunchArgumentsObserved(
         configuredArguments,
         effectiveArguments,
@@ -164,5 +169,6 @@ function completeDiagnostics({
         configuredArguments,
         effectiveArguments,
       ),
+    sourceObservationConsistent,
   };
 }
