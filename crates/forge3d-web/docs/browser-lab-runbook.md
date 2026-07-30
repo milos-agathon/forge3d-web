@@ -43,13 +43,14 @@ separate people or service identities.
 2. Enable GitHub's full-length Actions SHA policy when the repository exposes
    it. The checked static action-lock gate remains mandatory even when the live
    setting is unavailable.
-3. Create the `main` rule with strict App-bound checks, one approval, stale
-   review dismissal, approval of the latest reviewable push, conversation
-   resolution, administrator enforcement, and no force push, deletion, or
-   bypass actor.
+3. Create the `main` rule with strict App-bound checks, zero required
+   approvals, stale-review dismissal for any voluntary review, no latest-push
+   approval requirement, conversation resolution, administrator enforcement,
+   and no force push, deletion, or bypass actor.
 4. Run a canary PR proving direct and force pushes, deletion, unresolved
-   conversations, stale approvals, latest-push self-approval, and administrator
-   bypass are rejected. Preserve API responses and attempted-command results.
+   conversations, and administrator bypass are rejected. Preserve API
+   responses showing zero required approvals and no latest-push approval
+   requirement together with the attempted-command results.
 5. Merge a separate policy-pin PR that changes `bootstrapState` to `active` and
    sets `trustEpochSha` to the canary merge SHA. The epoch SHA itself and every
    earlier commit remain ineligible; only strict descendants may be promoted.

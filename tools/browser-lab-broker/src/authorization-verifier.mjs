@@ -126,12 +126,17 @@ export async function verifyLiveRepositoryTrust({
   const expectedChecks = required.checks
     .map((check) => ({ context: check.context, appId: check.sourceAppId }))
     .sort(compareChecks);
+  const requiredReviews =
+    policy.branchProtection.requiredPullRequestReviews;
   if (
     protection.required_status_checks?.strict !== true ||
     canonicalJson(checks) !== canonicalJson(expectedChecks) ||
-    protection.required_pull_request_reviews?.dismiss_stale_reviews !== true ||
-    protection.required_pull_request_reviews?.require_last_push_approval !== true ||
-    protection.required_pull_request_reviews?.required_approving_review_count !== 1 ||
+    protection.required_pull_request_reviews?.dismiss_stale_reviews !==
+      requiredReviews.dismissStaleReviews ||
+    protection.required_pull_request_reviews?.require_last_push_approval !==
+      requiredReviews.requireLastPushApproval ||
+    protection.required_pull_request_reviews?.required_approving_review_count !==
+      requiredReviews.requiredApprovingReviewCount ||
     protection.required_conversation_resolution?.enabled !== true ||
     protection.enforce_admins?.enabled !== true ||
     protection.allow_force_pushes?.enabled !== false ||

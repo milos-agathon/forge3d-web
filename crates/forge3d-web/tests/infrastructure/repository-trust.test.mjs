@@ -68,9 +68,16 @@ for (const [name, mutate, expected] of [
     /stale approval dismissal mismatch/u,
   ],
   [
+    "required approving reviews",
+    (input) => {
+      input.protection.required_pull_request_reviews.required_approving_review_count = 1;
+    },
+    /required approving reviews mismatch/u,
+  ],
+  [
     "latest push approval",
     (input) => {
-      input.protection.required_pull_request_reviews.require_last_push_approval = false;
+      input.protection.required_pull_request_reviews.require_last_push_approval = true;
     },
     /latest push approval mismatch/u,
   ],
@@ -185,9 +192,9 @@ function makeInput({ policy = makeActivePolicy() } = {}) {
         })),
       },
       required_pull_request_reviews: {
-        required_approving_review_count: 1,
+        required_approving_review_count: 0,
         dismiss_stale_reviews: true,
-        require_last_push_approval: true,
+        require_last_push_approval: false,
         bypass_pull_request_allowances: { users: [], teams: [], apps: [] },
       },
       required_conversation_resolution: { enabled: true },

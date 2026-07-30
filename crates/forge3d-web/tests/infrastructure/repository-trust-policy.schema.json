@@ -80,9 +80,9 @@
             "requireLastPushApproval"
           ],
           "properties": {
-            "requiredApprovingReviewCount": { "const": 1 },
+            "requiredApprovingReviewCount": { "const": 0 },
             "dismissStaleReviews": { "const": true },
-            "requireLastPushApproval": { "const": true }
+            "requireLastPushApproval": { "const": false }
           }
         },
         "requiredConversationResolution": { "const": true },

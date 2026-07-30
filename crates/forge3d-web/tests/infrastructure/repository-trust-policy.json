@@ -26,9 +26,9 @@
       ]
     },
     "requiredPullRequestReviews": {
-      "requiredApprovingReviewCount": 1,
+      "requiredApprovingReviewCount": 0,
       "dismissStaleReviews": true,
-      "requireLastPushApproval": true
+      "requireLastPushApproval": false
     },
     "requiredConversationResolution": true,
     "enforceAdmins": true,

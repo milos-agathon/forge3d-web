@@ -94,7 +94,35 @@ test("issuance mode still rejects a live job that is no longer queued", async ()
   }
 });
 
-function makeVerifier({ jobStatus, branchSha, expiresAt }) {
+test("issuance rejects live review requirements that exceed checked policy", async () => {
+  const context = makeVerifier({
+    jobStatus: "queued",
+    branchSha: targetSha,
+    expiresAt: "2026-07-28T12:30:00.000Z",
+    requiredApprovingReviewCount: 1,
+    requireLastPushApproval: true,
+  });
+  try {
+    await assert.rejects(
+      context.verifier.verify({
+        digest: context.digest,
+        controllerAssetId: "FW-LNX-NV-01",
+        mode: "issuance",
+      }),
+      /live branch protection does not match checked policy/u,
+    );
+  } finally {
+    rmSync(context.directory, { recursive: true, force: true });
+  }
+});
+
+function makeVerifier({
+  jobStatus,
+  branchSha,
+  expiresAt,
+  requiredApprovingReviewCount = 0,
+  requireLastPushApproval = false,
+}) {
   const directory = mkdtempSync(join(tmpdir(), "forge3d-authorization-"));
   const repositoryTrustPolicy = {
     schemaVersion: 1,
@@ -105,6 +133,11 @@ function makeVerifier({ jobStatus, branchSha, expiresAt }) {
       requiredStatusChecks: {
         strict: true,
         checks: requiredChecks,
+      },
+      requiredPullRequestReviews: {
+        requiredApprovingReviewCount: 0,
+        dismissStaleReviews: true,
+        requireLastPushApproval: false,
       },
     },
   };
@@ -158,7 +191,12 @@ function makeVerifier({ jobStatus, branchSha, expiresAt }) {
   const text = canonicalJson(authorization);
   const digest = createHash("sha256").update(text).digest("hex");
   writeFileSync(join(directory, `${digest}.json`), text);
-  const github = new LiveTrustGitHub({ jobStatus, branchSha });
+  const github = new LiveTrustGitHub({
+    jobStatus,
+    branchSha,
+    requiredApprovingReviewCount,
+    requireLastPushApproval,
+  });
   return {
     directory,
     digest,
@@ -174,9 +212,16 @@ function makeVerifier({ jobStatus, branchSha, expiresAt }) {
 }
 
 class LiveTrustGitHub {
-  constructor({ jobStatus, branchSha }) {
+  constructor({
+    jobStatus,
+    branchSha,
+    requiredApprovingReviewCount,
+    requireLastPushApproval,
+  }) {
     this.jobStatus = jobStatus;
     this.branchSha = branchSha;
+    this.requiredApprovingReviewCount = requiredApprovingReviewCount;
+    this.requireLastPushApproval = requireLastPushApproval;
     this.listRunnerCalls = 0;
   }
 
@@ -207,8 +252,9 @@ class LiveTrustGitHub {
       },
       required_pull_request_reviews: {
         dismiss_stale_reviews: true,
-        require_last_push_approval: true,
-        required_approving_review_count: 1,
+        require_last_push_approval: this.requireLastPushApproval,
+        required_approving_review_count:
+          this.requiredApprovingReviewCount,
         bypass_pull_request_allowances: {
           users: [],
           teams: [],
