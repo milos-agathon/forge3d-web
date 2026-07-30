@@ -53,10 +53,13 @@ matrix.
 `npm run test:browser:webkit` selects bundled Playwright WebKit without
 Chromium unsafe-WebGPU, GPU-blocklist, Vulkan-enable, or ANGLE-forcing
 arguments. Its hosted macOS job is explicitly non-blocking engine preflight.
-Only a successful complete run uploads the artifact named
-`forge3d-web-playwright-webkit-ENGINE_PASS`; a failed run produces no
-`ENGINE_PASS` artifact. This engine result is not branded or physical Safari
-evidence, so Safari remains unsupported/`NOT_PROVEN`.
+Only raw success from a complete structured Playwright report uploads the
+artifact named `forge3d-web-playwright-webkit-ENGINE_PASS`. A complete run in
+which every expected test fails at exactly the missing-`navigator.gpu`
+capability boundary reports `NOT_PROVEN` and uploads no artifact. Missing,
+malformed, incomplete, mixed, or unexpected reports fail the optional check.
+This engine result is not branded or physical Safari evidence, so Safari
+remains unsupported/`NOT_PROVEN`.
 
 ## Required Release Lane
 

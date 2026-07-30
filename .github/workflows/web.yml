@@ -191,15 +191,34 @@ jobs:
         working-directory: crates/forge3d-web
         run: npx playwright install webkit
 
+      - name: Capture expected Playwright WebKit suite inventory
+        working-directory: crates/forge3d-web
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_FILE: ${{ runner.temp }}/forge3d-web-webkit-preflight-expected.json
+        run: npx playwright test --list --project=webkit-preflight --reporter=json
+
       - name: Run Playwright WebKit engine preflight
+        id: webkit-tests
+        continue-on-error: true
         working-directory: crates/forge3d-web
         env:
           FORGE3D_WEBGPU_REQUIRED: "1"
           FORGE3D_SOURCE_BENCHMARK_MODE: probe
-        run: npm run test:browser:webkit
+          PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/webkit-preflight-actual.json
+        run: npm run test:browser:webkit -- --reporter=json
+
+      - name: Classify Playwright WebKit engine preflight
+        id: classify-webkit
+        if: always()
+        working-directory: crates/forge3d-web
+        env:
+          FORGE3D_WEBKIT_EXPECTED_REPORT: ${{ runner.temp }}/forge3d-web-webkit-preflight-expected.json
+          FORGE3D_WEBKIT_ACTUAL_REPORT: test-results/webkit-preflight-actual.json
+          FORGE3D_WEBKIT_RAW_OUTCOME: ${{ steps.webkit-tests.outcome }}
+        run: npm run classify:browser:webkit
 
       - name: Upload successful Playwright WebKit ENGINE_PASS evidence
-        if: success()
+        if: steps.webkit-tests.outcome == 'success' && steps.classify-webkit.outcome == 'success' && steps.classify-webkit.outputs.engine_pass_eligible == 'true' && steps.classify-webkit.outputs.classification == 'ENGINE_PASS'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: forge3d-web-playwright-webkit-ENGINE_PASS

@@ -122,10 +122,21 @@ function verifyPlaywrightWebKitEnginePreflight(text) {
     "name: Web Runtime / Playwright WebKit Engine Preflight",
     "name: Install Playwright WebKit engine",
     "run: npx playwright install webkit",
+    "name: Capture expected Playwright WebKit suite inventory",
+    "PLAYWRIGHT_JSON_OUTPUT_FILE: ${{ runner.temp }}/forge3d-web-webkit-preflight-expected.json",
+    "run: npx playwright test --list --project=webkit-preflight --reporter=json",
     "name: Run Playwright WebKit engine preflight",
+    "id: webkit-tests",
     'FORGE3D_WEBGPU_REQUIRED: "1"',
     "FORGE3D_SOURCE_BENCHMARK_MODE: probe",
-    "run: npm run test:browser:webkit",
+    "PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/webkit-preflight-actual.json",
+    "run: npm run test:browser:webkit -- --reporter=json",
+    "name: Classify Playwright WebKit engine preflight",
+    "id: classify-webkit",
+    "FORGE3D_WEBKIT_EXPECTED_REPORT: ${{ runner.temp }}/forge3d-web-webkit-preflight-expected.json",
+    "FORGE3D_WEBKIT_ACTUAL_REPORT: test-results/webkit-preflight-actual.json",
+    "FORGE3D_WEBKIT_RAW_OUTCOME: ${{ steps.webkit-tests.outcome }}",
+    "run: npm run classify:browser:webkit",
   ]) {
     if (!block.includes(expected)) {
       throw new Error(
@@ -139,10 +150,16 @@ function verifyPlaywrightWebKitEnginePreflight(text) {
     .filter((line) => /\bnpm run test:browser(?:\b|:)/u.test(line));
   if (
     browserCommands.length !== 1 ||
-    browserCommands[0] !== "run: npm run test:browser:webkit"
+    browserCommands[0] !==
+      "run: npm run test:browser:webkit -- --reporter=json"
   ) {
     throw new Error(
       "Playwright WebKit engine preflight must select only test:browser:webkit",
+    );
+  }
+  if (block.includes("PLAYWRIGHT_JSON_OUTPUT_NAME")) {
+    throw new Error(
+      "Playwright 1.56 JSON reports must use PLAYWRIGHT_JSON_OUTPUT_FILE",
     );
   }
   if (
@@ -160,12 +177,70 @@ function verifyPlaywrightWebKitEnginePreflight(text) {
     );
   }
 
+  const inventoryStep = workflowStepBlock(
+    block,
+    "Capture expected Playwright WebKit suite inventory",
+  );
+  const inventoryCommands = inventoryStep
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter((line) => line.includes("npx playwright test "));
+  if (
+    inventoryCommands.length !== 1 ||
+    inventoryCommands[0] !==
+      "run: npx playwright test --list --project=webkit-preflight --reporter=json"
+  ) {
+    throw new Error(
+      "Playwright WebKit expected inventory command must be complete and unfiltered",
+    );
+  }
+
+  const testStep = workflowStepBlock(
+    block,
+    "Run Playwright WebKit engine preflight",
+  );
+  for (const expected of [
+    "id: webkit-tests",
+    "continue-on-error: true",
+    "PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/webkit-preflight-actual.json",
+    "run: npm run test:browser:webkit -- --reporter=json",
+  ]) {
+    if (!testStep.includes(expected)) {
+      throw new Error(
+        `raw Playwright WebKit test step must include ${expected}`,
+      );
+    }
+  }
+  const classifierStep = workflowStepBlock(
+    block,
+    "Classify Playwright WebKit engine preflight",
+  );
+  for (const expected of [
+    "id: classify-webkit",
+    "if: always()",
+    "FORGE3D_WEBKIT_EXPECTED_REPORT: ${{ runner.temp }}/forge3d-web-webkit-preflight-expected.json",
+    "FORGE3D_WEBKIT_ACTUAL_REPORT: test-results/webkit-preflight-actual.json",
+    "FORGE3D_WEBKIT_RAW_OUTCOME: ${{ steps.webkit-tests.outcome }}",
+    "run: npm run classify:browser:webkit",
+  ]) {
+    if (!classifierStep.includes(expected)) {
+      throw new Error(
+        `Playwright WebKit classifier step must include ${expected}`,
+      );
+    }
+  }
+  if (classifierStep.includes("continue-on-error: true")) {
+    throw new Error(
+      "Playwright WebKit classifier step cannot continue on error",
+    );
+  }
+
   const uploadStep = workflowStepBlock(
     block,
     "Upload successful Playwright WebKit ENGINE_PASS evidence",
   );
   for (const expected of [
-    "if: success()",
+    "if: steps.webkit-tests.outcome == 'success' && steps.classify-webkit.outcome == 'success' && steps.classify-webkit.outputs.engine_pass_eligible == 'true' && steps.classify-webkit.outputs.classification == 'ENGINE_PASS'",
     "uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02",
     "name: forge3d-web-playwright-webkit-ENGINE_PASS",
     "path: crates/forge3d-web/test-results",
@@ -176,6 +251,18 @@ function verifyPlaywrightWebKitEnginePreflight(text) {
         `successful Playwright WebKit ENGINE_PASS upload must include ${expected}`,
       );
     }
+  }
+  if (uploadStep.includes("if: success()")) {
+    throw new Error(
+      "Playwright WebKit ENGINE_PASS upload must bind to raw test success",
+    );
+  }
+  const artifactUploads =
+    block.match(/\buses: actions\/upload-artifact@/gu) ?? [];
+  if (artifactUploads.length !== 1 || /\bNOT_PROVEN\b/u.test(uploadStep)) {
+    throw new Error(
+      "Playwright WebKit may upload only the raw-success-gated ENGINE_PASS artifact",
+    );
   }
 }
 

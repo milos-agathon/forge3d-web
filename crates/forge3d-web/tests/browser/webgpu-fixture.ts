@@ -73,6 +73,7 @@ export interface WebGpuDiagnostics extends WebGpuAvailability {
 
 interface Forge3DFixtures {
   webgpuAvailability: WebGpuAvailability;
+  webgpuCapabilityGuard: void;
   webgpuDiagnostics: WebGpuDiagnostics;
 }
 
@@ -124,6 +125,13 @@ export const test = base.extend<Forge3DFixtures>({
     }
     await use(result);
   },
+  webgpuCapabilityGuard: [
+    async ({ webgpuAvailability }, use) => {
+      void webgpuAvailability;
+      await use();
+    },
+    { auto: true },
+  ],
   webgpuDiagnostics: async (
     { browser, page, webgpuAvailability },
     use,

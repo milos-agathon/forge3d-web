@@ -207,8 +207,8 @@ test("Playwright WebKit engine preflight rejects Chromium flags and support clai
     () =>
       verifyWebWorkflowContract(
         workflowText.replace(
-          "        run: npm run test:browser:webkit",
-          "        run: npm run test:browser:webkit -- --enable-unsafe-webgpu",
+          "        run: npm run test:browser:webkit -- --reporter=json",
+          "        run: npm run test:browser:webkit -- --reporter=json --enable-unsafe-webgpu",
         ),
       ),
     /test:browser:webkit|Chromium launch flags/u,
@@ -225,13 +225,104 @@ test("Playwright WebKit engine preflight rejects Chromium flags and support clai
   );
 });
 
-test("Playwright WebKit ENGINE_PASS artifact uploads only after success", () => {
+test("Playwright WebKit report and classifier steps are mandatory", () => {
   assert.throws(
     () =>
       verifyWebWorkflowContract(
-        workflowText.replace("        if: success()\n", ""),
+        workflowText.replace(
+          "          PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/webkit-preflight-actual.json\n",
+          "",
+        ),
       ),
-    /if: success\(\)/u,
+    /webkit-preflight-actual\.json/u,
+  );
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace(
+          "        run: npm run classify:browser:webkit",
+          "        run: echo classification unavailable",
+        ),
+      ),
+    /classify:browser:webkit/u,
+  );
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace(
+          "run: npx playwright test --list --project=webkit-preflight --reporter=json",
+          "run: npx playwright test --list --project=webkit-preflight --reporter=json --grep camera",
+        ),
+      ),
+    /complete and unfiltered/u,
+  );
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace(
+          "PLAYWRIGHT_JSON_OUTPUT_FILE: ${{ runner.temp }}/forge3d-web-webkit-preflight-expected.json",
+          "PLAYWRIGHT_JSON_OUTPUT_NAME: ${{ runner.temp }}/forge3d-web-webkit-preflight-expected.json",
+        ),
+      ),
+    /PLAYWRIGHT_JSON_OUTPUT_FILE/u,
+  );
+  for (const replacement of [
+    "test-results/webkit-preflight-expected.json",
+    "crates/forge3d-web/webkit-preflight-expected.json",
+  ]) {
+    assert.throws(
+      () =>
+        verifyWebWorkflowContract(
+          workflowText.replaceAll(
+            "${{ runner.temp }}/forge3d-web-webkit-preflight-expected.json",
+            replacement,
+          ),
+        ),
+      /runner\.temp/u,
+    );
+  }
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace(
+          "        id: classify-webkit\n",
+          "        id: classify-webkit\n        continue-on-error: true\n",
+        ),
+      ),
+    /classifier step cannot continue on error/u,
+  );
+});
+
+test("Playwright WebKit raw failure is classified but cannot unlock ENGINE_PASS", () => {
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace(
+          "        continue-on-error: true\n        working-directory: crates/forge3d-web\n        env:\n          FORGE3D_WEBGPU_REQUIRED",
+          "        working-directory: crates/forge3d-web\n        env:\n          FORGE3D_WEBGPU_REQUIRED",
+        ),
+      ),
+    /raw Playwright WebKit test step must include continue-on-error: true/u,
+  );
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace(
+          "if: steps.webkit-tests.outcome == 'success' && steps.classify-webkit.outcome == 'success' && steps.classify-webkit.outputs.engine_pass_eligible == 'true' && steps.classify-webkit.outputs.classification == 'ENGINE_PASS'",
+          "if: success()",
+        ),
+      ),
+    /ENGINE_PASS upload must include if: steps\.webkit-tests\.outcome/u,
+  );
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace(
+          "name: forge3d-web-playwright-webkit-ENGINE_PASS",
+          "name: forge3d-web-playwright-webkit-NOT_PROVEN",
+        ),
+      ),
+    /ENGINE_PASS|raw-success-gated/u,
   );
 });
 
