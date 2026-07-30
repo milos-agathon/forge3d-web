@@ -37,7 +37,8 @@ cd ../..
 cargo fmt --all -- --check
 cargo clippy -p forge3d-core --target wasm32-unknown-unknown --no-default-features -- -D warnings
 cargo clippy -p forge3d-web --target wasm32-unknown-unknown -- -D warnings
-cargo test -p forge3d-core
+cargo test -p forge3d-core --features gpu
+cargo test -p forge3d-web
 cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features
 cargo check -p forge3d-web --target wasm32-unknown-unknown
 $env:PATH = "$pwd\crates\forge3d-web\node_modules\.bin;$env:PATH"
@@ -80,9 +81,30 @@ unsafe-WebGPU, GPU-blocklist, Vulkan-enable, or ANGLE-forcing arguments. It
 verifies a reported, non-fallback WebGPU adapter and independently observed
 drag/wheel/touch/keyboard interaction,
 unsupported-browser UI, screenshot readback, resize, and leak-free disposal.
+Before disposal, the source and installed-package gates run the same 30-cycle
+visibility lifecycle exercise. Non-headed execution records an explicitly
+labelled deterministic synthetic visibility mode. With `FORGE3D_HEADED=1`,
+Chromium projects use a second real tab and require actual document visibility
+transitions. The Playwright Firefox preflight remains headed but uses the
+explicitly labelled synthetic lifecycle because that automated lane did not
+yield real background-tab visibility; this says nothing about branded or
+physical Firefox behavior. The result records whether actual document transitions
+occurred, is retained separately from the unchanged v3 browser evidence record,
+and is never sufficient by itself for support promotion.
 It then runs the frozen benchmark and passes the complete exact-tarball evidence
 record through the shared fail-closed validator. It is not an HTTP-only asset
 smoke test.
+The frozen v1 benchmark remains exactly 600 samples applied on direct,
+consecutive harness animation-frame callbacks; its raw duration is a
+performance measurement, not the CHR-02 ten-second clock. A separate shared
+observation continuously cycles the frozen absolute trace on animation frames
+for at least 10,000 ms of actual viewer interaction/render activity. It
+observes normalized `viewer.onError` codes and uncaptured WebGPU validation
+errors reported through browser console or page errors, and fails on a short
+run or any observed error. Source Playwright attaches that explicitly
+non-promotional observation, while the installed-package gate retains it as a
+sibling outside the unchanged v3 browser evidence record. Probe observations
+remain non-promotional and probe lanes still omit the benchmark.
 Hosted CI sets `FORGE3D_PACKAGE_GATE_MODE=probe` and
 `FORGE3D_BROWSER_CHANNEL=bundled` because its virtual Windows runner may expose
 only a fallback adapter. That lane uses unsafe WebGPU plus Windows D3D11,

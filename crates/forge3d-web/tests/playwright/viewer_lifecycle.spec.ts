@@ -3,6 +3,11 @@ import {
   skipRenderAssertionsWhenProbing,
   test,
 } from "../browser/webgpu-fixture";
+import {
+  exerciseViewerVisibilityLifecycle,
+  resolveViewerVisibilityLifecycleMode,
+  VIEWER_VISIBILITY_LIFECYCLE_CYCLES,
+} from "../browser/viewer-visibility-lifecycle.mjs";
 
 test("creation, disposal, and retained getters follow the lifecycle contract", async ({
   page,
@@ -55,6 +60,74 @@ test("creation, disposal, and retained getters follow the lifecycle contract", a
   expect(result.diagnostics.activeObservers).toBe(0);
   expect(result.diagnostics.activeRuntimes).toBe(0);
   expect(result.diagnostics.pendingAnimationFrame).toBe(false);
+});
+
+test("visibility cycling preserves one viewer and resumes one frame", async (
+  { browser, context, page, webgpuAvailability },
+  testInfo,
+) => {
+  skipRenderAssertionsWhenProbing(webgpuAvailability);
+  await page.evaluate(async () => {
+    const errors: string[] = [];
+    (window as any).__forge3dVisibilityLifecycleErrors = errors;
+    await window.__forge3dInteractiveViewer.create({
+      onError: (error: any) => errors.push(error.code ?? error.message),
+    });
+  });
+
+  const headed = process.env.FORGE3D_HEADED === "1";
+  const lifecycleMode = resolveViewerVisibilityLifecycleMode({
+    headed,
+    browserEngine: browser.browserType().name(),
+  });
+  let result;
+  try {
+    result = await exerciseViewerVisibilityLifecycle({
+      page,
+      context,
+      requireActualDocumentVisibilityTransitions:
+        lifecycleMode.actualDocumentVisibilityTransitions,
+      cycleCount: VIEWER_VISIBILITY_LIFECYCLE_CYCLES,
+    });
+  } catch (error) {
+    await testInfo.attach("forge3d-viewer-visibility-lifecycle.json", {
+      body: JSON.stringify(
+        {
+          mode: lifecycleMode.mode,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        null,
+        2,
+      ),
+      contentType: "application/json",
+    });
+    throw error;
+  }
+  await testInfo.attach("forge3d-viewer-visibility-lifecycle.json", {
+    body: JSON.stringify(result, null, 2),
+    contentType: "application/json",
+  });
+
+  expect(result.cycleCount).toBe(VIEWER_VISIBILITY_LIFECYCLE_CYCLES);
+  expect(result.cycles).toHaveLength(VIEWER_VISIBILITY_LIFECYCLE_CYCLES);
+  expect(result.mode).toBe(lifecycleMode.mode);
+  expect(result.actualDocumentVisibilityTransitions).toBe(
+    lifecycleMode.actualDocumentVisibilityTransitions,
+  );
+  expect(result.visibilityStateSource).toBe(
+    lifecycleMode.visibilityStateSource,
+  );
+  expect(result.physicalSupportEvidence).toBe(false);
+  expect(result.supportPromotionEligible).toBe(false);
+  expect(result.sameCanvas).toBe(true);
+  expect(result.orbitChangedView).toBe(true);
+  expect(result.final.status).toBe("ready");
+  expect(result.final.diagnostics.recoveryAttempts).toBe(0);
+  expect(
+    await page.evaluate(
+      () => (window as any).__forge3dVisibilityLifecycleErrors,
+    ),
+  ).toEqual([]);
 });
 
 test("unsupported probe lanes expose structured UI without passing render assertions", async ({

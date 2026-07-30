@@ -35,6 +35,10 @@ for (const expected of [
   "pointerType: \"touch\"",
   "wheel:",
   "verifyUnsupportedUi",
+  "exerciseViewerVisibilityLifecycle",
+  "visibilityLifecycle",
+  "runViewerInteractionObservation",
+  "interactionObservation",
   "validateBrowserEvidence(evidence)",
   "--porcelain=v1",
   "FORGE3D_EVIDENCE_DIR",
@@ -46,6 +50,22 @@ for (const expected of [
     `package consumer browser gate missing ${expected}`,
   );
 }
+const lifecycleCallIndex = consumerHarness.indexOf(
+  "const visibilityLifecycle",
+);
+const disposalCallIndex = consumerHarness.indexOf("viewer.dispose();");
+assert(
+  lifecycleCallIndex >= 0 && disposalCallIndex > lifecycleCallIndex,
+  "package consumer must run the shared visibility lifecycle before disposal",
+);
+const interactionObservationCallIndex = consumerHarness.indexOf(
+  "runViewerInteractionObservation(page)",
+);
+assert(
+  interactionObservationCallIndex >= 0 &&
+    disposalCallIndex > interactionObservationCallIndex,
+  "package consumer must run the shared interaction observation before disposal",
+);
 
 for (const relative of [
   "scripts/prepare-dist.mjs",
@@ -61,6 +81,8 @@ for (const relative of [
   "examples/test-interactive-viewer.html",
   "tests/browser/browser-evidence.schema.json",
   "tests/browser/evidence-validator.mjs",
+  "tests/browser/viewer-interaction-observation.mjs",
+  "tests/browser/viewer-visibility-lifecycle.mjs",
   "tests/browser/viewer-benchmark.ts",
   "tests/browser/benchmark/benchmark-manifest-v1.json",
   "tests/browser/benchmark/benchmark-terrain-v1.f32le",

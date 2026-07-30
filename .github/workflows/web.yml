@@ -41,6 +41,12 @@ jobs:
       - name: Check web wasm build
         run: cargo check -p forge3d-web --target wasm32-unknown-unknown
 
+      - name: Test core GPU contracts
+        run: cargo test -p forge3d-core --features gpu
+
+      - name: Test web crate contracts
+        run: cargo test -p forge3d-web
+
       - name: Install web package dependencies
         working-directory: crates/forge3d-web
         run: |
