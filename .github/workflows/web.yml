@@ -161,3 +161,73 @@ jobs:
           path: crates/forge3d-web/test-results/**/browser-evidence.json
           if-no-files-found: error
           retention-days: 30
+
+  webkit-engine-preflight:
+    name: Web Runtime / Playwright WebKit Engine Preflight
+    needs: build-and-contract
+    runs-on: macos-latest
+    continue-on-error: true
+    timeout-minutes: 25
+
+    steps:
+      - name: Check out the protected source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable reviewed 2026-07-28
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "20.19.0"
+          cache: npm
+          cache-dependency-path: crates/forge3d-web/package-lock.json
+
+      - name: Install web package dependencies
+        working-directory: crates/forge3d-web
+        run: npm ci --registry=https://registry.npmjs.org
+
+      - name: Build browser package
+        working-directory: crates/forge3d-web
+        run: npm run build
+
+      - name: Install Playwright WebKit engine
+        working-directory: crates/forge3d-web
+        run: npx playwright install webkit
+
+      - name: Capture expected Playwright WebKit suite inventory
+        working-directory: crates/forge3d-web
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_FILE: ${{ runner.temp }}/forge3d-web-webkit-preflight-expected.json
+        run: npx playwright test --list --project=webkit-preflight --reporter=json
+
+      - name: Run Playwright WebKit engine preflight
+        id: webkit-tests
+        continue-on-error: true
+        working-directory: crates/forge3d-web
+        env:
+          FORGE3D_WEBGPU_REQUIRED: "1"
+          FORGE3D_SOURCE_BENCHMARK_MODE: probe
+          PLAYWRIGHT_JSON_OUTPUT_FILE: test-results/webkit-preflight-actual.json
+        run: npm run test:browser:webkit -- --reporter=json
+
+      - name: Classify Playwright WebKit engine preflight
+        id: classify-webkit
+        if: always()
+        working-directory: crates/forge3d-web
+        env:
+          FORGE3D_WEBKIT_EXPECTED_REPORT: ${{ runner.temp }}/forge3d-web-webkit-preflight-expected.json
+          FORGE3D_WEBKIT_ACTUAL_REPORT: test-results/webkit-preflight-actual.json
+          FORGE3D_WEBKIT_RAW_OUTCOME: ${{ steps.webkit-tests.outcome }}
+        run: npm run classify:browser:webkit
+
+      - name: Upload successful Playwright WebKit ENGINE_PASS evidence
+        if: steps.webkit-tests.outcome == 'success' && steps.classify-webkit.outcome == 'success' && steps.classify-webkit.outputs.engine_pass_eligible == 'true' && steps.classify-webkit.outputs.classification == 'ENGINE_PASS'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: forge3d-web-playwright-webkit-ENGINE_PASS
+          path: crates/forge3d-web/test-results
+          if-no-files-found: error
+          retention-days: 30

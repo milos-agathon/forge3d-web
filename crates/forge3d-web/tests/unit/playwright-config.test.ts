@@ -22,6 +22,7 @@ describe("Playwright browser project configuration", () => {
         "chromium-preflight",
         "chrome-stable",
         "edge-stable",
+        "webkit-preflight",
       ]);
 
       const preflight = projectNamed(projects, "chromium-preflight");
@@ -35,6 +36,7 @@ describe("Playwright browser project configuration", () => {
         browserName: "chromium",
         channel: "playwright",
         lane: "preflight",
+        launchObservation: "chromium-live",
         webgpuRequired: true,
         launchArgs: expectedArgs,
       });
@@ -50,6 +52,7 @@ describe("Playwright browser project configuration", () => {
         browserName: "chrome",
         channel: "chrome",
         lane: "branded",
+        launchObservation: "chromium-live",
         webgpuRequired: true,
         launchArgs: [],
       });
@@ -65,6 +68,22 @@ describe("Playwright browser project configuration", () => {
         browserName: "edge",
         channel: "msedge",
         lane: "branded",
+        launchObservation: "chromium-live",
+        webgpuRequired: true,
+        launchArgs: [],
+      });
+
+      const webkit = projectNamed(projects, "webkit-preflight");
+      expect(webkit.use).toEqual({
+        browserName: "webkit",
+      });
+      expect(webkit.use).not.toHaveProperty("launchOptions");
+      expect(webkit.metadata?.forge3dBrowser).toEqual({
+        project: webkit.name,
+        browserName: "webkit",
+        channel: "playwright",
+        lane: "preflight",
+        launchObservation: "project-configuration",
         webgpuRequired: true,
         launchArgs: [],
       });
@@ -96,6 +115,8 @@ describe("Playwright browser project configuration", () => {
         "playwright test --project=chromium-preflight",
       "test:browser:chrome": "playwright test --project=chrome-stable",
       "test:browser:edge": "playwright test --project=edge-stable",
+      "test:browser:webkit":
+        "playwright test --project=webkit-preflight",
     });
   });
 });

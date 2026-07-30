@@ -1,6 +1,5 @@
 import { expect, test as base } from "@playwright/test";
 
-import { observeChromiumLaunch } from "../../scripts/browser-launch-provenance.mjs";
 import {
   configuredLaunchArgumentsObserved,
   launchFlagPresence,
@@ -10,6 +9,11 @@ import {
   resolveWebGpuRequired,
   type Forge3DBrowserProjectMetadata,
 } from "./playwright-project-metadata";
+import {
+  observeSourceBrowserLaunch,
+  sourceLaunchObservationConsistent,
+  type SourceLaunchObservation,
+} from "./source-launch-observation";
 
 interface AdapterDiagnostics {
   requestAttempted: boolean;
@@ -62,12 +66,14 @@ export interface WebGpuDiagnostics extends WebGpuAvailability {
     effectiveLaunchFlagsPresent: boolean;
     configuredArgumentsObserved: boolean;
     preflightIdentityConsistent: boolean;
+    sourceObservationConsistent: boolean;
     error: { name: string; message: string } | null;
   };
 }
 
 interface Forge3DFixtures {
   webgpuAvailability: WebGpuAvailability;
+  webgpuCapabilityGuard: void;
   webgpuDiagnostics: WebGpuDiagnostics;
 }
 
@@ -119,17 +125,25 @@ export const test = base.extend<Forge3DFixtures>({
     }
     await use(result);
   },
+  webgpuCapabilityGuard: [
+    async ({ webgpuAvailability }, use) => {
+      void webgpuAvailability;
+      await use();
+    },
+    { auto: true },
+  ],
   webgpuDiagnostics: async (
     { browser, page, webgpuAvailability },
     use,
     testInfo,
   ) => {
-    let launch:
-      | Awaited<ReturnType<typeof observeChromiumLaunch>>
-      | undefined;
+    let launch: SourceLaunchObservation | undefined;
     let launchError: { name: string; message: string } | null = null;
     try {
-      launch = await observeChromiumLaunch(browser);
+      launch = await observeSourceBrowserLaunch(
+        browser,
+        webgpuAvailability.project,
+      );
     } catch (error) {
       launchError = serializeNodeError(error);
     }
@@ -272,6 +286,7 @@ export const test = base.extend<Forge3DFixtures>({
         effectiveLaunchFlagsPresent:
           launchFlagsPresent(effectiveArguments),
         configuredArgumentsObserved:
+          launch?.launchArgumentsObserved === true &&
           configuredLaunchArgumentsObserved(
             configuredArguments,
             effectiveArguments,
@@ -281,6 +296,11 @@ export const test = base.extend<Forge3DFixtures>({
             webgpuAvailability.project,
             configuredArguments,
             effectiveArguments,
+          ),
+        sourceObservationConsistent:
+          sourceLaunchObservationConsistent(
+            webgpuAvailability.project,
+            launch,
           ),
         error: launchError,
       },
@@ -294,17 +314,24 @@ export const test = base.extend<Forge3DFixtures>({
 
     await use(diagnostics);
 
-    expect(
-      diagnostics.launch.observed,
-      `${diagnostics.project.project} did not expose effective Chromium launch arguments`,
-    ).toBe(true);
-    expect(
-      diagnostics.launch.configuredArgumentsObserved,
-      `${diagnostics.project.project} did not apply all configured launch arguments`,
-    ).toBe(true);
+    if (diagnostics.project.launchObservation === "chromium-live") {
+      expect(
+        diagnostics.launch.configuredArgumentsObserved,
+        `${diagnostics.project.project} did not apply all configured launch arguments`,
+      ).toBe(true);
+    } else {
+      expect(
+        diagnostics.launch.configuredArgumentsObserved,
+        `${diagnostics.project.project} configuration-only evidence must not claim live launch-argument observation`,
+      ).toBe(false);
+    }
     expect(
       diagnostics.launch.preflightIdentityConsistent,
       "browser evidence with WebGPU-enabling flags must identify the chromium-preflight project",
+    ).toBe(true);
+    expect(
+      diagnostics.launch.sourceObservationConsistent,
+      `${diagnostics.project.project} source launch observation does not match its declared proof mode`,
     ).toBe(true);
     if (diagnostics.required) {
       expect(

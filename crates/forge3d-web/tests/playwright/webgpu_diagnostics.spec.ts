@@ -1,5 +1,4 @@
 import { expect, test } from "../browser/webgpu-fixture";
-import { isLiveChromiumLaunchArgumentSource } from "../../scripts/browser-launch-provenance.mjs";
 
 test("reports browser WebGPU diagnostics", async ({
   webgpuDiagnostics: diagnostics,
@@ -29,13 +28,20 @@ test("reports browser WebGPU diagnostics", async ({
   expect(diagnostics.launch.configuredArguments).toEqual(
     diagnostics.project.launchArgs,
   );
-  expect(diagnostics.launch.observed).toBe(true);
-  expect(diagnostics.launch.effectiveArguments.length).toBeGreaterThan(0);
-  expect(
-    isLiveChromiumLaunchArgumentSource(
-      diagnostics.launch.observationSource,
-    ),
-  ).toBe(true);
+  expect(diagnostics.launch.sourceObservationConsistent).toBe(true);
+  if (diagnostics.project.launchObservation === "chromium-live") {
+    expect(diagnostics.launch.observed).toBe(true);
+    expect(diagnostics.launch.configuredArgumentsObserved).toBe(true);
+    expect(diagnostics.launch.effectiveArguments.length).toBeGreaterThan(0);
+  } else {
+    expect(diagnostics.launch.observed).toBe(false);
+    expect(diagnostics.launch.configuredArgumentsObserved).toBe(false);
+    expect(diagnostics.launch.observationSource).toBe(
+      "playwright-project-configuration",
+    );
+    expect(diagnostics.launch.effectiveArguments).toEqual([]);
+    expect(diagnostics.launch.browserProcessId).toBeNull();
+  }
   expect(
     diagnostics.launch.configuredLaunchFlagsPresent,
   ).toBe(

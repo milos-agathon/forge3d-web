@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../browser/webgpu-fixture";
 
 declare global {
   interface Window {
