@@ -31,6 +31,11 @@ const installedPackageEvidenceProducer = readText(
   join(packageRoot, "scripts", "build-browser-test-package.mjs"),
 );
 
+assertEqual(
+  normalizeNewlines("alpha\r\nbeta\rgamma"),
+  "alpha\nbeta\ngamma",
+  "release contract source reads must normalize Windows and legacy line endings",
+);
 assertEqual(packageJson.description, "Browser-only Forge3D WebGPU/WASM runtime for terrain rendering", "package description must match the browser MVP");
 assertEqual(packageJson.repository?.type, "git", "package repository type must be declared");
 assertEqual(packageJson.repository?.url, "git+https://github.com/milos-agathon/forge3d.git", "package repository URL must be declared");
@@ -308,7 +313,11 @@ function readJson(path) {
 }
 
 function readText(path) {
-  return readFileSync(path, "utf8");
+  return normalizeNewlines(readFileSync(path, "utf8"));
+}
+
+function normalizeNewlines(value) {
+  return value.replace(/\r\n?/g, "\n");
 }
 
 function assert(condition, message) {
