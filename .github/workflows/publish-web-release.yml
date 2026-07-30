@@ -392,7 +392,7 @@ jobs:
               observation: {
                 artifactId: Number(process.env.OBSERVATION_ARTIFACT_ID),
                 artifactName: process.env.OBSERVATION_ARTIFACT_NAME,
-                artifactDigest: process.env.OBSERVATION_ARTIFACT_DIGEST,
+                artifactDigest: `sha256:${process.env.OBSERVATION_ARTIFACT_DIGEST}`,
                 contentSha256: process.env.OBSERVATION_CONTENT_SHA256
               },
               run: {

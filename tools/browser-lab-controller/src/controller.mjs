@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
 
 import { createHostLabCanary } from "./lab-canary.mjs";
+import { createManualSession } from "./manual-session.mjs";
 
 export class BrowserLabController {
   constructor({ hostId, platform, dependencies, now = () => new Date() }) {
@@ -27,9 +28,12 @@ export class BrowserLabController {
 
     let issued = null;
     let runnerProcess = null;
+    let runnerAbsenceProven = true;
+    let listenerStopEvidence = null;
     let brokerClean = false;
     let workRootWiped = false;
     let hostCanaryInput = null;
+    let manualSessionInput = null;
     let controllerReceiptSha256 = null;
     try {
       const jobRoot = await this.dependencies.prepareJobRoot({
@@ -61,6 +65,7 @@ export class BrowserLabController {
       const command =
         this.platform === "win32" ? "run.cmd" : "./run.sh";
       const args = ["--jitconfig", sensitiveConfiguration.toString("utf8")];
+      runnerAbsenceProven = false;
       try {
         runnerProcess = await this.dependencies.spawnRunner({
           command,
@@ -78,6 +83,7 @@ export class BrowserLabController {
       const terminal = await this.dependencies.monitorOneJob({
         process: runnerProcess,
         authorization,
+        authorizationDigest,
         runnerId: issued.runnerId,
         runnerName: issued.runnerName,
       });
@@ -91,6 +97,11 @@ export class BrowserLabController {
         }
       }
       await this.dependencies.stopRunner(runnerProcess);
+      listenerStopEvidence = createListenerStopEvidence(
+        runnerProcess,
+        this.now(),
+      );
+      runnerAbsenceProven = true;
       runnerProcess = null;
       await this.dependencies.forwardDiagnostics({
         jobRoot,
@@ -105,6 +116,12 @@ export class BrowserLabController {
           authorization,
         });
       }
+      if (authorization.manualSession != null) {
+        manualSessionInput = await this.dependencies.readManualSessionInput({
+          jobRoot,
+          authorization,
+        });
+      }
       await this.dependencies.verifyRunnerDistribution({
         jobRoot,
         phase: "after",
@@ -113,7 +130,7 @@ export class BrowserLabController {
         authorizationDigest,
         requestNonce: randomBytes(16).toString("hex"),
         reason: terminal.reason,
-        listenerStop: terminal.listenerStopEvidence,
+        listenerStop: listenerStopEvidence,
         workRootWipe: {
           attempted: false,
           wiped: false,
@@ -159,6 +176,40 @@ export class BrowserLabController {
           Buffer.from(canonicalJson(signedRecord)),
         );
       }
+      if (manualSessionInput) {
+        const credentials = await this.dependencies.controllerSigningCredentials();
+        const signedRecord = createManualSession({
+          authorization: {
+            ...authorization,
+            sha256: authorizationDigest,
+          },
+          intake: {
+            mediaChallenge: authorization.manualSession.mediaChallenge,
+            sha256: authorization.manualSession.intakeManifestSha256,
+            assetId: authorization.assetId,
+            hostId: authorization.hostId,
+          },
+          runner: {
+            id: issued.runnerId,
+            name: issued.runnerName,
+          },
+          ...manualSessionInput,
+          cleanup: {
+            ...manualSessionInput.cleanup,
+            runnerAbsent: true,
+          },
+          privateKey: credentials.privateKey,
+          signingKeyId: credentials.signingKeyId,
+        });
+        await this.dependencies.storeControllerReceipt({
+          run: authorization.run,
+          recordType: "manual-session",
+          signedRecord,
+        });
+        controllerReceiptSha256 = sha256(
+          Buffer.from(canonicalJson(signedRecord)),
+        );
+      }
       await this.dependencies.wipeJobRoot(jobRoot);
       workRootWiped = true;
       return {
@@ -172,20 +223,33 @@ export class BrowserLabController {
       };
     } catch (error) {
       if (runnerProcess) {
-        await this.dependencies.stopRunner(runnerProcess).catch(() => undefined);
+        const stopped = await this.dependencies
+          .stopRunner(runnerProcess)
+          .then(() => true)
+          .catch(() => false);
+        if (stopped) {
+          listenerStopEvidence = createListenerStopEvidence(
+            runnerProcess,
+            this.now(),
+          );
+          runnerAbsenceProven = true;
+          runnerProcess = null;
+        }
+      } else if (error?.runnerAbsenceProven === true) {
+        runnerAbsenceProven = true;
+        listenerStopEvidence = validListenerStopEvidence(
+          error.listenerStopEvidence,
+        )
+          ? error.listenerStopEvidence
+          : null;
       }
-      if (issued && !brokerClean) {
+      if (issued && !brokerClean && runnerAbsenceProven) {
         const cleanup = await this.dependencies.broker
           .cleanup({
             authorizationDigest,
             requestNonce: randomBytes(16).toString("hex"),
             reason: "controller_failure",
-            listenerStop: {
-              attempted: true,
-              stopped: true,
-              processId: null,
-              observedAt: this.now().toISOString(),
-            },
+            listenerStop: listenerStopEvidence,
             workRootWipe: {
               attempted: false,
               wiped: false,
@@ -198,7 +262,11 @@ export class BrowserLabController {
           cleanup?.deletionResult,
         );
       }
-      if (!issued || brokerClean) {
+      if (
+        runnerAbsenceProven &&
+        (!issued || brokerClean) &&
+        runnerProcess === null
+      ) {
         await this.dependencies.wipePreparedJobRoot(authorization.runnerNonce);
         workRootWiped = true;
       }
@@ -220,7 +288,12 @@ export class BrowserLabController {
       } finally {
         authorizationBytes.fill(0);
       }
-      if (cleanupSucceeded && (!issued || brokerClean) && workRootWiped) {
+      if (
+        cleanupSucceeded &&
+        runnerAbsenceProven &&
+        (!issued || brokerClean) &&
+        workRootWiped
+      ) {
         await lock.release();
       } else {
         await this.dependencies.quarantineHost({
@@ -235,6 +308,29 @@ export class BrowserLabController {
       }
     }
   }
+}
+
+function createListenerStopEvidence(runnerProcess, observedAt) {
+  const evidence = {
+    attempted: true,
+    stopped: true,
+    processId: runnerProcess?.pid,
+    observedAt: observedAt.toISOString(),
+  };
+  if (!validListenerStopEvidence(evidence)) {
+    throw new Error("local runner stop did not produce checked process evidence");
+  }
+  return evidence;
+}
+
+function validListenerStopEvidence(evidence) {
+  return (
+    evidence?.attempted === true &&
+    evidence.stopped === true &&
+    Number.isInteger(evidence.processId) &&
+    evidence.processId > 0 &&
+    Number.isFinite(Date.parse(evidence.observedAt))
+  );
 }
 
 export function validateAuthorization(authorization, hostId, now = new Date()) {

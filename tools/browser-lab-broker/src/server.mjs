@@ -135,7 +135,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const repositoryTrustPolicy = loadJson(
     requiredEnvironment("BROKER_REPOSITORY_TRUST_POLICY"),
   );
-  const workflowActionsLock = loadJson(
+  loadJson(
     requiredEnvironment("BROKER_WORKFLOW_ACTIONS_LOCK"),
   );
   if (
@@ -159,7 +159,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     directory: requiredEnvironment("BROKER_AUTHORIZATION_DIRECTORY"),
     github,
     repositoryTrustPolicy,
-    workflowActionsLock,
   });
   const controllerReachability = new ControllerReachabilityMonitor({
     matrix,

@@ -2,7 +2,11 @@ import { createServer } from "node:https";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
+import { decodeBrokerLifecycleHeader } from "./broker-lifecycle-store.mjs";
 import { loadControllerReceipt } from "./controller-receipt-store.mjs";
+
+const BROKER_HEALTH_CLIENT_IDENTITY = "broker:forge3d-browser-lab";
+const BROKER_LIFECYCLE_HEADER = "x-forge3d-broker-lifecycle";
 
 export function createHealthRecord({
   assetId,
@@ -31,6 +35,7 @@ export function createHealthRecord({
 export function createControllerRequestHandler({
   assetId,
   receiptDirectory,
+  lifecycleStore = null,
   now = () => new Date(),
 }) {
   return (request, response) => {
@@ -42,6 +47,28 @@ export function createControllerRequestHandler({
       response.writeHead(401, headers);
       response.end('{"ok":false}\n');
       return;
+    }
+    const lifecycleHeader = request.headers?.[BROKER_LIFECYCLE_HEADER];
+    if (lifecycleHeader !== undefined) {
+      try {
+        if (
+          request.method !== "GET" ||
+          request.url !== "/v1/health" ||
+          typeof lifecycleHeader !== "string" ||
+          request.socket.getPeerCertificate?.()?.subject?.CN !==
+            BROKER_HEALTH_CLIENT_IDENTITY ||
+          lifecycleStore === null
+        ) {
+          throw new Error("broker lifecycle health probe identity is invalid");
+        }
+        lifecycleStore.observe(
+          decodeBrokerLifecycleHeader(lifecycleHeader),
+        );
+      } catch {
+        response.writeHead(400, headers);
+        response.end('{"ok":false}\n');
+        return;
+      }
     }
     if (request.method === "GET" && request.url === "/v1/health") {
       const record = createHealthRecord({
@@ -55,7 +82,7 @@ export function createControllerRequestHandler({
     }
     const match =
       request.method === "GET"
-        ? /^\/v1\/receipts\/([1-9][0-9]*)\/([1-9][0-9]*)\/host-lab-canary$/u.exec(
+        ? /^\/v1\/receipts\/([1-9][0-9]*)\/([1-9][0-9]*)\/(host-lab-canary|manual-session)$/u.exec(
             request.url ?? "",
           )
         : null;
@@ -64,7 +91,7 @@ export function createControllerRequestHandler({
         const receipt = loadControllerReceipt({
           directory: receiptDirectory,
           run: { id: Number(match[1]), attempt: Number(match[2]) },
-          recordType: "host-lab-canary",
+          recordType: match[3],
         });
         if (receipt.record.hostId !== assetId) {
           throw new Error("controller receipt belongs to another host");
@@ -82,6 +109,29 @@ export function createControllerRequestHandler({
   };
 }
 
+export function createControllerHealthServer({
+  assetId,
+  receiptDirectory,
+  lifecycleStore = null,
+  tls,
+  now = () => new Date(),
+}) {
+  return createServer(
+    {
+      ...tls,
+      requestCert: true,
+      rejectUnauthorized: true,
+      minVersion: "TLSv1.3",
+    },
+    createControllerRequestHandler({
+      assetId,
+      receiptDirectory,
+      lifecycleStore,
+      now,
+    }),
+  );
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const assetId = process.env.FORGE3D_CONTROLLER_ASSET_ID;
   const port = Number(process.env.FORGE3D_CONTROLLER_HEALTH_PORT ?? "9443");
@@ -96,13 +146,11 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     rejectUnauthorized: true,
     minVersion: "TLSv1.3",
   };
-  const server = createServer(
+  const server = createControllerHealthServer({
+    assetId,
+    receiptDirectory: process.env.FORGE3D_CONTROLLER_RECEIPT_DIR,
     tls,
-    createControllerRequestHandler({
-      assetId,
-      receiptDirectory: process.env.FORGE3D_CONTROLLER_RECEIPT_DIR,
-    }),
-  );
+  });
   server.listen(port, "0.0.0.0", () => {
     console.log(JSON.stringify({ ok: true, assetId, port }));
   });

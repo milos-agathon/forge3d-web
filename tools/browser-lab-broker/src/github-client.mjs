@@ -47,11 +47,24 @@ export class GitHubAppTokenProvider {
       `${this.apiBase}/app/installations/${this.installationId}/access_tokens`,
       {
         method: "POST",
-        headers: githubHeaders(jwt),
+        headers: {
+          ...githubHeaders(jwt),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          repository_ids: [FIXED_REPOSITORY.id],
+          permissions: {
+            actions: "write",
+            administration: "write",
+            metadata: "read",
+          },
+        }),
       },
     );
     if (response.status !== 201) {
-      throw new Error(`broker installation-token request failed with HTTP ${response.status}`);
+      throw new Error(
+        `broker installation-token request failed with HTTP ${response.status}`,
+      );
     }
     const value = await response.json();
     const expectedPermissions = {
@@ -66,7 +79,9 @@ export class GitHubAppTokenProvider {
       JSON.stringify(sortObject(value.permissions ?? {})) !==
         JSON.stringify(sortObject(expectedPermissions))
     ) {
-      throw new Error("broker App token has missing or excess repository permissions");
+      throw new Error(
+        "broker App token has missing or excess repository permissions",
+      );
     }
     const repositoriesResponse = await this.fetchImpl(
       `${this.apiBase}/installation/repositories?per_page=100`,
@@ -84,7 +99,9 @@ export class GitHubAppTokenProvider {
       repositories.repositories[0].id !== FIXED_REPOSITORY.id ||
       repositories.repositories[0].full_name !== FIXED_REPOSITORY.fullName
     ) {
-      throw new Error("broker App token is not scoped to the fixed repository");
+      throw new Error(
+        "broker App token is not scoped to the fixed repository",
+      );
     }
     this.cached = { token: value.token, expiresAt: value.expires_at };
     return value.token;
@@ -286,5 +303,9 @@ function base64Url(value) {
 }
 
 function sortObject(value) {
-  return Object.fromEntries(Object.entries(value).sort(([left], [right]) => left.localeCompare(right)));
+  return Object.fromEntries(
+    Object.entries(value).sort(([left], [right]) =>
+      left.localeCompare(right),
+    ),
+  );
 }

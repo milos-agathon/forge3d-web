@@ -39,11 +39,17 @@ export async function captureAdapterAttestation(
   const rawInfo = (
     adapter as GPUAdapter & {
       info?: Record<string, string | number | boolean>;
+      isFallbackAdapter?: boolean;
     }
   ).info;
   const adapterInfoAvailable = rawInfo !== undefined && rawInfo !== null;
+  const directFallback = (
+    adapter as GPUAdapter & { isFallbackAdapter?: boolean }
+  ).isFallbackAdapter;
   const isFallbackAdapter =
-    adapterInfoAvailable && typeof rawInfo.isFallbackAdapter === "boolean"
+    typeof directFallback === "boolean"
+      ? directFallback
+      : adapterInfoAvailable && typeof rawInfo.isFallbackAdapter === "boolean"
       ? rawInfo.isFallbackAdapter
       : null;
   const device = await adapter.requestDevice();

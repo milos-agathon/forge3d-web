@@ -217,6 +217,25 @@ try {
       join(retainedFixture, "tests"),
       { recursive: true, force: false },
     );
+    writeFileSync(
+      join(retainedFixture, "tests", "browser", "adapter-attestation.js"),
+      ts.transpileModule(
+        readFileSync(
+          join(packageRoot, "tests", "browser", "adapter-attestation.ts"),
+          "utf8",
+        ),
+        {
+          compilerOptions: {
+            module: ts.ModuleKind.ES2022,
+            target: ts.ScriptTarget.ES2022,
+          },
+        },
+      ).outputText,
+    );
+    copyFileSync(
+      join(packageRoot, "tests", "browser", "hardware-page-harness.js"),
+      join(retainedFixture, "tests", "browser", "hardware-page-harness.js"),
+    );
     copyFileSync(
       benchmarkModulePath,
       join(retainedFixture, "viewer-benchmark.mjs"),

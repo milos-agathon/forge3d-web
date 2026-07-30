@@ -1,7 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { createHealthRecord } from "../src/controller-health-service.mjs";
+import { encodeLifecycleHeader } from "../../browser-lab-broker/src/controller-reachability.mjs";
+import { BrokerLifecycleStore } from "../src/broker-lifecycle-store.mjs";
+import {
+  createControllerRequestHandler,
+  createHealthRecord,
+} from "../src/controller-health-service.mjs";
 
 test("controller health record exposes only public identity and version", () => {
   const record = createHealthRecord({
@@ -27,3 +32,107 @@ test("controller health record exposes only public identity and version", () => 
     /identity\/state/u,
   );
 });
+
+test("broker mTLS health probe delivers the exact assignment lifecycle", () => {
+  const hostId = "FW-LNX-NV-01";
+  const runnerName = `${hostId}-${"ab".repeat(16)}`;
+  const lifecycleStore = new BrokerLifecycleStore({ hostId });
+  const handler = createControllerRequestHandler({
+    assetId: hostId,
+    receiptDirectory: "/unused",
+    lifecycleStore,
+    now: () => new Date("2026-07-29T10:01:31.000Z"),
+  });
+  const record = {
+    authorizationDigest: "a".repeat(64),
+    hostAssetId: hostId,
+    runnerId: 7,
+    runnerName,
+    state: "online_unassigned",
+    onlineAt: "2026-07-29T10:00:00.000Z",
+    assignmentDeadline: "2026-07-29T10:01:30.000Z",
+    everBusy: false,
+    lastRunnerObservation: {
+      id: 7,
+      name: runnerName,
+      status: "online",
+      busy: false,
+      observedAt: "2026-07-29T10:01:30.000Z",
+    },
+    lastJobObservation: {
+      id: 11,
+      status: "queued",
+      conclusion: null,
+      observedAt: "2026-07-29T10:01:30.000Z",
+    },
+  };
+  const response = fakeResponse();
+  handler(
+    {
+      method: "GET",
+      url: "/v1/health",
+      headers: {
+        "x-forge3d-broker-lifecycle": encodeLifecycleHeader(
+          record,
+          new Date("2026-07-29T10:01:31.000Z"),
+        ),
+      },
+      socket: {
+        authorized: true,
+        getPeerCertificate: () => ({
+          subject: { CN: "broker:forge3d-browser-lab" },
+        }),
+      },
+    },
+    response,
+  );
+
+  assert.equal(response.statusCode, 200);
+  const observed = lifecycleStore.get({
+    authorizationDigest: record.authorizationDigest,
+    runnerId: record.runnerId,
+    runnerName,
+  });
+  assert.equal(observed.assignmentDeadline, record.assignmentDeadline);
+  assert.equal(observed.lastRunnerObservation.busy, false);
+  assert.equal(observed.lastJobObservation.status, "queued");
+});
+
+test("lifecycle headers from any non-broker mTLS identity fail closed", () => {
+  const hostId = "FW-LNX-NV-01";
+  const lifecycleStore = new BrokerLifecycleStore({ hostId });
+  const handler = createControllerRequestHandler({
+    assetId: hostId,
+    receiptDirectory: "/unused",
+    lifecycleStore,
+  });
+  const response = fakeResponse();
+  handler(
+    {
+      method: "GET",
+      url: "/v1/health",
+      headers: { "x-forge3d-broker-lifecycle": "YWJjZA" },
+      socket: {
+        authorized: true,
+        getPeerCertificate: () => ({
+          subject: { CN: "observer:forge3d-trust" },
+        }),
+      },
+    },
+    response,
+  );
+  assert.equal(response.statusCode, 400);
+});
+
+function fakeResponse() {
+  return {
+    statusCode: null,
+    body: "",
+    writeHead(statusCode) {
+      this.statusCode = statusCode;
+    },
+    end(value) {
+      this.body += value ?? "";
+    },
+  };
+}

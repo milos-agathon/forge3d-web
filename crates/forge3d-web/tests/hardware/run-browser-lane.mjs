@@ -1,5 +1,4 @@
-import { readFileSync, writeFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const drivers = new Set([
   "playwright-chrome",
@@ -79,24 +78,25 @@ function parseArguments(argv) {
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const args = parseArguments(process.argv.slice(2));
-  const binding = JSON.parse(readFileSync(args.get("--binding"), "utf8"));
-  const adapter = JSON.parse(
-    readFileSync(args.get("--adapter-evidence"), "utf8"),
+  const runtimePath = args.get("--runtime");
+  if (!runtimePath) {
+    throw new Error("--runtime must identify the packaged production executor");
+  }
+  const { executeHardwareBrowserLane } = await import(
+    pathToFileURL(runtimePath).href
   );
-  const assertions = JSON.parse(
-    readFileSync(args.get("--assertion-result"), "utf8"),
-  );
-  const record = await runBrowserLane({
+  await executeHardwareBrowserLane({
     lane: args.get("--lane"),
-    driver: args.get("--driver"),
-    binding,
-    adapterSmoke: async () => adapter,
-    assertions: async () => assertions,
-    cleanup: async () => ({ ok: true }),
+    assetId: args.get("--asset-id"),
+    platform: args.get("--platform"),
+    binding: JSON.parse(args.get("--binding-json")),
+    route: JSON.parse(args.get("--route-json")),
+    browserPolicy: JSON.parse(args.get("--browser-policy-json")),
+    deviceMatrix: JSON.parse(args.get("--device-matrix-json")),
+    mediaChallenge: args.get("--media-challenge") || null,
+    appiumSessionModule: args.get("--appium-session-module") || null,
+    outputPath: args.get("--output"),
+    manualSessionInputPath: args.get("--manual-session-input") || null,
+    watermarkPath: args.get("--watermark") || null,
   });
-  writeFileSync(args.get("--output"), `${JSON.stringify(record, null, 2)}\n`, {
-    encoding: "utf8",
-    mode: 0o600,
-  });
-  console.log(JSON.stringify({ ok: true, output: args.get("--output") }));
 }

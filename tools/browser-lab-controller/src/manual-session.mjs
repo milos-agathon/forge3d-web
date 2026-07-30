@@ -5,6 +5,7 @@ export function createManualSession({
   intake,
   runner,
   system,
+  loginSession,
   browser,
   driver,
   origins,
@@ -30,9 +31,14 @@ export function createManualSession({
   }
   if (
     Object.values(cleanup).some((value) => value !== true) ||
-    origins.application === origins.asset
+    origins.application === origins.asset ||
+    loginSession?.interactive !== true ||
+    loginSession.locked !== false ||
+    loginSession.remote !== false
   ) {
-    throw new Error("manual session cleanup and dual-origin policy must pass");
+    throw new Error(
+      "manual session cleanup, session, and dual-origin policy must pass",
+    );
   }
   const record = {
     schemaVersion: 1,
@@ -57,7 +63,7 @@ export function createManualSession({
     browser,
     driver,
     headed: true,
-    loginSession: { interactive: true, locked: false, remote: false },
+    loginSession,
     origins,
     routeBasePath,
     mediaChallenge: intake.mediaChallenge,

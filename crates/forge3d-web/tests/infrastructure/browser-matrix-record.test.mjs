@@ -30,6 +30,22 @@ test("automated and manual sources derive closed matrix keys without artifact cl
         surfacePresented: true,
       },
     },
+    attestation: {
+      result: "PASS",
+      required: true,
+      binding: {
+        runId: 10,
+        assetId: "FW-LNX-NV-01",
+        commit: "a".repeat(40),
+        packageSha256: "d".repeat(64),
+      },
+      page: { isFallbackAdapter: false },
+      host: {
+        hostId: "FW-LNX-NV-01",
+        expectedGpuPresent: true,
+        headedSessionAvailable: true,
+      },
+    },
     run: { id: 10 },
   });
   assert.equal(automated.key, "automated:FW-LNX-NV-01:chrome-linux-rtx3070");
@@ -68,6 +84,33 @@ test("infrastructure canary, fallback adapter, failed identity, and unattested a
       evidence: {},
       run: {},
     }),
+  );
+  assert.throws(
+    () =>
+      createAutomatedMatrixRecord({
+        promotion: {
+          lane: "chrome-linux-rtx3070",
+          mode: "automated",
+          hostId: "FW-LNX-NV-01",
+          assetId: "FW-LNX-NV-01",
+          trustedSha: "a".repeat(40),
+          packageManifestSha256: "b".repeat(64),
+        },
+        evidence: {
+          result: "PASS",
+          lane: "chrome-linux-rtx3070",
+          trustedSha: "a".repeat(40),
+          packageSha256: "d".repeat(64),
+          packageManifestSha256: "b".repeat(64),
+          adapter: {
+            isFallbackAdapter: false,
+            deviceCreated: true,
+            surfacePresented: true,
+          },
+        },
+        run: { id: 10 },
+      }),
+    /does not match/u,
   );
   assert.throws(() =>
     finalizeMatrixRecord({

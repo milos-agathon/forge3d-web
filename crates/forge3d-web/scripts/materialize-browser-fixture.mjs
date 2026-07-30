@@ -40,7 +40,25 @@ export function materializeBrowserFixture({
       throw new Error(`browser fixture input must be a regular file: ${path}`);
     }
   }
-  copyFileSync(join(root, "test-interactive-viewer.html"), join(root, "index.html"));
+  const sourceHtml = readFileSync(
+    join(root, "test-interactive-viewer.html"),
+    "utf8",
+  );
+  const nonceRelativeHtml = sourceHtml.replaceAll(
+    '"/node_modules/',
+    '"./node_modules/',
+  );
+  if (
+    !nonceRelativeHtml.includes(
+      '"./node_modules/@forge3d/web/dist/index.js"',
+    )
+  ) {
+    throw new Error("browser fixture import map is not nonce-path relative");
+  }
+  writeFileSync(join(root, "index.html"), nonceRelativeHtml, {
+    encoding: "utf8",
+    mode: 0o600,
+  });
   copyFileSync(join(packageRoot, "dist", "index.js"), join(root, "app.js"));
   copyFileSync(
     join(packageRoot, "dist", "forge3d_web_bg.wasm"),
@@ -56,6 +74,17 @@ export function materializeBrowserFixture({
     ),
     join(root, "terrain.bin"),
   );
+  for (const file of [
+    "adapter-attestation.js",
+    "hardware-page-harness.js",
+  ]) {
+    const source = join(root, "tests", "browser", file);
+    const stats = lstatSync(source);
+    if (!stats.isFile() || stats.isSymbolicLink()) {
+      throw new Error(`browser hardware module must be a regular file: ${source}`);
+    }
+    copyFileSync(source, join(root, file));
+  }
   writeFileSync(
     join(root, "package.sha256"),
     `${packageSha256}  @forge3d-web-package.tgz\n`,

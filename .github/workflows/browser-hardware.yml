@@ -182,6 +182,7 @@ jobs:
       hardware_label: ${{ steps.promotion-outputs.outputs.hardware-label }}
       nonce_label: ${{ steps.promotion-outputs.outputs.nonce-label }}
       runner_nonce: ${{ steps.promotion-outputs.outputs.runner-nonce }}
+      tunnel_secret_name: ${{ steps.promotion-outputs.outputs.tunnel-secret-name }}
       promotion_artifact_id: ${{ steps.upload-promotion.outputs.artifact-id }}
       promotion_artifact_name: ${{ steps.promotion-outputs.outputs.artifact-name }}
       promotion_artifact_digest: ${{ steps.upload-promotion.outputs.artifact-digest }}
@@ -468,11 +469,20 @@ jobs:
           node --input-type=module --eval '
             import { readFileSync, writeFileSync } from "node:fs";
             const value = JSON.parse(readFileSync("promoted-package/hardware-promotion.json", "utf8"));
+            const tunnelSecrets = {
+              "FW-MAC-M2-01": "BROWSER_LAB_TUNNEL_FW_MAC_M2_01",
+              "FW-WIN-I12-01": "BROWSER_LAB_TUNNEL_FW_WIN_I12_01",
+              "FW-LNX-I12-01": "BROWSER_LAB_TUNNEL_FW_LNX_I12_01",
+              "FW-LNX-NV-01": "BROWSER_LAB_TUNNEL_FW_LNX_NV_01"
+            };
+            const tunnelSecretName = tunnelSecrets[value.hostId];
+            if (!tunnelSecretName) throw new Error("host tunnel secret mapping is missing");
             writeFileSync(process.env.GITHUB_OUTPUT, [
               `host-id=${value.hostId}`,
               `hardware-label=${value.hardwareLabel}`,
               `nonce-label=${value.nonceLabel}`,
               `runner-nonce=${value.runnerNonce}`,
+              `tunnel-secret-name=${tunnelSecretName}`,
               `artifact-name=hardware-promotion-${process.env.GITHUB_RUN_ID}-${process.env.GITHUB_RUN_ATTEMPT}`,
               ""
             ].join("\n"), { flag: "a" });
@@ -532,11 +542,6 @@ jobs:
             --source-ref refs/heads/main \
             --source-digest "${{ github.workflow_sha }}" \
             --deny-self-hosted-runners
-          if test -n "${{ inputs.intakeReleaseId }}"; then
-            challenge="$(node -p "require('./promotion/hardware-promotion.json').manualSession.mediaChallenge")"
-            test "${#challenge}" -eq 32
-            echo "FORGE3D_MANUAL_MEDIA_CHALLENGE=${challenge}" >> "${GITHUB_ENV}"
-          fi
 
       - name: Poll waiting approval and bind exactly one queued job
         id: authorize
@@ -578,6 +583,7 @@ jobs:
       cancel-in-progress: false
     env:
       FORGE3D_CONTROLLER_JOB_ROOT: ${{ runner.temp }}/forge3d-controller-job
+      FORGE3D_CLOUDFLARED_TOKEN: ${{ secrets[needs.promote-hardware.outputs.tunnel_secret_name] }}
     permissions:
       actions: read
       attestations: read
@@ -589,7 +595,112 @@ jobs:
     steps:
       - name: Refuse any repository source checkout
         shell: bash
-        run: test ! -d .git
+        run: |
+          test ! -d .git
+          mkdir -p "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence"
+
+      - name: Independently resolve and verify exact runner authorization
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EXPECTED_NONCE: ${{ needs.promote-hardware.outputs.runner_nonce }}
+          EXPECTED_HOST_ID: ${{ needs.promote-hardware.outputs.host_id }}
+          EXPECTED_LANE: ${{ inputs.lane }}
+          EXPECTED_ASSET_ID: ${{ inputs.assetId }}
+          EXPECTED_TRUSTED_SHA: ${{ inputs.trusted_sha }}
+          EXPECTED_WORKFLOW_SHA: ${{ github.workflow_sha }}
+        run: |
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/artifacts?per_page=100" > authorization-artifacts.json
+          node --input-type=module --eval '
+            import { readFileSync, writeFileSync } from "node:fs";
+            const name = `runner-authorization-${process.env.EXPECTED_NONCE}`;
+            const artifacts = JSON.parse(
+              readFileSync("authorization-artifacts.json", "utf8")
+            ).artifacts;
+            const matches = artifacts.filter((artifact) =>
+              artifact.name === name &&
+              artifact.expired === false &&
+              artifact.workflow_run?.id === Number(process.env.GITHUB_RUN_ID) &&
+              (
+                artifact.workflow_run.run_attempt === undefined ||
+                artifact.workflow_run.run_attempt === Number(process.env.GITHUB_RUN_ATTEMPT)
+              )
+            );
+            if (matches.length !== 1) {
+              throw new Error("exact authorization artifact did not resolve uniquely");
+            }
+            if (!/^sha256:[0-9a-f]{64}$/u.test(matches[0].digest ?? "")) {
+              throw new Error("authorization artifact digest is malformed");
+            }
+            writeFileSync("authorization-artifact.json", JSON.stringify({
+              id: matches[0].id,
+              digest: matches[0].digest
+            }));
+          '
+          authorization_id="$(node -p "require('./authorization-artifact.json').id")"
+          authorization_digest="$(node -p "require('./authorization-artifact.json').digest")"
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${authorization_id}/zip" > authorization.zip
+          test "$(sha256sum authorization.zip | cut -d ' ' -f 1)" = "${authorization_digest#sha256:}"
+          mkdir authorization
+          unzip -q authorization.zip -d authorization
+          test "$(find authorization -name runner-authorization.json -type f | wc -l)" -eq 1
+          gh attestation verify authorization/runner-authorization.json \
+            --repo milos-agathon/forge3d-web \
+            --signer-workflow milos-agathon/forge3d-web/.github/workflows/browser-hardware.yml \
+            --source-ref refs/heads/main \
+            --source-digest "${EXPECTED_WORKFLOW_SHA}" \
+            --deny-self-hosted-runners
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/attempts/${GITHUB_RUN_ATTEMPT}/jobs?per_page=100" > authorization-jobs.json
+          node --input-type=module --eval '
+            import { createHash } from "node:crypto";
+            import { readFileSync, writeFileSync } from "node:fs";
+            const text = readFileSync("authorization/runner-authorization.json", "utf8");
+            const authorization = JSON.parse(text);
+            const canonical = (value) => {
+              if (value === null || typeof value !== "object") return JSON.stringify(value);
+              if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+              return `{${Object.keys(value).sort().map(
+                (key) => `${JSON.stringify(key)}:${canonical(value[key])}`
+              ).join(",")}}`;
+            };
+            if (canonical(authorization) !== text) {
+              throw new Error("authorization artifact is not canonical JSON");
+            }
+            const jobs = JSON.parse(readFileSync("authorization-jobs.json", "utf8")).jobs;
+            const hardware = jobs.filter((job) =>
+              job.id === authorization.queuedHardwareJob.id &&
+              job.name === "Browser Hardware / Ephemeral Execution" &&
+              job.status === "in_progress" &&
+              job.runner_name === process.env.RUNNER_NAME
+            );
+            if (
+              hardware.length !== 1 ||
+              authorization.run.id !== Number(process.env.GITHUB_RUN_ID) ||
+              authorization.run.attempt !== Number(process.env.GITHUB_RUN_ATTEMPT) ||
+              authorization.hostId !== process.env.EXPECTED_HOST_ID ||
+              authorization.lane !== process.env.EXPECTED_LANE ||
+              authorization.assetId !== process.env.EXPECTED_ASSET_ID ||
+              authorization.trustedSha !== process.env.EXPECTED_TRUSTED_SHA ||
+              authorization.workflow.sha !== process.env.EXPECTED_WORKFLOW_SHA ||
+              authorization.runnerNonce !== process.env.EXPECTED_NONCE ||
+              authorization.runnerName !== process.env.RUNNER_NAME ||
+              authorization.customLabels.some((label) => !hardware[0].labels.includes(label)) ||
+              Date.parse(authorization.expiresAt) <= Date.now()
+            ) {
+              throw new Error("authorization does not match the executing hardware job");
+            }
+            writeFileSync(
+              `${process.env.FORGE3D_CONTROLLER_JOB_ROOT}/authorization-sha256.txt`,
+              createHash("sha256").update(text).digest("hex")
+            );
+            if (authorization.manualSession) {
+              writeFileSync(
+                process.env.GITHUB_ENV,
+                `FORGE3D_MANUAL_MEDIA_CHALLENGE=${authorization.manualSession.mediaChallenge}\n`,
+                { flag: "a" }
+              );
+            }
+          '
 
       - name: Download exact promoted package artifact
         shell: bash
@@ -608,6 +719,26 @@ jobs:
             --source-ref refs/heads/main \
             --source-digest "${{ github.workflow_sha }}" \
             --deny-self-hosted-runners
+          node --input-type=module --eval '
+            import { createHash } from "node:crypto";
+            import { readFileSync } from "node:fs";
+            const authorization = JSON.parse(
+              readFileSync("authorization/runner-authorization.json", "utf8")
+            );
+            const promotion = JSON.parse(
+              readFileSync("promotion/hardware-promotion.json", "utf8")
+            );
+            const manifestBytes = readFileSync("promotion/browser-package-manifest.json");
+            if (
+              promotion.runnerNonce !== authorization.runnerNonce ||
+              promotion.hostId !== authorization.hostId ||
+              promotion.assetId !== authorization.assetId ||
+              promotion.lane !== authorization.lane ||
+              promotion.trustedSha !== authorization.trustedSha ||
+              createHash("sha256").update(manifestBytes).digest("hex") !==
+                authorization.packageManifestSha256
+            ) throw new Error("promotion does not match runner authorization");
+          '
 
       - name: Install exact tarball in a fresh consumer
         shell: bash
@@ -623,24 +754,137 @@ jobs:
             --consumer consumer \
             --package-sha256 "${expected}"
 
-      - name: Run only the signed browser-neutral harness
+      - name: Observe live headed session and freeze exact browser and OS updates
         shell: bash
         run: |
-          test -f "${FORGE3D_CONTROLLER_JOB_ROOT}/adapter-evidence.json"
-          test -f "${FORGE3D_CONTROLLER_JOB_ROOT}/assertion-result.json"
-          node consumer/hardware/run-browser-lane.mjs \
+          node promotion/resolve-host-runtime.mjs \
             --lane "${{ inputs.lane }}" \
-            --driver "${FORGE3D_CONTROLLER_DRIVER}" \
-            --binding "${FORGE3D_CONTROLLER_JOB_ROOT}/binding.json" \
-            --adapter-evidence "${FORGE3D_CONTROLLER_JOB_ROOT}/adapter-evidence.json" \
-            --assertion-result "${FORGE3D_CONTROLLER_JOB_ROOT}/assertion-result.json" \
-            --output "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/browser-hardware-evidence.json"
+            --host-id "${{ needs.promote-hardware.outputs.host_id }}" \
+            --policy promotion/browser-policy.json \
+            --inventory-output "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/host-inventory.json" \
+            --channels-output "${FORGE3D_CONTROLLER_JOB_ROOT}/resolved-channels.json"
+          node promotion/manage-browser-update-window.mjs \
+            --operation freeze \
+            --asset-id "${{ needs.promote-hardware.outputs.host_id }}" \
+            --resolved-channels "${FORGE3D_CONTROLLER_JOB_ROOT}/resolved-channels.json" \
+            --policy promotion/browser-policy.json \
+            --state "${FORGE3D_CONTROLLER_JOB_ROOT}/update-window.json"
 
-      - name: Require controller-signed record for a manual session
+      - name: Start nonce-bound dual-origin trusted HTTPS route
+        shell: bash
+        run: |
+          test -n "${FORGE3D_CLOUDFLARED_TOKEN}"
+          test -x "${FORGE3D_CLOUDFLARED_EXECUTABLE}"
+          printf '{"nonces":[]}\n' > "${FORGE3D_CONTROLLER_JOB_ROOT}/nonce-registry.json"
+          job_id="$(node -p "require('./authorization/runner-authorization.json').queuedHardwareJob.id")"
+          node promotion/create-run-nonce.mjs \
+            --run-id "${GITHUB_RUN_ID}" \
+            --job-id "${job_id}" \
+            --registry "${FORGE3D_CONTROLLER_JOB_ROOT}/nonce-registry.json" \
+            --output "${FORGE3D_CONTROLLER_JOB_ROOT}/run-nonce.json"
+          package_sha="$(node -p "require('./promotion/browser-package-manifest.json').packageSha256")"
+          node promotion/manage-browser-route.mjs \
+            --operation start \
+            --fixture-root "$(pwd)/consumer" \
+            --server-module "$(pwd)/promotion/serve-browser-fixture.mjs" \
+            --cloudflared "${FORGE3D_CLOUDFLARED_EXECUTABLE}" \
+            --origin-policy promotion/https-origin-policy.json \
+            --host-id "${{ needs.promote-hardware.outputs.host_id }}" \
+            --nonce "${FORGE3D_CONTROLLER_JOB_ROOT}/run-nonce.json" \
+            --package-sha256 "${package_sha}" \
+            --application-port 18081 \
+            --asset-port 18082 \
+            --state "${FORGE3D_CONTROLLER_JOB_ROOT}/route-state.json" \
+            --log-directory "${FORGE3D_CONTROLLER_JOB_ROOT}/route-logs"
+          node --input-type=module --eval '
+            import { readFileSync, writeFileSync } from "node:fs";
+            const authorization = JSON.parse(
+              readFileSync("authorization/runner-authorization.json", "utf8")
+            );
+            const manifest = JSON.parse(
+              readFileSync("promotion/browser-package-manifest.json", "utf8")
+            );
+            const route = JSON.parse(
+              readFileSync(`${process.env.FORGE3D_CONTROLLER_JOB_ROOT}/route-state.json`, "utf8")
+            ).binding;
+            writeFileSync(
+              `${process.env.FORGE3D_CONTROLLER_JOB_ROOT}/route.json`,
+              JSON.stringify(route)
+            );
+            writeFileSync(
+              `${process.env.FORGE3D_CONTROLLER_JOB_ROOT}/binding.json`,
+              JSON.stringify({
+                lane: authorization.lane,
+                runId: authorization.run.id,
+                jobId: authorization.queuedHardwareJob.id,
+                assetId: authorization.assetId,
+                commit: authorization.trustedSha,
+                packageSha256: manifest.packageSha256
+              })
+            );
+          '
+
+      - name: Prove public certificate MIME CORS range and package route
+        shell: bash
+        run: |
+          for attempt in $(seq 1 60); do
+            if node promotion/probe-browser-fixture.mjs \
+              --binding "${FORGE3D_CONTROLLER_JOB_ROOT}/route.json" \
+              > "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/route-probe.pending.json"; then
+              mv \
+                "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/route-probe.pending.json" \
+                "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/route-probe.json"
+              break
+            fi
+            sleep 5
+          done
+          test -s "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/route-probe.json"
+
+      - name: Run checked headed browser Appium and adapter evidence
+        shell: bash
+        run: |
+          runtime_args=(
+            --lane "${{ inputs.lane }}" \
+            --asset-id "${{ inputs.assetId }}" \
+            --binding "${FORGE3D_CONTROLLER_JOB_ROOT}/binding.json" \
+            --route "${FORGE3D_CONTROLLER_JOB_ROOT}/route.json" \
+            --browser-policy promotion/browser-policy.json \
+            --device-matrix promotion/device-matrix.json \
+            --host-id "${{ needs.promote-hardware.outputs.host_id }}" \
+            --inventory "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/host-inventory.json" \
+            --appium-session-module "$(pwd)/promotion/appium-session.mjs" \
+            --process-registry "${FORGE3D_CONTROLLER_JOB_ROOT}/browser-processes.json" \
+            --output "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/browser-hardware-evidence.json"
+          )
+          if test -n "${FORGE3D_MANUAL_MEDIA_CHALLENGE:-}"; then
+            runtime_args+=(
+              --media-challenge "${FORGE3D_MANUAL_MEDIA_CHALLENGE}"
+              --manual-session-input "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/manual-session-input.json"
+              --watermark "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/session-watermark.json"
+            )
+          fi
+          node promotion/browser-lane-runtime.mjs "${runtime_args[@]}"
+
+      - name: Capture same-job host GPU evidence and join page attestation
+        shell: bash
+        run: |
+          node promotion/capture-host-gpu-evidence.mjs \
+            --binding "${FORGE3D_CONTROLLER_JOB_ROOT}/binding.json" \
+            --host-id "${{ needs.promote-hardware.outputs.host_id }}" \
+            --matrix promotion/hardware-matrix.json \
+            --inventory "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/host-inventory.json" \
+            --output "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/host-gpu-evidence.json"
+          node promotion/join-adapter-attestation.mjs \
+            --page "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/browser-hardware-evidence.json" \
+            --host "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/host-gpu-evidence.json" \
+            --required "${{ inputs.required }}" \
+            --output "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/adapter-attestation.json"
+
+      - name: Verify manual-session inputs came from this authorization
         if: contains(inputs.lane, 'manual-') || inputs.canaryMode == 'manual'
         shell: bash
         run: |
-          test -f "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/signed-manual-session.json"
+          test -f "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/manual-session-input.json"
           test -f "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/session-watermark.json"
           node --input-type=module --eval '
             import { readFileSync } from "node:fs";
@@ -651,22 +895,35 @@ jobs:
             if (
               watermark.nonDismissable !== true ||
               watermark.overlayTarget !== "viewer-shell-not-canvas" ||
-              watermark.mediaChallenge !== process.env.FORGE3D_MANUAL_MEDIA_CHALLENGE
+              watermark.mediaChallenge !== process.env.FORGE3D_MANUAL_MEDIA_CHALLENGE ||
+              !/^[0-9a-f]{32}$/u.test(watermark.mediaChallenge)
             ) throw new Error("manual session watermark proof is invalid");
           '
 
       - name: Emit automated release-matrix source from verified evidence
-        if: inputs.lane != 'infrastructure-canary' && !contains(inputs.lane, 'manual-')
+        if: inputs.required && inputs.lane != 'infrastructure-canary' && !contains(inputs.lane, 'manual-')
         shell: bash
         run: |
           node --input-type=module --eval '
             import { readFileSync, writeFileSync } from "node:fs";
+            const promotion = JSON.parse(
+              readFileSync("promotion/hardware-promotion.json", "utf8")
+            );
+            const browserEvidence = JSON.parse(readFileSync(
+              `${process.env.FORGE3D_CONTROLLER_JOB_ROOT}/evidence/browser-hardware-evidence.json`,
+              "utf8"
+            ));
             writeFileSync(
               `${process.env.FORGE3D_CONTROLLER_JOB_ROOT}/matrix-record-input.json`,
               JSON.stringify({
-                promotion: JSON.parse(readFileSync("promotion/hardware-promotion.json", "utf8")),
-                evidence: JSON.parse(readFileSync(
-                  `${process.env.FORGE3D_CONTROLLER_JOB_ROOT}/evidence/browser-hardware-evidence.json`,
+                promotion,
+                evidence: {
+                  ...browserEvidence,
+                  trustedSha: browserEvidence.commit,
+                  packageManifestSha256: promotion.packageManifestSha256
+                },
+                attestation: JSON.parse(readFileSync(
+                  `${process.env.FORGE3D_CONTROLLER_JOB_ROOT}/evidence/adapter-attestation.json`,
                   "utf8"
                 )),
                 run: { id: Number(process.env.GITHUB_RUN_ID) }
@@ -681,7 +938,12 @@ jobs:
       - name: Restore updates, stop browser drivers, Appium, fixtures, and tunnels
         if: always()
         shell: bash
-        run: node "${FORGE3D_CONTROLLER_JOB_ROOT}/cleanup-hardware-job.mjs"
+        run: |
+          node promotion/cleanup-browser-hardware.mjs \
+            --route-state "${FORGE3D_CONTROLLER_JOB_ROOT}/route-state.json" \
+            --update-state "${FORGE3D_CONTROLLER_JOB_ROOT}/update-window.json" \
+            --process-registry "${FORGE3D_CONTROLLER_JOB_ROOT}/browser-processes.json" \
+            --output "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/browser-hardware-cleanup.json"
 
       - name: Upload hardware evidence and cleanup diagnostics
         if: always()
@@ -735,7 +997,10 @@ jobs:
           mkdir finalized-hardware-evidence
           unzip -q hardware-evidence.zip -d finalized-hardware-evidence
           test "$(find finalized-hardware-evidence -name browser-hardware-evidence.json -type f | wc -l)" -eq 1
-          if test "${{ inputs.lane }}" != "infrastructure-canary"; then
+          test "$(find finalized-hardware-evidence -name host-inventory.json -type f | wc -l)" -eq 1
+          test "$(find finalized-hardware-evidence -name host-gpu-evidence.json -type f | wc -l)" -eq 1
+          test "$(find finalized-hardware-evidence -name adapter-attestation.json -type f | wc -l)" -eq 1
+          if test "${{ inputs.required }}" = "true" && test "${{ inputs.lane }}" != "infrastructure-canary"; then
             test "$(find finalized-hardware-evidence -name browser-matrix-record-source.json -type f | wc -l)" -eq 1
           fi
 
@@ -789,6 +1054,23 @@ jobs:
             "${receipt_url}" \
             > finalized-hardware-evidence/signed-controller-receipt.json
           test -s finalized-hardware-evidence/signed-controller-receipt.json
+
+      - name: Revalidate exact page and host adapter join on hosted runner
+        shell: bash
+        working-directory: crates/forge3d-web
+        run: |
+          page="$(find ../../finalized-hardware-evidence -name browser-hardware-evidence.json -type f)"
+          host="$(find ../../finalized-hardware-evidence -name host-gpu-evidence.json -type f)"
+          joined="$(find ../../finalized-hardware-evidence -name adapter-attestation.json -type f)"
+          node scripts/join-adapter-attestation.mjs \
+            --page "${page}" \
+            --host "${host}" \
+            --required "${{ inputs.required }}" \
+            --output ../../hosted-adapter-attestation.json
+          cmp "${joined}" ../../hosted-adapter-attestation.json
+          mv \
+            ../../hosted-adapter-attestation.json \
+            ../../finalized-hardware-evidence/hosted-adapter-attestation-verification.json
 
       - name: Resolve exact completed hardware job
         if: inputs.lane == 'infrastructure-canary'
@@ -919,10 +1201,14 @@ jobs:
           ref: ${{ github.workflow_sha }}
           persist-credentials: false
 
-      - name: Download exact authorization and signed-session artifacts
+      - name: Download exact authorization evidence and controller-signed session
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          CONTROLLER_MTLS_CERT: ${{ secrets.BROWSER_LAB_MTLS_CERT }}
+          CONTROLLER_MTLS_KEY: ${{ secrets.BROWSER_LAB_MTLS_KEY }}
+          CONTROLLER_MTLS_CA: ${{ secrets.BROWSER_LAB_MTLS_CA }}
+          HOST_ID: ${{ needs.promote-hardware.outputs.host_id }}
         run: |
           gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${{ needs.authorize-runner.outputs.authorization_artifact_id }}/zip" > authorization.zip
           expected="${{ needs.authorize-runner.outputs.authorization_artifact_digest }}"
@@ -941,7 +1227,38 @@ jobs:
           test "$(sha256sum evidence.zip | cut -d ' ' -f 1)" = "${expected#sha256:}"
           mkdir hardware-evidence
           unzip -q evidence.zip -d hardware-evidence
-          test "$(find hardware-evidence -name signed-manual-session.json -type f | wc -l)" -eq 1
+          test "$(find hardware-evidence -name manual-session-input.json -type f | wc -l)" -eq 1
+          test "$(find hardware-evidence -name session-watermark.json -type f | wc -l)" -eq 1
+          test "$(find hardware-evidence -name browser-hardware-cleanup.json -type f | wc -l)" -eq 1
+
+          install -m 600 /dev/null "${RUNNER_TEMP}/controller-client.crt"
+          install -m 600 /dev/null "${RUNNER_TEMP}/controller-client.key"
+          install -m 600 /dev/null "${RUNNER_TEMP}/controller-ca.crt"
+          printf '%s' "${CONTROLLER_MTLS_CERT}" > "${RUNNER_TEMP}/controller-client.crt"
+          printf '%s' "${CONTROLLER_MTLS_KEY}" > "${RUNNER_TEMP}/controller-client.key"
+          printf '%s' "${CONTROLLER_MTLS_CA}" > "${RUNNER_TEMP}/controller-ca.crt"
+          receipt_url="$(node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            const endpoints = JSON.parse(readFileSync(
+              "crates/forge3d-web/tests/infrastructure/controller-health-endpoints.json",
+              "utf8"
+            ));
+            const endpoint = endpoints.controllers.find(
+              (candidate) => candidate.assetId === process.env.HOST_ID
+            );
+            if (!endpoint) throw new Error("checked controller endpoint is missing");
+            process.stdout.write(endpoint.manualReceiptUrlTemplate
+              .replace("{run_id}", process.env.GITHUB_RUN_ID)
+              .replace("{run_attempt}", process.env.GITHUB_RUN_ATTEMPT));
+          ')"
+          curl --fail --silent --show-error \
+            --retry 60 --retry-delay 5 --retry-all-errors \
+            --cert "${RUNNER_TEMP}/controller-client.crt" \
+            --key "${RUNNER_TEMP}/controller-client.key" \
+            --cacert "${RUNNER_TEMP}/controller-ca.crt" \
+            "${receipt_url}" \
+            > hardware-evidence/signed-manual-session.json
+          test -s hardware-evidence/signed-manual-session.json
 
       - name: Resolve exact hardware workflow job
         shell: bash
@@ -998,19 +1315,25 @@ jobs:
             manual-finalizer-input.json \
             manual-session-finalizer.json
 
-      - name: Revoke trust-observer token
-        if: always() && steps.observer-token.outputs.token != ''
+      - name: Revoke trust-observer token and remove mTLS material
+        if: always()
         working-directory: crates/forge3d-web
         env:
           OBSERVER_TOKEN: ${{ steps.observer-token.outputs.token }}
         run: |
-          node --input-type=module --eval '
-            const response = await fetch("https://api.github.com/installation/token", {
-              method: "DELETE",
-              headers: { Accept: "application/vnd.github+json", Authorization: `Bearer ${process.env.OBSERVER_TOKEN}`, "X-GitHub-Api-Version": "2022-11-28" }
-            });
-            if (response.status !== 204) throw new Error(`token revocation failed: ${response.status}`);
-          '
+          if test -n "${OBSERVER_TOKEN}"; then
+            node --input-type=module --eval '
+              const response = await fetch("https://api.github.com/installation/token", {
+                method: "DELETE",
+                headers: { Accept: "application/vnd.github+json", Authorization: `Bearer ${process.env.OBSERVER_TOKEN}`, "X-GitHub-Api-Version": "2022-11-28" }
+              });
+              if (response.status !== 204) throw new Error(`token revocation failed: ${response.status}`);
+            '
+          fi
+          rm -f \
+            "${RUNNER_TEMP}/controller-client.crt" \
+            "${RUNNER_TEMP}/controller-client.key" \
+            "${RUNNER_TEMP}/controller-ca.crt"
 
       - name: Upload failure diagnostics without acceptable attestation
         if: failure()

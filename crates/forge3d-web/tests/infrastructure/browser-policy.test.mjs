@@ -7,12 +7,16 @@ import { fileURLToPath } from "node:url";
 import {
   assertSafeLaunchArguments,
   captureHostInventory,
+  observeLiveSession,
 } from "../../scripts/capture-host-inventory.mjs";
 import {
   assertUpdateWindowActive,
   closeUpdateWindow,
+  createPendingUpdateWindow,
   createUpdateWindow,
+  enforceHostUpdatePolicy,
 } from "../../scripts/manage-browser-update-window.mjs";
+import { resolveHostRuntime } from "../../scripts/resolve-host-runtime.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
 const policy = JSON.parse(readFileSync(join(root, "browser-policy.json"), "utf8"));
@@ -133,11 +137,13 @@ test("required host capture fails for locked, remote, non-Wayland, old, or drift
 });
 
 test("update window resolves exact versions, expires at 24 hours, and always closes", () => {
+  const freezeEnforcement = enforcement("freeze", [browser]);
   const frozen = createUpdateWindow({
     assetId: "FW-MAC-M2-01",
     resolvedChannels: [{ id: browser.id, version: browser.version }],
     frozenAt: new Date("2026-07-29T08:00:00.000Z"),
     policy,
+    enforcement: freezeEnforcement,
   });
   assertUpdateWindowActive(frozen, new Date("2026-07-30T07:59:59.000Z"));
   assert.throws(
@@ -147,8 +153,156 @@ test("update window resolves exact versions, expires at 24 hours, and always clo
   const closed = closeUpdateWindow(
     frozen,
     new Date("2026-07-29T09:00:00.000Z"),
+    enforcement("unfreeze", [browser]),
   );
   assert.equal(closed.state, "unfrozen");
   assert.equal(closed.cleanupAttempted, true);
   assert.throws(() => assertUpdateWindowActive(closed), /not active/u);
 });
+
+test("macOS and Windows session state is observed instead of synthesized", () => {
+  const mac = observeLiveSession("darwin", {
+    environment: {},
+    execute: (command) => {
+      if (command === "/usr/bin/stat") return "forge3d\n";
+      return '    "CGSSessionScreenIsLocked" = Yes\n';
+    },
+  });
+  assert.deepEqual(mac, {
+    interactive: true,
+    locked: true,
+    remote: false,
+    identifier: "forge3d",
+  });
+
+  const windows = observeLiveSession("win32", {
+    environment: {},
+    execute: () =>
+      JSON.stringify({
+        interactive: true,
+        locked: false,
+        remote: false,
+        identifier: "LAB\\forge3d",
+      }),
+  });
+  assert.equal(windows.interactive, true);
+  assert.equal(windows.locked, false);
+  assert.equal(windows.identifier, "LAB\\forge3d");
+});
+
+test("update window invokes an absolute enforcement helper and validates its receipt", () => {
+  const calls = [];
+  const result = enforceHostUpdatePolicy({
+    helper: "/opt/forge3d/bin/browser-update-control",
+    operation: "freeze",
+    assetId: "FW-MAC-M2-01",
+    resolvedChannels: [browser],
+    execute: (command, args) => {
+      calls.push([command, args]);
+      return JSON.stringify(enforcement("freeze", [browser]).receipt);
+    },
+  });
+  assert.equal(result.receipt.osUpdates, "disabled");
+  assert.equal(calls[0][0], "/opt/forge3d/bin/browser-update-control");
+  assert.deepEqual(calls[0][1].slice(0, 3), [
+    "freeze",
+    "--asset-id",
+    "FW-MAC-M2-01",
+  ]);
+  assert.throws(
+    () =>
+      createUpdateWindow({
+        assetId: "FW-MAC-M2-01",
+        resolvedChannels: [browser],
+        policy,
+      }),
+    /enforcement was not proven/u,
+  );
+});
+
+test("freeze attempts persist enough exact state for unconditional restoration", () => {
+  const pending = createPendingUpdateWindow({
+    assetId: "FW-MAC-M2-01",
+    resolvedChannels: [browser],
+    helper: "/opt/forge3d/bin/browser-update-control",
+    attemptedAt: new Date("2026-07-29T08:00:00.000Z"),
+  });
+  assert.equal(pending.state, "freeze_attempted");
+  assert.equal(pending.enforcement.freezeReceipt, null);
+  const restored = closeUpdateWindow(
+    pending,
+    new Date("2026-07-29T09:00:00.000Z"),
+    enforcement("unfreeze", [browser]),
+  );
+  assert.equal(restored.state, "unfrozen");
+  assert.equal(restored.enforcement.restoreReceipt.osUpdates, "restored");
+});
+
+test("host runtime helper supplies versions while the trusted script observes OS and lock state", () => {
+  const calls = [];
+  const result = resolveHostRuntime({
+    helper: "/opt/forge3d/bin/browser-inventory",
+    lane: "chrome-macos-m2",
+    hostId: "FW-MAC-M2-01",
+    policy,
+    platform: "darwin",
+    environment: {},
+    now: new Date("2026-07-29T08:00:00.000Z"),
+    execute: (command) => {
+      calls.push(command);
+      if (command === "/opt/forge3d/bin/browser-inventory") {
+        return JSON.stringify({
+          schemaVersion: 1,
+          hostId: "FW-MAC-M2-01",
+          lane: "chrome-macos-m2",
+          platform: "darwin",
+          displayServer: "WindowServer",
+          browsers: [browser],
+          tools,
+          launchArguments: [],
+        });
+      }
+      if (command === "/usr/bin/sw_vers") return "25A123\n";
+      if (command === "/usr/bin/stat") return "forge3d\n";
+      if (command === "/usr/sbin/ioreg") {
+        return '    "CGSSessionScreenIsLocked" = No\n';
+      }
+      throw new Error(`unexpected command ${command}`);
+    },
+  });
+  assert.equal(result.inventory.session.locked, false);
+  assert.equal(result.inventory.osBuild, "macOS build 25A123");
+  assert.deepEqual(result.resolvedChannels, [
+    { id: browser.id, version: browser.version },
+  ]);
+  assert.deepEqual(calls, [
+    "/opt/forge3d/bin/browser-inventory",
+    "/usr/bin/sw_vers",
+    "/usr/bin/stat",
+    "/usr/sbin/ioreg",
+  ]);
+});
+
+function enforcement(operation, channels) {
+  const state = operation === "freeze" ? "disabled" : "restored";
+  const observedAt =
+    operation === "freeze"
+      ? "2026-07-29T08:00:00.000Z"
+      : "2026-07-29T09:00:00.000Z";
+  return {
+    helper: "/opt/forge3d/bin/browser-update-control",
+    observedAt,
+    receipt: {
+      schemaVersion: 1,
+      operation,
+      assetId: "FW-MAC-M2-01",
+      osUpdates: state,
+      browserUpdates: channels.map(({ id, version }) => ({
+        id,
+        version,
+        state,
+      })),
+      observedAt,
+    },
+  };
+}

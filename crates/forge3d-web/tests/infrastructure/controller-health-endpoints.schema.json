@@ -29,7 +29,13 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["assetId", "identity", "url", "receiptUrlTemplate"],
+        "required": [
+          "assetId",
+          "identity",
+          "url",
+          "receiptUrlTemplate",
+          "manualReceiptUrlTemplate"
+        ],
         "properties": {
           "assetId": {
             "enum": [
@@ -50,6 +56,10 @@
           "receiptUrlTemplate": {
             "type": "string",
             "pattern": "^https://[^/?#]+:9443/v1/receipts/\\{run_id\\}/\\{run_attempt\\}/host-lab-canary$"
+          },
+          "manualReceiptUrlTemplate": {
+            "type": "string",
+            "pattern": "^https://[^/?#]+:9443/v1/receipts/\\{run_id\\}/\\{run_attempt\\}/manual-session$"
           }
         }
       }

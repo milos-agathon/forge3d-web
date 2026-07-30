@@ -26,6 +26,14 @@ test("broker token is exact-permission and single-repository scoped", async () =
             options.headers.Authorization,
             /^Bearer [^.]+\.[^.]+\.[^.]+$/u,
           );
+          assert.deepEqual(JSON.parse(options.body), {
+            repository_ids: [1259761852],
+            permissions: {
+              actions: "write",
+              administration: "write",
+              metadata: "read",
+            },
+          });
           return response(tokenBody(), 201);
         }
         assert.equal(

@@ -7,10 +7,23 @@
   <key>ProgramArguments</key>
   <array>
     <string>/usr/local/bin/node</string>
-    <string>/Library/Application Support/Forge3D/browser-lab-controller/src/controller-health-service.mjs</string>
+    <string>/Library/Application Support/Forge3D/browser-lab-controller/src/controller-service.mjs</string>
+    <string>--environment-file</string>
+    <string>/Library/Application Support/Forge3D/browser-lab-controller.env</string>
   </array>
   <key>WorkingDirectory</key>
   <string>/Library/Application Support/Forge3D/browser-lab</string>
+  <key>UserName</key>
+  <string>forge3d-lab-controller</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>FORGE3D_CONTROLLER_UNIX_SESSION_BRIDGE</key>
+    <string>/Library/Application Support/Forge3D/browser-lab-controller/services/unix-interactive-session-bridge.mjs</string>
+    <key>FORGE3D_CONTROLLER_UNIX_SESSION_BRIDGE_SHA256</key>
+    <string>406756cc95c7961d92b3809ae6a11c449ddaa59ddd956e87e3995b534869eda8</string>
+    <key>FORGE3D_CONTROLLER_INTERACTIVE_USER</key>
+    <string>forge3d-lab</string>
+  </dict>
   <key>RunAtLoad</key>
   <true/>
   <key>KeepAlive</key>

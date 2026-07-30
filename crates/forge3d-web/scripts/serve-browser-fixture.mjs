@@ -7,6 +7,14 @@ const applicationRoutes = new Map([
   ["index.html", { file: "index.html", contentType: "text/html; charset=utf-8" }],
   ["app.js", { file: "app.js", contentType: "text/javascript; charset=utf-8" }],
   [
+    "adapter-attestation.js",
+    { file: "adapter-attestation.js", contentType: "text/javascript; charset=utf-8" },
+  ],
+  [
+    "hardware-page-harness.js",
+    { file: "hardware-page-harness.js", contentType: "text/javascript; charset=utf-8" },
+  ],
+  [
     "package.sha256",
     { file: "package.sha256", contentType: "text/plain; charset=utf-8" },
   ],

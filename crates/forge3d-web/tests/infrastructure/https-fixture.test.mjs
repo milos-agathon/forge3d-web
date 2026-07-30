@@ -1,10 +1,21 @@
 import assert from "node:assert/strict";
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import {
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test, { after } from "node:test";
 
 import { createRunNonce } from "../../scripts/create-run-nonce.mjs";
+import {
+  startBrowserRoute,
+  stopBrowserRoute,
+} from "../../scripts/manage-browser-route.mjs";
+import { materializeBrowserFixture } from "../../scripts/materialize-browser-fixture.mjs";
 import { validateRawFixtureProbe } from "../../scripts/probe-browser-fixture.mjs";
 import { resolveFixtureResponse } from "../../scripts/serve-browser-fixture.mjs";
 
@@ -240,4 +251,134 @@ test("raw readiness joins public-route policy to the promoted package digest", (
       }),
     /package SHA-256/u,
   );
+});
+
+test("route orchestration starts both fixture origins and host-scoped cloudflared then proves cleanup", async () => {
+  const statePath = join(fixtureRoot, "route-state.json");
+  const calls = [];
+  let nextPid = 100;
+  const dependencies = {
+    now: () => new Date("2026-07-29T10:00:00.000Z"),
+    spawnProcess: (request) => {
+      calls.push(["spawn", request]);
+      return { name: request.name, pid: nextPid++ };
+    },
+    waitForLocalFixture: async (request) => calls.push(["wait", request]),
+    stopProcess: async (pid) => {
+      calls.push(["stop", pid]);
+      return { stopped: true, exitObserved: true };
+    },
+  };
+  const nonceRecord = createRunNonce({
+    runId: 10,
+    jobId: 20,
+    random: () => Buffer.from("ab".repeat(16), "hex"),
+  });
+  const originPolicy = {
+    hosts: [
+      {
+        hostAssetId: "FW-MAC-M2-01",
+        applicationHost,
+        assetHost,
+      },
+    ],
+  };
+  await assert.rejects(
+    () =>
+      startBrowserRoute({
+        fixtureRoot: "relative-fixture",
+        serverModule: "/opt/forge3d/serve-browser-fixture.mjs",
+        cloudflared: "/usr/local/bin/cloudflared",
+        tunnelToken: "host-scoped-token-1234567890",
+        originPolicy,
+        hostId: "FW-MAC-M2-01",
+        nonceRecord,
+        packageSha256: "c".repeat(64),
+        applicationPort: 41821,
+        assetPort: 41822,
+        statePath,
+        logDirectory: join(fixtureRoot, "logs"),
+        dependencies,
+      }),
+    /configuration is invalid/u,
+  );
+  const started = await startBrowserRoute({
+    fixtureRoot,
+    serverModule: "/opt/forge3d/serve-browser-fixture.mjs",
+    cloudflared: "/usr/local/bin/cloudflared",
+    tunnelToken: "host-scoped-token-1234567890",
+    originPolicy,
+    hostId: "FW-MAC-M2-01",
+    nonceRecord,
+    packageSha256: "c".repeat(64),
+    applicationPort: 41821,
+    assetPort: 41822,
+    statePath,
+    logDirectory: join(fixtureRoot, "logs"),
+    dependencies,
+  });
+  assert.equal(started.processes.length, 3);
+  assert.equal(
+    started.binding.applicationUrl,
+    `https://${applicationHost}${nonceRecord.basePath}`,
+  );
+  const tunnel = calls.find(
+    ([operation, request]) =>
+      operation === "spawn" && request.name === "cloudflared",
+  )[1];
+  assert.deepEqual(tunnel.args, ["tunnel", "--no-autoupdate", "run"]);
+  assert.equal(tunnel.environment.TUNNEL_TOKEN, "host-scoped-token-1234567890");
+  assert.equal(
+    readFileSync(statePath, "utf8").includes("host-scoped-token"),
+    false,
+  );
+
+  const stopped = await stopBrowserRoute({ statePath, dependencies });
+  assert.equal(stopped.cleanup.stopped.length, 3);
+  assert.deepEqual(
+    calls.filter(([operation]) => operation === "stop").map(([, pid]) => pid),
+    [102, 101, 100],
+  );
+});
+
+test("materialized import map remains inside the nonce-bound base path", () => {
+  const root = mkdtempSync(join(tmpdir(), "forge3d-materialized-fixture-"));
+  const packageRoot = join(root, "node_modules", "@forge3d", "web");
+  mkdirSync(join(packageRoot, "dist"), { recursive: true });
+  mkdirSync(join(root, "tests", "browser", "benchmark"), {
+    recursive: true,
+  });
+  writeFileSync(join(root, "package.json"), '{"private":true}');
+  writeFileSync(
+    join(root, "test-interactive-viewer.html"),
+    '<script type="importmap">{"imports":{"@forge3d/web":"/node_modules/@forge3d/web/dist/index.js"}}</script>',
+  );
+  for (const file of ["index.js", "forge3d_web.js"]) {
+    writeFileSync(join(packageRoot, "dist", file), "export {};");
+  }
+  writeFileSync(
+    join(packageRoot, "dist", "forge3d_web_bg.wasm"),
+    Buffer.from([0, 97, 115, 109]),
+  );
+  writeFileSync(
+    join(root, "tests", "browser", "benchmark", "benchmark-terrain-v1.f32le"),
+    Buffer.from([0, 1, 2, 3]),
+  );
+  for (const file of ["adapter-attestation.js", "hardware-page-harness.js"]) {
+    writeFileSync(join(root, "tests", "browser", file), "export {};");
+  }
+  try {
+    materializeBrowserFixture({
+      consumerDirectory: root,
+      packageSha256: "e".repeat(64),
+    });
+    const html = readFileSync(join(root, "index.html"), "utf8");
+    assert.match(
+      html,
+      /"\.\/node_modules\/@forge3d\/web\/dist\/index\.js"/u,
+    );
+    assert.equal(html.includes('"/node_modules/'), false);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
 });

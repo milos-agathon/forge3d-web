@@ -187,7 +187,18 @@ function validateRecord(record, row, expected) {
     record.workflow.path !== ".github/workflows/browser-hardware.yml" ||
     record.adapter?.isFallbackAdapter !== false ||
     record.adapter?.deviceCreated !== true ||
-    record.adapter?.surfacePresented !== true
+    record.adapter?.surfacePresented !== true ||
+    record.adapterAttestation?.result !== "PASS" ||
+    record.adapterAttestation.required !== true ||
+    record.adapterAttestation.binding?.runId !== record.workflow.runId ||
+    record.adapterAttestation.binding?.assetId !== row.assetId ||
+    record.adapterAttestation.binding?.commit !== expected.targetSha ||
+    record.adapterAttestation.binding?.packageSha256 !==
+      expected.packageSha256 ||
+    record.adapterAttestation.page?.isFallbackAdapter !== false ||
+    record.adapterAttestation.host?.hostId !== row.hostId ||
+    record.adapterAttestation.host?.expectedGpuPresent !== true ||
+    record.adapterAttestation.host?.headedSessionAvailable !== true
   ) {
     throw new Error(`automated hardware evidence is incomplete: ${row.key}`);
   }

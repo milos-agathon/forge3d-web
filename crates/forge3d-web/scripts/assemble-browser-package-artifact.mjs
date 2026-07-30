@@ -85,8 +85,48 @@ export function assembleBrowserPackageArtifact({
     "create-run-nonce.mjs",
     "serve-browser-fixture.mjs",
     "probe-browser-fixture.mjs",
+    "resolve-host-runtime.mjs",
+    "manage-browser-update-window.mjs",
+    "manage-browser-route.mjs",
+    "browser-lane-runtime.mjs",
+    "browser-launch-provenance.mjs",
+    "browser-run-provenance.mjs",
+    "browser-session-runtime.mjs",
+    "browser-process-registry.mjs",
+    "webdriver-client.mjs",
+    "cleanup-browser-hardware.mjs",
   ]) {
     copyFileSync(join(packageRoot, "scripts", file), join(output, file));
+  }
+  for (const [source, destination] of [
+    [
+      join(packageRoot, "tests", "infrastructure", "browser-policy.json"),
+      "browser-policy.json",
+    ],
+    [
+      join(packageRoot, "tests", "infrastructure", "https-origin-policy.json"),
+      "https-origin-policy.json",
+    ],
+    [
+      join(packageRoot, "tests", "infrastructure", "hardware-matrix.json"),
+      "hardware-matrix.json",
+    ],
+    [
+      join(packageRoot, "tests", "device", "device-matrix.json"),
+      "device-matrix.json",
+    ],
+    [
+      join(
+        repositoryRoot,
+        "tools",
+        "browser-lab-controller",
+        "src",
+        "appium-session.mjs",
+      ),
+      "appium-session.mjs",
+    ],
+  ]) {
+    copyFileSync(source, join(output, destination));
   }
   const fixtureArchiveName = "consumer-fixture.tar.gz";
   const fixtureArchive = createTarGz(join(evidence, "consumer-fixture"));

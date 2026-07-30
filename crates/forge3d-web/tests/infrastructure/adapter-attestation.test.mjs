@@ -4,7 +4,10 @@ import test from "node:test";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { captureHostGpuEvidence } from "../../scripts/capture-host-gpu-evidence.mjs";
+import {
+  captureHostGpuEvidence,
+  sanitizeMacDisplayEvidence,
+} from "../../scripts/capture-host-gpu-evidence.mjs";
 import { joinAdapterAttestation } from "../../scripts/join-adapter-attestation.mjs";
 import { assertJsonSchema } from "../browser/json-schema-validator.mjs";
 
@@ -43,10 +46,25 @@ const page = {
   lumaChanged: true,
   effectiveLaunchArguments: [],
 };
+const linuxInventory = {
+  schemaVersion: 1,
+  assetId: binding.assetId,
+  platform: "linux",
+  osBuild: "Linux 6.8.0 checked",
+  headed: true,
+  session: {
+    interactive: true,
+    locked: false,
+    remote: false,
+    identifier: "7",
+  },
+  capturedAt: "2026-07-29T10:00:00.000Z",
+};
 const host = captureHostGpuEvidence({
   binding,
   platform: "linux",
   matrix,
+  inventory: linuxInventory,
   commandEvidence: {
     lspci: "NVIDIA Corporation GA104 GeForce RTX 3070",
     nvidiaSmi: "NVIDIA GeForce RTX 3070, 555.42.02",
@@ -54,7 +72,6 @@ const host = captureHostGpuEvidence({
     sessionType: "wayland",
     waylandDisplay: "wayland-0",
     driver: "NVIDIA 555.42.02 Vulkan",
-    driverDate: "2024-06-01",
   },
 });
 
@@ -110,6 +127,7 @@ test("Linux evidence rejects missing Wayland/driver data and old NVIDIA drivers"
         binding,
         platform: "linux",
         matrix,
+        inventory: linuxInventory,
         commandEvidence: { ...commandEvidence, sessionType: "x11" },
       }),
     /headed Wayland/u,
@@ -120,7 +138,11 @@ test("Linux evidence rejects missing Wayland/driver data and old NVIDIA drivers"
         binding,
         platform: "linux",
         matrix,
-        commandEvidence: { ...commandEvidence, driverDate: "2024-04-30" },
+        inventory: linuxInventory,
+        commandEvidence: {
+          ...commandEvidence,
+          nvidiaSmi: "NVIDIA GeForce RTX 3070, 550.90.07",
+        },
       }),
     /May 2024/u,
   );
@@ -132,6 +154,7 @@ test("Intel Linux host evidence does not require NVIDIA tooling", () => {
     binding: intelBinding,
     platform: "linux",
     matrix,
+    inventory: { ...linuxInventory, assetId: "FW-LNX-I12-01" },
     commandEvidence: {
       lspci: "Intel Corporation Alder Lake-P Integrated Graphics Controller",
       nvidiaSmi: "",
@@ -143,4 +166,86 @@ test("Intel Linux host evidence does not require NVIDIA tooling", () => {
     },
   });
   assert.equal(record.expectedGpuPresent, true);
+});
+
+test("attached mobile evidence remains bound to its fixed controller host", () => {
+  const mobileBinding = { ...binding, assetId: "FW-IOS-OLD-01" };
+  const record = captureHostGpuEvidence({
+    binding: mobileBinding,
+    hostId: "FW-MAC-M2-01",
+    platform: "darwin",
+    matrix,
+    inventory: {
+      ...linuxInventory,
+      assetId: "FW-MAC-M2-01",
+      platform: "darwin",
+      osBuild: "Darwin 25.0.0 checked",
+      session: {
+        interactive: true,
+        locked: false,
+        remote: false,
+        identifier: "forge3d-lab",
+      },
+    },
+    commandEvidence: {
+      systemProfiler: {
+        SPDisplaysDataType: [{ sppci_model: "Apple M2" }],
+      },
+    },
+  });
+  assert.equal(record.assetId, "FW-IOS-OLD-01");
+  assert.equal(record.hostId, "FW-MAC-M2-01");
+  assert.throws(
+    () =>
+      captureHostGpuEvidence({
+        binding: mobileBinding,
+        hostId: "FW-WIN-I12-01",
+        platform: "win32",
+        matrix,
+        inventory: {
+          ...linuxInventory,
+          assetId: "FW-WIN-I12-01",
+          platform: "win32",
+          osBuild: "Microsoft Windows NT 10.0.26200.0",
+          session: {
+            interactive: true,
+            locked: false,
+            remote: false,
+            identifier: "FORGE3D\\lab",
+          },
+        },
+        commandEvidence: { videoControllers: [{ Name: "Intel Iris Xe" }] },
+      }),
+    /not attached/u,
+  );
+});
+
+test("macOS host GPU capture removes display serial and device identifiers", () => {
+  assert.deepEqual(
+    sanitizeMacDisplayEvidence({
+      SPDisplaysDataType: [
+        {
+          sppci_model: "Apple M2",
+          sppci_vendor: "Apple",
+          spdisplays_metal: "Supported",
+          spdisplays_ndrvs: [
+            {
+              "_name": "Personal display",
+              "spdisplays_display-serial-number": "SECRET-SERIAL",
+            },
+          ],
+          "_spdisplays_device-id": "0x1234",
+        },
+      ],
+    }),
+    {
+      SPDisplaysDataType: [
+        {
+          sppci_model: "Apple M2",
+          sppci_vendor: "Apple",
+          spdisplays_metal: "Supported",
+        },
+      ],
+    },
+  );
 });

@@ -13,14 +13,26 @@ const matrixPath = join(
 
 export function captureHostGpuEvidence({
   binding,
+  hostId = binding.assetId,
   platform,
   commandEvidence,
+  inventory,
   matrix,
   capturedAt = new Date(),
 }) {
-  const host = matrix.hosts.find(({ assetId }) => assetId === binding.assetId);
+  const host = matrix.hosts.find(({ assetId }) => assetId === hostId);
   if (!host) {
-    throw new Error(`asset is not a fixed browser-lab host: ${binding.assetId}`);
+    throw new Error(`host is not a fixed browser-lab host: ${hostId}`);
+  }
+  const attachedAsset = matrix.assets?.find(
+    ({ assetId }) => assetId === binding.assetId,
+  );
+  if (
+    binding.assetId !== hostId &&
+    (attachedAsset?.hostAssetId !== hostId ||
+      !host.attachedAssetIds.includes(binding.assetId))
+  ) {
+    throw new Error("target asset is not attached to the authorization-bound host");
   }
   const expectedPlatform = {
     macOS: "darwin",
@@ -29,6 +41,19 @@ export function captureHostGpuEvidence({
   }[host.os.family];
   if (platform !== expectedPlatform) {
     throw new Error(`platform ${platform} does not match ${host.assetId}`);
+  }
+  if (
+    inventory?.schemaVersion !== 1 ||
+    inventory.assetId !== hostId ||
+    inventory.platform !== platform ||
+    inventory.headed !== true ||
+    inventory.session?.interactive !== true ||
+    inventory.session?.locked !== false ||
+    inventory.session?.remote !== false ||
+    typeof inventory.osBuild !== "string" ||
+    inventory.osBuild.trim() === ""
+  ) {
+    throw new Error("host GPU evidence requires the same live headed inventory");
   }
   const serialized = JSON.stringify(commandEvidence).toLowerCase();
   for (const token of expectedGpuTokens(host.assetId)) {
@@ -49,7 +74,7 @@ export function captureHostGpuEvidence({
     }
     if (
       host.assetId === "FW-LNX-NV-01" &&
-      !driverDateAtOrAfter(commandEvidence.driverDate, "2024-05-01")
+      !nvidiaDriverAtOrAfter(commandEvidence.nvidiaSmi, "555.42.02")
     ) {
       throw new Error("NVIDIA driver is older than the May 2024 boundary");
     }
@@ -57,10 +82,14 @@ export function captureHostGpuEvidence({
   return {
     schemaVersion: 1,
     ...binding,
+    hostId,
     platform,
     expectedGpu: host.gpu,
     expectedGpuPresent: true,
     headedSessionAvailable: true,
+    osBuild: inventory.osBuild,
+    session: inventory.session,
+    inventoryCapturedAt: inventory.capturedAt,
     commandEvidence,
     capturedAt: new Date(capturedAt).toISOString(),
   };
@@ -75,9 +104,19 @@ function expectedGpuTokens(assetId) {
   }[assetId];
 }
 
-function driverDateAtOrAfter(actual, minimum) {
-  const actualTime = Date.parse(actual ?? "");
-  return Number.isFinite(actualTime) && actualTime >= Date.parse(minimum);
+function nvidiaDriverAtOrAfter(evidence, minimum) {
+  const match = String(evidence ?? "").match(
+    /,\s*([0-9]+)\.([0-9]+)\.([0-9]+)/u,
+  );
+  if (!match) return false;
+  const actual = match.slice(1).map(Number);
+  const expected = minimum.split(".").map(Number);
+  for (let index = 0; index < expected.length; index += 1) {
+    if (actual[index] !== expected[index]) {
+      return actual[index] > expected[index];
+    }
+  }
+  return true;
 }
 
 function run(command, args) {
@@ -95,8 +134,8 @@ function tryRun(command, args) {
 function liveEvidence(platform) {
   if (platform === "darwin") {
     return {
-      systemProfiler: JSON.parse(
-        run("system_profiler", ["SPDisplaysDataType", "-json"]),
+      systemProfiler: sanitizeMacDisplayEvidence(
+        JSON.parse(run("system_profiler", ["SPDisplaysDataType", "-json"])),
       ),
     };
   }
@@ -131,7 +170,29 @@ function liveEvidence(platform) {
     sessionType: process.env.XDG_SESSION_TYPE ?? "",
     waylandDisplay: process.env.WAYLAND_DISPLAY ?? "",
     driver: tryRun("glxinfo", ["-B"]) || tryRun("vulkaninfo", ["--summary"]),
-    driverDate: process.env.FORGE3D_GPU_DRIVER_DATE ?? "",
+  };
+}
+
+export function sanitizeMacDisplayEvidence(record) {
+  const allowed = new Set([
+    "sppci_model",
+    "sppci_vendor",
+    "sppci_device_type",
+    "sppci_bus",
+    "spdisplays_metal",
+    "spdisplays_vram",
+    "spdisplays_vram_shared",
+  ]);
+  return {
+    SPDisplaysDataType: (record.SPDisplaysDataType ?? []).map((gpu) =>
+      Object.fromEntries(
+        Object.entries(gpu).filter(
+          ([key, value]) =>
+            allowed.has(key) &&
+            ["string", "number", "boolean"].includes(typeof value),
+        ),
+      ),
+    ),
   };
 }
 
@@ -152,8 +213,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const args = parseArguments(process.argv.slice(2));
   const outputPath = args.get("--output");
   const bindingPath = args.get("--binding");
-  if (!outputPath || !bindingPath) {
-    throw new Error("--output and --binding are required");
+  const inventoryPath = args.get("--inventory");
+  if (!outputPath || !bindingPath || !inventoryPath) {
+    throw new Error("--output, --binding, and --inventory are required");
   }
   const matrix = JSON.parse(
     readFileSync(args.get("--matrix") ?? matrixPath, "utf8"),
@@ -164,8 +226,10 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     : liveEvidence(platform);
   const record = captureHostGpuEvidence({
     binding: JSON.parse(readFileSync(bindingPath, "utf8")),
+    hostId: args.get("--host-id"),
     platform,
     commandEvidence,
+    inventory: JSON.parse(readFileSync(inventoryPath, "utf8")),
     matrix,
   });
   writeFileSync(outputPath, `${JSON.stringify(record, null, 2)}\n`, {

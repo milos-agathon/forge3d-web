@@ -35,7 +35,7 @@ export function captureHostInventory({
   const browserRecords = browsers.map((browser) =>
     validateBrowserRecord(browser, policy),
   );
-  const toolRecords = validateToolVersions(tools, policy);
+  const toolRecords = validateToolVersions(tools, policy, platform);
   return {
     schemaVersion: 1,
     assetId,
@@ -55,6 +55,96 @@ export function captureHostInventory({
     prohibitedLaunchArgumentsPresent: [],
     capturedAt: new Date(capturedAt).toISOString(),
   };
+}
+
+export function observeLiveSession(
+  platform,
+  {
+    execute = execFileSync,
+    environment = process.env,
+  } = {},
+) {
+  if (platform === "linux") {
+    const sessionId = environment.XDG_SESSION_ID;
+    if (!sessionId) {
+      return {
+        interactive: false,
+        locked: true,
+        remote: environment.SSH_CONNECTION !== undefined,
+        identifier: "",
+        type: environment.XDG_SESSION_TYPE,
+        waylandDisplay: environment.WAYLAND_DISPLAY,
+      };
+    }
+    const property = (name) =>
+      execute(
+        "loginctl",
+        ["show-session", sessionId, `--property=${name}`, "--value"],
+        { encoding: "utf8" },
+      ).trim();
+    return {
+      interactive: property("Active") === "yes",
+      locked: property("LockedHint") === "yes",
+      remote:
+        property("Remote") === "yes" ||
+        environment.SSH_CONNECTION !== undefined,
+      identifier: sessionId,
+      type: property("Type") || environment.XDG_SESSION_TYPE,
+      waylandDisplay: environment.WAYLAND_DISPLAY,
+    };
+  }
+  if (platform === "darwin") {
+    const consoleUser = execute(
+      "/usr/bin/stat",
+      ["-f", "%Su", "/dev/console"],
+      { encoding: "utf8" },
+    ).trim();
+    const rootSession = execute(
+      "/usr/sbin/ioreg",
+      ["-n", "Root", "-d1"],
+      { encoding: "utf8" },
+    );
+    return {
+      interactive:
+        consoleUser !== "" &&
+        consoleUser !== "root" &&
+        consoleUser !== "loginwindow",
+      locked: /"CGSSessionScreenIsLocked"\s*=\s*(?:Yes|true|1)/u.test(
+        rootSession,
+      ),
+      remote:
+        environment.SSH_CONNECTION !== undefined ||
+        environment.SSH_CLIENT !== undefined,
+      identifier: consoleUser,
+    };
+  }
+  if (platform === "win32") {
+    const script = [
+      "$ErrorActionPreference = 'Stop'",
+      "$computer = Get-CimInstance Win32_ComputerSystem",
+      "$console = (query session 2>$null | Select-String '\\sconsole\\s+[^\\r\\n]*\\sActive\\s')",
+      "$locked = [bool](Get-Process LogonUI -ErrorAction SilentlyContinue)",
+      "$remote = [bool](query session 2>$null | Select-String '\\srdp-[^\\s]*\\s+[^\\r\\n]*\\sActive\\s')",
+      "[pscustomobject]@{ interactive = [bool]$console -and [bool]$computer.UserName; locked = $locked; remote = $remote; identifier = [string]$computer.UserName } | ConvertTo-Json -Compress",
+    ].join("; ");
+    const observed = JSON.parse(
+      execute(
+        "powershell.exe",
+        ["-NoProfile", "-NonInteractive", "-Command", script],
+        { encoding: "utf8" },
+      ),
+    );
+    return {
+      interactive: observed.interactive === true,
+      locked: observed.locked === true,
+      remote:
+        observed.remote === true ||
+        environment.SSH_CONNECTION !== undefined ||
+        environment.SSH_CLIENT !== undefined,
+      identifier: String(observed.identifier ?? ""),
+    };
+  }
+  throw new Error(`unsupported host platform: ${platform}`);
 }
 
 export function assertSafeLaunchArguments(argumentsList, policy) {
@@ -119,30 +209,29 @@ function validateBrowserRecord(browser, policy) {
   };
 }
 
-function validateToolVersions(tools, policy) {
+function validateToolVersions(tools, policy, platform) {
   const expected = policy.tools;
   const result = {};
-  for (const key of [
-    "playwright",
-    "selenium",
-    "geckodriver",
-    "appium",
-    "appiumUiAutomator2",
-    "appiumXcuitest",
-  ]) {
+  const requiredTools = ["playwright", "selenium", "geckodriver"];
+  if (platform === "darwin") {
+    requiredTools.push("appium", "appiumUiAutomator2", "appiumXcuitest");
+  }
+  for (const key of requiredTools) {
     if (tools[key] !== expected[key]) {
       throw new Error(`${key} must equal checked version ${expected[key]}`);
     }
     result[key] = tools[key];
   }
-  if (tools.safaridriverPath !== expected.safaridriverPath) {
-    throw new Error(`safaridriver must be ${expected.safaridriverPath}`);
+  if (platform === "darwin") {
+    if (tools.safaridriverPath !== expected.safaridriverPath) {
+      throw new Error(`safaridriver must be ${expected.safaridriverPath}`);
+    }
+    result.safaridriverPath = tools.safaridriverPath;
+    result.safaridriverVersion = nonEmpty(
+      tools.safaridriverVersion,
+      "safaridriverVersion",
+    );
   }
-  result.safaridriverPath = tools.safaridriverPath;
-  result.safaridriverVersion = nonEmpty(
-    tools.safaridriverVersion,
-    "safaridriverVersion",
-  );
   return result;
 }
 
@@ -174,38 +263,30 @@ function parseArguments(argv) {
   return result;
 }
 
-function liveSession(platform) {
-  if (platform === "linux") {
-    const sessionId = process.env.XDG_SESSION_ID;
-    return {
-      interactive: Boolean(sessionId),
-      locked: false,
-      remote: process.env.SSH_CONNECTION !== undefined,
-      identifier: sessionId ?? "",
-      type: process.env.XDG_SESSION_TYPE,
-      waylandDisplay: process.env.WAYLAND_DISPLAY,
-    };
-  }
-  return {
-    interactive: true,
-    locked: false,
-    remote:
-      process.env.SSH_CONNECTION !== undefined ||
-      process.env.SSH_CLIENT !== undefined,
-    identifier:
-      process.env.USERNAME ?? process.env.USER ?? process.env.LOGNAME ?? "",
-  };
-}
-
-function liveOsBuild(platform) {
+export function observeLiveOsBuild(
+  platform,
+  { execute = execFileSync } = {},
+) {
   if (platform === "win32") {
-    return execFileSync(
+    return execute(
       "powershell.exe",
-      ["-NoProfile", "-Command", "[System.Environment]::OSVersion.VersionString"],
+      [
+        "-NoProfile",
+        "-NonInteractive",
+        "-Command",
+        "$v = Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion'; \"$($v.ProductName) $($v.DisplayVersion) build $($v.CurrentBuild).$($v.UBR)\"",
+      ],
       { encoding: "utf8" },
     ).trim();
   }
-  return execFileSync("uname", ["-a"], { encoding: "utf8" }).trim();
+  if (platform === "darwin") {
+    return `macOS build ${execute(
+      "/usr/bin/sw_vers",
+      ["-buildVersion"],
+      { encoding: "utf8" },
+    ).trim()}`;
+  }
+  return execute("uname", ["-a"], { encoding: "utf8" }).trim();
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
@@ -219,13 +300,16 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     readFileSync(args.get("--policy") ?? defaultPolicyPath, "utf8"),
   );
   const resolved = JSON.parse(readFileSync(resolvedPath, "utf8"));
-  const platform = resolved.platform ?? process.platform;
+  if (resolved.platform && resolved.platform !== process.platform) {
+    throw new Error("resolved inventory platform disagrees with the live host");
+  }
+  const platform = process.platform;
   const inventory = captureHostInventory({
     ...resolved,
     assetId: args.get("--asset-id"),
     platform,
-    osBuild: resolved.osBuild ?? liveOsBuild(platform),
-    session: resolved.session ?? liveSession(platform),
+    osBuild: observeLiveOsBuild(platform),
+    session: observeLiveSession(platform),
     policy,
   });
   writeFileSync(outputPath, `${JSON.stringify(inventory, null, 2)}\n`, {

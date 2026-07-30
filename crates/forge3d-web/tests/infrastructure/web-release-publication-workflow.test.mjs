@@ -35,6 +35,10 @@ test("observer secret is isolated from read-only preflight and protected publish
   }
   assert.match(preflight, /browser-hardware-release-readiness/u);
   assert.match(preflight, /validateReleaseCandidate/u);
+  assert.match(
+    preflight,
+    /artifactDigest: `sha256:\$\{process\.env\.OBSERVATION_ARTIFACT_DIGEST\}`/u,
+  );
 });
 
 test("publisher has no checkout and performs approval, draft-first, byte, CLI, and intake gates", () => {

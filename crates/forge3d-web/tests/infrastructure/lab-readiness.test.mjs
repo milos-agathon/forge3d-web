@@ -38,6 +38,35 @@ const packageRecord = {
   attestation: { verified: true, denySelfHostedRunners: true },
 };
 const configuration = computeLabConfiguration({ repositoryRoot });
+
+test("lab digest binds the production controller broker browser and route paths", () => {
+  const paths = new Set(configuration.files.map(({ path }) => path));
+  for (const path of [
+    "crates/forge3d-web/scripts/browser-lane-runtime.mjs",
+    "crates/forge3d-web/scripts/browser-launch-provenance.mjs",
+    "crates/forge3d-web/scripts/browser-run-provenance.mjs",
+    "crates/forge3d-web/scripts/join-adapter-attestation.mjs",
+    "crates/forge3d-web/scripts/manage-browser-route.mjs",
+    "crates/forge3d-web/scripts/manage-browser-update-window.mjs",
+    "crates/forge3d-web/tests/browser/hardware-page-harness.js",
+    "tools/browser-lab-broker/src/authorization-verifier.mjs",
+    "tools/browser-lab-broker/src/runner-authorization.mjs",
+    "tools/browser-lab-controller/src/controller-service.mjs",
+    "tools/browser-lab-controller/src/controller-evidence-inputs.mjs",
+    "tools/browser-lab-controller/src/production-dependencies.mjs",
+    "tools/browser-lab-controller/src/unix-runner-execution.mjs",
+    "tools/browser-lab-controller/src/windows-runner-execution.mjs",
+    "tools/browser-lab-controller/services/browser-lab-controller.env.example",
+    "tools/browser-lab-controller/services/browser-lab-controller.sudoers-linux",
+    "tools/browser-lab-controller/services/browser-lab-controller.sudoers-macos",
+    "tools/browser-lab-controller/services/unix-interactive-session-bridge.mjs",
+    "tools/browser-lab-controller/services/unix-interactive-session-contract.mjs",
+    "tools/browser-lab-controller/services/windows-interactive-session-bridge.ps1",
+  ]) {
+    assert.equal(paths.has(path), true, `${path} is not configuration-bound`);
+  }
+});
+
 const hostCanaries = matrix.hosts.map((host, index) => ({
   runId: 60 + index,
   lane: "infrastructure-canary",

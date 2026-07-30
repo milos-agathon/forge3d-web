@@ -2,6 +2,10 @@ import { request } from "node:https";
 
 const HEALTH_PATH = "/v1/health";
 const MAX_RESPONSE_BYTES = 4 * 1024;
+export const BROKER_HEALTH_CLIENT_IDENTITY =
+  "broker:forge3d-browser-lab";
+export const BROKER_LIFECYCLE_HEADER =
+  "x-forge3d-broker-lifecycle";
 
 export class ControllerReachabilityMonitor {
   constructor({
@@ -9,6 +13,7 @@ export class ControllerReachabilityMonitor {
     configuration,
     tls,
     probe = probeControllerHealth,
+    now = () => new Date(),
   }) {
     this.configuration = validateConfiguration(configuration, matrix);
     this.endpoints = new Map(
@@ -19,6 +24,7 @@ export class ControllerReachabilityMonitor {
     );
     this.tls = tls;
     this.probe = probe;
+    this.now = now;
     this.consecutiveFailures = new Map();
   }
 
@@ -36,6 +42,7 @@ export class ControllerReachabilityMonitor {
         url: endpoint.url,
         tls: this.tls,
         timeoutMs: this.configuration.timeoutMs,
+        lifecycleHeader: encodeLifecycleHeader(record, this.now()),
       });
       healthy =
         response?.schemaVersion === 1 &&
@@ -112,7 +119,12 @@ export function validateConfiguration(configuration, matrix) {
   return structuredClone(configuration);
 }
 
-export function probeControllerHealth({ url, tls, timeoutMs }) {
+export function probeControllerHealth({
+  url,
+  tls,
+  timeoutMs,
+  lifecycleHeader,
+}) {
   return new Promise((resolve, reject) => {
     const healthRequest = request(
       url,
@@ -124,7 +136,10 @@ export function probeControllerHealth({ url, tls, timeoutMs }) {
         rejectUnauthorized: true,
         minVersion: "TLSv1.3",
         agent: false,
-        headers: { accept: "application/json" },
+        headers: {
+          accept: "application/json",
+          [BROKER_LIFECYCLE_HEADER]: lifecycleHeader,
+        },
       },
       (response) => {
         const chunks = [];
@@ -166,4 +181,36 @@ export function probeControllerHealth({ url, tls, timeoutMs }) {
     healthRequest.on("error", reject);
     healthRequest.end();
   });
+}
+
+export function encodeLifecycleHeader(record, publishedAt = new Date()) {
+  const runnerObservation =
+    Number.isInteger(record.lastRunnerObservation?.id) &&
+    Number.isFinite(Date.parse(record.lastRunnerObservation?.observedAt))
+      ? record.lastRunnerObservation
+      : null;
+  const jobObservation =
+    Number.isInteger(record.lastJobObservation?.id) &&
+    Number.isFinite(Date.parse(record.lastJobObservation?.observedAt))
+      ? record.lastJobObservation
+      : null;
+  const observation = {
+    schemaVersion: 1,
+    authorizationDigest: record.authorizationDigest,
+    hostAssetId: record.hostAssetId,
+    runnerId: record.runnerId,
+    runnerName: record.runnerName,
+    state: record.state,
+    onlineAt: record.onlineAt,
+    assignmentDeadline: record.assignmentDeadline,
+    everBusy: record.everBusy,
+    lastRunnerObservation: runnerObservation,
+    lastJobObservation: jobObservation,
+    publishedAt: new Date(publishedAt).toISOString(),
+  };
+  const encoded = Buffer.from(JSON.stringify(observation)).toString("base64url");
+  if (encoded.length > 4096) {
+    throw new Error("broker lifecycle observation exceeds health header limit");
+  }
+  return encoded;
 }

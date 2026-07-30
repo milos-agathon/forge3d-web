@@ -120,7 +120,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     promotion,
     policy,
   });
-  writeFileSync(args.get("--output"), `${authorization.canonical}\n`, {
+  writeFileSync(args.get("--output"), authorization.canonical, {
     encoding: "utf8",
     mode: 0o600,
   });

@@ -55,8 +55,17 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   if (!output || !args.get("--page") || !args.get("--host")) {
     throw new Error("--page, --host, and --output are required");
   }
+  const pageInput = JSON.parse(readFileSync(args.get("--page"), "utf8"));
+  const page = pageInput.adapter ?? pageInput;
+  if (pageInput.adapter) {
+    for (const key of bindingKeys) {
+      if (pageInput[key] !== page[key]) {
+        throw new Error(`browser/page attestation binding mismatch: ${key}`);
+      }
+    }
+  }
   const record = joinAdapterAttestation(
-    JSON.parse(readFileSync(args.get("--page"), "utf8")),
+    page,
     JSON.parse(readFileSync(args.get("--host"), "utf8")),
     { required: args.get("--required") !== "false" },
   );

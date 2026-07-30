@@ -16,6 +16,7 @@ test("controller receipt store binds immutable run and record identity", () => {
     record: {
       recordType: "host-lab-canary",
       runId: 41,
+      runAttempt: 2,
       hostId: "FW-LNX-NV-01",
     },
   };
@@ -47,6 +48,39 @@ test("controller receipt store binds immutable run and record identity", () => {
       run: { id: 42, attempt: 2 },
       recordType: "host-lab-canary",
       signedRecord,
+    }),
+  );
+});
+
+test("manual-session receipt is immutable and bound to the exact run attempt", () => {
+  const directory = mkdtempSync(join(tmpdir(), "forge3d-controller-manual-"));
+  const run = { id: 51, attempt: 3 };
+  const signedRecord = {
+    record: {
+      workflow: ".github/workflows/browser-hardware.yml",
+      run,
+      hostId: "FW-MAC-M2-01",
+    },
+  };
+  storeControllerReceipt({
+    directory,
+    run,
+    recordType: "manual-session",
+    signedRecord,
+  });
+  assert.deepEqual(
+    loadControllerReceipt({
+      directory,
+      run,
+      recordType: "manual-session",
+    }),
+    signedRecord,
+  );
+  assert.throws(() =>
+    loadControllerReceipt({
+      directory,
+      run: { id: 51, attempt: 2 },
+      recordType: "manual-session",
     }),
   );
 });

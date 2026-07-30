@@ -46,8 +46,14 @@ test("only observer and hosted finalizers receive trust secrets", () => {
   assert.match(observer, /secrets\.TRUST_OBSERVER_PRIVATE_KEY/u);
   for (const block of [promotion, authorization, hardware]) {
     assert.equal(block.includes("TRUST_OBSERVER"), false);
+  }
+  for (const block of [promotion, authorization]) {
     assert.equal(block.includes("secrets."), false);
   }
+  assert.match(
+    hardware,
+    /secrets\[needs\.promote-hardware\.outputs\.tunnel_secret_name\]/u,
+  );
   assert.match(automatedFinalizer, /runs-on: ubuntu-latest/u);
   assert.match(automatedFinalizer, /environment: forge3d-trust-observer/u);
   assert.match(automatedFinalizer, /secrets\.TRUST_OBSERVER_PRIVATE_KEY/u);
@@ -124,11 +130,22 @@ test("hardware routes only on three derived labels, serializes by host, and has 
 
 test("hardware executes only verified promoted artifacts and always cleans up", () => {
   assert.match(hardware, /--deny-self-hosted-runners/u);
+  assert.match(hardware, /runner-authorization-\$\{process\.env\.EXPECTED_NONCE\}/u);
+  assert.match(hardware, /authorization does not match the executing hardware job/u);
   assert.match(hardware, /test ! -d \.git/u);
   assert.match(hardware, /npm --prefix consumer install --no-save/u);
-  assert.match(hardware, /consumer\/hardware\/run-browser-lane\.mjs/u);
+  assert.match(hardware, /create-run-nonce\.mjs/u);
+  assert.match(hardware, /manage-browser-route\.mjs/u);
+  assert.match(hardware, /probe-browser-fixture\.mjs/u);
+  assert.match(hardware, /browser-lane-runtime\.mjs/u);
+  assert.match(hardware, /capture-host-gpu-evidence\.mjs/u);
+  assert.match(hardware, /join-adapter-attestation\.mjs/u);
+  assert.match(hardware, /evidence\/host-inventory\.json/u);
+  assert.match(hardware, /evidence\/adapter-attestation\.json/u);
+  assert.match(hardware, /resolve-host-runtime\.mjs/u);
+  assert.match(hardware, /manage-browser-update-window\.mjs/u);
   assert.match(hardware, /if: always\(\)/u);
-  assert.match(hardware, /cleanup-hardware-job\.mjs/u);
+  assert.match(hardware, /cleanup-browser-hardware\.mjs/u);
   assert.match(hardware, /retention-days: 90/u);
 });
 
@@ -136,6 +153,9 @@ test("manual finalizer verifies signed session and exact runner absence before a
   assert.match(finalizer, /if: >-\n      always\(\)/u);
   assert.match(finalizer, /finalize-manual-session\.mjs/u);
   assert.match(finalizer, /manual-session-finalizer\.json/u);
+  assert.match(finalizer, /manualReceiptUrlTemplate/u);
+  assert.match(finalizer, /BROWSER_LAB_MTLS_CERT/u);
+  assert.match(finalizer, /signed-manual-session\.json/u);
   assert.match(finalizer, /TRUST_OBSERVER_TOKEN: \$\{\{ steps\.observer-token\.outputs\.token \}\}/u);
   assert.equal(finalizer.includes("GITHUB_TOKEN:"), false);
   assert.match(finalizer, /if: failure\(\)/u);
@@ -161,6 +181,10 @@ test("automated evidence is copied by exact artifact ID and GitHub-hosted attest
   assert.match(automatedFinalizer, /finalize-host-lab-canary\.mjs/u);
   assert.match(automatedFinalizer, /signed-controller-receipt\.json/u);
   assert.match(automatedFinalizer, /--retry 60 --retry-delay 5/u);
+  assert.match(
+    automatedFinalizer,
+    /hosted-adapter-attestation-verification\.json/u,
+  );
 });
 
 function jobBlock(text, startId, nextId) {

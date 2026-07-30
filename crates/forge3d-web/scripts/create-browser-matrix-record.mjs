@@ -6,6 +6,7 @@ import { canonicalJson } from "./canonical-json.mjs";
 export function createAutomatedMatrixRecord({
   promotion,
   evidence,
+  attestation,
   run,
 }) {
   if (
@@ -14,11 +15,20 @@ export function createAutomatedMatrixRecord({
     evidence.result !== "PASS" ||
     evidence.lane !== promotion.lane ||
     evidence.trustedSha !== promotion.trustedSha ||
-    evidence.packageSha256 !== promotion.packageManifestSha256 &&
-      evidence.packageManifestSha256 !== promotion.packageManifestSha256 ||
+    evidence.packageManifestSha256 !== promotion.packageManifestSha256 ||
     evidence.adapter?.isFallbackAdapter !== false ||
     evidence.adapter?.deviceCreated !== true ||
-    evidence.adapter?.surfacePresented !== true
+    evidence.adapter?.surfacePresented !== true ||
+    attestation?.result !== "PASS" ||
+    attestation.required !== true ||
+    attestation.binding?.runId !== run.id ||
+    attestation.binding?.assetId !== promotion.assetId ||
+    attestation.binding?.commit !== promotion.trustedSha ||
+    attestation.binding?.packageSha256 !== evidence.packageSha256 ||
+    attestation.page?.isFallbackAdapter !== false ||
+    attestation.host?.expectedGpuPresent !== true ||
+    attestation.host?.headedSessionAvailable !== true ||
+    attestation.host?.hostId !== promotion.hostId
   ) {
     throw new Error("automated matrix evidence does not match its promotion");
   }
@@ -42,6 +52,7 @@ export function createAutomatedMatrixRecord({
       conclusion: "success",
     },
     adapter: evidence.adapter,
+    adapterAttestation: attestation,
   };
 }
 

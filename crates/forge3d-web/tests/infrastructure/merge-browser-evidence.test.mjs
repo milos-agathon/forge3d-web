@@ -53,6 +53,22 @@ const records = rows.map((row, index) => ({
           deviceCreated: true,
           surfacePresented: true,
         },
+        adapterAttestation: {
+          result: "PASS",
+          required: true,
+          binding: {
+            runId: 100 + index,
+            assetId: row.assetId,
+            commit: targetSha,
+            packageSha256,
+          },
+          page: { isFallbackAdapter: false },
+          host: {
+            hostId: row.hostId,
+            expectedGpuPresent: true,
+            headedSessionAvailable: true,
+          },
+        },
       }),
 }));
 const labReadiness = {
@@ -118,6 +134,9 @@ test("prior head, other package, expired manual, missing, duplicate, and infra e
       index === 0
         ? { ...record, result: "INFRA_ERROR", infrastructureError: "quarantined" }
         : record,
+    ),
+    records.map((record, index) =>
+      index === 0 ? { ...record, adapterAttestation: null } : record,
     ),
   ]) {
     assert.throws(() =>

@@ -45,16 +45,15 @@ test("locks immutable files, modes, symlinks, and narrow transient paths", () =>
 
     mkdirSync(join(root, "_diag"));
     writeFileSync(join(root, "_diag", "Runner_1.log"), "retained");
+    chmodSync(join(root, "_diag", "Runner_1.log"), 0o000);
     const withDiagnostics = verifyRunnerTree({
       root,
       platform: "linux-x64",
       manifest,
       transientPolicy,
     });
-    assert.deepEqual(withDiagnostics.transientEntries, [
-      "_diag",
-      "_diag/Runner_1.log",
-    ]);
+    assert.deepEqual(withDiagnostics.transientEntries, ["_diag"]);
+    chmodSync(join(root, "_diag", "Runner_1.log"), 0o600);
 
     writeFileSync(join(root, "unknown"), "bad");
     assert.throws(
@@ -63,6 +62,40 @@ test("locks immutable files, modes, symlinks, and narrow transient paths", () =>
     );
   } finally {
     rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("rejects a transient root changed to a symlink without walking it", () => {
+  const root = mkdtempSync(join(tmpdir(), "forge3d-runner-fixture-"));
+  const outside = mkdtempSync(join(tmpdir(), "forge3d-runner-outside-"));
+  try {
+    writeFileSync(join(root, "Runner.Listener"), "immutable");
+    const manifest = createRunnerDistributionManifest({
+      runnerVersion: "2.336.0",
+      generatedAt: "2026-07-28T12:00:00.000Z",
+      distributions: [
+        {
+          platform: "linux-x64",
+          archiveFileName: "runner.tar.gz",
+          archiveSha256: "a".repeat(64),
+          root,
+        },
+      ],
+    });
+    symlinkSync(outside, join(root, "_work"));
+    assert.throws(
+      () =>
+        verifyRunnerTree({
+          root,
+          platform: "linux-x64",
+          manifest,
+          transientPolicy: makeTransientPolicy(),
+        }),
+      /transient path changed kind/u,
+    );
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+    rmSync(outside, { recursive: true, force: true });
   }
 });
 

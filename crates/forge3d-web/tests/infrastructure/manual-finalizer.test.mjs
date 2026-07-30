@@ -52,6 +52,7 @@ const signedSession = createManualSession({
   intake,
   runner: { id: 44, name: authorization.record.runnerName },
   system: { os: "macOS 26", build: "25A123" },
+  loginSession: { interactive: true, locked: false, remote: false },
   browser: { name: "Safari", channel: "stable", version: "26.0" },
   driver: { name: "safaridriver", version: "26.0" },
   origins: { application: "https://app.example", asset: "https://asset.example" },

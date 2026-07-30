@@ -81,6 +81,7 @@ test("manual session is exactly 20 minutes, controller-signed, and cleanup-compl
     intake,
     runner: { id: 30, name: `FW-MAC-M2-01-${"d".repeat(32)}` },
     system: { os: "macOS 26", build: "25A123" },
+    loginSession: { interactive: true, locked: false, remote: false },
     browser: { name: "Safari", channel: "stable", version: "26.0" },
     driver: { name: "safaridriver", version: "Included with Safari 26.0" },
     origins: {

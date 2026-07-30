@@ -105,6 +105,20 @@ test("assembly binds one tarball, clean exact HEAD, evidence, schemas, and fixtu
     "browser-package-manifest.json",
     "create-browser-matrix-record.mjs",
     "canonical-json.mjs",
+    "browser-lane-runtime.mjs",
+    "browser-launch-provenance.mjs",
+    "browser-run-provenance.mjs",
+    "browser-session-runtime.mjs",
+    "browser-process-registry.mjs",
+    "webdriver-client.mjs",
+    "manage-browser-route.mjs",
+    "manage-browser-update-window.mjs",
+    "cleanup-browser-hardware.mjs",
+    "appium-session.mjs",
+    "browser-policy.json",
+    "https-origin-policy.json",
+    "hardware-matrix.json",
+    "device-matrix.json",
   ]) {
     assert.equal(manifest.files.some((entry) => entry.name === name), name !== "browser-package-manifest.json");
     assert.doesNotThrow(() => readFileSync(join(output, name)));

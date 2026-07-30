@@ -31,6 +31,26 @@ const requiredChecks = [
   },
 ];
 
+test("issuance accepts the current canonical runner-authorization schema", async () => {
+  const context = makeVerifier({
+    jobStatus: "queued",
+    branchSha: targetSha,
+    expiresAt: "2026-07-28T12:30:00.000Z",
+  });
+  try {
+    const authorization = await context.verifier.verify({
+      digest: context.digest,
+      controllerAssetId: "FW-LNX-NV-01",
+      mode: "issuance",
+    });
+    assert.equal(authorization.jobId, 3001);
+    assert.equal(authorization.hostAssetId, "FW-LNX-NV-01");
+    assert.equal(authorization.hwLabel, "hw-linux-rtx3070");
+  } finally {
+    rmSync(context.directory, { recursive: true, force: true });
+  }
+});
+
 test("cleanup mode verifies the exact completed ledger job without issuance-only gates", async () => {
   const context = makeVerifier({
     jobStatus: "completed",
@@ -84,27 +104,52 @@ function makeVerifier({ jobStatus, branchSha, expiresAt }) {
       },
     },
   };
-  const workflowActionsLock = {
-    schemaVersion: 1,
-    actions: [],
-  };
   const authorization = {
     schemaVersion: 1,
     repository: {
       id: repository.id,
-      fullName: repository.fullName,
+      name: repository.fullName,
     },
-    operation: "run-hardware-job",
-    targetSha,
-    workflowSha: "a".repeat(40),
-    signerWorkflow: ".github/workflows/authorize-browser-lab.yml",
-    runId: 2001,
-    jobId: 3001,
-    jobStatus: "queued",
-    hostAssetId: "FW-LNX-NV-01",
+    workflow: {
+      path: ".github/workflows/browser-hardware.yml",
+      ref: "refs/heads/main",
+      sha: "a".repeat(40),
+      event: "workflow_dispatch",
+    },
+    run: { id: 2001, attempt: 1 },
+    promotionJobId: 2002,
+    authorizationJobId: 2003,
+    queuedHardwareJob: {
+      id: 3001,
+      name: "Browser Hardware / Ephemeral Execution",
+      status: "queued",
+    },
+    trustedSha: targetSha,
+    trustEpochSha,
+    lane: "chrome-linux-rtx3070",
+    required: true,
+    assetId: "FW-LNX-NV-01",
+    hostId: "FW-LNX-NV-01",
+    runnerNonce: "ab".repeat(16),
+    nonceLabel: `jit-${"ab".repeat(16)}`,
+    runnerName: `FW-LNX-NV-01-${"ab".repeat(16)}`,
+    customLabels: [
+      "forge3d-web",
+      "hw-linux-rtx3070",
+      `jit-${"ab".repeat(16)}`,
+    ],
+    platformLabels: ["self-hosted", "Linux", "X64"],
+    repositoryJitRunnerGroupId: 1,
+    workFolder: "_work",
+    packageRunId: 1001,
+    packageManifestSha256: "b".repeat(64),
+    labReadiness: {
+      runId: 1002,
+      labInfrastructureDigest: "c".repeat(64),
+    },
+    manualSession: null,
+    issuedAt: "2026-07-28T11:50:00.000Z",
     expiresAt,
-    policySha256: sha256Canonical(repositoryTrustPolicy),
-    workflowActionsLockSha256: sha256Canonical(workflowActionsLock),
   };
   const text = canonicalJson(authorization);
   const digest = createHash("sha256").update(text).digest("hex");
@@ -118,7 +163,6 @@ function makeVerifier({ jobStatus, branchSha, expiresAt }) {
       directory,
       github,
       repositoryTrustPolicy,
-      workflowActionsLock,
       attestationVerifier: async () => {},
       now: () => new Date("2026-07-28T12:00:00.000Z"),
     }),
@@ -225,10 +269,4 @@ class LiveTrustGitHub {
       conclusion: this.jobStatus === "completed" ? "success" : null,
     };
   }
-}
-
-function sha256Canonical(value) {
-  return createHash("sha256")
-    .update(canonicalJson(value))
-    .digest("hex");
 }

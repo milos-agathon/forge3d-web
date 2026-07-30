@@ -138,7 +138,11 @@
         "permissions": {
           "type": "object",
           "additionalProperties": false,
-          "required": ["administration", "actions", "metadata"],
+          "required": [
+            "administration",
+            "actions",
+            "metadata"
+          ],
           "properties": {
             "administration": { "const": "write" },
             "actions": { "const": "write" },

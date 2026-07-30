@@ -37,6 +37,21 @@ const signedRecord = createHostLabCanary({
       surfacePresented: true,
     },
   },
+  adapterAttestation: {
+    result: "PASS",
+    required: true,
+    binding: {
+      runId: authorization.record.run.id,
+      assetId: hostId,
+      commit: authorization.record.trustedSha,
+      packageSha256: "d".repeat(64),
+    },
+    host: {
+      hostId,
+      expectedGpuPresent: true,
+      headedSessionAvailable: true,
+    },
+  },
   inventory: { hostId, attachedAssetIds: [] },
   route: { httpsVerified: true, corsRangeControlsPassed: true },
   execution: {

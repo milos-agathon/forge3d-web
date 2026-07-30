@@ -44,6 +44,10 @@ test("observer secret is isolated and canary cannot claim support readiness", ()
     assert.equal(value.includes("browser-hardware-release-readiness"), false);
   }
   assert.match(preflight, /supportClaim: false/u);
+  assert.match(
+    preflight,
+    /artifactDigest: `sha256:\$\{process\.env\.OBSERVATION_ARTIFACT_DIGEST\}`/u,
+  );
   assert.match(publisher, /makes no browser support claim/u);
 });
 

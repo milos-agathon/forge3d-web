@@ -3,6 +3,7 @@ import { signControllerRecord } from "./controller-signing.mjs";
 export function createHostLabCanary({
   authorization,
   browserEvidence,
+  adapterAttestation,
   inventory,
   route,
   execution,
@@ -17,6 +18,15 @@ export function createHostLabCanary({
     browserEvidence.adapter?.isFallbackAdapter !== false ||
     browserEvidence.adapter?.deviceCreated !== true ||
     browserEvidence.adapter?.surfacePresented !== true ||
+    adapterAttestation?.result !== "PASS" ||
+    adapterAttestation.required !== true ||
+    adapterAttestation.binding?.runId !== authorization.run.id ||
+    adapterAttestation.binding?.assetId !== authorization.assetId ||
+    adapterAttestation.binding?.commit !== authorization.trustedSha ||
+    adapterAttestation.binding?.packageSha256 !== browserEvidence.packageSha256 ||
+    adapterAttestation.host?.hostId !== authorization.hostId ||
+    adapterAttestation.host?.expectedGpuPresent !== true ||
+    adapterAttestation.host?.headedSessionAvailable !== true ||
     execution.acceptedJobCount !== 1 ||
     execution.cleanupComplete !== true ||
     route.httpsVerified !== true ||
@@ -41,6 +51,7 @@ export function createHostLabCanary({
       result: "PASS",
       supportAssertionsExecuted: false,
       adapter: browserEvidence.adapter,
+      adapterAttestation,
       authorization: {
         sha256: authorization.sha256,
         attested: true,
