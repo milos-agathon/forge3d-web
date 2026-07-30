@@ -337,6 +337,62 @@ test("unproven local runner absence quarantines without wiping its job root", as
   assert.equal(calls.some(([name]) => name === "release-lock"), false);
 });
 
+test("lost JIT issuance response reconciles the broker before wipe and lock release", async () => {
+  const calls = [];
+  const dependencies = successfulDependencies(calls);
+  dependencies.broker.issue = async () => {
+    calls.push(["broker-issue-response-lost"]);
+    throw new Error("broker JIT response was lost after issuance");
+  };
+  const controller = new BrowserLabController({
+    hostId: authorization.hostId,
+    platform: "linux",
+    dependencies,
+    now: () => new Date("2026-07-29T10:05:00.000Z"),
+  });
+
+  await assert.rejects(
+    () => controller.execute(structuredClone(authorization)),
+    /response was lost/u,
+  );
+  const cleanupIndex = calls.findIndex(([name]) => name === "broker-cleanup");
+  const wipeIndex = calls.findIndex(([name]) => name === "wipe-prepared");
+  const releaseIndex = calls.findIndex(([name]) => name === "release-lock");
+  assert.ok(cleanupIndex >= 0);
+  assert.ok(wipeIndex > cleanupIndex);
+  assert.ok(releaseIndex > wipeIndex);
+  assert.equal(calls.some(([name]) => name === "spawn"), false);
+});
+
+test("unreconciled JIT issuance quarantines without wipe or lock release", async () => {
+  const calls = [];
+  const dependencies = successfulDependencies(calls);
+  dependencies.broker.issue = async () => {
+    calls.push(["broker-issue-response-lost"]);
+    throw new Error("broker JIT response was lost after issuance");
+  };
+  dependencies.broker.cleanup = async (request) => {
+    calls.push(["broker-cleanup", request]);
+    throw new Error("broker reconciliation unavailable");
+  };
+  const controller = new BrowserLabController({
+    hostId: authorization.hostId,
+    platform: "linux",
+    dependencies,
+    now: () => new Date("2026-07-29T10:05:00.000Z"),
+  });
+
+  await assert.rejects(
+    () => controller.execute(structuredClone(authorization)),
+    /response was lost/u,
+  );
+  assert.ok(calls.find(([name]) => name === "broker-cleanup"));
+  assert.ok(calls.find(([name]) => name === "quarantine"));
+  assert.equal(calls.some(([name]) => name === "wipe-prepared"), false);
+  assert.equal(calls.some(([name]) => name === "release-lock"), false);
+  assert.equal(calls.some(([name]) => name === "spawn"), false);
+});
+
 test("failed launch handshake cannot clean the broker or wipe without bridge absence proof", async () => {
   const calls = [];
   const dependencies = successfulDependencies(calls);

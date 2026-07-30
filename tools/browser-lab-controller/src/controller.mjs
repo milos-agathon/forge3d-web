@@ -27,6 +27,7 @@ export class BrowserLabController {
     }
 
     let issued = null;
+    let jitIssuanceDispatched = false;
     let runnerProcess = null;
     let runnerAbsenceProven = true;
     let listenerStopEvidence = null;
@@ -46,6 +47,7 @@ export class BrowserLabController {
         phase: "before",
       });
       const requestNonce = randomBytes(16).toString("hex");
+      jitIssuanceDispatched = true;
       issued = await this.dependencies.broker.issue({
         authorizationDigest,
         requestNonce,
@@ -243,7 +245,11 @@ export class BrowserLabController {
           ? error.listenerStopEvidence
           : null;
       }
-      if (issued && !brokerClean && runnerAbsenceProven) {
+      if (
+        jitIssuanceDispatched &&
+        !brokerClean &&
+        runnerAbsenceProven
+      ) {
         const cleanup = await this.dependencies.broker
           .cleanup({
             authorizationDigest,
@@ -264,7 +270,7 @@ export class BrowserLabController {
       }
       if (
         runnerAbsenceProven &&
-        (!issued || brokerClean) &&
+        (!jitIssuanceDispatched || brokerClean) &&
         runnerProcess === null
       ) {
         await this.dependencies.wipePreparedJobRoot(authorization.runnerNonce);
@@ -291,7 +297,7 @@ export class BrowserLabController {
       if (
         cleanupSucceeded &&
         runnerAbsenceProven &&
-        (!issued || brokerClean) &&
+        (!jitIssuanceDispatched || brokerClean) &&
         workRootWiped
       ) {
         await lock.release();
