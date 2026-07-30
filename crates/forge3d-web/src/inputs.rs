@@ -644,10 +644,28 @@ mod tests {
     }
 
     #[test]
-    fn runtime_options_support_explicit_no_power_preference() {
+    fn runtime_power_preferences_map_exactly_and_default_to_high_performance() {
+        for (option, expected) in [
+            (PowerPreferenceOption::None, wgpu::PowerPreference::None),
+            (
+                PowerPreferenceOption::LowPower,
+                wgpu::PowerPreference::LowPower,
+            ),
+            (
+                PowerPreferenceOption::HighPerformance,
+                wgpu::PowerPreference::HighPerformance,
+            ),
+        ] {
+            assert_eq!(option.to_wgpu(), expected);
+        }
+
         assert_eq!(
-            PowerPreferenceOption::None.to_wgpu(),
-            wgpu::PowerPreference::None
+            PowerPreferenceOption::default(),
+            PowerPreferenceOption::HighPerformance
+        );
+        assert_eq!(
+            RuntimeOptions::default().power_preference.to_wgpu(),
+            wgpu::PowerPreference::HighPerformance
         );
     }
 
