@@ -57,11 +57,12 @@ separate people or service identities.
 6. Run `node scripts/verify-repository-trust.mjs` with a short-lived
    trust-observer installation token against current `main`.
 
-Automatic broker packaging remains non-privileged and skipped while the checked
-policy is exactly `pending-protection-canary` with a null `trustEpochSha`.
-Manual packaging fails in that state. The reviewed policy-pin change in step 5
-activates the observer and package jobs; missing observer credentials or any
-inconsistent bootstrap state then fails closed.
+Automatic broker and browser packaging remain non-privileged and skip their
+observer and build jobs while the checked policy is exactly
+`pending-protection-canary` with a null `trustEpochSha`. Manual packaging fails
+in that state. The reviewed policy-pin change in step 5 activates the observer
+and package jobs; missing observer credentials or any inconsistent bootstrap
+state then fails closed.
 
 If an environment approval takes longer than the observation's 30-minute
 validity window, rerun the dispatch. Never reuse an observation from another

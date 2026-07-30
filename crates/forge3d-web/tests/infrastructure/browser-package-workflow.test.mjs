@@ -10,6 +10,11 @@ const workflow = readFileSync(
   join(repositoryRoot, ".github", "workflows", "browser-package.yml"),
   "utf8",
 ).replace(/\r\n/gu, "\n");
+const bootstrapGate = jobBlock(
+  workflow,
+  "browser-package-bootstrap",
+  "observe-package-trust",
+);
 const observer = jobBlock(
   workflow,
   "observe-package-trust",
@@ -26,6 +31,23 @@ test("browser package runs only for protected-main push or manual dispatch", () 
   assert.match(
     observer,
     /if: github\.ref != 'refs\/heads\/main'\n        run: exit 1/u,
+  );
+});
+
+test("pending repository trust gates privileged packaging without credentials", () => {
+  assert.match(bootstrapGate, /runs-on: ubuntu-latest/u);
+  assert.match(bootstrapGate, /contents: read/u);
+  assert.match(bootstrapGate, /ref: \$\{\{ github\.workflow_sha \}\}/u);
+  assert.match(
+    bootstrapGate,
+    /node scripts\/resolve-package-bootstrap\.mjs/u,
+  );
+  assert.equal(bootstrapGate.includes("environment:"), false);
+  assert.equal(bootstrapGate.includes("secrets."), false);
+  assert.match(observer, /needs: browser-package-bootstrap/u);
+  assert.match(
+    observer,
+    /if: needs\.browser-package-bootstrap\.outputs\.package_enabled == 'true'/u,
   );
 });
 

@@ -10,9 +10,9 @@ const policyPath = join(
   "repository-trust-policy.json",
 );
 
-export function resolveBrokerPackageBootstrap(policy, { eventName }) {
+export function resolvePackageBootstrap(policy, { eventName }) {
   if (!["push", "workflow_dispatch"].includes(eventName)) {
-    throw new Error(`unsupported broker package event: ${eventName}`);
+    throw new Error(`unsupported package event: ${eventName}`);
   }
 
   const pending =
@@ -26,7 +26,7 @@ export function resolveBrokerPackageBootstrap(policy, { eventName }) {
       };
     }
     throw new Error(
-      "manual broker packaging requires active repository trust and a pinned epoch SHA",
+      "manual packaging requires active repository trust and a pinned epoch SHA",
     );
   }
 
@@ -49,7 +49,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     throw new Error("GITHUB_OUTPUT is required");
   }
   const policy = JSON.parse(readFileSync(policyPath, "utf8"));
-  const result = resolveBrokerPackageBootstrap(policy, {
+  const result = resolvePackageBootstrap(policy, {
     eventName: process.env.GITHUB_EVENT_NAME,
   });
   appendFileSync(
