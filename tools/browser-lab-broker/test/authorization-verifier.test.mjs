@@ -31,6 +31,30 @@ const requiredChecks = [
   },
 ];
 
+test("issuance accepts the current canonical runner-authorization schema", async () => {
+  const context = makeVerifier({
+    jobStatus: "queued",
+    branchSha: targetSha,
+    expiresAt: "2026-07-28T12:30:00.000Z",
+  });
+  try {
+    const authorization = await context.verifier.verify({
+      digest: context.digest,
+      controllerAssetId: "FW-LNX-NV-01",
+      mode: "issuance",
+    });
+    assert.equal(authorization.jobId, 3001);
+    assert.equal(authorization.targetAssetId, "FW-LNX-NV-01");
+    assert.equal(authorization.hostAssetId, "FW-LNX-NV-01");
+    assert.equal(authorization.hwLabel, "hw-linux-rtx3070");
+    assert.equal(authorization.lane, "chrome-linux-rtx3070");
+    assert.equal(authorization.hasLabReadiness, true);
+    assert.equal(authorization.hasManualSession, false);
+  } finally {
+    rmSync(context.directory, { recursive: true, force: true });
+  }
+});
+
 test("cleanup mode verifies the exact completed ledger job without issuance-only gates", async () => {
   const context = makeVerifier({
     jobStatus: "completed",
@@ -70,7 +94,35 @@ test("issuance mode still rejects a live job that is no longer queued", async ()
   }
 });
 
-function makeVerifier({ jobStatus, branchSha, expiresAt }) {
+test("issuance rejects live review requirements that exceed checked policy", async () => {
+  const context = makeVerifier({
+    jobStatus: "queued",
+    branchSha: targetSha,
+    expiresAt: "2026-07-28T12:30:00.000Z",
+    requiredApprovingReviewCount: 1,
+    requireLastPushApproval: true,
+  });
+  try {
+    await assert.rejects(
+      context.verifier.verify({
+        digest: context.digest,
+        controllerAssetId: "FW-LNX-NV-01",
+        mode: "issuance",
+      }),
+      /live branch protection does not match checked policy/u,
+    );
+  } finally {
+    rmSync(context.directory, { recursive: true, force: true });
+  }
+});
+
+function makeVerifier({
+  jobStatus,
+  branchSha,
+  expiresAt,
+  requiredApprovingReviewCount = 0,
+  requireLastPushApproval = false,
+}) {
   const directory = mkdtempSync(join(tmpdir(), "forge3d-authorization-"));
   const repositoryTrustPolicy = {
     schemaVersion: 1,
@@ -82,34 +134,69 @@ function makeVerifier({ jobStatus, branchSha, expiresAt }) {
         strict: true,
         checks: requiredChecks,
       },
+      requiredPullRequestReviews: {
+        requiredApprovingReviewCount: 0,
+        dismissStaleReviews: true,
+        requireLastPushApproval: false,
+      },
     },
-  };
-  const workflowActionsLock = {
-    schemaVersion: 1,
-    actions: [],
   };
   const authorization = {
     schemaVersion: 1,
     repository: {
       id: repository.id,
-      fullName: repository.fullName,
+      name: repository.fullName,
     },
-    operation: "run-hardware-job",
-    targetSha,
-    workflowSha: "a".repeat(40),
-    signerWorkflow: ".github/workflows/authorize-browser-lab.yml",
-    runId: 2001,
-    jobId: 3001,
-    jobStatus: "queued",
-    hostAssetId: "FW-LNX-NV-01",
+    workflow: {
+      path: ".github/workflows/browser-hardware.yml",
+      ref: "refs/heads/main",
+      sha: "a".repeat(40),
+      event: "workflow_dispatch",
+    },
+    run: { id: 2001, attempt: 1 },
+    promotionJobId: 2002,
+    authorizationJobId: 2003,
+    queuedHardwareJob: {
+      id: 3001,
+      name: "Browser Hardware / Ephemeral Execution",
+      status: "queued",
+    },
+    trustedSha: targetSha,
+    trustEpochSha,
+    lane: "chrome-linux-rtx3070",
+    required: true,
+    assetId: "FW-LNX-NV-01",
+    hostId: "FW-LNX-NV-01",
+    runnerNonce: "ab".repeat(16),
+    nonceLabel: `jit-${"ab".repeat(16)}`,
+    runnerName: `FW-LNX-NV-01-${"ab".repeat(16)}`,
+    customLabels: [
+      "forge3d-web",
+      "hw-linux-rtx3070",
+      `jit-${"ab".repeat(16)}`,
+    ],
+    platformLabels: ["self-hosted", "Linux", "X64"],
+    repositoryJitRunnerGroupId: 1,
+    workFolder: "_work",
+    packageRunId: 1001,
+    packageManifestSha256: "b".repeat(64),
+    labReadiness: {
+      runId: 1002,
+      labInfrastructureDigest: "c".repeat(64),
+    },
+    manualSession: null,
+    issuedAt: "2026-07-28T11:50:00.000Z",
     expiresAt,
-    policySha256: sha256Canonical(repositoryTrustPolicy),
-    workflowActionsLockSha256: sha256Canonical(workflowActionsLock),
   };
   const text = canonicalJson(authorization);
   const digest = createHash("sha256").update(text).digest("hex");
   writeFileSync(join(directory, `${digest}.json`), text);
-  const github = new LiveTrustGitHub({ jobStatus, branchSha });
+  const github = new LiveTrustGitHub({
+    jobStatus,
+    branchSha,
+    requiredApprovingReviewCount,
+    requireLastPushApproval,
+  });
   return {
     directory,
     digest,
@@ -118,7 +205,6 @@ function makeVerifier({ jobStatus, branchSha, expiresAt }) {
       directory,
       github,
       repositoryTrustPolicy,
-      workflowActionsLock,
       attestationVerifier: async () => {},
       now: () => new Date("2026-07-28T12:00:00.000Z"),
     }),
@@ -126,9 +212,16 @@ function makeVerifier({ jobStatus, branchSha, expiresAt }) {
 }
 
 class LiveTrustGitHub {
-  constructor({ jobStatus, branchSha }) {
+  constructor({
+    jobStatus,
+    branchSha,
+    requiredApprovingReviewCount,
+    requireLastPushApproval,
+  }) {
     this.jobStatus = jobStatus;
     this.branchSha = branchSha;
+    this.requiredApprovingReviewCount = requiredApprovingReviewCount;
+    this.requireLastPushApproval = requireLastPushApproval;
     this.listRunnerCalls = 0;
   }
 
@@ -151,7 +244,7 @@ class LiveTrustGitHub {
     return {
       required_status_checks: {
         strict: true,
-        contexts: [],
+        contexts: requiredChecks.map((check) => check.context),
         checks: requiredChecks.map((check) => ({
           context: check.context,
           app_id: check.sourceAppId,
@@ -159,8 +252,9 @@ class LiveTrustGitHub {
       },
       required_pull_request_reviews: {
         dismiss_stale_reviews: true,
-        require_last_push_approval: true,
-        required_approving_review_count: 1,
+        require_last_push_approval: this.requireLastPushApproval,
+        required_approving_review_count:
+          this.requiredApprovingReviewCount,
         bypass_pull_request_allowances: {
           users: [],
           teams: [],
@@ -225,10 +319,4 @@ class LiveTrustGitHub {
       conclusion: this.jobStatus === "completed" ? "success" : null,
     };
   }
-}
-
-function sha256Canonical(value) {
-  return createHash("sha256")
-    .update(canonicalJson(value))
-    .digest("hex");
 }

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { lstatSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -68,11 +68,15 @@ export function verifyRunnerTree({
   if (!distribution) {
     throw new Error(`runner manifest does not contain ${platform}`);
   }
+  validateTransientPolicy(transientPolicy);
+  const transientRoots = transientPolicyRoots(transientPolicy);
   const expected = new Map(
     distribution.entries.map((entry) => [entry.path, entry]),
   );
   const actual = new Map(
-    buildDistributionEntries(root).map((entry) => [entry.path, entry]),
+    buildDistributionEntries(root, {
+      excludePaths: [...transientRoots.keys()],
+    }).map((entry) => [entry.path, entry]),
   );
   for (const [path, expectedEntry] of expected) {
     const actualEntry = actual.get(path);
@@ -84,16 +88,14 @@ export function verifyRunnerTree({
     }
     actual.delete(path);
   }
-  const extras = [...actual.values()];
-  for (const entry of extras) {
-    if (!isAllowedTransient(entry.path, transientPolicy)) {
-      throw new Error(`unknown runner path outside transient policy: ${entry.path}`);
-    }
+  for (const entry of actual.values()) {
+    throw new Error(`unknown runner path outside transient policy: ${entry.path}`);
   }
+  const transientEntries = inspectTransientRoots(root, transientRoots);
   return {
     ok: true,
     immutableEntryCount: expected.size,
-    transientEntries: extras.map((entry) => entry.path).sort(),
+    transientEntries,
   };
 }
 
@@ -117,14 +119,42 @@ function validateTransientPolicy(policy) {
   }
 }
 
-function isAllowedTransient(path, policy) {
-  return policy.paths.some((entry) => {
-    if (entry.kind === "file") {
-      return path === entry.pattern;
+function transientPolicyRoots(policy) {
+  const roots = new Map();
+  for (const entry of policy.paths) {
+    const root =
+      entry.kind === "tree"
+        ? entry.pattern.replace(/\/\*\*$/u, "")
+        : entry.pattern;
+    if (roots.has(root)) {
+      throw new Error(`duplicate transient path root: ${root}`);
     }
-    const prefix = entry.pattern.slice(0, -2);
-    return path === prefix.slice(0, -1) || path.startsWith(prefix);
-  });
+    roots.set(root, entry.kind);
+  }
+  return roots;
+}
+
+function inspectTransientRoots(root, transientRoots) {
+  const present = [];
+  for (const [name, kind] of transientRoots) {
+    const path = join(root, name);
+    let stats;
+    try {
+      stats = lstatSync(path);
+    } catch (error) {
+      if (error?.code === "ENOENT") continue;
+      throw error;
+    }
+    if (
+      stats.isSymbolicLink() ||
+      (kind === "tree" && !stats.isDirectory()) ||
+      (kind === "file" && !stats.isFile())
+    ) {
+      throw new Error(`runner transient path changed kind: ${name}`);
+    }
+    present.push(name);
+  }
+  return present.sort();
 }
 
 function readJson(name) {

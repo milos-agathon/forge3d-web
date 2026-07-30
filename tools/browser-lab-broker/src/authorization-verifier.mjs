@@ -5,20 +5,22 @@ import { join } from "node:path";
 
 import { canonicalJson } from "./canonical-json.mjs";
 import { FIXED_REPOSITORY } from "./protocol.mjs";
+import {
+  normalizeAuthorization,
+  validateAuthorizationRecord,
+} from "./runner-authorization.mjs";
 
 export class FileAuthorizationVerifier {
   constructor({
     directory,
     github,
     repositoryTrustPolicy,
-    workflowActionsLock,
     attestationVerifier = verifyAuthorizationAttestation,
     now = () => new Date(),
   }) {
     this.directory = directory;
     this.github = github;
     this.repositoryTrustPolicy = repositoryTrustPolicy;
-    this.workflowActionsLock = workflowActionsLock;
     this.attestationVerifier = attestationVerifier;
     this.now = now;
   }
@@ -49,20 +51,14 @@ export class FileAuthorizationVerifier {
     if (canonicalJson(authorization) !== text) {
       throw new Error("runner authorization is not canonical JSON");
     }
-    if (
-      authorization.schemaVersion !== 1 ||
-      authorization.repository?.id !== FIXED_REPOSITORY.id ||
-      authorization.repository?.fullName !== FIXED_REPOSITORY.fullName ||
-      authorization.hostAssetId !== controllerAssetId ||
-      authorization.operation !== "run-hardware-job" ||
-      authorization.jobStatus !== "queued" ||
-      (!cleanup && Date.parse(authorization.expiresAt) <= this.now().getTime()) ||
-      authorization.policySha256 !== sha256Canonical(this.repositoryTrustPolicy) ||
-      authorization.workflowActionsLockSha256 !==
-        sha256Canonical(this.workflowActionsLock)
-    ) {
-      throw new Error("runner authorization fields are invalid or expired");
-    }
+    validateAuthorizationRecord({
+      authorization,
+      digest,
+      controllerAssetId,
+      policy: this.repositoryTrustPolicy,
+      now: this.now(),
+      enforceExpiry: !cleanup,
+    });
     await this.attestationVerifier({
       path,
       bundlePath: join(this.directory, `${digest}.bundle.jsonl`),
@@ -71,20 +67,23 @@ export class FileAuthorizationVerifier {
     await verifyLiveRepositoryTrust({
       github: this.github,
       policy: this.repositoryTrustPolicy,
-      targetSha: authorization.targetSha,
+      targetSha: authorization.trustedSha,
       allowRegisteredRunners: cleanup,
       requireCurrentTarget: !cleanup,
     });
-    const job = await this.github.getJob(authorization.jobId);
+    const job = await this.github.getJob(
+      authorization.queuedHardwareJob.id,
+    );
     if (
-      job.id !== authorization.jobId ||
-      job.run_id !== authorization.runId ||
+      job.id !== authorization.queuedHardwareJob.id ||
+      job.run_id !== authorization.run.id ||
       (!cleanup && job.status !== "queued") ||
-      job.head_sha !== undefined && job.head_sha !== authorization.targetSha
+      (job.head_sha !== undefined &&
+        job.head_sha !== authorization.trustedSha)
     ) {
       throw new Error("live job does not match runner authorization");
     }
-    return authorization;
+    return normalizeAuthorization(authorization);
   }
 }
 
@@ -127,13 +126,17 @@ export async function verifyLiveRepositoryTrust({
   const expectedChecks = required.checks
     .map((check) => ({ context: check.context, appId: check.sourceAppId }))
     .sort(compareChecks);
+  const requiredReviews =
+    policy.branchProtection.requiredPullRequestReviews;
   if (
     protection.required_status_checks?.strict !== true ||
-    (protection.required_status_checks?.contexts ?? []).length !== 0 ||
     canonicalJson(checks) !== canonicalJson(expectedChecks) ||
-    protection.required_pull_request_reviews?.dismiss_stale_reviews !== true ||
-    protection.required_pull_request_reviews?.require_last_push_approval !== true ||
-    protection.required_pull_request_reviews?.required_approving_review_count !== 1 ||
+    protection.required_pull_request_reviews?.dismiss_stale_reviews !==
+      requiredReviews.dismissStaleReviews ||
+    protection.required_pull_request_reviews?.require_last_push_approval !==
+      requiredReviews.requireLastPushApproval ||
+    protection.required_pull_request_reviews?.required_approving_review_count !==
+      requiredReviews.requiredApprovingReviewCount ||
     protection.required_conversation_resolution?.enabled !== true ||
     protection.enforce_admins?.enabled !== true ||
     protection.allow_force_pushes?.enabled !== false ||
@@ -211,11 +214,11 @@ function verifyAuthorizationAttestation({
       "--repo",
       FIXED_REPOSITORY.fullName,
       "--signer-workflow",
-      `${FIXED_REPOSITORY.fullName}/${authorization.signerWorkflow}`,
+      `${FIXED_REPOSITORY.fullName}/${authorization.workflow.path}`,
       "--source-ref",
       "refs/heads/main",
       "--source-digest",
-      authorization.workflowSha,
+      authorization.workflow.sha,
       "--deny-self-hosted-runners",
     ],
     { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
@@ -227,10 +230,4 @@ function verifyAuthorizationAttestation({
 
 function compareChecks(left, right) {
   return left.context.localeCompare(right.context) || left.appId - right.appId;
-}
-
-function sha256Canonical(value) {
-  return createHash("sha256")
-    .update(canonicalJson(value))
-    .digest("hex");
 }

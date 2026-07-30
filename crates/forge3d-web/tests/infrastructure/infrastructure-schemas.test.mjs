@@ -12,6 +12,7 @@ for (const name of [
   "browser-policy",
   "controller-health-endpoints",
   "hardware-matrix",
+  "https-origin-policy",
   "repository-trust-policy",
   "runner-distribution-manifest",
   "runner-transient-path-policy",
@@ -21,6 +22,26 @@ for (const name of [
     assertJsonSchema(readJson(`${name}.json`), readJson(`${name}.schema.json`));
   });
 }
+
+test("controller protocol schema rejects unreviewed operations", () => {
+  const schema = readJson("controller-protocol.schema.json");
+  const record = {
+    schemaVersion: 1,
+    operation: "issue-jit",
+    hostId: "FW-LNX-NV-01",
+    authorizationDigest: "a".repeat(64),
+    requestNonce: "b".repeat(32),
+    observedAt: "2026-07-29T10:00:00.000Z",
+    signature: {
+      algorithm: "SHA256withECDSA",
+      signingKeyId: "controller-fw-lnx-nv-01-p256-v1",
+      value: "base64url",
+    },
+  };
+  assertJsonSchema(record, schema);
+  record.operation = "shell";
+  assert.throws(() => assertJsonSchema(record, schema), /expected one of/u);
+});
 
 test("schemas reject unknown policy fields", () => {
   const policy = readJson("repository-trust-policy.json");

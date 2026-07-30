@@ -1,0 +1,463 @@
+name: Browser Lab Infrastructure Readiness
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_sha:
+        description: Full protected-main candidate SHA, equal to this workflow run SHA
+        required: true
+        type: string
+      packageRunId:
+        description: Exact Browser Package run ID
+        required: true
+        type: string
+      macHostCanaryRunId:
+        description: FW-MAC-M2-01 host canary run ID
+        required: true
+        type: string
+      windowsHostCanaryRunId:
+        description: FW-WIN-I12-01 host canary run ID
+        required: true
+        type: string
+      linuxIntelHostCanaryRunId:
+        description: FW-LNX-I12-01 host canary run ID
+        required: true
+        type: string
+      linuxNvidiaHostCanaryRunId:
+        description: FW-LNX-NV-01 host canary run ID
+        required: true
+        type: string
+      manualCanaryRunId:
+        description: Generic authenticated manual-canary submission run ID
+        required: true
+        type: string
+      manualIntakeReleaseId:
+        description: Generic manual canary intake release database ID
+        required: true
+        type: string
+      manualHardwareJobId:
+        description: Generic manual canary hardware job ID
+        required: true
+        type: string
+      labCanaryReleaseId:
+        description: Published non-support laboratory canary release database ID
+        required: true
+        type: string
+
+permissions: {}
+
+jobs:
+  observe-lab-readiness-trust:
+    name: Browser Lab Readiness / Observe Trust
+    runs-on: ubuntu-latest
+    environment: forge3d-trust-observer
+    permissions:
+      actions: read
+      artifact-metadata: write
+      attestations: write
+      checks: read
+      contents: read
+      id-token: write
+    outputs:
+      observation_artifact_id: ${{ steps.upload-observation.outputs.artifact-id }}
+      observation_artifact_name: ${{ steps.emit-observation.outputs.artifact-name }}
+      observation_artifact_digest: ${{ steps.upload-observation.outputs.artifact-digest }}
+      observation_content_sha256: ${{ steps.emit-observation.outputs.content-sha256 }}
+
+    steps:
+      - name: Reject non-main or mismatched candidate
+        if: github.ref != 'refs/heads/main' || inputs.candidate_sha != github.sha
+        run: exit 1
+
+      - name: Check out protected observer code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+
+      - name: Mint short-lived trust-observer token
+        id: observer-token
+        working-directory: crates/forge3d-web
+        env:
+          TRUST_OBSERVER_APP_ID: ${{ secrets.TRUST_OBSERVER_APP_ID }}
+          TRUST_OBSERVER_INSTALLATION_ID: ${{ secrets.TRUST_OBSERVER_INSTALLATION_ID }}
+          TRUST_OBSERVER_PRIVATE_KEY: ${{ secrets.TRUST_OBSERVER_PRIVATE_KEY }}
+        run: node scripts/mint-github-app-token.mjs
+
+      - name: Verify live protected-main trust
+        working-directory: crates/forge3d-web
+        env:
+          GITHUB_TOKEN: ${{ steps.observer-token.outputs.token }}
+        run: node scripts/verify-repository-trust.mjs > repository-trust-verification.json
+
+      - name: Emit exact readiness observation
+        id: emit-observation
+        working-directory: crates/forge3d-web
+        run: |
+          node scripts/emit-repository-trust-observation.mjs \
+            --verification repository-trust-verification.json \
+            --operation compute-lab-readiness \
+            --consumer browser-lab-infrastructure-readiness@none \
+            --workflow-path .github/workflows/browser-lab-infrastructure-readiness.yml \
+            --workflow-ref refs/heads/main \
+            --workflow-sha "${{ github.workflow_sha }}" \
+            --run-id "${{ github.run_id }}" \
+            --run-attempt "${{ github.run_attempt }}" \
+            --candidate-sha "${{ inputs.candidate_sha }}" \
+            --target-sha "${{ inputs.candidate_sha }}" \
+            --output repository-trust-observation.json
+          name="repository-trust-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-compute-lab-readiness"
+          echo "artifact-name=${name}" >> "$GITHUB_OUTPUT"
+          echo "content-sha256=$(sha256sum repository-trust-observation.json | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+
+      - name: Revoke observer token
+        if: always() && steps.observer-token.outputs.token != ''
+        working-directory: crates/forge3d-web
+        env:
+          OBSERVER_TOKEN: ${{ steps.observer-token.outputs.token }}
+        run: |
+          node --input-type=module --eval '
+            const response = await fetch("https://api.github.com/installation/token", {
+              method: "DELETE",
+              headers: { Accept: "application/vnd.github+json", Authorization: `Bearer ${process.env.OBSERVER_TOKEN}`, "X-GitHub-Api-Version": "2022-11-28" }
+            });
+            if (response.status !== 204) throw new Error(`token revocation failed: ${response.status}`);
+          '
+
+      - name: Upload exact observation
+        id: upload-observation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ${{ steps.emit-observation.outputs.artifact-name }}
+          path: crates/forge3d-web/repository-trust-observation.json
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 1
+
+      - name: Attest observation
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-path: crates/forge3d-web/repository-trust-observation.json
+
+  browser-lab-infrastructure-readiness:
+    name: browser-lab-infrastructure-readiness
+    needs: observe-lab-readiness-trust
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      artifact-metadata: write
+      attestations: write
+      checks: read
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Check out protected computation code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.workflow_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify exact observation and strict post-epoch main candidate
+        working-directory: crates/forge3d-web
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          OBSERVATION_ARTIFACT_ID: ${{ needs.observe-lab-readiness-trust.outputs.observation_artifact_id }}
+          OBSERVATION_ARTIFACT_NAME: ${{ needs.observe-lab-readiness-trust.outputs.observation_artifact_name }}
+          OBSERVATION_ARTIFACT_DIGEST: ${{ needs.observe-lab-readiness-trust.outputs.observation_artifact_digest }}
+          OBSERVATION_CONTENT_SHA256: ${{ needs.observe-lab-readiness-trust.outputs.observation_content_sha256 }}
+          EXPECTED_OPERATION: compute-lab-readiness
+          EXPECTED_CONSUMER_JOB: browser-lab-infrastructure-readiness
+          EXPECTED_CONSUMER_ENVIRONMENT: none
+          EXPECTED_TARGET_SHA: ${{ inputs.candidate_sha }}
+          EXPECTED_CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+          EXPECTED_CURRENT_MAIN_SHA: ${{ github.sha }}
+          EXPECTED_WORKFLOW_PATH: .github/workflows/browser-lab-infrastructure-readiness.yml
+        run: |
+          test "${GITHUB_REF}" = "refs/heads/main"
+          test "${{ inputs.candidate_sha }}" = "${GITHUB_SHA}"
+          node scripts/verify-repository-trust-observation.mjs
+          epoch="$(node -p "require('./tests/infrastructure/repository-trust-policy.json').trustEpochSha")"
+          test "${{ inputs.candidate_sha }}" != "${epoch}"
+          git merge-base --is-ancestor "${epoch}" "${{ inputs.candidate_sha }}"
+
+      - name: Resolve exact attested package
+        id: package
+        working-directory: crates/forge3d-web
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node scripts/resolve-hardware-promotion.mjs \
+            --package-run-id "${{ inputs.packageRunId }}" \
+            --trusted-sha "${{ inputs.candidate_sha }}" \
+            --output package-run.json
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${{ steps.package.outputs.package-artifact-id }}/zip" > package.zip
+          expected="${{ steps.package.outputs.package-artifact-digest }}"
+          test "$(sha256sum package.zip | cut -d ' ' -f 1)" = "${expected#sha256:}"
+          mkdir package
+          unzip -q package.zip -d package
+          gh attestation verify package/browser-package-manifest.json \
+            --repo milos-agathon/forge3d-web \
+            --signer-workflow milos-agathon/forge3d-web/.github/workflows/browser-package.yml \
+            --source-ref refs/heads/main \
+            --source-digest "${{ inputs.candidate_sha }}" \
+            --deny-self-hosted-runners
+
+      - name: Resolve exact closed host-canary records
+        shell: bash
+        working-directory: crates/forge3d-web
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+          PACKAGE_RUN_ID: ${{ inputs.packageRunId }}
+          RUN_SPECS: >-
+            ${{ inputs.macHostCanaryRunId }}:FW-MAC-M2-01
+            ${{ inputs.windowsHostCanaryRunId }}:FW-WIN-I12-01
+            ${{ inputs.linuxIntelHostCanaryRunId }}:FW-LNX-I12-01
+            ${{ inputs.linuxNvidiaHostCanaryRunId }}:FW-LNX-NV-01
+        run: |
+          mkdir host-canaries
+          for spec in ${RUN_SPECS}; do
+            run_id="${spec%%:*}"
+            host_id="${spec#*:}"
+            test "${run_id}" -eq "${run_id}" 2>/dev/null
+            gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" > "host-canaries/${run_id}-run.json"
+            gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" > "host-canaries/${run_id}-artifacts.json"
+            node --input-type=module --eval '
+              import { readFileSync, writeFileSync } from "node:fs";
+              const [runPath, artifactsPath, hostId] = process.argv.slice(1);
+              const run = JSON.parse(readFileSync(runPath, "utf8"));
+              const artifacts = JSON.parse(readFileSync(artifactsPath, "utf8")).artifacts;
+              if (
+                run.path !== ".github/workflows/browser-hardware.yml" ||
+                run.head_branch !== "main" ||
+                run.head_sha !== process.env.CANDIDATE_SHA ||
+                run.status !== "completed" ||
+                run.conclusion !== "success" ||
+                run.inputs?.lane !== "infrastructure-canary" ||
+                run.inputs?.canaryMode !== "host" ||
+                run.inputs?.assetId !== hostId ||
+                String(run.inputs?.packageRunId) !== process.env.PACKAGE_RUN_ID
+              ) throw new Error(`invalid host canary run ${run.id}`);
+              const matches = artifacts.filter((artifact) =>
+                artifact.name === `finalized-browser-hardware-${run.id}-${run.run_attempt}`
+              );
+              if (matches.length !== 1 || matches[0].expired) throw new Error("host canary artifact mismatch");
+              writeFileSync(`${run.id}-artifact.json`, JSON.stringify(matches[0]));
+            ' "host-canaries/${run_id}-run.json" "host-canaries/${run_id}-artifacts.json" "${host_id}"
+            artifact_id="$(node -p "require('./${run_id}-artifact.json').id")"
+            expected="$(node -p "require('./${run_id}-artifact.json').digest")"
+            gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "host-canaries/${run_id}.zip"
+            test "$(sha256sum "host-canaries/${run_id}.zip" | cut -d ' ' -f 1)" = "${expected#sha256:}"
+            mkdir "host-canaries/${run_id}"
+            unzip -q "host-canaries/${run_id}.zip" -d "host-canaries/${run_id}"
+            test "$(find "host-canaries/${run_id}" -name lab-host-canary.json -type f | wc -l)" -eq 1
+            gh attestation verify "$(find "host-canaries/${run_id}" -name lab-host-canary.json -type f)" \
+              --repo milos-agathon/forge3d-web \
+              --signer-workflow milos-agathon/forge3d-web/.github/workflows/browser-hardware.yml \
+              --source-ref refs/heads/main \
+              --source-digest "${CANDIDATE_SHA}" \
+              --deny-self-hosted-runners
+          done
+
+      - name: Resolve generic manual canary and immutable canary release
+        shell: bash
+        working-directory: crates/forge3d-web
+        env:
+          GH_TOKEN: ${{ github.token }}
+          MANUAL_RUN_ID: ${{ inputs.manualCanaryRunId }}
+          MANUAL_INTAKE_ID: ${{ inputs.manualIntakeReleaseId }}
+          MANUAL_JOB_ID: ${{ inputs.manualHardwareJobId }}
+          LAB_CANARY_RELEASE_ID: ${{ inputs.labCanaryReleaseId }}
+        run: |
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${MANUAL_RUN_ID}" > manual-run.json
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${MANUAL_RUN_ID}/artifacts?per_page=100" > manual-artifacts.json
+          node --input-type=module --eval '
+            import { readFileSync, writeFileSync } from "node:fs";
+            const run = JSON.parse(readFileSync("manual-run.json", "utf8"));
+            const artifacts = JSON.parse(readFileSync("manual-artifacts.json", "utf8")).artifacts;
+            if (
+              run.path !== ".github/workflows/submit-browser-manual-evidence.yml" ||
+              run.head_sha !== process.env.GITHUB_SHA ||
+              run.head_branch !== "main" ||
+              run.conclusion !== "success" ||
+              String(run.inputs?.intakeReleaseId) !== process.env.MANUAL_INTAKE_ID ||
+              String(run.inputs?.hardwareJobId) !== process.env.MANUAL_JOB_ID
+            ) throw new Error("generic manual canary run is invalid");
+            const matches = artifacts.filter((artifact) =>
+              artifact.name === `browser-manual-evidence-${run.id}-${run.run_attempt}`
+            );
+            if (matches.length !== 1 || matches[0].expired) throw new Error("manual canary artifact mismatch");
+            writeFileSync("manual-artifact.json", JSON.stringify(matches[0]));
+          '
+          artifact_id="$(node -p "require('./manual-artifact.json').id")"
+          expected="$(node -p "require('./manual-artifact.json').digest")"
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > manual.zip
+          test "$(sha256sum manual.zip | cut -d ' ' -f 1)" = "${expected#sha256:}"
+          mkdir manual
+          unzip -q manual.zip -d manual
+          test "$(find manual -name lab-manual-canary-source.json -type f | wc -l)" -eq 1
+          gh attestation verify "$(find manual -name lab-manual-canary-source.json -type f)" \
+            --repo milos-agathon/forge3d-web \
+            --signer-workflow milos-agathon/forge3d-web/.github/workflows/submit-browser-manual-evidence.yml \
+            --source-ref refs/heads/main \
+            --source-digest "${GITHUB_SHA}" \
+            --deny-self-hosted-runners
+          gh api "/repos/${GITHUB_REPOSITORY}/releases/${LAB_CANARY_RELEASE_ID}" > lab-canary-release.json
+          tag="$(node -p "require('./lab-canary-release.json').tag_name")"
+          gh release verify "${tag}" > lab-canary-release-verification.txt
+          mkdir lab-canary-assets
+          gh release download "${tag}" --dir lab-canary-assets
+          for asset in lab-canary-assets/*; do
+            gh release verify-asset "${tag}" "${asset}" >> lab-canary-release-verification.txt
+          done
+          test -f lab-canary-assets/browser-lab-canary-manifest.json
+          test -f lab-canary-assets/manual-canary.json
+          node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            import { canonicalJson } from "./scripts/canonical-json.mjs";
+            const release = JSON.parse(readFileSync("lab-canary-release.json", "utf8"));
+            const manifest = JSON.parse(readFileSync(
+              "lab-canary-assets/browser-lab-canary-manifest.json", "utf8"
+            ));
+            const published = JSON.parse(readFileSync(
+              "lab-canary-assets/manual-canary.json", "utf8"
+            ));
+            const source = JSON.parse(readFileSync(
+              process.argv[1], "utf8"
+            ));
+            const { attestation: publishedAttestation, ...publishedBody } = published;
+            const { attestation: sourceAttestation, ...sourceBody } = source;
+            if (
+              release.id !== Number(process.env.LAB_CANARY_RELEASE_ID) ||
+              release.draft !== false ||
+              release.target_commitish !== process.env.GITHUB_SHA ||
+              manifest.supportClaim !== false ||
+              manifest.candidateSha !== process.env.GITHUB_SHA ||
+              manifest.manualIntakeReleaseId !== Number(process.env.MANUAL_INTAKE_ID) ||
+              publishedAttestation?.verified !== true ||
+              sourceAttestation?.verified !== false ||
+              canonicalJson(publishedBody) !== canonicalJson(sourceBody)
+            ) throw new Error("published manual canary does not match its attested source");
+          ' "$(find manual -name lab-manual-canary-source.json -type f)"
+          publication_run_id="$(node -p "require('./lab-canary-assets/browser-lab-canary-manifest.json').publicationRunId")"
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${publication_run_id}" > canary-publication-run.json
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${publication_run_id}/artifacts?per_page=100" > canary-publication-artifacts.json
+          node --input-type=module --eval '
+            import { readFileSync, writeFileSync } from "node:fs";
+            const run = JSON.parse(readFileSync("canary-publication-run.json", "utf8"));
+            const artifacts = JSON.parse(readFileSync("canary-publication-artifacts.json", "utf8")).artifacts;
+            if (
+              run.path !== ".github/workflows/publish-browser-lab-canary.yml" ||
+              run.head_sha !== process.env.GITHUB_SHA ||
+              run.head_branch !== "main" ||
+              run.conclusion !== "success"
+            ) throw new Error("canary publication run is invalid");
+            const matches = artifacts.filter((artifact) =>
+              artifact.name === `lab-canary-publication-${run.id}-${run.run_attempt}`
+            );
+            if (matches.length !== 1 || matches[0].expired) throw new Error("canary publication artifact mismatch");
+            writeFileSync("canary-publication-artifact.json", JSON.stringify(matches[0]));
+          '
+          publication_artifact_id="$(node -p "require('./canary-publication-artifact.json').id")"
+          publication_expected="$(node -p "require('./canary-publication-artifact.json').digest")"
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${publication_artifact_id}/zip" > canary-publication.zip
+          test "$(sha256sum canary-publication.zip | cut -d ' ' -f 1)" = "${publication_expected#sha256:}"
+          mkdir canary-publication
+          unzip -q canary-publication.zip -d canary-publication
+          test -f canary-publication/canary-publication-record.json
+          intake_id="$(node -p "require('./lab-canary-assets/browser-lab-canary-manifest.json').manualIntakeReleaseId")"
+          if gh api "/repos/${GITHUB_REPOSITORY}/releases/${intake_id}" >/dev/null 2>&1; then
+            echo "manual canary intake still exists" >&2
+            exit 1
+          fi
+
+      - name: Compute canonical laboratory readiness
+        shell: bash
+        working-directory: crates/forge3d-web
+        env:
+          PACKAGE_RUN_ID: ${{ inputs.packageRunId }}
+        run: |
+          node --input-type=module --eval '
+            import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+            import { canonicalJson } from "./scripts/canonical-json.mjs";
+            const hostCanaries = readdirSync("host-canaries", { recursive: true })
+              .filter((path) => path.endsWith("lab-host-canary.json"))
+              .map((path) => JSON.parse(readFileSync(`host-canaries/${path}`, "utf8")));
+            const manualCanary = JSON.parse(readFileSync(
+              "lab-canary-assets/manual-canary.json", "utf8"
+            ));
+            const release = JSON.parse(readFileSync("lab-canary-release.json", "utf8"));
+            const releaseManifest = JSON.parse(readFileSync(
+              "lab-canary-assets/browser-lab-canary-manifest.json", "utf8"
+            ));
+            const publicationRecord = JSON.parse(readFileSync(
+              "canary-publication/canary-publication-record.json", "utf8"
+            ));
+            const packageManifest = JSON.parse(readFileSync(
+              "package/browser-package-manifest.json", "utf8"
+            ));
+            const input = {
+              candidateSha: process.env.GITHUB_SHA,
+              packageRecord: {
+                runId: Number(process.env.PACKAGE_RUN_ID),
+                targetSha: process.env.GITHUB_SHA,
+                packageSha256: packageManifest.packageSha256,
+                attestation: { verified: true, denySelfHostedRunners: true }
+              },
+              hostCanaries,
+              manualCanary,
+              canaryRelease: {
+                id: release.id,
+                publicationRunId: publicationRecord.publicationRunId,
+                tagName: release.tag_name,
+                targetSha: release.target_commitish,
+                supportClaim: publicationRecord.supportClaim,
+                draft: release.draft,
+                immutableReleaseVerified: true,
+                allAssetsVerified: true,
+                intakeDeletedAfterVerification: publicationRecord.intakeDeletedAfterVerification,
+                attestation: { verified: true }
+              },
+              repositoryTrust: {
+                verified: true,
+                currentMainSha: process.env.GITHUB_SHA,
+                targetSha: process.env.GITHUB_SHA
+              },
+              matrix: JSON.parse(readFileSync("tests/infrastructure/hardware-matrix.json", "utf8")),
+              run: {
+                id: Number(process.env.GITHUB_RUN_ID),
+                attempt: Number(process.env.GITHUB_RUN_ATTEMPT),
+                workflowSha: process.env.GITHUB_WORKFLOW_SHA
+              }
+            };
+            for (const hostCanary of hostCanaries) {
+              const published = JSON.parse(readFileSync(
+                `lab-canary-assets/host-${hostCanary.hostId}.json`, "utf8"
+              ));
+              if (canonicalJson(published) !== canonicalJson(hostCanary)) {
+                throw new Error(`published host canary drift: ${hostCanary.hostId}`);
+              }
+            }
+            writeFileSync("lab-readiness-input.json", JSON.stringify(input));
+          '
+          node scripts/compute-lab-readiness.mjs \
+            lab-readiness-input.json \
+            browser-lab-infrastructure-readiness.json \
+            "${GITHUB_WORKSPACE}"
+
+      - name: Upload fixed readiness artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: browser-lab-infrastructure-readiness
+          path: crates/forge3d-web/browser-lab-infrastructure-readiness.json
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 90
+
+      - name: Attest laboratory readiness
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-path: crates/forge3d-web/browser-lab-infrastructure-readiness.json

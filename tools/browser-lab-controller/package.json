@@ -1,0 +1,13 @@
+{
+  "name": "@forge3d/browser-lab-controller",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.3.0"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "pack:manifest": "node scripts/create-package-manifest.mjs"
+  }
+}

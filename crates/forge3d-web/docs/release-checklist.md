@@ -98,6 +98,53 @@ of an exact npm-tarball digest.
 The required source-browser benchmark writes and attaches its complete evidence
 record under Playwright `test-results/`; CI uploads that record separately.
 
+## Physical Evidence And Publication
+
+Code completion does not unlock physical lanes. First publish and verify the
+fixed non-support laboratory canary, then run
+`browser-lab-infrastructure-readiness` with the exact package, four host
+canaries, generic manual canary, intake, hardware job, and canary release IDs.
+For the infrastructure-only manual canary, pass the successful
+`submit-browser-manual-evidence.yml` run as `manualCanaryRunId`; pass its
+controller-signed session's Browser Hardware job separately as
+`manualHardwareJobId`. A Browser Hardware workflow run is not a substitute for
+the authenticated submission run.
+Only an attested `LAB_INFRA_READY` record with the current
+`labInfrastructureDigest` unlocks browser and product-manual lanes.
+
+After every required physical row runs, dispatch
+`browser-hardware-release-readiness` with the same target and laboratory run
+plus the canonical sorted evidence-run ID array. It must produce exactly 24
+closed keys, pass the prior-head, package-hash, and missing-row negative
+controls, and emit attested `RELEASE_MATRIX_READY`. Only that record may feed
+`publish-web-release.yml`.
+
+Individual package, controller, hardware, manual, readiness, and
+post-publication verification artifacts are retained in GitHub Actions for 90
+days. The immutable GitHub Release receives byte-identical package and evidence
+assets, their checksum-bearing manifest, and the complete matrix. Keep failed
+draft manual intakes for retry and audit. Delete an intake/tag only after every
+selected media byte is copied to the final draft, SHA-256 checked, the release
+is published once, and `gh release verify` plus every
+`gh release verify-asset` command succeeds.
+
+Rerun from the earliest invalid boundary:
+
+- Repository policy, workflow, package, or laboratory-digest drift requires a
+  new package, canaries, and laboratory-readiness record.
+- A failed, expired, wrong-SHA, wrong-package, or missing physical record
+  requires that exact lane to run again; do not reuse or edit its artifact.
+- A publication preflight older than 30 minutes requires a new dispatch.
+- A failed publication that did not publish may reuse intact source evidence
+  through a fresh preflight. Never mutate a published immutable release.
+
+A quarantined or maintenance asset remains required and blocks publication.
+Do not silently drop its row or substitute another host, GPU, device, browser,
+pen, trackpad, controller, tunnel, or package. Any substitution requires a
+reviewed matrix and policy change, new `labInfrastructureDigest`, fresh
+canaries, and a new complete physical matrix. Narrowing the published support
+matrix is a separate reviewed product decision, not an infrastructure skip.
+
 ## Release Notes
 
 - Confirm `CHANGELOG.md` has an `Unreleased` entry for browser MVP release

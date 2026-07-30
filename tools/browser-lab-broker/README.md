@@ -11,12 +11,15 @@ hardware matrix. The caller supplies an authorization digest and one-time
 nonce; it cannot supply a repository, runner name, label list, runner group,
 work folder, runner ID, workflow run ID, or workflow job ID.
 
-The broker fixes the repository to `milos-agathon/forge3d-web`, derives all
-runner fields from an attested canonical authorization, verifies live
-protected-main policy and the exact queued job, and calls only GitHub's
-repository JIT configuration, exact runner get/delete, exact job/run get, and
-bound-run cancel endpoints. It never calls the generic registration-token
-endpoint.
+The broker fixes the repository to `milos-agathon/forge3d-web`. Its protected
+authorization directory receives the canonical authorization subject and
+offline GitHub attestation bundle through the separately administered broker
+provisioning boundary. The service resolves them only by the caller-supplied
+digest, derives all runner fields from the authorization, verifies its
+attestation, live protected-main policy, and exact queued job, and calls only
+GitHub's repository JIT configuration, exact runner get/delete, exact job/run
+get, and bound-run cancel endpoints. It never calls an Actions artifact or
+generic registration-token endpoint.
 
 `encoded_jit_config` is returned once and never written to the ledger or log.
 The ledger records the authorization digest, exact runner/run/job identity,
@@ -34,6 +37,13 @@ the controller-unreachable deletion, run-cancellation, and quarantine path.
 Each controller health endpoint must be served by the controller process, not a
 host-independent proxy, so a successful probe proves that the responsible
 controller remains reachable.
+The same health request carries a size-bounded lifecycle header containing only
+the ledger-bound authorization digest, host, runner ID/name, state, persisted
+online/assignment window, busy latch, and last exact runner/job observations.
+The controller accepts that header only from the dedicated
+`broker:forge3d-browser-lab` certificate identity. This lets the controller act
+on the broker-observed assignment deadline without adding a third broker API
+operation or granting the controller repository-administration access.
 
 A confirmed controller disappearance latches quarantine against the host asset,
 including while its job is busy. New authorization digests cannot issue another

@@ -43,13 +43,14 @@ separate people or service identities.
 2. Enable GitHub's full-length Actions SHA policy when the repository exposes
    it. The checked static action-lock gate remains mandatory even when the live
    setting is unavailable.
-3. Create the `main` rule with strict App-bound checks, one approval, stale
-   review dismissal, approval of the latest reviewable push, conversation
-   resolution, administrator enforcement, and no force push, deletion, or
-   bypass actor.
+3. Create the `main` rule with strict App-bound checks, zero required
+   approvals, stale-review dismissal for any voluntary review, no latest-push
+   approval requirement, conversation resolution, administrator enforcement,
+   and no force push, deletion, or bypass actor.
 4. Run a canary PR proving direct and force pushes, deletion, unresolved
-   conversations, stale approvals, latest-push self-approval, and administrator
-   bypass are rejected. Preserve API responses and attempted-command results.
+   conversations, and administrator bypass are rejected. Preserve API
+   responses showing zero required approvals and no latest-push approval
+   requirement together with the attempted-command results.
 5. Merge a separate policy-pin PR that changes `bootstrapState` to `active` and
    sets `trustEpochSha` to the canary merge SHA. The epoch SHA itself and every
    earlier commit remain ineligible; only strict descendants may be promoted.
@@ -65,6 +66,41 @@ inconsistent bootstrap state then fails closed.
 If an environment approval takes longer than the observation's 30-minute
 validity window, rerun the dispatch. Never reuse an observation from another
 run, attempt, operation, job, environment, or target SHA.
+
+Before the first laboratory canary, a repository administrator must enable
+**Settings > Releases > Enable release immutability**. The preflight reads the
+live repository setting and fails closed when it is disabled or unavailable.
+Only releases created after enablement are eligible; an older mutable release
+cannot be used as the canary or the prior immutable release baseline.
+
+## Authenticated Manual Media Intake
+
+The expected tester must be a named `milos-agathon/forge3d-web` collaborator
+with repository `write` access, not `admin`, and must authenticate GitHub CLI as
+the same login recorded by the intake manifest. The only supported media
+ingestion command is:
+
+```sh
+gh release upload <intake-tag> <local-media-files>
+```
+
+Do not add `--clobber`. A workflow dispatch never accepts a local path, media
+name, username, URL, or digest. Upload only uniquely named `.png`, `.jpg`,
+`.jpeg`, `.webm`, or `.mp4` files during the controller-signed 20-minute
+session. Each file is limited to 100 MiB and the complete checklist to 500 MiB.
+The submission workflow resolves numeric asset IDs, checks the authenticated
+uploader and API digest, downloads the bytes, and recomputes SHA-256 before
+attesting the bundle.
+
+For the generic laboratory canary, use checklist
+`infrastructure-manual-canary`. After the controller-signed 20-minute Browser
+Hardware session finishes, upload the challenged media, then dispatch
+`submit-browser-manual-evidence.yml` with the intake release ID, selected
+numeric media asset IDs, the Browser Hardware session run ID, and its exact
+hardware job ID. The resulting Submit Browser Manual Evidence run ID is the
+`manualCanaryRunId` consumed by canary publication and laboratory readiness;
+the separate `manualHardwareJobId` remains the signed underlying hardware job.
+This record has `supportClaim: false` and cannot create a product matrix row.
 
 ## Physical Custody And Topology
 
@@ -97,6 +133,15 @@ credential store. Check in only the public JWK and a unique
 RFC 8785 JSON Canonicalization Scheme rules and signed with
 `SHA256withECDSA`. Rotation is a reviewed matrix change and invalidates the
 previous laboratory digest.
+
+For a host-mode infrastructure canary, the controller reads the neutral
+adapter, route, and inventory observations before wiping the runner job root.
+Only after broker-proven exact runner absence does it store one immutable
+signed receipt outside the runner tree. The GitHub-hosted finalizer retrieves
+that receipt through the checked exact-run mTLS URL, verifies the checked
+controller JWK, independently confirms runner absence with the trust-observer
+App, and then creates the hosted-attested `lab-host-canary.json`. The
+self-hosted hardware job never receives the controller key or observer token.
 
 Before enabling a host:
 

@@ -47,18 +47,16 @@ for (const [name, mutate, expected] of [
     /strict required status checks mismatch/u,
   ],
   [
-    "any-source context",
+    "any-source check",
     (input) => {
-      input.protection.required_status_checks.contexts.push(
-        "Web Runtime / Browser Preflight",
-      );
+      input.protection.required_status_checks.checks[0].app_id = -1;
     },
     /any-source/u,
   ],
   [
     "source app",
     (input) => {
-      input.protection.required_status_checks.checks[0].app_id = null;
+      input.protection.required_status_checks.checks[0].app_id += 1;
     },
     /required status checks mismatch/u,
   ],
@@ -70,9 +68,16 @@ for (const [name, mutate, expected] of [
     /stale approval dismissal mismatch/u,
   ],
   [
+    "required approving reviews",
+    (input) => {
+      input.protection.required_pull_request_reviews.required_approving_review_count = 1;
+    },
+    /required approving reviews mismatch/u,
+  ],
+  [
     "latest push approval",
     (input) => {
-      input.protection.required_pull_request_reviews.require_last_push_approval = false;
+      input.protection.required_pull_request_reviews.require_last_push_approval = true;
     },
     /latest push approval mismatch/u,
   ],
@@ -180,16 +185,16 @@ function makeInput({ policy = makeActivePolicy() } = {}) {
     protection: {
       required_status_checks: {
         strict: true,
-        contexts: [],
+        contexts: requiredChecks.map((check) => check.context),
         checks: requiredChecks.map((check) => ({
           context: check.context,
           app_id: check.sourceAppId,
         })),
       },
       required_pull_request_reviews: {
-        required_approving_review_count: 1,
+        required_approving_review_count: 0,
         dismiss_stale_reviews: true,
-        require_last_push_approval: true,
+        require_last_push_approval: false,
         bypass_pull_request_allowances: { users: [], teams: [], apps: [] },
       },
       required_conversation_resolution: { enabled: true },

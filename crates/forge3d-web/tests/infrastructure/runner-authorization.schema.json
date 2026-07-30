@@ -1,0 +1,151 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/runner-authorization.schema.json",
+  "title": "Forge3D one-job repository JIT runner authorization",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "repository",
+    "workflow",
+    "run",
+    "promotionJobId",
+    "authorizationJobId",
+    "queuedHardwareJob",
+    "trustedSha",
+    "trustEpochSha",
+    "lane",
+    "required",
+    "assetId",
+    "hostId",
+    "runnerNonce",
+    "nonceLabel",
+    "runnerName",
+    "customLabels",
+    "platformLabels",
+    "repositoryJitRunnerGroupId",
+    "workFolder",
+    "packageRunId",
+    "packageManifestSha256",
+    "labReadiness",
+    "manualSession",
+    "issuedAt",
+    "expiresAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name"],
+      "properties": {
+        "id": { "const": 1259761852 },
+        "name": { "const": "milos-agathon/forge3d-web" }
+      }
+    },
+    "workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "ref", "sha", "event"],
+      "properties": {
+        "path": { "const": ".github/workflows/browser-hardware.yml" },
+        "ref": { "const": "refs/heads/main" },
+        "sha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "event": { "const": "workflow_dispatch" }
+      }
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "attempt"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "attempt": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "promotionJobId": { "type": "integer", "minimum": 1 },
+    "authorizationJobId": { "type": "integer", "minimum": 1 },
+    "queuedHardwareJob": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "status"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "name": { "const": "Browser Hardware / Ephemeral Execution" },
+        "status": { "const": "queued" }
+      }
+    },
+    "trustedSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "trustEpochSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "lane": { "type": "string", "minLength": 1 },
+    "required": { "type": "boolean" },
+    "assetId": { "type": "string", "pattern": "^FW-[A-Z0-9-]+$" },
+    "hostId": {
+      "enum": [
+        "FW-MAC-M2-01",
+        "FW-WIN-I12-01",
+        "FW-LNX-I12-01",
+        "FW-LNX-NV-01"
+      ]
+    },
+    "runnerNonce": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
+    "nonceLabel": { "type": "string", "pattern": "^jit-[0-9a-f]{32}$" },
+    "runnerName": {
+      "type": "string",
+      "pattern": "^FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+-[0-9a-f]{32}$"
+    },
+    "customLabels": {
+      "type": "array",
+      "minItems": 3,
+      "maxItems": 3,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "platformLabels": {
+      "type": "array",
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "repositoryJitRunnerGroupId": { "const": 1 },
+    "workFolder": { "const": "_work" },
+    "packageRunId": { "type": "integer", "minimum": 1 },
+    "packageManifestSha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "labReadiness": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["runId", "labInfrastructureDigest"],
+      "properties": {
+        "runId": { "type": "integer", "minimum": 1 },
+        "labInfrastructureDigest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "manualSession": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": [
+        "intakeReleaseId",
+        "checklistId",
+        "mediaChallenge",
+        "intakeManifestSha256"
+      ],
+      "properties": {
+        "intakeReleaseId": { "type": "integer", "minimum": 1 },
+        "checklistId": { "type": "string", "minLength": 1 },
+        "mediaChallenge": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "intakeManifestSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "issuedAt": { "type": "string", "minLength": 20 },
+    "expiresAt": { "type": "string", "minLength": 20 }
+  }
+}

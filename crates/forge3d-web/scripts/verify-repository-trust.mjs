@@ -143,13 +143,17 @@ export function verifyRepositoryTrustSnapshot({
   const actualChecks = [...(requiredStatusChecks?.checks ?? [])]
     .map((check) => ({ context: check.context, appId: check.app_id }))
     .sort(compareContexts);
+  if (
+    actualChecks.some(
+      (check) => !Number.isInteger(check.appId) || check.appId < 0,
+    )
+  ) {
+    throw new Error("required status checks cannot use any-source checks");
+  }
   const desiredChecks = desiredProtection.requiredStatusChecks.checks
     .map((check) => ({ context: check.context, appId: check.sourceAppId }))
     .sort(compareContexts);
   assertDeepEqual(actualChecks, desiredChecks, "required status checks");
-  if ((requiredStatusChecks?.contexts ?? []).length > 0) {
-    throw new Error("required status checks cannot use any-source contexts");
-  }
 
   const reviews = protection.required_pull_request_reviews;
   assertEqual(

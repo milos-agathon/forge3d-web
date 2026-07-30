@@ -1,0 +1,337 @@
+name: Browser Hardware Release Readiness
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Full protected-main release target, equal to this workflow run SHA
+        required: true
+        type: string
+      labReadinessRunId:
+        description: Exact successful laboratory-readiness run ID
+        required: true
+        type: string
+      evidenceRunIds:
+        description: Canonical sorted JSON array of numeric physical-evidence run IDs
+        required: true
+        type: string
+
+permissions: {}
+
+jobs:
+  observe-hardware-release-readiness-trust:
+    name: Browser Release Matrix / Observe Trust
+    runs-on: ubuntu-latest
+    environment: forge3d-trust-observer
+    permissions:
+      actions: read
+      artifact-metadata: write
+      attestations: write
+      checks: read
+      contents: read
+      id-token: write
+    outputs:
+      observation_artifact_id: ${{ steps.upload-observation.outputs.artifact-id }}
+      observation_artifact_name: ${{ steps.emit-observation.outputs.artifact-name }}
+      observation_artifact_digest: ${{ steps.upload-observation.outputs.artifact-digest }}
+      observation_content_sha256: ${{ steps.emit-observation.outputs.content-sha256 }}
+
+    steps:
+      - name: Reject non-main or mismatched target
+        if: github.ref != 'refs/heads/main' || inputs.target_sha != github.sha
+        run: exit 1
+
+      - name: Check out protected observer code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+
+      - name: Mint short-lived trust-observer token
+        id: observer-token
+        working-directory: crates/forge3d-web
+        env:
+          TRUST_OBSERVER_APP_ID: ${{ secrets.TRUST_OBSERVER_APP_ID }}
+          TRUST_OBSERVER_INSTALLATION_ID: ${{ secrets.TRUST_OBSERVER_INSTALLATION_ID }}
+          TRUST_OBSERVER_PRIVATE_KEY: ${{ secrets.TRUST_OBSERVER_PRIVATE_KEY }}
+        run: node scripts/mint-github-app-token.mjs
+
+      - name: Verify live protected-main trust
+        working-directory: crates/forge3d-web
+        env:
+          GITHUB_TOKEN: ${{ steps.observer-token.outputs.token }}
+        run: node scripts/verify-repository-trust.mjs > repository-trust-verification.json
+
+      - name: Emit exact matrix-readiness observation
+        id: emit-observation
+        working-directory: crates/forge3d-web
+        run: |
+          node scripts/emit-repository-trust-observation.mjs \
+            --verification repository-trust-verification.json \
+            --operation compute-hardware-release-readiness \
+            --consumer browser-hardware-release-readiness@none \
+            --workflow-path .github/workflows/browser-hardware-release-readiness.yml \
+            --workflow-ref refs/heads/main \
+            --workflow-sha "${{ github.workflow_sha }}" \
+            --run-id "${{ github.run_id }}" \
+            --run-attempt "${{ github.run_attempt }}" \
+            --candidate-sha "${{ inputs.target_sha }}" \
+            --target-sha "${{ inputs.target_sha }}" \
+            --output repository-trust-observation.json
+          name="repository-trust-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-compute-hardware-release-readiness"
+          echo "artifact-name=${name}" >> "$GITHUB_OUTPUT"
+          echo "content-sha256=$(sha256sum repository-trust-observation.json | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+
+      - name: Revoke observer token
+        if: always() && steps.observer-token.outputs.token != ''
+        working-directory: crates/forge3d-web
+        env:
+          OBSERVER_TOKEN: ${{ steps.observer-token.outputs.token }}
+        run: |
+          node --input-type=module --eval '
+            const response = await fetch("https://api.github.com/installation/token", {
+              method: "DELETE",
+              headers: { Accept: "application/vnd.github+json", Authorization: `Bearer ${process.env.OBSERVER_TOKEN}`, "X-GitHub-Api-Version": "2022-11-28" }
+            });
+            if (response.status !== 204) throw new Error(`token revocation failed: ${response.status}`);
+          '
+
+      - name: Upload exact observation
+        id: upload-observation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ${{ steps.emit-observation.outputs.artifact-name }}
+          path: crates/forge3d-web/repository-trust-observation.json
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 1
+
+      - name: Attest observation
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-path: crates/forge3d-web/repository-trust-observation.json
+
+  browser-hardware-release-readiness:
+    name: browser-hardware-release-readiness
+    needs: observe-hardware-release-readiness-trust
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      artifact-metadata: write
+      attestations: write
+      checks: read
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Check out protected computation code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.workflow_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify observation, target, epoch, and canonical run IDs
+        working-directory: crates/forge3d-web
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          OBSERVATION_ARTIFACT_ID: ${{ needs.observe-hardware-release-readiness-trust.outputs.observation_artifact_id }}
+          OBSERVATION_ARTIFACT_NAME: ${{ needs.observe-hardware-release-readiness-trust.outputs.observation_artifact_name }}
+          OBSERVATION_ARTIFACT_DIGEST: ${{ needs.observe-hardware-release-readiness-trust.outputs.observation_artifact_digest }}
+          OBSERVATION_CONTENT_SHA256: ${{ needs.observe-hardware-release-readiness-trust.outputs.observation_content_sha256 }}
+          EXPECTED_OPERATION: compute-hardware-release-readiness
+          EXPECTED_CONSUMER_JOB: browser-hardware-release-readiness
+          EXPECTED_CONSUMER_ENVIRONMENT: none
+          EXPECTED_TARGET_SHA: ${{ inputs.target_sha }}
+          EXPECTED_CANDIDATE_SHA: ${{ inputs.target_sha }}
+          EXPECTED_CURRENT_MAIN_SHA: ${{ github.sha }}
+          EXPECTED_WORKFLOW_PATH: .github/workflows/browser-hardware-release-readiness.yml
+          EVIDENCE_RUN_IDS: ${{ inputs.evidenceRunIds }}
+        run: |
+          test "${GITHUB_REF}" = "refs/heads/main"
+          test "${{ inputs.target_sha }}" = "${GITHUB_SHA}"
+          node scripts/verify-repository-trust-observation.mjs
+          epoch="$(node -p "require('./tests/infrastructure/repository-trust-policy.json').trustEpochSha")"
+          test "${{ inputs.target_sha }}" != "${epoch}"
+          git merge-base --is-ancestor "${epoch}" "${{ inputs.target_sha }}"
+          node --input-type=module --eval '
+            import { writeFileSync } from "node:fs";
+            import { parseEvidenceRunIds } from "./scripts/merge-browser-evidence.mjs";
+            writeFileSync("evidence-run-ids.json", JSON.stringify(
+              parseEvidenceRunIds(process.env.EVIDENCE_RUN_IDS)
+            ));
+          '
+
+      - name: Resolve exact attested laboratory readiness
+        shell: bash
+        working-directory: crates/forge3d-web
+        env:
+          GH_TOKEN: ${{ github.token }}
+          LAB_READINESS_RUN_ID: ${{ inputs.labReadinessRunId }}
+        run: |
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${LAB_READINESS_RUN_ID}" > lab-run.json
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${LAB_READINESS_RUN_ID}/jobs?per_page=100" > lab-jobs.json
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${LAB_READINESS_RUN_ID}/artifacts?per_page=100" > lab-artifacts.json
+          node --input-type=module --eval '
+            import { readFileSync, writeFileSync } from "node:fs";
+            const run = JSON.parse(readFileSync("lab-run.json", "utf8"));
+            const jobs = JSON.parse(readFileSync("lab-jobs.json", "utf8")).jobs;
+            const artifacts = JSON.parse(readFileSync("lab-artifacts.json", "utf8")).artifacts;
+            if (
+              run.path !== ".github/workflows/browser-lab-infrastructure-readiness.yml" ||
+              run.head_branch !== "main" ||
+              run.head_sha !== process.env.GITHUB_SHA ||
+              run.status !== "completed" ||
+              run.conclusion !== "success" ||
+              jobs.filter((job) =>
+                job.name === "browser-lab-infrastructure-readiness" &&
+                job.conclusion === "success"
+              ).length !== 1
+            ) throw new Error("laboratory readiness run/job is invalid");
+            const matches = artifacts.filter((artifact) =>
+              artifact.name === "browser-lab-infrastructure-readiness"
+            );
+            if (matches.length !== 1 || matches[0].expired) throw new Error("laboratory readiness artifact mismatch");
+            writeFileSync("lab-artifact.json", JSON.stringify(matches[0]));
+          '
+          artifact_id="$(node -p "require('./lab-artifact.json').id")"
+          expected="$(node -p "require('./lab-artifact.json').digest")"
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > lab-readiness.zip
+          test "$(sha256sum lab-readiness.zip | cut -d ' ' -f 1)" = "${expected#sha256:}"
+          mkdir lab-readiness
+          unzip -q lab-readiness.zip -d lab-readiness
+          test "$(find lab-readiness -name browser-lab-infrastructure-readiness.json -type f | wc -l)" -eq 1
+          gh attestation verify "$(find lab-readiness -name browser-lab-infrastructure-readiness.json -type f)" \
+            --repo milos-agathon/forge3d-web \
+            --signer-workflow milos-agathon/forge3d-web/.github/workflows/browser-lab-infrastructure-readiness.yml \
+            --source-ref refs/heads/main \
+            --source-digest "${GITHUB_SHA}" \
+            --deny-self-hosted-runners
+
+      - name: Resolve every evidence run and exact artifact
+        shell: bash
+        working-directory: crates/forge3d-web
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+        run: |
+          mkdir evidence-runs matrix-records
+          for run_id in $(node -p "require('./evidence-run-ids.json').join(' ')"); do
+            gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" > "evidence-runs/${run_id}-run.json"
+            gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" > "evidence-runs/${run_id}-artifacts.json"
+            node --input-type=module --eval '
+              import { readFileSync, writeFileSync } from "node:fs";
+              const run = JSON.parse(readFileSync(process.argv[1], "utf8"));
+              const artifacts = JSON.parse(readFileSync(process.argv[2], "utf8")).artifacts;
+              const allowed = new Map([
+                [".github/workflows/browser-hardware.yml", `finalized-browser-hardware-${run.id}-${run.run_attempt}`],
+                [".github/workflows/submit-browser-manual-evidence.yml", `browser-manual-evidence-${run.id}-${run.run_attempt}`]
+              ]);
+              if (
+                !allowed.has(run.path) ||
+                run.head_branch !== "main" ||
+                run.head_sha !== process.env.TARGET_SHA ||
+                run.status !== "completed" ||
+                run.conclusion !== "success"
+              ) throw new Error(`invalid evidence workflow run ${run.id}`);
+              const matches = artifacts.filter((artifact) =>
+                artifact.name === allowed.get(run.path)
+              );
+              if (matches.length !== 1 || matches[0].expired) throw new Error("evidence artifact mismatch");
+              writeFileSync(`${run.id}-resolution.json`, JSON.stringify({
+                run,
+                artifact: matches[0]
+              }));
+            ' "evidence-runs/${run_id}-run.json" "evidence-runs/${run_id}-artifacts.json"
+            artifact_id="$(node -p "require('./${run_id}-resolution.json').artifact.id")"
+            expected="$(node -p "require('./${run_id}-resolution.json').artifact.digest")"
+            gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "evidence-runs/${run_id}.zip"
+            test "$(sha256sum "evidence-runs/${run_id}.zip" | cut -d ' ' -f 1)" = "${expected#sha256:}"
+            mkdir "evidence-runs/${run_id}"
+            unzip -q "evidence-runs/${run_id}.zip" -d "evidence-runs/${run_id}"
+            test "$(find "evidence-runs/${run_id}" -name browser-matrix-record-source.json -type f | wc -l)" -eq 1
+            workflow_path="$(node -p "require('./${run_id}-resolution.json').run.path")"
+            gh attestation verify "$(find "evidence-runs/${run_id}" -name browser-matrix-record-source.json -type f)" \
+              --repo milos-agathon/forge3d-web \
+              --signer-workflow "milos-agathon/forge3d-web/${workflow_path}" \
+              --source-ref refs/heads/main \
+              --source-digest "${TARGET_SHA}" \
+              --deny-self-hosted-runners
+            node --input-type=module --eval '
+              import { readFileSync, writeFileSync } from "node:fs";
+              const source = JSON.parse(readFileSync(process.argv[1], "utf8"));
+              writeFileSync("finalize-record-input.json", JSON.stringify({
+                source,
+                artifactId: Number(process.argv[2]),
+                attestation: { verified: true, denySelfHostedRunners: true }
+              }));
+            ' "$(find "evidence-runs/${run_id}" -name browser-matrix-record-source.json -type f)" "${artifact_id}"
+            node scripts/create-browser-matrix-record.mjs \
+              finalize \
+              finalize-record-input.json \
+              "matrix-records/${run_id}.json"
+          done
+
+      - name: Merge exact matrix and execute negative controls
+        shell: bash
+        working-directory: crates/forge3d-web
+        env:
+          LAB_READINESS_RUN_ID: ${{ inputs.labReadinessRunId }}
+        run: |
+          node --input-type=module --eval '
+            import { createHash } from "node:crypto";
+            import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+            const labPath = process.argv[1];
+            const labBytes = readFileSync(labPath);
+            const lab = JSON.parse(labBytes);
+            const records = readdirSync("matrix-records")
+              .sort((left, right) => Number.parseInt(left) - Number.parseInt(right))
+              .map((name) => JSON.parse(readFileSync(`matrix-records/${name}`, "utf8")));
+            const input = {
+              targetSha: process.env.GITHUB_SHA,
+              packageSha256: lab.packageSha256,
+              labReadiness: {
+                ...lab,
+                runId: Number(process.env.LAB_READINESS_RUN_ID),
+                manifestSha256: createHash("sha256").update(labBytes).digest("hex")
+              },
+              records,
+              matrix: JSON.parse(readFileSync("tests/infrastructure/hardware-matrix.json", "utf8"))
+            };
+            writeFileSync("merge-input.json", JSON.stringify(input));
+            writeFileSync("negative-prior-head.json", JSON.stringify({
+              ...input,
+              targetSha: "0".repeat(40)
+            }));
+            writeFileSync("negative-package.json", JSON.stringify({
+              ...input,
+              packageSha256: "0".repeat(64)
+            }));
+            writeFileSync("negative-missing.json", JSON.stringify({
+              ...input,
+              records: input.records.slice(1)
+            }));
+          ' "$(find lab-readiness -name browser-lab-infrastructure-readiness.json -type f)"
+          node scripts/merge-browser-evidence.mjs \
+            merge-input.json \
+            browser-hardware-release-readiness.json
+          for negative in negative-prior-head.json negative-package.json negative-missing.json; do
+            if node scripts/merge-browser-evidence.mjs "${negative}" rejected.json; then
+              echo "negative control unexpectedly passed: ${negative}" >&2
+              exit 1
+            fi
+          done
+
+      - name: Upload fixed release-readiness artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: browser-hardware-release-readiness
+          path: crates/forge3d-web/browser-hardware-release-readiness.json
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 90
+
+      - name: Attest release-matrix readiness
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-path: crates/forge3d-web/browser-hardware-release-readiness.json

@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "hostAssetId": "FW-MAC-M2-01",
+  "appium": {
+    "version": "3.0.2",
+    "drivers": {
+      "uiautomator2": "5.0.0",
+      "xcuitest": "10.0.0"
+    },
+    "wdaSigningIdentity": "forge3d-non-personal-ci-signing",
+    "wdaSigningSecretEnvironment": "forge3d-browser-lab"
+  },
+  "devices": [
+    {
+      "assetId": "FW-AND-QCOM-01",
+      "appiumId": "android-qualcomm-s23",
+      "model": "Samsung Galaxy S23 SM-S911B",
+      "platformName": "Android",
+      "automationName": "UiAutomator2",
+      "browserName": "Chrome",
+      "osBaseline": "Current vendor-supported Android release",
+      "accessory": null
+    },
+    {
+      "assetId": "FW-AND-MALI-01",
+      "appiumId": "android-mali-pixel8",
+      "model": "Google Pixel 8",
+      "platformName": "Android",
+      "automationName": "UiAutomator2",
+      "browserName": "Chrome",
+      "osBaseline": "Current vendor-supported Android release",
+      "accessory": null
+    },
+    {
+      "assetId": "FW-AND-PEN-01",
+      "appiumId": "android-pen-tabs9",
+      "model": "Samsung Galaxy Tab S9 Wi-Fi SM-X710",
+      "platformName": "Android",
+      "automationName": "UiAutomator2",
+      "browserName": "Chrome",
+      "osBaseline": "Current vendor-supported Android release",
+      "accessory": "In-box Samsung S Pen"
+    },
+    {
+      "assetId": "FW-IOS-OLD-01",
+      "appiumId": "ios-iphone11",
+      "model": "Apple iPhone 11",
+      "platformName": "iOS",
+      "automationName": "XCUITest",
+      "browserName": "Safari",
+      "osBaseline": "iOS 26 latest security patch",
+      "accessory": null
+    },
+    {
+      "assetId": "FW-IOS-NEW-01",
+      "appiumId": "ios-iphone17pro",
+      "model": "Apple iPhone 17 Pro",
+      "platformName": "iOS",
+      "automationName": "XCUITest",
+      "browserName": "Safari",
+      "osBaseline": "iOS 26 latest security patch",
+      "accessory": null
+    },
+    {
+      "assetId": "FW-IPAD-01",
+      "appiumId": "ipados-air11-m2",
+      "model": "Apple iPad Air 11-inch (M2)",
+      "platformName": "iPadOS",
+      "automationName": "XCUITest",
+      "browserName": "Safari",
+      "osBaseline": "iPadOS 26 latest security patch",
+      "accessory": "Paired Apple Pencil Pro"
+    }
+  ]
+}

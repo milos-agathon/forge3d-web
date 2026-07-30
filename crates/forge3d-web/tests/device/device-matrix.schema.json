@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/device-matrix.schema.json",
+  "title": "Forge3D Appium device matrix without physical identifiers",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "hostAssetId", "appium", "devices"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "hostAssetId": { "const": "FW-MAC-M2-01" },
+    "appium": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "version",
+        "drivers",
+        "wdaSigningIdentity",
+        "wdaSigningSecretEnvironment"
+      ],
+      "properties": {
+        "version": { "const": "3.0.2" },
+        "drivers": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["uiautomator2", "xcuitest"],
+          "properties": {
+            "uiautomator2": { "const": "5.0.0" },
+            "xcuitest": { "const": "10.0.0" }
+          }
+        },
+        "wdaSigningIdentity": { "const": "forge3d-non-personal-ci-signing" },
+        "wdaSigningSecretEnvironment": { "const": "forge3d-browser-lab" }
+      }
+    },
+    "devices": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "assetId",
+          "appiumId",
+          "model",
+          "platformName",
+          "automationName",
+          "browserName",
+          "osBaseline",
+          "accessory"
+        ],
+        "properties": {
+          "assetId": {
+            "enum": [
+              "FW-AND-QCOM-01",
+              "FW-AND-MALI-01",
+              "FW-AND-PEN-01",
+              "FW-IOS-OLD-01",
+              "FW-IOS-NEW-01",
+              "FW-IPAD-01"
+            ]
+          },
+          "appiumId": { "type": "string", "minLength": 1 },
+          "model": { "type": "string", "minLength": 1 },
+          "platformName": { "enum": ["Android", "iOS", "iPadOS"] },
+          "automationName": { "enum": ["UiAutomator2", "XCUITest"] },
+          "browserName": { "enum": ["Chrome", "Safari"] },
+          "osBaseline": { "type": "string", "minLength": 1 },
+          "accessory": { "type": ["string", "null"] }
+        }
+      }
+    }
+  }
+}

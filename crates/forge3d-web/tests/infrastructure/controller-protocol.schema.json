@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/controller-protocol.schema.json",
+  "title": "Forge3D browser-lab controller operation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "operation",
+    "hostId",
+    "authorizationDigest",
+    "requestNonce",
+    "observedAt",
+    "signature"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "operation": {
+      "enum": [
+        "prepare",
+        "issue-jit",
+        "start-runner",
+        "stop-runner",
+        "cleanup-runner",
+        "complete"
+      ]
+    },
+    "hostId": { "type": "string", "pattern": "^FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+$" },
+    "authorizationDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "requestNonce": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
+    "observedAt": { "type": "string", "minLength": 20 },
+    "signature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["algorithm", "signingKeyId", "value"],
+      "properties": {
+        "algorithm": { "const": "SHA256withECDSA" },
+        "signingKeyId": { "type": "string", "minLength": 1 },
+        "value": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}

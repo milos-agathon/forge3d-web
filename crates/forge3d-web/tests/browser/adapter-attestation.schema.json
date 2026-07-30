@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/adapter-attestation.schema.json",
+  "title": "Forge3D page-level WebGPU adapter attestation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "runId",
+    "jobId",
+    "assetId",
+    "commit",
+    "packageSha256",
+    "navigatorGpu",
+    "adapterInfoAvailable",
+    "adapterInfo",
+    "isFallbackAdapter",
+    "deviceAdapterInfo",
+    "limits",
+    "deviceCreated",
+    "surfaceCreated",
+    "surfacePresented",
+    "presentedFrameLuma",
+    "lumaChanged",
+    "effectiveLaunchArguments"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "runId": { "type": "integer", "minimum": 1 },
+    "jobId": { "type": "integer", "minimum": 1 },
+    "assetId": { "type": "string", "pattern": "^FW-[A-Z0-9-]+$" },
+    "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "packageSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "navigatorGpu": { "type": "boolean" },
+    "adapterInfoAvailable": { "type": "boolean" },
+    "adapterInfo": {
+      "type": "object",
+      "additionalProperties": {
+        "type": ["string", "number", "boolean"]
+      }
+    },
+    "isFallbackAdapter": { "type": ["boolean", "null"] },
+    "deviceAdapterInfo": {
+      "type": ["object", "null"],
+      "additionalProperties": {
+        "type": ["string", "number", "boolean"]
+      }
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": { "type": "number", "minimum": 0 }
+    },
+    "deviceCreated": { "type": "boolean" },
+    "surfaceCreated": { "type": "boolean" },
+    "surfacePresented": { "type": "boolean" },
+    "presentedFrameLuma": { "type": "number", "minimum": 0 },
+    "lumaChanged": { "type": "boolean" },
+    "effectiveLaunchArguments": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

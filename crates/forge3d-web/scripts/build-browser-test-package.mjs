@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import {
   copyFileSync,
+  cpSync,
   mkdtempSync,
   mkdirSync,
   readFileSync,
@@ -202,6 +203,48 @@ try {
       JSON.stringify(packageEvidence, null, 2),
     );
     copyFileSync(tarball, join(evidenceDirectory, basename(tarball)));
+    const retainedFixture = join(evidenceDirectory, "consumer-fixture");
+    mkdirSync(retainedFixture, { recursive: true });
+    for (const file of [
+      "package.json",
+      "package-evidence.json",
+      "test-interactive-viewer.html",
+    ]) {
+      copyFileSync(join(consumerDirectory, file), join(retainedFixture, file));
+    }
+    cpSync(
+      join(consumerDirectory, "tests"),
+      join(retainedFixture, "tests"),
+      { recursive: true, force: false },
+    );
+    writeFileSync(
+      join(retainedFixture, "tests", "browser", "adapter-attestation.js"),
+      ts.transpileModule(
+        readFileSync(
+          join(packageRoot, "tests", "browser", "adapter-attestation.ts"),
+          "utf8",
+        ),
+        {
+          compilerOptions: {
+            module: ts.ModuleKind.ES2022,
+            target: ts.ScriptTarget.ES2022,
+          },
+        },
+      ).outputText,
+    );
+    copyFileSync(
+      join(packageRoot, "tests", "browser", "hardware-page-harness.js"),
+      join(retainedFixture, "tests", "browser", "hardware-page-harness.js"),
+    );
+    copyFileSync(
+      benchmarkModulePath,
+      join(retainedFixture, "viewer-benchmark.mjs"),
+    );
+    mkdirSync(join(retainedFixture, "hardware"), { recursive: true });
+    copyFileSync(
+      join(packageRoot, "tests", "hardware", "run-browser-lane.mjs"),
+      join(retainedFixture, "hardware", "run-browser-lane.mjs"),
+    );
   } finally {
     await new Promise((resolvePromise, reject) =>
       server.close((error) => (error ? reject(error) : resolvePromise())),
@@ -238,8 +281,9 @@ async function runInstalledPackageBrowserGate(
   if (process.platform === "win32") {
     launchArguments.push("--use-angle=d3d11");
   }
+  const channel = process.env.FORGE3D_BROWSER_CHANNEL ?? "chrome";
   const browser = await chromium.launch({
-    channel: process.env.FORGE3D_BROWSER_CHANNEL ?? "chrome",
+    ...(channel === "bundled" ? {} : { channel }),
     headless: process.env.FORGE3D_HEADED !== "1",
     args: launchArguments,
   });

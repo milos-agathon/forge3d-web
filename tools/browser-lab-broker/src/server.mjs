@@ -100,6 +100,19 @@ export async function runWatchdogCycle({
   );
 }
 
+export function resolveBrokerProvisioningMode({ matrix, browserPolicy }) {
+  if (matrix.provisioningState !== "active") {
+    throw new Error("checked hardware inventory is not active");
+  }
+  if (browserPolicy.provisioningState === "active") {
+    return "active";
+  }
+  if (browserPolicy.provisioningState === "pending-jit-canary") {
+    return "initial-host-canary";
+  }
+  throw new Error("browser policy state is invalid");
+}
+
 function controllerProbeNotRequired(record) {
   return ["deleted", "already_absent", "quarantined"].includes(record.state);
 }
@@ -135,15 +148,13 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const repositoryTrustPolicy = loadJson(
     requiredEnvironment("BROKER_REPOSITORY_TRUST_POLICY"),
   );
-  const workflowActionsLock = loadJson(
+  loadJson(
     requiredEnvironment("BROKER_WORKFLOW_ACTIONS_LOCK"),
   );
-  if (
-    matrix.provisioningState !== "active" ||
-    browserPolicy.provisioningState !== "active"
-  ) {
-    throw new Error("broker cannot start before checked lab canaries are active");
-  }
+  const provisioningMode = resolveBrokerProvisioningMode({
+    matrix,
+    browserPolicy,
+  });
   const tokenProvider = new GitHubAppTokenProvider({
     appId: requiredEnvironment("BROKER_GITHUB_APP_ID"),
     installationId: requiredEnvironment("BROKER_GITHUB_INSTALLATION_ID"),
@@ -159,7 +170,6 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     directory: requiredEnvironment("BROKER_AUTHORIZATION_DIRECTORY"),
     github,
     repositoryTrustPolicy,
-    workflowActionsLock,
   });
   const controllerReachability = new ControllerReachabilityMonitor({
     matrix,
@@ -184,6 +194,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     ledger,
     authorizationVerifier,
     github,
+    provisioningMode,
   });
   const server = createBrokerServer({
     broker,

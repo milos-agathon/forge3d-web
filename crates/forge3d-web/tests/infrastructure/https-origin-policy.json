@@ -1,0 +1,27 @@
+{
+  "schemaVersion": 1,
+  "provider": "cloudflare-tunnel",
+  "pathPattern": "^/runs/[1-9][0-9]*/[1-9][0-9]*/[0-9a-f]{32}/$",
+  "hosts": [
+    {
+      "hostAssetId": "FW-MAC-M2-01",
+      "applicationHost": "mac-m2.webgpu-ci.forge3d.dev",
+      "assetHost": "assets-mac-m2.webgpu-ci.forge3d.dev"
+    },
+    {
+      "hostAssetId": "FW-WIN-I12-01",
+      "applicationHost": "win-i12.webgpu-ci.forge3d.dev",
+      "assetHost": "assets-win-i12.webgpu-ci.forge3d.dev"
+    },
+    {
+      "hostAssetId": "FW-LNX-I12-01",
+      "applicationHost": "linux-i12.webgpu-ci.forge3d.dev",
+      "assetHost": "assets-linux-i12.webgpu-ci.forge3d.dev"
+    },
+    {
+      "hostAssetId": "FW-LNX-NV-01",
+      "applicationHost": "linux-nv.webgpu-ci.forge3d.dev",
+      "assetHost": "assets-linux-nv.webgpu-ci.forge3d.dev"
+    }
+  ]
+}

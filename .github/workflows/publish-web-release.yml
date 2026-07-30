@@ -1,0 +1,616 @@
+name: Publish Forge3D Web Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_sha:
+        description: Full protected-main release target SHA
+        required: true
+        type: string
+      readinessRunId:
+        description: Exact successful browser hardware release-readiness run ID
+        required: true
+        type: string
+      tag:
+        description: Package-version-matching SemVer tag
+        required: true
+        type: string
+
+permissions: {}
+
+jobs:
+  observe-release-publication-trust:
+    name: Web Release / Observe Publication Trust
+    runs-on: ubuntu-latest
+    environment: forge3d-trust-observer
+    permissions:
+      actions: read
+      artifact-metadata: write
+      attestations: write
+      checks: read
+      contents: read
+      id-token: write
+    outputs:
+      observation_artifact_id: ${{ steps.upload-observation.outputs.artifact-id }}
+      observation_artifact_name: ${{ steps.emit-observation.outputs.artifact-name }}
+      observation_artifact_digest: ${{ steps.upload-observation.outputs.artifact-digest }}
+      observation_content_sha256: ${{ steps.emit-observation.outputs.content-sha256 }}
+
+    steps:
+      - name: Reject non-main or mismatched target
+        if: github.ref != 'refs/heads/main' || inputs.target_sha != github.sha
+        run: exit 1
+
+      - name: Check out protected observer code
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+
+      - name: Mint short-lived trust-observer token
+        id: observer-token
+        working-directory: crates/forge3d-web
+        env:
+          TRUST_OBSERVER_APP_ID: ${{ secrets.TRUST_OBSERVER_APP_ID }}
+          TRUST_OBSERVER_INSTALLATION_ID: ${{ secrets.TRUST_OBSERVER_INSTALLATION_ID }}
+          TRUST_OBSERVER_PRIVATE_KEY: ${{ secrets.TRUST_OBSERVER_PRIVATE_KEY }}
+        run: node scripts/mint-github-app-token.mjs
+
+      - name: Verify live protected-main trust
+        working-directory: crates/forge3d-web
+        env:
+          GITHUB_TOKEN: ${{ steps.observer-token.outputs.token }}
+        run: node scripts/verify-repository-trust.mjs > repository-trust-verification.json
+
+      - name: Emit observation for validation and protected publisher
+        id: emit-observation
+        working-directory: crates/forge3d-web
+        run: |
+          node scripts/emit-repository-trust-observation.mjs \
+            --verification repository-trust-verification.json \
+            --operation publish-web-release \
+            --consumer validate-release-candidate@none \
+            --consumer publish-release@forge3d-web-release \
+            --workflow-path .github/workflows/publish-web-release.yml \
+            --workflow-ref refs/heads/main \
+            --workflow-sha "${{ github.workflow_sha }}" \
+            --run-id "${{ github.run_id }}" \
+            --run-attempt "${{ github.run_attempt }}" \
+            --candidate-sha "${{ inputs.target_sha }}" \
+            --target-sha "${{ inputs.target_sha }}" \
+            --output repository-trust-observation.json
+          name="repository-trust-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}-publish-web-release"
+          echo "artifact-name=${name}" >> "$GITHUB_OUTPUT"
+          echo "content-sha256=$(sha256sum repository-trust-observation.json | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+
+      - name: Revoke observer token
+        if: always() && steps.observer-token.outputs.token != ''
+        working-directory: crates/forge3d-web
+        env:
+          OBSERVER_TOKEN: ${{ steps.observer-token.outputs.token }}
+        run: |
+          node --input-type=module --eval '
+            const response = await fetch("https://api.github.com/installation/token", {
+              method: "DELETE",
+              headers: { Accept: "application/vnd.github+json", Authorization: `Bearer ${process.env.OBSERVER_TOKEN}`, "X-GitHub-Api-Version": "2022-11-28" }
+            });
+            if (response.status !== 204) throw new Error(`token revocation failed: ${response.status}`);
+          '
+
+      - name: Upload exact observation
+        id: upload-observation
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ${{ steps.emit-observation.outputs.artifact-name }}
+          path: crates/forge3d-web/repository-trust-observation.json
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 1
+
+      - name: Attest observation
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-path: crates/forge3d-web/repository-trust-observation.json
+
+  validate-release-candidate:
+    name: Web Release / Validate Candidate
+    needs: observe-release-publication-trust
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      artifact-metadata: write
+      attestations: write
+      checks: read
+      contents: read
+      id-token: write
+      pull-requests: read
+    outputs:
+      preflight_artifact_id: ${{ steps.upload-preflight.outputs.artifact-id }}
+      preflight_artifact_digest: ${{ steps.upload-preflight.outputs.artifact-digest }}
+      preflight_sha256: ${{ steps.preflight.outputs.preflight-sha256 }}
+
+    steps:
+      - name: Check out protected validation code only
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.workflow_sha }}
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Verify observation and strict post-epoch target
+        working-directory: crates/forge3d-web
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          OBSERVATION_ARTIFACT_ID: ${{ needs.observe-release-publication-trust.outputs.observation_artifact_id }}
+          OBSERVATION_ARTIFACT_NAME: ${{ needs.observe-release-publication-trust.outputs.observation_artifact_name }}
+          OBSERVATION_ARTIFACT_DIGEST: ${{ needs.observe-release-publication-trust.outputs.observation_artifact_digest }}
+          OBSERVATION_CONTENT_SHA256: ${{ needs.observe-release-publication-trust.outputs.observation_content_sha256 }}
+          EXPECTED_OPERATION: publish-web-release
+          EXPECTED_CONSUMER_JOB: validate-release-candidate
+          EXPECTED_CONSUMER_ENVIRONMENT: none
+          EXPECTED_TARGET_SHA: ${{ inputs.target_sha }}
+          EXPECTED_CANDIDATE_SHA: ${{ inputs.target_sha }}
+          EXPECTED_CURRENT_MAIN_SHA: ${{ github.sha }}
+          EXPECTED_WORKFLOW_PATH: .github/workflows/publish-web-release.yml
+        run: |
+          test "${GITHUB_REF}" = "refs/heads/main"
+          test "${{ inputs.target_sha }}" = "${GITHUB_SHA}"
+          node scripts/verify-repository-trust-observation.mjs
+          epoch="$(node -p "require('./tests/infrastructure/repository-trust-policy.json').trustEpochSha")"
+          test "${{ inputs.target_sha }}" != "${epoch}"
+          git merge-base --is-ancestor "${epoch}" "${{ inputs.target_sha }}"
+
+      - name: Resolve exact attested release-readiness record
+        shell: bash
+        working-directory: crates/forge3d-web
+        env:
+          GH_TOKEN: ${{ github.token }}
+          READINESS_RUN_ID: ${{ inputs.readinessRunId }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+        run: |
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${READINESS_RUN_ID}" > readiness-run.json
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${READINESS_RUN_ID}/jobs?per_page=100" > readiness-jobs.json
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${READINESS_RUN_ID}/artifacts?per_page=100" > readiness-artifacts.json
+          node --input-type=module --eval '
+            import { readFileSync, writeFileSync } from "node:fs";
+            const run = JSON.parse(readFileSync("readiness-run.json", "utf8"));
+            const jobs = JSON.parse(readFileSync("readiness-jobs.json", "utf8")).jobs;
+            const artifacts = JSON.parse(readFileSync("readiness-artifacts.json", "utf8")).artifacts;
+            if (
+              run.path !== ".github/workflows/browser-hardware-release-readiness.yml" ||
+              run.head_sha !== process.env.TARGET_SHA ||
+              run.head_branch !== "main" ||
+              run.status !== "completed" ||
+              run.conclusion !== "success" ||
+              jobs.filter((job) =>
+                job.name === "browser-hardware-release-readiness" &&
+                job.conclusion === "success"
+              ).length !== 1
+            ) throw new Error("release-readiness run/job mismatch");
+            const matches = artifacts.filter((artifact) =>
+              artifact.name === "browser-hardware-release-readiness"
+            );
+            if (matches.length !== 1 || matches[0].expired) throw new Error("release-readiness artifact mismatch");
+            writeFileSync("readiness-artifact.json", JSON.stringify(matches[0]));
+          '
+          artifact_id="$(node -p "require('./readiness-artifact.json').id")"
+          expected="$(node -p "require('./readiness-artifact.json').digest")"
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > readiness.zip
+          test "$(sha256sum readiness.zip | cut -d ' ' -f 1)" = "${expected#sha256:}"
+          mkdir readiness
+          unzip -q readiness.zip -d readiness
+          test "$(find readiness -name browser-hardware-release-readiness.json -type f | wc -l)" -eq 1
+          gh attestation verify "$(find readiness -name browser-hardware-release-readiness.json -type f)" \
+            --repo milos-agathon/forge3d-web \
+            --signer-workflow milos-agathon/forge3d-web/.github/workflows/browser-hardware-release-readiness.yml \
+            --source-ref refs/heads/main \
+            --source-digest "${TARGET_SHA}" \
+            --deny-self-hosted-runners
+
+      - name: Validate SemVer tag, immutable setting, and absent release
+        shell: bash
+        working-directory: crates/forge3d-web
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          gh api "/repos/${GITHUB_REPOSITORY}" > repository-settings.json
+          node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            import { validateReleaseCandidate } from "./scripts/release-publication.mjs";
+            const settings = JSON.parse(readFileSync("repository-settings.json", "utf8"));
+            const readiness = JSON.parse(readFileSync(
+              process.argv[1], "utf8"
+            ));
+            validateReleaseCandidate({
+              targetSha: process.env.TARGET_SHA,
+              tag: process.env.RELEASE_TAG,
+              packageVersion: JSON.parse(readFileSync("package.json", "utf8")).version,
+              readiness,
+              repositorySettings: {
+                immutableReleases:
+                  settings.immutable_releases === true ||
+                  settings.immutable_releases?.enabled === true
+              },
+              existingRelease: null,
+              existingTag: null,
+              repositoryTrust: {
+                verified: true,
+                targetSha: process.env.TARGET_SHA,
+                currentMainSha: process.env.GITHUB_SHA
+              }
+            });
+          ' "$(find readiness -name browser-hardware-release-readiness.json -type f)"
+          if gh api "/repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
+            echo "release already exists" >&2
+            exit 1
+          fi
+          if gh api "/repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
+            echo "tag already exists" >&2
+            exit 1
+          fi
+
+      - name: Copy exact package and evidence assets by numeric artifact ID
+        shell: bash
+        working-directory: crates/forge3d-web
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+        run: |
+          mkdir release-assets evidence-assets
+          readiness_path="$(find readiness -name browser-hardware-release-readiness.json -type f)"
+          package_run_id="$(node -p "require('./${readiness_path}').packageRunId")"
+          node scripts/resolve-hardware-promotion.mjs \
+            --package-run-id "${package_run_id}" \
+            --trusted-sha "${TARGET_SHA}" \
+            --output package-run.json
+          package_artifact_id="$(node -p "require('./package-run.json').packageArtifactId")"
+          package_expected="$(node -p "require('./package-run.json').packageArtifactDigest")"
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${package_artifact_id}/zip" > package-assets.zip
+          test "$(sha256sum package-assets.zip | cut -d ' ' -f 1)" = "${package_expected#sha256:}"
+          mkdir package-assets
+          unzip -q package-assets.zip -d package-assets
+          gh attestation verify package-assets/browser-package-manifest.json \
+            --repo milos-agathon/forge3d-web \
+            --signer-workflow milos-agathon/forge3d-web/.github/workflows/browser-package.yml \
+            --source-ref refs/heads/main \
+            --source-digest "${TARGET_SHA}" \
+            --deny-self-hosted-runners
+          for asset in package-assets/*; do
+            cp "${asset}" "release-assets/package-$(basename "${asset}")"
+          done
+
+          node -e '
+            const value = require(process.argv[1]);
+            for (const record of value.recordDigests) {
+              process.stdout.write(`${record.artifactId}:${record.workflowRunId}:${record.sha256}\n`);
+            }
+          ' "${readiness_path}" > record-specs.txt
+          while IFS=: read -r artifact_id run_id record_sha; do
+            gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}" > "evidence-assets/${artifact_id}-metadata.json"
+            expected="$(node -p "require('./evidence-assets/${artifact_id}-metadata.json').digest")"
+            test "$(node -p "require('./evidence-assets/${artifact_id}-metadata.json').workflow_run.id")" = "${run_id}"
+            gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "evidence-assets/${artifact_id}.zip"
+            test "$(sha256sum "evidence-assets/${artifact_id}.zip" | cut -d ' ' -f 1)" = "${expected#sha256:}"
+            mkdir "evidence-assets/${artifact_id}"
+            unzip -q "evidence-assets/${artifact_id}.zip" -d "evidence-assets/${artifact_id}"
+            source_record="$(find "evidence-assets/${artifact_id}" -name browser-matrix-record-source.json -type f)"
+            test -f "${source_record}"
+            test "$(find "evidence-assets/${artifact_id}" -name browser-matrix-record-source.json -type f | wc -l)" -eq 1
+            gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}" > "evidence-assets/${artifact_id}-run.json"
+            workflow_path="$(node -p "require('./evidence-assets/${artifact_id}-run.json').path")"
+            test "$(node -p "require('./evidence-assets/${artifact_id}-run.json').head_sha")" = "${TARGET_SHA}"
+            test "$(node -p "require('./evidence-assets/${artifact_id}-run.json').head_branch")" = "main"
+            test "$(node -p "require('./evidence-assets/${artifact_id}-run.json').conclusion")" = "success"
+            case "${workflow_path}" in
+              .github/workflows/browser-hardware.yml|.github/workflows/submit-browser-manual-evidence.yml) ;;
+              *) echo "unexpected evidence signer workflow: ${workflow_path}" >&2; exit 1 ;;
+            esac
+            gh attestation verify "${source_record}" \
+              --repo milos-agathon/forge3d-web \
+              --signer-workflow "milos-agathon/forge3d-web/${workflow_path}" \
+              --source-ref refs/heads/main \
+              --source-digest "${TARGET_SHA}" \
+              --deny-self-hosted-runners
+            node --input-type=module --eval '
+              import { readFileSync, writeFileSync } from "node:fs";
+              import { sha256Hex } from "./scripts/canonical-json.mjs";
+              import { finalizeMatrixRecord } from "./scripts/create-browser-matrix-record.mjs";
+              const final = finalizeMatrixRecord({
+                source: JSON.parse(readFileSync(process.argv[1], "utf8")),
+                artifactId: Number(process.argv[2]),
+                attestation: { verified: true, denySelfHostedRunners: true }
+              });
+              if (sha256Hex(final) !== process.argv[3]) throw new Error("readiness record digest mismatch");
+              writeFileSync("verified-record.json", JSON.stringify(final));
+            ' "${source_record}" "${artifact_id}" "${record_sha}"
+            for asset in "evidence-assets/${artifact_id}"/*; do
+              test -f "${asset}" || continue
+              cp "${asset}" "release-assets/evidence-${artifact_id}-$(basename "${asset}")"
+            done
+          done < record-specs.txt
+          cp "${readiness_path}" release-assets/browser-hardware-release-readiness.json
+
+      - name: Resolve implementation actors and create closed preflight
+        id: preflight
+        shell: bash
+        working-directory: crates/forge3d-web
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          READINESS_RUN_ID: ${{ inputs.readinessRunId }}
+          OBSERVATION_ARTIFACT_ID: ${{ needs.observe-release-publication-trust.outputs.observation_artifact_id }}
+          OBSERVATION_ARTIFACT_NAME: ${{ needs.observe-release-publication-trust.outputs.observation_artifact_name }}
+          OBSERVATION_ARTIFACT_DIGEST: ${{ needs.observe-release-publication-trust.outputs.observation_artifact_digest }}
+          OBSERVATION_CONTENT_SHA256: ${{ needs.observe-release-publication-trust.outputs.observation_content_sha256 }}
+        run: |
+          node scripts/resolve-implementation-actors.mjs \
+            --target-sha "${TARGET_SHA}" \
+            --output implementation-actors.json
+          node --input-type=module --eval '
+            import { createHash } from "node:crypto";
+            import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+            import { createPublicationPreflight } from "./scripts/release-publication.mjs";
+            const readinessPath = "release-assets/browser-hardware-release-readiness.json";
+            const readiness = JSON.parse(readFileSync(readinessPath, "utf8"));
+            const assets = readdirSync("release-assets").map((name, index) => ({
+              sourceId: index + 1,
+              name,
+              sha256: createHash("sha256").update(readFileSync(`release-assets/${name}`)).digest("hex")
+            }));
+            const releaseManifest = {
+              schemaVersion: 1,
+              supportClaim: true,
+              targetSha: process.env.TARGET_SHA,
+              tag: process.env.RELEASE_TAG,
+              readinessRunId: Number(process.env.READINESS_RUN_ID),
+              readinessSha256: createHash("sha256").update(readFileSync(readinessPath)).digest("hex"),
+              assetChecksums: assets
+            };
+            writeFileSync("release-assets/browser-release-manifest.json", JSON.stringify(releaseManifest, null, 2));
+            assets.push({
+              sourceId: assets.length + 1,
+              name: "browser-release-manifest.json",
+              sha256: createHash("sha256").update(readFileSync("release-assets/browser-release-manifest.json")).digest("hex")
+            });
+            const readinessArtifact = JSON.parse(readFileSync("readiness-artifact.json", "utf8"));
+            const result = createPublicationPreflight({
+              mode: "supported-release",
+              supportClaim: true,
+              targetSha: process.env.TARGET_SHA,
+              tag: process.env.RELEASE_TAG,
+              readiness: {
+                runId: Number(process.env.READINESS_RUN_ID),
+                artifactId: readinessArtifact.id,
+                sha256: releaseManifest.readinessSha256,
+                status: readiness.status
+              },
+              assets,
+              observation: {
+                artifactId: Number(process.env.OBSERVATION_ARTIFACT_ID),
+                artifactName: process.env.OBSERVATION_ARTIFACT_NAME,
+                artifactDigest: `sha256:${process.env.OBSERVATION_ARTIFACT_DIGEST}`,
+                contentSha256: process.env.OBSERVATION_CONTENT_SHA256
+              },
+              run: {
+                id: Number(process.env.GITHUB_RUN_ID),
+                attempt: Number(process.env.GITHUB_RUN_ATTEMPT),
+                workflow: ".github/workflows/publish-web-release.yml"
+              },
+              workflowSha: process.env.GITHUB_WORKFLOW_SHA,
+              publisher: { actor: process.env.GITHUB_ACTOR, job: "publish-release" },
+              implementationActors: JSON.parse(readFileSync("implementation-actors.json", "utf8")).actors
+            });
+            writeFileSync("release-publication-preflight.json", result.canonical);
+            writeFileSync(process.env.GITHUB_OUTPUT, `preflight-sha256=${result.sha256}\n`, { flag: "a" });
+          '
+
+      - name: Attest preflight and every exact release asset
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-path: |
+            crates/forge3d-web/release-publication-preflight.json
+            crates/forge3d-web/release-assets/*
+
+      - name: Upload preflight and exact release assets
+        id: upload-preflight
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: web-release-preflight-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            crates/forge3d-web/release-publication-preflight.json
+            crates/forge3d-web/release-assets/
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 1
+
+  publish-release:
+    name: Web Release / Publish Immutable Evidence
+    needs:
+      - observe-release-publication-trust
+      - validate-release-candidate
+    runs-on: ubuntu-latest
+    environment: forge3d-web-release
+    permissions:
+      actions: read
+      attestations: read
+      contents: write
+
+    steps:
+      - name: Download and verify exact preflight without source checkout
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          test ! -d .git
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${{ needs.validate-release-candidate.outputs.preflight_artifact_id }}/zip" > preflight.zip
+          expected="${{ needs.validate-release-candidate.outputs.preflight_artifact_digest }}"
+          test "$(sha256sum preflight.zip | cut -d ' ' -f 1)" = "${expected#sha256:}"
+          mkdir preflight
+          unzip -q preflight.zip -d preflight
+          test -f preflight/release-publication-preflight.json
+          gh attestation verify preflight/release-publication-preflight.json \
+            --repo milos-agathon/forge3d-web \
+            --signer-workflow milos-agathon/forge3d-web/.github/workflows/publish-web-release.yml \
+            --source-ref refs/heads/main \
+            --source-digest "${{ github.workflow_sha }}" \
+            --deny-self-hosted-runners
+
+      - name: Reapply exact observation and preflight handoffs
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+          RELEASE_TAG: ${{ inputs.tag }}
+          PREFLIGHT_SHA256: ${{ needs.validate-release-candidate.outputs.preflight_sha256 }}
+          OBSERVATION_ARTIFACT_ID: ${{ needs.observe-release-publication-trust.outputs.observation_artifact_id }}
+          OBSERVATION_ARTIFACT_NAME: ${{ needs.observe-release-publication-trust.outputs.observation_artifact_name }}
+          OBSERVATION_ARTIFACT_DIGEST: ${{ needs.observe-release-publication-trust.outputs.observation_artifact_digest }}
+          OBSERVATION_CONTENT_SHA256: ${{ needs.observe-release-publication-trust.outputs.observation_content_sha256 }}
+        run: |
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${OBSERVATION_ARTIFACT_ID}/zip" > observation.zip
+          test "$(sha256sum observation.zip | cut -d ' ' -f 1)" = "${OBSERVATION_ARTIFACT_DIGEST#sha256:}"
+          mkdir observation
+          unzip -q observation.zip -d observation
+          gh attestation verify observation/repository-trust-observation.json \
+            --repo milos-agathon/forge3d-web \
+            --signer-workflow milos-agathon/forge3d-web/.github/workflows/publish-web-release.yml \
+            --source-ref refs/heads/main \
+            --source-digest "${{ github.workflow_sha }}" \
+            --deny-self-hosted-runners
+          node --input-type=module --eval '
+            import { createHash } from "node:crypto";
+            import { readFileSync } from "node:fs";
+            const observationBytes = readFileSync("observation/repository-trust-observation.json");
+            const observation = JSON.parse(observationBytes);
+            const preflightBytes = readFileSync("preflight/release-publication-preflight.json");
+            const preflight = JSON.parse(preflightBytes);
+            if (
+              createHash("sha256").update(observationBytes).digest("hex") !== process.env.OBSERVATION_CONTENT_SHA256 ||
+              observation.operation !== "publish-web-release" ||
+              observation.targetSha !== process.env.TARGET_SHA ||
+              !observation.consumers.some((value) =>
+                value.job === "publish-release" &&
+                value.environment === "forge3d-web-release"
+              ) ||
+              createHash("sha256").update(preflightBytes).digest("hex") !== process.env.PREFLIGHT_SHA256 ||
+              preflight.targetSha !== process.env.TARGET_SHA ||
+              preflight.tag !== process.env.RELEASE_TAG ||
+              preflight.publisher.job !== "publish-release" ||
+              preflight.publisher.environment !== "forge3d-web-release" ||
+              new Date(preflight.expiresAt) <= new Date()
+            ) throw new Error("publisher handoff mismatch or expiry");
+          '
+
+      - name: Require independent approval and unchanged immutability
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/approvals" > approvals.json
+          gh api "/repos/${GITHUB_REPOSITORY}" > repository-settings.json
+          node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            const preflight = JSON.parse(readFileSync("preflight/release-publication-preflight.json", "utf8"));
+            const approvals = JSON.parse(readFileSync("approvals.json", "utf8"))
+              .filter((value) => value.state === "approved");
+            const settings = JSON.parse(readFileSync("repository-settings.json", "utf8"));
+            if (
+              !(settings.immutable_releases === true || settings.immutable_releases?.enabled === true) ||
+              preflight.implementationActors.includes(process.env.GITHUB_ACTOR) ||
+              approvals.length < 1 ||
+              approvals.some((value) =>
+                value.user.login === process.env.GITHUB_ACTOR ||
+                preflight.implementationActors.includes(value.user.login)
+              )
+            ) throw new Error("publisher identity, approval, or immutable setting failed");
+          '
+
+      - name: Draft, byte-verify, publish once, and verify immutable release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          if gh api "/repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
+            echo "release appeared after preflight" >&2
+            exit 1
+          fi
+          gh release create "${RELEASE_TAG}" \
+            --target "${TARGET_SHA}" \
+            --title "Forge3D Web ${RELEASE_TAG}" \
+            --notes "Exact-head browser support evidence and package artifacts." \
+            --draft
+          gh release upload "${RELEASE_TAG}" preflight/release-assets/*
+          mkdir draft-download
+          gh release download "${RELEASE_TAG}" --dir draft-download
+          node --input-type=module --eval '
+            import { createHash } from "node:crypto";
+            import { readFileSync } from "node:fs";
+            const preflight = JSON.parse(readFileSync("preflight/release-publication-preflight.json", "utf8"));
+            for (const asset of preflight.assets) {
+              const digest = createHash("sha256").update(readFileSync(`draft-download/${asset.name}`)).digest("hex");
+              if (digest !== asset.sha256) throw new Error(`draft asset digest mismatch: ${asset.name}`);
+            }
+          '
+          gh release edit "${RELEASE_TAG}" --draft=false
+          gh release verify "${RELEASE_TAG}" > release-verification.txt
+          for asset in draft-download/*; do
+            gh release verify-asset "${RELEASE_TAG}" "${asset}" >> release-verification.txt
+          done
+
+      - name: Delete manual intakes only after final media verification
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          node --input-type=module --eval '
+            import { readFileSync, readdirSync } from "node:fs";
+            const ids = new Set();
+            for (const name of readdirSync("preflight/release-assets")) {
+              if (!name.endsWith("manual-evidence.json")) continue;
+              ids.add(JSON.parse(readFileSync(`preflight/release-assets/${name}`, "utf8")).intakeReleaseId);
+            }
+            process.stdout.write([...ids].sort((a, b) => a - b).join("\n"));
+          ' > intake-ids.txt
+          while IFS= read -r intake_id; do
+            test -n "${intake_id}" || continue
+            intake_tag="$(gh api "/repos/${GITHUB_REPOSITORY}/releases/${intake_id}" --jq .tag_name)"
+            gh release delete "${intake_tag}" --cleanup-tag --yes
+            if gh api "/repos/${GITHUB_REPOSITORY}/releases/${intake_id}" >/dev/null 2>&1; then
+              echo "manual intake remains after final verification: ${intake_id}" >&2
+              exit 1
+            fi
+          done < intake-ids.txt
+          node --input-type=module --eval '
+            import { createHash } from "node:crypto";
+            import { readFileSync, writeFileSync } from "node:fs";
+            writeFileSync("release-publication-record.json", JSON.stringify({
+              schemaVersion: 1,
+              supportClaim: true,
+              targetSha: process.env.GITHUB_SHA,
+              tag: process.env.RELEASE_TAG,
+              releaseVerified: true,
+              allAssetsVerified: true,
+              intakesDeletedAfterVerification: true,
+              verificationOutputSha256: createHash("sha256")
+                .update(readFileSync("release-verification.txt"))
+                .digest("hex")
+            }, null, 2));
+          '
+
+      - name: Retain post-publication verification
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: web-release-publication-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            release-publication-record.json
+            release-verification.txt
+          if-no-files-found: error
+          overwrite: false
+          retention-days: 90

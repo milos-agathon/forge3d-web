@@ -84,9 +84,10 @@ reviewable without committing serial numbers or credentials.
   `crates/forge3d-web/tests/infrastructure/repository-trust-policy.json` and its
   JSON schema. Freeze canonical repository ID/name, default branch `main`,
   `requiredStatusChecks.strict: true`, the two exact check names above with
-  source app slug `github-actions`, one approving review, stale-approval
-  dismissal, approval of the most recent reviewable push, required conversation
-  resolution, administrator enforcement, and `allowForcePushes: false`,
+  source app slug `github-actions`, zero required approving reviews,
+  stale-review dismissal for any voluntary review, no latest-push approval
+  requirement, required conversation resolution, administrator enforcement,
+  and `allowForcePushes: false`,
   `allowDeletions: false`, with no user/team/app bypass actor.
 - Add `crates/forge3d-web/scripts/verify-repository-trust.mjs`. Using the branch
   and branch-protection REST endpoints, it must fail closed unless `main` is
@@ -368,10 +369,11 @@ reviewable without committing serial numbers or credentials.
 - The live branch/protection APIs report the exact checked policy, both required
   checks are bound to the GitHub Actions App rather than "any source", and
   `verify-repository-trust.mjs` passes on the current `main`.
-- The canary evidence proves PR-only changes, independent latest-push approval,
-  stale-review dismissal, strict named checks, conversation resolution,
-  administrator enforcement, and force-push/deletion rejection. A negative
-  fixture changing any single policy field fails verification.
+- The canary evidence proves PR-only changes, zero required approving reviews,
+  no latest-push approval requirement, configured stale-review dismissal,
+  strict named checks, conversation resolution, administrator enforcement, and
+  force-push/deletion rejection. A negative fixture changing any single policy
+  field fails verification.
 - `trustEpochSha` identifies the post-protection canary merge; it is an ancestor
   of current `main`, and neither it nor any pre-epoch commit is eligible for a
   promoted hardware or release run.

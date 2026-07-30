@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/browser-lab-infrastructure-readiness.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "status",
+    "supportClaim",
+    "repository",
+    "workflow",
+    "run",
+    "candidateSha",
+    "packageRunId",
+    "packageSha256",
+    "labInfrastructureDigest",
+    "configurationFiles",
+    "hostCanaryRunIds",
+    "manualCanary",
+    "canaryReleaseId",
+    "createdAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "status": { "const": "LAB_INFRA_READY" },
+    "supportClaim": { "const": false },
+    "repository": { "const": "milos-agathon/forge3d-web" },
+    "workflow": {
+      "const": ".github/workflows/browser-lab-infrastructure-readiness.yml"
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "attempt", "workflowSha"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "attempt": { "type": "integer", "minimum": 1 },
+        "workflowSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" }
+      }
+    },
+    "candidateSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "packageRunId": { "type": "integer", "minimum": 1 },
+    "packageSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "labInfrastructureDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "configurationFiles": {
+      "type": "array",
+      "minItems": 16,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "sha256"],
+        "properties": {
+          "path": { "type": "string", "minLength": 1 },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+        }
+      }
+    },
+    "hostCanaryRunIds": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": { "type": "integer", "minimum": 1 }
+    },
+    "manualCanary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runId", "intakeReleaseId", "hardwareJobId"],
+      "properties": {
+        "runId": { "type": "integer", "minimum": 1 },
+        "intakeReleaseId": { "type": "integer", "minimum": 1 },
+        "hardwareJobId": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "canaryReleaseId": { "type": "integer", "minimum": 1 },
+    "createdAt": { "type": "string", "minLength": 20 }
+  }
+}

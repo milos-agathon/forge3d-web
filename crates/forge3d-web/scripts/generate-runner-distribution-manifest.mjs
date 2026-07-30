@@ -10,9 +10,9 @@ import { fileURLToPath } from "node:url";
 
 import { canonicalJson, sha256Hex } from "./canonical-json.mjs";
 
-export function buildDistributionEntries(root) {
+export function buildDistributionEntries(root, { excludePaths = [] } = {}) {
   const entries = [];
-  walk(root, root, entries);
+  walk(root, root, entries, new Set(excludePaths));
   return entries.sort((left, right) => left.path.localeCompare(right.path));
 }
 
@@ -50,11 +50,12 @@ export function createRunnerDistributionManifest({
   };
 }
 
-function walk(root, directory, entries) {
+function walk(root, directory, entries, excludePaths) {
   for (const name of readdirSync(directory).sort()) {
     const path = join(directory, name);
-    const stats = lstatSync(path);
     const normalizedPath = relative(root, path).split(sep).join("/");
+    if (excludePaths.has(normalizedPath)) continue;
+    const stats = lstatSync(path);
     const mode = (stats.mode & 0o7777).toString(8).padStart(4, "0");
     if (stats.isSymbolicLink()) {
       entries.push({
@@ -74,7 +75,7 @@ function walk(root, directory, entries) {
         sha256: null,
         target: null,
       });
-      walk(root, path, entries);
+      walk(root, path, entries, excludePaths);
     } else if (stats.isFile()) {
       entries.push({
         path: normalizedPath,
