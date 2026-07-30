@@ -167,22 +167,20 @@ test("macOS and Linux services delegate to the pinned graphical-login bridge", (
     assert.equal(sudoers.includes("--user-child"), false);
     assert.equal(sudoers.trim().split("\n").length, 1);
   }
-  assert.equal(
-    statSync(
-      join(root, "services", "unix-interactive-session-bridge.mjs"),
-    ).mode & 0o777,
-    0o755,
-  );
-  for (const name of [
-    "unix-interactive-session-contract.mjs",
-    "unix-runner-transient-paths.mjs",
-  ]) {
-    assert.equal(statSync(join(root, "services", name)).mode & 0o777, 0o644);
-  }
-  for (const name of [
-    "browser-lab-controller.sudoers-linux",
-    "browser-lab-controller.sudoers-macos",
-  ]) {
-    assert.equal(statSync(join(root, "services", name)).mode & 0o777, 0o644);
+  if (process.platform !== "win32") {
+    assert.equal(
+      statSync(
+        join(root, "services", "unix-interactive-session-bridge.mjs"),
+      ).mode & 0o777,
+      0o755,
+    );
+    for (const name of [
+      "unix-interactive-session-contract.mjs",
+      "unix-runner-transient-paths.mjs",
+      "browser-lab-controller.sudoers-linux",
+      "browser-lab-controller.sudoers-macos",
+    ]) {
+      assert.equal(statSync(join(root, "services", name)).mode & 0o777, 0o644);
+    }
   }
 });
