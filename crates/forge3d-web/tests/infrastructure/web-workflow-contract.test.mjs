@@ -27,6 +27,69 @@ const lockedActions = new Map(
   ]),
 );
 
+function verifyHostedChromiumPreflightContract(text) {
+  const browserCommands = text
+    .split(/\r?\n/u)
+    .map((line) => line.trim())
+    .filter((line) => /\bnpm run test:browser(?:\b|:)/u.test(line));
+  assert.deepEqual(
+    browserCommands,
+    [
+      'npm run test:browser:chromium -- --grep "reports browser WebGPU diagnostics"',
+      "run: npm run test:browser:chromium",
+    ],
+    "hosted source-browser commands must explicitly select the bundled Chromium preflight",
+  );
+  assert.equal(
+    browserCommands.some((line) => /\bnpm run test:browser(?:\s|$)/u.test(line)),
+    false,
+    "hosted source-browser commands must not use the ambiguous default script",
+  );
+  for (const expected of [
+    "Bundled Playwright Chromium",
+    "flagged preflight",
+    "ENGINE_PASS-only",
+    "not branded Chrome or Edge support evidence",
+  ]) {
+    assert.ok(
+      text.includes(expected),
+      `hosted source-browser workflow must describe ${expected}`,
+    );
+  }
+  assert.equal(
+    text
+      .split(/\r?\n/u)
+      .some(
+        (line) =>
+          /\b(?:Chrome|Edge)\b/u.test(line) &&
+          /--(?:enable-unsafe-webgpu|use-angle)/u.test(line),
+      ),
+    false,
+    "hosted workflow must not describe branded Chrome or Edge as using preflight flags",
+  );
+}
+
+function verifyHostedExactTarballProbeContract(text) {
+  const step = text.match(
+    /      - name: Test clean installed tarball in bundled Chromium preflight\n[\s\S]*?(?=\n      - name:)/u,
+  )?.[0];
+  assert.ok(
+    step,
+    "hosted exact-tarball probe must be an explicitly named bundled Chromium preflight",
+  );
+  for (const expected of [
+    "FORGE3D_BROWSER_CHANNEL: bundled",
+    "FORGE3D_EVIDENCE_DIR: test-results/browser-gate",
+    "FORGE3D_PACKAGE_GATE_MODE: probe",
+    "run: npm run test:package-consumer",
+  ]) {
+    assert.ok(
+      step.includes(expected),
+      `hosted exact-tarball probe must include ${expected}`,
+    );
+  }
+}
+
 test("web workflow exposes exactly the two immutable required checks", () => {
   const contract = verifyWebWorkflowContract();
   assert.deepEqual(contract.triggers, ["pull_request", "push"]);
@@ -51,6 +114,57 @@ test("web workflow keeps privileged triggers and self-hosted routing out", () =>
   assert.equal(workflowText.includes("self-hosted"), false);
   assert.equal(workflowText.includes("forge3d-trust-observer"), false);
   assert.equal(workflowText.includes("forge3d-browser-lab"), false);
+});
+
+test("hosted source-browser workflow is explicit ENGINE_PASS-only Chromium preflight", () => {
+  verifyHostedChromiumPreflightContract(workflowText);
+});
+
+test("hosted source-browser workflow rejects generic invocation and flagged Chrome wording", () => {
+  assert.throws(
+    () =>
+      verifyHostedChromiumPreflightContract(
+        workflowText.replaceAll(
+          "npm run test:browser:chromium",
+          "npm run test:browser",
+        ),
+      ),
+    /explicitly select the bundled Chromium preflight|ambiguous default script/u,
+  );
+  assert.throws(
+    () =>
+      verifyHostedChromiumPreflightContract(
+        workflowText.replace(
+          "Bundled Playwright Chromium is a flagged preflight",
+          "Branded Chrome uses --enable-unsafe-webgpu in a flagged preflight",
+        ),
+      ),
+    /Bundled Playwright Chromium|branded Chrome or Edge as using preflight flags/u,
+  );
+});
+
+test("hosted exact-tarball probe explicitly selects bundled Chromium", () => {
+  verifyHostedExactTarballProbeContract(workflowText);
+});
+
+test("hosted exact-tarball probe rejects an implicit or branded channel", () => {
+  assert.throws(
+    () =>
+      verifyHostedExactTarballProbeContract(
+        workflowText.replace("          FORGE3D_BROWSER_CHANNEL: bundled\n", ""),
+      ),
+    /FORGE3D_BROWSER_CHANNEL: bundled/u,
+  );
+  assert.throws(
+    () =>
+      verifyHostedExactTarballProbeContract(
+        workflowText.replace(
+          "FORGE3D_BROWSER_CHANNEL: bundled",
+          "FORGE3D_BROWSER_CHANNEL: chrome",
+        ),
+      ),
+    /FORGE3D_BROWSER_CHANNEL: bundled/u,
+  );
 });
 
 test("web workflow verifier rejects renamed, duplicate, missing, and self-hosted checks", () => {

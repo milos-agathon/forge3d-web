@@ -57,7 +57,8 @@ npm run test:package
 $env:FORGE3D_PACKAGE_GATE_MODE = "required"
 npm run test:package-consumer
 $env:FORGE3D_SOURCE_BENCHMARK_MODE = "required"
-npm run test:browser
+$env:FORGE3D_WEBGPU_REQUIRED = "1"
+npm run test:browser:chrome
 npm pack --dry-run
 cd ../..
 ```
@@ -73,30 +74,44 @@ serves `examples/test-interactive-viewer.html` from the consumer.
 The release gate refuses to attribute a dirty worktree to `HEAD`. Its complete
 validated record and package association are retained under
 `test-results/browser-gate/` (or `FORGE3D_EVIDENCE_DIR`) and uploaded by CI.
-The gate launches Chrome against that installed copy and verifies a reported,
-non-fallback WebGPU adapter, independently observed drag/wheel/touch/keyboard
-interaction,
+In required mode the gate defaults to installed branded Chrome, records
+`installed-tarball-chrome-stable` with browser/channel `chrome`, and passes no
+unsafe-WebGPU, GPU-blocklist, Vulkan-enable, or ANGLE-forcing arguments. It
+verifies a reported, non-fallback WebGPU adapter and independently observed
+drag/wheel/touch/keyboard interaction,
 unsupported-browser UI, screenshot readback, resize, and leak-free disposal.
 It then runs the frozen benchmark and passes the complete exact-tarball evidence
 record through the shared fail-closed validator. It is not an HTTP-only asset
 smoke test.
-Hosted CI sets `FORGE3D_PACKAGE_GATE_MODE=probe` because its virtual Windows
-runner may expose only a fallback adapter. That lane still builds, packs,
-installs, serves, and exercises the exact tarball, but records `PROBE`, omits
-the performance benchmark, and cannot satisfy release promotion. Required
-release execution defaults to `FORGE3D_PACKAGE_GATE_MODE=required` and still
-fails closed on fallback hardware.
+Hosted CI sets `FORGE3D_PACKAGE_GATE_MODE=probe` and
+`FORGE3D_BROWSER_CHANNEL=bundled` because its virtual Windows runner may expose
+only a fallback adapter. That lane uses unsafe WebGPU plus Windows D3D11,
+records `installed-tarball-chromium-preflight` as Playwright Chromium with
+`PROBE`, omits the performance benchmark, and cannot satisfy release promotion.
+Required release execution defaults to `FORGE3D_PACKAGE_GATE_MODE=required`
+and branded Chrome; required mode rejects the bundled channel and still fails
+closed on fallback hardware.
 Hosted CI likewise sets `FORGE3D_SOURCE_BENCHMARK_MODE=probe`: the source
-browser test persists schema-valid environment and interaction evidence but
-does not run or label software-renderer timing as a real-GPU benchmark.
-Required source execution defaults to `required`, runs all 600 measured
-samples, and rejects fallback adapters.
+browser job explicitly runs `test:browser:chromium`. The default
+`test:browser` command aliases that same bundled Playwright Chromium project,
+which uses unsafe-WebGPU preflight flags and the D3D11 ANGLE flag on Windows.
+That flagged configuration is preflight/`ENGINE_PASS` evidence only; it cannot
+establish branded Chrome or Edge support. The hosted probe persists
+schema-valid environment and interaction evidence but does not run or label
+software-renderer timing as a real-GPU benchmark.
+`test:browser:chrome` and `test:browser:edge` select the installed branded
+channels without unsafe WebGPU, GPU-blocklist, Vulkan-enable, or ANGLE-forcing
+flags. Their normal configurations use required evidence mode and fail when
+`navigator.gpu` or adapter acquisition is unavailable. The required branded
+source execution runs all 600 measured samples and rejects fallback adapters;
+these command definitions do not claim that either branded run has passed.
 Release browser evidence must validate against
 `tests/browser/browser-evidence.schema.json`; a required lane may not pass with
 an unavailable adapter, a probe-only result, or a source-WASM digest in place
 of an exact npm-tarball digest.
-The required source-browser benchmark writes and attaches its complete evidence
-record under Playwright `test-results/`; CI uploads that record separately.
+The required branded source-browser benchmark writes and attaches its complete
+evidence record under Playwright `test-results/`; CI uploads the separate
+flagged Chromium preflight record.
 
 ## Physical Evidence And Publication
 

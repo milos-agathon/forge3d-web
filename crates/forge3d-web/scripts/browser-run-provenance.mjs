@@ -1,4 +1,5 @@
 import { assertSafeLaunchArguments } from "./capture-host-inventory.mjs";
+import { isLiveChromiumLaunchArgumentSource } from "./browser-launch-provenance.mjs";
 
 const browserInventoryIds = {
   chrome: "chrome-stable",
@@ -117,7 +118,7 @@ function validLaunchSource(runtime, source, platform) {
     runtime.driver === "playwright-edge" ||
     runtime.driver === "infrastructure-canary"
   ) {
-    return source === "chromium-cdp-browser-command-line";
+    return isLiveChromiumLaunchArgumentSource(source, platform);
   }
   if (
     runtime.driver === "selenium-firefox" ||

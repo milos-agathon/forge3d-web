@@ -63,7 +63,10 @@
     "test:package": "npm run test:release-hardening && npm run test:browser-harness && npm run test:infrastructure && node tests/api/package-contract.mjs",
     "test:package-consumer": "node scripts/build-browser-test-package.mjs",
     "test:unit": "vitest run",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test --project=chromium-preflight",
+    "test:browser:chromium": "playwright test --project=chromium-preflight",
+    "test:browser:chrome": "playwright test --project=chrome-stable",
+    "test:browser:edge": "playwright test --project=edge-stable"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",

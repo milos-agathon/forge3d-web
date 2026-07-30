@@ -47,7 +47,20 @@ custody procedure.
 
 ## Browser Support
 
-Forge3D Web requires browser WebGPU support through `navigator.gpu`. The MVP verification lane targets current Chrome/Chromium with WebGPU enabled. Applications should feature-detect WebGPU before creating the runtime and present their own fallback UI when it is unavailable.
+Forge3D Web requires browser WebGPU support through `navigator.gpu`. The
+required source-browser configuration targets installed branded Chrome without
+unsafe WebGPU or ANGLE-forcing flags. Applications should feature-detect WebGPU
+before creating the runtime and present their own fallback UI when it is
+unavailable.
+
+The default `npm run test:browser` command and
+`npm run test:browser:chromium` both select bundled Playwright Chromium with
+explicit preflight flags. They are preflight/`ENGINE_PASS` only and cannot
+establish branded Chrome or Edge support. `npm run test:browser:chrome` and
+`npm run test:browser:edge` are the unflagged required-mode branded
+configurations; they fail when `navigator.gpu` or adapter acquisition is
+unavailable. These configurations do not claim that either branded lane has
+passed or change the current support tiers.
 
 See `docs/support-matrix.md` for the browser support matrix, unsupported surfaces, and release-lane requirements.
 
@@ -95,7 +108,7 @@ npm run build
 npm run test:api
 npm run test:package
 npm run test:package-consumer
-npm run test:browser
+npm run test:browser:chrome
 npm pack --dry-run
 ```
 
