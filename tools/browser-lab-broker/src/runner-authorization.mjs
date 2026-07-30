@@ -111,10 +111,14 @@ export function normalizeAuthorization(authorization) {
     runId: authorization.run.id,
     jobId: authorization.queuedHardwareJob.id,
     jobStatus: authorization.queuedHardwareJob.status,
+    targetAssetId: authorization.assetId,
     hostAssetId: authorization.hostId,
     hwLabel: authorization.customLabels[1],
     runnerNonce: authorization.runnerNonce,
     expiresAt: authorization.expiresAt,
+    lane: authorization.lane,
+    hasLabReadiness: authorization.labReadiness !== null,
+    hasManualSession: authorization.manualSession !== null,
   };
 }
 
