@@ -33,7 +33,7 @@ jobs:
         working-directory: crates/forge3d-web
         env:
           GITHUB_EVENT_NAME: ${{ github.event_name }}
-        run: node scripts/resolve-broker-package-bootstrap.mjs
+        run: node scripts/resolve-package-bootstrap.mjs
 
   observe-broker-package-trust:
     name: Browser Lab Broker / Observe Package Trust

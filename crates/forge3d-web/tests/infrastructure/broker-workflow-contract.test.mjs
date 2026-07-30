@@ -28,7 +28,7 @@ test("pending repository trust gates privileged packaging without credentials", 
   assert.match(bootstrapGate, /ref: \$\{\{ github\.workflow_sha \}\}/u);
   assert.match(
     bootstrapGate,
-    /node scripts\/resolve-broker-package-bootstrap\.mjs/u,
+    /node scripts\/resolve-package-bootstrap\.mjs/u,
   );
   assert.equal(bootstrapGate.includes("environment:"), false);
   assert.equal(bootstrapGate.includes("secrets."), false);

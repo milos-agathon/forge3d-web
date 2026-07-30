@@ -8,8 +8,32 @@ on:
 permissions: {}
 
 jobs:
+  browser-package-bootstrap:
+    name: Browser Package / Bootstrap Gate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      package_enabled: ${{ steps.activation.outputs.package-enabled }}
+
+    steps:
+      - name: Check out exact bootstrap policy
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          ref: ${{ github.workflow_sha }}
+          persist-credentials: false
+
+      - name: Resolve protected-main package activation
+        id: activation
+        working-directory: crates/forge3d-web
+        env:
+          GITHUB_EVENT_NAME: ${{ github.event_name }}
+        run: node scripts/resolve-package-bootstrap.mjs
+
   observe-package-trust:
     name: Browser Package / Observe Trusted Source
+    needs: browser-package-bootstrap
+    if: needs.browser-package-bootstrap.outputs.package_enabled == 'true'
     runs-on: ubuntu-latest
     environment: forge3d-trust-observer
     permissions:
