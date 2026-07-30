@@ -25,6 +25,13 @@ import { chromium } from "@playwright/test";
 import ts from "typescript";
 
 import { validateBrowserEvidence } from "../tests/browser/evidence-validator.mjs";
+import {
+  exerciseViewerVisibilityLifecycle,
+} from "../tests/browser/viewer-visibility-lifecycle.mjs";
+import {
+  runViewerInteractionObservation,
+  VIEWER_INTERACTION_ERROR_KEY,
+} from "../tests/browser/viewer-interaction-observation.mjs";
 import { resolveCommandInvocation } from "./command-executable.mjs";
 import { resolveInstalledTarballBrowserProfile } from "./installed-tarball-browser-profile.mjs";
 import { resolvePackageGateMode } from "./package-gate-mode.mjs";
@@ -340,14 +347,23 @@ async function runInstalledPackageBrowserGate(
       throw new Error("installed-package browser gate used a fallback adapter");
     }
 
-    const initial = await page.evaluate(async () => {
-      const viewer = await window.__forge3dInteractiveViewer.create();
+    const initial = await page.evaluate(async (errorKey) => {
+      window[errorKey] = [];
+      const viewer = await window.__forge3dInteractiveViewer.create({
+        onError(error) {
+          window[errorKey]?.push(
+            typeof error?.code === "string"
+              ? error.code
+              : "INTERNAL_ERROR",
+          );
+        },
+      });
       return {
         view: viewer.getView(),
         diagnostics: viewer.getDiagnostics(),
         packageSha256: window.__forge3dInteractiveViewer.packageSha256,
       };
-    });
+    }, VIEWER_INTERACTION_ERROR_KEY);
     if (initial.packageSha256 !== packageSha256) {
       throw new Error("browser fixture did not execute the expected tarball");
     }
@@ -397,6 +413,14 @@ async function runInstalledPackageBrowserGate(
       resize: false,
       disposal: false,
     };
+    const visibilityLifecycle =
+      await exerciseViewerVisibilityLifecycle({
+        page,
+        context: page.context(),
+        headed: process.env.FORGE3D_HEADED === "1",
+      });
+    const interactionObservation =
+      await runViewerInteractionObservation(page);
 
     const result = await page.evaluate(async () => {
       const viewer = window.__forge3dInteractiveViewer.viewer;
@@ -514,7 +538,8 @@ async function runInstalledPackageBrowserGate(
         skippedFrames: frameCounters.skippedFrames,
       },
       interactionAssertions,
-      normalizedErrorCodes: [],
+      normalizedErrorCodes:
+        interactionObservation.normalizedErrorCodes,
       benchmark,
     };
     if (browserProfile.lane === "required") {
@@ -538,6 +563,8 @@ async function runInstalledPackageBrowserGate(
       resize: true,
       disposal: true,
       unsupportedUi: true,
+      visibilityLifecycle,
+      interactionObservation,
       evidence,
     };
   } finally {

@@ -66,6 +66,14 @@ export function validateBrowserEvidence(
       "PASS evidence requires successful mouse, wheel, touch, keyboard, resize, and disposal assertions",
     );
   }
+  if (
+    record.runtimeResult === "PASS" &&
+    record.normalizedErrorCodes.length !== 0
+  ) {
+    throw new Error(
+      "PASS evidence requires an observed error-free interaction run",
+    );
+  }
 
   if (record.benchmark !== null) {
     validateBenchmark(record.benchmark);

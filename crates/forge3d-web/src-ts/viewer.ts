@@ -108,6 +108,7 @@ export class Forge3DViewer {
   #recoveryAttempts = 0;
   #recoveryPromise: Promise<void> | undefined;
   #recoveryController: AbortController | undefined;
+  #recoveringFromGeneration: number | undefined;
   #queuedDeviceLoss:
     | { generation: number; error: Forge3DError }
     | undefined;
@@ -495,6 +496,9 @@ export class Forge3DViewer {
         ? error
         : new Forge3DError("DEVICE_LOST", error.message, error.details);
     if (this.#recoveryPromise !== undefined) {
+      if (generation === this.#recoveringFromGeneration) {
+        return;
+      }
       this.#queuedDeviceLoss = { generation, error: normalized };
       this.#recoveryController?.abort(normalized);
       return;
@@ -509,6 +513,7 @@ export class Forge3DViewer {
     this.#scheduler?.suspend();
     this.#controls?.suspend();
     this.#sourceController?.abort();
+    this.#recoveringFromGeneration = generation;
     const recovery = this.#recover(generation, normalized);
     this.#recoveryPromise = recovery;
     void recovery.then(
@@ -648,6 +653,7 @@ export class Forge3DViewer {
     }
     this.#recoveryPromise = undefined;
     this.#recoveryController = undefined;
+    this.#recoveringFromGeneration = undefined;
     const queued = this.#queuedDeviceLoss;
     this.#queuedDeviceLoss = undefined;
     if (
