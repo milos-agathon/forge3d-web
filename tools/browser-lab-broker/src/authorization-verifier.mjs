@@ -128,7 +128,6 @@ export async function verifyLiveRepositoryTrust({
     .sort(compareChecks);
   if (
     protection.required_status_checks?.strict !== true ||
-    (protection.required_status_checks?.contexts ?? []).length !== 0 ||
     canonicalJson(checks) !== canonicalJson(expectedChecks) ||
     protection.required_pull_request_reviews?.dismiss_stale_reviews !== true ||
     protection.required_pull_request_reviews?.require_last_push_approval !== true ||

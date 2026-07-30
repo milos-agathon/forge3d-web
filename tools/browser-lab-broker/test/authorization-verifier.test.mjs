@@ -198,7 +198,7 @@ class LiveTrustGitHub {
     return {
       required_status_checks: {
         strict: true,
-        contexts: [],
+        contexts: requiredChecks.map((check) => check.context),
         checks: requiredChecks.map((check) => ({
           context: check.context,
           app_id: check.sourceAppId,
