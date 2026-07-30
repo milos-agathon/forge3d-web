@@ -27,7 +27,17 @@ const lockedActions = new Map(
   ]),
 );
 
-function verifyHostedChromiumPreflightContract(text) {
+function workflowStep(text, name) {
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+  return text.match(
+    new RegExp(
+      `      - name: ${escapedName}\\n[\\s\\S]*?(?=\\n      - name:|$)`,
+      "u",
+    ),
+  )?.[0];
+}
+
+function verifyHostedEnginePreflightContract(text) {
   const browserCommands = text
     .split(/\r?\n/u)
     .map((line) => line.trim())
@@ -37,8 +47,10 @@ function verifyHostedChromiumPreflightContract(text) {
     [
       'npm run test:browser:chromium -- --grep "reports browser WebGPU diagnostics"',
       "run: npm run test:browser:chromium",
+      'npm run test:browser:firefox-preflight -- --grep "reports browser WebGPU diagnostics"',
+      "run: npm run test:browser:firefox-preflight",
     ],
-    "hosted source-browser commands must explicitly select the bundled Chromium preflight",
+    "hosted source-browser commands must explicitly select the bundled Chromium and Firefox preflights",
   );
   assert.equal(
     browserCommands.some((line) => /\bnpm run test:browser(?:\s|$)/u.test(line)),
@@ -66,6 +78,100 @@ function verifyHostedChromiumPreflightContract(text) {
       ),
     false,
     "hosted workflow must not describe branded Chrome or Edge as using preflight flags",
+  );
+
+  const install = workflowStep(
+    text,
+    "Install bundled Chromium and Firefox for engine preflights",
+  );
+  assert.ok(install, "hosted workflow must install both bundled engines");
+  assert.match(install, /\n        run: npx playwright install chromium firefox\n/u);
+
+  const firefoxDiagnostics = workflowStep(
+    text,
+    "Print bundled Firefox preflight diagnostics with default preferences",
+  );
+  assert.ok(
+    firefoxDiagnostics,
+    "hosted workflow must run explicit default-preference Firefox diagnostics",
+  );
+  const firefoxRun = workflowStep(
+    text,
+    "Run bundled Firefox preflight with default preferences (ENGINE_PASS only)",
+  );
+  assert.ok(
+    firefoxRun,
+    "hosted workflow must run the unfiltered default-preference Firefox preflight",
+  );
+  for (const [name, step] of [
+    ["diagnostics", firefoxDiagnostics],
+    ["full", firefoxRun],
+  ]) {
+    for (const expected of [
+      'FORGE3D_HEADED: "1"',
+      'FORGE3D_WEBGPU_REQUIRED: "1"',
+      "FORGE3D_SOURCE_BENCHMARK_MODE: probe",
+    ]) {
+      assert.ok(
+        step.includes(expected),
+        `Firefox ${name} step must include ${expected}`,
+      );
+    }
+  }
+  assert.match(
+    firefoxDiagnostics,
+    /npm run test:browser:firefox-preflight -- --grep "reports browser WebGPU diagnostics"/u,
+  );
+  assert.match(
+    firefoxRun,
+    /\n        run: npm run test:browser:firefox-preflight\n/u,
+  );
+  for (const expected of [
+    "Bundled Playwright Firefox",
+    "default preferences",
+    "ENGINE_PASS-only",
+    "not branded Firefox, physical-browser, or exact-tarball support evidence",
+  ]) {
+    assert.ok(
+      firefoxDiagnostics.includes(expected),
+      `hosted Firefox diagnostics must describe ${expected}`,
+    );
+  }
+  assert.equal(
+    /dom\.webgpu\.enabled|firefoxUserPrefs|about:config|--pref(?:erence)?\b/u.test(
+      `${firefoxDiagnostics}\n${firefoxRun}`,
+    ),
+    false,
+    "default-preference Firefox preflight must not carry a preference override",
+  );
+
+  const firefoxUploadName =
+    "Upload Firefox preflight ENGINE_PASS default-preferences evidence";
+  const firefoxUpload = workflowStep(text, firefoxUploadName);
+  assert.ok(
+    firefoxUpload,
+    "hosted workflow must upload separately labelled Firefox evidence",
+  );
+  for (const expected of [
+    "name: forge3d-web-firefox-preflight-ENGINE_PASS-default-preferences",
+    "path: crates/forge3d-web/test-results/**/browser-evidence.json",
+    "if-no-files-found: error",
+    "retention-days: 30",
+  ]) {
+    assert.ok(
+      firefoxUpload.includes(expected),
+      `hosted Firefox evidence upload must include ${expected}`,
+    );
+  }
+  const firefoxRunIndex = text.indexOf(
+    "      - name: Run bundled Firefox preflight with default preferences (ENGINE_PASS only)",
+  );
+  const firefoxUploadIndex = text.indexOf(`      - name: ${firefoxUploadName}`);
+  const interveningStep = text.indexOf("\n      - name:", firefoxRunIndex + 1);
+  assert.equal(
+    interveningStep,
+    firefoxUploadIndex - 1,
+    "Firefox evidence must upload immediately after the full Firefox run",
   );
 }
 
@@ -116,30 +222,116 @@ test("web workflow keeps privileged triggers and self-hosted routing out", () =>
   assert.equal(workflowText.includes("forge3d-browser-lab"), false);
 });
 
-test("hosted source-browser workflow is explicit ENGINE_PASS-only Chromium preflight", () => {
-  verifyHostedChromiumPreflightContract(workflowText);
+test("hosted source-browser workflow keeps Chromium and Firefox engine preflights explicit", () => {
+  verifyHostedEnginePreflightContract(workflowText);
 });
 
 test("hosted source-browser workflow rejects generic invocation and flagged Chrome wording", () => {
   assert.throws(
     () =>
-      verifyHostedChromiumPreflightContract(
+      verifyHostedEnginePreflightContract(
         workflowText.replaceAll(
           "npm run test:browser:chromium",
           "npm run test:browser",
         ),
       ),
-    /explicitly select the bundled Chromium preflight|ambiguous default script/u,
+    /explicitly select the bundled Chromium and Firefox preflights|ambiguous default script/u,
   );
   assert.throws(
     () =>
-      verifyHostedChromiumPreflightContract(
+      verifyHostedEnginePreflightContract(
         workflowText.replace(
           "Bundled Playwright Chromium is a flagged preflight",
           "Branded Chrome uses --enable-unsafe-webgpu in a flagged preflight",
         ),
       ),
     /Bundled Playwright Chromium|branded Chrome or Edge as using preflight flags/u,
+  );
+});
+
+test("hosted Firefox preflight rejects generic commands, preference overrides, and merged evidence", () => {
+  assert.throws(
+    () =>
+      verifyHostedEnginePreflightContract(
+        workflowText.replaceAll(
+          "npm run test:browser:firefox-preflight",
+          "npm run test:browser",
+        ),
+      ),
+    /explicitly select the bundled Chromium and Firefox preflights|ambiguous default script/u,
+  );
+  assert.throws(
+    () =>
+      verifyHostedEnginePreflightContract(
+        workflowText.replace(
+          '          echo "Bundled Playwright Firefox runs with default preferences and can produce ENGINE_PASS-only evidence"',
+          '          echo "Bundled Playwright Firefox sets dom.webgpu.enabled=true and can produce ENGINE_PASS-only evidence"',
+        ),
+      ),
+    /default-preference Firefox preflight must not carry a preference override/u,
+  );
+  assert.throws(
+    () =>
+      verifyHostedEnginePreflightContract(
+        workflowText.replace(
+          "name: forge3d-web-firefox-preflight-ENGINE_PASS-default-preferences",
+          "name: forge3d-web-source-browser-evidence",
+        ),
+      ),
+    /separately labelled Firefox evidence|forge3d-web-firefox-preflight-ENGINE_PASS-default-preferences/u,
+  );
+  const firefoxDiagnostics = workflowStep(
+    workflowText,
+    "Print bundled Firefox preflight diagnostics with default preferences",
+  );
+  const firefoxRun = workflowStep(
+    workflowText,
+    "Run bundled Firefox preflight with default preferences (ENGINE_PASS only)",
+  );
+  assert.ok(firefoxDiagnostics);
+  assert.ok(firefoxRun);
+  for (const [name, step] of [
+    ["diagnostics", firefoxDiagnostics],
+    ["full", firefoxRun],
+  ]) {
+    assert.throws(
+      () =>
+        verifyHostedEnginePreflightContract(
+          workflowText.replace(
+            step,
+            step.replace('          FORGE3D_HEADED: "1"\n', ""),
+          ),
+        ),
+      new RegExp(`Firefox ${name} step must include FORGE3D_HEADED: "1"`, "u"),
+    );
+  }
+  assert.throws(
+    () =>
+      verifyHostedEnginePreflightContract(
+        workflowText.replace(
+          firefoxRun,
+          firefoxRun.replace(
+            "          FORGE3D_SOURCE_BENCHMARK_MODE: probe\n",
+            "",
+          ),
+        ),
+      ),
+    /Firefox full step must include FORGE3D_SOURCE_BENCHMARK_MODE: probe/u,
+  );
+  assert.throws(
+    () =>
+      verifyHostedEnginePreflightContract(
+        workflowText.replace(
+          "      - name: Upload Firefox preflight ENGINE_PASS default-preferences evidence",
+          [
+            "      - name: Intervening Firefox evidence mutation",
+            "        run: echo mutation",
+            "",
+            "      - name: Upload Firefox preflight ENGINE_PASS default-preferences evidence",
+          ].join("\n"),
+        ),
+      ),
+    /Firefox evidence must upload immediately after the full Firefox run/u,
   );
 });
 

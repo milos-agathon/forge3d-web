@@ -1,6 +1,9 @@
 import { expect, test as base } from "@playwright/test";
 
-import { observeChromiumLaunch } from "../../scripts/browser-launch-provenance.mjs";
+import {
+  collectPlaywrightLaunchDiagnostics,
+  type PlaywrightLaunchDiagnostics,
+} from "./playwright-launch-diagnostics";
 import {
   configuredLaunchArgumentsObserved,
   launchFlagPresence,
@@ -52,11 +55,17 @@ export interface WebGpuDiagnostics extends WebGpuAvailability {
   adapter: AdapterDiagnostics;
   viewerRuntime: ViewerRuntimeDiagnostics;
   launch: {
+    declaredEngine: "chromium" | "firefox";
+    actualEngine: string;
+    provenance: "live-browser" | "project-configuration" | null;
     configuredArguments: string[];
     effectiveArguments: string[];
     observationSource: string | null;
     observed: boolean;
     browserProcessId: number | null;
+    preferenceMode: "default" | "override" | null;
+    firefoxUserPrefs: Record<string, boolean> | null;
+    supportLevel: "ENGINE_PASS" | "NOT_PROVEN" | null;
     flagPresence: ReturnType<typeof launchFlagPresence>;
     configuredLaunchFlagsPresent: boolean;
     effectiveLaunchFlagsPresent: boolean;
@@ -69,6 +78,16 @@ export interface WebGpuDiagnostics extends WebGpuAvailability {
 interface Forge3DFixtures {
   webgpuAvailability: WebGpuAvailability;
   webgpuDiagnostics: WebGpuDiagnostics;
+}
+
+export function serializePlaywrightLaunchArguments(
+  project: Pick<Forge3DBrowserProjectMetadata, "launchArgs">,
+  launch: PlaywrightLaunchDiagnostics | undefined,
+): { configuredArguments: string[]; effectiveArguments: string[] } {
+  return {
+    configuredArguments: [...project.launchArgs],
+    effectiveArguments: [...(launch?.effectiveArguments ?? [])],
+  };
 }
 
 export const test = base.extend<Forge3DFixtures>({
@@ -124,12 +143,13 @@ export const test = base.extend<Forge3DFixtures>({
     use,
     testInfo,
   ) => {
-    let launch:
-      | Awaited<ReturnType<typeof observeChromiumLaunch>>
-      | undefined;
+    let launch: PlaywrightLaunchDiagnostics | undefined;
     let launchError: { name: string; message: string } | null = null;
     try {
-      launch = await observeChromiumLaunch(browser);
+      launch = await collectPlaywrightLaunchDiagnostics(
+        browser,
+        webgpuAvailability.project,
+      );
     } catch (error) {
       launchError = serializeNodeError(error);
     }
@@ -246,37 +266,63 @@ export const test = base.extend<Forge3DFixtures>({
       }
       return { adapter: adapterDiagnostics, viewerRuntime };
     });
-    const configuredArguments = [
-      ...webgpuAvailability.project.launchArgs,
-    ];
-    const effectiveArguments = [
-      ...(launch?.effectiveLaunchArguments ?? []),
-    ];
+    const { configuredArguments, effectiveArguments } =
+      serializePlaywrightLaunchArguments(
+        webgpuAvailability.project,
+        launch,
+      );
     const diagnostics: WebGpuDiagnostics = {
       ...webgpuAvailability,
       browserVersion: browser.version(),
       adapter: runtime.adapter,
       viewerRuntime: runtime.viewerRuntime,
       launch: {
+        declaredEngine:
+          launch?.declaredEngine ??
+          (webgpuAvailability.project.browserName === "firefox"
+            ? "firefox"
+            : "chromium"),
+        actualEngine:
+          launch?.actualEngine ?? browser.browserType().name(),
+        provenance: launch?.provenance ?? null,
         configuredArguments,
         effectiveArguments,
-        observationSource: launch?.launchArgumentSource ?? null,
-        observed: launch?.launchArgumentsObserved === true,
+        observationSource: launch?.observationSource ?? null,
+        observed: launch?.observed === true,
         browserProcessId: launch?.browserProcessId ?? null,
-        flagPresence: launchFlagPresence(
-          configuredArguments,
-          effectiveArguments,
-        ),
+        preferenceMode:
+          launch?.preferenceMode ??
+          webgpuAvailability.project.preferenceMode ??
+          null,
+        firefoxUserPrefs:
+          launch?.firefoxUserPrefs ??
+          (webgpuAvailability.project.firefoxUserPrefs === undefined
+            ? null
+            : { ...webgpuAvailability.project.firefoxUserPrefs }),
+        supportLevel:
+          launch?.supportLevel ??
+          webgpuAvailability.project.supportLevel ??
+          null,
+        flagPresence:
+          launch?.flagPresence ??
+          launchFlagPresence(
+            configuredArguments,
+            effectiveArguments,
+          ),
         configuredLaunchFlagsPresent:
+          launch?.configuredLaunchFlagsPresent ??
           launchFlagsPresent(configuredArguments),
         effectiveLaunchFlagsPresent:
+          launch?.effectiveLaunchFlagsPresent ??
           launchFlagsPresent(effectiveArguments),
         configuredArgumentsObserved:
+          launch?.configuredArgumentsObserved ??
           configuredLaunchArgumentsObserved(
             configuredArguments,
             effectiveArguments,
           ),
         preflightIdentityConsistent:
+          launch?.preflightIdentityConsistent ??
           preflightLaunchIdentityConsistent(
             webgpuAvailability.project,
             configuredArguments,
@@ -295,9 +341,22 @@ export const test = base.extend<Forge3DFixtures>({
     await use(diagnostics);
 
     expect(
-      diagnostics.launch.observed,
-      `${diagnostics.project.project} did not expose effective Chromium launch arguments`,
-    ).toBe(true);
+      diagnostics.launch.actualEngine,
+      `${diagnostics.project.project} launched the wrong Playwright engine`,
+    ).toBe(diagnostics.launch.declaredEngine);
+    if (diagnostics.launch.declaredEngine === "chromium") {
+      expect(
+        diagnostics.launch.observed,
+        `${diagnostics.project.project} did not expose effective Chromium launch arguments`,
+      ).toBe(true);
+      expect(diagnostics.launch.provenance).toBe("live-browser");
+    } else {
+      expect(diagnostics.launch.observed).toBe(false);
+      expect(diagnostics.launch.provenance).toBe(
+        "project-configuration",
+      );
+      expect(diagnostics.launch.effectiveArguments).toEqual([]);
+    }
     expect(
       diagnostics.launch.configuredArgumentsObserved,
       `${diagnostics.project.project} did not apply all configured launch arguments`,

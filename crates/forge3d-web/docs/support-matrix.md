@@ -11,7 +11,7 @@ surfaces, and deployment assumptions that application owners must satisfy.
 | Chrome/Chromium on Windows | Required | Required source and exact-tarball configurations use unflagged branded Chrome. Hosted CI exercises the exact tarball in flagged bundled Chromium as `PROBE` when only a fallback adapter is available. Promotion still requires a branded, physical, non-fallback Windows run. |
 | Chrome/Chromium on macOS/Linux | Best effort | Expected to work when `navigator.gpu` is available, but not required for the MVP release gate. |
 | Edge | Best effort | `test:browser:edge` is an unflagged branded required-mode configuration, but the current Edge support tier remains best effort until the required evidence exists. |
-| Firefox | Unsupported | WebGPU availability and behavior are not part of the MVP contract. |
+| Firefox | Unsupported | `test:browser:firefox-preflight` exercises Playwright's patched Firefox in headed mode with default preferences and no Chromium flags. A passing run is `ENGINE_PASS` source-browser evidence only, not branded Firefox, physical-browser, exact-tarball, or support evidence. |
 | Safari | Unsupported | Safari WebGPU is not part of the MVP contract. |
 | Mobile browsers | Unsupported | Touch UX, memory ceilings, and browser WebGPU variability are post-MVP work. |
 | WebGL fallback | Unsupported | Applications must feature-detect WebGPU and provide their own fallback UI. |
@@ -48,6 +48,14 @@ configurations use required evidence mode by default and fail if
 `navigator.gpu` or adapter acquisition is unavailable. Their presence does not
 claim that either branded run has passed or change any support tier in this
 matrix.
+
+`npm run test:browser:firefox-preflight` selects Playwright's patched Firefox
+with default preferences and no Chromium launch flags. The hosted lane sets
+`FORGE3D_HEADED=1` and `FORGE3D_WEBGPU_REQUIRED=1`, so missing WebGPU or adapter
+acquisition fails instead of turning required render behavior into a skip. It
+also sets `FORGE3D_SOURCE_BENCHMARK_MODE=probe`, keeping the resulting artifact
+at `ENGINE_PASS` rather than branded, physical, exact-tarball, or
+release-support evidence. The Firefox row remains `Unsupported`.
 
 ## Required Release Lane
 

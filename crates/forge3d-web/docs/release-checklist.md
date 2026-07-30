@@ -105,6 +105,16 @@ flags. Their normal configurations use required evidence mode and fail when
 `navigator.gpu` or adapter acquisition is unavailable. The required branded
 source execution runs all 600 measured samples and rejects fallback adapters;
 these command definitions do not claim that either branded run has passed.
+The hosted source-browser job separately runs
+`test:browser:firefox-preflight` in Playwright's patched Firefox with default
+preferences and no Chromium launch flags. Both its diagnostics probe and full
+suite run headed with `FORGE3D_HEADED=1`, set `FORGE3D_WEBGPU_REQUIRED=1`, and
+`FORGE3D_SOURCE_BENCHMARK_MODE=probe`: required render behavior fails when
+WebGPU or adapter acquisition is unavailable, while performance remains probe
+evidence. CI uploads that record immediately under a Firefox-preflight,
+`ENGINE_PASS`, default-preferences artifact name. It is not branded Firefox,
+physical-browser, exact npm-tarball, or release-support evidence and does not
+change Firefox's `Unsupported` support status.
 Release browser evidence must validate against
 `tests/browser/browser-evidence.schema.json`; a required lane may not pass with
 an unavailable adapter, a probe-only result, or a source-WASM digest in place

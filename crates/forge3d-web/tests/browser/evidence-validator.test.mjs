@@ -18,6 +18,169 @@ test("validates a complete record and recomputes index-569 p95/FPS", () => {
   );
 });
 
+test("keeps optional Firefox classification fields backward-compatible", () => {
+  const record = makeRecord();
+  assert.equal("supportLevel" in record, false);
+  assert.equal("browserPreference" in record, false);
+  assert.equal(validateBrowserEvidence(record), record);
+});
+
+test("rejects null browser preference override scalars", () => {
+  const record = makeRecord();
+  record.supportLevel = "NOT_PROVEN";
+  record.browserPreference = {
+    mode: "override",
+    overrides: {
+      "dom.webgpu.enabled": null,
+    },
+  };
+  assert.throws(
+    () => validateBrowserEvidence(record),
+    /expected type string\|number\|boolean/,
+  );
+});
+
+for (const project of [
+  "firefox-preflight",
+  "firefox-nightly-experimental",
+]) {
+  test(`validates exact ${project} source-browser classification`, () => {
+    const record = makeFirefoxRecord(project);
+    assert.equal(validateFirefoxRecord(record), record);
+  });
+}
+
+for (const [name, project, mutate] of [
+  [
+    "missing preflight support level",
+    "firefox-preflight",
+    (record) => {
+      delete record.supportLevel;
+    },
+  ],
+  [
+    "missing preflight preference label",
+    "firefox-preflight",
+    (record) => {
+      delete record.browserPreference;
+    },
+  ],
+  [
+    "preflight branded support level",
+    "firefox-preflight",
+    (record) => {
+      record.supportLevel = "BRANDED_PASS";
+    },
+  ],
+  [
+    "preflight exact-tarball artifact",
+    "firefox-preflight",
+    (record) => {
+      record.artifact.kind = "npm-tarball";
+    },
+  ],
+  [
+    "preflight PASS result",
+    "firefox-preflight",
+    (record) => {
+      record.runtimeResult = "PASS";
+    },
+  ],
+  [
+    "preflight override mode",
+    "firefox-preflight",
+    (record) => {
+      record.browserPreference.mode = "override";
+    },
+  ],
+  [
+    "preflight preference override",
+    "firefox-preflight",
+    (record) => {
+      record.browserPreference.overrides["dom.webgpu.enabled"] = true;
+    },
+  ],
+  [
+    "experimental engine support level",
+    "firefox-nightly-experimental",
+    (record) => {
+      record.supportLevel = "ENGINE_PASS";
+    },
+  ],
+  [
+    "experimental exact-tarball artifact",
+    "firefox-nightly-experimental",
+    (record) => {
+      record.artifact.kind = "npm-tarball";
+    },
+  ],
+  [
+    "experimental PASS result",
+    "firefox-nightly-experimental",
+    (record) => {
+      record.runtimeResult = "PASS";
+    },
+  ],
+  [
+    "experimental default mode",
+    "firefox-nightly-experimental",
+    (record) => {
+      record.browserPreference.mode = "default";
+    },
+  ],
+  [
+    "experimental missing WebGPU override",
+    "firefox-nightly-experimental",
+    (record) => {
+      record.browserPreference.overrides = {};
+    },
+  ],
+  [
+    "experimental false WebGPU override",
+    "firefox-nightly-experimental",
+    (record) => {
+      record.browserPreference.overrides["dom.webgpu.enabled"] = false;
+    },
+  ],
+  [
+    "experimental extra preference override",
+    "firefox-nightly-experimental",
+    (record) => {
+      record.browserPreference.overrides["some.other.preference"] = true;
+    },
+  ],
+  [
+    "Firefox project with Chromium identity",
+    "firefox-preflight",
+    (record) => {
+      record.browser.name = "chromium";
+    },
+  ],
+  [
+    "Firefox project with branded channel",
+    "firefox-preflight",
+    (record) => {
+      record.browser.channel = "firefox";
+    },
+  ],
+  [
+    "Firefox project with required lane",
+    "firefox-preflight",
+    (record) => {
+      record.lane = "required";
+    },
+  ],
+]) {
+  test(`rejects ${name}`, () => {
+    const record = makeFirefoxRecord(project);
+    mutate(record);
+    assert.throws(
+      () => validateFirefoxRecord(record),
+      /Firefox source-browser evidence classification is missing or inconsistent/,
+    );
+  });
+}
+
 test("retains a 500-ms stall in duration and raw intervals", () => {
   const record = makeRecord({ stallIndex: 300 });
   assert.equal(record.benchmark.rafIntervalsMs[300], 500);
@@ -173,6 +336,41 @@ for (const interaction of [
       () => validateBrowserEvidence(failed),
       /requires successful/,
     );
+  });
+}
+
+function makeFirefoxRecord(project) {
+  const record = makeRecord();
+  record.artifact.kind = "wasm-module";
+  record.project = project;
+  record.lane = "probe";
+  record.browser.name = "firefox";
+  record.browser.channel = "playwright";
+  record.runtimeResult = "PROBE";
+  record.benchmark = null;
+
+  if (project === "firefox-preflight") {
+    record.supportLevel = "ENGINE_PASS";
+    record.browserPreference = {
+      mode: "default",
+      overrides: {},
+    };
+  } else {
+    record.supportLevel = "NOT_PROVEN";
+    record.browserPreference = {
+      mode: "override",
+      overrides: {
+        "dom.webgpu.enabled": true,
+      },
+    };
+  }
+  return record;
+}
+
+function validateFirefoxRecord(record) {
+  return validateBrowserEvidence(record, {
+    requireBenchmark: false,
+    requireReleaseArtifact: false,
   });
 }
 

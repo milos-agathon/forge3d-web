@@ -66,7 +66,8 @@
     "test:browser": "playwright test --project=chromium-preflight",
     "test:browser:chromium": "playwright test --project=chromium-preflight",
     "test:browser:chrome": "playwright test --project=chrome-stable",
-    "test:browser:edge": "playwright test --project=edge-stable"
+    "test:browser:edge": "playwright test --project=edge-stable",
+    "test:browser:firefox-preflight": "playwright test --project=firefox-preflight"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",

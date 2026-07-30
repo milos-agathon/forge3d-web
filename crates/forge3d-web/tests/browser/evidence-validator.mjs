@@ -18,6 +18,18 @@ const REQUIRED_INTERACTIONS = [
   "resize",
   "disposal",
 ];
+const FIREFOX_SOURCE_CLASSIFICATIONS = {
+  "firefox-preflight": {
+    supportLevel: "ENGINE_PASS",
+    preferenceMode: "default",
+    preferenceOverrides: {},
+  },
+  "firefox-nightly-experimental": {
+    supportLevel: "NOT_PROVEN",
+    preferenceMode: "override",
+    preferenceOverrides: { "dom.webgpu.enabled": true },
+  },
+};
 
 export function validateBrowserEvidence(
   record,
@@ -27,6 +39,7 @@ export function validateBrowserEvidence(
   } = {},
 ) {
   assertJsonSchema(record, browserEvidenceSchema);
+  validateFirefoxSourceClassification(record);
 
   if (requireReleaseArtifact && record.artifact.kind !== "npm-tarball") {
     throw new Error(
@@ -71,6 +84,45 @@ export function validateBrowserEvidence(
     validateBenchmark(record.benchmark);
   }
   return record;
+}
+
+function validateFirefoxSourceClassification(record) {
+  if (!Object.hasOwn(FIREFOX_SOURCE_CLASSIFICATIONS, record.project)) return;
+  const expected = FIREFOX_SOURCE_CLASSIFICATIONS[record.project];
+
+  if (
+    record.artifact.kind !== "wasm-module" ||
+    record.runtimeResult !== "PROBE" ||
+    record.browser.name !== "firefox" ||
+    record.browser.channel !== "playwright" ||
+    record.lane !== "probe" ||
+    record.supportLevel !== expected.supportLevel ||
+    record.browserPreference?.mode !== expected.preferenceMode ||
+    !sameScalarRecord(
+      record.browserPreference?.overrides,
+      expected.preferenceOverrides,
+    )
+  ) {
+    throw new Error(
+      `${record.project} Firefox source-browser evidence classification is missing or inconsistent`,
+    );
+  }
+}
+
+function sameScalarRecord(candidate, expected) {
+  if (
+    candidate === null ||
+    typeof candidate !== "object" ||
+    Array.isArray(candidate)
+  ) {
+    return false;
+  }
+  const candidateKeys = Object.keys(candidate);
+  const expectedKeys = Object.keys(expected);
+  return (
+    candidateKeys.length === expectedKeys.length &&
+    expectedKeys.every((key) => candidate[key] === expected[key])
+  );
 }
 
 export function deriveBenchmarkTiming(
