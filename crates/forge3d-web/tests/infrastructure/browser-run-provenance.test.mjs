@@ -11,7 +11,9 @@ import test from "node:test";
 
 import {
   installedPackageVersion,
+  isPlaywrightSourceLaunchObservationConsistent,
   observeChromiumLaunch,
+  observePlaywrightSourceLaunch,
   resolveInstalledAppiumDriverVersion,
   splitObservedCommandLine,
 } from "../../scripts/browser-launch-provenance.mjs";
@@ -71,6 +73,63 @@ test("Chromium provenance comes from the live CDP browser command line", async (
   assert.equal(result.browserProcessId, 4312);
   assert.equal(result.launchArgumentsObserved, true);
   assert.equal(detached, true);
+});
+
+test("WebKit source configuration never enters Chromium CDP or process observation", async () => {
+  let cdpCalls = 0;
+  const observation = await observePlaywrightSourceLaunch(
+    {
+      newBrowserCDPSession: async () => {
+        cdpCalls += 1;
+        throw new Error("WebKit must not request a Chromium CDP session");
+      },
+    },
+    {
+      project: "webkit-preflight",
+      browserName: "webkit",
+      channel: "playwright",
+      lane: "preflight",
+      launchObservation: "project-configuration",
+      webgpuRequired: true,
+      launchArgs: [],
+    },
+  );
+
+  assert.equal(cdpCalls, 0);
+  assert.deepEqual(observation, {
+    effectiveLaunchArguments: [],
+    launchArgumentsObserved: false,
+    launchArgumentSource: "playwright-project-configuration",
+    browserProcessId: null,
+  });
+  assert.equal(
+    isPlaywrightSourceLaunchObservationConsistent(
+      {
+        launchObservation: "project-configuration",
+        launchArgs: [],
+      },
+      observation,
+    ),
+    true,
+  );
+});
+
+test("Chromium source observation rejects a fabricated non-live source", () => {
+  assert.equal(
+    isPlaywrightSourceLaunchObservationConsistent(
+      {
+        launchObservation: "chromium-live",
+        launchArgs: ["--enable-unsafe-webgpu"],
+      },
+      {
+        effectiveLaunchArguments: ["--enable-unsafe-webgpu"],
+        launchArgumentsObserved: true,
+        launchArgumentSource: "playwright-project-configuration",
+        browserProcessId: null,
+      },
+    ),
+    false,
+  );
 });
 
 test("Chromium provenance falls back to the exact live process arguments when CDP denies command-line access", async () => {

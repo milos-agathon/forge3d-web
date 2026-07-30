@@ -62,6 +62,12 @@ configurations; they fail when `navigator.gpu` or adapter acquisition is
 unavailable. These configurations do not claim that either branded lane has
 passed or change the current support tiers.
 
+`npm run test:browser:webkit` selects the bundled Playwright WebKit engine with
+no Chromium launch arguments. Hosted CI runs it only as a non-blocking macOS
+engine preflight and uploads an `ENGINE_PASS` artifact only after the complete
+suite succeeds. Playwright WebKit is not shipping Safari: this preflight cannot
+establish Safari support, and Safari remains unsupported/`NOT_PROVEN`.
+
 See `docs/support-matrix.md` for the browser support matrix, unsupported surfaces, and release-lane requirements.
 
 ## MIME, CORS, And Range Requirements

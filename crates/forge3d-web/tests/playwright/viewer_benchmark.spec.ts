@@ -16,9 +16,12 @@ import {
   preflightLaunchIdentityConsistent,
   resolveSourceBenchmarkEvidenceMode,
 } from "../browser/playwright-project-metadata";
+import {
+  observeSourceBrowserLaunch,
+  sourceLaunchObservationConsistent,
+} from "../browser/source-launch-observation";
 import { validateBrowserEvidence } from "../browser/evidence-validator.mjs";
 import { runViewerBenchmark } from "../browser/viewer-benchmark";
-import { observeChromiumLaunch } from "../../scripts/browser-launch-provenance.mjs";
 
 test("validates complete evidence from the frozen real-GPU benchmark", async ({
   browser,
@@ -32,7 +35,7 @@ test("validates complete evidence from the frozen real-GPU benchmark", async ({
     project,
     process.env.FORGE3D_SOURCE_BENCHMARK_MODE,
   );
-  const launch = await observeChromiumLaunch(browser);
+  const launch = await observeSourceBrowserLaunch(browser, project);
   const configuredLaunchArguments = [...project.launchArgs];
   const effectiveLaunchArguments = [
     ...launch.effectiveLaunchArguments,
@@ -55,6 +58,7 @@ test("validates complete evidence from the frozen real-GPU benchmark", async ({
     effectiveLaunchFlagsPresent:
       launchFlagsPresent(effectiveLaunchArguments),
     configuredArgumentsObserved:
+      launch.launchArgumentsObserved &&
       configuredLaunchArgumentsObserved(
         configuredLaunchArguments,
         effectiveLaunchArguments,
@@ -65,16 +69,23 @@ test("validates complete evidence from the frozen real-GPU benchmark", async ({
         configuredLaunchArguments,
         effectiveLaunchArguments,
       ),
+    sourceObservationConsistent:
+      sourceLaunchObservationConsistent(project, launch),
   };
   await testInfo.attach("forge3d-source-launch-diagnostics.json", {
     body: JSON.stringify(launchDiagnostics, null, 2),
     contentType: "application/json",
   });
-  expect(launchDiagnostics.launchArgumentsObserved).toBe(true);
-  expect(launchDiagnostics.configuredArgumentsObserved).toBe(true);
+  expect(launchDiagnostics.configuredArgumentsObserved).toBe(
+    project.launchObservation === "chromium-live",
+  );
   expect(
     launchDiagnostics.preflightIdentityConsistent,
     "source evidence with WebGPU-enabling flags must identify chromium-preflight",
+  ).toBe(true);
+  expect(
+    launchDiagnostics.sourceObservationConsistent,
+    "source launch observation must match the executing project's declared proof mode",
   ).toBe(true);
   const adapter = await readAdapterEvidence(page);
   if (evidenceMode === "required") {

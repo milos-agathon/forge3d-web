@@ -31,7 +31,7 @@ function verifyHostedChromiumPreflightContract(text) {
   const browserCommands = text
     .split(/\r?\n/u)
     .map((line) => line.trim())
-    .filter((line) => /\bnpm run test:browser(?:\b|:)/u.test(line));
+    .filter((line) => /\bnpm run test:browser:chromium\b/u.test(line));
   assert.deepEqual(
     browserCommands,
     [
@@ -94,11 +94,15 @@ test("web workflow exposes exactly the two immutable required checks", () => {
   const contract = verifyWebWorkflowContract();
   assert.deepEqual(contract.triggers, ["pull_request", "push"]);
   assert.deepEqual(
-    contract.jobs.map((job) => job.name).sort(),
+    contract.requiredChecks.map((job) => job.name).sort(),
     [
       "Web Runtime / Browser Preflight",
       "Web Runtime / Build And Contract Tests",
     ],
+  );
+  assert.deepEqual(
+    contract.nonBlockingChecks.map((job) => job.name),
+    ["Web Runtime / Playwright WebKit Engine Preflight"],
   );
 });
 
@@ -140,6 +144,94 @@ test("hosted source-browser workflow rejects generic invocation and flagged Chro
         ),
       ),
     /Bundled Playwright Chromium|branded Chrome or Edge as using preflight flags/u,
+  );
+});
+
+test("Playwright WebKit engine preflight is the only non-blocking web job", () => {
+  const contract = verifyWebWorkflowContract();
+  assert.deepEqual(
+    contract.jobs.map(({ id, continueOnError }) => [
+      id,
+      continueOnError === true,
+    ]),
+    [
+      ["build-and-contract", false],
+      ["browser-preflight", false],
+      ["webkit-engine-preflight", true],
+    ],
+  );
+});
+
+test("Playwright WebKit engine preflight rejects blocking or wrong-host execution", () => {
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace("    continue-on-error: true\n", ""),
+      ),
+    /continue-on-error: true/u,
+  );
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace(
+          "    runs-on: macos-latest\n    continue-on-error: true",
+          "    runs-on: windows-latest\n    continue-on-error: true",
+        ),
+      ),
+    /must run on macos-latest/u,
+  );
+});
+
+test("Playwright WebKit engine preflight rejects the wrong project or engine wording", () => {
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace(
+          "run: npm run test:browser:webkit",
+          "run: npm run test:browser:chromium",
+        ),
+      ),
+    /test:browser:webkit/u,
+  );
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replaceAll("Playwright WebKit", "WebKit"),
+      ),
+    /display name must remain immutable|Playwright WebKit/u,
+  );
+});
+
+test("Playwright WebKit engine preflight rejects Chromium flags and support claims", () => {
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace(
+          "        run: npm run test:browser:webkit",
+          "        run: npm run test:browser:webkit -- --enable-unsafe-webgpu",
+        ),
+      ),
+    /test:browser:webkit|Chromium launch flags/u,
+  );
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace(
+          "      - name: Run Playwright WebKit engine preflight",
+          "      - name: Run Playwright WebKit engine preflight for Safari BRANDED_PASS",
+        ),
+      ),
+    /Safari or branded evidence/u,
+  );
+});
+
+test("Playwright WebKit ENGINE_PASS artifact uploads only after success", () => {
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace("        if: success()\n", ""),
+      ),
+    /if: success\(\)/u,
   );
 });
 

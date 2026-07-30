@@ -62,6 +62,69 @@ export async function observeChromiumLaunch(
   }
 }
 
+export async function observePlaywrightSourceLaunch(
+  browser,
+  project,
+  {
+    observeChromium = observeChromiumLaunch,
+  } = {},
+) {
+  if (project.launchObservation === "chromium-live") {
+    return observeChromium(browser);
+  }
+  if (project.launchObservation !== "project-configuration") {
+    throw new Error(
+      `unsupported source launch observation mode: ${project.launchObservation}`,
+    );
+  }
+  if (
+    !Array.isArray(project.launchArgs) ||
+    project.launchArgs.length !== 0
+  ) {
+    throw new Error(
+      `${project.project} configuration-only launch proof requires zero launch arguments`,
+    );
+  }
+  return {
+    effectiveLaunchArguments: [],
+    launchArgumentsObserved: false,
+    launchArgumentSource: "playwright-project-configuration",
+    browserProcessId: null,
+  };
+}
+
+export function isPlaywrightSourceLaunchObservationConsistent(
+  project,
+  observation,
+  platform = process.platform,
+) {
+  if (observation === undefined) {
+    return false;
+  }
+  if (project.launchObservation === "chromium-live") {
+    return (
+      observation.launchArgumentsObserved === true &&
+      Array.isArray(observation.effectiveLaunchArguments) &&
+      observation.effectiveLaunchArguments.length > 0 &&
+      isLiveChromiumLaunchArgumentSource(
+        observation.launchArgumentSource,
+        platform,
+      )
+    );
+  }
+  return (
+    project.launchObservation === "project-configuration" &&
+    Array.isArray(project.launchArgs) &&
+    project.launchArgs.length === 0 &&
+    observation.launchArgumentsObserved === false &&
+    observation.launchArgumentSource ===
+      "playwright-project-configuration" &&
+    observation.browserProcessId === null &&
+    Array.isArray(observation.effectiveLaunchArguments) &&
+    observation.effectiveLaunchArguments.length === 0
+  );
+}
+
 export function isLiveChromiumLaunchArgumentSource(
   source,
   platform = process.platform,

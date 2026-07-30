@@ -10,12 +10,17 @@ declare global {
       disposedCode?: string;
       width: number;
       height: number;
+      beforeLumaRange: number;
+      afterLumaRange: number;
+      visiblePixels: number;
+      changedPixels: number;
+      comparedPixels: number;
     }>;
   }
 }
 
-test("captures a PNG Blob screenshot and rejects after dispose", async ({
-  page
+test("captures visible changing PNG pixels and rejects after dispose", async ({
+  page,
 }) => {
   await page.goto("/examples/test-screenshot.html");
 
@@ -28,4 +33,9 @@ test("captures a PNG Blob screenshot and rejects after dispose", async ({
   expect(result.disposedCode).toBe("RUNTIME_DISPOSED");
   expect(result.width).toBe(77);
   expect(result.height).toBe(53);
+  expect(result.visiblePixels).toBeGreaterThan(3_000);
+  expect(result.beforeLumaRange).toBeGreaterThan(20);
+  expect(result.afterLumaRange).toBeGreaterThan(20);
+  expect(result.comparedPixels).toBe(77 * 53);
+  expect(result.changedPixels).toBeGreaterThan(100);
 });

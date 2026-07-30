@@ -4,10 +4,15 @@ import {
 } from "./evidence-mode";
 
 export interface Forge3DBrowserProjectMetadata {
-  project: "chromium-preflight" | "chrome-stable" | "edge-stable";
-  browserName: "chromium" | "chrome" | "edge";
+  project:
+    | "chromium-preflight"
+    | "chrome-stable"
+    | "edge-stable"
+    | "webkit-preflight";
+  browserName: "chromium" | "chrome" | "edge" | "webkit";
   channel: "playwright" | "chrome" | "msedge";
   lane: "preflight" | "branded";
+  launchObservation: "chromium-live" | "project-configuration";
   webgpuRequired: boolean;
   launchArgs: string[];
 }
@@ -35,10 +40,20 @@ export function readForge3DBrowserProjectMetadata(
       "chromium-preflight",
       "chrome-stable",
       "edge-stable",
+      "webkit-preflight",
     ]) ||
-    !isOneOf(candidate.browserName, ["chromium", "chrome", "edge"]) ||
+    !isOneOf(candidate.browserName, [
+      "chromium",
+      "chrome",
+      "edge",
+      "webkit",
+    ]) ||
     !isOneOf(candidate.channel, ["playwright", "chrome", "msedge"]) ||
     !isOneOf(candidate.lane, ["preflight", "branded"]) ||
+    !isOneOf(candidate.launchObservation, [
+      "chromium-live",
+      "project-configuration",
+    ]) ||
     typeof candidate.webgpuRequired !== "boolean" ||
     !Array.isArray(candidate.launchArgs) ||
     candidate.launchArgs.some((argument) => typeof argument !== "string")
@@ -51,22 +66,34 @@ export function readForge3DBrowserProjectMetadata(
       browserName: "chromium",
       channel: "playwright",
       lane: "preflight",
+      launchObservation: "chromium-live",
     },
     "chrome-stable": {
       browserName: "chrome",
       channel: "chrome",
       lane: "branded",
+      launchObservation: "chromium-live",
     },
     "edge-stable": {
       browserName: "edge",
       channel: "msedge",
       lane: "branded",
+      launchObservation: "chromium-live",
+    },
+    "webkit-preflight": {
+      browserName: "webkit",
+      channel: "playwright",
+      lane: "preflight",
+      launchObservation: "project-configuration",
     },
   }[candidate.project];
   if (
     candidate.browserName !== expected.browserName ||
     candidate.channel !== expected.channel ||
-    candidate.lane !== expected.lane
+    candidate.lane !== expected.lane ||
+    candidate.launchObservation !== expected.launchObservation ||
+    (candidate.project === "webkit-preflight" &&
+      candidate.launchArgs.length !== 0)
   ) {
     throw new Error(
       "Playwright forge3dBrowser project identity is inconsistent",
@@ -77,6 +104,7 @@ export function readForge3DBrowserProjectMetadata(
     browserName: candidate.browserName,
     channel: candidate.channel,
     lane: candidate.lane,
+    launchObservation: candidate.launchObservation,
     webgpuRequired: candidate.webgpuRequired,
     launchArgs: [...candidate.launchArgs],
   };
