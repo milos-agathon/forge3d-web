@@ -59,11 +59,7 @@ on:
       canaryMode:
         description: Infrastructure canary mode only
         required: false
-        type: choice
-        options:
-          - ""
-          - host
-          - manual
+        type: string
       intakeReleaseId:
         description: Exact draft manual-evidence intake release ID
         required: false
@@ -582,7 +578,6 @@ jobs:
       group: forge3d-browser-host-${{ needs.promote-hardware.outputs.host_id }}
       cancel-in-progress: false
     env:
-      FORGE3D_CONTROLLER_JOB_ROOT: ${{ runner.temp }}/forge3d-controller-job
       FORGE3D_CLOUDFLARED_TOKEN: ${{ secrets[needs.promote-hardware.outputs.tunnel_secret_name] }}
     permissions:
       actions: read
@@ -597,7 +592,9 @@ jobs:
         shell: bash
         run: |
           test ! -d .git
-          mkdir -p "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence"
+          job_root="${RUNNER_TEMP}/forge3d-controller-job"
+          printf 'FORGE3D_CONTROLLER_JOB_ROOT=%s\n' "${job_root}" >> "${GITHUB_ENV}"
+          mkdir -p "${job_root}/evidence"
 
       - name: Independently resolve and verify exact runner authorization
         shell: bash

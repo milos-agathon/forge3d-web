@@ -39,6 +39,8 @@ test("hardware workflow is manual-only with closed inputs and protected main gua
   ]) {
     assert.match(workflow, new RegExp(`      ${input}:`, "u"));
   }
+  assert.match(workflow, /canaryMode:\n        description: [^\n]+\n        required: false\n        type: string/u);
+  assert.equal(workflow.includes('          - ""'), false);
 });
 
 test("only observer and hosted finalizers receive trust secrets", () => {
@@ -109,6 +111,16 @@ test("hardware routes only on three derived labels, serializes by host, and has 
   );
   assert.match(hardware, /cancel-in-progress: false/u);
   assert.match(hardware, /environment: forge3d-browser-lab/u);
+  assert.equal(
+    hardware.includes(
+      "FORGE3D_CONTROLLER_JOB_ROOT: ${{ runner.temp }}/forge3d-controller-job",
+    ),
+    false,
+  );
+  assert.match(
+    hardware,
+    /printf 'FORGE3D_CONTROLLER_JOB_ROOT=%s\\n' "\$\{job_root\}" >> "\$\{GITHUB_ENV\}"/u,
+  );
   assert.match(
     hardware,
     /timeout-minutes: \$\{\{ \(contains\(inputs\.lane, 'manual-'\) \|\| inputs\.canaryMode == 'manual'\) && 45 \|\| 30 \}\}/u,
