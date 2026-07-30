@@ -65,10 +65,10 @@ passed or change the current support tiers.
 `npm run test:browser:firefox-preflight` selects Playwright's patched Firefox
 build with default preferences and no Chromium launch flags. CI requires
 WebGPU for that project and runs the complete source-browser suite in headed
-mode, but records the source benchmark as a probe. Its separately labelled
-artifact can establish at most `ENGINE_PASS`; it is not branded Firefox,
-physical-browser, or exact npm-tarball evidence and does not promote Firefox
-from `Unsupported`.
+mode on a GitHub-hosted Apple-Silicon runner, but records the source benchmark
+as a probe. Its separately labelled artifact can establish at most
+`ENGINE_PASS`; it is not branded Firefox, physical-browser, or exact
+npm-tarball evidence and does not promote Firefox from `Unsupported`.
 
 See `docs/support-matrix.md` for the browser support matrix, unsupported surfaces, and release-lane requirements.
 

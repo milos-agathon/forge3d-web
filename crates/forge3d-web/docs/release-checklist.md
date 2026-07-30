@@ -105,7 +105,7 @@ flags. Their normal configurations use required evidence mode and fail when
 `navigator.gpu` or adapter acquisition is unavailable. The required branded
 source execution runs all 600 measured samples and rejects fallback adapters;
 these command definitions do not claim that either branded run has passed.
-The hosted source-browser job separately runs
+The GitHub-hosted Apple-Silicon source-browser job separately runs
 `test:browser:firefox-preflight` in Playwright's patched Firefox with default
 preferences and no Chromium launch flags. Both its diagnostics probe and full
 suite run headed with `FORGE3D_HEADED=1`, set `FORGE3D_WEBGPU_REQUIRED=1`, and

@@ -37,7 +37,38 @@ function workflowStep(text, name) {
   )?.[0];
 }
 
+function workflowJob(text, jobId) {
+  const marker = `  ${jobId}:\n`;
+  const start = text.indexOf(marker);
+  if (start === -1) {
+    return undefined;
+  }
+  const remainderStart = start + marker.length;
+  const remainder = text.slice(remainderStart);
+  const nextJob = remainder.search(/^  [A-Za-z0-9_-]+:\s*$/mu);
+  return nextJob === -1
+    ? text.slice(start)
+    : text.slice(start, remainderStart + nextJob);
+}
+
 function verifyHostedEnginePreflightContract(text) {
+  const browserPreflight = workflowJob(text, "browser-preflight");
+  assert.ok(browserPreflight, "hosted workflow must define browser-preflight");
+  assert.equal(
+    browserPreflight.includes("$env:"),
+    false,
+    "macOS browser-preflight must not use PowerShell $env: syntax",
+  );
+  for (const expected of [
+    'echo "FORGE3D_WEBGPU_REQUIRED=$FORGE3D_WEBGPU_REQUIRED"',
+    'echo "FORGE3D_SOURCE_BENCHMARK_MODE=$FORGE3D_SOURCE_BENCHMARK_MODE"',
+  ]) {
+    assert.ok(
+      browserPreflight.includes(expected),
+      `macOS browser-preflight diagnostics must include ${expected}`,
+    );
+  }
+
   const browserCommands = text
     .split(/\r?\n/u)
     .map((line) => line.trim())
@@ -208,6 +239,17 @@ test("web workflow exposes exactly the two immutable required checks", () => {
   );
 });
 
+test("web workflow pins the package job to Windows and source-browser preflight to macOS 15", () => {
+  const contract = verifyWebWorkflowContract();
+  assert.deepEqual(
+    Object.fromEntries(contract.jobs.map((job) => [job.id, job.runsOn])),
+    {
+      "build-and-contract": "windows-latest",
+      "browser-preflight": "macos-15",
+    },
+  );
+});
+
 test("web workflow keeps privileged triggers and self-hosted routing out", () => {
   for (const forbidden of [
     "workflow_dispatch",
@@ -246,6 +288,24 @@ test("hosted source-browser workflow rejects generic invocation and flagged Chro
         ),
       ),
     /Bundled Playwright Chromium|branded Chrome or Edge as using preflight flags/u,
+  );
+});
+
+test("macOS source-browser diagnostics reject stale PowerShell environment syntax", () => {
+  const browserPreflight = workflowJob(workflowText, "browser-preflight");
+  assert.ok(browserPreflight);
+  assert.throws(
+    () =>
+      verifyHostedEnginePreflightContract(
+        workflowText.replace(
+          browserPreflight,
+          browserPreflight.replace(
+            "$FORGE3D_WEBGPU_REQUIRED",
+            "$env:FORGE3D_WEBGPU_REQUIRED",
+          ),
+        ),
+      ),
+    /must not use PowerShell \$env: syntax/u,
   );
 });
 
@@ -359,7 +419,7 @@ test("hosted exact-tarball probe rejects an implicit or branded channel", () => 
   );
 });
 
-test("web workflow verifier rejects renamed, duplicate, missing, and self-hosted checks", () => {
+test("web workflow verifier rejects renamed, duplicate, missing, and runner mutations", () => {
   assert.throws(
     () =>
       verifyWebWorkflowContract(
@@ -392,7 +452,21 @@ test("web workflow verifier rejects renamed, duplicate, missing, and self-hosted
       verifyWebWorkflowContract(
         workflowText.replace("runs-on: windows-latest", "runs-on: self-hosted"),
       ),
-    /GitHub-hosted/u,
+    /build-and-contract runner must remain windows-latest/u,
+  );
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace("runs-on: macos-15", "runs-on: windows-latest"),
+      ),
+    /browser-preflight runner must remain macos-15/u,
+  );
+  assert.throws(
+    () =>
+      verifyWebWorkflowContract(
+        workflowText.replace("runs-on: macos-15", "runs-on: self-hosted"),
+      ),
+    /browser-preflight runner must remain macos-15/u,
   );
 });
 

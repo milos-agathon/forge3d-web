@@ -99,7 +99,7 @@ jobs:
   browser-preflight:
     name: Web Runtime / Browser Preflight
     needs: build-and-contract
-    runs-on: windows-latest
+    runs-on: macos-15
     timeout-minutes: 25
 
     steps:
@@ -135,7 +135,7 @@ jobs:
         env:
           FORGE3D_WEBGPU_REQUIRED: "1"
         run: |
-          echo "FORGE3D_WEBGPU_REQUIRED=$env:FORGE3D_WEBGPU_REQUIRED"
+          echo "FORGE3D_WEBGPU_REQUIRED=$FORGE3D_WEBGPU_REQUIRED"
           echo "Bundled Playwright Chromium is a flagged preflight that can produce ENGINE_PASS-only evidence"
           echo "It is not branded Chrome or Edge support evidence"
           echo "Playwright tests evaluate navigator.gpu before render assertions"
@@ -163,8 +163,8 @@ jobs:
           FORGE3D_WEBGPU_REQUIRED: "1"
           FORGE3D_SOURCE_BENCHMARK_MODE: probe
         run: |
-          echo "FORGE3D_WEBGPU_REQUIRED=$env:FORGE3D_WEBGPU_REQUIRED"
-          echo "FORGE3D_SOURCE_BENCHMARK_MODE=$env:FORGE3D_SOURCE_BENCHMARK_MODE"
+          echo "FORGE3D_WEBGPU_REQUIRED=$FORGE3D_WEBGPU_REQUIRED"
+          echo "FORGE3D_SOURCE_BENCHMARK_MODE=$FORGE3D_SOURCE_BENCHMARK_MODE"
           echo "Bundled Playwright Firefox runs with default preferences and can produce ENGINE_PASS-only evidence"
           echo "It is not branded Firefox, physical-browser, or exact-tarball support evidence"
           npm run test:browser:firefox-preflight -- --grep "reports browser WebGPU diagnostics"

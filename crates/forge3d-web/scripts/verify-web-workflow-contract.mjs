@@ -12,6 +12,7 @@ const requiredJobs = new Map([
     {
       name: "Web Runtime / Build And Contract Tests",
       needs: null,
+      runsOn: "windows-latest",
     },
   ],
   [
@@ -19,6 +20,7 @@ const requiredJobs = new Map([
     {
       name: "Web Runtime / Browser Preflight",
       needs: "build-and-contract",
+      runsOn: "macos-15",
     },
   ],
 ]);
@@ -62,8 +64,10 @@ export function verifyWebWorkflowContract(
       throw new Error(`duplicate job display name: ${job.name}`);
     }
     displayNames.add(job.name);
-    if (!/^(?:ubuntu|windows|macos)-latest$/u.test(job.runsOn ?? "")) {
-      throw new Error(`${jobId} must use a GitHub-hosted latest runner`);
+    if (job.runsOn !== expected.runsOn) {
+      throw new Error(
+        `${jobId} runner must remain ${expected.runsOn}, got ${job.runsOn ?? "absent"}`,
+      );
     }
     if ((job.needs ?? null) !== expected.needs) {
       throw new Error(
