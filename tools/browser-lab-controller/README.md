@@ -60,8 +60,10 @@ handshake as cleaned up.
 
 Provisioning must install all three Unix bridge files as root-owned, non-writable
 artifacts and grant `forge3d-lab-controller` passwordless access only to the
-fixed bridge path, including its fixed launch and `--stop` contracts. Linux
-cannot set `NoNewPrivileges=true` because that would disable the narrowly
+fixed bridge path, including its fixed launch and `--stop` contracts. The
+repository sudoers sources are `0644` because Git cannot represent `0440`;
+provisioning must install them root-owned at `0440` before enabling the service.
+Linux cannot set `NoNewPrivileges=true` because that would disable the narrowly
 configured sudo transition. The checked
 `browser-lab-controller.sudoers-linux` and
 `browser-lab-controller.sudoers-macos` files are the complete allowed sudo

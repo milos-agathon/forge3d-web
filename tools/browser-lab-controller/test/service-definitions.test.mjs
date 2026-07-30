@@ -6,6 +6,7 @@ import test from "node:test";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const repositoryRoot = join(root, "..", "..");
 
 test("every installed service launches polling orchestration, not health-only mode", () => {
   for (const name of [
@@ -28,6 +29,10 @@ test("every installed service launches polling orchestration, not health-only mo
 });
 
 test("Windows service delegates runner launch to the pinned physical-console bridge", () => {
+  const attributes = readFileSync(
+    join(repositoryRoot, ".gitattributes"),
+    "utf8",
+  );
   const service = readFileSync(
     join(root, "services", "forge3d-browser-lab-controller.xml"),
     "utf8",
@@ -37,6 +42,10 @@ test("Windows service delegates runner launch to the pinned physical-console bri
     "utf8",
   );
   const digest = createHash("sha256").update(bridge).digest("hex");
+  assert.match(
+    attributes,
+    /tools\/browser-lab-controller\/services\/\*\.ps1 text eol=lf/u,
+  );
   assert.match(service, /FORGE3D_CONTROLLER_WINDOWS_SESSION_BRIDGE/u);
   assert.match(service, /<username>LocalSystem<\/username>/u);
   assert.match(
@@ -67,6 +76,10 @@ test("Windows service delegates runner launch to the pinned physical-console bri
 });
 
 test("macOS and Linux services delegate to the pinned graphical-login bridge", () => {
+  const attributes = readFileSync(
+    join(repositoryRoot, ".gitattributes"),
+    "utf8",
+  );
   const linux = readFileSync(
     join(root, "services", "browser-lab-controller.service"),
     "utf8",
@@ -100,6 +113,10 @@ test("macOS and Linux services delegate to the pinned graphical-login bridge", (
   const transientPathsDigest = createHash("sha256")
     .update(transientPaths)
     .digest("hex");
+  assert.match(
+    attributes,
+    /tools\/browser-lab-controller\/services\/\*\.mjs text eol=lf/u,
+  );
   for (const service of [linux, mac]) {
     assert.match(service, /FORGE3D_CONTROLLER_UNIX_SESSION_BRIDGE/u);
     assert.match(service, new RegExp(bridgeDigest, "u"));
@@ -166,6 +183,6 @@ test("macOS and Linux services delegate to the pinned graphical-login bridge", (
     "browser-lab-controller.sudoers-linux",
     "browser-lab-controller.sudoers-macos",
   ]) {
-    assert.equal(statSync(join(root, "services", name)).mode & 0o777, 0o440);
+    assert.equal(statSync(join(root, "services", name)).mode & 0o777, 0o644);
   }
 });

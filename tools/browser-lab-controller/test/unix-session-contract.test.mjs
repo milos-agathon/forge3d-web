@@ -145,7 +145,7 @@ test("runner handoff preserves the verified distribution ownership boundary", ()
     const runnerRoot = realpathSync(runner);
     const handoffCalls = [];
     const modeCalls = [];
-    prepareRunnerTransientPaths(runner, 1001, statSync(runner).gid, {
+    prepareRunnerTransientPaths(runner, 1001, 498, {
       chown: (path, uid, gid) => handoffCalls.push({ path, uid, gid }),
       chmod: (path, mode) => modeCalls.push({ path, mode }),
     });
@@ -209,7 +209,15 @@ test("job-root traversal is granted only to the checked graphical identity", () 
     mkdirSync(job, { mode: 0o700 });
     mkdirSync(runner, { mode: 0o755 });
     const calls = [];
-    const controllerUid = statSync(job).uid;
+    const controllerUid = 498;
+    const controllerOwnedStat = (path) => {
+      const stats = statSync(path);
+      return {
+        isDirectory: () => stats.isDirectory(),
+        isSymbolicLink: () => stats.isSymbolicLink(),
+        uid: controllerUid,
+      };
+    };
     assert.equal(
       grantInteractiveJobTraversal(runner, {
         controllerUid,
@@ -218,6 +226,7 @@ test("job-root traversal is granted only to the checked graphical identity", () 
         platform: "linux",
         execute: (command, args, options) =>
           calls.push({ command, args, options }),
+        stat: controllerOwnedStat,
       }),
       realpathSync(job),
     );
@@ -242,6 +251,7 @@ test("job-root traversal is granted only to the checked graphical identity", () 
       platform: "darwin",
       execute: (command, args, options) =>
         calls.push({ command, args, options }),
+      stat: controllerOwnedStat,
     });
     assert.deepEqual(calls, [
       {
