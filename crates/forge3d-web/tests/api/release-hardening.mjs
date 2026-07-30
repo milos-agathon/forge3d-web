@@ -13,6 +13,23 @@ const packageLock = readText(join(packageRoot, "package-lock.json"));
 const infrastructureTestRunner = readText(
   join(packageRoot, "scripts", "run-infrastructure-tests.mjs"),
 );
+const benchmarkHarness = readText(
+  join(packageRoot, "tests", "browser", "viewer-benchmark.ts"),
+);
+const interactionObservationHarness = readText(
+  join(
+    packageRoot,
+    "tests",
+    "browser",
+    "viewer-interaction-observation.mjs",
+  ),
+);
+const sourceEvidenceProducer = readText(
+  join(packageRoot, "tests", "playwright", "viewer_benchmark.spec.ts"),
+);
+const installedPackageEvidenceProducer = readText(
+  join(packageRoot, "scripts", "build-browser-test-package.mjs"),
+);
 
 assertEqual(packageJson.description, "Browser-only Forge3D WebGPU/WASM runtime for terrain rendering", "package description must match the browser MVP");
 assertEqual(packageJson.repository?.type, "git", "package repository type must be declared");
@@ -80,6 +97,79 @@ assertThrows(
   "package gate must reject unknown evidence modes",
 );
 
+assertIncludes(
+  benchmarkHarness,
+  "viewer.setView(samples[index]);\n          index += 1;\n          requestAnimationFrame(apply);",
+  "frozen benchmark v1 must apply each measured sample on consecutive harness RAF callbacks",
+);
+for (const forbidden of [
+  "MINIMUM_INTERACTION_DURATION_MS",
+  "requestAtOrAfter",
+  "setTimeout(",
+]) {
+  assert(
+    !benchmarkHarness.includes(forbidden),
+    `frozen benchmark v1 must not contain ${forbidden}`,
+  );
+}
+for (const expected of [
+  "MINIMUM_VIEWER_INTERACTION_DURATION_MS = 10_000",
+  'page.on("console", onConsole)',
+  'page.on("pageerror", onPageError)',
+  "onError: (error) =>",
+  "uncapturedValidationErrors",
+  "export function isWebGpuValidationError",
+  "requestAnimationFrame(apply)",
+  "supportPromotionEligible: false",
+]) {
+  assertIncludes(
+    interactionObservationHarness,
+    expected,
+    `viewer interaction observation must retain ${expected}`,
+  );
+}
+assert(
+  !interactionObservationHarness.includes(
+    'message.type() === "error"',
+  ),
+  "viewer interaction observation must inspect WebGPU validation text at every console level",
+);
+for (const [label, producer] of [
+  ["source", sourceEvidenceProducer],
+  ["installed-package", installedPackageEvidenceProducer],
+]) {
+  assertIncludes(
+    producer,
+    "interactionObservation.normalizedErrorCodes",
+    `${label} evidence must retain observed interaction error codes`,
+  );
+  assert(
+    !producer.includes("normalizedErrorCodes: []"),
+    `${label} evidence must not claim an unobserved empty error list`,
+  );
+}
+assertIncludes(
+  sourceEvidenceProducer,
+  'testInfo.attach("forge3d-viewer-interaction-observation.json"',
+  "source evidence must attach the separate interaction observation",
+);
+const sourceObservationCallIndex = sourceEvidenceProducer.indexOf(
+  "await runViewerInteractionObservation(page, {",
+);
+const sourceInteractionExerciseCallIndex = sourceEvidenceProducer.indexOf(
+  "await exerciseRequiredInteractions(page)",
+);
+assert(
+  sourceObservationCallIndex >= 0 &&
+    sourceInteractionExerciseCallIndex > sourceObservationCallIndex,
+  "source evidence must run the owned interaction observation before creating a viewer for required interactions",
+);
+assertIncludes(
+  installedPackageEvidenceProducer,
+  "interactionObservation,\n      evidence,",
+  "installed-package gate must retain interaction observation beside v3 evidence",
+);
+
 for (const relative of [
   "docs/support-matrix.md",
   "docs/release-checklist.md",
@@ -133,6 +223,8 @@ for (const expected of [
   "$env:PATH = \"$pwd\\crates\\forge3d-web\\node_modules\\.bin;$env:PATH\"",
   "cargo clippy -p forge3d-core --target wasm32-unknown-unknown --no-default-features -- -D warnings",
   "cargo clippy -p forge3d-web --target wasm32-unknown-unknown -- -D warnings",
+  "cargo test -p forge3d-core --features gpu",
+  "cargo test -p forge3d-web",
   "cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features",
   "cargo check -p forge3d-web --target wasm32-unknown-unknown",
   ".\\crates\\forge3d-web\\node_modules\\.bin\\wasm-pack.cmd build crates/forge3d-web --target web",
@@ -140,7 +232,9 @@ for (const expected of [
   "npm run test:package",
   "npm run test:infrastructure",
   'FORGE3D_SOURCE_BENCHMARK_MODE = "required"',
-  "npm pack --dry-run"
+  "npm pack --dry-run",
+  "performance measurement, not the CHR-02 ten-second clock",
+  "sibling outside the unchanged v3 browser evidence record"
 ]) {
   assertIncludes(checklist, expected, `release checklist missing: ${expected}`);
 }
@@ -153,7 +247,11 @@ for (const expected of [
   "arrows orbit",
   "Shift+arrows pan",
   "`+`/`-` zoom",
-  "Home"
+  "Home",
+  "deterministic synthetic",
+  "second real browser tab",
+  "Neither a hidden document nor an occluded/skipped frame emits",
+  "must be incorporated into the separately attested branded, physical browser"
 ]) {
   assertIncludes(browserApi, expected, `browser API staging contract missing: ${expected}`);
 }
@@ -163,6 +261,8 @@ assertIncludes(webWorkflow, "npm ci --registry=https://registry.npmjs.org", "req
 assertIncludes(webWorkflow, "Test-Path node_modules/.bin/wasm-pack.cmd", "required web workflow must reject incomplete npm installs");
 assertIncludes(webWorkflow, "FORGE3D_PACKAGE_GATE_MODE: probe", "hosted web workflow must not claim fallback hardware as release evidence");
 assertIncludes(webWorkflow, "FORGE3D_SOURCE_BENCHMARK_MODE: probe", "hosted web workflow must not benchmark fallback hardware as release evidence");
+assertIncludes(webWorkflow, "run: cargo test -p forge3d-core --features gpu", "required web workflow must test core GPU contracts");
+assertIncludes(webWorkflow, "run: cargo test -p forge3d-web", "required web workflow must test web crate contracts");
 assertIncludes(webWorkflow, "run: npm run build:wasm", "required web workflow must invoke the pinned wasm-pack npm script");
 assertIncludes(webWorkflow, "run: npm run test:api", "required web workflow must enforce the API snapshot");
 assertIncludes(webWorkflow, "run: npm run test:package", "required web workflow must enforce package staging metadata");

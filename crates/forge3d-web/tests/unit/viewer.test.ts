@@ -171,6 +171,33 @@ describe("Forge3DViewer", () => {
     expect(viewer.getDiagnostics().submittedFrames).toBe(1);
   });
 
+  it.each([
+    ["none", "none"],
+    ["low-power", "low-power"],
+    ["high-performance", "high-performance"],
+  ] as const)(
+    "preserves explicit viewer power preference %s",
+    async (powerPreference, expected) => {
+      const optionsSeen: Forge3DRuntimeOptions[] = [];
+      setViewerRuntimeFactoryForTests({
+        create: async (_canvas, options) => {
+          optionsSeen.push(options);
+          return new FakeRuntime();
+        },
+      });
+
+      const viewer = await Forge3DViewer.create({} as HTMLCanvasElement, {
+        controls: false,
+        resize: false,
+        runtime: { powerPreference },
+      });
+
+      expect(optionsSeen).toHaveLength(1);
+      expect(optionsSeen[0]?.powerPreference).toBe(expected);
+      viewer.dispose();
+    },
+  );
+
   it("rejects policy violations before calling the runtime", async () => {
     const runtime = new FakeRuntime();
     const viewer = await createViewer(runtime, {
@@ -370,6 +397,47 @@ describe("Forge3DViewer", () => {
     expect(viewer.status).toBe("failed");
     expect(errors).toEqual(["DEVICE_LOST", "DEVICE_LOST"]);
     expect(viewer.getDiagnostics().activeRuntimes).toBe(0);
+  });
+
+  it("ignores duplicate loss from the generation already being recovered", async () => {
+    const first = new FakeRuntime();
+    const replacement = new FakeRuntime();
+    let releaseReplacement!: () => void;
+    const replacementReady = new Promise<void>((resolve) => {
+      releaseReplacement = resolve;
+    });
+    let creates = 0;
+    const errors: string[] = [];
+    setViewerRuntimeFactoryForTests({
+      create: async () => {
+        creates += 1;
+        if (creates === 1) {
+          return first;
+        }
+        await replacementReady;
+        return replacement;
+      },
+    });
+    const viewer = await Forge3DViewer.create({} as HTMLCanvasElement, {
+      controls: false,
+      resize: false,
+      onError: (error) => errors.push(error.code),
+    });
+    const staleLossHandler = first.lossHandler;
+
+    first.lose();
+    expect(viewer.status).toBe("recovering");
+    staleLossHandler?.(new Forge3DError("DEVICE_LOST", "duplicate stale loss"));
+    releaseReplacement();
+
+    await vi.waitFor(() => expect(viewer.status).toBe("ready"));
+    expect(creates).toBe(2);
+    expect(viewer.getDiagnostics()).toMatchObject({
+      generation: 2,
+      recoveryAttempts: 1,
+      activeRuntimes: 1,
+    });
+    expect(errors).toEqual(["DEVICE_LOST"]);
   });
 
   it("serializes source loads and cancels an active load during recovery", async () => {

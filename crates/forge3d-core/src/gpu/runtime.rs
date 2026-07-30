@@ -254,6 +254,8 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
     use std::sync::Arc;
 
+    use crate::error::Forge3dError;
+
     use super::{DeviceHealth, DeviceHealthState, GpuRuntimeOptions};
 
     #[test]
@@ -302,5 +304,64 @@ mod tests {
         health.mark_lost(wgpu::DeviceLostReason::Unknown, "lost".to_string());
 
         assert_eq!(notifications.load(Ordering::SeqCst), 0);
+    }
+
+    #[test]
+    fn uncaptured_validation_error_is_retained_without_marking_device_lost() {
+        let health = DeviceHealth::default();
+        let notifications = Arc::new(AtomicUsize::new(0));
+        let listener_notifications = notifications.clone();
+        health.subscribe(Arc::new(move |_| {
+            listener_notifications.fetch_add(1, Ordering::SeqCst);
+        }));
+        let error = wgpu::Error::Validation {
+            source: Box::new(std::io::Error::other("validation source")),
+            description: "uncaptured validation failure".to_string(),
+        };
+
+        health.record_uncaptured_error(&error);
+
+        let snapshot = health.snapshot();
+        assert_eq!(snapshot.state, DeviceHealthState::Ready);
+        assert_eq!(
+            snapshot.uncaptured_error.as_deref(),
+            Some("uncaptured validation failure")
+        );
+        assert_eq!(notifications.load(Ordering::SeqCst), 0);
+        assert!(matches!(
+            health.check(),
+            Err(Forge3dError::Internal { message })
+                if message == "uncaptured validation failure"
+        ));
+    }
+
+    #[test]
+    fn fatal_uncaptured_errors_mark_device_lost_and_notify_once() {
+        for error in [
+            wgpu::Error::Internal {
+                source: Box::new(std::io::Error::other("internal source")),
+                description: "uncaptured internal failure".to_string(),
+            },
+            wgpu::Error::OutOfMemory {
+                source: Box::new(std::io::Error::other("out-of-memory source")),
+            },
+        ] {
+            let health = DeviceHealth::default();
+            let notifications = Arc::new(AtomicUsize::new(0));
+            let listener_notifications = notifications.clone();
+            health.subscribe(Arc::new(move |_| {
+                listener_notifications.fetch_add(1, Ordering::SeqCst);
+            }));
+
+            health.record_uncaptured_error(&error);
+            health.record_uncaptured_error(&error);
+
+            assert_eq!(health.snapshot().state, DeviceHealthState::Lost);
+            assert_eq!(notifications.load(Ordering::SeqCst), 1);
+            assert!(matches!(
+                health.check(),
+                Err(Forge3dError::DeviceLost { .. })
+            ));
+        }
     }
 }

@@ -164,6 +164,29 @@ resolved `setTerrainFromSource()`, `setView()`, `resetView()`, and `resize()`
 also mark the viewer dirty. The viewer does not run a continuous rendering loop
 while idle. `Forge3DRuntime.render()` remains immediate.
 
+### Visibility And Occlusion
+
+When `document.visibilityState` becomes `hidden`, the viewer cancels its
+pending animation-frame callback but keeps the same canvas, scheduler,
+listeners, observer, and WebGPU runtime. Returning to `visible` coalesces the
+dirty state into exactly one attempted frame. A visible but occluded surface
+may make `Forge3DRuntime.render()` return `false`; the viewer records that
+attempt as a skipped frame and remains ready for the next invalidation.
+
+Neither a hidden document nor an occluded/skipped frame emits
+`REQUEST_CANCELLED`, starts device recovery, or recreates the runtime.
+`REQUEST_CANCELLED` remains reserved for cancelled terrain-source work,
+including work cancelled during an actual device-loss recovery.
+
+The shared 30-cycle source-browser and installed-package lifecycle exercise is
+hermetic by default: it uses an explicitly labelled deterministic synthetic
+`document.visibilityState` override. With `FORGE3D_HEADED=1`, it instead uses a
+second real browser tab and requires actual `document.visibilityState`
+transitions. The lifecycle record always marks itself as non-promotional.
+Synthetic proof establishes source/package behavior only; even a headed result
+must be incorporated into the separately attested branded, physical browser
+and GPU matrix before it can contribute to a support claim.
+
 ## Viewer Lifecycle And Recovery
 
 Successful creation reports `initializing -> ready` before the create promise

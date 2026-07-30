@@ -90,10 +90,20 @@ test("rejects supplied derived values that disagree with raw timing", () => {
   );
 });
 
+test("PASS evidence rejects observed viewer or validation errors", () => {
+  const record = makeRecord();
+  record.normalizedErrorCodes = ["INTERNAL_ERROR"];
+  assert.throws(
+    () => validateBrowserEvidence(record),
+    /observed error-free interaction run/,
+  );
+});
+
 test("probe evidence may omit benchmark but cannot satisfy a required lane", () => {
   const record = makeRecord();
   record.runtimeResult = "PROBE";
   record.adapter.available = false;
+  record.normalizedErrorCodes = ["INTERNAL_ERROR"];
   record.benchmark = null;
   assert.equal(
     validateBrowserEvidence(record, { requireBenchmark: false }),

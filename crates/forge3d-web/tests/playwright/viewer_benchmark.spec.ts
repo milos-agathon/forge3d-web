@@ -18,6 +18,9 @@ import {
 } from "../browser/playwright-project-metadata";
 import { validateBrowserEvidence } from "../browser/evidence-validator.mjs";
 import { runViewerBenchmark } from "../browser/viewer-benchmark";
+import {
+  runViewerInteractionObservation,
+} from "../browser/viewer-interaction-observation.mjs";
 import { observeChromiumLaunch } from "../../scripts/browser-launch-provenance.mjs";
 
 test("validates complete evidence from the frozen real-GPU benchmark", async ({
@@ -83,6 +86,14 @@ test("validates complete evidence from the frozen real-GPU benchmark", async ({
       "required source benchmark must use a non-fallback adapter",
     ).toBe(false);
   }
+  const interactionObservation =
+    await runViewerInteractionObservation(page, {
+      disposeViewer: true,
+    });
+  await testInfo.attach("forge3d-viewer-interaction-observation.json", {
+    body: JSON.stringify(interactionObservation, null, 2),
+    contentType: "application/json",
+  });
   const interactionAssertions = await exerciseRequiredInteractions(page);
   const benchmark =
     evidenceMode === "required"
@@ -148,7 +159,8 @@ test("validates complete evidence from the frozen real-GPU benchmark", async ({
       skippedFrames: frameCounters.skippedFrames,
     },
     interactionAssertions,
-    normalizedErrorCodes: [],
+    normalizedErrorCodes:
+      interactionObservation.normalizedErrorCodes,
     benchmark,
   };
 
