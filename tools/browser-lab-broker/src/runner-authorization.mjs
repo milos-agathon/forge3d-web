@@ -115,6 +115,9 @@ export function normalizeAuthorization(authorization) {
     hwLabel: authorization.customLabels[1],
     runnerNonce: authorization.runnerNonce,
     expiresAt: authorization.expiresAt,
+    lane: authorization.lane,
+    hasLabReadiness: authorization.labReadiness !== null,
+    hasManualSession: authorization.manualSession !== null,
   };
 }
 

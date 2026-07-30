@@ -4,7 +4,10 @@ import { dirname, join } from "node:path";
 import test from "node:test";
 import { fileURLToPath } from "node:url";
 
-import { runWatchdogCycle } from "../src/server.mjs";
+import {
+  resolveBrokerProvisioningMode,
+  runWatchdogCycle,
+} from "../src/server.mjs";
 
 const brokerRoot = join(
   dirname(fileURLToPath(import.meta.url)),
@@ -20,6 +23,38 @@ test("production server verifies separately provisioned authorizations", () => {
   assert.match(source, /new FileAuthorizationVerifier\(/u);
   assert.equal(source.includes("GitHubAuthorizationVerifier"), false);
   assert.equal(`${source}\n${githubSource}`.includes("actions/artifacts"), false);
+});
+
+test("broker startup exposes only active or initial host-canary modes", () => {
+  assert.equal(
+    resolveBrokerProvisioningMode({
+      matrix: { provisioningState: "active" },
+      browserPolicy: { provisioningState: "active" },
+    }),
+    "active",
+  );
+  assert.equal(
+    resolveBrokerProvisioningMode({
+      matrix: { provisioningState: "active" },
+      browserPolicy: { provisioningState: "pending-jit-canary" },
+    }),
+    "initial-host-canary",
+  );
+  for (const input of [
+    {
+      matrix: { provisioningState: "provisioning" },
+      browserPolicy: { provisioningState: "pending-jit-canary" },
+    },
+    {
+      matrix: { provisioningState: "active" },
+      browserPolicy: { provisioningState: "unknown" },
+    },
+  ]) {
+    assert.throws(
+      () => resolveBrokerProvisioningMode(input),
+      /checked hardware inventory is not active|browser policy state is invalid/u,
+    );
+  }
 });
 
 test("production watchdog uses the live controller reachability result", async () => {

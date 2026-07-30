@@ -46,6 +46,48 @@ test("derives one exact JIT runner and never persists encoded configuration", as
   assert.equal(context.github.registrationTokenCalls, 0);
 });
 
+test("initial host-canary mode rejects product and manual-session issuance", async () => {
+  const product = makeContext({
+    provisioningMode: "initial-host-canary",
+    authorization: {
+      lane: "chrome-linux-rtx3070",
+      hasLabReadiness: true,
+      hasManualSession: false,
+    },
+  });
+  await assert.rejects(
+    issue(product),
+    /initial host-canary mode accepts only non-manual infrastructure-canary/u,
+  );
+  assert.deepEqual(product.github.generateCalls, []);
+
+  const manual = makeContext({
+    provisioningMode: "initial-host-canary",
+    authorization: {
+      lane: "infrastructure-canary",
+      hasLabReadiness: false,
+      hasManualSession: true,
+    },
+  });
+  await assert.rejects(
+    issue(manual),
+    /initial host-canary mode accepts only non-manual infrastructure-canary/u,
+  );
+  assert.deepEqual(manual.github.generateCalls, []);
+
+  const hostCanary = makeContext({
+    provisioningMode: "initial-host-canary",
+    authorization: {
+      lane: "infrastructure-canary",
+      hasLabReadiness: false,
+      hasManualSession: false,
+    },
+  });
+  const response = await issue(hostCanary);
+  assert.equal(response.runnerName, `FW-LNX-NV-01-${"b".repeat(32)}`);
+  assert.equal(hostCanary.github.generateCalls.length, 1);
+});
+
 test("rejects request nonce and authorization replay before another JIT call", async () => {
   const context = makeContext();
   const request = makeJitRequest();
@@ -677,7 +719,10 @@ test("watchdog deletes, cancels, and quarantines when controller disappears befo
   assert.deepEqual(context.github.cancelCalls, [2001]);
 });
 
-function makeContext() {
+function makeContext({
+  provisioningMode = "active",
+  authorization: authorizationOverrides = {},
+} = {}) {
   let clock = new Date("2026-07-28T12:00:00.000Z");
   const now = () => new Date(clock);
   const ledger = new MemoryLedger();
@@ -697,6 +742,10 @@ function makeContext() {
     hwLabel: "hw-linux-rtx3070",
     runnerNonce: "b".repeat(32),
     expiresAt: "2026-07-28T12:30:00.000Z",
+    lane: "chrome-linux-rtx3070",
+    hasLabReadiness: true,
+    hasManualSession: false,
+    ...authorizationOverrides,
   };
   const authorizations = new Map([[digest, authorization]]);
   const verificationModes = [];
@@ -743,6 +792,7 @@ function makeContext() {
     },
     cancellationPollAttempts: 3,
     cancellationPollIntervalMs: 1,
+    provisioningMode,
   });
   return {
     broker,

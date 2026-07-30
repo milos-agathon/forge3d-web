@@ -28,6 +28,7 @@ export class BrowserLabBroker {
     sleep = wait,
     cancellationPollAttempts = CANCELLATION_POLL_ATTEMPTS,
     cancellationPollIntervalMs = CANCELLATION_POLL_INTERVAL_MS,
+    provisioningMode = "active",
   }) {
     this.matrix = matrix;
     this.browserPolicy = browserPolicy;
@@ -38,6 +39,10 @@ export class BrowserLabBroker {
     this.sleep = sleep;
     this.cancellationPollAttempts = cancellationPollAttempts;
     this.cancellationPollIntervalMs = cancellationPollIntervalMs;
+    if (!["active", "initial-host-canary"].includes(provisioningMode)) {
+      throw new Error("broker provisioning mode is invalid");
+    }
+    this.provisioningMode = provisioningMode;
   }
 
   async issueJitConfig(request, { mtlsIdentity }) {
@@ -51,6 +56,7 @@ export class BrowserLabBroker {
       controllerAssetId: request.controller.assetId,
       mode: "issuance",
     });
+    this.assertIssuanceAllowed(authorization);
     const host = verifyControllerRequest({
       request,
       matrix: this.matrix,
@@ -120,6 +126,19 @@ export class BrowserLabBroker {
       encodedJitConfig: issued.encodedJitConfig,
       startDeadline: startDeadline.toISOString(),
     };
+  }
+
+  assertIssuanceAllowed(authorization) {
+    if (
+      this.provisioningMode === "initial-host-canary" &&
+      (authorization.lane !== "infrastructure-canary" ||
+        authorization.hasLabReadiness !== false ||
+        authorization.hasManualSession !== false)
+    ) {
+      throw new Error(
+        "initial host-canary mode accepts only non-manual infrastructure-canary authorization",
+      );
+    }
   }
 
   async cleanupRunner(request, { mtlsIdentity }) {
