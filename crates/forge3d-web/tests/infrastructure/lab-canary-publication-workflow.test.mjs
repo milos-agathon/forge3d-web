@@ -5,6 +5,10 @@ import { resolve } from "node:path";
 import test from "node:test";
 import { parse } from "yaml";
 
+const attributes = readFileSync(
+  resolve(import.meta.dirname, "../../../../.gitattributes"),
+  "utf8",
+);
 const workflow = readFileSync(
   resolve(
     import.meta.dirname,
@@ -34,6 +38,20 @@ const publicationSchema = readFileSync(
   resolve(import.meta.dirname, "./lab-canary-publication-record.schema.json"),
 );
 const logicalPublisher = publisher.replace(/\\\n\s*/gu, " ");
+
+test("publication contract inputs use canonical LF bytes", () => {
+  for (const policy of [
+    ".github/workflows/*.yml text eol=lf",
+    "crates/forge3d-web/tests/infrastructure/*.json text eol=lf",
+    "crates/forge3d-web/tests/infrastructure/*.mjs text eol=lf",
+  ]) {
+    assert.equal(
+      attributes.split(/\r?\n/gu).includes(policy),
+      true,
+      `missing canonical LF policy: ${policy}`,
+    );
+  }
+});
 
 test("canary accepts only fixed host/manual IDs and derives candidate and tag", () => {
   for (const input of [
