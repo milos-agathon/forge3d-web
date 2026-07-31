@@ -5,6 +5,7 @@ import {
 } from "../browser/webgpu-fixture";
 import {
   exerciseViewerVisibilityLifecycle,
+  resolveViewerVisibilityLifecycleMode,
   VIEWER_VISIBILITY_LIFECYCLE_CYCLES,
 } from "../browser/viewer-visibility-lifecycle.mjs";
 
@@ -62,7 +63,7 @@ test("creation, disposal, and retained getters follow the lifecycle contract", a
 });
 
 test("visibility cycling preserves one viewer and resumes one frame", async (
-  { context, page, webgpuAvailability },
+  { browser, context, page, webgpuAvailability },
   testInfo,
 ) => {
   skipRenderAssertionsWhenProbing(webgpuAvailability);
@@ -75,21 +76,24 @@ test("visibility cycling preserves one viewer and resumes one frame", async (
   });
 
   const headed = process.env.FORGE3D_HEADED === "1";
+  const lifecycleMode = resolveViewerVisibilityLifecycleMode({
+    headed,
+    browserEngine: browser.browserType().name(),
+  });
   let result;
   try {
     result = await exerciseViewerVisibilityLifecycle({
       page,
       context,
-      headed,
+      requireActualDocumentVisibilityTransitions:
+        lifecycleMode.actualDocumentVisibilityTransitions,
       cycleCount: VIEWER_VISIBILITY_LIFECYCLE_CYCLES,
     });
   } catch (error) {
     await testInfo.attach("forge3d-viewer-visibility-lifecycle.json", {
       body: JSON.stringify(
         {
-          mode: headed
-            ? "headed-real-tab"
-            : "deterministic-synthetic-document-visibility",
+          mode: lifecycleMode.mode,
           error: error instanceof Error ? error.message : String(error),
         },
         null,
@@ -106,6 +110,15 @@ test("visibility cycling preserves one viewer and resumes one frame", async (
 
   expect(result.cycleCount).toBe(VIEWER_VISIBILITY_LIFECYCLE_CYCLES);
   expect(result.cycles).toHaveLength(VIEWER_VISIBILITY_LIFECYCLE_CYCLES);
+  expect(result.mode).toBe(lifecycleMode.mode);
+  expect(result.actualDocumentVisibilityTransitions).toBe(
+    lifecycleMode.actualDocumentVisibilityTransitions,
+  );
+  expect(result.visibilityStateSource).toBe(
+    lifecycleMode.visibilityStateSource,
+  );
+  expect(result.physicalSupportEvidence).toBe(false);
+  expect(result.supportPromotionEligible).toBe(false);
   expect(result.sameCanvas).toBe(true);
   expect(result.orbitChangedView).toBe(true);
   expect(result.final.status).toBe("ready");

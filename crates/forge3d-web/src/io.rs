@@ -405,13 +405,13 @@ async fn read_stream_body_bounded(
     let mut body = BoundedResponseBody::new(expected_bytes);
     loop {
         if let Err(error) = ensure_not_cancelled(signal) {
-            let _ = reader.cancel();
+            cancel_reader_best_effort(&reader).await;
             return Err(error);
         }
         let chunk =
             await_browser_io(reader.read(), signal, "Fetch body stream read failed").await?;
         if let Err(error) = ensure_not_cancelled(signal) {
-            let _ = reader.cancel();
+            cancel_reader_best_effort(&reader).await;
             return Err(error);
         }
         let done = js_sys::Reflect::get(&chunk, &JsValue::from_str("done"))
@@ -429,7 +429,7 @@ async fn read_stream_body_bounded(
             )
         })?;
         if value.is_undefined() || value.is_null() {
-            let _ = reader.cancel();
+            cancel_reader_best_effort(&reader).await;
             return Err(WebError::new(
                 Forge3DErrorCode::IoError,
                 "Terrain response stream produced an empty chunk value",
@@ -438,14 +438,14 @@ async fn read_stream_body_bounded(
         let chunk = js_sys::Uint8Array::new(&value);
         let chunk_len = chunk.length() as usize;
         if !body.can_accept(chunk_len) {
-            let _ = reader.cancel();
+            cancel_reader_best_effort(&reader).await;
             return Err(BoundedResponseBody::limit_error());
         }
         let old_len = body.len();
         let mut chunk_bytes = vec![0; chunk_len];
         chunk.copy_to(&mut chunk_bytes);
         if let Err(error) = body.push(&chunk_bytes) {
-            let _ = reader.cancel();
+            cancel_reader_best_effort(&reader).await;
             return Err(error);
         }
         if let Err(error) = report_progress(
@@ -454,7 +454,7 @@ async fn read_stream_body_bounded(
             Some(expected_bytes as u64),
             false,
         ) {
-            let _ = reader.cancel();
+            cancel_reader_best_effort(&reader).await;
             return Err(error);
         }
         debug_assert_eq!(body.len(), old_len + chunk_len);
@@ -467,6 +467,10 @@ async fn read_stream_body_bounded(
         true,
     )?;
     Ok(bytes)
+}
+
+async fn cancel_reader_best_effort(reader: &ReadableStreamDefaultReader) {
+    let _ = JsFuture::from(reader.cancel()).await;
 }
 
 struct BoundedResponseBody {

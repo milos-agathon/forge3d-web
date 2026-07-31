@@ -14,16 +14,27 @@ function projectNamed(
 }
 
 describe("Playwright browser project configuration", () => {
-  it.each(["win32", "darwin", "linux"])(
-    "keeps launch flags confined to the %s preflight project",
-    (platform) => {
-      const projects = createBrowserProjects(platform);
-      expect(projects.map(({ name }) => name)).toEqual([
+  it.each([
+    ["win32", "x64", false],
+    ["darwin", "arm64", false],
+    ["darwin", "x64", true],
+    ["linux", "x64", true],
+    ["linux", "arm64", true],
+  ] as const)(
+    "keeps launch flags and Firefox preferences scoped on %s/%s",
+    (platform, architecture, hasExperimentalFirefox) => {
+      const projects = createBrowserProjects(platform, architecture);
+      const expectedProjects = [
         "chromium-preflight",
         "chrome-stable",
         "edge-stable",
+        "firefox-preflight",
         "webkit-preflight",
-      ]);
+      ];
+      if (hasExperimentalFirefox) {
+        expectedProjects.push("firefox-nightly-experimental");
+      }
+      expect(projects.map(({ name }) => name)).toEqual(expectedProjects);
 
       const preflight = projectNamed(projects, "chromium-preflight");
       const expectedArgs = [
@@ -87,6 +98,55 @@ describe("Playwright browser project configuration", () => {
         webgpuRequired: true,
         launchArgs: [],
       });
+
+      const firefox = projectNamed(projects, "firefox-preflight");
+      expect(firefox.use).toEqual({
+        browserName: "firefox",
+      });
+      expect(firefox.use).not.toHaveProperty("launchOptions");
+      expect(firefox.metadata?.forge3dBrowser).toEqual({
+        project: firefox.name,
+        browserName: "firefox",
+        channel: "playwright",
+        lane: "preflight",
+        launchObservation: "project-configuration",
+        webgpuRequired: true,
+        launchArgs: [],
+        preferenceMode: "default",
+        firefoxUserPrefs: {},
+        supportLevel: "ENGINE_PASS",
+      });
+
+      const experimental = projects.find(
+        ({ name }) => name === "firefox-nightly-experimental",
+      );
+      if (!hasExperimentalFirefox) {
+        expect(experimental).toBeUndefined();
+        return;
+      }
+      expect(experimental?.use).toEqual({
+        browserName: "firefox",
+        launchOptions: {
+          firefoxUserPrefs: {
+            "dom.webgpu.enabled": true,
+          },
+        },
+      });
+      expect(experimental?.use?.launchOptions).not.toHaveProperty("args");
+      expect(experimental?.metadata?.forge3dBrowser).toEqual({
+        project: experimental?.name,
+        browserName: "firefox",
+        channel: "playwright",
+        lane: "experimental",
+        launchObservation: "project-configuration",
+        webgpuRequired: false,
+        launchArgs: [],
+        preferenceMode: "override",
+        firefoxUserPrefs: {
+          "dom.webgpu.enabled": true,
+        },
+        supportLevel: "NOT_PROVEN",
+      });
     },
   );
 
@@ -115,8 +175,13 @@ describe("Playwright browser project configuration", () => {
         "playwright test --project=chromium-preflight",
       "test:browser:chrome": "playwright test --project=chrome-stable",
       "test:browser:edge": "playwright test --project=edge-stable",
+      "test:browser:firefox-preflight":
+        "playwright test --project=firefox-preflight",
       "test:browser:webkit":
         "playwright test --project=webkit-preflight",
     });
+    expect(packageJson.scripts).not.toHaveProperty(
+      "test:browser:firefox-nightly-experimental",
+    );
   });
 });

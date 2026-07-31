@@ -83,10 +83,14 @@ drag/wheel/touch/keyboard interaction,
 unsupported-browser UI, screenshot readback, resize, and leak-free disposal.
 Before disposal, the source and installed-package gates run the same 30-cycle
 visibility lifecycle exercise. Non-headed execution records an explicitly
-labelled deterministic synthetic visibility mode; `FORGE3D_HEADED=1` uses a
-second real tab and requires actual document visibility transitions. The
-result is retained separately from the unchanged v3 browser evidence record
-and is never sufficient by itself for support promotion.
+labelled deterministic synthetic visibility mode. With `FORGE3D_HEADED=1`,
+Chromium projects use a second real tab and require actual document visibility
+transitions. The Playwright Firefox and WebKit preflights use the explicitly
+labelled synthetic lifecycle because those automated engine lanes do not yield
+real background-tab visibility; this says nothing about branded or physical
+Firefox or shipping Safari behavior. The result records whether actual document
+transitions occurred, is retained separately from the unchanged v3 browser
+evidence record, and is never sufficient by itself for support promotion.
 It then runs the frozen benchmark and passes the complete exact-tarball evidence
 record through the shared fail-closed validator. It is not an HTTP-only asset
 smoke test.
@@ -137,6 +141,16 @@ flags. Their normal configurations use required evidence mode and fail when
 `navigator.gpu` or adapter acquisition is unavailable. The required branded
 source execution runs all 600 measured samples and rejects fallback adapters;
 these command definitions do not claim that either branded run has passed.
+The GitHub-hosted Apple-Silicon source-browser job separately runs
+`test:browser:firefox-preflight` in Playwright's patched Firefox with default
+preferences and no Chromium launch flags. Both its diagnostics probe and full
+suite run headed with `FORGE3D_HEADED=1`, set `FORGE3D_WEBGPU_REQUIRED=1`, and
+`FORGE3D_SOURCE_BENCHMARK_MODE=probe`: required render behavior fails when
+WebGPU or adapter acquisition is unavailable, while performance remains probe
+evidence. CI uploads that record immediately under a Firefox-preflight,
+`ENGINE_PASS`, default-preferences artifact name. It is not branded Firefox,
+physical-browser, exact npm-tarball, or release-support evidence and does not
+change Firefox's `Unsupported` support status.
 Release browser evidence must validate against
 `tests/browser/browser-evidence.schema.json`; a required lane may not pass with
 an unavailable adapter, a probe-only result, or a source-WASM digest in place

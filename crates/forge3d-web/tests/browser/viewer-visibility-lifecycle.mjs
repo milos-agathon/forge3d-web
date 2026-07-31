@@ -4,32 +4,58 @@ const SYNTHETIC_VISIBILITY_KEY = "__forge3dSyntheticVisibilityLifecycle";
 const CANVAS_IDENTITY_KEY = "__forge3dVisibilityLifecycleCanvas";
 const PENDING_PROBE_KEY = "__forge3dVisibilityLifecyclePendingProbe";
 
+export function resolveViewerVisibilityLifecycleMode({
+  headed,
+  browserEngine,
+}) {
+  invariant(
+    typeof headed === "boolean",
+    "visibility lifecycle headed mode must be a boolean",
+  );
+  switch (browserEngine) {
+    case "chromium":
+      return createViewerVisibilityLifecycleClassification(headed);
+    case "firefox":
+    case "webkit":
+      return createViewerVisibilityLifecycleClassification(false);
+    default:
+      throw new Error(
+        `visibility lifecycle browser engine must be chromium, firefox, or webkit; got ${String(browserEngine)}`,
+      );
+  }
+}
+
 /**
  * Exercise the shared viewer through repeated document visibility transitions.
  *
- * Headed runs use a second real browser tab. Hermetic source and installed
- * package preflights use an explicitly labelled synthetic visibilityState
- * override so they do not depend on a window manager.
+ * Callers explicitly select whether this exercise must observe actual document
+ * visibility transitions. Hermetic or engine-limited preflights use an
+ * explicitly labelled synthetic visibilityState override so they do not depend
+ * on a window manager or fabricate real-tab evidence.
  */
 export async function exerciseViewerVisibilityLifecycle({
   page,
   context = page.context(),
-  headed = process.env.FORGE3D_HEADED === "1",
+  requireActualDocumentVisibilityTransitions,
   cycleCount = VIEWER_VISIBILITY_LIFECYCLE_CYCLES,
 }) {
+  invariant(
+    typeof requireActualDocumentVisibilityTransitions === "boolean",
+    "visibility lifecycle transition mode must be a boolean",
+  );
   invariant(
     Number.isInteger(cycleCount) && cycleCount > 0,
     "visibility lifecycle cycleCount must be a positive integer",
   );
 
-  const mode = headed
-    ? "headed-real-tab"
-    : "deterministic-synthetic-document-visibility";
+  const classification = createViewerVisibilityLifecycleClassification(
+    requireActualDocumentVisibilityTransitions,
+  );
   let coverPage;
   let syntheticInstalled = false;
 
   try {
-    if (headed) {
+    if (requireActualDocumentVisibilityTransitions) {
       coverPage = await context.newPage();
       await coverPage.goto("about:blank");
       await page.bringToFront();
@@ -57,7 +83,7 @@ export async function exerciseViewerVisibilityLifecycle({
       assertHealthyAndStable(before, baseline, `cycle ${index + 1} before hide`);
       await armPendingFrameProbe(page);
 
-      if (headed) {
+      if (requireActualDocumentVisibilityTransitions) {
         await coverPage.bringToFront();
         await waitForVisibility(
           page,
@@ -100,7 +126,7 @@ export async function exerciseViewerVisibilityLifecycle({
         `cycle ${index + 1} submitted or skipped a frame while hidden`,
       );
 
-      if (headed) {
+      if (requireActualDocumentVisibilityTransitions) {
         await page.bringToFront();
         await waitForVisibility(
           page,
@@ -178,14 +204,8 @@ export async function exerciseViewerVisibilityLifecycle({
     assertHealthyAndStable(final, baseline, "final");
 
     return {
-      mode,
+      ...classification,
       cycleCount,
-      visibilityStateSource: headed
-        ? "actual-document"
-        : "deterministic-synthetic-document-override",
-      actualDocumentVisibilityTransitions: headed,
-      physicalSupportEvidence: false,
-      supportPromotionEligible: false,
       baseline,
       final,
       sameCanvas: final.sameCanvas,
@@ -193,7 +213,7 @@ export async function exerciseViewerVisibilityLifecycle({
       cycles,
     };
   } finally {
-    if (headed) {
+    if (requireActualDocumentVisibilityTransitions) {
       if (coverPage !== undefined) {
         await coverPage.close();
       }
@@ -209,6 +229,22 @@ export async function exerciseViewerVisibilityLifecycle({
       }, CANVAS_IDENTITY_KEY);
     }
   }
+}
+
+function createViewerVisibilityLifecycleClassification(
+  actualDocumentVisibilityTransitions,
+) {
+  return {
+    mode: actualDocumentVisibilityTransitions
+      ? "headed-real-tab"
+      : "deterministic-synthetic-document-visibility",
+    visibilityStateSource: actualDocumentVisibilityTransitions
+      ? "actual-document"
+      : "deterministic-synthetic-document-override",
+    actualDocumentVisibilityTransitions,
+    physicalSupportEvidence: false,
+    supportPromotionEligible: false,
+  };
 }
 
 async function readViewerSnapshot(page, initializeCanvasIdentity = false) {

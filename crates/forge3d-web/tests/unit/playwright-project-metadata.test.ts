@@ -30,6 +30,34 @@ const preflight = {
   launchArgs: ["--enable-unsafe-webgpu", "--use-angle=d3d11"],
 } as const;
 
+const firefoxPreflight = {
+  project: "firefox-preflight",
+  browserName: "firefox",
+  channel: "playwright",
+  lane: "preflight",
+  launchObservation: "project-configuration",
+  webgpuRequired: true,
+  launchArgs: [],
+  preferenceMode: "default",
+  firefoxUserPrefs: {},
+  supportLevel: "ENGINE_PASS",
+} as const;
+
+const firefoxExperimental = {
+  project: "firefox-nightly-experimental",
+  browserName: "firefox",
+  channel: "playwright",
+  lane: "experimental",
+  launchObservation: "project-configuration",
+  webgpuRequired: false,
+  launchArgs: [],
+  preferenceMode: "override",
+  firefoxUserPrefs: {
+    "dom.webgpu.enabled": true,
+  },
+  supportLevel: "NOT_PROVEN",
+} as const;
+
 const webkit = {
   project: "webkit-preflight",
   browserName: "webkit",
@@ -54,6 +82,12 @@ describe("Playwright browser diagnostics metadata", () => {
     expect(
       resolveSourceBenchmarkEvidenceMode(chrome, "required"),
     ).toBe("required");
+    expect(
+      resolveSourceBenchmarkEvidenceMode(firefoxPreflight, undefined),
+    ).toBe("probe");
+    expect(
+      resolveSourceBenchmarkEvidenceMode(firefoxExperimental, "probe"),
+    ).toBe("probe");
   });
 
   it("rejects ambient evidence modes that conflict with the project lane", () => {
@@ -80,6 +114,9 @@ describe("Playwright browser diagnostics metadata", () => {
         "0",
       ),
     ).toBe(true);
+    expect(resolveWebGpuRequired(firefoxPreflight, "0")).toBe(true);
+    expect(resolveWebGpuRequired(firefoxExperimental, "0")).toBe(false);
+    expect(resolveWebGpuRequired(firefoxExperimental, "1")).toBe(true);
   });
 
   it("reads a complete, internally consistent executing-project identity", () => {
@@ -104,6 +141,60 @@ describe("Playwright browser diagnostics metadata", () => {
     expect(() =>
       readForge3DBrowserProjectMetadata({}),
     ).toThrow(/missing forge3dBrowser metadata/u);
+    expect(
+      readForge3DBrowserProjectMetadata({
+        forge3dBrowser: firefoxPreflight,
+      }),
+    ).toEqual(firefoxPreflight);
+    expect(
+      readForge3DBrowserProjectMetadata({
+        forge3dBrowser: firefoxExperimental,
+      }),
+    ).toEqual(firefoxExperimental);
+  });
+
+  it("cannot confuse default Firefox preflight with preference-enabled experimental evidence", () => {
+    for (const malformed of [
+      {
+        ...firefoxPreflight,
+        preferenceMode: "override",
+        firefoxUserPrefs: { "dom.webgpu.enabled": true },
+      },
+      {
+        ...firefoxPreflight,
+        supportLevel: "NOT_PROVEN",
+      },
+      {
+        ...firefoxPreflight,
+        launchArgs: ["--enable-unsafe-webgpu"],
+      },
+      {
+        ...firefoxExperimental,
+        preferenceMode: "default",
+        firefoxUserPrefs: {},
+      },
+      {
+        ...firefoxExperimental,
+        webgpuRequired: true,
+      },
+      {
+        ...firefoxExperimental,
+        launchArgs: ["--enable-unsafe-webgpu"],
+      },
+      {
+        ...firefoxExperimental,
+        firefoxUserPrefs: {
+          "dom.webgpu.enabled": true,
+          "some.other.preference": true,
+        },
+      },
+    ]) {
+      expect(() =>
+        readForge3DBrowserProjectMetadata({
+          forge3dBrowser: malformed,
+        }),
+      ).toThrow(/Firefox preference or support metadata is inconsistent/u);
+    }
   });
 
   it("rejects Chromium launch proof or launch arguments for WebKit", () => {

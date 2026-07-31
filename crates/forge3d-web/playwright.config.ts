@@ -13,13 +13,14 @@ function browserMetadata(
 
 export function createBrowserProjects(
   platform: string,
+  architecture: string = process.arch,
 ): PlaywrightTestProject[] {
   const preflightLaunchArgs = [
     "--enable-unsafe-webgpu",
     ...(platform === "win32" ? ["--use-angle=d3d11"] : []),
   ];
 
-  return [
+  const projects: PlaywrightTestProject[] = [
     {
       name: "chromium-preflight",
       metadata: browserMetadata({
@@ -71,6 +72,24 @@ export function createBrowserProjects(
       },
     },
     {
+      name: "firefox-preflight",
+      metadata: browserMetadata({
+        project: "firefox-preflight",
+        browserName: "firefox",
+        channel: "playwright",
+        lane: "preflight",
+        launchObservation: "project-configuration",
+        webgpuRequired: true,
+        launchArgs: [],
+        preferenceMode: "default",
+        firefoxUserPrefs: {},
+        supportLevel: "ENGINE_PASS",
+      }),
+      use: {
+        browserName: "firefox",
+      },
+    },
+    {
       name: "webkit-preflight",
       metadata: browserMetadata({
         project: "webkit-preflight",
@@ -86,6 +105,39 @@ export function createBrowserProjects(
       },
     },
   ];
+
+  if (
+    platform === "linux" ||
+    (platform === "darwin" && architecture === "x64")
+  ) {
+    projects.push({
+      name: "firefox-nightly-experimental",
+      metadata: browserMetadata({
+        project: "firefox-nightly-experimental",
+        browserName: "firefox",
+        channel: "playwright",
+        lane: "experimental",
+        launchObservation: "project-configuration",
+        webgpuRequired: false,
+        launchArgs: [],
+        preferenceMode: "override",
+        firefoxUserPrefs: {
+          "dom.webgpu.enabled": true,
+        },
+        supportLevel: "NOT_PROVEN",
+      }),
+      use: {
+        browserName: "firefox",
+        launchOptions: {
+          firefoxUserPrefs: {
+            "dom.webgpu.enabled": true,
+          },
+        },
+      },
+    });
+  }
+
+  return projects;
 }
 
 export default defineConfig({
@@ -100,5 +152,5 @@ export default defineConfig({
     baseURL: "http://127.0.0.1:57883",
     headless: process.env.FORGE3D_HEADED !== "1"
   },
-  projects: createBrowserProjects(process.platform)
+  projects: createBrowserProjects(process.platform, process.arch)
 });

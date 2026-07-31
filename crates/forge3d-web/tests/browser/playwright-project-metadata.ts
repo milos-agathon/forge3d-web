@@ -8,13 +8,18 @@ export interface Forge3DBrowserProjectMetadata {
     | "chromium-preflight"
     | "chrome-stable"
     | "edge-stable"
+    | "firefox-preflight"
+    | "firefox-nightly-experimental"
     | "webkit-preflight";
-  browserName: "chromium" | "chrome" | "edge" | "webkit";
+  browserName: "chromium" | "chrome" | "edge" | "firefox" | "webkit";
   channel: "playwright" | "chrome" | "msedge";
-  lane: "preflight" | "branded";
+  lane: "preflight" | "branded" | "experimental";
   launchObservation: "chromium-live" | "project-configuration";
   webgpuRequired: boolean;
   launchArgs: string[];
+  preferenceMode?: "default" | "override";
+  firefoxUserPrefs?: Record<string, boolean>;
+  supportLevel?: "ENGINE_PASS" | "NOT_PROVEN";
 }
 
 export interface LaunchFlagPresence {
@@ -40,16 +45,19 @@ export function readForge3DBrowserProjectMetadata(
       "chromium-preflight",
       "chrome-stable",
       "edge-stable",
+      "firefox-preflight",
+      "firefox-nightly-experimental",
       "webkit-preflight",
     ]) ||
     !isOneOf(candidate.browserName, [
       "chromium",
       "chrome",
       "edge",
+      "firefox",
       "webkit",
     ]) ||
     !isOneOf(candidate.channel, ["playwright", "chrome", "msedge"]) ||
-    !isOneOf(candidate.lane, ["preflight", "branded"]) ||
+    !isOneOf(candidate.lane, ["preflight", "branded", "experimental"]) ||
     !isOneOf(candidate.launchObservation, [
       "chromium-live",
       "project-configuration",
@@ -86,6 +94,18 @@ export function readForge3DBrowserProjectMetadata(
       lane: "preflight",
       launchObservation: "project-configuration",
     },
+    "firefox-preflight": {
+      browserName: "firefox",
+      channel: "playwright",
+      lane: "preflight",
+      launchObservation: "project-configuration",
+    },
+    "firefox-nightly-experimental": {
+      browserName: "firefox",
+      channel: "playwright",
+      lane: "experimental",
+      launchObservation: "project-configuration",
+    },
   }[candidate.project];
   if (
     candidate.browserName !== expected.browserName ||
@@ -99,6 +119,24 @@ export function readForge3DBrowserProjectMetadata(
       "Playwright forge3dBrowser project identity is inconsistent",
     );
   }
+
+  const firefoxFields =
+    candidate.project === "firefox-preflight"
+      ? readFirefoxFields(candidate, {
+          preferenceMode: "default",
+          firefoxUserPrefs: {},
+          supportLevel: "ENGINE_PASS",
+          webgpuRequired: true,
+        })
+      : candidate.project === "firefox-nightly-experimental"
+        ? readFirefoxFields(candidate, {
+            preferenceMode: "override",
+            firefoxUserPrefs: { "dom.webgpu.enabled": true },
+            supportLevel: "NOT_PROVEN",
+            webgpuRequired: false,
+          })
+        : {};
+
   return {
     project: candidate.project,
     browserName: candidate.browserName,
@@ -107,6 +145,7 @@ export function readForge3DBrowserProjectMetadata(
     launchObservation: candidate.launchObservation,
     webgpuRequired: candidate.webgpuRequired,
     launchArgs: [...candidate.launchArgs],
+    ...firefoxFields,
   };
 }
 
@@ -132,7 +171,7 @@ export function resolveSourceBenchmarkEvidenceMode(
   ambientMode: string | undefined,
 ): EvidenceMode {
   const projectMode =
-    metadata.lane === "preflight" ? "probe" : "required";
+    metadata.lane === "branded" ? "required" : "probe";
   if (ambientMode === undefined) {
     return projectMode;
   }
@@ -143,6 +182,52 @@ export function resolveSourceBenchmarkEvidenceMode(
     );
   }
   return projectMode;
+}
+
+function readFirefoxFields(
+  candidate: Record<string, unknown>,
+  expected: {
+    preferenceMode: "default" | "override";
+    firefoxUserPrefs: Record<string, boolean>;
+    supportLevel: "ENGINE_PASS" | "NOT_PROVEN";
+    webgpuRequired: boolean;
+  },
+): Pick<
+  Forge3DBrowserProjectMetadata,
+  "preferenceMode" | "firefoxUserPrefs" | "supportLevel"
+> {
+  if (
+    candidate.preferenceMode !== expected.preferenceMode ||
+    candidate.supportLevel !== expected.supportLevel ||
+    candidate.webgpuRequired !== expected.webgpuRequired ||
+    !Array.isArray(candidate.launchArgs) ||
+    candidate.launchArgs.length !== 0 ||
+    !sameBooleanRecord(candidate.firefoxUserPrefs, expected.firefoxUserPrefs)
+  ) {
+    throw new Error(
+      "Playwright Firefox preference or support metadata is inconsistent",
+    );
+  }
+  return {
+    preferenceMode: expected.preferenceMode,
+    firefoxUserPrefs: { ...expected.firefoxUserPrefs },
+    supportLevel: expected.supportLevel,
+  };
+}
+
+function sameBooleanRecord(
+  candidate: unknown,
+  expected: Record<string, boolean>,
+): boolean {
+  if (!isRecord(candidate)) return false;
+  const candidateEntries = Object.entries(candidate);
+  const expectedEntries = Object.entries(expected);
+  return (
+    candidateEntries.length === expectedEntries.length &&
+    expectedEntries.every(
+      ([key, value]) => candidate[key] === value,
+    )
+  );
 }
 
 export function launchFlagPresence(

@@ -10,16 +10,9 @@ import {
   test,
 } from "../browser/webgpu-fixture";
 import {
-  configuredLaunchArgumentsObserved,
-  launchFlagPresence,
-  launchFlagsPresent,
-  preflightLaunchIdentityConsistent,
   resolveSourceBenchmarkEvidenceMode,
 } from "../browser/playwright-project-metadata";
-import {
-  observeSourceBrowserLaunch,
-  sourceLaunchObservationConsistent,
-} from "../browser/source-launch-observation";
+import { collectPlaywrightLaunchDiagnostics } from "../browser/playwright-launch-diagnostics";
 import { validateBrowserEvidence } from "../browser/evidence-validator.mjs";
 import { runViewerBenchmark } from "../browser/viewer-benchmark";
 import {
@@ -38,50 +31,58 @@ test("validates complete evidence from the frozen real-GPU benchmark", async ({
     project,
     process.env.FORGE3D_SOURCE_BENCHMARK_MODE,
   );
-  const launch = await observeSourceBrowserLaunch(browser, project);
-  const configuredLaunchArguments = [...project.launchArgs];
-  const effectiveLaunchArguments = [
-    ...launch.effectiveLaunchArguments,
-  ];
+  const launch = await collectPlaywrightLaunchDiagnostics(
+    browser,
+    project,
+  );
+  const configuredLaunchArguments = [...launch.configuredArguments];
+  const effectiveLaunchArguments = [...launch.effectiveArguments];
   const launchDiagnostics = {
     project: project.project,
     declaredBrowser: project.browserName,
     declaredChannel: project.channel,
     declaredLane: project.lane,
+    declaredEngine: launch.declaredEngine,
+    actualEngine: launch.actualEngine,
+    provenance: launch.provenance,
     configuredLaunchArguments,
     effectiveLaunchArguments,
-    launchArgumentsObserved: launch.launchArgumentsObserved,
-    launchArgumentSource: launch.launchArgumentSource,
-    flagPresence: launchFlagPresence(
-      configuredLaunchArguments,
-      effectiveLaunchArguments,
-    ),
+    launchArgumentsObserved: launch.observed,
+    launchArgumentSource: launch.observationSource,
+    preferenceMode: launch.preferenceMode,
+    firefoxUserPrefs: launch.firefoxUserPrefs,
+    supportLevel: launch.supportLevel,
+    flagPresence: launch.flagPresence,
     configuredLaunchFlagsPresent:
-      launchFlagsPresent(configuredLaunchArguments),
+      launch.configuredLaunchFlagsPresent,
     effectiveLaunchFlagsPresent:
-      launchFlagsPresent(effectiveLaunchArguments),
+      launch.effectiveLaunchFlagsPresent,
     configuredArgumentsObserved:
-      launch.launchArgumentsObserved &&
-      configuredLaunchArgumentsObserved(
-        configuredLaunchArguments,
-        effectiveLaunchArguments,
-      ),
+      launch.configuredArgumentsObserved,
     preflightIdentityConsistent:
-      preflightLaunchIdentityConsistent(
-        project,
-        configuredLaunchArguments,
-        effectiveLaunchArguments,
-      ),
+      launch.preflightIdentityConsistent,
     sourceObservationConsistent:
-      sourceLaunchObservationConsistent(project, launch),
+      launch.sourceObservationConsistent,
   };
   await testInfo.attach("forge3d-source-launch-diagnostics.json", {
     body: JSON.stringify(launchDiagnostics, null, 2),
     contentType: "application/json",
   });
-  expect(launchDiagnostics.configuredArgumentsObserved).toBe(
-    project.launchObservation === "chromium-live",
+  expect(launchDiagnostics.actualEngine).toBe(
+    launchDiagnostics.declaredEngine,
   );
+  if (project.launchObservation === "chromium-live") {
+    expect(launchDiagnostics.launchArgumentsObserved).toBe(true);
+    expect(launchDiagnostics.provenance).toBe("live-browser");
+    expect(launchDiagnostics.configuredArgumentsObserved).toBe(true);
+  } else {
+    expect(launchDiagnostics.launchArgumentsObserved).toBe(false);
+    expect(launchDiagnostics.provenance).toBe(
+      "project-configuration",
+    );
+    expect(launchDiagnostics.effectiveLaunchArguments).toEqual([]);
+    expect(launchDiagnostics.configuredArgumentsObserved).toBe(false);
+  }
   expect(
     launchDiagnostics.preflightIdentityConsistent,
     "source evidence with WebGPU-enabling flags must identify chromium-preflight",
@@ -116,6 +117,17 @@ test("validates complete evidence from the frozen real-GPU benchmark", async ({
           lowPowerSignalProvenance: "browser API unavailable",
         })
       : null;
+  const firefoxEvidenceLabels =
+    project.project === "firefox-preflight" ||
+    project.project === "firefox-nightly-experimental"
+      ? {
+          supportLevel: project.supportLevel!,
+          browserPreference: {
+            mode: project.preferenceMode!,
+            overrides: { ...project.firefoxUserPrefs },
+          },
+        }
+      : {};
   const frameCounters = await page.evaluate(() =>
     window.__forge3dInteractiveViewer.viewer.getDiagnostics(),
   );
@@ -146,6 +158,7 @@ test("validates complete evidence from the frozen real-GPU benchmark", async ({
     },
     project: project.project,
     lane: evidenceMode,
+    ...firefoxEvidenceLabels,
     browser: {
       name: project.browserName,
       version: browser.version(),

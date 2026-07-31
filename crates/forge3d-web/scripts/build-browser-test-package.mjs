@@ -417,7 +417,8 @@ async function runInstalledPackageBrowserGate(
       await exerciseViewerVisibilityLifecycle({
         page,
         context: page.context(),
-        headed: process.env.FORGE3D_HEADED === "1",
+        requireActualDocumentVisibilityTransitions:
+          process.env.FORGE3D_HEADED === "1",
       });
     const interactionObservation =
       await runViewerInteractionObservation(page);

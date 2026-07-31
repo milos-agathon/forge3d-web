@@ -1,7 +1,10 @@
 import { expect, test as base } from "@playwright/test";
 
 import {
-  configuredLaunchArgumentsObserved,
+  collectPlaywrightLaunchDiagnostics,
+  type PlaywrightLaunchDiagnostics,
+} from "./playwright-launch-diagnostics";
+import {
   launchFlagPresence,
   launchFlagsPresent,
   preflightLaunchIdentityConsistent,
@@ -9,11 +12,6 @@ import {
   resolveWebGpuRequired,
   type Forge3DBrowserProjectMetadata,
 } from "./playwright-project-metadata";
-import {
-  observeSourceBrowserLaunch,
-  sourceLaunchObservationConsistent,
-  type SourceLaunchObservation,
-} from "./source-launch-observation";
 
 interface AdapterDiagnostics {
   requestAttempted: boolean;
@@ -56,11 +54,17 @@ export interface WebGpuDiagnostics extends WebGpuAvailability {
   adapter: AdapterDiagnostics;
   viewerRuntime: ViewerRuntimeDiagnostics;
   launch: {
+    declaredEngine: "chromium" | "firefox" | "webkit";
+    actualEngine: string;
+    provenance: "live-browser" | "project-configuration" | null;
     configuredArguments: string[];
     effectiveArguments: string[];
     observationSource: string | null;
     observed: boolean;
     browserProcessId: number | null;
+    preferenceMode: "default" | "override" | null;
+    firefoxUserPrefs: Record<string, boolean> | null;
+    supportLevel: "ENGINE_PASS" | "NOT_PROVEN" | null;
     flagPresence: ReturnType<typeof launchFlagPresence>;
     configuredLaunchFlagsPresent: boolean;
     effectiveLaunchFlagsPresent: boolean;
@@ -75,6 +79,16 @@ interface Forge3DFixtures {
   webgpuAvailability: WebGpuAvailability;
   webgpuCapabilityGuard: void;
   webgpuDiagnostics: WebGpuDiagnostics;
+}
+
+export function serializePlaywrightLaunchArguments(
+  project: Pick<Forge3DBrowserProjectMetadata, "launchArgs">,
+  launch: PlaywrightLaunchDiagnostics | undefined,
+): { configuredArguments: string[]; effectiveArguments: string[] } {
+  return {
+    configuredArguments: [...project.launchArgs],
+    effectiveArguments: [...(launch?.effectiveArguments ?? [])],
+  };
 }
 
 export const test = base.extend<Forge3DFixtures>({
@@ -137,10 +151,10 @@ export const test = base.extend<Forge3DFixtures>({
     use,
     testInfo,
   ) => {
-    let launch: SourceLaunchObservation | undefined;
+    let launch: PlaywrightLaunchDiagnostics | undefined;
     let launchError: { name: string; message: string } | null = null;
     try {
-      launch = await observeSourceBrowserLaunch(
+      launch = await collectPlaywrightLaunchDiagnostics(
         browser,
         webgpuAvailability.project,
       );
@@ -260,48 +274,68 @@ export const test = base.extend<Forge3DFixtures>({
       }
       return { adapter: adapterDiagnostics, viewerRuntime };
     });
-    const configuredArguments = [
-      ...webgpuAvailability.project.launchArgs,
-    ];
-    const effectiveArguments = [
-      ...(launch?.effectiveLaunchArguments ?? []),
-    ];
+    const { configuredArguments, effectiveArguments } =
+      serializePlaywrightLaunchArguments(
+        webgpuAvailability.project,
+        launch,
+      );
     const diagnostics: WebGpuDiagnostics = {
       ...webgpuAvailability,
       browserVersion: browser.version(),
       adapter: runtime.adapter,
       viewerRuntime: runtime.viewerRuntime,
       launch: {
+        declaredEngine:
+          launch?.declaredEngine ??
+          (webgpuAvailability.project.browserName === "firefox"
+            ? "firefox"
+            : webgpuAvailability.project.browserName === "webkit"
+              ? "webkit"
+              : "chromium"),
+        actualEngine:
+          launch?.actualEngine ?? browser.browserType().name(),
+        provenance: launch?.provenance ?? null,
         configuredArguments,
         effectiveArguments,
-        observationSource: launch?.launchArgumentSource ?? null,
-        observed: launch?.launchArgumentsObserved === true,
+        observationSource: launch?.observationSource ?? null,
+        observed: launch?.observed === true,
         browserProcessId: launch?.browserProcessId ?? null,
-        flagPresence: launchFlagPresence(
-          configuredArguments,
-          effectiveArguments,
-        ),
-        configuredLaunchFlagsPresent:
-          launchFlagsPresent(configuredArguments),
-        effectiveLaunchFlagsPresent:
-          launchFlagsPresent(effectiveArguments),
-        configuredArgumentsObserved:
-          launch?.launchArgumentsObserved === true &&
-          configuredLaunchArgumentsObserved(
+        preferenceMode:
+          launch?.preferenceMode ??
+          webgpuAvailability.project.preferenceMode ??
+          null,
+        firefoxUserPrefs:
+          launch?.firefoxUserPrefs ??
+          (webgpuAvailability.project.firefoxUserPrefs === undefined
+            ? null
+            : { ...webgpuAvailability.project.firefoxUserPrefs }),
+        supportLevel:
+          launch?.supportLevel ??
+          webgpuAvailability.project.supportLevel ??
+          null,
+        flagPresence:
+          launch?.flagPresence ??
+          launchFlagPresence(
             configuredArguments,
             effectiveArguments,
           ),
+        configuredLaunchFlagsPresent:
+          launch?.configuredLaunchFlagsPresent ??
+          launchFlagsPresent(configuredArguments),
+        effectiveLaunchFlagsPresent:
+          launch?.effectiveLaunchFlagsPresent ??
+          launchFlagsPresent(effectiveArguments),
+        configuredArgumentsObserved:
+          launch?.configuredArgumentsObserved ?? false,
         preflightIdentityConsistent:
+          launch?.preflightIdentityConsistent ??
           preflightLaunchIdentityConsistent(
             webgpuAvailability.project,
             configuredArguments,
             effectiveArguments,
           ),
         sourceObservationConsistent:
-          sourceLaunchObservationConsistent(
-            webgpuAvailability.project,
-            launch,
-          ),
+          launch?.sourceObservationConsistent ?? false,
         error: launchError,
       },
     };
@@ -314,17 +348,31 @@ export const test = base.extend<Forge3DFixtures>({
 
     await use(diagnostics);
 
+    expect(diagnostics.launch.error).toBeNull();
+    expect(
+      diagnostics.launch.actualEngine,
+      `${diagnostics.project.project} launched the wrong Playwright engine`,
+    ).toBe(diagnostics.launch.declaredEngine);
+    expect(diagnostics.launch.sourceObservationConsistent).toBe(true);
     if (diagnostics.project.launchObservation === "chromium-live") {
       expect(
-        diagnostics.launch.configuredArgumentsObserved,
-        `${diagnostics.project.project} did not apply all configured launch arguments`,
+        diagnostics.launch.observed,
+        `${diagnostics.project.project} did not expose effective Chromium launch arguments`,
       ).toBe(true);
+      expect(diagnostics.launch.provenance).toBe("live-browser");
     } else {
-      expect(
-        diagnostics.launch.configuredArgumentsObserved,
-        `${diagnostics.project.project} configuration-only evidence must not claim live launch-argument observation`,
-      ).toBe(false);
+      expect(diagnostics.launch.observed).toBe(false);
+      expect(diagnostics.launch.provenance).toBe(
+        "project-configuration",
+      );
+      expect(diagnostics.launch.effectiveArguments).toEqual([]);
     }
+    expect(
+      diagnostics.launch.configuredArgumentsObserved,
+      diagnostics.project.launchObservation === "chromium-live"
+        ? `${diagnostics.project.project} did not apply all configured launch arguments`
+        : `${diagnostics.project.project} configuration-only evidence must not claim live launch-argument observation`,
+    ).toBe(diagnostics.project.launchObservation === "chromium-live");
     expect(
       diagnostics.launch.preflightIdentityConsistent,
       "browser evidence with WebGPU-enabling flags must identify the chromium-preflight project",

@@ -67,6 +67,7 @@
     "test:browser:chromium": "playwright test --project=chromium-preflight",
     "test:browser:chrome": "playwright test --project=chrome-stable",
     "test:browser:edge": "playwright test --project=edge-stable",
+    "test:browser:firefox-preflight": "playwright test --project=firefox-preflight",
     "test:browser:webkit": "playwright test --project=webkit-preflight",
     "classify:browser:webkit": "node scripts/classify-webkit-preflight.mjs"
   },
