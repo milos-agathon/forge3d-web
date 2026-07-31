@@ -4,12 +4,34 @@ This service exposes only:
 
 - `POST /v1/jit-config`
 - `POST /v1/cleanup-runner`
+- `GET /v1/deployment`
 
-Both endpoints require a controller certificate trusted by the broker CA and a
+All endpoints require a controller certificate trusted by the broker CA. The
+two mutating endpoints require a
 canonical ECDSA P-256 request signed by the matching public key in the checked
 hardware matrix. The caller supplies an authorization digest and one-time
 nonce; it cannot supply a repository, runner name, label list, runner group,
 work folder, runner ID, workflow run ID, or workflow job ID.
+
+The read-only deployment endpoint returns the administrator-verified
+installation receipt loaded at startup. The installed service fails closed
+unless that receipt binds the exact protected-main source and workflow SHAs,
+GitHub attestation identity, package-manifest digest, archive, configuration,
+broker/cleanup protocol versions, and the exact package workflow run ID,
+attempt, artifact ID, name, and digest. Package-manifest schema version 1
+remains unchanged. The immutable artifact name ends with
+`<run-id>-<run-attempt>`, and the hosted proof verifies the unchanged manifest
+bytes inside that exact artifact. Attempt-unqualified artifact names are
+rejected.
+
+The service definition launches `src/bootstrap.mjs` before importing any broker
+runtime module. The bootstrap verifies the full manifest/receipt identity, the
+retained outer archive and its single nested npm package, and the exact current
+regular-file trees under `/opt/forge3d/browser-lab-broker` and
+`/etc/forge3d/browser-lab-broker-config`. Missing, extra, changed, symlinked, or
+hard-linked files fail before token-provider, watchdog, or socket construction.
+The archive remains at the fixed read-only
+`/opt/forge3d/browser-lab-broker-package/browser-lab-broker.tar.gz` path.
 
 The broker fixes the repository to `milos-agathon/forge3d-web`. Its protected
 authorization directory receives the canonical authorization subject and

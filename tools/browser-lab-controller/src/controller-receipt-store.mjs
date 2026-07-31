@@ -11,7 +11,11 @@ function receiptName(run, recordType) {
     run.id < 1 ||
     !Number.isInteger(run.attempt) ||
     run.attempt < 1 ||
-    !["host-lab-canary", "manual-session"].includes(recordType)
+    ![
+      "host-lab-canary",
+      "manual-session",
+      "deployment-provenance",
+    ].includes(recordType)
   ) {
     throw new Error("controller receipt identity is invalid");
   }
@@ -59,6 +63,14 @@ function matchesReceiptIdentity(signedRecord, run, recordType) {
   if (recordType === "host-lab-canary") {
     return (
       record?.recordType === recordType &&
+      record.runId === run.id &&
+      record.runAttempt === run.attempt
+    );
+  }
+  if (recordType === "deployment-provenance") {
+    return (
+      record?.recordType ===
+        "lab-service-deployment-provenance-receipt" &&
       record.runId === run.id &&
       record.runAttempt === run.attempt
     );

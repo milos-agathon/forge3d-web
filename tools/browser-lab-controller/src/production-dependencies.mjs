@@ -34,6 +34,7 @@ export function createProductionControllerDependencies({
   hostId,
   github,
   broker,
+  controllerDeployment = null,
   lifecycleStore = null,
   configuration,
   platform = process.platform,
@@ -164,6 +165,7 @@ export function createProductionControllerDependencies({
       return result;
     },
     broker,
+    controllerDeployment,
     spawnRunner: (request) =>
       spawnRunner({
         ...request,

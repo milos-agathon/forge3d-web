@@ -29,12 +29,12 @@ export function verifySignedManualSession({
   assertJsonSchema(record, manualSessionSchema);
   const host = matrix.hosts.find((candidate) => candidate.assetId === record.hostId);
   if (
-    host?.controller?.state !== "active" ||
+    host?.controller?.state !== "online" ||
     !host.controller.publicJwk ||
     signature.signingKeyId !== host.controller.signingKeyId ||
     record.controllerKeyId !== host.controller.signingKeyId
   ) {
-    throw new Error("manual session controller key is not active and pinned");
+    throw new Error("manual session controller key is not online and pinned");
   }
   const canonical = canonicalJson(record);
   const valid = verifySignature(

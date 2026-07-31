@@ -4,7 +4,8 @@
   <name>Forge3D Browser Lab Controller</name>
   <description>Authorization-bound one-job JIT controller with a pinned physical-console session bridge.</description>
   <executable>C:\Program Files\nodejs\node.exe</executable>
-  <arguments>"C:\ProgramData\Forge3D\browser-lab-controller\src\controller-service.mjs" --environment-file "C:\ProgramData\Forge3D\browser-lab-controller.env"</arguments>
+  <arguments>"C:\ProgramData\Forge3D\browser-lab-controller\src\bootstrap.mjs" --environment-file "C:\ProgramData\Forge3D\browser-lab-controller.env"</arguments>
+  <env name="FORGE3D_CONTROLLER_PACKAGE_ROOT" value="C:\ProgramData\Forge3D\browser-lab-controller"/>
   <env name="FORGE3D_CONTROLLER_WINDOWS_SESSION_BRIDGE" value="C:\ProgramData\Forge3D\browser-lab-controller\services\windows-interactive-session-bridge.ps1"/>
   <env name="FORGE3D_CONTROLLER_WINDOWS_SESSION_BRIDGE_SHA256" value="fd84d683c5f6475d382e8ace18632e6636570d9959ae71b92fbed0853ffceb5b"/>
   <workingdirectory>C:\ProgramData\Forge3D\browser-lab</workingdirectory>

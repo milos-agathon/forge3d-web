@@ -174,7 +174,7 @@ jobs:
       - name: Build broker and configuration archive
         run: |
           mkdir -p broker-package/config broker-package/package
-          npm pack tools/browser-lab-broker \
+          npm pack ./tools/browser-lab-broker \
             --pack-destination broker-package/package \
             --cache "${RUNNER_TEMP}/npm-cache"
           cp crates/forge3d-web/tests/infrastructure/browser-policy.json broker-package/config/
@@ -197,7 +197,7 @@ jobs:
       - name: Upload broker package
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
-          name: browser-lab-broker-${{ github.sha }}
+          name: browser-lab-broker-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             browser-lab-broker.tar.gz
             broker-package-manifest.json

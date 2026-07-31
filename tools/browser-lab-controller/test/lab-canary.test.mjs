@@ -65,7 +65,7 @@ test("host canary is controller-signed, non-support, and signature-verifiable", 
         {
           assetId: hostId,
           controller: {
-            state: "active",
+            state: "online",
             signingKeyId: keyId,
             publicJwk: keys.publicKey.export({ format: "jwk" }),
           },

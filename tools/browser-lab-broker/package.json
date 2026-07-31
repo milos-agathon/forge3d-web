@@ -10,10 +10,11 @@
   "files": [
     "src",
     "services",
+    "schemas",
     "README.md"
   ],
   "scripts": {
     "test": "node --test test/*.test.mjs",
-    "start": "node src/server.mjs"
+    "start": "node src/bootstrap.mjs"
   }
 }

@@ -281,7 +281,7 @@ jobs:
             const matches = release.assets.filter((asset) => asset.name === "intake-manifest.json");
             if (matches.length !== 1) throw new Error("expected exactly one intake-manifest.json asset");
             process.stdout.write(String(matches[0].id));
-          ')"
+          ')
           gh api \
             -H "Accept: application/octet-stream" \
             "/repos/${GITHUB_REPOSITORY}/releases/assets/${intake_asset_id}" \
@@ -357,8 +357,11 @@ jobs:
               run.path !== ".github/workflows/browser-lab-infrastructure-readiness.yml" ||
               run.head_sha !== process.env.TRUSTED_SHA ||
               run.head_branch !== "main" ||
+              run.event !== "workflow_dispatch" ||
               run.status !== "completed" ||
               run.conclusion !== "success" ||
+              !Number.isInteger(run.run_attempt) ||
+              run.run_attempt < 1 ||
               jobs.filter((job) =>
                 job.name === "browser-lab-infrastructure-readiness" &&
                 job.conclusion === "success"
@@ -386,15 +389,29 @@ jobs:
             --deny-self-hosted-runners
           node --input-type=module --eval '
             import { readFileSync, writeFileSync } from "node:fs";
-            import { verifyLabReadinessForPromotion } from "./scripts/compute-lab-readiness.mjs";
+            import { resolve } from "node:path";
+            import {
+              computeLabConfiguration,
+              verifyLabReadinessForPromotion
+            } from "./scripts/compute-lab-readiness.mjs";
+            import { sha256Hex } from "./scripts/canonical-json.mjs";
             const api = JSON.parse(readFileSync("lab-readiness-run.json", "utf8"));
+            const manifestBytes = readFileSync(process.argv[1]);
+            // The workflow-run REST response does not expose workflow_dispatch
+            // inputs. Promotion therefore trusts only the strict attested
+            // readiness manifest and the independently resolved API tuples.
             const digest = verifyLabReadinessForPromotion({
-              manifest: JSON.parse(readFileSync(process.argv[1], "utf8")),
+              manifest: JSON.parse(manifestBytes.toString("utf8")),
+              manifestBytes,
               readinessRun: {
                 id: api.id,
+                attempt: api.run_attempt,
                 path: api.path,
+                ref: `refs/heads/${api.head_branch}`,
                 headSha: api.head_sha,
                 headBranch: api.head_branch,
+                event: api.event,
+                status: api.status,
                 conclusion: api.conclusion
               },
               dispatch: {
@@ -403,13 +420,19 @@ jobs:
                 labReadinessRunId: Number(process.env.LAB_READINESS_RUN_ID)
               },
               packageManifest: JSON.parse(readFileSync("promoted-package/browser-package-manifest.json", "utf8")),
+              packageResolution: JSON.parse(readFileSync("package-run.json", "utf8")),
               attestation: {
+                verified: true,
                 repository: "milos-agathon/forge3d-web",
                 signerWorkflow: "milos-agathon/forge3d-web/.github/workflows/browser-lab-infrastructure-readiness.yml",
                 sourceRef: "refs/heads/main",
                 sourceDigest: process.env.TRUSTED_SHA,
-                denySelfHostedRunners: true
-              }
+                denySelfHostedRunners: true,
+                subjectSha256: sha256Hex(manifestBytes)
+              },
+              expectedConfiguration: computeLabConfiguration({
+                repositoryRoot: resolve(process.cwd(), "../..")
+              })
             });
             writeFileSync(process.env.GITHUB_ENV, `FORGE3D_VERIFIED_LAB_DIGEST=${digest}\n`, { flag: "a" });
           ' "${manifest}"
@@ -1029,7 +1052,7 @@ jobs:
           printf '%s' "${CONTROLLER_MTLS_CERT}" > "${RUNNER_TEMP}/controller-client.crt"
           printf '%s' "${CONTROLLER_MTLS_KEY}" > "${RUNNER_TEMP}/controller-client.key"
           printf '%s' "${CONTROLLER_MTLS_CA}" > "${RUNNER_TEMP}/controller-ca.crt"
-          receipt_url="$(node --input-type=module --eval '
+          mapfile -t receipt_urls < <(node --input-type=module --eval '
             import { readFileSync } from "node:fs";
             const endpoints = JSON.parse(readFileSync(
               "crates/forge3d-web/tests/infrastructure/controller-health-endpoints.json",
@@ -1039,18 +1062,30 @@ jobs:
               (candidate) => candidate.assetId === process.env.HOST_ID
             );
             if (!endpoint) throw new Error("checked controller endpoint is missing");
-            process.stdout.write(endpoint.receiptUrlTemplate
+            const render = (template) => template
               .replace("{run_id}", process.env.GITHUB_RUN_ID)
-              .replace("{run_attempt}", process.env.GITHUB_RUN_ATTEMPT));
+              .replace("{run_attempt}", process.env.GITHUB_RUN_ATTEMPT);
+            process.stdout.write([
+              render(endpoint.receiptUrlTemplate),
+              render(endpoint.deploymentReceiptUrlTemplate)
+            ].join("\n"));
           ')"
           curl --fail --silent --show-error \
             --retry 60 --retry-delay 5 --retry-all-errors \
             --cert "${RUNNER_TEMP}/controller-client.crt" \
             --key "${RUNNER_TEMP}/controller-client.key" \
             --cacert "${RUNNER_TEMP}/controller-ca.crt" \
-            "${receipt_url}" \
+            "${receipt_urls[0]}" \
             > finalized-hardware-evidence/signed-controller-receipt.json
           test -s finalized-hardware-evidence/signed-controller-receipt.json
+          curl --fail --silent --show-error \
+            --retry 60 --retry-delay 5 --retry-all-errors \
+            --cert "${RUNNER_TEMP}/controller-client.crt" \
+            --key "${RUNNER_TEMP}/controller-client.key" \
+            --cacert "${RUNNER_TEMP}/controller-ca.crt" \
+            "${receipt_urls[1]}" \
+            > finalized-hardware-evidence/signed-deployment-receipt.json
+          test -s finalized-hardware-evidence/signed-deployment-receipt.json
 
       - name: Revalidate exact page and host adapter join on hosted runner
         shell: bash
@@ -1093,6 +1128,10 @@ jobs:
                 "../../finalized-hardware-evidence/signed-controller-receipt.json",
                 "utf8"
               )),
+              signedDeploymentRecord: JSON.parse(readFileSync(
+                "../../finalized-hardware-evidence/signed-deployment-receipt.json",
+                "utf8"
+              )),
               authorization: {
                 record: authorization,
                 sha256: process.env.AUTHORIZATION_SHA256
@@ -1133,6 +1172,9 @@ jobs:
           node scripts/finalize-host-lab-canary.mjs \
             host-canary-finalizer-input.json \
             ../../finalized-hardware-evidence/lab-host-canary.json
+          node scripts/finalize-deployment-provenance.mjs \
+            host-canary-finalizer-input.json \
+            ../../finalized-hardware-evidence/lab-deployment-provenance.json
 
       - name: Revoke host observer token and remove mTLS material
         if: always() && inputs.lane == 'infrastructure-canary'

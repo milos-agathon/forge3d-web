@@ -13,6 +13,7 @@ test("package promotion resolves one exact successful main artifact by run ID", 
       path: ".github/workflows/browser-package.yml",
       head_sha: trustedSha,
       head_branch: "main",
+      status: "completed",
       conclusion: "success",
       event: "push",
       run_attempt: 1,
@@ -36,22 +37,42 @@ test("package promotion resolves one exact successful main artifact by run ID", 
     token: "test",
     fetchImpl: async () => response(responses.shift()),
   });
-  assert.equal(result.packageArtifactId, 11);
+  assert.deepEqual(result, {
+    packageRunId: 10,
+    packageArtifactId: 11,
+    packageArtifactName: `browser-package-${trustedSha}`,
+    packageArtifactDigest: `sha256:${"b".repeat(64)}`,
+    packageWorkflowSha: trustedSha,
+    packageRunAttempt: 1,
+    packageRunPath: ".github/workflows/browser-package.yml",
+    packageRunHeadBranch: "main",
+    packageRunRef: "refs/heads/main",
+    packageRunEvent: "push",
+    packageRunStatus: "completed",
+    packageRunConclusion: "success",
+  });
 });
 
-test("package promotion rejects prior SHA, wrong workflow, failed, duplicate, or expired artifact", async () => {
+test("package promotion rejects every incomplete or mismatched run tuple", async () => {
   for (const mutation of [
+    (run) => (run.id = 11),
     (run) => (run.head_sha = "f".repeat(40)),
     (run) => (run.path = ".github/workflows/web.yml"),
+    (run) => (run.head_branch = "dev"),
+    (run) => (run.status = "in_progress"),
     (run) => (run.conclusion = "failure"),
+    (run) => (run.event = "pull_request"),
+    (run) => (run.run_attempt = 0),
   ]) {
     const run = {
       id: 10,
       path: ".github/workflows/browser-package.yml",
       head_sha: trustedSha,
       head_branch: "main",
+      status: "completed",
       conclusion: "success",
       event: "push",
+      run_attempt: 1,
     };
     mutation(run);
     await assert.rejects(
@@ -64,6 +85,51 @@ test("package promotion rejects prior SHA, wrong workflow, failed, duplicate, or
           fetchImpl: async () => response(run),
         }),
       /not the successful exact-main/u,
+    );
+  }
+});
+
+test("package promotion rejects duplicate, expired, or malformed artifacts", async () => {
+  for (const mutation of [
+    (artifacts) => artifacts.push(structuredClone(artifacts[0])),
+    (artifacts) => (artifacts[0].expired = true),
+    (artifacts) => (artifacts[0].id = 0),
+    (artifacts) => (artifacts[0].name = "other"),
+    (artifacts) => (artifacts[0].digest = "sha256:invalid"),
+    (artifacts) => (artifacts[0].workflow_run.id = 11),
+    (artifacts) => (artifacts[0].workflow_run.head_sha = "f".repeat(40)),
+  ]) {
+    const run = {
+      id: 10,
+      path: ".github/workflows/browser-package.yml",
+      head_sha: trustedSha,
+      head_branch: "main",
+      status: "completed",
+      conclusion: "success",
+      event: "push",
+      run_attempt: 1,
+    };
+    const artifacts = [
+      {
+        id: 11,
+        name: `browser-package-${trustedSha}`,
+        expired: false,
+        digest: `sha256:${"b".repeat(64)}`,
+        workflow_run: { id: 10, head_sha: trustedSha },
+      },
+    ];
+    mutation(artifacts);
+    const responses = [run, { artifacts }];
+    await assert.rejects(
+      () =>
+        resolvePackageRun({
+          repository: "milos-agathon/forge3d-web",
+          packageRunId: 10,
+          trustedSha,
+          token: "test",
+          fetchImpl: async () => response(responses.shift()),
+        }),
+      /artifact is missing, duplicated, expired, or mismatched/u,
     );
   }
 });

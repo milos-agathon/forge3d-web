@@ -1,0 +1,190 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/manual-canary.schema.json",
+  "title": "Forge3D published generic manual laboratory canary",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "recordType",
+    "runId",
+    "runAttempt",
+    "hardwareJobId",
+    "intakeReleaseId",
+    "lane",
+    "canaryMode",
+    "checklistId",
+    "checklistStepResults",
+    "supportClaim",
+    "trustedSha",
+    "packageRunId",
+    "packageSha256",
+    "session",
+    "media",
+    "tester",
+    "approver",
+    "productAssertionsExecuted",
+    "attestation",
+    "createdAt",
+    "expiresAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "recordType": { "const": "manual-lab-canary" },
+    "runId": { "type": "integer", "minimum": 1 },
+    "runAttempt": { "type": "integer", "minimum": 1 },
+    "hardwareJobId": { "type": "integer", "minimum": 1 },
+    "intakeReleaseId": { "type": "integer", "minimum": 1 },
+    "lane": { "const": "infrastructure-canary" },
+    "canaryMode": { "const": "manual" },
+    "checklistId": { "const": "infrastructure-manual-canary" },
+    "checklistStepResults": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "SESSION_OPEN",
+        "VISIBLE_CHALLENGE",
+        "AUTHENTICATED_MEDIA_UPLOAD",
+        "SESSION_CLEANUP"
+      ],
+      "properties": {
+        "SESSION_OPEN": { "const": "pass" },
+        "VISIBLE_CHALLENGE": { "const": "pass" },
+        "AUTHENTICATED_MEDIA_UPLOAD": { "const": "pass" },
+        "SESSION_CLEANUP": { "const": "pass" }
+      }
+    },
+    "supportClaim": { "const": false },
+    "trustedSha": { "$ref": "#/$defs/sha40" },
+    "packageRunId": { "type": "integer", "minimum": 1 },
+    "packageSha256": { "$ref": "#/$defs/sha256" },
+    "session": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "durationMinutes",
+        "controllerSignatureVerified",
+        "runnerAbsent",
+        "cleanupComplete",
+        "runId",
+        "runAttempt",
+        "jobId"
+      ],
+      "properties": {
+        "durationMinutes": { "const": 20 },
+        "controllerSignatureVerified": { "const": true },
+        "runnerAbsent": { "const": true },
+        "cleanupComplete": { "const": true },
+        "runId": { "type": "integer", "minimum": 1 },
+        "runAttempt": { "type": "integer", "minimum": 1 },
+        "jobId": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "media": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authenticatedUploader",
+        "challengeMatched",
+        "digestsVerified",
+        "assetIds",
+        "assets"
+      ],
+      "properties": {
+        "authenticatedUploader": { "const": true },
+        "challengeMatched": { "const": true },
+        "digestsVerified": { "const": true },
+        "assetIds": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "integer", "minimum": 1 }
+        },
+        "assets": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/mediaAsset" }
+        }
+      }
+    },
+    "tester": { "type": "string", "minLength": 1 },
+    "approver": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "login"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "login": { "type": "string", "minLength": 1 }
+      }
+    },
+    "productAssertionsExecuted": { "const": false },
+    "attestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "verified",
+        "denySelfHostedRunners",
+        "repository",
+        "signerWorkflow",
+        "sourceRef",
+        "sourceDigest"
+      ],
+      "properties": {
+        "verified": { "const": true },
+        "denySelfHostedRunners": { "const": true },
+        "repository": { "const": "milos-agathon/forge3d-web" },
+        "signerWorkflow": {
+          "const": "milos-agathon/forge3d-web/.github/workflows/submit-browser-manual-evidence.yml"
+        },
+        "sourceRef": { "const": "refs/heads/main" },
+        "sourceDigest": { "$ref": "#/$defs/sha40" }
+      }
+    },
+    "createdAt": { "$ref": "#/$defs/timestamp" },
+    "expiresAt": { "$ref": "#/$defs/timestamp" }
+  },
+  "$defs": {
+    "sha40": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "minLength": 20
+    },
+    "mediaAsset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "name",
+        "uploader",
+        "size",
+        "mimeType",
+        "createdAt",
+        "apiSha256",
+        "sha256"
+      ],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "uploader": { "type": "string", "minLength": 1 },
+        "size": { "type": "integer", "minimum": 1 },
+        "mimeType": {
+          "enum": [
+            "image/png",
+            "image/jpeg",
+            "video/webm",
+            "video/mp4"
+          ]
+        },
+        "createdAt": { "$ref": "#/$defs/timestamp" },
+        "apiSha256": { "$ref": "#/$defs/sha256" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    }
+  }
+}

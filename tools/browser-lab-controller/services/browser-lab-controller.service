@@ -7,9 +7,10 @@ Wants=network-online.target graphical-session.target
 Type=simple
 User=forge3d-lab-controller
 Group=forge3d-lab-controller
-ExecStart=/usr/bin/node /opt/forge3d/browser-lab-controller/src/controller-service.mjs
+ExecStart=/usr/bin/node /opt/forge3d/browser-lab-controller/src/bootstrap.mjs
 WorkingDirectory=/var/lib/forge3d-browser-lab
 EnvironmentFile=/etc/forge3d/browser-lab-controller.env
+Environment=FORGE3D_CONTROLLER_PACKAGE_ROOT=/opt/forge3d/browser-lab-controller
 Environment=FORGE3D_CONTROLLER_UNIX_SESSION_BRIDGE=/opt/forge3d/browser-lab-controller/services/unix-interactive-session-bridge.mjs
 Environment=FORGE3D_CONTROLLER_UNIX_SESSION_BRIDGE_SHA256=406756cc95c7961d92b3809ae6a11c449ddaa59ddd956e87e3995b534869eda8
 Environment=FORGE3D_CONTROLLER_INTERACTIVE_USER=forge3d-lab

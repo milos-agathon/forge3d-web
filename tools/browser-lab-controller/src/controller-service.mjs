@@ -9,6 +9,7 @@ import {
 } from "./github-actions-client.mjs";
 import { BrokerLifecycleStore } from "./broker-lifecycle-store.mjs";
 import { createControllerHealthServer } from "./controller-health-service.mjs";
+import { loadControllerDeploymentProvenance } from "./deployment-provenance.mjs";
 import { startControllerPolling } from "./controller-daemon.mjs";
 import { createProductionControllerDependencies } from "./production-dependencies.mjs";
 
@@ -17,6 +18,21 @@ export function createInstalledControllerService({
   platform = process.platform,
 }) {
   const hostId = required(environment, "FORGE3D_CONTROLLER_ASSET_ID");
+  const deploymentProvenance = loadControllerDeploymentProvenance({
+    packageManifestPath: required(
+      environment,
+      "FORGE3D_CONTROLLER_PACKAGE_MANIFEST_FILE",
+    ),
+    installationReceiptPath: required(
+      environment,
+      "FORGE3D_CONTROLLER_INSTALLATION_RECEIPT_FILE",
+    ),
+    packageRoot: required(
+      environment,
+      "FORGE3D_CONTROLLER_PACKAGE_ROOT",
+    ),
+    hostId,
+  });
   const signingKeyId = required(
     environment,
     "FORGE3D_CONTROLLER_SIGNING_KEY_ID",
@@ -68,6 +84,7 @@ export function createInstalledControllerService({
     hostId,
     github,
     broker,
+    controllerDeployment: deploymentProvenance,
     lifecycleStore,
     platform,
     runnerEnvironment: environment,
@@ -143,6 +160,7 @@ export function createInstalledControllerService({
     assetId: hostId,
     receiptDirectory,
     lifecycleStore,
+    deploymentProvenance,
     tls: {
       key: readFileSync(
         required(environment, "FORGE3D_CONTROLLER_TLS_KEY_FILE"),
@@ -164,6 +182,7 @@ export function createInstalledControllerService({
   });
   return {
     hostId,
+    deploymentProvenance,
     start() {
       const port = Number(
         environment.FORGE3D_CONTROLLER_HEALTH_PORT ?? "9443",
@@ -215,17 +234,5 @@ function required(environment, name) {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const environmentFileIndex = process.argv.indexOf("--environment-file");
-  const environment =
-    environmentFileIndex === -1
-      ? process.env
-      : loadControllerEnvironmentFile(process.argv[environmentFileIndex + 1]);
-  const service = createInstalledControllerService({ environment });
-  service.start();
-  const shutdown = async () => {
-    await service.stop();
-    process.exit(0);
-  };
-  process.once("SIGINT", shutdown);
-  process.once("SIGTERM", shutdown);
+  throw new Error("controller service must start through src/bootstrap.mjs");
 }

@@ -3,8 +3,8 @@ import { request as httpsRequest } from "node:https";
 
 import { canonicalJson } from "./controller-signing.mjs";
 
-const ISSUE_PROTOCOL = "forge3d-browser-lab-broker/v1";
-const CLEANUP_PROTOCOL = "forge3d-browser-lab-cleanup/v1";
+export const BROKER_PROTOCOL_VERSION = "forge3d-browser-lab-broker/v1";
+export const CLEANUP_PROTOCOL_VERSION = "forge3d-browser-lab-cleanup/v1";
 
 export class ControllerBrokerClient {
   constructor({
@@ -14,6 +14,7 @@ export class ControllerBrokerClient {
     privateKey,
     tls,
     transport = postJson,
+    deploymentTransport = getJson,
   }) {
     if (
       !/^https:\/\//u.test(endpoint ?? "") ||
@@ -27,11 +28,12 @@ export class ControllerBrokerClient {
     this.privateKey = privateKey;
     this.tls = tls;
     this.transport = transport;
+    this.deploymentTransport = deploymentTransport;
   }
 
   async issue(request) {
     const body = this.sign({
-      protocolVersion: ISSUE_PROTOCOL,
+      protocolVersion: BROKER_PROTOCOL_VERSION,
       authorizationDigest: request.authorizationDigest,
       requestNonce: request.requestNonce,
       controller: this.controllerIdentity(),
@@ -42,7 +44,7 @@ export class ControllerBrokerClient {
       this.tls,
     );
     if (
-      response.protocolVersion !== ISSUE_PROTOCOL ||
+      response.protocolVersion !== BROKER_PROTOCOL_VERSION ||
       response.authorizationDigest !== request.authorizationDigest
     ) {
       throw new Error("broker JIT response binding is invalid");
@@ -52,7 +54,7 @@ export class ControllerBrokerClient {
 
   async cleanup(request) {
     const body = this.sign({
-      protocolVersion: CLEANUP_PROTOCOL,
+      protocolVersion: CLEANUP_PROTOCOL_VERSION,
       authorizationDigest: request.authorizationDigest,
       requestNonce: request.requestNonce,
       controller: this.controllerIdentity(),
@@ -69,6 +71,21 @@ export class ControllerBrokerClient {
       response.authorizationDigest !== request.authorizationDigest
     ) {
       throw new Error("broker cleanup response binding is invalid");
+    }
+    return response;
+  }
+
+  async deployment() {
+    const response = await this.deploymentTransport(
+      `${this.endpoint}/v1/deployment`,
+      this.tls,
+    );
+    if (
+      response?.recordType !== "lab-service-deployment-provenance" ||
+      response.service !== "broker" ||
+      response.serviceIdentity !== "broker:forge3d-browser-lab"
+    ) {
+      throw new Error("broker deployment provenance response is invalid");
     }
     return response;
   }
@@ -168,5 +185,55 @@ function postJson(url, body, tls) {
     );
     request.once("error", reject);
     request.end(payload);
+  });
+}
+
+function getJson(url, tls) {
+  return new Promise((resolve, reject) => {
+    const request = httpsRequest(
+      url,
+      {
+        method: "GET",
+        key: tls.key,
+        cert: tls.cert,
+        ca: tls.ca,
+        minVersion: "TLSv1.3",
+        rejectUnauthorized: true,
+        headers: {
+          Accept: "application/json",
+        },
+      },
+      (response) => {
+        const chunks = [];
+        let size = 0;
+        response.on("data", (chunk) => {
+          size += chunk.length;
+          if (size > 64 * 1024) {
+            request.destroy(
+              new Error("broker deployment response exceeds 64 KiB"),
+            );
+            return;
+          }
+          chunks.push(chunk);
+        });
+        response.on("end", () => {
+          try {
+            const value = JSON.parse(
+              Buffer.concat(chunks).toString("utf8"),
+            );
+            if (response.statusCode !== 200) {
+              throw new Error(
+                `broker rejected deployment request with HTTP ${response.statusCode}`,
+              );
+            }
+            resolve(value);
+          } catch (error) {
+            reject(error);
+          }
+        });
+      },
+    );
+    request.once("error", reject);
+    request.end();
   });
 }

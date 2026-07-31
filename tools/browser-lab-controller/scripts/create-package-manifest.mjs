@@ -16,6 +16,10 @@ export function createControllerPackageManifest({
     throw new Error("controller package requires exact target/workflow SHAs");
   }
   const root = resolve(packageRoot);
+  const rootStats = lstatSync(root);
+  if (rootStats.isSymbolicLink() || !rootStats.isDirectory()) {
+    throw new Error("controller package root must be a real directory");
+  }
   const files = listFiles(root)
     .map((path) => ({
       path: relative(root, path).replaceAll("\\", "/"),
@@ -45,6 +49,14 @@ function listFiles(directory) {
       const stats = lstatSync(path);
       if (stats.isSymbolicLink()) {
         throw new Error(`controller package cannot contain symlinks: ${path}`);
+      }
+      if (stats.isFile() && Number.isInteger(stats.nlink) && stats.nlink !== 1) {
+        throw new Error(`controller package cannot contain hard links: ${path}`);
+      }
+      if (!stats.isDirectory() && !stats.isFile()) {
+        throw new Error(
+          `controller package cannot contain non-regular files: ${path}`,
+        );
       }
       return stats.isDirectory() ? listFiles(path) : [path];
     });

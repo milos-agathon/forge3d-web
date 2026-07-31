@@ -25,8 +25,11 @@ export async function resolvePackageRun({
     run.path !== ".github/workflows/browser-package.yml" ||
     run.head_sha !== trustedSha ||
     run.head_branch !== "main" ||
+    run.status !== "completed" ||
     run.conclusion !== "success" ||
-    !["push", "workflow_dispatch"].includes(run.event)
+    !["push", "workflow_dispatch"].includes(run.event) ||
+    !Number.isInteger(run.run_attempt) ||
+    run.run_attempt < 1
   ) {
     throw new Error("package run is not the successful exact-main browser package run");
   }
@@ -41,7 +44,10 @@ export async function resolvePackageRun({
   );
   if (
     matches.length !== 1 ||
-    matches[0].expired ||
+    matches[0].expired !== false ||
+    !Number.isInteger(matches[0].id) ||
+    matches[0].id < 1 ||
+    !/^sha256:[0-9a-f]{64}$/u.test(matches[0].digest ?? "") ||
     matches[0].workflow_run?.id !== Number(packageRunId) ||
     matches[0].workflow_run?.head_sha !== trustedSha
   ) {
@@ -54,6 +60,12 @@ export async function resolvePackageRun({
     packageArtifactDigest: matches[0].digest,
     packageWorkflowSha: run.head_sha,
     packageRunAttempt: run.run_attempt,
+    packageRunPath: run.path,
+    packageRunHeadBranch: run.head_branch,
+    packageRunRef: `refs/heads/${run.head_branch}`,
+    packageRunEvent: run.event,
+    packageRunStatus: run.status,
+    packageRunConclusion: run.conclusion,
   };
 }
 

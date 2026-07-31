@@ -318,14 +318,38 @@ jobs:
               import { readFileSync, writeFileSync } from "node:fs";
               import { sha256Hex } from "./scripts/canonical-json.mjs";
               import { finalizeMatrixRecord } from "./scripts/create-browser-matrix-record.mjs";
+              import { resolveSelectedWorkflowArtifact } from "./scripts/selected-workflow-record.mjs";
+              const run = JSON.parse(readFileSync(process.argv[5], "utf8"));
+              const resolution = resolveSelectedWorkflowArtifact({
+                run,
+                artifacts: [
+                  JSON.parse(readFileSync(process.argv[6], "utf8"))
+                ],
+                expected: {
+                  runId: Number(process.argv[4]),
+                  path: run.path,
+                  ref: "refs/heads/main",
+                  headSha: process.env.TARGET_SHA,
+                  event: "workflow_dispatch",
+                  status: "completed",
+                  conclusion: "success"
+                }
+              });
               const final = finalizeMatrixRecord({
                 source: JSON.parse(readFileSync(process.argv[1], "utf8")),
                 artifactId: Number(process.argv[2]),
+                resolution,
                 attestation: { verified: true, denySelfHostedRunners: true }
               });
               if (sha256Hex(final) !== process.argv[3]) throw new Error("readiness record digest mismatch");
               writeFileSync("verified-record.json", JSON.stringify(final));
-            ' "${source_record}" "${artifact_id}" "${record_sha}"
+            ' \
+              "${source_record}" \
+              "${artifact_id}" \
+              "${record_sha}" \
+              "${run_id}" \
+              "evidence-assets/${artifact_id}-run.json" \
+              "evidence-assets/${artifact_id}-metadata.json"
             for asset in "evidence-assets/${artifact_id}"/*; do
               test -f "${asset}" || continue
               cp "${asset}" "release-assets/evidence-${artifact_id}-$(basename "${asset}")"

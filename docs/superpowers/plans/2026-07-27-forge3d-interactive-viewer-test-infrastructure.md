@@ -192,7 +192,8 @@ reviewable without committing serial numbers or credentials.
   broker as an explicit trust-root service because the same permission can
   alter repository settings. Run a
   post-protection canary PR that proves direct/force push and deletion fail,
-  stale approval is dismissed, the last push needs another person's approval,
+  stale voluntary reviews are dismissed, zero approving reviews are required,
+  no latest-push approval is required,
   both named checks are required and strict, unresolved conversations block,
   and administrators cannot bypass. Then merge a protected policy-pin PR that
   writes the canary merge SHA as `trustEpochSha`; promotion rejects that SHA

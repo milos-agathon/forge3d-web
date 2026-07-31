@@ -1,0 +1,180 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/broker-package-manifest.schema.json",
+  "title": "Forge3D browser-lab broker package manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "repository",
+    "targetSha",
+    "workflowSha",
+    "brokerProtocolVersion",
+    "cleanupProtocolVersion",
+    "archive",
+    "configuration",
+    "configurationSha256"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "repository": { "const": "milos-agathon/forge3d-web" },
+    "targetSha": { "$ref": "#/$defs/sha40" },
+    "workflowSha": { "$ref": "#/$defs/sha40" },
+    "brokerProtocolVersion": { "const": "forge3d-browser-lab-broker/v1" },
+    "cleanupProtocolVersion": { "const": "forge3d-browser-lab-cleanup/v1" },
+    "archive": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "sha256"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "configuration": {
+      "type": "array",
+      "minItems": 9,
+      "maxItems": 9,
+      "prefixItems": [
+        { "$ref": "#/$defs/browserPolicy" },
+        { "$ref": "#/$defs/brokerLifecycle" },
+        { "$ref": "#/$defs/brokerProtocol" },
+        { "$ref": "#/$defs/controllerHealth" },
+        { "$ref": "#/$defs/hardwareMatrix" },
+        { "$ref": "#/$defs/repositoryTrust" },
+        { "$ref": "#/$defs/runnerManifest" },
+        { "$ref": "#/$defs/transientPolicy" },
+        { "$ref": "#/$defs/actionLock" }
+      ],
+      "items": false
+    },
+    "configurationSha256": { "$ref": "#/$defs/sha256" }
+  },
+  "$defs": {
+    "sha40": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "configurationEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": { "type": "string" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "browserPolicy": {
+      "allOf": [
+        { "$ref": "#/$defs/configurationEntry" },
+        {
+          "properties": {
+            "path": {
+              "const": "crates/forge3d-web/tests/infrastructure/browser-policy.json"
+            }
+          }
+        }
+      ]
+    },
+    "brokerLifecycle": {
+      "allOf": [
+        { "$ref": "#/$defs/configurationEntry" },
+        {
+          "properties": {
+            "path": {
+              "const": "crates/forge3d-web/tests/infrastructure/broker-lifecycle.schema.json"
+            }
+          }
+        }
+      ]
+    },
+    "brokerProtocol": {
+      "allOf": [
+        { "$ref": "#/$defs/configurationEntry" },
+        {
+          "properties": {
+            "path": {
+              "const": "crates/forge3d-web/tests/infrastructure/broker-protocol.schema.json"
+            }
+          }
+        }
+      ]
+    },
+    "controllerHealth": {
+      "allOf": [
+        { "$ref": "#/$defs/configurationEntry" },
+        {
+          "properties": {
+            "path": {
+              "const": "crates/forge3d-web/tests/infrastructure/controller-health-endpoints.json"
+            }
+          }
+        }
+      ]
+    },
+    "hardwareMatrix": {
+      "allOf": [
+        { "$ref": "#/$defs/configurationEntry" },
+        {
+          "properties": {
+            "path": {
+              "const": "crates/forge3d-web/tests/infrastructure/hardware-matrix.json"
+            }
+          }
+        }
+      ]
+    },
+    "repositoryTrust": {
+      "allOf": [
+        { "$ref": "#/$defs/configurationEntry" },
+        {
+          "properties": {
+            "path": {
+              "const": "crates/forge3d-web/tests/infrastructure/repository-trust-policy.json"
+            }
+          }
+        }
+      ]
+    },
+    "runnerManifest": {
+      "allOf": [
+        { "$ref": "#/$defs/configurationEntry" },
+        {
+          "properties": {
+            "path": {
+              "const": "crates/forge3d-web/tests/infrastructure/runner-distribution-manifest.json"
+            }
+          }
+        }
+      ]
+    },
+    "transientPolicy": {
+      "allOf": [
+        { "$ref": "#/$defs/configurationEntry" },
+        {
+          "properties": {
+            "path": {
+              "const": "crates/forge3d-web/tests/infrastructure/runner-transient-path-policy.json"
+            }
+          }
+        }
+      ]
+    },
+    "actionLock": {
+      "allOf": [
+        { "$ref": "#/$defs/configurationEntry" },
+        {
+          "properties": {
+            "path": {
+              "const": "crates/forge3d-web/tests/infrastructure/workflow-actions-lock.json"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

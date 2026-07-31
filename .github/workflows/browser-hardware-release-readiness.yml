@@ -167,7 +167,9 @@ jobs:
         working-directory: crates/forge3d-web
         env:
           GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
           LAB_READINESS_RUN_ID: ${{ inputs.labReadinessRunId }}
+          TARGET_SHA: ${{ inputs.target_sha }}
         run: |
           gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${LAB_READINESS_RUN_ID}" > lab-run.json
           gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${LAB_READINESS_RUN_ID}/jobs?per_page=100" > lab-jobs.json
@@ -178,11 +180,15 @@ jobs:
             const jobs = JSON.parse(readFileSync("lab-jobs.json", "utf8")).jobs;
             const artifacts = JSON.parse(readFileSync("lab-artifacts.json", "utf8")).artifacts;
             if (
+              run.id !== Number(process.env.LAB_READINESS_RUN_ID) ||
               run.path !== ".github/workflows/browser-lab-infrastructure-readiness.yml" ||
               run.head_branch !== "main" ||
-              run.head_sha !== process.env.GITHUB_SHA ||
+              run.head_sha !== process.env.TARGET_SHA ||
+              run.event !== "workflow_dispatch" ||
               run.status !== "completed" ||
               run.conclusion !== "success" ||
+              !Number.isInteger(run.run_attempt) ||
+              run.run_attempt < 1 ||
               jobs.filter((job) =>
                 job.name === "browser-lab-infrastructure-readiness" &&
                 job.conclusion === "success"
@@ -201,12 +207,104 @@ jobs:
           mkdir lab-readiness
           unzip -q lab-readiness.zip -d lab-readiness
           test "$(find lab-readiness -name browser-lab-infrastructure-readiness.json -type f | wc -l)" -eq 1
-          gh attestation verify "$(find lab-readiness -name browser-lab-infrastructure-readiness.json -type f)" \
+          manifest="$(find lab-readiness -name browser-lab-infrastructure-readiness.json -type f)"
+          gh attestation verify "${manifest}" \
             --repo milos-agathon/forge3d-web \
             --signer-workflow milos-agathon/forge3d-web/.github/workflows/browser-lab-infrastructure-readiness.yml \
             --source-ref refs/heads/main \
-            --source-digest "${GITHUB_SHA}" \
+            --source-digest "${TARGET_SHA}" \
             --deny-self-hosted-runners
+          # The workflow-run REST response does not expose workflow_dispatch
+          # inputs. Only the strict, canonical, attested readiness manifest
+          # selects the effective package run; the package API tuple, ZIP, and
+          # manifest attestation are then resolved independently.
+          package_run_id="$(node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            import { canonicalJson } from "./scripts/canonical-json.mjs";
+            import { assertJsonSchema } from "./tests/browser/json-schema-validator.mjs";
+            const manifestBytes = readFileSync(process.argv[1]);
+            const manifest = JSON.parse(manifestBytes.toString("utf8"));
+            const schema = JSON.parse(readFileSync(
+              "tests/infrastructure/browser-lab-infrastructure-readiness.schema.json",
+              "utf8"
+            ));
+            assertJsonSchema(manifest, schema);
+            if (
+              !manifestBytes.equals(Buffer.from(`${canonicalJson(manifest)}\n`, "utf8")) ||
+              manifest.run.id !== Number(process.env.LAB_READINESS_RUN_ID) ||
+              manifest.candidateSha !== process.env.TARGET_SHA
+            ) throw new Error("attested laboratory readiness selection is invalid");
+            process.stdout.write(String(manifest.packageRunId));
+          ' "${manifest}")"
+          node scripts/resolve-hardware-promotion.mjs \
+            --package-run-id "${package_run_id}" \
+            --trusted-sha "${TARGET_SHA}" \
+            --output package-run.json
+          package_artifact_id="$(node -p "require('./package-run.json').packageArtifactId")"
+          package_expected="$(node -p "require('./package-run.json').packageArtifactDigest")"
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${package_artifact_id}/zip" > package.zip
+          test "$(sha256sum package.zip | cut -d ' ' -f 1)" = "${package_expected#sha256:}"
+          mkdir promoted-package
+          unzip -q package.zip -d promoted-package
+          test "$(find promoted-package -name browser-package-manifest.json -type f | wc -l)" -eq 1
+          package_manifest="$(find promoted-package -name browser-package-manifest.json -type f)"
+          gh attestation verify "${package_manifest}" \
+            --repo milos-agathon/forge3d-web \
+            --signer-workflow milos-agathon/forge3d-web/.github/workflows/browser-package.yml \
+            --source-ref refs/heads/main \
+            --source-digest "${TARGET_SHA}" \
+            --deny-self-hosted-runners
+          node --input-type=module --eval '
+            import { readFileSync, writeFileSync } from "node:fs";
+            import { resolve } from "node:path";
+            import {
+              computeLabConfiguration,
+              verifyLabReadinessForPromotion
+            } from "./scripts/compute-lab-readiness.mjs";
+            import { sha256Hex } from "./scripts/canonical-json.mjs";
+            const manifestBytes = readFileSync(process.argv[1]);
+            const manifest = JSON.parse(manifestBytes.toString("utf8"));
+            const api = JSON.parse(readFileSync("lab-run.json", "utf8"));
+            const digest = verifyLabReadinessForPromotion({
+              manifest,
+              manifestBytes,
+              readinessRun: {
+                id: api.id,
+                attempt: api.run_attempt,
+                path: api.path,
+                ref: `refs/heads/${api.head_branch}`,
+                headSha: api.head_sha,
+                headBranch: api.head_branch,
+                event: api.event,
+                status: api.status,
+                conclusion: api.conclusion
+              },
+              dispatch: {
+                trustedSha: process.env.TARGET_SHA,
+                packageRunId: manifest.packageRunId,
+                labReadinessRunId: Number(process.env.LAB_READINESS_RUN_ID)
+              },
+              packageManifest: JSON.parse(readFileSync(process.argv[2], "utf8")),
+              packageResolution: JSON.parse(readFileSync("package-run.json", "utf8")),
+              attestation: {
+                verified: true,
+                repository: "milos-agathon/forge3d-web",
+                signerWorkflow: "milos-agathon/forge3d-web/.github/workflows/browser-lab-infrastructure-readiness.yml",
+                sourceRef: "refs/heads/main",
+                sourceDigest: process.env.TARGET_SHA,
+                denySelfHostedRunners: true,
+                subjectSha256: sha256Hex(manifestBytes)
+              },
+              expectedConfiguration: computeLabConfiguration({
+                repositoryRoot: resolve(process.cwd(), "../..")
+              })
+            });
+            writeFileSync(
+              process.env.GITHUB_ENV,
+              `FORGE3D_VERIFIED_LAB_DIGEST=${digest}\n`,
+              { flag: "a" }
+            );
+          ' "${manifest}" "${package_manifest}"
 
       - name: Resolve every evidence run and exact artifact
         shell: bash
@@ -221,28 +319,31 @@ jobs:
             gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" > "evidence-runs/${run_id}-artifacts.json"
             node --input-type=module --eval '
               import { readFileSync, writeFileSync } from "node:fs";
+              import { resolveSelectedWorkflowArtifact } from "./scripts/selected-workflow-record.mjs";
               const run = JSON.parse(readFileSync(process.argv[1], "utf8"));
               const artifacts = JSON.parse(readFileSync(process.argv[2], "utf8")).artifacts;
-              const allowed = new Map([
-                [".github/workflows/browser-hardware.yml", `finalized-browser-hardware-${run.id}-${run.run_attempt}`],
-                [".github/workflows/submit-browser-manual-evidence.yml", `browser-manual-evidence-${run.id}-${run.run_attempt}`]
+              const allowedPaths = new Set([
+                ".github/workflows/browser-hardware.yml",
+                ".github/workflows/submit-browser-manual-evidence.yml"
               ]);
-              if (
-                !allowed.has(run.path) ||
-                run.head_branch !== "main" ||
-                run.head_sha !== process.env.TARGET_SHA ||
-                run.status !== "completed" ||
-                run.conclusion !== "success"
-              ) throw new Error(`invalid evidence workflow run ${run.id}`);
-              const matches = artifacts.filter((artifact) =>
-                artifact.name === allowed.get(run.path)
-              );
-              if (matches.length !== 1 || matches[0].expired) throw new Error("evidence artifact mismatch");
-              writeFileSync(`${run.id}-resolution.json`, JSON.stringify({
+              if (!allowedPaths.has(run.path)) {
+                throw new Error(`invalid evidence workflow path ${run.path}`);
+              }
+              const resolution = resolveSelectedWorkflowArtifact({
                 run,
-                artifact: matches[0]
-              }));
-            ' "evidence-runs/${run_id}-run.json" "evidence-runs/${run_id}-artifacts.json"
+                artifacts,
+                expected: {
+                  runId: Number(process.argv[3]),
+                  path: run.path,
+                  ref: "refs/heads/main",
+                  headSha: process.env.TARGET_SHA,
+                  event: "workflow_dispatch",
+                  status: "completed",
+                  conclusion: "success"
+                }
+              });
+              writeFileSync(`${run.id}-resolution.json`, JSON.stringify(resolution));
+            ' "evidence-runs/${run_id}-run.json" "evidence-runs/${run_id}-artifacts.json" "${run_id}"
             artifact_id="$(node -p "require('./${run_id}-resolution.json').artifact.id")"
             expected="$(node -p "require('./${run_id}-resolution.json').artifact.digest")"
             gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "evidence-runs/${run_id}.zip"
@@ -263,9 +364,13 @@ jobs:
               writeFileSync("finalize-record-input.json", JSON.stringify({
                 source,
                 artifactId: Number(process.argv[2]),
+                resolution: JSON.parse(readFileSync(process.argv[3], "utf8")),
                 attestation: { verified: true, denySelfHostedRunners: true }
               }));
-            ' "$(find "evidence-runs/${run_id}" -name browser-matrix-record-source.json -type f)" "${artifact_id}"
+            ' \
+              "$(find "evidence-runs/${run_id}" -name browser-matrix-record-source.json -type f)" \
+              "${artifact_id}" \
+              "${run_id}-resolution.json"
             node scripts/create-browser-matrix-record.mjs \
               finalize \
               finalize-record-input.json \

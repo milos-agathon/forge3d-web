@@ -227,40 +227,171 @@ jobs:
             gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" > "host-canaries/${run_id}-artifacts.json"
             node --input-type=module --eval '
               import { readFileSync, writeFileSync } from "node:fs";
-              const [runPath, artifactsPath, hostId] = process.argv.slice(1);
+              import { resolveSelectedWorkflowArtifact } from "./scripts/selected-workflow-record.mjs";
+              const [runPath, artifactsPath, hostId, selectedRunId] = process.argv.slice(1);
               const run = JSON.parse(readFileSync(runPath, "utf8"));
               const artifacts = JSON.parse(readFileSync(artifactsPath, "utf8")).artifacts;
-              if (
-                run.path !== ".github/workflows/browser-hardware.yml" ||
-                run.head_branch !== "main" ||
-                run.head_sha !== process.env.CANDIDATE_SHA ||
-                run.status !== "completed" ||
-                run.conclusion !== "success" ||
-                run.inputs?.lane !== "infrastructure-canary" ||
-                run.inputs?.canaryMode !== "host" ||
-                run.inputs?.assetId !== hostId ||
-                String(run.inputs?.packageRunId) !== process.env.PACKAGE_RUN_ID
-              ) throw new Error(`invalid host canary run ${run.id}`);
-              const matches = artifacts.filter((artifact) =>
-                artifact.name === `finalized-browser-hardware-${run.id}-${run.run_attempt}`
+              const resolution = resolveSelectedWorkflowArtifact({
+                run,
+                artifacts,
+                expected: {
+                  runId: Number(selectedRunId),
+                  path: ".github/workflows/browser-hardware.yml",
+                  ref: "refs/heads/main",
+                  headSha: process.env.CANDIDATE_SHA,
+                  event: "workflow_dispatch",
+                  status: "completed",
+                  conclusion: "success",
+                  inputs: {
+                    lane: "infrastructure-canary",
+                    canaryMode: "host",
+                    assetId: hostId,
+                    packageRunId: process.env.PACKAGE_RUN_ID,
+                    trusted_sha: process.env.CANDIDATE_SHA
+                  }
+                }
+              });
+              writeFileSync(
+                `host-canaries/${run.id}-resolution.json`,
+                JSON.stringify(resolution)
               );
-              if (matches.length !== 1 || matches[0].expired) throw new Error("host canary artifact mismatch");
-              writeFileSync(`${run.id}-artifact.json`, JSON.stringify(matches[0]));
-            ' "host-canaries/${run_id}-run.json" "host-canaries/${run_id}-artifacts.json" "${host_id}"
-            artifact_id="$(node -p "require('./${run_id}-artifact.json').id")"
-            expected="$(node -p "require('./${run_id}-artifact.json').digest")"
+            ' "host-canaries/${run_id}-run.json" "host-canaries/${run_id}-artifacts.json" "${host_id}" "${run_id}"
+            artifact_id="$(node -p "require('./host-canaries/${run_id}-resolution.json').artifact.id")"
+            expected="$(node -p "require('./host-canaries/${run_id}-resolution.json').artifact.digest")"
             gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "host-canaries/${run_id}.zip"
             test "$(sha256sum "host-canaries/${run_id}.zip" | cut -d ' ' -f 1)" = "${expected#sha256:}"
             mkdir "host-canaries/${run_id}"
             unzip -q "host-canaries/${run_id}.zip" -d "host-canaries/${run_id}"
             test "$(find "host-canaries/${run_id}" -name lab-host-canary.json -type f | wc -l)" -eq 1
-            gh attestation verify "$(find "host-canaries/${run_id}" -name lab-host-canary.json -type f)" \
+            test "$(find "host-canaries/${run_id}" -name lab-deployment-provenance.json -type f | wc -l)" -eq 1
+            subject="$(find "host-canaries/${run_id}" -name lab-host-canary.json -type f)"
+            deployment_subject="$(find "host-canaries/${run_id}" -name lab-deployment-provenance.json -type f)"
+            gh attestation verify "${subject}" \
               --repo milos-agathon/forge3d-web \
               --signer-workflow milos-agathon/forge3d-web/.github/workflows/browser-hardware.yml \
               --source-ref refs/heads/main \
               --source-digest "${CANDIDATE_SHA}" \
               --deny-self-hosted-runners
+            gh attestation verify "${deployment_subject}" \
+              --repo milos-agathon/forge3d-web \
+              --signer-workflow milos-agathon/forge3d-web/.github/workflows/browser-hardware.yml \
+              --source-ref refs/heads/main \
+              --source-digest "${CANDIDATE_SHA}" \
+              --deny-self-hosted-runners
+            node --input-type=module --eval '
+              import { readFileSync } from "node:fs";
+              import { verifySelectedWorkflowRecord } from "./scripts/selected-workflow-record.mjs";
+              const record = JSON.parse(readFileSync(process.argv[2], "utf8"));
+              verifySelectedWorkflowRecord({
+                resolution: JSON.parse(readFileSync(process.argv[1], "utf8")),
+                record,
+                expectedInputs: {
+                  lane: record.lane,
+                  canaryMode: record.canaryMode,
+                  assetId: record.assetId,
+                  packageRunId: record.packageRunId,
+                  trusted_sha: record.trustedSha
+                }
+              });
+            ' "host-canaries/${run_id}-resolution.json" "${subject}"
+            node --input-type=module --eval '
+              import { readFileSync } from "node:fs";
+              import { verifySelectedWorkflowRecord } from "./scripts/selected-workflow-record.mjs";
+              const record = JSON.parse(readFileSync(process.argv[2], "utf8"));
+              verifySelectedWorkflowRecord({
+                resolution: JSON.parse(readFileSync(process.argv[1], "utf8")),
+                record,
+                expectedInputs: {
+                  lane: "infrastructure-canary",
+                  canaryMode: "host",
+                  assetId: record.hostId,
+                  packageRunId: process.env.PACKAGE_RUN_ID,
+                  trusted_sha: record.trustedSha
+                }
+              });
+            ' "host-canaries/${run_id}-resolution.json" "${deployment_subject}"
           done
+
+      - name: Independently resolve exact deployed service packages
+        shell: bash
+        working-directory: crates/forge3d-web
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CANDIDATE_SHA: ${{ inputs.candidate_sha }}
+        run: |
+          mkdir deployment-packages
+          node --input-type=module --eval '
+            import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+            import { canonicalJson } from "./scripts/canonical-json.mjs";
+            const records = readdirSync("host-canaries", { recursive: true })
+              .filter((path) => path.endsWith("lab-deployment-provenance.json"))
+              .map((path) => JSON.parse(readFileSync(`host-canaries/${path}`, "utf8")))
+              .sort((left, right) => left.hostId.localeCompare(right.hostId));
+            if (
+              records.length !== 4 ||
+              new Set(records.map((record) => record.hostId)).size !== 4 ||
+              new Set(records.map((record) => canonicalJson(record.broker))).size !== 1
+            ) throw new Error("deployment sidecars do not contain four hosts and one broker");
+            const specs = [
+              { name: "broker", deployment: records[0].broker },
+              ...records.map((record) => ({
+                name: `controller-${record.hostId}`,
+                deployment: record.controller
+              }))
+            ];
+            for (const spec of specs) {
+              writeFileSync(
+                `deployment-packages/${spec.name}-deployment.json`,
+                JSON.stringify(spec.deployment)
+              );
+            }
+            writeFileSync(
+              "deployment-packages/spec-files.txt",
+              `${specs.map((spec) => `${spec.name}-deployment.json`).join("\n")}\n`
+            );
+          '
+          while IFS= read -r spec_file; do
+            test -n "${spec_file}"
+            base="${spec_file%-deployment.json}"
+            deployment="deployment-packages/${spec_file}"
+            service="$(node -p "require('./${deployment}').service")"
+            run_id="$(node -p "require('./${deployment}').packageRun.id")"
+            run_attempt="$(node -p "require('./${deployment}').packageRun.attempt")"
+            artifact_id="$(node -p "require('./${deployment}').packageRun.artifact.id")"
+            artifact_digest="$(node -p "require('./${deployment}').packageRun.artifact.digest")"
+            gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/attempts/${run_attempt}" \
+              > "deployment-packages/${base}-run.json"
+            gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}" \
+              > "deployment-packages/${base}-artifact.json"
+            gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" \
+              > "deployment-packages/${base}.zip"
+            test "$(sha256sum "deployment-packages/${base}.zip" | cut -d ' ' -f 1)" = "${artifact_digest#sha256:}"
+            mkdir "deployment-packages/${base}"
+            unzip -q "deployment-packages/${base}.zip" -d "deployment-packages/${base}"
+            manifest_name="${service}-package-manifest.json"
+            archive_name="$(node -p "require('./${deployment}').archive.name")"
+            test "$(find "deployment-packages/${base}" -name "${manifest_name}" -type f | wc -l)" -eq 1
+            test "$(find "deployment-packages/${base}" -name "${archive_name}" -type f | wc -l)" -eq 1
+            manifest="$(find "deployment-packages/${base}" -name "${manifest_name}" -type f)"
+            archive="$(find "deployment-packages/${base}" -name "${archive_name}" -type f)"
+            signer="milos-agathon/forge3d-web/.github/workflows/browser-lab-${service}.yml"
+            for subject in "${manifest}" "${archive}"; do
+              gh attestation verify "${subject}" \
+                --repo milos-agathon/forge3d-web \
+                --signer-workflow "${signer}" \
+                --source-ref refs/heads/main \
+                --source-digest "${CANDIDATE_SHA}" \
+                --deny-self-hosted-runners
+            done
+            node scripts/create-deployment-package-proof.mjs \
+              "${deployment}" \
+              "deployment-packages/${base}-run.json" \
+              "deployment-packages/${base}-artifact.json" \
+              "deployment-packages/${base}.zip" \
+              "${manifest}" \
+              "${archive}" \
+              "deployment-packages/${base}-proof.json"
+          done < deployment-packages/spec-files.txt
 
       - name: Resolve generic manual canary and immutable canary release
         shell: bash
@@ -271,40 +402,64 @@ jobs:
           MANUAL_INTAKE_ID: ${{ inputs.manualIntakeReleaseId }}
           MANUAL_JOB_ID: ${{ inputs.manualHardwareJobId }}
           LAB_CANARY_RELEASE_ID: ${{ inputs.labCanaryReleaseId }}
+          MAC_HOST_RUN_ID: ${{ inputs.macHostCanaryRunId }}
+          WINDOWS_HOST_RUN_ID: ${{ inputs.windowsHostCanaryRunId }}
+          LINUX_INTEL_HOST_RUN_ID: ${{ inputs.linuxIntelHostCanaryRunId }}
+          LINUX_NVIDIA_HOST_RUN_ID: ${{ inputs.linuxNvidiaHostCanaryRunId }}
         run: |
           gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${MANUAL_RUN_ID}" > manual-run.json
           gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${MANUAL_RUN_ID}/artifacts?per_page=100" > manual-artifacts.json
           node --input-type=module --eval '
             import { readFileSync, writeFileSync } from "node:fs";
+            import { resolveSelectedWorkflowArtifact } from "./scripts/selected-workflow-record.mjs";
             const run = JSON.parse(readFileSync("manual-run.json", "utf8"));
             const artifacts = JSON.parse(readFileSync("manual-artifacts.json", "utf8")).artifacts;
-            if (
-              run.path !== ".github/workflows/submit-browser-manual-evidence.yml" ||
-              run.head_sha !== process.env.GITHUB_SHA ||
-              run.head_branch !== "main" ||
-              run.conclusion !== "success" ||
-              String(run.inputs?.intakeReleaseId) !== process.env.MANUAL_INTAKE_ID ||
-              String(run.inputs?.hardwareJobId) !== process.env.MANUAL_JOB_ID
-            ) throw new Error("generic manual canary run is invalid");
-            const matches = artifacts.filter((artifact) =>
-              artifact.name === `browser-manual-evidence-${run.id}-${run.run_attempt}`
-            );
-            if (matches.length !== 1 || matches[0].expired) throw new Error("manual canary artifact mismatch");
-            writeFileSync("manual-artifact.json", JSON.stringify(matches[0]));
+            const resolution = resolveSelectedWorkflowArtifact({
+              run,
+              artifacts,
+              expected: {
+                runId: Number(process.env.MANUAL_RUN_ID),
+                path: ".github/workflows/submit-browser-manual-evidence.yml",
+                ref: "refs/heads/main",
+                headSha: process.env.GITHUB_SHA,
+                event: "workflow_dispatch",
+                status: "completed",
+                conclusion: "success",
+                inputs: {
+                  intakeReleaseId: process.env.MANUAL_INTAKE_ID,
+                  hardwareJobId: process.env.MANUAL_JOB_ID
+                }
+              }
+            });
+            writeFileSync("manual-resolution.json", JSON.stringify(resolution));
           '
-          artifact_id="$(node -p "require('./manual-artifact.json').id")"
-          expected="$(node -p "require('./manual-artifact.json').digest")"
+          artifact_id="$(node -p "require('./manual-resolution.json').artifact.id")"
+          expected="$(node -p "require('./manual-resolution.json').artifact.digest")"
           gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > manual.zip
           test "$(sha256sum manual.zip | cut -d ' ' -f 1)" = "${expected#sha256:}"
           mkdir manual
           unzip -q manual.zip -d manual
           test "$(find manual -name lab-manual-canary-source.json -type f | wc -l)" -eq 1
-          gh attestation verify "$(find manual -name lab-manual-canary-source.json -type f)" \
+          manual_subject="$(find manual -name lab-manual-canary-source.json -type f)"
+          gh attestation verify "${manual_subject}" \
             --repo milos-agathon/forge3d-web \
             --signer-workflow milos-agathon/forge3d-web/.github/workflows/submit-browser-manual-evidence.yml \
             --source-ref refs/heads/main \
             --source-digest "${GITHUB_SHA}" \
             --deny-self-hosted-runners
+          node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            import { verifySelectedWorkflowRecord } from "./scripts/selected-workflow-record.mjs";
+            const record = JSON.parse(readFileSync(process.argv[1], "utf8"));
+            verifySelectedWorkflowRecord({
+              resolution: JSON.parse(readFileSync("manual-resolution.json", "utf8")),
+              record,
+              expectedInputs: {
+                intakeReleaseId: record.intakeReleaseId,
+                hardwareJobId: record.hardwareJobId
+              }
+            });
+          ' "${manual_subject}"
           gh api "/repos/${GITHUB_REPOSITORY}/releases/${LAB_CANARY_RELEASE_ID}" > lab-canary-release.json
           tag="$(node -p "require('./lab-canary-release.json').tag_name")"
           gh release verify "${tag}" > lab-canary-release-verification.txt
@@ -347,27 +502,85 @@ jobs:
           gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${publication_run_id}/artifacts?per_page=100" > canary-publication-artifacts.json
           node --input-type=module --eval '
             import { readFileSync, writeFileSync } from "node:fs";
+            import { resolveSelectedWorkflowArtifact } from "./scripts/selected-workflow-record.mjs";
             const run = JSON.parse(readFileSync("canary-publication-run.json", "utf8"));
             const artifacts = JSON.parse(readFileSync("canary-publication-artifacts.json", "utf8")).artifacts;
-            if (
-              run.path !== ".github/workflows/publish-browser-lab-canary.yml" ||
-              run.head_sha !== process.env.GITHUB_SHA ||
-              run.head_branch !== "main" ||
-              run.conclusion !== "success"
-            ) throw new Error("canary publication run is invalid");
-            const matches = artifacts.filter((artifact) =>
-              artifact.name === `lab-canary-publication-${run.id}-${run.run_attempt}`
-            );
-            if (matches.length !== 1 || matches[0].expired) throw new Error("canary publication artifact mismatch");
-            writeFileSync("canary-publication-artifact.json", JSON.stringify(matches[0]));
-          '
-          publication_artifact_id="$(node -p "require('./canary-publication-artifact.json').id")"
-          publication_expected="$(node -p "require('./canary-publication-artifact.json').digest")"
+            const resolution = resolveSelectedWorkflowArtifact({
+              run,
+              artifacts,
+              expected: {
+                runId: Number(process.argv[1]),
+                path: ".github/workflows/publish-browser-lab-canary.yml",
+                ref: "refs/heads/main",
+                headSha: process.env.GITHUB_SHA,
+                event: "workflow_dispatch",
+                status: "completed",
+                conclusion: "success",
+                inputs: {
+                  macHostCanaryRunId: process.env.MAC_HOST_RUN_ID,
+                  windowsHostCanaryRunId: process.env.WINDOWS_HOST_RUN_ID,
+                  linuxIntelHostCanaryRunId: process.env.LINUX_INTEL_HOST_RUN_ID,
+                  linuxNvidiaHostCanaryRunId: process.env.LINUX_NVIDIA_HOST_RUN_ID,
+                  manualCanaryRunId: process.env.MANUAL_RUN_ID,
+                  manualIntakeReleaseId: process.env.MANUAL_INTAKE_ID,
+                  manualHardwareJobId: process.env.MANUAL_JOB_ID
+                }
+              }
+            });
+            writeFileSync("canary-publication-resolution.json", JSON.stringify(resolution));
+          ' "${publication_run_id}"
+          publication_artifact_id="$(node -p "require('./canary-publication-resolution.json').artifact.id")"
+          publication_expected="$(node -p "require('./canary-publication-resolution.json').artifact.digest")"
           gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${publication_artifact_id}/zip" > canary-publication.zip
           test "$(sha256sum canary-publication.zip | cut -d ' ' -f 1)" = "${publication_expected#sha256:}"
           mkdir canary-publication
           unzip -q canary-publication.zip -d canary-publication
           test -f canary-publication/canary-publication-record.json
+          node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            import { verifySelectedWorkflowRecord } from "./scripts/selected-workflow-record.mjs";
+            const hostRecords = [
+              "FW-MAC-M2-01",
+              "FW-WIN-I12-01",
+              "FW-LNX-I12-01",
+              "FW-LNX-NV-01"
+            ].map((hostId) => {
+              const runId = {
+                "FW-MAC-M2-01": process.env.MAC_HOST_RUN_ID,
+                "FW-WIN-I12-01": process.env.WINDOWS_HOST_RUN_ID,
+                "FW-LNX-I12-01": process.env.LINUX_INTEL_HOST_RUN_ID,
+                "FW-LNX-NV-01": process.env.LINUX_NVIDIA_HOST_RUN_ID
+              }[hostId];
+              return JSON.parse(readFileSync(
+                `host-canaries/${runId}/lab-host-canary.json`, "utf8"
+              ));
+            });
+            const hostRunId = (hostId) =>
+              hostRecords.find((record) => record.hostId === hostId)?.runId;
+            const manualRecord = JSON.parse(readFileSync(
+              "manual/lab-manual-canary-source.json", "utf8"
+            ));
+            verifySelectedWorkflowRecord({
+              resolution: JSON.parse(readFileSync(
+                "canary-publication-resolution.json", "utf8"
+              )),
+              record: JSON.parse(readFileSync(
+                "canary-publication/canary-publication-record.json", "utf8"
+              )),
+              runIdField: "publicationRunId",
+              runAttemptField: null,
+              shaField: "targetSha",
+              expectedInputs: {
+                macHostCanaryRunId: hostRunId("FW-MAC-M2-01"),
+                windowsHostCanaryRunId: hostRunId("FW-WIN-I12-01"),
+                linuxIntelHostCanaryRunId: hostRunId("FW-LNX-I12-01"),
+                linuxNvidiaHostCanaryRunId: hostRunId("FW-LNX-NV-01"),
+                manualCanaryRunId: manualRecord.runId,
+                manualIntakeReleaseId: manualRecord.intakeReleaseId,
+                manualHardwareJobId: manualRecord.hardwareJobId
+              }
+            });
+          '
           intake_id="$(node -p "require('./lab-canary-assets/browser-lab-canary-manifest.json').manualIntakeReleaseId")"
           if gh api "/repos/${GITHUB_REPOSITORY}/releases/${intake_id}" >/dev/null 2>&1; then
             echo "manual canary intake still exists" >&2
@@ -386,6 +599,12 @@ jobs:
             const hostCanaries = readdirSync("host-canaries", { recursive: true })
               .filter((path) => path.endsWith("lab-host-canary.json"))
               .map((path) => JSON.parse(readFileSync(`host-canaries/${path}`, "utf8")));
+            const deploymentProvenance = readdirSync("host-canaries", { recursive: true })
+              .filter((path) => path.endsWith("lab-deployment-provenance.json"))
+              .map((path) => JSON.parse(readFileSync(`host-canaries/${path}`, "utf8")));
+            const deploymentPackageProofs = readdirSync("deployment-packages")
+              .filter((path) => path.endsWith("-proof.json"))
+              .map((path) => JSON.parse(readFileSync(`deployment-packages/${path}`, "utf8")));
             const manualCanary = JSON.parse(readFileSync(
               "lab-canary-assets/manual-canary.json", "utf8"
             ));
@@ -408,6 +627,8 @@ jobs:
                 attestation: { verified: true, denySelfHostedRunners: true }
               },
               hostCanaries,
+              deploymentProvenance,
+              deploymentPackageProofs,
               manualCanary,
               canaryRelease: {
                 id: release.id,

@@ -1,9 +1,15 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { createIntakeManifest } from "../../scripts/manual-evidence.mjs";
 import { validateManualSubmission } from "../../scripts/validate-manual-evidence.mjs";
 import { canonicalJson, sha256Hex } from "../../scripts/canonical-json.mjs";
+import { assertJsonSchema } from "../browser/json-schema-validator.mjs";
+
+const manualCanarySchema = JSON.parse(
+  readFileSync(new URL("./manual-canary.schema.json", import.meta.url), "utf8"),
+);
 
 const intake = createIntakeManifest({
   trustedSha: "a".repeat(40),
@@ -169,6 +175,33 @@ test("infrastructure submission produces a non-support manual canary, not a prod
   assert.equal(canary.productAssertionsExecuted, false);
   assert.equal(canary.attestation.verified, false);
   assert.deepEqual(canary.media.assetIds, [40]);
+  const publishedCanary = {
+    ...canary,
+    attestation: {
+      verified: true,
+      denySelfHostedRunners: true,
+      repository: "milos-agathon/forge3d-web",
+      signerWorkflow:
+        "milos-agathon/forge3d-web/.github/workflows/submit-browser-manual-evidence.yml",
+      sourceRef: "refs/heads/main",
+      sourceDigest: canary.trustedSha,
+    },
+  };
+  assertJsonSchema(publishedCanary, manualCanarySchema);
+  assert.throws(
+    () =>
+      assertJsonSchema(
+        {
+          ...publishedCanary,
+          session: {
+            ...publishedCanary.session,
+            productSupportClaim: true,
+          },
+        },
+        manualCanarySchema,
+      ),
+    /additional property/u,
+  );
 });
 
 test("expired draft, self approval, implementation approval, or wrong finalizer fails", () => {

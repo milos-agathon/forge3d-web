@@ -40,6 +40,10 @@ test("controller is tested, versioned, retained, and GitHub-hosted attested", ()
   assert.match(packager, /run: npm test/u);
   assert.match(packager, /browser-lab-controller-1\.0\.0\.tar\.gz/u);
   assert.match(packager, /create-package-manifest\.mjs/u);
+  assert.match(
+    packager,
+    /name: browser-lab-controller-\$\{\{ github\.sha \}\}-\$\{\{ github\.run_id \}\}-\$\{\{ github\.run_attempt \}\}/u,
+  );
   assert.match(packager, /retention-days: 90/u);
   assert.match(packager, /actions\/attest@[0-9a-f]{40}/u);
   assert.match(packager, /artifact-metadata: write/u);
