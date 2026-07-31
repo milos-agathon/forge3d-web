@@ -21,6 +21,18 @@ test("binds broker archive, exact source, configuration, and protocols", () => {
       targetSha: "a".repeat(40),
       workflowSha: "b".repeat(40),
     });
+    assert.equal(manifest.schemaVersion, 1);
+    assert.deepEqual(Object.keys(manifest), [
+      "schemaVersion",
+      "repository",
+      "targetSha",
+      "workflowSha",
+      "brokerProtocolVersion",
+      "cleanupProtocolVersion",
+      "archive",
+      "configuration",
+      "configurationSha256",
+    ]);
     assert.equal(manifest.repository, "milos-agathon/forge3d-web");
     assert.equal(manifest.brokerProtocolVersion, "forge3d-browser-lab-broker/v1");
     assert.equal(

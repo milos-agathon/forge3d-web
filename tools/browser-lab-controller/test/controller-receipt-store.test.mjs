@@ -84,3 +84,39 @@ test("manual-session receipt is immutable and bound to the exact run attempt", (
     }),
   );
 });
+
+test("deployment provenance receipt is separate and bound to the canary run", () => {
+  const directory = mkdtempSync(
+    join(tmpdir(), "forge3d-controller-deployment-receipt-"),
+  );
+  const run = { id: 61, attempt: 4 };
+  const signedRecord = {
+    record: {
+      recordType: "lab-service-deployment-provenance-receipt",
+      runId: run.id,
+      runAttempt: run.attempt,
+      hostId: "FW-LNX-NV-01",
+    },
+  };
+  storeControllerReceipt({
+    directory,
+    run,
+    recordType: "deployment-provenance",
+    signedRecord,
+  });
+  assert.deepEqual(
+    loadControllerReceipt({
+      directory,
+      run,
+      recordType: "deployment-provenance",
+    }),
+    signedRecord,
+  );
+  assert.throws(() =>
+    loadControllerReceipt({
+      directory,
+      run: { ...run, attempt: 3 },
+      recordType: "deployment-provenance",
+    }),
+  );
+});

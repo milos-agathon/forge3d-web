@@ -212,26 +212,36 @@ jobs:
             gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/artifacts?per_page=100" > "resolved/${run_id}-artifacts.json"
             node --input-type=module --eval '
               import { readFileSync, writeFileSync } from "node:fs";
-              const [runPath, artifactsPath, hostId] = process.argv.slice(1);
+              import { resolveSelectedWorkflowArtifact } from "./scripts/selected-workflow-record.mjs";
+              const [runPath, artifactsPath, hostId, selectedRunId] = process.argv.slice(1);
               const run = JSON.parse(readFileSync(runPath, "utf8"));
               const artifacts = JSON.parse(readFileSync(artifactsPath, "utf8")).artifacts;
-              if (
-                run.path !== ".github/workflows/browser-hardware.yml" ||
-                run.head_sha !== process.env.GITHUB_SHA ||
-                run.head_branch !== "main" ||
-                run.conclusion !== "success" ||
-                run.inputs?.lane !== "infrastructure-canary" ||
-                run.inputs?.canaryMode !== "host" ||
-                run.inputs?.assetId !== hostId
-              ) throw new Error("host canary run mismatch");
-              const matches = artifacts.filter((artifact) =>
-                artifact.name === `finalized-browser-hardware-${run.id}-${run.run_attempt}`
+              const resolution = resolveSelectedWorkflowArtifact({
+                run,
+                artifacts,
+                expected: {
+                  runId: Number(selectedRunId),
+                  path: ".github/workflows/browser-hardware.yml",
+                  ref: "refs/heads/main",
+                  headSha: process.env.GITHUB_SHA,
+                  event: "workflow_dispatch",
+                  status: "completed",
+                  conclusion: "success",
+                  inputs: {
+                    lane: "infrastructure-canary",
+                    canaryMode: "host",
+                    assetId: hostId,
+                    trusted_sha: process.env.GITHUB_SHA
+                  }
+                }
+              });
+              writeFileSync(
+                `resolved/${run.id}-resolution.json`,
+                JSON.stringify(resolution)
               );
-              if (matches.length !== 1 || matches[0].expired) throw new Error("host canary artifact mismatch");
-              writeFileSync(`resolved/${run.id}-artifact.json`, JSON.stringify(matches[0]));
-            ' "resolved/${run_id}-run.json" "resolved/${run_id}-artifacts.json" "${host_id}"
-            artifact_id="$(node -p "require('./resolved/${run_id}-artifact.json').id")"
-            expected="$(node -p "require('./resolved/${run_id}-artifact.json').digest")"
+            ' "resolved/${run_id}-run.json" "resolved/${run_id}-artifacts.json" "${host_id}" "${run_id}"
+            artifact_id="$(node -p "require('./resolved/${run_id}-resolution.json').artifact.id")"
+            expected="$(node -p "require('./resolved/${run_id}-resolution.json').artifact.digest")"
             gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${artifact_id}/zip" > "resolved/${run_id}.zip"
             test "$(sha256sum "resolved/${run_id}.zip" | cut -d ' ' -f 1)" = "${expected#sha256:}"
             mkdir "resolved/${run_id}"
@@ -244,6 +254,32 @@ jobs:
               --source-ref refs/heads/main \
               --source-digest "${GITHUB_SHA}" \
               --deny-self-hosted-runners
+            node --input-type=module --eval '
+              import { readFileSync } from "node:fs";
+              import {
+                bindSelectedWorkflowInputs,
+                verifySelectedWorkflowRecord
+              } from "./scripts/selected-workflow-record.mjs";
+              const record = JSON.parse(readFileSync(process.argv[2], "utf8"));
+              const resolution = JSON.parse(
+                readFileSync(process.argv[1], "utf8")
+              );
+              const expectedInputs = {
+                lane: record.lane,
+                canaryMode: record.canaryMode,
+                assetId: record.assetId,
+                trusted_sha: record.trustedSha,
+                packageRunId: record.packageRunId
+              };
+              verifySelectedWorkflowRecord({
+                resolution: bindSelectedWorkflowInputs(
+                  resolution,
+                  { packageRunId: record.packageRunId }
+                ),
+                record,
+                expectedInputs
+              });
+            ' "resolved/${run_id}-resolution.json" "${subject}"
             cp "${subject}" "canary-assets/host-${host_id}.json"
           done
 
@@ -251,24 +287,30 @@ jobs:
           gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${MANUAL_RUN_ID}/artifacts?per_page=100" > resolved/manual-artifacts.json
           node --input-type=module --eval '
             import { readFileSync, writeFileSync } from "node:fs";
+            import { resolveSelectedWorkflowArtifact } from "./scripts/selected-workflow-record.mjs";
             const run = JSON.parse(readFileSync("resolved/manual-run.json", "utf8"));
             const artifacts = JSON.parse(readFileSync("resolved/manual-artifacts.json", "utf8")).artifacts;
-            if (
-              run.path !== ".github/workflows/submit-browser-manual-evidence.yml" ||
-              run.head_sha !== process.env.GITHUB_SHA ||
-              run.head_branch !== "main" ||
-              run.conclusion !== "success" ||
-              String(run.inputs?.intakeReleaseId) !== process.env.MANUAL_INTAKE_ID ||
-              String(run.inputs?.hardwareJobId) !== process.env.MANUAL_JOB_ID
-            ) throw new Error("manual canary run mismatch");
-            const matches = artifacts.filter((artifact) =>
-              artifact.name === `browser-manual-evidence-${run.id}-${run.run_attempt}`
-            );
-            if (matches.length !== 1 || matches[0].expired) throw new Error("manual canary artifact mismatch");
-            writeFileSync("resolved/manual-artifact.json", JSON.stringify(matches[0]));
+            const resolution = resolveSelectedWorkflowArtifact({
+              run,
+              artifacts,
+              expected: {
+                runId: Number(process.env.MANUAL_RUN_ID),
+                path: ".github/workflows/submit-browser-manual-evidence.yml",
+                ref: "refs/heads/main",
+                headSha: process.env.GITHUB_SHA,
+                event: "workflow_dispatch",
+                status: "completed",
+                conclusion: "success",
+                inputs: {
+                  intakeReleaseId: process.env.MANUAL_INTAKE_ID,
+                  hardwareJobId: process.env.MANUAL_JOB_ID
+                }
+              }
+            });
+            writeFileSync("resolved/manual-resolution.json", JSON.stringify(resolution));
           '
-          manual_artifact_id="$(node -p "require('./resolved/manual-artifact.json').id")"
-          manual_expected="$(node -p "require('./resolved/manual-artifact.json').digest")"
+          manual_artifact_id="$(node -p "require('./resolved/manual-resolution.json').artifact.id")"
+          manual_expected="$(node -p "require('./resolved/manual-resolution.json').artifact.digest")"
           gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${manual_artifact_id}/zip" > resolved/manual.zip
           test "$(sha256sum resolved/manual.zip | cut -d ' ' -f 1)" = "${manual_expected#sha256:}"
           mkdir resolved/manual
@@ -283,7 +325,18 @@ jobs:
             --deny-self-hosted-runners
           node --input-type=module --eval '
             import { readFileSync, writeFileSync } from "node:fs";
+            import { verifySelectedWorkflowRecord } from "./scripts/selected-workflow-record.mjs";
             const source = JSON.parse(readFileSync(process.argv[1], "utf8"));
+            verifySelectedWorkflowRecord({
+              resolution: JSON.parse(readFileSync(
+                "resolved/manual-resolution.json", "utf8"
+              )),
+              record: source,
+              expectedInputs: {
+                intakeReleaseId: source.intakeReleaseId,
+                hardwareJobId: source.hardwareJobId
+              }
+            });
             if (
               source.recordType !== "manual-lab-canary" ||
               source.runId !== Number(process.env.MANUAL_RUN_ID) ||

@@ -36,6 +36,7 @@ export function createControllerRequestHandler({
   assetId,
   receiptDirectory,
   lifecycleStore = null,
+  deploymentProvenance = null,
   now = () => new Date(),
 }) {
   return (request, response) => {
@@ -80,9 +81,19 @@ export function createControllerRequestHandler({
       response.end(`${JSON.stringify(record)}\n`);
       return;
     }
+    if (request.method === "GET" && request.url === "/v1/deployment") {
+      if (deploymentProvenance === null) {
+        response.writeHead(404, headers);
+        response.end('{"ok":false}\n');
+        return;
+      }
+      response.writeHead(200, headers);
+      response.end(`${JSON.stringify(deploymentProvenance)}\n`);
+      return;
+    }
     const match =
       request.method === "GET"
-        ? /^\/v1\/receipts\/([1-9][0-9]*)\/([1-9][0-9]*)\/(host-lab-canary|manual-session)$/u.exec(
+        ? /^\/v1\/receipts\/([1-9][0-9]*)\/([1-9][0-9]*)\/(host-lab-canary|manual-session|deployment-provenance)$/u.exec(
             request.url ?? "",
           )
         : null;
@@ -113,6 +124,7 @@ export function createControllerHealthServer({
   assetId,
   receiptDirectory,
   lifecycleStore = null,
+  deploymentProvenance = null,
   tls,
   now = () => new Date(),
 }) {
@@ -127,6 +139,7 @@ export function createControllerHealthServer({
       assetId,
       receiptDirectory,
       lifecycleStore,
+      deploymentProvenance,
       now,
     }),
   );

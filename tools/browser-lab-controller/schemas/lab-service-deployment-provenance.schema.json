@@ -1,0 +1,150 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/lab-service-deployment-provenance.schema.json",
+  "title": "Forge3D laboratory service installation provenance",
+  "$ref": "#/$defs/record",
+  "$defs": {
+    "sha40": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "record": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "recordType",
+        "service",
+        "serviceIdentity",
+        "packageRun",
+        "source",
+        "packageManifest",
+        "archive",
+        "configuration",
+        "protocols",
+        "administratorVerification"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "recordType": { "const": "lab-service-deployment-provenance" },
+        "service": { "enum": ["broker", "controller"] },
+        "serviceIdentity": {
+          "type": "string",
+          "pattern": "^(?:broker:forge3d-browser-lab|controller:FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+)$"
+        },
+        "packageRun": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "attempt", "artifact"],
+          "properties": {
+            "id": { "type": "integer", "minimum": 1 },
+            "attempt": { "type": "integer", "minimum": 1 },
+            "artifact": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "name", "digest"],
+              "properties": {
+                "id": { "type": "integer", "minimum": 1 },
+                "name": { "type": "string", "minLength": 1 },
+                "digest": {
+                  "type": "string",
+                  "pattern": "^sha256:[0-9a-f]{64}$"
+                }
+              }
+            }
+          }
+        },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["repository", "targetSha", "workflowSha"],
+          "properties": {
+            "repository": { "const": "milos-agathon/forge3d-web" },
+            "targetSha": { "$ref": "#/$defs/sha40" },
+            "workflowSha": { "$ref": "#/$defs/sha40" }
+          }
+        },
+        "packageManifest": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sha256", "attestation"],
+          "properties": {
+            "sha256": { "$ref": "#/$defs/sha256" },
+            "attestation": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "verified",
+                "repository",
+                "signerWorkflow",
+                "sourceRef",
+                "sourceDigest",
+                "denySelfHostedRunners"
+              ],
+              "properties": {
+                "verified": { "const": true },
+                "repository": { "const": "milos-agathon/forge3d-web" },
+                "signerWorkflow": {
+                  "enum": [
+                    "milos-agathon/forge3d-web/.github/workflows/browser-lab-broker.yml",
+                    "milos-agathon/forge3d-web/.github/workflows/browser-lab-controller.yml"
+                  ]
+                },
+                "sourceRef": { "const": "refs/heads/main" },
+                "sourceDigest": { "$ref": "#/$defs/sha40" },
+                "denySelfHostedRunners": { "const": true }
+              }
+            }
+          }
+        },
+        "archive": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "sha256"],
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "sha256": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        "configuration": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sha256"],
+          "properties": {
+            "sha256": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        "protocols": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["broker", "cleanup"],
+          "properties": {
+            "broker": { "const": "forge3d-browser-lab-broker/v1" },
+            "cleanup": { "const": "forge3d-browser-lab-cleanup/v1" }
+          }
+        },
+        "administratorVerification": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "method", "verifiedAt", "verifiedBy"],
+          "properties": {
+            "status": { "const": "verified" },
+            "method": { "const": "github-attestation" },
+            "verifiedAt": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "verifiedBy": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,62}[A-Za-z0-9])?$"
+            }
+          }
+        }
+      }
+    }
+  }
+}

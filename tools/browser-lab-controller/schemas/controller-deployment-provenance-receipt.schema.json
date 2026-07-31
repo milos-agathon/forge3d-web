@@ -1,0 +1,49 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/controller-deployment-provenance-receipt.schema.json",
+  "title": "Controller-signed broker/controller deployment observation",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "recordType",
+    "runId",
+    "runAttempt",
+    "hostId",
+    "controllerIdentity",
+    "trustedSha",
+    "observedAt",
+    "broker",
+    "controller"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "recordType": {
+      "const": "lab-service-deployment-provenance-receipt"
+    },
+    "runId": { "type": "integer", "minimum": 1 },
+    "runAttempt": { "type": "integer", "minimum": 1 },
+    "hostId": {
+      "type": "string",
+      "pattern": "^FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+$"
+    },
+    "controllerIdentity": {
+      "type": "string",
+      "pattern": "^controller:FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+$"
+    },
+    "trustedSha": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "observedAt": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "broker": {
+      "$ref": "lab-service-deployment-provenance.schema.json#/$defs/record"
+    },
+    "controller": {
+      "$ref": "lab-service-deployment-provenance.schema.json#/$defs/record"
+    }
+  }
+}

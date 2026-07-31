@@ -34,6 +34,7 @@
           "identity",
           "url",
           "receiptUrlTemplate",
+          "deploymentReceiptUrlTemplate",
           "manualReceiptUrlTemplate"
         ],
         "properties": {
@@ -56,6 +57,10 @@
           "receiptUrlTemplate": {
             "type": "string",
             "pattern": "^https://[^/?#]+:9443/v1/receipts/\\{run_id\\}/\\{run_attempt\\}/host-lab-canary$"
+          },
+          "deploymentReceiptUrlTemplate": {
+            "type": "string",
+            "pattern": "^https://[^/?#]+:9443/v1/receipts/\\{run_id\\}/\\{run_attempt\\}/deployment-provenance$"
           },
           "manualReceiptUrlTemplate": {
             "type": "string",

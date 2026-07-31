@@ -89,6 +89,29 @@ test("promotion validates exact base SHA/package and never rebuilds it", () => {
   assert.match(promotion, /--deny-self-hosted-runners/u);
 });
 
+test("promotion binds canonical readiness to current package and API tuples", () => {
+  for (const binding of [
+    "manifestBytes",
+    "attempt: api.run_attempt",
+    "ref: `refs/heads/${api.head_branch}`",
+    "event: api.event",
+    "status: api.status",
+    'packageResolution: JSON.parse(readFileSync("package-run.json", "utf8"))',
+    "verified: true",
+    "subjectSha256: sha256Hex(manifestBytes)",
+    "expectedConfiguration: computeLabConfiguration",
+    'repositoryRoot: resolve(process.cwd(), "../..")',
+  ]) {
+    assert.equal(promotion.includes(binding), true, `missing ${binding}`);
+  }
+  assert.match(
+    promotion,
+    /workflow-run REST response does not expose workflow_dispatch/u,
+  );
+  assert.equal(promotion.includes("api.inputs"), false);
+  assert.equal(promotion.includes("run.inputs"), false);
+});
+
 test("authorization polls exactly one queued job and attests a ten-minute record", () => {
   assert.match(authorization, /authorize-hardware-runner\.mjs/u);
   assert.match(
@@ -192,6 +215,19 @@ test("automated evidence is copied by exact artifact ID and GitHub-hosted attest
   assert.match(automatedFinalizer, /retention-days: 90/u);
   assert.match(automatedFinalizer, /finalize-host-lab-canary\.mjs/u);
   assert.match(automatedFinalizer, /signed-controller-receipt\.json/u);
+  assert.match(automatedFinalizer, /signed-deployment-receipt\.json/u);
+  assert.match(
+    automatedFinalizer,
+    /deploymentReceiptUrlTemplate/u,
+  );
+  assert.match(
+    automatedFinalizer,
+    /finalize-deployment-provenance\.mjs/u,
+  );
+  assert.match(
+    automatedFinalizer,
+    /lab-deployment-provenance\.json/u,
+  );
   assert.match(automatedFinalizer, /--retry 60 --retry-delay 5/u);
   assert.match(
     automatedFinalizer,

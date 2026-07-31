@@ -8,8 +8,11 @@ Type=simple
 User=forge3d-broker
 Group=forge3d-broker
 EnvironmentFile=/etc/forge3d/browser-lab-broker.env
+Environment=BROKER_PACKAGE_ROOT=/opt/forge3d/browser-lab-broker
+Environment=BROKER_PACKAGE_ARCHIVE_PATH=/opt/forge3d/browser-lab-broker-package/browser-lab-broker.tar.gz
+Environment=BROKER_CONFIGURATION_ROOT=/etc/forge3d/browser-lab-broker-config
 WorkingDirectory=/opt/forge3d/browser-lab-broker
-ExecStart=/usr/bin/node /opt/forge3d/browser-lab-broker/src/server.mjs
+ExecStart=/usr/bin/node /opt/forge3d/browser-lab-broker/src/bootstrap.mjs
 Restart=on-failure
 RestartSec=5
 UMask=0077
@@ -28,7 +31,7 @@ LockPersonality=true
 MemoryDenyWriteExecute=true
 CapabilityBoundingSet=
 SystemCallArchitectures=native
-ReadOnlyPaths=/opt/forge3d/browser-lab-broker /etc/forge3d
+ReadOnlyPaths=/opt/forge3d/browser-lab-broker /opt/forge3d/browser-lab-broker-package /etc/forge3d
 ReadWritePaths=/var/lib/forge3d-browser-lab-broker
 
 [Install]

@@ -6,7 +6,12 @@ import { canonicalJson, sha256Hex } from "./canonical-json.mjs";
 
 export function verifyControllerRecord({ signed, matrix, recordType }) {
   const record = signed.record;
-  if (recordType !== "host-lab-canary") {
+  if (
+    ![
+      "host-lab-canary",
+      "lab-service-deployment-provenance-receipt",
+    ].includes(recordType)
+  ) {
     throw new Error("unsupported controller record type");
   }
   const host = matrix.hosts.find(
@@ -14,7 +19,7 @@ export function verifyControllerRecord({ signed, matrix, recordType }) {
   );
   if (
     record.recordType !== recordType ||
-    host?.controller?.state !== "active" ||
+    host?.controller?.state !== "online" ||
     !host.controller.publicJwk ||
     signed.signature?.signingKeyId !== host.controller.signingKeyId ||
     signed.signature.algorithm !== "SHA256withECDSA" ||

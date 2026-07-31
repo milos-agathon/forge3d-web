@@ -1,0 +1,249 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/lab-deployment-provenance.schema.json",
+  "title": "Hosted-verified browser laboratory service deployment provenance",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "recordType",
+    "runId",
+    "runAttempt",
+    "hostId",
+    "controllerIdentity",
+    "trustedSha",
+    "observedAt",
+    "broker",
+    "controller",
+    "controllerSignature",
+    "attestation",
+    "finalizer"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "recordType": {
+      "const": "lab-service-deployment-provenance-receipt"
+    },
+    "runId": { "type": "integer", "minimum": 1 },
+    "runAttempt": { "type": "integer", "minimum": 1 },
+    "hostId": { "$ref": "#/$defs/hostId" },
+    "controllerIdentity": {
+      "type": "string",
+      "pattern": "^controller:FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+$"
+    },
+    "trustedSha": { "$ref": "#/$defs/sha40" },
+    "observedAt": { "$ref": "#/$defs/timestamp" },
+    "broker": { "$ref": "#/$defs/serviceDeployment" },
+    "controller": { "$ref": "#/$defs/serviceDeployment" },
+    "controllerSignature": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verified", "signingKeyId"],
+      "properties": {
+        "verified": { "const": true },
+        "signingKeyId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "attestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "verified",
+        "denySelfHostedRunners",
+        "repository",
+        "signerWorkflow",
+        "sourceRef",
+        "sourceDigest"
+      ],
+      "properties": {
+        "verified": { "const": true },
+        "denySelfHostedRunners": { "const": true },
+        "repository": { "const": "milos-agathon/forge3d-web" },
+        "signerWorkflow": {
+          "const": "milos-agathon/forge3d-web/.github/workflows/browser-hardware.yml"
+        },
+        "sourceRef": { "const": "refs/heads/main" },
+        "sourceDigest": { "$ref": "#/$defs/sha40" }
+      }
+    },
+    "finalizer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["run", "job", "environment", "observedAt"],
+      "properties": {
+        "run": { "$ref": "#/$defs/run" },
+        "job": { "const": "finalize-hardware-evidence" },
+        "environment": { "const": "forge3d-trust-observer" },
+        "observedAt": { "$ref": "#/$defs/timestamp" }
+      }
+    }
+  },
+  "$defs": {
+    "hostId": {
+      "type": "string",
+      "pattern": "^FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+$"
+    },
+    "sha40": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "attempt"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "attempt": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "packageArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "digest"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "packageRun": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "attempt", "artifact"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "attempt": { "type": "integer", "minimum": 1 },
+        "artifact": { "$ref": "#/$defs/packageArtifact" }
+      }
+    },
+    "serviceDeployment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "recordType",
+        "service",
+        "serviceIdentity",
+        "packageRun",
+        "source",
+        "packageManifest",
+        "archive",
+        "configuration",
+        "protocols",
+        "administratorVerification"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "recordType": {
+          "const": "lab-service-deployment-provenance"
+        },
+        "service": { "enum": ["broker", "controller"] },
+        "serviceIdentity": {
+          "type": "string",
+          "pattern": "^(?:broker:forge3d-browser-lab|controller:FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+)$"
+        },
+        "packageRun": { "$ref": "#/$defs/packageRun" },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["repository", "targetSha", "workflowSha"],
+          "properties": {
+            "repository": { "const": "milos-agathon/forge3d-web" },
+            "targetSha": { "$ref": "#/$defs/sha40" },
+            "workflowSha": { "$ref": "#/$defs/sha40" }
+          }
+        },
+        "packageManifest": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sha256", "attestation"],
+          "properties": {
+            "sha256": { "$ref": "#/$defs/sha256" },
+            "attestation": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "verified",
+                "repository",
+                "signerWorkflow",
+                "sourceRef",
+                "sourceDigest",
+                "denySelfHostedRunners"
+              ],
+              "properties": {
+                "verified": { "const": true },
+                "repository": {
+                  "const": "milos-agathon/forge3d-web"
+                },
+                "signerWorkflow": {
+                  "enum": [
+                    "milos-agathon/forge3d-web/.github/workflows/browser-lab-broker.yml",
+                    "milos-agathon/forge3d-web/.github/workflows/browser-lab-controller.yml"
+                  ]
+                },
+                "sourceRef": { "const": "refs/heads/main" },
+                "sourceDigest": { "$ref": "#/$defs/sha40" },
+                "denySelfHostedRunners": { "const": true }
+              }
+            }
+          }
+        },
+        "archive": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "sha256"],
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "sha256": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        "configuration": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["sha256"],
+          "properties": {
+            "sha256": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        "protocols": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["broker", "cleanup"],
+          "properties": {
+            "broker": {
+              "const": "forge3d-browser-lab-broker/v1"
+            },
+            "cleanup": {
+              "const": "forge3d-browser-lab-cleanup/v1"
+            }
+          }
+        },
+        "administratorVerification": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "method", "verifiedAt", "verifiedBy"],
+          "properties": {
+            "status": { "const": "verified" },
+            "method": { "const": "github-attestation" },
+            "verifiedAt": { "$ref": "#/$defs/timestamp" },
+            "verifiedBy": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,62}[A-Za-z0-9])?$"
+            }
+          }
+        }
+      }
+    }
+  }
+}

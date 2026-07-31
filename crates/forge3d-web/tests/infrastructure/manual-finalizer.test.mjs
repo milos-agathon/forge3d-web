@@ -87,7 +87,7 @@ const matrix = {
   hosts: [
     {
       assetId: "FW-MAC-M2-01",
-      controller: { state: "active", signingKeyId: keyId, publicJwk },
+      controller: { state: "online", signingKeyId: keyId, publicJwk },
     },
   ],
 };

@@ -7,7 +7,7 @@
   <key>ProgramArguments</key>
   <array>
     <string>/usr/local/bin/node</string>
-    <string>/Library/Application Support/Forge3D/browser-lab-controller/src/controller-service.mjs</string>
+    <string>/Library/Application Support/Forge3D/browser-lab-controller/src/bootstrap.mjs</string>
     <string>--environment-file</string>
     <string>/Library/Application Support/Forge3D/browser-lab-controller.env</string>
   </array>
@@ -17,6 +17,8 @@
   <string>forge3d-lab-controller</string>
   <key>EnvironmentVariables</key>
   <dict>
+    <key>FORGE3D_CONTROLLER_PACKAGE_ROOT</key>
+    <string>/Library/Application Support/Forge3D/browser-lab-controller</string>
     <key>FORGE3D_CONTROLLER_UNIX_SESSION_BRIDGE</key>
     <string>/Library/Application Support/Forge3D/browser-lab-controller/services/unix-interactive-session-bridge.mjs</string>
     <key>FORGE3D_CONTROLLER_UNIX_SESSION_BRIDGE_SHA256</key>

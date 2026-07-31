@@ -148,9 +148,9 @@ Before enabling a host:
 
 1. Confirm its exact model, CPU/GPU, RAM, OS build, display server, physical
    asset label, attached models, browser lanes, and controller identity.
-2. Change the host, controller, and attached assets to `active`, clear the
-   maintenance reason, and change matrix `provisioningState` to `active` only
-   when all four hosts are ready.
+2. Change the host and attached assets to `active`, the controller to `online`,
+   clear the maintenance reason, and change matrix `provisioningState` to
+   `active` only when all four hosts are ready.
 3. Run
    `node scripts/validate-hardware-matrix.mjs --require-provisioned`.
 4. Sign the live inventory on its owning controller and verify the signature
@@ -235,3 +235,43 @@ Repository code completion is not physical infrastructure readiness. Only the
 separate readiness workflow may report `LAB_INFRA_READY`, and only after live
 protected-main policy, controller signatures, runner absence at rest, all four
 JIT canaries, and the fixed inventory pass at the exact current SHA.
+
+Each installed broker and controller must also start from a protected
+administrator installation receipt. That receipt binds the attested package
+manifest, source and workflow SHAs, archive, configuration, protocol versions,
+and exact package workflow run ID/attempt plus artifact ID/name/digest. A fresh
+infrastructure canary observes the broker deployment over mTLS and stores a
+separate controller-signed combined deployment receipt under the canary run ID
+and attempt.
+
+Broker/controller package-manifest schema version 1 remains unchanged. The
+administrator deployment receipt records the exact package run tuple, and the
+immutable artifact name is candidate-, run-, and attempt-qualified.
+Installation and readiness reject an artifact from a different attempt of the
+same workflow run, while the hosted proof verifies the unchanged manifest bytes
+inside that exact artifact.
+
+Production service definitions launch a built-in-only integrity bootstrap
+before importing broker or controller runtime modules. Controller startup
+reconciles the exact installed tree against the existing manifest file list.
+Broker startup reconciles the exact installed tree against the single nested
+npm package in the retained, manifest-bound outer archive and reconciles the
+dedicated configuration root against the existing nine manifest entries.
+Missing, extra, changed, symlinked, or hard-linked files fail before runtime
+construction. These checks do not change either schema-version-1 shape.
+Installing a code or bootstrap change therefore requires fresh package
+manifests, attempt-qualified artifacts, administrator receipts, deployment
+sidecars, and physical canaries before readiness can be recomputed.
+
+The GitHub-hosted finalizer fetches both controller receipts, verifies both
+signatures against the checked controller JWK, and produces a separately
+attested `lab-deployment-provenance.json`; `lab-host-canary.json` remains
+unchanged. Readiness requires exactly one deployment sidecar for each fixed
+host, one byte-identical common broker deployment, and four exact controller
+deployments at the candidate SHA. It independently resolves each embedded
+package run and artifact, verifies the artifact digest, downloads the exact
+manifest and archive, verifies their protected-main GitHub attestations, and
+reconciles manifest, archive, configuration, and protocol identities. Code
+changes invalidate the laboratory configuration digest, while missing or stale
+deployment sidecars fail readiness. No deployment or code change can reuse
+older physical canaries.

@@ -3,6 +3,12 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
 
+import {
+  bindSelectedWorkflowInputs,
+  resolveSelectedWorkflowArtifact,
+  verifySelectedWorkflowRecord,
+} from "../../scripts/selected-workflow-record.mjs";
+
 const workflow = readFileSync(
   resolve(
     import.meta.dirname,
@@ -51,6 +57,60 @@ test("observer secret is isolated and canary cannot claim support readiness", ()
   assert.match(publisher, /makes no browser support claim/u);
 });
 
+test("host and manual records are rebound to normalized selected run artifacts", () => {
+  assert.match(preflight, /resolveSelectedWorkflowArtifact/u);
+  assert.match(preflight, /verifySelectedWorkflowRecord/u);
+  assert.match(preflight, /resolved\/\$\{run\.id\}-resolution\.json/u);
+  assert.match(preflight, /resolved\/manual-resolution\.json/u);
+  for (const field of [
+    'event: "workflow_dispatch"',
+    'status: "completed"',
+    'conclusion: "success"',
+    "trusted_sha: process.env.GITHUB_SHA",
+    "packageRunId: record.packageRunId",
+  ]) {
+    assert.match(preflight, new RegExp(field, "u"));
+  }
+  assert.match(
+    preflight,
+    /bindSelectedWorkflowInputs\(\s*resolution,\s*\{ packageRunId: record\.packageRunId \}\s*\)/u,
+  );
+  assert.equal(
+    preflight.includes("bindSelectedWorkflowInputs(\n                  resolution,\n                  expectedInputs"),
+    false,
+  );
+});
+
+test("host artifact with the wrong independently selected host is rejected", () => {
+  assertCanaryRecordRejected({
+    lane: "infrastructure-canary",
+    assetId: "FW-MAC-M2-01",
+  });
+});
+
+test("host artifact with the wrong independently selected lane is rejected", () => {
+  assertCanaryRecordRejected({
+    lane: "chrome-linux-rtx3070",
+    assetId: "FW-LNX-NV-01",
+  });
+});
+
+test("correct host artifact preserves selected context and adds package run", () => {
+  const { record, boundInputs } = verifyCanaryRecord({
+    lane: "infrastructure-canary",
+    assetId: "FW-LNX-NV-01",
+  });
+  assert.equal(record.assetId, "FW-LNX-NV-01");
+  assert.equal(record.packageRunId, 50);
+  assert.deepEqual(boundInputs, {
+    lane: "infrastructure-canary",
+    canaryMode: "host",
+    assetId: "FW-LNX-NV-01",
+    trusted_sha: "a".repeat(40),
+    packageRunId: 50,
+  });
+});
+
 test("publisher has no checkout, rechecks exact handoffs, publishes once, verifies, then deletes intake", () => {
   assert.match(publisher, /environment: forge3d-web-release/u);
   assert.equal(publisher.includes("actions/checkout@"), false);
@@ -72,4 +132,76 @@ function block(startId, nextId) {
   const end = nextId ? workflow.indexOf(`  ${nextId}:`, start + 1) : workflow.length;
   assert.notEqual(end, -1);
   return workflow.slice(start, end);
+}
+
+function assertCanaryRecordRejected({ lane, assetId }) {
+  assert.throws(
+    () => verifyCanaryRecord({ lane, assetId }),
+    /inputs do not match/u,
+  );
+}
+
+function verifyCanaryRecord({ lane, assetId }) {
+  const trustedSha = "a".repeat(40);
+  const resolution = resolveSelectedWorkflowArtifact({
+    run: {
+      id: 101,
+      run_attempt: 2,
+      path: ".github/workflows/browser-hardware.yml",
+      head_branch: "main",
+      head_sha: trustedSha,
+      event: "workflow_dispatch",
+      status: "completed",
+      conclusion: "success",
+    },
+    artifacts: [
+      {
+        id: 201,
+        name: "finalized-browser-hardware-101-2",
+        digest: `sha256:${"b".repeat(64)}`,
+        expired: false,
+      },
+    ],
+    expected: {
+      runId: 101,
+      path: ".github/workflows/browser-hardware.yml",
+      ref: "refs/heads/main",
+      headSha: trustedSha,
+      event: "workflow_dispatch",
+      status: "completed",
+      conclusion: "success",
+      inputs: {
+        lane: "infrastructure-canary",
+        canaryMode: "host",
+        assetId: "FW-LNX-NV-01",
+        trusted_sha: trustedSha,
+      },
+    },
+  });
+  const record = {
+    runId: 101,
+    runAttempt: 2,
+    trustedSha,
+    lane,
+    canaryMode: "host",
+    assetId,
+    packageRunId: 50,
+  };
+  const boundResolution = bindSelectedWorkflowInputs(resolution, {
+    packageRunId: record.packageRunId,
+  });
+  return {
+    record: verifySelectedWorkflowRecord({
+      resolution: boundResolution,
+      record,
+      expectedInputs: {
+        lane: record.lane,
+        canaryMode: record.canaryMode,
+        assetId: record.assetId,
+        trusted_sha: record.trustedSha,
+        packageRunId: record.packageRunId,
+      },
+    }),
+    boundInputs: boundResolution.run.inputs,
+  };
 }

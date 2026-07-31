@@ -7,6 +7,31 @@ and Metadata read. It resolves one valid, unexpired, GitHub-hosted-attested
 `runner-authorization.json`, acquires the owning host lock, verifies the pinned
 runner distribution, requests one broker-created repository JIT configuration
 over mTLS, and launches only `run.sh|run.cmd --jitconfig <opaque-value>`.
+Before constructing those runtime clients, the installed service loads the
+package manifest and administrator installation receipt named by
+`FORGE3D_CONTROLLER_PACKAGE_MANIFEST_FILE` and
+`FORGE3D_CONTROLLER_INSTALLATION_RECEIPT_FILE`. Startup fails closed unless the
+receipt binds the exact protected-main source and workflow SHAs, GitHub
+attestation identity, archive, package-manifest digest, packaged-file digest,
+broker/cleanup protocol versions, and the exact package workflow run tuple.
+Package-manifest schema version 1 remains unchanged. The immutable artifact name
+ends with `<run-id>-<run-attempt>`, and the hosted proof verifies the unchanged
+manifest bytes inside that exact artifact. Attempt-unqualified artifact names
+are rejected. Its mTLS service exposes the verified sidecar at
+`GET /v1/deployment` without changing the `/v1/health` payload.
+Every production service definition launches `src/bootstrap.mjs` first. The
+bootstrap validates the full manifest/receipt identity and the exact current
+regular-file tree at the platform-fixed controller package root before it
+dynamically imports controller runtime code. Missing, extra, changed,
+symlinked, or hard-linked files fail before token-provider, poller, or socket
+construction.
+`observeAndSignDeploymentProvenance` is the phase-two integration primitive for
+reading the broker sidecar and producing a separate controller-signed
+broker/controller deployment observation. Every fresh infrastructure host
+canary stores that observation under its exact run ID and attempt. The hosted
+finalizer fetches it separately, verifies the controller signature against the
+checked controller JWK, and attests `lab-deployment-provenance.json` without
+adding deployment fields to `lab-host-canary.json`.
 
 On Windows, the controller remains a Session-0 service, but it never launches
 the runner or browser there. It verifies the checked SHA-256 of

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
 
@@ -39,6 +39,40 @@ test("observer secret is isolated from read-only preflight and protected publish
     preflight,
     /artifactDigest: `sha256:\$\{process\.env\.OBSERVATION_ARTIFACT_DIGEST\}`/u,
   );
+});
+
+test("evidence records are reproduced from the exact API run and artifact tuple", () => {
+  assert.match(preflight, /resolveSelectedWorkflowArtifact/u);
+  assert.match(preflight, /finalizeMatrixRecord/u);
+  assert.match(preflight, /runId: Number\(process\.argv\[4\]\)/u);
+  assert.match(preflight, /event: "workflow_dispatch"/u);
+  assert.match(preflight, /status: "completed"/u);
+  assert.match(preflight, /resolution,/u);
+  assert.match(
+    preflight,
+    /evidence-assets\/\$\{artifact_id\}-metadata\.json/u,
+  );
+});
+
+test("every workflow caller supplies finalizeMatrixRecord an exact resolution", () => {
+  const workflowDirectory = resolve(
+    import.meta.dirname,
+    "../../../../.github/workflows",
+  );
+  const callers = readdirSync(workflowDirectory)
+    .filter((name) => name.endsWith(".yml"))
+    .map((name) => ({
+      name,
+      content: readFileSync(resolve(workflowDirectory, name), "utf8"),
+    }))
+    .filter(({ content }) => content.includes("finalizeMatrixRecord({"));
+  assert.ok(callers.length > 0);
+  for (const { content } of callers) {
+    assert.match(
+      content,
+      /finalizeMatrixRecord\(\{[\s\S]{0,500}\n\s+resolution,/u,
+    );
+  }
 });
 
 test("publisher has no checkout and performs approval, draft-first, byte, CLI, and intake gates", () => {

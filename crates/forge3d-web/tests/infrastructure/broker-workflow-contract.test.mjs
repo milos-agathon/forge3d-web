@@ -126,9 +126,19 @@ test("packager consumes all four values only through needs and uses exact-ID ver
 });
 
 test("packager includes the checked controller health endpoint configuration", () => {
+  assert.match(packager, /npm pack \.\/tools\/browser-lab-broker/u);
+  assert.match(
+    packager,
+    /tar -czf browser-lab-broker\.tar\.gz broker-package/u,
+  );
+  assert.match(packager, /create-package-manifest\.mjs/u);
   assert.match(
     packager,
     /cp crates\/forge3d-web\/tests\/infrastructure\/controller-health-endpoints\.json broker-package\/config\//u,
+  );
+  assert.match(
+    packager,
+    /name: browser-lab-broker-\$\{\{ github\.sha \}\}-\$\{\{ github\.run_id \}\}-\$\{\{ github\.run_attempt \}\}/u,
   );
 });
 

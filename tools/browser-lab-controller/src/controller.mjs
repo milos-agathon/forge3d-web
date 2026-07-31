@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 
 import { createHostLabCanary } from "./lab-canary.mjs";
 import { createManualSession } from "./manual-session.mjs";
+import { observeAndSignDeploymentProvenance } from "./deployment-provenance.mjs";
 
 export class BrowserLabController {
   constructor({ hostId, platform, dependencies, now = () => new Date() }) {
@@ -152,6 +153,18 @@ export class BrowserLabController {
       brokerClean = true;
       if (hostCanaryInput) {
         const credentials = await this.dependencies.controllerSigningCredentials();
+        const signedDeploymentRecord =
+          await observeAndSignDeploymentProvenance({
+            brokerClient: this.dependencies.broker,
+            controllerDeployment:
+              this.dependencies.controllerDeployment,
+            run: authorization.run,
+            hostId: this.hostId,
+            trustedSha: authorization.trustedSha,
+            privateKey: credentials.privateKey,
+            signingKeyId: credentials.signingKeyId,
+            observedAt: this.now(),
+          });
         const signedRecord = createHostLabCanary({
           authorization: {
             ...authorization,
@@ -168,6 +181,11 @@ export class BrowserLabController {
           },
           privateKey: credentials.privateKey,
           signingKeyId: credentials.signingKeyId,
+        });
+        await this.dependencies.storeControllerReceipt({
+          run: authorization.run,
+          recordType: "deployment-provenance",
+          signedRecord: signedDeploymentRecord,
         });
         await this.dependencies.storeControllerReceipt({
           run: authorization.run,

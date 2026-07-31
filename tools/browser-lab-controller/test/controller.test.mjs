@@ -142,6 +142,15 @@ test("controller stores a signed host canary only after broker-proven runner abs
   });
   dependencies.storeControllerReceipt = async (receipt) =>
     calls.push(["store-receipt", receipt]);
+  dependencies.controllerDeployment = serviceDeployment({
+    service: "controller",
+    serviceIdentity: `controller:${authorization.hostId}`,
+  });
+  dependencies.broker.deployment = async () =>
+    serviceDeployment({
+      service: "broker",
+      serviceIdentity: "broker:forge3d-browser-lab",
+    });
   const controller = new BrowserLabController({
     hostId: authorization.hostId,
     platform: "linux",
@@ -157,12 +166,34 @@ test("controller stores a signed host canary only after broker-proven runner abs
   };
   const result = await controller.execute(canaryAuthorization);
   const cleanupIndex = calls.findIndex(([name]) => name === "broker-cleanup");
-  const storeIndex = calls.findIndex(([name]) => name === "store-receipt");
-  assert.ok(cleanupIndex >= 0 && storeIndex > cleanupIndex);
+  const deploymentStoreIndex = calls.findIndex(
+    ([name, receipt]) =>
+      name === "store-receipt" &&
+      receipt.recordType === "deployment-provenance",
+  );
+  const storeIndex = calls.findIndex(
+    ([name, receipt]) =>
+      name === "store-receipt" &&
+      receipt.recordType === "host-lab-canary",
+  );
+  assert.ok(
+    cleanupIndex >= 0 &&
+      deploymentStoreIndex > cleanupIndex &&
+      storeIndex > deploymentStoreIndex,
+  );
   assert.match(result.controllerReceiptSha256, /^[0-9a-f]{64}$/u);
   const receipt = calls[storeIndex][1];
   assert.equal(receipt.signedRecord.record.runner.absentAfterRun, true);
   assert.equal(receipt.signedRecord.record.supportAssertionsExecuted, false);
+  const deploymentReceipt = calls[deploymentStoreIndex][1];
+  assert.equal(
+    deploymentReceipt.signedRecord.record.recordType,
+    "lab-service-deployment-provenance-receipt",
+  );
+  assert.equal(
+    deploymentReceipt.signedRecord.record.trustedSha,
+    canaryAuthorization.trustedSha,
+  );
 });
 
 test("controller creates the signed manual session after hardware and runner cleanup", async () => {
@@ -533,6 +564,63 @@ function hostAdapterAttestation({
       hostId,
       expectedGpuPresent: true,
       headedSessionAvailable: true,
+    },
+  };
+}
+
+function serviceDeployment({ service, serviceIdentity }) {
+  const targetSha = authorization.trustedSha;
+  const packageRunId = service === "broker" ? 101 : 102;
+  const packageRunAttempt = 1;
+  return {
+    schemaVersion: 1,
+    recordType: "lab-service-deployment-provenance",
+    service,
+    serviceIdentity,
+    packageRun: {
+      id: packageRunId,
+      attempt: packageRunAttempt,
+      artifact: {
+        id: service === "broker" ? 201 : 202,
+        name:
+          `browser-lab-${service}-${targetSha}-${packageRunId}-${packageRunAttempt}`,
+        digest: `sha256:${"1".repeat(64)}`,
+      },
+    },
+    source: {
+      repository: "milos-agathon/forge3d-web",
+      targetSha,
+      workflowSha: authorization.workflow.sha,
+    },
+    packageManifest: {
+      sha256: "2".repeat(64),
+      attestation: {
+        verified: true,
+        repository: "milos-agathon/forge3d-web",
+        signerWorkflow:
+          `milos-agathon/forge3d-web/.github/workflows/browser-lab-${service}.yml`,
+        sourceRef: "refs/heads/main",
+        sourceDigest: targetSha,
+        denySelfHostedRunners: true,
+      },
+    },
+    archive: {
+      name:
+        service === "broker"
+          ? "browser-lab-broker.tar.gz"
+          : "browser-lab-controller-1.0.0.tar.gz",
+      sha256: "3".repeat(64),
+    },
+    configuration: { sha256: "4".repeat(64) },
+    protocols: {
+      broker: "forge3d-browser-lab-broker/v1",
+      cleanup: "forge3d-browser-lab-cleanup/v1",
+    },
+    administratorVerification: {
+      status: "verified",
+      method: "github-attestation",
+      verifiedAt: "2026-07-29T09:00:00.000Z",
+      verifiedBy: "lab-admin",
     },
   };
 }

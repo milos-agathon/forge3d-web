@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 
 import { encodeLifecycleHeader } from "../../browser-lab-broker/src/controller-reachability.mjs";
@@ -7,6 +10,7 @@ import {
   createControllerRequestHandler,
   createHealthRecord,
 } from "../src/controller-health-service.mjs";
+import { storeControllerReceipt } from "../src/controller-receipt-store.mjs";
 
 test("controller health record exposes only public identity and version", () => {
   const record = createHealthRecord({
@@ -122,6 +126,85 @@ test("lifecycle headers from any non-broker mTLS identity fail closed", () => {
     response,
   );
   assert.equal(response.statusCode, 400);
+});
+
+test("mTLS deployment endpoint is additive to the unchanged health payload", () => {
+  const hostId = "FW-LNX-NV-01";
+  const deploymentProvenance = {
+    recordType: "lab-service-deployment-provenance",
+    service: "controller",
+  };
+  const handler = createControllerRequestHandler({
+    assetId: hostId,
+    receiptDirectory: "/unused",
+    deploymentProvenance,
+    now: () => new Date("2026-07-29T10:01:31.000Z"),
+  });
+  const request = {
+    method: "GET",
+    url: "/v1/deployment",
+    headers: {},
+    socket: { authorized: true },
+  };
+  const deploymentResponse = fakeResponse();
+  handler(request, deploymentResponse);
+  assert.equal(deploymentResponse.statusCode, 200);
+  assert.deepEqual(
+    JSON.parse(deploymentResponse.body),
+    deploymentProvenance,
+  );
+
+  const healthResponse = fakeResponse();
+  handler({ ...request, url: "/v1/health" }, healthResponse);
+  assert.deepEqual(Object.keys(JSON.parse(healthResponse.body)), [
+    "schemaVersion",
+    "assetId",
+    "controllerIdentity",
+    "controllerVersion",
+    "status",
+    "observedAt",
+  ]);
+});
+
+test("mTLS receipt endpoint serves separate signed deployment provenance", () => {
+  const directory = mkdtempSync(
+    join(tmpdir(), "forge3d-controller-deployment-health-"),
+  );
+  const run = { id: 71, attempt: 2 };
+  const signedRecord = {
+    record: {
+      recordType: "lab-service-deployment-provenance-receipt",
+      runId: run.id,
+      runAttempt: run.attempt,
+      hostId: "FW-LNX-NV-01",
+    },
+  };
+  try {
+    storeControllerReceipt({
+      directory,
+      run,
+      recordType: "deployment-provenance",
+      signedRecord,
+    });
+    const handler = createControllerRequestHandler({
+      assetId: "FW-LNX-NV-01",
+      receiptDirectory: directory,
+    });
+    const response = fakeResponse();
+    handler(
+      {
+        method: "GET",
+        url: `/v1/receipts/${run.id}/${run.attempt}/deployment-provenance`,
+        headers: {},
+        socket: { authorized: true },
+      },
+      response,
+    );
+    assert.equal(response.statusCode, 200);
+    assert.deepEqual(JSON.parse(response.body), signedRecord);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 function fakeResponse() {

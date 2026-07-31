@@ -9,15 +9,30 @@ const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const repositoryRoot = join(root, "..", "..");
 
 test("every installed service launches polling orchestration, not health-only mode", () => {
-  for (const name of [
-    "browser-lab-controller.service",
-    "com.forge3d.browser-lab-controller.plist",
-    "forge3d-browser-lab-controller.xml",
+  for (const [name, packageRoot] of [
+    [
+      "browser-lab-controller.service",
+      "/opt/forge3d/browser-lab-controller",
+    ],
+    [
+      "com.forge3d.browser-lab-controller.plist",
+      "/Library/Application Support/Forge3D/browser-lab-controller",
+    ],
+    [
+      "forge3d-browser-lab-controller.xml",
+      "C:\\ProgramData\\Forge3D\\browser-lab-controller",
+    ],
   ]) {
     const text = readFileSync(join(root, "services", name), "utf8");
-    assert.match(text, /controller-service\.mjs/u);
+    assert.match(text, /src[\\/]+bootstrap\.mjs/u);
+    assert.equal(text.includes(packageRoot), true);
+    assert.match(text, /FORGE3D_CONTROLLER_PACKAGE_ROOT/u);
     assert.equal(text.includes("controller-health-service.mjs"), false);
   }
+  const bootstrap = readFileSync(
+    join(root, "src", "bootstrap.mjs"),
+    "utf8",
+  );
   const service = readFileSync(
     join(root, "src", "controller-service.mjs"),
     "utf8",
@@ -26,6 +41,35 @@ test("every installed service launches polling orchestration, not health-only mo
   assert.match(service, /new BrowserLabController/u);
   assert.match(service, /new ControllerBrokerClient/u);
   assert.match(service, /createControllerHealthServer/u);
+  assert.match(service, /loadControllerDeploymentProvenance/u);
+  assert.match(bootstrap, /verifyControllerBootstrap/u);
+  assert.match(bootstrap, /import\("\.\/controller-service\.mjs"\)/u);
+  assert.equal(
+    [...bootstrap.matchAll(/from\s+["']([^"']+)["']/gu)].every(
+      (match) => match[1].startsWith("node:"),
+    ),
+    true,
+  );
+  assert.ok(
+    bootstrap.indexOf("verifyControllerBootstrap") <
+      bootstrap.indexOf('import("./controller-service.mjs")'),
+  );
+  const environment = readFileSync(
+    join(root, "services", "browser-lab-controller.env.example"),
+    "utf8",
+  );
+  assert.match(
+    environment,
+    /FORGE3D_CONTROLLER_PACKAGE_MANIFEST_FILE/u,
+  );
+  assert.match(
+    environment,
+    /FORGE3D_CONTROLLER_INSTALLATION_RECEIPT_FILE/u,
+  );
+  assert.match(
+    environment,
+    /FORGE3D_CONTROLLER_PACKAGE_ROOT=\/opt\/forge3d\/browser-lab-controller/u,
+  );
 });
 
 test("Windows service delegates runner launch to the pinned physical-console bridge", () => {

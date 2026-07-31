@@ -62,3 +62,30 @@ test("controller broker client signs mTLS issue and cleanup requests", async () 
     );
   }
 });
+
+test("controller broker client reads deployment provenance over the same mTLS identity", async () => {
+  const keys = generateKeyPairSync("ec", { namedCurve: "P-256" });
+  const deployment = {
+    recordType: "lab-service-deployment-provenance",
+    service: "broker",
+    serviceIdentity: "broker:forge3d-browser-lab",
+  };
+  let observed = null;
+  const client = new ControllerBrokerClient({
+    endpoint: "https://broker.internal:8443",
+    hostId: "FW-LNX-NV-01",
+    signingKeyId: "controller-fw-lnx-nv-01-p256-v1",
+    privateKey: keys.privateKey,
+    tls: { key: "key", cert: "cert", ca: "ca" },
+    deploymentTransport: async (url, tls) => {
+      observed = { url, tls };
+      return deployment;
+    },
+  });
+
+  assert.deepEqual(await client.deployment(), deployment);
+  assert.deepEqual(observed, {
+    url: "https://broker.internal:8443/v1/deployment",
+    tls: { key: "key", cert: "cert", ca: "ca" },
+  });
+});

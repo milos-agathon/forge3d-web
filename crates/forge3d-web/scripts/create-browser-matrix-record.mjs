@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 import { canonicalJson } from "./canonical-json.mjs";
+import { verifySelectedWorkflowRecord } from "./selected-workflow-record.mjs";
 
 export function createAutomatedMatrixRecord({
   promotion,
@@ -112,16 +113,32 @@ export function createManualMatrixRecord({ evidence, run }) {
 export function finalizeMatrixRecord({
   source,
   artifactId,
+  resolution,
   attestation,
 }) {
   if (
     !Number.isInteger(artifactId) ||
     artifactId < 1 ||
+    resolution?.artifact?.id !== artifactId ||
     attestation?.verified !== true ||
     attestation.denySelfHostedRunners !== true
   ) {
     throw new Error("matrix record requires exact artifact and attestation proof");
   }
+  const expectedKind = new Map([
+    [".github/workflows/browser-hardware.yml", "automated"],
+    [".github/workflows/submit-browser-manual-evidence.yml", "manual"],
+  ]).get(resolution?.run?.path);
+  if (expectedKind === undefined || source?.kind !== expectedKind) {
+    throw new Error(
+      "matrix source kind does not match the selected workflow path",
+    );
+  }
+  verifySelectedWorkflowRecord({
+    resolution,
+    record: source,
+    expectedInputs: {},
+  });
   return {
     ...source,
     workflow: { ...source.workflow, artifactId },
