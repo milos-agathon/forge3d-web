@@ -26,6 +26,8 @@ export async function resolvePackageRun({
     run.head_sha !== trustedSha ||
     run.head_branch !== "main" ||
     run.conclusion !== "success" ||
+    !Number.isInteger(run.run_attempt) ||
+    run.run_attempt < 1 ||
     !["push", "workflow_dispatch"].includes(run.event)
   ) {
     throw new Error("package run is not the successful exact-main browser package run");
@@ -48,12 +50,42 @@ export async function resolvePackageRun({
     throw new Error("package artifact is missing, duplicated, expired, or mismatched");
   }
   return {
+    repository,
     packageRunId: Number(packageRunId),
+    packageRunAttempt: run.run_attempt,
+    packageWorkflowPath: run.path,
+    packageWorkflowSha: run.head_sha,
     packageArtifactId: matches[0].id,
     packageArtifactName: expectedName,
     packageArtifactDigest: matches[0].digest,
-    packageWorkflowSha: run.head_sha,
-    packageRunAttempt: run.run_attempt,
+  };
+}
+
+export function verifyPackageManifestProvenance({ manifest, packageRun }) {
+  if (
+    manifest?.schemaVersion !== 1 ||
+    !Number.isInteger(manifest.runAttempt) ||
+    manifest.runAttempt < 1 ||
+    !Number.isInteger(packageRun?.packageRunAttempt) ||
+    packageRun.packageRunAttempt < 1 ||
+    manifest.repository !== packageRun?.repository ||
+    manifest.runId !== packageRun?.packageRunId ||
+    manifest.runAttempt !== packageRun?.packageRunAttempt ||
+    manifest.targetSha !== packageRun?.packageWorkflowSha ||
+    manifest.workflowPath !== packageRun?.packageWorkflowPath ||
+    manifest.workflowSha !== packageRun?.packageWorkflowSha
+  ) {
+    throw new Error(
+      "browser package manifest provenance does not match the resolved API run",
+    );
+  }
+  return {
+    repository: manifest.repository,
+    runId: manifest.runId,
+    runAttempt: manifest.runAttempt,
+    targetSha: manifest.targetSha,
+    workflowPath: manifest.workflowPath,
+    workflowSha: manifest.workflowSha,
   };
 }
 

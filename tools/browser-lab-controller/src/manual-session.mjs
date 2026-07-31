@@ -1,4 +1,6 @@
 import { signControllerRecord } from "./controller-signing.mjs";
+import { assertCompleteHostInventory } from "./controller-evidence-inputs.mjs";
+import { validateDiagnosticRetentionReceipt } from "./diagnostic-retention.mjs";
 
 export function createManualSession({
   authorization,
@@ -14,6 +16,10 @@ export function createManualSession({
   startedAt,
   endedAt,
   cleanup,
+  installations,
+  diagnosticRetention,
+  controllerCompletion,
+  hostInventory = null,
   privateKey,
   signingKeyId,
 }) {
@@ -21,6 +27,12 @@ export function createManualSession({
   if (duration !== 20 * 60 * 1000) {
     throw new Error("manual session capture window must be exactly 20 minutes");
   }
+  validateDiagnosticRetentionReceipt(diagnosticRetention, {
+    authorizationDigest: authorization.sha256,
+    hostId: authorization.hostId,
+    run: authorization.run,
+    runnerNonce: authorization.runnerNonce,
+  });
   if (
     authorization.manualSession?.mediaChallenge !== intake.mediaChallenge ||
     authorization.manualSession?.intakeManifestSha256 !== intake.sha256 ||
@@ -29,8 +41,21 @@ export function createManualSession({
   ) {
     throw new Error("manual session authorization/intake binding is invalid");
   }
+  const requiresTrackpadInventory =
+    authorization.hostId === "FW-MAC-M2-01" &&
+    (authorization.lane === "infrastructure-canary" ||
+      authorization.lane === "manual-safari-trackpad");
+  if (requiresTrackpadInventory) {
+    assertCompleteHostInventory(hostInventory, { authorization });
+  }
   if (
     Object.values(cleanup).some((value) => value !== true) ||
+    controllerCompletion?.state !== "completed" ||
+    controllerCompletion.hostLockReleased !== true ||
+    controllerCompletion.quarantined !== false ||
+    installations?.controller?.component !== "controller" ||
+    installations.controller.instanceId !== authorization.hostId ||
+    installations?.broker?.component !== "broker" ||
     origins.application === origins.asset ||
     loginSession?.interactive !== true ||
     loginSession.locked !== false ||
@@ -70,6 +95,10 @@ export function createManualSession({
     startedAt,
     endedAt,
     cleanup,
+    diagnosticRetention,
+    controllerCompletion,
+    installations,
+    ...(requiresTrackpadInventory ? { hostInventory } : {}),
   };
   return signControllerRecord({
     record,

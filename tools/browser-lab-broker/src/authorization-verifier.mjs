@@ -10,6 +10,8 @@ import {
   validateAuthorizationRecord,
 } from "./runner-authorization.mjs";
 
+const githubActionsApp = Object.freeze({ id: 15368, slug: "github-actions" });
+
 export class FileAuthorizationVerifier {
   constructor({
     directory,
@@ -78,8 +80,7 @@ export class FileAuthorizationVerifier {
       job.id !== authorization.queuedHardwareJob.id ||
       job.run_id !== authorization.run.id ||
       (!cleanup && job.status !== "queued") ||
-      (job.head_sha !== undefined &&
-        job.head_sha !== authorization.trustedSha)
+      job.head_sha !== authorization.trustedSha
     ) {
       throw new Error("live job does not match runner authorization");
     }
@@ -120,6 +121,17 @@ export async function verifyLiveRepositoryTrust({
     throw new Error("authorization target is not a strict trust-epoch descendant");
   }
   const required = policy.branchProtection.requiredStatusChecks;
+  if (
+    required.checks.some(
+      (check) =>
+        check.sourceAppId !== githubActionsApp.id ||
+        check.sourceAppSlug !== githubActionsApp.slug,
+    )
+  ) {
+    throw new Error(
+      "checked required status checks must use the GitHub Actions App 15368/github-actions",
+    );
+  }
   const checks = (protection.required_status_checks?.checks ?? [])
     .map((check) => ({ context: check.context, appId: check.app_id }))
     .sort(compareChecks);
@@ -166,27 +178,99 @@ export async function verifyLiveRepositoryTrust({
   ) {
     throw new Error("live Actions full-SHA policy is disabled");
   }
-  const workflowRuns = await github.getWorkflowRunsForSha(targetSha);
-  const runs = (workflowRuns.workflow_runs ?? []).filter(
+  const workflowRuns = completeCollection(
+    await github.getWorkflowRunsForSha(targetSha),
+    "workflow_runs",
+    "workflow runs",
+  );
+  const runs = workflowRuns.filter(
     (run) =>
       run.path === ".github/workflows/web.yml" &&
-      run.head_branch === "main" &&
-      run.head_sha === targetSha,
+      run.head_branch === policy.repository.defaultBranch &&
+      run.head_sha === targetSha &&
+      run.event === "push",
   );
   if (runs.length !== 1) {
     throw new Error("target main SHA does not have exactly one completed Web Runtime run");
   }
-  const runJobs = await github.getRunJobs(runs[0].id);
+  const [run] = runs;
+  if (
+    !Number.isInteger(run.id) ||
+    run.id < 1 ||
+    run.status !== "completed" ||
+    run.conclusion !== "success"
+  ) {
+    throw new Error(
+      "target-main Web Runtime push run is not a completed successful run",
+    );
+  }
+  const [runJobsResponse, checkRunsResponse] = await Promise.all([
+    github.getRunJobs(run.id),
+    github.getCheckRunsForSha(targetSha),
+  ]);
+  const runJobs = completeCollection(runJobsResponse, "jobs", "workflow jobs");
+  const checkRuns = completeCollection(
+    checkRunsResponse,
+    "check_runs",
+    "check runs",
+  );
   for (const requiredCheck of required.checks) {
-    const jobs = (runJobs.jobs ?? []).filter(
+    const jobs = runJobs.filter(
       (job) => job.name === requiredCheck.context,
+    );
+    const matchingCheckRuns = checkRuns.filter(
+      (checkRun) => checkRun.name === requiredCheck.context,
     );
     if (
       jobs.length !== 1 ||
-      jobs[0].status !== "completed" ||
-      jobs[0].conclusion !== "success"
+      matchingCheckRuns.length !== 1
     ) {
-      throw new Error(`${requiredCheck.context} is not a unique successful Actions job`);
+      throw new Error(
+        `${requiredCheck.context} must resolve to exactly one GitHub Actions workflow job and check run`,
+      );
+    }
+    const [job] = jobs;
+    const [checkRun] = matchingCheckRuns;
+    if (
+      !Number.isInteger(job.id) ||
+      job.id < 1 ||
+      job.status !== "completed" ||
+      job.conclusion !== "success"
+    ) {
+      throw new Error(
+        `${requiredCheck.context} workflow job is not a completed successful check`,
+      );
+    }
+    if (
+      !Number.isInteger(checkRun.id) ||
+      checkRun.id < 1 ||
+      checkRun.status !== "completed" ||
+      checkRun.conclusion !== "success"
+    ) {
+      throw new Error(
+        `${requiredCheck.context} check run is not a completed successful check`,
+      );
+    }
+    if (job.head_sha !== targetSha || checkRun.head_sha !== targetSha) {
+      throw new Error(`${requiredCheck.context} is stale for target main`);
+    }
+    if (
+      checkRun.app?.id !== githubActionsApp.id ||
+      checkRun.app?.slug !== githubActionsApp.slug
+    ) {
+      throw new Error(
+        `${requiredCheck.context} check run is not owned by GitHub Actions App 15368/github-actions`,
+      );
+    }
+    if (
+      typeof job.check_run_url !== "string" ||
+      typeof checkRun.url !== "string" ||
+      job.check_run_url !== checkRun.url ||
+      !isExactCheckRunUrl(checkRun.url, checkRun.id)
+    ) {
+      throw new Error(
+        `${requiredCheck.context} workflow job/check-run binding is mismatched`,
+      );
     }
   }
   if (!allowRegisteredRunners) {
@@ -230,4 +314,35 @@ function verifyAuthorizationAttestation({
 
 function compareChecks(left, right) {
   return left.context.localeCompare(right.context) || left.appId - right.appId;
+}
+
+function completeCollection(response, property, label) {
+  const entries = response?.[property];
+  if (
+    !Array.isArray(entries) ||
+    !Number.isInteger(response?.total_count) ||
+    response.total_count !== entries.length
+  ) {
+    throw new Error(`${label} response is incomplete`);
+  }
+  return entries;
+}
+
+function isExactCheckRunUrl(value, id) {
+  try {
+    const url = new URL(value);
+    return (
+      url.protocol === "https:" &&
+      url.hostname === "api.github.com" &&
+      url.port === "" &&
+      url.username === "" &&
+      url.password === "" &&
+      url.pathname ===
+        `/repos/${FIXED_REPOSITORY.fullName}/check-runs/${id}` &&
+      url.search === "" &&
+      url.hash === ""
+    );
+  } catch {
+    return false;
+  }
 }

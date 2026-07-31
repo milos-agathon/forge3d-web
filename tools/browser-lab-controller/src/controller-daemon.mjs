@@ -35,11 +35,7 @@ export async function pollControllerOnce({
             github.listRunAttemptJobs(runId, runAttempt),
         },
         artifactClient: {
-          listRunArtifacts: async (runId) =>
-            (await github.listRunArtifacts(runId)).map((artifact) => ({
-              ...artifact,
-              runAttempt: artifact.runAttempt ?? run.attempt,
-            })),
+          listRunArtifacts: (runId) => github.listRunArtifacts(runId),
           downloadById: (id) => github.downloadArtifactById(id),
         },
         attestationVerifier: {

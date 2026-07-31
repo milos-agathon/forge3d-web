@@ -24,10 +24,12 @@ const requiredChecks = [
   {
     context: "Web Runtime / Build And Contract Tests",
     sourceAppId: 15368,
+    sourceAppSlug: "github-actions",
   },
   {
     context: "Web Runtime / Browser Preflight",
     sourceAppId: 15368,
+    sourceAppSlug: "github-actions",
   },
 ];
 
@@ -69,6 +71,64 @@ test("cleanup mode verifies the exact completed ledger job without issuance-only
     });
     assert.equal(authorization.jobId, 3001);
     assert.equal(context.github.listRunnerCalls, 0);
+  } finally {
+    rmSync(context.directory, { recursive: true, force: true });
+  }
+});
+
+test("authorization rejects missing or malformed laboratory manifest digests", async () => {
+  for (const mutateAuthorization of [
+    (authorization) => {
+      delete authorization.labReadiness.manifestSha256;
+    },
+    (authorization) => {
+      authorization.labReadiness.manifestSha256 = "0".repeat(63);
+    },
+  ]) {
+    const context = makeVerifier({
+      jobStatus: "queued",
+      branchSha: targetSha,
+      expiresAt: "2026-07-28T12:30:00.000Z",
+      mutateAuthorization,
+    });
+    try {
+      await assert.rejects(
+        () =>
+          context.verifier.verify({
+            digest: context.digest,
+            controllerAssetId: "FW-LNX-NV-01",
+            mode: "issuance",
+          }),
+        /authorization/u,
+      );
+    } finally {
+      rmSync(context.directory, { recursive: true, force: true });
+    }
+  }
+});
+
+test("authorization rejects a manifest digest changed after its canonical digest was bound", async () => {
+  const context = makeVerifier({
+    jobStatus: "queued",
+    branchSha: targetSha,
+    expiresAt: "2026-07-28T12:30:00.000Z",
+  });
+  try {
+    const changed = structuredClone(context.authorization);
+    changed.labReadiness.manifestSha256 = "9".repeat(64);
+    writeFileSync(
+      join(context.directory, `${context.digest}.json`),
+      canonicalJson(changed),
+    );
+    await assert.rejects(
+      () =>
+        context.verifier.verify({
+          digest: context.digest,
+          controllerAssetId: "FW-LNX-NV-01",
+          mode: "issuance",
+        }),
+      /content does not match requested digest/u,
+    );
   } finally {
     rmSync(context.directory, { recursive: true, force: true });
   }
@@ -116,12 +176,143 @@ test("issuance rejects live review requirements that exceed checked policy", asy
   }
 });
 
+for (const [name, mutate, expectedError] of [
+  [
+    "a required check run from the wrong app",
+    (github) => {
+      github.checkRuns.check_runs[0].app = {
+        id: 1,
+        slug: "lookalike-actions",
+      };
+    },
+    /not owned by GitHub Actions App 15368\/github-actions/u,
+  ],
+  [
+    "a stale required-check SHA",
+    (github) => {
+      github.runJobs.jobs[0].head_sha = "c".repeat(40);
+    },
+    /stale for target main/u,
+  ],
+  [
+    "a missing required workflow job",
+    (github) => {
+      github.runJobs.jobs.pop();
+      github.runJobs.total_count -= 1;
+    },
+    /exactly one GitHub Actions workflow job and check run/u,
+  ],
+  [
+    "a missing required check run",
+    (github) => {
+      github.checkRuns.check_runs.pop();
+      github.checkRuns.total_count -= 1;
+    },
+    /exactly one GitHub Actions workflow job and check run/u,
+  ],
+  [
+    "a duplicate required workflow job",
+    (github) => {
+      const duplicate = structuredClone(github.runJobs.jobs[0]);
+      duplicate.id = 9001;
+      github.runJobs.jobs.push(duplicate);
+      github.runJobs.total_count += 1;
+    },
+    /exactly one GitHub Actions workflow job and check run/u,
+  ],
+  [
+    "a duplicate required check run",
+    (github) => {
+      const duplicate = structuredClone(github.checkRuns.check_runs[0]);
+      duplicate.id = 9002;
+      duplicate.url = `${duplicate.url.slice(0, duplicate.url.lastIndexOf("/") + 1)}9002`;
+      github.checkRuns.check_runs.push(duplicate);
+      github.checkRuns.total_count += 1;
+    },
+    /exactly one GitHub Actions workflow job and check run/u,
+  ],
+  [
+    "a mismatched workflow-job/check-run URL",
+    (github) => {
+      github.runJobs.jobs[0].check_run_url += "-other";
+    },
+    /workflow job\/check-run binding is mismatched/u,
+  ],
+  [
+    "a mismatched check-run ID and URL",
+    (github) => {
+      github.checkRuns.check_runs[0].id = 9003;
+    },
+    /workflow job\/check-run binding is mismatched/u,
+  ],
+  [
+    "matching check-run URLs from a look-alike origin",
+    (github) => {
+      const lookalike = new URL(github.checkRuns.check_runs[0].url);
+      lookalike.hostname = "example.invalid";
+      github.checkRuns.check_runs[0].url = lookalike.href;
+      github.runJobs.jobs[0].check_run_url = lookalike.href;
+    },
+    /workflow job\/check-run binding is mismatched/u,
+  ],
+  [
+    "a truncated workflow-runs response",
+    (github) => {
+      github.workflowRuns.total_count += 1;
+    },
+    /workflow runs response is incomplete/u,
+  ],
+  [
+    "a truncated workflow-jobs response",
+    (github) => {
+      github.runJobs.total_count += 1;
+    },
+    /workflow jobs response is incomplete/u,
+  ],
+  [
+    "a truncated check-runs response",
+    (github) => {
+      github.checkRuns.total_count += 1;
+    },
+    /check runs response is incomplete/u,
+  ],
+  [
+    "a failed Web Runtime workflow run",
+    (github) => {
+      github.workflowRuns.workflow_runs[0].conclusion = "failure";
+    },
+    /not a completed successful run/u,
+  ],
+]) {
+  test(`issuance rejects ${name}`, async () => {
+    const context = makeVerifier({
+      jobStatus: "queued",
+      branchSha: targetSha,
+      expiresAt: "2026-07-28T12:30:00.000Z",
+    });
+    try {
+      mutate(context.github);
+      await assert.rejects(
+        context.verifier.verify({
+          digest: context.digest,
+          controllerAssetId: "FW-LNX-NV-01",
+          mode: "issuance",
+        }),
+        expectedError,
+      );
+    } finally {
+      rmSync(context.directory, { recursive: true, force: true });
+    }
+  });
+}
+
 function makeVerifier({
   jobStatus,
   branchSha,
   expiresAt,
   requiredApprovingReviewCount = 0,
   requireLastPushApproval = false,
+  mutateAuthorization = null,
 }) {
   const directory = mkdtempSync(join(tmpdir(), "forge3d-authorization-"));
   const repositoryTrustPolicy = {
@@ -182,12 +373,14 @@ function makeVerifier({
     packageManifestSha256: "b".repeat(64),
     labReadiness: {
       runId: 1002,
+      manifestSha256: "d".repeat(64),
       labInfrastructureDigest: "c".repeat(64),
     },
     manualSession: null,
     issuedAt: "2026-07-28T11:50:00.000Z",
     expiresAt,
   };
+  mutateAuthorization?.(authorization);
   const text = canonicalJson(authorization);
   const digest = createHash("sha256").update(text).digest("hex");
   writeFileSync(join(directory, `${digest}.json`), text);
@@ -200,6 +393,7 @@ function makeVerifier({
   return {
     directory,
     digest,
+    authorization,
     github,
     verifier: new FileAuthorizationVerifier({
       directory,
@@ -223,6 +417,53 @@ class LiveTrustGitHub {
     this.requiredApprovingReviewCount = requiredApprovingReviewCount;
     this.requireLastPushApproval = requireLastPushApproval;
     this.listRunnerCalls = 0;
+    const runId = 7001;
+    this.workflowRuns = {
+      total_count: 1,
+      workflow_runs: [
+        {
+          id: runId,
+          path: ".github/workflows/web.yml",
+          head_branch: repository.defaultBranch,
+          head_sha: targetSha,
+          event: "push",
+          status: "completed",
+          conclusion: "success",
+        },
+      ],
+    };
+    const jobs = requiredChecks.map((check, index) => {
+      const checkRunId = 8001 + index;
+      return {
+        id: 7101 + index,
+        name: check.context,
+        head_sha: targetSha,
+        status: "completed",
+        conclusion: "success",
+        check_run_url:
+          `https://api.github.com/repos/${repository.fullName}` +
+          `/check-runs/${checkRunId}`,
+      };
+    });
+    this.runJobs = { total_count: jobs.length, jobs };
+    const checkRuns = requiredChecks.map((check, index) => {
+      const checkRunId = 8001 + index;
+      return {
+        id: checkRunId,
+        name: check.context,
+        head_sha: targetSha,
+        status: "completed",
+        conclusion: "success",
+        url:
+          `https://api.github.com/repos/${repository.fullName}` +
+          `/check-runs/${checkRunId}`,
+        app: { id: 15368, slug: "github-actions" },
+      };
+    });
+    this.checkRuns = {
+      total_count: checkRuns.length,
+      check_runs: checkRuns,
+    };
   }
 
   async getRepository() {
@@ -281,27 +522,17 @@ class LiveTrustGitHub {
 
   async getWorkflowRunsForSha(sha) {
     assert.equal(sha, targetSha);
-    return {
-      workflow_runs: [
-        {
-          id: 7001,
-          path: ".github/workflows/web.yml",
-          head_branch: "main",
-          head_sha: targetSha,
-        },
-      ],
-    };
+    return structuredClone(this.workflowRuns);
   }
 
   async getRunJobs(id) {
     assert.equal(id, 7001);
-    return {
-      jobs: requiredChecks.map((check) => ({
-        name: check.context,
-        status: "completed",
-        conclusion: "success",
-      })),
-    };
+    return structuredClone(this.runJobs);
+  }
+
+  async getCheckRunsForSha(sha) {
+    assert.equal(sha, targetSha);
+    return structuredClone(this.checkRuns);
   }
 
   async listRunners() {

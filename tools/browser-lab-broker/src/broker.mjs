@@ -29,6 +29,7 @@ export class BrowserLabBroker {
     cancellationPollAttempts = CANCELLATION_POLL_ATTEMPTS,
     cancellationPollIntervalMs = CANCELLATION_POLL_INTERVAL_MS,
     provisioningMode = "active",
+    deploymentEvidence,
   }) {
     this.matrix = matrix;
     this.browserPolicy = browserPolicy;
@@ -43,6 +44,10 @@ export class BrowserLabBroker {
       throw new Error("broker provisioning mode is invalid");
     }
     this.provisioningMode = provisioningMode;
+    if (deploymentEvidence?.component !== "broker") {
+      throw new Error("verified broker deployment evidence is required");
+    }
+    this.deploymentEvidence = structuredClone(deploymentEvidence);
   }
 
   async issueJitConfig(request, { mtlsIdentity }) {
@@ -66,8 +71,6 @@ export class BrowserLabBroker {
     this.verifyAuthorization(authorization);
     this.assertHostNotQuarantined(host.assetId);
     const derived = deriveJitRequest(authorization, host);
-    const response = await this.github.generateJitConfig(derived);
-    const issued = verifyReturnedRunner(response, derived);
     const issuedAt = this.now();
     const authorizationExpiry = new Date(authorization.expiresAt);
     const startDeadline = new Date(
@@ -76,56 +79,80 @@ export class BrowserLabBroker {
         issuedAt.getTime() + 2 * 60 * 1000,
       ),
     );
-    try {
-      this.ledger.create({
-        schemaVersion: 1,
-        protocolVersion: this.browserPolicy.brokerProtocolVersion,
-        authorizationDigest: request.authorizationDigest,
-        runId: authorization.runId,
-        jobId: authorization.jobId,
-        targetSha: authorization.targetSha,
-        hostAssetId: host.assetId,
-        controllerIdentity: host.controller.identity,
-        runnerId: issued.runnerId,
-        runnerName: issued.runnerName,
-        customLabels: derived.labels,
-        workFolder: derived.work_folder,
-        state: "issued",
-        issuedAt: issuedAt.toISOString(),
-        authorizationExpiresAt: authorizationExpiry.toISOString(),
-        startDeadline: startDeadline.toISOString(),
-        onlineAt: null,
-        assignmentDeadline: null,
-        everOnline: false,
-        everBusy: false,
-        lastRunnerObservation: null,
-        lastJobObservation: { status: authorization.jobStatus },
-        localStopEvidence: null,
-        workRootWipeEvidence: null,
-        deletionResult: null,
-        cancellationResult: null,
-        cancellationRequestedAt: null,
-        quarantineRequired: false,
-        controllerUnreachableAt: null,
-        quarantinedAt: null,
-        quarantineReleasedAt: null,
-        cleanupDecision: null,
-      });
-    } catch (error) {
-      const runner = await this.github.getRunner(issued.runnerId);
-      if (runner && runner.busy === false) {
-        await this.github.deleteRunner(issued.runnerId);
-      }
-      throw new Error(`broker could not persist issuance ledger: ${error.message}`);
-    }
-    return {
+    const intent = this.ledger.create({
+      schemaVersion: 1,
       protocolVersion: this.browserPolicy.brokerProtocolVersion,
       authorizationDigest: request.authorizationDigest,
-      runnerId: issued.runnerId,
-      runnerName: issued.runnerName,
-      encodedJitConfig: issued.encodedJitConfig,
+      runId: authorization.runId,
+      jobId: authorization.jobId,
+      targetSha: authorization.targetSha,
+      hostAssetId: host.assetId,
+      controllerIdentity: host.controller.identity,
+      runnerId: null,
+      runnerName: derived.name,
+      customLabels: derived.labels,
+      workFolder: derived.work_folder,
+      state: "issuing",
+      issuedAt: issuedAt.toISOString(),
+      authorizationExpiresAt: authorizationExpiry.toISOString(),
       startDeadline: startDeadline.toISOString(),
-    };
+      onlineAt: null,
+      assignmentDeadline: null,
+      everOnline: false,
+      everBusy: false,
+      lastRunnerObservation: null,
+      lastJobObservation: { status: authorization.jobStatus },
+      localStopEvidence: null,
+      workRootWipeEvidence: null,
+      deletionResult: null,
+      cancellationResult: null,
+      cancellationRequestedAt: null,
+      quarantineRequired: true,
+      controllerUnreachableAt: null,
+      quarantinedAt: null,
+      quarantineReleasedAt: null,
+      cleanupDecision:
+        "durable JIT issuance intent persisted before GitHub mutation",
+    });
+    try {
+      const response = await this.github.generateJitConfig(derived);
+      const issued = verifyReturnedRunner(response, derived);
+      this.ledger.update(request.authorizationDigest, {
+        runnerId: issued.runnerId,
+        state: "issued",
+        quarantineRequired: false,
+        cleanupDecision: null,
+      });
+      return {
+        protocolVersion: this.browserPolicy.brokerProtocolVersion,
+        authorizationDigest: request.authorizationDigest,
+        runnerId: issued.runnerId,
+        runnerName: issued.runnerName,
+        encodedJitConfig: issued.encodedJitConfig,
+        startDeadline: startDeadline.toISOString(),
+        deployment: structuredClone(this.deploymentEvidence),
+      };
+    } catch (error) {
+      let reconciled = null;
+      let reconciliationError = null;
+      try {
+        reconciled = await this.reconcileIssuingIntent(intent, {
+          authorization,
+        });
+      } catch (caught) {
+        reconciliationError = caught;
+      }
+      if (reconciliationError) {
+        throw new Error(
+          `GitHub JIT issuance failed and exact reconciliation remains quarantined: ${error.message}; ${reconciliationError.message}`,
+          { cause: new AggregateError([error, reconciliationError]) },
+        );
+      }
+      throw new Error(
+        `GitHub JIT issuance failed after ${reconciled.deletionResult} reconciliation: ${error.message}`,
+        { cause: error },
+      );
+    }
   }
 
   assertIssuanceAllowed(authorization) {
@@ -165,6 +192,19 @@ export class BrowserLabBroker {
       mtlsIdentity,
       expectedHostAssetId: record.hostAssetId,
     });
+    if (record.state === "issuing") {
+      const reconciled = await this.reconcileIssuingIntent(record, {
+        authorization,
+      });
+      return cleanupResponse(reconciled, this.deploymentEvidence);
+    }
+    if (
+      ["deleted", "already_absent"].includes(record.state) &&
+      record.quarantineRequired === false &&
+      record.cancellationResult !== "pending"
+    ) {
+      return cleanupResponse(record, this.deploymentEvidence);
+    }
     const cleaned =
       request.reason === "quarantine-release"
         ? await this.releaseHostQuarantine(
@@ -177,11 +217,14 @@ export class BrowserLabBroker {
             request.reason,
             request.listenerStop,
           );
-    return cleanupResponse(cleaned);
+    return cleanupResponse(cleaned, this.deploymentEvidence);
   }
 
   async watchdogTick(digest, { controllerReachable = true } = {}) {
     let record = this.requireRecord(digest);
+    if (record.state === "issuing") {
+      return this.reconcileIssuingIntent(record);
+    }
     if (record.cancellationResult === "pending") {
       return this.completePendingCancellation(record, {
         pollUntilTerminal: false,
@@ -342,6 +385,170 @@ export class BrowserLabBroker {
     return this.ledger.update(digest, {
       lastRunnerObservation: runnerObservation,
       lastJobObservation: jobObservation,
+    });
+  }
+
+  async reconcileIssuingIntent(record, { authorization = null } = {}) {
+    if (record.state !== "issuing" || record.quarantineRequired !== true) {
+      throw new Error("broker record is not a quarantined issuing intent");
+    }
+    const verifiedAuthorization =
+      authorization ??
+      (await this.authorizationVerifier.verify({
+        digest: record.authorizationDigest,
+        controllerAssetId: record.hostAssetId,
+        mode: "cleanup",
+      }));
+    this.verifyIssuingIntentBinding(record, verifiedAuthorization);
+
+    const listing = await this.github.listRunners();
+    if (
+      !Number.isInteger(listing?.total_count) ||
+      listing.total_count < 0 ||
+      !Array.isArray(listing.runners) ||
+      listing.total_count !== listing.runners.length
+    ) {
+      throw new Error(
+        "repository runner listing is incomplete for exact issuance reconciliation",
+      );
+    }
+    const nonceLabel = record.customLabels[2];
+    const related = listing.runners.filter((runner) => {
+      const labels = runnerLabels(runner);
+      return (
+        runner.name === record.runnerName ||
+        labels.includes(nonceLabel) ||
+        (labels.includes(record.customLabels[0]) &&
+          labels.includes(record.customLabels[1]))
+      );
+    });
+    if (related.length === 0) {
+      if (this.now().getTime() < Date.parse(record.startDeadline)) {
+        this.recordIssuanceReconciliationFailure(
+          record.authorizationDigest,
+          "complete repository runner listing found no deterministic match before the issuance start deadline",
+        );
+        throw new Error(
+          "zero runner matches before the issuance start deadline do not yet prove already_absent",
+        );
+      }
+      return this.ledger.update(record.authorizationDigest, {
+        state: "already_absent",
+        deletionResult: "already_absent",
+        quarantineRequired: false,
+        cleanupDecision:
+          "complete repository runner listing proved the deterministic JIT identity absent",
+      });
+    }
+    if (related.length !== 1) {
+      this.recordIssuanceReconciliationFailure(
+        record.authorizationDigest,
+        "multiple runners matched the deterministic JIT identity",
+      );
+      throw new Error(
+        "multiple runners matched the deterministic JIT identity; wildcard cleanup is forbidden",
+      );
+    }
+
+    const runner = related[0];
+    try {
+      validateReconciledRunner(runner, record);
+    } catch (error) {
+      this.recordIssuanceReconciliationFailure(
+        record.authorizationDigest,
+        error.message,
+      );
+      throw error;
+    }
+    const bound = this.ledger.update(record.authorizationDigest, {
+      runnerId: runner.id,
+      lastRunnerObservation: summarizeRunner(runner, this.now()),
+      cleanupDecision:
+        "unique exact deterministic JIT runner bound; awaiting queued-job and non-busy cleanup predicates",
+    });
+    const [exactRunner, job] = await Promise.all([
+      this.github.getRunner(bound.runnerId),
+      this.github.getJob(bound.jobId),
+    ]);
+    try {
+      validateQueuedReconciliationJob(job, bound);
+    } catch (error) {
+      this.recordIssuanceReconciliationFailure(
+        bound.authorizationDigest,
+        error.message,
+      );
+      throw error;
+    }
+    if (exactRunner === null) {
+      return this.ledger.update(bound.authorizationDigest, {
+        state: "already_absent",
+        deletionResult: "already_absent",
+        quarantineRequired: false,
+        cleanupDecision:
+          "unique deterministic JIT identity disappeared and exact-ID lookup proved it absent",
+      });
+    }
+    try {
+      validateReconciledRunner(exactRunner, bound);
+    } catch (error) {
+      this.recordIssuanceReconciliationFailure(
+        bound.authorizationDigest,
+        error.message,
+      );
+      throw error;
+    }
+    if (exactRunner.busy !== false) {
+      this.recordIssuanceReconciliationFailure(
+        bound.authorizationDigest,
+        "ambiguous JIT runner is busy",
+      );
+      throw new Error("ambiguous JIT runner is busy and cannot be deleted");
+    }
+    await this.github.deleteRunner(exactRunner.id);
+    if (await this.github.getRunner(exactRunner.id)) {
+      this.recordIssuanceReconciliationFailure(
+        bound.authorizationDigest,
+        "exact runner remained registered after deletion",
+      );
+      throw new Error(
+        "exact ambiguous JIT runner remained registered after deletion",
+      );
+    }
+    return this.ledger.update(bound.authorizationDigest, {
+      state: "deleted",
+      deletionResult: "deleted",
+      quarantineRequired: false,
+      cleanupDecision:
+        "unique exact non-busy JIT runner deleted while the authorization-bound job remained queued",
+    });
+  }
+
+  verifyIssuingIntentBinding(record, authorization) {
+    const host = this.matrix.hosts.find(
+      (candidate) => candidate.assetId === record.hostAssetId,
+    );
+    const derived = host ? deriveJitRequest(authorization, host) : null;
+    if (
+      !host ||
+      authorization.runId !== record.runId ||
+      authorization.jobId !== record.jobId ||
+      authorization.targetSha !== record.targetSha ||
+      authorization.hostAssetId !== record.hostAssetId ||
+      authorization.jobStatus !== "queued" ||
+      derived.name !== record.runnerName ||
+      derived.work_folder !== record.workFolder ||
+      !sameOrderedValues(derived.labels, record.customLabels)
+    ) {
+      throw new Error(
+        "authorization changed from the durable JIT issuance intent",
+      );
+    }
+  }
+
+  recordIssuanceReconciliationFailure(digest, decision) {
+    this.ledger.update(digest, {
+      quarantineRequired: true,
+      cleanupDecision: decision,
     });
   }
 
@@ -628,7 +835,7 @@ function cleanupPredicate({ reason, record, runner, job, listenerStop, now }) {
   };
 }
 
-function cleanupResponse(record) {
+function cleanupResponse(record, deployment) {
   return {
     authorizationDigest: record.authorizationDigest,
     runnerId: record.runnerId,
@@ -637,6 +844,7 @@ function cleanupResponse(record) {
     deletionResult: record.deletionResult,
     cancellationResult: record.cancellationResult,
     cleanupDecision: record.cleanupDecision,
+    deployment: structuredClone(deployment),
   };
 }
 
@@ -648,6 +856,54 @@ function summarizeRunner(runner, now) {
     busy: runner.busy,
     observedAt: now.toISOString(),
   };
+}
+
+function validateReconciledRunner(runner, record) {
+  if (
+    !Number.isInteger(runner.id) ||
+    runner.id < 1 ||
+    (record.runnerId !== null && runner.id !== record.runnerId)
+  ) {
+    throw new Error(
+      "reconciled runner ID, name, or custom labels changed from the durable issuance intent",
+    );
+  }
+  try {
+    validateRunnerIdentity(runner, { ...record, runnerId: runner.id });
+  } catch {
+    throw new Error(
+      "reconciled runner ID, name, or custom labels changed from the durable issuance intent",
+    );
+  }
+}
+
+function validateQueuedReconciliationJob(job, record) {
+  if (
+    job?.id !== record.jobId ||
+    job.run_id !== record.runId ||
+    job.status !== "queued" ||
+    job.head_sha !== record.targetSha
+  ) {
+    throw new Error(
+      "live queued job does not match the ambiguous JIT issuance intent",
+    );
+  }
+}
+
+function runnerLabels(runner) {
+  if (!Array.isArray(runner?.labels)) return [];
+  return runner.labels.map((label) =>
+    typeof label === "string" ? label : label?.name,
+  );
+}
+
+function sameOrderedValues(left, right) {
+  return (
+    Array.isArray(left) &&
+    Array.isArray(right) &&
+    left.length === right.length &&
+    left.every((value, index) => value === right[index])
+  );
 }
 
 function summarizeJob(job, now) {

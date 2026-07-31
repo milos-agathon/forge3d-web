@@ -1,0 +1,155 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/host-inventory.schema.json",
+  "title": "Forge3D exact physical host inventory",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "assetId",
+    "platform",
+    "model",
+    "cpu",
+    "gpu",
+    "ramGiB",
+    "osBuild",
+    "headed",
+    "displayServer",
+    "session",
+    "browsers",
+    "tools",
+    "effectiveLaunchArguments",
+    "prohibitedLaunchArgumentsPresent",
+    "attachedAssetIds",
+    "attachedAssets",
+    "trackpad",
+    "capturedAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "assetId": {
+      "type": "string",
+      "pattern": "^FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+$"
+    },
+    "platform": { "enum": ["darwin", "win32", "linux"] },
+    "model": { "type": "string", "minLength": 1 },
+    "cpu": { "type": "string", "minLength": 1 },
+    "gpu": { "type": "string", "minLength": 1 },
+    "ramGiB": { "type": "integer", "minimum": 16 },
+    "osBuild": { "type": "string", "minLength": 1 },
+    "headed": { "const": true },
+    "displayServer": { "type": "string", "minLength": 1 },
+    "session": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["interactive", "locked", "remote", "identifier"],
+      "properties": {
+        "interactive": { "const": true },
+        "locked": { "const": false },
+        "remote": { "const": false },
+        "identifier": { "type": "string", "minLength": 1 }
+      }
+    },
+    "browsers": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "channel",
+          "classification",
+          "automation",
+          "version",
+          "executable"
+        ],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "channel": { "type": "string", "minLength": 1 },
+          "classification": { "enum": ["required", "probe"] },
+          "automation": { "type": "string", "minLength": 1 },
+          "version": { "type": "string", "minLength": 1 },
+          "executable": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "tools": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["playwright", "selenium", "geckodriver"],
+      "properties": {
+        "playwright": { "type": "string", "minLength": 1 },
+        "selenium": { "type": "string", "minLength": 1 },
+        "geckodriver": { "type": "string", "minLength": 1 },
+        "appium": { "type": "string", "minLength": 1 },
+        "appiumUiAutomator2": { "type": "string", "minLength": 1 },
+        "appiumXcuitest": { "type": "string", "minLength": 1 },
+        "safaridriverPath": { "type": "string", "minLength": 1 },
+        "safaridriverVersion": { "type": "string", "minLength": 1 }
+      }
+    },
+    "effectiveLaunchArguments": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "prohibitedLaunchArgumentsPresent": {
+      "type": "array",
+      "maxItems": 0
+    },
+    "attachedAssetIds": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^FW-[A-Z0-9-]+$" }
+    },
+    "attachedAssets": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["assetId", "model", "appiumId"],
+        "properties": {
+          "assetId": { "type": "string", "pattern": "^FW-[A-Z0-9-]+$" },
+          "model": { "type": "string", "minLength": 1 },
+          "appiumId": { "type": ["null", "string"] }
+        }
+      }
+    },
+    "trackpad": {
+      "type": ["null", "object"],
+      "additionalProperties": false,
+      "required": [
+        "assetId",
+        "model",
+        "firmware",
+        "transport",
+        "batteryState",
+        "capturedAt",
+        "topology"
+      ],
+      "properties": {
+        "assetId": { "const": "FW-TRACKPAD-01" },
+        "model": { "type": "string", "minLength": 1 },
+        "firmware": { "type": "string", "minLength": 1 },
+        "transport": { "const": "Bluetooth" },
+        "batteryState": {
+          "type": "string",
+          "pattern": "^(?:unknown|(?:100|[0-9]{1,2})%)$"
+        },
+        "capturedAt": { "type": "string", "minLength": 20 },
+        "topology": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["pairingAndCharging", "gestures", "hubPresent"],
+          "properties": {
+            "pairingAndCharging": { "const": "direct-usb-c-to-usb-c" },
+            "gestures": { "const": "bluetooth" },
+            "hubPresent": { "const": false }
+          }
+        }
+      }
+    },
+    "capturedAt": { "type": "string", "minLength": 20 }
+  }
+}

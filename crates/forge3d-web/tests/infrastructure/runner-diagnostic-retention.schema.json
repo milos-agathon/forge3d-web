@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/runner-diagnostic-retention.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "storage",
+    "storageKey",
+    "hostId",
+    "run",
+    "runnerNonce",
+    "authorizationDigest",
+    "files",
+    "filesSha256",
+    "retainedAt",
+    "sha256"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "storage": { "const": "protected-controller-external" },
+    "storageKey": {
+      "type": "string",
+      "pattern": "^FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+-[1-9][0-9]*-[1-9][0-9]*-[0-9a-f]{64}$"
+    },
+    "hostId": {
+      "type": "string",
+      "pattern": "^FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+$"
+    },
+    "run": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "attempt"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "attempt": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "runnerNonce": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
+    "authorizationDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "files": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "size", "sha256"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "pattern": "^(?:Runner|Worker)_[A-Za-z0-9_.-]+\\.log$"
+          },
+          "size": { "type": "integer", "minimum": 1 },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+        }
+      }
+    },
+    "filesSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "retainedAt": { "type": "string", "format": "date-time" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+  }
+}

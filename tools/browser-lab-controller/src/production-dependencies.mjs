@@ -10,6 +10,8 @@ import {
 import {
   dirname,
   join,
+  relative,
+  sep,
 } from "node:path";
 
 import {
@@ -23,6 +25,7 @@ import {
 } from "./controller-evidence-inputs.mjs";
 import { acquireFileHostLock } from "./host-lock.mjs";
 import { storeControllerReceipt } from "./controller-receipt-store.mjs";
+import { retainRunnerDiagnostics } from "./diagnostic-retention.mjs";
 import {
   monitorAuthorizedJob,
   sanitizedRunnerEnvironment,
@@ -38,6 +41,7 @@ export function createProductionControllerDependencies({
   configuration,
   platform = process.platform,
   runnerEnvironment,
+  installationEvidence,
   now = () => new Date(),
 }) {
   if (
@@ -49,6 +53,12 @@ export function createProductionControllerDependencies({
   }
   if (typeof lifecycleStore?.get !== "function") {
     throw new Error("broker lifecycle store is required for JIT runners");
+  }
+  if (
+    installationEvidence?.component !== "controller" ||
+    installationEvidence.instanceId !== hostId
+  ) {
+    throw new Error("verified controller installation evidence is required");
   }
   const jobsRoot = requiredAbsolute(configuration.jobsRoot, "jobs root");
   const runnerTemplate = requiredAbsolute(
@@ -63,6 +73,14 @@ export function createProductionControllerDependencies({
     configuration.diagnosticsRoot,
     "diagnostics root",
   );
+  const diagnosticsRelation = relative(jobsRoot, diagnosticsRoot);
+  if (
+    diagnosticsRelation === "" ||
+    (diagnosticsRelation !== ".." &&
+      !diagnosticsRelation.startsWith(`..${sep}`))
+  ) {
+    throw new Error("diagnostics root must remain outside the jobs root");
+  }
   const receiptDirectory = requiredAbsolute(
     configuration.receiptDirectory,
     "receipt directory",
@@ -197,18 +215,22 @@ export function createProductionControllerDependencies({
         now,
       }),
     stopRunner,
-    forwardDiagnostics: async ({ jobRoot, authorizationDigest }) => {
+    forwardDiagnostics: async ({ jobRoot, authorizationDigest, authorization }) => {
       const source = join(jobRoot.runnerDirectory, "_diag");
-      const destination = safeChild(diagnosticsRoot, authorizationDigest);
-      if (existsSync(source)) {
-        cpSync(source, destination, {
-          recursive: true,
-          errorOnExist: true,
-          force: false,
-        });
-      } else {
-        mkdirSync(destination, { recursive: false, mode: 0o700 });
-      }
+      const storageKey =
+        `${authorization.hostId}-${authorization.run.id}-` +
+        `${authorization.run.attempt}-${authorizationDigest}`;
+      const destination = safeChild(diagnosticsRoot, storageKey);
+      return retainRunnerDiagnostics({
+        source,
+        destination,
+        authorizationDigest,
+        hostId: authorization.hostId,
+        run: authorization.run,
+        runnerNonce: authorization.runnerNonce,
+        storageKey,
+        now: now(),
+      });
     },
     readHostCanaryInput: async (request) => readHostCanaryInput(request),
     readManualSessionInput: async (request) => readManualSessionInput(request),
@@ -216,6 +238,8 @@ export function createProductionControllerDependencies({
       privateKey: readFileSync(signingKeyPath, "utf8"),
       signingKeyId: configuration.signingKeyId,
     }),
+    controllerInstallationEvidence: async () =>
+      structuredClone(installationEvidence),
     storeControllerReceipt: async ({ run, recordType, signedRecord }) =>
       storeControllerReceipt({
         directory: receiptDirectory,

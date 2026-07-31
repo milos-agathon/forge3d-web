@@ -1,0 +1,132 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/lab-canary-publication-record.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "recordType",
+    "supportClaim",
+    "candidateSha",
+    "labInfrastructureDigest",
+    "publicationRunId",
+    "publicationRun",
+    "tag",
+    "candidateManifestSha256",
+    "preflightSha256",
+    "release",
+    "assetApiPagination",
+    "assets",
+    "releaseVerification",
+    "assetVerifications",
+    "verificationBundleSha256",
+    "verifiedAt",
+    "intake",
+    "createdAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "recordType": { "const": "lab-canary-publication" },
+    "supportClaim": { "const": false },
+    "candidateSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "labInfrastructureDigest": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "publicationRunId": { "type": "integer", "minimum": 1 },
+    "publicationRun": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "attempt", "workflowPath"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "attempt": { "type": "integer", "minimum": 1 },
+        "workflowPath": {
+          "const": ".github/workflows/publish-browser-lab-canary.yml"
+        }
+      }
+    },
+    "tag": { "type": "string", "pattern": "^browser-lab-canary-[0-9a-f]{64}-[1-9][0-9]*$" },
+    "candidateManifestSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "preflightSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "tagName", "targetCommitish", "draft", "prerelease", "immutable", "publishedAt"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "tagName": { "type": "string", "minLength": 1 },
+        "targetCommitish": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "draft": { "const": false },
+        "prerelease": { "const": false },
+        "immutable": { "const": true },
+        "publishedAt": { "type": "string", "minLength": 20 }
+      }
+    },
+    "assetApiPagination": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["requestedPerPage", "pageCount", "totalAssets", "pagesSha256"],
+      "properties": {
+        "requestedPerPage": { "const": 100 },
+        "pageCount": { "type": "integer", "minimum": 1 },
+        "totalAssets": { "type": "integer", "minimum": 1 },
+        "pagesSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "assets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "size", "apiDigest", "sha256"],
+        "properties": {
+          "id": { "type": "integer", "minimum": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "size": { "type": "integer", "minimum": 1 },
+          "apiDigest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+        }
+      }
+    },
+    "releaseVerification": { "$ref": "#/$defs/verificationOutput" },
+    "assetVerifications": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "outputSha256", "output"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "outputSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "output": { "type": "object" }
+        }
+      }
+    },
+    "verificationBundleSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "verifiedAt": { "type": "string", "minLength": 20 },
+    "intake": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["releaseId", "tagName", "bindingSha256", "deletedAfterVerification", "deletedAt"],
+      "properties": {
+        "releaseId": { "type": "integer", "minimum": 1 },
+        "tagName": { "type": "string", "pattern": "^manual-evidence-intake-[1-9][0-9]*$" },
+        "bindingSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "deletedAfterVerification": { "const": true },
+        "deletedAt": { "type": "string", "minLength": 20 }
+      }
+    },
+    "createdAt": { "type": "string", "minLength": 20 }
+  },
+  "$defs": {
+    "verificationOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outputSha256", "output"],
+      "properties": {
+        "outputSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "output": { "type": "object" }
+      }
+    }
+  }
+}

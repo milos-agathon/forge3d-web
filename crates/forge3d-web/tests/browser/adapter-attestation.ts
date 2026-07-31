@@ -8,6 +8,7 @@ export interface AdapterAttestationBinding {
 
 export interface AdapterAttestationRecord extends AdapterAttestationBinding {
   schemaVersion: 1;
+  secureContext: boolean;
   navigatorGpu: boolean;
   adapterInfoAvailable: boolean;
   adapterInfo: Record<string, string | number | boolean>;
@@ -17,7 +18,8 @@ export interface AdapterAttestationRecord extends AdapterAttestationBinding {
   deviceCreated: boolean;
   surfaceCreated: boolean;
   surfacePresented: boolean;
-  presentedFrameLuma: number;
+  presentedFrameLumaSamples: [number, number];
+  presentedFrameLumaDelta: number;
   lumaChanged: boolean;
   effectiveLaunchArguments: string[];
 }
@@ -94,36 +96,31 @@ export async function captureAdapterAttestation(
     usage: 0x0008 | 0x0001,
   });
   try {
-    const texture = context.getCurrentTexture();
-    const encoder = device.createCommandEncoder();
-    const pass = encoder.beginRenderPass({
-      colorAttachments: [
-        {
-          view: texture.createView(),
-          clearValue: { r: 0.75, g: 0.25, b: 0.5, a: 1 },
-          loadOp: "clear",
-          storeOp: "store",
-        },
-      ],
-    });
-    pass.end();
-    encoder.copyTextureToBuffer(
-      { texture },
-      { buffer: readback, bytesPerRow },
-      { width: canvas.width, height: canvas.height, depthOrArrayLayers: 1 },
-    );
-    device.queue.submit([encoder.finish()]);
-    await readback.mapAsync(0x0001);
-    const pixel = new Uint8Array(readback.getMappedRange(), 0, 4);
-    const presentedFrameLuma =
-      (0.2126 * pixel[0] + 0.7152 * pixel[1] + 0.0722 * pixel[2]) / 255;
-    readback.unmap();
-    await new Promise<void>((resolve) =>
-      requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+    const presentedFrameLumaSamples: [number, number] = [
+      await presentAndReadLuma({
+        canvas,
+        context,
+        device,
+        readback,
+        bytesPerRow,
+        clearValue: 0.05,
+      }),
+      await presentAndReadLuma({
+        canvas,
+        context,
+        device,
+        readback,
+        bytesPerRow,
+        clearValue: 0.9,
+      }),
+    ];
+    const presentedFrameLumaDelta = Math.abs(
+      presentedFrameLumaSamples[1] - presentedFrameLumaSamples[0],
     );
     return {
       schemaVersion: 1,
       ...binding,
+      secureContext: globalThis.isSecureContext === true,
       navigatorGpu: true,
       adapterInfoAvailable,
       adapterInfo: sanitizeInfo(rawInfo),
@@ -135,8 +132,9 @@ export async function captureAdapterAttestation(
       deviceCreated: true,
       surfaceCreated: true,
       surfacePresented: true,
-      presentedFrameLuma,
-      lumaChanged: presentedFrameLuma > 0.05,
+      presentedFrameLumaSamples,
+      presentedFrameLumaDelta,
+      lumaChanged: presentedFrameLumaDelta >= 0.25,
       effectiveLaunchArguments: [...effectiveLaunchArguments],
     };
   } finally {
@@ -154,6 +152,7 @@ function unavailableRecord(
   return {
     schemaVersion: 1,
     ...binding,
+    secureContext: globalThis.isSecureContext === true,
     navigatorGpu,
     adapterInfoAvailable: false,
     adapterInfo: {},
@@ -163,10 +162,61 @@ function unavailableRecord(
     deviceCreated: false,
     surfaceCreated: false,
     surfacePresented: false,
-    presentedFrameLuma: 0,
+    presentedFrameLumaSamples: [0, 0],
+    presentedFrameLumaDelta: 0,
     lumaChanged: false,
     effectiveLaunchArguments: [...effectiveLaunchArguments],
   };
+}
+
+async function presentAndReadLuma({
+  canvas,
+  context,
+  device,
+  readback,
+  bytesPerRow,
+  clearValue,
+}: {
+  canvas: HTMLCanvasElement;
+  context: GPUCanvasContext;
+  device: GPUDevice;
+  readback: GPUBuffer;
+  bytesPerRow: number;
+  clearValue: number;
+}): Promise<number> {
+  const texture = context.getCurrentTexture();
+  const encoder = device.createCommandEncoder();
+  const pass = encoder.beginRenderPass({
+    colorAttachments: [
+      {
+        view: texture.createView(),
+        clearValue: {
+          r: clearValue,
+          g: clearValue,
+          b: clearValue,
+          a: 1,
+        },
+        loadOp: "clear",
+        storeOp: "store",
+      },
+    ],
+  });
+  pass.end();
+  encoder.copyTextureToBuffer(
+    { texture },
+    { buffer: readback, bytesPerRow },
+    { width: canvas.width, height: canvas.height, depthOrArrayLayers: 1 },
+  );
+  device.queue.submit([encoder.finish()]);
+  await readback.mapAsync(0x0001);
+  const pixel = new Uint8Array(readback.getMappedRange(), 0, 4);
+  const luma =
+    (0.2126 * pixel[0] + 0.7152 * pixel[1] + 0.0722 * pixel[2]) / 255;
+  readback.unmap();
+  await new Promise<void>((resolve) =>
+    requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+  );
+  return luma;
 }
 
 function sanitizeInfo(

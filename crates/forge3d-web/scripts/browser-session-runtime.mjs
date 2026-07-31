@@ -227,8 +227,10 @@ async function openAppiumSession({
         version: record.browserVersion,
       },
       driverVersion: installedDriverVersion,
+      mobileDevice: record,
       ...launch,
       runPage: (payload) => session.runHardwarePage(payload),
+      runRouteProbe: (payload) => session.runRouteProbe(payload),
       close: async () => {
         await session.delete().catch(() => undefined);
         await stopChild(child);

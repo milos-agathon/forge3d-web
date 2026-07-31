@@ -92,6 +92,66 @@ test("fails unless both USB and Bluetooth captures contain the fixed asset", () 
   );
 });
 
+test("fails closed on duplicate USB or Bluetooth trackpad records", () => {
+  const duplicateUsb = structuredClone(usbProfile);
+  duplicateUsb.SPUSBDataType[0]._items.push(
+    structuredClone(duplicateUsb.SPUSBDataType[0]._items[0]),
+  );
+  assert.throws(
+    () =>
+      captureTrackpadInventory({
+        usbProfile: duplicateUsb,
+        bluetoothProfile,
+      }),
+    /exactly once/u,
+  );
+
+  const duplicateBluetooth = structuredClone(bluetoothProfile);
+  duplicateBluetooth.SPBluetoothDataType.push(
+    structuredClone(duplicateBluetooth.SPBluetoothDataType[0]),
+  );
+  assert.throws(
+    () =>
+      captureTrackpadInventory({
+        usbProfile,
+        bluetoothProfile: duplicateBluetooth,
+      }),
+    /exactly once/u,
+  );
+});
+
+test("does not double-count the same profile node reached twice", () => {
+  const aliasedUsb = structuredClone(usbProfile);
+  const usbDevice = aliasedUsb.SPUSBDataType[0]._items[0];
+  aliasedUsb.SPUSBDataType[0]._items.push(usbDevice);
+  const aliasedBluetooth = structuredClone(bluetoothProfile);
+  const bluetoothDevice = aliasedBluetooth.SPBluetoothDataType[0];
+  aliasedBluetooth.SPBluetoothDataType.push(bluetoothDevice);
+
+  assert.doesNotThrow(() =>
+    captureTrackpadInventory({
+      usbProfile: aliasedUsb,
+      bluetoothProfile: aliasedBluetooth,
+    }),
+  );
+});
+
+test("rejects out-of-range and non-integer battery evidence", () => {
+  for (const battery of ["101%", "999", "87.5%", "-1%"]) {
+    const changed = structuredClone(bluetoothProfile);
+    changed.SPBluetoothDataType[0].device_batteryLevel = battery;
+    assert.throws(
+      () =>
+        captureTrackpadInventory({
+          usbProfile,
+          bluetoothProfile: changed,
+        }),
+      /battery percentage/u,
+      battery,
+    );
+  }
+});
+
 test("rejects a different Magic Trackpad model", () => {
   const olderUsb = structuredClone(usbProfile);
   olderUsb.SPUSBDataType[0]._items[0].model_id = "A1535";

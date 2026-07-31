@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 
 import { openProductionSession } from "./browser-session-runtime.mjs";
 import { validateBrowserRunProvenance } from "./browser-run-provenance.mjs";
+import { hasMeasuredLumaPresentation } from "./join-adapter-attestation.mjs";
 
 const DESKTOP_LANES = new Map([
   ["chrome-macos-m2", ["playwright-chrome", "chrome"]],
@@ -201,6 +202,8 @@ async function executeLaneContract({
     if (
       !adapter.deviceCreated ||
       !adapter.surfacePresented ||
+      adapter.secureContext !== true ||
+      !hasMeasuredLumaPresentation(adapter) ||
       adapter.isFallbackAdapter !== false
     ) {
       throw new Error("adapter smoke did not prove required hardware presentation");

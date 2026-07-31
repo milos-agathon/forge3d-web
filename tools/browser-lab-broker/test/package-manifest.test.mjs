@@ -29,7 +29,13 @@ test("binds broker archive, exact source, configuration, and protocols", () => {
     );
     assert.match(manifest.archive.sha256, /^[0-9a-f]{64}$/u);
     assert.match(manifest.configurationSha256, /^[0-9a-f]{64}$/u);
-    assert.equal(manifest.configuration.length, 9);
+    assert.equal(manifest.configuration.length, 10);
+    assert.equal(manifest.package, "@forge3d/browser-lab-broker");
+    assert.equal(manifest.version, "1.0.0");
+    assert.equal(manifest.protocols.controller, "forge3d-browser-lab-controller/v1");
+    assert.ok(
+      manifest.files.some((file) => file.path === "src/server.mjs"),
+    );
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

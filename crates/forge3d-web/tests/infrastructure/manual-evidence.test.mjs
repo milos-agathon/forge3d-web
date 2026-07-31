@@ -9,11 +9,17 @@ import {
   checklistDefinition,
   createIntakeManifest,
   createManualEvidence,
+  validateIntakeSelection,
   validateMediaAssets,
   validateStepResults,
 } from "../../scripts/manual-evidence.mjs";
 import { createManualSession } from "../../../../tools/browser-lab-controller/src/manual-session.mjs";
 import { assertJsonSchema } from "../browser/json-schema-validator.mjs";
+import { activeManualMatrices } from "./manual-intake-fixture.mjs";
+import {
+  diagnosticRetentionFixture,
+  serviceInstallationFixture,
+} from "./service-installation-fixture.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
 const intakeSchema = readJson("manual-evidence-intake.schema.json");
@@ -58,6 +64,7 @@ test("intake binds authenticated actor, exact package/checklist/asset, 128-bit c
     packageSha256: "b".repeat(64),
     checklistId: "mobile-multitouch",
     assetId: "FW-AND-QCOM-01",
+    ...activeManualMatrices("FW-AND-QCOM-01"),
     expectedTester: "tester-login",
     prepareRun: { id: 20, attempt: 1, workflowSha: "c".repeat(40) },
     now: new Date("2026-07-29T10:00:00.000Z"),
@@ -70,6 +77,120 @@ test("intake binds authenticated actor, exact package/checklist/asset, 128-bit c
   assertJsonSchema(intake, intakeSchema);
   assert.equal(intake.mediaChallenge, "09".repeat(16));
   assert.equal(intake.expiresAt, "2026-07-30T10:00:00.000Z");
+});
+
+test("intake selection requires exact active matrix, host, controller, attachment, and public device binding", () => {
+  const base = activeManualMatrices("FW-AND-QCOM-01");
+  assert.equal(
+    validateIntakeSelection({
+      ...base,
+      checklistId: "mobile-multitouch",
+      assetId: "FW-AND-QCOM-01",
+    }).device.model,
+    "Samsung Galaxy S23 SM-S911B",
+  );
+
+  const cases = [
+    [
+      (value) => {
+        value.hardwareMatrix.assets[1].state = "maintenance";
+      },
+      /asset is not uniquely active/u,
+    ],
+    [
+      (value) => {
+        value.hardwareMatrix.hosts[0].state = "maintenance";
+      },
+      /host\/controller is not active/u,
+    ],
+    [
+      (value) => {
+        value.hardwareMatrix.hosts[0].controller.state = "unprovisioned";
+      },
+      /host\/controller is not active/u,
+    ],
+    [
+      (value) => {
+        value.hardwareMatrix.hosts[0].maintenanceReason = "still quarantined";
+      },
+      /host\/controller is not active/u,
+    ],
+    [
+      (value) => {
+        value.hardwareMatrix.hosts[0].attachedAssetIds =
+          value.hardwareMatrix.hosts[0].attachedAssetIds.filter(
+            (assetId) => assetId !== "FW-AND-QCOM-01",
+          );
+      },
+      /not reciprocally attached|attachment is not reciprocal/u,
+    ],
+    [
+      (value) => {
+        value.deviceMatrix.devices[0].appiumId = "private-device-id";
+      },
+      /JSON schema validation failed/u,
+    ],
+    [
+      (value) => {
+        value.deviceMatrix.devices[0].model = "substituted model";
+      },
+      /JSON schema validation failed/u,
+    ],
+    [
+      (value) => {
+        value.deviceMatrix.devices[0].udid = "forbidden";
+      },
+      /JSON schema validation failed/u,
+    ],
+    [
+      (value) => {
+        value.deviceMatrix.devices[5] = structuredClone(
+          value.deviceMatrix.devices[4],
+        );
+      },
+      /each public asset once/u,
+    ],
+  ];
+  for (const [mutate, expected] of cases) {
+    const value = structuredClone(base);
+    mutate(value);
+    assert.throws(
+      () =>
+        validateIntakeSelection({
+          ...value,
+          checklistId: "mobile-multitouch",
+          assetId: "FW-AND-QCOM-01",
+        }),
+      expected,
+    );
+  }
+
+  const trackpad = activeManualMatrices("FW-TRACKPAD-01");
+  trackpad.hardwareMatrix.assets[0].model = "generic trackpad";
+  assert.throws(
+    () =>
+      validateIntakeSelection({
+        ...trackpad,
+        checklistId: "safari-trackpad",
+        assetId: "FW-TRACKPAD-01",
+      }),
+    /asset\/checklist pair is not checked/u,
+  );
+
+  const canary = createIntakeManifest({
+    trustedSha: sha,
+    packageRunId: 10,
+    packageSha256: "b".repeat(64),
+    checklistId: "infrastructure-manual-canary",
+    assetId: "FW-IOS-NEW-01",
+    ...activeManualMatrices("FW-IOS-NEW-01"),
+    expectedTester: "tester-login",
+    prepareRun: { id: 20, attempt: 1, workflowSha: "c".repeat(40) },
+    random: () => Buffer.alloc(16, 9),
+  });
+  assert.equal(canary.hostId, "FW-MAC-M2-01");
+  assert.equal(canary.supportClaim, false);
+  assert.throws(() => validateStepResults({}, canary), /only product/u);
 });
 
 test("manual session is exactly 20 minutes, controller-signed, and cleanup-complete", () => {
@@ -97,6 +218,26 @@ test("manual session is exactly 20 minutes, controller-signed, and cleanup-compl
     startedAt: "2026-07-29T10:00:00.000Z",
     endedAt: "2026-07-29T10:20:00.000Z",
     cleanup: cleanupFixture(),
+    installations: {
+      controller: serviceInstallationFixture({
+        component: "controller",
+        instanceId: authorization.hostId,
+        targetSha: authorization.trustedSha,
+      }),
+      broker: serviceInstallationFixture({
+        component: "broker",
+        instanceId: "browser-lab-broker",
+        targetSha: authorization.trustedSha,
+      }),
+    },
+    diagnosticRetention: diagnosticRetentionFixture({
+      authorizationDigest: authorization.sha256,
+      hostId: authorization.hostId,
+      run: authorization.run,
+      runnerNonce: authorization.runnerNonce,
+      retainedAt: "2026-07-29T10:20:30.000Z",
+    }),
+    controllerCompletion: controllerCompletionFixture(),
     privateKey,
     signingKeyId: "controller-fw-mac-m2-01-p256-v1",
   });
@@ -155,6 +296,10 @@ test("media and evidence require exact inventory, uploader, digest, window, step
     controllerSignatureSha256: "7".repeat(64),
   });
   assertJsonSchema(evidence, evidenceSchema);
+  assert.deepEqual(evidence.labReadiness, session.labReadiness);
+  assert.deepEqual(evidence.system, session.system);
+  assert.deepEqual(evidence.browser, session.browser);
+  assert.deepEqual(evidence.driver, session.driver);
 
   assert.throws(
     () => validateStepResults({ ...stepResults, EXTRA: "pass" }, intake),
@@ -194,6 +339,7 @@ function intakeFixture() {
     packageSha256: "b".repeat(64),
     checklistId: "mobile-multitouch",
     assetId: "FW-AND-QCOM-01",
+    ...activeManualMatrices("FW-AND-QCOM-01"),
     expectedTester: "tester-login",
     prepareRun: { id: 20, attempt: 1, workflowSha: "c".repeat(40) },
     now: new Date("2026-07-29T09:00:00.000Z"),
@@ -214,12 +360,14 @@ function authorizationFixture(intake) {
     hostId: intake.hostId,
     assetId: intake.assetId,
     sha256: "1".repeat(64),
+    runnerNonce: "d".repeat(32),
     manualSession: {
       mediaChallenge: intake.mediaChallenge,
       intakeManifestSha256: intake.sha256,
     },
     labReadiness: {
       runId: 5,
+      manifestSha256: "5".repeat(64),
       labInfrastructureDigest: "6".repeat(64),
     },
   };
@@ -230,15 +378,26 @@ function sessionFixture(intake) {
     run: { id: 20, attempt: 1 },
     hardwareJobId: 21,
     trustedSha: intake.trustedSha,
-    package: { sha256: intake.packageSha256 },
+    package: { runId: intake.packageRunId, sha256: intake.packageSha256 },
     assetId: intake.assetId,
     hostId: intake.hostId,
     mediaChallenge: intake.mediaChallenge,
     authorizationSha256: "1".repeat(64),
+    diagnosticRetention: diagnosticRetentionFixture({
+      authorizationDigest: "1".repeat(64),
+      hostId: intake.hostId,
+      run: { id: 20, attempt: 1 },
+      runnerNonce: "d".repeat(32),
+      retainedAt: "2026-07-29T10:20:30.000Z",
+    }),
     labReadiness: {
       runId: 5,
+      manifestSha256: "5".repeat(64),
       labInfrastructureDigest: "6".repeat(64),
     },
+    system: { os: "darwin", build: "25A123" },
+    browser: { name: "Safari", channel: "stable", version: "26.0" },
+    driver: { name: "safaridriver", version: "26.0" },
     routeBasePath: `/runs/20/21/${"e".repeat(32)}/`,
     startedAt: "2026-07-29T10:00:00.000Z",
     endedAt: "2026-07-29T10:20:00.000Z",
@@ -253,6 +412,19 @@ function cleanupFixture() {
     tunnelStopped: true,
     updatesRestored: true,
     runnerAbsent: true,
+  };
+}
+
+function controllerCompletionFixture() {
+  return {
+    state: "completed",
+    brokerCleanup: "deleted",
+    runnerAbsent: true,
+    workRootWiped: true,
+    hostCleanupComplete: true,
+    hostLockReleased: true,
+    quarantined: false,
+    completedAt: "2026-07-29T10:21:00.000Z",
   };
 }
 

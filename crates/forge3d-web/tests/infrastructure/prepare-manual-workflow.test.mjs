@@ -40,6 +40,10 @@ test("intake resolves package hash, derives actor/challenge, attests, and writes
   assert.match(prepare, /resolve-hardware-promotion\.mjs/u);
   assert.match(prepare, /EXPECTED_TESTER: \$\{\{ github\.actor \}\}/u);
   assert.match(prepare, /manual-evidence\.mjs/u);
+  assert.match(prepare, /tests\/infrastructure\/hardware-matrix\.json/u);
+  assert.match(prepare, /tests\/device\/device-matrix\.json/u);
+  assert.match(prepare, /hardwareMatrix,/u);
+  assert.match(prepare, /deviceMatrix,/u);
   assert.match(prepare, /actions\/attest@[0-9a-f]{40}/u);
   assert.match(prepare, /gh release create/u);
   assert.match(prepare, /--draft/u);
@@ -47,6 +51,17 @@ test("intake resolves package hash, derives actor/challenge, attests, and writes
   assert.equal(prepare.includes("--clobber"), false);
   assert.match(prepare, /contents: write/u);
   assert.match(prepare, /artifact-metadata: write/u);
+});
+
+test("package manifest provenance is joined to the resolved API run before intake mutation", () => {
+  const resolve = prepare.indexOf("resolve-hardware-promotion.mjs");
+  const attest = prepare.indexOf(
+    "gh attestation verify package/browser-package-manifest.json",
+  );
+  const join = prepare.indexOf("verifyPackageManifestProvenance");
+  const generate = prepare.indexOf("Generate closed intake manifest");
+  assert.ok(resolve > -1 && attest > resolve && join > attest && generate > join);
+  assert.equal(prepare.includes("package-run.json"), true);
 });
 
 function jobBlock(text, startId, nextId) {

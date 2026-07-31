@@ -137,7 +137,13 @@ export class ControllerGitHubActionsClient {
     for (const run of values.flatMap((value) => value.workflow_runs ?? [])) {
       if (
         run.path === ".github/workflows/browser-hardware.yml" &&
-        run.head_branch === "main"
+        run.head_branch === "main" &&
+        run.event === "workflow_dispatch" &&
+        Number.isInteger(run.id) &&
+        run.id > 0 &&
+        Number.isInteger(run.run_attempt) &&
+        run.run_attempt > 0 &&
+        /^[0-9a-f]{40}$/u.test(run.head_sha ?? "")
       ) {
         unique.set(`${run.id}:${run.run_attempt}`, {
           id: run.id,
@@ -171,7 +177,6 @@ export class ControllerGitHubActionsClient {
       name: artifact.name,
       expired: artifact.expired,
       workflowRunId: artifact.workflow_run?.id,
-      runAttempt: artifact.workflow_run?.run_attempt,
       digest: artifact.digest,
     }));
   }

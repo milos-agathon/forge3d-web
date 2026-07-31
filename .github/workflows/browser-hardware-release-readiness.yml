@@ -260,12 +260,21 @@ jobs:
             node --input-type=module --eval '
               import { readFileSync, writeFileSync } from "node:fs";
               const source = JSON.parse(readFileSync(process.argv[1], "utf8"));
+              const resolution = JSON.parse(readFileSync(process.argv[3], "utf8"));
               writeFileSync("finalize-record-input.json", JSON.stringify({
                 source,
                 artifactId: Number(process.argv[2]),
-                attestation: { verified: true, denySelfHostedRunners: true }
+                attestation: { verified: true, denySelfHostedRunners: true },
+                selectedRun: {
+                  id: resolution.run.id,
+                  attempt: resolution.run.run_attempt,
+                  path: resolution.run.path
+                }
               }));
-            ' "$(find "evidence-runs/${run_id}" -name browser-matrix-record-source.json -type f)" "${artifact_id}"
+            ' \
+              "$(find "evidence-runs/${run_id}" -name browser-matrix-record-source.json -type f)" \
+              "${artifact_id}" \
+              "${run_id}-resolution.json"
             node scripts/create-browser-matrix-record.mjs \
               finalize \
               finalize-record-input.json \
@@ -307,15 +316,59 @@ jobs:
               ...input,
               packageSha256: "0".repeat(64)
             }));
+            writeFileSync("negative-package-run.json", JSON.stringify({
+              ...input,
+              records: input.records.map((record, index) => index === 0
+                ? { ...record, packageRunId: input.labReadiness.packageRunId + 1 }
+                : record)
+            }));
             writeFileSync("negative-missing.json", JSON.stringify({
               ...input,
               records: input.records.slice(1)
+            }));
+            writeFileSync("negative-old-readiness-record.json", JSON.stringify({
+              ...input,
+              records: input.records.map((record, index) => index === 0
+                ? {
+                    ...record,
+                    labReadiness: {
+                      ...record.labReadiness,
+                      runId: record.labReadiness.runId - 1,
+                      manifestSha256: "0".repeat(64)
+                    }
+                  }
+                : record)
+            }));
+            writeFileSync("negative-safari-substitution.json", JSON.stringify({
+              ...input,
+              records: input.records.map((record) =>
+                record.key === "manual:FW-TRACKPAD-01:safari-trackpad"
+                  ? {
+                      ...record,
+                      browser: { ...record.browser, version: "substituted" }
+                    }
+                  : record)
+            }));
+            writeFileSync("negative-safari-package-run.json", JSON.stringify({
+              ...input,
+              records: input.records.map((record) =>
+                record.key === "manual:FW-TRACKPAD-01:safari-trackpad"
+                  ? { ...record, packageRunId: input.labReadiness.packageRunId + 1 }
+                  : record)
             }));
           ' "$(find lab-readiness -name browser-lab-infrastructure-readiness.json -type f)"
           node scripts/merge-browser-evidence.mjs \
             merge-input.json \
             browser-hardware-release-readiness.json
-          for negative in negative-prior-head.json negative-package.json negative-missing.json; do
+          for negative in \
+            negative-prior-head.json \
+            negative-package.json \
+            negative-package-run.json \
+            negative-missing.json \
+            negative-old-readiness-record.json \
+            negative-safari-substitution.json \
+            negative-safari-package-run.json
+          do
             if node scripts/merge-browser-evidence.mjs "${negative}" rejected.json; then
               echo "negative control unexpectedly passed: ${negative}" >&2
               exit 1

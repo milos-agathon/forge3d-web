@@ -200,6 +200,14 @@ jobs:
             --source-ref refs/heads/main \
             --source-digest "${{ inputs.trusted_sha }}" \
             --deny-self-hosted-runners
+          node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            import { verifyPackageManifestProvenance } from "./scripts/resolve-hardware-promotion.mjs";
+            verifyPackageManifestProvenance({
+              manifest: JSON.parse(readFileSync("package/browser-package-manifest.json", "utf8")),
+              packageRun: JSON.parse(readFileSync("package-run.json", "utf8"))
+            });
+          '
 
       - name: Generate closed intake manifest
         working-directory: crates/forge3d-web
@@ -213,12 +221,16 @@ jobs:
           node --input-type=module --eval '
             import { readFileSync, writeFileSync } from "node:fs";
             const packageManifest = JSON.parse(readFileSync("package/browser-package-manifest.json", "utf8"));
+            const hardwareMatrix = JSON.parse(readFileSync("tests/infrastructure/hardware-matrix.json", "utf8"));
+            const deviceMatrix = JSON.parse(readFileSync("tests/device/device-matrix.json", "utf8"));
             const input = {
               trustedSha: process.env.TRUSTED_SHA,
               packageRunId: Number(process.env.PACKAGE_RUN_ID),
               packageSha256: packageManifest.packageSha256,
               checklistId: process.env.CHECKLIST_ID,
               assetId: process.env.ASSET_ID,
+              hardwareMatrix,
+              deviceMatrix,
               expectedTester: process.env.EXPECTED_TESTER,
               prepareRun: {
                 id: Number(process.env.GITHUB_RUN_ID),

@@ -3,15 +3,23 @@ import {
   createSign,
   generateKeyPairSync,
 } from "node:crypto";
+import {
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import test from "node:test";
 
 import { BrowserLabBroker } from "../src/broker.mjs";
 import { canonicalJson } from "../src/canonical-json.mjs";
-import { MemoryLedger } from "../src/ledger.mjs";
+import { JsonFileLedger, MemoryLedger } from "../src/ledger.mjs";
 import {
   BROKER_PROTOCOL_VERSION,
   CLEANUP_PROTOCOL_VERSION,
 } from "../src/protocol.mjs";
+import { serviceInstallationFixture } from "../../../crates/forge3d-web/tests/infrastructure/service-installation-fixture.mjs";
 
 const { privateKey, publicKey } = generateKeyPairSync("ec", {
   namedCurve: "prime256v1",
@@ -23,12 +31,17 @@ const controller = {
   signingKeyId: "controller-fw-lnx-nv-01-p256-v1",
 };
 const digest = "a".repeat(64);
+const deploymentEvidence = serviceInstallationFixture({
+  component: "broker",
+  instanceId: "browser-lab-broker",
+});
 
 test("derives one exact JIT runner and never persists encoded configuration", async () => {
   const context = makeContext();
   const response = await issue(context);
   assert.equal(response.runnerName, `FW-LNX-NV-01-${"b".repeat(32)}`);
   assert.equal(response.encodedJitConfig, "encoded-jit-config-secret");
+  assert.deepEqual(response.deployment, deploymentEvidence);
   assert.deepEqual(context.github.generateCalls[0], {
     name: response.runnerName,
     runner_group_id: 1,
@@ -42,8 +55,193 @@ test("derives one exact JIT runner and never persists encoded configuration", as
   const record = context.ledger.get(digest);
   assert.equal(record.state, "issued");
   assert.equal(record.workFolder, "_work");
+  assert.equal(record.quarantineRequired, false);
   assert.equal(JSON.stringify(record).includes("encoded-jit-config-secret"), false);
   assert.equal(context.github.registrationTokenCalls, 0);
+});
+
+test("lost JIT response reconciles one exact runner and never posts a second configuration", async () => {
+  const context = makeContext();
+  context.github.generateFailure = "after";
+  await assert.rejects(issue(context), /deleted reconciliation.*lost response/u);
+  const record = context.ledger.get(digest);
+  assert.equal(record.state, "deleted");
+  assert.equal(record.runnerId, 1001);
+  assert.equal(record.deletionResult, "deleted");
+  assert.equal(record.quarantineRequired, false);
+  assert.equal(context.github.listCalls, 1);
+  assert.deepEqual(context.github.deleteCalls, [1001]);
+
+  await assert.rejects(
+    context.broker.issueJitConfig(makeJitRequest("1".repeat(32)), {
+      mtlsIdentity: controller.identity,
+    }),
+    /already has a broker issuance record/u,
+  );
+  assert.equal(context.github.generateCalls.length, 1);
+});
+
+test("ambiguous JIT failure keeps an early zero quarantined and closes absent after the deadline", async () => {
+  const context = makeContext();
+  context.github.generateFailure = "before";
+  await assert.rejects(
+    issue(context),
+    /zero runner matches before the issuance start deadline/u,
+  );
+  const pending = context.ledger.get(digest);
+  assert.equal(pending.state, "issuing");
+  assert.equal(pending.runnerId, null);
+  assert.equal(pending.quarantineRequired, true);
+  context.advance(121_000);
+  const record = await context.broker.watchdogTick(digest);
+  assert.equal(record.state, "already_absent");
+  assert.equal(record.runnerId, null);
+  assert.equal(record.deletionResult, "already_absent");
+  assert.equal(record.quarantineRequired, false);
+  assert.deepEqual(context.github.deleteCalls, []);
+  const cleanup = await context.broker.cleanupRunner(
+    makeCleanupRequest({
+      reason: "launch-failure",
+      nonce: "2".repeat(32),
+    }),
+    { mtlsIdentity: controller.identity },
+  );
+  assert.equal(cleanup.runnerId, null);
+  assert.equal(cleanup.state, "already_absent");
+});
+
+test("ambiguous JIT reconciliation quarantines multiple deterministic matches without deletion", async () => {
+  const context = makeContext();
+  context.github.generateFailure = "after";
+  context.github.onGenerate = (body) => {
+    context.github.additionalRunners.push({
+      id: 1002,
+      name: body.name,
+      labels: [...body.labels, "self-hosted", "Linux", "X64"],
+      status: "offline",
+      busy: false,
+    });
+  };
+  await assert.rejects(
+    issue(context),
+    /multiple runners matched.*wildcard cleanup is forbidden/u,
+  );
+  const record = context.ledger.get(digest);
+  assert.equal(record.state, "issuing");
+  assert.equal(record.quarantineRequired, true);
+  assert.match(record.cleanupDecision, /multiple runners/u);
+  assert.deepEqual(context.github.deleteCalls, []);
+});
+
+test("ambiguous JIT reconciliation keeps incomplete listings and busy runners quarantined", async () => {
+  const incomplete = makeContext();
+  incomplete.github.generateFailure = "after";
+  incomplete.github.reportedRunnerCount = 2;
+  await assert.rejects(
+    issue(incomplete),
+    /runner listing is incomplete/u,
+  );
+  assert.equal(incomplete.ledger.get(digest).state, "issuing");
+  assert.equal(incomplete.ledger.get(digest).quarantineRequired, true);
+  assert.deepEqual(incomplete.github.deleteCalls, []);
+
+  const busy = makeContext();
+  busy.github.generateFailure = "after";
+  busy.github.onGenerate = () => {
+    busy.github.runnerBusyAfterGeneration = true;
+  };
+  await assert.rejects(issue(busy), /runner is busy/u);
+  const bound = busy.ledger.get(digest);
+  assert.equal(bound.state, "issuing");
+  assert.equal(bound.runnerId, 1001);
+  assert.equal(bound.quarantineRequired, true);
+  assert.deepEqual(busy.github.deleteCalls, []);
+});
+
+test("ambiguous JIT reconciliation rejects changed identity and non-queued jobs", async () => {
+  const changed = makeContext();
+  changed.github.generateFailure = "after";
+  changed.github.extraLabels.push("changed-custom-label");
+  await assert.rejects(
+    issue(changed),
+    /custom labels changed/u,
+  );
+  assert.equal(changed.ledger.get(digest).state, "issuing");
+  assert.equal(changed.ledger.get(digest).quarantineRequired, true);
+  assert.deepEqual(changed.github.deleteCalls, []);
+
+  const nonQueued = makeContext();
+  nonQueued.github.generateFailure = "after";
+  nonQueued.github.onGenerate = () => {
+    nonQueued.github.job.status = "in_progress";
+  };
+  await assert.rejects(
+    issue(nonQueued),
+    /queued job does not match/u,
+  );
+  const bound = nonQueued.ledger.get(digest);
+  assert.equal(bound.state, "issuing");
+  assert.equal(bound.runnerId, 1001);
+  assert.equal(bound.quarantineRequired, true);
+  assert.deepEqual(nonQueued.github.deleteCalls, []);
+});
+
+test("ambiguous JIT reconciliation quarantines when a listed runner disappears and the job is no longer queued", async () => {
+  const context = makeContext();
+  context.github.generateFailure = "after";
+  context.github.onGenerate = () => {
+    context.github.disappearOnNextExactGet = true;
+    context.github.job.status = "in_progress";
+  };
+
+  await assert.rejects(issue(context), /queued job does not match/u);
+
+  const record = context.ledger.get(digest);
+  assert.equal(record.state, "issuing");
+  assert.equal(record.runnerId, 1001);
+  assert.equal(record.quarantineRequired, true);
+  assert.match(record.cleanupDecision, /queued job does not match/u);
+  assert.deepEqual(context.github.deleteCalls, []);
+});
+
+test("durable issuing intent survives restart and reconciles without another JIT POST", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "forge3d-broker-issuing-"));
+  const ledgerPath = join(directory, "ledger.json");
+  try {
+    const github = new MockGitHub();
+    const ledger = new JsonFileLedger(ledgerPath);
+    const context = makeContext({ ledger, github });
+    github.generateFailure = "after";
+    github.failNextListing = true;
+    github.onGenerate = () => {
+      const persisted = new JsonFileLedger(ledgerPath).get(digest);
+      assert.equal(persisted.state, "issuing");
+      assert.equal(persisted.runnerId, null);
+      assert.equal(persisted.runnerName, `FW-LNX-NV-01-${"b".repeat(32)}`);
+      assert.deepEqual(persisted.customLabels, [
+        "forge3d-web",
+        "hw-linux-rtx3070",
+        `jit-${"b".repeat(32)}`,
+      ]);
+      assert.equal(persisted.workFolder, "_work");
+      assert.equal(persisted.runId, 2001);
+      assert.equal(persisted.jobId, 3001);
+      assert.equal(persisted.hostAssetId, controller.assetId);
+      assert.equal(readFileSync(ledgerPath, "utf8").includes("encoded-jit"), false);
+    };
+    await assert.rejects(issue(context), /listing unavailable/u);
+    assert.equal(new JsonFileLedger(ledgerPath).get(digest).state, "issuing");
+
+    const restartedLedger = new JsonFileLedger(ledgerPath);
+    const restartedBroker = context.createBroker(restartedLedger);
+    const reconciled = await restartedBroker.watchdogTick(digest);
+    assert.equal(reconciled.state, "deleted");
+    assert.equal(reconciled.deletionResult, "deleted");
+    assert.equal(github.generateCalls.length, 1);
+    assert.deepEqual(github.deleteCalls, [1001]);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test("initial host-canary mode accepts only a host-bound canary", async () => {
@@ -175,6 +373,7 @@ test("terminal cleanup deletes only the ledger runner without cancelling a run",
     "cancellationResult",
     "cleanupDecision",
     "deletionResult",
+    "deployment",
     "runnerId",
     "runnerName",
     "state",
@@ -738,11 +937,13 @@ test("watchdog deletes, cancels, and quarantines when controller disappears befo
 function makeContext({
   provisioningMode = "active",
   authorization: authorizationOverrides = {},
+  ledger: suppliedLedger = null,
+  github: suppliedGitHub = null,
 } = {}) {
   let clock = new Date("2026-07-28T12:00:00.000Z");
   const now = () => new Date(clock);
-  const ledger = new MemoryLedger();
-  const github = new MockGitHub();
+  const ledger = suppliedLedger ?? new MemoryLedger();
+  const github = suppliedGitHub ?? new MockGitHub();
   const authorization = {
     schemaVersion: 1,
     repository: {
@@ -797,20 +998,23 @@ function makeContext({
     brokerProtocolVersion: BROKER_PROTOCOL_VERSION,
     cleanupProtocolVersion: CLEANUP_PROTOCOL_VERSION,
   };
-  const broker = new BrowserLabBroker({
-    matrix,
-    browserPolicy,
-    ledger,
-    authorizationVerifier,
-    github,
-    now,
-    sleep: async (milliseconds) => {
-      sleepCalls.push(milliseconds);
-    },
-    cancellationPollAttempts: 3,
-    cancellationPollIntervalMs: 1,
-    provisioningMode,
-  });
+  const createBroker = (brokerLedger = ledger) =>
+    new BrowserLabBroker({
+      matrix,
+      browserPolicy,
+      ledger: brokerLedger,
+      authorizationVerifier,
+      github,
+      now,
+      sleep: async (milliseconds) => {
+        sleepCalls.push(milliseconds);
+      },
+      cancellationPollAttempts: 3,
+      cancellationPollIntervalMs: 1,
+      provisioningMode,
+      deploymentEvidence,
+    });
+  const broker = createBroker();
   return {
     broker,
     ledger,
@@ -818,6 +1022,7 @@ function makeContext({
     now,
     verificationModes,
     sleepCalls,
+    createBroker,
     addAuthorization(authorizationDigest, overrides = {}) {
       authorizations.set(authorizationDigest, {
         ...structuredClone(authorization),
@@ -910,12 +1115,14 @@ class MockGitHub {
     this.job = {
       id: 3001,
       run_id: 2001,
+      head_sha: "f".repeat(40),
       status: "queued",
       conclusion: null,
     };
     this.run = { id: 2001, status: "queued", conclusion: null };
     this.deleted = false;
     this.generateCalls = [];
+    this.listCalls = 0;
     this.deleteCalls = [];
     this.cancelCalls = [];
     this.registrationTokenCalls = 0;
@@ -925,18 +1132,32 @@ class MockGitHub {
     this.cancellationAccepted = false;
     this.queuedRunReadsAfterCancel = 0;
     this.getRunCalls = 0;
+    this.generateFailure = null;
+    this.failNextListing = false;
+    this.additionalRunners = [];
+    this.onGenerate = null;
+    this.reportedRunnerCount = null;
+    this.runnerBusyAfterGeneration = false;
+    this.disappearOnNextExactGet = false;
   }
 
   async generateJitConfig(body) {
     this.generateCalls.push(structuredClone(body));
+    this.onGenerate?.(structuredClone(body));
+    if (this.generateFailure === "before") {
+      throw new Error("synthetic generate failure before mutation");
+    }
     this.deleted = false;
     this.runner = {
       id: 1001,
       name: body.name,
       labels: [...body.labels, ...this.extraLabels],
       status: "online",
-      busy: false,
+      busy: this.runnerBusyAfterGeneration,
     };
+    if (this.generateFailure === "after") {
+      throw new Error("synthetic lost response after mutation");
+    }
     return {
       status: 201,
       body: {
@@ -946,13 +1167,37 @@ class MockGitHub {
     };
   }
 
+  async listRunners() {
+    this.listCalls += 1;
+    if (this.failNextListing) {
+      this.failNextListing = false;
+      throw new Error("synthetic repository runner listing unavailable");
+    }
+    const runners = [
+      ...(!this.deleted && this.runner ? [this.runner] : []),
+      ...this.additionalRunners,
+    ];
+    return {
+      total_count: this.reportedRunnerCount ?? runners.length,
+      runners: structuredClone(runners),
+    };
+  }
+
   async getRunner(id) {
-    assert.equal(id, 1001);
-    return this.deleted ? null : structuredClone(this.runner);
+    assert.ok(Number.isInteger(id) && id > 0);
+    if (this.disappearOnNextExactGet) {
+      this.disappearOnNextExactGet = false;
+      this.deleted = true;
+      return null;
+    }
+    if (this.deleted) return null;
+    const runners = [this.runner, ...this.additionalRunners].filter(Boolean);
+    const runner = runners.find((candidate) => candidate.id === id);
+    return runner ? structuredClone(runner) : null;
   }
 
   async deleteRunner(id) {
-    assert.equal(id, 1001);
+    assert.ok(Number.isInteger(id) && id > 0);
     if (this.failNextDeletion) {
       this.failNextDeletion = false;
       throw new Error("synthetic deletion failure");

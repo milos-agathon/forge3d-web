@@ -38,11 +38,18 @@ test("exact lab/evidence attestations, merger, negative controls, and fixed arti
   assert.match(readiness, /name: browser-hardware-release-readiness/u);
   assert.match(readiness, /browser-lab-infrastructure-readiness\.json/u);
   assert.match(readiness, /browser-matrix-record-source\.json/u);
+  assert.match(readiness, /selectedRun:/u);
+  assert.match(readiness, /attempt: resolution\.run\.run_attempt/u);
+  assert.match(readiness, /path: resolution\.run\.path/u);
   assert.match(readiness, /merge-browser-evidence\.mjs/u);
   for (const negative of [
     "negative-prior-head.json",
     "negative-package.json",
+    "negative-package-run.json",
     "negative-missing.json",
+    "negative-old-readiness-record.json",
+    "negative-safari-substitution.json",
+    "negative-safari-package-run.json",
   ]) {
     assert.match(readiness, new RegExp(negative, "u"));
   }

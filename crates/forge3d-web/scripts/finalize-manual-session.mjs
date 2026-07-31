@@ -9,12 +9,25 @@ import { setTimeout as delay } from "node:timers/promises";
 import { fileURLToPath } from "node:url";
 
 import { canonicalJson } from "./canonical-json.mjs";
+import { validateHostInventory } from "./capture-host-inventory.mjs";
 import { assertJsonSchema } from "../tests/browser/json-schema-validator.mjs";
+import { validateDiagnosticRetentionReceipt } from "../../../tools/browser-lab-controller/src/diagnostic-retention.mjs";
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const manualSessionSchema = JSON.parse(
   readFileSync(
     join(packageRoot, "tests", "infrastructure", "manual-session.schema.json"),
+    "utf8",
+  ),
+);
+const installationSchema = JSON.parse(
+  readFileSync(
+    join(
+      packageRoot,
+      "tests",
+      "infrastructure",
+      "lab-service-installation.schema.json",
+    ),
     "utf8",
   ),
 );
@@ -24,12 +37,37 @@ export function verifySignedManualSession({
   authorization,
   hardwareJob,
   matrix,
+  hostInventory,
 }) {
   const { record, signature } = signedSession;
   assertJsonSchema(record, manualSessionSchema);
+  assertJsonSchema(record.installations.controller, installationSchema);
+  assertJsonSchema(record.installations.broker, installationSchema);
+  validateDiagnosticRetentionReceipt(record.diagnosticRetention, {
+    authorizationDigest: record.authorizationSha256,
+    hostId: record.hostId,
+    run: record.run,
+    runnerNonce: authorization.record.runnerNonce,
+  });
   const host = matrix.hosts.find((candidate) => candidate.assetId === record.hostId);
+  const requiresTrackpadInventory =
+    record.hostId === "FW-MAC-M2-01" &&
+    (authorization.record.lane === "infrastructure-canary" ||
+      authorization.record.lane === "manual-safari-trackpad");
+  if (requiresTrackpadInventory) {
+    validateHostInventory(record.hostInventory, {
+      matrix,
+      requireTrackpad: true,
+    });
+    if (hostInventory !== undefined) {
+      validateHostInventory(hostInventory, { matrix, requireTrackpad: true });
+      if (canonicalJson(record.hostInventory) !== canonicalJson(hostInventory)) {
+        throw new Error("signed manual-session inventory does not match the job artifact");
+      }
+    }
+  }
   if (
-    host?.controller?.state !== "active" ||
+    host?.controller?.state !== "online" ||
     !host.controller.publicJwk ||
     signature.signingKeyId !== host.controller.signingKeyId ||
     record.controllerKeyId !== host.controller.signingKeyId
@@ -57,12 +95,18 @@ export function verifySignedManualSession({
   }
   if (
     record.authorizationSha256 !== authorization.sha256 ||
+    record.diagnosticRetention.runnerNonce !==
+      authorization.record.runnerNonce ||
+    record.runner.name !==
+      `${record.hostId}-${record.diagnosticRetention.runnerNonce}` ||
     record.run.id !== authorization.record.run.id ||
     record.run.attempt !== authorization.record.run.attempt ||
     record.hardwareJobId !== authorization.record.queuedHardwareJob.id ||
     record.runner.name !== authorization.record.runnerName ||
     record.trustedSha !== authorization.record.trustedSha ||
     record.package.runId !== authorization.record.packageRunId ||
+    canonicalJson(record.labReadiness) !==
+      canonicalJson(authorization.record.labReadiness) ||
     record.hostId !== authorization.record.hostId ||
     record.assetId !== authorization.record.assetId
   ) {
@@ -76,6 +120,9 @@ export function verifySignedManualSession({
     hardwareJob.runner_id !== record.runner.id ||
     hardwareJob.runner_name !== record.runner.name ||
     Object.values(record.cleanup).some((value) => value !== true)
+    || record.controllerCompletion?.state !== "completed"
+    || record.controllerCompletion.hostLockReleased !== true
+    || record.controllerCompletion.quarantined !== false
   ) {
     throw new Error("manual session hardware job or signed cleanup is invalid");
   }
@@ -158,6 +205,9 @@ export function createManualFinalizerRecord({
     terminalJobState,
     absenceObservations,
     cleanup: session.cleanup,
+    diagnosticRetention: session.diagnosticRetention,
+    controllerCompletion: session.controllerCompletion,
+    installations: session.installations,
     observedAt: finalizer.observedAt,
   };
 }

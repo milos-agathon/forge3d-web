@@ -117,9 +117,14 @@ test("production watchdog probes issued records before the runner is online", as
   ]);
 });
 
-test("production watchdog keeps terminal and cancellation-pending records out of health probes", async () => {
+test("production watchdog keeps issuing, terminal, and cancellation-pending records out of health probes", async () => {
   const calls = [];
   const records = [
+    {
+      authorizationDigest: "a".repeat(64),
+      state: "issuing",
+      cancellationResult: null,
+    },
     {
       authorizationDigest: "c".repeat(64),
       state: "deleted",

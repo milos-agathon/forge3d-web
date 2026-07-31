@@ -10,6 +10,7 @@ import {
   GitHubRepositoryClient,
 } from "./github-client.mjs";
 import { JsonFileLedger } from "./ledger.mjs";
+import { loadInstalledBrokerEvidence } from "./installation-evidence.mjs";
 
 export function createBrokerServer({ broker, tls }) {
   return createServer(
@@ -114,7 +115,9 @@ export function resolveBrokerProvisioningMode({ matrix, browserPolicy }) {
 }
 
 function controllerProbeNotRequired(record) {
-  return ["deleted", "already_absent", "quarantined"].includes(record.state);
+  return ["issuing", "deleted", "already_absent", "quarantined"].includes(
+    record.state,
+  );
 }
 
 async function readRequestBody(request) {
@@ -143,18 +146,37 @@ function loadJson(path) {
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const matrix = loadJson(requiredEnvironment("BROKER_HARDWARE_MATRIX"));
-  const browserPolicy = loadJson(requiredEnvironment("BROKER_BROWSER_POLICY"));
-  const repositoryTrustPolicy = loadJson(
-    requiredEnvironment("BROKER_REPOSITORY_TRUST_POLICY"),
-  );
-  loadJson(
-    requiredEnvironment("BROKER_WORKFLOW_ACTIONS_LOCK"),
-  );
-  const provisioningMode = resolveBrokerProvisioningMode({
-    matrix,
-    browserPolicy,
+  const configurationPaths = [
+    ["BROKER_HARDWARE_MATRIX", "crates/forge3d-web/tests/infrastructure/hardware-matrix.json"],
+    ["BROKER_BROWSER_POLICY", "crates/forge3d-web/tests/infrastructure/browser-policy.json"],
+    ["BROKER_REPOSITORY_TRUST_POLICY", "crates/forge3d-web/tests/infrastructure/repository-trust-policy.json"],
+    ["BROKER_WORKFLOW_ACTIONS_LOCK", "crates/forge3d-web/tests/infrastructure/workflow-actions-lock.json"],
+    ["BROKER_CONTROLLER_HEALTH_ENDPOINTS", "crates/forge3d-web/tests/infrastructure/controller-health-endpoints.json"],
+  ].map(([environmentName, packagePath]) => ({
+    packagePath,
+    path: requiredEnvironment(environmentName),
+  }));
+  const deploymentEvidence = loadInstalledBrokerEvidence({
+    receiptPath: requiredEnvironment("BROKER_INSTALLATION_RECEIPT"),
+    packageManifestPath: requiredEnvironment("BROKER_PACKAGE_MANIFEST"),
+    servicePath: fileURLToPath(import.meta.url),
+    requiredConfigurations: configurationPaths,
   });
+  const configurationPath = (packagePath) =>
+    configurationPaths.find((entry) => entry.packagePath === packagePath).path;
+  const matrix = loadJson(configurationPath(
+    "crates/forge3d-web/tests/infrastructure/hardware-matrix.json",
+  ));
+  const browserPolicy = loadJson(configurationPath(
+    "crates/forge3d-web/tests/infrastructure/browser-policy.json",
+  ));
+  const repositoryTrustPolicy = loadJson(configurationPath(
+    "crates/forge3d-web/tests/infrastructure/repository-trust-policy.json",
+  ));
+  loadJson(configurationPath(
+    "crates/forge3d-web/tests/infrastructure/workflow-actions-lock.json",
+  ));
+  const provisioningMode = resolveBrokerProvisioningMode({ matrix, browserPolicy });
   const tokenProvider = new GitHubAppTokenProvider({
     appId: requiredEnvironment("BROKER_GITHUB_APP_ID"),
     installationId: requiredEnvironment("BROKER_GITHUB_INSTALLATION_ID"),
@@ -173,9 +195,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   });
   const controllerReachability = new ControllerReachabilityMonitor({
     matrix,
-    configuration: loadJson(
-      requiredEnvironment("BROKER_CONTROLLER_HEALTH_ENDPOINTS"),
-    ),
+    configuration: loadJson(configurationPath(
+      "crates/forge3d-web/tests/infrastructure/controller-health-endpoints.json",
+    )),
     tls: {
       key: readFileSync(
         requiredEnvironment("BROKER_CONTROLLER_HEALTH_CLIENT_KEY_PATH"),
@@ -195,6 +217,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     authorizationVerifier,
     github,
     provisioningMode,
+    deploymentEvidence,
   });
   const server = createBrokerServer({
     broker,

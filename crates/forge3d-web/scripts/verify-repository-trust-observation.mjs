@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import { inflateRawSync } from "node:zlib";
 
 import { canonicalJson, sha256Hex } from "./canonical-json.mjs";
+import { assertJsonSchema } from "../tests/browser/json-schema-validator.mjs";
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const policyPath = join(
@@ -26,7 +27,25 @@ const actionsLockPath = join(
   "infrastructure",
   "workflow-actions-lock.json",
 );
+const observationSchemaPath = join(
+  packageRoot,
+  "tests",
+  "infrastructure",
+  "repository-trust-observation.schema.json",
+);
 const observationName = "repository-trust-observation.json";
+const githubActionsApp = Object.freeze({ id: 15368, slug: "github-actions" });
+const requiredLiveResponseNames = Object.freeze([
+  "actionsPermissions",
+  "branch",
+  "checkRuns",
+  "protection",
+  "repository",
+  "repositoryRunners",
+  "trustEpochComparison",
+  "workflowJobs",
+  "workflowRuns",
+]);
 
 export function verifyRepositoryTrustObservation({
   bytes,
@@ -40,6 +59,7 @@ export function verifyRepositoryTrustObservation({
   if (canonicalJson(observation) !== text) {
     throw new Error("repository trust observation is not canonical JSON");
   }
+  assertJsonSchema(observation, readJson(observationSchemaPath));
   if (observation.schemaVersion !== 1) {
     throw new Error("repository trust observation schema version is unsupported");
   }
@@ -80,30 +100,59 @@ export function verifyRepositoryTrustObservation({
     );
   }
 
-  const desiredChecks = policy.branchProtection.requiredStatusChecks.checks
-    .map((check) => ({
-      name: check.context,
-      sourceAppId: check.sourceAppId,
-    }))
-    .sort(compareChecks);
+  const desiredChecks = policy.branchProtection.requiredStatusChecks.checks;
+  if (
+    desiredChecks.some(
+      (check) =>
+        check.sourceAppId !== githubActionsApp.id ||
+        check.sourceAppSlug !== githubActionsApp.slug,
+    )
+  ) {
+    throw new Error(
+      "checked required status checks must use the GitHub Actions App 15368/github-actions",
+    );
+  }
+  if (
+    !Array.isArray(observation.requiredChecks) ||
+    observation.requiredChecks.length !== desiredChecks.length
+  ) {
+    throw new Error("observation required checks do not match policy");
+  }
   const observedChecks = observation.requiredChecks
     .map((check) => {
       if (
         !Number.isInteger(check.id) ||
         check.id < 1 ||
-        check.conclusion !== "success"
+        !Number.isInteger(check.workflowJobId) ||
+        check.workflowJobId < 1 ||
+        check.headSha !== observation.currentMainSha ||
+        check.status !== "completed" ||
+        check.conclusion !== "success" ||
+        check.app?.id !== githubActionsApp.id ||
+        check.app?.slug !== githubActionsApp.slug
       ) {
         throw new Error("observation required check result is invalid");
       }
-      return { name: check.name, sourceAppId: check.sourceAppId };
+      return check.name;
     })
-    .sort(compareChecks);
-  if (canonicalJson(observedChecks) !== canonicalJson(desiredChecks)) {
+    .sort((left, right) => left.localeCompare(right));
+  if (
+    new Set(observation.requiredChecks.map((check) => check.id)).size !==
+      observation.requiredChecks.length ||
+    new Set(observation.requiredChecks.map((check) => check.workflowJobId)).size !==
+      observation.requiredChecks.length ||
+    canonicalJson(observedChecks) !==
+      canonicalJson(
+        desiredChecks
+          .map((check) => check.context)
+          .sort((left, right) => left.localeCompare(right)),
+      )
+  ) {
     throw new Error("observation required checks do not match policy");
   }
   if (
     !Array.isArray(observation.liveResponses) ||
-    observation.liveResponses.length < 7
+    observation.liveResponses.length !== requiredLiveResponseNames.length
   ) {
     throw new Error("observation must bind every live trust response");
   }
@@ -117,6 +166,12 @@ export function verifyRepositoryTrustObservation({
       throw new Error("observation live response binding is invalid");
     }
     responseNames.add(response.name);
+  }
+  if (
+    canonicalJson([...responseNames].sort()) !==
+    canonicalJson(requiredLiveResponseNames)
+  ) {
+    throw new Error("observation must bind every live trust response");
   }
 
   const consumerKeys = observation.consumers.map(
@@ -357,13 +412,6 @@ function assertEqual(actual, expected, label) {
   if (actual !== expected) {
     throw new Error(`${label} mismatch`);
   }
-}
-
-function compareChecks(left, right) {
-  return (
-    left.name.localeCompare(right.name) ||
-    left.sourceAppId - right.sourceAppId
-  );
 }
 
 function readJson(path) {

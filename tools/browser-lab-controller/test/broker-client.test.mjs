@@ -23,10 +23,12 @@ test("controller broker client signs mTLS issue and cleanup requests", async () 
             runnerId: 9,
             runnerName: "runner",
             encodedJitConfig: "opaque",
+            deployment: { component: "broker" },
           }
         : {
             authorizationDigest: body.authorizationDigest,
             deletionResult: "deleted",
+            deployment: { component: "broker" },
           };
     },
   });

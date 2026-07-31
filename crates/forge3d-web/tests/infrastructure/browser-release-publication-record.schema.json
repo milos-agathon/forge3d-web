@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/browser-release-publication-record.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "recordType",
+    "supportClaim",
+    "targetSha",
+    "tag",
+    "candidateSha256",
+    "publicationRun",
+    "release",
+    "assets",
+    "releaseVerification",
+    "assetVerifications",
+    "verificationBundleSha256",
+    "verifiedAt",
+    "intakes",
+    "createdAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "recordType": { "const": "browser-release-publication" },
+    "supportClaim": { "const": true },
+    "targetSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "tag": { "type": "string", "pattern": "^v[0-9]+\\.[0-9]+\\.[0-9]+(?:-[0-9A-Za-z.-]+)?$" },
+    "candidateSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "publicationRun": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "attempt", "workflowPath"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "attempt": { "type": "integer", "minimum": 1 },
+        "workflowPath": {
+          "const": ".github/workflows/publish-web-release.yml"
+        }
+      }
+    },
+    "release": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "tagName", "targetCommitish", "draft", "prerelease", "immutable", "publishedAt"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "tagName": { "type": "string", "minLength": 1 },
+        "targetCommitish": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "draft": { "const": false },
+        "prerelease": { "const": false },
+        "immutable": { "const": true },
+        "publishedAt": { "type": "string", "minLength": 20 }
+      }
+    },
+    "assets": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name", "size", "apiDigest", "sha256"],
+        "properties": {
+          "id": { "type": "integer", "minimum": 1 },
+          "name": { "type": "string", "minLength": 1 },
+          "size": { "type": "integer", "minimum": 1 },
+          "apiDigest": { "type": "string", "pattern": "^sha256:[0-9a-f]{64}$" },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+        }
+      }
+    },
+    "releaseVerification": { "$ref": "#/$defs/verificationOutput" },
+    "assetVerifications": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "outputSha256", "output"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "outputSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "output": { "type": "object" }
+        }
+      }
+    },
+    "verificationBundleSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "verifiedAt": { "type": "string", "minLength": 20 },
+    "intakes": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["releaseId", "tagName", "deletedAfterVerification", "deletedAt"],
+        "properties": {
+          "releaseId": { "type": "integer", "minimum": 1 },
+          "tagName": { "type": "string", "pattern": "^manual-evidence-intake-[1-9][0-9]*$" },
+          "deletedAfterVerification": { "const": true },
+          "deletedAt": { "type": "string", "minLength": 20 }
+        }
+      }
+    },
+    "createdAt": { "type": "string", "minLength": 20 }
+  },
+  "$defs": {
+    "verificationOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outputSha256", "output"],
+      "properties": {
+        "outputSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "output": { "type": "object" }
+      }
+    }
+  }
+}

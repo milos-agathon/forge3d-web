@@ -31,6 +31,28 @@ writeFileSync(
   join(fixtureRoot, "node_modules", "@forge3d", "web", "dist", "index.js"),
   "export {};",
 );
+writeFileSync(
+  join(
+    fixtureRoot,
+    "node_modules",
+    "@forge3d",
+    "web",
+    "dist",
+    "forge3d_web.js",
+  ),
+  "export default async function init() {};",
+);
+writeFileSync(
+  join(
+    fixtureRoot,
+    "node_modules",
+    "@forge3d",
+    "web",
+    "dist",
+    "forge3d_web_bg.wasm",
+  ),
+  Buffer.from([0, 97, 115, 109]),
+);
 mkdirSync(join(fixtureRoot, "tests", "browser", "benchmark"), {
   recursive: true,
 });
@@ -142,6 +164,20 @@ test("application host, nonce path, MIME, cache, and method policy fail closed",
       "node_modules/@forge3d/web/dist/index.js",
     ).headers["Content-Type"],
     "text/javascript; charset=utf-8",
+  );
+  assert.equal(
+    request(
+      "application",
+      "node_modules/@forge3d/web/dist/forge3d_web.js",
+    ).headers["Content-Type"],
+    "text/javascript; charset=utf-8",
+  );
+  assert.equal(
+    request(
+      "application",
+      "node_modules/@forge3d/web/dist/forge3d_web_bg.wasm",
+    ).headers["Content-Type"],
+    "application/wasm",
   );
   assert.equal(
     request(

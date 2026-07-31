@@ -10,13 +10,15 @@ export function captureTrackpadInventory({
   bluetoothProfile,
   capturedAt = new Date(),
 }) {
-  const usbMatch = findTrackpad(usbProfile);
-  const bluetoothMatch = findTrackpad(bluetoothProfile);
-  if (!usbMatch || !bluetoothMatch) {
+  const usbMatches = findTrackpads(usbProfile);
+  const bluetoothMatches = findTrackpads(bluetoothProfile);
+  if (usbMatches.length !== 1 || bluetoothMatches.length !== 1) {
     throw new Error(
-      "Magic Trackpad must be present in both USB and Bluetooth system profiles",
+      "Magic Trackpad must resolve exactly once in both USB and Bluetooth system profiles",
     );
   }
+  const [usbMatch] = usbMatches;
+  const [bluetoothMatch] = bluetoothMatches;
   const modelIdentifier = firstAllowlisted(
     bluetoothMatch.value,
     usbMatch.value,
@@ -59,46 +61,46 @@ export function captureTrackpadInventory({
   };
 }
 
-function findTrackpad(profile) {
+function findTrackpads(profile) {
   const matches = [];
-  visit(profile, [], matches);
-  return matches.find(({ value }) =>
-    /magic trackpad/iu.test(
-      String(
-        value._name ??
-          value.device_name ??
-          value.product_name ??
-          value["Product Name"] ??
-          "",
-      ),
+  visit(profile, [], matches, new WeakSet());
+  return matches.filter(({ value }) =>
+    /^(?:apple\s+)?magic trackpad(?:\s+\([^)]*\))?$/iu.test(
+      deviceName(value).trim(),
     ),
   );
 }
 
-function visit(value, ancestors, matches) {
+function visit(value, ancestors, matches, visited) {
   if (Array.isArray(value)) {
     for (const item of value) {
-      visit(item, ancestors, matches);
+      visit(item, ancestors, matches, visited);
     }
     return;
   }
   if (!value || typeof value !== "object") {
     return;
   }
-  const name = String(
+  if (visited.has(value)) return;
+  visited.add(value);
+  const name = deviceName(value);
+  matches.push({ value, ancestors });
+  const nextAncestors = name ? [...ancestors, name] : ancestors;
+  for (const child of Object.values(value)) {
+    if (child && typeof child === "object") {
+      visit(child, nextAncestors, matches, visited);
+    }
+  }
+}
+
+function deviceName(value) {
+  return String(
     value._name ??
       value.device_name ??
       value.product_name ??
       value["Product Name"] ??
       "",
   );
-  matches.push({ value, ancestors });
-  const nextAncestors = name ? [...ancestors, name] : ancestors;
-  for (const child of Object.values(value)) {
-    if (child && typeof child === "object") {
-      visit(child, nextAncestors, matches);
-    }
-  }
 }
 
 function firstAllowlisted(...args) {
@@ -114,11 +116,14 @@ function firstAllowlisted(...args) {
 }
 
 function normalizeBattery(value) {
-  const match = String(value ?? "").match(/(\d{1,3})\s*%?/u);
-  if (!match) {
-    return "unknown";
+  const text = String(value ?? "").trim();
+  if (text === "") return "unknown";
+  const match = text.match(/^(\d{1,3})\s*%?$/u);
+  if (!match) throw new Error("Magic Trackpad battery percentage is invalid");
+  const percent = Number(match[1]);
+  if (!Number.isInteger(percent) || percent < 0 || percent > 100) {
+    throw new Error("Magic Trackpad battery percentage is outside 0-100");
   }
-  const percent = Math.min(100, Number(match[1]));
   return `${percent}%`;
 }
 

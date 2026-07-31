@@ -22,8 +22,17 @@ get, and bound-run cancel endpoints. It never calls an Actions artifact or
 generic registration-token endpoint.
 
 `encoded_jit_config` is returned once and never written to the ledger or log.
-The ledger records the authorization digest, exact runner/run/job identity,
-state transitions, observations, controller-loss latch, listener-stop proof,
+Before the GitHub mutation, the ledger durably records a quarantining `issuing`
+intent with the authorization digest, deterministic runner name and labels,
+work folder, and exact run/job/host bindings. A lost response or service restart
+never triggers a second JIT request: the watchdog lists repository runners,
+accepts only one exact nonce-bound identity, and exact-ID deletes it only while
+non-busy and still bound to the queued job. Zero matches close as
+`already_absent` only from a complete listing at or after the issuance start
+deadline; an earlier zero, incomplete listing, multiple or changed match, busy
+runner, or non-queued job remains quarantined. The opaque configuration is
+never persisted. Later ledger
+states retain observations, the controller-loss latch, listener-stop proof,
 exact work-root-wipe proof, quarantine release, and cleanup decision. Request
 nonces are persistent and fail on replay.
 

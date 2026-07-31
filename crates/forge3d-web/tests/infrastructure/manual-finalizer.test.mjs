@@ -3,6 +3,7 @@ import {
   generateKeyPairSync,
   createHash,
 } from "node:crypto";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -11,18 +12,33 @@ import {
   verifySignedManualSession,
 } from "../../scripts/finalize-manual-session.mjs";
 import { createManualSession } from "../../../../tools/browser-lab-controller/src/manual-session.mjs";
+import { exactHostInventory } from "./host-inventory-fixture.mjs";
+import {
+  diagnosticRetentionFixture,
+  serviceInstallationFixture,
+} from "./service-installation-fixture.mjs";
 
 const keys = generateKeyPairSync("ec", { namedCurve: "P-256" });
 const publicJwk = keys.publicKey.export({ format: "jwk" });
 const keyId = "controller-fw-mac-m2-01-p256-v1";
+const matrix = JSON.parse(
+  readFileSync(new URL("./hardware-matrix.json", import.meta.url), "utf8"),
+);
+const matrixHost = matrix.hosts.find(
+  (host) => host.assetId === "FW-MAC-M2-01",
+);
+matrixHost.controller = { state: "online", signingKeyId: keyId, publicJwk };
+const hostInventory = exactHostInventory(matrix, "FW-MAC-M2-01");
 const authorization = {
   record: {
     workflow: { sha: "c".repeat(40) },
     run: { id: 20, attempt: 1 },
     queuedHardwareJob: { id: 21 },
     runnerName: `FW-MAC-M2-01-${"d".repeat(32)}`,
+    runnerNonce: "d".repeat(32),
     trustedSha: "a".repeat(40),
     packageRunId: 10,
+    lane: "manual-safari-trackpad",
     hostId: "FW-MAC-M2-01",
     assetId: "FW-TRACKPAD-01",
     manualSession: {
@@ -31,6 +47,7 @@ const authorization = {
     },
     labReadiness: {
       runId: 5,
+      manifestSha256: "5".repeat(64),
       labInfrastructureDigest: "6".repeat(64),
     },
   },
@@ -51,7 +68,7 @@ const signedSession = createManualSession({
   },
   intake,
   runner: { id: 44, name: authorization.record.runnerName },
-  system: { os: "macOS 26", build: "25A123" },
+  system: { os: hostInventory.platform, build: hostInventory.osBuild },
   loginSession: { interactive: true, locked: false, remote: false },
   browser: { name: "Safari", channel: "stable", version: "26.0" },
   driver: { name: "safaridriver", version: "26.0" },
@@ -72,6 +89,37 @@ const signedSession = createManualSession({
     updatesRestored: true,
     runnerAbsent: true,
   },
+  installations: {
+    controller: serviceInstallationFixture({
+      component: "controller",
+      instanceId: authorization.record.hostId,
+      targetSha: authorization.record.trustedSha,
+      inventory: hostInventory,
+    }),
+    broker: serviceInstallationFixture({
+      component: "broker",
+      instanceId: "browser-lab-broker",
+      targetSha: authorization.record.trustedSha,
+    }),
+  },
+  diagnosticRetention: diagnosticRetentionFixture({
+    authorizationDigest: authorization.sha256,
+    hostId: authorization.record.hostId,
+    run: authorization.record.run,
+    runnerNonce: authorization.record.runnerNonce,
+    retainedAt: "2026-07-29T10:20:30.000Z",
+  }),
+  controllerCompletion: {
+    state: "completed",
+    brokerCleanup: "deleted",
+    runnerAbsent: true,
+    workRootWiped: true,
+    hostCleanupComplete: true,
+    hostLockReleased: true,
+    quarantined: false,
+    completedAt: "2026-07-29T10:21:00.000Z",
+  },
+  hostInventory,
   privateKey: keys.privateKey,
   signingKeyId: keyId,
 });
@@ -83,21 +131,13 @@ const hardwareJob = {
   runner_id: 44,
   runner_name: authorization.record.runnerName,
 };
-const matrix = {
-  hosts: [
-    {
-      assetId: "FW-MAC-M2-01",
-      controller: { state: "active", signingKeyId: keyId, publicJwk },
-    },
-  ],
-};
-
 test("finalizer verifies controller signature, exact job tuple, and absent runner", async () => {
   const session = verifySignedManualSession({
     signedSession,
     authorization,
     hardwareJob,
     matrix,
+    hostInventory,
   });
   let time = 0;
   const replies = [
@@ -140,20 +180,45 @@ test("wrong job tuple, unpinned key, missing token, and five-minute presence fai
       authorization,
       hardwareJob: { ...hardwareJob, runner_name: "other" },
       matrix,
+      hostInventory,
     }),
+  );
+  assert.throws(
+    () =>
+      verifySignedManualSession({
+        signedSession,
+        authorization: {
+          ...authorization,
+          record: {
+            ...authorization.record,
+            labReadiness: {
+              ...authorization.record.labReadiness,
+              manifestSha256: "0".repeat(64),
+            },
+          },
+        },
+        hardwareJob,
+        matrix,
+        hostInventory,
+      }),
+    /runner authorization/u,
   );
   assert.throws(() =>
     verifySignedManualSession({
       signedSession,
       authorization,
       hardwareJob,
+      hostInventory,
       matrix: {
-        hosts: [
-          {
-            ...matrix.hosts[0],
-            controller: { ...matrix.hosts[0].controller, state: "unprovisioned" },
-          },
-        ],
+        ...matrix,
+        hosts: matrix.hosts.map((host) =>
+          host.assetId === "FW-MAC-M2-01"
+            ? {
+                ...host,
+                controller: { ...host.controller, state: "unprovisioned" },
+              }
+            : host,
+        ),
       },
     }),
   );

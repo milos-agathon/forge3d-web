@@ -111,7 +111,7 @@ export function createPromotion({
   trustEpochSha,
   workflowSha,
   packageManifestSha256,
-  labInfrastructureDigest = null,
+  labReadiness = null,
   manualSession = null,
   random = randomBytes,
 }) {
@@ -121,11 +121,10 @@ export function createPromotion({
   if (!/^[0-9a-f]{64}$/u.test(packageManifestSha256 ?? "")) {
     throw new Error("package manifest digest must be 64 lowercase hex");
   }
-  if (
-    validated.labReadinessRunId !== null &&
-    !/^[0-9a-f]{64}$/u.test(labInfrastructureDigest ?? "")
-  ) {
-    throw new Error("product lanes require an exact laboratory digest");
+  if (validated.labReadinessRunId !== null) {
+    assertLabReadinessIdentity(labReadiness, validated.labReadinessRunId);
+  } else if (labReadiness !== null) {
+    throw new Error("infrastructure canaries reject laboratory readiness");
   }
   const runnerNonce = random(16).toString("hex");
   if (!/^[0-9a-f]{32}$/u.test(runnerNonce)) {
@@ -137,7 +136,8 @@ export function createPromotion({
     trustEpochSha,
     workflowSha,
     packageManifestSha256,
-    labInfrastructureDigest,
+    labInfrastructureDigest: labReadiness?.labInfrastructureDigest ?? null,
+    labReadiness,
     manualSession,
     runnerNonce,
     nonceLabel: `jit-${runnerNonce}`,
@@ -162,6 +162,14 @@ export function createRunnerAuthorization({
   issuedAt = new Date(),
   policy,
 }) {
+  if (promotion.labReadinessRunId !== null) {
+    assertLabReadinessIdentity(
+      promotion.labReadiness,
+      promotion.labReadinessRunId,
+    );
+  } else if (promotion.labReadiness !== null) {
+    throw new Error("infrastructure canaries reject laboratory readiness");
+  }
   if (
     queuedJob.name !== "Browser Hardware / Ephemeral Execution" ||
     queuedJob.status !== "queued"
@@ -202,13 +210,7 @@ export function createRunnerAuthorization({
     workFolder: policy.jitWorkFolder,
     packageRunId: promotion.packageRunId,
     packageManifestSha256: promotion.packageManifestSha256,
-    labReadiness:
-      promotion.labReadinessRunId === null
-        ? null
-        : {
-            runId: promotion.labReadinessRunId,
-            labInfrastructureDigest: promotion.labInfrastructureDigest,
-          },
+    labReadiness: promotion.labReadiness,
     manualSession: promotion.manualSession,
     issuedAt: start.toISOString(),
     expiresAt: new Date(start.getTime() + 10 * 60 * 1000).toISOString(),
@@ -272,6 +274,21 @@ function requireSha(value, label) {
   return value;
 }
 
+function assertLabReadinessIdentity(identity, expectedRunId) {
+  if (
+    identity === null ||
+    typeof identity !== "object" ||
+    Array.isArray(identity) ||
+    Object.keys(identity).sort().join(",") !==
+      "labInfrastructureDigest,manifestSha256,runId" ||
+    identity.runId !== expectedRunId ||
+    !/^[0-9a-f]{64}$/u.test(identity.manifestSha256 ?? "") ||
+    !/^[0-9a-f]{64}$/u.test(identity.labInfrastructureDigest ?? "")
+  ) {
+    throw new Error("product lanes require the exact laboratory readiness identity");
+  }
+}
+
 function parseArguments(argv) {
   const result = new Map();
   for (let index = 0; index < argv.length; index += 2) {
@@ -300,7 +317,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       trustEpochSha: input.trustEpochSha,
       workflowSha: input.workflowSha,
       packageManifestSha256: input.packageManifestSha256,
-      labInfrastructureDigest: input.labInfrastructureDigest,
+      labReadiness: input.labReadiness,
       manualSession: input.manualSession,
     });
     writeFileSync(args.get("--output"), `${JSON.stringify(promotion, null, 2)}\n`, {

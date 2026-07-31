@@ -94,11 +94,12 @@ uploader and API digest, downloads the bytes, and recomputes SHA-256 before
 attesting the bundle.
 
 For the generic laboratory canary, use checklist
-`infrastructure-manual-canary`. After the controller-signed 20-minute Browser
-Hardware session finishes, upload the challenged media, then dispatch
-`submit-browser-manual-evidence.yml` with the intake release ID, selected
-numeric media asset IDs, the Browser Hardware session run ID, and its exact
-hardware job ID. The resulting Submit Browser Manual Evidence run ID is the
+`infrastructure-manual-canary`. Upload the challenged media during the
+controller-signed 20-minute Browser Hardware session. After the signed session
+and its finalizer finish, dispatch `submit-browser-manual-evidence.yml` with the
+intake release ID, selected numeric media asset IDs, the Browser Hardware
+session run ID, and its exact hardware job ID. The resulting Submit Browser
+Manual Evidence run ID is the
 `manualCanaryRunId` consumed by canary publication and laboratory readiness;
 the separate `manualHardwareJobId` remains the signed underlying hardware job.
 This record has `supportClaim: false` and cannot create a product matrix row.
@@ -158,6 +159,17 @@ Before enabling a host:
 
 Substituting any host, GPU, browser channel, OS family, device, pen, trackpad,
 controller, runner label, or HTTPS route requires a reviewed matrix change.
+
+The `FW-MAC-M2-01` host-mode canary must also open a real Appium session on
+each of the six attached mobile asset IDs. Every device must navigate the same
+run/job/nonce HTTPS route and execute the in-browser certificate, package
+SHA-256, WASM MIME, allowed/denied CORS, and range checks before the controller
+can sign the canary. Host-side HTTP/Node probes, the desktop canary browser,
+emulation, inventory declarations, and Appium configuration alone are not
+mobile route evidence. Appium sessions explicitly request and must return
+`acceptInsecureCerts: false`; certificate bypasses, private-CA exceptions, and
+insecure driver defaults fail closed. Private serials and UDIDs remain inside the protected
+device-control helper and are never recorded.
 
 ## Runner Distribution And One-Job Lifecycle
 
@@ -234,4 +246,9 @@ Every change PR includes:
 Repository code completion is not physical infrastructure readiness. Only the
 separate readiness workflow may report `LAB_INFRA_READY`, and only after live
 protected-main policy, controller signatures, runner absence at rest, all four
-JIT canaries, and the fixed inventory pass at the exact current SHA.
+JIT canaries, and the fixed inventory pass at the exact current SHA. Each
+selected host run completion, controller completion, hosted finalizer
+observation, hardware-job completion, and inventory capture must be no more
+than `acceptanceWindowHours` old (currently 24 hours) and must not be in the
+future. The Mac record additionally carries the exact six-device Appium route
+evidence and its digest into the readiness manifest.

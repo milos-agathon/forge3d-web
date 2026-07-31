@@ -150,9 +150,20 @@ jobs:
       - name: Package versioned controller archive
         working-directory: source
         run: |
-          tar -czf browser-lab-controller-1.0.0.tar.gz tools/browser-lab-controller
+          tar -czf browser-lab-controller-1.0.0.tar.gz \
+            tools/browser-lab-controller \
+            crates/forge3d-web/tests/infrastructure/browser-policy.json \
+            crates/forge3d-web/tests/infrastructure/controller-health-endpoints.json \
+            crates/forge3d-web/tests/infrastructure/controller-protocol.schema.json \
+            crates/forge3d-web/tests/infrastructure/hardware-matrix.json \
+            crates/forge3d-web/tests/infrastructure/lab-service-installation.schema.json \
+            crates/forge3d-web/tests/infrastructure/runner-distribution-manifest.json \
+            crates/forge3d-web/tests/infrastructure/runner-diagnostic-retention.schema.json \
+            crates/forge3d-web/tests/infrastructure/runner-transient-path-policy.json \
+            crates/forge3d-web/tests/infrastructure/workflow-actions-lock.json
           node tools/browser-lab-controller/scripts/create-package-manifest.mjs \
             --package-root tools/browser-lab-controller \
+            --repository-root . \
             --archive browser-lab-controller-1.0.0.tar.gz \
             --target-sha "${{ github.sha }}" \
             --workflow-sha "${{ github.workflow_sha }}" \

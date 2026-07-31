@@ -114,9 +114,17 @@
     "labReadiness": {
       "type": ["object", "null"],
       "additionalProperties": false,
-      "required": ["runId", "labInfrastructureDigest"],
+      "required": [
+        "runId",
+        "manifestSha256",
+        "labInfrastructureDigest"
+      ],
       "properties": {
         "runId": { "type": "integer", "minimum": 1 },
+        "manifestSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
         "labInfrastructureDigest": {
           "type": "string",
           "pattern": "^[0-9a-f]{64}$"

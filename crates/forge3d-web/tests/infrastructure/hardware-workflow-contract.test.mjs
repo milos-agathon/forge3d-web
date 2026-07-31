@@ -83,10 +83,15 @@ test("promotion validates exact base SHA/package and never rebuilds it", () => {
   assert.match(promotion, /fetch-depth: 0/u);
   assert.match(promotion, /git merge-base --is-ancestor/u);
   assert.match(promotion, /resolve-hardware-promotion\.mjs/u);
+  assert.match(promotion, /verifyPackageManifestProvenance/u);
+  assert.match(promotion, /packageRun: JSON\.parse\(readFileSync\("package-run\.json"/u);
   assert.match(promotion, /actions\/artifacts\/\$\{\{ steps\.package\.outputs\.package-artifact-id \}\}\/zip/u);
   assert.equal(promotion.includes("npm pack"), false);
   assert.equal(promotion.includes("npm run build"), false);
   assert.match(promotion, /--deny-self-hosted-runners/u);
+  assert.match(promotion, /FORGE3D_VERIFIED_LAB_RUN_ID/u);
+  assert.match(promotion, /FORGE3D_VERIFIED_LAB_MANIFEST_SHA256/u);
+  assert.match(promotion, /manifestSha256/u);
 });
 
 test("authorization polls exactly one queued job and attests a ten-minute record", () => {
@@ -149,10 +154,25 @@ test("hardware executes only verified promoted artifacts and always cleans up", 
   assert.match(hardware, /create-run-nonce\.mjs/u);
   assert.match(hardware, /manage-browser-route\.mjs/u);
   assert.match(hardware, /probe-browser-fixture\.mjs/u);
+  assert.match(hardware, /probe-mobile-device-routes\.mjs/u);
+  assert.match(hardware, /mobile-device-route-readiness\.json/u);
+  assert.match(hardware, /--origin-policy promotion\/https-origin-policy\.json/u);
+  assert.match(hardware, /inputs\.lane == 'infrastructure-canary'/u);
+  assert.match(hardware, /host_id == 'FW-MAC-M2-01'/u);
   assert.match(hardware, /browser-lane-runtime\.mjs/u);
   assert.match(hardware, /capture-host-gpu-evidence\.mjs/u);
   assert.match(hardware, /join-adapter-attestation\.mjs/u);
   assert.match(hardware, /evidence\/host-inventory\.json/u);
+  assert.match(hardware, /capture-trackpad-inventory\.mjs/u);
+  assert.match(hardware, /evidence\/trackpad-inventory\.json/u);
+  assert.match(
+    hardware,
+    /inputs\.lane == 'infrastructure-canary' \|\|\n\s+inputs\.lane == 'safari-macos-m2' \|\|\n\s+inputs\.lane == 'manual-safari-trackpad'/u,
+  );
+  assert.match(hardware, /--matrix promotion\/hardware-matrix\.json/u);
+  assert.match(hardware, /--trackpad-inventory/u);
+  assert.match(hardware, /matrix-record-input\.json/u);
+  assert.match(hardware, /hostInventory/u);
   assert.match(hardware, /evidence\/adapter-attestation\.json/u);
   assert.match(hardware, /resolve-host-runtime\.mjs/u);
   assert.match(hardware, /manage-browser-update-window\.mjs/u);
@@ -168,6 +188,10 @@ test("manual finalizer verifies signed session and exact runner absence before a
   assert.match(finalizer, /manualReceiptUrlTemplate/u);
   assert.match(finalizer, /BROWSER_LAB_MTLS_CERT/u);
   assert.match(finalizer, /signed-manual-session\.json/u);
+  assert.match(
+    finalizer,
+    /find \.\.\/\.\.\/hardware-evidence -name host-inventory\.json/u,
+  );
   assert.match(finalizer, /TRUST_OBSERVER_TOKEN: \$\{\{ steps\.observer-token\.outputs\.token \}\}/u);
   assert.equal(finalizer.includes("GITHUB_TOKEN:"), false);
   assert.match(finalizer, /if: failure\(\)/u);

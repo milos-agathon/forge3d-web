@@ -11,6 +11,7 @@ import { BrokerLifecycleStore } from "./broker-lifecycle-store.mjs";
 import { createControllerHealthServer } from "./controller-health-service.mjs";
 import { startControllerPolling } from "./controller-daemon.mjs";
 import { createProductionControllerDependencies } from "./production-dependencies.mjs";
+import { loadInstalledControllerEvidence } from "./installation-evidence.mjs";
 
 export function createInstalledControllerService({
   environment = process.env,
@@ -63,6 +64,98 @@ export function createInstalledControllerService({
     environment,
     "FORGE3D_CONTROLLER_RECEIPT_DIR",
   );
+  const inventoryHelperPath = required(
+    environment,
+    "FORGE3D_BROWSER_INVENTORY_HELPER",
+  );
+  const browserPolicyPath = required(
+    environment,
+    "FORGE3D_CONTROLLER_BROWSER_POLICY",
+  );
+  const sessionBridge =
+    platform === "win32"
+      ? {
+          identity: "FORGE3D_CONTROLLER_WINDOWS_SESSION_BRIDGE",
+          path: required(environment, "FORGE3D_CONTROLLER_WINDOWS_SESSION_BRIDGE"),
+          packagePath: "services/windows-interactive-session-bridge.ps1",
+          version: null,
+        }
+      : {
+          identity: "FORGE3D_CONTROLLER_UNIX_SESSION_BRIDGE",
+          path: required(environment, "FORGE3D_CONTROLLER_UNIX_SESSION_BRIDGE"),
+          packagePath: "services/unix-interactive-session-bridge.mjs",
+          version: null,
+        };
+  const requiredHelpers = [
+    {
+      identity: "FORGE3D_BROWSER_INVENTORY_HELPER",
+      path: inventoryHelperPath,
+      packagePath: null,
+      version: null,
+    },
+    ...[
+      ["FORGE3D_CONTROLLER_RUNNER_VERIFY_HELPER", null],
+      ["FORGE3D_CONTROLLER_HOST_CLEANUP_HELPER", null],
+      ["FORGE3D_UPDATE_CONTROL_HELPER", null],
+      ["FORGE3D_DEVICE_CONTROL_HELPER", null],
+      ["FORGE3D_CLOUDFLARED_EXECUTABLE", null],
+      ["FORGE3D_CONTROLLER_GH_EXECUTABLE", null],
+      ["FORGE3D_PLAYWRIGHT_MODULE", undefined],
+      ["FORGE3D_GECKODRIVER_EXECUTABLE", undefined],
+      ["FORGE3D_APPIUM_EXECUTABLE", undefined],
+    ].map(([identity, version]) => ({
+      identity,
+      path: required(environment, identity),
+      packagePath: null,
+      version,
+    })),
+    sessionBridge,
+  ];
+  const installationEvidence = loadInstalledControllerEvidence({
+    receiptPath: required(
+      environment,
+      "FORGE3D_CONTROLLER_INSTALLATION_RECEIPT",
+    ),
+    packageManifestPath: required(
+      environment,
+      "FORGE3D_CONTROLLER_PACKAGE_MANIFEST",
+    ),
+    hostId,
+    inventoryHelperPath,
+    servicePath: fileURLToPath(import.meta.url),
+    requiredHelpers,
+    requiredConfigurations: [
+      {
+        packagePath:
+          "crates/forge3d-web/tests/infrastructure/browser-policy.json",
+        path: browserPolicyPath,
+      },
+    ],
+  });
+  const browserPolicy = JSON.parse(readFileSync(browserPolicyPath, "utf8"));
+  assertInstalledToolVersion(
+    installationEvidence,
+    "FORGE3D_PLAYWRIGHT_MODULE",
+    browserPolicy.tools?.playwright,
+  );
+  assertInstalledToolVersion(
+    installationEvidence,
+    "FORGE3D_GECKODRIVER_EXECUTABLE",
+    browserPolicy.tools?.geckodriver,
+  );
+  assertInstalledToolVersion(
+    installationEvidence,
+    "FORGE3D_APPIUM_EXECUTABLE",
+    browserPolicy.tools?.appium,
+  );
+  const inventoryHelper = installationEvidence.installed.files.find(
+    (file) =>
+      file.role === "helper" &&
+      file.identity === "FORGE3D_BROWSER_INVENTORY_HELPER",
+  );
+  const installedSessionBridge = installationEvidence.installed.files.find(
+    (file) => file.role === "helper" && file.identity === sessionBridge.identity,
+  );
   const lifecycleStore = new BrokerLifecycleStore({ hostId });
   const dependencies = createProductionControllerDependencies({
     hostId,
@@ -70,7 +163,12 @@ export function createInstalledControllerService({
     broker,
     lifecycleStore,
     platform,
-    runnerEnvironment: environment,
+    runnerEnvironment: {
+      ...environment,
+      FORGE3D_BROWSER_INVENTORY_HELPER: inventoryHelper.path,
+      FORGE3D_BROWSER_INVENTORY_HELPER_SHA256: inventoryHelper.sha256,
+    },
+    installationEvidence,
     configuration: {
       jobsRoot: required(environment, "FORGE3D_CONTROLLER_JOBS_ROOT"),
       runnerTemplate: required(
@@ -99,31 +197,19 @@ export function createInstalledControllerService({
       ),
       windowsInteractiveSessionBridge:
         platform === "win32"
-          ? required(
-              environment,
-              "FORGE3D_CONTROLLER_WINDOWS_SESSION_BRIDGE",
-            )
+          ? sessionBridge.path
           : null,
       windowsInteractiveSessionBridgeSha256:
         platform === "win32"
-          ? required(
-              environment,
-              "FORGE3D_CONTROLLER_WINDOWS_SESSION_BRIDGE_SHA256",
-            )
+          ? installedSessionBridge.sha256
           : null,
       unixInteractiveSessionBridge:
         platform === "darwin" || platform === "linux"
-          ? required(
-              environment,
-              "FORGE3D_CONTROLLER_UNIX_SESSION_BRIDGE",
-            )
+          ? sessionBridge.path
           : null,
       unixInteractiveSessionBridgeSha256:
         platform === "darwin" || platform === "linux"
-          ? required(
-              environment,
-              "FORGE3D_CONTROLLER_UNIX_SESSION_BRIDGE_SHA256",
-            )
+          ? installedSessionBridge.sha256
           : null,
       interactiveSessionUser:
         platform === "darwin" || platform === "linux"
@@ -182,6 +268,19 @@ export function createInstalledControllerService({
       );
     },
   };
+}
+
+function assertInstalledToolVersion(evidence, identity, expectedVersion) {
+  const matches = evidence.installed.files.filter(
+    (file) => file.role === "helper" && file.identity === identity,
+  );
+  if (
+    typeof expectedVersion !== "string" ||
+    matches.length !== 1 ||
+    matches[0].version !== expectedVersion
+  ) {
+    throw new Error(`${identity} does not match the checked browser policy`);
+  }
 }
 
 export function loadControllerEnvironmentFile(

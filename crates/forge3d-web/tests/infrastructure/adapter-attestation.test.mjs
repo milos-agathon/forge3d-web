@@ -27,6 +27,7 @@ const binding = {
 const page = {
   schemaVersion: 1,
   ...binding,
+  secureContext: true,
   navigatorGpu: true,
   adapterInfoAvailable: true,
   adapterInfo: {
@@ -42,7 +43,8 @@ const page = {
   deviceCreated: true,
   surfaceCreated: true,
   surfacePresented: true,
-  presentedFrameLuma: 0.42,
+  presentedFrameLumaSamples: [0.1, 0.8],
+  presentedFrameLumaDelta: 0.7,
   lumaChanged: true,
   effectiveLaunchArguments: [],
 };
@@ -77,6 +79,12 @@ const host = captureHostGpuEvidence({
 
 test("page adapter attestation matches its strict schema", () => {
   assertJsonSchema(page, schema);
+  assert.throws(() =>
+    assertJsonSchema(
+      { ...page, presentedFrameLumaSamples: [0.8] },
+      schema,
+    ),
+  );
 });
 
 test("required attestation joins exact run/job/asset/commit/package bindings", () => {
@@ -102,11 +110,35 @@ test("fallback and missing fallback information fail before browser acceptance",
 
 test("device, surface, luma, host GPU, session, and exact binding are all required", () => {
   assert.throws(
+    () => joinAdapterAttestation({ ...page, secureContext: false }, host),
+    /requires a secure context/u,
+  );
+  assert.throws(
     () => joinAdapterAttestation({ ...page, deviceCreated: false }, host),
     /device, and surface creation/u,
   );
   assert.throws(
     () => joinAdapterAttestation({ ...page, lumaChanged: false }, host),
+    /luma-changing/u,
+  );
+  assert.throws(
+    () =>
+      joinAdapterAttestation(
+        { ...page, presentedFrameLumaDelta: 0.9 },
+        host,
+      ),
+    /luma-changing/u,
+  );
+  assert.throws(
+    () =>
+      joinAdapterAttestation(
+        {
+          ...page,
+          presentedFrameLumaSamples: [0.4, 0.5],
+          presentedFrameLumaDelta: 0.1,
+        },
+        host,
+      ),
     /luma-changing/u,
   );
   assert.throws(
