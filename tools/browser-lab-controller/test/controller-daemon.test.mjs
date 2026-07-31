@@ -30,6 +30,7 @@ const jobs = [
     name: "Browser Hardware / Ephemeral Execution",
     status: "queued",
     labels: [
+      "self-hosted",
       "forge3d-web",
       "hw-linux-rtx3070",
       `jit-${runnerNonce}`,
@@ -74,6 +75,7 @@ const authorization = {
   packageManifestSha256: "d".repeat(64),
   labReadiness: {
     runId: 77,
+    manifestSha256: "f".repeat(64),
     labInfrastructureDigest: "e".repeat(64),
   },
   manualSession: null,
@@ -99,7 +101,6 @@ test("controller polling resolves an attested authorization and executes it", as
           name: `runner-authorization-${runnerNonce}`,
           expired: false,
           workflowRunId: run.id,
-          runAttempt: run.attempt,
           digest: archiveDigest,
         },
       ],

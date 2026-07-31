@@ -10,11 +10,18 @@
     "workflow",
     "run",
     "trustedSha",
+    "packageRunId",
     "packageSha256",
     "labInfrastructureDigest",
+    "labReadiness",
     "checklistId",
     "stepResults",
     "assetId",
+    "hostId",
+    "system",
+    "browser",
+    "driver",
+    "hostInventory",
     "actor",
     "approver",
     "intakeReleaseId",
@@ -45,10 +52,31 @@
       }
     },
     "trustedSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "packageRunId": { "type": "integer", "minimum": 1 },
     "packageSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
     "labInfrastructureDigest": {
       "type": "string",
       "pattern": "^[0-9a-f]{64}$"
+    },
+    "labReadiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "runId",
+        "manifestSha256",
+        "labInfrastructureDigest"
+      ],
+      "properties": {
+        "runId": { "type": "integer", "minimum": 1 },
+        "manifestSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "labInfrastructureDigest": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
     },
     "checklistId": { "enum": ["mobile-multitouch", "safari-trackpad"] },
     "stepResults": {
@@ -57,6 +85,39 @@
       "additionalProperties": { "enum": ["pass", "fail"] }
     },
     "assetId": { "type": "string", "pattern": "^FW-[A-Z0-9-]+$" },
+    "hostId": {
+      "type": "string",
+      "pattern": "^FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+$"
+    },
+    "system": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["os", "build"],
+      "properties": {
+        "os": { "type": "string", "minLength": 1 },
+        "build": { "type": "string", "minLength": 1 }
+      }
+    },
+    "browser": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "channel", "version"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "channel": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "driver": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "version"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "hostInventory": { "type": ["object", "null"] },
     "actor": { "type": "string", "minLength": 1 },
     "approver": {
       "type": "object",
@@ -110,5 +171,23 @@
     },
     "createdAt": { "type": "string", "minLength": 20 },
     "expiresAt": { "type": "string", "minLength": 20 }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "checklistId": { "const": "safari-trackpad" } },
+        "required": ["checklistId"]
+      },
+      "then": {
+        "properties": {
+          "assetId": { "const": "FW-TRACKPAD-01" },
+          "hostId": { "const": "FW-MAC-M2-01" },
+          "browser": {
+            "properties": { "name": { "pattern": "^[Ss]afari$" } }
+          },
+          "hostInventory": { "type": "object" }
+        }
+      }
+    }
+  ]
 }

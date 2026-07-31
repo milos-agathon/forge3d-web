@@ -56,6 +56,7 @@ export class GitHubAppTokenProvider {
           permissions: {
             actions: "write",
             administration: "write",
+            checks: "read",
             metadata: "read",
           },
         }),
@@ -70,6 +71,7 @@ export class GitHubAppTokenProvider {
     const expectedPermissions = {
       actions: "write",
       administration: "write",
+      checks: "read",
       metadata: "read",
     };
     if (
@@ -131,6 +133,7 @@ export class GitHubRepositoryClient {
   }
 
   async getRunner(runnerId) {
+    assertExactRunnerId(runnerId);
     const response = await this.request(
       "GET",
       `${this.repositoryPath}/actions/runners/${runnerId}`,
@@ -153,6 +156,7 @@ export class GitHubRepositoryClient {
   }
 
   async deleteRunner(runnerId) {
+    assertExactRunnerId(runnerId);
     await this.request(
       "DELETE",
       `${this.repositoryPath}/actions/runners/${runnerId}`,
@@ -210,6 +214,18 @@ export class GitHubRepositoryClient {
       await this.request(
         "GET",
         `${this.repositoryPath}/actions/runs/${runId}/jobs?filter=latest&per_page=100`,
+        null,
+        [200],
+      )
+    ).body;
+  }
+
+  async getCheckRunsForSha(sha) {
+    assertCommitSha(sha);
+    return (
+      await this.request(
+        "GET",
+        `${this.repositoryPath}/commits/${sha}/check-runs?filter=all&per_page=100`,
         null,
         [200],
       )
@@ -287,6 +303,20 @@ export class GitHubRepositoryClient {
     return includeStatus
       ? { status: response.status, body: responseBody }
       : { status: response.status, body: responseBody };
+  }
+}
+
+function assertExactRunnerId(runnerId) {
+  if (!Number.isInteger(runnerId) || runnerId < 1) {
+    throw new Error(
+      "GitHub runner operation requires one exact positive integer ID",
+    );
+  }
+}
+
+function assertCommitSha(sha) {
+  if (!/^[0-9a-f]{40}$/u.test(sha ?? "")) {
+    throw new Error("GitHub commit operation requires one exact lowercase SHA");
   }
 }
 

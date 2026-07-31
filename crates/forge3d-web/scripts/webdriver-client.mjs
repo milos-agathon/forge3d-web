@@ -93,6 +93,30 @@ class WebDriverSession {
     return result.value;
   }
 
+  async runRouteProbe({ route, expectedPackageSha256 }) {
+    const script = `
+      const payload = arguments[0];
+      const done = arguments[arguments.length - 1];
+      import(new URL("hardware-page-harness.js", window.location.href).href)
+        .then((module) => module.verifyBrowserRoute(
+          payload.route,
+          payload.expectedPackageSha256,
+        ))
+        .then((value) => done({ ok: true, value }))
+        .catch((error) => done({ ok: false, error: String(error && error.message || error) }));
+    `;
+    const response = await this.client.request(
+      "POST",
+      `/session/${this.sessionId}/execute/async`,
+      { script, args: [{ route, expectedPackageSha256 }] },
+    );
+    const result = response.value;
+    if (result?.ok !== true) {
+      throw new Error(`browser route probe failed: ${result?.error}`);
+    }
+    return result.value;
+  }
+
   delete() {
     return this.client.request(
       "DELETE",

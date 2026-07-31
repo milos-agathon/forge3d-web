@@ -11,6 +11,7 @@
     "assetId",
     "commit",
     "packageSha256",
+    "secureContext",
     "navigatorGpu",
     "adapterInfoAvailable",
     "adapterInfo",
@@ -20,7 +21,8 @@
     "deviceCreated",
     "surfaceCreated",
     "surfacePresented",
-    "presentedFrameLuma",
+    "presentedFrameLumaSamples",
+    "presentedFrameLumaDelta",
     "lumaChanged",
     "effectiveLaunchArguments"
   ],
@@ -31,6 +33,7 @@
     "assetId": { "type": "string", "pattern": "^FW-[A-Z0-9-]+$" },
     "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
     "packageSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "secureContext": { "type": "boolean" },
     "navigatorGpu": { "type": "boolean" },
     "adapterInfoAvailable": { "type": "boolean" },
     "adapterInfo": {
@@ -53,7 +56,17 @@
     "deviceCreated": { "type": "boolean" },
     "surfaceCreated": { "type": "boolean" },
     "surfacePresented": { "type": "boolean" },
-    "presentedFrameLuma": { "type": "number", "minimum": 0 },
+    "presentedFrameLumaSamples": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "type": "number", "minimum": 0, "maximum": 1 }
+    },
+    "presentedFrameLumaDelta": {
+      "type": "number",
+      "minimum": 0,
+      "maximum": 1
+    },
     "lumaChanged": { "type": "boolean" },
     "effectiveLaunchArguments": {
       "type": "array",

@@ -26,6 +26,7 @@ export async function startPinnedAppiumSession({
   const capabilities = {
     platformName: device.platformName,
     browserName: device.browserName,
+    acceptInsecureCerts: false,
     "appium:automationName": device.automationName,
     "appium:udid": privateDeviceId,
     "appium:noReset": false,
@@ -56,7 +57,22 @@ export async function startPinnedAppiumSession({
   });
   try {
     await session.navigate(routeUrl);
+    if (session.capabilities?.acceptInsecureCerts !== false) {
+      throw new Error("Appium session did not enforce trusted certificates");
+    }
     const browser = await session.browserInfo();
+    const platformVersion = String(
+      session.capabilities.platformVersion ??
+        session.capabilities["appium:platformVersion"] ??
+        "",
+    );
+    if (
+      !platformVersion ||
+      !browser.version ||
+      browser.version.toLowerCase() === "unknown"
+    ) {
+      throw new Error("Appium session did not expose current device/browser versions");
+    }
     return {
       assetId: device.assetId,
       appiumId: device.appiumId,
@@ -69,10 +85,12 @@ export async function startPinnedAppiumSession({
           ? matrix.appium.drivers.xcuitest
           : matrix.appium.drivers.uiautomator2,
       browserVersion: browser.version,
+      platformVersion,
       routeUrl,
       connected: true,
       unlocked: true,
       trusted: true,
+      acceptInsecureCerts: false,
     };
   } catch (error) {
     await session.delete().catch(() => undefined);

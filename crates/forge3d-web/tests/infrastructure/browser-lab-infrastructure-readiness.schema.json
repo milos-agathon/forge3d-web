@@ -13,11 +13,18 @@
     "candidateSha",
     "packageRunId",
     "packageSha256",
+    "configurationDigest",
     "labInfrastructureDigest",
     "configurationFiles",
+    "serviceInstallations",
+    "serviceInstallationDigest",
+    "diagnosticRetentions",
     "hostCanaryRunIds",
+    "hostCanaryFreshness",
+    "mobileRouteReadiness",
     "manualCanary",
     "canaryReleaseId",
+    "canaryPublication",
     "createdAt"
   ],
   "properties": {
@@ -41,6 +48,10 @@
     "candidateSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
     "packageRunId": { "type": "integer", "minimum": 1 },
     "packageSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "configurationDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
     "labInfrastructureDigest": {
       "type": "string",
       "pattern": "^[0-9a-f]{64}$"
@@ -58,11 +69,143 @@
         }
       }
     },
+    "serviceInstallations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["broker", "controllers"],
+      "properties": {
+        "broker": { "type": "object" },
+        "controllers": {
+          "type": "array",
+          "minItems": 4,
+          "maxItems": 4,
+          "items": { "type": "object" }
+        }
+      }
+    },
+    "serviceInstallationDigest": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "diagnosticRetentions": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "hostId",
+          "runId",
+          "receiptSha256",
+          "filesSha256"
+        ],
+        "properties": {
+          "hostId": {
+            "type": "string",
+            "pattern": "^FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+$"
+          },
+          "runId": { "type": "integer", "minimum": 1 },
+          "receiptSha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          },
+          "filesSha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        }
+      }
+    },
     "hostCanaryRunIds": {
       "type": "array",
       "minItems": 4,
       "maxItems": 4,
       "items": { "type": "integer", "minimum": 1 }
+    },
+    "hostCanaryFreshness": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "hostId",
+          "runId",
+          "inventoryCapturedAt",
+          "hardwareJobCompletedAt",
+          "controllerCompletedAt",
+          "finalizerObservedAt",
+          "selectedRunCompletedAt",
+          "acceptanceWindowHours"
+        ],
+        "properties": {
+          "hostId": {
+            "type": "string",
+            "pattern": "^FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+$"
+          },
+          "runId": { "type": "integer", "minimum": 1 },
+          "inventoryCapturedAt": { "type": "string", "format": "date-time" },
+          "hardwareJobCompletedAt": { "type": "string", "format": "date-time" },
+          "controllerCompletedAt": { "type": "string", "format": "date-time" },
+          "finalizerObservedAt": { "type": "string", "format": "date-time" },
+          "selectedRunCompletedAt": { "type": "string", "format": "date-time" },
+          "acceptanceWindowHours": { "const": 24 }
+        }
+      }
+    },
+    "mobileRouteReadiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hostId",
+        "hostCanaryRunId",
+        "evidenceSha256",
+        "completedAt",
+        "applicationUrl",
+        "assetUrl",
+        "basePath",
+        "packageSha256",
+        "devices"
+      ],
+      "properties": {
+        "hostId": { "const": "FW-MAC-M2-01" },
+        "hostCanaryRunId": { "type": "integer", "minimum": 1 },
+        "evidenceSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "completedAt": { "type": "string", "format": "date-time" },
+        "applicationUrl": { "type": "string", "pattern": "^https://" },
+        "assetUrl": { "type": "string", "pattern": "^https://" },
+        "basePath": {
+          "type": "string",
+          "pattern": "^/runs/[1-9][0-9]*/[1-9][0-9]*/[0-9a-f]{32}/$"
+        },
+        "packageSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "devices": {
+          "type": "array",
+          "minItems": 6,
+          "maxItems": 6,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["assetId", "appiumId", "observedAt"],
+            "properties": {
+              "assetId": {
+                "type": "string",
+                "pattern": "^FW-(?:AND|IOS|IPAD)-"
+              },
+              "appiumId": { "type": "string", "minLength": 1 },
+              "observedAt": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      }
     },
     "manualCanary": {
       "type": "object",
@@ -75,6 +218,197 @@
       }
     },
     "canaryReleaseId": { "type": "integer", "minimum": 1 },
+    "canaryPublication": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "run",
+        "artifact",
+        "attestation",
+        "recordSha256",
+        "release",
+        "retainedMedia",
+        "verification"
+      ],
+      "properties": {
+        "run": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "attempt", "workflowPath"],
+          "properties": {
+            "id": { "type": "integer", "minimum": 1 },
+            "attempt": { "type": "integer", "minimum": 1 },
+            "workflowPath": {
+              "const": ".github/workflows/publish-browser-lab-canary.yml"
+            }
+          }
+        },
+        "artifact": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "name", "digest", "archiveSha256"],
+          "properties": {
+            "id": { "type": "integer", "minimum": 1 },
+            "name": {
+              "type": "string",
+              "pattern": "^lab-canary-publication-[1-9][0-9]*-[1-9][0-9]*$"
+            },
+            "digest": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$"
+            },
+            "archiveSha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            }
+          }
+        },
+        "attestation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "verified",
+            "repository",
+            "signerWorkflow",
+            "sourceRef",
+            "sourceDigest",
+            "denySelfHostedRunners"
+          ],
+          "properties": {
+            "verified": { "const": true },
+            "repository": { "const": "milos-agathon/forge3d-web" },
+            "signerWorkflow": {
+              "const": "milos-agathon/forge3d-web/.github/workflows/publish-browser-lab-canary.yml"
+            },
+            "sourceRef": { "const": "refs/heads/main" },
+            "sourceDigest": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+            "denySelfHostedRunners": { "const": true }
+          }
+        },
+        "recordSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "release": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "tagName", "targetCommitish", "immutable"],
+          "properties": {
+            "id": { "type": "integer", "minimum": 1 },
+            "tagName": { "type": "string", "minLength": 1 },
+            "targetCommitish": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{40}$"
+            },
+            "immutable": { "const": true }
+          }
+        },
+        "retainedMedia": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "sourceAssetId",
+              "sourceName",
+              "releaseName",
+              "size",
+              "mimeType",
+              "sha256",
+              "sourceApiDigest"
+            ],
+            "properties": {
+              "sourceAssetId": { "type": "integer", "minimum": 1 },
+              "sourceName": { "type": "string", "minLength": 1 },
+              "releaseName": {
+                "type": "string",
+                "pattern": "^manual-media-[1-9][0-9]*$"
+              },
+              "size": { "type": "integer", "minimum": 1 },
+              "mimeType": { "type": "string", "minLength": 1 },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "sourceApiDigest": {
+                "type": "string",
+                "pattern": "^sha256:[0-9a-f]{64}$"
+              }
+            }
+          }
+        },
+        "verification": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "release",
+            "assets",
+            "bundleSha256",
+            "verifiedAt"
+          ],
+          "properties": {
+            "release": { "$ref": "#/$defs/verificationOutput" },
+            "assets": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "id",
+                  "name",
+                  "size",
+                  "apiDigest",
+                  "sha256",
+                  "verification"
+                ],
+                "properties": {
+                  "id": { "type": "integer", "minimum": 1 },
+                  "name": { "type": "string", "minLength": 1 },
+                  "size": { "type": "integer", "minimum": 1 },
+                  "apiDigest": {
+                    "type": "string",
+                    "pattern": "^sha256:[0-9a-f]{64}$"
+                  },
+                  "sha256": {
+                    "type": "string",
+                    "pattern": "^[0-9a-f]{64}$"
+                  },
+                  "verification": {
+                    "$ref": "#/$defs/verificationOutput"
+                  }
+                }
+              }
+            },
+            "bundleSha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "verifiedAt": { "type": "string", "minLength": 20 }
+          }
+        }
+      }
+    },
     "createdAt": { "type": "string", "minLength": 20 }
+  },
+  "$defs": {
+    "verificationOutput": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outputBytesBase64", "outputSha256", "output"],
+      "properties": {
+        "outputBytesBase64": {
+          "type": "string",
+          "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$",
+          "minLength": 4
+        },
+        "outputSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
+        "output": { "type": "object" }
+      }
+    }
   }
 }

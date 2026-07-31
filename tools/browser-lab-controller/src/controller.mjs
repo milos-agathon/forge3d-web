@@ -1,5 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 
+import { validateDiagnosticRetentionReceipt } from "./diagnostic-retention.mjs";
 import { createHostLabCanary } from "./lab-canary.mjs";
 import { createManualSession } from "./manual-session.mjs";
 
@@ -36,8 +37,18 @@ export class BrowserLabController {
     let hostCanaryInput = null;
     let manualSessionInput = null;
     let controllerReceiptSha256 = null;
+    let brokerInstallation = null;
+    let result = null;
+    let diagnosticRetention = null;
+    let diagnosticRetentionAttempted = false;
+    let diagnosticRetentionSucceeded = false;
+    let jobRoot = null;
+    let primaryError = null;
+    let cleanupError = null;
+    let lockReleaseError = null;
+    let lockReleased = false;
     try {
-      const jobRoot = await this.dependencies.prepareJobRoot({
+      jobRoot = await this.dependencies.prepareJobRoot({
         hostId: this.hostId,
         runnerNonce: authorization.runnerNonce,
         workFolder: authorization.workFolder,
@@ -59,6 +70,7 @@ export class BrowserLabController {
         workFolder: authorization.workFolder,
       });
       assertIssuedRunner(issued, authorization);
+      brokerInstallation = issued.deployment;
       const sensitiveConfiguration = Buffer.from(
         issued.encodedJitConfig,
         "utf8",
@@ -105,10 +117,19 @@ export class BrowserLabController {
       );
       runnerAbsenceProven = true;
       runnerProcess = null;
-      await this.dependencies.forwardDiagnostics({
+      diagnosticRetentionAttempted = true;
+      diagnosticRetention = await this.dependencies.forwardDiagnostics({
         jobRoot,
         authorizationDigest,
+        authorization,
       });
+      validateDiagnosticRetentionReceipt(diagnosticRetention, {
+        authorizationDigest,
+        hostId: this.hostId,
+        run: authorization.run,
+        runnerNonce: authorization.runnerNonce,
+      });
+      diagnosticRetentionSucceeded = true;
       if (
         authorization.lane === "infrastructure-canary" &&
         authorization.manualSession === null
@@ -149,79 +170,21 @@ export class BrowserLabController {
       ) {
         throw new Error("online_unassigned cleanup did not cancel the exact bound run");
       }
+      if (
+        canonicalJson(cleanup.deployment) !== canonicalJson(brokerInstallation)
+      ) {
+        throw new Error("broker deployment evidence changed during execution");
+      }
       brokerClean = true;
-      if (hostCanaryInput) {
-        const credentials = await this.dependencies.controllerSigningCredentials();
-        const signedRecord = createHostLabCanary({
-          authorization: {
-            ...authorization,
-            sha256: authorizationDigest,
-          },
-          ...hostCanaryInput,
-          execution: {
-            ...hostCanaryInput.execution,
-            acceptedJobCount: 1,
-            cleanupComplete: true,
-            runnerId: issued.runnerId,
-            runnerName: issued.runnerName,
-            runnerAbsent: true,
-          },
-          privateKey: credentials.privateKey,
-          signingKeyId: credentials.signingKeyId,
-        });
-        await this.dependencies.storeControllerReceipt({
-          run: authorization.run,
-          recordType: "host-lab-canary",
-          signedRecord,
-        });
-        controllerReceiptSha256 = sha256(
-          Buffer.from(canonicalJson(signedRecord)),
-        );
-      }
-      if (manualSessionInput) {
-        const credentials = await this.dependencies.controllerSigningCredentials();
-        const signedRecord = createManualSession({
-          authorization: {
-            ...authorization,
-            sha256: authorizationDigest,
-          },
-          intake: {
-            mediaChallenge: authorization.manualSession.mediaChallenge,
-            sha256: authorization.manualSession.intakeManifestSha256,
-            assetId: authorization.assetId,
-            hostId: authorization.hostId,
-          },
-          runner: {
-            id: issued.runnerId,
-            name: issued.runnerName,
-          },
-          ...manualSessionInput,
-          cleanup: {
-            ...manualSessionInput.cleanup,
-            runnerAbsent: true,
-          },
-          privateKey: credentials.privateKey,
-          signingKeyId: credentials.signingKeyId,
-        });
-        await this.dependencies.storeControllerReceipt({
-          run: authorization.run,
-          recordType: "manual-session",
-          signedRecord,
-        });
-        controllerReceiptSha256 = sha256(
-          Buffer.from(canonicalJson(signedRecord)),
-        );
-      }
       await this.dependencies.wipeJobRoot(jobRoot);
       workRootWiped = true;
-      return {
+      result = {
         ok: true,
         authorizationDigest,
         runnerId: issued.runnerId,
         runnerName: issued.runnerName,
         deletionResult: cleanup.deletionResult,
         cancellationResult: cleanup.cancellationResult ?? null,
-        controllerReceiptSha256,
       };
     } catch (error) {
       if (runnerProcess) {
@@ -268,18 +231,37 @@ export class BrowserLabController {
           cleanup?.deletionResult,
         );
       }
+      if (jobRoot && !diagnosticRetentionAttempted) {
+        diagnosticRetentionAttempted = true;
+        try {
+          diagnosticRetention = await this.dependencies.forwardDiagnostics({
+            jobRoot,
+            authorizationDigest,
+            authorization,
+          });
+          validateDiagnosticRetentionReceipt(diagnosticRetention, {
+            authorizationDigest,
+            hostId: this.hostId,
+            run: authorization.run,
+            runnerNonce: authorization.runnerNonce,
+          });
+          diagnosticRetentionSucceeded = true;
+        } catch {
+          diagnosticRetention = null;
+        }
+      }
       if (
         runnerAbsenceProven &&
         (!jitIssuanceDispatched || brokerClean) &&
-        runnerProcess === null
+        runnerProcess === null &&
+        diagnosticRetentionSucceeded
       ) {
         await this.dependencies.wipePreparedJobRoot(authorization.runnerNonce);
         workRootWiped = true;
       }
-      throw error;
+      primaryError = error;
     } finally {
       let cleanupSucceeded = false;
-      let cleanupError = null;
       try {
         await this.dependencies.cleanupHost({
           restoreUpdates: true,
@@ -298,21 +280,116 @@ export class BrowserLabController {
         cleanupSucceeded &&
         runnerAbsenceProven &&
         (!jitIssuanceDispatched || brokerClean) &&
+        diagnosticRetentionSucceeded &&
         workRootWiped
       ) {
-        await lock.release();
-      } else {
+        try {
+          await lock.release();
+          lockReleased = true;
+        } catch (error) {
+          lockReleaseError = error;
+        }
+      }
+      if (!lockReleased) {
         await this.dependencies.quarantineHost({
           hostId: this.hostId,
           authorizationDigest,
           reason:
-            "runner absence, work-root wipe, or unconditional host cleanup was not proven",
+            "runner absence, diagnostic retention, work-root wipe, unconditional host cleanup, or host-lock release was not proven",
         });
       }
-      if (cleanupError) {
-        throw cleanupError;
-      }
     }
+
+    if (primaryError) throw primaryError;
+    if (cleanupError) throw cleanupError;
+    if (lockReleaseError) throw lockReleaseError;
+    if (!result || !diagnosticRetentionSucceeded || !lockReleased) {
+      throw new Error("controller completion was not proven");
+    }
+
+    if (hostCanaryInput || manualSessionInput) {
+      const credentials = await this.dependencies.controllerSigningCredentials();
+      const controllerInstallation =
+        await this.dependencies.controllerInstallationEvidence();
+      const controllerCompletion = {
+        state: "completed",
+        brokerCleanup: result.deletionResult,
+        runnerAbsent: true,
+        workRootWiped: true,
+        hostCleanupComplete: true,
+        hostLockReleased: true,
+        quarantined: false,
+        completedAt: this.now().toISOString(),
+      };
+      let recordType;
+      let signedRecord;
+      if (hostCanaryInput) {
+        recordType = "host-lab-canary";
+        signedRecord = createHostLabCanary({
+          authorization: {
+            ...authorization,
+            sha256: authorizationDigest,
+          },
+          ...hostCanaryInput,
+          execution: {
+            ...hostCanaryInput.execution,
+            acceptedJobCount: 1,
+            cleanupComplete: true,
+            runnerId: issued.runnerId,
+            runnerName: issued.runnerName,
+            runnerAbsent: true,
+          },
+          installations: {
+            controller: controllerInstallation,
+            broker: brokerInstallation,
+          },
+          diagnosticRetention,
+          controllerCompletion,
+          privateKey: credentials.privateKey,
+          signingKeyId: credentials.signingKeyId,
+        });
+      } else {
+        recordType = "manual-session";
+        signedRecord = createManualSession({
+          authorization: {
+            ...authorization,
+            sha256: authorizationDigest,
+          },
+          intake: {
+            mediaChallenge: authorization.manualSession.mediaChallenge,
+            sha256: authorization.manualSession.intakeManifestSha256,
+            assetId: authorization.assetId,
+            hostId: authorization.hostId,
+          },
+          runner: {
+            id: issued.runnerId,
+            name: issued.runnerName,
+          },
+          ...manualSessionInput,
+          cleanup: {
+            ...manualSessionInput.cleanup,
+            runnerAbsent: true,
+          },
+          installations: {
+            controller: controllerInstallation,
+            broker: brokerInstallation,
+          },
+          diagnosticRetention,
+          controllerCompletion,
+          privateKey: credentials.privateKey,
+          signingKeyId: credentials.signingKeyId,
+        });
+      }
+      await this.dependencies.storeControllerReceipt({
+        run: authorization.run,
+        recordType,
+        signedRecord,
+      });
+      controllerReceiptSha256 = sha256(
+        Buffer.from(canonicalJson(signedRecord)),
+      );
+    }
+    return { ...result, controllerReceiptSha256 };
   }
 }
 
@@ -406,7 +483,8 @@ function assertIssuedRunner(issued, authorization) {
     issued.runnerId < 1 ||
     issued.runnerName !== authorization.runnerName ||
     typeof issued.encodedJitConfig !== "string" ||
-    issued.encodedJitConfig.length < 1
+    issued.encodedJitConfig.length < 1 ||
+    issued.deployment?.component !== "broker"
   ) {
     throw new Error("broker returned a mismatched JIT runner");
   }

@@ -4,7 +4,10 @@ import test from "node:test";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { verifyRepositoryTrustSnapshot } from "../../scripts/verify-repository-trust.mjs";
+import {
+  verifyLiveRepositoryTrust,
+  verifyRepositoryTrustSnapshot,
+} from "../../scripts/verify-repository-trust.mjs";
 
 const infrastructureRoot = dirname(fileURLToPath(import.meta.url));
 const checkedPolicy = readJson(join(infrastructureRoot, "repository-trust-policy.json"));
@@ -29,7 +32,68 @@ test("accepts the exact active protected-main snapshot", () => {
       "Web Runtime / Build And Contract Tests",
     ],
   );
+  assert.deepEqual(result.requiredChecks[0].app, {
+    id: 15368,
+    slug: "github-actions",
+  });
+  assert.equal(result.requiredChecks[0].headSha, input.branch.commit.sha);
+  assert.equal(result.requiredChecks[0].status, "completed");
+  assert.equal(result.requiredChecks[0].workflowJobId, 1000);
 });
+
+test("live verification fetches and binds the exact current-main check-run response", async () => {
+  const context = makeLiveContext();
+  const result = await runLiveVerification(context);
+  const checkRunsResponse = result.liveResponses.find(
+    (response) => response.name === "checkRuns",
+  );
+  assert.equal(result.liveResponses.length, 9);
+  assert.equal(
+    checkRunsResponse.endpoint,
+    context.checkRunsEndpoint,
+  );
+  assert.equal(context.requested.includes(checkRunsResponse.endpoint), true);
+});
+
+for (const [name, mutate, expectedError] of [
+  [
+    "an incomplete workflow-run page",
+    (context) => {
+      context.workflowRuns.total_count = 2;
+    },
+    /workflow runs response is incomplete/u,
+  ],
+  [
+    "duplicate matching workflow runs",
+    (context) => {
+      const duplicate = structuredClone(context.workflowRuns.workflow_runs[0]);
+      duplicate.id = 7002;
+      context.workflowRuns.workflow_runs.push(duplicate);
+      context.workflowRuns.total_count = 2;
+    },
+    /exactly one completed Web Runtime push run/u,
+  ],
+  [
+    "a failed workflow run",
+    (context) => {
+      context.workflowRuns.workflow_runs[0].conclusion = "failure";
+    },
+    /not a completed successful run/u,
+  ],
+  [
+    "a workflow run without a positive integer id",
+    (context) => {
+      context.workflowRuns.workflow_runs[0].id = 0;
+    },
+    /not a completed successful run/u,
+  ],
+]) {
+  test(`live verification rejects ${name}`, async () => {
+    const context = makeLiveContext();
+    mutate(context);
+    await assert.rejects(runLiveVerification(context), expectedError);
+  });
+}
 
 for (const [name, mutate, expected] of [
   [
@@ -126,6 +190,91 @@ for (const [name, mutate, expected] of [
     /not a completed successful check/u,
   ],
   [
+    "missing check run",
+    (input) => {
+      input.checkRuns.check_runs.pop();
+      input.checkRuns.total_count -= 1;
+    },
+    /exactly one GitHub Actions workflow job and check run/u,
+  ],
+  [
+    "duplicate check run",
+    (input) => {
+      const duplicate = structuredClone(input.checkRuns.check_runs[0]);
+      duplicate.id = 9001;
+      duplicate.url = `${duplicate.url.slice(0, duplicate.url.lastIndexOf("/") + 1)}9001`;
+      input.checkRuns.check_runs.push(duplicate);
+      input.checkRuns.total_count += 1;
+    },
+    /exactly one GitHub Actions workflow job and check run/u,
+  ],
+  [
+    "duplicate workflow job",
+    (input) => {
+      const duplicate = structuredClone(input.actionJobs.jobs[0]);
+      duplicate.id = 9002;
+      input.actionJobs.jobs.push(duplicate);
+      input.actionJobs.total_count += 1;
+    },
+    /exactly one GitHub Actions workflow job and check run/u,
+  ],
+  [
+    "stale check-run SHA",
+    (input) => {
+      input.checkRuns.check_runs[0].head_sha = "c".repeat(40);
+    },
+    /stale for current main/u,
+  ],
+  [
+    "stale workflow-job SHA",
+    (input) => {
+      input.actionJobs.jobs[0].head_sha = "c".repeat(40);
+    },
+    /stale for current main/u,
+  ],
+  [
+    "check-run app id",
+    (input) => {
+      input.checkRuns.check_runs[0].app.id = 1;
+    },
+    /not owned by GitHub Actions App/u,
+  ],
+  [
+    "check-run app slug",
+    (input) => {
+      input.checkRuns.check_runs[0].app.slug = "lookalike-actions";
+    },
+    /not owned by GitHub Actions App/u,
+  ],
+  [
+    "workflow-job/check-run binding",
+    (input) => {
+      input.actionJobs.jobs[0].check_run_url += "-other";
+    },
+    /workflow job\/check-run binding is mismatched/u,
+  ],
+  [
+    "partial check-run response",
+    (input) => {
+      input.checkRuns.total_count += 1;
+    },
+    /check runs response is incomplete/u,
+  ],
+  [
+    "checked required-check app identity",
+    (input) => {
+      input.policy.branchProtection.requiredStatusChecks.checks[0].sourceAppId = 1;
+      input.policy.branchProtection.requiredStatusChecks.checks[0].sourceAppSlug =
+        "lookalike-actions";
+      input.protection.required_status_checks.checks[0].app_id = 1;
+      input.checkRuns.check_runs[0].app = {
+        id: 1,
+        slug: "lookalike-actions",
+      };
+    },
+    /must use the GitHub Actions App 15368\/github-actions/u,
+  ],
+  [
     "SHA pinning",
     (input) => {
       input.actionsPermissions.sha_pinning_required = false;
@@ -169,6 +318,30 @@ test("records an unavailable live SHA-pinning setting without relaxing static pi
 
 function makeInput({ policy = makeActivePolicy() } = {}) {
   const requiredChecks = policy.branchProtection.requiredStatusChecks.checks;
+  const currentMainSha = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+  const actionJobs = requiredChecks.map((check, index) => {
+    const checkRunId = 2000 + index;
+    return {
+      id: 1000 + index,
+      name: check.context,
+      head_sha: currentMainSha,
+      status: "completed",
+      conclusion: "success",
+      check_run_url: `https://api.github.com/repos/${policy.repository.fullName}/check-runs/${checkRunId}`,
+    };
+  });
+  const checkRuns = requiredChecks.map((check, index) => {
+    const checkRunId = 2000 + index;
+    return {
+      id: checkRunId,
+      name: check.context,
+      head_sha: currentMainSha,
+      status: "completed",
+      conclusion: "success",
+      url: `https://api.github.com/repos/${policy.repository.fullName}/check-runs/${checkRunId}`,
+      app: { id: 15368, slug: "github-actions" },
+    };
+  });
   return {
     policy: structuredClone(policy),
     actionsLock,
@@ -180,7 +353,7 @@ function makeInput({ policy = makeActivePolicy() } = {}) {
     branch: {
       name: "main",
       protected: true,
-      commit: { sha: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" },
+      commit: { sha: currentMainSha },
     },
     protection: {
       required_status_checks: {
@@ -204,12 +377,12 @@ function makeInput({ policy = makeActivePolicy() } = {}) {
       restrictions: null,
     },
     actionJobs: {
-      jobs: requiredChecks.map((check, index) => ({
-        id: 1000 + index,
-        name: check.context,
-        status: "completed",
-        conclusion: "success",
-      })),
+      total_count: actionJobs.length,
+      jobs: actionJobs,
+    },
+    checkRuns: {
+      total_count: checkRuns.length,
+      check_runs: checkRuns,
     },
     actionsPermissions: {
       enabled: true,
@@ -219,6 +392,72 @@ function makeInput({ policy = makeActivePolicy() } = {}) {
     repositoryRunners: { total_count: 0, runners: [] },
     trustEpochComparison: { status: "ahead", ahead_by: 1 },
   };
+}
+
+function makeLiveContext() {
+  const input = makeInput();
+  const repositoryPath = `/repos/${input.policy.repository.fullName}`;
+  const workflowRun = {
+    id: 7001,
+    path: ".github/workflows/web.yml",
+    head_branch: "main",
+    head_sha: input.branch.commit.sha,
+    status: "completed",
+    conclusion: "success",
+  };
+  const workflowRuns = { total_count: 1, workflow_runs: [workflowRun] };
+  const workflowRunsEndpoint =
+    `${repositoryPath}/actions/runs?branch=main&head_sha=${input.branch.commit.sha}` +
+    "&event=push&status=completed&per_page=100";
+  const checkRunsEndpoint =
+    `${repositoryPath}/commits/${input.branch.commit.sha}/check-runs` +
+    "?filter=all&per_page=100";
+  const routes = new Map([
+    [repositoryPath, input.repository],
+    [`${repositoryPath}/branches/main`, input.branch],
+    [`${repositoryPath}/branches/main/protection`, input.protection],
+    [`${repositoryPath}/actions/permissions`, input.actionsPermissions],
+    [`${repositoryPath}/actions/runners?per_page=100`, input.repositoryRunners],
+    [workflowRunsEndpoint, workflowRuns],
+    [
+      `${repositoryPath}/actions/runs/${workflowRun.id}/jobs?filter=latest&per_page=100`,
+      input.actionJobs,
+    ],
+    [checkRunsEndpoint, input.checkRuns],
+    [
+      `${repositoryPath}/compare/${input.policy.trustEpochSha}...${input.branch.commit.sha}`,
+      input.trustEpochComparison,
+    ],
+  ]);
+  return {
+    input,
+    repositoryPath,
+    workflowRuns,
+    workflowRunsEndpoint,
+    checkRunsEndpoint,
+    routes,
+    requested: [],
+  };
+}
+
+function runLiveVerification(context) {
+  return verifyLiveRepositoryTrust({
+    policy: context.input.policy,
+    actionsLock,
+    token: "observer-token",
+    apiBase: "https://api.github.test",
+    fetchImpl: async (url) => {
+      const parsed = new URL(url);
+      const key = `${parsed.pathname}${parsed.search}`;
+      context.requested.push(key);
+      const value = context.routes.get(key);
+      return {
+        ok: value !== undefined,
+        status: value === undefined ? 404 : 200,
+        json: async () => structuredClone(value),
+      };
+    },
+  });
 }
 
 function makeActivePolicy() {

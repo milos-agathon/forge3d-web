@@ -26,8 +26,12 @@ const binding = {
   packageSha256: "b".repeat(64),
 };
 const adapter = {
+  secureContext: true,
   deviceCreated: true,
   surfacePresented: true,
+  presentedFrameLumaSamples: [0.1, 0.8],
+  presentedFrameLumaDelta: 0.7,
+  lumaChanged: true,
   isFallbackAdapter: false,
 };
 const desktopInventory = {
@@ -115,6 +119,21 @@ test("fallback adapter and unreviewed drivers fail closed while cleanup still ru
     /required hardware presentation/u,
   );
   assert.equal(cleaned, true);
+  await assert.rejects(
+    () =>
+      runBrowserLane({
+        lane: binding.lane,
+        driver: "playwright-chrome",
+        binding,
+        adapterSmoke: async () => ({
+          ...adapter,
+          presentedFrameLumaDelta: 0.9,
+        }),
+        assertions: async () => ({ passed: true }),
+        cleanup: async () => ({ ok: true }),
+      }),
+    /required hardware presentation/u,
+  );
   await assert.rejects(
     () =>
       runBrowserLane({

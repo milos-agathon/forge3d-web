@@ -172,6 +172,10 @@ controller-signed session's Browser Hardware job separately as
 the authenticated submission run.
 Only an attested `LAB_INFRA_READY` record with the current
 `labInfrastructureDigest` unlocks browser and product-manual lanes.
+The selected host runs and their physical inventory must be current within the
+checked 24-hour acceptance window. The Mac host canary must contain six
+controller-signed Appium device route probes for the exact nonce-bound package;
+host-side or emulated route checks do not satisfy this gate.
 
 After every required physical row runs, dispatch
 `browser-hardware-release-readiness` with the same target and laboratory run

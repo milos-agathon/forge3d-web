@@ -260,6 +260,14 @@ jobs:
             --source-ref refs/heads/main \
             --source-digest "${{ inputs.trusted_sha }}" \
             --deny-self-hosted-runners
+          node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            import { verifyPackageManifestProvenance } from "./scripts/resolve-hardware-promotion.mjs";
+            verifyPackageManifestProvenance({
+              manifest: JSON.parse(readFileSync("promoted-package/browser-package-manifest.json", "utf8")),
+              packageRun: JSON.parse(readFileSync("package-run.json", "utf8"))
+            });
+          '
 
       - name: Resolve and verify exact manual intake
         if: inputs.intakeReleaseId != ''
@@ -386,12 +394,18 @@ jobs:
             --deny-self-hosted-runners
           node --input-type=module --eval '
             import { readFileSync, writeFileSync } from "node:fs";
-            import { verifyLabReadinessForPromotion } from "./scripts/compute-lab-readiness.mjs";
+            import {
+              computeLabConfiguration,
+              verifyLabReadinessForPromotion
+            } from "./scripts/compute-lab-readiness.mjs";
             const api = JSON.parse(readFileSync("lab-readiness-run.json", "utf8"));
-            const digest = verifyLabReadinessForPromotion({
-              manifest: JSON.parse(readFileSync(process.argv[1], "utf8")),
+            const manifestBytes = readFileSync(process.argv[1]);
+            const identity = verifyLabReadinessForPromotion({
+              manifest: JSON.parse(manifestBytes),
+              manifestBytes,
               readinessRun: {
                 id: api.id,
+                attempt: api.run_attempt,
                 path: api.path,
                 headSha: api.head_sha,
                 headBranch: api.head_branch,
@@ -403,6 +417,9 @@ jobs:
                 labReadinessRunId: Number(process.env.LAB_READINESS_RUN_ID)
               },
               packageManifest: JSON.parse(readFileSync("promoted-package/browser-package-manifest.json", "utf8")),
+              configuration: computeLabConfiguration({
+                repositoryRoot: process.env.GITHUB_WORKSPACE + "/source"
+              }),
               attestation: {
                 repository: "milos-agathon/forge3d-web",
                 signerWorkflow: "milos-agathon/forge3d-web/.github/workflows/browser-lab-infrastructure-readiness.yml",
@@ -411,7 +428,12 @@ jobs:
                 denySelfHostedRunners: true
               }
             });
-            writeFileSync(process.env.GITHUB_ENV, `FORGE3D_VERIFIED_LAB_DIGEST=${digest}\n`, { flag: "a" });
+            writeFileSync(process.env.GITHUB_ENV, [
+              `FORGE3D_VERIFIED_LAB_RUN_ID=${identity.runId}`,
+              `FORGE3D_VERIFIED_LAB_MANIFEST_SHA256=${identity.manifestSha256}`,
+              `FORGE3D_VERIFIED_LAB_DIGEST=${identity.labInfrastructureDigest}`,
+              ""
+            ].join("\n"), { flag: "a" });
           ' "${manifest}"
 
       - name: Create authorization-bound promotion
@@ -446,7 +468,13 @@ jobs:
               trustEpochSha: policy.trustEpochSha,
               workflowSha: process.env.WORKFLOW_SHA,
               packageManifestSha256: process.argv[1],
-              labInfrastructureDigest: process.env.LAB_READINESS_RUN_ID ? process.env.FORGE3D_VERIFIED_LAB_DIGEST : null,
+              labReadiness: process.env.LAB_READINESS_RUN_ID
+                ? {
+                    runId: Number(process.env.FORGE3D_VERIFIED_LAB_RUN_ID),
+                    manifestSha256: process.env.FORGE3D_VERIFIED_LAB_MANIFEST_SHA256,
+                    labInfrastructureDigest: process.env.FORGE3D_VERIFIED_LAB_DIGEST
+                  }
+                : null,
               manualSession: process.env.INTAKE_RELEASE_ID
                 ? JSON.parse(readFileSync("manual-session-promotion.json", "utf8"))
                 : null
@@ -732,6 +760,8 @@ jobs:
               promotion.assetId !== authorization.assetId ||
               promotion.lane !== authorization.lane ||
               promotion.trustedSha !== authorization.trustedSha ||
+              JSON.stringify(promotion.labReadiness) !==
+                JSON.stringify(authorization.labReadiness) ||
               createHash("sha256").update(manifestBytes).digest("hex") !==
                 authorization.packageManifestSha256
             ) throw new Error("promotion does not match runner authorization");
@@ -751,15 +781,34 @@ jobs:
             --consumer consumer \
             --package-sha256 "${expected}"
 
+      - name: Capture sanitized fixed trackpad inventory
+        if: >-
+          needs.promote-hardware.outputs.host_id == 'FW-MAC-M2-01' &&
+          (inputs.lane == 'infrastructure-canary' ||
+            inputs.lane == 'safari-macos-m2' ||
+            inputs.lane == 'manual-safari-trackpad')
+        shell: bash
+        run: |
+          node promotion/capture-trackpad-inventory.mjs \
+            --output "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/trackpad-inventory.json"
+
       - name: Observe live headed session and freeze exact browser and OS updates
         shell: bash
         run: |
-          node promotion/resolve-host-runtime.mjs \
-            --lane "${{ inputs.lane }}" \
-            --host-id "${{ needs.promote-hardware.outputs.host_id }}" \
-            --policy promotion/browser-policy.json \
-            --inventory-output "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/host-inventory.json" \
+          inventory_args=(
+            --lane "${{ inputs.lane }}"
+            --host-id "${{ needs.promote-hardware.outputs.host_id }}"
+            --policy promotion/browser-policy.json
+            --matrix promotion/hardware-matrix.json
+            --inventory-output "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/host-inventory.json"
             --channels-output "${FORGE3D_CONTROLLER_JOB_ROOT}/resolved-channels.json"
+          )
+          if test -f "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/trackpad-inventory.json"; then
+            inventory_args+=(
+              --trackpad-inventory "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/trackpad-inventory.json"
+            )
+          fi
+          node promotion/resolve-host-runtime.mjs "${inventory_args[@]}"
           node promotion/manage-browser-update-window.mjs \
             --operation freeze \
             --asset-id "${{ needs.promote-hardware.outputs.host_id }}" \
@@ -836,6 +885,25 @@ jobs:
             sleep 5
           done
           test -s "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/route-probe.json"
+
+      - name: Prove nonce-bound HTTPS route from every attached mobile device
+        if: >-
+          inputs.lane == 'infrastructure-canary' &&
+          needs.promote-hardware.outputs.host_id == 'FW-MAC-M2-01'
+        shell: bash
+        run: |
+          node promotion/probe-mobile-device-routes.mjs \
+            --host-id "${{ needs.promote-hardware.outputs.host_id }}" \
+            --binding "${FORGE3D_CONTROLLER_JOB_ROOT}/binding.json" \
+            --route "${FORGE3D_CONTROLLER_JOB_ROOT}/route.json" \
+            --browser-policy promotion/browser-policy.json \
+            --origin-policy promotion/https-origin-policy.json \
+            --hardware-matrix promotion/hardware-matrix.json \
+            --device-matrix promotion/device-matrix.json \
+            --inventory "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/host-inventory.json" \
+            --appium-session-module "$(pwd)/promotion/appium-session.mjs" \
+            --process-registry "${FORGE3D_CONTROLLER_JOB_ROOT}/browser-processes.json" \
+            --output "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/mobile-device-route-readiness.json"
 
       - name: Run checked headed browser Appium and adapter evidence
         shell: bash
@@ -923,7 +991,18 @@ jobs:
                   `${process.env.FORGE3D_CONTROLLER_JOB_ROOT}/evidence/adapter-attestation.json`,
                   "utf8"
                 )),
-                run: { id: Number(process.env.GITHUB_RUN_ID) }
+                hostInventory: JSON.parse(readFileSync(
+                  `${process.env.FORGE3D_CONTROLLER_JOB_ROOT}/evidence/host-inventory.json`,
+                  "utf8"
+                )),
+                matrix: JSON.parse(readFileSync(
+                  "promotion/hardware-matrix.json",
+                  "utf8"
+                )),
+                run: {
+                  id: Number(process.env.GITHUB_RUN_ID),
+                  attempt: Number(process.env.GITHUB_RUN_ATTEMPT)
+                }
               })
             );
           '
@@ -1080,6 +1159,7 @@ jobs:
           gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/attempts/${GITHUB_RUN_ATTEMPT}/jobs?per_page=100" > workflow-jobs.json
           node --input-type=module --eval '
             import { readFileSync, writeFileSync } from "node:fs";
+            const inventoryPath = process.argv[1];
             const authorization = JSON.parse(readFileSync(
               "../../authorization/runner-authorization.json", "utf8"
             ));
@@ -1101,6 +1181,7 @@ jobs:
               matrix: JSON.parse(readFileSync(
                 "tests/infrastructure/hardware-matrix.json", "utf8"
               )),
+              inventory: JSON.parse(readFileSync(inventoryPath, "utf8")),
               finalizer: {
                 workflowSha: process.env.GITHUB_WORKFLOW_SHA,
                 run: {
@@ -1112,7 +1193,7 @@ jobs:
                 observedAt: new Date().toISOString()
               }
             }));
-          '
+          ' "$(find ../../finalized-hardware-evidence -name host-inventory.json -type f)"
 
       - name: Mint short-lived Administration-read observer token
         if: inputs.lane == 'infrastructure-canary'
@@ -1227,6 +1308,7 @@ jobs:
           test "$(find hardware-evidence -name manual-session-input.json -type f | wc -l)" -eq 1
           test "$(find hardware-evidence -name session-watermark.json -type f | wc -l)" -eq 1
           test "$(find hardware-evidence -name browser-hardware-cleanup.json -type f | wc -l)" -eq 1
+          test "$(find hardware-evidence -name host-inventory.json -type f | wc -l)" -eq 1
 
           install -m 600 /dev/null "${RUNNER_TEMP}/controller-client.crt"
           install -m 600 /dev/null "${RUNNER_TEMP}/controller-client.key"
@@ -1268,6 +1350,7 @@ jobs:
           node --input-type=module --eval '
             import { readFileSync, writeFileSync } from "node:fs";
             const signedSessionPath = process.argv[1];
+            const hostInventoryPath = process.argv[2];
             const signedSession = JSON.parse(readFileSync(signedSessionPath, "utf8"));
             const jobs = JSON.parse(readFileSync("workflow-jobs.json", "utf8")).jobs;
             const matches = jobs.filter((job) => job.id === signedSession.record.hardwareJobId);
@@ -1280,6 +1363,7 @@ jobs:
               },
               hardwareJob: matches[0],
               matrix: JSON.parse(readFileSync("tests/infrastructure/hardware-matrix.json", "utf8")),
+              hostInventory: JSON.parse(readFileSync(hostInventoryPath, "utf8")),
               finalizer: {
                 workflowSha: process.env.GITHUB_WORKFLOW_SHA,
                 run: {
@@ -1292,7 +1376,9 @@ jobs:
               }
             };
             writeFileSync("manual-finalizer-input.json", JSON.stringify(input));
-          ' "$(find ../../hardware-evidence -name signed-manual-session.json -type f)"
+          ' \
+            "$(find ../../hardware-evidence -name signed-manual-session.json -type f)" \
+            "$(find ../../hardware-evidence -name host-inventory.json -type f)"
 
       - name: Mint short-lived Administration-read observer token
         id: observer-token

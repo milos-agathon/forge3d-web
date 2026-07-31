@@ -17,6 +17,7 @@ const actionsLockPath = join(
   "infrastructure",
   "workflow-actions-lock.json",
 );
+const githubActionsApp = Object.freeze({ id: 15368, slug: "github-actions" });
 
 export async function verifyLiveRepositoryTrust({
   policy = readJson(policyPath),
@@ -53,7 +54,12 @@ export async function verifyLiveRepositoryTrust({
     `${apiBase}${endpoints.workflowRuns}`,
     headers,
   );
-  const matchingRuns = (responses.workflowRuns.workflow_runs ?? []).filter(
+  const workflowRunList = completeCollection(
+    responses.workflowRuns,
+    "workflow_runs",
+    "workflow runs",
+  );
+  const matchingRuns = workflowRunList.filter(
     (run) =>
       run.path === ".github/workflows/web.yml" &&
       run.head_branch === policy.repository.defaultBranch &&
@@ -64,11 +70,30 @@ export async function verifyLiveRepositoryTrust({
       "current main must have exactly one completed Web Runtime push run",
     );
   }
+  const [matchingRun] = matchingRuns;
+  if (
+    !Number.isInteger(matchingRun.id) ||
+    matchingRun.id < 1 ||
+    matchingRun.status !== "completed" ||
+    matchingRun.conclusion !== "success"
+  ) {
+    throw new Error(
+      "current-main Web Runtime push run is not a completed successful run",
+    );
+  }
   endpoints.workflowJobs =
-    `${repositoryPath}/actions/runs/${matchingRuns[0].id}/jobs?filter=latest&per_page=100`;
+    `${repositoryPath}/actions/runs/${matchingRun.id}/jobs?filter=latest&per_page=100`;
   responses.workflowJobs = await getJson(
     fetchImpl,
     `${apiBase}${endpoints.workflowJobs}`,
+    headers,
+  );
+  endpoints.checkRuns =
+    `${repositoryPath}/commits/${responses.branch.commit.sha}/check-runs` +
+    "?filter=all&per_page=100";
+  responses.checkRuns = await getJson(
+    fetchImpl,
+    `${apiBase}${endpoints.checkRuns}`,
     headers,
   );
   if (policy.trustEpochSha) {
@@ -87,6 +112,7 @@ export async function verifyLiveRepositoryTrust({
     branch: responses.branch,
     protection: responses.protection,
     actionJobs: responses.workflowJobs,
+    checkRuns: responses.checkRuns,
     actionsPermissions: responses.actionsPermissions,
     repositoryRunners: responses.repositoryRunners,
     trustEpochComparison: responses.trustEpochComparison,
@@ -108,6 +134,7 @@ export function verifyRepositoryTrustSnapshot({
   branch,
   protection,
   actionJobs,
+  checkRuns,
   actionsPermissions,
   repositoryRunners,
   trustEpochComparison,
@@ -138,6 +165,17 @@ export function verifyRepositoryTrustSnapshot({
   }
 
   const desiredProtection = policy.branchProtection;
+  if (
+    desiredProtection.requiredStatusChecks.checks.some(
+      (check) =>
+        check.sourceAppId !== githubActionsApp.id ||
+        check.sourceAppSlug !== githubActionsApp.slug,
+    )
+  ) {
+    throw new Error(
+      "checked required status checks must use the GitHub Actions App 15368/github-actions",
+    );
+  }
   const requiredStatusChecks = protection.required_status_checks;
   assertEqual(requiredStatusChecks?.strict, true, "strict required status checks");
   const actualChecks = [...(requiredStatusChecks?.checks ?? [])]
@@ -196,27 +234,77 @@ export function verifyRepositoryTrustSnapshot({
     assertNoBypassActors(protection.restrictions);
   }
 
-  const checkRunList = actionJobs.jobs ?? [];
+  const workflowJobList = completeCollection(actionJobs, "jobs", "workflow jobs");
+  const checkRunList = completeCollection(checkRuns, "check_runs", "check runs");
   const verifiedChecks = desiredProtection.requiredStatusChecks.checks.map(
     (required) => {
-      const candidates = checkRunList.filter(
-        (check) =>
-          check.name === required.context,
+      const workflowJobs = workflowJobList.filter(
+        (job) => job.name === required.context,
       );
-      if (candidates.length !== 1) {
+      const matchingCheckRuns = checkRunList.filter(
+        (checkRun) => checkRun.name === required.context,
+      );
+      if (workflowJobs.length !== 1 || matchingCheckRuns.length !== 1) {
         throw new Error(
-          `${required.context} must resolve to exactly one GitHub Actions check run`,
+          `${required.context} must resolve to exactly one GitHub Actions workflow job and check run`,
         );
       }
-      const [check] = candidates;
-      if (check.status !== "completed" || check.conclusion !== "success") {
-        throw new Error(`${required.context} is not a completed successful check`);
+      const [job] = workflowJobs;
+      const [checkRun] = matchingCheckRuns;
+      if (
+        !Number.isInteger(job.id) ||
+        job.id < 1 ||
+        job.status !== "completed" ||
+        job.conclusion !== "success"
+      ) {
+        throw new Error(
+          `${required.context} workflow job is not a completed successful check`,
+        );
+      }
+      if (
+        !Number.isInteger(checkRun.id) ||
+        checkRun.id < 1 ||
+        checkRun.status !== "completed" ||
+        checkRun.conclusion !== "success"
+      ) {
+        throw new Error(
+          `${required.context} check run is not a completed successful check`,
+        );
+      }
+      if (
+        job.head_sha !== branch.commit.sha ||
+        checkRun.head_sha !== branch.commit.sha
+      ) {
+        throw new Error(`${required.context} is stale for current main`);
+      }
+      if (
+        checkRun.app?.id !== githubActionsApp.id ||
+        checkRun.app?.slug !== githubActionsApp.slug
+      ) {
+        throw new Error(
+          `${required.context} check run is not owned by GitHub Actions App 15368/github-actions`,
+        );
+      }
+      if (
+        typeof job.check_run_url !== "string" ||
+        typeof checkRun.url !== "string" ||
+        job.check_run_url !== checkRun.url
+      ) {
+        throw new Error(
+          `${required.context} workflow job/check-run binding is mismatched`,
+        );
       }
       return {
-        id: check.id,
-        name: check.name,
-        conclusion: check.conclusion,
-        sourceAppId: required.sourceAppId,
+        id: checkRun.id,
+        workflowJobId: job.id,
+        name: checkRun.name,
+        headSha: checkRun.head_sha,
+        status: checkRun.status,
+        conclusion: checkRun.conclusion,
+        app: {
+          id: checkRun.app.id,
+          slug: checkRun.app.slug,
+        },
       };
     },
   );
@@ -259,6 +347,18 @@ async function getJson(fetchImpl, url, headers) {
     throw new Error(`GitHub API ${response.status} for ${new URL(url).pathname}`);
   }
   return response.json();
+}
+
+function completeCollection(response, property, label) {
+  const entries = response?.[property];
+  if (
+    !Array.isArray(entries) ||
+    !Number.isInteger(response.total_count) ||
+    response.total_count !== entries.length
+  ) {
+    throw new Error(`${label} response is incomplete`);
+  }
+  return entries;
 }
 
 function assertNoBypassActors(value) {

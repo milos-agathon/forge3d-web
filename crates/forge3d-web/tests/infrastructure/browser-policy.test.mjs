@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 import { dirname, join } from "node:path";
@@ -19,6 +20,10 @@ import {
 import { resolveHostRuntime } from "../../scripts/resolve-host-runtime.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
+const inventoryHelper = join(root, "../../scripts/capture-host-inventory.mjs");
+const inventoryHelperSha256 = createHash("sha256")
+  .update(readFileSync(inventoryHelper))
+  .digest("hex");
 const policy = JSON.parse(readFileSync(join(root, "browser-policy.json"), "utf8"));
 const tools = {
   ...policy.tools,
@@ -241,7 +246,8 @@ test("freeze attempts persist enough exact state for unconditional restoration",
 test("host runtime helper supplies versions while the trusted script observes OS and lock state", () => {
   const calls = [];
   const result = resolveHostRuntime({
-    helper: "/opt/forge3d/bin/browser-inventory",
+    helper: inventoryHelper,
+    helperSha256: inventoryHelperSha256,
     lane: "chrome-macos-m2",
     hostId: "FW-MAC-M2-01",
     policy,
@@ -250,7 +256,7 @@ test("host runtime helper supplies versions while the trusted script observes OS
     now: new Date("2026-07-29T08:00:00.000Z"),
     execute: (command) => {
       calls.push(command);
-      if (command === "/opt/forge3d/bin/browser-inventory") {
+      if (command === inventoryHelper) {
         return JSON.stringify({
           schemaVersion: 1,
           hostId: "FW-MAC-M2-01",
@@ -276,7 +282,7 @@ test("host runtime helper supplies versions while the trusted script observes OS
     { id: browser.id, version: browser.version },
   ]);
   assert.deepEqual(calls, [
-    "/opt/forge3d/bin/browser-inventory",
+    inventoryHelper,
     "/usr/bin/sw_vers",
     "/usr/bin/stat",
     "/usr/sbin/ioreg",

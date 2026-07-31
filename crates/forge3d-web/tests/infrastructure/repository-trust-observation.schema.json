@@ -109,21 +109,44 @@
     "requiredChecks": {
       "type": "array",
       "minItems": 2,
+      "maxItems": 2,
+      "uniqueItems": true,
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "name", "conclusion", "sourceAppId"],
+        "required": [
+          "id",
+          "workflowJobId",
+          "name",
+          "headSha",
+          "status",
+          "conclusion",
+          "app"
+        ],
         "properties": {
           "id": { "type": "integer", "minimum": 1 },
+          "workflowJobId": { "type": "integer", "minimum": 1 },
           "name": { "type": "string", "minLength": 1 },
+          "headSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+          "status": { "const": "completed" },
           "conclusion": { "const": "success" },
-          "sourceAppId": { "const": 15368 }
+          "app": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "slug"],
+            "properties": {
+              "id": { "const": 15368 },
+              "slug": { "const": "github-actions" }
+            }
+          }
         }
       }
     },
     "liveResponses": {
       "type": "array",
-      "minItems": 7,
+      "minItems": 9,
+      "maxItems": 9,
+      "uniqueItems": true,
       "items": {
         "type": "object",
         "additionalProperties": false,

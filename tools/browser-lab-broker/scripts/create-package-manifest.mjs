@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
-import { basename, relative, resolve } from "node:path";
+import { lstatSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { basename, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { canonicalJson } from "../src/canonical-json.mjs";
@@ -8,6 +8,8 @@ import {
   BROKER_PROTOCOL_VERSION,
   CLEANUP_PROTOCOL_VERSION,
 } from "../src/protocol.mjs";
+
+const CONTROLLER_PROTOCOL_VERSION = "forge3d-browser-lab-controller/v1";
 
 export function createBrokerPackageManifest({
   repositoryRoot,
@@ -29,6 +31,7 @@ export function createBrokerPackageManifest({
     "crates/forge3d-web/tests/infrastructure/broker-protocol.schema.json",
     "crates/forge3d-web/tests/infrastructure/controller-health-endpoints.json",
     "crates/forge3d-web/tests/infrastructure/hardware-matrix.json",
+    "crates/forge3d-web/tests/infrastructure/lab-service-installation.schema.json",
     "crates/forge3d-web/tests/infrastructure/repository-trust-policy.json",
     "crates/forge3d-web/tests/infrastructure/runner-distribution-manifest.json",
     "crates/forge3d-web/tests/infrastructure/runner-transient-path-policy.json",
@@ -38,20 +41,50 @@ export function createBrokerPackageManifest({
     path,
     sha256: sha256(readFileSync(resolve(repositoryRoot, path))),
   }));
+  const packageRoot = resolve(repositoryRoot, "tools/browser-lab-broker");
+  const files = listFiles(packageRoot)
+    .map((path) => ({
+      path: relative(packageRoot, path).replaceAll("\\", "/"),
+      sha256: sha256(readFileSync(path)),
+    }))
+    .sort((left, right) => left.path.localeCompare(right.path));
   return {
     schemaVersion: 1,
     repository: "milos-agathon/forge3d-web",
+    package: "@forge3d/browser-lab-broker",
+    version: JSON.parse(
+      readFileSync(resolve(repositoryRoot, "tools/browser-lab-broker/package.json")),
+    ).version,
     targetSha,
     workflowSha,
     brokerProtocolVersion: BROKER_PROTOCOL_VERSION,
     cleanupProtocolVersion: CLEANUP_PROTOCOL_VERSION,
+    protocols: {
+      controller: CONTROLLER_PROTOCOL_VERSION,
+      broker: BROKER_PROTOCOL_VERSION,
+      cleanup: CLEANUP_PROTOCOL_VERSION,
+    },
     archive: {
       name: basename(archivePath),
       sha256: sha256(readFileSync(archivePath)),
     },
     configuration,
     configurationSha256: sha256(Buffer.from(canonicalJson(configuration))),
+    files,
   };
+}
+
+function listFiles(directory) {
+  return readdirSync(directory)
+    .sort()
+    .flatMap((name) => {
+      const path = join(directory, name);
+      const stats = lstatSync(path);
+      if (stats.isSymbolicLink()) {
+        throw new Error(`broker package cannot contain symlinks: ${path}`);
+      }
+      return stats.isDirectory() ? listFiles(path) : [path];
+    });
 }
 
 function sha256(bytes) {

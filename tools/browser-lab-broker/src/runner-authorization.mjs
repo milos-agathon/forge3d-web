@@ -125,9 +125,14 @@ export function normalizeAuthorization(authorization) {
 function validateOptionalBindings(authorization) {
   const readiness = authorization.labReadiness;
   if (readiness !== null) {
-    assertExactKeys(readiness, ["runId", "labInfrastructureDigest"]);
+    assertExactKeys(readiness, [
+      "runId",
+      "manifestSha256",
+      "labInfrastructureDigest",
+    ]);
     if (
       !isPositiveInteger(readiness.runId) ||
+      !/^[0-9a-f]{64}$/u.test(readiness.manifestSha256 ?? "") ||
       !/^[0-9a-f]{64}$/u.test(readiness.labInfrastructureDigest ?? "")
     ) {
       throw new Error("runner authorization readiness binding is invalid");

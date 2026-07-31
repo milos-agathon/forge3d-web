@@ -9,10 +9,13 @@ export function joinAdapterAttestation(page, host, { required = true } = {}) {
       throw new Error(`page/host attestation binding mismatch: ${key}`);
     }
   }
+  if (page.secureContext !== true) {
+    throw new Error("page-level WebGPU attestation requires a secure context");
+  }
   if (!page.navigatorGpu || !page.deviceCreated || !page.surfaceCreated) {
     throw new Error("WebGPU adapter, device, and surface creation are required");
   }
-  if (!page.surfacePresented || !page.lumaChanged || page.presentedFrameLuma <= 0.05) {
+  if (!hasMeasuredLumaPresentation(page)) {
     throw new Error("hardware attestation requires a luma-changing presented frame");
   }
   if (required) {
@@ -34,6 +37,27 @@ export function joinAdapterAttestation(page, host, { required = true } = {}) {
     page,
     host,
   };
+}
+
+export function hasMeasuredLumaPresentation(page) {
+  const samples = page?.presentedFrameLumaSamples;
+  if (
+    page?.surfacePresented !== true ||
+    page?.lumaChanged !== true ||
+    !Array.isArray(samples) ||
+    samples.length !== 2 ||
+    samples.some(
+      (value) => !Number.isFinite(value) || value < 0 || value > 1,
+    ) ||
+    !Number.isFinite(page.presentedFrameLumaDelta)
+  ) {
+    return false;
+  }
+  const measuredDelta = Math.abs(samples[1] - samples[0]);
+  return (
+    measuredDelta >= 0.25 &&
+    Math.abs(page.presentedFrameLumaDelta - measuredDelta) <= 1e-9
+  );
 }
 
 function parseArguments(argv) {

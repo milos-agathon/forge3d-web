@@ -1,0 +1,333 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/host-lab-canary.schema.json",
+  "title": "Forge3D signed host laboratory canary record",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "recordType",
+    "runId",
+    "runAttempt",
+    "lane",
+    "canaryMode",
+    "hostId",
+    "assetId",
+    "trustedSha",
+    "packageRunId",
+    "packageSha256",
+    "result",
+    "supportAssertionsExecuted",
+    "adapter",
+    "adapterAttestation",
+    "authorization",
+    "controller",
+    "runner",
+    "cleanup",
+    "diagnosticRetention",
+    "controllerCompletion",
+    "installations",
+    "inventory",
+    "route",
+    "browserRouteReadiness",
+    "mobileRouteReadiness",
+    "completedAt",
+    "attestation"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "recordType": { "const": "host-lab-canary" },
+    "runId": { "type": "integer", "minimum": 1 },
+    "runAttempt": { "type": "integer", "minimum": 1 },
+    "lane": { "const": "infrastructure-canary" },
+    "canaryMode": { "const": "host" },
+    "hostId": { "$ref": "#/$defs/hostId" },
+    "assetId": { "$ref": "#/$defs/hostId" },
+    "trustedSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "packageRunId": { "type": "integer", "minimum": 1 },
+    "packageSha256": { "$ref": "#/$defs/sha256" },
+    "result": { "const": "PASS" },
+    "supportAssertionsExecuted": { "const": false },
+    "adapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["isFallbackAdapter", "deviceCreated", "surfacePresented"],
+      "properties": {
+        "isFallbackAdapter": { "const": false },
+        "deviceCreated": { "const": true },
+        "surfacePresented": { "const": true }
+      }
+    },
+    "adapterAttestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["result", "required", "binding", "host"],
+      "properties": {
+        "result": { "const": "PASS" },
+        "required": { "const": true },
+        "binding": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["runId", "assetId", "commit", "packageSha256"],
+          "properties": {
+            "runId": { "type": "integer", "minimum": 1 },
+            "assetId": { "$ref": "#/$defs/hostId" },
+            "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+            "packageSha256": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        "host": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["hostId", "expectedGpuPresent", "headedSessionAvailable"],
+          "properties": {
+            "hostId": { "$ref": "#/$defs/hostId" },
+            "expectedGpuPresent": { "const": true },
+            "headedSessionAvailable": { "const": true }
+          }
+        }
+      }
+    },
+    "authorization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sha256", "attested"],
+      "properties": {
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "attested": { "const": true }
+      }
+    },
+    "controller": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["signatureVerified"],
+      "properties": { "signatureVerified": { "const": true } }
+    },
+    "runner": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "name", "acceptedJobCount", "absentAfterRun"],
+      "properties": {
+        "id": { "type": "integer", "minimum": 1 },
+        "name": { "type": "string", "minLength": 1 },
+        "acceptedJobCount": { "const": 1 },
+        "absentAfterRun": { "const": true }
+      }
+    },
+    "cleanup": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["complete"],
+      "properties": { "complete": { "const": true } }
+    },
+    "diagnosticRetention": { "$ref": "#/$defs/diagnosticRetention" },
+    "controllerCompletion": { "$ref": "#/$defs/completion" },
+    "installations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["controller", "broker"],
+      "properties": {
+        "controller": { "type": "object" },
+        "broker": { "type": "object" }
+      }
+    },
+    "inventory": { "type": "object" },
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ok",
+        "applicationHost",
+        "assetHost",
+        "basePath",
+        "applicationUrl",
+        "assetUrl",
+        "packageSha256",
+        "certificates",
+        "httpsVerified",
+        "corsRangeControlsPassed"
+      ],
+      "properties": {
+        "ok": { "const": true },
+        "applicationHost": { "type": "string", "minLength": 1 },
+        "assetHost": { "type": "string", "minLength": 1 },
+        "basePath": {
+          "type": "string",
+          "pattern": "^/runs/[1-9][0-9]*/[1-9][0-9]*/[0-9a-f]{32}/$"
+        },
+        "applicationUrl": { "type": "string", "pattern": "^https://" },
+        "assetUrl": { "type": "string", "pattern": "^https://" },
+        "packageSha256": { "$ref": "#/$defs/sha256" },
+        "certificates": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["application", "asset"],
+          "properties": {
+            "application": { "$ref": "#/$defs/certificate" },
+            "asset": { "$ref": "#/$defs/certificate" }
+          }
+        },
+        "httpsVerified": { "const": true },
+        "corsRangeControlsPassed": { "const": true }
+      }
+    },
+    "browserRouteReadiness": { "$ref": "#/$defs/routeReadiness" },
+    "mobileRouteReadiness": { "type": ["object", "null"] },
+    "completedAt": { "type": "string", "format": "date-time" },
+    "attestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["verified"],
+      "properties": { "verified": { "const": false } }
+    }
+  },
+  "$defs": {
+    "hostId": {
+      "type": "string",
+      "pattern": "^FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+$"
+    },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "diagnosticRetention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "storage",
+        "storageKey",
+        "hostId",
+        "run",
+        "runnerNonce",
+        "authorizationDigest",
+        "files",
+        "filesSha256",
+        "retainedAt",
+        "sha256"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "storage": { "const": "protected-controller-external" },
+        "storageKey": {
+          "type": "string",
+          "pattern": "^FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+-[1-9][0-9]*-[1-9][0-9]*-[0-9a-f]{64}$"
+        },
+        "hostId": { "$ref": "#/$defs/hostId" },
+        "run": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "attempt"],
+          "properties": {
+            "id": { "type": "integer", "minimum": 1 },
+            "attempt": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "runnerNonce": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "authorizationDigest": { "$ref": "#/$defs/sha256" },
+        "files": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "size", "sha256"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^(?:Runner|Worker)_[A-Za-z0-9_.-]+\\.log$"
+              },
+              "size": { "type": "integer", "minimum": 1 },
+              "sha256": { "$ref": "#/$defs/sha256" }
+            }
+          }
+        },
+        "filesSha256": { "$ref": "#/$defs/sha256" },
+        "retainedAt": { "type": "string", "format": "date-time" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "completion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "brokerCleanup",
+        "runnerAbsent",
+        "workRootWiped",
+        "hostCleanupComplete",
+        "hostLockReleased",
+        "quarantined",
+        "completedAt"
+      ],
+      "properties": {
+        "state": { "const": "completed" },
+        "brokerCleanup": { "enum": ["deleted", "already_absent"] },
+        "runnerAbsent": { "const": true },
+        "workRootWiped": { "const": true },
+        "hostCleanupComplete": { "const": true },
+        "hostLockReleased": { "const": true },
+        "quarantined": { "const": false },
+        "completedAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "certificate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authorized",
+        "authorizationError",
+        "subject",
+        "issuer",
+        "validFrom",
+        "validTo",
+        "fingerprint256"
+      ],
+      "properties": {
+        "authorized": { "const": true },
+        "authorizationError": { "type": "null" },
+        "subject": { "type": "string", "minLength": 1 },
+        "issuer": { "type": "string", "minLength": 1 },
+        "validFrom": { "type": "string", "minLength": 1 },
+        "validTo": { "type": "string", "minLength": 1 },
+        "fingerprint256": { "type": "string", "minLength": 1 }
+      }
+    },
+    "routeReadiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "secureContext",
+        "trustedHttps",
+        "applicationCertificateTrusted",
+        "assetCertificateTrusted",
+        "packageSha256Matched",
+        "wasmMimePassed",
+        "corsAllowPassed",
+        "corsDenyPassed",
+        "rangePassed",
+        "wrongMimeRejected",
+        "publicLoaderAllowedWasmPassed",
+        "wrongMimeErrorCode",
+        "corsDenyWasmErrorCode",
+        "corsWrongOriginWasmErrorCode"
+      ],
+      "properties": {
+        "secureContext": { "const": true },
+        "trustedHttps": { "const": true },
+        "applicationCertificateTrusted": { "const": true },
+        "assetCertificateTrusted": { "const": true },
+        "packageSha256Matched": { "const": true },
+        "wasmMimePassed": { "const": true },
+        "corsAllowPassed": { "const": true },
+        "corsDenyPassed": { "const": true },
+        "rangePassed": { "const": true },
+        "wrongMimeRejected": { "const": true },
+        "publicLoaderAllowedWasmPassed": { "const": true },
+        "wrongMimeErrorCode": { "const": "WASM_LOAD_FAILED" },
+        "corsDenyWasmErrorCode": { "const": "WASM_LOAD_FAILED" },
+        "corsWrongOriginWasmErrorCode": { "const": "WASM_LOAD_FAILED" }
+      }
+    }
+  }
+}

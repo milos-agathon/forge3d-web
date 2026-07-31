@@ -22,6 +22,11 @@ export function captureHostInventory({
   launchArguments = [],
   capturedAt = new Date(),
   policy,
+  hardware = null,
+  matrix = null,
+  trackpad = null,
+  requireExactHardware = false,
+  requireTrackpad = false,
 }) {
   if (!/^FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+$/u.test(assetId ?? "")) {
     throw new Error("assetId must identify a fixed browser-lab host");
@@ -36,7 +41,7 @@ export function captureHostInventory({
     validateBrowserRecord(browser, policy),
   );
   const toolRecords = validateToolVersions(tools, policy, platform);
-  return {
+  const baseInventory = {
     schemaVersion: 1,
     assetId,
     platform,
@@ -55,6 +60,130 @@ export function captureHostInventory({
     prohibitedLaunchArgumentsPresent: [],
     capturedAt: new Date(capturedAt).toISOString(),
   };
+  if (!requireExactHardware) return baseInventory;
+  if (!hardware || !matrix || !Array.isArray(hardware.attachedAssets)) {
+    throw new Error(
+      "exact host inventory requires explicit hardware, attachment, and matrix observations",
+    );
+  }
+  assertNoStableIdentifiers(hardware);
+  assertExactKeys(hardware, [
+    "model",
+    "cpu",
+    "gpu",
+    "ramGiB",
+    "attachedAssets",
+  ], "observed hardware");
+  const attachedAssets = hardware.attachedAssets.map((asset, index) => {
+    assertExactKeys(
+      asset,
+      ["assetId", "model", "appiumId"],
+      `observed attachment ${index}`,
+    );
+    return {
+      assetId: nonEmpty(asset.assetId, `attachedAssets[${index}].assetId`),
+      model: nonEmpty(asset.model, `attachedAssets[${index}].model`),
+      appiumId:
+        asset.appiumId === null
+          ? null
+          : nonEmpty(asset.appiumId, `attachedAssets[${index}].appiumId`),
+    };
+  });
+  const inventory = {
+    ...baseInventory,
+    model: nonEmpty(hardware.model, "hardware.model"),
+    cpu: nonEmpty(hardware.cpu, "hardware.cpu"),
+    gpu: nonEmpty(hardware.gpu, "hardware.gpu"),
+    ramGiB: hardware.ramGiB,
+    attachedAssetIds: attachedAssets.map(({ assetId: attachedId }) => attachedId),
+    attachedAssets,
+    trackpad,
+  };
+  validateHostInventory(inventory, { matrix, requireTrackpad });
+  return inventory;
+}
+
+export function validateHostInventory(
+  inventory,
+  { matrix, requireTrackpad = false } = {},
+) {
+  assertNoStableIdentifiers(inventory);
+  assertExactKeys(
+    inventory,
+    [
+      "schemaVersion",
+      "assetId",
+      "platform",
+      "model",
+      "cpu",
+      "gpu",
+      "ramGiB",
+      "osBuild",
+      "headed",
+      "displayServer",
+      "session",
+      "browsers",
+      "tools",
+      "effectiveLaunchArguments",
+      "prohibitedLaunchArgumentsPresent",
+      "capturedAt",
+      "attachedAssetIds",
+      "attachedAssets",
+      "trackpad",
+    ],
+    "host inventory",
+  );
+  const host = matrix?.hosts?.find(
+    (candidate) => candidate.assetId === inventory?.assetId,
+  );
+  const expectedPlatform = {
+    macOS: "darwin",
+    Windows: "win32",
+    Ubuntu: "linux",
+  }[host?.os?.family];
+  if (
+    inventory.schemaVersion !== 1 ||
+    !host ||
+    inventory.platform !== expectedPlatform ||
+    inventory.model !== host.model ||
+    inventory.cpu !== host.cpu ||
+    inventory.gpu !== host.gpu ||
+    inventory.ramGiB !== host.ramGiB ||
+    inventory.displayServer !== host.displayServer ||
+    inventory.headed !== true ||
+    inventory.session?.interactive !== true ||
+    inventory.session.locked !== false ||
+    inventory.session.remote !== false ||
+    !nonEmptyOrFalse(inventory.osBuild) ||
+    !nonEmptyOrFalse(inventory.session.identifier) ||
+    !isCanonicalTimestamp(inventory.capturedAt) ||
+    !Array.isArray(inventory.browsers) ||
+    inventory.browsers.length === 0 ||
+    !Array.isArray(inventory.effectiveLaunchArguments) ||
+    !Array.isArray(inventory.prohibitedLaunchArgumentsPresent) ||
+    inventory.prohibitedLaunchArgumentsPresent.length !== 0
+  ) {
+    throw new Error("host inventory does not match the checked physical host");
+  }
+  assertExactKeys(
+    inventory.session,
+    ["interactive", "locked", "remote", "identifier"],
+    "host inventory session",
+  );
+  for (const [index, browser] of inventory.browsers.entries()) {
+    assertExactKeys(
+      browser,
+      ["id", "channel", "classification", "automation", "version", "executable"],
+      `host inventory browser ${index}`,
+    );
+  }
+  assertInventoryTools(inventory.tools);
+  validateAttachedAssets(inventory, host, matrix);
+  validateTrackpad(inventory.trackpad, matrix, {
+    required: requireTrackpad,
+    expectedHostId: host.assetId,
+  });
+  return inventory;
 }
 
 export function observeLiveSession(
@@ -233,6 +362,180 @@ function validateToolVersions(tools, policy, platform) {
     );
   }
   return result;
+}
+
+function validateAttachedAssets(inventory, host, matrix) {
+  if (
+    !Array.isArray(inventory.attachedAssetIds) ||
+    !Array.isArray(inventory.attachedAssets)
+  ) {
+    throw new Error("host inventory must explicitly contain its attachment set");
+  }
+  const ids = inventory.attachedAssetIds;
+  const recordIds = inventory.attachedAssets.map((asset) => asset?.assetId);
+  if (
+    new Set(ids).size !== ids.length ||
+    new Set(recordIds).size !== recordIds.length ||
+    !sameSet(ids, host.attachedAssetIds) ||
+    !sameSet(ids, recordIds)
+  ) {
+    throw new Error("host inventory attachment IDs do not match the checked exact set");
+  }
+  for (const [index, record] of inventory.attachedAssets.entries()) {
+    assertExactKeys(
+      record,
+      ["assetId", "model", "appiumId"],
+      `host inventory attachment ${index}`,
+    );
+    const expected = matrix.assets.find(
+      (asset) => asset.assetId === record.assetId,
+    );
+    if (
+      !expected ||
+      expected.hostAssetId !== host.assetId ||
+      record.model !== expected.model ||
+      record.appiumId !== expected.appiumId
+    ) {
+      throw new Error(
+        `host inventory attachment does not match the checked matrix: ${record.assetId ?? "<missing>"}`,
+      );
+    }
+  }
+}
+
+function validateTrackpad(trackpad, matrix, { required, expectedHostId }) {
+  if (!required) {
+    if (trackpad !== null) {
+      throw new Error("trackpad inventory is only valid for its required Mac path");
+    }
+    return;
+  }
+  const expected = matrix.assets.find(
+    (asset) => asset.assetId === "FW-TRACKPAD-01",
+  );
+  assertNoStableIdentifiers(trackpad);
+  assertExactKeys(
+    trackpad,
+    [
+      "assetId",
+      "model",
+      "firmware",
+      "transport",
+      "batteryState",
+      "capturedAt",
+      "topology",
+    ],
+    "trackpad inventory",
+  );
+  assertExactKeys(
+    trackpad?.topology,
+    ["pairingAndCharging", "gestures", "hubPresent"],
+    "trackpad topology",
+  );
+  if (
+    expectedHostId !== "FW-MAC-M2-01" ||
+    expected?.hostAssetId !== expectedHostId ||
+    trackpad.assetId !== expected.assetId ||
+    trackpad.model !== expected.model ||
+    !nonEmptyOrFalse(trackpad.firmware) ||
+    trackpad.transport !== "Bluetooth" ||
+    !/^(?:unknown|(?:100|[0-9]{1,2})%)$/u.test(trackpad.batteryState ?? "") ||
+    !isCanonicalTimestamp(trackpad.capturedAt) ||
+    trackpad.topology.pairingAndCharging !== "direct-usb-c-to-usb-c" ||
+    trackpad.topology.gestures !== "bluetooth" ||
+    trackpad.topology.hubPresent !== false
+  ) {
+    throw new Error("trackpad inventory does not prove the fixed direct topology");
+  }
+}
+
+function assertInventoryTools(tools) {
+  const allowed = new Set([
+    "playwright",
+    "selenium",
+    "geckodriver",
+    "appium",
+    "appiumUiAutomator2",
+    "appiumXcuitest",
+    "safaridriverPath",
+    "safaridriverVersion",
+  ]);
+  if (
+    !tools ||
+    typeof tools !== "object" ||
+    Array.isArray(tools) ||
+    ["playwright", "selenium", "geckodriver"].some(
+      (name) => !nonEmptyOrFalse(tools[name]),
+    ) ||
+    Object.entries(tools).some(
+      ([name, value]) => !allowed.has(name) || !nonEmptyOrFalse(value),
+    )
+  ) {
+    throw new Error("host inventory tools are incomplete or contain unknown fields");
+  }
+}
+
+function assertExactKeys(value, expected, label) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${label} must be an object`);
+  }
+  const actual = Object.keys(value).sort();
+  const wanted = [...expected].sort();
+  if (
+    actual.length !== wanted.length ||
+    actual.some((key, index) => key !== wanted[index])
+  ) {
+    throw new Error(`${label} fields do not match the checked contract`);
+  }
+}
+
+export function assertNoStableIdentifiers(value) {
+  visit(value);
+
+  function visit(current) {
+    if (Array.isArray(current)) {
+      current.forEach(visit);
+      return;
+    }
+    if (current === null || typeof current !== "object") return;
+    for (const [key, nested] of Object.entries(current)) {
+      const normalized = key.toLowerCase().replaceAll(/[^a-z0-9]/gu, "");
+      if (
+        /(?:serial|udid|bluetoothaddress|deviceaddress|locationid)/u.test(
+          normalized,
+        )
+      ) {
+        throw new Error("host inventory contains a forbidden stable identifier");
+      }
+      if (
+        typeof nested === "string" &&
+        normalized !== "fingerprint256" &&
+        /\b(?:[0-9a-f]{2}[:-]){5}[0-9a-f]{2}\b/iu.test(nested)
+      ) {
+        throw new Error("host inventory contains a forbidden stable identifier");
+      }
+      visit(nested);
+    }
+  }
+}
+
+function sameSet(left, right) {
+  return (
+    Array.isArray(left) &&
+    Array.isArray(right) &&
+    left.length === right.length &&
+    [...left].sort().every((value, index) => value === [...right].sort()[index])
+  );
+}
+
+function nonEmptyOrFalse(value) {
+  return typeof value === "string" && value.trim() !== "";
+}
+
+function isCanonicalTimestamp(value) {
+  if (!nonEmptyOrFalse(value)) return false;
+  const parsed = new Date(value);
+  return !Number.isNaN(parsed.valueOf()) && parsed.toISOString() === value;
 }
 
 function parseMajor(version) {

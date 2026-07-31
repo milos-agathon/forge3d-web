@@ -3,8 +3,26 @@ import { readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { assertJsonSchema } from "../tests/browser/json-schema-validator.mjs";
+import { validateHardwareMatrix } from "./validate-hardware-matrix.mjs";
+
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const checklistDirectory = join(packageRoot, "tests", "manual");
+const hardwareMatrixSchema = readJson(
+  join(packageRoot, "tests", "infrastructure", "hardware-matrix.schema.json"),
+);
+const deviceMatrixSchema = readJson(
+  join(packageRoot, "tests", "device", "device-matrix.schema.json"),
+);
+const trackpadModel = "Apple Magic Trackpad USB-C (2024), A3120";
+const mobileAssetIds = new Set([
+  "FW-AND-QCOM-01",
+  "FW-AND-MALI-01",
+  "FW-AND-PEN-01",
+  "FW-IOS-OLD-01",
+  "FW-IOS-NEW-01",
+  "FW-IPAD-01",
+]);
 const checklistFiles = {
   "infrastructure-manual-canary": "infrastructure-manual-canary.md",
   "mobile-multitouch": "mobile-multitouch.md",
@@ -44,6 +62,8 @@ export function createIntakeManifest({
   packageSha256,
   checklistId,
   assetId,
+  hardwareMatrix,
+  deviceMatrix,
   expectedTester,
   prepareRun,
   now = new Date(),
@@ -60,13 +80,12 @@ export function createIntakeManifest({
     throw new Error("manual intake binding is invalid");
   }
   const checklist = checklistDefinition(checklistId);
-  if (
-    (checklistId === "mobile-multitouch" &&
-      !/^FW-(?:AND|IOS|IPAD)-/u.test(assetId)) ||
-    (checklistId === "safari-trackpad" && assetId !== "FW-TRACKPAD-01")
-  ) {
-    throw new Error("asset/checklist pair is not checked");
-  }
+  const selection = validateIntakeSelection({
+    hardwareMatrix,
+    deviceMatrix,
+    checklistId,
+    assetId,
+  });
   const mediaChallenge = random(16).toString("hex");
   if (!/^[0-9a-f]{32}$/u.test(mediaChallenge)) {
     throw new Error("media challenge must contain 128 random bits");
@@ -84,13 +103,97 @@ export function createIntakeManifest({
     checklistSha256: checklist.sha256,
     stepIds: checklist.stepIds,
     assetId,
-    hostId: "FW-MAC-M2-01",
+    hostId: selection.host.assetId,
     expectedTester,
     mediaChallenge,
     supportClaim: checklist.supportClaim,
     createdAt: createdAt.toISOString(),
     expiresAt: new Date(createdAt.getTime() + 24 * 60 * 60 * 1000).toISOString(),
   };
+}
+
+export function validateIntakeSelection({
+  hardwareMatrix,
+  deviceMatrix,
+  checklistId,
+  assetId,
+}) {
+  assertJsonSchema(hardwareMatrix, hardwareMatrixSchema);
+  assertJsonSchema(deviceMatrix, deviceMatrixSchema);
+  validateHardwareMatrix(hardwareMatrix);
+  const deviceIds = deviceMatrix.devices.map((value) => value.assetId);
+  if (
+    new Set(deviceIds).size !== mobileAssetIds.size ||
+    [...mobileAssetIds].some((value) => !deviceIds.includes(value))
+  ) {
+    throw new Error("checked Appium device matrix must contain each public asset once");
+  }
+
+  const assets = hardwareMatrix.assets.filter(
+    (value) => value.assetId === assetId,
+  );
+  if (assets.length !== 1 || assets[0].state !== "active") {
+    throw new Error("selected manual asset is not uniquely active in the checked matrix");
+  }
+  const asset = assets[0];
+  const hosts = hardwareMatrix.hosts.filter(
+    (value) => value.assetId === asset.hostAssetId,
+  );
+  if (
+    hosts.length !== 1 ||
+    hosts[0].state !== "active" ||
+    hosts[0].maintenanceReason !== null ||
+    hosts[0].controller.state !== "online"
+  ) {
+    throw new Error("selected manual asset owning host/controller is not active");
+  }
+  const host = hosts[0];
+  if (
+    host.attachedAssetIds.filter((value) => value === asset.assetId).length !== 1 ||
+    asset.hostAssetId !== host.assetId
+  ) {
+    throw new Error("selected manual asset/host attachment is not reciprocal");
+  }
+
+  const isMobile = ["android", "ios", "ipados"].includes(asset.kind);
+  const isTrackpad =
+    asset.assetId === "FW-TRACKPAD-01" &&
+    asset.kind === "trackpad" &&
+    asset.model === trackpadModel &&
+    asset.appiumId === null;
+  if (
+    (checklistId === "mobile-multitouch" && !isMobile) ||
+    (checklistId === "safari-trackpad" && !isTrackpad) ||
+    (checklistId === "infrastructure-manual-canary" && !isMobile && !isTrackpad)
+  ) {
+    throw new Error("asset/checklist pair is not checked");
+  }
+
+  const matchingDevices = deviceMatrix.devices.filter(
+    (value) => value.assetId === asset.assetId,
+  );
+  if (isMobile) {
+    const device = matchingDevices[0];
+    const expected =
+      asset.kind === "android"
+        ? ["Android", "UiAutomator2", "Chrome"]
+        : asset.kind === "ios"
+          ? ["iOS", "XCUITest", "Safari"]
+          : ["iPadOS", "XCUITest", "Safari"];
+    if (
+      matchingDevices.length !== 1 ||
+      deviceMatrix.hostAssetId !== host.assetId ||
+      asset.appiumId !== device?.appiumId ||
+      [device?.platformName, device?.automationName, device?.browserName].some(
+        (value, index) => value !== expected[index],
+      )
+    ) {
+      throw new Error("selected mobile Appium alias/model binding is not exact");
+    }
+  } else if (matchingDevices.length !== 0) {
+    throw new Error("checked trackpad must not have an Appium device binding");
+  }
+  return { asset, host, device: matchingDevices[0] ?? null };
 }
 
 export function validateStepResults(stepResults, intake) {
@@ -200,6 +303,7 @@ export function createManualEvidence({
   }
   if (
     session.trustedSha !== intake.trustedSha ||
+    session.package.runId !== intake.packageRunId ||
     session.package.sha256 !== intake.packageSha256 ||
     session.assetId !== intake.assetId ||
     session.hostId !== intake.hostId ||
@@ -208,17 +312,27 @@ export function createManualEvidence({
   ) {
     throw new Error("manual session does not match the intake binding");
   }
+  assertProductSessionProvenance(session, intake.checklistId);
   return {
     schemaVersion: 1,
     repository: "milos-agathon/forge3d-web",
     workflow: ".github/workflows/submit-browser-manual-evidence.yml",
     run: submissionRun,
     trustedSha: intake.trustedSha,
+    packageRunId: session.package.runId,
     packageSha256: intake.packageSha256,
     labInfrastructureDigest: session.labReadiness?.labInfrastructureDigest,
+    labReadiness: { ...session.labReadiness },
     checklistId: intake.checklistId,
     stepResults: validateStepResults(stepResults, intake),
     assetId: intake.assetId,
+    hostId: session.hostId,
+    system: structuredClone(session.system),
+    browser: structuredClone(session.browser),
+    driver: structuredClone(session.driver),
+    hostInventory: session.hostInventory
+      ? structuredClone(session.hostInventory)
+      : null,
     actor,
     approver,
     intakeReleaseId,
@@ -236,8 +350,59 @@ export function createManualEvidence({
   };
 }
 
+function assertProductSessionProvenance(session, checklistId) {
+  const identity = session.labReadiness;
+  if (
+    identity === null ||
+    typeof identity !== "object" ||
+    Array.isArray(identity) ||
+    Object.keys(identity).sort().join(",") !==
+      "labInfrastructureDigest,manifestSha256,runId" ||
+    !Number.isInteger(identity.runId) ||
+    identity.runId < 1 ||
+    !/^[0-9a-f]{64}$/u.test(identity.manifestSha256 ?? "") ||
+    !/^[0-9a-f]{64}$/u.test(identity.labInfrastructureDigest ?? "") ||
+    !nonEmpty(session.system?.os) ||
+    !nonEmpty(session.system?.build) ||
+    !nonEmpty(session.browser?.name) ||
+    !nonEmpty(session.browser?.channel) ||
+    !nonEmpty(session.browser?.version) ||
+    !nonEmpty(session.driver?.name) ||
+    !nonEmpty(session.driver?.version)
+  ) {
+    throw new Error("manual session runtime or laboratory provenance is incomplete");
+  }
+  if (checklistId === "safari-trackpad") {
+    const trackpad = session.hostInventory?.trackpad;
+    if (
+      session.hostId !== "FW-MAC-M2-01" ||
+      session.assetId !== "FW-TRACKPAD-01" ||
+      session.browser.name.toLowerCase() !== "safari" ||
+      session.system.os !== session.hostInventory?.platform ||
+      session.system.build !== session.hostInventory?.osBuild ||
+      trackpad?.assetId !== "FW-TRACKPAD-01" ||
+      !nonEmpty(trackpad.model) ||
+      !nonEmpty(trackpad.firmware) ||
+      trackpad.transport !== "Bluetooth" ||
+      trackpad.topology?.pairingAndCharging !== "direct-usb-c-to-usb-c" ||
+      trackpad.topology.gestures !== "bluetooth" ||
+      trackpad.topology.hubPresent !== false
+    ) {
+      throw new Error("Safari trackpad session provenance is incomplete");
+    }
+  }
+}
+
+function nonEmpty(value) {
+  return typeof value === "string" && value.trim() !== "";
+}
+
 function sha256(bytes) {
   return createHash("sha256").update(bytes).digest("hex");
+}
+
+function readJson(path) {
+  return JSON.parse(readFileSync(path, "utf8"));
 }
 
 function parseArguments(argv) {

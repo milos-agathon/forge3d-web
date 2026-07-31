@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { generateKeyPairSync } from "node:crypto";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
@@ -7,8 +8,33 @@ import {
   validateAuthorization,
 } from "../src/controller.mjs";
 import { sanitizedRunnerEnvironment } from "../src/runner-execution.mjs";
+import { exactHostInventory } from "../../../crates/forge3d-web/tests/infrastructure/host-inventory-fixture.mjs";
+import {
+  checkedHostRouteFixture,
+  completeRouteReadinessFixture,
+  diagnosticRetentionFixture,
+  serviceInstallationFixture,
+} from "../../../crates/forge3d-web/tests/infrastructure/service-installation-fixture.mjs";
 
 const nonce = "ab".repeat(16);
+const matrix = JSON.parse(
+  readFileSync(
+    new URL(
+      "../../../crates/forge3d-web/tests/infrastructure/hardware-matrix.json",
+      import.meta.url,
+    ),
+    "utf8",
+  ),
+);
+const originPolicy = JSON.parse(
+  readFileSync(
+    new URL(
+      "../../../crates/forge3d-web/tests/infrastructure/https-origin-policy.json",
+      import.meta.url,
+    ),
+    "utf8",
+  ),
+);
 const authorization = {
   schemaVersion: 1,
   repository: { id: 1259761852, name: "milos-agathon/forge3d-web" },
@@ -37,6 +63,11 @@ const authorization = {
   issuedAt: "2026-07-29T10:00:00.000Z",
   expiresAt: "2026-07-29T10:10:00.000Z",
 };
+const brokerInstallation = serviceInstallationFixture({
+  component: "broker",
+  instanceId: "browser-lab-broker",
+  targetSha: authorization.trustedSha,
+});
 
 test("controller validates exact host, workflow, nonce labels, and ten-minute expiry", () => {
   assert.doesNotThrow(() =>
@@ -102,6 +133,10 @@ test("controller starts only run.sh --jitconfig, scrubs argv, and proves cleanup
   assert.ok(calls.find(([name]) => name === "forward-diagnostics"));
   assert.ok(calls.find(([name]) => name === "wipe"));
   assert.ok(calls.find(([name]) => name === "release-lock"));
+  assert.ok(
+    calls.findIndex(([name]) => name === "forward-diagnostics") <
+      calls.findIndex(([name]) => name === "wipe"),
+  );
 });
 
 test("controller stores a signed host canary only after broker-proven runner absence", async () => {
@@ -118,6 +153,17 @@ test("controller stores a signed host canary only after broker-proven runner abs
         deviceCreated: true,
         surfacePresented: true,
       },
+      route: {
+        ...checkedHostRouteFixture({
+          originPolicy,
+          hostId: authorization.hostId,
+          runId: authorization.run.id,
+          jobId: authorization.queuedHardwareJob.id,
+          packageSha256: "d".repeat(64),
+        }),
+        expectedPackageSha256: "d".repeat(64),
+      },
+      routeReadiness: completeRouteReadinessFixture(),
     },
     adapterAttestation: hostAdapterAttestation({
       runId: authorization.run.id,
@@ -126,14 +172,15 @@ test("controller stores a signed host canary only after broker-proven runner abs
       packageSha256: "d".repeat(64),
       hostId: authorization.hostId,
     }),
-    inventory: {
+    inventory: exactHostInventory(matrix, authorization.hostId),
+    route: checkedHostRouteFixture({
+      originPolicy,
       hostId: authorization.hostId,
-      attachedAssetIds: [],
-    },
-    route: {
-      httpsVerified: true,
-      corsRangeControlsPassed: true,
-    },
+      runId: authorization.run.id,
+      jobId: authorization.queuedHardwareJob.id,
+      packageSha256: "d".repeat(64),
+    }),
+    originPolicy,
     execution: {},
   });
   dependencies.controllerSigningCredentials = async () => ({
@@ -157,12 +204,32 @@ test("controller stores a signed host canary only after broker-proven runner abs
   };
   const result = await controller.execute(canaryAuthorization);
   const cleanupIndex = calls.findIndex(([name]) => name === "broker-cleanup");
+  const hostCleanupIndex = calls.findIndex(([name]) => name === "cleanup-host");
+  const releaseIndex = calls.findIndex(([name]) => name === "release-lock");
   const storeIndex = calls.findIndex(([name]) => name === "store-receipt");
   assert.ok(cleanupIndex >= 0 && storeIndex > cleanupIndex);
+  assert.ok(hostCleanupIndex > cleanupIndex && releaseIndex > hostCleanupIndex);
+  assert.ok(storeIndex > releaseIndex);
   assert.match(result.controllerReceiptSha256, /^[0-9a-f]{64}$/u);
   const receipt = calls[storeIndex][1];
   assert.equal(receipt.signedRecord.record.runner.absentAfterRun, true);
   assert.equal(receipt.signedRecord.record.supportAssertionsExecuted, false);
+
+  const storedBeforeFailure = calls.filter(
+    ([name]) => name === "store-receipt",
+  ).length;
+  dependencies.forwardDiagnostics = async () => {
+    calls.push(["forward-diagnostics-failed"]);
+    throw new Error("runner diagnostics are absent");
+  };
+  await assert.rejects(
+    () => controller.execute(structuredClone(canaryAuthorization)),
+    /runner diagnostics are absent/u,
+  );
+  assert.equal(
+    calls.filter(([name]) => name === "store-receipt").length,
+    storedBeforeFailure,
+  );
 });
 
 test("controller creates the signed manual session after hardware and runner cleanup", async () => {
@@ -170,7 +237,7 @@ test("controller creates the signed manual session after hardware and runner cle
   const keys = generateKeyPairSync("ec", { namedCurve: "P-256" });
   const dependencies = successfulDependencies(calls);
   dependencies.readManualSessionInput = async () => ({
-    system: { os: "macOS", build: "25A123" },
+    system: { os: "darwin", build: "macOS fixture build" },
     loginSession: { interactive: true, locked: false, remote: false },
     browser: { name: "safari", channel: "stable", version: "26.0" },
     driver: { name: "safaridriver", version: "26.0" },
@@ -193,6 +260,7 @@ test("controller creates the signed manual session after hardware and runner cle
       tunnelStopped: true,
       updatesRestored: true,
     },
+    hostInventory: exactHostInventory(matrix, "FW-MAC-M2-01"),
   });
   dependencies.controllerSigningCredentials = async () => ({
     privateKey: keys.privateKey,
@@ -216,6 +284,7 @@ test("controller creates the signed manual session after hardware and runner cle
     packageRunId: 12,
     labReadiness: {
       runId: 9,
+      manifestSha256: "6".repeat(64),
       labInfrastructureDigest: "7".repeat(64),
     },
     manualSession: {
@@ -231,7 +300,15 @@ test("controller creates the signed manual session after hardware and runner cle
     runnerId: 7,
     runnerName: manualAuthorization.runnerName,
     encodedJitConfig: "opaque-jit-config",
+    deployment: brokerInstallation,
   });
+  dependencies.controllerInstallationEvidence = async () =>
+    serviceInstallationFixture({
+      component: "controller",
+      instanceId: "FW-MAC-M2-01",
+      targetSha: manualAuthorization.trustedSha,
+      inventory: exactHostInventory(matrix, "FW-MAC-M2-01"),
+    });
   const result = await controller.execute(manualAuthorization);
   const cleanupIndex = calls.findIndex(([name]) => name === "broker-cleanup");
   const storeIndex = calls.findIndex(([name]) => name === "store-receipt");
@@ -241,6 +318,10 @@ test("controller creates the signed manual session after hardware and runner cle
   assert.equal(receipt.recordType, "manual-session");
   assert.equal(receipt.signedRecord.record.cleanup.runnerAbsent, true);
   assert.equal(receipt.signedRecord.record.mediaChallenge, "9".repeat(32));
+  assert.equal(
+    receipt.signedRecord.record.hostInventory.trackpad.assetId,
+    "FW-TRACKPAD-01",
+  );
 });
 
 test("online-unassigned requires stopped listener, queued job, non-busy runner, and cancellation", async () => {
@@ -260,7 +341,11 @@ test("online-unassigned requires stopped listener, queued job, non-busy runner, 
   });
   dependencies.broker.cleanup = async (request) => {
     calls.push(["broker-cleanup", request]);
-    return { deletionResult: "deleted", cancellationResult: "cancelled" };
+    return {
+      deletionResult: "deleted",
+      cancellationResult: "cancelled",
+      deployment: brokerInstallation,
+    };
   };
   const controller = new BrowserLabController({
     hostId: authorization.hostId,
@@ -335,6 +420,61 @@ test("unproven local runner absence quarantines without wiping its job root", as
   assert.equal(calls.some(([name]) => name === "wipe"), false);
   assert.equal(calls.some(([name]) => name === "wipe-prepared"), false);
   assert.equal(calls.some(([name]) => name === "release-lock"), false);
+});
+
+test("diagnostic retention failures quarantine without wipe, unlock, or receipt", async () => {
+  const failures = [
+    "runner diagnostics are absent",
+    "runner diagnostic redaction failed",
+    "runner diagnostic external copy failed",
+    "runner diagnostic retention receipt is invalid",
+  ];
+  for (const message of failures) {
+    const calls = [];
+    const dependencies = successfulDependencies(calls);
+    dependencies.forwardDiagnostics = async () => {
+      calls.push(["forward-diagnostics-failed"]);
+      if (message.endsWith("receipt is invalid")) return {};
+      throw new Error(message);
+    };
+    dependencies.controllerSigningCredentials = async () => {
+      calls.push(["signing-credentials"]);
+      throw new Error("signing must not be reached");
+    };
+    dependencies.storeControllerReceipt = async () =>
+      calls.push(["store-receipt"]);
+    const controller = new BrowserLabController({
+      hostId: authorization.hostId,
+      platform: "linux",
+      dependencies,
+      now: () => new Date("2026-07-29T10:05:00.000Z"),
+    });
+    const canaryAuthorization = {
+      ...structuredClone(authorization),
+      lane: "infrastructure-canary",
+      manualSession: null,
+      assetId: authorization.hostId,
+      packageRunId: 12,
+    };
+
+    await assert.rejects(
+      () => controller.execute(canaryAuthorization),
+      /runner diagnostic/u,
+    );
+    assert.ok(calls.find(([name]) => name === "forward-diagnostics-failed"));
+    assert.ok(calls.find(([name]) => name === "broker-cleanup"));
+    const quarantine = calls.find(([name]) => name === "quarantine");
+    assert.match(quarantine[1].reason, /diagnostic retention/u);
+    for (const forbidden of [
+      "wipe",
+      "wipe-prepared",
+      "release-lock",
+      "signing-credentials",
+      "store-receipt",
+    ]) {
+      assert.equal(calls.some(([name]) => name === forbidden), false);
+    }
+  }
 });
 
 test("lost JIT issuance response reconciles the broker before wipe and lock release", async () => {
@@ -489,10 +629,15 @@ function successfulDependencies(calls) {
         runnerId: 7,
         runnerName: authorization.runnerName,
         encodedJitConfig: "opaque-jit-config",
+        deployment: brokerInstallation,
       }),
       cleanup: async (request) => {
         calls.push(["broker-cleanup", request]);
-        return { deletionResult: "deleted", cancellationResult: null };
+        return {
+          deletionResult: "deleted",
+          cancellationResult: null,
+          deployment: brokerInstallation,
+        };
       },
     },
     spawnRunner: async (options) => {
@@ -510,11 +655,25 @@ function successfulDependencies(calls) {
       },
     }),
     stopRunner: async () => calls.push(["stop"]),
-    forwardDiagnostics: async () => calls.push(["forward-diagnostics"]),
+    forwardDiagnostics: async ({ authorizationDigest, authorization }) => {
+      calls.push(["forward-diagnostics"]);
+      return diagnosticRetentionFixture({
+        authorizationDigest,
+        hostId: authorization.hostId,
+        run: authorization.run,
+        runnerNonce: authorization.runnerNonce,
+      });
+    },
     wipeJobRoot: async () => calls.push(["wipe"]),
     wipePreparedJobRoot: async () => calls.push(["wipe-prepared"]),
     cleanupHost: async (request) => calls.push(["cleanup-host", request]),
     quarantineHost: async (request) => calls.push(["quarantine", request]),
+    controllerInstallationEvidence: async () =>
+      serviceInstallationFixture({
+        component: "controller",
+        instanceId: authorization.hostId,
+        targetSha: authorization.trustedSha,
+      }),
   };
 }
 

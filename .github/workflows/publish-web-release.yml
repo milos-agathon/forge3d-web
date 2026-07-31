@@ -243,20 +243,27 @@ jobs:
               }
             });
           ' "$(find readiness -name browser-hardware-release-readiness.json -type f)"
-          if gh api "/repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
-            echo "release already exists" >&2
-            exit 1
-          fi
-          if gh api "/repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
-            echo "tag already exists" >&2
-            exit 1
-          fi
+          node --input-type=module --eval '
+            import { assertGitHubResourceAbsent } from "./scripts/release-publication.mjs";
+            for (const resourcePath of [
+              `releases/tags/${process.env.RELEASE_TAG}`,
+              `git/ref/tags/${process.env.RELEASE_TAG}`
+            ]) {
+              await assertGitHubResourceAbsent({
+                apiBase: process.env.GITHUB_API_URL,
+                repository: process.env.GITHUB_REPOSITORY,
+                resourcePath,
+                token: process.env.GITHUB_TOKEN
+              });
+            }
+          '
 
       - name: Copy exact package and evidence assets by numeric artifact ID
         shell: bash
         working-directory: crates/forge3d-web
         env:
           GH_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ inputs.target_sha }}
         run: |
           mkdir release-assets evidence-assets
@@ -278,6 +285,14 @@ jobs:
             --source-ref refs/heads/main \
             --source-digest "${TARGET_SHA}" \
             --deny-self-hosted-runners
+          node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            import { verifyPackageManifestProvenance } from "./scripts/resolve-hardware-promotion.mjs";
+            verifyPackageManifestProvenance({
+              manifest: JSON.parse(readFileSync("package-assets/browser-package-manifest.json", "utf8")),
+              packageRun: JSON.parse(readFileSync("package-run.json", "utf8"))
+            });
+          '
           for asset in package-assets/*; do
             cp "${asset}" "release-assets/package-$(basename "${asset}")"
           done
@@ -314,24 +329,148 @@ jobs:
               --source-ref refs/heads/main \
               --source-digest "${TARGET_SHA}" \
               --deny-self-hosted-runners
+            if test "${workflow_path}" = ".github/workflows/submit-browser-manual-evidence.yml"; then
+              for subject in "evidence-assets/${artifact_id}"/*; do
+                test -f "${subject}" || continue
+                gh attestation verify "${subject}" \
+                  --repo milos-agathon/forge3d-web \
+                  --signer-workflow milos-agathon/forge3d-web/.github/workflows/submit-browser-manual-evidence.yml \
+                  --source-ref refs/heads/main \
+                  --source-digest "${TARGET_SHA}" \
+                  --deny-self-hosted-runners
+              done
+            fi
             node --input-type=module --eval '
               import { readFileSync, writeFileSync } from "node:fs";
               import { sha256Hex } from "./scripts/canonical-json.mjs";
               import { finalizeMatrixRecord } from "./scripts/create-browser-matrix-record.mjs";
+              const selectedRun = JSON.parse(readFileSync(process.argv[4], "utf8"));
               const final = finalizeMatrixRecord({
                 source: JSON.parse(readFileSync(process.argv[1], "utf8")),
                 artifactId: Number(process.argv[2]),
-                attestation: { verified: true, denySelfHostedRunners: true }
+                attestation: { verified: true, denySelfHostedRunners: true },
+                selectedRun: {
+                  id: selectedRun.id,
+                  attempt: selectedRun.run_attempt,
+                  path: selectedRun.path
+                }
               });
               if (sha256Hex(final) !== process.argv[3]) throw new Error("readiness record digest mismatch");
               writeFileSync("verified-record.json", JSON.stringify(final));
-            ' "${source_record}" "${artifact_id}" "${record_sha}"
+            ' \
+              "${source_record}" \
+              "${artifact_id}" \
+              "${record_sha}" \
+              "evidence-assets/${artifact_id}-run.json"
             for asset in "evidence-assets/${artifact_id}"/*; do
               test -f "${asset}" || continue
+              if test "${workflow_path}" = ".github/workflows/submit-browser-manual-evidence.yml" &&
+                [[ "$(basename "${asset}")" =~ ^[1-9][0-9]*$ ]]; then
+                continue
+              fi
               cp "${asset}" "release-assets/evidence-${artifact_id}-$(basename "${asset}")"
             done
           done < record-specs.txt
           cp "${readiness_path}" release-assets/browser-hardware-release-readiness.json
+
+      - name: Re-fetch exact still-draft manual media by numeric release-asset ID
+        shell: bash
+        working-directory: crates/forge3d-web
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+        run: |
+          mkdir manual-current
+          node --input-type=module --eval '
+            import { readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+            const specifications = readdirSync("evidence-assets")
+              .filter((name) => /^[1-9][0-9]*$/.test(name) && statSync(`evidence-assets/${name}`).isDirectory())
+              .flatMap((artifactId) => {
+                const directory = `evidence-assets/${artifactId}`;
+                const names = new Set(readdirSync(directory));
+                if (!names.has("manual-evidence.json")) return [];
+                if (!names.has("intake-manifest.json")) throw new Error("manual evidence has no attested intake manifest");
+                const evidence = JSON.parse(readFileSync(`${directory}/manual-evidence.json`, "utf8"));
+                return [{
+                  evidenceArtifactId: Number(artifactId),
+                  evidencePath: `${directory}/manual-evidence.json`,
+                  intakePath: `${directory}/intake-manifest.json`,
+                  releaseId: evidence.intakeReleaseId,
+                  mediaAssetIds: evidence.media.map((asset) => asset.id)
+                }];
+              });
+            if (specifications.length < 1) throw new Error("supported release has no authenticated manual media");
+            if (new Set(specifications.map((value) => value.releaseId)).size !== specifications.length) {
+              throw new Error("manual intake release is reused by multiple evidence records");
+            }
+            writeFileSync("manual-current/specifications.json", JSON.stringify(specifications));
+            process.stdout.write(specifications.map((value) => value.releaseId).join("\n"));
+          ' > manual-current/release-ids.txt
+          while IFS= read -r release_id; do
+            test -n "${release_id}" || continue
+            gh api "/repos/${GITHUB_REPOSITORY}/releases/${release_id}" > "manual-current/release-${release_id}.json"
+          done < manual-current/release-ids.txt
+          node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            const specifications = JSON.parse(readFileSync("manual-current/specifications.json", "utf8"));
+            for (const specification of specifications) {
+              const release = JSON.parse(readFileSync(`manual-current/release-${specification.releaseId}.json`, "utf8"));
+              const manifests = release.assets.filter((asset) => asset.name === "intake-manifest.json");
+              if (manifests.length !== 1) throw new Error("manual intake manifest asset is not unique");
+              process.stdout.write(`${specification.releaseId}\t${manifests[0].id}\n`);
+              for (const assetId of specification.mediaAssetIds) {
+                process.stdout.write(`${specification.releaseId}\t${assetId}\n`);
+              }
+            }
+          ' > manual-current/asset-ids.tsv
+          while IFS=$'\t' read -r release_id asset_id; do
+            gh api "/repos/${GITHUB_REPOSITORY}/releases/assets/${asset_id}" > "manual-current/${release_id}-${asset_id}.json"
+            gh api -H "Accept: application/octet-stream" \
+              "/repos/${GITHUB_REPOSITORY}/releases/assets/${asset_id}" \
+              > "manual-current/${release_id}-${asset_id}"
+          done < manual-current/asset-ids.tsv
+          node --input-type=module --eval '
+            import { readFileSync, writeFileSync } from "node:fs";
+            import {
+              createManualMediaSourcePlan,
+              validateManualMediaIntake
+            } from "./scripts/release-publication.mjs";
+            const specifications = JSON.parse(readFileSync("manual-current/specifications.json", "utf8"));
+            const intakes = specifications.map((specification) => {
+              const evidence = JSON.parse(readFileSync(specification.evidencePath, "utf8"));
+              const intake = JSON.parse(readFileSync(specification.intakePath, "utf8"));
+              const release = JSON.parse(readFileSync(`manual-current/release-${specification.releaseId}.json`, "utf8"));
+              const manifest = release.assets.filter((asset) => asset.name === "intake-manifest.json");
+              const result = validateManualMediaIntake({
+                targetSha: process.env.TARGET_SHA,
+                evidenceArtifactId: specification.evidenceArtifactId,
+                evidence,
+                intake,
+                intakeRelease: release,
+                intakeManifestAssetId: manifest[0].id,
+                attestedIntakeBytes: readFileSync(specification.intakePath),
+                currentIntakeBytes: readFileSync(`manual-current/${specification.releaseId}-${manifest[0].id}`),
+                mediaMetadata: evidence.media.map((asset) =>
+                  JSON.parse(readFileSync(`manual-current/${specification.releaseId}-${asset.id}.json`, "utf8"))
+                ),
+                attestedMediaBytes: Object.fromEntries(evidence.media.map((asset) => [
+                  String(asset.id), readFileSync(`evidence-assets/${specification.evidenceArtifactId}/${asset.id}`)
+                ])),
+                currentMediaBytes: Object.fromEntries(evidence.media.map((asset) => [
+                  String(asset.id), readFileSync(`manual-current/${specification.releaseId}-${asset.id}`)
+                ]))
+              });
+              for (const media of result.media) {
+                writeFileSync(
+                  `release-assets/${media.finalName}`,
+                  readFileSync(`manual-current/${specification.releaseId}-${media.assetId}`)
+                );
+              }
+              return result;
+            });
+            const plan = createManualMediaSourcePlan({ targetSha: process.env.TARGET_SHA, intakes });
+            writeFileSync("release-assets/manual-media-sources.json", `${plan.canonical}\n`);
+          '
 
       - name: Resolve implementation actors and create closed preflight
         id: preflight
@@ -353,7 +492,11 @@ jobs:
           node --input-type=module --eval '
             import { createHash } from "node:crypto";
             import { readFileSync, readdirSync, writeFileSync } from "node:fs";
-            import { createPublicationPreflight } from "./scripts/release-publication.mjs";
+            import {
+              createBrowserReleaseCandidate,
+              createPublicationPreflight
+            } from "./scripts/release-publication.mjs";
+            import { sha256Hex } from "./scripts/canonical-json.mjs";
             const readinessPath = "release-assets/browser-hardware-release-readiness.json";
             const readiness = JSON.parse(readFileSync(readinessPath, "utf8"));
             const assets = readdirSync("release-assets").map((name, index) => ({
@@ -361,16 +504,18 @@ jobs:
               name,
               sha256: createHash("sha256").update(readFileSync(`release-assets/${name}`)).digest("hex")
             }));
-            const releaseManifest = {
-              schemaVersion: 1,
-              supportClaim: true,
+            const mediaPlan = JSON.parse(readFileSync("release-assets/manual-media-sources.json", "utf8"));
+            const releaseManifest = createBrowserReleaseCandidate({
               targetSha: process.env.TARGET_SHA,
               tag: process.env.RELEASE_TAG,
-              readinessRunId: Number(process.env.READINESS_RUN_ID),
-              readinessSha256: createHash("sha256").update(readFileSync(readinessPath)).digest("hex"),
-              assetChecksums: assets
-            };
-            writeFileSync("release-assets/browser-release-manifest.json", JSON.stringify(releaseManifest, null, 2));
+              readiness: {
+                runId: Number(process.env.READINESS_RUN_ID),
+                sha256: createHash("sha256").update(readFileSync(readinessPath)).digest("hex")
+              },
+              assets,
+              manualMediaPlanSha256: sha256Hex(mediaPlan)
+            });
+            writeFileSync("release-assets/browser-release-manifest.json", releaseManifest.canonical);
             assets.push({
               sourceId: assets.length + 1,
               name: "browser-release-manifest.json",
@@ -385,7 +530,7 @@ jobs:
               readiness: {
                 runId: Number(process.env.READINESS_RUN_ID),
                 artifactId: readinessArtifact.id,
-                sha256: releaseManifest.readinessSha256,
+                sha256: releaseManifest.record.readiness.sha256,
                 status: readiness.status
               },
               assets,
@@ -408,12 +553,29 @@ jobs:
             writeFileSync(process.env.GITHUB_OUTPUT, `preflight-sha256=${result.sha256}\n`, { flag: "a" });
           '
 
-      - name: Attest preflight and every exact release asset
+          mkdir -p \
+            publication-validator/scripts \
+            publication-validator/tests/browser \
+            publication-validator/tests/infrastructure
+          cp scripts/release-publication.mjs scripts/canonical-json.mjs publication-validator/scripts/
+          cp tests/browser/json-schema-validator.mjs publication-validator/tests/browser/
+          cp \
+            tests/infrastructure/browser-release-manifest.schema.json \
+            tests/infrastructure/browser-release-publication-record.schema.json \
+            tests/infrastructure/manual-evidence.schema.json \
+            tests/infrastructure/manual-evidence-intake.schema.json \
+            tests/infrastructure/manual-media-sources.schema.json \
+            publication-validator/tests/infrastructure/
+
+      - name: Attest preflight, publisher validator, and every exact release asset
         uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
         with:
           subject-path: |
             crates/forge3d-web/release-publication-preflight.json
             crates/forge3d-web/release-assets/*
+            crates/forge3d-web/publication-validator/scripts/*
+            crates/forge3d-web/publication-validator/tests/browser/*
+            crates/forge3d-web/publication-validator/tests/infrastructure/*
 
       - name: Upload preflight and exact release assets
         id: upload-preflight
@@ -423,6 +585,7 @@ jobs:
           path: |
             crates/forge3d-web/release-publication-preflight.json
             crates/forge3d-web/release-assets/
+            crates/forge3d-web/publication-validator/
           if-no-files-found: error
           overwrite: false
           retention-days: 1
@@ -438,6 +601,9 @@ jobs:
       actions: read
       attestations: read
       contents: write
+    outputs:
+      publication_artifact_id: ${{ steps.upload-publication.outputs.artifact-id }}
+      publication_artifact_digest: ${{ steps.upload-publication.outputs.artifact-digest }}
 
     steps:
       - name: Download and verify exact preflight without source checkout
@@ -458,6 +624,14 @@ jobs:
             --source-ref refs/heads/main \
             --source-digest "${{ github.workflow_sha }}" \
             --deny-self-hosted-runners
+          while IFS= read -r subject; do
+            gh attestation verify "${subject}" \
+              --repo milos-agathon/forge3d-web \
+              --signer-workflow milos-agathon/forge3d-web/.github/workflows/publish-web-release.yml \
+              --source-ref refs/heads/main \
+              --source-digest "${{ github.workflow_sha }}" \
+              --deny-self-hosted-runners
+          done < <(find preflight/publication-validator -type f | sort)
 
       - name: Reapply exact observation and preflight handoffs
         shell: bash
@@ -529,88 +703,476 @@ jobs:
             ) throw new Error("publisher identity, approval, or immutable setting failed");
           '
 
-      - name: Draft, byte-verify, publish once, and verify immutable release
+      - name: Re-fetch and re-attest exact manual bytes immediately before assembly
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+        run: |
+          mkdir publisher-intakes
+          node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            const plan = JSON.parse(readFileSync("preflight/release-assets/manual-media-sources.json", "utf8"));
+            for (const intake of plan.intakes) process.stdout.write(`${intake.releaseId}\n`);
+          ' > publisher-intakes/release-ids.txt
+          while IFS= read -r release_id; do
+            gh api "/repos/${GITHUB_REPOSITORY}/releases/${release_id}" > "publisher-intakes/release-${release_id}.json"
+          done < publisher-intakes/release-ids.txt
+          node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            const plan = JSON.parse(readFileSync("preflight/release-assets/manual-media-sources.json", "utf8"));
+            for (const intake of plan.intakes) {
+              process.stdout.write(`${intake.releaseId}\t${intake.intakeManifest.assetId}\tintake-manifest\n`);
+              for (const media of intake.media) {
+                process.stdout.write(`${intake.releaseId}\t${media.assetId}\t${media.finalName}\n`);
+              }
+            }
+          ' > publisher-intakes/assets.tsv
+          while IFS=$'\t' read -r release_id asset_id destination; do
+            gh api "/repos/${GITHUB_REPOSITORY}/releases/assets/${asset_id}" > "publisher-intakes/${release_id}-${asset_id}.json"
+            if test "${destination}" = "intake-manifest"; then
+              gh api -H "Accept: application/octet-stream" \
+                "/repos/${GITHUB_REPOSITORY}/releases/assets/${asset_id}" \
+                > "publisher-intakes/${release_id}-intake-manifest.json"
+            else
+              gh api -H "Accept: application/octet-stream" \
+                "/repos/${GITHUB_REPOSITORY}/releases/assets/${asset_id}" \
+                > "preflight/release-assets/${destination}"
+            fi
+          done < publisher-intakes/assets.tsv
+          node --input-type=module --eval '
+            import { createHash } from "node:crypto";
+            import { readFileSync, readdirSync } from "node:fs";
+            const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
+            const plan = JSON.parse(readFileSync("preflight/release-assets/manual-media-sources.json", "utf8"));
+            const preflight = JSON.parse(readFileSync("preflight/release-publication-preflight.json", "utf8"));
+            for (const intake of plan.intakes) {
+              const release = JSON.parse(readFileSync(`publisher-intakes/release-${intake.releaseId}.json`, "utf8"));
+              const expectedIds = [intake.intakeManifest.assetId, ...intake.media.map((asset) => asset.assetId)]
+                .sort((left, right) => left - right);
+              const actualIds = release.assets.map((asset) => asset.id).sort((left, right) => left - right);
+              const intakeBytes = readFileSync(`publisher-intakes/${intake.releaseId}-intake-manifest.json`);
+              const intakeRecord = JSON.parse(intakeBytes);
+              const manifestAsset = release.assets.find(
+                (asset) => asset.id === intake.intakeManifest.assetId
+              );
+              const manifestMetadata = JSON.parse(readFileSync(
+                `publisher-intakes/${intake.releaseId}-${intake.intakeManifest.assetId}.json`,
+                "utf8"
+              ));
+              if (
+                release.id !== intake.releaseId ||
+                release.tag_name !== intake.tagName ||
+                release.target_commitish !== process.env.TARGET_SHA ||
+                release.draft !== true ||
+                release.prerelease !== false ||
+                intakeRecord.trustedSha !== process.env.TARGET_SHA ||
+                `manual-evidence-intake-${intakeRecord.prepareRun.id}` !== intake.tagName ||
+                digest(intakeBytes) !== intake.intakeManifest.sha256 ||
+                manifestMetadata.id !== intake.intakeManifest.assetId ||
+                manifestMetadata.name !== "intake-manifest.json" ||
+                manifestMetadata.digest !== `sha256:${intake.intakeManifest.sha256}` ||
+                manifestMetadata.size !== intakeBytes.length ||
+                manifestAsset?.name !== manifestMetadata.name ||
+                manifestAsset?.digest !== manifestMetadata.digest ||
+                manifestAsset?.size !== manifestMetadata.size ||
+                expectedIds.length !== actualIds.length ||
+                expectedIds.some((id, index) => id !== actualIds[index])
+              ) throw new Error(`manual intake changed before publication: ${intake.releaseId}`);
+              for (const expected of intake.media) {
+                const releaseAsset = release.assets.find((asset) => asset.id === expected.assetId);
+                const metadata = JSON.parse(readFileSync(`publisher-intakes/${intake.releaseId}-${expected.assetId}.json`, "utf8"));
+                const bytes = readFileSync(`preflight/release-assets/${expected.finalName}`);
+                if (
+                  metadata.id !== expected.assetId ||
+                  metadata.name !== expected.originalName ||
+                  metadata.uploader?.login !== expected.uploader ||
+                  metadata.size !== expected.size ||
+                  metadata.content_type !== expected.mimeType ||
+                  metadata.created_at !== expected.createdAt ||
+                  metadata.digest !== `sha256:${expected.apiSha256}` ||
+                  releaseAsset?.name !== metadata.name ||
+                  releaseAsset?.uploader?.login !== metadata.uploader.login ||
+                  releaseAsset?.size !== metadata.size ||
+                  releaseAsset?.content_type !== metadata.content_type ||
+                  releaseAsset?.created_at !== metadata.created_at ||
+                  releaseAsset?.digest !== metadata.digest ||
+                  bytes.length !== expected.size ||
+                  digest(bytes) !== expected.sha256 ||
+                  expected.apiSha256 !== expected.sha256
+                ) throw new Error(`manual media changed before publication: ${expected.assetId}`);
+              }
+            }
+            const expectedNames = preflight.assets.map((asset) => asset.name).sort();
+            const actualNames = readdirSync("preflight/release-assets").sort();
+            if (
+              expectedNames.length !== actualNames.length ||
+              expectedNames.some((name, index) => name !== actualNames[index])
+            ) throw new Error("release asset inventory changed after preflight");
+            for (const asset of preflight.assets) {
+              if (digest(readFileSync(`preflight/release-assets/${asset.name}`)) !== asset.sha256) {
+                throw new Error(`re-fetched release asset digest mismatch: ${asset.name}`);
+              }
+            }
+          '
+          for subject in preflight/release-assets/*; do
+            gh attestation verify "${subject}" \
+              --repo milos-agathon/forge3d-web \
+              --signer-workflow milos-agathon/forge3d-web/.github/workflows/publish-web-release.yml \
+              --source-ref refs/heads/main \
+              --source-digest "${{ github.workflow_sha }}" \
+              --deny-self-hosted-runners
+          done
+
+      - name: Create draft, byte-verify closed assets, and publish exactly once
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ inputs.target_sha }}
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
-          if gh api "/repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" >/dev/null 2>&1; then
-            echo "release appeared after preflight" >&2
-            exit 1
-          fi
+          node --input-type=module --eval '
+            import { assertGitHubResourceAbsent } from "./preflight/publication-validator/scripts/release-publication.mjs";
+            for (const resourcePath of [
+              `releases/tags/${process.env.RELEASE_TAG}`,
+              `git/ref/tags/${process.env.RELEASE_TAG}`
+            ]) {
+              await assertGitHubResourceAbsent({
+                apiBase: process.env.GITHUB_API_URL,
+                repository: process.env.GITHUB_REPOSITORY,
+                resourcePath,
+                token: process.env.GH_TOKEN
+              });
+            }
+          '
           gh release create "${RELEASE_TAG}" \
+            --repo "${GITHUB_REPOSITORY}" \
             --target "${TARGET_SHA}" \
             --title "Forge3D Web ${RELEASE_TAG}" \
             --notes "Exact-head browser support evidence and package artifacts." \
             --draft
-          gh release upload "${RELEASE_TAG}" preflight/release-assets/*
+          gh api "/repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" > draft-release.json
+          node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            const release = JSON.parse(readFileSync("draft-release.json", "utf8"));
+            if (
+              release.tag_name !== process.env.RELEASE_TAG ||
+              release.target_commitish !== process.env.TARGET_SHA ||
+              release.draft !== true ||
+              release.prerelease !== false
+            ) throw new Error("created draft release identity is invalid");
+          '
+          gh release upload "${RELEASE_TAG}" preflight/release-assets/* --repo "${GITHUB_REPOSITORY}"
           mkdir draft-download
-          gh release download "${RELEASE_TAG}" --dir draft-download
+          gh release download "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --dir draft-download
           node --input-type=module --eval '
             import { createHash } from "node:crypto";
-            import { readFileSync } from "node:fs";
+            import { readFileSync, readdirSync } from "node:fs";
             const preflight = JSON.parse(readFileSync("preflight/release-publication-preflight.json", "utf8"));
+            const expected = preflight.assets.map((asset) => asset.name).sort();
+            const actual = readdirSync("draft-download").sort();
+            if (
+              expected.length !== actual.length ||
+              expected.some((name, index) => name !== actual[index])
+            ) throw new Error("draft release asset inventory is not closed");
             for (const asset of preflight.assets) {
               const digest = createHash("sha256").update(readFileSync(`draft-download/${asset.name}`)).digest("hex");
               if (digest !== asset.sha256) throw new Error(`draft asset digest mismatch: ${asset.name}`);
             }
           '
-          gh release edit "${RELEASE_TAG}" --draft=false
-          gh release verify "${RELEASE_TAG}" > release-verification.txt
-          for asset in draft-download/*; do
-            gh release verify-asset "${RELEASE_TAG}" "${asset}" >> release-verification.txt
-          done
+          gh release edit "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --draft=false
 
-      - name: Delete manual intakes only after final media verification
+      - name: Retain exact CLI JSON and verify immutable published bytes and API digests
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          TARGET_SHA: ${{ inputs.target_sha }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          mkdir -p publication-proof/asset-verification published-download
+          gh release verify "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --format json > publication-proof/release-verify.json
+          gh api "/repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" > publication-proof/release.json
+          published_release_id="$(node -p "require('./publication-proof/release.json').id")"
+          gh api --paginate --slurp \
+            "/repos/${GITHUB_REPOSITORY}/releases/${published_release_id}/assets?per_page=100" \
+            > publication-proof/release-assets-pages.json
+          gh release download "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --dir published-download
+          node --input-type=module --eval '
+            import { readFileSync, writeFileSync } from "node:fs";
+            const preflight = JSON.parse(readFileSync("preflight/release-publication-preflight.json", "utf8"));
+            const map = preflight.assets
+              .map((asset, index) => ({
+                name: asset.name,
+                path: `publication-proof/asset-verification/${String(index + 1).padStart(4, "0")}.json`
+              }))
+              .sort((left, right) => left.name.localeCompare(right.name));
+            writeFileSync("publication-proof/asset-verification-map.json", JSON.stringify(map));
+            for (const entry of map) {
+              process.stdout.write(`${entry.name}\t${entry.path}\n`);
+            }
+          ' > publication-proof/asset-verification.tsv
+          while IFS=$'\t' read -r asset_name proof_path; do
+            gh release verify-asset "${RELEASE_TAG}" "published-download/${asset_name}" --repo "${GITHUB_REPOSITORY}" --format json > "${proof_path}"
+          done < publication-proof/asset-verification.tsv
+          node --input-type=module --eval '
+            import { createHash } from "node:crypto";
+            import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+            const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
+            const release = JSON.parse(readFileSync("publication-proof/release.json", "utf8"));
+            const releaseAssets = JSON.parse(readFileSync(
+              "publication-proof/release-assets-pages.json", "utf8"
+            )).flat();
+            const preflight = JSON.parse(readFileSync("preflight/release-publication-preflight.json", "utf8"));
+            const expectedNames = preflight.assets.map((asset) => asset.name).sort();
+            const actualNames = releaseAssets.map((asset) => asset.name).sort();
+            const downloadedNames = readdirSync("published-download").sort();
+            if (
+              release.tag_name !== process.env.RELEASE_TAG ||
+              release.target_commitish !== process.env.TARGET_SHA ||
+              release.draft !== false ||
+              release.prerelease !== false ||
+              release.immutable !== true ||
+              !release.published_at ||
+              expectedNames.length !== actualNames.length ||
+              expectedNames.some((name, index) => name !== actualNames[index]) ||
+              expectedNames.length !== downloadedNames.length ||
+              expectedNames.some((name, index) => name !== downloadedNames[index])
+            ) throw new Error("published release identity, immutability, or asset inventory is invalid");
+            const assets = preflight.assets.map((expected) => {
+              const actual = releaseAssets.find((asset) => asset.name === expected.name);
+              const bytes = readFileSync(`published-download/${expected.name}`);
+              const sha256 = digest(bytes);
+              if (
+                actual?.digest !== `sha256:${expected.sha256}` ||
+                actual?.size !== bytes.length ||
+                sha256 !== expected.sha256
+              ) throw new Error(`published asset API/byte digest mismatch: ${expected.name}`);
+              return {
+                id: actual.id,
+                name: actual.name,
+                size: actual.size,
+                apiDigest: actual.digest,
+                sha256
+              };
+            });
+            JSON.parse(readFileSync("publication-proof/release-verify.json", "utf8"));
+            const proofMap = JSON.parse(readFileSync("publication-proof/asset-verification-map.json", "utf8"));
+            for (const proof of proofMap) JSON.parse(readFileSync(proof.path, "utf8"));
+            writeFileSync("publication-proof/published-assets.json", JSON.stringify(assets));
+            writeFileSync("publication-proof/verified-at.txt", new Date().toISOString());
+          '
+
+      - name: Delete exact manual intakes only after every final verification succeeds
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            const plan = JSON.parse(readFileSync("preflight/release-assets/manual-media-sources.json", "utf8"));
+            for (const intake of plan.intakes) {
+              process.stdout.write(`${intake.releaseId}\t${intake.tagName}\n`);
+            }
+          ' > publication-proof/intakes.tsv
+          : > publication-proof/intake-deletions.jsonl
+          while IFS=$'\t' read -r intake_id intake_tag; do
+            gh api "/repos/${GITHUB_REPOSITORY}/releases/${intake_id}" > publication-proof/intake-before-delete.json
+            node --input-type=module --eval '
+              import { readFileSync } from "node:fs";
+              const release = JSON.parse(readFileSync("publication-proof/intake-before-delete.json", "utf8"));
+              if (
+                release.id !== Number(process.argv[1]) ||
+                release.tag_name !== process.argv[2] ||
+                release.draft !== true
+              ) throw new Error("manual intake identity changed before deletion");
+            ' "${intake_id}" "${intake_tag}"
+            gh release delete "${intake_tag}" --repo "${GITHUB_REPOSITORY}" --cleanup-tag --yes
+            node --input-type=module --eval '
+              import { assertGitHubResourceAbsent } from "./preflight/publication-validator/scripts/release-publication.mjs";
+              for (const resourcePath of [
+                `releases/${process.argv[1]}`,
+                `git/ref/tags/${process.argv[2]}`
+              ]) {
+                await assertGitHubResourceAbsent({
+                  apiBase: process.env.GITHUB_API_URL,
+                  repository: process.env.GITHUB_REPOSITORY,
+                  resourcePath,
+                  token: process.env.GH_TOKEN
+                });
+              }
+            ' "${intake_id}" "${intake_tag}"
+            node --input-type=module --eval '
+              process.stdout.write(`${JSON.stringify({
+                releaseId: Number(process.argv[1]),
+                tagName: process.argv[2],
+                deletedAfterVerification: true,
+                deletedAt: new Date().toISOString()
+              })}\n`);
+            ' "${intake_id}" "${intake_tag}" >> publication-proof/intake-deletions.jsonl
+          done < publication-proof/intakes.tsv
+          node --input-type=module --eval '
+            import { readFileSync, writeFileSync } from "node:fs";
+            const lines = readFileSync("publication-proof/intake-deletions.jsonl", "utf8").trim().split("\n");
+            writeFileSync("publication-proof/intake-deletions.json", JSON.stringify(lines.map((line) => JSON.parse(line))));
+          '
+
+      - name: Create checked-schema post-publication record without release mutation
+        shell: bash
+        env:
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
           node --input-type=module --eval '
-            import { readFileSync, readdirSync } from "node:fs";
-            const ids = new Set();
-            for (const name of readdirSync("preflight/release-assets")) {
-              if (!name.endsWith("manual-evidence.json")) continue;
-              ids.add(JSON.parse(readFileSync(`preflight/release-assets/${name}`, "utf8")).intakeReleaseId);
-            }
-            process.stdout.write([...ids].sort((a, b) => a - b).join("\n"));
-          ' > intake-ids.txt
-          while IFS= read -r intake_id; do
-            test -n "${intake_id}" || continue
-            intake_tag="$(gh api "/repos/${GITHUB_REPOSITORY}/releases/${intake_id}" --jq .tag_name)"
-            gh release delete "${intake_tag}" --cleanup-tag --yes
-            if gh api "/repos/${GITHUB_REPOSITORY}/releases/${intake_id}" >/dev/null 2>&1; then
-              echo "manual intake remains after final verification: ${intake_id}" >&2
-              exit 1
-            fi
-          done < intake-ids.txt
-          node --input-type=module --eval '
             import { createHash } from "node:crypto";
             import { readFileSync, writeFileSync } from "node:fs";
-            writeFileSync("release-publication-record.json", JSON.stringify({
-              schemaVersion: 1,
-              supportClaim: true,
-              targetSha: process.env.GITHUB_SHA,
-              tag: process.env.RELEASE_TAG,
-              releaseVerified: true,
-              allAssetsVerified: true,
-              intakesDeletedAfterVerification: true,
-              verificationOutputSha256: createHash("sha256")
-                .update(readFileSync("release-verification.txt"))
-                .digest("hex")
-            }, null, 2));
+            const candidateBytes = readFileSync("preflight/release-assets/browser-release-manifest.json");
+            const proofMap = JSON.parse(readFileSync("publication-proof/asset-verification-map.json", "utf8"));
+            writeFileSync("publication-record-input.json", JSON.stringify({
+              candidate: JSON.parse(candidateBytes),
+              candidateSha256: createHash("sha256").update(candidateBytes).digest("hex"),
+              manualMediaPlan: JSON.parse(readFileSync("preflight/release-assets/manual-media-sources.json", "utf8")),
+              publicationRun: {
+                id: Number(process.env.GITHUB_RUN_ID),
+                attempt: Number(process.env.GITHUB_RUN_ATTEMPT),
+                workflowPath: ".github/workflows/publish-web-release.yml"
+              },
+              release: JSON.parse(readFileSync("publication-proof/release.json", "utf8")),
+              assets: JSON.parse(readFileSync("publication-proof/published-assets.json", "utf8")),
+              releaseVerification: { path: "publication-proof/release-verify.json" },
+              assetVerifications: proofMap.map((proof) => ({ name: proof.name, path: proof.path })),
+              intakeDeletions: JSON.parse(readFileSync("publication-proof/intake-deletions.json", "utf8")),
+              verifiedAt: readFileSync("publication-proof/verified-at.txt", "utf8").trim()
+            }));
           '
+          node preflight/publication-validator/scripts/release-publication.mjs \
+            publication-record-input.json \
+            create-publication-record \
+            release-publication-record.json
 
       - name: Retain post-publication verification
+        id: upload-publication
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: web-release-publication-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             release-publication-record.json
-            release-verification.txt
+            publication-proof/
+            preflight/publication-validator/tests/infrastructure/browser-release-publication-record.schema.json
           if-no-files-found: error
           overwrite: false
           retention-days: 90
+
+  attest-postpublication-record:
+    name: Web Release / Attest Postpublication Record
+    needs: publish-release
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+
+    steps:
+      - name: Download exact postpublication artifact without source checkout
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_ID: ${{ needs.publish-release.outputs.publication_artifact_id }}
+          ARTIFACT_DIGEST: ${{ needs.publish-release.outputs.publication_artifact_digest }}
+          ARTIFACT_NAME: web-release-publication-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          test ! -d .git
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${ARTIFACT_ID}" > publication-artifact.json
+          node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            const artifact = JSON.parse(readFileSync("publication-artifact.json", "utf8"));
+            if (
+              artifact.id !== Number(process.env.ARTIFACT_ID) ||
+              artifact.name !== process.env.ARTIFACT_NAME ||
+              artifact.digest !== process.env.ARTIFACT_DIGEST ||
+              artifact.expired === true ||
+              artifact.workflow_run?.id !== Number(process.env.GITHUB_RUN_ID)
+            ) throw new Error("postpublication artifact identity mismatch");
+          '
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${ARTIFACT_ID}/zip" > publication.zip
+          test "$(sha256sum publication.zip | cut -d ' ' -f 1)" = "${ARTIFACT_DIGEST#sha256:}"
+          unzip -Z1 publication.zip > publication-entries.txt
+          node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            const entries = readFileSync("publication-entries.txt", "utf8").trim().split("\n");
+            if (
+              entries.length < 2 ||
+              new Set(entries).size !== entries.length ||
+              entries.some((entry) => entry.startsWith("/") || entry.split("/").includes(".."))
+            ) throw new Error("postpublication artifact archive inventory is unsafe");
+          '
+          mkdir verified-publication
+          unzip -q publication.zip -d verified-publication
+          test -z "$(find verified-publication -type l -print -quit)"
+          test "$(find verified-publication -name release-publication-record.json -type f | wc -l)" -eq 1
+          test -f verified-publication/release-publication-record.json
+          test -f verified-publication/preflight/publication-validator/tests/infrastructure/browser-release-publication-record.schema.json
+
+      - name: Verify exact schema and canonical record content without repository source execution
+        shell: bash
+        env:
+          SCHEMA_SHA256: 04d88be1949207c17d2dba22a4d6fe7582f29b2f5d5b089bacd54994ef9c9d1a
+          TARGET_SHA: ${{ inputs.target_sha }}
+          RELEASE_TAG: ${{ inputs.tag }}
+        run: |
+          schema_path=verified-publication/preflight/publication-validator/tests/infrastructure/browser-release-publication-record.schema.json
+          test "$(sha256sum "${schema_path}" | cut -d ' ' -f 1)" = "${SCHEMA_SHA256}"
+          node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            const recordPath = "verified-publication/release-publication-record.json";
+            const schemaPath = "verified-publication/preflight/publication-validator/tests/infrastructure/browser-release-publication-record.schema.json";
+            const bytes = readFileSync(recordPath, "utf8");
+            const record = JSON.parse(bytes);
+            const schema = JSON.parse(readFileSync(schemaPath, "utf8"));
+            const object = (value) => value !== null && typeof value === "object" && !Array.isArray(value);
+            const resolveReference = (reference) => reference.slice(2).split("/").reduce(
+              (value, encoded) => value[encoded.replaceAll("~1", "/").replaceAll("~0", "~")], schema
+            );
+            const validate = (value, rule, path = "$") => {
+              if (rule.$ref) return validate(value, resolveReference(rule.$ref), path);
+              if (rule.const !== undefined && !Object.is(value, rule.const)) throw new Error(`${path}: const mismatch`);
+              const types = rule.type === undefined ? [] : Array.isArray(rule.type) ? rule.type : [rule.type];
+              const matches = (type) => type === "object" ? object(value) : type === "array" ? Array.isArray(value) :
+                type === "integer" ? Number.isInteger(value) : type === "number" ? typeof value === "number" && Number.isFinite(value) :
+                type === "null" ? value === null : typeof value === type;
+              if (types.length && !types.some(matches)) throw new Error(`${path}: type mismatch`);
+              if (typeof value === "string") {
+                if (rule.minLength !== undefined && value.length < rule.minLength) throw new Error(`${path}: minLength`);
+                if (rule.pattern !== undefined && !new RegExp(rule.pattern, "u").test(value)) throw new Error(`${path}: pattern`);
+              }
+              if (typeof value === "number" && rule.minimum !== undefined && value < rule.minimum) throw new Error(`${path}: minimum`);
+              if (Array.isArray(value)) {
+                if (rule.minItems !== undefined && value.length < rule.minItems) throw new Error(`${path}: minItems`);
+                for (let index = 0; index < value.length; index += 1) validate(value[index], rule.items, `${path}[${index}]`);
+              } else if (object(value)) {
+                for (const key of rule.required ?? []) if (!Object.hasOwn(value, key)) throw new Error(`${path}.${key}: required`);
+                for (const [key, child] of Object.entries(value)) {
+                  if (rule.properties?.[key]) validate(child, rule.properties[key], `${path}.${key}`);
+                  else if (rule.additionalProperties === false) throw new Error(`${path}.${key}: additional property`);
+                }
+              }
+            };
+            const canonical = (value) => {
+              if (value === null || typeof value !== "object") return JSON.stringify(value);
+              if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+              return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(",")}}`;
+            };
+            validate(record, schema);
+            if (
+              bytes !== `${canonical(record)}\n` ||
+              record.targetSha !== process.env.TARGET_SHA ||
+              record.tag !== process.env.RELEASE_TAG ||
+              record.publicationRun.id !== Number(process.env.GITHUB_RUN_ID) ||
+              record.publicationRun.attempt !== Number(process.env.GITHUB_RUN_ATTEMPT) ||
+              record.publicationRun.workflowPath !== ".github/workflows/publish-web-release.yml"
+            ) throw new Error("postpublication record content or run binding mismatch");
+          '
+
+      - name: Attest exact schema-checked postpublication record
+        uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0
+        with:
+          subject-path: verified-publication/release-publication-record.json

@@ -56,7 +56,7 @@
       "type": "string",
       "pattern": "^controller:FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+$"
     },
-    "runnerId": { "type": "integer", "minimum": 1 },
+    "runnerId": { "type": ["null", "integer"], "minimum": 1 },
     "runnerName": { "type": "string", "minLength": 1 },
     "customLabels": {
       "type": "array",
@@ -67,6 +67,7 @@
     "workFolder": { "const": "_work" },
     "state": {
       "enum": [
+        "issuing",
         "issued",
         "online_unassigned",
         "assigned",
@@ -113,5 +114,18 @@
     "quarantinedAt": { "type": ["null", "string"] },
     "quarantineReleasedAt": { "type": ["null", "string"] },
     "cleanupDecision": { "type": ["null", "string"] }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "runnerId": { "type": "null" } },
+        "required": ["runnerId"]
+      },
+      "then": {
+        "properties": {
+          "state": { "enum": ["issuing", "already_absent"] }
+        }
+      }
+    }
+  ]
 }

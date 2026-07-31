@@ -3,8 +3,8 @@ import { request as httpsRequest } from "node:https";
 
 import { canonicalJson } from "./controller-signing.mjs";
 
-const ISSUE_PROTOCOL = "forge3d-browser-lab-broker/v1";
-const CLEANUP_PROTOCOL = "forge3d-browser-lab-cleanup/v1";
+export const ISSUE_PROTOCOL = "forge3d-browser-lab-broker/v1";
+export const CLEANUP_PROTOCOL = "forge3d-browser-lab-cleanup/v1";
 
 export class ControllerBrokerClient {
   constructor({
@@ -43,7 +43,8 @@ export class ControllerBrokerClient {
     );
     if (
       response.protocolVersion !== ISSUE_PROTOCOL ||
-      response.authorizationDigest !== request.authorizationDigest
+      response.authorizationDigest !== request.authorizationDigest ||
+      response.deployment?.component !== "broker"
     ) {
       throw new Error("broker JIT response binding is invalid");
     }
@@ -66,7 +67,8 @@ export class ControllerBrokerClient {
       this.tls,
     );
     if (
-      response.authorizationDigest !== request.authorizationDigest
+      response.authorizationDigest !== request.authorizationDigest ||
+      response.deployment?.component !== "broker"
     ) {
       throw new Error("broker cleanup response binding is invalid");
     }

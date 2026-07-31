@@ -3,6 +3,7 @@ import test from "node:test";
 
 import { createIntakeManifest } from "../../scripts/manual-evidence.mjs";
 import { verifyManualIntake } from "../../scripts/resolve-manual-intake.mjs";
+import { activeManualMatrices } from "./manual-intake-fixture.mjs";
 
 const bytes = Buffer.from("intake bytes");
 const digest = "4ddfccdb4f1ff02d0913731b75e710981a69de79b1723cbd40230ee7fde8713d";
@@ -12,6 +13,7 @@ const intake = createIntakeManifest({
   packageSha256: "b".repeat(64),
   checklistId: "mobile-multitouch",
   assetId: "FW-AND-QCOM-01",
+  ...activeManualMatrices("FW-AND-QCOM-01"),
   expectedTester: "tester",
   prepareRun: { id: 20, attempt: 1, workflowSha: "c".repeat(40) },
   now: new Date("2026-07-29T10:00:00Z"),

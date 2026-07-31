@@ -38,6 +38,32 @@
         }
       }
     },
+    "deployment": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "recordType",
+        "component",
+        "instanceId",
+        "repository",
+        "package",
+        "attestation",
+        "installed",
+        "verifiedAt"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "recordType": { "const": "lab-service-installation" },
+        "component": { "const": "broker" },
+        "instanceId": { "const": "browser-lab-broker" },
+        "repository": { "const": "milos-agathon/forge3d-web" },
+        "package": { "type": "object" },
+        "attestation": { "type": "object" },
+        "installed": { "type": "object" },
+        "verifiedAt": { "type": "string", "minLength": 20 }
+      }
+    },
     "jitRequest": {
       "type": "object",
       "additionalProperties": false,
@@ -73,7 +99,8 @@
         "runnerId",
         "runnerName",
         "encodedJitConfig",
-        "startDeadline"
+        "startDeadline",
+        "deployment"
       ],
       "properties": {
         "protocolVersion": {
@@ -89,7 +116,8 @@
         "startDeadline": {
           "type": "string",
           "pattern": "^\\d{4}-\\d{2}-\\d{2}T"
-        }
+        },
+        "deployment": { "$ref": "#/$defs/deployment" }
       }
     },
     "listenerStop": {
@@ -170,14 +198,15 @@
         "state",
         "deletionResult",
         "cancellationResult",
-        "cleanupDecision"
+        "cleanupDecision",
+        "deployment"
       ],
       "properties": {
         "authorizationDigest": {
           "type": "string",
           "pattern": "^[0-9a-f]{64}$"
         },
-        "runnerId": { "type": "integer", "minimum": 1 },
+        "runnerId": { "type": ["null", "integer"], "minimum": 1 },
         "runnerName": { "type": "string", "minLength": 1 },
         "state": { "enum": ["deleted", "already_absent", "quarantined"] },
         "deletionResult": { "enum": ["deleted", "already_absent"] },
@@ -185,8 +214,23 @@
           "type": ["null", "string"],
           "enum": [null, "cancelled"]
         },
-        "cleanupDecision": { "type": "string", "minLength": 1 }
-      }
+        "cleanupDecision": { "type": "string", "minLength": 1 },
+        "deployment": { "$ref": "#/$defs/deployment" }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": { "runnerId": { "type": "null" } },
+            "required": ["runnerId"]
+          },
+          "then": {
+            "properties": {
+              "state": { "const": "already_absent" },
+              "deletionResult": { "const": "already_absent" }
+            }
+          }
+        }
+      ]
     }
   }
 }

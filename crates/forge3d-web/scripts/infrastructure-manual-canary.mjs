@@ -41,7 +41,10 @@ export function createInfrastructureManualCanary({
     session.hostId !== intake.hostId ||
     session.mediaChallenge !== intake.mediaChallenge ||
     session.intakeManifestSha256 !== intake.sha256 ||
-    Object.values(session.cleanup).some((value) => value !== true)
+    Object.values(session.cleanup).some((value) => value !== true) ||
+    session.controllerCompletion?.state !== "completed" ||
+    session.controllerCompletion.hostLockReleased !== true ||
+    session.controllerCompletion.quarantined !== false
   ) {
     throw new Error("infrastructure manual canary identity or independence failed");
   }
@@ -73,6 +76,9 @@ export function createInfrastructureManualCanary({
       controllerSignatureVerified: true,
       runnerAbsent: session.cleanup.runnerAbsent,
       cleanupComplete: true,
+      controllerCompletionState: session.controllerCompletion.state,
+      hostLockReleased: session.controllerCompletion.hostLockReleased,
+      quarantined: session.controllerCompletion.quarantined,
       runId: session.run.id,
       runAttempt: session.run.attempt,
       jobId: session.hardwareJobId,

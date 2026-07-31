@@ -351,22 +351,11 @@ jobs:
         shell: bash
         working-directory: crates/forge3d-web
         env:
-          GH_TOKEN: ${{ github.token }}
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ steps.intake.outputs.target-sha }}
         run: |
-          gh api "/repos/${GITHUB_REPOSITORY}/releases?per_page=100" > releases-api.json
-          previous_tag="$(node --input-type=module --eval '
-            import { readFileSync } from "node:fs";
-            const releases = JSON.parse(readFileSync("releases-api.json", "utf8"));
-            const previous = releases.find((release) =>
-              !release.draft && !release.prerelease && /^v?[0-9]+\\.[0-9]+\\.[0-9]+$/.test(release.tag_name)
-            );
-            if (previous) process.stdout.write(previous.tag_name);
-          ')"
           node scripts/resolve-implementation-actors.mjs \
             --target-sha "${TARGET_SHA}" \
-            --previous-tag "${previous_tag}" \
             --output implementation-actors.json
           gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/approvals" > submission-approvals.json
 

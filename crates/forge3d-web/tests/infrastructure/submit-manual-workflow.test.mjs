@@ -56,6 +56,8 @@ test("submission resolves numeric assets, controller session, actors, approvals,
   assert.match(submit, /prepare-manual-submission\.mjs/u);
   assert.match(submit, /validate-manual-evidence\.mjs/u);
   assert.match(submit, /resolve-implementation-actors\.mjs/u);
+  assert.equal(submit.includes("--previous-tag"), false);
+  assert.equal(submit.includes("releases-api.json"), false);
   assert.match(submit, /actions\/runs\/\$\{GITHUB_RUN_ID\}\/approvals/u);
   assert.match(submit, /releases\/assets\/\$\{asset_id\}/u);
   assert.match(submit, /--deny-self-hosted-runners/u);

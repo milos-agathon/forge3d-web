@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { canonicalJson, sha256Hex } from "../../scripts/canonical-json.mjs";
@@ -8,6 +9,7 @@ import {
   verifyObservationArtifact,
   verifyRepositoryTrustObservation,
 } from "../../scripts/verify-repository-trust-observation.mjs";
+import { assertJsonSchema } from "../browser/json-schema-validator.mjs";
 
 const now = new Date("2026-07-28T12:00:00.000Z");
 const policy = makePolicy();
@@ -34,6 +36,15 @@ test("emits and verifies a canonical, exact-consumer observation", () => {
   });
   assert.equal(observation.operation, "package-broker");
   assert.equal(observation.consumers.length, 1);
+  assertJsonSchema(
+    observation,
+    JSON.parse(
+      readFileSync(
+        new URL("./repository-trust-observation.schema.json", import.meta.url),
+        "utf8",
+      ),
+    ),
+  );
 });
 
 for (const [name, mutate, expectedError] of [
@@ -78,6 +89,43 @@ for (const [name, mutate, expectedError] of [
       value.policySha256 = "0".repeat(64);
     },
     /policy digest mismatch/u,
+  ],
+  [
+    "stale required-check SHA",
+    (value) => {
+      value.requiredChecks[0].headSha = "e".repeat(40);
+    },
+    /required check result is invalid/u,
+  ],
+  [
+    "wrong required-check app id",
+    (value) => {
+      value.requiredChecks[0].app.id = 1;
+    },
+    /expected constant 15368|required check result is invalid/u,
+  ],
+  [
+    "wrong required-check app slug",
+    (value) => {
+      value.requiredChecks[0].app.slug = "lookalike-actions";
+    },
+    /expected constant "github-actions"|required check result is invalid/u,
+  ],
+  [
+    "duplicate required-check id",
+    (value) => {
+      value.requiredChecks[1].id = value.requiredChecks[0].id;
+    },
+    /required checks do not match policy/u,
+  ],
+  [
+    "missing check-runs live response",
+    (value) => {
+      value.liveResponses = value.liveResponses.filter(
+        (response) => response.name !== "checkRuns",
+      );
+    },
+    /fewer than 9 items|bind every live trust response/u,
   ],
 ]) {
   test(`rejects observation with ${name}`, () => {
@@ -232,7 +280,10 @@ test("rejects an archive with multiple members", () => {
 function makeObservationBytes() {
   const verification = {
     ok: true,
-    repository: policy.repository,
+    repository: {
+      id: policy.repository.id,
+      fullName: policy.repository.fullName,
+    },
     currentMainSha: "dddddddddddddddddddddddddddddddddddddddd",
     trustEpochSha: policy.trustEpochSha,
     policySha256: sha256Hex(policy),
@@ -240,19 +291,35 @@ function makeObservationBytes() {
     requiredChecks: [
       {
         id: 1,
+        workflowJobId: 11,
         name: "Web Runtime / Build And Contract Tests",
+        headSha: "dddddddddddddddddddddddddddddddddddddddd",
+        status: "completed",
         conclusion: "success",
-        sourceAppId: 15368,
+        app: { id: 15368, slug: "github-actions" },
       },
       {
         id: 2,
+        workflowJobId: 12,
         name: "Web Runtime / Browser Preflight",
+        headSha: "dddddddddddddddddddddddddddddddddddddddd",
+        status: "completed",
         conclusion: "success",
-        sourceAppId: 15368,
+        app: { id: 15368, slug: "github-actions" },
       },
     ],
-    liveResponses: Array.from({ length: 7 }, (_, index) => ({
-      name: `response-${index}`,
+    liveResponses: [
+      "actionsPermissions",
+      "branch",
+      "checkRuns",
+      "protection",
+      "repository",
+      "repositoryRunners",
+      "trustEpochComparison",
+      "workflowJobs",
+      "workflowRuns",
+    ].map((name, index) => ({
+      name,
       endpoint: `/repos/milos-agathon/forge3d-web/resource-${index}`,
       sha256: String(index).repeat(64),
     })),
@@ -297,10 +364,12 @@ function makePolicy() {
         checks: [
           {
             context: "Web Runtime / Build And Contract Tests",
+            sourceAppSlug: "github-actions",
             sourceAppId: 15368,
           },
           {
             context: "Web Runtime / Browser Preflight",
+            sourceAppSlug: "github-actions",
             sourceAppId: 15368,
           },
         ],

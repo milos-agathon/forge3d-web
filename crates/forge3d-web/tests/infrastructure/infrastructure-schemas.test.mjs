@@ -5,6 +5,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { assertJsonSchema } from "../browser/json-schema-validator.mjs";
+import { serviceInstallationFixture } from "./service-installation-fixture.mjs";
 
 const root = dirname(fileURLToPath(import.meta.url));
 
@@ -134,9 +135,30 @@ test("broker protocol rejects internal ledger fields in cleanup responses", () =
     deletionResult: "deleted",
     cancellationResult: null,
     cleanupDecision: "authorized job is terminal",
+    deployment: serviceInstallationFixture({
+      component: "broker",
+      instanceId: "browser-lab-broker",
+    }),
   };
   const schema = readJson("broker-protocol.schema.json");
   assertJsonSchema(response, schema);
+  const missingDeployment = structuredClone(response);
+  delete missingDeployment.deployment;
+  assert.throws(
+    () => assertJsonSchema(missingDeployment, schema),
+    /oneOf/u,
+  );
+  const absentIssuance = {
+    ...response,
+    runnerId: null,
+    state: "already_absent",
+    deletionResult: "already_absent",
+    cleanupDecision:
+      "complete repository runner listing proved deterministic identity absent",
+  };
+  assertJsonSchema(absentIssuance, schema);
+  absentIssuance.state = "deleted";
+  assert.throws(() => assertJsonSchema(absentIssuance, schema), /oneOf/u);
   response.runId = 1;
   assert.throws(() => assertJsonSchema(response, schema), /oneOf/u);
 });
@@ -182,6 +204,18 @@ test("broker lifecycle schema freezes cleanup and redacted-ledger fields", () =>
   };
   const schema = readJson("broker-lifecycle.schema.json");
   assertJsonSchema(record, schema);
+  record.state = "issuing";
+  record.runnerId = null;
+  record.quarantineRequired = true;
+  record.cleanupDecision =
+    "durable JIT issuance intent persisted before GitHub mutation";
+  assertJsonSchema(record, schema);
+  record.state = "busy";
+  assert.throws(
+    () => assertJsonSchema(record, schema),
+    /expected one of \["issuing","already_absent"\]/u,
+  );
+  record.runnerId = 3;
   record.state = "quarantined";
   record.cancellationResult = "pending";
   record.cancellationRequestedAt = "2026-07-28T12:01:35.000Z";

@@ -182,6 +182,7 @@ jobs:
           cp crates/forge3d-web/tests/infrastructure/broker-protocol.schema.json broker-package/config/
           cp crates/forge3d-web/tests/infrastructure/controller-health-endpoints.json broker-package/config/
           cp crates/forge3d-web/tests/infrastructure/hardware-matrix.json broker-package/config/
+          cp crates/forge3d-web/tests/infrastructure/lab-service-installation.schema.json broker-package/config/
           cp crates/forge3d-web/tests/infrastructure/repository-trust-policy.json broker-package/config/
           cp crates/forge3d-web/tests/infrastructure/runner-distribution-manifest.json broker-package/config/
           cp crates/forge3d-web/tests/infrastructure/runner-transient-path-policy.json broker-package/config/

@@ -30,7 +30,10 @@
     "mediaChallenge",
     "startedAt",
     "endedAt",
-    "cleanup"
+    "cleanup",
+    "diagnosticRetention",
+    "controllerCompletion",
+    "installations"
   ],
   "properties": {
     "schemaVersion": { "const": 1 },
@@ -73,9 +76,17 @@
     "labReadiness": {
       "type": ["object", "null"],
       "additionalProperties": false,
-      "required": ["runId", "labInfrastructureDigest"],
+      "required": [
+        "runId",
+        "manifestSha256",
+        "labInfrastructureDigest"
+      ],
       "properties": {
         "runId": { "type": "integer", "minimum": 1 },
+        "manifestSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        },
         "labInfrastructureDigest": {
           "type": "string",
           "pattern": "^[0-9a-f]{64}$"
@@ -159,6 +170,116 @@
         "updatesRestored": { "const": true },
         "runnerAbsent": { "const": true }
       }
+    },
+    "diagnosticRetention": { "$ref": "#/$defs/diagnosticRetention" },
+    "controllerCompletion": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state",
+        "brokerCleanup",
+        "runnerAbsent",
+        "workRootWiped",
+        "hostCleanupComplete",
+        "hostLockReleased",
+        "quarantined",
+        "completedAt"
+      ],
+      "properties": {
+        "state": { "const": "completed" },
+        "brokerCleanup": { "enum": ["deleted", "already_absent"] },
+        "runnerAbsent": { "const": true },
+        "workRootWiped": { "const": true },
+        "hostCleanupComplete": { "const": true },
+        "hostLockReleased": { "const": true },
+        "quarantined": { "const": false },
+        "completedAt": { "type": "string", "minLength": 20 }
+      }
+    },
+    "installations": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["controller", "broker"],
+      "properties": {
+        "controller": { "type": "object" },
+        "broker": { "type": "object" }
+      }
+    },
+    "hostInventory": { "type": "object" }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "diagnosticRetention": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "storage",
+        "storageKey",
+        "hostId",
+        "run",
+        "runnerNonce",
+        "authorizationDigest",
+        "files",
+        "filesSha256",
+        "retainedAt",
+        "sha256"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "storage": { "const": "protected-controller-external" },
+        "storageKey": {
+          "type": "string",
+          "pattern": "^FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+-[1-9][0-9]*-[1-9][0-9]*-[0-9a-f]{64}$"
+        },
+        "hostId": {
+          "type": "string",
+          "pattern": "^FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+$"
+        },
+        "run": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["id", "attempt"],
+          "properties": {
+            "id": { "type": "integer", "minimum": 1 },
+            "attempt": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "runnerNonce": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "authorizationDigest": { "$ref": "#/$defs/sha256" },
+        "files": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["name", "size", "sha256"],
+            "properties": {
+              "name": {
+                "type": "string",
+                "pattern": "^(?:Runner|Worker)_[A-Za-z0-9_.-]+\\.log$"
+              },
+              "size": { "type": "integer", "minimum": 1 },
+              "sha256": { "$ref": "#/$defs/sha256" }
+            }
+          }
+        },
+        "filesSha256": { "$ref": "#/$defs/sha256" },
+        "retainedAt": { "type": "string", "format": "date-time" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
     }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "assetId": { "const": "FW-TRACKPAD-01" } },
+        "required": ["assetId"]
+      },
+      "then": { "required": ["hostInventory"] }
+    }
+  ]
 }

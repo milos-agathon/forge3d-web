@@ -7,10 +7,11 @@ MOB-03, MOB-04, MOB-05, and MOB-06
 
 ## Purpose And Gate
 
-The repository currently has one GitHub-hosted `windows-latest` workflow and no
-physical runner or device-lab configuration. Live repository inspection also
-reports `main.protected: false`, protection enforcement `off`, and no required
-checks. Therefore, `main` is not yet a trust root, and the eleven consuming
+At repository baseline `ffba491`, the repository had one GitHub-hosted
+`windows-latest` workflow and no physical runner or device-lab configuration.
+Live inspection at plan creation reported `main.protected: false`, protection
+enforcement `off`, and no required checks. Therefore, baseline `main` was not a
+trust root, and the eleven consuming
 tasks' physical acceptance remains `LAB_INFRA_BLOCKED` until the protection and
 laboratory gate below passes. Code and emulated preflight portions may be
 implemented earlier, but none of these eleven tasks may execute physical
@@ -31,6 +32,87 @@ USB-attached to the Apple Silicon host. Substituting a model, browser channel,
 GPU, OS family, controller, runner label, accessory, or hosting route requires
 a reviewed matrix change; it cannot silently inherit the original asset's
 support claim.
+
+## Status Snapshot — 2026-07-31
+
+This snapshot records implementation evidence separately from live physical and
+administrator evidence. `CODE_COMPLETE` means the repository source, schemas,
+workflows, negative controls, and documentation are implemented and locally
+verified. It does not mean a physical lane ran, a controller was provisioned,
+or either readiness gate passed.
+
+| Requirement | Repository implementation | Live/physical status | Remaining proof before acceptance |
+|---|---|---|---|
+| INF-00 | `CODE_COMPLETE` in PR candidate `codex/lab-infra-ready-20260731`, based on `d9da44bcc3b10d7e25d04cb0803c8e0b55aa9e11` | `BLOCKED` | Complete the protected-main bootstrap and policy pin; enable immutable releases and protected environments; provision the exact four hosts, seven attached assets, broker, controllers, public keys, mTLS endpoints, and installed-service receipts; then run clean host canaries. |
+| INF-01 | `CODE_COMPLETE` | `NOT_PROVEN` | Capture the checked installed branded browser, driver, OS, headed-session, prohibited-flag, and update-window evidence on every owning physical host. |
+| INF-02 | `CODE_COMPLETE` | `NOT_PROVEN` | Run the exact installed package in headed physical browsers and prove a non-fallback hardware adapter plus measured present/readback evidence. Local unsafe-WebGPU, headless, SwiftShader, fallback, and emulated results remain `PROBE`. |
+| INF-03 | `CODE_COMPLETE` | `NOT_PROVEN` | Serve the exact package through the nonce-bound trusted HTTPS origins and run the certificate, MIME, CORS, range, deny-route, and normalized-loader controls in every physical browser; the Mac canary must include all six real Appium device sessions. |
+| INF-04 | `CODE_COMPLETE` | `NOT_PROVEN` | Install the attested broker/controller packages and reviewed helpers, activate their services and keys, then prove four authorization-bound one-job JIT canaries, external diagnostics retention, exact-ID cleanup, wipe, and zero runners at rest. |
+| INF-05 | `CODE_COMPLETE` | `NOT_PROVEN` | Complete the generic authenticated manual canary with its controller-signed 20-minute session, challenge-bound media, exact intake assets, independent approval, cleanup, and retained provenance. Product manual rows remain separate. |
+| INF-06 | `CODE_COMPLETE` | `NOT_PROVEN` | Publish and verify the immutable non-support lab canary, compute the exact attested readiness record, and retain the postpublication verification record described below. No release or publication workflow has yet been dispatched. |
+| `LAB_INFRA_READY` | Gate implementation is `CODE_COMPLETE` and fail-closed | `LAB_INFRA_BLOCKED` | Supply one same-SHA package, four fresh host canaries, the fresh generic manual canary, immutable lab-canary publication, live trust observation, installed-service closure, and zero-runner evidence inside the checked 24-hour window. |
+| `RELEASE_MATRIX_READY` | Gate implementation is `CODE_COMPLETE` and fail-closed | `NOT_PROVEN` | First obtain `LAB_INFRA_READY`, then run all 24 required physical product rows and merge the exact same-package evidence set. |
+
+Validated repository evidence for this snapshot:
+
+- Rust/WASM, TypeScript, distribution, and example builds passed.
+- Package contracts passed, including 50 browser-harness tests and 462
+  infrastructure tests with one expected real-UID ACL integration skip.
+- API/type contracts passed; 97 unit tests passed.
+- The local source-browser probe passed 27 tests with one intentional skip, but
+  used unsafe WebGPU and a SwiftShader fallback, so it is not physical evidence.
+- Independent requirements-only review found no remaining actionable source,
+  schema, workflow, or test defect. Exact installed npm-tarball validation
+  remains a required post-commit PR gate and is recorded in PR evidence rather
+  than treated as source/static proof. Hosted CI, physical browser/GPU, Appium,
+  controller, JIT, manual, release, and readiness evidence remains unproven.
+
+### Recommended activation sequence
+
+1. **Land and reverify the code candidate.** Merge the reviewed implementation
+   only after required checks, exact installed-tarball consumer validation, and
+   exact-head autoreview pass. Record the resulting implementation merge SHA; do not
+   reuse pre-merge artifacts for physical acceptance.
+2. **Activate the repository trust root.** Provision the read-only
+   `forge3d-trust-observer` App/environment, confirm the strict App-bound checks
+   and full-length action pins, run the protected-main canary in this plan, and
+   merge a separate policy-pin PR that changes `bootstrapState` to `active` and
+   sets `trustEpochSha` to the canary merge SHA. Verify current `main` with
+   `verify-repository-trust.mjs` using a short-lived observer token.
+3. **Enable the protected execution surfaces.** Enable release immutability and
+   configure `forge3d-browser-lab`, `forge3d-manual-evidence`, and
+   `forge3d-web-release` with independent approvers. Install the distinct broker
+   App, controller mTLS material, and protected credentials without placing any
+   secret or stable device identifier in Git or Actions artifacts.
+4. **Provision and attest the fixed laboratory.** Acquire or assign the exact
+   inventory, generate one non-exported P-256 controller key per host, install
+   the attested broker/controller packages and every reviewed helper, configure
+   the checked endpoints, and capture signed inventories. Change a host,
+   controller, or attachment to `active` only after its live facts match the
+   checked matrix; run `validate-hardware-matrix.mjs --require-provisioned` when
+   all four hosts are ready.
+5. **Use a two-pass JIT-policy bootstrap.** First run one otherwise-clean
+   `infrastructure-canary` on every host while the transient/browser canary state
+   is pending. Review the observed transient paths and deployment receipts, then
+   merge a dedicated evidence PR that changes the transient policy to `verified`
+   and the browser policy to `active`. Because that changes the laboratory
+   digest, package the new exact `main` SHA and rerun all four host canaries; do
+   not reuse the bootstrap canaries as final readiness evidence.
+6. **Close the remaining non-support laboratory evidence within 24 hours.** The
+   final Mac host canary must open all six real Appium sessions against the same
+   nonce-bound HTTPS package. Complete the generic `infrastructure-manual-canary`
+   intake/session/submission with an independent approver, publish the immutable
+   non-support lab canary, and retain the postpublication CLI/API/byte proof.
+7. **Dispatch laboratory readiness once with the exact IDs.** Supply the same-SHA
+   package run, four final host-canary runs, manual-canary submission run, its
+   intake release and hardware job, and the immutable lab-canary release. Accept
+   only the attested `LAB_INFRA_READY` output whose recomputed
+   `labInfrastructureDigest` matches the checked source and installed services.
+8. **Then close release support separately.** Run all 24 required product rows,
+   dispatch `browser-hardware-release-readiness` with the canonical sorted run
+   IDs, and accept only `RELEASE_MATRIX_READY` before `publish-web-release.yml`.
+   A stale, changed, quarantined, substituted, or mismatched input reruns from
+   its earliest invalid boundary instead of being waived.
 
 ## Required Inventory
 
@@ -192,7 +274,8 @@ reviewable without committing serial numbers or credentials.
   broker as an explicit trust-root service because the same permission can
   alter repository settings. Run a
   post-protection canary PR that proves direct/force push and deletion fail,
-  stale approval is dismissed, the last push needs another person's approval,
+  stale voluntary reviews are dismissed, zero approving reviews are required,
+  no latest-push approval is required,
   both named checks are required and strict, unresolved conversations block,
   and administrators cannot bypass. Then merge a protected policy-pin PR that
   writes the canary merge SHA as `trustEpochSha`; promotion rejects that SHA
@@ -1223,8 +1306,10 @@ partial matrix from satisfying a release gate.
   permissions as `publish-web-release.yml`, but it uploads only synthetic
   canary assets and a manifest marked `"supportClaim": false`. It cannot invoke,
   emit, or satisfy
-  `browser-hardware-release-readiness`; successful CLI verification is recorded
-  only in `browser-lab-infrastructure-readiness`.
+  `browser-hardware-release-readiness`. Its publication workflow records
+  successful CLI verification in the attested postpublication verification
+  record; `browser-lab-infrastructure-readiness` independently resolves and
+  verifies that exact record.
 - Add `crates/forge3d-web/scripts/resolve-implementation-actors.mjs`. Using the
   GitHub API, compare the previous immutable Forge3D web release tag (or
   baseline `ffba491` for the first release) with `target_sha`, resolve every
@@ -1258,7 +1343,15 @@ partial matrix from satisfying a release gate.
   `none`. The preflight and publication jobs receive no repository secret other
   than the scoped `GITHUB_TOKEN`; only the separate observer job receives its
   environment-scoped App key. The publication job performs no checkout or
-  execution of repository source.
+  execution of repository source. After the publisher uploads the exact
+  postpublication artifact, a separate GitHub-hosted attester with only
+  `actions: read`, `id-token: write`, `attestations: write`, and
+  `artifact-metadata: write` downloads it by the publisher's numeric artifact
+  ID, requires the exact name and archive digest, validates the record against a
+  pinned schema without checking out or executing repository source, and
+  attests only that record. The publisher never receives attestation-writing
+  permission and the attester never receives `contents: write` or an
+  environment.
 - Only after all preflight and identity gates pass, create a draft release,
   upload the merged manifest, checksums, logs, screenshots/videos copied by
   numeric asset ID from INF-05's draft intakes, manual evidence, and all package
@@ -1344,12 +1437,17 @@ partial matrix from satisfying a release gate.
   expired, prior-run/attempt, wrong-target/tag/operation/consumer/environment,
   or wrongly attested trust observation/preflight record before publication or
   readiness attestation.
-- Actions evidence remains available for 90 days; released evidence is attached
-  to the corresponding GitHub Release.
+- Actions evidence remains available for 90 days. Every evidence asset available
+  before publication is attached to the corresponding GitHub Release. The
+  postpublication verification record is a separate attested 90-day Actions
+  artifact bound to the immutable release ID/tag, release-manifest digest, exact
+  run/attempt, and verified asset digests; it is consumed by readiness and never
+  mutates the published release.
 - A newly published canary or first candidate created after the setting was
   enabled passes `gh release verify`; every asset passes
-  `gh release verify-asset`, and the release manifest retains all command output
-  and the release attestation identity.
+  `gh release verify-asset`. The separate postpublication verification record
+  retains all command output and the release attestation identity and binds them
+  to the checksum-bearing release manifest.
 - Contract tests prove the lab-canary workflow cannot accept a target SHA,
   browser result, or release-matrix manifest, cannot publish outside its fixed
   namespace, always records `supportClaim: false`, and cannot satisfy or bypass

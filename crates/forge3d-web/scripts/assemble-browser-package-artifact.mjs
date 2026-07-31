@@ -78,6 +78,7 @@ export function assembleBrowserPackageArtifact({
     "assemble-browser-package-artifact.mjs",
     "materialize-browser-fixture.mjs",
     "capture-host-inventory.mjs",
+    "capture-trackpad-inventory.mjs",
     "capture-host-gpu-evidence.mjs",
     "join-adapter-attestation.mjs",
     "create-browser-matrix-record.mjs",
@@ -85,6 +86,7 @@ export function assembleBrowserPackageArtifact({
     "create-run-nonce.mjs",
     "serve-browser-fixture.mjs",
     "probe-browser-fixture.mjs",
+    "probe-mobile-device-routes.mjs",
     "resolve-host-runtime.mjs",
     "manage-browser-update-window.mjs",
     "manage-browser-route.mjs",
@@ -110,6 +112,24 @@ export function assembleBrowserPackageArtifact({
     [
       join(packageRoot, "tests", "infrastructure", "hardware-matrix.json"),
       "hardware-matrix.json",
+    ],
+    [
+      join(
+        packageRoot,
+        "tests",
+        "infrastructure",
+        "host-inventory.schema.json",
+      ),
+      "host-inventory.schema.json",
+    ],
+    [
+      join(
+        packageRoot,
+        "tests",
+        "infrastructure",
+        "mobile-device-route-readiness.schema.json",
+      ),
+      "mobile-device-route-readiness.schema.json",
     ],
     [
       join(packageRoot, "tests", "device", "device-matrix.json"),

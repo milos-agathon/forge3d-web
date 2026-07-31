@@ -1,9 +1,17 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { createIntakeManifest } from "../../scripts/manual-evidence.mjs";
 import { validateManualSubmission } from "../../scripts/validate-manual-evidence.mjs";
 import { canonicalJson, sha256Hex } from "../../scripts/canonical-json.mjs";
+import { exactHostInventory } from "./host-inventory-fixture.mjs";
+import { activeManualMatrices } from "./manual-intake-fixture.mjs";
+import { serviceInstallationFixture } from "./service-installation-fixture.mjs";
+
+const matrix = JSON.parse(
+  readFileSync(new URL("./hardware-matrix.json", import.meta.url), "utf8"),
+);
 
 const intake = createIntakeManifest({
   trustedSha: "a".repeat(40),
@@ -11,12 +19,14 @@ const intake = createIntakeManifest({
   packageSha256: "b".repeat(64),
   checklistId: "safari-trackpad",
   assetId: "FW-TRACKPAD-01",
+  ...activeManualMatrices("FW-TRACKPAD-01"),
   expectedTester: "tester",
   prepareRun: { id: 20, attempt: 1, workflowSha: "c".repeat(40) },
   now: new Date("2026-07-29T09:00:00.000Z"),
   random: () => Buffer.alloc(16, 8),
 });
 const intakeSha256 = "d".repeat(64);
+const hostInventory = exactHostInventory(matrix, "FW-MAC-M2-01");
 const session = {
   workflow: ".github/workflows/browser-hardware.yml",
   workflowSha: "e".repeat(40),
@@ -24,13 +34,18 @@ const session = {
   hardwareJobId: 31,
   runner: { id: 32, name: `FW-MAC-M2-01-${"2".repeat(32)}` },
   trustedSha: intake.trustedSha,
-  package: { sha256: intake.packageSha256 },
+  package: { runId: intake.packageRunId, sha256: intake.packageSha256 },
   labReadiness: {
     runId: 5,
+    manifestSha256: "5".repeat(64),
     labInfrastructureDigest: "6".repeat(64),
   },
   assetId: intake.assetId,
   hostId: intake.hostId,
+  system: { os: hostInventory.platform, build: hostInventory.osBuild },
+  browser: { name: "Safari", channel: "stable", version: "26.0" },
+  driver: { name: "safaridriver", version: "26.0" },
+  hostInventory,
   mediaChallenge: intake.mediaChallenge,
   intakeManifestSha256: intakeSha256,
   authorizationSha256: "f".repeat(64),
@@ -39,6 +54,29 @@ const session = {
   startedAt: "2026-07-29T10:00:00.000Z",
   endedAt: "2026-07-29T10:20:00.000Z",
   cleanup: { runnerAbsent: true },
+  controllerCompletion: {
+    state: "completed",
+    brokerCleanup: "deleted",
+    runnerAbsent: true,
+    workRootWiped: true,
+    hostCleanupComplete: true,
+    hostLockReleased: true,
+    quarantined: false,
+    completedAt: "2026-07-29T10:21:00.000Z",
+  },
+  installations: {
+    controller: serviceInstallationFixture({
+      component: "controller",
+      instanceId: intake.hostId,
+      targetSha: intake.trustedSha,
+      inventory: hostInventory,
+    }),
+    broker: serviceInstallationFixture({
+      component: "broker",
+      instanceId: "browser-lab-broker",
+      targetSha: intake.trustedSha,
+    }),
+  },
 };
 const signedSessionSha256 = sha256Hex(canonicalJson(session));
 const sessionFinalizer = {
@@ -130,6 +168,8 @@ test("submission produces closed evidence from draft, session, media, approval, 
   assert.equal(evidence.intakeReleaseId, 50);
   assert.equal(evidence.media[0].id, 40);
   assert.equal(evidence.approver.login, "independent-approver");
+  assert.deepEqual(evidence.labReadiness, session.labReadiness);
+  assert.equal(evidence.hostInventory.trackpad.assetId, "FW-TRACKPAD-01");
 });
 
 test("infrastructure submission produces a non-support manual canary, not a product row", () => {
@@ -139,6 +179,7 @@ test("infrastructure submission produces a non-support manual canary, not a prod
     packageSha256: intake.packageSha256,
     checklistId: "infrastructure-manual-canary",
     assetId: "FW-TRACKPAD-01",
+    ...activeManualMatrices("FW-TRACKPAD-01"),
     expectedTester: "tester",
     prepareRun: intake.prepareRun,
     now: new Date("2026-07-29T09:00:00.000Z"),

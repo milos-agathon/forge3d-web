@@ -30,6 +30,8 @@ export async function runBrowserLane({
     if (
       !adapter.deviceCreated ||
       !adapter.surfacePresented ||
+      adapter.secureContext !== true ||
+      !hasMeasuredLumaPresentation(adapter) ||
       adapter.isFallbackAdapter !== false
     ) {
       throw new Error("adapter smoke did not prove required hardware presentation");
@@ -61,6 +63,26 @@ export async function runBrowserLane({
       throw new Error(`hardware harness cleanup failed: ${result.error}`);
     }
   }
+}
+
+function hasMeasuredLumaPresentation(adapter) {
+  const samples = adapter?.presentedFrameLumaSamples;
+  if (
+    adapter?.lumaChanged !== true ||
+    !Array.isArray(samples) ||
+    samples.length !== 2 ||
+    samples.some(
+      (value) => !Number.isFinite(value) || value < 0 || value > 1,
+    ) ||
+    !Number.isFinite(adapter.presentedFrameLumaDelta)
+  ) {
+    return false;
+  }
+  const measuredDelta = Math.abs(samples[1] - samples[0]);
+  return (
+    measuredDelta >= 0.25 &&
+    Math.abs(adapter.presentedFrameLumaDelta - measuredDelta) <= 1e-9
+  );
 }
 
 function parseArguments(argv) {

@@ -11,6 +11,7 @@ import {
   createProductionControllerDependencies,
 } from "../src/production-dependencies.mjs";
 import { BrokerLifecycleStore } from "../src/broker-lifecycle-store.mjs";
+import { serviceInstallationFixture } from "../../../crates/forge3d-web/tests/infrastructure/service-installation-fixture.mjs";
 
 test("loaded service runtime controls cross the sanitized JIT boundary", () => {
   const directory = mkdtempSync(join(tmpdir(), "forge3d-controller-env-"));
@@ -52,6 +53,10 @@ test("loaded service runtime controls cross the sanitized JIT boundary", () => {
       }),
       platform: "linux",
       runnerEnvironment: loaded,
+      installationEvidence: serviceInstallationFixture({
+        component: "controller",
+        instanceId: "FW-LNX-I12-01",
+      }),
       configuration: configuration(directory),
     });
     const runner = dependencies.runnerEnvironment();
@@ -93,7 +98,11 @@ test("loaded service runtime controls cross the sanitized JIT boundary", () => {
       new URL("../src/controller-service.mjs", import.meta.url),
       "utf8",
     );
-    assert.match(serviceSource, /runnerEnvironment:\s*environment/u);
+    assert.match(serviceSource, /runnerEnvironment:\s*\{\s*\.\.\.environment/u);
+    assert.match(
+      serviceSource,
+      /FORGE3D_BROWSER_INVENTORY_HELPER_SHA256:\s*inventoryHelper\.sha256/u,
+    );
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

@@ -204,6 +204,14 @@ jobs:
             --source-ref refs/heads/main \
             --source-digest "${{ inputs.candidate_sha }}" \
             --deny-self-hosted-runners
+          node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            import { verifyPackageManifestProvenance } from "./scripts/resolve-hardware-promotion.mjs";
+            verifyPackageManifestProvenance({
+              manifest: JSON.parse(readFileSync("package/browser-package-manifest.json", "utf8")),
+              packageRun: JSON.parse(readFileSync("package-run.json", "utf8"))
+            });
+          '
 
       - name: Resolve exact closed host-canary records
         shell: bash
@@ -306,13 +314,50 @@ jobs:
             --source-digest "${GITHUB_SHA}" \
             --deny-self-hosted-runners
           gh api "/repos/${GITHUB_REPOSITORY}/releases/${LAB_CANARY_RELEASE_ID}" > lab-canary-release.json
+          gh api --paginate --slurp \
+            "/repos/${GITHUB_REPOSITORY}/releases/${LAB_CANARY_RELEASE_ID}/assets?per_page=100" \
+            > lab-canary-current-assets-pages.json
           tag="$(node -p "require('./lab-canary-release.json').tag_name")"
-          gh release verify "${tag}" > lab-canary-release-verification.txt
+          mkdir -p lab-canary-verification/asset-verification
+          gh release verify "${tag}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --format json > lab-canary-verification/release.json
           mkdir lab-canary-assets
-          gh release download "${tag}" --dir lab-canary-assets
-          for asset in lab-canary-assets/*; do
-            gh release verify-asset "${tag}" "${asset}" >> lab-canary-release-verification.txt
-          done
+          gh release download "${tag}" \
+            --repo "${GITHUB_REPOSITORY}" \
+            --dir lab-canary-assets
+          node --input-type=module --eval '
+            import { readFileSync, writeFileSync } from "node:fs";
+            const assets = JSON.parse(readFileSync(
+              "lab-canary-current-assets-pages.json", "utf8"
+            )).flat().sort((left, right) => left.name.localeCompare(right.name));
+            if (
+              assets.length < 1 ||
+              new Set(assets.map((asset) => asset.id)).size !== assets.length ||
+              new Set(assets.map((asset) => asset.name)).size !== assets.length
+            ) throw new Error("current canary release asset API closure is invalid");
+            const map = assets.map((asset, index) => ({
+              name: asset.name,
+              proofPath: `lab-canary-verification/asset-verification/${String(index + 1).padStart(4, "0")}.json`
+            }));
+            writeFileSync("lab-canary-verification/assets-map.json", JSON.stringify(map));
+            for (const entry of map) {
+              process.stdout.write(`${entry.name}\t${entry.proofPath}\n`);
+            }
+          ' > lab-canary-verification/assets.tsv
+          while IFS=$'\t' read -r asset_name proof_path; do
+            test -f "lab-canary-assets/${asset_name}"
+            gh release verify-asset "${tag}" "lab-canary-assets/${asset_name}" \
+              --repo "${GITHUB_REPOSITORY}" \
+              --format json > "${proof_path}"
+          done < lab-canary-verification/assets.tsv
+          node --input-type=module --eval '
+            import { writeFileSync } from "node:fs";
+            writeFileSync(
+              "lab-canary-verification/verified-at.txt",
+              new Date().toISOString()
+            );
+          '
           test -f lab-canary-assets/browser-lab-canary-manifest.json
           test -f lab-canary-assets/manual-canary.json
           node --input-type=module --eval '
@@ -367,22 +412,64 @@ jobs:
           test "$(sha256sum canary-publication.zip | cut -d ' ' -f 1)" = "${publication_expected#sha256:}"
           mkdir canary-publication
           unzip -q canary-publication.zip -d canary-publication
-          test -f canary-publication/canary-publication-record.json
-          intake_id="$(node -p "require('./lab-canary-assets/browser-lab-canary-manifest.json').manualIntakeReleaseId")"
-          if gh api "/repos/${GITHUB_REPOSITORY}/releases/${intake_id}" >/dev/null 2>&1; then
-            echo "manual canary intake still exists" >&2
-            exit 1
-          fi
+          test -f canary-publication/lab-canary-publication-record.json
+          test -f canary-publication/preflight/release-publication-preflight.json
+          test -f canary-publication/publication-proof/release-assets-pages.json
+          test -f canary-publication/publication-proof/release-verify.json
+          test -f canary-publication/publication-proof/assets-map.json
+          gh attestation verify \
+            canary-publication/preflight/release-publication-preflight.json \
+            --repo milos-agathon/forge3d-web \
+            --signer-workflow milos-agathon/forge3d-web/.github/workflows/publish-browser-lab-canary.yml \
+            --source-ref refs/heads/main \
+            --source-digest "${GITHUB_SHA}" \
+            --deny-self-hosted-runners
+          gh attestation verify \
+            canary-publication/lab-canary-publication-record.json \
+            --repo milos-agathon/forge3d-web \
+            --signer-workflow milos-agathon/forge3d-web/.github/workflows/publish-browser-lab-canary.yml \
+            --source-ref refs/heads/main \
+            --source-digest "${GITHUB_SHA}" \
+            --deny-self-hosted-runners
+          node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            const record = JSON.parse(readFileSync(
+              "canary-publication/lab-canary-publication-record.json", "utf8"
+            ));
+            process.stdout.write(`${record.intake.releaseId}\t${record.intake.tagName}\n`);
+          ' > canary-publication/intake-identity.tsv
+          IFS=$'\t' read -r intake_id intake_tag < canary-publication/intake-identity.tsv
+          INTAKE_ID="${intake_id}" INTAKE_TAG="${intake_tag}" \
+            node --input-type=module --eval '
+            import { requireGitHubResourceAbsent } from "./scripts/lab-canary-publication.mjs";
+            const root = `https://api.github.com/repos/${process.env.GITHUB_REPOSITORY}`;
+            await requireGitHubResourceAbsent({
+              url: `${root}/releases/${encodeURIComponent(process.env.INTAKE_ID)}`,
+              token: process.env.GH_TOKEN
+            });
+            await requireGitHubResourceAbsent({
+              url: `${root}/git/ref/tags/${encodeURIComponent(process.env.INTAKE_TAG)}`,
+              token: process.env.GH_TOKEN
+            });
+          '
 
       - name: Compute canonical laboratory readiness
         shell: bash
         working-directory: crates/forge3d-web
         env:
           PACKAGE_RUN_ID: ${{ inputs.packageRunId }}
+          HOST_RUN_SPECS: >-
+            ${{ inputs.macHostCanaryRunId }}:FW-MAC-M2-01
+            ${{ inputs.windowsHostCanaryRunId }}:FW-WIN-I12-01
+            ${{ inputs.linuxIntelHostCanaryRunId }}:FW-LNX-I12-01
+            ${{ inputs.linuxNvidiaHostCanaryRunId }}:FW-LNX-NV-01
+          MANUAL_RUN_ID: ${{ inputs.manualCanaryRunId }}
+          MANUAL_INTAKE_ID: ${{ inputs.manualIntakeReleaseId }}
+          MANUAL_JOB_ID: ${{ inputs.manualHardwareJobId }}
         run: |
           node --input-type=module --eval '
             import { readFileSync, readdirSync, writeFileSync } from "node:fs";
-            import { canonicalJson } from "./scripts/canonical-json.mjs";
+            import { canonicalJson, sha256Hex } from "./scripts/canonical-json.mjs";
             const hostCanaries = readdirSync("host-canaries", { recursive: true })
               .filter((path) => path.endsWith("lab-host-canary.json"))
               .map((path) => JSON.parse(readFileSync(`host-canaries/${path}`, "utf8")));
@@ -390,15 +477,103 @@ jobs:
               "lab-canary-assets/manual-canary.json", "utf8"
             ));
             const release = JSON.parse(readFileSync("lab-canary-release.json", "utf8"));
-            const releaseManifest = JSON.parse(readFileSync(
-              "lab-canary-assets/browser-lab-canary-manifest.json", "utf8"
+            const releaseManifestBytes = readFileSync(
+              "lab-canary-assets/browser-lab-canary-manifest.json"
+            );
+            const releaseManifest = JSON.parse(releaseManifestBytes);
+            const publicationRecordBytes = readFileSync(
+              "canary-publication/lab-canary-publication-record.json"
+            );
+            const publicationRecord = JSON.parse(publicationRecordBytes);
+            const intakeBindingBytes = readFileSync(
+              "lab-canary-assets/manual-intake-binding.json"
+            );
+            const intakeBinding = JSON.parse(intakeBindingBytes);
+            const preflightBytes = readFileSync(
+              "canary-publication/preflight/release-publication-preflight.json"
+            );
+            const preflight = JSON.parse(preflightBytes);
+            const retainedAssetPagesBytes = readFileSync(
+              "canary-publication/publication-proof/release-assets-pages.json"
+            );
+            const retainedAssetPages = JSON.parse(retainedAssetPagesBytes);
+            const currentAssetPages = JSON.parse(readFileSync(
+              "lab-canary-current-assets-pages.json", "utf8"
             ));
-            const publicationRecord = JSON.parse(readFileSync(
-              "canary-publication/canary-publication-record.json", "utf8"
+            const currentAssets = currentAssetPages.flat().map((asset) => {
+              const bytes = readFileSync(`lab-canary-assets/${asset.name}`);
+              return {
+                id: asset.id,
+                name: asset.name,
+                size: asset.size,
+                apiDigest: asset.digest,
+                sha256: sha256Hex(bytes)
+              };
+            });
+            const proofMap = JSON.parse(readFileSync(
+              "canary-publication/publication-proof/assets-map.json", "utf8"
             ));
+            const retainedReleaseVerificationBytes = readFileSync(
+              "canary-publication/publication-proof/release-verify.json"
+            );
+            const retainedAssetVerifications = proofMap.map((entry) => {
+              const bytes = readFileSync(`canary-publication/${entry.proofPath}`);
+              return {
+                name: entry.name,
+                outputSha256: sha256Hex(bytes),
+                output: JSON.parse(bytes)
+              };
+            });
+            const publicationRun = JSON.parse(readFileSync(
+              "canary-publication-run.json", "utf8"
+            ));
+            const publicationArtifact = JSON.parse(readFileSync(
+              "canary-publication-artifact.json", "utf8"
+            ));
+            const freshProofMap = JSON.parse(readFileSync(
+              "lab-canary-verification/assets-map.json", "utf8"
+            ));
+            const freshReleaseVerificationBytes = readFileSync(
+              "lab-canary-verification/release.json"
+            );
+            const freshAssetVerifications = freshProofMap.map((entry) => {
+              const bytes = readFileSync(entry.proofPath);
+              return {
+                name: entry.name,
+                outputBytesBase64: bytes.toString("base64"),
+                outputSha256: sha256Hex(bytes),
+                output: JSON.parse(bytes)
+              };
+            });
             const packageManifest = JSON.parse(readFileSync(
               "package/browser-package-manifest.json", "utf8"
             ));
+            const selectedHostRuns = process.env.HOST_RUN_SPECS.trim()
+              .split(/\s+/u)
+              .map((spec) => {
+                const [selectedRunId, hostId] = spec.split(":");
+                const apiRun = JSON.parse(readFileSync(
+                  `host-canaries/${selectedRunId}-run.json`, "utf8"
+                ));
+                return {
+                  hostId,
+                  selectedRunId: Number(selectedRunId),
+                  apiRunId: apiRun.id,
+                  runAttempt: apiRun.run_attempt,
+                  workflowPath: apiRun.path,
+                  createdAt: apiRun.created_at,
+                  completedAt: apiRun.updated_at,
+                  status: apiRun.status,
+                  conclusion: apiRun.conclusion,
+                  headSha: apiRun.head_sha,
+                  headBranch: apiRun.head_branch,
+                  event: apiRun.event,
+                  hardwareJobId: hostCanaries.find(
+                    (canary) => canary.hostId === hostId
+                  )?.hardwareJob?.id
+                };
+              });
+            const manualApiRun = JSON.parse(readFileSync("manual-run.json", "utf8"));
             const input = {
               candidateSha: process.env.GITHUB_SHA,
               packageRecord: {
@@ -409,17 +584,90 @@ jobs:
               },
               hostCanaries,
               manualCanary,
-              canaryRelease: {
-                id: release.id,
-                publicationRunId: publicationRecord.publicationRunId,
-                tagName: release.tag_name,
-                targetSha: release.target_commitish,
-                supportClaim: publicationRecord.supportClaim,
-                draft: release.draft,
-                immutableReleaseVerified: true,
-                allAssetsVerified: true,
-                intakeDeletedAfterVerification: publicationRecord.intakeDeletedAfterVerification,
-                attestation: { verified: true }
+              selectedRuns: {
+                hosts: selectedHostRuns,
+                manual: {
+                  selectedRunId: Number(process.env.MANUAL_RUN_ID),
+                  apiRunId: manualApiRun.id,
+                  runAttempt: manualApiRun.run_attempt,
+                  workflowPath: manualApiRun.path,
+                  hardwareJobId: Number(process.env.MANUAL_JOB_ID),
+                  intakeReleaseId: Number(process.env.MANUAL_INTAKE_ID)
+                }
+              },
+              canaryPublication: {
+                record: publicationRecord,
+                recordSha256: sha256Hex(publicationRecordBytes),
+                attestation: {
+                  verified: true,
+                  repository: "milos-agathon/forge3d-web",
+                  signerWorkflow: "milos-agathon/forge3d-web/.github/workflows/publish-browser-lab-canary.yml",
+                  sourceRef: "refs/heads/main",
+                  sourceDigest: process.env.GITHUB_SHA,
+                  denySelfHostedRunners: true
+                },
+                selection: {
+                  run: {
+                    selectedRunId: releaseManifest.publicationRunId,
+                    apiRunId: publicationRun.id,
+                    runAttempt: publicationRun.run_attempt,
+                    workflowPath: publicationRun.path,
+                    headSha: publicationRun.head_sha,
+                    headBranch: publicationRun.head_branch,
+                    conclusion: publicationRun.conclusion
+                  },
+                  artifact: {
+                    id: publicationArtifact.id,
+                    name: publicationArtifact.name,
+                    digest: publicationArtifact.digest,
+                    archiveSha256: sha256Hex(readFileSync("canary-publication.zip"))
+                  }
+                },
+                candidateManifest: {
+                  record: releaseManifest,
+                  sha256: sha256Hex(releaseManifestBytes)
+                },
+                intakeBinding: {
+                  record: intakeBinding,
+                  sha256: sha256Hex(intakeBindingBytes),
+                  bytesBase64: intakeBindingBytes.toString("base64")
+                },
+                preflight: {
+                  record: preflight,
+                  sha256: sha256Hex(preflightBytes)
+                },
+                release: {
+                  id: release.id,
+                  tagName: release.tag_name,
+                  targetCommitish: release.target_commitish,
+                  draft: release.draft,
+                  prerelease: release.prerelease,
+                  immutable: release.immutable,
+                  publishedAt: release.published_at,
+                  assets: currentAssets
+                },
+                proof: {
+                  assetPages: {
+                    pages: retainedAssetPages,
+                    sha256: sha256Hex(retainedAssetPagesBytes)
+                  },
+                  releaseVerification: {
+                    outputSha256: sha256Hex(retainedReleaseVerificationBytes),
+                    output: JSON.parse(retainedReleaseVerificationBytes)
+                  },
+                  assetVerifications: retainedAssetVerifications
+                },
+                freshVerification: {
+                  releaseVerification: {
+                    outputBytesBase64: freshReleaseVerificationBytes.toString("base64"),
+                    outputSha256: sha256Hex(freshReleaseVerificationBytes),
+                    output: JSON.parse(freshReleaseVerificationBytes)
+                  },
+                  assetVerifications: freshAssetVerifications,
+                  verifiedAt: readFileSync(
+                    "lab-canary-verification/verified-at.txt", "utf8"
+                  ).trim()
+                }
               },
               repositoryTrust: {
                 verified: true,
@@ -427,6 +675,11 @@ jobs:
                 targetSha: process.env.GITHUB_SHA
               },
               matrix: JSON.parse(readFileSync("tests/infrastructure/hardware-matrix.json", "utf8")),
+              deviceMatrix: JSON.parse(readFileSync("tests/device/device-matrix.json", "utf8")),
+              httpsOriginPolicy: JSON.parse(readFileSync("tests/infrastructure/https-origin-policy.json", "utf8")),
+              browserPolicy: JSON.parse(readFileSync("tests/infrastructure/browser-policy.json", "utf8")),
+              runnerDistributionManifest: JSON.parse(readFileSync("tests/infrastructure/runner-distribution-manifest.json", "utf8")),
+              runnerTransientPathPolicy: JSON.parse(readFileSync("tests/infrastructure/runner-transient-path-policy.json", "utf8")),
               run: {
                 id: Number(process.env.GITHUB_RUN_ID),
                 attempt: Number(process.env.GITHUB_RUN_ATTEMPT),

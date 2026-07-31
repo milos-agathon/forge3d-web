@@ -37,38 +37,119 @@
       "minItems": 6,
       "maxItems": 6,
       "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": [
-          "assetId",
-          "appiumId",
-          "model",
-          "platformName",
-          "automationName",
-          "browserName",
-          "osBaseline",
-          "accessory"
-        ],
-        "properties": {
-          "assetId": {
-            "enum": [
-              "FW-AND-QCOM-01",
-              "FW-AND-MALI-01",
-              "FW-AND-PEN-01",
-              "FW-IOS-OLD-01",
-              "FW-IOS-NEW-01",
-              "FW-IPAD-01"
-            ]
-          },
-          "appiumId": { "type": "string", "minLength": 1 },
-          "model": { "type": "string", "minLength": 1 },
-          "platformName": { "enum": ["Android", "iOS", "iPadOS"] },
-          "automationName": { "enum": ["UiAutomator2", "XCUITest"] },
-          "browserName": { "enum": ["Chrome", "Safari"] },
-          "osBaseline": { "type": "string", "minLength": 1 },
-          "accessory": { "type": ["string", "null"] }
-        }
+        "oneOf": [
+          { "$ref": "#/$defs/androidQualcomm" },
+          { "$ref": "#/$defs/androidMali" },
+          { "$ref": "#/$defs/androidPen" },
+          { "$ref": "#/$defs/iosOld" },
+          { "$ref": "#/$defs/iosNew" },
+          { "$ref": "#/$defs/ipad" }
+        ]
       }
+    }
+  },
+  "$defs": {
+    "device": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assetId",
+        "appiumId",
+        "model",
+        "platformName",
+        "automationName",
+        "browserName",
+        "osBaseline",
+        "accessory"
+      ],
+      "properties": {
+        "assetId": { "type": "string" },
+        "appiumId": { "type": "string", "minLength": 1 },
+        "model": { "type": "string", "minLength": 1 },
+        "platformName": { "enum": ["Android", "iOS", "iPadOS"] },
+        "automationName": { "enum": ["UiAutomator2", "XCUITest"] },
+        "browserName": { "enum": ["Chrome", "Safari"] },
+        "osBaseline": { "type": "string", "minLength": 1 },
+        "accessory": { "type": ["string", "null"] }
+      }
+    },
+    "androidQualcomm": {
+      "allOf": [
+        { "$ref": "#/$defs/device" },
+        { "properties": {
+          "assetId": { "const": "FW-AND-QCOM-01" },
+          "appiumId": { "const": "android-qualcomm-s23" },
+          "model": { "const": "Samsung Galaxy S23 SM-S911B" },
+          "platformName": { "const": "Android" },
+          "automationName": { "const": "UiAutomator2" },
+          "browserName": { "const": "Chrome" }
+        } }
+      ]
+    },
+    "androidMali": {
+      "allOf": [
+        { "$ref": "#/$defs/device" },
+        { "properties": {
+          "assetId": { "const": "FW-AND-MALI-01" },
+          "appiumId": { "const": "android-mali-pixel8" },
+          "model": { "const": "Google Pixel 8" },
+          "platformName": { "const": "Android" },
+          "automationName": { "const": "UiAutomator2" },
+          "browserName": { "const": "Chrome" }
+        } }
+      ]
+    },
+    "androidPen": {
+      "allOf": [
+        { "$ref": "#/$defs/device" },
+        { "properties": {
+          "assetId": { "const": "FW-AND-PEN-01" },
+          "appiumId": { "const": "android-pen-tabs9" },
+          "model": { "const": "Samsung Galaxy Tab S9 Wi-Fi SM-X710" },
+          "platformName": { "const": "Android" },
+          "automationName": { "const": "UiAutomator2" },
+          "browserName": { "const": "Chrome" }
+        } }
+      ]
+    },
+    "iosOld": {
+      "allOf": [
+        { "$ref": "#/$defs/device" },
+        { "properties": {
+          "assetId": { "const": "FW-IOS-OLD-01" },
+          "appiumId": { "const": "ios-iphone11" },
+          "model": { "const": "Apple iPhone 11" },
+          "platformName": { "const": "iOS" },
+          "automationName": { "const": "XCUITest" },
+          "browserName": { "const": "Safari" }
+        } }
+      ]
+    },
+    "iosNew": {
+      "allOf": [
+        { "$ref": "#/$defs/device" },
+        { "properties": {
+          "assetId": { "const": "FW-IOS-NEW-01" },
+          "appiumId": { "const": "ios-iphone17pro" },
+          "model": { "const": "Apple iPhone 17 Pro" },
+          "platformName": { "const": "iOS" },
+          "automationName": { "const": "XCUITest" },
+          "browserName": { "const": "Safari" }
+        } }
+      ]
+    },
+    "ipad": {
+      "allOf": [
+        { "$ref": "#/$defs/device" },
+        { "properties": {
+          "assetId": { "const": "FW-IPAD-01" },
+          "appiumId": { "const": "ipados-air11-m2" },
+          "model": { "const": "Apple iPad Air 11-inch (M2)" },
+          "platformName": { "const": "iPadOS" },
+          "automationName": { "const": "XCUITest" },
+          "browserName": { "const": "Safari" }
+        } }
+      ]
     }
   }
 }

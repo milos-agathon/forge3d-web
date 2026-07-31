@@ -16,6 +16,11 @@ const matrix = readJson("hardware-matrix.json");
 const policy = readJson("browser-policy.json");
 const authorizationSchema = readJson("runner-authorization.schema.json");
 const sha = "a".repeat(40);
+const labReadiness = {
+  runId: 20,
+  manifestSha256: "f".repeat(64),
+  labInfrastructureDigest: "e".repeat(64),
+};
 
 test("closed dispatch rules separate canary, browser, and manual lanes", () => {
   const canary = validateHardwareDispatch(
@@ -114,7 +119,7 @@ test("promotion generates only the derived hardware and nonce labels", () => {
     trustEpochSha: "b".repeat(40),
     workflowSha: "c".repeat(40),
     packageManifestSha256: "d".repeat(64),
-    labInfrastructureDigest: "e".repeat(64),
+    labReadiness,
     random: (bytes) => {
       requested = bytes;
       return Buffer.alloc(16, 9);
@@ -142,7 +147,7 @@ test("authorization freezes exact queued job, labels, expiry, and package/readin
     trustEpochSha: "b".repeat(40),
     workflowSha: "c".repeat(40),
     packageManifestSha256: "d".repeat(64),
-    labInfrastructureDigest: "e".repeat(64),
+    labReadiness,
     random: () => Buffer.alloc(16, 9),
   });
   const authorization = createRunnerAuthorization({
@@ -165,6 +170,7 @@ test("authorization freezes exact queued job, labels, expiry, and package/readin
     authorization.record.expiresAt,
     "2026-07-29T10:10:00.000Z",
   );
+  assert.deepEqual(authorization.record.labReadiness, labReadiness);
   assert.throws(
     () =>
       createRunnerAuthorization({
@@ -187,6 +193,34 @@ test("authorization freezes exact queued job, labels, expiry, and package/readin
       }),
     /custom labels/u,
   );
+});
+
+test("promotion rejects missing, mismatched, or malformed readiness identities", () => {
+  const base = {
+    dispatch: {
+      lane: "chrome-linux-rtx3070",
+      assetId: "FW-LNX-NV-01",
+      required: true,
+      trustedSha: sha,
+      packageRunId: "10",
+      labReadinessRunId: "20",
+    },
+    matrix,
+    trustEpochSha: "b".repeat(40),
+    workflowSha: "c".repeat(40),
+    packageManifestSha256: "d".repeat(64),
+    random: () => Buffer.alloc(16, 9),
+  };
+  for (const changed of [
+    null,
+    { ...labReadiness, runId: 19 },
+    { ...labReadiness, manifestSha256: "0".repeat(63) },
+  ]) {
+    assert.throws(
+      () => createPromotion({ ...base, labReadiness: changed }),
+      /exact laboratory readiness identity/u,
+    );
+  }
 });
 
 function readJson(name) {

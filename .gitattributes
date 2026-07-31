@@ -1,3 +1,6 @@
 *.pdb filter=lfs diff=lfs merge=lfs -text
+.github/workflows/*.yml text eol=lf
+crates/forge3d-web/tests/infrastructure/*.json text eol=lf
+crates/forge3d-web/tests/infrastructure/*.mjs text eol=lf
 tools/browser-lab-controller/services/*.mjs text eol=lf
 tools/browser-lab-controller/services/*.ps1 text eol=lf

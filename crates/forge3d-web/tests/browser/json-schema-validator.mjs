@@ -28,6 +28,16 @@ function validate(value, schema, path, errors, rootSchema) {
     validate(value, candidate, path, errors, rootSchema);
   }
 
+  if (schema.if !== undefined) {
+    const conditionErrors = [];
+    validate(value, schema.if, path, conditionErrors, rootSchema);
+    if (conditionErrors.length === 0 && schema.then !== undefined) {
+      validate(value, schema.then, path, errors, rootSchema);
+    } else if (conditionErrors.length > 0 && schema.else !== undefined) {
+      validate(value, schema.else, path, errors, rootSchema);
+    }
+  }
+
   if (schema.const !== undefined && !Object.is(value, schema.const)) {
     errors.push(`${path}: expected constant ${JSON.stringify(schema.const)}`);
     return;

@@ -1,0 +1,157 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/mobile-device-route-readiness.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "recordType",
+    "supportClaim",
+    "hostId",
+    "binding",
+    "route",
+    "probes",
+    "startedAt",
+    "completedAt"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "recordType": { "const": "mobile-device-route-readiness" },
+    "supportClaim": { "const": false },
+    "hostId": { "const": "FW-MAC-M2-01" },
+    "binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["runId", "jobId", "assetId", "commit", "packageSha256"],
+      "properties": {
+        "runId": { "type": "integer", "minimum": 1 },
+        "jobId": { "type": "integer", "minimum": 1 },
+        "assetId": { "const": "FW-MAC-M2-01" },
+        "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "packageSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "route": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schemaVersion",
+        "applicationHost",
+        "assetHost",
+        "basePath",
+        "applicationUrl",
+        "assetUrl",
+        "expectedPackageSha256"
+      ],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "applicationHost": { "type": "string", "minLength": 1 },
+        "assetHost": { "type": "string", "minLength": 1 },
+        "basePath": {
+          "type": "string",
+          "pattern": "^/runs/[1-9][0-9]*/[1-9][0-9]*/[0-9a-f]{32}/$"
+        },
+        "applicationUrl": { "type": "string", "pattern": "^https://" },
+        "assetUrl": { "type": "string", "pattern": "^https://" },
+        "expectedPackageSha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    },
+    "probes": {
+      "type": "array",
+      "minItems": 6,
+      "maxItems": 6,
+      "items": { "$ref": "#/$defs/probe" }
+    },
+    "startedAt": { "type": "string", "format": "date-time" },
+    "completedAt": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "probe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "hostId",
+        "assetId",
+        "appiumId",
+        "platformName",
+        "automationName",
+        "browserName",
+        "browserVersion",
+        "platformVersion",
+        "appiumVersion",
+        "driverVersion",
+        "connected",
+        "unlocked",
+        "trusted",
+        "acceptInsecureCerts",
+        "routeUrl",
+        "routeReadiness",
+        "observedAt"
+      ],
+      "properties": {
+        "hostId": { "const": "FW-MAC-M2-01" },
+        "assetId": {
+          "type": "string",
+          "pattern": "^FW-(?:AND|IOS|IPAD)-"
+        },
+        "appiumId": { "type": "string", "minLength": 1 },
+        "platformName": { "enum": ["Android", "iOS", "iPadOS"] },
+        "automationName": { "enum": ["UiAutomator2", "XCUITest"] },
+        "browserName": { "enum": ["Chrome", "Safari"] },
+        "browserVersion": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!unknown$).+$"
+        },
+        "platformVersion": { "type": "string", "minLength": 1 },
+        "appiumVersion": { "const": "3.0.2" },
+        "driverVersion": { "enum": ["5.0.0", "10.0.0"] },
+        "connected": { "const": true },
+        "unlocked": { "const": true },
+        "trusted": { "const": true },
+        "acceptInsecureCerts": { "const": false },
+        "routeUrl": { "type": "string", "pattern": "^https://" },
+        "routeReadiness": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "secureContext",
+            "trustedHttps",
+            "applicationCertificateTrusted",
+            "assetCertificateTrusted",
+            "packageSha256Matched",
+            "wasmMimePassed",
+            "corsAllowPassed",
+            "corsDenyPassed",
+            "rangePassed",
+            "wrongMimeRejected",
+            "publicLoaderAllowedWasmPassed",
+            "wrongMimeErrorCode",
+            "corsDenyWasmErrorCode",
+            "corsWrongOriginWasmErrorCode"
+          ],
+          "properties": {
+            "secureContext": { "const": true },
+            "trustedHttps": { "const": true },
+            "applicationCertificateTrusted": { "const": true },
+            "assetCertificateTrusted": { "const": true },
+            "packageSha256Matched": { "const": true },
+            "wasmMimePassed": { "const": true },
+            "corsAllowPassed": { "const": true },
+            "corsDenyPassed": { "const": true },
+            "rangePassed": { "const": true },
+            "wrongMimeRejected": { "const": true },
+            "publicLoaderAllowedWasmPassed": { "const": true },
+            "wrongMimeErrorCode": { "const": "WASM_LOAD_FAILED" },
+            "corsDenyWasmErrorCode": { "const": "WASM_LOAD_FAILED" },
+            "corsWrongOriginWasmErrorCode": { "const": "WASM_LOAD_FAILED" }
+          }
+        },
+        "observedAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  }
+}
