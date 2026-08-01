@@ -3,7 +3,10 @@ import { generateKeyPairSync, createVerify } from "node:crypto";
 import test from "node:test";
 
 import { ControllerBrokerClient } from "../src/broker-client.mjs";
-import { canonicalJson } from "../src/controller-signing.mjs";
+import {
+  canonicalJson,
+} from "../src/controller-signing.mjs";
+import { createTestPrivateKeySigner } from "./test-signer.mjs";
 
 test("controller broker client signs mTLS issue and cleanup requests", async () => {
   const keys = generateKeyPairSync("ec", { namedCurve: "P-256" });
@@ -11,8 +14,10 @@ test("controller broker client signs mTLS issue and cleanup requests", async () 
   const client = new ControllerBrokerClient({
     endpoint: "https://broker.internal:8443",
     hostId: "FW-LNX-NV-01",
-    signingKeyId: "controller-fw-lnx-nv-01-p256-v1",
-    privateKey: keys.privateKey,
+    signer: createTestPrivateKeySigner({
+      privateKey: keys.privateKey,
+      signingKeyId: "controller-fw-lnx-nv-01-p256-v1",
+    }),
     tls: { key: "key", cert: "cert", ca: "ca" },
     transport: async (url, body, tls) => {
       requests.push({ url, body, tls });

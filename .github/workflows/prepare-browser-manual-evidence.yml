@@ -76,7 +76,8 @@ jobs:
       - name: Verify live repository trust
         working-directory: crates/forge3d-web
         env:
-          GITHUB_TOKEN: ${{ steps.observer-token.outputs.token }}
+          TRUST_OBSERVER_TOKEN: ${{ steps.observer-token.outputs.token }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/verify-repository-trust.mjs > repository-trust-verification.json
 
       - name: Emit intake-bound trust observation
@@ -158,8 +159,7 @@ jobs:
           OBSERVATION_ARTIFACT_DIGEST: ${{ needs.observe-manual-intake-trust.outputs.observation_artifact_digest }}
           OBSERVATION_CONTENT_SHA256: ${{ needs.observe-manual-intake-trust.outputs.observation_content_sha256 }}
           EXPECTED_OPERATION: prepare-manual-intake
-          EXPECTED_CONSUMER_JOB: prepare-manual-intake
-          EXPECTED_CONSUMER_ENVIRONMENT: forge3d-manual-evidence
+          EXPECTED_CONSUMERS: '[{"job":"prepare-manual-intake","environment":"forge3d-manual-evidence"}]'
           EXPECTED_TARGET_SHA: ${{ inputs.trusted_sha }}
           EXPECTED_CANDIDATE_SHA: ${{ inputs.trusted_sha }}
           EXPECTED_CURRENT_MAIN_SHA: ${{ github.sha }}
@@ -244,6 +244,22 @@ jobs:
             --operation create-intake \
             --input intake-input.json \
             --output intake-manifest.json
+
+      - name: Revalidate exact observation immediately before first write
+        working-directory: crates/forge3d-web
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          OBSERVATION_ARTIFACT_ID: ${{ needs.observe-manual-intake-trust.outputs.observation_artifact_id }}
+          OBSERVATION_ARTIFACT_NAME: ${{ needs.observe-manual-intake-trust.outputs.observation_artifact_name }}
+          OBSERVATION_ARTIFACT_DIGEST: ${{ needs.observe-manual-intake-trust.outputs.observation_artifact_digest }}
+          OBSERVATION_CONTENT_SHA256: ${{ needs.observe-manual-intake-trust.outputs.observation_content_sha256 }}
+          EXPECTED_OPERATION: prepare-manual-intake
+          EXPECTED_CONSUMERS: '[{"job":"prepare-manual-intake","environment":"forge3d-manual-evidence"}]'
+          EXPECTED_TARGET_SHA: ${{ inputs.trusted_sha }}
+          EXPECTED_CANDIDATE_SHA: ${{ inputs.trusted_sha }}
+          EXPECTED_CURRENT_MAIN_SHA: ${{ github.sha }}
+          EXPECTED_WORKFLOW_PATH: .github/workflows/prepare-browser-manual-evidence.yml
+        run: node scripts/verify-repository-trust-observation.mjs
 
       - name: Attest intake manifest before release mutation
         uses: actions/attest@f7c74d28b9d84cb8768d0b8ca14a4bac6ef463e6 # v4.2.0

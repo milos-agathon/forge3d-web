@@ -5,6 +5,7 @@ import test from "node:test";
 import { canonicalJson, sha256Hex } from "../../scripts/canonical-json.mjs";
 import { createRepositoryTrustObservation } from "../../scripts/emit-repository-trust-observation.mjs";
 import {
+  createPublisherProof,
   validateOutputTuple,
   verifyObservationArtifact,
   verifyRepositoryTrustObservation,
@@ -16,8 +17,9 @@ const policy = makePolicy();
 const actionsLock = { schemaVersion: 1, reviewedAt: "2026-07-28", actions: [] };
 const expected = {
   operation: "package-broker",
-  consumerJob: "package-broker",
-  consumerEnvironment: "forge3d-browser-lab",
+  consumers: [
+    { job: "package-broker", environment: "forge3d-browser-lab" },
+  ],
   runId: 123,
   runAttempt: 2,
   targetSha: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
@@ -74,7 +76,14 @@ for (const [name, mutate, expectedError] of [
     (value) => {
       value.consumers[0].job = "other";
     },
-    /not bound to consumer/u,
+    /consumer set does not exactly match/u,
+  ],
+  [
+    "extra consumer",
+    (value) => {
+      value.consumers.push({ job: "other", environment: "none" });
+    },
+    /consumer set does not exactly match/u,
   ],
   [
     "expired validity",
@@ -160,6 +169,20 @@ test("rejects non-canonical observation bytes", () => {
   );
 });
 
+test("rejects an otherwise valid observation after its independent expiry", () => {
+  assert.throws(
+    () =>
+      verifyRepositoryTrustObservation({
+        bytes: makeObservationBytes(),
+        expected,
+        policy,
+        actionsLock,
+        now: new Date("2026-07-28T12:30:00.000Z"),
+      }),
+    /expired or not yet valid/u,
+  );
+});
+
 test("validates the exact artifact ID/name/digest/content tuple", () => {
   const observationBytes = makeObservationBytes();
   const zipBytes = makeStoredZip(
@@ -203,6 +226,8 @@ test("validates the exact artifact ID/name/digest/content tuple", () => {
     ["content", (copy) => (copy.outputs.contentSha256 = "0".repeat(64)), /content digest mismatch/u],
     ["run", (copy) => (copy.metadata.workflow_run.id = 999), /workflow run ID mismatch/u],
     ["repository", (copy) => (copy.metadata.workflow_run.repository_id = 1), /repository ID mismatch/u],
+    ["head repository", (copy) => (copy.metadata.workflow_run.head_repository_id = 1), /head repository ID mismatch/u],
+    ["head branch", (copy) => (copy.metadata.workflow_run.head_branch = "feature"), /head branch mismatch/u],
     ["head SHA", (copy) => (copy.metadata.workflow_run.head_sha = "d".repeat(40)), /head SHA mismatch/u],
     ["expired", (copy) => (copy.metadata.expired = true), /expired flag mismatch/u],
   ]) {
@@ -277,6 +302,48 @@ test("rejects an archive with multiple members", () => {
   );
 });
 
+test("publisher proof closes every nested observation binding", () => {
+  const observation = JSON.parse(makeObservationBytes().toString("utf8"));
+  const outputs = {
+    artifactId: "9001",
+    artifactName: "trust-123-2-package-broker",
+    artifactDigest: "a".repeat(64),
+    contentSha256: sha256Hex(makeObservationBytes()),
+  };
+  const metadata = {
+    expired: false,
+    workflow_run: {
+      id: expected.runId,
+      repository_id: policy.repository.id,
+      head_repository_id: policy.repository.id,
+      head_branch: "main",
+      head_sha: expected.workflowSha,
+    },
+  };
+  const proof = createPublisherProof({
+    outputs,
+    metadata,
+    observation,
+    repository: policy.repository.fullName,
+  });
+  const schema = JSON.parse(
+    readFileSync(
+      new URL("./repository-trust-publisher-proof.schema.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  assertJsonSchema(proof, schema);
+  for (const mutate of [
+    (value) => { value.observation.consumers[0].extra = true; },
+    (value) => { value.observation.workflow.extra = true; },
+    (value) => { value.observation.run.extra = true; },
+  ]) {
+    const tampered = structuredClone(proof);
+    mutate(tampered);
+    assert.throws(() => assertJsonSchema(tampered, schema), /additional property/u);
+  }
+});
+
 function makeObservationBytes() {
   const verification = {
     ok: true,
@@ -327,12 +394,7 @@ function makeObservationBytes() {
   const observation = createRepositoryTrustObservation({
     verification,
     operation: expected.operation,
-    consumers: [
-      {
-        job: expected.consumerJob,
-        environment: expected.consumerEnvironment,
-      },
-    ],
+    consumers: structuredClone(expected.consumers),
     workflow: {
       path: expected.workflowPath,
       ref: "refs/heads/main",

@@ -40,6 +40,7 @@ test("loaded service runtime controls cross the sanitized JIT boundary", () => {
           github: {},
           broker: {},
           platform: "linux",
+          controllerSigner: testSigner(),
           configuration: configuration(directory),
         }),
       /loaded service environment is required/u,
@@ -57,6 +58,7 @@ test("loaded service runtime controls cross the sanitized JIT boundary", () => {
         component: "controller",
         instanceId: "FW-LNX-I12-01",
       }),
+      controllerSigner: testSigner(),
       configuration: configuration(directory),
     });
     const runner = dependencies.runnerEnvironment();
@@ -115,13 +117,20 @@ function configuration(root) {
     runnerVerifier: join(root, "runner-verifier"),
     diagnosticsRoot: join(root, "diagnostics"),
     receiptDirectory: join(root, "receipts"),
-    signingKeyPath: join(root, "signing.pem"),
-    signingKeyId: "controller-fw-lnx-i12-01-p256-v1",
     hostCleanupHelper: join(root, "cleanup"),
     lockPath: join(root, "host.lock"),
     quarantinePath: join(root, "quarantine.json"),
     unixInteractiveSessionBridge: join(root, "unix-bridge.mjs"),
     unixInteractiveSessionBridgeSha256: "a".repeat(64),
     interactiveSessionUser: "forge3d-lab",
+  };
+}
+
+function testSigner() {
+  return {
+    signingKeyId: "controller-fw-lnx-i12-01-p256-v1",
+    sign() {
+      throw new Error("test signer must not be called");
+    },
   };
 }

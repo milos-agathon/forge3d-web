@@ -22,16 +22,28 @@ const githubActionsApp = Object.freeze({ id: 15368, slug: "github-actions" });
 export async function verifyLiveRepositoryTrust({
   policy = readJson(policyPath),
   actionsLock = readJson(actionsLockPath),
-  token = process.env.GITHUB_TOKEN,
+  observerToken = process.env.TRUST_OBSERVER_TOKEN,
+  workflowToken = process.env.GITHUB_TOKEN,
   apiBase = process.env.GITHUB_API_URL ?? "https://api.github.com",
   fetchImpl = fetch,
 } = {}) {
-  if (!token) {
-    throw new Error("GITHUB_TOKEN must be a short-lived trust-observer installation token");
+  if (!observerToken) {
+    throw new Error("TRUST_OBSERVER_TOKEN must be a short-lived observer installation token");
   }
-  const headers = {
+  if (!workflowToken) {
+    throw new Error("GITHUB_TOKEN must be the current workflow job token");
+  }
+  if (observerToken === workflowToken) {
+    throw new Error("observer and workflow tokens must be distinct credentials");
+  }
+  const observerHeaders = {
     Accept: "application/vnd.github+json",
-    Authorization: `Bearer ${token}`,
+    Authorization: `Bearer ${observerToken}`,
+    "X-GitHub-Api-Version": "2022-11-28",
+  };
+  const workflowHeaders = {
+    Accept: "application/vnd.github+json",
+    Authorization: `Bearer ${workflowToken}`,
     "X-GitHub-Api-Version": "2022-11-28",
   };
   const repositoryPath = `/repos/${policy.repository.fullName}`;
@@ -44,7 +56,11 @@ export async function verifyLiveRepositoryTrust({
   };
   const responses = {};
   for (const [name, endpoint] of Object.entries(endpoints)) {
-    responses[name] = await getJson(fetchImpl, `${apiBase}${endpoint}`, headers);
+    responses[name] = await getJson(
+      fetchImpl,
+      `${apiBase}${endpoint}`,
+      observerHeaders,
+    );
   }
   endpoints.workflowRuns =
     `${repositoryPath}/actions/runs?branch=${policy.repository.defaultBranch}` +
@@ -52,7 +68,7 @@ export async function verifyLiveRepositoryTrust({
   responses.workflowRuns = await getJson(
     fetchImpl,
     `${apiBase}${endpoints.workflowRuns}`,
-    headers,
+    observerHeaders,
   );
   const workflowRunList = completeCollection(
     responses.workflowRuns,
@@ -86,7 +102,7 @@ export async function verifyLiveRepositoryTrust({
   responses.workflowJobs = await getJson(
     fetchImpl,
     `${apiBase}${endpoints.workflowJobs}`,
-    headers,
+    observerHeaders,
   );
   endpoints.checkRuns =
     `${repositoryPath}/commits/${responses.branch.commit.sha}/check-runs` +
@@ -94,13 +110,13 @@ export async function verifyLiveRepositoryTrust({
   responses.checkRuns = await getJson(
     fetchImpl,
     `${apiBase}${endpoints.checkRuns}`,
-    headers,
+    workflowHeaders,
   );
   if (policy.trustEpochSha) {
     responses.trustEpochComparison = await getJson(
       fetchImpl,
       `${apiBase}${repositoryPath}/compare/${policy.trustEpochSha}...${responses.branch.commit.sha}`,
-      headers,
+      observerHeaders,
     );
     endpoints.trustEpochComparison =
       `${repositoryPath}/compare/${policy.trustEpochSha}...${responses.branch.commit.sha}`;

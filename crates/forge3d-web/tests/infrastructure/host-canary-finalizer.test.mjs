@@ -5,6 +5,7 @@ import test from "node:test";
 
 import { finalizeHostLabCanary } from "../../scripts/finalize-host-lab-canary.mjs";
 import { createHostLabCanary } from "../../../../tools/browser-lab-controller/src/lab-canary.mjs";
+import { createTestPrivateKeySigner } from "../../../../tools/browser-lab-controller/test/test-signer.mjs";
 import { exactHostInventory } from "./host-inventory-fixture.mjs";
 import {
   checkedHostRouteFixture,
@@ -122,8 +123,10 @@ const signedRecord = createHostLabCanary({
     quarantined: false,
     completedAt: "2026-07-29T10:01:00.000Z",
   },
-  privateKey: keys.privateKey,
-  signingKeyId: keyId,
+  signer: createTestPrivateKeySigner({
+    privateKey: keys.privateKey,
+    signingKeyId: keyId,
+  }),
 });
 const hardwareJob = {
   id: 21,

@@ -308,7 +308,7 @@ export class BrowserLabController {
     }
 
     if (hostCanaryInput || manualSessionInput) {
-      const credentials = await this.dependencies.controllerSigningCredentials();
+      const signer = await this.dependencies.controllerSigner();
       const controllerInstallation =
         await this.dependencies.controllerInstallationEvidence();
       const controllerCompletion = {
@@ -345,8 +345,7 @@ export class BrowserLabController {
           },
           diagnosticRetention,
           controllerCompletion,
-          privateKey: credentials.privateKey,
-          signingKeyId: credentials.signingKeyId,
+          signer,
         });
       } else {
         recordType = "manual-session";
@@ -376,8 +375,7 @@ export class BrowserLabController {
           },
           diagnosticRetention,
           controllerCompletion,
-          privateKey: credentials.privateKey,
-          signingKeyId: credentials.signingKeyId,
+          signer,
         });
       }
       await this.dependencies.storeControllerReceipt({

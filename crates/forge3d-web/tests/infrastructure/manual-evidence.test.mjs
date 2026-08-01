@@ -14,6 +14,7 @@ import {
   validateStepResults,
 } from "../../scripts/manual-evidence.mjs";
 import { createManualSession } from "../../../../tools/browser-lab-controller/src/manual-session.mjs";
+import { createTestPrivateKeySigner } from "../../../../tools/browser-lab-controller/test/test-signer.mjs";
 import { assertJsonSchema } from "../browser/json-schema-validator.mjs";
 import { activeManualMatrices } from "./manual-intake-fixture.mjs";
 import {
@@ -238,8 +239,10 @@ test("manual session is exactly 20 minutes, controller-signed, and cleanup-compl
       retainedAt: "2026-07-29T10:20:30.000Z",
     }),
     controllerCompletion: controllerCompletionFixture(),
-    privateKey,
-    signingKeyId: "controller-fw-mac-m2-01-p256-v1",
+    signer: createTestPrivateKeySigner({
+      privateKey,
+      signingKeyId: "controller-fw-mac-m2-01-p256-v1",
+    }),
   });
   assertJsonSchema(session.record, sessionSchema);
   assert.equal(session.signature.algorithm, "SHA256withECDSA");
@@ -289,7 +292,17 @@ test("media and evidence require exact inventory, uploader, digest, window, step
     stepResults,
     media,
     actor: intake.expectedTester,
-    approver: { id: 60, login: "independent-approver" },
+    approver: {
+      id: 60,
+      login: "independent-approver",
+      environment: { id: 600, name: "forge3d-manual-evidence" },
+    },
+    approvalProvenance: [{
+      id: 60,
+      login: "independent-approver",
+      state: "approved",
+      environment: { id: 600, name: "forge3d-manual-evidence" },
+    }],
     implementationActors: new Set(["implementation-author"]),
     submissionRun: { id: 70, attempt: 1, workflowSha: "8".repeat(40) },
     intakeReleaseId: 80,
@@ -325,7 +338,17 @@ test("media and evidence require exact inventory, uploader, digest, window, step
         stepResults,
         media,
         actor: intake.expectedTester,
-        approver: { id: 60, login: "implementation-author" },
+        approver: {
+          id: 60,
+          login: "implementation-author",
+          environment: { id: 600, name: "forge3d-manual-evidence" },
+        },
+        approvalProvenance: [{
+          id: 60,
+          login: "implementation-author",
+          state: "approved",
+          environment: { id: 600, name: "forge3d-manual-evidence" },
+        }],
         implementationActors: new Set(["implementation-author"]),
       }),
     /independent/u,

@@ -53,6 +53,32 @@ test("live verification fetches and binds the exact current-main check-run respo
     context.checkRunsEndpoint,
   );
   assert.equal(context.requested.includes(checkRunsResponse.endpoint), true);
+  for (const request of context.requests) {
+    assert.equal(
+      request.authorization,
+      request.endpoint === context.checkRunsEndpoint
+        ? "Bearer workflow-token"
+        : "Bearer observer-token",
+      `wrong credential for ${request.endpoint}`,
+    );
+  }
+});
+
+test("live verification requires distinct observer and workflow credentials", async () => {
+  const context = makeLiveContext();
+  await assert.rejects(
+    verifyLiveRepositoryTrust({
+      policy: context.input.policy,
+      actionsLock,
+      observerToken: "shared-token",
+      workflowToken: "shared-token",
+      apiBase: "https://api.github.test",
+      fetchImpl: async () => {
+        throw new Error("must not fetch");
+      },
+    }),
+    /must be distinct/u,
+  );
 });
 
 for (const [name, mutate, expectedError] of [
@@ -437,6 +463,7 @@ function makeLiveContext() {
     checkRunsEndpoint,
     routes,
     requested: [],
+    requests: [],
   };
 }
 
@@ -444,12 +471,17 @@ function runLiveVerification(context) {
   return verifyLiveRepositoryTrust({
     policy: context.input.policy,
     actionsLock,
-    token: "observer-token",
+    observerToken: "observer-token",
+    workflowToken: "workflow-token",
     apiBase: "https://api.github.test",
-    fetchImpl: async (url) => {
+    fetchImpl: async (url, options) => {
       const parsed = new URL(url);
       const key = `${parsed.pathname}${parsed.search}`;
       context.requested.push(key);
+      context.requests.push({
+        endpoint: key,
+        authorization: options.headers.Authorization,
+      });
       const value = context.routes.get(key);
       return {
         ok: value !== undefined,

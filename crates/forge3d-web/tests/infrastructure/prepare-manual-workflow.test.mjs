@@ -64,6 +64,20 @@ test("package manifest provenance is joined to the resolved API run before intak
   assert.equal(prepare.includes("package-run.json"), true);
 });
 
+test("intake writer revalidates the exact unexpired observation immediately before attestation", () => {
+  const generate = prepare.indexOf("Generate closed intake manifest");
+  const revalidate = prepare.indexOf(
+    "Revalidate exact observation immediately before first write",
+  );
+  const attest = prepare.indexOf("Attest intake manifest before release mutation");
+  assert.ok(generate > -1 && revalidate > generate && attest > revalidate);
+  const gate = prepare.slice(revalidate, attest);
+  assert.match(gate, /verify-repository-trust-observation\.mjs/u);
+  assert.match(gate, /EXPECTED_OPERATION: prepare-manual-intake/u);
+  assert.match(gate, /EXPECTED_TARGET_SHA: \$\{\{ inputs\.trusted_sha \}\}/u);
+  assert.match(gate, /observation_artifact_digest/u);
+});
+
 function jobBlock(text, startId, nextId) {
   const start = text.indexOf(`  ${startId}:`);
   assert.notEqual(start, -1);

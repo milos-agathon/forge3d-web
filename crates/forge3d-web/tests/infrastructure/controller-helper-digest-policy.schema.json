@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/controller-helper-digest-policy.schema.json",
+  "title": "Controller helper digest policy",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "provisioningState",
+    "requiredIdentities",
+    "allowlist"
+  ],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "provisioningState": {
+      "enum": ["pending-reviewed-digests", "active"]
+    },
+    "requiredIdentities": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "pattern": "^FORGE3D_[A-Z0-9_]+$"
+      }
+    },
+    "allowlist": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/entry" }
+    }
+  },
+  "$defs": {
+    "entry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["identity", "platform", "version", "sha256"],
+      "properties": {
+        "identity": {
+          "type": "string",
+          "pattern": "^FORGE3D_[A-Z0-9_]+$"
+        },
+        "platform": { "enum": ["darwin", "linux", "win32"] },
+        "version": {
+          "oneOf": [
+            { "type": "null" },
+            { "type": "string", "minLength": 1 }
+          ]
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$"
+        }
+      }
+    }
+  }
+}

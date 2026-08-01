@@ -156,7 +156,11 @@ const input = {
   stepResults: Object.fromEntries(intake.stepIds.map((id) => [id, "pass"])),
   actor: "tester",
   approvals: [
-    { state: "approved", user: { id: 60, login: "independent-approver" } },
+    {
+      state: "approved",
+      user: { id: 60, login: "independent-approver" },
+      environments: [{ id: 600, name: "forge3d-manual-evidence" }],
+    },
   ],
   implementationActors: ["implementation-author"],
   submissionRun: { id: 70, attempt: 1, workflowSha: "4".repeat(40) },
@@ -168,6 +172,11 @@ test("submission produces closed evidence from draft, session, media, approval, 
   assert.equal(evidence.intakeReleaseId, 50);
   assert.equal(evidence.media[0].id, 40);
   assert.equal(evidence.approver.login, "independent-approver");
+  assert.deepEqual(evidence.approver.environment, {
+    id: 600,
+    name: "forge3d-manual-evidence",
+  });
+  assert.equal(evidence.approvalProvenance.length, 1);
   assert.deepEqual(evidence.labReadiness, session.labReadiness);
   assert.equal(evidence.hostInventory.trackpad.assetId, "FW-TRACKPAD-01");
 });
@@ -225,7 +234,51 @@ test("expired draft, self approval, implementation approval, or wrong finalizer 
     () =>
       validateManualSubmission({
         ...structuredClone(input),
-        approvals: [{ state: "approved", user: { id: 1, login: "tester" } }],
+        approvals: [{
+          state: "approved",
+          user: { id: 1, login: "tester" },
+          environments: [{ id: 600, name: "forge3d-manual-evidence" }],
+        }],
+      }),
+    /independent/u,
+  );
+  assert.throws(
+    () =>
+      validateManualSubmission({
+        ...structuredClone(input),
+        approvals: [{
+          state: "approved",
+          user: { id: 61, login: "unrelated" },
+          environments: [{ id: 601, name: "other-environment" }],
+        }],
+      }),
+    /no approval exists/u,
+  );
+  assert.throws(
+    () =>
+      validateManualSubmission({
+        ...structuredClone(input),
+        approvals: [{
+          state: "approved",
+          user: { id: 61, login: "mixed" },
+          environments: [
+            { id: 600, name: "forge3d-manual-evidence" },
+            { id: 601, name: "other-environment" },
+          ],
+        }],
+      }),
+    /mixes/u,
+  );
+  assert.throws(
+    () =>
+      validateManualSubmission({
+        ...structuredClone(input),
+        actor: "Tester",
+        approvals: [{
+          state: "approved",
+          user: { id: 62, login: "tester" },
+          environments: [{ id: 600, name: "forge3d-manual-evidence" }],
+        }],
       }),
     /independent/u,
   );
@@ -239,5 +292,23 @@ test("expired draft, self approval, implementation approval, or wrong finalizer 
         },
       }),
     /finalizer attestation/u,
+  );
+});
+
+test("manual evidence preserves every exact target-environment approval", () => {
+  const evidence = validateManualSubmission({
+    ...structuredClone(input),
+    approvals: [
+      ...structuredClone(input.approvals),
+      {
+        state: "approved",
+        user: { id: 61, login: "second-approver" },
+        environments: [{ id: 600, name: "forge3d-manual-evidence" }],
+      },
+    ],
+  });
+  assert.deepEqual(
+    evidence.approvalProvenance.map((approval) => approval.login),
+    ["independent-approver", "second-approver"],
   );
 });

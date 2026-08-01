@@ -26,6 +26,9 @@ test("every installed service launches polling orchestration, not health-only mo
   assert.match(service, /new BrowserLabController/u);
   assert.match(service, /new ControllerBrokerClient/u);
   assert.match(service, /createControllerHealthServer/u);
+  assert.match(service, /createNativeControllerSigningProvider/u);
+  assert.equal(service.includes("FORGE3D_CONTROLLER_SIGNING_KEY_FILE"), false);
+  assert.equal(service.includes("controllerPrivateKey"), false);
 });
 
 test("Windows service delegates runner launch to the pinned physical-console bridge", () => {
@@ -41,13 +44,24 @@ test("Windows service delegates runner launch to the pinned physical-console bri
     join(root, "services", "windows-interactive-session-bridge.ps1"),
     "utf8",
   );
+  const readme = readFileSync(join(root, "README.md"), "utf8");
+  const runbook = readFileSync(
+    join(repositoryRoot, "crates", "forge3d-web", "docs", "browser-lab-runbook.md"),
+    "utf8",
+  );
   const digest = createHash("sha256").update(bridge).digest("hex");
   assert.match(
     attributes,
     /tools\/browser-lab-controller\/services\/\*\.ps1 text eol=lf/u,
   );
   assert.match(service, /FORGE3D_CONTROLLER_WINDOWS_SESSION_BRIDGE/u);
-  assert.match(service, /<username>LocalSystem<\/username>/u);
+  assert.match(
+    service,
+    /<username>NT SERVICE\\forge3d-browser-lab-controller<\/username>/u,
+  );
+  assert.match(service, /<allowservicelogon>true<\/allowservicelogon>/u);
+  assert.equal(service.includes("<username>LocalSystem</username>"), false);
+  assert.match(service, /FORGE3D_CONTROLLER_SIGNING_PROVIDER/u);
   assert.match(
     service,
     new RegExp(
@@ -57,7 +71,11 @@ test("Windows service delegates runner launch to the pinned physical-console bri
   );
   for (const contract of [
     "WTSGetActiveConsoleSessionId",
-    "WTSQueryUserToken",
+    "OpenProcessToken",
+    "AdjustTokenPrivileges",
+    "SeDebugPrivilege",
+    "QueryFullProcessImageName",
+    "explorer.exe",
     "CreateProcessAsUser",
     "CreateJobObject",
     "AssignProcessToJobObject",
@@ -71,6 +89,20 @@ test("Windows service delegates runner launch to the pinned physical-console bri
     "\\$derived",
   ]) {
     assert.match(bridge, new RegExp(contract, "u"));
+  }
+  assert.equal(bridge.includes("WTSQueryUserToken"), false);
+  assert.match(
+    bridge,
+    /SetLastError\(0\)\s*\n\s*\$adjusted = \[Forge3DInteractiveSession\]::AdjustTokenPrivileges/u,
+  );
+  for (const contractText of [
+    "NT SERVICE\\forge3d-browser-lab-controller",
+    "SeDebugPrivilege",
+    "SeAssignPrimaryTokenPrivilege",
+    "SeIncreaseQuotaPrivilege",
+  ]) {
+    assert.match(readme, new RegExp(contractText.replaceAll("\\", "\\\\"), "u"));
+    assert.match(runbook, new RegExp(contractText.replaceAll("\\", "\\\\"), "u"));
   }
   assert.equal(bridge.includes("Start-Process"), false);
 });
@@ -122,6 +154,7 @@ test("macOS and Linux services delegate to the pinned graphical-login bridge", (
     assert.match(service, new RegExp(bridgeDigest, "u"));
     assert.match(service, /FORGE3D_CONTROLLER_INTERACTIVE_USER/u);
     assert.match(service, /forge3d-lab/u);
+    assert.match(service, /FORGE3D_CONTROLLER_SIGNING_PROVIDER/u);
   }
   assert.match(linux, /User=forge3d-lab-controller/u);
   assert.match(linux, /NoNewPrivileges=false/u);

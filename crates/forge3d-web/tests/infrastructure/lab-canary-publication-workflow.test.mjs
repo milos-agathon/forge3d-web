@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
@@ -38,6 +39,9 @@ const publicationSchema = readFileSync(
   resolve(import.meta.dirname, "./lab-canary-publication-record.schema.json"),
 );
 const logicalPublisher = publisher.replace(/\\\n\s*/gu, " ");
+const selectorStep = parse(workflow).jobs["observe-lab-canary-publication-trust"].steps.find(
+  (step) => step.name === "Validate positive numeric selectors",
+);
 
 test("publication contract inputs use canonical LF bytes", () => {
   for (const policy of [
@@ -76,7 +80,39 @@ test("canary accepts only fixed host/manual IDs and derives candidate and tag", 
     /browser-lab-canary-\$\{effective\.labInfrastructureDigest\}-\$\{process\.env\.GITHUB_RUN_ID\}/u,
   );
   assert.equal(workflow.includes("release-matrix"), false);
+  for (const selector of [
+    "MAC_RUN_ID",
+    "WINDOWS_RUN_ID",
+    "LINUX_INTEL_RUN_ID",
+    "LINUX_NVIDIA_RUN_ID",
+    "MANUAL_RUN_ID",
+    "MANUAL_INTAKE_ID",
+    "MANUAL_JOB_ID",
+  ]) {
+    assert.match(observer, new RegExp(`${selector}: \\$\\{\\{ inputs\\.`, "u"));
+  }
+  assert.equal(observer.includes("SELECTORS:"), false);
   assert.doesNotThrow(() => parse(workflow));
+});
+
+test("each canary selector rejects surrounding or embedded whitespace", () => {
+  const selectorNames = [
+    "MAC_RUN_ID",
+    "WINDOWS_RUN_ID",
+    "LINUX_INTEL_RUN_ID",
+    "LINUX_NVIDIA_RUN_ID",
+    "MANUAL_RUN_ID",
+    "MANUAL_INTAKE_ID",
+    "MANUAL_JOB_ID",
+  ];
+  const baseline = Object.fromEntries(selectorNames.map((name) => [name, "123"]));
+  assert.equal(runSelectorValidation(baseline).status, 0);
+  for (const selector of selectorNames) {
+    for (const malformed of [" 123", "123 ", "12 3", "123\n"]) {
+      const result = runSelectorValidation({ ...baseline, [selector]: malformed });
+      assert.notEqual(result.status, 0, `${selector} accepted ${JSON.stringify(malformed)}`);
+    }
+  }
 });
 
 test("observer secret is isolated and canary cannot claim support readiness", () => {
@@ -95,22 +131,52 @@ test("observer secret is isolated and canary cannot claim support readiness", ()
   assert.match(publisher, /makes no browser support claim/u);
 });
 
-test("publisher has no checkout and carries an attested protected record validator", () => {
+test("publisher has no checkout and carries an attested closed trust proof", () => {
   assert.match(publisher, /environment: forge3d-web-release/u);
   assert.equal(publisher.includes("actions/checkout@"), false);
   assert.match(publisher, /test ! -d \.git/u);
   assert.match(publisher, /contents: write/u);
   assert.match(publisher, /attestations: read/u);
   assert.match(publisher, /for subject in preflight\/canary-assets\/\*/u);
-  assert.match(preflight, /canary-publication-validator\/scripts/u);
+  assert.match(preflight, /repository-trust-publisher-proof\.json/u);
   assert.match(preflight, /lab-canary-publication-record\.schema\.json/u);
-  assert.match(
-    publisher,
-    /find preflight\/canary-publication-validator -type f \| sort/u,
-  );
+  assert.match(publisher, /preflight\/repository-trust-publisher-proof\.json/u);
   assert.match(preflight, /recordType: "lab-canary-publication-candidate"/u);
   assert.match(publisher, /lab-canary-publication-record\.json/u);
   assert.match(publisher, /retention-days: 90/u);
+});
+
+test("publisher revalidates the complete observation and exact release environment approvals", () => {
+  assert.match(
+    preflight,
+    /EXPECTED_CONSUMERS: '\[\{"job":"validate-lab-canary","environment":"none"\},\{"job":"publish-lab-canary","environment":"forge3d-web-release"\}\]'/u,
+  );
+  for (const contract of [
+    "observation-artifact.json",
+    "unzip -Z1 observation.zip",
+    "canonical(observation)",
+    "observation.workflow.ref",
+    "observation.run.attempt",
+    "observation.currentMainSha",
+    "observation.policySha256",
+    "observation.workflowActionsLockSha256",
+    "observationExpiresAt",
+    "preflightExpiresAt",
+  ]) assert.equal(publisher.includes(contract), true, contract);
+  assert.match(publisher, /value\.environments\.length === 1/u);
+  assert.match(publisher, /value\.environments\[0\]\?\.name === "forge3d-web-release"/u);
+  assert.match(publisher, /value\.user\.login\.toLowerCase\(\)/u);
+  for (const contract of [
+    "preflightCreatedAt",
+    'preflight.mode !== "laboratory-canary"',
+    "preflight.supportClaim !== false",
+    "preflight.repository !== process.env.GITHUB_REPOSITORY",
+    "preflight.readiness.runId !== Number(process.env.GITHUB_RUN_ID)",
+    "preflight.readiness.sha256 !== process.env.LAB_DIGEST",
+    "manifest.labInfrastructureDigest !== process.env.LAB_DIGEST",
+    "!preflightAssetsValid",
+    "preflightExpiresAt - preflightCreatedAt > 30 * 60 * 1000",
+  ]) assert.equal(publisher.includes(contract), true, contract);
 });
 
 test("separate least-privilege job verifies and attests the exact canary record", () => {
@@ -130,6 +196,13 @@ test("separate least-privilege job verifies and attests the exact canary record"
   assert.match(attester, /publication_artifact_id/u);
   assert.match(attester, /publication_artifact_digest/u);
   assert.match(attester, /artifact\.workflow_run\?\.id !== Number\(process\.env\.GITHUB_RUN_ID\)/u);
+  assert.match(attester, /artifact\.expired !== false/u);
+  assert.match(attester, /artifact\.workflow_run\?\.repository_id !== 1259761852/u);
+  assert.match(attester, /artifact\.workflow_run\?\.head_repository_id !== 1259761852/u);
+  assert.match(attester, /artifact\.workflow_run\?\.head_sha !== process\.env\.EXPECTED_HEAD_SHA/u);
+  assert.match(attester, /!\/\^\[0-9a-f\]\{64\}\$\/u\.test\(process\.env\.ARTIFACT_DIGEST\)/u);
+  assert.match(attester, /artifact\.digest !== `sha256:\$\{process\.env\.ARTIFACT_DIGEST\}`/u);
+  assert.match(attester, /= "\$\{ARTIFACT_DIGEST\}"/u);
   assert.match(attester, /lab-canary-publication-record\.schema\.json/u);
   assert.equal(
     attester.match(/SCHEMA_SHA256: ([0-9a-f]{64})/u)?.[1],
@@ -145,7 +218,7 @@ test("separate least-privilege job verifies and attests the exact canary record"
 
 test("canary publication and readiness share the exact record filename and schema", () => {
   const produced = publisher.match(
-    /create-publication-record \\\n+\s+(lab-canary-publication-record\.json)/u,
+    /writeFileSync\("(lab-canary-publication-record\.json)"/u,
   )?.[1];
   const consumed = readinessWorkflow.match(
     /test -f canary-publication\/(lab-canary-publication-record\.json)/u,
@@ -176,8 +249,12 @@ test("preflight, race, deletion, and readiness absence gates use 404-only valida
     2,
   );
   assert.equal(
-    publisher.match(/await requireGitHubResourceAbsent/gu)?.length,
+    publisher.match(/await requireAbsent/gu)?.length,
     4,
+  );
+  assert.equal(
+    publisher.match(/response\.status !== 404/gu)?.length,
+    2,
   );
   assert.equal(
     readinessWorkflow.match(/await requireGitHubResourceAbsent/gu)?.length,
@@ -226,14 +303,46 @@ test("publisher closes fresh intake bytes, publishes once, then verifies immutab
   assert.match(publisher, /release\.immutable !== true/u);
   assert.match(publisher, /published canary API\/byte digest mismatch/u);
   assert.equal(
-    publisher.match(/verify-intake/gu)?.length,
+    publisher.match(/manual canary intake identity or manifest bytes changed/gu)?.length,
     2,
     "intake/media must be freshly closed before publication and deletion",
   );
+  assert.equal(publisher.includes("node preflight/"), false);
+  assert.equal(publisher.includes('from "./preflight'), false);
   assert.equal(
     publisher.match(/lab-canary-publication-record\.json/gu)?.length >= 2,
     true,
   );
+});
+
+test("canary publisher rechecks both handoff expiries around the final absence race", () => {
+  const mutation = publisher.slice(
+    publisher.indexOf("Create draft, byte-verify closed assets, and publish exactly once"),
+  );
+  const absence = mutation.indexOf("await requireAbsent(`git/ref/tags/${tag}`)");
+  const finalExpiry = mutation.indexOf("publication handoff expired immediately before mutation");
+  const create = mutation.indexOf('gh release create "${RELEASE_TAG}"');
+  assert.equal(mutation.match(/publication handoff expired (?:before|immediately before) mutation/gu)?.length, 2);
+  assert.notEqual(absence, -1);
+  assert.ok(absence < finalExpiry);
+  assert.ok(finalExpiry < create);
+  assert.match(mutation, /now >= observationExpiresAt/u);
+  assert.match(mutation, /now >= preflightExpiresAt/u);
+});
+
+test("every protected canary publisher inline module is syntactically valid", () => {
+  const modules = [...publisher.matchAll(
+    /node --input-type=module --eval '\n([\s\S]*?)\n\s*'/gu,
+  )];
+  assert.ok(modules.length > 0);
+  for (const [, source] of modules) {
+    const result = spawnSync(
+      process.execPath,
+      ["--check", "--input-type=module"],
+      { input: source, encoding: "utf8" },
+    );
+    assert.equal(result.status, 0, result.stderr);
+  }
 });
 
 test("every gh release subcommand has explicit repository context without checkout", () => {
@@ -269,13 +378,18 @@ test("final verification precedes exact intake cleanup and the retained record i
     "published canary API/byte digest mismatch",
     assetVerify,
   );
-  const secondIntakeVerification = logicalPublisher.lastIndexOf("verify-intake");
+  const secondIntakeVerification = logicalPublisher.lastIndexOf(
+    "manual canary intake identity or manifest bytes changed",
+  );
   const retainedMediaClosure = logicalPublisher.indexOf(
     "published-download/${asset.releaseName}",
     publishedClosure,
   );
   const deletion = logicalPublisher.indexOf('gh release delete "${intake_tag}"');
-  const record = logicalPublisher.indexOf("create-publication-record", deletion);
+  const record = logicalPublisher.indexOf(
+    'writeFileSync("lab-canary-publication-record.json"',
+    deletion,
+  );
   for (const index of [
     publish,
     releaseVerify,
@@ -313,6 +427,15 @@ function block(startId, nextId) {
   const end = nextId ? workflow.indexOf(`  ${nextId}:`, start + 1) : workflow.length;
   assert.notEqual(end, -1);
   return workflow.slice(start, end);
+}
+
+function runSelectorValidation(environment) {
+  const match = selectorStep.run.match(/--eval '([\s\S]*)'$/u);
+  assert.ok(match, "numeric selector step must remain a Node eval");
+  return spawnSync(process.execPath, ["--input-type=module", "--eval", match[1]], {
+    env: { ...process.env, ...environment },
+    encoding: "utf8",
+  });
 }
 
 function releaseCommands(value) {

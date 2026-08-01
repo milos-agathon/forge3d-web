@@ -15,6 +15,7 @@ import {
   validateReleaseCandidate,
   verifyPublicationHandoff,
 } from "../../scripts/release-publication.mjs";
+import { sha256Hex } from "../../scripts/canonical-json.mjs";
 import { assertJsonSchema } from "../browser/json-schema-validator.mjs";
 
 const sha = "a".repeat(40);
@@ -27,6 +28,12 @@ const readiness = {
   targetSha: sha,
 };
 const trust = { verified: true, targetSha: sha, currentMainSha: sha };
+const preflightReadiness = {
+  runId: readiness.runId,
+  artifactId: readiness.artifactId,
+  sha256: readiness.sha256,
+  status: readiness.status,
+};
 
 test("supported and canary candidates require exact main, immutable setting, and absent tag", () => {
   assert.equal(
@@ -65,7 +72,11 @@ test("publisher, self approval, implementer approval, drift, and existing releas
       actor: "implementer",
       implementationActors: ["implementer"],
       approvals: [
-        { state: "approved", user: { id: 1, login: "independent" } },
+        {
+          state: "approved",
+          user: { id: 1, login: "independent" },
+          environments: [{ id: 100, name: "forge3d-web-release" }],
+        },
       ],
     }),
   );
@@ -74,7 +85,11 @@ test("publisher, self approval, implementer approval, drift, and existing releas
       actor: "publisher",
       implementationActors: ["implementer"],
       approvals: [
-        { state: "approved", user: { id: 1, login: "publisher" } },
+        {
+          state: "approved",
+          user: { id: 1, login: "publisher" },
+          environments: [{ id: 100, name: "forge3d-web-release" }],
+        },
       ],
     }),
   );
@@ -92,6 +107,75 @@ test("publisher, self approval, implementer approval, drift, and existing releas
   );
 });
 
+test("publisher counts only exact forge3d-web-release approvals", () => {
+  const common = {
+    actor: "publisher",
+    implementationActors: ["implementer"],
+  };
+  assert.deepEqual(
+    validateIndependentPublisher({
+      ...common,
+      approvals: [
+        {
+          state: "approved",
+          user: { id: 1, login: "observer-approver" },
+          environments: [{ id: 90, name: "forge3d-trust-observer" }],
+        },
+        {
+          state: "approved",
+          user: { id: 2, login: "release-approver" },
+          environments: [{ id: 100, name: "forge3d-web-release" }],
+        },
+      ],
+    }),
+    [{
+      id: 2,
+      login: "release-approver",
+      environment: { id: 100, name: "forge3d-web-release" },
+    }],
+  );
+  assert.throws(
+    () =>
+      validateIndependentPublisher({
+        ...common,
+        approvals: [{
+          state: "approved",
+          user: { id: 1, login: "observer-approver" },
+          environments: [{ id: 90, name: "forge3d-trust-observer" }],
+        }],
+      }),
+    /no approval exists/u,
+  );
+  assert.throws(
+    () =>
+      validateIndependentPublisher({
+        ...common,
+        approvals: [{
+          state: "approved",
+          user: { id: 3, login: "mixed" },
+          environments: [
+            { id: 100, name: "forge3d-web-release" },
+            { id: 90, name: "forge3d-trust-observer" },
+          ],
+        }],
+      }),
+    /mixes/u,
+  );
+  assert.throws(
+    () =>
+      validateIndependentPublisher({
+        actor: "Publisher",
+        implementationActors: ["implementer"],
+        approvals: [{
+          state: "approved",
+          user: { id: 4, login: "publisher" },
+          environments: [{ id: 100, name: "forge3d-web-release" }],
+        }],
+      }),
+    /independent/u,
+  );
+});
+
 test("preflight is exact-consumer, independently approved, and expires in 30 minutes", () => {
   const observation = {
     artifactId: 20,
@@ -104,7 +188,7 @@ test("preflight is exact-consumer, independently approved, and expires in 30 min
     supportClaim: true,
     targetSha: sha,
     tag: "v1.26.3",
-    readiness,
+    readiness: preflightReadiness,
     assets: [{ sourceId: 30, name: "manifest.json", sha256: "e".repeat(64) }],
     observation,
     run: {
@@ -132,12 +216,17 @@ test("preflight is exact-consumer, independently approved, and expires in 30 min
     verifyPublicationHandoff({
       preflight: result.record,
       expected: {
+        mode: "supported-release",
+        supportClaim: true,
+        repository: "milos-agathon/forge3d-web",
         workflowSha: sha,
         runId: 40,
         runAttempt: 1,
         targetSha: sha,
         tag: "v1.26.3",
         publisherJob: "publish-release",
+        readiness: preflightReadiness,
+        assets: [{ sourceId: 30, name: "manifest.json", sha256: "e".repeat(64) }],
         observationArtifactId: 20,
         observationArtifactName: "trust",
         observationArtifactDigest: "sha256:" + "c".repeat(64),
@@ -147,6 +236,71 @@ test("preflight is exact-consumer, independently approved, and expires in 30 min
       now: new Date("2026-07-30T00:10:00Z"),
     }).tag,
     "v1.26.3",
+  );
+});
+
+test("publication handoff rejects readiness, asset, mode, and lifetime substitutions", () => {
+  const base = createPublicationPreflight({
+    mode: "supported-release",
+    supportClaim: true,
+    targetSha: sha,
+    tag: "v1.26.3",
+    readiness: preflightReadiness,
+    assets: [{ sourceId: 30, name: "manifest.json", sha256: "e".repeat(64) }],
+    observation: {
+      artifactId: 20,
+      artifactName: "trust",
+      artifactDigest: "sha256:" + "c".repeat(64),
+      contentSha256: "d".repeat(64),
+    },
+    run: {
+      id: 40,
+      attempt: 1,
+      workflow: ".github/workflows/publish-web-release.yml",
+    },
+    workflowSha: sha,
+    publisher: { actor: "publisher", job: "publish-release" },
+    implementationActors: ["implementer"],
+    createdAt: new Date("2026-07-30T00:00:00Z"),
+  }).record;
+  const expected = {
+    mode: "supported-release",
+    supportClaim: true,
+    repository: "milos-agathon/forge3d-web",
+    workflowSha: sha,
+    runId: 40,
+    runAttempt: 1,
+    targetSha: sha,
+    tag: "v1.26.3",
+    publisherJob: "publish-release",
+    readiness: preflightReadiness,
+    assets: [{ sourceId: 30, name: "manifest.json", sha256: "e".repeat(64) }],
+    observationArtifactId: 20,
+    observationArtifactName: "trust",
+    observationArtifactDigest: "sha256:" + "c".repeat(64),
+    observationContentSha256: "d".repeat(64),
+  };
+  const verify = (preflight, now = "2026-07-30T00:10:00Z") =>
+    verifyPublicationHandoff({
+      preflight,
+      expected: { ...expected, preflightSha256: sha256Hex(preflight) },
+      now: new Date(now),
+    });
+  assert.doesNotThrow(() => verify(base));
+  for (const mutate of [
+    (value) => { value.mode = "laboratory-canary"; value.supportClaim = false; },
+    (value) => { value.readiness.sha256 = "f".repeat(64); },
+    (value) => { value.assets[0].sha256 = "f".repeat(64); },
+    (value) => { value.repository = "attacker/repository"; },
+    (value) => { value.expiresAt = "2026-07-30T00:30:00.001Z"; },
+  ]) {
+    const changed = structuredClone(base);
+    mutate(changed);
+    assert.throws(() => verify(changed), /missing, stale, or mismatched|schema/u);
+  }
+  assert.throws(
+    () => verify(base, "2026-07-29T23:59:59.999Z"),
+    /missing, stale, or mismatched/u,
   );
 });
 
@@ -362,7 +516,17 @@ function manualMediaFixture() {
     driver: { name: "safaridriver", version: "18.0" },
     hostInventory: {},
     actor: "tester",
-    approver: { id: 64, login: "approver" },
+    approver: {
+      id: 64,
+      login: "approver",
+      environment: { id: 600, name: "forge3d-manual-evidence" },
+    },
+    approvalProvenance: [{
+      id: 64,
+      login: "approver",
+      state: "approved",
+      environment: { id: 600, name: "forge3d-manual-evidence" },
+    }],
     intakeReleaseId: 71,
     manualSessionRunId: 65,
     manualSessionJobId: 66,

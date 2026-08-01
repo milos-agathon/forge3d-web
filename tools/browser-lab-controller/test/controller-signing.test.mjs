@@ -6,6 +6,7 @@ import {
   canonicalJson,
   signControllerRecord,
 } from "../src/controller-signing.mjs";
+import { createTestPrivateKeySigner } from "./test-signer.mjs";
 
 test("controller signs RFC8785-compatible canonical bytes with P-256 SHA-256", () => {
   const { privateKey, publicKey } = generateKeyPairSync("ec", {
@@ -18,8 +19,10 @@ test("controller signs RFC8785-compatible canonical bytes with P-256 SHA-256", (
   };
   const signed = signControllerRecord({
     record,
-    privateKey,
-    signingKeyId: "controller-fw-lnx-nv-01-p256-v1",
+    signer: createTestPrivateKeySigner({
+      privateKey,
+      signingKeyId: "controller-fw-lnx-nv-01-p256-v1",
+    }),
   });
   assert.equal(
     signed.canonical,

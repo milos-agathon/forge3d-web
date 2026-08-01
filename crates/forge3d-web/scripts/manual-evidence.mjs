@@ -287,17 +287,31 @@ export function createManualEvidence({
   media,
   actor,
   approver,
+  approvalProvenance,
   implementationActors,
   submissionRun,
   intakeReleaseId,
   controllerSignatureSha256,
   now = new Date(),
 }) {
+  const normalizedActor = actor?.toLowerCase();
+  const normalizedImplementationActors = new Set(
+    [...implementationActors].map((value) => value.toLowerCase()),
+  );
   if (
     actor !== intake.expectedTester ||
-    implementationActors.has(actor) ||
-    approver.login === actor ||
-    implementationActors.has(approver.login)
+    normalizedImplementationActors.has(normalizedActor) ||
+    approver.login.toLowerCase() === normalizedActor ||
+    normalizedImplementationActors.has(approver.login.toLowerCase()) ||
+    !Array.isArray(approvalProvenance) ||
+    approvalProvenance.length < 1 ||
+    approvalProvenance.some(
+      (approval) =>
+        approval.state !== "approved" ||
+        approval.environment?.name !== "forge3d-manual-evidence" ||
+        normalizedImplementationActors.has(approval.login.toLowerCase()) ||
+        approval.login.toLowerCase() === normalizedActor,
+    )
   ) {
     throw new Error("tester and approver must be independent of implementation actors");
   }
@@ -335,6 +349,7 @@ export function createManualEvidence({
       : null,
     actor,
     approver,
+    approvalProvenance,
     intakeReleaseId,
     manualSessionRunId: session.run.id,
     manualSessionJobId: session.hardwareJobId,

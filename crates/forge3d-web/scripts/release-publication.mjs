@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 
 import { canonicalJson, sha256Hex } from "./canonical-json.mjs";
 import { assertJsonSchema } from "../tests/browser/json-schema-validator.mjs";
+import { selectIndependentEnvironmentApprovals } from "./environment-approval.mjs";
 
 const manualEvidenceSchema = readJson(
   new URL("../tests/infrastructure/manual-evidence.schema.json", import.meta.url),
@@ -28,6 +29,12 @@ const releaseCandidateSchema = readJson(
 const releasePublicationSchema = readJson(
   new URL(
     "../tests/infrastructure/browser-release-publication-record.schema.json",
+    import.meta.url,
+  ),
+);
+const publicationPreflightSchema = readJson(
+  new URL(
+    "../tests/infrastructure/release-publication-preflight.schema.json",
     import.meta.url,
   ),
 );
@@ -140,23 +147,18 @@ export function validateIndependentPublisher({
   actor,
   implementationActors,
   approvals,
+  environment = "forge3d-web-release",
 }) {
-  const approved = approvals.filter((approval) => approval.state === "approved");
-  if (
-    !actor ||
-    implementationActors.includes(actor) ||
-    approved.length < 1 ||
-    approved.some(
-      (approval) =>
-        approval.user.login === actor ||
-        implementationActors.includes(approval.user.login),
-    )
-  ) {
-    throw new Error("publisher and every approval must be independent");
-  }
+  const approved = selectIndependentEnvironmentApprovals({
+    actor,
+    implementationActors,
+    approvals,
+    environment,
+  });
   return approved.map((approval) => ({
     id: approval.user.id,
     login: approval.user.login,
+    environment: approval.environment,
   }));
 }
 
@@ -571,6 +573,7 @@ export function createPublicationPreflight({
       new Date(createdAt).getTime() + 30 * 60 * 1000,
     ).toISOString(),
   };
+  assertJsonSchema(record, publicationPreflightSchema);
   return {
     record,
     canonical: canonicalJson(record),
@@ -583,7 +586,14 @@ export function verifyPublicationHandoff({
   expected,
   now = new Date(),
 }) {
+  assertJsonSchema(preflight, publicationPreflightSchema);
+  const createdAt = new Date(preflight.createdAt);
+  const expiresAt = new Date(preflight.expiresAt);
+  const checkedAt = new Date(now);
   if (
+    preflight.mode !== expected.mode ||
+    preflight.supportClaim !== expected.supportClaim ||
+    preflight.repository !== expected.repository ||
     preflight.workflowSha !== expected.workflowSha ||
     preflight.run.id !== expected.runId ||
     preflight.run.attempt !== expected.runAttempt ||
@@ -591,13 +601,21 @@ export function verifyPublicationHandoff({
     preflight.tag !== expected.tag ||
     preflight.publisher.job !== expected.publisherJob ||
     preflight.publisher.environment !== "forge3d-web-release" ||
+    canonicalJson(preflight.readiness) !== canonicalJson(expected.readiness) ||
+    canonicalJson(preflight.assets) !== canonicalJson(expected.assets) ||
     preflight.observation.artifactId !== expected.observationArtifactId ||
     preflight.observation.artifactName !== expected.observationArtifactName ||
     preflight.observation.artifactDigest !==
       expected.observationArtifactDigest ||
     preflight.observation.contentSha256 !== expected.observationContentSha256 ||
     sha256Hex(preflight) !== expected.preflightSha256 ||
-    new Date(preflight.expiresAt) <= new Date(now)
+    Number.isNaN(createdAt.getTime()) ||
+    Number.isNaN(expiresAt.getTime()) ||
+    Number.isNaN(checkedAt.getTime()) ||
+    expiresAt <= createdAt ||
+    expiresAt.getTime() - createdAt.getTime() > 30 * 60 * 1000 ||
+    checkedAt < createdAt ||
+    checkedAt >= expiresAt
   ) {
     throw new Error("publication preflight handoff is missing, stale, or mismatched");
   }

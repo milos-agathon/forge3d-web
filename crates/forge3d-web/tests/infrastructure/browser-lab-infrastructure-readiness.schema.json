@@ -210,11 +210,23 @@
     "manualCanary": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["runId", "intakeReleaseId", "hardwareJobId"],
+      "required": [
+        "runId",
+        "intakeReleaseId",
+        "hardwareJobId",
+        "createdAt",
+        "selectedRunCreatedAt",
+        "selectedRunCompletedAt",
+        "acceptanceWindowHours"
+      ],
       "properties": {
         "runId": { "type": "integer", "minimum": 1 },
         "intakeReleaseId": { "type": "integer", "minimum": 1 },
-        "hardwareJobId": { "type": "integer", "minimum": 1 }
+        "hardwareJobId": { "type": "integer", "minimum": 1 },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "selectedRunCreatedAt": { "type": "string", "format": "date-time" },
+        "selectedRunCompletedAt": { "type": "string", "format": "date-time" },
+        "acceptanceWindowHours": { "const": 24 }
       }
     },
     "canaryReleaseId": { "type": "integer", "minimum": 1 },

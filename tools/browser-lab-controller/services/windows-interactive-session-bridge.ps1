@@ -39,6 +39,21 @@ public static class Forge3DInteractiveSession {
     public Int32 dwThreadId;
   }
   [StructLayout(LayoutKind.Sequential)]
+  public struct LUID {
+    public UInt32 LowPart;
+    public Int32 HighPart;
+  }
+  [StructLayout(LayoutKind.Sequential)]
+  public struct LUID_AND_ATTRIBUTES {
+    public LUID Luid;
+    public UInt32 Attributes;
+  }
+  [StructLayout(LayoutKind.Sequential)]
+  public struct TOKEN_PRIVILEGES {
+    public UInt32 PrivilegeCount;
+    public LUID_AND_ATTRIBUTES Privileges;
+  }
+  [StructLayout(LayoutKind.Sequential)]
   public struct IO_COUNTERS {
     public UInt64 ReadOperationCount;
     public UInt64 WriteOperationCount;
@@ -81,10 +96,47 @@ public static class Forge3DInteractiveSession {
   }
   [DllImport("kernel32.dll")]
   public static extern UInt32 WTSGetActiveConsoleSessionId();
-  [DllImport("Wtsapi32.dll", SetLastError = true)]
-  public static extern bool WTSQueryUserToken(
-    UInt32 sessionId,
+  [DllImport("kernel32.dll")]
+  public static extern IntPtr GetCurrentProcess();
+  [DllImport("kernel32.dll")]
+  public static extern void SetLastError(UInt32 errorCode);
+  [DllImport("kernel32.dll", SetLastError = true)]
+  public static extern IntPtr OpenProcess(
+    UInt32 desiredAccess,
+    bool inheritHandle,
+    UInt32 processId
+  );
+
+  [DllImport("advapi32.dll", SetLastError = true)]
+  public static extern bool OpenProcessToken(
+    IntPtr process,
+    UInt32 desiredAccess,
     out IntPtr token
+  );
+
+  [DllImport("advapi32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+  public static extern bool LookupPrivilegeValue(
+    string systemName,
+    string privilegeName,
+    out LUID luid
+  );
+
+  [DllImport("advapi32.dll", SetLastError = true)]
+  public static extern bool AdjustTokenPrivileges(
+    IntPtr token,
+    bool disableAllPrivileges,
+    ref TOKEN_PRIVILEGES newState,
+    UInt32 bufferLength,
+    IntPtr previousState,
+    IntPtr returnLength
+  );
+
+  [DllImport("kernel32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+  public static extern bool QueryFullProcessImageName(
+    IntPtr process,
+    UInt32 flags,
+    StringBuilder executablePath,
+    ref UInt32 executablePathLength
   );
 
   [DllImport("advapi32.dll", SetLastError = true)]
@@ -187,6 +239,51 @@ function Assert-Win32 {
   if (-not $Success) {
     $code = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
     throw "$Operation failed with Win32 error $code"
+  }
+}
+
+function Enable-ProcessPrivilege {
+  param([string]$Name)
+  $processToken = [IntPtr]::Zero
+  try {
+    Assert-Win32 (
+      [Forge3DInteractiveSession]::OpenProcessToken(
+        [Forge3DInteractiveSession]::GetCurrentProcess(),
+        0x0020 -bor 0x0008,
+        [ref]$processToken
+      )
+    ) "OpenProcessToken(current controller)"
+    $luid = New-Object Forge3DInteractiveSession+LUID
+    Assert-Win32 (
+      [Forge3DInteractiveSession]::LookupPrivilegeValue(
+        $null,
+        $Name,
+        [ref]$luid
+      )
+    ) "LookupPrivilegeValue"
+    $attribute = New-Object Forge3DInteractiveSession+LUID_AND_ATTRIBUTES
+    $attribute.Luid = $luid
+    $attribute.Attributes = 0x00000002
+    $privileges = New-Object Forge3DInteractiveSession+TOKEN_PRIVILEGES
+    $privileges.PrivilegeCount = 1
+    $privileges.Privileges = $attribute
+    [Forge3DInteractiveSession]::SetLastError(0)
+    $adjusted = [Forge3DInteractiveSession]::AdjustTokenPrivileges(
+      $processToken,
+      $false,
+      [ref]$privileges,
+      0,
+      [IntPtr]::Zero,
+      [IntPtr]::Zero
+    )
+    $adjustError = [Runtime.InteropServices.Marshal]::GetLastWin32Error()
+    if (-not $adjusted -or $adjustError -ne 0) {
+      throw "required controller process privilege is unavailable"
+    }
+  } finally {
+    if ($processToken -ne [IntPtr]::Zero) {
+      [void][Forge3DInteractiveSession]::CloseHandle($processToken)
+    }
   }
 }
 
@@ -302,7 +399,15 @@ $locked = Get-Process -Name "LogonUI" -ErrorAction SilentlyContinue |
 if ($null -ne $locked) {
   throw "active physical console session is locked"
 }
+$consoleShells = @(
+  Get-Process -Name "explorer" -ErrorAction SilentlyContinue |
+    Where-Object { $_.SessionId -eq $sessionId }
+)
+if ($consoleShells.Count -ne 1) {
+  throw "active physical console shell is missing or ambiguous"
+}
 
+$consoleProcessHandle = [IntPtr]::Zero
 $userToken = [IntPtr]::Zero
 $primaryToken = [IntPtr]::Zero
 $userEnvironment = [IntPtr]::Zero
@@ -314,9 +419,39 @@ $processInformation =
 $launchReceiptWritten = $false
 $assignedToJob = $false
 try {
+  Enable-ProcessPrivilege "SeDebugPrivilege"
+  $consoleProcessHandle = [Forge3DInteractiveSession]::OpenProcess(
+    0x00001000,
+    $false,
+    $consoleShells[0].Id
+  )
+  if ($consoleProcessHandle -eq [IntPtr]::Zero) {
+    Assert-Win32 $false "OpenProcess"
+  }
+  $consoleImage = New-Object Text.StringBuilder 32768
+  $consoleImageLength = [UInt32]$consoleImage.Capacity
   Assert-Win32 (
-    [Forge3DInteractiveSession]::WTSQueryUserToken($sessionId, [ref]$userToken)
-  ) "WTSQueryUserToken"
+    [Forge3DInteractiveSession]::QueryFullProcessImageName(
+      $consoleProcessHandle,
+      0,
+      $consoleImage,
+      [ref]$consoleImageLength
+    )
+  ) "QueryFullProcessImageName"
+  $expectedConsoleImage = Join-Path $env:WINDIR "explorer.exe"
+  if (-not $consoleImage.ToString().Equals(
+    $expectedConsoleImage,
+    [StringComparison]::OrdinalIgnoreCase
+  )) {
+    throw "active physical console shell path is not trusted"
+  }
+  Assert-Win32 (
+    [Forge3DInteractiveSession]::OpenProcessToken(
+      $consoleProcessHandle,
+      0x0002 -bor 0x0008,
+      [ref]$userToken
+    )
+  ) "OpenProcessToken"
   $tokenAccess = 0x0001 -bor 0x0002 -bor 0x0008 -bor 0x0080 -bor 0x0100
   Assert-Win32 (
     [Forge3DInteractiveSession]::DuplicateTokenEx(
@@ -516,5 +651,8 @@ finally {
   }
   if ($userToken -ne [IntPtr]::Zero) {
     [void][Forge3DInteractiveSession]::CloseHandle($userToken)
+  }
+  if ($consoleProcessHandle -ne [IntPtr]::Zero) {
+    [void][Forge3DInteractiveSession]::CloseHandle($consoleProcessHandle)
   }
 }

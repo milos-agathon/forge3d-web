@@ -20,8 +20,7 @@ export function createManualSession({
   diagnosticRetention,
   controllerCompletion,
   hostInventory = null,
-  privateKey,
-  signingKeyId,
+  signer,
 }) {
   const duration = new Date(endedAt) - new Date(startedAt);
   if (duration !== 20 * 60 * 1000) {
@@ -83,7 +82,7 @@ export function createManualSession({
     labReadiness: authorization.labReadiness,
     hostId: authorization.hostId,
     assetId: authorization.assetId,
-    controllerKeyId: signingKeyId,
+    controllerKeyId: signer?.signingKeyId,
     system,
     browser,
     driver,
@@ -102,7 +101,6 @@ export function createManualSession({
   };
   return signControllerRecord({
     record,
-    privateKey,
-    signingKeyId,
+    signer,
   });
 }

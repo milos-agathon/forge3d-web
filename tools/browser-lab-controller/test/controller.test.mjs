@@ -7,6 +7,7 @@ import {
   BrowserLabController,
   validateAuthorization,
 } from "../src/controller.mjs";
+import { createTestPrivateKeySigner } from "./test-signer.mjs";
 import { sanitizedRunnerEnvironment } from "../src/runner-execution.mjs";
 import { exactHostInventory } from "../../../crates/forge3d-web/tests/infrastructure/host-inventory-fixture.mjs";
 import {
@@ -183,10 +184,11 @@ test("controller stores a signed host canary only after broker-proven runner abs
     originPolicy,
     execution: {},
   });
-  dependencies.controllerSigningCredentials = async () => ({
-    privateKey: keys.privateKey,
-    signingKeyId: "controller-fw-lnx-nv-01-p256-v1",
-  });
+  dependencies.controllerSigner = async () =>
+    createTestPrivateKeySigner({
+      privateKey: keys.privateKey,
+      signingKeyId: "controller-fw-lnx-nv-01-p256-v1",
+    });
   dependencies.storeControllerReceipt = async (receipt) =>
     calls.push(["store-receipt", receipt]);
   const controller = new BrowserLabController({
@@ -262,10 +264,11 @@ test("controller creates the signed manual session after hardware and runner cle
     },
     hostInventory: exactHostInventory(matrix, "FW-MAC-M2-01"),
   });
-  dependencies.controllerSigningCredentials = async () => ({
-    privateKey: keys.privateKey,
-    signingKeyId: "controller-fw-mac-m2-01-p256-v1",
-  });
+  dependencies.controllerSigner = async () =>
+    createTestPrivateKeySigner({
+      privateKey: keys.privateKey,
+      signingKeyId: "controller-fw-mac-m2-01-p256-v1",
+    });
   dependencies.storeControllerReceipt = async (receipt) =>
     calls.push(["store-receipt", receipt]);
   const controller = new BrowserLabController({
@@ -437,8 +440,8 @@ test("diagnostic retention failures quarantine without wipe, unlock, or receipt"
       if (message.endsWith("receipt is invalid")) return {};
       throw new Error(message);
     };
-    dependencies.controllerSigningCredentials = async () => {
-      calls.push(["signing-credentials"]);
+    dependencies.controllerSigner = async () => {
+      calls.push(["controller-signer"]);
       throw new Error("signing must not be reached");
     };
     dependencies.storeControllerReceipt = async () =>
@@ -469,7 +472,7 @@ test("diagnostic retention failures quarantine without wipe, unlock, or receipt"
       "wipe",
       "wipe-prepared",
       "release-lock",
-      "signing-credentials",
+      "controller-signer",
       "store-receipt",
     ]) {
       assert.equal(calls.some(([name]) => name === forbidden), false);

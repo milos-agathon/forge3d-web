@@ -23,6 +23,16 @@ export function serviceInstallationFixture({
     }),
   ];
   if (component === "controller") {
+    files.push(
+      installedFile({
+        role: "configuration",
+        identity:
+          "config:crates/forge3d-web/tests/infrastructure/controller-helper-digest-policy.json",
+        path: "/etc/forge3d/controller-helper-digest-policy.json",
+        packagePath:
+          "crates/forge3d-web/tests/infrastructure/controller-helper-digest-policy.json",
+      }),
+    );
     const helperVersions = new Map([
       ["FORGE3D_PLAYWRIGHT_MODULE", browserPolicy?.tools?.playwright ?? "1.56.1"],
       ["FORGE3D_GECKODRIVER_EXECUTABLE", browserPolicy?.tools?.geckodriver ?? "0.36.0"],
@@ -36,6 +46,7 @@ export function serviceInstallationFixture({
       "FORGE3D_DEVICE_CONTROL_HELPER",
       "FORGE3D_CLOUDFLARED_EXECUTABLE",
       "FORGE3D_CONTROLLER_GH_EXECUTABLE",
+      "FORGE3D_CONTROLLER_SIGNING_PROVIDER",
       "FORGE3D_PLAYWRIGHT_MODULE",
       "FORGE3D_GECKODRIVER_EXECUTABLE",
       "FORGE3D_APPIUM_EXECUTABLE",

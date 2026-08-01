@@ -23,17 +23,31 @@ export function createInfrastructureManualCanary({
   media,
   actor,
   approver,
+  approvalProvenance,
   implementationActors,
   submissionRun,
   intakeReleaseId,
   now = new Date(),
 }) {
+  const normalizedActor = actor?.toLowerCase();
+  const normalizedImplementationActors = new Set(
+    [...implementationActors].map((value) => value.toLowerCase()),
+  );
   if (
     intake.supportClaim !== false ||
     actor !== intake.expectedTester ||
-    implementationActors.has(actor) ||
-    approver.login === actor ||
-    implementationActors.has(approver.login) ||
+    normalizedImplementationActors.has(normalizedActor) ||
+    approver.login.toLowerCase() === normalizedActor ||
+    normalizedImplementationActors.has(approver.login.toLowerCase()) ||
+    !Array.isArray(approvalProvenance) ||
+    approvalProvenance.length < 1 ||
+    approvalProvenance.some(
+      (approval) =>
+        approval.state !== "approved" ||
+        approval.environment?.name !== "forge3d-manual-evidence" ||
+        normalizedImplementationActors.has(approval.login.toLowerCase()) ||
+        approval.login.toLowerCase() === normalizedActor,
+    ) ||
     session.trustedSha !== intake.trustedSha ||
     session.package.runId !== intake.packageRunId ||
     session.package.sha256 !== intake.packageSha256 ||
@@ -96,6 +110,7 @@ export function createInfrastructureManualCanary({
     },
     tester: actor,
     approver,
+    approvalProvenance,
     productAssertionsExecuted: false,
     attestation: { verified: false },
     createdAt: new Date(now).toISOString(),

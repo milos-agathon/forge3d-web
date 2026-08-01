@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
+import { parse } from "yaml";
 
 const workflow = readFileSync(
   resolve(
@@ -24,6 +26,9 @@ const publicationSchema = readFileSync(
     "./browser-release-publication-record.schema.json",
   ),
 );
+const selectorStep = parse(workflow).jobs["observe-release-publication-trust"].steps.find(
+  (step) => step.name === "Validate positive numeric selectors",
+);
 
 test("supported publication is manual-only and requires target, readiness, and SemVer tag", () => {
   for (const input of ["target_sha", "readinessRunId", "tag"]) {
@@ -32,6 +37,55 @@ test("supported publication is manual-only and requires target, readiness, and S
   assert.match(observer, /inputs\.target_sha != github\.sha/u);
   assert.equal(workflow.includes("pull_request:"), false);
   assert.equal(workflow.includes("workflow_call:"), false);
+  assert.match(observer, /READINESS_RUN_ID: \$\{\{ inputs\.readinessRunId \}\}/u);
+  assert.match(observer, /\^\[1-9\]\[0-9\]\*\$/u);
+});
+
+test("release readiness selector rejects surrounding or embedded whitespace", () => {
+  const match = selectorStep.run.match(/--eval '([\s\S]*)'$/u);
+  assert.ok(match, "numeric selector step must remain a Node eval");
+  assert.equal(runSelectorValidation(match[1], "123").status, 0);
+  for (const malformed of [" 123", "123 ", "12 3", "123\n"]) {
+    assert.notEqual(
+      runSelectorValidation(match[1], malformed).status,
+      0,
+      `readiness selector accepted ${JSON.stringify(malformed)}`,
+    );
+  }
+});
+
+test("publisher revalidates the complete observation and exact release environment approvals", () => {
+  assert.match(
+    preflight,
+    /EXPECTED_CONSUMERS: '\[\{"job":"validate-release-candidate","environment":"none"\},\{"job":"publish-release","environment":"forge3d-web-release"\}\]'/u,
+  );
+  for (const contract of [
+    "observation-artifact.json",
+    "unzip -Z1 observation.zip",
+    "canonical(observation)",
+    "observation.workflow.ref",
+    "observation.run.attempt",
+    "observation.currentMainSha",
+    "observation.policySha256",
+    "observation.workflowActionsLockSha256",
+    "observationExpiresAt",
+    "preflightCreatedAt",
+    "preflightExpiresAt",
+    "repository-trust-publisher-proof.json",
+    "publisher-readiness-run.json",
+    "publisher-readiness-artifact.json",
+    'preflight.mode !== "supported-release"',
+    "preflight.supportClaim !== true",
+    "preflight.repository !== process.env.GITHUB_REPOSITORY",
+    "preflight.readiness.runId !== Number(process.env.READINESS_RUN_ID)",
+    "preflight.readiness.artifactId !== readinessArtifact.id",
+    "!readinessBytes.equals(independentReadinessBytes)",
+    "!preflightAssetsValid",
+    "preflightExpiresAt - preflightCreatedAt > 30 * 60 * 1000",
+  ]) assert.equal(publisher.includes(contract), true, contract);
+  assert.match(publisher, /value\.environments\.length === 1/u);
+  assert.match(publisher, /value\.environments\[0\]\?\.name === "forge3d-web-release"/u);
+  assert.match(publisher, /value\.user\.login\.toLowerCase\(\)/u);
 });
 
 test("observer secret is isolated from read-only preflight and protected publisher", () => {
@@ -76,6 +130,21 @@ test("publisher has no checkout and performs approval, draft-first, byte, CLI, a
   assert.match(publisher, /retention-days: 90/u);
 });
 
+test("publisher rechecks both handoff expiries around the final absence race", () => {
+  const mutation = publisher.slice(
+    publisher.indexOf("Create draft, byte-verify closed assets, and publish exactly once"),
+  );
+  const absence = mutation.indexOf("]) await assertAbsent(resourcePath);");
+  const finalExpiry = mutation.indexOf("publication handoff expired immediately before mutation");
+  const create = mutation.indexOf('gh release create "${RELEASE_TAG}"');
+  assert.equal(mutation.match(/publication handoff expired (?:before|immediately before) mutation/gu)?.length, 2);
+  assert.notEqual(absence, -1);
+  assert.ok(absence < finalExpiry);
+  assert.ok(finalExpiry < create);
+  assert.match(mutation, /now >= observationExpiresAt/u);
+  assert.match(mutation, /now >= preflightExpiresAt/u);
+});
+
 test("separate least-privilege job verifies and attests the exact postpublication record", () => {
   assert.match(attester, /needs: publish-release/u);
   assert.match(attester, /runs-on: ubuntu-latest/u);
@@ -93,6 +162,13 @@ test("separate least-privilege job verifies and attests the exact postpublicatio
   assert.match(attester, /publication_artifact_id/u);
   assert.match(attester, /publication_artifact_digest/u);
   assert.match(attester, /artifact\.workflow_run\?\.id !== Number\(process\.env\.GITHUB_RUN_ID\)/u);
+  assert.match(attester, /artifact\.expired !== false/u);
+  assert.match(attester, /artifact\.workflow_run\?\.repository_id !== 1259761852/u);
+  assert.match(attester, /artifact\.workflow_run\?\.head_repository_id !== 1259761852/u);
+  assert.match(attester, /artifact\.workflow_run\?\.head_sha !== process\.env\.EXPECTED_HEAD_SHA/u);
+  assert.match(attester, /!\/\^\[0-9a-f\]\{64\}\$\/u\.test\(process\.env\.ARTIFACT_DIGEST\)/u);
+  assert.match(attester, /artifact\.digest !== `sha256:\$\{process\.env\.ARTIFACT_DIGEST\}`/u);
+  assert.match(attester, /= "\$\{ARTIFACT_DIGEST\}"/u);
   assert.match(attester, /browser-release-publication-record\.schema\.json/u);
   assert.equal(
     attester.match(/SCHEMA_SHA256: ([0-9a-f]{64})/u)?.[1],
@@ -138,9 +214,11 @@ test("preflight, publisher race, and deletion prove absence only through the exa
     publisher.indexOf("Create checked-schema post-publication record"),
   );
   for (const probe of [preflightProbe, raceProbe, deletionProbe]) {
-    assert.match(probe, /assertGitHubResourceAbsent/u);
+    assert.match(probe, /assertGitHubResourceAbsent|assertAbsent/u);
     assert.match(probe, /git\/ref\/tags\//u);
   }
+  assert.match(raceProbe, /response\.status !== 404/u);
+  assert.match(deletionProbe, /response\.status !== 404/u);
   assert.match(preflightProbe, /releases\/tags\/\$\{process\.env\.RELEASE_TAG\}/u);
   assert.match(raceProbe, /releases\/tags\/\$\{process\.env\.RELEASE_TAG\}/u);
   assert.match(deletionProbe, /releases\/\$\{process\.argv\[1\]\}/u);
@@ -204,7 +282,7 @@ test("publication proof is post-publish, closed, schema-validated, and retained 
   const assetVerify = publisher.indexOf('gh release verify-asset "${RELEASE_TAG}"');
   const apiDigest = publisher.indexOf('actual?.digest !== `sha256:${expected.sha256}`');
   const deleteIntake = publisher.indexOf('gh release delete "${intake_tag}"');
-  const record = publisher.indexOf("create-publication-record");
+  const record = publisher.indexOf('writeFileSync("release-publication-record.json"');
   assert.ok(publish > -1 && releaseVerify > publish);
   assert.ok(assetVerify > releaseVerify);
   assert.ok(apiDigest > assetVerify);
@@ -220,6 +298,23 @@ test("publication proof is post-publish, closed, schema-validated, and retained 
   assert.match(publisher, /publication-proof\/published-assets\.json/u);
   assert.match(publisher, /release\.immutable !== true/u);
   assert.match(publisher, /release\.published_at/u);
+  assert.equal(publisher.includes("node preflight/"), false);
+  assert.equal(publisher.includes('from "./preflight'), false);
+});
+
+test("every protected web publisher inline module is syntactically valid", () => {
+  const modules = [...publisher.matchAll(
+    /node --input-type=module --eval '\n([\s\S]*?)\n\s*'/gu,
+  )];
+  assert.ok(modules.length > 0);
+  for (const [, source] of modules) {
+    const result = spawnSync(
+      process.execPath,
+      ["--check", "--input-type=module"],
+      { input: source, encoding: "utf8" },
+    );
+    assert.equal(result.status, 0, result.stderr);
+  }
 });
 
 test("intake deletion derives only from the checked manual-media source plan", () => {
@@ -239,6 +334,13 @@ function block(startId, nextId) {
   const end = nextId ? workflow.indexOf(`  ${nextId}:`, start + 1) : workflow.length;
   assert.notEqual(end, -1);
   return workflow.slice(start, end);
+}
+
+function runSelectorValidation(script, value) {
+  return spawnSync(process.execPath, ["--input-type=module", "--eval", script], {
+    env: { ...process.env, READINESS_RUN_ID: value },
+    encoding: "utf8",
+  });
 }
 
 function ghReleaseCommands(text) {

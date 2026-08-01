@@ -72,7 +72,8 @@ jobs:
       - name: Verify live protected-main trust
         working-directory: crates/forge3d-web
         env:
-          GITHUB_TOKEN: ${{ steps.observer-token.outputs.token }}
+          TRUST_OBSERVER_TOKEN: ${{ steps.observer-token.outputs.token }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/verify-repository-trust.mjs > repository-trust-verification.json
 
       - name: Emit canonical repository trust observation
@@ -159,8 +160,7 @@ jobs:
           OBSERVATION_ARTIFACT_DIGEST: ${{ needs.observe-broker-package-trust.outputs.observation_artifact_digest }}
           OBSERVATION_CONTENT_SHA256: ${{ needs.observe-broker-package-trust.outputs.observation_content_sha256 }}
           EXPECTED_OPERATION: package-broker
-          EXPECTED_CONSUMER_JOB: package-broker
-          EXPECTED_CONSUMER_ENVIRONMENT: forge3d-browser-lab
+          EXPECTED_CONSUMERS: '[{"job":"package-broker","environment":"forge3d-browser-lab"}]'
           EXPECTED_TARGET_SHA: ${{ github.sha }}
           EXPECTED_CANDIDATE_SHA: ${{ github.sha }}
           EXPECTED_CURRENT_MAIN_SHA: ${{ github.sha }}

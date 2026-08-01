@@ -33,6 +33,12 @@ const observationSchemaPath = join(
   "infrastructure",
   "repository-trust-observation.schema.json",
 );
+const publisherProofSchemaPath = join(
+  packageRoot,
+  "tests",
+  "infrastructure",
+  "repository-trust-publisher-proof.schema.json",
+);
 const observationName = "repository-trust-observation.json";
 const githubActionsApp = Object.freeze({ id: 15368, slug: "github-actions" });
 const requiredLiveResponseNames = Object.freeze([
@@ -180,9 +186,22 @@ export function verifyRepositoryTrustObservation({
   if (new Set(consumerKeys).size !== consumerKeys.length) {
     throw new Error("observation contains duplicate consumers");
   }
-  const intendedConsumer = `${expected.consumerJob}@${expected.consumerEnvironment}`;
-  if (!consumerKeys.includes(intendedConsumer)) {
-    throw new Error(`observation is not bound to consumer ${intendedConsumer}`);
+  const expectedConsumers = expected.consumers ?? [
+    {
+      job: expected.consumerJob,
+      environment: expected.consumerEnvironment,
+    },
+  ];
+  const expectedConsumerKeys = expectedConsumers
+    .map((consumer) => `${consumer.job}@${consumer.environment}`)
+    .sort((left, right) => left.localeCompare(right));
+  if (
+    expectedConsumerKeys.some((key) => key.includes("undefined")) ||
+    new Set(expectedConsumerKeys).size !== expectedConsumerKeys.length ||
+    canonicalJson([...consumerKeys].sort((left, right) => left.localeCompare(right))) !==
+      canonicalJson(expectedConsumerKeys)
+  ) {
+    throw new Error("observation consumer set does not exactly match expected consumers");
   }
 
   const observedAt = Date.parse(observation.observedAt);
@@ -265,6 +284,62 @@ export function verifyObservationArtifact({
     now,
   });
   return { observation, observationBytes: entry.bytes };
+}
+
+export function createPublisherProof({
+  outputs,
+  metadata,
+  observation,
+  repository,
+}) {
+  const proof = {
+    schemaVersion: 1,
+    artifact: {
+      id: Number(outputs.artifactId),
+      name: outputs.artifactName,
+      archiveSha256: outputs.artifactDigest,
+      contentSha256: outputs.contentSha256,
+      expired: metadata.expired,
+      workflowRun: {
+        id: metadata.workflow_run.id,
+        repositoryId: metadata.workflow_run.repository_id,
+        headRepositoryId: metadata.workflow_run.head_repository_id,
+        headBranch: metadata.workflow_run.head_branch,
+        headSha: metadata.workflow_run.head_sha,
+      },
+      archiveMember: {
+        count: 1,
+        name: observationName,
+        sha256: outputs.contentSha256,
+        canonicalJson: true,
+      },
+    },
+    observation: {
+      repository: observation.repository,
+      operation: observation.operation,
+      consumers: observation.consumers,
+      workflow: observation.workflow,
+      run: observation.run,
+      candidateSha: observation.candidateSha,
+      targetSha: observation.targetSha,
+      currentMainSha: observation.currentMainSha,
+      trustEpochSha: observation.trustEpochSha,
+      policySha256: observation.policySha256,
+      workflowActionsLockSha256: observation.workflowActionsLockSha256,
+      observedAt: observation.observedAt,
+      expiresAt: observation.expiresAt,
+    },
+    attestation: {
+      verified: true,
+      repository,
+      signerWorkflow: `${repository}/${observation.workflow.path}`,
+      sourceRef: "refs/heads/main",
+      sourceDigest: observation.workflow.sha,
+      denySelfHostedRunners: true,
+    },
+  };
+  assertJsonSchema(proof, readJson(publisherProofSchemaPath));
+  return proof;
 }
 
 export function validateOutputTuple(outputs) {
@@ -427,8 +502,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   };
   const expected = {
     operation: process.env.EXPECTED_OPERATION,
-    consumerJob: process.env.EXPECTED_CONSUMER_JOB,
-    consumerEnvironment: process.env.EXPECTED_CONSUMER_ENVIRONMENT,
+    consumers: parseExpectedConsumers(process.env.EXPECTED_CONSUMERS),
     runId: Number(process.env.GITHUB_RUN_ID),
     runAttempt: Number(process.env.GITHUB_RUN_ATTEMPT),
     candidateSha:
@@ -458,5 +532,42 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   } finally {
     rmSync(temporaryDirectory, { recursive: true, force: true });
   }
+  if (process.env.PUBLISHER_PROOF_PATH) {
+    const proof = createPublisherProof({
+      outputs,
+      metadata: artifact.metadata,
+      observation: verified.observation,
+      repository: process.env.GITHUB_REPOSITORY,
+    });
+    writeFileSync(process.env.PUBLISHER_PROOF_PATH, canonicalJson(proof), {
+      encoding: "utf8",
+      mode: 0o600,
+    });
+  }
   console.log(JSON.stringify({ ok: true, operation: verified.observation.operation }));
+}
+
+function parseExpectedConsumers(value) {
+  let consumers;
+  try {
+    consumers = JSON.parse(value ?? "");
+  } catch {
+    throw new Error("EXPECTED_CONSUMERS must be a JSON array");
+  }
+  if (
+    !Array.isArray(consumers) ||
+    consumers.length < 1 ||
+    consumers.some(
+      (consumer) =>
+        consumer === null ||
+        typeof consumer !== "object" ||
+        Array.isArray(consumer) ||
+        Object.keys(consumer).sort().join(",") !== "environment,job" ||
+        !/^[A-Za-z0-9_.-]+$/u.test(consumer.job ?? "") ||
+        !/^[A-Za-z0-9_.-]+$/u.test(consumer.environment ?? ""),
+    )
+  ) {
+    throw new Error("EXPECTED_CONSUMERS must be a complete job/environment array");
+  }
+  return consumers;
 }
