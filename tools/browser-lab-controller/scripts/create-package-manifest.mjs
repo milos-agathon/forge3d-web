@@ -35,6 +35,8 @@ export function createControllerPackageManifest({
   }
   const configurationPaths = [
     "crates/forge3d-web/tests/infrastructure/browser-policy.json",
+    "crates/forge3d-web/tests/infrastructure/controller-helper-digest-policy.json",
+    "crates/forge3d-web/tests/infrastructure/controller-helper-digest-policy.schema.json",
     "crates/forge3d-web/tests/infrastructure/controller-health-endpoints.json",
     "crates/forge3d-web/tests/infrastructure/controller-protocol.schema.json",
     "crates/forge3d-web/tests/infrastructure/hardware-matrix.json",

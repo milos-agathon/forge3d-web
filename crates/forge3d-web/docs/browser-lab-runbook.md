@@ -27,6 +27,14 @@ policy, controller keys, and clean JIT canaries exist. A pending matrix is not
   broker compromise as trust-root compromise.
 - Each controller runs outside any repository checkout and runner work root,
   under a dedicated non-login service account. It has no broker App key.
+- Windows uses the per-service virtual account
+  `NT SERVICE\forge3d-browser-lab-controller`, never `LocalSystem`. Grant only
+  service logon plus `SeDebugPrivilege`, `SeAssignPrimaryTokenPrivilege`, and
+  `SeIncreaseQuotaPrivilege` for the checked token/process bridge; deny
+  interactive and Remote Desktop logon. The bridge must use the verified
+  active-console Windows shell token and must not call the LocalSystem-only
+  `WTSQueryUserToken`. Prove the complete WinSW launch/stop path on the live
+  host before activation.
 - A hardware job receives neither App key, installation token, controller
   private key, encoded-config history, nor authority to register another
   runner.
@@ -136,6 +144,24 @@ RFC 8785 JSON Canonicalization Scheme rules and signed with
 `SHA256withECDSA`. Rotation is a reviewed matrix change and invalidates the
 previous laboratory digest.
 
+Install a native opaque signing provider beside each controller: CNG with a
+non-exportable key on Windows, Keychain with a non-exportable key on macOS, and
+PKCS#11 with a non-exportable key on Linux. Never export the key or configure a
+PEM signing path. Before enabling the service, run the provider's checked
+`describe --key-id` contract and verify the exact platform backend, P-256
+curve, `SHA256withECDSA` algorithm, key ID, and `exportable: false`. Add the
+provider's exact platform digest to the reviewed helper policy and verify a
+live signature against the checked public JWK. Source validation does not
+replace this live OS-keystore proof.
+
+Populate `controller-helper-digest-policy.json` with one reviewed SHA-256 for
+every required external helper's exact platform, identity, and checked version;
+then change its state to `active` in the same review. Install that exact policy
+and its closed schema from the attested controller package. Package-owned
+bridges are manifest-bound; every other helper, including the signer, must be
+allowlist-bound. Any missing entry or byte substitution keeps the controller
+offline.
+
 For a host-mode infrastructure canary, the controller reads the neutral
 adapter, route, and inventory observations before wiping the runner job root.
 Only after broker-proven exact runner absence does it store one immutable
@@ -223,6 +249,9 @@ After evidence upload and exact-ID cleanup:
 - verify the runner is absent or non-busy before broker deletion;
 - wipe the unique work and install roots;
 - verify no repository runner remains;
+- require the host cleanup receipt to report updates restored, browser stopped,
+  drivers stopped, Appium stopped, and tunnels stopped as five explicit true
+  results before releasing the host lock or signing evidence;
 - quarantine the host if the controller was unreachable, the listener stop is
   unproven, an immutable path changed, or an unknown transient path appeared.
 
@@ -250,5 +279,9 @@ JIT canaries, and the fixed inventory pass at the exact current SHA. Each
 selected host run completion, controller completion, hosted finalizer
 observation, hardware-job completion, and inventory capture must be no more
 than `acceptanceWindowHours` old (currently 24 hours) and must not be in the
-future. The Mac record additionally carries the exact six-device Appium route
-evidence and its digest into the readiness manifest.
+future. The generic authenticated manual canary's signed `createdAt` and its
+selected submission-run creation and completion must satisfy that same
+inclusive window and occur in that order; exactly 24 hours old is accepted and
+24 hours plus 1 millisecond is rejected. The Mac record additionally carries
+the exact six-device Appium route evidence and its digest into the readiness
+manifest.

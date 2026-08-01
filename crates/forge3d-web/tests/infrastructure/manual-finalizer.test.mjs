@@ -12,6 +12,7 @@ import {
   verifySignedManualSession,
 } from "../../scripts/finalize-manual-session.mjs";
 import { createManualSession } from "../../../../tools/browser-lab-controller/src/manual-session.mjs";
+import { createTestPrivateKeySigner } from "../../../../tools/browser-lab-controller/test/test-signer.mjs";
 import { exactHostInventory } from "./host-inventory-fixture.mjs";
 import {
   diagnosticRetentionFixture,
@@ -120,8 +121,10 @@ const signedSession = createManualSession({
     completedAt: "2026-07-29T10:21:00.000Z",
   },
   hostInventory,
-  privateKey: keys.privateKey,
-  signingKeyId: keyId,
+  signer: createTestPrivateKeySigner({
+    privateKey: keys.privateKey,
+    signingKeyId: keyId,
+  }),
 });
 const hardwareJob = {
   id: 21,

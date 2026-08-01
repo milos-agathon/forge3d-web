@@ -7,6 +7,7 @@ import {
 } from "./manual-evidence.mjs";
 import { createInfrastructureManualCanary } from "./infrastructure-manual-canary.mjs";
 import { canonicalJson, sha256Hex } from "./canonical-json.mjs";
+import { selectIndependentEnvironmentApprovals } from "./environment-approval.mjs";
 
 export function validateManualSubmission({
   release,
@@ -99,17 +100,12 @@ export function validateManualSubmission({
   ) {
     throw new Error("manual session finalizer attestation is invalid");
   }
-  const approved = approvals.filter((approval) => approval.state === "approved");
-  if (
-    approved.length < 1 ||
-    approved.some(
-      (approval) =>
-        approval.user.login === actor ||
-        implementationActors.includes(approval.user.login),
-    )
-  ) {
-    throw new Error("manual evidence requires independent protected-environment approval");
-  }
+  const approved = selectIndependentEnvironmentApprovals({
+    actor,
+    implementationActors,
+    approvals,
+    environment: "forge3d-manual-evidence",
+  });
   const boundIntake = { ...intake, sha256: intakeSha256 };
   const media = validateMediaAssets({
     selectedAssets,
@@ -128,7 +124,14 @@ export function validateManualSubmission({
     approver: {
       id: approved[0].user.id,
       login: approved[0].user.login,
+      environment: approved[0].environment,
     },
+    approvalProvenance: approved.map((approval) => ({
+      id: approval.user.id,
+      login: approval.user.login,
+      state: approval.state,
+      environment: approval.environment,
+    })),
     implementationActors: new Set(implementationActors),
     submissionRun,
     intakeReleaseId: release.id,

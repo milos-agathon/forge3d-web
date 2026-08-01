@@ -1,7 +1,10 @@
-import { createSign } from "node:crypto";
 import { request as httpsRequest } from "node:https";
 
-import { canonicalJson } from "./controller-signing.mjs";
+import {
+  assertControllerSigner,
+  assertSignatureValue,
+  canonicalJson,
+} from "./controller-signing.mjs";
 
 export const ISSUE_PROTOCOL = "forge3d-browser-lab-broker/v1";
 export const CLEANUP_PROTOCOL = "forge3d-browser-lab-cleanup/v1";
@@ -10,8 +13,7 @@ export class ControllerBrokerClient {
   constructor({
     endpoint,
     hostId,
-    signingKeyId,
-    privateKey,
+    signer,
     tls,
     transport = postJson,
   }) {
@@ -21,10 +23,10 @@ export class ControllerBrokerClient {
     ) {
       throw new Error("controller broker endpoint or host identity is invalid");
     }
+    assertControllerSigner(signer);
     this.endpoint = endpoint.replace(/\/$/u, "");
     this.hostId = hostId;
-    this.signingKeyId = signingKeyId;
-    this.privateKey = privateKey;
+    this.signer = signer;
     this.tls = tls;
     this.transport = transport;
   }
@@ -79,22 +81,19 @@ export class ControllerBrokerClient {
     return {
       assetId: this.hostId,
       identity: `controller:${this.hostId}`,
-      signingKeyId: this.signingKeyId,
+      signingKeyId: this.signer.signingKeyId,
     };
   }
 
   sign(record) {
-    const signer = createSign("SHA256");
-    signer.update(canonicalJson(record));
-    signer.end();
+    const value = this.signer.sign(canonicalJson(record), "der-base64url");
+    assertSignatureValue(value, "der-base64url");
     return {
       ...record,
       signature: {
         algorithm: "SHA256withECDSA",
-        signingKeyId: this.signingKeyId,
-        value: signer
-          .sign({ key: this.privateKey, dsaEncoding: "der" })
-          .toString("base64url"),
+        signingKeyId: this.signer.signingKeyId,
+        value,
       },
     };
   }

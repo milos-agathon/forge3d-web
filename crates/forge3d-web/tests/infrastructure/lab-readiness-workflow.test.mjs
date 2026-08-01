@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import test from "node:test";
+
+import { parse } from "yaml";
 
 const workflow = readFileSync(
   resolve(
@@ -19,6 +22,21 @@ const observer = block(
   "browser-lab-infrastructure-readiness",
 );
 const readiness = block("browser-lab-infrastructure-readiness", null);
+const numericSelectors = {
+  packageRunId: "PACKAGE_RUN_ID",
+  macHostCanaryRunId: "MAC_HOST_CANARY_RUN_ID",
+  windowsHostCanaryRunId: "WINDOWS_HOST_CANARY_RUN_ID",
+  linuxIntelHostCanaryRunId: "LINUX_INTEL_HOST_CANARY_RUN_ID",
+  linuxNvidiaHostCanaryRunId: "LINUX_NVIDIA_HOST_CANARY_RUN_ID",
+  manualCanaryRunId: "MANUAL_CANARY_RUN_ID",
+  manualIntakeReleaseId: "MANUAL_INTAKE_RELEASE_ID",
+  manualHardwareJobId: "MANUAL_HARDWARE_JOB_ID",
+  labCanaryReleaseId: "LAB_CANARY_RELEASE_ID",
+};
+const workflowDocument = parse(workflow);
+const selectorValidationJob =
+  workflowDocument.jobs["validate-readiness-selectors"];
+const selectorValidationStep = selectorValidationJob.steps[0];
 
 test("laboratory readiness accepts one package, four hosts, one manual canary, and one release", () => {
   for (const input of [
@@ -38,6 +56,71 @@ test("laboratory readiness accepts one package, four hosts, one manual canary, a
   assert.match(observer, /inputs\.candidate_sha != github\.sha/u);
   assert.equal(workflow.includes("pull_request:"), false);
   assert.equal(workflow.includes("workflow_call:"), false);
+});
+
+test("all nine numeric selectors are gated before checkout and API path use", () => {
+  assert.deepEqual(selectorValidationJob.permissions, {});
+  assert.equal(
+    workflowDocument.jobs["observe-lab-readiness-trust"].needs,
+    "validate-readiness-selectors",
+  );
+  assert.equal(
+    selectorValidationStep.name,
+    "Validate positive-decimal readiness selectors",
+  );
+  assert.match(selectorValidationStep.run, /\^\[1-9\]\[0-9\]\*\$/u);
+  for (const [input, environmentName] of Object.entries(numericSelectors)) {
+    assert.equal(selectorValidationStep.env[environmentName], `\${{ inputs.${input} }}`);
+    assert.match(selectorValidationStep.run, new RegExp(`\\b${input}\\b`, "u"));
+    assert.match(
+      selectorValidationStep.run,
+      new RegExp(`\\$\\{${environmentName}\\}`, "u"),
+    );
+  }
+  const validation = workflow.indexOf(
+    "- name: Validate positive-decimal readiness selectors",
+  );
+  assert.ok(validation >= 0);
+  assert.ok(validation < workflow.indexOf("verify-repository-trust.mjs"));
+  assert.ok(validation < workflow.indexOf("verify-repository-trust-observation.mjs"));
+  assert.ok(validation < workflow.indexOf("resolve-hardware-promotion.mjs"));
+  assert.ok(validation < workflow.indexOf("gh api"));
+});
+
+test("the workflow selector gate accepts only positive-decimal syntax at runtime", () => {
+  const validEnvironment = Object.fromEntries(
+    Object.values(numericSelectors).map((name, index) => [
+      name,
+      index === 0 ? "1" : `${index + 1}99999999999999999999`,
+    ]),
+  );
+  assert.equal(runSelectorValidation(validEnvironment).status, 0);
+
+  for (const environmentName of Object.values(numericSelectors)) {
+    for (const invalid of [
+      "",
+      "0",
+      "01",
+      "+1",
+      "-1",
+      "1.0",
+      " 1",
+      "1 ",
+      "1/../2",
+      "1\n2",
+    ]) {
+      const result = runSelectorValidation({
+        ...validEnvironment,
+        [environmentName]: invalid,
+      });
+      assert.notEqual(
+        result.status,
+        0,
+        `${environmentName} accepted ${JSON.stringify(invalid)}`,
+      );
+      assert.match(result.stdout, /must match \^\[1-9\]\[0-9\]\*\$/u);
+    }
+  }
 });
 
 test("only observer receives trust secret and computation cannot schedule product lanes", () => {
@@ -154,4 +237,15 @@ function block(startId, nextId) {
   const end = nextId ? workflow.indexOf(`  ${nextId}:`, start + 1) : workflow.length;
   assert.notEqual(end, -1);
   return workflow.slice(start, end);
+}
+
+function runSelectorValidation(environment) {
+  return spawnSync(
+    "bash",
+    ["-e", "-u", "-o", "pipefail", "-c", selectorValidationStep.run],
+    {
+      encoding: "utf8",
+      env: { ...process.env, ...environment },
+    },
+  );
 }

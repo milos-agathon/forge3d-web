@@ -107,6 +107,7 @@ export function validateInstalledControllerEvidence({
           resolve(file.path) === resolve(expected.path) &&
           file.packagePath === expected.packagePath &&
           (expected.version === undefined || file.version === expected.version) &&
+          (expected.sha256 === undefined || file.sha256 === expected.sha256) &&
           (expected.packagePath === null ||
             manifest.files.some(
               (candidate) =>

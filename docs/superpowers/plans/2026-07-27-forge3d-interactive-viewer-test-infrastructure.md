@@ -1486,7 +1486,11 @@ passing browser support matrix. It reports `LAB_INFRA_READY` only when:
    proves host reservation, signed session inventory, challenge-bound
    authenticated media intake/submission, cleanup, and retained provenance
    without invoking a product checklist or asserting that a product gesture
-   passed.
+   passed. Its selected submission-run creation, signed canary creation, and
+   selected submission-run completion must occur in that order and all fall
+   inside the same inclusive `acceptanceWindowHours=24` window as the final
+   host evidence; 24 hours is accepted and 24 hours plus 1 millisecond is
+   rejected.
 6. Release immutability is enabled and
    `publish-browser-lab-canary.yml` creates one non-support `lab-canary`
    release that proves draft-first upload, byte/digest/attestation verification,

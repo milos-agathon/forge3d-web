@@ -110,6 +110,8 @@ test("lab digest binds plan-named files and the production dependency closure", 
     "crates/forge3d-web/tests/browser/json-schema-validator.mjs",
     "crates/forge3d-web/tests/browser/hardware-page-harness.js",
     "crates/forge3d-web/tests/infrastructure/browser-policy.json",
+    "crates/forge3d-web/tests/infrastructure/controller-helper-digest-policy.json",
+    "crates/forge3d-web/tests/infrastructure/controller-helper-digest-policy.schema.json",
     "crates/forge3d-web/tests/infrastructure/browser-release-publication-record.schema.json",
     "crates/forge3d-web/tests/infrastructure/host-inventory.schema.json",
     "crates/forge3d-web/tests/infrastructure/mobile-device-route-readiness.schema.json",
@@ -125,6 +127,8 @@ test("lab digest binds plan-named files and the production dependency closure", 
     "tools/browser-lab-controller/src/broker-lifecycle-store.mjs",
     "tools/browser-lab-controller/src/controller-service.mjs",
     "tools/browser-lab-controller/src/controller-evidence-inputs.mjs",
+    "tools/browser-lab-controller/src/helper-digest-policy.mjs",
+    "tools/browser-lab-controller/src/native-signing-provider.mjs",
     "tools/browser-lab-controller/src/production-dependencies.mjs",
     "tools/browser-lab-controller/src/unix-runner-execution.mjs",
     "tools/browser-lab-controller/src/windows-runner-execution.mjs",
@@ -135,6 +139,7 @@ test("lab digest binds plan-named files and the production dependency closure", 
     "tools/browser-lab-controller/services/unix-interactive-session-contract.mjs",
     "tools/browser-lab-controller/services/unix-runner-transient-paths.mjs",
     "tools/browser-lab-controller/services/windows-interactive-session-bridge.ps1",
+    "crates/forge3d-web/scripts/environment-approval.mjs",
   ]) {
     assert.equal(paths.has(path), true, `${path} is not configuration-bound`);
   }
@@ -294,6 +299,7 @@ const manualCanary = {
   },
   productAssertionsExecuted: false,
   attestation: { verified: true },
+  createdAt: "2026-07-29T10:21:00.000Z",
   expiresAt: "2026-08-01T00:00:00Z",
 };
 const canaryPublication = canaryPublicationFixture();
@@ -320,6 +326,13 @@ const selectedRuns = {
     apiRunId: manualCanary.runId,
     runAttempt: manualCanary.runAttempt,
     workflowPath: ".github/workflows/submit-browser-manual-evidence.yml",
+    createdAt: "2026-07-29T10:00:00.000Z",
+    completedAt: "2026-07-29T10:22:00.000Z",
+    status: "completed",
+    conclusion: "success",
+    headSha: candidateSha,
+    headBranch: "main",
+    event: "workflow_dispatch",
     hardwareJobId: manualCanary.hardwareJobId,
     intakeReleaseId: manualCanary.intakeReleaseId,
   },
@@ -382,6 +395,15 @@ test("readiness closes four hosts, generic manual canary, and immutable canary r
     /^https:\/\/assets-mac-m2\.webgpu-ci\.forge3d\.dev\/runs\//u,
   );
   assert.equal(result.manifest.supportClaim, false);
+  assert.deepEqual(result.manifest.manualCanary, {
+    runId: manualCanary.runId,
+    intakeReleaseId: manualCanary.intakeReleaseId,
+    hardwareJobId: manualCanary.hardwareJobId,
+    createdAt: manualCanary.createdAt,
+    selectedRunCreatedAt: selectedRuns.manual.createdAt,
+    selectedRunCompletedAt: selectedRuns.manual.completedAt,
+    acceptanceWindowHours: 24,
+  });
   assert.equal(result.manifest.canaryPublication.run.attempt, 1);
   assert.equal(result.manifest.canaryPublication.artifact.id, 91);
   assert.equal(
@@ -413,6 +435,38 @@ test("host evidence freshness accepts the exact window boundary and rejects stal
   assert.equal(isFreshWithinAcceptanceWindow(now - window, now, window), true);
   assert.equal(isFreshWithinAcceptanceWindow(now - window - 1, now, window), false);
   assert.equal(isFreshWithinAcceptanceWindow(now + 1, now, window), false);
+});
+
+test("manual canary freshness accepts 24h and rejects 24h plus 1ms", () => {
+  const boundarySelection = structuredClone(selectedRuns);
+  boundarySelection.manual.createdAt = "2026-07-29T00:00:00.000Z";
+  const boundaryCanary = {
+    ...manualCanary,
+    createdAt: "2026-07-29T00:00:00.000Z",
+  };
+  assert.doesNotThrow(() =>
+    computeLabReadiness({
+      ...base,
+      manualCanary: boundaryCanary,
+      selectedRuns: boundarySelection,
+    }),
+  );
+
+  const staleSelection = structuredClone(selectedRuns);
+  staleSelection.manual.createdAt = "2026-07-28T23:59:59.999Z";
+  const staleCanary = {
+    ...manualCanary,
+    createdAt: "2026-07-28T23:59:59.999Z",
+  };
+  assert.throws(
+    () =>
+      computeLabReadiness({
+        ...base,
+        manualCanary: staleCanary,
+        selectedRuns: staleSelection,
+      }),
+    /generic manual infrastructure canary is invalid/u,
+  );
 });
 
 test("readiness recomputes diagnostic file and receipt hashes", () => {

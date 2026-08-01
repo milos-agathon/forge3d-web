@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { createHostLabCanary } from "../src/lab-canary.mjs";
+import { createTestPrivateKeySigner } from "./test-signer.mjs";
 import { verifyControllerRecord } from "../../../crates/forge3d-web/scripts/verify-controller-record.mjs";
 import { exactHostInventory } from "../../../crates/forge3d-web/tests/infrastructure/host-inventory-fixture.mjs";
 import {
@@ -15,6 +16,10 @@ import {
 
 const keys = generateKeyPairSync("ec", { namedCurve: "P-256" });
 const keyId = "controller-fw-lnx-nv-01-p256-v1";
+const signer = createTestPrivateKeySigner({
+  privateKey: keys.privateKey,
+  signingKeyId: keyId,
+});
 const hostId = "FW-LNX-NV-01";
 const matrix = JSON.parse(
   readFileSync(
@@ -131,8 +136,7 @@ test("host canary is controller-signed, non-support, and signature-verifiable", 
       quarantined: false,
       completedAt: "2026-07-29T10:00:00.000Z",
     },
-    privateKey: keys.privateKey,
-    signingKeyId: keyId,
+    signer,
   });
   const record = verifyControllerRecord({
     signed,
@@ -271,8 +275,7 @@ test("Mac controller cannot sign without the complete mobile route evidence", ()
           quarantined: false,
           completedAt: "2026-07-29T10:00:00.000Z",
         },
-        privateKey: keys.privateKey,
-        signingKeyId: keyId,
+        signer,
       }),
     /observations are incomplete/u,
   );

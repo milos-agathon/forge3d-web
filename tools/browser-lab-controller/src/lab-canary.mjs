@@ -15,8 +15,7 @@ export function createHostLabCanary({
   installations,
   diagnosticRetention,
   controllerCompletion,
-  privateKey,
-  signingKeyId,
+  signer,
 }) {
   assertCompleteHostInventory(inventory, { authorization });
   validateDiagnosticRetentionReceipt(diagnosticRetention, {
@@ -110,8 +109,7 @@ export function createHostLabCanary({
       completedAt: new Date(controllerCompletion.completedAt).toISOString(),
       attestation: { verified: false },
     },
-    privateKey,
-    signingKeyId,
+    signer,
   });
 }
 

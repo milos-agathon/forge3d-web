@@ -76,6 +76,8 @@ export const labConfigurationFiles = [
   "crates/forge3d-web/tests/infrastructure/browser-release-publication-record.schema.json",
   "crates/forge3d-web/tests/infrastructure/controller-health-endpoints.json",
   "crates/forge3d-web/tests/infrastructure/controller-health-endpoints.schema.json",
+  "crates/forge3d-web/tests/infrastructure/controller-helper-digest-policy.json",
+  "crates/forge3d-web/tests/infrastructure/controller-helper-digest-policy.schema.json",
   "crates/forge3d-web/tests/infrastructure/controller-protocol.schema.json",
   "crates/forge3d-web/tests/infrastructure/hardware-matrix.json",
   "crates/forge3d-web/tests/infrastructure/hardware-matrix.schema.json",
@@ -134,6 +136,7 @@ export const labConfigurationFiles = [
   "crates/forge3d-web/scripts/prepare-manual-submission.mjs",
   "crates/forge3d-web/scripts/probe-browser-fixture.mjs",
   "crates/forge3d-web/scripts/probe-mobile-device-routes.mjs",
+  "crates/forge3d-web/scripts/environment-approval.mjs",
   "crates/forge3d-web/scripts/release-publication.mjs",
   "crates/forge3d-web/scripts/resolve-host-runtime.mjs",
   "crates/forge3d-web/scripts/resolve-hardware-promotion.mjs",
@@ -190,9 +193,11 @@ export const labConfigurationFiles = [
   "tools/browser-lab-controller/src/diagnostic-retention.mjs",
   "tools/browser-lab-controller/src/host-lock.mjs",
   "tools/browser-lab-controller/src/github-actions-client.mjs",
+  "tools/browser-lab-controller/src/helper-digest-policy.mjs",
   "tools/browser-lab-controller/src/installation-evidence.mjs",
   "tools/browser-lab-controller/src/lab-canary.mjs",
   "tools/browser-lab-controller/src/manual-session.mjs",
+  "tools/browser-lab-controller/src/native-signing-provider.mjs",
   "tools/browser-lab-controller/src/production-dependencies.mjs",
   "tools/browser-lab-controller/src/runner-execution.mjs",
   "tools/browser-lab-controller/src/unix-runner-execution.mjs",
@@ -433,6 +438,7 @@ export function computeLabReadiness({
   validateManualCanary(manualCanary, {
     candidateSha,
     packageRecord,
+    browserPolicy,
     now,
     selection: selectedRuns?.manual,
   });
@@ -496,6 +502,10 @@ export function computeLabReadiness({
       runId: manualCanary.runId,
       intakeReleaseId: manualCanary.intakeReleaseId,
       hardwareJobId: manualCanary.hardwareJobId,
+      createdAt: manualCanary.createdAt,
+      selectedRunCreatedAt: selectedRuns.manual.createdAt,
+      selectedRunCompletedAt: selectedRuns.manual.completedAt,
+      acceptanceWindowHours: browserPolicy.acceptanceWindowHours,
     },
     canaryReleaseId: canaryPublication.record.release.id,
     canaryPublication: canaryPublicationEvidence,
@@ -568,6 +578,7 @@ function validateServiceInstallation(receipt, expected) {
     "FORGE3D_DEVICE_CONTROL_HELPER",
     "FORGE3D_CLOUDFLARED_EXECUTABLE",
     "FORGE3D_CONTROLLER_GH_EXECUTABLE",
+    "FORGE3D_CONTROLLER_SIGNING_PROVIDER",
     "FORGE3D_PLAYWRIGHT_MODULE",
     "FORGE3D_GECKODRIVER_EXECUTABLE",
     "FORGE3D_APPIUM_EXECUTABLE",
@@ -1193,6 +1204,13 @@ function summarizeMobileRouteReadiness(record) {
 }
 
 function validateManualCanary(record, expected) {
+  const now = new Date(expected.now).getTime();
+  const acceptanceWindowMs =
+    expected.browserPolicy?.acceptanceWindowHours * 60 * 60 * 1000;
+  const createdAt = Date.parse(record?.createdAt);
+  const selectedCreatedAt = Date.parse(expected.selection?.createdAt);
+  const selectedCompletedAt = Date.parse(expected.selection?.completedAt);
+  const expiresAt = Date.parse(record?.expiresAt);
   if (
     !Number.isInteger(expected.selection?.selectedRunId) ||
     !Number.isInteger(expected.selection?.apiRunId) ||
@@ -1204,6 +1222,11 @@ function validateManualCanary(record, expected) {
     expected.selection.runAttempt !== record?.runAttempt ||
     expected.selection.workflowPath !==
       ".github/workflows/submit-browser-manual-evidence.yml" ||
+    expected.selection.status !== "completed" ||
+    expected.selection.conclusion !== "success" ||
+    expected.selection.headSha !== expected.candidateSha ||
+    expected.selection.headBranch !== "main" ||
+    expected.selection.event !== "workflow_dispatch" ||
     expected.selection.hardwareJobId !== record?.hardwareJobId ||
     expected.selection.intakeReleaseId !== record?.intakeReleaseId ||
     record?.lane !== "infrastructure-canary" ||
@@ -1225,7 +1248,16 @@ function validateManualCanary(record, expected) {
     record.media?.digestsVerified !== true ||
     record.productAssertionsExecuted !== false ||
     record.attestation?.verified !== true ||
-    new Date(record.expiresAt) <= new Date(expected.now)
+    !Number.isFinite(now) ||
+    !Number.isFinite(acceptanceWindowMs) ||
+    acceptanceWindowMs <= 0 ||
+    !isFreshWithinAcceptanceWindow(createdAt, now, acceptanceWindowMs) ||
+    !isFreshWithinAcceptanceWindow(selectedCreatedAt, now, acceptanceWindowMs) ||
+    !isFreshWithinAcceptanceWindow(selectedCompletedAt, now, acceptanceWindowMs) ||
+    selectedCreatedAt > createdAt ||
+    createdAt > selectedCompletedAt ||
+    !Number.isFinite(expiresAt) ||
+    expiresAt <= now
   ) {
     throw new Error("generic manual infrastructure canary is invalid");
   }

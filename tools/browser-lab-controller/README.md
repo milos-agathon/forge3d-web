@@ -11,8 +11,10 @@ over mTLS, and launches only `run.sh|run.cmd --jitconfig <opaque-value>`.
 On Windows, the controller remains a Session-0 service, but it never launches
 the runner or browser there. It verifies the checked SHA-256 of
 `windows-interactive-session-bridge.ps1`, sends the JIT configuration through
-the bridge's standard input, and the bridge uses `WTSQueryUserToken` plus
-`CreateProcessAsUser` on `winsta0\default`. The bridge rejects a missing or
+the bridge's standard input, and the bridge opens and duplicates the verified
+active-console Windows shell token before using `CreateProcessAsUser` on
+`winsta0\default`. It does not call the LocalSystem-only `WTSQueryUserToken`.
+The bridge rejects a missing or
 locked physical console session, paths outside the controller jobs root, any
 entrypoint other than `run.cmd --jitconfig`, and environment variables outside
 the runner allowlist. Its receipt identifies the exact console session and
@@ -22,10 +24,16 @@ Object, and resumes it only after that checked containment exists. If launch
 fails before the receipt is accepted, it terminates the Job Object, awaits the
 runner handle, and returns checked cleanup evidence; closing handles alone is
 never treated as absence.
-The WinSW service runs as `LocalSystem`, which is required for
-`WTSQueryUserToken`; provisioning must ACL the controller code, service XML,
-bridge script, environment file, and signing material to Administrators and
-SYSTEM, with no write access for the interactive lab account.
+The WinSW service runs as the dedicated, non-login virtual account
+`NT SERVICE\forge3d-browser-lab-controller`, never `LocalSystem` or the
+interactive lab account. Provisioning must grant that identity only the
+checked service-logon, `SeDebugPrivilege`, `SeAssignPrimaryTokenPrivilege`, and
+`SeIncreaseQuotaPrivilege` rights required by the session bridge, explicitly
+deny interactive and Remote Desktop logon, and verify the bridge with a live
+physical-console launch before activation. ACL the controller code, service
+XML, bridge script, environment file, and helper executables to Administrators,
+SYSTEM, and read/execute for this virtual account, with no write access for the
+service or interactive lab identities.
 
 On macOS and Linux, the installed service runs as the dedicated non-login
 `forge3d-lab-controller` account and cannot launch `run.sh` directly. It
@@ -80,11 +88,29 @@ GitHub App, broker mTLS, health TLS, signing, lock, and service variables do
 not cross. Unix bridges replace controller identity/display values with the
 observed graphical login's home, user, runtime bus, and display session.
 
+Controller evidence signing never reads a PEM private-key file. Windows uses a
+digest-allowlisted native provider backed by a non-exportable CNG P-256 key;
+macOS uses the same closed provider protocol backed by a non-exportable
+Keychain P-256 key. The provider must attest its platform backend, curve,
+algorithm, key ID, and `exportable: false` before the service starts. Its stderr
+is suppressed and its digest is rechecked before every signature. Linux uses
+the same opaque contract with a non-exportable PKCS#11 key. Only the explicit
+test adapter accepts an in-memory private key.
+
+Every external helper, including the signing provider, must match one exact
+platform/identity/version SHA-256 in the attested
+`controller-helper-digest-policy.json`. Package-owned bridges remain bound to
+the attested package manifest. A pending policy, missing identity, version
+mismatch, changed byte, self-rewritten installation receipt, or extra helper
+fails service startup.
+
 It never gives the runner its controller GitHub App private key or installation
 token, a registration/remove token, repository secret, or source checkout. The
 host lock is released only after broker-confirmed exact-ID absence, distribution
 verification, external diagnostic forwarding, host cleanup, and complete
-per-job work-root removal. Otherwise the host is quarantined.
+per-job work-root removal. Cleanup must explicitly prove updates restored,
+browser stopped, drivers stopped, Appium stopped, and tunnels stopped before
+unlock or evidence signing. Otherwise the host is quarantined.
 
 The broker's existing five-second mTLS health probe carries a bounded lifecycle
 header from its exact issuance ledger. Only the dedicated

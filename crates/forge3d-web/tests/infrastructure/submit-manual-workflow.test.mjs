@@ -59,11 +59,26 @@ test("submission resolves numeric assets, controller session, actors, approvals,
   assert.equal(submit.includes("--previous-tag"), false);
   assert.equal(submit.includes("releases-api.json"), false);
   assert.match(submit, /actions\/runs\/\$\{GITHUB_RUN_ID\}\/approvals/u);
+  assert.match(submit, /forge3d-manual-evidence/u);
   assert.match(submit, /releases\/assets\/\$\{asset_id\}/u);
   assert.match(submit, /--deny-self-hosted-runners/u);
   assert.match(submit, /retention-days: 90/u);
   assert.match(submit, /actions\/attest@[0-9a-f]{40}/u);
   assert.equal(submit.includes("contents: write"), false);
+});
+
+test("submission writer revalidates the exact unexpired observation immediately before attestation", () => {
+  const generate = submit.indexOf("Generate closed evidence and byte-identical bundle");
+  const revalidate = submit.indexOf(
+    "Revalidate exact observation immediately before first write",
+  );
+  const attest = submit.indexOf("Attest generated evidence and exact media bundle");
+  assert.ok(generate > -1 && revalidate > generate && attest > revalidate);
+  const gate = submit.slice(revalidate, attest);
+  assert.match(gate, /verify-repository-trust-observation\.mjs/u);
+  assert.match(gate, /EXPECTED_OPERATION: submit-manual-evidence/u);
+  assert.match(gate, /EXPECTED_TARGET_SHA: \$\{\{ steps\.intake\.outputs\.target-sha \}\}/u);
+  assert.match(gate, /observation_content_sha256/u);
 });
 
 function block(startId, nextId) {

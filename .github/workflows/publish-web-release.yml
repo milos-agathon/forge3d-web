@@ -41,6 +41,11 @@ jobs:
         if: github.ref != 'refs/heads/main' || inputs.target_sha != github.sha
         run: exit 1
 
+      - name: Validate positive numeric selectors
+        env:
+          READINESS_RUN_ID: ${{ inputs.readinessRunId }}
+        run: node --input-type=module --eval 'if (!/^[1-9][0-9]*$/u.test(process.env.READINESS_RUN_ID)) throw new Error("readiness run ID must be a positive decimal")'
+
       - name: Check out protected observer code
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
@@ -59,7 +64,8 @@ jobs:
       - name: Verify live protected-main trust
         working-directory: crates/forge3d-web
         env:
-          GITHUB_TOKEN: ${{ steps.observer-token.outputs.token }}
+          TRUST_OBSERVER_TOKEN: ${{ steps.observer-token.outputs.token }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/verify-repository-trust.mjs > repository-trust-verification.json
 
       - name: Emit observation for validation and protected publisher
@@ -146,12 +152,12 @@ jobs:
           OBSERVATION_ARTIFACT_DIGEST: ${{ needs.observe-release-publication-trust.outputs.observation_artifact_digest }}
           OBSERVATION_CONTENT_SHA256: ${{ needs.observe-release-publication-trust.outputs.observation_content_sha256 }}
           EXPECTED_OPERATION: publish-web-release
-          EXPECTED_CONSUMER_JOB: validate-release-candidate
-          EXPECTED_CONSUMER_ENVIRONMENT: none
+          EXPECTED_CONSUMERS: '[{"job":"validate-release-candidate","environment":"none"},{"job":"publish-release","environment":"forge3d-web-release"}]'
           EXPECTED_TARGET_SHA: ${{ inputs.target_sha }}
           EXPECTED_CANDIDATE_SHA: ${{ inputs.target_sha }}
           EXPECTED_CURRENT_MAIN_SHA: ${{ github.sha }}
           EXPECTED_WORKFLOW_PATH: .github/workflows/publish-web-release.yml
+          PUBLISHER_PROOF_PATH: repository-trust-publisher-proof.json
         run: |
           test "${GITHUB_REF}" = "refs/heads/main"
           test "${{ inputs.target_sha }}" = "${GITHUB_SHA}"
@@ -572,6 +578,7 @@ jobs:
         with:
           subject-path: |
             crates/forge3d-web/release-publication-preflight.json
+            crates/forge3d-web/repository-trust-publisher-proof.json
             crates/forge3d-web/release-assets/*
             crates/forge3d-web/publication-validator/scripts/*
             crates/forge3d-web/publication-validator/tests/browser/*
@@ -584,6 +591,7 @@ jobs:
           name: web-release-preflight-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             crates/forge3d-web/release-publication-preflight.json
+            crates/forge3d-web/repository-trust-publisher-proof.json
             crates/forge3d-web/release-assets/
             crates/forge3d-web/publication-validator/
           if-no-files-found: error
@@ -610,28 +618,49 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
+          PREFLIGHT_ARTIFACT_ID: ${{ needs.validate-release-candidate.outputs.preflight_artifact_id }}
+          PREFLIGHT_ARTIFACT_DIGEST: ${{ needs.validate-release-candidate.outputs.preflight_artifact_digest }}
         run: |
           test ! -d .git
-          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${{ needs.validate-release-candidate.outputs.preflight_artifact_id }}/zip" > preflight.zip
-          expected="${{ needs.validate-release-candidate.outputs.preflight_artifact_digest }}"
-          test "$(sha256sum preflight.zip | cut -d ' ' -f 1)" = "${expected#sha256:}"
+          test "${PREFLIGHT_ARTIFACT_ID}" -eq "${PREFLIGHT_ARTIFACT_ID}" 2>/dev/null
+          test "${PREFLIGHT_ARTIFACT_ID}" -gt 0
+          test "${#PREFLIGHT_ARTIFACT_DIGEST}" -eq 64
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${PREFLIGHT_ARTIFACT_ID}" > preflight-artifact.json
+          node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            const artifact = JSON.parse(readFileSync("preflight-artifact.json", "utf8"));
+            if (
+              !/^[1-9][0-9]*$/u.test(process.env.PREFLIGHT_ARTIFACT_ID) ||
+              !/^[0-9a-f]{64}$/u.test(process.env.PREFLIGHT_ARTIFACT_DIGEST) ||
+              artifact.id !== Number(process.env.PREFLIGHT_ARTIFACT_ID) ||
+              artifact.name !== `web-release-preflight-${process.env.GITHUB_RUN_ID}-${process.env.GITHUB_RUN_ATTEMPT}` ||
+              artifact.digest !== `sha256:${process.env.PREFLIGHT_ARTIFACT_DIGEST}` ||
+              artifact.expired !== false ||
+              artifact.workflow_run?.id !== Number(process.env.GITHUB_RUN_ID) ||
+              artifact.workflow_run?.repository_id !== 1259761852 ||
+              artifact.workflow_run?.head_repository_id !== 1259761852 ||
+              artifact.workflow_run?.head_branch !== "main" ||
+              artifact.workflow_run?.head_sha !== process.env.GITHUB_WORKFLOW_SHA
+            ) throw new Error("preflight artifact metadata mismatch");
+          '
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${PREFLIGHT_ARTIFACT_ID}/zip" > preflight.zip
+          test "$(sha256sum preflight.zip | cut -d ' ' -f 1)" = "${PREFLIGHT_ARTIFACT_DIGEST}"
           mkdir preflight
           unzip -q preflight.zip -d preflight
           test -f preflight/release-publication-preflight.json
+          test -f preflight/repository-trust-publisher-proof.json
           gh attestation verify preflight/release-publication-preflight.json \
             --repo milos-agathon/forge3d-web \
             --signer-workflow milos-agathon/forge3d-web/.github/workflows/publish-web-release.yml \
             --source-ref refs/heads/main \
             --source-digest "${{ github.workflow_sha }}" \
             --deny-self-hosted-runners
-          while IFS= read -r subject; do
-            gh attestation verify "${subject}" \
-              --repo milos-agathon/forge3d-web \
-              --signer-workflow milos-agathon/forge3d-web/.github/workflows/publish-web-release.yml \
-              --source-ref refs/heads/main \
-              --source-digest "${{ github.workflow_sha }}" \
-              --deny-self-hosted-runners
-          done < <(find preflight/publication-validator -type f | sort)
+          gh attestation verify preflight/repository-trust-publisher-proof.json \
+            --repo milos-agathon/forge3d-web \
+            --signer-workflow milos-agathon/forge3d-web/.github/workflows/publish-web-release.yml \
+            --source-ref refs/heads/main \
+            --source-digest "${{ github.workflow_sha }}" \
+            --deny-self-hosted-runners
 
       - name: Reapply exact observation and preflight handoffs
         shell: bash
@@ -639,14 +668,56 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ inputs.target_sha }}
           RELEASE_TAG: ${{ inputs.tag }}
+          READINESS_RUN_ID: ${{ inputs.readinessRunId }}
           PREFLIGHT_SHA256: ${{ needs.validate-release-candidate.outputs.preflight_sha256 }}
           OBSERVATION_ARTIFACT_ID: ${{ needs.observe-release-publication-trust.outputs.observation_artifact_id }}
           OBSERVATION_ARTIFACT_NAME: ${{ needs.observe-release-publication-trust.outputs.observation_artifact_name }}
           OBSERVATION_ARTIFACT_DIGEST: ${{ needs.observe-release-publication-trust.outputs.observation_artifact_digest }}
           OBSERVATION_CONTENT_SHA256: ${{ needs.observe-release-publication-trust.outputs.observation_content_sha256 }}
         run: |
+          test "${OBSERVATION_ARTIFACT_ID}" -eq "${OBSERVATION_ARTIFACT_ID}" 2>/dev/null
+          test "${OBSERVATION_ARTIFACT_ID}" -gt 0
+          test "${#OBSERVATION_ARTIFACT_DIGEST}" -eq 64
+          test "${#OBSERVATION_CONTENT_SHA256}" -eq 64
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${READINESS_RUN_ID}" > publisher-readiness-run.json
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${READINESS_RUN_ID}/artifacts?per_page=100" > publisher-readiness-artifacts.json
+          node --input-type=module --eval '
+            import { readFileSync, writeFileSync } from "node:fs";
+            const run = JSON.parse(readFileSync("publisher-readiness-run.json", "utf8"));
+            const artifacts = JSON.parse(readFileSync("publisher-readiness-artifacts.json", "utf8")).artifacts;
+            const matches = artifacts.filter((artifact) => artifact.name === "browser-hardware-release-readiness");
+            if (
+              !/^[1-9][0-9]*$/u.test(process.env.READINESS_RUN_ID) ||
+              run.id !== Number(process.env.READINESS_RUN_ID) ||
+              run.path !== ".github/workflows/browser-hardware-release-readiness.yml" ||
+              run.head_sha !== process.env.TARGET_SHA ||
+              run.head_branch !== "main" ||
+              run.status !== "completed" ||
+              run.conclusion !== "success" ||
+              matches.length !== 1 ||
+              matches[0].expired !== false ||
+              !/^sha256:[0-9a-f]{64}$/u.test(matches[0].digest ?? "")
+            ) throw new Error("publisher release-readiness run or artifact mismatch");
+            writeFileSync("publisher-readiness-artifact.json", JSON.stringify(matches[0]));
+          '
+          readiness_artifact_id="$(node -p "require('./publisher-readiness-artifact.json').id")"
+          readiness_artifact_digest="$(node -p "require('./publisher-readiness-artifact.json').digest.slice(7)")"
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${readiness_artifact_id}/zip" > publisher-readiness.zip
+          test "$(sha256sum publisher-readiness.zip | cut -d ' ' -f 1)" = "${readiness_artifact_digest}"
+          mkdir publisher-readiness
+          unzip -q publisher-readiness.zip -d publisher-readiness
+          test "$(find publisher-readiness -name browser-hardware-release-readiness.json -type f | wc -l)" -eq 1
+          gh attestation verify "$(find publisher-readiness -name browser-hardware-release-readiness.json -type f)" \
+            --repo milos-agathon/forge3d-web \
+            --signer-workflow milos-agathon/forge3d-web/.github/workflows/browser-hardware-release-readiness.yml \
+            --source-ref refs/heads/main \
+            --source-digest "${TARGET_SHA}" \
+            --deny-self-hosted-runners
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${OBSERVATION_ARTIFACT_ID}" > observation-artifact.json
           gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${OBSERVATION_ARTIFACT_ID}/zip" > observation.zip
-          test "$(sha256sum observation.zip | cut -d ' ' -f 1)" = "${OBSERVATION_ARTIFACT_DIGEST#sha256:}"
+          test "$(sha256sum observation.zip | cut -d ' ' -f 1)" = "${OBSERVATION_ARTIFACT_DIGEST}"
+          test "$(unzip -Z1 observation.zip | wc -l)" -eq 1
+          test "$(unzip -Z1 observation.zip)" = "repository-trust-observation.json"
           mkdir observation
           unzip -q observation.zip -d observation
           gh attestation verify observation/repository-trust-observation.json \
@@ -655,27 +726,184 @@ jobs:
             --source-ref refs/heads/main \
             --source-digest "${{ github.workflow_sha }}" \
             --deny-self-hosted-runners
+          gh api "/repos/${GITHUB_REPOSITORY}/branches/main" > current-main.json
           node --input-type=module --eval '
             import { createHash } from "node:crypto";
-            import { readFileSync } from "node:fs";
+            import { readFileSync, readdirSync } from "node:fs";
+            const canonical = (value) => {
+              if (value === null || typeof value !== "object") return JSON.stringify(value);
+              if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+              return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(",")}}`;
+            };
+            const exactKeys = (value, keys) =>
+              value !== null && typeof value === "object" && !Array.isArray(value) &&
+              canonical(Object.keys(value).sort()) === canonical([...keys].sort());
+            const metadata = JSON.parse(readFileSync("observation-artifact.json", "utf8"));
+            const currentMain = JSON.parse(readFileSync("current-main.json", "utf8"));
             const observationBytes = readFileSync("observation/repository-trust-observation.json");
             const observation = JSON.parse(observationBytes);
+            const proofBytes = readFileSync("preflight/repository-trust-publisher-proof.json");
+            const proof = JSON.parse(proofBytes);
             const preflightBytes = readFileSync("preflight/release-publication-preflight.json");
             const preflight = JSON.parse(preflightBytes);
+            const readinessArtifact = JSON.parse(readFileSync("publisher-readiness-artifact.json", "utf8"));
+            const readinessBytes = readFileSync("preflight/release-assets/browser-hardware-release-readiness.json");
+            const independentReadinessBytes = readFileSync(
+              readdirSync("publisher-readiness", { recursive: true })
+                .map((name) => `publisher-readiness/${name}`)
+                .find((name) => name.endsWith("/browser-hardware-release-readiness.json"))
+            );
+            const readiness = JSON.parse(readinessBytes);
+            const assetEntries = readdirSync("preflight/release-assets", { withFileTypes: true });
+            const preflightAssetsValid =
+              Array.isArray(preflight.assets) &&
+              preflight.assets.length === assetEntries.length &&
+              assetEntries.every((entry) => entry.isFile()) &&
+              new Set(preflight.assets.map((asset) => asset.name)).size === preflight.assets.length &&
+              new Set(preflight.assets.map((asset) => asset.sourceId)).size === preflight.assets.length &&
+              preflight.assets.every((asset) =>
+                exactKeys(asset, ["sourceId", "name", "sha256"]) &&
+                Number.isInteger(asset.sourceId) && asset.sourceId > 0 &&
+                /^[A-Za-z0-9][A-Za-z0-9._-]*$/u.test(asset.name) &&
+                /^[0-9a-f]{64}$/u.test(asset.sha256) &&
+                createHash("sha256").update(readFileSync(`preflight/release-assets/${asset.name}`)).digest("hex") === asset.sha256
+              ) &&
+              canonical(assetEntries.map((entry) => entry.name).sort()) ===
+                canonical(preflight.assets.map((asset) => asset.name).sort());
+            const expectedConsumers = [
+              { job: "publish-release", environment: "forge3d-web-release" },
+              { job: "validate-release-candidate", environment: "none" }
+            ];
+            const now = Date.now();
+            const observedAt = Date.parse(observation.observedAt);
+            const observationExpiresAt = Date.parse(observation.expiresAt);
+            const preflightCreatedAt = Date.parse(preflight.createdAt);
+            const preflightExpiresAt = Date.parse(preflight.expiresAt);
             if (
+              !/^[1-9][0-9]*$/u.test(process.env.OBSERVATION_ARTIFACT_ID) ||
+              !/^[A-Za-z0-9_.-]+$/u.test(process.env.OBSERVATION_ARTIFACT_NAME) ||
+              process.env.OBSERVATION_ARTIFACT_NAME !== `repository-trust-${process.env.GITHUB_RUN_ID}-${process.env.GITHUB_RUN_ATTEMPT}-publish-web-release` ||
+              !/^[0-9a-f]{64}$/u.test(process.env.OBSERVATION_ARTIFACT_DIGEST) ||
+              !/^[0-9a-f]{64}$/u.test(process.env.OBSERVATION_CONTENT_SHA256) ||
+              metadata.id !== Number(process.env.OBSERVATION_ARTIFACT_ID) ||
+              metadata.name !== process.env.OBSERVATION_ARTIFACT_NAME ||
+              metadata.digest !== `sha256:${process.env.OBSERVATION_ARTIFACT_DIGEST}` ||
+              metadata.expired !== false ||
+              metadata.workflow_run?.id !== Number(process.env.GITHUB_RUN_ID) ||
+              metadata.workflow_run?.repository_id !== 1259761852 ||
+              metadata.workflow_run?.head_repository_id !== 1259761852 ||
+              metadata.workflow_run?.head_branch !== "main" ||
+              metadata.workflow_run?.head_sha !== process.env.GITHUB_WORKFLOW_SHA ||
               createHash("sha256").update(observationBytes).digest("hex") !== process.env.OBSERVATION_CONTENT_SHA256 ||
+              canonical(observation) !== observationBytes.toString("utf8") ||
+              !exactKeys(observation.repository, ["id", "fullName"]) ||
+              observation.repository.id !== 1259761852 ||
+              observation.repository.fullName !== process.env.GITHUB_REPOSITORY ||
               observation.operation !== "publish-web-release" ||
+              canonical(observation.consumers) !== canonical(expectedConsumers) ||
+              !observation.consumers.every((value) => exactKeys(value, ["job", "environment"])) ||
+              !exactKeys(observation.workflow, ["path", "ref", "sha"]) ||
+              observation.workflow.path !== ".github/workflows/publish-web-release.yml" ||
+              observation.workflow.ref !== "refs/heads/main" ||
+              observation.workflow.sha !== process.env.GITHUB_WORKFLOW_SHA ||
+              !exactKeys(observation.run, ["id", "attempt"]) ||
+              observation.run.id !== Number(process.env.GITHUB_RUN_ID) ||
+              observation.run.attempt !== Number(process.env.GITHUB_RUN_ATTEMPT) ||
+              observation.candidateSha !== process.env.TARGET_SHA ||
               observation.targetSha !== process.env.TARGET_SHA ||
-              !observation.consumers.some((value) =>
-                value.job === "publish-release" &&
-                value.environment === "forge3d-web-release"
-              ) ||
+              observation.currentMainSha !== process.env.GITHUB_SHA ||
+              currentMain.commit?.sha !== process.env.GITHUB_SHA ||
+              !/^[0-9a-f]{40}$/u.test(observation.trustEpochSha) ||
+              !/^[0-9a-f]{64}$/u.test(observation.policySha256) ||
+              !/^[0-9a-f]{64}$/u.test(observation.workflowActionsLockSha256) ||
+              !Number.isFinite(observedAt) ||
+              !Number.isFinite(observationExpiresAt) ||
+              observationExpiresAt <= observedAt ||
+              observationExpiresAt - observedAt > 30 * 60 * 1000 ||
+              now < observedAt || now >= observationExpiresAt ||
+              canonical(proof) !== proofBytes.toString("utf8") ||
+              !exactKeys(proof, ["schemaVersion", "artifact", "observation", "attestation"]) ||
+              proof.schemaVersion !== 1 ||
+              !exactKeys(proof.artifact, ["id", "name", "archiveSha256", "contentSha256", "expired", "workflowRun", "archiveMember"]) ||
+              proof.artifact.id !== metadata.id ||
+              proof.artifact.name !== metadata.name ||
+              proof.artifact.archiveSha256 !== process.env.OBSERVATION_ARTIFACT_DIGEST ||
+              proof.artifact.contentSha256 !== process.env.OBSERVATION_CONTENT_SHA256 ||
+              proof.artifact.expired !== false ||
+              canonical(proof.artifact.workflowRun) !== canonical({
+                id: metadata.workflow_run.id,
+                repositoryId: metadata.workflow_run.repository_id,
+                headRepositoryId: metadata.workflow_run.head_repository_id,
+                headBranch: metadata.workflow_run.head_branch,
+                headSha: metadata.workflow_run.head_sha
+              }) ||
+              canonical(proof.artifact.archiveMember) !== canonical({
+                count: 1,
+                name: "repository-trust-observation.json",
+                sha256: process.env.OBSERVATION_CONTENT_SHA256,
+                canonicalJson: true
+              }) ||
+              canonical(proof.observation) !== canonical({
+                repository: observation.repository,
+                operation: observation.operation,
+                consumers: observation.consumers,
+                workflow: observation.workflow,
+                run: observation.run,
+                candidateSha: observation.candidateSha,
+                targetSha: observation.targetSha,
+                currentMainSha: observation.currentMainSha,
+                trustEpochSha: observation.trustEpochSha,
+                policySha256: observation.policySha256,
+                workflowActionsLockSha256: observation.workflowActionsLockSha256,
+                observedAt: observation.observedAt,
+                expiresAt: observation.expiresAt
+              }) ||
+              canonical(proof.attestation) !== canonical({
+                verified: true,
+                repository: process.env.GITHUB_REPOSITORY,
+                signerWorkflow: `${process.env.GITHUB_REPOSITORY}/.github/workflows/publish-web-release.yml`,
+                sourceRef: "refs/heads/main",
+                sourceDigest: process.env.GITHUB_WORKFLOW_SHA,
+                denySelfHostedRunners: true
+              }) ||
               createHash("sha256").update(preflightBytes).digest("hex") !== process.env.PREFLIGHT_SHA256 ||
+              !exactKeys(preflight, ["schemaVersion", "mode", "supportClaim", "repository", "workflow", "workflowSha", "run", "targetSha", "tag", "readiness", "observation", "assets", "publisher", "implementationActors", "createdAt", "expiresAt"]) ||
+              preflight.schemaVersion !== 1 ||
+              preflight.mode !== "supported-release" ||
+              preflight.supportClaim !== true ||
+              preflight.repository !== process.env.GITHUB_REPOSITORY ||
+              preflight.workflow !== ".github/workflows/publish-web-release.yml" ||
+              preflight.workflowSha !== process.env.GITHUB_WORKFLOW_SHA ||
+              !exactKeys(preflight.run, ["id", "attempt"]) ||
+              preflight.run.id !== Number(process.env.GITHUB_RUN_ID) ||
+              preflight.run.attempt !== Number(process.env.GITHUB_RUN_ATTEMPT) ||
               preflight.targetSha !== process.env.TARGET_SHA ||
               preflight.tag !== process.env.RELEASE_TAG ||
+              !exactKeys(preflight.readiness, ["runId", "artifactId", "sha256", "status"]) ||
+              preflight.readiness.runId !== Number(process.env.READINESS_RUN_ID) ||
+              preflight.readiness.artifactId !== readinessArtifact.id ||
+              preflight.readiness.sha256 !== createHash("sha256").update(readinessBytes).digest("hex") ||
+              preflight.readiness.status !== "RELEASE_MATRIX_READY" ||
+              readiness.status !== "RELEASE_MATRIX_READY" ||
+              readiness.supportClaim !== true ||
+              readiness.targetSha !== process.env.TARGET_SHA ||
+              !readinessBytes.equals(independentReadinessBytes) ||
+              !preflightAssetsValid ||
+              !exactKeys(preflight.observation, ["artifactId", "artifactName", "artifactDigest", "contentSha256"]) ||
+              preflight.observation.artifactId !== Number(process.env.OBSERVATION_ARTIFACT_ID) ||
+              preflight.observation.artifactName !== process.env.OBSERVATION_ARTIFACT_NAME ||
+              preflight.observation.artifactDigest !== `sha256:${process.env.OBSERVATION_ARTIFACT_DIGEST}` ||
+              preflight.observation.contentSha256 !== process.env.OBSERVATION_CONTENT_SHA256 ||
+              !exactKeys(preflight.publisher, ["job", "environment", "actor", "approvers"]) ||
               preflight.publisher.job !== "publish-release" ||
               preflight.publisher.environment !== "forge3d-web-release" ||
-              new Date(preflight.expiresAt) <= new Date()
+              preflight.publisher.actor !== process.env.GITHUB_ACTOR ||
+              !Array.isArray(preflight.publisher.approvers) || preflight.publisher.approvers.length !== 0 ||
+              !Number.isFinite(preflightCreatedAt) ||
+              !Number.isFinite(preflightExpiresAt) ||
+              preflightExpiresAt <= preflightCreatedAt ||
+              preflightExpiresAt - preflightCreatedAt > 30 * 60 * 1000 ||
+              now < preflightCreatedAt || now >= preflightExpiresAt
             ) throw new Error("publisher handoff mismatch or expiry");
           '
 
@@ -687,20 +915,51 @@ jobs:
           gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/approvals" > approvals.json
           gh api "/repos/${GITHUB_REPOSITORY}" > repository-settings.json
           node --input-type=module --eval '
-            import { readFileSync } from "node:fs";
+            import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
             const preflight = JSON.parse(readFileSync("preflight/release-publication-preflight.json", "utf8"));
-            const approvals = JSON.parse(readFileSync("approvals.json", "utf8"))
-              .filter((value) => value.state === "approved");
+            const history = JSON.parse(readFileSync("approvals.json", "utf8"));
+            const approvals = history.filter((value) =>
+              value.state === "approved" &&
+              Array.isArray(value.environments) &&
+              value.environments.length === 1 &&
+              value.environments[0]?.name === "forge3d-web-release"
+            );
+            const mixed = history.some((value) =>
+              value.state === "approved" &&
+              Array.isArray(value.environments) &&
+              value.environments.some((environment) => environment?.name === "forge3d-web-release") &&
+              value.environments.length !== 1
+            );
+            const actor = process.env.GITHUB_ACTOR.toLowerCase();
+            const implementationActors = new Set(
+              preflight.implementationActors.map((value) => value.toLowerCase())
+            );
             const settings = JSON.parse(readFileSync("repository-settings.json", "utf8"));
             if (
               !(settings.immutable_releases === true || settings.immutable_releases?.enabled === true) ||
-              preflight.implementationActors.includes(process.env.GITHUB_ACTOR) ||
+              implementationActors.has(actor) ||
+              mixed ||
               approvals.length < 1 ||
               approvals.some((value) =>
-                value.user.login === process.env.GITHUB_ACTOR ||
-                preflight.implementationActors.includes(value.user.login)
+                !Number.isInteger(value.user?.id) || value.user.id < 1 ||
+                typeof value.user?.login !== "string" || value.user.login.length < 1 ||
+                !Number.isInteger(value.environments[0]?.id) || value.environments[0].id < 1 ||
+                value.user.login.toLowerCase() === actor ||
+                implementationActors.has(value.user.login.toLowerCase())
               )
             ) throw new Error("publisher identity, approval, or immutable setting failed");
+            mkdirSync("publication-proof", { recursive: true });
+            writeFileSync("publication-proof/environment-approvals.json", JSON.stringify({
+              environment: "forge3d-web-release",
+              approvals: approvals.map((value) => ({
+                state: "approved",
+                user: { id: value.user.id, login: value.user.login },
+                environment: {
+                  id: value.environments[0].id,
+                  name: value.environments[0].name
+                }
+              }))
+            }));
           '
 
       - name: Re-fetch and re-attest exact manual bytes immediately before assembly
@@ -832,18 +1091,54 @@ jobs:
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
           node --input-type=module --eval '
-            import { assertGitHubResourceAbsent } from "./preflight/publication-validator/scripts/release-publication.mjs";
+            import { readFileSync } from "node:fs";
+            const requireFreshHandoffs = () => {
+              const observation = JSON.parse(readFileSync("observation/repository-trust-observation.json", "utf8"));
+              const preflight = JSON.parse(readFileSync("preflight/release-publication-preflight.json", "utf8"));
+              const now = Date.now();
+              const observedAt = Date.parse(observation.observedAt);
+              const observationExpiresAt = Date.parse(observation.expiresAt);
+              const preflightCreatedAt = Date.parse(preflight.createdAt);
+              const preflightExpiresAt = Date.parse(preflight.expiresAt);
+              if (
+                !Number.isFinite(observedAt) || !Number.isFinite(observationExpiresAt) ||
+                observationExpiresAt <= observedAt || observationExpiresAt - observedAt > 30 * 60 * 1000 ||
+                now < observedAt || now >= observationExpiresAt ||
+                !Number.isFinite(preflightCreatedAt) || !Number.isFinite(preflightExpiresAt) ||
+                preflightExpiresAt <= preflightCreatedAt || preflightExpiresAt - preflightCreatedAt > 30 * 60 * 1000 ||
+                now < preflightCreatedAt || now >= preflightExpiresAt
+              ) throw new Error("publication handoff expired before mutation");
+            };
+            const assertAbsent = async (resourcePath) => {
+              const response = await fetch(
+                `${process.env.GITHUB_API_URL}/repos/${process.env.GITHUB_REPOSITORY}/${resourcePath}`,
+                { headers: { Accept: "application/vnd.github+json", Authorization: `Bearer ${process.env.GH_TOKEN}`, "X-GitHub-Api-Version": "2022-11-28" } }
+              );
+              if (response.status !== 404) throw new Error(`resource absence is not proven: ${response.status}`);
+            };
+            requireFreshHandoffs();
             for (const resourcePath of [
               `releases/tags/${process.env.RELEASE_TAG}`,
               `git/ref/tags/${process.env.RELEASE_TAG}`
-            ]) {
-              await assertGitHubResourceAbsent({
-                apiBase: process.env.GITHUB_API_URL,
-                repository: process.env.GITHUB_REPOSITORY,
-                resourcePath,
-                token: process.env.GH_TOKEN
-              });
-            }
+            ]) await assertAbsent(resourcePath);
+          '
+          node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            const observation = JSON.parse(readFileSync("observation/repository-trust-observation.json", "utf8"));
+            const preflight = JSON.parse(readFileSync("preflight/release-publication-preflight.json", "utf8"));
+            const now = Date.now();
+            const observedAt = Date.parse(observation.observedAt);
+            const observationExpiresAt = Date.parse(observation.expiresAt);
+            const preflightCreatedAt = Date.parse(preflight.createdAt);
+            const preflightExpiresAt = Date.parse(preflight.expiresAt);
+            if (
+              !Number.isFinite(observedAt) || !Number.isFinite(observationExpiresAt) ||
+              observationExpiresAt <= observedAt || observationExpiresAt - observedAt > 30 * 60 * 1000 ||
+              now < observedAt || now >= observationExpiresAt ||
+              !Number.isFinite(preflightCreatedAt) || !Number.isFinite(preflightExpiresAt) ||
+              preflightExpiresAt <= preflightCreatedAt || preflightExpiresAt - preflightCreatedAt > 30 * 60 * 1000 ||
+              now < preflightCreatedAt || now >= preflightExpiresAt
+            ) throw new Error("publication handoff expired immediately before mutation");
           '
           gh release create "${RELEASE_TAG}" \
             --repo "${GITHUB_REPOSITORY}" \
@@ -988,18 +1283,17 @@ jobs:
             ' "${intake_id}" "${intake_tag}"
             gh release delete "${intake_tag}" --repo "${GITHUB_REPOSITORY}" --cleanup-tag --yes
             node --input-type=module --eval '
-              import { assertGitHubResourceAbsent } from "./preflight/publication-validator/scripts/release-publication.mjs";
+              const assertAbsent = async (resourcePath) => {
+                const response = await fetch(
+                  `${process.env.GITHUB_API_URL}/repos/${process.env.GITHUB_REPOSITORY}/${resourcePath}`,
+                  { headers: { Accept: "application/vnd.github+json", Authorization: `Bearer ${process.env.GH_TOKEN}`, "X-GitHub-Api-Version": "2022-11-28" } }
+                );
+                if (response.status !== 404) throw new Error(`resource absence is not proven: ${response.status}`);
+              };
               for (const resourcePath of [
                 `releases/${process.argv[1]}`,
                 `git/ref/tags/${process.argv[2]}`
-              ]) {
-                await assertGitHubResourceAbsent({
-                  apiBase: process.env.GITHUB_API_URL,
-                  repository: process.env.GITHUB_REPOSITORY,
-                  resourcePath,
-                  token: process.env.GH_TOKEN
-                });
-              }
+              ]) await assertAbsent(resourcePath);
             ' "${intake_id}" "${intake_tag}"
             node --input-type=module --eval '
               process.stdout.write(`${JSON.stringify({
@@ -1043,10 +1337,123 @@ jobs:
               verifiedAt: readFileSync("publication-proof/verified-at.txt", "utf8").trim()
             }));
           '
-          node preflight/publication-validator/scripts/release-publication.mjs \
-            publication-record-input.json \
-            create-publication-record \
-            release-publication-record.json
+          node --input-type=module --eval '
+            import { createHash } from "node:crypto";
+            import { readFileSync, writeFileSync } from "node:fs";
+            const canonical = (value) => {
+              if (value === null || typeof value !== "object") return JSON.stringify(value);
+              if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
+              return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(",")}}`;
+            };
+            const digestBytes = (bytes) => createHash("sha256").update(bytes).digest("hex");
+            const digest = (value) => digestBytes(Buffer.from(canonical(value)));
+            const proof = (path) => {
+              const bytes = readFileSync(path);
+              const output = JSON.parse(bytes);
+              if (output === null || typeof output !== "object" || Array.isArray(output) || Object.keys(output).length === 0) {
+                throw new Error(`verification proof is empty: ${path}`);
+              }
+              return { outputSha256: digestBytes(bytes), output };
+            };
+            const input = JSON.parse(readFileSync("publication-record-input.json", "utf8"));
+            const releaseProof = proof(input.releaseVerification.path);
+            const assetProofs = input.assetVerifications.map((value) => ({
+              name: value.name,
+              ...proof(value.path)
+            }));
+            const expectedDigests = new Map(
+              input.candidate.assets.map((asset) => [asset.name, asset.sha256])
+            );
+            expectedDigests.set("browser-release-manifest.json", input.candidateSha256);
+            const expectedNames = [...expectedDigests.keys()].sort();
+            const actualNames = input.assets.map((asset) => asset.name).sort();
+            const proofNames = assetProofs.map((value) => value.name).sort();
+            const expectedIntakes = input.manualMediaPlan.intakes
+              .map(({ releaseId, tagName }) => ({ releaseId, tagName }))
+              .sort((left, right) => left.releaseId - right.releaseId);
+            const actualIntakes = input.intakeDeletions
+              .map(({ releaseId, tagName }) => ({ releaseId, tagName }))
+              .sort((left, right) => left.releaseId - right.releaseId);
+            const published = new Date(input.release.published_at);
+            const verified = new Date(input.verifiedAt);
+            const created = new Date();
+            if (
+              !/^[0-9a-f]{64}$/u.test(input.candidateSha256 ?? "") ||
+              digest(input.candidate) !== input.candidateSha256 ||
+              digest(input.manualMediaPlan) !== input.candidate.manualMediaPlanSha256 ||
+              input.manualMediaPlan.targetSha !== input.candidate.targetSha ||
+              !Number.isInteger(input.publicationRun?.id) || input.publicationRun.id < 1 ||
+              !Number.isInteger(input.publicationRun?.attempt) || input.publicationRun.attempt < 1 ||
+              input.publicationRun.workflowPath !== ".github/workflows/publish-web-release.yml" ||
+              input.release.tag_name !== input.candidate.tag ||
+              input.release.target_commitish !== input.candidate.targetSha ||
+              input.release.draft !== false || input.release.prerelease !== false ||
+              input.release.immutable !== true ||
+              !Number.isInteger(input.release.id) || input.release.id < 1 ||
+              Number.isNaN(published.getTime()) || Number.isNaN(verified.getTime()) ||
+              published > verified || verified > created ||
+              actualNames.length !== expectedNames.length ||
+              actualNames.some((name, index) => name !== expectedNames[index]) ||
+              proofNames.length !== expectedNames.length ||
+              proofNames.some((name, index) => name !== expectedNames[index]) ||
+              new Set(assetProofs.map((value) => value.name)).size !== assetProofs.length ||
+              expectedIntakes.length !== actualIntakes.length ||
+              expectedIntakes.some((value, index) =>
+                value.releaseId !== actualIntakes[index].releaseId ||
+                value.tagName !== actualIntakes[index].tagName
+              ) ||
+              input.intakeDeletions.some((value) => {
+                const deleted = new Date(value.deletedAt);
+                return value.deletedAfterVerification !== true ||
+                  Number.isNaN(deleted.getTime()) || deleted < verified || deleted > created;
+              })
+            ) throw new Error("post-publication release identity or verification proof is invalid");
+            const assets = input.assets.map((asset) => {
+              const sha256 = expectedDigests.get(asset.name);
+              if (
+                !Number.isInteger(asset.id) || asset.id < 1 ||
+                !Number.isInteger(asset.size) || asset.size < 1 ||
+                asset.sha256 !== sha256 || asset.apiDigest !== `sha256:${sha256}`
+              ) throw new Error(`published asset digest or identity mismatch: ${asset.name}`);
+              return { id: asset.id, name: asset.name, size: asset.size, apiDigest: asset.apiDigest, sha256 };
+            }).sort((left, right) => left.name.localeCompare(right.name));
+            assetProofs.sort((left, right) => left.name.localeCompare(right.name));
+            const proofDigests = [
+              { name: "release", sha256: releaseProof.outputSha256 },
+              ...assetProofs.map((value) => ({ name: value.name, sha256: value.outputSha256 }))
+            ];
+            const record = {
+              schemaVersion: 1,
+              recordType: "browser-release-publication",
+              supportClaim: true,
+              targetSha: input.candidate.targetSha,
+              tag: input.candidate.tag,
+              candidateSha256: input.candidateSha256,
+              publicationRun: input.publicationRun,
+              release: {
+                id: input.release.id,
+                tagName: input.release.tag_name,
+                targetCommitish: input.release.target_commitish,
+                draft: false,
+                prerelease: false,
+                immutable: true,
+                publishedAt: input.release.published_at
+              },
+              assets,
+              releaseVerification: releaseProof,
+              assetVerifications: assetProofs,
+              verificationBundleSha256: digest(proofDigests),
+              verifiedAt: verified.toISOString(),
+              intakes: input.intakeDeletions.map((value) => ({
+                releaseId: value.releaseId,
+                tagName: value.tagName,
+                deletedAfterVerification: true,
+                deletedAt: new Date(value.deletedAt).toISOString()
+              })).sort((left, right) => left.releaseId - right.releaseId),
+              createdAt: created.toISOString()
+            };
+            writeFileSync("release-publication-record.json", `${canonical(record)}\n`, { mode: 0o600 });
+          '
 
       - name: Retain post-publication verification
         id: upload-publication
@@ -1079,6 +1486,7 @@ jobs:
           ARTIFACT_ID: ${{ needs.publish-release.outputs.publication_artifact_id }}
           ARTIFACT_DIGEST: ${{ needs.publish-release.outputs.publication_artifact_digest }}
           ARTIFACT_NAME: web-release-publication-${{ github.run_id }}-${{ github.run_attempt }}
+          EXPECTED_HEAD_SHA: ${{ github.sha }}
         run: |
           test ! -d .git
           gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${ARTIFACT_ID}" > publication-artifact.json
@@ -1086,15 +1494,20 @@ jobs:
             import { readFileSync } from "node:fs";
             const artifact = JSON.parse(readFileSync("publication-artifact.json", "utf8"));
             if (
+              !/^[0-9a-f]{64}$/u.test(process.env.ARTIFACT_DIGEST) ||
               artifact.id !== Number(process.env.ARTIFACT_ID) ||
               artifact.name !== process.env.ARTIFACT_NAME ||
-              artifact.digest !== process.env.ARTIFACT_DIGEST ||
-              artifact.expired === true ||
-              artifact.workflow_run?.id !== Number(process.env.GITHUB_RUN_ID)
+              artifact.digest !== `sha256:${process.env.ARTIFACT_DIGEST}` ||
+              artifact.expired !== false ||
+              artifact.workflow_run?.id !== Number(process.env.GITHUB_RUN_ID) ||
+              artifact.workflow_run?.repository_id !== 1259761852 ||
+              artifact.workflow_run?.head_repository_id !== 1259761852 ||
+              artifact.workflow_run?.head_branch !== "main" ||
+              artifact.workflow_run?.head_sha !== process.env.EXPECTED_HEAD_SHA
             ) throw new Error("postpublication artifact identity mismatch");
           '
           gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${ARTIFACT_ID}/zip" > publication.zip
-          test "$(sha256sum publication.zip | cut -d ' ' -f 1)" = "${ARTIFACT_DIGEST#sha256:}"
+          test "$(sha256sum publication.zip | cut -d ' ' -f 1)" = "${ARTIFACT_DIGEST}"
           unzip -Z1 publication.zip > publication-entries.txt
           node --input-type=module --eval '
             import { readFileSync } from "node:fs";

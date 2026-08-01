@@ -47,8 +47,56 @@ on:
 permissions: {}
 
 jobs:
+  validate-readiness-selectors:
+    name: Browser Lab Readiness / Validate Selectors
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Validate positive-decimal readiness selectors
+        shell: bash
+        env:
+          PACKAGE_RUN_ID: ${{ inputs.packageRunId }}
+          MAC_HOST_CANARY_RUN_ID: ${{ inputs.macHostCanaryRunId }}
+          WINDOWS_HOST_CANARY_RUN_ID: ${{ inputs.windowsHostCanaryRunId }}
+          LINUX_INTEL_HOST_CANARY_RUN_ID: ${{ inputs.linuxIntelHostCanaryRunId }}
+          LINUX_NVIDIA_HOST_CANARY_RUN_ID: ${{ inputs.linuxNvidiaHostCanaryRunId }}
+          MANUAL_CANARY_RUN_ID: ${{ inputs.manualCanaryRunId }}
+          MANUAL_INTAKE_RELEASE_ID: ${{ inputs.manualIntakeReleaseId }}
+          MANUAL_HARDWARE_JOB_ID: ${{ inputs.manualHardwareJobId }}
+          LAB_CANARY_RELEASE_ID: ${{ inputs.labCanaryReleaseId }}
+        run: |
+          selector_names=(
+            packageRunId
+            macHostCanaryRunId
+            windowsHostCanaryRunId
+            linuxIntelHostCanaryRunId
+            linuxNvidiaHostCanaryRunId
+            manualCanaryRunId
+            manualIntakeReleaseId
+            manualHardwareJobId
+            labCanaryReleaseId
+          )
+          selector_values=(
+            "${PACKAGE_RUN_ID}"
+            "${MAC_HOST_CANARY_RUN_ID}"
+            "${WINDOWS_HOST_CANARY_RUN_ID}"
+            "${LINUX_INTEL_HOST_CANARY_RUN_ID}"
+            "${LINUX_NVIDIA_HOST_CANARY_RUN_ID}"
+            "${MANUAL_CANARY_RUN_ID}"
+            "${MANUAL_INTAKE_RELEASE_ID}"
+            "${MANUAL_HARDWARE_JOB_ID}"
+            "${LAB_CANARY_RELEASE_ID}"
+          )
+          for index in "${!selector_names[@]}"; do
+            if [[ ! "${selector_values[index]}" =~ ^[1-9][0-9]*$ ]]; then
+              echo "::error::${selector_names[index]} must match ^[1-9][0-9]*$"
+              exit 1
+            fi
+          done
+
   observe-lab-readiness-trust:
     name: Browser Lab Readiness / Observe Trust
+    needs: validate-readiness-selectors
     runs-on: ubuntu-latest
     environment: forge3d-trust-observer
     permissions:
@@ -87,7 +135,8 @@ jobs:
       - name: Verify live protected-main trust
         working-directory: crates/forge3d-web
         env:
-          GITHUB_TOKEN: ${{ steps.observer-token.outputs.token }}
+          TRUST_OBSERVER_TOKEN: ${{ steps.observer-token.outputs.token }}
+          GITHUB_TOKEN: ${{ github.token }}
         run: node scripts/verify-repository-trust.mjs > repository-trust-verification.json
 
       - name: Emit exact readiness observation
@@ -168,8 +217,7 @@ jobs:
           OBSERVATION_ARTIFACT_DIGEST: ${{ needs.observe-lab-readiness-trust.outputs.observation_artifact_digest }}
           OBSERVATION_CONTENT_SHA256: ${{ needs.observe-lab-readiness-trust.outputs.observation_content_sha256 }}
           EXPECTED_OPERATION: compute-lab-readiness
-          EXPECTED_CONSUMER_JOB: browser-lab-infrastructure-readiness
-          EXPECTED_CONSUMER_ENVIRONMENT: none
+          EXPECTED_CONSUMERS: '[{"job":"browser-lab-infrastructure-readiness","environment":"none"}]'
           EXPECTED_TARGET_SHA: ${{ inputs.candidate_sha }}
           EXPECTED_CANDIDATE_SHA: ${{ inputs.candidate_sha }}
           EXPECTED_CURRENT_MAIN_SHA: ${{ github.sha }}
@@ -591,6 +639,13 @@ jobs:
                   apiRunId: manualApiRun.id,
                   runAttempt: manualApiRun.run_attempt,
                   workflowPath: manualApiRun.path,
+                  createdAt: manualApiRun.created_at,
+                  completedAt: manualApiRun.updated_at,
+                  status: manualApiRun.status,
+                  conclusion: manualApiRun.conclusion,
+                  headSha: manualApiRun.head_sha,
+                  headBranch: manualApiRun.head_branch,
+                  event: manualApiRun.event,
                   hardwareJobId: Number(process.env.MANUAL_JOB_ID),
                   intakeReleaseId: Number(process.env.MANUAL_INTAKE_ID)
                 }

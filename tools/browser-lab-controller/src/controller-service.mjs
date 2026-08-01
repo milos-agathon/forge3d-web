@@ -12,6 +12,8 @@ import { createControllerHealthServer } from "./controller-health-service.mjs";
 import { startControllerPolling } from "./controller-daemon.mjs";
 import { createProductionControllerDependencies } from "./production-dependencies.mjs";
 import { loadInstalledControllerEvidence } from "./installation-evidence.mjs";
+import { bindReviewedHelperDigests } from "./helper-digest-policy.mjs";
+import { createNativeControllerSigningProvider } from "./native-signing-provider.mjs";
 
 export function createInstalledControllerService({
   environment = process.env,
@@ -22,9 +24,9 @@ export function createInstalledControllerService({
     environment,
     "FORGE3D_CONTROLLER_SIGNING_KEY_ID",
   );
-  const signingKeyPath = required(
+  const signingProviderPath = required(
     environment,
-    "FORGE3D_CONTROLLER_SIGNING_KEY_FILE",
+    "FORGE3D_CONTROLLER_SIGNING_PROVIDER",
   );
   const tokenProvider = new ControllerGitHubTokenProvider({
     appId: required(environment, "FORGE3D_CONTROLLER_GITHUB_APP_ID"),
@@ -41,24 +43,10 @@ export function createInstalledControllerService({
   const github = new ControllerGitHubActionsClient({
     tokenProvider,
     apiBase: environment.GITHUB_API_URL,
-    attestationCommand:
-      environment.FORGE3D_CONTROLLER_GH_EXECUTABLE ?? "gh",
-  });
-  const controllerPrivateKey = readFileSync(signingKeyPath, "utf8");
-  const broker = new ControllerBrokerClient({
-    endpoint: required(environment, "FORGE3D_BROKER_ENDPOINT"),
-    hostId,
-    signingKeyId,
-    privateKey: controllerPrivateKey,
-    tls: {
-      key: readFileSync(
-        required(environment, "FORGE3D_BROKER_CLIENT_KEY_FILE"),
-      ),
-      cert: readFileSync(
-        required(environment, "FORGE3D_BROKER_CLIENT_CERT_FILE"),
-      ),
-      ca: readFileSync(required(environment, "FORGE3D_BROKER_CA_FILE")),
-    },
+    attestationCommand: required(
+      environment,
+      "FORGE3D_CONTROLLER_GH_EXECUTABLE",
+    ),
   });
   const receiptDirectory = required(
     environment,
@@ -72,6 +60,12 @@ export function createInstalledControllerService({
     environment,
     "FORGE3D_CONTROLLER_BROWSER_POLICY",
   );
+  const helperPolicyPath = required(
+    environment,
+    "FORGE3D_CONTROLLER_HELPER_DIGEST_POLICY",
+  );
+  const browserPolicy = JSON.parse(readFileSync(browserPolicyPath, "utf8"));
+  const helperPolicy = JSON.parse(readFileSync(helperPolicyPath, "utf8"));
   const sessionBridge =
     platform === "win32"
       ? {
@@ -100,9 +94,10 @@ export function createInstalledControllerService({
       ["FORGE3D_DEVICE_CONTROL_HELPER", null],
       ["FORGE3D_CLOUDFLARED_EXECUTABLE", null],
       ["FORGE3D_CONTROLLER_GH_EXECUTABLE", null],
-      ["FORGE3D_PLAYWRIGHT_MODULE", undefined],
-      ["FORGE3D_GECKODRIVER_EXECUTABLE", undefined],
-      ["FORGE3D_APPIUM_EXECUTABLE", undefined],
+      ["FORGE3D_CONTROLLER_SIGNING_PROVIDER", null],
+      ["FORGE3D_PLAYWRIGHT_MODULE", browserPolicy.tools?.playwright],
+      ["FORGE3D_GECKODRIVER_EXECUTABLE", browserPolicy.tools?.geckodriver],
+      ["FORGE3D_APPIUM_EXECUTABLE", browserPolicy.tools?.appium],
     ].map(([identity, version]) => ({
       identity,
       path: required(environment, identity),
@@ -111,6 +106,11 @@ export function createInstalledControllerService({
     })),
     sessionBridge,
   ];
+  const reviewedHelpers = bindReviewedHelperDigests({
+    policy: helperPolicy,
+    helpers: requiredHelpers,
+    platform,
+  });
   const installationEvidence = loadInstalledControllerEvidence({
     receiptPath: required(
       environment,
@@ -123,16 +123,20 @@ export function createInstalledControllerService({
     hostId,
     inventoryHelperPath,
     servicePath: fileURLToPath(import.meta.url),
-    requiredHelpers,
+    requiredHelpers: reviewedHelpers,
     requiredConfigurations: [
       {
         packagePath:
           "crates/forge3d-web/tests/infrastructure/browser-policy.json",
         path: browserPolicyPath,
       },
+      {
+        packagePath:
+          "crates/forge3d-web/tests/infrastructure/controller-helper-digest-policy.json",
+        path: helperPolicyPath,
+      },
     ],
   });
-  const browserPolicy = JSON.parse(readFileSync(browserPolicyPath, "utf8"));
   assertInstalledToolVersion(
     installationEvidence,
     "FORGE3D_PLAYWRIGHT_MODULE",
@@ -156,6 +160,31 @@ export function createInstalledControllerService({
   const installedSessionBridge = installationEvidence.installed.files.find(
     (file) => file.role === "helper" && file.identity === sessionBridge.identity,
   );
+  const installedSigningProvider = installationEvidence.installed.files.find(
+    (file) =>
+      file.role === "helper" &&
+      file.identity === "FORGE3D_CONTROLLER_SIGNING_PROVIDER",
+  );
+  const controllerSigner = createNativeControllerSigningProvider({
+    executablePath: signingProviderPath,
+    executableSha256: installedSigningProvider.sha256,
+    signingKeyId,
+    platform,
+  });
+  const broker = new ControllerBrokerClient({
+    endpoint: required(environment, "FORGE3D_BROKER_ENDPOINT"),
+    hostId,
+    signer: controllerSigner,
+    tls: {
+      key: readFileSync(
+        required(environment, "FORGE3D_BROKER_CLIENT_KEY_FILE"),
+      ),
+      cert: readFileSync(
+        required(environment, "FORGE3D_BROKER_CLIENT_CERT_FILE"),
+      ),
+      ca: readFileSync(required(environment, "FORGE3D_BROKER_CA_FILE")),
+    },
+  });
   const lifecycleStore = new BrokerLifecycleStore({ hostId });
   const dependencies = createProductionControllerDependencies({
     hostId,
@@ -169,6 +198,7 @@ export function createInstalledControllerService({
       FORGE3D_BROWSER_INVENTORY_HELPER_SHA256: inventoryHelper.sha256,
     },
     installationEvidence,
+    controllerSigner,
     configuration: {
       jobsRoot: required(environment, "FORGE3D_CONTROLLER_JOBS_ROOT"),
       runnerTemplate: required(
@@ -184,8 +214,6 @@ export function createInstalledControllerService({
         "FORGE3D_CONTROLLER_DIAGNOSTICS_ROOT",
       ),
       receiptDirectory,
-      signingKeyPath,
-      signingKeyId,
       hostCleanupHelper: required(
         environment,
         "FORGE3D_CONTROLLER_HOST_CLEANUP_HELPER",

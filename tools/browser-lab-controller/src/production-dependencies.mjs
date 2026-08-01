@@ -3,7 +3,6 @@ import {
   cpSync,
   existsSync,
   mkdirSync,
-  readFileSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -32,6 +31,7 @@ import {
   spawnRunner,
   stopRunner,
 } from "./runner-execution.mjs";
+import { assertControllerSigner } from "./controller-signing.mjs";
 
 export function createProductionControllerDependencies({
   hostId,
@@ -42,6 +42,7 @@ export function createProductionControllerDependencies({
   platform = process.platform,
   runnerEnvironment,
   installationEvidence,
+  controllerSigner,
   now = () => new Date(),
 }) {
   if (
@@ -60,6 +61,7 @@ export function createProductionControllerDependencies({
   ) {
     throw new Error("verified controller installation evidence is required");
   }
+  assertControllerSigner(controllerSigner);
   const jobsRoot = requiredAbsolute(configuration.jobsRoot, "jobs root");
   const runnerTemplate = requiredAbsolute(
     configuration.runnerTemplate,
@@ -84,10 +86,6 @@ export function createProductionControllerDependencies({
   const receiptDirectory = requiredAbsolute(
     configuration.receiptDirectory,
     "receipt directory",
-  );
-  const signingKeyPath = requiredAbsolute(
-    configuration.signingKeyPath,
-    "signing key",
   );
   const hostCleanupHelper = requiredAbsolute(
     configuration.hostCleanupHelper,
@@ -234,10 +232,7 @@ export function createProductionControllerDependencies({
     },
     readHostCanaryInput: async (request) => readHostCanaryInput(request),
     readManualSessionInput: async (request) => readManualSessionInput(request),
-    controllerSigningCredentials: async () => ({
-      privateKey: readFileSync(signingKeyPath, "utf8"),
-      signingKeyId: configuration.signingKeyId,
-    }),
+    controllerSigner: async () => controllerSigner,
     controllerInstallationEvidence: async () =>
       structuredClone(installationEvidence),
     storeControllerReceipt: async ({ run, recordType, signedRecord }) =>
@@ -268,14 +263,7 @@ export function createProductionControllerDependencies({
           },
         ),
       );
-      if (
-        receipt.schemaVersion !== 1 ||
-        receipt.hostId !== hostId ||
-        receipt.cleanupComplete !== true ||
-        Object.values(receipt.results ?? {}).some((value) => value !== true)
-      ) {
-        throw new Error("controller host cleanup helper did not prove cleanup");
-      }
+      validateHostCleanupReceipt(receipt, { hostId, request });
     },
     quarantineHost: async (record) => {
       mkdirSync(dirname(quarantinePath), {
@@ -297,4 +285,40 @@ export function createProductionControllerDependencies({
       );
     },
   };
+}
+
+export function validateHostCleanupReceipt(receipt, { hostId, request }) {
+  const requested = {
+    restoreUpdates: "updatesRestored",
+    stopBrowser: "browserStopped",
+    stopDrivers: "driversStopped",
+    stopAppium: "appiumStopped",
+    stopTunnels: "tunnelsStopped",
+  };
+  const receiptKeys = Object.keys(receipt ?? {}).sort();
+  const resultKeys = Object.keys(receipt?.results ?? {}).sort();
+  const expectedReceiptKeys = [
+    "cleanupComplete",
+    "hostId",
+    "results",
+    "schemaVersion",
+  ];
+  const expectedResultKeys = Object.values(requested).sort();
+  if (
+    receiptKeys.length !== expectedReceiptKeys.length ||
+    receiptKeys.some((key, index) => key !== expectedReceiptKeys[index]) ||
+    receipt.schemaVersion !== 1 ||
+    receipt.hostId !== hostId ||
+    receipt.cleanupComplete !== true ||
+    resultKeys.length !== expectedResultKeys.length ||
+    resultKeys.some((key, index) => key !== expectedResultKeys[index]) ||
+    Object.entries(requested).some(
+      ([requestKey, resultKey]) =>
+        request?.[requestKey] !== true || receipt.results[resultKey] !== true,
+    ) ||
+    Object.keys(request ?? {}).length !== Object.keys(requested).length
+  ) {
+    throw new Error("controller host cleanup helper did not prove cleanup");
+  }
+  return receipt;
 }

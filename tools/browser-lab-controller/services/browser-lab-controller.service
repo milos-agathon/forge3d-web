@@ -13,6 +13,7 @@ EnvironmentFile=/etc/forge3d/browser-lab-controller.env
 Environment=FORGE3D_CONTROLLER_UNIX_SESSION_BRIDGE=/opt/forge3d/browser-lab-controller/services/unix-interactive-session-bridge.mjs
 Environment=FORGE3D_CONTROLLER_UNIX_SESSION_BRIDGE_SHA256=406756cc95c7961d92b3809ae6a11c449ddaa59ddd956e87e3995b534869eda8
 Environment=FORGE3D_CONTROLLER_INTERACTIVE_USER=forge3d-lab
+Environment=FORGE3D_CONTROLLER_SIGNING_PROVIDER=/opt/forge3d/browser-runtime/bin/forge3d-controller-signing-provider
 NoNewPrivileges=false
 PrivateTmp=true
 ProtectSystem=strict

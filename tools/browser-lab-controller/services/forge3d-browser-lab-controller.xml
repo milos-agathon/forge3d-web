@@ -6,11 +6,13 @@
   <executable>C:\Program Files\nodejs\node.exe</executable>
   <arguments>"C:\ProgramData\Forge3D\browser-lab-controller\src\controller-service.mjs" --environment-file "C:\ProgramData\Forge3D\browser-lab-controller.env"</arguments>
   <env name="FORGE3D_CONTROLLER_WINDOWS_SESSION_BRIDGE" value="C:\ProgramData\Forge3D\browser-lab-controller\services\windows-interactive-session-bridge.ps1"/>
-  <env name="FORGE3D_CONTROLLER_WINDOWS_SESSION_BRIDGE_SHA256" value="fd84d683c5f6475d382e8ace18632e6636570d9959ae71b92fbed0853ffceb5b"/>
+  <env name="FORGE3D_CONTROLLER_WINDOWS_SESSION_BRIDGE_SHA256" value="5fe494d058ed46c3d4eda04a98a355a307119f8305bf8fc23542c7f5a6ddbf98"/>
+  <env name="FORGE3D_CONTROLLER_SIGNING_PROVIDER" value="C:\ProgramData\Forge3D\browser-runtime\bin\forge3d-controller-signing-provider.exe"/>
   <workingdirectory>C:\ProgramData\Forge3D\browser-lab</workingdirectory>
   <logpath>C:\ProgramData\Forge3D\browser-lab\logs</logpath>
   <serviceaccount>
-    <username>LocalSystem</username>
+    <username>NT SERVICE\forge3d-browser-lab-controller</username>
+    <allowservicelogon>true</allowservicelogon>
   </serviceaccount>
   <startmode>Automatic</startmode>
   <onfailure action="restart" delay="5 sec"/>
