@@ -44,7 +44,7 @@
     "observation": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["repository", "operation", "consumers", "workflow", "run", "candidateSha", "targetSha", "currentMainSha", "trustEpochSha", "policySha256", "workflowActionsLockSha256", "observedAt", "expiresAt"],
+      "required": ["repository", "operation", "consumers", "workflow", "run", "candidateSha", "targetSha", "currentMainSha", "trustEpochSha", "policySha256", "workflowActionsLockSha256", "repositorySettings", "observedAt", "expiresAt"],
       "properties": {
         "repository": {
           "type": "object",
@@ -95,6 +95,22 @@
         "trustEpochSha": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
         "policySha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
         "workflowActionsLockSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "repositorySettings": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["immutableReleases"],
+          "properties": {
+            "immutableReleases": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["enabled", "enforcedByOwner"],
+              "properties": {
+                "enabled": { "const": true },
+                "enforcedByOwner": { "type": "boolean" }
+              }
+            }
+          }
+        },
         "observedAt": { "type": "string", "minLength": 20 },
         "expiresAt": { "type": "string", "minLength": 20 }
       }

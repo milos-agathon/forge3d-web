@@ -77,10 +77,19 @@ validity window, rerun the dispatch. Never reuse an observation from another
 run, attempt, operation, job, environment, or target SHA.
 
 Before the first laboratory canary, a repository administrator must enable
-**Settings > Releases > Enable release immutability**. The preflight reads the
-live repository setting and fails closed when it is disabled or unavailable.
-Only releases created after enablement are eligible; an older mutable release
-cannot be used as the canary or the prior immutable release baseline.
+**Settings > Releases > Enable release immutability**. For the exact
+`publish-lab-canary`, `compute-lab-readiness`,
+`compute-hardware-release-readiness`, and `publish-web-release` operations, the
+trust-observer job reads the dedicated `/immutable-releases` endpoint with
+GitHub API version `2026-03-10`, requires `enabled: true` and a boolean
+`enforced_by_owner`, and binds both semantic values plus the live response
+digest into its canonical attested observation. Other trust operations retain
+the base repository-trust response set and do not depend on release
+immutability. Preflight and publisher jobs have no observer credential; they
+consume the exact verified, unexpired observation and fail closed when the
+required setting proof is absent or disabled. Only releases created after
+enablement are eligible; an older mutable release cannot be used as the canary
+or the prior immutable release baseline.
 
 ## Authenticated Manual Media Intake
 

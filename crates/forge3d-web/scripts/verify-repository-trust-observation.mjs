@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import { inflateRawSync } from "node:zlib";
 
 import { canonicalJson, sha256Hex } from "./canonical-json.mjs";
+import { requiresImmutableReleaseSettings } from "./verify-repository-trust.mjs";
 import { assertJsonSchema } from "../tests/browser/json-schema-validator.mjs";
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
@@ -41,7 +42,7 @@ const publisherProofSchemaPath = join(
 );
 const observationName = "repository-trust-observation.json";
 const githubActionsApp = Object.freeze({ id: 15368, slug: "github-actions" });
-const requiredLiveResponseNames = Object.freeze([
+const baseRequiredLiveResponseNames = Object.freeze([
   "actionsPermissions",
   "branch",
   "checkRuns",
@@ -98,6 +99,24 @@ export function verifyRepositoryTrustObservation({
     "workflow action lock digest",
   );
   assertEqual(observation.trustEpochSha, policy.trustEpochSha, "trust epoch SHA");
+  const requireImmutableReleases = requiresImmutableReleaseSettings(
+    observation.operation,
+  );
+  if (requireImmutableReleases) {
+    assertEqual(
+      observation.repositorySettings.immutableReleases.enabled,
+      true,
+      "release immutability",
+    );
+    if (
+      typeof observation.repositorySettings.immutableReleases.enforcedByOwner !==
+      "boolean"
+    ) {
+      throw new Error("release immutability owner enforcement is invalid");
+    }
+  } else if (Object.hasOwn(observation, "repositorySettings")) {
+    throw new Error("non-release observation cannot carry repository settings");
+  }
   if (expected.currentMainSha) {
     assertEqual(
       observation.currentMainSha,
@@ -107,6 +126,9 @@ export function verifyRepositoryTrustObservation({
   }
 
   const desiredChecks = policy.branchProtection.requiredStatusChecks.checks;
+  const requiredLiveResponseNames = requireImmutableReleases
+    ? [...baseRequiredLiveResponseNames, "immutableReleases"].sort()
+    : baseRequiredLiveResponseNames;
   if (
     desiredChecks.some(
       (check) =>
@@ -178,6 +200,16 @@ export function verifyRepositoryTrustObservation({
     canonicalJson(requiredLiveResponseNames)
   ) {
     throw new Error("observation must bind every live trust response");
+  }
+  if (requireImmutableReleases) {
+    const immutableResponse = observation.liveResponses.find(
+      (response) => response.name === "immutableReleases",
+    );
+    assertEqual(
+      immutableResponse.endpoint,
+      `/repos/${observation.repository.fullName}/immutable-releases`,
+      "immutable-release response endpoint",
+    );
   }
 
   const consumerKeys = observation.consumers.map(
@@ -326,6 +358,7 @@ export function createPublisherProof({
       trustEpochSha: observation.trustEpochSha,
       policySha256: observation.policySha256,
       workflowActionsLockSha256: observation.workflowActionsLockSha256,
+      repositorySettings: observation.repositorySettings,
       observedAt: observation.observedAt,
       expiresAt: observation.expiresAt,
     },

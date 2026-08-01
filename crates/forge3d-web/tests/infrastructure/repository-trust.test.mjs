@@ -5,6 +5,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+  requiresImmutableReleaseSettings,
   verifyLiveRepositoryTrust,
   verifyRepositoryTrustSnapshot,
 } from "../../scripts/verify-repository-trust.mjs";
@@ -25,6 +26,7 @@ test("accepts the exact active protected-main snapshot", () => {
   const result = verifyRepositoryTrustSnapshot(input);
   assert.equal(result.ok, true);
   assert.equal(result.actionsShaPinning, "enabled");
+  assert.equal(Object.hasOwn(result, "repositorySettings"), false);
   assert.deepEqual(
     result.requiredChecks.map((check) => check.name).sort(),
     [
@@ -41,18 +43,56 @@ test("accepts the exact active protected-main snapshot", () => {
   assert.equal(result.requiredChecks[0].workflowJobId, 1000);
 });
 
-test("live verification fetches and binds the exact current-main check-run response", async () => {
+test("only exact publication and readiness operations require immutable releases", () => {
+  for (const operation of [
+    "compute-hardware-release-readiness",
+    "compute-lab-readiness",
+    "publish-lab-canary",
+    "publish-web-release",
+  ]) {
+    assert.equal(requiresImmutableReleaseSettings(operation), true, operation);
+  }
+  for (const operation of [
+    undefined,
+    "build-browser-package",
+    "package-broker",
+    "package-controller",
+    "promote-hardware",
+    "prepare-manual-intake",
+    "submit-manual-evidence",
+  ]) {
+    assert.equal(requiresImmutableReleaseSettings(operation), false, operation);
+  }
+});
+
+test("release-setting snapshots retain both immutable-release semantics", () => {
+  const result = verifyRepositoryTrustSnapshot(makeInput({
+    operation: "publish-web-release",
+    immutableReleases: { enabled: true, enforced_by_owner: false },
+  }));
+  assert.deepEqual(result.repositorySettings, {
+    immutableReleases: { enabled: true, enforcedByOwner: false },
+  });
+});
+
+test("live release verification binds immutable releases through the observer-only current API", async () => {
   const context = makeLiveContext();
-  const result = await runLiveVerification(context);
+  const result = await runLiveVerification(context, "publish-web-release");
   const checkRunsResponse = result.liveResponses.find(
     (response) => response.name === "checkRuns",
   );
-  assert.equal(result.liveResponses.length, 9);
+  const immutableReleasesResponse = result.liveResponses.find(
+    (response) => response.name === "immutableReleases",
+  );
+  assert.equal(result.liveResponses.length, 10);
+  assert.equal(result.operation, "publish-web-release");
   assert.equal(
     checkRunsResponse.endpoint,
     context.checkRunsEndpoint,
   );
   assert.equal(context.requested.includes(checkRunsResponse.endpoint), true);
+  assert.equal(immutableReleasesResponse.endpoint, context.immutableReleasesEndpoint);
+  assert.equal(context.requested.includes(context.immutableReleasesEndpoint), true);
   for (const request of context.requests) {
     assert.equal(
       request.authorization,
@@ -61,7 +101,26 @@ test("live verification fetches and binds the exact current-main check-run respo
         : "Bearer observer-token",
       `wrong credential for ${request.endpoint}`,
     );
+    assert.equal(
+      request.apiVersion,
+      request.endpoint === context.immutableReleasesEndpoint
+        ? "2026-03-10"
+        : "2022-11-28",
+      `wrong API version for ${request.endpoint}`,
+    );
   }
+});
+
+test("live non-release verification preserves the original nine-response contract", async () => {
+  const context = makeLiveContext();
+  const result = await runLiveVerification(context, "build-browser-package");
+  assert.equal(result.liveResponses.length, 9);
+  assert.equal(Object.hasOwn(result, "repositorySettings"), false);
+  assert.equal(
+    result.liveResponses.some((response) => response.name === "immutableReleases"),
+    false,
+  );
+  assert.equal(context.requested.includes(context.immutableReleasesEndpoint), false);
 });
 
 test("live verification requires distinct observer and workflow credentials", async () => {
@@ -316,6 +375,40 @@ for (const [name, mutate, expected] of [
     /strict descendant/u,
   ],
   [
+    "disabled release immutability",
+    (input) => {
+      input.operation = "publish-web-release";
+      input.immutableReleases = { enabled: true, enforced_by_owner: false };
+      input.immutableReleases.enabled = false;
+    },
+    /release immutability mismatch/u,
+  ],
+  [
+    "missing release immutability state",
+    (input) => {
+      input.operation = "publish-web-release";
+      input.immutableReleases = undefined;
+    },
+    /release immutability mismatch/u,
+  ],
+  [
+    "malformed release immutability owner enforcement",
+    (input) => {
+      input.operation = "publish-web-release";
+      input.immutableReleases = { enabled: true, enforced_by_owner: false };
+      input.immutableReleases.enforced_by_owner = "false";
+    },
+    /owner enforcement is invalid/u,
+  ],
+  [
+    "immutable-release state on a non-release operation",
+    (input) => {
+      input.operation = "build-browser-package";
+      input.immutableReleases = { enabled: true, enforced_by_owner: false };
+    },
+    /response is invalid for this operation/u,
+  ],
+  [
     "runner at rest",
     (input) => {
       input.repositoryRunners = {
@@ -342,7 +435,20 @@ test("records an unavailable live SHA-pinning setting without relaxing static pi
   );
 });
 
-function makeInput({ policy = makeActivePolicy() } = {}) {
+test("live verification rejects a missing immutable-releases response", async () => {
+  const context = makeLiveContext();
+  context.routes.delete(context.immutableReleasesEndpoint);
+  await assert.rejects(
+    runLiveVerification(context, "publish-web-release"),
+    /GitHub API 404.*immutable-releases/u,
+  );
+});
+
+function makeInput({
+  policy = makeActivePolicy(),
+  operation,
+  immutableReleases,
+} = {}) {
   const requiredChecks = policy.branchProtection.requiredStatusChecks.checks;
   const currentMainSha = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
   const actionJobs = requiredChecks.map((check, index) => {
@@ -368,9 +474,10 @@ function makeInput({ policy = makeActivePolicy() } = {}) {
       app: { id: 15368, slug: "github-actions" },
     };
   });
-  return {
+  const input = {
     policy: structuredClone(policy),
     actionsLock,
+    operation,
     repository: {
       id: policy.repository.id,
       full_name: policy.repository.fullName,
@@ -418,10 +525,13 @@ function makeInput({ policy = makeActivePolicy() } = {}) {
     repositoryRunners: { total_count: 0, runners: [] },
     trustEpochComparison: { status: "ahead", ahead_by: 1 },
   };
+  if (immutableReleases !== undefined) input.immutableReleases = immutableReleases;
+  return input;
 }
 
 function makeLiveContext() {
   const input = makeInput();
+  const immutableReleases = { enabled: true, enforced_by_owner: false };
   const repositoryPath = `/repos/${input.policy.repository.fullName}`;
   const workflowRun = {
     id: 7001,
@@ -438,11 +548,13 @@ function makeLiveContext() {
   const checkRunsEndpoint =
     `${repositoryPath}/commits/${input.branch.commit.sha}/check-runs` +
     "?filter=all&per_page=100";
+  const immutableReleasesEndpoint = `${repositoryPath}/immutable-releases`;
   const routes = new Map([
     [repositoryPath, input.repository],
     [`${repositoryPath}/branches/main`, input.branch],
     [`${repositoryPath}/branches/main/protection`, input.protection],
     [`${repositoryPath}/actions/permissions`, input.actionsPermissions],
+    [immutableReleasesEndpoint, immutableReleases],
     [`${repositoryPath}/actions/runners?per_page=100`, input.repositoryRunners],
     [workflowRunsEndpoint, workflowRuns],
     [
@@ -461,18 +573,20 @@ function makeLiveContext() {
     workflowRuns,
     workflowRunsEndpoint,
     checkRunsEndpoint,
+    immutableReleasesEndpoint,
     routes,
     requested: [],
     requests: [],
   };
 }
 
-function runLiveVerification(context) {
+function runLiveVerification(context, operation) {
   return verifyLiveRepositoryTrust({
     policy: context.input.policy,
     actionsLock,
     observerToken: "observer-token",
     workflowToken: "workflow-token",
+    operation,
     apiBase: "https://api.github.test",
     fetchImpl: async (url, options) => {
       const parsed = new URL(url);
@@ -481,6 +595,7 @@ function runLiveVerification(context) {
       context.requests.push({
         endpoint: key,
         authorization: options.headers.Authorization,
+        apiVersion: options.headers["X-GitHub-Api-Version"],
       });
       const value = context.routes.get(key);
       return {

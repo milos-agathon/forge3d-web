@@ -137,6 +137,7 @@ jobs:
         env:
           TRUST_OBSERVER_TOKEN: ${{ steps.observer-token.outputs.token }}
           GITHUB_TOKEN: ${{ github.token }}
+          REPOSITORY_TRUST_OPERATION: compute-lab-readiness
         run: node scripts/verify-repository-trust.mjs > repository-trust-verification.json
 
       - name: Emit exact readiness observation

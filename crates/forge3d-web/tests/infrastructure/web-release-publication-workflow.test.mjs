@@ -106,6 +106,30 @@ test("observer secret is isolated from read-only preflight and protected publish
   assert.match(preflight, /path: selectedRun\.path/u);
 });
 
+test("immutable-release administration stays in the attested observer boundary", () => {
+  assert.match(observer, /verify-repository-trust\.mjs/u);
+  assert.match(observer, /REPOSITORY_TRUST_OPERATION: publish-web-release/u);
+  assert.equal(workflow.includes("/immutable-releases"), false);
+  assert.equal(workflow.includes("immutable-release-settings.json"), false);
+  assert.match(
+    preflight,
+    /immutableReleases\?\.enabled === true/u,
+  );
+  assert.match(
+    publisher,
+    /immutableReleases\?\.enabled !== true/u,
+  );
+  assert.match(
+    publisher,
+    /exactKeys\(observation\.repositorySettings, \["immutableReleases"\]\)/u,
+  );
+  assert.equal(
+    publisher.match(/observation\.repositorySettings\?\.immutableReleases\?\.enabled !== true/gu)?.length,
+    2,
+  );
+  assert.match(publisher, /typeof immutableReleases\.enforcedByOwner !== "boolean"/u);
+});
+
 test("publisher has no checkout and performs approval, draft-first, byte, CLI, and intake gates", () => {
   assert.match(publisher, /environment: forge3d-web-release/u);
   assert.equal(publisher.includes("actions/checkout@"), false);
