@@ -18,12 +18,24 @@ const actionsLockPath = join(
   "workflow-actions-lock.json",
 );
 const githubActionsApp = Object.freeze({ id: 15368, slug: "github-actions" });
+const immutableReleasesApiVersion = "2026-03-10";
+const immutableReleaseOperations = new Set([
+  "compute-hardware-release-readiness",
+  "compute-lab-readiness",
+  "publish-lab-canary",
+  "publish-web-release",
+]);
+
+export function requiresImmutableReleaseSettings(operation) {
+  return immutableReleaseOperations.has(operation);
+}
 
 export async function verifyLiveRepositoryTrust({
   policy = readJson(policyPath),
   actionsLock = readJson(actionsLockPath),
   observerToken = process.env.TRUST_OBSERVER_TOKEN,
   workflowToken = process.env.GITHUB_TOKEN,
+  operation = process.env.REPOSITORY_TRUST_OPERATION,
   apiBase = process.env.GITHUB_API_URL ?? "https://api.github.com",
   fetchImpl = fetch,
 } = {}) {
@@ -36,6 +48,13 @@ export async function verifyLiveRepositoryTrust({
   if (observerToken === workflowToken) {
     throw new Error("observer and workflow tokens must be distinct credentials");
   }
+  if (
+    operation !== undefined &&
+    !/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(operation)
+  ) {
+    throw new Error("repository trust operation must be lowercase kebab-case");
+  }
+  const requireImmutableReleases = requiresImmutableReleaseSettings(operation);
   const observerHeaders = {
     Accept: "application/vnd.github+json",
     Authorization: `Bearer ${observerToken}`,
@@ -45,6 +64,10 @@ export async function verifyLiveRepositoryTrust({
     Accept: "application/vnd.github+json",
     Authorization: `Bearer ${workflowToken}`,
     "X-GitHub-Api-Version": "2022-11-28",
+  };
+  const immutableReleasesHeaders = {
+    ...observerHeaders,
+    "X-GitHub-Api-Version": immutableReleasesApiVersion,
   };
   const repositoryPath = `/repos/${policy.repository.fullName}`;
   const endpoints = {
@@ -60,6 +83,14 @@ export async function verifyLiveRepositoryTrust({
       fetchImpl,
       `${apiBase}${endpoint}`,
       observerHeaders,
+    );
+  }
+  if (requireImmutableReleases) {
+    endpoints.immutableReleases = `${repositoryPath}/immutable-releases`;
+    responses.immutableReleases = await getJson(
+      fetchImpl,
+      `${apiBase}${endpoints.immutableReleases}`,
+      immutableReleasesHeaders,
     );
   }
   endpoints.workflowRuns =
@@ -124,12 +155,14 @@ export async function verifyLiveRepositoryTrust({
   const result = verifyRepositoryTrustSnapshot({
     policy,
     actionsLock,
+    operation,
     repository: responses.repository,
     branch: responses.branch,
     protection: responses.protection,
     actionJobs: responses.workflowJobs,
     checkRuns: responses.checkRuns,
     actionsPermissions: responses.actionsPermissions,
+    immutableReleases: responses.immutableReleases,
     repositoryRunners: responses.repositoryRunners,
     trustEpochComparison: responses.trustEpochComparison,
   });
@@ -140,18 +173,21 @@ export async function verifyLiveRepositoryTrust({
       sha256: sha256Hex(value),
     }))
     .sort((left, right) => left.endpoint.localeCompare(right.endpoint));
+  if (operation !== undefined) result.operation = operation;
   return result;
 }
 
 export function verifyRepositoryTrustSnapshot({
   policy,
   actionsLock,
+  operation,
   repository,
   branch,
   protection,
   actionJobs,
   checkRuns,
   actionsPermissions,
+  immutableReleases,
   repositoryRunners,
   trustEpochComparison,
 }) {
@@ -169,6 +205,15 @@ export function verifyRepositoryTrustSnapshot({
   assertEqual(branch.name, policy.repository.defaultBranch, "branch name");
   assertEqual(branch.protected, true, "main protection");
   assertMatch(branch.commit?.sha, /^[0-9a-f]{40}$/u, "main commit SHA");
+  const requireImmutableReleases = requiresImmutableReleaseSettings(operation);
+  if (requireImmutableReleases) {
+    assertEqual(immutableReleases?.enabled, true, "release immutability");
+    if (typeof immutableReleases.enforced_by_owner !== "boolean") {
+      throw new Error("release immutability owner enforcement is invalid");
+    }
+  } else if (immutableReleases !== undefined) {
+    throw new Error("release immutability response is invalid for this operation");
+  }
 
   if (
     trustEpochComparison?.status !== "ahead" ||
@@ -341,7 +386,7 @@ export function verifyRepositoryTrustSnapshot({
     throw new Error("repository must have no registered runner at observation time");
   }
 
-  return {
+  const result = {
     schemaVersion: 1,
     ok: true,
     repository: {
@@ -355,6 +400,15 @@ export function verifyRepositoryTrustSnapshot({
     requiredChecks: verifiedChecks,
     actionsShaPinning,
   };
+  if (requireImmutableReleases) {
+    result.repositorySettings = {
+      immutableReleases: {
+        enabled: true,
+        enforcedByOwner: immutableReleases.enforced_by_owner,
+      },
+    };
+  }
+  return result;
 }
 
 async function getJson(fetchImpl, url, headers) {

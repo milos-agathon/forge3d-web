@@ -4,6 +4,34 @@
   "title": "Forge3D repository trust observation",
   "type": "object",
   "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "operation": {
+            "enum": [
+              "compute-hardware-release-readiness",
+              "compute-lab-readiness",
+              "publish-lab-canary",
+              "publish-web-release"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": ["repositorySettings"],
+        "properties": {
+          "liveResponses": { "minItems": 10, "maxItems": 10 }
+        }
+      },
+      "else": {
+        "properties": {
+          "repositorySettings": { "type": "null" },
+          "liveResponses": { "minItems": 9, "maxItems": 9 }
+        }
+      }
+    }
+  ],
   "required": [
     "schemaVersion",
     "repository",
@@ -106,6 +134,22 @@
       "type": "string",
       "pattern": "^[0-9a-f]{64}$"
     },
+    "repositorySettings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["immutableReleases"],
+      "properties": {
+        "immutableReleases": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "enforcedByOwner"],
+          "properties": {
+            "enabled": { "const": true },
+            "enforcedByOwner": { "type": "boolean" }
+          }
+        }
+      }
+    },
     "requiredChecks": {
       "type": "array",
       "minItems": 2,
@@ -145,7 +189,7 @@
     "liveResponses": {
       "type": "array",
       "minItems": 9,
-      "maxItems": 9,
+      "maxItems": 10,
       "uniqueItems": true,
       "items": {
         "type": "object",

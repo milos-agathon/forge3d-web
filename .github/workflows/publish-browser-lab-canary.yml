@@ -88,6 +88,7 @@ jobs:
         env:
           TRUST_OBSERVER_TOKEN: ${{ steps.observer-token.outputs.token }}
           GITHUB_TOKEN: ${{ github.token }}
+          REPOSITORY_TRUST_OPERATION: publish-lab-canary
         run: node scripts/verify-repository-trust.mjs > repository-trust-verification.json
 
       - name: Emit observation for both fixed consumers
@@ -527,14 +528,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ steps.effective-context.outputs.release-tag }}
         run: |
-          gh api "/repos/${GITHUB_REPOSITORY}" > repository-settings.json
           node --input-type=module --eval '
             import { readFileSync } from "node:fs";
-            const settings = JSON.parse(readFileSync("repository-settings.json", "utf8"));
-            const enabled =
-              settings.immutable_releases === true ||
-              settings.immutable_releases?.enabled === true;
-            if (!enabled) throw new Error("release immutability is unavailable or disabled");
+            const proof = JSON.parse(readFileSync("repository-trust-publisher-proof.json", "utf8"));
+            const immutableReleases = proof.observation?.repositorySettings?.immutableReleases;
+            if (
+              immutableReleases?.enabled !== true ||
+              typeof immutableReleases.enforcedByOwner !== "boolean"
+            ) {
+              throw new Error("attested release immutability is unavailable or disabled");
+            }
           '
           node --input-type=module --eval '
             import { requireGitHubResourceAbsent } from "./scripts/lab-canary-publication.mjs";
@@ -877,6 +880,10 @@ jobs:
               !/^[0-9a-f]{40}$/u.test(observation.trustEpochSha) ||
               !/^[0-9a-f]{64}$/u.test(observation.policySha256) ||
               !/^[0-9a-f]{64}$/u.test(observation.workflowActionsLockSha256) ||
+              !exactKeys(observation.repositorySettings, ["immutableReleases"]) ||
+              !exactKeys(observation.repositorySettings.immutableReleases, ["enabled", "enforcedByOwner"]) ||
+              observation.repositorySettings.immutableReleases.enabled !== true ||
+              typeof observation.repositorySettings.immutableReleases.enforcedByOwner !== "boolean" ||
               !Number.isFinite(observedAt) ||
               !Number.isFinite(observationExpiresAt) ||
               observationExpiresAt <= observedAt ||
@@ -916,6 +923,7 @@ jobs:
                 trustEpochSha: observation.trustEpochSha,
                 policySha256: observation.policySha256,
                 workflowActionsLockSha256: observation.workflowActionsLockSha256,
+                repositorySettings: observation.repositorySettings,
                 observedAt: observation.observedAt,
                 expiresAt: observation.expiresAt
               }) ||
@@ -969,16 +977,16 @@ jobs:
             ) throw new Error("publisher handoff mismatch or expiry");
           '
 
-      - name: Require independent environment approval and unchanged immutable setting
+      - name: Require independent environment approval and verified immutable setting
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}/approvals" > approvals.json
-          gh api "/repos/${GITHUB_REPOSITORY}" > repository-settings.json
           node --input-type=module --eval '
             import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
             const preflight = JSON.parse(readFileSync("preflight/release-publication-preflight.json", "utf8"));
+            const proof = JSON.parse(readFileSync("preflight/repository-trust-publisher-proof.json", "utf8"));
             const history = JSON.parse(readFileSync("approvals.json", "utf8"));
             const approvals = history.filter((value) =>
               value.state === "approved" &&
@@ -996,12 +1004,10 @@ jobs:
             const implementationActors = new Set(
               preflight.implementationActors.map((value) => value.toLowerCase())
             );
-            const settings = JSON.parse(readFileSync("repository-settings.json", "utf8"));
-            const immutable =
-              settings.immutable_releases === true ||
-              settings.immutable_releases?.enabled === true;
+            const immutableReleases = proof.observation?.repositorySettings?.immutableReleases;
             if (
-              !immutable ||
+              immutableReleases?.enabled !== true ||
+              typeof immutableReleases.enforcedByOwner !== "boolean" ||
               implementationActors.has(actor) ||
               mixed ||
               approvals.length < 1 ||
@@ -1210,6 +1216,8 @@ jobs:
               const preflightCreatedAt = Date.parse(preflight.createdAt);
               const preflightExpiresAt = Date.parse(preflight.expiresAt);
               if (
+                observation.repositorySettings?.immutableReleases?.enabled !== true ||
+                typeof observation.repositorySettings.immutableReleases.enforcedByOwner !== "boolean" ||
                 !Number.isFinite(observedAt) || !Number.isFinite(observationExpiresAt) ||
                 observationExpiresAt <= observedAt || observationExpiresAt - observedAt > 30 * 60 * 1000 ||
                 now < observedAt || now >= observationExpiresAt ||
@@ -1248,6 +1256,8 @@ jobs:
             const preflightCreatedAt = Date.parse(preflight.createdAt);
             const preflightExpiresAt = Date.parse(preflight.expiresAt);
             if (
+              observation.repositorySettings?.immutableReleases?.enabled !== true ||
+              typeof observation.repositorySettings.immutableReleases.enforcedByOwner !== "boolean" ||
               !Number.isFinite(observedAt) || !Number.isFinite(observationExpiresAt) ||
               observationExpiresAt <= observedAt || observationExpiresAt - observedAt > 30 * 60 * 1000 ||
               now < observedAt || now >= observationExpiresAt ||

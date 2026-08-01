@@ -38,6 +38,8 @@ test("emits and verifies a canonical, exact-consumer observation", () => {
   });
   assert.equal(observation.operation, "package-broker");
   assert.equal(observation.consumers.length, 1);
+  assert.equal(Object.hasOwn(observation, "repositorySettings"), false);
+  assert.equal(observation.liveResponses.length, 9);
   assertJsonSchema(
     observation,
     JSON.parse(
@@ -153,6 +155,104 @@ for (const [name, mutate, expectedError] of [
     );
   });
 }
+
+test("release observations bind immutable semantics and the exact live response", () => {
+  const releaseExpected = { ...expected, operation: "publish-web-release" };
+  const observation = verifyRepositoryTrustObservation({
+    bytes: makeObservationBytes({ operation: releaseExpected.operation }),
+    expected: releaseExpected,
+    policy,
+    actionsLock,
+    now: new Date(now.getTime() + 60_000),
+  });
+  assert.deepEqual(observation.repositorySettings, {
+    immutableReleases: { enabled: true, enforcedByOwner: false },
+  });
+  assert.equal(observation.liveResponses.length, 10);
+  assert.equal(
+    observation.liveResponses.find((response) => response.name === "immutableReleases")
+      ?.endpoint,
+    "/repos/milos-agathon/forge3d-web/immutable-releases",
+  );
+});
+
+for (const [name, mutate, expectedError] of [
+  [
+    "disabled release immutability",
+    (value) => { value.repositorySettings.immutableReleases.enabled = false; },
+    /expected constant true|release immutability mismatch/u,
+  ],
+  [
+    "missing release immutability state",
+    (value) => { delete value.repositorySettings.immutableReleases; },
+    /required property is missing|release immutability/u,
+  ],
+  [
+    "malformed release immutability owner enforcement",
+    (value) => {
+      value.repositorySettings.immutableReleases.enforcedByOwner = "false";
+    },
+    /expected type boolean|owner enforcement is invalid/u,
+  ],
+  [
+    "missing immutable-releases live response",
+    (value) => {
+      value.liveResponses = value.liveResponses.filter(
+        (response) => response.name !== "immutableReleases",
+      );
+    },
+    /fewer than 10 items|bind every live trust response/u,
+  ],
+  [
+    "mismatched immutable-releases endpoint",
+    (value) => {
+      value.liveResponses.find(
+        (response) => response.name === "immutableReleases",
+      ).endpoint = "/repos/another-owner/another-repository/immutable-releases";
+    },
+    /immutable-release response endpoint mismatch/u,
+  ],
+]) {
+  test(`rejects release observation with ${name}`, () => {
+    const releaseExpected = { ...expected, operation: "publish-web-release" };
+    const value = JSON.parse(
+      makeObservationBytes({ operation: releaseExpected.operation }).toString("utf8"),
+    );
+    mutate(value);
+    assert.throws(
+      () => verifyRepositoryTrustObservation({
+        bytes: Buffer.from(canonicalJson(value)),
+        expected: releaseExpected,
+        policy,
+        actionsLock,
+        now: new Date(now.getTime() + 60_000),
+      }),
+      expectedError,
+    );
+  });
+}
+
+test("rejects immutable-release state on a non-release observation", () => {
+  const value = JSON.parse(makeObservationBytes().toString("utf8"));
+  value.repositorySettings = {
+    immutableReleases: { enabled: true, enforcedByOwner: false },
+  };
+  value.liveResponses.push({
+    name: "immutableReleases",
+    endpoint: "/repos/milos-agathon/forge3d-web/immutable-releases",
+    sha256: "a".repeat(64),
+  });
+  assert.throws(
+    () => verifyRepositoryTrustObservation({
+      bytes: Buffer.from(canonicalJson(value)),
+      expected,
+      policy,
+      actionsLock,
+      now: new Date(now.getTime() + 60_000),
+    }),
+    /expected type null|more than 9 items|cannot carry repository settings/u,
+  );
+});
 
 test("rejects non-canonical observation bytes", () => {
   const value = JSON.parse(makeObservationBytes().toString("utf8"));
@@ -303,12 +403,16 @@ test("rejects an archive with multiple members", () => {
 });
 
 test("publisher proof closes every nested observation binding", () => {
-  const observation = JSON.parse(makeObservationBytes().toString("utf8"));
+  const observation = JSON.parse(
+    makeObservationBytes({ operation: "publish-web-release" }).toString("utf8"),
+  );
   const outputs = {
     artifactId: "9001",
     artifactName: "trust-123-2-package-broker",
     artifactDigest: "a".repeat(64),
-    contentSha256: sha256Hex(makeObservationBytes()),
+    contentSha256: sha256Hex(
+      makeObservationBytes({ operation: "publish-web-release" }),
+    ),
   };
   const metadata = {
     expired: false,
@@ -344,7 +448,13 @@ test("publisher proof closes every nested observation binding", () => {
   }
 });
 
-function makeObservationBytes() {
+function makeObservationBytes({ operation = expected.operation } = {}) {
+  const requireImmutableReleases = [
+    "compute-hardware-release-readiness",
+    "compute-lab-readiness",
+    "publish-lab-canary",
+    "publish-web-release",
+  ].includes(operation);
   const verification = {
     ok: true,
     repository: {
@@ -391,9 +501,20 @@ function makeObservationBytes() {
       sha256: String(index).repeat(64),
     })),
   };
+  if (requireImmutableReleases) {
+    verification.operation = operation;
+    verification.repositorySettings = {
+      immutableReleases: { enabled: true, enforcedByOwner: false },
+    };
+    verification.liveResponses.push({
+      name: "immutableReleases",
+      endpoint: "/repos/milos-agathon/forge3d-web/immutable-releases",
+      sha256: "a".repeat(64),
+    });
+  }
   const observation = createRepositoryTrustObservation({
     verification,
-    operation: expected.operation,
+    operation,
     consumers: structuredClone(expected.consumers),
     workflow: {
       path: expected.workflowPath,

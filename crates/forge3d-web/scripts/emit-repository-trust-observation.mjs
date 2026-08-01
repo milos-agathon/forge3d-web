@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { canonicalJson, sha256Hex } from "./canonical-json.mjs";
+import { requiresImmutableReleaseSettings } from "./verify-repository-trust.mjs";
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const defaultOutput = join(
@@ -27,6 +28,33 @@ export function createRepositoryTrustObservation({
   }
   if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(operation ?? "")) {
     throw new Error("operation must be a lowercase kebab-case identifier");
+  }
+  const requireImmutableReleases = requiresImmutableReleaseSettings(operation);
+  const immutableResponses = (verification.liveResponses ?? []).filter(
+    (response) => response.name === "immutableReleases",
+  );
+  if (requireImmutableReleases) {
+    if (
+      verification.operation !== operation ||
+      verification.repositorySettings?.immutableReleases?.enabled !== true ||
+      typeof verification.repositorySettings.immutableReleases.enforcedByOwner !==
+        "boolean" ||
+      immutableResponses.length !== 1 ||
+      immutableResponses[0].endpoint !==
+        `/repos/${verification.repository.fullName}/immutable-releases` ||
+      !/^[0-9a-f]{64}$/u.test(immutableResponses[0].sha256 ?? "")
+    ) {
+      throw new Error(
+        "release-setting operation requires an exact immutable-release verification",
+      );
+    }
+  } else if (
+    verification.repositorySettings !== undefined ||
+    immutableResponses.length !== 0
+  ) {
+    throw new Error(
+      "non-release operation cannot carry immutable-release verification",
+    );
   }
   if (!Array.isArray(consumers) || consumers.length === 0) {
     throw new Error("at least one intended consumer job/environment is required");
@@ -83,6 +111,9 @@ export function createRepositoryTrustObservation({
     trustEpochSha: verification.trustEpochSha,
     policySha256: verification.policySha256,
     workflowActionsLockSha256: verification.workflowActionsLockSha256,
+    ...(requireImmutableReleases
+      ? { repositorySettings: verification.repositorySettings }
+      : {}),
     requiredChecks: verification.requiredChecks,
     liveResponses: verification.liveResponses,
     nonce,
