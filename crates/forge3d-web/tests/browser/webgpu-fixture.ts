@@ -1,4 +1,5 @@
 import { expect, test as base } from "@playwright/test";
+export type { APIRequestContext, Page } from "@playwright/test";
 
 import {
   collectPlaywrightLaunchDiagnostics,

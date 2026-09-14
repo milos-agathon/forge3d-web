@@ -1,7 +1,7 @@
-import type { APIRequestContext, Page } from "@playwright/test";
-
 import {
+  type APIRequestContext,
   expect,
+  type Page,
   skipRenderAssertionsWhenProbing,
   test,
 } from "../browser/webgpu-fixture";
