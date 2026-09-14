@@ -21,6 +21,9 @@ try {
   const facadeBPath = emitFacadeCopy("copy-b");
   const facadeA = await import(pathToFileURL(facadeAPath));
   const facadeB = await import(pathToFileURL(facadeBPath));
+  const internalsA = await import(
+    pathToFileURL(join(dirname(facadeAPath), "runtime-internals.js"))
+  );
 
   assert.deepEqual(
     Object.keys(facadeA).sort(),
@@ -32,6 +35,7 @@ try {
     "function",
     "getCapabilities must be implemented by the facade",
   );
+
   for (const forbidden of [
     "setDeviceLostHandler",
     "simulateDeviceLossForTesting",
@@ -146,8 +150,102 @@ try {
     "a different URL must also reject after the coordinator is ready",
   );
   assert.equal(fetchCount, 2);
+
+  globalThis.__forge3dTestSynchronousRegistrationLoss = true;
+  const earlyLoss = await facadeA.Forge3DRuntime.create({}, {
+    wasmUrl: "https://assets.example.test/forge3d.wasm",
+  });
+  const earlyEvents = [];
+  const earlyHandler = (error) => {
+    earlyEvents.push(error.code);
+    internalsA.setRuntimeDeviceLostHandler(earlyLoss, earlyHandler);
+  };
+  internalsA.setRuntimeDeviceLostHandler(earlyLoss, earlyHandler);
+  internalsA.setRuntimeDeviceLostHandler(earlyLoss, earlyHandler);
+  assert.deepEqual(
+    earlyEvents,
+    ["DEVICE_LOST"],
+    "a synchronous registration loss must survive construction and replay once",
+  );
+  earlyLoss.dispose();
+
+  const disposedBeforeHandler = await facadeA.Forge3DRuntime.create({}, {
+    wasmUrl: "https://assets.example.test/forge3d.wasm",
+  });
+  disposedBeforeHandler.dispose();
+  let disposedEvents = 0;
+  internalsA.setRuntimeDeviceLostHandler(disposedBeforeHandler, () => {
+    disposedEvents += 1;
+  });
+  assert.equal(
+    disposedEvents,
+    0,
+    "disposal before handler registration must clear the pending loss",
+  );
+  globalThis.__forge3dTestSynchronousRegistrationLoss = false;
+  globalThis.__forge3dTestCallbackCount = 0;
+
   runtimeA.dispose();
   assert.equal(runtimeA.getCapabilities().deviceState, "disposed");
+
+  const detachBeforeOrdinaryDispose = globalThis.__forge3dTestDetachCount;
+  const nativeDisposeBeforeOrdinaryDispose = globalThis.__forge3dTestNativeDisposeCount;
+  const ordinary = await facadeA.Forge3DRuntime.create({}, {
+    wasmUrl: "https://assets.example.test/forge3d.wasm",
+  });
+  ordinary.dispose();
+  ordinary.dispose();
+  assert.equal(
+    globalThis.__forge3dTestDetachCount,
+    detachBeforeOrdinaryDispose + 1,
+    "ordinary disposal must detach the native loss listener synchronously once",
+  );
+  assert.equal(
+    globalThis.__forge3dTestNativeDisposeCount,
+    nativeDisposeBeforeOrdinaryDispose + 1,
+    "ordinary disposal must finalize the native runtime once",
+  );
+
+  let settleScreenshot;
+  globalThis.__forge3dTestScreenshot = new Promise((resolve) => {
+    settleScreenshot = resolve;
+  });
+  const pending = await facadeB.Forge3DRuntime.create({}, {
+    wasmUrl: "https://assets.example.test/forge3d.wasm",
+  });
+  const pendingNative = globalThis.__forge3dTestNativeRuntimes.at(-1);
+  const pendingScreenshot = pending.screenshot();
+  const detachBeforePendingDispose = globalThis.__forge3dTestDetachCount;
+  const nativeDisposeBeforePendingDispose = globalThis.__forge3dTestNativeDisposeCount;
+  pending.dispose();
+  assert.equal(
+    globalThis.__forge3dTestDetachCount,
+    detachBeforePendingDispose + 1,
+    "pending screenshot disposal must detach without waiting for native finalization",
+  );
+  assert.equal(pendingNative.callback, undefined);
+  pendingNative.emitLoss();
+  assert.equal(globalThis.__forge3dTestCallbackCount, 0);
+  assert.equal(
+    globalThis.__forge3dTestNativeDisposeCount,
+    nativeDisposeBeforePendingDispose,
+    "native disposal must wait for the in-flight screenshot",
+  );
+  assert.equal(pending.getCapabilities().deviceState, "disposed");
+  settleScreenshot(new Blob([]));
+  await assert.rejects(
+    pendingScreenshot,
+    (error) => error?.code === "RUNTIME_DISPOSED",
+  );
+  await Promise.resolve();
+  assert.equal(
+    globalThis.__forge3dTestNativeDisposeCount,
+    nativeDisposeBeforePendingDispose + 1,
+    "the settled screenshot must finalize native disposal exactly once",
+  );
+  pendingNative.emitLoss();
+  assert.equal(globalThis.__forge3dTestCallbackCount, 0);
+  delete globalThis.__forge3dTestScreenshot;
 
   const incompatible = spawnSync(
     process.execPath,
@@ -179,6 +277,12 @@ try {
   );
 } finally {
   delete globalThis.__forge3dTestInit;
+  delete globalThis.__forge3dTestScreenshot;
+  delete globalThis.__forge3dTestNativeRuntimes;
+  delete globalThis.__forge3dTestDetachCount;
+  delete globalThis.__forge3dTestNativeDisposeCount;
+  delete globalThis.__forge3dTestCallbackCount;
+  delete globalThis.__forge3dTestSynchronousRegistrationLoss;
   rmSync(temp, { recursive: true, force: true });
 }
 
@@ -202,7 +306,11 @@ function emitFacadeCopy(name) {
   }
   const fakeBridge = `
     export class Forge3DRuntime {
-      static async create() { return new Forge3DRuntime(); }
+      static async create() {
+        const runtime = new Forge3DRuntime();
+        (globalThis.__forge3dTestNativeRuntimes ??= []).push(runtime);
+        return runtime;
+      }
       disposed = false;
       width = 64;
       height = 64;
@@ -217,13 +325,36 @@ function emitFacadeCopy(name) {
         };
       }
       setDeviceLostCallback(callback) { this.callback = callback; }
+      registerDeviceLostCallback(callback) {
+        this.callback = (error) => {
+          globalThis.__forge3dTestCallbackCount += 1;
+          callback(error);
+        };
+        if (globalThis.__forge3dTestSynchronousRegistrationLoss) {
+          this.callback({ code: "DEVICE_LOST", message: "synchronous registration loss" });
+        }
+        let active = true;
+        return () => {
+          if (!active) return;
+          active = false;
+          globalThis.__forge3dTestDetachCount += 1;
+          this.callback = undefined;
+        };
+      }
+      emitLoss() { this.callback?.({ code: "DEVICE_LOST", message: "test loss" }); }
       setTerrain() {}
       async setTerrainFromSource() {}
       setCamera() {}
       resize() {}
       render() {}
-      async screenshot() { return new Blob([]); }
-      dispose() { this.disposed = true; }
+      async screenshot() {
+        return globalThis.__forge3dTestScreenshot ?? new Blob([]);
+      }
+      dispose() {
+        if (this.disposed) return;
+        this.disposed = true;
+        globalThis.__forge3dTestNativeDisposeCount += 1;
+      }
     }
     export default async function init({ module_or_path: response }) {
       if (!(response instanceof Response)) throw new Error("expected Response");
@@ -231,6 +362,10 @@ function emitFacadeCopy(name) {
     }
   `;
   mkdirSync(join(temp, "pkg"), { recursive: true });
+  globalThis.__forge3dTestNativeRuntimes = [];
+  globalThis.__forge3dTestDetachCount = 0;
+  globalThis.__forge3dTestNativeDisposeCount = 0;
+  globalThis.__forge3dTestCallbackCount = 0;
   writeFileSync(join(temp, "pkg", "forge3d_web.js"), fakeBridge);
   writeFileSync(join(temp, "package.json"), '{"type":"module"}');
   return join(copyRoot, "index.js");

@@ -35,99 +35,125 @@ pub(super) fn render_runtime(runtime: &mut Forge3DRuntime) -> Result<bool, WebEr
 fn acquire_surface_texture(
     runtime: &mut Forge3DRuntime,
 ) -> Result<Option<wgpu::SurfaceTexture>, WebError> {
-    let first = runtime
-        .surface_state
-        .as_ref()
-        .ok_or_else(|| {
-            WebError::new(
-                Forge3DErrorCode::RuntimeDisposed,
-                "Runtime surface state is not available",
-            )
-        })?
-        .surface
-        .get_current_texture();
+    drive_surface_acquisition(&mut RuntimeSurfaceAcquisition { runtime })
+}
 
+enum SurfaceAcquireStatus<T> {
+    Success(T),
+    Suboptimal(T),
+    Timeout,
+    Occluded,
+    Outdated,
+    Lost,
+    Validation,
+}
+
+trait SurfaceAcquisition {
+    type Frame;
+
+    fn check_health(&mut self) -> Result<(), WebError>;
+    fn acquire(&mut self) -> Result<SurfaceAcquireStatus<Self::Frame>, WebError>;
+    fn reconfigure(&mut self) -> Result<(), WebError>;
+    fn recreate(&mut self) -> Result<(), WebError>;
+}
+
+struct RuntimeSurfaceAcquisition<'a> {
+    runtime: &'a mut Forge3DRuntime,
+}
+
+impl SurfaceAcquisition for RuntimeSurfaceAcquisition<'_> {
+    type Frame = wgpu::SurfaceTexture;
+
+    fn check_health(&mut self) -> Result<(), WebError> {
+        super::device_health::ensure_device_healthy_error(self.runtime)
+    }
+
+    fn acquire(&mut self) -> Result<SurfaceAcquireStatus<Self::Frame>, WebError> {
+        let status = self
+            .runtime
+            .surface_state
+            .as_ref()
+            .ok_or_else(|| {
+                WebError::new(
+                    Forge3DErrorCode::RuntimeDisposed,
+                    "Runtime surface state is not available",
+                )
+            })?
+            .surface
+            .get_current_texture();
+        Ok(match status {
+            wgpu::CurrentSurfaceTexture::Success(frame) => SurfaceAcquireStatus::Success(frame),
+            wgpu::CurrentSurfaceTexture::Suboptimal(frame) => {
+                SurfaceAcquireStatus::Suboptimal(frame)
+            }
+            wgpu::CurrentSurfaceTexture::Timeout => SurfaceAcquireStatus::Timeout,
+            wgpu::CurrentSurfaceTexture::Occluded => SurfaceAcquireStatus::Occluded,
+            wgpu::CurrentSurfaceTexture::Outdated => SurfaceAcquireStatus::Outdated,
+            wgpu::CurrentSurfaceTexture::Lost => SurfaceAcquireStatus::Lost,
+            wgpu::CurrentSurfaceTexture::Validation => SurfaceAcquireStatus::Validation,
+        })
+    }
+
+    fn reconfigure(&mut self) -> Result<(), WebError> {
+        reconfigure_surface(self.runtime)
+    }
+
+    fn recreate(&mut self) -> Result<(), WebError> {
+        recreate_surface(self.runtime, false).map(|_| ())
+    }
+}
+
+fn drive_surface_acquisition<A: SurfaceAcquisition>(
+    acquisition: &mut A,
+) -> Result<Option<A::Frame>, WebError> {
+    acquisition.check_health()?;
+    let first = acquisition.acquire()?;
     match first {
-        wgpu::CurrentSurfaceTexture::Success(frame)
-        | wgpu::CurrentSurfaceTexture::Suboptimal(frame) => Ok(Some(frame)),
-        failure => match classify_surface_failure(&failure)? {
-            SurfaceFailureAction::Skip => Ok(None),
-            SurfaceFailureAction::Reconfigure => {
-                reconfigure_surface(runtime)?;
-                let state = runtime.surface_state.as_ref().ok_or_else(|| {
-                    WebError::new(
-                        Forge3DErrorCode::RuntimeDisposed,
-                        "Runtime surface state is not available",
-                    )
-                })?;
-                normalize_surface_retry(state.surface.get_current_texture())
-            }
-            SurfaceFailureAction::Recreate => {
-                recreate_surface(runtime, false)?;
-                let retry = runtime
-                    .surface_state
-                    .as_ref()
-                    .ok_or_else(|| {
-                        WebError::new(
-                            Forge3DErrorCode::SurfaceLost,
-                            "Surface recreation did not produce a surface",
-                        )
-                    })?
-                    .surface
-                    .get_current_texture();
-                normalize_surface_retry(retry)
-            }
-        },
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum SurfaceFailureAction {
-    Skip,
-    Reconfigure,
-    Recreate,
-}
-
-fn classify_surface_failure(
-    status: &wgpu::CurrentSurfaceTexture,
-) -> Result<SurfaceFailureAction, WebError> {
-    match status {
-        wgpu::CurrentSurfaceTexture::Timeout | wgpu::CurrentSurfaceTexture::Occluded => {
-            Ok(SurfaceFailureAction::Skip)
+        SurfaceAcquireStatus::Success(frame) | SurfaceAcquireStatus::Suboptimal(frame) => {
+            Ok(Some(frame))
         }
-        wgpu::CurrentSurfaceTexture::Outdated => Ok(SurfaceFailureAction::Reconfigure),
-        wgpu::CurrentSurfaceTexture::Lost => Ok(SurfaceFailureAction::Recreate),
-        wgpu::CurrentSurfaceTexture::Validation => Err(WebError::new(
-            Forge3DErrorCode::InternalError,
-            "Surface texture validation failed",
-        )),
-        wgpu::CurrentSurfaceTexture::Success(_) | wgpu::CurrentSurfaceTexture::Suboptimal(_) => {
-            Err(WebError::new(
-                Forge3DErrorCode::InternalError,
-                "Successful surface texture was sent to failure classification",
-            ))
+        SurfaceAcquireStatus::Timeout | SurfaceAcquireStatus::Occluded => Ok(None),
+        SurfaceAcquireStatus::Validation => validation_error(acquisition),
+        SurfaceAcquireStatus::Outdated => {
+            acquisition.reconfigure()?;
+            retry_surface_acquisition(acquisition)
+        }
+        SurfaceAcquireStatus::Lost => {
+            acquisition.recreate()?;
+            retry_surface_acquisition(acquisition)
         }
     }
 }
 
-fn normalize_surface_retry(
-    retry: wgpu::CurrentSurfaceTexture,
-) -> Result<Option<wgpu::SurfaceTexture>, WebError> {
-    match retry {
-        wgpu::CurrentSurfaceTexture::Success(frame)
-        | wgpu::CurrentSurfaceTexture::Suboptimal(frame) => Ok(Some(frame)),
-        wgpu::CurrentSurfaceTexture::Timeout | wgpu::CurrentSurfaceTexture::Occluded => Ok(None),
-        wgpu::CurrentSurfaceTexture::Outdated => Err(WebError::new(
+fn retry_surface_acquisition<A: SurfaceAcquisition>(
+    acquisition: &mut A,
+) -> Result<Option<A::Frame>, WebError> {
+    acquisition.check_health()?;
+    match acquisition.acquire()? {
+        SurfaceAcquireStatus::Success(frame) | SurfaceAcquireStatus::Suboptimal(frame) => {
+            Ok(Some(frame))
+        }
+        SurfaceAcquireStatus::Timeout | SurfaceAcquireStatus::Occluded => Ok(None),
+        SurfaceAcquireStatus::Outdated => Err(WebError::new(
             Forge3DErrorCode::SurfaceOutdated,
             "Surface remained outdated after one reconfiguration",
         )),
-        wgpu::CurrentSurfaceTexture::Lost => Err(WebError::new(
+        SurfaceAcquireStatus::Lost => Err(WebError::new(
             Forge3DErrorCode::SurfaceLost,
             "Surface remained lost after one recreation attempt",
         )),
-        wgpu::CurrentSurfaceTexture::Validation => Err(WebError::new(
+        SurfaceAcquireStatus::Validation => validation_error(acquisition),
+    }
+}
+
+fn validation_error<A: SurfaceAcquisition>(
+    acquisition: &mut A,
+) -> Result<Option<A::Frame>, WebError> {
+    match acquisition.check_health() {
+        Err(error) => Err(error),
+        Ok(()) => Err(WebError::new(
             Forge3DErrorCode::InternalError,
-            "Surface texture validation failed after recovery",
+            "Surface texture validation failed without a captured GPU diagnostic",
         )),
     }
 }
@@ -296,53 +322,175 @@ pub(super) fn encode_scene_render_pass(
 
 #[cfg(test)]
 mod tests {
-    use super::{classify_surface_failure, normalize_surface_retry, SurfaceFailureAction};
+    use std::collections::VecDeque;
+
+    use super::{drive_surface_acquisition, SurfaceAcquireStatus, SurfaceAcquisition};
     use crate::error::Forge3DErrorCode;
 
-    #[test]
-    fn timeout_and_occlusion_are_skipped_without_submission() {
-        for status in [
-            wgpu::CurrentSurfaceTexture::Timeout,
-            wgpu::CurrentSurfaceTexture::Occluded,
-        ] {
-            assert_eq!(
-                classify_surface_failure(&status).expect("status should be recoverable"),
-                SurfaceFailureAction::Skip,
-            );
-            assert!(normalize_surface_retry(status)
-                .expect("retry should skip")
-                .is_none());
+    // Contract reference: https://docs.rs/wgpu/29.0.3/wgpu/enum.CurrentSurfaceTexture.html
+    struct FakeAcquisition {
+        statuses: VecDeque<SurfaceAcquireStatus<&'static str>>,
+        health: VecDeque<Result<(), super::WebError>>,
+        actions: Vec<&'static str>,
+        recovery_error: Option<super::WebError>,
+    }
+
+    impl FakeAcquisition {
+        fn new(statuses: impl IntoIterator<Item = SurfaceAcquireStatus<&'static str>>) -> Self {
+            Self {
+                statuses: statuses.into_iter().collect(),
+                health: VecDeque::new(),
+                actions: Vec::new(),
+                recovery_error: None,
+            }
+        }
+    }
+
+    impl SurfaceAcquisition for FakeAcquisition {
+        type Frame = &'static str;
+
+        fn check_health(&mut self) -> Result<(), super::WebError> {
+            self.actions.push("health");
+            self.health.pop_front().unwrap_or(Ok(()))
+        }
+
+        fn acquire(&mut self) -> Result<SurfaceAcquireStatus<Self::Frame>, super::WebError> {
+            self.actions.push("acquire");
+            Ok(self.statuses.pop_front().expect("fixture status"))
+        }
+
+        fn reconfigure(&mut self) -> Result<(), super::WebError> {
+            self.actions.push("reconfigure");
+            match self.recovery_error.take() {
+                Some(error) => Err(error),
+                None => Ok(()),
+            }
+        }
+
+        fn recreate(&mut self) -> Result<(), super::WebError> {
+            self.actions.push("recreate");
+            match self.recovery_error.take() {
+                Some(error) => Err(error),
+                None => Ok(()),
+            }
         }
     }
 
     #[test]
-    fn outdated_and_lost_choose_exactly_one_recovery_action() {
-        assert_eq!(
-            classify_surface_failure(&wgpu::CurrentSurfaceTexture::Outdated)
-                .expect("outdated should reconfigure"),
-            SurfaceFailureAction::Reconfigure,
-        );
-        assert_eq!(
-            classify_surface_failure(&wgpu::CurrentSurfaceTexture::Lost)
-                .expect("lost should recreate"),
-            SurfaceFailureAction::Recreate,
-        );
-
-        let outdated = normalize_surface_retry(wgpu::CurrentSurfaceTexture::Outdated)
-            .expect_err("second outdated status must fail");
-        assert_eq!(outdated.code(), Forge3DErrorCode::SurfaceOutdated);
-        let lost = normalize_surface_retry(wgpu::CurrentSurfaceTexture::Lost)
-            .expect_err("second lost status must fail");
-        assert_eq!(lost.code(), Forge3DErrorCode::SurfaceLost);
+    fn timeout_and_occlusion_are_skipped_without_submission() {
+        for status in [
+            SurfaceAcquireStatus::Timeout,
+            SurfaceAcquireStatus::Occluded,
+        ] {
+            let mut acquisition = FakeAcquisition::new([status]);
+            assert!(drive_surface_acquisition(&mut acquisition)
+                .expect("status should skip")
+                .is_none());
+            assert_eq!(acquisition.actions, ["health", "acquire"]);
+        }
     }
 
     #[test]
-    fn validation_is_never_treated_as_a_skipped_frame() {
-        let initial = classify_surface_failure(&wgpu::CurrentSurfaceTexture::Validation)
-            .expect_err("validation must be terminal");
-        assert_eq!(initial.code(), Forge3DErrorCode::InternalError);
-        let retry = normalize_surface_retry(wgpu::CurrentSurfaceTexture::Validation)
-            .expect_err("retry validation must be terminal");
-        assert_eq!(retry.code(), Forge3DErrorCode::InternalError);
+    fn outdated_reconfigures_and_lost_recreates_before_exactly_one_retry() {
+        for (first, action) in [
+            (SurfaceAcquireStatus::Outdated, "reconfigure"),
+            (SurfaceAcquireStatus::Lost, "recreate"),
+        ] {
+            let mut acquisition =
+                FakeAcquisition::new([first, SurfaceAcquireStatus::Success("frame")]);
+            assert_eq!(
+                drive_surface_acquisition(&mut acquisition).expect("recovery should succeed"),
+                Some("frame")
+            );
+            assert_eq!(
+                acquisition.actions,
+                ["health", "acquire", action, "health", "acquire"]
+            );
+        }
+    }
+
+    #[test]
+    fn second_or_mixed_failure_is_terminal_without_another_recovery() {
+        for (second, code) in [
+            (
+                SurfaceAcquireStatus::Outdated,
+                Forge3DErrorCode::SurfaceOutdated,
+            ),
+            (SurfaceAcquireStatus::Lost, Forge3DErrorCode::SurfaceLost),
+        ] {
+            let mut acquisition = FakeAcquisition::new([SurfaceAcquireStatus::Outdated, second]);
+            let error = drive_surface_acquisition(&mut acquisition)
+                .expect_err("second failure must be terminal");
+            assert_eq!(error.code(), code);
+            assert_eq!(
+                acquisition.actions,
+                ["health", "acquire", "reconfigure", "health", "acquire"]
+            );
+        }
+    }
+
+    #[test]
+    fn recreation_failure_is_surface_lost_and_never_retries() {
+        let mut acquisition = FakeAcquisition::new([SurfaceAcquireStatus::Lost]);
+        acquisition.recovery_error = Some(super::WebError::new(
+            Forge3DErrorCode::SurfaceLost,
+            "recreation failed",
+        ));
+        let error = drive_surface_acquisition(&mut acquisition)
+            .expect_err("recreation failure must be terminal");
+        assert_eq!(error.code(), Forge3DErrorCode::SurfaceLost);
+        assert_eq!(acquisition.actions, ["health", "acquire", "recreate"]);
+    }
+
+    #[test]
+    fn timeout_or_occlusion_on_retry_skips_without_more_recovery() {
+        for second in [
+            SurfaceAcquireStatus::Timeout,
+            SurfaceAcquireStatus::Occluded,
+        ] {
+            let mut acquisition = FakeAcquisition::new([SurfaceAcquireStatus::Outdated, second]);
+            assert!(drive_surface_acquisition(&mut acquisition)
+                .expect("retry should skip")
+                .is_none());
+            assert_eq!(
+                acquisition.actions,
+                ["health", "acquire", "reconfigure", "health", "acquire"]
+            );
+        }
+    }
+
+    #[test]
+    fn health_is_checked_immediately_before_acquisition() {
+        let mut acquisition = FakeAcquisition::new([SurfaceAcquireStatus::Success("unused")]);
+        acquisition.health.push_back(Err(super::WebError::new(
+            Forge3DErrorCode::DeviceLost,
+            "lost while idle",
+        )));
+        let error = drive_surface_acquisition(&mut acquisition)
+            .expect_err("preexisting health error must stop acquisition");
+        assert_eq!(error.code(), Forge3DErrorCode::DeviceLost);
+        assert_eq!(acquisition.actions, ["health"]);
+    }
+
+    #[test]
+    fn validation_returns_the_sticky_diagnostic_or_explicit_internal_error() {
+        let mut captured = FakeAcquisition::new([SurfaceAcquireStatus::Validation]);
+        captured.health.push_back(Ok(()));
+        captured.health.push_back(Err(super::WebError::new(
+            Forge3DErrorCode::InternalError,
+            "captured validation: terrain pipeline",
+        )));
+        let error = drive_surface_acquisition(&mut captured)
+            .expect_err("captured validation must be terminal");
+        assert_eq!(error.message(), "captured validation: terrain pipeline");
+        assert_eq!(captured.actions, ["health", "acquire", "health"]);
+
+        let mut absent = FakeAcquisition::new([SurfaceAcquireStatus::Validation]);
+        let error = drive_surface_acquisition(&mut absent)
+            .expect_err("missing diagnostic must still be explicit");
+        assert_eq!(error.code(), Forge3DErrorCode::InternalError);
+        assert!(error
+            .message()
+            .contains("without a captured GPU diagnostic"));
     }
 }
