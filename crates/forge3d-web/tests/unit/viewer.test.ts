@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  type CameraInput,
   Forge3DError,
   type Forge3DRuntimeCapabilities,
   type Forge3DRuntimeOptions,
@@ -25,6 +26,8 @@ class FakeRuntime {
   sourceCalls = 0;
   readonly sources: TerrainHeightmapSourceInput[] = [];
   sourceAbortCount = 0;
+  readonly cameras: CameraInput[] = [];
+  readonly sizes: ResizeInput[] = [];
   renderError: Forge3DError | undefined;
   cameraError: Forge3DError | undefined;
   resizeError: Forge3DError | undefined;
@@ -65,8 +68,8 @@ class FakeRuntime {
     }
   }
 
-  lose(): void {
-    this.lossHandler?.(new Forge3DError("DEVICE_LOST", "test loss"));
+  lose(error = new Forge3DError("DEVICE_LOST", "test loss")): void {
+    this.lossHandler?.(error);
   }
 
   setTerrain(terrain: TerrainHeightmapInput): void {
@@ -103,11 +106,12 @@ class FakeRuntime {
     });
   }
 
-  setCamera(): void {
+  setCamera(camera: CameraInput): void {
     if (this.cameraError !== undefined) {
       throw this.cameraError;
     }
     this.cameraCalls += 1;
+    this.cameras.push(camera);
   }
 
   resize(size: ResizeInput): void {
@@ -115,6 +119,7 @@ class FakeRuntime {
       throw this.resizeError;
     }
     this.resizeCalls += 1;
+    this.sizes.push(size);
     this.width = Math.round(size.width * size.devicePixelRatio);
     this.height = Math.round(size.height * size.devicePixelRatio);
   }
@@ -143,6 +148,10 @@ class FakeRuntime {
     this.lossHandler = undefined;
   }
 }
+
+type ViewerNotification =
+  | { kind: "status"; transition: string }
+  | { kind: "error"; error: Forge3DError };
 
 describe("Forge3DViewer", () => {
   let rafCallbacks: FrameRequestCallback[];
@@ -918,6 +927,149 @@ describe("Forge3DViewer", () => {
     }
   });
 
+  it("restores view, size, controls, and one frame before terminal second loss", async () => {
+    const first = new FakeRuntime();
+    const replacement = new FakeRuntime();
+    const canvas = new FakeViewerCanvas();
+    const frames = new FakeViewerAnimationFrames();
+    vi.stubGlobal("requestAnimationFrame", frames.request);
+    vi.stubGlobal("cancelAnimationFrame", frames.cancel);
+    let releaseReplacement!: () => void;
+    const replacementReady = new Promise<void>((resolve) => {
+      releaseReplacement = resolve;
+    });
+    const canvases: HTMLCanvasElement[] = [];
+    const runtimeOptions: Forge3DRuntimeOptions[] = [];
+    const notifications: ViewerNotification[] = [];
+    let creates = 0;
+    setViewerRuntimeFactoryForTests({
+      create: async (createdCanvas, options) => {
+        creates += 1;
+        canvases.push(createdCanvas);
+        runtimeOptions.push(options);
+        if (creates === 1) return first;
+        if (creates !== 2) throw new Error("unexpected third runtime");
+        await replacementReady;
+        return replacement;
+      },
+    });
+    const viewer = await Forge3DViewer.create(
+      canvas as unknown as HTMLCanvasElement,
+      {
+        resize: false,
+        runtime: { powerPreference: "high-performance" },
+        onError: (error) =>
+          notifications.push({ kind: "error", error }),
+        onStatusChange: ({ previous, current }) =>
+          notifications.push({
+            kind: "status",
+            transition: `${previous}->${current}`,
+          }),
+      },
+    );
+    frames.flush();
+    viewer.resize({ width: 370, height: 210, devicePixelRatio: 1.5 });
+    const committedView = {
+      target: [-4, 6, 9] as [number, number, number],
+      distance: 17,
+      yawDegrees: -73,
+      pitchDegrees: 22,
+      fovYDegrees: 54,
+      near: 0.5,
+      far: 1400,
+    };
+    viewer.setView(committedView);
+    const committedCamera = first.cameras.at(-1);
+    const pendingBeforeLoss = frames.pendingHandles[0];
+    expect(pendingBeforeLoss).toBeDefined();
+
+    const firstLoss = new Forge3DError("DEVICE_LOST", "first committed loss");
+    first.lose(firstLoss);
+    expect(viewer.status).toBe("recovering");
+    expect(first.disposed).toBe(true);
+    expect(first.disposeCalls).toBe(1);
+    expect(viewer.getDiagnostics().activeRuntimes).toBe(0);
+    expect(frames.cancelled).toContain(pendingBeforeLoss);
+    expect(frames.pending).toBe(0);
+    const recoveringView = viewer.getView();
+    canvas.dispatchEvent(pointerEvent("pointerdown", 1, 100, 100));
+    canvas.dispatchEvent(pointerEvent("pointermove", 1, 150, 80));
+    expect(viewer.getView()).toEqual(recoveringView);
+    expect(first.cameraCalls).toBe(2);
+    expect(replacement.cameraCalls).toBe(0);
+
+    releaseReplacement();
+    await vi.waitFor(() => expect(viewer.status).toBe("ready"));
+    expect(creates).toBe(2);
+    expect(canvases).toEqual([
+      canvas as unknown as HTMLCanvasElement,
+      canvas as unknown as HTMLCanvasElement,
+    ]);
+    expect(runtimeOptions).toEqual([
+      { powerPreference: "high-performance" },
+      { powerPreference: "high-performance" },
+    ]);
+    expect(replacement.cameras).toEqual([committedCamera]);
+    expect(replacement.sizes).toEqual([
+      { width: 555, height: 315, devicePixelRatio: 1 },
+    ]);
+    const submittedBeforeRestoredFrame =
+      viewer.getDiagnostics().submittedFrames;
+    expect(replacement.renderCalls).toBe(0);
+    expect(frames.pending).toBe(1);
+    frames.flush();
+    expect(replacement.renderCalls).toBe(1);
+    expect(viewer.getDiagnostics().submittedFrames).toBe(
+      submittedBeforeRestoredFrame + 1,
+    );
+    expect(frames.pending).toBe(0);
+    frames.flush();
+    expect(replacement.renderCalls).toBe(1);
+    expect(viewer.getDiagnostics().submittedFrames).toBe(
+      submittedBeforeRestoredFrame + 1,
+    );
+
+    const restoredView = viewer.getView();
+    canvas.dispatchEvent(pointerEvent("pointerdown", 2, 90, 90));
+    canvas.dispatchEvent(pointerEvent("pointermove", 2, 125, 75));
+    expect(viewer.getView()).not.toEqual(restoredView);
+    expect(replacement.cameraCalls).toBe(2);
+    expect(frames.pending).toBe(1);
+    const retainedView = viewer.getView();
+    const retainedCapabilities = viewer.getCapabilities();
+    const retainedDiagnostics = viewer.getDiagnostics();
+
+    const secondLoss = new Forge3DError("DEVICE_LOST", "second terminal loss");
+    replacement.lose(secondLoss);
+    expect(viewer.status).toBe("failed");
+    expect(creates).toBe(2);
+    expect(replacement.disposed).toBe(true);
+    expect(replacement.disposeCalls).toBe(1);
+    expect(notifications).toEqual([
+      { kind: "status", transition: "initializing->ready" },
+      { kind: "error", error: firstLoss },
+      { kind: "status", transition: "ready->recovering" },
+      { kind: "status", transition: "recovering->ready" },
+      { kind: "error", error: secondLoss },
+      { kind: "status", transition: "ready->failed" },
+    ]);
+    expect(viewer.getView()).toEqual(retainedView);
+    expect(viewer.getCapabilities()).toEqual({
+      ...retainedCapabilities,
+      deviceState: "lost",
+    });
+    expect(viewer.getDiagnostics()).toEqual({
+      ...retainedDiagnostics,
+      activePointers: 0,
+      activeRuntimes: 0,
+      pendingAnimationFrame: false,
+    });
+    expect(retainedCapabilities.deviceState).toBe("ready");
+    expect(retainedDiagnostics.activeRuntimes).toBe(1);
+    expect(frames.pending).toBe(0);
+    viewer.dispose();
+  });
+
   const replayableSources: Array<{
     name: string;
     create: () => TerrainHeightmapSourceInput["source"];
@@ -1002,6 +1154,97 @@ describe("Forge3DViewer", () => {
     },
   );
 
+  it("waits for committed source replay before completing recovery", async () => {
+    let releaseReplay!: () => void;
+    const pendingReplay = new Promise<void>((resolve) => {
+      releaseReplay = resolve;
+    });
+    const first = new FakeRuntime();
+    const replacement = new FakeRuntime(pendingReplay);
+    const frames = new FakeViewerAnimationFrames();
+    vi.stubGlobal("requestAnimationFrame", frames.request);
+    vi.stubGlobal("cancelAnimationFrame", frames.cancel);
+    const notifications: ViewerNotification[] = [];
+    let creates = 0;
+    setViewerRuntimeFactoryForTests({
+      create: async () => {
+        creates += 1;
+        return creates === 1 ? first : replacement;
+      },
+    });
+    const initialView = {
+      target: [1, 3, 5] as [number, number, number],
+      distance: 13,
+      yawDegrees: 41,
+      pitchDegrees: -12,
+      fovYDegrees: 58,
+      near: 0.2,
+      far: 700,
+    };
+    const viewer = await Forge3DViewer.create({} as HTMLCanvasElement, {
+      controls: false,
+      resize: false,
+      initialView,
+      onStatusChange: ({ previous, current }) =>
+        notifications.push({
+          kind: "status",
+          transition: `${previous}->${current}`,
+        }),
+      onError: (error) => notifications.push({ kind: "error", error }),
+    });
+    frames.flush();
+    viewer.resize({ width: 333, height: 177, devicePixelRatio: 2 });
+    const source = {
+      width: 2,
+      height: 2,
+      source: new ArrayBuffer(16),
+    };
+    await viewer.setTerrainFromSource(source);
+    frames.flush();
+    const committedCamera = first.cameras.at(-1);
+
+    const operationalLoss = new Forge3DError(
+      "DEVICE_LOST",
+      "render submission lost the device",
+    );
+    first.renderError = operationalLoss;
+    viewer.render();
+    frames.flush();
+    await vi.waitFor(() => expect(replacement.sourceCalls).toBe(1));
+    expect(viewer.status).toBe("recovering");
+    expect(creates).toBe(2);
+    expect(replacement.cameras).toEqual([committedCamera]);
+    expect(replacement.sizes).toEqual([
+      { width: 666, height: 354, devicePixelRatio: 1 },
+    ]);
+    expect(replacement.sources).toHaveLength(1);
+    expect(replacement.sources[0]?.source).toBe(source.source);
+    expect(replacement.sources[0]?.signal?.aborted).toBe(false);
+    expect(replacement.renderCalls).toBe(0);
+    expect(frames.pending).toBe(0);
+
+    releaseReplay();
+    await vi.waitFor(() => expect(viewer.status).toBe("ready"));
+    expect(viewer.getView()).toEqual(initialView);
+    const submittedBeforeRestoredFrame =
+      viewer.getDiagnostics().submittedFrames;
+    expect(replacement.renderCalls).toBe(0);
+    expect(frames.pending).toBe(1);
+    frames.flush();
+    expect(replacement.renderCalls).toBe(1);
+    expect(viewer.getDiagnostics().submittedFrames).toBe(
+      submittedBeforeRestoredFrame + 1,
+    );
+    expect(frames.pending).toBe(0);
+    expect(notifications).toEqual([
+      { kind: "status", transition: "initializing->ready" },
+      { kind: "error", error: operationalLoss },
+      { kind: "status", transition: "ready->recovering" },
+      { kind: "status", transition: "recovering->ready" },
+    ]);
+    viewer.dispose();
+  });
+
   it("ignores duplicate loss from the generation already being recovered", async () => {
     const first = new FakeRuntime();
     const replacement = new FakeRuntime();
@@ -1059,6 +1302,12 @@ describe("Forge3DViewer", () => {
       controls: false,
       resize: false,
     });
+    const committedTerrain = {
+      width: 3,
+      height: 2,
+      heights: new Float32Array([9, 7, 5, 3, 1, -1]),
+    };
+    viewer.setTerrain(committedTerrain);
     const source = {
       width: 2,
       height: 2,
@@ -1073,6 +1322,9 @@ describe("Forge3DViewer", () => {
     releaseSource();
     await expect(load).rejects.toMatchObject({ code: "REQUEST_CANCELLED" });
     await vi.waitFor(() => expect(viewer.status).toBe("ready"));
+    expect(first.sourceAbortCount).toBe(1);
+    expect(second.terrains).toHaveLength(1);
+    expect(second.terrains[0]).toEqual(committedTerrain);
     expect(second.sourceCalls).toBe(0);
   });
 
@@ -1107,6 +1359,121 @@ describe("Forge3DViewer", () => {
     expect(replacement.disposeCalls).toBe(1);
     expect(viewer.status).toBe("disposed");
     expect(viewer.getDiagnostics().activeRuntimes).toBe(0);
+  });
+
+  it("fails terminally when the post-ready replacement factory rejects", async () => {
+    const first = new FakeRuntime();
+    const canvas = new FakeViewerCanvas();
+    const frames = new FakeViewerAnimationFrames();
+    vi.stubGlobal("requestAnimationFrame", frames.request);
+    vi.stubGlobal("cancelAnimationFrame", frames.cancel);
+    let rejectReplacement!: (reason: unknown) => void;
+    const replacementCreation = new Promise<FakeRuntime>((_resolve, reject) => {
+      rejectReplacement = reject;
+    });
+    const notifications: ViewerNotification[] = [];
+    let creates = 0;
+    setViewerRuntimeFactoryForTests({
+      create: async () => {
+        creates += 1;
+        if (creates === 1) return first;
+        if (creates === 2) return replacementCreation;
+        throw new Error("unexpected recovery retry");
+      },
+    });
+    const viewer = await Forge3DViewer.create(
+      canvas as unknown as HTMLCanvasElement,
+      {
+        resize: false,
+        onStatusChange: ({ previous, current }) =>
+          notifications.push({
+            kind: "status",
+            transition: `${previous}->${current}`,
+          }),
+        onError: (error) =>
+          notifications.push({ kind: "error", error }),
+      },
+    );
+    frames.flush();
+    viewer.setView({
+      target: [8, -3, 2],
+      distance: 19,
+      yawDegrees: 117,
+      pitchDegrees: 31,
+      fovYDegrees: 49,
+      near: 0.4,
+      far: 1800,
+    });
+    viewer.render();
+    const pendingInvalidation = frames.pendingHandles[0];
+    expect(pendingInvalidation).toBeDefined();
+    const retainedView = viewer.getView();
+    const retainedCapabilities = viewer.getCapabilities();
+    const retainedDiagnostics = viewer.getDiagnostics();
+
+    const loss = new Forge3DError("DEVICE_LOST", "factory recovery trigger");
+    first.lose(loss);
+    expect(viewer.status).toBe("recovering");
+    expect(first.disposed).toBe(true);
+    expect(first.disposeCalls).toBe(1);
+    expect(frames.cancelled).toContain(pendingInvalidation);
+    expect(frames.pending).toBe(0);
+    expect(viewer.getDiagnostics().activeRuntimes).toBe(0);
+
+    rejectReplacement(new Error("replacement factory exploded"));
+    await vi.waitFor(() => expect(viewer.status).toBe("failed"));
+    expect(creates).toBe(2);
+    const terminalNotification = notifications[3];
+    expect(terminalNotification?.kind).toBe("error");
+    if (terminalNotification?.kind !== "error") {
+      throw new Error("missing terminal recovery error notification");
+    }
+    const terminal = terminalNotification.error;
+    expect(terminal).toMatchObject({
+      code: "DEVICE_LOST",
+      message: "Device recovery failed",
+    });
+    expect(terminal.details).toEqual({
+      loss,
+      cause: expect.objectContaining({
+        code: "INTERNAL_ERROR",
+        message: "replacement factory exploded",
+      }),
+    });
+    expect(captureThrown(() => viewer.render())).toBe(terminal);
+    expect(notifications).toEqual([
+      { kind: "status", transition: "initializing->ready" },
+      { kind: "error", error: loss },
+      { kind: "status", transition: "ready->recovering" },
+      { kind: "error", error: terminal },
+      { kind: "status", transition: "recovering->failed" },
+    ]);
+    expect(viewer.getView()).toEqual(retainedView);
+    expect(viewer.getCapabilities()).toEqual({
+      ...retainedCapabilities,
+      deviceState: "lost",
+    });
+    expect(viewer.getDiagnostics()).toEqual({
+      ...retainedDiagnostics,
+      recoveryAttempts: 1,
+      activeRuntimes: 0,
+      pendingAnimationFrame: false,
+    });
+    expect(retainedCapabilities.deviceState).toBe("ready");
+    expect(retainedDiagnostics.pendingAnimationFrame).toBe(true);
+    expect(frames.pending).toBe(0);
+    const failedDiagnostics = viewer.getDiagnostics();
+
+    viewer.dispose();
+    expect(viewer.status).toBe("disposed");
+    expect(viewer.getView()).toEqual(retainedView);
+    expect(viewer.getCapabilities().deviceState).toBe("lost");
+    expect(viewer.getDiagnostics()).toEqual({
+      ...failedDiagnostics,
+      activePointers: 0,
+      ownedListeners: 0,
+      activeObservers: 0,
+    });
   });
 
   it("queues replacement-generation loss and aborts recovery replay", async () => {
