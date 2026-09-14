@@ -19,9 +19,11 @@ class FakeRuntime {
   height = 64;
   renderCalls = 0;
   terrainCalls = 0;
+  readonly terrains: TerrainHeightmapInput[] = [];
   cameraCalls = 0;
   resizeCalls = 0;
   sourceCalls = 0;
+  readonly sources: TerrainHeightmapSourceInput[] = [];
   sourceAbortCount = 0;
   renderError: Forge3DError | undefined;
   cameraError: Forge3DError | undefined;
@@ -67,14 +69,17 @@ class FakeRuntime {
     this.lossHandler?.(new Forge3DError("DEVICE_LOST", "test loss"));
   }
 
-  setTerrain(_terrain: TerrainHeightmapInput): void {
+  setTerrain(terrain: TerrainHeightmapInput): void {
     this.terrainCalls += 1;
+    this.terrains.push(terrain);
   }
 
   async setTerrainFromSource(
     terrain: TerrainHeightmapSourceInput,
   ): Promise<void> {
     this.sourceCalls += 1;
+    this.sources.push(terrain);
+    terrain.onProgress?.({ loaded: 16, total: 16, done: true });
     if (this.sourceDeferred === undefined) {
       return;
     }
@@ -861,7 +866,7 @@ describe("Forge3DViewer", () => {
     );
   });
 
-  it("recreates once, replays committed state, and fails on a second loss", async () => {
+  it("reuses the latest viewer-owned direct terrain snapshot during recovery", async () => {
     const runtimes = [new FakeRuntime(), new FakeRuntime()];
     let index = 0;
     const errors: string[] = [];
@@ -880,23 +885,122 @@ describe("Forge3DViewer", () => {
         resize: false,
         onError: (error) => errors.push(error.code),
       });
-    viewer.setTerrain({
-      width: 2,
-      height: 2,
-      heights: new Float32Array([0, 1, 1, 0]),
-    });
+    const callerHeights = new Float32Array([2, 3, 5, 7]);
+    try {
+      viewer.setTerrain({
+        width: 2,
+        height: 2,
+        heights: new Float32Array([0, 1, 1, 0]),
+      });
+      viewer.setTerrain({ width: 2, height: 2, heights: callerHeights });
+      const committed = runtimes[0]?.terrains[1];
+      expect(committed?.heights).not.toBe(callerHeights);
+      expect(Array.from(committed?.heights ?? [])).toEqual([2, 3, 5, 7]);
+      callerHeights.fill(99);
 
-    runtimes[0]?.lose();
-    await vi.waitFor(() => expect(viewer.status).toBe("ready"));
-    expect(index).toBe(2);
-    expect(runtimes[1]?.terrainCalls).toBe(1);
-    expect(viewer.getDiagnostics().recoveryAttempts).toBe(1);
+      runtimes[0]?.lose();
+      await vi.waitFor(() => expect(viewer.status).toBe("ready"));
+      expect(index).toBe(2);
+      expect(runtimes[1]?.terrains).toHaveLength(1);
+      expect(runtimes[1]?.terrains[0]).toBe(committed);
+      expect(runtimes[1]?.terrains[0]?.heights).toBe(committed?.heights);
+      expect(Array.from(runtimes[1]?.terrains[0]?.heights ?? [])).toEqual([
+        2, 3, 5, 7,
+      ]);
+      expect(viewer.getDiagnostics().recoveryAttempts).toBe(1);
 
-    runtimes[1]?.lose();
-    expect(viewer.status).toBe("failed");
-    expect(errors).toEqual(["DEVICE_LOST", "DEVICE_LOST"]);
-    expect(viewer.getDiagnostics().activeRuntimes).toBe(0);
+      runtimes[1]?.lose();
+      expect(viewer.status).toBe("failed");
+      expect(errors).toEqual(["DEVICE_LOST", "DEVICE_LOST"]);
+      expect(viewer.getDiagnostics().activeRuntimes).toBe(0);
+    } finally {
+      viewer.dispose();
+    }
   });
+
+  const replayableSources: Array<{
+    name: string;
+    create: () => TerrainHeightmapSourceInput["source"];
+  }> = [
+    { name: "URL string", create: () => "https://example.test/terrain.bin" },
+    {
+      name: "URL object",
+      create: () => new URL("https://example.test/terrain.bin"),
+    },
+    { name: "Blob", create: () => new Blob([new Uint8Array(32)]) },
+    {
+      name: "File",
+      create: () => new File([new Uint8Array(32)], "terrain.bin"),
+    },
+    { name: "ArrayBuffer", create: () => new ArrayBuffer(32) },
+  ];
+
+  it.each(replayableSources)(
+    "replays the latest successful $name descriptor once without progress reuse",
+    async ({ create }) => {
+      const first = new FakeRuntime();
+      const replacement = new FakeRuntime();
+      const runtimes = [first, replacement];
+      let creates = 0;
+      setViewerRuntimeFactoryForTests({
+        create: async () => runtimes[creates++] as FakeRuntime,
+      });
+      const viewer = await Forge3DViewer.create({} as HTMLCanvasElement, {
+        controls: false,
+        resize: false,
+      });
+      const source = create();
+      const callerController = new AbortController();
+      const progressEvents: Array<{
+        loaded: number;
+        total?: number;
+        done: boolean;
+      }> = [];
+      try {
+        await viewer.setTerrainFromSource({
+          width: 1,
+          height: 4,
+          source: new ArrayBuffer(16),
+        });
+        await viewer.setTerrainFromSource({
+          width: 2,
+          height: 2,
+          source,
+          byteOffset: 8,
+          byteLength: 16,
+          signal: callerController.signal,
+          onProgress: (event) => progressEvents.push(event),
+        });
+        expect(progressEvents).toEqual([
+          { loaded: 16, total: 16, done: true },
+        ]);
+        const initialLatest = first.sources[1];
+        expect(initialLatest?.source).toBe(source);
+        expect(initialLatest?.signal?.aborted).toBe(false);
+        callerController.abort();
+
+        first.lose();
+        await vi.waitFor(() => expect(viewer.status).toBe("ready"));
+        expect(creates).toBe(2);
+        expect(replacement.sources).toHaveLength(1);
+        expect(replacement.sources[0]).toMatchObject({
+          width: 2,
+          height: 2,
+          byteOffset: 8,
+          byteLength: 16,
+        });
+        expect(replacement.sources[0]?.source).toBe(source);
+        expect(replacement.sources[0]?.onProgress).toBeUndefined();
+        expect(replacement.sources[0]?.signal).not.toBe(callerController.signal);
+        expect(replacement.sources[0]?.signal?.aborted).toBe(false);
+        expect(progressEvents).toEqual([
+          { loaded: 16, total: 16, done: true },
+        ]);
+      } finally {
+        viewer.dispose();
+      }
+    },
+  );
 
   it("ignores duplicate loss from the generation already being recovered", async () => {
     const first = new FakeRuntime();
