@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   Forge3DError,
   type Forge3DRuntimeCapabilities,
@@ -140,6 +140,12 @@ describe("Forge3DViewer", () => {
       "window",
       Object.assign(new EventTarget(), { devicePixelRatio: 1 }),
     );
+  });
+
+  afterEach(() => {
+    setViewerRuntimeFactoryForTests(undefined);
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
   });
 
   it("creates with viewer power semantics and coalesces invalidations", async () => {
@@ -603,7 +609,239 @@ describe("Forge3DViewer", () => {
     expect(changes).toEqual(["initializing->failed"]);
     expect(errors).toEqual(["INVALID_INPUT"]);
   });
+
+  for (const reporterMode of ["reportError", "setTimeout"] as const) {
+    describe(`throwing callbacks with ${reporterMode}`, () => {
+      it("preserves lifecycle transitions, terminal state, and cleanup", async () => {
+        const deferred = interceptCallbackErrors(reporterMode);
+        const runtime = new FakeRuntime();
+        const transitions: string[] = [];
+        const errors: Forge3DError[] = [];
+        const readyCallbackError = new Error("ready status callback");
+        const failedCallbackError = new Error("failed status callback");
+        const disposedCallbackError = new Error("disposed status callback");
+        const errorCallbackError = new Error("error callback");
+        const statusCallbackErrors = [
+          readyCallbackError,
+          failedCallbackError,
+          disposedCallbackError,
+        ];
+        let statusCallbackIndex = 0;
+
+        const viewer = await createViewer(runtime, {
+          recovery: { deviceLoss: "none" },
+          onStatusChange: ({ previous, current }) => {
+            transitions.push(`${previous}->${current}`);
+            throw statusCallbackErrors[statusCallbackIndex++];
+          },
+          onError: (error) => {
+            errors.push(error);
+            throw errorCallbackError;
+          },
+        });
+
+        expect(deferred.reported).toEqual([]);
+        viewer.render();
+        rafCallbacks.shift()?.(0);
+        expect(runtime.renderCalls).toBe(1);
+
+        runtime.lose();
+        expect(viewer.status).toBe("failed");
+        expect(viewer.disposed).toBe(false);
+        expect(errors).toHaveLength(1);
+        expect(captureThrown(() => viewer.render())).toBe(errors[0]);
+        expect(runtime.disposed).toBe(true);
+        expect(runtime.lossHandler).toBeUndefined();
+
+        viewer.dispose();
+        expect(viewer.status).toBe("disposed");
+        expect(viewer.disposed).toBe(true);
+        expect(viewer.getDiagnostics()).toMatchObject({
+          activePointers: 0,
+          ownedListeners: 0,
+          activeObservers: 0,
+          activeRuntimes: 0,
+          pendingAnimationFrame: false,
+        });
+        const deferredCount = deferred.pendingCount();
+        viewer.dispose();
+        expect(deferred.pendingCount()).toBe(deferredCount);
+        expect(transitions).toEqual([
+          "initializing->ready",
+          "ready->failed",
+          "failed->disposed",
+        ]);
+        deferred.assertAndDrain([
+          readyCallbackError,
+          errorCallbackError,
+          failedCallbackError,
+          disposedCallbackError,
+        ]);
+      });
+
+      it("preserves the original initialization failure and cleans the runtime", async () => {
+        const deferred = interceptCallbackErrors(reporterMode);
+        const runtime = new FakeRuntime();
+        const initializationError = new Forge3DError(
+          "INVALID_INPUT",
+          "camera initialization failed",
+        );
+        runtime.cameraError = initializationError;
+        let factoryCalls = 0;
+        setViewerRuntimeFactoryForTests({
+          create: async () => {
+            factoryCalls += 1;
+            return runtime;
+          },
+        });
+        const notifications: string[] = [];
+        const statusCallbackError = new Error("initialization status callback");
+        const errorCallbackError = new Error("initialization error callback");
+
+        const rejection = await captureRejection(
+          Forge3DViewer.create({} as HTMLCanvasElement, {
+            controls: false,
+            resize: false,
+            onStatusChange: ({ previous, current }) => {
+              notifications.push(`status:${previous}->${current}`);
+              throw statusCallbackError;
+            },
+            onError: (error) => {
+              notifications.push(`error:${error.code}`);
+              throw errorCallbackError;
+            },
+          }),
+        );
+
+        expect(rejection).toBe(initializationError);
+        expect(factoryCalls).toBe(1);
+        expect(notifications).toEqual([
+          "status:initializing->failed",
+          "error:INVALID_INPUT",
+        ]);
+        expect(runtime.disposed).toBe(true);
+        expect(runtime.lossHandler).toBeUndefined();
+        deferred.assertAndDrain([statusCallbackError, errorCallbackError]);
+      });
+
+      it("reports validation failure before creating a runtime", async () => {
+        const deferred = interceptCallbackErrors(reporterMode);
+        let factoryCalls = 0;
+        setViewerRuntimeFactoryForTests({
+          create: async () => {
+            factoryCalls += 1;
+            return new FakeRuntime();
+          },
+        });
+        const notifications: string[] = [];
+        const callbackErrors: Forge3DError[] = [];
+        const statusCallbackError = new Error("validation status callback");
+        const errorCallbackError = new Error("validation error callback");
+
+        const rejection = await captureRejection(
+          Forge3DViewer.create({} as HTMLCanvasElement, {
+            controls: false,
+            resize: false,
+            resources: { budget: { maxCanvasPixels: 0 } },
+            onStatusChange: ({ previous, current }) => {
+              notifications.push(`status:${previous}->${current}`);
+              throw statusCallbackError;
+            },
+            onError: (error) => {
+              callbackErrors.push(error);
+              notifications.push(`error:${error.code}`);
+              throw errorCallbackError;
+            },
+          }),
+        );
+
+        expect(factoryCalls).toBe(0);
+        expect(callbackErrors).toHaveLength(1);
+        expect(rejection).toBe(callbackErrors[0]);
+        expect(notifications).toEqual([
+          "status:initializing->failed",
+          "error:INVALID_INPUT",
+        ]);
+        deferred.assertAndDrain([statusCallbackError, errorCallbackError]);
+      });
+    });
+  }
 });
+
+function interceptCallbackErrors(mode: "reportError" | "setTimeout"): {
+  readonly reported: unknown[];
+  pendingCount(): number;
+  assertAndDrain(expected: unknown[]): void;
+} {
+  const reported: unknown[] = [];
+  const microtasks: Array<() => void> = [];
+  const timers: Array<{ callback: () => void; delay: number | undefined }> = [];
+  vi.stubGlobal("queueMicrotask", (callback: () => void) => {
+    microtasks.push(callback);
+  });
+  vi.stubGlobal(
+    "setTimeout",
+    (callback: () => void, delay?: number): number => {
+      timers.push({ callback, delay });
+      return timers.length;
+    },
+  );
+  vi.stubGlobal(
+    "reportError",
+    mode === "reportError"
+      ? (error: unknown) => {
+          reported.push(error);
+        }
+      : undefined,
+  );
+
+  return {
+    reported,
+    pendingCount: () => microtasks.length + timers.length,
+    assertAndDrain(expected) {
+      expect(reported).toEqual([]);
+      if (mode === "reportError") {
+        expect(timers).toEqual([]);
+        expect(microtasks).toHaveLength(expected.length);
+        for (const callback of microtasks) {
+          expect(callback()).toBeUndefined();
+        }
+        expect(reported).toHaveLength(expected.length);
+        reported.forEach((error, index) => {
+          expect(error).toBe(expected[index]);
+        });
+        return;
+      }
+      expect(microtasks).toEqual([]);
+      expect(timers.map(({ delay }) => delay)).toEqual(
+        expected.map(() => 0),
+      );
+      expect(timers).toHaveLength(expected.length);
+      timers.forEach(({ callback }, index) => {
+        expect(captureThrown(callback)).toBe(expected[index]);
+      });
+      expect(reported).toEqual([]);
+    },
+  };
+}
+
+function captureThrown(callback: () => void): unknown {
+  try {
+    callback();
+  } catch (error) {
+    return error;
+  }
+  throw new Error("Expected callback to throw");
+}
+
+async function captureRejection(promise: Promise<unknown>): Promise<unknown> {
+  try {
+    await promise;
+  } catch (error) {
+    return error;
+  }
+  throw new Error("Expected promise to reject");
+}
 
 async function createViewer(
   runtime: FakeRuntime,
