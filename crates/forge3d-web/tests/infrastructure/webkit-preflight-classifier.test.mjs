@@ -384,7 +384,7 @@ test("every Playwright spec uses the automatic shared WebGPU guard", () => {
   const specs = readdirSync(directory)
     .filter((name) => name.endsWith(".spec.ts"))
     .sort();
-  assert.equal(specs.length, 12);
+  assert.equal(specs.length, 13);
   for (const name of specs) {
     const text = readFileSync(join(directory, name), "utf8");
     assert.equal(

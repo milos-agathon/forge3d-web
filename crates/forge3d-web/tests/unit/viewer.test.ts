@@ -14,6 +14,7 @@ import {
 
 class FakeRuntime {
   disposed = false;
+  disposeCalls = 0;
   width = 64;
   height = 64;
   renderCalls = 0;
@@ -28,6 +29,8 @@ class FakeRuntime {
   renderSubmitted = true;
   screenshotError: Forge3DError | undefined;
   lossHandler: ((error: Forge3DError) => void) | undefined;
+  loseDuringRegistration = false;
+  loseAfterRegistrationMicrotask = false;
   readonly screenshotBlob = new Blob(["png"], { type: "image/png" });
   readonly sourceDeferred: Promise<void> | undefined;
 
@@ -48,6 +51,16 @@ class FakeRuntime {
     handler: ((error: Forge3DError) => void) | undefined,
   ): void {
     this.lossHandler = handler;
+    if (handler !== undefined && this.loseDuringRegistration) {
+      this.loseDuringRegistration = false;
+      handler(new Forge3DError("DEVICE_LOST", "synchronous registration loss"));
+    }
+    if (handler !== undefined && this.loseAfterRegistrationMicrotask) {
+      this.loseAfterRegistrationMicrotask = false;
+      queueMicrotask(() => {
+        handler(new Forge3DError("DEVICE_LOST", "microtask registration loss"));
+      });
+    }
   }
 
   lose(): void {
@@ -117,6 +130,10 @@ class FakeRuntime {
   }
 
   dispose(): void {
+    if (this.disposed) {
+      return;
+    }
+    this.disposeCalls += 1;
     this.disposed = true;
     this.lossHandler = undefined;
   }
@@ -562,6 +579,169 @@ describe("Forge3DViewer", () => {
     expect(viewer.getDiagnostics().skippedFrames).toBe(1);
   });
 
+  it("awaits synchronous startup loss and initializes only the replacement", async () => {
+    const first = new FakeRuntime();
+    first.loseDuringRegistration = true;
+    const replacement = new FakeRuntime();
+    let releaseReplacement!: () => void;
+    const replacementReady = new Promise<void>((resolve) => {
+      releaseReplacement = resolve;
+    });
+    const statuses: string[] = [];
+    const errors: string[] = [];
+    let creates = 0;
+    setViewerRuntimeFactoryForTests({
+      create: async () => {
+        creates += 1;
+        if (creates === 1) return first;
+        await replacementReady;
+        return replacement;
+      },
+    });
+
+    let settled = false;
+    const creation = Forge3DViewer.create({} as HTMLCanvasElement, {
+      controls: false,
+      resize: false,
+      onStatusChange: ({ previous, current }) =>
+        statuses.push(`${previous}->${current}`),
+      onError: (error) => errors.push(error.code),
+    });
+    void creation.finally(() => {
+      settled = true;
+    });
+
+    await vi.waitFor(() => expect(creates).toBe(2));
+    expect(settled).toBe(false);
+    expect(first.disposed).toBe(true);
+    expect(first.disposeCalls).toBe(1);
+    expect(first.cameraCalls).toBe(0);
+    expect(statuses).toEqual(["initializing->recovering"]);
+
+    releaseReplacement();
+    const viewer = await creation;
+    expect(viewer.status).toBe("ready");
+    expect(viewer.getDiagnostics()).toMatchObject({
+      generation: 2,
+      recoveryAttempts: 1,
+      activeRuntimes: 1,
+    });
+    expect(replacement.disposed).toBe(false);
+    expect(replacement.cameraCalls).toBeGreaterThan(0);
+    expect(errors).toEqual(["DEVICE_LOST"]);
+    expect(statuses).toEqual([
+      "initializing->recovering",
+      "recovering->ready",
+    ]);
+  });
+
+  it("awaits a microtask startup loss before operating on the runtime", async () => {
+    const first = new FakeRuntime();
+    first.loseAfterRegistrationMicrotask = true;
+    const replacement = new FakeRuntime();
+    let releaseReplacement!: () => void;
+    const replacementReady = new Promise<void>((resolve) => {
+      releaseReplacement = resolve;
+    });
+    const statuses: string[] = [];
+    let creates = 0;
+    setViewerRuntimeFactoryForTests({
+      create: async () => {
+        creates += 1;
+        if (creates === 1) return first;
+        await replacementReady;
+        return replacement;
+      },
+    });
+
+    let settled = false;
+    const creation = Forge3DViewer.create({} as HTMLCanvasElement, {
+      controls: false,
+      resize: false,
+      onStatusChange: ({ previous, current }) =>
+        statuses.push(`${previous}->${current}`),
+    });
+    void creation.finally(() => {
+      settled = true;
+    });
+
+    await vi.waitFor(() => expect(creates).toBe(2));
+    expect(settled).toBe(false);
+    expect(first.disposed).toBe(true);
+    expect(first.disposeCalls).toBe(1);
+    expect(first.cameraCalls).toBe(0);
+    expect(first.resizeCalls).toBe(0);
+    expect(first.terrainCalls).toBe(0);
+    expect(first.renderCalls).toBe(0);
+    expect(statuses).toEqual(["initializing->recovering"]);
+
+    releaseReplacement();
+    const viewer = await creation;
+    expect(viewer.status).toBe("ready");
+    expect(viewer.getDiagnostics()).toMatchObject({
+      generation: 2,
+      recoveryAttempts: 1,
+      activeRuntimes: 1,
+    });
+    expect(replacement.disposed).toBe(false);
+    expect(statuses).toEqual([
+      "initializing->recovering",
+      "recovering->ready",
+    ]);
+
+    viewer.dispose();
+    expect(viewer.getDiagnostics().activeRuntimes).toBe(0);
+    expect(replacement.disposeCalls).toBe(1);
+  });
+
+  it("rejects startup when the synchronous-loss replacement fails", async () => {
+    const first = new FakeRuntime();
+    first.loseDuringRegistration = true;
+    const replacement = new FakeRuntime();
+    replacement.cameraError = new Forge3DError(
+      "INVALID_INPUT",
+      "replacement initialization failed",
+    );
+    let releaseReplacement!: () => void;
+    const replacementReady = new Promise<void>((resolve) => {
+      releaseReplacement = resolve;
+    });
+    const statuses: string[] = [];
+    let creates = 0;
+    setViewerRuntimeFactoryForTests({
+      create: async () => {
+        creates += 1;
+        if (creates === 1) return first;
+        await replacementReady;
+        return replacement;
+      },
+    });
+
+    let settled = false;
+    const creation = Forge3DViewer.create({} as HTMLCanvasElement, {
+      controls: false,
+      resize: false,
+      onStatusChange: ({ previous, current }) =>
+        statuses.push(`${previous}->${current}`),
+    });
+    void creation.catch(() => {
+      settled = true;
+    });
+
+    await vi.waitFor(() => expect(creates).toBe(2));
+    expect(settled).toBe(false);
+    expect(statuses).toEqual(["initializing->recovering"]);
+    releaseReplacement();
+    await expect(creation).rejects.toMatchObject({ code: "DEVICE_LOST" });
+    expect(settled).toBe(true);
+    expect(first.disposeCalls).toBe(1);
+    expect(replacement.disposeCalls).toBe(1);
+    expect(statuses).toEqual([
+      "initializing->recovering",
+      "recovering->failed",
+    ]);
+  });
+
   it("routes operational device loss into recovery", async () => {
     const first = new FakeRuntime();
     first.renderError = new Forge3DError("DEVICE_LOST", "operational loss");
@@ -819,6 +999,8 @@ describe("Forge3DViewer", () => {
     viewer.dispose();
     releaseReplacement();
     await vi.waitFor(() => expect(replacement.disposed).toBe(true));
+    expect(first.disposeCalls).toBe(1);
+    expect(replacement.disposeCalls).toBe(1);
     expect(viewer.status).toBe("disposed");
     expect(viewer.getDiagnostics().activeRuntimes).toBe(0);
   });

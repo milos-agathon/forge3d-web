@@ -112,6 +112,7 @@ export class Forge3DViewer {
   #queuedDeviceLoss:
     | { generation: number; error: Forge3DError }
     | undefined;
+  #initializationComplete = false;
 
   private constructor(
     canvas: HTMLCanvasElement,
@@ -161,7 +162,24 @@ export class Forge3DViewer {
     try {
       viewer = new Forge3DViewer(canvas, options, runtimeFactory);
       await viewer.#initialize();
-      viewer.#transition("ready");
+      if (viewer.#status === "failed" || viewer.#status === "disposed") {
+        throw (
+          viewer.#terminalError ??
+          new Forge3DError(
+            viewer.#status === "disposed"
+              ? "RUNTIME_DISPOSED"
+              : "INTERNAL_ERROR",
+            `Viewer initialization ended in ${viewer.#status}`,
+          )
+        );
+      }
+      if (viewer.#recoveryPromise !== undefined) {
+        await viewer.#recoveryPromise;
+        viewer.#ownedRuntimeOrThrow();
+      }
+      if (viewer.#status === "initializing" || viewer.#status === "recovering") {
+        viewer.#transition("ready");
+      }
       viewer.#scheduler?.requestRender();
       return viewer;
     } catch (error) {
@@ -174,7 +192,7 @@ export class Forge3DViewer {
           }),
         );
         safeExternalCallback(() => options.onError?.(normalized));
-      } else {
+      } else if (viewer.#status !== "failed" && viewer.#status !== "disposed") {
         viewer.#terminalError = normalized;
         viewer.#transition("failed");
         viewer.#emitError(normalized);
@@ -376,8 +394,25 @@ export class Forge3DViewer {
   }
 
   async #initialize(): Promise<void> {
-    const runtime = await this.#createRuntime();
+    let runtime = await this.#createRuntime();
+    if (this.#recoveryPromise !== undefined) {
+      await this.#recoveryPromise;
+    }
+    runtime = this.#ownedRuntimeOrThrow();
+    const initializedGeneration = this.#generation;
     runtime.setCamera(this.#controller.getCamera());
+    if (
+      this.#runtime !== runtime ||
+      this.#generation !== initializedGeneration ||
+      this.#hasTerminalStatus() ||
+      this.#recoveryPromise !== undefined
+    ) {
+      const recovery = this.#recoveryPromise;
+      if (recovery !== undefined) {
+        await recovery;
+      }
+      runtime = this.#ownedRuntimeOrThrow();
+    }
 
     this.#scheduler = new RenderScheduler({
       submitFrame: () => {
@@ -458,20 +493,26 @@ export class Forge3DViewer {
         devicePixelRatio: 1,
       };
     }
+    this.#initializationComplete = true;
   }
 
   async #createRuntime(): Promise<ViewerRuntime> {
-    const generation = this.#generation + 1;
+    const previousGeneration = this.#generation;
+    const generation = previousGeneration + 1;
     const runtime = await this.#runtimeFactory.create(
       this.#canvas,
       this.#runtimeOptions,
     );
-    if (this.#status === "disposed") {
-      runtime.dispose();
-      throw new Forge3DError(
-        "RUNTIME_DISPOSED",
-        "Viewer was disposed during runtime creation",
+    if (this.#status === "disposed" || this.#status === "failed") {
+      if (!runtime.disposed) runtime.dispose();
+      throw this.#terminalError ?? new Forge3DError(
+        this.#status === "disposed" ? "RUNTIME_DISPOSED" : "INTERNAL_ERROR",
+        `Viewer was ${this.#status} during runtime creation`,
       );
+    }
+    if (this.#generation !== previousGeneration || this.#runtime !== undefined) {
+      if (!runtime.disposed) runtime.dispose();
+      return this.#ownedRuntimeOrThrow();
     }
     this.#runtime = runtime;
     this.#generation = generation;
@@ -480,7 +521,44 @@ export class Forge3DViewer {
     setViewerRuntimeDeviceLostHandler(runtime, (error) => {
       this.#onDeviceLost(generation, Forge3DError.from(error));
     });
+    if (
+      this.#runtime !== runtime ||
+      this.#generation !== generation ||
+      this.#hasTerminalStatus()
+    ) {
+      if (this.#runtime !== runtime && !runtime.disposed) runtime.dispose();
+      const recovery = this.#recoveryPromise;
+      if (recovery !== undefined) {
+        await recovery;
+        return this.#ownedRuntimeOrThrow();
+      }
+      return this.#ownedRuntimeOrThrow();
+    }
     return runtime;
+  }
+
+  #ownedRuntimeOrThrow(): ViewerRuntime {
+    if (this.#status === "disposed") {
+      throw new Forge3DError("RUNTIME_DISPOSED", "Viewer is disposed");
+    }
+    if (this.#status === "failed") {
+      throw this.#terminalError ?? new Forge3DError(
+        "INTERNAL_ERROR",
+        "Viewer is in a failed state",
+      );
+    }
+    const runtime = this.#runtime;
+    if (runtime === undefined || runtime.disposed) {
+      throw this.#terminalError ?? new Forge3DError(
+        "DEVICE_LOST",
+        "Viewer runtime ownership was lost during initialization",
+      );
+    }
+    return runtime;
+  }
+
+  #hasTerminalStatus(): boolean {
+    return this.#status === "disposed" || this.#status === "failed";
   }
 
   #onDeviceLost(generation: number, error: Forge3DError): void {
@@ -544,18 +622,31 @@ export class Forge3DViewer {
       const replacement = await this.#createRuntime();
       if (
         this.#status === "disposed" ||
-        lostGeneration + 1 !== this.#generation
+        this.#status === "failed" ||
+        lostGeneration + 1 !== this.#generation ||
+        this.#runtime !== replacement ||
+        recoveryController.signal.aborted
       ) {
-        replacement.dispose();
+        if (this.#runtime !== replacement && !replacement.disposed) {
+          replacement.dispose();
+        }
         if (this.#runtime === replacement) {
+          setViewerRuntimeDeviceLostHandler(replacement, undefined);
+          if (!replacement.disposed) replacement.dispose();
           this.#runtime = undefined;
           this.#activeRuntimes -= 1;
         }
         return;
       }
       replacement.setCamera(this.#controller.getCamera());
+      if (this.#runtime !== replacement || recoveryController.signal.aborted) {
+        return;
+      }
       if (this.#lastSize !== undefined) {
         replacement.resize(this.#lastSize);
+      }
+      if (this.#runtime !== replacement || recoveryController.signal.aborted) {
+        return;
       }
       if (this.#terrainReplay?.kind === "direct") {
         replacement.setTerrain(this.#terrainReplay.value);
@@ -569,17 +660,19 @@ export class Forge3DViewer {
         );
       }
       if (
-        this.disposed ||
-        this.#status === "failed" ||
+        this.#hasTerminalStatus() ||
+        this.#runtime !== replacement ||
         recoveryController.signal.aborted
       ) {
         return;
       }
       this.#terminalError = undefined;
-      this.#transition("ready");
-      this.#controls?.resume();
-      this.#scheduler?.resume();
-      this.#scheduler?.requestRender();
+      if (this.#initializationComplete) {
+        this.#transition("ready");
+        this.#controls?.resume();
+        this.#scheduler?.resume();
+        this.#scheduler?.requestRender();
+      }
     } catch (error) {
       if (
         recoveryController.signal.aborted &&

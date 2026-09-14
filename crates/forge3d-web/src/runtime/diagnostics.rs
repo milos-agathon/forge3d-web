@@ -96,7 +96,7 @@ pub(super) async fn simulate_shader_compilation_failure(
     if let Some(error) = scope.pop().await {
         return Err(WebError::new(
             Forge3DErrorCode::ShaderCompilationFailed,
-            format!("diagnostic shader compilation failed: {error}"),
+            format!("forge3d-web-diagnostic-invalid-shader/pipeline compilation failed: {error}"),
         ));
     }
     Err(WebError::new(
