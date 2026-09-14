@@ -1,10 +1,17 @@
 import { defineConfig } from "vite";
+import { fileURLToPath } from "node:url";
+import { dirname } from "node:path";
+
+import { realmFixturePlugin } from "./tests/browser/realm-fixture-server.mjs";
+
+const root = dirname(fileURLToPath(import.meta.url));
 
 let cancelledTerrainReaders = 0;
 let cancelledOversizedReaders = 0;
 
 export default defineConfig({
   plugins: [
+    realmFixturePlugin(root),
     {
       name: "forge3d-source-wasm-route",
       configureServer(server) {

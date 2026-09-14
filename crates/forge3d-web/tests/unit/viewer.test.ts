@@ -14,6 +14,7 @@ import {
 
 class FakeRuntime {
   disposed = false;
+  disposeCalls = 0;
   width = 64;
   height = 64;
   renderCalls = 0;
@@ -30,6 +31,8 @@ class FakeRuntime {
   renderSubmitted = true;
   screenshotError: Forge3DError | undefined;
   lossHandler: ((error: Forge3DError) => void) | undefined;
+  loseDuringRegistration = false;
+  loseAfterRegistrationMicrotask = false;
   readonly screenshotBlob = new Blob(["png"], { type: "image/png" });
   readonly sourceDeferred: Promise<void> | undefined;
 
@@ -50,6 +53,16 @@ class FakeRuntime {
     handler: ((error: Forge3DError) => void) | undefined,
   ): void {
     this.lossHandler = handler;
+    if (handler !== undefined && this.loseDuringRegistration) {
+      this.loseDuringRegistration = false;
+      handler(new Forge3DError("DEVICE_LOST", "synchronous registration loss"));
+    }
+    if (handler !== undefined && this.loseAfterRegistrationMicrotask) {
+      this.loseAfterRegistrationMicrotask = false;
+      queueMicrotask(() => {
+        handler(new Forge3DError("DEVICE_LOST", "microtask registration loss"));
+      });
+    }
   }
 
   lose(): void {
@@ -122,6 +135,10 @@ class FakeRuntime {
   }
 
   dispose(): void {
+    if (this.disposed) {
+      return;
+    }
+    this.disposeCalls += 1;
     this.disposed = true;
     this.lossHandler = undefined;
   }
@@ -180,6 +197,319 @@ describe("Forge3DViewer", () => {
     rafCallbacks.shift()?.(0);
     expect(runtimes[0]?.renderCalls).toBe(1);
     expect(viewer.getDiagnostics().submittedFrames).toBe(1);
+  });
+
+  it("coordinates authoritative resize measurements with BFCache restore", async () => {
+    const runtime = new FakeRuntime();
+    const canvas = new FakeViewerCanvas();
+    canvas.cssWidth = 320.5;
+    canvas.cssHeight = 180.25;
+    const frames = new FakeViewerAnimationFrames();
+    const observers = installViewerResizeObserver(true);
+    vi.stubGlobal("requestAnimationFrame", frames.request);
+    vi.stubGlobal("cancelAnimationFrame", frames.cancel);
+    vi.stubGlobal("devicePixelRatio", 1.5);
+    setViewerRuntimeFactoryForTests({ create: async () => runtime });
+
+    const viewer = await Forge3DViewer.create(
+      canvas as unknown as HTMLCanvasElement,
+      { controls: false },
+    );
+    expect(runtime.resizeCalls).toBe(1);
+    expect([runtime.width, runtime.height]).toEqual([480, 270]);
+    expect(frames.pending).toBe(1);
+    frames.flush();
+    expect(runtime.renderCalls).toBe(1);
+    expect(viewer.getDiagnostics().submittedFrames).toBe(1);
+    expect(frames.pending).toBe(0);
+    const observer = observers.instances[0];
+    expect(observer).toBeDefined();
+
+    let before = viewerEventCounts(viewer, runtime);
+    canvas.cssWidth = 321.5;
+    const bootstrapObserveCalls = observer?.observeCalls.length ?? 0;
+    window.dispatchEvent(new Event("resize"));
+    expectNoResizeOrFrame(viewer, runtime, frames, before);
+    expect(observer?.observeCalls).toHaveLength(bootstrapObserveCalls + 2);
+    observer?.deliver(canvas, 321.5, 180.25);
+    flushResizeTransition(viewer, runtime, frames, before, [482, 270]);
+
+    before = viewerEventCounts(viewer, runtime);
+    vi.stubGlobal("devicePixelRatio", 1);
+    canvas.cssWidth = 400;
+    canvas.cssHeight = 300;
+    window.dispatchEvent(new Event("resize"));
+    expectNoResizeOrFrame(viewer, runtime, frames, before);
+    observer?.deliver(canvas, 400, 300, 400, 300);
+    flushResizeTransition(viewer, runtime, frames, before, [400, 300]);
+
+    before = viewerEventCounts(viewer, runtime);
+    vi.stubGlobal("devicePixelRatio", 1.5);
+    const dprObserveCalls = observer?.observeCalls.length ?? 0;
+    window.dispatchEvent(new Event("resize"));
+    expectNoResizeOrFrame(viewer, runtime, frames, before);
+    expect(observer?.observeCalls).toHaveLength(dprObserveCalls + 2);
+    window.dispatchEvent(new Event("resize"));
+    expectNoResizeOrFrame(viewer, runtime, frames, before);
+    expect(observer?.observeCalls).toHaveLength(dprObserveCalls + 2);
+    observer?.deliver(canvas, 400, 300, 600, 450);
+    flushResizeTransition(viewer, runtime, frames, before, [600, 450]);
+
+    before = viewerEventCounts(viewer, runtime);
+    canvas.cssWidth = 300;
+    canvas.cssHeight = 400;
+    window.dispatchEvent(new Event("resize"));
+    expectNoResizeOrFrame(viewer, runtime, frames, before);
+    observer?.deliver(canvas, 300, 400, 450, 600);
+    flushResizeTransition(viewer, runtime, frames, before, [450, 600]);
+
+    before = viewerEventCounts(viewer, runtime);
+    canvas.cssWidth = 100.5;
+    canvas.cssHeight = 50.5;
+    observer?.deliver(canvas, 100.5, 50.5, 150, 75);
+    flushResizeTransition(viewer, runtime, frames, before, [149, 75]);
+
+    const authoritativeCalls = runtime.resizeCalls;
+    observer?.deliver(canvas, 100.5, 50.5, 150, 75);
+    window.dispatchEvent(new Event("resize"));
+    expect(runtime.resizeCalls).toBe(authoritativeCalls);
+    expect(frames.pending).toBe(0);
+
+    before = viewerEventCounts(viewer, runtime);
+    canvas.cssWidth = 101.5;
+    canvas.cssHeight = 51.5;
+    const reconcileObserveCalls = observer?.observeCalls.length ?? 0;
+    window.dispatchEvent(new Event("resize"));
+    expectNoResizeOrFrame(viewer, runtime, frames, before);
+    expect(observer?.observeCalls).toHaveLength(reconcileObserveCalls + 2);
+    window.dispatchEvent(new Event("resize"));
+    expectNoResizeOrFrame(viewer, runtime, frames, before);
+    expect(observer?.observeCalls).toHaveLength(reconcileObserveCalls + 2);
+    observer?.deliver(canvas, 101.5, 51.5, 152, 77);
+    flushResizeTransition(viewer, runtime, frames, before, [151, 77]);
+    const reconciled = viewerEventCounts(viewer, runtime);
+    observer?.deliver(canvas, 101.5, 51.5, 152, 77);
+    window.dispatchEvent(new Event("resize"));
+    expectNoResizeOrFrame(viewer, runtime, frames, reconciled);
+
+    before = viewerEventCounts(viewer, runtime);
+    canvas.cssWidth = 100.5;
+    canvas.cssHeight = 50.5;
+    observer?.deliver(canvas, 100.5, 50.5, 150, 75);
+    flushResizeTransition(viewer, runtime, frames, before, [149, 75]);
+
+    window.dispatchEvent(pageTransitionEvent("pagehide", true));
+    const resizeCalls = runtime.resizeCalls;
+    observer?.deliver(canvas, 101.5, 51.5, 152, 77);
+    window.dispatchEvent(new Event("resize"));
+    expect(runtime.resizeCalls).toBe(resizeCalls);
+    const observeCallsBeforeRestore = observer?.observeCalls.length ?? 0;
+    const disconnectsBeforeRestore = observer?.disconnectCalls ?? 0;
+    window.dispatchEvent(pageTransitionEvent("pageshow", true));
+
+    expect(runtime.resizeCalls).toBe(resizeCalls);
+    expect(frames.pending).toBe(0);
+    expect(observer?.disconnectCalls).toBe(disconnectsBeforeRestore + 1);
+    expect(observer?.observeCalls).toHaveLength(observeCallsBeforeRestore + 2);
+    expect(observer?.observeCalls.every(({ target }) => target === canvas)).toBe(
+      true,
+    );
+    expect(observer?.observeCalls.slice(-2).map(({ options }) => options?.box)).toEqual(
+      ["device-pixel-content-box", undefined],
+    );
+    observer?.deliver(canvas, 0, 0);
+    window.dispatchEvent(new Event("resize"));
+    expect(runtime.resizeCalls).toBe(resizeCalls);
+    expect(frames.pending).toBe(0);
+    const unchangedRestore = viewerEventCounts(viewer, runtime);
+    observer?.deliver(canvas, 100.5, 50.5, 150, 75);
+    expect(runtime.resizeCalls).toBe(unchangedRestore.resizeCalls + 1);
+    observer?.deliver(canvas, 100.5, 50.5, 150, 75);
+    flushResizeTransition(
+      viewer,
+      runtime,
+      frames,
+      unchangedRestore,
+      [149, 75],
+    );
+
+    window.dispatchEvent(pageTransitionEvent("pagehide", true));
+    canvas.cssWidth = 101.5;
+    canvas.cssHeight = 51.5;
+    observer?.deliver(canvas, 101.5, 51.5, 152, 77);
+    expect(runtime.resizeCalls).toBe(resizeCalls + 1);
+    const observeCallsBeforeChangedRestore =
+      observer?.observeCalls.length ?? 0;
+    window.dispatchEvent(pageTransitionEvent("pageshow", true));
+    expect(observer?.observeCalls).toHaveLength(
+      observeCallsBeforeChangedRestore + 2,
+    );
+    const changedRestore = viewerEventCounts(viewer, runtime);
+    observer?.deliver(canvas, 101.5, 51.5, 152, 77);
+    expect(runtime.resizeCalls).toBe(changedRestore.resizeCalls + 1);
+    observer?.deliver(canvas, 101.5, 51.5, 152, 77);
+    flushResizeTransition(viewer, runtime, frames, changedRestore, [151, 77]);
+
+    before = viewerEventCounts(viewer, runtime);
+    canvas.cssWidth = 120.5;
+    canvas.cssHeight = 60.5;
+    observer?.deliver(canvas, 120.5, 60.5);
+    flushResizeTransition(viewer, runtime, frames, before, [180, 90]);
+    const rawCalls = runtime.resizeCalls;
+    window.dispatchEvent(new Event("resize"));
+    expect(runtime.resizeCalls).toBe(rawCalls);
+    before = viewerEventCounts(viewer, runtime);
+    canvas.cssWidth = 121.5;
+    window.dispatchEvent(new Event("resize"));
+    expectNoResizeOrFrame(viewer, runtime, frames, before);
+    observer?.deliver(canvas, 121.5, 60.5);
+    flushResizeTransition(viewer, runtime, frames, before, [182, 90]);
+    before = viewerEventCounts(viewer, runtime);
+    vi.stubGlobal("devicePixelRatio", 1);
+    window.dispatchEvent(new Event("resize"));
+    expectNoResizeOrFrame(viewer, runtime, frames, before);
+    observer?.deliver(canvas, 121.5, 60.5);
+    flushResizeTransition(viewer, runtime, frames, before, [121, 60]);
+
+    before = viewerEventCounts(viewer, runtime);
+    canvas.cssWidth = 121.6;
+    canvas.cssHeight = 60.6;
+    window.dispatchEvent(new Event("resize"));
+    expectNoResizeOrFrame(viewer, runtime, frames, before);
+    viewer.render();
+    expect(frames.pending).toBe(0);
+    observer?.deliver(canvas, 121.6, 60.6);
+    expect(runtime.resizeCalls).toBe(before.resizeCalls);
+    expect(runtime.renderCalls).toBe(before.renderCalls);
+    expect(frames.pending).toBe(1);
+    frames.flush();
+    expect(runtime.renderCalls).toBe(before.renderCalls + 1);
+    expect(viewer.getDiagnostics().submittedFrames).toBe(
+      before.submittedFrames + 1,
+    );
+    expect(frames.pending).toBe(0);
+
+    const ordinary = viewerEventCounts(viewer, runtime);
+    window.dispatchEvent(pageTransitionEvent("pageshow", false));
+    expect(runtime.resizeCalls).toBe(ordinary.resizeCalls);
+    expect(frames.pending).toBe(1);
+    frames.flush();
+    expect(runtime.renderCalls).toBe(ordinary.renderCalls + 1);
+    expect(viewer.getDiagnostics().submittedFrames).toBe(
+      ordinary.submittedFrames + 1,
+    );
+    expect(frames.pending).toBe(0);
+
+    const ownership = viewer.getDiagnostics();
+    for (let cycle = 0; cycle < 3; cycle += 1) {
+      window.dispatchEvent(pageTransitionEvent("pagehide", true));
+      window.dispatchEvent(pageTransitionEvent("pageshow", true));
+      before = viewerEventCounts(viewer, runtime);
+      observer?.deliver(canvas, 121.6, 60.6);
+      flushResizeTransition(viewer, runtime, frames, before, [121, 60]);
+      expect(viewer.getDiagnostics()).toMatchObject({
+        ownedListeners: ownership.ownedListeners,
+        activeObservers: 1,
+      });
+    }
+    viewer.dispose();
+    expect(viewer.getDiagnostics()).toMatchObject({
+      ownedListeners: 0,
+      activeObservers: 0,
+      pendingAnimationFrame: false,
+    });
+    const disposedCalls = runtime.resizeCalls;
+    observer?.deliver(canvas, 200, 100, 200, 100);
+    window.dispatchEvent(new Event("resize"));
+    window.dispatchEvent(pageTransitionEvent("pageshow", true));
+    expect(runtime.resizeCalls).toBe(disposedCalls);
+    expect(frames.pending).toBe(0);
+  });
+
+  it("uses fresh rectangle fallback after persisted restore without an observer", async () => {
+    const runtime = new FakeRuntime();
+    const canvas = new FakeViewerCanvas();
+    const frames = new FakeViewerAnimationFrames();
+    vi.stubGlobal("ResizeObserver", undefined);
+    vi.stubGlobal("requestAnimationFrame", frames.request);
+    vi.stubGlobal("cancelAnimationFrame", frames.cancel);
+    vi.stubGlobal("devicePixelRatio", 1);
+    setViewerRuntimeFactoryForTests({ create: async () => runtime });
+    const viewer = await Forge3DViewer.create(
+      canvas as unknown as HTMLCanvasElement,
+      { controls: false },
+    );
+    frames.flush();
+
+    let before = viewerEventCounts(viewer, runtime);
+    window.dispatchEvent(pageTransitionEvent("pagehide", true));
+    canvas.cssWidth = 200;
+    canvas.cssHeight = 100;
+    window.dispatchEvent(pageTransitionEvent("pageshow", true));
+    flushResizeTransition(viewer, runtime, frames, before, [200, 100]);
+
+    window.dispatchEvent(pageTransitionEvent("pagehide", true));
+    canvas.cssWidth = 0;
+    canvas.cssHeight = 0;
+    const hiddenCalls = runtime.resizeCalls;
+    window.dispatchEvent(pageTransitionEvent("pageshow", true));
+    expect(runtime.resizeCalls).toBe(hiddenCalls);
+    expect(frames.pending).toBe(0);
+    window.dispatchEvent(new Event("resize"));
+    expect(runtime.resizeCalls).toBe(hiddenCalls);
+    canvas.cssWidth = 240;
+    canvas.cssHeight = 120;
+    before = viewerEventCounts(viewer, runtime);
+    window.dispatchEvent(new Event("resize"));
+    flushResizeTransition(viewer, runtime, frames, before, [240, 120]);
+    viewer.dispose();
+  });
+
+  it("coalesces control updates and cancels the exact hidden-page frame", async () => {
+    const runtime = new FakeRuntime();
+    const canvas = new FakeViewerCanvas();
+    const frames = new FakeViewerAnimationFrames();
+    vi.stubGlobal("requestAnimationFrame", frames.request);
+    vi.stubGlobal("cancelAnimationFrame", frames.cancel);
+    setViewerRuntimeFactoryForTests({ create: async () => runtime });
+    const viewer = await Forge3DViewer.create(
+      canvas as unknown as HTMLCanvasElement,
+      { resize: false },
+    );
+    frames.flush();
+    const initialView = viewer.getView();
+    const initialCameraCalls = runtime.cameraCalls;
+    const initialRenders = runtime.renderCalls;
+
+    canvas.dispatchEvent(pointerEvent("pointerdown", 1, 100, 100));
+    for (let index = 1; index <= 100; index += 1) {
+      canvas.dispatchEvent(pointerEvent("pointermove", 1, 100 + index, 100));
+    }
+    expect(viewer.getView()).not.toEqual(initialView);
+    expect(runtime.cameraCalls).toBe(initialCameraCalls + 100);
+    expect(runtime.renderCalls).toBe(initialRenders);
+    expect(frames.pending).toBe(1);
+    frames.flush();
+    expect(runtime.renderCalls).toBe(initialRenders + 1);
+
+    viewer.render();
+    const pendingHandle = frames.pendingHandles[0];
+    expect(pendingHandle).toBeDefined();
+    window.dispatchEvent(pageTransitionEvent("pagehide", true));
+    expect(frames.cancelled).toContain(pendingHandle);
+    expect(frames.pending).toBe(0);
+    viewer.render();
+    expect(frames.pending).toBe(0);
+    viewer.dispose();
+    window.dispatchEvent(pageTransitionEvent("pageshow", true));
+    canvas.dispatchEvent(pointerEvent("pointermove", 1, 250, 100));
+    expect(frames.pending).toBe(0);
+    expect(viewer.getDiagnostics()).toMatchObject({
+      activePointers: 0,
+      ownedListeners: 0,
+      activeObservers: 0,
+      pendingAnimationFrame: false,
+    });
   });
 
   it.each([
@@ -252,6 +582,169 @@ describe("Forge3DViewer", () => {
     rafCallbacks.shift()?.(0);
     expect(viewer.getDiagnostics().submittedFrames).toBe(0);
     expect(viewer.getDiagnostics().skippedFrames).toBe(1);
+  });
+
+  it("awaits synchronous startup loss and initializes only the replacement", async () => {
+    const first = new FakeRuntime();
+    first.loseDuringRegistration = true;
+    const replacement = new FakeRuntime();
+    let releaseReplacement!: () => void;
+    const replacementReady = new Promise<void>((resolve) => {
+      releaseReplacement = resolve;
+    });
+    const statuses: string[] = [];
+    const errors: string[] = [];
+    let creates = 0;
+    setViewerRuntimeFactoryForTests({
+      create: async () => {
+        creates += 1;
+        if (creates === 1) return first;
+        await replacementReady;
+        return replacement;
+      },
+    });
+
+    let settled = false;
+    const creation = Forge3DViewer.create({} as HTMLCanvasElement, {
+      controls: false,
+      resize: false,
+      onStatusChange: ({ previous, current }) =>
+        statuses.push(`${previous}->${current}`),
+      onError: (error) => errors.push(error.code),
+    });
+    void creation.finally(() => {
+      settled = true;
+    });
+
+    await vi.waitFor(() => expect(creates).toBe(2));
+    expect(settled).toBe(false);
+    expect(first.disposed).toBe(true);
+    expect(first.disposeCalls).toBe(1);
+    expect(first.cameraCalls).toBe(0);
+    expect(statuses).toEqual(["initializing->recovering"]);
+
+    releaseReplacement();
+    const viewer = await creation;
+    expect(viewer.status).toBe("ready");
+    expect(viewer.getDiagnostics()).toMatchObject({
+      generation: 2,
+      recoveryAttempts: 1,
+      activeRuntimes: 1,
+    });
+    expect(replacement.disposed).toBe(false);
+    expect(replacement.cameraCalls).toBeGreaterThan(0);
+    expect(errors).toEqual(["DEVICE_LOST"]);
+    expect(statuses).toEqual([
+      "initializing->recovering",
+      "recovering->ready",
+    ]);
+  });
+
+  it("awaits a microtask startup loss before operating on the runtime", async () => {
+    const first = new FakeRuntime();
+    first.loseAfterRegistrationMicrotask = true;
+    const replacement = new FakeRuntime();
+    let releaseReplacement!: () => void;
+    const replacementReady = new Promise<void>((resolve) => {
+      releaseReplacement = resolve;
+    });
+    const statuses: string[] = [];
+    let creates = 0;
+    setViewerRuntimeFactoryForTests({
+      create: async () => {
+        creates += 1;
+        if (creates === 1) return first;
+        await replacementReady;
+        return replacement;
+      },
+    });
+
+    let settled = false;
+    const creation = Forge3DViewer.create({} as HTMLCanvasElement, {
+      controls: false,
+      resize: false,
+      onStatusChange: ({ previous, current }) =>
+        statuses.push(`${previous}->${current}`),
+    });
+    void creation.finally(() => {
+      settled = true;
+    });
+
+    await vi.waitFor(() => expect(creates).toBe(2));
+    expect(settled).toBe(false);
+    expect(first.disposed).toBe(true);
+    expect(first.disposeCalls).toBe(1);
+    expect(first.cameraCalls).toBe(0);
+    expect(first.resizeCalls).toBe(0);
+    expect(first.terrainCalls).toBe(0);
+    expect(first.renderCalls).toBe(0);
+    expect(statuses).toEqual(["initializing->recovering"]);
+
+    releaseReplacement();
+    const viewer = await creation;
+    expect(viewer.status).toBe("ready");
+    expect(viewer.getDiagnostics()).toMatchObject({
+      generation: 2,
+      recoveryAttempts: 1,
+      activeRuntimes: 1,
+    });
+    expect(replacement.disposed).toBe(false);
+    expect(statuses).toEqual([
+      "initializing->recovering",
+      "recovering->ready",
+    ]);
+
+    viewer.dispose();
+    expect(viewer.getDiagnostics().activeRuntimes).toBe(0);
+    expect(replacement.disposeCalls).toBe(1);
+  });
+
+  it("rejects startup when the synchronous-loss replacement fails", async () => {
+    const first = new FakeRuntime();
+    first.loseDuringRegistration = true;
+    const replacement = new FakeRuntime();
+    replacement.cameraError = new Forge3DError(
+      "INVALID_INPUT",
+      "replacement initialization failed",
+    );
+    let releaseReplacement!: () => void;
+    const replacementReady = new Promise<void>((resolve) => {
+      releaseReplacement = resolve;
+    });
+    const statuses: string[] = [];
+    let creates = 0;
+    setViewerRuntimeFactoryForTests({
+      create: async () => {
+        creates += 1;
+        if (creates === 1) return first;
+        await replacementReady;
+        return replacement;
+      },
+    });
+
+    let settled = false;
+    const creation = Forge3DViewer.create({} as HTMLCanvasElement, {
+      controls: false,
+      resize: false,
+      onStatusChange: ({ previous, current }) =>
+        statuses.push(`${previous}->${current}`),
+    });
+    void creation.catch(() => {
+      settled = true;
+    });
+
+    await vi.waitFor(() => expect(creates).toBe(2));
+    expect(settled).toBe(false);
+    expect(statuses).toEqual(["initializing->recovering"]);
+    releaseReplacement();
+    await expect(creation).rejects.toMatchObject({ code: "DEVICE_LOST" });
+    expect(settled).toBe(true);
+    expect(first.disposeCalls).toBe(1);
+    expect(replacement.disposeCalls).toBe(1);
+    expect(statuses).toEqual([
+      "initializing->recovering",
+      "recovering->failed",
+    ]);
   });
 
   it("routes operational device loss into recovery", async () => {
@@ -610,6 +1103,8 @@ describe("Forge3DViewer", () => {
     viewer.dispose();
     releaseReplacement();
     await vi.waitFor(() => expect(replacement.disposed).toBe(true));
+    expect(first.disposeCalls).toBe(1);
+    expect(replacement.disposeCalls).toBe(1);
     expect(viewer.status).toBe("disposed");
     expect(viewer.getDiagnostics().activeRuntimes).toBe(0);
   });
@@ -1005,6 +1500,174 @@ class FakeViewerCanvas extends EventTarget {
       toJSON: () => ({}),
     };
   }
+}
+
+class FakeViewerAnimationFrames {
+  readonly #callbacks = new Map<number, FrameRequestCallback>();
+  readonly cancelled: number[] = [];
+  #nextHandle = 1;
+
+  readonly request = (callback: FrameRequestCallback): number => {
+    const handle = this.#nextHandle;
+    this.#nextHandle += 1;
+    this.#callbacks.set(handle, callback);
+    return handle;
+  };
+
+  readonly cancel = (handle: number): void => {
+    this.cancelled.push(handle);
+    this.#callbacks.delete(handle);
+  };
+
+  get pending(): number {
+    return this.#callbacks.size;
+  }
+
+  get pendingHandles(): number[] {
+    return [...this.#callbacks.keys()];
+  }
+
+  flush(): void {
+    const callbacks = [...this.#callbacks.values()];
+    this.#callbacks.clear();
+    for (const callback of callbacks) {
+      callback(0);
+    }
+  }
+}
+
+interface ViewerEventCounts {
+  resizeCalls: number;
+  renderCalls: number;
+  submittedFrames: number;
+}
+
+function viewerEventCounts(
+  viewer: Forge3DViewer,
+  runtime: FakeRuntime,
+): ViewerEventCounts {
+  return {
+    resizeCalls: runtime.resizeCalls,
+    renderCalls: runtime.renderCalls,
+    submittedFrames: viewer.getDiagnostics().submittedFrames,
+  };
+}
+
+function expectNoResizeOrFrame(
+  viewer: Forge3DViewer,
+  runtime: FakeRuntime,
+  frames: FakeViewerAnimationFrames,
+  before: ViewerEventCounts,
+): void {
+  expect(runtime.resizeCalls).toBe(before.resizeCalls);
+  expect(runtime.renderCalls).toBe(before.renderCalls);
+  expect(viewer.getDiagnostics().submittedFrames).toBe(before.submittedFrames);
+  expect(frames.pending).toBe(0);
+}
+
+function flushResizeTransition(
+  viewer: Forge3DViewer,
+  runtime: FakeRuntime,
+  frames: FakeViewerAnimationFrames,
+  before: ViewerEventCounts,
+  expectedSize: readonly [number, number],
+): void {
+  expect(runtime.resizeCalls).toBe(before.resizeCalls + 1);
+  expect([runtime.width, runtime.height]).toEqual(expectedSize);
+  expect(runtime.renderCalls).toBe(before.renderCalls);
+  expect(viewer.getDiagnostics().submittedFrames).toBe(before.submittedFrames);
+  expect(frames.pending).toBe(1);
+  frames.flush();
+  expect(runtime.renderCalls).toBe(before.renderCalls + 1);
+  expect(viewer.getDiagnostics().submittedFrames).toBe(
+    before.submittedFrames + 1,
+  );
+  expect(frames.pending).toBe(0);
+}
+
+class ControlledViewerResizeObserver {
+  readonly observeCalls: Array<{
+    target: Element;
+    options?: ResizeObserverOptions;
+  }> = [];
+  disconnectCalls = 0;
+
+  constructor(
+    readonly callback: ResizeObserverCallback,
+    readonly rejectDevicePixelBox: boolean,
+  ) {}
+
+  observe(target: Element, options?: ResizeObserverOptions): void {
+    this.observeCalls.push({ target, options });
+    if (this.rejectDevicePixelBox && options !== undefined) {
+      throw new TypeError("device-pixel-content-box is unavailable");
+    }
+  }
+
+  unobserve(): void {}
+
+  disconnect(): void {
+    this.disconnectCalls += 1;
+  }
+
+  deliver(
+    target: EventTarget,
+    cssWidth: number,
+    cssHeight: number,
+    devicePixelWidth?: number,
+    devicePixelHeight?: number,
+  ): void {
+    const entry = {
+      target,
+      contentRect: { width: cssWidth, height: cssHeight },
+      contentBoxSize: [{ inlineSize: cssWidth, blockSize: cssHeight }],
+      devicePixelContentBoxSize:
+        devicePixelWidth === undefined || devicePixelHeight === undefined
+          ? []
+          : [{ inlineSize: devicePixelWidth, blockSize: devicePixelHeight }],
+      borderBoxSize: [],
+    } as unknown as ResizeObserverEntry;
+    this.callback([entry], this as unknown as ResizeObserver);
+  }
+}
+
+function installViewerResizeObserver(rejectDevicePixelBox = false): {
+  instances: ControlledViewerResizeObserver[];
+} {
+  const instances: ControlledViewerResizeObserver[] = [];
+  vi.stubGlobal(
+    "ResizeObserver",
+    class {
+      readonly #delegate: ControlledViewerResizeObserver;
+
+      constructor(callback: ResizeObserverCallback) {
+        this.#delegate = new ControlledViewerResizeObserver(
+          callback,
+          rejectDevicePixelBox,
+        );
+        instances.push(this.#delegate);
+      }
+
+      observe(target: Element, options?: ResizeObserverOptions): void {
+        this.#delegate.observe(target, options);
+      }
+
+      unobserve(target: Element): void {
+        this.#delegate.unobserve(target);
+      }
+
+      disconnect(): void {
+        this.#delegate.disconnect();
+      }
+    },
+  );
+  return { instances };
+}
+
+function pageTransitionEvent(type: string, persisted: boolean): Event {
+  const event = new Event(type);
+  Object.defineProperty(event, "persisted", { value: persisted });
+  return event;
 }
 
 function pointerEvent(

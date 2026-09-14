@@ -17,6 +17,7 @@ use terrain::{
 
 use forge3d_core::gpu::{GpuContext, GpuRuntime, SurfaceState};
 use wasm_bindgen::prelude::*;
+use wasm_bindgen::JsCast;
 use web_sys::{Blob, HtmlCanvasElement};
 
 use crate::error::{to_js_error, Forge3DErrorCode, WebError};
@@ -211,6 +212,29 @@ impl Forge3DRuntime {
             });
             self.device_health_listener_id = Some(context.health.subscribe(listener));
         }
+    }
+
+    #[wasm_bindgen(js_name = registerDeviceLostCallback)]
+    pub fn register_device_lost_callback(
+        &mut self,
+        callback: js_sys::Function,
+    ) -> js_sys::Function {
+        self.set_device_lost_callback(Some(callback));
+        let Some(context) = self.context.as_ref() else {
+            return js_sys::Function::new_no_args("");
+        };
+        let Some(listener_id) = self.device_health_listener_id else {
+            return js_sys::Function::new_no_args("");
+        };
+        let health = context.health.clone();
+        let listener_id = std::rc::Rc::new(std::cell::Cell::new(Some(listener_id)));
+        let disposer_listener_id = listener_id.clone();
+        let disposer = Closure::wrap(Box::new(move || {
+            if let Some(listener_id) = disposer_listener_id.take() {
+                health.unsubscribe(listener_id);
+            }
+        }) as Box<dyn FnMut()>);
+        disposer.into_js_value().unchecked_into()
     }
 
     #[wasm_bindgen(js_name = simulateDeviceLossForTesting)]

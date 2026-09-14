@@ -94,8 +94,12 @@ describe("ResizeController", () => {
     expect(commits.at(-1)).toEqual({ width: 100, height: 50, devicePixelRatio: 1 });
     dpr = 2;
     windowTarget.dispatchEvent(new Event("resize"));
-    expect(commits.at(-1)).toEqual({ width: 200, height: 100, devicePixelRatio: 1 });
+    expect(commits).toHaveLength(1);
+    expect(controller.suspended).toBe(true);
     windowTarget.dispatchEvent(new Event("resize"));
+    expect(commits).toHaveLength(1);
+    observerHarness.deliver(canvas, 100, 50);
+    expect(commits.at(-1)).toEqual({ width: 200, height: 100, devicePixelRatio: 1 });
     expect(commits).toHaveLength(2);
 
     observerHarness.deliver(canvas, 0, 0);
@@ -104,6 +108,9 @@ describe("ResizeController", () => {
     canvas.widthCss = 50;
     canvas.heightCss = 100;
     windowTarget.dispatchEvent(new Event("pageshow"));
+    expect(controller.suspended).toBe(true);
+    expect(commits).toHaveLength(2);
+    observerHarness.deliver(canvas, 50, 100);
     expect(controller.suspended).toBe(false);
     expect(commits.at(-1)).toEqual({ width: 100, height: 200, devicePixelRatio: 1 });
 

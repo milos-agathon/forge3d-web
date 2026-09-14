@@ -3,6 +3,20 @@ import { OwnedDomResources } from "./viewer-controls.js";
 
 type DisposeResource = () => void;
 
+type MeasurementPhase = "none" | "hidden" | "awaiting-measurement";
+
+interface CanvasMeasurement {
+  cssWidth: number;
+  cssHeight: number;
+  devicePixelWidth?: number;
+  devicePixelHeight?: number;
+}
+
+interface RawMeasurement {
+  measurement: CanvasMeasurement;
+  devicePixelRatio: number;
+}
+
 export interface BackingSizeConstraints {
   cssWidth: number;
   cssHeight: number;
@@ -59,7 +73,11 @@ export class ResizeController {
   readonly #ownsResources: boolean;
   readonly #disposeListeners: DisposeResource[] = [];
   #disposeObserver: DisposeResource | undefined;
+  #observer: ResizeObserverLike | undefined;
   #lastSize: BackingSize | undefined;
+  #rawMeasurement: RawMeasurement | undefined;
+  #measurementPhase: MeasurementPhase = "none";
+  #bootstrapped = false;
   #suspended = true;
   #disposed = false;
 
@@ -89,20 +107,20 @@ export class ResizeController {
       options.observerFactory ?? defaultResizeObserverFactory();
     if (observerFactory !== undefined) {
       const observer = observerFactory((entries) => {
+        if (this.#disposed || this.#measurementPhase === "hidden") {
+          return;
+        }
         const entry = entries.find((candidate) => candidate.target === this.#canvas);
         if (entry === undefined) {
-          this.refresh();
+          if (this.#measurementPhase !== "awaiting-measurement") {
+            this.refresh();
+          }
         } else {
           this.#commitMeasurement(measureEntry(entry));
         }
       });
-      try {
-        observer.observe(this.#canvas, {
-          box: "device-pixel-content-box",
-        });
-      } catch {
-        observer.observe(this.#canvas);
-      }
+      this.#observer = observer;
+      this.#observeCanvas(observer);
       this.#disposeObserver = this.#resources.ownObserver(() =>
         observer.disconnect(),
       );
@@ -114,11 +132,23 @@ export class ResizeController {
     if (windowTarget !== undefined) {
       this.#disposeListeners.push(
         this.#resources.listen(windowTarget, "resize", () => this.refresh()),
-        this.#resources.listen(windowTarget, "pageshow", () => this.refresh()),
+        this.#resources.listen(windowTarget, "pagehide", (event) => {
+          if ((event as PageTransitionEvent).persisted === true) {
+            this.#beginPersistedHide();
+          }
+        }),
+        this.#resources.listen(windowTarget, "pageshow", (event) => {
+          if ((event as PageTransitionEvent).persisted === true) {
+            this.#restorePersistedPage();
+          } else {
+            this.refresh();
+          }
+        }),
       );
     }
 
     this.refresh();
+    this.#bootstrapped = true;
   }
 
   get suspended(): boolean {
@@ -145,14 +175,30 @@ export class ResizeController {
   }
 
   refresh(): void {
-    if (this.#disposed) {
+    if (this.#disposed || this.#measurementPhase !== "none") {
       return;
     }
     const rect = this.#canvas.getBoundingClientRect();
-    this.#commitMeasurement({
+    const measurement: CanvasMeasurement = {
       cssWidth: rect.width,
       cssHeight: rect.height,
-    });
+    };
+    const devicePixelRatio = this.#getDevicePixelRatio();
+    const cached = this.#rawMeasurement;
+    if (
+      cached !== undefined &&
+      cached.devicePixelRatio === devicePixelRatio &&
+      cached.measurement.cssWidth === measurement.cssWidth &&
+      cached.measurement.cssHeight === measurement.cssHeight
+    ) {
+      this.#commitMeasurement(cached.measurement, devicePixelRatio);
+      return;
+    }
+    if (this.#bootstrapped && this.#awaitObserverMeasurement()) {
+      return;
+    }
+    this.#rawMeasurement = undefined;
+    this.#commitMeasurement(measurement, devicePixelRatio, false);
   }
 
   dispose(): void {
@@ -162,26 +208,72 @@ export class ResizeController {
     this.#disposed = true;
     this.#disposeObserver?.();
     this.#disposeObserver = undefined;
+    this.#observer = undefined;
     for (const dispose of this.#disposeListeners.splice(0)) {
       dispose();
     }
     this.#lastSize = undefined;
+    this.#rawMeasurement = undefined;
+    this.#measurementPhase = "none";
+    this.#bootstrapped = false;
     this.#setSuspended(true);
     if (this.#ownsResources) {
       this.#resources.dispose();
     }
   }
 
-  #commitMeasurement(measurement: {
-    cssWidth: number;
-    cssHeight: number;
-    devicePixelWidth?: number;
-    devicePixelHeight?: number;
-  }): void {
-    if (this.#disposed) {
+  #beginPersistedHide(): void {
+    if (this.#disposed || this.#measurementPhase === "hidden") {
       return;
     }
-    const devicePixelRatio = this.#getDevicePixelRatio();
+    this.#lastSize = undefined;
+    this.#rawMeasurement = undefined;
+    this.#measurementPhase = "hidden";
+    this.#setSuspended(true);
+  }
+
+  #restorePersistedPage(): void {
+    if (this.#disposed || this.#measurementPhase !== "hidden") {
+      return;
+    }
+    if (this.#awaitObserverMeasurement()) {
+      return;
+    }
+    this.#measurementPhase = "none";
+    this.refresh();
+  }
+
+  #awaitObserverMeasurement(): boolean {
+    const observer = this.#observer;
+    if (observer === undefined) {
+      return false;
+    }
+    this.#rawMeasurement = undefined;
+    this.#measurementPhase = "awaiting-measurement";
+    this.#setSuspended(true);
+    observer.disconnect();
+    this.#observeCanvas(observer);
+    return true;
+  }
+
+  #observeCanvas(observer: ResizeObserverLike): void {
+    try {
+      observer.observe(this.#canvas, {
+        box: "device-pixel-content-box",
+      });
+    } catch {
+      observer.observe(this.#canvas);
+    }
+  }
+
+  #commitMeasurement(
+    measurement: CanvasMeasurement,
+    devicePixelRatio = this.#getDevicePixelRatio(),
+    retainRawMeasurement = true,
+  ): void {
+    if (this.#disposed || this.#measurementPhase === "hidden") {
+      return;
+    }
     const constraints: BackingSizeConstraints = {
       cssWidth: measurement.cssWidth,
       cssHeight: measurement.cssHeight,
@@ -201,12 +293,26 @@ export class ResizeController {
       this.#setSuspended(true);
       return;
     }
-    this.#setSuspended(false);
+    if (retainRawMeasurement) {
+      this.#rawMeasurement = {
+        measurement: { ...measurement },
+        devicePixelRatio,
+      };
+    }
+    const completesMeasurement =
+      this.#measurementPhase === "awaiting-measurement";
+    if (!completesMeasurement) {
+      this.#setSuspended(false);
+    }
     if (
       this.#lastSize?.width === next.width &&
       this.#lastSize.height === next.height
     ) {
       this.#lastSize = next;
+      if (completesMeasurement) {
+        this.#measurementPhase = "none";
+        this.#setSuspended(false);
+      }
       return;
     }
     this.#lastSize = next;
@@ -217,6 +323,10 @@ export class ResizeController {
       height: next.height,
       devicePixelRatio: 1,
     });
+    if (completesMeasurement) {
+      this.#measurementPhase = "none";
+      this.#setSuspended(false);
+    }
   }
 
   #setSuspended(suspended: boolean): void {
