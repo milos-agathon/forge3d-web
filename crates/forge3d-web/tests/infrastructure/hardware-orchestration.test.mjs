@@ -83,6 +83,24 @@ test("closed dispatch rules separate canary, browser, and manual lanes", () => {
   );
 });
 
+test("Chrome Beta probes are optional, asset-bound, and never required rows", () => {
+  const probe = validateHardwareDispatch({
+    lane: "chrome-beta-linux-intel12", assetId: "FW-LNX-I12-01", required: false,
+    trustedSha: sha, packageRunId: "10", labReadinessRunId: "20",
+  }, matrix);
+  assert.equal(probe.required, false);
+  assert.equal(probe.hostId, "FW-LNX-I12-01");
+  assert.throws(() => validateHardwareDispatch({
+    lane: "chrome-beta-linux-intel12", assetId: "FW-LNX-I12-01", required: true,
+    trustedSha: sha, packageRunId: "10", labReadinessRunId: "20",
+  }, matrix), /reject required:true/u);
+  assert.throws(() => validateHardwareDispatch({
+    lane: "chrome-beta-linux-intel12", assetId: "FW-LNX-NV-01", required: false,
+    trustedSha: sha, packageRunId: "10", labReadinessRunId: "20",
+  }, matrix), /not routed/u);
+  assert.equal(matrix.hosts.flatMap((host) => host.requiredBrowserLanes).some((lane) => lane.includes("beta")), false);
+});
+
 test("all mobile, trackpad, and desktop Safari work serialize on the Mac host", () => {
   for (const [lane, assetId] of [
     ["mobile-usb-controller", "FW-AND-QCOM-01"],

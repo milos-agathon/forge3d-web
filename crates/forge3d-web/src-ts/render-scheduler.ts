@@ -25,7 +25,7 @@ export class RenderScheduler {
   readonly #resources: OwnedDomResources;
   readonly #ownsResources: boolean;
   readonly #disposeListeners: DisposeResource[] = [];
-  #animationFrame: number | undefined;
+  readonly #animationFrames = new Set<number>();
   #dirty = false;
   #suspended = false;
   #documentHidden = false;
@@ -91,7 +91,11 @@ export class RenderScheduler {
   }
 
   get pendingAnimationFrame(): boolean {
-    return this.#animationFrame !== undefined;
+    return this.#animationFrames.size > 0;
+  }
+
+  get ownedAnimationFrameCount(): number {
+    return this.#animationFrames.size;
   }
 
   get dirty(): boolean {
@@ -153,16 +157,18 @@ export class RenderScheduler {
 
   #scheduleIfPossible(): void {
     if (
-      this.#animationFrame !== undefined ||
+      this.#animationFrames.size > 0 ||
       !this.#dirty ||
       !this.#isRunnable()
     ) {
       return;
     }
-    this.#animationFrame = this.#requestAnimationFrame(() => {
-      this.#animationFrame = undefined;
+    let handle = 0;
+    handle = this.#requestAnimationFrame(() => {
+      this.#animationFrames.delete(handle);
       this.#submitIfPossible();
     });
+    this.#animationFrames.add(handle);
   }
 
   #submitIfPossible(): void {
@@ -194,12 +200,13 @@ export class RenderScheduler {
   }
 
   #cancelPendingFrame(): void {
-    if (this.#animationFrame === undefined) {
+    if (this.#animationFrames.size === 0) {
       return;
     }
-    const handle = this.#animationFrame;
-    this.#animationFrame = undefined;
-    this.#cancelAnimationFrame(handle);
+    for (const handle of this.#animationFrames) {
+      this.#cancelAnimationFrame(handle);
+    }
+    this.#animationFrames.clear();
   }
 }
 

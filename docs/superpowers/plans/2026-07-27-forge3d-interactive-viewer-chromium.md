@@ -164,6 +164,29 @@ the support matrix.
 - Intel Mac and AMD/Linux remain documented `NOT_PROVEN` until exact assets meet
   the same gate.
 
+**Source evidence ledger (2026-09-14)**
+
+- Source status: `CODE_COMPLETE` as an uncommitted local implementation based
+  on exact baseline `814a46db6228eaa2e5ac7a5302b1bd17bacf3011`. The task-specific
+  validator negative suite passed 20/20, the focused integration suite passed
+  38/38 in the first review round and 30/30 in the second focused executable
+  round, typecheck passed, unit tests passed 117/117, `test:package` passed
+  including browser-harness 74/74 and infrastructure 519/519 with one existing
+  platform skip, and the production build passed. A local Playwright Chromium
+  loopback `page.evaluate` serialization smoke also passed; it is source
+  validation rather than physical acceptance evidence.
+- Acceptance status: `LAB_INFRA_BLOCKED`. No required physical Chrome row ran,
+  so macOS Apple Silicon, Linux Intel Gen12 Wayland, and Linux RTX 3070 Wayland
+  remain `NOT_PROVEN`. Chrome Beta remains an optional non-promoting probe.
+- Installed-tarball browser execution was attempted and stopped at the
+  unchanged clean-worktree/exact-HEAD provenance guard because this evidence
+  describes uncommitted source. The guard was not bypassed and no evidence was
+  manufactured.
+- Unrun gates: the three required physical stable-Chrome jobs, optional Beta
+  probes, retained artifact merge/promotion, and all hardware/CI-only matrices.
+  `make -C docs html` is unavailable because the repository docs directory has
+  no `html` target.
+
 ## CHR-04 — Add Branded Edge Acceptance
 
 **Priority:** P1 for Windows/macOS; P2 for Linux; physical execution is

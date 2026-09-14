@@ -9,6 +9,7 @@ import {
 } from "../../scripts/merge-browser-evidence.mjs";
 import { assertJsonSchema } from "../browser/json-schema-validator.mjs";
 import { exactHostInventory } from "./host-inventory-fixture.mjs";
+import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
 
 const matrix = JSON.parse(
   readFileSync(new URL("./hardware-matrix.json", import.meta.url), "utf8"),
@@ -103,7 +104,7 @@ const records = rows.map((row, index) => {
             presentedFrameLumaDelta: 0.7,
             lumaChanged: true,
           },
-          adapterAttestation: {
+        adapterAttestation: {
             result: "PASS",
             required: true,
             binding: {
@@ -126,6 +127,9 @@ const records = rows.map((row, index) => {
               headedSessionAvailable: true,
             },
           },
+          ...(row.lane.startsWith("chrome-") && row.lane !== "chrome-windows-intel12"
+            ? { chr03Proof: validChr03HardwareProof({ lane: row.lane, assetId: row.assetId, commit: targetSha, packageSha256 }) }
+            : {}),
         }),
   };
 });
@@ -223,6 +227,21 @@ test("prior head, other package, expired manual, missing, duplicate, and infra e
     ),
     records.map((record, index) =>
       index === 0 ? { ...record, adapterAttestation: null } : record,
+    ),
+    records.map((record) =>
+      record.lane === "chrome-linux-intel12"
+        ? { ...record, chr03Proof: null }
+        : record,
+    ),
+    records.map((record) =>
+      record.lane === "chrome-linux-rtx3070"
+        ? { ...record, chr03Proof: { ...record.chr03Proof, behaviors: { ...record.chr03Proof.behaviors, orbit: false } } }
+        : record,
+    ),
+    records.map((record) =>
+      record.lane === "chrome-linux-rtx3070"
+        ? { ...record, chr03Proof: { ...record.chr03Proof, systemInfo: { ...record.chr03Proof.systemInfo, available: "false" } } }
+        : record,
     ),
     records.map((record, index) =>
       index === 0

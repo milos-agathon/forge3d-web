@@ -33,6 +33,7 @@ for (const expected of [
   "export interface ViewerResourceOptions",
   "export interface ViewerCapabilities",
   "export interface ViewerDiagnostics",
+  "ownedAnimationFrameCount: number",
   "export interface ViewerStatusChange",
   "export interface Forge3DViewerOptions",
   "controls?: false | OrbitControlsOptions",
@@ -164,6 +165,7 @@ for (const expected of [
   "ownedListeners",
   "activeObservers",
   "pendingAnimationFrame",
+  "ownedAnimationFrameCount",
   "activeRuntimes"
 ]) {
   assertIncludes(docs, expected, `browser API docs missing: ${expected}`);

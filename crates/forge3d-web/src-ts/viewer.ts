@@ -234,6 +234,7 @@ export class Forge3DViewer {
       activeObservers: this.#resources.activeObservers,
       activeRuntimes: this.#activeRuntimes,
       pendingAnimationFrame: scheduler?.pendingAnimationFrame ?? false,
+      ownedAnimationFrameCount: scheduler?.ownedAnimationFrameCount ?? 0,
       recoveryAttempts: this.#recoveryAttempts,
       screenshotInFlight: this.#screenshotPromise !== undefined,
       effectiveResourceBudget: { ...this.#budget },

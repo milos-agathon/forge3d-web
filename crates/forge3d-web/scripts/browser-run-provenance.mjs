@@ -3,6 +3,7 @@ import { isLiveChromiumLaunchArgumentSource } from "./browser-launch-provenance.
 
 const browserInventoryIds = {
   chrome: "chrome-stable",
+  "chrome-beta": "chrome-beta",
   msedge: "edge-stable",
   safari: "safari-stable",
   firefox: "firefox-release",

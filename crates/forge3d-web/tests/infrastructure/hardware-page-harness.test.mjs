@@ -36,10 +36,46 @@ copyFileSync(
   join(packageRoot, "tests", "browser", "hardware-page-harness.js"),
   join(temporaryRoot, "hardware-page-harness.js"),
 );
-const { verifyBrowserRoute } = await import(
+copyFileSync(
+  join(packageRoot, "tests", "browser", "viewer-benchmark-browser.js"),
+  join(temporaryRoot, "viewer-benchmark-browser.js"),
+);
+copyFileSync(
+  join(packageRoot, "scripts", "chr03-lanes.mjs"),
+  join(temporaryRoot, "chr03-lanes.js"),
+);
+const { verifyBrowserRoute, runRenderedLifecycleCycles } = await import(
   pathToFileURL(join(temporaryRoot, "hardware-page-harness.js")).href
 );
 after(() => rmSync(temporaryRoot, { recursive: true, force: true }));
+
+test("all 50 lifecycle viewers wait for their own deferred submitted frame", async () => {
+  const viewers = [];
+  let current;
+  const fixture = { create: async () => {
+    const state = { submittedFrames: 0, disposed: false };
+    const viewer = {
+      getDiagnostics: () => state.disposed
+        ? { submittedFrames: state.submittedFrames, ownedListeners: 0, activeObservers: 0, activePointers: 0, activeRuntimes: 0, pendingAnimationFrame: false, ownedAnimationFrameCount: 0 }
+        : { submittedFrames: state.submittedFrames, ownedListeners: 3, activeObservers: 0, activePointers: 0, activeRuntimes: 1, pendingAnimationFrame: state.submittedFrames === 0, ownedAnimationFrameCount: state.submittedFrames === 0 ? 1 : 0 },
+      dispose: () => { state.disposed = true; }, state,
+    };
+    viewers.push(viewer); current = viewer; return viewer;
+  } };
+  const cycles = await runRenderedLifecycleCycles({ fixture, binding: { runId: 1, jobId: 2 },
+    nextFrame: async () => { current.state.submittedFrames = 1; }, createIdentity: (index) => `viewer-${index}` });
+  assert.equal(cycles.length, 50);
+  assert.equal(viewers.length, 50);
+  assert.equal(viewers.every((viewer) => viewer.state.submittedFrames === 1 && viewer.state.disposed), true);
+});
+
+test("lifecycle viewer timeout fails and disposes the unrendered runtime", async () => {
+  let disposed = false;
+  const viewer = { getDiagnostics: () => ({ submittedFrames: 0 }), dispose: () => { disposed = true; } };
+  await assert.rejects(runRenderedLifecycleCycles({ fixture: { create: async () => viewer }, binding: { runId: 1, jobId: 2 },
+    nextFrame: async () => undefined, createIdentity: () => "unused" }), /lifecycle cycle 1 did not submit a frame/u);
+  assert.equal(disposed, true);
+});
 
 const packageSha256 = "a".repeat(64);
 const applicationUrl =

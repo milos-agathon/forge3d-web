@@ -426,6 +426,7 @@ describe("Forge3DViewer", () => {
       ownedListeners: 0,
       activeObservers: 0,
       pendingAnimationFrame: false,
+      ownedAnimationFrameCount: 0,
     });
     const disposedCalls = runtime.resizeCalls;
     observer?.deliver(canvas, 200, 100, 200, 100);
@@ -518,6 +519,7 @@ describe("Forge3DViewer", () => {
       ownedListeners: 0,
       activeObservers: 0,
       pendingAnimationFrame: false,
+      ownedAnimationFrameCount: 0,
     });
   });
 
@@ -1063,6 +1065,7 @@ describe("Forge3DViewer", () => {
       activePointers: 0,
       activeRuntimes: 0,
       pendingAnimationFrame: false,
+      ownedAnimationFrameCount: 0,
     });
     expect(retainedCapabilities.deviceState).toBe("ready");
     expect(retainedDiagnostics.activeRuntimes).toBe(1);
@@ -1458,6 +1461,7 @@ describe("Forge3DViewer", () => {
       recoveryAttempts: 1,
       activeRuntimes: 0,
       pendingAnimationFrame: false,
+      ownedAnimationFrameCount: 0,
     });
     expect(retainedCapabilities.deviceState).toBe("ready");
     expect(retainedDiagnostics.pendingAnimationFrame).toBe(true);

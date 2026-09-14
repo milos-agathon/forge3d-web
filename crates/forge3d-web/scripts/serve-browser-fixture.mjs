@@ -15,6 +15,14 @@ const applicationRoutes = new Map([
     { file: "hardware-page-harness.js", contentType: "text/javascript; charset=utf-8" },
   ],
   [
+    "viewer-benchmark-browser.js",
+    { file: "viewer-benchmark-browser.js", contentType: "text/javascript; charset=utf-8" },
+  ],
+  [
+    "chr03-lanes.js",
+    { file: "chr03-lanes.js", contentType: "text/javascript; charset=utf-8" },
+  ],
+  [
     "package.sha256",
     { file: "package.sha256", contentType: "text/plain; charset=utf-8" },
   ],

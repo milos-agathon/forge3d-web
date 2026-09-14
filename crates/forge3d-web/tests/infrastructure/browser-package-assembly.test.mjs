@@ -9,6 +9,7 @@ import {
 import { execFileSync } from "node:child_process";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { pathToFileURL } from "node:url";
 import test, { afterEach } from "node:test";
 import { createHash } from "node:crypto";
 
@@ -17,6 +18,7 @@ import {
   assertNoWorkspaceDependencies,
   createTarGz,
 } from "../../scripts/assemble-browser-package-artifact.mjs";
+import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
 
 const temporaryRoots = [];
 afterEach(() => {
@@ -25,7 +27,7 @@ afterEach(() => {
   }
 });
 
-test("assembly binds one tarball, clean exact HEAD, evidence, schemas, and fixture", () => {
+test("assembly binds one tarball, clean exact HEAD, evidence, schemas, and fixture", async () => {
   const root = temporaryRoot();
   const repository = join(root, "repository");
   const evidence = join(repository, "ignored", "evidence");
@@ -100,6 +102,7 @@ test("assembly binds one tarball, clean exact HEAD, evidence, schemas, and fixtu
     "consumer-fixture.tar.gz",
     "browser-evidence.schema.json",
     "adapter-attestation.schema.json",
+    "chr03-hardware-proof.schema.json",
     "host-inventory.schema.json",
     "mobile-device-route-readiness.schema.json",
     "commit-metadata.json",
@@ -111,6 +114,10 @@ test("assembly binds one tarball, clean exact HEAD, evidence, schemas, and fixtu
     "browser-launch-provenance.mjs",
     "browser-run-provenance.mjs",
     "browser-session-runtime.mjs",
+    "chrome-hardware-acceptance.mjs",
+    "chr03-hardware-proof-validator.mjs",
+    "chr03-lanes.mjs",
+    "json-schema-validator.mjs",
     "browser-process-registry.mjs",
     "capture-trackpad-inventory.mjs",
     "webdriver-client.mjs",
@@ -127,6 +134,13 @@ test("assembly binds one tarball, clean exact HEAD, evidence, schemas, and fixtu
     assert.equal(manifest.files.some((entry) => entry.name === name), name !== "browser-package-manifest.json");
     assert.doesNotThrow(() => readFileSync(join(output, name)));
   }
+  const sessionModule = await import(pathToFileURL(join(output, "browser-session-runtime.mjs")).href);
+  assert.equal(typeof sessionModule.openProductionSession, "function");
+  const proofModule = await import(pathToFileURL(join(output, "chr03-hardware-proof-validator.mjs")).href);
+  const proof = validChr03HardwareProof();
+  assert.equal(proofModule.validateChr03HardwareProofContract(proof), proof);
+  proof.systemInfo.available = "false";
+  assert.throws(() => proofModule.validateChr03HardwareProofContract(proof), /expected type boolean/u);
 });
 
 test("assembly dependency guard rejects file, link, and workspace protocols", () => {

@@ -14,7 +14,7 @@ const infrastructureTestRunner = readText(
   join(packageRoot, "scripts", "run-infrastructure-tests.mjs"),
 );
 const benchmarkHarness = readText(
-  join(packageRoot, "tests", "browser", "viewer-benchmark.ts"),
+  join(packageRoot, "tests", "browser", "viewer-benchmark-browser.js"),
 );
 const interactionObservationHarness = readText(
   join(
@@ -104,7 +104,7 @@ assertThrows(
 
 assertIncludes(
   benchmarkHarness,
-  "viewer.setView(samples[index]);\n          index += 1;\n          requestAnimationFrame(apply);",
+  "viewer.setView(samples[index]);\n        index += 1;\n        requestAnimationFrame(apply);",
   "frozen benchmark v1 must apply each measured sample on consecutive harness RAF callbacks",
 );
 for (const forbidden of [

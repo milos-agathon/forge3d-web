@@ -9,10 +9,16 @@ const packageJson = readJson(join(root, "package.json"));
 const consumerHarness = readText(
   join(root, "scripts", "build-browser-test-package.mjs"),
 );
+const declarations = readText(join(root, "types", "index.d.ts"));
 
 assertEqual(packageJson.type, "module", "package must be ESM-only");
 assertEqual(packageJson.exports["."].import, "./dist/index.js", "package entrypoint must use dist/index.js");
 assertEqual(packageJson.exports["."].types, "./types/index.d.ts", "package entrypoint must use hand-authored types");
+assertEqual(
+  declarations.split("ownedAnimationFrameCount: number").length - 1,
+  1,
+  "shipped ViewerDiagnostics must expose exactly one owned RAF handle count",
+);
 assertEqual(packageJson.exports["./wasm"], "./dist/forge3d_web_bg.wasm", "wasm export must point at packaged dist asset");
 assertIncludes(packageJson.files, "dist", "package files must include dist");
 assertIncludes(packageJson.files, "docs", "package files must include docs");
@@ -84,6 +90,10 @@ for (const relative of [
   "tests/browser/viewer-interaction-observation.mjs",
   "tests/browser/viewer-visibility-lifecycle.mjs",
   "tests/browser/viewer-benchmark.ts",
+  "tests/browser/viewer-benchmark-browser.js",
+  "tests/browser/chr03-hardware-proof.schema.json",
+  "scripts/chrome-hardware-acceptance.mjs",
+  "scripts/chr03-hardware-proof-validator.mjs",
   "tests/browser/benchmark/benchmark-manifest-v1.json",
   "tests/browser/benchmark/benchmark-terrain-v1.f32le",
   "tests/browser/benchmark/benchmark-trace-v1.json"
@@ -92,6 +102,10 @@ for (const relative of [
 }
 
 const readme = readText(join(root, "README.md"));
+const supportMatrix = readText(join(root, "docs/support-matrix.md"));
+for (const expected of ["Chrome stable on Intel macOS", "Chrome stable on AMD/Linux", "P2, `NOT_PROVEN`"]) {
+  assertIncludes(supportMatrix, expected, `support matrix missing CHR-03 boundary: ${expected}`);
+}
 for (const expected of [
   "## Browser Support",
   "## MIME, CORS, And Range Requirements",

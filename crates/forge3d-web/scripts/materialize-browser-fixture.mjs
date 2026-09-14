@@ -77,6 +77,8 @@ export function materializeBrowserFixture({
   for (const file of [
     "adapter-attestation.js",
     "hardware-page-harness.js",
+    "viewer-benchmark-browser.js",
+    "chr03-lanes.js",
   ]) {
     const source = join(root, "tests", "browser", file);
     const stats = lstatSync(source);
@@ -96,6 +98,7 @@ export function materializeBrowserFixture({
     applicationEntry: "index.html",
     wasm: "forge3d_web_bg.wasm",
     terrain: "terrain.bin",
+    benchmarkModule: "viewer-benchmark-browser.js",
   };
 }
 
