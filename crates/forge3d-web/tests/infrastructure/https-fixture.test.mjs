@@ -22,6 +22,8 @@ import { resolveFixtureResponse } from "../../scripts/serve-browser-fixture.mjs"
 const fixtureRoot = mkdtempSync(join(tmpdir(), "forge3d-https-fixture-"));
 writeFileSync(join(fixtureRoot, "index.html"), "<!doctype html>");
 writeFileSync(join(fixtureRoot, "app.js"), "export {};");
+writeFileSync(join(fixtureRoot, "viewer-benchmark-browser.js"), "export {};");
+writeFileSync(join(fixtureRoot, "chr03-lanes.js"), "export {};");
 writeFileSync(join(fixtureRoot, "package.sha256"), `${"c".repeat(64)}  package.tgz\n`);
 mkdirSync(
   join(fixtureRoot, "node_modules", "@forge3d", "web", "dist"),
@@ -185,6 +187,14 @@ test("application host, nonce path, MIME, cache, and method policy fail closed",
       "tests/browser/benchmark/benchmark-manifest-v1.json",
     ).headers["Content-Type"],
     "application/json; charset=utf-8",
+  );
+  assert.equal(
+    request("application", "viewer-benchmark-browser.js").headers["Content-Type"],
+    "text/javascript; charset=utf-8",
+  );
+  assert.equal(
+    request("application", "chr03-lanes.js").headers["Content-Type"],
+    "text/javascript; charset=utf-8",
   );
 });
 
@@ -400,7 +410,7 @@ test("materialized import map remains inside the nonce-bound base path", () => {
     join(root, "tests", "browser", "benchmark", "benchmark-terrain-v1.f32le"),
     Buffer.from([0, 1, 2, 3]),
   );
-  for (const file of ["adapter-attestation.js", "hardware-page-harness.js"]) {
+  for (const file of ["adapter-attestation.js", "hardware-page-harness.js", "viewer-benchmark-browser.js", "chr03-lanes.js"]) {
     writeFileSync(join(root, "tests", "browser", file), "export {};");
   }
   try {

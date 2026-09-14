@@ -36,10 +36,99 @@ copyFileSync(
   join(packageRoot, "tests", "browser", "hardware-page-harness.js"),
   join(temporaryRoot, "hardware-page-harness.js"),
 );
-const { isProductManualLane, verifyBrowserRoute } = await import(
+copyFileSync(
+  join(packageRoot, "tests", "browser", "viewer-benchmark-browser.js"),
+  join(temporaryRoot, "viewer-benchmark-browser.js"),
+);
+copyFileSync(
+  join(packageRoot, "scripts", "chr03-lanes.mjs"),
+  join(temporaryRoot, "chr03-lanes.js"),
+);
+const {
+  adapterBinding,
+  isProductManualLane,
+  runInitialViewerAssertions,
+  runRenderedLifecycleCycles,
+  verifyBrowserRoute,
+} = await import(
   pathToFileURL(join(temporaryRoot, "hardware-page-harness.js")).href
 );
 after(() => rmSync(temporaryRoot, { recursive: true, force: true }));
+
+test("manual viewer remains live for controller capture while automated and failed viewers dispose", async () => {
+  const makeViewer = ({ submittedFrames = 1 } = {}) => {
+    let disposed = false;
+    return {
+      status: "ready",
+      screenshot: async () => new Blob(["png"], { type: "image/png" }),
+      getDiagnostics: () => disposed
+        ? { submittedFrames, ownedListeners: 0, activeObservers: 0, activePointers: 0, activeRuntimes: 0, pendingAnimationFrame: false, ownedAnimationFrameCount: 0 }
+        : { submittedFrames, ownedListeners: 3, activeObservers: 1, activePointers: 0, activeRuntimes: 1, pendingAnimationFrame: false, ownedAnimationFrameCount: 0 },
+      dispose: () => { disposed = true; },
+      isDisposed: () => disposed,
+    };
+  };
+  const manual = makeViewer();
+  await runInitialViewerAssertions({ fixture: { create: async () => manual }, supportAssertions: false, retainViewer: true });
+  assert.equal(manual.isDisposed(), false);
+
+  const automated = makeViewer();
+  await runInitialViewerAssertions({ fixture: { create: async () => automated }, supportAssertions: true, retainViewer: false });
+  assert.equal(automated.isDisposed(), true);
+
+  const failed = makeViewer({ submittedFrames: 0 });
+  await assert.rejects(
+    runInitialViewerAssertions({ fixture: { create: async () => failed }, supportAssertions: true, retainViewer: false }),
+    /installed-package assertions failed/u,
+  );
+  assert.equal(failed.isDisposed(), true);
+});
+
+test("adapter attestation receives exactly the five-field binding schema", () => {
+  assert.deepEqual(adapterBinding({
+    lane: "chrome-linux-intel12",
+    runId: 10,
+    jobId: 20,
+    assetId: "FW-LNX-I12-01",
+    commit: "a".repeat(40),
+    packageSha256: "b".repeat(64),
+    expectedTester: "tester",
+  }), {
+    runId: 10,
+    jobId: 20,
+    assetId: "FW-LNX-I12-01",
+    commit: "a".repeat(40),
+    packageSha256: "b".repeat(64),
+  });
+});
+
+test("all 50 lifecycle viewers wait for their own deferred submitted frame", async () => {
+  const viewers = [];
+  let current;
+  const fixture = { create: async () => {
+    const state = { submittedFrames: 0, disposed: false };
+    const viewer = {
+      getDiagnostics: () => state.disposed
+        ? { submittedFrames: state.submittedFrames, ownedListeners: 0, activeObservers: 0, activePointers: 0, activeRuntimes: 0, pendingAnimationFrame: false, ownedAnimationFrameCount: 0 }
+        : { submittedFrames: state.submittedFrames, ownedListeners: 3, activeObservers: 0, activePointers: 0, activeRuntimes: 1, pendingAnimationFrame: state.submittedFrames === 0, ownedAnimationFrameCount: state.submittedFrames === 0 ? 1 : 0 },
+      dispose: () => { state.disposed = true; }, state,
+    };
+    viewers.push(viewer); current = viewer; return viewer;
+  } };
+  const cycles = await runRenderedLifecycleCycles({ fixture, binding: { runId: 1, jobId: 2 },
+    nextFrame: async () => { current.state.submittedFrames = 1; }, createIdentity: (index) => `viewer-${index}` });
+  assert.equal(cycles.length, 50);
+  assert.equal(viewers.length, 50);
+  assert.equal(viewers.every((viewer) => viewer.state.submittedFrames === 1 && viewer.state.disposed), true);
+});
+
+test("lifecycle viewer timeout fails and disposes the unrendered runtime", async () => {
+  let disposed = false;
+  const viewer = { getDiagnostics: () => ({ submittedFrames: 0 }), dispose: () => { disposed = true; } };
+  await assert.rejects(runRenderedLifecycleCycles({ fixture: { create: async () => viewer }, binding: { runId: 1, jobId: 2 },
+    nextFrame: async () => undefined, createIdentity: () => "unused" }), /lifecycle cycle 1 did not submit a frame/u);
+  assert.equal(disposed, true);
+});
 
 const packageSha256 = "a".repeat(64);
 const applicationUrl =

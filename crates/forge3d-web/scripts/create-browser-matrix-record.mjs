@@ -4,6 +4,10 @@ import { fileURLToPath } from "node:url";
 import { canonicalJson } from "./canonical-json.mjs";
 import { validateHostInventory } from "./capture-host-inventory.mjs";
 import { hasMeasuredLumaPresentation } from "./join-adapter-attestation.mjs";
+import { validateChr03HardwareProofContract as validateChr03HardwareProof } from "./chr03-hardware-proof-validator.mjs";
+import { CHR03_STABLE_LANES } from "./chr03-lanes.mjs";
+
+const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
 
 export function createAutomatedMatrixRecord({
   promotion,
@@ -20,6 +24,14 @@ export function createAutomatedMatrixRecord({
     promotion.labInfrastructureDigest,
   );
   assertRuntimeProvenance(evidence);
+  if (CHR03_REQUIRED_LANES.has(promotion.lane)) {
+    validateChr03HardwareProof(evidence.chr03Proof, {
+      lane: promotion.lane,
+      assetId: promotion.assetId,
+      commit: promotion.trustedSha,
+      packageSha256: evidence.packageSha256,
+    });
+  }
   const safariTrackpadRecord = promotion.lane === "safari-macos-m2";
   if (safariTrackpadRecord) {
     validateHostInventory(hostInventory, { matrix, requireTrackpad: true });
@@ -95,6 +107,7 @@ export function createAutomatedMatrixRecord({
     },
     adapter: evidence.adapter,
     adapterAttestation: attestation,
+    chr03Proof: evidence.chr03Proof ? structuredClone(evidence.chr03Proof) : null,
   };
 }
 

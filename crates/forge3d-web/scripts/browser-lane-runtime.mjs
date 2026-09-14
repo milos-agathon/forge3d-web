@@ -10,12 +10,19 @@ import { fileURLToPath } from "node:url";
 import { openProductionSession } from "./browser-session-runtime.mjs";
 import { validateBrowserRunProvenance } from "./browser-run-provenance.mjs";
 import { hasMeasuredLumaPresentation } from "./join-adapter-attestation.mjs";
+import { validateChr03HardwareProofContract as validateChr03HardwareProof } from "./chr03-hardware-proof-validator.mjs";
+import { CHR03_STABLE_LANES, isChr03Lane } from "./chr03-lanes.mjs";
+
+const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
 
 const DESKTOP_LANES = new Map([
   ["chrome-macos-m2", ["playwright-chrome", "chrome"]],
+  ["chrome-beta-macos-m2", ["playwright-chrome", "chrome-beta"]],
   ["chrome-windows-intel12", ["playwright-chrome", "chrome"]],
   ["chrome-linux-intel12", ["playwright-chrome", "chrome"]],
+  ["chrome-beta-linux-intel12", ["playwright-chrome", "chrome-beta"]],
   ["chrome-linux-rtx3070", ["playwright-chrome", "chrome"]],
+  ["chrome-beta-linux-rtx3070", ["playwright-chrome", "chrome-beta"]],
   ["edge-macos-m2", ["playwright-edge", "msedge"]],
   ["edge-windows-intel12", ["playwright-edge", "msedge"]],
   ["edge-linux-intel12", ["playwright-edge", "msedge"]],
@@ -125,17 +132,17 @@ export async function executeHardwareBrowserLane({
     appiumSessionModule,
     processRegistryPath,
   });
-  const provenance = validateBrowserRunProvenance({
-    runtime,
-    session,
-    inventory,
-    hostId,
-    platform,
-    browserPolicy,
-  });
   let pageResult;
   let captureWindow = null;
   try {
+    const provenance = validateBrowserRunProvenance({
+      runtime,
+      session,
+      inventory,
+      hostId,
+      platform,
+      browserPolicy,
+    });
     const record = await executeLaneContract({
       lane,
       driver: runtime.driver,
@@ -144,6 +151,7 @@ export async function executeHardwareBrowserLane({
         pageResult = await session.runPage({
           lane,
           binding: {
+            ...(isChr03Lane(lane) ? { lane: binding.lane } : {}),
             runId: binding.runId,
             jobId: binding.jobId,
             assetId: binding.assetId,
@@ -184,7 +192,17 @@ export async function executeHardwareBrowserLane({
         }
         return pageResult.adapter;
       },
-      assertions: async () => pageResult.assertions,
+      assertions: async () => {
+        if (CHR03_REQUIRED_LANES.has(lane)) {
+          validateChr03HardwareProof(pageResult.chr03Proof, {
+            lane,
+            assetId,
+            commit: binding.commit,
+            packageSha256: binding.packageSha256,
+          });
+        }
+        return pageResult.assertions;
+      },
       cleanup: async () => ({ ok: true }),
     });
     writeJson(outputPath, {
@@ -192,6 +210,7 @@ export async function executeHardwareBrowserLane({
       browser: session.browser,
       route,
       routeReadiness: pageResult.routeReadiness,
+      chr03Proof: pageResult.chr03Proof ?? null,
       headed: true,
       driver: provenance.driver,
       system: provenance.system,

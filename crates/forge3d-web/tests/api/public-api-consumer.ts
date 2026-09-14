@@ -205,6 +205,7 @@ async function compileViewerDeclarations(): Promise<void> {
   const view: OrbitView = viewer.getView();
   const capabilities: ViewerCapabilities = viewer.getCapabilities();
   const diagnostics: ViewerDiagnostics = viewer.getDiagnostics();
+  const ownedAnimationFrameCount: number = diagnostics.ownedAnimationFrameCount;
 
   viewer.setTerrain(terrain);
   const firstSourceLoad: Promise<void> =
@@ -239,6 +240,7 @@ async function compileViewerDeclarations(): Promise<void> {
     view,
     capabilities,
     diagnostics,
+    ownedAnimationFrameCount,
     screenshots,
     postDisposalStatus,
     postDisposalDisposed,

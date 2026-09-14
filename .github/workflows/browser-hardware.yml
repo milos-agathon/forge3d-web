@@ -10,6 +10,7 @@ on:
         options:
           - infrastructure-canary
           - chrome-macos-m2
+          - chrome-beta-macos-m2
           - edge-macos-m2
           - safari-macos-m2
           - firefox-macos-m2
@@ -18,8 +19,10 @@ on:
           - edge-windows-intel12
           - firefox-windows-intel12
           - chrome-linux-intel12
+          - chrome-beta-linux-intel12
           - edge-linux-intel12
           - chrome-linux-rtx3070
+          - chrome-beta-linux-rtx3070
           - edge-linux-rtx3070
           - manual-mobile-multitouch
           - manual-safari-trackpad

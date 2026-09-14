@@ -15,6 +15,8 @@ import {
   resolveInstalledAppiumDriverVersion,
 } from "./browser-launch-provenance.mjs";
 import { WebDriverClient } from "./webdriver-client.mjs";
+import { runChromeHardwareAcceptance } from "./chrome-hardware-acceptance.mjs";
+import { isChr03Lane } from "./chr03-lanes.mjs";
 
 export async function openProductionSession(request) {
   if (
@@ -73,26 +75,47 @@ async function openPlaywrightSession({ runtime, routeUrl, browserPolicy }) {
     headless: false,
     args: [],
   });
+  let context;
   try {
     const launch = await observeChromiumLaunch(browser);
-    const page = await browser.newPage();
+    context = await browser.newContext({ viewport: { width: 900, height: 700 } });
+    const page = await context.newPage();
     await page.goto(routeUrl, { waitUntil: "networkidle" });
     return {
       browser: {
-        name: runtime.browser,
-        channel: "stable",
+        name: runtime.browser === "chrome-beta" ? "chrome" : runtime.browser,
+        channel: runtime.browser === "chrome-beta" ? "beta" : "stable",
         version: browser.version(),
       },
       driverVersion,
       ...launch,
+      runPage: (payload) => ["chrome", "chrome-beta"].includes(runtime.browser) &&
+        isChr03Lane(payload.binding?.lane)
+        ? runChromeHardwareAcceptance(page, payload)
+        : runPlaywrightPage(page, payload),
       assertHealthy: createPlaywrightHealthObserver({ browser, page, routeUrl }),
-      runPage: (payload) => runPlaywrightPage(page, payload),
-      close: () => browser.close(),
+      close: () => closePlaywright(context, browser),
     };
   } catch (error) {
-    await browser.close();
+    await closePlaywright(context, browser).catch(() => undefined);
     throw error;
   }
+}
+
+export async function closePlaywright(context, browser) {
+  let contextError = null;
+  try {
+    await context?.close();
+  } catch (error) {
+    contextError = error;
+  }
+  try {
+    await browser.close();
+  } catch (browserError) {
+    if (contextError !== null) throw new AggregateError([contextError, browserError], "Playwright context and browser close failed");
+    throw browserError;
+  }
+  if (contextError !== null) throw contextError;
 }
 
 export function createPlaywrightHealthObserver({

@@ -17,6 +17,7 @@ import {
 import { cleanupBrowserHardware } from "../../scripts/cleanup-browser-hardware.mjs";
 import { createUpdateWindow } from "../../scripts/manage-browser-update-window.mjs";
 import { runBrowserLane } from "../hardware/run-browser-lane.mjs";
+import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
 
 const binding = {
   lane: "chrome-linux-rtx3070",
@@ -259,9 +260,10 @@ test("fallback adapter and unreviewed drivers fail closed while cleanup still ru
 test("production lane executor opens a headed browser and captures live page evidence", async () => {
   const directory = mkdtempSync(join(tmpdir(), "forge3d-browser-runtime-"));
   const calls = [];
+  let invalidProof = false;
   try {
     const outputPath = join(directory, "evidence.json");
-    await executeHardwareBrowserLane({
+    const request = {
       lane: binding.lane,
       assetId: binding.assetId,
       hostId: binding.assetId,
@@ -293,8 +295,19 @@ test("production lane executor opens a headed browser and captures live page evi
           launchArgumentsObserved: true,
           launchArgumentSource: "chromium-cdp-browser-command-line",
           browserProcessId: 501,
-          runPage: async () => {
+          runPage: async (payload) => {
             calls.push("page");
+            assert.equal(payload.binding.lane, binding.lane);
+            assert.deepEqual(Object.keys(payload.binding).sort(), [
+              "assetId", "commit", "jobId", "lane", "packageSha256", "runId",
+            ]);
+            const chr03Proof = validChr03HardwareProof({
+              lane: binding.lane,
+              assetId: binding.assetId,
+              commit: binding.trustedSha,
+              packageSha256: binding.packageSha256,
+            });
+            if (invalidProof) chr03Proof.systemInfo.available = "false";
             return {
               adapter,
               assertions: {
@@ -302,12 +315,14 @@ test("production lane executor opens a headed browser and captures live page evi
                 supportAssertionsExecuted: true,
               },
               watermark: null,
+              chr03Proof,
             };
           },
           close: async () => calls.push("close"),
         }),
       },
-    });
+    };
+    await executeHardwareBrowserLane(request);
     const record = JSON.parse(readFileSync(outputPath, "utf8"));
     assert.equal(record.result, "PASS");
     assert.equal(record.browser.version, "150.0.0.0");
@@ -316,9 +331,34 @@ test("production lane executor opens a headed browser and captures live page evi
     assert.equal(record.session.interactive, true);
     assert.equal(record.launchObservation.browserProcessId, 501);
     assert.deepEqual(calls, ["page", "close"]);
+    invalidProof = true;
+    await assert.rejects(executeHardwareBrowserLane({ ...request, outputPath: join(directory, "invalid.json") }), /expected type boolean/u);
+    assert.deepEqual(calls, ["page", "close", "page", "close"]);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
+});
+
+test("opened browser session closes when provenance validation rejects it", async () => {
+  let closed = 0;
+  await assert.rejects(() => executeHardwareBrowserLane({
+    lane: binding.lane, assetId: binding.assetId, hostId: binding.assetId,
+    platform: "linux", binding: { ...binding, commit: binding.trustedSha },
+    route: { applicationUrl: "https://example.invalid/run/" },
+    browserPolicy: { prohibitedLaunchArguments: [], tools: { playwright: "1.56.1" } },
+    deviceMatrix: { devices: [] }, inventory: { ...desktopInventory, headed: false },
+    outputPath: "/tmp/unused-chr03-evidence.json",
+    dependencies: {
+      now: () => new Date(), waitUntil: async () => undefined,
+      openSession: async () => ({
+        browser: { name: "chrome", channel: "stable", version: "150.0.0.0" },
+        driverVersion: "1.56.1", effectiveLaunchArguments: [], launchArgumentsObserved: true,
+        launchArgumentSource: "chromium-cdp-browser-command-line", runPage: async () => { throw new Error("must not run"); },
+        close: async () => { closed += 1; },
+      }),
+    },
+  }), /headed session/u);
+  assert.equal(closed, 1);
 });
 
 test("manual mobile runtime calls Appium class and retains the visible challenge window", async () => {

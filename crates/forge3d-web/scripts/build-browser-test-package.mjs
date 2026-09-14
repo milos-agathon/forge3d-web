@@ -137,6 +137,10 @@ try {
     );
   }
   const benchmarkModulePath = join(temporaryRoot, "viewer-benchmark.mjs");
+  copyFileSync(
+    join(packageRoot, "tests", "browser", "viewer-benchmark-browser.js"),
+    join(temporaryRoot, "viewer-benchmark-browser.js"),
+  );
   writeFileSync(
     benchmarkModulePath,
     ts.transpileModule(
@@ -248,6 +252,14 @@ try {
     copyFileSync(
       join(packageRoot, "tests", "browser", "hardware-page-harness.js"),
       join(retainedFixture, "tests", "browser", "hardware-page-harness.js"),
+    );
+    copyFileSync(
+      join(packageRoot, "tests", "browser", "viewer-benchmark-browser.js"),
+      join(retainedFixture, "tests", "browser", "viewer-benchmark-browser.js"),
+    );
+    copyFileSync(
+      join(packageRoot, "scripts", "chr03-lanes.mjs"),
+      join(retainedFixture, "tests", "browser", "chr03-lanes.js"),
     );
     copyFileSync(
       benchmarkModulePath,

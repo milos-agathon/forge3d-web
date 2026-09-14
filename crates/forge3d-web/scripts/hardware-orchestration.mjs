@@ -24,6 +24,11 @@ const manualLanes = new Set([
   "manual-mobile-multitouch",
   "manual-safari-trackpad",
 ]);
+const optionalChromeProbeHosts = new Map([
+  ["chrome-beta-macos-m2", "FW-MAC-M2-01"],
+  ["chrome-beta-linux-intel12", "FW-LNX-I12-01"],
+  ["chrome-beta-linux-rtx3070", "FW-LNX-NV-01"],
+]);
 
 export function validateHardwareDispatch(inputs, matrix) {
   const trustedSha = requireSha(inputs.trustedSha, "trusted_sha");
@@ -41,6 +46,7 @@ export function validateHardwareDispatch(inputs, matrix) {
   const productLanes = new Set(
     matrix.hosts.flatMap((candidate) => candidate.requiredBrowserLanes),
   );
+  for (const lane of optionalChromeProbeHosts.keys()) productLanes.add(lane);
   if (
     inputs.lane !== infrastructureLane &&
     !manualLanes.has(inputs.lane) &&
@@ -82,10 +88,12 @@ export function validateHardwareDispatch(inputs, matrix) {
     if (labReadinessRunId === null) {
       throw new Error("browser-family lane requires labReadinessRunId");
     }
-    if (
-      !host.requiredBrowserLanes.includes(inputs.lane) &&
-      inputs.lane !== "mobile-usb-controller"
-    ) {
+    const probeHost = optionalChromeProbeHosts.get(inputs.lane);
+    if (probeHost && required) {
+      throw new Error("Chrome Beta probe lanes reject required:true");
+    }
+    if ((!probeHost && !host.requiredBrowserLanes.includes(inputs.lane) && inputs.lane !== "mobile-usb-controller") ||
+        (probeHost && probeHost !== host.assetId)) {
       throw new Error(`${inputs.lane} is not routed to ${host.assetId}`);
     }
     mode = "automated";

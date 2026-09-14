@@ -9,7 +9,12 @@ surfaces, and deployment assumptions that application owners must satisfy.
 | Surface | MVP status | Notes |
 |---|---|---|
 | Chrome/Chromium on Windows | Required | Required source and exact-tarball configurations use unflagged branded Chrome. Hosted CI exercises the exact tarball in flagged bundled Chromium as `PROBE` when only a fallback adapter is available. Promotion still requires a branded, physical, non-fallback Windows run. |
-| Chrome/Chromium on macOS/Linux | Best effort | Expected to work when `navigator.gpu` is available, but not required for the MVP release gate. |
+| Chrome stable on Apple Silicon macOS | Required physical lane, `NOT_PROVEN` | CHR-03 requires the exact `FW-MAC-M2-01` asset and complete installed-package proof. The laboratory is currently unprovisioned, so no qualifying result exists. |
+| Chrome stable on Intel macOS | P2, `NOT_PROVEN` | No exact Intel Mac asset or qualifying result exists. Evidence from Apple Silicon cannot satisfy this row. |
+| Chrome stable on Linux Intel Gen12+ Wayland | Required physical lane, `NOT_PROVEN` | CHR-03 requires the exact `FW-LNX-I12-01` asset and complete installed-package proof. The laboratory is currently unprovisioned. |
+| Chrome stable on Linux NVIDIA RTX 3070 Wayland | Required physical lane, `NOT_PROVEN` | CHR-03 requires the exact `FW-LNX-NV-01` asset and complete installed-package proof. The laboratory is currently unprovisioned. |
+| Chrome stable on AMD/Linux | P2, `NOT_PROVEN` | No exact AMD/Linux asset or qualifying result exists. Intel or NVIDIA evidence cannot satisfy this row. |
+| Chrome Beta on the CHR-03 assets | Optional probe | Non-blocking early warning only. Beta is never a required release row and cannot replace stable Chrome evidence. |
 | Edge | Best effort | `test:browser:edge` is an unflagged branded required-mode configuration, but the current Edge support tier remains best effort until the required evidence exists. |
 | Firefox | Unsupported | `test:browser:firefox-preflight` exercises Playwright's patched Firefox in headed mode on GitHub-hosted Apple Silicon with default preferences and no Chromium flags. A passing run is `ENGINE_PASS` source-browser evidence only, not branded Firefox, physical-browser, exact-tarball, or support evidence. |
 | Playwright WebKit test engine | Engine preflight only | The non-blocking macOS `test:browser:webkit` lane uses no Chromium flags and may produce `ENGINE_PASS` only after the complete suite succeeds. Playwright WebKit is not shipping Safari and cannot establish a Safari support row. |
