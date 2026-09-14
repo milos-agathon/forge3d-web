@@ -16,6 +16,7 @@ export function validateManualSubmission({
   intakeManifestAssetId,
   intakeAttestation,
   session,
+  controllerSignatureSha256,
   signedSessionSha256,
   signedSessionSubjectSha256,
   sessionRun,
@@ -135,7 +136,7 @@ export function validateManualSubmission({
     implementationActors: new Set(implementationActors),
     submissionRun,
     intakeReleaseId: release.id,
-    controllerSignatureSha256: session.controllerSignatureSha256,
+    controllerSignatureSha256,
     now,
   };
   return intake.checklistId === "infrastructure-manual-canary"

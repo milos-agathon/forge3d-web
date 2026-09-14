@@ -241,26 +241,36 @@ export function validateMediaAssets({
     throw new Error("draft release asset inventory is not the closed selected set");
   }
   let total = 0;
+  const names = new Set();
   return selectedAssets.map((asset) => {
     const extension = asset.name
       .slice(asset.name.lastIndexOf("."))
       .toLowerCase();
     const expectedMime = mediaTypes.get(extension);
-    const createdAt = new Date(asset.createdAt);
+    const safeName =
+      typeof asset.name === "string" &&
+      /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/u.test(asset.name) &&
+      !asset.name.includes("..") &&
+      !names.has(asset.name.toLowerCase());
+    const createdMillis = strictUtcInstant(asset.createdAt);
     if (
       !expectedMime ||
+      !safeName ||
       asset.mimeType !== expectedMime ||
+      !Number.isInteger(asset.size) ||
       asset.size < 1 ||
       asset.size > 100 * 1024 * 1024 ||
       asset.uploader !== intake.expectedTester ||
       asset.uploader !== actor ||
       !/^[0-9a-f]{64}$/u.test(asset.apiSha256 ?? "") ||
       asset.apiSha256 !== asset.sha256 ||
-      createdAt < new Date(session.startedAt) ||
-      createdAt > new Date(session.endedAt)
+      createdMillis === null ||
+      createdMillis < strictSessionInstant(session.startedAt) ||
+      createdMillis > strictSessionInstant(session.endedAt)
     ) {
       throw new Error(`manual media asset is invalid: ${asset.id}`);
     }
+    names.add(asset.name.toLowerCase());
     total += asset.size;
     return {
       id: asset.id,
@@ -278,6 +288,23 @@ export function validateMediaAssets({
     }
     return asset;
   });
+}
+
+function strictUtcInstant(value) {
+  if (typeof value !== "string") return null;
+  const match = /^(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2})(\.\d{3})?Z$/u.exec(value);
+  if (!match) return null;
+  const millis = Date.parse(value);
+  if (!Number.isFinite(millis)) return null;
+  const canonical = new Date(millis).toISOString();
+  const expected = match[2] ? canonical : canonical.replace(/\.000Z$/u, "Z");
+  return expected === value ? millis : null;
+}
+
+function strictSessionInstant(value) {
+  const millis = strictUtcInstant(value);
+  if (millis === null) throw new Error("manual session capture window is invalid");
+  return millis;
 }
 
 export function createManualEvidence({
@@ -344,6 +371,11 @@ export function createManualEvidence({
     system: structuredClone(session.system),
     browser: structuredClone(session.browser),
     driver: structuredClone(session.driver),
+    ...(session.appium ? { appium: structuredClone(session.appium) } : {}),
+    ...(session.device ? { device: structuredClone(session.device) } : {}),
+    ...(session.inventoryCapturedAt
+      ? { inventoryCapturedAt: session.inventoryCapturedAt }
+      : {}),
     hostInventory: session.hostInventory
       ? structuredClone(session.hostInventory)
       : null,
@@ -404,6 +436,28 @@ function assertProductSessionProvenance(session, checklistId) {
       trackpad.topology.hubPresent !== false
     ) {
       throw new Error("Safari trackpad session provenance is incomplete");
+    }
+  }
+  if (checklistId === "mobile-multitouch") {
+    const appium = session.appium;
+    const device = session.device;
+    if (
+      Object.keys(appium ?? {}).sort().join(",") !==
+        "driverName,driverVersion,serverVersion" ||
+      !nonEmpty(appium.serverVersion) || appium.serverVersion === "unknown" ||
+      !nonEmpty(appium.driverName) || appium.driverName === "unknown" ||
+      !nonEmpty(appium.driverVersion) || appium.driverVersion === "unknown" ||
+      Object.keys(device ?? {}).sort().join(",") !==
+        "accessory,assetId,model,osVersion,platformName" ||
+      device.assetId !== session.assetId ||
+      !nonEmpty(device.model) || device.model === "unknown" ||
+      !["Android", "iOS", "iPadOS"].includes(device.platformName) ||
+      !nonEmpty(device.osVersion) || device.osVersion === "unknown" ||
+      !(device.accessory === null || nonEmpty(device.accessory)) ||
+      !nonEmpty(session.inventoryCapturedAt) ||
+      !Number.isFinite(Date.parse(session.inventoryCapturedAt))
+    ) {
+      throw new Error("manual mobile provenance is incomplete");
     }
   }
 }

@@ -4,6 +4,7 @@ import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import {
+  assertCaptureDeadlineReached,
   BrowserLabController,
   validateAuthorization,
 } from "../src/controller.mjs";
@@ -253,8 +254,6 @@ test("controller creates the signed manual session after hardware and runner cle
       sha256: "f".repeat(64),
       harnessSha256: "8".repeat(64),
     },
-    startedAt: "2026-07-29T10:00:00.000Z",
-    endedAt: "2026-07-29T10:20:00.000Z",
     cleanup: {
       browserStopped: true,
       driverStopped: true,
@@ -271,11 +270,35 @@ test("controller creates the signed manual session after hardware and runner cle
     });
   dependencies.storeControllerReceipt = async (receipt) =>
     calls.push(["store-receipt", receipt]);
+  dependencies.waitForManualSessionReadiness = async () => ({
+    schemaVersion: 1,
+    binding: { runId: 10, jobId: 11, assetId: "FW-TRACKPAD-01" },
+    mediaChallenge: "9".repeat(32),
+    browser: { name: "safari", channel: "stable", version: "26.0" },
+    deviceAssetId: null,
+    route: {
+      applicationUrl: `https://mac-m2.webgpu-ci.forge3d.dev/runs/10/11/${"e".repeat(32)}/`,
+      assetUrl: `https://assets-mac-m2.webgpu-ci.forge3d.dev/runs/10/11/${"e".repeat(32)}/`,
+      basePath: `/runs/10/11/${"e".repeat(32)}/`,
+    },
+    fixtureReady: true, browserReady: true, deviceReady: true,
+    routeReady: true, watermarkVisible: true,
+  });
+  let nowValue = new Date("2026-07-29T10:20:01.000Z");
+  dependencies.publishManualCaptureWindow = async ({ captureWindow }) => {
+    calls.push(["capture-window", captureWindow]);
+  };
+  dependencies.monitorOneJob = async () => {
+    nowValue = new Date(
+      calls.find(([name]) => name === "capture-window")[1].endedAt,
+    );
+    return { reason: "completed" };
+  };
   const controller = new BrowserLabController({
     hostId: "FW-MAC-M2-01",
     platform: "darwin",
     dependencies,
-    now: () => new Date("2026-07-29T10:20:01.000Z"),
+    now: () => nowValue,
   });
   const manualAuthorization = {
     ...structuredClone(authorization),
@@ -312,6 +335,27 @@ test("controller creates the signed manual session after hardware and runner cle
       targetSha: manualAuthorization.trustedSha,
       inventory: exactHostInventory(matrix, "FW-MAC-M2-01"),
     });
+  const earlyReceipts = [];
+  let earlyNow = new Date("2026-07-29T10:20:01.000Z");
+  const earlyDependencies = {
+    ...dependencies,
+    publishManualCaptureWindow: async ({ captureWindow }) => {
+      earlyNow = new Date(new Date(captureWindow.endedAt).getTime() - 1);
+    },
+    monitorOneJob: async () => ({ reason: "completed" }),
+    storeControllerReceipt: async (receipt) => earlyReceipts.push(receipt),
+  };
+  const earlyController = new BrowserLabController({
+    hostId: "FW-MAC-M2-01",
+    platform: "darwin",
+    dependencies: earlyDependencies,
+    now: () => earlyNow,
+  });
+  await assert.rejects(
+    () => earlyController.execute(structuredClone(manualAuthorization)),
+    /before the controller deadline/u,
+  );
+  assert.equal(earlyReceipts.length, 0);
   const result = await controller.execute(manualAuthorization);
   const cleanupIndex = calls.findIndex(([name]) => name === "broker-cleanup");
   const storeIndex = calls.findIndex(([name]) => name === "store-receipt");
@@ -325,6 +369,21 @@ test("controller creates the signed manual session after hardware and runner cle
     receipt.signedRecord.record.hostInventory.trackpad.assetId,
     "FW-TRACKPAD-01",
   );
+});
+
+test("manual terminal success cannot precede the controller capture deadline", () => {
+  const window = {
+    startedAt: "2026-07-29T10:00:00.000Z",
+    endedAt: "2026-07-29T10:20:00.000Z",
+  };
+  assert.throws(
+    () => assertCaptureDeadlineReached(window, "2026-07-29T10:19:59.999Z"),
+    /before the controller deadline/u,
+  );
+  assert.doesNotThrow(() =>
+    assertCaptureDeadlineReached(window, "2026-07-29T10:20:00.000Z"));
+  assert.doesNotThrow(() =>
+    assertCaptureDeadlineReached(window, "2026-07-29T10:20:00.001Z"));
 });
 
 test("online-unassigned requires stopped listener, queued job, non-busy runner, and cancellation", async () => {

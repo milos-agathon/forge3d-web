@@ -1,18 +1,23 @@
 import { captureAdapterAttestation } from "./adapter-attestation.js";
 
 export async function runHardwarePage({
+  lane,
   binding,
   route,
   effectiveLaunchArguments = [],
   supportAssertions = true,
   mediaChallenge = null,
+  sessionContext = null,
 }) {
   const fixture = window.__forge3dInteractiveViewer;
   const canvas = fixture?.canvas ?? document.querySelector("#viewer");
   if (!(canvas instanceof HTMLCanvasElement)) {
     throw new Error("hardware fixture canvas is unavailable");
   }
-  const watermark = installWatermark(mediaChallenge);
+  const productManual = isProductManualLane(lane);
+  const watermark = mediaChallenge !== null
+    ? installWatermark(mediaChallenge, sessionContext)
+    : null;
   const routeReadiness = await verifyBrowserRoute(route, binding.packageSha256);
   const adapter = await captureAdapterAttestation(
     canvas,
@@ -30,7 +35,7 @@ export async function runHardwarePage({
   ) {
     throw new Error("ATTESTATION_UNAVAILABLE: hardware adapter proof failed");
   }
-  if (!supportAssertions) {
+  if (!supportAssertions && !productManual) {
     return {
       adapter,
       assertions: {
@@ -42,11 +47,17 @@ export async function runHardwarePage({
     };
   }
 
-  const viewer = await fixture.create();
+  let viewer;
+  try {
+    viewer = await fixture.create();
+  } catch (error) {
+    showUnsupportedState(error);
+    throw error;
+  }
   const screenshot = await viewer.screenshot();
   const diagnostics = viewer.getDiagnostics();
   const assertions = {
-    supportAssertionsExecuted: true,
+    supportAssertionsExecuted: supportAssertions,
     screenshotPng:
       screenshot.type === "image/png" && Number(screenshot.size) > 0,
     submittedFrame: diagnostics.submittedFrames > 0,
@@ -59,6 +70,11 @@ export async function runHardwarePage({
     throw new Error("browser-neutral installed-package assertions failed");
   }
   return { adapter, assertions, routeReadiness, watermark };
+}
+
+export function isProductManualLane(lane) {
+  return lane === "manual-safari-trackpad" ||
+    lane === "manual-mobile-multitouch";
 }
 
 function hasMeasuredLumaPresentation(adapter) {
@@ -314,7 +330,7 @@ try {
 </script>`;
 }
 
-function installWatermark(mediaChallenge) {
+function installWatermark(mediaChallenge, sessionContext) {
   if (mediaChallenge === null) return null;
   if (!/^[0-9a-f]{32}$/u.test(mediaChallenge)) {
     throw new Error("manual session media challenge is malformed");
@@ -325,7 +341,25 @@ function installWatermark(mediaChallenge) {
     document.body;
   const watermark = document.createElement("div");
   watermark.id = "forge3d-session-watermark";
-  watermark.textContent = `SESSION_CHALLENGE_VISIBLE ${mediaChallenge}`;
+  if (!sessionContext || typeof sessionContext !== "object") {
+    throw new Error("manual session context is missing");
+  }
+  const lines = [
+    `SESSION_CHALLENGE_VISIBLE ${mediaChallenge}`,
+    `tester=${sessionContext.expectedTester}`,
+    `asset=${sessionContext.assetId} host=${sessionContext.hostId}`,
+    `package=${sessionContext.packageSha256}`,
+    `browser=${sessionContext.browser?.name}/${sessionContext.browser?.channel}/${sessionContext.browser?.version}`,
+    `os=${sessionContext.system?.os}/${sessionContext.system?.build}`,
+    `utc=${new Date().toISOString()}`,
+  ];
+  if (sessionContext.trackpad) {
+    lines.push(`trackpad=${sessionContext.trackpad.model}/${sessionContext.trackpad.firmware}/${sessionContext.trackpad.transport}`);
+  }
+  if (lines.some((line) => /undefined|null/u.test(line))) {
+    throw new Error("manual session context is incomplete");
+  }
+  watermark.textContent = lines.join("\n");
   Object.assign(watermark.style, {
     position: "fixed",
     inset: "12px 12px auto auto",
@@ -337,12 +371,23 @@ function installWatermark(mediaChallenge) {
     font: "700 16px/1.25 monospace",
     pointerEvents: "none",
     userSelect: "none",
+    maxWidth: "calc(100vw - 24px)",
+    whiteSpace: "pre-wrap",
+    overflowWrap: "anywhere",
   });
   shell.append(watermark);
   return {
     mediaChallenge,
+    sessionContext,
     nonDismissable: true,
     overlayTarget: "viewer-shell-not-canvas",
     visible: watermark.getClientRects().length > 0,
   };
+}
+
+function showUnsupportedState(error) {
+  const alert = document.createElement("div");
+  alert.setAttribute("role", "alert");
+  alert.textContent = `Viewer unavailable: ${error?.code ?? "INTERNAL"}`;
+  document.body.append(alert);
 }

@@ -15,6 +15,7 @@ import {
 
 import {
   assertOwnedJobRoot,
+  readUniqueJson,
   requiredAbsolute,
   safeChild,
 } from "./controller-job-files.mjs";
@@ -232,6 +233,30 @@ export function createProductionControllerDependencies({
     },
     readHostCanaryInput: async (request) => readHostCanaryInput(request),
     readManualSessionInput: async (request) => readManualSessionInput(request),
+    waitForManualSessionReadiness: async ({ jobRoot }) => {
+      const deadline = Date.now() + 10 * 60 * 1000;
+      while (Date.now() < deadline) {
+        try {
+          return readUniqueJson(jobRoot.jobDirectory, "manual-session-readiness.json");
+        } catch (error) {
+          if (!String(error.message).includes("expected exactly one")) throw error;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+      throw new Error("manual capture readiness signal is missing");
+    },
+    publishManualCaptureWindow: async ({ jobRoot, authorization, captureWindow }) => {
+      const output = safeChild(jobRoot.jobDirectory, "controller-capture-window.json");
+      writeFileSync(output, `${JSON.stringify({
+        schemaVersion: 1,
+        binding: {
+          runId: authorization.run.id,
+          jobId: authorization.queuedHardwareJob.id,
+          assetId: authorization.assetId,
+        },
+        ...captureWindow,
+      })}\n`, { encoding: "utf8", mode: 0o600, flag: "wx" });
+    },
     controllerSigner: async () => controllerSigner,
     controllerInstallationEvidence: async () =>
       structuredClone(installationEvidence),

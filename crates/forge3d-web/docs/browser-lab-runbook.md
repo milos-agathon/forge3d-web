@@ -105,10 +105,15 @@ gh release upload <intake-tag> <local-media-files>
 Do not add `--clobber`. A workflow dispatch never accepts a local path, media
 name, username, URL, or digest. Upload only uniquely named `.png`, `.jpg`,
 `.jpeg`, `.webm`, or `.mp4` files during the controller-signed 20-minute
-session. Each file is limited to 100 MiB and the complete checklist to 500 MiB.
+session. The controller starts that single window only after the authorized
+fixture, original browser page, route, visible challenge, and required device
+are ready. The runner uses the controller's deadline and continuously checks
+the same live session through the final observation. Each file is limited to
+100 MiB and the complete checklist to 500 MiB.
 The submission workflow resolves numeric asset IDs, checks the authenticated
 uploader and API digest, downloads the bytes, and recomputes SHA-256 before
-attesting the bundle.
+attesting the bundle. Dispatch submission only after the session completes,
+cleanup succeeds, and the hosted finalizer verifies the signed session.
 
 For the generic laboratory canary, use checklist
 `infrastructure-manual-canary`. Upload the challenged media during the
@@ -120,6 +125,11 @@ Manual Evidence run ID is the
 `manualCanaryRunId` consumed by canary publication and laboratory readiness;
 the separate `manualHardwareJobId` remains the signed underlying hardware job.
 This record has `supportClaim: false` and cannot create a product matrix row.
+The dedicated C11 canary producer/consumer split is not implemented; retain
+the current shared canary route until that separately approved workflow exists.
+Product manual capture also requires the reviewed installed package artifact;
+when that package is unavailable, do not substitute a source build or claim an
+installed-package browser result.
 
 ## Physical Custody And Topology
 

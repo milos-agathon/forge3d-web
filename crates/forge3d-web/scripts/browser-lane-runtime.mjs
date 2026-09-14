@@ -1,4 +1,5 @@
 import {
+  existsSync,
   mkdirSync,
   readFileSync,
   writeFileSync,
@@ -65,6 +66,26 @@ export function resolveLaneRuntime({ lane, assetId, platform }) {
   throw new Error(`lane has no checked runtime: ${lane} on ${platform}`);
 }
 
+export function createBrowserPageBinding({
+  authorization,
+  packageSha256,
+  actor,
+}) {
+  const expectedTester = actor?.trim();
+  if (authorization.manualSession && !expectedTester) {
+    throw new Error("manual workflow actor is missing");
+  }
+  return {
+    lane: authorization.lane,
+    runId: authorization.run.id,
+    jobId: authorization.queuedHardwareJob.id,
+    assetId: authorization.assetId,
+    commit: authorization.trustedSha,
+    packageSha256,
+    ...(authorization.manualSession ? { expectedTester } : {}),
+  };
+}
+
 export async function executeHardwareBrowserLane({
   lane,
   assetId,
@@ -80,11 +101,21 @@ export async function executeHardwareBrowserLane({
   outputPath,
   manualSessionInputPath = null,
   watermarkPath = null,
+  manualSessionReadinessPath = null,
+  controllerCaptureWindowPath = null,
+  trackpadInventory = null,
   processRegistryPath = null,
   dependencies = productionDependencies(),
 }) {
   const runtime = resolveLaneRuntime({ lane, assetId, platform });
-  const manualSession = runtime.manual || mediaChallenge !== null;
+  const manualLifecycle = runtime.manual || mediaChallenge !== null;
+  if (
+    manualLifecycle &&
+    (typeof binding.expectedTester !== "string" ||
+      binding.expectedTester.trim() === "")
+  ) {
+    throw new Error("product manual binding requires the authenticated tester");
+  }
   const session = await dependencies.openSession({
     runtime,
     assetId,
@@ -103,8 +134,7 @@ export async function executeHardwareBrowserLane({
     browserPolicy,
   });
   let pageResult;
-  let startedAt = null;
-  let endedAt = null;
+  let captureWindow = null;
   try {
     const record = await executeLaneContract({
       lane,
@@ -112,6 +142,7 @@ export async function executeHardwareBrowserLane({
       binding,
       adapterSmoke: async () => {
         pageResult = await session.runPage({
+          lane,
           binding: {
             runId: binding.runId,
             jobId: binding.jobId,
@@ -123,14 +154,33 @@ export async function executeHardwareBrowserLane({
           effectiveLaunchArguments: session.effectiveLaunchArguments,
           supportAssertions: runtime.supportAssertions,
           mediaChallenge,
+          sessionContext: manualLifecycle ? {
+            assetId,
+            hostId,
+            packageSha256: binding.packageSha256,
+            expectedTester: binding.expectedTester,
+            browser: session.browser,
+            system: { os: provenance.system.platform, build: provenance.system.osBuild },
+            trackpad: lane === "manual-safari-trackpad" ? trackpadInventory : null,
+          } : null,
         });
-        if (manualSession) {
-          startedAt = dependencies.now().toISOString();
-          const end = new Date(
-            new Date(startedAt).getTime() + 20 * 60 * 1000,
-          );
-          await dependencies.waitUntil(end);
-          endedAt = end.toISOString();
+        if (manualLifecycle) {
+          if (pageResult.watermark?.visible !== true ||
+              !Object.values(pageResult.routeReadiness ?? {}).every((value) => value === true)) {
+            throw new Error("manual fixture, route, and watermark are not ready");
+          }
+          await dependencies.announceManualReadiness({ path: manualSessionReadinessPath, readiness: {
+            schemaVersion: 1,
+            binding: { runId: binding.runId, jobId: binding.jobId, assetId: binding.assetId },
+            mediaChallenge,
+            browser: session.browser,
+            deviceAssetId: session.device?.assetId ?? null,
+            route,
+            fixtureReady: true, browserReady: true, deviceReady: true,
+            routeReady: true, watermarkVisible: true,
+          }});
+          captureWindow = await dependencies.waitForControllerWindow({ path: controllerCaptureWindowPath, binding });
+          await dependencies.waitUntil(new Date(captureWindow.endedAt), session.assertHealthy);
         }
         return pageResult.adapter;
       },
@@ -150,7 +200,7 @@ export async function executeHardwareBrowserLane({
       launchObservation: provenance.launchObservation,
       inventoryCapturedAt: provenance.inventoryCapturedAt,
     });
-    if (manualSession) {
+    if (manualLifecycle) {
       if (!manualSessionInputPath || !watermarkPath) {
         throw new Error("manual lane requires session-input and watermark outputs");
       }
@@ -170,12 +220,13 @@ export async function executeHardwareBrowserLane({
           name: runtime.driver,
           version: session.driverVersion,
         },
+        appium: session.appium ?? null,
+        device: session.device ?? null,
+        inventoryCapturedAt: provenance.inventoryCapturedAt,
         system: provenance.system,
         loginSession: provenance.loginSession,
         effectiveLaunchArguments: provenance.effectiveLaunchArguments,
         launchObservation: provenance.launchObservation,
-        startedAt,
-        endedAt,
         watermark: pageResult.watermark,
       });
     }
@@ -239,12 +290,32 @@ async function executeLaneContract({
 
 function productionDependencies() {
   return {
-    now: () => new Date(),
-    waitUntil: async (end) => {
-      const delay = end.getTime() - Date.now();
-      if (delay > 0) {
-        await new Promise((resolve) => setTimeout(resolve, delay));
+    announceManualReadiness: async ({ path, readiness }) => {
+      if (!path) throw new Error("manual readiness output path is required");
+      writeFileSync(path, `${JSON.stringify(readiness)}\n`, { encoding: "utf8", mode: 0o600, flag: "wx" });
+    },
+    waitForControllerWindow: async ({ path, binding }) => {
+      if (!path) throw new Error("controller capture-window path is required");
+      const deadline = Date.now() + 10 * 60 * 1000;
+      while (!existsSync(path) && Date.now() < deadline) await new Promise((resolve) => setTimeout(resolve, 250));
+      if (!existsSync(path)) throw new Error("controller capture window is missing");
+      const window = JSON.parse(readFileSync(path, "utf8"));
+      const started = Date.parse(window.startedAt), ended = Date.parse(window.endedAt);
+      if (window.schemaVersion !== 1 || window.binding?.runId !== binding.runId ||
+          window.binding?.jobId !== binding.jobId || window.binding?.assetId !== binding.assetId ||
+          !Number.isFinite(started) || ended - started !== 20 * 60 * 1000) {
+        throw new Error("controller capture window is invalid or replayed");
       }
+      return window;
+    },
+    waitUntil: async (end, assertHealthy) => {
+      if (typeof assertHealthy !== "function") throw new Error("INFRA_ERROR SESSION_HEALTH_OBSERVER_MISSING");
+      while (Date.now() < end.getTime()) {
+        await assertHealthy();
+        const delay = Math.min(1000, end.getTime() - Date.now());
+        if (delay > 0) await new Promise((resolve) => setTimeout(resolve, delay));
+      }
+      await assertHealthy();
     },
     openSession: openProductionSession,
   };
@@ -292,6 +363,10 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     outputPath: args.get("--output"),
     manualSessionInputPath: args.get("--manual-session-input") ?? null,
     watermarkPath: args.get("--watermark") ?? null,
+    manualSessionReadinessPath: args.get("--manual-session-readiness") ?? null,
+    controllerCaptureWindowPath: args.get("--controller-capture-window") ?? null,
+    trackpadInventory: args.get("--trackpad-inventory")
+      ? JSON.parse(readFileSync(args.get("--trackpad-inventory"), "utf8")) : null,
     processRegistryPath: args.get("--process-registry") ?? null,
   });
 }

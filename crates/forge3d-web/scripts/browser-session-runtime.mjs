@@ -85,6 +85,7 @@ async function openPlaywrightSession({ runtime, routeUrl, browserPolicy }) {
       },
       driverVersion,
       ...launch,
+      assertHealthy: createPlaywrightHealthObserver({ browser, page, routeUrl }),
       runPage: (payload) => runPlaywrightPage(page, payload),
       close: () => browser.close(),
     };
@@ -92,6 +93,62 @@ async function openPlaywrightSession({ runtime, routeUrl, browserPolicy }) {
     await browser.close();
     throw error;
   }
+}
+
+export function createPlaywrightHealthObserver({
+  browser,
+  page,
+  routeUrl,
+  timeoutMs = 5_000,
+}) {
+  const expectedUrl = normalizedFixtureUrl(routeUrl);
+  return async () => {
+    if (!browser.isConnected() || page.isClosed()) {
+      throw new Error("INFRA_ERROR PLAYWRIGHT_CAPTURE_PAGE_UNAVAILABLE");
+    }
+    let observedUrl;
+    let timer;
+    try {
+      observedUrl = await Promise.race([
+        page.evaluate(() => document.URL),
+        new Promise((_, reject) => {
+          timer = setTimeout(
+            () => reject(new Error("probe timeout")),
+            timeoutMs,
+          );
+        }),
+      ]);
+    } catch {
+      throw new Error("INFRA_ERROR PLAYWRIGHT_CAPTURE_PAGE_PROBE_FAILED");
+    } finally {
+      clearTimeout(timer);
+    }
+    if (normalizedFixtureUrl(observedUrl) !== expectedUrl) {
+      throw new Error("INFRA_ERROR PLAYWRIGHT_CAPTURE_PAGE_NAVIGATED");
+    }
+  };
+}
+
+function normalizedFixtureUrl(value) {
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    throw new Error("INFRA_ERROR PLAYWRIGHT_CAPTURE_PAGE_URL_INVALID");
+  }
+  if (
+    url.protocol !== "https:" ||
+    url.username ||
+    url.password ||
+    url.search ||
+    url.hash
+  ) {
+    throw new Error("INFRA_ERROR PLAYWRIGHT_CAPTURE_PAGE_URL_INVALID");
+  }
+  const pathname = url.pathname.endsWith("/index.html")
+    ? url.pathname.slice(0, -"index.html".length)
+    : url.pathname;
+  return `${url.origin}${pathname}`;
 }
 
 async function openLocalWebDriverSession({
@@ -106,7 +163,7 @@ async function openLocalWebDriverSession({
 }) {
   const child = spawn(command, args, {
     shell: false,
-    stdio: ["ignore", "ignore", "inherit"],
+    stdio: ["ignore", "ignore", "ignore"],
   });
   registerProcess(processRegistryPath, runtime.driver, child.pid);
   try {
@@ -127,6 +184,17 @@ async function openLocalWebDriverSession({
       },
       driverVersion,
       ...launch,
+      assertHealthy: async () => {
+        if (child.exitCode !== null) {
+          throw new Error("INFRA_ERROR DRIVER_EXITED");
+        }
+        const currentUrl = await session.currentUrl().catch(() => {
+          throw new Error("INFRA_ERROR BROWSER_SESSION_LOST");
+        });
+        if (currentUrl !== routeUrl) {
+          throw new Error("INFRA_ERROR BROWSER_ROUTE_CHANGED");
+        }
+      },
       runPage: (payload) => session.runHardwarePage(payload),
       close: async () => {
         await session.delete().catch(() => undefined);
@@ -160,14 +228,18 @@ async function openAppiumSession({
   }
   const appiumDriverName =
     runtime.driver === "appium-xcuitest" ? "xcuitest" : "uiautomator2";
+  let installedDrivers;
+  try {
+    installedDrivers = JSON.parse(execFileSync(
+      executable,
+      ["driver", "list", "--installed", "--json"],
+      { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+    ));
+  } catch {
+    throw new Error("INFRA_ERROR APPIUM_DRIVER_INVENTORY_FAILED");
+  }
   const installedDriverVersion = resolveInstalledAppiumDriverVersion(
-    JSON.parse(
-      execFileSync(
-        executable,
-        ["driver", "list", "--installed", "--json"],
-        { encoding: "utf8" },
-      ),
-    ),
+    installedDrivers,
     appiumDriverName,
   );
   const expectedDriverVersion =
@@ -180,7 +252,7 @@ async function openAppiumSession({
   const child = spawn(
     executable,
     ["--port", "4723", "--base-path", "/wd/hub"],
-    { shell: false, stdio: ["ignore", "ignore", "inherit"] },
+    { shell: false, stdio: ["ignore", "ignore", "ignore"] },
   );
   registerProcess(processRegistryPath, "appium", child.pid);
   const client = new WebDriverClient("http://127.0.0.1:4723/wd/hub");
@@ -227,10 +299,21 @@ async function openAppiumSession({
         version: record.browserVersion,
       },
       driverVersion: installedDriverVersion,
-      mobileDevice: record,
       ...launch,
+      appium: {
+        serverVersion: version.split(/\s+/u)[0],
+        driverName: appiumDriverName,
+        driverVersion: installedDriverVersion,
+      },
+      device: projectRuntimeDeviceObservation(record),
+      ...appiumRouteInterface(record, session),
+      assertHealthy: async () => {
+        if (child.exitCode !== null) {
+          throw new Error("INFRA_ERROR APPIUM_SERVER_EXITED");
+        }
+        await record.assertHealthy();
+      },
       runPage: (payload) => session.runHardwarePage(payload),
-      runRouteProbe: (payload) => session.runRouteProbe(payload),
       close: async () => {
         await session.delete().catch(() => undefined);
         await stopChild(child);
@@ -245,6 +328,23 @@ async function openAppiumSession({
   }
 }
 
+export function projectRuntimeDeviceObservation(record) {
+  return {
+    assetId: record.assetId,
+    model: record.model,
+    platformName: record.platformName,
+    osVersion: record.osVersion,
+    accessory: record.accessory,
+  };
+}
+
+export function appiumRouteInterface(record, session) {
+  return {
+    mobileDevice: record,
+    runRouteProbe: (payload) => session.runRouteProbe(payload),
+  };
+}
+
 async function runPlaywrightPage(page, payload) {
   return page.evaluate(async (value) => {
     const module = await import(
@@ -255,16 +355,22 @@ async function runPlaywrightPage(page, payload) {
 }
 
 function invokeDeviceHelper(helper, operation, assetId, value) {
-  const result = JSON.parse(
-    execFileSync(
+  let stdout;
+  try {
+    stdout = execFileSync(
       helper,
       [operation, "--asset-id", assetId, "--value", value],
-      {
-        encoding: "utf8",
-        stdio: ["ignore", "pipe", "inherit"],
-      },
-    ),
-  );
+      { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
+    );
+  } catch {
+    throw new Error(`INFRA_ERROR DEVICE_HELPER_${operation.toUpperCase()}_FAILED`);
+  }
+  let result;
+  try {
+    result = JSON.parse(stdout);
+  } catch {
+    throw new Error(`INFRA_ERROR DEVICE_HELPER_${operation.toUpperCase()}_INVALID`);
+  }
   if (
     result.schemaVersion !== 1 ||
     result.operation !== operation ||
@@ -276,7 +382,14 @@ function invokeDeviceHelper(helper, operation, assetId, value) {
 }
 
 function execVersion(command, args) {
-  return execFileSync(command, args, { encoding: "utf8" }).trim();
+  try {
+    return execFileSync(command, args, {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    }).trim();
+  } catch {
+    throw new Error("INFRA_ERROR VERSION_PROBE_FAILED");
+  }
 }
 
 function requiredAbsoluteEnvironment(name) {
