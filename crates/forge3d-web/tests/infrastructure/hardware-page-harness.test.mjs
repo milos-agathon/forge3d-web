@@ -36,7 +36,7 @@ copyFileSync(
   join(packageRoot, "tests", "browser", "hardware-page-harness.js"),
   join(temporaryRoot, "hardware-page-harness.js"),
 );
-const { verifyBrowserRoute } = await import(
+const { isProductManualLane, verifyBrowserRoute } = await import(
   pathToFileURL(join(temporaryRoot, "hardware-page-harness.js")).href
 );
 after(() => rmSync(temporaryRoot, { recursive: true, force: true }));
@@ -56,6 +56,12 @@ test("hardware page invokes the public runtime loader in a fresh iframe realm", 
   assert.match(source, /document\.createElement\("iframe"\)/u);
   assert.match(source, /facade\.Forge3DRuntime\.create/u);
   assert.doesNotMatch(source, /WebAssembly\.compileStreaming/u);
+});
+
+test("page product classifier accepts only the two closed manual lanes", () => {
+  assert.equal(isProductManualLane("manual-safari-trackpad"), true);
+  assert.equal(isProductManualLane("manual-mobile-multitouch"), true);
+  assert.equal(isProductManualLane("infrastructure-canary"), false);
 });
 
 test("page route uses isolated installed-package loader probes for all WASM controls", async () => {

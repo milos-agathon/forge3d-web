@@ -1,7 +1,8 @@
 export class WebDriverClient {
-  constructor(baseUrl, fetchImpl = fetch) {
+  constructor(baseUrl, fetchImpl = fetch, requestTimeoutMs = 5_000) {
     this.baseUrl = baseUrl.replace(/\/$/u, "");
     this.fetchImpl = fetchImpl;
+    this.requestTimeoutMs = requestTimeoutMs;
   }
 
   async waitUntilReady() {
@@ -30,18 +31,25 @@ export class WebDriverClient {
   }
 
   async request(method, path, body = undefined) {
-    const response = await this.fetchImpl(`${this.baseUrl}${path}`, {
-      method,
-      headers: { "Content-Type": "application/json" },
-      body: body === undefined ? undefined : JSON.stringify(body),
-    });
-    const value = await response.json().catch(() => ({}));
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.requestTimeoutMs);
+    let response;
+    let value;
+    try {
+      response = await this.fetchImpl(`${this.baseUrl}${path}`, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: body === undefined ? undefined : JSON.stringify(body),
+        signal: controller.signal,
+      });
+      value = await response.json();
+    } catch {
+      throw new Error(`INFRA_ERROR WEBDRIVER_REQUEST_FAILED ${method}`);
+    } finally {
+      clearTimeout(timeout);
+    }
     if (!response.ok || value.value?.error) {
-      throw new Error(
-        `WebDriver ${method} ${path} failed: ${
-          value.value?.message ?? response.status
-        }`,
-      );
+      throw new Error(`INFRA_ERROR WEBDRIVER_REQUEST_FAILED ${method} ${response.status}`);
     }
     return value;
   }
@@ -69,7 +77,19 @@ class WebDriverSession {
           this.capabilities.version ??
           "unknown",
       ),
+      platformVersion: String(this.capabilities.platformVersion ?? "unknown"),
     };
+  }
+
+  async currentUrl() {
+    const response = await this.client.request(
+      "GET",
+      `/session/${this.sessionId}/url`,
+    );
+    if (typeof response.value !== "string" || !/^https:\/\//u.test(response.value)) {
+      throw new Error("INFRA_ERROR WEBDRIVER_SESSION_STATE_INVALID");
+    }
+    return response.value;
   }
 
   async runHardwarePage(payload) {
@@ -88,7 +108,7 @@ class WebDriverSession {
     );
     const result = response.value;
     if (result?.ok !== true) {
-      throw new Error(`browser hardware page failed: ${result?.error}`);
+      throw new Error("INFRA_ERROR BROWSER_PAGE_FAILED");
     }
     return result.value;
   }
@@ -112,7 +132,7 @@ class WebDriverSession {
     );
     const result = response.value;
     if (result?.ok !== true) {
-      throw new Error(`browser route probe failed: ${result?.error}`);
+      throw new Error("INFRA_ERROR BROWSER_ROUTE_PROBE_FAILED");
     }
     return result.value;
   }

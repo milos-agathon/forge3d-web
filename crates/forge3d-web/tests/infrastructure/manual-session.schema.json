@@ -124,6 +124,27 @@
         "version": { "type": "string", "minLength": 1 }
       }
     },
+    "appium": {
+      "type": "object", "additionalProperties": false,
+      "required": ["serverVersion", "driverName", "driverVersion"],
+      "properties": {
+        "serverVersion": { "type": "string", "minLength": 1, "not": { "const": "unknown" } },
+        "driverName": { "type": "string", "minLength": 1, "not": { "const": "unknown" } },
+        "driverVersion": { "type": "string", "minLength": 1, "not": { "const": "unknown" } }
+      }
+    },
+    "device": {
+      "type": "object", "additionalProperties": false,
+      "required": ["assetId", "model", "platformName", "osVersion", "accessory"],
+      "properties": {
+        "assetId": { "type": "string", "pattern": "^FW-(?:AND|IOS|IPAD)-[A-Z0-9-]+$" },
+        "model": { "type": "string", "minLength": 1, "not": { "const": "unknown" } },
+        "platformName": { "enum": ["Android", "iOS", "iPadOS"] },
+        "osVersion": { "type": "string", "minLength": 1, "not": { "const": "unknown" } },
+        "accessory": { "type": ["string", "null"] }
+      }
+    },
+    "inventoryCapturedAt": { "type": "string", "format": "date-time" },
     "headed": { "const": true },
     "loginSession": {
       "type": "object",
