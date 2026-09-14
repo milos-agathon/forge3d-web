@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {
+  existsSync,
   mkdtempSync,
   readFileSync,
   rmSync,
@@ -99,6 +100,116 @@ test("infrastructure canary cannot execute browser support assertions", async ()
   assert.equal(result.assertions.supportAssertionsExecuted, false);
 });
 
+test("challenged infrastructure canary remains adapter-only", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "forge3d-canary-runtime-"));
+  let payload;
+  try {
+    await executeHardwareBrowserLane({
+      lane: "infrastructure-canary",
+      assetId: binding.assetId,
+      platform: "linux",
+      hostId: binding.assetId,
+      binding: {
+        ...binding,
+        lane: "infrastructure-canary",
+        expectedTester: "tester-login",
+      },
+      route: {
+        applicationUrl: `https://linux.example/runs/10/20/${"a".repeat(32)}/`,
+        assetUrl: `https://assets.example/runs/10/20/${"a".repeat(32)}/`,
+        basePath: `/runs/10/20/${"a".repeat(32)}/`,
+      },
+      browserPolicy: {
+        prohibitedLaunchArguments: [],
+        tools: { playwright: "1.56.1" },
+      },
+      deviceMatrix: { devices: [] },
+      inventory: desktopInventory,
+      mediaChallenge: "9".repeat(32),
+      outputPath: join(directory, "evidence.json"),
+      manualSessionInputPath: join(directory, "manual-input.json"),
+      watermarkPath: join(directory, "watermark.json"),
+      manualSessionReadinessPath: join(directory, "readiness.json"),
+      controllerCaptureWindowPath: join(directory, "window.json"),
+      dependencies: {
+        announceManualReadiness: async () => undefined,
+        waitForControllerWindow: async () => ({
+          startedAt: "2026-07-29T10:00:00.000Z",
+          endedAt: "2026-07-29T10:20:00.000Z",
+        }),
+        waitUntil: async () => undefined,
+        openSession: async () => ({
+          browser: { name: "chrome", channel: "stable", version: "150.0.0.0" },
+          driverVersion: "1.56.1",
+          effectiveLaunchArguments: [],
+          launchArgumentsObserved: true,
+          launchArgumentSource: "chromium-cdp-browser-command-line",
+          browserProcessId: 1,
+          runPage: async (value) => {
+            payload = value;
+            return {
+              adapter,
+              assertions: {
+                passed: true,
+                supportAssertionsExecuted: false,
+              },
+              routeReadiness: { trustedHttps: true },
+              watermark: {
+                mediaChallenge: "9".repeat(32),
+                visible: true,
+              },
+            };
+          },
+          close: async () => undefined,
+        }),
+      },
+    });
+    assert.equal(payload.lane, "infrastructure-canary");
+    assert.equal(payload.binding.lane, undefined);
+    assert.equal(payload.sessionContext.expectedTester, "tester-login");
+    assert.equal(payload.supportAssertions, false);
+    assert.equal(existsSync(join(directory, "manual-input.json")), true);
+    assert.equal(existsSync(join(directory, "watermark.json")), true);
+
+    const ordinaryInput = join(directory, "ordinary-manual-input.json");
+    await executeHardwareBrowserLane({
+      lane: "infrastructure-canary",
+      assetId: binding.assetId,
+      platform: "linux",
+      hostId: binding.assetId,
+      binding: { ...binding, lane: "infrastructure-canary" },
+      route: {
+        applicationUrl: `https://linux.example/runs/10/20/${"a".repeat(32)}/`,
+        assetUrl: `https://assets.example/runs/10/20/${"a".repeat(32)}/`,
+        basePath: `/runs/10/20/${"a".repeat(32)}/`,
+      },
+      browserPolicy: {
+        prohibitedLaunchArguments: [],
+        tools: { playwright: "1.56.1" },
+      },
+      deviceMatrix: { devices: [] },
+      inventory: desktopInventory,
+      outputPath: join(directory, "ordinary-evidence.json"),
+      manualSessionInputPath: ordinaryInput,
+      dependencies: {
+        openSession: async () => ({
+          browser: { name: "chrome", channel: "stable", version: "150.0.0.0" },
+          driverVersion: "1.56.1",
+          effectiveLaunchArguments: [],
+          launchArgumentsObserved: true,
+          launchArgumentSource: "chromium-cdp-browser-command-line",
+          browserProcessId: 1,
+          runPage: async () => ({ adapter, assertions: { passed: true }, watermark: null }),
+          close: async () => undefined,
+        }),
+      },
+    });
+    assert.equal(existsSync(ordinaryInput), false);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
 test("fallback adapter and unreviewed drivers fail closed while cleanup still runs", async () => {
   let cleaned = false;
   await assert.rejects(
@@ -184,8 +295,12 @@ test("production lane executor opens a headed browser and captures live page evi
           launchArgumentsObserved: true,
           launchArgumentSource: "chromium-cdp-browser-command-line",
           browserProcessId: 501,
-          runPage: async () => {
+          runPage: async (payload) => {
             calls.push("page");
+            assert.equal(payload.binding.lane, binding.lane);
+            assert.deepEqual(Object.keys(payload.binding).sort(), [
+              "assetId", "commit", "jobId", "lane", "packageSha256", "runId",
+            ]);
             const chr03Proof = validChr03HardwareProof({
               lane: binding.lane,
               assetId: binding.assetId,
@@ -275,6 +390,7 @@ test("manual mobile runtime calls Appium class and retains the visible challenge
         lane: "manual-mobile-multitouch",
         assetId: "FW-IOS-OLD-01",
         commit: binding.trustedSha,
+        expectedTester: "tester-login",
       },
       route: { applicationUrl: "https://example.invalid/run/" },
       browserPolicy: {
@@ -301,8 +417,18 @@ test("manual mobile runtime calls Appium class and retains the visible challenge
       manualSessionInputPath: join(directory, "manual-input.json"),
       watermarkPath: join(directory, "watermark.json"),
       dependencies: {
-        now: () => new Date("2026-07-29T10:00:00.000Z"),
-        waitUntil: async (end) => waits.push(end.toISOString()),
+        announceManualReadiness: async ({ readiness }) => {
+          assert.equal(readiness.fixtureReady, true);
+          assert.equal(readiness.mediaChallenge, challenge);
+        },
+        waitForControllerWindow: async () => ({
+          startedAt: "2026-07-29T10:00:00.000Z",
+          endedAt: "2026-07-29T10:20:00.000Z",
+        }),
+        waitUntil: async (end, assertHealthy) => {
+          await assertHealthy();
+          waits.push(end.toISOString());
+        },
         openSession: async () => ({
           browser: { name: "safari", channel: "stable", version: "26.0" },
           driverVersion: "10.0.0",
@@ -310,19 +436,27 @@ test("manual mobile runtime calls Appium class and retains the visible challenge
           launchArgumentsObserved: true,
           launchArgumentSource: "appium-effective-session-capabilities",
           browserProcessId: null,
-          runPage: async () => ({
-            adapter,
-            assertions: {
-              passed: true,
-              supportAssertionsExecuted: false,
-            },
-            watermark: {
-              mediaChallenge: challenge,
-              nonDismissable: true,
-              overlayTarget: "viewer-shell-not-canvas",
-              visible: true,
-            },
-          }),
+          device: { assetId: "FW-IOS-OLD-01" },
+          assertHealthy: async () => undefined,
+          runPage: async (payload) => {
+            assert.equal(payload.lane, "manual-mobile-multitouch");
+            assert.equal(payload.binding.lane, undefined);
+            assert.equal(payload.sessionContext.expectedTester, "tester-login");
+            return {
+              adapter,
+              assertions: {
+                passed: true,
+                supportAssertionsExecuted: false,
+              },
+              routeReadiness: { trustedHttps: true },
+              watermark: {
+                mediaChallenge: challenge,
+                nonDismissable: true,
+                overlayTarget: "viewer-shell-not-canvas",
+                visible: true,
+              },
+            };
+          },
           close: async () => undefined,
         }),
       },
@@ -330,9 +464,71 @@ test("manual mobile runtime calls Appium class and retains the visible challenge
     const input = JSON.parse(
       readFileSync(join(directory, "manual-input.json"), "utf8"),
     );
-    assert.equal(input.startedAt, "2026-07-29T10:00:00.000Z");
-    assert.equal(input.endedAt, "2026-07-29T10:20:00.000Z");
+    assert.equal(Object.hasOwn(input, "startedAt"), false);
+    assert.equal(Object.hasOwn(input, "endedAt"), false);
     assert.deepEqual(waits, ["2026-07-29T10:20:00.000Z"]);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("Safari product manual lane reaches page composition without changing attestation binding", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "forge3d-safari-manual-"));
+  const challenge = "ef".repeat(16);
+  try {
+    await executeHardwareBrowserLane({
+      lane: "manual-safari-trackpad",
+      assetId: "FW-TRACKPAD-01",
+      hostId: "FW-MAC-M2-01",
+      platform: "darwin",
+      binding: {
+        ...binding,
+        lane: "manual-safari-trackpad",
+        assetId: "FW-TRACKPAD-01",
+        expectedTester: "tester-login",
+      },
+      route: { applicationUrl: "https://example.invalid/run/" },
+      browserPolicy: { prohibitedLaunchArguments: [], tools: {} },
+      deviceMatrix: { devices: [] },
+      inventory: {
+        ...desktopInventory,
+        assetId: "FW-MAC-M2-01",
+        platform: "darwin",
+        osBuild: "Darwin 25.0.0 checked",
+        displayServer: "WindowServer",
+        tools: { safaridriverVersion: "26.0" },
+        browsers: [{ id: "safari-stable", version: "26.0", executable: "/usr/bin/safaridriver" }],
+      },
+      mediaChallenge: challenge,
+      outputPath: join(directory, "evidence.json"),
+      manualSessionInputPath: join(directory, "manual-input.json"),
+      watermarkPath: join(directory, "watermark.json"),
+      dependencies: {
+        announceManualReadiness: async () => undefined,
+        waitForControllerWindow: async () => ({ startedAt: "2026-07-29T10:00:00.000Z", endedAt: "2026-07-29T10:20:00.000Z" }),
+        waitUntil: async () => undefined,
+        openSession: async () => ({
+          browser: { name: "safari", channel: "stable", version: "26.0" },
+          driverVersion: "26.0",
+          effectiveLaunchArguments: [],
+          launchArgumentsObserved: true,
+          launchArgumentSource: "darwin-live-browser-process",
+          browserProcessId: null,
+          runPage: async (payload) => {
+            assert.equal(payload.lane, "manual-safari-trackpad");
+            assert.equal(payload.binding.lane, undefined);
+            return {
+              adapter,
+              assertions: { passed: true, submittedFrame: true, runtimeReady: true },
+              routeReadiness: { trustedHttps: true },
+              watermark: { mediaChallenge: challenge, visible: true },
+            };
+          },
+          close: async () => undefined,
+        }),
+      },
+    });
+    assert.equal(existsSync(join(directory, "manual-input.json")), true);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

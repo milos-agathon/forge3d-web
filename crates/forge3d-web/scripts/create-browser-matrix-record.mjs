@@ -88,6 +88,11 @@ export function createAutomatedMatrixRecord({
     system: structuredClone(evidence.system),
     browser: structuredClone(evidence.browser),
     driver: structuredClone(evidence.driver),
+    ...(evidence.appium ? { appium: structuredClone(evidence.appium) } : {}),
+    ...(evidence.device ? { device: structuredClone(evidence.device) } : {}),
+    ...(evidence.inventoryCapturedAt
+      ? { inventoryCapturedAt: evidence.inventoryCapturedAt }
+      : {}),
     hostInventory: safariTrackpadRecord
       ? structuredClone(hostInventory)
       : null,
@@ -170,6 +175,11 @@ export function createManualMatrixRecord({ evidence, run }) {
       system: structuredClone(evidence.system),
       browser: structuredClone(evidence.browser),
       driver: structuredClone(evidence.driver),
+      ...(evidence.appium ? { appium: structuredClone(evidence.appium) } : {}),
+      ...(evidence.device ? { device: structuredClone(evidence.device) } : {}),
+      ...(evidence.inventoryCapturedAt
+        ? { inventoryCapturedAt: evidence.inventoryCapturedAt }
+        : {}),
       hostInventory: evidence.hostInventory
         ? structuredClone(evidence.hostInventory)
         : null,

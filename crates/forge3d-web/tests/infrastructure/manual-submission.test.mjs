@@ -1,13 +1,21 @@
 import assert from "node:assert/strict";
+import { createHash, generateKeyPairSync } from "node:crypto";
 import { readFileSync } from "node:fs";
 import test from "node:test";
 
 import { createIntakeManifest } from "../../scripts/manual-evidence.mjs";
 import { validateManualSubmission } from "../../scripts/validate-manual-evidence.mjs";
+import { prepareManualSubmission } from "../../scripts/prepare-manual-submission.mjs";
+import { createManualFinalizerRecord } from "../../scripts/finalize-manual-session.mjs";
+import { createManualSession } from "../../../../tools/browser-lab-controller/src/manual-session.mjs";
+import { createTestPrivateKeySigner } from "../../../../tools/browser-lab-controller/test/test-signer.mjs";
 import { canonicalJson, sha256Hex } from "../../scripts/canonical-json.mjs";
 import { exactHostInventory } from "./host-inventory-fixture.mjs";
 import { activeManualMatrices } from "./manual-intake-fixture.mjs";
-import { serviceInstallationFixture } from "./service-installation-fixture.mjs";
+import {
+  diagnosticRetentionFixture,
+  serviceInstallationFixture,
+} from "./service-installation-fixture.mjs";
 
 const matrix = JSON.parse(
   readFileSync(new URL("./hardware-matrix.json", import.meta.url), "utf8"),
@@ -49,7 +57,6 @@ const session = {
   mediaChallenge: intake.mediaChallenge,
   intakeManifestSha256: intakeSha256,
   authorizationSha256: "f".repeat(64),
-  controllerSignatureSha256: "1".repeat(64),
   routeBasePath: `/runs/30/31/${"2".repeat(32)}/`,
   startedAt: "2026-07-29T10:00:00.000Z",
   endedAt: "2026-07-29T10:20:00.000Z",
@@ -119,6 +126,7 @@ const input = {
     denySelfHostedRunners: true,
   },
   session,
+  controllerSignatureSha256: "1".repeat(64),
   signedSessionSha256,
   signedSessionSubjectSha256: "5".repeat(64),
   sessionRun: {
@@ -167,11 +175,17 @@ const input = {
   now: new Date("2026-07-29T11:00:00.000Z"),
 };
 
+function sha256(bytes) {
+  return createHash("sha256").update(bytes).digest("hex");
+}
+
 test("submission produces closed evidence from draft, session, media, approval, and actors", () => {
   const evidence = validateManualSubmission(structuredClone(input));
   assert.equal(evidence.intakeReleaseId, 50);
   assert.equal(evidence.media[0].id, 40);
   assert.equal(evidence.approver.login, "independent-approver");
+  assert.equal(evidence.controllerSignatureSha256, "1".repeat(64));
+  assert.equal(Object.hasOwn(session, "controllerSignatureSha256"), false);
   assert.deepEqual(evidence.approver.environment, {
     id: 600,
     name: "forge3d-manual-evidence",
@@ -179,6 +193,99 @@ test("submission produces closed evidence from draft, session, media, approval, 
   assert.equal(evidence.approvalProvenance.length, 1);
   assert.deepEqual(evidence.labReadiness, session.labReadiness);
   assert.equal(evidence.hostInventory.trackpad.assetId, "FW-TRACKPAD-01");
+});
+
+test("genuine producer, finalizer, preparer, and validator preserve signed record bytes", () => {
+  const intakeBytes = Buffer.from(canonicalJson(intake));
+  const intakeDigest = sha256(intakeBytes);
+  const keys = generateKeyPairSync("ec", { namedCurve: "P-256" });
+  const runnerNonce = "2".repeat(32);
+  const authorization = {
+    workflow: { sha: "e".repeat(40) },
+    run: { id: 30, attempt: 1 },
+    queuedHardwareJob: { id: 31 },
+    runnerName: `FW-MAC-M2-01-${runnerNonce}`,
+    runnerNonce,
+    trustedSha: intake.trustedSha,
+    packageRunId: intake.packageRunId,
+    lane: "manual-safari-trackpad",
+    hostId: intake.hostId,
+    assetId: intake.assetId,
+    sha256: "f".repeat(64),
+    labReadiness: session.labReadiness,
+    manualSession: {
+      mediaChallenge: intake.mediaChallenge,
+      intakeManifestSha256: intakeDigest,
+    },
+  };
+  const genuine = createManualSession({
+    authorization,
+    intake: { ...intake, sha256: intakeDigest },
+    runner: { id: 32, name: authorization.runnerName },
+    system: session.system,
+    loginSession: { interactive: true, locked: false, remote: false },
+    browser: session.browser,
+    driver: session.driver,
+    origins: { application: "https://app.example", asset: "https://asset.example" },
+    routeBasePath: session.routeBasePath,
+    packageRecord: { runId: 10, sha256: intake.packageSha256, harnessSha256: "8".repeat(64) },
+    startedAt: session.startedAt,
+    endedAt: session.endedAt,
+    cleanup: {
+      browserStopped: true, driverStopped: true, fixtureStopped: true,
+      tunnelStopped: true, updatesRestored: true, runnerAbsent: true,
+    },
+    installations: session.installations,
+    diagnosticRetention: diagnosticRetentionFixture({
+      authorizationDigest: authorization.sha256,
+      hostId: authorization.hostId,
+      run: authorization.run,
+      runnerNonce,
+      retainedAt: "2026-07-29T10:20:30.000Z",
+    }),
+    controllerCompletion: session.controllerCompletion,
+    hostInventory,
+    signer: createTestPrivateKeySigner({
+      privateKey: keys.privateKey,
+      signingKeyId: "controller-fw-mac-m2-01-p256-v1",
+    }),
+  });
+  const finalizer = createManualFinalizerRecord({
+    session: genuine.record,
+    terminalJobState: "success",
+    absenceObservations: [{ status: 404 }],
+    finalizer: {
+      workflowSha: genuine.record.workflowSha,
+      run: genuine.record.run,
+      job: "finalize-manual-session",
+      environment: "forge3d-trust-observer",
+      observedAt: "2026-07-29T10:21:00.000Z",
+    },
+  });
+  const mediaBytes = Buffer.from("genuine-media");
+  const mediaDigest = sha256(mediaBytes);
+  const signedSessionBytes = Buffer.from(canonicalJson(genuine));
+  const finalizerBytes = Buffer.from(canonicalJson(finalizer));
+  const prepared = prepareManualSubmission({
+    dispatch: {
+      intakeReleaseId: "50", manualSessionRunId: "30", hardwareJobId: "31",
+      mediaAssetIds: "[40]", stepResults: canonicalJson(input.stepResults),
+    },
+    releaseApi: { id: 50, draft: true, tag_name: "manual-evidence-intake-20", target_commitish: intake.trustedSha },
+    intake, intakeBytes, signedSession: genuine, signedSessionBytes,
+    sessionFinalizer: finalizer, sessionFinalizerBytes: finalizerBytes,
+    sessionRunApi: { id: 30, run_attempt: 1, path: genuine.record.workflow, head_branch: "main", head_sha: intake.trustedSha, event: "workflow_dispatch", status: "completed", conclusion: "success" },
+    hardwareJobApi: { id: 31, name: "Browser Hardware / Ephemeral Execution", status: "completed", conclusion: "success", runner_id: 32, runner_name: authorization.runnerName },
+    releaseAssets: [{ id: 39, name: "intake-manifest.json" }, { id: 40, name: "trackpad.mp4", uploader: { login: "tester" }, size: mediaBytes.length, content_type: "video/mp4", created_at: "2026-07-29T10:10:00Z", digest: `sha256:${mediaDigest}` }],
+    mediaBytesById: new Map([[40, mediaBytes]]), approvals: input.approvals,
+    implementationActors: input.implementationActors, actor: "tester",
+    submissionRun: input.submissionRun,
+  });
+  assert.deepEqual(prepared.session, genuine.record);
+  assert.equal(canonicalJson(prepared.session), genuine.canonical);
+  assert.equal(Object.hasOwn(prepared.session, "controllerSignatureSha256"), false);
+  assert.equal(prepared.controllerSignatureSha256, sha256(Buffer.from(genuine.signature.value, "base64url")));
+  assert.equal(validateManualSubmission({ ...prepared, now: input.now }).media[0].sha256, mediaDigest);
 });
 
 test("infrastructure submission produces a non-support manual canary, not a product row", () => {

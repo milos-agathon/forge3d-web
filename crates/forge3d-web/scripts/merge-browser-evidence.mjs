@@ -207,6 +207,11 @@ function validateRecord(record, row, expected) {
       canonicalJson(record.session?.system) !== canonicalJson(record.system) ||
       canonicalJson(record.session?.browser) !== canonicalJson(record.browser) ||
       canonicalJson(record.session?.driver) !== canonicalJson(record.driver) ||
+      canonicalJson(record.session?.appium ?? null) !==
+        canonicalJson(record.appium ?? null) ||
+      canonicalJson(record.session?.device ?? null) !==
+        canonicalJson(record.device ?? null) ||
+      record.session?.inventoryCapturedAt !== record.inventoryCapturedAt ||
       canonicalJson(record.session?.hostInventory) !==
         canonicalJson(record.hostInventory) ||
       record.session?.result !== "success" ||

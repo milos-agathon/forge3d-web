@@ -6,6 +6,7 @@ import {
   probeAttachedMobileRoutes,
 } from "../../scripts/probe-mobile-device-routes.mjs";
 import { WebDriverClient } from "../../scripts/webdriver-client.mjs";
+import { appiumRouteInterface } from "../../scripts/browser-session-runtime.mjs";
 import { assertJsonSchema } from "../browser/json-schema-validator.mjs";
 import { exactHostInventory } from "./host-inventory-fixture.mjs";
 
@@ -72,21 +73,23 @@ test("six physical Appium devices prove the exact nonce-bound browser route", as
           device.automationName === "XCUITest"
             ? deviceMatrix.appium.drivers.xcuitest
             : deviceMatrix.appium.drivers.uiautomator2;
+        const mobileDevice = {
+          ...device,
+          appiumVersion: deviceMatrix.appium.version,
+          driverVersion,
+          browserVersion: "current",
+          platformVersion: "current-patched",
+          routeUrl: route.applicationUrl,
+          connected: true,
+          unlocked: true,
+          trusted: true,
+          acceptInsecureCerts: false,
+        };
         return {
           browser: { version: "current" },
-          mobileDevice: {
-            ...device,
-            appiumVersion: deviceMatrix.appium.version,
-            driverVersion,
-            browserVersion: "current",
-            platformVersion: "current-patched",
-            routeUrl: route.applicationUrl,
-            connected: true,
-            unlocked: true,
-            trusted: true,
-            acceptInsecureCerts: false,
-          },
-          runRouteProbe: async () => completeReadiness(),
+          ...appiumRouteInterface(mobileDevice, {
+            runRouteProbe: async () => completeReadiness(),
+          }),
           close: async () => closed.push(request.assetId),
         };
       },
@@ -101,6 +104,7 @@ test("six physical Appium devices prove the exact nonce-bound browser route", as
 });
 
 test("declarations, incomplete device closure, and incomplete browser proof fail closed", async () => {
+  let failedClosed = 0;
   await assert.rejects(
     () =>
       probeAttachedMobileRoutes({
@@ -198,32 +202,35 @@ test("declarations, incomplete device closure, and incomplete browser proof fail
             const device = deviceMatrix.devices.find(
               (candidate) => candidate.assetId === assetId,
             );
+            const mobileDevice = {
+              ...device,
+              appiumVersion: deviceMatrix.appium.version,
+              driverVersion:
+                device.automationName === "XCUITest" ? "10.0.0" : "5.0.0",
+              browserVersion: "current",
+              platformVersion: "current-patched",
+              routeUrl: route.applicationUrl,
+              connected: true,
+              unlocked: true,
+              trusted: true,
+              acceptInsecureCerts: false,
+            };
             return {
               browser: { version: "current" },
-              mobileDevice: {
-                ...device,
-                appiumVersion: deviceMatrix.appium.version,
-                driverVersion:
-                  device.automationName === "XCUITest" ? "10.0.0" : "5.0.0",
-                browserVersion: "current",
-                platformVersion: "current-patched",
-                routeUrl: route.applicationUrl,
-                connected: true,
-                unlocked: true,
-                trusted: true,
-                acceptInsecureCerts: false,
-              },
-              runRouteProbe: async () => ({
-                ...completeReadiness(),
-                trustedHttps: false,
+              ...appiumRouteInterface(mobileDevice, {
+                runRouteProbe: async () => ({
+                  ...completeReadiness(),
+                  trustedHttps: false,
+                }),
               }),
-              close: async () => undefined,
+              close: async () => { failedClosed += 1; },
             };
           },
         },
       }),
     /physical browser route readiness is incomplete/u,
   );
+  assert.equal(failedClosed, 1);
 });
 
 test("WebDriver executes route verification inside the navigated physical browser", async () => {

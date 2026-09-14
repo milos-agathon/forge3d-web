@@ -3,6 +3,8 @@ import test from "node:test";
 
 import { createIntakeManifest } from "../../scripts/manual-evidence.mjs";
 import { verifyManualIntake } from "../../scripts/resolve-manual-intake.mjs";
+import { createRunnerAuthorization } from "../../scripts/hardware-orchestration.mjs";
+import { createBrowserPageBinding } from "../../scripts/browser-lane-runtime.mjs";
 import { activeManualMatrices } from "./manual-intake-fixture.mjs";
 
 const bytes = Buffer.from("intake bytes");
@@ -53,12 +55,53 @@ const fixture = {
 };
 
 test("manual promotion derives only challenge and intake digest from verified draft", () => {
-  assert.deepEqual(verifyManualIntake(fixture), {
+  const manualSession = verifyManualIntake(fixture);
+  assert.deepEqual(manualSession, {
     intakeReleaseId: 30,
     checklistId: "mobile-multitouch",
     mediaChallenge: intake.mediaChallenge,
     intakeManifestSha256: digest,
   });
+  const promotion = {
+    trustedSha: intake.trustedSha,
+    trustEpochSha: "d".repeat(40),
+    lane: fixture.dispatch.lane,
+    required: true,
+    assetId: intake.assetId,
+    hostId: intake.hostId,
+    runnerNonce: "e".repeat(32),
+    nonceLabel: `jit-${"e".repeat(32)}`,
+    runnerName: `${intake.hostId}-${"e".repeat(32)}`,
+    customLabels: ["forge3d-web", "hw-macos-m2", `jit-${"e".repeat(32)}`],
+    packageRunId: intake.packageRunId,
+    packageManifestSha256: "f".repeat(64),
+    labReadinessRunId: 9,
+    labReadiness: {
+      runId: 9,
+      manifestSha256: "1".repeat(64),
+      labInfrastructureDigest: "2".repeat(64),
+    },
+    manualSession,
+  };
+  const authorization = createRunnerAuthorization({
+    promotion,
+    queuedJob: { id: 40, name: "Browser Hardware / Ephemeral Execution", status: "queued", labels: promotion.customLabels },
+    workflow: { sha: "3".repeat(40) },
+    run: { id: 50, attempt: 1 },
+    promotionJobId: 51,
+    authorizationJobId: 52,
+    policy: { repositoryJitRunnerGroupId: 1, jitWorkFolder: "_work" },
+  }).record;
+  assert.equal(Object.hasOwn(authorization.manualSession, "expectedTester"), false);
+  assert.equal(createBrowserPageBinding({
+    authorization,
+    packageSha256: intake.packageSha256,
+    actor: " tester ",
+  }).expectedTester, "tester");
+  assert.throws(
+    () => createBrowserPageBinding({ authorization, packageSha256: intake.packageSha256, actor: " " }),
+    /actor is missing/u,
+  );
 });
 
 test("wrong actor, lane, expiry, package, or attestation fails before promotion", () => {

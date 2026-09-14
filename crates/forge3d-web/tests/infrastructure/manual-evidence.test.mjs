@@ -14,6 +14,7 @@ import {
   validateStepResults,
 } from "../../scripts/manual-evidence.mjs";
 import { createManualSession } from "../../../../tools/browser-lab-controller/src/manual-session.mjs";
+import { projectRuntimeDeviceObservation } from "../../scripts/browser-session-runtime.mjs";
 import { createTestPrivateKeySigner } from "../../../../tools/browser-lab-controller/test/test-signer.mjs";
 import { assertJsonSchema } from "../browser/json-schema-validator.mjs";
 import { activeManualMatrices } from "./manual-intake-fixture.mjs";
@@ -52,7 +53,9 @@ test("checked manual checklists expose unique complete step IDs and isolate cana
   const canary = checklistDefinition("infrastructure-manual-canary");
   assert.ok(mobile.stepIds.includes("PEN_OR_PENCIL_ORBIT"));
   assert.ok(mobile.stepIds.includes("BACKGROUND_FOREGROUND"));
-  assert.ok(trackpad.stepIds.includes("TRACKPAD_PINCH_ZOOM"));
+  assert.ok(trackpad.stepIds.includes("TRACKPAD_TWO_FINGER_SCROLL_ZOOM"));
+  assert.ok(trackpad.stepIds.includes("NO_SAFARI_GESTURE_EVENT_LISTENERS"));
+  assert.ok(!trackpad.stepIds.includes("TRACKPAD_PINCH_ZOOM"));
   assert.equal(canary.supportClaim, false);
   assert.equal(canary.stepIds.some((id) => id.includes("ORBIT")), false);
 });
@@ -258,11 +261,84 @@ test("manual session is exactly 20 minutes, controller-signed, and cleanup-compl
   );
 });
 
+test("all six mobile runtime observations survive signed-session schema validation", () => {
+  const matrix = readJson(join("..", "device", "device-matrix.json"));
+  const { privateKey } = generateKeyPairSync("ec", { namedCurve: "P-256" });
+  for (const candidate of matrix.devices) {
+    const intake = createIntakeManifest({
+      trustedSha: sha,
+      packageRunId: 10,
+      packageSha256: "b".repeat(64),
+      checklistId: "mobile-multitouch",
+      assetId: candidate.assetId,
+      ...activeManualMatrices(candidate.assetId),
+      expectedTester: "tester-login",
+      prepareRun: { id: 20, attempt: 1, workflowSha: "c".repeat(40) },
+      now: new Date("2026-07-29T09:00:00.000Z"),
+      random: () => Buffer.alloc(16, 9),
+    });
+    intake.sha256 = createHash("sha256").update(JSON.stringify(intake)).digest("hex");
+    const authorization = { ...authorizationFixture(intake), lane: "manual-mobile-multitouch" };
+    const record = createManualSession({
+      authorization,
+      intake,
+      runner: { id: 30, name: `${intake.hostId}-${authorization.runnerNonce}` },
+      system: { os: "macOS 26", build: "25A123" },
+      loginSession: { interactive: true, locked: false, remote: false },
+      browser: { name: candidate.platformName === "Android" ? "chrome" : "safari", channel: "stable", version: "26.0" },
+      driver: { name: candidate.platformName === "Android" ? "appium-uiautomator2" : "appium-xcuitest", version: "1.0" },
+      appium: { serverVersion: "3.1.0", driverName: candidate.platformName === "Android" ? "uiautomator2" : "xcuitest", driverVersion: "1.0" },
+      device: projectRuntimeDeviceObservation({
+        assetId: candidate.assetId,
+        model: candidate.model,
+        platformName: candidate.platformName,
+        osVersion: "26.0",
+        accessory: candidate.accessory,
+      }),
+      inventoryCapturedAt: "2026-07-29T09:59:00.000Z",
+      origins: { application: "https://app.example", asset: "https://asset.example" },
+      routeBasePath: `/runs/20/21/${"e".repeat(32)}/`,
+      packageRecord: { runId: 10, sha256: intake.packageSha256, harnessSha256: "f".repeat(64) },
+      startedAt: "2026-07-29T10:00:00.000Z",
+      endedAt: "2026-07-29T10:20:00.000Z",
+      cleanup: cleanupFixture(),
+      installations: {
+        controller: serviceInstallationFixture({ component: "controller", instanceId: intake.hostId, targetSha: intake.trustedSha }),
+        broker: serviceInstallationFixture({ component: "broker", instanceId: "browser-lab-broker", targetSha: intake.trustedSha }),
+      },
+      diagnosticRetention: diagnosticRetentionFixture({ authorizationDigest: authorization.sha256, hostId: intake.hostId, run: authorization.run, runnerNonce: authorization.runnerNonce, retainedAt: "2026-07-29T10:20:30.000Z" }),
+      controllerCompletion: controllerCompletionFixture(),
+      signer: createTestPrivateKeySigner({ privateKey, signingKeyId: "controller-fw-mac-m2-01-p256-v1" }),
+    }).record;
+    assertJsonSchema(record, sessionSchema);
+    assert.deepEqual(record.device, {
+      assetId: candidate.assetId,
+      model: candidate.model,
+      platformName: candidate.platformName,
+      osVersion: "26.0",
+      accessory: candidate.accessory,
+    });
+  }
+});
+
 test("media and evidence require exact inventory, uploader, digest, window, steps, and independent actors", () => {
   const intake = intakeFixture();
   const session = {
     ...sessionFixture(intake),
     intakeManifestSha256: intake.sha256,
+    appium: {
+      serverVersion: "3.1.0",
+      driverName: "uiautomator2",
+      driverVersion: "5.0.0",
+    },
+    device: {
+      assetId: intake.assetId,
+      model: "Samsung Galaxy S23 SM-S911B",
+      platformName: "Android",
+      osVersion: "16",
+      accessory: null,
+    },
+    inventoryCapturedAt: "2026-07-29T09:59:00.000Z",
   };
   const asset = {
     id: 50,
@@ -313,6 +389,8 @@ test("media and evidence require exact inventory, uploader, digest, window, step
   assert.deepEqual(evidence.system, session.system);
   assert.deepEqual(evidence.browser, session.browser);
   assert.deepEqual(evidence.driver, session.driver);
+  assert.deepEqual(evidence.appium, session.appium);
+  assert.deepEqual(evidence.device, session.device);
 
   assert.throws(
     () => validateStepResults({ ...stepResults, EXTRA: "pass" }, intake),

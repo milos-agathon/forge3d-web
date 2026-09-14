@@ -86,11 +86,22 @@ export async function startPinnedAppiumSession({
           : matrix.appium.drivers.uiautomator2,
       browserVersion: browser.version,
       platformVersion,
+      osVersion: platformVersion,
+      model: device.model,
+      accessory: device.accessory,
       routeUrl,
       connected: true,
       unlocked: true,
       trusted: true,
       acceptInsecureCerts: false,
+      assertHealthy: async () => {
+        const current = await probeDevice(privateDeviceId).catch(() => null);
+        if (current?.connected !== true || current.unlocked !== true || current.trusted !== true) {
+          throw new Error("INFRA_ERROR DEVICE_HEALTH_CHANGED");
+        }
+        const currentUrl = await session.currentUrl().catch(() => null);
+        if (currentUrl !== routeUrl) throw new Error("INFRA_ERROR APPIUM_SESSION_CHANGED");
+      },
     };
   } catch (error) {
     await session.delete().catch(() => undefined);

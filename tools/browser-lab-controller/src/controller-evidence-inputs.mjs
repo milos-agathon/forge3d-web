@@ -83,6 +83,8 @@ export function readManualSessionInput({ jobRoot, authorization }) {
     inventory.session.locked !== false ||
     inventory.session.remote !== false ||
     !/^[0-9a-f]{64}$/u.test(harness?.sha256 ?? "")
+    || Object.hasOwn(session, "startedAt")
+    || Object.hasOwn(session, "endedAt")
   ) {
     throw new Error("manual session input does not match authorization");
   }
@@ -98,6 +100,9 @@ export function readManualSessionInput({ jobRoot, authorization }) {
     },
     browser: session.browser,
     driver: session.driver,
+    appium: session.appium ?? null,
+    device: session.device ?? null,
+    inventoryCapturedAt: session.inventoryCapturedAt,
     origins: {
       application: new URL(session.route.applicationUrl).origin,
       asset: new URL(session.route.assetUrl).origin,
@@ -108,8 +113,6 @@ export function readManualSessionInput({ jobRoot, authorization }) {
       sha256: manifest.packageSha256,
       harnessSha256: harness.sha256,
     },
-    startedAt: session.startedAt,
-    endedAt: session.endedAt,
     cleanup: {
       browserStopped: cleanup.browserDriversStopped === true,
       driverStopped: cleanup.browserDriversStopped === true,
