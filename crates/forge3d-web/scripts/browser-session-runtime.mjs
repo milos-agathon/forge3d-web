@@ -15,8 +15,9 @@ import {
   resolveInstalledAppiumDriverVersion,
 } from "./browser-launch-provenance.mjs";
 import { WebDriverClient } from "./webdriver-client.mjs";
-import { runChromeHardwareAcceptance } from "./chrome-hardware-acceptance.mjs";
+import { runBrandedHardwareAcceptance } from "./chrome-hardware-acceptance.mjs";
 import { isChr03Lane } from "./chr03-lanes.mjs";
+import { isChr04Lane } from "./chr04-lanes.mjs";
 
 export async function openProductionSession(request) {
   if (
@@ -89,9 +90,11 @@ async function openPlaywrightSession({ runtime, routeUrl, browserPolicy }) {
       },
       driverVersion,
       ...launch,
-      runPage: (payload) => ["chrome", "chrome-beta"].includes(runtime.browser) &&
-        isChr03Lane(payload.binding?.lane)
-        ? runChromeHardwareAcceptance(page, payload)
+      runPage: (payload) => (
+        (["chrome", "chrome-beta"].includes(runtime.browser) && isChr03Lane(payload.binding?.lane)) ||
+        (runtime.browser === "msedge" && isChr04Lane(payload.binding?.lane))
+      )
+        ? runBrandedHardwareAcceptance(page, payload)
         : runPlaywrightPage(page, payload),
       assertHealthy: createPlaywrightHealthObserver({ browser, page, routeUrl }),
       close: () => closePlaywright(context, browser),

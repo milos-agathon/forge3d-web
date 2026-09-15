@@ -33,6 +33,7 @@ import {
   VIEWER_INTERACTION_ERROR_KEY,
 } from "../tests/browser/viewer-interaction-observation.mjs";
 import { resolveCommandInvocation } from "./command-executable.mjs";
+import { runEdgeBrowserAcceptance } from "./edge-browser-acceptance.mjs";
 import { resolveInstalledTarballBrowserProfile } from "./installed-tarball-browser-profile.mjs";
 import { resolvePackageGateMode } from "./package-gate-mode.mjs";
 
@@ -262,6 +263,10 @@ try {
       join(retainedFixture, "tests", "browser", "chr03-lanes.js"),
     );
     copyFileSync(
+      join(packageRoot, "scripts", "chr04-lanes.mjs"),
+      join(retainedFixture, "tests", "browser", "chr04-lanes.js"),
+    );
+    copyFileSync(
       benchmarkModulePath,
       join(retainedFixture, "viewer-benchmark.mjs"),
     );
@@ -401,27 +406,11 @@ async function runInstalledPackageBrowserGate(
     const afterKeyboard = await page.evaluate(() =>
       window.__forge3dInteractiveViewer.viewer.getView(),
     );
-    const afterTouch = await page.evaluate(() => {
-      const fixture = window.__forge3dInteractiveViewer;
-      const event = (type, x, y) =>
-        new PointerEvent(type, {
-          bubbles: true,
-          pointerId: 73,
-          pointerType: "touch",
-          clientX: x,
-          clientY: y,
-          isPrimary: true,
-        });
-      fixture.canvas.dispatchEvent(event("pointerdown", 120, 120));
-      fixture.canvas.dispatchEvent(event("pointermove", 150, 95));
-      fixture.canvas.dispatchEvent(event("pointerup", 150, 95));
-      return fixture.viewer.getView();
-    });
     const interactionAssertions = {
       mouse: JSON.stringify(afterMouse) !== JSON.stringify(initial.view),
       wheel: JSON.stringify(afterWheel) !== JSON.stringify(afterMouse),
       keyboard: JSON.stringify(afterKeyboard) !== JSON.stringify(afterWheel),
-      touch: JSON.stringify(afterTouch) !== JSON.stringify(afterKeyboard),
+      touch: false,
       resize: false,
       disposal: false,
     };
@@ -488,13 +477,6 @@ async function runInstalledPackageBrowserGate(
       throw new Error("installed-package disposal leaked viewer resources");
     }
     interactionAssertions.disposal = true;
-    for (const [name, passed] of Object.entries(interactionAssertions)) {
-      if (!passed) {
-        throw new Error(
-          `installed-package ${name} interaction did not independently satisfy its assertion`,
-        );
-      }
-    }
     if (pageErrors.length > 0) {
       throw new Error(`installed-package page errors: ${pageErrors.join("; ")}`);
     }
@@ -508,6 +490,20 @@ async function runInstalledPackageBrowserGate(
             lowPowerSignalProvenance: "browser API unavailable",
           })
         : null;
+    const edgeAcceptance = await runEdgeBrowserAcceptance({
+      browser,
+      page,
+      fixtureUrl: `${origin}/test-interactive-viewer.html`,
+    });
+    interactionAssertions.touch = edgeAcceptance.touch.viewChanged === true &&
+      edgeAcceptance.touch.activePointersAfter === 0 && edgeAcceptance.touch.disposed === true;
+    for (const [name, passed] of Object.entries(interactionAssertions)) {
+      if (!passed) {
+        throw new Error(
+          `installed-package ${name} interaction did not independently satisfy its assertion`,
+        );
+      }
+    }
     const frameCounters = await page.evaluate(() =>
       window.__forge3dInteractiveViewer.viewer.getDiagnostics(),
     );
@@ -563,7 +559,6 @@ async function runInstalledPackageBrowserGate(
         requireReleaseArtifact: true,
       });
     }
-    await verifyUnsupportedUi(browser, origin);
     if (pageErrors.length > 0) {
       throw new Error(`installed-package page errors: ${pageErrors.join("; ")}`);
     }
@@ -576,40 +571,13 @@ async function runInstalledPackageBrowserGate(
       resize: true,
       disposal: true,
       unsupportedUi: true,
+      unsupportedDiagnostic: edgeAcceptance,
       visibilityLifecycle,
       interactionObservation,
       evidence,
     };
   } finally {
     await browser.close();
-  }
-}
-
-async function verifyUnsupportedUi(browser, origin) {
-  const context = await browser.newContext();
-  await context.addInitScript(() => {
-    Object.defineProperty(navigator, "gpu", {
-      configurable: true,
-      get: () => undefined,
-    });
-  });
-  const page = await context.newPage();
-  try {
-    await page.goto(`${origin}/test-interactive-viewer.html`);
-    const result = await page.evaluate(async () => {
-      await window.__forge3dInteractiveViewer.create().catch(() => undefined);
-      const unsupported = document.querySelector("#unsupported");
-      const status = document.querySelector("#status");
-      return {
-        unsupportedVisible: unsupported?.hidden === false,
-        status: status?.value,
-      };
-    });
-    if (!result.unsupportedVisible || result.status !== "unsupported") {
-      throw new Error("installed-package unsupported UI did not activate");
-    }
-  } finally {
-    await context.close();
   }
 }
 

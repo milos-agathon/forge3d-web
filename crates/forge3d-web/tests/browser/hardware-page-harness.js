@@ -1,6 +1,7 @@
 import { captureAdapterAttestation } from "./adapter-attestation.js";
 import { runViewerBenchmarkInBrowser } from "./viewer-benchmark-browser.js";
 import { isChr03Lane } from "./chr03-lanes.js";
+import { isChr04Lane } from "./chr04-lanes.js";
 
 export async function runHardwarePage({
   lane,
@@ -10,6 +11,7 @@ export async function runHardwarePage({
   supportAssertions = true,
   mediaChallenge = null,
   chr03 = null,
+  hardware = null,
   sessionContext = null,
 }) {
   const fixture = window.__forge3dInteractiveViewer;
@@ -54,12 +56,17 @@ export async function runHardwarePage({
     fixture,
     supportAssertions,
     retainViewer: productManual,
-    onError: window.__forge3dChr03OnError,
+    onError: window.__forge3dHardwareOnError,
   });
-  const chr03Proof = isChr03Lane(lane)
-    ? await runChr03HardwareProof({ binding, route, chr03 })
+  const proofFamily = isChr03Lane(lane) ? "chr03" : isChr04Lane(lane) ? "chr04" : null;
+  const hardwareProof = proofFamily
+    ? await runBrandedHardwareProof({ binding, route, observations: hardware ?? chr03, proofFamily })
     : null;
-  return { adapter, assertions, routeReadiness, watermark, chr03Proof };
+  return {
+    adapter, assertions, routeReadiness, watermark,
+    chr03Proof: proofFamily === "chr03" ? hardwareProof : null,
+    chr04Proof: proofFamily === "chr04" ? hardwareProof : null,
+  };
 }
 
 export async function runInitialViewerAssertions({
@@ -113,9 +120,9 @@ export function adapterBinding(binding) {
   };
 }
 
-async function runChr03HardwareProof({ binding, route, chr03 }) {
-  if (!chr03?.driver || !chr03.visibility || !chr03.systemInfo || !Array.isArray(chr03.observedErrors)) {
-    throw new Error("required Chrome lane is missing native-driver CHR-03 observations");
+async function runBrandedHardwareProof({ binding, route, observations, proofFamily }) {
+  if (!observations?.driver || !observations.visibility || !observations.systemInfo || !Array.isArray(observations.observedErrors)) {
+    throw new Error("required branded browser lane is missing native-driver observations");
   }
   const fixture = window.__forge3dInteractiveViewer;
   const terrainUrl = new URL("cors/allow/terrain.bin", route.assetUrl).href;
@@ -123,7 +130,7 @@ async function runChr03HardwareProof({ binding, route, chr03 }) {
       new URL(terrainUrl).origin === new URL(route.applicationUrl).origin) {
     throw new Error("CHR-03 cross-origin 512x512 terrain source is invalid");
   }
-  const terrainViewer = await fixture.create({ resize: false, controls: { keyboard: true }, onError: window.__forge3dChr03OnError });
+  const terrainViewer = await fixture.create({ resize: false, controls: { keyboard: true }, onError: window.__forge3dHardwareOnError });
   terrainViewer.resize({ width: 320, height: 320, devicePixelRatio: 2 });
   const beforeTerrain = terrainViewer.getDiagnostics().submittedFrames;
   const progressEvents = [];
@@ -156,17 +163,20 @@ async function runChr03HardwareProof({ binding, route, chr03 }) {
       trace: new URL("benchmark-trace-v1.json", benchmarkBase).href,
     },
   });
-  const lifecycleCycles = await runRenderedLifecycleCycles({ fixture, binding, onError: window.__forge3dChr03OnError });
-  const visibilityCycles = chr03.visibility.cycles ?? [];
+  const lifecycleCycles = await runRenderedLifecycleCycles({ fixture, binding, onError: window.__forge3dHardwareOnError });
+  const visibilityCycles = observations.visibility.cycles ?? [];
   const submittedEveryCycle = visibilityCycles.length === 30 &&
     visibilityCycles.every((cycle) => cycle.visibleFrame === "submitted");
-  const driver = chr03.driver;
+  const driver = observations.driver;
   return {
     schemaVersion: 1,
-    kind: "forge3d-chr03-chrome-hardware-proof-v1",
+    kind: proofFamily === "chr04"
+      ? "forge3d-chr04-edge-hardware-proof-v1"
+      : "forge3d-chr03-chrome-hardware-proof-v1",
     binding: {
       lane: binding.lane,
       assetId: binding.assetId,
+      ...(proofFamily === "chr04" ? { platform: binding.platform } : {}),
       commit: binding.commit,
       packageSha256: binding.packageSha256,
     },
@@ -177,17 +187,17 @@ async function runChr03HardwareProof({ binding, route, chr03 }) {
       pointerCapture: driver.pointerCapture?.captured === true && driver.pointerCapture?.released === true && driver.pointerCapture?.outsideMoveChanged === true && driver.pointerCapture?.activePointersAfter === 0,
       keyboard: Object.values(driver.keyboard ?? {}).length === 5 && Object.values(driver.keyboard).every((event) => event.changed === true),
       autoResize: Object.values(driver.autoResize ?? {}).length === 3 && Object.values(driver.autoResize).every(Boolean),
-      visibilityResume: chr03.visibility.actualDocumentVisibilityTransitions === true && submittedEveryCycle,
+      visibilityResume: observations.visibility.actualDocumentVisibilityTransitions === true && submittedEveryCycle,
       terrainSource: terrainSubmitted,
       screenshot: screenshot.mimeType === "image/png" && screenshot.byteLength > 0,
       disposal: lifecycleCycles.every(({ afterDispose }) => resourcesReleased(afterDispose)),
     },
     driver,
     visibility: {
-      source: chr03.visibility.visibilityStateSource,
-      cycleCount: chr03.visibility.cycleCount,
+      source: observations.visibility.visibilityStateSource,
+      cycleCount: observations.visibility.cycleCount,
       hiddenObserved: visibilityCycles.every((cycle) => cycle.hiddenPendingFrameCancelled === true),
-      visibleObserved: chr03.visibility.final?.visibilityState === "visible",
+      visibleObserved: observations.visibility.final?.visibilityState === "visible",
       submittedEveryCycle,
     },
     terrainSource: { api: "setTerrainFromSource", url: terrainUrl, crossOrigin: true, width: 512, height: 512,
@@ -195,9 +205,9 @@ async function runChr03HardwareProof({ binding, route, chr03 }) {
       submittedFrame: terrainSubmitted },
     screenshot,
     lifecycleCycles,
-    errors: [...chr03.observedErrors],
+    errors: [...observations.observedErrors],
     benchmark,
-    systemInfo: chr03.systemInfo,
+    systemInfo: observations.systemInfo,
   };
 }
 

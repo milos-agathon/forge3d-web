@@ -1,4 +1,8 @@
-export async function runChromeHardwareAcceptance(page, payload) {
+import { isChr04Lane } from "./chr04-lanes.mjs";
+import { runEdgeBrowserAcceptance } from "./edge-browser-acceptance.mjs";
+
+export async function runBrandedHardwareAcceptance(page, payload) {
+  const proofKey = isChr04Lane(payload.binding?.lane) ? "chr04Proof" : "chr03Proof";
   const pageErrors = [];
   const onPageError = (error) => pageErrors.push(`${error.name}: ${error.message}`);
   const onConsole = (message) => {
@@ -9,16 +13,16 @@ export async function runChromeHardwareAcceptance(page, payload) {
   try {
     await page.evaluate(async () => {
       const fixture = window.__forge3dInteractiveViewer;
-      window.__forge3dChr03Errors = [];
-      const onError = (error) => window.__forge3dChr03Errors.push(
+      window.__forge3dHardwareErrors = [];
+      const onError = (error) => window.__forge3dHardwareErrors.push(
         error instanceof Error ? `${error.name}: ${error.message}` : String(error),
       );
-      window.__forge3dChr03OnError = onError;
+      window.__forge3dHardwareOnError = onError;
       const viewer = await fixture.create({ resize: true, controls: { keyboard: true }, onError });
       const canvas = fixture.canvas;
-      window.__forge3dChr03 = { captures: [], releases: [] };
-      canvas.addEventListener("gotpointercapture", (event) => window.__forge3dChr03.captures.push(event.pointerId));
-      canvas.addEventListener("lostpointercapture", (event) => window.__forge3dChr03.releases.push(event.pointerId));
+      window.__forge3dHardware = { captures: [], releases: [] };
+      canvas.addEventListener("gotpointercapture", (event) => window.__forge3dHardware.captures.push(event.pointerId));
+      canvas.addEventListener("lostpointercapture", (event) => window.__forge3dHardware.releases.push(event.pointerId));
       for (let attempt = 0; attempt < 120 && viewer.getDiagnostics().submittedFrames === 0; attempt += 1) {
         await new Promise((resolve) => requestAnimationFrame(resolve));
       }
@@ -34,18 +38,18 @@ export async function runChromeHardwareAcceptance(page, payload) {
     await page.mouse.down({ button: "left" });
     const pointerDown = await page.evaluate(() => ({
       diagnostics: window.__forge3dInteractiveViewer.viewer.getDiagnostics(),
-      captures: [...window.__forge3dChr03.captures],
+      captures: [...window.__forge3dHardware.captures],
     }));
     await page.mouse.move(box.x + box.width + 40, box.y - 20, { steps: 4 });
     const outside = await page.evaluate(() => ({
       view: window.__forge3dInteractiveViewer.viewer.getView(),
-      captures: [...window.__forge3dChr03.captures],
+      captures: [...window.__forge3dHardware.captures],
     }));
     const outsideView = outside.view;
     await page.mouse.up({ button: "left" });
     const pointerUp = await page.evaluate(() => ({
       diagnostics: window.__forge3dInteractiveViewer.viewer.getDiagnostics(),
-      releases: [...window.__forge3dChr03.releases],
+      releases: [...window.__forge3dHardware.releases],
     }));
     const afterOrbit = outsideView;
 
@@ -123,17 +127,26 @@ export async function runChromeHardwareAcceptance(page, payload) {
       return module.runHardwarePage(value);
     }, {
       ...payload,
-      chr03: { driver, visibility, systemInfo, observedErrors: [] },
+      hardware: { driver, visibility, systemInfo, observedErrors: [] },
     });
+    if (proofKey === "chr04Proof") {
+      result.chr04Proof.edgeAcceptance = await runEdgeBrowserAcceptance({
+        browser: page.context().browser(),
+        page,
+        fixtureUrl: page.url(),
+      });
+    }
     await page.waitForTimeout(50);
-    const viewerErrors = await page.evaluate(() => [...(window.__forge3dChr03Errors ?? [])]);
-    result.chr03Proof.errors = [...new Set([...result.chr03Proof.errors, ...viewerErrors, ...pageErrors])];
+    const viewerErrors = await page.evaluate(() => [...(window.__forge3dHardwareErrors ?? [])]);
+    result[proofKey].errors = [...new Set([...result[proofKey].errors, ...viewerErrors, ...pageErrors])];
     return result;
   } finally {
     page.off("pageerror", onPageError);
     page.off("console", onConsole);
   }
 }
+
+export const runChromeHardwareAcceptance = runBrandedHardwareAcceptance;
 
 async function exerciseActualVisibility(page, cycleCount) {
   const cover = await page.context().newPage();

@@ -10,6 +10,8 @@ import {
 import { assertJsonSchema } from "../browser/json-schema-validator.mjs";
 import { exactHostInventory } from "./host-inventory-fixture.mjs";
 import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
+import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
+import { CHR04_LANES } from "../../scripts/chr04-lanes.mjs";
 
 const matrix = JSON.parse(
   readFileSync(new URL("./hardware-matrix.json", import.meta.url), "utf8"),
@@ -27,6 +29,8 @@ const rows = requiredEvidenceRows(matrix);
 const records = rows.map((row, index) => {
   const safariTrackpad =
     row.lane === "safari-macos-m2" || row.checklistId === "safari-trackpad";
+  const edge = row.lane.startsWith("edge-");
+  const edgePlatform = edge ? CHR04_LANES[row.lane].platform : null;
   const system =
     row.kind === "manual"
       ? {
@@ -34,17 +38,19 @@ const records = rows.map((row, index) => {
           build: safariTrackpad ? macInventory.osBuild : "25A456",
         }
       : {
-          platform: safariTrackpad ? "darwin" : "linux",
+          platform: safariTrackpad ? "darwin" : edgePlatform ?? "linux",
           osBuild: safariTrackpad
             ? macInventory.osBuild
             : "Ubuntu 24.04.1",
-          displayServer: safariTrackpad ? "WindowServer" : "GNOME Wayland",
+          displayServer: safariTrackpad || edgePlatform === "darwin" ? "WindowServer" : edgePlatform === "win32" ? "Desktop Window Manager" : "GNOME Wayland",
         };
   const browser = safariTrackpad
     ? { name: "Safari", channel: "stable", version: "26.0" }
+    : edge ? { name: "msedge", channel: "stable", version: "150.0.1.2" }
     : { name: "chrome", channel: "stable", version: "150.0" };
   const driver = safariTrackpad
     ? { name: "safaridriver", version: "26.0" }
+    : edge ? { name: "playwright-edge", version: "1.56.1" }
     : { name: "playwright-chrome", version: "1.56.1" };
   const hostInventory = safariTrackpad
     ? structuredClone(macInventory)
@@ -104,6 +110,7 @@ const records = rows.map((row, index) => {
             presentedFrameLumaDelta: 0.7,
             lumaChanged: true,
           },
+          effectiveLaunchArguments: [],
         adapterAttestation: {
             result: "PASS",
             required: true,
@@ -130,6 +137,7 @@ const records = rows.map((row, index) => {
           ...(row.lane.startsWith("chrome-") && row.lane !== "chrome-windows-intel12"
             ? { chr03Proof: validChr03HardwareProof({ lane: row.lane, assetId: row.assetId, commit: targetSha, packageSha256 }) }
             : {}),
+          ...(edge ? { chr04Proof: validChr04HardwareProof({ lane: row.lane, assetId: row.assetId, platform: edgePlatform, commit: targetSha, packageSha256 }) } : {}),
         }),
   };
 });
@@ -236,6 +244,28 @@ test("prior head, other package, expired manual, missing, duplicate, and infra e
     records.map((record) =>
       record.lane === "chrome-linux-rtx3070"
         ? { ...record, chr03Proof: { ...record.chr03Proof, behaviors: { ...record.chr03Proof.behaviors, orbit: false } } }
+        : record,
+    ),
+    records.map((record) =>
+      record.lane === "edge-linux-rtx3070"
+        ? { ...record, chr04Proof: { ...record.chr04Proof, kind: "forge3d-chr03-chrome-hardware-proof-v1" } }
+        : record,
+    ),
+    ...["touch", "code", "ui", "bypass"].map((mutation) => records.map((record) => {
+      if (record.lane !== "edge-linux-rtx3070") return record;
+      const chr04Proof = structuredClone(record.chr04Proof);
+      if (mutation === "touch") chr04Proof.edgeAcceptance.touch.viewChanged = false;
+      if (mutation === "code") chr04Proof.edgeAcceptance.unsupported.nullAdapter.publicCode = "WEBGPU_UNAVAILABLE";
+      if (mutation === "ui") chr04Proof.edgeAcceptance.unsupported.nullAdapter.unsupportedVisible = false;
+      if (mutation === "bypass") chr04Proof.edgeAcceptance.unsupported.nullAdapter.hasBypassAdvice = true;
+      return { ...record, chr04Proof };
+    })),
+    records.map((record) => record.lane === "edge-linux-rtx3070"
+      ? { ...record, effectiveLaunchArguments: ["--ignore-certificate-errors=value"] }
+      : record),
+    records.map((record) =>
+      record.lane === "edge-linux-intel12"
+        ? { ...record, system: { ...record.system, displayServer: "X11" } }
         : record,
     ),
     records.map((record) =>

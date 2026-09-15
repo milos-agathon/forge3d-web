@@ -30,7 +30,7 @@ for (const [name, mutate, message] of [
     proof.benchmark.rafTimestampsMs = timestamps(51);
     updateDerived(proof.benchmark);
   }, /exceeds 50 ms/u],
-  ["injected two-owned-RAF observation", (proof) => { proof.benchmark.scheduling.maxOutstandingFrames = 2; }, /scheduler observations/u],
+  ["injected two-owned-RAF observation", (proof) => { proof.benchmark.scheduling.maxOutstandingFrames = 2; }, /greater than maximum|scheduler observations/u],
   ["duplicate RAF", (proof) => { proof.benchmark.scheduling.duplicateRafObserved = true; }, /duplicateRafObserved|duplicate RAF/u],
   ["fractional queue sample", (proof) => { proof.benchmark.scheduling.pendingAfterInvalidation = 1.5; }, /expected type integer|scheduler observations/u],
   ["missing scheduler field", (proof) => { delete proof.benchmark.scheduling.observationSamples; }, /required property|scheduler observations/u],

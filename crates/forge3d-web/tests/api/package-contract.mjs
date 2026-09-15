@@ -9,6 +9,9 @@ const packageJson = readJson(join(root, "package.json"));
 const consumerHarness = readText(
   join(root, "scripts", "build-browser-test-package.mjs"),
 );
+const edgeAcceptanceHarness = readText(
+  join(root, "scripts", "edge-browser-acceptance.mjs"),
+);
 const declarations = readText(join(root, "types", "index.d.ts"));
 
 assertEqual(packageJson.type, "module", "package must be ESM-only");
@@ -38,9 +41,8 @@ for (const expected of [
   "viewer.screenshot()",
   "viewer.resize",
   "viewer.dispose()",
-  "pointerType: \"touch\"",
   "wheel:",
-  "verifyUnsupportedUi",
+  "runEdgeBrowserAcceptance",
   "exerciseViewerVisibilityLifecycle",
   "visibilityLifecycle",
   "runViewerInteractionObservation",
@@ -55,6 +57,15 @@ for (const expected of [
     expected,
     `package consumer browser gate missing ${expected}`,
   );
+}
+for (const expected of [
+  "pointerType: \"touch\"",
+  "WEBGPU_UNAVAILABLE",
+  "WEBGPU_ADAPTER_UNAVAILABLE",
+  "physicalPolicyProof: false",
+  "withIsolatedBrowserContext",
+]) {
+  assertIncludes(edgeAcceptanceHarness, expected, `shared Edge acceptance helper missing ${expected}`);
 }
 const lifecycleCallIndex = consumerHarness.indexOf(
   "const visibilityLifecycle",
@@ -92,8 +103,12 @@ for (const relative of [
   "tests/browser/viewer-benchmark.ts",
   "tests/browser/viewer-benchmark-browser.js",
   "tests/browser/chr03-hardware-proof.schema.json",
+  "tests/browser/chr04-hardware-proof.schema.json",
   "scripts/chrome-hardware-acceptance.mjs",
+  "scripts/edge-browser-acceptance.mjs",
   "scripts/chr03-hardware-proof-validator.mjs",
+  "scripts/chr04-hardware-proof-validator.mjs",
+  "scripts/chr04-lanes.mjs",
   "tests/browser/benchmark/benchmark-manifest-v1.json",
   "tests/browser/benchmark/benchmark-terrain-v1.f32le",
   "tests/browser/benchmark/benchmark-trace-v1.json"

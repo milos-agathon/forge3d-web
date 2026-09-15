@@ -15,7 +15,9 @@ surfaces, and deployment assumptions that application owners must satisfy.
 | Chrome stable on Linux NVIDIA RTX 3070 Wayland | Required physical lane, `NOT_PROVEN` | CHR-03 requires the exact `FW-LNX-NV-01` asset and complete installed-package proof. The laboratory is currently unprovisioned. |
 | Chrome stable on AMD/Linux | P2, `NOT_PROVEN` | No exact AMD/Linux asset or qualifying result exists. Intel or NVIDIA evidence cannot satisfy this row. |
 | Chrome Beta on the CHR-03 assets | Optional probe | Non-blocking early warning only. Beta is never a required release row and cannot replace stable Chrome evidence. |
-| Edge | Best effort | `test:browser:edge` is an unflagged branded required-mode configuration, but the current Edge support tier remains best effort until the required evidence exists. |
+| Edge stable on Windows 11 Intel Gen12+ | Required physical lane, `NOT_PROVEN` | CHR-04 requires unflagged branded `msedge` stable through `playwright-edge` on exact asset `FW-WIN-I12-01`, with the complete installed-package FND-07 payload and non-fallback hardware presentation. No qualifying physical result exists. |
+| Edge stable on Apple Silicon macOS | Required physical lane, `NOT_PROVEN` | CHR-04 requires unflagged branded `msedge` stable through `playwright-edge` on exact asset `FW-MAC-M2-01`, with the complete installed-package FND-07 payload and non-fallback hardware presentation. No qualifying physical result exists. |
+| Edge stable on Linux GNOME Wayland | Conditional physical lanes, `NOT_PROVEN` | CHR-04 accepts only exact assets `FW-LNX-I12-01` and `FW-LNX-NV-01` when live provenance observes GNOME Wayland, branded `msedge` stable, safe launch arguments, and non-fallback hardware presentation. No qualifying physical result exists. |
 | Firefox | Unsupported | `test:browser:firefox-preflight` exercises Playwright's patched Firefox in headed mode on GitHub-hosted Apple Silicon with default preferences and no Chromium flags. A passing run is `ENGINE_PASS` source-browser evidence only, not branded Firefox, physical-browser, exact-tarball, or support evidence. |
 | Playwright WebKit test engine | Engine preflight only | The non-blocking macOS `test:browser:webkit` lane uses no Chromium flags and may produce `ENGINE_PASS` only after the complete suite succeeds. Playwright WebKit is not shipping Safari and cannot establish a Safari support row. |
 | Safari | Unsupported | `NOT_PROVEN`: neither Playwright WebKit nor structural CI is shipping Safari evidence. Safari WebGPU is not part of the MVP contract. |
@@ -36,8 +38,10 @@ surfaces, and deployment assumptions that application owners must satisfy.
 - Byte-range terrain reads may send a `Range` header when `byteOffset` or
   `byteLength` is supplied. Servers may return either the requested partial
   object or a full object that still satisfies the requested byte slice.
-- Applications must check `navigator.gpu` before calling
-  `Forge3DRuntime.create(canvas, options)`.
+- Applications should handle the stable `WEBGPU_UNAVAILABLE` and
+  `WEBGPU_ADAPTER_UNAVAILABLE` errors from the public runtime/viewer API and
+  show an unsupported-state UI. Browser or organization policy and disabled
+  graphics acceleration can make adapter acquisition unavailable.
 
 ## Browser Test Configurations
 

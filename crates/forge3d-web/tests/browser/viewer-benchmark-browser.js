@@ -29,7 +29,7 @@ export async function runViewerBenchmarkInBrowser({ environment, assetUrls, incl
       throw new Error("benchmark asset URLs must use HTTPS or loopback HTTP");
     }
   }
-  const viewer = await fixture.create({ resize: false, controls: { keyboard: true }, onError: window.__forge3dChr03OnError });
+  const viewer = await fixture.create({ resize: false, controls: { keyboard: true }, onError: window.__forge3dHardwareOnError });
   try {
     const responses = await Promise.all([
       fetch(assetUrls.manifest, { cache: "no-store" }),

@@ -410,7 +410,7 @@ test("materialized import map remains inside the nonce-bound base path", () => {
     join(root, "tests", "browser", "benchmark", "benchmark-terrain-v1.f32le"),
     Buffer.from([0, 1, 2, 3]),
   );
-  for (const file of ["adapter-attestation.js", "hardware-page-harness.js", "viewer-benchmark-browser.js", "chr03-lanes.js"]) {
+  for (const file of ["adapter-attestation.js", "hardware-page-harness.js", "viewer-benchmark-browser.js", "chr03-lanes.js", "chr04-lanes.js"]) {
     writeFileSync(join(root, "tests", "browser", file), "export {};");
   }
   try {

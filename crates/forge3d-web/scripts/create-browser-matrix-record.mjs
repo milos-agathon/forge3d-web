@@ -6,8 +6,11 @@ import { validateHostInventory } from "./capture-host-inventory.mjs";
 import { hasMeasuredLumaPresentation } from "./join-adapter-attestation.mjs";
 import { validateChr03HardwareProofContract as validateChr03HardwareProof } from "./chr03-hardware-proof-validator.mjs";
 import { CHR03_STABLE_LANES } from "./chr03-lanes.mjs";
+import { validateChr04EdgeEvidence } from "./chr04-hardware-proof-validator.mjs";
+import { CHR04_LANES } from "./chr04-lanes.mjs";
 
 const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
+const CHR04_REQUIRED_LANES = new Set(Object.keys(CHR04_LANES));
 
 export function createAutomatedMatrixRecord({
   promotion,
@@ -30,6 +33,23 @@ export function createAutomatedMatrixRecord({
       assetId: promotion.assetId,
       commit: promotion.trustedSha,
       packageSha256: evidence.packageSha256,
+    });
+  }
+  if (CHR04_REQUIRED_LANES.has(promotion.lane)) {
+    validateChr04EdgeEvidence({
+      proof: evidence.chr04Proof,
+      expectedBinding: {
+        lane: promotion.lane,
+        assetId: promotion.assetId,
+        platform: CHR04_LANES[promotion.lane].platform,
+        commit: promotion.trustedSha,
+        packageSha256: evidence.packageSha256,
+      },
+      browser: evidence.browser,
+      driver: evidence.driver,
+      system: evidence.system,
+      effectiveLaunchArguments: evidence.effectiveLaunchArguments,
+      adapter: evidence.adapter,
     });
   }
   const safariTrackpadRecord = promotion.lane === "safari-macos-m2";
@@ -88,6 +108,9 @@ export function createAutomatedMatrixRecord({
     system: structuredClone(evidence.system),
     browser: structuredClone(evidence.browser),
     driver: structuredClone(evidence.driver),
+    effectiveLaunchArguments: Array.isArray(evidence.effectiveLaunchArguments)
+      ? [...evidence.effectiveLaunchArguments]
+      : null,
     ...(evidence.appium ? { appium: structuredClone(evidence.appium) } : {}),
     ...(evidence.device ? { device: structuredClone(evidence.device) } : {}),
     ...(evidence.inventoryCapturedAt
@@ -108,6 +131,7 @@ export function createAutomatedMatrixRecord({
     adapter: evidence.adapter,
     adapterAttestation: attestation,
     chr03Proof: evidence.chr03Proof ? structuredClone(evidence.chr03Proof) : null,
+    chr04Proof: evidence.chr04Proof ? structuredClone(evidence.chr04Proof) : null,
   };
 }
 

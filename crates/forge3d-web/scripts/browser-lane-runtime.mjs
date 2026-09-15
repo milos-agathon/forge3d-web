@@ -12,8 +12,11 @@ import { validateBrowserRunProvenance } from "./browser-run-provenance.mjs";
 import { hasMeasuredLumaPresentation } from "./join-adapter-attestation.mjs";
 import { validateChr03HardwareProofContract as validateChr03HardwareProof } from "./chr03-hardware-proof-validator.mjs";
 import { CHR03_STABLE_LANES, isChr03Lane } from "./chr03-lanes.mjs";
+import { validateChr04EdgeEvidence } from "./chr04-hardware-proof-validator.mjs";
+import { CHR04_LANES, isChr04Lane } from "./chr04-lanes.mjs";
 
 const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
+const CHR04_REQUIRED_LANES = new Set(Object.keys(CHR04_LANES));
 
 const DESKTOP_LANES = new Map([
   ["chrome-macos-m2", ["playwright-chrome", "chrome"]],
@@ -45,6 +48,10 @@ export function resolveLaneRuntime({ lane, assetId, platform }) {
   }
   const desktop = DESKTOP_LANES.get(lane);
   if (desktop) {
+    if (isChr04Lane(lane) &&
+        (CHR04_LANES[lane].assetId !== assetId || CHR04_LANES[lane].platform !== platform)) {
+      throw new Error("CHR-04 lane does not match its exact hardware asset and platform");
+    }
     return {
       driver: desktop[0],
       browser: desktop[1],
@@ -151,12 +158,13 @@ export async function executeHardwareBrowserLane({
         pageResult = await session.runPage({
           lane,
           binding: {
-            ...(isChr03Lane(lane) ? { lane: binding.lane } : {}),
+            ...(isChr03Lane(lane) || isChr04Lane(lane) ? { lane: binding.lane } : {}),
             runId: binding.runId,
             jobId: binding.jobId,
             assetId: binding.assetId,
             commit: binding.commit,
             packageSha256: binding.packageSha256,
+            ...(isChr04Lane(lane) ? { platform } : {}),
           },
           route,
           effectiveLaunchArguments: session.effectiveLaunchArguments,
@@ -201,6 +209,18 @@ export async function executeHardwareBrowserLane({
             packageSha256: binding.packageSha256,
           });
         }
+        if (CHR04_REQUIRED_LANES.has(lane)) {
+          validateChr04EdgeEvidence({
+            proof: pageResult.chr04Proof,
+            expectedBinding: { lane, assetId, platform, commit: binding.commit, packageSha256: binding.packageSha256 },
+            browser: session.browser,
+            driver: provenance.driver,
+            system: provenance.system,
+            effectiveLaunchArguments: provenance.effectiveLaunchArguments,
+            adapter: pageResult.adapter,
+            browserPolicy,
+          });
+        }
         return pageResult.assertions;
       },
       cleanup: async () => ({ ok: true }),
@@ -211,6 +231,7 @@ export async function executeHardwareBrowserLane({
       route,
       routeReadiness: pageResult.routeReadiness,
       chr03Proof: pageResult.chr03Proof ?? null,
+      chr04Proof: pageResult.chr04Proof ?? null,
       headed: true,
       driver: provenance.driver,
       system: provenance.system,

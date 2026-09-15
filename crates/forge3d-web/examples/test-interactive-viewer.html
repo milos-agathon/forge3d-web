@@ -52,8 +52,10 @@
         <button id="dispose" type="button">Dispose</button>
       </div>
       <output id="status">idle</output>
+      <output id="error-code" aria-label="Error code"></output>
       <p id="unsupported" role="alert" hidden>
-        This browser does not expose a usable WebGPU adapter.
+        WebGPU is unavailable. Your browser or organization policy may block it,
+        or graphics acceleration may be disabled. Contact your administrator.
       </p>
     </main>
     <script type="module">
@@ -62,31 +64,43 @@
       const canvas = document.querySelector("#viewer");
       const status = document.querySelector("#status");
       const unsupported = document.querySelector("#unsupported");
+      const errorCode = document.querySelector("#error-code");
       let viewer;
 
       async function create(options = {}) {
         if (viewer && !viewer.disposed) {
           return viewer;
         }
-        if (!navigator.gpu || !(await navigator.gpu.requestAdapter())) {
-          unsupported.hidden = false;
-          status.value = "unsupported";
-          throw new Error("WEBGPU_UNAVAILABLE");
-        }
-        viewer = await Forge3DViewer.create(canvas, {
-          ...options,
-          onStatusChange(change) {
-            status.value = change.current;
-            options.onStatusChange?.(change);
-          },
-          onError(error) {
-            status.value = error.code;
-            options.onError?.(error);
+        try {
+          viewer = await Forge3DViewer.create(canvas, {
+            ...options,
+            onStatusChange(change) {
+              status.value = change.current;
+              options.onStatusChange?.(change);
+            },
+            onError(error) {
+              errorCode.value = error.code;
+              options.onError?.(error);
+            }
+          });
+          viewer.setTerrain(makeTerrain(64, 64));
+          unsupported.hidden = true;
+          errorCode.value = "";
+          status.value = viewer.status;
+          canvas.focus();
+          return viewer;
+        } catch (error) {
+          const code = typeof error?.code === "string" ? error.code : "INTERNAL_ERROR";
+          errorCode.value = code;
+          if (code === "WEBGPU_UNAVAILABLE" || code === "WEBGPU_ADAPTER_UNAVAILABLE") {
+            unsupported.hidden = false;
+            status.value = "unsupported";
+          } else {
+            unsupported.hidden = true;
+            status.value = code;
           }
-        });
-        viewer.setTerrain(makeTerrain(64, 64));
-        canvas.focus();
-        return viewer;
+          throw error;
+        }
       }
 
       function makeTerrain(width, height) {
@@ -107,9 +121,7 @@
       }
 
       document.querySelector("#create").addEventListener("click", () => {
-        create().catch((error) => {
-          status.value = error.code ?? error.message;
-        });
+        create().catch(() => undefined);
       });
       document.querySelector("#resize").addEventListener("click", () => {
         if (!viewer || viewer.disposed) {
@@ -130,6 +142,9 @@
         },
         get supported() {
           return !unsupported.hidden ? false : undefined;
+        },
+        get errorCode() {
+          return errorCode.value || null;
         },
         packageSha256: null
       };

@@ -79,6 +79,7 @@ export function materializeBrowserFixture({
     "hardware-page-harness.js",
     "viewer-benchmark-browser.js",
     "chr03-lanes.js",
+    "chr04-lanes.js",
   ]) {
     const source = join(root, "tests", "browser", file);
     const stats = lstatSync(source);
