@@ -5,6 +5,10 @@ import { dirname, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import test from "node:test";
 import ts from "typescript";
+import { validateChr03HardwareProofContract } from "../../scripts/chr03-hardware-proof-validator.mjs";
+import { validateChr04HardwareProofContract } from "../../scripts/chr04-hardware-proof-validator.mjs";
+import { validChr03HardwareProof } from "./chr03-hardware-proof-fixture.mjs";
+import { validChr04HardwareProof } from "./chr04-hardware-proof-fixture.mjs";
 import { runViewerBenchmarkInBrowser } from "./viewer-benchmark-browser.js";
 
 const root = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
@@ -40,6 +44,42 @@ test("serialized benchmark callback retains its URL validation helper", async ()
     await assert.rejects(serialized({ environment: {}, assetUrls: {
       manifest: "file:///manifest.json", terrain: "http://example.com/terrain.bin", trace: "ftp://example.com/trace.json",
     } }), /HTTPS or loopback HTTP/u);
+  } finally {
+    globalThis.window = previousWindow;
+  }
+});
+
+test("benchmark viewer errors reach the shared hardware list and reject CHR-03 and CHR-04 proofs", async () => {
+  const previousWindow = globalThis.window;
+  const retainedErrors = [];
+  globalThis.window = {
+    __forge3dHardwareErrors: retainedErrors,
+    __forge3dHardwareOnError: (error) => retainedErrors.push(error.code ?? error.message),
+    __forge3dInteractiveViewer: {
+      canvas: {},
+      create: async ({ onError }) => {
+        onError({ code: "GPU_DEVICE_LOST" });
+        throw new Error("stop after injected benchmark error");
+      },
+    },
+  };
+  try {
+    await assert.rejects(runViewerBenchmarkInBrowser({
+      environment: {},
+      assetUrls: {
+        manifest: "https://fixture.test/manifest.json",
+        terrain: "https://fixture.test/terrain.bin",
+        trace: "https://fixture.test/trace.json",
+      },
+    }), /stop after injected benchmark error/u);
+    assert.deepEqual(retainedErrors, ["GPU_DEVICE_LOST"]);
+    for (const proof of [validChr03HardwareProof(), validChr04HardwareProof()]) {
+      proof.errors = [...retainedErrors];
+      const validate = proof.kind.includes("chr03")
+        ? validateChr03HardwareProofContract
+        : validateChr04HardwareProofContract;
+      assert.throws(() => validate(proof), /more than 0 items|viewer errors/u);
+    }
   } finally {
     globalThis.window = previousWindow;
   }

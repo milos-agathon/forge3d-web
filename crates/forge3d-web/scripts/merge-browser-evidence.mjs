@@ -5,8 +5,11 @@ import { canonicalJson, sha256Hex } from "./canonical-json.mjs";
 import { hasMeasuredLumaPresentation } from "./join-adapter-attestation.mjs";
 import { validateChr03HardwareProofContract as validateChr03HardwareProof } from "./chr03-hardware-proof-validator.mjs";
 import { CHR03_STABLE_LANES } from "./chr03-lanes.mjs";
+import { validateChr04EdgeEvidence } from "./chr04-hardware-proof-validator.mjs";
+import { CHR04_LANES } from "./chr04-lanes.mjs";
 
 const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
+const CHR04_REQUIRED_LANES = new Set(Object.keys(CHR04_LANES));
 
 export function requiredEvidenceRows(matrix) {
   const rows = [];
@@ -248,6 +251,23 @@ function validateRecord(record, row, expected) {
       assetId: row.assetId,
       commit: expected.targetSha,
       packageSha256: expected.packageSha256,
+    });
+  }
+  if (row.kind === "automated" && CHR04_REQUIRED_LANES.has(row.lane)) {
+    validateChr04EdgeEvidence({
+      proof: record.chr04Proof,
+      expectedBinding: {
+        lane: row.lane,
+        assetId: row.assetId,
+        platform: CHR04_LANES[row.lane].platform,
+        commit: expected.targetSha,
+        packageSha256: expected.packageSha256,
+      },
+      browser: record.browser,
+      driver: record.driver,
+      system: record.system,
+      effectiveLaunchArguments: record.effectiveLaunchArguments,
+      adapter: record.adapter,
     });
   }
 }

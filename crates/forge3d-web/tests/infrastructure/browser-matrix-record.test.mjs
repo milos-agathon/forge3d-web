@@ -9,6 +9,7 @@ import {
 } from "../../scripts/create-browser-matrix-record.mjs";
 import { exactHostInventory } from "./host-inventory-fixture.mjs";
 import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
+import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
 
 const matrix = JSON.parse(
   readFileSync(new URL("./hardware-matrix.json", import.meta.url), "utf8"),
@@ -88,6 +89,33 @@ test("automated and manual sources derive closed matrix keys without artifact cl
   const invalidProof = structuredClone(automatedInput);
   invalidProof.evidence.chr03Proof.systemInfo.available = "false";
   assert.throws(() => createAutomatedMatrixRecord(invalidProof), /expected type boolean/u);
+  const edgeInput = structuredClone(automatedInput);
+  Object.assign(edgeInput.promotion, { lane: "edge-linux-rtx3070" });
+  Object.assign(edgeInput.evidence, {
+    lane: "edge-linux-rtx3070",
+    browser: { name: "msedge", channel: "stable", version: "150.0.1.2" },
+    driver: { name: "playwright-edge", version: "1.56.1" },
+    effectiveLaunchArguments: [],
+    chr03Proof: null,
+    chr04Proof: validChr04HardwareProof({ packageSha256: "d".repeat(64) }),
+  });
+  const edge = createAutomatedMatrixRecord(edgeInput);
+  assert.equal(edge.key, "automated:FW-LNX-NV-01:edge-linux-rtx3070");
+  assert.equal(edge.chr04Proof.kind, "forge3d-chr04-edge-hardware-proof-v1");
+  for (const mutate of [
+    (input) => { input.evidence.chr04Proof = null; },
+    (input) => { input.evidence.browser.name = "chrome"; },
+    (input) => { input.evidence.effectiveLaunchArguments = ["--ignore-gpu-blocklist"]; },
+    (input) => { input.evidence.effectiveLaunchArguments = ["--ignore-certificate-errors=value"]; },
+    (input) => { input.evidence.chr04Proof.edgeAcceptance.touch.viewChanged = false; },
+    (input) => { input.evidence.chr04Proof.edgeAcceptance.unsupported.nullAdapter.publicCode = "WEBGPU_UNAVAILABLE"; },
+    (input) => { input.evidence.chr04Proof.edgeAcceptance.unsupported.nullAdapter.unsupportedVisible = false; },
+    (input) => { input.evidence.chr04Proof.edgeAcceptance.unsupported.nullAdapter.hasBypassAdvice = true; },
+  ]) {
+    const invalidEdge = structuredClone(edgeInput);
+    mutate(invalidEdge);
+    assert.throws(() => createAutomatedMatrixRecord(invalidEdge));
+  }
   const manual = createManualMatrixRecord({
     evidence: {
       checklistId: "safari-trackpad",

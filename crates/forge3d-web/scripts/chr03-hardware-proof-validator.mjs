@@ -37,6 +37,10 @@ export function validateChr03HardwareProofContract(proof, expectedBinding = null
       if (proof.binding[name] !== expectedBinding[name]) throw new Error(`CHR-03 proof ${name} does not match the authorized binding`);
     }
   }
+  return validateHardwareProofPayload(proof);
+}
+
+export function validateHardwareProofPayload(proof) {
   const requiredBehaviors = ["orbit", "pan", "wheelZoom", "pointerCapture", "keyboard", "autoResize", "visibilityResume", "terrainSource", "screenshot", "disposal"];
   if (requiredBehaviors.some((name) => proof.behaviors?.[name] !== true)) throw new Error("CHR-03 named behavior proof is incomplete");
   const driver = proof.driver;

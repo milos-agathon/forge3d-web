@@ -18,6 +18,7 @@ import { cleanupBrowserHardware } from "../../scripts/cleanup-browser-hardware.m
 import { createUpdateWindow } from "../../scripts/manage-browser-update-window.mjs";
 import { runBrowserLane } from "../hardware/run-browser-lane.mjs";
 import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
+import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
 
 const binding = {
   lane: "chrome-linux-rtx3070",
@@ -359,6 +360,59 @@ test("opened browser session closes when provenance validation rejects it", asyn
     },
   }), /headed session/u);
   assert.equal(closed, 1);
+});
+
+test("Edge runtime routes exact CHR-04 proof and rejects borrowed Chrome proof before PASS", async () => {
+  assert.deepEqual(resolveLaneRuntime({ lane: "edge-linux-rtx3070", assetId: "FW-LNX-NV-01", platform: "linux" }), {
+    driver: "playwright-edge", browser: "msedge", supportAssertions: true, manual: false, mobile: false,
+  });
+  const directory = mkdtempSync(join(tmpdir(), "forge3d-chr04-runtime-"));
+  let mutateProof = () => undefined;
+  try {
+    const edgeBinding = { ...binding, lane: "edge-linux-rtx3070", commit: binding.trustedSha };
+    const request = {
+      lane: edgeBinding.lane, assetId: edgeBinding.assetId, hostId: edgeBinding.assetId, platform: "linux",
+      binding: edgeBinding,
+      route: { applicationUrl: "https://edge.example/run/" },
+      browserPolicy: { prohibitedLaunchArguments: ["--enable-unsafe-webgpu", "--ignore-certificate-errors"], tools: { playwright: "1.56.1" } },
+      deviceMatrix: { devices: [] },
+      inventory: { ...desktopInventory, browsers: [{ id: "edge-stable", version: "150.0.0.0", executable: "/usr/bin/microsoft-edge" }] },
+      outputPath: join(directory, "edge.json"),
+      dependencies: { openSession: async () => ({
+        browser: { name: "msedge", channel: "stable", version: "150.0.0.0" }, driverVersion: "1.56.1",
+        effectiveLaunchArguments: [], launchArgumentsObserved: true,
+        launchArgumentSource: "chromium-cdp-browser-command-line", browserProcessId: 77,
+        runPage: async (payload) => {
+          assert.equal(payload.binding.platform, "linux");
+          const proof = validChr04HardwareProof({ lane: edgeBinding.lane, assetId: edgeBinding.assetId,
+            platform: "linux", commit: edgeBinding.commit, packageSha256: edgeBinding.packageSha256 });
+          mutateProof(proof);
+          return { adapter, assertions: { passed: true, supportAssertionsExecuted: true }, chr04Proof: proof };
+        },
+        close: async () => undefined,
+      }) },
+    };
+    await executeHardwareBrowserLane(request);
+    assert.equal(JSON.parse(readFileSync(request.outputPath, "utf8")).chr04Proof.binding.platform, "linux");
+    for (const [name, mutate] of [
+      ["borrowed", (proof) => { proof.kind = "forge3d-chr03-chrome-hardware-proof-v1"; }],
+      ["touch", (proof) => { proof.edgeAcceptance.touch.viewChanged = false; }],
+      ["code", (proof) => { proof.edgeAcceptance.unsupported.nullAdapter.publicCode = "WEBGPU_UNAVAILABLE"; }],
+      ["ui", (proof) => { proof.edgeAcceptance.unsupported.nullAdapter.unsupportedVisible = false; }],
+      ["bypass", (proof) => { proof.edgeAcceptance.unsupported.nullAdapter.hasBypassAdvice = true; }],
+    ]) {
+      mutateProof = mutate;
+      await assert.rejects(() => executeHardwareBrowserLane({ ...request, outputPath: join(directory, `${name}.json`) }));
+    }
+    mutateProof = () => undefined;
+    const unsafe = { ...request, outputPath: join(directory, "certificate.json") };
+    unsafe.dependencies = { openSession: async () => ({
+      ...(await request.dependencies.openSession()), effectiveLaunchArguments: ["--ignore-certificate-errors=value"],
+    }) };
+    await assert.rejects(() => executeHardwareBrowserLane(unsafe), /prohibited browser launch arguments/u);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test("manual mobile runtime calls Appium class and retains the visible challenge window", async () => {

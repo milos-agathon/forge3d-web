@@ -8,6 +8,7 @@ import {
   resolveViewerVisibilityLifecycleMode,
   VIEWER_VISIBILITY_LIFECYCLE_CYCLES,
 } from "../browser/viewer-visibility-lifecycle.mjs";
+import { runEdgeBrowserAcceptance } from "../../scripts/edge-browser-acceptance.mjs";
 
 test("creation, disposal, and retained getters follow the lifecycle contract", async ({
   page,
@@ -145,6 +146,34 @@ test("unsupported probe lanes expose structured UI without passing render assert
   );
   await expect(page.locator("#unsupported")).toBeVisible();
   await expect(page.locator("#status")).toHaveText("unsupported");
+  await expect(page.locator("#error-code")).toHaveText(
+    webgpuAvailability.hasNavigatorGpu
+      ? "WEBGPU_ADAPTER_UNAVAILABLE"
+      : "WEBGPU_UNAVAILABLE",
+  );
+  await expect(page.locator("#unsupported a")).toHaveCount(0);
+  await expect(page.locator("#unsupported")).not.toContainText(/unsafe-webgpu|ignore-gpu-blocklist|browser flag/iu);
+});
+
+test("shared Edge browser acceptance exercises touch and unsupported diagnostics", async ({
+  browser, page, webgpuAvailability,
+}) => {
+  test.skip(
+    !webgpuAvailability.hasNavigatorGpu || !webgpuAvailability.adapterAvailable,
+    "null-adapter regression requires a positive browser WebGPU baseline",
+  );
+  const result = await runEdgeBrowserAcceptance({ browser, page, fixtureUrl: page.url() });
+  expect(result).toMatchObject({
+    synthetic: true, physicalPolicyProof: false,
+    touch: { injectedAtBrowserBoundary: true, viewChanged: true, activePointersAfter: 0, disposed: true },
+    unsupported: {
+      missingApi: { publicCode: "WEBGPU_UNAVAILABLE", status: "unsupported", unsupportedVisible: true,
+        hasBypassAdvice: false, bypassLinks: 0 },
+      nullAdapter: { publicCode: "WEBGPU_ADAPTER_UNAVAILABLE", status: "unsupported", unsupportedVisible: true,
+        adapterIntercepted: true, hasBypassAdvice: false, bypassLinks: 0, recovered: true },
+      unrelated: { code: "WASM_LOAD_FAILED", status: "WASM_LOAD_FAILED", unsupportedVisible: false },
+    },
+  });
 });
 
 declare global {
