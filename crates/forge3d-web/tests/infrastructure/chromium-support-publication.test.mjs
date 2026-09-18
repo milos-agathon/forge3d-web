@@ -10,6 +10,7 @@ import {
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import { canonicalJson, sha256Hex } from "../../scripts/canonical-json.mjs";
 import { createChromiumSupportPublication } from "../../scripts/chromium-support-publication.mjs";
@@ -217,7 +218,9 @@ test("CLI consumes canonical readiness and finalized records and writes exact de
     writeFileSync(paths.matrix, JSON.stringify(input.matrix));
     writeFileSync(paths.policy, JSON.stringify(input.policy));
     const result = spawnSync(process.execPath, [
-      new URL("../../scripts/chromium-support-publication.mjs", import.meta.url).pathname,
+      fileURLToPath(
+        new URL("../../scripts/chromium-support-publication.mjs", import.meta.url),
+      ),
       "--target-sha", input.targetSha,
       "--readiness", paths.readiness,
       "--readiness-artifact", paths.readinessArtifact,
