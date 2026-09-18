@@ -396,6 +396,7 @@ test("candidate record is schema-valid and makes no post-publication CLI claims"
     assets: [
       { name: "payload.bin", sha256: digest(Buffer.from("payload")) },
       { name: "manual-media-sources.json", sha256: plan.sha256 },
+      { name: "chromium-support.md", sha256: digest(Buffer.from("support")) },
     ],
     manualMediaPlanSha256: plan.sha256,
     createdAt: new Date("2026-07-30T00:00:00Z"),
@@ -403,6 +404,17 @@ test("candidate record is schema-valid and makes no post-publication CLI claims"
   assertJsonSchema(candidate.record, schema("browser-release-manifest.schema.json"));
   assert.equal(Object.hasOwn(candidate.record, "releaseVerification"), false);
   assert.equal(Object.hasOwn(candidate.record, "publishedAt"), false);
+  assert.throws(
+    () => createBrowserReleaseCandidate({
+      targetSha: sha,
+      tag: "v1.26.3",
+      readiness,
+      assets: [{ name: "payload.bin", sha256: digest(Buffer.from("payload")) }],
+      manualMediaPlanSha256: plan.sha256,
+      createdAt: new Date("2026-07-30T00:00:00Z"),
+    }),
+    /include chromium-support\.md exactly once/u,
+  );
 });
 
 test("post-publication record retains exact CLI JSON digests and immutable release identity", () => {
@@ -589,6 +601,7 @@ function publicationFixture() {
     assets: [
       { name: "payload.bin", sha256: payloadSha },
       { name: "manual-media-sources.json", sha256: manual.sha256 },
+      { name: "chromium-support.md", sha256: digest(Buffer.from("support")) },
     ],
     manualMediaPlanSha256: manual.sha256,
     createdAt: new Date("2026-07-30T00:00:00Z"),
@@ -596,6 +609,7 @@ function publicationFixture() {
   const expected = [
     ["payload.bin", payloadSha],
     ["manual-media-sources.json", manual.sha256],
+    ["chromium-support.md", digest(Buffer.from("support"))],
     ["browser-release-manifest.json", candidate.sha256],
   ];
   const assets = expected.map(([name, sha256], index) => ({

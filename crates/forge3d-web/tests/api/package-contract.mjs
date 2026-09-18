@@ -3,6 +3,10 @@ import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
 
+import { CHROMIUM_PRIMARY_ROWS } from "../../scripts/chromium-support-publication.mjs";
+import { CHR03_STABLE_LANES } from "../../scripts/chr03-lanes.mjs";
+import { CHR04_LANES } from "../../scripts/chr04-lanes.mjs";
+
 const root = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 
 const packageJson = readJson(join(root, "package.json"));
@@ -35,6 +39,33 @@ assertEqual(
   "node scripts/build-browser-test-package.mjs",
   "package consumer command must use the shared tarball harness",
 );
+for (const [name, command] of Object.entries({
+  "test:browser": "playwright test --project=chromium-preflight",
+  "test:browser:chromium": "playwright test --project=chromium-preflight",
+  "test:browser:chrome": "playwright test --project=chrome-stable",
+  "test:browser:edge": "playwright test --project=edge-stable",
+})) assertEqual(packageJson.scripts[name], command, `browser command mapping drifted: ${name}`);
+
+const matrix = readJson(join(root, "tests", "infrastructure", "hardware-matrix.json"));
+const expectedPrimaryRows = {
+  "chrome-windows-intel12": "FW-WIN-I12-01",
+  ...CHR03_STABLE_LANES,
+  ...Object.fromEntries(
+    Object.entries(CHR04_LANES)
+      .filter(([, value]) => value.requirement === "required")
+      .map(([lane, value]) => [lane, value.assetId]),
+  ),
+};
+assertEqual(
+  JSON.stringify(CHROMIUM_PRIMARY_ROWS),
+  JSON.stringify(expectedPrimaryRows),
+  "six Chromium publication keys must agree with the CHR-03/04 registries",
+);
+for (const [lane, assetId] of Object.entries(expectedPrimaryRows)) {
+  const host = matrix.hosts.find((candidate) => candidate.assetId === assetId);
+  assert(host?.requiredBrowserLanes.includes(lane), `matrix missing primary Chromium lane ${lane}`);
+}
+assertEqual(Object.keys(expectedPrimaryRows).length, 6, "Chromium primary set must contain six rows");
 for (const expected of [
   "chromium.launch",
   "page.goto",
@@ -118,7 +149,16 @@ for (const relative of [
 
 const readme = readText(join(root, "README.md"));
 const supportMatrix = readText(join(root, "docs/support-matrix.md"));
-for (const expected of ["Chrome stable on Intel macOS", "Chrome stable on AMD/Linux", "P2, `NOT_PROVEN`"]) {
+for (const expected of [
+  "Chrome stable on Intel macOS",
+  "Chrome stable on AMD/Linux",
+  "P2, `NOT_PROVEN`",
+  "six primary configured rows",
+  "Edge Linux stays conditional/P2",
+  "derivative Chromium brands",
+  "non-Wayland Linux",
+  "`chromium-support.md`",
+]) {
   assertIncludes(supportMatrix, expected, `support matrix missing CHR-03 boundary: ${expected}`);
 }
 for (const expected of [
