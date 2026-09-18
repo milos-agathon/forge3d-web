@@ -19,7 +19,7 @@ export function captureHostInventory({
   session,
   browsers,
   tools,
-  launchArguments = [],
+  launchArguments,
   capturedAt = new Date(),
   policy,
   hardware = null,
@@ -35,8 +35,8 @@ export function captureHostInventory({
     throw new Error(`unsupported host platform: ${platform}`);
   }
   validateHeadedSession({ platform, displayServer, session, policy });
-  const normalizedArguments = launchArguments.map(String);
-  assertSafeLaunchArguments(normalizedArguments, policy);
+  assertSafeLaunchArguments(launchArguments, policy);
+  const normalizedArguments = [...launchArguments];
   const browserRecords = browsers.map((browser) =>
     validateBrowserRecord(browser, policy),
   );
@@ -277,14 +277,50 @@ export function observeLiveSession(
 }
 
 export function assertSafeLaunchArguments(argumentsList, policy) {
-  const prohibited = new Set(policy.prohibitedLaunchArguments);
+  if (
+    !Array.isArray(argumentsList) ||
+    argumentsList.some((argument) => typeof argument !== "string")
+  ) {
+    throw new Error("browser launch arguments must be an array of strings");
+  }
+  const prohibited = new Set(
+    policy.prohibitedLaunchArguments.map(
+      (argument) => normalizeChromiumSwitch(argument)?.option,
+    ),
+  );
   const matches = argumentsList.filter((argument) => {
-    const option = String(argument).split("=", 1)[0];
-    return prohibited.has(option);
+    const normalized = normalizeChromiumSwitch(argument);
+    if (normalized === null) return false;
+    const { option, value } = normalized;
+    if (prohibited.has(option) || option === "--enable-vulkan") return true;
+    if (option !== "--enable-features") return false;
+    if (value === null) return true;
+    const features = value
+      .split(",")
+      .map((feature) => feature.trim());
+    return features.some((feature) => /^vulkan(?:$|[<:])/u.test(feature));
   });
   if (matches.length > 0) {
     throw new Error(`prohibited browser launch arguments: ${matches.join(", ")}`);
   }
+}
+
+export function normalizeChromiumSwitch(argument) {
+  if (typeof argument !== "string") return null;
+  const prefixLength = argument.startsWith("--")
+    ? 2
+    : argument.startsWith("-") || argument.startsWith("/")
+      ? 1
+      : 0;
+  if (prefixLength === 0 || argument.length === prefixLength) return null;
+  const body = argument.slice(prefixLength);
+  const delimiter = body.indexOf("=");
+  const name = (delimiter < 0 ? body : body.slice(0, delimiter)).toLowerCase();
+  if (!/^[a-z0-9][a-z0-9-]*$/u.test(name)) return null;
+  return {
+    option: `--${name}`,
+    value: delimiter < 0 ? null : body.slice(delimiter + 1).toLowerCase(),
+  };
 }
 
 function validateHeadedSession({ platform, displayServer, session, policy }) {
@@ -577,7 +613,7 @@ export function observeLiveOsBuild(
         "-NoProfile",
         "-NonInteractive",
         "-Command",
-        "$v = Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion'; \"$($v.ProductName) $($v.DisplayVersion) build $($v.CurrentBuild).$($v.UBR)\"",
+        "$os = Get-CimInstance Win32_OperatingSystem; $v = Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion'; [ordered]@{ caption = [string]$os.Caption; productType = [int]$os.ProductType; version = [string]$os.Version; buildNumber = [string]$os.BuildNumber; displayVersion = [string]$v.DisplayVersion; editionId = [string]$v.EditionID; ubr = [int]$v.UBR; registryProductName = [string]$v.ProductName } | ConvertTo-Json -Compress",
       ],
       { encoding: "utf8" },
     ).trim();
@@ -589,7 +625,7 @@ export function observeLiveOsBuild(
       { encoding: "utf8" },
     ).trim()}`;
   }
-  return execute("uname", ["-a"], { encoding: "utf8" }).trim();
+  return execute("/usr/bin/lsb_release", ["-ds"], { encoding: "utf8" }).trim();
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {

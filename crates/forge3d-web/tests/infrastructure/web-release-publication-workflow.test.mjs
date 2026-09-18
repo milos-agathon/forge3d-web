@@ -300,6 +300,46 @@ test("candidate is schema-backed and contains no impossible post-publication cla
   assert.equal(preflight.includes("publishedAt"), false);
 });
 
+test("Chromium support publication closes unique records before candidate and binds exact release bodies", () => {
+  const persist = preflight.indexOf('writeFileSync(`verified-records/${process.argv[2]}.json`');
+  const generate = preflight.indexOf("node scripts/chromium-support-publication.mjs");
+  const media = preflight.indexOf("Re-fetch exact still-draft manual media");
+  const candidate = preflight.indexOf("createBrowserReleaseCandidate");
+  assert.ok(persist > -1 && generate > persist);
+  assert.ok(media > generate && candidate > generate);
+  for (const value of [
+    "--readiness-artifact readiness-artifact.json",
+    "--readiness-run readiness-run.json",
+    "--lab-readiness-run lab-readiness-run.json",
+    "--package-run package-run.json",
+    "--records-directory verified-records",
+    "--matrix tests/infrastructure/hardware-matrix.json",
+    "--policy tests/infrastructure/browser-policy.json",
+    "--output release-assets/chromium-support.md",
+  ]) assert.match(preflight, new RegExp(value.replaceAll("/", "\\/"), "u"));
+  assert.equal(preflight.includes('--lab-readiness "${lab_readiness_path}"'), true);
+  assert.match(preflight, /actions\/runs\/\$\{lab_readiness_run_id\}\/artifacts/u);
+  assert.match(preflight, /browser-lab-infrastructure-readiness\.json/u);
+  assert.match(preflight, /gh attestation verify "\$\{lab_readiness_path\}"/u);
+  assert.match(preflight, /--source-digest "\$\{TARGET_SHA\}"/u);
+  assert.match(preflight, /find release-assets -maxdepth 1 -name chromium-support\.md/u);
+  assert.match(publisher, /--notes-file preflight\/release-assets\/chromium-support\.md/u);
+  assert.equal(
+    publisher.match(/release\.body !== supportBody/gu)?.length,
+    2,
+  );
+  assert.match(publisher, /publication-proof\/draft-release\.json/u);
+  assert.match(publisher, /publication-proof\/release\.json/u);
+  assert.ok(
+    publisher.indexOf("release.body !== supportBody") <
+      publisher.indexOf("gh release upload"),
+  );
+  assert.ok(
+    publisher.lastIndexOf("release.body !== supportBody") >
+      publisher.indexOf('gh release edit "${RELEASE_TAG}"'),
+  );
+});
+
 test("publication proof is post-publish, closed, schema-validated, and retained without asset mutation", () => {
   const publish = publisher.indexOf('gh release edit "${RELEASE_TAG}"');
   const releaseVerify = publisher.indexOf('gh release verify "${RELEASE_TAG}"');

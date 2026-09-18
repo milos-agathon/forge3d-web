@@ -8,15 +8,15 @@ surfaces, and deployment assumptions that application owners must satisfy.
 
 | Surface | MVP status | Notes |
 |---|---|---|
-| Chrome/Chromium on Windows | Required | Required source and exact-tarball configurations use unflagged branded Chrome. Hosted CI exercises the exact tarball in flagged bundled Chromium as `PROBE` when only a fallback adapter is available. Promotion still requires a branded, physical, non-fallback Windows run. |
-| Chrome stable on Apple Silicon macOS | Required physical lane, `NOT_PROVEN` | CHR-03 requires the exact `FW-MAC-M2-01` asset and complete installed-package proof. The laboratory is currently unprovisioned, so no qualifying result exists. |
+| Chrome stable on Windows 11, Intel Iris Xe | Required physical lane, `NOT_PROVEN` | Publication requires exact asset `FW-WIN-I12-01` (Intel NUC 12 Pro, Core i5-1240P, Iris Xe, x86-64), an observed four-component stable Chrome version and Windows build, unflagged launch arguments, and non-fallback presentation. This exact Windows requirement is not satisfied by Linux, macOS, or bundled Chromium evidence. |
+| Chrome stable on Apple Silicon macOS | Required physical lane, `NOT_PROVEN` | Publication requires exact asset `FW-MAC-M2-01` (Mac mini 2023, Apple M2 CPU/GPU, arm64), an observed four-component stable Chrome version and macOS build, unflagged launch arguments, and non-fallback presentation. |
 | Chrome stable on Intel macOS | P2, `NOT_PROVEN` | No exact Intel Mac asset or qualifying result exists. Evidence from Apple Silicon cannot satisfy this row. |
-| Chrome stable on Linux Intel Gen12+ Wayland | Required physical lane, `NOT_PROVEN` | CHR-03 requires the exact `FW-LNX-I12-01` asset and complete installed-package proof. The laboratory is currently unprovisioned. |
-| Chrome stable on Linux NVIDIA RTX 3070 Wayland | Required physical lane, `NOT_PROVEN` | CHR-03 requires the exact `FW-LNX-NV-01` asset and complete installed-package proof. The laboratory is currently unprovisioned. |
+| Chrome stable on Linux Intel Gen12+ Wayland | Required physical lane, `NOT_PROVEN` | Publication requires exact asset `FW-LNX-I12-01` (Intel NUC 12 Pro, Core i5-1240P, Iris Xe, x86-64), an observed four-component stable Chrome version and Ubuntu build, and a real GNOME Wayland session. |
+| Chrome stable on Linux NVIDIA RTX 3070 Wayland | Required physical lane, `NOT_PROVEN` | Publication requires exact asset `FW-LNX-NV-01` (ThinkStation P360, Core i7-12700, RTX 3070 8 GB, x86-64), an observed four-component stable Chrome version and Ubuntu build, and a real GNOME Wayland session. |
 | Chrome stable on AMD/Linux | P2, `NOT_PROVEN` | No exact AMD/Linux asset or qualifying result exists. Intel or NVIDIA evidence cannot satisfy this row. |
 | Chrome Beta on the CHR-03 assets | Optional probe | Non-blocking early warning only. Beta is never a required release row and cannot replace stable Chrome evidence. |
-| Edge stable on Windows 11 Intel Gen12+ | Required physical lane, `NOT_PROVEN` | CHR-04 requires unflagged branded `msedge` stable through `playwright-edge` on exact asset `FW-WIN-I12-01`, with the complete installed-package FND-07 payload and non-fallback hardware presentation. No qualifying physical result exists. |
-| Edge stable on Apple Silicon macOS | Required physical lane, `NOT_PROVEN` | CHR-04 requires unflagged branded `msedge` stable through `playwright-edge` on exact asset `FW-MAC-M2-01`, with the complete installed-package FND-07 payload and non-fallback hardware presentation. No qualifying physical result exists. |
+| Edge stable on Windows 11 Intel Gen12+ | Required physical lane, `NOT_PROVEN` | Publication requires branded stable `msedge` through `playwright-edge` on exact asset `FW-WIN-I12-01`, with an observed four-component Edge version and Windows build, safe launch arguments, and non-fallback hardware presentation. |
+| Edge stable on Apple Silicon macOS | Required physical lane, `NOT_PROVEN` | Publication requires branded stable `msedge` through `playwright-edge` on exact asset `FW-MAC-M2-01`, with an observed four-component Edge version and macOS build, safe launch arguments, and non-fallback hardware presentation. |
 | Edge stable on Linux GNOME Wayland | Conditional physical lanes, `NOT_PROVEN` | CHR-04 accepts only exact assets `FW-LNX-I12-01` and `FW-LNX-NV-01` when live provenance observes GNOME Wayland, branded `msedge` stable, safe launch arguments, and non-fallback hardware presentation. No qualifying physical result exists. |
 | Firefox | Unsupported | `test:browser:firefox-preflight` exercises Playwright's patched Firefox in headed mode on GitHub-hosted Apple Silicon with default preferences and no Chromium flags. A passing run is `ENGINE_PASS` source-browser evidence only, not branded Firefox, physical-browser, exact-tarball, or support evidence. |
 | Playwright WebKit test engine | Engine preflight only | The non-blocking macOS `test:browser:webkit` lane uses no Chromium flags and may produce `ENGINE_PASS` only after the complete suite succeeds. Playwright WebKit is not shipping Safari and cannot establish a Safari support row. |
@@ -44,6 +44,19 @@ surfaces, and deployment assumptions that application owners must satisfy.
   graphics acceleration can make adapter acquisition unavailable.
 
 ## Browser Test Configurations
+
+The six primary configured rows are
+`chrome-windows-intel12`, `chrome-macos-m2`, `chrome-linux-intel12`,
+`chrome-linux-rtx3070`, `edge-windows-intel12`, and `edge-macos-m2` on the exact
+assets named above. Their current status remains `NOT_PROVEN`. A supported
+release must contain generated `chromium-support.md`; that artifact derives the
+actual browser versions, OS builds, displays, package digest, and exact run and
+attempt links from the attested closed 24-key matrix. Static policy
+`minimumMajor` values are update controls and never become a support floor.
+
+Edge Linux stays conditional/P2. Intel Mac, AMD/Linux, unlisted hardware,
+non-Wayland Linux, and derivative Chromium brands remain `NOT_PROVEN`. Chrome
+Beta and browser preflight lanes cannot promote support.
 
 The default `npm run test:browser` command aliases
 `npm run test:browser:chromium`. Both select bundled Playwright Chromium with

@@ -211,7 +211,7 @@ for (const expected of [
 const supportMatrix = readText(join(packageRoot, "docs", "support-matrix.md"));
 for (const expected of [
   "| Surface | MVP status | Notes |",
-  "| Chrome/Chromium on Windows | Required |",
+  "| Chrome stable on Windows 11, Intel Iris Xe | Required physical lane, `NOT_PROVEN` |",
   "| Firefox | Unsupported |",
   "| Safari | Unsupported |",
   "| WebGL fallback | Unsupported |",
@@ -242,6 +242,19 @@ for (const expected of [
   "sibling outside the unchanged v3 browser evidence record"
 ]) {
   assertIncludes(checklist, expected, `release checklist missing: ${expected}`);
+}
+for (const expected of [
+  "chromium-support.md",
+  "six primary configured",
+  "Edge Linux stays conditional/P2",
+  "derivative Chromium brands",
+  "run-attempt links",
+]) {
+  assertIncludes(
+    `${supportMatrix}\n${checklist}`,
+    expected,
+    `CHR-05 release documentation missing: ${expected}`,
+  );
 }
 
 const browserApi = readText(join(packageRoot, "docs", "browser-api.md"));

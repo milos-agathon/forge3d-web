@@ -329,9 +329,10 @@ export function createBrowserReleaseCandidate({
   if (
     new Set(candidate.assets.map((asset) => asset.name)).size !==
       candidate.assets.length ||
-    candidate.assets.some((asset) => asset.name === "browser-release-manifest.json")
+    candidate.assets.some((asset) => asset.name === "browser-release-manifest.json") ||
+    candidate.assets.filter((asset) => asset.name === "chromium-support.md").length !== 1
   ) {
-    throw new Error("release candidate asset names are not unique");
+    throw new Error("release candidate assets must be unique and include chromium-support.md exactly once");
   }
   assertJsonSchema(candidate, releaseCandidateSchema);
   return {
