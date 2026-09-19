@@ -52,7 +52,8 @@ test("checked manual checklists expose unique complete step IDs and isolate cana
   const canary = checklistDefinition("infrastructure-manual-canary");
   assert.ok(mobile.stepIds.includes("PEN_OR_PENCIL_ORBIT"));
   assert.ok(mobile.stepIds.includes("BACKGROUND_FOREGROUND"));
-  assert.ok(trackpad.stepIds.includes("TRACKPAD_PINCH_ZOOM"));
+  assert.ok(trackpad.stepIds.includes("TRACKPAD_TWO_FINGER_SCROLL_ZOOM"));
+  assert.equal(trackpad.stepIds.includes("TRACKPAD_PINCH_ZOOM"), false);
   assert.equal(canary.supportClaim, false);
   assert.equal(canary.stepIds.some((id) => id.includes("ORBIT")), false);
 });

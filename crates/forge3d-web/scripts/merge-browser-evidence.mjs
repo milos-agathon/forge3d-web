@@ -3,6 +3,17 @@ import { fileURLToPath } from "node:url";
 
 import { canonicalJson, sha256Hex } from "./canonical-json.mjs";
 import { hasMeasuredLumaPresentation } from "./join-adapter-attestation.mjs";
+import { checklistDefinition } from "./manual-evidence.mjs";
+
+const safariTrackpadSemanticSteps = Object.freeze([
+  "SESSION_CHALLENGE_VISIBLE",
+  "TRACKPAD_ORBIT",
+  "TRACKPAD_PAN",
+  "TRACKPAD_TWO_FINGER_SCROLL_ZOOM",
+  "TRACKPAD_MOMENTUM_END",
+  "TRACKPAD_PAGE_SCROLL_ISOLATION",
+  "TRACKPAD_CLEANUP",
+]);
 
 export function requiredEvidenceRows(matrix) {
   const rows = [];
@@ -185,12 +196,16 @@ function validateRecord(record, row, expected) {
     throw new Error(`evidence binding or outcome is invalid: ${row.key}`);
   }
   if (row.kind === "manual") {
+    const checklist = checklistDefinition(row.checklistId);
+    const suppliedSteps = Object.keys(record.stepResults ?? {}).sort();
+    const expectedSteps = [...checklist.stepIds].sort();
     if (
       record.checklistId !== row.checklistId ||
       record.workflow.path !==
         ".github/workflows/submit-browser-manual-evidence.yml" ||
+      suppliedSteps.length !== expectedSteps.length ||
+      suppliedSteps.some((step, index) => step !== expectedSteps[index]) ||
       Object.values(record.stepResults ?? {}).some((value) => value !== "pass") ||
-      Object.keys(record.stepResults ?? {}).length < 4 ||
       record.session?.trustedSha !== expected.targetSha ||
       record.session?.packageRunId !== expected.packageRunId ||
       record.session?.packageSha256 !== expected.packageSha256 ||
@@ -209,6 +224,19 @@ function validateRecord(record, row, expected) {
       new Date(record.expiresAt) <= new Date(expected.now)
     ) {
       throw new Error(`manual evidence is incomplete, failed, or expired: ${row.key}`);
+    }
+    if (row.checklistId === "safari-trackpad") {
+      if (
+        checklist.stepIds.length !== safariTrackpadSemanticSteps.length ||
+        checklist.stepIds.some(
+          (step, index) => step !== safariTrackpadSemanticSteps[index],
+        ) ||
+        Object.hasOwn(record.stepResults, "TRACKPAD_PINCH_ZOOM")
+      ) {
+        throw new Error(
+          "Safari trackpad evidence must use the exact non-pinch semantic checklist",
+        );
+      }
     }
   } else if (
     record.workflow.path !== ".github/workflows/browser-hardware.yml" ||

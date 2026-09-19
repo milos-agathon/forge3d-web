@@ -184,6 +184,17 @@ closed keys, pass the prior-head, package-hash, and missing-row negative
 controls, and emit attested `RELEASE_MATRIX_READY`. Only that record may feed
 `publish-web-release.yml`.
 
+For Safari, the publisher must regenerate exactly one `safari-support.md` only
+after all 24 finalized records and immutable manual media have been validated.
+The helper requires stable numeric Safari 26+, macOS major exactly 26 with the
+observed product version and build, the exact `FW-MAC-M2-01` Apple M2 inventory,
+`/usr/bin/safaridriver`, empty safe launch arguments, the exact non-pinch
+trackpad checklist, and automation/manual agreement. It replays readiness at
+`createdAt`, rechecks current expiry before draft creation and final publication,
+uses the verified file through `--notes-file`, and byte-compares the GitHub
+Release body after draft creation, immediately before publication, and after
+publication. Any equality-boundary expiry or body drift blocks publication.
+
 Individual package, controller, hardware, manual, readiness, and
 post-publication verification artifacts are retained in GitHub Actions for 90
 days. The immutable GitHub Release receives byte-identical package and evidence

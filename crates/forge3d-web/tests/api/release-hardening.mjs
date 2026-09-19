@@ -182,6 +182,10 @@ for (const relative of [
 ]) {
   assert(existsSync(join(packageRoot, relative)), `missing release document: ${relative}`);
 }
+assert(
+  existsSync(join(packageRoot, "scripts", "safari-support-publication.mjs")),
+  "missing SAF-05 publication guard",
+);
 
 for (const relative of [
   "docs/browser-lab-runbook.md",
@@ -213,7 +217,12 @@ for (const expected of [
   "| Surface | MVP status | Notes |",
   "| Chrome/Chromium on Windows | Required |",
   "| Firefox | Unsupported |",
+  "| Safari Technology Preview | Unsupported |",
+  "Non-blocking early warning only",
+  "Safari Technology Preview cannot establish stable Safari support",
   "| Safari | Unsupported |",
+  "stable Safari 26+ on macOS major 26",
+  "safari-support.md",
   "| WebGL fallback | Unsupported |",
   '$env:FORGE3D_WEBGPU_REQUIRED = "1"'
 ]) {
@@ -239,7 +248,9 @@ for (const expected of [
   'FORGE3D_SOURCE_BENCHMARK_MODE = "required"',
   "npm pack --dry-run",
   "performance measurement, not the CHR-02 ten-second clock",
-  "sibling outside the unchanged v3 browser evidence record"
+  "sibling outside the unchanged v3 browser evidence record",
+  "--notes-file",
+  "Any equality-boundary expiry or body drift blocks publication",
 ]) {
   assertIncludes(checklist, expected, `release checklist missing: ${expected}`);
 }
@@ -256,7 +267,9 @@ for (const expected of [
   "deterministic synthetic",
   "second real browser tab",
   "Neither a hidden document nor an occluded/skipped frame emits",
-  "must be incorporated into the separately attested branded, physical browser"
+  "must be incorporated into the separately attested branded, physical browser",
+  "two-finger scroll zoom",
+  "Trackpad pinch is not a Forge3D viewer control",
 ]) {
   assertIncludes(browserApi, expected, `browser API staging contract missing: ${expected}`);
 }
@@ -303,6 +316,7 @@ for (const expected of [
 
 const changelog = readText(join(repoRoot, "CHANGELOG.md"));
 assertIncludes(changelog, "Hardened the browser WebGPU/WASM MVP prerelease", "changelog must describe Phase 16 release hardening");
+assertIncludes(changelog, "SAF-05 source-only Safari publication guards", "changelog must describe guarded Safari publication");
 
 const plan = readText(join(repoRoot, "docs", "superpowers", "plans", "2026-06-04-forge3d-browser-webgpu-wasm-runtime.md"));
 assertIncludes(plan, "browser/npm/WASM-only repository", "plan must declare browser-only repository scope");

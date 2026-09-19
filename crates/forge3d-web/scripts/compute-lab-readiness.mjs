@@ -138,6 +138,7 @@ export const labConfigurationFiles = [
   "crates/forge3d-web/scripts/probe-mobile-device-routes.mjs",
   "crates/forge3d-web/scripts/environment-approval.mjs",
   "crates/forge3d-web/scripts/release-publication.mjs",
+  "crates/forge3d-web/scripts/safari-support-publication.mjs",
   "crates/forge3d-web/scripts/resolve-host-runtime.mjs",
   "crates/forge3d-web/scripts/resolve-hardware-promotion.mjs",
   "crates/forge3d-web/scripts/resolve-implementation-actors.mjs",

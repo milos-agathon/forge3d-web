@@ -13,7 +13,8 @@ surfaces, and deployment assumptions that application owners must satisfy.
 | Edge | Best effort | `test:browser:edge` is an unflagged branded required-mode configuration, but the current Edge support tier remains best effort until the required evidence exists. |
 | Firefox | Unsupported | `test:browser:firefox-preflight` exercises Playwright's patched Firefox in headed mode on GitHub-hosted Apple Silicon with default preferences and no Chromium flags. A passing run is `ENGINE_PASS` source-browser evidence only, not branded Firefox, physical-browser, exact-tarball, or support evidence. |
 | Playwright WebKit test engine | Engine preflight only | The non-blocking macOS `test:browser:webkit` lane uses no Chromium flags and may produce `ENGINE_PASS` only after the complete suite succeeds. Playwright WebKit is not shipping Safari and cannot establish a Safari support row. |
-| Safari | Unsupported | `NOT_PROVEN`: neither Playwright WebKit nor structural CI is shipping Safari evidence. Safari WebGPU is not part of the MVP contract. |
+| Safari Technology Preview | Unsupported | Non-blocking early warning only. Every result remains `NOT_PROVEN`; Safari Technology Preview cannot establish stable Safari support. |
+| Safari | Unsupported | `NOT_PROVEN`: source support is guarded for a future narrow row of stable Safari 26+ on macOS major 26 on the exact `FW-MAC-M2-01` Apple M2 host. Publication still requires same-commit SafariDriver automation, physical Magic Trackpad evidence, the complete 24-row matrix, `LAB_INFRA_READY`, and `RELEASE_MATRIX_READY`; none is currently proven. Older macOS, Intel Mac, Safari Technology Preview, and Playwright WebKit remain excluded. |
 | Mobile browsers | Unsupported | Touch UX, memory ceilings, and browser WebGPU variability are post-MVP work. |
 | WebGL fallback | Unsupported | Applications must feature-detect WebGPU and provide their own fallback UI. |
 | Node.js rendering | Unsupported | The package is browser-only and requires an `HTMLCanvasElement`. |
@@ -69,6 +70,14 @@ capability boundary reports `NOT_PROVEN` and uploads no artifact. Missing,
 malformed, incomplete, mixed, or unexpected reports fail the optional check.
 This engine result is not branded or physical Safari evidence, so Safari
 remains unsupported/`NOT_PROVEN`.
+
+The guarded Safari publication path accepts only stable numeric Safari 26 or
+newer on macOS major exactly 26, observed as `macOS <product> build <build>`, on
+the exact Apple M2 inventory with `/usr/bin/safaridriver` and no launch flags.
+It replays all 24 finalized records at the readiness timestamp and separately
+rechecks current manual-evidence expiry. Its generated `safari-support.md`
+becomes release notes only after all gates pass; it does not broaden this
+current Unsupported/`NOT_PROVEN` row.
 
 ## Required Release Lane
 

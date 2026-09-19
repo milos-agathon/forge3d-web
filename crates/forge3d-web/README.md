@@ -80,6 +80,13 @@ malformed, mixed, or unexpected reports fail the optional check. Playwright
 WebKit is not shipping Safari: this preflight cannot establish Safari support,
 and Safari remains unsupported/`NOT_PROVEN`.
 
+SAF-05 adds a fail-closed publication guard for a future narrow stable Safari
+26+ / macOS 26 / Apple M2 row. It does not change current support: Safari,
+older macOS, Intel Mac, Safari Technology Preview, and Playwright WebKit remain
+Unsupported/`NOT_PROVEN` until exact physical `RELEASE_MATRIX_READY` evidence is
+published. Desktop trackpad acceptance covers two-finger scroll zoom, inertial
+termination, and page isolation; trackpad pinch is explicitly not claimed.
+
 See `docs/support-matrix.md` for the browser support matrix, unsupported surfaces, and release-lane requirements.
 
 ## MIME, CORS, And Range Requirements

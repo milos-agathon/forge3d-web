@@ -154,7 +154,7 @@ export function validateHostInventory(
     inventory.session?.interactive !== true ||
     inventory.session.locked !== false ||
     inventory.session.remote !== false ||
-    !nonEmptyOrFalse(inventory.osBuild) ||
+    !isObservedOsBuild(inventory.platform, inventory.osBuild) ||
     !nonEmptyOrFalse(inventory.session.identifier) ||
     !isCanonicalTimestamp(inventory.capturedAt) ||
     !Array.isArray(inventory.browsers) ||
@@ -532,6 +532,15 @@ function nonEmptyOrFalse(value) {
   return typeof value === "string" && value.trim() !== "";
 }
 
+function isObservedOsBuild(platform, value) {
+  if (platform === "darwin") {
+    return /^macOS [1-9][0-9]*(?:\.[0-9]+){1,2} build [0-9]{2}[A-Z][0-9A-Z]+$/u.test(
+      value ?? "",
+    );
+  }
+  return nonEmptyOrFalse(value);
+}
+
 function isCanonicalTimestamp(value) {
   if (!nonEmptyOrFalse(value)) return false;
   const parsed = new Date(value);
@@ -583,11 +592,23 @@ export function observeLiveOsBuild(
     ).trim();
   }
   if (platform === "darwin") {
-    return `macOS build ${execute(
+    const productVersion = execute(
+      "/usr/bin/sw_vers",
+      ["-productVersion"],
+      { encoding: "utf8" },
+    ).trim();
+    const buildVersion = execute(
       "/usr/bin/sw_vers",
       ["-buildVersion"],
       { encoding: "utf8" },
-    ).trim()}`;
+    ).trim();
+    if (
+      !/^[1-9][0-9]*(?:\.[0-9]+){1,2}$/u.test(productVersion) ||
+      !/^[0-9]{2}[A-Z][0-9A-Z]+$/u.test(buildVersion)
+    ) {
+      throw new Error("macOS product version or build observation is invalid");
+    }
+    return `macOS ${productVersion} build ${buildVersion}`;
   }
   return execute("uname", ["-a"], { encoding: "utf8" }).trim();
 }

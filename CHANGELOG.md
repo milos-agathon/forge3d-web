@@ -7,6 +7,7 @@ This project adheres to [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 ### Added
 - Hardened the browser WebGPU/WASM MVP prerelease with npm metadata, package release docs, a browser support matrix, a release checklist, Vite example documentation, and release-hardening package contract tests.
+- Added SAF-05 source-only Safari publication guards: exact stable Safari/macOS/M2 evidence replay, corrected physical two-finger trackpad semantics, immutable evidence links, and release-body verification. Safari remains Unsupported/`NOT_PROVEN` until the physical matrix is actually proven and published.
 
 ### Changed
 - Narrowed the repository to browser/npm/WASM scope by removing Python/native surfaces, legacy root source, old examples/docs/assets, and generated local artifacts.
