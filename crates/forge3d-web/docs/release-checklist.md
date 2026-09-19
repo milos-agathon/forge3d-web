@@ -195,6 +195,25 @@ uses the verified file through `--notes-file`, and byte-compares the GitHub
 Release body after draft creation, immediately before publication, and after
 publication. Any equality-boundary expiry or body drift blocks publication.
 
+The publisher persists every finalized digest-checked record under a unique
+filename, then generates exactly one `chromium-support.md` before closing the
+candidate and publication-preflight inventories. The generator revalidates the
+attested `RELEASE_MATRIX_READY` manifest, exact target/package/laboratory
+bindings, all 24 unique keys, safe launch arguments, six primary configured
+Chromium rows, and conditional Edge Linux rows. It writes the observed
+four-component branded browser versions, OS builds and displays; configured
+CPU/GPU/architecture constraints; and exact run-attempt links. The draft and
+immutable published GitHub Release API bodies must each equal those source
+bytes exactly. The file must also be present exactly once in the candidate
+manifest, draft download, immutable download, and postpublication verification.
+
+After both guarded support documents exist, the publisher deterministically
+joins `chromium-support.md`, two LF bytes, and `safari-support.md` into exactly
+one `browser-support.md`. Only that sealed aggregate is passed through
+`--notes-file`; the draft, immediately pre-publication, and immutable published
+Release API bodies must equal its bytes exactly. Both source documents and the
+aggregate remain in the closed, hashed, attested release-asset inventory.
+
 Individual package, controller, hardware, manual, readiness, and
 post-publication verification artifacts are retained in GitHub Actions for 90
 days. The immutable GitHub Release receives byte-identical package and evidence

@@ -21,10 +21,12 @@ describe("RenderScheduler", () => {
     expect(raf.pending).toBe(1);
     expect(scheduler.renderRequests).toBe(100);
     expect(scheduler.pendingAnimationFrame).toBe(true);
+    expect(scheduler.ownedAnimationFrameCount).toBe(1);
     raf.flush();
     expect(submissions).toBe(1);
     expect(scheduler.submittedFrames).toBe(1);
     expect(scheduler.pendingAnimationFrame).toBe(false);
+    expect(scheduler.ownedAnimationFrameCount).toBe(0);
   });
 
   it("retains dirtiness while suspended and cancels every RAF", () => {

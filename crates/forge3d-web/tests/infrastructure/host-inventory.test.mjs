@@ -323,6 +323,7 @@ function captureExact(hardware) {
     },
     browsers: [browser],
     tools,
+    launchArguments: [],
     policy,
     capturedAt: new Date("2026-07-29T08:00:00.000Z"),
     hardware,

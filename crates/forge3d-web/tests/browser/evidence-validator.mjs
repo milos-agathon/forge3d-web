@@ -171,7 +171,7 @@ export function deriveBenchmarkTiming(
   };
 }
 
-function validateBenchmark(benchmark) {
+export function validateBenchmark(benchmark) {
   const derived = deriveBenchmarkTiming(
     benchmark.rafTimestampsMs,
     benchmark.submittedFramesDelta,

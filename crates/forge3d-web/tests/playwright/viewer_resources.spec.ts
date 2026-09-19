@@ -157,17 +157,69 @@ test("an oversized real response cancels its browser stream reader", async ({
   skipRenderAssertionsWhenProbing(webgpuAvailability);
   const result = await page.evaluate(async () => {
     const prototype = ReadableStreamDefaultReader.prototype;
-    const descriptor = Object.getOwnPropertyDescriptor(
+    const cancelDescriptor = Object.getOwnPropertyDescriptor(
       prototype,
       "cancel",
     );
-    if (!descriptor || typeof descriptor.value !== "function") {
+    const readDescriptor = Object.getOwnPropertyDescriptor(prototype, "read");
+    const uint8ArrayDescriptor = Object.getOwnPropertyDescriptor(
+      globalThis,
+      "Uint8Array",
+    );
+    if (!cancelDescriptor || typeof cancelDescriptor.value !== "function") {
       throw new Error(
         "ReadableStreamDefaultReader.cancel descriptor is unavailable",
       );
     }
+    if (!readDescriptor || typeof readDescriptor.value !== "function") {
+      throw new Error(
+        "ReadableStreamDefaultReader.read descriptor is unavailable",
+      );
+    }
+    if (!uint8ArrayDescriptor) {
+      throw new Error("Uint8Array descriptor is unavailable");
+    }
     const originalCancel =
-      descriptor.value as ReadableStreamDefaultReader<unknown>["cancel"];
+      cancelDescriptor.value as ReadableStreamDefaultReader<unknown>["cancel"];
+    const originalRead =
+      readDescriptor.value as ReadableStreamDefaultReader<unknown>["read"];
+    const OriginalUint8Array = globalThis.Uint8Array;
+    const overflowChunks = new WeakSet<object>();
+    let cumulativeReceived = 0;
+    let observedOverflowChunks = 0;
+    let overflowChunkCopies = 0;
+    Object.defineProperty(prototype, "read", {
+      ...readDescriptor,
+      value: function (this: ReadableStreamDefaultReader<unknown>) {
+        return originalRead.call(this).then((readResult) => {
+          const value = readResult.value;
+          if (value instanceof OriginalUint8Array) {
+            if (cumulativeReceived + value.byteLength > 16) {
+              overflowChunks.add(value);
+              observedOverflowChunks += 1;
+            }
+            cumulativeReceived += value.byteLength;
+          }
+          return readResult;
+        });
+      },
+    });
+    Object.defineProperty(globalThis, "Uint8Array", {
+      ...uint8ArrayDescriptor,
+      value: new Proxy(OriginalUint8Array, {
+        construct(target, argumentsList, newTarget) {
+          const source = argumentsList[0];
+          if (
+            typeof source === "object" &&
+            source !== null &&
+            overflowChunks.has(source)
+          ) {
+            overflowChunkCopies += 1;
+          }
+          return Reflect.construct(target, argumentsList, newTarget);
+        },
+      }),
+    });
     const trackedCancelSettlements: Promise<"fulfilled" | "rejected">[] =
       [];
     let releaseCancelGate: () => void = () => {};
@@ -180,7 +232,7 @@ test("an oversized real response cancels its browser stream reader", async ({
     });
     let cancelCalls = 0;
     Object.defineProperty(prototype, "cancel", {
-      ...descriptor,
+      ...cancelDescriptor,
       value: function (
         this: ReadableStreamDefaultReader<unknown>,
         reason?: unknown,
@@ -237,7 +289,9 @@ test("an oversized real response cancels its browser stream reader", async ({
       );
     } finally {
       releaseCancelGate();
-      Object.defineProperty(prototype, "cancel", descriptor);
+      Object.defineProperty(globalThis, "Uint8Array", uint8ArrayDescriptor);
+      Object.defineProperty(prototype, "read", readDescriptor);
+      Object.defineProperty(prototype, "cancel", cancelDescriptor);
       viewer?.dispose();
     }
     return {
@@ -245,6 +299,8 @@ test("an oversized real response cancels its browser stream reader", async ({
       cancelCalls,
       cancelSettlements,
       settledBeforeCancelGate,
+      observedOverflowChunks,
+      overflowChunkCopies,
     };
   });
   expect(result).toEqual({
@@ -252,6 +308,146 @@ test("an oversized real response cancels its browser stream reader", async ({
     cancelCalls: 1,
     cancelSettlements: ["fulfilled"],
     settledBeforeCancelGate: false,
+    observedOverflowChunks: 1,
+    overflowChunkCopies: 0,
+  });
+});
+
+test("a malformed synthetic stream chunk is cancelled before terrain commit", async ({
+  page,
+  webgpuAvailability,
+}) => {
+  skipRenderAssertionsWhenProbing(webgpuAvailability);
+  const result = await page.evaluate(async () => {
+    const viewer = await window.__forge3dInteractiveViewer.create();
+    const readerPrototype = ReadableStreamDefaultReader.prototype;
+    const readDescriptor = Object.getOwnPropertyDescriptor(
+      readerPrototype,
+      "read",
+    );
+    const cancelDescriptor = Object.getOwnPropertyDescriptor(
+      readerPrototype,
+      "cancel",
+    );
+    if (!readDescriptor || typeof readDescriptor.value !== "function") {
+      throw new Error(
+        "ReadableStreamDefaultReader.read descriptor is unavailable",
+      );
+    }
+    if (!cancelDescriptor || typeof cancelDescriptor.value !== "function") {
+      throw new Error(
+        "ReadableStreamDefaultReader.cancel descriptor is unavailable",
+      );
+    }
+    const coordinator = (globalThis as any)[
+      Symbol.for("@forge3d/web.wasm-bridge-coordinator")
+    ];
+    const bridge = await coordinator?.record?.promise;
+    const runtimePrototype = bridge?.Forge3DRuntime?.prototype;
+    const terrainDescriptor = runtimePrototype
+      ? Object.getOwnPropertyDescriptor(runtimePrototype, "setTerrain")
+      : undefined;
+    if (!terrainDescriptor || typeof terrainDescriptor.value !== "function") {
+      throw new Error("Generated runtime setTerrain descriptor is unavailable");
+    }
+    const originalRead =
+      readDescriptor.value as ReadableStreamDefaultReader<unknown>["read"];
+    const originalCancel =
+      cancelDescriptor.value as ReadableStreamDefaultReader<unknown>["cancel"];
+    const originalSetTerrain = terrainDescriptor.value as (
+      terrain: unknown,
+    ) => void;
+    let releaseCancelGate: () => void = () => {};
+    const cancelGate = new Promise<void>((resolve) => {
+      releaseCancelGate = resolve;
+    });
+    let notifyCancelCalled: () => void = () => {};
+    const cancelCalled = new Promise<void>((resolve) => {
+      notifyCancelCalled = resolve;
+    });
+    let yieldedMalformedChunk = false;
+    let cancelCalls = 0;
+    let terrainCommitCalls = 0;
+    Object.defineProperty(readerPrototype, "read", {
+      ...readDescriptor,
+      value: function (this: ReadableStreamDefaultReader<unknown>) {
+        return originalRead.call(this).then((readResult) => {
+          if (!yieldedMalformedChunk && !readResult.done) {
+            yieldedMalformedChunk = true;
+            return {
+              done: false,
+              value: { fixture: "malformed-non-uint8array-chunk" },
+            };
+          }
+          return readResult;
+        });
+      },
+    });
+    Object.defineProperty(readerPrototype, "cancel", {
+      ...cancelDescriptor,
+      value: function (
+        this: ReadableStreamDefaultReader<unknown>,
+        reason?: unknown,
+      ) {
+        cancelCalls += 1;
+        notifyCancelCalled();
+        return originalCancel.call(this, reason).then(async () => {
+          await cancelGate;
+        });
+      },
+    });
+    Object.defineProperty(runtimePrototype, "setTerrain", {
+      ...terrainDescriptor,
+      value: function (this: unknown, terrain: unknown) {
+        terrainCommitCalls += 1;
+        return originalSetTerrain.call(this, terrain);
+      },
+    });
+
+    let code: string | null = null;
+    let settledBeforeCancelGate = true;
+    try {
+      const terrainOutcome = viewer
+        .setTerrainFromSource({
+          width: 2,
+          height: 2,
+          source: new Blob([new Uint8Array(16)]),
+        })
+        .then(
+          () => ({ code: null }),
+          (error: any) => ({ code: error.code as string }),
+        );
+      await cancelCalled;
+      settledBeforeCancelGate =
+        (await Promise.race([
+          terrainOutcome.then(() => "settled" as const),
+          new Promise<"pending">((resolve) => {
+            setTimeout(() => resolve("pending"), 0);
+          }),
+        ])) === "settled";
+      releaseCancelGate();
+      code = (await terrainOutcome).code;
+    } finally {
+      releaseCancelGate();
+      Object.defineProperty(runtimePrototype, "setTerrain", terrainDescriptor);
+      Object.defineProperty(readerPrototype, "cancel", cancelDescriptor);
+      Object.defineProperty(readerPrototype, "read", readDescriptor);
+      viewer.dispose();
+    }
+    return {
+      code,
+      cancelCalls,
+      yieldedMalformedChunk,
+      settledBeforeCancelGate,
+      terrainCommitCalls,
+    };
+  });
+  expect(result).toEqual({
+    code: "IO_ERROR",
+    cancelCalls: 1,
+    yieldedMalformedChunk: true,
+    settledBeforeCancelGate: false,
+    terrainCommitCalls: 0,
   });
 });
 

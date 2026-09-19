@@ -107,6 +107,8 @@ export interface ViewerDiagnostics {
   activeObservers: number;
   activeRuntimes: number;
   pendingAnimationFrame: boolean;
+  /** Number of requestAnimationFrame handles currently owned by this viewer. */
+  ownedAnimationFrameCount: number;
   recoveryAttempts: number;
   screenshotInFlight: boolean;
   effectiveResourceBudget: ViewerResourceBudget;
@@ -188,6 +190,9 @@ interface WasmRuntime {
   setDeviceLostCallback?(
     callback: ((error: unknown) => void) | undefined,
   ): void;
+  registerDeviceLostCallback?(
+    callback: (error: unknown) => void,
+  ): () => void;
   simulateDeviceLossForTesting?(): void;
   setTerrain(terrain: TerrainHeightmapInput): void;
   setTerrainFromSource(terrain: TerrainHeightmapSourceInput): Promise<void>;
@@ -265,6 +270,8 @@ export class Forge3DRuntime {
   readonly #clearColor: [number, number, number, number];
   #lastCapabilities: Forge3DRuntimeCapabilities;
   #deviceLostHandler: ((error: unknown) => void) | undefined;
+  #pendingDeviceLoss: Forge3DError | undefined;
+  #detachDeviceLostRegistration: (() => void) | undefined;
   #width: number;
   #height: number;
   #disposeRequested = false;
@@ -279,6 +286,7 @@ export class Forge3DRuntime {
     this.#inner = inner;
     this.#loadTerrainHeightmapSource = loadTerrainHeightmapSource;
     this.#deviceLostHandler = undefined;
+    this.#pendingDeviceLoss = undefined;
     this.#width = inner.width;
     this.#height = inner.height;
     this.#diagnosticsEnabled = inner.diagnosticsEnabled;
@@ -290,21 +298,42 @@ export class Forge3DRuntime {
       clearColor[3] ?? 1,
     ];
     this.#lastCapabilities = normalizeCapabilities(inner.getCapabilities());
-    this.#inner.setDeviceLostCallback?.((error) => {
+    const nativeDeviceLostCallback = (error: unknown) => {
       const normalized = Forge3DError.from(error);
       this.#lastCapabilities = {
         ...this.#lastCapabilities,
         deviceState: "lost",
       };
-      this.#deviceLostHandler?.(
-        normalized.code === "DEVICE_LOST"
-          ? normalized
-          : new Forge3DError("DEVICE_LOST", normalized.message, normalized.details),
-      );
-    });
+      const deviceLoss = normalized.code === "DEVICE_LOST"
+        ? normalized
+        : new Forge3DError("DEVICE_LOST", normalized.message, normalized.details);
+      if (this.#deviceLostHandler !== undefined) {
+        this.#deviceLostHandler(deviceLoss);
+      } else if (!this.#disposeRequested && this.#pendingDeviceLoss === undefined) {
+        this.#pendingDeviceLoss = deviceLoss;
+      }
+    };
+    this.#detachDeviceLostRegistration =
+      this.#inner.registerDeviceLostCallback?.(nativeDeviceLostCallback);
+    if (this.#detachDeviceLostRegistration === undefined) {
+      this.#inner.setDeviceLostCallback?.(nativeDeviceLostCallback);
+      this.#detachDeviceLostRegistration = () => {
+        this.#inner.setDeviceLostCallback?.(undefined);
+      };
+    }
     registerRuntimeInternals(this, {
       setDeviceLostHandler: (handler) => {
+        if (this.#disposeRequested) {
+          this.#deviceLostHandler = undefined;
+          this.#pendingDeviceLoss = undefined;
+          return;
+        }
         this.#deviceLostHandler = handler;
+        if (handler !== undefined && this.#pendingDeviceLoss !== undefined) {
+          const pending = this.#pendingDeviceLoss;
+          this.#pendingDeviceLoss = undefined;
+          handler(pending);
+        }
       },
       simulateDeviceLossForTests: () => {
         this.#assertNotDisposed();
@@ -477,6 +506,9 @@ export class Forge3DRuntime {
     }
     this.#disposeRequested = true;
     this.#deviceLostHandler = undefined;
+    this.#pendingDeviceLoss = undefined;
+    this.#detachDeviceLostRegistration?.();
+    this.#detachDeviceLostRegistration = undefined;
     this.#pendingMutations = [];
     if (this.#screenshotPromise !== undefined) {
       this.#lastCapabilities = {
@@ -543,7 +575,6 @@ export class Forge3DRuntime {
       return;
     }
     this.#nativeDisposed = true;
-    this.#inner.setDeviceLostCallback?.(undefined);
     this.#inner.dispose();
     this.#lastCapabilities = {
       ...this.#lastCapabilities,

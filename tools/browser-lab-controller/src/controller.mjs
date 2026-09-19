@@ -22,6 +22,7 @@ export class BrowserLabController {
     validateAuthorization(authorization, this.hostId, this.now());
     const authorizationBytes = Buffer.from(canonicalJson(authorization));
     const authorizationDigest = sha256(authorizationBytes);
+    let captureWindow = null;
     const lock = await this.dependencies.acquireHostLock(this.hostId);
     if (!lock) {
       throw new Error(`host lock is already occupied: ${this.hostId}`);
@@ -94,6 +95,20 @@ export class BrowserLabController {
         args[1] = "<scrubbed>";
       }
 
+      if (authorization.manualSession != null) {
+        const readiness = await this.dependencies.waitForManualSessionReadiness({
+          jobRoot,
+          authorization,
+        });
+        validateManualSessionReadiness(readiness, authorization);
+        captureWindow = controllerCaptureWindow(this.now());
+        await this.dependencies.publishManualCaptureWindow({
+          jobRoot,
+          authorization,
+          captureWindow,
+        });
+      }
+
       const terminal = await this.dependencies.monitorOneJob({
         process: runnerProcess,
         authorization,
@@ -101,6 +116,7 @@ export class BrowserLabController {
         runnerId: issued.runnerId,
         runnerName: issued.runnerName,
       });
+      assertCaptureDeadlineReached(captureWindow, this.now());
       if (terminal.reason === "online_unassigned") {
         if (
           terminal.listenerStopped !== true ||
@@ -365,6 +381,8 @@ export class BrowserLabController {
             name: issued.runnerName,
           },
           ...manualSessionInput,
+          startedAt: captureWindow.startedAt,
+          endedAt: captureWindow.endedAt,
           cleanup: {
             ...manualSessionInput.cleanup,
             runnerAbsent: true,
@@ -389,6 +407,62 @@ export class BrowserLabController {
     }
     return { ...result, controllerReceiptSha256 };
   }
+}
+
+function controllerCaptureWindow(start) {
+  const startedAt = new Date(start);
+  if (!Number.isFinite(startedAt.getTime())) {
+    throw new Error("controller capture start is invalid");
+  }
+  return {
+    startedAt: startedAt.toISOString(),
+    endedAt: new Date(startedAt.getTime() + 20 * 60 * 1000).toISOString(),
+  };
+}
+
+export function assertCaptureDeadlineReached(captureWindow, observedAt) {
+  if (
+    captureWindow !== null &&
+    new Date(observedAt).getTime() < new Date(captureWindow.endedAt).getTime()
+  ) {
+    throw new Error("manual capture ended before the controller deadline");
+  }
+}
+
+function validateManualSessionReadiness(readiness, authorization) {
+  const expectedRuntime = resolveAuthorizedLaneRuntime(authorization);
+  const keys = Object.keys(readiness ?? {}).sort().join(",");
+  const expectedKeys = ["binding", "browser", "browserReady", "deviceAssetId", "deviceReady", "fixtureReady", "mediaChallenge", "route", "routeReady", "schemaVersion", "watermarkVisible"].sort().join(",");
+  let routeValid = false;
+  try {
+    routeValid = /^https:\/\//u.test(readiness.route?.applicationUrl ?? "") &&
+      /^https:\/\//u.test(readiness.route?.assetUrl ?? "") &&
+      new URL(readiness.route.applicationUrl).origin !== new URL(readiness.route.assetUrl).origin &&
+      /^\/runs\/[1-9][0-9]*\/[1-9][0-9]*\/[0-9a-f]{32}\/$/u.test(readiness.route.basePath) &&
+      readiness.route.basePath.startsWith(`/runs/${authorization.run.id}/${authorization.queuedHardwareJob.id}/`);
+  } catch { routeValid = false; }
+  if (keys !== expectedKeys || readiness.schemaVersion !== 1 ||
+      readiness.binding?.runId !== authorization.run.id ||
+      readiness.binding?.jobId !== authorization.queuedHardwareJob.id ||
+      readiness.binding?.assetId !== authorization.assetId ||
+      readiness.mediaChallenge !== authorization.manualSession.mediaChallenge ||
+      readiness.browser?.name?.toLowerCase() !== expectedRuntime.browser ||
+      !readiness.browser.channel || !readiness.browser.version ||
+      readiness.deviceAssetId !== expectedRuntime.deviceAssetId || !routeValid ||
+      readiness.fixtureReady !== true || readiness.browserReady !== true ||
+      readiness.deviceReady !== true || readiness.routeReady !== true ||
+      readiness.watermarkVisible !== true) {
+    throw new Error("manual capture readiness signal is invalid or replayed");
+  }
+}
+
+export function resolveAuthorizedLaneRuntime(authorization) {
+  if (authorization.lane === "infrastructure-canary") return { browser: "chrome", deviceAssetId: null };
+  if (authorization.lane === "manual-safari-trackpad" && authorization.assetId === "FW-TRACKPAD-01") return { browser: "safari", deviceAssetId: null };
+  if (authorization.lane === "manual-mobile-multitouch" && /^FW-(?:AND|IOS|IPAD)-[A-Z0-9-]+$/u.test(authorization.assetId ?? "")) {
+    return { browser: authorization.assetId.startsWith("FW-AND-") ? "chrome" : "safari", deviceAssetId: authorization.assetId };
+  }
+  throw new Error("manual authorization lane and asset are not a checked runtime");
 }
 
 function createListenerStopEvidence(runnerProcess, observedAt) {

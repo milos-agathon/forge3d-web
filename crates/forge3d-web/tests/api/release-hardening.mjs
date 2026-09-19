@@ -14,7 +14,7 @@ const infrastructureTestRunner = readText(
   join(packageRoot, "scripts", "run-infrastructure-tests.mjs"),
 );
 const benchmarkHarness = readText(
-  join(packageRoot, "tests", "browser", "viewer-benchmark.ts"),
+  join(packageRoot, "tests", "browser", "viewer-benchmark-browser.js"),
 );
 const interactionObservationHarness = readText(
   join(
@@ -104,7 +104,7 @@ assertThrows(
 
 assertIncludes(
   benchmarkHarness,
-  "viewer.setView(samples[index]);\n          index += 1;\n          requestAnimationFrame(apply);",
+  "viewer.setView(samples[index]);\n        index += 1;\n        requestAnimationFrame(apply);",
   "frozen benchmark v1 must apply each measured sample on consecutive harness RAF callbacks",
 );
 for (const forbidden of [
@@ -215,7 +215,7 @@ for (const expected of [
 const supportMatrix = readText(join(packageRoot, "docs", "support-matrix.md"));
 for (const expected of [
   "| Surface | MVP status | Notes |",
-  "| Chrome/Chromium on Windows | Required |",
+  "| Chrome stable on Windows 11, Intel Iris Xe | Required physical lane, `NOT_PROVEN` |",
   "| Firefox | Unsupported |",
   "| Safari Technology Preview | Unsupported |",
   "Non-blocking early warning only",
@@ -253,6 +253,19 @@ for (const expected of [
   "Any equality-boundary expiry or body drift blocks publication",
 ]) {
   assertIncludes(checklist, expected, `release checklist missing: ${expected}`);
+}
+for (const expected of [
+  "chromium-support.md",
+  "six primary configured",
+  "Edge Linux stays conditional/P2",
+  "derivative Chromium brands",
+  "run-attempt links",
+]) {
+  assertIncludes(
+    `${supportMatrix}\n${checklist}`,
+    expected,
+    `CHR-05 release documentation missing: ${expected}`,
+  );
 }
 
 const browserApi = readText(join(packageRoot, "docs", "browser-api.md"));

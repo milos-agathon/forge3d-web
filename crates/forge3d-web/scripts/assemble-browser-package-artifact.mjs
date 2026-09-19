@@ -68,6 +68,8 @@ export function assembleBrowserPackageArtifact({
   for (const file of [
     "browser-evidence.schema.json",
     "adapter-attestation.schema.json",
+    "chr03-hardware-proof.schema.json",
+    "chr04-hardware-proof.schema.json",
   ]) {
     copyFileSync(
       join(packageRoot, "tests", "browser", file),
@@ -94,12 +96,22 @@ export function assembleBrowserPackageArtifact({
     "browser-launch-provenance.mjs",
     "browser-run-provenance.mjs",
     "browser-session-runtime.mjs",
+    "chrome-hardware-acceptance.mjs",
+    "edge-browser-acceptance.mjs",
+    "chr03-hardware-proof-validator.mjs",
+    "chr03-lanes.mjs",
+    "chr04-hardware-proof-validator.mjs",
+    "chr04-lanes.mjs",
     "browser-process-registry.mjs",
     "webdriver-client.mjs",
     "cleanup-browser-hardware.mjs",
   ]) {
     copyFileSync(join(packageRoot, "scripts", file), join(output, file));
   }
+  copyFileSync(
+    join(packageRoot, "tests", "browser", "json-schema-validator.mjs"),
+    join(output, "json-schema-validator.mjs"),
+  );
   for (const [source, destination] of [
     [
       join(packageRoot, "tests", "infrastructure", "browser-policy.json"),

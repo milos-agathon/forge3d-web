@@ -291,7 +291,7 @@ test("Safari notes and manual expiry are rechecked at every publication boundary
   const mutation = publisher.slice(
     publisher.indexOf("Create draft, byte-verify closed assets, and publish exactly once"),
   );
-  assert.match(mutation, /--notes-file preflight\/release-assets\/safari-support\.md/u);
+  assert.match(mutation, /--notes-file preflight\/release-assets\/browser-support\.md/u);
   assert.ok((mutation.match(/release\.body !== supportBody/gu) ?? []).length >= 3);
   assert.ok((mutation.match(/record\.kind === "manual"/gu) ?? []).length >= 3);
   assert.ok((mutation.match(/manualEvidence\.length !== 7|evidence\.length !== 7/gu) ?? []).length >= 3);
@@ -331,6 +331,47 @@ test("candidate is schema-backed and contains no impossible post-publication cla
   assert.equal(preflight.includes("releaseVerified: true"), false);
   assert.equal(preflight.includes("allAssetsVerified: true"), false);
   assert.equal(preflight.includes("publishedAt"), false);
+});
+
+test("Chromium support publication closes unique records before candidate and binds exact release bodies", () => {
+  const persist = preflight.indexOf('writeFileSync(`verified-records/${process.argv[2]}.json`');
+  const generate = preflight.indexOf("node scripts/chromium-support-publication.mjs");
+  const media = preflight.indexOf("Re-fetch exact still-draft manual media");
+  const candidate = preflight.indexOf("createBrowserReleaseCandidate");
+  assert.ok(persist > -1 && generate > persist);
+  assert.ok(media > generate && candidate > generate);
+  for (const value of [
+    "--readiness-artifact readiness-artifact.json",
+    "--readiness-run readiness-run.json",
+    "--lab-readiness-run lab-readiness-run.json",
+    "--package-run package-run.json",
+    "--records-directory verified-records",
+    "--matrix tests/infrastructure/hardware-matrix.json",
+    "--policy tests/infrastructure/browser-policy.json",
+    "--output release-assets/chromium-support.md",
+  ]) assert.match(preflight, new RegExp(value.replaceAll("/", "\\/"), "u"));
+  assert.equal(preflight.includes('--lab-readiness "${lab_readiness_path}"'), true);
+  assert.match(preflight, /actions\/runs\/\$\{lab_readiness_run_id\}\/artifacts/u);
+  assert.match(preflight, /browser-lab-infrastructure-readiness\.json/u);
+  assert.match(preflight, /gh attestation verify "\$\{lab_readiness_path\}"/u);
+  assert.match(preflight, /--source-digest "\$\{TARGET_SHA\}"/u);
+  assert.match(preflight, /find release-assets -maxdepth 1 -name chromium-support\.md/u);
+  assert.match(preflight, /writeFileSync\("release-assets\/browser-support\.md", `\$\{chromium\}\\n\\n\$\{safari\}`/u);
+  assert.match(publisher, /--notes-file preflight\/release-assets\/browser-support\.md/u);
+  assert.equal(
+    publisher.match(/release\.body !== supportBody/gu)?.length,
+    3,
+  );
+  assert.match(publisher, /publication-proof\/draft-release\.json/u);
+  assert.match(publisher, /publication-proof\/release\.json/u);
+  assert.ok(
+    publisher.indexOf("release.body !== supportBody") <
+      publisher.indexOf("gh release upload"),
+  );
+  assert.ok(
+    publisher.lastIndexOf("release.body !== supportBody") >
+      publisher.indexOf('gh release edit "${RELEASE_TAG}"'),
+  );
 });
 
 test("publication proof is post-publish, closed, schema-validated, and retained without asset mutation", () => {

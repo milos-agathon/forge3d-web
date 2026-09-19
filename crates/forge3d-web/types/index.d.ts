@@ -134,6 +134,8 @@ export interface ViewerDiagnostics {
   activeObservers: number;
   activeRuntimes: number;
   pendingAnimationFrame: boolean;
+  /** Number of requestAnimationFrame handles currently owned by this viewer. */
+  ownedAnimationFrameCount: number;
   recoveryAttempts: number;
   screenshotInFlight: boolean;
   effectiveResourceBudget: ViewerResourceBudget;

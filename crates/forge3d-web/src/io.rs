@@ -435,7 +435,16 @@ async fn read_stream_body_bounded(
                 "Terrain response stream produced an empty chunk value",
             ));
         }
-        let chunk = js_sys::Uint8Array::new(&value);
+        let chunk = match value.dyn_into::<js_sys::Uint8Array>() {
+            Ok(chunk) => chunk,
+            Err(_) => {
+                cancel_reader_best_effort(&reader).await;
+                return Err(WebError::new(
+                    Forge3DErrorCode::IoError,
+                    "Terrain response stream chunk was not a Uint8Array",
+                ));
+            }
+        };
         let chunk_len = chunk.length() as usize;
         if !body.can_accept(chunk_len) {
             cancel_reader_best_effort(&reader).await;

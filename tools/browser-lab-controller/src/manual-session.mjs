@@ -10,6 +10,9 @@ export function createManualSession({
   loginSession,
   browser,
   driver,
+  appium = null,
+  device = null,
+  inventoryCapturedAt = null,
   origins,
   routeBasePath,
   packageRecord,
@@ -46,6 +49,15 @@ export function createManualSession({
       authorization.lane === "manual-safari-trackpad");
   if (requiresTrackpadInventory) {
     assertCompleteHostInventory(hostInventory, { authorization });
+  }
+  const requiresMobileProvenance = authorization.lane === "manual-mobile-multitouch";
+  if (requiresMobileProvenance && !validMobileProvenance({
+    appium,
+    device,
+    inventoryCapturedAt,
+    assetId: authorization.assetId,
+  })) {
+    throw new Error("manual mobile session provenance is incomplete");
   }
   if (
     Object.values(cleanup).some((value) => value !== true) ||
@@ -86,6 +98,9 @@ export function createManualSession({
     system,
     browser,
     driver,
+    ...(appium === null ? {} : { appium }),
+    ...(device === null ? {} : { device }),
+    ...(inventoryCapturedAt === null ? {} : { inventoryCapturedAt }),
     headed: true,
     loginSession,
     origins,
@@ -103,4 +118,25 @@ export function createManualSession({
     record,
     signer,
   });
+}
+
+function validMobileProvenance({ appium, device, inventoryCapturedAt, assetId }) {
+  const nonEmpty = (value) =>
+    typeof value === "string" && value.trim() !== "" && value !== "unknown";
+  return (
+    appium !== null &&
+    Object.keys(appium).sort().join(",") === "driverName,driverVersion,serverVersion" &&
+    nonEmpty(appium.serverVersion) &&
+    nonEmpty(appium.driverName) &&
+    nonEmpty(appium.driverVersion) &&
+    device !== null &&
+    Object.keys(device).sort().join(",") === "accessory,assetId,model,osVersion,platformName" &&
+    device.assetId === assetId &&
+    nonEmpty(device.model) &&
+    nonEmpty(device.platformName) &&
+    nonEmpty(device.osVersion) &&
+    (device.accessory === null || nonEmpty(device.accessory)) &&
+    typeof inventoryCapturedAt === "string" &&
+    Number.isFinite(Date.parse(inventoryCapturedAt))
+  );
 }

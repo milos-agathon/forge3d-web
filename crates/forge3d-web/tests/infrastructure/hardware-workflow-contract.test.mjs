@@ -160,6 +160,9 @@ test("hardware executes only verified promoted artifacts and always cleans up", 
   assert.match(hardware, /inputs\.lane == 'infrastructure-canary'/u);
   assert.match(hardware, /host_id == 'FW-MAC-M2-01'/u);
   assert.match(hardware, /browser-lane-runtime\.mjs/u);
+  assert.match(hardware, /!process\.env\.GITHUB_ACTOR\?\.trim\(\)/u);
+  assert.match(hardware, /createBrowserPageBinding/u);
+  assert.doesNotMatch(hardware, /manualSession\.expectedTester/u);
   assert.match(hardware, /capture-host-gpu-evidence\.mjs/u);
   assert.match(hardware, /join-adapter-attestation\.mjs/u);
   assert.match(hardware, /evidence\/host-inventory\.json/u);

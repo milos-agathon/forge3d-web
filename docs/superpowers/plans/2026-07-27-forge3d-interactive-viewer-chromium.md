@@ -164,6 +164,29 @@ the support matrix.
 - Intel Mac and AMD/Linux remain documented `NOT_PROVEN` until exact assets meet
   the same gate.
 
+**Source evidence ledger (2026-09-14)**
+
+- Source status: `CODE_COMPLETE` as an uncommitted local implementation based
+  on exact baseline `814a46db6228eaa2e5ac7a5302b1bd17bacf3011`. The task-specific
+  validator negative suite passed 20/20, the focused integration suite passed
+  38/38 in the first review round and 30/30 in the second focused executable
+  round, typecheck passed, unit tests passed 117/117, `test:package` passed
+  including browser-harness 74/74 and infrastructure 519/519 with one existing
+  platform skip, and the production build passed. A local Playwright Chromium
+  loopback `page.evaluate` serialization smoke also passed; it is source
+  validation rather than physical acceptance evidence.
+- Acceptance status: `LAB_INFRA_BLOCKED`. No required physical Chrome row ran,
+  so macOS Apple Silicon, Linux Intel Gen12 Wayland, and Linux RTX 3070 Wayland
+  remain `NOT_PROVEN`. Chrome Beta remains an optional non-promoting probe.
+- Installed-tarball browser execution was attempted and stopped at the
+  unchanged clean-worktree/exact-HEAD provenance guard because this evidence
+  describes uncommitted source. The guard was not bypassed and no evidence was
+  manufactured.
+- Unrun gates: the three required physical stable-Chrome jobs, optional Beta
+  probes, retained artifact merge/promotion, and all hardware/CI-only matrices.
+  `make -C docs html` is unavailable because the repository docs directory has
+  no `html` target.
+
 ## CHR-04 — Add Branded Edge Acceptance
 
 **Priority:** P1 for Windows/macOS; P2 for Linux; physical execution is
@@ -230,6 +253,31 @@ pass at the same commit.
 - Release artifacts link to all required exact-head runs.
 - Existing API, package, Rust, WASM, terrain, screenshot, and IO gates remain
   green.
+
+**Source evidence ledger (2026-09-18)**
+
+- Source status: `CODE_COMPLETE` as an uncommitted implementation in the clean
+  isolated worktree created from exact baseline
+  `1810aca68700ee5f5e849e61dc0d16c4a2db66e8`. The source adds the fail-closed
+  generated `chromium-support.md`, unique finalized-record retention, closed
+  candidate/draft/published asset and release-body verification, launch-argument
+  hardening, and synchronized package/docs contracts.
+- Automated proof: focused Chromium publication, host-inventory, and host-policy
+  tests passed 23/23; typecheck
+  passed; unit tests passed 117/117; `test:api` passed; the production
+  WASM/TypeScript/Vite build passed; `test:package` passed with browser harness
+  81/81 and infrastructure 548 passed plus one existing platform skip; npm pack
+  dry-run passed; both relevant wasm32 cargo checks passed; and
+  `git diff --check` passed.
+- Acceptance status remains `NOT_PROVEN`. No physical row ran, no support
+  artifact was published, and `package.json` intentionally remains
+  `contractStage: "verification-incomplete"` with `releaseReady: false`.
+- The exact-head installed-tarball consumer stopped at its unchanged clean
+  worktree guard because this evidence describes uncommitted source; the guard
+  was not bypassed. `make -C docs html` remains unavailable because the docs
+  directory has no `html` target. Physical/CI-only browser matrices, live
+  publication, release, deployment, and the full unrelated Rust CI matrix were
+  not run.
 
 ## Chromium Plan Acceptance Matrix
 

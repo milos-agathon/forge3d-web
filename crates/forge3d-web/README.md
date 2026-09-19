@@ -62,6 +62,16 @@ configurations; they fail when `navigator.gpu` or adapter acquisition is
 unavailable. These configurations do not claim that either branded lane has
 passed or change the current support tiers.
 
+The configured primary publication rows are Chrome stable on exact Windows
+Intel Iris Xe, Apple M2 macOS, Linux Intel Iris Xe GNOME Wayland, and Linux RTX
+3070 GNOME Wayland assets, plus Edge stable on the exact Windows Intel Iris Xe
+and Apple M2 macOS assets. Every row remains `NOT_PROVEN` until one attested
+`RELEASE_MATRIX_READY` set generates the release's `chromium-support.md` with
+the actual four-component browser versions, OS builds, displays, and exact
+run-attempt links. Edge Linux remains conditional/P2. Intel Mac, AMD/Linux,
+unlisted hardware, non-Wayland Linux, derivative Chromium brands, Beta, and
+preflight lanes do not establish support or a browser-version floor.
+
 `npm run test:browser:firefox-preflight` selects Playwright's patched Firefox
 build with default preferences and no Chromium launch flags. CI requires
 WebGPU for that project and runs the complete source-browser suite in headed

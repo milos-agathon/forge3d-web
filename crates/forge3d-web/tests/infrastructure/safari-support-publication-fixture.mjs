@@ -6,6 +6,9 @@ import {
   requiredEvidenceRows,
 } from "../../scripts/merge-browser-evidence.mjs";
 import { checklistDefinition } from "../../scripts/manual-evidence.mjs";
+import { CHR04_LANES } from "../../scripts/chr04-lanes.mjs";
+import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
+import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
 import { exactHostInventory } from "./host-inventory-fixture.mjs";
 
 export const targetSha = "a".repeat(40);
@@ -44,19 +47,46 @@ export function validSafariPublicationInput() {
   });
   const records = requiredEvidenceRows(matrix).map((row, index) => {
     const safari = row.lane === "safari-macos-m2" || row.checklistId === "safari-trackpad";
+    const edge = row.lane.startsWith("edge-");
+    const chrome = row.lane.startsWith("chrome-");
+    const edgePlatform = edge ? CHR04_LANES[row.lane].platform : null;
+    const inferredPlatform = row.lane.includes("windows")
+      ? "win32"
+      : row.lane.includes("macos")
+        ? "darwin"
+        : "linux";
+    const platform = safari ? "darwin" : edgePlatform ?? inferredPlatform;
     const system = row.kind === "manual"
       ? { os: safari ? "darwin" : "linux", build: safari ? macInventory.osBuild : "Ubuntu fixture" }
       : {
-          platform: safari ? "darwin" : "linux",
-          osBuild: safari ? macInventory.osBuild : "Ubuntu fixture",
-          displayServer: safari ? "WindowServer" : "GNOME Wayland",
+          platform,
+          osBuild: safari
+            ? macInventory.osBuild
+            : platform === "win32"
+              ? JSON.stringify({ caption: "Microsoft Windows 11 Pro", productType: 1, version: "10.0.26200", buildNumber: "26200", displayVersion: "25H2", editionId: "Professional", ubr: 1000, registryProductName: "Windows 10 Pro" })
+              : platform === "darwin"
+                ? "macOS 26.0 (25A456)"
+                : "Ubuntu 24.04.1 LTS",
+          displayServer: platform === "win32"
+            ? "Desktop Window Manager"
+            : platform === "darwin"
+              ? "WindowServer"
+              : "GNOME Wayland",
         };
     const browser = safari
       ? { name: "safari", channel: "stable", version: "26.0" }
-      : { name: "chrome", channel: "stable", version: "150.0" };
+      : edge
+        ? { name: "msedge", channel: "stable", version: "150.0.1.2" }
+        : chrome
+          ? { name: "chrome", channel: "stable", version: "150.0.7339.12" }
+          : { name: "firefox", channel: "release", version: "150.0.1" };
     const driver = safari
       ? { name: "safaridriver", version: "26.0" }
-      : { name: "playwright-chrome", version: "1.56.1" };
+      : edge
+        ? { name: "playwright-edge", version: "1.56.1" }
+        : chrome
+          ? { name: "playwright-chrome", version: "1.56.1" }
+          : { name: "selenium-firefox", version: "4.35.0" };
     const workflow = {
       runId: 100 + index,
       runAttempt: 2,
@@ -135,6 +165,12 @@ export function validSafariPublicationInput() {
           headedSessionAvailable: true,
         },
       },
+      ...(chrome && row.lane !== "chrome-windows-intel12"
+        ? { chr03Proof: validChr03HardwareProof({ lane: row.lane, assetId: row.assetId, commit: targetSha, packageSha256 }) }
+        : {}),
+      ...(edge
+        ? { chr04Proof: validChr04HardwareProof({ lane: row.lane, assetId: row.assetId, platform, commit: targetSha, packageSha256 }) }
+        : {}),
     };
   });
   const readiness = mergeBrowserEvidence({

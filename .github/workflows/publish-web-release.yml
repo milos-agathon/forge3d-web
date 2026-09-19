@@ -387,9 +387,12 @@ jobs:
           node --input-type=module --eval '
             import { readFileSync, writeFileSync } from "node:fs";
             const artifacts = JSON.parse(readFileSync("lab-readiness-artifacts.json", "utf8")).artifacts;
-            const matches = artifacts.filter((artifact) => artifact.name === "browser-lab-infrastructure-readiness");
+            const matches = artifacts.filter((artifact) =>
+              artifact.name === "browser-lab-infrastructure-readiness"
+            );
             if (
-              matches.length !== 1 || matches[0].expired ||
+              matches.length !== 1 ||
+              matches[0].expired ||
               matches[0].workflow_run?.id !== Number(process.argv[1]) ||
               matches[0].workflow_run?.head_sha !== process.env.TARGET_SHA ||
               !/^sha256:[0-9a-f]{64}$/.test(matches[0].digest ?? "")
@@ -410,6 +413,21 @@ jobs:
             --source-ref refs/heads/main \
             --source-digest "${TARGET_SHA}" \
             --deny-self-hosted-runners
+
+          node scripts/chromium-support-publication.mjs \
+            --target-sha "${TARGET_SHA}" \
+            --readiness "${readiness_path}" \
+            --readiness-artifact readiness-artifact.json \
+            --readiness-run readiness-run.json \
+            --lab-readiness "${lab_readiness_path}" \
+            --lab-readiness-run lab-readiness-run.json \
+            --package-run package-run.json \
+            --records-directory verified-records \
+            --matrix tests/infrastructure/hardware-matrix.json \
+            --policy tests/infrastructure/browser-policy.json \
+            --repository "${GITHUB_REPOSITORY}" \
+            --output release-assets/chromium-support.md
+          test "$(find release-assets -maxdepth 1 -name chromium-support.md -type f | wc -l)" -eq 1
 
       - name: Re-fetch exact still-draft manual media by numeric release-asset ID
         shell: bash
@@ -538,6 +556,19 @@ jobs:
             --repository "${GITHUB_REPOSITORY}" \
             --output release-assets/safari-support.md
           test "$(find release-assets -maxdepth 1 -name safari-support.md -type f | wc -l)" -eq 1
+          node --input-type=module --eval '
+            import { readFileSync, writeFileSync } from "node:fs";
+            const chromium = readFileSync("release-assets/chromium-support.md", "utf8");
+            const safari = readFileSync("release-assets/safari-support.md", "utf8");
+            if (chromium.endsWith("\n") || safari.endsWith("\n")) {
+              throw new Error("support source documents must not end with LF");
+            }
+            writeFileSync("release-assets/browser-support.md", `${chromium}\n\n${safari}`, {
+              encoding: "utf8",
+              mode: 0o600
+            });
+          '
+          test "$(find release-assets -maxdepth 1 -name browser-support.md -type f | wc -l)" -eq 1
 
       - name: Resolve implementation actors and create closed preflight
         id: preflight
@@ -1242,13 +1273,13 @@ jobs:
             --repo "${GITHUB_REPOSITORY}" \
             --target "${TARGET_SHA}" \
             --title "Forge3D Web ${RELEASE_TAG}" \
-            --notes-file preflight/release-assets/safari-support.md \
+            --notes-file preflight/release-assets/browser-support.md \
             --draft
           gh api "/repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" > publication-proof/draft-release.json
           node --input-type=module --eval '
             import { readFileSync } from "node:fs";
             const release = JSON.parse(readFileSync("publication-proof/draft-release.json", "utf8"));
-            const supportBody = readFileSync("preflight/release-assets/safari-support.md", "utf8");
+            const supportBody = readFileSync("preflight/release-assets/browser-support.md", "utf8");
             if (
               release.tag_name !== process.env.RELEASE_TAG ||
               release.target_commitish !== process.env.TARGET_SHA ||
@@ -1279,7 +1310,7 @@ jobs:
           node --input-type=module --eval '
             import { readFileSync, readdirSync } from "node:fs";
             const release = JSON.parse(readFileSync("publication-proof/final-draft-release.json", "utf8"));
-            const supportBody = readFileSync("preflight/release-assets/safari-support.md", "utf8");
+            const supportBody = readFileSync("preflight/release-assets/browser-support.md", "utf8");
             const manualEvidence = readdirSync("preflight/release-assets")
               .filter((name) => /^evidence-[1-9][0-9]*-browser-matrix-record-source\.json$/.test(name))
               .map((name) => JSON.parse(readFileSync(`preflight/release-assets/${name}`, "utf8")))
@@ -1333,7 +1364,7 @@ jobs:
             import { readFileSync, readdirSync, writeFileSync } from "node:fs";
             const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
             const release = JSON.parse(readFileSync("publication-proof/release.json", "utf8"));
-            const supportBody = readFileSync("preflight/release-assets/safari-support.md", "utf8");
+            const supportBody = readFileSync("preflight/release-assets/browser-support.md", "utf8");
             const releaseAssets = JSON.parse(readFileSync(
               "publication-proof/release-assets-pages.json", "utf8"
             )).flat();

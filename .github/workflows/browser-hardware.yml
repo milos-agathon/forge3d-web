@@ -10,6 +10,7 @@ on:
         options:
           - infrastructure-canary
           - chrome-macos-m2
+          - chrome-beta-macos-m2
           - edge-macos-m2
           - safari-macos-m2
           - firefox-macos-m2
@@ -18,8 +19,10 @@ on:
           - edge-windows-intel12
           - firefox-windows-intel12
           - chrome-linux-intel12
+          - chrome-beta-linux-intel12
           - edge-linux-intel12
           - chrome-linux-rtx3070
+          - chrome-beta-linux-rtx3070
           - edge-linux-rtx3070
           - manual-mobile-multitouch
           - manual-safari-trackpad
@@ -719,6 +722,9 @@ jobs:
               createHash("sha256").update(text).digest("hex")
             );
             if (authorization.manualSession) {
+              if (!process.env.GITHUB_ACTOR?.trim()) {
+                throw new Error("manual workflow actor is missing");
+              }
               writeFileSync(
                 process.env.GITHUB_ENV,
                 `FORGE3D_MANUAL_MEDIA_CHALLENGE=${authorization.manualSession.mediaChallenge}\n`,
@@ -844,6 +850,7 @@ jobs:
             --log-directory "${FORGE3D_CONTROLLER_JOB_ROOT}/route-logs"
           node --input-type=module --eval '
             import { readFileSync, writeFileSync } from "node:fs";
+            import { createBrowserPageBinding } from "./promotion/browser-lane-runtime.mjs";
             const authorization = JSON.parse(
               readFileSync("authorization/runner-authorization.json", "utf8")
             );
@@ -859,14 +866,11 @@ jobs:
             );
             writeFileSync(
               `${process.env.FORGE3D_CONTROLLER_JOB_ROOT}/binding.json`,
-              JSON.stringify({
-                lane: authorization.lane,
-                runId: authorization.run.id,
-                jobId: authorization.queuedHardwareJob.id,
-                assetId: authorization.assetId,
-                commit: authorization.trustedSha,
-                packageSha256: manifest.packageSha256
-              })
+              JSON.stringify(createBrowserPageBinding({
+                authorization,
+                packageSha256: manifest.packageSha256,
+                actor: process.env.GITHUB_ACTOR
+              }))
             );
           '
 
@@ -926,7 +930,12 @@ jobs:
               --media-challenge "${FORGE3D_MANUAL_MEDIA_CHALLENGE}"
               --manual-session-input "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/manual-session-input.json"
               --watermark "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/session-watermark.json"
+              --manual-session-readiness "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/manual-session-readiness.json"
+              --controller-capture-window "${FORGE3D_CONTROLLER_JOB_ROOT}/controller-capture-window.json"
             )
+          fi
+          if test -f "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/trackpad-inventory.json"; then
+            runtime_args+=(--trackpad-inventory "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/trackpad-inventory.json")
           fi
           node promotion/browser-lane-runtime.mjs "${runtime_args[@]}"
 

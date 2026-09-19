@@ -244,7 +244,8 @@ scheduled.
 frame, removes owned input and lifecycle listeners, disconnects observers,
 invalidates recovery, disposes the owned runtime, and releases screenshot/load
 state. Final diagnostics expose `ownedListeners`, `activeObservers`,
-`pendingAnimationFrame`, and `activeRuntimes`, allowing cleanup to be verified.
+`pendingAnimationFrame`, `ownedAnimationFrameCount`, and `activeRuntimes`,
+allowing cleanup and the single viewer-owned RAF invariant to be verified.
 
 After disposal, `disposed`, `status`, `getView()`, `getCapabilities()`,
 `getDiagnostics()`, and repeated `dispose()` remain legal and return defensive

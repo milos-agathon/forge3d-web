@@ -1,22 +1,32 @@
 import { captureAdapterAttestation } from "./adapter-attestation.js";
+import { runViewerBenchmarkInBrowser } from "./viewer-benchmark-browser.js";
+import { isChr03Lane } from "./chr03-lanes.js";
+import { isChr04Lane } from "./chr04-lanes.js";
 
 export async function runHardwarePage({
+  lane,
   binding,
   route,
   effectiveLaunchArguments = [],
   supportAssertions = true,
   mediaChallenge = null,
+  chr03 = null,
+  hardware = null,
+  sessionContext = null,
 }) {
   const fixture = window.__forge3dInteractiveViewer;
   const canvas = fixture?.canvas ?? document.querySelector("#viewer");
   if (!(canvas instanceof HTMLCanvasElement)) {
     throw new Error("hardware fixture canvas is unavailable");
   }
-  const watermark = installWatermark(mediaChallenge);
+  const productManual = isProductManualLane(lane);
+  const watermark = mediaChallenge !== null
+    ? installWatermark(mediaChallenge, sessionContext)
+    : null;
   const routeReadiness = await verifyBrowserRoute(route, binding.packageSha256);
   const adapter = await captureAdapterAttestation(
     canvas,
-    binding,
+    adapterBinding(binding),
     effectiveLaunchArguments,
   );
   if (
@@ -30,7 +40,7 @@ export async function runHardwarePage({
   ) {
     throw new Error("ATTESTATION_UNAVAILABLE: hardware adapter proof failed");
   }
-  if (!supportAssertions) {
+  if (!supportAssertions && !productManual) {
     return {
       adapter,
       assertions: {
@@ -42,23 +52,237 @@ export async function runHardwarePage({
     };
   }
 
-  const viewer = await fixture.create();
-  const screenshot = await viewer.screenshot();
-  const diagnostics = viewer.getDiagnostics();
-  const assertions = {
-    supportAssertionsExecuted: true,
-    screenshotPng:
-      screenshot.type === "image/png" && Number(screenshot.size) > 0,
-    submittedFrame: diagnostics.submittedFrames > 0,
-    runtimeReady: viewer.status === "ready",
+  const assertions = await runInitialViewerAssertions({
+    fixture,
+    supportAssertions,
+    retainViewer: productManual,
+    onError: window.__forge3dHardwareOnError,
+  });
+  const proofFamily = isChr03Lane(lane) ? "chr03" : isChr04Lane(lane) ? "chr04" : null;
+  const hardwareProof = proofFamily
+    ? await runBrandedHardwareProof({ binding, route, observations: hardware ?? chr03, proofFamily })
+    : null;
+  return {
+    adapter, assertions, routeReadiness, watermark,
+    chr03Proof: proofFamily === "chr03" ? hardwareProof : null,
+    chr04Proof: proofFamily === "chr04" ? hardwareProof : null,
   };
-  assertions.passed = Object.entries(assertions)
-    .filter(([name]) => name !== "supportAssertionsExecuted")
-    .every(([, passed]) => passed === true);
-  if (!assertions.passed) {
-    throw new Error("browser-neutral installed-package assertions failed");
+}
+
+export async function runInitialViewerAssertions({
+  fixture,
+  supportAssertions,
+  retainViewer,
+  onError,
+}) {
+  let viewer;
+  try {
+    viewer = await fixture.create({ onError });
+    const screenshot = await viewer.screenshot();
+    const diagnostics = viewer.getDiagnostics();
+    const assertions = {
+      supportAssertionsExecuted: supportAssertions,
+      screenshotPng:
+        screenshot.type === "image/png" && Number(screenshot.size) > 0,
+      submittedFrame: diagnostics.submittedFrames > 0,
+      runtimeReady: viewer.status === "ready",
+    };
+    assertions.passed = Object.entries(assertions)
+      .filter(([name]) => name !== "supportAssertionsExecuted")
+      .every(([, passed]) => passed === true);
+    if (!assertions.passed) {
+      throw new Error("browser-neutral installed-package assertions failed");
+    }
+    if (retainViewer) return assertions;
+    viewer.dispose();
+    const disposed = viewer.getDiagnostics();
+    if (disposed.ownedListeners !== 0 || disposed.activeObservers !== 0 ||
+        disposed.activePointers !== 0 || disposed.activeRuntimes !== 0 ||
+        disposed.pendingAnimationFrame !== false ||
+        disposed.ownedAnimationFrameCount !== 0) {
+      throw new Error("initial hardware viewer did not release its resources");
+    }
+    return assertions;
+  } catch (error) {
+    viewer?.dispose();
+    if (!viewer) showUnsupportedState(error);
+    throw error;
   }
-  return { adapter, assertions, routeReadiness, watermark };
+}
+
+export function adapterBinding(binding) {
+  return {
+    runId: binding.runId,
+    jobId: binding.jobId,
+    assetId: binding.assetId,
+    commit: binding.commit,
+    packageSha256: binding.packageSha256,
+  };
+}
+
+async function runBrandedHardwareProof({ binding, route, observations, proofFamily }) {
+  if (!observations?.driver || !observations.visibility || !observations.systemInfo || !Array.isArray(observations.observedErrors)) {
+    throw new Error("required branded browser lane is missing native-driver observations");
+  }
+  const fixture = window.__forge3dInteractiveViewer;
+  const terrainUrl = new URL("cors/allow/terrain.bin", route.assetUrl).href;
+  if (new URL(terrainUrl).protocol !== "https:" ||
+      new URL(terrainUrl).origin === new URL(route.applicationUrl).origin) {
+    throw new Error("CHR-03 cross-origin 512x512 terrain source is invalid");
+  }
+  const terrainViewer = await fixture.create({ resize: false, controls: { keyboard: true }, onError: window.__forge3dHardwareOnError });
+  terrainViewer.resize({ width: 320, height: 320, devicePixelRatio: 2 });
+  const beforeTerrain = terrainViewer.getDiagnostics().submittedFrames;
+  const progressEvents = [];
+  await terrainViewer.setTerrainFromSource({
+    width: 512,
+    height: 512,
+    source: terrainUrl,
+    onProgress: (event) => progressEvents.push({ loaded: event.loaded, total: event.total, done: event.done }),
+  });
+  await waitForSubmittedFrame(terrainViewer, beforeTerrain, "terrain source");
+  const terrainSubmitted = terrainViewer.getDiagnostics().submittedFrames > beforeTerrain;
+  const screenshotBlob = await terrainViewer.screenshot();
+  const screenshotBytes = await screenshotBlob.arrayBuffer();
+  const screenshot = await readPngEvidence(screenshotBlob, screenshotBytes);
+  terrainViewer.dispose();
+
+  const benchmarkBase = new URL("tests/browser/benchmark/", route.applicationUrl);
+  const benchmark = await runViewerBenchmarkInBrowser({
+    includeSchedulingEvidence: true,
+    environment: {
+      browserZoom: 1,
+      thermalState: "unavailable",
+      thermalSignalProvenance: "browser API unavailable",
+      lowPowerMode: "unavailable",
+      lowPowerSignalProvenance: "browser API unavailable",
+    },
+    assetUrls: {
+      manifest: new URL("benchmark-manifest-v1.json", benchmarkBase).href,
+      terrain: new URL("benchmark-terrain-v1.f32le", benchmarkBase).href,
+      trace: new URL("benchmark-trace-v1.json", benchmarkBase).href,
+    },
+  });
+  const lifecycleCycles = await runRenderedLifecycleCycles({ fixture, binding, onError: window.__forge3dHardwareOnError });
+  const visibilityCycles = observations.visibility.cycles ?? [];
+  const submittedEveryCycle = visibilityCycles.length === 30 &&
+    visibilityCycles.every((cycle) => cycle.visibleFrame === "submitted");
+  const driver = observations.driver;
+  return {
+    schemaVersion: 1,
+    kind: proofFamily === "chr04"
+      ? "forge3d-chr04-edge-hardware-proof-v1"
+      : "forge3d-chr03-chrome-hardware-proof-v1",
+    binding: {
+      lane: binding.lane,
+      assetId: binding.assetId,
+      ...(proofFamily === "chr04" ? { platform: binding.platform } : {}),
+      commit: binding.commit,
+      packageSha256: binding.packageSha256,
+    },
+    behaviors: {
+      orbit: driver.orbitChanged === true,
+      pan: driver.panChanged === true,
+      wheelZoom: driver.wheelChanged === true,
+      pointerCapture: driver.pointerCapture?.captured === true && driver.pointerCapture?.released === true && driver.pointerCapture?.outsideMoveChanged === true && driver.pointerCapture?.activePointersAfter === 0,
+      keyboard: Object.values(driver.keyboard ?? {}).length === 5 && Object.values(driver.keyboard).every((event) => event.changed === true),
+      autoResize: Object.values(driver.autoResize ?? {}).length === 3 && Object.values(driver.autoResize).every(Boolean),
+      visibilityResume: observations.visibility.actualDocumentVisibilityTransitions === true && submittedEveryCycle,
+      terrainSource: terrainSubmitted,
+      screenshot: screenshot.mimeType === "image/png" && screenshot.byteLength > 0,
+      disposal: lifecycleCycles.every(({ afterDispose }) => resourcesReleased(afterDispose)),
+    },
+    driver,
+    visibility: {
+      source: observations.visibility.visibilityStateSource,
+      cycleCount: observations.visibility.cycleCount,
+      hiddenObserved: visibilityCycles.every((cycle) => cycle.hiddenPendingFrameCancelled === true),
+      visibleObserved: observations.visibility.final?.visibilityState === "visible",
+      submittedEveryCycle,
+    },
+    terrainSource: { api: "setTerrainFromSource", url: terrainUrl, crossOrigin: true, width: 512, height: 512,
+      byteLength: progressEvents.at(-1)?.total ?? 0, progressEvents, completed: progressEvents.at(-1)?.done === true,
+      submittedFrame: terrainSubmitted },
+    screenshot,
+    lifecycleCycles,
+    errors: [...observations.observedErrors],
+    benchmark,
+    systemInfo: observations.systemInfo,
+  };
+}
+
+async function waitForSubmittedFrame(viewer, before, label, nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve))) {
+  for (let attempt = 0; attempt < 120; attempt += 1) {
+    await nextFrame();
+    if (viewer.getDiagnostics().submittedFrames > before) return;
+  }
+  throw new Error(`${label} did not submit a frame`);
+}
+
+function resourcesReleased(diagnostics) {
+  return diagnostics.ownedListeners === 0 && diagnostics.activeObservers === 0 &&
+    diagnostics.activePointers === 0 && diagnostics.activeRuntimes === 0 &&
+    diagnostics.pendingAnimationFrame === false && diagnostics.ownedAnimationFrameCount === 0;
+}
+
+function resourceDiagnostics(diagnostics) {
+  return {
+    ownedListeners: diagnostics.ownedListeners,
+    activeObservers: diagnostics.activeObservers,
+    activePointers: diagnostics.activePointers,
+    activeRuntimes: diagnostics.activeRuntimes,
+    pendingAnimationFrame: diagnostics.pendingAnimationFrame,
+    ownedAnimationFrameCount: diagnostics.ownedAnimationFrameCount,
+  };
+}
+
+export async function runRenderedLifecycleCycles({
+  fixture,
+  binding,
+  onError,
+  nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve)),
+  createIdentity = (index) => `${binding.runId}:${binding.jobId}:${index + 1}:${crypto.randomUUID()}`,
+}) {
+  const cycles = [];
+  for (let index = 0; index < 50; index += 1) {
+    const viewer = await fixture.create({ resize: false, controls: { keyboard: true }, onError });
+    let live;
+    try {
+      await waitForSubmittedFrame(viewer, 0, `lifecycle cycle ${index + 1}`, nextFrame);
+      live = viewer.getDiagnostics();
+      if (live.activeRuntimes !== 1 || live.ownedListeners < 1 || live.submittedFrames < 1) {
+        throw new Error(`lifecycle cycle ${index + 1} did not own a live rendered runtime`);
+      }
+    } finally {
+      viewer.dispose();
+    }
+    cycles.push({
+      cycle: index + 1,
+      runtimeIdentity: createIdentity(index),
+      submittedFrames: live.submittedFrames,
+      afterDispose: resourceDiagnostics(viewer.getDiagnostics()),
+    });
+  }
+  return cycles;
+}
+
+async function sha256(bytes) {
+  return [...new Uint8Array(await crypto.subtle.digest("SHA-256", bytes))]
+    .map((value) => value.toString(16).padStart(2, "0")).join("");
+}
+
+async function readPngEvidence(blob, bytes) {
+  const view = new DataView(bytes);
+  const signature = new Uint8Array(bytes, 0, Math.min(8, bytes.byteLength));
+  if (blob.type !== "image/png" || signature.join(",") !== "137,80,78,71,13,10,26,10" || bytes.byteLength < 24) {
+    throw new Error("viewer screenshot is not a complete PNG");
+  }
+  return { mimeType: blob.type, byteLength: bytes.byteLength, sha256: await sha256(bytes), width: view.getUint32(16), height: view.getUint32(20) };
+}
+
+export function isProductManualLane(lane) {
+  return lane === "manual-safari-trackpad" ||
+    lane === "manual-mobile-multitouch";
 }
 
 function hasMeasuredLumaPresentation(adapter) {
@@ -314,7 +538,7 @@ try {
 </script>`;
 }
 
-function installWatermark(mediaChallenge) {
+function installWatermark(mediaChallenge, sessionContext) {
   if (mediaChallenge === null) return null;
   if (!/^[0-9a-f]{32}$/u.test(mediaChallenge)) {
     throw new Error("manual session media challenge is malformed");
@@ -325,7 +549,25 @@ function installWatermark(mediaChallenge) {
     document.body;
   const watermark = document.createElement("div");
   watermark.id = "forge3d-session-watermark";
-  watermark.textContent = `SESSION_CHALLENGE_VISIBLE ${mediaChallenge}`;
+  if (!sessionContext || typeof sessionContext !== "object") {
+    throw new Error("manual session context is missing");
+  }
+  const lines = [
+    `SESSION_CHALLENGE_VISIBLE ${mediaChallenge}`,
+    `tester=${sessionContext.expectedTester}`,
+    `asset=${sessionContext.assetId} host=${sessionContext.hostId}`,
+    `package=${sessionContext.packageSha256}`,
+    `browser=${sessionContext.browser?.name}/${sessionContext.browser?.channel}/${sessionContext.browser?.version}`,
+    `os=${sessionContext.system?.os}/${sessionContext.system?.build}`,
+    `utc=${new Date().toISOString()}`,
+  ];
+  if (sessionContext.trackpad) {
+    lines.push(`trackpad=${sessionContext.trackpad.model}/${sessionContext.trackpad.firmware}/${sessionContext.trackpad.transport}`);
+  }
+  if (lines.some((line) => /undefined|null/u.test(line))) {
+    throw new Error("manual session context is incomplete");
+  }
+  watermark.textContent = lines.join("\n");
   Object.assign(watermark.style, {
     position: "fixed",
     inset: "12px 12px auto auto",
@@ -337,12 +579,23 @@ function installWatermark(mediaChallenge) {
     font: "700 16px/1.25 monospace",
     pointerEvents: "none",
     userSelect: "none",
+    maxWidth: "calc(100vw - 24px)",
+    whiteSpace: "pre-wrap",
+    overflowWrap: "anywhere",
   });
   shell.append(watermark);
   return {
     mediaChallenge,
+    sessionContext,
     nonDismissable: true,
     overlayTarget: "viewer-shell-not-canvas",
     visible: watermark.getClientRects().length > 0,
   };
+}
+
+function showUnsupportedState(error) {
+  const alert = document.createElement("div");
+  alert.setAttribute("role", "alert");
+  alert.textContent = `Viewer unavailable: ${error?.code ?? "INTERNAL"}`;
+  document.body.append(alert);
 }

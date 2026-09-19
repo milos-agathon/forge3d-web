@@ -79,6 +79,9 @@ export function prepareManualSubmission({
     }
     const asset = matches[0];
     const digest = apiDigest(asset.digest);
+    if (bytes.length !== asset.size) {
+      throw new Error(`selected release asset byte count changed: ${id}`);
+    }
     return {
       id,
       name: asset.name,
@@ -90,12 +93,10 @@ export function prepareManualSubmission({
       sha256: sha256(bytes),
     };
   });
-  const session = {
-    ...signedSession.record,
-    controllerSignatureSha256: sha256(
-      Buffer.from(signedSession.signature.value, "base64url"),
-    ),
-  };
+  const session = signedSession.record;
+  const controllerSignatureSha256 = sha256(
+    Buffer.from(signedSession.signature.value, "base64url"),
+  );
   return {
     release: {
       id: releaseApi.id,
@@ -116,6 +117,7 @@ export function prepareManualSubmission({
       denySelfHostedRunners: true,
     },
     session,
+    controllerSignatureSha256,
     signedSessionSha256: signedSession.sha256,
     signedSessionSubjectSha256: sha256(signedSessionBytes),
     sessionRun: {

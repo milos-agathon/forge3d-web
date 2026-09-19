@@ -4,16 +4,24 @@ import { fileURLToPath } from "node:url";
 import { canonicalJson, sha256Hex } from "./canonical-json.mjs";
 import { hasMeasuredLumaPresentation } from "./join-adapter-attestation.mjs";
 import { checklistDefinition } from "./manual-evidence.mjs";
+import { validateChr03HardwareProofContract as validateChr03HardwareProof } from "./chr03-hardware-proof-validator.mjs";
+import { CHR03_STABLE_LANES } from "./chr03-lanes.mjs";
+import { validateChr04EdgeEvidence } from "./chr04-hardware-proof-validator.mjs";
+import { CHR04_LANES } from "./chr04-lanes.mjs";
 
 const safariTrackpadSemanticSteps = Object.freeze([
   "SESSION_CHALLENGE_VISIBLE",
   "TRACKPAD_ORBIT",
   "TRACKPAD_PAN",
   "TRACKPAD_TWO_FINGER_SCROLL_ZOOM",
+  "NO_SAFARI_GESTURE_EVENT_LISTENERS",
   "TRACKPAD_MOMENTUM_END",
   "TRACKPAD_PAGE_SCROLL_ISOLATION",
   "TRACKPAD_CLEANUP",
 ]);
+
+const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
+const CHR04_REQUIRED_LANES = new Set(Object.keys(CHR04_LANES));
 
 export function requiredEvidenceRows(matrix) {
   const rows = [];
@@ -218,6 +226,11 @@ function validateRecord(record, row, expected) {
       canonicalJson(record.session?.system) !== canonicalJson(record.system) ||
       canonicalJson(record.session?.browser) !== canonicalJson(record.browser) ||
       canonicalJson(record.session?.driver) !== canonicalJson(record.driver) ||
+      canonicalJson(record.session?.appium ?? null) !==
+        canonicalJson(record.appium ?? null) ||
+      canonicalJson(record.session?.device ?? null) !==
+        canonicalJson(record.device ?? null) ||
+      record.session?.inventoryCapturedAt !== record.inventoryCapturedAt ||
       canonicalJson(record.session?.hostInventory) !==
         canonicalJson(record.hostInventory) ||
       record.session?.result !== "success" ||
@@ -260,6 +273,31 @@ function validateRecord(record, row, expected) {
     record.adapterAttestation.host?.headedSessionAvailable !== true
   ) {
     throw new Error(`automated hardware evidence is incomplete: ${row.key}`);
+  }
+  if (row.kind === "automated" && CHR03_REQUIRED_LANES.has(row.lane)) {
+    validateChr03HardwareProof(record.chr03Proof, {
+      lane: row.lane,
+      assetId: row.assetId,
+      commit: expected.targetSha,
+      packageSha256: expected.packageSha256,
+    });
+  }
+  if (row.kind === "automated" && CHR04_REQUIRED_LANES.has(row.lane)) {
+    validateChr04EdgeEvidence({
+      proof: record.chr04Proof,
+      expectedBinding: {
+        lane: row.lane,
+        assetId: row.assetId,
+        platform: CHR04_LANES[row.lane].platform,
+        commit: expected.targetSha,
+        packageSha256: expected.packageSha256,
+      },
+      browser: record.browser,
+      driver: record.driver,
+      system: record.system,
+      effectiveLaunchArguments: record.effectiveLaunchArguments,
+      adapter: record.adapter,
+    });
   }
 }
 

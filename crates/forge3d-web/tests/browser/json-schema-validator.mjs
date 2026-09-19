@@ -73,6 +73,9 @@ function validate(value, schema, path, errors, rootSchema) {
     if (schema.minimum !== undefined && value < schema.minimum) {
       errors.push(`${path}: less than minimum ${schema.minimum}`);
     }
+    if (schema.maximum !== undefined && value > schema.maximum) {
+      errors.push(`${path}: greater than maximum ${schema.maximum}`);
+    }
     if (
       schema.exclusiveMinimum !== undefined &&
       value <= schema.exclusiveMinimum

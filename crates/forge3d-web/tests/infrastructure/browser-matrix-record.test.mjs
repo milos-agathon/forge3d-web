@@ -8,6 +8,8 @@ import {
   finalizeMatrixRecord,
 } from "../../scripts/create-browser-matrix-record.mjs";
 import { exactHostInventory } from "./host-inventory-fixture.mjs";
+import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
+import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
 
 const matrix = JSON.parse(
   readFileSync(new URL("./hardware-matrix.json", import.meta.url), "utf8"),
@@ -19,7 +21,7 @@ const labReadiness = {
 };
 
 test("automated and manual sources derive closed matrix keys without artifact claims", () => {
-  const automated = createAutomatedMatrixRecord({
+  const automatedInput = {
     promotion: {
       lane: "chrome-linux-rtx3070",
       mode: "automated",
@@ -44,6 +46,7 @@ test("automated and manual sources derive closed matrix keys without artifact cl
       },
       browser: { name: "chrome", channel: "stable", version: "150.0" },
       driver: { name: "playwright-chrome", version: "1.56.1" },
+      chr03Proof: validChr03HardwareProof({ packageSha256: "d".repeat(64) }),
       adapter: {
         isFallbackAdapter: false,
         secureContext: true,
@@ -78,10 +81,41 @@ test("automated and manual sources derive closed matrix keys without artifact cl
       },
     },
     run: { id: 10, attempt: 2 },
-  });
+  };
+  const automated = createAutomatedMatrixRecord(automatedInput);
   assert.equal(automated.key, "automated:FW-LNX-NV-01:chrome-linux-rtx3070");
   assert.equal(automated.packageRunId, 8);
   assert.equal(automated.workflow.runAttempt, 2);
+  const invalidProof = structuredClone(automatedInput);
+  invalidProof.evidence.chr03Proof.systemInfo.available = "false";
+  assert.throws(() => createAutomatedMatrixRecord(invalidProof), /expected type boolean/u);
+  const edgeInput = structuredClone(automatedInput);
+  Object.assign(edgeInput.promotion, { lane: "edge-linux-rtx3070" });
+  Object.assign(edgeInput.evidence, {
+    lane: "edge-linux-rtx3070",
+    browser: { name: "msedge", channel: "stable", version: "150.0.1.2" },
+    driver: { name: "playwright-edge", version: "1.56.1" },
+    effectiveLaunchArguments: [],
+    chr03Proof: null,
+    chr04Proof: validChr04HardwareProof({ packageSha256: "d".repeat(64) }),
+  });
+  const edge = createAutomatedMatrixRecord(edgeInput);
+  assert.equal(edge.key, "automated:FW-LNX-NV-01:edge-linux-rtx3070");
+  assert.equal(edge.chr04Proof.kind, "forge3d-chr04-edge-hardware-proof-v1");
+  for (const mutate of [
+    (input) => { input.evidence.chr04Proof = null; },
+    (input) => { input.evidence.browser.name = "chrome"; },
+    (input) => { input.evidence.effectiveLaunchArguments = ["--ignore-gpu-blocklist"]; },
+    (input) => { input.evidence.effectiveLaunchArguments = ["--ignore-certificate-errors=value"]; },
+    (input) => { input.evidence.chr04Proof.edgeAcceptance.touch.viewChanged = false; },
+    (input) => { input.evidence.chr04Proof.edgeAcceptance.unsupported.nullAdapter.publicCode = "WEBGPU_UNAVAILABLE"; },
+    (input) => { input.evidence.chr04Proof.edgeAcceptance.unsupported.nullAdapter.unsupportedVisible = false; },
+    (input) => { input.evidence.chr04Proof.edgeAcceptance.unsupported.nullAdapter.hasBypassAdvice = true; },
+  ]) {
+    const invalidEdge = structuredClone(edgeInput);
+    mutate(invalidEdge);
+    assert.throws(() => createAutomatedMatrixRecord(invalidEdge));
+  }
   const manual = createManualMatrixRecord({
     evidence: {
       checklistId: "safari-trackpad",
@@ -178,7 +212,7 @@ test("infrastructure canary, fallback adapter, failed identity, and unattested a
         },
         run: { id: 10, attempt: 1 },
       }),
-    /does not match/u,
+    /expected type object|does not match/u,
   );
   assert.throws(
     () =>
