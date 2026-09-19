@@ -270,6 +270,39 @@ test("package manifest provenance is joined to the resolved API run before relea
   assert.match(packageStep, /GITHUB_TOKEN: \$\{\{ github\.token \}\}/u);
 });
 
+test("Safari support notes are generated after finalized records and manual media, then sealed", () => {
+  const finalized = preflight.indexOf("verified-records/${process.argv[2]}.json");
+  const media = preflight.indexOf("createManualMediaSourcePlan");
+  const generate = preflight.indexOf("node scripts/safari-support-publication.mjs");
+  const enumerate = preflight.indexOf('const assets = readdirSync("release-assets")');
+  assert.ok(finalized > -1 && media > finalized && generate > media && enumerate > generate);
+  for (const contract of [
+    "--records-directory verified-records",
+    "--manual-media-plan release-assets/manual-media-sources.json",
+    "--package-manifest package-assets/browser-package-manifest.json",
+    '--package-asset "release-assets/$(cat package-tarball-name.txt)"',
+    "--output release-assets/safari-support.md",
+    "exact-lab-readiness",
+    "canonical-package-run.json",
+  ]) assert.equal(preflight.includes(contract), true, contract);
+});
+
+test("Safari notes and manual expiry are rechecked at every publication boundary", () => {
+  const mutation = publisher.slice(
+    publisher.indexOf("Create draft, byte-verify closed assets, and publish exactly once"),
+  );
+  assert.match(mutation, /--notes-file preflight\/release-assets\/browser-support\.md/u);
+  assert.ok((mutation.match(/release\.body !== supportBody/gu) ?? []).length >= 3);
+  assert.ok((mutation.match(/record\.kind === "manual"/gu) ?? []).length >= 3);
+  assert.ok((mutation.match(/manualEvidence\.length !== 7|evidence\.length !== 7/gu) ?? []).length >= 3);
+  assert.ok((mutation.match(/now >= expiry|Date\.now\(\) >= expiry/gu) ?? []).length >= 3);
+  const publish = mutation.indexOf('gh release edit "${RELEASE_TAG}"');
+  const finalBody = mutation.lastIndexOf("release.body !== supportBody", publish);
+  assert.ok(finalBody > -1 && finalBody < publish);
+  assert.equal(mutation.indexOf("gh release edit", publish + 1), -1);
+  assert.equal(mutation.indexOf("gh release upload", publish), -1);
+});
+
 test("manual media is fetched by numeric ID twice and rebound to exact intake metadata", () => {
   assert.match(
     preflight,
@@ -323,10 +356,11 @@ test("Chromium support publication closes unique records before candidate and bi
   assert.match(preflight, /gh attestation verify "\$\{lab_readiness_path\}"/u);
   assert.match(preflight, /--source-digest "\$\{TARGET_SHA\}"/u);
   assert.match(preflight, /find release-assets -maxdepth 1 -name chromium-support\.md/u);
-  assert.match(publisher, /--notes-file preflight\/release-assets\/chromium-support\.md/u);
+  assert.match(preflight, /writeFileSync\("release-assets\/browser-support\.md", `\$\{chromium\}\\n\\n\$\{safari\}`/u);
+  assert.match(publisher, /--notes-file preflight\/release-assets\/browser-support\.md/u);
   assert.equal(
     publisher.match(/release\.body !== supportBody/gu)?.length,
-    2,
+    3,
   );
   assert.match(publisher, /publication-proof\/draft-release\.json/u);
   assert.match(publisher, /publication-proof\/release\.json/u);

@@ -7,6 +7,7 @@ This project adheres to [Keep a Changelog](https://keepachangelog.com/en/1.1.0/)
 ## [Unreleased]
 ### Added
 - Hardened the browser WebGPU/WASM MVP prerelease with npm metadata, package release docs, a browser support matrix, a release checklist, Vite example documentation, and release-hardening package contract tests.
+- Added SAF-05 source-only Safari publication guards: exact stable Safari/macOS/M2 evidence replay, corrected physical two-finger trackpad semantics, immutable evidence links, and release-body verification. Safari remains Unsupported/`NOT_PROVEN` until the physical matrix is actually proven and published.
 - Added fail-closed CHR-05 support publication for the six configured primary stable Chrome/Edge hardware rows. The generated release artifact binds actual browser/OS/display observations and all 24 evidence runs; current rows and the browser-version floor remain `NOT_PROVEN` until physical evidence produces it. Edge Linux stays conditional/P2, while Intel Mac, AMD/Linux, unlisted hardware, non-Wayland Linux, derivative Chromium brands, Beta, and preflight remain excluded from primary support.
 
 ### Changed

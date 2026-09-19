@@ -141,7 +141,7 @@ test("capture preserves the exact observed launch argument strings", () => {
   const record = captureHostInventory({
     assetId: "FW-MAC-M2-01",
     platform: "darwin",
-    osBuild: "macOS 26.0 (25A123)",
+    osBuild: "macOS 26.0 build 25A123",
     displayServer: "WindowServer",
     session: {
       interactive: true,
@@ -239,7 +239,7 @@ test("update window resolves exact versions, expires at 24 hours, and always clo
 test("macOS and Windows session state is observed instead of synthesized", () => {
   const mac = observeLiveSession("darwin", {
     environment: {},
-    execute: (command) => {
+    execute: (command, args) => {
       if (command === "/usr/bin/stat") return "forge3d\n";
       return '    "CGSSessionScreenIsLocked" = Yes\n';
     },
@@ -348,7 +348,7 @@ test("host runtime helper supplies versions while the trusted script observes OS
     platform: "darwin",
     environment: {},
     now: new Date("2026-07-29T08:00:00.000Z"),
-    execute: (command) => {
+    execute: (command, args) => {
       calls.push(command);
       if (command === inventoryHelper) {
         return JSON.stringify({
@@ -362,7 +362,9 @@ test("host runtime helper supplies versions while the trusted script observes OS
           launchArguments: [],
         });
       }
-      if (command === "/usr/bin/sw_vers") return "25A123\n";
+      if (command === "/usr/bin/sw_vers") {
+        return args[0] === "-productVersion" ? "26.0\n" : "25A123\n";
+      }
       if (command === "/usr/bin/stat") return "forge3d\n";
       if (command === "/usr/sbin/ioreg") {
         return '    "CGSSessionScreenIsLocked" = No\n';
@@ -371,13 +373,14 @@ test("host runtime helper supplies versions while the trusted script observes OS
     },
   });
   assert.equal(result.inventory.session.locked, false);
-  assert.equal(result.inventory.osBuild, "macOS build 25A123");
+  assert.equal(result.inventory.osBuild, "macOS 26.0 build 25A123");
   assert.deepEqual(result.inventory.effectiveLaunchArguments, []);
   assert.deepEqual(result.resolvedChannels, [
     { id: browser.id, version: browser.version },
   ]);
   assert.deepEqual(calls, [
     inventoryHelper,
+    "/usr/bin/sw_vers",
     "/usr/bin/sw_vers",
     "/usr/bin/stat",
     "/usr/sbin/ioreg",

@@ -147,8 +147,20 @@ for (const relative of [
   assert(existsSync(join(root, relative)), `missing package artifact: ${relative}`);
 }
 
+const supportMatrix = readText(join(root, "docs", "support-matrix.md"));
+for (const expected of [
+  "| Safari Technology Preview | Unsupported |",
+  "Non-blocking early warning only",
+  "Every result remains `NOT_PROVEN`",
+  "Safari Technology Preview cannot establish stable Safari support",
+]) {
+  assert(
+    supportMatrix.includes(expected),
+    `packaged support matrix missing Safari Technology Preview distinction: ${expected}`,
+  );
+}
+
 const readme = readText(join(root, "README.md"));
-const supportMatrix = readText(join(root, "docs/support-matrix.md"));
 for (const expected of [
   "Chrome stable on Intel macOS",
   "Chrome stable on AMD/Linux",
@@ -165,7 +177,9 @@ for (const expected of [
   "## Browser Support",
   "## MIME, CORS, And Range Requirements",
   "## MVP Scope And Exclusions",
-  "import { Forge3DRuntime } from \"@forge3d/web\""
+  "import { Forge3DRuntime } from \"@forge3d/web\"",
+  "SAF-05 adds a fail-closed publication guard",
+  "Unsupported/`NOT_PROVEN`",
 ]) {
   assertIncludes(readme, expected, `README missing package guidance: ${expected}`);
 }

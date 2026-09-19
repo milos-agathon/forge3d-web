@@ -60,6 +60,12 @@ npm pack --dry-run
 See `crates/forge3d-web/docs/release-checklist.md` for the release checklist
 and `crates/forge3d-web/docs/support-matrix.md` for browser support.
 
+Safari remains Unsupported/`NOT_PROVEN`. The source contains a guarded SAF-05
+publication path for stable Safari 26+ on macOS major 26 on the exact Apple M2
+lab host, but it cannot emit release notes without the complete same-commit
+physical matrix and unexpired manual trackpad evidence. Playwright WebKit and
+Safari Technology Preview do not satisfy that gate.
+
 Chromium support remains evidence-bound. The six configured primary rows cover
 stable Chrome on exact Windows Intel Iris Xe, Apple M2 macOS, Linux Intel Iris
 Xe GNOME Wayland, and Linux RTX 3070 GNOME Wayland hardware, plus stable Edge

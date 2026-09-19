@@ -7,6 +7,7 @@ import {
   parseEvidenceRunIds,
   requiredEvidenceRows,
 } from "../../scripts/merge-browser-evidence.mjs";
+import { checklistDefinition } from "../../scripts/manual-evidence.mjs";
 import { assertJsonSchema } from "../browser/json-schema-validator.mjs";
 import { exactHostInventory } from "./host-inventory-fixture.mjs";
 import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
@@ -83,7 +84,12 @@ const records = rows.map((row, index) => {
     attestation: { verified: true, denySelfHostedRunners: true },
     ...(row.kind === "manual"
       ? {
-          stepResults: { A: "pass", B: "pass", C: "pass", D: "pass" },
+          stepResults: Object.fromEntries(
+            checklistDefinition(row.checklistId).stepIds.map((step) => [
+              step,
+              "pass",
+            ]),
+          ),
           session: {
             trustedSha: targetSha,
             packageRunId: 50,
@@ -318,6 +324,27 @@ test("prior head, other package, expired manual, missing, duplicate, and infra e
         ? {
             ...record,
             packageRunId: 49,
+          }
+        : record,
+    ),
+    records.map((record) =>
+      record.key === "manual:FW-TRACKPAD-01:safari-trackpad"
+        ? {
+            ...record,
+            stepResults: {
+              ...record.stepResults,
+              TRACKPAD_PINCH_ZOOM: "pass",
+            },
+          }
+        : record,
+    ),
+    records.map((record) =>
+      record.key === "manual:FW-TRACKPAD-01:safari-trackpad"
+        ? {
+            ...record,
+            stepResults: Object.fromEntries(
+              Object.entries(record.stepResults).slice(1),
+            ),
           }
         : record,
     ),

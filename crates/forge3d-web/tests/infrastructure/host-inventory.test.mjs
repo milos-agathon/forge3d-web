@@ -12,6 +12,7 @@ import test from "node:test";
 
 import {
   captureHostInventory,
+  observeLiveOsBuild,
   validateHostInventory,
 } from "../../scripts/capture-host-inventory.mjs";
 import { captureTrackpadInventory } from "../../scripts/capture-trackpad-inventory.mjs";
@@ -90,7 +91,7 @@ test("Mac canary producer emits the exact seven-asset schema-valid signed invent
     platform: "darwin",
     environment: {},
     now: new Date("2026-07-29T08:00:00.000Z"),
-    execute: (command) => {
+    execute: (command, args) => {
       calls.push(command);
       if (command === inventoryHelper) {
         return JSON.stringify({
@@ -105,7 +106,9 @@ test("Mac canary producer emits the exact seven-asset schema-valid signed invent
           hardware: observedHardware,
         });
       }
-      if (command === "/usr/bin/sw_vers") return "25A123\n";
+      if (command === "/usr/bin/sw_vers") {
+        return args[0] === "-productVersion" ? "26.0\n" : "25A123\n";
+      }
       if (command === "/usr/bin/stat") return "forge3d\n";
       if (command === "/usr/sbin/ioreg") {
         return '    "CGSSessionScreenIsLocked" = No\n';
@@ -124,6 +127,7 @@ test("Mac canary producer emits the exact seven-asset schema-valid signed invent
   );
   assert.deepEqual(calls, [
     inventoryHelper,
+    "/usr/bin/sw_vers",
     "/usr/bin/sw_vers",
     "/usr/bin/stat",
     "/usr/sbin/ioreg",
@@ -144,7 +148,7 @@ test("SAF-03 captures the same exact Mac and trackpad inventory contract", () =>
     platform: "darwin",
     environment: {},
     now: new Date("2026-07-29T08:00:00.000Z"),
-    execute: (command) => {
+    execute: (command, args) => {
       if (command === inventoryHelper) {
         return JSON.stringify({
           schemaVersion: 1,
@@ -158,7 +162,9 @@ test("SAF-03 captures the same exact Mac and trackpad inventory contract", () =>
           hardware: hardwareObservation(),
         });
       }
-      if (command === "/usr/bin/sw_vers") return "25A123\n";
+      if (command === "/usr/bin/sw_vers") {
+        return args[0] === "-productVersion" ? "26.0\n" : "25A123\n";
+      }
       if (command === "/usr/bin/stat") return "forge3d\n";
       if (command === "/usr/sbin/ioreg") {
         return '    "CGSSessionScreenIsLocked" = No\n';
@@ -274,11 +280,40 @@ test("runtime rejects forbidden stable identifier fields instead of sanitizing t
   assert.throws(() => captureExact(observed), /stable identifier/u);
 });
 
+test("macOS identity observes and validates both product version and build", () => {
+  const calls = [];
+  const observed = observeLiveOsBuild("darwin", {
+    execute: (command, args) => {
+      calls.push([command, args]);
+      return args[0] === "-productVersion" ? "26.1\n" : "25B72\n";
+    },
+  });
+  assert.equal(observed, "macOS 26.1 build 25B72");
+  assert.deepEqual(calls, [
+    ["/usr/bin/sw_vers", ["-productVersion"]],
+    ["/usr/bin/sw_vers", ["-buildVersion"]],
+  ]);
+  for (const outputs of [
+    ["26", "25B72"],
+    ["26.1", "unknown"],
+    ["latest", "25B72"],
+  ]) {
+    let index = 0;
+    assert.throws(
+      () =>
+        observeLiveOsBuild("darwin", {
+          execute: () => outputs[index++],
+        }),
+      /invalid/u,
+    );
+  }
+});
+
 function captureExact(hardware) {
   return captureHostInventory({
     assetId: hostId,
     platform: "darwin",
-    osBuild: "macOS build 25A123",
+    osBuild: "macOS 26.0 build 25A123",
     displayServer: "WindowServer",
     session: {
       interactive: true,

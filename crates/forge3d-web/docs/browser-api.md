@@ -158,6 +158,14 @@ pan, zoom, and reset: arrows orbit, Shift+arrows pan, `+`/`-` zoom, and Home
 resets. Low-level `Forge3DRuntime.setCamera()` continues to accept arbitrary
 camera values and is not constrained to orbit-camera input.
 
+On desktop Safari, the v1 trackpad contract is two-finger scroll zoom, including
+clean inertial termination and page-scroll isolation while the canvas is
+focused; the page must scroll normally when the gesture begins outside the
+canvas. Trackpad pinch is not a Forge3D viewer control: Safari may apply its
+normal page or browser gesture, and Forge3D neither intercepts nor claims it as
+viewer zoom. Shipping Safari remains Unsupported/`NOT_PROVEN` until the guarded
+physical release matrix is actually published.
+
 `Forge3DViewer.render()` marks the viewer dirty and schedules at most one
 animation frame; it does not submit synchronously. `setTerrain()`, a successfully
 resolved `setTerrainFromSource()`, `setView()`, `resetView()`, and `resize()`

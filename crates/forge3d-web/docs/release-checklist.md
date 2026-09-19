@@ -184,6 +184,17 @@ closed keys, pass the prior-head, package-hash, and missing-row negative
 controls, and emit attested `RELEASE_MATRIX_READY`. Only that record may feed
 `publish-web-release.yml`.
 
+For Safari, the publisher must regenerate exactly one `safari-support.md` only
+after all 24 finalized records and immutable manual media have been validated.
+The helper requires stable numeric Safari 26+, macOS major exactly 26 with the
+observed product version and build, the exact `FW-MAC-M2-01` Apple M2 inventory,
+`/usr/bin/safaridriver`, empty safe launch arguments, the exact non-pinch
+trackpad checklist, and automation/manual agreement. It replays readiness at
+`createdAt`, rechecks current expiry before draft creation and final publication,
+and retains the component exactly once in the candidate manifest, draft
+download, immutable download, and postpublication verification.
+Any equality-boundary expiry blocks publication.
+
 The publisher persists every finalized digest-checked record under a unique
 filename, then generates exactly one `chromium-support.md` before closing the
 candidate and publication-preflight inventories. The generator revalidates the
@@ -192,9 +203,22 @@ bindings, all 24 unique keys, safe launch arguments, six primary configured
 Chromium rows, and conditional Edge Linux rows. It writes the observed
 four-component branded browser versions, OS builds and displays; configured
 CPU/GPU/architecture constraints; and exact run-attempt links. The draft and
-immutable published GitHub Release API bodies must each equal those source
-bytes exactly. The file must also be present exactly once in the candidate
-manifest, draft download, immutable download, and postpublication verification.
+immutable downloads must contain that exact component once, and the candidate
+manifest and postpublication verification must bind its bytes.
+
+Both `chromium-support.md` and `safari-support.md` are components.
+Component status: sealed release assets only.
+Neither component is independently passed through `--notes-file` or used as
+release-body authority.
+After both components exist, the publisher
+deterministically joins `chromium-support.md`, two LF bytes, and
+`safari-support.md` into exactly one `browser-support.md`.
+`browser-support.md` is the sole `--notes-file`. It is also the sole authority
+for draft, immediate prepublication, and postpublication Release API body
+equality.
+All three files
+remain in the closed, hashed, attested release-asset inventory.
+Any release-body drift blocks publication.
 
 Individual package, controller, hardware, manual, readiness, and
 post-publication verification artifacts are retained in GitHub Actions for 90
