@@ -135,6 +135,11 @@ missing-`navigator.gpu` capability boundary; the job summary then says
 incomplete, extra, mixed, unexpected, or raw-result-disagreeing reports fail the
 optional check. This engine preflight is not shipping Safari, branded-browser,
 exact-tarball, or physical GPU evidence. Safari remains unsupported/`NOT_PROVEN`.
+The packaged shipping-Safari lane contains SAF-04 W3C interaction, real-DOM
+layout, persisted-BFCache, hard-reload-control, and closed proof validation.
+Those mechanisms do not change the unsupported/`NOT_PROVEN` status until the
+stable Safari lane and separately signed physical trackpad checklist run on the
+exact release commit and package.
 `test:browser:chrome` and `test:browser:edge` select the installed branded
 channels without unsafe WebGPU, GPU-blocklist, Vulkan-enable, or ANGLE-forcing
 flags. Their normal configurations use required evidence mode and fail when

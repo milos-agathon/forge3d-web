@@ -11,6 +11,7 @@ import { exactHostInventory } from "./host-inventory-fixture.mjs";
 import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
 import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
 import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
+import { validSaf04HardwareProof } from "../browser/saf04-hardware-proof-fixture.mjs";
 
 const matrix = JSON.parse(
   readFileSync(new URL("./hardware-matrix.json", import.meta.url), "utf8"),
@@ -127,7 +128,9 @@ test("automated and manual sources derive closed matrix keys without artifact cl
     system: { platform: "darwin", osBuild: exactHostInventory(matrix, "FW-MAC-M2-01").osBuild, displayServer: "WindowServer" },
     route: { applicationUrl: `${safariProof.route.applicationOrigin}${safariProof.route.basePath}`, assetUrl: `${safariProof.route.assetOrigin}${safariProof.route.basePath}` },
     effectiveLaunchArguments: [],
-    chr03Proof: null, saf02Proof: safariProof,
+    chr03Proof: null,
+    saf02Proof: safariProof,
+    saf04Proof: validSaf04HardwareProof({ commit: "a".repeat(40), packageSha256: "d".repeat(64) }),
   });
   safariInput.attestation.binding.assetId = "FW-MAC-M2-01";
   safariInput.attestation.host.hostId = "FW-MAC-M2-01";
@@ -144,6 +147,10 @@ test("automated and manual sources derive closed matrix keys without artifact cl
   compoundUnsafeSafari.evidence.effectiveLaunchArguments = ["--enable-features=CanvasOopRasterization,WebGPU"];
   compoundUnsafeSafari.evidence.saf02Proof.environment.effectiveLaunchArguments = [...compoundUnsafeSafari.evidence.effectiveLaunchArguments];
   assert.throws(() => createAutomatedMatrixRecord({ ...compoundUnsafeSafari, hostInventory: exactHostInventory(matrix, "FW-MAC-M2-01"), matrix }), /prohibited browser launch arguments/u);
+  assert.equal(safari.saf04Proof.kind, "forge3d-saf04-safari-lifecycle-proof-v1");
+  const invalidSafari = structuredClone(safariInput);
+  invalidSafari.evidence.saf04Proof.lifecycle.bfcacheCycles[0].pageshowPersisted = false;
+  assert.throws(() => createAutomatedMatrixRecord({ ...invalidSafari, hostInventory: exactHostInventory(matrix, "FW-MAC-M2-01"), matrix }));
   const manual = createManualMatrixRecord({
     evidence: {
       checklistId: "safari-trackpad",

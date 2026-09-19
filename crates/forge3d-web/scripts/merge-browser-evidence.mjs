@@ -8,6 +8,7 @@ import { CHR03_STABLE_LANES } from "./chr03-lanes.mjs";
 import { validateChr04EdgeEvidence } from "./chr04-hardware-proof-validator.mjs";
 import { CHR04_LANES } from "./chr04-lanes.mjs";
 import { validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
+import { validateSaf04HardwareProof } from "./saf04-hardware-proof-validator.mjs";
 
 const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
 const CHR04_REQUIRED_LANES = new Set(Object.keys(CHR04_LANES));
@@ -281,6 +282,12 @@ function validateRecord(record, row, expected) {
       assetUrl: record.saf02Route?.assetUrl,
       browser: record.browser, system: record.system, adapter: record.adapter,
       effectiveLaunchArguments: record.effectiveLaunchArguments,
+    });
+    validateSaf04HardwareProof(record.saf04Proof, {
+      lane: row.lane,
+      assetId: row.assetId,
+      commit: expected.targetSha,
+      packageSha256: expected.packageSha256,
     });
   }
 }

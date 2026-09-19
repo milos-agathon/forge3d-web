@@ -127,6 +127,7 @@ export class ViewerControls {
   readonly #disposeListeners: DisposeResource[] = [];
   readonly #pointers = new Map<number, ActivePointer>();
   readonly #keyboard: boolean;
+  readonly #previousStyleAttribute: string | null;
   readonly #previousTouchAction: string;
   readonly #previousTabIndex: string | null;
   #enabled: boolean;
@@ -148,6 +149,7 @@ export class ViewerControls {
     this.#ownsResources = resources === undefined;
     this.#enabled = options.enabled ?? true;
     this.#keyboard = options.keyboard ?? true;
+    this.#previousStyleAttribute = canvas.getAttribute("style");
     this.#previousTouchAction = canvas.style.touchAction;
     this.#previousTabIndex = canvas.getAttribute("tabindex");
 
@@ -207,7 +209,11 @@ export class ViewerControls {
     for (const dispose of this.#disposeListeners.splice(0)) {
       dispose();
     }
-    this.#canvas.style.touchAction = this.#previousTouchAction;
+    if (this.#previousStyleAttribute === null) {
+      this.#canvas.removeAttribute("style");
+    } else {
+      this.#canvas.setAttribute("style", this.#previousStyleAttribute);
+    }
     if (this.#previousTabIndex === null) {
       this.#canvas.removeAttribute("tabindex");
     } else {

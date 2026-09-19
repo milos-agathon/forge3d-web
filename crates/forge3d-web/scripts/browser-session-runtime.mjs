@@ -18,6 +18,7 @@ import { WebDriverClient } from "./webdriver-client.mjs";
 import { runBrandedHardwareAcceptance } from "./chrome-hardware-acceptance.mjs";
 import { isChr03Lane } from "./chr03-lanes.mjs";
 import { isChr04Lane } from "./chr04-lanes.mjs";
+import { runSafariBrowserAcceptance } from "./safari-browser-acceptance.mjs";
 
 export async function openProductionSession(request) {
   if (
@@ -121,6 +122,12 @@ export async function closePlaywright(context, browser) {
   if (contextError !== null) throw contextError;
 }
 
+export function runWebDriverPage({ runtime, session, payload }) {
+  return runtime.driver === "safaridriver" && payload?.binding?.lane === "safari-macos-m2"
+    ? runSafariBrowserAcceptance(session, payload)
+    : session.runHardwarePage(payload);
+}
+
 export function createPlaywrightHealthObserver({
   browser,
   page,
@@ -196,6 +203,7 @@ async function openLocalWebDriverSession({
     const client = new WebDriverClient(`http://127.0.0.1:${port}`);
     await client.waitUntilReady();
     const session = await client.createSession(capabilities);
+    await session.setTimeouts();
     await session.navigate(routeUrl);
     const launch = observeWebDriverLaunch({ runtime, session });
     return {
@@ -221,7 +229,7 @@ async function openLocalWebDriverSession({
           throw new Error("INFRA_ERROR BROWSER_ROUTE_CHANGED");
         }
       },
-      runPage: (payload) => session.runHardwarePage(payload),
+      runPage: (payload) => runWebDriverPage({ runtime, session, payload }),
       close: async () => {
         await session.delete().catch(() => undefined);
         await stopChild(child);

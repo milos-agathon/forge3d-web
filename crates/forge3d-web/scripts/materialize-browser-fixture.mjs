@@ -59,6 +59,11 @@ export function materializeBrowserFixture({
     encoding: "utf8",
     mode: 0o600,
   });
+  writeFileSync(
+    join(root, "lifecycle-away.html"),
+    "<!doctype html><meta charset=\"utf-8\"><title>Forge3D lifecycle away</title><p>Lifecycle navigation target</p>\n",
+    { encoding: "utf8", mode: 0o600 },
+  );
   copyFileSync(join(packageRoot, "dist", "index.js"), join(root, "app.js"));
   copyFileSync(
     join(packageRoot, "dist", "forge3d_web_bg.wasm"),
@@ -104,6 +109,7 @@ export function materializeBrowserFixture({
     consumerDirectory: root,
     packageSha256,
     applicationEntry: "index.html",
+    lifecycleAway: "lifecycle-away.html",
     wasm: "forge3d_web_bg.wasm",
     terrain: "terrain.bin",
     rangedTerrain: "terrain-range.bin",

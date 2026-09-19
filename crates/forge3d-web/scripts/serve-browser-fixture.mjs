@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 
 const applicationRoutes = new Map([
   ["index.html", { file: "index.html", contentType: "text/html; charset=utf-8" }],
+  ["lifecycle-away.html", { file: "lifecycle-away.html", contentType: "text/html; charset=utf-8" }],
   ["app.js", { file: "app.js", contentType: "text/javascript; charset=utf-8" }],
   [
     "adapter-attestation.js",

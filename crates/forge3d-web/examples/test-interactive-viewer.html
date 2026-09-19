@@ -11,6 +11,7 @@
       }
       body {
         margin: 0;
+        min-height: 220vh;
         background: #10141b;
         color: #e7edf5;
       }
@@ -41,9 +42,23 @@
         padding: 0.75rem;
         background: #54242b;
       }
+      #outside-scroll-target {
+        margin: 110vh 1rem 1rem;
+      }
     </style>
   </head>
   <body>
+    <script>
+      window.__forge3dLifecycle = { sequence: 0, pagehide: [], pageshow: [] };
+      addEventListener("pagehide", (event) => {
+        window.__forge3dLifecycle.pagehide.push({ id: ++window.__forge3dLifecycle.sequence,
+          persisted: event.persisted, trusted: event.isTrusted });
+      });
+      addEventListener("pageshow", (event) => {
+        window.__forge3dLifecycle.pageshow.push({ id: ++window.__forge3dLifecycle.sequence,
+          persisted: event.persisted, trusted: event.isTrusted });
+      });
+    </script>
     <main>
       <canvas id="viewer" width="320" height="320" tabindex="0"></canvas>
       <div class="controls">
@@ -58,6 +73,7 @@
         or graphics acceleration may be disabled. Contact your administrator.
       </p>
     </main>
+    <p id="outside-scroll-target">Outside-canvas page-scroll target</p>
     <script type="module">
       import { Forge3DViewer } from "../src-ts/index.ts";
 

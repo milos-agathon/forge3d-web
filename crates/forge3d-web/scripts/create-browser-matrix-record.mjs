@@ -9,6 +9,7 @@ import { CHR03_STABLE_LANES } from "./chr03-lanes.mjs";
 import { validateChr04EdgeEvidence } from "./chr04-hardware-proof-validator.mjs";
 import { CHR04_LANES } from "./chr04-lanes.mjs";
 import { validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
+import { validateSaf04HardwareProof } from "./saf04-hardware-proof-validator.mjs";
 
 const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
 const CHR04_REQUIRED_LANES = new Set(Object.keys(CHR04_LANES));
@@ -62,6 +63,12 @@ export function createAutomatedMatrixRecord({
       applicationUrl: evidence.route?.applicationUrl, assetUrl: evidence.route?.assetUrl,
       browser: evidence.browser, system: evidence.system, adapter: evidence.adapter,
       effectiveLaunchArguments: evidence.effectiveLaunchArguments,
+    });
+    validateSaf04HardwareProof(evidence.saf04Proof, {
+      lane: promotion.lane,
+      assetId: promotion.assetId,
+      commit: promotion.trustedSha,
+      packageSha256: evidence.packageSha256,
     });
     validateHostInventory(hostInventory, { matrix, requireTrackpad: true });
     if (
@@ -146,6 +153,7 @@ export function createAutomatedMatrixRecord({
       hardwareJobId: evidence.jobId,
       saf02Route: structuredClone(evidence.route),
     } : {}),
+    saf04Proof: evidence.saf04Proof ? structuredClone(evidence.saf04Proof) : null,
   };
 }
 

@@ -157,6 +157,14 @@ look-alike WebKit binary.
 **Priority:** P1; code/preflight is implementable, physical trackpad execution
 is `LAB_INFRA_BLOCKED` until `browser-lab-infrastructure-readiness`
 
+**Source status:** `CODE_COMPLETE`. The source now restores the exact prior
+inline style and tabindex, tests 30 real-DOM `display:none` and zero-parent
+cycles, drives bounded W3C SafariDriver input and 30 persisted BFCache returns,
+and carries a versioned exact-commit/package-bound `saf04Proof` through matrix
+creation and merge validation. Physical trackpad execution, signed media, and
+shipping-Safari results remain `NOT_PROVEN`; this source status is not a
+support claim.
+
 **Task definition**
 
 Validate the DOM behavior most likely to diverge in Safari without introducing

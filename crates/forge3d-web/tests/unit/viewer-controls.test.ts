@@ -92,10 +92,10 @@ describe("ViewerControls", () => {
     controls.dispose();
   });
 
-  it("restores canvas touch action and tabindex across fifty instances", () => {
+  it("restores the exact canvas style attribute and tabindex across fifty instances", () => {
     for (let index = 0; index < 50; index += 1) {
       const canvas = new FakeCanvas();
-      canvas.style.touchAction = "pan-y";
+      canvas.setAttribute("style", "color: red; touch-action: pan-y;");
       canvas.setAttribute("tabindex", "-1");
       const resources = new OwnedDomResources();
       const controls = new ViewerControls(
@@ -110,9 +110,33 @@ describe("ViewerControls", () => {
       controls.dispose();
       expect(resources.ownedListeners).toBe(0);
       expect(resources.activePointers).toBe(0);
-      expect(canvas.style.touchAction).toBe("pan-y");
+      expect(canvas.getAttribute("style")).toBe("color: red; touch-action: pan-y;");
       expect(canvas.getAttribute("tabindex")).toBe("-1");
     }
+  });
+
+  it("restores absent style and tabindex attributes without leaving empty attributes", () => {
+    const canvas = new FakeCanvas();
+    const controls = new ViewerControls(
+      canvas as unknown as HTMLCanvasElement,
+      new OrbitController(),
+    );
+    expect(canvas.getAttribute("style")).not.toBeNull();
+    expect(canvas.getAttribute("tabindex")).toBe("0");
+    controls.dispose();
+    expect(canvas.getAttribute("style")).toBeNull();
+    expect(canvas.getAttribute("tabindex")).toBeNull();
+  });
+
+  it("owns no Safari Gesture Event listeners before or after disposal", () => {
+    const canvas = new FakeCanvas();
+    const controls = new ViewerControls(
+      canvas as unknown as HTMLCanvasElement,
+      new OrbitController(),
+    );
+    expect(canvas.listenerTypes.some((type) => type.startsWith("gesture"))).toBe(false);
+    controls.dispose();
+    expect(canvas.activeListenerTypes.some((type) => type.startsWith("gesture"))).toBe(false);
   });
 
   it("does not suppress browser touch gestures while controls are disabled", () => {
@@ -133,10 +157,39 @@ describe("ViewerControls", () => {
 });
 
 class FakeCanvas extends EventTarget {
-  readonly style = { touchAction: "" };
+  readonly style = {
+    get touchAction(): string {
+      return parseStyle(this.owner.getAttribute("style")).touchAction;
+    },
+    set touchAction(value: string) {
+      const parsed = parseStyle(this.owner.getAttribute("style"));
+      parsed.touchAction = value;
+      this.owner.setAttribute("style", serializeStyle(parsed));
+    },
+    owner: undefined as unknown as FakeCanvas,
+  };
   readonly captures = new Set<number>();
   readonly #attributes = new Map<string, string>();
+  readonly listenerTypes: string[] = [];
+  readonly activeListenerTypes: string[] = [];
   clientHeight = 400;
+
+  constructor() {
+    super();
+    this.style.owner = this;
+  }
+
+  override addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void {
+    this.listenerTypes.push(type);
+    this.activeListenerTypes.push(type);
+    super.addEventListener(type, listener, options);
+  }
+
+  override removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void {
+    const index = this.activeListenerTypes.indexOf(type);
+    if (index >= 0) this.activeListenerTypes.splice(index, 1);
+    super.removeEventListener(type, listener, options);
+  }
 
   setAttribute(name: string, value: string): void {
     this.#attributes.set(name, value);
@@ -177,6 +230,20 @@ class FakeCanvas extends EventTarget {
       toJSON: () => ({}),
     };
   }
+}
+
+function parseStyle(value: string | null): { color: string; touchAction: string } {
+  const declarations = new Map(
+    (value ?? "").split(";").map((part) => part.trim()).filter(Boolean).map((part) => {
+      const separator = part.indexOf(":");
+      return [part.slice(0, separator).trim(), part.slice(separator + 1).trim()];
+    }),
+  );
+  return { color: declarations.get("color") ?? "", touchAction: declarations.get("touch-action") ?? "" };
+}
+
+function serializeStyle(style: { color: string; touchAction: string }): string {
+  return [style.color ? `color: ${style.color};` : "", style.touchAction ? `touch-action: ${style.touchAction};` : ""].filter(Boolean).join(" ");
 }
 
 function pointerEvent(

@@ -13,6 +13,7 @@ import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture
 import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
 import { CHR04_LANES } from "../../scripts/chr04-lanes.mjs";
 import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
+import { validSaf04HardwareProof } from "../browser/saf04-hardware-proof-fixture.mjs";
 
 const matrix = JSON.parse(
   readFileSync(new URL("./hardware-matrix.json", import.meta.url), "utf8"),
@@ -148,6 +149,7 @@ const records = rows.map((row, index) => {
                 applicationUrl: `${saf02Proof.route.applicationOrigin}${saf02Proof.route.basePath}`,
                 assetUrl: `${saf02Proof.route.assetOrigin}${saf02Proof.route.basePath}`,
               },
+              saf04Proof: validSaf04HardwareProof({ commit: targetSha, packageSha256 }),
             };
           })() : {}),
         }),
@@ -319,6 +321,11 @@ test("prior head, other package, expired manual, missing, duplicate, and infra e
             ...record,
             packageRunId: 49,
           }
+        : record,
+    ),
+    records.map((record) =>
+      record.lane === "safari-macos-m2"
+        ? { ...record, saf04Proof: { ...record.saf04Proof, lifecycle: { ...record.saf04Proof.lifecycle, hardReloadPersisted: true } } }
         : record,
     ),
     records.map((record) =>

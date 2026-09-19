@@ -4,6 +4,89 @@ import {
   test,
 } from "../browser/webgpu-fixture";
 
+test("manual fixture exposes a scrollable target outside the canvas", async ({ page }) => {
+  const result = await page.evaluate(() => {
+    const canvas = document.querySelector("#viewer")!.getBoundingClientRect();
+    const target = document.querySelector("#outside-scroll-target")!.getBoundingClientRect();
+    const scrollable = document.documentElement.scrollHeight > window.innerHeight;
+    window.scrollTo(0, document.documentElement.scrollHeight);
+    return { scrollable, targetOutsideCanvas: target.top > canvas.bottom, scrollY: window.scrollY };
+  });
+  expect(result.scrollable).toBe(true);
+  expect(result.targetOutsideCanvas).toBe(true);
+  expect(result.scrollY).toBeGreaterThan(0);
+});
+
+test("pointercancel releases pending capture before the next trusted move", async ({ page, webgpuAvailability }) => {
+  skipRenderAssertionsWhenProbing(webgpuAvailability);
+  await page.evaluate(async () => {
+    const canvas = window.__forge3dInteractiveViewer.canvas;
+    window.__saf04Cancel = { down: null, got: null, lost: null, move: null };
+    canvas.addEventListener("pointerdown", (event) => { window.__saf04Cancel.down = event.pointerId; });
+    canvas.addEventListener("gotpointercapture", (event) => { window.__saf04Cancel.got = event.pointerId; });
+    canvas.addEventListener("lostpointercapture", (event) => { window.__saf04Cancel.lost = event.pointerId; });
+    canvas.addEventListener("pointermove", (event) => { window.__saf04Cancel.move = event.pointerId; });
+    await window.__forge3dInteractiveViewer.create();
+  });
+  const box = await page.locator("#viewer").boundingBox();
+  await page.mouse.move(box!.x + 100, box!.y + 100);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + 120, box!.y + 120);
+  const captured = await page.evaluate(() => {
+    const canvas = window.__forge3dInteractiveViewer.canvas;
+    return { ...window.__saf04Cancel, hasCapture: canvas.hasPointerCapture(window.__saf04Cancel.down!),
+      activePointers: window.__forge3dInteractiveViewer.viewer.getDiagnostics().activePointers };
+  });
+  const immediate = await page.evaluate(() => {
+    const canvas = window.__forge3dInteractiveViewer.canvas;
+    const id = window.__saf04Cancel.down!;
+    canvas.dispatchEvent(new PointerEvent("pointercancel", { bubbles: true, pointerId: id, pointerType: "mouse" }));
+    return { hasCapture: canvas.hasPointerCapture(id),
+      activePointers: window.__forge3dInteractiveViewer.viewer.getDiagnostics().activePointers };
+  });
+  await page.mouse.move(box!.x + 140, box!.y + 140);
+  const released = await page.evaluate(() => ({ ...window.__saf04Cancel,
+    hasCapture: window.__forge3dInteractiveViewer.canvas.hasPointerCapture(window.__saf04Cancel.down!),
+    activePointers: window.__forge3dInteractiveViewer.viewer.getDiagnostics().activePointers }));
+  await page.mouse.up();
+  expect(captured.got).toBe(captured.down);
+  expect(captured.move).toBe(captured.down);
+  expect(captured.hasCapture).toBe(true);
+  expect(captured.activePointers).toBe(1);
+  expect(immediate).toEqual({ hasCapture: false, activePointers: 0 });
+  expect(released.lost).toBe(released.down);
+  expect(released.move).toBe(released.down);
+  expect(released.hasCapture).toBe(false);
+  expect(released.activePointers).toBe(0);
+});
+
+test("pointercancel regression predicate rejects bookkeeping-only release", async ({ page, webgpuAvailability }) => {
+  skipRenderAssertionsWhenProbing(webgpuAvailability);
+  await page.evaluate(async () => {
+    window.__saf04Cancel = { down: null, got: null, lost: null, move: null };
+    window.__forge3dInteractiveViewer.canvas.addEventListener("pointerdown", (event) => {
+      window.__saf04Cancel.down = event.pointerId;
+    });
+    await window.__forge3dInteractiveViewer.create();
+  });
+  const box = await page.locator("#viewer").boundingBox();
+  await page.mouse.move(box!.x + 100, box!.y + 100);
+  await page.mouse.down();
+  const accepted = await page.evaluate(() => {
+    const canvas = window.__forge3dInteractiveViewer.canvas;
+    const id = window.__saf04Cancel.down!;
+    const release = canvas.releasePointerCapture.bind(canvas);
+    canvas.releasePointerCapture = () => undefined;
+    canvas.dispatchEvent(new PointerEvent("pointercancel", { bubbles: true, pointerId: id, pointerType: "mouse" }));
+    const value = !canvas.hasPointerCapture(id) &&
+      window.__forge3dInteractiveViewer.viewer.getDiagnostics().activePointers === 0;
+    canvas.releasePointerCapture = release;
+    return value;
+  });
+  await page.mouse.up();
+  expect(accepted).toBe(false);
+});
+
 test("supports mouse, wheel, touch, and keyboard interaction", async ({
   page,
   webgpuAvailability,
@@ -132,5 +215,6 @@ async function getView(page: import("@playwright/test").Page) {
 declare global {
   interface Window {
     __forge3dInteractiveViewer: any;
+    __saf04Cancel: { down: number | null; got: number | null; lost: number | null; move: number | null };
   }
 }
