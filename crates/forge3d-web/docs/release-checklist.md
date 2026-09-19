@@ -184,6 +184,18 @@ closed keys, pass the prior-head, package-hash, and missing-row negative
 controls, and emit attested `RELEASE_MATRIX_READY`. Only that record may feed
 `publish-web-release.yml`.
 
+The publisher persists every finalized digest-checked record under a unique
+filename, then generates exactly one `chromium-support.md` before closing the
+candidate and publication-preflight inventories. The generator revalidates the
+attested `RELEASE_MATRIX_READY` manifest, exact target/package/laboratory
+bindings, all 24 unique keys, safe launch arguments, six primary configured
+Chromium rows, and conditional Edge Linux rows. It writes the observed
+four-component branded browser versions, OS builds and displays; configured
+CPU/GPU/architecture constraints; and exact run-attempt links. The draft and
+immutable published GitHub Release API bodies must each equal those source
+bytes exactly. The file must also be present exactly once in the candidate
+manifest, draft download, immutable download, and postpublication verification.
+
 Individual package, controller, hardware, manual, readiness, and
 post-publication verification artifacts are retained in GitHub Actions for 90
 days. The immutable GitHub Release receives byte-identical package and evidence

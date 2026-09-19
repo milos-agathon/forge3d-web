@@ -8,6 +8,7 @@ import { fileURLToPath } from "node:url";
 import {
   assertSafeLaunchArguments,
   captureHostInventory,
+  observeLiveOsBuild,
   observeLiveSession,
 } from "../../scripts/capture-host-inventory.mjs";
 import {
@@ -56,6 +57,87 @@ test("INF-01 policy freezes the required shipping and probe browser channels", (
 });
 
 test("capture records an unlocked headed shipping browser with exact tool versions", () => {
+  const input = {
+    assetId: "FW-MAC-M2-01",
+    platform: "darwin",
+    osBuild: "macOS 26.0 (25A123)",
+    displayServer: "WindowServer",
+    session: {
+      interactive: true,
+      locked: false,
+      remote: false,
+      identifier: "console",
+    },
+    browsers: [browser],
+    tools,
+    launchArguments: [],
+    policy,
+    capturedAt: new Date("2026-07-29T08:00:00.000Z"),
+  };
+  const record = captureHostInventory(input);
+  assert.equal(record.headed, true);
+  assert.deepEqual(record.prohibitedLaunchArgumentsPresent, []);
+  assert.equal(record.browsers[0].version, browser.version);
+  assert.equal(record.tools.playwright, policy.tools.playwright);
+  for (const invalid of [undefined, null, {}, ["safe", null]]) {
+    const changed = { ...input, launchArguments: invalid };
+    if (invalid === undefined) delete changed.launchArguments;
+    assert.throws(
+      () => captureHostInventory(changed),
+      /array of strings/u,
+    );
+  }
+});
+
+test("unsafe WebGPU, backend, blocklist, certificate, and software flags fail", () => {
+  for (const argument of policy.prohibitedLaunchArguments) {
+    assert.throws(
+      () => assertSafeLaunchArguments([`${argument}=value`], policy),
+      /prohibited browser launch arguments/u,
+      argument,
+    );
+  }
+  for (const argument of [
+    "--enable-vulkan",
+    "--ENABLE-VULKAN=value",
+    "--enable-features=Vulkan",
+    "--enable-features=Foo,vUlKaN,Bar",
+    "--enable-features=Vulkan<Trial",
+    "--enable-features=Foo,Vulkan:trial/param,Bar",
+    "--enable-features=Foo,wEbGpUExperiment,Bar",
+    "-enable-features=WebGPUService",
+    "/enable-features=CanvasWebGPU",
+    "-enable-unsafe-webgpu",
+    "-enable-features=Vulkan",
+    "/use-angle=swiftshader",
+    "--enable-features",
+  ]) {
+    assert.throws(
+      () => assertSafeLaunchArguments([argument], policy),
+      /prohibited browser launch arguments/u,
+      argument,
+    );
+  }
+  assert.throws(
+    () => assertSafeLaunchArguments(["--enable-features", "Foo,Vulkan"], policy),
+    /prohibited browser launch arguments/u,
+  );
+  assert.doesNotThrow(() =>
+    assertSafeLaunchArguments(
+      ["-enable-automation", "/user-data-dir=C:\\forge3d", "--enable-features=CanvasOopRasterization,WebGLDraftExtensions"],
+      policy,
+    ),
+  );
+  for (const invalid of [null, {}, [1], ["safe", null]]) {
+    assert.throws(
+      () => assertSafeLaunchArguments(invalid, policy),
+      /array of strings/u,
+    );
+  }
+});
+
+test("capture preserves the exact observed launch argument strings", () => {
+  const launchArguments = ["--enable-automation", "--user-data-dir=/tmp/a b"];
   const record = captureHostInventory({
     assetId: "FW-MAC-M2-01",
     platform: "darwin",
@@ -70,22 +152,10 @@ test("capture records an unlocked headed shipping browser with exact tool versio
     browsers: [browser],
     tools,
     policy,
-    capturedAt: new Date("2026-07-29T08:00:00.000Z"),
+    launchArguments,
   });
-  assert.equal(record.headed, true);
-  assert.deepEqual(record.prohibitedLaunchArgumentsPresent, []);
-  assert.equal(record.browsers[0].version, browser.version);
-  assert.equal(record.tools.playwright, policy.tools.playwright);
-});
-
-test("unsafe WebGPU, backend, blocklist, certificate, and software flags fail", () => {
-  for (const argument of policy.prohibitedLaunchArguments) {
-    assert.throws(
-      () => assertSafeLaunchArguments([`${argument}=value`], policy),
-      /prohibited browser launch arguments/u,
-      argument,
-    );
-  }
+  assert.deepEqual(record.effectiveLaunchArguments, launchArguments);
+  assert.notEqual(record.effectiveLaunchArguments, launchArguments);
 });
 
 test("required host capture fails for locked, remote, non-Wayland, old, or drifted tools", () => {
@@ -104,6 +174,7 @@ test("required host capture fails for locked, remote, non-Wayland, old, or drift
     },
     browsers: [browser],
     tools,
+    launchArguments: [],
     policy,
   };
   assert.throws(
@@ -193,6 +264,29 @@ test("macOS and Windows session state is observed instead of synthesized", () =>
   assert.equal(windows.interactive, true);
   assert.equal(windows.locked, false);
   assert.equal(windows.identifier, "LAB\\forge3d");
+  const windowsIdentity = JSON.stringify({
+    caption: "Microsoft Windows 11 Pro",
+    productType: 1,
+    version: "10.0.26200",
+    buildNumber: "26200",
+    displayVersion: "25H2",
+    editionId: "Professional",
+    ubr: 1000,
+    registryProductName: "Windows 10 Pro",
+  });
+  assert.equal(
+    observeLiveOsBuild("win32", {
+      execute: (command, args) => {
+        assert.equal(command, "powershell.exe");
+        assert.match(args.at(-1), /Get-CimInstance Win32_OperatingSystem/u);
+        assert.match(args.at(-1), /ProductType/u);
+        assert.match(args.at(-1), /EditionID/u);
+        assert.match(args.at(-1), /DisplayVersion/u);
+        return `${windowsIdentity}\n`;
+      },
+    }),
+    windowsIdentity,
+  );
 });
 
 test("update window invokes an absolute enforcement helper and validates its receipt", () => {
@@ -278,6 +372,7 @@ test("host runtime helper supplies versions while the trusted script observes OS
   });
   assert.equal(result.inventory.session.locked, false);
   assert.equal(result.inventory.osBuild, "macOS build 25A123");
+  assert.deepEqual(result.inventory.effectiveLaunchArguments, []);
   assert.deepEqual(result.resolvedChannels, [
     { id: browser.id, version: browser.version },
   ]);
@@ -287,6 +382,59 @@ test("host runtime helper supplies versions while the trusted script observes OS
     "/usr/bin/stat",
     "/usr/sbin/ioreg",
   ]);
+  for (const invalid of [undefined, null, {}, ["safe", null]]) {
+    assert.throws(
+      () => resolveHostRuntime({
+        helper: inventoryHelper,
+        helperSha256: inventoryHelperSha256,
+        lane: "chrome-macos-m2",
+        hostId: "FW-MAC-M2-01",
+        policy,
+        platform: "darwin",
+        environment: {},
+        execute: (command) => {
+          if (command !== inventoryHelper) throw new Error(`unexpected command ${command}`);
+          const observation = {
+            schemaVersion: 1,
+            hostId: "FW-MAC-M2-01",
+            lane: "chrome-macos-m2",
+            platform: "darwin",
+            displayServer: "WindowServer",
+            browsers: [browser],
+            tools,
+            launchArguments: invalid,
+          };
+          if (invalid === undefined) delete observation.launchArguments;
+          return JSON.stringify(observation);
+        },
+      }),
+      /invalid or synthesized record/u,
+    );
+  }
+  assert.throws(
+    () => resolveHostRuntime({
+      helper: inventoryHelper,
+      helperSha256: inventoryHelperSha256,
+      lane: "chrome-linux-intel12",
+      hostId: "FW-LNX-I12-01",
+      policy,
+      platform: "linux",
+      environment: {},
+      execute: (command) => {
+        if (command !== inventoryHelper) throw new Error(`unexpected command ${command}`);
+        return JSON.stringify({
+          schemaVersion: 1,
+          hostId: "FW-LNX-I12-01",
+          lane: "chrome-linux-intel12",
+          platform: "linux",
+          browsers: [browser],
+          tools,
+          launchArguments: [],
+        });
+      },
+    }),
+    /must observe its display server/u,
+  );
 });
 
 function enforcement(operation, channels) {

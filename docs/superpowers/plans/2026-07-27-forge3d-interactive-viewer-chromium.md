@@ -254,6 +254,31 @@ pass at the same commit.
 - Existing API, package, Rust, WASM, terrain, screenshot, and IO gates remain
   green.
 
+**Source evidence ledger (2026-09-18)**
+
+- Source status: `CODE_COMPLETE` as an uncommitted implementation in the clean
+  isolated worktree created from exact baseline
+  `1810aca68700ee5f5e849e61dc0d16c4a2db66e8`. The source adds the fail-closed
+  generated `chromium-support.md`, unique finalized-record retention, closed
+  candidate/draft/published asset and release-body verification, launch-argument
+  hardening, and synchronized package/docs contracts.
+- Automated proof: focused Chromium publication, host-inventory, and host-policy
+  tests passed 23/23; typecheck
+  passed; unit tests passed 117/117; `test:api` passed; the production
+  WASM/TypeScript/Vite build passed; `test:package` passed with browser harness
+  81/81 and infrastructure 548 passed plus one existing platform skip; npm pack
+  dry-run passed; both relevant wasm32 cargo checks passed; and
+  `git diff --check` passed.
+- Acceptance status remains `NOT_PROVEN`. No physical row ran, no support
+  artifact was published, and `package.json` intentionally remains
+  `contractStage: "verification-incomplete"` with `releaseReady: false`.
+- The exact-head installed-tarball consumer stopped at its unchanged clean
+  worktree guard because this evidence describes uncommitted source; the guard
+  was not bypassed. `make -C docs html` remains unavailable because the docs
+  directory has no `html` target. Physical/CI-only browser matrices, live
+  publication, release, deployment, and the full unrelated Rust CI matrix were
+  not run.
+
 ## Chromium Plan Acceptance Matrix
 
 | Surface | Required status |

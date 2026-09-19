@@ -50,7 +50,10 @@ export function resolveHostRuntime({
     observed.lane !== lane ||
     observed.platform !== platform ||
     observed.session !== undefined ||
-    observed.osBuild !== undefined
+    observed.osBuild !== undefined ||
+    !Object.hasOwn(observed, "launchArguments") ||
+    !Array.isArray(observed.launchArguments) ||
+    observed.launchArguments.some((argument) => typeof argument !== "string")
   ) {
     throw new Error("host runtime helper returned an invalid or synthesized record");
   }
@@ -60,27 +63,20 @@ export function resolveHostRuntime({
     lane === "manual-safari-trackpad";
   if (requireExactHardware) assertNoStableIdentifiers(observed);
   if (
-    requireExactHardware &&
-    (typeof observed.displayServer !== "string" ||
-      observed.displayServer.trim() === "")
+    typeof observed.displayServer !== "string" ||
+    observed.displayServer.trim() === ""
   ) {
-    throw new Error("exact host runtime must observe its display server");
+    throw new Error("host runtime must observe its display server");
   }
   const inventory = captureHostInventory({
     assetId: hostId,
     platform,
     osBuild: observeLiveOsBuild(platform, { execute }),
-    displayServer:
-      observed.displayServer ??
-      (platform === "darwin"
-        ? "WindowServer"
-        : platform === "win32"
-          ? "Desktop Window Manager"
-          : "GNOME Wayland"),
+    displayServer: observed.displayServer,
     session: observeLiveSession(platform, { execute, environment }),
     browsers: observed.browsers,
     tools: observed.tools,
-    launchArguments: observed.launchArguments ?? [],
+    launchArguments: observed.launchArguments,
     capturedAt: now,
     policy,
     hardware: observed.hardware,

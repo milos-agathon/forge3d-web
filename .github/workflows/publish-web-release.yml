@@ -274,7 +274,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           TARGET_SHA: ${{ inputs.target_sha }}
         run: |
-          mkdir release-assets evidence-assets
+          mkdir release-assets evidence-assets verified-records
           readiness_path="$(find readiness -name browser-hardware-release-readiness.json -type f)"
           package_run_id="$(node -p "require('./${readiness_path}').packageRunId")"
           node scripts/resolve-hardware-promotion.mjs \
@@ -364,7 +364,7 @@ jobs:
                 }
               });
               if (sha256Hex(final) !== process.argv[3]) throw new Error("readiness record digest mismatch");
-              writeFileSync("verified-record.json", JSON.stringify(final));
+              writeFileSync(`verified-records/${process.argv[2]}.json`, JSON.stringify(final));
             ' \
               "${source_record}" \
               "${artifact_id}" \
@@ -380,6 +380,54 @@ jobs:
             done
           done < record-specs.txt
           cp "${readiness_path}" release-assets/browser-hardware-release-readiness.json
+
+          lab_readiness_run_id="$(node -p "require('./${readiness_path}').labReadiness.runId")"
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${lab_readiness_run_id}" > lab-readiness-run.json
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/runs/${lab_readiness_run_id}/artifacts?per_page=100" > lab-readiness-artifacts.json
+          node --input-type=module --eval '
+            import { readFileSync, writeFileSync } from "node:fs";
+            const artifacts = JSON.parse(readFileSync("lab-readiness-artifacts.json", "utf8")).artifacts;
+            const matches = artifacts.filter((artifact) =>
+              artifact.name === "browser-lab-infrastructure-readiness"
+            );
+            if (
+              matches.length !== 1 ||
+              matches[0].expired ||
+              matches[0].workflow_run?.id !== Number(process.argv[1]) ||
+              matches[0].workflow_run?.head_sha !== process.env.TARGET_SHA ||
+              !/^sha256:[0-9a-f]{64}$/.test(matches[0].digest ?? "")
+            ) throw new Error("laboratory readiness artifact mismatch");
+            writeFileSync("lab-readiness-artifact.json", JSON.stringify(matches[0]));
+          ' "${lab_readiness_run_id}"
+          lab_readiness_artifact_id="$(node -p "require('./lab-readiness-artifact.json').id")"
+          lab_readiness_artifact_digest="$(node -p "require('./lab-readiness-artifact.json').digest")"
+          gh api "/repos/${GITHUB_REPOSITORY}/actions/artifacts/${lab_readiness_artifact_id}/zip" > lab-readiness.zip
+          test "$(sha256sum lab-readiness.zip | cut -d ' ' -f 1)" = "${lab_readiness_artifact_digest#sha256:}"
+          mkdir exact-lab-readiness
+          unzip -q lab-readiness.zip -d exact-lab-readiness
+          test "$(find exact-lab-readiness -name browser-lab-infrastructure-readiness.json -type f | wc -l)" -eq 1
+          lab_readiness_path="$(find exact-lab-readiness -name browser-lab-infrastructure-readiness.json -type f)"
+          gh attestation verify "${lab_readiness_path}" \
+            --repo milos-agathon/forge3d-web \
+            --signer-workflow milos-agathon/forge3d-web/.github/workflows/browser-lab-infrastructure-readiness.yml \
+            --source-ref refs/heads/main \
+            --source-digest "${TARGET_SHA}" \
+            --deny-self-hosted-runners
+
+          node scripts/chromium-support-publication.mjs \
+            --target-sha "${TARGET_SHA}" \
+            --readiness "${readiness_path}" \
+            --readiness-artifact readiness-artifact.json \
+            --readiness-run readiness-run.json \
+            --lab-readiness "${lab_readiness_path}" \
+            --lab-readiness-run lab-readiness-run.json \
+            --package-run package-run.json \
+            --records-directory verified-records \
+            --matrix tests/infrastructure/hardware-matrix.json \
+            --policy tests/infrastructure/browser-policy.json \
+            --repository "${GITHUB_REPOSITORY}" \
+            --output release-assets/chromium-support.md
+          test "$(find release-assets -maxdepth 1 -name chromium-support.md -type f | wc -l)" -eq 1
 
       - name: Re-fetch exact still-draft manual media by numeric release-asset ID
         shell: bash
@@ -1156,17 +1204,20 @@ jobs:
             --repo "${GITHUB_REPOSITORY}" \
             --target "${TARGET_SHA}" \
             --title "Forge3D Web ${RELEASE_TAG}" \
-            --notes "Exact-head browser support evidence and package artifacts." \
+            --notes-file preflight/release-assets/chromium-support.md \
             --draft
-          gh api "/repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" > draft-release.json
+          mkdir -p publication-proof
+          gh api "/repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" > publication-proof/draft-release.json
           node --input-type=module --eval '
             import { readFileSync } from "node:fs";
-            const release = JSON.parse(readFileSync("draft-release.json", "utf8"));
+            const release = JSON.parse(readFileSync("publication-proof/draft-release.json", "utf8"));
+            const supportBody = readFileSync("preflight/release-assets/chromium-support.md", "utf8");
             if (
               release.tag_name !== process.env.RELEASE_TAG ||
               release.target_commitish !== process.env.TARGET_SHA ||
               release.draft !== true ||
-              release.prerelease !== false
+              release.prerelease !== false ||
+              release.body !== supportBody
             ) throw new Error("created draft release identity is invalid");
           '
           gh release upload "${RELEASE_TAG}" preflight/release-assets/* --repo "${GITHUB_REPOSITORY}"
@@ -1226,6 +1277,7 @@ jobs:
             import { readFileSync, readdirSync, writeFileSync } from "node:fs";
             const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
             const release = JSON.parse(readFileSync("publication-proof/release.json", "utf8"));
+            const supportBody = readFileSync("preflight/release-assets/chromium-support.md", "utf8");
             const releaseAssets = JSON.parse(readFileSync(
               "publication-proof/release-assets-pages.json", "utf8"
             )).flat();
@@ -1239,6 +1291,7 @@ jobs:
               release.draft !== false ||
               release.prerelease !== false ||
               release.immutable !== true ||
+              release.body !== supportBody ||
               !release.published_at ||
               expectedNames.length !== actualNames.length ||
               expectedNames.some((name, index) => name !== actualNames[index]) ||

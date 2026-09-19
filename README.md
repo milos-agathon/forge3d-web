@@ -60,6 +60,15 @@ npm pack --dry-run
 See `crates/forge3d-web/docs/release-checklist.md` for the release checklist
 and `crates/forge3d-web/docs/support-matrix.md` for browser support.
 
+Chromium support remains evidence-bound. The six configured primary rows cover
+stable Chrome on exact Windows Intel Iris Xe, Apple M2 macOS, Linux Intel Iris
+Xe GNOME Wayland, and Linux RTX 3070 GNOME Wayland hardware, plus stable Edge
+on the exact Windows and Apple M2 assets. They remain `NOT_PROVEN` until the
+closed physical matrix produces the immutable release's generated
+`chromium-support.md`. Edge Linux is conditional/P2; Intel Mac, AMD/Linux,
+unlisted hardware, non-Wayland Linux, derivative brands, Beta, and preflight
+remain outside primary support.
+
 ## License
 
 Apache-2.0 OR MIT.
