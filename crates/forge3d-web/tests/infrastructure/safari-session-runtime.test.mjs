@@ -5,6 +5,8 @@ import { tmpdir } from "node:os";
 import test from "node:test";
 
 import { openProductionSession } from "../../scripts/browser-session-runtime.mjs";
+import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
+import { validSaf03Proof } from "../browser/saf03-proof-fixture.mjs";
 
 const previousAcceptance = process.env.FORGE3D_SAFARI_ACCEPTANCE_MODULE;
 const previousSelenium = process.env.FORGE3D_SELENIUM_MODULE;
@@ -48,6 +50,62 @@ test("manual Safari trackpad retains the neutral WebDriver path", async () => {
   });
   assert.equal(result, sentinel);
   assert.equal(neutralCalls, 1);
+});
+
+test("automated Selenium Safari raises the script timeout before combined acceptance", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "saf03-timeout-"));
+  const calls = [];
+  const nonce = "ab".repeat(16);
+  const route = {
+    applicationUrl: `https://mac-m2.webgpu-ci.forge3d.dev/runs/41/42/${nonce}/`,
+    assetUrl: `https://assets-mac-m2.webgpu-ci.forge3d.dev/runs/41/42/${nonce}/`,
+  };
+  const driver = {
+    manage: () => ({ setTimeouts: async (timeouts) => calls.push(["timeouts", timeouts]) }),
+    executeAsyncScript: async () => {
+      calls.push(["execute"]);
+      return {
+        ok: true,
+        value: {
+          adapter: { isFallbackAdapter: false, secureContext: true, deviceCreated: true, surfacePresented: true },
+          saf02Proof: validSaf02Conformance({
+            runId: 41,
+            jobId: 42,
+            commit: "a".repeat(40),
+            packageSha256: "b".repeat(64),
+            nonce,
+          }),
+        },
+      };
+    },
+  };
+  try {
+    const stable = stableSession(91007, () => undefined, driver);
+    const acceptance = {
+      SAF03_SELENIUM_VERSION: "4.35.0",
+      openSeleniumSafariSession: async () => stable,
+      runStableSafariAcceptance: async () => {
+        calls.push(["saf03"]);
+        return validSaf03Proof();
+      },
+    };
+    const session = await openProductionSession(
+      stableRequest(directory),
+      dependencies(null, { acceptance }),
+    );
+    await session.runPage({
+      binding: closedBinding(),
+      route,
+    });
+    assert.deepEqual(calls.slice(0, 3), [
+      ["timeouts", { script: 115_000 }],
+      ["execute"],
+      ["saf03"],
+    ]);
+    await session.close();
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test("post-open launch observation failure closes and records SafariDriver cleanup", async () => {
@@ -127,6 +185,9 @@ function stableRequest(directory, { includeStp = false } = {}) {
         { id: "safari-stable", channel: "stable", classification: "required", version: "26.0" },
         ...(includeStp ? [{ id: "safari-technology-preview", channel: "technology-preview", classification: "probe", version: "26.1", executable: "/Applications/Safari Technology Preview.app/Contents/MacOS/Safari Technology Preview" }] : []),
       ],
+      osVersion: "26.0",
+      osBuild: "macOS build 25A123",
+      architecture: "arm64",
       tools: { safaridriverVersion: "26.0", safariTechnologyPreviewDriverPath: includeStp ? "/Applications/Safari Technology Preview.app/Contents/MacOS/safaridriver" : false,
         safariTechnologyPreviewDriverVersion: includeStp ? "26.1" : false },
     },
@@ -142,9 +203,9 @@ function dependencies(stable, overrides = {}) {
   };
 }
 
-function stableSession(driverPid, onClose = () => undefined) {
+function stableSession(driverPid, onClose = () => undefined, driver = {}) {
   return { driverPid, browser: { name: "safari", channel: "stable", version: "26.0" }, driverVersion: "26.0",
-    driver: {}, close: async () => { onClose(); return { sessionDeleted: true, driverStopped: true, processAbsent: true, ok: true }; } };
+    driver, close: async () => { onClose(); return { sessionDeleted: true, driverStopped: true, processAbsent: true, ok: true }; } };
 }
 
 function queuedAcceptance(values) {

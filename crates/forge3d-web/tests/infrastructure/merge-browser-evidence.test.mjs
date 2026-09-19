@@ -310,6 +310,13 @@ test("prior head, other package, expired manual, missing, duplicate, and infra e
       replay.saf02Proof.route.basePath = `/runs/999/888/${nonce}/`;
       return replay;
     }),
+    records.map((record) => {
+      if (record.lane !== "safari-macos-m2") return record;
+      const splitRoute = structuredClone(record);
+      splitRoute.route.applicationUrl = "https://unrelated.example.invalid/run/";
+      splitRoute.safariTechnologyPreview.probe.route = splitRoute.route.applicationUrl;
+      return splitRoute;
+    }),
     records.map((record) =>
       record.lane === "edge-linux-intel12"
         ? { ...record, system: { ...record.system, displayServer: "X11" } }

@@ -9,7 +9,7 @@ import { CHR03_STABLE_LANES } from "./chr03-lanes.mjs";
 import { validateChr04EdgeEvidence } from "./chr04-hardware-proof-validator.mjs";
 import { CHR04_LANES } from "./chr04-lanes.mjs";
 import { validateSaf03EvidenceEnvelope } from "./saf03-proof-validator.mjs";
-import { validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
+import { assertExactSafariRoute, validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
 
 const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
 const CHR04_REQUIRED_LANES = new Set(Object.keys(CHR04_LANES));
@@ -119,7 +119,7 @@ export function createAutomatedMatrixRecord({
   ) {
     throw new Error("automated matrix evidence does not match its promotion");
   }
-  return {
+  const record = {
     schemaVersion: 1,
     key: `automated:${promotion.assetId}:${promotion.lane}`,
     kind: "automated",
@@ -169,6 +169,8 @@ export function createAutomatedMatrixRecord({
       saf02Route: structuredClone(evidence.route),
     } : {}),
   };
+  if (safariTrackpadRecord) assertExactSafariRoute(record.route, record.saf02Route);
+  return record;
 }
 
 export function createManualMatrixRecord({ evidence, run }) {
@@ -324,6 +326,7 @@ export function finalizeMatrixRecord({
     throw new Error("matrix record requires exact artifact and attestation proof");
   }
   if (source.lane === "safari-macos-m2") {
+    assertExactSafariRoute(source.route, source.saf02Route);
     validateSaf02Conformance(source.saf02Proof, {
       lane: source.lane,
       assetId: source.assetId,

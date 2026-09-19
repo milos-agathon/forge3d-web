@@ -111,6 +111,7 @@ async function openSafariSeleniumSession({ runtime, routeUrl, browserPolicy, inv
       }
     },
     runPage: async (payload) => {
+      await stable.driver.manage().setTimeouts({ script: 115_000 });
       const neutral = await runSeleniumHardwarePage(stable.driver, payload);
       const proof = await acceptance.runStableSafariAcceptance({
         session: stable,

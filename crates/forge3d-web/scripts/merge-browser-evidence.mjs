@@ -8,7 +8,7 @@ import { CHR03_STABLE_LANES } from "./chr03-lanes.mjs";
 import { validateChr04EdgeEvidence } from "./chr04-hardware-proof-validator.mjs";
 import { CHR04_LANES } from "./chr04-lanes.mjs";
 import { validateSaf03EvidenceEnvelope } from "./saf03-proof-validator.mjs";
-import { validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
+import { assertExactSafariRoute, validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
 
 const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
 const CHR04_REQUIRED_LANES = new Set(Object.keys(CHR04_LANES));
@@ -273,6 +273,7 @@ function validateRecord(record, row, expected) {
     });
   }
   if (row.kind === "automated" && row.lane === "safari-macos-m2") {
+    assertExactSafariRoute(record.route, record.saf02Route);
     validateSaf02Conformance(record.saf02Proof, {
       lane: row.lane, assetId: row.assetId, hostId: row.hostId,
       runId: record.workflow.runId, jobId: record.hardwareJobId,

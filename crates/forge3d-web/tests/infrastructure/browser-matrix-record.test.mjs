@@ -166,6 +166,13 @@ test("automated and manual sources derive closed matrix keys without artifact cl
     selectedRun: { id: 10, attempt: 2, path: ".github/workflows/browser-hardware.yml" },
   };
   assert.equal(finalizeMatrixRecord({ source: safari, ...safariFinalization }).workflow.artifactId, 31);
+  const splitRoute = structuredClone(safari);
+  splitRoute.route.applicationUrl = "https://unrelated.example.invalid/run/";
+  splitRoute.safariTechnologyPreview.probe.route = splitRoute.route.applicationUrl;
+  assert.throws(
+    () => finalizeMatrixRecord({ source: splitRoute, ...safariFinalization }),
+    /same exact authorized route/u,
+  );
   for (const mutate of [
     (source) => { source.saf02Proof.binding.jobId += 1; },
     (source) => { source.saf02Route.applicationUrl = "https://unrelated.example.invalid/run/"; },
