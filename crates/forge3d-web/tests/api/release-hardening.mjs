@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
@@ -7,6 +8,12 @@ import { resolvePackageGateMode } from "../../scripts/package-gate-mode.mjs";
 
 const packageRoot = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const repoRoot = join(packageRoot, "..", "..");
+
+execFileSync(
+  process.execPath,
+  ["--check", join(packageRoot, "tests", "api", "package-contract.mjs")],
+  { stdio: "pipe" },
+);
 
 const packageJson = readJson(join(packageRoot, "package.json"));
 const packageLock = readText(join(packageRoot, "package-lock.json"));

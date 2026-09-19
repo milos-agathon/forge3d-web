@@ -161,7 +161,6 @@ for (const expected of [
 }
 
 const readme = readText(join(root, "README.md"));
-const supportMatrix = readText(join(root, "docs/support-matrix.md"));
 for (const expected of [
   "Chrome stable on Intel macOS",
   "Chrome stable on AMD/Linux",
