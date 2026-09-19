@@ -252,6 +252,21 @@ Publish only the Safari configurations that pass the exact release commit.
 | Safari 26+, macOS Sequoia/Sonoma | P2, `NOT_PROVEN` until physically passed |
 | Safari, Intel Mac | P2, `NOT_PROVEN` until physically passed |
 
+## SAF-02 source implementation note — 2026-09-18
+
+The installed-public-package fixture now contains a nonce-bound, same-realm
+bad-MIME-to-correct-MIME retry, the full public terrain range/CORS matrix, and
+a strict SAF-02 proof validated before Safari lane success and again during
+matrix creation and merge. The proof records continuous browser/WebGPU error
+observation, actual canvas configuration, quantitative 77x53 terrain/camera
+PNG evidence, and exact run, job, commit, package, origin, base-path, and nonce
+bindings. Fixture and WebDriver operations have bounded timeouts.
+
+This is source implementation and automated-verification coverage only.
+Shipping Safari execution, laboratory readiness, physical acceptance, and a
+Safari support row remain `NOT_PROVEN`; Playwright WebKit remains preflight
+evidence and is not shipping-Safari proof.
+
 ## Primary References
 
 - <https://developer.apple.com/documentation/safari-release-notes/safari-26-release-notes>

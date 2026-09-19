@@ -150,6 +150,129 @@ test("public loader retries the same canonical route after wrong MIME", async ({
   expect((await metrics(request)).bridgeFetches - baseline.bridgeFetches).toBe(1);
 });
 
+test("SAF-02 distinct canonical WASM URLs initialize in separately observed Window realms", async ({
+  page,
+  webgpuAvailability,
+}) => {
+  skipRenderAssertionsWhenProbing(webgpuAvailability);
+  await page.goto("/examples/test-clear.html");
+  const frames = await Promise.all([
+    createFrame(page, "saf02-correct-mime"),
+    createFrame(page, "saf02-allowed-origin"),
+  ]);
+  const results = await Promise.all(frames.map((frame, index) => frame.evaluate(async ({ index }) => {
+    const contextPrototype = (globalThis as any).GPUCanvasContext.prototype;
+    const configure = contextPrototype.configure;
+    const observed: Array<{ format: string; alphaMode: string }> = [];
+    contextPrototype.configure = function(descriptor: GPUCanvasConfiguration) {
+      observed.push({
+        format: String(descriptor.format),
+        alphaMode: String(descriptor.alphaMode ?? "opaque"),
+      });
+      return configure.call(this, descriptor);
+    };
+    try {
+      const facade = await import("/tests/realm-fixture/a/index.js");
+      const canvas = document.createElement("canvas");
+      canvas.width = canvas.height = 32;
+      document.body.append(canvas);
+      const runtime = await facade.Forge3DRuntime.create(canvas, {
+        wasmUrl: `/tests/realm-fixture/runtime.wasm?id=saf02-isolated-${index}-${Date.now()}`,
+        alphaMode: index === 0 ? "opaque" : "premultiplied",
+        width: 32,
+        height: 32,
+        devicePixelRatio: 1,
+      });
+      runtime.dispose();
+      canvas.remove();
+      return {
+        state: (globalThis as any)[Symbol.for("@forge3d/web.wasm-bridge-coordinator")].record.state,
+        observed,
+      };
+    } finally {
+      contextPrototype.configure = configure;
+    }
+  }, { index })));
+  expect(results.map(({ state }) => state)).toEqual(["ready", "ready"]);
+  expect(results[0].observed.some(({ alphaMode }) => alphaMode === "opaque")).toBe(true);
+  expect(results[1].observed.some(({ alphaMode }) => alphaMode === "premultiplied")).toBe(true);
+});
+
+test("SAF-02 production observer iframe remains rendered for its full RAF drain", async ({ page }) => {
+  await page.goto("/examples/test-clear.html");
+  const result = await page.evaluate(async () => {
+    const { createObservedRealmFrame } = await import("/tests/browser/saf02-conformance.js");
+    const frame = createObservedRealmFrame();
+    frame.srcdoc = "<!doctype html><title>observer</title>";
+    const loaded = new Promise<void>((resolve) => frame.addEventListener("load", () => resolve(), { once: true }));
+    document.body.append(frame);
+    try {
+      await loaded;
+      const rect = frame.getBoundingClientRect();
+      const scope = frame.contentWindow!;
+      const drained = await Promise.race([
+        new Promise<boolean>((resolve) => scope.requestAnimationFrame(() =>
+          scope.requestAnimationFrame(() => resolve(true)))),
+        new Promise<boolean>((resolve) => setTimeout(() => resolve(false), 2_000)),
+      ]);
+      return { hidden: frame.hidden, width: rect.width, height: rect.height, drained };
+    } finally {
+      frame.remove();
+    }
+  });
+  expect(result).toEqual({ hidden: false, width: 2, height: 2, drained: true });
+});
+
+test("installed facade canonical WASM URL survives parent conformance work and generic viewer creation", async ({
+  page,
+  webgpuAvailability,
+}) => {
+  skipRenderAssertionsWhenProbing(webgpuAvailability);
+  await page.goto("/examples/test-clear.html");
+  const result = await page.evaluate(async () => {
+    const facade = await import("/tests/realm-fixture/a/index.js");
+    const canvas = document.createElement("canvas");
+    canvas.width = 32;
+    canvas.height = 32;
+    document.body.append(canvas);
+    const canonicalWasmUrl = new URL(
+      "/tests/realm-fixture/a/forge3d_web_bg.wasm",
+      location.href,
+    ).href;
+    const terrain = { width: 2, height: 2, heights: new Float32Array([0, 1, 2, 3]) };
+    const conformanceViewer = await facade.Forge3DViewer.create(canvas, {
+      resize: false,
+      runtime: { wasmUrl: canonicalWasmUrl },
+    });
+    conformanceViewer.setTerrain(terrain);
+    await new Promise(requestAnimationFrame);
+    await conformanceViewer.screenshot();
+    conformanceViewer.dispose();
+
+    const fixture = {
+      create: (options = {}) => facade.Forge3DViewer.create(canvas, options),
+    };
+    const viewer = await fixture.create({ resize: false });
+    viewer.setTerrain(terrain);
+    await new Promise(requestAnimationFrame);
+    const screenshot = await viewer.screenshot();
+    const diagnostics = viewer.getDiagnostics();
+    viewer.dispose();
+    canvas.remove();
+    const record = (globalThis as any)[
+      Symbol.for("@forge3d/web.wasm-bridge-coordinator")
+    ].record;
+    return {
+      selectedUrl: record.selectedUrl,
+      screenshotType: screenshot.type,
+      submittedFrames: diagnostics.submittedFrames,
+    };
+  });
+  expect(result.selectedUrl).toBe("http://127.0.0.1:57883/tests/realm-fixture/a/forge3d_web_bg.wasm");
+  expect(result.screenshotType).toBe("image/png");
+  expect(result.submittedFrames).toBeGreaterThan(0);
+});
+
 test("both real bundles preserve an incompatible coordinator exactly", async ({
   page,
   request,

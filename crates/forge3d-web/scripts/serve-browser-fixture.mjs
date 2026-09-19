@@ -15,6 +15,10 @@ const applicationRoutes = new Map([
     { file: "hardware-page-harness.js", contentType: "text/javascript; charset=utf-8" },
   ],
   [
+    "saf02-conformance.js",
+    { file: "saf02-conformance.js", contentType: "text/javascript; charset=utf-8" },
+  ],
+  [
     "viewer-benchmark-browser.js",
     { file: "viewer-benchmark-browser.js", contentType: "text/javascript; charset=utf-8" },
   ],
@@ -42,11 +46,19 @@ const applicationRoutes = new Map([
     "terrain.bin",
     { file: "terrain.bin", contentType: "application/octet-stream", ranges: true },
   ],
+  [
+    "terrain-range.bin",
+    { file: "terrain-range.bin", contentType: "application/octet-stream", ranges: true },
+  ],
 ]);
 const assetNameRoutes = new Map([
   [
     "terrain.bin",
     { file: "terrain.bin", contentType: "application/octet-stream", ranges: true },
+  ],
+  [
+    "terrain-range.bin",
+    { file: "terrain-range.bin", contentType: "application/octet-stream", ranges: true },
   ],
   [
     "forge3d_web_bg.wasm",
@@ -61,6 +73,7 @@ export function resolveFixtureResponse({
   assetHost,
   basePath,
   request,
+  state = createFixtureState(),
 }) {
   assertConfiguration({ role, applicationHost, assetHost, basePath });
   const expectedHost = role === "application" ? applicationHost : assetHost;
@@ -88,6 +101,7 @@ export function resolveFixtureResponse({
       relativePath,
       request,
       applicationHost,
+      state,
     });
   }
   return assetResponse({
@@ -98,7 +112,11 @@ export function resolveFixtureResponse({
   });
 }
 
-function applicationResponse({ fixtureRoot, relativePath, request, applicationHost }) {
+export function createFixtureState() {
+  return { wasmRetryGets: new Map() };
+}
+
+function applicationResponse({ fixtureRoot, relativePath, request, applicationHost, state }) {
   if (
     request.origin &&
     request.origin !== `https://${applicationHost}`
@@ -107,6 +125,24 @@ function applicationResponse({ fixtureRoot, relativePath, request, applicationHo
   }
   if (request.method === "OPTIONS") {
     return response(405, { ...commonHeaders(), Allow: "GET, HEAD" }, Buffer.alloc(0));
+  }
+  if (/^saf02\/retry\/[0-9a-f]{32}\/forge3d_web_bg\.wasm$/u.test(relativePath)) {
+    const key = relativePath;
+    const attempts = state.wasmRetryGets.get(key) ?? 0;
+    if (request.method === "GET") state.wasmRetryGets.set(key, attempts + 1);
+    return fileResponse({
+      fixtureRoot,
+      route: {
+        file: "forge3d_web_bg.wasm",
+        contentType: attempts === 0 ? "application/octet-stream" : "application/wasm",
+      },
+      request,
+      headers: {
+        ...commonHeaders(),
+        "Content-Type": attempts === 0 ? "application/octet-stream" : "application/wasm",
+        "Cross-Origin-Resource-Policy": "same-origin",
+      },
+    });
   }
   const route = resolveApplicationRoute(relativePath);
   if (!route) {
@@ -126,7 +162,7 @@ function applicationResponse({ fixtureRoot, relativePath, request, applicationHo
 
 function assetResponse({ fixtureRoot, relativePath, request, applicationHost }) {
   const match = relativePath.match(
-    /^cors\/(allow|deny|wrong-origin)\/(terrain\.bin|forge3d_web_bg\.wasm)$/u,
+    /^cors\/(allow|deny|wrong-origin)\/(?:(range-exact|range-ignored|range-416)\/)?(terrain(?:-range)?\.bin|forge3d_web_bg\.wasm)$/u,
   );
   if (!match) {
     return response(404, commonHeaders(), Buffer.from("not found\n"));
@@ -135,7 +171,8 @@ function assetResponse({ fixtureRoot, relativePath, request, applicationHost }) 
     return response(403, commonHeaders(), Buffer.from("origin denied\n"));
   }
   const policy = match[1];
-  const route = assetNameRoutes.get(match[2]);
+  const control = match[2] ?? null;
+  const route = assetNameRoutes.get(match[3]);
   const headers = {
     ...commonHeaders(),
     "Content-Type": route.contentType,
@@ -149,6 +186,22 @@ function assetResponse({ fixtureRoot, relativePath, request, applicationHost }) 
       headers["Access-Control-Max-Age"] = "0";
     }
     return response(204, headers, Buffer.alloc(0));
+  }
+  if (control === "range-416" && request.range) {
+    const body = readFileSync(resolve(fixtureRoot, route.file));
+    return response(416, {
+      ...headers,
+      "Accept-Ranges": "bytes",
+      "Content-Range": `bytes */${body.length}`,
+    }, Buffer.alloc(0));
+  }
+  if (control === "range-ignored" && request.range) {
+    return fileResponse({
+      fixtureRoot,
+      route: { ...route, ranges: false },
+      request: { ...request, range: undefined },
+      headers,
+    });
   }
   return fileResponse({ fixtureRoot, route, request, headers });
 }
@@ -304,11 +357,13 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     assetHost: args.get("--asset-host"),
     basePath: args.get("--base-path"),
   };
+  const state = createFixtureState();
   assertConfiguration(configuration);
   const server = createServer((request, result) => {
     try {
       const resolved = resolveFixtureResponse({
         ...configuration,
+        state,
         request: {
           method: request.method,
           url: request.url,

@@ -104,6 +104,9 @@ test("unsafe WebGPU, backend, blocklist, certificate, and software flags fail", 
     "--enable-features=Foo,vUlKaN,Bar",
     "--enable-features=Vulkan<Trial",
     "--enable-features=Foo,Vulkan:trial/param,Bar",
+    "--enable-features=Foo,wEbGpUExperiment,Bar",
+    "-enable-features=WebGPUService",
+    "/enable-features=CanvasWebGPU",
     "-enable-unsafe-webgpu",
     "-enable-features=Vulkan",
     "/use-angle=swiftshader",
@@ -121,7 +124,7 @@ test("unsafe WebGPU, backend, blocklist, certificate, and software flags fail", 
   );
   assert.doesNotThrow(() =>
     assertSafeLaunchArguments(
-      ["-enable-automation", "/user-data-dir=C:\\forge3d", "--enable-features=CanvasOopRasterization"],
+      ["-enable-automation", "/user-data-dir=C:\\forge3d", "--enable-features=CanvasOopRasterization,WebGLDraftExtensions"],
       policy,
     ),
   );
