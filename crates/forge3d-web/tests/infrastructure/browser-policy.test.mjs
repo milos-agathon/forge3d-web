@@ -29,6 +29,7 @@ const policy = JSON.parse(readFileSync(join(root, "browser-policy.json"), "utf8"
 const tools = {
   ...policy.tools,
   safaridriverVersion: "Included with Safari 26.0",
+  safariTechnologyPreviewDriverVersion: "Included with Safari Technology Preview 26.1",
 };
 const browser = {
   id: "chrome-stable",
@@ -60,7 +61,9 @@ test("capture records an unlocked headed shipping browser with exact tool versio
   const input = {
     assetId: "FW-MAC-M2-01",
     platform: "darwin",
+    osVersion: "26.0",
     osBuild: "macOS 26.0 (25A123)",
+    architecture: "arm64",
     displayServer: "WindowServer",
     session: {
       interactive: true,
@@ -138,7 +141,9 @@ test("capture preserves the exact observed launch argument strings", () => {
   const record = captureHostInventory({
     assetId: "FW-MAC-M2-01",
     platform: "darwin",
+    osVersion: "26.0",
     osBuild: "macOS 26.0 (25A123)",
+    architecture: "arm64",
     displayServer: "WindowServer",
     session: {
       interactive: true,
@@ -159,7 +164,9 @@ test("required host capture fails for locked, remote, non-Wayland, old, or drift
   const base = {
     assetId: "FW-LNX-I12-01",
     platform: "linux",
+    osVersion: "6.8.0",
     osBuild: "Ubuntu 24.04.3 LTS",
+    architecture: "x86_64",
     displayServer: "GNOME Wayland",
     session: {
       interactive: true,
@@ -236,7 +243,7 @@ test("update window resolves exact versions, expires at 24 hours, and always clo
 test("macOS and Windows session state is observed instead of synthesized", () => {
   const mac = observeLiveSession("darwin", {
     environment: {},
-    execute: (command) => {
+    execute: (command, args) => {
       if (command === "/usr/bin/stat") return "forge3d\n";
       return '    "CGSSessionScreenIsLocked" = Yes\n';
     },
@@ -345,7 +352,7 @@ test("host runtime helper supplies versions while the trusted script observes OS
     platform: "darwin",
     environment: {},
     now: new Date("2026-07-29T08:00:00.000Z"),
-    execute: (command) => {
+    execute: (command, args) => {
       calls.push(command);
       if (command === inventoryHelper) {
         return JSON.stringify({
@@ -359,7 +366,8 @@ test("host runtime helper supplies versions while the trusted script observes OS
           launchArguments: [],
         });
       }
-      if (command === "/usr/bin/sw_vers") return "25A123\n";
+      if (command === "/usr/bin/sw_vers") return args[0] === "-productVersion" ? "26.0\n" : "25A123\n";
+      if (command === "/usr/bin/uname") return "arm64\n";
       if (command === "/usr/bin/stat") return "forge3d\n";
       if (command === "/usr/sbin/ioreg") {
         return '    "CGSSessionScreenIsLocked" = No\n';
@@ -368,7 +376,9 @@ test("host runtime helper supplies versions while the trusted script observes OS
     },
   });
   assert.equal(result.inventory.session.locked, false);
+  assert.equal(result.inventory.osVersion, "26.0");
   assert.equal(result.inventory.osBuild, "macOS build 25A123");
+  assert.equal(result.inventory.architecture, "arm64");
   assert.deepEqual(result.inventory.effectiveLaunchArguments, []);
   assert.deepEqual(result.resolvedChannels, [
     { id: browser.id, version: browser.version },
@@ -376,6 +386,8 @@ test("host runtime helper supplies versions while the trusted script observes OS
   assert.deepEqual(calls, [
     inventoryHelper,
     "/usr/bin/sw_vers",
+    "/usr/bin/sw_vers",
+    "/usr/bin/uname",
     "/usr/bin/stat",
     "/usr/sbin/ioreg",
   ]);

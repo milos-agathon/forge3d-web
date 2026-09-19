@@ -10,6 +10,7 @@ import {
 import { exactHostInventory } from "./host-inventory-fixture.mjs";
 import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
 import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
+import { validSaf03Proof, validStpResult } from "../browser/saf03-proof-fixture.mjs";
 
 const matrix = JSON.parse(
   readFileSync(new URL("./hardware-matrix.json", import.meta.url), "utf8"),
@@ -115,6 +116,67 @@ test("automated and manual sources derive closed matrix keys without artifact cl
     const invalidEdge = structuredClone(edgeInput);
     mutate(invalidEdge);
     assert.throws(() => createAutomatedMatrixRecord(invalidEdge));
+  }
+  const safariInput = structuredClone(automatedInput);
+  Object.assign(safariInput.promotion, { lane: "safari-macos-m2", hostId: "FW-MAC-M2-01", assetId: "FW-MAC-M2-01" });
+  Object.assign(safariInput.evidence, {
+    lane: "safari-macos-m2",
+    browser: { name: "safari", channel: "stable", version: "26.0" },
+    driver: { name: "safaridriver", version: "Included with Safari 26.0" },
+    system: { platform: "darwin", osVersion: "26.0", osBuild: "macOS build 25A123", architecture: "arm64", displayServer: "WindowServer" },
+    route: { applicationUrl: "https://safari.example.invalid/run/" },
+    chr03Proof: null,
+    saf03Proof: validSaf03Proof({ commit: "a".repeat(40), packageSha256: "d".repeat(64) }),
+  });
+  safariInput.attestation.binding.assetId = "FW-MAC-M2-01";
+  safariInput.attestation.host.hostId = "FW-MAC-M2-01";
+  const safariInventory = exactHostInventory(matrix, "FW-MAC-M2-01");
+  safariInventory.osVersion = safariInput.evidence.system.osVersion;
+  safariInventory.osBuild = safariInput.evidence.system.osBuild;
+  safariInventory.architecture = safariInput.evidence.system.architecture;
+  safariInventory.browsers.push(
+    { id: "safari-stable", channel: "stable", classification: "required", automation: "safaridriver", version: "26.0", executable: "/Applications/Safari.app/Contents/MacOS/Safari" },
+    { id: "safari-technology-preview", channel: "technology-preview", classification: "probe", automation: "safaridriver", version: "26.1", executable: "/Applications/Safari Technology Preview.app/Contents/MacOS/Safari Technology Preview" },
+  );
+  Object.assign(safariInventory.tools, { safaridriverPath: "/usr/bin/safaridriver", safaridriverVersion: "Included with Safari 26.0", safariTechnologyPreviewDriverPath: "/Applications/Safari Technology Preview.app/Contents/MacOS/safaridriver", safariTechnologyPreviewDriverVersion: "26.1" });
+  safariInput.hostInventory = safariInventory;
+  safariInput.matrix = matrix;
+  safariInput.evidence.safariTechnologyPreview = validStpResult(safariInventory, {
+    commit: "a".repeat(40), packageSha256: "d".repeat(64),
+  });
+  const safari = createAutomatedMatrixRecord(safariInput);
+  assert.equal(safari.saf03Proof.kind, "forge3d-saf03-safari-acceptance-v1");
+  assert.equal(safari.safariTechnologyPreview.replacesStable, false);
+  const safariFinalization = {
+    artifactId: 31,
+    attestation: { verified: true, denySelfHostedRunners: true },
+    selectedRun: { id: 10, attempt: 2, path: ".github/workflows/browser-hardware.yml" },
+  };
+  assert.equal(finalizeMatrixRecord({ source: safari, ...safariFinalization }).workflow.artifactId, 31);
+  for (const mutate of [
+    (source) => { source.saf03Proof.browser.version = "26.1"; },
+    (source) => { source.saf03Proof.driver.version = "wrong"; },
+    (source) => { source.saf03Proof.system.osVersion = "25.6"; },
+    (source) => { source.saf03Proof.system.osBuild = "macOS build 24Z999"; },
+    (source) => { source.saf03Proof.system.architecture = "x64"; },
+    (source) => { source.safariTechnologyPreview.probe.route = "https://unrelated.example.invalid/run/"; },
+  ]) {
+    const tampered = structuredClone(safari); mutate(tampered);
+    assert.throws(() => finalizeMatrixRecord({ source: tampered, ...safariFinalization }));
+  }
+  for (const mutate of [
+    (input) => { input.evidence.saf03Proof = null; },
+    (input) => { input.evidence.saf03Proof.bfcacheCycles[0].events[1].persisted = false; },
+    (input) => { input.evidence.safariTechnologyPreview.cleanup.ok = false; },
+    (input) => { input.evidence.browser.version = "26.1"; },
+    (input) => { input.evidence.driver.version = "wrong"; },
+    (input) => { input.evidence.system.osVersion = "25.6"; },
+    (input) => { input.evidence.system.osBuild = "macOS build 24Z999"; },
+    (input) => { input.evidence.system.architecture = "x64"; },
+    (input) => { input.evidence.safariTechnologyPreview.probe.route = "https://unrelated.example.invalid/run/"; },
+  ]) {
+    const invalidSafari = structuredClone(safariInput); mutate(invalidSafari);
+    assert.throws(() => createAutomatedMatrixRecord(invalidSafari));
   }
   const manual = createManualMatrixRecord({
     evidence: {

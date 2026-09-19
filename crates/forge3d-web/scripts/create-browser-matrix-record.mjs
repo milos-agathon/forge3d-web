@@ -8,6 +8,7 @@ import { validateChr03HardwareProofContract as validateChr03HardwareProof } from
 import { CHR03_STABLE_LANES } from "./chr03-lanes.mjs";
 import { validateChr04EdgeEvidence } from "./chr04-hardware-proof-validator.mjs";
 import { CHR04_LANES } from "./chr04-lanes.mjs";
+import { validateSaf03EvidenceEnvelope } from "./saf03-proof-validator.mjs";
 
 const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
 const CHR04_REQUIRED_LANES = new Set(Object.keys(CHR04_LANES));
@@ -64,6 +65,23 @@ export function createAutomatedMatrixRecord({
     ) {
       throw new Error("automated Safari provenance does not match SAF-03");
     }
+    validateSaf03EvidenceEnvelope({
+      proof: evidence.saf03Proof,
+      technologyPreview: evidence.safariTechnologyPreview,
+      inventory: hostInventory,
+      browser: evidence.browser,
+      driver: evidence.driver,
+      system: evidence.system,
+      adapter: evidence.adapter,
+      route: evidence.route,
+      expectedBinding: {
+        lane: promotion.lane,
+        assetId: promotion.assetId,
+        platform: "darwin",
+        commit: promotion.trustedSha,
+        packageSha256: evidence.packageSha256,
+      },
+    });
   }
   if (
     promotion.lane === "infrastructure-canary" ||
@@ -119,6 +137,7 @@ export function createAutomatedMatrixRecord({
     hostInventory: safariTrackpadRecord
       ? structuredClone(hostInventory)
       : null,
+    route: safariTrackpadRecord ? structuredClone(evidence.route) : null,
     result: "PASS",
     infrastructureError: null,
     workflow: {
@@ -132,6 +151,9 @@ export function createAutomatedMatrixRecord({
     adapterAttestation: attestation,
     chr03Proof: evidence.chr03Proof ? structuredClone(evidence.chr03Proof) : null,
     chr04Proof: evidence.chr04Proof ? structuredClone(evidence.chr04Proof) : null,
+    saf03Proof: evidence.saf03Proof ? structuredClone(evidence.saf03Proof) : null,
+    safariTechnologyPreview: evidence.safariTechnologyPreview
+      ? structuredClone(evidence.safariTechnologyPreview) : null,
   };
 }
 
@@ -286,6 +308,25 @@ export function finalizeMatrixRecord({
     attestation.denySelfHostedRunners !== true
   ) {
     throw new Error("matrix record requires exact artifact and attestation proof");
+  }
+  if (source.lane === "safari-macos-m2") {
+    validateSaf03EvidenceEnvelope({
+      proof: source.saf03Proof,
+      technologyPreview: source.safariTechnologyPreview,
+      inventory: source.hostInventory,
+      browser: source.browser,
+      driver: source.driver,
+      system: source.system,
+      adapter: source.adapter,
+      route: source.route,
+      expectedBinding: {
+        lane: source.lane,
+        assetId: source.assetId,
+        platform: "darwin",
+        commit: source.trustedSha,
+        packageSha256: source.packageSha256,
+      },
+    });
   }
   if (
     !Number.isInteger(selectedRun?.id) ||

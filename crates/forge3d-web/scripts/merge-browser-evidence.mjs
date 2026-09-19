@@ -7,6 +7,7 @@ import { validateChr03HardwareProofContract as validateChr03HardwareProof } from
 import { CHR03_STABLE_LANES } from "./chr03-lanes.mjs";
 import { validateChr04EdgeEvidence } from "./chr04-hardware-proof-validator.mjs";
 import { CHR04_LANES } from "./chr04-lanes.mjs";
+import { validateSaf03EvidenceEnvelope } from "./saf03-proof-validator.mjs";
 
 const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
 const CHR04_REQUIRED_LANES = new Set(Object.keys(CHR04_LANES));
@@ -268,6 +269,25 @@ function validateRecord(record, row, expected) {
       system: record.system,
       effectiveLaunchArguments: record.effectiveLaunchArguments,
       adapter: record.adapter,
+    });
+  }
+  if (row.kind === "automated" && row.lane === "safari-macos-m2") {
+    validateSaf03EvidenceEnvelope({
+      proof: record.saf03Proof,
+      technologyPreview: record.safariTechnologyPreview,
+      inventory: record.hostInventory,
+      browser: record.browser,
+      driver: record.driver,
+      system: record.system,
+      adapter: record.adapter,
+      route: record.route,
+      expectedBinding: {
+        lane: row.lane,
+        assetId: row.assetId,
+        platform: "darwin",
+        commit: expected.targetSha,
+        packageSha256: expected.packageSha256,
+      },
     });
   }
 }

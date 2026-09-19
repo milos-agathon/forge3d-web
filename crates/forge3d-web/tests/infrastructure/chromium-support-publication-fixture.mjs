@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 
 import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
 import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
+import { validSaf03Proof, validStpResult } from "../browser/saf03-proof-fixture.mjs";
 import { CHR04_LANES } from "../../scripts/chr04-lanes.mjs";
 import { canonicalJson, sha256Hex } from "../../scripts/canonical-json.mjs";
 import {
@@ -28,6 +29,17 @@ export function validPublicationInput({ skipMerge = false } = {}) {
     labInfrastructureDigest: "c".repeat(64),
   };
   const macInventory = exactHostInventory(matrix, "FW-MAC-M2-01");
+  Object.assign(macInventory, { osVersion: "26.0", osBuild: "macOS build 25A123", architecture: "arm64" });
+  macInventory.browsers.push(
+    { id: "safari-stable", channel: "stable", classification: "required", automation: "safaridriver", version: "26.0", executable: "/Applications/Safari.app/Contents/MacOS/Safari" },
+    { id: "safari-technology-preview", channel: "technology-preview", classification: "probe", automation: "safaridriver", version: "26.1", executable: "/Applications/Safari Technology Preview.app/Contents/MacOS/Safari Technology Preview" },
+  );
+  Object.assign(macInventory.tools, {
+    safaridriverPath: "/usr/bin/safaridriver",
+    safaridriverVersion: "Included with Safari 26.0",
+    safariTechnologyPreviewDriverPath: "/Applications/Safari Technology Preview.app/Contents/MacOS/safaridriver",
+    safariTechnologyPreviewDriverVersion: "26.1",
+  });
   const rows = requiredEvidenceRows(matrix);
   const records = rows.map((row, index) => {
     const safariTrackpad =
@@ -45,6 +57,7 @@ export function validPublicationInput({ skipMerge = false } = {}) {
       ? { os: "darwin", build: safariTrackpad ? macInventory.osBuild : "25A456" }
       : {
           platform,
+          osVersion: safariTrackpad ? macInventory.osVersion : "fixture-version",
           osBuild: safariTrackpad
             ? macInventory.osBuild
             : platform === "win32"
@@ -52,6 +65,7 @@ export function validPublicationInput({ skipMerge = false } = {}) {
             : platform === "darwin"
               ? "macOS 26.0 (25A456)"
               : "Ubuntu 24.04.1 LTS",
+          architecture: safariTrackpad ? macInventory.architecture : platform === "darwin" ? "arm64" : "x64",
           displayServer: platform === "win32"
             ? "Desktop Window Manager"
             : platform === "darwin"
@@ -59,14 +73,14 @@ export function validPublicationInput({ skipMerge = false } = {}) {
               : "GNOME Wayland",
         };
     const browser = safariTrackpad
-      ? { name: "Safari", channel: "stable", version: "26.0" }
+      ? { name: row.kind === "automated" ? "safari" : "Safari", channel: "stable", version: "26.0" }
       : edge
         ? { name: "msedge", channel: "stable", version: "150.0.1.2" }
         : chrome
           ? { name: "chrome", channel: "stable", version: "150.0.7339.12" }
           : { name: "firefox", channel: "release", version: "150.0.1" };
     const driver = safariTrackpad
-      ? { name: "safaridriver", version: "26.0" }
+      ? { name: "safaridriver", version: macInventory.tools.safaridriverVersion }
       : edge
         ? { name: "playwright-edge", version: "1.56.1" }
         : chrome
@@ -161,6 +175,13 @@ export function validPublicationInput({ skipMerge = false } = {}) {
         : {}),
       ...(edge
         ? { chr04Proof: validChr04HardwareProof({ lane: row.lane, assetId: row.assetId, platform, commit: targetSha, packageSha256 }) }
+        : {}),
+      ...(row.lane === "safari-macos-m2"
+        ? {
+            route: { applicationUrl: "https://safari.example.invalid/run/" },
+            saf03Proof: validSaf03Proof({ commit: targetSha, packageSha256 }),
+            safariTechnologyPreview: validStpResult(macInventory),
+          }
         : {}),
     };
   });

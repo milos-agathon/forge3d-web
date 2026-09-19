@@ -82,6 +82,9 @@ try {
         name: "forge3d-browser-tarball-consumer",
         private: true,
         type: "module",
+        devDependencies: {
+          "selenium-webdriver": "4.35.0",
+        },
       },
       null,
       2,
@@ -105,6 +108,10 @@ try {
   );
   const consumerFixture = join(consumerDirectory, "test-interactive-viewer.html");
   copyFileSync(sourceFixture, consumerFixture);
+  copyFileSync(
+    join(packageRoot, "examples", "test-lifecycle-away.html"),
+    join(consumerDirectory, "test-lifecycle-away.html"),
+  );
   let fixture = readFileSync(consumerFixture, "utf8");
   fixture = fixture.replace(
     '<script type="module">',
@@ -227,6 +234,7 @@ try {
       "package.json",
       "package-evidence.json",
       "test-interactive-viewer.html",
+      "test-lifecycle-away.html",
     ]) {
       copyFileSync(join(consumerDirectory, file), join(retainedFixture, file));
     }
@@ -253,6 +261,11 @@ try {
     copyFileSync(
       join(packageRoot, "tests", "browser", "hardware-page-harness.js"),
       join(retainedFixture, "tests", "browser", "hardware-page-harness.js"),
+    );
+    mkdirSync(join(retainedFixture, "tests", "webdriver"), { recursive: true });
+    copyFileSync(
+      join(packageRoot, "tests", "webdriver", "safari-viewer.mjs"),
+      join(retainedFixture, "tests", "webdriver", "safari-viewer.mjs"),
     );
     copyFileSync(
       join(packageRoot, "tests", "browser", "viewer-benchmark-browser.js"),

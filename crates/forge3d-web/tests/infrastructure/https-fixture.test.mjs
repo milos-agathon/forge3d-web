@@ -394,11 +394,16 @@ test("materialized import map remains inside the nonce-bound base path", () => {
   mkdirSync(join(root, "tests", "browser", "benchmark"), {
     recursive: true,
   });
+  mkdirSync(join(root, "tests", "webdriver"), { recursive: true });
+  mkdirSync(join(root, "node_modules", "selenium-webdriver"), { recursive: true });
   writeFileSync(join(root, "package.json"), '{"private":true}');
   writeFileSync(
     join(root, "test-interactive-viewer.html"),
     '<script type="importmap">{"imports":{"@forge3d/web":"/node_modules/@forge3d/web/dist/index.js"}}</script>',
   );
+  writeFileSync(join(root, "test-lifecycle-away.html"), "<!doctype html>");
+  writeFileSync(join(root, "tests", "webdriver", "safari-viewer.mjs"), "export {};");
+  writeFileSync(join(root, "node_modules", "selenium-webdriver", "package.json"), JSON.stringify({ name: "selenium-webdriver", version: "4.35.0" }));
   for (const file of ["index.js", "forge3d_web.js"]) {
     writeFileSync(join(packageRoot, "dist", file), "export {};");
   }
