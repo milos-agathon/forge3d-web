@@ -70,7 +70,8 @@ export function realmFixturePlugin(root) {
         }
         if (
           url.pathname === "/tests/realm-fixture/runtime.wasm" ||
-          url.pathname === "/tests/realm-fixture/runtime-other.wasm"
+          url.pathname === "/tests/realm-fixture/runtime-other.wasm" ||
+          /^\/tests\/realm-fixture\/(?:a|b)\/forge3d_web_bg\.wasm$/u.test(url.pathname)
         ) {
           assetFetches += 1;
           const id = url.searchParams.get("id") ?? "default";

@@ -19,6 +19,7 @@ import {
   createTarGz,
 } from "../../scripts/assemble-browser-package-artifact.mjs";
 import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
+import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
 
 const temporaryRoots = [];
 afterEach(() => {
@@ -104,6 +105,7 @@ test("assembly binds one tarball, clean exact HEAD, evidence, schemas, and fixtu
     "adapter-attestation.schema.json",
     "chr03-hardware-proof.schema.json",
     "chr04-hardware-proof.schema.json",
+    "saf02-conformance.schema.json",
     "host-inventory.schema.json",
     "mobile-device-route-readiness.schema.json",
     "commit-metadata.json",
@@ -121,6 +123,7 @@ test("assembly binds one tarball, clean exact HEAD, evidence, schemas, and fixtu
     "chr03-lanes.mjs",
     "chr04-hardware-proof-validator.mjs",
     "chr04-lanes.mjs",
+    "saf02-conformance-validator.mjs",
     "json-schema-validator.mjs",
     "browser-process-registry.mjs",
     "capture-trackpad-inventory.mjs",
@@ -145,6 +148,17 @@ test("assembly binds one tarball, clean exact HEAD, evidence, schemas, and fixtu
   assert.equal(proofModule.validateChr03HardwareProofContract(proof), proof);
   proof.systemInfo.available = "false";
   assert.throws(() => proofModule.validateChr03HardwareProofContract(proof), /expected type boolean/u);
+  const safariModule = await import(pathToFileURL(join(output, "saf02-conformance-validator.mjs")).href);
+  const safariProof = validSaf02Conformance();
+  const safariExpected = {
+    ...safariProof.binding,
+    applicationUrl: `${safariProof.route.applicationOrigin}${safariProof.route.basePath}`,
+    assetUrl: `${safariProof.route.assetOrigin}${safariProof.route.basePath}`,
+    effectiveLaunchArguments: [],
+  };
+  assert.equal(safariModule.validateSaf02Conformance(safariProof, safariExpected), safariProof);
+  safariProof.render.changedPixels = 100;
+  assert.throws(() => safariModule.validateSaf02Conformance(safariProof, safariExpected));
 });
 
 test("assembly dependency guard rejects file, link, and workspace protocols", () => {

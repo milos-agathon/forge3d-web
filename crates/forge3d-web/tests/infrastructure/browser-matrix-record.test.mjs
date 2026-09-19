@@ -10,6 +10,7 @@ import {
 import { exactHostInventory } from "./host-inventory-fixture.mjs";
 import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
 import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
+import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
 
 const matrix = JSON.parse(
   readFileSync(new URL("./hardware-matrix.json", import.meta.url), "utf8"),
@@ -116,6 +117,33 @@ test("automated and manual sources derive closed matrix keys without artifact cl
     mutate(invalidEdge);
     assert.throws(() => createAutomatedMatrixRecord(invalidEdge));
   }
+  const safariInput = structuredClone(automatedInput);
+  Object.assign(safariInput.promotion, { lane: "safari-macos-m2", hostId: "FW-MAC-M2-01", assetId: "FW-MAC-M2-01" });
+  const safariProof = validSaf02Conformance({ runId: 10, jobId: 22, commit: "a".repeat(40), packageSha256: "d".repeat(64) });
+  Object.assign(safariInput.evidence, {
+    lane: "safari-macos-m2", runId: 10, jobId: 22,
+    browser: { name: "safari", channel: "stable", version: "26.0" },
+    driver: { name: "safaridriver", version: "26.0" },
+    system: { platform: "darwin", osBuild: exactHostInventory(matrix, "FW-MAC-M2-01").osBuild, displayServer: "WindowServer" },
+    route: { applicationUrl: `${safariProof.route.applicationOrigin}${safariProof.route.basePath}`, assetUrl: `${safariProof.route.assetOrigin}${safariProof.route.basePath}` },
+    effectiveLaunchArguments: [],
+    chr03Proof: null, saf02Proof: safariProof,
+  });
+  safariInput.attestation.binding.assetId = "FW-MAC-M2-01";
+  safariInput.attestation.host.hostId = "FW-MAC-M2-01";
+  const safari = createAutomatedMatrixRecord({ ...safariInput, hostInventory: exactHostInventory(matrix, "FW-MAC-M2-01"), matrix });
+  assert.equal(safari.saf02Proof.result, "PASS");
+  assert.deepEqual(safari.saf02Route, safariInput.evidence.route);
+  const replayedSafari = structuredClone(safariInput);
+  replayedSafari.evidence.saf02Proof.binding.jobId = 23;
+  assert.throws(() => createAutomatedMatrixRecord({ ...replayedSafari, hostInventory: exactHostInventory(matrix, "FW-MAC-M2-01"), matrix }));
+  const unsafeSafari = structuredClone(safariInput);
+  unsafeSafari.evidence.effectiveLaunchArguments = ["--ignore-certificate-errors=value"];
+  assert.throws(() => createAutomatedMatrixRecord({ ...unsafeSafari, hostInventory: exactHostInventory(matrix, "FW-MAC-M2-01"), matrix }), /launch arguments/u);
+  const compoundUnsafeSafari = structuredClone(safariInput);
+  compoundUnsafeSafari.evidence.effectiveLaunchArguments = ["--enable-features=CanvasOopRasterization,WebGPU"];
+  compoundUnsafeSafari.evidence.saf02Proof.environment.effectiveLaunchArguments = [...compoundUnsafeSafari.evidence.effectiveLaunchArguments];
+  assert.throws(() => createAutomatedMatrixRecord({ ...compoundUnsafeSafari, hostInventory: exactHostInventory(matrix, "FW-MAC-M2-01"), matrix }), /prohibited browser launch arguments/u);
   const manual = createManualMatrixRecord({
     evidence: {
       checklistId: "safari-trackpad",

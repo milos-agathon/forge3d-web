@@ -280,7 +280,7 @@ export function assertSafeLaunchArguments(argumentsList, policy) {
   const prohibited = new Set(policy.prohibitedLaunchArguments);
   const matches = argumentsList.filter((argument) => {
     const option = String(argument).split("=", 1)[0];
-    return prohibited.has(option);
+    return prohibited.has(option) || /^--enable-features=.*webgpu/iu.test(String(argument));
   });
   if (matches.length > 0) {
     throw new Error(`prohibited browser launch arguments: ${matches.join(", ")}`);
