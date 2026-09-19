@@ -24,6 +24,9 @@ writeFileSync(join(fixtureRoot, "index.html"), "<!doctype html>");
 writeFileSync(join(fixtureRoot, "app.js"), "export {};");
 writeFileSync(join(fixtureRoot, "viewer-benchmark-browser.js"), "export {};");
 writeFileSync(join(fixtureRoot, "chr03-lanes.js"), "export {};");
+writeFileSync(join(fixtureRoot, "lifecycle-viewer.html"), "<!doctype html>");
+writeFileSync(join(fixtureRoot, "lifecycle-away.html"), "<!doctype html>");
+writeFileSync(join(fixtureRoot, "viewer-bfcache-lifecycle.js"), "export {};");
 writeFileSync(join(fixtureRoot, "package.sha256"), `${"c".repeat(64)}  package.tgz\n`);
 mkdirSync(
   join(fixtureRoot, "node_modules", "@forge3d", "web", "dist"),
@@ -265,6 +268,28 @@ test("asset allow route returns exact CORS and range headers", () => {
   assert.equal(preflight.headers["Access-Control-Allow-Headers"], "Range");
 });
 
+test("only exact nonce-scoped lifecycle routes are cache compatible", () => {
+  for (const path of [
+    "lifecycle-viewer.html",
+    "lifecycle-away.html",
+    "viewer-bfcache-lifecycle.js",
+  ]) {
+    const result = request("application", path);
+    assert.equal(result.status, 200);
+    assert.equal(result.headers["Cache-Control"], "private, max-age=0");
+    assert.equal(result.headers["X-Content-Type-Options"], "nosniff");
+  }
+  for (const path of ["index.html", "app.js", "package.sha256"]) {
+    assert.equal(request("application", path).headers["Cache-Control"], "no-store");
+  }
+  assert.equal(
+    request("application", "lifecycle-viewer.html", {
+      url: `/runs/10/20/${"b".repeat(32)}/lifecycle-viewer.html`,
+    }).status,
+    404,
+  );
+});
+
 test("deny and wrong-origin terrain and WASM policies remain browser-enforced", () => {
   for (const asset of ["terrain.bin", "forge3d_web_bg.wasm"]) {
     const deny = request("asset", `cors/deny/${asset}`);
@@ -445,7 +470,7 @@ test("materialized import map remains inside the nonce-bound base path", () => {
     join(root, "tests", "browser", "benchmark", "benchmark-terrain-v1.f32le"),
     Buffer.from([0, 1, 2, 3]),
   );
-  for (const file of ["adapter-attestation.js", "hardware-page-harness.js", "saf02-conformance.js", "viewer-benchmark-browser.js", "chr03-lanes.js", "chr04-lanes.js"]) {
+  for (const file of ["adapter-attestation.js", "hardware-page-harness.js", "saf02-conformance.js", "viewer-benchmark-browser.js", "chr03-lanes.js", "chr04-lanes.js", "viewer-bfcache-lifecycle.js"]) {
     writeFileSync(join(root, "tests", "browser", file), "export {};");
   }
   try {
@@ -459,6 +484,10 @@ test("materialized import map remains inside the nonce-bound base path", () => {
       /"\.\/node_modules\/@forge3d\/web\/dist\/index\.js"/u,
     );
     assert.equal(html.includes('"/node_modules/'), false);
+    const lifecycle = readFileSync(join(root, "lifecycle-viewer.html"), "utf8");
+    assert.match(lifecycle, /installViewerBfcacheLifecycle/u);
+    assert.match(lifecycle, /\.\/viewer-bfcache-lifecycle\.js/u);
+    assert.match(readFileSync(join(root, "lifecycle-away.html"), "utf8"), /lifecycle away/u);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }

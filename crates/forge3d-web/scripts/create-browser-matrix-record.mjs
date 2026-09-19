@@ -9,6 +9,8 @@ import { CHR03_STABLE_LANES } from "./chr03-lanes.mjs";
 import { validateChr04EdgeEvidence } from "./chr04-hardware-proof-validator.mjs";
 import { CHR04_LANES } from "./chr04-lanes.mjs";
 import { validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
+import { validateFfx04LifecycleProof } from "./ffx04-lifecycle-proof-validator.mjs";
+import { FFX04_LANES, isFfx04Lane } from "./ffx04-lanes.mjs";
 
 const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
 const CHR04_REQUIRED_LANES = new Set(Object.keys(CHR04_LANES));
@@ -51,6 +53,25 @@ export function createAutomatedMatrixRecord({
       system: evidence.system,
       effectiveLaunchArguments: evidence.effectiveLaunchArguments,
       adapter: evidence.adapter,
+    });
+  }
+  if (isFfx04Lane(promotion.lane)) {
+    if (!Number.isSafeInteger(evidence.jobId) || evidence.jobId < 1 ||
+        evidence.runId !== run.id || attestation?.binding?.runId !== run.id ||
+        attestation?.binding?.jobId !== evidence.jobId) {
+      throw new Error("FFX04 authorized run/job binding does not match workflow and attestation");
+    }
+    validateFfx04LifecycleProof(evidence.ffx04Proof, {
+      lane: promotion.lane,
+      runId: run.id,
+      jobId: evidence.jobId,
+      assetId: promotion.assetId,
+      platform: FFX04_LANES[promotion.lane].platform,
+      commit: promotion.trustedSha,
+      packageSha256: evidence.packageSha256,
+      browser: evidence.browser,
+      driver: evidence.driver,
+      applicationUrl: evidence.route?.applicationUrl,
     });
   }
   const safariTrackpadRecord = promotion.lane === "safari-macos-m2";
@@ -146,6 +167,10 @@ export function createAutomatedMatrixRecord({
       hardwareJobId: evidence.jobId,
       saf02Route: structuredClone(evidence.route),
     } : {}),
+    ffx04Proof: evidence.ffx04Proof ? structuredClone(evidence.ffx04Proof) : null,
+    ...(isFfx04Lane(promotion.lane)
+      ? { fixtureApplicationUrl: evidence.route.applicationUrl, sourceJobId: evidence.jobId }
+      : {}),
   };
 }
 

@@ -11,6 +11,7 @@ import { assertJsonSchema } from "../browser/json-schema-validator.mjs";
 import { exactHostInventory } from "./host-inventory-fixture.mjs";
 import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
 import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
+import { validFfx04LifecycleProof } from "../browser/ffx04-lifecycle-proof-fixture.mjs";
 import { CHR04_LANES } from "../../scripts/chr04-lanes.mjs";
 import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
 
@@ -31,7 +32,11 @@ const records = rows.map((row, index) => {
   const safariTrackpad =
     row.lane === "safari-macos-m2" || row.checklistId === "safari-trackpad";
   const edge = row.lane.startsWith("edge-");
+  const firefox = row.lane.startsWith("firefox-");
   const edgePlatform = edge ? CHR04_LANES[row.lane].platform : null;
+  const firefoxPlatform = firefox
+    ? row.lane.includes("windows") ? "win32" : "darwin"
+    : null;
   const system =
     row.kind === "manual"
       ? {
@@ -39,19 +44,21 @@ const records = rows.map((row, index) => {
           build: safariTrackpad ? macInventory.osBuild : "25A456",
         }
       : {
-          platform: safariTrackpad ? "darwin" : edgePlatform ?? "linux",
+          platform: safariTrackpad ? "darwin" : edgePlatform ?? firefoxPlatform ?? "linux",
           osBuild: safariTrackpad
             ? macInventory.osBuild
-            : "Ubuntu 24.04.1",
-          displayServer: safariTrackpad || edgePlatform === "darwin" ? "WindowServer" : edgePlatform === "win32" ? "Desktop Window Manager" : "GNOME Wayland",
+            : firefoxPlatform === "win32" ? "Windows 11" : firefoxPlatform === "darwin" ? "macOS 26" : "Ubuntu 24.04.1",
+          displayServer: safariTrackpad || edgePlatform === "darwin" || firefoxPlatform === "darwin" ? "WindowServer" : edgePlatform === "win32" || firefoxPlatform === "win32" ? "Desktop Window Manager" : "GNOME Wayland",
         };
   const browser = safariTrackpad
     ? { name: "Safari", channel: "stable", version: "26.0" }
     : edge ? { name: "msedge", channel: "stable", version: "150.0.1.2" }
+    : firefox ? { name: "firefox", channel: "release", version: "150.0.1" }
     : { name: "chrome", channel: "stable", version: "150.0" };
   const driver = safariTrackpad
     ? { name: "safaridriver", version: "26.0" }
     : edge ? { name: "playwright-edge", version: "1.56.1" }
+    : firefox ? { name: "selenium-firefox", version: "4.35.0" }
     : { name: "playwright-chrome", version: "1.56.1" };
   const hostInventory = safariTrackpad
     ? structuredClone(macInventory)
@@ -117,6 +124,7 @@ const records = rows.map((row, index) => {
             required: true,
             binding: {
               runId: 100 + index,
+              ...(firefox ? { jobId: 20 } : {}),
               assetId: row.assetId,
               commit: targetSha,
               packageSha256,
@@ -150,6 +158,14 @@ const records = rows.map((row, index) => {
               },
             };
           })() : {}),
+          ...(firefox ? {
+            sourceJobId: 20,
+            fixtureApplicationUrl: `https://firefox.webgpu-ci.forge3d.dev/runs/${100 + index}/20/${"c".repeat(32)}/`,
+            ffx04Proof: validFfx04LifecycleProof({ lane: row.lane, assetId: row.assetId,
+              platform: firefoxPlatform, commit: targetSha, packageSha256,
+              runId: 100 + index, jobId: 20,
+              browserVersion: browser.version, driverVersion: driver.version }),
+          } : {}),
         }),
   };
 });

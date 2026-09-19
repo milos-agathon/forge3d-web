@@ -108,15 +108,30 @@ export class OwnedDomResources {
 interface ActivePointer {
   pointerId: number;
   pointerType: string;
-  button: number;
   x: number;
   y: number;
+  buttons: number;
+}
+
+interface ContextMenuAuthorization {
+  pointerId: number;
+  x: number;
+  y: number;
+  phase: "active" | "pending";
+}
+
+interface InlineStyleSnapshot {
+  readonly present: boolean;
+  readonly value: string;
+  readonly priority: string;
 }
 
 const ORBIT_DEGREES_PER_CSS_PIXEL = 0.25;
 const KEYBOARD_ORBIT_DEGREES = 2;
 const KEYBOARD_PAN_CSS_PIXELS = 10;
 const KEYBOARD_ZOOM_DELTA = 120;
+const CONTEXT_MENU_AUTHORIZATION_MS = 1_000;
+const CONTEXT_MENU_COORDINATE_TOLERANCE = 2;
 
 export class ViewerControls {
   readonly #canvas: HTMLCanvasElement;
@@ -127,12 +142,13 @@ export class ViewerControls {
   readonly #disposeListeners: DisposeResource[] = [];
   readonly #pointers = new Map<number, ActivePointer>();
   readonly #keyboard: boolean;
-  readonly #previousTouchAction: string;
+  readonly #previousTouchAction: InlineStyleSnapshot;
   readonly #previousTabIndex: string | null;
   #enabled: boolean;
   #suspended = false;
   #disposed = false;
-  #rightButtonConsumed = false;
+  #contextMenuAuthorization: ContextMenuAuthorization | null = null;
+  #contextMenuTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(
     canvas: HTMLCanvasElement,
@@ -148,12 +164,10 @@ export class ViewerControls {
     this.#ownsResources = resources === undefined;
     this.#enabled = options.enabled ?? true;
     this.#keyboard = options.keyboard ?? true;
-    this.#previousTouchAction = canvas.style.touchAction;
+    this.#previousTouchAction = snapshotInlineStyle(canvas.style, "touch-action");
     this.#previousTabIndex = canvas.getAttribute("tabindex");
 
-    canvas.style.touchAction = this.#enabled
-      ? "none"
-      : this.#previousTouchAction;
+    this.#applyTouchAction();
     canvas.setAttribute("tabindex", "0");
     this.#attachListeners();
   }
@@ -176,9 +190,7 @@ export class ViewerControls {
       return;
     }
     this.#enabled = enabled;
-    this.#canvas.style.touchAction = enabled
-      ? "none"
-      : this.#previousTouchAction;
+    this.#applyTouchAction();
     if (!enabled) {
       this.#cancelAllPointers();
     }
@@ -207,7 +219,11 @@ export class ViewerControls {
     for (const dispose of this.#disposeListeners.splice(0)) {
       dispose();
     }
-    this.#canvas.style.touchAction = this.#previousTouchAction;
+    restoreInlineStyle(
+      this.#canvas.style,
+      "touch-action",
+      this.#previousTouchAction,
+    );
     if (this.#previousTabIndex === null) {
       this.#canvas.removeAttribute("tabindex");
     } else {
@@ -226,13 +242,13 @@ export class ViewerControls {
       this.#onPointerMove(event as PointerEvent),
     );
     this.#listen("pointerup", (event) =>
-      this.#finishPointer((event as PointerEvent).pointerId),
+      this.#onPointerUp(event as PointerEvent),
     );
     this.#listen("pointercancel", (event) =>
-      this.#finishPointer((event as PointerEvent).pointerId),
+      this.#finishPointer((event as PointerEvent).pointerId, false),
     );
     this.#listen("lostpointercapture", (event) =>
-      this.#finishPointer((event as PointerEvent).pointerId),
+      this.#finishPointer((event as PointerEvent).pointerId, false),
     );
     this.#listen("pointerleave", (event) =>
       this.#onPointerLeave(event as PointerEvent),
@@ -257,15 +273,23 @@ export class ViewerControls {
   }
 
   #onPointerDown(event: PointerEvent): void {
+    if (
+      event.pointerType === "mouse" &&
+      event.button === 2 &&
+      event.shiftKey
+    ) {
+      this.#clearContextMenuAuthorization();
+      return;
+    }
     if (!this.#isInteractive() || !isAcceptedPointer(event, this.#pointers)) {
       return;
     }
     const pointer: ActivePointer = {
       pointerId: event.pointerId,
       pointerType: event.pointerType,
-      button: event.button,
       x: event.clientX,
       y: event.clientY,
+      buttons: event.pointerType === "mouse" ? event.buttons & 0b111 : 0,
     };
     this.#pointers.set(event.pointerId, pointer);
     const tracked = this.#resources.trackPointer(event.pointerId, () => {
@@ -293,7 +317,9 @@ export class ViewerControls {
       this.#canvas.focus();
     }
     if (event.pointerType === "mouse" && event.button === 2) {
-      this.#rightButtonConsumed = true;
+      this.#armContextMenuAuthorization(event.pointerId, event.clientX, event.clientY);
+    } else {
+      this.#clearContextMenuAuthorization();
     }
     event.preventDefault();
   }
@@ -307,11 +333,44 @@ export class ViewerControls {
       return;
     }
 
+    if (previousPointer.pointerType === "mouse") {
+      const supportedButtons = event.buttons & 0b111;
+      if (supportedButtons === 0) {
+        this.#finishPointer(event.pointerId, false);
+        return;
+      }
+      if (this.#contextMenuAuthorization?.phase === "pending") {
+        this.#clearContextMenuAuthorization();
+      }
+      const newlyPressedRight =
+        (previousPointer.buttons & 0b010) === 0 && (supportedButtons & 0b010) !== 0;
+      const newlyReleasedRight =
+        (previousPointer.buttons & 0b010) !== 0 && (supportedButtons & 0b010) === 0;
+      if (newlyReleasedRight) {
+        this.#pendContextMenuAuthorization(event.pointerId, event.clientX, event.clientY);
+      }
+      if (newlyPressedRight) {
+        if (event.shiftKey) {
+          this.#clearContextMenuAuthorization();
+        } else {
+          this.#armContextMenuAuthorization(event.pointerId, event.clientX, event.clientY);
+        }
+      } else if (
+        this.#contextMenuAuthorization?.phase === "active" &&
+        this.#contextMenuAuthorization.pointerId === event.pointerId &&
+        (supportedButtons & 0b010) !== 0
+      ) {
+        this.#contextMenuAuthorization.x = event.clientX;
+        this.#contextMenuAuthorization.y = event.clientY;
+      }
+    }
+
     const previousTouches = this.#gesturePointers();
     const nextPointer: ActivePointer = {
       ...previousPointer,
       x: event.clientX,
       y: event.clientY,
+      buttons: previousPointer.pointerType === "mouse" ? event.buttons & 0b111 : 0,
     };
     this.#pointers.set(event.pointerId, nextPointer);
     const nextTouches = this.#gesturePointers();
@@ -340,16 +399,16 @@ export class ViewerControls {
     } else if (previousPointer.pointerType === "mouse") {
       const deltaX = nextPointer.x - previousPointer.x;
       const deltaY = nextPointer.y - previousPointer.y;
-      if (previousPointer.button === 0) {
-        changed = this.#controller.orbitBy(
-          deltaX * ORBIT_DEGREES_PER_CSS_PIXEL,
-          deltaY * ORBIT_DEGREES_PER_CSS_PIXEL,
-        );
-      } else {
+      if ((event.buttons & 0b110) !== 0) {
         changed = this.#controller.panBy(
           deltaX,
           deltaY,
           positiveCanvasHeight(this.#canvas),
+        );
+      } else {
+        changed = this.#controller.orbitBy(
+          deltaX * ORBIT_DEGREES_PER_CSS_PIXEL,
+          deltaY * ORBIT_DEGREES_PER_CSS_PIXEL,
         );
       }
     }
@@ -357,6 +416,31 @@ export class ViewerControls {
       this.#invalidate();
     }
     event.preventDefault();
+  }
+
+  #onPointerUp(event: PointerEvent): void {
+    const pointer = this.#pointers.get(event.pointerId);
+    if (pointer === undefined) {
+      return;
+    }
+    const supportedButtons = event.pointerType === "mouse" ? event.buttons & 0b111 : 0;
+    const releasedRight =
+      pointer.pointerType === "mouse" &&
+      (pointer.buttons & 0b010) !== 0 &&
+      (supportedButtons & 0b010) === 0;
+    if (releasedRight) {
+      this.#pendContextMenuAuthorization(event.pointerId, event.clientX, event.clientY);
+    }
+    if (supportedButtons !== 0) {
+      this.#pointers.set(event.pointerId, {
+        ...pointer,
+        x: event.clientX,
+        y: event.clientY,
+        buttons: supportedButtons,
+      });
+      return;
+    }
+    this.#finishPointer(event.pointerId, true);
   }
 
   #onPointerLeave(event: PointerEvent): void {
@@ -370,7 +454,7 @@ export class ViewerControls {
     } catch {
       // A fake or detached canvas may not be able to query capture.
     }
-    this.#finishPointer(event.pointerId);
+    this.#finishPointer(event.pointerId, false);
   }
 
   #onWheel(event: WheelEvent): void {
@@ -390,10 +474,21 @@ export class ViewerControls {
   }
 
   #onContextMenu(event: MouseEvent): void {
-    if (!this.#enabled || !this.#rightButtonConsumed) {
+    if (event.shiftKey) {
+      this.#clearContextMenuAuthorization();
       return;
     }
-    this.#rightButtonConsumed = false;
+    const authorization = this.#contextMenuAuthorization;
+    if (
+      !this.#isInteractive() ||
+      authorization === null ||
+      event.button !== 2 ||
+      Math.abs(event.clientX - authorization.x) > CONTEXT_MENU_COORDINATE_TOLERANCE ||
+      Math.abs(event.clientY - authorization.y) > CONTEXT_MENU_COORDINATE_TOLERANCE
+    ) {
+      return;
+    }
+    this.#clearContextMenuAuthorization();
     event.preventDefault();
   }
 
@@ -473,18 +568,77 @@ export class ViewerControls {
       .slice(0, 2);
   }
 
-  #finishPointer(pointerId: number): void {
+  #finishPointer(pointerId: number, preserveContextMenu: boolean): void {
     if (!this.#pointers.delete(pointerId)) {
       return;
     }
     this.#resources.releasePointer(pointerId);
+    if (
+      !preserveContextMenu &&
+      this.#contextMenuAuthorization?.pointerId === pointerId
+    ) {
+      this.#clearContextMenuAuthorization();
+    }
   }
 
   #cancelAllPointers(): void {
     for (const pointerId of [...this.#pointers.keys()]) {
-      this.#finishPointer(pointerId);
+      this.#finishPointer(pointerId, false);
     }
-    this.#rightButtonConsumed = false;
+    this.#clearContextMenuAuthorization();
+  }
+
+  #armContextMenuAuthorization(pointerId: number, x: number, y: number): void {
+    this.#clearContextMenuTimer();
+    this.#contextMenuAuthorization = { pointerId, x, y, phase: "active" };
+  }
+
+  #scheduleContextMenuExpiry(): void {
+    this.#clearContextMenuTimer();
+    this.#contextMenuTimer = setTimeout(() => {
+      this.#contextMenuTimer = null;
+      if (this.#contextMenuAuthorization?.phase === "pending") {
+        this.#contextMenuAuthorization = null;
+      }
+    }, CONTEXT_MENU_AUTHORIZATION_MS);
+  }
+
+  #pendContextMenuAuthorization(pointerId: number, x: number, y: number): void {
+    const authorization = this.#contextMenuAuthorization;
+    if (
+      authorization?.pointerId !== pointerId ||
+      authorization.phase !== "active"
+    ) {
+      return;
+    }
+    authorization.x = x;
+    authorization.y = y;
+    authorization.phase = "pending";
+    this.#scheduleContextMenuExpiry();
+  }
+
+  #clearContextMenuTimer(): void {
+    if (this.#contextMenuTimer !== null) {
+      clearTimeout(this.#contextMenuTimer);
+      this.#contextMenuTimer = null;
+    }
+  }
+
+  #clearContextMenuAuthorization(): void {
+    this.#clearContextMenuTimer();
+    this.#contextMenuAuthorization = null;
+  }
+
+  #applyTouchAction(): void {
+    if (this.#enabled) {
+      this.#canvas.style.setProperty("touch-action", "none");
+    } else {
+      restoreInlineStyle(
+        this.#canvas.style,
+        "touch-action",
+        this.#previousTouchAction,
+      );
+    }
   }
 
   #isInteractive(): boolean {
@@ -495,6 +649,36 @@ export class ViewerControls {
     if (this.#disposed) {
       throw new Error("ViewerControls is disposed");
     }
+  }
+}
+
+function snapshotInlineStyle(
+  style: CSSStyleDeclaration,
+  property: string,
+): InlineStyleSnapshot {
+  let present = false;
+  for (let index = 0; index < style.length; index += 1) {
+    if (style.item(index) === property) {
+      present = true;
+      break;
+    }
+  }
+  return {
+    present,
+    value: style.getPropertyValue(property),
+    priority: style.getPropertyPriority(property),
+  };
+}
+
+function restoreInlineStyle(
+  style: CSSStyleDeclaration,
+  property: string,
+  snapshot: InlineStyleSnapshot,
+): void {
+  if (snapshot.present) {
+    style.setProperty(property, snapshot.value, snapshot.priority);
+  } else {
+    style.removeProperty(property);
   }
 }
 
