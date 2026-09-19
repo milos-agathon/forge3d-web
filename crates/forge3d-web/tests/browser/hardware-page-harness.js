@@ -3,6 +3,7 @@ import { runViewerBenchmarkInBrowser } from "./viewer-benchmark-browser.js";
 import { isChr03Lane } from "./chr03-lanes.js";
 import { isChr04Lane } from "./chr04-lanes.js";
 import { isFfx03Lane } from "./ffx03-lanes.js";
+import { runSaf02Conformance } from "./saf02-conformance.js";
 
 export async function runHardwarePage({
   lane,
@@ -24,6 +25,9 @@ export async function runHardwarePage({
   const productManual = isProductManualLane(lane);
   const watermark = mediaChallenge !== null
     ? installWatermark(mediaChallenge, sessionContext)
+    : null;
+  const saf02Proof = lane === "safari-macos-m2"
+    ? await runSaf02Conformance({ binding, route, effectiveLaunchArguments })
     : null;
   const initial = preflight ?? await runHardwarePreflight({ binding, route,
     effectiveLaunchArguments, supportAssertions, retainViewer: productManual });
@@ -47,7 +51,7 @@ export async function runHardwarePage({
     ? await runBrandedHardwareProof({ binding, route, observations: hardware ?? chr03, proofFamily })
     : null;
   return {
-    adapter, assertions, routeReadiness, watermark,
+    adapter, assertions, routeReadiness, watermark, saf02Proof,
     chr03Proof: proofFamily === "chr03" ? hardwareProof : null,
     chr04Proof: proofFamily === "chr04" ? hardwareProof : null,
     ffx03Workload: proofFamily === "ffx03" ? hardwareProof : null,
@@ -353,17 +357,18 @@ export async function verifyBrowserRoute(
   }
   const application = route.applicationUrl;
   const asset = route.assetUrl;
-  const packageResponse = await fetchImpl(`${application}package.sha256`, {
+  const fetchRoute = (url, options) => fetchWithTimeout(fetchImpl, url, options);
+  const packageResponse = await fetchRoute(`${application}package.sha256`, {
     cache: "no-store",
   });
-  const wasmResponse = await fetchImpl(`${application}forge3d_web_bg.wasm`, {
+  const wasmResponse = await fetchRoute(`${application}forge3d_web_bg.wasm`, {
     cache: "no-store",
   });
-  const allowedRange = await fetchImpl(`${asset}cors/allow/terrain.bin`, {
+  const allowedRange = await fetchRoute(`${asset}cors/allow/terrain.bin`, {
     headers: { Range: "bytes=1-3" },
     cache: "no-store",
   });
-  const allowedWasm = await fetchImpl(
+  const allowedWasm = await fetchRoute(
     `${asset}cors/allow/forge3d_web_bg.wasm`,
     { cache: "no-store" },
   );
@@ -383,11 +388,11 @@ export async function verifyBrowserRoute(
   }
   await expectCorsFailure(
     `${asset}cors/deny/terrain.bin`,
-    fetchImpl,
+    fetchRoute,
   );
   await expectCorsFailure(
     `${asset}cors/wrong-origin/terrain.bin`,
-    fetchImpl,
+    fetchRoute,
   );
 
   const facadeUrl = new URL(
@@ -447,6 +452,16 @@ async function expectCorsFailure(url, fetchImpl) {
     return;
   }
   throw new Error(`browser did not enforce CORS failure for ${url}`);
+}
+
+export async function fetchWithTimeout(fetchImpl, url, options = {}, timeoutMs = 5_000) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetchImpl(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function assertNormalizedWasmLoadFailure(result, label) {

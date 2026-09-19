@@ -37,6 +37,10 @@ copyFileSync(
   join(temporaryRoot, "hardware-page-harness.js"),
 );
 copyFileSync(
+  join(packageRoot, "tests", "browser", "saf02-conformance.js"),
+  join(temporaryRoot, "saf02-conformance.js"),
+);
+copyFileSync(
   join(packageRoot, "tests", "browser", "viewer-benchmark-browser.js"),
   join(temporaryRoot, "viewer-benchmark-browser.js"),
 );
@@ -54,6 +58,7 @@ copyFileSync(
 );
 const {
   adapterBinding,
+  fetchWithTimeout,
   isProductManualLane,
   runInitialViewerAssertions,
   runRenderedLifecycleCycles,
@@ -153,6 +158,12 @@ test("hardware page invokes the public runtime loader in a fresh iframe realm", 
   assert.match(source, /document\.createElement\("iframe"\)/u);
   assert.match(source, /facade\.Forge3DRuntime\.create/u);
   assert.doesNotMatch(source, /WebAssembly\.compileStreaming/u);
+  const saf02Source = readFileSync(
+    join(packageRoot, "tests", "browser", "saf02-conformance.js"),
+    "utf8",
+  );
+  assert.doesNotMatch(saf02Source, /frame\.hidden\s*=\s*true/u);
+  assert.match(saf02Source, /createObservedRealmFrame/u);
 });
 
 test("page product classifier accepts only the two closed manual lanes", () => {
@@ -285,6 +296,17 @@ test("page route rejects unsuccessful WASM responses even with the expected MIME
     }),
     /MIME, package, range, or CORS proof failed/u,
   );
+});
+
+test("hanging browser fixture fetch aborts at its bounded inner deadline", async () => {
+  let aborted = false;
+  await assert.rejects(
+    fetchWithTimeout((_url, { signal }) => new Promise((_resolve, reject) => {
+      signal.addEventListener("abort", () => { aborted = true; reject(new DOMException("aborted", "AbortError")); });
+    }), "https://fixture.invalid/hang", {}, 1),
+    /aborted/u,
+  );
+  assert.equal(aborted, true);
 });
 
 async function fixtureFetch(url) {

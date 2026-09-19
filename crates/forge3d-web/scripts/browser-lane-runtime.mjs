@@ -19,6 +19,7 @@ import {
   validateFfx03ProbeOutcome,
 } from "./ffx03-hardware-proof-validator.mjs";
 import { FFX03_STABLE_LANES, isFfx03Lane, resolveFfx03Lane } from "./ffx03-lanes.mjs";
+import { validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
 
 const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
 const CHR04_REQUIRED_LANES = new Set(Object.keys(CHR04_LANES));
@@ -199,10 +200,13 @@ export async function executeHardwareBrowserLane({
         pageResult = await session.runPage({
           lane,
           binding: {
-            ...(isChr03Lane(lane) || isChr04Lane(lane) || isFfx03Lane(lane) ? { lane: binding.lane } : {}),
+            ...(isChr03Lane(lane) || isChr04Lane(lane) || isFfx03Lane(lane) || lane === "safari-macos-m2"
+              ? { lane: binding.lane }
+              : {}),
             runId: binding.runId,
             jobId: binding.jobId,
             assetId: binding.assetId,
+            ...(lane === "safari-macos-m2" ? { hostId } : {}),
             commit: binding.commit,
             packageSha256: binding.packageSha256,
             ...(isChr04Lane(lane) ? { platform } : {}),
@@ -242,6 +246,15 @@ export async function executeHardwareBrowserLane({
         return pageResult.adapter;
       },
       assertions: async () => {
+        if (lane === "safari-macos-m2") {
+          validateSaf02Conformance(pageResult.saf02Proof, {
+            lane, assetId, hostId, runId: binding.runId, jobId: binding.jobId,
+            commit: binding.commit, packageSha256: binding.packageSha256,
+            applicationUrl: route.applicationUrl, assetUrl: route.assetUrl,
+            browser: session.browser, system: provenance.system, adapter: pageResult.adapter,
+            effectiveLaunchArguments: provenance.effectiveLaunchArguments,
+          });
+        }
         if (CHR03_REQUIRED_LANES.has(lane)) {
           validateChr03HardwareProof(pageResult.chr03Proof, {
             lane,
@@ -274,6 +287,7 @@ export async function executeHardwareBrowserLane({
       chr03Proof: pageResult.chr03Proof ?? null,
       chr04Proof: pageResult.chr04Proof ?? null,
       ffx03Proof: null,
+      saf02Proof: pageResult.saf02Proof ?? null,
       headed: true,
       driver: provenance.driver,
       system: provenance.system,

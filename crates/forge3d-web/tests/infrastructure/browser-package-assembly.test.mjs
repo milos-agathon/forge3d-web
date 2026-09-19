@@ -23,6 +23,7 @@ import {
 } from "../../scripts/assemble-browser-package-artifact.mjs";
 import { materializeSeleniumHarness } from "../../scripts/materialize-selenium-harness.mjs";
 import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
+import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
 
 const temporaryRoots = [];
 afterEach(() => {
@@ -112,6 +113,7 @@ test("assembly binds one tarball, clean exact HEAD, evidence, schemas, and fixtu
     "chr03-hardware-proof.schema.json",
     "chr04-hardware-proof.schema.json",
     "ffx03-hardware-proof.schema.json",
+    "saf02-conformance.schema.json",
     "host-inventory.schema.json",
     "mobile-device-route-readiness.schema.json",
     "commit-metadata.json",
@@ -132,6 +134,7 @@ test("assembly binds one tarball, clean exact HEAD, evidence, schemas, and fixtu
     "ffx03-hardware-proof-validator.mjs",
     "ffx03-lanes.mjs",
     "firefox-viewer.mjs",
+    "saf02-conformance-validator.mjs",
     "json-schema-validator.mjs",
     "browser-process-registry.mjs",
     "capture-trackpad-inventory.mjs",
@@ -156,6 +159,17 @@ test("assembly binds one tarball, clean exact HEAD, evidence, schemas, and fixtu
   assert.equal(proofModule.validateChr03HardwareProofContract(proof), proof);
   proof.systemInfo.available = "false";
   assert.throws(() => proofModule.validateChr03HardwareProofContract(proof), /expected type boolean/u);
+  const safariModule = await import(pathToFileURL(join(output, "saf02-conformance-validator.mjs")).href);
+  const safariProof = validSaf02Conformance();
+  const safariExpected = {
+    ...safariProof.binding,
+    applicationUrl: `${safariProof.route.applicationOrigin}${safariProof.route.basePath}`,
+    assetUrl: `${safariProof.route.assetOrigin}${safariProof.route.basePath}`,
+    effectiveLaunchArguments: [],
+  };
+  assert.equal(safariModule.validateSaf02Conformance(safariProof, safariExpected), safariProof);
+  safariProof.render.changedPixels = 100;
+  assert.throws(() => safariModule.validateSaf02Conformance(safariProof, safariExpected));
 });
 
 test("Selenium closure assembly fails when a lock-bound installed package is missing", () => {

@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
 import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
 import { validFfx03Proof, validFfxAdapter } from "../browser/ffx03-proof-fixture.mjs";
+import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
 import { CHR04_LANES } from "../../scripts/chr04-lanes.mjs";
 import { canonicalJson, sha256Hex } from "../../scripts/canonical-json.mjs";
 import {
@@ -132,6 +133,14 @@ export function validPublicationInput({ skipMerge = false } = {}) {
       presentedFrameLumaDelta: 0.7,
       lumaChanged: true,
     };
+    const saf02Proof = row.lane === "safari-macos-m2"
+      ? validSaf02Conformance({
+          runId: workflow.runId,
+          jobId: 300 + index,
+          commit: targetSha,
+          packageSha256,
+        })
+      : null;
     return {
       ...record,
       effectiveLaunchArguments: firefox ? ["-profile", "/tmp/profile"] : [],
@@ -169,6 +178,16 @@ export function validPublicationInput({ skipMerge = false } = {}) {
         platform, architecture: platform === "darwin" ? "arm64" : "x64",
         version: browser.version, commit: targetSha,
         packageSha256, adapter }) } : {}),
+      ...(saf02Proof
+        ? {
+            hardwareJobId: saf02Proof.binding.jobId,
+            saf02Proof,
+            saf02Route: {
+              applicationUrl: `${saf02Proof.route.applicationOrigin}${saf02Proof.route.basePath}`,
+              assetUrl: `${saf02Proof.route.assetOrigin}${saf02Proof.route.basePath}`,
+            },
+          }
+        : {}),
     };
   });
   if (skipMerge) return { records, matrix, policy };

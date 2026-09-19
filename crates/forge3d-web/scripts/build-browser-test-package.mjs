@@ -255,6 +255,10 @@ try {
       join(retainedFixture, "tests", "browser", "hardware-page-harness.js"),
     );
     copyFileSync(
+      join(packageRoot, "tests", "browser", "saf02-conformance.js"),
+      join(retainedFixture, "tests", "browser", "saf02-conformance.js"),
+    );
+    copyFileSync(
       join(packageRoot, "tests", "browser", "viewer-benchmark-browser.js"),
       join(retainedFixture, "tests", "browser", "viewer-benchmark-browser.js"),
     );

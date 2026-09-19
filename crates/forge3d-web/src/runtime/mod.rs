@@ -306,6 +306,45 @@ mod tests {
     #[test]
     fn color_ramp_uniform_matches_wgsl_uniform_layout_size() {
         assert_eq!(std::mem::size_of::<super::terrain::ColorRampUniform>(), 160);
+        assert_eq!(
+            std::mem::offset_of!(super::terrain::ColorRampUniform, stop_count),
+            128
+        );
+        assert_eq!(
+            std::mem::offset_of!(super::terrain::ColorRampUniform, clear_color),
+            144
+        );
+        assert_eq!(std::mem::size_of::<super::terrain::CameraUniform>(), 64);
+        assert_eq!(std::mem::size_of::<super::terrain::TerrainVertex>(), 20);
+        assert_eq!(
+            std::mem::offset_of!(super::terrain::TerrainVertex, position),
+            0
+        );
+        assert_eq!(std::mem::offset_of!(super::terrain::TerrainVertex, uv), 12);
+    }
+
+    #[test]
+    fn screenshot_normalization_covers_all_supported_surface_formats() {
+        let rgba = vec![1, 2, 3, 4, 10, 20, 30, 40, 90, 80, 70, 60];
+        for format in [
+            wgpu::TextureFormat::Rgba8Unorm,
+            wgpu::TextureFormat::Rgba8UnormSrgb,
+        ] {
+            assert_eq!(
+                super::readback::normalize_readback_to_rgba(rgba.clone(), format).unwrap(),
+                rgba
+            );
+        }
+        let bgra = vec![3, 2, 1, 4, 30, 20, 10, 40, 70, 80, 90, 60];
+        for format in [
+            wgpu::TextureFormat::Bgra8Unorm,
+            wgpu::TextureFormat::Bgra8UnormSrgb,
+        ] {
+            assert_eq!(
+                super::readback::normalize_readback_to_rgba(bgra.clone(), format).unwrap(),
+                rgba
+            );
+        }
     }
 
     #[test]

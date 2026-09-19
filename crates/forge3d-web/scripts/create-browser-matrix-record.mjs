@@ -10,6 +10,7 @@ import { validateChr04EdgeEvidence } from "./chr04-hardware-proof-validator.mjs"
 import { CHR04_LANES } from "./chr04-lanes.mjs";
 import { validateFfx03HardwareProof } from "./ffx03-hardware-proof-validator.mjs";
 import { FFX03_STABLE_LANES } from "./ffx03-lanes.mjs";
+import { validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
 
 const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
 const CHR04_REQUIRED_LANES = new Set(Object.keys(CHR04_LANES));
@@ -76,6 +77,14 @@ export function createAutomatedMatrixRecord({
   }
   const safariTrackpadRecord = promotion.lane === "safari-macos-m2";
   if (safariTrackpadRecord) {
+    validateSaf02Conformance(evidence.saf02Proof, {
+      lane: promotion.lane, assetId: promotion.assetId, hostId: promotion.hostId,
+      runId: run.id, jobId: evidence.jobId, commit: promotion.trustedSha,
+      packageSha256: evidence.packageSha256,
+      applicationUrl: evidence.route?.applicationUrl, assetUrl: evidence.route?.assetUrl,
+      browser: evidence.browser, system: evidence.system, adapter: evidence.adapter,
+      effectiveLaunchArguments: evidence.effectiveLaunchArguments,
+    });
     validateHostInventory(hostInventory, { matrix, requireTrackpad: true });
     if (
       promotion.hostId !== "FW-MAC-M2-01" ||
@@ -155,6 +164,11 @@ export function createAutomatedMatrixRecord({
     chr03Proof: evidence.chr03Proof ? structuredClone(evidence.chr03Proof) : null,
     chr04Proof: evidence.chr04Proof ? structuredClone(evidence.chr04Proof) : null,
     ffx03Proof: evidence.ffx03Proof ? structuredClone(evidence.ffx03Proof) : null,
+    saf02Proof: evidence.saf02Proof ? structuredClone(evidence.saf02Proof) : null,
+    ...(safariTrackpadRecord ? {
+      hardwareJobId: evidence.jobId,
+      saf02Route: structuredClone(evidence.route),
+    } : {}),
   };
 }
 

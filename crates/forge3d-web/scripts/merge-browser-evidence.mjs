@@ -9,6 +9,7 @@ import { validateChr04EdgeEvidence } from "./chr04-hardware-proof-validator.mjs"
 import { CHR04_LANES } from "./chr04-lanes.mjs";
 import { validateFfx03HardwareProof } from "./ffx03-hardware-proof-validator.mjs";
 import { FFX03_STABLE_LANES } from "./ffx03-lanes.mjs";
+import { validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
 
 const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
 const CHR04_REQUIRED_LANES = new Set(Object.keys(CHR04_LANES));
@@ -289,6 +290,18 @@ function validateRecord(record, row, expected) {
         canonicalJson(record.ffx03Proof.adapter) !== canonicalJson(record.adapter)) {
       throw new Error(`FFX-03 proof conflicts with merged evidence: ${row.key}`);
     }
+  }
+  if (row.kind === "automated" && row.lane === "safari-macos-m2") {
+    const proof = record.saf02Proof;
+    validateSaf02Conformance(proof, {
+      lane: row.lane, assetId: row.assetId, hostId: row.hostId,
+      runId: record.workflow.runId, jobId: record.hardwareJobId,
+      commit: expected.targetSha, packageSha256: expected.packageSha256,
+      applicationUrl: record.saf02Route?.applicationUrl,
+      assetUrl: record.saf02Route?.assetUrl,
+      browser: record.browser, system: record.system, adapter: record.adapter,
+      effectiveLaunchArguments: record.effectiveLaunchArguments,
+    });
   }
 }
 
