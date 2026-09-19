@@ -250,7 +250,13 @@ for (const expected of [
   "performance measurement, not the CHR-02 ten-second clock",
   "sibling outside the unchanged v3 browser evidence record",
   "--notes-file",
-  "Any equality-boundary expiry or body drift blocks publication",
+  "Any equality-boundary expiry blocks publication",
+  "Any release-body drift blocks publication",
+  "Component status: sealed release assets only",
+  "Neither component is independently passed through `--notes-file`",
+  "`browser-support.md` is the sole `--notes-file`",
+  "It is also the sole authority",
+  "for draft, immediate prepublication, and postpublication Release API body",
 ]) {
   assertIncludes(checklist, expected, `release checklist missing: ${expected}`);
 }
