@@ -248,10 +248,13 @@ test("WebDriver executes route verification inside the navigated physical browse
   const session = await client.createSession({ browserName: "Safari" });
   const result = await session.runRouteProbe({ route, expectedPackageSha256: packageSha256 });
   assert.equal(result.trustedHttps, true);
-  const execution = JSON.parse(requests[1].init.body);
+  const timeoutRequest = JSON.parse(requests[1].init.body);
+  assert.deepEqual(timeoutRequest, { script: 25_000 });
+  assert.match(requests[1].url, /\/session\/physical\/timeouts$/u);
+  const execution = JSON.parse(requests[2].init.body);
   assert.match(execution.script, /verifyBrowserRoute/u);
   assert.deepEqual(execution.args, [{ route, expectedPackageSha256: packageSha256 }]);
-  assert.match(requests[1].url, /\/session\/physical\/execute\/async$/u);
+  assert.match(requests[2].url, /\/session\/physical\/execute\/async$/u);
 });
 
 function completeReadiness() {

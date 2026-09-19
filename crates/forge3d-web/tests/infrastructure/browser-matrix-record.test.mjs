@@ -11,6 +11,7 @@ import { exactHostInventory } from "./host-inventory-fixture.mjs";
 import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
 import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
 import { validSaf03Proof, validStpResult } from "../browser/saf03-proof-fixture.mjs";
+import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
 
 const matrix = JSON.parse(
   readFileSync(new URL("./hardware-matrix.json", import.meta.url), "utf8"),
@@ -119,13 +120,22 @@ test("automated and manual sources derive closed matrix keys without artifact cl
   }
   const safariInput = structuredClone(automatedInput);
   Object.assign(safariInput.promotion, { lane: "safari-macos-m2", hostId: "FW-MAC-M2-01", assetId: "FW-MAC-M2-01" });
+  const safariProof = validSaf02Conformance({ runId: 10, jobId: 22, commit: "a".repeat(40), packageSha256: "d".repeat(64) });
+  const safariRoute = {
+    applicationUrl: `${safariProof.route.applicationOrigin}${safariProof.route.basePath}`,
+    assetUrl: `${safariProof.route.assetOrigin}${safariProof.route.basePath}`,
+  };
   Object.assign(safariInput.evidence, {
     lane: "safari-macos-m2",
+    runId: 10,
+    jobId: 22,
     browser: { name: "safari", channel: "stable", version: "26.0" },
     driver: { name: "safaridriver", version: "Included with Safari 26.0" },
     system: { platform: "darwin", osVersion: "26.0", osBuild: "macOS build 25A123", architecture: "arm64", displayServer: "WindowServer" },
-    route: { applicationUrl: "https://safari.example.invalid/run/" },
+    route: safariRoute,
+    effectiveLaunchArguments: [],
     chr03Proof: null,
+    saf02Proof: safariProof,
     saf03Proof: validSaf03Proof({ commit: "a".repeat(40), packageSha256: "d".repeat(64) }),
   });
   safariInput.attestation.binding.assetId = "FW-MAC-M2-01";
@@ -144,7 +154,10 @@ test("automated and manual sources derive closed matrix keys without artifact cl
   safariInput.evidence.safariTechnologyPreview = validStpResult(safariInventory, {
     commit: "a".repeat(40), packageSha256: "d".repeat(64),
   });
+  safariInput.evidence.safariTechnologyPreview.probe.route = safariRoute.applicationUrl;
   const safari = createAutomatedMatrixRecord(safariInput);
+  assert.equal(safari.saf02Proof.result, "PASS");
+  assert.deepEqual(safari.saf02Route, safariRoute);
   assert.equal(safari.saf03Proof.kind, "forge3d-saf03-safari-acceptance-v1");
   assert.equal(safari.safariTechnologyPreview.replacesStable, false);
   const safariFinalization = {
@@ -154,6 +167,8 @@ test("automated and manual sources derive closed matrix keys without artifact cl
   };
   assert.equal(finalizeMatrixRecord({ source: safari, ...safariFinalization }).workflow.artifactId, 31);
   for (const mutate of [
+    (source) => { source.saf02Proof.binding.jobId += 1; },
+    (source) => { source.saf02Route.applicationUrl = "https://unrelated.example.invalid/run/"; },
     (source) => { source.saf03Proof.browser.version = "26.1"; },
     (source) => { source.saf03Proof.driver.version = "wrong"; },
     (source) => { source.saf03Proof.system.osVersion = "25.6"; },
@@ -178,6 +193,16 @@ test("automated and manual sources derive closed matrix keys without artifact cl
     const invalidSafari = structuredClone(safariInput); mutate(invalidSafari);
     assert.throws(() => createAutomatedMatrixRecord(invalidSafari));
   }
+  const replayedSafari = structuredClone(safariInput);
+  replayedSafari.evidence.saf02Proof.binding.jobId = 23;
+  assert.throws(() => createAutomatedMatrixRecord(replayedSafari));
+  const unsafeSafari = structuredClone(safariInput);
+  unsafeSafari.evidence.effectiveLaunchArguments = ["--ignore-certificate-errors=value"];
+  assert.throws(() => createAutomatedMatrixRecord(unsafeSafari), /launch arguments/u);
+  const compoundUnsafeSafari = structuredClone(safariInput);
+  compoundUnsafeSafari.evidence.effectiveLaunchArguments = ["--enable-features=CanvasOopRasterization,WebGPU"];
+  compoundUnsafeSafari.evidence.saf02Proof.environment.effectiveLaunchArguments = [...compoundUnsafeSafari.evidence.effectiveLaunchArguments];
+  assert.throws(() => createAutomatedMatrixRecord(compoundUnsafeSafari), /prohibited browser launch arguments/u);
   const manual = createManualMatrixRecord({
     evidence: {
       checklistId: "safari-trackpad",

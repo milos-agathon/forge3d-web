@@ -94,12 +94,18 @@ export function validateRawFixtureProbe({
 }
 
 async function fetchRecord(url, options) {
-  const response = await fetch(url, options);
-  return {
-    status: response.status,
-    headers: Object.fromEntries(response.headers),
-    body: Buffer.from(await response.arrayBuffer()),
-  };
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5_000);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    return {
+      status: response.status,
+      headers: Object.fromEntries(response.headers),
+      body: Buffer.from(await response.arrayBuffer()),
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function parseArguments(argv) {

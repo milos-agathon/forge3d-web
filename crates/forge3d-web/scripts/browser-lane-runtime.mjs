@@ -16,6 +16,7 @@ import { validateChr04EdgeEvidence } from "./chr04-hardware-proof-validator.mjs"
 import { CHR04_LANES, isChr04Lane } from "./chr04-lanes.mjs";
 import { validateSaf03SafariProof } from "./saf03-proof-validator.mjs";
 import { isSaf03Lane } from "./saf03-lanes.mjs";
+import { validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
 
 const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
 const CHR04_REQUIRED_LANES = new Set(Object.keys(CHR04_LANES));
@@ -166,6 +167,7 @@ export async function executeHardwareBrowserLane({
             runId: binding.runId,
             jobId: binding.jobId,
             assetId: binding.assetId,
+            ...(lane === "safari-macos-m2" ? { hostId } : {}),
             commit: binding.commit,
             packageSha256: binding.packageSha256,
             ...(isChr04Lane(lane) ? { platform } : {}),
@@ -205,6 +207,15 @@ export async function executeHardwareBrowserLane({
         return pageResult.adapter;
       },
       assertions: async () => {
+        if (lane === "safari-macos-m2") {
+          validateSaf02Conformance(pageResult.saf02Proof, {
+            lane, assetId, hostId, runId: binding.runId, jobId: binding.jobId,
+            commit: binding.commit, packageSha256: binding.packageSha256,
+            applicationUrl: route.applicationUrl, assetUrl: route.assetUrl,
+            browser: session.browser, system: provenance.system, adapter: pageResult.adapter,
+            effectiveLaunchArguments: provenance.effectiveLaunchArguments,
+          });
+        }
         if (CHR03_REQUIRED_LANES.has(lane)) {
           validateChr03HardwareProof(pageResult.chr03Proof, {
             lane,
@@ -250,6 +261,7 @@ export async function executeHardwareBrowserLane({
       chr04Proof: pageResult.chr04Proof ?? null,
       saf03Proof: pageResult.saf03Proof ?? null,
       safariTechnologyPreview,
+      saf02Proof: pageResult.saf02Proof ?? null,
       headed: true,
       driver: provenance.driver,
       system: provenance.system,

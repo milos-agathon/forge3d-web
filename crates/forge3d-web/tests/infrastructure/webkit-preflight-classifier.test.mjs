@@ -384,7 +384,22 @@ test("every Playwright spec uses the automatic shared WebGPU guard", () => {
   const specs = readdirSync(directory)
     .filter((name) => name.endsWith(".spec.ts"))
     .sort();
-  assert.equal(specs.length, 13);
+  assert.deepEqual(specs, [
+    "camera_resize.spec.ts",
+    "clear.spec.ts",
+    "device_loss.spec.ts",
+    "interactive_viewer.spec.ts",
+    "realm_coordination.spec.ts",
+    "realm_coordination_real.spec.ts",
+    "saf02_page_composition.spec.ts",
+    "screenshot.spec.ts",
+    "terrain.spec.ts",
+    "terrain_sources.spec.ts",
+    "viewer_benchmark.spec.ts",
+    "viewer_lifecycle.spec.ts",
+    "viewer_resources.spec.ts",
+    "webgpu_diagnostics.spec.ts",
+  ]);
   for (const name of specs) {
     const text = readFileSync(join(directory, name), "utf8");
     assert.equal(
@@ -397,6 +412,10 @@ test("every Playwright spec uses the automatic shared WebGPU guard", () => {
       true,
       `${name} does not use the automatic shared WebGPU guard`,
     );
+    if (name === "saf02_page_composition.spec.ts") {
+      assert.match(text, /webgpuAvailability/u);
+      assert.match(text, /skipRenderAssertionsWhenProbing\(webgpuAvailability\)/u);
+    }
   }
 });
 

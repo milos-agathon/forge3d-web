@@ -19,6 +19,8 @@ import { createUpdateWindow } from "../../scripts/manage-browser-update-window.m
 import { runBrowserLane } from "../hardware/run-browser-lane.mjs";
 import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
 import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
+import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
+import { validAbsentStpResult, validSaf03Proof } from "../browser/saf03-proof-fixture.mjs";
 
 const binding = {
   lane: "chrome-linux-rtx3070",
@@ -337,6 +339,84 @@ test("production lane executor opens a headed browser and captures live page evi
     invalidProof = true;
     await assert.rejects(executeHardwareBrowserLane({ ...request, outputPath: join(directory, "invalid.json") }), /expected type boolean/u);
     assert.deepEqual(calls, ["page", "close", "page", "close"]);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("production Safari lane dispatches the authorized SAF-02 binding and validates its proof", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "forge3d-safari-runtime-"));
+  const nonce = "ab".repeat(16);
+  const safariBinding = {
+    ...binding,
+    lane: "safari-macos-m2",
+    assetId: "FW-MAC-M2-01",
+    commit: binding.trustedSha,
+  };
+  const route = {
+    applicationUrl: `https://mac-m2.webgpu-ci.forge3d.dev/runs/10/20/${nonce}/`,
+    assetUrl: `https://assets-mac-m2.webgpu-ci.forge3d.dev/runs/10/20/${nonce}/`,
+  };
+  try {
+    const outputPath = join(directory, "evidence.json");
+    await executeHardwareBrowserLane({
+      lane: safariBinding.lane,
+      assetId: safariBinding.assetId,
+      hostId: safariBinding.assetId,
+      platform: "darwin",
+      binding: safariBinding,
+      route,
+      browserPolicy: {
+        prohibitedLaunchArguments: ["--ignore-certificate-errors"],
+        tools: { safaridriver: "26.0" },
+      },
+      deviceMatrix: { devices: [] },
+      inventory: {
+        ...desktopInventory,
+        assetId: "FW-MAC-M2-01",
+        platform: "darwin",
+        osBuild: "Darwin 25.0.0 checked",
+        displayServer: "WindowServer",
+        browsers: [{ id: "safari-stable", version: "26.0", executable: "/usr/bin/safaridriver" }],
+        tools: { safaridriverVersion: "26.0" },
+      },
+      outputPath,
+      dependencies: {
+        openSession: async () => ({
+          browser: { name: "safari", channel: "stable", version: "26.0" },
+          driverVersion: "26.0",
+          effectiveLaunchArguments: [],
+          launchArgumentsObserved: true,
+          launchArgumentSource: "darwin-live-browser-process",
+          browserProcessId: 502,
+          runPage: async (payload) => {
+            assert.deepEqual(payload.binding, {
+              lane: "safari-macos-m2", runId: 10, jobId: 20,
+              assetId: "FW-MAC-M2-01", hostId: "FW-MAC-M2-01",
+              commit: binding.trustedSha, packageSha256: binding.packageSha256,
+            });
+            return {
+              adapter,
+              assertions: { passed: true, supportAssertionsExecuted: true },
+              saf02Proof: validSaf02Conformance({
+                runId: 10, jobId: 20, commit: binding.trustedSha,
+                packageSha256: binding.packageSha256, nonce,
+              }),
+              saf03Proof: validSaf03Proof({
+                commit: binding.trustedSha,
+                packageSha256: binding.packageSha256,
+              }),
+            };
+          },
+          runTechnologyPreview: async () => validAbsentStpResult(),
+          close: async () => undefined,
+        }),
+      },
+    });
+    const evidence = JSON.parse(readFileSync(outputPath, "utf8"));
+    assert.equal(evidence.saf02Proof.result, "PASS");
+    assert.equal(evidence.saf03Proof.kind, "forge3d-saf03-safari-acceptance-v1");
+    assert.equal(evidence.safariTechnologyPreview.result, "ABSENT");
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

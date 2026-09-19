@@ -306,7 +306,10 @@ export function assertSafeLaunchArguments(argumentsList, policy) {
     const features = value
       .split(",")
       .map((feature) => feature.trim());
-    return features.some((feature) => /^vulkan(?:$|[<:])/u.test(feature));
+    return features.some(
+      (feature) =>
+        /^vulkan(?:$|[<:])/u.test(feature) || feature.includes("webgpu"),
+    );
   });
   if (matches.length > 0) {
     throw new Error(`prohibited browser launch arguments: ${matches.join(", ")}`);

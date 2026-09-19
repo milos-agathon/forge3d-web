@@ -9,6 +9,7 @@ import { CHR03_STABLE_LANES } from "./chr03-lanes.mjs";
 import { validateChr04EdgeEvidence } from "./chr04-hardware-proof-validator.mjs";
 import { CHR04_LANES } from "./chr04-lanes.mjs";
 import { validateSaf03EvidenceEnvelope } from "./saf03-proof-validator.mjs";
+import { validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
 
 const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
 const CHR04_REQUIRED_LANES = new Set(Object.keys(CHR04_LANES));
@@ -55,6 +56,14 @@ export function createAutomatedMatrixRecord({
   }
   const safariTrackpadRecord = promotion.lane === "safari-macos-m2";
   if (safariTrackpadRecord) {
+    validateSaf02Conformance(evidence.saf02Proof, {
+      lane: promotion.lane, assetId: promotion.assetId, hostId: promotion.hostId,
+      runId: run.id, jobId: evidence.jobId, commit: promotion.trustedSha,
+      packageSha256: evidence.packageSha256,
+      applicationUrl: evidence.route?.applicationUrl, assetUrl: evidence.route?.assetUrl,
+      browser: evidence.browser, system: evidence.system, adapter: evidence.adapter,
+      effectiveLaunchArguments: evidence.effectiveLaunchArguments,
+    });
     validateHostInventory(hostInventory, { matrix, requireTrackpad: true });
     if (
       promotion.hostId !== "FW-MAC-M2-01" ||
@@ -154,6 +163,11 @@ export function createAutomatedMatrixRecord({
     saf03Proof: evidence.saf03Proof ? structuredClone(evidence.saf03Proof) : null,
     safariTechnologyPreview: evidence.safariTechnologyPreview
       ? structuredClone(evidence.safariTechnologyPreview) : null,
+    saf02Proof: evidence.saf02Proof ? structuredClone(evidence.saf02Proof) : null,
+    ...(safariTrackpadRecord ? {
+      hardwareJobId: evidence.jobId,
+      saf02Route: structuredClone(evidence.route),
+    } : {}),
   };
 }
 
@@ -310,6 +324,21 @@ export function finalizeMatrixRecord({
     throw new Error("matrix record requires exact artifact and attestation proof");
   }
   if (source.lane === "safari-macos-m2") {
+    validateSaf02Conformance(source.saf02Proof, {
+      lane: source.lane,
+      assetId: source.assetId,
+      hostId: source.hostId,
+      runId: source.workflow.runId,
+      jobId: source.hardwareJobId,
+      commit: source.trustedSha,
+      packageSha256: source.packageSha256,
+      applicationUrl: source.saf02Route?.applicationUrl,
+      assetUrl: source.saf02Route?.assetUrl,
+      browser: source.browser,
+      system: source.system,
+      adapter: source.adapter,
+      effectiveLaunchArguments: source.effectiveLaunchArguments,
+    });
     validateSaf03EvidenceEnvelope({
       proof: source.saf03Proof,
       technologyPreview: source.safariTechnologyPreview,

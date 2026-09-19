@@ -13,6 +13,7 @@ import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture
 import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
 import { CHR04_LANES } from "../../scripts/chr04-lanes.mjs";
 import { validSaf03Proof, validStpResult } from "../browser/saf03-proof-fixture.mjs";
+import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
 
 const matrix = JSON.parse(
   readFileSync(new URL("./hardware-matrix.json", import.meta.url), "utf8"),
@@ -152,11 +153,21 @@ const records = rows.map((row, index) => {
             ? { chr03Proof: validChr03HardwareProof({ lane: row.lane, assetId: row.assetId, commit: targetSha, packageSha256 }) }
             : {}),
           ...(edge ? { chr04Proof: validChr04HardwareProof({ lane: row.lane, assetId: row.assetId, platform: edgePlatform, commit: targetSha, packageSha256 }) } : {}),
-          ...(row.lane === "safari-macos-m2" ? {
-            route: { applicationUrl: "https://safari.example.invalid/run/" },
-            saf03Proof: validSaf03Proof({ commit: targetSha, packageSha256 }),
-            safariTechnologyPreview: validStpResult(macInventory),
-          } : {}),
+          ...(row.lane === "safari-macos-m2" ? (() => {
+            const saf02Proof = validSaf02Conformance({ runId: 100 + index, jobId: 900 + index, commit: targetSha, packageSha256 });
+            const applicationUrl = `${saf02Proof.route.applicationOrigin}${saf02Proof.route.basePath}`;
+            const assetUrl = `${saf02Proof.route.assetOrigin}${saf02Proof.route.basePath}`;
+            const safariTechnologyPreview = validStpResult(macInventory, { commit: targetSha, packageSha256 });
+            safariTechnologyPreview.probe.route = applicationUrl;
+            return {
+              hardwareJobId: 900 + index,
+              saf02Proof,
+              saf02Route: { applicationUrl, assetUrl },
+              route: { applicationUrl, assetUrl },
+              saf03Proof: validSaf03Proof({ commit: targetSha, packageSha256 }),
+              safariTechnologyPreview,
+            };
+          })() : {}),
         }),
   };
 });
@@ -282,6 +293,23 @@ test("prior head, other package, expired manual, missing, duplicate, and infra e
     records.map((record) => record.lane === "edge-linux-rtx3070"
       ? { ...record, effectiveLaunchArguments: ["--ignore-certificate-errors=value"] }
       : record),
+    records.map((record) => record.lane === "safari-macos-m2"
+      ? { ...record, effectiveLaunchArguments: ["--ignore-certificate-errors=value"] }
+      : record),
+    records.map((record) => {
+      if (record.lane !== "safari-macos-m2") return record;
+      const unsafe = structuredClone(record);
+      unsafe.effectiveLaunchArguments = ["--enable-features=CanvasOopRasterization,WebGPU"];
+      unsafe.saf02Proof.environment.effectiveLaunchArguments = [...unsafe.effectiveLaunchArguments];
+      return unsafe;
+    }),
+    records.map((record) => {
+      if (record.lane !== "safari-macos-m2") return record;
+      const replay = structuredClone(record);
+      const nonce = replay.saf02Proof.route.nonce;
+      replay.saf02Proof.route.basePath = `/runs/999/888/${nonce}/`;
+      return replay;
+    }),
     records.map((record) =>
       record.lane === "edge-linux-intel12"
         ? { ...record, system: { ...record.system, displayServer: "X11" } }

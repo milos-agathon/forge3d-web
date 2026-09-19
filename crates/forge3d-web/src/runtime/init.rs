@@ -248,12 +248,7 @@ pub(super) fn surface_descriptor_for_alpha(
                 "WebGPU surface reported no present modes",
             )
         })?;
-    let alpha_mode = caps
-        .alpha_modes
-        .iter()
-        .copied()
-        .find(|mode| *mode == preferred_alpha)
-        .or_else(|| caps.alpha_modes.first().copied())
+    let alpha_mode = select_surface_alpha_mode(&caps.alpha_modes, preferred_alpha, true)
         .ok_or_else(|| {
             WebError::new(
                 Forge3DErrorCode::SurfaceCreateFailed,
@@ -266,4 +261,60 @@ pub(super) fn surface_descriptor_for_alpha(
     descriptor.alpha_mode = alpha_mode;
     descriptor.view_formats = vec![format];
     Ok(descriptor)
+}
+
+#[cfg(any(target_arch = "wasm32", test))]
+fn select_surface_alpha_mode(
+    reported_modes: &[wgpu::CompositeAlphaMode],
+    preferred: wgpu::CompositeAlphaMode,
+    browser_webgpu: bool,
+) -> Option<wgpu::CompositeAlphaMode> {
+    // wgpu 29's WebGPU backend reports only Opaque even though its configure
+    // implementation supports both core GPUCanvasAlphaMode values.
+    if browser_webgpu
+        && matches!(
+            preferred,
+            wgpu::CompositeAlphaMode::Opaque | wgpu::CompositeAlphaMode::PreMultiplied
+        )
+    {
+        return Some(preferred);
+    }
+    reported_modes
+        .iter()
+        .copied()
+        .find(|mode| *mode == preferred)
+        .or_else(|| reported_modes.first().copied())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::select_surface_alpha_mode;
+    use wgpu::CompositeAlphaMode::{Opaque, PostMultiplied, PreMultiplied};
+
+    #[test]
+    fn browser_webgpu_selects_both_core_canvas_alpha_modes() {
+        let incomplete_backend_report = [Opaque];
+        assert_eq!(
+            select_surface_alpha_mode(&incomplete_backend_report, Opaque, true),
+            Some(Opaque)
+        );
+        assert_eq!(
+            select_surface_alpha_mode(&incomplete_backend_report, PreMultiplied, true),
+            Some(PreMultiplied)
+        );
+    }
+
+    #[test]
+    fn alpha_selection_preserves_reported_capability_fallback_elsewhere() {
+        let reported = [Opaque];
+        assert_eq!(
+            select_surface_alpha_mode(&reported, PreMultiplied, false),
+            Some(Opaque)
+        );
+        assert_eq!(
+            select_surface_alpha_mode(&reported, PostMultiplied, true),
+            Some(Opaque)
+        );
+        assert_eq!(select_surface_alpha_mode(&[], PostMultiplied, true), None);
+    }
 }

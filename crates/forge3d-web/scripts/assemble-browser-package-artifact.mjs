@@ -71,6 +71,7 @@ export function assembleBrowserPackageArtifact({
     "chr03-hardware-proof.schema.json",
     "chr04-hardware-proof.schema.json",
     "saf03-safari-proof.schema.json",
+    "saf02-conformance.schema.json",
   ]) {
     copyFileSync(
       join(packageRoot, "tests", "browser", file),
@@ -105,6 +106,7 @@ export function assembleBrowserPackageArtifact({
     "chr04-lanes.mjs",
     "saf03-proof-validator.mjs",
     "saf03-lanes.mjs",
+    "saf02-conformance-validator.mjs",
     "browser-process-registry.mjs",
     "webdriver-client.mjs",
     "cleanup-browser-hardware.mjs",

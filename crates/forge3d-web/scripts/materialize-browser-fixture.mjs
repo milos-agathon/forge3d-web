@@ -84,9 +84,16 @@ export function materializeBrowserFixture({
     ),
     join(root, "terrain.bin"),
   );
+  const terrain = readFileSync(join(root, "terrain.bin"));
+  writeFileSync(
+    join(root, "terrain-range.bin"),
+    Buffer.concat([Buffer.alloc(4), terrain]),
+    { mode: 0o600 },
+  );
   for (const file of [
     "adapter-attestation.js",
     "hardware-page-harness.js",
+    "saf02-conformance.js",
     "viewer-benchmark-browser.js",
     "chr03-lanes.js",
     "chr04-lanes.js",
@@ -109,6 +116,7 @@ export function materializeBrowserFixture({
     applicationEntry: "index.html",
     wasm: "forge3d_web_bg.wasm",
     terrain: "terrain.bin",
+    rangedTerrain: "terrain-range.bin",
     benchmarkModule: "viewer-benchmark-browser.js",
     safariAcceptanceModule: "tests/webdriver/safari-viewer.mjs",
     seleniumVersion: "4.35.0",
