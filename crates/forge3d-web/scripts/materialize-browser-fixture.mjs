@@ -27,6 +27,9 @@ export function materializeBrowserFixture({
     join(packageRoot, "dist", "forge3d_web.js"),
     join(packageRoot, "dist", "forge3d_web_bg.wasm"),
     join(root, "test-interactive-viewer.html"),
+    join(root, "test-lifecycle-away.html"),
+    join(root, "tests", "webdriver", "safari-viewer.mjs"),
+    join(root, "node_modules", "selenium-webdriver", "package.json"),
     join(
       root,
       "tests",
@@ -44,6 +47,13 @@ export function materializeBrowserFixture({
     join(root, "test-interactive-viewer.html"),
     "utf8",
   );
+  const seleniumPackage = JSON.parse(readFileSync(
+    join(root, "node_modules", "selenium-webdriver", "package.json"),
+    "utf8",
+  ));
+  if (seleniumPackage.name !== "selenium-webdriver" || seleniumPackage.version !== "4.35.0") {
+    throw new Error("browser fixture must materialize exact selenium-webdriver 4.35.0");
+  }
   const nonceRelativeHtml = sourceHtml.replaceAll(
     '"/node_modules/',
     '"./node_modules/',
@@ -108,6 +118,8 @@ export function materializeBrowserFixture({
     terrain: "terrain.bin",
     rangedTerrain: "terrain-range.bin",
     benchmarkModule: "viewer-benchmark-browser.js",
+    safariAcceptanceModule: "tests/webdriver/safari-viewer.mjs",
+    seleniumVersion: "4.35.0",
   };
 }
 

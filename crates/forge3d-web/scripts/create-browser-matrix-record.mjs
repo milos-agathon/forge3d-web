@@ -8,7 +8,8 @@ import { validateChr03HardwareProofContract as validateChr03HardwareProof } from
 import { CHR03_STABLE_LANES } from "./chr03-lanes.mjs";
 import { validateChr04EdgeEvidence } from "./chr04-hardware-proof-validator.mjs";
 import { CHR04_LANES } from "./chr04-lanes.mjs";
-import { validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
+import { validateSaf03EvidenceEnvelope } from "./saf03-proof-validator.mjs";
+import { assertExactSafariRoute, validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
 
 const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
 const CHR04_REQUIRED_LANES = new Set(Object.keys(CHR04_LANES));
@@ -73,6 +74,23 @@ export function createAutomatedMatrixRecord({
     ) {
       throw new Error("automated Safari provenance does not match SAF-03");
     }
+    validateSaf03EvidenceEnvelope({
+      proof: evidence.saf03Proof,
+      technologyPreview: evidence.safariTechnologyPreview,
+      inventory: hostInventory,
+      browser: evidence.browser,
+      driver: evidence.driver,
+      system: evidence.system,
+      adapter: evidence.adapter,
+      route: evidence.route,
+      expectedBinding: {
+        lane: promotion.lane,
+        assetId: promotion.assetId,
+        platform: "darwin",
+        commit: promotion.trustedSha,
+        packageSha256: evidence.packageSha256,
+      },
+    });
   }
   if (
     promotion.lane === "infrastructure-canary" ||
@@ -101,7 +119,7 @@ export function createAutomatedMatrixRecord({
   ) {
     throw new Error("automated matrix evidence does not match its promotion");
   }
-  return {
+  const record = {
     schemaVersion: 1,
     key: `automated:${promotion.assetId}:${promotion.lane}`,
     kind: "automated",
@@ -128,6 +146,7 @@ export function createAutomatedMatrixRecord({
     hostInventory: safariTrackpadRecord
       ? structuredClone(hostInventory)
       : null,
+    route: safariTrackpadRecord ? structuredClone(evidence.route) : null,
     result: "PASS",
     infrastructureError: null,
     workflow: {
@@ -141,12 +160,17 @@ export function createAutomatedMatrixRecord({
     adapterAttestation: attestation,
     chr03Proof: evidence.chr03Proof ? structuredClone(evidence.chr03Proof) : null,
     chr04Proof: evidence.chr04Proof ? structuredClone(evidence.chr04Proof) : null,
+    saf03Proof: evidence.saf03Proof ? structuredClone(evidence.saf03Proof) : null,
+    safariTechnologyPreview: evidence.safariTechnologyPreview
+      ? structuredClone(evidence.safariTechnologyPreview) : null,
     saf02Proof: evidence.saf02Proof ? structuredClone(evidence.saf02Proof) : null,
     ...(safariTrackpadRecord ? {
       hardwareJobId: evidence.jobId,
       saf02Route: structuredClone(evidence.route),
     } : {}),
   };
+  if (safariTrackpadRecord) assertExactSafariRoute(record.route, record.saf02Route);
+  return record;
 }
 
 export function createManualMatrixRecord({ evidence, run }) {
@@ -300,6 +324,41 @@ export function finalizeMatrixRecord({
     attestation.denySelfHostedRunners !== true
   ) {
     throw new Error("matrix record requires exact artifact and attestation proof");
+  }
+  if (source.lane === "safari-macos-m2") {
+    assertExactSafariRoute(source.route, source.saf02Route);
+    validateSaf02Conformance(source.saf02Proof, {
+      lane: source.lane,
+      assetId: source.assetId,
+      hostId: source.hostId,
+      runId: source.workflow.runId,
+      jobId: source.hardwareJobId,
+      commit: source.trustedSha,
+      packageSha256: source.packageSha256,
+      applicationUrl: source.saf02Route?.applicationUrl,
+      assetUrl: source.saf02Route?.assetUrl,
+      browser: source.browser,
+      system: source.system,
+      adapter: source.adapter,
+      effectiveLaunchArguments: source.effectiveLaunchArguments,
+    });
+    validateSaf03EvidenceEnvelope({
+      proof: source.saf03Proof,
+      technologyPreview: source.safariTechnologyPreview,
+      inventory: source.hostInventory,
+      browser: source.browser,
+      driver: source.driver,
+      system: source.system,
+      adapter: source.adapter,
+      route: source.route,
+      expectedBinding: {
+        lane: source.lane,
+        assetId: source.assetId,
+        platform: "darwin",
+        commit: source.trustedSha,
+        packageSha256: source.packageSha256,
+      },
+    });
   }
   if (
     !Number.isInteger(selectedRun?.id) ||

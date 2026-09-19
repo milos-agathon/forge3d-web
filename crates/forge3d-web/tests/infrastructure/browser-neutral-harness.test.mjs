@@ -20,6 +20,7 @@ import { runBrowserLane } from "../hardware/run-browser-lane.mjs";
 import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
 import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
 import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
+import { validAbsentStpResult, validSaf03Proof } from "../browser/saf03-proof-fixture.mjs";
 
 const binding = {
   lane: "chrome-linux-rtx3070",
@@ -42,7 +43,9 @@ const desktopInventory = {
   schemaVersion: 1,
   assetId: binding.assetId,
   platform: "linux",
+  osVersion: "6.8.0",
   osBuild: "Linux 6.8.0 checked",
+  architecture: "x86_64",
   headed: true,
   displayServer: "GNOME Wayland",
   session: {
@@ -399,13 +402,21 @@ test("production Safari lane dispatches the authorized SAF-02 binding and valida
                 runId: 10, jobId: 20, commit: binding.trustedSha,
                 packageSha256: binding.packageSha256, nonce,
               }),
+              saf03Proof: validSaf03Proof({
+                commit: binding.trustedSha,
+                packageSha256: binding.packageSha256,
+              }),
             };
           },
+          runTechnologyPreview: async () => validAbsentStpResult(),
           close: async () => undefined,
         }),
       },
     });
-    assert.equal(JSON.parse(readFileSync(outputPath, "utf8")).saf02Proof.result, "PASS");
+    const evidence = JSON.parse(readFileSync(outputPath, "utf8"));
+    assert.equal(evidence.saf02Proof.result, "PASS");
+    assert.equal(evidence.saf03Proof.kind, "forge3d-saf03-safari-acceptance-v1");
+    assert.equal(evidence.safariTechnologyPreview.result, "ABSENT");
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
@@ -527,7 +538,9 @@ test("manual mobile runtime calls Appium class and retains the visible challenge
         ...desktopInventory,
         assetId: "FW-MAC-M2-01",
         platform: "darwin",
+        osVersion: "26.0",
         osBuild: "Darwin 25.0.0 checked",
+        architecture: "arm64",
         displayServer: "WindowServer",
         session: {
           interactive: true,
@@ -619,7 +632,9 @@ test("Safari product manual lane reaches page composition without changing attes
         ...desktopInventory,
         assetId: "FW-MAC-M2-01",
         platform: "darwin",
+        osVersion: "26.0",
         osBuild: "Darwin 25.0.0 checked",
+        architecture: "arm64",
         displayServer: "WindowServer",
         tools: { safaridriverVersion: "26.0" },
         browsers: [{ id: "safari-stable", version: "26.0", executable: "/usr/bin/safaridriver" }],

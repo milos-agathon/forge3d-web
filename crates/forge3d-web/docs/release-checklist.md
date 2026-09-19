@@ -135,6 +135,15 @@ missing-`navigator.gpu` capability boundary; the job summary then says
 incomplete, extra, mixed, unexpected, or raw-result-disagreeing reports fail the
 optional check. This engine preflight is not shipping Safari, branded-browser,
 exact-tarball, or physical GPU evidence. Safari remains unsupported/`NOT_PROVEN`.
+
+For SAF-03, accept only `forge3d-saf03-safari-acceptance-v1` from the required
+`safari-macos-m2` lane. The record must retain per-action camera/frame/pixel
+evidence, native and viewer PNG digests with decoded terrain pixels, exactly 30
+ordered real visibility cycles, exactly 30 ordered persisted-true BFCache
+cycles, the separate persisted-false hard reload, exact ownership/disposal,
+and the untrimmed FND-07 benchmark. Revalidate the full object at lane, matrix
+source, hosted finalizer, and merge boundaries. A legacy Safari smoke, WebKit
+preflight, STP result, or missing/uncertain cleanup cannot replace stable proof.
 `test:browser:chrome` and `test:browser:edge` select the installed branded
 channels without unsafe WebGPU, GPU-blocklist, Vulkan-enable, or ANGLE-forcing
 flags. Their normal configurations use required evidence mode and fail when

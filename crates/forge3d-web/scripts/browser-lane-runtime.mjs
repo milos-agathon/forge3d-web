@@ -14,6 +14,8 @@ import { validateChr03HardwareProofContract as validateChr03HardwareProof } from
 import { CHR03_STABLE_LANES, isChr03Lane } from "./chr03-lanes.mjs";
 import { validateChr04EdgeEvidence } from "./chr04-hardware-proof-validator.mjs";
 import { CHR04_LANES, isChr04Lane } from "./chr04-lanes.mjs";
+import { validateSaf03SafariProof } from "./saf03-proof-validator.mjs";
+import { isSaf03Lane } from "./saf03-lanes.mjs";
 import { validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
 
 const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
@@ -132,10 +134,12 @@ export async function executeHardwareBrowserLane({
     throw new Error("product manual binding requires the authenticated tester");
   }
   const session = await dependencies.openSession({
+    lane,
     runtime,
     assetId,
     routeUrl: route.applicationUrl,
     browserPolicy,
+    inventory,
     deviceMatrix,
     appiumSessionModule,
     processRegistryPath,
@@ -159,9 +163,7 @@ export async function executeHardwareBrowserLane({
         pageResult = await session.runPage({
           lane,
           binding: {
-            ...(isChr03Lane(lane) || isChr04Lane(lane) || lane === "safari-macos-m2"
-              ? { lane: binding.lane }
-              : {}),
+            ...(isChr03Lane(lane) || isChr04Lane(lane) || isSaf03Lane(lane) ? { lane: binding.lane } : {}),
             runId: binding.runId,
             jobId: binding.jobId,
             assetId: binding.assetId,
@@ -234,10 +236,22 @@ export async function executeHardwareBrowserLane({
             browserPolicy,
           });
         }
+        if (lane === "safari-macos-m2") {
+          validateSaf03SafariProof(pageResult.saf03Proof, {
+            lane,
+            assetId,
+            platform,
+            commit: binding.commit,
+            packageSha256: binding.packageSha256,
+          });
+        }
         return pageResult.assertions;
       },
       cleanup: async () => ({ ok: true }),
     });
+    const safariTechnologyPreview = lane === "safari-macos-m2"
+      ? await session.runTechnologyPreview({ lane, binding, route })
+      : null;
     writeJson(outputPath, {
       ...record,
       browser: session.browser,
@@ -245,6 +259,8 @@ export async function executeHardwareBrowserLane({
       routeReadiness: pageResult.routeReadiness,
       chr03Proof: pageResult.chr03Proof ?? null,
       chr04Proof: pageResult.chr04Proof ?? null,
+      saf03Proof: pageResult.saf03Proof ?? null,
+      safariTechnologyPreview,
       saf02Proof: pageResult.saf02Proof ?? null,
       headed: true,
       driver: provenance.driver,

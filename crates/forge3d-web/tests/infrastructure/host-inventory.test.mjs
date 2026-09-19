@@ -45,6 +45,7 @@ const browser = {
 const tools = {
   ...policy.tools,
   safaridriverVersion: "Included with Safari 26.0",
+  safariTechnologyPreviewDriverVersion: "Included with Safari Technology Preview 26.1",
 };
 const trackpad = captureTrackpadInventory({
   usbProfile: {
@@ -90,7 +91,7 @@ test("Mac canary producer emits the exact seven-asset schema-valid signed invent
     platform: "darwin",
     environment: {},
     now: new Date("2026-07-29T08:00:00.000Z"),
-    execute: (command) => {
+    execute: (command, args) => {
       calls.push(command);
       if (command === inventoryHelper) {
         return JSON.stringify({
@@ -105,7 +106,8 @@ test("Mac canary producer emits the exact seven-asset schema-valid signed invent
           hardware: observedHardware,
         });
       }
-      if (command === "/usr/bin/sw_vers") return "25A123\n";
+      if (command === "/usr/bin/sw_vers") return args[0] === "-productVersion" ? "26.0\n" : "25A123\n";
+      if (command === "/usr/bin/uname") return "arm64\n";
       if (command === "/usr/bin/stat") return "forge3d\n";
       if (command === "/usr/sbin/ioreg") {
         return '    "CGSSessionScreenIsLocked" = No\n';
@@ -125,6 +127,8 @@ test("Mac canary producer emits the exact seven-asset schema-valid signed invent
   assert.deepEqual(calls, [
     inventoryHelper,
     "/usr/bin/sw_vers",
+    "/usr/bin/sw_vers",
+    "/usr/bin/uname",
     "/usr/bin/stat",
     "/usr/sbin/ioreg",
   ]);
@@ -144,7 +148,7 @@ test("SAF-03 captures the same exact Mac and trackpad inventory contract", () =>
     platform: "darwin",
     environment: {},
     now: new Date("2026-07-29T08:00:00.000Z"),
-    execute: (command) => {
+    execute: (command, args) => {
       if (command === inventoryHelper) {
         return JSON.stringify({
           schemaVersion: 1,
@@ -158,7 +162,8 @@ test("SAF-03 captures the same exact Mac and trackpad inventory contract", () =>
           hardware: hardwareObservation(),
         });
       }
-      if (command === "/usr/bin/sw_vers") return "25A123\n";
+      if (command === "/usr/bin/sw_vers") return args[0] === "-productVersion" ? "26.0\n" : "25A123\n";
+      if (command === "/usr/bin/uname") return "arm64\n";
       if (command === "/usr/bin/stat") return "forge3d\n";
       if (command === "/usr/sbin/ioreg") {
         return '    "CGSSessionScreenIsLocked" = No\n';
@@ -278,7 +283,9 @@ function captureExact(hardware) {
   return captureHostInventory({
     assetId: hostId,
     platform: "darwin",
+    osVersion: "26.0",
     osBuild: "macOS build 25A123",
+    architecture: "arm64",
     displayServer: "WindowServer",
     session: {
       interactive: true,

@@ -79,7 +79,7 @@ export function validateHardwareProofPayload(proof) {
     if (after?.ownedListeners !== 0 || after.activeObservers !== 0 || after.activePointers !== 0 || after.activeRuntimes !== 0 || after.pendingAnimationFrame !== false || after.ownedAnimationFrameCount !== 0) throw new Error("CHR-03 lifecycle cycle leaked owned resources");
   });
   if (!Array.isArray(proof.errors) || proof.errors.length !== 0) throw new Error("CHR-03 proof contains browser or WebGPU errors");
-  validateBenchmark(proof.benchmark);
+  validateFnd07Benchmark(proof.benchmark);
   if (proof.systemInfo?.diagnosticOnly !== true ||
       (proof.systemInfo.available === true && proof.systemInfo.value === null) ||
       (proof.systemInfo.available === false && !proof.systemInfo.unavailableReason)) {
@@ -88,7 +88,7 @@ export function validateHardwareProofPayload(proof) {
   return proof;
 }
 
-function validateBenchmark(benchmark) {
+export function validateFnd07Benchmark(benchmark) {
   if (!benchmark || Object.keys(benchmark).length !== benchmarkFields.length ||
       benchmarkFields.some((field) => !Object.hasOwn(benchmark, field)) ||
       Object.entries(benchmarkConstants).some(([field, value]) => benchmark[field] !== value)) {

@@ -191,6 +191,16 @@ non-promotional. Synthetic proof establishes
 source/package behavior only; even a headed result must be incorporated into the separately attested branded, physical browser
 and GPU matrix before it can contribute to a support claim.
 
+The physical SAF-03 lane is distinct. It drives shipping Safari with the exact
+Selenium 4.35.0 client and Apple's SafariDriver, records every native action
+with camera/frame/decoded-pixel before-and-after evidence, and runs separate
+30-cycle real-tab visibility and persisted-true BFCache sequences. A separately
+labelled persisted-false refresh proves cold initialization is not counted as a
+restore. The versioned proof retains native and viewer screenshot digests plus
+the complete raw FND-07 benchmark and is revalidated across each evidence
+boundary. Safari Technology Preview is an optional, separately inventoried
+probe and never substitutes for shipping Safari.
+
 ## Viewer Lifecycle And Recovery
 
 Successful creation reports `initializing -> ready` before the create promise

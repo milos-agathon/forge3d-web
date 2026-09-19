@@ -21,6 +21,10 @@ import { createFixtureState, resolveFixtureResponse } from "../../scripts/serve-
 
 const fixtureRoot = mkdtempSync(join(tmpdir(), "forge3d-https-fixture-"));
 writeFileSync(join(fixtureRoot, "index.html"), "<!doctype html>");
+writeFileSync(
+  join(fixtureRoot, "test-lifecycle-away.html"),
+  "<!doctype html><title>Lifecycle transition</title>",
+);
 writeFileSync(join(fixtureRoot, "app.js"), "export {};");
 writeFileSync(join(fixtureRoot, "viewer-benchmark-browser.js"), "export {};");
 writeFileSync(join(fixtureRoot, "chr03-lanes.js"), "export {};");
@@ -233,6 +237,20 @@ test("application host, nonce path, MIME, cache, and method policy fail closed",
   );
 });
 
+test("trusted lifecycle-away route serves exact GET and HEAD HTML responses", () => {
+  const get = request("application", "test-lifecycle-away.html");
+  assert.equal(get.status, 200);
+  assert.equal(get.headers["Content-Type"], "text/html; charset=utf-8");
+  assert.equal(get.body.toString("utf8"), "<!doctype html><title>Lifecycle transition</title>");
+  const head = request("application", "test-lifecycle-away.html", { method: "HEAD" });
+  assert.equal(head.status, 200);
+  assert.equal(head.headers["Content-Type"], "text/html; charset=utf-8");
+  assert.equal(head.headers["Content-Length"], String(get.body.length));
+  assert.equal(head.body.length, 0);
+  assert.equal(request("application", "test-lifecycle-away.html.bak").status, 404);
+  assert.equal(request("application", "test-lifecycle-away.html", { host: assetHost }).status, 421);
+});
+
 test("asset allow route returns exact CORS and range headers", () => {
   const full = request("asset", "cors/allow/terrain.bin");
   assert.deepEqual(full.headers, {
@@ -429,11 +447,16 @@ test("materialized import map remains inside the nonce-bound base path", () => {
   mkdirSync(join(root, "tests", "browser", "benchmark"), {
     recursive: true,
   });
+  mkdirSync(join(root, "tests", "webdriver"), { recursive: true });
+  mkdirSync(join(root, "node_modules", "selenium-webdriver"), { recursive: true });
   writeFileSync(join(root, "package.json"), '{"private":true}');
   writeFileSync(
     join(root, "test-interactive-viewer.html"),
     '<script type="importmap">{"imports":{"@forge3d/web":"/node_modules/@forge3d/web/dist/index.js"}}</script>',
   );
+  writeFileSync(join(root, "test-lifecycle-away.html"), "<!doctype html>");
+  writeFileSync(join(root, "tests", "webdriver", "safari-viewer.mjs"), "export {};");
+  writeFileSync(join(root, "node_modules", "selenium-webdriver", "package.json"), JSON.stringify({ name: "selenium-webdriver", version: "4.35.0" }));
   for (const file of ["index.js", "forge3d_web.js"]) {
     writeFileSync(join(packageRoot, "dist", file), "export {};");
   }
