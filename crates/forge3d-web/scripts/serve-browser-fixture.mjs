@@ -31,6 +31,10 @@ const applicationRoutes = new Map([
     { file: "chr04-lanes.js", contentType: "text/javascript; charset=utf-8" },
   ],
   [
+    "ffx03-lanes.js",
+    { file: "ffx03-lanes.js", contentType: "text/javascript; charset=utf-8" },
+  ],
+  [
     "package.sha256",
     { file: "package.sha256", contentType: "text/plain; charset=utf-8" },
   ],
