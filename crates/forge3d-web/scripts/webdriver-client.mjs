@@ -7,10 +7,8 @@ export class WebDriverClient {
 
   async waitUntilReady() {
     for (let attempt = 0; attempt < 60; attempt += 1) {
-      const response = await this.fetchImpl(`${this.baseUrl}/status`).catch(
-        () => null,
-      );
-      if (response?.ok) return;
+      const response = await this.requestRaw("GET", "/status", undefined, 2_000).catch(() => null);
+      if (response?.http.ok) return;
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
     throw new Error(`WebDriver did not become ready at ${this.baseUrl}`);
@@ -30,9 +28,18 @@ export class WebDriverClient {
     );
   }
 
-  async request(method, path, body = undefined) {
+  async request(method, path, body = undefined, timeoutMs = this.requestTimeoutMs) {
+    const response = await this.requestRaw(method, path, body, timeoutMs);
+    const { value, http } = response;
+    if (!http.ok || value.value?.error) {
+      throw new Error(`INFRA_ERROR WEBDRIVER_REQUEST_FAILED ${method} ${http.status}`);
+    }
+    return value;
+  }
+
+  async requestRaw(method, path, body = undefined, timeoutMs = this.requestTimeoutMs) {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), this.requestTimeoutMs);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     let response;
     let value;
     try {
@@ -48,10 +55,7 @@ export class WebDriverClient {
     } finally {
       clearTimeout(timeout);
     }
-    if (!response.ok || value.value?.error) {
-      throw new Error(`INFRA_ERROR WEBDRIVER_REQUEST_FAILED ${method} ${response.status}`);
-    }
-    return value;
+    return { http: response, value };
   }
 }
 
@@ -93,6 +97,7 @@ class WebDriverSession {
   }
 
   async runHardwarePage(payload) {
+    await this.client.request("POST", `/session/${this.sessionId}/timeouts`, { script: 115_000 });
     const script = `
       const payload = arguments[0];
       const done = arguments[arguments.length - 1];
@@ -105,6 +110,7 @@ class WebDriverSession {
       "POST",
       `/session/${this.sessionId}/execute/async`,
       { script, args: [payload] },
+      120_000,
     );
     const result = response.value;
     if (result?.ok !== true) {
@@ -114,6 +120,7 @@ class WebDriverSession {
   }
 
   async runRouteProbe({ route, expectedPackageSha256 }) {
+    await this.client.request("POST", `/session/${this.sessionId}/timeouts`, { script: 25_000 });
     const script = `
       const payload = arguments[0];
       const done = arguments[arguments.length - 1];
@@ -129,6 +136,7 @@ class WebDriverSession {
       "POST",
       `/session/${this.sessionId}/execute/async`,
       { script, args: [{ route, expectedPackageSha256 }] },
+      30_000,
     );
     const result = response.value;
     if (result?.ok !== true) {

@@ -150,7 +150,7 @@ impl DepthAttachment {
 
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
-struct CameraUniform {
+pub(super) struct CameraUniform {
     view_projection: [[f32; 4]; 4],
 }
 
@@ -160,12 +160,12 @@ pub(super) const TERRAIN_SKIRT_DEPTH: f32 = 0.24;
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub(super) struct ColorRampUniform {
-    stops: [[f32; 4]; MAX_COLOR_RAMP_STOPS],
-    stop_count: u32,
+    pub(super) stops: [[f32; 4]; MAX_COLOR_RAMP_STOPS],
+    pub(super) stop_count: u32,
     // WGSL uniform layout aligns the following vec3<u32> member to 16 bytes:
     // 128 bytes of stops + 4 stop-count bytes + 12 padding bytes + 16 clear-color bytes.
-    _stop_count_alignment_padding: [u32; 3],
-    clear_color: [f32; 4],
+    pub(super) _stop_count_alignment_padding: [u32; 3],
+    pub(super) clear_color: [f32; 4],
 }
 
 impl ColorRampUniform {

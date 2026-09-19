@@ -36,8 +36,9 @@ surfaces, and deployment assumptions that application owners must satisfy.
 - Cross-origin terrain URL sources must send CORS headers that allow browser
   `fetch` from the application origin.
 - Byte-range terrain reads may send a `Range` header when `byteOffset` or
-  `byteLength` is supplied. Servers may return either the requested partial
-  object or a full object that still satisfies the requested byte slice.
+  `byteLength` is supplied. A nonzero-offset request requires the exact `206`
+  response and `Content-Range`; a full `200` response is accepted only for an
+  exact zero-offset body.
 - Applications should handle the stable `WEBGPU_UNAVAILABLE` and
   `WEBGPU_ADAPTER_UNAVAILABLE` errors from the public runtime/viewer API and
   show an unsupported-state UI. Browser or organization policy and disabled

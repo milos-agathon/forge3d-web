@@ -143,6 +143,9 @@ test("primary Chromium provenance rejects nonstable, placeholder, malformed, uns
     [(value) => { primary(value).effectiveLaunchArguments = ["--use-angle=swiftshader"]; }, /prohibited browser launch arguments/u],
     [(value) => { primary(value).effectiveLaunchArguments = ["--enable-vulkan"]; }, /prohibited browser launch arguments/u],
     [(value) => { primary(value).effectiveLaunchArguments = ["--enable-features=Foo,Vulkan,Bar"]; }, /prohibited browser launch arguments/u],
+    [(value) => { primary(value).effectiveLaunchArguments = ["--enable-features=Foo,wEbGpUExperiment,Bar"]; }, /prohibited browser launch arguments/u],
+    [(value) => { primary(value).effectiveLaunchArguments = ["-enable-features=WebGPUService"]; }, /prohibited browser launch arguments/u],
+    [(value) => { primary(value).effectiveLaunchArguments = ["/enable-features=CanvasWebGPU"]; }, /prohibited browser launch arguments/u],
     [(value) => { primary(value).effectiveLaunchArguments = ["-enable-features=Vulkan"]; }, /prohibited browser launch arguments/u],
     [(value) => { primary(value).effectiveLaunchArguments = ["/use-angle=swiftshader"]; }, /prohibited browser launch arguments/u],
     [(value) => { primary(value).adapter.isFallbackAdapter = true; }, /automated hardware evidence is incomplete/u],
@@ -163,6 +166,37 @@ test("primary Chromium provenance rejects nonstable, placeholder, malformed, uns
     const input = validPublicationInput();
     input.records[0] = { ...input.records[0], lane, assetId, hostId: assetId };
     assert.throws(() => publish(input));
+  }
+
+  const safeFeatures = validPublicationInput();
+  primary(safeFeatures).effectiveLaunchArguments = [
+    "--enable-features=CanvasOopRasterization,WebGLDraftExtensions",
+  ];
+  rebindReadiness(safeFeatures);
+  assert.doesNotThrow(() => publish(safeFeatures));
+});
+
+test("Safari publication requires the complete independently bound SAF-02 proof", () => {
+  const safari = (value) =>
+    value.records.find((record) => record.lane === "safari-macos-m2");
+  const mutations = [
+    [(value) => { delete safari(value).saf02Proof; }, /JSON schema validation failed/u],
+    [(value) => { safari(value).saf02Proof.result = "FAIL"; }, /JSON schema validation failed/u],
+    [(value) => { delete safari(value).hardwareJobId; }, /SAF-02 proof jobId does not match its authorization/u],
+    [(value) => { safari(value).hardwareJobId += 1; }, /SAF-02 proof jobId does not match its authorization/u],
+    [(value) => { delete safari(value).saf02Route; }, /Invalid URL/u],
+    [(value) => { safari(value).saf02Route.applicationUrl = "https://mac-m2.webgpu-ci.forge3d.dev/runs/999/888/cccccccccccccccccccccccccccccccc/"; }, /SAF-02 proof route is replayed or mismatched/u],
+    [(value) => { safari(value).saf02Proof.binding.runId += 1; }, /SAF-02 proof runId does not match its authorization/u],
+    [(value) => { safari(value).saf02Proof.binding.jobId += 1; }, /SAF-02 proof jobId does not match its authorization/u],
+    [(value) => { safari(value).saf02Proof.binding.commit = "e".repeat(40); }, /SAF-02 proof commit does not match its authorization/u],
+    [(value) => { safari(value).saf02Proof.binding.packageSha256 = "f".repeat(64); }, /SAF-02 proof packageSha256 does not match its authorization/u],
+    [(value) => { safari(value).saf02Proof.route.basePath = `/runs/999/888/${safari(value).saf02Proof.route.nonce}/`; }, /SAF-02 proof route is replayed or mismatched/u],
+  ];
+  for (const [mutate, error] of mutations) {
+    const input = validPublicationInput();
+    mutate(input);
+    rebindReadiness(input);
+    assert.throws(() => publish(input), error);
   }
 });
 

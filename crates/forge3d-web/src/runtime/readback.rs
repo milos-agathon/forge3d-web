@@ -133,7 +133,7 @@ async fn map_readback_buffer(
     Ok(data)
 }
 
-fn normalize_readback_to_rgba(
+pub(super) fn normalize_readback_to_rgba(
     mut pixels: Vec<u8>,
     format: wgpu::TextureFormat,
 ) -> Result<Vec<u8>, WebError> {

@@ -17,7 +17,7 @@ import {
 } from "../../scripts/manage-browser-route.mjs";
 import { materializeBrowserFixture } from "../../scripts/materialize-browser-fixture.mjs";
 import { validateRawFixtureProbe } from "../../scripts/probe-browser-fixture.mjs";
-import { resolveFixtureResponse } from "../../scripts/serve-browser-fixture.mjs";
+import { createFixtureState, resolveFixtureResponse } from "../../scripts/serve-browser-fixture.mjs";
 
 const fixtureRoot = mkdtempSync(join(tmpdir(), "forge3d-https-fixture-"));
 writeFileSync(join(fixtureRoot, "index.html"), "<!doctype html>");
@@ -70,6 +70,7 @@ writeFileSync(
 );
 writeFileSync(join(fixtureRoot, "forge3d_web_bg.wasm"), Buffer.from([0, 97, 115, 109]));
 writeFileSync(join(fixtureRoot, "terrain.bin"), Buffer.from([0, 1, 2, 3, 4, 5]));
+writeFileSync(join(fixtureRoot, "terrain-range.bin"), Buffer.from([9, 9, 9, 9, 0, 1, 2, 3, 4, 5]));
 after(() => {
   rmSync(fixtureRoot, { recursive: true, force: true });
 });
@@ -83,11 +84,13 @@ const configuration = {
   assetHost,
   basePath,
 };
+const fixtureState = createFixtureState();
 
 function request(role, path, overrides = {}) {
   return resolveFixtureResponse({
     role,
     ...configuration,
+    state: overrides.state ?? fixtureState,
     request: {
       method: "GET",
       url: `${basePath}${path}`,
@@ -99,6 +102,38 @@ function request(role, path, overrides = {}) {
     },
   });
 }
+
+test("SAF-02 retry route changes MIME only after the first identical GET", () => {
+  const state = createFixtureState();
+  const path = `saf02/retry/${"d".repeat(32)}/forge3d_web_bg.wasm`;
+  assert.equal(request("application", path, { method: "HEAD", state }).headers["Content-Type"], "application/octet-stream");
+  assert.equal(request("application", path, { method: "OPTIONS", state }).status, 405);
+  const first = request("application", path, { state });
+  const second = request("application", path, { state });
+  assert.equal(first.headers["Content-Type"], "application/octet-stream");
+  assert.equal(second.headers["Content-Type"], "application/wasm");
+  assert.deepEqual(first.body, second.body);
+  const isolated = request("application", path, { state: createFixtureState() });
+  assert.equal(isolated.headers["Content-Type"], "application/octet-stream");
+  const concurrent = request("application", `saf02/retry/${"e".repeat(32)}/forge3d_web_bg.wasm`, { state });
+  assert.equal(concurrent.headers["Content-Type"], "application/octet-stream");
+});
+
+test("SAF-02 terrain range controls distinguish exact, ignored, and unsatisfied ranges", () => {
+  const exact = request("asset", "cors/allow/range-exact/terrain-range.bin", { range: "bytes=4-9" });
+  assert.equal(exact.status, 206);
+  assert.equal(exact.headers["Content-Range"], "bytes 4-9/10");
+  assert.deepEqual([...exact.body], [0, 1, 2, 3, 4, 5]);
+  const zeroOffset = request("asset", "cors/allow/range-ignored/terrain.bin", { range: "bytes=0-5" });
+  assert.equal(zeroOffset.status, 200);
+  assert.equal(zeroOffset.headers["Content-Length"], "6");
+  const ignored = request("asset", "cors/allow/range-ignored/terrain-range.bin", { range: "bytes=4-9" });
+  assert.equal(ignored.status, 200);
+  assert.equal(ignored.headers["Content-Length"], "10");
+  const unsatisfied = request("asset", "cors/allow/range-416/terrain-range.bin", { range: "bytes=4-9" });
+  assert.equal(unsatisfied.status, 416);
+  assert.equal(unsatisfied.headers["Content-Range"], "bytes */10");
+});
 
 test("nonce generation consumes exactly 16 bytes and rejects malformed or reused output", () => {
   let requestedBytes = null;
@@ -410,7 +445,7 @@ test("materialized import map remains inside the nonce-bound base path", () => {
     join(root, "tests", "browser", "benchmark", "benchmark-terrain-v1.f32le"),
     Buffer.from([0, 1, 2, 3]),
   );
-  for (const file of ["adapter-attestation.js", "hardware-page-harness.js", "viewer-benchmark-browser.js", "chr03-lanes.js", "chr04-lanes.js"]) {
+  for (const file of ["adapter-attestation.js", "hardware-page-harness.js", "saf02-conformance.js", "viewer-benchmark-browser.js", "chr03-lanes.js", "chr04-lanes.js"]) {
     writeFileSync(join(root, "tests", "browser", file), "export {};");
   }
   try {

@@ -1,0 +1,45 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "kind", "binding", "route", "environment", "wasm", "terrain", "render", "observers", "result"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "kind": { "const": "forge3d-saf02-conformance-v1" },
+    "binding": { "$ref": "#/$defs/binding" },
+    "route": { "$ref": "#/$defs/route" },
+    "environment":{"type":"object","additionalProperties":false,"required":["secureContext","userAgent","platform","effectiveLaunchArguments"],"properties":{"secureContext":{"const":true},"userAgent":{"type":"string","minLength":1},"platform":{"type":"string","minLength":1},"effectiveLaunchArguments":{"type":"array","items":{"type":"string"}}}},
+    "wasm": {
+      "type": "object", "additionalProperties": false, "required": ["outcomes", "retry"],
+      "properties": {
+        "outcomes": { "type": "object", "additionalProperties": false,
+          "required": ["correctMime", "allowedCors", "badMime", "deniedCors", "wrongOriginCors"],
+          "properties": { "correctMime": {"const":"PASS"}, "allowedCors":{"const":"PASS"}, "badMime":{"const":"WASM_LOAD_FAILED"}, "deniedCors":{"const":"WASM_LOAD_FAILED"}, "wrongOriginCors":{"const":"WASM_LOAD_FAILED"} }
+        },
+        "retry": { "type":"object", "additionalProperties":false,
+          "required":["id","first","second","sameRealm","identicalUrl","observersComplete","observed","configureCalls"],
+          "properties":{"id":{"type":"string","minLength":1},"first":{"const":"WASM_LOAD_FAILED"},"second":{"const":"PASS"},"sameRealm":{"const":true},"identicalUrl":{"const":true},"observersComplete":{"const":true},"observed":{"type":"array","maxItems":0},"configureCalls":{"type":"array","minItems":1,"items":{"$ref":"#/$defs/configure"}}}
+        }
+      }
+    },
+    "terrain": { "type":"object", "additionalProperties":false, "required":["outcomes"], "properties":{"outcomes":{"type":"object","additionalProperties":false,
+      "required":["sameOriginFull","allowedCorsFull","nonzero206","zeroOffset200","nonzero200","range416","corsDeny","corsWrongOrigin"],
+      "properties":{"sameOriginFull":{"const":"PASS"},"allowedCorsFull":{"const":"PASS"},"nonzero206":{"const":"PASS"},"zeroOffset200":{"const":"PASS"},"nonzero200":{"const":"IO_ERROR"},"range416":{"const":"IO_ERROR"},"corsDeny":{"const":"IO_ERROR"},"corsWrongOrigin":{"const":"IO_ERROR"}}
+    }}},
+    "render": { "type":"object","additionalProperties":false,
+      "required":["width","height","beforeBytes","afterBytes","beforePngSignature","afterPngSignature","beforeLumaRange","afterLumaRange","visiblePixels","comparedPixels","changedPixels","cameraChanged","submittedFramesBeforeCamera","submittedFramesAfterCamera","configure"],
+      "properties":{"width":{"const":77},"height":{"const":53},"beforeBytes":{"type":"integer","minimum":1},"afterBytes":{"type":"integer","minimum":1},"beforePngSignature":{"const":true},"afterPngSignature":{"const":true},"beforeLumaRange":{"type":"number","exclusiveMinimum":20},"afterLumaRange":{"type":"number","exclusiveMinimum":20},"visiblePixels":{"type":"integer","minimum":3001},"comparedPixels":{"const":4081},"changedPixels":{"type":"integer","minimum":101},"cameraChanged":{"const":true},"submittedFramesBeforeCamera":{"type":"integer","minimum":1},"submittedFramesAfterCamera":{"type":"integer","minimum":2},"configure":{"type":"null"}}
+    },
+    "observers": { "type":"object","additionalProperties":false,
+      "required":["installedBeforeInitialization","restored","windowErrors","unhandledRejections","consoleFindings","deviceUncapturedErrors","configureCalls","viewerErrors"],
+      "properties":{"installedBeforeInitialization":{"const":true},"restored":{"const":true},"windowErrors":{"type":"array","maxItems":0},"unhandledRejections":{"type":"array","maxItems":0},"consoleFindings":{"type":"array","maxItems":0},"deviceUncapturedErrors":{"type":"array","maxItems":0},"configureCalls":{"type":"array","minItems":2,"items":{"$ref":"#/$defs/configure"}},"viewerErrors":{"type":"array","items":{"$ref":"#/$defs/viewerError"}}}
+    },
+    "result": { "const": "PASS" }
+  },
+  "$defs": {
+    "binding":{"type":"object","additionalProperties":false,"required":["lane","assetId","hostId","runId","jobId","commit","packageSha256"],"properties":{"lane":{"const":"safari-macos-m2"},"assetId":{"const":"FW-MAC-M2-01"},"hostId":{"const":"FW-MAC-M2-01"},"runId":{"type":"integer","minimum":1},"jobId":{"type":"integer","minimum":1},"commit":{"type":"string","pattern":"^[0-9a-f]{40}$"},"packageSha256":{"type":"string","pattern":"^[0-9a-f]{64}$"}}},
+    "route":{"type":"object","additionalProperties":false,"required":["applicationOrigin","assetOrigin","basePath","nonce"],"properties":{"applicationOrigin":{"type":"string","pattern":"^https://[a-z0-9-]+\\.webgpu-ci\\.forge3d\\.dev$"},"assetOrigin":{"type":"string","pattern":"^https://assets-[a-z0-9-]+\\.webgpu-ci\\.forge3d\\.dev$"},"basePath":{"type":"string","pattern":"^/runs/[1-9][0-9]*/[1-9][0-9]*/[0-9a-f]{32}/$"},"nonce":{"type":"string","pattern":"^[0-9a-f]{32}$"}}},
+    "configure":{"type":"object","additionalProperties":false,"required":["format","alphaMode"],"properties":{"format":{"type":"string","pattern":"^(bgra8unorm|rgba8unorm)"},"alphaMode":{"enum":["opaque","premultiplied"]}}},
+    "viewerError":{"type":"object","additionalProperties":false,"required":["phase","code"],"properties":{"phase":{"enum":["terrain-nonzero-200","terrain-416","terrain-cors-deny","terrain-cors-wrong-origin"]},"code":{"const":"IO_ERROR"}}}
+  }
+}

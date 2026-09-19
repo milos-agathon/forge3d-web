@@ -162,12 +162,15 @@ function productionDependencies() {
       expectedBodyPrefix = undefined,
     }) {
       for (let attempt = 0; attempt < 80; attempt += 1) {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 2_000);
         const response = await fetch(`http://127.0.0.1:${port}${path}`, {
           headers: {
             Host: host,
             ...(origin ? { Origin: origin } : {}),
           },
-        }).catch(() => null);
+          signal: controller.signal,
+        }).catch(() => null).finally(() => clearTimeout(timeout));
         if (response?.ok) {
           const body = await response.text();
           if (!expectedBodyPrefix || body.startsWith(expectedBodyPrefix)) return;
