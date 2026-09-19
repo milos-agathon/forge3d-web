@@ -14,6 +14,7 @@ const defaultPolicyPath = join(
 export function captureHostInventory({
   assetId,
   platform,
+  architecture = process.arch,
   osBuild,
   displayServer,
   session,
@@ -45,6 +46,7 @@ export function captureHostInventory({
     schemaVersion: 1,
     assetId,
     platform,
+    architecture: validateArchitecture(platform, architecture),
     osBuild: nonEmpty(osBuild, "osBuild"),
     headed: true,
     displayServer: nonEmpty(displayServer, "displayServer"),
@@ -114,6 +116,7 @@ export function validateHostInventory(
       "schemaVersion",
       "assetId",
       "platform",
+      "architecture",
       "model",
       "cpu",
       "gpu",
@@ -145,6 +148,7 @@ export function validateHostInventory(
     inventory.schemaVersion !== 1 ||
     !host ||
     inventory.platform !== expectedPlatform ||
+    inventory.architecture !== expectedArchitecture(host.assetId) ||
     inventory.model !== host.model ||
     inventory.cpu !== host.cpu ||
     inventory.gpu !== host.gpu ||
@@ -184,6 +188,17 @@ export function validateHostInventory(
     expectedHostId: host.assetId,
   });
   return inventory;
+}
+
+function validateArchitecture(platform, architecture) {
+  if (!['x64', 'arm64'].includes(architecture) || (platform === 'win32' && architecture !== 'x64')) {
+    throw new Error("host architecture is not supported by the browser-lab contract");
+  }
+  return architecture;
+}
+
+function expectedArchitecture(assetId) {
+  return assetId === "FW-MAC-M2-01" ? "arm64" : "x64";
 }
 
 export function observeLiveSession(

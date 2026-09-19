@@ -8,6 +8,7 @@
     "schemaVersion",
     "assetId",
     "platform",
+    "architecture",
     "model",
     "cpu",
     "gpu",
@@ -32,6 +33,7 @@
       "pattern": "^FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+$"
     },
     "platform": { "enum": ["darwin", "win32", "linux"] },
+    "architecture": { "enum": ["x64", "arm64"] },
     "model": { "type": "string", "minLength": 1 },
     "cpu": { "type": "string", "minLength": 1 },
     "gpu": { "type": "string", "minLength": 1 },

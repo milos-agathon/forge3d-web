@@ -48,6 +48,10 @@ copyFileSync(
   join(packageRoot, "scripts", "chr04-lanes.mjs"),
   join(temporaryRoot, "chr04-lanes.js"),
 );
+copyFileSync(
+  join(packageRoot, "scripts", "ffx03-lanes.mjs"),
+  join(temporaryRoot, "ffx03-lanes.js"),
+);
 const {
   adapterBinding,
   isProductManualLane,

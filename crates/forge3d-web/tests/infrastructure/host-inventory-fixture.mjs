@@ -19,6 +19,7 @@ export function exactHostInventory(matrix, hostId) {
     schemaVersion: 1,
     assetId: host.assetId,
     platform,
+    architecture: hostId === "FW-MAC-M2-01" ? "arm64" : "x64",
     model: host.model,
     cpu: host.cpu,
     gpu: host.gpu,

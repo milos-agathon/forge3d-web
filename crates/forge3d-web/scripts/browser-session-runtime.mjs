@@ -18,8 +18,11 @@ import { WebDriverClient } from "./webdriver-client.mjs";
 import { runBrandedHardwareAcceptance } from "./chrome-hardware-acceptance.mjs";
 import { isChr03Lane } from "./chr03-lanes.mjs";
 import { isChr04Lane } from "./chr04-lanes.mjs";
+import { isFfx03Lane } from "./ffx03-lanes.mjs";
 
-export async function openProductionSession(request) {
+const FFX03_SELENIUM_VERSION = "4.35.0";
+
+export async function openProductionSession(request, dependencies = {}) {
   if (
     request.runtime.driver === "playwright-chrome" ||
     request.runtime.driver === "playwright-edge" ||
@@ -41,22 +44,45 @@ export async function openProductionSession(request) {
     });
   }
   if (request.runtime.driver === "selenium-firefox") {
-    const command = requiredAbsoluteEnvironment(
-      "FORGE3D_GECKODRIVER_EXECUTABLE",
-    );
-    return openLocalWebDriverSession({
-      ...request,
-      command,
-      args: ["--port", "4446"],
-      port: 4446,
-      capabilities: {
-        browserName: "firefox",
-        "moz:firefoxOptions": { args: [] },
-      },
-      driverVersion: execVersion(command, ["--version"]),
-    });
+    if (!isFfx03Lane(request.lane)) throw new Error("unrecognized Firefox lane bypassed the FFX-03 contract");
+    return openFirefoxSession(request, dependencies);
   }
   return openAppiumSession(request);
+}
+
+async function openFirefoxSession(request, dependencies) {
+  const modulePath = dependencies.acceptanceModulePath ?? requiredAbsoluteEnvironment(
+    "FORGE3D_FIREFOX_ACCEPTANCE_MODULE",
+  );
+  const seleniumModulePath = dependencies.seleniumModulePath ?? requiredAbsoluteEnvironment(
+    "FORGE3D_SELENIUM_MODULE",
+  );
+  const installedVersion = (dependencies.installedPackageVersion ?? installedPackageVersion)(
+    seleniumModulePath, ["selenium-webdriver"],
+  );
+  if (installedVersion !== request.browserPolicy.tools.selenium || installedVersion !== FFX03_SELENIUM_VERSION) {
+    throw new Error("installed Selenium version does not match checked FFX-03 policy");
+  }
+  const acceptance = dependencies.acceptance ?? await import(pathToFileURL(modulePath).href);
+  if (acceptance.FFX03_SELENIUM_VERSION !== installedVersion) {
+    throw new Error("FFX-03 acceptance module uses a different Selenium client version");
+  }
+  const selected = request.inventory?.browsers?.find((browser) =>
+    browser.id === (request.runtime.channel === "nightly" ? "firefox-nightly" : "firefox-release"));
+  const geckodriverPath = dependencies.geckodriverPath ?? requiredAbsoluteEnvironment(
+    "FORGE3D_GECKODRIVER_EXECUTABLE",
+  );
+  const driverVersion = (dependencies.execVersion ?? execVersion)(geckodriverPath, ["--version"])
+    .match(/[0-9]+\.[0-9]+\.[0-9]+/u)?.[0];
+  return acceptance.openSeleniumFirefoxSession({
+    lane: request.lane, assetId: request.assetId, platform: request.platform,
+    architecture: request.architecture, required: request.runtime.required,
+    routeUrl: request.routeUrl, browser: selected,
+    geckodriverPath, geckodriverVersion: driverVersion,
+    temporaryRoot: request.temporaryRoot, processRegistryPath: request.processRegistryPath,
+    registerProcess, markProcessStopped,
+    observeLaunch: dependencies.observeWebDriverLaunch ?? observeWebDriverLaunch,
+  });
 }
 
 async function openPlaywrightSession({ runtime, routeUrl, browserPolicy }) {

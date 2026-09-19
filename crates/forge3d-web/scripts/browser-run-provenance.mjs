@@ -1,5 +1,6 @@
 import { assertSafeLaunchArguments } from "./capture-host-inventory.mjs";
 import { isLiveChromiumLaunchArgumentSource } from "./browser-launch-provenance.mjs";
+import { assertFfx03BrowserVersion, resolveFfx03Lane } from "./ffx03-lanes.mjs";
 
 const browserInventoryIds = {
   chrome: "chrome-stable",
@@ -47,6 +48,11 @@ export function validateBrowserRunProvenance({
   ) {
     throw new Error("browser launch did not expose exact runtime provenance");
   }
+  if (runtime.driver === "selenium-firefox" &&
+      session.observedExecutable !== inventory.browsers?.find((browser) =>
+        browser.id === (runtime.channel === "nightly" ? "firefox-nightly" : "firefox-release"))?.executable) {
+    throw new Error("observed Firefox executable does not match checked inventory");
+  }
   assertSafeLaunchArguments(
     session.effectiveLaunchArguments,
     browserPolicy,
@@ -58,6 +64,7 @@ export function validateBrowserRunProvenance({
       platform: inventory.platform,
       osBuild: inventory.osBuild,
       displayServer: inventory.displayServer,
+      ...(runtime.driver === "selenium-firefox" ? { architecture: inventory.architecture } : {}),
     },
     loginSession: { ...inventory.session },
     driver: {
@@ -76,7 +83,8 @@ export function validateBrowserRunProvenance({
 
 function validateBrowserVersion(runtime, browser, inventory) {
   if (runtime.mobile) return;
-  const inventoryId = browserInventoryIds[runtime.browser];
+  const inventoryId = runtime.browser === "firefox" && runtime.channel === "nightly"
+    ? "firefox-nightly" : browserInventoryIds[runtime.browser];
   const installed = inventory.browsers?.find(({ id }) => id === inventoryId);
   if (
     !installed ||
@@ -84,6 +92,12 @@ function validateBrowserVersion(runtime, browser, inventory) {
     !nonEmpty(installed.executable)
   ) {
     throw new Error("running browser version does not match live checked inventory");
+  }
+  if (runtime.driver === "selenium-firefox") {
+    const contract = resolveFfx03Lane({ lane: runtime.lane ?? installed.lane,
+      assetId: installed.assetId ?? inventory.assetId, platform: inventory.platform,
+      architecture: inventory.architecture, required: runtime.required });
+    assertFfx03BrowserVersion(browser.version, contract);
   }
 }
 

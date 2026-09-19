@@ -8,9 +8,12 @@ import { validateChr03HardwareProofContract as validateChr03HardwareProof } from
 import { CHR03_STABLE_LANES } from "./chr03-lanes.mjs";
 import { validateChr04EdgeEvidence } from "./chr04-hardware-proof-validator.mjs";
 import { CHR04_LANES } from "./chr04-lanes.mjs";
+import { validateFfx03HardwareProof } from "./ffx03-hardware-proof-validator.mjs";
+import { FFX03_STABLE_LANES } from "./ffx03-lanes.mjs";
 
 const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
 const CHR04_REQUIRED_LANES = new Set(Object.keys(CHR04_LANES));
+const FFX03_REQUIRED_LANES = new Set(Object.keys(FFX03_STABLE_LANES));
 
 export function createAutomatedMatrixRecord({
   promotion,
@@ -51,6 +54,25 @@ export function createAutomatedMatrixRecord({
       effectiveLaunchArguments: evidence.effectiveLaunchArguments,
       adapter: evidence.adapter,
     });
+  }
+  if (FFX03_REQUIRED_LANES.has(promotion.lane)) {
+    const lane = FFX03_STABLE_LANES[promotion.lane];
+    validateFfx03HardwareProof(evidence.ffx03Proof, {
+      lane: promotion.lane, assetId: promotion.assetId, platform: lane.platform,
+      architecture: lane.architecture, commit: promotion.trustedSha,
+      packageSha256: evidence.packageSha256,
+    });
+    if (canonicalJson(evidence.ffx03Proof.browser) !== canonicalJson(evidence.browser) ||
+        evidence.ffx03Proof.driver.name !== evidence.driver.name ||
+        evidence.ffx03Proof.driver.version !== evidence.driver.version ||
+        evidence.ffx03Proof.system.platform !== evidence.system.platform ||
+        evidence.ffx03Proof.system.architecture !== evidence.system.architecture ||
+        canonicalJson(evidence.ffx03Proof.launch.arguments) !== canonicalJson(evidence.effectiveLaunchArguments) ||
+        evidence.ffx03Proof.launch.source !== evidence.launchObservation?.source ||
+        evidence.ffx03Proof.launch.browserProcessId !== evidence.launchObservation?.browserProcessId ||
+        canonicalJson(evidence.ffx03Proof.adapter) !== canonicalJson(evidence.adapter)) {
+      throw new Error("FFX-03 proof conflicts with outer matrix evidence");
+    }
   }
   const safariTrackpadRecord = promotion.lane === "safari-macos-m2";
   if (safariTrackpadRecord) {
@@ -132,6 +154,7 @@ export function createAutomatedMatrixRecord({
     adapterAttestation: attestation,
     chr03Proof: evidence.chr03Proof ? structuredClone(evidence.chr03Proof) : null,
     chr04Proof: evidence.chr04Proof ? structuredClone(evidence.chr04Proof) : null,
+    ffx03Proof: evidence.ffx03Proof ? structuredClone(evidence.ffx03Proof) : null,
   };
 }
 

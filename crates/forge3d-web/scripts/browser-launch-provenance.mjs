@@ -147,7 +147,7 @@ export function observeWebDriverLaunch({
     if (!Number.isInteger(processId) || processId < 1) {
       throw new Error("Firefox WebDriver did not expose its browser process ID");
     }
-    return observeProcessLaunch({ processId, platform, execute, readFile });
+    return observeProcessLaunch({ processId, platform, execute, readFile, includeExecutable: true });
   }
   if (runtime.driver === "safaridriver") {
     const output = execute("pgrep", ["-x", "Safari"], {
@@ -248,7 +248,7 @@ export function splitObservedCommandLine(commandLine, platform) {
     : splitPosixCommandLine(commandLine);
 }
 
-function observeProcessLaunch({ processId, platform, execute, readFile }) {
+function observeProcessLaunch({ processId, platform, execute, readFile, includeExecutable = false }) {
   let tokens;
   if (platform === "win32") {
     const commandLine = JSON.parse(
@@ -306,6 +306,7 @@ function observeProcessLaunch({ processId, platform, execute, readFile }) {
     throw new Error("browser process command line has no executable");
   }
   return {
+    ...(includeExecutable ? { observedExecutable: tokens[0] } : {}),
     effectiveLaunchArguments: tokens.slice(1),
     launchArgumentsObserved: true,
     launchArgumentSource: `${platform}-live-browser-process`,

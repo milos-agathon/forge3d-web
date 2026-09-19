@@ -68,7 +68,7 @@
       "browser": "firefox",
       "channel": "release",
       "classification": "required",
-      "minimumMajor": 141,
+      "minimumMajor": 142,
       "automation": "selenium"
     },
     {
