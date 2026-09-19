@@ -90,6 +90,18 @@ malformed, mixed, or unexpected reports fail the optional check. Playwright
 WebKit is not shipping Safari: this preflight cannot establish Safari support,
 and Safari remains unsupported/`NOT_PROVEN`.
 
+The protected browser-lab package also carries the SAF-03 stable-Safari
+acceptance mechanism. It uses the exact `selenium-webdriver` 4.35.0 client with
+Apple's `/usr/bin/safaridriver`, the installed tarball fixture, native pointer,
+wheel, keyboard, resize, screenshot, disposal, 30 real visibility cycles, 30
+persisted-true BFCache returns, a separate persisted-false reload control, and
+the complete frozen FND-07 benchmark. Its closed v1 evidence is validated again
+when the lane runs, when a matrix source is created, on the hosted finalizer,
+and during evidence merge. Safari Technology Preview uses its separately
+inventoried bundle driver and is probe-only; it can warn on product failure but
+cleanup uncertainty fails the job. These mechanisms do not claim a physical
+pass: Safari stays `NOT_PROVEN` until the protected physical matrix succeeds.
+
 See `docs/support-matrix.md` for the browser support matrix, unsupported surfaces, and release-lane requirements.
 
 ## MIME, CORS, And Range Requirements

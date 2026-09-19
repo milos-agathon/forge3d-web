@@ -782,7 +782,7 @@ jobs:
           test "$(sha256sum "${tarball}" | cut -d ' ' -f 1)" = "${expected}"
           mkdir consumer
           tar -xzf promotion/consumer-fixture.tar.gz -C consumer
-          npm --prefix consumer install --no-save "${tarball}"
+          npm --prefix consumer install --include=dev --no-save "${tarball}"
           node promotion/materialize-browser-fixture.mjs \
             --consumer consumer \
             --package-sha256 "${expected}"
@@ -912,6 +912,8 @@ jobs:
       - name: Run checked headed browser Appium and adapter evidence
         shell: bash
         run: |
+          export FORGE3D_SAFARI_ACCEPTANCE_MODULE="$(pwd)/consumer/tests/webdriver/safari-viewer.mjs"
+          export FORGE3D_SELENIUM_MODULE="$(pwd)/consumer/node_modules/selenium-webdriver/index.js"
           runtime_args=(
             --lane "${{ inputs.lane }}" \
             --asset-id "${{ inputs.assetId }}" \
@@ -1156,6 +1158,38 @@ jobs:
           mv \
             ../../hosted-adapter-attestation.json \
             ../../finalized-hardware-evidence/hosted-adapter-attestation-verification.json
+
+      - name: Revalidate complete SAF-03 stable and Technology Preview evidence
+        if: inputs.lane == 'safari-macos-m2'
+        shell: bash
+        working-directory: crates/forge3d-web
+        env:
+          EXPECTED_SHA: ${{ inputs.trusted_sha }}
+          EXPECTED_ASSET: ${{ inputs.assetId }}
+        run: |
+          node --input-type=module --eval '
+            import { readFileSync } from "node:fs";
+            import { validateSaf03EvidenceEnvelope } from "./scripts/saf03-proof-validator.mjs";
+            const evidence = JSON.parse(readFileSync("../../finalized-hardware-evidence/browser-hardware-evidence.json", "utf8"));
+            const inventory = JSON.parse(readFileSync("../../finalized-hardware-evidence/host-inventory.json", "utf8"));
+            validateSaf03EvidenceEnvelope({
+              proof: evidence.saf03Proof,
+              technologyPreview: evidence.safariTechnologyPreview,
+              inventory,
+              browser: evidence.browser,
+              driver: evidence.driver,
+              system: evidence.system,
+              adapter: evidence.adapter,
+              route: evidence.route,
+              expectedBinding: {
+                lane: "safari-macos-m2",
+                assetId: process.env.EXPECTED_ASSET,
+                platform: "darwin",
+                commit: process.env.EXPECTED_SHA,
+                packageSha256: evidence.packageSha256
+              }
+            });
+          '
 
       - name: Resolve exact completed hardware job
         if: inputs.lane == 'infrastructure-canary'

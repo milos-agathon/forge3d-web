@@ -87,7 +87,8 @@
     "appium": "3.0.2",
     "appiumUiAutomator2": "5.0.0",
     "appiumXcuitest": "10.0.0",
-    "safaridriverPath": "/usr/bin/safaridriver"
+    "safaridriverPath": "/usr/bin/safaridriver",
+    "safariTechnologyPreviewDriverPath": "/Applications/Safari Technology Preview.app/Contents/MacOS/safaridriver"
   },
   "archives": [
     {

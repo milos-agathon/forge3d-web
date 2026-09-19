@@ -2,7 +2,12 @@ import { captureAdapterAttestation } from "./adapter-attestation.js";
 import { runViewerBenchmarkInBrowser } from "./viewer-benchmark-browser.js";
 import { isChr03Lane } from "./chr03-lanes.js";
 import { isChr04Lane } from "./chr04-lanes.js";
-import { runSaf02Conformance } from "./saf02-conformance.js";
+import { runSaf02Conformance, withTimeout } from "./saf02-conformance.js";
+
+export const ROUTE_FETCH_TIMEOUT_MS = 5_000;
+export const ROUTE_LOADER_PROBE_TIMEOUT_MS = 15_000;
+export const ADAPTER_ATTESTATION_TIMEOUT_MS = 15_000;
+export const INITIAL_VIEWER_ASSERTIONS_TIMEOUT_MS = 15_000;
 
 export async function runHardwarePage({
   lane,
@@ -28,10 +33,14 @@ export async function runHardwarePage({
     ? await runSaf02Conformance({ binding, route, effectiveLaunchArguments })
     : null;
   const routeReadiness = await verifyBrowserRoute(route, binding.packageSha256);
-  const adapter = await captureAdapterAttestation(
-    canvas,
-    adapterBinding(binding),
-    effectiveLaunchArguments,
+  const adapter = await withTimeout(
+    captureAdapterAttestation(
+      canvas,
+      adapterBinding(binding),
+      effectiveLaunchArguments,
+    ),
+    ADAPTER_ATTESTATION_TIMEOUT_MS,
+    "adapter attestation",
   );
   if (
     adapter.adapterInfoAvailable !== true ||
@@ -56,12 +65,16 @@ export async function runHardwarePage({
     };
   }
 
-  const assertions = await runInitialViewerAssertions({
-    fixture,
-    supportAssertions,
-    retainViewer: productManual,
-    onError: window.__forge3dHardwareOnError,
-  });
+  const assertions = await withTimeout(
+    runInitialViewerAssertions({
+      fixture,
+      supportAssertions,
+      retainViewer: productManual,
+      onError: window.__forge3dHardwareOnError,
+    }),
+    INITIAL_VIEWER_ASSERTIONS_TIMEOUT_MS,
+    "initial viewer assertions",
+  );
   const proofFamily = isChr03Lane(lane) ? "chr03" : isChr04Lane(lane) ? "chr04" : null;
   const hardwareProof = proofFamily
     ? await runBrandedHardwareProof({ binding, route, observations: hardware ?? chr03, proofFamily })
@@ -338,7 +351,12 @@ export async function verifyBrowserRoute(
   }
   const application = route.applicationUrl;
   const asset = route.assetUrl;
-  const fetchRoute = (url, options) => fetchWithTimeout(fetchImpl, url, options);
+  const fetchRoute = (url, options) => fetchWithTimeout(
+    fetchImpl,
+    url,
+    options,
+    ROUTE_FETCH_TIMEOUT_MS,
+  );
   const packageResponse = await fetchRoute(`${application}package.sha256`, {
     cache: "no-store",
   });
@@ -486,7 +504,7 @@ async function probeInstalledPackageLoader({ facadeUrl, wasmUrl }) {
     const timeout = setTimeout(() => {
       cleanup();
       reject(new Error(`installed package loader probe timed out for ${wasmUrl}`));
-    }, 15_000);
+    }, ROUTE_LOADER_PROBE_TIMEOUT_MS);
     const onMessage = (event) => {
       if (
         event.source !== frame.contentWindow ||
