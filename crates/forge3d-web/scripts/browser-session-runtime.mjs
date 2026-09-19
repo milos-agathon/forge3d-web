@@ -20,6 +20,22 @@ import { isChr03Lane } from "./chr03-lanes.mjs";
 import { isChr04Lane } from "./chr04-lanes.mjs";
 import { projectSaf03Binding, validateSaf03SafariProof, validateSaf03TechnologyPreviewResult } from "./saf03-proof-validator.mjs";
 
+export const SAFARI_HARDWARE_PAGE_TIMEOUT_BUDGET = Object.freeze({
+  saf02Page: 110_000,
+  // verifyBrowserRoute performs six sequential bounded fetches and four
+  // sequential isolated-loader probes before adapter/viewer validation.
+  routeFetches: 6 * 5_000,
+  routeLoaderProbes: 4 * 15_000,
+  adapterAttestation: 15_000,
+  initialViewerAssertions: 15_000,
+  // Covers WebDriver callback serialization and scheduling outside the page's
+  // independently bounded stages; it is not available to extend a stage.
+  webdriverTransportMargin: 10_000,
+});
+export const SAFARI_COMPOSED_SCRIPT_TIMEOUT_MS = Object.values(
+  SAFARI_HARDWARE_PAGE_TIMEOUT_BUDGET,
+).reduce((total, value) => total + value, 0);
+
 export async function openProductionSession(request, dependencies = {}) {
   if (
     request.runtime.driver === "playwright-chrome" ||
@@ -111,7 +127,9 @@ async function openSafariSeleniumSession({ runtime, routeUrl, browserPolicy, inv
       }
     },
     runPage: async (payload) => {
-      await stable.driver.manage().setTimeouts({ script: 115_000 });
+      await stable.driver.manage().setTimeouts({
+        script: SAFARI_COMPOSED_SCRIPT_TIMEOUT_MS,
+      });
       const neutral = await runSeleniumHardwarePage(stable.driver, payload);
       const proof = await acceptance.runStableSafariAcceptance({
         session: stable,

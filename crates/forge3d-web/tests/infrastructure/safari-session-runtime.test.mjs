@@ -4,7 +4,11 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import test from "node:test";
 
-import { openProductionSession } from "../../scripts/browser-session-runtime.mjs";
+import {
+  openProductionSession,
+  SAFARI_COMPOSED_SCRIPT_TIMEOUT_MS,
+  SAFARI_HARDWARE_PAGE_TIMEOUT_BUDGET,
+} from "../../scripts/browser-session-runtime.mjs";
 import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
 import { validSaf03Proof } from "../browser/saf03-proof-fixture.mjs";
 
@@ -52,7 +56,7 @@ test("manual Safari trackpad retains the neutral WebDriver path", async () => {
   assert.equal(neutralCalls, 1);
 });
 
-test("automated Selenium Safari raises the script timeout before combined acceptance", async () => {
+test("automated Selenium Safari admits near-bound composed work and rejects overrun", async () => {
   const directory = mkdtempSync(join(tmpdir(), "saf03-timeout-"));
   const calls = [];
   const nonce = "ab".repeat(16);
@@ -60,26 +64,28 @@ test("automated Selenium Safari raises the script timeout before combined accept
     applicationUrl: `https://mac-m2.webgpu-ci.forge3d.dev/runs/41/42/${nonce}/`,
     assetUrl: `https://assets-mac-m2.webgpu-ci.forge3d.dev/runs/41/42/${nonce}/`,
   };
-  const driver = {
-    manage: () => ({ setTimeouts: async (timeouts) => calls.push(["timeouts", timeouts]) }),
-    executeAsyncScript: async () => {
-      calls.push(["execute"]);
-      return {
-        ok: true,
-        value: {
-          adapter: { isFallbackAdapter: false, secureContext: true, deviceCreated: true, surfacePresented: true },
-          saf02Proof: validSaf02Conformance({
-            runId: 41,
-            jobId: 42,
-            commit: "a".repeat(40),
-            packageSha256: "b".repeat(64),
-            nonce,
-          }),
-        },
-      };
+  const neutral = {
+    ok: true,
+    value: {
+      adapter: { isFallbackAdapter: false, secureContext: true, deviceCreated: true, surfacePresented: true },
+      saf02Proof: validSaf02Conformance({
+        runId: 41,
+        jobId: 42,
+        commit: "a".repeat(40),
+        packageSha256: "b".repeat(64),
+        nonce,
+      }),
     },
   };
   try {
+    const boundedStages = SAFARI_COMPOSED_SCRIPT_TIMEOUT_MS -
+      SAFARI_HARDWARE_PAGE_TIMEOUT_BUDGET.webdriverTransportMargin;
+    assert.equal(
+      SAFARI_COMPOSED_SCRIPT_TIMEOUT_MS,
+      Object.values(SAFARI_HARDWARE_PAGE_TIMEOUT_BUDGET)
+        .reduce((total, value) => total + value, 0),
+    );
+    const driver = virtualTimedDriver(boundedStages - 1, neutral, calls);
     const stable = stableSession(91007, () => undefined, driver);
     const acceptance = {
       SAF03_SELENIUM_VERSION: "4.35.0",
@@ -98,11 +104,40 @@ test("automated Selenium Safari raises the script timeout before combined accept
       route,
     });
     assert.deepEqual(calls.slice(0, 3), [
-      ["timeouts", { script: 115_000 }],
-      ["execute"],
+      ["timeouts", { script: SAFARI_COMPOSED_SCRIPT_TIMEOUT_MS }],
+      ["execute", boundedStages - 1],
       ["saf03"],
     ]);
     await session.close();
+
+    const overrunCalls = [];
+    const overrunDriver = virtualTimedDriver(
+      SAFARI_COMPOSED_SCRIPT_TIMEOUT_MS + 1,
+      neutral,
+      overrunCalls,
+    );
+    const overrunSession = await openProductionSession(
+      stableRequest(directory),
+      dependencies(null, {
+        acceptance: {
+          ...acceptance,
+          openSeleniumSafariSession: async () => stableSession(
+            91008,
+            () => undefined,
+            overrunDriver,
+          ),
+        },
+      }),
+    );
+    await assert.rejects(
+      () => overrunSession.runPage({ binding: closedBinding(), route }),
+      /script timeout exceeded/u,
+    );
+    assert.deepEqual(overrunCalls, [
+      ["timeouts", { script: SAFARI_COMPOSED_SCRIPT_TIMEOUT_MS }],
+      ["execute", SAFARI_COMPOSED_SCRIPT_TIMEOUT_MS + 1],
+    ]);
+    await overrunSession.close();
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
@@ -190,6 +225,23 @@ function stableRequest(directory, { includeStp = false } = {}) {
       architecture: "arm64",
       tools: { safaridriverVersion: "26.0", safariTechnologyPreviewDriverPath: includeStp ? "/Applications/Safari Technology Preview.app/Contents/MacOS/safaridriver" : false,
         safariTechnologyPreviewDriverVersion: includeStp ? "26.1" : false },
+    },
+  };
+}
+
+function virtualTimedDriver(elapsedMs, result, calls) {
+  let scriptTimeoutMs = 0;
+  return {
+    manage: () => ({
+      setTimeouts: async (timeouts) => {
+        scriptTimeoutMs = timeouts.script;
+        calls.push(["timeouts", timeouts]);
+      },
+    }),
+    executeAsyncScript: async () => {
+      calls.push(["execute", elapsedMs]);
+      if (elapsedMs > scriptTimeoutMs) throw new Error("script timeout exceeded");
+      return result;
     },
   };
 }
