@@ -1,0 +1,663 @@
+{
+  "schemaVersion": 1,
+  "lockId": "forge3d-parity-dependencies-v1",
+  "policy": "Every lock-controlled codec, shaping, projection, archive, document, video or cryptographic asset is exact-version and exact-digest pinned. Substitution requires an ADR, license/security review and the same fixture suite.",
+  "assets": [
+    {
+      "id": "harfbuzzjs",
+      "package": "harfbuzzjs",
+      "version": "1.6.0",
+      "ecosystem": "npm",
+      "source": {
+        "uri": "https://registry.npmjs.org/harfbuzzjs/-/harfbuzzjs-1.6.0.tgz",
+        "sha256": "c1e2c37480396d8d8721f909f2a7fce42153bbbc26cdd712c611d498311a2088",
+        "integrity": "sha512-fNnYg+CX5MBzckYZpqBJKs9qIVMH9vMhFNo9I81wp1QFu7jI3DOvtf1+VDwH4vsfnCylAFBNSX3gio9uNGPk/w=="
+      },
+      "license": {
+        "spdx": "MIT",
+        "provenance": "registry package metadata and LICENSE content in harfbuzzjs@1.6.0",
+        "review": "SPDX MIT is compatible with Forge3D distribution when notices are retained"
+      },
+      "build": {
+        "provenance": "immutable npm registry tarball harfbuzzjs@1.6.0",
+        "toolchain": "npm 11 with package-lock integrity verification",
+        "flags": [
+          "exact-version",
+          "ignore-lifecycle-scripts-during-audit"
+        ],
+        "artifacts": [
+          {
+            "name": "harfbuzzjs-1.6.0.tgz",
+            "sha256": "c1e2c37480396d8d8721f909f2a7fce42153bbbc26cdd712c611d498311a2088",
+            "sri": "sha512-fNnYg+CX5MBzckYZpqBJKs9qIVMH9vMhFNo9I81wp1QFu7jI3DOvtf1+VDwH4vsfnCylAFBNSX3gio9uNGPk/w=="
+          }
+        ]
+      },
+      "fixtureProvenance": [
+        "1f4084a:tests/test_p1_typography_font_support.py"
+      ],
+      "delivery": {
+        "mode": "bundled-self-hosted",
+        "cspRule": "Package code and WASM must be emitted under script-src 'self'; worker assets must use worker-src 'self'; no dependency CDN is permitted",
+        "sriRule": "Acquire only the registry tarball matching sha512-fNnYg+CX5MBzckYZpqBJKs9qIVMH9vMhFNo9I81wp1QFu7jI3DOvtf1+VDwH4vsfnCylAFBNSX3gio9uNGPk/w==; emitted self-hosted assets retain a SHA-256 entry in the package asset manifest",
+        "runtimeRemoteFetch": false
+      },
+      "consumingTasks": [
+        "W13",
+        "W22"
+      ],
+      "consumerTokens": [
+        "harfbuzzjs"
+      ],
+      "review": {
+        "security": "Run fixture conformance, corrupt-input tests and dependency advisory review before consumption",
+        "maintenance": "Exact version is frozen; substitution requires an ADR and the same fixtures",
+        "license": "Retain MIT license text and notices in the published package"
+      }
+    },
+    {
+      "id": "proj-wasm",
+      "package": "proj-wasm",
+      "version": "0.1.0-alpha9",
+      "ecosystem": "npm",
+      "source": {
+        "uri": "https://registry.npmjs.org/proj-wasm/-/proj-wasm-0.1.0-alpha9.tgz",
+        "sha256": "5e453ddded6fb5bebdbf89b29fd41779437a2040ac3ec9dc20c3e930774b26e2",
+        "integrity": "sha512-+UlFw7XxZD2jPelQUaNBOV5v3OB4VIFWgLhQCQniGkkzjBtVCIUpEwFJSinmfIPj1BvTEnOLOGBwZ5sVt1Ee8g=="
+      },
+      "license": {
+        "spdx": "MIT",
+        "provenance": "registry package metadata and LICENSE content in proj-wasm@0.1.0-alpha9",
+        "review": "SPDX MIT is compatible with Forge3D distribution when notices are retained"
+      },
+      "build": {
+        "provenance": "immutable npm registry tarball proj-wasm@0.1.0-alpha9",
+        "toolchain": "npm 11 with package-lock integrity verification",
+        "flags": [
+          "exact-version",
+          "ignore-lifecycle-scripts-during-audit"
+        ],
+        "artifacts": [
+          {
+            "name": "proj-wasm-0.1.0-alpha9.tgz",
+            "sha256": "5e453ddded6fb5bebdbf89b29fd41779437a2040ac3ec9dc20c3e930774b26e2",
+            "sri": "sha512-+UlFw7XxZD2jPelQUaNBOV5v3OB4VIFWgLhQCQniGkkzjBtVCIUpEwFJSinmfIPj1BvTEnOLOGBwZ5sVt1Ee8g=="
+          }
+        ]
+      },
+      "fixtureProvenance": [
+        "1f4084a:tests/test_crs_reproject.py"
+      ],
+      "manifestFixtureIds": [
+        "crs-epsg-v1"
+      ],
+      "delivery": {
+        "mode": "bundled-self-hosted",
+        "cspRule": "Package code and WASM must be emitted under script-src 'self'; worker assets must use worker-src 'self'; no dependency CDN is permitted",
+        "sriRule": "Acquire only the registry tarball matching sha512-+UlFw7XxZD2jPelQUaNBOV5v3OB4VIFWgLhQCQniGkkzjBtVCIUpEwFJSinmfIPj1BvTEnOLOGBwZ5sVt1Ee8g==; emitted self-hosted assets retain a SHA-256 entry in the package asset manifest",
+        "runtimeRemoteFetch": false
+      },
+      "consumingTasks": [
+        "W14",
+        "W22"
+      ],
+      "consumerTokens": [
+        "proj-wasm"
+      ],
+      "review": {
+        "security": "Experimental dependency: fixture conformance, corrupt-input tests and a security review are mandatory before consumption",
+        "maintenance": "Experimental/maintenance-risk; substitution requires an ADR and the same fixtures",
+        "license": "Retain MIT license text and notices in the published package"
+      }
+    },
+    {
+      "id": "geotiff",
+      "package": "geotiff",
+      "version": "3.0.5",
+      "ecosystem": "npm",
+      "source": {
+        "uri": "https://registry.npmjs.org/geotiff/-/geotiff-3.0.5.tgz",
+        "sha256": "9b3628c4fd2357cddef76a511fc4df3c054ad3a2a9393a0d79797a052f888355",
+        "integrity": "sha512-OWcL9S9+yDZ6iAlXMt32T1iwUApJM8UiD47xbm6ZP1h33d10fqkPs14EG/ttT5EnefpZSx3G15iDFC5FxUNUwA=="
+      },
+      "license": {
+        "spdx": "MIT",
+        "provenance": "registry package metadata and LICENSE content in geotiff@3.0.5",
+        "review": "SPDX MIT is compatible with Forge3D distribution when notices are retained"
+      },
+      "build": {
+        "provenance": "immutable npm registry tarball geotiff@3.0.5",
+        "toolchain": "npm 11 with package-lock integrity verification",
+        "flags": [
+          "exact-version",
+          "ignore-lifecycle-scripts-during-audit"
+        ],
+        "artifacts": [
+          {
+            "name": "geotiff-3.0.5.tgz",
+            "sha256": "9b3628c4fd2357cddef76a511fc4df3c054ad3a2a9393a0d79797a052f888355",
+            "sri": "sha512-OWcL9S9+yDZ6iAlXMt32T1iwUApJM8UiD47xbm6ZP1h33d10fqkPs14EG/ttT5EnefpZSx3G15iDFC5FxUNUwA=="
+          }
+        ]
+      },
+      "fixtureProvenance": [
+        "1f4084a:tests/test_cog_streaming.py"
+      ],
+      "manifestFixtureIds": [
+        "clipmap-seam-v1"
+      ],
+      "delivery": {
+        "mode": "bundled-self-hosted",
+        "cspRule": "Package code and WASM must be emitted under script-src 'self'; worker assets must use worker-src 'self'; no dependency CDN is permitted",
+        "sriRule": "Acquire only the registry tarball matching sha512-OWcL9S9+yDZ6iAlXMt32T1iwUApJM8UiD47xbm6ZP1h33d10fqkPs14EG/ttT5EnefpZSx3G15iDFC5FxUNUwA==; emitted self-hosted assets retain a SHA-256 entry in the package asset manifest",
+        "runtimeRemoteFetch": false
+      },
+      "consumingTasks": [
+        "W08",
+        "W22"
+      ],
+      "consumerTokens": [
+        "geotiff"
+      ],
+      "review": {
+        "security": "Run fixture conformance, corrupt-input tests and dependency advisory review before consumption",
+        "maintenance": "Exact version is frozen; substitution requires an ADR and the same fixtures",
+        "license": "Retain MIT license text and notices in the published package"
+      }
+    },
+    {
+      "id": "laz-perf",
+      "package": "laz-perf",
+      "version": "0.0.7",
+      "ecosystem": "npm",
+      "source": {
+        "uri": "https://registry.npmjs.org/laz-perf/-/laz-perf-0.0.7.tgz",
+        "sha256": "7585aa5e425443c639a2580548ebb8c3eed3124bacd7eebbf3ab0fbde2d8e0c4",
+        "integrity": "sha512-2xRqm/f/2UqDS5qqkjOyDb6uVIjkVw6SGmQlMoTQliVWkZhPfIbUJTubUl3mTloaWqKcjlS/urmP1CYoxelsEg=="
+      },
+      "license": {
+        "spdx": "Apache-2.0",
+        "provenance": "registry package metadata and LICENSE content in laz-perf@0.0.7",
+        "review": "SPDX Apache-2.0 is compatible with Forge3D distribution when notices are retained"
+      },
+      "build": {
+        "provenance": "immutable npm registry tarball laz-perf@0.0.7",
+        "toolchain": "npm 11 with package-lock integrity verification",
+        "flags": [
+          "exact-version",
+          "ignore-lifecycle-scripts-during-audit"
+        ],
+        "artifacts": [
+          {
+            "name": "laz-perf-0.0.7.tgz",
+            "sha256": "7585aa5e425443c639a2580548ebb8c3eed3124bacd7eebbf3ab0fbde2d8e0c4",
+            "sri": "sha512-2xRqm/f/2UqDS5qqkjOyDb6uVIjkVw6SGmQlMoTQliVWkZhPfIbUJTubUl3mTloaWqKcjlS/urmP1CYoxelsEg=="
+          }
+        ]
+      },
+      "fixtureProvenance": [
+        "1f4084a:tests/test_copc_laz_fixture.py"
+      ],
+      "manifestFixtureIds": [
+        "copc-ept-tiles-v1"
+      ],
+      "delivery": {
+        "mode": "bundled-self-hosted",
+        "cspRule": "Package code and WASM must be emitted under script-src 'self'; worker assets must use worker-src 'self'; no dependency CDN is permitted",
+        "sriRule": "Acquire only the registry tarball matching sha512-2xRqm/f/2UqDS5qqkjOyDb6uVIjkVw6SGmQlMoTQliVWkZhPfIbUJTubUl3mTloaWqKcjlS/urmP1CYoxelsEg==; emitted self-hosted assets retain a SHA-256 entry in the package asset manifest",
+        "runtimeRemoteFetch": false
+      },
+      "consumingTasks": [
+        "W16",
+        "W22"
+      ],
+      "consumerTokens": [
+        "laz-perf"
+      ],
+      "review": {
+        "security": "Experimental dependency: fixture conformance, corrupt-input tests and a security review are mandatory before consumption",
+        "maintenance": "Experimental/maintenance-risk; substitution requires an ADR and the same fixtures",
+        "license": "Retain Apache-2.0 license text and notices in the published package"
+      }
+    },
+    {
+      "id": "ktx-parse",
+      "package": "ktx-parse",
+      "version": "1.1.0",
+      "ecosystem": "npm",
+      "source": {
+        "uri": "https://registry.npmjs.org/ktx-parse/-/ktx-parse-1.1.0.tgz",
+        "sha256": "9d4303bbd807faa4e0455f8115f6d75cee7036ec9d5160b6911363074d3ee003",
+        "integrity": "sha512-mKp3y+FaYgR7mXWAbyyzpa/r1zDWeaunH+INJO4fou3hb45XuNSwar+7llrRyvpMWafxSIi99RNFJ05MHedaJQ=="
+      },
+      "license": {
+        "spdx": "MIT",
+        "provenance": "registry package metadata and LICENSE content in ktx-parse@1.1.0",
+        "review": "SPDX MIT is compatible with Forge3D distribution when notices are retained"
+      },
+      "build": {
+        "provenance": "immutable npm registry tarball ktx-parse@1.1.0",
+        "toolchain": "npm 11 with package-lock integrity verification",
+        "flags": [
+          "exact-version",
+          "ignore-lifecycle-scripts-during-audit"
+        ],
+        "artifacts": [
+          {
+            "name": "ktx-parse-1.1.0.tgz",
+            "sha256": "9d4303bbd807faa4e0455f8115f6d75cee7036ec9d5160b6911363074d3ee003",
+            "sri": "sha512-mKp3y+FaYgR7mXWAbyyzpa/r1zDWeaunH+INJO4fou3hb45XuNSwar+7llrRyvpMWafxSIi99RNFJ05MHedaJQ=="
+          }
+        ]
+      },
+      "fixtureProvenance": [
+        "1f4084a:tests/test_mesh_tbn.py"
+      ],
+      "manifestFixtureIds": [
+        "terrain-material-v1"
+      ],
+      "delivery": {
+        "mode": "bundled-self-hosted",
+        "cspRule": "Package code and WASM must be emitted under script-src 'self'; worker assets must use worker-src 'self'; no dependency CDN is permitted",
+        "sriRule": "Acquire only the registry tarball matching sha512-mKp3y+FaYgR7mXWAbyyzpa/r1zDWeaunH+INJO4fou3hb45XuNSwar+7llrRyvpMWafxSIi99RNFJ05MHedaJQ==; emitted self-hosted assets retain a SHA-256 entry in the package asset manifest",
+        "runtimeRemoteFetch": false
+      },
+      "consumingTasks": [
+        "W04",
+        "W22"
+      ],
+      "consumerTokens": [
+        "ktx-parse"
+      ],
+      "review": {
+        "security": "Run fixture conformance, corrupt-input tests and dependency advisory review before consumption",
+        "maintenance": "Exact version is frozen; substitution requires an ADR and the same fixtures",
+        "license": "Retain MIT license text and notices in the published package"
+      }
+    },
+    {
+      "id": "basis-universal",
+      "package": "basis_universal",
+      "version": "2.0.3",
+      "ecosystem": "upstream-wasm",
+      "source": {
+        "uri": "https://codeload.github.com/BinomialLLC/basis_universal/tar.gz/refs/tags/v2_0_3",
+        "sha256": "eb9ac9ec933524b3c97720368b5cb423fa8767bfc409029d4864063e0d078bec",
+        "integrity": "git-commit-21fb6e242b1e425a7557c5655bb1b475f71933ca"
+      },
+      "license": {
+        "spdx": "Apache-2.0",
+        "provenance": "LICENSE in basis_universal commit 21fb6e242b1e425a7557c5655bb1b475f71933ca",
+        "review": "Apache-2.0 notice and attribution must ship with the WASM/JS pair"
+      },
+      "build": {
+        "provenance": "upstream checked-in webgl/transcoder/build artifacts at commit 21fb6e242b1e425a7557c5655bb1b475f71933ca; locally rebuilt output is rejected unless an ADR pins an Emscripten toolchain",
+        "toolchain": "upstream Emscripten WebGL transcoder build, artifact-locked",
+        "flags": [
+          "single-threaded",
+          "webgl-transcoder",
+          "no-runtime-cdn"
+        ],
+        "artifacts": [
+          {
+            "name": "basis_transcoder.js",
+            "sha256": "697ab2b61e257f4e62e68bb021bd667d7e5c2bef9fa359600b76804f52f26a80",
+            "sri": "sha384-prKJ+b7t+CEoKkHut7HYRUZ1Jye8M+e/1b6QGseIm98QtLNX9G48aBCyYT3jP8IH"
+          },
+          {
+            "name": "basis_transcoder.wasm",
+            "sha256": "5139f8299b2c4ff691877e2e8809fabdd64d029af061bbb95d8ea8d1acabd522",
+            "sri": "sha384-IzrxHljMzPSJUYnPQfAp46lGBIDE9h02UUF0W0WQqHY+Q65k+weklhRFX/FlxqWL"
+          }
+        ]
+      },
+      "fixtureProvenance": [
+        "1f4084a:src/loaders/ktx2",
+        "1f4084a:tests/test_mesh_tbn.py"
+      ],
+      "manifestFixtureIds": [
+        "terrain-material-v1"
+      ],
+      "delivery": {
+        "mode": "bundled-self-hosted-wasm",
+        "cspRule": "Serve JS/WASM from 'self' with application/wasm; script-src 'self'; connect-src 'self'; no CDN fallback",
+        "sriRule": "Both checked-in upstream artifacts must match the recorded SHA-256 and SHA-384 values before packaging",
+        "runtimeRemoteFetch": false
+      },
+      "consumingTasks": [
+        "W04",
+        "W22"
+      ],
+      "consumerTokens": [
+        "basis_universal",
+        "basis_transcoder.wasm",
+        "basis_transcoder.js"
+      ],
+      "review": {
+        "security": "Run KTX2 corrupt-input and decompression-bound tests before consumption",
+        "maintenance": "Exact upstream commit and artifacts are frozen; substitution requires an ADR and the same fixtures",
+        "license": "Retain Apache-2.0 license and notices"
+      }
+    },
+    {
+      "id": "exr",
+      "package": "exr",
+      "version": "1.74.2",
+      "ecosystem": "crates.io",
+      "source": {
+        "uri": "https://static.crates.io/crates/exr/exr-1.74.2.crate",
+        "sha256": "711fe42c9964295e01ee3fba3f9fe0e1d24b98886950d68efe81b1c76e21adf3",
+        "integrity": "sha256-711fe42c9964295e01ee3fba3f9fe0e1d24b98886950d68efe81b1c76e21adf3"
+      },
+      "license": {
+        "spdx": "BSD-3-Clause",
+        "provenance": "crates.io metadata and LICENSE.md in exr 1.74.2",
+        "review": "BSD-3-Clause notice must ship with the WASM package"
+      },
+      "build": {
+        "provenance": "crates.io source compiled by the workspace for wasm32-unknown-unknown",
+        "toolchain": "Rust >=1.83.0, workspace stable toolchain",
+        "flags": [
+          "--no-default-features",
+          "default-rayon-disabled",
+          "--target=wasm32-unknown-unknown"
+        ],
+        "artifacts": [
+          {
+            "name": "exr-1.74.2.crate",
+            "sha256": "711fe42c9964295e01ee3fba3f9fe0e1d24b98886950d68efe81b1c76e21adf3",
+            "sri": "sha256-711fe42c9964295e01ee3fba3f9fe0e1d24b98886950d68efe81b1c76e21adf3"
+          }
+        ]
+      },
+      "fixtureProvenance": [
+        "1f4084a:tests/test_exr_output.py"
+      ],
+      "manifestFixtureIds": [
+        "offline-denoise-v1"
+      ],
+      "delivery": {
+        "mode": "compiled-into-self-hosted-wasm",
+        "cspRule": "Only the Forge3D self-hosted WASM module is loaded; connect-src and script-src remain 'self'",
+        "sriRule": "Cargo source checksum and final Forge3D WASM package digest must both match their locks",
+        "runtimeRemoteFetch": false
+      },
+      "consumingTasks": [
+        "W06",
+        "W22"
+      ],
+      "consumerTokens": [
+        "exr =",
+        "exr::"
+      ],
+      "review": {
+        "security": "Run malformed EXR, dimension-limit and allocation-bound tests before consumption",
+        "maintenance": "Default rayon remains disabled for WASM; version substitution requires an ADR and the same fixtures",
+        "license": "Retain BSD-3-Clause license text"
+      }
+    },
+    {
+      "id": "mediabunny",
+      "package": "mediabunny",
+      "version": "1.58.0",
+      "ecosystem": "npm",
+      "source": {
+        "uri": "https://registry.npmjs.org/mediabunny/-/mediabunny-1.58.0.tgz",
+        "sha256": "15dc5b43638894812eb5801edd453a1d28febb260a7df957844d91912b55785c",
+        "integrity": "sha512-0jW6vSDVqWwNe3+WBryrMzC2mUBfk6E5KQLGXLdKVGzclceXXIsbayEkAsNDCuoTcoMiVI62sPDnkkFDxiMjGw=="
+      },
+      "license": {
+        "spdx": "MPL-2.0",
+        "provenance": "registry package metadata and LICENSE content in mediabunny@1.58.0",
+        "review": "SPDX MPL-2.0 is compatible with Forge3D distribution when notices are retained"
+      },
+      "build": {
+        "provenance": "immutable npm registry tarball mediabunny@1.58.0",
+        "toolchain": "npm 11 with package-lock integrity verification",
+        "flags": [
+          "exact-version",
+          "ignore-lifecycle-scripts-during-audit"
+        ],
+        "artifacts": [
+          {
+            "name": "mediabunny-1.58.0.tgz",
+            "sha256": "15dc5b43638894812eb5801edd453a1d28febb260a7df957844d91912b55785c",
+            "sri": "sha512-0jW6vSDVqWwNe3+WBryrMzC2mUBfk6E5KQLGXLdKVGzclceXXIsbayEkAsNDCuoTcoMiVI62sPDnkkFDxiMjGw=="
+          }
+        ]
+      },
+      "fixtureProvenance": [
+        "1f4084a:tests/test_animation_mvp.py"
+      ],
+      "manifestFixtureIds": [
+        "offline-denoise-v1"
+      ],
+      "delivery": {
+        "mode": "bundled-self-hosted",
+        "cspRule": "Package code and WASM must be emitted under script-src 'self'; worker assets must use worker-src 'self'; no dependency CDN is permitted",
+        "sriRule": "Acquire only the registry tarball matching sha512-0jW6vSDVqWwNe3+WBryrMzC2mUBfk6E5KQLGXLdKVGzclceXXIsbayEkAsNDCuoTcoMiVI62sPDnkkFDxiMjGw==; emitted self-hosted assets retain a SHA-256 entry in the package asset manifest",
+        "runtimeRemoteFetch": false
+      },
+      "consumingTasks": [
+        "W06",
+        "W22"
+      ],
+      "consumerTokens": [
+        "mediabunny"
+      ],
+      "review": {
+        "security": "Run fixture conformance, corrupt-input tests and dependency advisory review before consumption",
+        "maintenance": "Exact version is frozen; substitution requires an ADR and the same fixtures",
+        "license": "Retain MPL-2.0 license text and notices in the published package"
+      }
+    },
+    {
+      "id": "fflate",
+      "package": "fflate",
+      "version": "0.8.3",
+      "ecosystem": "npm",
+      "source": {
+        "uri": "https://registry.npmjs.org/fflate/-/fflate-0.8.3.tgz",
+        "sha256": "38c2cd824402407b43153c782274aec2ea83ea688e4aa0b743c5f2c305857d92",
+        "integrity": "sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA=="
+      },
+      "license": {
+        "spdx": "MIT",
+        "provenance": "registry package metadata and LICENSE content in fflate@0.8.3",
+        "review": "SPDX MIT is compatible with Forge3D distribution when notices are retained"
+      },
+      "build": {
+        "provenance": "immutable npm registry tarball fflate@0.8.3",
+        "toolchain": "npm 11 with package-lock integrity verification",
+        "flags": [
+          "exact-version",
+          "ignore-lifecycle-scripts-during-audit"
+        ],
+        "artifacts": [
+          {
+            "name": "fflate-0.8.3.tgz",
+            "sha256": "38c2cd824402407b43153c782274aec2ea83ea688e4aa0b743c5f2c305857d92",
+            "sri": "sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA=="
+          }
+        ]
+      },
+      "fixtureProvenance": [
+        "1f4084a:tests/test_bundle_roundtrip.py"
+      ],
+      "delivery": {
+        "mode": "bundled-self-hosted",
+        "cspRule": "Package code and WASM must be emitted under script-src 'self'; worker assets must use worker-src 'self'; no dependency CDN is permitted",
+        "sriRule": "Acquire only the registry tarball matching sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA==; emitted self-hosted assets retain a SHA-256 entry in the package asset manifest",
+        "runtimeRemoteFetch": false
+      },
+      "consumingTasks": [
+        "W19",
+        "W22"
+      ],
+      "consumerTokens": [
+        "fflate"
+      ],
+      "review": {
+        "security": "Run fixture conformance, corrupt-input tests and dependency advisory review before consumption",
+        "maintenance": "Exact version is frozen; substitution requires an ADR and the same fixtures",
+        "license": "Retain MIT license text and notices in the published package"
+      }
+    },
+    {
+      "id": "pdf-lib",
+      "package": "pdf-lib",
+      "version": "1.17.1",
+      "ecosystem": "npm",
+      "source": {
+        "uri": "https://registry.npmjs.org/pdf-lib/-/pdf-lib-1.17.1.tgz",
+        "sha256": "a7cc1eaf12e41e612a7be581162a63b18118aefc01e90f6a1f35347b1f324a1c",
+        "integrity": "sha512-V/mpyJAoTsN4cnP31vc0wfNA1+p20evqqnap0KLoRUN0Yk/p3wN52DOEsL4oBFcLdb76hlpKPtzJIgo67j/XLw=="
+      },
+      "license": {
+        "spdx": "MIT",
+        "provenance": "registry package metadata and LICENSE content in pdf-lib@1.17.1",
+        "review": "SPDX MIT is compatible with Forge3D distribution when notices are retained"
+      },
+      "build": {
+        "provenance": "immutable npm registry tarball pdf-lib@1.17.1",
+        "toolchain": "npm 11 with package-lock integrity verification",
+        "flags": [
+          "exact-version",
+          "ignore-lifecycle-scripts-during-audit"
+        ],
+        "artifacts": [
+          {
+            "name": "pdf-lib-1.17.1.tgz",
+            "sha256": "a7cc1eaf12e41e612a7be581162a63b18118aefc01e90f6a1f35347b1f324a1c",
+            "sri": "sha512-V/mpyJAoTsN4cnP31vc0wfNA1+p20evqqnap0KLoRUN0Yk/p3wN52DOEsL4oBFcLdb76hlpKPtzJIgo67j/XLw=="
+          }
+        ]
+      },
+      "fixtureProvenance": [
+        "1f4084a:tests/test_export_projection.py"
+      ],
+      "delivery": {
+        "mode": "bundled-self-hosted",
+        "cspRule": "Package code and WASM must be emitted under script-src 'self'; worker assets must use worker-src 'self'; no dependency CDN is permitted",
+        "sriRule": "Acquire only the registry tarball matching sha512-V/mpyJAoTsN4cnP31vc0wfNA1+p20evqqnap0KLoRUN0Yk/p3wN52DOEsL4oBFcLdb76hlpKPtzJIgo67j/XLw==; emitted self-hosted assets retain a SHA-256 entry in the package asset manifest",
+        "runtimeRemoteFetch": false
+      },
+      "consumingTasks": [
+        "W20",
+        "W22"
+      ],
+      "consumerTokens": [
+        "pdf-lib"
+      ],
+      "review": {
+        "security": "Run fixture conformance, corrupt-input tests and dependency advisory review before consumption",
+        "maintenance": "Exact version is frozen; substitution requires an ADR and the same fixtures",
+        "license": "Retain MIT license text and notices in the published package"
+      }
+    },
+    {
+      "id": "pdf-lib-fontkit",
+      "package": "@pdf-lib/fontkit",
+      "version": "1.1.1",
+      "ecosystem": "npm",
+      "source": {
+        "uri": "https://registry.npmjs.org/@pdf-lib/fontkit/-/fontkit-1.1.1.tgz",
+        "sha256": "6dd0ae9209fce419b2ed76c97166863167b4df56d75fbe3c7f1d1e6e49c85867",
+        "integrity": "sha512-KjMd7grNapIWS/Dm0gvfHEilSyAmeLvrEGVcqLGi0VYebuqqzTbgF29efCx7tvx+IEbG3zQciRSWl3GkUSvjZg=="
+      },
+      "license": {
+        "spdx": "MIT",
+        "provenance": "registry package metadata and LICENSE content in @pdf-lib/fontkit@1.1.1",
+        "review": "SPDX MIT is compatible with Forge3D distribution when notices are retained"
+      },
+      "build": {
+        "provenance": "immutable npm registry tarball @pdf-lib/fontkit@1.1.1",
+        "toolchain": "npm 11 with package-lock integrity verification",
+        "flags": [
+          "exact-version",
+          "ignore-lifecycle-scripts-during-audit"
+        ],
+        "artifacts": [
+          {
+            "name": "@pdf-lib/fontkit-1.1.1.tgz",
+            "sha256": "6dd0ae9209fce419b2ed76c97166863167b4df56d75fbe3c7f1d1e6e49c85867",
+            "sri": "sha512-KjMd7grNapIWS/Dm0gvfHEilSyAmeLvrEGVcqLGi0VYebuqqzTbgF29efCx7tvx+IEbG3zQciRSWl3GkUSvjZg=="
+          }
+        ]
+      },
+      "fixtureProvenance": [
+        "1f4084a:tests/test_export_svg.py"
+      ],
+      "delivery": {
+        "mode": "bundled-self-hosted",
+        "cspRule": "Package code and WASM must be emitted under script-src 'self'; worker assets must use worker-src 'self'; no dependency CDN is permitted",
+        "sriRule": "Acquire only the registry tarball matching sha512-KjMd7grNapIWS/Dm0gvfHEilSyAmeLvrEGVcqLGi0VYebuqqzTbgF29efCx7tvx+IEbG3zQciRSWl3GkUSvjZg==; emitted self-hosted assets retain a SHA-256 entry in the package asset manifest",
+        "runtimeRemoteFetch": false
+      },
+      "consumingTasks": [
+        "W20",
+        "W22"
+      ],
+      "consumerTokens": [
+        "@pdf-lib/fontkit"
+      ],
+      "review": {
+        "security": "Run fixture conformance, corrupt-input tests and dependency advisory review before consumption",
+        "maintenance": "Exact version is frozen; substitution requires an ADR and the same fixtures",
+        "license": "Retain MIT license text and notices in the published package"
+      }
+    },
+    {
+      "id": "noble-ed25519",
+      "package": "@noble/ed25519",
+      "version": "3.2.0",
+      "ecosystem": "npm",
+      "source": {
+        "uri": "https://registry.npmjs.org/@noble/ed25519/-/ed25519-3.2.0.tgz",
+        "sha256": "aaae5d6bc1aa92b798dc2017f2ff1f834f6d8a1e339fdc3e08915ec336006bd8",
+        "integrity": "sha512-criDgRlnUA09hchYrTy/JUWPIEap5rZxQe6wDWzRx51oWWpDRcUpuNzlgPxDJaOK6AsW9c0wKcj3rKRv6t+bPQ=="
+      },
+      "license": {
+        "spdx": "MIT",
+        "provenance": "registry package metadata and LICENSE content in @noble/ed25519@3.2.0",
+        "review": "SPDX MIT is compatible with Forge3D distribution when notices are retained"
+      },
+      "build": {
+        "provenance": "immutable npm registry tarball @noble/ed25519@3.2.0",
+        "toolchain": "npm 11 with package-lock integrity verification",
+        "flags": [
+          "exact-version",
+          "ignore-lifecycle-scripts-during-audit"
+        ],
+        "artifacts": [
+          {
+            "name": "@noble/ed25519-3.2.0.tgz",
+            "sha256": "aaae5d6bc1aa92b798dc2017f2ff1f834f6d8a1e339fdc3e08915ec336006bd8",
+            "sri": "sha512-criDgRlnUA09hchYrTy/JUWPIEap5rZxQe6wDWzRx51oWWpDRcUpuNzlgPxDJaOK6AsW9c0wKcj3rKRv6t+bPQ=="
+          }
+        ]
+      },
+      "fixtureProvenance": [
+        "1f4084a:tests/test_license.py"
+      ],
+      "delivery": {
+        "mode": "bundled-self-hosted",
+        "cspRule": "Package code and WASM must be emitted under script-src 'self'; worker assets must use worker-src 'self'; no dependency CDN is permitted",
+        "sriRule": "Acquire only the registry tarball matching sha512-criDgRlnUA09hchYrTy/JUWPIEap5rZxQe6wDWzRx51oWWpDRcUpuNzlgPxDJaOK6AsW9c0wKcj3rKRv6t+bPQ==; emitted self-hosted assets retain a SHA-256 entry in the package asset manifest",
+        "runtimeRemoteFetch": false
+      },
+      "consumingTasks": [
+        "W21",
+        "W22"
+      ],
+      "consumerTokens": [
+        "@noble/ed25519"
+      ],
+      "review": {
+        "security": "Run fixture conformance, corrupt-input tests and dependency advisory review before consumption",
+        "maintenance": "Exact version is frozen; substitution requires an ADR and the same fixtures",
+        "license": "Retain MIT license text and notices in the published package"
+      }
+    }
+  ]
+}

@@ -25,7 +25,7 @@ surfaces, and deployment assumptions that application owners must satisfy.
 | WebGL fallback | Unsupported | Applications must feature-detect WebGPU and provide their own fallback UI. |
 | Node.js rendering | Unsupported | The package is browser-only and requires an `HTMLCanvasElement`. |
 | OffscreenCanvas | Unsupported | The MVP runtime owns a main-thread canvas-backed WebGPU surface. |
-| Python/native parity | Unsupported | Python wheels and the native viewer are out of scope for this browser/npm/WASM repository. |
+| Python/native delivery | Unsupported | Python wheels and the native viewer are not delivered from this browser/npm/WASM repository; their capabilities are tracked parity rows in the repository manifest `docs/parity/forge3d-composite-baseline.json`. |
 
 ## Deployment Requirements
 

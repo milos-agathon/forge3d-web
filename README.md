@@ -38,7 +38,10 @@ This repository is scoped to browser/npm/WASM delivery:
   typecheck, and Chromium WebGPU tests.
 
 Python wheels, PyO3 bindings, native viewers, desktop IPC, root Python tests,
-and legacy examples/docs are intentionally out of scope for this repo.
+and legacy examples/docs are not built or delivered from this repo. Their
+capabilities remain the functional-parity baseline tracked in
+`docs/parity/forge3d-composite-baseline.json` and the runtime plan under
+`docs/superpowers/plans/`.
 
 ## Verification
 

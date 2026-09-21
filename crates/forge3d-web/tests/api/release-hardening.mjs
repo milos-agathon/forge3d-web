@@ -318,8 +318,21 @@ const changelog = readText(join(repoRoot, "CHANGELOG.md"));
 assertIncludes(changelog, "Hardened the browser WebGPU/WASM MVP prerelease", "changelog must describe Phase 16 release hardening");
 
 const plan = readText(join(repoRoot, "docs", "superpowers", "plans", "2026-06-04-forge3d-browser-webgpu-wasm-runtime.md"));
-assertIncludes(plan, "browser/npm/WASM-only repository", "plan must declare browser-only repository scope");
-assertIncludes(plan, "Python/PyO3, maturin, native desktop viewers", "plan must mark Python/native surfaces out of scope");
+assertIncludes(plan, "browser/npm/WASM-only as a delivery format", "plan must scope browser/npm/WASM exclusivity to the delivery format");
+assertIncludes(plan, "native Forge3D functionality is no longer out of scope", "plan must keep native capabilities inside the parity target");
+assertIncludes(plan, "docs/parity/forge3d-composite-baseline.json", "plan must link the composite parity manifest");
+
+const migrationGoals = readText(join(repoRoot, "docs", "superpowers", "specs", "2026-06-05-forge3d-browser-webgpu-wasm-migration-goals.md"));
+const rootReadme = readText(join(repoRoot, "README.md"));
+for (const [name, document] of [
+  ["migration goals spec", migrationGoals],
+  ["root README", rootReadme],
+  ["package README", readme],
+  ["support matrix", supportMatrix],
+]) {
+  assertIncludes(document, "docs/parity/forge3d-composite-baseline.json", `${name} must link native-capability status to the parity manifest`);
+  assert(!/out of scope for this (repo|repository)/i.test(document), `${name} must not declare native functionality out of scope`);
+}
 
 function readJson(path) {
   return JSON.parse(readText(path));

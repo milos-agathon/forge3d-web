@@ -19,7 +19,8 @@ Active workspace members:
 - `crates/forge3d-core`
 - `crates/forge3d-web`
 
-Removed or out of scope for this repository:
+Not delivered from this repository (delivery-format exclusions, not parity
+exclusions):
 
 - Python package source, PyO3 bindings, maturin configuration, Python wheels,
   root Python tests, and Python compatibility gates.
@@ -27,6 +28,12 @@ Removed or out of scope for this repository:
   integration, native examples, and native release gates.
 - Legacy top-level Rust source, staged non-MVP core feature directories, legacy
   docs/assets/examples/scripts, and generated local build artifacts.
+
+These removals scope the delivery format only. Native Forge3D functionality
+remains the functional-parity target: every removed capability is implemented,
+mapped to a tested browser equivalent, or recorded as a tombstone in
+`docs/parity/forge3d-composite-baseline.json` under the runtime plan
+`docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md`.
 
 ## Global Invariants
 
