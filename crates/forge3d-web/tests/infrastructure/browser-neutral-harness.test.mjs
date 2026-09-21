@@ -22,6 +22,7 @@ import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture
 import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
 import { validSaf04HardwareProof } from "../browser/saf04-hardware-proof-fixture.mjs";
 import { validFfx04LifecycleProof } from "../browser/ffx04-lifecycle-proof-fixture.mjs";
+import { validFfx03Proof, validFfxAdapter } from "../browser/ffx03-proof-fixture.mjs";
 import { validAbsentStpResult, validSaf03Proof } from "../browser/saf03-proof-fixture.mjs";
 
 const binding = {
@@ -117,13 +118,33 @@ test("only Firefox lanes require and validate the FFX-04 lifecycle proof", async
     commit: "a".repeat(40),
     packageSha256: "b".repeat(64),
   };
+  const firefoxAdapter = validFfxAdapter({
+    assetId: firefoxBinding.assetId,
+    commit: firefoxBinding.commit,
+    packageSha256: firefoxBinding.packageSha256,
+  });
+  firefoxAdapter.runId = firefoxBinding.runId;
+  firefoxAdapter.jobId = firefoxBinding.jobId;
+  const ffx03Proof = validFfx03Proof({
+    lane: firefoxBinding.lane,
+    assetId: firefoxBinding.assetId,
+    platform: "darwin",
+    architecture: "arm64",
+    version: "147.0",
+    commit: firefoxBinding.commit,
+    packageSha256: firefoxBinding.packageSha256,
+    adapter: firefoxAdapter,
+  });
   const inventory = {
     ...desktopInventory,
     assetId: firefoxBinding.assetId,
     platform: "darwin",
+    architecture: "arm64",
+    osVersion: "26.0",
+    osBuild: "fixture-build",
     displayServer: "WindowServer",
-    browsers: [{ id: "firefox-release", version: "147.0", executable: "/Applications/Firefox.app" }],
-    tools: { geckodriver: "0.36.0" },
+    browsers: [{ id: "firefox-release", version: "147.0", executable: ffx03Proof.launch.executable }],
+    tools: { geckodriver: "0.36.0", selenium: "4.35.0" },
   };
   let lifecycleCalls = 0;
   let invalidProof = false;
@@ -132,20 +153,30 @@ test("only Firefox lanes require and validate the FFX-04 lifecycle proof", async
     assetId: firefoxBinding.assetId,
     hostId: firefoxBinding.assetId,
     platform: "darwin",
+    required: true,
     binding: firefoxBinding,
     route: { applicationUrl: `https://firefox.webgpu-ci.forge3d.dev/runs/10/20/${"c".repeat(32)}/` },
-    browserPolicy: { prohibitedLaunchArguments: [], tools: { geckodriver: "0.36.0" } },
+    browserPolicy: { prohibitedLaunchArguments: [], tools: { geckodriver: "0.36.0", selenium: "4.35.0" } },
     deviceMatrix: { devices: [] },
     inventory,
     outputPath: join(directory, "firefox.json"),
     dependencies: { openSession: async () => ({
-      browser: { name: "firefox", channel: "release", version: "147.0" },
-      driverVersion: "geckodriver 0.36.0",
-      effectiveLaunchArguments: [],
+      browser: ffx03Proof.browser,
+      driverVersion: "0.36.0",
+      driverExecutable: ffx03Proof.driver.executable,
+      clientVersion: "4.35.0",
+      observedExecutable: ffx03Proof.launch.executable,
+      effectiveLaunchArguments: ffx03Proof.launch.arguments,
       launchArgumentsObserved: true,
-      launchArgumentSource: "darwin-live-browser-process",
-      browserProcessId: 42,
-      runPage: async () => ({ adapter, assertions: { passed: true, supportAssertionsExecuted: true } }),
+      launchArgumentSource: ffx03Proof.launch.source,
+      browserProcessId: ffx03Proof.launch.browserProcessId,
+      runPage: async () => ({
+        adapter: firefoxAdapter,
+        assertions: { passed: true, supportAssertionsExecuted: true },
+        routeReadiness: { trustedHttps: true },
+        ffx03Workload: ffx03Proof.workload,
+        configuration: ffx03Proof.configuration,
+      }),
       runFirefoxLifecycle: async () => {
         lifecycleCalls += 1;
         const proof = validFfx04LifecycleProof({
@@ -156,11 +187,13 @@ test("only Firefox lanes require and validate the FFX-04 lifecycle proof", async
           packageSha256: firefoxBinding.packageSha256,
           runId: firefoxBinding.runId,
           jobId: firefoxBinding.jobId,
+          browserVersion: "147.0",
+          driverVersion: "0.36.0",
         });
         if (invalidProof) proof.cycles[0].hidden.persisted = false;
         return proof;
       },
-      close: async () => undefined,
+      close: async () => ffx03Proof.cleanup,
     }) },
   };
   try {
