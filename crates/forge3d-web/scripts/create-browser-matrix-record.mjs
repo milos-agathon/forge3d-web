@@ -8,8 +8,11 @@ import { validateChr03HardwareProofContract as validateChr03HardwareProof } from
 import { CHR03_STABLE_LANES } from "./chr03-lanes.mjs";
 import { validateChr04EdgeEvidence } from "./chr04-hardware-proof-validator.mjs";
 import { CHR04_LANES } from "./chr04-lanes.mjs";
-import { validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
 import { validateSaf04HardwareProof } from "./saf04-hardware-proof-validator.mjs";
+import { validateSaf03EvidenceEnvelope } from "./saf03-proof-validator.mjs";
+import { assertExactSafariRoute, validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
+import { validateFfx04LifecycleProof } from "./ffx04-lifecycle-proof-validator.mjs";
+import { FFX04_LANES, isFfx04Lane } from "./ffx04-lanes.mjs";
 
 const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
 const CHR04_REQUIRED_LANES = new Set(Object.keys(CHR04_LANES));
@@ -54,6 +57,25 @@ export function createAutomatedMatrixRecord({
       adapter: evidence.adapter,
     });
   }
+  if (isFfx04Lane(promotion.lane)) {
+    if (!Number.isSafeInteger(evidence.jobId) || evidence.jobId < 1 ||
+        evidence.runId !== run.id || attestation?.binding?.runId !== run.id ||
+        attestation?.binding?.jobId !== evidence.jobId) {
+      throw new Error("FFX04 authorized run/job binding does not match workflow and attestation");
+    }
+    validateFfx04LifecycleProof(evidence.ffx04Proof, {
+      lane: promotion.lane,
+      runId: run.id,
+      jobId: evidence.jobId,
+      assetId: promotion.assetId,
+      platform: FFX04_LANES[promotion.lane].platform,
+      commit: promotion.trustedSha,
+      packageSha256: evidence.packageSha256,
+      browser: evidence.browser,
+      driver: evidence.driver,
+      applicationUrl: evidence.route?.applicationUrl,
+    });
+  }
   const safariTrackpadRecord = promotion.lane === "safari-macos-m2";
   if (safariTrackpadRecord) {
     validateSaf02Conformance(evidence.saf02Proof, {
@@ -80,6 +102,23 @@ export function createAutomatedMatrixRecord({
     ) {
       throw new Error("automated Safari provenance does not match SAF-03");
     }
+    validateSaf03EvidenceEnvelope({
+      proof: evidence.saf03Proof,
+      technologyPreview: evidence.safariTechnologyPreview,
+      inventory: hostInventory,
+      browser: evidence.browser,
+      driver: evidence.driver,
+      system: evidence.system,
+      adapter: evidence.adapter,
+      route: evidence.route,
+      expectedBinding: {
+        lane: promotion.lane,
+        assetId: promotion.assetId,
+        platform: "darwin",
+        commit: promotion.trustedSha,
+        packageSha256: evidence.packageSha256,
+      },
+    });
   }
   if (
     promotion.lane === "infrastructure-canary" ||
@@ -108,7 +147,7 @@ export function createAutomatedMatrixRecord({
   ) {
     throw new Error("automated matrix evidence does not match its promotion");
   }
-  return {
+  const record = {
     schemaVersion: 1,
     key: `automated:${promotion.assetId}:${promotion.lane}`,
     kind: "automated",
@@ -135,6 +174,7 @@ export function createAutomatedMatrixRecord({
     hostInventory: safariTrackpadRecord
       ? structuredClone(hostInventory)
       : null,
+    route: safariTrackpadRecord ? structuredClone(evidence.route) : null,
     result: "PASS",
     infrastructureError: null,
     workflow: {
@@ -148,13 +188,22 @@ export function createAutomatedMatrixRecord({
     adapterAttestation: attestation,
     chr03Proof: evidence.chr03Proof ? structuredClone(evidence.chr03Proof) : null,
     chr04Proof: evidence.chr04Proof ? structuredClone(evidence.chr04Proof) : null,
+    saf03Proof: evidence.saf03Proof ? structuredClone(evidence.saf03Proof) : null,
+    safariTechnologyPreview: evidence.safariTechnologyPreview
+      ? structuredClone(evidence.safariTechnologyPreview) : null,
     saf02Proof: evidence.saf02Proof ? structuredClone(evidence.saf02Proof) : null,
     ...(safariTrackpadRecord ? {
       hardwareJobId: evidence.jobId,
       saf02Route: structuredClone(evidence.route),
     } : {}),
     saf04Proof: evidence.saf04Proof ? structuredClone(evidence.saf04Proof) : null,
+    ffx04Proof: evidence.ffx04Proof ? structuredClone(evidence.ffx04Proof) : null,
+    ...(isFfx04Lane(promotion.lane)
+      ? { fixtureApplicationUrl: evidence.route.applicationUrl, sourceJobId: evidence.jobId }
+      : {}),
   };
+  if (safariTrackpadRecord) assertExactSafariRoute(record.route, record.saf02Route);
+  return record;
 }
 
 export function createManualMatrixRecord({ evidence, run }) {
@@ -308,6 +357,47 @@ export function finalizeMatrixRecord({
     attestation.denySelfHostedRunners !== true
   ) {
     throw new Error("matrix record requires exact artifact and attestation proof");
+  }
+  if (source.lane === "safari-macos-m2") {
+    assertExactSafariRoute(source.route, source.saf02Route);
+    validateSaf02Conformance(source.saf02Proof, {
+      lane: source.lane,
+      assetId: source.assetId,
+      hostId: source.hostId,
+      runId: source.workflow.runId,
+      jobId: source.hardwareJobId,
+      commit: source.trustedSha,
+      packageSha256: source.packageSha256,
+      applicationUrl: source.saf02Route?.applicationUrl,
+      assetUrl: source.saf02Route?.assetUrl,
+      browser: source.browser,
+      system: source.system,
+      adapter: source.adapter,
+      effectiveLaunchArguments: source.effectiveLaunchArguments,
+    });
+    validateSaf03EvidenceEnvelope({
+      proof: source.saf03Proof,
+      technologyPreview: source.safariTechnologyPreview,
+      inventory: source.hostInventory,
+      browser: source.browser,
+      driver: source.driver,
+      system: source.system,
+      adapter: source.adapter,
+      route: source.route,
+      expectedBinding: {
+        lane: source.lane,
+        assetId: source.assetId,
+        platform: "darwin",
+        commit: source.trustedSha,
+        packageSha256: source.packageSha256,
+      },
+    });
+    validateSaf04HardwareProof(source.saf04Proof, {
+      lane: source.lane,
+      assetId: source.assetId,
+      commit: source.trustedSha,
+      packageSha256: source.packageSha256,
+    });
   }
   if (
     !Number.isInteger(selectedRun?.id) ||

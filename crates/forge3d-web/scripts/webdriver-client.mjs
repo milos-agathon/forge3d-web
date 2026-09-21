@@ -229,6 +229,44 @@ export class WebDriverSession {
     return result.value;
   }
 
+  async runBfcacheLifecycleAction(action, args = []) {
+    const exports = new Set([
+      "prepareViewerBfcacheCycle",
+      "observeViewerBfcacheRestore",
+      "exerciseViewerAfterBfcache",
+      "disposeViewerBfcacheLifecycle",
+    ]);
+    if (!exports.has(action) || !Array.isArray(args)) {
+      throw new Error("INFRA_ERROR WEBDRIVER_BFCACHE_ACTION_INVALID");
+    }
+    const script = `
+      const action = arguments[0];
+      const values = arguments[1];
+      const done = arguments[arguments.length - 1];
+      import(new URL("viewer-bfcache-lifecycle.js", window.location.href).href)
+        .then((module) => module[action](...values))
+        .then((value) => done({ ok: true, value }))
+        .catch((error) => done({ ok: false, message: String(error && error.message || error) }));
+    `;
+    const response = await this.client.request(
+      "POST",
+      `/session/${this.sessionId}/execute/async`,
+      { script, args: [action, args] },
+    );
+    if (response.value?.ok !== true) {
+      throw new Error(`INFRA_ERROR WEBDRIVER_BFCACHE_ACTION_FAILED ${action}`);
+    }
+    return response.value.value;
+  }
+
+  historyBack() {
+    return this.client.request(
+      "POST",
+      `/session/${this.sessionId}/back`,
+      {},
+    );
+  }
+
   delete() {
     return this.client.request(
       "DELETE",

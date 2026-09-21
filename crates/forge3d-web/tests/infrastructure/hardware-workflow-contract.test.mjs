@@ -150,7 +150,7 @@ test("hardware executes only verified promoted artifacts and always cleans up", 
   assert.match(hardware, /runner-authorization-\$\{process\.env\.EXPECTED_NONCE\}/u);
   assert.match(hardware, /authorization does not match the executing hardware job/u);
   assert.match(hardware, /test ! -d \.git/u);
-  assert.match(hardware, /npm --prefix consumer install --no-save/u);
+  assert.match(hardware, /npm --prefix consumer install --include=dev --no-save/u);
   assert.match(hardware, /create-run-nonce\.mjs/u);
   assert.match(hardware, /manage-browser-route\.mjs/u);
   assert.match(hardware, /probe-browser-fixture\.mjs/u);

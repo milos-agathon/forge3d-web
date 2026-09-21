@@ -86,7 +86,8 @@
         "appium",
         "appiumUiAutomator2",
         "appiumXcuitest",
-        "safaridriverPath"
+        "safaridriverPath",
+        "safariTechnologyPreviewDriverPath"
       ],
       "properties": {
         "playwright": { "$ref": "#/$defs/version" },
@@ -95,7 +96,8 @@
         "appium": { "$ref": "#/$defs/version" },
         "appiumUiAutomator2": { "$ref": "#/$defs/version" },
         "appiumXcuitest": { "$ref": "#/$defs/version" },
-        "safaridriverPath": { "const": "/usr/bin/safaridriver" }
+        "safaridriverPath": { "const": "/usr/bin/safaridriver" },
+        "safariTechnologyPreviewDriverPath": { "const": "/Applications/Safari Technology Preview.app/Contents/MacOS/safaridriver" }
       }
     },
     "archives": {

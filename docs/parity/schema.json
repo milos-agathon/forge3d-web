@@ -1,0 +1,561 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/parity-manifest-v1.json",
+  "title": "Forge3D composite parity manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "manifestId",
+    "sourcePlan",
+    "baselineLayers",
+    "counts",
+    "capabilities",
+    "constraints",
+    "webTargets",
+    "tombstones",
+    "inventorySources",
+    "mappings",
+    "requiredFixtureIds",
+    "requiredHardwareProfileIds",
+    "dependencyLock"
+  ],
+  "properties": {
+    "$schema": { "type": "string", "minLength": 1 },
+    "schemaVersion": { "const": 1 },
+    "manifestId": { "const": "forge3d-composite-baseline-v1" },
+    "sourcePlan": { "$ref": "#/$defs/fileDigest" },
+    "baselineLayers": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 4,
+      "items": { "$ref": "#/$defs/baselineLayer" }
+    },
+    "counts": { "$ref": "#/$defs/counts" },
+    "capabilities": {
+      "type": "array",
+      "minItems": 84,
+      "maxItems": 84,
+      "items": { "$ref": "#/$defs/capability" }
+    },
+    "constraints": {
+      "type": "array",
+      "minItems": 7,
+      "maxItems": 7,
+      "items": { "$ref": "#/$defs/constraint" }
+    },
+    "webTargets": {
+      "type": "array",
+      "minItems": 91,
+      "items": { "$ref": "#/$defs/webTarget" }
+    },
+    "tombstones": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/tombstone" }
+    },
+    "inventorySources": {
+      "type": "array",
+      "minItems": 3,
+      "items": { "$ref": "#/$defs/inventorySource" }
+    },
+    "mappings": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/mapping" }
+    },
+    "requiredFixtureIds": {
+      "type": "array",
+      "minItems": 9,
+      "maxItems": 9,
+      "items": { "$ref": "#/$defs/nonBlank" }
+    },
+    "requiredHardwareProfileIds": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 2,
+      "items": { "$ref": "#/$defs/nonBlank" }
+    },
+    "dependencyLock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "requiredAssetIds"],
+      "properties": {
+        "path": { "$ref": "#/$defs/nonBlank" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "requiredAssetIds": {
+          "type": "array",
+          "minItems": 12,
+          "maxItems": 12,
+          "items": { "$ref": "#/$defs/nonBlank" }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "nonBlank": { "type": "string", "minLength": 1, "pattern": ".*\\S.*" },
+    "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "gitCommit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "gitObject": { "type": "string", "pattern": "^[0-9a-f]{40,64}$" },
+    "fileDigest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256"],
+      "properties": {
+        "path": { "$ref": "#/$defs/nonBlank" },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "baselineLayer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "commit", "tree", "role", "evidenceGrades", "supportingCommits"],
+      "properties": {
+        "id": { "enum": ["deep-native", "reconciliation", "final-contract", "browser-baseline"] },
+        "commit": { "$ref": "#/$defs/gitCommit" },
+        "tree": { "$ref": "#/$defs/gitObject" },
+        "role": { "$ref": "#/$defs/nonBlank" },
+        "evidenceGrades": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "enum": ["A", "B", "C", "D"] }
+        },
+        "supportingCommits": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/gitCommit" }
+        }
+      }
+    },
+    "counts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capabilities",
+        "constraints",
+        "packageRootExports",
+        "registeredClasses",
+        "registeredFunctions",
+        "sceneMethods",
+        "pythonApiFiles",
+        "nativeTestFiles",
+        "namedNativeTestFiles",
+        "nativeTestDefinitions",
+        "nativeExamples",
+        "nativeDocumentationAssets",
+        "nativeDocumentationPages",
+        "browserDeclarations",
+        "browserUnitFiles",
+        "browserUnitCases",
+        "browserPlaywrightSpecs",
+        "browserPlaywrightLiteralCases",
+        "browserPlaywrightGeneratedCases",
+        "browserApiArtifacts",
+        "browserHtmlFixtures"
+      ],
+      "properties": {
+        "capabilities": { "const": 84 },
+        "constraints": { "const": 7 },
+        "packageRootExports": { "const": 220 },
+        "registeredClasses": { "const": 28 },
+        "registeredFunctions": { "const": 44 },
+        "sceneMethods": { "type": "integer", "minimum": 80 },
+        "pythonApiFiles": { "const": 72 },
+        "nativeTestFiles": { "const": 211 },
+        "namedNativeTestFiles": { "const": 191 },
+        "nativeTestDefinitions": { "const": 1792 },
+        "nativeExamples": { "const": 54 },
+        "nativeDocumentationAssets": { "const": 88 },
+        "nativeDocumentationPages": { "const": 53 },
+        "browserDeclarations": { "const": 26 },
+        "browserUnitFiles": { "const": 12 },
+        "browserUnitCases": { "const": 80 },
+        "browserPlaywrightSpecs": { "const": 14 },
+        "browserPlaywrightLiteralCases": { "const": 38 },
+        "browserPlaywrightGeneratedCases": { "const": 39 },
+        "browserApiArtifacts": { "const": 6 },
+        "browserHtmlFixtures": { "const": 7 }
+      }
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "lifecycle",
+        "evidenceGrade",
+        "status",
+        "ownerTask",
+        "nativeCapability",
+        "requiredWebOutcome",
+        "nativeEvidence",
+        "requiredTests",
+        "acceptance",
+        "targetId",
+        "xcLinks"
+      ],
+      "properties": {
+        "id": { "pattern": "^(R(0[1-9]|1[0-2])|C0[1-8]|T(0[1-9]|1[0-3]|1[5-8]|14[ab])|P(0[1-9]|1[0-5])|V(0[1-5]|06[ab]|07)|G(0[1-4]|05[ab]|0[6-9]|1[0-1])|M(01|02[ab]|0[3-9]))$" },
+        "title": { "$ref": "#/$defs/nonBlank" },
+        "lifecycle": { "enum": ["FP", "FI", "DA"] },
+        "evidenceGrade": { "enum": ["A", "B", "C", "D"] },
+        "status": { "enum": ["I", "P", "G", "E", "G→C", "C"] },
+        "ownerTask": { "pattern": "^W(0[0-9]|1[0-9]|2[0-4])$" },
+        "nativeCapability": { "$ref": "#/$defs/nonBlank" },
+        "requiredWebOutcome": { "$ref": "#/$defs/nonBlank" },
+        "nativeEvidence": { "$ref": "#/$defs/nonEmptyStrings" },
+        "requiredTests": { "$ref": "#/$defs/nonEmptyStrings" },
+        "acceptance": { "$ref": "#/$defs/nonEmptyStrings" },
+        "targetId": { "$ref": "#/$defs/nonBlank" },
+        "xcLinks": { "$ref": "#/$defs/xcLinks" }
+      }
+    },
+    "constraint": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "title",
+        "lifecycle",
+        "evidenceGrade",
+        "status",
+        "ownerTask",
+        "nativeCapability",
+        "requiredWebOutcome",
+        "nativeEvidence",
+        "requiredTests",
+        "acceptance",
+        "targetId"
+      ],
+      "properties": {
+        "id": { "pattern": "^E0[1-7]$" },
+        "title": { "$ref": "#/$defs/nonBlank" },
+        "lifecycle": { "const": "XC" },
+        "evidenceGrade": { "enum": ["A", "B", "C", "D"] },
+        "status": { "enum": ["I", "P", "G", "E", "C"] },
+        "ownerTask": { "pattern": "^W(0[0-9]|1[0-9]|2[0-4])$" },
+        "nativeCapability": { "$ref": "#/$defs/nonBlank" },
+        "requiredWebOutcome": { "$ref": "#/$defs/nonBlank" },
+        "nativeEvidence": { "$ref": "#/$defs/nonEmptyStrings" },
+        "requiredTests": { "$ref": "#/$defs/nonEmptyStrings" },
+        "acceptance": { "$ref": "#/$defs/nonEmptyStrings" },
+        "targetId": { "$ref": "#/$defs/nonBlank" }
+      }
+    },
+    "webTarget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "capabilityId", "kind", "contract", "owner", "evidence", "tests"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonBlank" },
+        "capabilityId": { "$ref": "#/$defs/nonBlank" },
+        "kind": { "enum": ["web-api", "equivalent", "tombstone"] },
+        "contract": { "$ref": "#/$defs/nonBlank" },
+        "owner": { "$ref": "#/$defs/nonBlank" },
+        "evidence": { "$ref": "#/$defs/nonEmptyStrings" },
+        "tests": { "$ref": "#/$defs/nonEmptyStrings" }
+      }
+    },
+    "tombstone": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "capabilityId", "lifecycle", "evidence", "disposition", "targetId"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonBlank" },
+        "title": { "$ref": "#/$defs/nonBlank" },
+        "capabilityId": { "$ref": "#/$defs/nonBlank" },
+        "lifecycle": { "enum": ["historically-shipped-then-removed", "intended-unverified", "delivery-mechanism", "product-boundary", "diagnostic-only"] },
+        "evidence": { "$ref": "#/$defs/nonEmptyStrings" },
+        "disposition": { "$ref": "#/$defs/nonBlank" },
+        "targetId": { "$ref": "#/$defs/nonBlank" }
+      }
+    },
+    "inventorySource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "path", "sha256", "recordCount"],
+      "properties": {
+        "kind": { "enum": ["composite-inventory", "fixture-contracts", "hardware-profiles"] },
+        "path": { "$ref": "#/$defs/nonBlank" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "recordCount": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "mapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["artifactId", "capabilityId", "targetId", "xcLinks", "classificationRule"],
+      "properties": {
+        "artifactId": { "$ref": "#/$defs/nonBlank" },
+        "capabilityId": { "$ref": "#/$defs/nonBlank" },
+        "targetId": { "$ref": "#/$defs/nonBlank" },
+        "xcLinks": { "$ref": "#/$defs/xcLinks" },
+        "classificationRule": { "$ref": "#/$defs/nonBlank" }
+      }
+    },
+    "xcLinks": {
+      "type": "array",
+      "items": { "pattern": "^E0[1-7]$" }
+    },
+    "nonEmptyStrings": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/nonBlank" }
+    },
+    "inventory": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "sourceDate", "records", "counts"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "sourceDate": { "const": "2026-09-20" },
+        "records": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/artifact" }
+        },
+        "counts": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": { "type": "integer", "minimum": 0 }
+        }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "layer", "name", "source"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonBlank" },
+        "kind": { "$ref": "#/$defs/nonBlank" },
+        "layer": { "enum": ["deep-native", "reconciliation", "final-contract", "browser-baseline", "tombstone-ledger"] },
+        "name": { "$ref": "#/$defs/nonBlank" },
+        "qualifiedName": { "$ref": "#/$defs/nonBlank" },
+        "source": { "$ref": "#/$defs/artifactSource" },
+        "details": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "artifactSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["ref", "path", "sha256"],
+      "properties": {
+        "ref": { "$ref": "#/$defs/nonBlank" },
+        "path": { "$ref": "#/$defs/nonBlank" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "gitBlob": { "$ref": "#/$defs/gitObject" },
+        "line": { "type": "integer", "minimum": 1 },
+        "endLine": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "fixtureContracts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "fixtures"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "fixtures": {
+          "type": "array",
+          "minItems": 9,
+          "items": { "$ref": "#/$defs/fixtureContract" }
+        }
+      }
+    },
+    "fixtureContract": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "ownerTasks", "capabilityIds", "provenance", "generator", "tolerances", "budgets"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonBlank" },
+        "ownerTasks": { "$ref": "#/$defs/nonEmptyStrings" },
+        "capabilityIds": { "$ref": "#/$defs/nonEmptyStrings" },
+        "provenance": { "$ref": "#/$defs/nonEmptyStrings" },
+        "generator": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "version", "seed", "parameters", "sha256"],
+          "properties": {
+            "kind": { "$ref": "#/$defs/nonBlank" },
+            "version": { "$ref": "#/$defs/nonBlank" },
+            "seed": { "type": "integer", "minimum": 0 },
+            "parameters": { "type": "object", "minProperties": 1, "additionalProperties": true },
+            "sha256": { "$ref": "#/$defs/sha256" }
+          }
+        },
+        "tolerances": { "type": "object", "minProperties": 1, "additionalProperties": { "$ref": "#/$defs/toleranceValue" } },
+        "budgets": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "$ref": "#/$defs/fixtureBudget" }
+        }
+      }
+    },
+    "toleranceValue": {
+      "oneOf": [
+        { "type": "number" },
+        { "type": "string", "minLength": 1 },
+        { "type": "boolean" }
+      ]
+    },
+    "fixtureBudget": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["profileId", "cpuBytes", "gpuBytes", "frameTimeP95Ms", "durationSeconds"],
+      "properties": {
+        "profileId": { "$ref": "#/$defs/nonBlank" },
+        "cpuBytes": { "type": "integer", "minimum": 1 },
+        "gpuBytes": { "type": "integer", "minimum": 1 },
+        "frameTimeP95Ms": { "type": "number", "exclusiveMinimum": 0 },
+        "durationSeconds": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "hardwareProfiles": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "profiles"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "profiles": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": { "$ref": "#/$defs/hardwareProfile" }
+        }
+      }
+    },
+    "hardwareProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "hardwareMatrixAssetId", "adapter", "driver", "os", "adapterBudgetBytes", "effectiveBudgetBytes", "requiredFeatures", "viewport", "provenance"],
+      "properties": {
+        "id": { "enum": ["reference-discrete", "reference-integrated"] },
+        "hardwareMatrixAssetId": { "$ref": "#/$defs/nonBlank" },
+        "adapter": { "$ref": "#/$defs/hardwareIdentity" },
+        "driver": { "$ref": "#/$defs/hardwareIdentity" },
+        "os": { "$ref": "#/$defs/hardwareIdentity" },
+        "adapterBudgetBytes": { "type": "integer", "minimum": 4294967296 },
+        "effectiveBudgetBytes": { "type": "integer", "minimum": 4294967296 },
+        "requiredFeatures": { "$ref": "#/$defs/nonEmptyStrings" },
+        "viewport": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["width", "height", "devicePixelRatio"],
+          "properties": {
+            "width": { "const": 1920 },
+            "height": { "const": 1080 },
+            "devicePixelRatio": { "const": 1 }
+          }
+        },
+        "provenance": { "$ref": "#/$defs/nonEmptyStrings" }
+      }
+    },
+    "hardwareIdentity": {
+      "type": "object",
+      "minProperties": 2,
+      "additionalProperties": { "$ref": "#/$defs/nonBlank" }
+    },
+    "dependencyLock": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["schemaVersion", "lockId", "policy", "assets"],
+      "properties": {
+        "schemaVersion": { "const": 1 },
+        "lockId": { "const": "forge3d-parity-dependencies-v1" },
+        "policy": { "$ref": "#/$defs/nonBlank" },
+        "assets": {
+          "type": "array",
+          "minItems": 12,
+          "maxItems": 12,
+          "items": { "$ref": "#/$defs/dependencyAsset" }
+        }
+      }
+    },
+    "dependencyAsset": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "package", "version", "ecosystem", "source", "license", "build", "fixtureProvenance", "delivery", "consumingTasks", "consumerTokens", "review"],
+      "properties": {
+        "id": { "$ref": "#/$defs/nonBlank" },
+        "package": { "$ref": "#/$defs/nonBlank" },
+        "version": { "$ref": "#/$defs/nonBlank" },
+        "ecosystem": { "enum": ["npm", "crates.io", "upstream-wasm"] },
+        "source": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["uri", "sha256", "integrity"],
+          "properties": {
+            "uri": { "$ref": "#/$defs/nonBlank" },
+            "sha256": { "$ref": "#/$defs/sha256" },
+            "integrity": { "$ref": "#/$defs/nonBlank" }
+          }
+        },
+        "license": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["spdx", "provenance", "review"],
+          "properties": {
+            "spdx": { "$ref": "#/$defs/nonBlank" },
+            "provenance": { "$ref": "#/$defs/nonBlank" },
+            "review": { "$ref": "#/$defs/nonBlank" }
+          }
+        },
+        "build": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["provenance", "toolchain", "flags", "artifacts"],
+          "properties": {
+            "provenance": { "$ref": "#/$defs/nonBlank" },
+            "toolchain": { "$ref": "#/$defs/nonBlank" },
+            "flags": { "$ref": "#/$defs/nonEmptyStrings" },
+            "artifacts": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "$ref": "#/$defs/dependencyArtifact" }
+            }
+          }
+        },
+        "fixtureProvenance": { "$ref": "#/$defs/nonEmptyStrings" },
+        "manifestFixtureIds": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/nonBlank" }
+        },
+        "delivery": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mode", "cspRule", "sriRule", "runtimeRemoteFetch"],
+          "properties": {
+            "mode": { "$ref": "#/$defs/nonBlank" },
+            "cspRule": { "$ref": "#/$defs/nonBlank" },
+            "sriRule": { "$ref": "#/$defs/nonBlank" },
+            "runtimeRemoteFetch": { "type": "boolean" }
+          }
+        },
+        "consumingTasks": { "$ref": "#/$defs/nonEmptyStrings" },
+        "consumerTokens": { "$ref": "#/$defs/nonEmptyStrings" },
+        "review": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["security", "maintenance", "license"],
+          "properties": {
+            "security": { "$ref": "#/$defs/nonBlank" },
+            "maintenance": { "$ref": "#/$defs/nonBlank" },
+            "license": { "$ref": "#/$defs/nonBlank" }
+          }
+        }
+      }
+    },
+    "dependencyArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "sha256"],
+      "properties": {
+        "name": { "$ref": "#/$defs/nonBlank" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "sri": { "$ref": "#/$defs/nonBlank" }
+      }
+    }
+  }
+}

@@ -23,7 +23,9 @@ const inventory = {
   schemaVersion: 1,
   assetId: "FW-WIN-I12-01",
   platform: "win32",
+  osVersion: "10.0.26200.0",
   osBuild: "Microsoft Windows NT 10.0.26200.0",
+  architecture: "x64",
   headed: true,
   displayServer: "Desktop Window Manager",
   session: {

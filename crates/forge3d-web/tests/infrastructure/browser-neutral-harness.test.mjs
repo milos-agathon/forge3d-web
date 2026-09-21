@@ -21,6 +21,8 @@ import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture
 import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
 import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
 import { validSaf04HardwareProof } from "../browser/saf04-hardware-proof-fixture.mjs";
+import { validFfx04LifecycleProof } from "../browser/ffx04-lifecycle-proof-fixture.mjs";
+import { validAbsentStpResult, validSaf03Proof } from "../browser/saf03-proof-fixture.mjs";
 
 const binding = {
   lane: "chrome-linux-rtx3070",
@@ -43,7 +45,9 @@ const desktopInventory = {
   schemaVersion: 1,
   assetId: binding.assetId,
   platform: "linux",
+  osVersion: "6.8.0",
   osBuild: "Linux 6.8.0 checked",
+  architecture: "x86_64",
   headed: true,
   displayServer: "GNOME Wayland",
   session: {
@@ -101,6 +105,90 @@ test("infrastructure canary cannot execute browser support assertions", async ()
   });
   assert.equal(assertionsCalled, false);
   assert.equal(result.assertions.supportAssertionsExecuted, false);
+});
+
+test("only Firefox lanes require and validate the FFX-04 lifecycle proof", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "forge3d-ffx04-runtime-"));
+  const firefoxBinding = {
+    lane: "firefox-macos-m2",
+    runId: 10,
+    jobId: 20,
+    assetId: "FW-MAC-M2-01",
+    commit: "a".repeat(40),
+    packageSha256: "b".repeat(64),
+  };
+  const inventory = {
+    ...desktopInventory,
+    assetId: firefoxBinding.assetId,
+    platform: "darwin",
+    displayServer: "WindowServer",
+    browsers: [{ id: "firefox-release", version: "147.0", executable: "/Applications/Firefox.app" }],
+    tools: { geckodriver: "0.36.0" },
+  };
+  let lifecycleCalls = 0;
+  let invalidProof = false;
+  const request = {
+    lane: firefoxBinding.lane,
+    assetId: firefoxBinding.assetId,
+    hostId: firefoxBinding.assetId,
+    platform: "darwin",
+    binding: firefoxBinding,
+    route: { applicationUrl: `https://firefox.webgpu-ci.forge3d.dev/runs/10/20/${"c".repeat(32)}/` },
+    browserPolicy: { prohibitedLaunchArguments: [], tools: { geckodriver: "0.36.0" } },
+    deviceMatrix: { devices: [] },
+    inventory,
+    outputPath: join(directory, "firefox.json"),
+    dependencies: { openSession: async () => ({
+      browser: { name: "firefox", channel: "release", version: "147.0" },
+      driverVersion: "geckodriver 0.36.0",
+      effectiveLaunchArguments: [],
+      launchArgumentsObserved: true,
+      launchArgumentSource: "darwin-live-browser-process",
+      browserProcessId: 42,
+      runPage: async () => ({ adapter, assertions: { passed: true, supportAssertionsExecuted: true } }),
+      runFirefoxLifecycle: async () => {
+        lifecycleCalls += 1;
+        const proof = validFfx04LifecycleProof({
+          lane: firefoxBinding.lane,
+          assetId: firefoxBinding.assetId,
+          platform: "darwin",
+          commit: firefoxBinding.commit,
+          packageSha256: firefoxBinding.packageSha256,
+          runId: firefoxBinding.runId,
+          jobId: firefoxBinding.jobId,
+        });
+        if (invalidProof) proof.cycles[0].hidden.persisted = false;
+        return proof;
+      },
+      close: async () => undefined,
+    }) },
+  };
+  try {
+    await executeHardwareBrowserLane(request);
+    assert.equal(lifecycleCalls, 1);
+    assert.equal(JSON.parse(readFileSync(request.outputPath, "utf8")).ffx04Proof.result, "PASS");
+    invalidProof = true;
+    await assert.rejects(
+      () => executeHardwareBrowserLane({ ...request, outputPath: join(directory, "invalid.json") }),
+      /FFX04_LIFECYCLE_PROOF_INVALID/u,
+    );
+    assert.equal(lifecycleCalls, 2);
+    const missingRunner = {
+      ...request,
+      outputPath: join(directory, "missing.json"),
+      dependencies: { openSession: async () => {
+        const session = await request.dependencies.openSession();
+        delete session.runFirefoxLifecycle;
+        return session;
+      } },
+    };
+    await assert.rejects(
+      () => executeHardwareBrowserLane(missingRunner),
+      /FFX04_LIFECYCLE_RUNNER_UNAVAILABLE/u,
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test("challenged infrastructure canary remains adapter-only", async () => {
@@ -404,13 +492,21 @@ test("production Safari lane dispatches the authorized SAF-02 binding and valida
                 commit: binding.trustedSha,
                 packageSha256: binding.packageSha256,
               }),
+              saf03Proof: validSaf03Proof({
+                commit: binding.trustedSha,
+                packageSha256: binding.packageSha256,
+              }),
             };
           },
+          runTechnologyPreview: async () => validAbsentStpResult(),
           close: async () => undefined,
         }),
       },
     });
-    assert.equal(JSON.parse(readFileSync(outputPath, "utf8")).saf02Proof.result, "PASS");
+    const evidence = JSON.parse(readFileSync(outputPath, "utf8"));
+    assert.equal(evidence.saf02Proof.result, "PASS");
+    assert.equal(evidence.saf03Proof.kind, "forge3d-saf03-safari-acceptance-v1");
+    assert.equal(evidence.safariTechnologyPreview.result, "ABSENT");
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }
@@ -532,7 +628,9 @@ test("manual mobile runtime calls Appium class and retains the visible challenge
         ...desktopInventory,
         assetId: "FW-MAC-M2-01",
         platform: "darwin",
+        osVersion: "26.0",
         osBuild: "Darwin 25.0.0 checked",
+        architecture: "arm64",
         displayServer: "WindowServer",
         session: {
           interactive: true,
@@ -624,7 +722,9 @@ test("Safari product manual lane reaches page composition without changing attes
         ...desktopInventory,
         assetId: "FW-MAC-M2-01",
         platform: "darwin",
+        osVersion: "26.0",
         osBuild: "Darwin 25.0.0 checked",
+        architecture: "arm64",
         displayServer: "WindowServer",
         tools: { safaridriverVersion: "26.0" },
         browsers: [{ id: "safari-stable", version: "26.0", executable: "/usr/bin/safaridriver" }],
@@ -703,9 +803,15 @@ test("stable Safari lane requires and retains exact SAF-04 proof", async () => {
             adapter,
             assertions: { passed: true },
             saf02Proof,
+            saf03Proof: validSaf03Proof({
+              commit: binding.trustedSha,
+              packageSha256: binding.packageSha256,
+            }),
             saf04Proof: proof,
           };
-        }, close: async () => undefined,
+        },
+        runTechnologyPreview: async () => validAbsentStpResult(),
+        close: async () => undefined,
       }) },
     };
     await executeHardwareBrowserLane(request);

@@ -5,11 +5,15 @@ const META = "\uE03D";
 const HOME = "\uE011";
 const ARROW_RIGHT = "\uE014";
 
-export async function runSafariBrowserAcceptance(session, payload) {
+export async function runSafariBrowserAcceptance(
+  session,
+  payload,
+  { hardwarePageResult } = {},
+) {
   if (payload?.binding?.lane !== "safari-macos-m2") {
     throw new Error("SAF-04 acceptance requires the authorized Safari lane");
   }
-  const result = await session.runHardwarePage(payload);
+  const result = hardwarePageResult ?? await session.runHardwarePage(payload);
   await initializeViewer(session);
   const canvasId = await session.findElement("#viewer");
   const canvasOrigin = { [ELEMENT_KEY]: canvasId };

@@ -1,8 +1,8 @@
-const PAGE_TIMEOUT_MS = 110_000;
+export const SAF02_PAGE_TIMEOUT_MS = 110_000;
 const OPERATION_TIMEOUT_MS = 8_000;
 
 export async function runSaf02Conformance({ binding, route, effectiveLaunchArguments = [] }) {
-  return withTimeout(run(binding, route, effectiveLaunchArguments), PAGE_TIMEOUT_MS, "SAF-02 page");
+  return withTimeout(run(binding, route, effectiveLaunchArguments), SAF02_PAGE_TIMEOUT_MS, "SAF-02 page");
 }
 
 async function run(binding, route, effectiveLaunchArguments) {

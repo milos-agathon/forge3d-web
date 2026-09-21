@@ -7,8 +7,11 @@ import { validateChr03HardwareProofContract as validateChr03HardwareProof } from
 import { CHR03_STABLE_LANES } from "./chr03-lanes.mjs";
 import { validateChr04EdgeEvidence } from "./chr04-hardware-proof-validator.mjs";
 import { CHR04_LANES } from "./chr04-lanes.mjs";
-import { validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
 import { validateSaf04HardwareProof } from "./saf04-hardware-proof-validator.mjs";
+import { validateSaf03EvidenceEnvelope } from "./saf03-proof-validator.mjs";
+import { assertExactSafariRoute, validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
+import { validateFfx04LifecycleProof } from "./ffx04-lifecycle-proof-validator.mjs";
+import { FFX04_LANES, isFfx04Lane } from "./ffx04-lanes.mjs";
 
 const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
 const CHR04_REQUIRED_LANES = new Set(Object.keys(CHR04_LANES));
@@ -273,8 +276,8 @@ function validateRecord(record, row, expected) {
     });
   }
   if (row.kind === "automated" && row.lane === "safari-macos-m2") {
-    const proof = record.saf02Proof;
-    validateSaf02Conformance(proof, {
+    assertExactSafariRoute(record.route, record.saf02Route);
+    validateSaf02Conformance(record.saf02Proof, {
       lane: row.lane, assetId: row.assetId, hostId: row.hostId,
       runId: record.workflow.runId, jobId: record.hardwareJobId,
       commit: expected.targetSha, packageSha256: expected.packageSha256,
@@ -288,6 +291,41 @@ function validateRecord(record, row, expected) {
       assetId: row.assetId,
       commit: expected.targetSha,
       packageSha256: expected.packageSha256,
+    });
+    validateSaf03EvidenceEnvelope({
+      proof: record.saf03Proof,
+      technologyPreview: record.safariTechnologyPreview,
+      inventory: record.hostInventory,
+      browser: record.browser,
+      driver: record.driver,
+      system: record.system,
+      adapter: record.adapter,
+      route: record.route,
+      expectedBinding: {
+        lane: row.lane,
+        assetId: row.assetId,
+        platform: "darwin",
+        commit: expected.targetSha,
+        packageSha256: expected.packageSha256,
+      },
+    });
+  }
+  if (row.kind === "automated" && isFfx04Lane(row.lane)) {
+    if (!Number.isSafeInteger(record.sourceJobId) || record.sourceJobId < 1 ||
+        record.adapterAttestation?.binding?.jobId !== record.sourceJobId) {
+      throw new Error(`FFX-04 run/job attestation binding is invalid: ${row.key}`);
+    }
+    validateFfx04LifecycleProof(record.ffx04Proof, {
+      lane: row.lane,
+      runId: record.workflow.runId,
+      jobId: record.sourceJobId,
+      assetId: row.assetId,
+      platform: FFX04_LANES[row.lane].platform,
+      commit: expected.targetSha,
+      packageSha256: expected.packageSha256,
+      browser: record.browser,
+      driver: record.driver,
+      applicationUrl: record.fixtureApplicationUrl,
     });
   }
 }

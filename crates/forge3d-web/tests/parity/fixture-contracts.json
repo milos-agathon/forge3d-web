@@ -1,0 +1,541 @@
+{
+  "schemaVersion": 1,
+  "fixtures": [
+    {
+      "id": "dem-synthetic-v1",
+      "ownerTasks": [
+        "W03"
+      ],
+      "capabilityIds": [
+        "T01",
+        "T02",
+        "T03",
+        "T04"
+      ],
+      "provenance": [
+        "1f4084a:tests/test_dem_loading.py",
+        "1f4084a:tests/test_terrain_analysis_api.py",
+        "analytic 257x257 height field"
+      ],
+      "generator": {
+        "kind": "deterministic-contract-spec",
+        "version": "1",
+        "seed": 0,
+        "parameters": {
+          "width": 257,
+          "height": 257,
+          "expression": "sin(x/16)+cos(y/32)+0.001*x*y",
+          "nodataCells": [
+            [
+              0,
+              0
+            ],
+            [
+              128,
+              128
+            ]
+          ],
+          "spacingMeters": [
+            30,
+            30
+          ]
+        },
+        "sha256": "c93152c8593356030de05f66efd9ed2999d510b12fa5d72fb885ace835842443"
+      },
+      "tolerances": {
+        "scalarAbsRel": 0.000001,
+        "slopeAspectRadians": 0.0001,
+        "contourHausdorffCells": 0.25,
+        "aoSunMaxAbs": 0.02
+      },
+      "budgets": [
+        {
+          "profileId": "reference-discrete",
+          "cpuBytes": 67108864,
+          "gpuBytes": 134217728,
+          "frameTimeP95Ms": 16.7,
+          "durationSeconds": 60
+        },
+        {
+          "profileId": "reference-integrated",
+          "cpuBytes": 67108864,
+          "gpuBytes": 100663296,
+          "frameTimeP95Ms": 33.3,
+          "durationSeconds": 60
+        }
+      ]
+    },
+    {
+      "id": "terrain-material-v1",
+      "ownerTasks": [
+        "W04",
+        "W07"
+      ],
+      "capabilityIds": [
+        "P01",
+        "P02",
+        "P03",
+        "P04",
+        "P05",
+        "P06",
+        "P07",
+        "T05",
+        "T06",
+        "T07"
+      ],
+      "provenance": [
+        "1f4084a:tests/golden/terrain/terrain_pbr.png",
+        "1f4084a:tests/test_terrain_materials.py"
+      ],
+      "generator": {
+        "kind": "deterministic-contract-spec",
+        "version": "1",
+        "seed": 0,
+        "parameters": {
+          "width": 1024,
+          "height": 1024,
+          "materialToggles": [
+            "pbr",
+            "pom",
+            "triplanar",
+            "detail",
+            "snow",
+            "rock",
+            "wetness",
+            "subsurface"
+          ],
+          "lightPreset": "golden-noon"
+        },
+        "sha256": "7868ec4543b0f9e621cc3e32bdbe241ec275832be22919ede14f42b4a887b0f8"
+      },
+      "tolerances": {
+        "ssimMinimum": 0.98,
+        "enabledPixelDeltaMinimum": 0.00392156862745098,
+        "attributeMaxAbs": 0.00001
+      },
+      "budgets": [
+        {
+          "profileId": "reference-discrete",
+          "cpuBytes": 536870912,
+          "gpuBytes": 2147483648,
+          "frameTimeP95Ms": 16.7,
+          "durationSeconds": 600
+        },
+        {
+          "profileId": "reference-integrated",
+          "cpuBytes": 402653184,
+          "gpuBytes": 1073741824,
+          "frameTimeP95Ms": 33.3,
+          "durationSeconds": 600
+        }
+      ]
+    },
+    {
+      "id": "clipmap-seam-v1",
+      "ownerTasks": [
+        "W08"
+      ],
+      "capabilityIds": [
+        "T08",
+        "T09",
+        "T10",
+        "T11",
+        "T14a",
+        "T14b"
+      ],
+      "provenance": [
+        "1f4084a:tests/test_clipmap_structure.py",
+        "1f4084a:tests/test_geomorph_seams.py"
+      ],
+      "generator": {
+        "kind": "deterministic-contract-spec",
+        "version": "1",
+        "seed": 0,
+        "parameters": {
+          "virtualWidth": 16385,
+          "virtualHeight": 16385,
+          "ringCount": 8,
+          "tileSize": 256,
+          "overlayCount": 3
+        },
+        "sha256": "6ae5736c535f6f8a3a01777c0a3b23f6f47db0c5aa58308eb1ad0fd11efec4f8"
+      },
+      "tolerances": {
+        "budgetRelative": 0.05,
+        "crackPixels": 0.5,
+        "heightDiscontinuityRange": 0.0001,
+        "overlayDeterministic": true
+      },
+      "budgets": [
+        {
+          "profileId": "reference-discrete",
+          "cpuBytes": 1073741824,
+          "gpuBytes": 3221225472,
+          "frameTimeP95Ms": 16.7,
+          "durationSeconds": 600
+        },
+        {
+          "profileId": "reference-integrated",
+          "cpuBytes": 805306368,
+          "gpuBytes": 1610612736,
+          "frameTimeP95Ms": 33.3,
+          "durationSeconds": 600
+        }
+      ]
+    },
+    {
+      "id": "volume-temporal-v1",
+      "ownerTasks": [
+        "W10",
+        "W11"
+      ],
+      "capabilityIds": [
+        "T16",
+        "T17",
+        "P08",
+        "P09",
+        "P10",
+        "P11",
+        "P13",
+        "P14",
+        "P15"
+      ],
+      "provenance": [
+        "1f4084a:tests/test_volumetrics_sky.py",
+        "1f4084a:tests/test_taa_convergence.py"
+      ],
+      "generator": {
+        "kind": "deterministic-contract-spec",
+        "version": "1",
+        "seed": 0,
+        "parameters": {
+          "width": 1920,
+          "height": 1080,
+          "frames": 64,
+          "disocclusionFrame": 16,
+          "boundedVolume": [
+            -10,
+            -5,
+            -10,
+            10,
+            20,
+            10
+          ]
+        },
+        "sha256": "d4ea1d2d925eaa62c7f9f99c1aaef84af1783b0e109ac1ce498e3aeebe19466e"
+      },
+      "tolerances": {
+        "ssimMinimum": 0.98,
+        "outsideVolumeMax": 0.00392156862745098,
+        "errorDecayEightFrames": 0.95,
+        "convergedFlickerMax": 0.00392156862745098
+      },
+      "budgets": [
+        {
+          "profileId": "reference-discrete",
+          "cpuBytes": 805306368,
+          "gpuBytes": 3221225472,
+          "frameTimeP95Ms": 16.7,
+          "durationSeconds": 600
+        },
+        {
+          "profileId": "reference-integrated",
+          "cpuBytes": 536870912,
+          "gpuBytes": 1610612736,
+          "frameTimeP95Ms": 33.3,
+          "durationSeconds": 600
+        }
+      ]
+    },
+    {
+      "id": "crs-epsg-v1",
+      "ownerTasks": [
+        "W14"
+      ],
+      "capabilityIds": [
+        "G01"
+      ],
+      "provenance": [
+        "1f4084a:tests/test_crs_reproject.py",
+        "EPSG:4326/EPSG:3857/EPSG:32632 published control points"
+      ],
+      "generator": {
+        "kind": "deterministic-contract-spec",
+        "version": "1",
+        "seed": 0,
+        "parameters": {
+          "geographicCrs": "EPSG:4326",
+          "projectedCrs": [
+            "EPSG:3857",
+            "EPSG:32632"
+          ],
+          "pointCount": 32,
+          "includesAxisOrderCases": true
+        },
+        "sha256": "d118df580b6ddd0c8a684eae329aa411ce83950c885ad8d72689d6c0868ff60a"
+      },
+      "tolerances": {
+        "geographicDegrees": 1e-7,
+        "projectedMeters": 0.01,
+        "roundTripMeters": 0.02,
+        "missingGridMustFail": true
+      },
+      "budgets": [
+        {
+          "profileId": "reference-discrete",
+          "cpuBytes": 268435456,
+          "gpuBytes": 67108864,
+          "frameTimeP95Ms": 16.7,
+          "durationSeconds": 60
+        },
+        {
+          "profileId": "reference-integrated",
+          "cpuBytes": 268435456,
+          "gpuBytes": 67108864,
+          "frameTimeP95Ms": 33.3,
+          "durationSeconds": 60
+        }
+      ]
+    },
+    {
+      "id": "mesh-io-v1",
+      "ownerTasks": [
+        "W15"
+      ],
+      "capabilityIds": [
+        "G05a",
+        "G05b",
+        "G06",
+        "G07",
+        "G08"
+      ],
+      "provenance": [
+        "1f4084a:tests/test_mesh_tbn.py",
+        "1f4084a:tests/test_buildings_cityjson.py"
+      ],
+      "generator": {
+        "kind": "deterministic-contract-spec",
+        "version": "1",
+        "seed": 0,
+        "parameters": {
+          "primitives": [
+            "cube",
+            "plane",
+            "tube",
+            "ribbon",
+            "extrusion"
+          ],
+          "formats": [
+            "OBJ",
+            "STL",
+            "glTF",
+            "GLB"
+          ],
+          "indexed": true
+        },
+        "sha256": "b7bebedb72b02a2e4e9efed95f8f8683d57d875fec08de9d69838bc4d85e1eaa"
+      },
+      "tolerances": {
+        "countsTopologyExact": true,
+        "attributeMaxAbs": 0.00001,
+        "boundsMaxAbs": 0.00001,
+        "hausdorffSceneDiagonal": 0.00001
+      },
+      "budgets": [
+        {
+          "profileId": "reference-discrete",
+          "cpuBytes": 536870912,
+          "gpuBytes": 1073741824,
+          "frameTimeP95Ms": 16.7,
+          "durationSeconds": 120
+        },
+        {
+          "profileId": "reference-integrated",
+          "cpuBytes": 402653184,
+          "gpuBytes": 805306368,
+          "frameTimeP95Ms": 33.3,
+          "durationSeconds": 120
+        }
+      ]
+    },
+    {
+      "id": "copc-ept-tiles-v1",
+      "ownerTasks": [
+        "W16"
+      ],
+      "capabilityIds": [
+        "G02",
+        "G03",
+        "G04"
+      ],
+      "provenance": [
+        "1f4084a:tests/test_copc_laz_fixture.py",
+        "1f4084a:tests/test_3dtiles_sse.py"
+      ],
+      "generator": {
+        "kind": "deterministic-contract-spec",
+        "version": "1",
+        "seed": 0,
+        "parameters": {
+          "pointCount": 1000000,
+          "hierarchyDepth": 8,
+          "cameraKeyframes": 64,
+          "formats": [
+            "COPC",
+            "EPT",
+            "b3dm",
+            "pnts"
+          ]
+        },
+        "sha256": "f1a11e99006ac0c8cb38a198d325151721088d515bb9885a635ff9c5ba700c5a"
+      },
+      "tolerances": {
+        "countsColorsSelectionsExact": true,
+        "boundsDatasetSpan": 0.00001,
+        "initialRangeFractionMax": 0.25,
+        "nonRangeBodyFetches": 0
+      },
+      "budgets": [
+        {
+          "profileId": "reference-discrete",
+          "cpuBytes": 1610612736,
+          "gpuBytes": 3221225472,
+          "frameTimeP95Ms": 16.7,
+          "durationSeconds": 600
+        },
+        {
+          "profileId": "reference-integrated",
+          "cpuBytes": 1073741824,
+          "gpuBytes": 2147483648,
+          "frameTimeP95Ms": 33.3,
+          "durationSeconds": 600
+        }
+      ]
+    },
+    {
+      "id": "trace-sdf-v1",
+      "ownerTasks": [
+        "W17"
+      ],
+      "capabilityIds": [
+        "G09",
+        "G10",
+        "G11"
+      ],
+      "provenance": [
+        "1f4084a:tests/test_path_tracing_api.py",
+        "1f4084a:tests/test_sdf_python.py"
+      ],
+      "generator": {
+        "kind": "deterministic-contract-spec",
+        "version": "1",
+        "seed": 0,
+        "parameters": {
+          "triangles": 65536,
+          "sdfPrimitives": 128,
+          "rays": 1048576,
+          "spp": [
+            1,
+            4,
+            16,
+            64
+          ],
+          "seed": 1597463007
+        },
+        "sha256": "54acc7e71e13be2f36b6c99a93f6ab6a25151f575e65b8579293dd0b585888ca"
+      },
+      "tolerances": {
+        "hitIdsExact": true,
+        "fixedSeedHashesExact": true,
+        "rayParameterMaxAbs": 0.00001,
+        "barycentricMaxAbs": 0.00001,
+        "sdfSceneDiagonal": 0.0001,
+        "materialExact": true,
+        "ssimAt64Spp": 0.98
+      },
+      "budgets": [
+        {
+          "profileId": "reference-discrete",
+          "cpuBytes": 1610612736,
+          "gpuBytes": 4294967296,
+          "frameTimeP95Ms": 16.7,
+          "durationSeconds": 600
+        },
+        {
+          "profileId": "reference-integrated",
+          "cpuBytes": 1073741824,
+          "gpuBytes": 2147483648,
+          "frameTimeP95Ms": 33.3,
+          "durationSeconds": 600
+        }
+      ]
+    },
+    {
+      "id": "offline-denoise-v1",
+      "ownerTasks": [
+        "W06",
+        "W22"
+      ],
+      "capabilityIds": [
+        "R02",
+        "C05",
+        "C06",
+        "C07",
+        "C08"
+      ],
+      "provenance": [
+        "1f4084a:tests/test_tv12_offline_quality.py",
+        "1f4084a:tests/test_exr_output.py"
+      ],
+      "generator": {
+        "kind": "deterministic-contract-spec",
+        "version": "1",
+        "seed": 0,
+        "parameters": {
+          "width": 1920,
+          "height": 1080,
+          "samples": [
+            1,
+            4,
+            16,
+            64
+          ],
+          "aovs": [
+            "color",
+            "albedo",
+            "normal",
+            "depth",
+            "id",
+            "motion"
+          ],
+          "frames": 120
+        },
+        "sha256": "d67b1b3fb6109eeddddb07c66d0d6d029dfe3223fbfb36fb1d6c9ff42b0114ff"
+      },
+      "tolerances": {
+        "floatColorAovMaxAbs": 0.00001,
+        "depthMaxAbs": 0.000001,
+        "denoiseSsimGainMin": 0.02,
+        "denoiseMseReductionMin": 0.2,
+        "convergedSsimRegressionMax": 0.005,
+        "nativeGoldenSsimMin": 0.98
+      },
+      "budgets": [
+        {
+          "profileId": "reference-discrete",
+          "cpuBytes": 1610612736,
+          "gpuBytes": 4294967296,
+          "frameTimeP95Ms": 16.7,
+          "durationSeconds": 600
+        },
+        {
+          "profileId": "reference-integrated",
+          "cpuBytes": 1073741824,
+          "gpuBytes": 2147483648,
+          "frameTimeP95Ms": 33.3,
+          "durationSeconds": 600
+        }
+      ]
+    }
+  ]
+}

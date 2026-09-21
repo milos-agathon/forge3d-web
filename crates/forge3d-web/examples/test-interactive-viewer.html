@@ -58,6 +58,62 @@
         window.__forge3dLifecycle.pageshow.push({ id: ++window.__forge3dLifecycle.sequence,
           persisted: event.persisted, trusted: event.isTrusted });
       });
+      (() => {
+        const errorLedgerKey = "forge3d-saf03-error-ledger-v1";
+        const persistenceFailure = "collector:persistence-failure";
+        let errors = [];
+        let initialPersistenceFailure = false;
+        try {
+          const retained = JSON.parse(sessionStorage.getItem(errorLedgerKey) ?? "[]");
+          if (Array.isArray(retained)) errors = retained.filter((value) => typeof value === "string").slice(-100);
+          else initialPersistenceFailure = true;
+        } catch { initialPersistenceFailure = true; }
+        const describe = (value) => String(value?.message ?? value ?? "unknown error");
+        let persistenceFailed = errors.includes(persistenceFailure);
+        const markPersistenceFailure = () => {
+          if (persistenceFailed) return;
+          persistenceFailed = true;
+          errors.push(persistenceFailure);
+          if (errors.length > 100) errors.splice(0, errors.length - 100);
+          try { window.name = persistenceFailure; } catch {}
+        };
+        if (initialPersistenceFailure || window.name === persistenceFailure) markPersistenceFailure();
+        const retainError = (value) => {
+          errors.push(value);
+          if (errors.length > 100) errors.splice(0, errors.length - 100);
+          try {
+            const serialized = JSON.stringify(errors);
+            sessionStorage.setItem(errorLedgerKey, serialized);
+            if (sessionStorage.getItem(errorLedgerKey) !== serialized) markPersistenceFailure();
+          } catch { markPersistenceFailure(); }
+        };
+        addEventListener("error", (event) => retainError(`error:${describe(event.error ?? event.message)}`));
+        addEventListener("unhandledrejection", (event) => retainError(`unhandledrejection:${describe(event.reason)}`));
+        const originalConsoleError = console.error;
+        console.error = (...values) => {
+          retainError(`console.error:${values.map(describe).join(" ")}`);
+          originalConsoleError.apply(console, values);
+        };
+        window.__forge3dSafariErrors = errors;
+        window.__forge3dSafariErrorLedgerKey = errorLedgerKey;
+        window.__forge3dSafariRecordError = retainError;
+        const state = {
+          documentIdentity: crypto.randomUUID(),
+          viewerIdentity: null,
+          sequence: 0,
+          events: []
+        };
+        const record = (type, persisted = null) => state.events.push({
+          sequence: ++state.sequence,
+          type,
+          state: document.visibilityState,
+          persisted
+        });
+        document.addEventListener("visibilitychange", () => record("visibilitychange"));
+        addEventListener("pagehide", (event) => record("pagehide", event.persisted));
+        addEventListener("pageshow", (event) => record("pageshow", event.persisted));
+        window.__forge3dSafariLifecycle = state;
+      })();
     </script>
     <main>
       <canvas id="viewer" width="320" height="320" tabindex="0"></canvas>
@@ -143,9 +199,10 @@
         if (!viewer || viewer.disposed) {
           return;
         }
-        const width = canvas.width === 320 ? 240 : 320;
+        const currentCssWidth = Math.round(Number.parseFloat(getComputedStyle(canvas).width));
+        const width = currentCssWidth === 320 ? 240 : 320;
         canvas.style.width = `${width}px`;
-        viewer.resize({ width, height: 320, devicePixelRatio: 1 });
+        viewer.resize({ width, height: 320, devicePixelRatio: window.devicePixelRatio });
       });
       document.querySelector("#dispose").addEventListener("click", dispose);
 

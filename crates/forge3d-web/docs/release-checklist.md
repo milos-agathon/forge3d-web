@@ -1,8 +1,6 @@
-# Forge3D Web MVP Release Checklist
+# Forge3D Web Release Checklist
 
-Run this checklist from the repository root unless a command explicitly changes
-directory. The checklist mirrors the Phase 16 release gate for the browser
-WebGPU/WASM MVP.
+Run this checklist from the repository root unless a command explicitly changes directory. It gates the incremental browser WebGPU/WASM package and, once every manifest row closes, the complete functional-parity release.
 
 ## Interactive Viewer Release Blocker
 
@@ -22,6 +20,24 @@ INF-00 code completion is also separate from live laboratory readiness.
 until the administrator and physical-controller steps in
 `docs/browser-lab-runbook.md` are evidenced. A pending policy must fail closed;
 it cannot be treated as a skipped or successful physical gate.
+
+## Functional-Parity Truthfulness Blocker
+
+Browser/npm/WASM is the delivery format, not a functional exclusion. Release
+documentation must keep these categories separate:
+
+| Category | Required treatment |
+|---|---|
+| Delivery-format exclusion | Name the unshipped packaging/process mechanism and map its observable outcomes to E01-E07 browser equivalents. |
+| Tombstone or product boundary | Link the explicit [composite manifest](https://github.com/milos-agathon/forge3d/blob/main/docs/parity/forge3d-composite-baseline.json) or plan ledger entry; never present it as an implemented capability. |
+| Feature gap | Link every current gap to its R/C/T/P/V/G/M row and W00-W24 task; never relabel an open row as excluded. |
+| Browser support evidence | Keep a lane `NOT_PROVEN` until its required attested physical evidence passes. |
+
+The [exhaustive parity matrix](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#exhaustive-parity-matrix)
+and [tombstone ledger](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#truthfulness-lifecycle-and-tombstone-ledger)
+are authoritative. A release cannot claim complete functional parity while
+`npm run verify:parity` reports an open capability/constraint, plan drift,
+unmapped inventory, or missing evidence.
 
 ## Clean Setup
 
@@ -49,6 +65,7 @@ $env:PATH = "$pwd\crates\forge3d-web\node_modules\.bin;$env:PATH"
 
 ```powershell
 cd crates/forge3d-web
+npm run verify:parity
 npm run typecheck
 npm run build
 npm run test:unit
@@ -140,6 +157,15 @@ layout, persisted-BFCache, hard-reload-control, and closed proof validation.
 Those mechanisms do not change the unsupported/`NOT_PROVEN` status until the
 stable Safari lane and separately signed physical trackpad checklist run on the
 exact release commit and package.
+
+For SAF-03, accept only `forge3d-saf03-safari-acceptance-v1` from the required
+`safari-macos-m2` lane. The record must retain per-action camera/frame/pixel
+evidence, native and viewer PNG digests with decoded terrain pixels, exactly 30
+ordered real visibility cycles, exactly 30 ordered persisted-true BFCache
+cycles, the separate persisted-false hard reload, exact ownership/disposal,
+and the untrimmed FND-07 benchmark. Revalidate the full object at lane, matrix
+source, hosted finalizer, and merge boundaries. A legacy Safari smoke, WebKit
+preflight, STP result, or missing/uncertain cleanup cannot replace stable proof.
 `test:browser:chrome` and `test:browser:edge` select the installed branded
 channels without unsafe WebGPU, GPU-blocklist, Vulkan-enable, or ANGLE-forcing
 flags. Their normal configurations use required evidence mode and fail when
@@ -229,13 +255,16 @@ matrix is a separate reviewed product decision, not an infrastructure skip.
 
 ## Release Notes
 
-- Confirm `CHANGELOG.md` has an `Unreleased` entry for browser MVP release
+- Confirm `CHANGELOG.md` has an `Unreleased` entry for browser package release
   hardening.
-- Confirm `docs/support-matrix.md` states browser support, unsupported
-  surfaces, MIME, CORS/Range, and cache requirements.
+- Confirm `docs/support-matrix.md` states evidence-bound browser status, product
+  boundaries, tracked feature gaps, MIME, CORS/Range, and cache requirements.
+- Confirm every documented current feature gap links to its parity row and task.
+- Confirm delivery-format exclusions and tombstones are not described as
+  functional-parity exclusions.
 - Confirm `README.md` links this checklist and the support matrix.
 - Confirm `docs/browser-lab-runbook.md` and every checked infrastructure
   policy agree on the repository, trust epoch, controller keys, runner
   version, archive digests, protocol versions, and provisioning state.
-- Confirm post-MVP features remain documented as unsupported rather than
-  partially exposed through the browser API.
+- Confirm no browser family is described as supported without the required
+  attested physical evidence.
