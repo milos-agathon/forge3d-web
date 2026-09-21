@@ -19,7 +19,12 @@ import {
   validateFfx03ProbeOutcome,
 } from "./ffx03-hardware-proof-validator.mjs";
 import { FFX03_STABLE_LANES, isFfx03Lane, resolveFfx03Lane } from "./ffx03-lanes.mjs";
+import { validateSaf03SafariProof } from "./saf03-proof-validator.mjs";
+import { isSaf03Lane } from "./saf03-lanes.mjs";
 import { validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
+import { validateSaf04HardwareProof } from "./saf04-hardware-proof-validator.mjs";
+import { validateFfx04LifecycleProof } from "./ffx04-lifecycle-proof-validator.mjs";
+import { isFfx04Lane } from "./ffx04-lanes.mjs";
 
 const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
 const CHR04_REQUIRED_LANES = new Set(Object.keys(CHR04_LANES));
@@ -151,18 +156,18 @@ export async function executeHardwareBrowserLane({
     throw new Error("product manual binding requires the authenticated tester");
   }
   const session = await dependencies.openSession({
-    runtime,
     lane,
+    runtime,
     assetId,
     platform,
     architecture,
     routeUrl: route.applicationUrl,
     browserPolicy,
+    inventory,
     deviceMatrix,
     appiumSessionModule,
     processRegistryPath,
     temporaryRoot: processRegistryPath ? dirname(processRegistryPath) : null,
-    inventory,
   });
   let pageResult;
   let captureWindow = null;
@@ -200,7 +205,7 @@ export async function executeHardwareBrowserLane({
         pageResult = await session.runPage({
           lane,
           binding: {
-            ...(isChr03Lane(lane) || isChr04Lane(lane) || isFfx03Lane(lane) || lane === "safari-macos-m2"
+            ...(isChr03Lane(lane) || isChr04Lane(lane) || isFfx03Lane(lane) || isSaf03Lane(lane)
               ? { lane: binding.lane }
               : {}),
             runId: binding.runId,
@@ -225,6 +230,18 @@ export async function executeHardwareBrowserLane({
             trackpad: lane === "manual-safari-trackpad" ? trackpadInventory : null,
           } : null,
         });
+        if (isFfx04Lane(lane)) {
+          if (typeof session.runFirefoxLifecycle !== "function") {
+            throw new Error("FFX04_LIFECYCLE_RUNNER_UNAVAILABLE");
+          }
+          pageResult.ffx04Proof = await session.runFirefoxLifecycle({
+            lane,
+            assetId,
+            platform,
+            binding,
+            route,
+          });
+        }
         if (manualLifecycle) {
           if (pageResult.watermark?.visible !== true ||
               !Object.values(pageResult.routeReadiness ?? {}).every((value) => value === true)) {
@@ -275,10 +292,41 @@ export async function executeHardwareBrowserLane({
             browserPolicy,
           });
         }
+        if (lane === "safari-macos-m2") {
+          validateSaf04HardwareProof(pageResult.saf04Proof, {
+            lane, assetId, commit: binding.commit, packageSha256: binding.packageSha256,
+          });
+        }
+        if (isFfx04Lane(lane)) {
+          validateFfx04LifecycleProof(pageResult.ffx04Proof, {
+            lane,
+            runId: binding.runId,
+            jobId: binding.jobId,
+            assetId,
+            platform,
+            commit: binding.commit,
+            packageSha256: binding.packageSha256,
+            browser: session.browser,
+            driver: provenance.driver,
+            applicationUrl: route.applicationUrl,
+          });
+        }
+        if (lane === "safari-macos-m2") {
+          validateSaf03SafariProof(pageResult.saf03Proof, {
+            lane,
+            assetId,
+            platform,
+            commit: binding.commit,
+            packageSha256: binding.packageSha256,
+          });
+        }
         return pageResult.assertions;
       },
       cleanup: async () => ({ ok: true }),
     });
+    const safariTechnologyPreview = lane === "safari-macos-m2"
+      ? await session.runTechnologyPreview({ lane, binding, route })
+      : null;
     const evidence = {
       ...record,
       browser: session.browser,
@@ -287,7 +335,11 @@ export async function executeHardwareBrowserLane({
       chr03Proof: pageResult.chr03Proof ?? null,
       chr04Proof: pageResult.chr04Proof ?? null,
       ffx03Proof: null,
+      saf03Proof: pageResult.saf03Proof ?? null,
+      safariTechnologyPreview,
       saf02Proof: pageResult.saf02Proof ?? null,
+      saf04Proof: pageResult.saf04Proof ?? null,
+      ffx04Proof: pageResult.ffx04Proof ?? null,
       headed: true,
       driver: provenance.driver,
       system: provenance.system,

@@ -388,6 +388,7 @@ test("every Playwright spec uses the automatic shared WebGPU guard", () => {
     "camera_resize.spec.ts",
     "clear.spec.ts",
     "device_loss.spec.ts",
+    "firefox_input_lifecycle.spec.ts",
     "interactive_viewer.spec.ts",
     "realm_coordination.spec.ts",
     "realm_coordination_real.spec.ts",

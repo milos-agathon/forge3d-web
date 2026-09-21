@@ -3,7 +3,12 @@ import { runViewerBenchmarkInBrowser } from "./viewer-benchmark-browser.js";
 import { isChr03Lane } from "./chr03-lanes.js";
 import { isChr04Lane } from "./chr04-lanes.js";
 import { isFfx03Lane } from "./ffx03-lanes.js";
-import { runSaf02Conformance } from "./saf02-conformance.js";
+import { runSaf02Conformance, withTimeout } from "./saf02-conformance.js";
+
+export const ROUTE_FETCH_TIMEOUT_MS = 5_000;
+export const ROUTE_LOADER_PROBE_TIMEOUT_MS = 15_000;
+export const ADAPTER_ATTESTATION_TIMEOUT_MS = 15_000;
+export const INITIAL_VIEWER_ASSERTIONS_TIMEOUT_MS = 15_000;
 
 export async function runHardwarePage({
   lane,
@@ -64,14 +69,22 @@ export async function runHardwarePreflight({ binding, route, effectiveLaunchArgu
   const canvas = fixture?.canvas ?? document.querySelector("#viewer");
   if (!(canvas instanceof HTMLCanvasElement)) throw new Error("hardware fixture canvas is unavailable");
   const routeReadiness = await verifyBrowserRoute(route, binding.packageSha256);
-  const adapter = await captureAdapterAttestation(canvas, adapterBinding(binding), effectiveLaunchArguments);
+  const adapter = await withTimeout(
+    captureAdapterAttestation(canvas, adapterBinding(binding), effectiveLaunchArguments),
+    ADAPTER_ATTESTATION_TIMEOUT_MS,
+    "adapter attestation",
+  );
   if (adapter.adapterInfoAvailable !== true || adapter.isFallbackAdapter !== false ||
       adapter.secureContext !== true || adapter.deviceCreated !== true || adapter.surfaceCreated !== true ||
       adapter.surfacePresented !== true || !hasMeasuredLumaPresentation(adapter)) {
     throw new Error("ATTESTATION_UNAVAILABLE: hardware adapter proof failed");
   }
-  const assertions = await runInitialViewerAssertions({ fixture, supportAssertions,
-    retainViewer, onError: window.__forge3dHardwareOnError });
+  const assertions = await withTimeout(
+    runInitialViewerAssertions({ fixture, supportAssertions,
+      retainViewer, onError: window.__forge3dHardwareOnError }),
+    INITIAL_VIEWER_ASSERTIONS_TIMEOUT_MS,
+    "initial viewer assertions",
+  );
   return { routeReadiness, adapter, assertions };
 }
 
@@ -357,7 +370,12 @@ export async function verifyBrowserRoute(
   }
   const application = route.applicationUrl;
   const asset = route.assetUrl;
-  const fetchRoute = (url, options) => fetchWithTimeout(fetchImpl, url, options);
+  const fetchRoute = (url, options) => fetchWithTimeout(
+    fetchImpl,
+    url,
+    options,
+    ROUTE_FETCH_TIMEOUT_MS,
+  );
   const packageResponse = await fetchRoute(`${application}package.sha256`, {
     cache: "no-store",
   });
@@ -505,7 +523,7 @@ async function probeInstalledPackageLoader({ facadeUrl, wasmUrl }) {
     const timeout = setTimeout(() => {
       cleanup();
       reject(new Error(`installed package loader probe timed out for ${wasmUrl}`));
-    }, 15_000);
+    }, ROUTE_LOADER_PROBE_TIMEOUT_MS);
     const onMessage = (event) => {
       if (
         event.source !== frame.contentWindow ||

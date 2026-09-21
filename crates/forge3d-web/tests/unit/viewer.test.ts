@@ -1826,7 +1826,7 @@ async function createViewer(
 }
 
 class FakeViewerCanvas extends EventTarget {
-  readonly style = { touchAction: "" };
+  readonly style = new FakeViewerStyle();
   readonly captures = new Set<number>();
   readonly #attributes = new Map<string, string>();
   cssWidth = 400;
@@ -1870,6 +1870,27 @@ class FakeViewerCanvas extends EventTarget {
       left: 0,
       toJSON: () => ({}),
     };
+  }
+}
+
+class FakeViewerStyle {
+  readonly #properties = new Map<string, { value: string; priority: string }>();
+  get length(): number { return this.#properties.size; }
+  get touchAction(): string { return this.getPropertyValue("touch-action"); }
+  set touchAction(value: string) {
+    if (value) this.setProperty("touch-action", value);
+    else this.removeProperty("touch-action");
+  }
+  item(index: number): string { return [...this.#properties.keys()][index] ?? ""; }
+  getPropertyValue(property: string): string { return this.#properties.get(property)?.value ?? ""; }
+  getPropertyPriority(property: string): string { return this.#properties.get(property)?.priority ?? ""; }
+  setProperty(property: string, value: string, priority = ""): void {
+    this.#properties.set(property, { value, priority });
+  }
+  removeProperty(property: string): string {
+    const previous = this.getPropertyValue(property);
+    this.#properties.delete(property);
+    return previous;
   }
 }
 

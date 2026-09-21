@@ -27,6 +27,9 @@ export function materializeBrowserFixture({
     join(packageRoot, "dist", "forge3d_web.js"),
     join(packageRoot, "dist", "forge3d_web_bg.wasm"),
     join(root, "test-interactive-viewer.html"),
+    join(root, "test-lifecycle-away.html"),
+    join(root, "tests", "webdriver", "safari-viewer.mjs"),
+    join(root, "node_modules", "selenium-webdriver", "package.json"),
     join(
       root,
       "tests",
@@ -44,6 +47,13 @@ export function materializeBrowserFixture({
     join(root, "test-interactive-viewer.html"),
     "utf8",
   );
+  const seleniumPackage = JSON.parse(readFileSync(
+    join(root, "node_modules", "selenium-webdriver", "package.json"),
+    "utf8",
+  ));
+  if (seleniumPackage.name !== "selenium-webdriver" || seleniumPackage.version !== "4.35.0") {
+    throw new Error("browser fixture must materialize exact selenium-webdriver 4.35.0");
+  }
   const nonceRelativeHtml = sourceHtml.replaceAll(
     '"/node_modules/',
     '"./node_modules/',
@@ -59,6 +69,23 @@ export function materializeBrowserFixture({
     encoding: "utf8",
     mode: 0o600,
   });
+  const lifecycleModule = "./viewer-bfcache-lifecycle.js";
+  const lifecycleInstaller = `  <script type="module">
+      import { installViewerBfcacheLifecycle } from "${lifecycleModule}";
+      installViewerBfcacheLifecycle(window.__forge3dInteractiveViewer);
+    </script>`;
+  const lifecycleHtml = nonceRelativeHtml.includes("</body>")
+    ? nonceRelativeHtml.replace("</body>", `${lifecycleInstaller}\n  </body>`)
+    : `${nonceRelativeHtml}\n${lifecycleInstaller}\n`;
+  writeFileSync(join(root, "lifecycle-viewer.html"), lifecycleHtml, {
+    encoding: "utf8",
+    mode: 0o600,
+  });
+  writeFileSync(
+    join(root, "lifecycle-away.html"),
+    "<!doctype html><meta charset=\"utf-8\"><title>Forge3D lifecycle away</title><p>away</p>\n",
+    { encoding: "utf8", mode: 0o600 },
+  );
   copyFileSync(join(packageRoot, "dist", "index.js"), join(root, "app.js"));
   copyFileSync(
     join(packageRoot, "dist", "forge3d_web_bg.wasm"),
@@ -88,6 +115,7 @@ export function materializeBrowserFixture({
     "chr03-lanes.js",
     "chr04-lanes.js",
     "ffx03-lanes.js",
+    "viewer-bfcache-lifecycle.js",
   ]) {
     const source = join(root, "tests", "browser", file);
     const stats = lstatSync(source);
@@ -109,6 +137,10 @@ export function materializeBrowserFixture({
     terrain: "terrain.bin",
     rangedTerrain: "terrain-range.bin",
     benchmarkModule: "viewer-benchmark-browser.js",
+    lifecycleViewer: "lifecycle-viewer.html",
+    lifecycleAway: "lifecycle-away.html",
+    safariAcceptanceModule: "tests/webdriver/safari-viewer.mjs",
+    seleniumVersion: "4.35.0",
   };
 }
 

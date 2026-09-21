@@ -8,12 +8,13 @@
     "schemaVersion",
     "assetId",
     "platform",
-    "architecture",
     "model",
     "cpu",
     "gpu",
     "ramGiB",
+    "osVersion",
     "osBuild",
+    "architecture",
     "headed",
     "displayServer",
     "session",
@@ -33,12 +34,13 @@
       "pattern": "^FW-(?:MAC|WIN|LNX)-[A-Z0-9-]+$"
     },
     "platform": { "enum": ["darwin", "win32", "linux"] },
-    "architecture": { "enum": ["x64", "arm64"] },
     "model": { "type": "string", "minLength": 1 },
     "cpu": { "type": "string", "minLength": 1 },
     "gpu": { "type": "string", "minLength": 1 },
     "ramGiB": { "type": "integer", "minimum": 16 },
+    "osVersion": { "type": "string", "minLength": 1 },
     "osBuild": { "type": "string", "minLength": 1 },
+    "architecture": { "type": "string", "minLength": 1 },
     "headed": { "const": true },
     "displayServer": { "type": "string", "minLength": 1 },
     "session": {
@@ -88,7 +90,9 @@
         "appiumUiAutomator2": { "type": "string", "minLength": 1 },
         "appiumXcuitest": { "type": "string", "minLength": 1 },
         "safaridriverPath": { "type": "string", "minLength": 1 },
-        "safaridriverVersion": { "type": "string", "minLength": 1 }
+        "safaridriverVersion": { "type": "string", "minLength": 1 },
+        "safariTechnologyPreviewDriverPath": { "type": ["string", "boolean"], "minLength": 1 },
+        "safariTechnologyPreviewDriverVersion": { "type": ["string", "boolean"], "minLength": 1 }
       }
     },
     "effectiveLaunchArguments": {

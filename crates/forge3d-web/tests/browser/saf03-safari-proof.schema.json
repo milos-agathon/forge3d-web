@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/saf03-safari-proof-v1.json",
+  "title": "Forge3D SAF-03 stable Safari acceptance proof v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "kind", "binding", "browser", "driver", "system", "secureContext", "adapter", "actions", "screenshots", "lifecycleBaseline", "visibilityCycles", "bfcacheCycles", "hardReload", "disposal", "benchmark", "errorObservations", "errors"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "kind": { "const": "forge3d-saf03-safari-acceptance-v1" },
+    "binding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["lane", "assetId", "platform", "commit", "packageSha256"],
+      "properties": {
+        "lane": { "const": "safari-macos-m2" }, "assetId": { "const": "FW-MAC-M2-01" }, "platform": { "const": "darwin" },
+        "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" }, "packageSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "browser": { "$ref": "#/$defs/browser" },
+    "driver": {
+      "type": "object", "additionalProperties": false,
+      "required": ["name", "version", "executable", "clientName", "clientVersion"],
+      "properties": {
+        "name": { "const": "safaridriver" }, "version": { "type": "string", "minLength": 1 }, "executable": { "const": "/usr/bin/safaridriver" },
+        "clientName": { "const": "selenium-webdriver" }, "clientVersion": { "const": "4.35.0" }
+      }
+    },
+    "system": {
+      "type": "object", "additionalProperties": false, "required": ["platform", "osVersion", "osBuild", "architecture"],
+      "properties": { "platform": { "const": "darwin" }, "osVersion": { "type": "string", "pattern": "^26(?:\\.|$)" }, "osBuild": { "type": "string", "minLength": 1 }, "architecture": { "const": "arm64" } }
+    },
+    "secureContext": { "const": true },
+    "adapter": { "type": "object" },
+    "actions": {
+      "type": "object", "additionalProperties": false, "required": ["orbit", "pan", "wheelZoom", "reset", "resize"],
+      "properties": {
+        "orbit": { "$ref": "#/$defs/action" }, "pan": { "$ref": "#/$defs/action" }, "wheelZoom": { "$ref": "#/$defs/action" },
+        "reset": { "$ref": "#/$defs/reset" }, "resize": { "$ref": "#/$defs/resize" }
+      }
+    },
+    "screenshots": {
+      "type": "object", "additionalProperties": false, "required": ["native", "viewer"],
+      "properties": { "native": { "$ref": "#/$defs/screenshot" }, "viewer": { "$ref": "#/$defs/screenshot" } }
+    },
+    "lifecycleBaseline": { "$ref": "#/$defs/lifecycleBaseline" },
+    "visibilityCycles": { "type": "array", "minItems": 30, "maxItems": 30, "items": { "$ref": "#/$defs/visibilityCycle" } },
+    "bfcacheCycles": { "type": "array", "minItems": 30, "maxItems": 30, "items": { "$ref": "#/$defs/bfcacheCycle" } },
+    "hardReload": { "$ref": "#/$defs/hardReload" },
+    "disposal": { "$ref": "#/$defs/ownership" },
+    "benchmark": { "type": "object" },
+    "errorObservations": {
+      "type": "object", "additionalProperties": false, "required": ["beforeReload", "reloadBoundary", "afterReload"],
+      "properties": { "beforeReload": { "type": "array", "maxItems": 0 }, "reloadBoundary": { "type": "array", "maxItems": 0 }, "afterReload": { "type": "array", "maxItems": 0 } }
+    },
+    "errors": { "type": "array", "maxItems": 0 }
+  },
+  "$defs": {
+    "browser": {
+      "type": "object", "additionalProperties": false, "required": ["name", "channel", "version"],
+      "properties": { "name": { "const": "safari" }, "channel": { "const": "stable" }, "version": { "type": "string", "pattern": "^[0-9]+(?:\\.[0-9]+){1,3}$" } }
+    },
+    "view": {
+      "type": "object", "additionalProperties": false, "required": ["target", "distance", "yawDegrees", "pitchDegrees", "fovYDegrees", "near", "far"],
+      "properties": {
+        "target": { "type": "array", "minItems": 3, "maxItems": 3, "items": { "type": "number" } },
+        "distance": { "type": "number" }, "yawDegrees": { "type": "number" }, "pitchDegrees": { "type": "number" }, "fovYDegrees": { "type": "number" }, "near": { "type": "number" }, "far": { "type": "number" }
+      }
+    },
+    "pixel": {
+      "type": "object", "additionalProperties": false,
+      "required": ["decoded", "nonBlank", "sampleCount", "terrainPixelCount", "lumaMinimum", "lumaMaximum", "sha256"],
+      "properties": {
+        "decoded": { "const": true }, "nonBlank": { "const": true }, "sampleCount": { "type": "integer", "minimum": 16 }, "terrainPixelCount": { "type": "integer", "minimum": 1 },
+        "lumaMinimum": { "type": "number", "minimum": 0, "maximum": 1 }, "lumaMaximum": { "type": "number", "minimum": 0, "maximum": 1 }, "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "snapshot": {
+      "type": "object", "additionalProperties": false, "required": ["view", "submittedFrames", "pixels"],
+      "properties": { "view": { "$ref": "#/$defs/view" }, "submittedFrames": { "type": "integer", "minimum": 1 }, "pixels": { "$ref": "#/$defs/pixel" } }
+    },
+    "action": {
+      "type": "object", "additionalProperties": false, "required": ["action", "native", "before", "after", "changed"],
+      "properties": { "action": { "enum": ["orbit", "pan", "wheelZoom"] }, "native": { "const": true }, "before": { "$ref": "#/$defs/snapshot" }, "after": { "$ref": "#/$defs/snapshot" }, "changed": { "const": true } }
+    },
+    "reset": {
+      "type": "object", "additionalProperties": false, "required": ["action", "native", "key", "before", "after", "initialView", "tolerance", "matchedInitial"],
+      "properties": { "action": { "const": "reset" }, "native": { "const": true }, "key": { "const": "Home" }, "before": { "$ref": "#/$defs/snapshot" }, "after": { "$ref": "#/$defs/snapshot" }, "initialView": { "$ref": "#/$defs/view" }, "tolerance": { "const": 1e-9 }, "matchedInitial": { "const": true } }
+    },
+    "size": { "type": "object", "additionalProperties": false, "required": ["width", "height"], "properties": { "width": { "type": "number", "exclusiveMinimum": 0 }, "height": { "type": "number", "exclusiveMinimum": 0 } } },
+    "resize": {
+      "type": "object", "additionalProperties": false, "required": ["action", "native", "fixtureControl", "cssBefore", "cssAfter", "backingBefore", "backingAfter", "submittedFrameFresh", "pixelsBefore", "pixelsAfter"],
+      "properties": { "action": { "const": "resize" }, "native": { "const": true }, "fixtureControl": { "const": "#resize" }, "cssBefore": { "$ref": "#/$defs/size" }, "cssAfter": { "$ref": "#/$defs/size" }, "backingBefore": { "$ref": "#/$defs/size" }, "backingAfter": { "$ref": "#/$defs/size" }, "submittedFrameFresh": { "const": true }, "pixelsBefore": { "$ref": "#/$defs/pixel" }, "pixelsAfter": { "$ref": "#/$defs/pixel" } }
+    },
+    "screenshot": {
+      "type": "object", "additionalProperties": false, "required": ["mimeType", "byteLength", "sha256", "width", "height", "pixels"],
+      "properties": { "mimeType": { "const": "image/png" }, "byteLength": { "type": "integer", "minimum": 24 }, "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }, "width": { "type": "integer", "minimum": 1 }, "height": { "type": "integer", "minimum": 1 }, "pixels": { "$ref": "#/$defs/pixel" } }
+    },
+    "ownership": {
+      "type": "object", "additionalProperties": false, "required": ["activeRuntimes", "ownedListeners", "activeObservers", "activePointers", "pendingAnimationFrame", "ownedAnimationFrameCount"],
+      "properties": { "activeRuntimes": { "type": "integer", "minimum": 0, "maximum": 1 }, "ownedListeners": { "type": "integer", "minimum": 0 }, "activeObservers": { "type": "integer", "minimum": 0, "maximum": 1 }, "activePointers": { "const": 0 }, "pendingAnimationFrame": { "type": "boolean" }, "ownedAnimationFrameCount": { "type": "integer", "minimum": 0, "maximum": 1 } }
+    },
+    "event": {
+      "type": "object", "additionalProperties": false, "required": ["sequence", "type", "state", "persisted"],
+      "properties": { "sequence": { "type": "integer", "minimum": 1 }, "type": { "enum": ["visibilitychange", "pagehide", "pageshow"] }, "state": { "enum": ["hidden", "visible"] }, "persisted": { "type": ["boolean", "null"] } }
+    },
+    "lifecycleBaseline": {
+      "type": "object", "additionalProperties": false,
+      "required": ["documentIdentity", "viewerIdentity", "lastEventSequence", "ownership"],
+      "properties": {
+        "documentIdentity": { "type": "string", "minLength": 1 }, "viewerIdentity": { "type": "string", "minLength": 1 },
+        "lastEventSequence": { "type": "integer", "minimum": 0 }, "ownership": { "$ref": "#/$defs/ownership" }
+      }
+    },
+    "cycleBase": {
+      "type": "object", "required": ["cycle", "documentIdentityBefore", "documentIdentityAfter", "viewerIdentityBefore", "viewerIdentityAfter", "submittedFramesBefore", "submittedFramesAfter", "submittedFrameFresh", "ownership", "pixels"]
+    },
+    "visibilityCycle": {
+      "type": "object", "additionalProperties": false, "required": ["cycle", "documentIdentityBefore", "documentIdentityAfter", "viewerIdentityBefore", "viewerIdentityAfter", "hiddenEvent", "visibleEvent", "submittedFramesBefore", "submittedFramesAfter", "submittedFrameFresh", "ownership", "pixels"],
+      "properties": { "cycle": { "type": "integer", "minimum": 1, "maximum": 30 }, "documentIdentityBefore": { "type": "string", "minLength": 1 }, "documentIdentityAfter": { "type": "string", "minLength": 1 }, "viewerIdentityBefore": { "type": "string", "minLength": 1 }, "viewerIdentityAfter": { "type": "string", "minLength": 1 }, "hiddenEvent": { "$ref": "#/$defs/event" }, "visibleEvent": { "$ref": "#/$defs/event" }, "submittedFramesBefore": { "type": "integer", "minimum": 1 }, "submittedFramesAfter": { "type": "integer", "minimum": 2 }, "submittedFrameFresh": { "const": true }, "ownership": { "$ref": "#/$defs/ownership" }, "pixels": { "$ref": "#/$defs/pixel" } }
+    },
+    "bfcacheCycle": {
+      "type": "object", "additionalProperties": false, "required": ["cycle", "documentIdentityBefore", "documentIdentityAfter", "viewerIdentityBefore", "viewerIdentityAfter", "events", "submittedFramesBefore", "submittedFramesAfter", "submittedFrameFresh", "ownership", "pixels"],
+      "properties": { "cycle": { "type": "integer", "minimum": 1, "maximum": 30 }, "documentIdentityBefore": { "type": "string", "minLength": 1 }, "documentIdentityAfter": { "type": "string", "minLength": 1 }, "viewerIdentityBefore": { "type": "string", "minLength": 1 }, "viewerIdentityAfter": { "type": "string", "minLength": 1 }, "events": { "type": "array", "minItems": 2, "maxItems": 2, "items": { "$ref": "#/$defs/event" } }, "submittedFramesBefore": { "type": "integer", "minimum": 1 }, "submittedFramesAfter": { "type": "integer", "minimum": 2 }, "submittedFrameFresh": { "const": true }, "ownership": { "$ref": "#/$defs/ownership" }, "pixels": { "$ref": "#/$defs/pixel" } }
+    },
+    "hardReload": {
+      "type": "object", "additionalProperties": false, "required": ["pageshowPersisted", "previousDocumentIdentity", "documentIdentity", "previousViewerIdentity", "viewerIdentity", "submittedFrameFresh", "ownership", "pixels"],
+      "properties": { "pageshowPersisted": { "const": false }, "previousDocumentIdentity": { "type": "string", "minLength": 1 }, "documentIdentity": { "type": "string", "minLength": 1 }, "previousViewerIdentity": { "type": "string", "minLength": 1 }, "viewerIdentity": { "type": "string", "minLength": 1 }, "submittedFrameFresh": { "const": true }, "ownership": { "$ref": "#/$defs/ownership" }, "pixels": { "$ref": "#/$defs/pixel" } }
+    }
+  }
+}

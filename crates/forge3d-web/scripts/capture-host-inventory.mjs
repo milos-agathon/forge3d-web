@@ -14,8 +14,9 @@ const defaultPolicyPath = join(
 export function captureHostInventory({
   assetId,
   platform,
-  architecture = process.arch,
+  osVersion,
   osBuild,
+  architecture,
   displayServer,
   session,
   browsers,
@@ -46,8 +47,9 @@ export function captureHostInventory({
     schemaVersion: 1,
     assetId,
     platform,
-    architecture: validateArchitecture(platform, architecture),
+    osVersion: nonEmpty(osVersion, "osVersion"),
     osBuild: nonEmpty(osBuild, "osBuild"),
+    architecture: nonEmpty(architecture, "architecture"),
     headed: true,
     displayServer: nonEmpty(displayServer, "displayServer"),
     session: {
@@ -116,12 +118,13 @@ export function validateHostInventory(
       "schemaVersion",
       "assetId",
       "platform",
-      "architecture",
       "model",
       "cpu",
       "gpu",
       "ramGiB",
+      "osVersion",
       "osBuild",
+      "architecture",
       "headed",
       "displayServer",
       "session",
@@ -148,7 +151,6 @@ export function validateHostInventory(
     inventory.schemaVersion !== 1 ||
     !host ||
     inventory.platform !== expectedPlatform ||
-    inventory.architecture !== expectedArchitecture(host.assetId) ||
     inventory.model !== host.model ||
     inventory.cpu !== host.cpu ||
     inventory.gpu !== host.gpu ||
@@ -158,7 +160,9 @@ export function validateHostInventory(
     inventory.session?.interactive !== true ||
     inventory.session.locked !== false ||
     inventory.session.remote !== false ||
-    !nonEmptyOrFalse(inventory.osBuild) ||
+    typeof inventory.osVersion !== "string" || inventory.osVersion.trim() === "" ||
+    typeof inventory.osBuild !== "string" || inventory.osBuild.trim() === "" ||
+    typeof inventory.architecture !== "string" || inventory.architecture.trim() === "" ||
     !nonEmptyOrFalse(inventory.session.identifier) ||
     !isCanonicalTimestamp(inventory.capturedAt) ||
     !Array.isArray(inventory.browsers) ||
@@ -188,17 +192,6 @@ export function validateHostInventory(
     expectedHostId: host.assetId,
   });
   return inventory;
-}
-
-function validateArchitecture(platform, architecture) {
-  if (!['x64', 'arm64'].includes(architecture) || (platform === 'win32' && architecture !== 'x64')) {
-    throw new Error("host architecture is not supported by the browser-lab contract");
-  }
-  return architecture;
-}
-
-function expectedArchitecture(assetId) {
-  return assetId === "FW-MAC-M2-01" ? "arm64" : "x64";
 }
 
 export function observeLiveSession(
@@ -414,6 +407,16 @@ function validateToolVersions(tools, policy, platform) {
       tools.safaridriverVersion,
       "safaridriverVersion",
     );
+    const stpPath = tools.safariTechnologyPreviewDriverPath;
+    const stpVersion = tools.safariTechnologyPreviewDriverVersion;
+    if ((stpPath === false) !== (stpVersion === false) ||
+        (stpPath !== false && stpPath !== expected.safariTechnologyPreviewDriverPath)) {
+      throw new Error("Safari Technology Preview bundle driver inventory is inconsistent with checked policy");
+    }
+    result.safariTechnologyPreviewDriverPath = stpPath === false
+      ? false : nonEmpty(stpPath, "safariTechnologyPreviewDriverPath");
+    result.safariTechnologyPreviewDriverVersion = stpVersion === false
+      ? false : nonEmpty(stpVersion, "safariTechnologyPreviewDriverVersion");
   }
   return result;
 }
@@ -513,6 +516,8 @@ function assertInventoryTools(tools) {
     "appiumXcuitest",
     "safaridriverPath",
     "safaridriverVersion",
+    "safariTechnologyPreviewDriverPath",
+    "safariTechnologyPreviewDriverVersion",
   ]);
   if (
     !tools ||
@@ -646,6 +651,29 @@ export function observeLiveOsBuild(
   return execute("/usr/bin/lsb_release", ["-ds"], { encoding: "utf8" }).trim();
 }
 
+export function observeLiveOsVersion(
+  platform,
+  { execute = execFileSync } = {},
+) {
+  if (platform === "win32") {
+    return execute("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", "(Get-CimInstance Win32_OperatingSystem).Version"], { encoding: "utf8" }).trim();
+  }
+  if (platform === "darwin") {
+    return execute("/usr/bin/sw_vers", ["-productVersion"], { encoding: "utf8" }).trim();
+  }
+  return execute("/usr/bin/uname", ["-r"], { encoding: "utf8" }).trim();
+}
+
+export function observeLiveArchitecture(
+  platform,
+  { execute = execFileSync } = {},
+) {
+  if (platform === "win32") {
+    return execute("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", "[System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()"], { encoding: "utf8" }).trim().toLowerCase();
+  }
+  return execute("/usr/bin/uname", ["-m"], { encoding: "utf8" }).trim();
+}
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const args = parseArguments(process.argv.slice(2));
   const outputPath = args.get("--output");
@@ -665,7 +693,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     ...resolved,
     assetId: args.get("--asset-id"),
     platform,
+    osVersion: observeLiveOsVersion(platform),
     osBuild: observeLiveOsBuild(platform),
+    architecture: observeLiveArchitecture(platform),
     session: observeLiveSession(platform),
     policy,
   });

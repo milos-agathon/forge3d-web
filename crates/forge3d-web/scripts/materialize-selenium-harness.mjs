@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { lstatSync, mkdirSync, readFileSync, readdirSync, realpathSync } from "node:fs";
-import { join, relative, resolve } from "node:path";
+import { join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
 
@@ -37,8 +37,9 @@ export function materializeSeleniumHarness({ promotionDirectory, outputDirectory
   }
   if (!paths.has("node_modules/selenium-webdriver")) throw new Error("promoted Selenium lock omits its root package");
   mkdirSync(output, { recursive: false });
-  const extraction = spawnSync("tar", ["-xzf", archivePath, "-C", output], {
-    encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
+  const archiveArgument = relative(output, archivePath).split(sep).join("/");
+  const extraction = spawnSync("tar", ["-xzf", archiveArgument], {
+    cwd: output, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"],
   });
   if (extraction.status !== 0) throw new Error(`promoted Selenium archive extraction failed: ${extraction.stderr.trim()}`);
   const outputReal = realpathSync(output);

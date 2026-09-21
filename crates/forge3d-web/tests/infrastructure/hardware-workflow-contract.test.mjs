@@ -150,7 +150,7 @@ test("hardware executes only verified promoted artifacts and always cleans up", 
   assert.match(hardware, /runner-authorization-\$\{process\.env\.EXPECTED_NONCE\}/u);
   assert.match(hardware, /authorization does not match the executing hardware job/u);
   assert.match(hardware, /test ! -d \.git/u);
-  assert.match(hardware, /npm --prefix consumer install --no-save/u);
+  assert.match(hardware, /npm --prefix consumer install --include=dev --no-save/u);
   assert.match(hardware, /create-run-nonce\.mjs/u);
   assert.match(hardware, /manage-browser-route\.mjs/u);
   assert.match(hardware, /probe-browser-fixture\.mjs/u);
@@ -198,6 +198,20 @@ test("Firefox Nightly stays optional and uses only validated typed probe outcome
   assert.match(hardware, /selenium-harness\/firefox-viewer\.mjs/u);
   assert.match(hardware, /FORGE3D_FIREFOX_ACCEPTANCE_MODULE/u);
   assert.match(hardware, /FORGE3D_SELENIUM_MODULE/u);
+  const seleniumModuleGuard =
+    'if [[ "${{ inputs.lane }}" == firefox-* ]]; then\n' +
+    '            test -n "${FORGE3D_SELENIUM_MODULE:-}"\n' +
+    '            test "${FORGE3D_SELENIUM_MODULE}" = "${FORGE3D_CONTROLLER_JOB_ROOT}/selenium-harness/node_modules/selenium-webdriver/index.js"\n' +
+    "          else\n" +
+    '            export FORGE3D_SELENIUM_MODULE="$(pwd)/consumer/node_modules/selenium-webdriver/index.js"\n' +
+    "          fi";
+  assert.notEqual(hardware.indexOf(seleniumModuleGuard), -1,
+    "workflow must guard the promoted Selenium closure behind the Firefox lane check");
+  assert.equal(
+    hardware.split('FORGE3D_SELENIUM_MODULE="$(pwd)/consumer/node_modules/selenium-webdriver/index.js"').length,
+    2,
+    "consumer Selenium module must be exported only inside the non-Firefox else block",
+  );
   assert.match(hardware, /"\$\{\{ inputs\.lane \}\}" == firefox-nightly-\*/u);
   assert.match(hardware, /outcome"\)" != "PROBE_PASS"/u);
   assert.match(automatedFinalizer, /validateFfx03ProbeOutcome/u);

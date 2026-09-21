@@ -12,8 +12,11 @@ import { exactHostInventory } from "./host-inventory-fixture.mjs";
 import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
 import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
 import { validFfx03Proof, validFfxAdapter } from "../browser/ffx03-proof-fixture.mjs";
+import { validFfx04LifecycleProof } from "../browser/ffx04-lifecycle-proof-fixture.mjs";
 import { CHR04_LANES } from "../../scripts/chr04-lanes.mjs";
+import { validSaf03Proof, validStpResult } from "../browser/saf03-proof-fixture.mjs";
 import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
+import { validSaf04HardwareProof } from "../browser/saf04-hardware-proof-fixture.mjs";
 
 const matrix = JSON.parse(
   readFileSync(new URL("./hardware-matrix.json", import.meta.url), "utf8"),
@@ -27,6 +30,17 @@ const labIdentity = {
   labInfrastructureDigest: labDigest,
 };
 const macInventory = exactHostInventory(matrix, "FW-MAC-M2-01");
+Object.assign(macInventory, { osVersion: "26.0", osBuild: "macOS build 25A123", architecture: "arm64" });
+macInventory.browsers.push(
+  { id: "safari-stable", channel: "stable", classification: "required", automation: "safaridriver", version: "26.0", executable: "/Applications/Safari.app/Contents/MacOS/Safari" },
+  { id: "safari-technology-preview", channel: "technology-preview", classification: "probe", automation: "safaridriver", version: "26.1", executable: "/Applications/Safari Technology Preview.app/Contents/MacOS/Safari Technology Preview" },
+);
+Object.assign(macInventory.tools, {
+  safaridriverPath: "/usr/bin/safaridriver",
+  safaridriverVersion: "Included with Safari 26.0",
+  safariTechnologyPreviewDriverPath: "/Applications/Safari Technology Preview.app/Contents/MacOS/safaridriver",
+  safariTechnologyPreviewDriverVersion: "26.1",
+});
 const rows = requiredEvidenceRows(matrix);
 const records = rows.map((row, index) => {
   const safariTrackpad =
@@ -36,6 +50,7 @@ const records = rows.map((row, index) => {
   const edgePlatform = edge ? CHR04_LANES[row.lane].platform : null;
   const inferredPlatform = row.lane.includes("windows") ? "win32"
     : row.lane.includes("macos") ? "darwin" : "linux";
+  const firefoxPlatform = firefox ? inferredPlatform : null;
   const system =
     row.kind === "manual"
       ? {
@@ -44,19 +59,22 @@ const records = rows.map((row, index) => {
         }
       : {
           platform: safariTrackpad ? "darwin" : edgePlatform ?? inferredPlatform,
+          osVersion: safariTrackpad ? macInventory.osVersion : "fixture-version",
           osBuild: safariTrackpad
             ? macInventory.osBuild
-            : "Ubuntu 24.04.1",
-          displayServer: safariTrackpad || edgePlatform === "darwin" ? "WindowServer" : edgePlatform === "win32" ? "Desktop Window Manager" : "GNOME Wayland",
-          ...(firefox ? { architecture: inferredPlatform === "darwin" ? "arm64" : "x64" } : {}),
+            : firefoxPlatform === "win32" ? "Windows 11" : firefoxPlatform === "darwin" ? "macOS 26" : "Ubuntu 24.04.1",
+          architecture: safariTrackpad ? macInventory.architecture
+            : firefox ? (inferredPlatform === "darwin" ? "arm64" : "x64")
+            : "x64",
+          displayServer: safariTrackpad || edgePlatform === "darwin" || firefoxPlatform === "darwin" ? "WindowServer" : edgePlatform === "win32" || firefoxPlatform === "win32" ? "Desktop Window Manager" : "GNOME Wayland",
         };
   const browser = safariTrackpad
-    ? { name: "Safari", channel: "stable", version: "26.0" }
+    ? { name: row.kind === "automated" ? "safari" : "Safari", channel: "stable", version: "26.0" }
     : edge ? { name: "msedge", channel: "stable", version: "150.0.1.2" }
     : firefox ? { name: "firefox", channel: "release", version: inferredPlatform === "darwin" ? "147.0" : "142.0" }
     : { name: "chrome", channel: "stable", version: "150.0" };
   const driver = safariTrackpad
-    ? { name: "safaridriver", version: "26.0" }
+    ? { name: "safaridriver", version: macInventory.tools.safaridriverVersion }
     : edge ? { name: "playwright-edge", version: "1.56.1" }
     : firefox ? { name: "selenium-firefox", version: "0.36.0" }
     : { name: "playwright-chrome", version: "1.56.1" };
@@ -124,6 +142,7 @@ const records = rows.map((row, index) => {
             required: true,
             binding: {
               runId: 100 + index,
+              ...(firefox ? { jobId: 20 } : {}),
               assetId: row.assetId,
               commit: targetSha,
               packageSha256,
@@ -153,15 +172,28 @@ const records = rows.map((row, index) => {
               packageSha256 }) }) } : {}),
           ...(row.lane === "safari-macos-m2" ? (() => {
             const saf02Proof = validSaf02Conformance({ runId: 100 + index, jobId: 900 + index, commit: targetSha, packageSha256 });
+            const applicationUrl = `${saf02Proof.route.applicationOrigin}${saf02Proof.route.basePath}`;
+            const assetUrl = `${saf02Proof.route.assetOrigin}${saf02Proof.route.basePath}`;
+            const safariTechnologyPreview = validStpResult(macInventory, { commit: targetSha, packageSha256 });
+            safariTechnologyPreview.probe.route = applicationUrl;
             return {
               hardwareJobId: 900 + index,
               saf02Proof,
-              saf02Route: {
-                applicationUrl: `${saf02Proof.route.applicationOrigin}${saf02Proof.route.basePath}`,
-                assetUrl: `${saf02Proof.route.assetOrigin}${saf02Proof.route.basePath}`,
-              },
+              saf02Route: { applicationUrl, assetUrl },
+              route: { applicationUrl, assetUrl },
+              saf04Proof: validSaf04HardwareProof({ commit: targetSha, packageSha256 }),
+              saf03Proof: validSaf03Proof({ commit: targetSha, packageSha256 }),
+              safariTechnologyPreview,
             };
           })() : {}),
+          ...(firefox ? {
+            sourceJobId: 20,
+            fixtureApplicationUrl: `https://firefox.webgpu-ci.forge3d.dev/runs/${100 + index}/20/${"c".repeat(32)}/`,
+            ffx04Proof: validFfx04LifecycleProof({ lane: row.lane, assetId: row.assetId,
+              platform: firefoxPlatform, commit: targetSha, packageSha256,
+              runId: 100 + index, jobId: 20,
+              browserVersion: browser.version, driverVersion: driver.version }),
+          } : {}),
         }),
   };
 });
@@ -304,6 +336,13 @@ test("prior head, other package, expired manual, missing, duplicate, and infra e
       replay.saf02Proof.route.basePath = `/runs/999/888/${nonce}/`;
       return replay;
     }),
+    records.map((record) => {
+      if (record.lane !== "safari-macos-m2") return record;
+      const splitRoute = structuredClone(record);
+      splitRoute.route.applicationUrl = "https://unrelated.example.invalid/run/";
+      splitRoute.safariTechnologyPreview.probe.route = splitRoute.route.applicationUrl;
+      return splitRoute;
+    }),
     records.map((record) =>
       record.lane === "edge-linux-intel12"
         ? { ...record, system: { ...record.system, displayServer: "X11" } }
@@ -331,6 +370,38 @@ test("prior head, other package, expired manual, missing, duplicate, and infra e
             ...record,
             packageRunId: 49,
           }
+        : record,
+    ),
+    records.map((record) => record.lane === "safari-macos-m2"
+      ? { ...record, saf03Proof: { ...record.saf03Proof, visibilityCycles: record.saf03Proof.visibilityCycles.slice(0, 29) } }
+      : record),
+    records.map((record) => record.lane === "safari-macos-m2"
+      ? { ...record, safariTechnologyPreview: { ...record.safariTechnologyPreview, cleanup: { ...record.safariTechnologyPreview.cleanup, processAbsent: false, ok: false } } }
+      : record),
+    ...[
+      (record) => { record.saf03Proof.browser.version = "26.1"; },
+      (record) => { record.saf03Proof.driver.version = "wrong"; },
+      (record) => { record.saf03Proof.system.osVersion = "25.6"; },
+      (record) => { record.saf03Proof.system.osBuild = "macOS build 24Z999"; },
+      (record) => { record.saf03Proof.system.architecture = "x64"; },
+      (record) => { record.safariTechnologyPreview.probe.route = "https://unrelated.example.invalid/run/"; },
+      (record) => { record.safariTechnologyPreview.cleanup.sessionDeleted = null; },
+      (record) => {
+        Object.assign(record.safariTechnologyPreview, { result: "PRODUCT_FAILURE", warning: "STP_PRODUCT_FAILURE probe error", probe: null });
+        record.safariTechnologyPreview.cleanup.sessionDeleted = null;
+      },
+      (record) => {
+        Object.assign(record.safariTechnologyPreview, { result: "PRODUCT_FAILURE", warning: "STP_PRODUCT_FAILURE preflight", probe: null });
+        record.safariTechnologyPreview.cleanup = { notStarted: true, sessionDeleted: null, driverStopped: null, processAbsent: true, ok: true };
+      },
+    ].map((mutate) => records.map((record) => {
+      const copy = structuredClone(record);
+      if (copy.lane === "safari-macos-m2") mutate(copy);
+      return copy;
+    })),
+    records.map((record) =>
+      record.lane === "safari-macos-m2"
+        ? { ...record, saf04Proof: { ...record.saf04Proof, lifecycle: { ...record.saf04Proof.lifecycle, hardReloadPersisted: true } } }
         : record,
     ),
     records.map((record) =>

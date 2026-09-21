@@ -5,7 +5,23 @@ import { fileURLToPath } from "node:url";
 
 const applicationRoutes = new Map([
   ["index.html", { file: "index.html", contentType: "text/html; charset=utf-8" }],
+  [
+    "test-lifecycle-away.html",
+    { file: "test-lifecycle-away.html", contentType: "text/html; charset=utf-8" },
+  ],
   ["app.js", { file: "app.js", contentType: "text/javascript; charset=utf-8" }],
+  [
+    "lifecycle-viewer.html",
+    { file: "lifecycle-viewer.html", contentType: "text/html; charset=utf-8", lifecycle: true },
+  ],
+  [
+    "lifecycle-away.html",
+    { file: "lifecycle-away.html", contentType: "text/html; charset=utf-8", lifecycle: true },
+  ],
+  [
+    "viewer-bfcache-lifecycle.js",
+    { file: "viewer-bfcache-lifecycle.js", contentType: "text/javascript; charset=utf-8", lifecycle: true },
+  ],
   [
     "adapter-attestation.js",
     { file: "adapter-attestation.js", contentType: "text/javascript; charset=utf-8" },
@@ -157,7 +173,7 @@ function applicationResponse({ fixtureRoot, relativePath, request, applicationHo
     route,
     request,
     headers: {
-      ...commonHeaders(),
+      ...commonHeaders(route.lifecycle === true),
       "Content-Type": route.contentType,
       "Cross-Origin-Resource-Policy": "same-origin",
     },
@@ -309,9 +325,9 @@ function parseRange(value, length) {
   return { start, end };
 }
 
-function commonHeaders() {
+function commonHeaders(cacheCompatible = false) {
   return {
-    "Cache-Control": "no-store",
+    "Cache-Control": cacheCompatible ? "private, max-age=0" : "no-store",
     "X-Content-Type-Options": "nosniff",
   };
 }

@@ -26,7 +26,9 @@ export function validateBrowserRunProvenance({
     inventory.session?.interactive !== true ||
     inventory.session?.locked !== false ||
     inventory.session?.remote !== false ||
+    !nonEmpty(inventory.osVersion) ||
     !nonEmpty(inventory.osBuild) ||
+    !nonEmpty(inventory.architecture) ||
     !nonEmpty(inventory.displayServer) ||
     !nonEmpty(inventory.session.identifier) ||
     !nonEmpty(inventory.capturedAt)
@@ -62,9 +64,10 @@ export function validateBrowserRunProvenance({
   return {
     system: {
       platform: inventory.platform,
+      osVersion: inventory.osVersion,
       osBuild: inventory.osBuild,
+      architecture: inventory.architecture,
       displayServer: inventory.displayServer,
-      ...(runtime.driver === "selenium-firefox" ? { architecture: inventory.architecture } : {}),
     },
     loginSession: { ...inventory.session },
     driver: {

@@ -6,6 +6,7 @@ import test from "node:test";
 
 import { executeHardwareBrowserLane } from "../../scripts/browser-lane-runtime.mjs";
 import { validFfx03Proof } from "../browser/ffx03-proof-fixture.mjs";
+import { validFfx04LifecycleProof } from "../browser/ffx04-lifecycle-proof-fixture.mjs";
 
 test("stable Firefox writes PASS only after successful observed cleanup", async () => {
   const root = mkdtempSync(join(tmpdir(), "ffx03-finalize-"));
@@ -18,6 +19,7 @@ test("stable Firefox writes PASS only after successful observed cleanup", async 
     const evidence = JSON.parse(readFileSync(output, "utf8"));
     assert.equal(evidence.result, "PASS");
     assert.equal(evidence.ffx03Proof.cleanup.ok, true);
+    assert.equal(evidence.ffx04Proof.task, "FFX-04");
   } finally { rmSync(root, { recursive: true, force: true }); }
 });
 
@@ -100,7 +102,8 @@ function fixtureRequest(outputPath, events) {
     required: true,
     binding: { lane: "firefox-macos-m2", runId: 11, jobId: 12, assetId: "FW-MAC-M2-01",
       commit: "a".repeat(40), packageSha256: "b".repeat(64) },
-    route: { applicationUrl: "https://fixture.example/run/", assetUrl: "https://asset.example/run/" },
+    route: { applicationUrl: `https://firefox.webgpu-ci.forge3d.dev/runs/11/12/${"c".repeat(32)}/`,
+      assetUrl: "https://asset.example/run/" },
     browserPolicy: { tools: { geckodriver: "0.36.0", selenium: "4.35.0" }, prohibitedLaunchArguments: [] },
     deviceMatrix: {}, inventory: inventory(), outputPath,
     dependencies: { openSession: async () => fakeSession(events) },
@@ -132,6 +135,11 @@ function fakeSession(events, close = async () => ({ sessionDeleted: true, driver
     async runPage() { events.push("page"); return { adapter: adapter(), assertions: { passed: true,
       supportAssertionsExecuted: true }, routeReadiness: { trustedHttps: true },
       ffx03Workload: proof.workload, configuration: proof.configuration }; },
+    async runFirefoxLifecycle() {
+      return validFfx04LifecycleProof({ lane: "firefox-macos-m2", assetId: "FW-MAC-M2-01",
+        platform: "darwin", commit: "a".repeat(40), packageSha256: "b".repeat(64),
+        browserVersion: "147.0", driverVersion: "0.36.0", runId: 11, jobId: 12 });
+    },
     async close() { events.push("close"); return close(); },
   };
 }
@@ -156,7 +164,7 @@ function nightlySession(events, outcome, adapterValue, close = async () => ({ se
 
 function inventory() {
   return { schemaVersion: 1, assetId: "FW-MAC-M2-01", platform: "darwin", architecture: "arm64",
-    osBuild: "fixture-build", headed: true, displayServer: "WindowServer",
+    osVersion: "26.0", osBuild: "fixture-build", headed: true, displayServer: "WindowServer",
     session: { interactive: true, locked: false, remote: false, identifier: "console" },
     browsers: [{ id: "firefox-release", channel: "release", classification: "required",
       automation: "selenium", version: "147.0", executable: "/Applications/Firefox.app/Contents/MacOS/firefox" }],
@@ -165,7 +173,7 @@ function inventory() {
 
 function nightlyInventory() {
   return { schemaVersion: 1, assetId: "FW-LNX-I12-01", platform: "linux", architecture: "x64",
-    osBuild: "fixture-build", headed: true, displayServer: "X11",
+    osVersion: "24.04", osBuild: "fixture-build", headed: true, displayServer: "X11",
     session: { interactive: true, locked: false, remote: false, identifier: "console" },
     browsers: [{ id: "firefox-nightly", channel: "nightly", classification: "probe",
       automation: "selenium", version: "148.0a1", executable: "/opt/firefox-nightly/firefox" }],

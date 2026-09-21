@@ -14,13 +14,32 @@ import {
   observeWebDriverLaunch,
   resolveInstalledAppiumDriverVersion,
 } from "./browser-launch-provenance.mjs";
-import { WebDriverClient } from "./webdriver-client.mjs";
+import { WebDriverClient, WebDriverSession } from "./webdriver-client.mjs";
 import { runBrandedHardwareAcceptance } from "./chrome-hardware-acceptance.mjs";
 import { isChr03Lane } from "./chr03-lanes.mjs";
 import { isChr04Lane } from "./chr04-lanes.mjs";
 import { isFfx03Lane } from "./ffx03-lanes.mjs";
+import { runSafariBrowserAcceptance } from "./safari-browser-acceptance.mjs";
+import { runFirefoxLifecycleAcceptance } from "./firefox-lifecycle-acceptance.mjs";
+import { projectSaf03Binding, validateSaf03SafariProof, validateSaf03TechnologyPreviewResult } from "./saf03-proof-validator.mjs";
 
 const FFX03_SELENIUM_VERSION = "4.35.0";
+
+export const SAFARI_HARDWARE_PAGE_TIMEOUT_BUDGET = Object.freeze({
+  saf02Page: 110_000,
+  // verifyBrowserRoute performs six sequential bounded fetches and four
+  // sequential isolated-loader probes before adapter/viewer validation.
+  routeFetches: 6 * 5_000,
+  routeLoaderProbes: 4 * 15_000,
+  adapterAttestation: 15_000,
+  initialViewerAssertions: 15_000,
+  // Covers WebDriver callback serialization and scheduling outside the page's
+  // independently bounded stages; it is not available to extend a stage.
+  webdriverTransportMargin: 10_000,
+});
+export const SAFARI_COMPOSED_SCRIPT_TIMEOUT_MS = Object.values(
+  SAFARI_HARDWARE_PAGE_TIMEOUT_BUDGET,
+).reduce((total, value) => total + value, 0);
 
 export async function openProductionSession(request, dependencies = {}) {
   if (
@@ -31,16 +50,16 @@ export async function openProductionSession(request, dependencies = {}) {
     return openPlaywrightSession(request);
   }
   if (request.runtime.driver === "safaridriver") {
-    return openLocalWebDriverSession({
+    if (request.runtime.manual !== true && request.lane === "safari-macos-m2") {
+      return openSafariSeleniumSession(request, dependencies);
+    }
+    return (dependencies.openLocalWebDriverSession ?? openLocalWebDriverSession)({
       ...request,
       command: request.browserPolicy.tools.safaridriverPath,
       args: ["--port", "4445"],
       port: 4445,
       capabilities: { browserName: "safari" },
-      driverVersion: execVersion(
-        request.browserPolicy.tools.safaridriverPath,
-        ["--version"],
-      ),
+      driverVersion: request.inventory.tools.safaridriverVersion,
     });
   }
   if (request.runtime.driver === "selenium-firefox") {
@@ -74,15 +93,238 @@ async function openFirefoxSession(request, dependencies) {
   );
   const driverVersion = (dependencies.execVersion ?? execVersion)(geckodriverPath, ["--version"])
     .match(/[0-9]+\.[0-9]+\.[0-9]+/u)?.[0];
-  return acceptance.openSeleniumFirefoxSession({
-    lane: request.lane, assetId: request.assetId, platform: request.platform,
-    architecture: request.architecture, required: request.runtime.required,
-    routeUrl: request.routeUrl, browser: selected,
-    geckodriverPath, geckodriverVersion: driverVersion,
-    temporaryRoot: request.temporaryRoot, processRegistryPath: request.processRegistryPath,
-    registerProcess, markProcessStopped,
+  const opened = await acceptance.openSeleniumFirefoxSession({
+    lane: request.lane,
+    assetId: request.assetId,
+    platform: request.platform,
+    architecture: request.architecture,
+    required: request.runtime.required,
+    routeUrl: request.routeUrl,
+    browser: selected,
+    geckodriverPath,
+    geckodriverVersion: driverVersion,
+    temporaryRoot: request.temporaryRoot,
+    processRegistryPath: request.processRegistryPath,
+    registerProcess,
+    markProcessStopped,
     observeLaunch: dependencies.observeWebDriverLaunch ?? observeWebDriverLaunch,
   });
+  if (!opened.contract.required) return opened;
+  const attachSession = dependencies.attachWebDriverSession ??
+    ((driver) => attachWebDriverSession(driver, 4446));
+  const runFfx04 = dependencies.runFirefoxLifecycleAcceptance ??
+    runFirefoxLifecycleAcceptance;
+  return {
+    ...opened,
+    runFirefoxLifecycle: async (payload) => runFfx04({
+      session: await attachSession(opened.driver),
+      browser: opened.browser,
+      driver: { name: "selenium-firefox", version: opened.driverVersion },
+      launchObservation: {
+        observed: opened.launchArgumentsObserved,
+        source: opened.launchArgumentSource,
+        browserProcessId: opened.browserProcessId,
+      },
+      ...payload,
+    }),
+  };
+}
+
+async function openSafariSeleniumSession({ runtime, routeUrl, browserPolicy, inventory, processRegistryPath }, dependencies) {
+  const modulePath = requiredAbsoluteEnvironment("FORGE3D_SAFARI_ACCEPTANCE_MODULE");
+  const seleniumModule = requiredAbsoluteEnvironment("FORGE3D_SELENIUM_MODULE");
+  const resolvePackageVersion = dependencies.installedPackageVersion ?? installedPackageVersion;
+  const observeLaunch = dependencies.observeWebDriverLaunch ?? observeWebDriverLaunch;
+  const clientVersion = resolvePackageVersion(seleniumModule, ["selenium-webdriver"]);
+  if (clientVersion !== browserPolicy.tools.selenium || clientVersion !== "4.35.0") {
+    throw new Error("installed Selenium client does not match the exact SAF-03 policy");
+  }
+  const acceptance = dependencies.acceptance ?? await import(pathToFileURL(modulePath).href);
+  if (acceptance.SAF03_SELENIUM_VERSION !== clientVersion) {
+    throw new Error("SAF-03 acceptance module does not use the checked Selenium client");
+  }
+  const stableInventory = inventory.browsers.find(({ id }) => id === "safari-stable");
+  if (!stableInventory || stableInventory.channel !== "stable" || stableInventory.classification !== "required") {
+    throw new Error("stable Safari inventory is missing from SAF-03 host");
+  }
+  const stable = await acceptance.openSeleniumSafariSession({
+    routeUrl,
+    safaridriverPath: browserPolicy.tools.safaridriverPath,
+    safaridriverVersion: inventory.tools.safaridriverVersion,
+    browserVersion: stableInventory.version,
+  });
+  let stableRegistered = false;
+  let launch;
+  try {
+    registerProcess(processRegistryPath, runtime.driver, stable.driverPid);
+    stableRegistered = true;
+    launch = observeLaunch({ runtime, session: { capabilities: {} } });
+  } catch (error) {
+    try {
+      await stable.close();
+      if (stableRegistered) markProcessStopped(processRegistryPath, stable.driverPid);
+    } catch (cleanupError) {
+      throw new AggregateError([error, cleanupError], "INFRA_ERROR SAFARIDRIVER_POST_OPEN_CLEANUP_UNPROVEN");
+    }
+    throw error;
+  }
+  return {
+    browser: stable.browser,
+    driverVersion: stable.driverVersion,
+    ...launch,
+    assertHealthy: async () => {
+      const url = await stable.driver.getCurrentUrl().catch(() => {
+        throw new Error("INFRA_ERROR BROWSER_SESSION_LOST");
+      });
+      if (url !== routeUrl && url !== routeUrl.replace(/index\.html$/u, "")) {
+        throw new Error("INFRA_ERROR BROWSER_ROUTE_CHANGED");
+      }
+    },
+    runPage: async (payload) => {
+      await stable.driver.manage().setTimeouts({
+        script: SAFARI_COMPOSED_SCRIPT_TIMEOUT_MS,
+      });
+      const neutral = await runSeleniumHardwarePage(stable.driver, payload);
+      const attachSession = dependencies.attachWebDriverSession ?? ((driver) => attachWebDriverSession(driver, 4445));
+      const runSaf04 = dependencies.runSafariBrowserAcceptance ?? runSafariBrowserAcceptance;
+      const saf04Result = await runSaf04(
+        await attachSession(stable.driver),
+        payload,
+        { hardwarePageResult: neutral },
+      );
+      const proof = await acceptance.runStableSafariAcceptance({
+        session: stable,
+        binding: payload.binding,
+        route: payload.route,
+        adapter: neutral.adapter,
+        system: { osVersion: inventory.osVersion, osBuild: inventory.osBuild, architecture: inventory.architecture },
+        benchmarkEnvironment: {
+          browserZoom: 1,
+          thermalState: "unavailable",
+          thermalSignalProvenance: "browser API unavailable",
+          lowPowerMode: "unavailable",
+          lowPowerSignalProvenance: "browser API unavailable",
+        },
+      });
+      validateSaf03SafariProof(proof, {
+        lane: payload.binding.lane,
+        assetId: payload.binding.assetId,
+        platform: "darwin",
+        commit: payload.binding.commit,
+        packageSha256: payload.binding.packageSha256,
+      });
+      return {
+        ...saf04Result,
+        assertions: { supportAssertionsExecuted: true, passed: true },
+        saf03Proof: proof,
+      };
+    },
+    runTechnologyPreview: async ({ binding, route }) => {
+      const closedBinding = projectSaf03Binding(binding);
+      const installed = inventory.browsers.find(({ id }) => id === "safari-technology-preview");
+      if (!installed) {
+        const absent = { kind: "forge3d-saf03-stp-result-v1",
+          binding: closedBinding,
+          channel: "technology-preview", classification: "probe",
+          required: false, replacesStable: false, clientVersion, executable: null, driverExecutable: null, version: null,
+          driverVersion: null,
+          browser: null, result: "ABSENT", warning: "Safari Technology Preview is not installed on the checked host",
+          cleanup: { notStarted: true, sessionDeleted: null, driverStopped: null, processAbsent: true, ok: true },
+          probe: null };
+        return validateSaf03TechnologyPreviewResult(absent, inventory, closedBinding, route.applicationUrl);
+      }
+      if (inventory.tools.safariTechnologyPreviewDriverPath !== browserPolicy.tools.safariTechnologyPreviewDriverPath ||
+          typeof inventory.tools.safariTechnologyPreviewDriverVersion !== "string") {
+        return validateSaf03TechnologyPreviewResult({ kind: "forge3d-saf03-stp-result-v1", binding: closedBinding,
+          channel: "technology-preview", classification: "probe", required: false, replacesStable: false,
+          clientVersion, executable: installed.executable, driverExecutable: null, driverVersion: null,
+          version: installed.version, browser: null, result: "PRODUCT_FAILURE",
+          warning: "STP_PRODUCT_FAILURE bundle driver inventory does not match checked policy",
+          cleanup: { notStarted: true, sessionDeleted: null, driverStopped: null, processAbsent: true, ok: true }, probe: null }, inventory, closedBinding, route.applicationUrl);
+      }
+      let preview;
+      let cleanup;
+      let result = "PASS";
+      let warning = null;
+      let probe = null;
+      try {
+        try {
+          preview = await acceptance.openSeleniumSafariSession({
+            routeUrl,
+            safaridriverPath: inventory.tools.safariTechnologyPreviewDriverPath,
+            safaridriverVersion: inventory.tools.safariTechnologyPreviewDriverVersion,
+            browserVersion: installed.version,
+            technologyPreview: true,
+          });
+          registerProcess(processRegistryPath, "safaridriver-stp", preview.driverPid);
+        } catch (error) {
+          if (error?.cleanup?.ok !== true) throw error;
+          result = "PRODUCT_FAILURE";
+          warning = `STP_PRODUCT_FAILURE ${error instanceof Error ? error.message : String(error)}`;
+          cleanup = error.cleanup;
+        }
+        if (!preview) {
+          const record = { kind: "forge3d-saf03-stp-result-v1", binding: closedBinding,
+            channel: "technology-preview", classification: "probe", required: false, replacesStable: false,
+            clientVersion, executable: installed.executable,
+            driverExecutable: inventory.tools.safariTechnologyPreviewDriverPath,
+            driverVersion: inventory.tools.safariTechnologyPreviewDriverVersion, version: installed.version,
+            browser: null, result, warning, cleanup, probe: null };
+          return validateSaf03TechnologyPreviewResult(record, inventory, closedBinding, route.applicationUrl);
+        }
+        try {
+          probe = await acceptance.runSafariTechnologyPreviewProbe({ session: preview, binding, route });
+        } catch (error) {
+          if (!String(error instanceof Error ? error.message : error).startsWith("STP_PRODUCT_FAILURE ")) throw error;
+          result = "PRODUCT_FAILURE";
+          warning = error instanceof Error ? error.message : String(error);
+        }
+      } finally {
+        if (preview) {
+          cleanup = { notStarted: false, ...await preview.close() };
+          markProcessStopped(processRegistryPath, preview.driverPid);
+        }
+      }
+      const record = { kind: "forge3d-saf03-stp-result-v1",
+        binding: closedBinding,
+        channel: "technology-preview", classification: "probe",
+        required: false, replacesStable: false, clientVersion, executable: installed.executable,
+        driverExecutable: inventory.tools.safariTechnologyPreviewDriverPath,
+        driverVersion: inventory.tools.safariTechnologyPreviewDriverVersion, version: installed.version,
+        browser: preview?.browser ?? null, result, warning, cleanup, probe };
+      return validateSaf03TechnologyPreviewResult(record, inventory, closedBinding, route.applicationUrl);
+    },
+    close: async () => {
+      const cleanup = await stable.close();
+      markProcessStopped(processRegistryPath, stable.driverPid);
+      return cleanup;
+    },
+  };
+}
+
+async function runSeleniumHardwarePage(driver, payload) {
+  const result = await driver.executeAsyncScript(`
+    const payload = arguments[0];
+    const done = arguments[arguments.length - 1];
+    import(new URL("hardware-page-harness.js", window.location.href).href)
+      .then((module) => module.runHardwarePage(payload))
+      .then((value) => done({ ok: true, value }))
+      .catch((error) => done({ ok: false, error: String(error && error.message || error) }));
+  `, payload);
+  if (result?.ok !== true) throw new Error(`BROWSER_PAGE_FAILED ${result?.error ?? "unknown"}`);
+  return result.value;
+}
+
+async function attachWebDriverSession(driver, port) {
+  const sessionId = (await driver.getSession()).getId();
+  if (typeof sessionId !== "string" || sessionId === "") {
+    throw new Error("INFRA_ERROR WEBDRIVER_SESSION_STATE_INVALID");
+  }
+  return new WebDriverSession(
+    new WebDriverClient(`http://127.0.0.1:${port}`),
+    sessionId,
+    {},
+  );
 }
 
 async function openPlaywrightSession({ runtime, routeUrl, browserPolicy }) {
@@ -224,16 +466,17 @@ async function openLocalWebDriverSession({
     const session = await client.createSession(capabilities);
     await session.navigate(routeUrl);
     const launch = observeWebDriverLaunch({ runtime, session });
+    const browser = {
+      name: runtime.browser,
+      channel: runtime.browser === "firefox" ? "release" : "stable",
+      version: String(
+        session.capabilities.browserVersion ??
+          session.capabilities.version ??
+          "unknown",
+      ),
+    };
     return {
-      browser: {
-        name: runtime.browser,
-        channel: runtime.browser === "firefox" ? "release" : "stable",
-        version: String(
-          session.capabilities.browserVersion ??
-            session.capabilities.version ??
-            "unknown",
-        ),
-      },
+      browser,
       driverVersion,
       ...launch,
       assertHealthy: async () => {
@@ -248,6 +491,21 @@ async function openLocalWebDriverSession({
         }
       },
       runPage: (payload) => session.runHardwarePage(payload),
+      ...(runtime.driver === "selenium-firefox"
+        ? {
+            runFirefoxLifecycle: (payload) => runFirefoxLifecycleAcceptance({
+              session,
+              browser,
+              driver: { name: runtime.driver, version: driverVersion },
+              launchObservation: {
+                observed: launch.launchArgumentsObserved,
+                source: launch.launchArgumentSource,
+                browserProcessId: launch.browserProcessId,
+              },
+              ...payload,
+            }),
+          }
+        : {}),
       close: async () => {
         await session.delete().catch(() => undefined);
         await stopChild(child);
