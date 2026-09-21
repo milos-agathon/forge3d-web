@@ -1,12 +1,20 @@
 # Forge3D Web Support Matrix
 
-This matrix defines the browser WebGPU/WASM MVP support contract for the
-`@forge3d/web` prerelease. It describes the tested surface, unsupported
-surfaces, and deployment assumptions that application owners must satisfy.
+This matrix defines browser/OS/GPU evidence for the `@forge3d/web` prerelease,
+plus browser product boundaries and current feature gaps. Browser support
+status is independent of functional-parity scope: a `NOT_PROVEN` lane does not
+remove a capability from the parity target.
+
+`Supported` may be published only from the required attested physical evidence.
+`NOT_PROVEN` means no support claim. `Tracked feature gap` means the capability
+is open in the parity matrix and must link to its row and task. `Product
+boundary` means the
+[composite manifest](https://github.com/milos-agathon/forge3d/blob/main/docs/parity/forge3d-composite-baseline.json)
+records an explicit tombstone rather than a native capability omission.
 
 ## Browser And Runtime Support
 
-| Surface | MVP status | Notes |
+| Surface | Evidence status | Notes |
 |---|---|---|
 | Chrome stable on Windows 11, Intel Iris Xe | Required physical lane, `NOT_PROVEN` | Publication requires exact asset `FW-WIN-I12-01` (Intel NUC 12 Pro, Core i5-1240P, Iris Xe, x86-64), an observed four-component stable Chrome version and Windows build, unflagged launch arguments, and non-fallback presentation. This exact Windows requirement is not satisfied by Linux, macOS, or bundled Chromium evidence. |
 | Chrome stable on Apple Silicon macOS | Required physical lane, `NOT_PROVEN` | Publication requires exact asset `FW-MAC-M2-01` (Mac mini 2023, Apple M2 CPU/GPU, arm64), an observed four-component stable Chrome version and macOS build, unflagged launch arguments, and non-fallback presentation. |
@@ -18,14 +26,14 @@ surfaces, and deployment assumptions that application owners must satisfy.
 | Edge stable on Windows 11 Intel Gen12+ | Required physical lane, `NOT_PROVEN` | Publication requires branded stable `msedge` through `playwright-edge` on exact asset `FW-WIN-I12-01`, with an observed four-component Edge version and Windows build, safe launch arguments, and non-fallback hardware presentation. |
 | Edge stable on Apple Silicon macOS | Required physical lane, `NOT_PROVEN` | Publication requires branded stable `msedge` through `playwright-edge` on exact asset `FW-MAC-M2-01`, with an observed four-component Edge version and macOS build, safe launch arguments, and non-fallback hardware presentation. |
 | Edge stable on Linux GNOME Wayland | Conditional physical lanes, `NOT_PROVEN` | CHR-04 accepts only exact assets `FW-LNX-I12-01` and `FW-LNX-NV-01` when live provenance observes GNOME Wayland, branded `msedge` stable, safe launch arguments, and non-fallback hardware presentation. No qualifying physical result exists. |
-| Firefox | Unsupported | `test:browser:firefox-preflight` exercises Playwright's patched Firefox in headed mode on GitHub-hosted Apple Silicon with default preferences and no Chromium flags. A passing run is `ENGINE_PASS` source-browser evidence only, not branded Firefox, physical-browser, exact-tarball, or support evidence. |
+| Firefox | `NOT_PROVEN` | `test:browser:firefox-preflight` exercises Playwright's patched Firefox in headed mode on GitHub-hosted Apple Silicon with default preferences and no Chromium flags. A passing run is `ENGINE_PASS` source-browser evidence only. Browser-family closure is owned by [W24](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w24--cross-browser-performance-recovery-packaging-and-final-closure). |
 | Playwright WebKit test engine | Engine preflight only | The non-blocking macOS `test:browser:webkit` lane uses no Chromium flags and may produce `ENGINE_PASS` only after the complete suite succeeds. Playwright WebKit is not shipping Safari and cannot establish a Safari support row. |
-| Safari | Unsupported | `NOT_PROVEN`: SAF-03 now provides fail-closed stable SafariDriver/Selenium 4.35.0 acceptance and a separately inventoried, probe-only Technology Preview result, but no protected physical SAF-03 record is present. Playwright WebKit and structural CI cannot establish this row. |
-| Mobile browsers | Unsupported | Touch UX, memory ceilings, and browser WebGPU variability are post-MVP work. |
-| WebGL fallback | Unsupported | Applications must feature-detect WebGPU and provide their own fallback UI. |
-| Node.js rendering | Unsupported | The package is browser-only and requires an `HTMLCanvasElement`. |
-| OffscreenCanvas | Unsupported | The MVP runtime owns a main-thread canvas-backed WebGPU surface. |
-| Python/native delivery | Unsupported | Python wheels and the native viewer are not delivered from this browser/npm/WASM repository; their capabilities are tracked parity rows in the repository manifest `docs/parity/forge3d-composite-baseline.json`. |
+| Safari | `NOT_PROVEN` | SAF-03 provides fail-closed stable SafariDriver/Selenium 4.35.0 acceptance and a separately inventoried, probe-only Technology Preview result, but no protected physical SAF-03 record is present. Browser-family closure is owned by [W24](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w24--cross-browser-performance-recovery-packaging-and-final-closure). |
+| Mobile browsers | `NOT_PROVEN` | Touch and mobile resource behavior exist, but no required physical mobile support lane is complete. Cross-browser publication remains [W24](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w24--cross-browser-performance-recovery-packaging-and-final-closure). |
+| WebGL fallback | Product boundary | WebGPU browser execution is recorded by the [WebGL product-boundary tombstone](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#truthfulness-lifecycle-and-tombstone-ledger); final packaging enforcement belongs to [W24](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w24--cross-browser-performance-recovery-packaging-and-final-closure). Applications must feature-detect WebGPU and provide their own fallback UI. |
+| Node.js rendering | Product boundary | Node rendering is recorded by the [Node product-boundary tombstone](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#truthfulness-lifecycle-and-tombstone-ledger); browser-headless outcomes remain tracked by [R11/W02](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#runtime-gpu-and-platform-foundations). |
+| `OffscreenCanvas` | Tracked feature gap | Worker and hidden-canvas equivalents are tracked by [R10-R11](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#runtime-gpu-and-platform-foundations) and [W02](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w02--general-scenerender-graph-resources-diagnostics-and-config). The current runtime owns a main-thread canvas-backed surface. |
+| Forge3D functional parity | In progress | The [exhaustive parity matrix](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#exhaustive-parity-matrix) and [ordered W00-W24 tasks](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#ordered-implementation-tasks) own every current gap. Complete parity is not claimed while any active row is open. |
 
 ## Deployment Requirements
 
@@ -80,7 +88,7 @@ missing WebGPU or adapter acquisition fails instead of turning required render
 behavior into a skip. It also sets
 `FORGE3D_SOURCE_BENCHMARK_MODE=probe`, keeping the resulting artifact at
 `ENGINE_PASS` rather than branded, physical, exact-tarball, or release-support
-evidence. The Firefox row remains `Unsupported`.
+evidence. The Firefox row remains `NOT_PROVEN`.
 
 `npm run test:browser:webkit` selects bundled Playwright WebKit without
 Chromium unsafe-WebGPU, GPU-blocklist, Vulkan-enable, or ANGLE-forcing
@@ -91,7 +99,7 @@ which every expected test fails at exactly the missing-`navigator.gpu`
 capability boundary reports `NOT_PROVEN` and uploads no artifact. Missing,
 malformed, incomplete, mixed, or unexpected reports fail the optional check.
 This engine result is not branded or physical Safari evidence, so Safari
-remains unsupported/`NOT_PROVEN`.
+remains `NOT_PROVEN`.
 
 ## Required Release Lane
 
