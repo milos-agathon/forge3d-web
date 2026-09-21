@@ -157,6 +157,14 @@ look-alike WebKit binary.
 **Priority:** P1; code/preflight is implementable, physical trackpad execution
 is `LAB_INFRA_BLOCKED` until `browser-lab-infrastructure-readiness`
 
+**Source status:** `CODE_COMPLETE`. The source now restores the owned
+`touch-action` property and tabindex without overwriting unrelated inline
+styles, tests 30 real-DOM `display:none` and zero-parent cycles, drives bounded
+W3C SafariDriver input and 30 persisted BFCache returns, and carries a versioned
+exact-commit/package-bound `saf04Proof` through matrix creation and merge
+validation. Physical trackpad execution, signed media, and shipping-Safari
+results remain `NOT_PROVEN`; this source status is not a support claim.
+
 **Task definition**
 
 Validate the DOM behavior most likely to diverge in Safari without introducing
@@ -190,7 +198,8 @@ non-standard gesture APIs.
   `pagehide.persisted === true` and `pageshow.persisted === true`; a
   non-persisted reload is a separate control and cannot satisfy it. Recreate
   only on actual `DEVICE_LOST`, not every navigation lifecycle event.
-- Restore prior canvas inline styles and tabindex exactly on disposal.
+- Restore the prior owned `touch-action` property and tabindex exactly on
+  disposal without overwriting unrelated application inline-style changes.
 
 **Definition of done**
 

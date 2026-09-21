@@ -4,6 +4,7 @@ import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture
 import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
 import { validSaf03Proof, validStpResult } from "../browser/saf03-proof-fixture.mjs";
 import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
+import { validSaf04HardwareProof } from "../browser/saf04-hardware-proof-fixture.mjs";
 import { validFfx04LifecycleProof } from "../browser/ffx04-lifecycle-proof-fixture.mjs";
 import { CHR04_LANES } from "../../scripts/chr04-lanes.mjs";
 import { canonicalJson, sha256Hex } from "../../scripts/canonical-json.mjs";
@@ -219,6 +220,9 @@ export function validPublicationInput({ skipMerge = false } = {}) {
               browserVersion: browser.version, driverVersion: driver.version,
             }),
           }
+        : {}),
+      ...(row.lane === "safari-macos-m2"
+        ? { saf04Proof: validSaf04HardwareProof({ commit: targetSha, packageSha256 }) }
         : {}),
     };
   });

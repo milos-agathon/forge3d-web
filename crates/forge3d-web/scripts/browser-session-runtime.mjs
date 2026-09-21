@@ -14,10 +14,11 @@ import {
   observeWebDriverLaunch,
   resolveInstalledAppiumDriverVersion,
 } from "./browser-launch-provenance.mjs";
-import { WebDriverClient } from "./webdriver-client.mjs";
+import { WebDriverClient, WebDriverSession } from "./webdriver-client.mjs";
 import { runBrandedHardwareAcceptance } from "./chrome-hardware-acceptance.mjs";
 import { isChr03Lane } from "./chr03-lanes.mjs";
 import { isChr04Lane } from "./chr04-lanes.mjs";
+import { runSafariBrowserAcceptance } from "./safari-browser-acceptance.mjs";
 import { runFirefoxLifecycleAcceptance } from "./firefox-lifecycle-acceptance.mjs";
 import { projectSaf03Binding, validateSaf03SafariProof, validateSaf03TechnologyPreviewResult } from "./saf03-proof-validator.mjs";
 
@@ -132,6 +133,13 @@ async function openSafariSeleniumSession({ runtime, routeUrl, browserPolicy, inv
         script: SAFARI_COMPOSED_SCRIPT_TIMEOUT_MS,
       });
       const neutral = await runSeleniumHardwarePage(stable.driver, payload);
+      const attachSession = dependencies.attachWebDriverSession ?? attachWebDriverSession;
+      const runSaf04 = dependencies.runSafariBrowserAcceptance ?? runSafariBrowserAcceptance;
+      const saf04Result = await runSaf04(
+        await attachSession(stable.driver),
+        payload,
+        { hardwarePageResult: neutral },
+      );
       const proof = await acceptance.runStableSafariAcceptance({
         session: stable,
         binding: payload.binding,
@@ -153,7 +161,11 @@ async function openSafariSeleniumSession({ runtime, routeUrl, browserPolicy, inv
         commit: payload.binding.commit,
         packageSha256: payload.binding.packageSha256,
       });
-      return { ...neutral, assertions: { supportAssertionsExecuted: true, passed: true }, saf03Proof: proof };
+      return {
+        ...saf04Result,
+        assertions: { supportAssertionsExecuted: true, passed: true },
+        saf03Proof: proof,
+      };
     },
     runTechnologyPreview: async ({ binding, route }) => {
       const closedBinding = projectSaf03Binding(binding);
@@ -249,6 +261,18 @@ async function runSeleniumHardwarePage(driver, payload) {
   `, payload);
   if (result?.ok !== true) throw new Error(`BROWSER_PAGE_FAILED ${result?.error ?? "unknown"}`);
   return result.value;
+}
+
+async function attachWebDriverSession(driver) {
+  const sessionId = (await driver.getSession()).getId();
+  if (typeof sessionId !== "string" || sessionId === "") {
+    throw new Error("INFRA_ERROR WEBDRIVER_SESSION_STATE_INVALID");
+  }
+  return new WebDriverSession(
+    new WebDriverClient("http://127.0.0.1:4445"),
+    sessionId,
+    {},
+  );
 }
 
 async function openPlaywrightSession({ runtime, routeUrl, browserPolicy }) {

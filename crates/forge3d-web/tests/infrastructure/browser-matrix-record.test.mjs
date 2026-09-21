@@ -12,6 +12,7 @@ import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture
 import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
 import { validSaf03Proof, validStpResult } from "../browser/saf03-proof-fixture.mjs";
 import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
+import { validSaf04HardwareProof } from "../browser/saf04-hardware-proof-fixture.mjs";
 import { validFfx04LifecycleProof } from "../browser/ffx04-lifecycle-proof-fixture.mjs";
 
 const matrix = JSON.parse(
@@ -137,6 +138,7 @@ test("automated and manual sources derive closed matrix keys without artifact cl
     effectiveLaunchArguments: [],
     chr03Proof: null,
     saf02Proof: safariProof,
+    saf04Proof: validSaf04HardwareProof({ commit: "a".repeat(40), packageSha256: "d".repeat(64) }),
     saf03Proof: validSaf03Proof({ commit: "a".repeat(40), packageSha256: "d".repeat(64) }),
   });
   safariInput.attestation.binding.assetId = "FW-MAC-M2-01";
@@ -211,6 +213,10 @@ test("automated and manual sources derive closed matrix keys without artifact cl
   compoundUnsafeSafari.evidence.effectiveLaunchArguments = ["--enable-features=CanvasOopRasterization,WebGPU"];
   compoundUnsafeSafari.evidence.saf02Proof.environment.effectiveLaunchArguments = [...compoundUnsafeSafari.evidence.effectiveLaunchArguments];
   assert.throws(() => createAutomatedMatrixRecord({ ...compoundUnsafeSafari, hostInventory: exactHostInventory(matrix, "FW-MAC-M2-01"), matrix }), /prohibited browser launch arguments/u);
+  assert.equal(safari.saf04Proof.kind, "forge3d-saf04-safari-lifecycle-proof-v1");
+  const invalidSafari = structuredClone(safariInput);
+  invalidSafari.evidence.saf04Proof.lifecycle.bfcacheCycles[0].pageshowPersisted = false;
+  assert.throws(() => createAutomatedMatrixRecord({ ...invalidSafari, hostInventory: exactHostInventory(matrix, "FW-MAC-M2-01"), matrix }));
   const firefoxInput = structuredClone(automatedInput);
   Object.assign(firefoxInput.promotion, {
     lane: "firefox-macos-m2",

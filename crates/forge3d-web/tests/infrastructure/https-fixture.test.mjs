@@ -21,6 +21,7 @@ import { createFixtureState, resolveFixtureResponse } from "../../scripts/serve-
 
 const fixtureRoot = mkdtempSync(join(tmpdir(), "forge3d-https-fixture-"));
 writeFileSync(join(fixtureRoot, "index.html"), "<!doctype html>");
+writeFileSync(join(fixtureRoot, "lifecycle-away.html"), "<!doctype html>");
 writeFileSync(
   join(fixtureRoot, "test-lifecycle-away.html"),
   "<!doctype html><title>Lifecycle transition</title>",
@@ -202,6 +203,7 @@ test("application host, nonce path, MIME, cache, and method policy fail closed",
     request("application", "index.html", { method: "POST" }).status,
     405,
   );
+  assert.equal(request("application", "lifecycle-away.html").status, 200);
   assert.equal(
     request(
       "application",

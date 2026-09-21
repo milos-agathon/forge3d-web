@@ -20,6 +20,7 @@ import { runBrowserLane } from "../hardware/run-browser-lane.mjs";
 import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
 import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
 import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
+import { validSaf04HardwareProof } from "../browser/saf04-hardware-proof-fixture.mjs";
 import { validFfx04LifecycleProof } from "../browser/ffx04-lifecycle-proof-fixture.mjs";
 import { validAbsentStpResult, validSaf03Proof } from "../browser/saf03-proof-fixture.mjs";
 
@@ -487,6 +488,10 @@ test("production Safari lane dispatches the authorized SAF-02 binding and valida
                 runId: 10, jobId: 20, commit: binding.trustedSha,
                 packageSha256: binding.packageSha256, nonce,
               }),
+              saf04Proof: validSaf04HardwareProof({
+                commit: binding.trustedSha,
+                packageSha256: binding.packageSha256,
+              }),
               saf03Proof: validSaf03Proof({
                 commit: binding.trustedSha,
                 packageSha256: binding.packageSha256,
@@ -754,6 +759,66 @@ test("Safari product manual lane reaches page composition without changing attes
       },
     });
     assert.equal(existsSync(join(directory, "manual-input.json")), true);
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
+});
+
+test("stable Safari lane requires and retains exact SAF-04 proof", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "forge3d-safari-saf04-"));
+  let invalid = false;
+  const saf02Proof = validSaf02Conformance({
+    runId: binding.runId,
+    jobId: binding.jobId,
+    commit: binding.trustedSha,
+    packageSha256: binding.packageSha256,
+  });
+  try {
+    const request = {
+      lane: "safari-macos-m2",
+      assetId: "FW-MAC-M2-01",
+      hostId: "FW-MAC-M2-01",
+      platform: "darwin",
+      binding: { ...binding, lane: "safari-macos-m2", assetId: "FW-MAC-M2-01", commit: binding.trustedSha },
+      route: {
+        applicationUrl: `${saf02Proof.route.applicationOrigin}${saf02Proof.route.basePath}`,
+        assetUrl: `${saf02Proof.route.assetOrigin}${saf02Proof.route.basePath}`,
+      },
+      browserPolicy: { prohibitedLaunchArguments: [], tools: {} },
+      deviceMatrix: { devices: [] },
+      inventory: { ...desktopInventory, assetId: "FW-MAC-M2-01", platform: "darwin",
+        osBuild: "Darwin 25.0.0 checked", displayServer: "WindowServer",
+        tools: { safaridriverVersion: "26.0" },
+        browsers: [{ id: "safari-stable", version: "26.0", executable: "/usr/bin/safaridriver" }] },
+      outputPath: join(directory, "evidence.json"),
+      dependencies: { openSession: async () => ({
+        browser: { name: "safari", channel: "stable", version: "26.0" },
+        driverVersion: "26.0", effectiveLaunchArguments: [], launchArgumentsObserved: true,
+        launchArgumentSource: "darwin-live-browser-process", browserProcessId: null,
+        runPage: async (payload) => {
+          assert.equal(payload.binding.lane, "safari-macos-m2");
+          const proof = validSaf04HardwareProof({ commit: binding.trustedSha, packageSha256: binding.packageSha256 });
+          if (invalid) proof.lifecycle.bfcacheCycles[0].pageshowPersisted = false;
+          return {
+            adapter,
+            assertions: { passed: true },
+            saf02Proof,
+            saf03Proof: validSaf03Proof({
+              commit: binding.trustedSha,
+              packageSha256: binding.packageSha256,
+            }),
+            saf04Proof: proof,
+          };
+        },
+        runTechnologyPreview: async () => validAbsentStpResult(),
+        close: async () => undefined,
+      }) },
+    };
+    await executeHardwareBrowserLane(request);
+    assert.equal(JSON.parse(readFileSync(request.outputPath, "utf8")).saf04Proof.kind,
+      "forge3d-saf04-safari-lifecycle-proof-v1");
+    invalid = true;
+    await assert.rejects(() => executeHardwareBrowserLane(request), /constant true/u);
   } finally {
     rmSync(directory, { recursive: true, force: true });
   }

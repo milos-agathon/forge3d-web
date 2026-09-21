@@ -35,6 +35,31 @@ test("WebDriver health fails closed on disappearance, HTTP, malformed, and timeo
   }
 });
 
+test("WebDriver W3C actions are bounded and use standard endpoints", async () => {
+  const requests = [];
+  const client = new WebDriverClient("http://127.0.0.1:4445", async (url, options) => {
+    requests.push([url, options.method, options.body]);
+    if (url.endsWith("/element")) {
+      return response(200, { value: { "element-6066-11e4-a52e-4f735466cecf": "canvas-1" } });
+    }
+    if (url.endsWith("/rect")) {
+      return response(200, { value: { x: 1, y: 2, width: 320, height: 240 } });
+    }
+    return response(200, { value: null });
+  });
+  const session = new (await import("../../scripts/webdriver-client.mjs")).WebDriverSession(client, "s1", {});
+  const element = await session.findElement("#viewer");
+  assert.equal(element, "canvas-1");
+  assert.equal((await session.elementRect(element)).width, 320);
+  await session.performActions([{ type: "pointer", id: "mouse", parameters: { pointerType: "mouse" }, actions: [{ type: "pause", duration: 0 }] }]);
+  await session.releaseActions();
+  await session.back();
+  await session.refresh();
+  assert.throws(() => session.performActions([]), /between one and four/u);
+  assert.throws(() => session.performActions([{ actions: Array.from({ length: 65 }, () => ({ type: "pause" })) }]), /between one and 64/u);
+  assert.deepEqual(requests.map((entry) => entry[1]), ["POST", "GET", "POST", "DELETE", "POST", "POST"]);
+});
+
 test("WebDriver BFCache actions use the exact async-script and history endpoints", async () => {
   const requests = [];
   const client = new WebDriverClient("http://127.0.0.1:4446", async (url, options) => {

@@ -15,6 +15,7 @@ import { validFfx04LifecycleProof } from "../browser/ffx04-lifecycle-proof-fixtu
 import { CHR04_LANES } from "../../scripts/chr04-lanes.mjs";
 import { validSaf03Proof, validStpResult } from "../browser/saf03-proof-fixture.mjs";
 import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
+import { validSaf04HardwareProof } from "../browser/saf04-hardware-proof-fixture.mjs";
 
 const matrix = JSON.parse(
   readFileSync(new URL("./hardware-matrix.json", import.meta.url), "utf8"),
@@ -172,6 +173,7 @@ const records = rows.map((row, index) => {
               saf02Proof,
               saf02Route: { applicationUrl, assetUrl },
               route: { applicationUrl, assetUrl },
+              saf04Proof: validSaf04HardwareProof({ commit: targetSha, packageSha256 }),
               saf03Proof: validSaf03Proof({ commit: targetSha, packageSha256 }),
               safariTechnologyPreview,
             };
@@ -389,6 +391,11 @@ test("prior head, other package, expired manual, missing, duplicate, and infra e
       if (copy.lane === "safari-macos-m2") mutate(copy);
       return copy;
     })),
+    records.map((record) =>
+      record.lane === "safari-macos-m2"
+        ? { ...record, saf04Proof: { ...record.saf04Proof, lifecycle: { ...record.saf04Proof.lifecycle, hardReloadPersisted: true } } }
+        : record,
+    ),
     records.map((record) =>
       record.kind === "manual"
         ? {

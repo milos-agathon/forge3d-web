@@ -413,6 +413,17 @@ describe("ViewerControls", () => {
     }
   });
 
+  it("owns no Safari Gesture Event listeners before or after disposal", () => {
+    const canvas = new FakeCanvas();
+    const controls = new ViewerControls(
+      canvas as unknown as HTMLCanvasElement,
+      new OrbitController(),
+    );
+    expect(canvas.listenerTypes.some((type) => type.startsWith("gesture"))).toBe(false);
+    controls.dispose();
+    expect(canvas.activeListenerTypes.some((type) => type.startsWith("gesture"))).toBe(false);
+  });
+
   it("does not suppress browser touch gestures while controls are disabled", () => {
     const canvas = new FakeCanvas();
     canvas.style.touchAction = "pan-y";
@@ -434,8 +445,22 @@ class FakeCanvas extends EventTarget {
   readonly style = new FakeStyle();
   readonly captures = new Set<number>();
   readonly #attributes = new Map<string, string>();
+  readonly listenerTypes: string[] = [];
+  readonly activeListenerTypes: string[] = [];
   captureFails = false;
   clientHeight = 400;
+
+  override addEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | AddEventListenerOptions): void {
+    this.listenerTypes.push(type);
+    this.activeListenerTypes.push(type);
+    super.addEventListener(type, listener, options);
+  }
+
+  override removeEventListener(type: string, listener: EventListenerOrEventListenerObject, options?: boolean | EventListenerOptions): void {
+    const index = this.activeListenerTypes.indexOf(type);
+    if (index >= 0) this.activeListenerTypes.splice(index, 1);
+    super.removeEventListener(type, listener, options);
+  }
 
   setAttribute(name: string, value: string): void {
     this.#attributes.set(name, value);

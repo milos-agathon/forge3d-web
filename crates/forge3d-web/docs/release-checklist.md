@@ -152,6 +152,11 @@ missing-`navigator.gpu` capability boundary; the job summary then says
 incomplete, extra, mixed, unexpected, or raw-result-disagreeing reports fail the
 optional check. This engine preflight is not shipping Safari, branded-browser,
 exact-tarball, or physical GPU evidence. Safari remains unsupported/`NOT_PROVEN`.
+The packaged shipping-Safari lane contains SAF-04 W3C interaction, real-DOM
+layout, persisted-BFCache, hard-reload-control, and closed proof validation.
+Those mechanisms do not change the unsupported/`NOT_PROVEN` status until the
+stable Safari lane and separately signed physical trackpad checklist run on the
+exact release commit and package.
 
 For SAF-03, accept only `forge3d-saf03-safari-acceptance-v1` from the required
 `safari-macos-m2` lane. The record must retain per-action camera/frame/pixel

@@ -17,6 +17,7 @@ import { CHR04_LANES, isChr04Lane } from "./chr04-lanes.mjs";
 import { validateSaf03SafariProof } from "./saf03-proof-validator.mjs";
 import { isSaf03Lane } from "./saf03-lanes.mjs";
 import { validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
+import { validateSaf04HardwareProof } from "./saf04-hardware-proof-validator.mjs";
 import { validateFfx04LifecycleProof } from "./ffx04-lifecycle-proof-validator.mjs";
 import { isFfx04Lane } from "./ffx04-lanes.mjs";
 
@@ -250,6 +251,11 @@ export async function executeHardwareBrowserLane({
             browserPolicy,
           });
         }
+        if (lane === "safari-macos-m2") {
+          validateSaf04HardwareProof(pageResult.saf04Proof, {
+            lane, assetId, commit: binding.commit, packageSha256: binding.packageSha256,
+          });
+        }
         if (isFfx04Lane(lane)) {
           validateFfx04LifecycleProof(pageResult.ffx04Proof, {
             lane,
@@ -290,6 +296,7 @@ export async function executeHardwareBrowserLane({
       saf03Proof: pageResult.saf03Proof ?? null,
       safariTechnologyPreview,
       saf02Proof: pageResult.saf02Proof ?? null,
+      saf04Proof: pageResult.saf04Proof ?? null,
       ffx04Proof: pageResult.ffx04Proof ?? null,
       headed: true,
       driver: provenance.driver,

@@ -7,6 +7,7 @@ import { validateChr03HardwareProofContract as validateChr03HardwareProof } from
 import { CHR03_STABLE_LANES } from "./chr03-lanes.mjs";
 import { validateChr04EdgeEvidence } from "./chr04-hardware-proof-validator.mjs";
 import { CHR04_LANES } from "./chr04-lanes.mjs";
+import { validateSaf04HardwareProof } from "./saf04-hardware-proof-validator.mjs";
 import { validateSaf03EvidenceEnvelope } from "./saf03-proof-validator.mjs";
 import { assertExactSafariRoute, validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
 import { validateFfx04LifecycleProof } from "./ffx04-lifecycle-proof-validator.mjs";
@@ -284,6 +285,12 @@ function validateRecord(record, row, expected) {
       assetUrl: record.saf02Route?.assetUrl,
       browser: record.browser, system: record.system, adapter: record.adapter,
       effectiveLaunchArguments: record.effectiveLaunchArguments,
+    });
+    validateSaf04HardwareProof(record.saf04Proof, {
+      lane: row.lane,
+      assetId: row.assetId,
+      commit: expected.targetSha,
+      packageSha256: expected.packageSha256,
     });
     validateSaf03EvidenceEnvelope({
       proof: record.saf03Proof,
