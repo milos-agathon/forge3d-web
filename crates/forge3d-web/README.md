@@ -134,7 +134,7 @@ and error codes.
 
 The browser MVP includes canvas-backed WebGPU rendering, camera and resize control, Float32 heightmaps, URL/File/Blob/ArrayBuffer terrain byte sources, screenshots, and TypeScript declarations.
 
-The MVP does not include Python APIs, native windows, TCP or stdin control, COPC/EPT/LAZ streaming, 3D Tiles, COG/raster streaming, Mapbox Style parity, WebGL fallback, or Python/native feature parity.
+The package does not yet implement COPC/EPT/LAZ streaming, 3D Tiles, COG/raster streaming, or Mapbox Style parity; those are tracked capability gaps in the repository parity manifest (`docs/parity/forge3d-composite-baseline.json`), not permanent exclusions. Python APIs, native windows, TCP/stdin control, and WebGL fallback are delivery-format exclusions: native functionality remains the parity target through browser equivalents per the runtime plan.
 
 ## Release Verification
 
