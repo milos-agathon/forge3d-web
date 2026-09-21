@@ -12,6 +12,7 @@ import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture
 import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
 import { validSaf03Proof, validStpResult } from "../browser/saf03-proof-fixture.mjs";
 import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
+import { validFfx04LifecycleProof } from "../browser/ffx04-lifecycle-proof-fixture.mjs";
 
 const matrix = JSON.parse(
   readFileSync(new URL("./hardware-matrix.json", import.meta.url), "utf8"),
@@ -209,7 +210,46 @@ test("automated and manual sources derive closed matrix keys without artifact cl
   const compoundUnsafeSafari = structuredClone(safariInput);
   compoundUnsafeSafari.evidence.effectiveLaunchArguments = ["--enable-features=CanvasOopRasterization,WebGPU"];
   compoundUnsafeSafari.evidence.saf02Proof.environment.effectiveLaunchArguments = [...compoundUnsafeSafari.evidence.effectiveLaunchArguments];
-  assert.throws(() => createAutomatedMatrixRecord(compoundUnsafeSafari), /prohibited browser launch arguments/u);
+  assert.throws(() => createAutomatedMatrixRecord({ ...compoundUnsafeSafari, hostInventory: exactHostInventory(matrix, "FW-MAC-M2-01"), matrix }), /prohibited browser launch arguments/u);
+  const firefoxInput = structuredClone(automatedInput);
+  Object.assign(firefoxInput.promotion, {
+    lane: "firefox-macos-m2",
+    hostId: "FW-MAC-M2-01",
+    assetId: "FW-MAC-M2-01",
+  });
+  Object.assign(firefoxInput.evidence, {
+    lane: "firefox-macos-m2",
+    runId: 10,
+    jobId: 20,
+    system: { platform: "darwin", osBuild: "macOS 26", displayServer: "WindowServer" },
+    browser: { name: "firefox", channel: "release", version: "147.0" },
+    driver: { name: "selenium-firefox", version: "geckodriver 0.36.0" },
+    route: { applicationUrl: `https://firefox.webgpu-ci.forge3d.dev/runs/10/20/${"c".repeat(32)}/` },
+    chr03Proof: null,
+    ffx04Proof: validFfx04LifecycleProof({
+      commit: "a".repeat(40),
+      packageSha256: "d".repeat(64),
+      driverVersion: "geckodriver 0.36.0",
+    }),
+  });
+  firefoxInput.attestation.binding.assetId = "FW-MAC-M2-01";
+  firefoxInput.attestation.binding.jobId = 20;
+  firefoxInput.attestation.host.hostId = "FW-MAC-M2-01";
+  const firefox = createAutomatedMatrixRecord(firefoxInput);
+  assert.equal(firefox.ffx04Proof.result, "PASS");
+  assert.equal(firefox.fixtureApplicationUrl, firefoxInput.evidence.route.applicationUrl);
+  for (const mutate of [
+    (input) => { input.evidence.ffx04Proof = null; },
+    (input) => { input.evidence.ffx04Proof.cycles[0].shown.persisted = false; },
+    (input) => { input.evidence.runId = 11; },
+    (input) => { input.evidence.jobId = 21; },
+    (input) => { input.attestation.binding.jobId = 21; },
+    (input) => { input.evidence.route.applicationUrl = "https://other.webgpu-ci.forge3d.dev/runs/10/20/cccccccccccccccccccccccccccccccc/"; },
+  ]) {
+    const invalidFirefox = structuredClone(firefoxInput);
+    mutate(invalidFirefox);
+    assert.throws(() => createAutomatedMatrixRecord(invalidFirefox), /FFX04/u);
+  }
   const manual = createManualMatrixRecord({
     evidence: {
       checklistId: "safari-trackpad",

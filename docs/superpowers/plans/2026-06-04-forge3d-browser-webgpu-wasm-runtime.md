@@ -422,10 +422,10 @@ is not complete until every listed matrix row meets its definition of done.
 ### Working-Tree Task Code-Completion Ledger
 
 This ledger measures **only checked-out code and task-owned artifacts** in
-the working tree: production evidence is base HEAD
-`36c1ac251e2a0b1721227f4abd19fbb864636faa` plus task-owned plan artifacts in
-this revision. No uncommitted runtime code exists. It does not award or
-withhold completion for physical-browser evidence. `Full` means
+the working tree. The stored W00 browser inventory remains anchored at
+`36c1ac251e2a0b1721227f4abd19fbb864636faa`; later source additions count only
+when the assessment evidence below names them. It does not award or withhold
+completion for physical-browser evidence. `Full` means
 every implementation artifact in the task's stated scope exists. `Partial`
 means a direct, non-trivial part exists but its stated scope is incomplete.
 `None` means no direct implementation artifact for that task exists; incidental
@@ -436,7 +436,7 @@ is still not functionally complete and does not change any matrix row to `I`.
 |---|---|---|---|
 | W00 | Full | The composite manifest/schema/dependency lock, 6,531-record stored inventory, fixture and hardware contracts, semantic verifier tests, `verify:parity` package script and pre-build CI gate are present in the working tree. | None. |
 | W01 | Full | The authoritative goals spec, root/package READMEs, support matrix, release checklist, release-hardening contract and docs-link tests distinguish browser delivery, tracked gaps, tombstones and evidence-bound support. | None. |
-| W02 | Partial | `crates/forge3d-core/src/gpu/{runtime,surface}.rs` and `crates/forge3d-web/src/runtime/{init,render,diagnostics,device_health}.rs` implement the MVP device/surface lifecycle, diagnostics and coarse resource policy; `Forge3DViewer` supplies main-thread DOM input. | Add scene/pass/resource/memory/timing modules, platform worker/OffscreenCanvas/storage adapters, typed scene/session/config/stats API, graph/resource accounting and R03-R11/E01-E04 behavior. |
+| W02 | Partial | `crates/forge3d-core/src/gpu/{runtime,surface}.rs` and `crates/forge3d-web/src/runtime/{init,render,diagnostics,device_health}.rs` implement the MVP device/surface lifecycle, diagnostics and coarse resource policy; `Forge3DViewer` supplies main-thread DOM input. FFX-04 adds deterministic pointer termination, consumed-gesture context menus, wheel normalization, focus, suspension/BFCache, disposal, and property-level `touch-action` restoration contracts. | Add scene/pass/resource/memory/timing modules, platform worker/OffscreenCanvas/storage adapters, typed scene/session/config/stats API, graph/resource accounting and R03-R11/E01-E04 behavior. |
 | W03 | Partial | `crates/forge3d-core/src/terrain.rs` and `crates/forge3d-web/src/runtime/terrain.rs` implement dense Float32 grid terrain and a 2-8-stop ramp. | Add the DEM model, metadata/statistics/normalization/nodata/CRS, analysis, queries, height AO and sun visibility. |
 | W04 | None | Active source has no light/material/shadow/IBL module or public typed lighting API. | Implement P01-P07 including BRDF routes, texture/KTX2, IBL cache and shadow/CSM paths. |
 | W05 | Partial | `crates/forge3d-core/src/camera/mod.rs` provides validated look-at perspective projection; `crates/forge3d-web/src-ts/orbit-controller.ts` provides orbit math/controls. | Add orthographic/world-screen transforms, fly controls, camera animation, keyframes and terrain-aware orbit/rail/follow rigs. |
@@ -458,7 +458,7 @@ is still not functionally complete and does not change any matrix row to `I`.
 | W21 | Partial | The checked-in FND-07 benchmark harness exists at `tests/browser/viewer-benchmark.ts` and `tests/browser/benchmark/**`; `ViewerResourcePreset` is only an MVP allocation policy. | Add offline licensing/gates, public PNG/array utilities/display adapters and public benchmark/memory API; renderer presets remain W02/R04-owned. |
 | W22 | None | No direct integrated E05 codec registry, codec dispatch contract or AOV-guided denoiser artifact exists. | Integrate and verify the codec registry/denoiser after feature codecs land; platform adapters remain W02-owned. |
 | W23 | Partial | Browser docs, seven HTML fixtures, the Vite example and W00's exhaustive native-to-web inventory/provenance map exist. Converted goldens and runnable migrated evidence for every original workflow are not restored. | Add all-row documentation/example/test/golden migration evidence and enforce its coverage report. |
-| W24 | Partial | R01 runtime/recovery, package/browser contracts, support matrix, hardware workflows, FND-07 harness and W00 `verify:parity` gate are present; most matrix rows remain G/P/E. | Complete W01-W23, then add final parity report and close every package, browser, performance and recovery release gate. |
+| W24 | Partial | R01 runtime/recovery, package/browser contracts, support matrix, hardware workflows, FND-07 harness and W00 `verify:parity` gate are present. FFX-04 adds fail-closed Firefox lifecycle proof validation and source tests, but no qualifying physical Firefox execution; most matrix rows remain G/P/E. | Complete W01-W23, obtain the required physical browser evidence, then add the final parity report and close every package, browser, performance and recovery release gate. |
 
 The per-task **Code status** lines below duplicate this ledger deliberately so a
 task remains unambiguous when read or reviewed in isolation.

@@ -17,6 +17,8 @@ import { CHR04_LANES, isChr04Lane } from "./chr04-lanes.mjs";
 import { validateSaf03SafariProof } from "./saf03-proof-validator.mjs";
 import { isSaf03Lane } from "./saf03-lanes.mjs";
 import { validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
+import { validateFfx04LifecycleProof } from "./ffx04-lifecycle-proof-validator.mjs";
+import { isFfx04Lane } from "./ffx04-lanes.mjs";
 
 const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
 const CHR04_REQUIRED_LANES = new Set(Object.keys(CHR04_LANES));
@@ -186,6 +188,18 @@ export async function executeHardwareBrowserLane({
             trackpad: lane === "manual-safari-trackpad" ? trackpadInventory : null,
           } : null,
         });
+        if (isFfx04Lane(lane)) {
+          if (typeof session.runFirefoxLifecycle !== "function") {
+            throw new Error("FFX04_LIFECYCLE_RUNNER_UNAVAILABLE");
+          }
+          pageResult.ffx04Proof = await session.runFirefoxLifecycle({
+            lane,
+            assetId,
+            platform,
+            binding,
+            route,
+          });
+        }
         if (manualLifecycle) {
           if (pageResult.watermark?.visible !== true ||
               !Object.values(pageResult.routeReadiness ?? {}).every((value) => value === true)) {
@@ -236,6 +250,20 @@ export async function executeHardwareBrowserLane({
             browserPolicy,
           });
         }
+        if (isFfx04Lane(lane)) {
+          validateFfx04LifecycleProof(pageResult.ffx04Proof, {
+            lane,
+            runId: binding.runId,
+            jobId: binding.jobId,
+            assetId,
+            platform,
+            commit: binding.commit,
+            packageSha256: binding.packageSha256,
+            browser: session.browser,
+            driver: provenance.driver,
+            applicationUrl: route.applicationUrl,
+          });
+        }
         if (lane === "safari-macos-m2") {
           validateSaf03SafariProof(pageResult.saf03Proof, {
             lane,
@@ -262,6 +290,7 @@ export async function executeHardwareBrowserLane({
       saf03Proof: pageResult.saf03Proof ?? null,
       safariTechnologyPreview,
       saf02Proof: pageResult.saf02Proof ?? null,
+      ffx04Proof: pageResult.ffx04Proof ?? null,
       headed: true,
       driver: provenance.driver,
       system: provenance.system,

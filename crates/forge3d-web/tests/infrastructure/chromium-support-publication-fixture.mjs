@@ -4,6 +4,7 @@ import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture
 import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
 import { validSaf03Proof, validStpResult } from "../browser/saf03-proof-fixture.mjs";
 import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
+import { validFfx04LifecycleProof } from "../browser/ffx04-lifecycle-proof-fixture.mjs";
 import { CHR04_LANES } from "../../scripts/chr04-lanes.mjs";
 import { canonicalJson, sha256Hex } from "../../scripts/canonical-json.mjs";
 import {
@@ -47,6 +48,7 @@ export function validPublicationInput({ skipMerge = false } = {}) {
       row.lane === "safari-macos-m2" || row.checklistId === "safari-trackpad";
     const edge = row.lane.startsWith("edge-");
     const chrome = row.lane.startsWith("chrome-");
+    const firefox = row.lane.startsWith("firefox-");
     const edgePlatform = edge ? CHR04_LANES[row.lane].platform : null;
     const inferredPlatform = row.lane.includes("windows")
       ? "win32"
@@ -161,6 +163,7 @@ export function validPublicationInput({ skipMerge = false } = {}) {
         required: true,
         binding: {
           runId: workflow.runId,
+          ...(firefox ? { jobId: 20 } : {}),
           assetId: row.assetId,
           commit: targetSha,
           packageSha256,
@@ -203,6 +206,18 @@ export function validPublicationInput({ skipMerge = false } = {}) {
               result.probe.route = `${saf02Proof.route.applicationOrigin}${saf02Proof.route.basePath}`;
               return result;
             })(),
+          }
+        : {}),
+      ...(firefox
+        ? {
+            sourceJobId: 20,
+            fixtureApplicationUrl: `https://firefox.webgpu-ci.forge3d.dev/runs/${workflow.runId}/20/${"c".repeat(32)}/`,
+            ffx04Proof: validFfx04LifecycleProof({
+              lane: row.lane, assetId: row.assetId, platform,
+              commit: targetSha, packageSha256,
+              runId: workflow.runId, jobId: 20,
+              browserVersion: browser.version, driverVersion: driver.version,
+            }),
           }
         : {}),
     };

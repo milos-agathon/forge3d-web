@@ -202,6 +202,19 @@ Publish platform-qualified Firefox support, not a blanket browser claim.
 | Firefox Nightly, Intel macOS with pref | P2 experimental |
 | Firefox release, Linux/Intel macOS | `NOT_PROVEN` until default-enabled and passed |
 
+## FFX-04 source implementation note — 2026-09-21
+
+The shared viewer controls now deterministically terminate captured pointers,
+authorize context menus only for consumed gestures, normalize pixel/line/page
+wheel units, scope keyboard focus to the canvas, suspend across hidden,
+zero-sized, and BFCache states, and dispose without duplicate resources.
+Disposal restores only the owned `touch-action` property and `tabindex`, so
+unrelated application inline-style changes survive.
+
+The source suite and fail-closed FFX-04 proof contract cover these behaviors.
+No qualifying branded physical Firefox lifecycle run is present, so this note
+does not establish Firefox support or complete FFX-04's physical evidence.
+
 ## Primary References
 
 - <https://developer.mozilla.org/en-US/docs/Mozilla/Firefox/Experimental_features#webgpu_api>

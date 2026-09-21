@@ -18,6 +18,7 @@ import { WebDriverClient } from "./webdriver-client.mjs";
 import { runBrandedHardwareAcceptance } from "./chrome-hardware-acceptance.mjs";
 import { isChr03Lane } from "./chr03-lanes.mjs";
 import { isChr04Lane } from "./chr04-lanes.mjs";
+import { runFirefoxLifecycleAcceptance } from "./firefox-lifecycle-acceptance.mjs";
 import { projectSaf03Binding, validateSaf03SafariProof, validateSaf03TechnologyPreviewResult } from "./saf03-proof-validator.mjs";
 
 export const SAFARI_HARDWARE_PAGE_TIMEOUT_BUDGET = Object.freeze({
@@ -389,16 +390,17 @@ async function openLocalWebDriverSession({
     const session = await client.createSession(capabilities);
     await session.navigate(routeUrl);
     const launch = observeWebDriverLaunch({ runtime, session });
+    const browser = {
+      name: runtime.browser,
+      channel: runtime.browser === "firefox" ? "release" : "stable",
+      version: String(
+        session.capabilities.browserVersion ??
+          session.capabilities.version ??
+          "unknown",
+      ),
+    };
     return {
-      browser: {
-        name: runtime.browser,
-        channel: runtime.browser === "firefox" ? "release" : "stable",
-        version: String(
-          session.capabilities.browserVersion ??
-            session.capabilities.version ??
-            "unknown",
-        ),
-      },
+      browser,
       driverVersion,
       ...launch,
       assertHealthy: async () => {
@@ -413,6 +415,21 @@ async function openLocalWebDriverSession({
         }
       },
       runPage: (payload) => session.runHardwarePage(payload),
+      ...(runtime.driver === "selenium-firefox"
+        ? {
+            runFirefoxLifecycle: (payload) => runFirefoxLifecycleAcceptance({
+              session,
+              browser,
+              driver: { name: runtime.driver, version: driverVersion },
+              launchObservation: {
+                observed: launch.launchArgumentsObserved,
+                source: launch.launchArgumentSource,
+                browserProcessId: launch.browserProcessId,
+              },
+              ...payload,
+            }),
+          }
+        : {}),
       close: async () => {
         await session.delete().catch(() => undefined);
         await stopChild(child);

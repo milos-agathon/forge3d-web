@@ -20,6 +20,7 @@ import { runBrowserLane } from "../hardware/run-browser-lane.mjs";
 import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
 import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
 import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
+import { validFfx04LifecycleProof } from "../browser/ffx04-lifecycle-proof-fixture.mjs";
 import { validAbsentStpResult, validSaf03Proof } from "../browser/saf03-proof-fixture.mjs";
 
 const binding = {
@@ -103,6 +104,90 @@ test("infrastructure canary cannot execute browser support assertions", async ()
   });
   assert.equal(assertionsCalled, false);
   assert.equal(result.assertions.supportAssertionsExecuted, false);
+});
+
+test("only Firefox lanes require and validate the FFX-04 lifecycle proof", async () => {
+  const directory = mkdtempSync(join(tmpdir(), "forge3d-ffx04-runtime-"));
+  const firefoxBinding = {
+    lane: "firefox-macos-m2",
+    runId: 10,
+    jobId: 20,
+    assetId: "FW-MAC-M2-01",
+    commit: "a".repeat(40),
+    packageSha256: "b".repeat(64),
+  };
+  const inventory = {
+    ...desktopInventory,
+    assetId: firefoxBinding.assetId,
+    platform: "darwin",
+    displayServer: "WindowServer",
+    browsers: [{ id: "firefox-release", version: "147.0", executable: "/Applications/Firefox.app" }],
+    tools: { geckodriver: "0.36.0" },
+  };
+  let lifecycleCalls = 0;
+  let invalidProof = false;
+  const request = {
+    lane: firefoxBinding.lane,
+    assetId: firefoxBinding.assetId,
+    hostId: firefoxBinding.assetId,
+    platform: "darwin",
+    binding: firefoxBinding,
+    route: { applicationUrl: `https://firefox.webgpu-ci.forge3d.dev/runs/10/20/${"c".repeat(32)}/` },
+    browserPolicy: { prohibitedLaunchArguments: [], tools: { geckodriver: "0.36.0" } },
+    deviceMatrix: { devices: [] },
+    inventory,
+    outputPath: join(directory, "firefox.json"),
+    dependencies: { openSession: async () => ({
+      browser: { name: "firefox", channel: "release", version: "147.0" },
+      driverVersion: "geckodriver 0.36.0",
+      effectiveLaunchArguments: [],
+      launchArgumentsObserved: true,
+      launchArgumentSource: "darwin-live-browser-process",
+      browserProcessId: 42,
+      runPage: async () => ({ adapter, assertions: { passed: true, supportAssertionsExecuted: true } }),
+      runFirefoxLifecycle: async () => {
+        lifecycleCalls += 1;
+        const proof = validFfx04LifecycleProof({
+          lane: firefoxBinding.lane,
+          assetId: firefoxBinding.assetId,
+          platform: "darwin",
+          commit: firefoxBinding.commit,
+          packageSha256: firefoxBinding.packageSha256,
+          runId: firefoxBinding.runId,
+          jobId: firefoxBinding.jobId,
+        });
+        if (invalidProof) proof.cycles[0].hidden.persisted = false;
+        return proof;
+      },
+      close: async () => undefined,
+    }) },
+  };
+  try {
+    await executeHardwareBrowserLane(request);
+    assert.equal(lifecycleCalls, 1);
+    assert.equal(JSON.parse(readFileSync(request.outputPath, "utf8")).ffx04Proof.result, "PASS");
+    invalidProof = true;
+    await assert.rejects(
+      () => executeHardwareBrowserLane({ ...request, outputPath: join(directory, "invalid.json") }),
+      /FFX04_LIFECYCLE_PROOF_INVALID/u,
+    );
+    assert.equal(lifecycleCalls, 2);
+    const missingRunner = {
+      ...request,
+      outputPath: join(directory, "missing.json"),
+      dependencies: { openSession: async () => {
+        const session = await request.dependencies.openSession();
+        delete session.runFirefoxLifecycle;
+        return session;
+      } },
+    };
+    await assert.rejects(
+      () => executeHardwareBrowserLane(missingRunner),
+      /FFX04_LIFECYCLE_RUNNER_UNAVAILABLE/u,
+    );
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });
 
 test("challenged infrastructure canary remains adapter-only", async () => {
