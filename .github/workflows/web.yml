@@ -35,6 +35,10 @@ jobs:
           cache: npm
           cache-dependency-path: crates/forge3d-web/package-lock.json
 
+      - name: Verify composite parity manifest
+        working-directory: crates/forge3d-web
+        run: npm run verify:parity
+
       - name: Check core no-default wasm build
         run: cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features
 
