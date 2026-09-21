@@ -203,6 +203,7 @@ for (const expected of [
   "See `docs/release-checklist.md`",
   "See `docs/browser-lab-runbook.md`",
   "Cache `.wasm` assets with immutable content hashing",
+  "## Current Surface And Parity Gaps",
   "npm run test:package"
 ]) {
   assertIncludes(readme, expected, `README missing release guidance: ${expected}`);
@@ -210,11 +211,13 @@ for (const expected of [
 
 const supportMatrix = readText(join(packageRoot, "docs", "support-matrix.md"));
 for (const expected of [
-  "| Surface | MVP status | Notes |",
+  "| Surface | Evidence status | Notes |",
   "| Chrome stable on Windows 11, Intel Iris Xe | Required physical lane, `NOT_PROVEN` |",
-  "| Firefox | Unsupported |",
-  "| Safari | Unsupported |",
-  "| WebGL fallback | Unsupported |",
+  "| Firefox | `NOT_PROVEN` |",
+  "| Safari | `NOT_PROVEN` |",
+  "| WebGL fallback | Product boundary |",
+  "| `OffscreenCanvas` | Tracked feature gap |",
+  "Forge3D functional parity",
   '$env:FORGE3D_WEBGPU_REQUIRED = "1"'
 ]) {
   assertIncludes(supportMatrix, expected, `support matrix missing: ${expected}`);
@@ -318,20 +321,87 @@ const changelog = readText(join(repoRoot, "CHANGELOG.md"));
 assertIncludes(changelog, "Hardened the browser WebGPU/WASM MVP prerelease", "changelog must describe Phase 16 release hardening");
 
 const plan = readText(join(repoRoot, "docs", "superpowers", "plans", "2026-06-04-forge3d-browser-webgpu-wasm-runtime.md"));
-assertIncludes(plan, "browser/npm/WASM-only as a delivery format", "plan must scope browser/npm/WASM exclusivity to the delivery format");
+assertIncludes(plan, "# Forge3D Browser WebGPU/WASM Functional-Parity Plan", "plan must be the functional-parity plan");
 assertIncludes(plan, "native Forge3D functionality is no longer out of scope", "plan must keep native capabilities inside the parity target");
-assertIncludes(plan, "docs/parity/forge3d-composite-baseline.json", "plan must link the composite parity manifest");
+assertIncludes(plan, "## Truthfulness, Lifecycle, And Tombstone Ledger", "plan must carry the tombstone ledger section");
 
 const migrationGoals = readText(join(repoRoot, "docs", "superpowers", "specs", "2026-06-05-forge3d-browser-webgpu-wasm-migration-goals.md"));
 const rootReadme = readText(join(repoRoot, "README.md"));
+const parityDocuments = `${rootReadme}\n${readme}\n${migrationGoals}\n${supportMatrix}\n${checklist}`;
+for (const forbidden of [
+  "intentionally out of scope for this repo",
+  "| Python/native parity | Unsupported |",
+  "or Python/native feature parity",
+  "Removed or out of scope for this repository:",
+]) {
+  assertNotIncludes(parityDocuments, forbidden, `parity documentation must not contain obsolete scope language: ${forbidden}`);
+}
+const normalizedParityDocuments = parityDocuments.replace(/\s+/gu, " ");
+for (const forbidden of [
+  /native Forge3D (?:functionality|outcomes?).{0,80}(?:out of scope|excluded)/iu,
+  /Python\/native (?:features?|parity).{0,80}(?:out of scope|excluded)/iu,
+]) {
+  assert(!forbidden.test(normalizedParityDocuments), `parity documentation contains an untracked functional exclusion: ${forbidden}`);
+}
+for (const [name, document] of [
+  ["migration goals spec", migrationGoals],
+  ["root README", rootReadme],
+  ["package README", readme],
+  ["support matrix", supportMatrix],
+  ["release checklist", checklist],
+]) {
+  assertIncludes(
+    document,
+    "docs/parity/forge3d-composite-baseline.json",
+    `${name} must link the composite parity manifest`,
+  );
+}
+for (const expected of [
+  "## Delivery Format",
+  "## Truthful Status Categories",
+  "Delivery-format exclusion",
+  "Tombstone",
+  "Feature gap",
+  "Browser support status",
+]) {
+  assertIncludes(migrationGoals, expected, `goals spec missing truthful status language: ${expected}`);
+}
 for (const [name, document] of [
   ["migration goals spec", migrationGoals],
   ["root README", rootReadme],
   ["package README", readme],
   ["support matrix", supportMatrix],
 ]) {
-  assertIncludes(document, "docs/parity/forge3d-composite-baseline.json", `${name} must link native-capability status to the parity manifest`);
   assert(!/out of scope for this (repo|repository)/i.test(document), `${name} must not declare native functionality out of scope`);
+}
+for (const surface of [
+  "Chrome stable on Windows 11, Intel Iris Xe",
+  "Chrome stable on Apple Silicon macOS",
+  "Chrome stable on Intel macOS",
+  "Chrome stable on Linux Intel Gen12+ Wayland",
+  "Chrome stable on Linux NVIDIA RTX 3070 Wayland",
+  "Chrome stable on AMD/Linux",
+  "Edge stable on Windows 11 Intel Gen12+",
+  "Edge stable on Apple Silicon macOS",
+  "Edge stable on Linux GNOME Wayland",
+  "Firefox",
+  "Safari",
+  "Mobile browsers",
+]) {
+  const row = supportMatrix.split("\n").find((line) => line.startsWith(`| ${surface} |`));
+  assert(row !== undefined, `support matrix missing ${surface} row`);
+  assertIncludes(row, "`NOT_PROVEN`", `support matrix ${surface} row must remain evidence-bound`);
+  assertNotIncludes(row, "| Supported |", `support matrix ${surface} row must not claim support`);
+}
+for (const surface of ["WebGL fallback", "Node.js rendering"]) {
+  const row = supportMatrix.split("\n").find((line) => line.startsWith(`| ${surface} |`));
+  assert(row !== undefined, `support matrix missing ${surface} row`);
+  assertIncludes(row, "Product boundary", `support matrix ${surface} row must be a product boundary`);
+}
+const offscreenRow = supportMatrix.split("\n").find((line) => line.startsWith("| `OffscreenCanvas` |"));
+assert(offscreenRow !== undefined, "support matrix missing OffscreenCanvas row");
+for (const expected of ["Tracked feature gap", "R10-R11", "W02"]) {
+  assertIncludes(offscreenRow, expected, `support matrix OffscreenCanvas row must link the parity owner: ${expected}`);
 }
 
 function readJson(path) {
@@ -360,6 +430,12 @@ function assertEqual(actual, expected, message) {
 
 function assertIncludes(value, expected, message) {
   if (!value.includes(expected)) {
+    throw new Error(message);
+  }
+}
+
+function assertNotIncludes(value, forbidden, message) {
+  if (value.includes(forbidden)) {
     throw new Error(message);
   }
 }

@@ -169,7 +169,7 @@ for (const expected of [
 for (const expected of [
   "## Browser Support",
   "## MIME, CORS, And Range Requirements",
-  "## MVP Scope And Exclusions",
+  "## Current Surface And Parity Gaps",
   "import { Forge3DRuntime } from \"@forge3d/web\""
 ]) {
   assertIncludes(readme, expected, `README missing package guidance: ${expected}`);

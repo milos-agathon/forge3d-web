@@ -435,7 +435,7 @@ is still not functionally complete and does not change any matrix row to `I`.
 | Task | Code status | Assessment evidence | Remaining implementation/artifact scope |
 |---|---|---|---|
 | W00 | Full | The composite manifest/schema/dependency lock, 6,531-record stored inventory, fixture and hardware contracts, semantic verifier tests, `verify:parity` package script and pre-build CI gate are present in the working tree. | None. |
-| W01 | Full | The migration-goals spec, root `README.md`, `crates/forge3d-web/README.md`, `crates/forge3d-web/docs/support-matrix.md` and `crates/forge3d-web/tests/api/release-hardening.mjs` now distinguish delivery-format exclusions from parity-tracked gaps, link `docs/parity/forge3d-composite-baseline.json`, and the hardening contract rejects "out of scope" claims against native functionality. | None. |
+| W01 | Full | The authoritative goals spec, root/package READMEs, support matrix, release checklist, release-hardening contract and docs-link tests distinguish browser delivery, tracked gaps, tombstones and evidence-bound support. | None. |
 | W02 | Partial | `crates/forge3d-core/src/gpu/{runtime,surface}.rs` and `crates/forge3d-web/src/runtime/{init,render,diagnostics,device_health}.rs` implement the MVP device/surface lifecycle, diagnostics and coarse resource policy; `Forge3DViewer` supplies main-thread DOM input. | Add scene/pass/resource/memory/timing modules, platform worker/OffscreenCanvas/storage adapters, typed scene/session/config/stats API, graph/resource accounting and R03-R11/E01-E04 behavior. |
 | W03 | Partial | `crates/forge3d-core/src/terrain.rs` and `crates/forge3d-web/src/runtime/terrain.rs` implement dense Float32 grid terrain and a 2-8-stop ramp. | Add the DEM model, metadata/statistics/normalization/nodata/CRS, analysis, queries, height AO and sun visibility. |
 | W04 | None | Active source has no light/material/shadow/IBL module or public typed lighting API. | Implement P01-P07 including BRDF routes, texture/KTX2, IBL cache and shadow/CSM paths. |
@@ -515,7 +515,7 @@ task remains unambiguous when read or reviewed in isolation.
 
 ### W01 — Replace Obsolete Scope Contracts
 
-- Code status: **Full** — the spec, both READMEs, the support matrix and the release-hardening contract now scope browser/npm/WASM exclusivity to the delivery format and link every native-capability claim to the parity manifest; see the working-tree ledger above.
+- Code status: **Full** — authoritative scope and package/release contracts now preserve browser-only delivery while tracking every native outcome, tombstone and feature gap.
 
 - Scope: plan/spec/package truthfulness.
 - Files/APIs: update

@@ -1,6 +1,6 @@
 # @forge3d/web
 
-Browser-only Forge3D WebGPU/WASM runtime for rendering MVP terrain scenes from JavaScript and TypeScript.
+Browser-delivered Forge3D WebGPU/WASM runtime for JavaScript and TypeScript. The current release surface renders MVP terrain scenes while the tracked target covers the complete Forge3D capability baseline.
 
 ```ts
 import { Forge3DRuntime } from "@forge3d/web";
@@ -78,7 +78,7 @@ WebGPU for that project and runs the complete source-browser suite in headed
 mode on a GitHub-hosted Apple-Silicon runner, but records the source benchmark
 as a probe. Its separately labelled artifact can establish at most
 `ENGINE_PASS`; it is not branded Firefox, physical-browser, or exact
-npm-tarball evidence and does not promote Firefox from `Unsupported`.
+npm-tarball evidence and leaves Firefox at `NOT_PROVEN`.
 
 `npm run test:browser:webkit` selects the bundled Playwright WebKit engine with
 no Chromium launch arguments. Hosted CI runs it only as a non-blocking macOS
@@ -87,8 +87,8 @@ for the `ENGINE_PASS` artifact. When the complete suite runs and every expected
 test fails at exactly the missing-`navigator.gpu` capability boundary, the
 optional check reports `NOT_PROVEN` and uploads no artifact; incomplete,
 malformed, mixed, or unexpected reports fail the optional check. Playwright
-WebKit is not shipping Safari: this preflight cannot establish Safari support,
-and Safari remains unsupported/`NOT_PROVEN`.
+WebKit is not shipping Safari. This preflight cannot establish Safari support,
+so Safari remains `NOT_PROVEN`.
 
 The protected browser-lab package also carries the SAF-03 stable-Safari
 acceptance mechanism. It uses the exact `selenium-webdriver` 4.35.0 client with
@@ -102,7 +102,7 @@ inventoried bundle driver and is probe-only; it can warn on product failure but
 cleanup uncertainty fails the job. These mechanisms do not claim a physical
 pass: Safari stays `NOT_PROVEN` until the protected physical matrix succeeds.
 
-See `docs/support-matrix.md` for the browser support matrix, unsupported surfaces, and release-lane requirements.
+See `docs/support-matrix.md` for browser evidence status, product boundaries, tracked feature gaps, and release-lane requirements.
 
 ## MIME, CORS, And Range Requirements
 
@@ -130,11 +130,31 @@ Cache `.wasm` assets with immutable content hashing, or invalidate the wasm asse
 See `docs/browser-api.md` for the stable TypeScript contract, lifecycle rules,
 and error codes.
 
-## MVP Scope And Exclusions
+## Current Surface And Parity Gaps
 
-The browser MVP includes canvas-backed WebGPU rendering, camera and resize control, Float32 heightmaps, URL/File/Blob/ArrayBuffer terrain byte sources, screenshots, and TypeScript declarations.
+The current package includes canvas-backed WebGPU rendering, camera and resize
+control, Float32 heightmaps, URL/File/Blob/ArrayBuffer terrain byte sources,
+screenshots, and TypeScript declarations. This is the implemented release
+surface, not the final parity boundary.
 
-The package does not yet implement COPC/EPT/LAZ streaming, 3D Tiles, COG/raster streaming, or Mapbox Style parity; those are tracked capability gaps in the repository parity manifest (`docs/parity/forge3d-composite-baseline.json`), not permanent exclusions. Python APIs, native windows, TCP/stdin control, and WebGL fallback are delivery-format exclusions: native functionality remains the parity target through browser equivalents per the runtime plan.
+| Capability | Current status | Parity owner |
+|---|---|---|
+| Worker `OffscreenCanvas` and browser-headless output | Current gap | [R10-R11](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#runtime-gpu-and-platform-foundations), [W02](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w02--general-scenerender-graph-resources-diagnostics-and-config) |
+| COPC/EPT/LAZ point streaming | Current gap | [G02-G03](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#geospatial-data-geometry-acceleration-and-ray-rendering), [W16](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w16--point-clouds-and-ogc-3d-tiles) |
+| OGC 3D Tiles | Current gap | [G04](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#geospatial-data-geometry-acceleration-and-ray-rendering), [W16](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w16--point-clouds-and-ogc-3d-tiles) |
+| COG and raster streaming/overlays | Current gap | [T09-T11](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#terrain-and-large-raster-scenes), [W08](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w08--clipmaps-streaming-cog-raster-overlays-and-virtual-textures) |
+| Mapbox Style subset | Current gap | [M03](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#product-scene-styling-packaging-cartography-and-utilities), [W19](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w19--mapbox-style-bundles-variants-and-review-layers) |
+
+Python wheels, PyO3/NumPy bindings, native windows, stdin/TCP control, and CMake
+are delivery mechanisms rather than feature gaps. Their observable outcomes map
+to browser equivalents in the
+[exhaustive parity matrix](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#exhaustive-parity-matrix).
+WebGL fallback and Node rendering are explicit entries in the
+[tombstone ledger](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#truthfulness-lifecycle-and-tombstone-ledger),
+not silent parity exclusions. Complete functional parity is not claimed while
+any active row in the
+[composite parity manifest](https://github.com/milos-agathon/forge3d/blob/main/docs/parity/forge3d-composite-baseline.json)
+remains open.
 
 ## Release Verification
 
@@ -143,6 +163,7 @@ See `docs/release-checklist.md` for the full prerelease checklist and
 package verification runs:
 
 ```bash
+npm run verify:parity
 npm run typecheck
 npm run build
 npm run test:api
