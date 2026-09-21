@@ -21,6 +21,14 @@ pub struct RuntimeOptions {
     pub color_space: ColorSpaceOption,
     #[serde(default)]
     pub diagnostics: bool,
+    #[serde(default)]
+    pub quality: QualityOption,
+    #[serde(default)]
+    pub memory_budget_bytes: Option<u64>,
+    #[serde(default)]
+    pub overflow_policy: OverflowPolicyOption,
+    #[serde(default)]
+    pub timestamp_mode: TimestampModeOption,
 }
 
 impl RuntimeOptions {
@@ -67,6 +75,11 @@ impl RuntimeOptions {
         self.clear_color.unwrap_or([0.0, 0.0, 0.0, 1.0])
     }
 
+    pub fn memory_budget_bytes(&self) -> u64 {
+        self.memory_budget_bytes
+            .unwrap_or(forge3d_core::memory::DEFAULT_MEMORY_BUDGET_BYTES)
+    }
+
     fn validate(&self) -> Result<(), WebError> {
         if let Some(width) = self.width {
             validate_positive_dimension("width", width)?;
@@ -90,6 +103,14 @@ impl RuntimeOptions {
                         format!("clearColor[{index}] must be finite and in the range [0, 1]"),
                     ));
                 }
+            }
+        }
+        if let Some(budget) = self.memory_budget_bytes {
+            if budget == 0 {
+                return Err(WebError::new(
+                    Forge3DErrorCode::InvalidInput,
+                    "memoryBudgetBytes must be greater than zero",
+                ));
             }
         }
         Ok(())
@@ -515,7 +536,78 @@ impl Default for RuntimeOptions {
             alpha_mode: AlphaModeOption::Premultiplied,
             color_space: ColorSpaceOption::Srgb,
             diagnostics: false,
+            quality: QualityOption::High,
+            memory_budget_bytes: None,
+            overflow_policy: OverflowPolicyOption::Downscale,
+            timestamp_mode: TimestampModeOption::Auto,
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum QualityOption {
+    Ultra,
+    High,
+    Medium,
+    Low,
+}
+
+impl QualityOption {
+    pub fn to_core(self) -> forge3d_core::memory::QualityLevel {
+        match self {
+            Self::Ultra => forge3d_core::memory::QualityLevel::Ultra,
+            Self::High => forge3d_core::memory::QualityLevel::High,
+            Self::Medium => forge3d_core::memory::QualityLevel::Medium,
+            Self::Low => forge3d_core::memory::QualityLevel::Low,
+        }
+    }
+}
+
+impl Default for QualityOption {
+    fn default() -> Self {
+        Self::High
+    }
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum OverflowPolicyOption {
+    Reject,
+    Downscale,
+}
+
+impl OverflowPolicyOption {
+    pub fn to_core(self) -> forge3d_core::memory::OverflowPolicy {
+        match self {
+            Self::Reject => forge3d_core::memory::OverflowPolicy::Reject,
+            Self::Downscale => forge3d_core::memory::OverflowPolicy::Downscale,
+        }
+    }
+}
+
+impl Default for OverflowPolicyOption {
+    fn default() -> Self {
+        Self::Downscale
+    }
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum TimestampModeOption {
+    Auto,
+    Disabled,
+}
+
+impl TimestampModeOption {
+    pub fn timestamp_queries_requested(self) -> bool {
+        matches!(self, Self::Auto)
+    }
+}
+
+impl Default for TimestampModeOption {
+    fn default() -> Self {
+        Self::Auto
     }
 }
 

@@ -16,6 +16,21 @@ pub mod terrain;
 #[cfg(feature = "webgpu")]
 pub mod readback;
 
+#[cfg(feature = "webgpu")]
+pub mod scene;
+
+#[cfg(feature = "webgpu")]
+pub mod render_graph;
+
+#[cfg(feature = "webgpu")]
+pub mod memory;
+
+#[cfg(feature = "webgpu")]
+pub mod resources;
+
+#[cfg(feature = "webgpu")]
+pub mod timing;
+
 pub const WORKSPACE_SPLIT_PHASE: u8 = 5;
 
 pub fn phase() -> u8 {

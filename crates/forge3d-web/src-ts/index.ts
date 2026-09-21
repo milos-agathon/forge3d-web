@@ -1,4 +1,8 @@
 import { registerRuntimeInternals } from "./runtime-internals.js";
+import {
+  normalizeMemoryReport,
+  normalizeRenderStats,
+} from "./native-reports.js";
 
 export type Forge3DErrorCode =
   | "WEBGPU_UNAVAILABLE"
@@ -30,6 +34,10 @@ export interface Forge3DRuntimeOptions {
   alphaMode?: "opaque" | "premultiplied";
   colorSpace?: "srgb";
   diagnostics?: boolean;
+  quality?: RenderQuality;
+  memoryBudgetBytes?: number;
+  overflowPolicy?: MemoryOverflowPolicy;
+  timestampMode?: TimestampMode;
 }
 
 type WasmRuntimeOptions = Omit<Forge3DRuntimeOptions, "wasmUrl">;
@@ -39,6 +47,13 @@ export interface Forge3DRuntimeCapabilities {
   maxTextureDimension2D: number;
   maxBufferSize: number;
   surfaceFormat: string;
+  adapterInfo?: AdapterInfo;
+  isFallbackAdapter?: boolean;
+  features?: string[];
+  limits?: Record<string, number>;
+  surfaceFormats?: string[];
+  preferredCanvasFormat?: string;
+  timestampQuery?: boolean;
 }
 
 export type ViewerStatus =
@@ -180,6 +195,406 @@ export interface ResizeInput {
   devicePixelRatio: number;
 }
 
+export type RenderQuality = "ultra" | "high" | "medium" | "low";
+
+export type MemoryOverflowPolicy = "reject" | "downscale";
+
+export type TimestampMode = "auto" | "disabled";
+
+export type RendererPresetName =
+  | "studio-pbr"
+  | "outdoor-sun"
+  | "toon-viz"
+  | "rainier-showcase"
+  | "rainier-relief";
+
+export interface LightSlotConfig {
+  type: string;
+  intensity: number;
+  color: [number, number, number];
+  direction?: [number, number, number];
+  position?: [number, number, number];
+}
+
+export interface MaterialSlotConfig {
+  id: string;
+  model: string;
+  parameters: Record<string, number | boolean | string>;
+}
+
+export interface RendererConfigData {
+  quality: RenderQuality;
+  memoryBudgetBytes: number;
+  overflowPolicy: MemoryOverflowPolicy;
+  timestampMode: TimestampMode;
+  sampleCount: 1 | 4;
+  lighting: { exposure: number; lights: LightSlotConfig[] };
+  materials: Record<string, MaterialSlotConfig>;
+  shading: {
+    brdf: string;
+    roughness: number;
+    metallic: number;
+    normalMaps: boolean;
+  };
+  shadows: {
+    enabled: boolean;
+    technique: string;
+    mapSize: number;
+    cascades: number;
+  };
+  gi: { modes: string[]; ambientOcclusionStrength: number };
+  atmosphere: { enabled: boolean; sky: string; hdrUrl?: string };
+  brdfOverride?: string;
+}
+
+export interface RendererConfigInput {
+  quality?: RenderQuality;
+  memoryBudgetBytes?: number;
+  overflowPolicy?: MemoryOverflowPolicy;
+  timestampMode?: TimestampMode;
+  sampleCount?: 1 | 4;
+  lighting?: Partial<RendererConfigData["lighting"]>;
+  materials?: Record<string, MaterialSlotConfig>;
+  shading?: Partial<RendererConfigData["shading"]>;
+  shadows?: Partial<RendererConfigData["shadows"]>;
+  gi?: Partial<RendererConfigData["gi"]>;
+  atmosphere?: Partial<RendererConfigData["atmosphere"]>;
+  brdfOverride?: string | null;
+}
+
+export type RendererConfigSource =
+  | import("./renderer-config.js").RendererConfig
+  | RendererConfigInput
+  | RendererPresetName;
+
+export type SceneNodeId = number;
+
+export type SceneNodeKind =
+  | "group"
+  | "terrain"
+  | "ground-plane"
+  | "text-mesh"
+  | "overlay"
+  | "custom";
+
+export interface SceneTransform {
+  translation: [number, number, number];
+  rotation: [number, number, number, number];
+  scale: [number, number, number];
+}
+
+export interface SceneNodeBase {
+  name: string;
+  transform?: Partial<SceneTransform>;
+  visible?: boolean;
+  materialSlot?: string;
+}
+
+export interface GroupNodeInput extends SceneNodeBase {
+  kind: "group";
+}
+
+export interface TerrainNodeInput extends SceneNodeBase {
+  kind: "terrain";
+  terrain: TerrainHeightmapInput;
+}
+
+export interface GroundPlaneNodeInput extends SceneNodeBase {
+  kind: "ground-plane";
+  size: [number, number];
+  color: [number, number, number, number];
+  height?: number;
+}
+
+export interface TextMeshNodeInput extends SceneNodeBase {
+  kind: "text-mesh";
+  text: string;
+  size: number;
+  color: [number, number, number, number];
+}
+
+export interface OverlayNodeInput extends SceneNodeBase {
+  kind: "overlay";
+  bounds: [number, number, number, number];
+  color: [number, number, number, number];
+  zIndex?: number;
+}
+
+export interface CustomNodeInput extends SceneNodeBase {
+  kind: "custom";
+  layerType: string;
+  payload?: unknown;
+}
+
+export type SceneNodeInput =
+  | GroupNodeInput
+  | TerrainNodeInput
+  | GroundPlaneNodeInput
+  | TextMeshNodeInput
+  | OverlayNodeInput
+  | CustomNodeInput;
+
+export interface SceneNodeSnapshot {
+  id: SceneNodeId;
+  parent: SceneNodeId | null;
+  children: SceneNodeId[];
+  node: SceneNodeInput;
+  transform: SceneTransform;
+  visible: boolean;
+}
+
+export type ScenePassKind = "render" | "compute" | "copy";
+
+export interface ScenePassInput {
+  name: string;
+  kind: ScenePassKind;
+  reads?: string[];
+  writes?: string[];
+  dependsOn?: string[];
+}
+
+export interface SceneRenderBarrier {
+  resource: string;
+  beforePass: string;
+  from: "read" | "write";
+  to: "read" | "write";
+}
+
+export interface SceneRenderPlan {
+  passes: string[];
+  barriers: SceneRenderBarrier[];
+  resourceLifetimes: Record<string, [number, number]>;
+}
+
+export interface SceneSnapshot {
+  revision: number;
+  nodes: SceneNodeSnapshot[];
+  passes: ScenePassInput[];
+}
+
+export type MemoryCategory =
+  | "buffers"
+  | "textures"
+  | "staging"
+  | "readback"
+  | "tile-cache"
+  | "render-bundles"
+  | "other";
+
+export interface QualityDowngrade {
+  requested: RenderQuality;
+  effective: RenderQuality;
+  requestedBytes: number;
+  admittedBytes: number;
+}
+
+export interface MemoryReport {
+  currentBytes: number;
+  peakBytes: number;
+  budgetBytes: number;
+  utilization: number;
+  allocationCount: number;
+  categories: Record<MemoryCategory, number>;
+  effectiveQuality: RenderQuality;
+  downgrades: QualityDowngrade[];
+}
+
+export type SessionStatus =
+  | "initializing"
+  | "ready"
+  | "recovering"
+  | "failed"
+  | "disposed";
+
+export interface Forge3DSessionOptions {
+  runtime?: Forge3DRuntimeOptions;
+  renderer?: RendererConfigSource;
+  recovery?: { deviceLoss?: "none" | "once" };
+}
+
+export interface AdapterInfo {
+  name: string;
+  vendor: string;
+  architecture: string;
+  device: string;
+  description: string;
+  backend: string;
+  deviceType: string;
+}
+
+export interface Forge3DSessionCapabilities extends Forge3DRuntimeCapabilities {
+  adapterInfo: AdapterInfo;
+  isFallbackAdapter: boolean;
+  features: string[];
+  limits: Record<string, number>;
+  surfaceFormats: string[];
+  preferredCanvasFormat: string;
+  timestampQuery: boolean;
+  timingMode: "gpu-timestamp" | "cpu";
+  effectiveQuality: RenderQuality;
+  offscreenCanvas: boolean;
+  workers: boolean;
+  sharedArrayBuffer: boolean;
+  fileSystemAccess: boolean;
+  opfs: boolean;
+}
+
+export interface PassRenderStats {
+  name: string;
+  milliseconds: number;
+  timing: "gpu-timestamp" | "cpu";
+}
+
+export interface RenderStats {
+  frameIndex: number;
+  frameTimeMs: number;
+  drawCalls: number;
+  triangles: number;
+  passes: PassRenderStats[];
+}
+
+export type Forge3DTypedArray =
+  | Uint8Array
+  | Uint16Array
+  | Uint32Array
+  | Int8Array
+  | Int16Array
+  | Int32Array
+  | Float32Array
+  | Float64Array;
+
+export type Forge3DDType =
+  | "u8"
+  | "u16"
+  | "u32"
+  | "i8"
+  | "i16"
+  | "i32"
+  | "f32"
+  | "f64";
+
+export interface TypedArrayShape {
+  dtype: Forge3DDType;
+  shape: readonly number[];
+}
+
+export interface TransferableTypedArray<T extends Forge3DTypedArray> {
+  value: T;
+  transfer: [ArrayBuffer];
+}
+
+export type BrowserByteSource =
+  | string
+  | URL
+  | Blob
+  | ArrayBuffer
+  | ArrayBufferView
+  | ReadableStream<Uint8Array>
+  | Response;
+
+export interface ByteReadProgress {
+  loaded: number;
+  total?: number;
+  done: boolean;
+}
+
+export interface ByteReadOptions {
+  signal?: AbortSignal;
+  maxBytes?: number;
+  onProgress?: (progress: ByteReadProgress) => void;
+}
+
+export type BrowserByteSink =
+  | { kind: "blob"; type?: string }
+  | { kind: "stream"; stream: WritableStream<Uint8Array> }
+  | {
+      kind: "file-system";
+      handle?: FileSystemFileHandle;
+      suggestedName?: string;
+      type?: string;
+    }
+  | { kind: "opfs"; path: string; type?: string }
+  | { kind: "download"; filename: string; type?: string };
+
+export interface ByteWriteResult {
+  bytesWritten: number;
+  blob?: Blob;
+  handle?: FileSystemFileHandle;
+}
+
+export interface Forge3DMessageCallOptions {
+  signal?: AbortSignal;
+  transfer?: Transferable[];
+}
+
+export interface Forge3DMessageContext {
+  signal: AbortSignal;
+  requestId: number;
+}
+
+export type Forge3DMessageHandler = (
+  payload: unknown,
+  context: Forge3DMessageContext,
+) => unknown | Promise<unknown>;
+
+export type Forge3DMessageHandlers = Record<string, Forge3DMessageHandler>;
+
+export type WorkerExecutionMode =
+  | "shared-array-buffer"
+  | "transferable"
+  | "main-thread";
+
+export interface Forge3DWorkerPoolOptions {
+  size?: number;
+  maxQueued?: number;
+  preferSharedArrayBuffer?: boolean;
+  workerFactory?: (index: number) => MessagePort;
+  mainThreadHandler: Forge3DMessageHandler;
+}
+
+export interface WorkerPoolDiagnostics {
+  mode: WorkerExecutionMode;
+  size: number;
+  active: number;
+  queued: number;
+  disposed: boolean;
+}
+
+export interface Forge3DWorkerRendererOptions {
+  worker: Worker;
+  session?: Forge3DSessionOptions;
+  controls?: false | OrbitControlsOptions;
+  resize?: false | ViewerResizeOptions;
+  ariaLabel?: string;
+}
+
+export interface WorkerRendererDiagnostics {
+  ownedListeners: number;
+  activePointers: number;
+  activeObservers: number;
+  disposed: boolean;
+  stateHash: string;
+}
+
+export type OffscreenOutput =
+  | { kind: "blob"; value: Blob }
+  | { kind: "image-bitmap"; value: ImageBitmap }
+  | { kind: "rgba8"; value: Uint8Array; width: number; height: number }
+  | { kind: "stream"; value: ReadableStream<Uint8Array> };
+
+export interface Forge3DOffscreenRendererOptions extends Forge3DSessionOptions {
+  width: number;
+  height: number;
+}
+
+export interface Forge3DNotebookAdapter {
+  readonly canvas: HTMLCanvasElement;
+  readonly session: Promise<import("./session.js").Forge3DSession>;
+  display(scene: import("./scene.js").Forge3DScene): Promise<void>;
+  capture(): Promise<Blob>;
+  dispose(): void;
+}
+
 interface WasmRuntime {
   readonly disposed: boolean;
   readonly width: number;
@@ -196,15 +611,23 @@ interface WasmRuntime {
   simulateDeviceLossForTesting?(): void;
   setTerrain(terrain: TerrainHeightmapInput): void;
   setTerrainFromSource(terrain: TerrainHeightmapSourceInput): Promise<void>;
+  setScene?(scene: SceneSnapshot): void;
   setCamera(camera: CameraInput): void;
   resize(size: ResizeInput): void;
   render(): boolean;
   screenshot(): Promise<Blob>;
+  readRgba?(): Promise<Uint8Array>;
+  getMemoryReport?(): MemoryReport;
+  getRenderStats?(): RenderStats;
   dispose(): void;
 }
 
 interface WasmRuntimeConstructor {
   create(canvas: HTMLCanvasElement, options: unknown): Promise<WasmRuntime>;
+  createOffscreen?(
+    canvas: OffscreenCanvas,
+    options: unknown,
+  ): Promise<WasmRuntime>;
 }
 
 interface WasmBridge {
@@ -277,6 +700,7 @@ export class Forge3DRuntime {
   #disposeRequested = false;
   #nativeDisposed = false;
   #screenshotPromise: Promise<Blob> | undefined;
+  #readbackPromise: Promise<Uint8Array> | undefined;
   #pendingMutations: Array<() => void> = [];
 
   private constructor(
@@ -356,7 +780,7 @@ export class Forge3DRuntime {
   }
 
   static async create(
-    canvas: HTMLCanvasElement,
+    canvas: HTMLCanvasElement | OffscreenCanvas,
     options: Forge3DRuntimeOptions = {},
   ): Promise<Forge3DRuntime> {
     if (globalThis.isSecureContext === false) {
@@ -368,10 +792,28 @@ export class Forge3DRuntime {
 
     try {
       const bridge = await loadWasmBridge(options.wasmUrl);
-      const runtime = await bridge.Forge3DRuntime.create(
-        canvas,
-        normalizeRuntimeOptions(options),
-      );
+      const normalized = normalizeRuntimeOptions(options);
+      const offscreen =
+        typeof OffscreenCanvas !== "undefined" &&
+        canvas instanceof OffscreenCanvas;
+      let runtime: WasmRuntime;
+      if (offscreen) {
+        if (bridge.Forge3DRuntime.createOffscreen === undefined) {
+          throw new Forge3DError(
+            "UNSUPPORTED_FEATURE",
+            "The Forge3D WASM bridge does not support OffscreenCanvas",
+          );
+        }
+        runtime = await bridge.Forge3DRuntime.createOffscreen(
+          canvas,
+          normalized,
+        );
+      } else {
+        runtime = await bridge.Forge3DRuntime.create(
+          canvas as HTMLCanvasElement,
+          normalized,
+        );
+      }
       return new Forge3DRuntime(
         runtime,
         bridge.loadTerrainHeightmapSource,
@@ -402,7 +844,7 @@ export class Forge3DRuntime {
   }
 
   getCapabilities(): Forge3DRuntimeCapabilities {
-    if (!this.disposed && this.#screenshotPromise === undefined) {
+    if (!this.disposed && !this.#captureInFlight()) {
       this.#lastCapabilities = normalizeCapabilities(
         this.#inner.getCapabilities(),
       );
@@ -417,7 +859,7 @@ export class Forge3DRuntime {
 
   render(): boolean {
     this.#assertNotDisposed();
-    if (this.#screenshotPromise !== undefined) {
+    if (this.#captureInFlight()) {
       return false;
     }
     try {
@@ -434,6 +876,10 @@ export class Forge3DRuntime {
     if (this.#screenshotPromise !== undefined) {
       return this.#screenshotPromise;
     }
+    if (this.#readbackPromise !== undefined) {
+      await this.#readbackPromise.catch(() => undefined);
+      this.#assertNotDisposed();
+    }
     const native = this.#inner.screenshot();
     const result = native.then(
       (blob) => {
@@ -447,10 +893,102 @@ export class Forge3DRuntime {
     );
     this.#screenshotPromise = result;
     void result.then(
-      () => this.#completeScreenshotSafely(result),
-      () => this.#completeScreenshotSafely(result),
+      () => this.#completeCaptureSafely(result),
+      () => this.#completeCaptureSafely(result),
     );
     return result;
+  }
+
+  async readRgba(): Promise<Uint8Array> {
+    this.#assertNotDisposed();
+    const readRgba = this.#inner.readRgba;
+    if (readRgba === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not support readback",
+      );
+    }
+    if (this.#readbackPromise !== undefined) {
+      return this.#readbackPromise;
+    }
+    if (this.#screenshotPromise !== undefined) {
+      await this.#screenshotPromise.catch(() => undefined);
+      this.#assertNotDisposed();
+    }
+    const native = readRgba.call(this.#inner);
+    const result = native.then(
+      (bytes) => {
+        this.#assertNotDisposed();
+        return new Uint8Array(bytes);
+      },
+      (error: unknown) => {
+        this.#assertNotDisposed();
+        throw Forge3DError.from(error);
+      },
+    );
+    this.#readbackPromise = result;
+    void result.then(
+      () => this.#completeCaptureSafely(result),
+      () => this.#completeCaptureSafely(result),
+    );
+    return result;
+  }
+
+  setScene(scene: SceneSnapshot): void {
+    this.#assertNotDisposed();
+    if (this.#inner.setScene === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not support scenes",
+      );
+    }
+    this.#runOrQueue(() => this.#inner.setScene?.(scene));
+  }
+
+  getRenderStats(): RenderStats {
+    const getRenderStats = this.#inner.getRenderStats;
+    if (getRenderStats === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not report render stats",
+      );
+    }
+    let stats: RenderStats | undefined;
+    try {
+      stats = normalizeRenderStats(getRenderStats.call(this.#inner));
+    } catch (error) {
+      throw Forge3DError.from(error);
+    }
+    if (stats === undefined) {
+      throw new Forge3DError(
+        "INTERNAL_ERROR",
+        "Native render stats were malformed",
+      );
+    }
+    return stats;
+  }
+
+  getMemoryReport(): MemoryReport {
+    const getMemoryReport = this.#inner.getMemoryReport;
+    if (getMemoryReport === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not report memory usage",
+      );
+    }
+    let report: MemoryReport | undefined;
+    try {
+      report = normalizeMemoryReport(getMemoryReport.call(this.#inner));
+    } catch (error) {
+      throw Forge3DError.from(error);
+    }
+    if (report === undefined) {
+      throw new Forge3DError(
+        "INTERNAL_ERROR",
+        "Native memory report was malformed",
+      );
+    }
+    return report;
   }
 
   setTerrain(terrain: TerrainHeightmapInput): void {
@@ -510,7 +1048,7 @@ export class Forge3DRuntime {
     this.#detachDeviceLostRegistration?.();
     this.#detachDeviceLostRegistration = undefined;
     this.#pendingMutations = [];
-    if (this.#screenshotPromise !== undefined) {
+    if (this.#captureInFlight()) {
       this.#lastCapabilities = {
         ...this.#lastCapabilities,
         deviceState: "disposed",
@@ -520,6 +1058,13 @@ export class Forge3DRuntime {
     this.#finalizeDispose();
   }
 
+  #captureInFlight(): boolean {
+    return (
+      this.#screenshotPromise !== undefined ||
+      this.#readbackPromise !== undefined
+    );
+  }
+
   #assertNotDisposed(): void {
     if (this.#disposeRequested) {
       throw new Forge3DError("RUNTIME_DISPOSED", "Runtime is disposed");
@@ -527,7 +1072,7 @@ export class Forge3DRuntime {
   }
 
   #runOrQueue(operation: () => void): void {
-    if (this.#screenshotPromise !== undefined) {
+    if (this.#captureInFlight()) {
       this.#pendingMutations.push(operation);
       return;
     }
@@ -538,11 +1083,14 @@ export class Forge3DRuntime {
     }
   }
 
-  #completeScreenshot(promise: Promise<Blob>): void {
-    if (this.#screenshotPromise !== promise) {
+  #completeCapture(promise: Promise<unknown>): void {
+    if (this.#screenshotPromise === promise) {
+      this.#screenshotPromise = undefined;
+    } else if (this.#readbackPromise === promise) {
+      this.#readbackPromise = undefined;
+    } else {
       return;
     }
-    this.#screenshotPromise = undefined;
     if (this.#disposeRequested) {
       this.#finalizeDispose();
       return;
@@ -562,9 +1110,9 @@ export class Forge3DRuntime {
     }
   }
 
-  #completeScreenshotSafely(promise: Promise<Blob>): void {
+  #completeCaptureSafely(promise: Promise<unknown>): void {
     try {
-      this.#completeScreenshot(promise);
+      this.#completeCapture(promise);
     } catch (error) {
       reportUnhandledRuntimeError(Forge3DError.from(error));
     }
@@ -850,12 +1398,36 @@ function normalizeResizeInput(size: ResizeInput): ResizeInput {
 function normalizeCapabilities(
   capabilities: Forge3DRuntimeCapabilities,
 ): Forge3DRuntimeCapabilities {
-  return {
+  const normalized: Forge3DRuntimeCapabilities = {
     deviceState: capabilities.deviceState,
     maxTextureDimension2D: capabilities.maxTextureDimension2D,
     maxBufferSize: capabilities.maxBufferSize,
     surfaceFormat: capabilities.surfaceFormat,
   };
+  if (capabilities.adapterInfo !== undefined) {
+    normalized.adapterInfo = { ...capabilities.adapterInfo };
+  }
+  if (capabilities.isFallbackAdapter !== undefined) {
+    normalized.isFallbackAdapter = capabilities.isFallbackAdapter === true;
+  }
+  if (capabilities.features !== undefined) {
+    normalized.features = [...new Set(capabilities.features)].sort();
+  }
+  if (capabilities.limits !== undefined) {
+    normalized.limits = { ...capabilities.limits };
+  }
+  if (capabilities.surfaceFormats !== undefined) {
+    normalized.surfaceFormats = [
+      ...new Set(capabilities.surfaceFormats),
+    ].sort();
+  }
+  if (capabilities.preferredCanvasFormat !== undefined) {
+    normalized.preferredCanvasFormat = capabilities.preferredCanvasFormat;
+  }
+  if (capabilities.timestampQuery !== undefined) {
+    normalized.timestampQuery = capabilities.timestampQuery === true;
+  }
+  return normalized;
 }
 
 function isErrorLike(value: unknown): value is {
@@ -903,3 +1475,24 @@ const ERROR_CODES = new Set<Forge3DErrorCode>([
 ]);
 
 export { Forge3DViewer } from "./viewer.js";
+export {
+  getRendererPreset,
+  RendererConfig,
+  rendererPresetNames,
+} from "./renderer-config.js";
+export { Forge3DScene } from "./scene.js";
+export { Forge3DSession } from "./session.js";
+export { BorrowedWasmView } from "./ownership.js";
+export { readByteSource, writeByteSink } from "./browser-io.js";
+export {
+  Forge3DMessageClient,
+  Forge3DWebSocketAdapter,
+  serveForge3DMessagePort,
+} from "./message-protocol.js";
+export { Forge3DWorkerPool, selectWorkerExecutionMode } from "./browser-resources.js";
+export { Forge3DWorkerRenderer, installForge3DWorkerHost } from "./worker-renderer.js";
+export { Forge3DOffscreenRenderer } from "./offscreen-renderer.js";
+export {
+  createNotebookAdapter,
+  defineForge3DElement,
+} from "./display-adapters.js";

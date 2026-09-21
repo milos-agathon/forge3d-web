@@ -46,7 +46,6 @@ pub const DEFAULT_WASM_INACTIVE_MODULE_ROOTS: &[&str] = &[
     "py_module",
     "py_types",
     "render",
-    "scene",
     "sdf",
     "shaders",
     "shadows",
