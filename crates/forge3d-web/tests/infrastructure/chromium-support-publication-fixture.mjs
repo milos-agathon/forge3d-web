@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 
 import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
 import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
+import { validFfx03Proof, validFfxAdapter } from "../browser/ffx03-proof-fixture.mjs";
 import { validSaf03Proof, validStpResult } from "../browser/saf03-proof-fixture.mjs";
 import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
 import { validSaf04HardwareProof } from "../browser/saf04-hardware-proof-fixture.mjs";
@@ -89,7 +90,7 @@ export function validPublicationInput({ skipMerge = false } = {}) {
         ? { name: "playwright-edge", version: "1.56.1" }
         : chrome
           ? { name: "playwright-chrome", version: "1.56.1" }
-          : { name: "selenium-firefox", version: "4.35.0" };
+          : { name: "selenium-firefox", version: "0.36.0" };
     const hostInventory = safariTrackpad ? structuredClone(macInventory) : null;
     const workflow = {
       runId: 100 + index,
@@ -138,7 +139,7 @@ export function validPublicationInput({ skipMerge = false } = {}) {
         expiresAt: "2026-10-05T00:00:00.000Z",
       };
     }
-    const adapter = {
+    const adapter = firefox ? validFfxAdapter({ assetId: row.assetId, commit: targetSha, packageSha256 }) : {
       isFallbackAdapter: false,
       secureContext: true,
       deviceCreated: true,
@@ -157,7 +158,7 @@ export function validPublicationInput({ skipMerge = false } = {}) {
       : null;
     return {
       ...record,
-      effectiveLaunchArguments: [],
+      effectiveLaunchArguments: firefox ? ["-profile", "/tmp/profile"] : [],
       adapter,
       adapterAttestation: {
         result: "PASS",
@@ -189,6 +190,10 @@ export function validPublicationInput({ skipMerge = false } = {}) {
       ...(edge
         ? { chr04Proof: validChr04HardwareProof({ lane: row.lane, assetId: row.assetId, platform, commit: targetSha, packageSha256 }) }
         : {}),
+      ...(firefox ? { ffx03Proof: validFfx03Proof({ lane: row.lane, assetId: row.assetId,
+        platform, architecture: platform === "darwin" ? "arm64" : "x64",
+        version: browser.version, commit: targetSha,
+        packageSha256, adapter }) } : {}),
       ...(saf02Proof
         ? {
             hardwareJobId: saf02Proof.binding.jobId,

@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import {
+  copyFileSync,
   mkdirSync,
   mkdtempSync,
   readFileSync,
+  realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
@@ -17,7 +19,9 @@ import {
   assembleBrowserPackageArtifact,
   assertNoWorkspaceDependencies,
   createTarGz,
+  buildSeleniumHarness,
 } from "../../scripts/assemble-browser-package-artifact.mjs";
+import { materializeSeleniumHarness } from "../../scripts/materialize-selenium-harness.mjs";
 import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
 import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
 
@@ -101,10 +105,14 @@ test("assembly binds one tarball, clean exact HEAD, evidence, schemas, and fixtu
   );
   for (const name of [
     "consumer-fixture.tar.gz",
+    "selenium-harness.tar.gz",
+    "selenium-harness-lock.json",
+    "materialize-selenium-harness.mjs",
     "browser-evidence.schema.json",
     "adapter-attestation.schema.json",
     "chr03-hardware-proof.schema.json",
     "chr04-hardware-proof.schema.json",
+    "ffx03-hardware-proof.schema.json",
     "saf03-safari-proof.schema.json",
     "saf02-conformance.schema.json",
     "saf04-hardware-proof.schema.json",
@@ -125,6 +133,9 @@ test("assembly binds one tarball, clean exact HEAD, evidence, schemas, and fixtu
     "chr03-lanes.mjs",
     "chr04-hardware-proof-validator.mjs",
     "chr04-lanes.mjs",
+    "ffx03-hardware-proof-validator.mjs",
+    "ffx03-lanes.mjs",
+    "firefox-viewer.mjs",
     "saf03-proof-validator.mjs",
     "saf03-lanes.mjs",
     "saf02-conformance-validator.mjs",
@@ -168,6 +179,59 @@ test("assembly binds one tarball, clean exact HEAD, evidence, schemas, and fixtu
   assert.equal(safariModule.validateSaf02Conformance(safariProof, safariExpected), safariProof);
   safariProof.render.changedPixels = 100;
   assert.throws(() => safariModule.validateSaf02Conformance(safariProof, safariExpected));
+});
+
+test("Selenium closure assembly fails when a lock-bound installed package is missing", () => {
+  const root = temporaryRoot();
+  mkdirSync(join(root, "node_modules", "selenium-webdriver"), { recursive: true });
+  writeFileSync(join(root, "package-lock.json"), JSON.stringify({ packages: {
+    "node_modules/selenium-webdriver": { version: "4.35.0", integrity: "sha512-root", dependencies: { missing: "1" } },
+  } }));
+  writeFileSync(join(root, "node_modules", "selenium-webdriver", "package.json"),
+    JSON.stringify({ name: "selenium-webdriver", version: "4.35.0" }));
+  assert.throws(() => buildSeleniumHarness(root), /missing lock integrity for missing/u);
+});
+
+test("promoted Selenium closure materializes artifact-only and rejects missing or tampered inputs", () => {
+  const root = temporaryRoot();
+  const promotion = join(root, "promotion");
+  const output = join(root, "materialized");
+  mkdirSync(promotion);
+  const harness = buildSeleniumHarness();
+  const archiveName = "selenium-harness.tar.gz";
+  const lockName = "selenium-harness-lock.json";
+  const archiveSha256 = sha256(harness.archive);
+  const lockBytes = Buffer.from(`${JSON.stringify({ schemaVersion: 1, rootPackage: "selenium-webdriver",
+    rootVersion: "4.35.0", archiveSha256, packages: harness.packages }, null, 2)}\n`);
+  const acceptanceBytes = readFileSync(new URL("../webdriver/firefox-viewer.mjs", import.meta.url));
+  const lanesBytes = readFileSync(new URL("../../scripts/ffx03-lanes.mjs", import.meta.url));
+  writeFileSync(join(promotion, archiveName), harness.archive);
+  writeFileSync(join(promotion, lockName), lockBytes);
+  writeFileSync(join(promotion, "firefox-viewer.mjs"), acceptanceBytes);
+  writeFileSync(join(promotion, "ffx03-lanes.mjs"), lanesBytes);
+  writeFileSync(join(promotion, "browser-package-manifest.json"), JSON.stringify({ files: [
+    { name: archiveName, sha256: archiveSha256 }, { name: lockName, sha256: sha256(lockBytes) },
+    { name: "firefox-viewer.mjs", sha256: sha256(acceptanceBytes) },
+    { name: "ffx03-lanes.mjs", sha256: sha256(lanesBytes) },
+  ] }));
+  const modulePath = materializeSeleniumHarness({ promotionDirectory: promotion, outputDirectory: output });
+  assert.equal(modulePath, join(realpathSync(output), "node_modules", "selenium-webdriver", "index.js"));
+  assert.doesNotThrow(() => readFileSync(modulePath));
+  for (const name of ["firefox-viewer.mjs", "ffx03-lanes.mjs"]) copyFileSync(join(promotion, name), join(output, name));
+  const acceptancePath = join(realpathSync(output), "firefox-viewer.mjs");
+  assert.equal(execFileSync(process.execPath, ["--input-type=module", "--eval",
+    `const module = await import(${JSON.stringify(pathToFileURL(acceptancePath).href)}); if (module.FFX03_SELENIUM_VERSION !== "4.35.0") throw new Error("wrong acceptance module");`], {
+    cwd: root, encoding: "utf8", env: { PATH: process.env.PATH ?? "", NODE_PATH: "" },
+  }), "");
+  assert.doesNotThrow(() => readFileSync(join(promotion, "firefox-viewer.mjs")));
+  assert.doesNotThrow(() => readFileSync(join(promotion, "ffx03-lanes.mjs")));
+
+  rmSync(join(promotion, archiveName));
+  assert.throws(() => materializeSeleniumHarness({ promotionDirectory: promotion,
+    outputDirectory: join(root, "missing") }), /missing or tampered/u);
+  writeFileSync(join(promotion, archiveName), Buffer.from("tampered"));
+  assert.throws(() => materializeSeleniumHarness({ promotionDirectory: promotion,
+    outputDirectory: join(root, "tampered") }), /missing or tampered/u);
 });
 
 test("assembly dependency guard rejects file, link, and workspace protocols", () => {

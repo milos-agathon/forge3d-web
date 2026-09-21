@@ -14,6 +14,7 @@ import { validSaf03Proof, validStpResult } from "../browser/saf03-proof-fixture.
 import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
 import { validSaf04HardwareProof } from "../browser/saf04-hardware-proof-fixture.mjs";
 import { validFfx04LifecycleProof } from "../browser/ffx04-lifecycle-proof-fixture.mjs";
+import { validFfx03Proof, validFfxAdapter } from "../browser/ffx03-proof-fixture.mjs";
 
 const matrix = JSON.parse(
   readFileSync(new URL("./hardware-matrix.json", import.meta.url), "utf8"),
@@ -223,19 +224,26 @@ test("automated and manual sources derive closed matrix keys without artifact cl
     hostId: "FW-MAC-M2-01",
     assetId: "FW-MAC-M2-01",
   });
+  const firefoxAdapter = validFfxAdapter({ assetId: "FW-MAC-M2-01", commit: "a".repeat(40), packageSha256: "d".repeat(64) });
   Object.assign(firefoxInput.evidence, {
     lane: "firefox-macos-m2",
     runId: 10,
     jobId: 20,
-    system: { platform: "darwin", osBuild: "macOS 26", displayServer: "WindowServer" },
+    system: { platform: "darwin", osVersion: "26.0", osBuild: "macOS 26", architecture: "arm64", displayServer: "WindowServer" },
     browser: { name: "firefox", channel: "release", version: "147.0" },
-    driver: { name: "selenium-firefox", version: "geckodriver 0.36.0" },
+    driver: { name: "selenium-firefox", version: "0.36.0" },
     route: { applicationUrl: `https://firefox.webgpu-ci.forge3d.dev/runs/10/20/${"c".repeat(32)}/` },
     chr03Proof: null,
+    effectiveLaunchArguments: ["-profile", "/tmp/profile"],
+    launchObservation: { observed: true, source: "darwin-live-browser-process", browserProcessId: 42 },
+    adapter: firefoxAdapter,
+    ffx03Proof: validFfx03Proof({ lane: "firefox-macos-m2", assetId: "FW-MAC-M2-01",
+      platform: "darwin", architecture: "arm64", version: "147.0",
+      commit: "a".repeat(40), packageSha256: "d".repeat(64), adapter: firefoxAdapter }),
     ffx04Proof: validFfx04LifecycleProof({
       commit: "a".repeat(40),
       packageSha256: "d".repeat(64),
-      driverVersion: "geckodriver 0.36.0",
+      driverVersion: "0.36.0",
     }),
   });
   firefoxInput.attestation.binding.assetId = "FW-MAC-M2-01";

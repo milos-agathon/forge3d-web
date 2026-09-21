@@ -288,6 +288,10 @@ try {
       join(retainedFixture, "tests", "browser", "chr04-lanes.js"),
     );
     copyFileSync(
+      join(packageRoot, "scripts", "ffx03-lanes.mjs"),
+      join(retainedFixture, "tests", "browser", "ffx03-lanes.js"),
+    );
+    copyFileSync(
       benchmarkModulePath,
       join(retainedFixture, "viewer-benchmark.mjs"),
     );

@@ -114,6 +114,7 @@ export function materializeBrowserFixture({
     "viewer-benchmark-browser.js",
     "chr03-lanes.js",
     "chr04-lanes.js",
+    "ffx03-lanes.js",
     "viewer-bfcache-lifecycle.js",
   ]) {
     const source = join(root, "tests", "browser", file);

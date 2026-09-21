@@ -2,6 +2,7 @@ import { captureAdapterAttestation } from "./adapter-attestation.js";
 import { runViewerBenchmarkInBrowser } from "./viewer-benchmark-browser.js";
 import { isChr03Lane } from "./chr03-lanes.js";
 import { isChr04Lane } from "./chr04-lanes.js";
+import { isFfx03Lane } from "./ffx03-lanes.js";
 import { runSaf02Conformance, withTimeout } from "./saf02-conformance.js";
 
 export const ROUTE_FETCH_TIMEOUT_MS = 5_000;
@@ -18,6 +19,7 @@ export async function runHardwarePage({
   mediaChallenge = null,
   chr03 = null,
   hardware = null,
+  preflight = null,
   sessionContext = null,
 }) {
   const fixture = window.__forge3dInteractiveViewer;
@@ -32,27 +34,9 @@ export async function runHardwarePage({
   const saf02Proof = lane === "safari-macos-m2"
     ? await runSaf02Conformance({ binding, route, effectiveLaunchArguments })
     : null;
-  const routeReadiness = await verifyBrowserRoute(route, binding.packageSha256);
-  const adapter = await withTimeout(
-    captureAdapterAttestation(
-      canvas,
-      adapterBinding(binding),
-      effectiveLaunchArguments,
-    ),
-    ADAPTER_ATTESTATION_TIMEOUT_MS,
-    "adapter attestation",
-  );
-  if (
-    adapter.adapterInfoAvailable !== true ||
-    adapter.isFallbackAdapter !== false ||
-    adapter.secureContext !== true ||
-    adapter.deviceCreated !== true ||
-    adapter.surfaceCreated !== true ||
-    adapter.surfacePresented !== true ||
-    !hasMeasuredLumaPresentation(adapter)
-  ) {
-    throw new Error("ATTESTATION_UNAVAILABLE: hardware adapter proof failed");
-  }
+  const initial = preflight ?? await runHardwarePreflight({ binding, route,
+    effectiveLaunchArguments, supportAssertions, retainViewer: productManual });
+  const { routeReadiness, adapter, assertions } = initial;
   if (!supportAssertions && !productManual) {
     return {
       adapter,
@@ -65,17 +49,9 @@ export async function runHardwarePage({
     };
   }
 
-  const assertions = await withTimeout(
-    runInitialViewerAssertions({
-      fixture,
-      supportAssertions,
-      retainViewer: productManual,
-      onError: window.__forge3dHardwareOnError,
-    }),
-    INITIAL_VIEWER_ASSERTIONS_TIMEOUT_MS,
-    "initial viewer assertions",
-  );
-  const proofFamily = isChr03Lane(lane) ? "chr03" : isChr04Lane(lane) ? "chr04" : null;
+  if (productManual && preflight !== null) throw new Error("manual lanes cannot reuse a preflight viewer");
+  const proofFamily = isChr03Lane(lane) ? "chr03" : isChr04Lane(lane) ? "chr04"
+    : isFfx03Lane(lane) ? "ffx03" : null;
   const hardwareProof = proofFamily
     ? await runBrandedHardwareProof({ binding, route, observations: hardware ?? chr03, proofFamily })
     : null;
@@ -83,7 +59,33 @@ export async function runHardwarePage({
     adapter, assertions, routeReadiness, watermark, saf02Proof,
     chr03Proof: proofFamily === "chr03" ? hardwareProof : null,
     chr04Proof: proofFamily === "chr04" ? hardwareProof : null,
+    ffx03Workload: proofFamily === "ffx03" ? hardwareProof : null,
   };
+}
+
+export async function runHardwarePreflight({ binding, route, effectiveLaunchArguments = [], supportAssertions = true,
+  retainViewer = false }) {
+  const fixture = window.__forge3dInteractiveViewer;
+  const canvas = fixture?.canvas ?? document.querySelector("#viewer");
+  if (!(canvas instanceof HTMLCanvasElement)) throw new Error("hardware fixture canvas is unavailable");
+  const routeReadiness = await verifyBrowserRoute(route, binding.packageSha256);
+  const adapter = await withTimeout(
+    captureAdapterAttestation(canvas, adapterBinding(binding), effectiveLaunchArguments),
+    ADAPTER_ATTESTATION_TIMEOUT_MS,
+    "adapter attestation",
+  );
+  if (adapter.adapterInfoAvailable !== true || adapter.isFallbackAdapter !== false ||
+      adapter.secureContext !== true || adapter.deviceCreated !== true || adapter.surfaceCreated !== true ||
+      adapter.surfacePresented !== true || !hasMeasuredLumaPresentation(adapter)) {
+    throw new Error("ATTESTATION_UNAVAILABLE: hardware adapter proof failed");
+  }
+  const assertions = await withTimeout(
+    runInitialViewerAssertions({ fixture, supportAssertions,
+      retainViewer, onError: window.__forge3dHardwareOnError }),
+    INITIAL_VIEWER_ASSERTIONS_TIMEOUT_MS,
+    "initial viewer assertions",
+  );
+  return { routeReadiness, adapter, assertions };
 }
 
 export async function runInitialViewerAssertions({
@@ -180,16 +182,21 @@ async function runBrandedHardwareProof({ binding, route, observations, proofFami
       trace: new URL("benchmark-trace-v1.json", benchmarkBase).href,
     },
   });
-  const lifecycleCycles = await runRenderedLifecycleCycles({ fixture, binding, onError: window.__forge3dHardwareOnError });
+  const lifecycleCycles = await runRenderedLifecycleCycles({ fixture, binding,
+    viewerConfiguration: { resize: true, controls: { keyboard: true } },
+    onError: window.__forge3dHardwareOnError });
   const visibilityCycles = observations.visibility.cycles ?? [];
-  const submittedEveryCycle = visibilityCycles.length === 30 &&
+  const expectedVisibilityCycles = proofFamily === "ffx03" ? 1 : 30;
+  const submittedEveryCycle = visibilityCycles.length === expectedVisibilityCycles &&
     visibilityCycles.every((cycle) => cycle.visibleFrame === "submitted");
   const driver = observations.driver;
   return {
     schemaVersion: 1,
     kind: proofFamily === "chr04"
       ? "forge3d-chr04-edge-hardware-proof-v1"
-      : "forge3d-chr03-chrome-hardware-proof-v1",
+      : proofFamily === "ffx03"
+        ? "forge3d-ffx03-firefox-workload-v1"
+        : "forge3d-chr03-chrome-hardware-proof-v1",
     binding: {
       lane: binding.lane,
       assetId: binding.assetId,
@@ -257,12 +264,13 @@ export async function runRenderedLifecycleCycles({
   fixture,
   binding,
   onError,
+  viewerConfiguration = { resize: false, controls: { keyboard: true } },
   nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve)),
   createIdentity = (index) => `${binding.runId}:${binding.jobId}:${index + 1}:${crypto.randomUUID()}`,
 }) {
   const cycles = [];
   for (let index = 0; index < 50; index += 1) {
-    const viewer = await fixture.create({ resize: false, controls: { keyboard: true }, onError });
+    const viewer = await fixture.create({ ...viewerConfiguration, onError });
     let live;
     try {
       await waitForSubmittedFrame(viewer, 0, `lifecycle cycle ${index + 1}`, nextFrame);
@@ -294,7 +302,18 @@ async function readPngEvidence(blob, bytes) {
   if (blob.type !== "image/png" || signature.join(",") !== "137,80,78,71,13,10,26,10" || bytes.byteLength < 24) {
     throw new Error("viewer screenshot is not a complete PNG");
   }
-  return { mimeType: blob.type, byteLength: bytes.byteLength, sha256: await sha256(bytes), width: view.getUint32(16), height: view.getUint32(20) };
+  const bitmap = await createImageBitmap(blob);
+  const decoded = new OffscreenCanvas(bitmap.width, bitmap.height);
+  const context = decoded.getContext("2d", { willReadFrequently: true });
+  context.drawImage(bitmap, 0, 0);
+  const pixels = context.getImageData(0, 0, bitmap.width, bitmap.height).data;
+  bitmap.close();
+  let nonBlank = false;
+  for (let index = 0; index < pixels.length; index += 4) {
+    if (pixels[index] !== 0 || pixels[index + 1] !== 0 || pixels[index + 2] !== 0) { nonBlank = true; break; }
+  }
+  return { mimeType: blob.type, byteLength: bytes.byteLength, sha256: await sha256(bytes),
+    width: view.getUint32(16), height: view.getUint32(20), pixels: { decoded: true, nonBlank } };
 }
 
 export function isProductManualLane(lane) {

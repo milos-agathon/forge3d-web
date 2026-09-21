@@ -4,7 +4,7 @@
   "manifestId": "forge3d-composite-baseline-v1",
   "sourcePlan": {
     "path": "docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md",
-    "sha256": "18ff312b973279e142b7308f861178df38893c71c86c9e1a513a4e3517538395"
+    "sha256": "e53923f77c1ab89a6ea6a6ed8192b78ae4f89a054081fb8e8b9f661cbd6cc4e2"
   },
   "baselineLayers": [
     {
@@ -3951,7 +3951,7 @@
     {
       "kind": "composite-inventory",
       "path": "crates/forge3d-web/tests/parity/composite-inventory.json",
-      "sha256": "5ba6a58813bcd644b64fa7df500e5add38b2573223d07e002aa7de62e83ab280",
+      "sha256": "5ea2ac19f403d7913e5eea82acfda36af3c086af48e6b50524d8a8ecafcc7832",
       "recordCount": 6531
     },
     {

@@ -11,6 +11,7 @@ import { assertJsonSchema } from "../browser/json-schema-validator.mjs";
 import { exactHostInventory } from "./host-inventory-fixture.mjs";
 import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
 import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
+import { validFfx03Proof, validFfxAdapter } from "../browser/ffx03-proof-fixture.mjs";
 import { validFfx04LifecycleProof } from "../browser/ffx04-lifecycle-proof-fixture.mjs";
 import { CHR04_LANES } from "../../scripts/chr04-lanes.mjs";
 import { validSaf03Proof, validStpResult } from "../browser/saf03-proof-fixture.mjs";
@@ -47,9 +48,9 @@ const records = rows.map((row, index) => {
   const edge = row.lane.startsWith("edge-");
   const firefox = row.lane.startsWith("firefox-");
   const edgePlatform = edge ? CHR04_LANES[row.lane].platform : null;
-  const firefoxPlatform = firefox
-    ? row.lane.includes("windows") ? "win32" : "darwin"
-    : null;
+  const inferredPlatform = row.lane.includes("windows") ? "win32"
+    : row.lane.includes("macos") ? "darwin" : "linux";
+  const firefoxPlatform = firefox ? inferredPlatform : null;
   const system =
     row.kind === "manual"
       ? {
@@ -57,23 +58,25 @@ const records = rows.map((row, index) => {
           build: safariTrackpad ? macInventory.osBuild : "25A456",
         }
       : {
-          platform: safariTrackpad ? "darwin" : edgePlatform ?? firefoxPlatform ?? "linux",
+          platform: safariTrackpad ? "darwin" : edgePlatform ?? inferredPlatform,
           osVersion: safariTrackpad ? macInventory.osVersion : "fixture-version",
           osBuild: safariTrackpad
             ? macInventory.osBuild
             : firefoxPlatform === "win32" ? "Windows 11" : firefoxPlatform === "darwin" ? "macOS 26" : "Ubuntu 24.04.1",
-          architecture: safariTrackpad ? macInventory.architecture : "x64",
+          architecture: safariTrackpad ? macInventory.architecture
+            : firefox ? (inferredPlatform === "darwin" ? "arm64" : "x64")
+            : "x64",
           displayServer: safariTrackpad || edgePlatform === "darwin" || firefoxPlatform === "darwin" ? "WindowServer" : edgePlatform === "win32" || firefoxPlatform === "win32" ? "Desktop Window Manager" : "GNOME Wayland",
         };
   const browser = safariTrackpad
     ? { name: row.kind === "automated" ? "safari" : "Safari", channel: "stable", version: "26.0" }
     : edge ? { name: "msedge", channel: "stable", version: "150.0.1.2" }
-    : firefox ? { name: "firefox", channel: "release", version: "150.0.1" }
+    : firefox ? { name: "firefox", channel: "release", version: inferredPlatform === "darwin" ? "147.0" : "142.0" }
     : { name: "chrome", channel: "stable", version: "150.0" };
   const driver = safariTrackpad
     ? { name: "safaridriver", version: macInventory.tools.safaridriverVersion }
     : edge ? { name: "playwright-edge", version: "1.56.1" }
-    : firefox ? { name: "selenium-firefox", version: "4.35.0" }
+    : firefox ? { name: "selenium-firefox", version: "0.36.0" }
     : { name: "playwright-chrome", version: "1.56.1" };
   const hostInventory = safariTrackpad
     ? structuredClone(macInventory)
@@ -124,7 +127,7 @@ const records = rows.map((row, index) => {
           expiresAt: "2026-08-05T00:00:00.000Z",
         }
       : {
-          adapter: {
+          adapter: firefox ? validFfxAdapter({ assetId: row.assetId, commit: targetSha, packageSha256 }) : {
             isFallbackAdapter: false,
             secureContext: true,
             deviceCreated: true,
@@ -133,7 +136,7 @@ const records = rows.map((row, index) => {
             presentedFrameLumaDelta: 0.7,
             lumaChanged: true,
           },
-          effectiveLaunchArguments: [],
+          effectiveLaunchArguments: firefox ? ["-profile", "/tmp/profile"] : [],
         adapterAttestation: {
             result: "PASS",
             required: true,
@@ -162,6 +165,11 @@ const records = rows.map((row, index) => {
             ? { chr03Proof: validChr03HardwareProof({ lane: row.lane, assetId: row.assetId, commit: targetSha, packageSha256 }) }
             : {}),
           ...(edge ? { chr04Proof: validChr04HardwareProof({ lane: row.lane, assetId: row.assetId, platform: edgePlatform, commit: targetSha, packageSha256 }) } : {}),
+          ...(firefox ? { ffx03Proof: validFfx03Proof({ lane: row.lane, assetId: row.assetId,
+            platform: inferredPlatform, architecture: inferredPlatform === "darwin" ? "arm64" : "x64",
+            version: inferredPlatform === "darwin" ? "147.0" : "142.0", commit: targetSha,
+            packageSha256, adapter: validFfxAdapter({ assetId: row.assetId, commit: targetSha,
+              packageSha256 }) }) } : {}),
           ...(row.lane === "safari-macos-m2" ? (() => {
             const saf02Proof = validSaf02Conformance({ runId: 100 + index, jobId: 900 + index, commit: targetSha, packageSha256 });
             const applicationUrl = `${saf02Proof.route.applicationOrigin}${saf02Proof.route.basePath}`;

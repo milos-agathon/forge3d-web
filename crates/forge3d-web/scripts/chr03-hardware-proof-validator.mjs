@@ -40,21 +40,25 @@ export function validateChr03HardwareProofContract(proof, expectedBinding = null
   return validateHardwareProofPayload(proof);
 }
 
-export function validateHardwareProofPayload(proof) {
+export function validateHardwareProofPayload(proof, { visibilityCycles = 30, requireDecodedPixels = false } = {}) {
   const requiredBehaviors = ["orbit", "pan", "wheelZoom", "pointerCapture", "keyboard", "autoResize", "visibilityResume", "terrainSource", "screenshot", "disposal"];
   if (requiredBehaviors.some((name) => proof.behaviors?.[name] !== true)) throw new Error("CHR-03 named behavior proof is incomplete");
   const driver = proof.driver;
-  if (!driver?.orbitChanged || !driver.panChanged || !driver.wheelChanged ||
-      !driver.pointerCapture?.captured || !driver.pointerCapture.outsideMoveChanged ||
-      !driver.pointerCapture.released || driver.pointerCapture.activePointersAfter !== 0 ||
+  if (driver?.orbitChanged !== true || driver.panChanged !== true || driver.wheelChanged !== true ||
+      driver.pointerCapture?.captured !== true || driver.pointerCapture.outsideMoveChanged !== true ||
+      driver.pointerCapture.released !== true || driver.pointerCapture.activePointersAfter !== 0 ||
+      !Number.isInteger(driver.pointerCapture.pointerId) || driver.pointerCapture.pointerId < 1 ||
+      !Number.isInteger(driver.pointerCapture.capturedPointerId) || driver.pointerCapture.capturedPointerId < 1 ||
+      !Number.isInteger(driver.pointerCapture.releasedPointerId) || driver.pointerCapture.releasedPointerId < 1 ||
       driver.pointerCapture.pointerId !== driver.pointerCapture.capturedPointerId ||
       driver.pointerCapture.pointerId !== driver.pointerCapture.releasedPointerId ||
       !keyboardEvidenceIsExact(driver.keyboard) ||
       Object.keys(driver.autoResize ?? {}).length !== 3 || Object.values(driver.autoResize).some((value) => value !== true)) {
     throw new Error("CHR-03 native driver observations are incomplete");
   }
-  if (proof.visibility?.source !== "actual-document" || proof.visibility.cycleCount !== 30 ||
-      !proof.visibility.hiddenObserved || !proof.visibility.visibleObserved || !proof.visibility.submittedEveryCycle) {
+  if (proof.visibility?.source !== "actual-document" || proof.visibility.cycleCount !== visibilityCycles ||
+      proof.visibility.hiddenObserved !== true || proof.visibility.visibleObserved !== true ||
+      proof.visibility.submittedEveryCycle !== true) {
     throw new Error("CHR-03 actual visibility/resume proof is incomplete");
   }
   if (proof.terrainSource?.api !== "setTerrainFromSource" || proof.terrainSource?.crossOrigin !== true || proof.terrainSource.width !== 512 ||
@@ -66,7 +70,8 @@ export function validateHardwareProofPayload(proof) {
   if (proof.screenshot?.mimeType !== "image/png" || !Number.isInteger(proof.screenshot.byteLength) ||
       proof.screenshot.byteLength < 1 || !/^[0-9a-f]{64}$/u.test(proof.screenshot.sha256 ?? "") ||
       !Number.isInteger(proof.screenshot.width) || proof.screenshot.width < 1 ||
-      !Number.isInteger(proof.screenshot.height) || proof.screenshot.height < 1) {
+      !Number.isInteger(proof.screenshot.height) || proof.screenshot.height < 1 ||
+      (requireDecodedPixels && (proof.screenshot.pixels?.decoded !== true || proof.screenshot.pixels?.nonBlank !== true))) {
     throw new Error("CHR-03 PNG screenshot proof is incomplete");
   }
   if (!Array.isArray(proof.lifecycleCycles) || proof.lifecycleCycles.length !== 50) throw new Error("CHR-03 requires exactly 50 lifecycle cycles");
@@ -119,11 +124,17 @@ export function validateFnd07Benchmark(benchmark) {
       !close(benchmark.measuredDurationMs, duration) || !close(benchmark.framesPerSecond, fps) ||
       !close(benchmark.p95RafIntervalMs, p95)) throw new Error("CHR-03 benchmark raw workload or derived timing is incomplete");
   if (benchmark.visibilityStateBefore !== "visible" || benchmark.visibilityStateAfter !== "visible" ||
-      !benchmark.documentHasFocusBefore || !benchmark.documentHasFocusAfter || benchmark.visibilityChangeCount !== 0 ||
+      benchmark.documentHasFocusBefore !== true || benchmark.documentHasFocusAfter !== true || benchmark.visibilityChangeCount !== 0 ||
       benchmark.windowBlurCount !== 0 || benchmark.browserZoomBefore !== 1 || benchmark.browserZoomAfter !== 1 ||
       benchmark.viewportScaleBefore !== 1 || benchmark.viewportScaleAfter !== 1) throw new Error("CHR-03 benchmark was hidden, blurred, zoomed, or throttled");
-  if ([benchmark.thermalStateBefore, benchmark.thermalStateAfter].some((value) => ["serious", "critical"].includes(value)) ||
-      [benchmark.lowPowerModeBefore, benchmark.lowPowerModeAfter].includes(true)) throw new Error("CHR-03 benchmark observed throttling");
+  const thermalStates = [benchmark.thermalStateBefore, benchmark.thermalStateAfter];
+  const lowPowerModes = [benchmark.lowPowerModeBefore, benchmark.lowPowerModeAfter];
+  if (!thermalStates.every((value) => ["nominal", "fair", "serious", "critical", "unavailable"].includes(value)) ||
+      !lowPowerModes.every((value) => value === true || value === false || value === "unavailable")) {
+    throw new Error("CHR-03 benchmark environment observations are invalid");
+  }
+  if (thermalStates.some((value) => ["serious", "critical"].includes(value)) || lowPowerModes.includes(true))
+    throw new Error("CHR-03 benchmark observed throttling");
   if (p95 > 50) throw new Error("CHR-03 benchmark p95 RAF interval exceeds 50 ms");
   const scheduling = benchmark.scheduling;
   const schedulingFields = ["observationSamples", "pendingBeforeInvalidation", "pendingAfterInvalidation",

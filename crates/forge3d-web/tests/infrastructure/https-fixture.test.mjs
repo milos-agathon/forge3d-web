@@ -470,6 +470,16 @@ test("route orchestration starts both fixture origins and host-scoped cloudflare
 test("materialized import map remains inside the nonce-bound base path", () => {
   const root = mkdtempSync(join(tmpdir(), "forge3d-materialized-fixture-"));
   const packageRoot = join(root, "node_modules", "@forge3d", "web");
+  const materializedModules = [
+    "adapter-attestation.js",
+    "hardware-page-harness.js",
+    "saf02-conformance.js",
+    "viewer-benchmark-browser.js",
+    "chr03-lanes.js",
+    "chr04-lanes.js",
+    "ffx03-lanes.js",
+    "viewer-bfcache-lifecycle.js",
+  ];
   mkdirSync(join(packageRoot, "dist"), { recursive: true });
   mkdirSync(join(root, "tests", "browser", "benchmark"), {
     recursive: true,
@@ -495,8 +505,11 @@ test("materialized import map remains inside the nonce-bound base path", () => {
     join(root, "tests", "browser", "benchmark", "benchmark-terrain-v1.f32le"),
     Buffer.from([0, 1, 2, 3]),
   );
-  for (const file of ["adapter-attestation.js", "hardware-page-harness.js", "saf02-conformance.js", "viewer-benchmark-browser.js", "chr03-lanes.js", "chr04-lanes.js", "viewer-bfcache-lifecycle.js"]) {
-    writeFileSync(join(root, "tests", "browser", file), "export {};");
+  for (const file of materializedModules) {
+    writeFileSync(
+      join(root, "tests", "browser", file),
+      `export const fixtureModule = ${JSON.stringify(file)};`,
+    );
   }
   try {
     materializeBrowserFixture({
@@ -509,6 +522,51 @@ test("materialized import map remains inside the nonce-bound base path", () => {
       /"\.\/node_modules\/@forge3d\/web\/dist\/index\.js"/u,
     );
     assert.equal(html.includes('"/node_modules/'), false);
+    for (const file of materializedModules) {
+      const expected = readFileSync(join(root, file));
+      const fixtureRequest = (method, path = file) =>
+        resolveFixtureResponse({
+          role: "application",
+          fixtureRoot: root,
+          applicationHost,
+          assetHost,
+          basePath,
+          request: {
+            method,
+            url: `${basePath}${path}`,
+            host: applicationHost,
+          },
+        });
+      const get = fixtureRequest("GET");
+      assert.equal(get.status, 200, `${file} GET status`);
+      assert.equal(
+        get.headers["Content-Type"],
+        "text/javascript; charset=utf-8",
+        `${file} GET MIME`,
+      );
+      assert.deepEqual(get.body, expected, `${file} GET bytes`);
+      const head = fixtureRequest("HEAD");
+      assert.equal(head.status, 200, `${file} HEAD status`);
+      assert.equal(
+        head.headers["Content-Type"],
+        "text/javascript; charset=utf-8",
+        `${file} HEAD MIME`,
+      );
+      assert.equal(head.body.length, 0, `${file} HEAD body`);
+    }
+    const unknown = resolveFixtureResponse({
+      role: "application",
+      fixtureRoot: root,
+      applicationHost,
+      assetHost,
+      basePath,
+      request: {
+        method: "GET",
+        url: `${basePath}unknown-module.js`,
+        host: applicationHost,
+      },
+    });
+    assert.equal(unknown.status, 404);
     const lifecycle = readFileSync(join(root, "lifecycle-viewer.html"), "utf8");
     assert.match(lifecycle, /installViewerBfcacheLifecycle/u);
     assert.match(lifecycle, /\.\/viewer-bfcache-lifecycle\.js/u);

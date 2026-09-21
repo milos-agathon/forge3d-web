@@ -159,7 +159,8 @@ rendering after suspension.
 - Shift+right-click behavior does not corrupt the controller even if the browser
   opens its context menu.
 - Hidden/BFCache-restored viewers resume once without duplicate resources.
-- Canvas focus/tabindex and inline styles are restored exactly on dispose.
+- Canvas focus/tabindex and the owned `touch-action` property are restored
+  exactly on dispose without overwriting unrelated application inline styles.
 
 ## FFX-05 — Promote Only Default-Enabled Firefox Platforms
 
@@ -201,6 +202,20 @@ Publish platform-qualified Firefox support, not a blanket browser claim.
 | Firefox Nightly, Linux with pref/default Nightly behavior | P2 experimental |
 | Firefox Nightly, Intel macOS with pref | P2 experimental |
 | Firefox release, Linux/Intel macOS | `NOT_PROVEN` until default-enabled and passed |
+
+## FFX-03 source implementation note — 2026-09-21
+
+The source now packages a hash-bound Selenium 4.35.0 closure with geckodriver
+0.36.0, validates exact stable Windows x64 and Apple Silicon macOS lanes, keeps
+Linux Nightly outcomes probe-only, and retains branded interaction, actual
+visibility, decoded screenshot, 50-cycle resource cleanup, complete FND-07
+benchmark, process absence, launch, profile, adapter, commit, and package proof.
+The stable session also runs the already-merged FFX-04 lifecycle proof without
+opening a second browser session.
+
+This is source and fail-closed evidence-contract coverage only. No qualifying
+physical stable Firefox or Nightly run is present, so FFX-03 remains
+`NOT_PROVEN` and this note does not establish Firefox support.
 
 ## FFX-04 source implementation note — 2026-09-21
 

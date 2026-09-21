@@ -18,9 +18,12 @@ import { WebDriverClient, WebDriverSession } from "./webdriver-client.mjs";
 import { runBrandedHardwareAcceptance } from "./chrome-hardware-acceptance.mjs";
 import { isChr03Lane } from "./chr03-lanes.mjs";
 import { isChr04Lane } from "./chr04-lanes.mjs";
+import { isFfx03Lane } from "./ffx03-lanes.mjs";
 import { runSafariBrowserAcceptance } from "./safari-browser-acceptance.mjs";
 import { runFirefoxLifecycleAcceptance } from "./firefox-lifecycle-acceptance.mjs";
 import { projectSaf03Binding, validateSaf03SafariProof, validateSaf03TechnologyPreviewResult } from "./saf03-proof-validator.mjs";
+
+const FFX03_SELENIUM_VERSION = "4.35.0";
 
 export const SAFARI_HARDWARE_PAGE_TIMEOUT_BUDGET = Object.freeze({
   saf02Page: 110_000,
@@ -60,22 +63,71 @@ export async function openProductionSession(request, dependencies = {}) {
     });
   }
   if (request.runtime.driver === "selenium-firefox") {
-    const command = requiredAbsoluteEnvironment(
-      "FORGE3D_GECKODRIVER_EXECUTABLE",
-    );
-    return openLocalWebDriverSession({
-      ...request,
-      command,
-      args: ["--port", "4446"],
-      port: 4446,
-      capabilities: {
-        browserName: "firefox",
-        "moz:firefoxOptions": { args: [] },
-      },
-      driverVersion: execVersion(command, ["--version"]),
-    });
+    if (!isFfx03Lane(request.lane)) throw new Error("unrecognized Firefox lane bypassed the FFX-03 contract");
+    return openFirefoxSession(request, dependencies);
   }
   return openAppiumSession(request);
+}
+
+async function openFirefoxSession(request, dependencies) {
+  const modulePath = dependencies.acceptanceModulePath ?? requiredAbsoluteEnvironment(
+    "FORGE3D_FIREFOX_ACCEPTANCE_MODULE",
+  );
+  const seleniumModulePath = dependencies.seleniumModulePath ?? requiredAbsoluteEnvironment(
+    "FORGE3D_SELENIUM_MODULE",
+  );
+  const installedVersion = (dependencies.installedPackageVersion ?? installedPackageVersion)(
+    seleniumModulePath, ["selenium-webdriver"],
+  );
+  if (installedVersion !== request.browserPolicy.tools.selenium || installedVersion !== FFX03_SELENIUM_VERSION) {
+    throw new Error("installed Selenium version does not match checked FFX-03 policy");
+  }
+  const acceptance = dependencies.acceptance ?? await import(pathToFileURL(modulePath).href);
+  if (acceptance.FFX03_SELENIUM_VERSION !== installedVersion) {
+    throw new Error("FFX-03 acceptance module uses a different Selenium client version");
+  }
+  const selected = request.inventory?.browsers?.find((browser) =>
+    browser.id === (request.runtime.channel === "nightly" ? "firefox-nightly" : "firefox-release"));
+  const geckodriverPath = dependencies.geckodriverPath ?? requiredAbsoluteEnvironment(
+    "FORGE3D_GECKODRIVER_EXECUTABLE",
+  );
+  const driverVersion = (dependencies.execVersion ?? execVersion)(geckodriverPath, ["--version"])
+    .match(/[0-9]+\.[0-9]+\.[0-9]+/u)?.[0];
+  const opened = await acceptance.openSeleniumFirefoxSession({
+    lane: request.lane,
+    assetId: request.assetId,
+    platform: request.platform,
+    architecture: request.architecture,
+    required: request.runtime.required,
+    routeUrl: request.routeUrl,
+    browser: selected,
+    geckodriverPath,
+    geckodriverVersion: driverVersion,
+    temporaryRoot: request.temporaryRoot,
+    processRegistryPath: request.processRegistryPath,
+    registerProcess,
+    markProcessStopped,
+    observeLaunch: dependencies.observeWebDriverLaunch ?? observeWebDriverLaunch,
+  });
+  if (!opened.contract.required) return opened;
+  const attachSession = dependencies.attachWebDriverSession ??
+    ((driver) => attachWebDriverSession(driver, 4446));
+  const runFfx04 = dependencies.runFirefoxLifecycleAcceptance ??
+    runFirefoxLifecycleAcceptance;
+  return {
+    ...opened,
+    runFirefoxLifecycle: async (payload) => runFfx04({
+      session: await attachSession(opened.driver),
+      browser: opened.browser,
+      driver: { name: "selenium-firefox", version: opened.driverVersion },
+      launchObservation: {
+        observed: opened.launchArgumentsObserved,
+        source: opened.launchArgumentSource,
+        browserProcessId: opened.browserProcessId,
+      },
+      ...payload,
+    }),
+  };
 }
 
 async function openSafariSeleniumSession({ runtime, routeUrl, browserPolicy, inventory, processRegistryPath }, dependencies) {
@@ -133,7 +185,7 @@ async function openSafariSeleniumSession({ runtime, routeUrl, browserPolicy, inv
         script: SAFARI_COMPOSED_SCRIPT_TIMEOUT_MS,
       });
       const neutral = await runSeleniumHardwarePage(stable.driver, payload);
-      const attachSession = dependencies.attachWebDriverSession ?? attachWebDriverSession;
+      const attachSession = dependencies.attachWebDriverSession ?? ((driver) => attachWebDriverSession(driver, 4445));
       const runSaf04 = dependencies.runSafariBrowserAcceptance ?? runSafariBrowserAcceptance;
       const saf04Result = await runSaf04(
         await attachSession(stable.driver),
@@ -263,13 +315,13 @@ async function runSeleniumHardwarePage(driver, payload) {
   return result.value;
 }
 
-async function attachWebDriverSession(driver) {
+async function attachWebDriverSession(driver, port) {
   const sessionId = (await driver.getSession()).getId();
   if (typeof sessionId !== "string" || sessionId === "") {
     throw new Error("INFRA_ERROR WEBDRIVER_SESSION_STATE_INVALID");
   }
   return new WebDriverSession(
-    new WebDriverClient("http://127.0.0.1:4445"),
+    new WebDriverClient(`http://127.0.0.1:${port}`),
     sessionId,
     {},
   );

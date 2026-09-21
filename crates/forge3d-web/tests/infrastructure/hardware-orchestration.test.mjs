@@ -101,6 +101,16 @@ test("Chrome Beta probes are optional, asset-bound, and never required rows", ()
   assert.equal(matrix.hosts.flatMap((host) => host.requiredBrowserLanes).some((lane) => lane.includes("beta")), false);
 });
 
+test("Firefox dispatch preserves the closed stable-required and Nightly-optional classifications", () => {
+  const base = { trustedSha: sha, packageRunId: "10", labReadinessRunId: "20" };
+  assert.throws(() => validateHardwareDispatch({ ...base, lane: "firefox-macos-m2",
+    assetId: "FW-MAC-M2-01", required: false }, matrix), /reject required:false/u);
+  assert.throws(() => validateHardwareDispatch({ ...base, lane: "firefox-nightly-linux-intel12",
+    assetId: "FW-LNX-I12-01", required: true }, matrix), /reject required:true/u);
+  assert.equal(validateHardwareDispatch({ ...base, lane: "firefox-nightly-linux-intel12",
+    assetId: "FW-LNX-I12-01", required: false }, matrix).required, false);
+});
+
 test("all mobile, trackpad, and desktop Safari work serialize on the Mac host", () => {
   for (const [lane, assetId] of [
     ["mobile-usb-controller", "FW-AND-QCOM-01"],
