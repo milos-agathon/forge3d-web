@@ -1,4 +1,5 @@
 use forge3d_core::gpu::GpuContext;
+use forge3d_core::memory::MemoryCategory;
 use wasm_bindgen::{closure::Closure, prelude::*, Clamped, JsCast};
 use wasm_bindgen_futures::JsFuture;
 use web_sys::{Blob, CanvasRenderingContext2d, HtmlCanvasElement, ImageData};
@@ -7,37 +8,77 @@ use super::render::encode_scene_render_pass;
 use super::Forge3DRuntime;
 use crate::error::{map_core_error, Forge3DErrorCode, WebError};
 
+const READBACK_MEMORY_KEY: &str = "readback:frame";
+
 pub(super) async fn screenshot_runtime(runtime: &mut Forge3DRuntime) -> Result<Blob, WebError> {
-    let context = runtime.context.as_ref().ok_or_else(|| {
+    let rgba = read_rgba_runtime(runtime).await?;
+    png_blob_from_rgba(runtime.width, runtime.height, rgba).await
+}
+
+pub(super) async fn read_rgba_runtime(runtime: &mut Forge3DRuntime) -> Result<Vec<u8>, WebError> {
+    let context = runtime.context.clone().ok_or_else(|| {
         WebError::new(
             Forge3DErrorCode::RuntimeDisposed,
             "Runtime GPU context is not available",
         )
     })?;
-    let surface_state = runtime.surface_state.as_ref().ok_or_else(|| {
-        WebError::new(
-            Forge3DErrorCode::RuntimeDisposed,
-            "Runtime surface state is not available",
-        )
-    })?;
-    let format = surface_state.config.format;
+    let format = runtime
+        .surface_state
+        .as_ref()
+        .map(|state| state.config.format)
+        .ok_or_else(|| {
+            WebError::new(
+                Forge3DErrorCode::RuntimeDisposed,
+                "Runtime surface state is not available",
+            )
+        })?;
     let layout = forge3d_core::readback::rgba8_layout(runtime.width, runtime.height)
         .map_err(map_core_error)?;
     if layout.buffer_size > runtime.max_buffer_size {
         return Err(WebError::new(
             Forge3DErrorCode::ResourceLimitExceeded,
             format!(
-                "screenshot readback requires {} bytes but maxBufferSize is {}",
+                "frame readback requires {} bytes but maxBufferSize is {}",
                 layout.buffer_size, runtime.max_buffer_size
             ),
         ));
     }
+    let texture_bytes = u64::from(runtime.width)
+        .checked_mul(u64::from(runtime.height))
+        .and_then(|pixels| pixels.checked_mul(4))
+        .ok_or_else(|| {
+            WebError::new(
+                Forge3DErrorCode::ResourceLimitExceeded,
+                "readback byte accounting overflowed",
+            )
+        })?;
+    let total_bytes = texture_bytes
+        .checked_add(layout.buffer_size)
+        .ok_or_else(|| {
+            WebError::new(
+                Forge3DErrorCode::ResourceLimitExceeded,
+                "readback byte accounting overflowed",
+            )
+        })?;
+    runtime
+        .memory
+        .replace(READBACK_MEMORY_KEY, MemoryCategory::Readback, total_bytes)?;
+    let result = capture_frame_rgba(runtime, &context, format, &layout).await;
+    runtime.memory.release(READBACK_MEMORY_KEY);
+    result
+}
 
+async fn capture_frame_rgba(
+    runtime: &Forge3DRuntime,
+    context: &GpuContext,
+    format: wgpu::TextureFormat,
+    layout: &forge3d_core::readback::ReadbackLayout,
+) -> Result<Vec<u8>, WebError> {
     let validation_scope = context
         .device
         .push_error_scope(wgpu::ErrorFilter::Validation);
     let texture = context.device.create_texture(&wgpu::TextureDescriptor {
-        label: Some("forge3d-web-screenshot-texture"),
+        label: Some("forge3d-web-readback-texture"),
         size: wgpu::Extent3d {
             width: runtime.width,
             height: runtime.height,
@@ -52,7 +93,7 @@ pub(super) async fn screenshot_runtime(runtime: &mut Forge3DRuntime) -> Result<B
     });
     let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
     let readback = context.device.create_buffer(&wgpu::BufferDescriptor {
-        label: Some("forge3d-web-screenshot-readback"),
+        label: Some("forge3d-web-readback-buffer"),
         size: layout.buffer_size,
         usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
         mapped_at_creation: false,
@@ -60,10 +101,16 @@ pub(super) async fn screenshot_runtime(runtime: &mut Forge3DRuntime) -> Result<B
     let mut encoder = context
         .device
         .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("forge3d-web-screenshot-encoder"),
+            label: Some("forge3d-web-readback-encoder"),
         });
 
-    encode_scene_render_pass(runtime, &mut encoder, &view, "forge3d-web-screenshot-pass");
+    encode_scene_render_pass(
+        runtime,
+        &mut encoder,
+        &view,
+        "forge3d-web-readback-pass",
+        None,
+    );
     encoder.copy_texture_to_buffer(
         wgpu::TexelCopyTextureInfo {
             texture: &texture,
@@ -90,13 +137,12 @@ pub(super) async fn screenshot_runtime(runtime: &mut Forge3DRuntime) -> Result<B
     if let Some(error) = validation_scope.pop().await {
         return Err(WebError::new(
             Forge3DErrorCode::InternalError,
-            format!("forge3d-web-screenshot-texture/readback: {error}"),
+            format!("forge3d-web-readback-texture/buffer: {error}"),
         ));
     }
     let padded = map_readback_buffer(context, &readback, layout.buffer_size).await?;
-    let rgba = forge3d_core::readback::unpad_rows(&padded, layout).map_err(map_core_error)?;
-    let rgba = normalize_readback_to_rgba(rgba, format)?;
-    png_blob_from_rgba(runtime.width, runtime.height, rgba).await
+    let rgba = forge3d_core::readback::unpad_rows(&padded, *layout).map_err(map_core_error)?;
+    normalize_readback_to_rgba(rgba, format)
 }
 
 async fn map_readback_buffer(
@@ -120,7 +166,7 @@ async fn map_readback_buffer(
     JsFuture::from(promise).await.map_err(|error| {
         WebError::with_details(
             Forge3DErrorCode::IoError,
-            "Screenshot readback mapping failed",
+            "Frame readback mapping failed",
             error,
         )
     })?;
@@ -147,12 +193,107 @@ pub(super) fn normalize_readback_to_rgba(
         }
         _ => Err(WebError::new(
             Forge3DErrorCode::UnsupportedFeature,
-            format!("Screenshots do not support surface format {format:?}"),
+            format!("Frame readback does not support surface format {format:?}"),
         )),
     }
 }
 
-async fn png_blob_from_rgba(width: u32, height: u32, rgba: Vec<u8>) -> Result<Blob, WebError> {
+async fn png_blob_from_rgba(width: u32, height: u32, mut rgba: Vec<u8>) -> Result<Blob, WebError> {
+    match offscreen_png_blob(width, height, &mut rgba).await {
+        Ok(blob) => Ok(blob),
+        Err(offscreen_error) => {
+            if web_sys::window()
+                .and_then(|window| window.document())
+                .is_some()
+            {
+                html_canvas_png_blob(width, height, &mut rgba).await
+            } else {
+                Err(offscreen_error)
+            }
+        }
+    }
+}
+
+async fn offscreen_png_blob(width: u32, height: u32, rgba: &mut Vec<u8>) -> Result<Blob, WebError> {
+    let canvas = web_sys::OffscreenCanvas::new(width, height).map_err(|error| {
+        WebError::with_details(
+            Forge3DErrorCode::IoError,
+            "Failed to create offscreen PNG encoding canvas",
+            error,
+        )
+    })?;
+    let context = canvas
+        .get_context("2d")
+        .map_err(|error| {
+            WebError::with_details(
+                Forge3DErrorCode::IoError,
+                "Failed to request offscreen 2D canvas context",
+                error,
+            )
+        })?
+        .ok_or_else(|| {
+            WebError::new(
+                Forge3DErrorCode::IoError,
+                "Offscreen 2D canvas context is unavailable",
+            )
+        })?
+        .dyn_into::<web_sys::OffscreenCanvasRenderingContext2d>()
+        .map_err(|error| {
+            WebError::with_details(
+                Forge3DErrorCode::IoError,
+                "Offscreen context is not OffscreenCanvasRenderingContext2D",
+                error.into(),
+            )
+        })?;
+    let image_data = ImageData::new_with_u8_clamped_array_and_sh(Clamped(rgba), width, height)
+        .map_err(|error| {
+            WebError::with_details(
+                Forge3DErrorCode::IoError,
+                "Failed to create ImageData for screenshot",
+                error,
+            )
+        })?;
+    context
+        .put_image_data(&image_data, 0.0, 0.0)
+        .map_err(|error| {
+            WebError::with_details(
+                Forge3DErrorCode::IoError,
+                "Failed to write screenshot pixels to offscreen canvas",
+                error,
+            )
+        })?;
+    let options = web_sys::ImageEncodeOptions::new();
+    options.set_type("image/png");
+    let promise = canvas
+        .convert_to_blob_with_options(&options)
+        .map_err(|error| {
+            WebError::with_details(
+                Forge3DErrorCode::IoError,
+                "Failed to start offscreen PNG encoding",
+                error,
+            )
+        })?;
+    let blob = JsFuture::from(promise).await.map_err(|error| {
+        WebError::with_details(
+            Forge3DErrorCode::IoError,
+            "Offscreen PNG encoding failed",
+            error,
+        )
+    })?;
+    blob.dyn_into::<Blob>().map_err(|error| {
+        WebError::with_details(
+            Forge3DErrorCode::IoError,
+            "Offscreen PNG encoder did not return a Blob",
+            error,
+        )
+    })
+}
+
+async fn html_canvas_png_blob(
+    width: u32,
+    height: u32,
+    rgba: &mut Vec<u8>,
+) -> Result<Blob, WebError> {
     let document = web_sys::window()
         .and_then(|window| window.document())
         .ok_or_else(|| WebError::new(Forge3DErrorCode::IoError, "Document is not available"))?;
@@ -199,7 +340,7 @@ async fn png_blob_from_rgba(width: u32, height: u32, rgba: Vec<u8>) -> Result<Bl
                 error.into(),
             )
         })?;
-    let image_data = ImageData::new_with_u8_clamped_array_and_sh(Clamped(&rgba), width, height)
+    let image_data = ImageData::new_with_u8_clamped_array_and_sh(Clamped(rgba), width, height)
         .map_err(|error| {
             WebError::with_details(
                 Forge3DErrorCode::IoError,

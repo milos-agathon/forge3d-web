@@ -1,16 +1,22 @@
 #[cfg(target_arch = "wasm32")]
 use forge3d_core::gpu::SurfaceState;
+use forge3d_core::timing::TimingSource;
 
 #[cfg(target_arch = "wasm32")]
 use super::init::surface_descriptor_for_alpha;
+use super::scene::scene_pass_draws;
+use super::timing::{now_ms, pass_milliseconds, world_draw_count};
 use super::Forge3DRuntime;
-use crate::error::{Forge3DErrorCode, WebError};
+use crate::error::{map_core_error, Forge3DErrorCode, WebError};
 
 pub(super) fn render_runtime(runtime: &mut Forge3DRuntime) -> Result<bool, WebError> {
+    if let Some(ring) = runtime.query_ring.as_mut() {
+        ring.harvest();
+    }
     let Some(frame) = acquire_surface_texture(runtime)? else {
         return Ok(false);
     };
-    let context = runtime.context.as_ref().ok_or_else(|| {
+    let context = runtime.context.clone().ok_or_else(|| {
         WebError::new(
             Forge3DErrorCode::RuntimeDisposed,
             "Runtime GPU context is not available",
@@ -22,14 +28,74 @@ pub(super) fn render_runtime(runtime: &mut Forge3DRuntime) -> Result<bool, WebEr
     let mut encoder = context
         .device
         .create_command_encoder(&wgpu::CommandEncoderDescriptor {
-            label: Some("forge3d-web-clear-encoder"),
+            label: Some("forge3d-web-scene-encoder"),
         });
+    let timestamp_slot = runtime.query_ring.as_mut().and_then(|ring| ring.acquire());
+    let frame_start = now_ms();
 
-    encode_scene_render_pass(runtime, &mut encoder, &view, "forge3d-web-clear-pass");
+    encode_scene_render_pass(
+        runtime,
+        &mut encoder,
+        &view,
+        "forge3d-web-scene-pass",
+        timestamp_slot,
+    );
+    if let (Some(ring), Some(slot)) = (runtime.query_ring.as_mut(), timestamp_slot) {
+        ring.resolve_into(&mut encoder, slot);
+    }
 
     context.queue.submit(std::iter::once(encoder.finish()));
+    if let (Some(ring), Some(slot)) = (runtime.query_ring.as_mut(), timestamp_slot) {
+        ring.begin_map(slot);
+    }
     frame.present();
+    record_frame_stats(runtime, now_ms() - frame_start)?;
     Ok(true)
+}
+
+fn record_frame_stats(runtime: &mut Forge3DRuntime, frame_ms: f64) -> Result<(), WebError> {
+    let passes = scene_pass_draws(runtime);
+    let gpu = runtime.query_ring.as_ref().and_then(|ring| ring.latest());
+    let (world_ms, overlay_ms, source) = match gpu {
+        Some(timing) => (
+            timing.world_ms,
+            timing.overlay_ms,
+            TimingSource::GpuTimestamp,
+        ),
+        None => (0.0, 0.0, TimingSource::Cpu),
+    };
+    let world_draws = world_draw_count(&passes);
+    runtime.timer.begin_frame();
+    for pass in &passes {
+        let milliseconds =
+            pass_milliseconds(pass, world_ms, overlay_ms, world_draws).ok_or_else(|| {
+                WebError::new(
+                    Forge3DErrorCode::InternalError,
+                    format!("pass {} produced an invalid timing sample", pass.name),
+                )
+            })?;
+        match source {
+            TimingSource::GpuTimestamp => {
+                runtime
+                    .timer
+                    .record_gpu(pass.name.clone(), milliseconds)
+                    .map_err(map_core_error)?;
+            }
+            TimingSource::Cpu => {
+                runtime
+                    .timer
+                    .record_cpu(pass.name.clone(), milliseconds)
+                    .map_err(map_core_error)?;
+            }
+        }
+    }
+    let draw_calls = passes.iter().map(|pass| pass.draws).sum();
+    let triangles = passes.iter().map(|pass| pass.triangles).sum();
+    runtime.last_stats = runtime
+        .timer
+        .finish_frame(frame_ms, draw_calls, triangles)
+        .map_err(map_core_error)?;
+    Ok(())
 }
 
 fn acquire_surface_texture(
@@ -194,7 +260,7 @@ pub(super) fn recreate_surface(
         })?;
     let surface = gpu_runtime
         .instance
-        .create_surface(wgpu::SurfaceTarget::Canvas(runtime.canvas.clone()))
+        .create_surface(runtime.canvas.surface_target())
         .map_err(|error| {
             WebError::new(
                 Forge3DErrorCode::SurfaceLost,
@@ -228,10 +294,14 @@ pub(super) fn recreate_surface(
     let state = SurfaceState::new(surface, &context, descriptor)
         .map_err(|error| WebError::new(Forge3DErrorCode::SurfaceLost, error.to_string()))?;
 
-    let pipeline_rebuilt = new_format != old_format && runtime.terrain.is_some();
+    let pipeline_rebuilt =
+        new_format != old_format && (runtime.terrain.is_some() || runtime.scene.is_some());
     if new_format != old_format {
         if let Some(terrain) = runtime.terrain.as_mut() {
             terrain.rebuild_pipeline(&context, new_format);
+        }
+        if let Some(scene) = runtime.scene.as_mut() {
+            scene.rebuild_pipelines(&context, new_format);
         }
     }
     runtime.surface_format = format!("{new_format:?}");
@@ -276,6 +346,7 @@ pub(super) fn encode_scene_render_pass(
     encoder: &mut wgpu::CommandEncoder,
     view: &wgpu::TextureView,
     label: &'static str,
+    timestamp_slot: Option<usize>,
 ) {
     let depth_stencil_attachment =
         runtime
@@ -289,34 +360,83 @@ pub(super) fn encode_scene_render_pass(
                 }),
                 stencil_ops: None,
             });
-    let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-        label: Some(label),
+    let world_writes = timestamp_slot.and_then(|slot| {
+        runtime
+            .query_ring
+            .as_ref()
+            .map(|ring| ring.pass_writes(slot, 0))
+    });
+    {
+        let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+            label: Some(label),
+            color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                view,
+                depth_slice: None,
+                resolve_target: None,
+                ops: wgpu::Operations {
+                    load: wgpu::LoadOp::Clear(wgpu::Color {
+                        r: runtime.clear_color[0] as f64,
+                        g: runtime.clear_color[1] as f64,
+                        b: runtime.clear_color[2] as f64,
+                        a: runtime.clear_color[3] as f64,
+                    }),
+                    store: wgpu::StoreOp::Store,
+                },
+            })],
+            depth_stencil_attachment,
+            occlusion_query_set: None,
+            timestamp_writes: world_writes,
+            multiview_mask: None,
+        });
+
+        if let Some(terrain) = runtime.terrain.as_ref() {
+            render_pass.set_pipeline(&terrain.pipeline);
+            render_pass.set_bind_group(0, &terrain.bind_group, &[]);
+            render_pass.set_vertex_buffer(0, terrain.vertex_buffer.slice(..));
+            render_pass.set_index_buffer(terrain.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
+            render_pass.draw_indexed(0..terrain.index_count, 0, 0..1);
+        }
+        if let Some(scene) = runtime.scene.as_ref() {
+            if let Some(bundle) = scene.world_bundle.as_ref() {
+                render_pass.execute_bundles(std::iter::once(bundle));
+            }
+        }
+    }
+
+    let overlay_writes = timestamp_slot.and_then(|slot| {
+        runtime
+            .query_ring
+            .as_ref()
+            .map(|ring| ring.pass_writes(slot, 1))
+    });
+    let has_overlay = runtime
+        .scene
+        .as_ref()
+        .and_then(|scene| scene.overlay_bundle.as_ref())
+        .is_some();
+    if !has_overlay && overlay_writes.is_none() {
+        return;
+    }
+    let mut overlay_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+        label: Some("forge3d-web-overlay-pass"),
         color_attachments: &[Some(wgpu::RenderPassColorAttachment {
             view,
             depth_slice: None,
             resolve_target: None,
             ops: wgpu::Operations {
-                load: wgpu::LoadOp::Clear(wgpu::Color {
-                    r: runtime.clear_color[0] as f64,
-                    g: runtime.clear_color[1] as f64,
-                    b: runtime.clear_color[2] as f64,
-                    a: runtime.clear_color[3] as f64,
-                }),
+                load: wgpu::LoadOp::Load,
                 store: wgpu::StoreOp::Store,
             },
         })],
-        depth_stencil_attachment,
+        depth_stencil_attachment: None,
         occlusion_query_set: None,
-        timestamp_writes: None,
+        timestamp_writes: overlay_writes,
         multiview_mask: None,
     });
-
-    if let Some(terrain) = runtime.terrain.as_ref() {
-        render_pass.set_pipeline(&terrain.pipeline);
-        render_pass.set_bind_group(0, &terrain.bind_group, &[]);
-        render_pass.set_vertex_buffer(0, terrain.vertex_buffer.slice(..));
-        render_pass.set_index_buffer(terrain.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
-        render_pass.draw_indexed(0..terrain.index_count, 0, 0..1);
+    if let Some(scene) = runtime.scene.as_ref() {
+        if let Some(bundle) = scene.overlay_bundle.as_ref() {
+            overlay_pass.execute_bundles(std::iter::once(bundle));
+        }
     }
 }
 

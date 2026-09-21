@@ -8,6 +8,7 @@ use crate::error::{Forge3dError, Result};
 pub struct GpuRuntimeOptions {
     pub power_preference: wgpu::PowerPreference,
     pub required_features: wgpu::Features,
+    pub optional_features: wgpu::Features,
     pub required_limits: wgpu::Limits,
     pub label: Option<String>,
 }
@@ -17,6 +18,7 @@ impl Default for GpuRuntimeOptions {
         Self {
             power_preference: wgpu::PowerPreference::HighPerformance,
             required_features: wgpu::Features::empty(),
+            optional_features: wgpu::Features::empty(),
             required_limits: wgpu::Limits::downlevel_webgl2_defaults(),
             label: None,
         }
@@ -211,7 +213,8 @@ impl GpuRuntime {
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
                 label: options.label.as_deref(),
-                required_features: options.required_features,
+                required_features: options.required_features
+                    | (options.optional_features & adapter.features()),
                 required_limits: options.required_limits.clone(),
                 experimental_features: wgpu::ExperimentalFeatures::disabled(),
                 memory_hints: wgpu::MemoryHints::Performance,
@@ -267,6 +270,7 @@ mod tests {
             wgpu::PowerPreference::HighPerformance
         );
         assert!(options.required_features.is_empty());
+        assert!(options.optional_features.is_empty());
         assert_eq!(
             options.required_limits.max_texture_dimension_2d,
             wgpu::Limits::downlevel_webgl2_defaults().max_texture_dimension_2d

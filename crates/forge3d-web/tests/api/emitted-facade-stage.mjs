@@ -27,8 +27,30 @@ try {
 
   assert.deepEqual(
     Object.keys(facadeA).sort(),
-    ["Forge3DError", "Forge3DRuntime", "Forge3DViewer"],
-    "the implemented facade must export the frozen runtime and viewer classes",
+    [
+      "BorrowedWasmView",
+      "Forge3DError",
+      "Forge3DMessageClient",
+      "Forge3DOffscreenRenderer",
+      "Forge3DRuntime",
+      "Forge3DScene",
+      "Forge3DSession",
+      "Forge3DViewer",
+      "Forge3DWebSocketAdapter",
+      "Forge3DWorkerPool",
+      "Forge3DWorkerRenderer",
+      "RendererConfig",
+      "createNotebookAdapter",
+      "defineForge3DElement",
+      "getRendererPreset",
+      "installForge3DWorkerHost",
+      "readByteSource",
+      "rendererPresetNames",
+      "selectWorkerExecutionMode",
+      "serveForge3DMessagePort",
+      "writeByteSink",
+    ],
+    "the implemented facade must export the frozen runtime, viewer, scene, session, and config surface",
   );
   assert.equal(
     typeof facadeA.Forge3DRuntime.prototype.getCapabilities,
@@ -136,6 +158,47 @@ try {
   assert.equal(initCount, 1, "duplicate bundles must initialize WASM once");
   assert.equal(runtimeA.getCapabilities().deviceState, "ready");
   assert.equal(runtimeB.getCapabilities().surfaceFormat, "bgra8unorm-srgb");
+
+  const capabilitiesA = runtimeA.getCapabilities();
+  capabilitiesA.adapterInfo.name = "mutated";
+  capabilitiesA.features.push("mutated");
+  capabilitiesA.limits.maxBindGroups = 1;
+  capabilitiesA.surfaceFormats.push("mutated");
+  const capabilitiesAgain = runtimeA.getCapabilities();
+  assert.equal(
+    capabilitiesAgain.adapterInfo.name,
+    "fake-adapter",
+    "adapter info must be a defensive copy",
+  );
+  assert.equal(
+    capabilitiesAgain.features.includes("mutated"),
+    false,
+    "features must be a defensive copy",
+  );
+  assert.equal(capabilitiesAgain.limits.maxBindGroups, 4);
+  assert.equal(
+    capabilitiesAgain.surfaceFormats.includes("mutated"),
+    false,
+    "surface formats must be a defensive copy",
+  );
+  const nativeStats = runtimeA.getRenderStats();
+  assert.equal(nativeStats.passes[0].timing, "gpu-timestamp");
+  nativeStats.passes.length = 0;
+  assert.equal(
+    runtimeA.getRenderStats().passes.length,
+    1,
+    "render stats must be a defensive copy",
+  );
+  const nativeMemory = runtimeA.getMemoryReport();
+  nativeMemory.categories["scene:vertices"] = 1;
+  assert.equal(
+    runtimeA.getMemoryReport().categories["scene:vertices"],
+    undefined,
+    "memory categories must be a defensive copy",
+  );
+  runtimeA.setScene({ id: "scene", nodes: [], passes: [] });
+  const facadeRgba = await runtimeA.readRgba();
+  assert.equal(facadeRgba.length, 4);
   assert.equal(
     fetchCount,
     2,
@@ -311,19 +374,65 @@ function emitFacadeCopy(name) {
         (globalThis.__forge3dTestNativeRuntimes ??= []).push(runtime);
         return runtime;
       }
+      static async createOffscreen() {
+        const runtime = new Forge3DRuntime();
+        (globalThis.__forge3dTestNativeRuntimes ??= []).push(runtime);
+        return runtime;
+      }
       disposed = false;
       width = 64;
       height = 64;
       diagnosticsEnabled = false;
+      capabilities = {
+        maxTextureDimension2D: 4096,
+        maxBufferSize: 1073741824,
+        surfaceFormat: "bgra8unorm-srgb",
+        adapterInfo: {
+          name: "fake-adapter",
+          vendor: "0x1234",
+          architecture: "",
+          device: "0x5678",
+          description: "fake driver",
+          backend: "webgpu",
+          deviceType: "discrete-gpu"
+        },
+        isFallbackAdapter: false,
+        features: ["timestamp-query"],
+        limits: { maxTextureDimension2D: 4096, maxBindGroups: 4 },
+        surfaceFormats: ["rgba8unorm", "bgra8unorm-srgb"],
+        preferredCanvasFormat: "bgra8unorm-srgb",
+        timestampQuery: true
+      };
       clearColor() { return [0, 0, 0, 1]; }
       getCapabilities() {
         return {
-          deviceState: this.disposed ? "disposed" : "ready",
-          maxTextureDimension2D: 4096,
-          maxBufferSize: 1073741824,
-          surfaceFormat: "bgra8unorm-srgb"
+          ...this.capabilities,
+          deviceState: this.disposed ? "disposed" : "ready"
         };
       }
+      getRenderStats() {
+        return {
+          frameIndex: 1,
+          frameTimeMs: 1,
+          drawCalls: 1,
+          triangles: 2,
+          passes: [{ name: "terrain", milliseconds: 1, timing: "gpu-timestamp" }]
+        };
+      }
+      getMemoryReport() {
+        return {
+          currentBytes: 0,
+          peakBytes: 1024,
+          budgetBytes: 536870912,
+          utilization: 0,
+          allocationCount: 0,
+          categories: {},
+          effectiveQuality: "high",
+          downgrades: []
+        };
+      }
+      setScene(scene) { this.scene = scene; }
+      async readRgba() { return new Uint8Array([1, 2, 3, 255]); }
       setDeviceLostCallback(callback) { this.callback = callback; }
       registerDeviceLostCallback(callback) {
         this.callback = (error) => {

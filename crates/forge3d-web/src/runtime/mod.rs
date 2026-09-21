@@ -1,21 +1,31 @@
+mod canvas;
 mod device_health;
 mod diagnostics;
 mod init;
+mod memory;
 mod readback;
 mod render;
+mod scene;
 mod terrain;
+mod timing;
 
+use canvas::RuntimeCanvas;
 use device_health::{ensure_device_healthy_error, set_js_property};
 pub use device_health::{ensure_not_disposed, ensure_not_disposed_error};
+use diagnostics::AdapterDiagnostics;
 use init::create_runtime;
+use memory::MemoryLedger;
 use readback::screenshot_runtime;
 use render::render_runtime;
 use terrain::{
     resize_runtime, set_camera_runtime, set_terrain_options_runtime, set_terrain_runtime,
     DepthAttachment, TerrainRenderResources,
 };
+use timing::TimestampRing;
 
 use forge3d_core::gpu::{GpuContext, GpuRuntime, SurfaceState};
+use forge3d_core::memory::QualityLevel;
+use forge3d_core::timing::{FrameTimer, RenderStats};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{Blob, HtmlCanvasElement};
@@ -24,13 +34,13 @@ use crate::error::{to_js_error, Forge3DErrorCode, WebError};
 
 #[wasm_bindgen]
 pub struct Forge3DRuntime {
-    #[allow(dead_code)]
-    canvas: HtmlCanvasElement,
+    canvas: RuntimeCanvas,
     gpu_runtime: Option<GpuRuntime>,
     context: Option<GpuContext>,
     surface_state: Option<SurfaceState>,
     depth_attachment: Option<DepthAttachment>,
     terrain: Option<TerrainRenderResources>,
+    scene: Option<scene::NativeScene>,
     camera: forge3d_core::camera::CameraInput,
     width: u32,
     height: u32,
@@ -44,6 +54,13 @@ pub struct Forge3DRuntime {
     preferred_alpha_mode: wgpu::CompositeAlphaMode,
     device_lost_callback: Option<js_sys::Function>,
     device_health_listener_id: Option<u64>,
+    memory: MemoryLedger,
+    overflow_policy: forge3d_core::memory::OverflowPolicy,
+    requested_quality: QualityLevel,
+    adapter_diagnostics: AdapterDiagnostics,
+    query_ring: Option<TimestampRing>,
+    timer: FrameTimer,
+    last_stats: RenderStats,
 }
 
 #[wasm_bindgen]
@@ -54,7 +71,20 @@ impl Forge3DRuntime {
         options: JsValue,
     ) -> Result<Forge3DRuntime, JsValue> {
         install_panic_hook();
-        create_runtime(canvas, options).await.map_err(to_js_error)
+        create_runtime(RuntimeCanvas::Html(canvas), options)
+            .await
+            .map_err(to_js_error)
+    }
+
+    #[wasm_bindgen(js_name = createOffscreen)]
+    pub async fn create_offscreen(
+        canvas: web_sys::OffscreenCanvas,
+        options: JsValue,
+    ) -> Result<Forge3DRuntime, JsValue> {
+        install_panic_hook();
+        create_runtime(RuntimeCanvas::Offscreen(canvas), options)
+            .await
+            .map_err(to_js_error)
     }
 
     #[wasm_bindgen(js_name = dispose)]
@@ -70,7 +100,10 @@ impl Forge3DRuntime {
         self.gpu_runtime = None;
         self.depth_attachment = None;
         self.terrain = None;
+        self.scene = None;
+        self.query_ring = None;
         self.disposed = true;
+        self.memory.clear();
     }
 
     #[wasm_bindgen(js_name = render)]
@@ -85,6 +118,23 @@ impl Forge3DRuntime {
         ensure_not_disposed_error(self).map_err(to_js_error)?;
         ensure_device_healthy_error(self).map_err(to_js_error)?;
         screenshot_runtime(self).await.map_err(to_js_error)
+    }
+
+    #[wasm_bindgen(js_name = readRgba)]
+    pub async fn read_rgba(&mut self) -> Result<js_sys::Uint8Array, JsValue> {
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        ensure_device_healthy_error(self).map_err(to_js_error)?;
+        let rgba = readback::read_rgba_runtime(self)
+            .await
+            .map_err(to_js_error)?;
+        Ok(js_sys::Uint8Array::from(rgba.as_slice()))
+    }
+
+    #[wasm_bindgen(js_name = setScene)]
+    pub fn set_scene(&mut self, snapshot: JsValue) -> Result<(), JsValue> {
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        ensure_device_healthy_error(self).map_err(to_js_error)?;
+        scene::set_scene_runtime(self, snapshot).map_err(to_js_error)
     }
 
     #[wasm_bindgen(js_name = setTerrain)]
@@ -169,27 +219,45 @@ impl Forge3DRuntime {
         } else {
             "ready"
         };
+        let capabilities_value: JsValue = capabilities.clone().into();
         set_js_property(
-            capabilities.as_ref(),
+            &capabilities_value,
             "deviceState",
             &JsValue::from_str(device_state),
         );
         set_js_property(
-            capabilities.as_ref(),
+            &capabilities_value,
             "maxTextureDimension2D",
             &JsValue::from_f64(self.max_texture_dimension_2d as f64),
         );
         set_js_property(
-            capabilities.as_ref(),
+            &capabilities_value,
             "maxBufferSize",
             &JsValue::from_f64(self.max_buffer_size as f64),
         );
         set_js_property(
-            capabilities.as_ref(),
+            &capabilities_value,
             "surfaceFormat",
             &JsValue::from_str(&self.surface_format),
         );
-        capabilities.into()
+        set_js_property(
+            &capabilities_value,
+            "preferredCanvasFormat",
+            &JsValue::from_str(&self.surface_format),
+        );
+        self.adapter_diagnostics
+            .populate_capabilities(&capabilities_value);
+        capabilities_value
+    }
+
+    #[wasm_bindgen(js_name = getMemoryReport)]
+    pub fn get_memory_report(&self) -> JsValue {
+        self.memory.report_js()
+    }
+
+    #[wasm_bindgen(js_name = getRenderStats)]
+    pub fn get_render_stats(&self) -> JsValue {
+        timing::stats_to_js(&self.last_stats)
     }
 
     #[wasm_bindgen(js_name = setDeviceLostCallback)]
@@ -384,12 +452,15 @@ mod tests {
     #[test]
     fn runtime_dispose_guard_uses_stable_error_code() {
         let runtime = super::Forge3DRuntime {
-            canvas: wasm_bindgen::JsCast::unchecked_into(wasm_bindgen::JsValue::NULL),
+            canvas: super::RuntimeCanvas::Html(wasm_bindgen::JsCast::unchecked_into(
+                wasm_bindgen::JsValue::NULL,
+            )),
             gpu_runtime: None,
             context: None,
             surface_state: None,
             depth_attachment: None,
             terrain: None,
+            scene: None,
             camera: forge3d_core::camera::CameraInput::default(),
             width: 1,
             height: 1,
@@ -402,6 +473,23 @@ mod tests {
             preferred_alpha_mode: wgpu::CompositeAlphaMode::PreMultiplied,
             device_lost_callback: None,
             device_health_listener_id: None,
+            memory: super::MemoryLedger::new(
+                forge3d_core::memory::DEFAULT_MEMORY_BUDGET_BYTES,
+                forge3d_core::memory::QualityLevel::High,
+            )
+            .unwrap(),
+            overflow_policy: forge3d_core::memory::OverflowPolicy::Downscale,
+            requested_quality: forge3d_core::memory::QualityLevel::High,
+            adapter_diagnostics: super::AdapterDiagnostics::default(),
+            query_ring: None,
+            timer: forge3d_core::timing::FrameTimer::new(false),
+            last_stats: forge3d_core::timing::RenderStats {
+                frame_index: 0,
+                frame_time_ms: 0.0,
+                draw_calls: 0,
+                triangles: 0,
+                passes: Vec::new(),
+            },
         };
 
         let error = ensure_not_disposed_error(&runtime).unwrap_err();

@@ -1,10 +1,19 @@
 #[cfg(target_arch = "wasm32")]
-use forge3d_core::gpu::{GpuContext, GpuRuntime, GpuRuntimeOptions, SurfaceState};
+use forge3d_core::gpu::{
+    GpuContext, GpuRuntime, GpuRuntimeOptions, SurfaceState, SurfaceStateDescriptor,
+};
 use wasm_bindgen::prelude::*;
-use web_sys::HtmlCanvasElement;
 
 #[cfg(target_arch = "wasm32")]
+use super::canvas::RuntimeCanvas;
+#[cfg(target_arch = "wasm32")]
+use super::diagnostics::AdapterDiagnostics;
+#[cfg(target_arch = "wasm32")]
+use super::memory::MemoryLedger;
+#[cfg(target_arch = "wasm32")]
 use super::terrain::{create_terrain_render_pipeline, TERRAIN_SHADER};
+#[cfg(target_arch = "wasm32")]
+use super::timing::TimestampRing;
 #[cfg(target_arch = "wasm32")]
 use super::DepthAttachment;
 use super::Forge3DRuntime;
@@ -15,31 +24,44 @@ use crate::error::{Forge3DErrorCode, WebError};
 use crate::inputs::RuntimeOptions;
 
 #[cfg(target_arch = "wasm32")]
-pub(super) async fn create_runtime(
-    canvas: HtmlCanvasElement,
-    options: JsValue,
-) -> Result<Forge3DRuntime, WebError> {
-    if !web_sys::window()
-        .map(|window| window.is_secure_context())
-        .unwrap_or(false)
-    {
+fn check_webgpu_environment() -> Result<(), WebError> {
+    let global = js_sys::global();
+    let is_secure = js_sys::Reflect::get(&global, &JsValue::from_str("isSecureContext"))
+        .ok()
+        .and_then(|value| value.as_bool());
+    if is_secure != Some(true) {
         return Err(WebError::new(
             Forge3DErrorCode::InsecureContext,
             "WebGPU requires a secure browser context",
         ));
     }
-    if web_sys::window()
-        .and_then(|window| {
-            js_sys::Reflect::get(&window.navigator(), &JsValue::from_str("gpu")).ok()
-        })
-        .filter(|gpu| !gpu.is_undefined() && !gpu.is_null())
-        .is_none()
-    {
+    let navigator = js_sys::Reflect::get(&global, &JsValue::from_str("navigator"))
+        .ok()
+        .filter(|value| !value.is_undefined() && !value.is_null())
+        .ok_or_else(|| {
+            WebError::new(
+                Forge3DErrorCode::WebGpuUnavailable,
+                "navigator is not available",
+            )
+        })?;
+    let gpu = js_sys::Reflect::get(&navigator, &JsValue::from_str("gpu"))
+        .ok()
+        .filter(|value| !value.is_undefined() && !value.is_null());
+    if gpu.is_none() {
         return Err(WebError::new(
             Forge3DErrorCode::WebGpuUnavailable,
             "navigator.gpu is not available",
         ));
     }
+    Ok(())
+}
+
+#[cfg(target_arch = "wasm32")]
+pub(super) async fn create_runtime(
+    canvas: RuntimeCanvas,
+    options: JsValue,
+) -> Result<Forge3DRuntime, WebError> {
+    check_webgpu_environment()?;
 
     let options = RuntimeOptions::from_js_value(options)?;
     let (width, height) = options.pixel_size(canvas.width(), canvas.height())?;
@@ -52,7 +74,7 @@ pub(super) async fn create_runtime(
     let gpu_runtime = GpuRuntime::new(instance);
     let surface = gpu_runtime
         .instance
-        .create_surface(wgpu::SurfaceTarget::Canvas(canvas.clone()))
+        .create_surface(canvas.surface_target())
         .map_err(|error| {
             WebError::new(
                 Forge3DErrorCode::SurfaceCreateFailed,
@@ -63,6 +85,11 @@ pub(super) async fn create_runtime(
     let context_options = GpuRuntimeOptions {
         power_preference: options.power_preference.to_wgpu(),
         required_features: wgpu::Features::empty(),
+        optional_features: if options.timestamp_mode.timestamp_queries_requested() {
+            wgpu::Features::TIMESTAMP_QUERY
+        } else {
+            wgpu::Features::empty()
+        },
         required_limits: wgpu::Limits::downlevel_webgl2_defaults(),
         label: Some("forge3d-web-device".to_string()),
     };
@@ -86,6 +113,20 @@ pub(super) async fn create_runtime(
     validate_terrain_shader_and_pipeline(&context, surface_state.config.format).await?;
     let depth_attachment = DepthAttachment::new(&context, width, height);
     let surface_format = format!("{:?}", surface_state.config.format);
+    let surface_formats = surface_state
+        .surface
+        .get_capabilities(&context.adapter)
+        .formats;
+    let adapter_diagnostics = AdapterDiagnostics::capture(&context, surface_formats);
+    let query_ring = if context
+        .device
+        .features()
+        .contains(wgpu::Features::TIMESTAMP_QUERY)
+    {
+        Some(TimestampRing::new(&context.device, &context.queue))
+    } else {
+        None
+    };
 
     Ok(Forge3DRuntime {
         canvas,
@@ -94,6 +135,7 @@ pub(super) async fn create_runtime(
         surface_state: Some(surface_state),
         depth_attachment: Some(depth_attachment),
         terrain: None,
+        scene: None,
         camera: forge3d_core::camera::CameraInput::default(),
         width,
         height,
@@ -106,6 +148,19 @@ pub(super) async fn create_runtime(
         preferred_alpha_mode: options.alpha_mode.preferred_wgpu(),
         device_lost_callback: None,
         device_health_listener_id: None,
+        memory: MemoryLedger::new(options.memory_budget_bytes(), options.quality.to_core())?,
+        overflow_policy: options.overflow_policy.to_core(),
+        requested_quality: options.quality.to_core(),
+        adapter_diagnostics,
+        query_ring,
+        timer: forge3d_core::timing::FrameTimer::new(true),
+        last_stats: forge3d_core::timing::RenderStats {
+            frame_index: 0,
+            frame_time_ms: 0.0,
+            draw_calls: 0,
+            triangles: 0,
+            passes: Vec::new(),
+        },
     })
 }
 
@@ -188,7 +243,7 @@ async fn validate_terrain_shader_and_pipeline(
 
 #[cfg(not(target_arch = "wasm32"))]
 pub(super) async fn create_runtime(
-    canvas: HtmlCanvasElement,
+    canvas: super::canvas::RuntimeCanvas,
     options: JsValue,
 ) -> Result<Forge3DRuntime, WebError> {
     let _ = (canvas, options);
@@ -205,7 +260,7 @@ fn surface_descriptor(
     options: &RuntimeOptions,
     width: u32,
     height: u32,
-) -> Result<forge3d_core::gpu::SurfaceStateDescriptor, WebError> {
+) -> Result<SurfaceStateDescriptor, WebError> {
     surface_descriptor_for_alpha(
         surface,
         context,
@@ -222,7 +277,7 @@ pub(super) fn surface_descriptor_for_alpha(
     preferred_alpha: wgpu::CompositeAlphaMode,
     width: u32,
     height: u32,
-) -> Result<forge3d_core::gpu::SurfaceStateDescriptor, WebError> {
+) -> Result<SurfaceStateDescriptor, WebError> {
     let caps = surface.get_capabilities(&context.adapter);
     let format = caps
         .formats
@@ -256,7 +311,7 @@ pub(super) fn surface_descriptor_for_alpha(
             )
         })?;
 
-    let mut descriptor = forge3d_core::gpu::SurfaceStateDescriptor::new(width, height, format);
+    let mut descriptor = SurfaceStateDescriptor::new(width, height, format);
     descriptor.present_mode = present_mode;
     descriptor.alpha_mode = alpha_mode;
     descriptor.view_formats = vec![format];

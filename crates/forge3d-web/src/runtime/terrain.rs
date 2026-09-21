@@ -1,12 +1,145 @@
 use forge3d_core::gpu::GpuContext;
+use forge3d_core::memory::{MemoryCategory, OverflowPolicy, QualityLevel};
 use wasm_bindgen::prelude::*;
 use wgpu::util::DeviceExt;
 
+use super::memory::{
+    downscaled_dimension, quality_ladder_from, quality_scale_percent, resample_heightmap,
+    LedgerDowngrade,
+};
 use super::Forge3DRuntime;
 use crate::error::{map_core_error, Forge3DErrorCode, WebError};
 use crate::inputs::{
     CameraOptions, ResizeOptions, TerrainColorRampOptions, TerrainHeightmapOptions,
+    TerrainPhysicalLimits,
 };
+
+pub(super) const TERRAIN_MESH_KEY: &str = "terrain:mesh";
+pub(super) const TERRAIN_HEIGHTMAP_KEY: &str = "terrain:heightmap";
+pub(super) const TERRAIN_UNIFORMS_KEY: &str = "terrain:uniforms";
+pub(super) const DEPTH_TEXTURE_KEY: &str = "depth";
+pub(super) const TERRAIN_UNIFORM_BYTES: u64 =
+    (std::mem::size_of::<CameraUniform>() + std::mem::size_of::<ColorRampUniform>()) as u64;
+pub(super) const DEPTH_BYTES_PER_PIXEL: u64 = 4;
+
+pub(super) fn depth_texture_bytes(width: u32, height: u32) -> Option<u64> {
+    u64::from(width)
+        .checked_mul(u64::from(height))
+        .and_then(|pixels| pixels.checked_mul(DEPTH_BYTES_PER_PIXEL))
+}
+
+pub(super) fn terrain_memory_keys() -> [&'static str; 3] {
+    [
+        TERRAIN_MESH_KEY,
+        TERRAIN_HEIGHTMAP_KEY,
+        TERRAIN_UNIFORMS_KEY,
+    ]
+}
+
+fn terrain_gpu_bytes(
+    allocation: &crate::inputs::TerrainAllocation,
+) -> Result<(u64, u64, u64), WebError> {
+    let mesh = allocation
+        .vertex_bytes
+        .checked_add(allocation.index_bytes)
+        .ok_or_else(|| {
+            WebError::new(
+                Forge3DErrorCode::ResourceLimitExceeded,
+                "terrain mesh byte accounting overflowed",
+            )
+        })?;
+    Ok((mesh, allocation.sample_bytes, TERRAIN_UNIFORM_BYTES))
+}
+
+fn terrain_total_bytes(allocation: &crate::inputs::TerrainAllocation) -> Result<u64, WebError> {
+    let (mesh, texture, uniforms) = terrain_gpu_bytes(allocation)?;
+    mesh.checked_add(texture)
+        .and_then(|value| value.checked_add(uniforms))
+        .ok_or_else(|| {
+            WebError::new(
+                Forge3DErrorCode::ResourceLimitExceeded,
+                "terrain byte accounting overflowed",
+            )
+        })
+}
+
+struct TerrainCandidate {
+    options: TerrainHeightmapOptions,
+    allocation: crate::inputs::TerrainAllocation,
+    total_bytes: u64,
+    effective_quality: QualityLevel,
+    requested_bytes: u64,
+}
+
+fn select_terrain_candidate(
+    runtime: &Forge3DRuntime,
+    terrain: &TerrainHeightmapOptions,
+) -> Result<TerrainCandidate, WebError> {
+    let limits = TerrainPhysicalLimits {
+        max_texture_dimension_2d: runtime.max_texture_dimension_2d,
+        max_buffer_size: runtime.max_buffer_size,
+    };
+    let requested = runtime.requested_quality;
+    let requested_allocation = crate::inputs::validate_terrain_allocation(
+        terrain.width,
+        terrain.height,
+        terrain.heights.len(),
+        limits,
+    )?;
+    let requested_bytes = terrain_total_bytes(&requested_allocation)?;
+    let ladder = quality_ladder_from(requested);
+    let levels: &[QualityLevel] = match runtime.overflow_policy {
+        OverflowPolicy::Reject => &ladder[..1],
+        OverflowPolicy::Downscale => ladder,
+    };
+    for level in levels {
+        let relative =
+            quality_scale_percent(*level) as f64 / quality_scale_percent(requested) as f64;
+        let (width, height, heights) = if relative >= 1.0 {
+            (terrain.width, terrain.height, terrain.heights.clone())
+        } else {
+            let width = downscaled_dimension(terrain.width, relative);
+            let height = downscaled_dimension(terrain.height, relative);
+            (
+                width,
+                height,
+                resample_heightmap(
+                    &terrain.heights,
+                    terrain.width,
+                    terrain.height,
+                    width,
+                    height,
+                ),
+            )
+        };
+        let allocation =
+            crate::inputs::validate_terrain_allocation(width, height, heights.len(), limits)?;
+        let total = terrain_total_bytes(&allocation)?;
+        if runtime
+            .memory
+            .fits_after_release(&terrain_memory_keys(), total)
+        {
+            return Ok(TerrainCandidate {
+                options: TerrainHeightmapOptions {
+                    width,
+                    height,
+                    heights,
+                    color_ramp: terrain.color_ramp.clone(),
+                },
+                allocation,
+                total_bytes: total,
+                effective_quality: *level,
+                requested_bytes,
+            });
+        }
+    }
+    Err(WebError::new(
+        Forge3DErrorCode::ResourceLimitExceeded,
+        format!(
+            "terrain requires {requested_bytes} bytes beyond the memory budget even at the lowest quality level"
+        ),
+    ))
+}
 
 pub(super) fn set_terrain_runtime(
     runtime: &mut Forge3DRuntime,
@@ -26,31 +159,57 @@ pub(super) fn set_terrain_options_runtime(
     runtime: &mut Forge3DRuntime,
     terrain: TerrainHeightmapOptions,
 ) -> Result<(), WebError> {
-    let context = runtime.context.as_ref().ok_or_else(|| {
+    let context = runtime.context.clone().ok_or_else(|| {
         WebError::new(
             Forge3DErrorCode::RuntimeDisposed,
             "Runtime GPU context is not available",
         )
     })?;
-    let surface_state = runtime.surface_state.as_ref().ok_or_else(|| {
-        WebError::new(
-            Forge3DErrorCode::RuntimeDisposed,
-            "Runtime surface state is not available",
-        )
-    })?;
+    let surface_format = runtime
+        .surface_state
+        .as_ref()
+        .map(|state| state.config.format)
+        .ok_or_else(|| {
+            WebError::new(
+                Forge3DErrorCode::RuntimeDisposed,
+                "Runtime surface state is not available",
+            )
+        })?;
 
-    let color_ramp = terrain.color_ramp.clone();
-    let terrain = terrain.validate()?;
-    runtime.terrain = Some(TerrainRenderResources::new(
-        context,
-        surface_state.config.format,
-        &terrain,
+    let candidate = select_terrain_candidate(runtime, &terrain)?;
+    let color_ramp = candidate.options.color_ramp.clone();
+    let validated = candidate.options.validate()?;
+    let resources = TerrainRenderResources::new(
+        &context,
+        surface_format,
+        &validated,
         &color_ramp,
         runtime.clear_color,
         &runtime.camera,
         runtime.width,
         runtime.height,
-    )?);
+    )?;
+    let (mesh_bytes, texture_bytes, uniform_bytes) = terrain_gpu_bytes(&candidate.allocation)?;
+    runtime
+        .memory
+        .replace(TERRAIN_MESH_KEY, MemoryCategory::Buffers, mesh_bytes)?;
+    runtime.memory.replace(
+        TERRAIN_HEIGHTMAP_KEY,
+        MemoryCategory::Textures,
+        texture_bytes,
+    )?;
+    runtime
+        .memory
+        .replace(TERRAIN_UNIFORMS_KEY, MemoryCategory::Buffers, uniform_bytes)?;
+    if candidate.effective_quality != runtime.requested_quality {
+        runtime.memory.record_downgrade(LedgerDowngrade {
+            requested: runtime.requested_quality,
+            effective: candidate.effective_quality,
+            requested_bytes: candidate.requested_bytes,
+            admitted_bytes: candidate.total_bytes,
+        });
+    }
+    runtime.terrain = Some(resources);
     Ok(())
 }
 
@@ -68,6 +227,9 @@ pub(super) fn set_camera_runtime(
     let camera = CameraOptions::from_js_value(camera)?.validate()?;
     if let Some(terrain) = runtime.terrain.as_ref() {
         terrain.update_camera(context, &camera, runtime.width, runtime.height)?;
+    }
+    if let Some(scene) = runtime.scene.as_ref() {
+        scene.update_camera(context, &camera, runtime.width, runtime.height)?;
     }
     runtime.camera = camera;
     Ok(())
@@ -97,6 +259,21 @@ pub(super) fn resize_runtime(runtime: &mut Forge3DRuntime, size: JsValue) -> Res
             ),
         ));
     }
+    let depth_bytes = depth_texture_bytes(width, height).ok_or_else(|| {
+        WebError::new(
+            Forge3DErrorCode::ResourceLimitExceeded,
+            "depth texture byte accounting overflowed",
+        )
+    })?;
+    if !runtime
+        .memory
+        .fits_after_release(&[DEPTH_TEXTURE_KEY], depth_bytes)
+    {
+        return Err(WebError::new(
+            Forge3DErrorCode::ResourceLimitExceeded,
+            format!("resized depth texture of {depth_bytes} bytes exceeds the memory budget"),
+        ));
+    }
     runtime.canvas.set_width(width);
     runtime.canvas.set_height(height);
     surface_state
@@ -105,9 +282,16 @@ pub(super) fn resize_runtime(runtime: &mut Forge3DRuntime, size: JsValue) -> Res
     runtime.width = width;
     runtime.height = height;
     runtime.depth_attachment = Some(DepthAttachment::new(context, width, height));
+    runtime
+        .memory
+        .replace(DEPTH_TEXTURE_KEY, MemoryCategory::Textures, depth_bytes)?;
 
     if let Some(terrain) = runtime.terrain.as_ref() {
         terrain.update_camera(context, &runtime.camera, width, height)?;
+    }
+    if let Some(scene) = runtime.scene.as_mut() {
+        scene.update_camera(context, &runtime.camera, width, height)?;
+        scene.rebuild_overlays(context, width, height);
     }
     Ok(())
 }
@@ -119,7 +303,7 @@ pub(super) struct TerrainVertex {
     pub(super) uv: [f32; 2],
 }
 
-const DEPTH_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Depth24Plus;
+pub(super) const DEPTH_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Depth24Plus;
 
 pub(super) struct DepthAttachment {
     #[allow(dead_code)]
@@ -644,7 +828,7 @@ fn create_height_texture(
     (texture, view)
 }
 
-fn create_camera_uniform(
+pub(super) fn create_camera_uniform(
     camera: &forge3d_core::camera::CameraInput,
     width: u32,
     height: u32,
