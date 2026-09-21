@@ -85,10 +85,55 @@ class FakeRuntime implements SessionRuntimeLike {
 
 type CanvasListener = (event: Record<string, unknown>) => void;
 
+class FakeStyle {
+  readonly #properties = new Map<
+    string,
+    { value: string; priority: string }
+  >();
+
+  get length(): number {
+    return this.#properties.size;
+  }
+
+  get touchAction(): string {
+    return this.getPropertyValue("touch-action");
+  }
+
+  set touchAction(value: string) {
+    if (value) {
+      this.setProperty("touch-action", value);
+    } else {
+      this.removeProperty("touch-action");
+    }
+  }
+
+  item(index: number): string {
+    return [...this.#properties.keys()][index] ?? "";
+  }
+
+  getPropertyValue(property: string): string {
+    return this.#properties.get(property)?.value ?? "";
+  }
+
+  getPropertyPriority(property: string): string {
+    return this.#properties.get(property)?.priority ?? "";
+  }
+
+  setProperty(property: string, value: string, priority = ""): void {
+    this.#properties.set(property, { value, priority });
+  }
+
+  removeProperty(property: string): string {
+    const previous = this.getPropertyValue(property);
+    this.#properties.delete(property);
+    return previous;
+  }
+}
+
 class FakeCanvas {
   readonly listeners = new Map<string, Set<CanvasListener>>();
   readonly attributes = new Map<string, string>();
-  readonly style: Record<string, string> = { touchAction: "" };
+  readonly style = new FakeStyle();
   readonly captured = new Set<number>();
   readonly offscreen = { kind: "fake-offscreen" };
   clientHeight = 100;
@@ -268,6 +313,7 @@ function pointer(
     pointerId: 1,
     pointerType: "mouse",
     button: 0,
+    buttons: 1,
     clientX: 10,
     clientY: 10,
     preventDefault() {},
@@ -439,7 +485,7 @@ describe("Forge3DWorkerRenderer", () => {
       "pointermove",
       pointer({ clientX: 30, clientY: 10 }),
     );
-    canvas.dispatch("pointerup", pointer({}));
+    canvas.dispatch("pointerup", pointer({ buttons: 0 }));
     canvas.dispatch(
       "wheel",
       { deltaY: 120, deltaMode: 0, preventDefault() {} },
