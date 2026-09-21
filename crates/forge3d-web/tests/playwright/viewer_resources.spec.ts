@@ -115,6 +115,97 @@ test("fifty real viewers release every owned browser resource", async ({
   }
 });
 
+test("real DOM display-none and zero-parent layouts suspend and recover for thirty cycles", async ({
+  page,
+  webgpuAvailability,
+}) => {
+  test.setTimeout(120_000);
+  skipRenderAssertionsWhenProbing(webgpuAvailability);
+  const observations = await page.evaluate(async () => {
+    const fixture = window.__forge3dInteractiveViewer;
+    const viewer = await fixture.create({ resize: true });
+    const canvas = fixture.canvas;
+    const parent = canvas.parentElement!;
+    const frame = () => new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    const exercise = async (kind: "display-none" | "zero-parent") => {
+      const cycles = [];
+      for (let cycle = 1; cycle <= 30; cycle += 1) {
+        const canvasStyle = canvas.getAttribute("style");
+        const parentStyle = parent.getAttribute("style");
+        if (kind === "display-none") canvas.style.display = "none";
+        else {
+          parent.style.width = "0px";
+          parent.style.height = "0px";
+          parent.style.minWidth = "0px";
+          parent.style.padding = "0";
+          parent.style.gap = "0";
+          parent.style.gridTemplateColumns = "0px";
+          parent.style.boxSizing = "border-box";
+          parent.style.overflow = "hidden";
+          canvas.style.width = "0px";
+          canvas.style.height = "0px";
+          canvas.style.border = "0";
+        }
+        let reachedZeroRect = false;
+        for (let attempt = 0; attempt < 120; attempt += 1) {
+          await frame();
+          const rect = canvas.getBoundingClientRect();
+          const parentRect = parent.getBoundingClientRect();
+          const parentIsZero = kind === "display-none" || (parentRect.width === 0 && parentRect.height === 0);
+          if (rect.width === 0 && rect.height === 0 && parentIsZero &&
+              viewer.getDiagnostics().pendingAnimationFrame === false) {
+            reachedZeroRect = true;
+            break;
+          }
+        }
+        if (!reachedZeroRect) {
+          const rect = canvas.getBoundingClientRect();
+          const parentRect = parent.getBoundingClientRect();
+          throw new Error(`${kind} did not reach a suspended zero-area layout: ${JSON.stringify({
+            canvas: [rect.width, rect.height],
+            parent: [parentRect.width, parentRect.height],
+            diagnostics: viewer.getDiagnostics(),
+          })}`);
+        }
+        await frame();
+        const hiddenBefore = viewer.getDiagnostics();
+        const view = viewer.getView();
+        viewer.setView({ ...view, yawDegrees: view.yawDegrees + 0.01 });
+        await frame(); await frame(); await frame();
+        const hiddenAfter = viewer.getDiagnostics();
+        if (canvasStyle === null) canvas.removeAttribute("style");
+        else canvas.setAttribute("style", canvasStyle);
+        if (parentStyle === null) parent.removeAttribute("style");
+        else parent.setAttribute("style", parentStyle);
+        let recovered = viewer.getDiagnostics();
+        for (let attempt = 0; attempt < 120 && recovered.submittedFrames <= hiddenAfter.submittedFrames; attempt += 1) {
+          await frame();
+          recovered = viewer.getDiagnostics();
+        }
+        cycles.push({
+          hiddenSubmittedDelta: hiddenAfter.submittedFrames - hiddenBefore.submittedFrames,
+          recovered: recovered.submittedFrames > hiddenAfter.submittedFrames,
+          activeObservers: recovered.activeObservers,
+          activeRuntimes: recovered.activeRuntimes,
+          ownedAnimationFrameCount: recovered.ownedAnimationFrameCount,
+        });
+      }
+      return cycles;
+    };
+    return {
+      displayNone: await exercise("display-none"),
+      zeroParent: await exercise("zero-parent"),
+    };
+  });
+  for (const cycles of [observations.displayNone, observations.zeroParent]) {
+    expect(cycles).toHaveLength(30);
+    expect(cycles.every((cycle) => cycle.hiddenSubmittedDelta === 0)).toBe(true);
+    expect(cycles.every((cycle) => cycle.recovered)).toBe(true);
+    expect(cycles.every((cycle) => cycle.activeObservers === 1 && cycle.activeRuntimes === 1)).toBe(true);
+    expect(cycles.every((cycle) => cycle.ownedAnimationFrameCount <= 1)).toBe(true);
+  }
+});
+
 test("disposal cancels a real streaming URL reader", async ({
   page,
   webgpuAvailability,

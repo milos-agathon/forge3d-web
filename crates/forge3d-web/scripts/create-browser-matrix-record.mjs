@@ -8,11 +8,17 @@ import { validateChr03HardwareProofContract as validateChr03HardwareProof } from
 import { CHR03_STABLE_LANES } from "./chr03-lanes.mjs";
 import { validateChr04EdgeEvidence } from "./chr04-hardware-proof-validator.mjs";
 import { CHR04_LANES } from "./chr04-lanes.mjs";
+import { validateFfx03HardwareProof } from "./ffx03-hardware-proof-validator.mjs";
+import { FFX03_STABLE_LANES } from "./ffx03-lanes.mjs";
+import { validateSaf04HardwareProof } from "./saf04-hardware-proof-validator.mjs";
 import { validateSaf03EvidenceEnvelope } from "./saf03-proof-validator.mjs";
 import { assertExactSafariRoute, validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
+import { validateFfx04LifecycleProof } from "./ffx04-lifecycle-proof-validator.mjs";
+import { FFX04_LANES, isFfx04Lane } from "./ffx04-lanes.mjs";
 
 const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
 const CHR04_REQUIRED_LANES = new Set(Object.keys(CHR04_LANES));
+const FFX03_REQUIRED_LANES = new Set(Object.keys(FFX03_STABLE_LANES));
 
 export function createAutomatedMatrixRecord({
   promotion,
@@ -54,6 +60,44 @@ export function createAutomatedMatrixRecord({
       adapter: evidence.adapter,
     });
   }
+  if (FFX03_REQUIRED_LANES.has(promotion.lane)) {
+    const lane = FFX03_STABLE_LANES[promotion.lane];
+    validateFfx03HardwareProof(evidence.ffx03Proof, {
+      lane: promotion.lane, assetId: promotion.assetId, platform: lane.platform,
+      architecture: lane.architecture, commit: promotion.trustedSha,
+      packageSha256: evidence.packageSha256,
+    });
+    if (canonicalJson(evidence.ffx03Proof.browser) !== canonicalJson(evidence.browser) ||
+        evidence.ffx03Proof.driver.name !== evidence.driver.name ||
+        evidence.ffx03Proof.driver.version !== evidence.driver.version ||
+        evidence.ffx03Proof.system.platform !== evidence.system.platform ||
+        evidence.ffx03Proof.system.architecture !== evidence.system.architecture ||
+        canonicalJson(evidence.ffx03Proof.launch.arguments) !== canonicalJson(evidence.effectiveLaunchArguments) ||
+        evidence.ffx03Proof.launch.source !== evidence.launchObservation?.source ||
+        evidence.ffx03Proof.launch.browserProcessId !== evidence.launchObservation?.browserProcessId ||
+        canonicalJson(evidence.ffx03Proof.adapter) !== canonicalJson(evidence.adapter)) {
+      throw new Error("FFX-03 proof conflicts with outer matrix evidence");
+    }
+  }
+  if (isFfx04Lane(promotion.lane)) {
+    if (!Number.isSafeInteger(evidence.jobId) || evidence.jobId < 1 ||
+        evidence.runId !== run.id || attestation?.binding?.runId !== run.id ||
+        attestation?.binding?.jobId !== evidence.jobId) {
+      throw new Error("FFX04 authorized run/job binding does not match workflow and attestation");
+    }
+    validateFfx04LifecycleProof(evidence.ffx04Proof, {
+      lane: promotion.lane,
+      runId: run.id,
+      jobId: evidence.jobId,
+      assetId: promotion.assetId,
+      platform: FFX04_LANES[promotion.lane].platform,
+      commit: promotion.trustedSha,
+      packageSha256: evidence.packageSha256,
+      browser: evidence.browser,
+      driver: evidence.driver,
+      applicationUrl: evidence.route?.applicationUrl,
+    });
+  }
   const safariTrackpadRecord = promotion.lane === "safari-macos-m2";
   if (safariTrackpadRecord) {
     validateSaf02Conformance(evidence.saf02Proof, {
@@ -63,6 +107,12 @@ export function createAutomatedMatrixRecord({
       applicationUrl: evidence.route?.applicationUrl, assetUrl: evidence.route?.assetUrl,
       browser: evidence.browser, system: evidence.system, adapter: evidence.adapter,
       effectiveLaunchArguments: evidence.effectiveLaunchArguments,
+    });
+    validateSaf04HardwareProof(evidence.saf04Proof, {
+      lane: promotion.lane,
+      assetId: promotion.assetId,
+      commit: promotion.trustedSha,
+      packageSha256: evidence.packageSha256,
     });
     validateHostInventory(hostInventory, { matrix, requireTrackpad: true });
     if (
@@ -160,6 +210,7 @@ export function createAutomatedMatrixRecord({
     adapterAttestation: attestation,
     chr03Proof: evidence.chr03Proof ? structuredClone(evidence.chr03Proof) : null,
     chr04Proof: evidence.chr04Proof ? structuredClone(evidence.chr04Proof) : null,
+    ffx03Proof: evidence.ffx03Proof ? structuredClone(evidence.ffx03Proof) : null,
     saf03Proof: evidence.saf03Proof ? structuredClone(evidence.saf03Proof) : null,
     safariTechnologyPreview: evidence.safariTechnologyPreview
       ? structuredClone(evidence.safariTechnologyPreview) : null,
@@ -168,6 +219,11 @@ export function createAutomatedMatrixRecord({
       hardwareJobId: evidence.jobId,
       saf02Route: structuredClone(evidence.route),
     } : {}),
+    saf04Proof: evidence.saf04Proof ? structuredClone(evidence.saf04Proof) : null,
+    ffx04Proof: evidence.ffx04Proof ? structuredClone(evidence.ffx04Proof) : null,
+    ...(isFfx04Lane(promotion.lane)
+      ? { fixtureApplicationUrl: evidence.route.applicationUrl, sourceJobId: evidence.jobId }
+      : {}),
   };
   if (safariTrackpadRecord) assertExactSafariRoute(record.route, record.saf02Route);
   return record;
@@ -358,6 +414,12 @@ export function finalizeMatrixRecord({
         commit: source.trustedSha,
         packageSha256: source.packageSha256,
       },
+    });
+    validateSaf04HardwareProof(source.saf04Proof, {
+      lane: source.lane,
+      assetId: source.assetId,
+      commit: source.trustedSha,
+      packageSha256: source.packageSha256,
     });
   }
   if (

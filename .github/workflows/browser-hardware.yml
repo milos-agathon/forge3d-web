@@ -21,9 +21,11 @@ on:
           - chrome-linux-intel12
           - chrome-beta-linux-intel12
           - edge-linux-intel12
+          - firefox-nightly-linux-intel12
           - chrome-linux-rtx3070
           - chrome-beta-linux-rtx3070
           - edge-linux-rtx3070
+          - firefox-nightly-linux-rtx3070
           - manual-mobile-multitouch
           - manual-safari-trackpad
       assetId:
@@ -635,6 +637,7 @@ jobs:
           EXPECTED_HOST_ID: ${{ needs.promote-hardware.outputs.host_id }}
           EXPECTED_LANE: ${{ inputs.lane }}
           EXPECTED_ASSET_ID: ${{ inputs.assetId }}
+          EXPECTED_REQUIRED: ${{ inputs.required }}
           EXPECTED_TRUSTED_SHA: ${{ inputs.trusted_sha }}
           EXPECTED_WORKFLOW_SHA: ${{ github.workflow_sha }}
         run: |
@@ -708,6 +711,7 @@ jobs:
               authorization.hostId !== process.env.EXPECTED_HOST_ID ||
               authorization.lane !== process.env.EXPECTED_LANE ||
               authorization.assetId !== process.env.EXPECTED_ASSET_ID ||
+              authorization.required !== (process.env.EXPECTED_REQUIRED === "true") ||
               authorization.trustedSha !== process.env.EXPECTED_TRUSTED_SHA ||
               authorization.workflow.sha !== process.env.EXPECTED_WORKFLOW_SHA ||
               authorization.runnerNonce !== process.env.EXPECTED_NONCE ||
@@ -783,6 +787,16 @@ jobs:
           mkdir consumer
           tar -xzf promotion/consumer-fixture.tar.gz -C consumer
           npm --prefix consumer install --include=dev --no-save "${tarball}"
+          if [[ "${{ inputs.lane }}" == firefox-* ]]; then
+            selenium_module="$(node promotion/materialize-selenium-harness.mjs \
+              --promotion promotion \
+              --output "${FORGE3D_CONTROLLER_JOB_ROOT}/selenium-harness")"
+            cp promotion/firefox-viewer.mjs promotion/ffx03-lanes.mjs \
+              "${FORGE3D_CONTROLLER_JOB_ROOT}/selenium-harness/"
+            printf 'FORGE3D_FIREFOX_ACCEPTANCE_MODULE=%s\n' \
+              "${FORGE3D_CONTROLLER_JOB_ROOT}/selenium-harness/firefox-viewer.mjs" >> "${GITHUB_ENV}"
+            printf 'FORGE3D_SELENIUM_MODULE=%s\n' "${selenium_module}" >> "${GITHUB_ENV}"
+          fi
           node promotion/materialize-browser-fixture.mjs \
             --consumer consumer \
             --package-sha256 "${expected}"
@@ -913,9 +927,15 @@ jobs:
         shell: bash
         run: |
           export FORGE3D_SAFARI_ACCEPTANCE_MODULE="$(pwd)/consumer/tests/webdriver/safari-viewer.mjs"
-          export FORGE3D_SELENIUM_MODULE="$(pwd)/consumer/node_modules/selenium-webdriver/index.js"
+          if [[ "${{ inputs.lane }}" == firefox-* ]]; then
+            test -n "${FORGE3D_SELENIUM_MODULE:-}"
+            test "${FORGE3D_SELENIUM_MODULE}" = "${FORGE3D_CONTROLLER_JOB_ROOT}/selenium-harness/node_modules/selenium-webdriver/index.js"
+          else
+            export FORGE3D_SELENIUM_MODULE="$(pwd)/consumer/node_modules/selenium-webdriver/index.js"
+          fi
           runtime_args=(
             --lane "${{ inputs.lane }}" \
+            --required "${{ inputs.required }}" \
             --asset-id "${{ inputs.assetId }}" \
             --binding "${FORGE3D_CONTROLLER_JOB_ROOT}/binding.json" \
             --route "${FORGE3D_CONTROLLER_JOB_ROOT}/route.json" \
@@ -950,6 +970,10 @@ jobs:
             --matrix promotion/hardware-matrix.json \
             --inventory "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/host-inventory.json" \
             --output "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/host-gpu-evidence.json"
+          if [[ "${{ inputs.lane }}" == firefox-nightly-* ]] && \
+             test "$(node -p "require('${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/browser-hardware-evidence.json').outcome")" != "PROBE_PASS"; then
+            exit 0
+          fi
           node promotion/join-adapter-attestation.mjs \
             --page "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/browser-hardware-evidence.json" \
             --host "${FORGE3D_CONTROLLER_JOB_ROOT}/evidence/host-gpu-evidence.json" \
@@ -1086,7 +1110,12 @@ jobs:
           test "$(find finalized-hardware-evidence -name browser-hardware-evidence.json -type f | wc -l)" -eq 1
           test "$(find finalized-hardware-evidence -name host-inventory.json -type f | wc -l)" -eq 1
           test "$(find finalized-hardware-evidence -name host-gpu-evidence.json -type f | wc -l)" -eq 1
-          test "$(find finalized-hardware-evidence -name adapter-attestation.json -type f | wc -l)" -eq 1
+          if [[ "${{ inputs.lane }}" != firefox-nightly-* ]] || \
+             test "$(node -p "require('./finalized-hardware-evidence/browser-hardware-evidence.json').outcome")" = "PROBE_PASS"; then
+            test "$(find finalized-hardware-evidence -name adapter-attestation.json -type f | wc -l)" -eq 1
+          else
+            test "$(find finalized-hardware-evidence -name adapter-attestation.json -type f | wc -l)" -eq 0
+          fi
           if test "${{ inputs.required }}" = "true" && test "${{ inputs.lane }}" != "infrastructure-canary"; then
             test "$(find finalized-hardware-evidence -name browser-matrix-record-source.json -type f | wc -l)" -eq 1
           fi
@@ -1148,6 +1177,16 @@ jobs:
         run: |
           page="$(find ../../finalized-hardware-evidence -name browser-hardware-evidence.json -type f)"
           host="$(find ../../finalized-hardware-evidence -name host-gpu-evidence.json -type f)"
+          if [[ "${{ inputs.lane }}" == firefox-nightly-* ]]; then
+            node --input-type=module --eval '
+              import { readFileSync } from "node:fs";
+              import { validateFfx03ProbeOutcome } from "./scripts/ffx03-hardware-proof-validator.mjs";
+              validateFfx03ProbeOutcome(JSON.parse(readFileSync(process.argv[1], "utf8")));
+            ' "${page}"
+            if test "$(node -p "require('${page}').outcome")" != "PROBE_PASS"; then
+              exit 0
+            fi
+          fi
           joined="$(find ../../finalized-hardware-evidence -name adapter-attestation.json -type f)"
           node scripts/join-adapter-attestation.mjs \
             --page "${page}" \

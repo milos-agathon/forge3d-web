@@ -29,6 +29,14 @@ const optionalChromeProbeHosts = new Map([
   ["chrome-beta-linux-intel12", "FW-LNX-I12-01"],
   ["chrome-beta-linux-rtx3070", "FW-LNX-NV-01"],
 ]);
+const optionalFirefoxProbeHosts = new Map([
+  ["firefox-nightly-linux-intel12", "FW-LNX-I12-01"],
+  ["firefox-nightly-linux-rtx3070", "FW-LNX-NV-01"],
+]);
+const requiredFirefoxHosts = new Map([
+  ["firefox-macos-m2", "FW-MAC-M2-01"],
+  ["firefox-windows-intel12", "FW-WIN-I12-01"],
+]);
 
 export function validateHardwareDispatch(inputs, matrix) {
   const trustedSha = requireSha(inputs.trustedSha, "trusted_sha");
@@ -47,6 +55,7 @@ export function validateHardwareDispatch(inputs, matrix) {
     matrix.hosts.flatMap((candidate) => candidate.requiredBrowserLanes),
   );
   for (const lane of optionalChromeProbeHosts.keys()) productLanes.add(lane);
+  for (const lane of optionalFirefoxProbeHosts.keys()) productLanes.add(lane);
   if (
     inputs.lane !== infrastructureLane &&
     !manualLanes.has(inputs.lane) &&
@@ -88,9 +97,13 @@ export function validateHardwareDispatch(inputs, matrix) {
     if (labReadinessRunId === null) {
       throw new Error("browser-family lane requires labReadinessRunId");
     }
-    const probeHost = optionalChromeProbeHosts.get(inputs.lane);
+    const probeHost = optionalChromeProbeHosts.get(inputs.lane) ?? optionalFirefoxProbeHosts.get(inputs.lane);
+    const requiredFirefoxHost = requiredFirefoxHosts.get(inputs.lane);
     if (probeHost && required) {
-      throw new Error("Chrome Beta probe lanes reject required:true");
+      throw new Error("optional browser probe lanes reject required:true");
+    }
+    if (requiredFirefoxHost && !required) {
+      throw new Error("stable Firefox lanes reject required:false");
     }
     if ((!probeHost && !host.requiredBrowserLanes.includes(inputs.lane) && inputs.lane !== "mobile-usb-controller") ||
         (probeHost && probeHost !== host.assetId)) {

@@ -38,6 +38,9 @@ export class WebDriverClient {
   }
 
   async requestRaw(method, path, body = undefined, timeoutMs = this.requestTimeoutMs) {
+    if (!Number.isSafeInteger(timeoutMs) || timeoutMs < 1 || timeoutMs > 120_000) {
+      throw new Error("WebDriver request timeout must be between 1 and 120000 ms");
+    }
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), timeoutMs);
     let response;
@@ -59,7 +62,7 @@ export class WebDriverClient {
   }
 }
 
-class WebDriverSession {
+export class WebDriverSession {
   constructor(client, sessionId, capabilities) {
     this.client = client;
     this.sessionId = sessionId;
@@ -71,7 +74,88 @@ class WebDriverSession {
       "POST",
       `/session/${this.sessionId}/url`,
       { url },
+      35_000,
     );
+  }
+
+  back() {
+    return this.client.request("POST", `/session/${this.sessionId}/back`, {}, 35_000);
+  }
+
+  refresh() {
+    return this.client.request("POST", `/session/${this.sessionId}/refresh`, {}, 35_000);
+  }
+
+  setTimeouts({ script = 120_000, pageLoad = 30_000, implicit = 0 } = {}) {
+    return this.client.request("POST", `/session/${this.sessionId}/timeouts`, {
+      script, pageLoad, implicit,
+    });
+  }
+
+  async findElement(selector) {
+    const response = await this.client.request(
+      "POST",
+      `/session/${this.sessionId}/element`,
+      { using: "css selector", value: selector },
+    );
+    const value = response.value;
+    const id = value?.["element-6066-11e4-a52e-4f735466cecf"];
+    if (typeof id !== "string" || id === "") {
+      throw new Error("INFRA_ERROR WEBDRIVER_ELEMENT_INVALID");
+    }
+    return id;
+  }
+
+  async elementRect(elementId) {
+    const response = await this.client.request(
+      "GET",
+      `/session/${this.sessionId}/element/${encodeURIComponent(elementId)}/rect`,
+    );
+    const rect = response.value;
+    if (![rect?.x, rect?.y, rect?.width, rect?.height].every(Number.isFinite) ||
+        rect.width <= 0 || rect.height <= 0) {
+      throw new Error("INFRA_ERROR WEBDRIVER_ELEMENT_RECT_INVALID");
+    }
+    return rect;
+  }
+
+  performActions(actions) {
+    if (!Array.isArray(actions) || actions.length < 1 || actions.length > 4) {
+      throw new Error("WebDriver actions must contain between one and four sources");
+    }
+    const actionCount = actions.reduce((count, source) =>
+      Math.max(count, Array.isArray(source?.actions) ? source.actions.length : 0), 0);
+    if (actionCount < 1 || actionCount > 64) {
+      throw new Error("WebDriver action sequence must contain between one and 64 ticks");
+    }
+    return this.client.request(
+      "POST",
+      `/session/${this.sessionId}/actions`,
+      { actions },
+    );
+  }
+
+  releaseActions() {
+    return this.client.request("DELETE", `/session/${this.sessionId}/actions`);
+  }
+
+  async execute(script, args = []) {
+    const response = await this.client.request(
+      "POST",
+      `/session/${this.sessionId}/execute/sync`,
+      { script, args },
+    );
+    return response.value;
+  }
+
+  async executeAsync(script, args = [], timeoutMs = 120_000) {
+    const response = await this.client.request(
+      "POST",
+      `/session/${this.sessionId}/execute/async`,
+      { script, args },
+      timeoutMs,
+    );
+    return response.value;
   }
 
   async browserInfo() {
@@ -143,6 +227,44 @@ class WebDriverSession {
       throw new Error("INFRA_ERROR BROWSER_ROUTE_PROBE_FAILED");
     }
     return result.value;
+  }
+
+  async runBfcacheLifecycleAction(action, args = []) {
+    const exports = new Set([
+      "prepareViewerBfcacheCycle",
+      "observeViewerBfcacheRestore",
+      "exerciseViewerAfterBfcache",
+      "disposeViewerBfcacheLifecycle",
+    ]);
+    if (!exports.has(action) || !Array.isArray(args)) {
+      throw new Error("INFRA_ERROR WEBDRIVER_BFCACHE_ACTION_INVALID");
+    }
+    const script = `
+      const action = arguments[0];
+      const values = arguments[1];
+      const done = arguments[arguments.length - 1];
+      import(new URL("viewer-bfcache-lifecycle.js", window.location.href).href)
+        .then((module) => module[action](...values))
+        .then((value) => done({ ok: true, value }))
+        .catch((error) => done({ ok: false, message: String(error && error.message || error) }));
+    `;
+    const response = await this.client.request(
+      "POST",
+      `/session/${this.sessionId}/execute/async`,
+      { script, args: [action, args] },
+    );
+    if (response.value?.ok !== true) {
+      throw new Error(`INFRA_ERROR WEBDRIVER_BFCACHE_ACTION_FAILED ${action}`);
+    }
+    return response.value.value;
+  }
+
+  historyBack() {
+    return this.client.request(
+      "POST",
+      `/session/${this.sessionId}/back`,
+      {},
+    );
   }
 
   delete() {

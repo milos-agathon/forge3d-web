@@ -69,6 +69,23 @@ export function materializeBrowserFixture({
     encoding: "utf8",
     mode: 0o600,
   });
+  const lifecycleModule = "./viewer-bfcache-lifecycle.js";
+  const lifecycleInstaller = `  <script type="module">
+      import { installViewerBfcacheLifecycle } from "${lifecycleModule}";
+      installViewerBfcacheLifecycle(window.__forge3dInteractiveViewer);
+    </script>`;
+  const lifecycleHtml = nonceRelativeHtml.includes("</body>")
+    ? nonceRelativeHtml.replace("</body>", `${lifecycleInstaller}\n  </body>`)
+    : `${nonceRelativeHtml}\n${lifecycleInstaller}\n`;
+  writeFileSync(join(root, "lifecycle-viewer.html"), lifecycleHtml, {
+    encoding: "utf8",
+    mode: 0o600,
+  });
+  writeFileSync(
+    join(root, "lifecycle-away.html"),
+    "<!doctype html><meta charset=\"utf-8\"><title>Forge3D lifecycle away</title><p>away</p>\n",
+    { encoding: "utf8", mode: 0o600 },
+  );
   copyFileSync(join(packageRoot, "dist", "index.js"), join(root, "app.js"));
   copyFileSync(
     join(packageRoot, "dist", "forge3d_web_bg.wasm"),
@@ -97,6 +114,8 @@ export function materializeBrowserFixture({
     "viewer-benchmark-browser.js",
     "chr03-lanes.js",
     "chr04-lanes.js",
+    "ffx03-lanes.js",
+    "viewer-bfcache-lifecycle.js",
   ]) {
     const source = join(root, "tests", "browser", file);
     const stats = lstatSync(source);
@@ -118,6 +137,8 @@ export function materializeBrowserFixture({
     terrain: "terrain.bin",
     rangedTerrain: "terrain-range.bin",
     benchmarkModule: "viewer-benchmark-browser.js",
+    lifecycleViewer: "lifecycle-viewer.html",
+    lifecycleAway: "lifecycle-away.html",
     safariAcceptanceModule: "tests/webdriver/safari-viewer.mjs",
     seleniumVersion: "4.35.0",
   };

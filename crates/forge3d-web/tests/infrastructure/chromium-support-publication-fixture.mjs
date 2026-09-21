@@ -2,8 +2,11 @@ import { readFileSync } from "node:fs";
 
 import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
 import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
+import { validFfx03Proof, validFfxAdapter } from "../browser/ffx03-proof-fixture.mjs";
 import { validSaf03Proof, validStpResult } from "../browser/saf03-proof-fixture.mjs";
 import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
+import { validSaf04HardwareProof } from "../browser/saf04-hardware-proof-fixture.mjs";
+import { validFfx04LifecycleProof } from "../browser/ffx04-lifecycle-proof-fixture.mjs";
 import { CHR04_LANES } from "../../scripts/chr04-lanes.mjs";
 import { canonicalJson, sha256Hex } from "../../scripts/canonical-json.mjs";
 import {
@@ -47,6 +50,7 @@ export function validPublicationInput({ skipMerge = false } = {}) {
       row.lane === "safari-macos-m2" || row.checklistId === "safari-trackpad";
     const edge = row.lane.startsWith("edge-");
     const chrome = row.lane.startsWith("chrome-");
+    const firefox = row.lane.startsWith("firefox-");
     const edgePlatform = edge ? CHR04_LANES[row.lane].platform : null;
     const inferredPlatform = row.lane.includes("windows")
       ? "win32"
@@ -86,7 +90,7 @@ export function validPublicationInput({ skipMerge = false } = {}) {
         ? { name: "playwright-edge", version: "1.56.1" }
         : chrome
           ? { name: "playwright-chrome", version: "1.56.1" }
-          : { name: "selenium-firefox", version: "4.35.0" };
+          : { name: "selenium-firefox", version: "0.36.0" };
     const hostInventory = safariTrackpad ? structuredClone(macInventory) : null;
     const workflow = {
       runId: 100 + index,
@@ -135,7 +139,7 @@ export function validPublicationInput({ skipMerge = false } = {}) {
         expiresAt: "2026-10-05T00:00:00.000Z",
       };
     }
-    const adapter = {
+    const adapter = firefox ? validFfxAdapter({ assetId: row.assetId, commit: targetSha, packageSha256 }) : {
       isFallbackAdapter: false,
       secureContext: true,
       deviceCreated: true,
@@ -154,13 +158,14 @@ export function validPublicationInput({ skipMerge = false } = {}) {
       : null;
     return {
       ...record,
-      effectiveLaunchArguments: [],
+      effectiveLaunchArguments: firefox ? ["-profile", "/tmp/profile"] : [],
       adapter,
       adapterAttestation: {
         result: "PASS",
         required: true,
         binding: {
           runId: workflow.runId,
+          ...(firefox ? { jobId: 20 } : {}),
           assetId: row.assetId,
           commit: targetSha,
           packageSha256,
@@ -185,6 +190,10 @@ export function validPublicationInput({ skipMerge = false } = {}) {
       ...(edge
         ? { chr04Proof: validChr04HardwareProof({ lane: row.lane, assetId: row.assetId, platform, commit: targetSha, packageSha256 }) }
         : {}),
+      ...(firefox ? { ffx03Proof: validFfx03Proof({ lane: row.lane, assetId: row.assetId,
+        platform, architecture: platform === "darwin" ? "arm64" : "x64",
+        version: browser.version, commit: targetSha,
+        packageSha256, adapter }) } : {}),
       ...(saf02Proof
         ? {
             hardwareJobId: saf02Proof.binding.jobId,
@@ -204,6 +213,21 @@ export function validPublicationInput({ skipMerge = false } = {}) {
               return result;
             })(),
           }
+        : {}),
+      ...(firefox
+        ? {
+            sourceJobId: 20,
+            fixtureApplicationUrl: `https://firefox.webgpu-ci.forge3d.dev/runs/${workflow.runId}/20/${"c".repeat(32)}/`,
+            ffx04Proof: validFfx04LifecycleProof({
+              lane: row.lane, assetId: row.assetId, platform,
+              commit: targetSha, packageSha256,
+              runId: workflow.runId, jobId: 20,
+              browserVersion: browser.version, driverVersion: driver.version,
+            }),
+          }
+        : {}),
+      ...(row.lane === "safari-macos-m2"
+        ? { saf04Proof: validSaf04HardwareProof({ commit: targetSha, packageSha256 }) }
         : {}),
     };
   });

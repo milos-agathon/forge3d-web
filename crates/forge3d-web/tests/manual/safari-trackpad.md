@@ -18,6 +18,12 @@ the gesture steps.
   loop.
 - [ ] `TRACKPAD_PAGE_SCROLL_ISOLATION` — Confirm canvas gestures do not move the
   surrounding page.
+- [ ] `TRACKPAD_OUTSIDE_CANVAS_PAGE_SCROLL` — Move the pointer outside the
+  canvas and confirm two-finger scrolling moves the surrounding page normally.
 - [ ] `TRACKPAD_CLEANUP` — Confirm Safari, fixture, Bluetooth gesture session,
   direct-USB pairing/charging state, update freeze, and host reservation
   cleanup.
+
+Trackpad pinch is outside the Forge3D v1 viewer-input contract. Safari may
+apply its normal page/browser gesture; this checklist neither intercepts that
+gesture nor treats it as mandatory Forge3D viewer acceptance.

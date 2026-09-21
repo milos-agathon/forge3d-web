@@ -160,6 +160,9 @@ test("hardware executes only verified promoted artifacts and always cleans up", 
   assert.match(hardware, /inputs\.lane == 'infrastructure-canary'/u);
   assert.match(hardware, /host_id == 'FW-MAC-M2-01'/u);
   assert.match(hardware, /browser-lane-runtime\.mjs/u);
+  assert.match(hardware, /EXPECTED_REQUIRED: \$\{\{ inputs\.required \}\}/u);
+  assert.match(hardware, /authorization\.required !== \(process\.env\.EXPECTED_REQUIRED === "true"\)/u);
+  assert.match(hardware, /--required "\$\{\{ inputs\.required \}\}"/u);
   assert.match(hardware, /!process\.env\.GITHUB_ACTOR\?\.trim\(\)/u);
   assert.match(hardware, /createBrowserPageBinding/u);
   assert.doesNotMatch(hardware, /manualSession\.expectedTester/u);
@@ -182,6 +185,38 @@ test("hardware executes only verified promoted artifacts and always cleans up", 
   assert.match(hardware, /if: always\(\)/u);
   assert.match(hardware, /cleanup-browser-hardware\.mjs/u);
   assert.match(hardware, /retention-days: 90/u);
+});
+
+test("Firefox Nightly stays optional and uses only validated typed probe outcomes", () => {
+  for (const lane of ["firefox-nightly-linux-intel12", "firefox-nightly-linux-rtx3070"]) {
+    assert.equal(workflow.split(`          - ${lane}`).length, 2);
+  }
+  assert.doesNotMatch(hardware, /npm --prefix promotion install|selenium-webdriver@4\.35\.0/u);
+  assert.match(hardware, /materialize-selenium-harness\.mjs/u);
+  assert.match(hardware, /selenium-harness/u);
+  assert.match(hardware, /cp promotion\/firefox-viewer\.mjs promotion\/ffx03-lanes\.mjs/u);
+  assert.match(hardware, /selenium-harness\/firefox-viewer\.mjs/u);
+  assert.match(hardware, /FORGE3D_FIREFOX_ACCEPTANCE_MODULE/u);
+  assert.match(hardware, /FORGE3D_SELENIUM_MODULE/u);
+  const seleniumModuleGuard =
+    'if [[ "${{ inputs.lane }}" == firefox-* ]]; then\n' +
+    '            test -n "${FORGE3D_SELENIUM_MODULE:-}"\n' +
+    '            test "${FORGE3D_SELENIUM_MODULE}" = "${FORGE3D_CONTROLLER_JOB_ROOT}/selenium-harness/node_modules/selenium-webdriver/index.js"\n' +
+    "          else\n" +
+    '            export FORGE3D_SELENIUM_MODULE="$(pwd)/consumer/node_modules/selenium-webdriver/index.js"\n' +
+    "          fi";
+  assert.notEqual(hardware.indexOf(seleniumModuleGuard), -1,
+    "workflow must guard the promoted Selenium closure behind the Firefox lane check");
+  assert.equal(
+    hardware.split('FORGE3D_SELENIUM_MODULE="$(pwd)/consumer/node_modules/selenium-webdriver/index.js"').length,
+    2,
+    "consumer Selenium module must be exported only inside the non-Firefox else block",
+  );
+  assert.match(hardware, /"\$\{\{ inputs\.lane \}\}" == firefox-nightly-\*/u);
+  assert.match(hardware, /outcome"\)" != "PROBE_PASS"/u);
+  assert.match(automatedFinalizer, /validateFfx03ProbeOutcome/u);
+  assert.match(automatedFinalizer, /outcome"\)" != "PROBE_PASS"/u);
+  assert.match(automatedFinalizer, /find \.\.\/\.\.\/finalized-hardware-evidence -name adapter-attestation\.json/u);
 });
 
 test("manual finalizer verifies signed session and exact runner absence before attestation", () => {

@@ -14,12 +14,21 @@ import { validateChr03HardwareProofContract as validateChr03HardwareProof } from
 import { CHR03_STABLE_LANES, isChr03Lane } from "./chr03-lanes.mjs";
 import { validateChr04EdgeEvidence } from "./chr04-hardware-proof-validator.mjs";
 import { CHR04_LANES, isChr04Lane } from "./chr04-lanes.mjs";
+import {
+  validateFfx03HardwareProof,
+  validateFfx03ProbeOutcome,
+} from "./ffx03-hardware-proof-validator.mjs";
+import { FFX03_STABLE_LANES, isFfx03Lane, resolveFfx03Lane } from "./ffx03-lanes.mjs";
 import { validateSaf03SafariProof } from "./saf03-proof-validator.mjs";
 import { isSaf03Lane } from "./saf03-lanes.mjs";
 import { validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
+import { validateSaf04HardwareProof } from "./saf04-hardware-proof-validator.mjs";
+import { validateFfx04LifecycleProof } from "./ffx04-lifecycle-proof-validator.mjs";
+import { isFfx04Lane } from "./ffx04-lanes.mjs";
 
 const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
 const CHR04_REQUIRED_LANES = new Set(Object.keys(CHR04_LANES));
+const FFX03_REQUIRED_LANES = new Set(Object.keys(FFX03_STABLE_LANES));
 
 const DESKTOP_LANES = new Map([
   ["chrome-macos-m2", ["playwright-chrome", "chrome"]],
@@ -37,9 +46,11 @@ const DESKTOP_LANES = new Map([
   ["manual-safari-trackpad", ["safaridriver", "safari"]],
   ["firefox-macos-m2", ["selenium-firefox", "firefox"]],
   ["firefox-windows-intel12", ["selenium-firefox", "firefox"]],
+  ["firefox-nightly-linux-intel12", ["selenium-firefox", "firefox"]],
+  ["firefox-nightly-linux-rtx3070", ["selenium-firefox", "firefox"]],
 ]);
 
-export function resolveLaneRuntime({ lane, assetId, platform }) {
+export function resolveLaneRuntime({ lane, assetId, platform, architecture = platform === "darwin" ? "arm64" : "x64", required }) {
   if (lane === "infrastructure-canary") {
     return {
       driver: "infrastructure-canary",
@@ -51,6 +62,8 @@ export function resolveLaneRuntime({ lane, assetId, platform }) {
   }
   const desktop = DESKTOP_LANES.get(lane);
   if (desktop) {
+    const firefox = isFfx03Lane(lane)
+      ? resolveFfx03Lane({ lane, assetId, platform, architecture, required }) : null;
     if (isChr04Lane(lane) &&
         (CHR04_LANES[lane].assetId !== assetId || CHR04_LANES[lane].platform !== platform)) {
       throw new Error("CHR-04 lane does not match its exact hardware asset and platform");
@@ -61,6 +74,8 @@ export function resolveLaneRuntime({ lane, assetId, platform }) {
       supportAssertions: !lane.startsWith("manual-"),
       manual: lane.startsWith("manual-"),
       mobile: false,
+      ...(firefox ? { channel: firefox.channel, required: firefox.required,
+        experimental: firefox.experimental, architecture, lane } : {}),
     };
   }
   if (
@@ -108,6 +123,8 @@ export async function executeHardwareBrowserLane({
   assetId,
   hostId,
   platform,
+  architecture = null,
+  required = null,
   binding,
   route,
   browserPolicy,
@@ -124,7 +141,12 @@ export async function executeHardwareBrowserLane({
   processRegistryPath = null,
   dependencies = productionDependencies(),
 }) {
-  const runtime = resolveLaneRuntime({ lane, assetId, platform });
+  architecture ??= inventory?.architecture ?? (platform === "darwin" ? "arm64" : "x64");
+  if (isFfx03Lane(lane) && typeof required !== "boolean") {
+    throw new Error("FFX-03 runtime requires the authorized required boolean");
+  }
+  const runtime = resolveLaneRuntime({ lane, assetId, platform, architecture,
+    required: isFfx03Lane(lane) ? required : undefined });
   const manualLifecycle = runtime.manual || mediaChallenge !== null;
   if (
     manualLifecycle &&
@@ -137,15 +159,20 @@ export async function executeHardwareBrowserLane({
     lane,
     runtime,
     assetId,
+    platform,
+    architecture,
     routeUrl: route.applicationUrl,
     browserPolicy,
     inventory,
     deviceMatrix,
     appiumSessionModule,
     processRegistryPath,
+    temporaryRoot: processRegistryPath ? dirname(processRegistryPath) : null,
   });
   let pageResult;
   let captureWindow = null;
+  let sessionClosed = false;
+  let primaryError = null;
   try {
     const provenance = validateBrowserRunProvenance({
       runtime,
@@ -155,6 +182,21 @@ export async function executeHardwareBrowserLane({
       platform,
       browserPolicy,
     });
+    if (runtime.experimental) {
+      pageResult = await session.runPage({
+        lane, binding: closedPageBinding(binding), route,
+        effectiveLaunchArguments: session.effectiveLaunchArguments,
+        supportAssertions: true,
+      });
+      sessionClosed = true;
+      const cleanup = await session.close();
+      const probe = createFfx03ProbeRecord({ lane, assetId, platform, architecture,
+        binding, route, session, provenance, pageResult, cleanup });
+      validateFfx03ProbeOutcome(probe, { lane, assetId, platform, architecture,
+        commit: binding.commit, packageSha256: binding.packageSha256 });
+      writeJson(outputPath, probe);
+      return probe;
+    }
     const record = await executeLaneContract({
       lane,
       driver: runtime.driver,
@@ -163,7 +205,9 @@ export async function executeHardwareBrowserLane({
         pageResult = await session.runPage({
           lane,
           binding: {
-            ...(isChr03Lane(lane) || isChr04Lane(lane) || isSaf03Lane(lane) ? { lane: binding.lane } : {}),
+            ...(isChr03Lane(lane) || isChr04Lane(lane) || isFfx03Lane(lane) || isSaf03Lane(lane)
+              ? { lane: binding.lane }
+              : {}),
             runId: binding.runId,
             jobId: binding.jobId,
             assetId: binding.assetId,
@@ -186,6 +230,18 @@ export async function executeHardwareBrowserLane({
             trackpad: lane === "manual-safari-trackpad" ? trackpadInventory : null,
           } : null,
         });
+        if (isFfx04Lane(lane)) {
+          if (typeof session.runFirefoxLifecycle !== "function") {
+            throw new Error("FFX04_LIFECYCLE_RUNNER_UNAVAILABLE");
+          }
+          pageResult.ffx04Proof = await session.runFirefoxLifecycle({
+            lane,
+            assetId,
+            platform,
+            binding,
+            route,
+          });
+        }
         if (manualLifecycle) {
           if (pageResult.watermark?.visible !== true ||
               !Object.values(pageResult.routeReadiness ?? {}).every((value) => value === true)) {
@@ -237,6 +293,25 @@ export async function executeHardwareBrowserLane({
           });
         }
         if (lane === "safari-macos-m2") {
+          validateSaf04HardwareProof(pageResult.saf04Proof, {
+            lane, assetId, commit: binding.commit, packageSha256: binding.packageSha256,
+          });
+        }
+        if (isFfx04Lane(lane)) {
+          validateFfx04LifecycleProof(pageResult.ffx04Proof, {
+            lane,
+            runId: binding.runId,
+            jobId: binding.jobId,
+            assetId,
+            platform,
+            commit: binding.commit,
+            packageSha256: binding.packageSha256,
+            browser: session.browser,
+            driver: provenance.driver,
+            applicationUrl: route.applicationUrl,
+          });
+        }
+        if (lane === "safari-macos-m2") {
           validateSaf03SafariProof(pageResult.saf03Proof, {
             lane,
             assetId,
@@ -252,16 +327,19 @@ export async function executeHardwareBrowserLane({
     const safariTechnologyPreview = lane === "safari-macos-m2"
       ? await session.runTechnologyPreview({ lane, binding, route })
       : null;
-    writeJson(outputPath, {
+    const evidence = {
       ...record,
       browser: session.browser,
       route,
       routeReadiness: pageResult.routeReadiness,
       chr03Proof: pageResult.chr03Proof ?? null,
       chr04Proof: pageResult.chr04Proof ?? null,
+      ffx03Proof: null,
       saf03Proof: pageResult.saf03Proof ?? null,
       safariTechnologyPreview,
       saf02Proof: pageResult.saf02Proof ?? null,
+      saf04Proof: pageResult.saf04Proof ?? null,
+      ffx04Proof: pageResult.ffx04Proof ?? null,
       headed: true,
       driver: provenance.driver,
       system: provenance.system,
@@ -269,7 +347,18 @@ export async function executeHardwareBrowserLane({
       effectiveLaunchArguments: provenance.effectiveLaunchArguments,
       launchObservation: provenance.launchObservation,
       inventoryCapturedAt: provenance.inventoryCapturedAt,
-    });
+    };
+    if (FFX03_REQUIRED_LANES.has(lane)) {
+      sessionClosed = true;
+      const cleanup = await session.close();
+      evidence.ffx03Proof = createFfx03StableProof({ lane, assetId, platform,
+        architecture, binding, session, provenance, pageResult, cleanup });
+      validateFfx03HardwareProof(evidence.ffx03Proof, {
+        lane, assetId, platform, architecture, commit: binding.commit,
+        packageSha256: binding.packageSha256,
+      });
+    }
+    writeJson(outputPath, evidence);
     if (manualLifecycle) {
       if (!manualSessionInputPath || !watermarkPath) {
         throw new Error("manual lane requires session-input and watermark outputs");
@@ -301,9 +390,71 @@ export async function executeHardwareBrowserLane({
       });
     }
     return record;
+  } catch (error) {
+    primaryError = error;
+    throw error;
   } finally {
-    await session.close();
+    if (!sessionClosed) {
+      try {
+        await session.close();
+      } catch (cleanupError) {
+        if (primaryError) throw new AggregateError([primaryError, cleanupError],
+          "browser lane failed and session cleanup also failed");
+        throw cleanupError;
+      }
+    }
   }
+}
+
+function closedPageBinding(binding) {
+  return { lane: binding.lane, runId: binding.runId, jobId: binding.jobId,
+    assetId: binding.assetId, commit: binding.commit, packageSha256: binding.packageSha256 };
+}
+
+function createFfx03StableProof({ lane, assetId, platform, architecture, binding,
+  session, provenance, pageResult, cleanup }) {
+  return {
+    schemaVersion: 1, kind: "forge3d-ffx03-firefox-hardware-proof-v1",
+    classification: "required", required: true, experimental: false,
+    binding: { lane, assetId, platform, architecture, channel: "release",
+      commit: binding.commit, packageSha256: binding.packageSha256 },
+    browser: session.browser,
+    driver: { name: "selenium-firefox", version: session.driverVersion,
+      executable: session.driverExecutable, clientName: "selenium-webdriver",
+      clientVersion: session.clientVersion },
+    system: { platform, architecture, osBuild: provenance.system.osBuild },
+    launch: { observed: true, source: session.launchArgumentSource,
+      browserProcessId: session.browserProcessId, executable: session.observedExecutable,
+      arguments: session.effectiveLaunchArguments },
+    configuration: pageResult.configuration,
+    adapter: pageResult.adapter,
+    workload: pageResult.ffx03Workload,
+    errors: [], cleanup,
+  };
+}
+
+function createFfx03ProbeRecord({ lane, assetId, platform, architecture, binding,
+  route, session, provenance, pageResult, cleanup }) {
+  const outcome = pageResult.probeOutcome;
+  return {
+    schemaVersion: 1, kind: "forge3d-ffx03-firefox-nightly-probe-v1",
+    classification: "probe", required: false, experimental: true, outcome,
+    binding: { lane, assetId, platform, architecture, channel: "nightly",
+      commit: binding.commit, packageSha256: binding.packageSha256 },
+    browser: session.browser,
+    driver: { name: "selenium-firefox", version: session.driverVersion,
+      executable: session.driverExecutable, clientName: "selenium-webdriver",
+      clientVersion: session.clientVersion },
+    system: { platform, architecture, osBuild: provenance.system.osBuild },
+    launch: { observed: true, source: session.launchArgumentSource,
+      browserProcessId: session.browserProcessId, executable: session.observedExecutable,
+      arguments: session.effectiveLaunchArguments },
+    configuration: pageResult.configuration,
+    route: route.applicationUrl,
+    adapter: outcome === "PROBE_PASS" ? pageResult.adapter : null,
+    diagnostic: outcome === "PROBE_PASS" ? null : pageResult.diagnostic,
+    cleanup,
+  };
 }
 
 async function executeLaneContract({
@@ -419,6 +570,7 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     assetId: args.get("--asset-id"),
     hostId: args.get("--host-id"),
     platform: args.get("--platform") ?? process.platform,
+    required: args.has("--required") ? parseRequired(args.get("--required")) : null,
     binding: JSON.parse(readFileSync(args.get("--binding"), "utf8")),
     route: JSON.parse(readFileSync(args.get("--route"), "utf8")),
     browserPolicy: JSON.parse(
@@ -439,4 +591,10 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       ? JSON.parse(readFileSync(args.get("--trackpad-inventory"), "utf8")) : null,
     processRegistryPath: args.get("--process-registry") ?? null,
   });
+}
+
+function parseRequired(value) {
+  if (value === "true") return true;
+  if (value === "false") return false;
+  throw new Error("--required must be true or false");
 }

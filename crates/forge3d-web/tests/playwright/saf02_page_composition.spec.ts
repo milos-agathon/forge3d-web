@@ -27,6 +27,7 @@ test("real SAF-02 hardware page continues into generic installed-fixture creatio
     ["viewer-benchmark-browser.js", readFileSync(new URL("../browser/viewer-benchmark-browser.js", import.meta.url), "utf8")],
     ["chr03-lanes.js", readFileSync(new URL("../../scripts/chr03-lanes.mjs", import.meta.url), "utf8")],
     ["chr04-lanes.js", readFileSync(new URL("../../scripts/chr04-lanes.mjs", import.meta.url), "utf8")],
+    ["ffx03-lanes.js", readFileSync(new URL("../../scripts/ffx03-lanes.mjs", import.meta.url), "utf8")],
     ["adapter-attestation.js", ts.transpileModule(
       readFileSync(new URL("../browser/adapter-attestation.ts", import.meta.url), "utf8"),
       { compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 } },

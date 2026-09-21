@@ -7,11 +7,17 @@ import { validateChr03HardwareProofContract as validateChr03HardwareProof } from
 import { CHR03_STABLE_LANES } from "./chr03-lanes.mjs";
 import { validateChr04EdgeEvidence } from "./chr04-hardware-proof-validator.mjs";
 import { CHR04_LANES } from "./chr04-lanes.mjs";
+import { validateFfx03HardwareProof } from "./ffx03-hardware-proof-validator.mjs";
+import { FFX03_STABLE_LANES } from "./ffx03-lanes.mjs";
+import { validateSaf04HardwareProof } from "./saf04-hardware-proof-validator.mjs";
 import { validateSaf03EvidenceEnvelope } from "./saf03-proof-validator.mjs";
 import { assertExactSafariRoute, validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
+import { validateFfx04LifecycleProof } from "./ffx04-lifecycle-proof-validator.mjs";
+import { FFX04_LANES, isFfx04Lane } from "./ffx04-lanes.mjs";
 
 const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
 const CHR04_REQUIRED_LANES = new Set(Object.keys(CHR04_LANES));
+const FFX03_REQUIRED_LANES = new Set(Object.keys(FFX03_STABLE_LANES));
 
 export function requiredEvidenceRows(matrix) {
   const rows = [];
@@ -272,6 +278,23 @@ function validateRecord(record, row, expected) {
       adapter: record.adapter,
     });
   }
+  if (row.kind === "automated" && FFX03_REQUIRED_LANES.has(row.lane)) {
+    const lane = FFX03_STABLE_LANES[row.lane];
+    validateFfx03HardwareProof(record.ffx03Proof, {
+      lane: row.lane, assetId: row.assetId, platform: lane.platform,
+      architecture: lane.architecture, commit: expected.targetSha,
+      packageSha256: expected.packageSha256,
+    });
+    if (canonicalJson(record.ffx03Proof.browser) !== canonicalJson(record.browser) ||
+        record.ffx03Proof.driver.name !== record.driver.name ||
+        record.ffx03Proof.driver.version !== record.driver.version ||
+        record.ffx03Proof.system.platform !== record.system.platform ||
+        record.ffx03Proof.system.architecture !== record.system.architecture ||
+        canonicalJson(record.ffx03Proof.launch.arguments) !== canonicalJson(record.effectiveLaunchArguments) ||
+        canonicalJson(record.ffx03Proof.adapter) !== canonicalJson(record.adapter)) {
+      throw new Error(`FFX-03 proof conflicts with merged evidence: ${row.key}`);
+    }
+  }
   if (row.kind === "automated" && row.lane === "safari-macos-m2") {
     assertExactSafariRoute(record.route, record.saf02Route);
     validateSaf02Conformance(record.saf02Proof, {
@@ -282,6 +305,12 @@ function validateRecord(record, row, expected) {
       assetUrl: record.saf02Route?.assetUrl,
       browser: record.browser, system: record.system, adapter: record.adapter,
       effectiveLaunchArguments: record.effectiveLaunchArguments,
+    });
+    validateSaf04HardwareProof(record.saf04Proof, {
+      lane: row.lane,
+      assetId: row.assetId,
+      commit: expected.targetSha,
+      packageSha256: expected.packageSha256,
     });
     validateSaf03EvidenceEnvelope({
       proof: record.saf03Proof,
@@ -299,6 +328,24 @@ function validateRecord(record, row, expected) {
         commit: expected.targetSha,
         packageSha256: expected.packageSha256,
       },
+    });
+  }
+  if (row.kind === "automated" && isFfx04Lane(row.lane)) {
+    if (!Number.isSafeInteger(record.sourceJobId) || record.sourceJobId < 1 ||
+        record.adapterAttestation?.binding?.jobId !== record.sourceJobId) {
+      throw new Error(`FFX-04 run/job attestation binding is invalid: ${row.key}`);
+    }
+    validateFfx04LifecycleProof(record.ffx04Proof, {
+      lane: row.lane,
+      runId: record.workflow.runId,
+      jobId: record.sourceJobId,
+      assetId: row.assetId,
+      platform: FFX04_LANES[row.lane].platform,
+      commit: expected.targetSha,
+      packageSha256: expected.packageSha256,
+      browser: record.browser,
+      driver: record.driver,
+      applicationUrl: record.fixtureApplicationUrl,
     });
   }
 }

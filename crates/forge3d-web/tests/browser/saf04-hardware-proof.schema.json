@@ -1,0 +1,143 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/saf04-hardware-proof-v1.json",
+  "title": "Forge3D SAF-04 Safari lifecycle proof v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "kind", "binding", "controls", "layout", "lifecycle"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "kind": { "const": "forge3d-saf04-safari-lifecycle-proof-v1" },
+    "binding": {
+      "type": "object", "additionalProperties": false,
+      "required": ["lane", "assetId", "commit", "packageSha256"],
+      "properties": {
+        "lane": { "const": "safari-macos-m2" },
+        "assetId": { "const": "FW-MAC-M2-01" },
+        "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+        "packageSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+      }
+    },
+    "controls": {
+      "type": "object", "additionalProperties": false,
+      "required": ["orbit", "pan", "wheelZoom", "keyboardReset", "pointer", "contextMenuSuppressed", "gestureListeners"],
+      "properties": {
+        "orbit": { "const": true }, "pan": { "const": true }, "wheelZoom": { "const": true },
+        "keyboardReset": {
+          "type": "object", "additionalProperties": false,
+          "required": ["preResetDiffersFromInitial", "matchesInitial"],
+          "properties": { "preResetDiffersFromInitial": { "const": true }, "matchesInitial": { "const": true } }
+        },
+        "pointer": {
+          "type": "object", "additionalProperties": false,
+          "required": ["pointerId", "capturedPointerId", "outsidePointerId", "continuedPointerId", "releasedPointerId", "capturedOutside", "activeOutside", "cameraChangedOutside", "captureRetainedForFurtherMovement", "cameraChangedAfterFurtherMovement", "releasedSamePointer", "activePointersAfterRelease", "cancelledPointerId", "cancelCapturedPointerId", "cancelEstablishMovePointerId", "cancelPostMovePointerId", "cancelCaptureEstablished", "cancelImmediateHasPointerCapture", "cancelImmediateActivePointers", "cancelReleasedPointerId", "cancelHasPointerCapture", "cancelReleased"],
+          "properties": {
+            "pointerId": { "type": "integer", "minimum": 1 }, "capturedPointerId": { "type": "integer", "minimum": 1 },
+            "outsidePointerId": { "type": "integer", "minimum": 1 }, "continuedPointerId": { "type": "integer", "minimum": 1 },
+            "releasedPointerId": { "type": "integer", "minimum": 1 }, "capturedOutside": { "const": true },
+            "activeOutside": { "const": 1 }, "cameraChangedOutside": { "const": true },
+            "captureRetainedForFurtherMovement": { "const": true }, "cameraChangedAfterFurtherMovement": { "const": true },
+            "releasedSamePointer": { "const": true }, "activePointersAfterRelease": { "const": 0 },
+            "cancelledPointerId": { "type": "integer", "minimum": 1 }, "cancelCapturedPointerId": { "type": "integer", "minimum": 1 },
+            "cancelEstablishMovePointerId": { "type": "integer", "minimum": 1 }, "cancelPostMovePointerId": { "type": "integer", "minimum": 1 },
+            "cancelCaptureEstablished": { "const": true }, "cancelImmediateHasPointerCapture": { "const": false },
+            "cancelImmediateActivePointers": { "const": 0 },
+            "cancelReleasedPointerId": { "type": "integer", "minimum": 1 }, "cancelHasPointerCapture": { "const": false },
+            "cancelReleased": { "const": true }
+          }
+        },
+        "contextMenuSuppressed": { "const": true },
+        "gestureListeners": {
+          "type": "object", "additionalProperties": false,
+          "required": ["targets", "whileLive", "afterDispose", "everAdded"],
+          "properties": {
+            "targets": { "type": "array", "prefixItems": [{ "const": "canvas" }, { "const": "document" }, { "const": "window" }], "items": false },
+            "whileLive": { "const": 0 }, "afterDispose": { "const": 0 }, "everAdded": { "const": 0 }
+          }
+        }
+      }
+    },
+    "layout": {
+      "type": "object", "additionalProperties": false,
+      "required": ["fractionalDpr", "browserZoom", "displayNoneCycles", "zeroParentCycles"],
+      "properties": {
+        "fractionalDpr": { "const": true },
+        "browserZoom": {
+          "type": "object", "additionalProperties": false,
+          "required": ["dprBefore", "dprAfter", "cssWidthBefore", "cssHeightBefore", "cssWidthAfter", "cssHeightAfter", "backingWidthBefore", "backingHeightBefore", "backingWidthAfter", "backingHeightAfter", "effectiveDprBefore", "effectiveDprAfter", "maxEffectiveDpr", "maxCanvasPixels", "maxTextureDimension2D", "submittedDelta", "resetDpr", "resetBackingWidth", "resetBackingHeight", "resetEffectiveDpr", "resetSubmittedDelta"],
+          "properties": {
+            "dprBefore": { "type": "number", "exclusiveMinimum": 0 }, "dprAfter": { "type": "number", "exclusiveMinimum": 0 },
+            "cssWidthBefore": { "type": "number", "exclusiveMinimum": 0 }, "cssHeightBefore": { "type": "number", "exclusiveMinimum": 0 },
+            "cssWidthAfter": { "type": "number", "exclusiveMinimum": 0 }, "cssHeightAfter": { "type": "number", "exclusiveMinimum": 0 },
+            "backingWidthBefore": { "type": "integer", "minimum": 1 }, "backingHeightBefore": { "type": "integer", "minimum": 1 },
+            "backingWidthAfter": { "type": "integer", "minimum": 1 }, "backingHeightAfter": { "type": "integer", "minimum": 1 },
+            "effectiveDprBefore": { "type": "number", "exclusiveMinimum": 0 }, "effectiveDprAfter": { "type": "number", "exclusiveMinimum": 0 }, "maxEffectiveDpr": { "const": 2 },
+            "maxCanvasPixels": { "const": 8294400 }, "maxTextureDimension2D": { "type": "integer", "minimum": 8192 },
+            "submittedDelta": { "type": "integer", "minimum": 1 },
+            "resetDpr": { "type": "number", "exclusiveMinimum": 0 }, "resetBackingWidth": { "type": "integer", "minimum": 1 },
+            "resetBackingHeight": { "type": "integer", "minimum": 1 }, "resetEffectiveDpr": { "type": "number", "exclusiveMinimum": 0 },
+            "resetSubmittedDelta": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "displayNoneCycles": { "$ref": "#/$defs/layoutCycles" },
+        "zeroParentCycles": { "$ref": "#/$defs/layoutCycles" }
+      }
+    },
+    "lifecycle": {
+      "type": "object", "additionalProperties": false,
+      "required": ["baseline", "bfcacheCycles", "hardReloadPersisted", "generationBefore", "generationAfter"],
+      "properties": {
+        "baseline": {
+          "type": "object", "additionalProperties": false,
+          "required": ["documentToken", "viewerToken", "canvasToken", "generation", "ownedListeners", "inputControllerSets", "activeObservers", "activeRuntimes", "activePointers", "pagehideCount", "pageshowCount"],
+          "properties": {
+            "documentToken": { "type": "string", "minLength": 1 }, "viewerToken": { "type": "string", "minLength": 1 },
+            "canvasToken": { "type": "string", "minLength": 1 }, "generation": { "type": "integer", "minimum": 1 },
+            "ownedListeners": { "type": "integer", "minimum": 1 }, "inputControllerSets": { "const": 1 }, "activeObservers": { "const": 1 },
+            "activeRuntimes": { "const": 1 }, "activePointers": { "const": 0 },
+            "pagehideCount": { "type": "integer", "minimum": 0 }, "pageshowCount": { "type": "integer", "minimum": 1 }
+          }
+        },
+        "bfcacheCycles": {
+          "type": "array", "minItems": 30, "maxItems": 30,
+          "items": {
+            "type": "object", "additionalProperties": false,
+            "required": ["cycle", "pagehideEventId", "pageshowEventId", "pagehideCount", "pageshowCount", "pagehidePersisted", "pageshowPersisted", "pagehideTrusted", "pageshowTrusted", "preNavigationIdentityStable", "postNavigationIdentityStable", "runtimeGeneration", "ownedListeners", "inputControllerSets", "activeObservers", "activePointers", "activeRuntimes", "recoveryAttempts", "pendingAnimationFrame", "ownedAnimationFrameCount", "postReturnInputChanged", "postReturnSubmittedDelta"],
+            "properties": {
+              "cycle": { "type": "integer", "minimum": 1, "maximum": 30 },
+              "pagehideEventId": { "type": "integer", "minimum": 1 }, "pageshowEventId": { "type": "integer", "minimum": 1 },
+              "pagehideCount": { "type": "integer", "minimum": 1 }, "pageshowCount": { "type": "integer", "minimum": 2 },
+              "pagehidePersisted": { "const": true }, "pageshowPersisted": { "const": true },
+              "pagehideTrusted": { "const": true }, "pageshowTrusted": { "const": true },
+              "preNavigationIdentityStable": { "const": true }, "postNavigationIdentityStable": { "const": true },
+              "runtimeGeneration": { "type": "integer", "minimum": 1 }, "ownedListeners": { "type": "integer", "minimum": 1 },
+              "inputControllerSets": { "const": 1 },
+              "activeObservers": { "const": 1 }, "activePointers": { "const": 0 }, "activeRuntimes": { "const": 1 },
+              "recoveryAttempts": { "const": 0 }, "pendingAnimationFrame": { "type": "boolean" },
+              "ownedAnimationFrameCount": { "type": "integer", "minimum": 0, "maximum": 1 },
+              "postReturnInputChanged": { "const": true }, "postReturnSubmittedDelta": { "type": "integer", "minimum": 1 }
+            }
+          }
+        },
+        "hardReloadPersisted": { "const": false },
+        "generationBefore": { "type": "integer", "minimum": 1 },
+        "generationAfter": { "type": "integer", "minimum": 1 }
+      }
+    }
+  },
+  "$defs": {
+    "layoutCycles": {
+      "type": "array", "minItems": 30, "maxItems": 30,
+      "items": {
+        "type": "object", "additionalProperties": false,
+        "required": ["cycle", "hiddenSubmittedDelta", "recovered", "activeObservers", "activeRuntimes", "pendingAnimationFrame", "ownedAnimationFrameCount"],
+        "properties": {
+          "cycle": { "type": "integer", "minimum": 1, "maximum": 30 },
+          "hiddenSubmittedDelta": { "const": 0 }, "recovered": { "const": true },
+          "activeObservers": { "const": 1 }, "activeRuntimes": { "const": 1 },
+          "pendingAnimationFrame": { "type": "boolean" }, "ownedAnimationFrameCount": { "type": "integer", "minimum": 0, "maximum": 1 }
+        }
+      }
+    }
+  }
+}

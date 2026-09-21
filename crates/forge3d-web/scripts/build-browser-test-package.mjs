@@ -276,12 +276,20 @@ try {
       join(retainedFixture, "tests", "browser", "viewer-benchmark-browser.js"),
     );
     copyFileSync(
+      join(packageRoot, "tests", "browser", "viewer-bfcache-lifecycle.js"),
+      join(retainedFixture, "tests", "browser", "viewer-bfcache-lifecycle.js"),
+    );
+    copyFileSync(
       join(packageRoot, "scripts", "chr03-lanes.mjs"),
       join(retainedFixture, "tests", "browser", "chr03-lanes.js"),
     );
     copyFileSync(
       join(packageRoot, "scripts", "chr04-lanes.mjs"),
       join(retainedFixture, "tests", "browser", "chr04-lanes.js"),
+    );
+    copyFileSync(
+      join(packageRoot, "scripts", "ffx03-lanes.mjs"),
+      join(retainedFixture, "tests", "browser", "ffx03-lanes.js"),
     );
     copyFileSync(
       benchmarkModulePath,

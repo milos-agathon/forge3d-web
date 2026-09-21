@@ -25,6 +25,7 @@ export function assembleBrowserPackageArtifact({
   runId = null,
   runAttempt = null,
   repositoryRootPath = repositoryRoot,
+  packageRootPath = packageRoot,
 }) {
   assertSha(targetSha, "target SHA");
   assertSha(workflowSha, "workflow SHA");
@@ -70,8 +71,10 @@ export function assembleBrowserPackageArtifact({
     "adapter-attestation.schema.json",
     "chr03-hardware-proof.schema.json",
     "chr04-hardware-proof.schema.json",
+    "ffx03-hardware-proof.schema.json",
     "saf03-safari-proof.schema.json",
     "saf02-conformance.schema.json",
+    "saf04-hardware-proof.schema.json",
   ]) {
     copyFileSync(
       join(packageRoot, "tests", "browser", file),
@@ -80,6 +83,7 @@ export function assembleBrowserPackageArtifact({
   }
   for (const file of [
     "assemble-browser-package-artifact.mjs",
+    "materialize-selenium-harness.mjs",
     "materialize-browser-fixture.mjs",
     "capture-host-inventory.mjs",
     "capture-trackpad-inventory.mjs",
@@ -104,15 +108,26 @@ export function assembleBrowserPackageArtifact({
     "chr03-lanes.mjs",
     "chr04-hardware-proof-validator.mjs",
     "chr04-lanes.mjs",
+    "ffx03-hardware-proof-validator.mjs",
+    "ffx03-lanes.mjs",
     "saf03-proof-validator.mjs",
     "saf03-lanes.mjs",
     "saf02-conformance-validator.mjs",
+    "saf04-hardware-proof-validator.mjs",
+    "safari-browser-acceptance.mjs",
+    "firefox-lifecycle-acceptance.mjs",
+    "ffx04-lifecycle-proof-validator.mjs",
+    "ffx04-lanes.mjs",
     "browser-process-registry.mjs",
     "webdriver-client.mjs",
     "cleanup-browser-hardware.mjs",
   ]) {
     copyFileSync(join(packageRoot, "scripts", file), join(output, file));
   }
+  copyFileSync(
+    join(packageRoot, "tests", "webdriver", "firefox-viewer.mjs"),
+    join(output, "firefox-viewer.mjs"),
+  );
   copyFileSync(
     join(packageRoot, "tests", "browser", "json-schema-validator.mjs"),
     join(output, "json-schema-validator.mjs"),
@@ -168,6 +183,15 @@ export function assembleBrowserPackageArtifact({
   const fixtureArchiveName = "consumer-fixture.tar.gz";
   const fixtureArchive = createTarGz(join(evidence, "consumer-fixture"));
   writeFileSync(join(output, fixtureArchiveName), fixtureArchive, { mode: 0o600 });
+  const selenium = buildSeleniumHarness(packageRootPath);
+  writeFileSync(join(output, "selenium-harness.tar.gz"), selenium.archive, { mode: 0o600 });
+  writeFileSync(join(output, "selenium-harness-lock.json"), `${JSON.stringify({
+    schemaVersion: 1,
+    rootPackage: "selenium-webdriver",
+    rootVersion: "4.35.0",
+    archiveSha256: sha256(selenium.archive),
+    packages: selenium.packages,
+  }, null, 2)}\n`, { encoding: "utf8", mode: 0o600 });
   writeFileSync(
     join(output, `${tarballName}.sha256`),
     `${tarballSha256}  ${tarballName}\n`,
@@ -243,9 +267,47 @@ export function assertNoWorkspaceDependencies(packageJson) {
 
 export function createTarGz(directory) {
   const root = resolve(directory);
+  return createTarGzEntries(listFiles(root).map((path) => ({
+    path, name: relative(root, path).replaceAll("\\", "/"),
+  })));
+}
+
+export function buildSeleniumHarness(rootPath = packageRoot) {
+  const root = resolve(rootPath);
+  const lock = readJson(join(root, "package-lock.json"));
+  const pending = ["selenium-webdriver"];
+  const visited = new Set();
+  const packages = [];
+  const entries = [];
+  while (pending.length > 0) {
+    const name = pending.shift();
+    if (visited.has(name)) continue;
+    visited.add(name);
+    const key = `node_modules/${name}`;
+    const locked = lock.packages?.[key];
+    if (!locked || typeof locked.version !== "string" ||
+        typeof locked.integrity !== "string" || !locked.integrity.startsWith("sha512-")) {
+      throw new Error(`Selenium dependency closure is missing lock integrity for ${name}`);
+    }
+    const directory = join(root, key);
+    const installed = readJson(join(directory, "package.json"));
+    if (installed.name !== name || installed.version !== locked.version) {
+      throw new Error(`Selenium dependency closure does not match the lock for ${name}`);
+    }
+    packages.push({ path: key, name, version: locked.version, integrity: locked.integrity });
+    for (const path of listFiles(directory)) entries.push({
+      path, name: `${key}/${relative(directory, path).replaceAll("\\", "/")}`,
+    });
+    for (const dependency of Object.keys(locked.dependencies ?? {}).sort()) pending.push(dependency);
+  }
+  packages.sort((left, right) => left.path.localeCompare(right.path));
+  entries.sort((left, right) => left.name.localeCompare(right.name));
+  return { archive: createTarGzEntries(entries), packages };
+}
+
+function createTarGzEntries(entries) {
   const blocks = [];
-  for (const path of listFiles(root)) {
-    const name = relative(root, path).replaceAll("\\", "/");
+  for (const { path, name } of entries) {
     const bytes = readFileSync(path);
     blocks.push(createTarHeader(name, bytes.length), bytes);
     const padding = (512 - (bytes.length % 512)) % 512;

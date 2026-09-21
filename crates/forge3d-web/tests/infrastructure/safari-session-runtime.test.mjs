@@ -11,6 +11,7 @@ import {
 } from "../../scripts/browser-session-runtime.mjs";
 import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
 import { validSaf03Proof } from "../browser/saf03-proof-fixture.mjs";
+import { validSaf04HardwareProof } from "../browser/saf04-hardware-proof-fixture.mjs";
 
 const previousAcceptance = process.env.FORGE3D_SAFARI_ACCEPTANCE_MODULE;
 const previousSelenium = process.env.FORGE3D_SELENIUM_MODULE;
@@ -87,6 +88,7 @@ test("automated Selenium Safari admits near-bound composed work and rejects over
     );
     const driver = virtualTimedDriver(boundedStages - 1, neutral, calls);
     const stable = stableSession(91007, () => undefined, driver);
+    const attachedSession = { attached: "selenium-session" };
     const acceptance = {
       SAF03_SELENIUM_VERSION: "4.35.0",
       openSeleniumSafariSession: async () => stable,
@@ -97,17 +99,35 @@ test("automated Selenium Safari admits near-bound composed work and rejects over
     };
     const session = await openProductionSession(
       stableRequest(directory),
-      dependencies(null, { acceptance }),
+      dependencies(null, {
+        acceptance,
+        attachWebDriverSession: async (seleniumDriver) => {
+          assert.equal(seleniumDriver, driver);
+          return attachedSession;
+        },
+        runSafariBrowserAcceptance: async (attached, payload, options) => {
+          calls.push(["saf04"]);
+          assert.equal(attached, attachedSession);
+          assert.equal(options.hardwarePageResult, neutral.value);
+          return { ...options.hardwarePageResult, saf04Proof: validSaf04HardwareProof({
+            commit: payload.binding.commit,
+            packageSha256: payload.binding.packageSha256,
+          }) };
+        },
+      }),
     );
-    await session.runPage({
+    const pageResult = await session.runPage({
       binding: closedBinding(),
       route,
     });
-    assert.deepEqual(calls.slice(0, 3), [
+    assert.deepEqual(calls.slice(0, 4), [
       ["timeouts", { script: SAFARI_COMPOSED_SCRIPT_TIMEOUT_MS }],
       ["execute", boundedStages - 1],
+      ["saf04"],
       ["saf03"],
     ]);
+    assert.equal(pageResult.saf04Proof.kind, "forge3d-saf04-safari-lifecycle-proof-v1");
+    assert.equal(pageResult.saf03Proof.kind, "forge3d-saf03-safari-acceptance-v1");
     await session.close();
 
     const overrunCalls = [];
@@ -250,6 +270,14 @@ function dependencies(stable, overrides = {}) {
   return {
     installedPackageVersion: () => "4.35.0",
     observeWebDriverLaunch: () => ({ effectiveLaunchArguments: [], launchArgumentsObserved: true, launchArgumentSource: "darwin-live-browser-process", browserProcessId: null }),
+    attachWebDriverSession: async () => ({ attached: "fake" }),
+    runSafariBrowserAcceptance: async (_session, payload, options) => ({
+      ...(options?.hardwarePageResult ?? {}),
+      saf04Proof: validSaf04HardwareProof({
+        commit: payload.binding.commit,
+        packageSha256: payload.binding.packageSha256,
+      }),
+    }),
     acceptance: overrides.acceptance ?? { SAF03_SELENIUM_VERSION: "4.35.0", openSeleniumSafariSession: async () => stable },
     ...overrides,
   };
