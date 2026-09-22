@@ -1,5 +1,6 @@
 use forge3d_core::gpu::GpuContext;
 use forge3d_core::memory::{MemoryCategory, OverflowPolicy, QualityLevel};
+use forge3d_core::terrain::{HeightfieldAoConfig, SunVisibilityConfig, TerrainDebugView};
 use wasm_bindgen::prelude::*;
 use wgpu::util::DeviceExt;
 
@@ -17,9 +18,15 @@ use crate::inputs::{
 pub(super) const TERRAIN_MESH_KEY: &str = "terrain:mesh";
 pub(super) const TERRAIN_HEIGHTMAP_KEY: &str = "terrain:heightmap";
 pub(super) const TERRAIN_UNIFORMS_KEY: &str = "terrain:uniforms";
+pub(super) const TERRAIN_AO_KEY: &str = "terrain:height-ao";
+pub(super) const TERRAIN_SUN_KEY: &str = "terrain:sun-visibility";
+pub(super) const TERRAIN_ANALYSIS_FALLBACK_KEY: &str = "terrain:analysis-fallback";
+pub(super) const TERRAIN_ANALYSIS_FALLBACK_BYTES: u64 = 4;
 pub(super) const DEPTH_TEXTURE_KEY: &str = "depth";
-pub(super) const TERRAIN_UNIFORM_BYTES: u64 =
-    (std::mem::size_of::<CameraUniform>() + std::mem::size_of::<ColorRampUniform>()) as u64;
+pub(super) const TERRAIN_UNIFORM_BYTES: u64 = (std::mem::size_of::<CameraUniform>()
+    + std::mem::size_of::<ColorRampUniform>()
+    + std::mem::size_of::<TerrainParamsUniform>())
+    as u64;
 pub(super) const DEPTH_BYTES_PER_PIXEL: u64 = 4;
 
 pub(super) fn depth_texture_bytes(width: u32, height: u32) -> Option<u64> {
@@ -28,11 +35,26 @@ pub(super) fn depth_texture_bytes(width: u32, height: u32) -> Option<u64> {
         .and_then(|pixels| pixels.checked_mul(DEPTH_BYTES_PER_PIXEL))
 }
 
-pub(super) fn terrain_memory_keys() -> [&'static str; 3] {
+pub(super) fn analysis_texture_bytes(
+    width: u32,
+    height: u32,
+    resolution_scale: f32,
+) -> Option<u64> {
+    let out_w = (width as f64 * resolution_scale as f64).round().max(1.0) as u64;
+    let out_h = (height as f64 * resolution_scale as f64).round().max(1.0) as u64;
+    out_w
+        .checked_mul(out_h)
+        .and_then(|pixels| pixels.checked_mul(4))
+}
+
+pub(super) fn terrain_memory_keys() -> [&'static str; 6] {
     [
         TERRAIN_MESH_KEY,
         TERRAIN_HEIGHTMAP_KEY,
         TERRAIN_UNIFORMS_KEY,
+        TERRAIN_AO_KEY,
+        TERRAIN_SUN_KEY,
+        TERRAIN_ANALYSIS_FALLBACK_KEY,
     ]
 }
 
@@ -51,10 +73,17 @@ fn terrain_gpu_bytes(
     Ok((mesh, allocation.sample_bytes, TERRAIN_UNIFORM_BYTES))
 }
 
-fn terrain_total_bytes(allocation: &crate::inputs::TerrainAllocation) -> Result<u64, WebError> {
+fn terrain_total_bytes(
+    allocation: &crate::inputs::TerrainAllocation,
+    ao_bytes: u64,
+    sun_bytes: u64,
+) -> Result<u64, WebError> {
     let (mesh, texture, uniforms) = terrain_gpu_bytes(allocation)?;
     mesh.checked_add(texture)
         .and_then(|value| value.checked_add(uniforms))
+        .and_then(|value| value.checked_add(ao_bytes))
+        .and_then(|value| value.checked_add(sun_bytes))
+        .and_then(|value| value.checked_add(TERRAIN_ANALYSIS_FALLBACK_BYTES))
         .ok_or_else(|| {
             WebError::new(
                 Forge3DErrorCode::ResourceLimitExceeded,
@@ -63,17 +92,38 @@ fn terrain_total_bytes(allocation: &crate::inputs::TerrainAllocation) -> Result<
         })
 }
 
+fn analysis_output_bytes(
+    config_enabled: bool,
+    resolution_scale: f32,
+    width: u32,
+    height: u32,
+) -> Result<u64, WebError> {
+    if !config_enabled {
+        return Ok(0);
+    }
+    analysis_texture_bytes(width, height, resolution_scale).ok_or_else(|| {
+        WebError::new(
+            Forge3DErrorCode::ResourceLimitExceeded,
+            "terrain analysis byte accounting overflowed",
+        )
+    })
+}
+
 struct TerrainCandidate {
     options: TerrainHeightmapOptions,
     allocation: crate::inputs::TerrainAllocation,
     total_bytes: u64,
+    ao_bytes: u64,
+    sun_bytes: u64,
     effective_quality: QualityLevel,
     requested_bytes: u64,
 }
 
 fn select_terrain_candidate(
     runtime: &Forge3DRuntime,
-    terrain: &TerrainHeightmapOptions,
+    mut terrain: TerrainHeightmapOptions,
+    height_ao: &HeightfieldAoConfig,
+    sun_visibility: &SunVisibilityConfig,
 ) -> Result<TerrainCandidate, WebError> {
     let limits = TerrainPhysicalLimits {
         max_texture_dimension_2d: runtime.max_texture_dimension_2d,
@@ -86,7 +136,21 @@ fn select_terrain_candidate(
         terrain.heights.len(),
         limits,
     )?;
-    let requested_bytes = terrain_total_bytes(&requested_allocation)?;
+    let requested_bytes = terrain_total_bytes(
+        &requested_allocation,
+        analysis_output_bytes(
+            height_ao.enabled,
+            height_ao.resolution_scale,
+            terrain.width,
+            terrain.height,
+        )?,
+        analysis_output_bytes(
+            sun_visibility.enabled,
+            sun_visibility.resolution_scale,
+            terrain.width,
+            terrain.height,
+        )?,
+    )?;
     let ladder = quality_ladder_from(requested);
     let levels: &[QualityLevel] = match runtime.overflow_policy {
         OverflowPolicy::Reject => &ladder[..1],
@@ -95,39 +159,78 @@ fn select_terrain_candidate(
     for level in levels {
         let relative =
             quality_scale_percent(*level) as f64 / quality_scale_percent(requested) as f64;
-        let (width, height, heights) = if relative >= 1.0 {
-            (terrain.width, terrain.height, terrain.heights.clone())
+        let (width, height) = if relative >= 1.0 {
+            (terrain.width, terrain.height)
         } else {
-            let width = downscaled_dimension(terrain.width, relative);
-            let height = downscaled_dimension(terrain.height, relative);
             (
-                width,
-                height,
-                resample_heightmap(
-                    &terrain.heights,
-                    terrain.width,
-                    terrain.height,
-                    width,
-                    height,
-                ),
+                downscaled_dimension(terrain.width, relative),
+                downscaled_dimension(terrain.height, relative),
             )
         };
-        let allocation =
-            crate::inputs::validate_terrain_allocation(width, height, heights.len(), limits)?;
-        let total = terrain_total_bytes(&allocation)?;
+        let allocation = crate::inputs::validate_terrain_allocation(
+            width,
+            height,
+            (width * height) as usize,
+            limits,
+        )?;
+        let ao_bytes =
+            analysis_output_bytes(height_ao.enabled, height_ao.resolution_scale, width, height)?;
+        let sun_bytes = analysis_output_bytes(
+            sun_visibility.enabled,
+            sun_visibility.resolution_scale,
+            width,
+            height,
+        )?;
+        let total = terrain_total_bytes(&allocation, ao_bytes, sun_bytes)?;
         if runtime
             .memory
             .fits_after_release(&terrain_memory_keys(), total)
         {
+            let (heights, spacing) = if relative >= 1.0 {
+                (std::mem::take(&mut terrain.heights), terrain.spacing)
+            } else {
+                let scale_x = if terrain.width > 1 && width > 1 {
+                    (terrain.width - 1) as f32 / (width - 1) as f32
+                } else {
+                    1.0
+                };
+                let scale_z = if terrain.height > 1 && height > 1 {
+                    (terrain.height - 1) as f32 / (height - 1) as f32
+                } else {
+                    1.0
+                };
+                (
+                    resample_heightmap(
+                        &terrain.heights,
+                        terrain.width,
+                        terrain.height,
+                        width,
+                        height,
+                    ),
+                    terrain
+                        .spacing
+                        .map(|spacing| [spacing[0] * scale_x, spacing[1] * scale_z]),
+                )
+            };
             return Ok(TerrainCandidate {
                 options: TerrainHeightmapOptions {
                     width,
                     height,
                     heights,
                     color_ramp: terrain.color_ramp.clone(),
+                    spacing,
+                    exaggeration: terrain.exaggeration,
+                    domain: terrain.domain,
+                    nodata: terrain.nodata,
+                    crs: terrain.crs.clone(),
+                    height_ao: terrain.height_ao.clone(),
+                    sun_visibility: terrain.sun_visibility.clone(),
+                    debug_view: terrain.debug_view,
                 },
                 allocation,
                 total_bytes: total,
+                ao_bytes,
+                sun_bytes,
                 effective_quality: *level,
                 requested_bytes,
             });
@@ -176,14 +279,23 @@ pub(super) fn set_terrain_options_runtime(
             )
         })?;
 
-    let candidate = select_terrain_candidate(runtime, &terrain)?;
+    let height_ao = terrain.height_ao.to_config()?;
+    let sun_visibility = terrain.sun_visibility.to_config()?;
+    let debug_view = terrain
+        .debug_view
+        .map(crate::inputs::TerrainDebugViewOption::to_core)
+        .unwrap_or(TerrainDebugView::None);
+    let candidate = select_terrain_candidate(runtime, terrain, &height_ao, &sun_visibility)?;
     let color_ramp = candidate.options.color_ramp.clone();
     let validated = candidate.options.validate()?;
     let resources = TerrainRenderResources::new(
         &context,
         surface_format,
-        &validated,
+        &validated.input,
         &color_ramp,
+        &height_ao,
+        &sun_visibility,
+        debug_view,
         runtime.clear_color,
         &runtime.camera,
         runtime.width,
@@ -201,6 +313,19 @@ pub(super) fn set_terrain_options_runtime(
     runtime
         .memory
         .replace(TERRAIN_UNIFORMS_KEY, MemoryCategory::Buffers, uniform_bytes)?;
+    runtime
+        .memory
+        .replace(TERRAIN_AO_KEY, MemoryCategory::Textures, candidate.ao_bytes)?;
+    runtime.memory.replace(
+        TERRAIN_SUN_KEY,
+        MemoryCategory::Textures,
+        candidate.sun_bytes,
+    )?;
+    runtime.memory.replace(
+        TERRAIN_ANALYSIS_FALLBACK_KEY,
+        MemoryCategory::Textures,
+        TERRAIN_ANALYSIS_FALLBACK_BYTES,
+    )?;
     if candidate.effective_quality != runtime.requested_quality {
         runtime.memory.record_downgrade(LedgerDowngrade {
             requested: runtime.requested_quality,
@@ -367,6 +492,50 @@ impl ColorRampUniform {
     }
 }
 
+#[repr(C)]
+#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+pub(super) struct TerrainParamsUniform {
+    pub(super) spacing: [f32; 2],
+    pub(super) exaggeration: f32,
+    pub(super) domain_min: f32,
+    pub(super) inv_domain_span: f32,
+    pub(super) nodata_value: f32,
+    pub(super) has_nodata: f32,
+    pub(super) debug_view: u32,
+}
+
+impl TerrainParamsUniform {
+    fn from_input(
+        terrain: &forge3d_core::terrain::TerrainHeightmapInput,
+        debug_view: TerrainDebugView,
+    ) -> Self {
+        Self {
+            spacing: terrain.spacing,
+            exaggeration: terrain.exaggeration,
+            domain_min: terrain.domain[0],
+            inv_domain_span: 1.0 / (terrain.domain[1] - terrain.domain[0]),
+            nodata_value: terrain.nodata.unwrap_or(f32::NAN),
+            has_nodata: if terrain.nodata.is_some_and(|value| !value.is_nan()) {
+                1.0
+            } else {
+                0.0
+            },
+            debug_view: match debug_view {
+                TerrainDebugView::None => 0,
+                TerrainDebugView::HeightAo => 1,
+                TerrainDebugView::SunVisibility => 2,
+            },
+        }
+    }
+}
+
+pub(super) struct TerrainAnalysisOutput {
+    pub(super) texture: wgpu::Texture,
+    pub(super) view: wgpu::TextureView,
+    pub(super) width: u32,
+    pub(super) height: u32,
+}
+
 pub(super) struct TerrainRenderResources {
     pub(super) pipeline: wgpu::RenderPipeline,
     #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
@@ -381,7 +550,14 @@ pub(super) struct TerrainRenderResources {
     #[allow(dead_code)]
     color_ramp_buffer: wgpu::Buffer,
     #[allow(dead_code)]
-    height_texture: wgpu::Texture,
+    params_buffer: wgpu::Buffer,
+    pub(super) height_texture: wgpu::Texture,
+    pub(super) height_width: u32,
+    pub(super) height_height: u32,
+    pub(super) ao_output: Option<TerrainAnalysisOutput>,
+    pub(super) sun_output: Option<TerrainAnalysisOutput>,
+    #[allow(dead_code)]
+    analysis_fallback_view: wgpu::TextureView,
     #[allow(dead_code)]
     sampler: wgpu::Sampler,
 }
@@ -393,6 +569,9 @@ impl TerrainRenderResources {
         surface_format: wgpu::TextureFormat,
         terrain: &forge3d_core::terrain::TerrainHeightmapInput,
         color_ramp: &TerrainColorRampOptions,
+        height_ao: &HeightfieldAoConfig,
+        sun_visibility: &SunVisibilityConfig,
+        debug_view: TerrainDebugView,
         clear_color: [f32; 4],
         camera: &forge3d_core::camera::CameraInput,
         width: u32,
@@ -403,6 +582,7 @@ impl TerrainRenderResources {
         let (height_texture, height_view) = create_height_texture(context, terrain);
         let camera_uniform = create_camera_uniform(camera, width, height)?;
         let color_ramp_uniform = ColorRampUniform::from_options(color_ramp, clear_color);
+        let params_uniform = TerrainParamsUniform::from_input(terrain, debug_view);
         let camera_buffer = context
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -418,6 +598,13 @@ impl TerrainRenderResources {
                     contents: bytemuck::bytes_of(&color_ramp_uniform),
                     usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
                 });
+        let params_buffer = context
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("forge3d-web-terrain-params-uniform"),
+                contents: bytemuck::bytes_of(&params_uniform),
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            });
         let sampler = context.device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("forge3d-web-terrain-nearest-sampler"),
             address_mode_u: wgpu::AddressMode::ClampToEdge,
@@ -428,6 +615,28 @@ impl TerrainRenderResources {
             mipmap_filter: wgpu::MipmapFilterMode::Nearest,
             ..wgpu::SamplerDescriptor::default()
         });
+        let fallback = create_analysis_fallback_texture(context);
+        let analysis_fallback_view = fallback.create_view(&wgpu::TextureViewDescriptor::default());
+        let ao_output = if height_ao.enabled {
+            Some(super::analysis::run_height_ao_pass(
+                context,
+                &height_view,
+                terrain,
+                height_ao,
+            )?)
+        } else {
+            None
+        };
+        let sun_output = if sun_visibility.enabled {
+            Some(super::analysis::run_sun_visibility_pass(
+                context,
+                &height_view,
+                terrain,
+                sun_visibility,
+            )?)
+        } else {
+            None
+        };
         let bind_group_layout =
             context
                 .device
@@ -470,8 +679,46 @@ impl TerrainRenderResources {
                             },
                             count: None,
                         },
+                        wgpu::BindGroupLayoutEntry {
+                            binding: 4,
+                            visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+                            ty: wgpu::BindingType::Buffer {
+                                ty: wgpu::BufferBindingType::Uniform,
+                                has_dynamic_offset: false,
+                                min_binding_size: None,
+                            },
+                            count: None,
+                        },
+                        wgpu::BindGroupLayoutEntry {
+                            binding: 5,
+                            visibility: wgpu::ShaderStages::FRAGMENT,
+                            ty: wgpu::BindingType::Texture {
+                                sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                                view_dimension: wgpu::TextureViewDimension::D2,
+                                multisampled: false,
+                            },
+                            count: None,
+                        },
+                        wgpu::BindGroupLayoutEntry {
+                            binding: 6,
+                            visibility: wgpu::ShaderStages::FRAGMENT,
+                            ty: wgpu::BindingType::Texture {
+                                sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                                view_dimension: wgpu::TextureViewDimension::D2,
+                                multisampled: false,
+                            },
+                            count: None,
+                        },
                     ],
                 });
+        let ao_view = ao_output
+            .as_ref()
+            .map(|output| &output.view)
+            .unwrap_or(&analysis_fallback_view);
+        let sun_view = sun_output
+            .as_ref()
+            .map(|output| &output.view)
+            .unwrap_or(&analysis_fallback_view);
         let bind_group = context
             .device
             .create_bind_group(&wgpu::BindGroupDescriptor {
@@ -493,6 +740,18 @@ impl TerrainRenderResources {
                     wgpu::BindGroupEntry {
                         binding: 3,
                         resource: color_ramp_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 4,
+                        resource: params_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 5,
+                        resource: wgpu::BindingResource::TextureView(ao_view),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 6,
+                        resource: wgpu::BindingResource::TextureView(sun_view),
                     },
                 ],
             });
@@ -577,7 +836,13 @@ impl TerrainRenderResources {
             index_count,
             camera_buffer,
             color_ramp_buffer,
+            params_buffer,
             height_texture,
+            height_width: terrain.width,
+            height_height: terrain.height,
+            ao_output,
+            sun_output,
+            analysis_fallback_view,
             sampler,
         })
     }
@@ -819,13 +1084,52 @@ fn create_height_texture(
         sample_count: 1,
         dimension: wgpu::TextureDimension::D2,
         format: wgpu::TextureFormat::R32Float,
-        usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+        usage: wgpu::TextureUsages::TEXTURE_BINDING
+            | wgpu::TextureUsages::COPY_DST
+            | wgpu::TextureUsages::COPY_SRC,
         view_formats: &[],
     });
 
     upload_r32float_texture(context, &texture, terrain);
     let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
     (texture, view)
+}
+
+fn create_analysis_fallback_texture(context: &GpuContext) -> wgpu::Texture {
+    let texture = context.device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("forge3d-web-terrain-analysis-fallback"),
+        size: wgpu::Extent3d {
+            width: 1,
+            height: 1,
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format: wgpu::TextureFormat::R32Float,
+        usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+        view_formats: &[],
+    });
+    context.queue.write_texture(
+        wgpu::TexelCopyTextureInfo {
+            texture: &texture,
+            mip_level: 0,
+            origin: wgpu::Origin3d::ZERO,
+            aspect: wgpu::TextureAspect::All,
+        },
+        bytemuck::bytes_of(&1.0f32),
+        wgpu::TexelCopyBufferLayout {
+            offset: 0,
+            bytes_per_row: Some(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT),
+            rows_per_image: Some(1),
+        },
+        wgpu::Extent3d {
+            width: 1,
+            height: 1,
+            depth_or_array_layers: 1,
+        },
+    );
+    texture
 }
 
 pub(super) fn create_camera_uniform(
@@ -847,51 +1151,79 @@ pub(super) fn create_camera_uniform(
     })
 }
 
-fn upload_r32float_texture(
+pub(super) enum R32FloatUploadPlan {
+    Tight { bytes_per_row: u32 },
+    RowWise { row_bytes: u32 },
+}
+
+pub(super) fn r32float_upload_plan(width: u32) -> R32FloatUploadPlan {
+    let row_bytes = width * std::mem::size_of::<f32>() as u32;
+    if row_bytes % wgpu::COPY_BYTES_PER_ROW_ALIGNMENT == 0 {
+        R32FloatUploadPlan::Tight {
+            bytes_per_row: row_bytes,
+        }
+    } else {
+        R32FloatUploadPlan::RowWise { row_bytes }
+    }
+}
+
+pub(super) fn upload_r32float_texture(
     context: &GpuContext,
     texture: &wgpu::Texture,
     terrain: &forge3d_core::terrain::TerrainHeightmapInput,
 ) {
-    let row_bytes = terrain.width * std::mem::size_of::<f32>() as u32;
-    let padded_row_bytes = align_copy_bytes_per_row(row_bytes);
     let source = bytemuck::cast_slice::<f32, u8>(&terrain.heights);
-    let upload: std::borrow::Cow<'_, [u8]> = if padded_row_bytes == row_bytes {
-        std::borrow::Cow::Borrowed(source)
-    } else {
-        let mut padded = vec![0u8; (padded_row_bytes * terrain.height) as usize];
-        for y in 0..terrain.height {
-            let source_start = (y * row_bytes) as usize;
-            let source_end = source_start + row_bytes as usize;
-            let destination_start = (y * padded_row_bytes) as usize;
-            let destination_end = destination_start + row_bytes as usize;
-            padded[destination_start..destination_end]
-                .copy_from_slice(&source[source_start..source_end]);
+    match r32float_upload_plan(terrain.width) {
+        R32FloatUploadPlan::Tight { bytes_per_row } => {
+            context.queue.write_texture(
+                wgpu::TexelCopyTextureInfo {
+                    texture,
+                    mip_level: 0,
+                    origin: wgpu::Origin3d::ZERO,
+                    aspect: wgpu::TextureAspect::All,
+                },
+                source,
+                wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(bytes_per_row),
+                    rows_per_image: Some(terrain.height),
+                },
+                wgpu::Extent3d {
+                    width: terrain.width,
+                    height: terrain.height,
+                    depth_or_array_layers: 1,
+                },
+            );
         }
-        std::borrow::Cow::Owned(padded)
-    };
-
-    context.queue.write_texture(
-        wgpu::TexelCopyTextureInfo {
-            texture,
-            mip_level: 0,
-            origin: wgpu::Origin3d::ZERO,
-            aspect: wgpu::TextureAspect::All,
-        },
-        &upload,
-        wgpu::TexelCopyBufferLayout {
-            offset: 0,
-            bytes_per_row: Some(padded_row_bytes),
-            rows_per_image: Some(terrain.height),
-        },
-        wgpu::Extent3d {
-            width: terrain.width,
-            height: terrain.height,
-            depth_or_array_layers: 1,
-        },
-    );
+        R32FloatUploadPlan::RowWise { row_bytes } => {
+            for y in 0..terrain.height {
+                let start = (y * row_bytes) as usize;
+                let row = &source[start..start + row_bytes as usize];
+                context.queue.write_texture(
+                    wgpu::TexelCopyTextureInfo {
+                        texture,
+                        mip_level: 0,
+                        origin: wgpu::Origin3d { x: 0, y, z: 0 },
+                        aspect: wgpu::TextureAspect::All,
+                    },
+                    row,
+                    wgpu::TexelCopyBufferLayout {
+                        offset: 0,
+                        bytes_per_row: None,
+                        rows_per_image: None,
+                    },
+                    wgpu::Extent3d {
+                        width: terrain.width,
+                        height: 1,
+                        depth_or_array_layers: 1,
+                    },
+                );
+            }
+        }
+    }
 }
 
-fn align_copy_bytes_per_row(value: u32) -> u32 {
+pub(super) fn align_copy_bytes_per_row(value: u32) -> u32 {
     let alignment = wgpu::COPY_BYTES_PER_ROW_ALIGNMENT;
     value.div_ceil(alignment) * alignment
 }
@@ -912,6 +1244,16 @@ struct ColorRampUniform {
     clear_color: vec4<f32>,
 };
 
+struct TerrainParamsUniform {
+    spacing: vec2<f32>,
+    exaggeration: f32,
+    domain_min: f32,
+    inv_domain_span: f32,
+    nodata_value: f32,
+    has_nodata: f32,
+    debug_view: u32,
+};
+
 struct VertexOutput {
     @builtin(position) position: vec4<f32>,
     @location(0) height: f32,
@@ -922,34 +1264,83 @@ struct VertexOutput {
 @group(0) @binding(1) var nearest_sampler: sampler;
 @group(0) @binding(2) var<uniform> camera: CameraUniform;
 @group(0) @binding(3) var<uniform> color_ramp: ColorRampUniform;
+@group(0) @binding(4) var<uniform> params: TerrainParamsUniform;
+@group(0) @binding(5) var ao_texture: texture_2d<f32>;
+@group(0) @binding(6) var sun_texture: texture_2d<f32>;
 
-const TERRAIN_HEIGHT_SCALE: f32 = 0.7;
+fn is_valid_height(value: f32) -> bool {
+    if (value != value) {
+        return false;
+    }
+    if (params.has_nodata > 0.5 && value == params.nodata_value) {
+        return false;
+    }
+    return true;
+}
 
 @vertex
 fn vs_main(input: VertexInput) -> VertexOutput {
-    let height = textureSampleLevel(heightmap, nearest_sampler, input.uv, 0.0).r;
-    let edge_fade = terrain_edge_fade(input.uv);
-    let height_scale = TERRAIN_HEIGHT_SCALE * mix(0.08, 1.0, edge_fade);
+    let raw_height = textureSampleLevel(heightmap, nearest_sampler, input.uv, 0.0).r;
+    let height = select(params.domain_min, raw_height, is_valid_height(raw_height));
     let world_position = vec3<f32>(
         input.position.x,
-        input.position.y + height * height_scale,
+        input.position.y + (height - params.domain_min) * params.exaggeration,
         input.position.z,
     );
     var output: VertexOutput;
     output.position = camera.view_projection * vec4<f32>(world_position, 1.0);
-    output.height = height;
+    output.height = raw_height;
     output.uv = input.uv;
     return output;
 }
 
 @fragment
 fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
-    let t = clamp(input.height, 0.0, 1.0);
+    if (!is_valid_height(input.height)) {
+        return vec4<f32>(color_ramp.clear_color.xyz, 1.0);
+    }
+    if (params.debug_view == 1u) {
+        return vec4<f32>(vec3<f32>(analysis_gray(input.uv, 1u)), 1.0);
+    }
+    if (params.debug_view == 2u) {
+        return vec4<f32>(vec3<f32>(analysis_gray(input.uv, 2u)), 1.0);
+    }
+    let t = clamp((input.height - params.domain_min) * params.inv_domain_span, 0.0, 1.0);
     let base_color = sample_color_ramp(t);
     let normal = terrain_normal(input.uv);
-    let shaded = shade_relief(base_color, normal);
+    var shaded = shade_relief(base_color, normal);
+    shaded = shaded * analysis_shade(input.uv, 1u) * analysis_shade(input.uv, 2u);
     let edge_fade = terrain_edge_fade(input.uv);
     return vec4<f32>(mix(color_ramp.clear_color.xyz, shaded, edge_fade), 1.0);
+}
+
+fn analysis_shade(uv: vec2<f32>, channel: u32) -> f32 {
+    let raw = analysis_sample(uv, channel);
+    return select(1.0, raw, raw == raw);
+}
+
+fn analysis_gray(uv: vec2<f32>, channel: u32) -> f32 {
+    let raw = analysis_sample(uv, channel);
+    return clamp(select(0.0, raw, raw == raw), 0.0, 1.0);
+}
+
+fn analysis_sample(uv: vec2<f32>, channel: u32) -> f32 {
+    if (channel == 1u) {
+        let dims = textureDimensions(ao_texture);
+        let texel = clamp(
+            vec2<i32>(uv * vec2<f32>(dims)),
+            vec2<i32>(0, 0),
+            vec2<i32>(dims) - vec2<i32>(1, 1),
+        );
+        return textureLoad(ao_texture, texel, 0).r;
+    }
+    let dims = textureDimensions(sun_texture);
+    let texel = clamp(
+        vec2<i32>(uv * vec2<f32>(dims)),
+        vec2<i32>(0, 0),
+        vec2<i32>(dims) - vec2<i32>(1, 1),
+    );
+    return textureLoad(sun_texture, texel, 0).r;
 }
 
 fn sample_color_ramp(t: f32) -> vec3<f32> {
@@ -962,7 +1353,7 @@ fn sample_color_ramp(t: f32) -> vec3<f32> {
         if (t <= next.w) {
             let span = max(next.w - previous.w, 0.0001);
             let local_t = clamp((t - previous.w) / span, 0.0, 1.0);
-            return mix(previous.xyz, next.xyz, smoothstep(0.0, 1.0, local_t));
+            return mix(previous.xyz, next.xyz, local_t);
         }
         previous = next;
     }
@@ -974,19 +1365,23 @@ fn terrain_normal(uv: vec2<f32>) -> vec3<f32> {
     let max_texel = vec2<i32>(i32(dimensions.x) - 1, i32(dimensions.y) - 1);
     let scaled_uv = uv * vec2<f32>(f32(dimensions.x - 1u), f32(dimensions.y - 1u));
     let center = vec2<i32>(i32(round(scaled_uv.x)), i32(round(scaled_uv.y)));
-    let left = height_at(center + vec2<i32>(-1, 0), max_texel);
-    let right = height_at(center + vec2<i32>(1, 0), max_texel);
-    let up = height_at(center + vec2<i32>(0, -1), max_texel);
-    let down = height_at(center + vec2<i32>(0, 1), max_texel);
-    let x_spacing = 2.0 / max(f32(dimensions.x - 1u), 1.0);
-    let z_spacing = 2.0 / max(f32(dimensions.y - 1u), 1.0);
-    let tangent_x = vec3<f32>(2.0 * x_spacing, (right - left) * TERRAIN_HEIGHT_SCALE, 0.0);
-    let tangent_z = vec3<f32>(0.0, (down - up) * TERRAIN_HEIGHT_SCALE, 2.0 * z_spacing);
+    let center_height = height_at(center, max_texel);
+    let left = height_or_center(center + vec2<i32>(-1, 0), max_texel, center_height);
+    let right = height_or_center(center + vec2<i32>(1, 0), max_texel, center_height);
+    let up = height_or_center(center + vec2<i32>(0, -1), max_texel, center_height);
+    let down = height_or_center(center + vec2<i32>(0, 1), max_texel, center_height);
+    let tangent_x = vec3<f32>(2.0 * params.spacing.x, (right - left) * params.exaggeration, 0.0);
+    let tangent_z = vec3<f32>(0.0, (down - up) * params.exaggeration, 2.0 * params.spacing.y);
     return normalize(cross(tangent_z, tangent_x));
 }
 
 fn height_at(texel: vec2<i32>, max_texel: vec2<i32>) -> f32 {
     return textureLoad(heightmap, clamp(texel, vec2<i32>(0, 0), max_texel), 0).r;
+}
+
+fn height_or_center(texel: vec2<i32>, max_texel: vec2<i32>, center_height: f32) -> f32 {
+    let value = height_at(texel, max_texel);
+    return select(center_height, value, is_valid_height(value));
 }
 
 fn terrain_edge_fade(uv: vec2<f32>) -> f32 {

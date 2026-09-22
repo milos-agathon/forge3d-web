@@ -897,27 +897,95 @@ describe("Forge3DViewer", () => {
         onError: (error) => errors.push(error.code),
       });
     const callerHeights = new Float32Array([2, 3, 5, 7]);
+    const callerDirection: [number, number, number] = [0.3, 0.7, 0.2];
+    const callerColormap = {
+      stops: [
+        { position: 0, color: [0, 0, 0] as [number, number, number] },
+        { position: 1, color: [1, 1, 1] as [number, number, number] },
+      ],
+    };
     try {
       viewer.setTerrain({
         width: 2,
         height: 2,
         heights: new Float32Array([0, 1, 1, 0]),
       });
-      viewer.setTerrain({ width: 2, height: 2, heights: callerHeights });
+      viewer.setTerrain({
+        width: 2,
+        height: 2,
+        heights: callerHeights,
+        spacing: [30, 20],
+        exaggeration: 2.5,
+        domain: [1, 9],
+        nodata: NaN,
+        crs: "EPSG:32633",
+        colormap: callerColormap,
+        heightAo: {
+          enabled: true,
+          resolutionScale: 0.5,
+          directions: 8,
+          steps: 16,
+          maxDistance: 200,
+          strength: 1,
+        },
+        sunVisibility: {
+          enabled: true,
+          mode: "soft",
+          resolutionScale: 1,
+          samples: 4,
+          steps: 24,
+          maxDistance: 400,
+          softness: 1,
+          bias: 0.01,
+          direction: callerDirection,
+        },
+        debugView: "sun-visibility",
+      });
       const committed = runtimes[0]?.terrains[1];
       expect(committed?.heights).not.toBe(callerHeights);
       expect(Array.from(committed?.heights ?? [])).toEqual([2, 3, 5, 7]);
       callerHeights.fill(99);
+      callerDirection[0] = -9;
+      callerColormap.stops[0]!.position = 0.5;
 
       runtimes[0]?.lose();
       await vi.waitFor(() => expect(viewer.status).toBe("ready"));
       expect(index).toBe(2);
       expect(runtimes[1]?.terrains).toHaveLength(1);
       expect(runtimes[1]?.terrains[0]).toBe(committed);
-      expect(runtimes[1]?.terrains[0]?.heights).toBe(committed?.heights);
-      expect(Array.from(runtimes[1]?.terrains[0]?.heights ?? [])).toEqual([
-        2, 3, 5, 7,
-      ]);
+      const replayed = runtimes[1]?.terrains[0];
+      expect(Array.from(replayed?.heights ?? [])).toEqual([2, 3, 5, 7]);
+      expect(replayed?.spacing).toEqual([30, 20]);
+      expect(replayed?.exaggeration).toBe(2.5);
+      expect(replayed?.domain).toEqual([1, 9]);
+      expect(Number.isNaN(replayed?.nodata)).toBe(true);
+      expect(replayed?.crs).toBe("EPSG:32633");
+      expect(replayed?.colormap).toEqual({
+        stops: [
+          { position: 0, color: [0, 0, 0] },
+          { position: 1, color: [1, 1, 1] },
+        ],
+      });
+      expect(replayed?.heightAo).toEqual({
+        enabled: true,
+        resolutionScale: 0.5,
+        directions: 8,
+        steps: 16,
+        maxDistance: 200,
+        strength: 1,
+      });
+      expect(replayed?.sunVisibility).toEqual({
+        enabled: true,
+        mode: "soft",
+        resolutionScale: 1,
+        samples: 4,
+        steps: 24,
+        maxDistance: 400,
+        softness: 1,
+        bias: 0.01,
+        direction: [0.3, 0.7, 0.2],
+      });
+      expect(replayed?.debugView).toBe("sun-visibility");
       expect(viewer.getDiagnostics().recoveryAttempts).toBe(1);
 
       runtimes[1]?.lose();
@@ -1201,8 +1269,29 @@ describe("Forge3DViewer", () => {
       width: 2,
       height: 2,
       source: new ArrayBuffer(16),
+      spacing: [25, 40] as [number, number],
+      exaggeration: 1.5,
+      domain: [0, 8] as [number, number],
+      nodata: -9999,
+      crs: "EPSG:4326",
+      colorRamp: {
+        stops: [
+          { position: 0, color: [0, 0, 0] as [number, number, number] },
+          { position: 1, color: [1, 1, 1] as [number, number, number] },
+        ],
+      },
+      heightAo: { enabled: true, directions: 6 },
+      sunVisibility: {
+        enabled: true,
+        mode: "hard" as const,
+        direction: [1, 0.35, 0] as [number, number, number],
+      },
+      debugView: "height-ao" as const,
     };
     await viewer.setTerrainFromSource(source);
+    source.spacing[0] = -1;
+    source.colorRamp.stops[1]!.color[0] = 0.25;
+    source.sunVisibility.direction[1] = 9;
     frames.flush();
     const committedCamera = first.cameras.at(-1);
 
@@ -1223,6 +1312,25 @@ describe("Forge3DViewer", () => {
     expect(replacement.sources).toHaveLength(1);
     expect(replacement.sources[0]?.source).toBe(source.source);
     expect(replacement.sources[0]?.signal?.aborted).toBe(false);
+    const replayedSource = replacement.sources[0];
+    expect(replayedSource?.spacing).toEqual([25, 40]);
+    expect(replayedSource?.exaggeration).toBe(1.5);
+    expect(replayedSource?.domain).toEqual([0, 8]);
+    expect(replayedSource?.nodata).toBe(-9999);
+    expect(replayedSource?.crs).toBe("EPSG:4326");
+    expect(replayedSource?.colorRamp).toEqual({
+      stops: [
+        { position: 0, color: [0, 0, 0] },
+        { position: 1, color: [1, 1, 1] },
+      ],
+    });
+    expect(replayedSource?.heightAo).toEqual({ enabled: true, directions: 6 });
+    expect(replayedSource?.sunVisibility).toEqual({
+      enabled: true,
+      mode: "hard",
+      direction: [1, 0.35, 0],
+    });
+    expect(replayedSource?.debugView).toBe("height-ao");
     expect(replacement.renderCalls).toBe(0);
     expect(frames.pending).toBe(0);
 

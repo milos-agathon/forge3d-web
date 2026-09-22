@@ -145,7 +145,7 @@ async fn capture_frame_rgba(
     normalize_readback_to_rgba(rgba, format)
 }
 
-async fn map_readback_buffer(
+pub(super) async fn map_readback_buffer(
     context: &GpuContext,
     buffer: &wgpu::Buffer,
     size: u64,

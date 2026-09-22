@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
@@ -123,6 +123,250 @@ pub struct TerrainHeightmapOptions {
     pub height: u32,
     pub heights: Vec<f32>,
     pub color_ramp: TerrainColorRampOptions,
+    pub spacing: Option<[f32; 2]>,
+    pub exaggeration: Option<f32>,
+    pub domain: Option<[f32; 2]>,
+    pub nodata: Option<f32>,
+    pub crs: Option<String>,
+    pub height_ao: HeightAoJsOptions,
+    pub sun_visibility: SunVisibilityJsOptions,
+    pub debug_view: Option<TerrainDebugViewOption>,
+}
+
+#[derive(Debug)]
+pub struct ValidatedTerrain {
+    pub input: forge3d_core::terrain::TerrainHeightmapInput,
+    pub color_ramp: TerrainColorRampOptions,
+    pub height_ao: forge3d_core::terrain::HeightfieldAoConfig,
+    pub sun_visibility: forge3d_core::terrain::SunVisibilityConfig,
+    pub debug_view: forge3d_core::terrain::TerrainDebugView,
+}
+
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct HeightAoJsOptions {
+    #[serde(default)]
+    pub enabled: Option<bool>,
+    #[serde(default)]
+    pub resolution_scale: Option<f32>,
+    #[serde(default)]
+    pub directions: Option<u32>,
+    #[serde(default)]
+    pub steps: Option<u32>,
+    #[serde(default)]
+    pub max_distance: Option<f32>,
+    #[serde(default)]
+    pub strength: Option<f32>,
+}
+
+impl HeightAoJsOptions {
+    pub fn to_config(&self) -> Result<forge3d_core::terrain::HeightfieldAoConfig, WebError> {
+        let defaults = forge3d_core::terrain::HeightfieldAoConfig::default();
+        forge3d_core::terrain::HeightfieldAoConfig {
+            enabled: self.enabled.unwrap_or(defaults.enabled),
+            resolution_scale: self.resolution_scale.unwrap_or(defaults.resolution_scale),
+            directions: self.directions.unwrap_or(defaults.directions),
+            steps: self.steps.unwrap_or(defaults.steps),
+            max_distance: self.max_distance.unwrap_or(defaults.max_distance),
+            strength: self.strength.unwrap_or(defaults.strength),
+        }
+        .validate()
+        .map_err(crate::error::map_core_error)
+    }
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum SunModeOption {
+    Hard,
+    Soft,
+}
+
+impl SunModeOption {
+    pub(crate) fn to_core(self) -> forge3d_core::terrain::SunVisibilityMode {
+        match self {
+            Self::Hard => forge3d_core::terrain::SunVisibilityMode::Hard,
+            Self::Soft => forge3d_core::terrain::SunVisibilityMode::Soft,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SunVisibilityJsOptions {
+    #[serde(default)]
+    pub enabled: Option<bool>,
+    #[serde(default)]
+    pub mode: Option<SunModeOption>,
+    #[serde(default)]
+    pub resolution_scale: Option<f32>,
+    #[serde(default)]
+    pub samples: Option<u32>,
+    #[serde(default)]
+    pub steps: Option<u32>,
+    #[serde(default)]
+    pub max_distance: Option<f32>,
+    #[serde(default)]
+    pub softness: Option<f32>,
+    #[serde(default)]
+    pub bias: Option<f32>,
+    #[serde(default)]
+    pub direction: Option<[f32; 3]>,
+}
+
+impl SunVisibilityJsOptions {
+    pub fn to_config(&self) -> Result<forge3d_core::terrain::SunVisibilityConfig, WebError> {
+        let defaults = forge3d_core::terrain::SunVisibilityConfig::default();
+        forge3d_core::terrain::SunVisibilityConfig {
+            enabled: self.enabled.unwrap_or(defaults.enabled),
+            mode: self
+                .mode
+                .map(SunModeOption::to_core)
+                .unwrap_or(defaults.mode),
+            resolution_scale: self.resolution_scale.unwrap_or(defaults.resolution_scale),
+            samples: self.samples.unwrap_or(defaults.samples),
+            steps: self.steps.unwrap_or(defaults.steps),
+            max_distance: self.max_distance.unwrap_or(defaults.max_distance),
+            softness: self.softness.unwrap_or(defaults.softness),
+            bias: self.bias.unwrap_or(defaults.bias),
+            direction: self.direction.unwrap_or(defaults.direction),
+        }
+        .validate()
+        .map_err(crate::error::map_core_error)
+    }
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum TerrainDebugViewOption {
+    None,
+    HeightAo,
+    SunVisibility,
+}
+
+impl TerrainDebugViewOption {
+    pub(crate) fn to_core(self) -> forge3d_core::terrain::TerrainDebugView {
+        match self {
+            Self::None => forge3d_core::terrain::TerrainDebugView::None,
+            Self::HeightAo => forge3d_core::terrain::TerrainDebugView::HeightAo,
+            Self::SunVisibility => forge3d_core::terrain::TerrainDebugView::SunVisibility,
+        }
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct TerrainMetadataFields {
+    pub spacing: Option<[f32; 2]>,
+    pub exaggeration: Option<f32>,
+    pub domain: Option<[f32; 2]>,
+    pub nodata: Option<f32>,
+    pub crs: Option<String>,
+    pub height_ao: HeightAoJsOptions,
+    pub sun_visibility: SunVisibilityJsOptions,
+    pub debug_view: Option<TerrainDebugViewOption>,
+}
+
+pub fn read_terrain_metadata(value: &JsValue) -> Result<TerrainMetadataFields, WebError> {
+    let spacing = read_optional_f32_pair_property(value, "spacing")?;
+    let exaggeration =
+        read_optional_f64_property(value, "exaggeration")?.map(|number| number as f32);
+    let domain = read_optional_f32_pair_property(value, "domain")?;
+    let nodata = read_optional_f64_property(value, "nodata")?.map(|number| number as f32);
+    let crs = read_optional_string_property(value, "crs")?;
+    let height_ao =
+        read_optional_object_property::<HeightAoJsOptions>(value, "heightAo")?.unwrap_or_default();
+    let sun_visibility =
+        read_optional_object_property::<SunVisibilityJsOptions>(value, "sunVisibility")?
+            .unwrap_or_default();
+    let debug_view = read_optional_object_property::<TerrainDebugViewOption>(value, "debugView")?;
+    Ok(TerrainMetadataFields {
+        spacing,
+        exaggeration,
+        domain,
+        nodata,
+        crs,
+        height_ao,
+        sun_visibility,
+        debug_view,
+    })
+}
+
+fn read_optional_property(value: &JsValue, name: &str) -> Result<Option<JsValue>, WebError> {
+    let property = js_sys::Reflect::get(value, &JsValue::from_str(name)).map_err(|error| {
+        WebError::with_details(
+            Forge3DErrorCode::InvalidInput,
+            format!("terrain {name} could not be read"),
+            error,
+        )
+    })?;
+    if property.is_undefined() || property.is_null() {
+        Ok(None)
+    } else {
+        Ok(Some(property))
+    }
+}
+
+fn read_optional_f64_property(value: &JsValue, name: &str) -> Result<Option<f64>, WebError> {
+    let Some(property) = read_optional_property(value, name)? else {
+        return Ok(None);
+    };
+    property.as_f64().map(Some).ok_or_else(|| {
+        WebError::new(
+            Forge3DErrorCode::InvalidInput,
+            format!("terrain {name} must be a number"),
+        )
+    })
+}
+
+fn read_optional_f32_pair_property(
+    value: &JsValue,
+    name: &str,
+) -> Result<Option<[f32; 2]>, WebError> {
+    let Some(property) = read_optional_property(value, name)? else {
+        return Ok(None);
+    };
+    let pair: Vec<f64> = serde_wasm_bindgen::from_value(property).map_err(|error| {
+        WebError::new(
+            Forge3DErrorCode::InvalidInput,
+            format!("terrain {name} must be a two-element number array: {error}"),
+        )
+    })?;
+    if pair.len() != 2 {
+        return Err(WebError::new(
+            Forge3DErrorCode::InvalidInput,
+            format!("terrain {name} must contain exactly two numbers"),
+        ));
+    }
+    Ok(Some([pair[0] as f32, pair[1] as f32]))
+}
+
+fn read_optional_string_property(value: &JsValue, name: &str) -> Result<Option<String>, WebError> {
+    let Some(property) = read_optional_property(value, name)? else {
+        return Ok(None);
+    };
+    property.as_string().map(Some).ok_or_else(|| {
+        WebError::new(
+            Forge3DErrorCode::InvalidInput,
+            format!("terrain {name} must be a string"),
+        )
+    })
+}
+
+fn read_optional_object_property<T: for<'de> Deserialize<'de>>(
+    value: &JsValue,
+    name: &str,
+) -> Result<Option<T>, WebError> {
+    let Some(property) = read_optional_property(value, name)? else {
+        return Ok(None);
+    };
+    serde_wasm_bindgen::from_value(property)
+        .map(Some)
+        .map_err(|error| {
+            WebError::new(
+                Forge3DErrorCode::InvalidInput,
+                format!("Invalid terrain {name} input: {error}"),
+            )
+        })
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -179,6 +423,7 @@ impl TerrainHeightmapOptions {
         let color_ramp_value = js_sys::Reflect::get(&value, &JsValue::from_str("colorRamp"))
             .map_err(|_| WebError::new(Forge3DErrorCode::InvalidInput, "invalid colorRamp"))?;
         let color_ramp = TerrainColorRampOptions::from_js_value(color_ramp_value)?;
+        let metadata = read_terrain_metadata(&value)?;
 
         let mut heights = vec![0.0; heights_array.length() as usize];
         heights_array.copy_to(&mut heights);
@@ -188,13 +433,44 @@ impl TerrainHeightmapOptions {
             height,
             heights,
             color_ramp,
+            spacing: metadata.spacing,
+            exaggeration: metadata.exaggeration,
+            domain: metadata.domain,
+            nodata: metadata.nodata,
+            crs: metadata.crs,
+            height_ao: metadata.height_ao,
+            sun_visibility: metadata.sun_visibility,
+            debug_view: metadata.debug_view,
         })
     }
 
-    pub fn validate(self) -> Result<forge3d_core::terrain::TerrainHeightmapInput, WebError> {
+    pub fn validate(self) -> Result<ValidatedTerrain, WebError> {
         self.color_ramp.validate()?;
-        forge3d_core::terrain::TerrainHeightmapInput::new(self.width, self.height, self.heights)
-            .map_err(crate::error::map_core_error)
+        let height_ao = self.height_ao.to_config()?;
+        let sun_visibility = self.sun_visibility.to_config()?;
+        let input = forge3d_core::terrain::TerrainHeightmapInput::with_options(
+            self.width,
+            self.height,
+            self.heights,
+            forge3d_core::terrain::TerrainGridOptions {
+                spacing: self.spacing,
+                exaggeration: self.exaggeration,
+                domain: self.domain,
+                nodata: self.nodata,
+                crs: self.crs,
+            },
+        )
+        .map_err(crate::error::map_core_error)?;
+        Ok(ValidatedTerrain {
+            input,
+            color_ramp: self.color_ramp,
+            height_ao,
+            sun_visibility,
+            debug_view: self
+                .debug_view
+                .map(TerrainDebugViewOption::to_core)
+                .unwrap_or(forge3d_core::terrain::TerrainDebugView::None),
+        })
     }
 }
 
@@ -793,6 +1069,14 @@ mod tests {
             height: 2,
             heights: vec![0.0, 0.1, 0.2, 0.3, 0.4],
             color_ramp: TerrainColorRampOptions::default(),
+            spacing: None,
+            exaggeration: None,
+            domain: None,
+            nodata: None,
+            crs: None,
+            height_ao: super::HeightAoJsOptions::default(),
+            sun_visibility: super::SunVisibilityJsOptions::default(),
+            debug_view: None,
         };
 
         let error = options.validate().unwrap_err();
@@ -806,8 +1090,16 @@ mod tests {
         let options = TerrainHeightmapOptions {
             width: 2,
             height: 2,
-            heights: vec![0.0, f32::NAN, 0.5, 1.0],
+            heights: vec![0.0, f32::INFINITY, 0.5, 1.0],
             color_ramp: TerrainColorRampOptions::default(),
+            spacing: None,
+            exaggeration: None,
+            domain: None,
+            nodata: None,
+            crs: None,
+            height_ao: super::HeightAoJsOptions::default(),
+            sun_visibility: super::SunVisibilityJsOptions::default(),
+            debug_view: None,
         };
 
         let error = options.validate().unwrap_err();

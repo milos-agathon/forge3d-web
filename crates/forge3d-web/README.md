@@ -21,6 +21,42 @@ runtime.setTerrain({
 runtime.render();
 ```
 
+```ts
+import { TerrainDataset } from "@forge3d/web";
+
+const dataset = TerrainDataset.fromArray({
+  width: 257,
+  height: 257,
+  heights,              // row-major little-endian f32 elevations in meters
+  spacing: [30, 30],    // physical cell size in meters
+  nodata: -9999,
+  crs: "EPSG:32633",
+  colormap: "terrain"
+});
+const loaded = await TerrainDataset.fromSource({
+  width: 257,
+  height: 257,
+  source: fileOrBlobOrArrayBufferOrUrl
+});
+
+dataset.statistics;            // min/max/mean/std/percentiles over valid cells
+const slope = dataset.slopeAspect();   // CPU radians
+const ao = dataset.heightAo({ enabled: true });
+const query = dataset.query(0, 0);     // bilinear world-space sample
+
+runtime.setTerrain({
+  ...dataset.toTerrainInput(),
+  heightAo: { enabled: true },
+  sunVisibility: { enabled: true },
+  debugView: "height-ao"
+});
+const gpuField = await runtime.computeTerrainAnalysis(
+  dataset.toTerrainInput(),
+  { kind: "height-ao", options: { enabled: true } }
+);
+const resident = await runtime.readTerrainAnalysis("sun-visibility");
+```
+
 ## Install
 
 ```bash
@@ -119,8 +155,13 @@ Cache `.wasm` assets with immutable content hashing, or invalidate the wasm asse
 - `Forge3DViewer.create(canvas, options)`
 - viewer orbit, pan, zoom, automatic resize, invalidation rendering, recovery,
   diagnostics, resource budgets, screenshots, and deterministic disposal
-- `setTerrain({ width, height, heights })`
+- `setTerrain({ width, height, heights, spacing, exaggeration, domain, nodata, crs, colormap, heightAo, sunVisibility, debugView })`
 - `setTerrainFromSource({ width, height, source, byteOffset, byteLength, signal, onProgress })`
+- `TerrainDataset.fromArray` / `TerrainDataset.fromSource` typed DEM ingestion
+  with statistics, normalization, nodata fill, slope/aspect, contours, world
+  queries, CPU AO/sun fields, worker-pool decoding, and named colormaps
+- `readTerrainHeights()`, `computeTerrainAnalysis(terrain, request)`, and
+  `readTerrainAnalysis(kind)` GPU analysis/readback
 - `setCamera(camera)`
 - `resize({ width, height, devicePixelRatio })`
 - `render()`

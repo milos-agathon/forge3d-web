@@ -3,6 +3,7 @@ import {
   normalizeMemoryReport,
   normalizeRenderStats,
 } from "./native-reports.js";
+import { getTerrainColormap, TerrainDataset } from "./terrain-dataset.js";
 
 export type Forge3DErrorCode =
   | "WEBGPU_UNAVAILABLE"
@@ -151,6 +152,15 @@ export interface TerrainHeightmapInput {
   height: number;
   heights: Float32Array;
   colorRamp?: TerrainColorRampInput;
+  colormap?: TerrainColormapInput;
+  spacing?: [number, number];
+  exaggeration?: number;
+  domain?: [number, number];
+  nodata?: number;
+  crs?: string;
+  heightAo?: HeightAoOptions;
+  sunVisibility?: SunVisibilityOptions;
+  debugView?: TerrainDebugView;
 }
 
 export interface TerrainColorRampInput {
@@ -161,6 +171,124 @@ export interface TerrainColorStopInput {
   position: number;
   color: [number, number, number];
 }
+
+export type TerrainColormapName =
+  | "viridis"
+  | "magma"
+  | "terrain"
+  | "grayscale";
+
+export type TerrainColormapInput = TerrainColormapName | TerrainColorRampInput;
+
+export type TerrainDebugView = "none" | "height-ao" | "sun-visibility";
+
+export interface TerrainStatistics {
+  min: number;
+  max: number;
+  mean: number;
+  std: number;
+  median: number;
+  p01: number;
+  p99: number;
+  count: number;
+  nodataCount: number;
+}
+
+export interface HeightAoOptions {
+  enabled?: boolean;
+  resolutionScale?: number;
+  directions?: number;
+  steps?: number;
+  maxDistance?: number;
+  strength?: number;
+}
+
+export interface SunVisibilityOptions {
+  enabled?: boolean;
+  mode?: "hard" | "soft";
+  resolutionScale?: number;
+  samples?: number;
+  steps?: number;
+  maxDistance?: number;
+  softness?: number;
+  bias?: number;
+  direction?: [number, number, number];
+}
+
+export interface TerrainDatasetInput {
+  width: number;
+  height: number;
+  heights: Float32Array;
+  spacing?: [number, number];
+  exaggeration?: number;
+  domain?: [number, number];
+  nodata?: number;
+  crs?: string;
+  transform?: [number, number, number, number, number, number];
+  bounds?: [number, number, number, number];
+  colormap?: TerrainColormapInput;
+}
+
+export interface TerrainDatasetSourceInput
+  extends Omit<TerrainDatasetInput, "heights"> {
+  source: TerrainByteSource;
+  signal?: AbortSignal;
+  onProgress?: (progress: TerrainSourceProgress) => void;
+  maxBytes?: number;
+}
+
+export interface TerrainDatasetLoadOptions {
+  workerPool?: import("./browser-resources.js").Forge3DWorkerPool;
+}
+
+export interface TerrainNormalizationOptions {
+  domain?: [number, number];
+  targetDomain?: [number, number];
+  clip?: boolean;
+}
+
+export interface TerrainSlopeAspectResult {
+  width: number;
+  height: number;
+  slopeRadians: Float32Array;
+  aspectRadians: Float32Array;
+}
+
+export interface TerrainContourPolyline {
+  level: number;
+  points: Float32Array;
+}
+
+export interface TerrainContourResult {
+  polylines: TerrainContourPolyline[];
+  polylineCount: number;
+  totalPoints: number;
+}
+
+export interface TerrainQueryResult {
+  elevation: number;
+  slopeRadians: number;
+  aspectRadians: number;
+  worldPosition: [number, number, number];
+  normal: [number, number, number];
+  gridPosition: [number, number];
+}
+
+export interface TerrainScalarField {
+  kind: "height-ao" | "sun-visibility";
+  width: number;
+  height: number;
+  values: Float32Array;
+}
+
+export type TerrainComputeRequest =
+  | { kind: "slope-aspect" }
+  | { kind: "height-ao"; options?: HeightAoOptions }
+  | { kind: "sun-visibility"; options?: SunVisibilityOptions };
+
+export type TerrainComputeResult =
+  | TerrainSlopeAspectResult
+  | TerrainScalarField;
 
 export interface TerrainSourceProgress {
   loaded: number;
@@ -178,6 +306,16 @@ export interface TerrainHeightmapSourceInput {
   byteLength?: number;
   signal?: AbortSignal;
   onProgress?: (progress: TerrainSourceProgress) => void;
+  colorRamp?: TerrainColorRampInput;
+  colormap?: TerrainColormapInput;
+  spacing?: [number, number];
+  exaggeration?: number;
+  domain?: [number, number];
+  nodata?: number;
+  crs?: string;
+  heightAo?: HeightAoOptions;
+  sunVisibility?: SunVisibilityOptions;
+  debugView?: TerrainDebugView;
 }
 
 export interface CameraInput {
@@ -617,6 +755,14 @@ interface WasmRuntime {
   render(): boolean;
   screenshot(): Promise<Blob>;
   readRgba?(): Promise<Uint8Array>;
+  readTerrainHeights?(): Promise<Float32Array>;
+  computeTerrainAnalysis?(
+    terrain: TerrainHeightmapInput,
+    request: TerrainComputeRequest,
+  ): Promise<TerrainComputeResult>;
+  readTerrainAnalysis?(
+    kind: "height-ao" | "sun-visibility",
+  ): Promise<TerrainScalarField>;
   getMemoryReport?(): MemoryReport;
   getRenderStats?(): RenderStats;
   dispose(): void;
@@ -700,7 +846,7 @@ export class Forge3DRuntime {
   #disposeRequested = false;
   #nativeDisposed = false;
   #screenshotPromise: Promise<Blob> | undefined;
-  #readbackPromise: Promise<Uint8Array> | undefined;
+  #readbackPromise: Promise<unknown> | undefined;
   #pendingMutations: Array<() => void> = [];
 
   private constructor(
@@ -909,7 +1055,7 @@ export class Forge3DRuntime {
       );
     }
     if (this.#readbackPromise !== undefined) {
-      return this.#readbackPromise;
+      return this.#readbackPromise as Promise<Uint8Array>;
     }
     if (this.#screenshotPromise !== undefined) {
       await this.#screenshotPromise.catch(() => undefined);
@@ -1020,6 +1166,85 @@ export class Forge3DRuntime {
     } catch (error) {
       throw Forge3DError.from(error);
     }
+  }
+
+  async readTerrainHeights(): Promise<Float32Array> {
+    this.#assertNotDisposed();
+    const readTerrainHeights = this.#inner.readTerrainHeights;
+    if (readTerrainHeights === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not support terrain height readback",
+      );
+    }
+    const values = await this.#exclusiveReadback(() =>
+      readTerrainHeights.call(this.#inner),
+    );
+    return new Float32Array(values);
+  }
+
+  async computeTerrainAnalysis(
+    terrain: TerrainDataset | TerrainHeightmapInput,
+    request: TerrainComputeRequest,
+  ): Promise<TerrainComputeResult> {
+    this.#assertNotDisposed();
+    const computeTerrainAnalysis = this.#inner.computeTerrainAnalysis;
+    if (computeTerrainAnalysis === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not support terrain analysis",
+      );
+    }
+    const normalized =
+      terrain instanceof TerrainDataset
+        ? terrain.toTerrainInput()
+        : normalizeTerrainHeightmapInput(terrain);
+    return this.#exclusiveReadback(() =>
+      computeTerrainAnalysis.call(this.#inner, normalized, request),
+    );
+  }
+
+  async readTerrainAnalysis(
+    kind: "height-ao" | "sun-visibility",
+  ): Promise<TerrainScalarField> {
+    this.#assertNotDisposed();
+    const readTerrainAnalysis = this.#inner.readTerrainAnalysis;
+    if (readTerrainAnalysis === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not support terrain analysis readback",
+      );
+    }
+    return this.#exclusiveReadback(() =>
+      readTerrainAnalysis.call(this.#inner, kind),
+    );
+  }
+
+  async #exclusiveReadback<T>(operation: () => Promise<T>): Promise<T> {
+    if (this.#readbackPromise !== undefined) {
+      await this.#readbackPromise.catch(() => undefined);
+      this.#assertNotDisposed();
+    }
+    if (this.#screenshotPromise !== undefined) {
+      await this.#screenshotPromise.catch(() => undefined);
+      this.#assertNotDisposed();
+    }
+    const result = operation().then(
+      (value) => {
+        this.#assertNotDisposed();
+        return value;
+      },
+      (error: unknown) => {
+        this.#assertNotDisposed();
+        throw Forge3DError.from(error);
+      },
+    );
+    this.#readbackPromise = result;
+    void result.then(
+      () => this.#completeCaptureSafely(result),
+      () => this.#completeCaptureSafely(result),
+    );
+    return result;
   }
 
   setCamera(camera: CameraInput): void {
@@ -1323,6 +1548,88 @@ function normalizeRuntimeOptions(
   return runtimeOptions;
 }
 
+function normalizeTerrainColorRamp(
+  terrain: TerrainHeightmapInput | TerrainHeightmapSourceInput,
+): TerrainColorRampInput | undefined {
+  if (terrain.colormap !== undefined && terrain.colorRamp !== undefined) {
+    throw new Forge3DError(
+      "INVALID_INPUT",
+      "terrain colormap and colorRamp cannot both be provided",
+    );
+  }
+  const ramp =
+    terrain.colorRamp ??
+    (terrain.colormap === undefined
+      ? undefined
+      : typeof terrain.colormap === "string"
+        ? getTerrainColormap(terrain.colormap)
+        : terrain.colormap);
+  if (ramp === undefined) {
+    return undefined;
+  }
+  const stops = ramp.stops;
+  if (!Array.isArray(stops) || stops.length < 2 || stops.length > 8) {
+    throw new Forge3DError(
+      "INVALID_INPUT",
+      "colorRamp.stops must contain between 2 and 8 stops",
+    );
+  }
+  return {
+    stops: stops.map((stop) => ({
+      position: stop.position,
+      color: [stop.color[0], stop.color[1], stop.color[2]],
+    })),
+  };
+}
+
+interface TerrainMetadataTarget {
+  spacing?: [number, number];
+  exaggeration?: number;
+  domain?: [number, number];
+  nodata?: number;
+  crs?: string;
+  heightAo?: HeightAoOptions;
+  sunVisibility?: SunVisibilityOptions;
+  debugView?: TerrainDebugView;
+}
+
+function copyTerrainMetadata(
+  source: TerrainHeightmapInput | TerrainHeightmapSourceInput,
+  target: TerrainMetadataTarget,
+): void {
+  if (source.spacing !== undefined) {
+    target.spacing = [source.spacing[0], source.spacing[1]];
+  }
+  if (source.exaggeration !== undefined) {
+    target.exaggeration = source.exaggeration;
+  }
+  if (source.domain !== undefined) {
+    target.domain = [source.domain[0], source.domain[1]];
+  }
+  if (source.nodata !== undefined) {
+    target.nodata = source.nodata;
+  }
+  if (source.crs !== undefined) {
+    target.crs = source.crs;
+  }
+  if (source.heightAo !== undefined) {
+    target.heightAo = { ...source.heightAo };
+  }
+  if (source.sunVisibility !== undefined) {
+    const direction = source.sunVisibility.direction;
+    target.sunVisibility =
+      direction === undefined
+        ? { ...source.sunVisibility }
+        : {
+            ...source.sunVisibility,
+            direction: [direction[0], direction[1], direction[2]],
+          };
+  }
+  if (source.debugView !== undefined) {
+    target.debugView = source.debugView;
+  }
+}
+
 function normalizeTerrainHeightmapInput(
   terrain: TerrainHeightmapInput,
 ): TerrainHeightmapInput {
@@ -1331,25 +1638,11 @@ function normalizeTerrainHeightmapInput(
     height: terrain.height,
     heights: terrain.heights,
   };
-  if (terrain.colorRamp !== undefined) {
-    const stops = terrain.colorRamp.stops;
-    if (
-      !Array.isArray(stops) ||
-      stops.length < 2 ||
-      stops.length > 8
-    ) {
-      throw new Forge3DError(
-        "INVALID_INPUT",
-        "colorRamp.stops must contain between 2 and 8 stops",
-      );
-    }
-    normalized.colorRamp = {
-      stops: stops.map((stop) => ({
-        position: stop.position,
-        color: [stop.color[0], stop.color[1], stop.color[2]],
-      })),
-    };
+  const colorRamp = normalizeTerrainColorRamp(terrain);
+  if (colorRamp !== undefined) {
+    normalized.colorRamp = colorRamp;
   }
+  copyTerrainMetadata(terrain, normalized);
   return normalized;
 }
 
@@ -1373,6 +1666,11 @@ function normalizeTerrainHeightmapSourceInput(
   if (terrain.onProgress !== undefined) {
     normalized.onProgress = terrain.onProgress;
   }
+  const colorRamp = normalizeTerrainColorRamp(terrain);
+  if (colorRamp !== undefined) {
+    normalized.colorRamp = colorRamp;
+  }
+  copyTerrainMetadata(terrain, normalized);
   return normalized;
 }
 
@@ -1490,6 +1788,12 @@ export {
   serveForge3DMessagePort,
 } from "./message-protocol.js";
 export { Forge3DWorkerPool, selectWorkerExecutionMode } from "./browser-resources.js";
+export {
+  TerrainDataset,
+  createTerrainDatasetWorkerHandler,
+  getTerrainColormap,
+  getTerrainColormapLut,
+} from "./terrain-dataset.js";
 export { Forge3DWorkerRenderer, installForge3DWorkerHost } from "./worker-renderer.js";
 export { Forge3DOffscreenRenderer } from "./offscreen-renderer.js";
 export {

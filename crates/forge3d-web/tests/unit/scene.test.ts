@@ -318,7 +318,19 @@ describe("Forge3DScene", () => {
       scene.addTerrain({
         width: 2,
         height: 2,
-        heights: new Float32Array([0, Number.NaN, 0, 0]),
+        heights: new Float32Array([0, Number.POSITIVE_INFINITY, 0, 0]),
+      }),
+    );
+    expectInvalid(() =>
+      scene.addTerrain({
+        width: 2,
+        height: 2,
+        heights: new Float32Array([
+          Number.NaN,
+          Number.NaN,
+          Number.NaN,
+          Number.NaN,
+        ]),
       }),
     );
     expectInvalid(() =>
@@ -328,6 +340,156 @@ describe("Forge3DScene", () => {
         heights: [0, 0, 0, 0] as never,
       }),
     );
+  });
+
+  it("accepts NaN and nodata markers as invalid samples", () => {
+    const scene = Forge3DScene.create();
+    const id = scene.addTerrain(
+      {
+        width: 2,
+        height: 2,
+        heights: new Float32Array([0, Number.NaN, -9999, 2]),
+        nodata: -9999,
+      },
+      { name: "terrain" },
+    );
+    const snapshot = scene.getNode(id)!;
+    const stored =
+      snapshot.node.kind === "terrain" ? snapshot.node.terrain : null;
+    expect(stored?.nodata).toBe(-9999);
+    expect(stored?.heights[1]).toBeNaN();
+
+    const nanNodata = Forge3DScene.create();
+    nanNodata.addTerrain(
+      {
+        width: 2,
+        height: 2,
+        heights: new Float32Array([0, Number.NaN, 1, 2]),
+        nodata: Number.NaN,
+      },
+      { name: "terrain" },
+    );
+  });
+
+  it("validates terrain metadata and rejects invalid values", () => {
+    const scene = Forge3DScene.create();
+    const base = (): TerrainHeightmapInput => ({
+      width: 2,
+      height: 2,
+      heights: new Float32Array([0, 1, 2, 3]),
+    });
+    const reject = (patch: Record<string, unknown>): void => {
+      expectInvalid(() =>
+        scene.addTerrain({ ...base(), ...patch } as TerrainHeightmapInput),
+      );
+    };
+
+    reject({ spacing: [0, 1] });
+    reject({ spacing: [1, Number.NaN] });
+    reject({ spacing: [1] });
+    reject({ exaggeration: 0 });
+    reject({ exaggeration: Number.POSITIVE_INFINITY });
+    reject({ domain: [2, 1] });
+    reject({ domain: [0, Number.NaN] });
+    reject({ nodata: Number.POSITIVE_INFINITY });
+    reject({ crs: "" });
+    reject({ crs: 42 });
+    reject({ debugView: "normals" });
+    reject({
+      colorRamp: {
+        stops: [
+          { position: 0, color: [0, 0, 0] },
+          { position: 1, color: [1, 1, 1] },
+        ],
+      },
+      colormap: "viridis",
+    });
+    reject({ colormap: "not-a-map" });
+    reject({ colormap: { stops: [{ position: 0, color: [0, 0, 0] }] } });
+    reject({ heightAo: { directions: 0 } });
+    reject({ heightAo: { resolutionScale: 2 } });
+    reject({ sunVisibility: { mode: "soft", samples: 0 } });
+    reject({ sunVisibility: { mode: "hard", samples: 17 } });
+    reject({ sunVisibility: { direction: [0, 0, 0] } });
+
+    const id = scene.addTerrain(
+      {
+        ...base(),
+        spacing: [30, 20],
+        exaggeration: 2,
+        domain: [0, 4],
+        nodata: -1,
+        crs: "EPSG:32633",
+        colormap: "magma",
+        heightAo: { enabled: true, directions: 8 },
+        sunVisibility: {
+          enabled: true,
+          mode: "hard",
+          samples: 9,
+          softness: 2,
+          direction: [0.3, 0.7, 0.2],
+        },
+        debugView: "height-ao",
+      },
+      { name: "terrain" },
+    );
+    expect(scene.getNode(id)!.node.kind).toBe("terrain");
+  });
+
+  it("preserves terrain metadata defensively through snapshots and copies", () => {
+    const scene = Forge3DScene.create();
+    const heights = new Float32Array([1, Number.NaN, 3, -9999]);
+    const input: TerrainHeightmapInput = {
+      width: 2,
+      height: 2,
+      heights,
+      spacing: [30, 20],
+      exaggeration: 1.5,
+      domain: [0, 8],
+      nodata: -9999,
+      crs: "EPSG:4326",
+      colormap: {
+        stops: [
+          { position: 0, color: [0, 0, 0] },
+          { position: 1, color: [1, 1, 1] },
+        ],
+      },
+      heightAo: { enabled: true, directions: 8 },
+      sunVisibility: {
+        enabled: true,
+        mode: "soft",
+        samples: 4,
+        direction: [0.3, 0.7, 0.2],
+      },
+      debugView: "sun-visibility",
+    };
+    const id = scene.addTerrain(input, { name: "terrain" });
+    heights[0] = 42;
+    input.spacing![0] = 99;
+    (input.colormap as { stops: { position: number }[] }).stops[0]!.position =
+      0.5;
+    input.sunVisibility!.direction![0] = -9;
+
+    const snapshot = scene.getNode(id)!;
+    const stored =
+      snapshot.node.kind === "terrain" ? snapshot.node.terrain : null;
+    expect(stored?.heights[0]).toBe(1);
+    expect(stored?.spacing).toEqual([30, 20]);
+    expect(stored?.colormap).toEqual({
+      stops: [
+        { position: 0, color: [0, 0, 0] },
+        { position: 1, color: [1, 1, 1] },
+      ],
+    });
+    expect(stored?.sunVisibility?.direction).toEqual([0.3, 0.7, 0.2]);
+    expect(stored?.debugView).toBe("sun-visibility");
+
+    const copied = scene.copy();
+    const copiedTerrain = copied.getNode(id)!.node;
+    const copiedStored =
+      copiedTerrain.kind === "terrain" ? copiedTerrain.terrain : null;
+    expect(copiedStored).toEqual(stored);
+    expect(copiedStored?.heights).not.toBe(stored?.heights);
   });
 
   it("prepends implicit passes in canonical kind order", () => {

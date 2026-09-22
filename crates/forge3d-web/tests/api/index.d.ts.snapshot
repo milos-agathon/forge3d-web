@@ -171,14 +171,32 @@ export interface Forge3DViewerOptions {
   onError?: (error: Forge3DError) => void;
 }
 
-/** Float32 heightmap input for the MVP terrain renderer. */
+/** Float32 heightmap input for the terrain renderer. */
 export interface TerrainHeightmapInput {
   width: number;
   height: number;
-  /** Must contain exactly width * height finite float values. */
+  /** Must contain exactly width * height values; NaN marks nodata cells. */
   heights: Float32Array;
   /** Optional terrain color ramp used by the WebGPU surface shader. */
   colorRamp?: TerrainColorRampInput;
+  /** Named colormap or custom ramp; cannot be combined with colorRamp. */
+  colormap?: TerrainColormapInput;
+  /** Physical sample spacing in world units. */
+  spacing?: [number, number];
+  /** Vertical exaggeration applied to (height - domainMin). */
+  exaggeration?: number;
+  /** Height domain used for normalized rendering. */
+  domain?: [number, number];
+  /** Optional numeric nodata marker; NaN always marks nodata cells. */
+  nodata?: number;
+  /** Optional CRS identifier retained as metadata. */
+  crs?: string;
+  /** Optional GPU ambient-occlusion settings. */
+  heightAo?: HeightAoOptions;
+  /** Optional GPU sun-visibility settings. */
+  sunVisibility?: SunVisibilityOptions;
+  /** Optional grayscale debug view selection. */
+  debugView?: TerrainDebugView;
 }
 
 export interface TerrainColorRampInput {
@@ -190,6 +208,174 @@ export interface TerrainColorStopInput {
   position: number;
   color: [number, number, number];
 }
+
+/** Named colormaps provided by the terrain facade. */
+export type TerrainColormapName =
+  | "viridis"
+  | "magma"
+  | "terrain"
+  | "grayscale";
+
+/** Colormap selector accepted by terrain inputs and LUT generation. */
+export type TerrainColormapInput = TerrainColormapName | TerrainColorRampInput;
+
+/** Grayscale debug views for terrain analysis output. */
+export type TerrainDebugView = "none" | "height-ao" | "sun-visibility";
+
+/** Population statistics over valid (non-nodata) height samples. */
+export interface TerrainStatistics {
+  min: number;
+  max: number;
+  mean: number;
+  std: number;
+  median: number;
+  p01: number;
+  p99: number;
+  count: number;
+  nodataCount: number;
+}
+
+/** Heightfield ambient-occlusion options shared by CPU and GPU analysis. */
+export interface HeightAoOptions {
+  enabled?: boolean;
+  resolutionScale?: number;
+  directions?: number;
+  steps?: number;
+  maxDistance?: number;
+  strength?: number;
+}
+
+/** Sun-visibility options shared by CPU and GPU analysis. */
+export interface SunVisibilityOptions {
+  enabled?: boolean;
+  mode?: "hard" | "soft";
+  resolutionScale?: number;
+  samples?: number;
+  steps?: number;
+  maxDistance?: number;
+  softness?: number;
+  bias?: number;
+  /** Direction pointing toward the sun; normalized by the implementation. */
+  direction?: [number, number, number];
+}
+
+/** Typed-array input accepted by TerrainDataset.fromArray. */
+export interface TerrainDatasetInput {
+  width: number;
+  height: number;
+  heights: Float32Array;
+  spacing?: [number, number];
+  exaggeration?: number;
+  domain?: [number, number];
+  nodata?: number;
+  crs?: string;
+  transform?: [number, number, number, number, number, number];
+  bounds?: [number, number, number, number];
+  colormap?: TerrainColormapInput;
+}
+
+/** Byte-source input accepted by TerrainDataset.fromSource. */
+export interface TerrainDatasetSourceInput
+  extends Omit<TerrainDatasetInput, "heights"> {
+  source: TerrainByteSource;
+  signal?: AbortSignal;
+  onProgress?: (progress: TerrainSourceProgress) => void;
+  maxBytes?: number;
+}
+
+export interface TerrainDatasetLoadOptions {
+  workerPool?: Forge3DWorkerPool;
+}
+
+export interface TerrainNormalizationOptions {
+  domain?: [number, number];
+  targetDomain?: [number, number];
+  clip?: boolean;
+}
+
+export interface TerrainSlopeAspectResult {
+  width: number;
+  height: number;
+  slopeRadians: Float32Array;
+  aspectRadians: Float32Array;
+}
+
+export interface TerrainContourPolyline {
+  level: number;
+  /** Flat x/z point pairs in centered physical coordinates. */
+  points: Float32Array;
+}
+
+export interface TerrainContourResult {
+  polylines: TerrainContourPolyline[];
+  polylineCount: number;
+  totalPoints: number;
+}
+
+export interface TerrainQueryResult {
+  elevation: number;
+  slopeRadians: number;
+  aspectRadians: number;
+  worldPosition: [number, number, number];
+  normal: [number, number, number];
+  gridPosition: [number, number];
+}
+
+export interface TerrainScalarField {
+  kind: "height-ao" | "sun-visibility";
+  width: number;
+  height: number;
+  values: Float32Array;
+}
+
+export type TerrainComputeRequest =
+  | { kind: "slope-aspect" }
+  | { kind: "height-ao"; options?: HeightAoOptions }
+  | { kind: "sun-visibility"; options?: SunVisibilityOptions };
+
+export type TerrainComputeResult =
+  | TerrainSlopeAspectResult
+  | TerrainScalarField;
+
+/** CPU terrain dataset with metadata, statistics, and analysis helpers. */
+export declare class TerrainDataset {
+  static fromArray(input: TerrainDatasetInput): TerrainDataset;
+  static fromSource(
+    input: TerrainDatasetSourceInput,
+    options?: TerrainDatasetLoadOptions,
+  ): Promise<TerrainDataset>;
+  readonly width: number;
+  readonly height: number;
+  readonly heights: Float32Array;
+  readonly spacing: [number, number];
+  readonly exaggeration: number;
+  readonly domain: [number, number];
+  readonly nodata?: number;
+  readonly crs?: string;
+  readonly transform?: [number, number, number, number, number, number];
+  readonly bounds?: [number, number, number, number];
+  readonly colormap: TerrainColormapInput;
+  readonly statistics: TerrainStatistics;
+  validMask(): Uint8Array;
+  normalize(options?: TerrainNormalizationOptions): TerrainDataset;
+  fillNodata(method?: "nearest" | "mean"): TerrainDataset;
+  toTerrainInput(): TerrainHeightmapInput;
+  slopeAspect(): TerrainSlopeAspectResult;
+  contours(levels: readonly number[]): TerrainContourResult;
+  query(x: number, z: number): TerrainQueryResult | undefined;
+  heightAo(options?: HeightAoOptions): TerrainScalarField;
+  sunVisibility(options?: SunVisibilityOptions): TerrainScalarField;
+  estimatedCpuBytes(): number;
+}
+
+export declare function createTerrainDatasetWorkerHandler(): Forge3DMessageHandler;
+export declare function getTerrainColormap(
+  name: TerrainColormapName,
+): TerrainColorRampInput;
+export declare function getTerrainColormapLut(
+  input: TerrainColormapInput,
+  size?: number,
+): Uint8Array;
 
 /** Progress event for browser terrain byte-source reads. */
 export interface TerrainSourceProgress {
@@ -218,6 +404,18 @@ export interface TerrainHeightmapSourceInput {
   signal?: AbortSignal;
   /** Completion/progress callback. URL and Blob reads currently report completion. */
   onProgress?: (progress: TerrainSourceProgress) => void;
+  /** Optional terrain color ramp used by the WebGPU surface shader. */
+  colorRamp?: TerrainColorRampInput;
+  /** Named colormap or custom ramp; cannot be combined with colorRamp. */
+  colormap?: TerrainColormapInput;
+  spacing?: [number, number];
+  exaggeration?: number;
+  domain?: [number, number];
+  nodata?: number;
+  crs?: string;
+  heightAo?: HeightAoOptions;
+  sunVisibility?: SunVisibilityOptions;
+  debugView?: TerrainDebugView;
 }
 
 /** Camera parameters used to build the terrain view-projection matrix. */
@@ -595,6 +793,14 @@ export declare class Forge3DRuntime {
   render(): boolean;
   screenshot(): Promise<Blob>;
   readRgba(): Promise<Uint8Array>;
+  readTerrainHeights(): Promise<Float32Array>;
+  computeTerrainAnalysis(
+    terrain: TerrainDataset | TerrainHeightmapInput,
+    request: TerrainComputeRequest,
+  ): Promise<TerrainComputeResult>;
+  readTerrainAnalysis(
+    kind: "height-ao" | "sun-visibility",
+  ): Promise<TerrainScalarField>;
   dispose(): void;
 }
 

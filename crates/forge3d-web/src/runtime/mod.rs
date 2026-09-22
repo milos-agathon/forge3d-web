@@ -1,3 +1,4 @@
+mod analysis;
 mod canvas;
 mod device_health;
 mod diagnostics;
@@ -158,6 +159,37 @@ impl Forge3DRuntime {
         ensure_not_disposed_error(self).map_err(to_js_error)?;
         ensure_device_healthy_error(self).map_err(to_js_error)?;
         set_terrain_options_runtime(self, terrain).map_err(to_js_error)
+    }
+
+    #[wasm_bindgen(js_name = readTerrainHeights)]
+    pub async fn read_terrain_heights(&mut self) -> Result<js_sys::Float32Array, JsValue> {
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        ensure_device_healthy_error(self).map_err(to_js_error)?;
+        analysis::read_terrain_heights_runtime(self)
+            .await
+            .map_err(to_js_error)
+    }
+
+    #[wasm_bindgen(js_name = computeTerrainAnalysis)]
+    pub async fn compute_terrain_analysis(
+        &mut self,
+        terrain: JsValue,
+        request: JsValue,
+    ) -> Result<JsValue, JsValue> {
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        ensure_device_healthy_error(self).map_err(to_js_error)?;
+        analysis::compute_terrain_analysis_runtime(self, terrain, request)
+            .await
+            .map_err(to_js_error)
+    }
+
+    #[wasm_bindgen(js_name = readTerrainAnalysis)]
+    pub async fn read_terrain_analysis(&mut self, kind: JsValue) -> Result<JsValue, JsValue> {
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        ensure_device_healthy_error(self).map_err(to_js_error)?;
+        analysis::read_terrain_analysis_runtime(self, kind)
+            .await
+            .map_err(to_js_error)
     }
 
     #[wasm_bindgen(js_name = setCamera)]
@@ -494,5 +526,22 @@ mod tests {
 
         let error = ensure_not_disposed_error(&runtime).unwrap_err();
         assert_eq!(error.code().as_str(), "RUNTIME_DISPOSED");
+    }
+
+    #[test]
+    fn r32float_upload_plan_selects_tight_or_rowwise_by_alignment() {
+        use super::terrain::{r32float_upload_plan, R32FloatUploadPlan};
+        match r32float_upload_plan(64) {
+            R32FloatUploadPlan::Tight { bytes_per_row } => {
+                assert_eq!(bytes_per_row, 256);
+            }
+            _ => panic!("64-wide rows are aligned"),
+        }
+        match r32float_upload_plan(257) {
+            R32FloatUploadPlan::RowWise { row_bytes } => {
+                assert_eq!(row_bytes, 1028);
+            }
+            _ => panic!("257-wide rows must use per-row writes"),
+        }
     }
 }

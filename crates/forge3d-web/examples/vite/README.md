@@ -3,8 +3,25 @@
 This example consumes the package entrypoint exactly as an application would:
 
 ```ts
-import { Forge3DRuntime } from "@forge3d/web";
+import { Forge3DRuntime, TerrainDataset } from "@forge3d/web";
 ```
+
+## Terrain Datasets
+
+`src/main.ts` builds a deterministic 65x65 DEM and exercises all three
+`TerrainDataset` source modes:
+
+- `TerrainDataset.fromArray` with a direct `Float32Array` of little-endian
+  f32 elevation samples in row-major order.
+- `TerrainDataset.fromSource` with a `File` containing the same f32le bytes.
+- `TerrainDataset.fromSource` with a fetched URL (a `Blob` object URL; the
+  dataset pipeline fetches it like any other URL).
+
+Heights are meters, `spacing` is the physical cell size in meters, and
+`nodata`/`NaN` marks invalid samples. The example renders the dataset with
+height AO and sun visibility enabled, then exercises CPU analysis
+(`slopeAspect`, `query`), `readTerrainHeights`, and GPU
+`computeTerrainAnalysis`, logging the results.
 
 ## Run
 

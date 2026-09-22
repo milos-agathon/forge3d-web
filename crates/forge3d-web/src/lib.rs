@@ -57,6 +57,61 @@ fn terrain_options_to_js(
     }
     set_js_value(&ramp, "stops", stops.as_ref())?;
     set_js_value(&result, "colorRamp", ramp.as_ref())?;
+
+    if let Some(spacing) = terrain.spacing {
+        let values = js_sys::Array::new();
+        for value in spacing {
+            values.push(&JsValue::from_f64(value as f64));
+        }
+        set_js_value(&result, "spacing", values.as_ref())?;
+    }
+    if let Some(exaggeration) = terrain.exaggeration {
+        set_js_value(
+            &result,
+            "exaggeration",
+            &JsValue::from_f64(exaggeration as f64),
+        )?;
+    }
+    if let Some(domain) = terrain.domain {
+        let values = js_sys::Array::new();
+        for value in domain {
+            values.push(&JsValue::from_f64(value as f64));
+        }
+        set_js_value(&result, "domain", values.as_ref())?;
+    }
+    if let Some(nodata) = terrain.nodata {
+        set_js_value(&result, "nodata", &JsValue::from_f64(nodata as f64))?;
+    }
+    if let Some(crs) = terrain.crs {
+        set_js_value(&result, "crs", &JsValue::from_str(&crs))?;
+    }
+    let height_ao = serde_wasm_bindgen::to_value(&terrain.height_ao).map_err(|error| {
+        crate::error::WebError::with_details(
+            crate::error::Forge3DErrorCode::InternalError,
+            "Failed to serialize terrain heightAo options",
+            JsValue::from_str(&error.to_string()),
+        )
+    })?;
+    set_js_value(&result, "heightAo", &height_ao)?;
+    let sun_visibility =
+        serde_wasm_bindgen::to_value(&terrain.sun_visibility).map_err(|error| {
+            crate::error::WebError::with_details(
+                crate::error::Forge3DErrorCode::InternalError,
+                "Failed to serialize terrain sunVisibility options",
+                JsValue::from_str(&error.to_string()),
+            )
+        })?;
+    set_js_value(&result, "sunVisibility", &sun_visibility)?;
+    if let Some(debug_view) = terrain.debug_view {
+        let value = serde_wasm_bindgen::to_value(&debug_view).map_err(|error| {
+            crate::error::WebError::with_details(
+                crate::error::Forge3DErrorCode::InternalError,
+                "Failed to serialize terrain debugView",
+                JsValue::from_str(&error.to_string()),
+            )
+        })?;
+        set_js_value(&result, "debugView", &value)?;
+    }
     Ok(result.into())
 }
 

@@ -96,7 +96,7 @@ try {
     [
       "--input-type=module",
       "--eval",
-      'import { Forge3DViewer } from "@forge3d/web"; if (typeof Forge3DViewer !== "function") throw new Error("Forge3DViewer export missing");',
+      'import { Forge3DViewer, TerrainDataset } from "@forge3d/web"; if (typeof Forge3DViewer !== "function") throw new Error("Forge3DViewer export missing"); if (typeof TerrainDataset !== "function") throw new Error("TerrainDataset export missing");',
     ],
     consumerDirectory,
   );
@@ -127,6 +127,27 @@ try {
     `packageSha256: "${packageSha256}"`,
   );
   writeFileSync(consumerFixture, fixture);
+  const w03SourceFixture = join(
+    packageRoot,
+    "examples",
+    "test-w03-terrain.html",
+  );
+  const w03ConsumerFixture = join(consumerDirectory, "test-w03-terrain.html");
+  let w03Fixture = readFileSync(w03SourceFixture, "utf8");
+  w03Fixture = w03Fixture.replace(
+    '<script type="module">',
+    `<script type="importmap">{"imports":{"@forge3d/web":"/node_modules/@forge3d/web/dist/index.js"}}</script>
+    <script type="module">`,
+  );
+  w03Fixture = w03Fixture.replace(
+    'from "../src-ts/index.ts"',
+    'from "@forge3d/web"',
+  );
+  w03Fixture = w03Fixture.replace(
+    "packageSha256 = null",
+    `packageSha256 = "${packageSha256}"`,
+  );
+  writeFileSync(w03ConsumerFixture, w03Fixture);
   const benchmarkDirectory = join(
     consumerDirectory,
     "tests",
@@ -235,6 +256,7 @@ try {
       "package-evidence.json",
       "test-interactive-viewer.html",
       "test-lifecycle-away.html",
+      "test-w03-terrain.html",
     ]) {
       copyFileSync(join(consumerDirectory, file), join(retainedFixture, file));
     }
@@ -584,6 +606,34 @@ async function runInstalledPackageBrowserGate(
         requireReleaseArtifact: true,
       });
     }
+    await page.goto(`${origin}/test-w03-terrain.html`, {
+      waitUntil: "networkidle",
+    });
+    const terrainDataset = await page.evaluate(() =>
+      window.__forge3dW03Probe(),
+    );
+    if (terrainDataset.supported !== true || terrainDataset.ok !== true) {
+      throw new Error(
+        `installed-package terrain dataset probe failed: ${JSON.stringify(terrainDataset.error ?? terrainDataset)}`,
+      );
+    }
+    if (terrainDataset.packageSha256 !== packageSha256) {
+      throw new Error(
+        "installed-package terrain fixture did not execute the expected tarball",
+      );
+    }
+    for (const mode of ["direct", "file", "url"]) {
+      const sourceResult = terrainDataset.sources?.[mode];
+      if (
+        !sourceResult ||
+        sourceResult.maxError > 1e-6 ||
+        sourceResult.nanMismatch !== 0
+      ) {
+        throw new Error(
+          `installed-package terrain dataset ${mode} source mode failed: ${JSON.stringify(sourceResult)}`,
+        );
+      }
+    }
     if (pageErrors.length > 0) {
       throw new Error(`installed-package page errors: ${pageErrors.join("; ")}`);
     }
@@ -600,6 +650,18 @@ async function runInstalledPackageBrowserGate(
       visibilityLifecycle,
       interactionObservation,
       evidence,
+      terrainDataset: {
+        direct: terrainDataset.sources.direct,
+        file: terrainDataset.sources.file,
+        url: terrainDataset.sources.url,
+        demReadback: terrainDataset.demReadback,
+        gpuParity: terrainDataset.gpuParity,
+        resident: terrainDataset.resident,
+        disabledAoCode: terrainDataset.disabledAoCode,
+        disabledSunCode: terrainDataset.disabledSunCode,
+        renderDiffers: terrainDataset.renderDiffers,
+        memory: terrainDataset.memory,
+      },
     };
   } finally {
     await browser.close();
