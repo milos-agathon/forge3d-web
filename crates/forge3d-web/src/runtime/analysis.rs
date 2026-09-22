@@ -804,8 +804,13 @@ fn qnan() -> f32 {{
     return bitcast<f32>(params.counts.z);
 }}
 
+fn is_nan_height(value: f32) -> bool {{
+    let bits = bitcast<u32>(value);
+    return (bits & 0x7f800000u) == 0x7f800000u && (bits & 0x007fffffu) != 0u;
+}}
+
 fn is_valid_height(value: f32) -> bool {{
-    if (value != value) {{
+    if (is_nan_height(value)) {{
         return false;
     }}
     if (params.has_nodata > 0.5 && value == params.nodata_value) {{
@@ -856,7 +861,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     let steps = params.counts.y;
     let step_uv = max_uv / f32(steps);
     let center = world_height_at_uv(uv);
-    if (center != center) {
+    if (is_nan_height(center)) {
         textureStore(output, vec2<i32>(gid.xy), vec4<f32>(qnan(), 0.0, 0.0, 0.0));
         return;
     }
@@ -871,7 +876,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
                 break;
             }
             let sample_height = world_height_at_uv(sample_uv);
-            if (sample_height != sample_height) {
+            if (is_nan_height(sample_height)) {
                 continue;
             }
             let offset = (sample_uv - uv) * extent;
@@ -920,7 +925,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
     let max_uv = params.direction.w / max(extent.x, extent.y);
     let step_uv = max_uv / f32(steps);
     let center = world_height_at_uv(uv);
-    if (center != center) {
+    if (is_nan_height(center)) {
         textureStore(output, texel, vec4<f32>(qnan(), 0.0, 0.0, 0.0));
         return;
     }
@@ -937,7 +942,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>) {
                 break;
             }
             let sample_height = world_height_at_uv(sample_uv);
-            if (sample_height != sample_height) {
+            if (is_nan_height(sample_height)) {
                 continue;
             }
             let offset = (sample_uv - uv) * extent;

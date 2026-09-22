@@ -1268,8 +1268,13 @@ struct VertexOutput {
 @group(0) @binding(5) var ao_texture: texture_2d<f32>;
 @group(0) @binding(6) var sun_texture: texture_2d<f32>;
 
+fn is_nan_height(value: f32) -> bool {
+    let bits = bitcast<u32>(value);
+    return (bits & 0x7f800000u) == 0x7f800000u && (bits & 0x007fffffu) != 0u;
+}
+
 fn is_valid_height(value: f32) -> bool {
-    if (value != value) {
+    if (is_nan_height(value)) {
         return false;
     }
     if (params.has_nodata > 0.5 && value == params.nodata_value) {
