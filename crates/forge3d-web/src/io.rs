@@ -5,8 +5,8 @@ use web_sys::{Blob, ReadableStreamDefaultReader, Request, RequestInit, RequestMo
 
 use crate::error::{Forge3DErrorCode, WebError};
 use crate::inputs::{
-    validate_terrain_allocation, TerrainColorRampOptions, TerrainHeightmapOptions,
-    TerrainPhysicalLimits,
+    read_terrain_metadata, validate_terrain_allocation, TerrainColorRampOptions,
+    TerrainHeightmapOptions, TerrainPhysicalLimits,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -65,12 +65,21 @@ pub async fn load_terrain_heightmap_source(
             format!("Terrain source body could not be decoded: {error}"),
         )
     })?;
+    let metadata = read_terrain_metadata(&input)?;
 
     Ok(TerrainHeightmapOptions {
         width,
         height,
         heights,
         color_ramp,
+        spacing: metadata.spacing,
+        exaggeration: metadata.exaggeration,
+        domain: metadata.domain,
+        nodata: metadata.nodata,
+        crs: metadata.crs,
+        height_ao: metadata.height_ao,
+        sun_visibility: metadata.sun_visibility,
+        debug_view: metadata.debug_view,
     })
 }
 

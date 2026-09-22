@@ -4,7 +4,7 @@
   "manifestId": "forge3d-composite-baseline-v1",
   "sourcePlan": {
     "path": "docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md",
-    "sha256": "e53923f77c1ab89a6ea6a6ed8192b78ae4f89a054081fb8e8b9f661cbd6cc4e2"
+    "sha256": "90e16fc95c7f5e9e7254fd1f4d059766780ac55f5f0d1df3ab0dcbad18185a7d"
   },
   "baselineLayers": [
     {
@@ -561,7 +561,7 @@
       "title": "DEM stats/normalization/domains/nodata/load",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W03",
       "nativeCapability": "DEM stats/normalization/domains/nodata/load: 1f4084a:python/forge3d/io.py:68-487, tests/test_dem_loading.py, tests/test_terrain_runtime.py",
       "requiredWebOutcome": "Add async DEM model with stats, percentile/domain, nodata fill/mask, spacing and CRS metadata",
@@ -584,7 +584,7 @@
       "title": "Grid mesh, R32F upload/readback and built-in/runtime colormaps",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "P",
+      "status": "I",
       "ownerTask": "W03",
       "nativeCapability": "Grid mesh, R32F upload/readback and built-in/runtime colormaps: 1f4084a:src/terrain/mesh.rs, src/terrain/colormap_lut.rs, tests/test_terrain_renderer.py, CHANGELOG.md 0.0.4-0.0.8",
       "requiredWebOutcome": "Basic grid/height/ramp exist; add physical spacing, exaggeration/domain, readback and named LUTs",
@@ -608,7 +608,7 @@
       "title": "Slope/aspect/contours and terrain queries",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W03",
       "nativeCapability": "Slope/aspect/contours and terrain queries: 1f4084a:src/terrain/analysis.rs, src/picking/terrain_query.rs, tests/test_terrain_analysis_api.py",
       "requiredWebOutcome": "Add CPU/WASM and WebGPU compute analysis with consistent units and typed query results",
@@ -631,7 +631,7 @@
       "title": "Heightfield AO and sun visibility",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W03",
       "nativeCapability": "Heightfield AO and sun visibility: 1f4084a:src/terrain/renderer/height_ao/**, tests/test_heightfield_ao.py, tests/test_sun_visibility.py",
       "requiredWebOutcome": "Add configurable compute passes and debug outputs",
@@ -2524,7 +2524,7 @@
       "contract": "Add async DEM model with stats, percentile/domain, nodata fill/mask, spacing and CRS metadata",
       "owner": "W03",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T01"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T01"
       ],
       "tests": [
         "port DEM/grid/colormap/analysis/height-AO/sun-visibility tests; exact synthetic slopes/contours; NaN/nodata/errors; compute/CPU parity."
@@ -2537,7 +2537,7 @@
       "contract": "Basic grid/height/ramp exist; add physical spacing, exaggeration/domain, readback and named LUTs",
       "owner": "W03",
       "evidence": [
-        "tracked P closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T02"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T02"
       ],
       "tests": [
         "port DEM/grid/colormap/analysis/height-AO/sun-visibility tests; exact synthetic slopes/contours; NaN/nodata/errors; compute/CPU parity."
@@ -2550,7 +2550,7 @@
       "contract": "Add CPU/WASM and WebGPU compute analysis with consistent units and typed query results",
       "owner": "W03",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T03"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T03"
       ],
       "tests": [
         "port DEM/grid/colormap/analysis/height-AO/sun-visibility tests; exact synthetic slopes/contours; NaN/nodata/errors; compute/CPU parity."
@@ -2563,7 +2563,7 @@
       "contract": "Add configurable compute passes and debug outputs",
       "owner": "W03",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T04"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T04"
       ],
       "tests": [
         "port DEM/grid/colormap/analysis/height-AO/sun-visibility tests; exact synthetic slopes/contours; NaN/nodata/errors; compute/CPU parity."
@@ -3951,7 +3951,7 @@
     {
       "kind": "composite-inventory",
       "path": "crates/forge3d-web/tests/parity/composite-inventory.json",
-      "sha256": "5ea2ac19f403d7913e5eea82acfda36af3c086af48e6b50524d8a8ecafcc7832",
+      "sha256": "5da1712c5ec1b5907253e304ca6f4714f2618faab8faff37d534bf04128f0d2c",
       "recordCount": 6531
     },
     {

@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forge3D W03 Terrain Dataset Test</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+      }
+
+      canvas {
+        display: block;
+        width: 160px;
+        height: 120px;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="forge3d-w03-canvas" width="160" height="120"></canvas>
+    <script type="module">
+      import {
+        Forge3DError,
+        Forge3DRuntime,
+        TerrainDataset,
+      } from "../src-ts/index.ts";
+
+      const canvas = document.querySelector("#forge3d-w03-canvas");
+      const packageSha256 = null;
+
+      const DEM_WIDTH = 257;
+      const DEM_HEIGHT = 257;
+      const DEM_SPACING = [30, 30];
+      const PARITY_SIZE = 65;
+      const AO_OPTIONS = {
+        enabled: true,
+        resolutionScale: 1,
+        directions: 8,
+        steps: 24,
+        maxDistance: 24,
+        strength: 1,
+      };
+      const SUN_OPTIONS = {
+        enabled: true,
+        mode: "hard",
+        resolutionScale: 1,
+        samples: 1,
+        steps: 32,
+        maxDistance: 32,
+        softness: 0,
+        bias: 0.001,
+        direction: [1, 0.35, 0],
+      };
+      const PARITY_CAMERA = {
+        position: [0, 70, 70],
+        target: [0, 0, 0],
+        up: [0, 1, 0],
+        fovYDegrees: 55,
+        near: 0.5,
+        far: 500,
+      };
+      const DEM_CAMERA = {
+        position: [0, 4200, 4200],
+        target: [0, 0, 0],
+        up: [0, 1, 0],
+        fovYDegrees: 55,
+        near: 10,
+        far: 20000,
+      };
+
+      function buildDemHeights() {
+        const heights = new Float32Array(DEM_WIDTH * DEM_HEIGHT);
+        for (let y = 0; y < DEM_HEIGHT; y += 1) {
+          for (let x = 0; x < DEM_WIDTH; x += 1) {
+            heights[y * DEM_WIDTH + x] = Math.fround(
+              Math.sin(x / 16) + Math.cos(y / 32) + 0.001 * x * y,
+            );
+          }
+        }
+        heights[0] = NaN;
+        heights[128 * DEM_WIDTH + 128] = NaN;
+        return heights;
+      }
+
+      function buildParityDataset() {
+        const heights = new Float32Array(PARITY_SIZE * PARITY_SIZE);
+        for (let y = 0; y < PARITY_SIZE; y += 1) {
+          for (let x = 0; x < PARITY_SIZE; x += 1) {
+            const ridge = 6 * Math.exp(-((x - 32) * (x - 32)) / 18);
+            const valley =
+              -3 *
+              Math.exp(
+                -(((x - 14) * (x - 14) + (y - 32) * (y - 32)) / 60),
+              );
+            heights[y * PARITY_SIZE + x] = Math.fround(ridge + valley);
+          }
+        }
+        return TerrainDataset.fromArray({
+          width: PARITY_SIZE,
+          height: PARITY_SIZE,
+          heights,
+          spacing: [1, 1],
+        });
+      }
+
+      function scalarError(actual, expected) {
+        let maxError = 0;
+        let nanMismatch = 0;
+        for (let index = 0; index < expected.length; index += 1) {
+          const a = actual[index];
+          const e = expected[index];
+          if (Number.isNaN(a) || Number.isNaN(e)) {
+            if (!(Number.isNaN(a) && Number.isNaN(e))) {
+              nanMismatch += 1;
+            }
+            continue;
+          }
+          const abs = Math.abs(a - e);
+          const rel = abs / Math.max(Math.abs(e), 1e-30);
+          maxError = Math.max(maxError, Math.min(abs, rel));
+        }
+        return { maxError, nanMismatch };
+      }
+
+      function wrappedAngleError(a, b) {
+        const full = Math.PI * 2;
+        let delta = Math.abs(a - b) % full;
+        if (delta > Math.PI) {
+          delta = full - delta;
+        }
+        return delta;
+      }
+
+      function pointToSegmentDistance(px, pz, ax, az, bx, bz) {
+        const dx = bx - ax;
+        const dz = bz - az;
+        const lengthSq = dx * dx + dz * dz;
+        const t =
+          lengthSq === 0
+            ? 0
+            : Math.min(
+                1,
+                Math.max(
+                  0,
+                  ((px - ax) * dx + (pz - az) * dz) / lengthSq,
+                ),
+              );
+        const cx = ax + dx * t;
+        const cz = az + dz * t;
+        return Math.hypot(px - cx, pz - cz);
+      }
+
+      function contourHausdorff(contour, analyticX, minZ, maxZ, spacing) {
+        let vertexMax = 0;
+        let analyticMax = 0;
+        const vertices = [];
+        for (const polyline of contour.polylines) {
+          for (let index = 0; index < polyline.points.length; index += 2) {
+            vertices.push([
+              polyline.points[index],
+              polyline.points[index + 1],
+            ]);
+          }
+        }
+        for (const [vx, vz] of vertices) {
+          const clampedZ = Math.min(maxZ, Math.max(minZ, vz));
+          vertexMax = Math.max(
+            vertexMax,
+            Math.hypot(vx - analyticX, vz - clampedZ),
+          );
+        }
+        for (let z = minZ; z <= maxZ; z += (maxZ - minZ) / 200) {
+          let best = Infinity;
+          for (const polyline of contour.polylines) {
+            const p = polyline.points;
+            best = Math.min(
+              best,
+              pointToSegmentDistance(analyticX, z, p[0], p[1], p[2], p[3]),
+            );
+          }
+          analyticMax = Math.max(analyticMax, best);
+        }
+        return {
+          vertexMaxCells: vertexMax / spacing,
+          hausdorffCells:
+            Math.max(vertexMax, analyticMax) / spacing,
+        };
+      }
+
+      function rgbaStats(bytes) {
+        let grayscale = true;
+        let min = 255;
+        let max = 0;
+        let nonzeroAlpha = 0;
+        for (let index = 0; index < bytes.length; index += 4) {
+          const r = bytes[index];
+          const g = bytes[index + 1];
+          const b = bytes[index + 2];
+          if (r !== g || g !== b) {
+            grayscale = false;
+          }
+          min = Math.min(min, r);
+          max = Math.max(max, r);
+          if (bytes[index + 3] > 0) {
+            nonzeroAlpha += 1;
+          }
+        }
+        return { grayscale, nonconstant: min !== max, nonzeroAlpha };
+      }
+
+      function bytesDiffer(a, b) {
+        if (a.byteLength !== b.byteLength) {
+          return true;
+        }
+        for (let index = 0; index < a.length; index += 1) {
+          if (a[index] !== b[index]) {
+            return true;
+          }
+        }
+        return false;
+      }
+
+      async function errorCodeOf(operation) {
+        try {
+          await operation();
+          return null;
+        } catch (error) {
+          return Forge3DError.from(error).code;
+        }
+      }
+
+      window.__forge3dW03Probe = async () => {
+        if (!navigator.gpu) {
+          return { supported: false };
+        }
+        const result = {
+          supported: true,
+          packageSha256,
+          ok: true,
+        };
+        let runtime;
+        try {
+          const expected = buildDemHeights();
+          const dem = TerrainDataset.fromArray({
+            width: DEM_WIDTH,
+            height: DEM_HEIGHT,
+            heights: expected,
+            spacing: DEM_SPACING,
+            nodata: NaN,
+            crs: "EPSG:32633",
+            colormap: "terrain",
+          });
+          const demBytes = new Uint8Array(expected.slice().buffer);
+          const progressLog = { done: false };
+          const fileDataset = await TerrainDataset.fromSource({
+            width: DEM_WIDTH,
+            height: DEM_HEIGHT,
+            source: new File([demBytes], "dem-synthetic-v1.f32le", {
+              type: "application/octet-stream",
+            }),
+            spacing: DEM_SPACING,
+            nodata: NaN,
+            onProgress(progress) {
+              progressLog.done = progress.done === true;
+            },
+          });
+          const blobUrl = URL.createObjectURL(new Blob([demBytes]));
+          let urlDataset;
+          try {
+            urlDataset = await TerrainDataset.fromSource({
+              width: DEM_WIDTH,
+              height: DEM_HEIGHT,
+              source: blobUrl,
+              spacing: DEM_SPACING,
+              nodata: NaN,
+            });
+          } finally {
+            URL.revokeObjectURL(blobUrl);
+          }
+          result.sources = {
+            direct: scalarError(dem.heights, expected),
+            file: scalarError(fileDataset.heights, expected),
+            url: scalarError(urlDataset.heights, expected),
+            fileStatistics: fileDataset.statistics,
+            urlStatistics: urlDataset.statistics,
+            progressDone: progressLog.done,
+          };
+          result.statistics = dem.statistics;
+          result.estimatedCpuBytes = dem.estimatedCpuBytes();
+
+          const cpuSlopeAspect = dem.slopeAspect();
+          const queryResult = dem.query(0, 0);
+          const gridQuery = dem.query(
+            30 * DEM_SPACING[0] - ((DEM_WIDTH - 1) * DEM_SPACING[0]) / 2,
+            30 * DEM_SPACING[1] - ((DEM_HEIGHT - 1) * DEM_SPACING[1]) / 2,
+          );
+          result.query = {
+            centerIsNodata:
+              queryResult !== undefined &&
+              Number.isNaN(queryResult.elevation),
+            gridResult:
+              gridQuery === undefined
+                ? null
+                : {
+                    elevation: gridQuery.elevation,
+                    expected: expected[30 * DEM_WIDTH + 30],
+                    slopeRadians: gridQuery.slopeRadians,
+                    aspectRadians: gridQuery.aspectRadians,
+                    normalLength: Math.hypot(...gridQuery.normal),
+                  },
+          };
+
+          const rampSize = { width: 9, height: 5 };
+          const rampHeights = new Float32Array(
+            rampSize.width * rampSize.height,
+          );
+          for (let y = 0; y < rampSize.height; y += 1) {
+            for (let x = 0; x < rampSize.width; x += 1) {
+              rampHeights[y * rampSize.width + x] = x - 4;
+            }
+          }
+          const ramp = TerrainDataset.fromArray({
+            width: rampSize.width,
+            height: rampSize.height,
+            heights: rampHeights,
+            spacing: [1, 1],
+          });
+          const rampContour = ramp.contours([0.5]);
+          result.contours = {
+            ...contourHausdorff(rampContour, 0.5, -2, 2, 1),
+            polylineCount: rampContour.polylineCount,
+            totalPoints: rampContour.totalPoints,
+          };
+          const demContour = dem.contours([0.5, 30]);
+          result.demContour = {
+            polylineCount: demContour.polylineCount,
+            totalPoints: demContour.totalPoints,
+          };
+
+          const parity = buildParityDataset();
+          const cpuAo = parity.heightAo(AO_OPTIONS);
+          const cpuSun = parity.sunVisibility(SUN_OPTIONS);
+          result.cpuFields = {
+            aoMin: Math.min(...cpuAo.values),
+            sunMin: Math.min(...cpuSun.values),
+          };
+
+          runtime = await Forge3DRuntime.create(canvas, {
+            width: 160,
+            height: 120,
+            devicePixelRatio: 1,
+            clearColor: [0, 0, 0, 1],
+          });
+          const memoryBefore = runtime.getMemoryReport();
+
+          runtime.setTerrain(dem.toTerrainInput());
+          runtime.setCamera(DEM_CAMERA);
+          runtime.render();
+          const readback = await runtime.readTerrainHeights();
+          result.demReadback = scalarError(readback, expected);
+
+          const gpuSlopeAspect = await runtime.computeTerrainAnalysis(
+            dem.toTerrainInput(),
+            { kind: "slope-aspect" },
+          );
+          let maxSlope = 0;
+          let maxAspect = 0;
+          let nanMismatch = 0;
+          for (
+            let index = 0;
+            index < cpuSlopeAspect.slopeRadians.length;
+            index += 1
+          ) {
+            const cpuSlope = cpuSlopeAspect.slopeRadians[index];
+            const gpuSlope = gpuSlopeAspect.slopeRadians[index];
+            if (Number.isNaN(cpuSlope) || Number.isNaN(gpuSlope)) {
+              if (!(Number.isNaN(cpuSlope) && Number.isNaN(gpuSlope))) {
+                nanMismatch += 1;
+              }
+              continue;
+            }
+            maxSlope = Math.max(maxSlope, Math.abs(cpuSlope - gpuSlope));
+            maxAspect = Math.max(
+              maxAspect,
+              wrappedAngleError(
+                cpuSlopeAspect.aspectRadians[index],
+                gpuSlopeAspect.aspectRadians[index],
+              ),
+            );
+          }
+          result.slopeAspect = {
+            maxSlopeError: maxSlope,
+            maxAspectError: maxAspect,
+            nanMismatch,
+            width: gpuSlopeAspect.width,
+            height: gpuSlopeAspect.height,
+          };
+
+          const parityInput = parity.toTerrainInput();
+          const gpuAo = await runtime.computeTerrainAnalysis(parityInput, {
+            kind: "height-ao",
+            options: AO_OPTIONS,
+          });
+          const gpuSun = await runtime.computeTerrainAnalysis(parityInput, {
+            kind: "sun-visibility",
+            options: SUN_OPTIONS,
+          });
+          result.gpuParity = {
+            ao: scalarError(gpuAo.values, cpuAo.values),
+            sun: scalarError(gpuSun.values, cpuSun.values),
+            aoKind: gpuAo.kind,
+            sunKind: gpuSun.kind,
+            aoWidth: gpuAo.width,
+            sunWidth: gpuSun.width,
+          };
+
+          const analysisInput = {
+            ...parity.toTerrainInput(),
+            heightAo: { ...AO_OPTIONS },
+            sunVisibility: { ...SUN_OPTIONS },
+          };
+
+          runtime.setTerrain(parity.toTerrainInput());
+          runtime.setCamera(PARITY_CAMERA);
+          runtime.render();
+          const rgbaDisabled = await runtime.readRgba();
+          result.disabledAoCode = await errorCodeOf(() =>
+            runtime.readTerrainAnalysis("height-ao"),
+          );
+          result.disabledSunCode = await errorCodeOf(() =>
+            runtime.readTerrainAnalysis("sun-visibility"),
+          );
+
+          runtime.setTerrain(analysisInput);
+          runtime.render();
+          const rgbaEnabled = await runtime.readRgba();
+          const residentAo = await runtime.readTerrainAnalysis("height-ao");
+          const residentSun = await runtime.readTerrainAnalysis(
+            "sun-visibility",
+          );
+          result.resident = {
+            ao: scalarError(residentAo.values, cpuAo.values),
+            sun: scalarError(residentSun.values, cpuSun.values),
+            aoKind: residentAo.kind,
+            sunKind: residentSun.kind,
+          };
+          result.renderDiffers = bytesDiffer(rgbaDisabled, rgbaEnabled);
+
+          runtime.setTerrain({ ...analysisInput, debugView: "height-ao" });
+          runtime.render();
+          result.debugAo = rgbaStats(await runtime.readRgba());
+
+          runtime.setTerrain({
+            ...analysisInput,
+            debugView: "sun-visibility",
+          });
+          runtime.render();
+          result.debugSun = rgbaStats(await runtime.readRgba());
+
+          runtime.setTerrain({ ...analysisInput, debugView: "none" });
+          runtime.render();
+
+          const disabledComputeInput = parity.toTerrainInput();
+          const gpuAoDisabled = await runtime.computeTerrainAnalysis(
+            disabledComputeInput,
+            {
+              kind: "height-ao",
+              options: { ...AO_OPTIONS, enabled: false },
+            },
+          );
+          const gpuSunDisabled = await runtime.computeTerrainAnalysis(
+            disabledComputeInput,
+            {
+              kind: "sun-visibility",
+              options: { ...SUN_OPTIONS, enabled: false },
+            },
+          );
+          const cpuAoDisabled = parity.heightAo({
+            ...AO_OPTIONS,
+            enabled: false,
+          });
+          const cpuSunDisabled = parity.sunVisibility({
+            ...SUN_OPTIONS,
+            enabled: false,
+          });
+          result.disabledCompute = {
+            aoAllOne: gpuAoDisabled.values.every((value) => value === 1),
+            sunAllOne: gpuSunDisabled.values.every((value) => value === 1),
+            aoMaxError: scalarError(gpuAoDisabled.values, cpuAoDisabled.values)
+              .maxError,
+            sunMaxError: scalarError(
+              gpuSunDisabled.values,
+              cpuSunDisabled.values,
+            ).maxError,
+          };
+
+          const ledgerBefore = runtime.getMemoryReport();
+          await runtime.computeTerrainAnalysis(disabledComputeInput, {
+            kind: "height-ao",
+            options: AO_OPTIONS,
+          });
+          const ledgerAfterOk = runtime.getMemoryReport();
+          const rejectedCode = await errorCodeOf(() =>
+            runtime.computeTerrainAnalysis(disabledComputeInput, {
+              kind: "height-ao",
+              options: { ...AO_OPTIONS, steps: 0 },
+            }),
+          );
+          const ledgerAfterError = runtime.getMemoryReport();
+          const sameLedger = (a, b) =>
+            a.currentBytes === b.currentBytes &&
+            JSON.stringify(a.categories) === JSON.stringify(b.categories);
+          result.ledger = {
+            afterSuccess: sameLedger(ledgerAfterOk, ledgerBefore),
+            afterError: sameLedger(ledgerAfterError, ledgerBefore),
+            rejectedCode,
+          };
+
+          const paritySource = parity.heights.buffer.slice(0);
+          await runtime.setTerrainFromSource({
+            width: PARITY_SIZE,
+            height: PARITY_SIZE,
+            source: paritySource,
+            spacing: [1, 1],
+            exaggeration: 1,
+            heightAo: { ...AO_OPTIONS },
+            sunVisibility: { ...SUN_OPTIONS },
+            debugView: "height-ao",
+          });
+          runtime.render();
+          const sourceAo = await runtime.readTerrainAnalysis("height-ao");
+          const sourceSun = await runtime.readTerrainAnalysis(
+            "sun-visibility",
+          );
+          result.sourcePath = {
+            ao: scalarError(sourceAo.values, cpuAo.values),
+            sun: scalarError(sourceSun.values, cpuSun.values),
+            render: rgbaStats(await runtime.readRgba()),
+          };
+
+          runtime.setTerrain(analysisInput);
+          runtime.render();
+
+          const memoryAfter = runtime.getMemoryReport();
+          result.memory = {
+            before: memoryBefore.currentBytes,
+            after: memoryAfter.currentBytes,
+            increase: memoryAfter.currentBytes - memoryBefore.currentBytes,
+            categories: memoryAfter.categories,
+          };
+
+          runtime.dispose();
+          runtime = undefined;
+        } catch (error) {
+          result.ok = false;
+          const normalized = Forge3DError.from(error);
+          result.error = {
+            code: normalized.code,
+            message: normalized.message,
+          };
+          if (runtime !== undefined && !runtime.disposed) {
+            runtime.dispose();
+          }
+        }
+        return result;
+      };
+    </script>
+  </body>
+</html>

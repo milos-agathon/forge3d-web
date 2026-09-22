@@ -4,8 +4,13 @@ import {
   type Forge3DRuntimeCapabilities,
   type Forge3DRuntimeOptions,
   type Forge3DViewerOptions,
+  type HeightAoOptions,
   type OrbitView,
   type ResizeInput,
+  type SunVisibilityOptions,
+  type TerrainColorRampInput,
+  type TerrainColormapInput,
+  type TerrainDebugView,
   type TerrainHeightmapInput,
   type TerrainHeightmapSourceInput,
   type ViewerCapabilities,
@@ -917,20 +922,88 @@ function cloneView(view: Readonly<OrbitView>): OrbitView {
   };
 }
 
+interface TerrainMetadataCarrier {
+  colorRamp?: TerrainColorRampInput;
+  colormap?: TerrainColormapInput;
+  spacing?: [number, number];
+  exaggeration?: number;
+  domain?: [number, number];
+  nodata?: number;
+  crs?: string;
+  heightAo?: HeightAoOptions;
+  sunVisibility?: SunVisibilityOptions;
+  debugView?: TerrainDebugView;
+}
+
+function cloneColorRamp(ramp: TerrainColorRampInput): TerrainColorRampInput {
+  return {
+    stops: ramp.stops.map((stop) => ({
+      position: stop.position,
+      color: [stop.color[0], stop.color[1], stop.color[2]],
+    })),
+  };
+}
+
+function cloneSunVisibility(
+  options: SunVisibilityOptions,
+): SunVisibilityOptions {
+  const clone: SunVisibilityOptions = { ...options };
+  if (options.direction !== undefined) {
+    clone.direction = [
+      options.direction[0],
+      options.direction[1],
+      options.direction[2],
+    ];
+  }
+  return clone;
+}
+
+function copyTerrainMetadata(
+  source: TerrainMetadataCarrier,
+  target: TerrainMetadataCarrier,
+): void {
+  if (source.colorRamp !== undefined) {
+    target.colorRamp = cloneColorRamp(source.colorRamp);
+  }
+  if (source.colormap !== undefined) {
+    target.colormap =
+      typeof source.colormap === "string"
+        ? source.colormap
+        : cloneColorRamp(source.colormap);
+  }
+  if (source.spacing !== undefined) {
+    target.spacing = [source.spacing[0], source.spacing[1]];
+  }
+  if (source.exaggeration !== undefined) {
+    target.exaggeration = source.exaggeration;
+  }
+  if (source.domain !== undefined) {
+    target.domain = [source.domain[0], source.domain[1]];
+  }
+  if (source.nodata !== undefined) {
+    target.nodata = source.nodata;
+  }
+  if (source.crs !== undefined) {
+    target.crs = source.crs;
+  }
+  if (source.heightAo !== undefined) {
+    target.heightAo = { ...source.heightAo };
+  }
+  if (source.sunVisibility !== undefined) {
+    target.sunVisibility = cloneSunVisibility(source.sunVisibility);
+  }
+  if (source.debugView !== undefined) {
+    target.debugView = source.debugView;
+  }
+}
+
 function cloneTerrain(terrain: TerrainHeightmapInput): TerrainHeightmapInput {
   const clone: TerrainHeightmapInput = {
     width: terrain.width,
     height: terrain.height,
     heights: new Float32Array(terrain.heights),
   };
-  if (terrain.colorRamp !== undefined) {
-    clone.colorRamp = {
-      stops: terrain.colorRamp.stops.map((stop) => ({
-        position: stop.position,
-        color: [stop.color[0], stop.color[1], stop.color[2]],
-      })),
-    };
-  }
+  copyTerrainMetadata(terrain, clone);
   return clone;
 }
 
@@ -950,6 +1023,7 @@ function cloneSourceRequest(
   if (terrain.byteLength !== undefined) {
     clone.byteLength = terrain.byteLength;
   }
+  copyTerrainMetadata(terrain, clone);
   if (signal !== undefined) {
     clone.signal = signal;
   }

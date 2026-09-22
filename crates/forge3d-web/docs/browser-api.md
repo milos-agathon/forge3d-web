@@ -97,6 +97,9 @@ surface is:
 - `runtime.render(): boolean` (`true` only when commands were submitted and
   presented; `false` for a timeout/occluded surface)
 - `runtime.screenshot(): Promise<Blob>`
+- `runtime.readTerrainHeights(): Promise<Float32Array>`
+- `runtime.computeTerrainAnalysis(terrain, request): Promise<TerrainComputeResult>`
+- `runtime.readTerrainAnalysis(kind): Promise<TerrainScalarField>`
 - `runtime.dispose(): void`
 - `runtime.disposed`, `runtime.width`, `runtime.height`, and `runtime.diagnosticsEnabled`
 - `runtime.clearColor(): [number, number, number, number]`
@@ -274,7 +277,103 @@ Byte-source terrain inputs are asynchronously read before the same terrain
 validation and GPU upload path is used.
 
 `setTerrain(terrain)` accepts an optional `colorRamp` with 2-8 ordered stops.
-Stop positions and RGB channels use normalized `0..1` values.
+Stop positions and RGB channels use normalized `0..1` values. The named
+`colormap` input (`"viridis"`, `"magma"`, `"terrain"`, or `"grayscale"`) is
+normalized to explicit stops by the facade before crossing the WASM boundary;
+supplying `colormap` and `colorRamp` together is `INVALID_INPUT`.
+
+## Terrain Datasets (W03)
+
+`TerrainDataset` is a typed DEM container with validated metadata and CPU
+analysis. Heights are little-endian f32 elevation samples in row-major order
+(row 0 is z-min; rows increase toward north/+z). `spacing` is the physical
+cell size in meters
+(default `[1, 1]`), `exaggeration` scales rendered height above the domain
+minimum (default `1`), and `domain` is the valid `[min, max]` elevation range
+used for normalization and color mapping (default: observed valid minimum and
+maximum). `nodata` marks invalid samples; `NaN` and the numeric marker are
+excluded from statistics while positive and negative infinity are
+`INVALID_INPUT`. `crs`, `transform`, and `bounds` are retained metadata.
+
+```ts
+import { TerrainDataset } from "@forge3d/web";
+
+const dataset = TerrainDataset.fromArray({
+  width: 257,
+  height: 257,
+  heights,
+  spacing: [30, 30],
+  nodata: -9999,
+  crs: "EPSG:32633",
+  colormap: "terrain",
+});
+
+const fromBytes = await TerrainDataset.fromSource({
+  width: 257,
+  height: 257,
+  source: fileOrBlobOrArrayBufferOrUrl,
+  signal: controller.signal,
+  onProgress: ({ loaded, total, done }) => {},
+  maxBytes: 64 * 1024 * 1024,
+});
+```
+
+- `TerrainDataset.fromArray(input)` retains the input `Float32Array`
+  (`dataset.heights === input.heights`) and performs no second full-sized
+  allocation.
+- `TerrainDataset.fromSource(input, { workerPool })` decodes exact
+  little-endian f32 bytes from a `string`/`URL` (fetched), `File`, `Blob`, or
+  `ArrayBuffer`. Wrong byte counts reject
+  with `IO_ERROR`, cancellation with `REQUEST_CANCELLED`, `maxBytes` overflow
+  with `RESOURCE_LIMIT_EXCEEDED`, and invalid metadata or source types with
+  `INVALID_INPUT`. With a `Forge3DWorkerPool` the owned byte buffer is
+  transferred into the worker and back without an extra clone;
+  `createTerrainDatasetWorkerHandler()` serves that payload.
+- `dataset.statistics` reports `min`, `max`, `mean`, population `std`,
+  `median`, `p01`, `p99`, valid `count`, and `nodataCount` over valid samples.
+- `dataset.validMask()`, `dataset.normalize(options)`, and
+  `dataset.fillNodata("nearest" | "mean")` never mutate the source; the
+  derived calls return new datasets. `nearest` fill is deterministic nearest
+  Euclidean valid cell with row-major tie-breaking.
+- `dataset.slopeAspect()` returns per-cell slope and downslope aspect in
+  radians (x = east, grid row = north, aspect clockwise from north in
+  `[0, 2π)`, flat cells `0`; invalid cells `NaN`). Central differences are
+  used in the interior and one-sided differences at boundaries, in physical
+  spacing units.
+- `dataset.contours(levels)` runs marching squares in physical centered
+  coordinates and returns deterministic segment polylines.
+- `dataset.query(x, z)` bilinearly interpolates elevation in physical world
+  coordinates and reports `slopeRadians`, `aspectRadians`, `worldPosition`,
+  `normal`, and `gridPosition`; outside the extent it returns `undefined`.
+- `dataset.heightAo(options)` and `dataset.sunVisibility(options)` return
+  scalar fields mirroring the GPU formulas (nearest height sampling over
+  `spacing * dimensions` world extent). AO averages
+  `1 - clamp(atan(maxTangent) / (π/2))` over evenly spaced directions then
+  applies `mix(1, ao, strength)`; sun marches toward the sun direction in
+  `hard` or `soft` mode. Invalid output cells are `NaN`.
+- `dataset.estimatedCpuBytes()` counts owned f32 bytes plus a materialized
+  mask if present.
+- `getTerrainColormap(name)` returns the named control stops and
+  `getTerrainColormapLut(input, size = 256)` returns an RGBA8 lookup table.
+
+`dataset.toTerrainInput()` converts a dataset into a `TerrainHeightmapInput`
+for `setTerrain`/`computeTerrainAnalysis`. `TerrainHeightmapInput` additionally
+accepts `spacing`, `exaggeration`, `domain`, `nodata`, `crs`, `heightAo`,
+`sunVisibility`, and `debugView` (`"none"`, `"height-ao"`, or
+`"sun-visibility"`). Enabled AO and sun visibility run WebGPU compute passes
+that modulate terrain shading; a `debugView` renders the resident field as
+grayscale. Disabled passes bind a constant `1.0` fallback.
+
+`runtime.readTerrainHeights()` copies the resident R32Float height texture
+back to a `Float32Array`, reproducing source scalars including `NaN` nodata.
+`runtime.computeTerrainAnalysis(terrain, request)` dispatches WebGPU compute
+for `{ kind: "slope-aspect" }`, `{ kind: "height-ao", options }`, and
+`{ kind: "sun-visibility", options }` and resolves to the discriminated
+`TerrainComputeResult`. `runtime.readTerrainAnalysis("height-ao" |
+"sun-visibility")` reads the resident analysis texture and rejects with
+`UNSUPPORTED_FEATURE` when that pass was not enabled on the committed
+terrain. All three obey the same disposal and readback-serialization rules
+as screenshots.
 
 ## Browser IO
 

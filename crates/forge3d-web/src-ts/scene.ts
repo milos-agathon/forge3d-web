@@ -2,6 +2,7 @@ import { Forge3DError } from "./index.js";
 import type {
   CustomNodeInput,
   GroundPlaneNodeInput,
+  HeightAoOptions,
   OverlayNodeInput,
   SceneNodeId,
   SceneNodeInput,
@@ -10,11 +11,14 @@ import type {
   SceneRenderPlan,
   SceneSnapshot,
   SceneTransform,
+  SunVisibilityOptions,
+  TerrainColorRampInput,
   TerrainHeightmapInput,
   TerrainNodeInput,
   TextMeshNodeInput,
 } from "./index.js";
 import { compileScenePasses } from "./render-graph.js";
+import { getTerrainColormap } from "./terrain-dataset.js";
 
 const IMPLICIT_PASS_KINDS = [
   "terrain",
@@ -497,6 +501,9 @@ function validateByKind(node: SceneNodeInput): void {
 }
 
 function validateTerrain(terrain: TerrainHeightmapInput): void {
+  if (typeof terrain !== "object" || terrain === null) {
+    throw invalid("terrain must be an object");
+  }
   if (
     !Number.isSafeInteger(terrain.width) ||
     terrain.width <= 0 ||
@@ -514,9 +521,244 @@ function validateTerrain(terrain: TerrainHeightmapInput): void {
       `terrain heights length ${terrain.heights.length} does not match ${expected} samples`,
     );
   }
+  const nodata = terrain.nodata;
+  if (nodata !== undefined) {
+    if (
+      typeof nodata !== "number" ||
+      nodata === Infinity ||
+      nodata === -Infinity
+    ) {
+      throw invalid("terrain nodata must be a finite number or NaN");
+    }
+  }
+  const marked =
+    nodata !== undefined && !Number.isNaN(nodata) ? nodata : undefined;
+  let validCount = 0;
   for (const value of terrain.heights) {
-    if (!Number.isFinite(value)) {
-      throw invalid("terrain heights must be finite");
+    if (value === Infinity || value === -Infinity) {
+      throw invalid("terrain heights must not contain Infinity");
+    }
+    if (Number.isFinite(value) && value !== marked) {
+      validCount += 1;
+    }
+  }
+  if (validCount === 0) {
+    throw invalid("terrain heights must contain at least one valid sample");
+  }
+  if (terrain.spacing !== undefined) {
+    validatePositivePair(terrain.spacing, "terrain spacing");
+  }
+  if (
+    terrain.exaggeration !== undefined &&
+    (!Number.isFinite(terrain.exaggeration) || terrain.exaggeration <= 0)
+  ) {
+    throw invalid("terrain exaggeration must be finite and positive");
+  }
+  if (terrain.domain !== undefined) {
+    if (
+      !Array.isArray(terrain.domain) ||
+      terrain.domain.length !== 2 ||
+      !Number.isFinite(terrain.domain[0]) ||
+      !Number.isFinite(terrain.domain[1]) ||
+      terrain.domain[0]! > terrain.domain[1]!
+    ) {
+      throw invalid("terrain domain must be two finite ordered values");
+    }
+  }
+  if (
+    terrain.crs !== undefined &&
+    (typeof terrain.crs !== "string" || terrain.crs.length === 0)
+  ) {
+    throw invalid("terrain crs must be a non-empty string");
+  }
+  if (terrain.colorRamp !== undefined && terrain.colormap !== undefined) {
+    throw invalid("terrain colorRamp and colormap cannot both be provided");
+  }
+  if (terrain.colorRamp !== undefined) {
+    validateTerrainRamp(terrain.colorRamp, "colorRamp");
+  }
+  if (terrain.colormap !== undefined) {
+    if (typeof terrain.colormap === "string") {
+      getTerrainColormap(terrain.colormap);
+    } else {
+      validateTerrainRamp(terrain.colormap, "colormap");
+    }
+  }
+  if (terrain.heightAo !== undefined) {
+    validateHeightAoOptions(terrain.heightAo);
+  }
+  if (terrain.sunVisibility !== undefined) {
+    validateSunVisibilityOptions(terrain.sunVisibility);
+  }
+  if (
+    terrain.debugView !== undefined &&
+    terrain.debugView !== "none" &&
+    terrain.debugView !== "height-ao" &&
+    terrain.debugView !== "sun-visibility"
+  ) {
+    throw invalid("terrain debugView must be a known debug view");
+  }
+}
+
+function validateTerrainRamp(
+  ramp: TerrainColorRampInput,
+  name: string,
+): void {
+  if (typeof ramp !== "object" || ramp === null || !Array.isArray(ramp.stops)) {
+    throw invalid(`${name}.stops must be an array`);
+  }
+  if (ramp.stops.length < 2 || ramp.stops.length > 8) {
+    throw invalid(`${name}.stops must contain between 2 and 8 stops`);
+  }
+  let previous = -Infinity;
+  for (const [index, stop] of ramp.stops.entries()) {
+    if (typeof stop !== "object" || stop === null) {
+      throw invalid(`${name}.stops[${index}] must be an object`);
+    }
+    if (
+      !Number.isFinite(stop.position) ||
+      stop.position < 0 ||
+      stop.position > 1
+    ) {
+      throw invalid(`${name}.stops[${index}].position must be in [0, 1]`);
+    }
+    if (stop.position < previous) {
+      throw invalid(`${name}.stops positions must be ordered`);
+    }
+    previous = stop.position;
+    if (!Array.isArray(stop.color) || stop.color.length !== 3) {
+      throw invalid(`${name}.stops[${index}].color must have 3 channels`);
+    }
+    for (const channel of stop.color) {
+      if (!Number.isFinite(channel) || channel < 0 || channel > 1) {
+        throw invalid(
+          `${name}.stops[${index}].color must be in the 0..1 range`,
+        );
+      }
+    }
+  }
+}
+
+function validateHeightAoOptions(options: HeightAoOptions): void {
+  if (typeof options !== "object" || options === null) {
+    throw invalid("terrain heightAo must be an object");
+  }
+  if (options.enabled !== undefined && typeof options.enabled !== "boolean") {
+    throw invalid("terrain heightAo.enabled must be a boolean");
+  }
+  if (
+    options.resolutionScale !== undefined &&
+    (!Number.isFinite(options.resolutionScale) ||
+      options.resolutionScale < 0.1 ||
+      options.resolutionScale > 1)
+  ) {
+    throw invalid("terrain heightAo.resolutionScale must be between 0.1 and 1");
+  }
+  if (
+    options.directions !== undefined &&
+    (!Number.isSafeInteger(options.directions) ||
+      options.directions < 1 ||
+      options.directions > 16)
+  ) {
+    throw invalid("terrain heightAo.directions must be between 1 and 16");
+  }
+  if (
+    options.steps !== undefined &&
+    (!Number.isSafeInteger(options.steps) ||
+      options.steps < 1 ||
+      options.steps > 64)
+  ) {
+    throw invalid("terrain heightAo.steps must be between 1 and 64");
+  }
+  if (
+    options.maxDistance !== undefined &&
+    (!Number.isFinite(options.maxDistance) || options.maxDistance <= 0)
+  ) {
+    throw invalid("terrain heightAo.maxDistance must be finite and positive");
+  }
+  if (
+    options.strength !== undefined &&
+    (!Number.isFinite(options.strength) ||
+      options.strength < 0 ||
+      options.strength > 2)
+  ) {
+    throw invalid("terrain heightAo.strength must be between 0 and 2");
+  }
+}
+
+function validateSunVisibilityOptions(options: SunVisibilityOptions): void {
+  if (typeof options !== "object" || options === null) {
+    throw invalid("terrain sunVisibility must be an object");
+  }
+  if (options.enabled !== undefined && typeof options.enabled !== "boolean") {
+    throw invalid("terrain sunVisibility.enabled must be a boolean");
+  }
+  if (
+    options.mode !== undefined &&
+    options.mode !== "hard" &&
+    options.mode !== "soft"
+  ) {
+    throw invalid("terrain sunVisibility.mode must be 'hard' or 'soft'");
+  }
+  if (
+    options.resolutionScale !== undefined &&
+    (!Number.isFinite(options.resolutionScale) ||
+      options.resolutionScale < 0.1 ||
+      options.resolutionScale > 1)
+  ) {
+    throw invalid(
+      "terrain sunVisibility.resolutionScale must be between 0.1 and 1",
+    );
+  }
+  if (
+    options.samples !== undefined &&
+    (!Number.isSafeInteger(options.samples) ||
+      options.samples < 1 ||
+      options.samples > 16)
+  ) {
+    throw invalid("terrain sunVisibility.samples must be between 1 and 16");
+  }
+  if (
+    options.steps !== undefined &&
+    (!Number.isSafeInteger(options.steps) ||
+      options.steps < 1 ||
+      options.steps > 64)
+  ) {
+    throw invalid("terrain sunVisibility.steps must be between 1 and 64");
+  }
+  if (
+    options.maxDistance !== undefined &&
+    (!Number.isFinite(options.maxDistance) || options.maxDistance <= 0)
+  ) {
+    throw invalid(
+      "terrain sunVisibility.maxDistance must be finite and positive",
+    );
+  }
+  if (
+    options.softness !== undefined &&
+    (!Number.isFinite(options.softness) || options.softness < 0)
+  ) {
+    throw invalid("terrain sunVisibility.softness must be finite and non-negative");
+  }
+  if (
+    options.bias !== undefined &&
+    (!Number.isFinite(options.bias) || options.bias < 0)
+  ) {
+    throw invalid("terrain sunVisibility.bias must be finite and non-negative");
+  }
+  if (options.direction !== undefined) {
+    const direction = options.direction;
+    if (
+      !Array.isArray(direction) ||
+      direction.length !== 3 ||
+      direction.some((component) => !Number.isFinite(component))
+    ) {
+      throw invalid(
+        "terrain sunVisibility.direction must contain 3 finite numbers",
+      );
+    }
+    if (Math.hypot(direction[0]!, direction[1]!, direction[2]!) <= 0) {
+      throw invalid("terrain sunVisibility.direction must be non-zero");
     }
   }
 }
