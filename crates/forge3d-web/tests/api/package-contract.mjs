@@ -1,4 +1,5 @@
 import { execSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
@@ -28,6 +29,17 @@ assertEqual(
 );
 assertEqual(packageJson.exports["./wasm"], "./dist/forge3d_web_bg.wasm", "wasm export must point at packaged dist asset");
 assertIncludes(packageJson.files, "dist", "package files must include dist");
+assertIncludes(packageJson.files, "assets", "package files must include self-hosted Basis assets");
+assertEqual(
+  packageJson.devDependencies?.["ktx-parse"],
+  "1.1.0",
+  "ktx-parse must stay pinned to the dependency-lock version",
+);
+assertEqual(
+  packageJson.dependencies,
+  undefined,
+  "lock-controlled ktx-parse is vendored into dist, so the package has no runtime dependencies",
+);
 assertIncludes(packageJson.files, "docs", "package files must include docs");
 assertIncludes(packageJson.files, "types", "package files must include types");
 assertIncludes(packageJson.files, "README.md", "package files must include README");
@@ -128,6 +140,11 @@ for (const relative of [
   "examples/vite/src/main.ts",
   "examples/test-interactive-viewer.html",
   "examples/test-lifecycle-away.html",
+  "examples/test-w03-terrain.html",
+  "examples/test-w04-package.html",
+  "assets/basis/basis_transcoder.js",
+  "assets/basis/basis_transcoder.wasm",
+  "assets/basis/LICENSE",
   "tests/browser/browser-evidence.schema.json",
   "tests/browser/evidence-validator.mjs",
   "tests/browser/viewer-interaction-observation.mjs",
@@ -189,6 +206,25 @@ assert(existsSync(distIndexPath), "dist/index.js must exist after npm run build"
 assert(existsSync(distWasmJsPath), "dist/forge3d_web.js must exist after npm run build");
 assert(existsSync(distWasmPath), "dist/forge3d_web_bg.wasm must exist after npm run build");
 
+const distTextures = readText(join(root, "dist", "textures.js"));
+assertIncludes(
+  distTextures,
+  "from \"./vendor/ktx-parse.js\"",
+  "dist textures must import the vendored ktx-parse module",
+);
+assertNotIncludes(
+  distTextures,
+  "from \"ktx-parse\"",
+  "dist must not leave a bare ktx-parse specifier for no-bundler consumers",
+);
+const assetManifest = readJson(join(root, "dist", "asset-manifest.json"));
+for (const asset of assetManifest.assets) {
+  const digest = createHash("sha256")
+    .update(readFileSync(join(root, asset.path)))
+    .digest("hex");
+  assertEqual(digest, asset.sha256, `asset manifest digest mismatch for ${asset.path}`);
+}
+
 const distIndex = readText(distIndexPath);
 assertIncludes(distIndex, "\"./forge3d_web.js\"", "dist facade must load packaged wasm bridge locally");
 assertNotIncludes(distIndex, "../pkg/forge3d_web.js", "dist facade must not reference unpublished pkg directory");
@@ -215,14 +251,30 @@ for (const expected of [
   "dist/index.js",
   "dist/forge3d_web.js",
   "dist/forge3d_web_bg.wasm",
+  "dist/vendor/ktx-parse.js",
+  "dist/vendor/ktx-parse.LICENSE",
+  "dist/asset-manifest.json",
   "docs/support-matrix.md",
   "docs/release-checklist.md",
   "types/index.d.ts",
+  "assets/basis/basis_transcoder.js",
+  "assets/basis/basis_transcoder.wasm",
+  "assets/basis/LICENSE",
   "README.md",
   "LICENSE",
   "LICENSE-APACHE"
 ]) {
   assert(files.has(expected), `npm pack dry-run missing ${expected}`);
+}
+for (const expected of [
+  "test-w04-package.html",
+  "__forge3dW04PackageProbe",
+]) {
+  assertIncludes(
+    consumerHarness,
+    expected,
+    `package consumer must run the W04 public-API fixture: ${expected}`,
+  );
 }
 
 function readJson(path) {

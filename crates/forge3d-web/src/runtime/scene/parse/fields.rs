@@ -15,6 +15,20 @@ pub(super) fn required_string(value: &JsValue, field: &str) -> Result<String, We
         .ok_or_else(|| invalid(format!("scene {field} must be a nonempty string")))
 }
 
+pub(super) fn optional_string(
+    value: &JsValue,
+    field: &str,
+    default: &str,
+) -> Result<String, WebError> {
+    if value.is_undefined() || value.is_null() {
+        return Ok(default.to_string());
+    }
+    value
+        .as_string()
+        .filter(|text| !text.is_empty())
+        .ok_or_else(|| invalid(format!("scene {field} must be a nonempty string")))
+}
+
 pub(super) fn optional_string_array(value: &JsValue, field: &str) -> Result<Vec<String>, WebError> {
     if value.is_undefined() || value.is_null() {
         return Ok(Vec::new());

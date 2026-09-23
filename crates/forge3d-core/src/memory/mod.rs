@@ -59,7 +59,7 @@ struct Allocation {
     decision: BudgetDecision,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MemoryTracker {
     budget_bytes: u64,
     current_bytes: u64,

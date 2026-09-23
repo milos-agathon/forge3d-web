@@ -14,6 +14,7 @@ import type {
   TerrainDatasetSourceInput,
   TerrainHeightmapInput,
   TerrainNormalizationOptions,
+  TerrainRenderMode,
   TerrainQueryResult,
   TerrainByteSource,
   TerrainScalarField,
@@ -38,6 +39,7 @@ interface NormalizedDatasetFields {
   transform: [number, number, number, number, number, number] | undefined;
   bounds: [number, number, number, number] | undefined;
   colormap: TerrainColormapInput;
+  renderMode: TerrainRenderMode | undefined;
   statistics: TerrainStatistics;
 }
 
@@ -483,6 +485,7 @@ function validateDatasetFields(
     transform?: [number, number, number, number, number, number] | undefined;
     bounds?: [number, number, number, number] | undefined;
     colormap?: TerrainColormapInput | undefined;
+    renderMode?: TerrainRenderMode | undefined;
   },
   signal?: AbortSignal,
 ): NormalizedDatasetFields {
@@ -581,6 +584,14 @@ function validateDatasetFields(
     }
   }
 
+  if (
+    input.renderMode !== undefined &&
+    input.renderMode !== "perspective" &&
+    input.renderMode !== "screen"
+  ) {
+    throw invalid("terrain renderMode must be 'perspective' or 'screen'");
+  }
+
   return {
     width,
     height,
@@ -593,6 +604,7 @@ function validateDatasetFields(
     transform,
     bounds,
     colormap,
+    renderMode: input.renderMode,
     statistics,
   };
 }
@@ -817,6 +829,7 @@ export class TerrainDataset {
       transform: input.transform,
       bounds: input.bounds,
       colormap: input.colormap,
+      renderMode: input.renderMode,
     };
     if (options.workerPool !== undefined) {
       const heights = await (options.workerPool as Forge3DWorkerPool).run<
@@ -851,6 +864,7 @@ export class TerrainDataset {
     | undefined;
   readonly bounds: [number, number, number, number] | undefined;
   readonly colormap: TerrainColormapInput;
+  readonly renderMode: TerrainRenderMode | undefined;
   readonly statistics: TerrainStatistics;
 
   #mask?: Uint8Array;
@@ -867,6 +881,7 @@ export class TerrainDataset {
     this.transform = fields.transform;
     this.bounds = fields.bounds;
     this.colormap = fields.colormap;
+    this.renderMode = fields.renderMode;
     this.statistics = fields.statistics;
   }
 
@@ -933,6 +948,7 @@ export class TerrainDataset {
         transform: this.transform,
         bounds: this.bounds,
         colormap: this.colormap,
+        renderMode: this.renderMode,
       }),
     );
   }
@@ -992,6 +1008,7 @@ export class TerrainDataset {
         transform: this.transform,
         bounds: this.bounds,
         colormap: this.colormap,
+        renderMode: this.renderMode,
       }),
     );
   }
@@ -1006,6 +1023,9 @@ export class TerrainDataset {
       domain: [...this.domain],
       colorRamp: resolveColormap(this.colormap),
     };
+    if (this.renderMode !== undefined) {
+      input.renderMode = this.renderMode;
+    }
     if (this.nodata !== undefined) {
       input.nodata = this.nodata;
     }

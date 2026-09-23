@@ -1,0 +1,348 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forge3D W04 IBL Test</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+      }
+
+      canvas {
+        display: block;
+        width: 160px;
+        height: 120px;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="forge3d-w04-ibl-canvas" width="160" height="120"></canvas>
+    <script type="module">
+      import {
+        Forge3DError,
+        Forge3DRuntime,
+        Forge3DScene,
+        Forge3DSession,
+        IblCache,
+        ImageBasedLighting,
+        decodeRgbe,
+      } from "../src-ts/index.ts";
+      import { iblFromSnapshot } from "../src-ts/ibl.ts";
+      import { setSessionRuntimeFactoryForTests } from "../src-ts/session.ts";
+      import { simulateRuntimeDeviceLossForTests } from "../src-ts/runtime-internals.ts";
+
+      const canvas = document.querySelector("#forge3d-w04-ibl-canvas");
+      const WIDTH = 160;
+      const HEIGHT = 120;
+      const CAMERA = {
+        position: [0, 4, 6],
+        target: [0, 0, 0],
+        up: [0, 1, 0],
+        fovYDegrees: 50,
+        near: 0.1,
+        far: 100,
+      };
+
+      function encodeRgbeRle(width, height, pixels) {
+        const header = new TextEncoder().encode(
+          `#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y ${height} +X ${width}\n`,
+        );
+        const body = [];
+        for (let row = 0; row < height; row += 1) {
+          body.push(2, 2, (width >> 8) & 0xff, width & 0xff);
+          for (let channel = 0; channel < 4; channel += 1) {
+            let x = 0;
+            while (x < width) {
+              const value = pixels[(row * width + x) * 4 + channel];
+              let run = 1;
+              while (
+                x + run < width &&
+                run < 127 &&
+                pixels[(row * width + x + run) * 4 + channel] === value
+              ) {
+                run += 1;
+              }
+              if (run >= 2) {
+                body.push(128 + run, value);
+                x += run;
+              } else {
+                const start = x;
+                x += 1;
+                while (
+                  x < width &&
+                  x - start < 127 &&
+                  !(
+                    x + 1 < width &&
+                    pixels[(row * width + x) * 4 + channel] ===
+                      pixels[(row * width + x + 1) * 4 + channel]
+                  )
+                ) {
+                  x += 1;
+                }
+                body.push(x - start);
+                for (let index = start; index < x; index += 1) {
+                  body.push(pixels[(row * width + index) * 4 + channel]);
+                }
+              }
+            }
+          }
+        }
+        const out = new Uint8Array(header.length + body.length);
+        out.set(header, 0);
+        out.set(Uint8Array.from(body), header.length);
+        return out;
+      }
+
+      function fixturePixels() {
+        const width = 8;
+        const height = 4;
+        const pixels = new Uint8Array(width * height * 4);
+        for (let row = 0; row < height; row += 1) {
+          for (let x = 0; x < width; x += 1) {
+            const base = (row * width + x) * 4;
+            if (x < 4) {
+              pixels[base] = 255;
+              pixels[base + 1] = 64 + row * 16;
+              pixels[base + 2] = 32;
+              pixels[base + 3] = 131;
+            } else {
+              pixels[base] = 16;
+              pixels[base + 1] = 32 + x * 4;
+              pixels[base + 2] = 200;
+              pixels[base + 3] = 129;
+            }
+          }
+        }
+        return { width, height, pixels };
+      }
+
+      function compareRgba(a, b) {
+        let changed = 0;
+        const pixels = Math.min(a.length, b.length) / 4;
+        for (let pixel = 0; pixel < pixels; pixel += 1) {
+          const base = pixel * 4;
+          if (
+            a[base] !== b[base] ||
+            a[base + 1] !== b[base + 1] ||
+            a[base + 2] !== b[base + 2]
+          ) {
+            changed += 1;
+          }
+        }
+        return { changedFraction: pixels > 0 ? changed / pixels : 0 };
+      }
+
+      function averageLuminance(rgba) {
+        let total = 0;
+        const pixels = rgba.length / 4;
+        for (let pixel = 0; pixel < pixels; pixel += 1) {
+          const base = pixel * 4;
+          total +=
+            0.2126 * rgba[base] + 0.7152 * rgba[base + 1] + 0.0722 * rgba[base + 2];
+        }
+        return pixels > 0 ? total / pixels : 0;
+      }
+
+      function bytesEqual(a, b) {
+        if (a.byteLength !== b.byteLength) {
+          return false;
+        }
+        for (let index = 0; index < a.length; index += 1) {
+          if (a[index] !== b[index]) {
+            return false;
+          }
+        }
+        return true;
+      }
+
+      window.__forge3dW04IblProbe = async () => {
+        if (!navigator.gpu) {
+          return { supported: false };
+        }
+        const result = { supported: true, ok: true };
+        let session;
+        const createdRuntimes = [];
+        setSessionRuntimeFactoryForTests(async (runtimeCanvas, options) => {
+          const runtime = await Forge3DRuntime.create(runtimeCanvas, options);
+          createdRuntimes.push(runtime);
+          return runtime;
+        });
+        try {
+          const { width, height, pixels } = fixturePixels();
+          const rgbe = encodeRgbeRle(width, height, pixels);
+          const decoded = decodeRgbe(rgbe);
+          result.decoded = {
+            width: decoded.width,
+            height: decoded.height,
+            first: Array.from(decoded.data.slice(0, 4)),
+            last: Array.from(decoded.data.slice(-4)),
+          };
+
+          const scene = Forge3DScene.create();
+          scene.addGroundPlane({
+            name: "ground",
+            materialSlot: "tex",
+            size: [8, 8],
+            color: [1, 1, 1, 1],
+          });
+          scene.setMaterial("tex", {
+            id: "tex",
+            brdf: "cooktorrance-ggx",
+            baseColor: [0.35, 0.35, 0.35, 1],
+            metallic: 0.2,
+            roughness: 0.5,
+          });
+
+          session = await Forge3DSession.create(canvas, {
+            runtime: {
+              diagnostics: true,
+              width: WIDTH,
+              height: HEIGHT,
+              devicePixelRatio: 1,
+              clearColor: [0, 0, 0, 1],
+            },
+            recovery: { deviceLoss: "once" },
+          });
+          session.setScene(scene);
+          session.setCamera(CAMERA);
+          session.render();
+          const disabledRgba = await session.readRgba();
+
+          const cache = new IblCache({ backend: "cache-storage" });
+          const ibl = await ImageBasedLighting.fromRGBE(rgbe, {
+            quality: "low",
+          });
+          const memoryBefore = session.getMemoryReport();
+          const nativeBefore =
+            createdRuntimes.at(-1).getMemoryReport().currentBytes ?? 0;
+
+          const prepared = await ibl.prepare(session, cache);
+          const second = await ibl.prepare(session, cache);
+          const firstPayload = prepared.snapshot().prepared;
+          const secondPayload = second.snapshot().prepared;
+          result.cache = {
+            backend: cache.backend,
+            firstHit: prepared.report.cacheHit,
+            secondHit: second.report.cacheHit,
+            identical:
+              bytesEqual(firstPayload.irradiance, secondPayload.irradiance) &&
+              bytesEqual(firstPayload.specular, secondPayload.specular) &&
+              bytesEqual(firstPayload.brdfLut, secondPayload.brdfLut),
+            preparedBytes:
+              firstPayload.irradiance.byteLength +
+              firstPayload.specular.byteLength +
+              firstPayload.brdfLut.byteLength,
+          };
+          result.report = {
+            requestedQuality: prepared.report.requestedQuality,
+            effectiveQuality: prepared.report.effectiveQuality,
+            effectiveMode: prepared.report.effectiveMode,
+            brdfApproximation: prepared.report.brdfApproximation,
+            cacheBackend: prepared.report.cacheBackend,
+          };
+
+          const withIntensity = (intensity, rotationDegrees) =>
+            iblFromSnapshot({
+              ...prepared.snapshot(),
+              intensity,
+              rotationDegrees,
+            });
+
+          scene.setImageBasedLighting(withIntensity(0.5, 0));
+          session.render();
+          const halfRgba = await session.readRgba();
+          scene.setImageBasedLighting(withIntensity(1.5, 0));
+          session.render();
+          const fullRgba = await session.readRgba();
+
+          result.intensity = {
+            disabledVsHalf: compareRgba(disabledRgba, halfRgba),
+            halfVsFull: compareRgba(halfRgba, fullRgba),
+            luminance: {
+              disabled: averageLuminance(disabledRgba),
+              half: averageLuminance(halfRgba),
+              full: averageLuminance(fullRgba),
+            },
+          };
+
+          scene.setImageBasedLighting(withIntensity(0.5, 90));
+          session.render();
+          const rotatedRgba = await session.readRgba();
+          result.rotation = compareRgba(halfRgba, rotatedRgba);
+
+          scene.setImageBasedLighting(withIntensity(0.5, 0));
+          scene.setMaterial("tex", {
+            id: "tex",
+            brdf: "cooktorrance-ggx",
+            baseColor: [0.35, 0.35, 0.35, 1],
+            metallic: 0.2,
+            roughness: 0.1,
+          });
+          session.render();
+          const smoothRgba = await session.readRgba();
+          scene.setMaterial("tex", {
+            id: "tex",
+            brdf: "cooktorrance-ggx",
+            baseColor: [0.35, 0.35, 0.35, 1],
+            metallic: 0.2,
+            roughness: 0.9,
+          });
+          session.render();
+          const roughRgba = await session.readRgba();
+          result.roughness = compareRgba(smoothRgba, roughRgba);
+
+          const memoryAfter = session.getMemoryReport();
+          const nativeAfter =
+            createdRuntimes.at(-1).getMemoryReport().currentBytes ?? 0;
+          result.memory = {
+            sessionIncrease:
+              memoryAfter.currentBytes - memoryBefore.currentBytes,
+            nativeIncrease: nativeAfter - nativeBefore,
+            retainedIbl: result.cache.preparedBytes,
+          };
+
+          const generation = createdRuntimes.length;
+          simulateRuntimeDeviceLossForTests(createdRuntimes.at(-1));
+          const deadline = performance.now() + 15_000;
+          while (
+            (createdRuntimes.length === generation ||
+              session.status !== "ready") &&
+            session.status !== "failed" &&
+            session.status !== "disposed" &&
+            performance.now() < deadline
+          ) {
+            await new Promise((resolve) => setTimeout(resolve, 10));
+          }
+          session.render();
+          const recoveredRgba = await session.readRgba();
+          result.recovered = {
+            status: session.status,
+            byteEqual: bytesEqual(recoveredRgba, roughRgba),
+            generations: createdRuntimes.length,
+          };
+
+          session.dispose();
+          session = undefined;
+        } catch (error) {
+          result.ok = false;
+          const normalized = Forge3DError.from(error);
+          result.error = {
+            code: normalized.code,
+            message: normalized.message,
+          };
+          if (session !== undefined && !session.disposed) {
+            session.dispose();
+          }
+        } finally {
+          setSessionRuntimeFactoryForTests(undefined);
+        }
+        return result;
+      };
+    </script>
+  </body>
+</html>

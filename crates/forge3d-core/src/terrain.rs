@@ -2,6 +2,13 @@ use crate::error::{Forge3dError, Result};
 
 const TWO_PI: f32 = std::f32::consts::TAU;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum TerrainRenderMode {
+    #[default]
+    Perspective,
+    Screen,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct TerrainHeightmapInput {
     pub width: u32,
@@ -14,6 +21,7 @@ pub struct TerrainHeightmapInput {
     pub domain: [f32; 2],
     pub nodata: Option<f32>,
     pub crs: Option<String>,
+    pub render_mode: TerrainRenderMode,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -23,6 +31,7 @@ pub struct TerrainGridOptions {
     pub domain: Option<[f32; 2]>,
     pub nodata: Option<f32>,
     pub crs: Option<String>,
+    pub render_mode: Option<TerrainRenderMode>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -374,6 +383,7 @@ impl TerrainHeightmapInput {
             domain,
             nodata: options.nodata,
             crs: options.crs,
+            render_mode: options.render_mode.unwrap_or_default(),
         })
     }
 

@@ -58,3 +58,94 @@ fn ledger_records_downgrades_and_effective_quality() {
     assert_eq!(ledger.effective_quality, QualityLevel::Low);
     assert_eq!(ledger.downgrades.len(), 1);
 }
+
+#[test]
+fn native_ledger_admits_each_fixed_w04_key_once_and_clear_empties() {
+    let mut ledger = MemoryLedger::new(DEFAULT_MEMORY_BUDGET_BYTES, QualityLevel::High).unwrap();
+    let keys: Vec<&'static str> = crate::runtime::scene::scene_memory_keys()
+        .into_iter()
+        .chain(crate::runtime::lighting::lighting_memory_keys())
+        .chain(crate::runtime::textures::texture_memory_keys())
+        .chain(crate::runtime::terrain::terrain_memory_keys())
+        .chain([
+            crate::runtime::ibl::IBL_TEXTURES_LEDGER_KEY,
+            crate::runtime::ibl::IBL_UNIFORM_LEDGER_KEY,
+            crate::runtime::ibl::IBL_TRANSIENT_LEDGER_KEY,
+            crate::runtime::shadows::SHADOW_DEPTH_KEY,
+            crate::runtime::shadows::SHADOW_MOMENTS_KEY,
+            crate::runtime::shadows::SHADOW_UNIFORMS_KEY,
+            "depth",
+            "readback:frame",
+        ])
+        .collect();
+    let unique: std::collections::BTreeSet<_> = keys.iter().copied().collect();
+    assert_eq!(unique.len(), keys.len(), "fixed ledger keys must be unique");
+    for key in &keys {
+        ledger.replace(key, MemoryCategory::Buffers, 64).unwrap();
+        assert_eq!(ledger.admitted_bytes(key), Some(64));
+    }
+    let admitted: std::collections::BTreeSet<_> = ledger.admitted_keys().collect();
+    assert_eq!(admitted.len(), keys.len());
+    ledger.clear();
+    let report = ledger.tracker.report();
+    assert_eq!(report.allocation_count, 0);
+    assert_eq!(report.current_bytes, 0);
+    assert!(report.categories.is_empty());
+    assert_eq!(ledger.admitted_keys().count(), 0);
+}
+
+#[test]
+fn native_ledger_clone_isolates_failed_planning_from_live_accounting() {
+    let mut ledger = MemoryLedger::new(4096, QualityLevel::High).unwrap();
+    ledger
+        .replace("scene:vertices", MemoryCategory::Buffers, 256)
+        .unwrap();
+    let before = ledger.tracker.report();
+    let mut planned = ledger.clone();
+    planned
+        .replace("textures:payload", MemoryCategory::Textures, 2048)
+        .unwrap();
+    assert!(planned
+        .replace("ibl:textures", MemoryCategory::Textures, 4096)
+        .is_err());
+    drop(planned);
+    let after = ledger.tracker.report();
+    assert_eq!(after.current_bytes, before.current_bytes);
+    assert_eq!(after.allocation_count, before.allocation_count);
+    assert_eq!(ledger.admitted_bytes("textures:payload"), None);
+}
+
+#[test]
+fn disabled_shadow_moment_allocation_reports_actual_one_layer_bytes() {
+    use forge3d_core::shadowing::{
+        ShadowConfig, ShadowFilter, SHADOW_DEPTH_UNIFORM_BYTES, SHADOW_UNIFORM_BYTES,
+    };
+    let config = ShadowConfig::default();
+    let (depth, moments, uniforms) =
+        crate::runtime::shadows::shadow_ledger_bytes(&config, 2048, 4).unwrap();
+    assert_eq!(depth, 4);
+    assert_eq!(moments, 16);
+    assert_eq!(
+        uniforms,
+        (SHADOW_UNIFORM_BYTES + SHADOW_DEPTH_UNIFORM_BYTES + 16) as u64
+    );
+    let enabled = ShadowConfig {
+        enabled: true,
+        ..Default::default()
+    };
+    let (depth, moments, uniforms) =
+        crate::runtime::shadows::shadow_ledger_bytes(&enabled, 256, 3).unwrap();
+    assert_eq!(depth, 256 * 256 * 4 * 3);
+    assert_eq!(moments, 16 * 3);
+    assert_eq!(
+        uniforms,
+        (SHADOW_UNIFORM_BYTES + 3 * SHADOW_DEPTH_UNIFORM_BYTES + 16) as u64
+    );
+    let vsm = ShadowConfig {
+        enabled: true,
+        filter: ShadowFilter::Vsm,
+        ..Default::default()
+    };
+    let (_, moments, _) = crate::runtime::shadows::shadow_ledger_bytes(&vsm, 256, 3).unwrap();
+    assert_eq!(moments, 256 * 256 * 16 * 3);
+}

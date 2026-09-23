@@ -1,0 +1,401 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forge3D W04 Lifecycle Test</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+      }
+
+      canvas {
+        display: block;
+        width: 160px;
+        height: 120px;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="forge3d-w04-lifecycle-canvas" width="160" height="120"></canvas>
+    <canvas id="forge3d-w04-lifecycle-session" width="160" height="120"></canvas>
+    <script type="module">
+      import {
+        Forge3DError,
+        Forge3DRuntime,
+        Forge3DScene,
+        Forge3DSession,
+        ImageBasedLighting,
+      } from "../src-ts/index.ts";
+      import { setSessionRuntimeFactoryForTests } from "../src-ts/session.ts";
+      import { simulateRuntimeDeviceLossForTests } from "../src-ts/runtime-internals.ts";
+
+      const canvas = document.querySelector("#forge3d-w04-lifecycle-canvas");
+      const sessionCanvas = document.querySelector(
+        "#forge3d-w04-lifecycle-session",
+      );
+      const WIDTH = 160;
+      const HEIGHT = 120;
+      const BUDGET = 8 * 1024 * 1024;
+      const CAMERA = {
+        position: [0, 4.5, 7],
+        target: [0, 0.6, 0],
+        up: [0, 1, 0],
+        fovYDegrees: 50,
+        near: 0.1,
+        far: 100,
+      };
+
+      function encodeRgbeRle(width, height, pixels) {
+        const out = [];
+        const header = `#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y ${height} +X ${width}\n`;
+        for (const char of header) {
+          out.push(char.charCodeAt(0));
+        }
+        for (let y = 0; y < height; y += 1) {
+          out.push(2, 2, width >> 8, width & 0xff);
+          for (let channel = 0; channel < 4; channel += 1) {
+            let x = 0;
+            while (x < width) {
+              const value = pixels[(y * width + x) * 4 + channel];
+              let run = 1;
+              while (
+                x + run < width &&
+                run < 127 &&
+                pixels[(y * width + x + run) * 4 + channel] === value
+              ) {
+                run += 1;
+              }
+              out.push(128 + run, value);
+              x += run;
+            }
+          }
+        }
+        return new Uint8Array(out);
+      }
+
+      function fixtureRgbe() {
+        const width = 8;
+        const height = 4;
+        const pixels = new Uint8Array(width * height * 4);
+        for (let row = 0; row < height; row += 1) {
+          for (let x = 0; x < width; x += 1) {
+            const base = (row * width + x) * 4;
+            const bright = x < 4;
+            pixels[base] = bright ? 180 : 24;
+            pixels[base + 1] = bright ? 190 : 30;
+            pixels[base + 2] = bright ? 200 : 48;
+            pixels[base + 3] = 129;
+          }
+        }
+        return encodeRgbeRle(width, height, pixels);
+      }
+
+      function smallTexture() {
+        return {
+          width: 2,
+          height: 2,
+          format: "rgba8unorm-srgb",
+          colorSpace: "srgb",
+          data: new Uint8Array([
+            255, 32, 32, 255,
+            32, 255, 32, 255,
+            32, 32, 255, 255,
+            255, 255, 32, 255,
+          ]),
+          generateMipmaps: true,
+        };
+      }
+
+      function shadowInput(filter, mapSize) {
+        return {
+          enabled: true,
+          filter,
+          mapSize,
+          depthBias: 0.002,
+          normalBias: 0.02,
+          slopeBias: 0.01,
+          softness: 1.5,
+          pcssBlockerRadius: 3,
+          pcssFilterRadius: 4,
+          lightSize: 0.5,
+          momentBias: 0.0005,
+          lightBleedReduction: 0.2,
+          evsmPositiveExponent: 5,
+          evsmNegativeExponent: 5,
+          peterPanningOffset: 0.001,
+        };
+      }
+
+      function csmInput() {
+        return {
+          enabled: true,
+          cascadeCount: 2,
+          maxDistance: 60,
+          splitLambda: 0.75,
+          blendRange: 0.15,
+          stabilize: true,
+          debugView: "none",
+        };
+      }
+
+      async function buildScene(overrides) {
+        const scene = Forge3DScene.create();
+        scene.addGroundPlane({
+          name: "ground",
+          materialSlot: "tex",
+          size: [8, 8],
+          color: [0.75, 0.75, 0.72, 1],
+        });
+        scene.addTextMesh({
+          name: "peg",
+          text: "W04",
+          size: 0.45,
+          color: [0.9, 0.85, 0.7, 1],
+          transform: { translation: [-2.2, 0.03, -1.4] },
+        });
+        scene.addLight({
+          type: "directional",
+          color: overrides?.lightColor ?? [1, 1, 1],
+          intensity: overrides?.lightIntensity ?? 1.6,
+          direction: [0.55, -1.0, 0.3],
+          castsShadow: true,
+        });
+        scene.setMaterial("tex", {
+          id: "tex",
+          brdf: "lambert",
+          baseColor: overrides?.baseColor ?? [0.6, 0.6, 0.6, 1],
+          textures: { baseColor: smallTexture() },
+        });
+        const ibl = await ImageBasedLighting.fromRGBE(fixtureRgbe(), {
+          quality: "low",
+          intensity: overrides?.iblIntensity ?? 0.6,
+        });
+        scene.setImageBasedLighting(ibl);
+        scene.setShadows(
+          shadowInput(overrides?.filter ?? "hard", overrides?.mapSize ?? 256),
+          csmInput(),
+        );
+        return scene;
+      }
+
+      function bytesEqual(a, b) {
+        if (a.byteLength !== b.byteLength) {
+          return false;
+        }
+        for (let index = 0; index < a.length; index += 1) {
+          if (a[index] !== b[index]) {
+            return false;
+          }
+        }
+        return true;
+      }
+
+      function memoryDigest(report) {
+        return JSON.stringify({
+          currentBytes: report.currentBytes,
+          peakBytes: report.peakBytes,
+          allocationCount: report.allocationCount,
+          categories: report.categories,
+          effectiveQuality: report.effectiveQuality,
+          downgrades: report.downgrades,
+        });
+      }
+
+      async function errorCode(operation) {
+        try {
+          await operation();
+          return { code: "NONE", message: "" };
+        } catch (error) {
+          const normalized = Forge3DError.from(error);
+          return { code: normalized.code, message: normalized.message };
+        }
+      }
+
+      window.__forge3dW04LifecycleProbe = async () => {
+        if (!navigator.gpu) {
+          return { supported: false };
+        }
+        const result = { supported: true, ok: true };
+        let runtime;
+        let session;
+        const createdRuntimes = [];
+        setSessionRuntimeFactoryForTests(async (runtimeCanvas, options) => {
+          const created = await Forge3DRuntime.create(runtimeCanvas, options);
+          created.setSceneCalls = 0;
+          const original = created.setScene.bind(created);
+          created.setScene = (snapshot) => {
+            created.setSceneCalls += 1;
+            return original(snapshot);
+          };
+          createdRuntimes.push(created);
+          return created;
+        });
+        try {
+          runtime = await Forge3DRuntime.create(canvas, {
+            diagnostics: true,
+            width: WIDTH,
+            height: HEIGHT,
+            devicePixelRatio: 1,
+            clearColor: [0, 0, 0, 1],
+            memoryBudgetBytes: BUDGET,
+            overflowPolicy: "reject",
+          });
+
+          const scene = await buildScene({});
+          runtime.setScene(scene.snapshot());
+          runtime.setCamera(CAMERA);
+          runtime.render();
+          const baseRgba = await runtime.readRgba();
+          const memoryBefore = runtime.getMemoryReport();
+          const shadowBefore = runtime.getShadowReport();
+          result.initial = {
+            currentBytes: memoryBefore.currentBytes,
+            effectiveMapSize: shadowBefore.effectiveMapSize,
+            filter: shadowBefore.effectiveFilter,
+          };
+
+          const oversized = await buildScene({
+            filter: "vsm",
+            mapSize: 4096,
+            lightColor: [0.2, 0.9, 0.3],
+            lightIntensity: 3.4,
+            baseColor: [0.9, 0.2, 0.2, 1],
+            iblIntensity: 2.5,
+          });
+          result.oversized = await errorCode(() =>
+            runtime.setScene(oversized.snapshot()),
+          );
+          const memoryAfterOversized = runtime.getMemoryReport();
+          const shadowAfterOversized = runtime.getShadowReport();
+          runtime.render();
+          const oversizedRgba = await runtime.readRgba();
+          result.oversizedUnchanged = {
+            memory:
+              memoryDigest(memoryBefore) === memoryDigest(memoryAfterOversized),
+            shadow:
+              JSON.stringify(shadowBefore) ===
+              JSON.stringify(shadowAfterOversized),
+            frame: bytesEqual(baseRgba, oversizedRgba),
+          };
+
+          const malformed = scene.snapshot();
+          malformed.materials.materials[0].material.route.model = "bogus";
+          result.malformed = await errorCode(() =>
+            runtime.setScene(malformed),
+          );
+          const memoryAfterMalformed = runtime.getMemoryReport();
+          const shadowAfterMalformed = runtime.getShadowReport();
+          runtime.render();
+          const malformedRgba = await runtime.readRgba();
+          result.malformedUnchanged = {
+            memory:
+              memoryDigest(memoryBefore) ===
+              memoryDigest(memoryAfterMalformed),
+            shadow:
+              JSON.stringify(shadowBefore) ===
+              JSON.stringify(shadowAfterMalformed),
+            frame: bytesEqual(baseRgba, malformedRgba),
+          };
+
+          result.cameraRejection = await errorCode(() =>
+            runtime.setCamera({ ...CAMERA, near: 70, far: 100 }),
+          );
+          runtime.render();
+          const cameraRgba = await runtime.readRgba();
+          result.cameraUnchanged = bytesEqual(baseRgba, cameraRgba);
+
+          const empty = Forge3DScene.create();
+          empty.addLight({
+            type: "directional",
+            color: [0.4, 0.5, 1],
+            intensity: 0.4,
+            direction: [-0.4, -1.0, -0.2],
+            castsShadow: false,
+          });
+          const emptyIbl = await ImageBasedLighting.fromRGBE(fixtureRgbe(), {
+            quality: "low",
+            intensity: 0.2,
+          });
+          empty.setImageBasedLighting(emptyIbl);
+          empty.setShadows(
+            { enabled: false, mapSize: 256 },
+            { enabled: false },
+          );
+          runtime.setScene(empty.snapshot());
+          runtime.render();
+          const emptyRgba = await runtime.readRgba();
+          const emptyShadow = runtime.getShadowReport();
+          const emptyMemory = runtime.getMemoryReport();
+          result.empty = {
+            applied: !bytesEqual(baseRgba, emptyRgba),
+            shadowReason: emptyShadow.reason,
+            csmEnabled: emptyShadow.csmEnabled,
+            currentBytes: emptyMemory.currentBytes,
+          };
+
+          session = await Forge3DSession.create(sessionCanvas, {
+            runtime: {
+              diagnostics: true,
+              width: WIDTH,
+              height: HEIGHT,
+              devicePixelRatio: 1,
+              clearColor: [0, 0, 0, 1],
+            },
+            recovery: { deviceLoss: "once" },
+          });
+          const recoveryScene = await buildScene({ filter: "pcf" });
+          session.setScene(recoveryScene);
+          session.setCamera(CAMERA);
+          session.render();
+          const preRgba = await session.readRgba();
+          const generation = createdRuntimes.length;
+          simulateRuntimeDeviceLossForTests(createdRuntimes.at(-1));
+          const deadline = performance.now() + 15_000;
+          while (
+            (createdRuntimes.length === generation ||
+              session.status !== "ready") &&
+            session.status !== "failed" &&
+            session.status !== "disposed" &&
+            performance.now() < deadline
+          ) {
+            await new Promise((resolve) => setTimeout(resolve, 10));
+          }
+          session.render();
+          const postRgba = await session.readRgba();
+          result.recovery = {
+            status: session.status,
+            generations: createdRuntimes.length,
+            byteEqual: bytesEqual(preRgba, postRgba),
+            setSceneCalls: createdRuntimes.at(-1).setSceneCalls,
+          };
+
+          session.dispose();
+          session = undefined;
+          runtime.dispose();
+          runtime = undefined;
+        } catch (error) {
+          result.ok = false;
+          const normalized = Forge3DError.from(error);
+          result.error = {
+            code: normalized.code,
+            message: normalized.message,
+          };
+          if (session !== undefined && !session.disposed) {
+            session.dispose();
+          }
+          if (runtime !== undefined && !runtime.disposed) {
+            runtime.dispose();
+          }
+        } finally {
+          setSessionRuntimeFactoryForTests(undefined);
+        }
+        return result;
+      };
+    </script>
+  </body>
+</html>

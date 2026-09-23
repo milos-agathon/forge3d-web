@@ -226,6 +226,7 @@ fn select_terrain_candidate(
                     height_ao: terrain.height_ao.clone(),
                     sun_visibility: terrain.sun_visibility.clone(),
                     debug_view: terrain.debug_view,
+                    render_mode: terrain.render_mode,
                 },
                 allocation,
                 total_bytes: total,
@@ -285,6 +286,26 @@ pub(super) fn set_terrain_options_runtime(
         .debug_view
         .map(crate::inputs::TerrainDebugViewOption::to_core)
         .unwrap_or(TerrainDebugView::None);
+    let lighting_layout = &runtime
+        .lighting
+        .as_ref()
+        .ok_or_else(|| {
+            WebError::new(
+                Forge3DErrorCode::RuntimeDisposed,
+                "Runtime lighting resources are not available",
+            )
+        })?
+        .bind_group_layout;
+    let texture_layout = &runtime
+        .textures
+        .as_ref()
+        .ok_or_else(|| {
+            WebError::new(
+                Forge3DErrorCode::RuntimeDisposed,
+                "Runtime texture resources are not available",
+            )
+        })?
+        .bind_group_layout;
     let candidate = select_terrain_candidate(runtime, terrain, &height_ao, &sun_visibility)?;
     let color_ramp = candidate.options.color_ramp.clone();
     let validated = candidate.options.validate()?;
@@ -300,6 +321,18 @@ pub(super) fn set_terrain_options_runtime(
         &runtime.camera,
         runtime.width,
         runtime.height,
+        lighting_layout,
+        texture_layout,
+        &runtime
+            .ibl
+            .as_ref()
+            .ok_or_else(|| {
+                WebError::new(
+                    Forge3DErrorCode::RuntimeDisposed,
+                    "Runtime IBL resources are not available",
+                )
+            })?
+            .bind_group_layout,
     )?;
     let (mesh_bytes, texture_bytes, uniform_bytes) = terrain_gpu_bytes(&candidate.allocation)?;
     runtime
@@ -335,6 +368,7 @@ pub(super) fn set_terrain_options_runtime(
         });
     }
     runtime.terrain = Some(resources);
+    super::shadows::rebuild_terrain_depth_binding(runtime);
     Ok(())
 }
 
@@ -350,6 +384,20 @@ pub(super) fn set_camera_runtime(
     })?;
 
     let camera = CameraOptions::from_js_value(camera)?.validate()?;
+    let prepared_shadows = match (runtime.shadows.as_ref(), runtime.lighting.as_ref()) {
+        (Some(shadows), Some(lighting)) => {
+            let aspect = runtime.width as f32 / runtime.height.max(1) as f32;
+            Some(super::shadows::prepare_shadow_state(
+                &camera,
+                aspect,
+                &lighting.state,
+                &lighting.light_ids,
+                shadows,
+                runtime.terrain.as_ref(),
+            )?)
+        }
+        _ => None,
+    };
     if let Some(terrain) = runtime.terrain.as_ref() {
         terrain.update_camera(context, &camera, runtime.width, runtime.height)?;
     }
@@ -357,6 +405,9 @@ pub(super) fn set_camera_runtime(
         scene.update_camera(context, &camera, runtime.width, runtime.height)?;
     }
     runtime.camera = camera;
+    if let (Some(shadows), Some(prepared)) = (runtime.shadows.as_mut(), prepared_shadows) {
+        prepared.write(context, shadows);
+    }
     Ok(())
 }
 
@@ -399,6 +450,20 @@ pub(super) fn resize_runtime(runtime: &mut Forge3DRuntime, size: JsValue) -> Res
             format!("resized depth texture of {depth_bytes} bytes exceeds the memory budget"),
         ));
     }
+    let prepared_shadows = match (runtime.shadows.as_ref(), runtime.lighting.as_ref()) {
+        (Some(shadows), Some(lighting)) => {
+            let aspect = width as f32 / height.max(1) as f32;
+            Some(super::shadows::prepare_shadow_state(
+                &runtime.camera,
+                aspect,
+                &lighting.state,
+                &lighting.light_ids,
+                shadows,
+                runtime.terrain.as_ref(),
+            )?)
+        }
+        _ => None,
+    };
     runtime.canvas.set_width(width);
     runtime.canvas.set_height(height);
     surface_state
@@ -416,7 +481,12 @@ pub(super) fn resize_runtime(runtime: &mut Forge3DRuntime, size: JsValue) -> Res
     }
     if let Some(scene) = runtime.scene.as_mut() {
         scene.update_camera(context, &runtime.camera, width, height)?;
-        scene.rebuild_overlays(context, width, height);
+        if let (Some(textures), Some(ibl)) = (runtime.textures.as_ref(), runtime.ibl.as_ref()) {
+            scene.rebuild_overlays(context, textures, ibl, width, height);
+        }
+    }
+    if let (Some(shadows), Some(prepared)) = (runtime.shadows.as_mut(), prepared_shadows) {
+        prepared.write(context, shadows);
     }
     Ok(())
 }
@@ -461,6 +531,8 @@ impl DepthAttachment {
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub(super) struct CameraUniform {
     view_projection: [[f32; 4]; 4],
+    camera_position: [f32; 4],
+    camera_forward: [f32; 4],
 }
 
 const MAX_COLOR_RAMP_STOPS: usize = 8;
@@ -502,12 +574,16 @@ pub(super) struct TerrainParamsUniform {
     pub(super) nodata_value: f32,
     pub(super) has_nodata: f32,
     pub(super) debug_view: u32,
+    pub(super) render_mode: u32,
+    pub(super) output_srgb: u32,
+    pub(super) _padding: [u32; 2],
 }
 
 impl TerrainParamsUniform {
     fn from_input(
         terrain: &forge3d_core::terrain::TerrainHeightmapInput,
         debug_view: TerrainDebugView,
+        surface_format: wgpu::TextureFormat,
     ) -> Self {
         Self {
             spacing: terrain.spacing,
@@ -525,6 +601,15 @@ impl TerrainParamsUniform {
                 TerrainDebugView::HeightAo => 1,
                 TerrainDebugView::SunVisibility => 2,
             },
+            render_mode: match terrain.render_mode {
+                forge3d_core::terrain::TerrainRenderMode::Perspective => 0,
+                forge3d_core::terrain::TerrainRenderMode::Screen => 1,
+            },
+            output_srgb: u32::from(matches!(
+                surface_format,
+                wgpu::TextureFormat::Rgba8UnormSrgb | wgpu::TextureFormat::Bgra8UnormSrgb
+            )),
+            _padding: [0; 2],
         }
     }
 }
@@ -546,11 +631,14 @@ pub(super) struct TerrainRenderResources {
     pub(super) vertex_buffer: wgpu::Buffer,
     pub(super) index_buffer: wgpu::Buffer,
     pub(super) index_count: u32,
+    pub(super) render_mode: u32,
     camera_buffer: wgpu::Buffer,
     #[allow(dead_code)]
     color_ramp_buffer: wgpu::Buffer,
-    #[allow(dead_code)]
-    params_buffer: wgpu::Buffer,
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    pub(super) params_buffer: wgpu::Buffer,
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    pub(super) params: TerrainParamsUniform,
     pub(super) height_texture: wgpu::Texture,
     pub(super) height_width: u32,
     pub(super) height_height: u32,
@@ -576,13 +664,16 @@ impl TerrainRenderResources {
         camera: &forge3d_core::camera::CameraInput,
         width: u32,
         height: u32,
+        lighting_layout: &wgpu::BindGroupLayout,
+        texture_layout: &wgpu::BindGroupLayout,
+        ibl_layout: &wgpu::BindGroupLayout,
     ) -> Result<Self, WebError> {
         let (vertex_buffer, index_buffer, index_count) =
             create_terrain_mesh_buffers(context, terrain)?;
         let (height_texture, height_view) = create_height_texture(context, terrain);
         let camera_uniform = create_camera_uniform(camera, width, height)?;
         let color_ramp_uniform = ColorRampUniform::from_options(color_ramp, clear_color);
-        let params_uniform = TerrainParamsUniform::from_input(terrain, debug_view);
+        let params_uniform = TerrainParamsUniform::from_input(terrain, debug_view, surface_format);
         let camera_buffer = context
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -655,13 +746,13 @@ impl TerrainRenderResources {
                         },
                         wgpu::BindGroupLayoutEntry {
                             binding: 1,
-                            visibility: wgpu::ShaderStages::VERTEX,
+                            visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
                             ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::NonFiltering),
                             count: None,
                         },
                         wgpu::BindGroupLayoutEntry {
                             binding: 2,
-                            visibility: wgpu::ShaderStages::VERTEX,
+                            visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
                             ty: wgpu::BindingType::Buffer {
                                 ty: wgpu::BufferBindingType::Uniform,
                                 has_dynamic_offset: false,
@@ -760,7 +851,12 @@ impl TerrainRenderResources {
                 .device
                 .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                     label: Some("forge3d-web-terrain-pipeline-layout"),
-                    bind_group_layouts: &[Some(&bind_group_layout)],
+                    bind_group_layouts: &[
+                        Some(&bind_group_layout),
+                        Some(lighting_layout),
+                        Some(texture_layout),
+                        Some(ibl_layout),
+                    ],
                     immediate_size: 0,
                 });
         let shader = context
@@ -834,9 +930,14 @@ impl TerrainRenderResources {
             vertex_buffer,
             index_buffer,
             index_count,
+            render_mode: match terrain.render_mode {
+                forge3d_core::terrain::TerrainRenderMode::Perspective => 0,
+                forge3d_core::terrain::TerrainRenderMode::Screen => 1,
+            },
             camera_buffer,
             color_ramp_buffer,
             params_buffer,
+            params: params_uniform,
             height_texture,
             height_width: terrain.width,
             height_height: terrain.height,
@@ -1144,10 +1245,37 @@ pub(super) fn create_camera_uniform(
         ));
     }
     let aspect_ratio = width as f32 / height as f32;
+    let forward = {
+        let direction = [
+            camera.target[0] - camera.position[0],
+            camera.target[1] - camera.position[1],
+            camera.target[2] - camera.position[2],
+        ];
+        let length = (direction[0] * direction[0]
+            + direction[1] * direction[1]
+            + direction[2] * direction[2])
+            .sqrt();
+        if length.is_finite() && length > 0.0 {
+            [
+                direction[0] / length,
+                direction[1] / length,
+                direction[2] / length,
+            ]
+        } else {
+            [0.0, 0.0, -1.0]
+        }
+    };
     Ok(CameraUniform {
         view_projection: camera
             .view_projection_matrix(aspect_ratio)
             .map_err(map_core_error)?,
+        camera_position: [
+            camera.position[0],
+            camera.position[1],
+            camera.position[2],
+            1.0,
+        ],
+        camera_forward: [forward[0], forward[1], forward[2], 0.0],
     })
 }
 
@@ -1228,14 +1356,22 @@ pub(super) fn align_copy_bytes_per_row(value: u32) -> u32 {
     value.div_ceil(alignment) * alignment
 }
 
-pub(super) const TERRAIN_SHADER: &str = r#"
+pub(super) const TERRAIN_SHADER: &str = concat!(
+    include_str!("brdf.wgsl"),
+    include_str!("ibl_lighting.wgsl"),
+    include_str!("shadow_lighting.wgsl"),
+    include_str!("lighting.wgsl"),
+    r#"
 struct VertexInput {
+    @builtin(vertex_index) vertex_index: u32,
     @location(0) position: vec3<f32>,
     @location(1) uv: vec2<f32>,
 };
 
 struct CameraUniform {
     view_projection: mat4x4<f32>,
+    camera_position: vec4<f32>,
+    camera_forward: vec4<f32>,
 };
 
 struct ColorRampUniform {
@@ -1252,12 +1388,16 @@ struct TerrainParamsUniform {
     nodata_value: f32,
     has_nodata: f32,
     debug_view: u32,
+    render_mode: u32,
+    output_srgb: u32,
+    _params_pad: vec2<u32>,
 };
 
 struct VertexOutput {
     @builtin(position) position: vec4<f32>,
     @location(0) height: f32,
     @location(1) uv: vec2<f32>,
+    @location(2) world_position: vec3<f32>,
 };
 
 @group(0) @binding(0) var heightmap: texture_2d<f32>;
@@ -1285,38 +1425,91 @@ fn is_valid_height(value: f32) -> bool {
 
 @vertex
 fn vs_main(input: VertexInput) -> VertexOutput {
+    var output: VertexOutput;
+    if (params.render_mode == 1u) {
+        // Screen mode: fullscreen triangle with fixed NDC coverage; the camera
+        // uniform stays bound for shading-only view/specular terms.
+        let uv = vec2<f32>(
+            f32((input.vertex_index << 1u) & 2u),
+            f32(input.vertex_index & 2u),
+        );
+        let uv_clamped = clamp(uv, vec2<f32>(0.0), vec2<f32>(1.0));
+        let raw_height = screen_height_sample(uv_clamped);
+        let height = select(params.domain_min, raw_height, is_valid_height(raw_height));
+        let t = clamp(
+            (height - params.domain_min) * params.inv_domain_span,
+            0.0,
+            1.0,
+        );
+        let height_display = params.domain_min + t / params.inv_domain_span;
+        output.height = raw_height;
+        output.uv = uv_clamped;
+        output.position = vec4<f32>(uv.x * 2.0 - 1.0, uv.y * 2.0 - 1.0, 0.0, 1.0);
+        // Native screen frame: XY is the unit tile plane, Z is display height.
+        output.world_position = vec3<f32>(
+            uv.x - 0.5,
+            uv.y - 0.5,
+            height_display * params.exaggeration,
+        );
+        return output;
+    }
     let raw_height = textureSampleLevel(heightmap, nearest_sampler, input.uv, 0.0).r;
     let height = select(params.domain_min, raw_height, is_valid_height(raw_height));
+    output.height = raw_height;
+    output.uv = input.uv;
     let world_position = vec3<f32>(
         input.position.x,
         input.position.y + (height - params.domain_min) * params.exaggeration,
         input.position.z,
     );
-    var output: VertexOutput;
     output.position = camera.view_projection * vec4<f32>(world_position, 1.0);
-    output.height = raw_height;
-    output.uv = input.uv;
+    output.world_position = world_position;
     return output;
 }
 
 @fragment
 fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
-    if (!is_valid_height(input.height)) {
-        return vec4<f32>(color_ramp.clear_color.xyz, 1.0);
-    }
     if (params.debug_view == 1u) {
         return vec4<f32>(vec3<f32>(analysis_gray(input.uv, 1u)), 1.0);
     }
     if (params.debug_view == 2u) {
         return vec4<f32>(vec3<f32>(analysis_gray(input.uv, 2u)), 1.0);
     }
+    if (params.render_mode == 1u) {
+        return terrain_screen_shade(input);
+    }
+    let valid_height = is_valid_height(input.height);
     let t = clamp((input.height - params.domain_min) * params.inv_domain_span, 0.0, 1.0);
     let base_color = sample_color_ramp(t);
     let normal = terrain_normal(input.uv);
-    var shaded = shade_relief(base_color, normal);
+    let view_direction = forge3d_safe_direction(
+        camera.camera_position.xyz - input.world_position,
+    );
+    var tangent_xyz = vec3<f32>(1.0, 0.0, 0.0)
+        - normal * dot(normal, vec3<f32>(1.0, 0.0, 0.0));
+    if (dot(tangent_xyz, tangent_xyz) < 1e-8) {
+        tangent_xyz = vec3<f32>(0.0, 0.0, 1.0)
+            - normal * dot(normal, vec3<f32>(0.0, 0.0, 1.0));
+    }
+    let tangent = vec4<f32>(forge3d_safe_direction(tangent_xyz), 1.0);
+    let view_depth = dot(
+        camera.camera_forward.xyz,
+        input.world_position - camera.camera_position.xyz,
+    );
+    var shaded = forge3d_evaluate_lighting(
+        base_color,
+        input.world_position,
+        normal,
+        view_direction,
+        0u,
+        input.uv,
+        tangent,
+        view_depth,
+    );
     shaded = shaded * analysis_shade(input.uv, 1u) * analysis_shade(input.uv, 2u);
     let edge_fade = terrain_edge_fade(input.uv);
-    return vec4<f32>(mix(color_ramp.clear_color.xyz, shaded, edge_fade), 1.0);
+    let lit = mix(color_ramp.clear_color.xyz, shaded, edge_fade);
+    return vec4<f32>(select(lit, color_ramp.clear_color.xyz, !valid_height), 1.0);
 }
 
 fn analysis_shade(uv: vec2<f32>, channel: u32) -> f32 {
@@ -1394,14 +1587,407 @@ fn terrain_edge_fade(uv: vec2<f32>) -> f32 {
     return smoothstep(0.0, 0.35, edge_distance);
 }
 
-fn shade_relief(color: vec3<f32>, normal: vec3<f32>) -> vec3<f32> {
-    let key_light = normalize(vec3<f32>(-0.48, 0.78, 0.40));
-    let fill_light = normalize(vec3<f32>(0.55, 0.45, -0.35));
-    let diffuse = max(dot(normal, key_light), 0.0);
-    let fill = max(dot(normal, fill_light), 0.0) * 0.12;
-    let slope = clamp(1.0 - normal.y, 0.0, 1.0);
-    let shade = clamp(0.50 + diffuse * 0.56 + fill + slope * 0.12, 0.42, 1.22);
-    let highlight = vec3<f32>(1.0, 0.94, 0.82) * max(diffuse - 0.72, 0.0) * 0.08;
-    return clamp(color * shade + highlight, vec3<f32>(0.0), vec3<f32>(1.0));
+// Terrain screen render mode: ports the historical terrain_pbr_pom screen
+// path (fullscreen coverage, stylized hillshade composition, filmic tonemap).
+
+fn screen_height_sample(uv_in: vec2<f32>) -> f32 {
+    // The historical screen path binds the R32Float heightmap without float
+    // filtering, so every height fetch resolves to the nearest texel
+    // (clamp-to-edge); normals are piecewise constant per texel.
+    let uv = clamp(uv_in, vec2<f32>(0.0, 0.0), vec2<f32>(1.0, 1.0));
+    let dims = vec2<f32>(textureDimensions(heightmap, 0));
+    let max_texel = vec2<i32>(i32(dims.x) - 1, i32(dims.y) - 1);
+    return height_at(vec2<i32>(floor(uv * dims)), max_texel);
 }
-"#;
+
+fn screen_height_geom(uv: vec2<f32>) -> f32 {
+    let raw = screen_height_sample(uv);
+    let span = 1.0 / params.inv_domain_span;
+    let t = clamp((raw - params.domain_min) * params.inv_domain_span, 0.0, 1.0);
+    return params.domain_min + t * span;
+}
+
+fn screen_height_lod(uv: vec2<f32>) -> f32 {
+    let dims = vec2<f32>(textureDimensions(heightmap, 0));
+    let max_lod = f32(textureNumLevels(heightmap) - 1u);
+    let rho = max(length(dpdx(uv) * dims), length(dpdy(uv) * dims));
+    return clamp(log2(max(rho, 1.0)), 0.0, max_lod);
+}
+
+fn screen_height_normal(uv: vec2<f32>) -> vec3<f32> {
+    let dims = vec2<f32>(textureDimensions(heightmap, 0));
+    let lod = screen_height_lod(uv);
+    let texel_uv = exp2(lod) / dims;
+    let offset_x = vec2<f32>(texel_uv.x, 0.0);
+    let offset_y = vec2<f32>(0.0, texel_uv.y);
+    let tl = screen_height_geom(uv - offset_x - offset_y);
+    let t = screen_height_geom(uv - offset_y);
+    let tr = screen_height_geom(uv + offset_x - offset_y);
+    let l = screen_height_geom(uv - offset_x);
+    let r = screen_height_geom(uv + offset_x);
+    let bl = screen_height_geom(uv - offset_x + offset_y);
+    let b = screen_height_geom(uv + offset_y);
+    let br = screen_height_geom(uv + offset_x + offset_y);
+    let dx = (tr + 2.0 * r + br) - (tl + 2.0 * l + bl);
+    let dy = (bl + 2.0 * b + br) - (tl + 2.0 * t + tr);
+    // Native screen mode fixes spacing to 1.0 (world tile is a unit square).
+    let world_texel = texel_uv;
+    let vertical_scale = max(params.exaggeration * 0.5, 1e-3);
+    return normalize(
+        vec3<f32>(-dx / world_texel.x, vertical_scale, -dy / world_texel.y),
+    );
+}
+
+fn screen_hue_variation(
+    albedo: vec3<f32>,
+    slope_factor: f32,
+    height_norm: f32,
+    hue_shift_strength: f32,
+) -> vec3<f32> {
+    if (hue_shift_strength <= 0.0) {
+        return albedo;
+    }
+    let max_c = max(max(albedo.r, albedo.g), albedo.b);
+    let min_c = min(min(albedo.r, albedo.g), albedo.b);
+    let delta = max_c - min_c;
+    if (delta < 0.001) {
+        return albedo;
+    }
+    var hue: f32;
+    if (max_c == albedo.r) {
+        hue = ((albedo.g - albedo.b) / delta) / 6.0;
+        if (hue < 0.0) {
+            hue = hue + 1.0;
+        }
+    } else if (max_c == albedo.g) {
+        hue = (2.0 + (albedo.b - albedo.r) / delta) / 6.0;
+    } else {
+        hue = (4.0 + (albedo.r - albedo.g) / delta) / 6.0;
+    }
+    let saturation = delta / max_c;
+    let value = max_c;
+    let slope_shift = (slope_factor - 0.5) * hue_shift_strength;
+    let elev_shift = (height_norm - 0.5) * hue_shift_strength * 0.4;
+    let noise_shift = (saturation - 0.5) * hue_shift_strength * 0.5;
+    let new_hue = fract(hue + slope_shift + elev_shift + noise_shift);
+    let c = saturation * value;
+    let x = c * (1.0 - abs(fract(new_hue * 6.0) * 2.0 - 1.0));
+    let m = value - c;
+    var rgb: vec3<f32>;
+    let h6 = new_hue * 6.0;
+    if (h6 < 1.0) {
+        rgb = vec3<f32>(c, x, 0.0);
+    } else if (h6 < 2.0) {
+        rgb = vec3<f32>(x, c, 0.0);
+    } else if (h6 < 3.0) {
+        rgb = vec3<f32>(0.0, c, x);
+    } else if (h6 < 4.0) {
+        rgb = vec3<f32>(0.0, x, c);
+    } else if (h6 < 5.0) {
+        rgb = vec3<f32>(x, 0.0, c);
+    } else {
+        rgb = vec3<f32>(c, 0.0, x);
+    }
+    return rgb + vec3<f32>(m, m, m);
+}
+
+fn screen_layer_roughness(height_norm: f32, slope_factor: f32) -> f32 {
+    // Historical MaterialSet.terrain_default: four layers centered at
+    // 0, 1/3, 2/3, 1 with roughness [0.50, 0.85, 0.50, 0.25], blend_half 0.125.
+    let centers = vec4<f32>(0.0, 1.0 / 3.0, 2.0 / 3.0, 1.0);
+    let roughness = vec4<f32>(0.5, 0.85, 0.5, 0.25);
+    let sigma = 0.125 * 1.5;
+    var weight_sum = 0.0;
+    var blended = 0.0;
+    for (var idx = 0u; idx < 4u; idx = idx + 1u) {
+        let dist = abs(height_norm - centers[idx]);
+        let height_weight = exp(-dist * dist / (2.0 * sigma * sigma));
+        var slope_mod = 1.0;
+        if (idx == 0u) {
+            slope_mod = mix(1.0, 1.5, slope_factor);
+        } else if (idx == 1u) {
+            slope_mod = mix(1.0, 0.5, slope_factor);
+        }
+        let weight = height_weight * slope_mod;
+        weight_sum = weight_sum + weight;
+        blended = blended + roughness[idx] * weight;
+    }
+    if (weight_sum <= 1e-5) {
+        return roughness[0];
+    }
+    return blended / weight_sum;
+}
+
+struct ScreenIblSplit {
+    diffuse: vec3<f32>,
+    specular: vec3<f32>,
+};
+
+fn screen_ibl_split(
+    n: vec3<f32>,
+    v: vec3<f32>,
+    base_color: vec3<f32>,
+    roughness: f32,
+    f0: vec3<f32>,
+) -> ScreenIblSplit {
+    let rotation = forge3d_ibl.rotation_radians;
+    let rotated_normal = forge3d_ibl_rotate_y(n, rotation);
+    let rotated_reflection = forge3d_ibl_rotate_y(reflect(-v, n), rotation);
+    let n_dot_v = clamp(dot(n, v), 0.0, 1.0);
+    let rough = clamp(roughness, 0.0, 1.0);
+    let one_minus_cos = clamp(1.0 - n_dot_v, 0.0, 1.0);
+    let pow5 = one_minus_cos * one_minus_cos * one_minus_cos
+        * one_minus_cos * one_minus_cos;
+    let fresnel = f0 + (max(vec3<f32>(1.0 - rough), f0) - f0) * pow5;
+    let k_d = vec3<f32>(1.0) - fresnel;
+    let irradiance = textureSampleLevel(
+        forge3d_ibl_irradiance,
+        forge3d_ibl_sampler,
+        rotated_normal,
+        0.0,
+    ).rgb;
+    let diffuse = k_d * base_color * irradiance;
+    let mip_count = max(forge3d_ibl.specular_mip_count, 1u);
+    let mip_level = min(rough * rough * 9.0, f32(mip_count - 1u));
+    let prefiltered = textureSampleLevel(
+        forge3d_ibl_specular,
+        forge3d_ibl_sampler,
+        rotated_reflection,
+        mip_level,
+    ).rgb;
+    let brdf = textureSampleLevel(
+        forge3d_ibl_brdf_lut,
+        forge3d_ibl_sampler,
+        vec2<f32>(n_dot_v, rough),
+        0.0,
+    ).rg;
+    let specular = prefiltered * (fresnel * brdf.x + brdf.y);
+    var split: ScreenIblSplit;
+    split.diffuse = diffuse;
+    split.specular = specular;
+    return split;
+}
+
+fn tonemap_filmic_terrain(color: vec3<f32>) -> vec3<f32> {
+    let a = 0.22;
+    let b = 0.30;
+    let c = 0.10;
+    let d = 0.20;
+    let e = 0.01;
+    let f = 0.30;
+    let w = 11.2;
+    let x = max(color, vec3<f32>(0.0));
+    let curve = ((x * (a * x + vec3<f32>(c * b)) + vec3<f32>(d * e))
+        / (x * (a * x + vec3<f32>(b)) + vec3<f32>(d * f)))
+        - vec3<f32>(e / f);
+    let white = ((w * (a * w + c * b) + d * e) / (w * (a * w + b) + d * f))
+        - e / f;
+    return clamp(curve / white, vec3<f32>(0.0), vec3<f32>(1.0));
+}
+
+fn srgb_eotf_decode(c: vec3<f32>) -> vec3<f32> {
+    let lo = c / 12.92;
+    let hi = pow((c + vec3<f32>(0.055)) / 1.055, vec3<f32>(2.4));
+    return select(hi, lo, c <= vec3<f32>(0.04045));
+}
+
+fn screen_output_encode(linear: vec3<f32>) -> vec3<f32> {
+    let gamma = pow(
+        clamp(linear, vec3<f32>(0.0), vec3<f32>(1.0)),
+        vec3<f32>(1.0 / 2.2),
+    );
+    if (params.output_srgb == 1u) {
+        return srgb_eotf_decode(gamma);
+    }
+    return gamma;
+}
+
+// Historical screen-mode comparison sampling: the native shadow sampler was a
+// linear comparison sampler, so each requested uv blends four binary
+// depth-test results on cascade layer 0.
+fn screen_shadow_compare_linear(shadow_uv: vec2<f32>, depth: f32) -> f32 {
+    let size = max(forge3d_shadows.params0.x, 1.0);
+    let dims = vec2<i32>(i32(size), i32(size));
+    let p = shadow_uv * size - vec2<f32>(0.5, 0.5);
+    let base = vec2<i32>(floor(p));
+    let f = p - floor(p);
+    var total = 0.0;
+    for (var oy = 0; oy < 2; oy = oy + 1) {
+        for (var ox = 0; ox < 2; ox = ox + 1) {
+            let texel = clamp(
+                base + vec2<i32>(ox, oy),
+                vec2<i32>(0, 0),
+                dims - vec2<i32>(1, 1),
+            );
+            let stored = textureLoad(forge3d_shadow_depth, texel, 0, 0);
+            let lit = select(0.0, 1.0, depth <= stored);
+            let weight = select(1.0 - f.x, f.x, ox == 1)
+                * select(1.0 - f.y, f.y, oy == 1);
+            total = total + lit * weight;
+        }
+    }
+    return total;
+}
+
+fn terrain_screen_shadow(
+    uv: vec2<f32>,
+    height_norm: f32,
+    normal: vec3<f32>,
+    light_dir: vec3<f32>,
+) -> f32 {
+    if (!forge3d_shadow_enabled() || forge3d_shadows.control.z == 0u) {
+        return 1.0;
+    }
+    // Historical screen-mode receiver: native Z-up position on the unit tile.
+    let receiver = vec3<f32>(
+        uv.x - 0.5,
+        uv.y - 0.5,
+        height_norm * params.exaggeration,
+    );
+    let clip = forge3d_shadows.matrices[0] * vec4<f32>(receiver, 1.0);
+    let ndc = clip.xyz / clip.w;
+    let shadow_uv = vec2<f32>(ndc.x * 0.5 + 0.5, ndc.y * -0.5 + 0.5);
+    if (shadow_uv.x < 0.0 || shadow_uv.x > 1.0
+        || shadow_uv.y < 0.0 || shadow_uv.y > 1.0
+        || ndc.z < 0.0 || ndc.z > 1.0)
+    {
+        return 1.0;
+    }
+    let n_dot_l = max(dot(normal, light_dir), 0.0);
+    let slope = clamp(1.0 - n_dot_l, 0.0, 1.0);
+    let bias = forge3d_shadows.params0.z
+        + forge3d_shadows.params1.x * slope
+        + forge3d_shadows.params0.w;
+    let compare_depth = ndc.z - bias;
+    let filter_scale = max(forge3d_shadows.params2.x, 1.0);
+    let texel_uv = (1.0 / max(forge3d_shadows.params0.x, 1.0)) * filter_scale;
+    var sum = 0.0;
+    for (var y = -2; y <= 2; y = y + 1) {
+        for (var x = -2; x <= 2; x = x + 1) {
+            sum = sum + screen_shadow_compare_linear(
+                shadow_uv + vec2<f32>(f32(x), f32(y)) * texel_uv,
+                compare_depth,
+            );
+        }
+    }
+    return sum / 25.0;
+}
+
+fn terrain_screen_shade(input: VertexOutput) -> vec4<f32> {
+    let uv = input.uv;
+    let h_raw = screen_height_sample(uv);
+    let valid_height = is_valid_height(h_raw);
+    let height_clamped = clamp(
+        select(params.domain_min, h_raw, valid_height),
+        params.domain_min,
+        params.domain_min + 1.0 / params.inv_domain_span,
+    );
+    let height_norm = clamp(
+        (height_clamped - params.domain_min) * params.inv_domain_span,
+        0.0,
+        1.0,
+    );
+    var albedo = sample_color_ramp(height_norm);
+
+    let base_normal = vec3<f32>(0.0, 0.0, 1.0);
+    let slope_factor = clamp(1.0 - abs(base_normal.y), 0.04, 1.0);
+    albedo = screen_hue_variation(albedo, slope_factor, height_norm, 0.08);
+
+    let lod = screen_height_lod(uv);
+    let lod_fade = 1.0 - smoothstep(1.0, 4.0, lod);
+    let normal_strength = clamp(1.0, 0.25, 4.0);
+    let height_normal = screen_height_normal(uv);
+    let amplified = normalize(
+        base_normal + (height_normal - base_normal) * normal_strength,
+    );
+    let shading_normal = normalize(mix(base_normal, amplified, lod_fade));
+
+    // Native screen frame is Z-up; the interpolated vertex position reproduces
+    // the historical fullscreen-triangle world position for view/specular terms.
+    let world_pos = input.world_position;
+    let view_dir = normalize(camera.camera_position.xyz - world_pos);
+
+    // First shadow-casting directional light; fall back to any directional.
+    var light_travel = vec3<f32>(0.0, 0.0, 0.0);
+    var light_color = vec3<f32>(0.0, 0.0, 0.0);
+    var light_found = false;
+    let light_total = min(forge3d_lighting.light_count, 64u);
+    for (var i = 0u; i < light_total; i = i + 1u) {
+        let light = forge3d_lights[i];
+        if ((light.enabled & 1u) == 0u || light.kind != 0u) {
+            continue;
+        }
+        if (!light_found || light.casts_shadow != 0u) {
+            light_travel = light.direction_inner_cos.xyz;
+            light_color = max(light.color_intensity.rgb, vec3<f32>(0.0))
+                * max(light.color_intensity.a, 0.0);
+            light_found = true;
+            if (light.casts_shadow != 0u) {
+                break;
+            }
+        }
+    }
+    // Map the shared Y-up to-sun direction into the native screen frame.
+    let light_dir = forge3d_safe_direction(
+        vec3<f32>(-light_travel.x, light_travel.z, -light_travel.y),
+    );
+    let sun_intensity = length(light_color);
+
+    // Historical screen-mode shadow receiver path: dedicated fixed light
+    // matrix and native bias/PCSS; deliberately not the general CSM chain.
+    let shadow_visibility = terrain_screen_shadow(
+        uv,
+        height_norm,
+        shading_normal,
+        light_dir,
+    );
+    let shadow_factor = mix(0.8, 1.0, shadow_visibility);
+    let shadow_clamped = max(shadow_factor, 0.30);
+    let sun_vis = max(analysis_sample(uv, 2u), 0.30);
+    let combined_shadow = shadow_clamped * sun_vis;
+    let ao_clamped = max(analysis_sample(uv, 1u), 0.65);
+    let ao_shadow_factor = ao_clamped * combined_shadow;
+
+    let n_dot_l = max(dot(shading_normal, light_dir), 0.0);
+    let ambient_interp = mix(0.32, 0.10, n_dot_l);
+    let sun_contrib = (0.36 - 0.10) * n_dot_l * sun_intensity;
+    let base_diffuse = ambient_interp + sun_contrib;
+    let slope_steepness = 1.0 - abs(shading_normal.y);
+    let normal_gradient = length(dpdx(shading_normal)) + length(dpdy(shading_normal));
+    let edge_signal = slope_steepness * 0.3 + normal_gradient * 15.0;
+    let edge_bright = clamp(edge_signal * (n_dot_l + 0.3), 0.0, 0.25);
+    let edge_dark = clamp(edge_signal * (1.0 - n_dot_l) * 0.5, 0.0, 0.15);
+    let diffuse_raw = base_diffuse + edge_bright - edge_dark;
+    let diffuse_lit = diffuse_raw * ao_shadow_factor;
+
+    let roughness = clamp(
+        screen_layer_roughness(height_norm, slope_factor),
+        0.25,
+        1.0,
+    );
+    let f0 = vec3<f32>(0.04, 0.04, 0.04);
+    let ibl_split = screen_ibl_split(
+        shading_normal,
+        view_dir,
+        albedo,
+        roughness,
+        f0,
+    );
+    let ibl_diffuse_factor = length(ibl_split.diffuse) * forge3d_ibl.intensity;
+    let ibl_term = ibl_diffuse_factor * 0.18 * 0.35;
+    let lighting_factor = diffuse_lit + ibl_term;
+    let lit_albedo = albedo * lighting_factor;
+    let spec_contrib = ibl_split.specular * forge3d_ibl.intensity * 0.12;
+    let spec_capped = min(spec_contrib, albedo * 0.20);
+
+    var shaded = lit_albedo + spec_capped;
+    shaded = shaded * max(forge3d_lighting.exposure, 0.0);
+    let mapped = tonemap_filmic_terrain(shaded);
+    return vec4<f32>(
+        select(color_ramp.clear_color.xyz, screen_output_encode(mapped), valid_height),
+        1.0,
+    );
+}
+
+"#,
+);

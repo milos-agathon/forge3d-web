@@ -13,7 +13,14 @@ import { OrbitController, defaultOrbitView } from "./orbit-controller.js";
 import { ResizeController } from "./resize-controller.js";
 import { validateExplicitResize } from "./resource-policy.js";
 import { RendererConfig } from "./renderer-config.js";
-import { Forge3DScene } from "./scene.js";
+import {
+  Forge3DScene,
+  restoreSceneIbl,
+  restoreSceneLighting,
+  restoreSceneMaterials,
+  restoreSceneShadows,
+} from "./scene.js";
+import { defaultShadowSnapshot } from "./shadows.js";
 import { Forge3DSession } from "./session.js";
 import { ViewerControls } from "./viewer-controls.js";
 
@@ -176,6 +183,16 @@ export class Forge3DWorkerRenderer {
     for (const node of snapshot.nodes) {
       if (node.node.kind === "terrain") {
         transfer.push(node.node.terrain.heights.buffer as ArrayBuffer);
+      }
+    }
+    if (snapshot.ibl !== null) {
+      transfer.push(snapshot.ibl.source.data.buffer as ArrayBuffer);
+      if (snapshot.ibl.prepared !== undefined) {
+        transfer.push(
+          snapshot.ibl.prepared.irradiance.buffer as ArrayBuffer,
+          snapshot.ibl.prepared.specular.buffer as ArrayBuffer,
+          snapshot.ibl.prepared.brdfLut.buffer as ArrayBuffer,
+        );
       }
     }
     const committed =
@@ -401,6 +418,14 @@ function reconstructScene(snapshot: SceneSnapshot): Forge3DScene {
   for (const pass of snapshot.passes) {
     scene.addPass(pass);
   }
+  if (snapshot.lighting !== undefined) {
+    restoreSceneLighting(scene, snapshot.lighting);
+  }
+  if (snapshot.materials !== undefined) {
+    restoreSceneMaterials(scene, snapshot.materials);
+  }
+  restoreSceneIbl(scene, snapshot.ibl ?? null);
+  restoreSceneShadows(scene, snapshot.shadows ?? defaultShadowSnapshot());
   return scene;
 }
 

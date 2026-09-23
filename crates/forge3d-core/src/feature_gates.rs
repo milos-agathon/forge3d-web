@@ -32,7 +32,6 @@ pub const DEFAULT_WASM_INACTIVE_MODULE_ROOTS: &[&str] = &[
     "import",
     "labels",
     "license",
-    "lighting",
     "loaders",
     "mesh",
     "offscreen",

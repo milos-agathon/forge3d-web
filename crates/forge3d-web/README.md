@@ -63,7 +63,7 @@ const resident = await runtime.readTerrainAnalysis("sun-visibility");
 npm install @forge3d/web
 ```
 
-The package is ESM-only and ships a JavaScript facade, a WebAssembly module, and hand-authored TypeScript declarations.
+The package is ESM-only and ships a JavaScript facade, a WebAssembly module, and hand-authored TypeScript declarations. It also ships the self-hosted Basis Universal 2.0.3 transcoder under `assets/basis/` for KTX2 textures. The lock-pinned `ktx-parse@1.1.0` module is vendored under `dist/vendor/`, so the package has no runtime dependencies. `dist/asset-manifest.json` records the SHA-256 of every self-hosted third-party asset.
 
 ## Interactive Viewer Status
 
@@ -142,7 +142,9 @@ See `docs/support-matrix.md` for browser evidence status, product boundaries, tr
 
 ## MIME, CORS, And Range Requirements
 
-Serve `.wasm` files with `Content-Type: application/wasm`. The package loads `dist/forge3d_web_bg.wasm` next to the generated bridge module, so bundlers and static hosts must preserve that asset URL.
+Serve `.wasm` files with `Content-Type: application/wasm`. The package loads `dist/forge3d_web_bg.wasm` next to the generated bridge module, so bundlers and static hosts must preserve that asset URL. `Ktx2Loader` resolves `assets/basis/basis_transcoder.{js,wasm}` relative to `dist/` by default. Preserve those files, or pass `basisJsUrl`/`basisWasmUrl` to point at self-hosted copies. No CDN fallback exists.
+
+`IblCache` stores precomputed IBL maps in CacheStorage, then OPFS. Where neither is available (for example, insecure contexts or strict storage policies), the report records `cacheBackend: "none"` and every load recomputes on the GPU.
 
 URL terrain sources use browser `fetch`. Cross-origin terrain URLs need normal CORS headers. Byte-range terrain reads request `Range` headers when `byteOffset` or `byteLength` is supplied; servers that do not support range responses may return the full object, which the browser adapter validates before upload.
 
@@ -162,6 +164,14 @@ Cache `.wasm` assets with immutable content hashing, or invalidate the wasm asse
   queries, CPU AO/sun fields, worker-pool decoding, and named colormaps
 - `readTerrainHeights()`, `computeTerrainAnalysis(terrain, request)`, and
   `readTerrainAnalysis(kind)` GPU analysis/readback
+- `Forge3DScene` lighting, materials, textures, IBL, and shadows (W04):
+  `addLight` (directional/point/spot/LTC rect, presets, soft falloff, bounds),
+  `setMaterial` with 13 BRDF models and observable `resolveBrdfModel` routes,
+  `TextureSet`/`Ktx2Loader`/`generateMeshTangents`/`extractGltfMaterialChannels`,
+  `ImageBasedLighting` with GPU precompute and `IblCache`, and
+  `ShadowConfig` (six filters) with a separate `CascadedShadowConfig`
+- terrain `renderMode: "screen"` reproducing the native `terrain_pbr_pom`
+  screen path, matched against a native golden at SSIM >= 0.98
 - `setCamera(camera)`
 - `resize({ width, height, devicePixelRatio })`
 - `render()`
@@ -175,7 +185,8 @@ and error codes.
 
 The current package includes canvas-backed WebGPU rendering, camera and resize
 control, Float32 heightmaps, URL/File/Blob/ArrayBuffer terrain byte sources,
-screenshots, and TypeScript declarations. This is the implemented release
+typed lights, BRDF materials, PBR/KTX2 textures, cached IBL, filtered and
+cascaded shadows, screenshots, and TypeScript declarations. This is the implemented release
 surface, not the final parity boundary.
 
 | Capability | Current status | Parity owner |

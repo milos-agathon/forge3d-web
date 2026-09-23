@@ -1,0 +1,593 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forge3D W04 Parity Test</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+      }
+
+      canvas {
+        display: block;
+        width: 192px;
+        height: 128px;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="forge3d-w04-parity-canvas" width="192" height="128"></canvas>
+    <script type="module">
+      import {
+        Forge3DError,
+        Forge3DRuntime,
+        Forge3DScene,
+        Forge3DSession,
+        ImageBasedLighting,
+        IblCache,
+        ShadowConfig,
+        CascadedShadowConfig,
+        TextureSet,
+        Ktx2Loader,
+        resolveBrdfModel,
+        extractGltfMaterialChannels,
+        generateMeshTangents,
+      } from "../src-ts/index.ts";
+      import { setSessionRuntimeFactoryForTests } from "../src-ts/session.ts";
+      import { simulateRuntimeDeviceLossForTests } from "../src-ts/runtime-internals.ts";
+
+      const canvas = document.querySelector("#forge3d-w04-parity-canvas");
+      const WIDTH = 192;
+      const HEIGHT = 128;
+      const GOLDEN_URL = "/tests/golden/w04-terrain-pbr-native.png";
+      const TERRAIN_SIZE = 96;
+      const TERRAIN_SPAN = 2.8;
+      const TERRAIN_SPACING = TERRAIN_SPAN / (TERRAIN_SIZE - 1);
+      const Z_SCALE = 1.45;
+      const HISTORICAL_CLIP_NEAR = 0.1;
+      const HISTORICAL_CLIP_FAR = 6000.0;
+      const CAM_RADIUS = 5.0;
+      const CAM_PHI_DEG = 138.0;
+      const CAM_THETA_DEG = 63.0;
+      const CAM_FOV_DEG = 54.0;
+      const LIGHT_AZIMUTH_DEG = 135.0;
+      const LIGHT_ELEVATION_DEG = 24.0;
+      const SUN_INTENSITY = 2.4;
+      const IBL_INTENSITY = 1.0;
+      const TERRAIN_ROUGHNESS = (0.5 + 0.85 + 0.5 + 0.25) / 4;
+      const BRDF_MODELS = [
+        "lambert",
+        "phong",
+        "blinn-phong",
+        "oren-nayar",
+        "cooktorrance-ggx",
+        "cooktorrance-beckmann",
+        "disney-principled",
+        "ashikhmin-shirley",
+        "ward",
+        "toon",
+        "minnaert",
+        "subsurface",
+        "hair",
+      ];
+      const SHADOW_FILTERS = ["hard", "pcf", "pcss", "vsm", "evsm", "msm"];
+      const PACKED_SIZES = {
+        packedLight: 112,
+        packedMaterial: 64,
+        lightingUniform: 32,
+        materialUniform: 16,
+        shadowUniform: 368,
+        shadowDepthUniform: 64,
+      };
+
+      function buildHeightmap() {
+        const heights = new Float32Array(TERRAIN_SIZE * TERRAIN_SIZE);
+        for (let row = 0; row < TERRAIN_SIZE; row += 1) {
+          const y = -1 + (2 * row) / (TERRAIN_SIZE - 1);
+          for (let col = 0; col < TERRAIN_SIZE; col += 1) {
+            const x = -1 + (2 * col) / (TERRAIN_SIZE - 1);
+            const ridge =
+              0.52 *
+              Math.exp(-((x + 0.25) ** 2 * 6.5 + (y - 0.12) ** 2 * 10));
+            const basin =
+              -0.18 *
+              Math.exp(-((x - 0.05) ** 2 * 20 + (y + 0.05) ** 2 * 24));
+            const spur =
+              0.22 *
+              Math.exp(-((x - 0.42) ** 2 * 28 + (y + 0.22) ** 2 * 18));
+            const slope = 0.25 * (1 - y) + 0.1 * x;
+            heights[row * TERRAIN_SIZE + col] = ridge + basin + spur + slope;
+          }
+        }
+        let min = Infinity;
+        let max = -Infinity;
+        for (const value of heights) {
+          if (value < min) {
+            min = value;
+          }
+          if (value > max) {
+            max = value;
+          }
+        }
+        const span = Math.max(max - min, 1e-6);
+        for (let index = 0; index < heights.length; index += 1) {
+          heights[index] = (heights[index] - min) / span;
+        }
+        return heights;
+      }
+
+      function srgbColor(hex) {
+        return [
+          parseInt(hex.slice(1, 3), 16) / 255,
+          parseInt(hex.slice(3, 5), 16) / 255,
+          parseInt(hex.slice(5, 7), 16) / 255,
+        ];
+      }
+
+      function colorRamp() {
+        return {
+          stops: [
+            { position: 0.0, color: srgbColor("#18391f") },
+            { position: 0.38, color: srgbColor("#4e7c35") },
+            { position: 0.65, color: srgbColor("#8f7a4a") },
+            { position: 0.82, color: srgbColor("#b8ac88") },
+            { position: 1.0, color: srgbColor("#f2f4f7") },
+          ],
+        };
+      }
+
+      function historicalHdrBytes() {
+        const width = 8;
+        const height = 4;
+        const header = `#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y ${height} +X ${width}\n`;
+        const head = new TextEncoder().encode(header);
+        const bytes = new Uint8Array(head.length + width * height * 4);
+        bytes.set(head, 0);
+        for (let y = 0; y < height; y += 1) {
+          for (let x = 0; x < width; x += 1) {
+            const offset = head.length + (y * width + x) * 4;
+            bytes[offset] = Math.trunc((x / (width - 1)) * 255);
+            bytes[offset + 1] = Math.trunc((y / (height - 1)) * 255);
+            bytes[offset + 2] = 128;
+            bytes[offset + 3] = 128;
+          }
+        }
+        return bytes;
+      }
+
+      function lightDirection() {
+        const az = (LIGHT_AZIMUTH_DEG * Math.PI) / 180;
+        const el = (LIGHT_ELEVATION_DEG * Math.PI) / 180;
+        return [
+          Math.cos(el) * Math.sin(az),
+          -Math.sin(el),
+          -Math.cos(el) * Math.cos(az),
+        ];
+      }
+
+      function cameraInput() {
+        const phi = (CAM_PHI_DEG * Math.PI) / 180;
+        const theta = (CAM_THETA_DEG * Math.PI) / 180;
+        return {
+          position: [
+            CAM_RADIUS * Math.sin(theta) * Math.cos(phi),
+            CAM_RADIUS * Math.cos(theta),
+            CAM_RADIUS * Math.sin(theta) * Math.sin(phi),
+          ],
+          target: [0, 0, 0],
+          up: [0, 1, 0],
+          fovYDegrees: CAM_FOV_DEG,
+          near: HISTORICAL_CLIP_NEAR,
+          far: HISTORICAL_CLIP_FAR,
+        };
+      }
+
+      function shadowInput(filter, mapSize) {
+        return {
+          enabled: true,
+          filter,
+          mapSize,
+          depthBias: 0.0005,
+          normalBias: 0.0002,
+          slopeBias: 0.001,
+          softness: 1.5,
+          pcssBlockerRadius: 2,
+          pcssFilterRadius: 4,
+          lightSize: 0.001,
+          momentBias: 0.0005,
+          lightBleedReduction: 0.5,
+          evsmPositiveExponent: 5,
+          evsmNegativeExponent: 5,
+          peterPanningOffset: 0.0002,
+        };
+      }
+
+      function csmInput() {
+        return {
+          enabled: true,
+          cascadeCount: 3,
+          maxDistance: 4000,
+          splitLambda: 0.75,
+          blendRange: 0.1,
+          stabilize: true,
+          debugView: "none",
+        };
+      }
+
+      async function buildParityScene() {
+        const scene = Forge3DScene.create();
+        scene.addTerrain({
+          width: TERRAIN_SIZE,
+          height: TERRAIN_SIZE,
+          heights: buildHeightmap(),
+          spacing: [TERRAIN_SPACING, TERRAIN_SPACING],
+          exaggeration: Z_SCALE,
+          domain: [0, 1],
+          colorRamp: colorRamp(),
+          renderMode: "screen",
+        });
+        // The native golden scene has exactly one directional sun; drop the
+        // default key light every Forge3DScene starts with.
+        scene.clearLights();
+        scene.addLight({
+          type: "directional",
+          color: [1, 1, 1],
+          intensity: SUN_INTENSITY,
+          direction: lightDirection(),
+          castsShadow: true,
+        });
+        scene.setMaterial("default", {
+          id: "default",
+          brdf: "cooktorrance-ggx",
+          baseColor: [1, 1, 1, 1],
+          metallic: 0,
+          roughness: TERRAIN_ROUGHNESS,
+        });
+        const ibl = await ImageBasedLighting.fromRGBE(historicalHdrBytes(), {
+          quality: "low",
+          intensity: IBL_INTENSITY,
+          rotationDegrees: 0,
+        });
+        scene.setImageBasedLighting(ibl);
+        scene.setShadows(shadowInput("pcss", 4096), csmInput());
+        return scene;
+      }
+
+      function bytesEqual(a, b) {
+        if (a.byteLength !== b.byteLength) {
+          return false;
+        }
+        for (let index = 0; index < a.length; index += 1) {
+          if (a[index] !== b[index]) {
+            return false;
+          }
+        }
+        return true;
+      }
+
+      function gaussianWindow(size, sigma) {
+        const weights = new Float64Array(size);
+        let sum = 0;
+        for (let index = 0; index < size; index += 1) {
+          const coordinate = index - (size - 1) / 2;
+          const value = Math.exp(-0.5 * (coordinate / sigma) ** 2);
+          weights[index] = value;
+          sum += value;
+        }
+        for (let index = 0; index < size; index += 1) {
+          weights[index] /= sum;
+        }
+        return weights;
+      }
+
+      function filterChannel(channel, width, height, weights) {
+        const half = (weights.length - 1) / 2;
+        const temp = new Float64Array(width * height);
+        const out = new Float64Array(width * height);
+        for (let y = 0; y < height; y += 1) {
+          for (let x = 0; x < width; x += 1) {
+            let sum = 0;
+            for (let k = -half; k <= half; k += 1) {
+              const sx = x + k;
+              if (sx < 0 || sx >= width) {
+                continue;
+              }
+              sum += channel[y * width + sx] * weights[k + half];
+            }
+            temp[y * width + x] = sum;
+          }
+        }
+        for (let y = 0; y < height; y += 1) {
+          for (let x = 0; x < width; x += 1) {
+            let sum = 0;
+            for (let k = -half; k <= half; k += 1) {
+              const sy = y + k;
+              if (sy < 0 || sy >= height) {
+                continue;
+              }
+              sum += temp[sy * width + x] * weights[k + half];
+            }
+            out[y * width + x] = sum;
+          }
+        }
+        return out;
+      }
+
+      function ssimChannel(a, b, width, height, weights) {
+        const c1 = (0.01 * 255) ** 2;
+        const c2 = (0.03 * 255) ** 2;
+        const pixels = width * height;
+        const aSq = new Float64Array(pixels);
+        const bSq = new Float64Array(pixels);
+        const ab = new Float64Array(pixels);
+        for (let index = 0; index < pixels; index += 1) {
+          aSq[index] = a[index] * a[index];
+          bSq[index] = b[index] * b[index];
+          ab[index] = a[index] * b[index];
+        }
+        const muA = filterChannel(a, width, height, weights);
+        const muB = filterChannel(b, width, height, weights);
+        const sigmaA = filterChannel(aSq, width, height, weights);
+        const sigmaB = filterChannel(bSq, width, height, weights);
+        const sigmaAB = filterChannel(ab, width, height, weights);
+        let total = 0;
+        for (let index = 0; index < pixels; index += 1) {
+          const muA2 = muA[index] * muA[index];
+          const muB2 = muB[index] * muB[index];
+          const varA = sigmaA[index] - muA2;
+          const varB = sigmaB[index] - muB2;
+          const cov = sigmaAB[index] - muA[index] * muB[index];
+          const numerator = (2 * muA[index] * muB[index] + c1) * (2 * cov + c2);
+          const denominator = (muA2 + muB2 + c1) * (varA + varB + c2);
+          total += numerator / denominator;
+        }
+        return total / pixels;
+      }
+
+      function ssimRgba(a, b, width, height) {
+        const weights = gaussianWindow(11, 1.5);
+        const pixels = width * height;
+        let total = 0;
+        for (let channel = 0; channel < 3; channel += 1) {
+          const aChannel = new Float64Array(pixels);
+          const bChannel = new Float64Array(pixels);
+          for (let index = 0; index < pixels; index += 1) {
+            aChannel[index] = a[index * 4 + channel];
+            bChannel[index] = b[index * 4 + channel];
+          }
+          total += ssimChannel(aChannel, bChannel, width, height, weights);
+        }
+        return total / 3;
+      }
+
+      function meanAbsoluteDifference(a, b) {
+        let total = 0;
+        const pixels = Math.min(a.length, b.length);
+        for (let index = 0; index < pixels; index += 4) {
+          total +=
+            Math.abs(a[index] - b[index]) +
+            Math.abs(a[index + 1] - b[index + 1]) +
+            Math.abs(a[index + 2] - b[index + 2]);
+        }
+        return total / (pixels * 0.75);
+      }
+
+      async function decodeGolden() {
+        const response = await fetch(GOLDEN_URL);
+        const blob = await response.blob();
+        const bitmap = await createImageBitmap(blob, {
+          colorSpaceConversion: "none",
+          premultiplyAlpha: "none",
+        });
+        const offscreen = document.createElement("canvas");
+        offscreen.width = WIDTH;
+        offscreen.height = HEIGHT;
+        const context = offscreen.getContext("2d", { willReadFrequently: true });
+        context.drawImage(bitmap, 0, 0);
+        return context.getImageData(0, 0, WIDTH, HEIGHT).data;
+      }
+
+      async function errorCode(operation) {
+        try {
+          await operation();
+          return { code: "NONE" };
+        } catch (error) {
+          const normalized = Forge3DError.from(error);
+          return { code: normalized.code, message: normalized.message };
+        }
+      }
+
+      window.__forge3dW04ParityProbe = async () => {
+        if (!navigator.gpu) {
+          return { supported: false };
+        }
+        const result = { supported: true, ok: true };
+        let session;
+        const createdRuntimes = [];
+        setSessionRuntimeFactoryForTests(async (runtimeCanvas, options) => {
+          const created = await Forge3DRuntime.create(runtimeCanvas, options);
+          created.setSceneCalls = 0;
+          const original = created.setScene.bind(created);
+          created.setScene = (snapshot) => {
+            created.setSceneCalls += 1;
+            return original(snapshot);
+          };
+          createdRuntimes.push(created);
+          return created;
+        });
+        try {
+          session = await Forge3DSession.create(canvas, {
+            runtime: {
+              diagnostics: true,
+              width: WIDTH,
+              height: HEIGHT,
+              devicePixelRatio: 1,
+              clearColor: [0, 0, 0, 1],
+              memoryBudgetBytes: 1 << 30,
+              overflowPolicy: "reject",
+            },
+            recovery: { deviceLoss: "once" },
+          });
+          const scene = await buildParityScene();
+          session.setScene(scene);
+          session.setCamera(cameraInput());
+          session.render();
+          const rgba = await session.readRgba();
+          session.render();
+          const rgbaRepeat = await session.readRgba();
+          result.selfEqual = bytesEqual(rgba, rgbaRepeat);
+
+          const golden = await decodeGolden();
+          result.ssim = ssimRgba(rgba, golden, WIDTH, HEIGHT);
+          result.meanAbsolute = meanAbsoluteDifference(rgba, golden);
+          {
+            const diag = document.createElement("canvas");
+            diag.width = WIDTH;
+            diag.height = HEIGHT;
+            const diagCtx = diag.getContext("2d");
+            const imageData = new ImageData(new Uint8ClampedArray(rgba), WIDTH, HEIGHT);
+            diagCtx.putImageData(imageData, 0, 0);
+            result.actualPng = diag.toDataURL("image/png");
+            const diff = new Uint8ClampedArray(WIDTH * HEIGHT * 4);
+            for (let index = 0; index < rgba.length; index += 4) {
+              diff[index] = Math.abs(rgba[index] - golden[index]);
+              diff[index + 1] = Math.abs(rgba[index + 1] - golden[index + 1]);
+              diff[index + 2] = Math.abs(rgba[index + 2] - golden[index + 2]);
+              diff[index + 3] = 255;
+            }
+            const diffData = new ImageData(diff, WIDTH, HEIGHT);
+            diagCtx.putImageData(diffData, 0, 0);
+            result.diffPng = diag.toDataURL("image/png");
+          }
+          result.memory = session.getMemoryReport();
+          result.shadow = session.getShadowReport();
+
+          result.brdfRoutes = BRDF_MODELS.map((model) =>
+            resolveBrdfModel(model),
+          );
+
+          const inner = createdRuntimes.at(-1);
+          result.shadowReports = {};
+          for (const filter of SHADOW_FILTERS) {
+            const sweep = Forge3DScene.create();
+            sweep.setShadows(shadowInput(filter, 256), csmInput());
+            inner.setShadows(sweep.snapshot().shadows);
+            result.shadowReports[filter] = inner.getShadowReport();
+          }
+          result.csmRejection = await errorCode(async () => {
+            new ShadowConfig({ filter: "csm" });
+          });
+
+          const textureSet = new TextureSet({
+            baseColor: {
+              width: 1,
+              height: 1,
+              format: "rgba8unorm-srgb",
+              colorSpace: "srgb",
+              data: new Uint8Array([200, 120, 40, 255]),
+            },
+          });
+          result.textureContract = {
+            snapshot: textureSet.snapshot(),
+          };
+          result.gltfChannels = (() => {
+            const channels = extractGltfMaterialChannels(
+              new Uint8Array([11, 128, 64, 255]),
+              1,
+              1,
+            );
+            return {
+              occlusion: channels.occlusion[0],
+              roughness: channels.roughness[0],
+              metallic: channels.metallic[0],
+            };
+          })();
+          result.tangents = (() => {
+            const output = generateMeshTangents({
+              positions: new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]),
+              normals: new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1]),
+              uvs: new Float32Array([0, 0, 1, 0, 0, 1]),
+              indices: new Uint32Array([0, 1, 2]),
+            });
+            return { length: output.tangents.length };
+          })();
+          result.ktx2Contract = await errorCode(async () => {
+            const loader = new Ktx2Loader({
+              basisTranscoder: {
+                async transcode() {
+                  throw new Forge3DError(
+                    "UNSUPPORTED_FEATURE",
+                    "stub adapter must not run for invalid containers",
+                  );
+                },
+              },
+            });
+            await loader.load(new Uint8Array([1, 2, 3, 4]), {
+              semantic: "base-color",
+              capabilities: { bc: false, etc2: false, astc: false },
+            });
+          });
+
+          const iblCache = new IblCache({ namespace: "w04-parity" });
+          const source = await ImageBasedLighting.fromRGBE(
+            historicalHdrBytes(),
+            { quality: "low", intensity: IBL_INTENSITY },
+          );
+          const preparedFirst = await source.prepare(session, iblCache);
+          const second = await ImageBasedLighting.fromRGBE(
+            historicalHdrBytes(),
+            { quality: "low", intensity: IBL_INTENSITY },
+          );
+          const preparedSecond = await second.prepare(session, iblCache);
+          result.ibl = {
+            unprepared: source.report,
+            first: preparedFirst.report,
+            second: preparedSecond.report,
+          };
+
+          const reference = rgba;
+          simulateRuntimeDeviceLossForTests(inner);
+          const deadline = performance.now() + 15_000;
+          while (
+            (createdRuntimes.length === 1 || session.status !== "ready") &&
+            session.status !== "failed" &&
+            session.status !== "disposed" &&
+            performance.now() < deadline
+          ) {
+            await new Promise((resolve) => setTimeout(resolve, 10));
+          }
+          session.render();
+          const recovered = await session.readRgba();
+          result.recovery = {
+            status: session.status,
+            generations: createdRuntimes.length,
+            byteEqual: bytesEqual(reference, recovered),
+            setSceneCalls: createdRuntimes.at(-1)?.setSceneCalls,
+          };
+          result.packing = PACKED_SIZES;
+
+          session.dispose();
+          session = undefined;
+        } catch (error) {
+          result.ok = false;
+          const normalized = Forge3DError.from(error);
+          result.error = {
+            code: normalized.code,
+            message: normalized.message,
+          };
+          if (session !== undefined && !session.disposed) {
+            session.dispose();
+          }
+        } finally {
+          setSessionRuntimeFactoryForTests(undefined);
+        }
+        return result;
+      };
+    </script>
+  </body>
+</html>

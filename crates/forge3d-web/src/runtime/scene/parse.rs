@@ -13,8 +13,8 @@ mod tests;
 
 #[cfg(target_arch = "wasm32")]
 use fields::{
-    finite_number, get_property, number_tuple, optional_number, optional_string_array,
-    parse_transform, required_string,
+    finite_number, get_property, number_tuple, optional_number, optional_string,
+    optional_string_array, parse_transform, required_string,
 };
 
 #[derive(Debug, Clone, PartialEq)]
@@ -63,6 +63,7 @@ pub(super) struct ParsedNode {
     pub visible: bool,
     pub kind: ParsedNodeKind,
     pub transform: ParsedTransform,
+    pub material_slot: String,
 }
 
 #[derive(Debug, Clone)]
@@ -78,6 +79,12 @@ pub(super) struct ParsedPass {
 pub(super) struct ParsedScene {
     pub nodes: Vec<ParsedNode>,
     pub passes: Vec<ParsedPass>,
+    pub lighting: forge3d_core::lighting::LightingState,
+    pub light_ids: Vec<u32>,
+    pub materials: forge3d_core::materials::MaterialState,
+    pub texture_sets: std::collections::BTreeMap<u32, crate::runtime::textures::ParsedTextureSet>,
+    pub ibl: Option<crate::runtime::ibl::ParsedIbl>,
+    pub shadows: crate::runtime::shadows::ParsedShadows,
 }
 
 pub(super) fn invalid(message: impl Into<String>) -> WebError {
@@ -125,7 +132,46 @@ pub(super) fn parse_snapshot(value: &JsValue) -> Result<ParsedScene, WebError> {
             passes.push(parse_pass(&entry)?);
         }
     }
-    Ok(ParsedScene { nodes, passes })
+    let lighting_value = get_property(value, "lighting")?;
+    let lighting = crate::runtime::lighting::lighting_state_from_js(&lighting_value)?;
+    let light_ids = crate::runtime::lighting::lighting_light_ids_from_js(&lighting_value)?;
+    let parsed_materials = crate::runtime::textures::materials_and_textures_from_js(
+        &get_property(value, "materials")?,
+    )?;
+    let materials = parsed_materials.state;
+    let material_slots: BTreeSet<&str> = materials
+        .slots
+        .iter()
+        .map(|slot| slot.slot.as_str())
+        .collect();
+    for node in &nodes {
+        if !material_slots.contains(node.material_slot.as_str()) {
+            return Err(invalid(format!(
+                "scene node {} references unknown material slot '{}'",
+                node.id, node.material_slot
+            )));
+        }
+    }
+    let ibl_value = get_property(value, "ibl")?;
+    if ibl_value.is_undefined() {
+        return Err(invalid("scene snapshot ibl is required"));
+    }
+    let ibl = crate::runtime::ibl::ibl_from_js(&ibl_value)?;
+    let shadows_value = get_property(value, "shadows")?;
+    if shadows_value.is_undefined() {
+        return Err(invalid("scene snapshot shadows is required"));
+    }
+    let shadows = crate::runtime::shadows::shadows_from_js(&shadows_value)?;
+    Ok(ParsedScene {
+        nodes,
+        passes,
+        lighting,
+        light_ids,
+        materials,
+        texture_sets: parsed_materials.texture_sets,
+        ibl,
+        shadows,
+    })
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -198,6 +244,11 @@ fn parse_node(value: &JsValue) -> Result<ParsedNode, WebError> {
         visible,
         kind,
         transform: parse_transform(&get_property(value, "transform")?)?,
+        material_slot: optional_string(
+            &get_property(&node, "materialSlot")?,
+            "node.materialSlot",
+            "default",
+        )?,
     })
 }
 

@@ -1,5 +1,8 @@
 import { Forge3DError } from "./index.js";
+import { normalizeLightInput } from "./lighting.js";
+import { resolveBrdfModel } from "./materials.js";
 import type {
+  BrdfRoute,
   LightSlotConfig,
   MaterialSlotConfig,
   RendererConfigData,
@@ -174,6 +177,10 @@ export class RendererConfig {
   toJSON(): RendererConfigData {
     return deepCopy(this.#data);
   }
+
+  getBrdfRoute(): BrdfRoute {
+    return resolveBrdfModel(this.#data.brdfOverride ?? this.#data.shading.brdf);
+  }
 }
 
 export function rendererPresetNames(): readonly RendererPresetName[] {
@@ -283,8 +290,15 @@ function validateConfigData(data: RendererConfigData): void {
   validateShadows(data.shadows);
   validateGi(data.gi);
   validateAtmosphere(data.atmosphere);
-  if (data.brdfOverride !== undefined && data.brdfOverride.length === 0) {
-    invalid("brdfOverride", "must be a nonempty string");
+  if (data.brdfOverride !== undefined) {
+    if (data.brdfOverride.length === 0) {
+      invalid("brdfOverride", "must be a nonempty string");
+    }
+    try {
+      resolveBrdfModel(data.brdfOverride);
+    } catch {
+      invalid("brdfOverride", `unknown brdf model '${data.brdfOverride}'`);
+    }
   }
 }
 
@@ -298,22 +312,7 @@ function validateLighting(lighting: RendererConfigData["lighting"]): void {
 }
 
 function validateLight(light: LightSlotConfig): void {
-  if (typeof light.type !== "string" || light.type.length === 0) {
-    invalid("light.type", "must be a nonempty string");
-  }
-  if (!Number.isFinite(light.intensity) || light.intensity < 0) {
-    invalid("light.intensity", "must be finite and nonnegative");
-  }
-  validateUnitColor(light.color, "light.color");
-  if (light.direction !== undefined) {
-    validateVec3(light.direction, "light.direction");
-    if (light.direction.every((component) => component === 0)) {
-      invalid("light.direction", "must be nonzero");
-    }
-  }
-  if (light.position !== undefined) {
-    validateVec3(light.position, "light.position");
-  }
+  normalizeLightInput(light);
 }
 
 function validateMaterials(materials: Record<string, MaterialSlotConfig>): void {
@@ -328,16 +327,37 @@ function validateMaterials(materials: Record<string, MaterialSlotConfig>): void 
       invalid("material.model", "must be a nonempty string");
     }
     for (const value of Object.values(material.parameters)) {
-      if (typeof value === "number" && !Number.isFinite(value)) {
-        invalid("material.parameters", "numeric parameters must be finite");
+      if (typeof value === "number") {
+        if (!Number.isFinite(value)) {
+          invalid("material.parameters", "numeric parameters must be finite");
+        }
+        continue;
       }
-      if (
-        typeof value !== "number" &&
-        typeof value !== "boolean" &&
-        typeof value !== "string"
-      ) {
-        invalid("material.parameters", "must be number, boolean, or string");
+      if (typeof value === "boolean" || typeof value === "string") {
+        continue;
       }
+      if (Array.isArray(value)) {
+        const valid =
+          value.length === 4 &&
+          value.every(
+            (component) =>
+              typeof component === "number" &&
+              Number.isFinite(component) &&
+              component >= 0 &&
+              component <= 1,
+          );
+        if (!valid) {
+          invalid(
+            "material.parameters",
+            "tuple parameters must contain exactly four finite components in the 0..1 range",
+          );
+        }
+        continue;
+      }
+      invalid(
+        "material.parameters",
+        "must be number, boolean, string, or a four-component color tuple",
+      );
     }
   }
 }
@@ -345,6 +365,11 @@ function validateMaterials(materials: Record<string, MaterialSlotConfig>): void 
 function validateShading(shading: RendererConfigData["shading"]): void {
   if (typeof shading.brdf !== "string" || shading.brdf.length === 0) {
     invalid("shading.brdf", "must be a nonempty string");
+  }
+  try {
+    resolveBrdfModel(shading.brdf);
+  } catch {
+    invalid("shading.brdf", `unknown brdf model '${shading.brdf}'`);
   }
   validateUnitInterval(shading.roughness, "shading.roughness");
   validateUnitInterval(shading.metallic, "shading.metallic");
@@ -360,6 +385,16 @@ function validateShadows(shadows: RendererConfigData["shadows"]): void {
   if (typeof shadows.technique !== "string" || shadows.technique.length === 0) {
     invalid("shadows.technique", "must be a nonempty string");
   }
+  const technique = shadows.technique.trim().toLowerCase();
+  if (technique === "csm") {
+    invalid("shadows.technique", "csm is a cascade pipeline, not a shadow filter");
+  }
+  if (
+    technique !== "none" &&
+    !["hard", "pcf", "pcss", "vsm", "evsm", "msm"].includes(technique)
+  ) {
+    invalid("shadows.technique", `unknown shadow technique "${shadows.technique}"`);
+  }
   if (!Number.isSafeInteger(shadows.mapSize) || shadows.mapSize <= 0) {
     invalid("shadows.mapSize", "must be a positive safe integer");
   }
@@ -372,11 +407,13 @@ function validateShadows(shadows: RendererConfigData["shadows"]): void {
   }
   if (
     shadows.enabled &&
-    (shadows.mapSize < 256 || (shadows.mapSize & (shadows.mapSize - 1)) !== 0)
+    (shadows.mapSize < 256 ||
+      shadows.mapSize > 4096 ||
+      (shadows.mapSize & (shadows.mapSize - 1)) !== 0)
   ) {
     invalid(
       "shadows.mapSize",
-      "must be a power of two at least 256 when shadows are enabled",
+      "must be a power of two between 256 and 4096 when shadows are enabled",
     );
   }
 }
@@ -399,26 +436,6 @@ function validateAtmosphere(atmosphere: RendererConfigData["atmosphere"]): void 
   }
   if (atmosphere.hdrUrl !== undefined && atmosphere.hdrUrl.length === 0) {
     invalid("atmosphere.hdrUrl", "must be a nonempty string");
-  }
-}
-
-function validateVec3(value: [number, number, number], field: string): void {
-  if (!Array.isArray(value) || value.length !== 3) {
-    invalid(field, "must be a 3-component vector");
-  }
-  for (const component of value) {
-    if (!Number.isFinite(component)) {
-      invalid(field, "components must be finite");
-    }
-  }
-}
-
-function validateUnitColor(value: [number, number, number], field: string): void {
-  validateVec3(value, field);
-  for (const component of value) {
-    if (component < 0 || component > 1) {
-      invalid(field, "components must be in the 0..1 range");
-    }
   }
 }
 

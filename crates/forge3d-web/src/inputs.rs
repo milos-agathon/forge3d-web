@@ -131,6 +131,7 @@ pub struct TerrainHeightmapOptions {
     pub height_ao: HeightAoJsOptions,
     pub sun_visibility: SunVisibilityJsOptions,
     pub debug_view: Option<TerrainDebugViewOption>,
+    pub render_mode: Option<TerrainRenderModeOption>,
 }
 
 #[derive(Debug)]
@@ -254,6 +255,22 @@ impl TerrainDebugViewOption {
     }
 }
 
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum TerrainRenderModeOption {
+    Perspective,
+    Screen,
+}
+
+impl TerrainRenderModeOption {
+    pub(crate) fn to_core(self) -> forge3d_core::terrain::TerrainRenderMode {
+        match self {
+            Self::Perspective => forge3d_core::terrain::TerrainRenderMode::Perspective,
+            Self::Screen => forge3d_core::terrain::TerrainRenderMode::Screen,
+        }
+    }
+}
+
 #[derive(Debug, Default)]
 pub struct TerrainMetadataFields {
     pub spacing: Option<[f32; 2]>,
@@ -264,6 +281,7 @@ pub struct TerrainMetadataFields {
     pub height_ao: HeightAoJsOptions,
     pub sun_visibility: SunVisibilityJsOptions,
     pub debug_view: Option<TerrainDebugViewOption>,
+    pub render_mode: Option<TerrainRenderModeOption>,
 }
 
 pub fn read_terrain_metadata(value: &JsValue) -> Result<TerrainMetadataFields, WebError> {
@@ -279,6 +297,8 @@ pub fn read_terrain_metadata(value: &JsValue) -> Result<TerrainMetadataFields, W
         read_optional_object_property::<SunVisibilityJsOptions>(value, "sunVisibility")?
             .unwrap_or_default();
     let debug_view = read_optional_object_property::<TerrainDebugViewOption>(value, "debugView")?;
+    let render_mode =
+        read_optional_object_property::<TerrainRenderModeOption>(value, "renderMode")?;
     Ok(TerrainMetadataFields {
         spacing,
         exaggeration,
@@ -288,6 +308,7 @@ pub fn read_terrain_metadata(value: &JsValue) -> Result<TerrainMetadataFields, W
         height_ao,
         sun_visibility,
         debug_view,
+        render_mode,
     })
 }
 
@@ -441,6 +462,7 @@ impl TerrainHeightmapOptions {
             height_ao: metadata.height_ao,
             sun_visibility: metadata.sun_visibility,
             debug_view: metadata.debug_view,
+            render_mode: metadata.render_mode,
         })
     }
 
@@ -458,6 +480,7 @@ impl TerrainHeightmapOptions {
                 domain: self.domain,
                 nodata: self.nodata,
                 crs: self.crs,
+                render_mode: self.render_mode.map(TerrainRenderModeOption::to_core),
             },
         )
         .map_err(crate::error::map_core_error)?;
@@ -1077,6 +1100,7 @@ mod tests {
             height_ao: super::HeightAoJsOptions::default(),
             sun_visibility: super::SunVisibilityJsOptions::default(),
             debug_view: None,
+            render_mode: None,
         };
 
         let error = options.validate().unwrap_err();
@@ -1100,6 +1124,7 @@ mod tests {
             height_ao: super::HeightAoJsOptions::default(),
             sun_visibility: super::SunVisibilityJsOptions::default(),
             debug_view: None,
+            render_mode: None,
         };
 
         let error = options.validate().unwrap_err();

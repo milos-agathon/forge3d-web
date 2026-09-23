@@ -33,6 +33,8 @@ pub(super) fn render_runtime(runtime: &mut Forge3DRuntime) -> Result<bool, WebEr
     let timestamp_slot = runtime.query_ring.as_mut().and_then(|ring| ring.acquire());
     let frame_start = now_ms();
 
+    super::shadows::refresh_shadow_state(runtime)?;
+    super::shadows::encode_shadow_passes(runtime, &mut encoder);
     encode_scene_render_pass(
         runtime,
         &mut encoder,
@@ -297,11 +299,23 @@ pub(super) fn recreate_surface(
     let pipeline_rebuilt =
         new_format != old_format && (runtime.terrain.is_some() || runtime.scene.is_some());
     if new_format != old_format {
+        let textures = runtime.textures.as_ref().ok_or_else(|| {
+            WebError::new(
+                Forge3DErrorCode::RuntimeDisposed,
+                "Runtime texture resources are not available",
+            )
+        })?;
+        let ibl = runtime.ibl.as_ref().ok_or_else(|| {
+            WebError::new(
+                Forge3DErrorCode::RuntimeDisposed,
+                "Runtime IBL resources are not available",
+            )
+        })?;
         if let Some(terrain) = runtime.terrain.as_mut() {
             terrain.rebuild_pipeline(&context, new_format);
         }
         if let Some(scene) = runtime.scene.as_mut() {
-            scene.rebuild_pipelines(&context, new_format);
+            scene.rebuild_pipelines(&context, new_format, textures, ibl);
         }
     }
     runtime.surface_format = format!("{new_format:?}");
@@ -389,12 +403,25 @@ pub(super) fn encode_scene_render_pass(
             multiview_mask: None,
         });
 
-        if let Some(terrain) = runtime.terrain.as_ref() {
+        if let (Some(terrain), Some(lighting), Some(textures), Some(ibl)) = (
+            runtime.terrain.as_ref(),
+            runtime.lighting.as_ref(),
+            runtime.textures.as_ref(),
+            runtime.ibl.as_ref(),
+        ) {
             render_pass.set_pipeline(&terrain.pipeline);
             render_pass.set_bind_group(0, &terrain.bind_group, &[]);
+            render_pass.set_bind_group(1, &lighting.bind_group, &[]);
+            render_pass.set_bind_group(2, textures.bind_group_for(0), &[]);
+            render_pass.set_bind_group(3, &ibl.bind_group, &[]);
             render_pass.set_vertex_buffer(0, terrain.vertex_buffer.slice(..));
             render_pass.set_index_buffer(terrain.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
-            render_pass.draw_indexed(0..terrain.index_count, 0, 0..1);
+            if terrain.render_mode == 1 {
+                // Screen mode: fullscreen triangle generated from vertex_index.
+                render_pass.draw(0..3, 0..1);
+            } else {
+                render_pass.draw_indexed(0..terrain.index_count, 0, 0..1);
+            }
         }
         if let Some(scene) = runtime.scene.as_ref() {
             if let Some(bundle) = scene.world_bundle.as_ref() {

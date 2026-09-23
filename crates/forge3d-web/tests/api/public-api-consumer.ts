@@ -719,3 +719,132 @@ void manuallyManagedViewerOptions;
 void presetNames;
 void renderQuality;
 void overflowPolicy;
+
+import {
+  CascadedShadowConfig,
+  decodeRgbe,
+  extractGltfMaterialChannels,
+  generateMeshTangents,
+  getLightPreset,
+  IblCache,
+  ImageBasedLighting,
+  Ktx2Loader,
+  LightCollection,
+  lightPresetNames,
+  MaterialCollection,
+  resolveBrdfModel,
+  ShadowConfig,
+  TextureSet,
+  type BrdfRoute,
+  type GltfMaterialChannels,
+  type IblReport,
+  type IblSnapshot,
+  type LightBounds,
+  type LightId,
+  type LightingSnapshot,
+  type LightInput,
+  type LightPresetName,
+  type MaterialCollectionSnapshot,
+  type MeshTbnResult,
+  type RgbeImage,
+  type ShadowCascadeInfo,
+  type ShadowFilter,
+  type ShadowReport,
+  type ShadowSnapshot,
+  type TerrainRenderMode,
+  type TextureImageSnapshot,
+  type TextureSetSnapshot,
+} from "../../types/index";
+
+async function compileW04Declarations(): Promise<void> {
+  const renderMode: TerrainRenderMode = "screen";
+  const scene = Forge3DScene.create();
+  scene.addTerrain({ ...terrain, renderMode });
+  scene.clearLights();
+  const sun = {
+    type: "directional",
+    color: [1, 1, 1],
+    intensity: 2.4,
+    direction: [0.65, -0.41, 0.65],
+    castsShadow: true,
+  } satisfies LightInput;
+  const lightId: LightId = scene.addLight(sun);
+  scene.updateLight(lightId, { ...sun, intensity: 2 });
+  const bounds: LightBounds = scene.getLightBounds(lightId);
+  const affects: boolean = scene.lightAffectsPoint(lightId, [0, 0, 0]);
+  scene.setLightingExposure(1);
+  scene.setLightDebugBounds(false);
+  scene.setAreaLightApproximation({ mode: "sampled", sampleCount: 8 });
+  const presetNames: readonly LightPresetName[] = lightPresetNames();
+  const preset: LightInput = getLightPreset("candle");
+  const lights = LightCollection.defaults();
+  const lightingSnapshot: LightingSnapshot = lights.snapshot();
+
+  scene.setMaterial("default", { id: "default", brdf: "hair", roughness: 0.5 });
+  const route: BrdfRoute = resolveBrdfModel("blinn-phong");
+  const materialRoute: BrdfRoute = scene.getMaterialRoute("default");
+  const materials: MaterialCollectionSnapshot = new MaterialCollection().snapshot();
+
+  const textures = new TextureSet({
+    baseColor: {
+      width: 1,
+      height: 1,
+      format: "rgba8unorm-srgb",
+      colorSpace: "srgb",
+      data: new Uint8Array(4),
+    },
+  });
+  const textureSnapshot: TextureSetSnapshot = textures.snapshot();
+  const tangents: MeshTbnResult = generateMeshTangents({
+    positions: new Float32Array(9),
+    normals: new Float32Array(9),
+    uvs: new Float32Array(6),
+    indices: new Uint32Array([0, 1, 2]),
+  });
+  const channels: GltfMaterialChannels = extractGltfMaterialChannels(new Uint8Array(4), 1, 1);
+  const image: TextureImageSnapshot = await new Ktx2Loader().load(new Uint8Array(0), {
+    semantic: "base-color",
+    capabilities: { bc: false, etc2: false, astc: true },
+  });
+
+  const rgbe: RgbeImage = decodeRgbe(new Uint8Array(0));
+  const ibl = await ImageBasedLighting.fromLinear(rgbe, { quality: "low" });
+  const session = await Forge3DSession.create(offscreenCanvas, sessionOptions);
+  const prepared = await ibl.prepare(session, new IblCache({ backend: "auto" }));
+  const iblReport: IblReport = prepared.report;
+  const iblSnapshot: IblSnapshot = await session.precomputeIbl(prepared.snapshot());
+  scene.setImageBasedLighting(prepared);
+
+  const filter: ShadowFilter = "pcss";
+  scene.setShadows(new ShadowConfig({ filter }), new CascadedShadowConfig({ cascadeCount: 3 }));
+  const cascades: ShadowCascadeInfo[] = scene.getShadowCascadeInfo(0.1, 100);
+  session.setScene(scene);
+  const shadowReport: ShadowReport = session.getShadowReport();
+  const shadowSnapshot: ShadowSnapshot = scene.snapshot().shadows;
+
+  const runtime = await Forge3DRuntime.create(canvas);
+  runtime.setLighting(lightingSnapshot);
+  runtime.setMaterials(materials);
+  runtime.setIbl(null);
+  runtime.setShadows(shadowSnapshot);
+  const runtimeShadowReport: ShadowReport = runtime.getShadowReport();
+  void [
+    bounds,
+    affects,
+    presetNames,
+    preset,
+    route,
+    materialRoute,
+    textureSnapshot,
+    tangents,
+    channels,
+    image,
+    iblReport,
+    iblSnapshot,
+    cascades,
+    shadowReport,
+    runtimeShadowReport,
+  ];
+}
+
+void compileW04Declarations;

@@ -1,12 +1,15 @@
 use forge3d_core::gpu::GpuContext;
 use wgpu::util::DeviceExt;
 
-use super::geometry::ColorVertex;
+use super::geometry::{LitVertex, OverlayVertex};
 use super::pipelines::{
     create_overlay_pipeline, create_world_pipeline, OVERLAY_SHADER, WORLD_SHADER,
 };
 use crate::error::WebError;
+use crate::runtime::ibl::IblResources;
+use crate::runtime::lighting::LightingResources;
 use crate::runtime::terrain::{create_camera_uniform, DEPTH_FORMAT};
+use crate::runtime::textures::TextureResources;
 
 #[derive(Debug, Clone)]
 pub(crate) struct OverlayGeometry {
@@ -20,13 +23,14 @@ pub(crate) struct DrawRange {
     pub first_vertex: u32,
     pub vertex_count: u32,
     pub triangles: u64,
+    pub material_index: u32,
 }
 
 #[derive(Debug, Default)]
 pub(super) struct BuiltGeometry {
-    pub world_vertices: Vec<ColorVertex>,
+    pub world_vertices: Vec<LitVertex>,
     pub world_ranges: Vec<DrawRange>,
-    pub overlay_vertices: Vec<ColorVertex>,
+    pub overlay_vertices: Vec<OverlayVertex>,
     pub overlay_ranges: Vec<DrawRange>,
     pub overlays: Vec<OverlayGeometry>,
 }
@@ -35,6 +39,10 @@ pub(crate) struct NativeScene {
     camera_layout: wgpu::BindGroupLayout,
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
+    lighting_layout: wgpu::BindGroupLayout,
+    lighting_bind_group: wgpu::BindGroup,
+    texture_layout: wgpu::BindGroupLayout,
+    ibl_layout: wgpu::BindGroupLayout,
     world_shader: wgpu::ShaderModule,
     overlay_shader: wgpu::ShaderModule,
     world_pipeline: wgpu::RenderPipeline,
@@ -59,6 +67,9 @@ impl NativeScene {
         width: u32,
         height: u32,
         pass_names: Vec<String>,
+        lighting: &LightingResources,
+        textures: &TextureResources,
+        ibl: &IblResources,
     ) -> Result<Self, WebError> {
         let camera_layout =
             context
@@ -67,7 +78,7 @@ impl NativeScene {
                     label: Some("forge3d-web-scene-camera-layout"),
                     entries: &[wgpu::BindGroupLayoutEntry {
                         binding: 0,
-                        visibility: wgpu::ShaderStages::VERTEX,
+                        visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
                         ty: wgpu::BindingType::Buffer {
                             ty: wgpu::BufferBindingType::Uniform,
                             has_dynamic_offset: false,
@@ -106,14 +117,25 @@ impl NativeScene {
                 label: Some("forge3d-web-scene-overlay-shader"),
                 source: wgpu::ShaderSource::Wgsl(OVERLAY_SHADER.into()),
             });
-        let world_pipeline =
-            create_world_pipeline(&context.device, format, &camera_layout, &world_shader);
+        let world_pipeline = create_world_pipeline(
+            &context.device,
+            format,
+            &camera_layout,
+            &lighting.bind_group_layout,
+            &textures.bind_group_layout,
+            &ibl.bind_group_layout,
+            &world_shader,
+        );
         let overlay_pipeline = create_overlay_pipeline(&context.device, format, &overlay_shader);
 
         let mut scene = Self {
             camera_layout,
             camera_buffer,
             camera_bind_group,
+            lighting_layout: lighting.bind_group_layout.clone(),
+            lighting_bind_group: lighting.bind_group.clone(),
+            texture_layout: textures.bind_group_layout.clone(),
+            ibl_layout: ibl.bind_group_layout.clone(),
             world_shader,
             overlay_shader,
             world_pipeline,
@@ -129,7 +151,7 @@ impl NativeScene {
             pass_names,
         };
         scene.upload_geometry(context, &geometry);
-        scene.encode_bundles(context);
+        scene.encode_bundles(context, textures, ibl);
         Ok(scene)
     }
 
@@ -162,7 +184,12 @@ impl NativeScene {
         };
     }
 
-    pub(super) fn encode_bundles(&mut self, context: &GpuContext) {
+    pub(crate) fn encode_bundles(
+        &mut self,
+        context: &GpuContext,
+        textures: &TextureResources,
+        ibl: &IblResources,
+    ) {
         self.world_bundle = self.world_vertex_buffer.as_ref().map(|buffer| {
             let mut encoder =
                 context
@@ -180,8 +207,11 @@ impl NativeScene {
                     });
             encoder.set_pipeline(&self.world_pipeline);
             encoder.set_bind_group(0, &self.camera_bind_group, &[]);
+            encoder.set_bind_group(1, &self.lighting_bind_group, &[]);
+            encoder.set_bind_group(3, &ibl.bind_group, &[]);
             encoder.set_vertex_buffer(0, buffer.slice(..));
             for range in &self.world_ranges {
+                encoder.set_bind_group(2, textures.bind_group_for(range.material_index), &[]);
                 encoder.draw(
                     range.first_vertex..range.first_vertex + range.vertex_count,
                     0..1,
@@ -216,7 +246,14 @@ impl NativeScene {
         });
     }
 
-    pub(crate) fn rebuild_overlays(&mut self, context: &GpuContext, width: u32, height: u32) {
+    pub(crate) fn rebuild_overlays(
+        &mut self,
+        context: &GpuContext,
+        textures: &TextureResources,
+        ibl: &IblResources,
+        width: u32,
+        height: u32,
+    ) {
         let mut vertices = Vec::new();
         let mut ranges = Vec::with_capacity(self.overlays.len());
         for overlay in &self.overlays {
@@ -232,6 +269,7 @@ impl NativeScene {
                 first_vertex,
                 vertex_count: 6,
                 triangles: 2,
+                material_index: 0,
             });
         }
         self.overlay_vertex_buffer = if vertices.is_empty() {
@@ -248,7 +286,7 @@ impl NativeScene {
             )
         };
         self.overlay_ranges = ranges;
-        self.encode_bundles(context);
+        self.encode_bundles(context, textures, ibl);
     }
 
     pub(crate) fn update_camera(
@@ -265,17 +303,26 @@ impl NativeScene {
         Ok(())
     }
 
-    pub(crate) fn rebuild_pipelines(&mut self, context: &GpuContext, format: wgpu::TextureFormat) {
+    pub(crate) fn rebuild_pipelines(
+        &mut self,
+        context: &GpuContext,
+        format: wgpu::TextureFormat,
+        textures: &TextureResources,
+        ibl: &IblResources,
+    ) {
         self.world_pipeline = create_world_pipeline(
             &context.device,
             format,
             &self.camera_layout,
+            &self.lighting_layout,
+            &self.texture_layout,
+            &self.ibl_layout,
             &self.world_shader,
         );
         self.overlay_pipeline =
             create_overlay_pipeline(&context.device, format, &self.overlay_shader);
         self.format = format;
-        self.encode_bundles(context);
+        self.encode_bundles(context, textures, ibl);
     }
 
     pub(super) fn world_vertex_bytes(&self) -> u64 {
@@ -284,7 +331,7 @@ impl NativeScene {
             .iter()
             .map(|range| range.vertex_count)
             .sum::<u32>() as u64)
-            * std::mem::size_of::<ColorVertex>() as u64
+            * std::mem::size_of::<LitVertex>() as u64
     }
 
     pub(super) fn overlay_vertex_bytes(&self) -> u64 {
@@ -293,6 +340,6 @@ impl NativeScene {
             .iter()
             .map(|range| range.vertex_count)
             .sum::<u32>() as u64)
-            * std::mem::size_of::<ColorVertex>() as u64
+            * std::mem::size_of::<OverlayVertex>() as u64
     }
 }

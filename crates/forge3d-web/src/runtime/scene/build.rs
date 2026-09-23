@@ -4,7 +4,7 @@ use std::collections::BTreeSet;
 use forge3d_core::scene::{NodeId, SceneGraph};
 
 use super::super::timing::{PassDraw, PassGroup};
-use super::geometry::{self, ColorVertex};
+use super::geometry::{self, LitVertex, OverlayVertex};
 use super::gpu::{BuiltGeometry, DrawRange, OverlayGeometry};
 use super::parse::{ParsedNode, ParsedNodeKind};
 use super::Forge3DRuntime;
@@ -41,9 +41,21 @@ pub(super) fn build_geometry(
     graph: &SceneGraph,
     node_map: &BTreeMap<u32, NodeId>,
     nodes: &[ParsedNode],
+    materials: &forge3d_core::materials::MaterialState,
     width: u32,
     height: u32,
 ) -> BuiltGeometry {
+    let slot_indices: BTreeMap<&str, u32> = materials
+        .slots
+        .iter()
+        .map(|slot| (slot.slot.as_str(), slot.index))
+        .collect();
+    let material_index_of = |node: &ParsedNode| {
+        slot_indices
+            .get(node.material_slot.as_str())
+            .copied()
+            .unwrap_or(0)
+    };
     let visible = visible_node_ids(graph, node_map);
     let mut geometry = BuiltGeometry::default();
     let mut overlay_nodes = Vec::new();
@@ -72,17 +84,25 @@ pub(super) fn build_geometry(
                         *size,
                         *plane_height,
                         *color,
+                        material_index_of(node),
                     ));
                 geometry.world_ranges.push(DrawRange {
                     pass: "ground-plane".to_string(),
                     first_vertex,
                     vertex_count: 6,
                     triangles: 2,
+                    material_index: material_index_of(node),
                 });
             }
             ParsedNodeKind::TextMesh { text, size, color } => {
                 let first_vertex = geometry.world_vertices.len() as u32;
-                let vertices = geometry::text_mesh_vertices(world, text, *size, *color);
+                let vertices = geometry::text_mesh_vertices(
+                    world,
+                    text,
+                    *size,
+                    *color,
+                    material_index_of(node),
+                );
                 let vertex_count = vertices.len() as u32;
                 geometry.world_vertices.extend(vertices);
                 geometry.world_ranges.push(DrawRange {
@@ -90,6 +110,7 @@ pub(super) fn build_geometry(
                     first_vertex,
                     vertex_count,
                     triangles: u64::from(vertex_count) / 3,
+                    material_index: material_index_of(node),
                 });
             }
             ParsedNodeKind::Overlay {
@@ -113,6 +134,7 @@ pub(super) fn build_geometry(
             first_vertex,
             vertex_count: 6,
             triangles: 2,
+            material_index: 0,
         });
         geometry.overlays.push(OverlayGeometry { bounds, color });
     }
@@ -120,24 +142,28 @@ pub(super) fn build_geometry(
 }
 
 pub(super) fn checked_scene_bytes(geometry: &BuiltGeometry) -> Result<u64, WebError> {
-    let vertex_len = geometry
-        .world_vertices
-        .len()
-        .checked_add(geometry.overlay_vertices.len())
-        .ok_or_else(|| {
-            WebError::new(
-                Forge3DErrorCode::ResourceLimitExceeded,
-                "scene vertex count overflowed",
-            )
-        })? as u64;
-    vertex_len
-        .checked_mul(std::mem::size_of::<ColorVertex>() as u64)
+    let world_bytes = (geometry.world_vertices.len() as u64)
+        .checked_mul(std::mem::size_of::<LitVertex>() as u64)
         .ok_or_else(|| {
             WebError::new(
                 Forge3DErrorCode::ResourceLimitExceeded,
                 "scene vertex bytes overflowed",
             )
-        })
+        })?;
+    let overlay_bytes = (geometry.overlay_vertices.len() as u64)
+        .checked_mul(std::mem::size_of::<OverlayVertex>() as u64)
+        .ok_or_else(|| {
+            WebError::new(
+                Forge3DErrorCode::ResourceLimitExceeded,
+                "scene vertex bytes overflowed",
+            )
+        })?;
+    world_bytes.checked_add(overlay_bytes).ok_or_else(|| {
+        WebError::new(
+            Forge3DErrorCode::ResourceLimitExceeded,
+            "scene vertex bytes overflowed",
+        )
+    })
 }
 
 pub(super) fn bundle_estimate_bytes(geometry: &BuiltGeometry) -> u64 {

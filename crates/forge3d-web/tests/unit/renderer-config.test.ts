@@ -202,7 +202,7 @@ describe("RendererConfig", () => {
     const base = new RendererConfig({
       shading: { roughness: 0.2, metallic: 0.8 },
       shadows: { enabled: true, mapSize: 1024, cascades: 2 },
-      brdfOverride: "custom-brdf",
+      brdfOverride: "toon",
     });
     const copied = base.copy({
       shading: { metallic: 0.1 },
@@ -221,8 +221,34 @@ describe("RendererConfig", () => {
     expect("brdfOverride" in data).toBe(false);
 
     const unchanged = base.toJSON();
-    expect(unchanged.brdfOverride).toBe("custom-brdf");
+    expect(unchanged.brdfOverride).toBe("toon");
     expect(unchanged.shading.metallic).toBe(0.8);
+  });
+
+  it("resolves shading and override brdfs through the shared route table", () => {
+    const base = new RendererConfig();
+    expect(base.getBrdfRoute().model).toBe("cooktorrance-ggx");
+    expect(base.getBrdfRoute().implementation).toBe("exact");
+
+    const alias = new RendererConfig({ shading: { brdf: "ggx" } });
+    const aliasRoute = alias.getBrdfRoute();
+    expect(aliasRoute.model).toBe("cooktorrance-ggx");
+    expect(aliasRoute.implementation).toBe("alias");
+    expect(aliasRoute.diagnostic).toBe("ggx is an alias for cooktorrance-ggx");
+
+    const overridden = new RendererConfig({
+      shading: { brdf: "lambert" },
+      brdfOverride: "sss",
+    });
+    const route = overridden.getBrdfRoute();
+    expect(route.model).toBe("subsurface");
+    expect(route.effectiveModel).toBe("disney-principled");
+    expect(route.implementation).toBe("approximation");
+    expect(route.diagnostic).toContain("approximated by disney-principled");
+    expect(route.diagnostic).toContain("input alias sss resolves to subsurface");
+
+    const preset = RendererConfig.preset("toon-viz");
+    expect(preset.getBrdfRoute().model).toBe("toon");
   });
 
   it("returns a defensive copy from RendererConfig.from on a config", () => {
@@ -294,6 +320,16 @@ describe("RendererConfig", () => {
       () => new RendererConfig({ shading: { brdf: "" } }),
     );
     expectInvalid(
+      () => new RendererConfig({ shading: { brdf: "custom-brdf" } }),
+    );
+    expectInvalid(
+      () => new RendererConfig({ shading: { brdf: "pbr" } }),
+    );
+    expectInvalid(
+      () => new RendererConfig({ brdfOverride: "not-a-model" }),
+    );
+    expectInvalid(() => new RendererConfig({ brdfOverride: "" }));
+    expectInvalid(
       () =>
         new RendererConfig({
           materials: {
@@ -301,9 +337,160 @@ describe("RendererConfig", () => {
           },
         }),
     );
+    const withParameter = (value: unknown) => () =>
+      new RendererConfig({
+        materials: {
+          slot: { id: "slot", parameters: { baseColor: value as never } },
+        },
+      });
+    expectInvalid(withParameter([0.5, 0.5, 0.5]));
+    expectInvalid(withParameter([0.5, 0.5, 0.5, 1, 0]));
+    expectInvalid(withParameter([0.5, 0.5, 0.5, 1.5]));
+    expectInvalid(withParameter([0.5, 0.5, 0.5, -0.1]));
+    expectInvalid(withParameter([0.5, 0.5, 0.5, Number.NaN]));
+    expectInvalid(withParameter([0.5, 0.5, 0.5, Number.POSITIVE_INFINITY]));
+    expectInvalid(withParameter([0.5, "x", 0.5, 1]));
+    expectInvalid(withParameter({ r: 1, g: 1, b: 1, a: 1 }));
+    expectInvalid(withParameter(Number.NaN));
     expectInvalid(
       () =>
         new RendererConfig({ quality: "medium-high" as never }),
+    );
+  });
+
+  it("accepts baseColor tuples and scalar material parameters", () => {
+    const config = new RendererConfig({
+      materials: {
+        hero: {
+          id: "hero",
+          model: "pbr",
+          parameters: {
+            baseColor: [0.8, 0.6, 0.4, 1],
+            metallic: 1,
+            enabled: true,
+            label: "hero",
+          },
+        },
+      },
+    });
+    const data = config.toJSON();
+    expect(data.materials.hero.parameters.baseColor).toEqual([
+      0.8, 0.6, 0.4, 1,
+    ]);
+    expect(data.materials.hero.parameters.metallic).toBe(1);
+    expect(data.materials.hero.parameters.enabled).toBe(true);
+    expect(data.materials.hero.parameters.label).toBe("hero");
+  });
+
+  it("rejects unknown light types and malformed type-specific fields", () => {
+    const withLight = (light: unknown) => () =>
+      new RendererConfig({
+        lighting: { lights: [light as never] },
+      });
+
+    expectInvalid(
+      withLight({ type: "mystery", intensity: 1, color: [1, 1, 1] }),
+    );
+    expectInvalid(withLight({ type: "", intensity: 1, color: [1, 1, 1] }));
+    expectInvalid(
+      withLight({ type: "directional", intensity: 1, color: [1, 1, 1] }),
+    );
+    expectInvalid(
+      withLight({
+        type: "point",
+        intensity: 1,
+        color: [1, 1, 1],
+        position: [0, 1, 0],
+      }),
+    );
+    expectInvalid(
+      withLight({
+        type: "point",
+        intensity: 1,
+        color: [1, 1, 1],
+        range: 4,
+      }),
+    );
+    expectInvalid(
+      withLight({
+        type: "point",
+        intensity: 1,
+        color: [1, 1, 1],
+        position: [0, 1, 0],
+        range: -2,
+      }),
+    );
+    expectInvalid(
+      withLight({
+        type: "spot",
+        intensity: 1,
+        color: [1, 1, 1],
+        position: [0, 1, 0],
+        direction: [0, -1, 0],
+        range: 10,
+        innerConeDegrees: 40,
+        outerConeDegrees: 20,
+      }),
+    );
+    expectInvalid(
+      withLight({
+        type: "spot",
+        intensity: 1,
+        color: [1, 1, 1],
+        position: [0, 1, 0],
+        direction: [0, -1, 0],
+        range: 10,
+        innerConeDegrees: 10,
+      }),
+    );
+    expectInvalid(
+      withLight({
+        type: "rect",
+        intensity: 1,
+        color: [1, 1, 1],
+        position: [0, 8, 0],
+        right: [1, 0, 0],
+        up: [0, 0, 1],
+        width: 0,
+        height: 4,
+        range: 10,
+      }),
+    );
+    expectInvalid(
+      withLight({
+        type: "rect",
+        intensity: 1,
+        color: [1, 1, 1],
+        position: [0, 8, 0],
+        right: [1, 0, 0],
+        up: [3, 0, 0],
+        width: 4,
+        height: 4,
+        range: 10,
+      }),
+    );
+    expectInvalid(
+      withLight({
+        type: "spot",
+        intensity: 1,
+        color: [1, 1, 1],
+        position: [0, 1, 0],
+        direction: [0, -1, 0],
+        range: 10,
+        innerConeDegrees: 10,
+        outerConeDegrees: 30,
+        falloff: "bounced",
+      }),
+    );
+    expectInvalid(
+      withLight({
+        type: "point",
+        intensity: 1,
+        color: [1, 1, 1],
+        position: [0, 1, 0],
+        range: 10,
+        falloffExponent: 0,
+      }),
     );
   });
 

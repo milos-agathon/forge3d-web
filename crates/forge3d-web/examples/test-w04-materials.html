@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forge3D W04 Materials/Textures Test</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+      }
+
+      canvas {
+        display: block;
+        width: 160px;
+        height: 120px;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="forge3d-w04-canvas" width="160" height="120"></canvas>
+    <script type="module">
+      import {
+        Forge3DError,
+        Forge3DRuntime,
+        Forge3DScene,
+        Forge3DSession,
+        generateMeshTangents,
+        extractGltfMaterialChannels,
+      } from "../src-ts/index.ts";
+      import { setSessionRuntimeFactoryForTests } from "../src-ts/session.ts";
+      import { simulateRuntimeDeviceLossForTests } from "../src-ts/runtime-internals.ts";
+
+      const canvas = document.querySelector("#forge3d-w04-canvas");
+      const WIDTH = 160;
+      const HEIGHT = 120;
+      const CAMERA = {
+        position: [0, 4, 6],
+        target: [0, 0, 0],
+        up: [0, 1, 0],
+        fovYDegrees: 50,
+        near: 0.1,
+        far: 100,
+      };
+
+      function image(format, colorSpace, pixels) {
+        return {
+          width: 2,
+          height: 2,
+          format,
+          colorSpace,
+          data: new Uint8Array(pixels),
+          generateMipmaps: true,
+        };
+      }
+
+      function fixtureTextures() {
+        return {
+          baseColor: image("rgba8unorm-srgb", "srgb", [
+            255, 32, 32, 255,
+            32, 255, 32, 255,
+            32, 32, 255, 255,
+            255, 255, 32, 255,
+          ]),
+          normal: image("rgba8unorm", "linear", [
+            128, 128, 255, 255,
+            190, 128, 225, 255,
+            66, 128, 225, 255,
+            128, 190, 235, 255,
+          ]),
+          metallicRoughness: image("rgba8unorm", "linear", [
+            255, 32, 255, 255,
+            255, 255, 32, 255,
+            255, 128, 255, 255,
+            255, 224, 0, 255,
+          ]),
+          occlusion: image("rgba8unorm", "linear", [
+            64, 0, 0, 255,
+            255, 0, 0, 255,
+            128, 0, 0, 255,
+            192, 0, 0, 255,
+          ]),
+          emissive: image("rgba8unorm-srgb", "srgb", [
+            40, 16, 4, 255,
+            4, 40, 16, 255,
+            16, 4, 40, 255,
+            40, 40, 8, 255,
+          ]),
+        };
+      }
+
+      function texturePayloadBytes(set) {
+        let total = 0;
+        for (const key of [
+          "baseColor",
+          "normal",
+          "metallicRoughness",
+          "occlusion",
+          "emissive",
+        ]) {
+          const image = set[key];
+          if (image === undefined) {
+            continue;
+          }
+          for (const level of image.levels) {
+            total += level.data.byteLength;
+          }
+        }
+        return total;
+      }
+
+      function compareRgba(a, b) {
+        let changed = 0;
+        let maxChannelDelta = 0;
+        const pixels = Math.min(a.length, b.length) / 4;
+        for (let index = 0; index < a.length && index < b.length; index += 1) {
+          if (index % 4 === 3) {
+            continue;
+          }
+          maxChannelDelta = Math.max(maxChannelDelta, Math.abs(a[index] - b[index]));
+        }
+        for (let pixel = 0; pixel < pixels; pixel += 1) {
+          const base = pixel * 4;
+          if (
+            a[base] !== b[base] ||
+            a[base + 1] !== b[base + 1] ||
+            a[base + 2] !== b[base + 2]
+          ) {
+            changed += 1;
+          }
+        }
+        return {
+          changedFraction: pixels > 0 ? changed / pixels : 0,
+          maxChannelDelta,
+        };
+      }
+
+      function bytesEqual(a, b) {
+        if (a.byteLength !== b.byteLength) {
+          return false;
+        }
+        for (let index = 0; index < a.length; index += 1) {
+          if (a[index] !== b[index]) {
+            return false;
+          }
+        }
+        return true;
+      }
+
+      window.__forge3dW04Probe = async () => {
+        if (!navigator.gpu) {
+          return { supported: false };
+        }
+        const result = { supported: true, ok: true };
+        let session;
+        const createdRuntimes = [];
+        setSessionRuntimeFactoryForTests(async (runtimeCanvas, options) => {
+          const runtime = await Forge3DRuntime.create(runtimeCanvas, options);
+          createdRuntimes.push(runtime);
+          return runtime;
+        });
+        try {
+          const tangents = generateMeshTangents({
+            positions: new Float32Array([
+              0, 0, 0, 1, 0, 0, 1, 0, 1, 0, 0, 1,
+            ]),
+            normals: new Float32Array([
+              0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1, 0,
+            ]),
+            uvs: new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]),
+            indices: new Uint16Array([0, 1, 2, 0, 2, 3]),
+          });
+          const channels = extractGltfMaterialChannels(
+            new Uint8Array([
+              10, 20, 30, 255,
+              40, 50, 60, 255,
+              70, 80, 90, 255,
+              100, 110, 120, 255,
+            ]),
+            2,
+            2,
+          );
+          result.cpu = {
+            tangent: Array.from(tangents.tangents.slice(0, 4)),
+            occlusion: Array.from(channels.occlusion),
+            roughness: Array.from(channels.roughness),
+            metallic: Array.from(channels.metallic),
+          };
+
+          const scene = Forge3DScene.create();
+          scene.addGroundPlane({
+            name: "ground",
+            materialSlot: "tex",
+            size: [8, 8],
+            color: [1, 1, 1, 1],
+          });
+          scene.setMaterial("tex", {
+            id: "tex",
+            brdf: "lambert",
+            baseColor: [1, 1, 1, 1],
+          });
+
+          session = await Forge3DSession.create(canvas, {
+            runtime: {
+              diagnostics: true,
+              width: WIDTH,
+              height: HEIGHT,
+              devicePixelRatio: 1,
+              clearColor: [0, 0, 0, 1],
+            },
+            recovery: { deviceLoss: "once" },
+          });
+          const memoryBefore = session.getMemoryReport();
+          session.setScene(scene);
+          session.setCamera(CAMERA);
+          session.render();
+          const scalarRgba = await session.readRgba();
+
+          const texturedInput = fixtureTextures();
+          scene.setMaterial("tex", {
+            id: "tex",
+            brdf: "lambert",
+            baseColor: [1, 1, 1, 1],
+            textures: texturedInput,
+          });
+          session.render();
+          const lambertRgba = await session.readRgba();
+          result.textured = compareRgba(scalarRgba, lambertRgba);
+          result.rgbaBytes = lambertRgba.byteLength;
+
+          const snapshot = scene.getMaterial("tex");
+          const payload = texturePayloadBytes(snapshot.textures);
+          result.texturePayloadBytes = payload;
+
+          scene.setMaterial("tex", {
+            id: "tex",
+            brdf: "cooktorrance-ggx",
+            baseColor: [1, 1, 1, 1],
+            textures: fixtureTextures(),
+          });
+          session.render();
+          const ggxRgba = await session.readRgba();
+          result.brdf = compareRgba(lambertRgba, ggxRgba);
+
+          scene.setMaterial("tex", {
+            id: "tex",
+            brdf: "lambert",
+            baseColor: [1, 1, 1, 1],
+            textures: {
+              ...fixtureTextures(),
+              sampler: {
+                magFilter: "nearest",
+                minFilter: "nearest",
+                mipmapFilter: "nearest",
+                maxAnisotropy: 1,
+              },
+            },
+          });
+          session.render();
+          const nearestRgba = await session.readRgba();
+          result.nearestSampler = {
+            bytes: nearestRgba.byteLength,
+            nonzero: nearestRgba.some((value) => value !== 0),
+          };
+
+          const memoryAfter = session.getMemoryReport();
+          const nativeTexturesBefore =
+            createdRuntimes.at(-1).getMemoryReport().categories.textures ?? 0;
+
+          const generation = createdRuntimes.length;
+          simulateRuntimeDeviceLossForTests(createdRuntimes.at(-1));
+          const deadline = performance.now() + 15_000;
+          while (
+            (createdRuntimes.length === generation ||
+              session.status !== "ready") &&
+            session.status !== "failed" &&
+            session.status !== "disposed" &&
+            performance.now() < deadline
+          ) {
+            await new Promise((resolve) => setTimeout(resolve, 10));
+          }
+          session.render();
+          const recoveredRgba = await session.readRgba();
+          result.recovered = {
+            status: session.status,
+            byteEqual: bytesEqual(recoveredRgba, nearestRgba),
+            generations: createdRuntimes.length,
+          };
+          const nativeTexturesAfter =
+            createdRuntimes.at(-1).getMemoryReport().categories.textures ?? 0;
+
+          result.memory = {
+            sessionIncrease:
+              memoryAfter.currentBytes - memoryBefore.currentBytes,
+            nativeTexturesBefore,
+            nativeTexturesAfter,
+          };
+
+          session.dispose();
+          session = undefined;
+        } catch (error) {
+          result.ok = false;
+          const normalized = Forge3DError.from(error);
+          result.error = {
+            code: normalized.code,
+            message: normalized.message,
+          };
+          if (session !== undefined && !session.disposed) {
+            session.dispose();
+          }
+        } finally {
+          setSessionRuntimeFactoryForTests(undefined);
+        }
+        return result;
+      };
+    </script>
+  </body>
+</html>
