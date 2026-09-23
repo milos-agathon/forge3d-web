@@ -50,4 +50,5 @@ web-sys = { workspace = true, features = [
 ] }
 
 [dev-dependencies]
+naga = { version = "29.0.3", features = ["wgsl-in"] }
 wasm-bindgen-test = "0.3"

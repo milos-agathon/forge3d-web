@@ -249,9 +249,12 @@ fn forge3d_shadow_sample(
     let depth = clamp(projected.z, 0.0, 1.0);
     var sampled = 1.0;
     switch forge3d_shadows.control.y {
+        // #if shadow_filter_0
         case 0u: {
             sampled = forge3d_shadow_compare_sample(shadow_uv, cascade, depth);
         }
+        // #endif
+        // #if shadow_filter_1
         case 1u: {
             let radius = clamp(
                 forge3d_shadows.params1.y + forge3d_shadows.params1.w * 0.5,
@@ -260,18 +263,29 @@ fn forge3d_shadow_sample(
             );
             sampled = forge3d_shadow_pcf(shadow_uv, cascade, depth, radius);
         }
+        // #endif
+        // #if shadow_filter_2
         case 2u: {
             sampled = forge3d_shadow_pcss(shadow_uv, cascade, depth);
         }
+        // #endif
+        // #if shadow_filter_3
         case 3u: {
             sampled = forge3d_shadow_vsm(shadow_uv, cascade, depth);
         }
+        // #endif
+        // #if shadow_filter_4
         case 4u: {
             sampled = forge3d_shadow_evsm(shadow_uv, cascade, depth);
         }
+        // #endif
+        // #if shadow_filter_5
         default: {
             sampled = forge3d_shadow_msm(shadow_uv, cascade, depth);
         }
+        // #else
+        default: {}
+        // #endif
     }
     let in_bounds = forge3d_shadow_uv_in_bounds(projected.xy)
         && projected.z >= 0.0
@@ -288,6 +302,7 @@ fn forge3d_shadow_visibility(
     if (!forge3d_shadow_enabled()) {
         return 1.0;
     }
+    // #if shadows
     let count = forge3d_shadow_cascade_count();
     let cascade = forge3d_shadow_cascade_index(view_depth);
     let visibility = forge3d_shadow_sample(world_position, normal, cascade);
@@ -303,6 +318,9 @@ fn forge3d_shadow_visibility(
         can_blend,
     );
     return mix(visibility, next, weight);
+    // #else
+    return 1.0;
+    // #endif
 }
 
 fn forge3d_shadow_debug_color(
@@ -312,14 +330,18 @@ fn forge3d_shadow_debug_color(
     view_depth: f32,
 ) -> vec3<f32> {
     let mode = forge3d_shadows.control.w;
+    // #if shadow_debug_cascades
     if (mode == 1u) {
         let cascade = forge3d_shadow_cascade_index(view_depth);
         let tint = FORGE3D_SHADOW_CASCADE_COLORS[cascade];
         return base_color * 0.35 + tint * 0.65;
     }
+    // #endif
+    // #if shadow_debug_factor
     if (mode == 2u) {
         let visibility = forge3d_shadow_visibility(world_position, normal, view_depth);
         return vec3<f32>(visibility);
     }
+    // #endif
     return base_color;
 }

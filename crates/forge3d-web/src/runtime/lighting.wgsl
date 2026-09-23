@@ -58,15 +58,17 @@ fn forge3d_material(index: u32) -> PackedMaterial {
 
 fn forge3d_material_alpha(index: u32, uv: vec2<f32>) -> f32 {
     let material = forge3d_material(index);
+    var alpha = material.base_color.a;
+    // #if tex_base
     let texel = textureSample(
         forge3d_tex_base_color,
         forge3d_tex_sampler,
         uv,
     );
-    var alpha = material.base_color.a;
     if ((material.flags & 1u) != 0u) {
         alpha = alpha * texel.a;
     }
+    // #endif
     return alpha;
 }
 
@@ -131,36 +133,49 @@ fn forge3d_evaluate_lighting(
     view_depth: f32,
 ) -> vec3<f32> {
     let material = forge3d_material(material_index);
+    // #if tex_base
     let tex_base = textureSample(
         forge3d_tex_base_color,
         forge3d_tex_sampler,
         uv,
     );
+    // #endif
+    // #if tex_normal
     let tex_normal = textureSample(
         forge3d_tex_normal,
         forge3d_tex_sampler,
         uv,
     );
+    // #endif
+    // #if tex_metallic_roughness
     let tex_mr = textureSample(
         forge3d_tex_metallic_roughness,
         forge3d_tex_sampler,
         uv,
     );
+    // #endif
+    // #if tex_occlusion
     let tex_occlusion = textureSample(
         forge3d_tex_occlusion,
         forge3d_tex_sampler,
         uv,
     );
+    // #endif
+    // #if tex_emissive
     let tex_emissive = textureSample(
         forge3d_tex_emissive,
         forge3d_tex_sampler,
         uv,
     );
+    // #endif
     var base_color = vertex_color * material.base_color.rgb;
+    // #if tex_base
     if ((material.flags & 1u) != 0u) {
         base_color = base_color * tex_base.rgb;
     }
+    // #endif
     var n = forge3d_safe_direction(surface_normal);
+    // #if tex_normal
     if ((material.flags & 2u) != 0u) {
         let mapped = tex_normal.xyz * 2.0 - vec3<f32>(1.0);
         let t = forge3d_safe_direction(tangent.xyz);
@@ -169,11 +184,14 @@ fn forge3d_evaluate_lighting(
             t * mapped.x + bitangent * mapped.y + n * mapped.z,
         );
     }
+    // #endif
     var surface = material.surface;
+    // #if tex_metallic_roughness
     if ((material.flags & 4u) != 0u) {
         surface.x = surface.x * tex_mr.b;
         surface.y = surface.y * tex_mr.g;
     }
+    // #endif
     let v = forge3d_safe_direction(view_direction);
     let shadow_visibility = forge3d_shadow_visibility(world_position, n, view_depth);
     var shadow_caster_consumed = false;
@@ -192,6 +210,7 @@ fn forge3d_evaluate_lighting(
         var light_distance = 0.0;
         var finite_light = true;
         switch light.kind {
+            // #if light_directional
             case 0u: {
                 finite_light = false;
                 let to_light = forge3d_safe_direction(-light.direction_inner_cos.xyz);
@@ -210,6 +229,8 @@ fn forge3d_evaluate_lighting(
                     contribution = contribution * shadow_visibility;
                 }
             }
+            // #endif
+            // #if light_point_spot
             case 1u, 2u: {
                 let range = max(light.position_range.a, 1e-5);
                 let edge_softness = light.soft_params.y;
@@ -250,6 +271,8 @@ fn forge3d_evaluate_lighting(
                     to_light,
                 ) * color_intensity * lambert * falloff;
             }
+            // #endif
+            // #if light_rect
             default: {
                 let center = light.position_range.xyz;
                 let range = max(light.position_range.a, 1e-5);
@@ -338,7 +361,13 @@ fn forge3d_evaluate_lighting(
                     forge3d_safe_direction(-to_fragment),
                 ) * color_intensity * rect_term;
             }
+            // #else
+            default: {
+                continue;
+            }
+            // #endif
         }
+        // #if light_debug_bounds
         if (
             finite_light
             && forge3d_lighting.debug_bounds != 0u
@@ -351,17 +380,26 @@ fn forge3d_evaluate_lighting(
                 debug_hit = true;
             }
         }
+        // #endif
         direct = direct + max(contribution, vec3<f32>(0.0));
     }
+    // #if ibl
     let ibl_ambient = forge3d_eval_ibl(n, v, base_color, surface.x, surface.y);
     var ambient = select(base_color * 0.08, ibl_ambient, forge3d_ibl.enabled != 0u);
+    // #else
+    var ambient = base_color * 0.08;
+    // #endif
+    // #if tex_occlusion
     if ((material.flags & 8u) != 0u) {
         ambient = ambient * tex_occlusion.r;
     }
+    // #endif
     var result = (ambient + direct) * max(forge3d_lighting.exposure, 0.0);
+    // #if tex_emissive
     if ((material.flags & 16u) != 0u) {
         result = result + tex_emissive.rgb;
     }
+    // #endif
     if (debug_hit) {
         result = mix(result, vec3<f32>(1.0, 0.0, 1.0), 0.75);
     }

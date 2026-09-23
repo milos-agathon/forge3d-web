@@ -286,26 +286,7 @@ pub(super) fn set_terrain_options_runtime(
         .debug_view
         .map(crate::inputs::TerrainDebugViewOption::to_core)
         .unwrap_or(TerrainDebugView::None);
-    let lighting_layout = &runtime
-        .lighting
-        .as_ref()
-        .ok_or_else(|| {
-            WebError::new(
-                Forge3DErrorCode::RuntimeDisposed,
-                "Runtime lighting resources are not available",
-            )
-        })?
-        .bind_group_layout;
-    let texture_layout = &runtime
-        .textures
-        .as_ref()
-        .ok_or_else(|| {
-            WebError::new(
-                Forge3DErrorCode::RuntimeDisposed,
-                "Runtime texture resources are not available",
-            )
-        })?
-        .bind_group_layout;
+    let features = super::shader_variants::runtime_lighting_features(runtime)?;
     let candidate = select_terrain_candidate(runtime, terrain, &height_ao, &sun_visibility)?;
     let color_ramp = candidate.options.color_ramp.clone();
     let validated = candidate.options.validate()?;
@@ -321,19 +302,13 @@ pub(super) fn set_terrain_options_runtime(
         &runtime.camera,
         runtime.width,
         runtime.height,
-        lighting_layout,
-        texture_layout,
-        &runtime
-            .ibl
-            .as_ref()
-            .ok_or_else(|| {
-                WebError::new(
-                    Forge3DErrorCode::RuntimeDisposed,
-                    "Runtime IBL resources are not available",
-                )
-            })?
-            .bind_group_layout,
-        runtime.terrain_pipeline_cache.as_ref(),
+        runtime.terrain_pipeline_cache.as_mut().ok_or_else(|| {
+            WebError::new(
+                Forge3DErrorCode::RuntimeDisposed,
+                "Runtime terrain pipeline cache is not available",
+            )
+        })?,
+        features,
     )?;
     let (mesh_bytes, texture_bytes, uniform_bytes) = terrain_gpu_bytes(&candidate.allocation)?;
     runtime
@@ -624,6 +599,7 @@ pub(super) struct TerrainAnalysisOutput {
 
 /// Group-0 layout shared by the init-time validation pipeline and every
 /// terrain bind group, so the validated pipeline can be reused as-is.
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 pub(super) fn terrain_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
     device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         label: Some("forge3d-web-terrain-bind-group-layout"),
@@ -698,23 +674,79 @@ pub(super) fn terrain_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGrou
     })
 }
 
-/// Terrain pipeline compiled once per runtime (at init validation) and
-/// reused by every terrain commit with the same surface format.
-#[derive(Clone)]
+/// Feature-specialized terrain pipelines for one runtime, keyed by shader
+/// features and surface format. Init-time validation compiles the variant for
+/// the default state; terrain commits and renders reuse or add variants.
 pub(super) struct TerrainPipelineCache {
-    pub(super) surface_format: wgpu::TextureFormat,
     pub(super) bind_group_layout: wgpu::BindGroupLayout,
-    pub(super) pipeline_layout: wgpu::PipelineLayout,
-    pub(super) shader: wgpu::ShaderModule,
+    pipeline_layout: wgpu::PipelineLayout,
+    variants: std::collections::HashMap<(u64, wgpu::TextureFormat), TerrainPipelineVariant>,
+}
+
+#[derive(Clone)]
+pub(super) struct TerrainPipelineVariant {
+    pub(super) features: ShaderFeatures,
     pub(super) pipeline: wgpu::RenderPipeline,
+}
+
+impl TerrainPipelineCache {
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    pub(super) fn new(
+        device: &wgpu::Device,
+        lighting_layout: &wgpu::BindGroupLayout,
+        texture_layout: &wgpu::BindGroupLayout,
+        ibl_layout: &wgpu::BindGroupLayout,
+    ) -> Self {
+        let bind_group_layout = terrain_bind_group_layout(device);
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("forge3d-web-terrain-pipeline-layout"),
+            bind_group_layouts: &[
+                Some(&bind_group_layout),
+                Some(lighting_layout),
+                Some(texture_layout),
+                Some(ibl_layout),
+            ],
+            immediate_size: 0,
+        });
+        Self {
+            bind_group_layout,
+            pipeline_layout,
+            variants: std::collections::HashMap::new(),
+        }
+    }
+
+    /// Returns the pipeline for `features`, compiling it on first use.
+    pub(super) fn variant(
+        &mut self,
+        device: &wgpu::Device,
+        features: ShaderFeatures,
+        surface_format: wgpu::TextureFormat,
+    ) -> TerrainPipelineVariant {
+        let pipeline_layout = &self.pipeline_layout;
+        self.variants
+            .entry((features.bits(), surface_format))
+            .or_insert_with(|| {
+                let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                    label: Some("forge3d-web-terrain-shader"),
+                    source: wgpu::ShaderSource::Wgsl(specialize(TERRAIN_SHADER, features).into()),
+                });
+                let pipeline = create_terrain_render_pipeline(
+                    device,
+                    surface_format,
+                    pipeline_layout,
+                    &shader,
+                );
+                TerrainPipelineVariant { features, pipeline }
+            })
+            .clone()
+    }
 }
 
 pub(super) struct TerrainRenderResources {
     pub(super) pipeline: wgpu::RenderPipeline,
+    /// Shader features the current `pipeline` was specialized for.
     #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
-    pipeline_layout: wgpu::PipelineLayout,
-    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
-    shader: wgpu::ShaderModule,
+    pub(super) features: ShaderFeatures,
     pub(super) bind_group: wgpu::BindGroup,
     pub(super) vertex_buffer: wgpu::Buffer,
     pub(super) index_buffer: wgpu::Buffer,
@@ -752,10 +784,8 @@ impl TerrainRenderResources {
         camera: &forge3d_core::camera::CameraInput,
         width: u32,
         height: u32,
-        lighting_layout: &wgpu::BindGroupLayout,
-        texture_layout: &wgpu::BindGroupLayout,
-        ibl_layout: &wgpu::BindGroupLayout,
-        pipeline_cache: Option<&TerrainPipelineCache>,
+        pipeline_cache: &mut TerrainPipelineCache,
+        features: ShaderFeatures,
     ) -> Result<Self, WebError> {
         let (vertex_buffer, index_buffer, index_count) =
             create_terrain_mesh_buffers(context, terrain)?;
@@ -817,10 +847,7 @@ impl TerrainRenderResources {
         } else {
             None
         };
-        let cached = pipeline_cache.filter(|cache| cache.surface_format == surface_format);
-        let bind_group_layout = cached
-            .map(|cache| cache.bind_group_layout.clone())
-            .unwrap_or_else(|| terrain_bind_group_layout(&context.device));
+        let bind_group_layout = pipeline_cache.bind_group_layout.clone();
         let ao_view = ao_output
             .as_ref()
             .map(|output| &output.view)
@@ -865,46 +892,18 @@ impl TerrainRenderResources {
                     },
                 ],
             });
-        let (pipeline_layout, shader, pipeline) = match cached {
-            Some(cache) => (
-                cache.pipeline_layout.clone(),
-                cache.shader.clone(),
-                cache.pipeline.clone(),
-            ),
-            None => {
-                let pipeline_layout =
-                    context
-                        .device
-                        .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                            label: Some("forge3d-web-terrain-pipeline-layout"),
-                            bind_group_layouts: &[
-                                Some(&bind_group_layout),
-                                Some(lighting_layout),
-                                Some(texture_layout),
-                                Some(ibl_layout),
-                            ],
-                            immediate_size: 0,
-                        });
-                let shader = context
-                    .device
-                    .create_shader_module(wgpu::ShaderModuleDescriptor {
-                        label: Some("forge3d-web-terrain-shader"),
-                        source: wgpu::ShaderSource::Wgsl(TERRAIN_SHADER.into()),
-                    });
-                let pipeline = create_terrain_render_pipeline(
-                    &context.device,
-                    surface_format,
-                    &pipeline_layout,
-                    &shader,
-                );
-                (pipeline_layout, shader, pipeline)
-            }
-        };
+        let variant = pipeline_cache.variant(
+            &context.device,
+            features.with_terrain_mode(match terrain.render_mode {
+                forge3d_core::terrain::TerrainRenderMode::Perspective => 0,
+                forge3d_core::terrain::TerrainRenderMode::Screen => 1,
+            }),
+            surface_format,
+        );
 
         Ok(Self {
-            pipeline,
-            pipeline_layout,
-            shader,
+            pipeline: variant.pipeline,
+            features: variant.features,
             bind_group,
             vertex_buffer,
             index_buffer,
@@ -941,18 +940,22 @@ impl TerrainRenderResources {
         Ok(())
     }
 
+    /// Points `pipeline` at the cached variant for `features` and `surface_format`.
     #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
-    pub(super) fn rebuild_pipeline(
+    pub(super) fn use_variant(
         &mut self,
         context: &GpuContext,
+        cache: &mut TerrainPipelineCache,
+        features: ShaderFeatures,
         surface_format: wgpu::TextureFormat,
     ) {
-        self.pipeline = create_terrain_render_pipeline(
+        let variant = cache.variant(
             &context.device,
+            features.with_terrain_mode(self.render_mode),
             surface_format,
-            &self.pipeline_layout,
-            &self.shader,
         );
+        self.pipeline = variant.pipeline;
+        self.features = variant.features;
     }
 }
 
@@ -1335,6 +1338,9 @@ pub(super) fn align_copy_bytes_per_row(value: u32) -> u32 {
     value.div_ceil(alignment) * alignment
 }
 
+use super::shader_variants::{specialize, ShaderFeatures};
+
+/// Terrain WGSL template; compile variants through [`TerrainPipelineCache`].
 pub(super) const TERRAIN_SHADER: &str = concat!(
     include_str!("brdf.wgsl"),
     include_str!("ibl_lighting.wgsl"),
@@ -1405,6 +1411,7 @@ fn is_valid_height(value: f32) -> bool {
 @vertex
 fn vs_main(input: VertexInput) -> VertexOutput {
     var output: VertexOutput;
+    // #if terrain_screen
     if (params.render_mode == 1u) {
         // Screen mode: fullscreen triangle with fixed NDC coverage; the camera
         // uniform stays bound for shading-only view/specular terms.
@@ -1432,6 +1439,8 @@ fn vs_main(input: VertexInput) -> VertexOutput {
         );
         return output;
     }
+    // #endif
+    // #if terrain_perspective
     let raw_height = textureSampleLevel(heightmap, nearest_sampler, input.uv, 0.0).r;
     let height = select(params.domain_min, raw_height, is_valid_height(raw_height));
     output.height = raw_height;
@@ -1443,6 +1452,7 @@ fn vs_main(input: VertexInput) -> VertexOutput {
     );
     output.position = camera.view_projection * vec4<f32>(world_position, 1.0);
     output.world_position = world_position;
+    // #endif
     return output;
 }
 
@@ -1454,9 +1464,12 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
     if (params.debug_view == 2u) {
         return vec4<f32>(vec3<f32>(analysis_gray(input.uv, 2u)), 1.0);
     }
+    // #if terrain_screen
     if (params.render_mode == 1u) {
         return terrain_screen_shade(input);
     }
+    // #endif
+    // #if terrain_perspective
     let valid_height = is_valid_height(input.height);
     let t = clamp((input.height - params.domain_min) * params.inv_domain_span, 0.0, 1.0);
     let base_color = sample_color_ramp(t);
@@ -1489,6 +1502,9 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
     let edge_fade = terrain_edge_fade(input.uv);
     let lit = mix(color_ramp.clear_color.xyz, shaded, edge_fade);
     return vec4<f32>(select(lit, color_ramp.clear_color.xyz, !valid_height), 1.0);
+    // #else
+    return vec4<f32>(color_ramp.clear_color.xyz, 1.0);
+    // #endif
 }
 
 fn analysis_shade(uv: vec2<f32>, channel: u32) -> f32 {

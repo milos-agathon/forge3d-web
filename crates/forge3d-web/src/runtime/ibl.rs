@@ -765,6 +765,9 @@ pub(super) struct IblResources {
     pub retained_texture_bytes: u64,
     _textures: Vec<wgpu::Texture>,
     pub(super) sampler: wgpu::Sampler,
+    /// Mirrors the uniform's `enabled` lane; selects the shader IBL region.
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    pub(super) enabled: bool,
 }
 
 pub(super) fn ibl_layout_entries() -> [wgpu::BindGroupLayoutEntry; 5] {
@@ -1027,6 +1030,7 @@ fn assemble_ibl_resources(
         retained_texture_bytes,
         _textures: vec![specular, irradiance, brdf_lut],
         sampler,
+        enabled: uniform.enabled != 0,
     }
 }
 

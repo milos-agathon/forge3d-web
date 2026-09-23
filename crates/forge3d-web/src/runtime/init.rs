@@ -11,9 +11,7 @@ use super::diagnostics::AdapterDiagnostics;
 #[cfg(target_arch = "wasm32")]
 use super::memory::MemoryLedger;
 #[cfg(target_arch = "wasm32")]
-use super::terrain::{
-    create_terrain_render_pipeline, terrain_bind_group_layout, TerrainPipelineCache, TERRAIN_SHADER,
-};
+use super::terrain::TerrainPipelineCache;
 #[cfg(target_arch = "wasm32")]
 use super::timing::TimestampRing;
 #[cfg(target_arch = "wasm32")]
@@ -172,9 +170,15 @@ pub(super) async fn create_runtime(
         MemoryCategory::Buffers,
         super::ibl::IBL_UNIFORM_BYTES,
     )?;
-    let terrain_pipeline_cache =
-        validate_terrain_shader_and_pipeline(&context, surface_state.config.format, &ibl_layout)
-            .await?;
+    let terrain_pipeline_cache = validate_terrain_shader_and_pipeline(
+        &context,
+        surface_state.config.format,
+        &lighting,
+        &textures,
+        &ibl,
+        &shadows,
+    )
+    .await?;
     let depth_attachment = DepthAttachment::new(&context, width, height);
     let surface_format = format!("{:?}", surface_state.config.format);
     let surface_formats = surface_state
@@ -233,50 +237,31 @@ pub(super) async fn create_runtime(
     })
 }
 
+/// Compiles the terrain pipeline variant for the initial runtime state inside a
+/// validation scope, so shader/pipeline failures surface as
+/// `SHADER_COMPILATION_FAILED` at creation. The compiled variant seeds the
+/// runtime's terrain pipeline cache.
 #[cfg(target_arch = "wasm32")]
 async fn validate_terrain_shader_and_pipeline(
     context: &GpuContext,
     surface_format: wgpu::TextureFormat,
-    ibl_layout: &wgpu::BindGroupLayout,
+    lighting: &super::lighting::LightingResources,
+    textures: &super::textures::TextureResources,
+    ibl: &super::ibl::IblResources,
+    shadows: &super::shadows::ShadowResources,
 ) -> Result<TerrainPipelineCache, WebError> {
     let scope = context
         .device
         .push_error_scope(wgpu::ErrorFilter::Validation);
-    let bind_group_layout = terrain_bind_group_layout(&context.device);
-    let lighting_layout =
-        context
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("forge3d-web-lighting-validation-bind-group-layout"),
-                entries: &super::lighting::lighting_layout_entries(),
-            });
-    let texture_layout =
-        context
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("forge3d-web-texture-validation-bind-group-layout"),
-                entries: &super::textures::texture_layout_entries(),
-            });
-    let pipeline_layout = context
-        .device
-        .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("forge3d-web-terrain-validation-pipeline-layout"),
-            bind_group_layouts: &[
-                Some(&bind_group_layout),
-                Some(&lighting_layout),
-                Some(&texture_layout),
-                Some(ibl_layout),
-            ],
-            immediate_size: 0,
-        });
-    let shader = context
-        .device
-        .create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("forge3d-web-terrain-shader"),
-            source: wgpu::ShaderSource::Wgsl(TERRAIN_SHADER.into()),
-        });
-    let pipeline =
-        create_terrain_render_pipeline(&context.device, surface_format, &pipeline_layout, &shader);
+    let mut cache = TerrainPipelineCache::new(
+        &context.device,
+        &lighting.bind_group_layout,
+        &textures.bind_group_layout,
+        &ibl.bind_group_layout,
+    );
+    let features =
+        super::shader_variants::lighting_features(lighting, ibl, shadows).with_terrain_mode(0);
+    cache.variant(&context.device, features, surface_format);
 
     if let Some(error) = scope.pop().await {
         return Err(WebError::new(
@@ -284,13 +269,7 @@ async fn validate_terrain_shader_and_pipeline(
             format!("forge3d-web-terrain-shader/pipeline: {error}"),
         ));
     }
-    Ok(TerrainPipelineCache {
-        surface_format,
-        bind_group_layout,
-        pipeline_layout,
-        shader,
-        pipeline,
-    })
+    Ok(cache)
 }
 
 #[cfg(not(target_arch = "wasm32"))]

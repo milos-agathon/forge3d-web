@@ -430,6 +430,11 @@ pub(super) struct ShadowResources {
     effective_map_size: u32,
     pub(super) caster: Option<ShadowCaster>,
     report: ShadowReportState,
+    /// Mirrors the shadow uniform's `control` lanes last written to the GPU
+    /// (`[enabled, filter lane, cascade count, debug mode]`); selects shader
+    /// variant regions. The uniform buffer starts zeroed.
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    pub(super) control: [u32; 4],
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -898,6 +903,7 @@ impl ShadowResources {
             csm,
             effective_map_size: map_size,
             caster: None,
+            control: [0; 4],
             report: ShadowReportState {
                 requested_filter: config.filter.name().to_string(),
                 effective_filter: config.filter.name().to_string(),
@@ -1014,6 +1020,7 @@ impl PreparedShadowState {
             bytemuck::bytes_of(&self.moments_uniform),
         );
         shadows.caster = self.caster;
+        shadows.control = self.uniform.control;
         // Disabled shadows cast from no light; match the scene-side report.
         shadows.report.caster_light_id = self
             .caster

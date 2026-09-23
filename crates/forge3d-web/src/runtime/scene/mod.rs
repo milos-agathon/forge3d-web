@@ -235,6 +235,16 @@ fn prepare_scene(
                 lighting_resources,
                 &textures,
                 &ibl_resources,
+                super::shader_variants::ShaderFeatures::for_lighting(
+                    &lighting_resources.state,
+                    &lighting_resources.material_state,
+                    ibl_resources.enabled,
+                    runtime
+                        .shadows
+                        .as_ref()
+                        .map(|shadows| shadows.control)
+                        .unwrap_or([0; 4]),
+                ),
             )?;
             let vertex_bytes = scene
                 .world_vertex_bytes()

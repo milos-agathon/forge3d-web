@@ -34,6 +34,7 @@ pub(super) fn render_runtime(runtime: &mut Forge3DRuntime) -> Result<bool, WebEr
     let frame_start = now_ms();
 
     super::shadows::refresh_shadow_state(runtime)?;
+    super::shader_variants::sync_pipelines(runtime)?;
     super::shadows::encode_shadow_passes(runtime, &mut encoder);
     encode_scene_render_pass(
         runtime,
@@ -311,8 +312,12 @@ pub(super) fn recreate_surface(
                 "Runtime IBL resources are not available",
             )
         })?;
-        if let Some(terrain) = runtime.terrain.as_mut() {
-            terrain.rebuild_pipeline(&context, new_format);
+        if let (Some(terrain), Some(cache)) = (
+            runtime.terrain.as_mut(),
+            runtime.terrain_pipeline_cache.as_mut(),
+        ) {
+            let features = terrain.features;
+            terrain.use_variant(&context, cache, features, new_format);
         }
         if let Some(scene) = runtime.scene.as_mut() {
             scene.rebuild_pipelines(&context, new_format, textures, ibl);

@@ -9,6 +9,7 @@ mod memory;
 mod readback;
 mod render;
 mod scene;
+mod shader_variants;
 mod shadows;
 mod terrain;
 mod textures;

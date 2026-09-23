@@ -8,6 +8,7 @@ use super::pipelines::{
 use crate::error::WebError;
 use crate::runtime::ibl::IblResources;
 use crate::runtime::lighting::LightingResources;
+use crate::runtime::shader_variants::{specialize, ShaderFeatures};
 use crate::runtime::terrain::{create_camera_uniform, DEPTH_FORMAT};
 use crate::runtime::textures::TextureResources;
 
@@ -44,6 +45,8 @@ pub(crate) struct NativeScene {
     texture_layout: wgpu::BindGroupLayout,
     ibl_layout: wgpu::BindGroupLayout,
     world_shader: wgpu::ShaderModule,
+    /// Shader features `world_shader`/`world_pipeline` were specialized for.
+    world_features: ShaderFeatures,
     overlay_shader: wgpu::ShaderModule,
     world_pipeline: wgpu::RenderPipeline,
     overlay_pipeline: wgpu::RenderPipeline,
@@ -70,6 +73,7 @@ impl NativeScene {
         lighting: &LightingResources,
         textures: &TextureResources,
         ibl: &IblResources,
+        world_features: ShaderFeatures,
     ) -> Result<Self, WebError> {
         let camera_layout =
             context
@@ -105,12 +109,7 @@ impl NativeScene {
                     resource: camera_buffer.as_entire_binding(),
                 }],
             });
-        let world_shader = context
-            .device
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("forge3d-web-scene-world-shader"),
-                source: wgpu::ShaderSource::Wgsl(WORLD_SHADER.into()),
-            });
+        let world_shader = create_world_shader(context, world_features);
         let overlay_shader = context
             .device
             .create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -137,6 +136,7 @@ impl NativeScene {
             texture_layout: textures.bind_group_layout.clone(),
             ibl_layout: ibl.bind_group_layout.clone(),
             world_shader,
+            world_features,
             overlay_shader,
             world_pipeline,
             overlay_pipeline,
@@ -303,6 +303,33 @@ impl NativeScene {
         Ok(())
     }
 
+    /// Recompiles the world pipeline for `features` and re-encodes the world
+    /// bundle when they differ from the current specialization.
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    pub(crate) fn use_world_variant(
+        &mut self,
+        context: &GpuContext,
+        features: ShaderFeatures,
+        textures: &TextureResources,
+        ibl: &IblResources,
+    ) {
+        if self.world_features == features {
+            return;
+        }
+        self.world_shader = create_world_shader(context, features);
+        self.world_features = features;
+        self.world_pipeline = create_world_pipeline(
+            &context.device,
+            self.format,
+            &self.camera_layout,
+            &self.lighting_layout,
+            &self.texture_layout,
+            &self.ibl_layout,
+            &self.world_shader,
+        );
+        self.encode_bundles(context, textures, ibl);
+    }
+
     pub(crate) fn rebuild_pipelines(
         &mut self,
         context: &GpuContext,
@@ -342,4 +369,13 @@ impl NativeScene {
             .sum::<u32>() as u64)
             * std::mem::size_of::<OverlayVertex>() as u64
     }
+}
+
+fn create_world_shader(context: &GpuContext, features: ShaderFeatures) -> wgpu::ShaderModule {
+    context
+        .device
+        .create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("forge3d-web-scene-world-shader"),
+            source: wgpu::ShaderSource::Wgsl(specialize(WORLD_SHADER, features).into()),
+        })
 }

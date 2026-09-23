@@ -244,45 +244,71 @@ fn forge3d_eval_brdf(
     l: vec3<f32>,
 ) -> vec3<f32> {
     switch model {
+        // #if brdf_0
         case 0u: {
             return forge3d_diffuse_lambert(base_color, surface.x);
         }
+        // #endif
+        // #if brdf_1
         case 1u: {
             return forge3d_phong(base_color, surface, n, v, l);
         }
+        // #endif
+        // #if brdf_2
         case 2u: {
             return forge3d_phong(base_color, surface, n, v, l);
         }
+        // #endif
+        // #if brdf_3
         case 3u: {
             return forge3d_oren_nayar(base_color, surface, n, v, l);
         }
+        // #endif
+        // #if brdf_4
         case 4u: {
             return forge3d_cook_torrance(base_color, surface, n, v, l, false);
         }
+        // #endif
+        // #if brdf_5
         case 5u: {
             return forge3d_cook_torrance(base_color, surface, n, v, l, true);
         }
+        // #endif
+        // #if brdf_6
         case 6u: {
             return forge3d_disney(base_color, surface, lobes, n, v, l);
         }
+        // #endif
+        // #if brdf_11
         case 11u: {
             return forge3d_disney(base_color, surface, lobes, n, v, l);
         }
+        // #endif
+        // #if brdf_7
         case 7u: {
             return forge3d_ashikhmin(base_color, surface, lobes, n, v, l);
         }
+        // #endif
+        // #if brdf_12
         case 12u: {
             return forge3d_ashikhmin(base_color, surface, lobes, n, v, l);
         }
+        // #endif
+        // #if brdf_8
         case 8u: {
             return forge3d_ward(base_color, surface, lobes, n, v, l);
         }
+        // #endif
+        // #if brdf_9
         case 9u: {
             return forge3d_toon(base_color, surface, n, l);
         }
+        // #endif
+        // #if brdf_10
         case 10u: {
             return forge3d_minnaert(base_color, surface, lobes, n, v, l);
         }
+        // #endif
         default: {
             return forge3d_diffuse_lambert(base_color, surface.x);
         }

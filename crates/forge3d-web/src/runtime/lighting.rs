@@ -45,7 +45,7 @@ pub(super) struct LightingResources {
     pub bind_group: wgpu::BindGroup,
     pub(super) state: LightingState,
     pub(super) light_ids: Vec<u32>,
-    material_state: MaterialState,
+    pub(super) material_state: MaterialState,
 }
 
 impl LightingResources {
