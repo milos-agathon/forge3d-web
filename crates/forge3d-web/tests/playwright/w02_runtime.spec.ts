@@ -15,6 +15,9 @@ test("W02 runtime integrates session, offscreen, and worker paths", async ({
   page,
   webgpuAvailability,
 }) => {
+  // Creates several WebGPU runtimes; each compiles the W04 shared-lighting
+  // terrain/scene pipelines, which uncached CI GPUs compile slowly.
+  test.slow();
   skipRenderAssertionsWhenProbing(webgpuAvailability);
   const pageErrors: string[] = [];
   const consoleErrors: string[] = [];
@@ -130,6 +133,9 @@ test("survives 30 create/render/loss/dispose cycles without leaks", async ({
   page,
   webgpuAvailability,
 }) => {
+  // Creates several WebGPU runtimes; each compiles the W04 shared-lighting
+  // terrain/scene pipelines, which uncached CI GPUs compile slowly.
+  test.slow();
   skipRenderAssertionsWhenProbing(webgpuAvailability);
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));

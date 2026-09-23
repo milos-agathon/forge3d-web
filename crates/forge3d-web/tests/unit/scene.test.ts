@@ -2,10 +2,29 @@ import { describe, expect, it, vi } from "vitest";
 
 import { Forge3DError } from "../../src-ts/index.js";
 import type {
+  PointLightInput,
   SceneNodeInput,
   TerrainHeightmapInput,
 } from "../../src-ts/index.js";
+import { ImageBasedLighting } from "../../src-ts/ibl.js";
 import { Forge3DScene } from "../../src-ts/scene.js";
+
+const DEFAULT_LIGHTING_BYTES = 64 * 112 + 32;
+const DEFAULT_MATERIAL_BYTES = 256 * 64 + 16;
+const SCENE_OVERHEAD_BYTES = DEFAULT_LIGHTING_BYTES + DEFAULT_MATERIAL_BYTES;
+
+function pointLight(
+  overrides: Partial<PointLightInput> = {},
+): PointLightInput {
+  return {
+    type: "point",
+    color: [1, 1, 1],
+    intensity: 1,
+    position: [0, 0, 0],
+    range: 10,
+    ...overrides,
+  };
+}
 
 function terrain(width = 3, height = 3): TerrainHeightmapInput {
   return {
@@ -581,9 +600,11 @@ describe("Forge3DScene", () => {
     scene.addNode({ kind: "group", name: "free" });
     scene.addNode({ kind: "custom", name: "free2", layerType: "x" });
 
-    const expected = 36 + 180 + 96 + 168 + 504 + 144;
+    const expected = 36 + 180 + 96 + 168 + 504 + 144 + SCENE_OVERHEAD_BYTES;
     expect(scene.estimatedGpuBytes()).toBe(expected);
-    expect(Forge3DScene.create().estimatedGpuBytes()).toBe(0);
+    expect(Forge3DScene.create().estimatedGpuBytes()).toBe(
+      SCENE_OVERHEAD_BYTES,
+    );
   });
 
   it("defensively copies nodes, snapshots, and scene copies", () => {
@@ -629,8 +650,9 @@ describe("Forge3DScene", () => {
     expect(scene.getNode(id)!.id).toBe(id);
     expect(scene.getNodes()).toHaveLength(1);
     expect(scene.snapshot().nodes).toHaveLength(1);
-    expect(scene.estimatedGpuBytes()).toBe(0);
+    expect(scene.estimatedGpuBytes()).toBe(SCENE_OVERHEAD_BYTES);
     expect(scene.getRenderPlan().passes).toEqual([]);
+    expect(scene.getLights()).toHaveLength(1);
 
     for (const operation of [
       () => scene.addNode({ kind: "group", name: "b" }),
@@ -640,6 +662,16 @@ describe("Forge3DScene", () => {
       () => scene.removeNode(id),
       () => scene.addPass({ name: "p", kind: "render" }),
       () => scene.removePass("p"),
+      () => scene.addLight(pointLight()),
+      () => scene.updateLight(0, pointLight()),
+      () => scene.removeLight(0),
+      () => scene.clearLights(),
+      () => scene.setLightingExposure(1.2),
+      () => scene.setLightDebugBounds(true),
+      () => scene.setAreaLightApproximation({ mode: "sampled" }),
+      () => scene.setMaterial("hero", { id: "hero" }),
+      () => scene.removeMaterial("hero"),
+      () => scene.clearMaterials(),
     ]) {
       try {
         operation();
@@ -648,5 +680,290 @@ describe("Forge3DScene", () => {
         expect((error as Forge3DError).code).toBe("RUNTIME_DISPOSED");
       }
     }
+  });
+});
+
+describe("Forge3DScene lighting", () => {
+  it("starts with the default directional key light and can clear it", () => {
+    const scene = Forge3DScene.create();
+    const lights = scene.getLights();
+    expect(lights).toHaveLength(1);
+    expect(lights[0]!.type).toBe("directional");
+    expect(lights[0]!.intensity).toBe(3);
+    expect(lights[0]!.enabled).toBe(true);
+
+    scene.clearLights();
+    expect(scene.getLights()).toEqual([]);
+    expect(scene.snapshot().lighting.lights).toEqual([]);
+    expect(scene.snapshot().lighting.maxLights).toBe(64);
+  });
+
+  it("bumps revision exactly once per effective light mutation", () => {
+    const scene = Forge3DScene.create();
+    const base = scene.revision;
+
+    const id = scene.addLight(pointLight());
+    expect(id).toBe(1);
+    expect(scene.revision).toBe(base + 1);
+
+    scene.updateLight(id, pointLight({ intensity: 2 }));
+    expect(scene.revision).toBe(base + 2);
+    expect(scene.getLight(id)!.intensity).toBe(2);
+
+    expectInvalid(() =>
+      scene.updateLight(id, pointLight({ range: -1 })),
+    );
+    expect(scene.revision).toBe(base + 2);
+    expectInvalid(() => scene.updateLight(999, pointLight()));
+    expect(scene.revision).toBe(base + 2);
+    expectInvalid(() =>
+      scene.addLight(pointLight({ color: [2, 0, 0] })),
+    );
+    expect(scene.revision).toBe(base + 2);
+
+    expect(scene.removeLight(id)).toBe(true);
+    expect(scene.revision).toBe(base + 3);
+    expect(scene.removeLight(id)).toBe(false);
+    expect(scene.revision).toBe(base + 3);
+
+    scene.setLightingExposure(1.4);
+    expect(scene.revision).toBe(base + 4);
+    scene.setLightDebugBounds(true);
+    expect(scene.revision).toBe(base + 5);
+    scene.setAreaLightApproximation({ sampleCount: 8 });
+    expect(scene.revision).toBe(base + 6);
+
+    scene.clearLights();
+    expect(scene.revision).toBe(base + 7);
+    scene.clearLights();
+    expect(scene.revision).toBe(base + 7);
+  });
+
+  it("exposes light reads, bounds, and point queries", () => {
+    const scene = Forge3DScene.create();
+    const lamp = scene.addLight(
+      pointLight({ position: [0, 4, 0], range: 6, edgeSoftness: 1 }),
+    );
+    expect(scene.getLight(lamp)!.type).toBe("point");
+    expect(scene.getLightBounds(lamp)).toEqual({
+      kind: "sphere",
+      center: [0, 4, 0],
+      radius: 7,
+    });
+    expect(scene.lightAffectsPoint(lamp, [0, 10, 0])).toBe(true);
+    expect(scene.lightAffectsPoint(lamp, [0, 12, 0])).toBe(false);
+
+    const key = scene.getLights()[0]!;
+    expect(scene.getLightBounds(key.id)).toEqual({ kind: "unbounded" });
+    expect(scene.lightAffectsPoint(key.id, [100, -50, 3])).toBe(true);
+
+    expectInvalid(() => scene.getLightBounds(999));
+    expectInvalid(() => scene.lightAffectsPoint(999, [0, 0, 0]));
+    expect(scene.getLight(999)).toBeUndefined();
+  });
+
+  it("carries normalized lighting config in snapshots", () => {
+    const scene = Forge3DScene.create();
+    scene.setLightingExposure(2);
+    scene.setLightDebugBounds(true);
+    scene.setAreaLightApproximation({ mode: "sampled", sampleCount: 16 });
+    const snapshot = scene.snapshot();
+    expect(snapshot.lighting.exposure).toBe(2);
+    expect(snapshot.lighting.debugBounds).toBe(true);
+    expect(snapshot.lighting.areaLights).toEqual({
+      mode: "sampled",
+      sampleCount: 16,
+      lutSize: 64,
+    });
+    expect(snapshot.lighting.lights).toHaveLength(1);
+    expectInvalid(() => scene.setLightingExposure(-1));
+    expectInvalid(() =>
+      scene.setAreaLightApproximation({ sampleCount: 5 as never }),
+    );
+  });
+
+  it("isolates lighting across snapshot() and copy()", () => {
+    const scene = Forge3DScene.create();
+    const lamp = scene.addLight(pointLight({ intensity: 2 }));
+
+    const snapshot = scene.snapshot();
+    const stored = snapshot.lighting.lights[1]!;
+    expect(stored.id).toBe(lamp);
+    if (stored.type === "point") {
+      stored.position[0] = 99;
+    }
+    const reread = scene.getLight(lamp)!;
+    expect(reread.type === "point" ? reread.position[0] : null).toBe(0);
+
+    const copied = scene.copy();
+    copied.removeLight(lamp);
+    copied.setLightingExposure(0.25);
+    expect(scene.getLight(lamp)).toBeDefined();
+    expect(scene.snapshot().lighting.exposure).toBe(1);
+    expect(copied.getLight(lamp)).toBeUndefined();
+    expect(copied.snapshot().lighting.lights).toHaveLength(1);
+  });
+
+  it("keeps stable light ids across removals", () => {
+    const scene = Forge3DScene.create();
+    const keyId = scene.getLights()[0]!.id;
+    const lamp = scene.addLight(pointLight());
+    scene.removeLight(keyId);
+    const next = scene.addLight(pointLight());
+    expect(next).toBe(2);
+    expect(scene.getLights().map((light) => light.id)).toEqual([lamp, next]);
+  });
+});
+
+describe("Forge3DScene materials", () => {
+  it("starts with the default material slot and exposes it", () => {
+    const scene = Forge3DScene.create();
+    const materials = scene.getMaterials();
+    expect(materials).toHaveLength(1);
+    expect(materials[0]!.slot).toBe("default");
+    expect(materials[0]!.index).toBe(0);
+    expect(materials[0]!.material.brdf).toBe("cooktorrance-ggx");
+    expect(scene.getMaterial("default")!.roughness).toBe(0.5);
+    expect(scene.getMaterialRoute("default").implementation).toBe("exact");
+    expect(scene.getMaterial("missing")).toBeUndefined();
+  });
+
+  it("bumps revision once per effective material mutation", () => {
+    const scene = Forge3DScene.create();
+    const base = scene.revision;
+
+    scene.setMaterial("hero", { id: "hero", brdf: "oren-nayar" });
+    expect(scene.revision).toBe(base + 1);
+    expect(scene.getMaterial("hero")!.brdf).toBe("oren-nayar");
+
+    scene.setMaterial("hero", { id: "hero", brdf: "ward" });
+    expect(scene.revision).toBe(base + 2);
+
+    expect(scene.removeMaterial("hero")).toBe(true);
+    expect(scene.revision).toBe(base + 3);
+    expect(scene.removeMaterial("hero")).toBe(false);
+    expect(scene.revision).toBe(base + 3);
+    expect(scene.removeMaterial("default")).toBe(false);
+    expect(scene.revision).toBe(base + 3);
+
+    scene.clearMaterials();
+    expect(scene.revision).toBe(base + 3);
+    scene.setMaterial("hero", { id: "hero" });
+    scene.clearMaterials();
+    expect(scene.revision).toBe(base + 5);
+    expect(scene.getMaterials()).toHaveLength(1);
+
+    expectInvalid(() => scene.setMaterial("bad", { id: "" }));
+    expectInvalid(() => scene.getMaterialRoute("missing"));
+  });
+
+  it("carries materials and node materialSlot in snapshots and copies", () => {
+    const scene = Forge3DScene.create();
+    scene.setMaterial("hero", {
+      id: "hero",
+      brdf: "sss",
+      baseColor: [0.8, 0.2, 0.2, 1],
+    });
+    const mesh = Forge3DScene.create();
+    const nodeId = scene.addNode({
+      kind: "group",
+      name: "routed",
+      materialSlot: "hero",
+    });
+    void mesh;
+
+    const snapshot = scene.snapshot();
+    expect(snapshot.materials.revision).toBeGreaterThan(0);
+    const hero = snapshot.materials.materials.find(
+      (entry) => entry.slot === "hero",
+    )!;
+    expect(hero.material.brdf).toBe("subsurface");
+    expect(hero.material.route.effectiveModel).toBe("disney-principled");
+    expect(hero.material.route.implementation).toBe("approximation");
+    expect(snapshot.nodes[0]!.node.materialSlot).toBe("hero");
+    void nodeId;
+
+    hero.material.baseColor[0] = 9;
+    expect(scene.getMaterial("hero")!.baseColor[0]).toBe(0.8);
+
+    const copied = scene.copy();
+    copied.setMaterial("hero", { id: "hero", brdf: "lambert" });
+    expect(scene.getMaterial("hero")!.brdf).toBe("subsurface");
+    expect(copied.getMaterial("hero")!.brdf).toBe("lambert");
+    expect(copied.getMaterials().find((e) => e.slot === "hero")!.index).toBe(
+      hero.index,
+    );
+  });
+
+  it("includes material bytes in the memory estimate", () => {
+    const scene = Forge3DScene.create();
+    expect(scene.estimatedGpuBytes()).toBe(SCENE_OVERHEAD_BYTES);
+  });
+});
+
+describe("Forge3DScene image-based lighting", () => {
+  async function lowIbl(): Promise<ImageBasedLighting> {
+    return ImageBasedLighting.fromLinear(
+      {
+        width: 2,
+        height: 1,
+        data: new Float32Array([1, 0.5, 0.25, 1, 0.2, 0.4, 0.8, 1]),
+      },
+      { quality: "low", intensity: 0.75 },
+    );
+  }
+
+  it("defaults to a null IBL snapshot", () => {
+    const scene = Forge3DScene.create();
+    expect(scene.getImageBasedLighting()).toBeUndefined();
+    expect(scene.snapshot().ibl).toBeNull();
+  });
+
+  it("stores, snapshots, and clears IBL defensively", async () => {
+    const scene = Forge3DScene.create();
+    const ibl = await lowIbl();
+    const revision = scene.revision;
+    scene.setImageBasedLighting(ibl);
+    expect(scene.revision).toBe(revision + 1);
+
+    const snapshot = scene.snapshot();
+    expect(snapshot.ibl).not.toBeNull();
+    expect(snapshot.ibl!.intensity).toBe(0.75);
+    expect(snapshot.ibl!.requestedQuality).toBe("low");
+    expect(snapshot.ibl!.report.effectiveMode).toBe("runtime-precompute");
+
+    const fetched = scene.getImageBasedLighting();
+    expect(fetched).not.toBe(ibl);
+    expect(fetched!.snapshot()).toEqual(ibl.snapshot());
+    fetched!.snapshot().source.data[0] = 55;
+    expect(scene.snapshot().ibl!.source.data[0]).toBe(1);
+
+    scene.setImageBasedLighting(undefined);
+    expect(scene.snapshot().ibl).toBeNull();
+    expect(scene.getImageBasedLighting()).toBeUndefined();
+  });
+
+  it("rejects non-ImageBasedLighting values", () => {
+    const scene = Forge3DScene.create();
+    expectInvalid(() =>
+      scene.setImageBasedLighting({} as ImageBasedLighting),
+    );
+  });
+
+  it("copies IBL across scene copies", async () => {
+    const scene = Forge3DScene.create();
+    const ibl = await lowIbl();
+    scene.setImageBasedLighting(ibl);
+    const copy = scene.copy();
+    expect(copy.snapshot().ibl).toEqual(scene.snapshot().ibl);
+    copy.setImageBasedLighting(undefined);
+    expect(scene.snapshot().ibl).not.toBeNull();
+  });
+
+  it("includes IBL bytes in the memory estimate", async () => {
+    const scene = Forge3DScene.create();
+    const baseline = scene.estimatedGpuBytes();
+    scene.setImageBasedLighting(await lowIbl());
+    expect(scene.estimatedGpuBytes()).toBeGreaterThan(baseline);
   });
 });

@@ -4,7 +4,7 @@
   "manifestId": "forge3d-composite-baseline-v1",
   "sourcePlan": {
     "path": "docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md",
-    "sha256": "90e16fc95c7f5e9e7254fd1f4d059766780ac55f5f0d1df3ab0dcbad18185a7d"
+    "sha256": "59cf1335e944455d797ed3055959f123b860fc61081935c0948f06c5a10fbcb6"
   },
   "baselineLayers": [
     {
@@ -1002,7 +1002,7 @@
       "title": "Directional/point/spot lights and presets",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W04",
       "nativeCapability": "Directional/point/spot lights and presets: 1f4084a:src/lighting/light.rs, src/lighting/light_buffer/**, tests/test_light_feature_enablement.py, tests/test_lighting_preset.py",
       "requiredWebOutcome": "Replace fixed shader lights with typed mutable collection, shadows and debug bounds",
@@ -1026,7 +1026,7 @@
       "title": "Soft light radius/falloff presets",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W04",
       "nativeCapability": "Soft light radius/falloff presets: 1f4084a:src/core/soft_light_radius.rs, src/scene/py_api/soft_light.rs, tests/test_light_feature_enablement.py",
       "requiredWebOutcome": "Add controls, effective range and point-affects-light query",
@@ -1049,7 +1049,7 @@
       "title": "LTC rectangle lights",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W04",
       "nativeCapability": "LTC rectangle lights: 1f4084a:src/core/ltc_area_lights.rs, src/lighting/area_lights.rs, src/scene/py_api/rect_area_lights.rs",
       "requiredWebOutcome": "Add LUT, rect/two-sided lights and approximation controls",
@@ -1072,7 +1072,7 @@
       "title": "BRDF/material routing, including alias/approximation routes",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W04",
       "nativeCapability": "BRDF/material routing, including alias/approximation routes: 1f4084a:src/shaders/brdf/**, src/render/params/shading.rs, tests/test_lighting_alignment.py",
       "requiredWebOutcome": "Port the exact final enum and observable routing for Lambert, Phong/Blinn, Oren-Nayar, GGX/Beckmann, Disney, Ashikhmin, Ward, Toon, Minnaert, Subsurface and Hair; diagnose aliases/approximations",
@@ -1095,7 +1095,7 @@
       "title": "PBR textures, TBN/normal maps, samplers/mipmaps, compressed/KTX2 textures and glTF MR channels",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W04",
       "nativeCapability": "PBR textures, TBN/normal maps, samplers/mipmaps, compressed/KTX2 textures and glTF MR channels: 1f4084a:src/mesh/tbn.rs, src/core/compressed_textures.rs, src/loaders/ktx2/**, src/io/gltf_read.rs, tests/test_mesh_tbn.py",
       "requiredWebOutcome": "Add typed texture/material sets, color spaces, TBN, transcode and channel extraction",
@@ -1122,7 +1122,7 @@
       "title": "IBL conversion, irradiance, specular prefilter, BRDF LUT and disk cache",
       "lifecycle": "FP",
       "evidenceGrade": "B",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W04",
       "nativeCapability": "IBL conversion, irradiance, specular prefilter, BRDF LUT and disk cache: 1f4084a:src/core/ibl/**, src/lighting/ibl_cache.rs, src/scene/py_api/ibl.rs",
       "requiredWebOutcome": "Add WebGPU IBL and CacheStorage/OPFS cache keyed by source/settings",
@@ -1147,7 +1147,7 @@
       "title": "Hard/PCF/PCSS/VSM/EVSM/MSM filters plus separate CSM pipeline",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W04",
       "nativeCapability": "Hard/PCF/PCSS/VSM/EVSM/MSM filters plus separate CSM pipeline: 1f4084a:src/lighting/shadow.rs, src/shadows/**, tests/test_shadow_techniques.py",
       "requiredWebOutcome": "Add all filters/cascades; CSM must not be accepted as a filter enum",
@@ -2771,7 +2771,7 @@
       "contract": "Replace fixed shader lights with typed mutable collection, shadows and debug bounds",
       "owner": "W04",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P01"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P01"
       ],
       "tests": [
         "light mutation/bounds, BRDF references/energy, TBN/normal/KTX2, IBL sweeps, six filter families and separate CSM stability/peter-panning goldens."
@@ -2784,7 +2784,7 @@
       "contract": "Add controls, effective range and point-affects-light query",
       "owner": "W04",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P02"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P02"
       ],
       "tests": [
         "light mutation/bounds, BRDF references/energy, TBN/normal/KTX2, IBL sweeps, six filter families and separate CSM stability/peter-panning goldens."
@@ -2797,7 +2797,7 @@
       "contract": "Add LUT, rect/two-sided lights and approximation controls",
       "owner": "W04",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P03"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P03"
       ],
       "tests": [
         "light mutation/bounds, BRDF references/energy, TBN/normal/KTX2, IBL sweeps, six filter families and separate CSM stability/peter-panning goldens."
@@ -2810,7 +2810,7 @@
       "contract": "Port the exact final enum and observable routing for Lambert, Phong/Blinn, Oren-Nayar, GGX/Beckmann, Disney, Ashikhmin, Ward, Toon, Minnaert, Subsurface and Hair; diagnose aliases/approximations",
       "owner": "W04",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P04"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P04"
       ],
       "tests": [
         "light mutation/bounds, BRDF references/energy, TBN/normal/KTX2, IBL sweeps, six filter families and separate CSM stability/peter-panning goldens."
@@ -2823,7 +2823,7 @@
       "contract": "Add typed texture/material sets, color spaces, TBN, transcode and channel extraction",
       "owner": "W04",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P05"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P05"
       ],
       "tests": [
         "light mutation/bounds, BRDF references/energy, TBN/normal/KTX2, IBL sweeps, six filter families and separate CSM stability/peter-panning goldens."
@@ -2836,7 +2836,7 @@
       "contract": "Add WebGPU IBL and CacheStorage/OPFS cache keyed by source/settings",
       "owner": "W04",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P06"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P06"
       ],
       "tests": [
         "light mutation/bounds, BRDF references/energy, TBN/normal/KTX2, IBL sweeps, six filter families and separate CSM stability/peter-panning goldens."
@@ -2849,7 +2849,7 @@
       "contract": "Add all filters/cascades; CSM must not be accepted as a filter enum",
       "owner": "W04",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P07"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P07"
       ],
       "tests": [
         "light mutation/bounds, BRDF references/energy, TBN/normal/KTX2, IBL sweeps, six filter families and separate CSM stability/peter-panning goldens."
@@ -3951,7 +3951,7 @@
     {
       "kind": "composite-inventory",
       "path": "crates/forge3d-web/tests/parity/composite-inventory.json",
-      "sha256": "5da1712c5ec1b5907253e304ca6f4714f2618faab8faff37d534bf04128f0d2c",
+      "sha256": "1c2674a37aaf027917565569e467ea1ebd8305b34e5e765e7e8ff03d61f3a7e2",
       "recordCount": 6531
     },
     {

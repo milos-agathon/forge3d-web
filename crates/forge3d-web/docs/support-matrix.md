@@ -33,12 +33,21 @@ records an explicit tombstone rather than a native capability omission.
 | WebGL fallback | Product boundary | WebGPU browser execution is recorded by the [WebGL product-boundary tombstone](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#truthfulness-lifecycle-and-tombstone-ledger); final packaging enforcement belongs to [W24](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w24--cross-browser-performance-recovery-packaging-and-final-closure). Applications must feature-detect WebGPU and provide their own fallback UI. |
 | Node.js rendering | Product boundary | Node rendering is recorded by the [Node product-boundary tombstone](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#truthfulness-lifecycle-and-tombstone-ledger); browser-headless outcomes remain tracked by [R11/W02](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#runtime-gpu-and-platform-foundations). |
 | `OffscreenCanvas` | Tracked feature gap | Worker and hidden-canvas equivalents are tracked by [R10-R11](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#runtime-gpu-and-platform-foundations) and [W02](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w02--general-scenerender-graph-resources-diagnostics-and-config). The current runtime owns a main-thread canvas-backed surface. |
+| Lights, BRDF materials, textures/KTX2, IBL, shadows (W04) | Implemented; Chromium preflight evidence only | P01-P07 run in the flagged Chromium preflight lane, including the native `terrain_pbr_pom` screen-mode golden at SSIM >= 0.98. Branded and physical browser rows above still govern support claims. |
 | Forge3D functional parity | In progress | The [exhaustive parity matrix](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#exhaustive-parity-matrix) and [ordered W00-W24 tasks](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#ordered-implementation-tasks) own every current gap. Complete parity is not claimed while any active row is open. |
 
 ## Deployment Requirements
 
 - Serve `.wasm` assets with `Content-Type: application/wasm`.
 - Preserve the package-local wasm URL emitted by the bundler or static host.
+- Preserve `assets/basis/basis_transcoder.{js,wasm}` (or pass `basisJsUrl` and
+  `basisWasmUrl`) when using `Ktx2Loader` with Basis Universal payloads; no
+  CDN fallback exists.
+- `IblCache` needs CacheStorage or OPFS (secure contexts). Without either it
+  reports `cacheBackend: "none"` and recomputes IBL on the GPU.
+- Natively compressed KTX2 (BC/ETC2/ASTC) needs the matching
+  `texture-compression-*` adapter feature. Otherwise it is rejected with
+  `UNSUPPORTED_FEATURE`, never silently decompressed.
 - Cache `.wasm` assets with immutable content hashing, or use a deploy process
   that invalidates the asset whenever `dist/forge3d_web_bg.wasm` changes.
 - Cross-origin terrain URL sources must send CORS headers that allow browser

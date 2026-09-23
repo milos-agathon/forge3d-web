@@ -1,8 +1,29 @@
+import { iblFromSnapshot, ImageBasedLighting } from "./ibl.js";
 import { Forge3DError } from "./index.js";
+import {
+  buildShadowReport,
+  CascadedShadowConfig,
+  ShadowConfig,
+  shadowCascadeInfo,
+} from "./shadows.js";
 import type {
+  AreaLightApproximationConfig,
+  BrdfRoute,
   CustomNodeInput,
   GroundPlaneNodeInput,
   HeightAoOptions,
+  IblSnapshot,
+  LightBounds,
+  LightId,
+  LightInput,
+  LightingSnapshot,
+  LightSnapshot,
+  CascadedShadowConfigInput,
+  CascadedShadowConfigSnapshot,
+  MaterialCollectionSnapshot,
+  MaterialInput,
+  MaterialSlotSnapshot,
+  MaterialSnapshot,
   OverlayNodeInput,
   SceneNodeId,
   SceneNodeInput,
@@ -11,12 +32,19 @@ import type {
   SceneRenderPlan,
   SceneSnapshot,
   SceneTransform,
+  ShadowCascadeInfo,
+  ShadowConfigInput,
+  ShadowConfigSnapshot,
+  ShadowReport,
+  ShadowSnapshot,
   SunVisibilityOptions,
   TerrainColorRampInput,
   TerrainHeightmapInput,
   TerrainNodeInput,
   TextMeshNodeInput,
 } from "./index.js";
+import { LightCollection } from "./lighting.js";
+import { MaterialCollection } from "./materials.js";
 import { compileScenePasses } from "./render-graph.js";
 import { getTerrainColormap } from "./terrain-dataset.js";
 
@@ -46,11 +74,49 @@ export class Forge3DScene {
   readonly #nodes = new Map<SceneNodeId, StoredNode>();
   readonly #roots: SceneNodeId[] = [];
   readonly #passes: ScenePassInput[] = [];
+  #lights: LightCollection;
+  #materials: MaterialCollection;
+  #ibl: ImageBasedLighting | undefined;
+  #shadowConfig = new ShadowConfig();
+  #shadowCsm = new CascadedShadowConfig();
+  #shadowsConfigured = false;
   #nextId = 0;
   #revision = 0;
   #disposed = false;
 
-  private constructor() {}
+  private constructor() {
+    this.#lights = new LightCollection();
+    this.#materials = new MaterialCollection();
+    const key = LightCollection.defaults().values()[0];
+    if (key !== undefined) {
+      this.#lights.add(key);
+    }
+    sceneInternals.set(this, {
+      restoreLighting: (lighting) => {
+        this.#assertOperational();
+        this.#lights = LightCollection.from(lighting);
+        this.#revision += 1;
+      },
+      restoreMaterials: (materials) => {
+        this.#assertOperational();
+        this.#materials = MaterialCollection.from(materials);
+        this.#revision += 1;
+      },
+      restoreIbl: (ibl) => {
+        this.#assertOperational();
+        this.#ibl = ibl === null ? undefined : iblFromSnapshot(ibl);
+        this.#revision += 1;
+      },
+      restoreShadows: (shadows) => {
+        this.#assertOperational();
+        this.#shadowConfig = ShadowConfig.from(shadows.config);
+        this.#shadowCsm = CascadedShadowConfig.from(shadows.csm);
+        this.#shadowsConfigured = true;
+        this.#revision += 1;
+      },
+      shadowsConfigured: () => this.#shadowsConfigured,
+    });
+  }
 
   static create(): Forge3DScene {
     return new Forge3DScene();
@@ -319,6 +385,10 @@ export class Forge3DScene {
       revision: this.#revision,
       nodes,
       passes: cloneValue(this.#passes) as ScenePassInput[],
+      lighting: this.#lights.snapshot(),
+      materials: this.#materials.snapshot(),
+      ibl: this.#ibl?.snapshot() ?? null,
+      shadows: this.#shadowSnapshot(),
     };
   }
 
@@ -340,15 +410,218 @@ export class Forge3DScene {
     copy.#passes.push(
       ...(cloneValue(this.#passes) as ScenePassInput[]),
     );
+    copy.#lights = this.#lights.copy();
+    copy.#materials = this.#materials.copy();
+    copy.#ibl = this.#ibl?.copy();
+    copy.#shadowConfig = this.#shadowConfig.copy();
+    copy.#shadowCsm = this.#shadowCsm.copy();
+    copy.#shadowsConfigured = this.#shadowsConfigured;
     return copy;
   }
 
   estimatedGpuBytes(): number {
-    let total = 0;
+    let total =
+      this.#lights.estimatedGpuBytes() + this.#materials.estimatedGpuBytes();
     for (const node of this.#nodes.values()) {
       total = checkedAdd(total, nodeByteEstimate(node.node));
     }
-    return total;
+    total = checkedAdd(total, this.#ibl?.estimatedGpuBytes() ?? 0);
+    return checkedAdd(
+      total,
+      this.#shadowConfig.estimatedGpuBytes(
+        this.#shadowCsm.snapshot().enabled
+          ? this.#shadowCsm.snapshot().cascadeCount
+          : 1,
+      ),
+    );
+  }
+
+  addLight(light: LightInput): LightId {
+    this.#assertOperational();
+    const id = this.#lights.add(light);
+    this.#revision += 1;
+    return id;
+  }
+
+  updateLight(id: LightId, light: LightInput): void {
+    this.#assertOperational();
+    this.#lights.update(id, light);
+    this.#revision += 1;
+  }
+
+  removeLight(id: LightId): boolean {
+    this.#assertOperational();
+    if (!this.#lights.remove(id)) {
+      return false;
+    }
+    this.#revision += 1;
+    return true;
+  }
+
+  clearLights(): void {
+    this.#assertOperational();
+    if (this.#lights.size === 0) {
+      return;
+    }
+    this.#lights.clear();
+    this.#revision += 1;
+  }
+
+  getLight(id: LightId): LightSnapshot | undefined {
+    return this.#lights.get(id);
+  }
+
+  getLights(): LightSnapshot[] {
+    return this.#lights.values();
+  }
+
+  getLightBounds(id: LightId): LightBounds {
+    return this.#lights.bounds(id);
+  }
+
+  lightAffectsPoint(
+    id: LightId,
+    point: [number, number, number],
+  ): boolean {
+    return this.#lights.affectsPoint(id, point);
+  }
+
+  setLightingExposure(exposure: number): void {
+    this.#assertOperational();
+    this.#lights.setExposure(exposure);
+    this.#revision += 1;
+  }
+
+  setLightDebugBounds(enabled: boolean): void {
+    this.#assertOperational();
+    this.#lights.setDebugBounds(enabled);
+    this.#revision += 1;
+  }
+
+  setAreaLightApproximation(
+    config: Partial<AreaLightApproximationConfig>,
+  ): void {
+    this.#assertOperational();
+    this.#lights.setAreaLightApproximation(config);
+    this.#revision += 1;
+  }
+
+  setMaterial(slot: string, material: MaterialInput): void {
+    this.#assertOperational();
+    this.#materials.set(slot, material);
+    this.#revision += 1;
+  }
+
+  removeMaterial(slot: string): boolean {
+    this.#assertOperational();
+    if (!this.#materials.remove(slot)) {
+      return false;
+    }
+    this.#revision += 1;
+    return true;
+  }
+
+  clearMaterials(): void {
+    this.#assertOperational();
+    const revision = this.#materials.revision;
+    this.#materials.clear();
+    if (this.#materials.revision !== revision) {
+      this.#revision += 1;
+    }
+  }
+
+  getMaterial(slot: string): MaterialSnapshot | undefined {
+    return this.#materials.get(slot);
+  }
+
+  getMaterials(): MaterialSlotSnapshot[] {
+    return this.#materials.values();
+  }
+
+  getMaterialRoute(slot: string): BrdfRoute {
+    return this.#materials.route(slot);
+  }
+
+  setImageBasedLighting(ibl: ImageBasedLighting | undefined): void {
+    this.#assertOperational();
+    if (ibl !== undefined && !(ibl instanceof ImageBasedLighting)) {
+      throw invalid("ibl must be an ImageBasedLighting instance");
+    }
+    this.#ibl = ibl?.copy();
+    this.#revision += 1;
+  }
+
+  getImageBasedLighting(): ImageBasedLighting | undefined {
+    this.#assertOperational();
+    return this.#ibl?.copy();
+  }
+
+  setShadows(
+    config: ShadowConfig | ShadowConfigInput,
+    csm?: CascadedShadowConfig | CascadedShadowConfigInput,
+  ): void {
+    this.#assertOperational();
+    const nextConfig =
+      config instanceof ShadowConfig ? config.copy() : new ShadowConfig(config);
+    this.#shadowConfig = nextConfig;
+    if (csm !== undefined) {
+      this.#shadowCsm =
+        csm instanceof CascadedShadowConfig
+          ? csm.copy()
+          : new CascadedShadowConfig(csm);
+    }
+    this.#shadowsConfigured = true;
+    this.#revision += 1;
+  }
+
+  getShadows(): { config: ShadowConfig; csm: CascadedShadowConfig } {
+    this.#assertOperational();
+    return {
+      config: this.#shadowConfig.copy(),
+      csm: this.#shadowCsm.copy(),
+    };
+  }
+
+  getShadowReport(): ShadowReport {
+    this.#assertOperational();
+    return this.#shadowSnapshot().report;
+  }
+
+  getShadowCascadeInfo(
+    cameraNear: number,
+    cameraFar: number,
+  ): ShadowCascadeInfo[] {
+    this.#assertOperational();
+    return shadowCascadeInfo(
+      this.#shadowConfig.snapshot(),
+      this.#shadowCsm.snapshot(),
+      cameraNear,
+      cameraFar,
+    );
+  }
+
+  #shadowSnapshot(): ShadowSnapshot {
+    const config = this.#shadowConfig.snapshot();
+    const csm = this.#shadowCsm.snapshot();
+    return { config, csm, report: this.#shadowReport(config, csm) };
+  }
+
+  #shadowReport(
+    config: ShadowConfigSnapshot,
+    csm: CascadedShadowConfigSnapshot,
+  ): ShadowReport {
+    let casterLightId: number | null = null;
+    for (const light of this.#lights.snapshot().lights) {
+      if (
+        light.enabled &&
+        light.castsShadow &&
+        light.type === "directional"
+      ) {
+        casterLightId = light.id;
+        break;
+      }
+    }
+    return buildShadowReport(config, csm, casterLightId);
   }
 
   dispose(): void {
@@ -371,6 +644,83 @@ export class Forge3DScene {
     }
     out.push(id);
   }
+}
+
+interface SceneInternalAccess {
+  restoreLighting(lighting: LightingSnapshot): void;
+  restoreMaterials(materials: MaterialCollectionSnapshot): void;
+  restoreIbl(ibl: IblSnapshot | null): void;
+  restoreShadows(shadows: ShadowSnapshot): void;
+  shadowsConfigured(): boolean;
+}
+
+const sceneInternals = new WeakMap<Forge3DScene, SceneInternalAccess>();
+
+export function restoreSceneLighting(
+  scene: Forge3DScene,
+  lighting: LightingSnapshot,
+): void {
+  const access = sceneInternals.get(scene);
+  if (access === undefined) {
+    throw new Forge3DError(
+      "INVALID_INPUT",
+      "scene must be a Forge3DScene",
+    );
+  }
+  access.restoreLighting(lighting);
+}
+
+export function restoreSceneMaterials(
+  scene: Forge3DScene,
+  materials: MaterialCollectionSnapshot,
+): void {
+  const access = sceneInternals.get(scene);
+  if (access === undefined) {
+    throw new Forge3DError(
+      "INVALID_INPUT",
+      "scene must be a Forge3DScene",
+    );
+  }
+  access.restoreMaterials(materials);
+}
+
+export function restoreSceneIbl(
+  scene: Forge3DScene,
+  ibl: IblSnapshot | null,
+): void {
+  const access = sceneInternals.get(scene);
+  if (access === undefined) {
+    throw new Forge3DError(
+      "INVALID_INPUT",
+      "scene must be a Forge3DScene",
+    );
+  }
+  access.restoreIbl(ibl);
+}
+
+export function restoreSceneShadows(
+  scene: Forge3DScene,
+  shadows: ShadowSnapshot,
+): void {
+  const access = sceneInternals.get(scene);
+  if (access === undefined) {
+    throw new Forge3DError(
+      "INVALID_INPUT",
+      "scene must be a Forge3DScene",
+    );
+  }
+  access.restoreShadows(shadows);
+}
+
+export function sceneShadowsConfigured(scene: Forge3DScene): boolean {
+  const access = sceneInternals.get(scene);
+  if (access === undefined) {
+    throw new Forge3DError(
+      "INVALID_INPUT",
+      "scene must be a Forge3DScene",
+    );
+  }
+  return access.shadowsConfigured();
 }
 
 export function estimateSceneTriangles(
@@ -597,6 +947,13 @@ function validateTerrain(terrain: TerrainHeightmapInput): void {
     terrain.debugView !== "sun-visibility"
   ) {
     throw invalid("terrain debugView must be a known debug view");
+  }
+  if (
+    terrain.renderMode !== undefined &&
+    terrain.renderMode !== "perspective" &&
+    terrain.renderMode !== "screen"
+  ) {
+    throw invalid("terrain renderMode must be 'perspective' or 'screen'");
   }
 }
 

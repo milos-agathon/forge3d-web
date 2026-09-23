@@ -14,6 +14,9 @@ test("real SAF-02 hardware page continues into generic installed-fixture creatio
   request,
   webgpuAvailability,
 }) => {
+  // Creates several WebGPU runtimes; each compiles the W04 shared-lighting
+  // terrain/scene pipelines, which uncached CI GPUs compile slowly.
+  test.slow();
   skipRenderAssertionsWhenProbing(webgpuAvailability);
   const facade = await (await request.get("/tests/realm-fixture/a/index.js")).body();
   const bridge = await (await request.get("/tests/realm-fixture/pkg/forge3d_web.js")).body();

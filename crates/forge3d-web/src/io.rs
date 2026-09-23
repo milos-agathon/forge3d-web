@@ -80,6 +80,7 @@ pub async fn load_terrain_heightmap_source(
         height_ao: metadata.height_ao,
         sun_visibility: metadata.sun_visibility,
         debug_view: metadata.debug_view,
+        render_mode: metadata.render_mode,
     })
 }
 

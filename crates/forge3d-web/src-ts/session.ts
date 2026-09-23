@@ -6,15 +6,26 @@ import type {
   Forge3DRuntimeOptions,
   Forge3DSessionCapabilities,
   Forge3DSessionOptions,
+  IblSnapshot,
+  LightingSnapshot,
+  MaterialCollectionSnapshot,
   MemoryReport,
+  RendererConfigData,
   RenderStats,
   ResizeInput,
   SceneSnapshot,
   SessionStatus,
+  ShadowReport,
+  ShadowSnapshot,
   TerrainHeightmapInput,
 } from "./index.js";
 import { RendererConfig } from "./renderer-config.js";
-import { clonePayload, estimateSceneTriangles, Forge3DScene } from "./scene.js";
+import {
+  clonePayload,
+  estimateSceneTriangles,
+  Forge3DScene,
+  sceneShadowsConfigured,
+} from "./scene.js";
 import { compileScenePasses } from "./render-graph.js";
 import { SceneMemoryTracker } from "./memory-policy.js";
 import { normalizeRenderStats } from "./native-reports.js";
@@ -25,6 +36,12 @@ export interface SessionRuntimeLike {
   readonly disposed?: boolean;
   getCapabilities(): Forge3DRuntimeCapabilities;
   setTerrain?(terrain: TerrainHeightmapInput): void;
+  setLighting?(lighting: LightingSnapshot): void;
+  setMaterials?(materials: MaterialCollectionSnapshot): void;
+  setIbl?(ibl: IblSnapshot | null): void;
+  precomputeIbl?(input: IblSnapshot): Promise<IblSnapshot>;
+  setShadows?(shadows: ShadowSnapshot): void;
+  getShadowReport?(): ShadowReport;
   setScene?(scene: SceneSnapshot): void;
   setCamera?(camera: CameraInput): void;
   setDeviceLostHandler?(handler: ((error: unknown) => void) | undefined): void;
@@ -174,6 +191,33 @@ export class Forge3DSession {
 
   getMemoryReport(): MemoryReport {
     return this.#tracker.report();
+  }
+
+  async precomputeIbl(input: IblSnapshot): Promise<IblSnapshot> {
+    const runtime = this.#runtimeOrThrow();
+    if (runtime.precomputeIbl === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not support IBL precomputation",
+      );
+    }
+    return runtime.precomputeIbl(clonePayload(input));
+  }
+
+  getShadowReport(): ShadowReport {
+    const runtime = this.#runtimeOrThrow();
+    const report = runtime.getShadowReport?.();
+    if (report !== undefined) {
+      return report;
+    }
+    const sceneReport = this.#scene?.getShadowReport();
+    if (sceneReport !== undefined) {
+      return sceneReport;
+    }
+    throw new Forge3DError(
+      "UNSUPPORTED_FEATURE",
+      "Runtime does not report shadow state",
+    );
   }
 
   setScene(scene: Forge3DScene): void {
@@ -360,6 +404,8 @@ export class Forge3DSession {
 
   #commitScene(runtime: SessionRuntimeLike, scene: Forge3DScene): void {
     const copy = scene.copy();
+    applyRendererConfigMaterials(copy, this.#config.toJSON());
+    applyRendererConfigShadows(copy, this.#config.toJSON());
     const estimatedBytes = copy.estimatedGpuBytes();
     const snapshot = copy.snapshot();
     const config = this.#config.toJSON();
@@ -424,7 +470,14 @@ export class Forge3DSession {
         runtime.setTerrain?.(clonePayload(node.node.terrain));
       }
     }
-    runtime.setScene?.(snapshot);
+    if (runtime.setScene !== undefined) {
+      runtime.setScene(snapshot);
+      return;
+    }
+    runtime.setLighting?.(clonePayload(snapshot.lighting));
+    runtime.setMaterials?.(clonePayload(snapshot.materials));
+    runtime.setIbl?.(clonePayload(snapshot.ibl));
+    runtime.setShadows?.(clonePayload(snapshot.shadows));
   }
 
   #attachLossHandler(runtime: SessionRuntimeLike): void {
@@ -738,6 +791,81 @@ function cloneCamera(camera: CameraInput): CameraInput {
     near: camera.near,
     far: camera.far,
   };
+}
+
+function applyRendererConfigMaterials(
+  scene: Forge3DScene,
+  config: RendererConfigData,
+): void {
+  const shadingBrdf = config.brdfOverride ?? config.shading.brdf;
+  scene.setMaterial("default", {
+    id: "default",
+    brdf: shadingBrdf,
+    baseColor: [1, 1, 1, 1],
+    metallic: config.shading.metallic,
+    roughness: config.shading.roughness,
+    sheen: 0,
+    clearcoat: 0,
+    subsurface: 0,
+    anisotropy: 0,
+  });
+  for (const [slot, entry] of Object.entries(config.materials)) {
+    const parameters = entry.parameters;
+    const numeric = (key: string): number | undefined => {
+      const value = parameters[key];
+      return typeof value === "number" && Number.isFinite(value)
+        ? value
+        : undefined;
+    };
+    const brdfParameter = parameters["brdf"];
+    const baseColorParameter = parameters["baseColor"];
+    const baseColor: [number, number, number, number] =
+      Array.isArray(baseColorParameter) &&
+      baseColorParameter.length === 4 &&
+      baseColorParameter.every(
+        (component) =>
+          typeof component === "number" && Number.isFinite(component),
+      )
+        ? baseColorParameter
+        : [1, 1, 1, 1];
+    scene.setMaterial(slot, {
+      id: entry.id,
+      brdf:
+        typeof brdfParameter === "string" && brdfParameter.length > 0
+          ? brdfParameter
+          : shadingBrdf,
+      baseColor,
+      metallic: numeric("metallic") ?? config.shading.metallic,
+      roughness: numeric("roughness") ?? config.shading.roughness,
+      sheen: numeric("sheen") ?? 0,
+      clearcoat: numeric("clearcoat") ?? 0,
+      subsurface: numeric("subsurface") ?? 0,
+      anisotropy: numeric("anisotropy") ?? 0,
+    });
+  }
+}
+
+function applyRendererConfigShadows(
+  scene: Forge3DScene,
+  config: RendererConfigData,
+): void {
+  if (sceneShadowsConfigured(scene)) {
+    return;
+  }
+  const shadows = config.shadows;
+  const technique = shadows.technique.trim().toLowerCase();
+  const cascades = shadows.cascades;
+  scene.setShadows(
+    {
+      enabled: shadows.enabled,
+      filter: technique,
+      mapSize: shadows.mapSize,
+    },
+    {
+      enabled: shadows.enabled && technique !== "none" && cascades > 1,
+      cascadeCount: cascades > 1 ? (cascades as 2 | 3 | 4) : 3,
+    },
+  );
 }
 
 function nowMilliseconds(): number {

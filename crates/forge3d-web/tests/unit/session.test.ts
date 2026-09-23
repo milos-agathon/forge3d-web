@@ -6,10 +6,15 @@ import type {
   Forge3DRuntimeCapabilities,
   Forge3DRuntimeOptions,
   Forge3DSessionOptions,
+  IblSnapshot,
+  LightingSnapshot,
+  MaterialCollectionSnapshot,
   MemoryReport,
   RenderStats,
   ResizeInput,
   SceneSnapshot,
+  ShadowReport,
+  ShadowSnapshot,
   TerrainHeightmapInput,
 } from "../../src-ts/index.js";
 import { Forge3DScene } from "../../src-ts/scene.js";
@@ -40,6 +45,13 @@ class FakeRuntime implements SessionRuntimeLike {
   failSetDeviceLostHandler = false;
   readonly terrains: TerrainHeightmapInput[] = [];
   readonly scenes: SceneSnapshot[] = [];
+  readonly lightings: LightingSnapshot[] = [];
+  readonly materials: MaterialCollectionSnapshot[] = [];
+  readonly ibls: (IblSnapshot | null)[] = [];
+  readonly shadows: ShadowSnapshot[] = [];
+  shadowReport: ShadowReport | undefined;
+  iblPrecomputeResult: Promise<IblSnapshot> | undefined;
+  readonly callOrder: string[] = [];
   readonly resizes: ResizeInput[] = [];
   readonly cameras: CameraInput[] = [];
   screenshotCalls = 0;
@@ -65,6 +77,7 @@ class FakeRuntime implements SessionRuntimeLike {
   }
 
   setTerrain(terrain: TerrainHeightmapInput): void {
+    this.callOrder.push("terrain");
     this.terrains.push(terrain);
   }
 
@@ -73,7 +86,49 @@ class FakeRuntime implements SessionRuntimeLike {
       this.failSetScene = false;
       throw new Forge3DError("INTERNAL_ERROR", "scene apply failed");
     }
+    this.callOrder.push("scene");
     this.scenes.push(scene);
+  }
+
+  setLighting(lighting: LightingSnapshot): void {
+    this.callOrder.push("lighting");
+    this.lightings.push(lighting);
+  }
+
+  setMaterials(materials: MaterialCollectionSnapshot): void {
+    this.callOrder.push("materials");
+    this.materials.push(materials);
+  }
+
+  setIbl(ibl: IblSnapshot | null): void {
+    this.callOrder.push("ibl");
+    this.ibls.push(ibl);
+  }
+
+  precomputeIbl(input: IblSnapshot): Promise<IblSnapshot> {
+    return this.iblPrecomputeResult ?? Promise.resolve(input);
+  }
+
+  setShadows(shadows: ShadowSnapshot): void {
+    this.callOrder.push("shadows");
+    this.shadows.push(shadows);
+  }
+
+  getShadowReport(): ShadowReport {
+    return (
+      this.shadowReport ??
+      this.shadows[this.shadows.length - 1]?.report ?? {
+        requestedFilter: "pcf",
+        effectiveFilter: "pcf",
+        requestedMapSize: 2048,
+        effectiveMapSize: 2048,
+        csmEnabled: false,
+        cascadeCount: 1,
+        momentFormat: "none",
+        casterLightId: null,
+        reason: "shadows disabled",
+      }
+    );
   }
 
   setCamera(camera: CameraInput): void {
@@ -256,7 +311,7 @@ describe("Forge3DSession", () => {
     installFactory();
     const options: Forge3DSessionOptions = {
       renderer: {
-        memoryBudgetBytes: 200,
+        memoryBudgetBytes: 7500 + 256 * 64 + 16,
         overflowPolicy: "reject",
       },
     };
@@ -272,7 +327,7 @@ describe("Forge3DSession", () => {
       color: [1, 1, 1, 1],
     });
     session.setScene(small);
-    expect(session.getMemoryReport().currentBytes).toBe(168);
+    expect(session.getMemoryReport().currentBytes).toBe(168 + 64 * 112 + 32 + 256 * 64 + 16);
 
     const oversized = Forge3DScene.create();
     oversized.addTerrain(terrain(), { name: "terrain" });
@@ -283,7 +338,7 @@ describe("Forge3DSession", () => {
       expect((error as Forge3DError).code).toBe("RESOURCE_LIMIT_EXCEEDED");
     }
 
-    expect(session.getMemoryReport().currentBytes).toBe(168);
+    expect(session.getMemoryReport().currentBytes).toBe(168 + 64 * 112 + 32 + 256 * 64 + 16);
     expect(session.getScene()!.snapshot().nodes).toHaveLength(1);
     expect(latest().scenes).toHaveLength(1);
     expect(session.render()).toBe(true);
@@ -295,7 +350,7 @@ describe("Forge3DSession", () => {
     const session = await Forge3DSession.create({} as OffscreenCanvas, {
       renderer: {
         quality: "ultra",
-        memoryBudgetBytes: 300,
+        memoryBudgetBytes: 18000,
         overflowPolicy: "downscale",
       },
     });
@@ -304,13 +359,15 @@ describe("Forge3DSession", () => {
     session.setScene(scene);
 
     const report = session.getMemoryReport();
-    expect(report.currentBytes).toBe(234);
+    const requestedBytes = 7512 + 256 * 64 + 16;
+    const admittedBytes = Math.ceil((requestedBytes * 75) / 100);
+    expect(report.currentBytes).toBe(admittedBytes);
     expect(report.downgrades).toEqual([
       {
         requested: "ultra",
         effective: "high",
-        requestedBytes: 312,
-        admittedBytes: 234,
+        requestedBytes,
+        admittedBytes,
       },
     ]);
     expect(session.getCapabilities().effectiveQuality).toBe("high");
@@ -340,15 +397,165 @@ describe("Forge3DSession", () => {
     expect(Array.from(runtime.terrains[0]!.heights)).toEqual([1, 2, 3, 4]);
     expect(runtime.scenes).toHaveLength(1);
     const committed = runtime.scenes[0]!;
-    expect(committed.revision).toBe(scene.revision);
+    expect(committed.revision).toBe(scene.revision + 2);
     expect(committed.nodes.map((node) => node.node.kind)).toEqual([
       "terrain",
       "overlay",
     ]);
+    expect(runtime.lightings).toHaveLength(0);
+    expect(runtime.materials).toHaveLength(0);
+    expect(runtime.ibls).toHaveLength(0);
+    expect(runtime.shadows).toHaveLength(0);
+    expect(runtime.callOrder).toEqual(["terrain", "scene"]);
 
     heights[0] = 99;
     expect(runtime.terrains[0]!.heights[0]).toBe(1);
 
+    session.dispose();
+  });
+
+  it("replays canonical W04 setters when the runtime lacks setScene", async () => {
+    setSessionRuntimeFactoryForTests((canvas, options) => {
+      factoryCalls.push({ canvas, options });
+      const runtime = new FakeRuntime(nextCapabilities);
+      (runtime as unknown as { setScene?: unknown }).setScene = undefined;
+      return Promise.resolve(runtime);
+    });
+    const session = await Forge3DSession.create({} as OffscreenCanvas, {});
+    const runtime = latest();
+
+    const scene = Forge3DScene.create();
+    scene.addTerrain(terrain(), { name: "terrain" });
+    scene.addOverlay({
+      name: "hud",
+      bounds: [0, 0, 10, 10],
+      color: [0, 0, 0, 1],
+    });
+    session.setScene(scene);
+
+    expect(runtime.callOrder).toEqual([
+      "terrain",
+      "lighting",
+      "materials",
+      "ibl",
+      "shadows",
+    ]);
+    expect(runtime.scenes).toHaveLength(0);
+    expect(runtime.lightings).toHaveLength(1);
+    expect(runtime.materials).toHaveLength(1);
+    expect(runtime.ibls).toHaveLength(1);
+    expect(runtime.shadows).toHaveLength(1);
+
+    session.dispose();
+  });
+
+  it("routes precomputeIbl through the runtime", async () => {
+    installFactory();
+    const session = await Forge3DSession.create({} as OffscreenCanvas, {});
+    const runtime = latest();
+
+    const ibl = {
+      source: {
+        width: 1,
+        height: 1,
+        data: new Float32Array([1, 1, 1, 1]),
+        sourceHash: "a".repeat(64),
+      },
+      intensity: 1,
+      rotationDegrees: 0,
+      requestedQuality: "low",
+      effectiveQuality: "low",
+      report: {
+        requestedQuality: "low",
+        effectiveQuality: "low",
+        cacheBackend: "none",
+        cacheHit: false,
+        effectiveMode: "runtime-precompute",
+        brdfApproximation: "split-sum-ggx",
+        reason: "test",
+      },
+    } as IblSnapshot;
+    const prepared = { ...ibl, report: { ...ibl.report } };
+    runtime.iblPrecomputeResult = Promise.resolve(prepared);
+    const result = await session.precomputeIbl(ibl);
+    expect(result).toBe(prepared);
+
+    session.dispose();
+  });
+
+  it("reapplies IBL after device-loss recovery", async () => {
+    installFactory();
+    const session = await Forge3DSession.create({} as OffscreenCanvas, {
+      recovery: { deviceLoss: "once" },
+    });
+    const runtime = latest();
+
+    const scene = Forge3DScene.create();
+    session.setScene(scene);
+    expect(runtime.ibls).toEqual([]);
+    expect(runtime.scenes).toHaveLength(1);
+
+    runtime.lose();
+    await session.whenReady();
+    const recovered = latest();
+    expect(recovered).not.toBe(runtime);
+    expect(recovered.scenes).toHaveLength(1);
+    expect(recovered.scenes[0]!.ibl).toBeNull();
+    expect(recovered.ibls).toEqual([]);
+
+    session.dispose();
+  });
+
+  it("applies renderer config shading and legacy slots to committed materials", async () => {
+    installFactory();
+    const session = await Forge3DSession.create({} as OffscreenCanvas, {
+      renderer: {
+        shading: { brdf: "ggx", roughness: 0.9, metallic: 0.3 },
+        brdfOverride: "oren-nayar",
+        materials: {
+          hero: {
+            id: "hero-mat",
+            model: "pbr",
+            parameters: {
+              brdf: "sss",
+              baseColor: [0.8, 0.6, 0.4, 1],
+              metallic: 0.7,
+              unused: true,
+            },
+          },
+        },
+      },
+    });
+    const runtime = latest();
+
+    const scene = Forge3DScene.create();
+    scene.addGroundPlane({
+      name: "ground",
+      size: [4, 4],
+      color: [1, 1, 1, 1],
+    });
+    session.setScene(scene);
+
+    const committed = runtime.scenes[0]!;
+    const defaultSlot = committed.materials.materials.find(
+      (entry) => entry.slot === "default",
+    )!;
+    expect(defaultSlot.material.brdf).toBe("oren-nayar");
+    expect(defaultSlot.material.route.requested).toBe("oren-nayar");
+    expect(defaultSlot.material.roughness).toBe(0.9);
+    expect(defaultSlot.material.metallic).toBe(0.3);
+
+    const hero = committed.materials.materials.find(
+      (entry) => entry.slot === "hero",
+    )!;
+    expect(hero.material.id).toBe("hero-mat");
+    expect(hero.material.brdf).toBe("subsurface");
+    expect(hero.material.route.effectiveModel).toBe("disney-principled");
+    expect(hero.material.metallic).toBe(0.7);
+    expect(hero.material.baseColor).toEqual([0.8, 0.6, 0.4, 1]);
+
+    expect(scene.getMaterial("default")!.brdf).toBe("cooktorrance-ggx");
+    expect(scene.getMaterial("hero")).toBeUndefined();
     session.dispose();
   });
 
@@ -437,6 +644,11 @@ describe("Forge3DSession", () => {
     expect(replacement).not.toBe(first);
     expect(replacement.scenes).toHaveLength(1);
     expect(replacement.scenes[0]).toEqual(committed);
+    expect(replacement.lightings).toHaveLength(0);
+    expect(replacement.materials).toHaveLength(0);
+    expect(replacement.ibls).toHaveLength(0);
+    expect(replacement.shadows).toHaveLength(0);
+    expect(replacement.callOrder).toEqual(["terrain", "scene"]);
     expect(replacement.terrains).toHaveLength(1);
 
     scene.setVisible(0, false);
@@ -556,7 +768,7 @@ describe("Forge3DSession", () => {
         expect.objectContaining({ code: "RUNTIME_DISPOSED" }) as never,
       );
     }
-    expect(peakBytes).toBe(144);
+    expect(peakBytes).toBe(144 + 64 * 112 + 32 + 256 * 64 + 16);
     expect(FakeRuntime.activeCount).toBe(0);
     expect(FakeRuntime.listenerCount).toBe(0);
     expect(FakeRuntime.instances.every((runtime) => runtime.disposed)).toBe(
@@ -598,7 +810,7 @@ describe("Forge3DSession", () => {
         ? restored.snapshot().nodes[0]!.node.name
         : "",
     ).toBe("terrain-a");
-    expect(session.getMemoryReport().currentBytes).toBe(312);
+    expect(session.getMemoryReport().currentBytes).toBe(312 + 64 * 112 + 32 + 256 * 64 + 16);
     session.dispose();
   });
 

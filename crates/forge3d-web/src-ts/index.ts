@@ -4,6 +4,7 @@ import {
   normalizeRenderStats,
 } from "./native-reports.js";
 import { getTerrainColormap, TerrainDataset } from "./terrain-dataset.js";
+import type { TextureSet } from "./textures.js";
 
 export type Forge3DErrorCode =
   | "WEBGPU_UNAVAILABLE"
@@ -161,6 +162,7 @@ export interface TerrainHeightmapInput {
   heightAo?: HeightAoOptions;
   sunVisibility?: SunVisibilityOptions;
   debugView?: TerrainDebugView;
+  renderMode?: TerrainRenderMode;
 }
 
 export interface TerrainColorRampInput {
@@ -181,6 +183,8 @@ export type TerrainColormapName =
 export type TerrainColormapInput = TerrainColormapName | TerrainColorRampInput;
 
 export type TerrainDebugView = "none" | "height-ao" | "sun-visibility";
+
+export type TerrainRenderMode = "perspective" | "screen";
 
 export interface TerrainStatistics {
   min: number;
@@ -227,6 +231,7 @@ export interface TerrainDatasetInput {
   transform?: [number, number, number, number, number, number];
   bounds?: [number, number, number, number];
   colormap?: TerrainColormapInput;
+  renderMode?: TerrainRenderMode;
 }
 
 export interface TerrainDatasetSourceInput
@@ -316,6 +321,7 @@ export interface TerrainHeightmapSourceInput {
   heightAo?: HeightAoOptions;
   sunVisibility?: SunVisibilityOptions;
   debugView?: TerrainDebugView;
+  renderMode?: TerrainRenderMode;
 }
 
 export interface CameraInput {
@@ -346,18 +352,287 @@ export type RendererPresetName =
   | "rainier-showcase"
   | "rainier-relief";
 
-export interface LightSlotConfig {
-  type: string;
-  intensity: number;
+export type LightId = number;
+export type LightType = "directional" | "point" | "spot" | "rect";
+export type SoftLightFalloff =
+  | "linear"
+  | "quadratic"
+  | "cubic"
+  | "exponential";
+export type AreaLightApproximation = "ltc" | "sampled";
+export type AreaLightSampleCount = 1 | 4 | 8 | 16;
+
+export interface LightBaseInput {
   color: [number, number, number];
-  direction?: [number, number, number];
-  position?: [number, number, number];
+  intensity: number;
+  enabled?: boolean;
+  castsShadow?: boolean;
 }
+export interface DirectionalLightInput extends LightBaseInput {
+  type: "directional";
+  direction: [number, number, number];
+}
+export interface PointLightInput extends LightBaseInput {
+  type: "point";
+  position: [number, number, number];
+  range: number;
+  innerRadius?: number;
+  edgeSoftness?: number;
+  falloff?: SoftLightFalloff;
+  falloffExponent?: number;
+}
+export interface SpotLightInput extends LightBaseInput {
+  type: "spot";
+  position: [number, number, number];
+  direction: [number, number, number];
+  range: number;
+  innerConeDegrees: number;
+  outerConeDegrees: number;
+  innerRadius?: number;
+  edgeSoftness?: number;
+  falloff?: SoftLightFalloff;
+  falloffExponent?: number;
+}
+export interface RectAreaLightInput extends LightBaseInput {
+  type: "rect";
+  position: [number, number, number];
+  right: [number, number, number];
+  up: [number, number, number];
+  width: number;
+  height: number;
+  range: number;
+  edgeSoftness?: number;
+  twoSided?: boolean;
+}
+export type LightInput =
+  | DirectionalLightInput
+  | PointLightInput
+  | SpotLightInput
+  | RectAreaLightInput;
+export type LightSnapshot = LightInput & {
+  id: LightId;
+  enabled: boolean;
+  castsShadow: boolean;
+};
+export type LightBounds =
+  | { kind: "unbounded" }
+  | { kind: "sphere"; center: [number, number, number]; radius: number };
+export interface AreaLightApproximationConfig {
+  mode: AreaLightApproximation;
+  sampleCount: AreaLightSampleCount;
+  lutSize: 64;
+}
+export interface LightingSnapshot {
+  revision: number;
+  maxLights: number;
+  exposure: number;
+  debugBounds: boolean;
+  areaLights: AreaLightApproximationConfig;
+  lights: LightSnapshot[];
+}
+export type LightPresetName =
+  | "spotlight"
+  | "area-light"
+  | "ambient-light"
+  | "candle"
+  | "street-lamp";
+
+export type LightSlotConfig = LightInput;
+
+export type MaterialParameterValue =
+  | number
+  | boolean
+  | string
+  | [number, number, number, number];
 
 export interface MaterialSlotConfig {
   id: string;
   model: string;
-  parameters: Record<string, number | boolean | string>;
+  parameters: Record<string, MaterialParameterValue>;
+}
+
+export type BrdfModel =
+  | "lambert"
+  | "phong"
+  | "blinn-phong"
+  | "oren-nayar"
+  | "cooktorrance-ggx"
+  | "cooktorrance-beckmann"
+  | "disney-principled"
+  | "ashikhmin-shirley"
+  | "ward"
+  | "toon"
+  | "minnaert"
+  | "subsurface"
+  | "hair";
+export type BrdfImplementation = "exact" | "alias" | "approximation";
+export interface BrdfRoute {
+  requested: string;
+  model: BrdfModel;
+  effectiveModel: BrdfModel;
+  implementation: BrdfImplementation;
+  diagnostic?: string;
+}
+export type TextureSemantic =
+  | "base-color"
+  | "normal"
+  | "metallic-roughness"
+  | "occlusion"
+  | "emissive";
+export type TextureColorSpace = "srgb" | "linear";
+export type TextureFormat =
+  | "rgba8unorm"
+  | "rgba8unorm-srgb"
+  | "bc1-rgba-unorm"
+  | "bc1-rgba-unorm-srgb"
+  | "bc3-rgba-unorm"
+  | "bc3-rgba-unorm-srgb"
+  | "bc7-rgba-unorm"
+  | "bc7-rgba-unorm-srgb"
+  | "etc2-rgba8unorm"
+  | "etc2-rgba8unorm-srgb"
+  | "astc-4x4-unorm"
+  | "astc-4x4-unorm-srgb";
+export type TextureWrapMode = "repeat" | "clamp-to-edge" | "mirror-repeat";
+export type TextureFilter = "nearest" | "linear";
+export type TextureEffectiveQuality =
+  | "native"
+  | "transcoded"
+  | "rgba8-fallback";
+export interface TextureSamplerConfig {
+  wrapU?: TextureWrapMode;
+  wrapV?: TextureWrapMode;
+  magFilter?: TextureFilter;
+  minFilter?: TextureFilter;
+  mipmapFilter?: TextureFilter;
+  maxAnisotropy?: 1 | 2 | 4 | 8 | 16;
+}
+export interface TextureLevelInput {
+  width: number;
+  height: number;
+  data: Uint8Array;
+}
+export interface TextureImageInput {
+  width: number;
+  height: number;
+  format: TextureFormat;
+  colorSpace: TextureColorSpace;
+  data: Uint8Array;
+  mipmaps?: TextureLevelInput[];
+  generateMipmaps?: boolean;
+  sourceFormat?: "raw" | "ktx2" | "basis";
+  effectiveQuality?: TextureEffectiveQuality;
+}
+export interface TextureLevelSnapshot {
+  width: number;
+  height: number;
+  data: Uint8Array;
+}
+export interface TextureImageSnapshot {
+  width: number;
+  height: number;
+  format: TextureFormat;
+  colorSpace: TextureColorSpace;
+  levels: TextureLevelSnapshot[];
+  compressed: boolean;
+  sourceFormat: "raw" | "ktx2" | "basis";
+  effectiveQuality: TextureEffectiveQuality;
+}
+export interface TextureSetInput {
+  baseColor?: TextureImageInput | TextureImageSnapshot;
+  normal?: TextureImageInput | TextureImageSnapshot;
+  metallicRoughness?: TextureImageInput | TextureImageSnapshot;
+  occlusion?: TextureImageInput | TextureImageSnapshot;
+  emissive?: TextureImageInput | TextureImageSnapshot;
+  sampler?: TextureSamplerConfig;
+}
+export interface TextureSetSnapshot {
+  baseColor?: TextureImageSnapshot;
+  normal?: TextureImageSnapshot;
+  metallicRoughness?: TextureImageSnapshot;
+  occlusion?: TextureImageSnapshot;
+  emissive?: TextureImageSnapshot;
+  sampler: Required<TextureSamplerConfig>;
+}
+export interface TextureFormatCapabilities {
+  bc: boolean;
+  etc2: boolean;
+  astc: boolean;
+}
+export interface Ktx2LoadOptions {
+  semantic: TextureSemantic;
+  capabilities: TextureFormatCapabilities;
+  signal?: AbortSignal;
+  maxBytes?: number;
+}
+export interface Ktx2TranscodeReport {
+  sourceFormat: string;
+  requestedFormat: string;
+  effectiveFormat: TextureFormat | "unsupported";
+  effectiveQuality: TextureEffectiveQuality | "unsupported";
+  reason: string;
+}
+export interface BasisTranscoderAdapter {
+  transcode(
+    data: Uint8Array,
+    target: TextureFormat,
+    colorSpace: TextureColorSpace,
+    signal?: AbortSignal,
+  ): Promise<TextureImageSnapshot>;
+}
+export interface Ktx2LoaderOptions {
+  basisTranscoder?: BasisTranscoderAdapter;
+  basisJsUrl?: string | URL;
+  basisWasmUrl?: string | URL;
+}
+export interface MeshTbnInput {
+  positions: Float32Array;
+  normals: Float32Array;
+  uvs: Float32Array;
+  indices: Uint16Array | Uint32Array;
+}
+export interface MeshTbnResult {
+  tangents: Float32Array;
+}
+export interface GltfMaterialChannels {
+  occlusion: Uint8Array;
+  roughness: Uint8Array;
+  metallic: Uint8Array;
+}
+export interface MaterialInput {
+  id: string;
+  brdf?: string;
+  baseColor?: [number, number, number, number];
+  metallic?: number;
+  roughness?: number;
+  sheen?: number;
+  clearcoat?: number;
+  subsurface?: number;
+  anisotropy?: number;
+  textures?: TextureSet | TextureSetInput;
+}
+export interface MaterialSnapshot {
+  id: string;
+  brdf: BrdfModel;
+  baseColor: [number, number, number, number];
+  metallic: number;
+  roughness: number;
+  sheen: number;
+  clearcoat: number;
+  subsurface: number;
+  anisotropy: number;
+  route: BrdfRoute;
+  textures: TextureSetSnapshot;
+}
+export interface MaterialSlotSnapshot {
+  slot: string;
+  index: number;
+  material: MaterialSnapshot;
+}
+export interface MaterialCollectionSnapshot {
+  revision: number;
+  maxMaterials: number;
+  materials: MaterialSlotSnapshot[];
 }
 
 export interface RendererConfigData {
@@ -504,10 +779,145 @@ export interface SceneRenderPlan {
   resourceLifetimes: Record<string, [number, number]>;
 }
 
+export type ShadowFilter = "hard" | "pcf" | "pcss" | "vsm" | "evsm" | "msm";
+export type ShadowTechnique = "none" | ShadowFilter;
+export type ShadowDebugView = "none" | "cascades" | "shadow-factor";
+export interface ShadowConfigInput {
+  enabled?: boolean;
+  filter?: string;
+  mapSize?: number;
+  depthBias?: number;
+  normalBias?: number;
+  slopeBias?: number;
+  softness?: number;
+  pcssBlockerRadius?: number;
+  pcssFilterRadius?: number;
+  lightSize?: number;
+  momentBias?: number;
+  lightBleedReduction?: number;
+  evsmPositiveExponent?: number;
+  evsmNegativeExponent?: number;
+  peterPanningOffset?: number;
+}
+export interface ShadowConfigSnapshot {
+  enabled: boolean;
+  filter: ShadowFilter;
+  mapSize: number;
+  depthBias: number;
+  normalBias: number;
+  slopeBias: number;
+  softness: number;
+  pcssBlockerRadius: number;
+  pcssFilterRadius: number;
+  lightSize: number;
+  momentBias: number;
+  lightBleedReduction: number;
+  evsmPositiveExponent: number;
+  evsmNegativeExponent: number;
+  peterPanningOffset: number;
+}
+export interface CascadedShadowConfigInput {
+  enabled?: boolean;
+  cascadeCount?: 2 | 3 | 4;
+  maxDistance?: number;
+  splitLambda?: number;
+  blendRange?: number;
+  stabilize?: boolean;
+  debugView?: ShadowDebugView;
+}
+export interface CascadedShadowConfigSnapshot {
+  enabled: boolean;
+  cascadeCount: 2 | 3 | 4;
+  maxDistance: number;
+  splitLambda: number;
+  blendRange: number;
+  stabilize: boolean;
+  debugView: ShadowDebugView;
+}
+export interface ShadowReport {
+  requestedFilter: ShadowFilter;
+  effectiveFilter: ShadowFilter;
+  requestedMapSize: number;
+  effectiveMapSize: number;
+  csmEnabled: boolean;
+  cascadeCount: number;
+  momentFormat: "none" | "rgba32float";
+  casterLightId: number | null;
+  reason: string;
+}
+export interface ShadowSnapshot {
+  config: ShadowConfigSnapshot;
+  csm: CascadedShadowConfigSnapshot;
+  report: ShadowReport;
+}
+export interface ShadowCascadeInfo {
+  near: number;
+  far: number;
+  texelSize: number;
+}
+
 export interface SceneSnapshot {
   revision: number;
   nodes: SceneNodeSnapshot[];
   passes: ScenePassInput[];
+  lighting: LightingSnapshot;
+  materials: MaterialCollectionSnapshot;
+  ibl: IblSnapshot | null;
+  shadows: ShadowSnapshot;
+}
+
+export type IblQuality = "low" | "medium" | "high" | "ultra";
+export type IblCacheBackend = "auto" | "cache-storage" | "opfs" | "none";
+export interface RgbeImage {
+  width: number;
+  height: number;
+  data: Float32Array;
+}
+export interface IblOptions {
+  quality?: IblQuality;
+  intensity?: number;
+  rotationDegrees?: number;
+}
+export interface IblSourceSnapshot {
+  width: number;
+  height: number;
+  data: Float32Array;
+  sourceHash: string;
+}
+export interface IblPrecomputedSnapshot {
+  format: "rgba16float";
+  irradianceSize: number;
+  specularSize: number;
+  specularMipCount: number;
+  brdfLutSize: number;
+  irradiance: Uint8Array;
+  specular: Uint8Array;
+  brdfLut: Uint8Array;
+}
+export interface IblReport {
+  requestedQuality: IblQuality;
+  effectiveQuality: IblQuality;
+  cacheBackend: IblCacheBackend;
+  cacheHit: boolean;
+  effectiveMode: "disabled" | "runtime-precompute" | "prepared-upload";
+  brdfApproximation: "split-sum-ggx";
+  reason: string;
+}
+export interface IblSnapshot {
+  source: IblSourceSnapshot;
+  intensity: number;
+  rotationDegrees: number;
+  requestedQuality: IblQuality;
+  effectiveQuality: IblQuality;
+  prepared?: IblPrecomputedSnapshot;
+  report: IblReport;
+}
+export interface IblCacheOptions {
+  backend?: IblCacheBackend;
+  namespace?: string;
+}
+export interface IblPrecomputeTarget {
+  precomputeIbl(input: IblSnapshot): Promise<IblSnapshot>;
 }
 
 export type MemoryCategory =
@@ -750,6 +1160,12 @@ interface WasmRuntime {
   setTerrain(terrain: TerrainHeightmapInput): void;
   setTerrainFromSource(terrain: TerrainHeightmapSourceInput): Promise<void>;
   setScene?(scene: SceneSnapshot): void;
+  setLighting?(lighting: LightingSnapshot): void;
+  setMaterials?(materials: MaterialCollectionSnapshot): void;
+  setIbl?(ibl: IblSnapshot | null): void;
+  precomputeIbl?(input: IblSnapshot): Promise<IblSnapshot>;
+  setShadows?(shadows: ShadowSnapshot): void;
+  getShadowReport?(): ShadowReport;
   setCamera(camera: CameraInput): void;
   resize(size: ResizeInput): void;
   render(): boolean;
@@ -1089,6 +1505,73 @@ export class Forge3DRuntime {
       );
     }
     this.#runOrQueue(() => this.#inner.setScene?.(scene));
+  }
+
+  setLighting(lighting: LightingSnapshot): void {
+    this.#assertNotDisposed();
+    if (this.#inner.setLighting === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not support lighting",
+      );
+    }
+    this.#runOrQueue(() => this.#inner.setLighting?.(lighting));
+  }
+
+  setMaterials(materials: MaterialCollectionSnapshot): void {
+    this.#assertNotDisposed();
+    if (this.#inner.setMaterials === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not support materials",
+      );
+    }
+    this.#runOrQueue(() => this.#inner.setMaterials?.(materials));
+  }
+
+  setIbl(ibl: IblSnapshot | null): void {
+    this.#assertNotDisposed();
+    if (this.#inner.setIbl === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not support IBL",
+      );
+    }
+    this.#runOrQueue(() => this.#inner.setIbl?.(ibl));
+  }
+
+  async precomputeIbl(input: IblSnapshot): Promise<IblSnapshot> {
+    this.#assertNotDisposed();
+    if (this.#inner.precomputeIbl === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not support IBL precomputation",
+      );
+    }
+    const precompute = this.#inner.precomputeIbl;
+    return this.#exclusiveReadback(() => precompute.call(this.#inner, input));
+  }
+
+  setShadows(shadows: ShadowSnapshot): void {
+    this.#assertNotDisposed();
+    if (this.#inner.setShadows === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not support shadows",
+      );
+    }
+    this.#runOrQueue(() => this.#inner.setShadows?.(shadows));
+  }
+
+  getShadowReport(): ShadowReport {
+    this.#assertNotDisposed();
+    if (this.#inner.getShadowReport === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not report shadow state",
+      );
+    }
+    return this.#inner.getShadowReport.call(this.#inner);
   }
 
   getRenderStats(): RenderStats {
@@ -1591,6 +2074,7 @@ interface TerrainMetadataTarget {
   heightAo?: HeightAoOptions;
   sunVisibility?: SunVisibilityOptions;
   debugView?: TerrainDebugView;
+  renderMode?: TerrainRenderMode;
 }
 
 function copyTerrainMetadata(
@@ -1627,6 +2111,15 @@ function copyTerrainMetadata(
   }
   if (source.debugView !== undefined) {
     target.debugView = source.debugView;
+  }
+  if (source.renderMode !== undefined) {
+    if (source.renderMode !== "perspective" && source.renderMode !== "screen") {
+      throw new Forge3DError(
+        "INVALID_INPUT",
+        "terrain renderMode must be 'perspective' or 'screen'",
+      );
+    }
+    target.renderMode = source.renderMode;
   }
 }
 
@@ -1778,6 +2271,12 @@ export {
   RendererConfig,
   rendererPresetNames,
 } from "./renderer-config.js";
+export {
+  getLightPreset,
+  LightCollection,
+  lightPresetNames,
+} from "./lighting.js";
+export { MaterialCollection, resolveBrdfModel } from "./materials.js";
 export { Forge3DScene } from "./scene.js";
 export { Forge3DSession } from "./session.js";
 export { BorrowedWasmView } from "./ownership.js";
@@ -1794,6 +2293,14 @@ export {
   getTerrainColormap,
   getTerrainColormapLut,
 } from "./terrain-dataset.js";
+export {
+  TextureSet,
+  generateMeshTangents,
+  extractGltfMaterialChannels,
+  Ktx2Loader,
+} from "./textures.js";
+export { decodeRgbe, IblCache, ImageBasedLighting } from "./ibl.js";
+export { CascadedShadowConfig, ShadowConfig } from "./shadows.js";
 export { Forge3DWorkerRenderer, installForge3DWorkerHost } from "./worker-renderer.js";
 export { Forge3DOffscreenRenderer } from "./offscreen-renderer.js";
 export {

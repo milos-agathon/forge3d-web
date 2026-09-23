@@ -5,6 +5,8 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  symlinkSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -15,6 +17,9 @@ import ts from "typescript";
 
 const root = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const temp = mkdtempSync(join(tmpdir(), "forge3d-facade-"));
+// Emitted modules import runtime dependencies (ktx-parse) by bare specifier;
+// resolve them from the package's installed dependencies like a consumer would.
+symlinkSync(join(root, "node_modules"), join(temp, "node_modules"), "junction");
 
 try {
   const facadeAPath = emitFacadeCopy("copy-a");
@@ -29,6 +34,7 @@ try {
     Object.keys(facadeA).sort(),
     [
       "BorrowedWasmView",
+      "CascadedShadowConfig",
       "Forge3DError",
       "Forge3DMessageClient",
       "Forge3DOffscreenRenderer",
@@ -39,17 +45,30 @@ try {
       "Forge3DWebSocketAdapter",
       "Forge3DWorkerPool",
       "Forge3DWorkerRenderer",
+      "IblCache",
+      "ImageBasedLighting",
+      "Ktx2Loader",
+      "LightCollection",
+      "MaterialCollection",
       "RendererConfig",
+      "ShadowConfig",
       "TerrainDataset",
+      "TextureSet",
       "createNotebookAdapter",
       "createTerrainDatasetWorkerHandler",
+      "decodeRgbe",
       "defineForge3DElement",
+      "extractGltfMaterialChannels",
+      "generateMeshTangents",
+      "getLightPreset",
       "getRendererPreset",
       "getTerrainColormap",
       "getTerrainColormapLut",
       "installForge3DWorkerHost",
+      "lightPresetNames",
       "readByteSource",
       "rendererPresetNames",
+      "resolveBrdfModel",
       "selectWorkerExecutionMode",
       "serveForge3DMessagePort",
       "writeByteSink",
@@ -350,6 +369,8 @@ try {
   delete globalThis.__forge3dTestNativeDisposeCount;
   delete globalThis.__forge3dTestCallbackCount;
   delete globalThis.__forge3dTestSynchronousRegistrationLoss;
+  // Remove the dependency junction itself so recursive cleanup never follows it.
+  unlinkSync(join(temp, "node_modules"));
   rmSync(temp, { recursive: true, force: true });
 }
 

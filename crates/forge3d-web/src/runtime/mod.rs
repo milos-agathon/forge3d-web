@@ -2,12 +2,17 @@ mod analysis;
 mod canvas;
 mod device_health;
 mod diagnostics;
+mod ibl;
 mod init;
+mod lighting;
 mod memory;
 mod readback;
 mod render;
 mod scene;
+mod shader_variants;
+mod shadows;
 mod terrain;
+mod textures;
 mod timing;
 
 use canvas::RuntimeCanvas;
@@ -41,7 +46,13 @@ pub struct Forge3DRuntime {
     surface_state: Option<SurfaceState>,
     depth_attachment: Option<DepthAttachment>,
     terrain: Option<TerrainRenderResources>,
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    terrain_pipeline_cache: Option<terrain::TerrainPipelineCache>,
     scene: Option<scene::NativeScene>,
+    lighting: Option<lighting::LightingResources>,
+    textures: Option<textures::TextureResources>,
+    ibl: Option<ibl::IblResources>,
+    shadows: Option<shadows::ShadowResources>,
     camera: forge3d_core::camera::CameraInput,
     width: u32,
     height: u32,
@@ -101,7 +112,12 @@ impl Forge3DRuntime {
         self.gpu_runtime = None;
         self.depth_attachment = None;
         self.terrain = None;
+        self.terrain_pipeline_cache = None;
         self.scene = None;
+        self.lighting = None;
+        self.textures = None;
+        self.ibl = None;
+        self.shadows = None;
         self.query_ring = None;
         self.disposed = true;
         self.memory.clear();
@@ -136,6 +152,48 @@ impl Forge3DRuntime {
         ensure_not_disposed_error(self).map_err(to_js_error)?;
         ensure_device_healthy_error(self).map_err(to_js_error)?;
         scene::set_scene_runtime(self, snapshot).map_err(to_js_error)
+    }
+
+    #[wasm_bindgen(js_name = setLighting)]
+    pub fn set_lighting(&mut self, snapshot: JsValue) -> Result<(), JsValue> {
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        ensure_device_healthy_error(self).map_err(to_js_error)?;
+        lighting::set_lighting_runtime(self, snapshot).map_err(to_js_error)
+    }
+
+    #[wasm_bindgen(js_name = setMaterials)]
+    pub fn set_materials(&mut self, snapshot: JsValue) -> Result<(), JsValue> {
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        ensure_device_healthy_error(self).map_err(to_js_error)?;
+        lighting::set_materials_runtime(self, snapshot).map_err(to_js_error)
+    }
+
+    #[wasm_bindgen(js_name = setIbl)]
+    pub fn set_ibl(&mut self, input: JsValue) -> Result<(), JsValue> {
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        ensure_device_healthy_error(self).map_err(to_js_error)?;
+        ibl::set_ibl_runtime(self, input).map_err(to_js_error)
+    }
+
+    #[wasm_bindgen(js_name = precomputeIbl)]
+    pub async fn precompute_ibl(&mut self, input: JsValue) -> Result<JsValue, JsValue> {
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        ensure_device_healthy_error(self).map_err(to_js_error)?;
+        ibl::precompute_ibl_runtime(self, input)
+            .await
+            .map_err(to_js_error)
+    }
+
+    #[wasm_bindgen(js_name = setShadows)]
+    pub fn set_shadows(&mut self, snapshot: JsValue) -> Result<(), JsValue> {
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        ensure_device_healthy_error(self).map_err(to_js_error)?;
+        shadows::set_shadows_runtime(self, snapshot).map_err(to_js_error)
+    }
+
+    #[wasm_bindgen(js_name = getShadowReport)]
+    pub fn get_shadow_report(&mut self) -> JsValue {
+        shadows::shadow_report_js(self)
     }
 
     #[wasm_bindgen(js_name = setTerrain)]
@@ -414,7 +472,7 @@ mod tests {
             std::mem::offset_of!(super::terrain::ColorRampUniform, clear_color),
             144
         );
-        assert_eq!(std::mem::size_of::<super::terrain::CameraUniform>(), 64);
+        assert_eq!(std::mem::size_of::<super::terrain::CameraUniform>(), 96);
         assert_eq!(std::mem::size_of::<super::terrain::TerrainVertex>(), 20);
         assert_eq!(
             std::mem::offset_of!(super::terrain::TerrainVertex, position),
@@ -492,7 +550,12 @@ mod tests {
             surface_state: None,
             depth_attachment: None,
             terrain: None,
+            terrain_pipeline_cache: None,
             scene: None,
+            lighting: None,
+            textures: None,
+            ibl: None,
+            shadows: None,
             camera: forge3d_core::camera::CameraInput::default(),
             width: 1,
             height: 1,

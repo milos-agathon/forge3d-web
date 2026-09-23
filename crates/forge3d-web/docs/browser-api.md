@@ -375,6 +375,95 @@ for `{ kind: "slope-aspect" }`, `{ kind: "height-ao", options }`, and
 terrain. All three obey the same disposal and readback-serialization rules
 as screenshots.
 
+## Lights, Materials, Textures, IBL, And Shadows
+
+W04 adds typed lighting, material, texture, image-based-lighting, and shadow
+state to `Forge3DScene`. Every selection is validated in TypeScript and again
+by the runtime, and every report states the *effective* choice, never only
+the requested one.
+
+```ts
+import {
+  Forge3DScene,
+  ImageBasedLighting,
+  IblCache,
+  resolveBrdfModel,
+} from "@forge3d/web";
+
+const scene = Forge3DScene.create();
+scene.addTerrain({ ...terrain, renderMode: "screen" });
+scene.clearLights(); // every scene starts with a default key + fill light
+scene.addLight({ type: "directional", color: [1, 1, 1], intensity: 2.4, direction: [0.65, -0.41, 0.65] });
+scene.setMaterial("default", { id: "default", brdf: "cooktorrance-ggx", roughness: 0.52 });
+const ibl = await ImageBasedLighting.fromRGBE(hdrBytes, { quality: "medium" });
+scene.setImageBasedLighting(await ibl.prepare(session, new IblCache()));
+scene.setShadows({ enabled: true, filter: "pcss", mapSize: 2048 }, { enabled: true, cascadeCount: 3 });
+session.setScene(scene);
+```
+
+- **Lights.** `addLight`/`updateLight`/`removeLight`/`clearLights` manage up
+  to 64 `directional`, `point`, `spot`, and `rect` lights (`LightCollection`
+  exposes the same API standalone). Point and spot lights take a soft
+  `innerRadius`, `edgeSoftness`, and `falloff` (`linear`, `quadratic`,
+  `cubic`, `exponential`). `getLightBounds(id)` and
+  `lightAffectsPoint(id, point)` report the effective range. Rect lights use
+  LTC by default; `setAreaLightApproximation({ mode: "sampled", sampleCount })`
+  selects the sampled approximation. `getLightPreset(name)` returns the
+  `spotlight`, `area-light`, `ambient-light`, `candle`, and `street-lamp`
+  presets.
+- **Materials and BRDF routing.** `setMaterial(slot, input)` accepts all 13
+  native BRDF models. `resolveBrdfModel(name)` and `getMaterialRoute(slot)`
+  report the observable route: `blinn-phong` is an `alias` of `phong`;
+  `subsurface` (→ `disney-principled`) and `hair` (→ `ashikhmin-shirley`) are
+  `approximation`s with a `diagnostic`. Every other model is `exact`. Unknown
+  model names reject with `INVALID_INPUT`.
+- **Textures.** `TextureSet` holds base-color, normal, metallic-roughness,
+  occlusion, and emissive images with explicit `colorSpace`, mip levels, and
+  sampler state. `generateMeshTangents(input)` returns per-vertex `xyzw`
+  tangents: per-triangle accumulation, Gram–Schmidt orthogonalization against
+  the normal, and handedness in `w`. `extractGltfMaterialChannels(rgba, w, h)`
+  splits a glTF ORM texture into occlusion (R), roughness (G), and
+  metallic (B).
+  `Ktx2Loader.load(source, { semantic, capabilities })` parses KTX2 with
+  `ktx-parse`. Natively compressed BC/ETC2/ASTC payloads upload only when the
+  matching `capabilities` flag is set. Otherwise the load rejects; it is never
+  silently decompressed. Basis Universal payloads transcode through the
+  configured `basisTranscoder` in `astc` → `bc7` → `etc2` → RGBA8 order. The resulting
+  image records `effectiveQuality` (`native`, `transcoded`, or
+  `rgba8-fallback`). An unsupported container rejects with
+  `UNSUPPORTED_FEATURE`, and `getLastReport()` still describes the attempt
+  with `effectiveQuality: "unsupported"`.
+- **IBL.** `ImageBasedLighting.fromRGBE(bytes, options)` decodes Radiance
+  RGBE in-repo. Irradiance, the specular prefilter, and the split-sum GGX BRDF
+  LUT are computed on the GPU. `ibl.prepare(session, cache)` stores the
+  precomputed maps in an `IblCache` keyed by source hash and settings. The
+  `auto` backend chooses CacheStorage, then OPFS, then `none`. `ibl.report`
+  records `effectiveMode` (`runtime-precompute` or `prepared-upload`),
+  `cacheBackend`, and `cacheHit`.
+- **Shadows.** Shadows are off until `enabled: true`. `ShadowConfig` selects one filter: `hard`, `pcf`, `pcss`,
+  `vsm`, `evsm`, or `msm`. Cascades are a separate pipeline configured by
+  `CascadedShadowConfig` (2–4 cascades, split lambda, blend range,
+  stabilization). The filter parser rejects `"csm"` with `INVALID_INPUT`:
+  "csm is a cascade pipeline, not a shadow filter". The map size is admitted
+  against the memory budget. `getShadowReport()` returns the requested and
+  effective filter and map size, the effective cascade state (`csmEnabled` is
+  `false` and `cascadeCount` is `1` while shadows are disabled), the moment
+  format, the caster light id, and a `reason` (`requested configuration`,
+  `memory budget`, `shadows disabled`, or
+  `no shadow-casting directional light`).
+- **Atomic commits.** `session.setScene(scene)` validates and admits lighting,
+  materials, IBL, and shadows together. A rejected commit leaves the
+  previously committed frame, memory report, and shadow report unchanged, and
+  device-loss recovery replays the last accepted scene.
+
+`renderMode: "screen"` on a terrain reproduces the historical native
+`terrain_pbr_pom` screen path: a fullscreen triangle, nearest-texel height
+sampling, stylized hillshade composition, and a filmic tonemap. In this mode
+the shadow pass uses the native fixed orthographic light matrix and the native
+depth-caster packing. The native caster collapses when the height-domain
+minimum is `0`, so such scenes are unshadowed, exactly as in native. The
+general P07 filter/CSM path serves `renderMode: "perspective"` (the default).
+
 ## Browser IO
 
 `runtime.setTerrainFromSource(terrain)` accepts little-endian f32 heightmap bytes

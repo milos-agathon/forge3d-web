@@ -16,6 +16,7 @@ pub(super) async fn screenshot_runtime(runtime: &mut Forge3DRuntime) -> Result<B
 }
 
 pub(super) async fn read_rgba_runtime(runtime: &mut Forge3DRuntime) -> Result<Vec<u8>, WebError> {
+    super::shader_variants::sync_pipelines(runtime)?;
     let context = runtime.context.clone().ok_or_else(|| {
         WebError::new(
             Forge3DErrorCode::RuntimeDisposed,

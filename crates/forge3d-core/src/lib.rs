@@ -4,6 +4,8 @@ pub mod error;
 
 pub mod io;
 
+pub mod codecs;
+
 #[cfg(feature = "gpu")]
 pub mod gpu;
 
@@ -23,10 +25,22 @@ pub mod scene;
 pub mod render_graph;
 
 #[cfg(feature = "webgpu")]
+pub mod lighting;
+
+#[cfg(feature = "webgpu")]
+pub mod materials;
+
+#[cfg(feature = "webgpu")]
+pub mod mesh_tbn;
+
+#[cfg(feature = "webgpu")]
 pub mod memory;
 
 #[cfg(feature = "webgpu")]
 pub mod resources;
+
+#[cfg(feature = "webgpu")]
+pub mod shadowing;
 
 #[cfg(feature = "webgpu")]
 pub mod timing;

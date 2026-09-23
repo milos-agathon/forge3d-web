@@ -14,7 +14,7 @@ pub(super) struct LedgerDowngrade {
     pub admitted_bytes: u64,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub(super) struct MemoryLedger {
     tracker: MemoryTracker,
     keys: BTreeMap<String, forge3d_core::memory::AllocationId>,
@@ -95,6 +95,16 @@ impl MemoryLedger {
         self.tracker.clear();
         self.keys.clear();
         self.admitted.clear();
+    }
+
+    #[allow(dead_code)]
+    pub(super) fn admitted_bytes(&self, key: &str) -> Option<u64> {
+        self.admitted.get(key).copied()
+    }
+
+    #[allow(dead_code)]
+    pub(super) fn admitted_keys(&self) -> impl Iterator<Item = &str> {
+        self.admitted.keys().map(String::as_str)
     }
 
     pub(super) fn report_js(&self) -> JsValue {

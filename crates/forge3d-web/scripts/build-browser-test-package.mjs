@@ -148,6 +148,29 @@ try {
     `packageSha256 = "${packageSha256}"`,
   );
   writeFileSync(w03ConsumerFixture, w03Fixture);
+  const w04ConsumerFixture = join(consumerDirectory, "test-w04-package.html");
+  let w04Fixture = readFileSync(
+    join(packageRoot, "examples", "test-w04-package.html"),
+    "utf8",
+  );
+  w04Fixture = w04Fixture.replace(
+    '<script type="module">',
+    `<script type="importmap">{"imports":{"@forge3d/web":"/node_modules/@forge3d/web/dist/index.js"}}</script>
+    <script type="module">`,
+  );
+  w04Fixture = w04Fixture.replace(
+    'from "../src-ts/index.ts"',
+    'from "@forge3d/web"',
+  );
+  w04Fixture = w04Fixture.replace(
+    'new URL("../src-ts/index.ts", import.meta.url).href',
+    'new URL("/node_modules/@forge3d/web/dist/index.js", import.meta.url).href',
+  );
+  w04Fixture = w04Fixture.replace(
+    "packageSha256 = null",
+    `packageSha256 = "${packageSha256}"`,
+  );
+  writeFileSync(w04ConsumerFixture, w04Fixture);
   const benchmarkDirectory = join(
     consumerDirectory,
     "tests",
@@ -257,6 +280,7 @@ try {
       "test-interactive-viewer.html",
       "test-lifecycle-away.html",
       "test-w03-terrain.html",
+      "test-w04-package.html",
     ]) {
       copyFileSync(join(consumerDirectory, file), join(retainedFixture, file));
     }
@@ -634,6 +658,36 @@ async function runInstalledPackageBrowserGate(
         );
       }
     }
+    await page.goto(`${origin}/test-w04-package.html`, {
+      waitUntil: "networkidle",
+    });
+    const w04Package = await page.evaluate(() =>
+      window.__forge3dW04PackageProbe(),
+    );
+    if (w04Package.supported !== true || w04Package.ok !== true) {
+      throw new Error(
+        `installed-package W04 probe failed: ${JSON.stringify(w04Package.error ?? w04Package)}`,
+      );
+    }
+    if (w04Package.packageSha256 !== packageSha256) {
+      throw new Error(
+        "installed-package W04 fixture did not execute the expected tarball",
+      );
+    }
+    if (
+      w04Package.shadow?.effectiveFilter !== "pcf" ||
+      w04Package.shadow?.cascadeCount !== 2 ||
+      w04Package.disabledShadow?.csmEnabled !== false ||
+      w04Package.ibl?.effectiveMode !== "prepared-upload" ||
+      w04Package.csmRejection?.code !== "INVALID_INPUT" ||
+      w04Package.basisAsset?.status !== 200 ||
+      !(w04Package.basisAsset?.bytes > 0) ||
+      !(w04Package.lightingChange > 0.1)
+    ) {
+      throw new Error(
+        `installed-package W04 lighting/material/IBL/shadow surface failed: ${JSON.stringify(w04Package)}`,
+      );
+    }
     if (pageErrors.length > 0) {
       throw new Error(`installed-package page errors: ${pageErrors.join("; ")}`);
     }
@@ -650,6 +704,13 @@ async function runInstalledPackageBrowserGate(
       visibilityLifecycle,
       interactionObservation,
       evidence,
+      w04Package: {
+        shadow: w04Package.shadow,
+        disabledShadow: w04Package.disabledShadow,
+        ibl: w04Package.ibl,
+        routes: w04Package.routes,
+        basisAsset: w04Package.basisAsset,
+      },
       terrainDataset: {
         direct: terrainDataset.sources.direct,
         file: terrainDataset.sources.file,
