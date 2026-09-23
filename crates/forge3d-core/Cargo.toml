@@ -24,3 +24,6 @@ bytemuck = { workspace = true, optional = true }
 glam.workspace = true
 thiserror.workspace = true
 wgpu = { workspace = true, optional = true }
+
+[dev-dependencies]
+serde_json.workspace = true

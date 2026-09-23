@@ -172,6 +172,13 @@ Cache `.wasm` assets with immutable content hashing, or invalidate the wasm asse
   `ShadowConfig` (six filters) with a separate `CascadedShadowConfig`
 - terrain `renderMode: "screen"` reproducing the native `terrain_pbr_pom`
   screen path, matched against a native golden at SSIM >= 0.98
+- cameras, controllers, animation, and rigs (W05): perspective and
+  orthographic `CameraInput`, the `Camera` class with world/screen
+  conversion, native look-at/projection/TRS/DOF helpers, orbit and fly
+  controllers with mode switching, key bindings and deterministic input
+  replay, `CameraAnimation` keyframes, and clearance-verified
+  `TerrainOrbitRig`/`TerrainRailRig`/`TerrainTargetFollowRig` bakes, all
+  matched against a native oracle within 1e-5
 - `setCamera(camera)`
 - `resize({ width, height, devicePixelRatio })`
 - `render()`
@@ -186,7 +193,9 @@ and error codes.
 The current package includes canvas-backed WebGPU rendering, camera and resize
 control, Float32 heightmaps, URL/File/Blob/ArrayBuffer terrain byte sources,
 typed lights, BRDF materials, PBR/KTX2 textures, cached IBL, filtered and
-cascaded shadows, screenshots, and TypeScript declarations. This is the implemented release
+cascaded shadows, perspective/orthographic cameras with orbit/fly controls,
+camera keyframe animation and terrain camera rigs, screenshots, and TypeScript
+declarations. This is the implemented release
 surface, not the final parity boundary.
 
 | Capability | Current status | Parity owner |

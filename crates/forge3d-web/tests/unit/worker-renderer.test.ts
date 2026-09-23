@@ -537,7 +537,7 @@ describe("Forge3DWorkerRenderer", () => {
       await renderer.setScene(scene);
       await renderer.render();
       const diagnostics = renderer.getDiagnostics();
-      expect(diagnostics.ownedListeners).toBe(9);
+      expect(diagnostics.ownedListeners).toBe(11);
       renderer.dispose();
       await flush();
       expect(runtimes[cycle]!.disposed).toBe(true);

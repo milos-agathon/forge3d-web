@@ -1,6 +1,11 @@
 import {
+  type CameraControllerMode,
+  type CameraInput,
+  type CameraInputEvent,
+  type CameraProjectionKind,
   Forge3DError,
   Forge3DRuntime,
+  type FlyView,
   type Forge3DRuntimeCapabilities,
   type Forge3DRuntimeOptions,
   type Forge3DViewerOptions,
@@ -19,6 +24,8 @@ import {
   type ViewerStatus,
 } from "./index.js";
 import { OrbitController } from "./orbit-controller.js";
+import { CameraController } from "./camera-controllers.js";
+import { validateCameraInput } from "./camera.js";
 import { RenderScheduler } from "./render-scheduler.js";
 import { ResizeController, computeBackingSize } from "./resize-controller.js";
 import { OwnedDomResources, ViewerControls } from "./viewer-controls.js";
@@ -45,7 +52,7 @@ interface ViewerRuntime {
   simulateDeviceLossForTesting?(): void;
   setTerrain(terrain: TerrainHeightmapInput): void;
   setTerrainFromSource(terrain: TerrainHeightmapSourceInput): Promise<void>;
-  setCamera(camera: ReturnType<OrbitController["getCamera"]>): void;
+  setCamera(camera: CameraInput): void;
   resize(size: ResizeInput): void;
   render(): boolean;
   screenshot(): Promise<Blob>;
@@ -91,6 +98,9 @@ export class Forge3DViewer {
   readonly #runtimeOptions: Forge3DRuntimeOptions;
   readonly #runtimeFactory: ViewerRuntimeFactory;
   readonly #controller: OrbitController;
+  readonly #camera: CameraController;
+  #projection: CameraProjectionKind = "perspective";
+  #orthographicHeight: number | undefined;
   readonly #budget: ViewerResourceBudget;
   readonly #maxDevicePixelRatio: number;
   readonly #recoveryMode: "none" | "once";
@@ -138,6 +148,16 @@ export class Forge3DViewer {
     this.#controller = new OrbitController(
       options.initialView ?? cloneView(DEFAULT_VIEW),
       options.controls === false ? undefined : options.controls,
+    );
+    const controls = options.controls === false ? undefined : options.controls;
+    this.#camera = new CameraController(
+      {
+        ...(controls?.mode !== undefined ? { mode: controls.mode } : {}),
+        ...(controls?.fly !== undefined ? { flyOptions: controls.fly } : {}),
+        ...(controls?.bindings !== undefined ? { bindings: controls.bindings } : {}),
+        ...(options.initialFlyView !== undefined ? { fly: options.initialFlyView } : {}),
+      },
+      this.#controller,
     );
     this.#capabilities = {
       deviceState: "disposed",
@@ -217,6 +237,75 @@ export class Forge3DViewer {
 
   getView(): OrbitView {
     return this.#controller.getView();
+  }
+
+  /** Active controller mode (`"orbit"` or `"fly"`). */
+  getCameraMode(): CameraControllerMode {
+    return this.#camera.mode;
+  }
+
+  /** Switches between orbit and fly control, keeping the view continuous. */
+  setCameraMode(mode: CameraControllerMode): void {
+    const runtime = this.#operationalRuntime();
+    if (this.#camera.setMode(mode)) {
+      this.#pushCamera(runtime);
+    }
+  }
+
+  getFlyView(): FlyView {
+    return this.#camera.fly.getView();
+  }
+
+  setFlyView(view: FlyView): void {
+    const runtime = this.#operationalRuntime();
+    this.#camera.fly.setView(view);
+    this.#pushCamera(runtime);
+  }
+
+  /** Camera currently rendered (active controller plus projection). */
+  getCamera(): CameraInput {
+    return this.#effectiveCamera();
+  }
+
+  /**
+   * Points both controllers at `camera` and adopts its projection; the
+   * active mode is kept. Controllers are Y-up, so `camera.up` must be +Y.
+   */
+  setCamera(camera: CameraInput): void {
+    const runtime = this.#operationalRuntime();
+    const checked = validateCameraInput(camera);
+    const upLength = Math.hypot(checked.up[0], checked.up[1], checked.up[2]);
+    if (
+      Math.abs(checked.up[0]) > 1e-6 * upLength ||
+      Math.abs(checked.up[2]) > 1e-6 * upLength ||
+      checked.up[1] <= 0
+    ) {
+      throw new Forge3DError(
+        "INVALID_INPUT",
+        "viewer cameras are Y-up; camera.up must point along +Y",
+      );
+    }
+    this.#camera.setCamera(checked);
+    this.#projection = checked.projection ?? "perspective";
+    this.#orthographicHeight = checked.orthographicHeight;
+    this.#pushCamera(runtime);
+  }
+
+  /** Records every camera input event applied from now on. */
+  startCameraRecording(): void {
+    this.#camera.startRecording();
+  }
+
+  /** Stops recording and returns the recorded, serializable events. */
+  stopCameraRecording(): CameraInputEvent[] {
+    return this.#camera.stopRecording();
+  }
+
+  /** Applies recorded camera input events deterministically. */
+  replayCameraInput(events: readonly CameraInputEvent[]): void {
+    const runtime = this.#operationalRuntime();
+    this.#camera.replay(events);
+    this.#pushCamera(runtime);
   }
 
   getCapabilities(): ViewerCapabilities {
@@ -315,14 +404,27 @@ export class Forge3DViewer {
   setView(view: OrbitView): void {
     const runtime = this.#operationalRuntime();
     this.#controller.setView(view);
-    this.#callRuntime(() => runtime.setCamera(this.#controller.getCamera()));
-    this.#scheduler?.requestRender();
+    this.#pushCamera(runtime);
   }
 
+  /** Resets the active controller (orbit or fly) to its initial view. */
   resetView(): void {
     const runtime = this.#operationalRuntime();
-    this.#controller.reset();
-    this.#callRuntime(() => runtime.setCamera(this.#controller.getCamera()));
+    this.#camera.apply({ type: "reset" });
+    this.#pushCamera(runtime);
+  }
+
+  #effectiveCamera(): CameraInput {
+    const camera = this.#camera.getCamera();
+    if (this.#projection === "orthographic") {
+      camera.projection = "orthographic";
+      camera.orthographicHeight = this.#orthographicHeight ?? 1;
+    }
+    return camera;
+  }
+
+  #pushCamera(runtime: ViewerRuntime): void {
+    this.#callRuntime(() => runtime.setCamera(this.#effectiveCamera()));
     this.#scheduler?.requestRender();
   }
 
@@ -361,7 +463,7 @@ export class Forge3DViewer {
       return this.#screenshotPromise;
     }
     validateScreenshotBudget(runtime.width, runtime.height, this.#budget);
-    this.#callRuntime(() => runtime.setCamera(this.#controller.getCamera()));
+    this.#callRuntime(() => runtime.setCamera(this.#effectiveCamera()));
     const promise = runtime.screenshot().catch((error: unknown) => {
       const normalized = Forge3DError.from(error);
       this.#routeDeviceLoss(normalized);
@@ -406,7 +508,7 @@ export class Forge3DViewer {
     }
     runtime = this.#ownedRuntimeOrThrow();
     const initializedGeneration = this.#generation;
-    runtime.setCamera(this.#controller.getCamera());
+    runtime.setCamera(this.#effectiveCamera());
     if (
       this.#runtime !== runtime ||
       this.#generation !== initializedGeneration ||
@@ -433,13 +535,14 @@ export class Forge3DViewer {
         this.#runtime !== undefined &&
         !this.#resizeController?.suspended,
       onError: (error) => this.#handleRuntimeError(Forge3DError.from(error)),
+      onFrame: (timestamp) => this.#controls?.onAnimationFrame(timestamp) ?? false,
       resources: this.#resources,
     });
 
     if (this.#options.controls !== false) {
       this.#controls = new ViewerControls(
         this.#canvas,
-        this.#controller,
+        this.#camera,
         this.#options.controls ?? {},
         () => {
           if (this.#status !== "ready") {
@@ -451,7 +554,7 @@ export class Forge3DViewer {
           }
           if (
             !this.#callRuntimeFromCallback(() =>
-              current.setCamera(this.#controller.getCamera()),
+              current.setCamera(this.#effectiveCamera()),
             )
           ) {
             return;
@@ -644,7 +747,7 @@ export class Forge3DViewer {
         }
         return;
       }
-      replacement.setCamera(this.#controller.getCamera());
+      replacement.setCamera(this.#effectiveCamera());
       if (this.#runtime !== replacement || recoveryController.signal.aborted) {
         return;
       }

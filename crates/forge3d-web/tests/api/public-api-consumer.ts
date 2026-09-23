@@ -848,3 +848,95 @@ async function compileW04Declarations(): Promise<void> {
 }
 
 void compileW04Declarations;
+
+import {
+  Camera,
+  CameraAnimation,
+  CameraController,
+  CameraKeyframe,
+  composeTrs,
+  DEFAULT_CAMERA_KEY_BINDINGS,
+  depthOfFieldRange,
+  FlyController,
+  invertMatrix,
+  lookAt,
+  makeCamera,
+  mat4ToRows,
+  OrbitController,
+  orthographic,
+  perspective,
+  RenderConfig,
+  RenderProgress,
+  replayCameraInput,
+  screenRay,
+  TERRAIN_CLEARANCE_TOLERANCE,
+  TerrainClearance,
+  TerrainOrbitRig,
+  TerrainRailRig,
+  TerrainRigSource,
+  TerrainTargetFollowRig,
+  terrainRigFromJSON,
+  viewerOrbitRadius,
+  worldToScreen,
+  type CameraControllerMode,
+  type CameraInputEvent,
+  type CameraJSON,
+  type CameraState,
+  type ClipSpace,
+  type FlyView,
+  type ScreenPoint,
+  type TerrainRig,
+  type TerrainRigJSON,
+  type Vec3,
+} from "../../types/index";
+
+async function compileW05Declarations(viewer: Forge3DViewer, session: Forge3DSession): Promise<void> {
+  const clip: ClipSpace = "gl";
+  const eye: Vec3 = [3, 4, 5];
+  const view: Float32Array = lookAt(eye, [0, 0, 0], [0, 1, 0]);
+  const projection: Float32Array = perspective(45, 1.5, 0.1, 100, clip);
+  const ortho: Float32Array = orthographic(-1, 1, -1, 1, 0.1, 10);
+  const rows: number[][] = mat4ToRows(composeTrs([1, 2, 3], [0, 90, 0], [1, 1, 1]));
+  const camera = new Camera({ position: eye, target: [0, 0, 0], projection: "orthographic", orthographicHeight: 4 });
+  const json: CameraJSON = camera.toJSON();
+  const point: ScreenPoint | undefined = camera.worldToScreen([0, 0, 0], { width: 10, height: 10 });
+  const projected = worldToScreen(camera.viewProjectionMatrix(1), [0, 0, 0], { width: 10, height: 10 });
+  const ray = screenRay(invertMatrix(camera.viewProjectionMatrix(1)), 5, 5, { width: 10, height: 10 });
+  const range = depthOfFieldRange(50, 2.8, 3000);
+  const pathTracing = makeCamera({ origin: eye, lookAt: [0, 0, 0], up: [0, 1, 0], fovY: 40, aspect: 1, exposure: 1 });
+
+  const animation = new CameraAnimation([new CameraKeyframe({ time: 0, phiDeg: 0, thetaDeg: 45, radius: 10, fovDeg: 50 })]);
+  animation.addKeyframe({ time: 2, phiDeg: 90, thetaDeg: 40, radius: 12, fovDeg: 45, target: [0, 1, 0] });
+  const state: CameraState | undefined = animation.evaluate(1);
+  const frames: number = animation.getFrameCount(30);
+  const naming = new RenderConfig({ fps: 24 }).framePath(3);
+  const percent: number = new RenderProgress(1, 2, 0.5, naming).percent;
+
+  const controller = new CameraController({ mode: "fly", bindings: { toggleMode: ["Tab"] } }, new OrbitController());
+  const mode: CameraControllerMode = controller.toggleMode();
+  const fly: FlyView = new FlyController().getView();
+  const events: CameraInputEvent[] = [{ type: "key", code: DEFAULT_CAMERA_KEY_BINDINGS.forward[0] ?? "KeyW", pressed: true }];
+  const replayed = replayCameraInput({}, events);
+
+  const source = new TerrainRigSource({ heights: new Float32Array(4), width: 2, height: 2, terrainWidth: 10 });
+  const rigs: TerrainRig[] = [
+    new TerrainOrbitRig({ targetXZ: [5, 5], duration: 1, radius: 3, phiStartDeg: 0, phiEndDeg: 90, clearance: new TerrainClearance({ minimumHeight: 1 }) }),
+    new TerrainRailRig({ pathXZ: [[1, 1], [9, 1]], duration: 1, cameraHeightOffset: 2, lookAheadDistance: 1 }),
+    new TerrainTargetFollowRig({ targetPathXZ: [[2, 2], [8, 8]], duration: 1, radius: 1 }),
+  ];
+  const rigJson: TerrainRigJSON = rigs[0]!.toJSON();
+  const baked: CameraAnimation = terrainRigFromJSON(rigJson).bake(source, { samplesPerSecond: 4 });
+  const worldCamera = source.cameraAt(baked, 0.5, { near: 0.1, far: 100 });
+  const radius: number = viewerOrbitRadius(source) + TERRAIN_CLEARANCE_TOLERANCE;
+
+  viewer.setCameraMode("fly");
+  viewer.setCamera({ ...replayed, projection: "orthographic", orthographicHeight: 5 });
+  viewer.startCameraRecording();
+  viewer.replayCameraInput(viewer.stopCameraRecording());
+  const current = viewer.getCamera();
+  const lastSessionCamera = session.getCamera();
+
+  void [view, projection, ortho, rows, json, point, projected, ray, range, pathTracing, state, frames, percent, mode, fly, worldCamera, radius, current, lastSessionCamera];
+}
+
+void compileW05Declarations;

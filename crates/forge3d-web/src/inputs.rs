@@ -744,6 +744,17 @@ pub struct CameraOptions {
     pub fov_y_degrees: f32,
     pub near: f32,
     pub far: f32,
+    #[serde(default)]
+    pub projection: Option<CameraProjectionKind>,
+    #[serde(default)]
+    pub orthographic_height: Option<f32>,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum CameraProjectionKind {
+    Perspective,
+    Orthographic,
 }
 
 impl CameraOptions {
@@ -764,13 +775,34 @@ impl CameraOptions {
     }
 
     pub fn validate(&self) -> Result<forge3d_core::camera::CameraInput, WebError> {
-        forge3d_core::camera::CameraInput::new(
+        use forge3d_core::camera::CameraProjection;
+
+        let projection = match (self.projection, self.orthographic_height) {
+            (None | Some(CameraProjectionKind::Perspective), None) => CameraProjection::Perspective,
+            (Some(CameraProjectionKind::Orthographic), Some(height)) => {
+                CameraProjection::Orthographic { height }
+            }
+            (Some(CameraProjectionKind::Orthographic), None) => {
+                return Err(WebError::new(
+                    Forge3DErrorCode::InvalidInput,
+                    "camera.orthographicHeight is required for orthographic projection",
+                ));
+            }
+            (None | Some(CameraProjectionKind::Perspective), Some(_)) => {
+                return Err(WebError::new(
+                    Forge3DErrorCode::InvalidInput,
+                    "camera.orthographicHeight is only valid for orthographic projection",
+                ));
+            }
+        };
+        forge3d_core::camera::CameraInput::with_projection(
             self.position,
             self.target,
             self.up,
             self.fov_y_degrees,
             self.near,
             self.far,
+            projection,
         )
         .map_err(crate::error::map_core_error)
     }
@@ -1016,8 +1048,8 @@ fn read_u32_property(value: &JsValue, name: &str) -> Result<u32, WebError> {
 #[cfg(test)]
 mod tests {
     use super::{
-        AlphaModeOption, CameraOptions, PowerPreferenceOption, ResizeOptions, RuntimeOptions,
-        TerrainColorRampOptions, TerrainColorStopOptions, TerrainHeightmapOptions,
+        AlphaModeOption, CameraOptions, CameraProjectionKind, PowerPreferenceOption, ResizeOptions,
+        RuntimeOptions, TerrainColorRampOptions, TerrainColorStopOptions, TerrainHeightmapOptions,
         TerrainPhysicalLimits,
     };
 
@@ -1216,12 +1248,55 @@ mod tests {
             fov_y_degrees: 45.0,
             near: 0.01,
             far: 100.0,
+            projection: None,
+            orthographic_height: None,
         };
 
         let error = options.validate().unwrap_err();
 
         assert_eq!(error.code().as_str(), "INVALID_INPUT");
         assert!(error.message().contains("position"));
+    }
+
+    #[test]
+    fn camera_options_select_orthographic_projection() {
+        let base = CameraOptions {
+            position: [0.0, 4.0, 6.0],
+            target: [0.0, 0.0, 0.0],
+            up: [0.0, 1.0, 0.0],
+            fov_y_degrees: 45.0,
+            near: 0.1,
+            far: 100.0,
+            projection: Some(CameraProjectionKind::Orthographic),
+            orthographic_height: Some(5.0),
+        };
+        let camera = base.validate().unwrap();
+        assert_eq!(
+            camera.projection,
+            forge3d_core::camera::CameraProjection::Orthographic { height: 5.0 }
+        );
+
+        let missing = CameraOptions {
+            orthographic_height: None,
+            ..base
+        };
+        assert!(missing
+            .validate()
+            .unwrap_err()
+            .message()
+            .contains("orthographicHeight"));
+
+        let stray = CameraOptions {
+            projection: Some(CameraProjectionKind::Perspective),
+            ..base
+        };
+        assert!(stray.validate().is_err());
+
+        let zero = CameraOptions {
+            orthographic_height: Some(0.0),
+            ..base
+        };
+        assert!(zero.validate().is_err());
     }
 
     #[test]

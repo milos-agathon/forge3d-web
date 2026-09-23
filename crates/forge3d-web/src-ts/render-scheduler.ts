@@ -11,6 +11,12 @@ export interface RenderSchedulerOptions {
   pageTarget?: EventTarget;
   resources?: OwnedDomResources;
   onError?: (error: unknown) => void;
+  /**
+   * Runs at the start of every owned animation frame with its timestamp.
+   * Returning `true` keeps the scheduler animating (another frame is
+   * requested after this one), e.g. while fly-mode movement keys are held.
+   */
+  onFrame?: (timestamp: number) => boolean;
 }
 
 /**
@@ -22,6 +28,7 @@ export class RenderScheduler {
   readonly #requestAnimationFrame: (callback: FrameRequestCallback) => number;
   readonly #cancelAnimationFrame: (handle: number) => void;
   readonly #onError: (error: unknown) => void;
+  readonly #onFrame: ((timestamp: number) => boolean) | undefined;
   readonly #resources: OwnedDomResources;
   readonly #ownsResources: boolean;
   readonly #disposeListeners: DisposeResource[] = [];
@@ -43,6 +50,7 @@ export class RenderScheduler {
     this.#cancelAnimationFrame =
       options.cancelAnimationFrame ?? defaultCancelAnimationFrame;
     this.#onError = options.onError ?? reportAsync;
+    this.#onFrame = options.onFrame;
     this.#resources = options.resources ?? new OwnedDomResources();
     this.#ownsResources = options.resources === undefined;
 
@@ -164,16 +172,27 @@ export class RenderScheduler {
       return;
     }
     let handle = 0;
-    handle = this.#requestAnimationFrame(() => {
+    handle = this.#requestAnimationFrame((timestamp) => {
       this.#animationFrames.delete(handle);
-      this.#submitIfPossible();
+      this.#submitIfPossible(timestamp);
     });
     this.#animationFrames.add(handle);
   }
 
-  #submitIfPossible(): void {
+  #submitIfPossible(timestamp: number): void {
     if (!this.#dirty || !this.#isRunnable()) {
       return;
+    }
+    let animating = false;
+    if (this.#onFrame !== undefined) {
+      try {
+        animating = this.#onFrame(timestamp) === true;
+      } catch (error) {
+        this.#onError(error);
+      }
+      if (!this.#isRunnable()) {
+        return;
+      }
     }
     this.#dirty = false;
     try {
@@ -185,6 +204,9 @@ export class RenderScheduler {
       }
     } catch (error) {
       this.#onError(error);
+    }
+    if (animating) {
+      this.#dirty = true;
     }
     this.#scheduleIfPossible();
   }

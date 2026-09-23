@@ -407,6 +407,8 @@ test("every Playwright spec uses the automatic shared WebGPU guard", () => {
     "w04_package.spec.ts",
     "w04_parity.spec.ts",
     "w04_shadows.spec.ts",
+    "w05_camera.spec.ts",
+    "w05_package.spec.ts",
     "webgpu_diagnostics.spec.ts",
   ]);
   for (const name of specs) {

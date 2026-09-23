@@ -377,6 +377,7 @@ fn test_camera() -> CameraInput {
         fov_y_degrees: 46.0,
         near: 0.1,
         far: 100.0,
+        projection: crate::camera::CameraProjection::Perspective,
     }
 }
 

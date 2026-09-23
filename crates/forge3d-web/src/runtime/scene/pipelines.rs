@@ -49,9 +49,12 @@ fn vs_main(input: VertexInput) -> VertexOutput {
 
 @fragment
 fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
-    let view_direction = forge3d_safe_direction(
-        camera.camera_position.xyz - input.world_position,
-    );
+    // camera_forward.w flags an orthographic camera: parallel view rays.
+    var view_vector = camera.camera_position.xyz - input.world_position;
+    if (camera.camera_forward.w > 0.5) {
+        view_vector = -camera.camera_forward.xyz;
+    }
+    let view_direction = forge3d_safe_direction(view_vector);
     let view_depth = dot(
         camera.camera_forward.xyz,
         input.world_position - camera.camera_position.xyz,

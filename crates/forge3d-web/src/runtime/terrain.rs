@@ -1257,7 +1257,12 @@ pub(super) fn create_camera_uniform(
             camera.position[2],
             1.0,
         ],
-        camera_forward: [forward[0], forward[1], forward[2], 0.0],
+        camera_forward: [
+            forward[0],
+            forward[1],
+            forward[2],
+            if camera.is_orthographic() { 1.0 } else { 0.0 },
+        ],
     })
 }
 
@@ -1474,9 +1479,12 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
     let t = clamp((input.height - params.domain_min) * params.inv_domain_span, 0.0, 1.0);
     let base_color = sample_color_ramp(t);
     let normal = terrain_normal(input.uv);
-    let view_direction = forge3d_safe_direction(
-        camera.camera_position.xyz - input.world_position,
-    );
+    // camera_forward.w flags an orthographic camera: parallel view rays.
+    var view_vector = camera.camera_position.xyz - input.world_position;
+    if (camera.camera_forward.w > 0.5) {
+        view_vector = -camera.camera_forward.xyz;
+    }
+    let view_direction = forge3d_safe_direction(view_vector);
     var tangent_xyz = vec3<f32>(1.0, 0.0, 0.0)
         - normal * dot(normal, vec3<f32>(1.0, 0.0, 0.0));
     if (dot(tangent_xyz, tangent_xyz) < 1e-8) {

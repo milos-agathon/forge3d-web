@@ -171,6 +171,25 @@ try {
     `packageSha256 = "${packageSha256}"`,
   );
   writeFileSync(w04ConsumerFixture, w04Fixture);
+  const w05ConsumerFixture = join(consumerDirectory, "test-w05-package.html");
+  let w05Fixture = readFileSync(
+    join(packageRoot, "examples", "test-w05-package.html"),
+    "utf8",
+  );
+  w05Fixture = w05Fixture.replace(
+    '<script type="module">',
+    `<script type="importmap">{"imports":{"@forge3d/web":"/node_modules/@forge3d/web/dist/index.js"}}</script>
+    <script type="module">`,
+  );
+  w05Fixture = w05Fixture.replace(
+    'from "../src-ts/index.ts"',
+    'from "@forge3d/web"',
+  );
+  w05Fixture = w05Fixture.replace(
+    "packageSha256 = null",
+    `packageSha256 = "${packageSha256}"`,
+  );
+  writeFileSync(w05ConsumerFixture, w05Fixture);
   const benchmarkDirectory = join(
     consumerDirectory,
     "tests",
@@ -281,6 +300,7 @@ try {
       "test-lifecycle-away.html",
       "test-w03-terrain.html",
       "test-w04-package.html",
+      "test-w05-package.html",
     ]) {
       copyFileSync(join(consumerDirectory, file), join(retainedFixture, file));
     }
@@ -688,6 +708,35 @@ async function runInstalledPackageBrowserGate(
         `installed-package W04 lighting/material/IBL/shadow surface failed: ${JSON.stringify(w04Package)}`,
       );
     }
+    await page.goto(`${origin}/test-w05-package.html`, {
+      waitUntil: "networkidle",
+    });
+    const w05Package = await page.evaluate(() =>
+      window.__forge3dW05PackageProbe(),
+    );
+    if (w05Package.supported !== true || w05Package.ok !== true) {
+      throw new Error(
+        `installed-package W05 probe failed: ${JSON.stringify(w05Package.error ?? w05Package)}`,
+      );
+    }
+    if (w05Package.packageSha256 !== packageSha256) {
+      throw new Error(
+        "installed-package W05 fixture did not execute the expected tarball",
+      );
+    }
+    if (
+      !(w05Package.projection?.orthographicCovered > 1000) ||
+      !(w05Package.projection?.projectionDiffers > 1) ||
+      !(w05Package.projection?.orthographicDistanceChange < 0.01) ||
+      w05Package.animation?.frames !== 61 ||
+      !(w05Package.rig?.minClearance >= 2 - 1e-9) ||
+      w05Package.replay?.equal !== true ||
+      w05Package.orthographicRejection !== "INVALID_INPUT"
+    ) {
+      throw new Error(
+        `installed-package W05 camera/animation/rig surface failed: ${JSON.stringify(w05Package)}`,
+      );
+    }
     if (pageErrors.length > 0) {
       throw new Error(`installed-package page errors: ${pageErrors.join("; ")}`);
     }
@@ -710,6 +759,12 @@ async function runInstalledPackageBrowserGate(
         ibl: w04Package.ibl,
         routes: w04Package.routes,
         basisAsset: w04Package.basisAsset,
+      },
+      w05Package: {
+        projection: w05Package.projection,
+        animation: w05Package.animation,
+        rig: w05Package.rig,
+        replay: w05Package.replay,
       },
       terrainDataset: {
         direct: terrainDataset.sources.direct,

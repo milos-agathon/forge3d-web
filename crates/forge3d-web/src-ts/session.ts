@@ -1,4 +1,5 @@
 import { Forge3DError, Forge3DRuntime } from "./index.js";
+import { cloneCameraInput, validateCameraInput } from "./camera.js";
 import type {
   AdapterInfo,
   CameraInput,
@@ -290,15 +291,20 @@ export class Forge3DSession {
 
   setCamera(camera: CameraInput): void {
     const runtime = this.#runtimeOrThrow();
-    const normalized = validateCamera(camera);
+    const normalized = validateCameraInput(camera);
     if (runtime.setCamera === undefined) {
       throw new Forge3DError(
         "UNSUPPORTED_FEATURE",
         "Runtime does not support cameras",
       );
     }
-    runtime.setCamera(cloneCamera(normalized));
+    runtime.setCamera(cloneCameraInput(normalized));
     this.#camera = normalized;
+  }
+
+  /** Last committed camera (replayed after device loss), if any. */
+  getCamera(): CameraInput | undefined {
+    return this.#camera === undefined ? undefined : cloneCameraInput(this.#camera);
   }
 
   readRgba(): Promise<Uint8Array> {
@@ -562,7 +568,7 @@ export class Forge3DSession {
           );
         }
         if (this.#camera !== undefined) {
-          replacement.setCamera?.(cloneCamera(this.#camera));
+          replacement.setCamera?.(cloneCameraInput(this.#camera));
         }
       } catch (error) {
         this.#detachLoss?.();
@@ -724,74 +730,6 @@ function sortedUnique(values: readonly string[]): string[] {
   return [...new Set(values)].sort();
 }
 
-function validateCamera(camera: CameraInput): CameraInput {
-  const checked = cloneCamera(camera);
-  for (const [field, vector] of [
-    ["position", checked.position],
-    ["target", checked.target],
-    ["up", checked.up],
-  ] as const) {
-    if (!Array.isArray(vector) || vector.length !== 3) {
-      throw new Forge3DError(
-        "INVALID_INPUT",
-        `camera.${field} must be a 3-component vector`,
-      );
-    }
-    for (const component of vector) {
-      if (!Number.isFinite(component)) {
-        throw new Forge3DError(
-          "INVALID_INPUT",
-          `camera.${field} components must be finite`,
-        );
-      }
-    }
-  }
-  const upLength = Math.hypot(
-    checked.up[0],
-    checked.up[1],
-    checked.up[2],
-  );
-  if (upLength <= 0) {
-    throw new Forge3DError(
-      "INVALID_INPUT",
-      "camera.up must be a nonzero vector",
-    );
-  }
-  if (
-    !Number.isFinite(checked.fovYDegrees) ||
-    checked.fovYDegrees <= 0 ||
-    checked.fovYDegrees >= 180
-  ) {
-    throw new Forge3DError(
-      "INVALID_INPUT",
-      "camera.fovYDegrees must be finite and within (0, 180)",
-    );
-  }
-  if (!Number.isFinite(checked.near) || checked.near <= 0) {
-    throw new Forge3DError(
-      "INVALID_INPUT",
-      "camera.near must be finite and positive",
-    );
-  }
-  if (!Number.isFinite(checked.far) || checked.far <= checked.near) {
-    throw new Forge3DError(
-      "INVALID_INPUT",
-      "camera.far must be finite and greater than near",
-    );
-  }
-  return checked;
-}
-
-function cloneCamera(camera: CameraInput): CameraInput {
-  return {
-    position: [...camera.position],
-    target: [...camera.target],
-    up: [...camera.up],
-    fovYDegrees: camera.fovYDegrees,
-    near: camera.near,
-    far: camera.far,
-  };
-}
 
 function applyRendererConfigMaterials(
   scene: Forge3DScene,
