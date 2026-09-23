@@ -45,6 +45,8 @@ pub struct Forge3DRuntime {
     surface_state: Option<SurfaceState>,
     depth_attachment: Option<DepthAttachment>,
     terrain: Option<TerrainRenderResources>,
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    terrain_pipeline_cache: Option<terrain::TerrainPipelineCache>,
     scene: Option<scene::NativeScene>,
     lighting: Option<lighting::LightingResources>,
     textures: Option<textures::TextureResources>,
@@ -109,6 +111,7 @@ impl Forge3DRuntime {
         self.gpu_runtime = None;
         self.depth_attachment = None;
         self.terrain = None;
+        self.terrain_pipeline_cache = None;
         self.scene = None;
         self.lighting = None;
         self.textures = None;
@@ -546,6 +549,7 @@ mod tests {
             surface_state: None,
             depth_attachment: None,
             terrain: None,
+            terrain_pipeline_cache: None,
             scene: None,
             lighting: None,
             textures: None,

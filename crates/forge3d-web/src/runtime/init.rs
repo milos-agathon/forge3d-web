@@ -11,7 +11,9 @@ use super::diagnostics::AdapterDiagnostics;
 #[cfg(target_arch = "wasm32")]
 use super::memory::MemoryLedger;
 #[cfg(target_arch = "wasm32")]
-use super::terrain::{create_terrain_render_pipeline, TERRAIN_SHADER};
+use super::terrain::{
+    create_terrain_render_pipeline, terrain_bind_group_layout, TerrainPipelineCache, TERRAIN_SHADER,
+};
 #[cfg(target_arch = "wasm32")]
 use super::timing::TimestampRing;
 #[cfg(target_arch = "wasm32")]
@@ -170,8 +172,9 @@ pub(super) async fn create_runtime(
         MemoryCategory::Buffers,
         super::ibl::IBL_UNIFORM_BYTES,
     )?;
-    validate_terrain_shader_and_pipeline(&context, surface_state.config.format, &ibl_layout)
-        .await?;
+    let terrain_pipeline_cache =
+        validate_terrain_shader_and_pipeline(&context, surface_state.config.format, &ibl_layout)
+            .await?;
     let depth_attachment = DepthAttachment::new(&context, width, height);
     let surface_format = format!("{:?}", surface_state.config.format);
     let surface_formats = surface_state
@@ -196,6 +199,7 @@ pub(super) async fn create_runtime(
         surface_state: Some(surface_state),
         depth_attachment: Some(depth_attachment),
         terrain: None,
+        terrain_pipeline_cache: Some(terrain_pipeline_cache),
         scene: None,
         lighting: Some(lighting),
         textures: Some(textures),
@@ -234,84 +238,11 @@ async fn validate_terrain_shader_and_pipeline(
     context: &GpuContext,
     surface_format: wgpu::TextureFormat,
     ibl_layout: &wgpu::BindGroupLayout,
-) -> Result<(), WebError> {
+) -> Result<TerrainPipelineCache, WebError> {
     let scope = context
         .device
         .push_error_scope(wgpu::ErrorFilter::Validation);
-    let bind_group_layout =
-        context
-            .device
-            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("forge3d-web-terrain-validation-bind-group-layout"),
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Texture {
-                            sample_type: wgpu::TextureSampleType::Float { filterable: false },
-                            view_dimension: wgpu::TextureViewDimension::D2,
-                            multisampled: false,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::NonFiltering),
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 2,
-                        visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 3,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 4,
-                        visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 5,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Texture {
-                            sample_type: wgpu::TextureSampleType::Float { filterable: false },
-                            view_dimension: wgpu::TextureViewDimension::D2,
-                            multisampled: false,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 6,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Texture {
-                            sample_type: wgpu::TextureSampleType::Float { filterable: false },
-                            view_dimension: wgpu::TextureViewDimension::D2,
-                            multisampled: false,
-                        },
-                        count: None,
-                    },
-                ],
-            });
+    let bind_group_layout = terrain_bind_group_layout(&context.device);
     let lighting_layout =
         context
             .device
@@ -344,7 +275,7 @@ async fn validate_terrain_shader_and_pipeline(
             label: Some("forge3d-web-terrain-shader"),
             source: wgpu::ShaderSource::Wgsl(TERRAIN_SHADER.into()),
         });
-    let _pipeline =
+    let pipeline =
         create_terrain_render_pipeline(&context.device, surface_format, &pipeline_layout, &shader);
 
     if let Some(error) = scope.pop().await {
@@ -353,7 +284,13 @@ async fn validate_terrain_shader_and_pipeline(
             format!("forge3d-web-terrain-shader/pipeline: {error}"),
         ));
     }
-    Ok(())
+    Ok(TerrainPipelineCache {
+        surface_format,
+        bind_group_layout,
+        pipeline_layout,
+        shader,
+        pipeline,
+    })
 }
 
 #[cfg(not(target_arch = "wasm32"))]

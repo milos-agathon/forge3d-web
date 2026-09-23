@@ -395,6 +395,13 @@ pub(super) fn shadow_layout_entries() -> [wgpu::BindGroupLayoutEntry; 5] {
     ]
 }
 
+struct ShadowDepthPipelines {
+    scene: wgpu::RenderPipeline,
+    terrain: wgpu::RenderPipeline,
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    terrain_screen: wgpu::RenderPipeline,
+}
+
 pub(super) struct ShadowResources {
     #[allow(dead_code)]
     depth_texture: wgpu::Texture,
@@ -409,14 +416,13 @@ pub(super) struct ShadowResources {
     cascade_buffers: Vec<wgpu::Buffer>,
     scene_depth_bind_groups: Vec<wgpu::BindGroup>,
     terrain_depth_bind_groups: Vec<wgpu::BindGroup>,
-    scene_depth_pipeline: wgpu::RenderPipeline,
-    terrain_depth_pipeline: wgpu::RenderPipeline,
-    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
-    terrain_screen_depth_pipeline: wgpu::RenderPipeline,
+    // Depth/moment pipelines are compiled only for enabled shadows so disabled
+    // runtimes (every init and shadowless scene) skip the pipeline cost.
+    depth_pipelines: Option<ShadowDepthPipelines>,
     #[allow(dead_code)]
     depth_layout: wgpu::BindGroupLayout,
     terrain_depth_layout: wgpu::BindGroupLayout,
-    moment_pipeline: wgpu::ComputePipeline,
+    moment_pipeline: Option<wgpu::ComputePipeline>,
     moment_bind_group: wgpu::BindGroup,
     moments_uniform: wgpu::Buffer,
     pub(super) config: ShadowConfig,
@@ -615,166 +621,174 @@ impl ShadowResources {
                 ],
             });
 
-        let depth_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("forge3d-shadow-depth-shader"),
-            source: wgpu::ShaderSource::Wgsl(SHADOW_DEPTH_SHADER.into()),
-        });
-        let scene_depth_layout_pipeline =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("forge3d-shadow-scene-depth-pipeline-layout"),
-                bind_group_layouts: &[Some(&depth_layout)],
-                immediate_size: 0,
+        let depth_pipelines = enabled.then(|| {
+            let depth_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("forge3d-shadow-depth-shader"),
+                source: wgpu::ShaderSource::Wgsl(SHADOW_DEPTH_SHADER.into()),
             });
-        let depth_bias_state = wgpu::DepthBiasState {
-            constant: (config.depth_bias * 16_777_216.0).round() as i32,
-            slope_scale: config.slope_bias,
-            clamp: 0.0,
-        };
-        let scene_depth_pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("forge3d-shadow-scene-depth-pipeline"),
-            layout: Some(&scene_depth_layout_pipeline),
-            vertex: wgpu::VertexState {
-                module: &depth_shader,
-                entry_point: Some("vs_scene_depth"),
-                compilation_options: wgpu::PipelineCompilationOptions::default(),
-                buffers: &[wgpu::VertexBufferLayout {
-                    array_stride: std::mem::size_of::<super::scene::LitVertex>()
-                        as wgpu::BufferAddress,
-                    step_mode: wgpu::VertexStepMode::Vertex,
-                    attributes: &[wgpu::VertexAttribute {
-                        offset: 0,
-                        shader_location: 0,
-                        format: wgpu::VertexFormat::Float32x3,
-                    }],
-                }],
-            },
-            fragment: None,
-            primitive: wgpu::PrimitiveState {
-                topology: wgpu::PrimitiveTopology::TriangleList,
-                strip_index_format: None,
-                front_face: wgpu::FrontFace::Ccw,
-                cull_mode: None,
-                unclipped_depth: false,
-                polygon_mode: wgpu::PolygonMode::Fill,
-                conservative: false,
-            },
-            depth_stencil: Some(wgpu::DepthStencilState {
-                format: SHADOW_DEPTH_FORMAT,
-                depth_write_enabled: Some(true),
-                depth_compare: Some(wgpu::CompareFunction::LessEqual),
-                stencil: wgpu::StencilState::default(),
-                bias: depth_bias_state,
-            }),
-            multisample: wgpu::MultisampleState::default(),
-            multiview_mask: None,
-            cache: None,
-        });
-        let terrain_depth_layout_pipeline =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("forge3d-shadow-terrain-depth-pipeline-layout"),
-                bind_group_layouts: &[Some(&terrain_depth_layout)],
-                immediate_size: 0,
-            });
-        let terrain_depth_pipeline =
-            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: Some("forge3d-shadow-terrain-depth-pipeline"),
-                layout: Some(&terrain_depth_layout_pipeline),
-                vertex: wgpu::VertexState {
-                    module: &depth_shader,
-                    entry_point: Some("vs_terrain_depth"),
-                    compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    buffers: &[wgpu::VertexBufferLayout {
-                        array_stride: std::mem::size_of::<super::terrain::TerrainVertex>()
-                            as wgpu::BufferAddress,
-                        step_mode: wgpu::VertexStepMode::Vertex,
-                        attributes: &[
-                            wgpu::VertexAttribute {
+            let scene_depth_layout_pipeline =
+                device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                    label: Some("forge3d-shadow-scene-depth-pipeline-layout"),
+                    bind_group_layouts: &[Some(&depth_layout)],
+                    immediate_size: 0,
+                });
+            let depth_bias_state = wgpu::DepthBiasState {
+                constant: (config.depth_bias * 16_777_216.0).round() as i32,
+                slope_scale: config.slope_bias,
+                clamp: 0.0,
+            };
+            let scene_depth_pipeline =
+                device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                    label: Some("forge3d-shadow-scene-depth-pipeline"),
+                    layout: Some(&scene_depth_layout_pipeline),
+                    vertex: wgpu::VertexState {
+                        module: &depth_shader,
+                        entry_point: Some("vs_scene_depth"),
+                        compilation_options: wgpu::PipelineCompilationOptions::default(),
+                        buffers: &[wgpu::VertexBufferLayout {
+                            array_stride: std::mem::size_of::<super::scene::LitVertex>()
+                                as wgpu::BufferAddress,
+                            step_mode: wgpu::VertexStepMode::Vertex,
+                            attributes: &[wgpu::VertexAttribute {
                                 offset: 0,
                                 shader_location: 0,
                                 format: wgpu::VertexFormat::Float32x3,
-                            },
-                            wgpu::VertexAttribute {
-                                offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
-                                shader_location: 1,
-                                format: wgpu::VertexFormat::Float32x2,
-                            },
-                        ],
-                    }],
-                },
-                fragment: None,
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleList,
-                    strip_index_format: None,
-                    front_face: wgpu::FrontFace::Ccw,
-                    cull_mode: None,
-                    unclipped_depth: false,
-                    polygon_mode: wgpu::PolygonMode::Fill,
-                    conservative: false,
-                },
-                depth_stencil: Some(wgpu::DepthStencilState {
-                    format: SHADOW_DEPTH_FORMAT,
-                    depth_write_enabled: Some(true),
-                    depth_compare: Some(wgpu::CompareFunction::LessEqual),
-                    stencil: wgpu::StencilState::default(),
-                    bias: depth_bias_state,
-                }),
-                multisample: wgpu::MultisampleState::default(),
-                multiview_mask: None,
-                cache: None,
-            });
-        // Historical native screen-mode caster state: back-face culling,
-        // Less depth compare, and fixed hardware depth bias.
-        let terrain_screen_depth_pipeline =
-            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: Some("forge3d-shadow-terrain-screen-depth-pipeline"),
-                layout: Some(&terrain_depth_layout_pipeline),
-                vertex: wgpu::VertexState {
-                    module: &depth_shader,
-                    entry_point: Some("vs_terrain_depth"),
-                    compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    buffers: &[wgpu::VertexBufferLayout {
-                        array_stride: std::mem::size_of::<super::terrain::TerrainVertex>()
-                            as wgpu::BufferAddress,
-                        step_mode: wgpu::VertexStepMode::Vertex,
-                        attributes: &[
-                            wgpu::VertexAttribute {
-                                offset: 0,
-                                shader_location: 0,
-                                format: wgpu::VertexFormat::Float32x3,
-                            },
-                            wgpu::VertexAttribute {
-                                offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
-                                shader_location: 1,
-                                format: wgpu::VertexFormat::Float32x2,
-                            },
-                        ],
-                    }],
-                },
-                fragment: None,
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleList,
-                    strip_index_format: None,
-                    front_face: wgpu::FrontFace::Ccw,
-                    cull_mode: Some(wgpu::Face::Back),
-                    unclipped_depth: false,
-                    polygon_mode: wgpu::PolygonMode::Fill,
-                    conservative: false,
-                },
-                depth_stencil: Some(wgpu::DepthStencilState {
-                    format: SHADOW_DEPTH_FORMAT,
-                    depth_write_enabled: Some(true),
-                    depth_compare: Some(wgpu::CompareFunction::Less),
-                    stencil: wgpu::StencilState::default(),
-                    bias: wgpu::DepthBiasState {
-                        constant: 2,
-                        slope_scale: 2.0,
-                        clamp: 0.0,
+                            }],
+                        }],
                     },
-                }),
-                multisample: wgpu::MultisampleState::default(),
-                multiview_mask: None,
-                cache: None,
-            });
+                    fragment: None,
+                    primitive: wgpu::PrimitiveState {
+                        topology: wgpu::PrimitiveTopology::TriangleList,
+                        strip_index_format: None,
+                        front_face: wgpu::FrontFace::Ccw,
+                        cull_mode: None,
+                        unclipped_depth: false,
+                        polygon_mode: wgpu::PolygonMode::Fill,
+                        conservative: false,
+                    },
+                    depth_stencil: Some(wgpu::DepthStencilState {
+                        format: SHADOW_DEPTH_FORMAT,
+                        depth_write_enabled: Some(true),
+                        depth_compare: Some(wgpu::CompareFunction::LessEqual),
+                        stencil: wgpu::StencilState::default(),
+                        bias: depth_bias_state,
+                    }),
+                    multisample: wgpu::MultisampleState::default(),
+                    multiview_mask: None,
+                    cache: None,
+                });
+            let terrain_depth_layout_pipeline =
+                device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                    label: Some("forge3d-shadow-terrain-depth-pipeline-layout"),
+                    bind_group_layouts: &[Some(&terrain_depth_layout)],
+                    immediate_size: 0,
+                });
+            let terrain_depth_pipeline =
+                device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                    label: Some("forge3d-shadow-terrain-depth-pipeline"),
+                    layout: Some(&terrain_depth_layout_pipeline),
+                    vertex: wgpu::VertexState {
+                        module: &depth_shader,
+                        entry_point: Some("vs_terrain_depth"),
+                        compilation_options: wgpu::PipelineCompilationOptions::default(),
+                        buffers: &[wgpu::VertexBufferLayout {
+                            array_stride: std::mem::size_of::<super::terrain::TerrainVertex>()
+                                as wgpu::BufferAddress,
+                            step_mode: wgpu::VertexStepMode::Vertex,
+                            attributes: &[
+                                wgpu::VertexAttribute {
+                                    offset: 0,
+                                    shader_location: 0,
+                                    format: wgpu::VertexFormat::Float32x3,
+                                },
+                                wgpu::VertexAttribute {
+                                    offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
+                                    shader_location: 1,
+                                    format: wgpu::VertexFormat::Float32x2,
+                                },
+                            ],
+                        }],
+                    },
+                    fragment: None,
+                    primitive: wgpu::PrimitiveState {
+                        topology: wgpu::PrimitiveTopology::TriangleList,
+                        strip_index_format: None,
+                        front_face: wgpu::FrontFace::Ccw,
+                        cull_mode: None,
+                        unclipped_depth: false,
+                        polygon_mode: wgpu::PolygonMode::Fill,
+                        conservative: false,
+                    },
+                    depth_stencil: Some(wgpu::DepthStencilState {
+                        format: SHADOW_DEPTH_FORMAT,
+                        depth_write_enabled: Some(true),
+                        depth_compare: Some(wgpu::CompareFunction::LessEqual),
+                        stencil: wgpu::StencilState::default(),
+                        bias: depth_bias_state,
+                    }),
+                    multisample: wgpu::MultisampleState::default(),
+                    multiview_mask: None,
+                    cache: None,
+                });
+            // Historical native screen-mode caster state: back-face culling,
+            // Less depth compare, and fixed hardware depth bias.
+            let terrain_screen_depth_pipeline =
+                device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+                    label: Some("forge3d-shadow-terrain-screen-depth-pipeline"),
+                    layout: Some(&terrain_depth_layout_pipeline),
+                    vertex: wgpu::VertexState {
+                        module: &depth_shader,
+                        entry_point: Some("vs_terrain_depth"),
+                        compilation_options: wgpu::PipelineCompilationOptions::default(),
+                        buffers: &[wgpu::VertexBufferLayout {
+                            array_stride: std::mem::size_of::<super::terrain::TerrainVertex>()
+                                as wgpu::BufferAddress,
+                            step_mode: wgpu::VertexStepMode::Vertex,
+                            attributes: &[
+                                wgpu::VertexAttribute {
+                                    offset: 0,
+                                    shader_location: 0,
+                                    format: wgpu::VertexFormat::Float32x3,
+                                },
+                                wgpu::VertexAttribute {
+                                    offset: std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
+                                    shader_location: 1,
+                                    format: wgpu::VertexFormat::Float32x2,
+                                },
+                            ],
+                        }],
+                    },
+                    fragment: None,
+                    primitive: wgpu::PrimitiveState {
+                        topology: wgpu::PrimitiveTopology::TriangleList,
+                        strip_index_format: None,
+                        front_face: wgpu::FrontFace::Ccw,
+                        cull_mode: Some(wgpu::Face::Back),
+                        unclipped_depth: false,
+                        polygon_mode: wgpu::PolygonMode::Fill,
+                        conservative: false,
+                    },
+                    depth_stencil: Some(wgpu::DepthStencilState {
+                        format: SHADOW_DEPTH_FORMAT,
+                        depth_write_enabled: Some(true),
+                        depth_compare: Some(wgpu::CompareFunction::Less),
+                        stencil: wgpu::StencilState::default(),
+                        bias: wgpu::DepthBiasState {
+                            constant: 2,
+                            slope_scale: 2.0,
+                            clamp: 0.0,
+                        },
+                    }),
+                    multisample: wgpu::MultisampleState::default(),
+                    multiview_mask: None,
+                    cache: None,
+                });
+            ShadowDepthPipelines {
+                scene: scene_depth_pipeline,
+                terrain: terrain_depth_pipeline,
+                terrain_screen: terrain_screen_depth_pipeline,
+            }
+        });
 
         let moment_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("forge3d-shadow-moments-layout"),
@@ -834,23 +848,27 @@ impl ShadowResources {
                 },
             ],
         });
-        let moments_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("forge3d-shadow-moments-shader"),
-            source: wgpu::ShaderSource::Wgsl(SHADOW_MOMENTS_SHADER.into()),
-        });
-        let moment_pipeline_layout =
-            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("forge3d-shadow-moments-pipeline-layout"),
-                bind_group_layouts: &[Some(&moment_layout)],
-                immediate_size: 0,
+        let moment_pipeline = (enabled && config.requires_moments()).then(|| {
+            let moments_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("forge3d-shadow-moments-shader"),
+                source: wgpu::ShaderSource::Wgsl(SHADOW_MOMENTS_SHADER.into()),
             });
-        let moment_pipeline = device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
-            label: Some("forge3d-shadow-moments-pipeline"),
-            layout: Some(&moment_pipeline_layout),
-            module: &moments_shader,
-            entry_point: Some("moments_encode"),
-            compilation_options: wgpu::PipelineCompilationOptions::default(),
-            cache: None,
+            let moment_pipeline_layout =
+                device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                    label: Some("forge3d-shadow-moments-pipeline-layout"),
+                    bind_group_layouts: &[Some(&moment_layout)],
+                    immediate_size: 0,
+                });
+            let moment_pipeline =
+                device.create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                    label: Some("forge3d-shadow-moments-pipeline"),
+                    layout: Some(&moment_pipeline_layout),
+                    module: &moments_shader,
+                    entry_point: Some("moments_encode"),
+                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                    cache: None,
+                });
+            moment_pipeline
         });
 
         let moment_format = if enabled && config.requires_moments() {
@@ -870,9 +888,7 @@ impl ShadowResources {
             cascade_buffers,
             scene_depth_bind_groups,
             terrain_depth_bind_groups: Vec::new(),
-            scene_depth_pipeline,
-            terrain_depth_pipeline,
-            terrain_screen_depth_pipeline,
+            depth_pipelines,
             depth_layout,
             terrain_depth_layout,
             moment_pipeline,
@@ -1162,6 +1178,9 @@ pub(super) fn encode_shadow_passes(runtime: &Forge3DRuntime, encoder: &mut wgpu:
     if !shadows.effective_enabled() {
         return;
     }
+    let Some(pipelines) = shadows.depth_pipelines.as_ref() else {
+        return;
+    };
     let scene_buffer = runtime
         .scene
         .as_ref()
@@ -1184,7 +1203,7 @@ pub(super) fn encode_shadow_passes(runtime: &Forge3DRuntime, encoder: &mut wgpu:
         });
         if let Some(buffer) = scene_buffer {
             let scene = runtime.scene.as_ref();
-            pass.set_pipeline(&shadows.scene_depth_pipeline);
+            pass.set_pipeline(&pipelines.scene);
             pass.set_bind_group(0, &shadows.scene_depth_bind_groups[index], &[]);
             pass.set_vertex_buffer(0, buffer.slice(..));
             if let Some(scene) = scene {
@@ -1199,9 +1218,9 @@ pub(super) fn encode_shadow_passes(runtime: &Forge3DRuntime, encoder: &mut wgpu:
         if let Some(terrain) = runtime.terrain.as_ref() {
             if let Some(bind_group) = shadows.terrain_depth_bind_groups.get(index) {
                 if terrain.render_mode == 1 {
-                    pass.set_pipeline(&shadows.terrain_screen_depth_pipeline);
+                    pass.set_pipeline(&pipelines.terrain_screen);
                 } else {
-                    pass.set_pipeline(&shadows.terrain_depth_pipeline);
+                    pass.set_pipeline(&pipelines.terrain);
                 }
                 pass.set_bind_group(0, bind_group, &[]);
                 pass.set_vertex_buffer(0, terrain.vertex_buffer.slice(..));
@@ -1210,12 +1229,12 @@ pub(super) fn encode_shadow_passes(runtime: &Forge3DRuntime, encoder: &mut wgpu:
             }
         }
     }
-    if shadows.config.requires_moments() {
+    if let Some(moment_pipeline) = shadows.moment_pipeline.as_ref() {
         let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
             label: Some("forge3d-shadow-moments-pass"),
             timestamp_writes: None,
         });
-        pass.set_pipeline(&shadows.moment_pipeline);
+        pass.set_pipeline(moment_pipeline);
         pass.set_bind_group(0, &shadows.moment_bind_group, &[]);
         let workgroups = shadows.effective_map_size.div_ceil(8);
         pass.dispatch_workgroups(workgroups, workgroups, shadows.cascade_buffers.len() as u32);
