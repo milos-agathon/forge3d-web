@@ -232,6 +232,7 @@ dependencies = [
  "forge3d-core",
  "glam",
  "js-sys",
+ "naga",
  "serde",
  "serde-wasm-bindgen",
  "serde_json",
