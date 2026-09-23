@@ -5,6 +5,7 @@ import {
 } from "./native-reports.js";
 import { getTerrainColormap, TerrainDataset } from "./terrain-dataset.js";
 import type { TextureSet } from "./textures.js";
+import { cloneCameraInput } from "./camera.js";
 
 export type Forge3DErrorCode =
   | "WEBGPU_UNAVAILABLE"
@@ -87,6 +88,12 @@ export interface OrbitControlsOptions {
   maxDistance?: number;
   minPitchDegrees?: number;
   maxPitchDegrees?: number;
+  /** Initial camera mode for viewer controls (default `"orbit"`). */
+  mode?: CameraControllerMode;
+  /** Fly (FPS) movement and look settings. */
+  fly?: FlyControlsOptions;
+  /** Keyboard bindings by `KeyboardEvent.code`. */
+  bindings?: CameraKeyBindings;
 }
 
 export interface ViewerResizeOptions {
@@ -140,6 +147,8 @@ export interface ViewerStatusChange {
 export interface Forge3DViewerOptions {
   runtime?: Forge3DRuntimeOptions;
   initialView?: OrbitView;
+  /** Initial fly view; defaults to the eye and direction of `initialView`. */
+  initialFlyView?: FlyView;
   controls?: false | OrbitControlsOptions;
   resize?: false | ViewerResizeOptions;
   recovery?: ViewerRecoveryOptions;
@@ -331,7 +340,270 @@ export interface CameraInput {
   fovYDegrees: number;
   near: number;
   far: number;
+  /** Projection model; defaults to `"perspective"`. */
+  projection?: CameraProjectionKind;
+  /** Vertical world extent of an orthographic camera (required for it). */
+  orthographicHeight?: number;
 }
+
+export type Vec3 = [number, number, number];
+export type CameraProjectionKind = "perspective" | "orthographic";
+export type ClipSpace = "wgpu" | "gl";
+
+export interface CameraOptions {
+  position: Vec3;
+  target: Vec3;
+  up?: Vec3;
+  fovYDegrees?: number;
+  near?: number;
+  far?: number;
+  projection?: CameraProjectionKind;
+  orthographicHeight?: number;
+}
+
+export interface CameraJSON extends CameraOptions {
+  kind: "forge3d.camera";
+  version: 1;
+}
+
+export interface ViewportSize {
+  width: number;
+  height: number;
+}
+
+export interface ScreenPoint {
+  /** Pixels from the left edge. */
+  x: number;
+  /** Pixels from the top edge. */
+  y: number;
+  /** WebGPU NDC depth: 0 at the near plane, 1 at the far plane. */
+  depth: number;
+}
+
+export interface ScreenRay {
+  origin: Vec3;
+  direction: Vec3;
+}
+
+export interface CameraDofParamsInput {
+  aperture: number;
+  focusDistance: number;
+  focalLength: number;
+  autoFocus?: boolean;
+  autoFocusSpeed?: number;
+}
+
+export interface CameraDofParams {
+  aperture: number;
+  focusDistance: number;
+  focalLength: number;
+  autoFocus: boolean;
+  autoFocusSpeed: number;
+}
+
+export interface DepthOfFieldRange {
+  near: number;
+  far: number;
+}
+
+export interface PathTracingCameraInput {
+  origin: Vec3;
+  lookAt: Vec3;
+  up: Vec3;
+  fovY: number;
+  aspect: number;
+  exposure: number;
+}
+
+export type PathTracingCamera = PathTracingCameraInput;
+
+export interface CameraKeyframeInput {
+  time: number;
+  phiDeg: number;
+  thetaDeg: number;
+  radius: number;
+  fovDeg: number;
+  target?: Vec3 | null;
+}
+
+export interface CameraKeyframeJSON {
+  time: number;
+  phiDeg: number;
+  thetaDeg: number;
+  radius: number;
+  fovDeg: number;
+  target: Vec3 | null;
+}
+
+export interface CameraState {
+  phiDeg: number;
+  thetaDeg: number;
+  radius: number;
+  fovDeg: number;
+  target: Vec3 | null;
+}
+
+export interface CameraAnimationSample {
+  frame: number;
+  time: number;
+  state: CameraState;
+}
+
+export interface CameraAnimationJSON {
+  kind: "forge3d.camera-animation";
+  version: 1;
+  keyframes: CameraKeyframeJSON[];
+}
+
+export interface CameraStateCameraOptions {
+  fallbackTarget?: Vec3;
+  up?: Vec3;
+  near?: number;
+  far?: number;
+  projection?: CameraProjectionKind;
+  orthographicHeight?: number;
+}
+
+export interface RenderConfigOptions {
+  outputDir?: string;
+  fps?: number;
+  width?: number;
+  height?: number;
+  filenamePrefix?: string;
+  frameDigits?: number;
+}
+
+export interface FlyView {
+  position: Vec3;
+  yawDegrees: number;
+  pitchDegrees: number;
+  fovYDegrees: number;
+  near: number;
+  far: number;
+}
+
+export interface FlyControlsOptions {
+  /** World units per second at unit input (native default 5). */
+  moveSpeed?: number;
+  /** Movement multiplier while a boost key is held (native default 2). */
+  boostMultiplier?: number;
+  /** Look sensitivity in degrees per CSS pixel. */
+  lookSpeed?: number;
+  minPitchDegrees?: number;
+  maxPitchDegrees?: number;
+}
+
+export interface FlyInputState {
+  forward?: boolean;
+  backward?: boolean;
+  left?: boolean;
+  right?: boolean;
+  up?: boolean;
+  down?: boolean;
+  boost?: boolean;
+}
+
+export type CameraControllerMode = "orbit" | "fly";
+
+export type CameraKeyAction =
+  | "forward"
+  | "backward"
+  | "left"
+  | "right"
+  | "up"
+  | "down"
+  | "boost"
+  | "toggleMode"
+  | "reset";
+
+/** `KeyboardEvent.code` values per action. */
+export type CameraKeyBindings = Partial<Record<CameraKeyAction, readonly string[]>>;
+
+export interface CameraControllerOptions {
+  mode?: CameraControllerMode;
+  orbit?: OrbitView;
+  orbitOptions?: OrbitControlsOptions;
+  fly?: FlyView;
+  flyOptions?: FlyControlsOptions;
+  bindings?: CameraKeyBindings;
+}
+
+export interface CameraControllerState {
+  mode: CameraControllerMode;
+  orbit: OrbitView;
+  fly: FlyView;
+}
+
+export type CameraInputEvent =
+  | { type: "orbit"; deltaYawDegrees: number; deltaPitchDegrees: number }
+  | { type: "pan"; deltaX: number; deltaY: number; viewportHeight: number }
+  | { type: "zoom"; delta: number }
+  | { type: "look"; deltaYawDegrees: number; deltaPitchDegrees: number }
+  | { type: "move"; forward: number; right: number; up: number }
+  | { type: "key"; code: string; pressed: boolean }
+  | { type: "tick"; deltaSeconds: number }
+  | { type: "mode"; mode: CameraControllerMode }
+  | { type: "reset" }
+  | { type: "releaseKeys" };
+
+export interface TerrainRigSourceInput {
+  heights: Float32Array | readonly number[];
+  width: number;
+  height: number;
+  zScale?: number;
+  terrainWidth?: number;
+}
+
+export interface TerrainClearanceOptions {
+  minimumHeight?: number;
+  maxRefinePasses?: number;
+}
+
+export interface TerrainRigBakeOptions {
+  samplesPerSecond?: number;
+}
+
+export interface TerrainOrbitRigOptions {
+  targetXZ: [number, number];
+  duration: number;
+  radius: number;
+  phiStartDeg: number;
+  phiEndDeg: number;
+  thetaStartDeg?: number;
+  thetaEndDeg?: number;
+  radiusEnd?: number;
+  fovStartDeg?: number;
+  fovEndDeg?: number;
+  targetHeightOffset?: number;
+  clearance?: TerrainClearanceOptions;
+}
+
+export interface TerrainRailRigOptions {
+  pathXZ: [number, number][];
+  duration: number;
+  cameraHeightOffset: number;
+  lookAheadDistance: number;
+  lateralOffset?: number;
+  targetHeightOffset?: number;
+  fovDeg?: number;
+  clearance?: TerrainClearanceOptions;
+}
+
+export interface TerrainTargetFollowRigOptions {
+  targetPathXZ: [number, number][];
+  duration: number;
+  radius: number;
+  thetaDeg?: number;
+  headingOffsetDeg?: number;
+  targetHeightOffset?: number;
+  fovDeg?: number;
+  clearance?: TerrainClearanceOptions;
+}
+
+export type TerrainRigJSON =
+  | { kind: "orbit"; version: 1; options: TerrainOrbitRigOptions }
+  | { kind: "rail"; version: 1; options: TerrainRailRigOptions }
+  | { kind: "follow"; version: 1; options: TerrainTargetFollowRigOptions };
 
 export interface ResizeInput {
   width: number;
@@ -2168,14 +2440,7 @@ function normalizeTerrainHeightmapSourceInput(
 }
 
 function normalizeCameraInput(camera: CameraInput): CameraInput {
-  return {
-    position: [camera.position[0], camera.position[1], camera.position[2]],
-    target: [camera.target[0], camera.target[1], camera.target[2]],
-    up: [camera.up[0], camera.up[1], camera.up[2]],
-    fovYDegrees: camera.fovYDegrees,
-    near: camera.near,
-    far: camera.far,
-  };
+  return cloneCameraInput(camera);
 }
 
 function normalizeResizeInput(size: ResizeInput): ResizeInput {
@@ -2301,6 +2566,64 @@ export {
 } from "./textures.js";
 export { decodeRgbe, IblCache, ImageBasedLighting } from "./ibl.js";
 export { CascadedShadowConfig, ShadowConfig } from "./shadows.js";
+export {
+  apertureToFStop,
+  Camera,
+  cameraDofParams,
+  circleOfConfusion,
+  composeTrs,
+  depthOfFieldRange,
+  fStopToAperture,
+  hyperfocalDistance,
+  invertMatrix,
+  lookAt,
+  lookAtTransform,
+  makeCamera,
+  mat4FromRows,
+  mat4ToRows,
+  multiplyMatrices,
+  normalMatrix,
+  orthographic,
+  perspective,
+  rotateX,
+  rotateY,
+  rotateZ,
+  scale,
+  scaleUniform,
+  screenRay,
+  screenToWorld,
+  translate,
+  viewProjection,
+  worldToScreen,
+} from "./camera.js";
+export {
+  CameraAnimation,
+  CameraKeyframe,
+  cameraStateEye,
+  cameraStateToInput,
+  cubicHermite,
+  RenderConfig,
+  RenderProgress,
+} from "./camera-animation.js";
+export {
+  CameraController,
+  cameraDirection,
+  DEFAULT_CAMERA_KEY_BINDINGS,
+  FlyController,
+  replayCameraInput,
+  yawPitchFromDirection,
+} from "./camera-controllers.js";
+export { OrbitController } from "./orbit-controller.js";
+export {
+  TERRAIN_CLEARANCE_TOLERANCE,
+  TerrainClearance,
+  TerrainOrbitRig,
+  TerrainRailRig,
+  TerrainRigSource,
+  TerrainTargetFollowRig,
+  terrainRigFromJSON,
+  viewerOrbitRadius,
+} from "./camera-rigs.js";
 export { Forge3DWorkerRenderer, installForge3DWorkerHost } from "./worker-renderer.js";
 export { Forge3DOffscreenRenderer } from "./offscreen-renderer.js";
 export {

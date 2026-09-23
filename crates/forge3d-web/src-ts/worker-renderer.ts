@@ -57,6 +57,7 @@ export class Forge3DWorkerRenderer {
   readonly #client: Forge3DMessageClient;
   #controls: ViewerControls | undefined;
   #controller: OrbitController | undefined;
+  #flyFrame: number | undefined;
   #resizer: ResizeController | undefined;
   readonly #previousRole: string | null;
   readonly #previousAriaLabel: string | null;
@@ -142,7 +143,10 @@ export class Forge3DWorkerRenderer {
         canvas,
         controller,
         options.controls ?? {},
-        () => renderer.#sendCamera(),
+        () => {
+          renderer.#sendCamera();
+          renderer.#scheduleFlyFrame();
+        },
       );
       renderer.#controls = controls;
       renderer.#controller = controller;
@@ -248,17 +252,45 @@ export class Forge3DWorkerRenderer {
     this.#disposed = true;
     void this.#client.call("dispose").catch(() => undefined);
     this.#client.dispose();
+    this.#cancelFlyFrame();
     this.#controls?.dispose();
     this.#resizer?.dispose();
     restoreAttribute(this.#canvas, "role", this.#previousRole);
     restoreAttribute(this.#canvas, "aria-label", this.#previousAriaLabel);
   }
 
-  #sendCamera(): void {
-    if (this.#disposed || this.#controller === undefined) {
+  /** Drives fly-mode movement while keys are held (one owned frame). */
+  #scheduleFlyFrame(): void {
+    const controls = this.#controls;
+    if (
+      this.#disposed ||
+      this.#flyFrame !== undefined ||
+      controls === undefined ||
+      !controls.cameraController.moving ||
+      typeof globalThis.requestAnimationFrame !== "function"
+    ) {
       return;
     }
-    const camera = this.#controller.getCamera();
+    this.#flyFrame = globalThis.requestAnimationFrame((timestamp) => {
+      this.#flyFrame = undefined;
+      if (this.#controls?.onAnimationFrame(timestamp) === true) {
+        this.#scheduleFlyFrame();
+      }
+    });
+  }
+
+  #cancelFlyFrame(): void {
+    if (this.#flyFrame !== undefined) {
+      globalThis.cancelAnimationFrame?.(this.#flyFrame);
+      this.#flyFrame = undefined;
+    }
+  }
+
+  #sendCamera(): void {
+    if (this.#disposed || this.#controls === undefined) {
+      return;
+    }
+    const camera = this.#controls.cameraController.getCamera();
     this.#state.camera = camera;
     void this.#client.call("setCamera", camera).catch(() => undefined);
   }

@@ -102,6 +102,12 @@ export interface OrbitControlsOptions {
   maxDistance?: number;
   minPitchDegrees?: number;
   maxPitchDegrees?: number;
+  /** Initial viewer camera mode (default `"orbit"`). */
+  mode?: CameraControllerMode;
+  /** Fly (FPS) movement and look settings. */
+  fly?: FlyControlsOptions;
+  /** Keyboard bindings by `KeyboardEvent.code` (toggle defaults to `KeyV`). */
+  bindings?: CameraKeyBindings;
 }
 
 /** Automatic resize policy. */
@@ -163,6 +169,8 @@ export interface ViewerStatusChange {
 export interface Forge3DViewerOptions {
   runtime?: Forge3DRuntimeOptions;
   initialView?: OrbitView;
+  /** Initial fly view; defaults to the eye and direction of `initialView`. */
+  initialFlyView?: FlyView;
   controls?: false | OrbitControlsOptions;
   resize?: false | ViewerResizeOptions;
   recovery?: ViewerRecoveryOptions;
@@ -431,7 +439,656 @@ export interface CameraInput {
   fovYDegrees: number;
   near: number;
   far: number;
+  /** Projection model; defaults to `"perspective"`. */
+  projection?: CameraProjectionKind;
+  /** Vertical world extent of an orthographic camera (required for it). */
+  orthographicHeight?: number;
 }
+
+/** Three-component vector. */
+export type Vec3 = [number, number, number];
+
+/** Camera projection model. */
+export type CameraProjectionKind = "perspective" | "orthographic";
+
+/** Clip-space depth convention: WebGPU `0..1` or OpenGL `-1..1`. */
+export type ClipSpace = "wgpu" | "gl";
+
+/** Options for the typed `Camera`; omitted fields use documented defaults. */
+export interface CameraOptions {
+  position: Vec3;
+  target: Vec3;
+  /** Defaults to +Y. */
+  up?: Vec3;
+  /** Defaults to 45 degrees. */
+  fovYDegrees?: number;
+  /** Defaults to 0.1. */
+  near?: number;
+  /** Defaults to 1000. */
+  far?: number;
+  projection?: CameraProjectionKind;
+  /** Vertical world extent; required for orthographic cameras. */
+  orthographicHeight?: number;
+}
+
+/** Versioned camera serialization. */
+export interface CameraJSON extends CameraOptions {
+  kind: "forge3d.camera";
+  version: 1;
+}
+
+export interface ViewportSize {
+  width: number;
+  height: number;
+}
+
+/** Projected point: pixels from the top-left corner plus WebGPU NDC depth. */
+export interface ScreenPoint {
+  x: number;
+  y: number;
+  /** 0 at the near plane, 1 at the far plane. */
+  depth: number;
+}
+
+/** World-space picking ray with a unit direction. */
+export interface ScreenRay {
+  origin: Vec3;
+  direction: Vec3;
+}
+
+export interface CameraDofParamsInput {
+  aperture: number;
+  focusDistance: number;
+  focalLength: number;
+  autoFocus?: boolean;
+  autoFocusSpeed?: number;
+}
+
+export interface CameraDofParams {
+  aperture: number;
+  focusDistance: number;
+  focalLength: number;
+  autoFocus: boolean;
+  autoFocusSpeed: number;
+}
+
+export interface DepthOfFieldRange {
+  near: number;
+  /** `Infinity` beyond the hyperfocal distance. */
+  far: number;
+}
+
+/** Path-tracing camera descriptor (native `make_camera`). */
+export interface PathTracingCameraInput {
+  origin: Vec3;
+  lookAt: Vec3;
+  up: Vec3;
+  fovY: number;
+  aspect: number;
+  exposure: number;
+}
+
+export type PathTracingCamera = PathTracingCameraInput;
+
+/**
+ * Typed, immutable camera with perspective or orthographic projection,
+ * matrices (column-major `Float32Array(16)`) and world/screen conversion.
+ */
+export declare class Camera {
+  constructor(options: CameraOptions);
+  static fromInput(input: CameraInput): Camera;
+  static fromJSON(json: CameraJSON): Camera;
+  readonly position: Vec3;
+  readonly target: Vec3;
+  readonly up: Vec3;
+  readonly fovYDegrees: number;
+  readonly near: number;
+  readonly far: number;
+  readonly projection: CameraProjectionKind;
+  readonly orthographicHeight: number | undefined;
+  readonly forward: Vec3;
+  with(changes: Partial<CameraOptions>): Camera;
+  viewMatrix(): Float32Array;
+  projectionMatrix(aspect: number, clipSpace?: ClipSpace): Float32Array;
+  viewProjectionMatrix(aspect: number, clipSpace?: ClipSpace): Float32Array;
+  worldToScreen(point: Readonly<Vec3>, viewport: ViewportSize): ScreenPoint | undefined;
+  screenToWorld(x: number, y: number, depth: number, viewport: ViewportSize): Vec3;
+  screenRay(x: number, y: number, viewport: ViewportSize): ScreenRay;
+  toInput(): CameraInput;
+  toJSON(): CameraJSON;
+}
+
+export declare function lookAt(eye: Readonly<Vec3>, target: Readonly<Vec3>, up: Readonly<Vec3>): Float32Array;
+export declare function perspective(
+  fovYDegrees: number,
+  aspect: number,
+  near: number,
+  far: number,
+  clipSpace?: ClipSpace,
+): Float32Array;
+export declare function orthographic(
+  left: number,
+  right: number,
+  bottom: number,
+  top: number,
+  near: number,
+  far: number,
+  clipSpace?: ClipSpace,
+): Float32Array;
+export declare function viewProjection(
+  eye: Readonly<Vec3>,
+  target: Readonly<Vec3>,
+  up: Readonly<Vec3>,
+  fovYDegrees: number,
+  aspect: number,
+  near: number,
+  far: number,
+  clipSpace?: ClipSpace,
+): Float32Array;
+export declare function translate(tx: number, ty: number, tz: number): Float32Array;
+export declare function rotateX(degrees: number): Float32Array;
+export declare function rotateY(degrees: number): Float32Array;
+export declare function rotateZ(degrees: number): Float32Array;
+export declare function scale(sx: number, sy: number, sz: number): Float32Array;
+export declare function scaleUniform(s: number): Float32Array;
+/** `T * R * S`; Euler rotation applied X, then Y, then Z. */
+export declare function composeTrs(
+  translation: Readonly<Vec3>,
+  rotationDegrees: Readonly<Vec3>,
+  scale: Readonly<Vec3>,
+): Float32Array;
+export declare function lookAtTransform(
+  position: Readonly<Vec3>,
+  target: Readonly<Vec3>,
+  up: Readonly<Vec3>,
+): Float32Array;
+export declare function multiplyMatrices(left: ArrayLike<number>, right: ArrayLike<number>): Float32Array;
+export declare function invertMatrix(matrix: ArrayLike<number>): Float32Array;
+export declare function normalMatrix(modelMatrix: ArrayLike<number>): Float32Array;
+/** Column-major matrix to native row-major rows. */
+export declare function mat4ToRows(matrix: ArrayLike<number>): number[][];
+/** Native row-major rows to a column-major matrix. */
+export declare function mat4FromRows(rows: readonly (readonly number[])[]): Float32Array;
+export declare function worldToScreen(
+  viewProjection: ArrayLike<number>,
+  point: Readonly<Vec3>,
+  viewport: ViewportSize,
+): ScreenPoint | undefined;
+export declare function screenToWorld(
+  inverseViewProjection: ArrayLike<number>,
+  x: number,
+  y: number,
+  depth: number,
+  viewport: ViewportSize,
+): Vec3;
+export declare function screenRay(
+  inverseViewProjection: ArrayLike<number>,
+  x: number,
+  y: number,
+  viewport: ViewportSize,
+): ScreenRay;
+export declare function fStopToAperture(fStop: number): number;
+export declare function apertureToFStop(aperture: number): number;
+export declare function hyperfocalDistance(
+  focalLength: number,
+  fStop: number,
+  circleOfConfusion?: number,
+): number;
+export declare function depthOfFieldRange(
+  focalLength: number,
+  fStop: number,
+  focusDistance: number,
+  circleOfConfusion?: number,
+): DepthOfFieldRange;
+export declare function circleOfConfusion(
+  depth: number,
+  focalLength: number,
+  aperture: number,
+  focusDistance: number,
+  sensorSize?: number,
+): number;
+export declare function cameraDofParams(input: CameraDofParamsInput): CameraDofParams;
+export declare function makeCamera(input: PathTracingCameraInput): PathTracingCamera;
+
+/** Keyframe input: azimuth `phi`, polar angle `theta` from +Y, radius, FOV. */
+export interface CameraKeyframeInput {
+  time: number;
+  phiDeg: number;
+  thetaDeg: number;
+  radius: number;
+  fovDeg: number;
+  target?: Vec3 | null;
+}
+
+export interface CameraKeyframeJSON {
+  time: number;
+  phiDeg: number;
+  thetaDeg: number;
+  radius: number;
+  fovDeg: number;
+  target: Vec3 | null;
+}
+
+/** Interpolated camera animation state. */
+export interface CameraState {
+  phiDeg: number;
+  thetaDeg: number;
+  radius: number;
+  fovDeg: number;
+  target: Vec3 | null;
+}
+
+export interface CameraAnimationSample {
+  frame: number;
+  time: number;
+  state: CameraState;
+}
+
+export interface CameraAnimationJSON {
+  kind: "forge3d.camera-animation";
+  version: 1;
+  keyframes: CameraKeyframeJSON[];
+}
+
+export interface CameraStateCameraOptions {
+  /** Target used when a state has none. */
+  fallbackTarget?: Vec3;
+  up?: Vec3;
+  near?: number;
+  far?: number;
+  projection?: CameraProjectionKind;
+  orthographicHeight?: number;
+}
+
+/** Immutable keyframe; values are stored in f32 like the native animation. */
+export declare class CameraKeyframe {
+  constructor(input: CameraKeyframeInput);
+  static from(input: CameraKeyframeInput | CameraKeyframe): CameraKeyframe;
+  readonly time: number;
+  readonly phiDeg: number;
+  readonly thetaDeg: number;
+  readonly radius: number;
+  readonly fovDeg: number;
+  readonly target: Readonly<Vec3> | null;
+  toJSON(): CameraKeyframeJSON;
+}
+
+/** Target-aware keyframe animation with Catmull-Rom interpolation. */
+export declare class CameraAnimation {
+  constructor(keyframes?: Iterable<CameraKeyframeInput | CameraKeyframe>);
+  static fromJSON(json: CameraAnimationJSON): CameraAnimation;
+  readonly keyframeCount: number;
+  /** Time of the last keyframe in seconds. */
+  readonly duration: number;
+  addKeyframe(keyframe: CameraKeyframeInput | CameraKeyframe): void;
+  getKeyframes(): CameraKeyframe[];
+  replaceKeyframes(keyframes: Iterable<CameraKeyframeInput | CameraKeyframe>): void;
+  clearKeyframes(): void;
+  /** Inclusive frame count `ceil(duration * fps) + 1`, or 0. */
+  getFrameCount(fps: number): number;
+  frameTimes(fps: number): number[];
+  sample(fps: number): CameraAnimationSample[];
+  evaluate(time: number): CameraState | undefined;
+  cameraAt(time: number, options?: CameraStateCameraOptions): CameraInput | undefined;
+  toJSON(): CameraAnimationJSON;
+}
+
+export declare function cubicHermite(p0: number, p1: number, p2: number, p3: number, t: number): number;
+export declare function cameraStateEye(state: CameraState, fallbackTarget?: Readonly<Vec3>): Vec3;
+export declare function cameraStateToInput(state: CameraState, options?: CameraStateCameraOptions): CameraInput;
+
+export interface RenderConfigOptions {
+  outputDir?: string;
+  fps?: number;
+  width?: number;
+  height?: number;
+  filenamePrefix?: string;
+  frameDigits?: number;
+}
+
+/** Offline frame-sequence naming (native `RenderConfig`). */
+export declare class RenderConfig {
+  constructor(options?: RenderConfigOptions);
+  readonly outputDir: string;
+  readonly fps: number;
+  readonly width: number;
+  readonly height: number;
+  readonly filenamePrefix: string;
+  readonly frameDigits: number;
+  frameFileName(frame: number): string;
+  framePath(frame: number): string;
+  /** Creates the nested output directory below a File System Access/OPFS root. */
+  ensureOutputDir(root: FileSystemDirectoryHandle): Promise<FileSystemDirectoryHandle>;
+}
+
+export declare class RenderProgress {
+  constructor(frame: number, totalFrames: number, time: number, outputPath: string);
+  readonly frame: number;
+  readonly totalFrames: number;
+  readonly time: number;
+  readonly outputPath: string;
+  readonly percent: number;
+}
+
+/** First-person fly camera state (degrees). */
+export interface FlyView {
+  position: Vec3;
+  yawDegrees: number;
+  pitchDegrees: number;
+  fovYDegrees: number;
+  near: number;
+  far: number;
+}
+
+export interface FlyControlsOptions {
+  /** World units per second at unit input (native default 5). */
+  moveSpeed?: number;
+  /** Movement multiplier while boost is held (native default 2). */
+  boostMultiplier?: number;
+  /** Look sensitivity in degrees per CSS pixel. */
+  lookSpeed?: number;
+  minPitchDegrees?: number;
+  maxPitchDegrees?: number;
+}
+
+export interface FlyInputState {
+  forward?: boolean;
+  backward?: boolean;
+  left?: boolean;
+  right?: boolean;
+  up?: boolean;
+  down?: boolean;
+  boost?: boolean;
+}
+
+export type CameraControllerMode = "orbit" | "fly";
+
+export type CameraKeyAction =
+  | "forward"
+  | "backward"
+  | "left"
+  | "right"
+  | "up"
+  | "down"
+  | "boost"
+  | "toggleMode"
+  | "reset";
+
+/** `KeyboardEvent.code` values per action. */
+export type CameraKeyBindings = Partial<Record<CameraKeyAction, readonly string[]>>;
+
+export interface CameraControllerOptions {
+  mode?: CameraControllerMode;
+  orbit?: OrbitView;
+  orbitOptions?: OrbitControlsOptions;
+  fly?: FlyView;
+  flyOptions?: FlyControlsOptions;
+  bindings?: CameraKeyBindings;
+}
+
+export interface CameraControllerState {
+  mode: CameraControllerMode;
+  orbit: OrbitView;
+  fly: FlyView;
+}
+
+/** Serializable controller input used for deterministic replay. */
+export type CameraInputEvent =
+  | { type: "orbit"; deltaYawDegrees: number; deltaPitchDegrees: number }
+  | { type: "pan"; deltaX: number; deltaY: number; viewportHeight: number }
+  | { type: "zoom"; delta: number }
+  | { type: "look"; deltaYawDegrees: number; deltaPitchDegrees: number }
+  | { type: "move"; forward: number; right: number; up: number }
+  | { type: "key"; code: string; pressed: boolean }
+  | { type: "tick"; deltaSeconds: number }
+  | { type: "mode"; mode: CameraControllerMode }
+  | { type: "reset" }
+  | { type: "releaseKeys" };
+
+export declare const DEFAULT_CAMERA_KEY_BINDINGS: Readonly<Required<CameraKeyBindings>>;
+
+/** Browser-independent Y-up orbit camera math. */
+export declare class OrbitController {
+  constructor(initialView?: OrbitView, options?: OrbitControlsOptions);
+  getView(): OrbitView;
+  getCamera(): CameraInput;
+  setView(view: OrbitView): boolean;
+  orbitBy(deltaYawDegrees: number, deltaPitchDegrees: number): boolean;
+  panBy(deltaXCssPixels: number, deltaYCssPixels: number, viewportHeightCssPixels: number): boolean;
+  zoomBy(delta: number): boolean;
+  reset(): boolean;
+}
+
+/** First-person fly (FPS) camera with native movement semantics. */
+export declare class FlyController {
+  constructor(initialView?: FlyView, options?: FlyControlsOptions);
+  static viewFromCamera(camera: CameraInput): FlyView;
+  readonly moveSpeed: number;
+  readonly lookSpeed: number;
+  readonly boostMultiplier: number;
+  readonly forward: Vec3;
+  readonly right: Vec3;
+  getView(): FlyView;
+  setView(view: FlyView): boolean;
+  getCamera(): CameraInput;
+  lookBy(deltaYawDegrees: number, deltaPitchDegrees: number): boolean;
+  moveBy(forward: number, right: number, up: number): boolean;
+  update(deltaSeconds: number, input: FlyInputState): boolean;
+  zoomBy(deltaFovDegrees: number): boolean;
+  reset(): boolean;
+}
+
+/** Orbit + fly controller with mode switching, bindings and replay. */
+export declare class CameraController {
+  constructor(options?: CameraControllerOptions, orbit?: OrbitController);
+  readonly orbit: OrbitController;
+  readonly fly: FlyController;
+  readonly bindings: Readonly<Required<CameraKeyBindings>>;
+  readonly mode: CameraControllerMode;
+  readonly flyInput: FlyInputState;
+  readonly moving: boolean;
+  readonly recording: boolean;
+  getCamera(): CameraInput;
+  getState(): CameraControllerState;
+  setState(state: CameraControllerState): boolean;
+  setMode(mode: CameraControllerMode): boolean;
+  toggleMode(): CameraControllerMode;
+  setCamera(camera: CameraInput): boolean;
+  startRecording(): void;
+  stopRecording(): CameraInputEvent[];
+  apply(event: CameraInputEvent): boolean;
+  replay(events: readonly CameraInputEvent[]): boolean;
+  resetAll(): boolean;
+}
+
+export declare function cameraDirection(yawDegrees: number, pitchDegrees: number): Vec3;
+export declare function yawPitchFromDirection(vector: Readonly<Vec3>): [number, number];
+export declare function replayCameraInput(
+  options: CameraControllerOptions,
+  events: readonly CameraInputEvent[],
+): CameraInput;
+
+/** Heightfield for terrain rigs (native `TerrainScatterSource` contract). */
+export interface TerrainRigSourceInput {
+  heights: Float32Array | readonly number[];
+  width: number;
+  height: number;
+  zScale?: number;
+  terrainWidth?: number;
+}
+
+export interface TerrainClearanceOptions {
+  minimumHeight?: number;
+  maxRefinePasses?: number;
+}
+
+export interface TerrainRigBakeOptions {
+  /** Initial keyframe rate (default 60). */
+  samplesPerSecond?: number;
+}
+
+export interface TerrainOrbitRigOptions {
+  targetXZ: [number, number];
+  duration: number;
+  radius: number;
+  phiStartDeg: number;
+  phiEndDeg: number;
+  thetaStartDeg?: number;
+  thetaEndDeg?: number;
+  radiusEnd?: number;
+  fovStartDeg?: number;
+  fovEndDeg?: number;
+  targetHeightOffset?: number;
+  clearance?: TerrainClearanceOptions;
+}
+
+export interface TerrainRailRigOptions {
+  pathXZ: [number, number][];
+  duration: number;
+  cameraHeightOffset: number;
+  lookAheadDistance: number;
+  lateralOffset?: number;
+  targetHeightOffset?: number;
+  fovDeg?: number;
+  clearance?: TerrainClearanceOptions;
+}
+
+export interface TerrainTargetFollowRigOptions {
+  targetPathXZ: [number, number][];
+  duration: number;
+  radius: number;
+  thetaDeg?: number;
+  headingOffsetDeg?: number;
+  targetHeightOffset?: number;
+  fovDeg?: number;
+  clearance?: TerrainClearanceOptions;
+}
+
+export type TerrainRigJSON =
+  | { kind: "orbit"; version: 1; options: TerrainOrbitRigOptions }
+  | { kind: "rail"; version: 1; options: TerrainRailRigOptions }
+  | { kind: "follow"; version: 1; options: TerrainTargetFollowRigOptions };
+
+/** Clearance tolerance used by rig verification (world units). */
+export declare const TERRAIN_CLEARANCE_TOLERANCE: number;
+
+export declare class TerrainRigSource {
+  constructor(input: TerrainRigSourceInput);
+  static fromDataset(
+    dataset: TerrainDataset,
+    options?: { zScale?: number; terrainWidth?: number },
+  ): TerrainRigSource;
+  readonly width: number;
+  readonly height: number;
+  readonly terrainWidth: number;
+  readonly zScale: number;
+  readonly minHeight: number;
+  readonly maxHeight: number;
+  contractToPixel(x: number, z: number): [number, number];
+  sampleScaledHeight(row: number, col: number): number;
+  heightAt(x: number, z: number): number;
+  toWorld(point: Readonly<Vec3>): Vec3;
+  /**
+   * Contract-space pose at `time`; with `minimumHeight` the eye is lifted to
+   * terrain + minimum so playback never violates clearance.
+   */
+  eyeAt(
+    animation: CameraAnimation,
+    time: number,
+    options?: { minimumHeight?: number },
+  ): { eye: Vec3; target: Vec3; fovDeg: number } | undefined;
+  /** Renderer-space camera at `time` (`eyeAt` mapped through `toWorld`). */
+  cameraAt(
+    animation: CameraAnimation,
+    time: number,
+    options?: Omit<CameraStateCameraOptions, "fallbackTarget"> & { minimumHeight?: number },
+  ): CameraInput | undefined;
+}
+
+export declare class TerrainClearance {
+  constructor(options?: TerrainClearanceOptions);
+  readonly minimumHeight: number;
+  readonly maxRefinePasses: number;
+  toJSON(): Required<TerrainClearanceOptions>;
+}
+
+export declare class TerrainOrbitRig {
+  /** Clearance-clamped renderer camera for a bake of this rig. */
+  cameraAt(
+    source: TerrainRigSource,
+    animation: CameraAnimation,
+    time: number,
+    options?: Omit<CameraStateCameraOptions, "fallbackTarget">,
+  ): CameraInput | undefined;
+  constructor(options: TerrainOrbitRigOptions);
+  readonly kind: "orbit";
+  readonly targetXZ: Readonly<[number, number]>;
+  readonly duration: number;
+  readonly radius: number;
+  readonly phiStartDeg: number;
+  readonly phiEndDeg: number;
+  readonly thetaStartDeg: number;
+  readonly thetaEndDeg: number | undefined;
+  readonly radiusEnd: number | undefined;
+  readonly fovStartDeg: number;
+  readonly fovEndDeg: number | undefined;
+  readonly targetHeightOffset: number;
+  readonly clearance: TerrainClearance;
+  bake(source: TerrainRigSource, options?: TerrainRigBakeOptions): CameraAnimation;
+  toJSON(): TerrainRigJSON;
+}
+
+export declare class TerrainRailRig {
+  /** Clearance-clamped renderer camera for a bake of this rig. */
+  cameraAt(
+    source: TerrainRigSource,
+    animation: CameraAnimation,
+    time: number,
+    options?: Omit<CameraStateCameraOptions, "fallbackTarget">,
+  ): CameraInput | undefined;
+  constructor(options: TerrainRailRigOptions);
+  readonly kind: "rail";
+  readonly pathXZ: readonly Readonly<[number, number]>[];
+  readonly duration: number;
+  readonly cameraHeightOffset: number;
+  readonly lookAheadDistance: number;
+  readonly lateralOffset: number;
+  readonly targetHeightOffset: number;
+  readonly fovDeg: number;
+  readonly clearance: TerrainClearance;
+  bake(source: TerrainRigSource, options?: TerrainRigBakeOptions): CameraAnimation;
+  toJSON(): TerrainRigJSON;
+}
+
+export declare class TerrainTargetFollowRig {
+  /** Clearance-clamped renderer camera for a bake of this rig. */
+  cameraAt(
+    source: TerrainRigSource,
+    animation: CameraAnimation,
+    time: number,
+    options?: Omit<CameraStateCameraOptions, "fallbackTarget">,
+  ): CameraInput | undefined;
+  constructor(options: TerrainTargetFollowRigOptions);
+  readonly kind: "follow";
+  readonly targetPathXZ: readonly Readonly<[number, number]>[];
+  readonly duration: number;
+  readonly radius: number;
+  readonly thetaDeg: number;
+  readonly headingOffsetDeg: number;
+  readonly targetHeightOffset: number;
+  readonly fovDeg: number;
+  readonly clearance: TerrainClearance;
+  bake(source: TerrainRigSource, options?: TerrainRigBakeOptions): CameraAnimation;
+  toJSON(): TerrainRigJSON;
+}
+
+export type TerrainRig = TerrainOrbitRig | TerrainRailRig | TerrainTargetFollowRig;
+
+export declare function terrainRigFromJSON(json: TerrainRigJSON): TerrainRig;
+export declare function viewerOrbitRadius(
+  sourceOrWidth: TerrainRigSource | number,
+  options?: { scale?: number; minimum?: number },
+): number;
 
 /** Explicit DPR-aware resize input. */
 export interface ResizeInput {
@@ -1322,6 +1979,8 @@ export declare class Forge3DSession {
   getScene(): Forge3DScene | undefined;
   render(): boolean;
   setCamera(camera: CameraInput): void;
+  /** Last committed camera (replayed after device loss), if any. */
+  getCamera(): CameraInput | undefined;
   readRgba(): Promise<Uint8Array>;
   resize(size: ResizeInput): void;
   screenshot(): Promise<Blob>;
@@ -1392,11 +2051,25 @@ export declare class Forge3DViewer {
   readonly disposed: boolean;
   readonly status: ViewerStatus;
   getView(): OrbitView;
+  /** Active controller mode. */
+  getCameraMode(): CameraControllerMode;
+  /** Switches orbit/fly control keeping the eye and view direction. */
+  setCameraMode(mode: CameraControllerMode): void;
+  getFlyView(): FlyView;
+  setFlyView(view: FlyView): void;
+  /** Camera currently rendered (active controller plus projection). */
+  getCamera(): CameraInput;
+  /** Points both controllers at a Y-up camera and adopts its projection. */
+  setCamera(camera: CameraInput): void;
+  startCameraRecording(): void;
+  stopCameraRecording(): CameraInputEvent[];
+  replayCameraInput(events: readonly CameraInputEvent[]): void;
   getCapabilities(): ViewerCapabilities;
   getDiagnostics(): ViewerDiagnostics;
   setTerrain(terrain: TerrainHeightmapInput): void;
   setTerrainFromSource(terrain: TerrainHeightmapSourceInput): Promise<void>;
   setView(view: OrbitView): void;
+  /** Resets the active controller (orbit or fly) to its initial view. */
   resetView(): void;
   resize(size: ResizeInput): void;
   render(): void;

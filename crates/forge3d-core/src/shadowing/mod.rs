@@ -514,7 +514,6 @@ pub fn build_shadow_cascades(
         .cross(forward)
         .try_normalize()
         .unwrap_or(glam::Vec3::Y);
-    let tan_half_fov = (camera.fov_y_degrees.to_radians() * 0.5).tan();
     let light_view = light_view_matrix(direction);
 
     let cascade_count = csm.effective_cascade_count() as usize;
@@ -525,8 +524,7 @@ pub fn build_shadow_cascades(
         let mut light_min = glam::Vec3::splat(f32::INFINITY);
         let mut light_max = glam::Vec3::splat(f32::NEG_INFINITY);
         for depth in [slice_near, slice_far] {
-            let half_height = depth * tan_half_fov;
-            let half_width = half_height * aspect;
+            let (half_width, half_height) = camera.half_extents_at(depth, aspect);
             for sign_y in [-1.0_f32, 1.0] {
                 for sign_x in [-1.0_f32, 1.0] {
                     let corner = position

@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forge3D W05 Package Consumer Test</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+      }
+
+      canvas {
+        display: block;
+        width: 160px;
+        height: 120px;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="forge3d-w05-package-canvas" width="160" height="120"></canvas>
+    <script type="module">
+      // Public-API-only W05 consumer: the installed-tarball harness rewrites
+      // the facade import to "@forge3d/web" and runs this page unchanged.
+      import {
+        Camera,
+        CameraAnimation,
+        CameraController,
+        Forge3DError,
+        Forge3DScene,
+        Forge3DSession,
+        TerrainDataset,
+        TerrainOrbitRig,
+        TerrainRigSource,
+        lookAt,
+        mat4ToRows,
+        perspective,
+        replayCameraInput,
+      } from "../src-ts/index.ts";
+
+      const canvas = document.querySelector("#forge3d-w05-package-canvas");
+      const packageSha256 = null;
+      const WIDTH = 160;
+      const HEIGHT = 120;
+      const SIZE = 49;
+
+      function dataset() {
+        const heights = new Float32Array(SIZE * SIZE);
+        for (let row = 0; row < SIZE; row += 1) {
+          for (let col = 0; col < SIZE; col += 1) {
+            const dx = col - 24;
+            const dz = row - 20;
+            heights[row * SIZE + col] = Math.fround(9 * Math.exp(-(dx * dx + dz * dz) / 70));
+          }
+        }
+        return TerrainDataset.fromArray({ width: SIZE, height: SIZE, heights, spacing: [1, 1], colormap: "terrain" });
+      }
+
+      function coveredPixels(rgba) {
+        let count = 0;
+        for (let offset = 0; offset < rgba.length; offset += 4) {
+          if (rgba[offset] + rgba[offset + 1] + rgba[offset + 2] > 12) count += 1;
+        }
+        return count;
+      }
+
+      function meanAbsDiff(a, b) {
+        let total = 0;
+        for (let index = 0; index < a.length; index += 1) total += Math.abs(a[index] - b[index]);
+        return total / a.length;
+      }
+
+      window.__forge3dW05PackageProbe = async () => {
+        if (!navigator.gpu) {
+          return { supported: false, packageSha256 };
+        }
+        const result = { supported: true, ok: true, packageSha256 };
+        let session;
+        try {
+          session = await Forge3DSession.create(canvas, {
+            runtime: { width: WIDTH, height: HEIGHT, devicePixelRatio: 1, clearColor: [0, 0, 0, 1] },
+          });
+          const terrain = dataset();
+          const scene = Forge3DScene.create();
+          scene.addTerrain(terrain.toTerrainInput());
+          // Cascades refit to the camera frustum; disable them so the
+          // orthographic distance-invariance check isolates the projection.
+          scene.setShadows({ enabled: false }, { enabled: false });
+          session.setScene(scene);
+
+          const camera = new Camera({ position: [30, 28, 34], target: [0, 2, 0], fovYDegrees: 45, near: 0.5, far: 400 });
+          session.setCamera(camera.toInput());
+          session.render();
+          const perspectiveRgba = await session.readRgba();
+          const ortho = camera.with({ projection: "orthographic", orthographicHeight: 60 });
+          session.setCamera(ortho.toInput());
+          session.render();
+          const orthographicRgba = await session.readRgba();
+          // Twice as far along the same view ray (target + 2 * (eye - target)).
+          session.setCamera(ortho.with({ position: [60, 54, 68] }).toInput());
+          session.render();
+          const orthographicFarRgba = await session.readRgba();
+          result.projection = {
+            perspectiveCovered: coveredPixels(perspectiveRgba),
+            orthographicCovered: coveredPixels(orthographicRgba),
+            projectionDiffers: meanAbsDiff(perspectiveRgba, orthographicRgba),
+            orthographicDistanceChange: meanAbsDiff(orthographicRgba, orthographicFarRgba),
+            lastCamera: session.getCamera(),
+          };
+
+          const matrixRows = mat4ToRows(perspective(45, 1.5, 0.1, 100));
+          result.math = {
+            perspective11: matrixRows[1][1],
+            lookAtFinite: Array.from(lookAt([1, 2, 3], [0, 0, 0], [0, 1, 0])).every(Number.isFinite),
+          };
+
+          const animation = new CameraAnimation([
+            { time: 0, phiDeg: 0, thetaDeg: 50, radius: 45, fovDeg: 45, target: [0, 2, 0] },
+            { time: 2, phiDeg: 120, thetaDeg: 60, radius: 40, fovDeg: 50, target: [0, 2, 0] },
+          ]);
+          session.setCamera(animation.cameraAt(0, { near: 0.5, far: 400 }));
+          session.render();
+          const start = await session.readRgba();
+          session.setCamera(animation.cameraAt(2, { near: 0.5, far: 400 }));
+          session.render();
+          const end = await session.readRgba();
+          result.animation = { frames: animation.getFrameCount(30), change: meanAbsDiff(start, end) };
+
+          const source = TerrainRigSource.fromDataset(terrain);
+          const rig = new TerrainOrbitRig({
+            targetXZ: [24, 20],
+            duration: 1,
+            radius: 14,
+            phiStartDeg: 0,
+            phiEndDeg: 180,
+            thetaStartDeg: 80,
+            clearance: { minimumHeight: 2 },
+          });
+          const baked = rig.bake(source, { samplesPerSecond: 8 });
+          let minClearance = Infinity;
+          for (let index = 0; index <= 500; index += 1) {
+            const { eye } = source.eyeAt(baked, index / 500, { minimumHeight: 2 });
+            minClearance = Math.min(minClearance, eye[1] - source.heightAt(eye[0], eye[2]));
+          }
+          session.setCamera(rig.cameraAt(source, baked, 0.5, { near: 0.1, far: 400 }));
+          session.render();
+          result.rig = {
+            keyframes: baked.keyframeCount,
+            minClearance,
+            covered: coveredPixels(await session.readRgba()),
+          };
+
+          const controller = new CameraController({ mode: "fly" });
+          controller.startRecording();
+          controller.apply({ type: "key", code: "KeyW", pressed: true });
+          controller.apply({ type: "tick", deltaSeconds: 0.25 });
+          controller.apply({ type: "look", deltaYawDegrees: 10, deltaPitchDegrees: -4 });
+          const events = controller.stopRecording();
+          result.replay = {
+            equal: JSON.stringify(replayCameraInput({ mode: "fly" }, events)) === JSON.stringify(controller.getCamera()),
+          };
+
+          try {
+            session.setCamera({ ...camera.toInput(), projection: "orthographic" });
+            result.orthographicRejection = "NONE";
+          } catch (error) {
+            result.orthographicRejection = Forge3DError.from(error).code;
+          }
+        } catch (error) {
+          result.ok = false;
+          const normalized = Forge3DError.from(error);
+          result.error = { code: normalized.code, message: normalized.message };
+        } finally {
+          session?.dispose();
+        }
+        return result;
+      };
+    </script>
+  </body>
+</html>

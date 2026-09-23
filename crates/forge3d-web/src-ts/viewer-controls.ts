@@ -1,4 +1,5 @@
-import type { OrbitControlsOptions } from "./index.js";
+import type { CameraInputEvent, OrbitControlsOptions } from "./index.js";
+import { CameraController } from "./camera-controllers.js";
 import { OrbitController } from "./orbit-controller.js";
 
 type DisposeResource = () => void;
@@ -133,9 +134,12 @@ const KEYBOARD_ZOOM_DELTA = 120;
 const CONTEXT_MENU_AUTHORIZATION_MS = 1_000;
 const CONTEXT_MENU_COORDINATE_TOLERANCE = 2;
 
+/** Longest fly-mode movement step taken from one animation frame. */
+const MAX_FLY_FRAME_SECONDS = 0.1;
+
 export class ViewerControls {
   readonly #canvas: HTMLCanvasElement;
-  readonly #controller: OrbitController;
+  readonly #camera: CameraController;
   readonly #invalidate: () => void;
   readonly #resources: OwnedDomResources;
   readonly #ownsResources: boolean;
@@ -149,16 +153,27 @@ export class ViewerControls {
   #disposed = false;
   #contextMenuAuthorization: ContextMenuAuthorization | null = null;
   #contextMenuTimer: ReturnType<typeof setTimeout> | null = null;
+  #lastFlyFrame: number | undefined;
 
   constructor(
     canvas: HTMLCanvasElement,
-    controller: OrbitController,
+    controller: OrbitController | CameraController,
     options: OrbitControlsOptions = {},
     onInvalidate: () => void = () => {},
     resources?: OwnedDomResources,
   ) {
     this.#canvas = canvas;
-    this.#controller = controller;
+    this.#camera =
+      controller instanceof CameraController
+        ? controller
+        : new CameraController(
+            {
+              ...(options.mode !== undefined ? { mode: options.mode } : {}),
+              ...(options.fly !== undefined ? { flyOptions: options.fly } : {}),
+              ...(options.bindings !== undefined ? { bindings: options.bindings } : {}),
+            },
+            controller,
+          );
     this.#invalidate = onInvalidate;
     this.#resources = resources ?? new OwnedDomResources();
     this.#ownsResources = resources === undefined;
@@ -184,6 +199,32 @@ export class ViewerControls {
     return this.#enabled;
   }
 
+  /** Orbit/fly controller driven by this DOM input. */
+  get cameraController(): CameraController {
+    return this.#camera;
+  }
+
+  /**
+   * Scheduler frame hook: advances fly-mode movement by the elapsed frame
+   * time while movement keys are held. Returns whether frames must continue.
+   */
+  onAnimationFrame(timestamp: number): boolean {
+    if (!this.#isInteractive() || !this.#camera.moving) {
+      this.#lastFlyFrame = undefined;
+      return false;
+    }
+    const previous = this.#lastFlyFrame;
+    this.#lastFlyFrame = timestamp;
+    const deltaSeconds =
+      previous === undefined || !Number.isFinite(timestamp)
+        ? 0
+        : Math.min(Math.max((timestamp - previous) / 1000, 0), MAX_FLY_FRAME_SECONDS);
+    if (this.#apply({ type: "tick", deltaSeconds })) {
+      this.#invalidate();
+    }
+    return true;
+  }
+
   setEnabled(enabled: boolean): void {
     this.#assertActive();
     if (this.#enabled === enabled) {
@@ -193,6 +234,7 @@ export class ViewerControls {
     this.#applyTouchAction();
     if (!enabled) {
       this.#cancelAllPointers();
+      this.#releaseKeys();
     }
   }
 
@@ -202,6 +244,7 @@ export class ViewerControls {
     }
     this.#suspended = true;
     this.#cancelAllPointers();
+    this.#releaseKeys();
   }
 
   resume(): void {
@@ -216,6 +259,7 @@ export class ViewerControls {
     }
     this.#disposed = true;
     this.#cancelAllPointers();
+    this.#releaseKeys();
     for (const dispose of this.#disposeListeners.splice(0)) {
       dispose();
     }
@@ -260,6 +304,8 @@ export class ViewerControls {
       this.#onContextMenu(event as MouseEvent),
     );
     this.#listen("keydown", (event) => this.#onKeyDown(event as KeyboardEvent));
+    this.#listen("keyup", (event) => this.#onKeyUp(event as KeyboardEvent));
+    this.#listen("blur", () => this.#releaseKeys());
   }
 
   #listen(
@@ -376,40 +422,53 @@ export class ViewerControls {
     const nextTouches = this.#gesturePointers();
 
     let changed = false;
-    if (nextTouches.length >= 2 && previousTouches.length >= 2) {
+    if (this.#camera.mode === "fly") {
+      if (nextTouches.length < 2) {
+        const lookSpeed = this.#camera.fly.lookSpeed;
+        changed = this.#apply({
+          type: "look",
+          deltaYawDegrees: -(nextPointer.x - previousPointer.x) * lookSpeed,
+          deltaPitchDegrees: -(nextPointer.y - previousPointer.y) * lookSpeed,
+        });
+      }
+    } else if (nextTouches.length >= 2 && previousTouches.length >= 2) {
       const previousGesture = twoPointerGesture(previousTouches);
       const nextGesture = twoPointerGesture(nextTouches);
       const height = positiveCanvasHeight(this.#canvas);
       changed =
-        this.#controller.panBy(
-          nextGesture.centroidX - previousGesture.centroidX,
-          nextGesture.centroidY - previousGesture.centroidY,
-          height,
-        ) || changed;
+        this.#apply({
+          type: "pan",
+          deltaX: nextGesture.centroidX - previousGesture.centroidX,
+          deltaY: nextGesture.centroidY - previousGesture.centroidY,
+          viewportHeight: height,
+        }) || changed;
       if (previousGesture.distance > 0 && nextGesture.distance > 0) {
         const pinchDelta =
           -Math.log(nextGesture.distance / previousGesture.distance) * 1000;
-        changed = this.#controller.zoomBy(pinchDelta) || changed;
+        changed = this.#apply({ type: "zoom", delta: pinchDelta }) || changed;
       }
     } else if (nextTouches.length === 1) {
-      changed = this.#controller.orbitBy(
-        (nextPointer.x - previousPointer.x) * ORBIT_DEGREES_PER_CSS_PIXEL,
-        (nextPointer.y - previousPointer.y) * ORBIT_DEGREES_PER_CSS_PIXEL,
-      );
+      changed = this.#apply({
+        type: "orbit",
+        deltaYawDegrees: (nextPointer.x - previousPointer.x) * ORBIT_DEGREES_PER_CSS_PIXEL,
+        deltaPitchDegrees: (nextPointer.y - previousPointer.y) * ORBIT_DEGREES_PER_CSS_PIXEL,
+      });
     } else if (previousPointer.pointerType === "mouse") {
       const deltaX = nextPointer.x - previousPointer.x;
       const deltaY = nextPointer.y - previousPointer.y;
       if ((event.buttons & 0b110) !== 0) {
-        changed = this.#controller.panBy(
+        changed = this.#apply({
+          type: "pan",
           deltaX,
           deltaY,
-          positiveCanvasHeight(this.#canvas),
-        );
+          viewportHeight: positiveCanvasHeight(this.#canvas),
+        });
       } else {
-        changed = this.#controller.orbitBy(
-          deltaX * ORBIT_DEGREES_PER_CSS_PIXEL,
-          deltaY * ORBIT_DEGREES_PER_CSS_PIXEL,
-        );
+        changed = this.#apply({
+          type: "orbit",
+          deltaYawDegrees: deltaX * ORBIT_DEGREES_PER_CSS_PIXEL,
+          deltaPitchDegrees: deltaY * ORBIT_DEGREES_PER_CSS_PIXEL,
+        });
       }
     }
     if (changed) {
@@ -467,7 +526,7 @@ export class ViewerControls {
         : event.deltaMode === 2
           ? positiveCanvasHeight(this.#canvas)
           : 1;
-    if (this.#controller.zoomBy(event.deltaY * scale)) {
+    if (this.#apply({ type: "zoom", delta: event.deltaY * scale })) {
       this.#invalidate();
     }
     event.preventDefault();
@@ -496,55 +555,54 @@ export class ViewerControls {
     if (!this.#isInteractive() || !this.#keyboard) {
       return;
     }
+    if (this.#handleBoundKey(event)) {
+      return;
+    }
+    if (this.#camera.mode === "fly") {
+      return;
+    }
     let consumed = true;
     let changed = false;
+    const orbit = (deltaYawDegrees: number, deltaPitchDegrees: number): boolean =>
+      this.#apply({ type: "orbit", deltaYawDegrees, deltaPitchDegrees });
+    const pan = (deltaX: number, deltaY: number): boolean =>
+      this.#apply({
+        type: "pan",
+        deltaX,
+        deltaY,
+        viewportHeight: positiveCanvasHeight(this.#canvas),
+      });
     switch (event.key) {
       case "ArrowLeft":
         changed = event.shiftKey
-          ? this.#controller.panBy(
-              -KEYBOARD_PAN_CSS_PIXELS,
-              0,
-              positiveCanvasHeight(this.#canvas),
-            )
-          : this.#controller.orbitBy(-KEYBOARD_ORBIT_DEGREES, 0);
+          ? pan(-KEYBOARD_PAN_CSS_PIXELS, 0)
+          : orbit(-KEYBOARD_ORBIT_DEGREES, 0);
         break;
       case "ArrowRight":
         changed = event.shiftKey
-          ? this.#controller.panBy(
-              KEYBOARD_PAN_CSS_PIXELS,
-              0,
-              positiveCanvasHeight(this.#canvas),
-            )
-          : this.#controller.orbitBy(KEYBOARD_ORBIT_DEGREES, 0);
+          ? pan(KEYBOARD_PAN_CSS_PIXELS, 0)
+          : orbit(KEYBOARD_ORBIT_DEGREES, 0);
         break;
       case "ArrowUp":
         changed = event.shiftKey
-          ? this.#controller.panBy(
-              0,
-              -KEYBOARD_PAN_CSS_PIXELS,
-              positiveCanvasHeight(this.#canvas),
-            )
-          : this.#controller.orbitBy(0, -KEYBOARD_ORBIT_DEGREES);
+          ? pan(0, -KEYBOARD_PAN_CSS_PIXELS)
+          : orbit(0, -KEYBOARD_ORBIT_DEGREES);
         break;
       case "ArrowDown":
         changed = event.shiftKey
-          ? this.#controller.panBy(
-              0,
-              KEYBOARD_PAN_CSS_PIXELS,
-              positiveCanvasHeight(this.#canvas),
-            )
-          : this.#controller.orbitBy(0, KEYBOARD_ORBIT_DEGREES);
+          ? pan(0, KEYBOARD_PAN_CSS_PIXELS)
+          : orbit(0, KEYBOARD_ORBIT_DEGREES);
         break;
       case "+":
       case "=":
-        changed = this.#controller.zoomBy(-KEYBOARD_ZOOM_DELTA);
+        changed = this.#apply({ type: "zoom", delta: -KEYBOARD_ZOOM_DELTA });
         break;
       case "-":
       case "_":
-        changed = this.#controller.zoomBy(KEYBOARD_ZOOM_DELTA);
+        changed = this.#apply({ type: "zoom", delta: KEYBOARD_ZOOM_DELTA });
         break;
       case "Home":
-        changed = this.#controller.reset();
+        changed = this.#apply({ type: "reset" });
         break;
       default:
         consumed = false;
@@ -556,6 +614,58 @@ export class ViewerControls {
       this.#invalidate();
     }
     event.preventDefault();
+  }
+
+  /**
+   * Routes bound keys (mode toggle in both modes; movement, boost and reset
+   * in fly mode). Returns whether the event was consumed.
+   */
+  #handleBoundKey(event: KeyboardEvent): boolean {
+    const code = event.code;
+    if (typeof code !== "string" || code === "") {
+      return false;
+    }
+    const bindings = this.#camera.bindings;
+    const isToggle = bindings.toggleMode.includes(code);
+    const isFlyKey =
+      this.#camera.mode === "fly" &&
+      (bindings.forward.includes(code) ||
+        bindings.backward.includes(code) ||
+        bindings.left.includes(code) ||
+        bindings.right.includes(code) ||
+        bindings.up.includes(code) ||
+        bindings.down.includes(code) ||
+        bindings.boost.includes(code) ||
+        bindings.reset.includes(code));
+    if (!isToggle && !isFlyKey) {
+      return false;
+    }
+    event.preventDefault();
+    if (event.repeat) {
+      return true;
+    }
+    const changed = this.#apply({ type: "key", code, pressed: true });
+    if (changed || this.#camera.moving) {
+      this.#invalidate();
+    }
+    return true;
+  }
+
+  #onKeyUp(event: KeyboardEvent): void {
+    const code = event.code;
+    if (typeof code !== "string" || code === "") {
+      return;
+    }
+    this.#apply({ type: "key", code, pressed: false });
+  }
+
+  #releaseKeys(): void {
+    this.#lastFlyFrame = undefined;
+    this.#apply({ type: "releaseKeys" });
+  }
+
+  #apply(event: CameraInputEvent): boolean {
+    return this.#camera.apply(event);
   }
 
   #gesturePointers(): ActivePointer[] {

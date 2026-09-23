@@ -161,6 +161,14 @@ pan, zoom, and reset: arrows orbit, Shift+arrows pan, `+`/`-` zoom, and Home
 resets. Low-level `Forge3DRuntime.setCamera()` continues to accept arbitrary
 camera values and is not constrained to orbit-camera input.
 
+Pressing `KeyV` (configurable through `controls.bindings.toggleMode`)
+switches between orbit and fly (FPS) control without moving the view. In fly
+mode, dragging looks around, `W`/`S` or Up/Down move along the view direction,
+`A`/`D` or Left/Right strafe, `E`/`Q` rise and descend, Shift doubles the
+speed, and Home resets the fly view. Held movement keys keep the viewer's single
+owned animation frame alive and stop it when released, blurred, suspended, or
+disposed; one frame never applies more than 0.1 s of movement.
+
 `Forge3DViewer.render()` marks the viewer dirty and schedules at most one
 animation frame; it does not submit synchronously. `setTerrain()`, a successfully
 resolved `setTerrainFromSource()`, `setView()`, `resetView()`, and `resize()`
@@ -463,6 +471,70 @@ the shadow pass uses the native fixed orthographic light matrix and the native
 depth-caster packing. The native caster collapses when the height-domain
 minimum is `0`, so such scenes are unshadowed, exactly as in native. The
 general P07 filter/CSM path serves `renderMode: "perspective"` (the default).
+
+## Cameras, Controllers, Animation, And Rigs
+
+W05 ports the native camera surface (C01-C04). Every numeric path is checked
+against `tests/golden/w05-camera-native.json`, recorded from the native
+Forge3D oracle, within 1e-5 (relative above magnitude 1).
+
+- **Cameras and projections.** `CameraInput` accepts `projection:
+  "orthographic"` with a required `orthographicHeight` (vertical world extent;
+  width follows the viewport aspect). The runtime, session, viewer, shadows and
+  lighting all honour it, and device-loss recovery replays it. The immutable
+  `Camera` class adds `viewMatrix()`, `projectionMatrix(aspect, clipSpace)`,
+  `worldToScreen`, `screenToWorld`, `screenRay` and versioned JSON. Free
+  functions `lookAt`, `perspective`, `orthographic` and `viewProjection` take a
+  `clipSpace` of `"wgpu"` (depth `0..1`, default) or `"gl"` (`-1..1`) like the
+  native `camera_*` functions. Matrices are column-major `Float32Array(16)`;
+  `mat4ToRows`/`mat4FromRows` convert to the native row-major layout.
+  `translate`, `rotateX/Y/Z`, `scale`, `scaleUniform`, `composeTrs`
+  (`T * R * S`, Euler X then Y then Z), `lookAtTransform`, `multiplyMatrices`,
+  `invertMatrix` and `normalMatrix` port the native transforms. Screen space is
+  pixels from the top-left corner with WebGPU NDC depth. Depth-of-field
+  helpers (`depthOfFieldRange`, `hyperfocalDistance`, `circleOfConfusion`,
+  `fStopToAperture`, `cameraDofParams`) and `makeCamera` match native.
+  Validation keeps the native wording but names the browser parameters, for
+  example "fovYDegrees must be finite and in (0, 180)".
+- **Controllers.** `OrbitController` keeps the frozen viewer orbit behaviour.
+  `FlyController` is the native FPS camera: `update(dt, input)` moves
+  `moveSpeed` (default 5) units per second along forward/right/up with a boost
+  multiplier (default 2). `CameraController` combines both, switches modes
+  continuously, resolves `KeyboardEvent.code` bindings (defaults above; the
+  native Tab binding is available but not the default because it would trap
+  keyboard focus), and expresses every change as a serializable
+  `CameraInputEvent`. `startRecording()`/`stopRecording()` capture events and
+  `replayCameraInput(options, events)` reproduces the camera bit-for-bit. The
+  viewer exposes `getCameraMode()`, `setCameraMode()`, `getFlyView()`,
+  `setFlyView()`, `getCamera()`, `setCamera()` (Y-up cameras only),
+  `startCameraRecording()`, `stopCameraRecording()` and
+  `replayCameraInput()`; `resetView()` resets the active controller.
+- **Keyframe animation.** `CameraAnimation` stores target-aware
+  `CameraKeyframe`s (azimuth `phiDeg`, polar `thetaDeg` from +Y, `radius`,
+  `fovDeg`, optional `target`) sorted by time and interpolates them with the
+  native Catmull-Rom (cubic Hermite) basis in f32. `evaluate(time)` clamps to
+  the keyframe range, `getFrameCount(fps)` is `ceil(duration * fps) + 1`, and
+  `cameraAt(time)` returns a renderer `CameraInput` (eye
+  `target + r (sin θ cos φ, cos θ, sin θ sin φ)`). `RenderConfig` names frame
+  sequences (`frame_0042.png`) and `ensureOutputDir()` creates the directory
+  below a File System Access or OPFS handle; `RenderProgress.percent` reports
+  completion. Animations serialize with `toJSON()`/`CameraAnimation.fromJSON()`.
+- **Terrain rigs.** `TerrainOrbitRig`, `TerrainRailRig` and
+  `TerrainTargetFollowRig` bake deterministic, clearance-verified animations
+  from a `TerrainRigSource` (the native contract: terrain spans
+  `[0, terrainWidth]`, heights rebased to the minimum and scaled by `zScale`).
+  After the initial bake at `samplesPerSecond`, the path is verified at
+  `max(32 * samplesPerSecond, 240)` Hz and refined for up to
+  `clearance.maxRefinePasses` passes; a path whose eye would still dip below
+  terrain + `minimumHeight` or leave the terrain is rejected with
+  `INVALID_INPUT`. Baked keyframes match native; because Catmull-Rom can
+  still dip between verification samples, rig playback through
+  `rig.cameraAt(source, animation, time)` or `source.eyeAt(animation, time,
+  { minimumHeight })` lifts the eye to terrain + `minimumHeight`, so played-back
+  cameras never violate the minimum at any time.
+  `TerrainRigSource.fromDataset(dataset)` samples a W03 `TerrainDataset` and
+  `source.cameraAt(animation, time)` maps rig space onto the renderer's world
+  space. Rigs serialize with `toJSON()`/`terrainRigFromJSON()`.
 
 ## Browser IO
 

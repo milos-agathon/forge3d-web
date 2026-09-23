@@ -48,6 +48,9 @@ jobs:
       - name: Test core GPU contracts
         run: cargo test -p forge3d-core --features gpu
 
+      - name: Test core WebGPU contracts (camera, lighting, shadows, native oracles)
+        run: cargo test -p forge3d-core --features webgpu
+
       - name: Test web crate contracts
         run: cargo test -p forge3d-web
 

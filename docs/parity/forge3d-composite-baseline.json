@@ -4,7 +4,7 @@
   "manifestId": "forge3d-composite-baseline-v1",
   "sourcePlan": {
     "path": "docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md",
-    "sha256": "59cf1335e944455d797ed3055959f123b860fc61081935c0948f06c5a10fbcb6"
+    "sha256": "b114e02da51fb048d02c4eea040c0d09f83636ecbd9c0ecd72dced1ce14fb39b"
   },
   "baselineLayers": [
     {
@@ -374,7 +374,7 @@
       "title": "Look-at, perspective, orthographic, view-projection and transforms",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "P",
+      "status": "I",
       "ownerTask": "W05",
       "nativeCapability": "Look-at, perspective, orthographic, view-projection and transforms: 1f4084a:src/py_module/functions/camera.rs:4-34, tests/test_perspective_projection.py",
       "requiredWebOutcome": "Look-at perspective/orbit exist; add typed orthographic/projection/transforms and world/screen conversion",
@@ -396,7 +396,7 @@
       "title": "Orbit and FPS cameras",
       "lifecycle": "FP",
       "evidenceGrade": "B",
-      "status": "P",
+      "status": "I",
       "ownerTask": "W05",
       "nativeCapability": "Orbit and FPS cameras: 1f4084a:src/viewer/camera_controller.rs, src/viewer/input/viewer_input.rs, tests/test_viewer_ipc.py",
       "requiredWebOutcome": "Add FPS/fly mode, controller switching, bindings and deterministic replay to existing orbit controls",
@@ -419,7 +419,7 @@
       "title": "Target-aware camera keyframes/interpolation",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W05",
       "nativeCapability": "Target-aware camera keyframes/interpolation: 1f4084a:python/forge3d/__init__.pyi:595-649, tests/test_animation_mvp.py, examples/camera_animation_demo.py",
       "requiredWebOutcome": "Add CameraAnimation, editing/evaluate/duration/frame-count API",
@@ -442,7 +442,7 @@
       "title": "Terrain orbit/rail/follow rigs and clearance",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W05",
       "nativeCapability": "Terrain orbit/rail/follow rigs and clearance: 1f4084a:python/forge3d/camera_rigs.py:273-721, tests/test_camera_rigs.py, examples/terrain_camera_rigs_demo.py",
       "requiredWebOutcome": "Add deterministic serializable rig builders using terrain sampler",
@@ -2420,7 +2420,7 @@
       "contract": "Look-at perspective/orbit exist; add typed orthographic/projection/transforms and world/screen conversion",
       "owner": "W05",
       "evidence": [
-        "tracked P closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:C01"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:C01"
       ],
       "tests": [
         "port animation/rig/projection/transform tests; pointer/keyboard controller switching; deterministic keyframes/rigs; clearance edge cases."
@@ -2433,7 +2433,7 @@
       "contract": "Add FPS/fly mode, controller switching, bindings and deterministic replay to existing orbit controls",
       "owner": "W05",
       "evidence": [
-        "tracked P closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:C02"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:C02"
       ],
       "tests": [
         "port animation/rig/projection/transform tests; pointer/keyboard controller switching; deterministic keyframes/rigs; clearance edge cases."
@@ -2446,7 +2446,7 @@
       "contract": "Add CameraAnimation, editing/evaluate/duration/frame-count API",
       "owner": "W05",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:C03"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:C03"
       ],
       "tests": [
         "port animation/rig/projection/transform tests; pointer/keyboard controller switching; deterministic keyframes/rigs; clearance edge cases."
@@ -2459,7 +2459,7 @@
       "contract": "Add deterministic serializable rig builders using terrain sampler",
       "owner": "W05",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:C04"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:C04"
       ],
       "tests": [
         "port animation/rig/projection/transform tests; pointer/keyboard controller switching; deterministic keyframes/rigs; clearance edge cases."
@@ -3951,7 +3951,7 @@
     {
       "kind": "composite-inventory",
       "path": "crates/forge3d-web/tests/parity/composite-inventory.json",
-      "sha256": "1c2674a37aaf027917565569e467ea1ebd8305b34e5e765e7e8ff03d61f3a7e2",
+      "sha256": "6d53361c5bfbea5dcfd45a081a871c77c081af48ef14e4e2b34733a2e54bdc48",
       "recordCount": 6531
     },
     {

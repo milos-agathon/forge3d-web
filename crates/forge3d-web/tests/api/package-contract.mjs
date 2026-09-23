@@ -142,6 +142,7 @@ for (const relative of [
   "examples/test-lifecycle-away.html",
   "examples/test-w03-terrain.html",
   "examples/test-w04-package.html",
+  "examples/test-w05-package.html",
   "assets/basis/basis_transcoder.js",
   "assets/basis/basis_transcoder.wasm",
   "assets/basis/LICENSE",
@@ -269,6 +270,8 @@ for (const expected of [
 for (const expected of [
   "test-w04-package.html",
   "__forge3dW04PackageProbe",
+  "test-w05-package.html",
+  "__forge3dW05PackageProbe",
 ]) {
   assertIncludes(
     consumerHarness,
