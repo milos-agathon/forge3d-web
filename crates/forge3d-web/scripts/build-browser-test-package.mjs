@@ -588,37 +588,6 @@ async function runInstalledPackageBrowserGate(
       throw new Error("installed-package disposal leaked viewer resources");
     }
     interactionAssertions.disposal = true;
-    await page.goto(`${origin}/test-w06-package.html`, {
-      waitUntil: "networkidle",
-    });
-    const w06Package = await page.evaluate(() =>
-      window.__forge3dW06PackageProbe(),
-    );
-    if (w06Package.supported !== true || w06Package.ok !== true) {
-      throw new Error(
-        `installed-package W06 probe failed: ${JSON.stringify(w06Package.error ?? w06Package)}`,
-      );
-    }
-    if (w06Package.packageSha256 !== packageSha256) {
-      throw new Error(
-        "installed-package W06 fixture did not execute the expected tarball",
-      );
-    }
-    if (
-      !(w06Package.capture?.hdrError <= 1e-5) ||
-      w06Package.capture?.id !== true ||
-      w06Package.offline?.samplesUsed !== 4 ||
-      w06Package.offline?.denoiser !== "atrous" ||
-      w06Package.exr?.channels !== 14 ||
-      w06Package.exr?.mse !== 0 ||
-      w06Package.frames?.count !== 6 ||
-      (w06Package.video?.ok !== true &&
-        w06Package.video?.kind !== "video-codec-unavailable")
-    ) {
-      throw new Error(
-        `installed-package W06 capture/offline/EXR/frame/video surface failed: ${JSON.stringify(w06Package)}`,
-      );
-    }
     if (pageErrors.length > 0) {
       throw new Error(`installed-package page errors: ${pageErrors.join("; ")}`);
     }
@@ -786,6 +755,37 @@ async function runInstalledPackageBrowserGate(
     ) {
       throw new Error(
         `installed-package W05 camera/animation/rig surface failed: ${JSON.stringify(w05Package)}`,
+      );
+    }
+    await page.goto(`${origin}/test-w06-package.html`, {
+      waitUntil: "networkidle",
+    });
+    const w06Package = await page.evaluate(() =>
+      window.__forge3dW06PackageProbe(),
+    );
+    if (w06Package.supported !== true || w06Package.ok !== true) {
+      throw new Error(
+        `installed-package W06 probe failed: ${JSON.stringify(w06Package.error ?? w06Package)}`,
+      );
+    }
+    if (w06Package.packageSha256 !== packageSha256) {
+      throw new Error(
+        "installed-package W06 fixture did not execute the expected tarball",
+      );
+    }
+    if (
+      !(w06Package.capture?.hdrError <= 1e-5) ||
+      w06Package.capture?.id !== true ||
+      w06Package.offline?.samplesUsed !== 4 ||
+      w06Package.offline?.denoiser !== "atrous" ||
+      w06Package.exr?.channels !== 14 ||
+      w06Package.exr?.mse !== 0 ||
+      w06Package.frames?.count !== 6 ||
+      (w06Package.video?.ok !== true &&
+        w06Package.video?.kind !== "video-codec-unavailable")
+    ) {
+      throw new Error(
+        `installed-package W06 capture/offline/EXR/frame/video surface failed: ${JSON.stringify(w06Package)}`,
       );
     }
     if (pageErrors.length > 0) {
