@@ -1,8 +1,19 @@
 import { Forge3DError, Forge3DRuntime } from "./index.js";
 import { cloneCameraInput, validateCameraInput } from "./camera.js";
+import { captureOnce, renderOffline as renderOfflineTarget } from "./offline.js";
+import type { AovFrame, HdrFrame } from "./frames.js";
 import type {
   AdapterInfo,
   CameraInput,
+  CaptureOptions,
+  CaptureResult,
+  DenoiseSettingsInput,
+  OfflineAccumulationOptions,
+  OfflineBatchResult,
+  OfflineMetrics,
+  OfflineRenderOptions,
+  OfflineResolveOptions,
+  OfflineResult,
   Forge3DRuntimeCapabilities,
   Forge3DRuntimeOptions,
   Forge3DSessionCapabilities,
@@ -52,6 +63,14 @@ export interface SessionRuntimeLike {
   readRgba?(): Promise<Uint8Array>;
   getRenderStats?(): RenderStats;
   getMemoryReport?(): MemoryReport;
+  readonly width?: number;
+  readonly height?: number;
+  beginOfflineAccumulation?(options?: OfflineAccumulationOptions): void;
+  accumulateBatch?(sampleCount: number): Promise<OfflineBatchResult>;
+  readAccumulationMetrics?(targetVariance: number, tileSize?: number): Promise<OfflineMetrics>;
+  resolveOfflineHdr?(options?: OfflineResolveOptions): Promise<CaptureResult>;
+  endOfflineAccumulation?(): boolean;
+  denoiseHdrFrame?(frame: HdrFrame, aov?: AovFrame, settings?: DenoiseSettingsInput): Promise<HdrFrame>;
   dispose(): void;
 }
 
@@ -236,8 +255,85 @@ export class Forge3DSession {
     return this.#scene?.copy();
   }
 
-  render(): boolean {
+  /** Drawing-buffer width of the live runtime (0 before initialization). */
+  get width(): number {
+    return this.#runtime?.width ?? 0;
+  }
+
+  /** Drawing-buffer height of the live runtime (0 before initialization). */
+  get height(): number {
+    return this.#runtime?.height ?? 0;
+  }
+
+  /** Commits pending scene edits, then opens an offline session. */
+  beginOfflineAccumulation(options: OfflineAccumulationOptions = {}): void {
     const runtime = this.#runtimeOrThrow();
+    this.#syncScene(runtime);
+    this.#offlineRuntime(runtime.beginOfflineAccumulation).call(runtime, options);
+  }
+
+  accumulateBatch(sampleCount: number): Promise<OfflineBatchResult> {
+    const runtime = this.#runtimeOrThrow();
+    return this.#offlineRuntime(runtime.accumulateBatch).call(runtime, sampleCount);
+  }
+
+  readAccumulationMetrics(targetVariance: number, tileSize?: number): Promise<OfflineMetrics> {
+    const runtime = this.#runtimeOrThrow();
+    return this.#offlineRuntime(runtime.readAccumulationMetrics).call(
+      runtime,
+      targetVariance,
+      tileSize,
+    );
+  }
+
+  resolveOfflineHdr(options?: OfflineResolveOptions): Promise<CaptureResult> {
+    const runtime = this.#runtimeOrThrow();
+    return this.#offlineRuntime(runtime.resolveOfflineHdr).call(runtime, options);
+  }
+
+  /** Ends the offline session of the live runtime; never throws. */
+  endOfflineAccumulation(): boolean {
+    const runtime = this.#runtime;
+    if (runtime === undefined || runtime.endOfflineAccumulation === undefined) {
+      return false;
+    }
+    try {
+      return runtime.endOfflineAccumulation();
+    } catch {
+      return false;
+    }
+  }
+
+  /** HDR/AOV capture of the committed scene (see `Forge3DRuntime.capture`). */
+  capture(options: CaptureOptions = {}): Promise<CaptureResult> {
+    return captureOnce(this, options);
+  }
+
+  /** Native `render_offline` on the session runtime. */
+  renderOffline(options: OfflineRenderOptions = {}): Promise<OfflineResult> {
+    return renderOfflineTarget(this, options);
+  }
+
+  denoiseHdrFrame(
+    frame: HdrFrame,
+    aov?: AovFrame,
+    settings?: DenoiseSettingsInput,
+  ): Promise<HdrFrame> {
+    const runtime = this.#runtimeOrThrow();
+    return this.#offlineRuntime(runtime.denoiseHdrFrame).call(runtime, frame, aov, settings);
+  }
+
+  #offlineRuntime<T>(method: T | undefined): T {
+    if (method === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not support offline capture",
+      );
+    }
+    return method;
+  }
+
+  #syncScene(runtime: SessionRuntimeLike): void {
     if (
       this.#sceneSource !== undefined &&
       !this.#sceneSource.disposed &&
@@ -245,6 +341,11 @@ export class Forge3DSession {
     ) {
       this.#commitScene(runtime, this.#sceneSource);
     }
+  }
+
+  render(): boolean {
+    const runtime = this.#runtimeOrThrow();
+    this.#syncScene(runtime);
     const plan =
       this.#scene !== undefined
         ? this.#scene.getRenderPlan()

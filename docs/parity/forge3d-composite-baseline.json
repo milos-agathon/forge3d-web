@@ -4,7 +4,7 @@
   "manifestId": "forge3d-composite-baseline-v1",
   "sourcePlan": {
     "path": "docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md",
-    "sha256": "b114e02da51fb048d02c4eea040c0d09f83636ecbd9c0ecd72dced1ce14fb39b"
+    "sha256": "0b5ed36579c2f9102c8de8b9f0669d87a003f3c68af81eb5447f24d557d639ef"
   },
   "baselineLayers": [
     {
@@ -113,7 +113,7 @@
       "title": "Canvas/offscreen render and readback",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "P",
+      "status": "I",
       "ownerTask": "W06",
       "nativeCapability": "Canvas/offscreen render and readback: 1f4084a:python/forge3d/__init__.pyi:137-170, src/scene/render_paths/**",
       "requiredWebOutcome": "PNG screenshot exists; generalize to typed color, depth, ID, float, HDR and AOV readback",
@@ -465,7 +465,7 @@
       "title": "Snapshot and deterministic frame sequences",
       "lifecycle": "FP",
       "evidenceGrade": "B",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W06",
       "nativeCapability": "Snapshot and deterministic frame sequences: 1f4084a:python/forge3d/viewer.py:1113-1199, python/forge3d/helpers/frame_dump.py, tests/test_animation_mvp.py",
       "requiredWebOutcome": "Extend single PNG to multi-frame progress/cancel streams and stable OPFS/download sinks",
@@ -488,7 +488,7 @@
       "title": "Example-owned MP4/cinematic workflow through external ffmpeg",
       "lifecycle": "FI",
       "evidenceGrade": "B",
-      "status": "E",
+      "status": "I",
       "ownerTask": "W06",
       "nativeCapability": "Example-owned MP4/cinematic workflow through external ffmpeg: 1f4084a:CHANGELOG.md:500-511, tests/test_animation_mvp.py, examples/camera_animation_demo.py",
       "requiredWebOutcome": "WebCodecs plus deterministic MP4 muxing; typed unavailable-codec diagnostic",
@@ -513,7 +513,7 @@
       "title": "AOV, HDR, EXR and depth outputs",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W06",
       "nativeCapability": "AOV, HDR, EXR and depth outputs: 1f4084a:python/forge3d/__init__.pyi:542-593, tests/test_aov.py, tests/test_exr_output.py",
       "requiredWebOutcome": "Add color/albedo/normal/depth/ID/motion AOVs, float HDR and EXR Blob",
@@ -536,7 +536,7 @@
       "title": "Offline accumulation, adaptive convergence and optional OIDN",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "E",
+      "status": "I",
       "ownerTask": "W06",
       "nativeCapability": "Offline accumulation, adaptive convergence and optional OIDN: 1f4084a:python/forge3d/offline.py:18-147, tests/test_tv12_offline_quality.py, tests/test_tv12_oidn.py",
       "requiredWebOutcome": "Add WebGPU accumulation/variance controller and measurable AOV-guided WebGPU denoiser equivalent",
@@ -2277,7 +2277,7 @@
       "contract": "PNG screenshot exists; generalize to typed color, depth, ID, float, HDR and AOV readback",
       "owner": "W06",
       "evidence": [
-        "tracked P closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:R02"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:R02"
       ],
       "tests": [
         "channel/value readback, row padding, EXR metadata/round trip, convergence metrics, cancellation/progress, exact frame timestamps/counts, unavailable-codec diagnostic and native-golden SSIM >= 0.98."
@@ -2472,7 +2472,7 @@
       "contract": "Extend single PNG to multi-frame progress/cancel streams and stable OPFS/download sinks",
       "owner": "W06",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:C05"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:C05"
       ],
       "tests": [
         "channel/value readback, row padding, EXR metadata/round trip, convergence metrics, cancellation/progress, exact frame timestamps/counts, unavailable-codec diagnostic and native-golden SSIM >= 0.98."
@@ -2485,7 +2485,7 @@
       "contract": "WebCodecs plus deterministic MP4 muxing; typed unavailable-codec diagnostic",
       "owner": "W06",
       "evidence": [
-        "tracked E closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:C06"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:C06"
       ],
       "tests": [
         "channel/value readback, row padding, EXR metadata/round trip, convergence metrics, cancellation/progress, exact frame timestamps/counts, unavailable-codec diagnostic and native-golden SSIM >= 0.98."
@@ -2498,7 +2498,7 @@
       "contract": "Add color/albedo/normal/depth/ID/motion AOVs, float HDR and EXR Blob",
       "owner": "W06",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:C07"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:C07"
       ],
       "tests": [
         "channel/value readback, row padding, EXR metadata/round trip, convergence metrics, cancellation/progress, exact frame timestamps/counts, unavailable-codec diagnostic and native-golden SSIM >= 0.98."
@@ -2511,7 +2511,7 @@
       "contract": "Add WebGPU accumulation/variance controller and measurable AOV-guided WebGPU denoiser equivalent",
       "owner": "W06",
       "evidence": [
-        "tracked E closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:C08"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:C08"
       ],
       "tests": [
         "channel/value readback, row padding, EXR metadata/round trip, convergence metrics, cancellation/progress, exact frame timestamps/counts, unavailable-codec diagnostic and native-golden SSIM >= 0.98."

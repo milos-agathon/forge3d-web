@@ -179,6 +179,15 @@ Cache `.wasm` assets with immutable content hashing, or invalidate the wasm asse
   replay, `CameraAnimation` keyframes, and clearance-verified
   `TerrainOrbitRig`/`TerrainRailRig`/`TerrainTargetFollowRig` bakes, all
   matched against a native oracle within 1e-5
+- readback, AOVs, offline quality, frames, and video (W06): `capture()` and
+  the offline session (`beginOfflineAccumulation`, `accumulateBatch`,
+  `readAccumulationMetrics`, `resolveOfflineHdr`) return `Frame`, float
+  `HdrFrame` and `AovFrame` (albedo, normal, depth, object ID, motion) with
+  exact float readback; `renderOffline` ports native jittered accumulation,
+  adaptive convergence and the AOV-guided A-trous denoiser on WebGPU; EXR
+  `Blob`s via `readExr`/`writeExr`; deterministic PNG frame sequences with
+  progress, cancellation and memory/OPFS/download sinks; and WebCodecs
+  MP4/WebM export with typed unavailable-codec diagnostics
 - `setCamera(camera)`
 - `resize({ width, height, devicePixelRatio })`
 - `render()`
@@ -194,8 +203,9 @@ The current package includes canvas-backed WebGPU rendering, camera and resize
 control, Float32 heightmaps, URL/File/Blob/ArrayBuffer terrain byte sources,
 typed lights, BRDF materials, PBR/KTX2 textures, cached IBL, filtered and
 cascaded shadows, perspective/orthographic cameras with orbit/fly controls,
-camera keyframe animation and terrain camera rigs, screenshots, and TypeScript
-declarations. This is the implemented release
+camera keyframe animation and terrain camera rigs, screenshots, HDR/AOV/EXR
+capture, offline accumulation and denoising, frame sequences, video export,
+and TypeScript declarations. This is the implemented release
 surface, not the final parity boundary.
 
 | Capability | Current status | Parity owner |

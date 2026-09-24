@@ -1,6 +1,7 @@
 pub mod error;
 pub mod inputs;
 pub mod io;
+pub mod offline_api;
 pub mod runtime;
 
 pub use crate::error::Forge3DError;

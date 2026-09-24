@@ -100,6 +100,92 @@ pub fn unpad_rows(padded: &[u8], layout: ReadbackLayout) -> Result<Vec<u8>> {
     Ok(tight)
 }
 
+/// Texel formats the typed readback path copies out of GPU textures.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReadbackFormat {
+    Rgba8Unorm,
+    Bgra8Unorm,
+    Rgba16Float,
+    Rgba32Float,
+    Rg32Float,
+    R32Float,
+    R32Uint,
+}
+
+impl ReadbackFormat {
+    pub fn bytes_per_pixel(self) -> u32 {
+        match self {
+            Self::Rgba8Unorm | Self::Bgra8Unorm | Self::R32Float | Self::R32Uint => 4,
+            Self::Rgba16Float | Self::Rg32Float => 8,
+            Self::Rgba32Float => 16,
+        }
+    }
+
+    pub fn channels(self) -> u32 {
+        match self {
+            Self::Rgba8Unorm | Self::Bgra8Unorm | Self::Rgba16Float | Self::Rgba32Float => 4,
+            Self::Rg32Float => 2,
+            Self::R32Float | Self::R32Uint => 1,
+        }
+    }
+
+    pub fn layout(self, width: u32, height: u32) -> Result<ReadbackLayout> {
+        ReadbackLayout::new(width, height, self.bytes_per_pixel())
+    }
+}
+
+/// IEEE 754 binary16 to binary32 (exact; subnormals, infinities and NaN kept).
+pub fn f16_to_f32(bits: u16) -> f32 {
+    let sign = u32::from(bits >> 15) << 31;
+    let exponent = u32::from((bits >> 10) & 0x1f);
+    let mantissa = u32::from(bits & 0x3ff);
+    let magnitude = match (exponent, mantissa) {
+        (0, 0) => 0,
+        (0, m) => {
+            // Subnormal: normalize the mantissa.
+            let shift = m.leading_zeros() - 21;
+            let m = (m << shift) & 0x3ff;
+            ((113 - shift) << 23) | (m << 13)
+        }
+        (0x1f, m) => 0x7f80_0000 | (m << 13),
+        (e, m) => ((e + 112) << 23) | (m << 13),
+    };
+    f32::from_bits(sign | magnitude)
+}
+
+/// Unpads rows and decodes little-endian texels to `f32` lanes.
+pub fn decode_float_rows(
+    padded: &[u8],
+    layout: ReadbackLayout,
+    format: ReadbackFormat,
+) -> Result<Vec<f32>> {
+    let tight = unpad_rows(padded, layout)?;
+    match format {
+        ReadbackFormat::Rgba32Float | ReadbackFormat::Rg32Float | ReadbackFormat::R32Float => {
+            Ok(tight
+                .chunks_exact(4)
+                .map(|b| f32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+                .collect())
+        }
+        ReadbackFormat::Rgba16Float => Ok(tight
+            .chunks_exact(2)
+            .map(|b| f16_to_f32(u16::from_le_bytes([b[0], b[1]])))
+            .collect()),
+        ReadbackFormat::Rgba8Unorm | ReadbackFormat::Bgra8Unorm | ReadbackFormat::R32Uint => {
+            invalid("format", "not a float readback format")
+        }
+    }
+}
+
+/// Unpads rows and decodes little-endian `u32` texels.
+pub fn decode_u32_rows(padded: &[u8], layout: ReadbackLayout) -> Result<Vec<u32>> {
+    let tight = unpad_rows(padded, layout)?;
+    Ok(tight
+        .chunks_exact(4)
+        .map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]))
+        .collect())
+}
+
 fn invalid<T>(field: &str, message: &str) -> Result<T> {
     Err(Forge3dError::InvalidInput {
         field: field.to_string(),
@@ -109,7 +195,67 @@ fn invalid<T>(field: &str, message: &str) -> Result<T> {
 
 #[cfg(test)]
 mod tests {
-    use super::{align_copy_bytes_per_row, rgba8_layout, unpad_rows};
+    use super::{
+        align_copy_bytes_per_row, decode_float_rows, decode_u32_rows, f16_to_f32, rgba8_layout,
+        unpad_rows, ReadbackFormat,
+    };
+
+    #[test]
+    fn typed_formats_report_texel_sizes_and_padded_layouts() {
+        assert_eq!(ReadbackFormat::Rgba32Float.bytes_per_pixel(), 16);
+        assert_eq!(ReadbackFormat::Rg32Float.channels(), 2);
+        let layout = ReadbackFormat::Rgba32Float.layout(17, 3).unwrap();
+        assert_eq!(layout.unpadded_bytes_per_row, 272);
+        assert_eq!(layout.padded_bytes_per_row, 512);
+        let layout = ReadbackFormat::R32Float.layout(65, 2).unwrap();
+        assert_eq!(layout.padded_bytes_per_row, 512);
+    }
+
+    #[test]
+    fn f16_decoding_is_exact_across_classes() {
+        assert_eq!(f16_to_f32(0x3c00), 1.0);
+        assert_eq!(f16_to_f32(0xc000), -2.0);
+        assert_eq!(f16_to_f32(0x7bff), 65504.0);
+        assert_eq!(f16_to_f32(0x0001), 2.0f32.powi(-24));
+        assert_eq!(f16_to_f32(0x03ff), 1023.0 * 2.0f32.powi(-24));
+        assert_eq!(f16_to_f32(0x0400), 2.0f32.powi(-14));
+        assert_eq!(f16_to_f32(0x8000).to_bits(), (-0.0f32).to_bits());
+        assert!(f16_to_f32(0x7c00).is_infinite());
+        assert!(f16_to_f32(0x7e00).is_nan());
+        assert_eq!(f16_to_f32(0x3555), 0.333_251_95);
+    }
+
+    #[test]
+    fn float_and_uint_rows_decode_after_unpadding() {
+        let layout = ReadbackFormat::R32Float.layout(3, 2).unwrap();
+        let mut padded = vec![0u8; layout.buffer_size as usize];
+        for (row, values) in [[1.5f32, -2.0, 3.25], [0.125, 7.0, -0.5]]
+            .iter()
+            .enumerate()
+        {
+            for (x, value) in values.iter().enumerate() {
+                let start = row * layout.padded_bytes_per_row as usize + x * 4;
+                padded[start..start + 4].copy_from_slice(&value.to_le_bytes());
+            }
+        }
+        assert_eq!(
+            decode_float_rows(&padded, layout, ReadbackFormat::R32Float).unwrap(),
+            vec![1.5, -2.0, 3.25, 0.125, 7.0, -0.5]
+        );
+        let ids = decode_u32_rows(&padded, layout).unwrap();
+        assert_eq!(ids[0], 1.5f32.to_bits());
+        assert!(decode_float_rows(&padded, layout, ReadbackFormat::R32Uint).is_err());
+
+        let layout = ReadbackFormat::Rgba16Float.layout(1, 1).unwrap();
+        let mut padded = vec![0u8; layout.buffer_size as usize];
+        for (lane, bits) in [0x3c00u16, 0x4000, 0x3800, 0x0000].iter().enumerate() {
+            padded[lane * 2..lane * 2 + 2].copy_from_slice(&bits.to_le_bytes());
+        }
+        assert_eq!(
+            decode_float_rows(&padded, layout, ReadbackFormat::Rgba16Float).unwrap(),
+            vec![1.0, 2.0, 0.5, 0.0]
+        );
+    }
 
     #[test]
     fn aligns_rows_to_webgpu_copy_alignment() {

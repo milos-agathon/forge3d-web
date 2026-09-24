@@ -6,6 +6,8 @@ pub mod io;
 
 pub mod codecs;
 
+pub mod offline;
+
 #[cfg(feature = "gpu")]
 pub mod gpu;
 

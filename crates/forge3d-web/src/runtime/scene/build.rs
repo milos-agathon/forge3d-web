@@ -59,6 +59,7 @@ pub(super) fn build_geometry(
     let visible = visible_node_ids(graph, node_map);
     let mut geometry = BuiltGeometry::default();
     let mut overlay_nodes = Vec::new();
+    let mut first_unassigned = 0usize;
     for node in nodes {
         if !visible.contains(&node.id) {
             continue;
@@ -122,6 +123,11 @@ pub(super) fn build_geometry(
             }
             _ => {}
         }
+        let object_id = scene_object_id(node.id);
+        for vertex in &mut geometry.world_vertices[first_unassigned..] {
+            vertex.object_id = object_id;
+        }
+        first_unassigned = geometry.world_vertices.len();
     }
     overlay_nodes.sort_by_key(|(id, z_index, _, _)| (*z_index, *id));
     for (_id, _z_index, bounds, color) in overlay_nodes {
@@ -139,6 +145,11 @@ pub(super) fn build_geometry(
         geometry.overlays.push(OverlayGeometry { bounds, color });
     }
     geometry
+}
+
+/// AOV object ID of a scene node: `0` is background, `1` the terrain.
+pub(crate) fn scene_object_id(node_id: u32) -> u32 {
+    node_id.saturating_add(crate::runtime::offline::AOV_ID_SCENE_NODE_BASE)
 }
 
 pub(super) fn checked_scene_bytes(geometry: &BuiltGeometry) -> Result<u64, WebError> {

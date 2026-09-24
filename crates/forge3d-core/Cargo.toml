@@ -20,6 +20,8 @@ webgpu = ["gpu"]
 
 [dependencies]
 async-trait.workspace = true
+# Lock-controlled (docs/parity/dependency-lock.json): default rayon disabled for WASM.
+exr = { version = "=1.74.2", default-features = false }
 bytemuck = { workspace = true, optional = true }
 glam.workspace = true
 thiserror.workspace = true

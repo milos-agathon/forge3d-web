@@ -889,6 +889,89 @@ import {
   type TerrainRigJSON,
   type Vec3,
 } from "../../types/index";
+import {
+  AOV_ID_TERRAIN,
+  AovFrame,
+  aovObjectId,
+  atrousDenoise,
+  compareImages,
+  createDownloadFrameSink,
+  createFrameStream,
+  createMemoryFrameSink,
+  createOpfsFrameSink,
+  DenoiseSettings,
+  dumpFrameSequence,
+  encodePng,
+  encodeVideo,
+  EXR_MIME_TYPE,
+  Frame,
+  FrameDumper,
+  frameTimestampUs,
+  HdrFrame,
+  hasUpwardConvergenceTrend,
+  muxEncodedVideo,
+  OfflineProgress,
+  OfflineQualitySettings,
+  probeVideoCodecs,
+  readExr,
+  renderFrames,
+  renderOffline,
+  writeExr,
+  writeFrames,
+  type CaptureResult,
+  type EncodedVideoResult,
+  type ExrImage,
+  type ImageComparison,
+  type OfflineMetrics,
+  type OfflineResult,
+  type RenderedFrame,
+  type VideoCodecSupport,
+  type VideoCodecUnavailableDetails,
+} from "../../types/index";
+
+async function compileW06Declarations(runtime: Forge3DRuntime, session: Forge3DSession): Promise<void> {
+  runtime.beginOfflineAccumulation({ samples: 8, seed: 1, aovs: "all" });
+  await runtime.accumulateBatch(4);
+  const metrics: OfflineMetrics = await runtime.readAccumulationMetrics(0.002, 8);
+  const resolved: CaptureResult = await runtime.resolveOfflineHdr({
+    tonemap: { operator: "aces", whitePoint: 4 },
+    denoise: new DenoiseSettings({ enabled: true, iterations: 2 }),
+  });
+  const ended: boolean = runtime.endOfflineAccumulation() && runtime.offlineActive;
+  const capture = await session.capture({ aovs: ["depth", "id", "motion"], previousCamera: session.getCamera() ?? { position: [0, 1, 2], target: [0, 0, 0], up: [0, 1, 0], fovYDegrees: 45, near: 0.1, far: 100 } });
+  const offline: OfflineResult = await renderOffline(session, {
+    settings: new OfflineQualitySettings({ enabled: true, adaptive: true }),
+    denoise: { enabled: true, method: "oidn" },
+    onProgress: (progress: OfflineProgress) => void progress.p95Delta,
+  });
+  const trend: boolean = hasUpwardConvergenceTrend([metrics]);
+  const denoised: HdrFrame = await runtime.denoiseHdrFrame(resolved.hdrFrame, resolved.aovFrame, { edgeStopping: 0 });
+  const tonemapped: Frame = await denoised.tonemap({ operator: "filmic-terrain" });
+  const exr: Blob = await capture.aovFrame.toExr(capture.hdrFrame, { compression: "piz" });
+  const image: ExrImage = await readExr(exr, { maxDimension: 4096 });
+  const written: Blob = await writeExr({ width: 1, height: 1, channels: [{ name: "id", data: new Uint32Array([AOV_ID_TERRAIN]) }] });
+  const fromExr: HdrFrame = await HdrFrame.fromExr(written);
+  const aov = new AovFrame({ width: 1, height: 1, near: 0.1, far: 10, id: new Uint32Array([aovObjectId(3)]) });
+  const png: Blob = await encodePng(1, 1, new Uint8Array(4), { compression: "none" });
+  const cpu: Float32Array = await atrousDenoise({ width: 1, height: 1, color: new Float32Array(4) });
+  const comparison: ImageComparison = await compareImages(cpu, cpu, { width: 1, height: 1, channels: 4 });
+  const sink = createMemoryFrameSink({ format: "png" });
+  const frames: AsyncGenerator<RenderedFrame> = renderFrames(runtime, { cameraAt: () => ({ position: [0, 1, 2], target: [0, 0, 0], up: [0, 1, 0], fovYDegrees: 45, near: 0.1, far: 100 }), frameCount: 2, fps: 30 });
+  const summary = await writeFrames(frames, sink);
+  const stream: ReadableStream<RenderedFrame> = createFrameStream(session, { cameraAt: () => ({ position: [0, 1, 2], target: [0, 0, 0], up: [0, 1, 0], fovYDegrees: 45, near: 0.1, far: 100 }), frameCount: 1, mode: "display" });
+  const opfs = await createOpfsFrameSink();
+  const download = createDownloadFrameSink({ download: () => undefined });
+  const dumper = new FrameDumper(download, { prefix: "render" });
+  const dumped: number = await dumpFrameSequence([tonemapped], opfs);
+  const probes: VideoCodecSupport[] = await probeVideoCodecs({ width: 16, height: 16, fps: 30, container: "webm" });
+  const video: EncodedVideoResult = await encodeVideo([tonemapped], { fps: 30, codec: ["avc", "vp9"] });
+  const muxed: Blob = await muxEncodedVideo([{ data: new Uint8Array(1), type: "key", timestampUs: 0, durationUs: frameTimestampUs(1, 30) }], { codec: "vp9", width: 16, height: 16, fps: 30 });
+  const details: VideoCodecUnavailableDetails | undefined = undefined;
+  const mime: "image/x-exr" = EXR_MIME_TYPE;
+  void [ended, offline, trend, image, fromExr, aov, png, comparison, summary, stream, dumper, dumped, probes, video, muxed, details, mime, sink.files.size];
+}
+
+void compileW06Declarations;
 
 async function compileW05Declarations(viewer: Forge3DViewer, session: Forge3DSession): Promise<void> {
   const clip: ClipSpace = "gl";

@@ -38,13 +38,30 @@ const vendor = join(dist, "vendor");
 mkdirSync(vendor, { recursive: true });
 copyRequired(join(ktxRoot, "dist", "ktx-parse.modern.js"), join(vendor, "ktx-parse.js"));
 copyRequired(join(ktxRoot, "LICENSE"), join(vendor, "ktx-parse.LICENSE"));
+// mediabunny is lock-controlled as bundled-self-hosted too: the exact
+// integrity-verified 1.58.0 ESM bundle (MPL-2.0) is loaded lazily by video.js.
+const mediabunnyRoot = join(root, "node_modules", "mediabunny");
+const mediabunnyVersion = JSON.parse(readRequired(join(mediabunnyRoot, "package.json"))).version;
+if (mediabunnyVersion !== "1.58.0") {
+  throw new Error(`mediabunny must be 1.58.0 per the dependency lock, found ${mediabunnyVersion}`);
+}
+copyRequired(
+  join(mediabunnyRoot, "dist", "bundles", "mediabunny.min.mjs"),
+  join(vendor, "mediabunny.js"),
+);
+copyRequired(join(mediabunnyRoot, "LICENSE"), join(vendor, "mediabunny.LICENSE"));
 for (const file of readdirSync(dist)) {
   if (!file.endsWith(".js")) continue;
   const path = join(dist, file);
   const source = readFileSync(path, "utf8");
-  const rewritten = source.replaceAll("from \"ktx-parse\"", "from \"./vendor/ktx-parse.js\"");
+  const rewritten = source
+    .replaceAll("from \"ktx-parse\"", "from \"./vendor/ktx-parse.js\"")
+    .replaceAll("import(\"mediabunny\")", "import(\"./vendor/mediabunny.js\")");
   if (/from\s+["']ktx-parse["']/u.test(rewritten)) {
     throw new Error(`dist/${file} still imports the bare ktx-parse specifier`);
+  }
+  if (/import\(\s*["']mediabunny["']\s*\)/u.test(rewritten)) {
+    throw new Error(`dist/${file} still imports the bare mediabunny specifier`);
   }
   if (rewritten !== source) writeFileSync(path, rewritten);
 }
@@ -52,6 +69,7 @@ for (const file of readdirSync(dist)) {
 // Package asset manifest: SHA-256 of every emitted self-hosted third-party asset.
 const assetManifest = [
   ["dist/vendor/ktx-parse.js", "ktx-parse@1.1.0"],
+  ["dist/vendor/mediabunny.js", "mediabunny@1.58.0"],
   ["assets/basis/basis_transcoder.js", "basis_universal@2.0.3"],
   ["assets/basis/basis_transcoder.wasm", "basis_universal@2.0.3"],
 ].map(([path, source]) => ({

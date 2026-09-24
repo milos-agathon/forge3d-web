@@ -3,11 +3,13 @@ use wgpu::util::DeviceExt;
 
 use super::geometry::{LitVertex, OverlayVertex};
 use super::pipelines::{
-    create_overlay_pipeline, create_world_pipeline, OVERLAY_SHADER, WORLD_SHADER,
+    create_overlay_pipeline, create_world_capture_pipeline, create_world_pipeline, OVERLAY_SHADER,
+    WORLD_SHADER,
 };
 use crate::error::WebError;
 use crate::runtime::ibl::IblResources;
 use crate::runtime::lighting::LightingResources;
+use crate::runtime::offline::CapturePass;
 use crate::runtime::shader_variants::{specialize, ShaderFeatures};
 use crate::runtime::terrain::{create_camera_uniform, DEPTH_FORMAT};
 use crate::runtime::textures::TextureResources;
@@ -59,6 +61,10 @@ pub(crate) struct NativeScene {
     pub(crate) overlay_ranges: Vec<DrawRange>,
     pub(crate) overlays: Vec<OverlayGeometry>,
     pub(crate) pass_names: Vec<String>,
+    /// Offline capture pipelines `(features, primary, surface)`, compiled on
+    /// the first capture and reused until the lighting features change.
+    capture_world: Option<(ShaderFeatures, wgpu::RenderPipeline, wgpu::RenderPipeline)>,
+    capture_overlay: Option<wgpu::RenderPipeline>,
 }
 
 impl NativeScene {
@@ -149,6 +155,8 @@ impl NativeScene {
             overlay_ranges: geometry.overlay_ranges.clone(),
             overlays: geometry.overlays.clone(),
             pass_names,
+            capture_world: None,
+            capture_overlay: None,
         };
         scene.upload_geometry(context, &geometry);
         scene.encode_bundles(context, textures, ibl);
@@ -350,6 +358,121 @@ impl NativeScene {
             create_overlay_pipeline(&context.device, format, &self.overlay_shader);
         self.format = format;
         self.encode_bundles(context, textures, ibl);
+    }
+
+    /// Scene camera bind group bound to an offline capture camera buffer.
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    pub(crate) fn capture_camera_bind_group(
+        &self,
+        device: &wgpu::Device,
+        camera_buffer: &wgpu::Buffer,
+    ) -> wgpu::BindGroup {
+        device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("forge3d-web-scene-capture-camera-bind-group"),
+            layout: &self.camera_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: camera_buffer.as_entire_binding(),
+            }],
+        })
+    }
+
+    /// Ensures capture pipelines exist for the current world specialization.
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    pub(crate) fn prepare_capture(&mut self, context: &GpuContext) {
+        let current = self.world_features;
+        let stale = self
+            .capture_world
+            .as_ref()
+            .map_or(true, |(features, _, _)| *features != current);
+        if stale && self.world_vertex_buffer.is_some() {
+            let features = current.with_capture();
+            let shader = context
+                .device
+                .create_shader_module(wgpu::ShaderModuleDescriptor {
+                    label: Some("forge3d-web-scene-world-capture-shader"),
+                    source: wgpu::ShaderSource::Wgsl(specialize(WORLD_SHADER, features).into()),
+                });
+            let layouts = [
+                &self.camera_layout,
+                &self.lighting_layout,
+                &self.texture_layout,
+                &self.ibl_layout,
+            ];
+            let primary = create_world_capture_pipeline(
+                &context.device,
+                layouts,
+                &shader,
+                CapturePass::Primary,
+            );
+            let surface = create_world_capture_pipeline(
+                &context.device,
+                layouts,
+                &shader,
+                CapturePass::Surface,
+            );
+            self.capture_world = Some((current, primary, surface));
+        }
+        if self.capture_overlay.is_none() && self.overlay_vertex_buffer.is_some() {
+            self.capture_overlay = Some(create_overlay_pipeline(
+                &context.device,
+                crate::runtime::offline::CAPTURE_OVERLAY_FORMAT,
+                &self.overlay_shader,
+            ));
+        }
+    }
+
+    /// Draws the world geometry into an open capture pass.
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    pub(crate) fn draw_capture_world(
+        &self,
+        pass: &mut wgpu::RenderPass<'_>,
+        which: CapturePass,
+        camera_bind_group: &wgpu::BindGroup,
+        textures: &TextureResources,
+        ibl: &IblResources,
+    ) {
+        let (Some((_, primary, surface)), Some(buffer)) = (
+            self.capture_world.as_ref(),
+            self.world_vertex_buffer.as_ref(),
+        ) else {
+            return;
+        };
+        pass.set_pipeline(match which {
+            CapturePass::Primary => primary,
+            CapturePass::Surface => surface,
+        });
+        pass.set_bind_group(0, camera_bind_group, &[]);
+        pass.set_bind_group(1, &self.lighting_bind_group, &[]);
+        pass.set_bind_group(3, &ibl.bind_group, &[]);
+        pass.set_vertex_buffer(0, buffer.slice(..));
+        for range in &self.world_ranges {
+            pass.set_bind_group(2, textures.bind_group_for(range.material_index), &[]);
+            pass.draw(
+                range.first_vertex..range.first_vertex + range.vertex_count,
+                0..1,
+            );
+        }
+    }
+
+    /// Draws the overlays into an open capture overlay-layer pass.
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    pub(crate) fn draw_capture_overlays(&self, pass: &mut wgpu::RenderPass<'_>) -> bool {
+        let (Some(pipeline), Some(buffer)) = (
+            self.capture_overlay.as_ref(),
+            self.overlay_vertex_buffer.as_ref(),
+        ) else {
+            return false;
+        };
+        pass.set_pipeline(pipeline);
+        pass.set_vertex_buffer(0, buffer.slice(..));
+        for range in &self.overlay_ranges {
+            pass.draw(
+                range.first_vertex..range.first_vertex + range.vertex_count,
+                0..1,
+            );
+        }
+        !self.overlay_ranges.is_empty()
     }
 
     pub(super) fn world_vertex_bytes(&self) -> u64 {
