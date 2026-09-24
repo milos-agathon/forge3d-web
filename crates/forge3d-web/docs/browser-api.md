@@ -536,6 +536,78 @@ Forge3D oracle, within 1e-5 (relative above magnitude 1).
   `source.cameraAt(animation, time)` maps rig space onto the renderer's world
   space. Rigs serialize with `toJSON()`/`terrainRigFromJSON()`.
 
+## Readback, AOVs, Offline Quality, Frames, And Video
+
+W06 ports native readback and offline output (R02, C05-C08). Captures never
+touch the display frame: they render the committed scene through dedicated
+capture pipelines into float targets and read them back with padded rows
+decoded in WASM.
+
+- **Frames.** `Frame` is tight RGBA8 (rows top to bottom), `HdrFrame` is
+  linear float RGBA and `AovFrame` carries linear `albedo()` RGB, world-space
+  shading `normal()` XYZ, `depth()` (linear view depth normalized by the camera
+  clip planes, background `1`; `linearDepth()` converts back), object `id()`
+  (`0` background, `AOV_ID_TERRAIN`, scene nodes `aovObjectId(node)`) and pixel
+  `motion()` (`current - previous`, +x right, +y down, from `previousCamera`).
+  Missing channels throw `INVALID_INPUT` with the native wording ("Normal AOV
+  not available"). `Frame.toPng()` is deterministic (`compression: "none"` is
+  byte-identical everywhere).
+- **Capture.** `runtime.capture(options)` / `session.capture(options)` returns
+  `{ frame, hdrFrame, aovFrame }`; `aovs` defaults to the native albedo,
+  normal and depth (`"all"` adds ID and motion). HDR color is unclamped scene
+  radiance with overlays composited premultiplied; the default `display`
+  tonemap reproduces the realtime frame within one unit per channel.
+- **Offline accumulation.** `beginOfflineAccumulation({ samples, seed, aovs,
+  previousCamera })`, `accumulateBatch(n)`, `readAccumulationMetrics(targetVariance,
+  tileSize)`, `resolveOfflineHdr({ tonemap, denoise })` and
+  `endOfflineAccumulation()` follow the native session: jitter is the native
+  R2 sequence (seeded), metrics are native relative tile-luminance deltas
+  against the last three readings, a second begin fails with "already active",
+  and metrics before any sample fail. While a session is open `render()`
+  returns `false`, `screenshot()`/`readRgba()` reject, and scene/camera
+  mutations queue until it ends. `renderOffline(target, options)` (also a
+  runtime/session method) ports `render_offline`: `settings.enabled` must be
+  true, adaptive runs stop after `minSamples` on an upward convergence trend,
+  `onProgress` receives `OfflineProgress`, `signal` cancels with
+  `REQUEST_CANCELLED`, and the session always ends. Depth, ID and motion come
+  from one unjittered reference pass. A device loss surfaces `DEVICE_LOST`.
+- **Denoise.** `DenoiseSettings` validates like native (`atrous`, `oidn`,
+  `none`; 1-10 iterations). The WebGPU A-trous denoiser uses the native
+  B3-spline weights with albedo, normal-angle and optional depth guides plus a
+  luminance edge-stopping term (`edgeStopping`, default 1) scaled by a robust
+  noise estimate, so converged frames stay unchanged; `edgeStopping: 0`
+  reproduces the native NumPy weights. `oidn` is unavailable in browsers and
+  falls back to A-trous with the native warning in `metadata.warnings`.
+  `runtime.denoiseHdrFrame(hdr, aov)` denoises any frame on the GPU and
+  `atrousDenoise(input)` is the CPU/WASM reference; `compareImages` reports
+  MSE, PSNR (native definition) and SSIM.
+- **Tonemap.** `display` plus the native `reinhard`, `reinhard-extended`,
+  `aces`, `uncharted2`, `exposure` and `filmic-terrain` operators run on the
+  GPU in `resolveOfflineHdr` and on the CPU in `HdrFrame.tonemap()`.
+- **EXR.** `HdrFrame.toExr()`, `AovFrame.toExr(beauty)` and `writeExr()`
+  produce `image/x-exr` `Blob`s with native channel names (`beauty.R/G/B/A`,
+  `albedo.R/G/B`, `normal.X/Y/Z`, `depth.Z`, `id` as uint, `motion.X/Y`),
+  optional text metadata and `none`/`rle`/`zip`/`zips`/`piz` compression.
+  `readExr()` validates the header before decoding, so malformed files fail
+  with `INVALID_INPUT` and oversized ones with `RESOURCE_LIMIT_EXCEEDED`.
+- **Frame sequences.** `renderFrames(target, { animation | cameraAt, fps,
+  mode })` yields frames at exact times `i / fps` with microsecond timestamps
+  `round(i * 1e6 / fps)`; `mode` is `capture` (default), `display` or
+  `offline`. `createFrameStream` wraps it as a `ReadableStream`. `writeFrames`
+  drains into a sink: `createMemoryFrameSink`, `createOpfsFrameSink` (below a
+  `RenderConfig.outputDir` in OPFS or a File System Access directory) or
+  `createDownloadFrameSink`; names follow `RenderConfig.frameFileName`.
+  `FrameDumper` and `dumpFrameSequence` port the native dumper.
+- **Video.** `encodeVideo(frames, { fps, container, codec })` encodes with
+  WebCodecs (`avc`, `vp9`, `av1`, `hevc`, `vp8`, first supported wins) and
+  muxes MP4 or WebM with the lock-pinned mediabunny 1.58.0; frame `i` has
+  timestamp `round(i * 1e6 / fps)` and muxing is deterministic (the MP4
+  creation time is pinned). When no codec can encode, the error is
+  `UNSUPPORTED_FEATURE` with `VideoCodecUnavailableDetails`
+  (`kind: "video-codec-unavailable"` plus per-codec probes);
+  `probeVideoCodecs` reports support up front and `muxEncodedVideo` muxes
+  caller-encoded chunks.
+
 ## Browser IO
 
 `runtime.setTerrainFromSource(terrain)` accepts little-endian f32 heightmap bytes

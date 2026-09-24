@@ -1984,6 +1984,19 @@ export declare class Forge3DSession {
   readRgba(): Promise<Uint8Array>;
   resize(size: ResizeInput): void;
   screenshot(): Promise<Blob>;
+  /** Drawing-buffer size of the live runtime (0 before initialization). */
+  readonly width: number;
+  readonly height: number;
+  /** Commits pending scene edits, then opens an offline accumulation session. */
+  beginOfflineAccumulation(options?: OfflineAccumulationOptions): void;
+  accumulateBatch(sampleCount: number): Promise<OfflineBatchResult>;
+  readAccumulationMetrics(targetVariance: number, tileSize?: number): Promise<OfflineMetrics>;
+  resolveOfflineHdr(options?: OfflineResolveOptions): Promise<CaptureResult>;
+  /** Ends the live runtime's offline session; never throws. */
+  endOfflineAccumulation(): boolean;
+  capture(options?: CaptureOptions): Promise<CaptureResult>;
+  renderOffline(options?: OfflineRenderOptions): Promise<OfflineResult>;
+  denoiseHdrFrame(frame: HdrFrame, aov?: AovFrame, settings?: DenoiseSettingsInput): Promise<HdrFrame>;
   whenReady(): Promise<void>;
   dispose(): void;
 }
@@ -2034,6 +2047,27 @@ export declare class Forge3DRuntime {
   readTerrainAnalysis(
     kind: "height-ao" | "sun-visibility",
   ): Promise<TerrainScalarField>;
+  /** Whether an offline accumulation session is open. */
+  readonly offlineActive: boolean;
+  /**
+   * Opens an offline accumulation session for the committed scene and camera
+   * (native `begin_offline_accumulation`). While open, render() returns false,
+   * screenshot()/readRgba() reject, and scene/camera mutations queue until
+   * endOfflineAccumulation().
+   */
+  beginOfflineAccumulation(options?: OfflineAccumulationOptions): void;
+  accumulateBatch(sampleCount: number): Promise<OfflineBatchResult>;
+  readAccumulationMetrics(targetVariance: number, tileSize?: number): Promise<OfflineMetrics>;
+  /** Resolves HDR color, AOVs and a tonemapped frame (optionally denoised). */
+  resolveOfflineHdr(options?: OfflineResolveOptions): Promise<CaptureResult>;
+  /** Ends the session; returns whether one was open. Idempotent. */
+  endOfflineAccumulation(): boolean;
+  /** HDR/AOV capture of the committed scene (one sample by default). */
+  capture(options?: CaptureOptions): Promise<CaptureResult>;
+  /** Native `render_offline` on this runtime. */
+  renderOffline(options?: OfflineRenderOptions): Promise<OfflineResult>;
+  /** WebGPU A-trous denoise guided by the frame's AOVs. */
+  denoiseHdrFrame(frame: HdrFrame, aov?: AovFrame, settings?: DenoiseSettingsInput): Promise<HdrFrame>;
   dispose(): void;
 }
 
@@ -2317,3 +2351,553 @@ export declare function createNotebookAdapter(
   container: HTMLElement,
   options?: Forge3DSessionOptions,
 ): Forge3DNotebookAdapter;
+
+/* W06: readback, AOV/HDR/EXR, offline quality, frame sequences and video. */
+
+/** Capture AOVs (native `AovSettings` plus ID and motion). */
+export type AovName = "albedo" | "normal" | "depth" | "id" | "motion";
+
+/** Native offline tonemap operators plus the realtime `display` encode. */
+export type TonemapOperatorName =
+  | "display"
+  | "reinhard"
+  | "reinhard-extended"
+  | "aces"
+  | "uncharted2"
+  | "exposure"
+  | "filmic-terrain";
+
+export interface TonemapOptions {
+  operator?: TonemapOperatorName;
+  whitePoint?: number;
+}
+
+export interface HdrTonemapOptions extends TonemapOptions {
+  /** Per-pixel display encode for `display`: 0 linear, 1 sRGB, 2 screen filmic. */
+  displayEncode?: Uint8Array;
+}
+
+export type DenoiseMethod = "atrous" | "oidn" | "none";
+
+export interface DenoiseGuides {
+  albedo?: boolean;
+  normal?: boolean;
+  depth?: boolean;
+}
+
+export interface DenoiseSettingsInput {
+  enabled?: boolean;
+  method?: DenoiseMethod;
+  iterations?: number;
+  sigmaColor?: number;
+  sigmaAlbedo?: number;
+  sigmaNormal?: number;
+  sigmaDepth?: number;
+  /** Luminance edge-stopping strength; 0 reproduces the native NumPy weights. */
+  edgeStopping?: number;
+  guides?: DenoiseGuides;
+}
+
+export interface OfflineQualitySettingsInput {
+  enabled?: boolean;
+  adaptive?: boolean;
+  targetVariance?: number;
+  maxSamples?: number;
+  minSamples?: number;
+  batchSize?: number;
+  tileSize?: number;
+  convergenceRatio?: number;
+}
+
+export interface OfflineAccumulationOptions {
+  /** Jitter sequence length (native `jitter_sequence_samples`). */
+  samples?: number;
+  seed?: number | null;
+  aovs?: readonly AovName[] | "all";
+  /** Camera of the previous frame for motion vectors (default: current). */
+  previousCamera?: CameraInput;
+}
+
+export interface OfflineBatchResult {
+  totalSamples: number;
+  batchTimeMs: number;
+}
+
+export interface OfflineMetrics {
+  totalSamples: number;
+  meanDelta: number;
+  p95Delta: number;
+  maxTileDelta: number;
+  convergedTileRatio: number;
+}
+
+export interface OfflineResolveOptions {
+  tonemap?: TonemapOptions;
+  denoise?: DenoiseSettingsInput | DenoiseSettings | null;
+}
+
+export interface CaptureOptions extends OfflineAccumulationOptions, OfflineResolveOptions {
+  signal?: AbortSignal;
+}
+
+export interface CaptureResult {
+  frame: Frame;
+  hdrFrame: HdrFrame;
+  aovFrame: AovFrame;
+}
+
+export interface OfflineRenderOptions {
+  settings?: OfflineQualitySettings | OfflineQualitySettingsInput;
+  /** Target samples when not adaptive (native `aa_samples`). */
+  samples?: number;
+  seed?: number | null;
+  aovs?: readonly AovName[] | "all";
+  denoise?: DenoiseSettings | DenoiseSettingsInput | null;
+  tonemap?: TonemapOptions;
+  previousCamera?: CameraInput;
+  onProgress?: (progress: OfflineProgress) => void;
+  signal?: AbortSignal;
+}
+
+export interface OfflineRenderMetadata {
+  samplesUsed: number;
+  denoiserUsed: "none" | "atrous";
+  denoiserRequested: DenoiseMethod;
+  denoiseGuides: string[];
+  finalP95Delta: number | null;
+  convergedRatio: number | null;
+  targetSamples: number;
+  adaptive: boolean;
+  tonemapOperator: TonemapOperatorName;
+  elapsedMs: number;
+  warnings: string[];
+}
+
+export interface OfflineResult extends CaptureResult {
+  metadata: OfflineRenderMetadata;
+}
+
+export type ExrCompression = "none" | "rle" | "zip" | "zips" | "piz";
+
+export interface ExrChannelInput {
+  name: string;
+  data: Float32Array | Uint32Array;
+  quantizeLinearly?: boolean;
+}
+
+export interface ExrChannel {
+  name: string;
+  type: "f32" | "u32" | "f16";
+  data: Float32Array | Uint32Array;
+}
+
+export interface ExrImage {
+  width: number;
+  height: number;
+  channels: ExrChannel[];
+  metadata: Record<string, string>;
+  software: string | null;
+  compression: string;
+}
+
+export interface ExrWriteOptions {
+  prefix?: string;
+  compression?: ExrCompression;
+  metadata?: Readonly<Record<string, string>>;
+}
+
+export interface ExrReadOptions {
+  maxDimension?: number;
+  maxPixels?: number;
+}
+
+export interface PngEncodeOptions {
+  compression?: "deflate" | "none";
+}
+
+export interface HdrDenoiseInput extends DenoiseSettingsInput {
+  width: number;
+  height: number;
+  color: Float32Array;
+  albedo?: Float32Array;
+  normal?: Float32Array;
+  depth?: Float32Array;
+}
+
+export interface ImageCompareOptions {
+  width: number;
+  height: number;
+  /** Interleaved lanes per pixel in both images. */
+  channels: number;
+  /** Leading lanes that enter the metrics (default: all). */
+  compareChannels?: number;
+  /** SSIM dynamic range (default 1). */
+  dataRange?: number;
+}
+
+export interface ImageComparison {
+  mse: number;
+  psnr: number;
+  ssim: number;
+  maxAbs: number;
+}
+
+export interface AovFrameInit {
+  width: number;
+  height: number;
+  near: number;
+  far: number;
+  albedo?: Float32Array;
+  normal?: Float32Array;
+  depth?: Float32Array;
+  id?: Uint32Array;
+  motion?: Float32Array;
+}
+
+export declare const EXR_MIME_TYPE: "image/x-exr";
+export declare const AOV_ID_BACKGROUND: 0;
+export declare const AOV_ID_TERRAIN: 1;
+export declare const AOV_ID_SCENE_NODE_BASE: 2;
+/** AOV object ID of a scene node (`node.id + 2`). */
+export declare function aovObjectId(nodeId: number): number;
+
+/** Tight RGBA8 frame, rows top to bottom (native `Frame`). */
+export declare class Frame {
+  constructor(width: number, height: number, data: Uint8Array);
+  readonly width: number;
+  readonly height: number;
+  readonly format: "rgba8unorm";
+  readonly data: Uint8Array;
+  size(): [number, number];
+  toRgba8(): Uint8Array;
+  pixel(x: number, y: number): [number, number, number, number];
+  /** Deterministic PNG (native `save_png_deterministic`). */
+  toPng(options?: PngEncodeOptions): Promise<Blob>;
+}
+
+/** Linear float RGBA frame (native `HdrFrame`). */
+export declare class HdrFrame {
+  constructor(width: number, height: number, data: Float32Array);
+  readonly width: number;
+  readonly height: number;
+  readonly size: [number, number];
+  readonly data: Float32Array;
+  toFloat32(): Float32Array;
+  pixel(x: number, y: number): [number, number, number, number];
+  tonemap(options?: HdrTonemapOptions): Promise<Frame>;
+  toExr(options?: ExrWriteOptions): Promise<Blob>;
+  static fromExr(
+    source: Blob | ArrayBuffer | Uint8Array,
+    options?: ExrReadOptions & { prefix?: string },
+  ): Promise<HdrFrame>;
+}
+
+/** Arbitrary output variables (native `AovFrame`). */
+export declare class AovFrame {
+  constructor(init: AovFrameInit);
+  readonly width: number;
+  readonly height: number;
+  readonly near: number;
+  readonly far: number;
+  readonly hasAlbedo: boolean;
+  readonly hasNormal: boolean;
+  readonly hasDepth: boolean;
+  readonly hasId: boolean;
+  readonly hasMotion: boolean;
+  size(): [number, number];
+  channels(): AovName[];
+  albedo(): Float32Array;
+  normal(): Float32Array;
+  /** Linear view depth normalized to [0, 1] by the camera clip planes. */
+  depth(): Float32Array;
+  /** View-space depth `near + depth * (far - near)`. */
+  linearDepth(): Float32Array;
+  id(): Uint32Array;
+  /** Pixel motion `current - previous` (+x right, +y down). */
+  motion(): Float32Array;
+  toPngs(baseName?: string, options?: PngEncodeOptions): Promise<Record<string, Blob>>;
+  toExr(beauty?: HdrFrame | Frame, options?: ExrWriteOptions): Promise<Blob>;
+}
+
+export declare function encodePng(
+  width: number,
+  height: number,
+  rgba: Uint8Array,
+  options?: PngEncodeOptions,
+): Promise<Blob>;
+export declare function writeExr(image: {
+  width: number;
+  height: number;
+  channels: readonly ExrChannelInput[];
+  metadata?: Readonly<Record<string, string>>;
+  compression?: ExrCompression;
+}): Promise<Blob>;
+export declare function readExr(
+  source: Blob | ArrayBuffer | Uint8Array,
+  options?: ExrReadOptions,
+): Promise<ExrImage>;
+
+/** Offline accumulation and adaptive sampling policy (native TV12). */
+export declare class OfflineQualitySettings {
+  constructor(input?: OfflineQualitySettingsInput);
+  static from(input: OfflineQualitySettings | OfflineQualitySettingsInput | undefined): OfflineQualitySettings;
+  readonly enabled: boolean;
+  readonly adaptive: boolean;
+  readonly targetVariance: number;
+  readonly maxSamples: number;
+  readonly minSamples: number;
+  readonly batchSize: number;
+  readonly tileSize: number;
+  readonly convergenceRatio: number;
+  toJSON(): Required<OfflineQualitySettingsInput>;
+}
+
+/** A-trous denoise configuration (native M5 `DenoiseSettings`). */
+export declare class DenoiseSettings {
+  constructor(input?: DenoiseSettingsInput);
+  static from(input: DenoiseSettings | DenoiseSettingsInput | null | undefined): DenoiseSettings;
+  readonly enabled: boolean;
+  readonly method: DenoiseMethod;
+  readonly iterations: number;
+  readonly sigmaColor: number;
+  readonly sigmaAlbedo: number;
+  readonly sigmaNormal: number;
+  readonly sigmaDepth: number;
+  readonly edgeStopping: number;
+  readonly guides: Readonly<Required<DenoiseGuides>>;
+  readonly active: boolean;
+  toNative(): Record<string, unknown>;
+  toJSON(): Required<Omit<DenoiseSettingsInput, "guides">> & { guides: Required<DenoiseGuides> };
+}
+
+/** Progress of renderOffline (native `OfflineProgress`). */
+export declare class OfflineProgress {
+  constructor(
+    samplesSoFar: number,
+    maxSamples: number,
+    meanDelta: number,
+    p95Delta: number,
+    convergedRatio: number,
+    elapsedMs: number,
+  );
+  readonly samplesSoFar: number;
+  readonly maxSamples: number;
+  readonly meanDelta: number;
+  readonly p95Delta: number;
+  readonly convergedRatio: number;
+  readonly elapsedMs: number;
+}
+
+/** Surface implemented by Forge3DRuntime and Forge3DSession. */
+export interface OfflineRenderTarget {
+  beginOfflineAccumulation(options?: OfflineAccumulationOptions): void;
+  accumulateBatch(sampleCount: number): Promise<OfflineBatchResult>;
+  readAccumulationMetrics(targetVariance: number, tileSize?: number): Promise<OfflineMetrics>;
+  resolveOfflineHdr(options?: OfflineResolveOptions): Promise<CaptureResult>;
+  endOfflineAccumulation(): boolean;
+}
+
+/** Native `forge3d.offline.render_offline`; settings.enabled must be true. */
+export declare function renderOffline(
+  target: OfflineRenderTarget,
+  options?: OfflineRenderOptions,
+): Promise<OfflineResult>;
+/** Native `_has_upward_convergence_trend`. */
+export declare function hasUpwardConvergenceTrend(history: readonly OfflineMetrics[]): boolean;
+/** CPU/WASM A-trous reference (native `atrous_denoise`). */
+export declare function atrousDenoise(input: HdrDenoiseInput): Promise<Float32Array>;
+/** MSE, PSNR, Gaussian SSIM and max absolute error between two images. */
+export declare function compareImages(
+  a: Float32Array,
+  b: Float32Array,
+  options: ImageCompareOptions,
+): Promise<ImageComparison>;
+
+export interface RenderedFrame {
+  index: number;
+  time: number;
+  timestampUs: number;
+  durationUs: number;
+  camera?: CameraInput;
+  frame: Frame;
+  hdrFrame?: HdrFrame;
+  aovFrame?: AovFrame;
+}
+
+export type FrameSequenceMode = "capture" | "display" | "offline";
+
+export interface FrameSequenceOptions {
+  animation?: CameraAnimation;
+  cameraAt?: (time: number, index: number) => CameraInput;
+  cameraOptions?: CameraStateCameraOptions;
+  frameCount?: number;
+  fps?: number;
+  config?: RenderConfig;
+  startFrame?: number;
+  endFrame?: number;
+  mode?: FrameSequenceMode;
+  capture?: CaptureOptions;
+  offline?: Omit<OfflineRenderOptions, "onProgress" | "previousCamera" | "signal">;
+  onProgress?: (progress: RenderProgress) => void;
+  signal?: AbortSignal;
+}
+
+/** Render surface renderFrames drives (Forge3DRuntime or Forge3DSession). */
+export interface FrameRenderTarget {
+  readonly width: number;
+  readonly height: number;
+  setCamera(camera: CameraInput): void;
+  render(): boolean;
+  readRgba(): Promise<Uint8Array>;
+  capture(options?: CaptureOptions): Promise<CaptureResult>;
+  renderOffline(options?: OfflineRenderOptions): Promise<OfflineResult>;
+}
+
+export type FrameSinkFormat = "png" | "exr";
+
+export interface FrameSink {
+  write(frame: RenderedFrame, name?: string): Promise<string>;
+  close?(): void | Promise<void>;
+  abort?(reason: unknown): void | Promise<void>;
+}
+
+export interface FrameWriteSummary {
+  frames: number;
+  names: string[];
+  timestampsUs: number[];
+}
+
+/** Exact microsecond timestamp `round(index * 1e6 / fps)`. */
+export declare function frameTimestampUs(index: number, fps: number): number;
+export declare function renderFrames(
+  target: FrameRenderTarget,
+  options: FrameSequenceOptions,
+): AsyncGenerator<RenderedFrame, void, undefined>;
+export declare function createFrameStream(
+  target: FrameRenderTarget,
+  options: FrameSequenceOptions,
+): ReadableStream<RenderedFrame>;
+export declare function writeFrames(
+  frames: AsyncIterable<RenderedFrame> | Iterable<RenderedFrame>,
+  sink: FrameSink,
+  options?: { signal?: AbortSignal },
+): Promise<FrameWriteSummary>;
+export declare function createMemoryFrameSink(options?: {
+  config?: RenderConfig;
+  format?: FrameSinkFormat;
+  png?: PngEncodeOptions;
+}): FrameSink & { readonly files: Map<string, Blob> };
+export declare function createOpfsFrameSink(options?: {
+  root?: FileSystemDirectoryHandle;
+  config?: RenderConfig;
+  format?: FrameSinkFormat;
+  png?: PngEncodeOptions;
+}): Promise<FrameSink & { readonly directory: FileSystemDirectoryHandle }>;
+export declare function createDownloadFrameSink(options?: {
+  config?: RenderConfig;
+  format?: FrameSinkFormat;
+  png?: PngEncodeOptions;
+  download?: (blob: Blob, name: string) => void | Promise<void>;
+}): FrameSink;
+
+/** Native `FrameDumper`: auto-numbered frame capture into a sink. */
+export declare class FrameDumper {
+  constructor(sink: FrameSink, options?: { prefix?: string; frameDigits?: number });
+  readonly prefix: string;
+  startRecording(): void;
+  captureFrame(frame: Frame | RenderedFrame): Promise<string>;
+  stopRecording(): Promise<number>;
+  getFrameCount(): number;
+  isRecording(): boolean;
+}
+
+/** Native `dump_frame_sequence`. */
+export declare function dumpFrameSequence(
+  frames: Iterable<Frame> | AsyncIterable<Frame>,
+  sink: FrameSink,
+  options?: { prefix?: string; frameDigits?: number },
+): Promise<number>;
+
+export type VideoCodecName = "avc" | "hevc" | "vp9" | "av1" | "vp8";
+export type VideoContainer = "mp4" | "webm";
+
+export interface VideoCodecProbeOptions {
+  width: number;
+  height: number;
+  fps: number;
+  container?: VideoContainer;
+  codec?: VideoCodecName | readonly VideoCodecName[];
+  bitrate?: number;
+}
+
+export interface VideoCodecSupport {
+  codec: VideoCodecName;
+  codecString: string;
+  container: VideoContainer;
+  supported: boolean;
+  reason?: "webcodecs-unavailable" | "unsupported-config";
+}
+
+/** `Forge3DError.details` of UNSUPPORTED_FEATURE when no codec can encode. */
+export interface VideoCodecUnavailableDetails {
+  kind: "video-codec-unavailable";
+  container: VideoContainer;
+  requested: VideoCodecName[];
+  probes: VideoCodecSupport[];
+  webCodecs: boolean;
+}
+
+export interface VideoEncodeOptions {
+  fps: number;
+  container?: VideoContainer;
+  codec?: VideoCodecName | readonly VideoCodecName[];
+  bitrate?: number;
+  keyFrameInterval?: number;
+  creationTime?: Date | number;
+  signal?: AbortSignal;
+  onProgress?: (framesEncoded: number) => void;
+}
+
+export interface EncodedVideoChunkInput {
+  data: Uint8Array;
+  type: "key" | "delta";
+  timestampUs: number;
+  durationUs: number;
+}
+
+export interface MuxVideoOptions {
+  codec: VideoCodecName;
+  codecString?: string;
+  container?: VideoContainer;
+  width: number;
+  height: number;
+  fps: number;
+  decoderConfig?: VideoDecoderConfig;
+  creationTime?: Date | number;
+}
+
+export interface EncodedVideoResult {
+  blob: Blob;
+  mimeType: string;
+  container: VideoContainer;
+  codec: VideoCodecName;
+  codecString: string;
+  width: number;
+  height: number;
+  fps: number;
+  frameCount: number;
+  timestampsUs: number[];
+  durationUs: number;
+  keyFrames: number;
+}
+
+export declare function probeVideoCodecs(options: VideoCodecProbeOptions): Promise<VideoCodecSupport[]>;
+/** WebCodecs encode plus deterministic MP4/WebM muxing (mediabunny 1.58.0). */
+export declare function encodeVideo(
+  frames: Iterable<Frame | RenderedFrame> | AsyncIterable<Frame | RenderedFrame>,
+  options: VideoEncodeOptions,
+): Promise<EncodedVideoResult>;
+export declare function muxEncodedVideo(
+  chunks: readonly EncodedVideoChunkInput[],
+  options: MuxVideoOptions,
+): Promise<Blob>;

@@ -234,6 +234,8 @@ pub(super) async fn create_runtime(
             triangles: 0,
             passes: Vec::new(),
         },
+        offline: None,
+        offline_pipelines: None,
     })
 }
 

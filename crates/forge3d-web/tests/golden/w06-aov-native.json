@@ -1,0 +1,47 @@
+{
+  "fixture": "w06-aov-native",
+  "provenance": {
+    "generator": "crates/forge3d-web/scripts/generate-w06-aov-fixture.py",
+    "native": "forge3d 1.34.0 TerrainRenderer.render_with_aov",
+    "nativeTests": [
+      "1f4084a:tests/test_aov.py",
+      "1f4084a:tests/test_exr_output.py"
+    ],
+    "scene": "examples/test-w04-parity.html (W04 terrain_pbr_pom screen mode, POM disabled)"
+  },
+  "width": 192,
+  "height": 128,
+  "encoding": "binary16-le",
+  "planes": [
+    {
+      "name": "albedo",
+      "channels": 3,
+      "offset": 0
+    },
+    {
+      "name": "normal",
+      "channels": 3,
+      "offset": 147456
+    },
+    {
+      "name": "depth",
+      "channels": 1,
+      "offset": 294912
+    }
+  ],
+  "conventions": {
+    "albedo": "linear base color before lighting",
+    "normal": "unit shading normal in the native screen-mode Z-up frame",
+    "depth": "linear view depth normalized by clip (0.1, 6000)"
+  },
+  "clip": [
+    0.1,
+    6000.0
+  ],
+  "sha256": "191cb4d30996528fab43e83bdeef5760e8b86d289dc8b620c795fda4e22259c7",
+  "beautySha256": "783202b7fdc68a58f8b6f290b281090433ec07c7442f329fede6c0769dafd866",
+  "tolerances": {
+    "aovSsimMin": 0.98,
+    "beautyGoldenSsimMin": 0.98
+  }
+}

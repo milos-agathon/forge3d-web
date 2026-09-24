@@ -38,8 +38,10 @@ const SHADOW_DEBUG_CASCADES: u64 = 1 << 30;
 const SHADOW_DEBUG_FACTOR: u64 = 1 << 31;
 const TERRAIN_SCREEN: u64 = 1 << 32;
 const TERRAIN_PERSPECTIVE: u64 = 1 << 33;
+/// Offline/AOV capture entry points (never part of display pipelines).
+const CAPTURE: u64 = 1 << 34;
 #[cfg(test)]
-const ALL_BITS: u64 = (1 << 34) - 1;
+const ALL_BITS: u64 = (1 << 35) - 1;
 
 impl ShaderFeatures {
     /// Every region: the unspecialized template.
@@ -118,6 +120,12 @@ impl ShaderFeatures {
         }
     }
 
+    /// Adds the offline capture entry points and capture-only uniform fields.
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    pub(crate) fn with_capture(self) -> Self {
+        self.with(CAPTURE, true)
+    }
+
     fn enabled(self, name: &str) -> bool {
         let bit = match name {
             "light_directional" => LIGHT_DIRECTIONAL,
@@ -135,6 +143,7 @@ impl ShaderFeatures {
             "shadow_debug_factor" => SHADOW_DEBUG_FACTOR,
             "terrain_screen" => TERRAIN_SCREEN,
             "terrain_perspective" => TERRAIN_PERSPECTIVE,
+            "capture" => CAPTURE,
             other => {
                 if let Some(model) = other.strip_prefix("brdf_") {
                     let model: u32 = model.parse().expect("brdf feature index");

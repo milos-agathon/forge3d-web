@@ -36,9 +36,14 @@ assertEqual(
   "ktx-parse must stay pinned to the dependency-lock version",
 );
 assertEqual(
+  packageJson.devDependencies?.mediabunny,
+  "1.58.0",
+  "mediabunny must stay pinned to the dependency-lock version",
+);
+assertEqual(
   packageJson.dependencies,
   undefined,
-  "lock-controlled ktx-parse is vendored into dist, so the package has no runtime dependencies",
+  "lock-controlled ktx-parse and mediabunny are vendored into dist, so the package has no runtime dependencies",
 );
 assertIncludes(packageJson.files, "docs", "package files must include docs");
 assertIncludes(packageJson.files, "types", "package files must include types");
@@ -143,6 +148,7 @@ for (const relative of [
   "examples/test-w03-terrain.html",
   "examples/test-w04-package.html",
   "examples/test-w05-package.html",
+  "examples/test-w06-package.html",
   "assets/basis/basis_transcoder.js",
   "assets/basis/basis_transcoder.wasm",
   "assets/basis/LICENSE",
@@ -218,7 +224,23 @@ assertNotIncludes(
   "from \"ktx-parse\"",
   "dist must not leave a bare ktx-parse specifier for no-bundler consumers",
 );
+const distVideo = readText(join(root, "dist", "video.js"));
+assertIncludes(
+  distVideo,
+  "import(\"./vendor/mediabunny.js\")",
+  "dist video must lazily import the vendored mediabunny module",
+);
+assertNotIncludes(
+  distVideo,
+  "import(\"mediabunny\")",
+  "dist must not leave a bare mediabunny specifier for no-bundler consumers",
+);
 const assetManifest = readJson(join(root, "dist", "asset-manifest.json"));
+assertIncludes(
+  assetManifest.assets.map((asset) => asset.path),
+  "dist/vendor/mediabunny.js",
+  "asset manifest must pin the vendored mediabunny bundle",
+);
 for (const asset of assetManifest.assets) {
   const digest = createHash("sha256")
     .update(readFileSync(join(root, asset.path)))
@@ -254,6 +276,8 @@ for (const expected of [
   "dist/forge3d_web_bg.wasm",
   "dist/vendor/ktx-parse.js",
   "dist/vendor/ktx-parse.LICENSE",
+  "dist/vendor/mediabunny.js",
+  "dist/vendor/mediabunny.LICENSE",
   "dist/asset-manifest.json",
   "docs/support-matrix.md",
   "docs/release-checklist.md",
@@ -272,6 +296,8 @@ for (const expected of [
   "__forge3dW04PackageProbe",
   "test-w05-package.html",
   "__forge3dW05PackageProbe",
+  "test-w06-package.html",
+  "__forge3dW06PackageProbe",
 ]) {
   assertIncludes(
     consumerHarness,

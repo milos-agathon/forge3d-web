@@ -406,3 +406,39 @@ fn forge3d_evaluate_lighting(
     result = forge3d_shadow_debug_color(result, world_position, n, view_depth);
     return max(result, vec3<f32>(0.0));
 }
+
+// #if capture
+// Capture AOV helpers: the material base color and shading normal exactly as
+// forge3d_evaluate_lighting resolves them, before any light is applied.
+fn forge3d_surface_albedo(vertex_color: vec3<f32>, material_index: u32, uv: vec2<f32>) -> vec3<f32> {
+    let material = forge3d_material(material_index);
+    var base_color = vertex_color * material.base_color.rgb;
+    // #if tex_base
+    let tex_base = textureSample(forge3d_tex_base_color, forge3d_tex_sampler, uv);
+    if ((material.flags & 1u) != 0u) {
+        base_color = base_color * tex_base.rgb;
+    }
+    // #endif
+    return base_color;
+}
+
+fn forge3d_surface_normal(
+    surface_normal: vec3<f32>,
+    tangent: vec4<f32>,
+    material_index: u32,
+    uv: vec2<f32>,
+) -> vec3<f32> {
+    let material = forge3d_material(material_index);
+    var n = forge3d_safe_direction(surface_normal);
+    // #if tex_normal
+    let tex_normal = textureSample(forge3d_tex_normal, forge3d_tex_sampler, uv);
+    if ((material.flags & 2u) != 0u) {
+        let mapped = tex_normal.xyz * 2.0 - vec3<f32>(1.0);
+        let t = forge3d_safe_direction(tangent.xyz);
+        let bitangent = cross(n, t) * tangent.w;
+        n = forge3d_safe_direction(t * mapped.x + bitangent * mapped.y + n * mapped.z);
+    }
+    // #endif
+    return n;
+}
+// #endif

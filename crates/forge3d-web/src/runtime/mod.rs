@@ -6,6 +6,7 @@ mod ibl;
 mod init;
 mod lighting;
 mod memory;
+pub(crate) mod offline;
 mod readback;
 mod render;
 mod scene;
@@ -73,6 +74,16 @@ pub struct Forge3DRuntime {
     query_ring: Option<TimestampRing>,
     timer: FrameTimer,
     last_stats: RenderStats,
+    offline: Option<offline::OfflineSession>,
+    offline_pipelines: Option<offline::OfflinePipelines>,
+}
+
+impl Forge3DRuntime {
+    fn guard_mutation(&mut self) -> Result<(), JsValue> {
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        ensure_device_healthy_error(self).map_err(to_js_error)?;
+        offline::ensure_no_offline(self).map_err(to_js_error)
+    }
 }
 
 #[wasm_bindgen]
@@ -119,28 +130,33 @@ impl Forge3DRuntime {
         self.ibl = None;
         self.shadows = None;
         self.query_ring = None;
+        self.offline = None;
+        self.offline_pipelines = None;
         self.disposed = true;
         self.memory.clear();
     }
 
+    /// Renders one display frame. While an offline session is open the display
+    /// frame is skipped (returns `false`) like the native session guard.
     #[wasm_bindgen(js_name = render)]
     pub fn render(&mut self) -> Result<bool, JsValue> {
         ensure_not_disposed_error(self).map_err(to_js_error)?;
         ensure_device_healthy_error(self).map_err(to_js_error)?;
+        if self.offline.is_some() {
+            return Ok(false);
+        }
         render_runtime(self).map_err(to_js_error)
     }
 
     #[wasm_bindgen(js_name = screenshot)]
     pub async fn screenshot(&mut self) -> Result<Blob, JsValue> {
-        ensure_not_disposed_error(self).map_err(to_js_error)?;
-        ensure_device_healthy_error(self).map_err(to_js_error)?;
+        self.guard_mutation()?;
         screenshot_runtime(self).await.map_err(to_js_error)
     }
 
     #[wasm_bindgen(js_name = readRgba)]
     pub async fn read_rgba(&mut self) -> Result<js_sys::Uint8Array, JsValue> {
-        ensure_not_disposed_error(self).map_err(to_js_error)?;
-        ensure_device_healthy_error(self).map_err(to_js_error)?;
+        self.guard_mutation()?;
         let rgba = readback::read_rgba_runtime(self)
             .await
             .map_err(to_js_error)?;
@@ -149,36 +165,31 @@ impl Forge3DRuntime {
 
     #[wasm_bindgen(js_name = setScene)]
     pub fn set_scene(&mut self, snapshot: JsValue) -> Result<(), JsValue> {
-        ensure_not_disposed_error(self).map_err(to_js_error)?;
-        ensure_device_healthy_error(self).map_err(to_js_error)?;
+        self.guard_mutation()?;
         scene::set_scene_runtime(self, snapshot).map_err(to_js_error)
     }
 
     #[wasm_bindgen(js_name = setLighting)]
     pub fn set_lighting(&mut self, snapshot: JsValue) -> Result<(), JsValue> {
-        ensure_not_disposed_error(self).map_err(to_js_error)?;
-        ensure_device_healthy_error(self).map_err(to_js_error)?;
+        self.guard_mutation()?;
         lighting::set_lighting_runtime(self, snapshot).map_err(to_js_error)
     }
 
     #[wasm_bindgen(js_name = setMaterials)]
     pub fn set_materials(&mut self, snapshot: JsValue) -> Result<(), JsValue> {
-        ensure_not_disposed_error(self).map_err(to_js_error)?;
-        ensure_device_healthy_error(self).map_err(to_js_error)?;
+        self.guard_mutation()?;
         lighting::set_materials_runtime(self, snapshot).map_err(to_js_error)
     }
 
     #[wasm_bindgen(js_name = setIbl)]
     pub fn set_ibl(&mut self, input: JsValue) -> Result<(), JsValue> {
-        ensure_not_disposed_error(self).map_err(to_js_error)?;
-        ensure_device_healthy_error(self).map_err(to_js_error)?;
+        self.guard_mutation()?;
         ibl::set_ibl_runtime(self, input).map_err(to_js_error)
     }
 
     #[wasm_bindgen(js_name = precomputeIbl)]
     pub async fn precompute_ibl(&mut self, input: JsValue) -> Result<JsValue, JsValue> {
-        ensure_not_disposed_error(self).map_err(to_js_error)?;
-        ensure_device_healthy_error(self).map_err(to_js_error)?;
+        self.guard_mutation()?;
         ibl::precompute_ibl_runtime(self, input)
             .await
             .map_err(to_js_error)
@@ -186,8 +197,7 @@ impl Forge3DRuntime {
 
     #[wasm_bindgen(js_name = setShadows)]
     pub fn set_shadows(&mut self, snapshot: JsValue) -> Result<(), JsValue> {
-        ensure_not_disposed_error(self).map_err(to_js_error)?;
-        ensure_device_healthy_error(self).map_err(to_js_error)?;
+        self.guard_mutation()?;
         shadows::set_shadows_runtime(self, snapshot).map_err(to_js_error)
     }
 
@@ -198,8 +208,7 @@ impl Forge3DRuntime {
 
     #[wasm_bindgen(js_name = setTerrain)]
     pub fn set_terrain(&mut self, terrain: JsValue) -> Result<(), JsValue> {
-        ensure_not_disposed_error(self).map_err(to_js_error)?;
-        ensure_device_healthy_error(self).map_err(to_js_error)?;
+        self.guard_mutation()?;
         set_terrain_runtime(self, terrain).map_err(to_js_error)
     }
 
@@ -214,8 +223,7 @@ impl Forge3DRuntime {
         let terrain = crate::io::load_terrain_heightmap_source(terrain, limits)
             .await
             .map_err(to_js_error)?;
-        ensure_not_disposed_error(self).map_err(to_js_error)?;
-        ensure_device_healthy_error(self).map_err(to_js_error)?;
+        self.guard_mutation()?;
         set_terrain_options_runtime(self, terrain).map_err(to_js_error)
     }
 
@@ -252,16 +260,75 @@ impl Forge3DRuntime {
 
     #[wasm_bindgen(js_name = setCamera)]
     pub fn set_camera(&mut self, camera: JsValue) -> Result<(), JsValue> {
-        ensure_not_disposed_error(self).map_err(to_js_error)?;
-        ensure_device_healthy_error(self).map_err(to_js_error)?;
+        self.guard_mutation()?;
         set_camera_runtime(self, camera).map_err(to_js_error)
     }
 
     #[wasm_bindgen(js_name = resize)]
     pub fn resize(&mut self, size: JsValue) -> Result<(), JsValue> {
+        self.guard_mutation()?;
+        resize_runtime(self, size).map_err(to_js_error)
+    }
+
+    /// Opens an offline accumulation session (native
+    /// `begin_offline_accumulation`) for the committed scene and camera.
+    #[wasm_bindgen(js_name = beginOffline)]
+    pub fn begin_offline(&mut self, options: JsValue) -> Result<(), JsValue> {
         ensure_not_disposed_error(self).map_err(to_js_error)?;
         ensure_device_healthy_error(self).map_err(to_js_error)?;
-        resize_runtime(self, size).map_err(to_js_error)
+        offline::begin_offline_runtime(self, options).map_err(to_js_error)
+    }
+
+    #[wasm_bindgen(js_name = accumulateBatch)]
+    pub async fn accumulate_batch(&mut self, sample_count: u32) -> Result<JsValue, JsValue> {
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        ensure_device_healthy_error(self).map_err(to_js_error)?;
+        offline::accumulate_batch_runtime(self, sample_count)
+            .await
+            .map_err(to_js_error)
+    }
+
+    #[wasm_bindgen(js_name = readAccumulationMetrics)]
+    pub async fn read_accumulation_metrics(
+        &mut self,
+        target_variance: f64,
+        tile_size: u32,
+    ) -> Result<JsValue, JsValue> {
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        ensure_device_healthy_error(self).map_err(to_js_error)?;
+        offline::read_metrics_runtime(self, target_variance, tile_size)
+            .await
+            .map_err(to_js_error)
+    }
+
+    #[wasm_bindgen(js_name = resolveOffline)]
+    pub async fn resolve_offline(&mut self, options: JsValue) -> Result<JsValue, JsValue> {
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        ensure_device_healthy_error(self).map_err(to_js_error)?;
+        offline::resolve_offline_runtime(self, options)
+            .await
+            .map_err(to_js_error)
+    }
+
+    /// Ends the offline session; returns whether one was open.
+    #[wasm_bindgen(js_name = endOffline)]
+    pub fn end_offline(&mut self) -> bool {
+        offline::end_offline_runtime(self)
+    }
+
+    #[wasm_bindgen(getter, js_name = offlineActive)]
+    pub fn offline_active(&self) -> bool {
+        self.offline.is_some()
+    }
+
+    /// WebGPU A-trous denoise of caller-supplied HDR color and guides.
+    #[wasm_bindgen(js_name = denoiseHdr)]
+    pub async fn denoise_hdr(&mut self, input: JsValue) -> Result<js_sys::Float32Array, JsValue> {
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        ensure_device_healthy_error(self).map_err(to_js_error)?;
+        offline::denoise_hdr_runtime(self, input)
+            .await
+            .map_err(to_js_error)
     }
 
     #[wasm_bindgen(getter)]
@@ -585,6 +652,8 @@ mod tests {
                 triangles: 0,
                 passes: Vec::new(),
             },
+            offline: None,
+            offline_pipelines: None,
         };
 
         let error = ensure_not_disposed_error(&runtime).unwrap_err();

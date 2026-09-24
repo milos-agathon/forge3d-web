@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forge3D W06 Package Consumer Test</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+      }
+
+      canvas {
+        display: block;
+        width: 64px;
+        height: 48px;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="forge3d-w06-package-canvas" width="64" height="48"></canvas>
+    <script type="module">
+      // Public-API-only W06 consumer: the installed-tarball harness rewrites
+      // the facade import to "@forge3d/web" and runs this page unchanged.
+      import {
+        CameraAnimation,
+        Forge3DError,
+        Forge3DScene,
+        Forge3DSession,
+        HdrFrame,
+        OfflineQualitySettings,
+        aovObjectId,
+        compareImages,
+        createMemoryFrameSink,
+        encodeVideo,
+        readExr,
+        renderFrames,
+        writeFrames,
+      } from "../src-ts/index.ts";
+
+      const canvas = document.querySelector("#forge3d-w06-package-canvas");
+      const packageSha256 = null;
+      const WIDTH = 64;
+      const HEIGHT = 48;
+      const CAMERA = {
+        position: [0, 5, 0],
+        target: [0, 0, 0],
+        up: [0, 0, -1],
+        fovYDegrees: 60,
+        near: 0.5,
+        far: 20,
+      };
+
+      window.__forge3dW06PackageProbe = async () => {
+        if (!navigator.gpu) {
+          return { supported: false, packageSha256 };
+        }
+        const result = { supported: true, ok: true, packageSha256 };
+        let session;
+        try {
+          session = await Forge3DSession.create(canvas, {
+            runtime: { width: WIDTH, height: HEIGHT, devicePixelRatio: 1, clearColor: [0.1, 0.2, 0.3, 1] },
+          });
+          const scene = Forge3DScene.create();
+          scene.clearLights();
+          scene.addLight({ type: "directional", direction: [0, -1, 0], color: [1, 1, 1], intensity: 20, castsShadow: false });
+          const node = scene.addGroundPlane({ name: "plane", materialSlot: "m", size: [4, 4], color: [0.5, 0.5, 0.5, 1] });
+          scene.setMaterial("m", { id: "m", brdf: "lambert", baseColor: [1, 0.5, 1, 1], metallic: 0 });
+          session.setScene(scene);
+          session.setCamera(CAMERA);
+
+          const capture = await session.capture({ aovs: "all" });
+          const center = (HEIGHT / 2) * WIDTH + WIDTH / 2;
+          const expected = Math.fround(Math.fround(0.5 * 0.08) + Math.fround(0.5 * Math.fround(1 / Math.PI)) * 20);
+          result.capture = {
+            hdrError: Math.abs(capture.hdrFrame.data[center * 4] - expected),
+            id: capture.aovFrame.id()[center] === aovObjectId(node),
+            normalY: capture.aovFrame.normal()[center * 3 + 1],
+            channels: capture.aovFrame.channels(),
+          };
+
+          const offline = await session.renderOffline({
+            settings: new OfflineQualitySettings({ enabled: true, batchSize: 2 }),
+            samples: 4,
+            seed: 1,
+            denoise: { enabled: true },
+          });
+          result.offline = {
+            samplesUsed: offline.metadata.samplesUsed,
+            denoiser: offline.metadata.denoiserUsed,
+          };
+
+          const exr = await capture.aovFrame.toExr(capture.hdrFrame);
+          const image = await readExr(exr);
+          const roundTrip = await HdrFrame.fromExr(exr);
+          const metrics = await compareImages(roundTrip.data, capture.hdrFrame.data, {
+            width: WIDTH,
+            height: HEIGHT,
+            channels: 4,
+          });
+          result.exr = { channels: image.channels.length, software: image.software, mse: metrics.mse };
+
+          const animation = new CameraAnimation([
+            { time: 0, phiDeg: 0, thetaDeg: 30, radius: 5, fovDeg: 60, target: [0, 0, 0] },
+            { time: 0.5, phiDeg: 40, thetaDeg: 30, radius: 5, fovDeg: 60, target: [0, 0, 0] },
+          ]);
+          const frames = [];
+          const sink = createMemoryFrameSink();
+          const summary = await writeFrames(
+            (async function* () {
+              for await (const frame of renderFrames(session, { animation, fps: 10, cameraOptions: { near: 0.5, far: 20 } })) {
+                frames.push(frame);
+                yield frame;
+              }
+            })(),
+            sink,
+          );
+          result.frames = { count: summary.frames, timestampsUs: summary.timestampsUs, names: summary.names };
+
+          try {
+            const video = await encodeVideo(frames, { fps: 10, container: "webm" });
+            result.video = { ok: true, frameCount: video.frameCount, mimeType: video.mimeType, size: video.blob.size };
+          } catch (error) {
+            const normalized = Forge3DError.from(error);
+            result.video = { ok: false, code: normalized.code, kind: normalized.details?.kind };
+          }
+        } catch (error) {
+          result.ok = false;
+          const normalized = Forge3DError.from(error);
+          result.error = { code: normalized.code, message: normalized.message };
+        } finally {
+          session?.dispose();
+        }
+        return result;
+      };
+    </script>
+  </body>
+</html>

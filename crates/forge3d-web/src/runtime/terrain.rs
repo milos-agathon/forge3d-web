@@ -681,6 +681,9 @@ pub(super) struct TerrainPipelineCache {
     pub(super) bind_group_layout: wgpu::BindGroupLayout,
     pipeline_layout: wgpu::PipelineLayout,
     variants: std::collections::HashMap<(u64, wgpu::TextureFormat), TerrainPipelineVariant>,
+    /// Offline capture pipelines keyed by capture-specialized features.
+    capture_variants:
+        std::collections::HashMap<(u64, super::offline::CapturePass), wgpu::RenderPipeline>,
 }
 
 #[derive(Clone)]
@@ -712,7 +715,37 @@ impl TerrainPipelineCache {
             bind_group_layout,
             pipeline_layout,
             variants: std::collections::HashMap::new(),
+            capture_variants: std::collections::HashMap::new(),
         }
+    }
+
+    /// Returns the capture pipeline for `features` (already carrying the
+    /// terrain mode) and `pass`, compiling the capture variant on first use.
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    pub(super) fn capture_variant(
+        &mut self,
+        device: &wgpu::Device,
+        features: ShaderFeatures,
+        pass: super::offline::CapturePass,
+    ) -> wgpu::RenderPipeline {
+        let features = features.with_capture();
+        let pipeline_layout = &self.pipeline_layout;
+        self.capture_variants
+            .entry((features.bits(), pass))
+            .or_insert_with(|| {
+                let shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                    label: Some("forge3d-web-terrain-capture-shader"),
+                    source: wgpu::ShaderSource::Wgsl(specialize(TERRAIN_SHADER, features).into()),
+                });
+                build_terrain_pipeline(
+                    device,
+                    pipeline_layout,
+                    &shader,
+                    pass.entry_point(),
+                    &pass.color_targets(),
+                )
+            })
+            .clone()
     }
 
     /// Returns the pipeline for `features`, compiling it on first use.
@@ -940,6 +973,64 @@ impl TerrainRenderResources {
         Ok(())
     }
 
+    /// Group-0 bind group identical to `bind_group` except for the camera
+    /// uniform, which is the offline capture camera (`CaptureCameraUniform`).
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    pub(super) fn capture_bind_group(
+        &self,
+        device: &wgpu::Device,
+        layout: &wgpu::BindGroupLayout,
+        camera_buffer: &wgpu::Buffer,
+    ) -> wgpu::BindGroup {
+        let height_view = self
+            .height_texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
+        let ao_view = self
+            .ao_output
+            .as_ref()
+            .map(|output| &output.view)
+            .unwrap_or(&self.analysis_fallback_view);
+        let sun_view = self
+            .sun_output
+            .as_ref()
+            .map(|output| &output.view)
+            .unwrap_or(&self.analysis_fallback_view);
+        device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("forge3d-web-terrain-capture-bind-group"),
+            layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&height_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&self.sampler),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: camera_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: self.color_ramp_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 4,
+                    resource: self.params_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 5,
+                    resource: wgpu::BindingResource::TextureView(ao_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 6,
+                    resource: wgpu::BindingResource::TextureView(sun_view),
+                },
+            ],
+        })
+    }
+
     /// Points `pipeline` at the cached variant for `features` and `surface_format`.
     #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
     pub(super) fn use_variant(
@@ -965,6 +1056,21 @@ pub(super) fn create_terrain_render_pipeline(
     surface_format: wgpu::TextureFormat,
     pipeline_layout: &wgpu::PipelineLayout,
     shader: &wgpu::ShaderModule,
+) -> wgpu::RenderPipeline {
+    let targets = [Some(wgpu::ColorTargetState {
+        format: surface_format,
+        blend: None,
+        write_mask: wgpu::ColorWrites::ALL,
+    })];
+    build_terrain_pipeline(device, pipeline_layout, shader, "fs_main", &targets)
+}
+
+fn build_terrain_pipeline(
+    device: &wgpu::Device,
+    pipeline_layout: &wgpu::PipelineLayout,
+    shader: &wgpu::ShaderModule,
+    fragment_entry: &str,
+    targets: &[Option<wgpu::ColorTargetState>],
 ) -> wgpu::RenderPipeline {
     device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
         label: Some("forge3d-web-terrain-pipeline"),
@@ -992,13 +1098,9 @@ pub(super) fn create_terrain_render_pipeline(
         },
         fragment: Some(wgpu::FragmentState {
             module: shader,
-            entry_point: Some("fs_main"),
+            entry_point: Some(fragment_entry),
             compilation_options: wgpu::PipelineCompilationOptions::default(),
-            targets: &[Some(wgpu::ColorTargetState {
-                format: surface_format,
-                blend: None,
-                write_mask: wgpu::ColorWrites::ALL,
-            })],
+            targets,
         }),
         primitive: wgpu::PrimitiveState {
             topology: wgpu::PrimitiveTopology::TriangleList,
@@ -1266,6 +1368,48 @@ pub(super) fn create_camera_uniform(
     })
 }
 
+/// Camera uniform of the offline capture variants: the display camera block
+/// (jittered view-projection) followed by the unjittered current/previous
+/// matrices for motion vectors, `[near, far, width, height]` and the object ID
+/// the draw writes (`capture_ids.x`).
+#[repr(C)]
+#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+pub(super) struct CaptureCameraUniform {
+    pub(super) base: CameraUniform,
+    pub(super) motion_current: [[f32; 4]; 4],
+    pub(super) motion_previous: [[f32; 4]; 4],
+    pub(super) capture_params: [f32; 4],
+    pub(super) capture_ids: [u32; 4],
+}
+
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+pub(super) fn create_capture_camera_uniform(
+    camera: &forge3d_core::camera::CameraInput,
+    previous: &forge3d_core::camera::CameraInput,
+    width: u32,
+    height: u32,
+    jitter: [f32; 2],
+    object_id: u32,
+) -> Result<CaptureCameraUniform, WebError> {
+    let mut base = create_camera_uniform(camera, width, height)?;
+    let current = base.view_projection;
+    let previous = create_camera_uniform(previous, width, height)?.view_projection;
+    base.view_projection = forge3d_core::offline::jitter::jitter_clip_matrix(
+        glam::Mat4::from_cols_array_2d(&current),
+        jitter,
+        width,
+        height,
+    )
+    .to_cols_array_2d();
+    Ok(CaptureCameraUniform {
+        base,
+        motion_current: current,
+        motion_previous: previous,
+        capture_params: [camera.near, camera.far, width as f32, height as f32],
+        capture_ids: [object_id, 0, 0, 0],
+    })
+}
+
 pub(super) enum R32FloatUploadPlan {
     Tight { bytes_per_row: u32 },
     RowWise { row_bytes: u32 },
@@ -1362,6 +1506,12 @@ struct CameraUniform {
     view_projection: mat4x4<f32>,
     camera_position: vec4<f32>,
     camera_forward: vec4<f32>,
+    // #if capture
+    motion_current: mat4x4<f32>,
+    motion_previous: mat4x4<f32>,
+    capture_params: vec4<f32>,
+    capture_ids: vec4<u32>,
+    // #endif
 };
 
 struct ColorRampUniform {
@@ -1384,10 +1534,21 @@ struct TerrainParamsUniform {
 };
 
 struct VertexOutput {
+    // #if capture
+    @builtin(position) @invariant position: vec4<f32>,
+    // #else
     @builtin(position) position: vec4<f32>,
+    // #endif
     @location(0) height: f32,
     @location(1) uv: vec2<f32>,
     @location(2) world_position: vec3<f32>,
+};
+
+struct TerrainSample {
+    radiance: vec3<f32>,
+    albedo: vec3<f32>,
+    normal: vec3<f32>,
+    covered: bool,
 };
 
 @group(0) @binding(0) var heightmap: texture_2d<f32>;
@@ -1475,6 +1636,14 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
     }
     // #endif
     // #if terrain_perspective
+    return vec4<f32>(terrain_perspective_sample(input).radiance, 1.0);
+    // #else
+    return vec4<f32>(color_ramp.clear_color.xyz, 1.0);
+    // #endif
+}
+
+// #if terrain_perspective
+fn terrain_perspective_sample(input: VertexOutput) -> TerrainSample {
     let valid_height = is_valid_height(input.height);
     let t = clamp((input.height - params.domain_min) * params.inv_domain_span, 0.0, 1.0);
     let base_color = sample_color_ramp(t);
@@ -1509,11 +1678,14 @@ fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
     shaded = shaded * analysis_shade(input.uv, 1u) * analysis_shade(input.uv, 2u);
     let edge_fade = terrain_edge_fade(input.uv);
     let lit = mix(color_ramp.clear_color.xyz, shaded, edge_fade);
-    return vec4<f32>(select(lit, color_ramp.clear_color.xyz, !valid_height), 1.0);
-    // #else
-    return vec4<f32>(color_ramp.clear_color.xyz, 1.0);
-    // #endif
+    var result: TerrainSample;
+    result.radiance = select(lit, color_ramp.clear_color.xyz, !valid_height);
+    result.albedo = base_color;
+    result.normal = normal;
+    result.covered = valid_height;
+    return result;
 }
+// #endif
 
 fn analysis_shade(uv: vec2<f32>, channel: u32) -> f32 {
     let raw = analysis_sample(uv, channel);
@@ -1877,6 +2049,16 @@ fn terrain_screen_shadow(
 }
 
 fn terrain_screen_shade(input: VertexOutput) -> vec4<f32> {
+    let screen = terrain_screen_sample(input);
+    let mapped = tonemap_filmic_terrain(screen.radiance);
+    return vec4<f32>(
+        select(color_ramp.clear_color.xyz, screen_output_encode(mapped), screen.covered),
+        1.0,
+    );
+}
+
+/// Pre-tonemap screen-mode radiance with its albedo and shading normal.
+fn terrain_screen_sample(input: VertexOutput) -> TerrainSample {
     let uv = input.uv;
     let h_raw = screen_height_sample(uv);
     let valid_height = is_valid_height(h_raw);
@@ -1985,12 +2167,96 @@ fn terrain_screen_shade(input: VertexOutput) -> vec4<f32> {
 
     var shaded = lit_albedo + spec_capped;
     shaded = shaded * max(forge3d_lighting.exposure, 0.0);
-    let mapped = tonemap_filmic_terrain(shaded);
-    return vec4<f32>(
-        select(color_ramp.clear_color.xyz, screen_output_encode(mapped), valid_height),
-        1.0,
-    );
+    var result: TerrainSample;
+    result.radiance = shaded;
+    result.albedo = albedo;
+    result.normal = shading_normal;
+    result.covered = valid_height;
+    return result;
 }
+
+// #if capture
+// Offline/AOV capture: primary targets (HDR color, normalized linear depth,
+// object ID, pixel motion) and surface targets (albedo, shading normal).
+struct CapturePrimaryOutput {
+    @location(0) color: vec4<f32>,
+    @location(1) depth: f32,
+    @location(2) id: u32,
+    @location(3) motion: vec2<f32>,
+};
+
+struct CaptureSurfaceOutput {
+    @location(0) albedo: vec4<f32>,
+    @location(1) normal: vec4<f32>,
+};
+
+fn terrain_capture_sample(input: VertexOutput) -> TerrainSample {
+    var result: TerrainSample;
+    result.radiance = color_ramp.clear_color.xyz;
+    result.albedo = vec3<f32>(0.0);
+    result.normal = vec3<f32>(0.0);
+    result.covered = false;
+    // #if terrain_screen
+    if (params.render_mode == 1u) {
+        result = terrain_screen_sample(input);
+    }
+    // #endif
+    // #if terrain_perspective
+    if (params.render_mode != 1u) {
+        result = terrain_perspective_sample(input);
+    }
+    // #endif
+    if (params.debug_view == 1u || params.debug_view == 2u) {
+        result.radiance = vec3<f32>(analysis_gray(input.uv, params.debug_view));
+    }
+    return result;
+}
+
+fn capture_linear_depth(world_position: vec3<f32>) -> f32 {
+    let view_depth = dot(
+        camera.camera_forward.xyz,
+        world_position - camera.camera_position.xyz,
+    );
+    let near = camera.capture_params.x;
+    let far = camera.capture_params.y;
+    return clamp((view_depth - near) / max(far - near, 1e-5), 0.0, 1.0);
+}
+
+fn capture_motion(world_position: vec3<f32>) -> vec2<f32> {
+    let current = camera.motion_current * vec4<f32>(world_position, 1.0);
+    let previous = camera.motion_previous * vec4<f32>(world_position, 1.0);
+    if (abs(current.w) < 1e-12 || abs(previous.w) < 1e-12) {
+        return vec2<f32>(0.0);
+    }
+    let delta = current.xy / current.w - previous.xy / previous.w;
+    return delta * vec2<f32>(0.5 * camera.capture_params.z, -0.5 * camera.capture_params.w);
+}
+
+@fragment
+fn fs_capture_primary(input: VertexOutput) -> CapturePrimaryOutput {
+    let shaded = terrain_capture_sample(input);
+    var output: CapturePrimaryOutput;
+    output.color = vec4<f32>(shaded.radiance, 1.0);
+    output.depth = select(1.0, capture_linear_depth(input.world_position), shaded.covered);
+    output.id = select(0u, camera.capture_ids.x, shaded.covered);
+    // Screen mode covers fixed NDC; only perspective terrain moves on screen.
+    output.motion = select(
+        vec2<f32>(0.0),
+        capture_motion(input.world_position),
+        shaded.covered && params.render_mode != 1u,
+    );
+    return output;
+}
+
+@fragment
+fn fs_capture_surface(input: VertexOutput) -> CaptureSurfaceOutput {
+    let shaded = terrain_capture_sample(input);
+    var output: CaptureSurfaceOutput;
+    output.albedo = select(vec4<f32>(0.0), vec4<f32>(shaded.albedo, 1.0), shaded.covered);
+    output.normal = select(vec4<f32>(0.0), vec4<f32>(shaded.normal, 1.0), shaded.covered);
+    return output;
+}
+// #endif
 
 "#,
 );
