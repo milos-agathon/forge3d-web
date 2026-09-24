@@ -146,8 +146,9 @@ test.describe("W06 readback, AOV/HDR/EXR, offline quality, frames and video", ()
     expect(r.pngSignature).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
     expect(r.progress.map((p: number[]) => p[0])).toEqual(Array.from({ length: 13 }, (_, i) => i + 1));
     expect(r.progress.every((p: number[]) => p[1] === 13)).toBe(true);
-    // First frame has no previous camera; later frames carry camera motion.
-    expect(r.motion[0]).toBe(0);
+    // First frame has no previous camera (identical matrices, zero motion up
+    // to float evaluation noise); later frames carry camera motion.
+    expect(r.motion[0]).toBeLessThanOrEqual(1e-3);
     expect(r.motion[1]).toBeGreaterThan(0.1);
     expect(r.displayVsCapture).toBeLessThanOrEqual(1);
     expect(r.cancelled).toBe("REQUEST_CANCELLED");
