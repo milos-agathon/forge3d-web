@@ -486,7 +486,7 @@ fn create_session(
         runtime.terrain_pipeline_cache.as_mut(),
     ) {
         (Some(terrain), Some(cache)) => {
-            let features = lighting_features.with_terrain_mode(terrain.render_mode);
+            let features = terrain.specialize(lighting_features);
             let primary = cache.capture_variant(device, features, CapturePass::Primary);
             let surface_pipeline =
                 surface.then(|| cache.capture_variant(device, features, CapturePass::Surface));

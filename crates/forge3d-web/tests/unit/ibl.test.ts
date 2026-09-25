@@ -128,24 +128,25 @@ const QUALITY_SIZES: Record<
     brdfLutSize: number;
   }
 > = {
-  low: { irradianceSize: 8, specularSize: 32, specularMipCount: 4, brdfLutSize: 32 },
+  // Native IBLQuality tiers (1f4084a:src/core/ibl.rs).
+  low: { irradianceSize: 64, specularSize: 128, specularMipCount: 5, brdfLutSize: 512 },
   medium: {
-    irradianceSize: 16,
-    specularSize: 64,
-    specularMipCount: 5,
-    brdfLutSize: 64,
+    irradianceSize: 128,
+    specularSize: 256,
+    specularMipCount: 6,
+    brdfLutSize: 512,
   },
   high: {
-    irradianceSize: 32,
-    specularSize: 128,
-    specularMipCount: 6,
-    brdfLutSize: 128,
+    irradianceSize: 256,
+    specularSize: 512,
+    specularMipCount: 7,
+    brdfLutSize: 512,
   },
   ultra: {
-    irradianceSize: 64,
-    specularSize: 256,
-    specularMipCount: 7,
-    brdfLutSize: 256,
+    irradianceSize: 256,
+    specularSize: 1024,
+    specularMipCount: 8,
+    brdfLutSize: 512,
   },
 };
 
@@ -515,8 +516,30 @@ describe("ImageBasedLighting", () => {
     expect(ibl.snapshot().source.sourceHash).toBe(
       "00e32d439691524eb55fe3bd0a91db7dbdd9e5d8d7871de16e60a384d2bcabdf",
     );
+    // Cache schema v2 (native IBL port) plus the prefilter lane (per-mip = 1).
     expect(await ibl.cacheKey()).toBe(
-      "e646828ccc6182e532cec9fd36af524bb868280e07043243e8d5dd3e31c1ea7c",
+      "b37cb04996139cd9c45a9ba6439cced486097cad937f28fa4101921f9324d212",
+    );
+  });
+
+  it("defaults to the per-mip prefilter and keys the native schedule separately", async () => {
+    const perMip = await ImageBasedLighting.fromLinear(linearImage(), { quality: "low" });
+    expect(perMip.prefilter).toBe("per-mip");
+    expect(perMip.snapshot().prefilter).toBe("per-mip");
+    const native = await ImageBasedLighting.fromLinear(linearImage(), {
+      quality: "low",
+      prefilter: "native",
+    });
+    expect(native.prefilter).toBe("native");
+    expect(await native.cacheKey()).not.toBe(await perMip.cacheKey());
+    expect(iblFromSnapshot(native.snapshot()).prefilter).toBe("native");
+    await expectCodeAsync(
+      () =>
+        ImageBasedLighting.fromLinear(linearImage(), {
+          quality: "low",
+          prefilter: "fast" as never,
+        }),
+      "INVALID_INPUT",
     );
   });
 
@@ -607,7 +630,16 @@ describe("ImageBasedLighting", () => {
     });
     const restored = iblFromSnapshot(prepared.snapshot());
     expect(restored.prepared).toBe(true);
-    expect(restored.snapshot()).toEqual(prepared.snapshot());
+    // Native-size payloads are megabytes; compare bytes directly rather than
+    // through element-wise deep equality.
+    const { prepared: restoredBytes, ...restoredMeta } = restored.snapshot();
+    const { prepared: expectedBytes, ...expectedMeta } = prepared.snapshot();
+    expect(restoredMeta).toEqual(expectedMeta);
+    for (const plane of ["irradiance", "specular", "brdfLut"] as const) {
+      expect(
+        Buffer.from(restoredBytes![plane]).equals(Buffer.from(expectedBytes![plane])),
+      ).toBe(true);
+    }
   });
 
   it("rejects snapshots with a mismatched or tampered sourceHash", async () => {
@@ -853,7 +885,7 @@ describe("IblCache", () => {
     await cache.put(key, preparedPayload("medium"));
     const hit = await cache.get(key);
     expect(hit).toBeDefined();
-    expect(hit!.specularMipCount).toBe(5);
+    expect(hit!.specularMipCount).toBe(6);
     expect(files.keys().next().value).toBe(`${key}.ibl`);
   });
 

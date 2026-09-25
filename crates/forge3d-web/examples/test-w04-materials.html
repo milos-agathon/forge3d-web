@@ -150,6 +150,54 @@
         return true;
       }
 
+      // Point-light attenuation on the GPU: linear HDR radiance at the plane
+      // point straight below a point light, minus the unlit ambient, for each
+      // falloff mode and light height. The spec compares these against the
+      // native formulas.
+      window.__forge3dW04FalloffProbe = async (cases) => {
+        if (!navigator.gpu) {
+          return { supported: false };
+        }
+        let session;
+        try {
+          session = await Forge3DSession.create(canvas, {
+            runtime: { width: WIDTH, height: HEIGHT, devicePixelRatio: 1, clearColor: [0, 0, 0, 1] },
+          });
+          const camera = {
+            position: [0, 7, 0.001],
+            target: [0, 0, 0],
+            up: [0, 0, -1],
+            fovYDegrees: 40,
+            near: 0.1,
+            far: 50,
+          };
+          const radianceAt = async (light) => {
+            const scene = Forge3DScene.create();
+            scene.clearLights();
+            scene.addGroundPlane({ name: "ground", materialSlot: "plane", size: [8, 8], color: [1, 1, 1, 1] });
+            scene.setMaterial("plane", { id: "plane", brdf: "lambert", baseColor: [1, 1, 1, 1] });
+            scene.addLight(light);
+            session.setScene(scene);
+            session.setCamera(camera);
+            const capture = await session.capture({ samples: 1 });
+            return capture.hdrFrame.pixel(Math.floor(WIDTH / 2), Math.floor(HEIGHT / 2))[1];
+          };
+          const base = { type: "point", color: [1, 1, 1], intensity: 4, castsShadow: false };
+          const ambient = await radianceAt({ ...base, position: [0, 3, 0], range: 10, enabled: false });
+          const results = [];
+          for (const entry of cases) {
+            const lit = await radianceAt({ ...base, ...entry.light, position: [0, entry.height, 0] });
+            results.push({ ...entry, direct: lit - ambient });
+          }
+          return { supported: true, ok: true, ambient, results };
+        } catch (error) {
+          const normalized = Forge3DError.from(error);
+          return { supported: true, ok: false, error: { code: normalized.code, message: normalized.message } };
+        } finally {
+          if (session !== undefined && !session.disposed) session.dispose();
+        }
+      };
+
       window.__forge3dW04Probe = async () => {
         if (!navigator.gpu) {
           return { supported: false };

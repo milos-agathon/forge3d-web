@@ -1,0 +1,830 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forge3D W07 Terrain Materials Test</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #000;
+      }
+
+      canvas {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="w07-canvas" width="192" height="128"></canvas>
+    <canvas id="w07-perf" width="1920" height="1080" style="width: 480px; height: 270px"></canvas>
+    <script type="module">
+      import {
+        Forge3DError,
+        Forge3DRuntime,
+        Forge3DScene,
+        Forge3DSession,
+        ImageBasedLighting,
+        getTerrainMaterialDefaults,
+        normalizeTerrainMaterial,
+      } from "../src-ts/index.ts";
+      import { setSessionRuntimeFactoryForTests } from "../src-ts/session.ts";
+      import { simulateRuntimeDeviceLossForTests } from "../src-ts/runtime-internals.ts";
+
+      const GOLDEN_ROOT = "/tests/golden/w07/";
+      const canvas = document.querySelector("#w07-canvas");
+      const perfCanvas = document.querySelector("#w07-perf");
+
+      // ---------------------------------------------------------------------
+      // Native scene reconstruction (scripts/generate-w07-material-goldens.py)
+      // ---------------------------------------------------------------------
+
+      function hexColor(hex) {
+        return [
+          parseInt(hex.slice(1, 3), 16) / 255,
+          parseInt(hex.slice(3, 5), 16) / 255,
+          parseInt(hex.slice(5, 7), 16) / 255,
+        ];
+      }
+
+      function hdrBytes(blue) {
+        const width = 8;
+        const height = 4;
+        const head = new TextEncoder().encode(
+          `#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y ${height} +X ${width}\n`,
+        );
+        const bytes = new Uint8Array(head.length + width * height * 4);
+        bytes.set(head, 0);
+        for (let y = 0; y < height; y += 1) {
+          for (let x = 0; x < width; x += 1) {
+            const offset = head.length + (y * width + x) * 4;
+            bytes[offset] = Math.trunc((x / 7) * 255);
+            bytes[offset + 1] = Math.trunc((y / 3) * 255);
+            bytes[offset + 2] = blue;
+            bytes[offset + 3] = 128;
+          }
+        }
+        return bytes;
+      }
+
+      // Native to-sun direction is (cos el cos az, cos el sin az, sin el) in
+      // the Z-up screen frame (1f4084a:src/terrain/render_params/
+      // decode_lighting.rs); the runtime maps a Y-up travel direction t to
+      // (-t.x, t.z, -t.y) in that frame.
+      function lightDirection(sun) {
+        const az = (sun.azimuthDeg * Math.PI) / 180;
+        const el = (sun.elevationDeg * Math.PI) / 180;
+        return [-Math.cos(el) * Math.cos(az), -Math.sin(el), Math.cos(el) * Math.sin(az)];
+      }
+
+      function cameraInput(spec) {
+        const phi = (spec.camera.phiDeg * Math.PI) / 180;
+        const theta = (spec.camera.thetaDeg * Math.PI) / 180;
+        const radius = spec.camera.radius;
+        return {
+          position: [
+            radius * Math.sin(theta) * Math.cos(phi),
+            radius * Math.cos(theta),
+            radius * Math.sin(theta) * Math.sin(phi),
+          ],
+          target: [0, 0, 0],
+          up: [0, 1, 0],
+          fovYDegrees: spec.camera.fovDeg,
+          near: spec.clip[0],
+          far: spec.clip[1],
+        };
+      }
+
+      function shadowInput() {
+        return {
+          enabled: true,
+          filter: "pcss",
+          mapSize: 4096,
+          depthBias: 0.0005,
+          normalBias: 0.0002,
+          slopeBias: 0.001,
+          softness: 1.5,
+          pcssBlockerRadius: 2,
+          pcssFilterRadius: 4,
+          lightSize: 0.001,
+          momentBias: 0.0005,
+          lightBleedReduction: 0.5,
+          evsmPositiveExponent: 5,
+          evsmNegativeExponent: 5,
+          peterPanningOffset: 0.0002,
+        };
+      }
+
+      const CSM = {
+        enabled: true,
+        cascadeCount: 3,
+        maxDistance: 4000,
+        splitLambda: 0.75,
+        blendRange: 0.1,
+        stabilize: true,
+        debugView: "none",
+      };
+
+      let manifestPromise;
+      function manifest() {
+        manifestPromise ??= fetch(`${GOLDEN_ROOT}terrain-material-native.json`).then((r) => r.json());
+        return manifestPromise;
+      }
+
+      const heightCache = new Map();
+      async function sceneHeights(spec) {
+        if (!heightCache.has(spec.heightsFile)) {
+          const buffer = await (await fetch(GOLDEN_ROOT + spec.heightsFile)).arrayBuffer();
+          heightCache.set(spec.heightsFile, new Float32Array(buffer));
+        }
+        return heightCache.get(spec.heightsFile);
+      }
+
+      function terrainInput(spec, heights, extra = {}) {
+        return {
+          width: spec.terrainSize,
+          height: spec.terrainSize,
+          heights,
+          spacing: [
+            spec.terrainSpan / (spec.terrainSize - 1),
+            spec.terrainSpan / (spec.terrainSize - 1),
+          ],
+          exaggeration: spec.zScale,
+          domain: [0, 1],
+          colorRamp: {
+            stops: spec.stops.map(([position, hex]) => ({ position, color: hexColor(hex) })),
+          },
+          renderMode: "screen",
+          ...extra,
+        };
+      }
+
+      async function buildScene(spec, material, extra = {}, minimal = false) {
+        const scene = Forge3DScene.create();
+        const input = terrainInput(spec, await sceneHeights(spec), extra);
+        if (material !== undefined) {
+          input.material = material;
+        }
+        scene.addTerrain(input);
+        scene.clearLights();
+        scene.addLight({
+          type: "directional",
+          color: [1, 1, 1],
+          intensity: spec.sun.intensity,
+          direction: lightDirection(spec.sun),
+          castsShadow: true,
+        });
+        scene.setMaterial("default", {
+          id: "default",
+          brdf: "cooktorrance-ggx",
+          baseColor: [1, 1, 1, 1],
+          metallic: 0,
+          roughness: (0.5 + 0.85 + 0.5 + 0.25) / 4,
+        });
+        if (minimal) {
+          return scene;
+        }
+        scene.setImageBasedLighting(
+          await ImageBasedLighting.fromRGBE(hdrBytes(spec.hdrBlue), {
+            quality: "medium",
+            intensity: 1,
+            rotationDegrees: 0,
+            // Native goldens were rendered with the native prefilter bug.
+            prefilter: "native",
+          }),
+        );
+        scene.setShadows(shadowInput(), CSM);
+        return scene;
+      }
+
+      // ---------------------------------------------------------------------
+      // Image metrics
+      // ---------------------------------------------------------------------
+
+      function gaussianWindow(size, sigma) {
+        const weights = new Float64Array(size);
+        let sum = 0;
+        for (let index = 0; index < size; index += 1) {
+          const coordinate = index - (size - 1) / 2;
+          weights[index] = Math.exp(-0.5 * (coordinate / sigma) ** 2);
+          sum += weights[index];
+        }
+        return weights.map((value) => value / sum);
+      }
+
+      function filterChannel(channel, width, height, weights) {
+        const half = (weights.length - 1) / 2;
+        const temp = new Float64Array(width * height);
+        const out = new Float64Array(width * height);
+        for (let y = 0; y < height; y += 1) {
+          for (let x = 0; x < width; x += 1) {
+            let sum = 0;
+            for (let k = -half; k <= half; k += 1) {
+              const sx = x + k;
+              if (sx >= 0 && sx < width) sum += channel[y * width + sx] * weights[k + half];
+            }
+            temp[y * width + x] = sum;
+          }
+        }
+        for (let y = 0; y < height; y += 1) {
+          for (let x = 0; x < width; x += 1) {
+            let sum = 0;
+            for (let k = -half; k <= half; k += 1) {
+              const sy = y + k;
+              if (sy >= 0 && sy < height) sum += temp[sy * width + x] * weights[k + half];
+            }
+            out[y * width + x] = sum;
+          }
+        }
+        return out;
+      }
+
+      function ssimRgba(a, b, width, height) {
+        const weights = gaussianWindow(11, 1.5);
+        const pixels = width * height;
+        const c1 = (0.01 * 255) ** 2;
+        const c2 = (0.03 * 255) ** 2;
+        let total = 0;
+        for (let channel = 0; channel < 3; channel += 1) {
+          const x = new Float64Array(pixels);
+          const y = new Float64Array(pixels);
+          for (let index = 0; index < pixels; index += 1) {
+            x[index] = a[index * 4 + channel];
+            y[index] = b[index * 4 + channel];
+          }
+          const xx = x.map((v) => v * v);
+          const yy = y.map((v) => v * v);
+          const xy = x.map((v, i) => v * y[i]);
+          const muX = filterChannel(x, width, height, weights);
+          const muY = filterChannel(y, width, height, weights);
+          const sXX = filterChannel(xx, width, height, weights);
+          const sYY = filterChannel(yy, width, height, weights);
+          const sXY = filterChannel(xy, width, height, weights);
+          let sum = 0;
+          for (let index = 0; index < pixels; index += 1) {
+            const mx2 = muX[index] * muX[index];
+            const my2 = muY[index] * muY[index];
+            const cov = sXY[index] - muX[index] * muY[index];
+            sum +=
+              ((2 * muX[index] * muY[index] + c1) * (2 * cov + c2)) /
+              ((mx2 + my2 + c1) * (sXX[index] - mx2 + sYY[index] - my2 + c2));
+          }
+          total += sum / pixels;
+        }
+        return total / 3;
+      }
+
+      function meanAbsDiff(a, b) {
+        let total = 0;
+        for (let index = 0; index < a.length; index += 4) {
+          total +=
+            Math.abs(a[index] - b[index]) +
+            Math.abs(a[index + 1] - b[index + 1]) +
+            Math.abs(a[index + 2] - b[index + 2]);
+        }
+        return total / ((a.length / 4) * 3);
+      }
+
+      function bytesEqual(a, b) {
+        if (a.length !== b.length) return false;
+        for (let index = 0; index < a.length; index += 1) {
+          if (a[index] !== b[index]) return false;
+        }
+        return true;
+      }
+
+      function nonconstant(rgba) {
+        const seen = new Set();
+        for (let index = 0; index < rgba.length; index += 4) {
+          seen.add((rgba[index] << 16) | (rgba[index + 1] << 8) | rgba[index + 2]);
+          if (seen.size > 64) break;
+        }
+        return seen.size;
+      }
+
+      async function decodePng(url, width, height) {
+        const blob = await (await fetch(url)).blob();
+        const bitmap = await createImageBitmap(blob, {
+          colorSpaceConversion: "none",
+          premultiplyAlpha: "none",
+        });
+        const offscreen = document.createElement("canvas");
+        offscreen.width = width;
+        offscreen.height = height;
+        const context = offscreen.getContext("2d", { willReadFrequently: true });
+        context.drawImage(bitmap, 0, 0);
+        return context.getImageData(0, 0, width, height).data;
+      }
+
+      // Native render_scale (1f4084a:src/shaders/terrain_blit.wgsl) renders at
+      // size * scale, then blits with `uv * 0.5` from a fullscreen triangle:
+      // it stretches the vertically flipped top-left quadrant of the internal
+      // frame over the output through a linear, repeat-addressed sampler. That
+      // is a native bug, not a web feature; the probe reproduces it only so the
+      // historical terrain_pom golden compares shading like for like.
+      function internalSize(spec) {
+        const scale = spec.renderScale ?? 1;
+        return [Math.round(spec.width * scale), Math.round(spec.height * scale)];
+      }
+
+      function nativeRenderScaleBlit(source, sourceWidth, sourceHeight, width, height) {
+        const wrap = (value, size) => ((value % size) + size) % size;
+        const out = new Uint8ClampedArray(width * height * 4);
+        for (let y = 0; y < height; y += 1) {
+          const fy = 0.5 * (1 - (y + 0.5) / height) * sourceHeight - 0.5;
+          const y0 = Math.floor(fy);
+          const ty = fy - y0;
+          for (let x = 0; x < width; x += 1) {
+            const fx = 0.5 * ((x + 0.5) / width) * sourceWidth - 0.5;
+            const x0 = Math.floor(fx);
+            const tx = fx - x0;
+            for (let c = 0; c < 4; c += 1) {
+              const at = (xx, yy) =>
+                source[(wrap(yy, sourceHeight) * sourceWidth + wrap(xx, sourceWidth)) * 4 + c];
+              const top = at(x0, y0) * (1 - tx) + at(x0 + 1, y0) * tx;
+              const bottom = at(x0, y0 + 1) * (1 - tx) + at(x0 + 1, y0 + 1) * tx;
+              out[(y * width + x) * 4 + c] = Math.round(top * (1 - ty) + bottom * ty);
+            }
+          }
+        }
+        return out;
+      }
+
+      function toPng(rgba, width, height) {
+        const out = document.createElement("canvas");
+        out.width = width;
+        out.height = height;
+        out.getContext("2d").putImageData(new ImageData(new Uint8ClampedArray(rgba), width, height), 0, 0);
+        return out.toDataURL("image/png");
+      }
+
+      async function errorOf(operation) {
+        try {
+          await operation();
+          return { code: "NONE", message: "" };
+        } catch (error) {
+          const normalized = Forge3DError.from(error);
+          return { code: normalized.code, message: normalized.message };
+        }
+      }
+
+      async function withSession(width, height, body, runtimeOptions = {}, renderer = undefined) {
+        canvas.width = width;
+        canvas.height = height;
+        canvas.style.width = `${width}px`;
+        canvas.style.height = `${height}px`;
+        const session = await Forge3DSession.create(canvas, {
+          runtime: {
+            diagnostics: true,
+            width,
+            height,
+            devicePixelRatio: 1,
+            clearColor: [0, 0, 0, 1],
+            memoryBudgetBytes: 1 << 30,
+            overflowPolicy: "reject",
+            ...runtimeOptions,
+          },
+          recovery: { deviceLoss: "once" },
+          ...(renderer === undefined ? {} : { renderer }),
+        });
+        try {
+          return await body(session);
+        } finally {
+          if (!session.disposed) session.dispose();
+        }
+      }
+
+      async function renderScene(session, spec, material, extra) {
+        session.setScene(await buildScene(spec, material, extra));
+        session.setCamera(cameraInput(spec));
+        session.render();
+        return session.readRgba();
+      }
+
+      // ---------------------------------------------------------------------
+      // Deterministic synthetic textures for textured/perspective checks
+      // ---------------------------------------------------------------------
+
+      function checkerTexture(size, a, b, cells) {
+        const data = new Uint8Array(size * size * 4);
+        for (let y = 0; y < size; y += 1) {
+          for (let x = 0; x < size; x += 1) {
+            const on = (Math.floor((x * cells) / size) + Math.floor((y * cells) / size)) % 2 === 0;
+            const color = on ? a : b;
+            data.set([color[0], color[1], color[2], 255], (y * size + x) * 4);
+          }
+        }
+        return { width: size, height: size, data };
+      }
+
+      function bumpNormalMap(size) {
+        const data = new Uint8Array(size * size * 4);
+        for (let y = 0; y < size; y += 1) {
+          for (let x = 0; x < size; x += 1) {
+            const nx = Math.sin((x / size) * Math.PI * 16) * 0.6;
+            const ny = Math.cos((y / size) * Math.PI * 16) * 0.6;
+            const nz = Math.sqrt(Math.max(1 - nx * nx - ny * ny, 0));
+            data.set(
+              [Math.round((nx * 0.5 + 0.5) * 255), Math.round((ny * 0.5 + 0.5) * 255), Math.round((nz * 0.5 + 0.5) * 255), 255],
+              (y * size + x) * 4,
+            );
+          }
+        }
+        return { width: size, height: size, data };
+      }
+
+      function halfMask(size) {
+        const data = new Uint8Array(size * size);
+        for (let y = 0; y < size; y += 1) {
+          for (let x = 0; x < size; x += 1) {
+            data[y * size + x] = x < size / 2 ? 255 : 0;
+          }
+        }
+        return { width: size, height: size, data };
+      }
+
+      function perspectiveCamera() {
+        return {
+          position: [2.4, 2.1, 2.6],
+          target: [0, 0.35, 0],
+          up: [0, 1, 0],
+          fovYDegrees: 50,
+          near: 0.05,
+          far: 50,
+        };
+      }
+
+      const w07 = {
+        // Renders one manifest scene with an arbitrary material and scene
+        // overrides (bisecting native mismatches); returns a PNG data URL.
+        async render(sceneId, material, overrides = {}) {
+          const data = await manifest();
+          const spec = { ...data.scenes[sceneId], ...overrides };
+          const [width, height] = internalSize(spec);
+          return withSession(width, height, async (session) => {
+            let rgba = await renderScene(session, spec, material);
+            if (width !== spec.width || height !== spec.height) {
+              rgba = nativeRenderScaleBlit(rgba, width, height, spec.width, spec.height);
+            }
+            return toPng(rgba, spec.width, spec.height);
+          });
+        },
+
+        // T05-T07: every native toggle vs its golden, plus the zero-feature
+        // baseline identity.
+        async goldens() {
+          const data = await manifest();
+          const results = {};
+          const bySize = new Map();
+          for (const variant of data.variants) {
+            const spec = data.scenes[variant.scene];
+            const key = internalSize(spec).join("x");
+            if (!bySize.has(key)) bySize.set(key, []);
+            bySize.get(key).push(variant);
+          }
+          const zero = {};
+          for (const [key, variants] of bySize) {
+            const [internalWidth, internalHeight] = internalSize(data.scenes[variants[0].scene]);
+            await withSession(internalWidth, internalHeight, async (session) => {
+              for (const variant of variants) {
+                const spec = data.scenes[variant.scene];
+                let rgba = await renderScene(session, spec, variant.material);
+                if (internalWidth !== spec.width || internalHeight !== spec.height) {
+                  rgba = nativeRenderScaleBlit(rgba, internalWidth, internalHeight, spec.width, spec.height);
+                }
+                const golden = await decodePng(GOLDEN_ROOT + variant.png, spec.width, spec.height);
+                const entry = {
+                  ssim: ssimRgba(rgba, golden, spec.width, spec.height),
+                  meanAbs: meanAbsDiff(rgba, golden),
+                  historical: variant.historical ?? null,
+                  oracleSsim: variant.oracleSsim ?? null,
+                  nativeDelta: variant.nativeDelta ?? null,
+                  minDelta: variant.minDelta ?? null,
+                  rgba,
+                };
+                if (entry.ssim < data.tolerances.ssimMin) {
+                  entry.actualPng = toPng(rgba, spec.width, spec.height);
+                }
+                results[variant.id] = entry;
+                if (variant.baseline === null && variant.id.endsWith("-baseline")) {
+                  // Zero-feature material must reproduce the unmaterialed frame.
+                  const plain = await renderScene(session, spec, undefined);
+                  let maxDiff = 0;
+                  let maxAt = -1;
+                  let differing = 0;
+                  for (let index = 0; index < rgba.length; index += 1) {
+                    const diff = Math.abs(plain[index] - rgba[index]);
+                    if (diff > 0) differing += 1;
+                    if (diff > maxDiff) {
+                      maxDiff = diff;
+                      maxAt = index >> 2;
+                    }
+                  }
+                  zero[variant.id] = {
+                    byteEqual: bytesEqual(plain, rgba),
+                    maxDiff,
+                    differing,
+                    maxPixel: maxAt < 0 ? null : {
+                      x: maxAt % spec.width,
+                      y: Math.floor(maxAt / spec.width),
+                      plain: Array.from(plain.slice(maxAt * 4, maxAt * 4 + 3)),
+                      material: Array.from(rgba.slice(maxAt * 4, maxAt * 4 + 3)),
+                    },
+                    meanAbs: meanAbsDiff(plain, rgba),
+                  };
+                }
+              }
+            });
+          }
+          for (const variant of data.variants) {
+            const entry = results[variant.id];
+            if (variant.baseline !== null) {
+              entry.delta = meanAbsDiff(entry.rgba, results[variant.baseline].rgba);
+            }
+          }
+          for (const entry of Object.values(results)) delete entry.rgba;
+          return { ssimMin: data.tolerances.ssimMin, variants: results, zero };
+        },
+
+        // Validation, diagnostics and the report contract.
+        async contracts() {
+          const data = await manifest();
+          const spec = data.scenes.w04;
+          const out = {};
+          out.defaults = getTerrainMaterialDefaults();
+          out.invalid = {};
+          const cases = {
+            maxSteps: { pom: { maxSteps: 101 } },
+            minGtMax: { pom: { minSteps: 20, maxSteps: 10 } },
+            snowSlope: { layers: { snow: { slopeMax: 91 } } },
+            lutMissing: { heightCurve: { mode: "lut" } },
+            octaves: { layers: { variation: { octaves: 9 } } },
+            layerCount: { materialSet: [] },
+            roughness: { materialSet: [{ roughness: 0.01 }] },
+            albedoMode: { albedoMode: "texture" },
+            tint: { layers: { rock: { subsurfaceTint: [1.2, 1, 1] } } },
+            fade: { detail: { fadeStart: 100, fadeEnd: 50 } },
+            heightRange: { clamp: { heightRange: [0.8, 0.2] } },
+          };
+          for (const [name, material] of Object.entries(cases)) {
+            out.invalid[name] = await errorOf(() => normalizeTerrainMaterial(material));
+          }
+          await withSession(spec.width, spec.height, async (session) => {
+            // Runtime revalidates what bypasses the TS normalizer.
+            const inner = session;
+            out.sceneRejection = await errorOf(async () =>
+              Forge3DScene.create().addTerrain(
+                terrainInput(spec, await sceneHeights(spec), { material: { pom: { maxSteps: 500 } } }),
+              ),
+            );
+            await renderScene(session, spec, {});
+            out.defaultReport = inner.getTerrainMaterialReport();
+            await renderScene(session, spec, {
+              albedoMode: "material",
+              pom: { enabled: true, mode: "relief" },
+              detail: { strength: 0.5 },
+              materialSet: [
+                { texture: checkerTexture(64, [200, 60, 40], [40, 60, 200], 4) },
+                { texture: { width: 8, height: 8, data: new Uint8Array(12) } },
+                {},
+              ],
+              layers: { snow: { enabled: true, mask: { width: 4, height: 4, data: new Uint8Array(3) } } },
+            });
+            out.diagnosticReport = inner.getTerrainMaterialReport();
+            await renderScene(session, spec, undefined);
+            out.plainReport = inner.getTerrainMaterialReport();
+          });
+          return out;
+        },
+
+        // Textured layers, masks, detail maps, SSS, spec-AA tiers and debug
+        // views in perspective mode (browser-only texture path).
+        async textured() {
+          const data = await manifest();
+          const spec = data.scenes.tv4;
+          const out = { frames: {} };
+          const textures = [
+            checkerTexture(128, [150, 120, 90], [90, 70, 50], 8),
+            checkerTexture(128, [60, 140, 50], [30, 90, 30], 8),
+            checkerTexture(128, [140, 100, 60], [100, 70, 40], 8),
+            checkerTexture(128, [245, 245, 250], [210, 215, 225], 8),
+          ];
+          const base = {
+            albedoMode: "material",
+            materialSet: [{}, {}, {}, {}],
+          };
+          const textured = {
+            albedoMode: "material",
+            materialSet: textures.map((texture) => ({ texture })),
+          };
+          await withSession(320, 200, async (session) => {
+            const render = async (material) => {
+              session.setScene(await buildScene(spec, material, { renderMode: "perspective" }));
+              session.setCamera(perspectiveCamera());
+              session.render();
+              return session.readRgba();
+            };
+            const frames = {
+              plain: await render(undefined),
+              flat: await render(base),
+              textured: await render(textured),
+              snow: await render({ ...textured, layers: { snow: { enabled: true, altitudeMin: 0.9, altitudeBlend: 0.3, slopeMax: 70 } } }),
+              snowMasked: await render({ ...textured, layers: { snow: { enabled: true, altitudeMin: 0.9, altitudeBlend: 0.3, slopeMax: 70, mask: halfMask(64) } } }),
+              snowSss: await render({ ...textured, layers: { snow: { enabled: true, altitudeMin: 0.9, altitudeBlend: 0.3, slopeMax: 70, subsurfaceStrength: 0.9, subsurfaceTint: [0.6, 0.8, 1] } } }),
+              rock: await render({ ...textured, layers: { rock: { enabled: true, slopeMin: 20, slopeBlend: 10 } } }),
+              pom: await render({ ...textured, pom: { enabled: true, scale: 0.06 } }),
+              detailMap: await render({ ...textured, detail: { strength: 1, normalMap: bumpNormalMap(128) } }),
+              aaNative: await render({ ...textured, detail: { enabled: true, scale: 0.02, normalStrength: 1 }, debugView: "roughness" }),
+              aaHigh: await render({ ...textured, detail: { enabled: true, scale: 0.02, normalStrength: 1 }, specularAa: { quality: "high" }, debugView: "roughness" }),
+              aaOff: await render({ ...textured, detail: { enabled: true, scale: 0.02, normalStrength: 1 }, specularAa: { quality: "off" }, debugView: "roughness" }),
+              weights: await render({ ...textured, layers: { snow: { enabled: true, altitudeMin: 0.9, altitudeBlend: 0.3, slopeMax: 70 }, rock: { enabled: true, slopeMin: 20 }, wetness: { enabled: true } }, debugView: "layer-weights" }),
+              triplanar: await render({ ...textured, debugView: "triplanar-weights" }),
+            };
+            out.report = session.getTerrainMaterialReport();
+            const delta = (a, b) => meanAbsDiff(frames[a], frames[b]);
+            out.nonconstant = Object.fromEntries(Object.entries(frames).map(([k, v]) => [k, nonconstant(v)]));
+            out.deltas = {
+              flatVsPlain: delta("flat", "plain"),
+              texturedVsFlat: delta("textured", "flat"),
+              snow: delta("snow", "textured"),
+              snowMasked: delta("snowMasked", "snow"),
+              snowSss: delta("snowSss", "snow"),
+              rock: delta("rock", "textured"),
+              pom: delta("pom", "textured"),
+              detailMap: delta("detailMap", "textured"),
+              aaHighVsNative: delta("aaHigh", "aaNative"),
+              aaNativeVsOff: delta("aaNative", "aaOff"),
+            };
+            // The mask keeps snow only on the left half of terrain UV space.
+            out.frames.snowMasked = toPng(frames.snowMasked, 320, 200);
+          });
+          return out;
+        },
+
+        // Budget, 30-cycle memory return and device-loss replay.
+        async lifecycle() {
+          const data = await manifest();
+          const spec = data.scenes.w04;
+          const out = {};
+          const createdRuntimes = [];
+          setSessionRuntimeFactoryForTests(async (runtimeCanvas, options) => {
+            const created = await Forge3DRuntime.create(runtimeCanvas, options);
+            createdRuntimes.push(created);
+            return created;
+          });
+          const big = {
+            albedoMode: "material",
+            materialSet: [0, 1, 2, 3].map((i) => ({
+              texture: checkerTexture(1024, [40 * i, 120, 200 - 40 * i], [20, 30, 40], 16),
+            })),
+          };
+          try {
+            await withSession(spec.width, spec.height, async (session) => {
+              const heights = await sceneHeights(spec);
+              await renderScene(session, spec, undefined);
+              const baseline = session.getMemoryReport();
+              const nativeBaseline = createdRuntimes.at(-1).getMemoryReport().currentBytes;
+              const returned = [];
+              let peak = 0;
+              for (let cycle = 0; cycle < 30; cycle += 1) {
+                await renderScene(session, spec, cycle % 2 === 0 ? big : { pom: { enabled: true }, layers: { snow: { enabled: true } } });
+                peak = Math.max(peak, createdRuntimes.at(-1).getMemoryReport().currentBytes);
+                await renderScene(session, spec, undefined);
+                returned.push(createdRuntimes.at(-1).getMemoryReport().currentBytes);
+              }
+              out.cycles = {
+                nativeBaseline,
+                peak,
+                allReturned: returned.every((bytes) => bytes === nativeBaseline),
+                sessionCurrent: session.getMemoryReport().currentBytes,
+                sessionBaseline: baseline.currentBytes,
+              };
+
+              // Device-loss replay keeps the material.
+              const material = { albedoMode: "mix", colormapStrength: 0.4, pom: { enabled: true }, layers: { snow: { enabled: true, altitudeMin: 0.7, altitudeBlend: 0.2 } } };
+              const before = await renderScene(session, spec, material);
+              const reportBefore = session.getTerrainMaterialReport();
+              const generation = createdRuntimes.length;
+              simulateRuntimeDeviceLossForTests(createdRuntimes.at(-1));
+              const deadline = performance.now() + 15_000;
+              while (
+                (createdRuntimes.length === generation || session.status !== "ready") &&
+                session.status !== "failed" &&
+                performance.now() < deadline
+              ) {
+                await new Promise((resolve) => setTimeout(resolve, 10));
+              }
+              session.render();
+              const after = await session.readRgba();
+              out.recovery = {
+                status: session.status,
+                generations: createdRuntimes.length,
+                byteEqual: bytesEqual(before, after),
+                reportEqual: JSON.stringify(reportBefore) === JSON.stringify(session.getTerrainMaterialReport()),
+              };
+              void heights;
+            });
+
+            // A tight budget downscales the albedo array and reports it
+            // (4 x 1024^2 RGBA8 with mips needs ~22 MiB; the budget is 8 MiB).
+            await withSession(
+              spec.width,
+              spec.height,
+              async (session) => {
+                session.setScene(await buildScene(spec, big, {}, true));
+                session.setCamera(cameraInput(spec));
+                session.render();
+                out.budget = {
+                  report: session.getTerrainMaterialReport(),
+                  memory: createdRuntimes.at(-1).getMemoryReport(),
+                };
+              },
+              { memoryBudgetBytes: 8 * 1024 * 1024 },
+              { memoryBudgetBytes: 8 * 1024 * 1024 },
+            );
+          } finally {
+            setSessionRuntimeFactoryForTests(undefined);
+          }
+          return out;
+        },
+
+        // p95 frame time at 1080p with the full material stack.
+        async performance(frames = 60) {
+          const data = await manifest();
+          const spec = data.scenes.tv4;
+          const heights = await sceneHeights(spec);
+          const full = {
+            albedoMode: "mix",
+            colormapStrength: 0.5,
+            materialSet: [0, 1, 2, 3].map((i) => ({
+              texture: checkerTexture(512, [60 + 40 * i, 110, 160 - 30 * i], [30, 40, 50], 16),
+            })),
+            pom: { enabled: true },
+            detail: { enabled: true },
+            layers: {
+              snow: { enabled: true, altitudeMin: 0.7, altitudeBlend: 0.2, subsurfaceStrength: 0.6 },
+              rock: { enabled: true, slopeMin: 30 },
+              wetness: { enabled: true },
+              variation: { snowMacroAmplitude: 0.3, rockDetailAmplitude: 0.2, wetnessMacroAmplitude: 0.2 },
+            },
+            specularAa: { quality: "high" },
+          };
+          const out = {};
+          for (const mode of ["screen", "perspective"]) {
+            const runtime = await Forge3DRuntime.create(perfCanvas, {
+              width: 1920,
+              height: 1080,
+              devicePixelRatio: 1,
+              clearColor: [0, 0, 0, 1],
+              memoryBudgetBytes: 1 << 30,
+            });
+            try {
+              const scene = await buildScene(spec, full, { renderMode: mode });
+              for (const node of scene.getNodes()) {
+                if (node.node.kind === "terrain") runtime.setTerrain(node.node.terrain);
+              }
+              runtime.setScene(scene.snapshot());
+              runtime.setCamera(mode === "screen" ? cameraInput(spec) : perspectiveCamera());
+              runtime.render();
+              await runtime.readRgba();
+              // Per-frame GPU pass time from timestamp queries when exposed,
+              // otherwise the CPU frame time; the frame loop is paced by rAF.
+              const times = [];
+              let timing = "cpu";
+              for (let frame = 0; frame < frames; frame += 1) {
+                runtime.render();
+                await new Promise((resolve) => requestAnimationFrame(resolve));
+                const stats = runtime.getRenderStats();
+                const gpu = stats.passes.filter((pass) => pass.timing === "gpu-timestamp");
+                if (gpu.length > 0) {
+                  timing = "gpu-timestamp";
+                  times.push(gpu.reduce((sum, pass) => sum + pass.milliseconds, 0));
+                } else {
+                  times.push(stats.frameTimeMs);
+                }
+              }
+              await runtime.readRgba();
+              times.sort((a, b) => a - b);
+              const memory = runtime.getMemoryReport();
+              out[mode] = {
+                timing,
+                p50: times[Math.floor(times.length * 0.5)],
+                p95: times[Math.floor(times.length * 0.95)],
+                peakBytes: memory.peakBytes,
+                budgetBytes: memory.budgetBytes,
+                report: runtime.getTerrainMaterialReport(),
+              };
+              void heights;
+            } finally {
+              runtime.dispose();
+            }
+          }
+          return out;
+        },
+      };
+
+      window.__forge3dW07 = w07;
+    </script>
+  </body>
+</html>

@@ -13,6 +13,7 @@ mod scene;
 mod shader_variants;
 mod shadows;
 mod terrain;
+mod terrain_material;
 mod textures;
 mod timing;
 
@@ -204,6 +205,15 @@ impl Forge3DRuntime {
     #[wasm_bindgen(js_name = getShadowReport)]
     pub fn get_shadow_report(&mut self) -> JsValue {
         shadows::shadow_report_js(self)
+    }
+
+    #[wasm_bindgen(js_name = getTerrainMaterialReport)]
+    pub fn get_terrain_material_report(&self) -> JsValue {
+        terrain_material::report_js(
+            self.terrain
+                .as_ref()
+                .map(|terrain| &terrain.material.report),
+        )
     }
 
     #[wasm_bindgen(js_name = setTerrain)]

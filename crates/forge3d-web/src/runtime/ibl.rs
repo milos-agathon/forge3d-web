@@ -23,7 +23,6 @@ pub(super) const IBL_UNIFORM_LEDGER_KEY: &str = "ibl:uniform";
 pub(super) const IBL_TRANSIENT_LEDGER_KEY: &str = "ibl:transient";
 const IBL_FALLBACK_TEXTURE_BYTES: u64 = 104;
 const RGBA16F_TEXEL_BYTES: u64 = 8;
-const RGBA32F_TEXEL_BYTES: u64 = 16;
 const WORKGROUP_SIZE: u32 = 8;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -52,43 +51,29 @@ pub(super) struct IblQualitySpec {
     pub specular: u32,
     pub specular_mips: u32,
     pub brdf_lut: u32,
-    pub samples: u32,
+    pub irradiance_samples: u32,
+    pub brdf_samples: u32,
 }
 
+/// Native `IBLQuality` tiers (`1f4084a:src/core/ibl.rs`): the base environment
+/// cube matches the specular size, the BRDF LUT is 512 at every tier, and the
+/// irradiance/LUT passes take 128/1024 samples (the prefilter schedule is
+/// `prefilter_mip_params`).
 pub(super) fn ibl_quality_spec(quality: IblQuality) -> IblQualitySpec {
-    match quality {
-        IblQuality::Low => IblQualitySpec {
-            environment: 32,
-            irradiance: 8,
-            specular: 32,
-            specular_mips: 4,
-            brdf_lut: 32,
-            samples: 32,
-        },
-        IblQuality::Medium => IblQualitySpec {
-            environment: 64,
-            irradiance: 16,
-            specular: 64,
-            specular_mips: 5,
-            brdf_lut: 64,
-            samples: 64,
-        },
-        IblQuality::High => IblQualitySpec {
-            environment: 128,
-            irradiance: 32,
-            specular: 128,
-            specular_mips: 6,
-            brdf_lut: 128,
-            samples: 128,
-        },
-        IblQuality::Ultra => IblQualitySpec {
-            environment: 256,
-            irradiance: 64,
-            specular: 256,
-            specular_mips: 7,
-            brdf_lut: 256,
-            samples: 256,
-        },
+    let (irradiance, specular, specular_mips) = match quality {
+        IblQuality::Low => (64, 128, 5),
+        IblQuality::Medium => (128, 256, 6),
+        IblQuality::High => (256, 512, 7),
+        IblQuality::Ultra => (256, 1024, 8),
+    };
+    IblQualitySpec {
+        environment: specular,
+        irradiance,
+        specular,
+        specular_mips,
+        brdf_lut: 512,
+        irradiance_samples: 128,
+        brdf_samples: 1024,
     }
 }
 
@@ -191,7 +176,7 @@ fn readback_bytes(spec: &IblQualitySpec) -> Option<u64> {
 fn source_bytes(parsed: &ParsedIbl) -> Option<u64> {
     u64::from(parsed.source_width)
         .checked_mul(u64::from(parsed.source_height))?
-        .checked_mul(RGBA32F_TEXEL_BYTES)
+        .checked_mul(RGBA16F_TEXEL_BYTES)
 }
 
 fn invalid(message: impl Into<String>) -> WebError {
@@ -223,7 +208,24 @@ pub(super) struct ParsedIbl {
     pub rotation_degrees: f32,
     pub requested_quality: IblQuality,
     pub effective_quality: IblQuality,
+    /// `native`: every prefilter pass reads the last mip's parameters, as the
+    /// native renderer's shared uniform buffer does; `per-mip` otherwise.
+    pub native_prefilter: bool,
     pub prepared: Option<ParsedIblPrepared>,
+}
+
+/// Parses the optional `prefilter` field (`per-mip` when absent).
+///
+/// `native` is the bug-compatible schedule for oracle comparisons: every pass
+/// reads the last mip's parameters, so most specular texels stay zero.
+fn parse_prefilter(text: Option<&str>) -> Result<bool, WebError> {
+    match text {
+        Some("native") => Ok(true),
+        None | Some("per-mip") => Ok(false),
+        Some(other) => Err(invalid(format!(
+            "ibl prefilter must be 'native' or 'per-mip'; got {other}"
+        ))),
+    }
 }
 
 fn validate_source_dimensions(width: u32, height: u32) -> Result<(), WebError> {
@@ -360,6 +362,7 @@ fn build_parsed_ibl(
     rotation_degrees: f32,
     requested_quality: IblQuality,
     effective_quality: IblQuality,
+    native_prefilter: bool,
     prepared: Option<ParsedIblPrepared>,
 ) -> Result<ParsedIbl, WebError> {
     validate_source_data((width, height, &data))?;
@@ -388,6 +391,7 @@ fn build_parsed_ibl(
         rotation_degrees,
         requested_quality,
         effective_quality,
+        native_prefilter,
         prepared,
     })
 }
@@ -426,6 +430,11 @@ pub(super) fn ibl_from_json(value: &serde_json::Value) -> Result<Option<ParsedIb
     let rotation_degrees = json_f32(value, "rotationDegrees")?;
     let requested_quality = json_quality(value, "requestedQuality")?;
     let effective_quality = json_quality(value, "effectiveQuality")?;
+    let native_prefilter = match value.get("prefilter") {
+        None | Some(serde_json::Value::Null) => parse_prefilter(None)?,
+        Some(serde_json::Value::String(text)) => parse_prefilter(Some(text))?,
+        Some(_) => return Err(invalid("ibl prefilter must be a string")),
+    };
     let prepared = match value.get("prepared") {
         None | Some(serde_json::Value::Null) => None,
         Some(prepared) => Some(parse_prepared_json(prepared)?),
@@ -445,6 +454,7 @@ pub(super) fn ibl_from_json(value: &serde_json::Value) -> Result<Option<ParsedIb
         rotation_degrees,
         requested_quality,
         effective_quality,
+        native_prefilter,
         prepared,
     )
     .map(Some)
@@ -673,6 +683,12 @@ pub(super) fn ibl_from_js(value: &JsValue) -> Result<Option<ParsedIbl>, WebError
             "ibl effectiveQuality '{effective_text}' is unknown"
         ))
     })?;
+    let prefilter_value = js_property(value, "prefilter")?;
+    let native_prefilter = if prefilter_value.is_undefined() || prefilter_value.is_null() {
+        parse_prefilter(None)?
+    } else {
+        parse_prefilter(Some(&js_string(&prefilter_value, "ibl.prefilter")?))?
+    };
     let prepared_value = js_property(value, "prepared")?;
     let prepared = if prepared_value.is_undefined() || prepared_value.is_null() {
         None
@@ -726,6 +742,7 @@ pub(super) fn ibl_from_js(value: &JsValue) -> Result<Option<ParsedIbl>, WebError
         rotation_degrees,
         requested_quality,
         effective_quality,
+        native_prefilter,
         prepared,
     )
     .map(Some)
@@ -752,7 +769,19 @@ struct IblPassUniform {
     roughness: f32,
     sample_count: u32,
     lut_size: u32,
-    pad0: u32,
+    max_mip_levels: u32,
+}
+
+/// Native `(1024 >> mip).max(64)` prefilter schedule and
+/// `sqrt(mip / (mips - 1))` roughness (1f4084a:src/core/ibl/prefilter.rs).
+pub(super) fn prefilter_mip_params(mip: u32, mips: u32) -> (u32, f32) {
+    let samples = (1024u32 >> mip.min(31)).max(64);
+    let roughness = if mips > 1 {
+        (mip as f32 / (mips - 1) as f32).sqrt()
+    } else {
+        0.0
+    };
+    (samples, roughness)
 }
 
 pub(super) struct IblResources {
@@ -1307,14 +1336,20 @@ fn run_ibl_compute(
         mip_level_count: 1,
         sample_count: 1,
         dimension: wgpu::TextureDimension::D2,
-        format: wgpu::TextureFormat::Rgba32Float,
+        // Native uploads the equirect as Rgba16Float and samples it linearly.
+        format: wgpu::TextureFormat::Rgba16Float,
         usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
         view_formats: &[],
     });
     {
-        let row_bytes = (parsed.source_width * RGBA32F_TEXEL_BYTES as u32) as usize;
+        let halves: Vec<u16> = parsed
+            .source_data
+            .iter()
+            .map(|value| forge3d_core::readback::f32_to_f16(*value))
+            .collect();
+        let row_bytes = (parsed.source_width * RGBA16F_TEXEL_BYTES as u32) as usize;
         let padded_row = aligned_row_bytes(row_bytes as u32) as usize;
-        let raw: &[u8] = bytemuck::cast_slice(&parsed.source_data);
+        let raw: &[u8] = bytemuck::cast_slice(&halves);
         let extent = wgpu::Extent3d {
             width: parsed.source_width,
             height: parsed.source_height,
@@ -1432,7 +1467,7 @@ fn run_ibl_compute(
                 binding: 0,
                 visibility: wgpu::ShaderStages::COMPUTE,
                 ty: wgpu::BindingType::Texture {
-                    sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                    sample_type: wgpu::TextureSampleType::Float { filterable: true },
                     view_dimension: wgpu::TextureViewDimension::D2,
                     multisampled: false,
                 },
@@ -1440,6 +1475,12 @@ fn run_ibl_compute(
             },
             storage_array_binding(2),
             uniform_binding(3),
+            wgpu::BindGroupLayoutEntry {
+                binding: 6,
+                visibility: wgpu::ShaderStages::COMPUTE,
+                ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                count: None,
+            },
         ],
     });
     let convolve_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -1540,7 +1581,7 @@ fn run_ibl_compute(
     });
     let lut_storage_view = brdf_lut.create_view(&wgpu::TextureViewDescriptor::default());
 
-    let pass_uniform = |src_w, src_h, face_size, mip_level, roughness, lut_size| {
+    let pass_uniform = |src_w, src_h, face_size, mip_level, roughness, lut_size, sample_count| {
         create_pass_uniform(
             device,
             "forge3d-ibl-pass-uniform",
@@ -1550,12 +1591,22 @@ fn run_ibl_compute(
                 face_size,
                 mip_level,
                 roughness,
-                sample_count: spec.samples,
+                sample_count,
                 lut_size,
-                pad0: 0,
+                max_mip_levels: spec.specular_mips,
             },
         )
     };
+    let equirect_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+        label: Some("forge3d-ibl-equirect-sampler"),
+        address_mode_u: wgpu::AddressMode::Repeat,
+        address_mode_v: wgpu::AddressMode::ClampToEdge,
+        address_mode_w: wgpu::AddressMode::ClampToEdge,
+        mag_filter: wgpu::FilterMode::Linear,
+        min_filter: wgpu::FilterMode::Linear,
+        mipmap_filter: wgpu::MipmapFilterMode::Linear,
+        ..Default::default()
+    });
 
     let dispatch_groups = |size: u32| size.div_ceil(WORKGROUP_SIZE);
 
@@ -1566,6 +1617,7 @@ fn run_ibl_compute(
         0,
         0.0,
         0,
+        1,
     );
     let equirect_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: Some("forge3d-ibl-equirect-bg"),
@@ -1583,9 +1635,14 @@ fn run_ibl_compute(
                 binding: 3,
                 resource: equirect_uniform.as_entire_binding(),
             },
+            wgpu::BindGroupEntry {
+                binding: 6,
+                resource: wgpu::BindingResource::Sampler(&equirect_sampler),
+            },
         ],
     });
-    let irradiance_uniform = pass_uniform(0, 0, spec.irradiance, 0, 0.0, 0);
+    let irradiance_uniform =
+        pass_uniform(0, 0, spec.irradiance, 0, 0.0, 0, spec.irradiance_samples);
     let irradiance_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: Some("forge3d-ibl-irradiance-bg"),
         layout: &convolve_layout,
@@ -1612,12 +1669,17 @@ fn run_ibl_compute(
     let mut specular_bind_groups = Vec::with_capacity(spec.specular_mips as usize);
     let mut specular_mip_views = Vec::with_capacity(spec.specular_mips as usize);
     for mip in 0..spec.specular_mips {
-        let size = mip_size(spec.specular, mip);
-        let roughness = if spec.specular_mips > 1 {
-            mip as f32 / (spec.specular_mips - 1) as f32
+        // Native `prefilter.rs` rewrites one shared uniform buffer per mip but
+        // submits every pass together, so each pass reads the last mip's
+        // size/roughness/samples: only a last-size corner of every mip is
+        // written (the rest stays zero). `native` reproduces that output.
+        let params_mip = if parsed.native_prefilter {
+            spec.specular_mips.saturating_sub(1)
         } else {
-            0.0
+            mip
         };
+        let size = mip_size(spec.specular, params_mip);
+        let (samples, roughness) = prefilter_mip_params(params_mip, spec.specular_mips);
         specular_mip_views.push(specular.create_view(&wgpu::TextureViewDescriptor {
             label: Some("forge3d-ibl-specular-mip"),
             dimension: Some(wgpu::TextureViewDimension::D2Array),
@@ -1625,7 +1687,7 @@ fn run_ibl_compute(
             mip_level_count: Some(1),
             ..Default::default()
         }));
-        specular_uniforms.push(pass_uniform(0, 0, size, mip, roughness, 0));
+        specular_uniforms.push(pass_uniform(0, 0, size, mip, roughness, 0, samples));
     }
     for mip in 0..spec.specular_mips {
         specular_bind_groups.push(device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -1651,7 +1713,7 @@ fn run_ibl_compute(
             ],
         }));
     }
-    let lut_uniform = pass_uniform(0, 0, 0, 0, 0.0, spec.brdf_lut);
+    let lut_uniform = pass_uniform(0, 0, 0, 0, 0.0, spec.brdf_lut, spec.brdf_samples);
     let lut_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
         label: Some("forge3d-ibl-lut-bg"),
         layout: &lut_layout,
@@ -2117,6 +2179,15 @@ fn ibl_snapshot_to_js(
         &snapshot,
         "effectiveQuality",
         &JsValue::from_str(ibl_quality_name(effective)),
+    );
+    super::set_js_property(
+        &snapshot,
+        "prefilter",
+        &JsValue::from_str(if parsed.native_prefilter {
+            "native"
+        } else {
+            "per-mip"
+        }),
     );
     match prepared {
         Some(prepared) => {

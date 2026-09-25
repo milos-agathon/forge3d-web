@@ -40,8 +40,10 @@ const TERRAIN_SCREEN: u64 = 1 << 32;
 const TERRAIN_PERSPECTIVE: u64 = 1 << 33;
 /// Offline/AOV capture entry points (never part of display pipelines).
 const CAPTURE: u64 = 1 << 34;
+/// Terrain PBR/POM material pipeline (W07).
+const TERRAIN_MATERIAL: u64 = 1 << 35;
 #[cfg(test)]
-const ALL_BITS: u64 = (1 << 35) - 1;
+const ALL_BITS: u64 = (1 << 36) - 1;
 
 impl ShaderFeatures {
     /// Every region: the unspecialized template.
@@ -120,6 +122,11 @@ impl ShaderFeatures {
         }
     }
 
+    /// Adds or clears the terrain material region.
+    pub(crate) fn with_terrain_material(self, enabled: bool) -> Self {
+        Self(self.0 & !TERRAIN_MATERIAL).with(TERRAIN_MATERIAL, enabled)
+    }
+
     /// Adds the offline capture entry points and capture-only uniform fields.
     #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
     pub(crate) fn with_capture(self) -> Self {
@@ -144,6 +151,7 @@ impl ShaderFeatures {
             "terrain_screen" => TERRAIN_SCREEN,
             "terrain_perspective" => TERRAIN_PERSPECTIVE,
             "capture" => CAPTURE,
+            "terrain_material" => TERRAIN_MATERIAL,
             other => {
                 if let Some(model) = other.strip_prefix("brdf_") {
                     let model: u32 = model.parse().expect("brdf feature index");
@@ -260,7 +268,7 @@ pub(super) fn sync_pipelines(runtime: &mut super::Forge3DRuntime) -> Result<(), 
         runtime.terrain.as_mut(),
         runtime.terrain_pipeline_cache.as_mut(),
     ) {
-        if terrain.features != features.with_terrain_mode(terrain.render_mode) {
+        if terrain.features != terrain.specialize(features) {
             terrain.use_variant(&context, cache, features, format);
         }
     }

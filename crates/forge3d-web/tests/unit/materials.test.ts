@@ -88,12 +88,21 @@ describe("resolveBrdfModel", () => {
       ["sss", "subsurface"],
       ["kajiyakay", "hair"],
       ["kajiya-kay", "hair"],
+      // Native normalize_key also drops '.' and hyphens anywhere.
+      ["Oren.Nayar", "oren-nayar"],
+      ["cook_torrance.ggx", "cooktorrance-ggx"],
+      ["Kajiya Kay", "hair"],
+      ["MINNAERT", "minnaert"],
     ];
     for (const [input, model] of aliases) {
       const route = resolveBrdfModel(input);
       expect(route.requested).toBe(input);
       expect(route.model).toBe(model);
     }
+    // Must match forge3d-core resolve_brdf, which re-validates every commit.
+    expect(resolveBrdfModel("Oren.Nayar").diagnostic).toBe(
+      "oren.nayar is an alias for oren-nayar",
+    );
     const ggx = resolveBrdfModel("ggx");
     expect(ggx.implementation).toBe("alias");
     expect(ggx.effectiveModel).toBe("cooktorrance-ggx");

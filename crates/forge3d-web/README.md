@@ -188,6 +188,12 @@ Cache `.wasm` assets with immutable content hashing, or invalidate the wasm asse
   `Blob`s via `readExr`/`writeExr`; deterministic PNG frame sequences with
   progress, cancellation and memory/OPFS/download sinks; and WebCodecs
   MP4/WebM export with typed unavailable-codec diagnostics
+- terrain PBR/POM materials (W07): `terrain.material` ports the native
+  `terrain_pbr_pom` land shading (triplanar material set, POM, height curves,
+  clamps, snow/rock/wetness layers with TV4 variation and TV10 subsurface,
+  micro-detail, specular-AA tiers, debug views) with deterministic fallback
+  diagnostics in `getTerrainMaterialReport()`, matched against native
+  `terrain-material-v1` goldens at SSIM >= 0.98
 - `setCamera(camera)`
 - `resize({ width, height, devicePixelRatio })`
 - `render()`

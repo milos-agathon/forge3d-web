@@ -23,6 +23,7 @@ export const LTC_LUT_SIZE = 64;
 
 const AREA_SAMPLE_COUNTS: readonly AreaLightSampleCount[] = [1, 4, 8, 16];
 const FALLOFF_MODES: readonly SoftLightFalloff[] = [
+  "inverse-square",
   "linear",
   "quadratic",
   "cubic",
@@ -262,16 +263,15 @@ const LIGHT_PRESETS: Readonly<Record<LightPresetName, LightInput>> = {
     color: [1, 1, 0.9],
   },
   "area-light": {
-    type: "rect",
+    type: "point",
     position: [0, 8, 0],
-    right: [1, 0, 0],
-    up: [0, 0, 1],
-    width: 16,
-    height: 16,
-    range: 25,
-    edgeSoftness: 3,
-    color: [1, 0.95, 0.9],
     intensity: 1.5,
+    range: 25,
+    innerRadius: 8,
+    edgeSoftness: 3,
+    falloff: "quadratic",
+    falloffExponent: 1.5,
+    color: [1, 0.95, 0.9],
   },
   "ambient-light": {
     type: "point",
@@ -281,6 +281,7 @@ const LIGHT_PRESETS: Readonly<Record<LightPresetName, LightInput>> = {
     innerRadius: 15,
     edgeSoftness: 5,
     falloff: "linear",
+    falloffExponent: 1,
     color: [0.9, 0.95, 1],
   },
   candle: {
@@ -622,12 +623,12 @@ function normalizeEdgeSoftness(value: unknown): number {
 
 function normalizeFalloff(value: unknown): SoftLightFalloff {
   if (value === undefined) {
-    return "quadratic";
+    return "inverse-square";
   }
   if (!FALLOFF_MODES.includes(value as SoftLightFalloff)) {
     throw invalid(
       "light.falloff",
-      "must be linear, quadratic, cubic, or exponential",
+      "must be inverse-square, linear, quadratic, cubic, or exponential",
     );
   }
   return value as SoftLightFalloff;

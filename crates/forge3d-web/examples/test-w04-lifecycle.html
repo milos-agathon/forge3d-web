@@ -338,6 +338,37 @@
             currentBytes: emptyMemory.currentBytes,
           };
 
+          // 30 commit/render/release cycles: IBL maps, shadow + CSM maps and
+          // material textures must return the ledger to the empty-scene state.
+          const cycleFilters = ["hard", "pcf", "pcss", "vsm", "evsm", "msm"];
+          const cycleBytes = [];
+          let cyclePeakLoaded = 0;
+          for (let cycle = 0; cycle < 30; cycle += 1) {
+            const loaded = await buildScene({
+              filter: cycleFilters[cycle % cycleFilters.length],
+              iblIntensity: 0.4 + (cycle % 5) * 0.1,
+            });
+            runtime.setScene(loaded.snapshot());
+            runtime.render();
+            cyclePeakLoaded = Math.max(
+              cyclePeakLoaded,
+              runtime.getMemoryReport().currentBytes,
+            );
+            runtime.setScene(empty.snapshot());
+            runtime.render();
+            cycleBytes.push(runtime.getMemoryReport().currentBytes);
+          }
+          result.cycles = {
+            count: cycleBytes.length,
+            baseline: emptyMemory.currentBytes,
+            allReturned: cycleBytes.every(
+              (bytes) => bytes === emptyMemory.currentBytes,
+            ),
+            peakLoaded: cyclePeakLoaded,
+            allocationCount: runtime.getMemoryReport().allocationCount,
+            baselineAllocationCount: emptyMemory.allocationCount,
+          };
+
           session = await Forge3DSession.create(sessionCanvas, {
             runtime: {
               diagnostics: true,

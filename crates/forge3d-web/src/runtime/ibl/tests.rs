@@ -33,68 +33,74 @@ fn snapshot_json() -> serde_json::Value {
 }
 
 #[test]
-fn quality_table_matches_public_contract() {
-    let low = ibl_quality_spec(IblQuality::Low);
-    assert_eq!(
-        (
-            low.environment,
-            low.irradiance,
-            low.specular,
-            low.specular_mips,
-            low.brdf_lut,
-            low.samples
-        ),
-        (32, 8, 32, 4, 32, 32)
-    );
-    let medium = ibl_quality_spec(IblQuality::Medium);
-    assert_eq!(
-        (
-            medium.environment,
-            medium.irradiance,
-            medium.specular,
-            medium.specular_mips,
-            medium.brdf_lut,
-            medium.samples
-        ),
-        (64, 16, 64, 5, 64, 64)
-    );
-    let high = ibl_quality_spec(IblQuality::High);
-    assert_eq!(
-        (
-            high.environment,
-            high.irradiance,
-            high.specular,
-            high.specular_mips,
-            high.brdf_lut,
-            high.samples
-        ),
-        (128, 32, 128, 6, 128, 128)
-    );
-    let ultra = ibl_quality_spec(IblQuality::Ultra);
-    assert_eq!(
-        (
-            ultra.environment,
-            ultra.irradiance,
-            ultra.specular,
-            ultra.specular_mips,
-            ultra.brdf_lut,
-            ultra.samples
-        ),
-        (256, 64, 256, 7, 256, 256)
-    );
+fn quality_table_matches_native_tiers() {
+    // 1f4084a:src/core/ibl.rs IBLQuality plus irradiance.rs/prefilter.rs/
+    // brdf_lut.rs sample counts.
+    let tiers = [
+        (IblQuality::Low, (128, 64, 128, 5)),
+        (IblQuality::Medium, (256, 128, 256, 6)),
+        (IblQuality::High, (512, 256, 512, 7)),
+        (IblQuality::Ultra, (1024, 256, 1024, 8)),
+    ];
+    for (quality, expected) in tiers {
+        let spec = ibl_quality_spec(quality);
+        assert_eq!(
+            (
+                spec.environment,
+                spec.irradiance,
+                spec.specular,
+                spec.specular_mips
+            ),
+            expected,
+            "{quality:?}"
+        );
+        assert_eq!(spec.brdf_lut, 512);
+        assert_eq!((spec.irradiance_samples, spec.brdf_samples), (128, 1024));
+    }
+}
+
+#[test]
+fn prefilter_mode_defaults_to_per_mip_and_rejects_unknown_values() {
+    // `native` is the bug-compatible oracle schedule; it must be requested.
+    let parsed = ibl_from_json(&snapshot_json()).unwrap().unwrap();
+    assert!(!parsed.native_prefilter);
+    let mut snapshot = snapshot_json();
+    snapshot["prefilter"] = serde_json::json!("per-mip");
+    assert!(!ibl_from_json(&snapshot).unwrap().unwrap().native_prefilter);
+    snapshot["prefilter"] = serde_json::json!("native");
+    assert!(ibl_from_json(&snapshot).unwrap().unwrap().native_prefilter);
+    snapshot["prefilter"] = serde_json::json!("fast");
+    assert!(ibl_from_json(&snapshot).is_err());
+}
+
+#[test]
+fn prefilter_schedule_matches_native() {
+    // 1f4084a:src/core/ibl/prefilter.rs: (1024 >> mip).max(64) samples and
+    // roughness = sqrt(mip / (mips - 1)).
+    let mips = 6;
+    let schedule: Vec<(u32, f32)> = (0..mips)
+        .map(|mip| prefilter_mip_params(mip, mips))
+        .collect();
+    let samples: Vec<u32> = schedule.iter().map(|(s, _)| *s).collect();
+    assert_eq!(samples, vec![1024, 512, 256, 128, 64, 64]);
+    for (mip, (_, roughness)) in schedule.iter().enumerate() {
+        let native = (mip as f32 / 5.0).sqrt();
+        assert!((roughness - native).abs() < 1e-7, "mip {mip}");
+    }
+    assert_eq!(prefilter_mip_params(0, 1), (1024, 0.0));
 }
 
 #[test]
 fn prepared_lengths_match_rgba16f_layout() {
     let spec = ibl_quality_spec(IblQuality::Low);
     let (irradiance, specular, brdf) = ibl_prepared_lengths(&spec).unwrap();
-    assert_eq!(irradiance, 8 * 8 * 6 * 8);
-    let specular_expected: u64 = [32u64, 16, 8, 4]
+    assert_eq!(irradiance, 64 * 64 * 6 * 8);
+    let specular_expected: u64 = [128u64, 64, 32, 16, 8]
         .iter()
         .map(|size| size * size * 6 * 8)
         .sum();
     assert_eq!(specular, specular_expected);
-    assert_eq!(brdf, 32 * 32 * 8);
+    assert_eq!(brdf, 512 * 512 * 8);
 }
 
 #[test]
@@ -210,14 +216,14 @@ fn prepared_payload_validates_against_quality_table() {
     snapshot["report"]["effectiveMode"] = serde_json::json!("prepared-upload");
     let parsed = ibl_from_json(&snapshot).unwrap().unwrap();
     let prepared = parsed.prepared.expect("prepared payload");
-    assert_eq!(prepared.specular_mip_count, 4);
-    assert_eq!(prepared.irradiance.len() as u64, 8 * 8 * 6 * 8);
+    assert_eq!(prepared.specular_mip_count, 5);
+    assert_eq!(prepared.irradiance.len() as u64, 64 * 64 * 6 * 8);
 }
 
 #[test]
 fn rejects_prepared_size_and_length_mismatch() {
     let mut prepared = prepared_json();
-    prepared["irradianceSize"] = serde_json::json!(16);
+    prepared["irradianceSize"] = serde_json::json!(128);
     let mut snapshot = snapshot_json();
     snapshot["prepared"] = prepared;
     snapshot["report"]["effectiveMode"] = serde_json::json!("prepared-upload");
@@ -359,9 +365,18 @@ fn compute_shader_uses_8x8_workgroups_and_rgba16float_outputs() {
     assert!(IBL_COMPUTE_SHADER.contains("irradiance_convolve"));
     assert!(IBL_COMPUTE_SHADER.contains("specular_prefilter"));
     assert!(IBL_COMPUTE_SHADER.contains("brdf_integrate"));
-    assert!(IBL_COMPUTE_SHADER.contains("textureLoad(ibl_src_equirect"));
-    assert!(IBL_COMPUTE_SHADER.contains("65504"));
-    assert!(IBL_COMPUTE_SHADER.contains("* IBL_PI"));
+    // Native semantics (1f4084a:src/shaders/ibl_*.wgsl): filtered equirect
+    // sampling, saturated irradiance/prefilter/LUT, the native split-sum term.
+    assert!(IBL_COMPUTE_SHADER.contains(
+        "textureSampleLevel(
+        ibl_src_equirect"
+    ));
+    assert!(IBL_COMPUTE_SHADER
+        .contains("irradiance = saturate(IBL_PI * irradiance / f32(sample_count));"));
+    assert!(IBL_COMPUTE_SHADER
+        .contains("prefiltered = saturate(prefiltered / max(total_weight, 1e-3));"));
+    assert!(IBL_COMPUTE_SHADER.contains("let g = (2.0 * n_dot_h * n_dot_v) / max(v_dot_h, 1e-5);"));
+    assert!(!IBL_COMPUTE_SHADER.contains("textureLoad(ibl_src_equirect"));
 }
 
 #[test]

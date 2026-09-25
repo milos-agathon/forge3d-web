@@ -4,7 +4,7 @@
   "manifestId": "forge3d-composite-baseline-v1",
   "sourcePlan": {
     "path": "docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md",
-    "sha256": "0b5ed36579c2f9102c8de8b9f0669d87a003f3c68af81eb5447f24d557d639ef"
+    "sha256": "15186a6dbfc523a287c0cb3c233dfeb56689490e1109291721034fac09d77980"
   },
   "baselineLayers": [
     {
@@ -654,7 +654,7 @@
       "title": "Terrain PBR, triplanar, POM, sampling and clamps",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W07",
       "nativeCapability": "Terrain PBR, triplanar, POM, sampling and clamps: 1f4084a:src/shaders/terrain_pbr_pom.wgsl, python/forge3d/terrain_pbr_pom.py, tests/test_terrain_viewer_pbr.py",
       "requiredWebOutcome": "Replace fixed relief shader with typed PBR/POM pipeline and matching defaults/validation",
@@ -677,7 +677,7 @@
       "title": "Material layers/noise/snow/rock/wetness/subsurface",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W07",
       "nativeCapability": "Material layers/noise/snow/rock/wetness/subsurface: 1f4084a:src/terrain/render_params/native_material.rs, tests/test_terrain_tv4_material_variation.py, tests/test_terrain_tv10_subsurface_materials.py",
       "requiredWebOutcome": "Add masks, scalar/textured inputs, variation, SSS and deterministic fallback diagnostics",
@@ -700,7 +700,7 @@
       "title": "Micro-detail and normal anti-aliasing",
       "lifecycle": "FP",
       "evidenceGrade": "B",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W07",
       "nativeCapability": "Micro-detail and normal anti-aliasing: 1f4084a:src/terrain/render_params/native_material.rs, src/shaders/terrain_pbr_pom.wgsl, tests/test_terrain_materials.py",
       "requiredWebOutcome": "Add detail normal/material modulation and specular AA quality tiers",
@@ -2576,7 +2576,7 @@
       "contract": "Replace fixed relief shader with typed PBR/POM pipeline and matching defaults/validation",
       "owner": "W07",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T05"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T05"
       ],
       "tests": [
         "port renderer/material/TV4/TV10/color goldens; zero-feature baseline; invalid parameters and missing-texture diagnostics; SSIM >= 0.98."
@@ -2589,7 +2589,7 @@
       "contract": "Add masks, scalar/textured inputs, variation, SSS and deterministic fallback diagnostics",
       "owner": "W07",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T06"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T06"
       ],
       "tests": [
         "port renderer/material/TV4/TV10/color goldens; zero-feature baseline; invalid parameters and missing-texture diagnostics; SSIM >= 0.98."
@@ -2602,7 +2602,7 @@
       "contract": "Add detail normal/material modulation and specular AA quality tiers",
       "owner": "W07",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T07"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T07"
       ],
       "tests": [
         "port renderer/material/TV4/TV10/color goldens; zero-feature baseline; invalid parameters and missing-texture diagnostics; SSIM >= 0.98."

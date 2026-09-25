@@ -6,6 +6,7 @@ import type {
   IblCacheBackend,
   IblCacheOptions,
   IblOptions,
+  IblPrefilterMode,
   IblPrecomputeTarget,
   IblPrecomputedSnapshot,
   IblQuality,
@@ -17,7 +18,7 @@ import type {
 export const IBL_MAX_SOURCE_DIMENSION = 16384;
 const MAX_SOURCE_PIXELS = IBL_MAX_SOURCE_DIMENSION * IBL_MAX_SOURCE_DIMENSION;
 const IBL_UNIFORM_BYTES = 32;
-const CACHE_SCHEMA_VERSION = 1;
+const CACHE_SCHEMA_VERSION = 2;
 const CACHE_MAGIC = "F3DIBL01";
 const CACHE_HEADER_BYTES = 76;
 const DEFAULT_CACHE_NAMESPACE = "forge3d-ibl-v1";
@@ -30,46 +31,31 @@ interface IblQualitySpec {
   specularSize: number;
   specularMipCount: number;
   brdfLutSize: number;
-  sampleCount: number;
+}
+
+// Native IBLQuality tiers (1f4084a:src/core/ibl.rs): the environment cube
+// matches the specular size and the BRDF LUT is 512 at every tier.
+function nativeTier(
+  quality: IblQuality,
+  irradianceSize: number,
+  specularSize: number,
+  specularMipCount: number,
+): IblQualitySpec {
+  return {
+    quality,
+    environmentSize: specularSize,
+    irradianceSize,
+    specularSize,
+    specularMipCount,
+    brdfLutSize: 512,
+  };
 }
 
 const IBL_QUALITY_SPECS: readonly IblQualitySpec[] = [
-  {
-    quality: "low",
-    environmentSize: 32,
-    irradianceSize: 8,
-    specularSize: 32,
-    specularMipCount: 4,
-    brdfLutSize: 32,
-    sampleCount: 32,
-  },
-  {
-    quality: "medium",
-    environmentSize: 64,
-    irradianceSize: 16,
-    specularSize: 64,
-    specularMipCount: 5,
-    brdfLutSize: 64,
-    sampleCount: 64,
-  },
-  {
-    quality: "high",
-    environmentSize: 128,
-    irradianceSize: 32,
-    specularSize: 128,
-    specularMipCount: 6,
-    brdfLutSize: 128,
-    sampleCount: 128,
-  },
-  {
-    quality: "ultra",
-    environmentSize: 256,
-    irradianceSize: 64,
-    specularSize: 256,
-    specularMipCount: 7,
-    brdfLutSize: 256,
-    sampleCount: 256,
-  },
+  nativeTier("low", 64, 128, 5),
+  nativeTier("medium", 128, 256, 6),
+  nativeTier("high", 256, 512, 7),
+  nativeTier("ultra", 256, 1024, 8),
 ];
 
 const IBL_QUALITY_INDEX: Record<IblQuality, number> = {
@@ -932,6 +918,7 @@ interface NormalizedIblSnapshot {
   rotationDegrees: number;
   requestedQuality: IblQuality;
   effectiveQuality: IblQuality;
+  prefilter: IblPrefilterMode;
   prepared: IblPrecomputedSnapshot | undefined;
   report: IblReport;
 }
@@ -972,6 +959,7 @@ function normalizeIblSnapshot(value: unknown): NormalizedIblSnapshot {
   }
   const requestedQuality = normalizeQuality(snapshot.requestedQuality);
   const effectiveQuality = normalizeQuality(snapshot.effectiveQuality);
+  const prefilter = normalizePrefilter(snapshot.prefilter);
   if (IBL_QUALITY_INDEX[effectiveQuality] > IBL_QUALITY_INDEX[requestedQuality]) {
     throw invalid("IBL effectiveQuality cannot exceed requestedQuality");
   }
@@ -1035,9 +1023,20 @@ function normalizeIblSnapshot(value: unknown): NormalizedIblSnapshot {
     rotationDegrees,
     requestedQuality,
     effectiveQuality,
+    prefilter,
     prepared,
     report: { ...report },
   };
+}
+
+function normalizePrefilter(value: unknown): IblPrefilterMode {
+  if (value === undefined || value === null) {
+    return "per-mip";
+  }
+  if (value !== "native" && value !== "per-mip") {
+    throw invalid("IBL prefilter must be 'native' or 'per-mip'");
+  }
+  return value;
 }
 
 export class ImageBasedLighting {
@@ -1048,6 +1047,7 @@ export class ImageBasedLighting {
   readonly #intensity: number;
   readonly #rotationDegrees: number;
   readonly #requestedQuality: IblQuality;
+  readonly #prefilter: IblPrefilterMode;
   readonly #prepared: IblPrecomputedSnapshot | undefined;
   readonly #report: IblReport;
 
@@ -1056,6 +1056,7 @@ export class ImageBasedLighting {
     intensity: number,
     rotationDegrees: number,
     requestedQuality: IblQuality,
+    prefilter: IblPrefilterMode,
     prepared: IblPrecomputedSnapshot | undefined,
     report: IblReport,
   ) {
@@ -1066,6 +1067,7 @@ export class ImageBasedLighting {
     this.#intensity = intensity;
     this.#rotationDegrees = rotationDegrees;
     this.#requestedQuality = requestedQuality;
+    this.#prefilter = prefilter;
     this.#prepared = prepared;
     this.#report = report;
   }
@@ -1095,6 +1097,7 @@ export class ImageBasedLighting {
       intensity,
       rotationDegrees,
       requestedQuality,
+      normalizePrefilter(options.prefilter),
       undefined,
       {
         requestedQuality,
@@ -1116,16 +1119,22 @@ export class ImageBasedLighting {
     return { ...this.#report };
   }
 
+  /** Specular prefilter schedule used for this environment. */
+  get prefilter(): IblPrefilterMode {
+    return this.#prefilter;
+  }
+
   async cacheKey(): Promise<string> {
     const encoder = new TextEncoder();
     const head = encoder.encode(this.#sourceHash);
-    const bytes = new Uint8Array(head.length + 16);
+    const bytes = new Uint8Array(head.length + 20);
     bytes.set(head, 0);
     const view = new DataView(bytes.buffer);
     view.setUint32(head.length, IBL_QUALITY_INDEX[this.#requestedQuality], true);
     view.setFloat32(head.length + 4, this.#intensity, true);
     view.setFloat32(head.length + 8, this.#rotationDegrees, true);
     view.setUint32(head.length + 12, CACHE_SCHEMA_VERSION, true);
+    view.setUint32(head.length + 16, this.#prefilter === "native" ? 0 : 1, true);
     return sha256Hex(bytes);
   }
 
@@ -1166,6 +1175,7 @@ export class ImageBasedLighting {
             this.#intensity,
             this.#rotationDegrees,
             this.#requestedQuality,
+            this.#prefilter,
             clonePrepared(hit),
             {
               requestedQuality: this.#requestedQuality,
@@ -1191,6 +1201,7 @@ export class ImageBasedLighting {
     }
     if (
       normalized.requestedQuality !== this.#requestedQuality ||
+      normalized.prefilter !== this.#prefilter ||
       Math.abs(normalized.intensity - this.#intensity) > 1e-4 ||
       Math.abs(normalized.rotationDegrees - this.#rotationDegrees) > 1e-4
     ) {
@@ -1209,6 +1220,7 @@ export class ImageBasedLighting {
       this.#intensity,
       this.#rotationDegrees,
       this.#requestedQuality,
+      this.#prefilter,
       normalized.prepared,
       {
         requestedQuality: this.#requestedQuality,
@@ -1234,6 +1246,7 @@ export class ImageBasedLighting {
       rotationDegrees: this.#rotationDegrees,
       requestedQuality: this.#requestedQuality,
       effectiveQuality: this.#report.effectiveQuality,
+      prefilter: this.#prefilter,
       report: { ...this.#report },
     };
     const prepared = clonePrepared(this.#prepared);
@@ -1249,6 +1262,7 @@ export class ImageBasedLighting {
       this.#intensity,
       this.#rotationDegrees,
       this.#requestedQuality,
+      this.#prefilter,
       clonePrepared(this.#prepared),
       { ...this.#report },
     );
@@ -1302,6 +1316,7 @@ export function iblFromSnapshot(snapshot: IblSnapshot): ImageBasedLighting {
       intensity: number,
       rotationDegrees: number,
       requestedQuality: IblQuality,
+      prefilter: IblPrefilterMode,
       prepared: IblPrecomputedSnapshot | undefined,
       report: IblReport,
     ): ImageBasedLighting;
@@ -1315,6 +1330,7 @@ export function iblFromSnapshot(snapshot: IblSnapshot): ImageBasedLighting {
     normalized.intensity,
     normalized.rotationDegrees,
     normalized.requestedQuality,
+    normalized.prefilter,
     normalized.prepared,
     normalized.report,
   );

@@ -47,6 +47,10 @@ import { LightCollection } from "./lighting.js";
 import { MaterialCollection } from "./materials.js";
 import { compileScenePasses } from "./render-graph.js";
 import { getTerrainColormap } from "./terrain-dataset.js";
+import {
+  estimateTerrainMaterialBytes,
+  normalizeTerrainMaterial,
+} from "./terrain-material.js";
 
 const IMPLICIT_PASS_KINDS = [
   "terrain",
@@ -955,6 +959,9 @@ function validateTerrain(terrain: TerrainHeightmapInput): void {
   ) {
     throw invalid("terrain renderMode must be 'perspective' or 'screen'");
   }
+  if (terrain.material !== undefined) {
+    normalizeTerrainMaterial(terrain.material);
+  }
 }
 
 function validateTerrainRamp(
@@ -1196,10 +1203,13 @@ function nodeByteEstimate(node: SceneNodeInput): number {
       const cells = checkedMultiply(node.terrain.width - 1, node.terrain.height - 1);
       return checkedAdd(
         checkedAdd(
-          node.terrain.heights.byteLength,
-          checkedMultiply(checkedMultiply(node.terrain.width, node.terrain.height), 20),
+          checkedAdd(
+            node.terrain.heights.byteLength,
+            checkedMultiply(checkedMultiply(node.terrain.width, node.terrain.height), 20),
+          ),
+          checkedMultiply(cells, 24),
         ),
-        checkedMultiply(cells, 24),
+        estimateTerrainMaterialBytes(node.terrain.material),
       );
     }
     case "ground-plane":

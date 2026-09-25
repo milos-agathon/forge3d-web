@@ -52,6 +52,13 @@ test("W04 lifecycle: atomic scene commits, camera validation, recovery replay", 
   expect(result.empty.shadowReason).toBe("shadows disabled");
   expect(result.empty.csmEnabled).toBe(false);
 
+  expect(result.cycles.count).toBe(30);
+  expect(result.cycles.peakLoaded).toBeGreaterThan(result.cycles.baseline);
+  expect(result.cycles.allReturned).toBe(true);
+  expect(result.cycles.allocationCount).toBe(
+    result.cycles.baselineAllocationCount,
+  );
+
   expect(result.recovery.status).toBe("ready");
   expect(result.recovery.generations).toBe(2);
   expect(result.recovery.byteEqual).toBe(true);
