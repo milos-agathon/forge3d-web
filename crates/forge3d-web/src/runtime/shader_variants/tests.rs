@@ -26,7 +26,7 @@ fn validate(label: &str, source: &str) {
 fn variant_sweep() -> Vec<ShaderFeatures> {
     let all = ShaderFeatures::ALL.bits();
     let mut sets = vec![all, 0];
-    for bit in 0..36 {
+    for bit in 0..41 {
         sets.push(1 << bit);
         sets.push(all & !(1 << bit));
     }

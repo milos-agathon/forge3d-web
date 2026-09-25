@@ -484,9 +484,14 @@
             bySize.get(key).push(variant);
           }
           const zero = {};
+          let fallbackAdapter = false;
           for (const [key, variants] of bySize) {
             const [internalWidth, internalHeight] = internalSize(data.scenes[variants[0].scene]);
             await withSession(internalWidth, internalHeight, async (session) => {
+              // wgpu's web backend reports no adapter details, so ask the
+              // browser whether this is a software (fallback) adapter.
+              const adapter = await navigator.gpu.requestAdapter();
+              fallbackAdapter ||= adapter?.info?.isFallbackAdapter === true;
               for (const variant of variants) {
                 const spec = data.scenes[variant.scene];
                 let rgba = await renderScene(session, spec, variant.material);
@@ -544,7 +549,7 @@
             }
           }
           for (const entry of Object.values(results)) delete entry.rgba;
-          return { ssimMin: data.tolerances.ssimMin, variants: results, zero };
+          return { ssimMin: data.tolerances.ssimMin, fallbackAdapter, variants: results, zero };
         },
 
         // Validation, diagnostics and the report contract.
@@ -770,7 +775,14 @@
             },
             specularAa: { quality: "high" },
           };
-          const out = {};
+          // Frame-time budgets bind to reference hardware; a software
+          // (fallback) adapter only records a short measurement.
+          const adapter = await navigator.gpu.requestAdapter();
+          const fallbackAdapter = adapter?.info?.isFallbackAdapter === true;
+          if (fallbackAdapter) {
+            frames = 5;
+          }
+          const out = { fallbackAdapter };
           for (const mode of ["screen", "perspective"]) {
             const runtime = await Forge3DRuntime.create(perfCanvas, {
               width: 1920,

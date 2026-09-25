@@ -118,7 +118,9 @@ fn specular_prefilter(@builtin(global_invocation_id) id: vec3<u32>) {
     var prefiltered = vec3<f32>(0.0);
     var total_weight = 0.0;
     let roughness = clamp(ibl_pass.roughness, 0.0, 1.0);
-    let sample_count = max(ibl_pass.sample_count, 1u);
+    // At roughness 0 every GGX sample is the normal itself (cos_theta == 1),
+    // so the native loop averages identical lookups: one sample is exact.
+    let sample_count = select(max(ibl_pass.sample_count, 1u), 1u, roughness == 0.0);
     for (var i = 0u; i < sample_count; i = i + 1u) {
         let xi = ibl_hammersley(i, sample_count);
         let half_dir = ibl_importance_ggx(xi, normal, roughness);

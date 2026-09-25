@@ -31,7 +31,39 @@ pub(super) struct TerrainMaterialReport {
     pub diagnostics: Vec<TerrainMaterialDiagnostic>,
 }
 
+/// Optional material shader regions a terrain can reach (each mirrors the
+/// uniform condition that already skips the region at runtime).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub(crate) struct TerrainMaterialRegions {
+    pub pom: bool,
+    pub detail: bool,
+    pub layers: bool,
+    pub debug: bool,
+    pub albedo: bool,
+}
+
+impl TerrainMaterialRegions {
+    fn for_material(material: Option<&TerrainMaterialOptions>, has_detail_map: bool) -> Self {
+        let Some(material) = material else {
+            return Self::default();
+        };
+        let s = &material.settings;
+        let debug = s.debug_view != forge3d_core::terrain_material::TerrainMaterialDebugView::None;
+        Self {
+            pom: s.pom.enabled && s.pom.scale > 0.0,
+            detail: s.detail.enabled || (has_detail_map && s.detail.detail_strength > 0.0),
+            layers: s.layers.snow_enabled || s.layers.rock_enabled || s.layers.wetness_enabled,
+            debug,
+            albedo: s.albedo_mode != forge3d_core::terrain_material::AlbedoMode::Colormap
+                || s.debug_view
+                    == forge3d_core::terrain_material::TerrainMaterialDebugView::MaterialAlbedo,
+        }
+    }
+}
+
 pub(super) struct TerrainMaterialResources {
+    /// Optional regions compiled into this terrain's pipeline.
+    pub regions: TerrainMaterialRegions,
     /// Whether the terrain shader runs the material region: always in screen
     /// mode (the native path, with the default material when none is set).
     pub shader_enabled: bool,
@@ -324,6 +356,7 @@ impl TerrainMaterialResources {
             ..wgpu::SamplerDescriptor::default()
         });
         Self {
+            regions: TerrainMaterialRegions::for_material(material, plan.report.detail_normal_map),
             shader_enabled: plan.report.enabled || screen,
             uniform_buffer,
             albedo_view: array_view(&albedo),
@@ -490,6 +523,42 @@ mod tests {
         );
         assert_eq!((plan.aux.width, plan.aux.height), (1, 1));
         assert_eq!(plan.report.gpu_bytes, uniform_bytes() + 4 + 8);
+    }
+
+    #[test]
+    fn shader_regions_follow_the_enabled_material_features() {
+        use forge3d_core::terrain_material::{
+            AlbedoMode, TerrainMaterialDebugView, TerrainMaterialSettings,
+        };
+        let options = |settings: TerrainMaterialSettings| TerrainMaterialOptions {
+            layer_images: vec![None; settings.material_set.len()],
+            settings,
+            detail_normal: None,
+            masks: [None, None, None],
+        };
+        assert_eq!(
+            TerrainMaterialRegions::for_material(None, false),
+            TerrainMaterialRegions::default()
+        );
+        // The zero-feature material reaches no optional region.
+        let defaults = options(TerrainMaterialSettings::default());
+        assert_eq!(
+            TerrainMaterialRegions::for_material(Some(&defaults), false),
+            TerrainMaterialRegions::default()
+        );
+        let mut settings = TerrainMaterialSettings::default();
+        settings.pom.enabled = true;
+        settings.layers.wetness_enabled = true;
+        settings.albedo_mode = AlbedoMode::Mix;
+        settings.detail.detail_strength = 0.5;
+        let regions = TerrainMaterialRegions::for_material(Some(&options(settings.clone())), false);
+        assert!(regions.pom && regions.layers && regions.albedo);
+        assert!(!regions.detail, "a detail strength without a map is inert");
+        assert!(TerrainMaterialRegions::for_material(Some(&options(settings)), true).detail);
+        let mut debug = TerrainMaterialSettings::default();
+        debug.debug_view = TerrainMaterialDebugView::MaterialAlbedo;
+        let regions = TerrainMaterialRegions::for_material(Some(&options(debug)), false);
+        assert!(regions.debug && regions.albedo);
     }
 
     #[test]

@@ -15,6 +15,8 @@ test("W04 lifecycle: atomic scene commits, camera validation, recovery replay", 
   webgpuAvailability,
 }) => {
   skipRenderAssertionsWhenProbing(webgpuAvailability);
+  // 30 IBL/shadow commit cycles; software adapters need the slow budget.
+  test.slow();
   const pageErrors: string[] = [];
   const consoleErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));

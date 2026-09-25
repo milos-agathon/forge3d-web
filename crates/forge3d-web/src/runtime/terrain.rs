@@ -864,6 +864,7 @@ impl TerrainRenderResources {
         features
             .with_terrain_mode(self.render_mode)
             .with_terrain_material(self.material.shader_enabled)
+            .with_terrain_material_regions(self.material.regions)
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -1001,7 +1002,8 @@ impl TerrainRenderResources {
                     forge3d_core::terrain::TerrainRenderMode::Perspective => 0,
                     forge3d_core::terrain::TerrainRenderMode::Screen => 1,
                 })
-                .with_terrain_material(material.shader_enabled),
+                .with_terrain_material(material.shader_enabled)
+                .with_terrain_material_regions(material.regions),
             surface_format,
         );
 

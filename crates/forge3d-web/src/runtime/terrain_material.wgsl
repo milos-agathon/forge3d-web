@@ -11,6 +11,9 @@
 // Browsers enforce derivative uniformity: every derivative is taken by the
 // front-end functions before the POM march (a separate function), and
 // `tm_shade` only uses explicit-gradient or explicit-level sampling.
+// Optional features (`tm_pom`, `tm_detail`, `tm_layers`, `tm_debug`,
+// `tm_albedo`) are specialized out of pipelines whose material cannot reach
+// them; each gate mirrors the uniform condition that already skips it.
 // Derivatives are coarse, as in the native 1.34 terrain shader, so the edge,
 // specular-AA and height-LOD terms are deterministic per 2x2 quad.
 
@@ -354,13 +357,21 @@ fn tm_material_set(
     result.albedo = vec3<f32>(0.0);
     result.roughness = 0.0;
     result.metallic = 0.0;
+    // Colormap albedo never reads the layer textures (only the material
+    // albedo debug view does), so skip the 12 triplanar fetches there.
+    let need_albedo = u32(terrain_material.control.y + 0.5) != 1u
+        || u32(terrain_material.debug.x + 0.5) == TM_DEBUG_MATERIAL_ALBEDO;
     for (var idx = 0; idx < 4; idx = idx + 1) {
         if (idx < layer_count) {
             let weight = weights[idx];
-            let sample_rgb = tm_sample_triplanar(
-                world_pos, triplanar_normal, tri_scale, tri_blend, idx, dpdx_world, dpdy_world,
-            );
-            result.albedo = result.albedo + sample_rgb * weight;
+            // #if tm_albedo
+            if (need_albedo) {
+                let sample_rgb = tm_sample_triplanar(
+                    world_pos, triplanar_normal, tri_scale, tri_blend, idx, dpdx_world, dpdy_world,
+                );
+                result.albedo = result.albedo + sample_rgb * weight;
+            }
+            // #endif
             result.roughness = result.roughness + terrain_material.layer_roughness[idx] * weight;
             result.metallic = result.metallic + terrain_material.layer_metallic[idx] * weight;
         }
@@ -917,6 +928,7 @@ fn tm_shade(surface: TmSurface) -> TerrainSample {
     }
     albedo = clamp(albedo, vec3<f32>(0.0), vec3<f32>(1.0));
 
+    // #if tm_detail
     let detail_enabled = terrain_material.detail0.x > 0.5;
     let albedo_noise = clamp(terrain_material.detail0.w, 0.0, 0.5);
     if (detail_enabled && albedo_noise > 0.0) {
@@ -929,8 +941,10 @@ fn tm_shade(surface: TmSurface) -> TerrainSample {
             );
         }
     }
+    // #endif
     albedo = screen_hue_variation(albedo, surface.slope_factor, height_norm, terrain_material.flags.w);
 
+    // #if tm_layers
     var masks = vec3<f32>(1.0);
     let mask_bits = u32(terrain_material.detail1.w + 0.5);
     if (mask_bits != 0u) {
@@ -947,6 +961,10 @@ fn tm_shade(surface: TmSurface) -> TerrainSample {
     let layer_weights = tm_layer_weights(surface.altitude, surface.attrs, noise, masks);
     let subsurface = tm_resolve_subsurface(layer_weights);
     albedo = tm_apply_layers(albedo, layer_weights);
+    // #else
+    let layer_weights = TmLayerWeights(0.0, 0.0, 0.0);
+    let subsurface = TmSubsurface(0.0, vec3<f32>(1.0));
+    // #endif
     occlusion = clamp(occlusion, terrain_material.clamp2.x, terrain_material.clamp2.y);
 
     // P3 split roughness: Toksvig only widens the specular lobe.
@@ -965,6 +983,7 @@ fn tm_shade(surface: TmSurface) -> TerrainSample {
     let metallic = clamp(material.metallic, 0.0, 1.0);
     let f0 = mix(vec3<f32>(0.04, 0.04, 0.04), albedo, metallic);
 
+    // #if tm_debug
     let debug_view = u32(terrain_material.debug.x + 0.5);
     if (debug_view != 0u) {
         var debug_rgb = vec3<f32>(0.0);
@@ -998,6 +1017,7 @@ fn tm_shade(surface: TmSurface) -> TerrainSample {
         debug_sample.covered = surface.covered;
         return debug_sample;
     }
+    // #endif
 
     // Terrain land composition (P2-S4 structure).
     let shadow_clamped = max(surface.shadow_factor, 0.30);
@@ -1029,7 +1049,9 @@ fn tm_shade(surface: TmSurface) -> TerrainSample {
     );
     let ibl_diffuse_factor = length(ibl_split.diffuse) * forge3d_ibl.intensity;
     let ibl_term = ibl_diffuse_factor * TM_AMBIENT_FLOOR * 0.35;
-    let terrain_sss = tm_evaluate_subsurface(
+    var terrain_sss = vec3<f32>(0.0);
+    // #if tm_layers
+    terrain_sss = tm_evaluate_subsurface(
         subsurface,
         albedo,
         surface.shading_normal,
@@ -1038,6 +1060,7 @@ fn tm_shade(surface: TmSurface) -> TerrainSample {
         combined_shadow,
         ibl_diffuse_factor,
     );
+    // #endif
     let lighting_factor = diffuse_lit + ibl_term;
     let lit_albedo = albedo * lighting_factor;
     let spec_contrib = ibl_split.specular * forge3d_ibl.intensity * 0.12;
@@ -1095,13 +1118,19 @@ fn tm_screen_sample(input: VertexOutput) -> TerrainSample {
     let view_vector = camera.camera_position.xyz - world_pos;
     let view_dir = normalize(view_vector);
     let view_distance = length(view_vector);
-    let shading_normal = tm_detail_normals(blended_normal, world_pos, uv, view_distance, duv_dx, duv_dy);
+    var shading_normal = blended_normal;
+    // #if tm_detail
+    shading_normal = tm_detail_normals(blended_normal, world_pos, uv, view_distance, duv_dx, duv_dy);
+    // #endif
     let dndx = dpdxCoarse(shading_normal);
     let dndy = dpdyCoarse(shading_normal);
 
     // Native multiplies the tangent-to-world matrix by the view vector.
     let tbn = tm_build_tbn(blended_normal);
-    let parallax_uv = clamp(tm_pom(uv, tbn * view_dir), vec2<f32>(0.0), vec2<f32>(1.0));
+    var parallax_uv = clamp(uv, vec2<f32>(0.0), vec2<f32>(1.0));
+    // #if tm_pom
+    parallax_uv = clamp(tm_pom(uv, tbn * view_dir), vec2<f32>(0.0), vec2<f32>(1.0));
+    // #endif
 
     let light = tm_primary_light();
     let light_dir = forge3d_safe_direction(vec3<f32>(-light.travel.x, light.travel.z, -light.travel.y));
@@ -1168,13 +1197,19 @@ fn tm_perspective_sample(input: VertexOutput) -> TerrainSample {
         view_distance = abs(dot(camera.camera_forward.xyz, world_pos - camera.camera_position.xyz));
     }
     let view_dir = forge3d_safe_direction(view_vector);
-    let shading_normal = tm_detail_normals(blended_normal, world_pos, uv, view_distance, duv_dx, duv_dy);
+    var shading_normal = blended_normal;
+    // #if tm_detail
+    shading_normal = tm_detail_normals(blended_normal, world_pos, uv, view_distance, duv_dx, duv_dy);
+    // #endif
     let dndx = dpdxCoarse(shading_normal);
     let dndy = dpdyCoarse(shading_normal);
 
     // Heightfield tangent frame: +U along world +X, +V along world +Z.
     let view_dir_tangent = vec3<f32>(view_dir.x, view_dir.z, view_dir.y);
-    let parallax_uv = clamp(tm_pom(uv, view_dir_tangent), vec2<f32>(0.0), vec2<f32>(1.0));
+    var parallax_uv = clamp(uv, vec2<f32>(0.0), vec2<f32>(1.0));
+    // #if tm_pom
+    parallax_uv = clamp(tm_pom(uv, view_dir_tangent), vec2<f32>(0.0), vec2<f32>(1.0));
+    // #endif
 
     let light = tm_primary_light();
     let light_dir = forge3d_safe_direction(-light.travel);

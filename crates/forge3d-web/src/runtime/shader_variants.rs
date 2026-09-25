@@ -42,8 +42,15 @@ const TERRAIN_PERSPECTIVE: u64 = 1 << 33;
 const CAPTURE: u64 = 1 << 34;
 /// Terrain PBR/POM material pipeline (W07).
 const TERRAIN_MATERIAL: u64 = 1 << 35;
+/// Optional terrain-material regions (W07).
+const TM_POM: u64 = 1 << 36;
+const TM_DETAIL: u64 = 1 << 37;
+const TM_LAYERS: u64 = 1 << 38;
+const TM_DEBUG: u64 = 1 << 39;
+const TM_ALBEDO: u64 = 1 << 40;
+const TM_ALL: u64 = TM_POM | TM_DETAIL | TM_LAYERS | TM_DEBUG | TM_ALBEDO;
 #[cfg(test)]
-const ALL_BITS: u64 = (1 << 36) - 1;
+const ALL_BITS: u64 = (1 << 41) - 1;
 
 impl ShaderFeatures {
     /// Every region: the unspecialized template.
@@ -127,6 +134,19 @@ impl ShaderFeatures {
         Self(self.0 & !TERRAIN_MATERIAL).with(TERRAIN_MATERIAL, enabled)
     }
 
+    /// Replaces the optional terrain-material regions.
+    pub(crate) fn with_terrain_material_regions(
+        self,
+        regions: super::terrain_material::TerrainMaterialRegions,
+    ) -> Self {
+        Self(self.0 & !TM_ALL)
+            .with(TM_POM, regions.pom)
+            .with(TM_DETAIL, regions.detail)
+            .with(TM_LAYERS, regions.layers)
+            .with(TM_DEBUG, regions.debug)
+            .with(TM_ALBEDO, regions.albedo)
+    }
+
     /// Adds the offline capture entry points and capture-only uniform fields.
     #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
     pub(crate) fn with_capture(self) -> Self {
@@ -152,6 +172,11 @@ impl ShaderFeatures {
             "terrain_perspective" => TERRAIN_PERSPECTIVE,
             "capture" => CAPTURE,
             "terrain_material" => TERRAIN_MATERIAL,
+            "tm_pom" => TM_POM,
+            "tm_detail" => TM_DETAIL,
+            "tm_layers" => TM_LAYERS,
+            "tm_debug" => TM_DEBUG,
+            "tm_albedo" => TM_ALBEDO,
             other => {
                 if let Some(model) = other.strip_prefix("brdf_") {
                     let model: u32 = model.parse().expect("brdf feature index");

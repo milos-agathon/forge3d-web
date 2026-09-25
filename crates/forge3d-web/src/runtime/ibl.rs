@@ -1299,6 +1299,47 @@ struct IblReadbackJob {
     regions: Vec<IblReadbackRegion>,
 }
 
+/// The split-sum BRDF LUT depends only on its size and sample count, yet it
+/// is the dominant precompute cost (512^2 texels x 1024 samples). IBL builds
+/// on the same device share one LUT texture; each IBL still accounts it in its
+/// retained bytes, and disabling IBL drops the cache so no copy outlives the
+/// resources that account it.
+struct CachedBrdfLut {
+    device: wgpu::Device,
+    size: u32,
+    samples: u32,
+    texture: wgpu::Texture,
+}
+
+thread_local! {
+    static BRDF_LUT_CACHE: std::cell::RefCell<Option<CachedBrdfLut>> =
+        const { std::cell::RefCell::new(None) };
+}
+
+fn cached_brdf_lut(device: &wgpu::Device, size: u32, samples: u32) -> Option<wgpu::Texture> {
+    BRDF_LUT_CACHE.with(|cache| {
+        cache.borrow().as_ref().and_then(|entry| {
+            (entry.device == *device && entry.size == size && entry.samples == samples)
+                .then(|| entry.texture.clone())
+        })
+    })
+}
+
+fn store_brdf_lut(device: &wgpu::Device, size: u32, samples: u32, texture: &wgpu::Texture) {
+    BRDF_LUT_CACHE.with(|cache| {
+        *cache.borrow_mut() = Some(CachedBrdfLut {
+            device: device.clone(),
+            size,
+            samples,
+            texture: texture.clone(),
+        });
+    });
+}
+
+pub(super) fn clear_brdf_lut_cache() {
+    BRDF_LUT_CACHE.with(|cache| cache.borrow_mut().take());
+}
+
 struct IblComputeOutput {
     irradiance: wgpu::Texture,
     specular: wgpu::Texture,
@@ -1416,21 +1457,25 @@ fn run_ibl_compute(
             | wgpu::TextureUsages::TEXTURE_BINDING
             | wgpu::TextureUsages::COPY_SRC,
     );
-    let brdf_lut = device.create_texture(&wgpu::TextureDescriptor {
-        label: Some("forge3d-ibl-brdf-lut"),
-        size: wgpu::Extent3d {
-            width: spec.brdf_lut,
-            height: spec.brdf_lut,
-            depth_or_array_layers: 1,
-        },
-        mip_level_count: 1,
-        sample_count: 1,
-        dimension: wgpu::TextureDimension::D2,
-        format: wgpu::TextureFormat::Rgba16Float,
-        usage: wgpu::TextureUsages::STORAGE_BINDING
-            | wgpu::TextureUsages::TEXTURE_BINDING
-            | wgpu::TextureUsages::COPY_SRC,
-        view_formats: &[],
+    let cached_lut = cached_brdf_lut(device, spec.brdf_lut, spec.brdf_samples);
+    let lut_cache_hit = cached_lut.is_some();
+    let brdf_lut = cached_lut.unwrap_or_else(|| {
+        device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("forge3d-ibl-brdf-lut"),
+            size: wgpu::Extent3d {
+                width: spec.brdf_lut,
+                height: spec.brdf_lut,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba16Float,
+            usage: wgpu::TextureUsages::STORAGE_BINDING
+                | wgpu::TextureUsages::TEXTURE_BINDING
+                | wgpu::TextureUsages::COPY_SRC,
+            view_formats: &[],
+        })
     });
 
     let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -1753,10 +1798,15 @@ fn run_ibl_compute(
             pass.set_bind_group(0, bind_group, &[]);
             pass.dispatch_workgroups(groups, groups, 6);
         }
-        pass.set_pipeline(&lut_pipeline);
-        pass.set_bind_group(0, &lut_bind_group, &[]);
-        let groups = dispatch_groups(spec.brdf_lut);
-        pass.dispatch_workgroups(groups, groups, 1);
+        if !lut_cache_hit {
+            pass.set_pipeline(&lut_pipeline);
+            pass.set_bind_group(0, &lut_bind_group, &[]);
+            let groups = dispatch_groups(spec.brdf_lut);
+            pass.dispatch_workgroups(groups, groups, 1);
+        }
+    }
+    if !lut_cache_hit {
+        store_brdf_lut(device, spec.brdf_lut, spec.brdf_samples, &brdf_lut);
     }
 
     if readback {
@@ -1942,7 +1992,10 @@ pub(super) fn build_ibl_resources(
     shadows: &super::shadows::ShadowResources,
 ) -> Result<IblResources, WebError> {
     match parsed {
-        None => Ok(IblResources::disabled(context, layout, shadows)),
+        None => {
+            clear_brdf_lut_cache();
+            Ok(IblResources::disabled(context, layout, shadows))
+        }
         Some(ibl) => match &ibl.prepared {
             Some(prepared) => build_prepared_ibl(context, layout, ibl, prepared, shadows),
             None => {
