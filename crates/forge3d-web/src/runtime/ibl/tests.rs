@@ -367,10 +367,9 @@ fn compute_shader_uses_8x8_workgroups_and_rgba16float_outputs() {
     assert!(IBL_COMPUTE_SHADER.contains("brdf_integrate"));
     // Native semantics (1f4084a:src/shaders/ibl_*.wgsl): filtered equirect
     // sampling, saturated irradiance/prefilter/LUT, the native split-sum term.
-    assert!(IBL_COMPUTE_SHADER.contains(
-        "textureSampleLevel(
-        ibl_src_equirect"
-    ));
+    // Line endings vary by checkout (CRLF on CI), so compare normalized text.
+    let shader = IBL_COMPUTE_SHADER.replace("\r\n", "\n");
+    assert!(shader.contains("textureSampleLevel(\n        ibl_src_equirect"));
     assert!(IBL_COMPUTE_SHADER
         .contains("irradiance = saturate(IBL_PI * irradiance / f32(sample_count));"));
     assert!(IBL_COMPUTE_SHADER
