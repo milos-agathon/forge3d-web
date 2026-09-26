@@ -139,7 +139,7 @@ test.describe("W07 terrain PBR/POM and layered materials", () => {
     expect(r.cycles.allReturned).toBe(true);
     expect(r.recovery.status).toBe("ready");
     expect(r.recovery.generations).toBe(2);
-    expect(r.recovery.byteEqual).toBe(true);
+    expect(r.recovery.byteEqual, `device-loss replay diff ${JSON.stringify(r.recovery)}`).toBe(true);
     expect(r.recovery.reportEqual).toBe(true);
     const codes = r.budget.report.diagnostics.map((d: any) => d.code);
     expect(codes).toContain("terrain-material-texture-downscaled");

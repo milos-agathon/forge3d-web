@@ -793,10 +793,23 @@
               }
               session.render();
               const after = await session.readRgba();
+              let differing = 0;
+              let maxDiff = 0;
+              let firstPixel = -1;
+              for (let index = 0; index < before.length; index += 1) {
+                const diff = Math.abs(before[index] - after[index]);
+                if (diff === 0) continue;
+                differing += 1;
+                maxDiff = Math.max(maxDiff, diff);
+                if (firstPixel < 0) firstPixel = index >> 2;
+              }
               out.recovery = {
                 status: session.status,
                 generations: createdRuntimes.length,
                 byteEqual: bytesEqual(before, after),
+                differing,
+                maxDiff,
+                firstPixel: firstPixel < 0 ? null : { x: firstPixel % spec.width, y: Math.floor(firstPixel / spec.width) },
                 reportEqual: JSON.stringify(reportBefore) === JSON.stringify(session.getTerrainMaterialReport()),
               };
               void heights;
