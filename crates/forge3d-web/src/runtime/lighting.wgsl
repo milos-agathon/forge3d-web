@@ -35,8 +35,8 @@ struct MaterialUniform {
 };
 @group(1) @binding(0) var<storage, read> forge3d_lights: array<PackedLight>;
 @group(1) @binding(1) var<uniform> forge3d_lighting: LightingUniform;
-@group(1) @binding(2) var forge3d_ltc_matrix: texture_2d<f32>;
-@group(1) @binding(3) var forge3d_ltc_amplitude: texture_2d<f32>;
+// LTC LUT: rows 0..64 = matrix, rows 64..128 = amplitude (.r).
+@group(1) @binding(2) var forge3d_ltc_lut: texture_2d<f32>;
 @group(1) @binding(4) var forge3d_ltc_sampler: sampler;
 @group(1) @binding(5) var<storage, read> forge3d_materials: array<PackedMaterial>;
 @group(1) @binding(6) var<uniform> forge3d_material_meta: MaterialUniform;
@@ -88,38 +88,42 @@ fn forge3d_radial_falloff(
     mode: u32,
     exponent: f32,
 ) -> f32 {
-    if (distance <= inner_radius) {
-        return 1.0;
+    // Lane 4: the native light-buffer attenuation (inverse square with a
+    // quadratic range window); soft radius controls do not apply.
+    if (mode == 4u) {
+        let ratio = clamp(distance / max(range, 1e-4), 0.0, 1.0);
+        return (1.0 - ratio * ratio) / max(distance * distance, 1e-4);
     }
-    if (distance <= range) {
-        let x = clamp(
-            (distance - inner_radius) / max(range - inner_radius, 1e-5),
-            0.0,
-            1.0,
-        );
+    // Lanes 0-3: the native soft-light-radius curves. The light reaches zero
+    // at `range`; edge softness only widens the smoothstep window.
+    if (distance >= range) {
+        return 0.0;
+    }
+    var falloff = 1.0;
+    if (distance > inner_radius) {
+        let t = (distance - inner_radius) / max(range - inner_radius, 1e-5);
         switch mode {
             case 0u: {
-                return 1.0 - x;
+                falloff = 1.0 - t;
             }
             case 2u: {
-                let t = 1.0 - x;
-                return t * t * t;
+                falloff = 1.0 - t * t * t;
             }
             case 3u: {
-                return exp(-exponent * x);
+                falloff = exp(-exponent * t);
             }
             default: {
-                let t = 1.0 - x;
-                return t * t;
+                falloff = pow(1.0 - t, exponent);
             }
         }
     }
-    var at_one = 0.0;
-    if (mode == 3u) {
-        at_one = exp(-exponent);
+    if (edge_softness > 0.0) {
+        let soft_outer = range + edge_softness;
+        let soft_inner = inner_radius - edge_softness;
+        let s = clamp((distance - soft_outer) / (soft_inner - soft_outer), 0.0, 1.0);
+        falloff = falloff * s * s * (3.0 - 2.0 * s);
     }
-    let edge_fade = 1.0 - (distance - range) / max(edge_softness, 1e-5);
-    return at_one * max(edge_fade, 0.0);
+    return falloff;
 }
 
 fn forge3d_evaluate_lighting(
@@ -259,7 +263,6 @@ fn forge3d_evaluate_lighting(
                     let t = clamp((cone_cos - outer_cos) / span, 0.0, 1.0);
                     falloff = falloff * t * t * (3.0 - 2.0 * t);
                 }
-                falloff = falloff / max(light_distance * light_distance, 1.0);
                 let lambert = max(dot(n, to_light), 0.0);
                 contribution = forge3d_eval_brdf(
                     material.effective_brdf,
@@ -309,13 +312,13 @@ fn forge3d_evaluate_lighting(
                         32,
                     );
                     let matrix_term = textureLoad(
-                        forge3d_ltc_matrix,
+                        forge3d_ltc_lut,
                         lut_coord,
                         0,
                     );
                     let amplitude_term = textureLoad(
-                        forge3d_ltc_amplitude,
-                        lut_coord,
+                        forge3d_ltc_lut,
+                        lut_coord + vec2<i32>(0, 64),
                         0,
                     ).r;
                     let lobe = max(

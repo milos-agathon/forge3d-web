@@ -252,6 +252,8 @@ __pycache__/
 !tests/golden/terrain/*.png
 !crates/forge3d-web/tests/golden/
 !crates/forge3d-web/tests/golden/*.png
+!crates/forge3d-web/tests/golden/w07/
+!crates/forge3d-web/tests/golden/w07/*.png
 !docs/gallery/images/*.png
 !docs/gallery/images/*.jpg
 !docs/gallery/thumbs/*.png

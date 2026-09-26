@@ -9,3 +9,5 @@ scripts/*.mjs text eol=lf
 tools/browser-lab-controller/services/*.mjs text eol=lf
 tools/browser-lab-controller/services/*.ps1 text eol=lf
 crates/forge3d-web/tests/golden/*.bin binary
+crates/forge3d-web/tests/golden/w07/*.f32 binary
+crates/forge3d-web/tests/golden/w07/*.png binary

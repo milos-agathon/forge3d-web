@@ -17,6 +17,7 @@ import {
   normalizeRenderStats,
 } from "./native-reports.js";
 import { getTerrainColormap, TerrainDataset } from "./terrain-dataset.js";
+import { normalizeTerrainMaterial } from "./terrain-material.js";
 import type { TextureSet } from "./textures.js";
 import { cloneCameraInput } from "./camera.js";
 
@@ -185,6 +186,8 @@ export interface TerrainHeightmapInput {
   sunVisibility?: SunVisibilityOptions;
   debugView?: TerrainDebugView;
   renderMode?: TerrainRenderMode;
+  /** Terrain PBR/POM material; omitted keeps the unmaterialed terrain. */
+  material?: TerrainMaterialInput;
 }
 
 export interface TerrainColorRampInput {
@@ -207,6 +210,278 @@ export type TerrainColormapInput = TerrainColormapName | TerrainColorRampInput;
 export type TerrainDebugView = "none" | "height-ao" | "sun-visibility";
 
 export type TerrainRenderMode = "perspective" | "screen";
+
+export type TerrainAlbedoMode = "material" | "colormap" | "mix";
+export type TerrainPomMode = "occlusion" | "relief" | "parallax";
+export type TerrainHeightCurveMode = "linear" | "pow" | "smoothstep" | "lut";
+export type TerrainSamplingFilter = "linear" | "nearest";
+export type TerrainSamplingAddress = "repeat" | "clamp-to-edge" | "mirror-repeat";
+export type TerrainSpecularAaQuality = "off" | "native" | "medium" | "high";
+export type TerrainMaterialDebugView =
+  | "none"
+  | "material-albedo"
+  | "triplanar-weights"
+  | "triplanar-checker"
+  | "pom-offset"
+  | "specular-aa-variance"
+  | "roughness"
+  | "layer-weights"
+  | "subsurface";
+
+/** Decoded RGBA8 image (albedo is sRGB-encoded, normal maps are linear). */
+export interface TerrainMaterialImage {
+  width: number;
+  height: number;
+  data: Uint8Array;
+}
+
+/** Decoded single-channel coverage mask in terrain UV space. */
+export interface TerrainMaterialMask {
+  width: number;
+  height: number;
+  data: Uint8Array;
+}
+
+export interface TerrainMaterialLayerInput {
+  baseColor?: [number, number, number];
+  roughness?: number;
+  metallic?: number;
+  texture?: TerrainMaterialImage | null;
+}
+
+export interface TerrainTriplanarInput {
+  scale?: number;
+  blendSharpness?: number;
+  normalStrength?: number;
+}
+
+export interface TerrainPomInput {
+  enabled?: boolean;
+  mode?: TerrainPomMode;
+  scale?: number;
+  minSteps?: number;
+  maxSteps?: number;
+  refineSteps?: number;
+  shadow?: boolean;
+  occlusion?: boolean;
+}
+
+export interface TerrainLodInput {
+  level?: number;
+  bias?: number;
+  lod0Bias?: number;
+}
+
+export interface TerrainSamplingInput {
+  magFilter?: TerrainSamplingFilter;
+  minFilter?: TerrainSamplingFilter;
+  mipFilter?: TerrainSamplingFilter;
+  anisotropy?: number;
+  addressU?: TerrainSamplingAddress;
+  addressV?: TerrainSamplingAddress;
+  addressW?: TerrainSamplingAddress;
+}
+
+export interface TerrainClampInput {
+  /** Defaults to the terrain height domain. */
+  heightRange?: [number, number] | null;
+  slopeRange?: [number, number];
+  ambientRange?: [number, number];
+  shadowRange?: [number, number];
+  occlusionRange?: [number, number];
+}
+
+export interface TerrainHeightCurveInput {
+  mode?: TerrainHeightCurveMode;
+  strength?: number;
+  power?: number;
+  /** 256 values in [0, 1]; required when `mode` is `"lut"`. */
+  lut?: Float32Array | number[] | null;
+}
+
+export interface TerrainSnowLayerInput {
+  enabled?: boolean;
+  altitudeMin?: number;
+  altitudeBlend?: number;
+  slopeMax?: number;
+  slopeBlend?: number;
+  aspectInfluence?: number;
+  color?: [number, number, number];
+  roughness?: number;
+  subsurfaceStrength?: number;
+  subsurfaceTint?: [number, number, number];
+  mask?: TerrainMaterialMask | null;
+}
+
+export interface TerrainRockLayerInput {
+  enabled?: boolean;
+  slopeMin?: number;
+  slopeBlend?: number;
+  color?: [number, number, number];
+  roughness?: number;
+  subsurfaceStrength?: number;
+  subsurfaceTint?: [number, number, number];
+  mask?: TerrainMaterialMask | null;
+}
+
+export interface TerrainWetnessLayerInput {
+  enabled?: boolean;
+  strength?: number;
+  slopeInfluence?: number;
+  subsurfaceStrength?: number;
+  subsurfaceTint?: [number, number, number];
+  mask?: TerrainMaterialMask | null;
+}
+
+export interface TerrainMaterialNoiseInput {
+  macroScale?: number;
+  detailScale?: number;
+  octaves?: number;
+  snowMacroAmplitude?: number;
+  snowDetailAmplitude?: number;
+  rockMacroAmplitude?: number;
+  rockDetailAmplitude?: number;
+  wetnessMacroAmplitude?: number;
+  wetnessDetailAmplitude?: number;
+}
+
+export interface TerrainMaterialLayersInput {
+  snow?: TerrainSnowLayerInput;
+  rock?: TerrainRockLayerInput;
+  wetness?: TerrainWetnessLayerInput;
+  variation?: TerrainMaterialNoiseInput;
+}
+
+export interface TerrainDetailInput {
+  enabled?: boolean;
+  scale?: number;
+  normalStrength?: number;
+  albedoNoise?: number;
+  fadeStart?: number;
+  fadeEnd?: number;
+  sigmaPx?: number;
+  /** Blend strength of `normalMap` (0 disables it). */
+  strength?: number;
+  normalMap?: TerrainMaterialImage | null;
+}
+
+export interface TerrainSpecularAaInput {
+  quality?: TerrainSpecularAaQuality;
+  sigmaScale?: number;
+}
+
+/**
+ * Terrain PBR/POM material (native `TerrainRenderParams` material fields).
+ * Every field is optional; omitted fields take the native defaults, and the
+ * all-default material reproduces the unmaterialed terrain image.
+ */
+export interface TerrainMaterialInput {
+  albedoMode?: TerrainAlbedoMode;
+  colormapStrength?: number;
+  gamma?: number;
+  colormapSrgb?: boolean;
+  outputSrgbEotf?: boolean;
+  lambertContrast?: number;
+  roughnessMultiplier?: number;
+  hueVariation?: number;
+  /** 1-4 layers; defaults to the native rock/grass/dirt/snow set. */
+  materialSet?: TerrainMaterialLayerInput[];
+  triplanar?: TerrainTriplanarInput;
+  pom?: TerrainPomInput;
+  lod?: TerrainLodInput;
+  sampling?: TerrainSamplingInput;
+  clamp?: TerrainClampInput;
+  heightCurve?: TerrainHeightCurveInput;
+  layers?: TerrainMaterialLayersInput;
+  detail?: TerrainDetailInput;
+  specularAa?: TerrainSpecularAaInput;
+  debugView?: TerrainMaterialDebugView;
+}
+
+export interface TerrainMaterialLayerSnapshot {
+  baseColor: [number, number, number];
+  roughness: number;
+  metallic: number;
+  texture: TerrainMaterialImage | null;
+}
+
+/** Fully resolved, validated terrain material. */
+export interface TerrainMaterialSnapshot {
+  albedoMode: TerrainAlbedoMode;
+  colormapStrength: number;
+  gamma: number;
+  colormapSrgb: boolean;
+  outputSrgbEotf: boolean;
+  lambertContrast: number;
+  roughnessMultiplier: number;
+  hueVariation: number;
+  materialSet: TerrainMaterialLayerSnapshot[];
+  triplanar: Required<TerrainTriplanarInput>;
+  pom: Required<TerrainPomInput>;
+  lod: Required<TerrainLodInput>;
+  sampling: Required<TerrainSamplingInput>;
+  clamp: {
+    heightRange: [number, number] | null;
+    slopeRange: [number, number];
+    ambientRange: [number, number];
+    shadowRange: [number, number];
+    occlusionRange: [number, number];
+  };
+  heightCurve: {
+    mode: TerrainHeightCurveMode;
+    strength: number;
+    power: number;
+    lut: Float32Array | null;
+  };
+  layers: {
+    snow: Required<Omit<TerrainSnowLayerInput, "mask">> & {
+      mask: TerrainMaterialMask | null;
+    };
+    rock: Required<Omit<TerrainRockLayerInput, "mask">> & {
+      mask: TerrainMaterialMask | null;
+    };
+    wetness: Required<Omit<TerrainWetnessLayerInput, "mask">> & {
+      mask: TerrainMaterialMask | null;
+    };
+    variation: Required<TerrainMaterialNoiseInput>;
+  };
+  detail: Required<Omit<TerrainDetailInput, "normalMap">> & {
+    normalMap: TerrainMaterialImage | null;
+  };
+  specularAa: Required<TerrainSpecularAaInput>;
+  debugView: TerrainMaterialDebugView;
+}
+
+export type TerrainMaterialDiagnosticCode =
+  | "terrain-material-texture-invalid"
+  | "terrain-material-texture-resampled"
+  | "terrain-material-texture-downscaled"
+  | "terrain-material-texture-missing"
+  | "terrain-material-detail-normal-invalid"
+  | "terrain-material-detail-normal-missing"
+  | "terrain-material-mask-invalid"
+  | "terrain-material-aux-downscaled"
+  | "terrain-material-pom-mode-approximated";
+
+export interface TerrainMaterialDiagnostic {
+  code: TerrainMaterialDiagnosticCode;
+  message: string;
+  layer?: number;
+}
+
+/** What the runtime actually bound for the committed terrain material. */
+export interface TerrainMaterialReport {
+  enabled: boolean;
+  layerCount: number;
+  texturedLayers: boolean[];
+  textureWidth: number;
+  textureHeight: number;
+  mipLevels: number;
+  maskChannels: ("snow" | "rock" | "wetness")[];
+  detailNormalMap: boolean;
+  gpuBytes: number;
+  diagnostics: TerrainMaterialDiagnostic[];
+}
 
 export interface TerrainStatistics {
   min: number;
@@ -344,6 +619,8 @@ export interface TerrainHeightmapSourceInput {
   sunVisibility?: SunVisibilityOptions;
   debugView?: TerrainDebugView;
   renderMode?: TerrainRenderMode;
+  /** Terrain PBR/POM material; omitted keeps the unmaterialed terrain. */
+  material?: TerrainMaterialInput;
 }
 
 export interface CameraInput {
@@ -942,6 +1219,7 @@ export type RendererPresetName =
 export type LightId = number;
 export type LightType = "directional" | "point" | "spot" | "rect";
 export type SoftLightFalloff =
+  | "inverse-square"
   | "linear"
   | "quadratic"
   | "cubic"
@@ -1460,10 +1738,18 @@ export interface RgbeImage {
   height: number;
   data: Float32Array;
 }
+/**
+ * Specular prefilter schedule. `per-mip` (default) filters every mip at its
+ * own roughness. `native` reproduces a native renderer bug for oracle
+ * comparisons: every prefilter pass reads the last mip's parameters, so each
+ * mip only receives a small corner of the roughest lobe and the rest is zero.
+ */
+export type IblPrefilterMode = "native" | "per-mip";
 export interface IblOptions {
   quality?: IblQuality;
   intensity?: number;
   rotationDegrees?: number;
+  prefilter?: IblPrefilterMode;
 }
 export interface IblSourceSnapshot {
   width: number;
@@ -1496,6 +1782,8 @@ export interface IblSnapshot {
   rotationDegrees: number;
   requestedQuality: IblQuality;
   effectiveQuality: IblQuality;
+  /** Defaults to `per-mip` when absent. */
+  prefilter?: IblPrefilterMode;
   prepared?: IblPrecomputedSnapshot;
   report: IblReport;
 }
@@ -1753,6 +2041,7 @@ interface WasmRuntime {
   precomputeIbl?(input: IblSnapshot): Promise<IblSnapshot>;
   setShadows?(shadows: ShadowSnapshot): void;
   getShadowReport?(): ShadowReport;
+  getTerrainMaterialReport?(): TerrainMaterialReport;
   setCamera(camera: CameraInput): void;
   resize(size: ResizeInput): void;
   render(): boolean;
@@ -2173,6 +2462,18 @@ export class Forge3DRuntime {
     return this.#inner.getShadowReport.call(this.#inner);
   }
 
+  /** What the runtime bound for the committed terrain material. */
+  getTerrainMaterialReport(): TerrainMaterialReport {
+    this.#assertNotDisposed();
+    if (this.#inner.getTerrainMaterialReport === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not report terrain material state",
+      );
+    }
+    return this.#inner.getTerrainMaterialReport.call(this.#inner);
+  }
+
   getRenderStats(): RenderStats {
     const getRenderStats = this.#inner.getRenderStats;
     if (getRenderStats === undefined) {
@@ -2229,11 +2530,18 @@ export class Forge3DRuntime {
     terrain: TerrainHeightmapSourceInput,
   ): Promise<void> {
     try {
+      // The material never passes through the byte-source decoder; it is
+      // reattached to the decoded heightmap.
+      const { material, ...source } =
+        normalizeTerrainHeightmapSourceInput(terrain);
       const decoded = await this.#loadTerrainHeightmapSource(
-        normalizeTerrainHeightmapSourceInput(terrain),
+        source,
         this.#lastCapabilities.maxTextureDimension2D,
         this.#lastCapabilities.maxBufferSize,
       );
+      if (material !== undefined) {
+        decoded.material = material;
+      }
       if (this.disposed) {
         throw new Forge3DError(
           "RUNTIME_DISPOSED",
@@ -2858,6 +3166,8 @@ interface TerrainMetadataTarget {
   sunVisibility?: SunVisibilityOptions;
   debugView?: TerrainDebugView;
   renderMode?: TerrainRenderMode;
+  /** Terrain PBR/POM material; omitted keeps the unmaterialed terrain. */
+  material?: TerrainMaterialInput;
 }
 
 function copyTerrainMetadata(
@@ -2903,6 +3213,9 @@ function copyTerrainMetadata(
       );
     }
     target.renderMode = source.renderMode;
+  }
+  if (source.material !== undefined) {
+    target.material = normalizeTerrainMaterial(source.material);
   }
 }
 
@@ -3053,6 +3366,10 @@ export {
   lightPresetNames,
 } from "./lighting.js";
 export { MaterialCollection, resolveBrdfModel } from "./materials.js";
+export {
+  getTerrainMaterialDefaults,
+  normalizeTerrainMaterial,
+} from "./terrain-material.js";
 export { Forge3DScene } from "./scene.js";
 export { Forge3DSession } from "./session.js";
 export { BorrowedWasmView } from "./ownership.js";

@@ -209,6 +209,25 @@ try {
     `packageSha256 = "${packageSha256}"`,
   );
   writeFileSync(w06ConsumerFixture, w06Fixture);
+  const w07ConsumerFixture = join(consumerDirectory, "test-w07-package.html");
+  let w07Fixture = readFileSync(
+    join(packageRoot, "examples", "test-w07-package.html"),
+    "utf8",
+  );
+  w07Fixture = w07Fixture.replace(
+    '<script type="module">',
+    `<script type="importmap">{"imports":{"@forge3d/web":"/node_modules/@forge3d/web/dist/index.js"}}</script>
+    <script type="module">`,
+  );
+  w07Fixture = w07Fixture.replace(
+    'from "../src-ts/index.ts"',
+    'from "@forge3d/web"',
+  );
+  w07Fixture = w07Fixture.replace(
+    "packageSha256 = null",
+    `packageSha256 = "${packageSha256}"`,
+  );
+  writeFileSync(w07ConsumerFixture, w07Fixture);
   const benchmarkDirectory = join(
     consumerDirectory,
     "tests",
@@ -321,6 +340,7 @@ try {
       "test-w04-package.html",
       "test-w05-package.html",
       "test-w06-package.html",
+      "test-w07-package.html",
     ]) {
       copyFileSync(join(consumerDirectory, file), join(retainedFixture, file));
     }
@@ -786,6 +806,35 @@ async function runInstalledPackageBrowserGate(
     ) {
       throw new Error(
         `installed-package W06 capture/offline/EXR/frame/video surface failed: ${JSON.stringify(w06Package)}`,
+      );
+    }
+    await page.goto(`${origin}/test-w07-package.html`, {
+      waitUntil: "networkidle",
+    });
+    const w07Package = await page.evaluate(() =>
+      window.__forge3dW07PackageProbe(),
+    );
+    if (w07Package.supported !== true || w07Package.ok !== true) {
+      throw new Error(
+        `installed-package W07 probe failed: ${JSON.stringify(w07Package.error ?? w07Package)}`,
+      );
+    }
+    if (w07Package.packageSha256 !== packageSha256) {
+      throw new Error(
+        "installed-package W07 fixture did not execute the expected tarball",
+      );
+    }
+    if (
+      w07Package.defaults?.albedoMode !== "colormap" ||
+      w07Package.rejection !== "INVALID_INPUT" ||
+      !(w07Package.zeroMaxDiff <= 1) ||
+      !(w07Package.fullDelta > 1) ||
+      w07Package.report?.enabled !== true ||
+      w07Package.report?.layerCount !== 2 ||
+      w07Package.report?.maskChannels?.[0] !== "wetness"
+    ) {
+      throw new Error(
+        `installed-package W07 terrain material surface failed: ${JSON.stringify(w07Package)}`,
       );
     }
     if (pageErrors.length > 0) {

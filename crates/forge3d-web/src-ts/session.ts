@@ -28,6 +28,7 @@ import type {
   SceneSnapshot,
   SessionStatus,
   ShadowReport,
+  TerrainMaterialReport,
   ShadowSnapshot,
   TerrainHeightmapInput,
 } from "./index.js";
@@ -54,6 +55,7 @@ export interface SessionRuntimeLike {
   precomputeIbl?(input: IblSnapshot): Promise<IblSnapshot>;
   setShadows?(shadows: ShadowSnapshot): void;
   getShadowReport?(): ShadowReport;
+  getTerrainMaterialReport?(): TerrainMaterialReport;
   setScene?(scene: SceneSnapshot): void;
   setCamera?(camera: CameraInput): void;
   setDeviceLostHandler?(handler: ((error: unknown) => void) | undefined): void;
@@ -238,6 +240,19 @@ export class Forge3DSession {
       "UNSUPPORTED_FEATURE",
       "Runtime does not report shadow state",
     );
+  }
+
+  /** What the live runtime bound for the committed terrain material. */
+  getTerrainMaterialReport(): TerrainMaterialReport {
+    const runtime = this.#runtimeOrThrow();
+    const report = runtime.getTerrainMaterialReport?.();
+    if (report === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not report terrain material state",
+      );
+    }
+    return report;
   }
 
   setScene(scene: Forge3DScene): void {

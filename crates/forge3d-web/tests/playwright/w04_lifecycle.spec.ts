@@ -15,6 +15,8 @@ test("W04 lifecycle: atomic scene commits, camera validation, recovery replay", 
   webgpuAvailability,
 }) => {
   skipRenderAssertionsWhenProbing(webgpuAvailability);
+  // 30 IBL/shadow commit cycles; software adapters need the slow budget.
+  test.slow();
   const pageErrors: string[] = [];
   const consoleErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
@@ -51,6 +53,13 @@ test("W04 lifecycle: atomic scene commits, camera validation, recovery replay", 
   expect(result.empty.applied).toBe(true);
   expect(result.empty.shadowReason).toBe("shadows disabled");
   expect(result.empty.csmEnabled).toBe(false);
+
+  expect(result.cycles.count).toBe(30);
+  expect(result.cycles.peakLoaded).toBeGreaterThan(result.cycles.baseline);
+  expect(result.cycles.allReturned).toBe(true);
+  expect(result.cycles.allocationCount).toBe(
+    result.cycles.baselineAllocationCount,
+  );
 
   expect(result.recovery.status).toBe("ready");
   expect(result.recovery.generations).toBe(2);

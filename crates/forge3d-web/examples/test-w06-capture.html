@@ -270,6 +270,8 @@
           quality: "low",
           intensity: IBL_INTENSITY,
           rotationDegrees: 0,
+          // Native goldens were rendered with the native prefilter bug.
+          prefilter: "native",
         });
         scene.setImageBasedLighting(ibl);
         scene.setShadows(shadowInput("pcss", 4096), csmInput());

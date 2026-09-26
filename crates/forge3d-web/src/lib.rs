@@ -3,6 +3,7 @@ pub mod inputs;
 pub mod io;
 pub mod offline_api;
 pub mod runtime;
+pub mod terrain_material_input;
 
 pub use crate::error::Forge3DError;
 pub use crate::runtime::Forge3DRuntime;

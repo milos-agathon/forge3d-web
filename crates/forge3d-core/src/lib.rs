@@ -47,6 +47,9 @@ pub mod shadowing;
 #[cfg(feature = "webgpu")]
 pub mod timing;
 
+#[cfg(feature = "webgpu")]
+pub mod terrain_material;
+
 pub const WORKSPACE_SPLIT_PHASE: u8 = 5;
 
 pub fn phase() -> u8 {

@@ -153,6 +153,53 @@ pub fn f16_to_f32(bits: u16) -> f32 {
     f32::from_bits(sign | magnitude)
 }
 
+/// IEEE 754 binary32 to binary16 with round-to-nearest-even (the `half`
+/// crate's `f16::from_f32`, which native uses to upload HDR sources).
+pub fn f32_to_f16(value: f32) -> u16 {
+    let bits = value.to_bits();
+    let sign = ((bits >> 16) & 0x8000) as u16;
+    let exponent = ((bits >> 23) & 0xff) as i32;
+    let mantissa = bits & 0x007f_ffff;
+    if exponent == 0xff {
+        // Infinity or NaN (keep a quiet NaN payload bit).
+        let nan = if mantissa != 0 {
+            0x0200 | (mantissa >> 13) as u16
+        } else {
+            0
+        };
+        return sign | 0x7c00 | nan;
+    }
+    let unbiased = exponent - 127;
+    if unbiased > 15 {
+        return sign | 0x7c00;
+    }
+    if unbiased >= -14 {
+        // Normal half: round the 13 dropped mantissa bits to nearest even.
+        let half_exponent = ((unbiased + 15) as u32) << 10;
+        let half_mantissa = mantissa >> 13;
+        let rest = mantissa & 0x1fff;
+        let mut result = half_exponent | half_mantissa;
+        if rest > 0x1000 || (rest == 0x1000 && (half_mantissa & 1) == 1) {
+            result += 1; // may carry into the exponent (and up to infinity)
+        }
+        return sign | result as u16;
+    }
+    if unbiased < -25 {
+        return sign;
+    }
+    // Subnormal half: shift the implicit-one mantissa into place and round.
+    let full = mantissa | 0x0080_0000;
+    let shift = (-14 - unbiased + 13) as u32;
+    let half_mantissa = full >> shift;
+    let rest = full & ((1 << shift) - 1);
+    let halfway = 1 << (shift - 1);
+    let mut result = half_mantissa;
+    if rest > halfway || (rest == halfway && (half_mantissa & 1) == 1) {
+        result += 1;
+    }
+    sign | result as u16
+}
+
 /// Unpads rows and decodes little-endian texels to `f32` lanes.
 pub fn decode_float_rows(
     padded: &[u8],
@@ -196,8 +243,8 @@ fn invalid<T>(field: &str, message: &str) -> Result<T> {
 #[cfg(test)]
 mod tests {
     use super::{
-        align_copy_bytes_per_row, decode_float_rows, decode_u32_rows, f16_to_f32, rgba8_layout,
-        unpad_rows, ReadbackFormat,
+        align_copy_bytes_per_row, decode_float_rows, decode_u32_rows, f16_to_f32, f32_to_f16,
+        rgba8_layout, unpad_rows, ReadbackFormat,
     };
 
     #[test]
@@ -223,6 +270,24 @@ mod tests {
         assert!(f16_to_f32(0x7c00).is_infinite());
         assert!(f16_to_f32(0x7e00).is_nan());
         assert_eq!(f16_to_f32(0x3555), 0.333_251_95);
+    }
+
+    #[test]
+    fn f16_encoding_round_trips_every_half_and_rounds_to_nearest_even() {
+        for bits in 0u16..=u16::MAX {
+            let value = f16_to_f32(bits);
+            if value.is_nan() {
+                assert!(f16_to_f32(f32_to_f16(value)).is_nan());
+            } else {
+                assert_eq!(f32_to_f16(value), bits, "{bits:#06x}");
+            }
+        }
+        // Halfway between 1.0 and the next half rounds to even (1.0).
+        assert_eq!(f32_to_f16(1.0 + 2.0f32.powi(-11)), 0x3c00);
+        assert_eq!(f32_to_f16(1.0 + 3.0 * 2.0f32.powi(-11)), 0x3c02);
+        assert_eq!(f32_to_f16(65520.0), 0x7c00);
+        assert_eq!(f32_to_f16(2.0f32.powi(-26)), 0x0000);
+        assert_eq!(f32_to_f16(0.333_333_34), 0x3555);
     }
 
     #[test]

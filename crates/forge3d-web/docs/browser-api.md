@@ -412,13 +412,17 @@ session.setScene(scene);
 - **Lights.** `addLight`/`updateLight`/`removeLight`/`clearLights` manage up
   to 64 `directional`, `point`, `spot`, and `rect` lights (`LightCollection`
   exposes the same API standalone). Point and spot lights take a soft
-  `innerRadius`, `edgeSoftness`, and `falloff` (`linear`, `quadratic`,
-  `cubic`, `exponential`). `getLightBounds(id)` and
+  `innerRadius`, `edgeSoftness`, and `falloff`. The default `inverse-square`
+  is the native light-buffer attenuation `(1 - (d/range)^2) / max(d^2, 1e-4)`;
+  `linear`, `quadratic` (`(1 - t)^falloffExponent`), `cubic` (`1 - t^3`) and
+  `exponential` are the native soft-light-radius curves, reaching zero at
+  `range` with `edgeSoftness` widening a smoothstep window. `getLightBounds(id)` and
   `lightAffectsPoint(id, point)` report the effective range. Rect lights use
   LTC by default; `setAreaLightApproximation({ mode: "sampled", sampleCount })`
   selects the sampled approximation. `getLightPreset(name)` returns the
   `spotlight`, `area-light`, `ambient-light`, `candle`, and `street-lamp`
-  presets.
+  presets with the native `SoftLightPreset` values (`area-light` is a soft
+  point light, not a rect light).
 - **Materials and BRDF routing.** `setMaterial(slot, input)` accepts all 13
   native BRDF models. `resolveBrdfModel(name)` and `getMaterialRoute(slot)`
   report the observable route: `blinn-phong` is an `alias` of `phong`;
@@ -443,7 +447,13 @@ session.setScene(scene);
   with `effectiveQuality: "unsupported"`.
 - **IBL.** `ImageBasedLighting.fromRGBE(bytes, options)` decodes Radiance
   RGBE in-repo. Irradiance, the specular prefilter, and the split-sum GGX BRDF
-  LUT are computed on the GPU. `ibl.prepare(session, cache)` stores the
+  LUT are computed on the GPU at the native `IBLQuality` tiers (irradiance/
+  specular/mips: low 64/128/5, medium 128/256/6, high 256/512/7, ultra
+  256/1024/8; a 512 BRDF LUT; 128/1024/1024 samples) with verbatim ports of
+  the native shaders. `prefilter` defaults to `per-mip`; `prefilter: "native"`
+  reproduces a native bug (every prefilter pass reads the last mip's
+  parameters, leaving most specular texels zero) and is meant only for
+  comparisons against native renders. `ibl.prepare(session, cache)` stores the
   precomputed maps in an `IblCache` keyed by source hash and settings. The
   `auto` backend chooses CacheStorage, then OPFS, then `none`. `ibl.report`
   records `effectiveMode` (`runtime-precompute` or `prepared-upload`),
@@ -607,6 +617,87 @@ decoded in WASM.
   (`kind: "video-codec-unavailable"` plus per-codec probes);
   `probeVideoCodecs` reports support up front and `muxEncodedVideo` muxes
   caller-encoded chunks.
+
+## Terrain PBR/POM Materials
+
+W07 ports the native `terrain_pbr_pom` land shading (T05-T07). Set
+`terrain.material` on any terrain input to switch the terrain to the material
+pipeline; omit it to keep the existing terrain. Every field is optional and
+takes the native default, and the all-default material (`material: {}`)
+renders byte-identically to the unmaterialed terrain: colormap albedo at full
+strength with POM, detail and every layer off. (Native `make_terrain_params_config`
+defaults to `albedo_mode="mix"` and POM on; request those explicitly.)
+
+```ts
+scene.addTerrain({
+  ...terrain,
+  renderMode: "screen",
+  material: {
+    albedoMode: "mix",
+    colormapStrength: 0.25,
+    pom: { enabled: true, scale: 0.04 },
+    layers: {
+      snow: { enabled: true, altitudeMin: 0.78, subsurfaceStrength: 0.58 },
+      rock: { enabled: true, slopeMin: 38 },
+      variation: { snowMacroAmplitude: 0.2 },
+    },
+    detail: { enabled: true, scale: 2, normalStrength: 0.3 },
+    specularAa: { quality: "high" },
+  },
+});
+session.setScene(scene);
+const report = session.getTerrainMaterialReport();
+```
+
+- **Albedo and material set.** `albedoMode` is `colormap`, `material` (the
+  triplanar material set) or `mix` (`colormapStrength` blends toward the
+  colormap). `materialSet` holds 1-4 layers (default: the native
+  rock/grass/dirt/snow `MaterialSet.terrain_default`), each with `baseColor`,
+  `roughness` in [0.04, 1], `metallic` and an optional sRGB RGBA8 `texture`.
+  Layers blend by height and slope with the native Gaussian weights and are
+  sampled triplanar (`triplanar.scale`, `blendSharpness`, `normalStrength`).
+- **POM, curves and clamps.** `pom` runs the native occlusion ray march with
+  binary refinement (`scale`, `minSteps`, `maxSteps` <= 100, `refineSteps`,
+  `occlusion`). Native renders every `mode` with that march, so `relief` and
+  `parallax` report `terrain-material-pom-mode-approximated`. `heightCurve`
+  (`linear`, `pow`, `smoothstep`, or `lut` with 256 values) reshapes geometry
+  and normals; `clamp` holds the native height/slope/ambient/shadow/occlusion
+  ranges (`heightRange` defaults to the terrain domain). `colormapSrgb`,
+  `outputSrgbEotf`, `gamma` and `hueVariation` keep the native color controls.
+- **Material layers.** `layers.snow` (altitude, slope and aspect), `rock`
+  (slope) and `wetness` (flatness darkening) port native M4; `variation` adds
+  the TV4 FBM/ridged/cellular noise per layer (all amplitudes 0 by default);
+  `subsurfaceStrength`/`subsurfaceTint` add the TV10 wrap/backscatter term.
+  Each layer also accepts a `mask` (single-channel coverage in terrain UV).
+- **Micro-detail and specular AA.** `detail` adds the native triplanar
+  detail normals and albedo noise with a distance fade, plus an optional
+  tangent-space `normalMap` blended by `strength` (native binds but never
+  samples this map). `specularAa.quality` selects the Toksvig variance
+  threshold: `native` (1.0, the native default, which leaves ordinary terrain
+  untouched), `medium` (0.25), `high` (0), or `off`.
+- **Debug views.** `debugView` renders `material-albedo`,
+  `triplanar-weights`, `triplanar-checker`, `pom-offset`,
+  `specular-aa-variance`, `roughness`, `layer-weights` or `subsurface`.
+- **Report and diagnostics.** `getTerrainMaterialReport()` (session or
+  runtime) returns what the GPU bound: layer count, textured layers, texture
+  size and mips, mask channels, the detail-map flag, GPU bytes and
+  diagnostics. Invalid or missing images never fail the commit: they fall back
+  to the base color or neutral map and report
+  `terrain-material-texture-invalid`, `-texture-missing`, `-texture-resampled`,
+  `-texture-downscaled` (memory budget or `maxTextureDimension2D`),
+  `-mask-invalid`, `-detail-normal-invalid` or `-detail-normal-missing`.
+  Invalid settings reject with `INVALID_INPUT` and the native wording (for
+  example `max_steps must be <= 100`).
+- **Screen and perspective.** Screen mode keeps the native fullscreen frame
+  quirks (constant base normal, so slope-driven rock appears only through
+  variation noise) so native goldens compare directly. Perspective mode feeds
+  the same shading from the true heightfield normal and a world-to-tangent
+  POM frame, so slope-driven layers follow the terrain.
+- **Parity evidence.** `tests/golden/w07/` holds the `terrain-material-v1`
+  fixture: 22 native forge3d 1.34 renders plus the verbatim `1f4084a`
+  `terrain_pom` and `terrain_tv10_*` goldens. Every variant matches at SSIM
+  >= 0.98; the historical POM golden passes with the least margin (about
+  0.980, against 0.985 between native 1.34 and `1f4084a` themselves).
 
 ## Browser IO
 

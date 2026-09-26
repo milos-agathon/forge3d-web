@@ -54,6 +54,23 @@ const BRDF_ALIASES: ReadonlyMap<string, BrdfModel> = new Map([
 
 const CANONICAL_SET: ReadonlySet<string> = new Set(CANONICAL_BRDF_MODELS);
 
+// Native `normalize_key` (1f4084a:src/render/params/common.rs): trim, lowercase
+// and drop '-', '_', ' ' and '.' before matching `BrdfModel::from_str` keys.
+function nativeBrdfKey(requested: string): string {
+  return requested.trim().toLowerCase().replace(/[-_ .]/g, "");
+}
+
+const NATIVE_BRDF_KEYS: ReadonlyMap<string, BrdfModel> = new Map([
+  ...CANONICAL_BRDF_MODELS.map(
+    (model) => [nativeBrdfKey(model), model] as [string, BrdfModel],
+  ),
+  ["ggx", "cooktorrance-ggx"],
+  ["beckmann", "cooktorrance-beckmann"],
+  ["disney", "disney-principled"],
+  ["sss", "subsurface"],
+  ["kajiyakay", "hair"],
+]);
+
 function normalizeBrdfName(requested: string): string {
   return requested
     .split(/[_\s]+/)
@@ -103,7 +120,7 @@ export function resolveBrdfModel(requested: string): BrdfRoute {
   const normalized = normalizeBrdfName(requested);
   const model: BrdfModel | undefined = CANONICAL_SET.has(normalized)
     ? (normalized as BrdfModel)
-    : BRDF_ALIASES.get(normalized);
+    : (BRDF_ALIASES.get(normalized) ?? NATIVE_BRDF_KEYS.get(nativeBrdfKey(requested)));
   if (model === undefined) {
     throw new Forge3DError(
       "INVALID_INPUT",

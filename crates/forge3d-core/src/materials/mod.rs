@@ -188,6 +188,36 @@ fn normalize_brdf_name(requested: &str) -> String {
         .to_lowercase()
 }
 
+/// Native `normalize_key` (1f4084a:src/render/params/common.rs): trim,
+/// lowercase and drop '-', '_', ' ' and '.'.
+fn native_brdf_key(requested: &str) -> String {
+    requested
+        .trim()
+        .to_ascii_lowercase()
+        .chars()
+        .filter(|c| !matches!(c, '-' | '_' | ' ' | '.'))
+        .collect()
+}
+
+/// Native `BrdfModel::from_str` keys after `normalize_key`.
+fn native_brdf_model(requested: &str) -> Option<&'static str> {
+    let key = native_brdf_key(requested);
+    if let Some(canonical) = CANONICAL_BRDF_MODELS
+        .iter()
+        .find(|canonical| native_brdf_key(canonical) == key)
+    {
+        return Some(canonical);
+    }
+    match key.as_str() {
+        "ggx" => Some("cooktorrance-ggx"),
+        "beckmann" => Some("cooktorrance-beckmann"),
+        "disney" => Some("disney-principled"),
+        "sss" => Some("subsurface"),
+        "kajiyakay" => Some("hair"),
+        _ => None,
+    }
+}
+
 fn base_route(model: &'static str) -> (BrdfImplementation, Option<String>, &'static str) {
     match model {
         "blinn-phong" => (
@@ -227,6 +257,7 @@ pub fn resolve_brdf(requested: &str) -> Result<BrdfRoute> {
             .iter()
             .find(|(alias, _)| *alias == normalized)
             .map(|(_, model)| *model)
+            .or_else(|| native_brdf_model(requested))
             .ok_or_else(|| invalid("material.brdf", format!("unknown brdf model '{requested}'")))?
     };
     let (base_implementation, base_diagnostic, effective_model) = base_route(model);

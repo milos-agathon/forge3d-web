@@ -222,7 +222,7 @@ describe("LightCollection", () => {
       range: 10,
       innerRadius: 0,
       edgeSoftness: 0,
-      falloff: "quadratic",
+      falloff: "inverse-square",
       falloffExponent: 2,
     });
 
@@ -513,17 +513,17 @@ describe("light presets", () => {
       falloffExponent: 4,
       color: [1, 1, 0.9],
     });
+    // Native SoftLightPreset::AreaLight is a soft radial light, not a rect.
     expect(getLightPreset("area-light")).toEqual({
-      type: "rect",
+      type: "point",
       position: [0, 8, 0],
-      right: [1, 0, 0],
-      up: [0, 0, 1],
-      width: 16,
-      height: 16,
-      range: 25,
-      edgeSoftness: 3,
-      color: [1, 0.95, 0.9],
       intensity: 1.5,
+      range: 25,
+      innerRadius: 8,
+      edgeSoftness: 3,
+      falloff: "quadratic",
+      falloffExponent: 1.5,
+      color: [1, 0.95, 0.9],
     });
     expect(getLightPreset("ambient-light")).toEqual({
       type: "point",
@@ -533,6 +533,7 @@ describe("light presets", () => {
       innerRadius: 15,
       edgeSoftness: 5,
       falloff: "linear",
+      falloffExponent: 1,
       color: [0.9, 0.95, 1],
     });
     expect(getLightPreset("candle")).toEqual({
@@ -579,11 +580,11 @@ describe("light presets", () => {
     (first as { intensity: number }).intensity = 99;
     expect(getLightPreset("candle").intensity).toBe(1.2);
     const second = getLightPreset("area-light");
-    if (second.type === "rect") {
-      second.right[0] = 0;
+    if (second.type === "point") {
+      second.position[1] = 0;
     }
     const third = getLightPreset("area-light");
-    expect(third.type === "rect" ? third.right : null).toEqual([1, 0, 0]);
+    expect(third.type === "point" ? third.position : null).toEqual([0, 8, 0]);
   });
 });
 

@@ -38,8 +38,9 @@ pub(super) struct LightingResources {
     pub uniform_buffer: wgpu::Buffer,
     pub materials_buffer: wgpu::Buffer,
     pub material_uniform_buffer: wgpu::Buffer,
-    pub ltc_matrix_view: wgpu::TextureView,
-    pub ltc_amplitude_view: wgpu::TextureView,
+    /// One LUT texture: rows `0..64` hold the matrix, rows `64..128` the
+    /// amplitude in `.r`, so area lights take a single sampled-texture slot.
+    pub ltc_lut_view: wgpu::TextureView,
     pub ltc_sampler: wgpu::Sampler,
     pub bind_group_layout: wgpu::BindGroupLayout,
     pub bind_group: wgpu::BindGroup,
@@ -95,20 +96,12 @@ impl LightingResources {
                 });
 
         let lut = forge3d_core::lighting::generate_ltc_lut();
-        let ltc_matrix_view = upload_ltc_texture(
+        let mut lut_rows: Vec<[f32; 4]> = lut.matrix.clone();
+        lut_rows.extend(lut.amplitude.iter().map(|value| [*value, 0.0, 0.0, 0.0]));
+        let ltc_lut_view = upload_ltc_texture(
             context,
-            "forge3d-web-lighting-ltc-matrix",
-            bytemuck::cast_slice(&lut.matrix),
-        );
-        let amplitude_rgba: Vec<[f32; 4]> = lut
-            .amplitude
-            .iter()
-            .map(|value| [*value, 0.0, 0.0, 0.0])
-            .collect();
-        let ltc_amplitude_view = upload_ltc_texture(
-            context,
-            "forge3d-web-lighting-ltc-amplitude",
-            bytemuck::cast_slice(&amplitude_rgba),
+            "forge3d-web-lighting-ltc-lut",
+            bytemuck::cast_slice(&lut_rows),
         );
         let ltc_sampler = context.device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("forge3d-web-lighting-ltc-sampler"),
@@ -144,11 +137,7 @@ impl LightingResources {
                     },
                     wgpu::BindGroupEntry {
                         binding: 2,
-                        resource: wgpu::BindingResource::TextureView(&ltc_matrix_view),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 3,
-                        resource: wgpu::BindingResource::TextureView(&ltc_amplitude_view),
+                        resource: wgpu::BindingResource::TextureView(&ltc_lut_view),
                     },
                     wgpu::BindGroupEntry {
                         binding: 4,
@@ -186,8 +175,7 @@ impl LightingResources {
             uniform_buffer,
             materials_buffer,
             material_uniform_buffer,
-            ltc_matrix_view,
-            ltc_amplitude_view,
+            ltc_lut_view,
             ltc_sampler,
             bind_group_layout,
             bind_group,
@@ -287,7 +275,7 @@ fn upload_ltc_texture(
         label: Some(label),
         size: wgpu::Extent3d {
             width: LTC_LUT_SIZE as u32,
-            height: LTC_LUT_SIZE as u32,
+            height: 2 * LTC_LUT_SIZE as u32,
             depth_or_array_layers: 1,
         },
         mip_level_count: 1,
@@ -308,11 +296,11 @@ fn upload_ltc_texture(
         wgpu::TexelCopyBufferLayout {
             offset: 0,
             bytes_per_row: Some((LTC_LUT_SIZE * 16) as u32),
-            rows_per_image: Some(LTC_LUT_SIZE as u32),
+            rows_per_image: Some(2 * LTC_LUT_SIZE as u32),
         },
         wgpu::Extent3d {
             width: LTC_LUT_SIZE as u32,
-            height: LTC_LUT_SIZE as u32,
+            height: 2 * LTC_LUT_SIZE as u32,
             depth_or_array_layers: 1,
         },
     );
@@ -320,7 +308,7 @@ fn upload_ltc_texture(
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
-pub(super) fn lighting_layout_entries() -> [wgpu::BindGroupLayoutEntry; 7] {
+pub(super) fn lighting_layout_entries() -> [wgpu::BindGroupLayoutEntry; 6] {
     [
         wgpu::BindGroupLayoutEntry {
             binding: 0,
@@ -344,16 +332,6 @@ pub(super) fn lighting_layout_entries() -> [wgpu::BindGroupLayoutEntry; 7] {
         },
         wgpu::BindGroupLayoutEntry {
             binding: 2,
-            visibility: wgpu::ShaderStages::FRAGMENT,
-            ty: wgpu::BindingType::Texture {
-                sample_type: wgpu::TextureSampleType::Float { filterable: false },
-                view_dimension: wgpu::TextureViewDimension::D2,
-                multisampled: false,
-            },
-            count: None,
-        },
-        wgpu::BindGroupLayoutEntry {
-            binding: 3,
             visibility: wgpu::ShaderStages::FRAGMENT,
             ty: wgpu::BindingType::Texture {
                 sample_type: wgpu::TextureSampleType::Float { filterable: false },
@@ -900,14 +878,15 @@ fn parse_falloff(
     object: &serde_json::Map<String, serde_json::Value>,
 ) -> Result<SoftLightFalloff, WebError> {
     match object.get("falloff") {
-        None | Some(serde_json::Value::Null) => Ok(SoftLightFalloff::Quadratic),
+        None | Some(serde_json::Value::Null) => Ok(SoftLightFalloff::InverseSquare),
         Some(serde_json::Value::String(text)) => match text.as_str() {
+            "inverse-square" => Ok(SoftLightFalloff::InverseSquare),
             "linear" => Ok(SoftLightFalloff::Linear),
             "quadratic" => Ok(SoftLightFalloff::Quadratic),
             "cubic" => Ok(SoftLightFalloff::Cubic),
             "exponential" => Ok(SoftLightFalloff::Exponential),
             other => Err(invalid(format!(
-                "light.falloff must be linear, quadratic, cubic, or exponential; got {other}"
+                "light.falloff must be inverse-square, linear, quadratic, cubic, or exponential; got {other}"
             ))),
         },
         Some(_) => Err(invalid("light.falloff must be a string")),

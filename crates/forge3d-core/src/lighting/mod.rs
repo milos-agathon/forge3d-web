@@ -50,6 +50,8 @@ pub enum SoftLightFalloff {
     Quadratic,
     Cubic,
     Exponential,
+    /// Native light-buffer attenuation: `(1 - (d/r)^2) / max(d^2, 1e-4)`.
+    InverseSquare,
 }
 
 impl SoftLightFalloff {
@@ -59,6 +61,7 @@ impl SoftLightFalloff {
             Self::Quadratic => 1,
             Self::Cubic => 2,
             Self::Exponential => 3,
+            Self::InverseSquare => 4,
         }
     }
 }

@@ -190,6 +190,24 @@ fn route_table_covers_exact_alias_and_approximation() {
     assert_eq!(normalized_exact.implementation, BrdfImplementation::Exact);
     assert!(normalized_exact.diagnostic.is_none());
 
+    // Native normalize_key also drops '.' and hyphens anywhere; the TS
+    // resolver accepts the same spellings, so commits must round-trip.
+    for (input, model) in [
+        ("Oren.Nayar", "oren-nayar"),
+        ("cook_torrance.ggx", "cooktorrance-ggx"),
+        ("Kajiya Kay", "hair"),
+        ("MINNAERT", "minnaert"),
+    ] {
+        let route = resolve_brdf(input).expect("native key resolves");
+        assert_eq!(route.model, model, "{input}");
+    }
+    let dotted = resolve_brdf("Oren.Nayar").expect("native key");
+    assert_eq!(dotted.implementation, BrdfImplementation::Alias);
+    assert_eq!(
+        dotted.diagnostic.as_deref(),
+        Some("oren.nayar is an alias for oren-nayar")
+    );
+
     assert!(resolve_brdf("custom-brdf").is_err());
     assert!(resolve_brdf("").is_err());
     assert!(resolve_brdf("ward-ish").is_err());

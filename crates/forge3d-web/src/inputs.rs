@@ -132,6 +132,7 @@ pub struct TerrainHeightmapOptions {
     pub sun_visibility: SunVisibilityJsOptions,
     pub debug_view: Option<TerrainDebugViewOption>,
     pub render_mode: Option<TerrainRenderModeOption>,
+    pub material: Option<crate::terrain_material_input::TerrainMaterialOptions>,
 }
 
 #[derive(Debug)]
@@ -445,6 +446,7 @@ impl TerrainHeightmapOptions {
             .map_err(|_| WebError::new(Forge3DErrorCode::InvalidInput, "invalid colorRamp"))?;
         let color_ramp = TerrainColorRampOptions::from_js_value(color_ramp_value)?;
         let metadata = read_terrain_metadata(&value)?;
+        let material = crate::terrain_material_input::read_terrain_material(&value)?;
 
         let mut heights = vec![0.0; heights_array.length() as usize];
         heights_array.copy_to(&mut heights);
@@ -463,6 +465,7 @@ impl TerrainHeightmapOptions {
             sun_visibility: metadata.sun_visibility,
             debug_view: metadata.debug_view,
             render_mode: metadata.render_mode,
+            material,
         })
     }
 
@@ -1133,6 +1136,7 @@ mod tests {
             sun_visibility: super::SunVisibilityJsOptions::default(),
             debug_view: None,
             render_mode: None,
+            material: None,
         };
 
         let error = options.validate().unwrap_err();
@@ -1157,6 +1161,7 @@ mod tests {
             sun_visibility: super::SunVisibilityJsOptions::default(),
             debug_view: None,
             render_mode: None,
+            material: None,
         };
 
         let error = options.validate().unwrap_err();

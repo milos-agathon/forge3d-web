@@ -1023,3 +1023,50 @@ async function compileW05Declarations(viewer: Forge3DViewer, session: Forge3DSes
 }
 
 void compileW05Declarations;
+
+import {
+  getTerrainMaterialDefaults,
+  ImageBasedLighting as W07ImageBasedLighting,
+  normalizeTerrainMaterial,
+  type IblPrefilterMode,
+  type TerrainAlbedoMode,
+  type TerrainMaterialDiagnosticCode,
+  type TerrainMaterialInput,
+  type TerrainMaterialReport,
+  type TerrainMaterialSnapshot,
+  type TerrainSpecularAaQuality,
+} from "../../types/index";
+
+async function compileW07Declarations(runtime: Forge3DRuntime, session: Forge3DSession): Promise<void> {
+  const albedoMode: TerrainAlbedoMode = "mix";
+  const quality: TerrainSpecularAaQuality = "high";
+  const material: TerrainMaterialInput = {
+    albedoMode,
+    colormapStrength: 0.25,
+    materialSet: [{ baseColor: [0.3, 0.3, 0.3], roughness: 0.5, texture: { width: 1, height: 1, data: new Uint8Array(4) } }],
+    triplanar: { scale: 6, blendSharpness: 4, normalStrength: 1 },
+    pom: { enabled: true, mode: "occlusion", scale: 0.04, minSteps: 12, maxSteps: 40, refineSteps: 4 },
+    heightCurve: { mode: "lut", strength: 1, lut: new Float32Array(256) },
+    layers: {
+      snow: { enabled: true, altitudeMin: 0.7, subsurfaceStrength: 0.5, mask: { width: 1, height: 1, data: new Uint8Array(1) } },
+      rock: { enabled: true, slopeMin: 36 },
+      wetness: { enabled: true, strength: 0.4 },
+      variation: { snowMacroAmplitude: 0.2, octaves: 5 },
+    },
+    detail: { enabled: true, scale: 2, strength: 0.5, normalMap: { width: 1, height: 1, data: new Uint8Array(4) } },
+    specularAa: { quality, sigmaScale: 1 },
+    debugView: "layer-weights",
+  };
+  const terrain: TerrainHeightmapInput = { width: 2, height: 2, heights: new Float32Array(4), renderMode: "screen", material };
+  const snapshot: TerrainMaterialSnapshot = normalizeTerrainMaterial(terrain.material);
+  const defaults: TerrainMaterialSnapshot = getTerrainMaterialDefaults();
+  const sessionReport: TerrainMaterialReport = session.getTerrainMaterialReport();
+  const runtimeReport: TerrainMaterialReport = runtime.getTerrainMaterialReport();
+  const code: TerrainMaterialDiagnosticCode | undefined = runtimeReport.diagnostics[0]?.code;
+  const prefilter: IblPrefilterMode = "native";
+  const ibl = await W07ImageBasedLighting.fromLinear({ width: 1, height: 1, data: new Float32Array(4) }, { prefilter });
+  const schedule: IblPrefilterMode = ibl.prefilter;
+  void [snapshot.pom.maxSteps, defaults.albedoMode, sessionReport.gpuBytes, code, schedule];
+}
+
+void compileW07Declarations;
