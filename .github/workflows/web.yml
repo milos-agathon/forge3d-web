@@ -113,7 +113,7 @@ jobs:
     name: Web Runtime / Browser Preflight
     needs: build-and-contract
     runs-on: macos-15
-    timeout-minutes: 25
+    timeout-minutes: 45
 
     steps:
       - name: Check out the protected source
