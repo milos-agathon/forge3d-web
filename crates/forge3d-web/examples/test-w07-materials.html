@@ -359,6 +359,71 @@
         return out.toDataURL("image/png");
       }
 
+      // WGSL leaves coarse-derivative granularity to the implementation. The
+      // native goldens come from an adapter that returns one dpdxCoarse /
+      // dpdyCoarse value per 2x2 quad; Metal (no coarse variant) and software
+      // rasterizers may not. Draw v = x*y + x*x + y*y into a 4x4 target and
+      // report whether every quad sees a single derivative pair.
+      async function quadCoarseDerivatives() {
+        const adapter = await navigator.gpu.requestAdapter();
+        const device = await adapter.requestDevice();
+        try {
+          const module = device.createShaderModule({
+            code: `
+              @vertex fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4<f32> {
+                let p = vec2<f32>(f32((i << 1u) & 2u), f32(i & 2u));
+                return vec4<f32>(p * 2.0 - 1.0, 0.0, 1.0);
+              }
+              @fragment fn fs(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+                let v = pos.x * pos.y + pos.x * pos.x + pos.y * pos.y;
+                return vec4<f32>(dpdxCoarse(v), dpdyCoarse(v), 0.0, 1.0);
+              }`,
+          });
+          const format = "rgba32float";
+          const pipeline = device.createRenderPipeline({
+            layout: "auto",
+            vertex: { module, entryPoint: "vs" },
+            fragment: { module, entryPoint: "fs", targets: [{ format }] },
+          });
+          const size = 4;
+          const texture = device.createTexture({
+            size: [size, size],
+            format,
+            usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
+          });
+          const bytesPerRow = 256;
+          const buffer = device.createBuffer({
+            size: bytesPerRow * size,
+            usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+          });
+          const encoder = device.createCommandEncoder();
+          const pass = encoder.beginRenderPass({
+            colorAttachments: [{ view: texture.createView(), loadOp: "clear", storeOp: "store" }],
+          });
+          pass.setPipeline(pipeline);
+          pass.draw(3);
+          pass.end();
+          encoder.copyTextureToBuffer({ texture }, { buffer, bytesPerRow }, [size, size]);
+          device.queue.submit([encoder.finish()]);
+          await buffer.mapAsync(GPUMapMode.READ);
+          const data = new Float32Array(buffer.getMappedRange().slice(0));
+          buffer.unmap();
+          const at = (x, y, c) => data[(y * bytesPerRow) / 4 + x * 4 + c];
+          for (let qy = 0; qy < size; qy += 2) {
+            for (let qx = 0; qx < size; qx += 2) {
+              for (const [dx, dy] of [[1, 0], [0, 1], [1, 1]]) {
+                if (at(qx + dx, qy + dy, 0) !== at(qx, qy, 0) || at(qx + dx, qy + dy, 1) !== at(qx, qy, 1)) {
+                  return false;
+                }
+              }
+            }
+          }
+          return true;
+        } finally {
+          device.destroy();
+        }
+      }
+
       async function errorOf(operation) {
         try {
           await operation();
@@ -549,7 +614,13 @@
             }
           }
           for (const entry of Object.values(results)) delete entry.rgba;
-          return { ssimMin: data.tolerances.ssimMin, fallbackAdapter, variants: results, zero };
+          return {
+            ssimMin: data.tolerances.ssimMin,
+            fallbackAdapter,
+            quadCoarseDerivatives: await quadCoarseDerivatives(),
+            variants: results,
+            zero,
+          };
         },
 
         // Validation, diagnostics and the report contract.
