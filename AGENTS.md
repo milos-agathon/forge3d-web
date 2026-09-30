@@ -61,3 +61,27 @@
 - For `f32::MAX` default values in Rust, use the literal value `3.4028235e38` in the `#[pyo3(signature)]` since PyO3 doesn't evaluate Rust constants in signature defaults.
 - Nested PyO3 classes (e.g., `PyLabelFlags` inside `PyLabelStyle`) must also be registered with `m.add_class::<>()` and derive `Clone`. When used as a field in another `#[pyclass]`, the `#[pyo3(get, set)]` attribute works seamlessly.
 - New `py_bindings.rs` submodules should be declared unconditionally in `mod.rs` (not behind `cfg(feature)`), with the `#[cfg(feature = "extension-module")]` guard on individual items inside the file. This matches the pattern used by `lighting/py_bindings.rs` and `terrain/cog/py_bindings.rs`.
+
+## W08: Clipmaps, Streaming, COG, Overlays, VT (2026-09-28)
+
+- The terrain pipeline layout already uses all 16 default WebGPU fragment sampled-texture slots; W08 raises `maxSampledTexturesPerShaderStage` to `min(adapter, 24)` in `forge3d-core/src/gpu/runtime.rs` and gates W08 features on the negotiated limit (capability booleans). Count bindings before adding any fragment texture.
+- WGSL `vec2<f32>` has 8-byte alignment in storage structs; mirror Rust `#[repr(C)]` structs with explicit offset tests (`lod_select_layouts_match_wgsl`), or readback data is silently garbage.
+- geotiff 3.0.5's `Pool` spawns `blob:` workers (violates the locked `worker-src 'self'`). Decode in the package worker pool with `getDecoder(compression, params)`; `getDecoderParameters` is not exported, so build the params on the main thread.
+- "No W08 input = HEAD bytes" was proven by building HEAD in a C: worktree and hashing page outputs in both trees; use this whenever shared shader code is refactored. Never tune W04/W07 shading to chase a new golden: isolate the new feature (e.g. the VT golden compares albedo AOVs).
+- Native 1.38 VT: the public `full_pyramid_levels` is `floor(log2)+1`, but the runtime page pyramid runs to 1x1 (`ceil(log2)+1`); the web mirrors both.
+- D: is nearly full; run cargo with `CARGO_TARGET_DIR` on C: (e.g. `C:\devin-target\forge3d-web`).
+
+## W08 review fixes (2026-09-30)
+
+- A parity test can pass on two blank frames. `streamingParity` compared pure clear color for its whole life: heights render at `(h - domain_min) * exaggeration`, so the y=550 camera was under the surface. Every image-comparison probe now asserts its compared region is covered (`centralClear == 0`), and dense-vs-streamed renders share an explicit `domain` (the streamed commit only sees the coarse base's min/max).
+- Under `terrain_streaming`, `heightmap` is the slot atlas: any `textureDimensions`/`textureNumLevels`/`textureSample*` on it in shared shader code is wrong. Route through the page-table helpers, and prove non-streaming output unchanged by resolving only the `terrain_streaming` directives (false) on the before/after templates and diffing.
+- Size W08 allocations from the validated inputs and admit them in one `MemoryLedger::replace_all` before creating anything; sequential `replace` calls can overflow midway when a commit trades one W08 block for another.
+- To test sampled-texture gates, override `adapter.limits` in a Playwright init script (own `limits` property on the real adapter; a Proxy breaks `this` for native methods). wgpu requests `min(adapter, 24)`, so the device gets exactly the capped limit.
+- The VT feedback ring is zeroed every frame; count requests only for non-empty slots and deduplicate, and pin a feedback test to an exact count by requesting every page of a tiny pyramid, not by hoping mip selection is adapter-independent.
+
+## W08 completion verification (2026-09-30)
+
+- "Served with HTTP 200" is not "works": the generated `dist/vendor/geotiff.js` wrapper declared `GeoTIFF` twice (a SyntaxError), yet every in-repo spec passed because dev-server pages import `src-ts` and Vite resolves `geotiff` from `node_modules`. Only the installed-tarball consumer exercises `dist`; evaluate vendored modules (`package-contract.mjs` imports the wrapper, `w08_package.spec.ts` decodes a tile through `/dist/index.js`).
+- `test:package-consumer` refuses a dirty tree, so it had never run for W08; when it did, its static server lacked `Range` support and the COG probe correctly failed with `range-not-supported`. Any harness server that hosts COG fixtures must answer single `bytes=` ranges with 206.
+- A metric needs a negative control that exercises the real failure mode: `morphRange 0` cannot break seams (coarse-boundary vertices are forced to the coarse LOD), so the seam test clears `CLIPMAP_FLAG_COARSE_BOUNDARY` to prove `max_height_discontinuity` detects a > 1e-4-of-range step.
+- The infrastructure test pins the exact Playwright spec list; add every new spec there.
