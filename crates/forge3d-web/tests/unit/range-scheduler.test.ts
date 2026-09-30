@@ -3,7 +3,7 @@
 // persistent serving, and statistics, all through a mocked 206
 // range-serving fetch.
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { Forge3DError } from "../../src-ts/index.js";
 import type { PersistentByteCache } from "../../src-ts/index.js";
@@ -466,8 +466,20 @@ describe("RangeScheduler review fixes", () => {
   it("never lets a reverse-order merge exceed maxCoalescedBytes", async () => {
     const data = makeBytes(8192);
     const { fetch, calls } = controlledFetch(data.length);
+    // Bodies settle a few ms late, as on a loaded runner: the scheduler only
+    // dispatches the next merge after the body resolves, so the test must
+    // wait for events rather than count microtask ticks.
+    const slowFetch: RangeFetchLike = (input, init) =>
+      fetch(input, init).then((response) => {
+        const body = response.arrayBuffer.bind(response);
+        response.arrayBuffer = async () => {
+          await new Promise((resolve) => setTimeout(resolve, 5));
+          return body();
+        };
+        return response;
+      });
     const scheduler = new RangeScheduler({
-      fetch,
+      fetch: slowFetch,
       maxConcurrent: 1,
       coalesceGapBytes: 16,
       maxCoalescedBytes: 64,
@@ -479,11 +491,21 @@ describe("RangeScheduler review fixes", () => {
     await flush();
     calls[0]!.resolve(data, 0, 7);
     await blocker;
+    let settled = false;
+    const all = Promise.all(pending).finally(() => {
+      settled = true;
+    });
     const sizes: number[] = [];
     let served = 1;
-    for (let guard = 0; guard < 10; guard += 1) {
-      await flush();
-      await flush();
+    for (;;) {
+      await vi.waitFor(
+        () => {
+          if (!settled && calls.length === served) {
+            throw new Error("waiting for the next coalesced range fetch");
+          }
+        },
+        { timeout: 4000, interval: 1 },
+      );
       if (calls.length === served) break;
       const call = calls[served]!;
       served += 1;
@@ -493,7 +515,7 @@ describe("RangeScheduler review fixes", () => {
       sizes.push(end - start + 1);
       call.resolve(data, start, end);
     }
-    const results = await Promise.all(pending);
+    const results = await all;
     [80, 64, 48, 32, 16, 0].forEach((offset, i) => {
       expect(Array.from(results[i]!)).toEqual(
         Array.from(data.slice(offset, offset + 16)),
