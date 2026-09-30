@@ -1070,3 +1070,219 @@ async function compileW07Declarations(runtime: Forge3DRuntime, session: Forge3DS
 }
 
 void compileW07Declarations;
+
+// W08 (F1-F5): terrain streaming / COG / overlay / VT declarations.
+import {
+  ArrayHeightSource,
+  CacheStorageByteCache,
+  cacheStorageByteStore,
+  calculateTriangleReduction,
+  CogDataset,
+  CogHeightSource,
+  createCogWorkerHandler,
+  createPersistentByteCache,
+  decodeOverlayImage,
+  DigestCheckedByteCache,
+  FunctionHeightSource,
+  generateClipmapMesh,
+  getTerrainOverlayDefaults,
+  heightPyramidLodCount,
+  IndexedDbByteCache,
+  indexedDbByteStore,
+  isTerrainOverlayLayerVisible,
+  MemoryByteCache,
+  normalizeTerrainOverlays,
+  normalizeTerrainVirtualTexture,
+  OpfsByteCache,
+  opfsByteStore,
+  RangeScheduler,
+  selectLodTilesReference,
+  TerrainStreamer,
+  terrainOverlayVisibleLayers,
+  validateTerrainVtSupport,
+  type ClipmapMeshResult,
+  type CogStats,
+  type HeightStreamingStats,
+  type HeightTileCompletion,
+  type HeightTilePlan,
+  type HeightTileSource,
+  type IfdInfo,
+  type LodSelectionReport,
+  type MemoryByteCacheStats,
+  type NormalizedTerrainOverlays,
+  type NormalizedTerrainVirtualTexture,
+  type OverlayBlendMode,
+  type PersistentByteCache,
+  type RangeSchedulerStats,
+  type TerrainStreamerOptions,
+  type TerrainStreamerStats,
+  type TerrainVtSupportReport,
+} from "../../types/index";
+
+async function compileW08Declarations(
+  runtime: Forge3DRuntime,
+  viewer: Forge3DViewer,
+  session: Forge3DSession,
+): Promise<void> {
+  const memory = new MemoryByteCache(1024);
+  memory.put("k", new Uint8Array(4));
+  const memStats: MemoryByteCacheStats = memory.stats();
+
+  const scheduler = new RangeScheduler({ memoryCache: memory });
+  const bytes: Uint8Array = await scheduler.request(
+    "https://example.test/dem.tif",
+    0,
+    16,
+    { priority: 1, signal: new AbortController().signal },
+  );
+  const rangeStats: RangeSchedulerStats = scheduler.stats();
+  scheduler.dispose();
+
+  const persistent: PersistentByteCache = new OpfsByteCache({ name: "w08" });
+  void new IndexedDbByteCache({ name: "w08" });
+  void new CacheStorageByteCache({ name: "w08" });
+  void new DigestCheckedByteCache("custom", opfsByteStore("w08"));
+  void indexedDbByteStore("w08");
+  void cacheStorageByteStore("w08");
+  await persistent.put("k", bytes);
+  const fallback = await createPersistentByteCache({ name: "w08" });
+
+  const cog = await CogDataset.open("https://example.test/dem.tif", {
+    cacheSizeMb: 32,
+    scheduler,
+    persistentCache: persistent,
+    signal: new AbortController().signal,
+  });
+  const info: IfdInfo = cog.ifdInfo(0);
+  const tile: Float32Array = await cog.readTile(0, 0, 0);
+  const rgbaTile: Uint8ClampedArray = await cog.readOverviewRgba(0);
+  const cogStats: CogStats = cog.stats();
+
+  const handler = createCogWorkerHandler();
+  const arraySource: HeightTileSource = new ArrayHeightSource(
+    new Float32Array(4),
+    2,
+    2,
+  );
+  const functionSource = new FunctionHeightSource({
+    width: 2,
+    height: 2,
+    sample: () => 0,
+  });
+  const cogSource = new CogHeightSource(cog);
+  const lodCount: number = heightPyramidLodCount(1025, 1025, 256);
+
+  const streamerOptions: TerrainStreamerOptions = {
+    maxResidentBytes: 64 * 1024 * 1024,
+    maxInFlight: 8,
+    lodBias: 0,
+  };
+  const streamer = await TerrainStreamer.create(
+    viewer,
+    cogSource,
+    streamerOptions,
+  );
+  await TerrainStreamer.create(runtime, arraySource);
+  await streamer.update();
+  await streamer.whenConverged();
+  const streamerStats: TerrainStreamerStats = streamer.stats();
+  streamer.dispose();
+
+  const blend: OverlayBlendMode = "multiply";
+  const overlays: NormalizedTerrainOverlays = normalizeTerrainOverlays({
+    enabled: true,
+    layers: [
+      {
+        image: { width: 1, height: 1, data: new Uint8Array(4) },
+        extent: [0, 0, 1, 1],
+        blendMode: blend,
+      },
+    ],
+  });
+  const overlayDefaults: NormalizedTerrainOverlays =
+    getTerrainOverlayDefaults();
+  const visible = terrainOverlayVisibleLayers(overlays);
+  const layerVisible: boolean = isTerrainOverlayLayerVisible(visible[0]!);
+  const image = await decodeOverlayImage(new ImageData(1, 1));
+
+  const vt: NormalizedTerrainVirtualTexture =
+    normalizeTerrainVirtualTexture({
+      layers: [{ family: "albedo", virtualSizePx: [2048, 2048] }],
+    });
+  const vtReport: TerrainVtSupportReport =
+    await validateTerrainVtSupport({
+      layers: [{ family: "albedo", virtualSizePx: [2048, 2048] }],
+    });
+
+  const clipmap: ClipmapMeshResult = await generateClipmapMesh(
+    { ringCount: 4, ringResolution: 64, centerResolution: 64 },
+    [0, 0],
+    256,
+  );
+  const reduction: number = await calculateTriangleReduction(100_000, 4_000);
+  const lod = await selectLodTilesReference({
+    viewProj: new Array(16).fill(0),
+    cameraPos: [0, 0, 0],
+    viewportHeight: 720,
+    fovY: 0.8,
+    maxLod: 4,
+    tiles: [
+      { lod: 0, x: 0, y: 0, boundsMin: [0, 0], boundsMax: [1, 1] },
+    ],
+  });
+  void lod;
+
+  const plan: HeightTilePlan = runtime.planHeightTiles(4);
+  const completion: HeightTileCompletion = runtime.completeHeightTile(
+    0,
+    0,
+    0,
+    new Float32Array(4),
+  );
+  runtime.failHeightTile(0, 0, 0);
+  const stats: HeightStreamingStats = runtime.getHeightStreamingStats();
+  const selection: LodSelectionReport | null = runtime.getLodSelection();
+  runtime.registerMaterialVtSource(0, "albedo", {
+    width: 1,
+    height: 1,
+    data: new Uint8Array(4),
+  });
+  runtime.clearMaterialVtSources();
+  void session.getTerrainGeometryReport();
+  void session.getTerrainOverlayReport();
+  void viewer.getHeightStreamingStats();
+  void viewer.getMaterialVtStats();
+  const removeRecovery = viewer.addRecoveryListener(() => {});
+  const removeFrame = viewer.addFrameListener(() => true);
+  removeRecovery();
+  removeFrame();
+  viewer.requestRender();
+
+  void [
+    memStats,
+    rangeStats,
+    persistent,
+    fallback,
+    info,
+    tile,
+    rgbaTile,
+    cogStats,
+    handler,
+    functionSource,
+    lodCount,
+    streamerStats,
+    overlayDefaults,
+    layerVisible,
+    image,
+    vt,
+    vtReport,
+    clipmap,
+    reduction,
+    plan,
+    completion,
+    stats,
+    selection,
+  ];
+}
+
+void compileW08Declarations;

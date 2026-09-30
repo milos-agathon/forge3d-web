@@ -134,6 +134,9 @@ class FakeRuntime implements SessionRuntimeLike {
   setCamera(camera: CameraInput): void {
     this.cameras.push(camera);
   }
+  registerMaterialVtSource(materialIndex: number, family: string): void {
+    this.callOrder.push(`vt:${materialIndex}:${family}`);
+  }
 
   setDeviceLostHandler(
     handler: ((error: unknown) => void) | undefined,
@@ -479,6 +482,34 @@ describe("Forge3DSession", () => {
     runtime.iblPrecomputeResult = Promise.resolve(prepared);
     const result = await session.precomputeIbl(ibl);
     expect(result).toBe(prepared);
+
+    session.dispose();
+  });
+
+  it("replays VT sources before the committed scene on recovery", async () => {
+    installFactory();
+    const session = await Forge3DSession.create({} as OffscreenCanvas, {
+      recovery: { deviceLoss: "once" },
+    });
+    const runtime = latest();
+    session.registerMaterialVtSource(
+      0,
+      "albedo",
+      { width: 2, height: 2, data: new Uint8Array(16) },
+      [0.5, 0.5, 0.5, 1],
+    );
+    session.setScene(Forge3DScene.create());
+
+    runtime.lose();
+    await session.whenReady();
+    const recovered = latest();
+    expect(recovered).not.toBe(runtime);
+    // The runtime reads VT sources when the terrain/scene is committed,
+    // so the replay must register them first.
+    const vt = recovered.callOrder.indexOf("vt:0:albedo");
+    const scene = recovered.callOrder.indexOf("scene");
+    expect(vt).toBeGreaterThanOrEqual(0);
+    expect(scene).toBeGreaterThan(vt);
 
     session.dispose();
   });

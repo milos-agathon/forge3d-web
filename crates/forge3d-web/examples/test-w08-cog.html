@@ -1,0 +1,991 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forge3D W08 COG Test</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+      }
+
+      canvas {
+        display: block;
+        width: 256px;
+        height: 192px;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="forge3d-w08-cog-canvas" width="256" height="192"></canvas>
+    <script type="module">
+      import {
+        CacheStorageByteCache,
+        CogDataset,
+        CogHeightSource,
+        Forge3DError,
+        Forge3DRuntime,
+        Forge3DViewer,
+        Forge3DWorkerPool,
+        FunctionHeightSource,
+        IndexedDbByteCache,
+        OpfsByteCache,
+        RangeScheduler,
+        TerrainStreamer,
+        cacheStorageByteStore,
+        createCogWorkerHandler,
+        indexedDbByteStore,
+        opfsByteStore,
+      } from "../src-ts/index.ts";
+      import { simulateViewerDeviceLossForTests } from "../src-ts/viewer.ts";
+
+      const canvas = document.querySelector("#forge3d-w08-cog-canvas");
+      const WIDTH = 256;
+      const HEIGHT = 192;
+      const CLEAR = [0.05, 0.07, 0.1, 1];
+
+      async function sha256Hex(bytes) {
+        const digest = await crypto.subtle.digest(
+          "SHA-256",
+          bytes.buffer.slice(
+            bytes.byteOffset,
+            bytes.byteOffset + bytes.byteLength,
+          ),
+        );
+        return [...new Uint8Array(digest)]
+          .map((b) => b.toString(16).padStart(2, "0"))
+          .join("");
+      }
+
+      function makePool() {
+        return new Forge3DWorkerPool({
+          size: 1,
+          workerFactory: () =>
+            new Worker(new URL("./test-w08-cog-worker.js", import.meta.url), {
+              type: "module",
+            }),
+          mainThreadHandler: createCogWorkerHandler(),
+        });
+      }
+
+      function poolMode(pool) {
+        return pool === undefined ? "main-thread" : pool.getDiagnostics().mode;
+      }
+
+      function metadataOf(cog) {
+        return {
+          width: cog.width,
+          height: cog.height,
+          overviewCount: cog.overviewCount,
+          bands: cog.samplesPerPixel,
+          bitsPerSample: cog.bitsPerSample,
+          sampleFormat: cog.sampleFormat,
+          compression: cog.compression,
+          nodata: cog.nodata,
+          crs: cog.crs,
+          geoTransform: cog.geoTransform,
+          bounds: cog.bounds,
+          ifdInfo: Array.from({ length: cog.overviewCount }, (_, level) =>
+            cog.ifdInfo(level),
+          ),
+        };
+      }
+
+      async function openCog(url, extra = {}) {
+        const scheduler = new RangeScheduler();
+        const cog = await CogDataset.open(url, { scheduler, ...extra });
+        return { cog, scheduler };
+      }
+
+      function tileSamples(tile) {
+        // Square tile: sample pixels matching the rasterio truth file
+        // ([0,0], image-center, last).
+        const w = Math.round(Math.sqrt(tile.length));
+        const centerIndex = Math.floor(w / 2) * w + Math.floor(w / 2);
+        return {
+          first: tile[0],
+          center: tile[centerIndex],
+          last: tile[tile.length - 1],
+        };
+      }
+
+      async function makeRuntime() {
+        return Forge3DRuntime.create(canvas, {
+          width: WIDTH,
+          height: HEIGHT,
+          devicePixelRatio: 1,
+          clearColor: CLEAR,
+        });
+      }
+
+      function countClearPixels(rgba) {
+        const r = Math.round(CLEAR[0] * 255);
+        const g = Math.round(CLEAR[1] * 255);
+        const b = Math.round(CLEAR[2] * 255);
+        let count = 0;
+        for (let index = 0; index < rgba.length; index += 4) {
+          if (
+            rgba[index] === r &&
+            rgba[index + 1] === g &&
+            rgba[index + 2] === b
+          ) {
+            count += 1;
+          }
+        }
+        return count;
+      }
+
+      function maxAbsDiff(a, b) {
+        let max = 0;
+        for (let index = 0; index < a.length; index += 1) {
+          max = Math.max(max, Math.abs(a[index] - b[index]));
+        }
+        return max;
+      }
+
+      function rgbaBase64(rgba) {
+        let binary = "";
+        const chunk = 8192;
+        for (let index = 0; index < rgba.length; index += chunk) {
+          binary += String.fromCharCode(
+            ...rgba.subarray(index, Math.min(index + chunk, rgba.length)),
+          );
+        }
+        return btoa(binary);
+      }
+
+      // Deterministic local ssim (luminance, uniform weights) — enough for a
+      // post-recovery byte-drift gate alongside the byte-identical check.
+      function ssimMono(a, b) {
+        if (a.length !== b.length || a.length === 0) return 0;
+        const n = a.length / 4;
+        const la = new Float64Array(n);
+        const lb = new Float64Array(n);
+        let meanA = 0;
+        let meanB = 0;
+        for (let i = 0; i < n; i += 1) {
+          la[i] = 0.2126 * a[i * 4] + 0.7152 * a[i * 4 + 1] + 0.0722 * a[i * 4 + 2];
+          lb[i] = 0.2126 * b[i * 4] + 0.7152 * b[i * 4 + 1] + 0.0722 * b[i * 4 + 2];
+          meanA += la[i];
+          meanB += lb[i];
+        }
+        meanA /= n;
+        meanB /= n;
+        let varA = 0;
+        let varB = 0;
+        let cov = 0;
+        for (let i = 0; i < n; i += 1) {
+          const da = la[i] - meanA;
+          const db = lb[i] - meanB;
+          varA += da * da;
+          varB += db * db;
+          cov += da * db;
+        }
+        varA /= n;
+        varB /= n;
+        cov /= n;
+        const c1 = 6.5025;
+        const c2 = 58.5225;
+        return (
+          ((2 * meanA * meanB + c1) * (2 * cov + c2)) /
+          ((meanA * meanA + meanB * meanB + c1) * (varA + varB + c2))
+        );
+      }
+
+      function persistentCacheFor(kind, name) {
+        if (kind === "opfs") return new OpfsByteCache({ name });
+        if (kind === "indexeddb") return new IndexedDbByteCache({ name });
+        if (kind === "cache-storage") return new CacheStorageByteCache({ name });
+        throw new Error(`unknown cache kind ${kind}`);
+      }
+
+      function byteStoreFor(kind, name) {
+        if (kind === "opfs") return opfsByteStore(name);
+        if (kind === "indexeddb") return indexedDbByteStore(name);
+        if (kind === "cache-storage") return cacheStorageByteStore(name);
+        throw new Error(`unknown cache kind ${kind}`);
+      }
+
+      function heightmap1025() {
+        const size = 1025;
+        const heights = new Float32Array(size * size);
+        for (let row = 0; row < size; row += 1) {
+          for (let col = 0; col < size; col += 1) {
+            const x = col / (size - 1) - 0.5;
+            const z = row / (size - 1) - 0.5;
+            heights[row * size + col] =
+              0.35 * Math.exp(-(x * x + z * z) * 18) +
+              0.04 * Math.sin(x * 40) * Math.cos(z * 36);
+          }
+        }
+        return heights;
+      }
+
+      // The COG terrain uses sample-space world units (spacing 1 -> the
+      // 1024x1024 virtual heightfield spans [-512, 512]^2 centred at the
+      // origin, like the 16385 fixture in test-w08-terrain).
+      const CLIPMAP = {
+        ringCount: 4,
+        ringResolution: 32,
+        centerResolution: 64,
+        skirtDepth: 12,
+        morphRange: 0.5,
+      };
+
+      // Top-down view fully inside the 1024x1024 footprint: every pixel in
+      // the frame is terrain, so any clear pixel is a hole/crack.
+      const COG_CAM = {
+        position: [0, 600, 0],
+        target: [0, 0, 30],
+        up: [0, 0, -1],
+        fovYDegrees: 55,
+        near: 10,
+        far: 1500,
+      };
+
+      // Forge3DViewer cameras must be Y-up, so the recovery probe uses a
+      // tilted view of the same footprint instead of the top-down COG_CAM.
+      const VIEWER_CAM = {
+        position: [0, 420, -760],
+        target: [0, 0, 40],
+        up: [0, 1, 0],
+        fovYDegrees: 55,
+        near: 10,
+        far: 3000,
+      };
+
+      function overlayImage(seed, width = 64, height = 64) {
+        const data = new Uint8Array(width * height * 4);
+        for (let index = 0; index < width * height; index += 1) {
+          const u = (index % width) / width;
+          const v = Math.floor(index / width) / height;
+          data[index * 4] = Math.round(seed * 40 + u * 120) & 0xff;
+          data[index * 4 + 1] = Math.round(seed * 70 + v * 140) & 0xff;
+          data[index * 4 + 2] = Math.round(seed * 30 + (u + v) * 60) & 0xff;
+          data[index * 4 + 3] = Math.round(110 + 120 * u * v) & 0xff;
+        }
+        return { width, height, data };
+      }
+
+      const api = {};
+
+      api.metadata = async (url) => {
+        const { cog, scheduler } = await openCog(url);
+        const result = {
+          metadata: metadataOf(cog),
+          range: scheduler.stats(),
+        };
+        cog.dispose();
+        return result;
+      };
+
+      api.predictor = async (url, mode) => {
+        const pool = mode === "worker" ? makePool() : undefined;
+        try {
+          const { cog, scheduler } = await openCog(url, {
+            ...(pool !== undefined ? { workerPool: pool } : {}),
+          });
+          const tile = await cog.readTile(0, 0, 0);
+          const result = {
+            mode,
+            poolMode: poolMode(pool),
+            width: cog.width,
+            height: cog.height,
+            dtypeBits: cog.bitsPerSample,
+            sha256: await sha256Hex(tile),
+            first8: [...tile.slice(0, 8)],
+            samples: tileSamples(tile),
+            range: scheduler.stats(),
+          };
+          cog.dispose();
+          return result;
+        } finally {
+          pool?.dispose();
+        }
+      };
+
+      api.rainierTiles = async (url, mode) => {
+        const pool = mode === "worker" ? makePool() : undefined;
+        try {
+          const { cog, scheduler } = await openCog(url, {
+            ...(pool !== undefined ? { workerPool: pool } : {}),
+          });
+          const levels = [];
+          for (let level = 0; level < cog.overviewCount; level += 1) {
+            const tile = await cog.readTile(0, 0, level);
+            levels.push({
+              level,
+              sha256: await sha256Hex(tile),
+              samples: tileSamples(tile),
+            });
+          }
+          const result = {
+            mode,
+            poolMode: poolMode(pool),
+            metadata: metadataOf(cog),
+            levels,
+            range: scheduler.stats(),
+          };
+          cog.dispose();
+          return result;
+        } finally {
+          pool?.dispose();
+        }
+      };
+
+      api.singleTileBytes = async (url) => {
+        const { cog, scheduler } = await openCog(url);
+        await cog.readTile(0, 0, 0);
+        const range = scheduler.stats();
+        const stats = cog.stats();
+        const result = {
+          bytesTransferred: range.bytesTransferred,
+          httpRequests: range.httpRequests,
+          fileBytes: scheduler.fileSize(url) ?? null,
+          memoryUsedBytes: stats.memoryUsedBytes,
+        };
+        cog.dispose();
+        return result;
+      };
+
+      api.repeatRead = async (url) => {
+        const { cog, scheduler } = await openCog(url);
+        await cog.readTile(0, 0, 0);
+        const before = scheduler.stats();
+        await cog.readTile(0, 0, 0);
+        const after = scheduler.stats();
+        const tileStats = cog.stats();
+        const result = {
+          newRequests: after.httpRequests - before.httpRequests,
+          newBytes: after.bytesTransferred - before.bytesTransferred,
+          cacheHits: tileStats.cacheHits,
+          cacheMisses: tileStats.cacheMisses,
+          rangeCacheHits: after.cacheHits - before.cacheHits,
+        };
+        cog.dispose();
+        return result;
+      };
+
+      const PERSISTENT_TILES = [
+        [0, 0],
+        [1, 0],
+        [0, 1],
+        [1, 1],
+      ];
+
+      api.primePersistent = async (url, kind) => {
+        const name = `forge3d-w08-cog-${kind}`;
+        const cache = persistentCacheFor(kind, name);
+        // The persistent cache is a RangeScheduler option — pass it through
+        // the scheduler so range reads are persisted.
+        const scheduler = new RangeScheduler({ persistentCache: cache });
+        const cog = await CogDataset.open(url, {
+          scheduler,
+          persistentCache: cache,
+        });
+        const digests = [];
+        for (const [x, y] of PERSISTENT_TILES) {
+          const tile = await cog.readTile(x, y, 0);
+          digests.push(await sha256Hex(tile));
+        }
+        const result = {
+          kind,
+          digests,
+          persistent: cog.stats().persistent,
+          range: scheduler.stats(),
+        };
+        cog.dispose();
+        return result;
+      };
+
+      api.replayPersistent = async (url, kind) => {
+        const name = `forge3d-w08-cog-${kind}`;
+        const cache = persistentCacheFor(kind, name);
+        const scheduler = new RangeScheduler({ persistentCache: cache });
+        const cog = await CogDataset.open(url, {
+          scheduler,
+          persistentCache: cache,
+        });
+        const digests = [];
+        for (const [x, y] of PERSISTENT_TILES) {
+          const tile = await cog.readTile(x, y, 0);
+          digests.push(await sha256Hex(tile));
+        }
+        const result = {
+          kind,
+          digests,
+          persistent: cog.stats().persistent,
+          range: scheduler.stats(),
+        };
+        cog.dispose();
+        return result;
+      };
+
+      async function corruptOpfs(ns) {
+        const root = await navigator.storage.getDirectory();
+        const dir = await root.getDirectoryHandle(ns);
+        const names = [];
+        for await (const name of dir.keys()) names.push(name);
+        names.sort();
+        if (names.length === 0) return { corrupted: false, entries: 0 };
+        const file = await dir.getFileHandle(names[0]);
+        const bytes = new Uint8Array(await (await file.getFile()).arrayBuffer());
+        if (bytes.length > 40) bytes[40] ^= 0xff;
+        else bytes[bytes.length - 1] ^= 0xff;
+        const writable = await file.createWritable();
+        await writable.write(bytes);
+        await writable.close();
+        return { corrupted: true, entries: names.length, entry: names[0] };
+      }
+
+      async function idbRequest(request) {
+        return new Promise((resolve, reject) => {
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () =>
+            reject(request.error ?? new Error("idb request failed"));
+        });
+      }
+
+      async function corruptIndexedDb(ns) {
+        const db = await idbRequest(indexedDB.open(ns, 1));
+        try {
+          const tx = db.transaction("entries", "readwrite");
+          const store = tx.objectStore("entries");
+          const keys = await idbRequest(store.getAllKeys());
+          keys.sort();
+          if (keys.length === 0) return { corrupted: false, entries: 0 };
+          const key = keys.find((k) => String(k).startsWith("forge3d:r:")) ?? keys[0];
+          const value = await idbRequest(store.get(key));
+          const bytes =
+            value instanceof Uint8Array ? value : new Uint8Array(value);
+          if (bytes.length > 40) bytes[40] ^= 0xff;
+          else bytes[bytes.length - 1] ^= 0xff;
+          await idbRequest(store.put(bytes, key));
+          return { corrupted: true, entries: keys.length, entry: String(key) };
+        } finally {
+          db.close();
+        }
+      }
+
+      async function corruptCacheStorage(ns) {
+        const cache = await caches.open(ns);
+        const keys = await cache.keys();
+        if (keys.length === 0) return { corrupted: false, entries: 0 };
+        const request = keys[0];
+        const bytes = new Uint8Array(
+          await (await cache.match(request)).arrayBuffer(),
+        );
+        if (bytes.length > 40) bytes[40] ^= 0xff;
+        else bytes[bytes.length - 1] ^= 0xff;
+        await cache.put(
+          request,
+          new Response(bytes, {
+            headers: { "content-type": "application/octet-stream" },
+          }),
+        );
+        return { corrupted: true, entries: keys.length, entry: request.url };
+      }
+
+      api.corruptEntry = async (kind) => {
+        const ns = `forge3d-w08-cog-${kind}`;
+        if (kind === "opfs") return { kind, ...(await corruptOpfs(ns)) };
+        if (kind === "indexeddb") return { kind, ...(await corruptIndexedDb(ns)) };
+        return { kind, ...(await corruptCacheStorage(ns)) };
+      };
+
+      api.clearPersistent = async (kind) => {
+        const ns = `forge3d-w08-cog-${kind}`;
+        await byteStoreFor(kind, ns).clear();
+        return { kind, cleared: true };
+      };
+
+      api.backendsAvailable = async () => ({
+        opfs:
+          typeof navigator !== "undefined" &&
+          typeof navigator.storage?.getDirectory === "function",
+        indexeddb: typeof indexedDB !== "undefined",
+        cacheStorage: typeof caches !== "undefined",
+        worker: typeof Worker !== "undefined",
+        secureContext: globalThis.isSecureContext === true,
+      });
+
+      api.rangeIgnored = async (url) => {
+        const scheduler = new RangeScheduler();
+        try {
+          await CogDataset.open(url, { scheduler });
+          return { code: "NONE" };
+        } catch (error) {
+          const normalized = Forge3DError.from(error);
+          return {
+            code: normalized.code,
+            reason: normalized.details?.reason ?? null,
+            message: normalized.message,
+            range: scheduler.stats(),
+          };
+        }
+      };
+
+      api.abortRead = async (url) => {
+        const { cog } = await openCog(url);
+        const controller = new AbortController();
+        const pending = cog.readTile(0, 0, 0, { signal: controller.signal });
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        controller.abort();
+        try {
+          await pending;
+          return { code: "NONE" };
+        } catch (error) {
+          const normalized = Forge3DError.from(error);
+          return {
+            code: normalized.code,
+            signalAborted: controller.signal.aborted,
+          };
+        } finally {
+          cog.dispose();
+        }
+      };
+
+      api.streamRainier = async (url) => {
+        const runtime = await makeRuntime();
+        try {
+          const errors = [];
+          const scheduler = new RangeScheduler();
+          const cog = await CogDataset.open(url, { scheduler });
+          const source = new CogHeightSource(cog);
+          const streamer = await TerrainStreamer.create(runtime, source, {
+            terrain: {
+              spacing: [1, 1],
+              exaggeration: 0.08,
+              renderMode: "perspective",
+            },
+            clipmap: CLIPMAP,
+            maxResidentBytes: 8 * 1024 * 1024,
+            maxInFlight: 4,
+            onError: (error) =>
+              errors.push(Forge3DError.from(error).message),
+          });
+          // Coarse base only: render before convergence completes.
+          runtime.setCamera(COG_CAM);
+          runtime.render();
+          const coarse = await runtime.readRgba();
+          let streamerStats = streamer.stats();
+          let guard = 0;
+          while (!streamerStats.converged && guard < 600) {
+            await streamer.update();
+            runtime.render();
+            // Drain in-flight fetches before re-planning so a plan change
+            // never aborts a partial range read — every transferred range
+            // then lands exactly once (keeps bytes under the file size).
+            let drain = 0;
+            while (streamer.stats().pendingFetches > 0 && drain < 600) {
+              await new Promise((resolve) => setTimeout(resolve, 0));
+              drain += 1;
+            }
+            streamerStats = streamer.stats();
+            guard += 1;
+          }
+          runtime.render();
+          const converged = await runtime.readRgba();
+          const result = {
+            converged: streamerStats.converged,
+            runtime: streamerStats.runtime,
+            uploadedTiles: streamerStats.uploadedTiles,
+            coarseClearPixels: countClearPixels(coarse),
+            convergedClearPixels: countClearPixels(converged),
+            coarseVsConvergedMaxDiff: maxAbsDiff(coarse, converged),
+            bytesTransferred: scheduler.stats().bytesTransferred,
+            httpRequests: scheduler.stats().httpRequests,
+            memory: runtime.getMemoryReport(),
+            errors,
+          };
+          streamer.dispose();
+          cog.dispose();
+          return result;
+        } finally {
+          runtime.dispose();
+        }
+      };
+
+      api.landcoverOverlay = async (terrainUrl, overlayUrl) => {
+        const runtime = await makeRuntime();
+        try {
+          const { cog, scheduler } = await openCog(terrainUrl);
+          const source = new CogHeightSource(cog);
+          const errors = [];
+          const overlayCog = await CogDataset.open(overlayUrl, { scheduler });
+          const overviewLevel = overlayCog.overviewCount - 1;
+          const overviewInfo = overlayCog.ifdInfo(overviewLevel);
+          const overviewPixels = await overlayCog.readOverviewRgba(overviewLevel);
+          const overview = {
+            width: overviewInfo.width,
+            height: overviewInfo.height,
+            data: new Uint8Array(
+              overviewPixels.buffer,
+              overviewPixels.byteOffset,
+              overviewPixels.byteLength,
+            ),
+          };
+          const streamer = await TerrainStreamer.create(runtime, source, {
+            terrain: {
+              spacing: [1, 1],
+              exaggeration: 0.00001,
+              renderMode: "perspective",
+              crs: cog.crs ?? "EPSG:4326",
+              // bounds doubles as the CRS-space extent the overlay
+              // placement maps into (and the world XZ extent).
+              ...(cog.bounds !== undefined ? { bounds: cog.bounds } : {}),
+              ...(cog.bounds !== undefined
+                ? {
+                    overlays: {
+                      layers: [
+                        {
+                          name: "landcover",
+                          image: overview,
+                          // CRS placement in the terrain's CRS; the
+                          // landcover file's real bounds do not overlap
+                          // Mount Rainier, so the layer is placed at the
+                          // terrain's own CRS extent to exercise the path.
+                          crs: overlayCog.crs ?? "EPSG:4326",
+                          crsBounds: cog.bounds,
+                          opacity: 0.85,
+                          blendMode: "normal",
+                        },
+                      ],
+                    },
+                  }
+                : {}),
+            },
+            clipmap: CLIPMAP,
+            maxResidentBytes: 8 * 1024 * 1024,
+            onError: (error) =>
+              errors.push(Forge3DError.from(error).message),
+          });
+          // Top-down view inside the degree-scale bounds (the terrain's
+          // CRS-space extent doubles as the world extent).
+          const b = cog.bounds ?? [0, 0, 1, 1];
+          const cx = b[0] + (b[2] - b[0]) * 0.5;
+          const cz = b[1] + (b[3] - b[1]) * 0.5;
+          runtime.setCamera({
+            position: [cx, 0.1, cz],
+            target: [cx, 0, cz],
+            up: [0, 0, -1],
+            fovYDegrees: 50,
+            near: 0.001,
+            far: 5,
+          });
+          let streamerStats = streamer.stats();
+          let guard = 0;
+          while (!streamerStats.converged && guard < 600) {
+            await streamer.update();
+            runtime.render();
+            // Fetch completions are macrotasks — yield out of the microtask
+            // queue or the loop starves them and never converges.
+            await new Promise((resolve) => setTimeout(resolve, 0));
+            streamerStats = streamer.stats();
+            guard += 1;
+          }
+          runtime.render();
+          const withOverlay = await runtime.readRgba();
+          runtime.render();
+          const withOverlay2 = await runtime.readRgba();
+          const report = runtime.getTerrainOverlayReport();
+          const result = {
+            converged: streamerStats.converged,
+            overlayReport: report,
+            deterministic: maxAbsDiff(withOverlay, withOverlay2) === 0,
+            overlayWidth: overview.width,
+            overlayHeight: overview.height,
+            overlayCogBounds: overlayCog.bounds,
+            terrainCogBounds: cog.bounds,
+            terrainCrs: cog.crs,
+            overlayCrs: overlayCog.crs,
+            bytesTransferred: scheduler.stats().bytesTransferred,
+            errors,
+          };
+          streamer.dispose();
+          overlayCog.dispose();
+          cog.dispose();
+          return result;
+        } finally {
+          runtime.dispose();
+        }
+      };
+
+      api.viewerRecovery = async (url) => {
+        const viewerErrors = [];
+        const viewer = await Forge3DViewer.create(canvas, {
+          runtime: {
+            width: WIDTH,
+            height: HEIGHT,
+            devicePixelRatio: 1,
+            clearColor: CLEAR,
+            diagnostics: true,
+          },
+          // Orbit state is what #effectiveCamera() replays after recovery —
+          // a raw setCamera(position/target) does not round-trip through
+          // the camera controller and would shift the clipmap center.
+          initialView: {
+            target: [0, 0, 0],
+            distance: 1100,
+            yawDegrees: 0,
+            pitchDegrees: 40,
+            fovYDegrees: 55,
+            near: 10,
+            far: 4000,
+          },
+          onError: (error) =>
+            viewerErrors.push(Forge3DError.from(error).message),
+        });
+        try {
+          const errors = [];
+          const scheduler = new RangeScheduler();
+          const cog = await CogDataset.open(url, { scheduler });
+          const source = new CogHeightSource(cog);
+          const streamer = await TerrainStreamer.create(viewer, source, {
+            terrain: {
+              spacing: [1, 1],
+              exaggeration: 0.08,
+              renderMode: "perspective",
+            },
+            clipmap: CLIPMAP,
+            maxResidentBytes: 8 * 1024 * 1024,
+            maxInFlight: 4,
+            onError: (error) =>
+              errors.push(Forge3DError.from(error).message),
+          });
+          viewer.resetView();
+          let streamerStats = streamer.stats();
+          let guard0 = 0;
+          while (!streamerStats.converged && guard0 < 600) {
+            await streamer.update();
+            viewer.render();
+            let drain0 = 0;
+            while (streamer.stats().pendingFetches > 0 && drain0 < 600) {
+              await new Promise((resolve) => setTimeout(resolve, 0));
+              drain0 += 1;
+            }
+            streamerStats = streamer.stats();
+            guard0 += 1;
+          }
+          viewer.render();
+          const before = await decodePng(await viewer.screenshot());
+          const bytesBefore = scheduler.stats().bytesTransferred;
+          const generationBefore = viewer.getDiagnostics().generation;
+          simulateViewerDeviceLossForTests(viewer);
+          // The device-lost callback is asynchronous: first wait until the
+          // loss is observed (status leaves "ready"), then for recovery.
+          for (let i = 0; i < 120 && viewer.status === "ready"; i += 1) {
+            await new Promise((resolve) => setTimeout(resolve, 25));
+          }
+          for (let i = 0; i < 240 && viewer.status === "recovering"; i += 1) {
+            await new Promise((resolve) => setTimeout(resolve, 50));
+          }
+          let streamerStats2 = streamer.stats();
+          let guard = 0;
+          while (!streamerStats2.converged && guard < 600) {
+            await streamer.update();
+            viewer.render();
+            let drain = 0;
+            while (streamer.stats().pendingFetches > 0 && drain < 600) {
+              await new Promise((resolve) => setTimeout(resolve, 0));
+              drain += 1;
+            }
+            streamerStats2 = streamer.stats();
+            guard += 1;
+          }
+          viewer.render();
+          const after = await decodePng(await viewer.screenshot());
+          const bytesAfter = scheduler.stats().bytesTransferred;
+          const identical =
+            before.length === after.length &&
+            before.every((value, index) => value === after[index]);
+          // Diagnostic: where do the frames differ?
+          let diffCount = 0;
+          let minX = WIDTH, maxX = -1, minY = HEIGHT, maxY = -1;
+          for (let py = 0; py < HEIGHT; py += 1) {
+            for (let px = 0; px < WIDTH; px += 1) {
+              const o = (py * WIDTH + px) * 4;
+              if (
+                before[o] !== after[o] ||
+                before[o + 1] !== after[o + 1] ||
+                before[o + 2] !== after[o + 2]
+              ) {
+                diffCount += 1;
+                if (px < minX) minX = px;
+                if (px > maxX) maxX = px;
+                if (py < minY) minY = py;
+                if (py > maxY) maxY = py;
+              }
+            }
+          }
+          const result = {
+            status: viewer.status,
+            generationBefore,
+            generationAfter: viewer.getDiagnostics().generation,
+            recoveryAttempts: viewer.getDiagnostics().recoveryAttempts,
+            identical,
+            ssim: identical ? 1 : ssimMono(before, after),
+            maxDiff: maxAbsDiff(before, after),
+            replayBytes: bytesAfter - bytesBefore,
+            converged: streamerStats2.converged,
+            diffCount,
+            diffBox: [minX, minY, maxX, maxY],
+            streamerRuntime: streamerStats2.runtime,
+            errors,
+            viewerErrors,
+          };
+          streamer.dispose();
+          cog.dispose();
+          return result;
+        } catch (error) {
+          return {
+            probeError: `${Forge3DError.from(error).message}\n${error?.stack ?? ""}`,
+            status: viewer.status,
+            viewerErrors,
+          };
+        } finally {
+          viewer.dispose();
+        }
+      };
+
+      async function decodePng(blob) {
+        const bitmap = await createImageBitmap(blob);
+        const target = new OffscreenCanvas(bitmap.width, bitmap.height);
+        const ctx = target.getContext("2d");
+        ctx.drawImage(bitmap, 0, 0);
+        bitmap.close();
+        return ctx.getImageData(0, 0, target.width, target.height).data;
+      }
+
+      api.memoryCycles = async (vtUrlUnused, cycles = 30) => {
+        const runtime = await makeRuntime();
+        try {
+          const empty = {
+            width: 2,
+            height: 2,
+            heights: new Float32Array(4),
+            renderMode: "perspective",
+          };
+          const heights1025 = heightmap1025();
+          // Streaming commits carry the coarsest pyramid level (129x129
+          // for a 1025-virtual pyramid with tile 256) as the base heights.
+          const coarse = new Float32Array(129 * 129);
+          for (let row = 0; row < 129; row += 1) {
+            for (let col = 0; col < 129; col += 1) {
+              coarse[row * 129 + col] = heights1025[row * 8 * 1025 + col * 8];
+            }
+          }
+          const layerImage = (seed) => overlayImage(seed, 128, 128);
+          const fullTerrain = () => ({
+            width: 129,
+            height: 129,
+            heights: coarse,
+            renderMode: "perspective",
+            exaggeration: 0.15,
+            geometry: { mode: "clipmap", clipmap: CLIPMAP },
+            streaming: {
+              width: 1025,
+              height: 1025,
+              tileSize: 256,
+              maxResidentBytes: 4 * 1024 * 1024,
+            },
+            overlays: {
+              layers: [0, 1, 2].map((seed) => ({
+                name: `layer-${seed}`,
+                image: layerImage(seed),
+                opacity: 0.7,
+                blendMode: seed === 1 ? "multiply" : "normal",
+                zOrder: seed,
+              })),
+            },
+            material: {
+              albedoMode: "material",
+              virtualTexture: {
+                atlasSize: 512,
+                residencyBudgetMb: 4,
+                maxMipLevels: 4,
+                useFeedback: false,
+                layers: [
+                  { family: "albedo", virtualSizePx: [2048, 2048] },
+                ],
+              },
+            },
+          });
+          const registerVt = () =>
+            runtime.registerMaterialVtSource(
+              0,
+              "albedo",
+              layerImage(7),
+              [0.8, 0.8, 0.8, 1],
+            );
+          const camera = COG_CAM;
+          runtime.setTerrain(empty);
+          runtime.setCamera(camera);
+          runtime.render();
+          const baseline = runtime.getMemoryReport();
+          const deltas = [];
+          let peakLoaded = 0;
+          for (let cycle = 0; cycle < cycles; cycle += 1) {
+            runtime.setTerrain(fullTerrain());
+            registerVt();
+            runtime.render();
+            const loaded = runtime.getMemoryReport();
+            peakLoaded = Math.max(peakLoaded, loaded.currentBytes);
+            runtime.clearMaterialVtSources();
+            runtime.setTerrain(empty);
+            runtime.render();
+            const report = runtime.getMemoryReport();
+            deltas.push(report.currentBytes - baseline.currentBytes);
+          }
+          return {
+            cycles,
+            baselineBytes: baseline.currentBytes,
+            peakLoadedBytes: peakLoaded,
+            maxDelta: Math.max(...deltas),
+            deltas: [deltas[0], deltas[Math.floor(cycles / 2)], deltas[cycles - 1]],
+            allReturned: deltas.every((delta) => delta === 0),
+            categories: runtime.getMemoryReport().categories,
+          };
+        } finally {
+          runtime.dispose();
+        }
+      };
+
+      api.disposeAbort = async (url) => {
+        const scheduler = new RangeScheduler({ maxConcurrent: 1 });
+        const cog = await CogDataset.open(url, { scheduler });
+        const first = cog.readTile(0, 0, 0);
+        const second = cog.readTile(1, 0, 0);
+        // Disposal aborts in-flight requests (H4/D5): dispose both.
+        cog.dispose();
+        scheduler.dispose();
+        const results = [];
+        for (const pending of [first, second]) {
+          try {
+            await pending;
+            results.push("resolved");
+          } catch (error) {
+            results.push(Forge3DError.from(error).code);
+          }
+        }
+        return { results, schedulerDisposed: true };
+      };
+
+      api.drainToConverged = async (streamer, target) => {
+        let stats = streamer.stats();
+        while (!stats.converged) {
+          await streamer.update();
+          target.render();
+          stats = streamer.stats();
+        }
+        return stats;
+      };
+
+      window.__forge3dW08Cog = api;
+    </script>
+  </body>
+</html>

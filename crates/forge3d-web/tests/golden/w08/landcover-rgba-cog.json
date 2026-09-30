@@ -1,0 +1,102 @@
+{
+  "file": "landcover-rgba-cog.tif",
+  "sizeBytes": 35459,
+  "sha256": "8a825fdb218508dfb3393013176735d88846b3f364ce41fccac07f918c4a06ee",
+  "width": 512,
+  "height": 512,
+  "count": 4,
+  "dtype": [
+    "uint8",
+    "uint8",
+    "uint8",
+    "uint8"
+  ],
+  "nodata": null,
+  "crs": "EPSG:4326",
+  "epsg": 4326,
+  "bounds": [
+    8.186499014913565,
+    46.63229351891224,
+    8.294709687215612,
+    46.74050419121429
+  ],
+  "transform": [
+    0.00021134896933993572,
+    0.0,
+    8.186499014913565,
+    0.0,
+    -0.00021134896933993556,
+    46.74050419121429
+  ],
+  "blockShapes": [
+    [
+      256,
+      256
+    ],
+    [
+      256,
+      256
+    ],
+    [
+      256,
+      256
+    ],
+    [
+      256,
+      256
+    ]
+  ],
+  "colorInterp": [
+    "red",
+    "green",
+    "blue",
+    "alpha"
+  ],
+  "overviewFactors": [
+    2
+  ],
+  "levels": [
+    {
+      "level": 0,
+      "factor": 1,
+      "width": 512,
+      "height": 512,
+      "tileWidth": 256,
+      "tileHeight": 256,
+      "tilesAcross": 2,
+      "tilesDown": 2,
+      "tileCount": 4,
+      "bitsPerSample": "uint8",
+      "compression": "deflate"
+    },
+    {
+      "level": 1,
+      "factor": 2,
+      "width": 256,
+      "height": 256,
+      "tileWidth": 256,
+      "tileHeight": 256,
+      "tilesAcross": 1,
+      "tilesDown": 1,
+      "tileCount": 1,
+      "bitsPerSample": "uint8",
+      "compression": "deflate"
+    }
+  ],
+  "samples": [
+    {
+      "0,0": 63.0,
+      "center": 63.0,
+      "last": 63.0
+    },
+    {
+      "0,0": 63.0,
+      "center": 63.0,
+      "last": 32.0
+    }
+  ],
+  "tileSha256": [
+    "a9259d7d0d4209ceb55b4f149ffe959b7e7a33e8785bbec1192d3f6e142e97f7",
+    "0a67c5e1aac6be6c8211824602edf53cf181aa682993ae76bafe48133979e741"
+  ]
+}

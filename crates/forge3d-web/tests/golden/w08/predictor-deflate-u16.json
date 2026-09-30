@@ -1,0 +1,63 @@
+{
+  "file": "predictor-deflate-u16.tif",
+  "sizeBytes": 328,
+  "sha256": "68c6c2be099b9f06adc28d4e17e712f7a9b005f3ba35a415275da1d7c5cd1b78",
+  "width": 16,
+  "height": 16,
+  "count": 1,
+  "dtype": [
+    "uint16"
+  ],
+  "nodata": null,
+  "crs": null,
+  "epsg": null,
+  "bounds": [
+    0.0,
+    0.0,
+    16.0,
+    16.0
+  ],
+  "transform": [
+    1.0,
+    0.0,
+    0.0,
+    0.0,
+    -1.0,
+    16.0
+  ],
+  "blockShapes": [
+    [
+      16,
+      16
+    ]
+  ],
+  "colorInterp": [
+    "gray"
+  ],
+  "overviewFactors": [],
+  "levels": [
+    {
+      "level": 0,
+      "factor": 1,
+      "width": 16,
+      "height": 16,
+      "tileWidth": 16,
+      "tileHeight": 16,
+      "tilesAcross": 1,
+      "tilesDown": 1,
+      "tileCount": 1,
+      "bitsPerSample": "uint16",
+      "compression": "deflate"
+    }
+  ],
+  "samples": [
+    {
+      "0,0": 7.0,
+      "center": 415.0,
+      "last": 772.0
+    }
+  ],
+  "tileSha256": [
+    "18e1b10ecc37597db28376dd9a533ccb6a03c075d7a3b4e448be562abff740fb"
+  ]
+}

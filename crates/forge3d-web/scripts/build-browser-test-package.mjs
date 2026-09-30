@@ -228,6 +228,49 @@ try {
     `packageSha256 = "${packageSha256}"`,
   );
   writeFileSync(w07ConsumerFixture, w07Fixture);
+  const w08ConsumerFixture = join(consumerDirectory, "test-w08-package.html");
+  let w08Fixture = readFileSync(
+    join(packageRoot, "examples", "test-w08-package.html"),
+    "utf8",
+  );
+  w08Fixture = w08Fixture.replace(
+    '<script type="module">',
+    `<script type="importmap">{"imports":{"@forge3d/web":"/node_modules/@forge3d/web/dist/index.js"}}</script>
+    <script type="module">`,
+  );
+  w08Fixture = w08Fixture.replace(
+    'from "../src-ts/index.ts"',
+    'from "@forge3d/web"',
+  );
+  w08Fixture = w08Fixture.replace(
+    "packageSha256 = null",
+    `packageSha256 = "${packageSha256}"`,
+  );
+  writeFileSync(w08ConsumerFixture, w08Fixture);
+  // COG decode worker: in the consumer it imports the packaged dist module
+  // (worker-src 'self'), which in turn loads the vendored geotiff bundle.
+  const w08WorkerFixture = join(consumerDirectory, "test-w08-cog-worker.js");
+  let w08Worker = readFileSync(
+    join(packageRoot, "examples", "test-w08-cog-worker.js"),
+    "utf8",
+  );
+  w08Worker = w08Worker.replace(
+    'from "../src-ts/index.ts"',
+    'from "/node_modules/@forge3d/web/dist/index.js"',
+  );
+  writeFileSync(w08WorkerFixture, w08Worker);
+  const w08FixtureDirectory = join(consumerDirectory, "fixtures", "w08");
+  mkdirSync(w08FixtureDirectory, { recursive: true });
+  copyFileSync(
+    join(
+      packageRoot,
+      "tests",
+      "golden",
+      "w08",
+      "predictor-deflate-u16.tif",
+    ),
+    join(w08FixtureDirectory, "predictor-deflate-u16.tif"),
+  );
   const benchmarkDirectory = join(
     consumerDirectory,
     "tests",
@@ -341,6 +384,8 @@ try {
       "test-w05-package.html",
       "test-w06-package.html",
       "test-w07-package.html",
+      "test-w08-package.html",
+      "test-w08-cog-worker.js",
     ]) {
       copyFileSync(join(consumerDirectory, file), join(retainedFixture, file));
     }
@@ -837,6 +882,86 @@ async function runInstalledPackageBrowserGate(
         `installed-package W07 terrain material surface failed: ${JSON.stringify(w07Package)}`,
       );
     }
+    // The packaged dist must resolve geotiff only through the vendored
+    // bundle — a bare "geotiff" specifier would fail for consumers.
+    const distCogResponse = await fetch(
+      `${origin}/node_modules/@forge3d/web/dist/cog.js`,
+    );
+    if (!distCogResponse.ok) {
+      throw new Error("installed-package dist cog.js was not served");
+    }
+    const distCogSource = await distCogResponse.text();
+    if (
+      /(?:from|import)\s*[(]?\s*["']geotiff["']/.test(distCogSource) ||
+      distCogSource.includes('import("geotiff")') ||
+      distCogSource.includes("import('geotiff')")
+    ) {
+      throw new Error(
+        "installed-package dist cog.js retains a bare geotiff specifier",
+      );
+    }
+    await page.goto(`${origin}/test-w08-package.html`, {
+      waitUntil: "networkidle",
+    });
+    const w08Package = await page.evaluate(async (fixtureUrl) => {
+      await new Promise((resolve) => {
+        const poll = () =>
+          window.__forge3dW08PackageProbe === undefined
+            ? setTimeout(poll, 25)
+            : resolve();
+        poll();
+      });
+      return window.__forge3dW08PackageProbe(fixtureUrl);
+    }, `${origin}/fixtures/w08/predictor-deflate-u16.tif`);
+    if (w08Package.supported !== true || w08Package.ok !== true) {
+      throw new Error(
+        `installed-package W08 probe failed: ${JSON.stringify(w08Package.error ?? w08Package)}`,
+      );
+    }
+    if (w08Package.packageSha256 !== packageSha256) {
+      throw new Error(
+        "installed-package W08 fixture did not execute the expected tarball",
+      );
+    }
+    // The vendored geotiff must decode the predictor tile exactly on the
+    // main thread and in the packaged module worker, and the clipmap must
+    // render at its triangle budget.
+    if (
+      w08Package.mainThread?.sha256 !==
+        "18e1b10ecc37597db28376dd9a533ccb6a03c075d7a3b4e448be562abff740fb" ||
+      w08Package.decodeParity !== true ||
+      w08Package.worker?.mode === "main-thread" ||
+      w08Package.render?.geometry?.triangleCount !==
+        w08Package.render?.geometry?.triangleBudget ||
+      !(w08Package.render?.nonClearPixels > 0)
+    ) {
+      throw new Error(
+        `installed-package W08 decode/render contract failed: ${JSON.stringify({
+          mainThread: w08Package.mainThread,
+          decodeParity: w08Package.decodeParity,
+          worker: w08Package.worker,
+          geometry: w08Package.render?.geometry,
+        })}`,
+      );
+    }
+    if (
+      w08Package.mainThread?.sha256 !==
+        "18e1b10ecc37597db28376dd9a533ccb6a03c075d7a3b4e448be562abff740fb" ||
+      w08Package.decodeParity !== true ||
+      w08Package.worker?.mode === "main-thread" ||
+      w08Package.render?.nonClearPixels <= 0 ||
+      w08Package.render?.geometry?.mode !== "clipmap" ||
+      w08Package.render?.geometry?.triangleCount !==
+        w08Package.render?.geometry?.triangleBudget ||
+      w08Package.render?.overlays?.enabled !== true ||
+      w08Package.render?.overlays?.layerCount !== 1 ||
+      w08Package.render?.vt === null ||
+      w08Package.render?.vt === undefined
+    ) {
+      throw new Error(
+        `installed-package W08 COG/clipmap/overlay/VT surface failed: ${JSON.stringify(w08Package)}`,
+      );
+    }
     if (pageErrors.length > 0) {
       throw new Error(`installed-package page errors: ${pageErrors.join("; ")}`);
     }
@@ -872,6 +997,12 @@ async function runInstalledPackageBrowserGate(
         exr: w06Package.exr,
         frames: w06Package.frames,
         video: w06Package.video,
+      },
+      w08Package: {
+        mainThread: w08Package.mainThread,
+        worker: w08Package.worker,
+        decodeParity: w08Package.decodeParity,
+        render: w08Package.render,
       },
       terrainDataset: {
         direct: terrainDataset.sources.direct,
@@ -954,10 +1085,46 @@ function createStaticServer(root) {
       ".json": "application/json; charset=utf-8",
       ".wasm": "application/wasm",
     };
-    response.writeHead(200, {
+    const headers = {
       "content-type": contentTypes[extname(path)] ?? "application/octet-stream",
       "cache-control": "no-store",
-    });
+      "accept-ranges": "bytes",
+    };
+    // W08 COG streaming reads byte ranges and rejects a 200 full-body reply,
+    // so serve single `bytes=` ranges as 206 like a range-capable host.
+    const range = request.headers.range;
+    if (range !== undefined) {
+      const slice = parseByteRange(range, bytes.length);
+      if (slice === null) {
+        response
+          .writeHead(416, { "content-range": `bytes */${bytes.length}` })
+          .end();
+        return;
+      }
+      response.writeHead(206, {
+        ...headers,
+        "content-range": `bytes ${slice.start}-${slice.end}/${bytes.length}`,
+        "content-length": String(slice.end - slice.start + 1),
+      });
+      response.end(bytes.subarray(slice.start, slice.end + 1));
+      return;
+    }
+    response.writeHead(200, headers);
     response.end(bytes);
   });
+}
+
+function parseByteRange(header, size) {
+  const match = /^bytes=(\d*)-(\d*)$/u.exec(header.trim());
+  if (match === null || (match[1] === "" && match[2] === "")) return null;
+  let start;
+  let end;
+  if (match[1] === "") {
+    start = Math.max(0, size - Number(match[2]));
+    end = size - 1;
+  } else {
+    start = Number(match[1]);
+    end = match[2] === "" ? size - 1 : Math.min(Number(match[2]), size - 1);
+  }
+  return start <= end && start < size ? { start, end } : null;
 }

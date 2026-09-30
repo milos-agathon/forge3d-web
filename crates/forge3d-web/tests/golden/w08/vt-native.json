@@ -1,0 +1,165 @@
+{
+  "fixture": "terrain-vt-v1",
+  "provenance": {
+    "generator": "crates/forge3d-web/scripts/generate-w08-vt-goldens.py",
+    "native": "forge3d 1.38.0 TerrainRenderer (render_with_aov + render_terrain_pbr_pom, screen mode)",
+    "nativeTests": [
+      "1f4084a:tests/test_tv20_virtual_texturing.py"
+    ],
+    "materialSet": "MaterialSet.terrain_default()"
+  },
+  "tolerances": {
+    "ssimMin": 0.98,
+    "albedoMeanAbsMax": 0.01
+  },
+  "scene": {
+    "width": 224,
+    "height": 160,
+    "terrainSize": 160,
+    "terrainSpan": 8.0,
+    "zScale": 1.6,
+    "domain": [
+      0.0,
+      1.0
+    ],
+    "albedoMode": "material",
+    "colormapStrength": 0.0,
+    "sun": {
+      "azimuthDeg": 136.0,
+      "elevationDeg": 24.0,
+      "intensity": 2.2
+    },
+    "iblIntensity": 1.8,
+    "hdrBlue": 164,
+    "camera": {
+      "radius": 4.0,
+      "phiDeg": 142.0,
+      "thetaDeg": 58.0,
+      "fovDeg": 50.0
+    },
+    "clip": [
+      0.1,
+      6000.0
+    ],
+    "cameraMode": "screen",
+    "heightsFile": "vt-heights.f32",
+    "heightsSha256": "daafa8b27c76ae0dea28115c321719a8336965fc2d4eb8a0d255564bb12e98c5"
+  },
+  "virtualTexture": {
+    "enabled": true,
+    "atlasSize": 2048,
+    "residencyBudgetMb": 64.0,
+    "maxMipLevels": 6,
+    "useFeedback": true,
+    "layers": [
+      {
+        "family": "albedo",
+        "virtualSizePx": [
+          2048,
+          2048
+        ]
+      }
+    ]
+  },
+  "virtualSize": 2048,
+  "materialCount": 4,
+  "sources": [
+    {
+      "materialIndex": 0,
+      "fallback": [
+        0.6000017829969817,
+        0.14501491714926326,
+        0.10606913847081802,
+        1.0
+      ],
+      "png": "vt-src-0.png",
+      "sha256": "db593d0374a9eec3830aba737f1abd9976e113ab003633d85eb9d7a083aacfea"
+    },
+    {
+      "materialIndex": 1,
+      "fallback": [
+        0.11905424174140482,
+        0.49598505356732536,
+        0.17093284457337624,
+        1.0
+      ],
+      "png": "vt-src-1.png",
+      "sha256": "79ea2d1d301398d39c39b3be3c0bb9f9f20c281454f35d904332795855ac7d66"
+    },
+    {
+      "materialIndex": 2,
+      "fallback": [
+        0.13215326047411152,
+        0.24900163949704637,
+        0.6129772812712426,
+        1.0
+      ],
+      "png": "vt-src-2.png",
+      "sha256": "660bd27141da56059d70354865f0db7387e37c6e7d00cef2466b74742b6a3714"
+    },
+    {
+      "materialIndex": 3,
+      "fallback": [
+        0.626000405292885,
+        0.574002509023629,
+        0.14501379424450445,
+        1.0
+      ],
+      "png": "vt-src-3.png",
+      "sha256": "04aa06a33f3a6541a63af4590e3f40d42273a3a81995aaeabe9dec8b7749ce4f"
+    }
+  ],
+  "albedoAov": {
+    "comment": "primary golden: float32 little-endian row-major (h, w, 3) linear RGB albedo AOV in [0, 1] \u2014 isolates VT output from screen-path shadow fidelity (native test_tv20 assertion)",
+    "dtype": "float32-le",
+    "shape": [
+      160,
+      224,
+      3
+    ],
+    "off": {
+      "file": "vt-albedo-off.f32",
+      "sha256": "1b97d8a840d94e22509c252cae92543d00fe999d32f76777a0b9861177f59a84"
+    },
+    "on": {
+      "file": "vt-albedo-on.f32",
+      "sha256": "9555644ac2ed3dc59e3e181c6c7202944fffb714ecc04bf5473a2d29306b5f0a"
+    },
+    "nativeDelta": 0.1007
+  },
+  "shadowlessBeauty": {
+    "comment": "secondary golden: beauty with ShadowSettings(enabled=False) on both sides \u2014 removes shadow coverage from the comparison",
+    "off": {
+      "png": "vt-noshadow-off.png",
+      "sha256": "3c7fd9aa792b1e48e64c166c68a220f77bf46d93289748485ddbc7fa40add820"
+    },
+    "on": {
+      "png": "vt-noshadow-on.png",
+      "sha256": "9cd3b306f39fbb457f5fb02408bc680e4d605188cb09c77bd0ad3b15252db51f"
+    },
+    "nativeDelta": 28.2837
+  },
+  "variants": [
+    {
+      "id": "vt-off",
+      "png": "vt-off.png",
+      "sha256": "47283b58fad29e243fe846e803dd8cda83a948f974088529a40cf4afd32c0adc",
+      "diagnostic": "shadowed beauty \u2014 pre-existing W07 screen-path comparison"
+    },
+    {
+      "id": "vt-on",
+      "png": "vt-on.png",
+      "sha256": "8ab558f28ff3b530463b40da490efed2e4affa1f156b2073c9f744439420bb4b",
+      "nativeDelta": 25.5665,
+      "diagnostic": "shadowed beauty \u2014 pre-existing W07 screen-path comparison",
+      "stats": {
+        "resident_pages": 20.0,
+        "total_pages": 480.0,
+        "cache_budget_pages": 64.0,
+        "cache_misses": 20.0,
+        "tiles_streamed": 20.0,
+        "source_count": 4.0
+      }
+    }
+  ]
+}

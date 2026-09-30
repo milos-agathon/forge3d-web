@@ -1,0 +1,1069 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forge3D W08 Material Virtual Texturing Test</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #000;
+      }
+
+      canvas {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="w08-vt" width="224" height="160"></canvas>
+    <script type="module">
+      import {
+        Forge3DRuntime,
+        Forge3DScene,
+        ImageBasedLighting,
+        validateTerrainVtSupport,
+      } from "../src-ts/index.ts";
+      import { validateTerrainVtSupportTs } from "../src-ts/terrain-overlay.ts";
+      import { Forge3DViewer } from "../src-ts/viewer.ts";
+      import {
+        createLosableSession,
+        decodePngRgba,
+        framesEqual as recoveryFramesEqual,
+        loseViewer,
+        settleVt,
+      } from "./w08-recovery-harness.js";
+
+      const canvas = document.querySelector("#w08-vt");
+      // Native tv20 params: 224x160, terrain span 8, z 1.6, ibl 1.8, sun
+      // az 136 / el 24 / int 2.2, cam radius 4 phi 142 theta 58 fov 50.
+      const W = canvas.width;
+      const H = canvas.height;
+      const TERRAIN_SIZE = 160;
+      const TERRAIN_SPAN = 8.0;
+      const Z_SCALE = 1.6;
+      const IBL_INTENSITY = 1.8;
+      const SUN = { azimuthDeg: 136, elevationDeg: 24, intensity: 2.2 };
+      const VT_MATERIAL_COUNT = 4;
+
+      // ------------------------------------------------------------------
+      // Scene fixtures
+      // ------------------------------------------------------------------
+
+      function buildHeights() {
+        // Deterministic ridge/basin DEM in domain [0, 1].
+        const heights = new Float32Array(TERRAIN_SIZE * TERRAIN_SIZE);
+        for (let row = 0; row < TERRAIN_SIZE; row += 1) {
+          const y = -1 + (2 * row) / (TERRAIN_SIZE - 1);
+          for (let col = 0; col < TERRAIN_SIZE; col += 1) {
+            const x = -1 + (2 * col) / (TERRAIN_SIZE - 1);
+            heights[row * TERRAIN_SIZE + col] =
+              0.45 +
+              0.3 * Math.exp(-((x + 0.25) ** 2 * 6.5 + (y - 0.12) ** 2 * 10)) -
+              0.18 * Math.exp(-((x - 0.05) ** 2 * 20 + (y + 0.05) ** 2 * 24)) +
+              0.22 * Math.exp(-((x - 0.42) ** 2 * 28 + (y + 0.22) ** 2 * 18)) +
+              0.06 * Math.sin(x * 12) * Math.cos(y * 9);
+          }
+        }
+        return heights;
+      }
+
+      function hdrBytes(blue) {
+        const width = 8;
+        const height = 4;
+        const head = new TextEncoder().encode(
+          `#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y ${height} +X ${width}\n`,
+        );
+        const bytes = new Uint8Array(head.length + width * height * 4);
+        bytes.set(head, 0);
+        for (let y = 0; y < height; y += 1) {
+          for (let x = 0; x < width; x += 1) {
+            const offset = head.length + (y * width + x) * 4;
+            bytes[offset] = Math.trunc((x / 7) * 255);
+            bytes[offset + 1] = Math.trunc((y / 3) * 255);
+            bytes[offset + 2] = blue;
+            bytes[offset + 3] = 128;
+          }
+        }
+        return bytes;
+      }
+
+      function lightDirection(sun) {
+        const az = (sun.azimuthDeg * Math.PI) / 180;
+        const el = (sun.elevationDeg * Math.PI) / 180;
+        return [
+          -Math.cos(el) * Math.cos(az),
+          -Math.sin(el),
+          Math.cos(el) * Math.sin(az),
+        ];
+      }
+
+      // Native default ShadowSettings (make_terrain_params_config):
+      // PCSS, 4096 map, 3 cascades, max 4000, softness 1.5,
+      // depth_bias 0.0005, slope_scale_bias 0.001, intensity 0.8 (the
+      // intensity floor is baked into the screen shader's IBL factor).
+      function shadowInput() {
+        return {
+          enabled: true,
+          filter: "pcss",
+          mapSize: 4096,
+          depthBias: 0.0005,
+          slopeBias: 0.001,
+          normalBias: 0.0002,
+          peterPanningOffset: 0.0002,
+          lightSize: 0.5,
+          softness: 1.5,
+          // Native technique_params = [softness*10, softness*20]: PCSS
+          // blocker search radius and max filter radius, in texels.
+          pcssBlockerRadius: 15,
+          pcssFilterRadius: 30,
+        };
+      }
+
+      const CSM = {
+        enabled: true,
+        cascadeCount: 3,
+        maxDistance: 4000,
+        splitLambda: 0.5,
+        blendRange: 0.1,
+        stabilize: true,
+        debugView: "none",
+      };
+
+      // Native mesh-camera orbit: radius/phi/theta around the target.
+      function cameraInput(target = [0, 0, 0], radius = 4.0) {
+        const phi = (142 * Math.PI) / 180;
+        const theta = (58 * Math.PI) / 180;
+        return {
+          position: [
+            target[0] + radius * Math.sin(theta) * Math.cos(phi),
+            target[1] + radius * Math.cos(theta),
+            target[2] + radius * Math.sin(theta) * Math.sin(phi),
+          ],
+          target: [...target],
+          up: [0, 1, 0],
+          fovYDegrees: 50,
+          near: 0.05,
+          far: 200,
+        };
+      }
+
+      async function withRuntime(body) {
+        const runtime = await Forge3DRuntime.create(canvas, {
+          diagnostics: true,
+          width: W,
+          height: H,
+          devicePixelRatio: 1,
+          clearColor: [0, 0, 0, 1],
+          memoryBudgetBytes: 1 << 30,
+          overflowPolicy: "reject",
+        });
+        try {
+          return await body(runtime);
+        } finally {
+          if (!runtime.disposed) runtime.dispose();
+        }
+      }
+
+      // material.virtualTexture goes on the committed material; perspective
+      // mode = the native `camera_mode = "mesh"` path (uv rect from the
+      // camera target/radius/fov).
+      function materialInput(virtualTexture) {
+        return {
+          albedoMode: "material",
+          colormapStrength: 0,
+          ...(virtualTexture !== undefined ? { virtualTexture } : {}),
+        };
+      }
+
+      async function applyTerrain(runtime, virtualTexture, options = {}) {
+        const scene = await buildVtScene(virtualTexture, options);
+        for (const node of scene.getNodes()) {
+          if (node.node.kind === "terrain") {
+            runtime.setTerrain(node.node.terrain);
+          }
+        }
+        const snapshot = scene.snapshot();
+        runtime.setScene(snapshot);
+        runtime.setLighting(snapshot.lighting);
+        runtime.setMaterials(snapshot.materials);
+        runtime.setIbl(snapshot.ibl);
+        runtime.setShadows(snapshot.shadows);
+      }
+
+      async function buildVtScene(virtualTexture, options = {}) {
+        const heights = options.heights ?? buildHeights();
+        const terrainSize = options.terrainSize ?? TERRAIN_SIZE;
+        const scene = Forge3DScene.create();
+        scene.addTerrain({
+          width: terrainSize,
+          height: terrainSize,
+          heights,
+          spacing: [
+            TERRAIN_SPAN / (terrainSize - 1),
+            TERRAIN_SPAN / (terrainSize - 1),
+          ],
+          exaggeration: Z_SCALE,
+          domain: [0, 1],
+          renderMode: options.renderMode ?? "perspective",
+          material: {
+            ...materialInput(virtualTexture),
+            ...(options.materialExtra ?? {}),
+          },
+        });
+        scene.clearLights();
+        const withShadows = options.shadows ?? true;
+        if (options.sun !== false) {
+          scene.addLight({
+            type: "directional",
+            color: [1, 1, 1],
+            intensity: options.sunIntensity ?? SUN.intensity,
+            direction: lightDirection(SUN),
+            castsShadow: withShadows,
+          });
+        }
+        if (withShadows) {
+          scene.setShadows(shadowInput(), CSM);
+        }
+        if (options.ibl !== false) {
+          scene.setImageBasedLighting(
+            await ImageBasedLighting.fromRGBE(
+              hdrBytes(options.hdrBlue ?? 160),
+              {
+                quality: "medium",
+                intensity: options.iblIntensity ?? IBL_INTENSITY,
+                rotationDegrees: 0,
+                prefilter: "native",
+              },
+            ),
+          );
+        }
+        return scene;
+      }
+
+      function terrainOf(scene) {
+        return scene.getNodes().find((node) => node.node.kind === "terrain")
+          .node.terrain;
+      }
+
+      // ------------------------------------------------------------------
+      // Native `_build_vt_source` port (test_tv20_virtual_texturing.py):
+      // checker x stripe modulation over a per-material palette.
+      // ------------------------------------------------------------------
+
+      const VT_PALETTE = [
+        [0.88, 0.18, 0.12],
+        [0.14, 0.72, 0.22],
+        [0.16, 0.34, 0.9],
+        [0.92, 0.84, 0.18],
+      ];
+
+      function buildVtSource(size, materialIndex) {
+        const data = new Uint8Array(size * size * 4);
+        const base = VT_PALETTE[materialIndex % VT_PALETTE.length];
+        let sum = [0, 0, 0];
+        for (let y = 0; y < size; y += 1) {
+          const yy = y / (size - 1);
+          for (let x = 0; x < size; x += 1) {
+            const xx = x / (size - 1);
+            const stripe =
+              0.5 +
+              0.5 *
+                Math.sin(
+                  (xx * (materialIndex + 1.5) * 14 +
+                    yy * (materialIndex + 2.0) * 11) *
+                    Math.PI,
+                );
+            const checker =
+              (Math.floor(xx * (10 + materialIndex * 3)) +
+                Math.floor(yy * (12 + materialIndex * 2))) %
+              2;
+            const modulation = 0.3 + 0.7 * (0.55 * checker + 0.45 * stripe);
+            const i = (y * size + x) * 4;
+            for (let ch = 0; ch < 3; ch += 1) {
+              const v = Math.min(
+                Math.max(base[ch] * modulation + (1 - modulation) * 0.08, 0),
+                1,
+              );
+              data[i + ch] = Math.round(v * 255);
+              // Native fallback is the mean of the rounded u8 channels.
+              sum[ch] += data[i + ch] / 255;
+            }
+            data[i + 3] = 255;
+          }
+        }
+        const count = size * size;
+        return {
+          image: { width: size, height: size, data },
+          fallback: [sum[0] / count, sum[1] / count, sum[2] / count, 1],
+        };
+      }
+
+      function registerVtSources(runtime, virtualSize) {
+        runtime.clearMaterialVtSources();
+        for (let m = 0; m < VT_MATERIAL_COUNT; m += 1) {
+          const source = buildVtSource(virtualSize, m);
+          runtime.registerMaterialVtSource(m, "albedo", source.image, source.fallback);
+        }
+      }
+
+      const VT_SETTINGS_2048 = {
+        enabled: true,
+        atlasSize: 1024,
+        residencyBudgetMb: 24,
+        maxMipLevels: 6,
+        layers: [{ family: "albedo", virtualSizePx: [2048, 2048] }],
+      };
+
+      const VT_SETTINGS_FEEDBACK_EXACT = {
+        enabled: true,
+        atlasSize: 1024,
+        residencyBudgetMb: 24,
+        maxMipLevels: 2,
+        useFeedback: true,
+        layers: [{ family: "albedo", virtualSizePx: [496, 496] }],
+      };
+
+      // Recovery probes: a 2048 atlas (64 slots) holds all 20 pages, so the
+      // settled residency does not depend on when feedback readbacks land.
+      const VT_SETTINGS_RECOVERY = {
+        ...VT_SETTINGS_FEEDBACK_EXACT,
+        atlasSize: 2048,
+        residencyBudgetMb: 64,
+      };
+
+      const VT_SETTINGS_4096_BUDGET = {
+        enabled: true,
+        atlasSize: 512,
+        residencyBudgetMb: 0.75,
+        maxMipLevels: 6,
+        layers: [{ family: "albedo", virtualSizePx: [4096, 4096] }],
+      };
+
+      function meanAbsDiff3(a, b) {
+        let total = 0;
+        const n = Math.min(a.length, b.length);
+        for (let i = 0; i < n; i += 1) total += Math.abs(a[i] - b[i]);
+        return total / n;
+      }
+
+      function maxAbsDiff(a, b) {
+        let max = 0;
+        const n = Math.min(a.length, b.length);
+        for (let i = 0; i < n; i += 1) {
+          const d = Math.abs(a[i] - b[i]);
+          if (d > max) max = d;
+        }
+        return max;
+      }
+
+      // ------------------------------------------------------------------
+      // Golden image metrics (same SSIM as test-w07-materials.html)
+      // ------------------------------------------------------------------
+
+      function gaussianWindow(size, sigma) {
+        const weights = new Float64Array(size);
+        let sum = 0;
+        for (let index = 0; index < size; index += 1) {
+          const coordinate = index - (size - 1) / 2;
+          weights[index] = Math.exp(-0.5 * (coordinate / sigma) ** 2);
+          sum += weights[index];
+        }
+        return weights.map((value) => value / sum);
+      }
+
+      function filterChannel(channel, width, height, weights) {
+        const half = (weights.length - 1) / 2;
+        const temp = new Float64Array(width * height);
+        const out = new Float64Array(width * height);
+        for (let y = 0; y < height; y += 1) {
+          for (let x = 0; x < width; x += 1) {
+            let sum = 0;
+            for (let k = -half; k <= half; k += 1) {
+              const sx = x + k;
+              if (sx >= 0 && sx < width)
+                sum += channel[y * width + sx] * weights[k + half];
+            }
+            temp[y * width + x] = sum;
+          }
+        }
+        for (let y = 0; y < height; y += 1) {
+          for (let x = 0; x < width; x += 1) {
+            let sum = 0;
+            for (let k = -half; k <= half; k += 1) {
+              const sy = y + k;
+              if (sy >= 0 && sy < height)
+                sum += temp[sy * width + x] * weights[k + half];
+            }
+            out[y * width + x] = sum;
+          }
+        }
+        return out;
+      }
+
+      function ssimRgba(a, b, width, height) {
+        const weights = gaussianWindow(11, 1.5);
+        const pixels = width * height;
+        const c1 = (0.01 * 255) ** 2;
+        const c2 = (0.03 * 255) ** 2;
+        let total = 0;
+        for (let channel = 0; channel < 3; channel += 1) {
+          const x = new Float64Array(pixels);
+          const y = new Float64Array(pixels);
+          for (let index = 0; index < pixels; index += 1) {
+            x[index] = a[index * 4 + channel];
+            y[index] = b[index * 4 + channel];
+          }
+          const xx = x.map((v) => v * v);
+          const yy = y.map((v) => v * v);
+          const xy = x.map((v, i) => v * y[i]);
+          const muX = filterChannel(x, width, height, weights);
+          const muY = filterChannel(y, width, height, weights);
+          const sXX = filterChannel(xx, width, height, weights);
+          const sYY = filterChannel(yy, width, height, weights);
+          const sXY = filterChannel(xy, width, height, weights);
+          let sum = 0;
+          for (let index = 0; index < pixels; index += 1) {
+            const mx2 = muX[index] * muX[index];
+            const my2 = muY[index] * muY[index];
+            const cov = sXY[index] - muX[index] * muY[index];
+            sum +=
+              ((2 * muX[index] * muY[index] + c1) * (2 * cov + c2)) /
+              ((mx2 + my2 + c1) * (sXX[index] - mx2 + sYY[index] - my2 + c2));
+          }
+          total += sum / pixels;
+        }
+        return total / 3;
+      }
+
+      // SSIM on 3-channel linear float data in [0, 1] (the albedo AOV on
+      // both sides): same 11x1.5 gaussian window, scale-1 constants.
+      function ssimF32(a, b, width, height) {
+        const weights = gaussianWindow(11, 1.5);
+        const pixels = width * height;
+        const c1 = 0.01 ** 2;
+        const c2 = 0.03 ** 2;
+        let total = 0;
+        for (let channel = 0; channel < 3; channel += 1) {
+          const x = new Float64Array(pixels);
+          const y = new Float64Array(pixels);
+          for (let index = 0; index < pixels; index += 1) {
+            x[index] = a[index * 3 + channel];
+            y[index] = b[index * 3 + channel];
+          }
+          const xx = x.map((v) => v * v);
+          const yy = y.map((v) => v * v);
+          const xy = x.map((v, i) => v * y[i]);
+          const muX = filterChannel(x, width, height, weights);
+          const muY = filterChannel(y, width, height, weights);
+          const sXX = filterChannel(xx, width, height, weights);
+          const sYY = filterChannel(yy, width, height, weights);
+          const sXY = filterChannel(xy, width, height, weights);
+          let sum = 0;
+          for (let index = 0; index < pixels; index += 1) {
+            const mx2 = muX[index] * muX[index];
+            const my2 = muY[index] * muY[index];
+            const cov = sXY[index] - muX[index] * muY[index];
+            sum +=
+              ((2 * muX[index] * muY[index] + c1) * (2 * cov + c2)) /
+              ((mx2 + my2 + c1) * (sXX[index] - mx2 + sYY[index] - my2 + c2));
+          }
+          total += sum / pixels;
+        }
+        return total / 3;
+      }
+
+      async function decodePng(url, width, height) {
+        const blob = await (await fetch(url)).blob();
+        const bitmap = await createImageBitmap(blob, {
+          colorSpaceConversion: "none",
+          premultiplyAlpha: "none",
+        });
+        const offscreen = document.createElement("canvas");
+        offscreen.width = width;
+        offscreen.height = height;
+        const context = offscreen.getContext("2d", {
+          willReadFrequently: true,
+        });
+        context.drawImage(bitmap, 0, 0);
+        return context.getImageData(0, 0, width, height).data;
+      }
+
+      // Channel means + mean abs diff for golden diagnostics.
+      function frameStats(a, b) {
+        const sum = [0, 0, 0];
+        const sumB = [0, 0, 0];
+        const dsum = [0, 0, 0];
+        let maxD = 0;
+        let over = 0;
+        const pixels = a.length / 4;
+        for (let i = 0; i < pixels; i += 1) {
+          for (let c = 0; c < 3; c += 1) {
+            sum[c] += a[i * 4 + c];
+            sumB[c] += b[i * 4 + c];
+            const d = Math.abs(a[i * 4 + c] - b[i * 4 + c]);
+            dsum[c] += d;
+            if (d > maxD) maxD = d;
+            if (d > 2) over += 1;
+          }
+        }
+        return {
+          meanA: sum.map((v) => v / pixels),
+          meanB: sumB.map((v) => v / pixels),
+          meanD: dsum.map((v) => v / pixels),
+          maxD,
+          over2: over,
+        };
+      }
+
+      function toPng(rgba, width, height) {
+        const out = document.createElement("canvas");
+        out.width = width;
+        out.height = height;
+        out
+          .getContext("2d")
+          .putImageData(
+            new ImageData(new Uint8ClampedArray(rgba), width, height),
+            0,
+            0,
+          );
+        return out.toDataURL("image/png");
+      }
+
+      async function sha256Hex(bytes) {
+        const digest = await crypto.subtle.digest("SHA-256", bytes);
+        return [...new Uint8Array(digest)]
+          .map((v) => v.toString(16).padStart(2, "0"))
+          .join("");
+      }
+
+      // Deep JSON equality independent of key order.
+      function sameJson(a, b) {
+        const norm = (v) =>
+          v === null || typeof v !== "object"
+            ? v
+            : Array.isArray(v)
+              ? v.map(norm)
+              : Object.fromEntries(
+                  Object.keys(v)
+                    .sort()
+                    .map((k) => [k, norm(v[k])]),
+                );
+        return JSON.stringify(norm(a)) === JSON.stringify(norm(b));
+      }
+
+      const GOLDEN_VT_SETTINGS = {
+        enabled: true,
+        atlasSize: 2048,
+        residencyBudgetMb: 64.0,
+        maxMipLevels: 6,
+        useFeedback: true,
+        layers: [{ family: "albedo", virtualSizePx: [2048, 2048] }],
+      };
+
+      // ------------------------------------------------------------------
+      // Cases (native tv20 runtime assertions)
+      // ------------------------------------------------------------------
+
+      const RECOVERY_RUNTIME = {
+        width: W,
+        height: H,
+        devicePixelRatio: 1,
+        clearColor: [0, 0, 0, 1],
+        diagnostics: true,
+      };
+
+      function registerVtSourcesOn(target, virtualSize) {
+        for (let m = 0; m < VT_MATERIAL_COUNT; m += 1) {
+          const source = buildVtSource(virtualSize, m);
+          target.registerMaterialVtSource(m, "albedo", source.image, source.fallback);
+        }
+      }
+
+      const w08vt = {
+        // Viewer device loss: the replay registers the retained VT sources
+        // before the terrain, so the recovered frame (after VT residency
+        // settles again) is byte-equal and sourceCount is unchanged.
+        async viewerDeviceLoss() {
+          const viewer = await Forge3DViewer.create(canvas, {
+            runtime: RECOVERY_RUNTIME,
+            initialView: {
+              target: [0, 0, 0],
+              distance: 4,
+              yawDegrees: 142,
+              pitchDegrees: 32,
+              fovYDegrees: 50,
+              near: 0.05,
+              far: 200,
+            },
+            controls: false,
+            resize: false,
+          });
+          try {
+            registerVtSourcesOn(viewer, 496);
+            viewer.setTerrain(
+              terrainOf(await buildVtScene(VT_SETTINGS_RECOVERY)),
+            );
+            const stats = () => viewer.getMaterialVtStats();
+            await settleVt(() => viewer.render(), stats);
+            const before = await decodePngRgba(await viewer.screenshot());
+            const statsBefore = stats();
+            await loseViewer(viewer);
+            await settleVt(() => viewer.render(), stats);
+            const after = await decodePngRgba(await viewer.screenshot());
+            return {
+              status: viewer.status,
+              recoveryAttempts: viewer.getDiagnostics().recoveryAttempts,
+              statsBefore,
+              statsAfter: stats(),
+              diff: recoveryFramesEqual(before, after),
+            };
+          } finally {
+            viewer.dispose();
+          }
+        },
+
+        // Same contract through Forge3DSession's #recover replay.
+        async sessionDeviceLoss() {
+          const { session, lose, runtimeCount } = await createLosableSession(
+            canvas,
+            { runtime: RECOVERY_RUNTIME },
+          );
+          try {
+            registerVtSourcesOn(session, 496);
+            session.setScene(await buildVtScene(VT_SETTINGS_RECOVERY));
+            session.setCamera(cameraInput());
+            const stats = () => session.getMaterialVtStats();
+            await settleVt(() => session.render(), stats);
+            const before = await session.readRgba();
+            const statsBefore = stats();
+            await lose();
+            await settleVt(() => session.render(), stats);
+            const after = await session.readRgba();
+            return {
+              status: session.status,
+              runtimes: runtimeCount(),
+              statsBefore,
+              statsAfter: stats(),
+              diff: recoveryFramesEqual(before, after),
+            };
+          } finally {
+            session.dispose();
+          }
+        },
+
+        // Disabled VT preserves the baseline albedo AOV exactly and
+        // reports zero residency (sources registered but unused).
+        async disabledIdentity() {
+          return withRuntime(async (runtime) => {
+            await applyTerrain(runtime, undefined);
+            runtime.setCamera(cameraInput());
+            runtime.render();
+            const baseline = (await runtime.capture({ aovs: ["albedo"] })).aovFrame.albedo();
+
+            registerVtSources(runtime, 2048);
+            await applyTerrain(runtime, { enabled: false });
+            runtime.setCamera(cameraInput());
+            runtime.render();
+            const disabled = (await runtime.capture({ aovs: ["albedo"] })).aovFrame.albedo();
+            const stats = runtime.getMaterialVtStats();
+            return {
+              maxDiff: maxAbsDiff(baseline, disabled),
+              residentPages: stats.residentPages,
+              totalPages: stats.totalPages,
+              sourceCount: stats.sourceCount,
+            };
+          });
+        },
+
+        // Enabled VT changes the albedo AOV and reports residency/streaming.
+        async enabled() {
+          return withRuntime(async (runtime) => {
+            await applyTerrain(runtime, undefined);
+            runtime.setCamera(cameraInput());
+            runtime.render();
+            const baseline = (await runtime.capture({ aovs: ["albedo"] })).aovFrame.albedo();
+
+            registerVtSources(runtime, 2048);
+            await applyTerrain(runtime, VT_SETTINGS_2048);
+            runtime.setCamera(cameraInput());
+            runtime.render();
+            const vt = (await runtime.capture({ aovs: ["albedo"] })).aovFrame.albedo();
+            const stats = runtime.getMaterialVtStats();
+            return {
+              meanAbsDiff: meanAbsDiff3(baseline, vt),
+              stats,
+            };
+          });
+        },
+
+        // Budget enforcement under camera motion: tight atlas + budget
+        // against the 4096 virtual set forces evictions between views.
+        async budget() {
+          return withRuntime(async (runtime) => {
+            registerVtSources(runtime, 4096);
+            await applyTerrain(runtime, VT_SETTINGS_4096_BUDGET);
+            runtime.setCamera(cameraInput([-2, 0, -2], 1.25));
+            runtime.render();
+            const statsLeft = runtime.getMaterialVtStats();
+            runtime.setCamera(cameraInput([2, 0, 2], 1.25));
+            runtime.render();
+            const statsRight = runtime.getMaterialVtStats();
+            return { statsLeft, statsRight };
+          });
+        },
+
+        // Shader feedback lands within a few frames (non-blocking readback).
+        // mapAsync resolves on an event-loop turn, so yield between frames.
+        //
+        // The scene makes the feedback set exact on any adapter: a 496px
+        // virtual texture is 2x2 pages of 248 at mip 0 and 1 page at mip 1,
+        // so the pyramid has 4 materials x (4 + 1) = 20 pages, while the
+        // feedback ring is 4 materials x 2 mips x 2x2 = 32 slots. Every
+        // pixel samples all 4 materials; uv = world * 0.04 straddles 0 on
+        // screen (target is the origin), so fract(uv) lands in both mip-0
+        // pages on each axis, while the far terrain's footprint (> 2 texels
+        // per pixel) asks for the single mip-1 page: all 20 pages are
+        // requested. The 12 mip-1 slots with no page stay zeroed and must
+        // not decode as requests (32 before the fix).
+        async feedback() {
+          return withRuntime(async (runtime) => {
+            registerVtSources(runtime, 496);
+            await applyTerrain(runtime, VT_SETTINGS_FEEDBACK_EXACT, {
+              materialExtra: { triplanar: { scale: 0.04 } },
+            });
+            runtime.setCamera(cameraInput());
+            // The readback lands on a later event-loop turn (frame 6 on
+            // SwiftShader); render until it does, bounded at 30 frames.
+            const frames = [];
+            for (let i = 0; i < 30; i += 1) {
+              runtime.render();
+              await new Promise((resolve) => setTimeout(resolve, 0));
+              const stats = runtime.getMaterialVtStats();
+              frames.push({
+                frame: i,
+                feedbackRequests: stats.feedbackRequests,
+                residentPages: stats.residentPages,
+              });
+              if (stats.feedbackRequests > 0 && frames.length >= 2) {
+                const previous = frames.at(-2).feedbackRequests;
+                if (previous === stats.feedbackRequests) break;
+              }
+            }
+            return { frames, stats: runtime.getMaterialVtStats() };
+          });
+        },
+
+        // A non-albedo family is rejected at commit: UNSUPPORTED_FEATURE
+        // with the blocking-diagnostics message and the report in details;
+        // nothing was allocated and stats stay zero.
+        async rejectNormalFamily() {
+          return withRuntime(async (runtime) => {
+            registerVtSources(runtime, 2048);
+            // Baseline VT-less commit so a stats report exists; the rejected
+            // commit must leave it (and its zeros) untouched.
+            await applyTerrain(runtime, undefined);
+            let commitError = null;
+            try {
+              await applyTerrain(runtime, {
+                enabled: true,
+                atlasSize: 1024,
+                residencyBudgetMb: 24,
+                maxMipLevels: 6,
+                layers: [{ family: "normal", virtualSizePx: [2048, 2048] }],
+              });
+            } catch (error) {
+              commitError = {
+                code: error?.code ?? error?.name,
+                message: String(error?.message ?? error),
+                diagnosticCodes:
+                  error?.details?.diagnostics?.map((d) => d.code) ?? null,
+              };
+            }
+            const stats = runtime.getMaterialVtStats();
+            const report = await validateTerrainVtSupport({
+              enabled: true,
+              layers: [{ family: "normal", virtualSizePx: [2048, 2048] }],
+            });
+            return {
+              commitError,
+              stats,
+              report: {
+                status: report.status,
+                diagnosticCodes: report.diagnostics.map((d) => d.code),
+                unsupportedFeatures: report.unsupportedFeatures,
+              },
+            };
+          });
+        },
+
+        // Native vt golden parity (G2): the same screen-mode first frames
+        // `scripts/generate-w08-vt-goldens.py` produced natively, on the
+        // native heightmap and test HDR. Sources/heightmap digests are
+        // checked against the manifest so any generator drift fails loudly.
+        async aovDump() {
+          const heights = new Float32Array(
+            await (await fetch("/tests/golden/w08/vt-heights.f32")).arrayBuffer(),
+          );
+          const frames = {};
+          for (const [key, opts] of [
+            ["base", {}],
+            ["nosun", { sun: false }],
+            ["noibl", { ibl: false }],
+            ["neither", { sun: false, ibl: false }],
+            ["sun16", { sunIntensity: 1.6, ibl: false }],
+            ["sun1732", { sunIntensity: 1.732, ibl: false }],
+          ]) {
+            frames[key] = await withRuntime(async (runtime) => {
+              await applyTerrain(runtime, undefined, {
+                heights, renderMode: "screen", hdrBlue: 164, ...opts,
+              });
+              runtime.setCamera(cameraInput());
+              runtime.render();
+              return Array.from(await runtime.readRgba());
+            });
+          }
+          return { frames };
+        },
+
+        async goldenParity() {
+          const manifest = await (
+            await fetch("/tests/golden/w08/vt-native.json")
+          ).json();
+          const heights = new Float32Array(
+            await (await fetch("/tests/golden/w08/vt-heights.f32")).arrayBuffer(),
+          );
+          const heightsSha = await sha256Hex(
+            new Uint8Array(heights.buffer.slice(0)),
+          );
+          // The native source textures are stored losslessly as PNGs: the
+          // browser registers the exact native bytes rather than a JS port
+          // of the float32 generator.
+          const sources = [];
+          const sourceChecks = [];
+          for (let m = 0; m < VT_MATERIAL_COUNT; m += 1) {
+            const rgba = await decodePng(
+              `/tests/golden/w08/${manifest.sources[m].png}`,
+              manifest.virtualSize,
+              manifest.virtualSize,
+            );
+            const data = new Uint8Array(rgba);
+            const sha = await sha256Hex(data.slice());
+            sourceChecks.push({
+              materialIndex: m,
+              sha256: sha,
+              expected: manifest.sources[m].sha256,
+              match: sha === manifest.sources[m].sha256,
+            });
+            sources.push({
+              image: {
+                width: manifest.virtualSize,
+                height: manifest.virtualSize,
+                data,
+              },
+              fallback: manifest.sources[m].fallback,
+            });
+          }
+          // Native references: shadowed beauty (diagnostics only — the
+          // pre-existing W07 screen-path shadow coverage), shadowless
+          // beauty, and the float32 linear-RGB albedo AOVs (primary).
+          const off = await decodePng(
+            "/tests/golden/w08/vt-off.png",
+            manifest.scene.width,
+            manifest.scene.height,
+          );
+          const on = await decodePng(
+            "/tests/golden/w08/vt-on.png",
+            manifest.scene.width,
+            manifest.scene.height,
+          );
+          const nsOff = await decodePng(
+            `/tests/golden/w08/${manifest.shadowlessBeauty.off.png}`,
+            manifest.scene.width,
+            manifest.scene.height,
+          );
+          const nsOn = await decodePng(
+            `/tests/golden/w08/${manifest.shadowlessBeauty.on.png}`,
+            manifest.scene.width,
+            manifest.scene.height,
+          );
+          const albedoOff = new Float32Array(
+            await (
+              await fetch(`/tests/golden/w08/${manifest.albedoAov.off.file}`)
+            ).arrayBuffer(),
+          );
+          const albedoOn = new Float32Array(
+            await (
+              await fetch(`/tests/golden/w08/${manifest.albedoAov.on.file}`)
+            ).arrayBuffer(),
+          );
+          const sceneOpts = {
+            heights,
+            renderMode: "screen",
+            hdrBlue: manifest.scene.hdrBlue,
+          };
+          return withRuntime(async (runtime) => {
+            const renderFrame = async () => {
+              runtime.setCamera(cameraInput());
+              runtime.render();
+              return runtime.readRgba();
+            };
+            const captureAlbedo = async () =>
+              (await runtime.capture({ aovs: ["albedo"] })).aovFrame.albedo();
+            // VT-off first frame: same scene, no virtualTexture block —
+            // shadowed beauty + albedo AOV + shadowless beauty.
+            await applyTerrain(runtime, undefined, sceneOpts);
+            const offRgba = await renderFrame();
+            const shadowReport = runtime.getShadowReport();
+            const offAlbedo = await captureAlbedo();
+            await applyTerrain(runtime, undefined, {
+              ...sceneOpts,
+              shadows: false,
+            });
+            const offNsRgba = await renderFrame();
+
+            // Disabled-VT frame: sources registered + virtualTexture
+            // {enabled:false} must reproduce the no-input frame exactly
+            // (same contract as the disabledIdentity case).
+            for (let m = 0; m < VT_MATERIAL_COUNT; m += 1) {
+              runtime.registerMaterialVtSource(
+                m,
+                "albedo",
+                sources[m].image,
+                sources[m].fallback,
+              );
+            }
+            await applyTerrain(runtime, { enabled: false }, sceneOpts);
+            const disabledRgba = await renderFrame();
+
+            // VT-on first frame: commit the golden VT settings, render
+            // once (deterministic first VT frame), then the AOV/shadowless
+            // variants.
+            await applyTerrain(runtime, GOLDEN_VT_SETTINGS, sceneOpts);
+            const onRgba = await renderFrame();
+            const stats = runtime.getMaterialVtStats();
+            const onAlbedo = await captureAlbedo();
+            await applyTerrain(runtime, GOLDEN_VT_SETTINGS, {
+              ...sceneOpts,
+              shadows: false,
+            });
+            const onNsRgba = await renderFrame();
+            const w = manifest.scene.width;
+            const h = manifest.scene.height;
+            return {
+              heightsSha256: heightsSha,
+              heightsExpected: manifest.scene.heightsSha256,
+              heightsMatch: heightsSha === manifest.scene.heightsSha256,
+              sourceChecks,
+              // PRIMARY: the albedo AOV isolates the VT output (native
+              // test_tv20 assertion) — linear [0,1] values, no sRGB.
+              albedoSsimOff: ssimF32(offAlbedo, albedoOff, w, h),
+              albedoSsimOn: ssimF32(onAlbedo, albedoOn, w, h),
+              albedoMeanAbsOff: meanAbsDiff3(offAlbedo, albedoOff),
+              albedoMeanAbsOn: meanAbsDiff3(onAlbedo, albedoOn),
+              albedoOnOffDelta: meanAbsDiff3(offAlbedo, onAlbedo),
+              nativeAlbedoDelta: manifest.albedoAov.nativeDelta,
+              // SECONDARY: beauty with shadows disabled on both sides.
+              ssimNsOff: ssimRgba(offNsRgba, nsOff, w, h),
+              ssimNsOn: ssimRgba(onNsRgba, nsOn, w, h),
+              // Diagnostics: shadowed beauty tracks the pre-existing W07
+              // screen-path shadow coverage, not the VT contract.
+              ssimOff: ssimRgba(offRgba, off, w, h),
+              ssimOn: ssimRgba(onRgba, on, w, h),
+              meanAbsDiff: meanAbsDiff3(offRgba, onRgba),
+              offDisabledMaxDiff: maxAbsDiff(offRgba, disabledRgba),
+              offDisabledByteEqual: maxAbsDiff(offRgba, disabledRgba) === 0,
+              shadowReport,
+              diffOff: frameStats(offRgba, off),
+              diffOn: frameStats(onRgba, on),
+              diffNsOff: frameStats(offNsRgba, nsOff),
+              nativeDelta: manifest.variants[1].nativeDelta,
+              stats,
+              nativeStats: manifest.variants[1].stats,
+              offPng: toPng(offRgba, w, h),
+              onPng: toPng(onRgba, w, h),
+            };
+          });
+        },
+
+        // F5/H4: the pure-TS `validateTerrainVtSupportTs` mirror must
+        // produce output identical to the WASM free function.
+        async vtSupportParity() {
+          const cases = [
+            {
+              name: "albedo-only",
+              input: {
+                enabled: true,
+                layers: [{ family: "albedo", virtualSizePx: [2048, 2048] }],
+              },
+            },
+            {
+              name: "albedo-normal-mask",
+              input: {
+                enabled: true,
+                layers: [
+                  { family: "albedo" },
+                  { family: "normal" },
+                  { family: "mask" },
+                ],
+              },
+            },
+            {
+              name: "mask-albedo-normal",
+              input: {
+                enabled: true,
+                layers: [
+                  { family: "mask" },
+                  { family: "albedo" },
+                  { family: "normal" },
+                ],
+              },
+            },
+            {
+              name: "disabled",
+              input: { enabled: false, layers: [{ family: "normal" }] },
+            },
+          ];
+          const out = [];
+          for (const entry of cases) {
+            const ts = validateTerrainVtSupportTs(entry.input);
+            const wasm = await validateTerrainVtSupport(entry.input);
+            out.push({
+              name: entry.name,
+              equal: sameJson(ts, wasm),
+              ts: {
+                status: ts.status,
+                diagnostics: ts.diagnostics.map((d) => d.objectId),
+                unsupportedFeatures: ts.unsupportedFeatures,
+              },
+              wasm: {
+                status: wasm.status,
+                diagnostics: wasm.diagnostics.map((d) => d.objectId),
+                unsupportedFeatures: wasm.unsupportedFeatures,
+              },
+            });
+          }
+          return { cases: out };
+        },
+
+        // Combined stats capture for the final report (native comparison).
+        async stats() {
+          return withRuntime(async (runtime) => {
+            registerVtSources(runtime, 2048);
+            await applyTerrain(runtime, VT_SETTINGS_2048);
+            runtime.setCamera(cameraInput());
+            runtime.render();
+            runtime.render();
+            return {
+              stats: runtime.getMaterialVtStats(),
+              capabilities: runtime.getCapabilities(),
+            };
+          });
+        },
+      };
+
+      window.__forge3dW08Vt = w08vt;
+    </script>
+  </body>
+</html>

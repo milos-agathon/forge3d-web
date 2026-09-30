@@ -1,0 +1,851 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forge3D W08 Terrain Overlays Test</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #000;
+      }
+
+      canvas {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="w08-overlays" width="224" height="160"></canvas>
+    <script type="module">
+      import {
+        Forge3DError,
+        Forge3DRuntime,
+        Forge3DScene,
+        ImageBasedLighting,
+      } from "../src-ts/index.ts";
+      import { Forge3DViewer } from "../src-ts/viewer.ts";
+      import {
+        createLosableSession,
+        decodePngRgba,
+        framesEqual as recoveryFramesEqual,
+        loseViewer,
+      } from "./w08-recovery-harness.js";
+
+      const canvas = document.querySelector("#w08-overlays");
+      const W = canvas.width;
+      const H = canvas.height;
+      const TERRAIN_SIZE = 96;
+      const TERRAIN_SPAN = 2.8;
+      const Z_SCALE = 1.45;
+
+      // ------------------------------------------------------------------
+      // Scene fixtures (W07 conventions: session + directional sun + IBL)
+      // ------------------------------------------------------------------
+
+      function buildHeights() {
+        const heights = new Float32Array(TERRAIN_SIZE * TERRAIN_SIZE);
+        for (let row = 0; row < TERRAIN_SIZE; row += 1) {
+          const y = -1 + (2 * row) / (TERRAIN_SIZE - 1);
+          for (let col = 0; col < TERRAIN_SIZE; col += 1) {
+            const x = -1 + (2 * col) / (TERRAIN_SIZE - 1);
+            heights[row * TERRAIN_SIZE + col] =
+              0.45 +
+              0.3 *
+                Math.exp(-((x + 0.3) ** 2 * 9 + (y - 0.1) ** 2 * 7)) -
+              0.2 *
+                Math.exp(-((x - 0.35) ** 2 * 16 + (y + 0.25) ** 2 * 16)) +
+              0.08 * Math.sin(x * 9) * Math.cos(y * 7);
+          }
+        }
+        return heights;
+      }
+
+      function hdrBytes(blue) {
+        const width = 8;
+        const height = 4;
+        const head = new TextEncoder().encode(
+          `#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y ${height} +X ${width}\n`,
+        );
+        const bytes = new Uint8Array(head.length + width * height * 4);
+        bytes.set(head, 0);
+        for (let y = 0; y < height; y += 1) {
+          for (let x = 0; x < width; x += 1) {
+            const offset = head.length + (y * width + x) * 4;
+            bytes[offset] = Math.trunc((x / 7) * 255);
+            bytes[offset + 1] = Math.trunc((y / 3) * 255);
+            bytes[offset + 2] = blue;
+            bytes[offset + 3] = 128;
+          }
+        }
+        return bytes;
+      }
+
+      function lightDirection(azimuthDeg, elevationDeg) {
+        const az = (azimuthDeg * Math.PI) / 180;
+        const el = (elevationDeg * Math.PI) / 180;
+        return [
+          -Math.cos(el) * Math.cos(az),
+          -Math.sin(el),
+          Math.cos(el) * Math.sin(az),
+        ];
+      }
+
+      function shadowInput() {
+        return {
+          enabled: true,
+          filter: "pcf",
+          mapSize: 1024,
+          depthBias: 0.0005,
+          normalBias: 0.0002,
+          slopeBias: 0.001,
+        };
+      }
+
+      const CSM = {
+        enabled: true,
+        cascadeCount: 2,
+        maxDistance: 8,
+        splitLambda: 0.75,
+        blendRange: 0.1,
+        stabilize: true,
+        debugView: "none",
+      };
+
+      async function withRuntime(body) {
+        const runtime = await Forge3DRuntime.create(canvas, {
+          diagnostics: true,
+          width: W,
+          height: H,
+          devicePixelRatio: 1,
+          clearColor: [0, 0, 0, 1],
+          memoryBudgetBytes: 1 << 30,
+          overflowPolicy: "reject",
+        });
+        try {
+          return await body(runtime);
+        } finally {
+          if (!runtime.disposed) runtime.dispose();
+        }
+      }
+
+      // Session `#applyCommittedScene` recipe on a bare runtime: terrain
+      // first (it owns group 0), then the scene snapshot + shared state.
+      function applyScene(runtime, scene) {
+        for (const node of scene.getNodes()) {
+          if (node.node.kind === "terrain") {
+            runtime.setTerrain(node.node.terrain);
+          }
+        }
+        const snapshot = scene.snapshot();
+        runtime.setScene(snapshot);
+        runtime.setLighting(snapshot.lighting);
+        runtime.setMaterials(snapshot.materials);
+        runtime.setIbl(snapshot.ibl);
+        runtime.setShadows(snapshot.shadows);
+      }
+
+      async function buildScene(terrainExtra, withShadows = false) {
+        const scene = Forge3DScene.create();
+        scene.addTerrain({
+          width: TERRAIN_SIZE,
+          height: TERRAIN_SIZE,
+          heights: buildHeights(),
+          spacing: [
+            TERRAIN_SPAN / (TERRAIN_SIZE - 1),
+            TERRAIN_SPAN / (TERRAIN_SIZE - 1),
+          ],
+          exaggeration: Z_SCALE,
+          domain: [0, 1],
+          renderMode: "screen",
+          // hueVariation (native default 0.08) is a nonlinear HSV op applied
+          // AFTER the overlay stage in tm_shade; pin it to 0 so the albedo
+          // AOV equals exactly `overlay_stack(base_albedo)` and the CPU
+          // blend reference holds to 2/255.
+          material: { hueVariation: 0 },
+          ...terrainExtra,
+        });
+        scene.clearLights();
+        scene.addLight({
+          type: "directional",
+          color: [1, 1, 1],
+          intensity: 2.4,
+          direction: lightDirection(135, 24),
+          castsShadow: withShadows,
+        });
+        scene.setImageBasedLighting(
+          await ImageBasedLighting.fromRGBE(hdrBytes(160), {
+            quality: "medium",
+            intensity: 1,
+            rotationDegrees: 0,
+            prefilter: "native",
+          }),
+        );
+        if (withShadows) {
+          scene.setShadows(shadowInput(), CSM);
+        }
+        return scene;
+      }
+
+      function cameraInput() {
+        return {
+          position: [3.0, 2.2, 3.0],
+          target: [0, 0.3, 0],
+          up: [0, 1, 0],
+          fovYDegrees: 50,
+          near: 0.05,
+          far: 50,
+        };
+      }
+
+      // ------------------------------------------------------------------
+      // Overlay layer fixtures: three layers, distinct z-orders and blend
+      // modes, one partial uv extent. Images are smooth so the CPU plan +
+      // GPU bilinear sampling track the JS reference within tolerance.
+      // ------------------------------------------------------------------
+
+      function gradientImage(size, fn) {
+        const data = new Uint8Array(size * size * 4);
+        for (let y = 0; y < size; y += 1) {
+          for (let x = 0; x < size; x += 1) {
+            const [r, g, b, a] = fn(x / (size - 1), y / (size - 1));
+            data.set(
+              [
+                Math.round(r * 255),
+                Math.round(g * 255),
+                Math.round(b * 255),
+                Math.round(a * 255),
+              ],
+              (y * size + x) * 4,
+            );
+          }
+        }
+        return { width: size, height: size, data };
+      }
+
+      function layerStack(zA = 0, zB = 1, zC = 2) {
+        return [
+          {
+            name: "normal-patch",
+            image: gradientImage(64, (u, v) => [
+              0.85 - 0.25 * v,
+              0.30 + 0.30 * u,
+              0.20 + 0.15 * Math.sin(u * Math.PI),
+              1,
+            ]),
+            extent: [0.15, 0.15, 0.65, 0.65],
+            opacity: 0.9,
+            blendMode: "normal",
+            zOrder: zA,
+          },
+          {
+            name: "multiply-band",
+            image: gradientImage(64, (u, v) => {
+              const m = 0.55 + 0.4 * Math.sin(u * Math.PI * 2 + v);
+              return [m, m, m, 1];
+            }),
+            extent: [0.30, 0.30, 0.95, 0.95],
+            opacity: 0.8,
+            blendMode: "multiply",
+            zOrder: zB,
+          },
+          {
+            name: "overlay-wash",
+            image: gradientImage(64, (u, v) => [
+              0.45 + 0.4 * v,
+              0.45 + 0.4 * u,
+              0.50,
+              1,
+            ]),
+            opacity: 0.7,
+            blendMode: "overlay",
+            zOrder: zC,
+          },
+        ];
+      }
+
+
+  function parityLayers() {
+    return [
+      {
+        name: "parity-normal",
+        image: gradientImage(64, (u, v) => [
+          0.35 + 0.5 * u,
+          0.25 + 0.45 * v,
+          0.30 + 0.20 * Math.sin(u * Math.PI),
+          0.55 + 0.45 * u * v,
+        ]),
+        opacity: 0.95,
+        blendMode: "normal",
+        zOrder: 0,
+      },
+      {
+        name: "parity-multiply",
+        image: gradientImage(64, (u, v) => {
+          const m = 0.55 + 0.4 * Math.sin(u * Math.PI * 2 + v);
+          return [m, m, m, 0.6 + 0.4 * v];
+        }),
+        opacity: 0.85,
+        blendMode: "multiply",
+        zOrder: 1,
+      },
+      {
+        name: "parity-overlay",
+        image: gradientImage(64, (u, v) => [
+          0.45 + 0.4 * v,
+          0.45 + 0.4 * u,
+          0.50,
+          0.65 + 0.35 * Math.sin((u + v) * Math.PI),
+        ]),
+        opacity: 0.9,
+        blendMode: "overlay",
+        zOrder: 2,
+      },
+    ];
+  }
+
+      function overlaysInput(options = {}) {
+        return {
+          enabled: true,
+          globalOpacity: options.globalOpacity ?? 1,
+          resolutionScale: 1,
+          layers: options.layers ?? layerStack(),
+        };
+      }
+
+      // ------------------------------------------------------------------
+      // Metrics
+      // ------------------------------------------------------------------
+
+      function framesEqual(a, b) {
+        if (a.length !== b.length) return { byteEqual: false, maxDiff: -1 };
+        let maxDiff = 0;
+        for (let i = 0; i < a.length; i += 1) {
+          const d = Math.abs(a[i] - b[i]);
+          if (d > maxDiff) maxDiff = d;
+        }
+        return { byteEqual: maxDiff === 0, maxDiff };
+      }
+
+      // ------------------------------------------------------------------
+      // JS port of the core overlay pipeline (plan_overlays resample +
+      // Rgba8UnormSrgb sample + WGSL blend), so the captured albedo AOV can
+      // be compared against an exact CPU reference at 2/255 tolerance.
+      // ------------------------------------------------------------------
+
+      function srgbToLinear(c) {
+        return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+      }
+
+      function sampleBilinear(image, u, v, opacity) {
+        const w = image.width;
+        const h = image.height;
+        const data = image.data;
+        const uc = Math.min(Math.max(u, 0), 1);
+        const vc = Math.min(Math.max(v, 0), 1);
+        const fx = Math.min(Math.max(uc * w - 0.5, 0), w - 1);
+        const fy = Math.min(Math.max(vc * h - 0.5, 0), h - 1);
+        const x0 = Math.floor(fx);
+        const y0 = Math.floor(fy);
+        const x1 = Math.min(x0 + 1, w - 1);
+        const y1 = Math.min(y0 + 1, h - 1);
+        const tx = fx - x0;
+        const ty = fy - y0;
+        const at = (x, y, ch) => data[(y * w + x) * 4 + ch] / 255;
+        const lerp = (ch) => {
+          const c00 = at(x0, y0, ch);
+          const c10 = at(x1, y0, ch);
+          const c01 = at(x0, y1, ch);
+          const c11 = at(x1, y1, ch);
+          const top = c00 * (1 - tx) + c10 * tx;
+          const bot = c01 * (1 - tx) + c11 * tx;
+          return top * (1 - ty) + bot * ty;
+        };
+        return [lerp(0), lerp(1), lerp(2), lerp(3) * opacity];
+      }
+
+      // Rgba8UnormSrgb sample emulation: the GPU decodes each texel to
+      // linear BEFORE the bilinear lerp (interpolation happens in linear
+      // space); alpha is not sRGB-decoded.
+      function sampleBilinearLinear(image, u, v) {
+        const w = image.width;
+        const h = image.height;
+        const data = image.data;
+        const uc = Math.min(Math.max(u, 0), 1);
+        const vc = Math.min(Math.max(v, 0), 1);
+        const fx = Math.min(Math.max(uc * w - 0.5, 0), w - 1);
+        const fy = Math.min(Math.max(vc * h - 0.5, 0), h - 1);
+        const x0 = Math.floor(fx);
+        const y0 = Math.floor(fy);
+        const x1 = Math.min(x0 + 1, w - 1);
+        const y1 = Math.min(y0 + 1, h - 1);
+        const tx = fx - x0;
+        const ty = fy - y0;
+        const at = (x, y, ch) => data[(y * w + x) * 4 + ch] / 255;
+        const lin = (ch) => {
+          const c00 = srgbToLinear(at(x0, y0, ch));
+          const c10 = srgbToLinear(at(x1, y0, ch));
+          const c01 = srgbToLinear(at(x0, y1, ch));
+          const c11 = srgbToLinear(at(x1, y1, ch));
+          const top = c00 * (1 - tx) + c10 * tx;
+          const bot = c01 * (1 - tx) + c11 * tx;
+          return top * (1 - ty) + bot * ty;
+        };
+        const aLerp = () => {
+          const a00 = at(x0, y0, 3);
+          const a10 = at(x1, y0, 3);
+          const a01 = at(x0, y1, 3);
+          const a11 = at(x1, y1, 3);
+          const top = a00 * (1 - tx) + a10 * tx;
+          const bot = a01 * (1 - tx) + a11 * tx;
+          return top * (1 - ty) + bot * ty;
+        };
+        return [lin(0), lin(1), lin(2), aLerp()];
+      }
+
+      // resample_layer (core): pixel-center uv, uv-extent mask, trunc u8.
+      function resampleLayer(layer, tw, th) {
+        const out = new Uint8Array(tw * th * 4);
+        const e = layer.extent ?? [0, 0, 1, 1];
+        for (let y = 0; y < th; y += 1) {
+          for (let x = 0; x < tw; x += 1) {
+            const u = (x + 0.5) / tw;
+            const v = (y + 0.5) / th;
+            if (u < e[0] || u > e[2] || v < e[1] || v > e[3]) continue;
+            const lu = (u - e[0]) / (e[2] - e[0]);
+            const lv = (v - e[1]) / (e[3] - e[1]);
+            const src = sampleBilinear(layer.image, lu, lv, layer.opacity ?? 1);
+            const i = (y * tw + x) * 4;
+            out[i] = Math.min(Math.max(src[0], 0), 1) * 255;
+            out[i + 1] = Math.min(Math.max(src[1], 0), 1) * 255;
+            out[i + 2] = Math.min(Math.max(src[2], 0), 1) * 255;
+            out[i + 3] = Math.min(Math.max(src[3], 0), 1) * 255;
+          }
+        }
+        return { width: tw, height: th, data: out };
+      }
+
+      function blendLinear(mode, dst, src, a) {
+        const out = [0, 0, 0];
+        for (let ch = 0; ch < 3; ch += 1) {
+          const b = dst[ch];
+          const s = src[ch];
+          if (mode === "multiply") {
+            out[ch] = b * (1 - a) + b * s * a;
+          } else if (mode === "overlay") {
+            const ov = b < 0.5 ? 2 * b * s : 1 - 2 * (1 - b) * (1 - s);
+            out[ch] = b * (1 - a) + ov * a;
+          } else {
+            out[ch] = b * (1 - a) + s * a;
+          }
+        }
+        return out;
+      }
+
+      // ------------------------------------------------------------------
+      // Web-Mercator helpers (terrain_overlay::crs port)
+      // ------------------------------------------------------------------
+
+      const R_MERC = 6378137.0;
+      function lonlatToMercator(lonDeg, latDeg) {
+        const lat = Math.min(Math.max(latDeg, -85.05112878), 85.05112878);
+        return [
+          R_MERC * (lonDeg * Math.PI) / 180,
+          R_MERC * Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI) / 180 / 2)),
+        ];
+      }
+
+      // ------------------------------------------------------------------
+      // Cases
+      // ------------------------------------------------------------------
+
+      const RECOVERY_RUNTIME = {
+        width: W,
+        height: H,
+        devicePixelRatio: 1,
+        clearColor: [0, 0, 0, 1],
+        diagnostics: true,
+      };
+
+      const w08overlays = {
+        // Viewer device loss: the replayed terrain carries its overlay
+        // stack, so the recovered frame is byte-equal and the overlay
+        // report is unchanged.
+        async viewerDeviceLoss() {
+          const viewer = await Forge3DViewer.create(canvas, {
+            runtime: RECOVERY_RUNTIME,
+            initialView: {
+              target: [0, 0.3, 0],
+              distance: 4.8,
+              yawDegrees: 45,
+              pitchDegrees: 27,
+              fovYDegrees: 50,
+              near: 0.05,
+              far: 50,
+            },
+            controls: false,
+            resize: false,
+          });
+          try {
+            const scene = await buildScene({ overlays: overlaysInput() });
+            const terrain = scene
+              .getNodes()
+              .find((node) => node.node.kind === "terrain").node.terrain;
+            viewer.setTerrain(terrain);
+            viewer.render();
+            const before = await decodePngRgba(await viewer.screenshot());
+            const reportBefore = viewer.getTerrainOverlayReport();
+            await loseViewer(viewer);
+            viewer.render();
+            const after = await decodePngRgba(await viewer.screenshot());
+            return {
+              status: viewer.status,
+              recoveryAttempts: viewer.getDiagnostics().recoveryAttempts,
+              reportBefore,
+              reportAfter: viewer.getTerrainOverlayReport(),
+              diff: recoveryFramesEqual(before, after),
+            };
+          } finally {
+            viewer.dispose();
+          }
+        },
+
+        // Same contract through Forge3DSession's #recover replay.
+        async sessionDeviceLoss() {
+          const { session, lose, runtimeCount } = await createLosableSession(
+            canvas,
+            { runtime: RECOVERY_RUNTIME },
+          );
+          try {
+            session.setScene(await buildScene({ overlays: overlaysInput() }));
+            session.setCamera(cameraInput());
+            session.render();
+            const before = await session.readRgba();
+            const reportBefore = session.getTerrainOverlayReport();
+            await lose();
+            session.render();
+            const after = await session.readRgba();
+            return {
+              status: session.status,
+              runtimes: runtimeCount(),
+              reportBefore,
+              reportAfter: session.getTerrainOverlayReport(),
+              diff: recoveryFramesEqual(before, after),
+            };
+          } finally {
+            session.dispose();
+          }
+        },
+
+        // 3-layer stack: two renders byte-identical; swapped z-orders
+        // produce a different frame; report exposes the planned stack.
+        async deterministic() {
+          return withRuntime(async (runtime) => {
+            applyScene(runtime, await buildScene({ overlays: overlaysInput() }));
+            runtime.setCamera(cameraInput());
+            runtime.render();
+            const a = await runtime.readRgba();
+            runtime.render();
+            const b = await runtime.readRgba();
+            const report = runtime.getTerrainOverlayReport();
+
+            // Swap z-order: normal-patch now on top of overlay-wash.
+            const swapped = layerStack(2, 1, 0);
+            applyScene(runtime, await buildScene({ overlays: overlaysInput({ layers: swapped }) }));
+            runtime.render();
+            const c = await runtime.readRgba();
+            return {
+              deterministic: framesEqual(a, b),
+              zOrderDiffers: framesEqual(a, c),
+              report,
+            };
+          });
+        },
+
+        // Feature-off identity: disabled settings / all-invisible layers
+        // are byte-identical to a commit with no overlays at all.
+        async offIdentity() {
+          return withRuntime(async (runtime) => {
+            applyScene(runtime, await buildScene({}));
+            runtime.setCamera(cameraInput());
+            runtime.render();
+            const base = await runtime.readRgba();
+
+            applyScene(
+              runtime,
+              await buildScene({
+                overlays: { enabled: false, layers: layerStack() },
+              }),
+            );
+            runtime.render();
+            const disabled = await runtime.readRgba();
+
+            const invisible = layerStack().map((l) => ({ ...l, visible: false }));
+            applyScene(
+              runtime,
+              await buildScene({
+                overlays: overlaysInput({ layers: invisible }),
+              }),
+            );
+            runtime.render();
+            const hidden = await runtime.readRgba();
+
+            const report = runtime.getTerrainOverlayReport();
+            return {
+              disabled: framesEqual(base, disabled),
+              invisible: framesEqual(base, hidden),
+              report,
+            };
+          });
+        },
+
+        // Albedo AOV parity: the captured overlaid albedo must match a JS
+        // port of plan_overlays + the WGSL blend applied to the terrain's
+        // own no-overlay albedo AOV, within 2/255.
+        //
+        // Two reproduction details matter for an exact match:
+        //  - Screen-mode uv quirk (matches the native shader): the
+        //    fullscreen triangle positions use unclamped uv (0..2) while
+        //    `output.uv` is the clamped attribute (0..1), so barycentric
+        //    interpolation hands the fragment
+        //    `uv = ((x+0.5)/(2*W), (1-(y+0.5)/H)/2)` — terrain uv only
+        //    spans [0,0.5]^2 across the frame.
+        //  - Rgba8UnormSrgb sampling decodes each texel to linear BEFORE
+        //    the bilinear lerp, so the CPU port interpolates in linear
+        //    space (sampleBilinearLinear).
+        //
+        // The parity stack below deliberately uses full-uv-extent layers
+        // with smooth rgb AND smooth alpha content: a binary extent-mask
+        // edge would make sampled alpha hypersensitive to hardware
+        // sub-texel varying/filter quantization (~1/100 texel) that no
+        // CPU reference can reproduce. Partial-extent coverage is proven
+        // separately by the deterministic/z-order and CRS placement tests.
+
+        async albedoParity() {
+          return withRuntime(async (runtime) => {
+            const settings = overlaysInput({ layers: parityLayers(), globalOpacity: 0.9 });
+            applyScene(runtime, await buildScene({}));
+            runtime.setCamera(cameraInput());
+            const baseCap = await runtime.capture({ aovs: ["albedo"] });
+            applyScene(runtime, await buildScene({ overlays: settings }));
+            const cap = await runtime.capture({ aovs: ["albedo"] });
+            const base = baseCap.aovFrame.albedo();
+            const overlaid = cap.aovFrame.albedo();
+            const width = cap.aovFrame.width;
+            const height = cap.aovFrame.height;
+            // Plan target = terrain dims x resolutionScale (96x96 here).
+            const planDims = [
+              Math.max(1, Math.round(TERRAIN_SIZE * (settings.resolutionScale ?? 1))),
+              Math.max(1, Math.round(TERRAIN_SIZE * (settings.resolutionScale ?? 1))),
+            ];
+            // Resample every layer once (the planned textures), then the
+            // per-pixel port samples them like the GPU does.
+            const planned = (settings.layers ?? [])
+              .filter((l) => (l.visible ?? true) && (l.opacity ?? 1) > 0.001)
+              .sort((a, b) => (a.zOrder ?? 0) - (b.zOrder ?? 0))
+              .map((layer) => ({
+                mode: layer.blendMode ?? "normal",
+                planned: resampleLayer(layer, planDims[0], planDims[1]),
+              }));
+            const global = Math.min(Math.max(settings.globalOpacity ?? 1, 0), 1);
+            const tolerance = 2 / 255;
+            let maxDiff = 0;
+            let total = 0;
+            let over = 0;
+            let changed = 0;
+            let argmax = null;
+            for (let y = 0; y < height; y += 1) {
+              for (let x = 0; x < width; x += 1) {
+                const i = (y * width + x) * 3;
+                const u = (x + 0.5) / (2 * width);
+                const v = (1 - (y + 0.5) / height) / 2;
+                let expected = [base[i], base[i + 1], base[i + 2]];
+                for (const entry of planned) {
+                  const s = sampleBilinearLinear(entry.planned, u, v);
+                  const a = Math.min(Math.max(s[3], 0), 1) * global;
+                  expected = blendLinear(entry.mode, expected, [s[0], s[1], s[2]], a);
+                }
+                let pxDelta = 0;
+                for (let ch = 0; ch < 3; ch += 1) {
+                  const d = Math.abs(overlaid[i + ch] - expected[ch]);
+                  total += d;
+                  pxDelta += Math.abs(overlaid[i + ch] - base[i + ch]);
+                  if (d > maxDiff) {
+                    maxDiff = d;
+                    argmax = {
+                      x, y, ch, u, v,
+                      expected: expected[ch],
+                      overlaid: overlaid[i + ch],
+                      base: base[i + ch],
+                    };
+                  }
+                  if (d > tolerance) over += 1;
+                }
+                if (pxDelta > 0.05) changed += 1;
+              }
+            }
+            return {
+              maxDiff,
+              meanAbsDiff: total / (width * height * 3),
+              overTolerance: over,
+              argmax,
+              tolerance,
+              changedPixels: changed,
+              channels: width * height * 3,
+            };
+          });
+        },
+
+        // Overlays apply BEFORE lighting: a self-shadowed overlay pixel is
+        // darker than the same overlay pixel lit. Perspective mode runs the
+        // standard CSM self-shadow path; the overlay still lands on albedo.
+        async shadowInteraction() {
+          return withRuntime(async (runtime) => {
+            applyScene(
+              runtime,
+              await buildScene(
+                { renderMode: "perspective", overlays: overlaysInput() },
+                true,
+              ),
+            );
+            runtime.setCamera(cameraInput());
+            runtime.render();
+            const shadowed = await runtime.readRgba();
+            const report = runtime.getShadowReport ? runtime.getShadowReport() : null;
+
+            const scene = await buildScene(
+              { renderMode: "perspective", overlays: overlaysInput() },
+              false,
+            );
+            // Rebuild with the light not casting and no shadow resources.
+            applyScene(runtime, scene);
+            runtime.render();
+            const lit = await runtime.readRgba();
+
+            // Find pixels where the shadowed frame is darker than lit and
+            // report the strongest self-shadow pixel inside the overlay's
+            // partial extent (terrain uv -> screen pixel, v flipped).
+            let best = null;
+            for (let y = 0; y < H; y += 1) {
+              for (let x = 0; x < W; x += 1) {
+                const i = (y * W + x) * 4;
+                const dl =
+                  lit[i] + lit[i + 1] + lit[i + 2] -
+                  (shadowed[i] + shadowed[i + 1] + shadowed[i + 2]);
+                if (best === null || dl > best.darkening) {
+                  best = { x, y, darkening: dl, lit: [lit[i], lit[i + 1], lit[i + 2]], shadowed: [shadowed[i], shadowed[i + 1], shadowed[i + 2]] };
+                }
+              }
+            }
+            return { ...best, report };
+          });
+        },
+
+        // CRS placement: an EPSG:4326 layer lands on an EPSG:3857 terrain
+        // where the Mercator transform predicts; far pixels are untouched.
+        async crsPlacement() {
+          return withRuntime(async (runtime) => {
+            // Terrain covers lon 10..11 deg, lat 50..51 deg as EPSG:3857.
+            const [minX, minY] = lonlatToMercator(10, 50);
+            const [maxX, maxY] = lonlatToMercator(11, 51);
+            const bounds = [minX, minY, maxX, maxY];
+            const layer = {
+              name: "lonlat-patch",
+              image: gradientImage(32, () => [0.95, 0.1, 0.1, 1]),
+              crs: "EPSG:4326",
+              crsBounds: [10.2, 50.2, 10.8, 50.8],
+              opacity: 1,
+              blendMode: "normal",
+              zOrder: 0,
+            };
+            const terrainGeo = { crs: "EPSG:3857", bounds };
+            applyScene(
+              runtime,
+              await buildScene({
+                ...terrainGeo,
+                overlays: { enabled: true, layers: [layer] },
+              }),
+            );
+            runtime.setCamera(cameraInput());
+            runtime.render();
+            const overlaid = await runtime.readRgba();
+            applyScene(runtime, await buildScene({ ...terrainGeo }));
+            runtime.render();
+            const base = await runtime.readRgba();
+
+            // Expected coverage: layer bounds transformed to terrain uv.
+            const [lx0, ly0] = lonlatToMercator(10.2, 50.2);
+            const [lx1, ly1] = lonlatToMercator(10.8, 50.8);
+            const u0 = (lx0 - bounds[0]) / (bounds[2] - bounds[0]);
+            const u1 = (lx1 - bounds[0]) / (bounds[2] - bounds[0]);
+            const v0 = (bounds[3] - ly1) / (bounds[3] - bounds[1]);
+            const v1 = (bounds[3] - ly0) / (bounds[3] - bounds[1]);
+            const pxAt = (u, v) => {
+              const x = Math.min(Math.max(Math.floor(u * W), 0), W - 1);
+              const y = Math.min(Math.max(Math.floor((1 - v) * H), 0), H - 1);
+              return (y * W + x) * 4;
+            };
+            const inside = pxAt((u0 + u1) / 2, (v0 + v1) / 2);
+            const outside = pxAt(0.03, 0.97);
+            const diff = (a, b, i) =>
+              Math.abs(a[i] - b[i]) + Math.abs(a[i + 1] - b[i + 1]) + Math.abs(a[i + 2] - b[i + 2]);
+            return {
+              uvRect: [u0, v0, u1, v1],
+              insideDiff: diff(overlaid, base, inside),
+              outsideDiff: diff(overlaid, base, outside),
+              insideRgba: [overlaid[inside], overlaid[inside + 1], overlaid[inside + 2]],
+            };
+          });
+        },
+
+        // Unsupported CRS pair -> UNSUPPORTED_FEATURE with crs_mismatch.
+        async unsupportedCrs() {
+          return withRuntime(async (runtime) => {
+            const [minX, minY] = lonlatToMercator(10, 50);
+            const [maxX, maxY] = lonlatToMercator(11, 51);
+            const layer = {
+              name: "bad-crs",
+              image: gradientImage(8, () => [1, 0, 0, 1]),
+              crs: "EPSG:3035",
+              crsBounds: [0, 0, 1000, 1000],
+            };
+            runtime.setCamera(cameraInput());
+            try {
+              applyScene(
+                runtime,
+                await buildScene({
+                  crs: "EPSG:3857",
+                  bounds: [minX, minY, maxX, maxY],
+                  overlays: { enabled: true, layers: [layer] },
+                }),
+              );
+              runtime.render();
+              return { threw: false };
+            } catch (error) {
+              return {
+                threw: true,
+                code: error?.code ?? error?.name,
+                message: String(error?.message ?? error),
+              };
+            }
+          });
+        },
+
+        async report() {
+          return withRuntime(async (runtime) => {
+            applyScene(runtime, await buildScene({ overlays: overlaysInput() }));
+            runtime.setCamera(cameraInput());
+            runtime.render();
+            return {
+              report: runtime.getTerrainOverlayReport(),
+              capabilities: runtime.getCapabilities(),
+            };
+          });
+        },
+      };
+
+      window.__forge3dW08Overlays = w08overlays;
+    </script>
+  </body>
+</html>
