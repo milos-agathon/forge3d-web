@@ -14,6 +14,8 @@ mod shader_variants;
 mod shadows;
 mod terrain;
 mod terrain_material;
+mod terrain_vt;
+mod terrain_w08;
 mod textures;
 mod timing;
 
@@ -63,6 +65,8 @@ pub struct Forge3DRuntime {
     disposed: bool,
     max_texture_dimension_2d: u32,
     max_buffer_size: u64,
+    max_sampled_textures_per_shader_stage: u32,
+    max_storage_buffers_per_shader_stage: u32,
     surface_format: String,
     #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
     preferred_alpha_mode: wgpu::CompositeAlphaMode,
@@ -77,6 +81,9 @@ pub struct Forge3DRuntime {
     last_stats: RenderStats,
     offline: Option<offline::OfflineSession>,
     offline_pipelines: Option<offline::OfflinePipelines>,
+    /// W08 (E6): VT source registry — survives terrain re-commits, cleared
+    /// on dispose.
+    vt_registry: forge3d_core::terrain_vt::VtSourceRegistry,
 }
 
 impl Forge3DRuntime {
@@ -133,6 +140,7 @@ impl Forge3DRuntime {
         self.query_ring = None;
         self.offline = None;
         self.offline_pipelines = None;
+        self.vt_registry.clear();
         self.disposed = true;
         self.memory.clear();
     }
@@ -214,6 +222,155 @@ impl Forge3DRuntime {
                 .as_ref()
                 .map(|terrain| &terrain.material.report),
         )
+    }
+
+    /// W08 (E2/E7): geometry report — grid counts for plain terrain, the
+    /// A1/A7 clipmap fields when `geometry.clipmap` was committed.
+    #[wasm_bindgen(js_name = getTerrainGeometryReport)]
+    pub fn get_terrain_geometry_report(&self) -> JsValue {
+        match self.terrain.as_ref() {
+            Some(terrain) => terrain.geometry_report(),
+            None => {
+                let report = js_sys::Object::new();
+                set_js_property(&report, "mode", &JsValue::from_str("none"));
+                report.into()
+            }
+        }
+    }
+
+    /// W08 (E3): plans the clipmap-driven height-tile request set.
+    /// Errors `INVALID_INPUT "height streaming not enabled"` when the
+    /// committed terrain has no `streaming` block.
+    #[wasm_bindgen(js_name = planHeightTiles)]
+    pub fn plan_height_tiles(&mut self, max_requests: u32) -> Result<JsValue, JsValue> {
+        self.guard_mutation()?;
+        self.terrain
+            .as_mut()
+            .ok_or_else(|| to_js_error(terrain::height_streaming_not_enabled()))?
+            .plan_height_tiles(max_requests)
+            .map_err(to_js_error)
+    }
+
+    /// W08 (E3): completes a pending tile request with packed row-major
+    /// heights matching the pyramid tile rect.
+    #[wasm_bindgen(js_name = completeHeightTile)]
+    pub fn complete_height_tile(
+        &mut self,
+        lod: u32,
+        x: u32,
+        y: u32,
+        heights: &[f32],
+    ) -> Result<JsValue, JsValue> {
+        self.guard_mutation()?;
+        let context = self.context.clone().ok_or_else(|| {
+            to_js_error(WebError::new(
+                Forge3DErrorCode::RuntimeDisposed,
+                "Runtime GPU context is not available",
+            ))
+        })?;
+        self.terrain
+            .as_mut()
+            .ok_or_else(|| to_js_error(terrain::height_streaming_not_enabled()))?
+            .complete_height_tile(
+                &context,
+                forge3d_core::terrain_stream::TileId::new(lod, x, y),
+                heights,
+            )
+            .map_err(to_js_error)
+    }
+
+    /// W08 (E3): releases an in-flight tile request, counted failed.
+    #[wasm_bindgen(js_name = failHeightTile)]
+    pub fn fail_height_tile(&mut self, lod: u32, x: u32, y: u32) -> Result<(), JsValue> {
+        self.guard_mutation()?;
+        self.terrain
+            .as_mut()
+            .ok_or_else(|| to_js_error(terrain::height_streaming_not_enabled()))?
+            .fail_height_tile(forge3d_core::terrain_stream::TileId::new(lod, x, y))
+            .map_err(to_js_error)
+    }
+
+    /// W08 (E3): streamed-heightfield stats object.
+    #[wasm_bindgen(js_name = getHeightStreamingStats)]
+    pub fn get_height_streaming_stats(&self) -> Result<JsValue, JsValue> {
+        self.terrain
+            .as_ref()
+            .ok_or_else(|| to_js_error(terrain::height_streaming_not_enabled()))?
+            .height_streaming_stats()
+            .map_err(to_js_error)
+    }
+
+    /// W08 (E4): latest GPU LOD selection — `null` before the first
+    /// completed readback.
+    #[wasm_bindgen(js_name = getLodSelection)]
+    pub fn get_lod_selection(&self) -> Result<JsValue, JsValue> {
+        self.terrain
+            .as_ref()
+            .ok_or_else(|| to_js_error(terrain::height_streaming_not_enabled()))?
+            .lod_selection()
+            .map_err(to_js_error)
+    }
+
+    /// W08 (E5): overlay report for the committed terrain; `null` when no
+    /// terrain exists.
+    #[wasm_bindgen(js_name = getTerrainOverlayReport)]
+    pub fn get_terrain_overlay_report(&self) -> JsValue {
+        match self.terrain.as_ref() {
+            Some(terrain) => terrain.overlay_report(),
+            None => JsValue::NULL,
+        }
+    }
+
+    /// W08 (E6): registers a CPU VT source image for
+    /// `(materialIndex, family)`. `image` is `{width, height, data:
+    /// Uint8Array}`; `fallback` is an optional `[r,g,b,a]` color.
+    #[wasm_bindgen(js_name = registerMaterialVtSource)]
+    pub fn register_material_vt_source(
+        &mut self,
+        material_index: u32,
+        family: String,
+        image: JsValue,
+        fallback: JsValue,
+    ) -> Result<(), JsValue> {
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        let (width, height, data) =
+            crate::terrain_material_input::read_image(&image, "virtualTexture.source")
+                .map_err(to_js_error)?;
+        let fallback_color: [f32; 4] = if fallback.is_undefined() || fallback.is_null() {
+            [0.5, 0.5, 0.5, 1.0]
+        } else {
+            serde_wasm_bindgen::from_value(fallback).map_err(|error| {
+                to_js_error(WebError::new(
+                    Forge3DErrorCode::InvalidInput,
+                    format!("Invalid input virtualTexture.fallback: {error}"),
+                ))
+            })?
+        };
+        self.vt_registry
+            .register(
+                material_index,
+                &family,
+                (width, height),
+                data,
+                fallback_color,
+            )
+            .map_err(|error| to_js_error(crate::error::map_core_error(error)))
+    }
+
+    /// W08 (E6): clears every registered VT source.
+    #[wasm_bindgen(js_name = clearMaterialVtSources)]
+    pub fn clear_material_vt_sources(&mut self) {
+        self.vt_registry.clear();
+    }
+
+    /// W08 (E6): camelCase `VtStats`; zeros when VT is disabled or no
+    /// terrain is committed (e.g. after a rejected VT commit).
+    #[wasm_bindgen(js_name = getMaterialVtStats)]
+    pub fn get_material_vt_stats(&self) -> JsValue {
+        match self.terrain.as_ref() {
+            Some(terrain) => terrain.vt_stats_report(),
+            None => terrain::vt_stats_js(false, &forge3d_core::terrain_vt::VtStats::default()),
+        }
     }
 
     #[wasm_bindgen(js_name = setTerrain)]
@@ -411,6 +568,42 @@ impl Forge3DRuntime {
             &capabilities_value,
             "preferredCanvasFormat",
             &JsValue::from_str(&self.surface_format),
+        );
+        // W08 (E0): feature booleans reflect the negotiated device limits.
+        let sampled = self.max_sampled_textures_per_shader_stage;
+        set_js_property(
+            &capabilities_value,
+            "maxSampledTexturesPerShaderStage",
+            &JsValue::from_f64(sampled as f64),
+        );
+        set_js_property(
+            &capabilities_value,
+            "maxStorageBuffersPerShaderStage",
+            &JsValue::from_f64(self.max_storage_buffers_per_shader_stage as f64),
+        );
+        let clipmap_ok = sampled >= terrain::W08_SAMPLED_TEXTURES_CLIPMAP;
+        set_js_property(
+            &capabilities_value,
+            "terrainClipmap",
+            &JsValue::from_bool(clipmap_ok),
+        );
+        set_js_property(
+            &capabilities_value,
+            "terrainStreaming",
+            &JsValue::from_bool(clipmap_ok && sampled >= terrain::W08_SAMPLED_TEXTURES_STREAMING),
+        );
+        set_js_property(
+            &capabilities_value,
+            "terrainOverlays",
+            &JsValue::from_bool(sampled >= terrain::W08_SAMPLED_TEXTURES_OVERLAYS),
+        );
+        set_js_property(
+            &capabilities_value,
+            "terrainVirtualTexture",
+            &JsValue::from_bool(
+                sampled >= terrain::W08_SAMPLED_TEXTURES_VT
+                    && self.max_storage_buffers_per_shader_stage >= terrain::W08_STORAGE_BUFFERS_VT,
+            ),
         );
         self.adapter_diagnostics
             .populate_capabilities(&capabilities_value);
@@ -641,6 +834,8 @@ mod tests {
             disposed: true,
             max_texture_dimension_2d: 8192,
             max_buffer_size: 256 * 1024 * 1024,
+            max_sampled_textures_per_shader_stage: 16,
+            max_storage_buffers_per_shader_stage: 8,
             surface_format: "Rgba8UnormSrgb".to_string(),
             preferred_alpha_mode: wgpu::CompositeAlphaMode::PreMultiplied,
             device_lost_callback: None,
@@ -664,6 +859,7 @@ mod tests {
             },
             offline: None,
             offline_pipelines: None,
+            vt_registry: forge3d_core::terrain_vt::VtSourceRegistry::new(),
         };
 
         let error = ensure_not_disposed_error(&runtime).unwrap_err();

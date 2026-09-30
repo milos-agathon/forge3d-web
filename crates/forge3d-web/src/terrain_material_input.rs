@@ -10,6 +10,7 @@ use forge3d_core::terrain_material::{
     TerrainLayerImage, TerrainMaskImage, TerrainMaterialDebugView, TerrainMaterialLayer,
     TerrainMaterialSettings, TERRAIN_MATERIAL_LAYER_CAPACITY,
 };
+use forge3d_core::terrain_vt::{TerrainVtSettings, VtLayerFamily};
 use serde::de::IgnoredAny;
 use serde::Deserialize;
 use wasm_bindgen::prelude::*;
@@ -24,6 +25,8 @@ pub struct TerrainMaterialOptions {
     pub detail_normal: Option<TerrainLayerImage>,
     /// Snow, rock and wetness coverage masks.
     pub masks: [Option<TerrainMaskImage>; 3],
+    /// `material.virtualTexture` (W08/E6): absent = VT off.
+    pub virtual_texture: Option<TerrainVtSettings>,
 }
 
 impl TerrainMaterialOptions {
@@ -294,6 +297,77 @@ pub(crate) struct TerrainMaterialJs {
     detail: Option<DetailJs>,
     specular_aa: Option<SpecularAaJs>,
     debug_view: Option<DebugViewJs>,
+    virtual_texture: Option<VtJs>,
+}
+
+/// Serde view of one `material.virtualTexture.layers[i]` entry (E6). The
+/// `family` is validated against the core `VALID_FAMILIES` list;
+/// runtime support is restricted to `albedo` and surfaced separately via
+/// `validate_terrain_vt_support` diagnostics.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct VtLayerJs {
+    family: Option<String>,
+    virtual_size_px: Option<[u32; 2]>,
+    tile_size: Option<u32>,
+    tile_border: Option<u32>,
+    fallback: Option<[f32; 4]>,
+}
+
+/// Serde view of `material.virtualTexture` (E6).
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub(crate) struct VtJs {
+    enabled: Option<bool>,
+    atlas_size: Option<u32>,
+    residency_budget_mb: Option<f32>,
+    max_mip_levels: Option<u32>,
+    use_feedback: Option<bool>,
+    layers: Option<Vec<VtLayerJs>>,
+}
+
+impl VtJs {
+    /// Resolves the native defaults and runs `VtLayerFamily` /
+    /// `TerrainVtSettings` validation. `enabled` defaults to true whenever
+    /// the `virtualTexture` block is present, matching the native contract.
+    pub(crate) fn to_settings(&self) -> Result<TerrainVtSettings, WebError> {
+        let mut settings = TerrainVtSettings::default();
+        settings.enabled = self.enabled.unwrap_or(true);
+        settings.atlas_size = self.atlas_size.unwrap_or(settings.atlas_size);
+        settings.residency_budget_mb = self
+            .residency_budget_mb
+            .unwrap_or(settings.residency_budget_mb);
+        settings.max_mip_levels = self.max_mip_levels.unwrap_or(settings.max_mip_levels);
+        settings.use_feedback = self.use_feedback.unwrap_or(settings.use_feedback);
+        settings.layers = self
+            .layers
+            .as_deref()
+            .unwrap_or(&[])
+            .iter()
+            .map(|layer| {
+                let family = layer.family.clone().unwrap_or_else(|| {
+                    forge3d_core::terrain_vt::TERRAIN_VT_SUPPORTED_FAMILY.to_string()
+                });
+                let mut resolved = VtLayerFamily::new(family).map_err(map_core_error)?;
+                if let Some([w, h]) = layer.virtual_size_px {
+                    resolved = resolved.with_virtual_size(w, h);
+                }
+                if let Some(tile_size) = layer.tile_size {
+                    resolved = resolved.with_tile_size(tile_size);
+                }
+                if let Some(tile_border) = layer.tile_border {
+                    resolved = resolved.with_tile_border(tile_border);
+                }
+                if let Some(fallback) = layer.fallback {
+                    resolved = resolved.with_fallback(fallback);
+                }
+                resolved.validate().map_err(map_core_error)?;
+                Ok(resolved)
+            })
+            .collect::<Result<Vec<VtLayerFamily>, WebError>>()?;
+        settings.validate().map_err(map_core_error)?;
+        Ok(settings)
+    }
 }
 
 fn filter(value: Option<FilterJs>, fallback: SamplingFilter) -> SamplingFilter {
@@ -522,7 +596,8 @@ fn get(value: &JsValue, name: &str) -> Result<Option<JsValue>, WebError> {
 
 /// Reads `{ width, height, data: Uint8Array }`; size consistency is reported
 /// later as a fallback diagnostic, matching native texture-load failures.
-fn read_image(value: &JsValue, field: &str) -> Result<(u32, u32, Vec<u8>), WebError> {
+/// Also used for `registerMaterialVtSource` images and overlay rasters.
+pub(crate) fn read_image(value: &JsValue, field: &str) -> Result<(u32, u32, Vec<u8>), WebError> {
     let dimension = |name: &str| -> Result<u32, WebError> {
         get(value, name)?
             .and_then(|number| number.as_f64())
@@ -570,6 +645,57 @@ fn mask_image(value: Option<JsValue>, field: &str) -> Result<Option<TerrainMaskI
         .transpose()
 }
 
+/// JSON mirror of core `VtSupportReport` (the struct is not `Serialize`) —
+/// used by the commit blocking-diagnostics error details and by the
+/// `validateTerrainVtSupport` free function.
+pub fn vt_support_report_json(
+    report: &forge3d_core::terrain_vt::VtSupportReport,
+) -> serde_json::Value {
+    let diagnostics: Vec<serde_json::Value> = report
+        .diagnostics
+        .iter()
+        .map(|diagnostic| {
+            let details: serde_json::Map<String, serde_json::Value> = diagnostic
+                .details
+                .iter()
+                .map(|(key, value)| (key.clone(), serde_json::Value::String(value.clone())))
+                .collect();
+            serde_json::json!({
+                "code": diagnostic.code,
+                "severity": diagnostic.severity,
+                "message": diagnostic.message,
+                "remediation": diagnostic.remediation,
+                "supportLevel": diagnostic.support_level,
+                "layerId": diagnostic.layer_id,
+                "objectId": diagnostic.object_id,
+                "details": details,
+            })
+        })
+        .collect();
+    let summaries: Vec<serde_json::Value> = report
+        .layer_summaries
+        .iter()
+        .map(|summary| {
+            serde_json::json!({
+                "layerId": summary.layer_id,
+                "layerType": summary.layer_type,
+                "supportLevel": summary.support_level,
+                "diagnosticCodes": summary.diagnostic_codes,
+                "enabled": summary.enabled,
+                "families": summary.families,
+                "nativeSupportedFamily": summary.native_supported_family,
+            })
+        })
+        .collect();
+    serde_json::json!({
+        "status": report.status,
+        "diagnostics": diagnostics,
+        "layerSummaries": summaries,
+        "supportedFeatures": report.supported_features,
+        "unsupportedFeatures": report.unsupported_features,
+    })
+}
+
 /// Parses `terrain.material`; `None` when the property is absent.
 pub fn read_terrain_material(
     terrain: &JsValue,
@@ -604,11 +730,17 @@ pub fn read_terrain_material(
             }
         }
     }
+    let virtual_texture = parsed
+        .virtual_texture
+        .as_ref()
+        .map(VtJs::to_settings)
+        .transpose()?;
     Ok(Some(TerrainMaterialOptions {
         settings,
         layer_images,
         detail_normal,
         masks,
+        virtual_texture,
     }))
 }
 

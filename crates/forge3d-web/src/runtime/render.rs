@@ -35,7 +35,16 @@ pub(super) fn render_runtime(runtime: &mut Forge3DRuntime) -> Result<bool, WebEr
 
     super::shadows::refresh_shadow_state(runtime)?;
     super::shader_variants::sync_pipelines(runtime)?;
+    // W08 (E3-E6): harvest the pending readbacks, run the VT residency
+    // pass and roll the mosaic LRU frame before encoding.
+    if let Some(terrain) = runtime.terrain.as_mut() {
+        terrain.prepare_w08_frame(&context, &runtime.camera, runtime.width, runtime.height);
+    }
     super::shadows::encode_shadow_passes(runtime, &mut encoder);
+    if let Some(terrain) = runtime.terrain.as_ref() {
+        // W08 (E6): clear the VT feedback ring before the pass writes it.
+        terrain.encode_w08_frame_start(&mut encoder);
+    }
     encode_scene_render_pass(
         runtime,
         &mut encoder,
@@ -43,11 +52,23 @@ pub(super) fn render_runtime(runtime: &mut Forge3DRuntime) -> Result<bool, WebEr
         "forge3d-web-scene-pass",
         timestamp_slot,
     );
+    if let Some(terrain) = runtime.terrain.as_ref() {
+        // W08 (E6): copy the written feedback ring to the staging buffer.
+        terrain.encode_w08_frame_end(&mut encoder);
+    }
+    // W08 (E4): GPU LOD selection runs after the scene pass in the same
+    // encoder; the staging copy feeds next frame's non-blocking map.
+    if let Some(terrain) = runtime.terrain.as_mut() {
+        terrain.encode_w08_compute(&mut encoder);
+    }
     if let (Some(ring), Some(slot)) = (runtime.query_ring.as_mut(), timestamp_slot) {
         ring.resolve_into(&mut encoder, slot);
     }
 
     context.queue.submit(std::iter::once(encoder.finish()));
+    if let Some(terrain) = runtime.terrain.as_mut() {
+        terrain.begin_w08_map(&context);
+    }
     if let (Some(ring), Some(slot)) = (runtime.query_ring.as_mut(), timestamp_slot) {
         ring.begin_map(slot);
     }

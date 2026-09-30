@@ -79,6 +79,45 @@ impl MemoryLedger {
         Ok(())
     }
 
+    /// Swaps a whole key set at once: admitted only when the new total fits
+    /// after releasing every listed key, and on rejection the ledger is left
+    /// exactly as it was (sequential `replace` calls could overflow midway,
+    /// e.g. a terrain trading VT bytes for streaming bytes).
+    pub(super) fn replace_all(
+        &mut self,
+        entries: &[(&str, MemoryCategory, u64)],
+    ) -> Result<(), WebError> {
+        let keys: Vec<&str> = entries.iter().map(|(key, _, _)| *key).collect();
+        let total = entries
+            .iter()
+            .try_fold(0u64, |sum, (_, _, bytes)| sum.checked_add(*bytes));
+        if !total.is_some_and(|total| self.fits_after_release(&keys, total)) {
+            return Err(WebError::new(
+                Forge3DErrorCode::ResourceLimitExceeded,
+                format!(
+                    "allocations [{}] of {} bytes exceed the memory budget",
+                    keys.join(", "),
+                    total.map_or_else(|| "overflowing".to_string(), |t| t.to_string()),
+                ),
+            ));
+        }
+        for key in &keys {
+            self.release(key);
+        }
+        for &(key, category, bytes) in entries {
+            if bytes == 0 {
+                continue;
+            }
+            let id = self
+                .tracker
+                .allocate(key.to_string(), category, bytes)
+                .map_err(map_core_error)?;
+            self.keys.insert(key.to_string(), id);
+            self.admitted.insert(key.to_string(), bytes);
+        }
+        Ok(())
+    }
+
     pub(super) fn release(&mut self, key: &str) {
         if let Some(id) = self.keys.remove(key) {
             self.tracker.release(id);

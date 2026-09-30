@@ -49,8 +49,16 @@ const TM_LAYERS: u64 = 1 << 38;
 const TM_DEBUG: u64 = 1 << 39;
 const TM_ALBEDO: u64 = 1 << 40;
 const TM_ALL: u64 = TM_POM | TM_DETAIL | TM_LAYERS | TM_DEBUG | TM_ALBEDO;
+/// W08 clipmap geometry branch (geometry uniform + clipmap vs_main).
+const TERRAIN_CLIPMAP: u64 = 1 << 41;
+/// W08 streamed heightfield (atlas + page-table height helpers).
+const TERRAIN_STREAMING: u64 = 1 << 42;
+/// W08 terrain overlays (group-0 bindings 14-16 + `terrain_apply_overlays`).
+const TERRAIN_OVERLAYS: u64 = 1 << 43;
+/// W08 terrain virtual texturing (group-0 bindings 17-19 + binding 8 atlas).
+const TERRAIN_VT: u64 = 1 << 44;
 #[cfg(test)]
-const ALL_BITS: u64 = (1 << 41) - 1;
+const ALL_BITS: u64 = (1 << 45) - 1;
 
 impl ShaderFeatures {
     /// Every region: the unspecialized template.
@@ -147,6 +155,21 @@ impl ShaderFeatures {
             .with(TM_ALBEDO, regions.albedo)
     }
 
+    /// Adds or clears the W08 terrain clipmap/streaming regions.
+    pub(crate) fn with_terrain_w08(self, clipmap: bool, streaming: bool) -> Self {
+        Self(self.0 & !(TERRAIN_CLIPMAP | TERRAIN_STREAMING))
+            .with(TERRAIN_CLIPMAP, clipmap)
+            .with(TERRAIN_STREAMING, streaming)
+    }
+
+    /// Adds or clears the W08 overlay / virtual-texturing regions (H2b). VT
+    /// is only meaningful on the material path (`TERRAIN_MATERIAL`).
+    pub(crate) fn with_terrain_w08_h2b(self, overlays: bool, vt: bool) -> Self {
+        Self(self.0 & !(TERRAIN_OVERLAYS | TERRAIN_VT))
+            .with(TERRAIN_OVERLAYS, overlays)
+            .with(TERRAIN_VT, vt)
+    }
+
     /// Adds the offline capture entry points and capture-only uniform fields.
     #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
     pub(crate) fn with_capture(self) -> Self {
@@ -177,6 +200,10 @@ impl ShaderFeatures {
             "tm_layers" => TM_LAYERS,
             "tm_debug" => TM_DEBUG,
             "tm_albedo" => TM_ALBEDO,
+            "terrain_clipmap" => TERRAIN_CLIPMAP,
+            "terrain_streaming" => TERRAIN_STREAMING,
+            "terrain_overlay" | "terrain_overlays" => TERRAIN_OVERLAYS,
+            "terrain_vt" => TERRAIN_VT,
             other => {
                 if let Some(model) = other.strip_prefix("brdf_") {
                     let model: u32 = model.parse().expect("brdf feature index");

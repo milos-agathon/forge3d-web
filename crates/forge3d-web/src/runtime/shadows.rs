@@ -1226,13 +1226,35 @@ pub(super) fn encode_shadow_passes(runtime: &Forge3DRuntime, encoder: &mut wgpu:
             if let Some(bind_group) = shadows.terrain_depth_bind_groups.get(index) {
                 if terrain.render_mode == 1 {
                     pass.set_pipeline(&pipelines.terrain_screen);
+                    pass.set_bind_group(0, bind_group, &[]);
+                    pass.set_vertex_buffer(0, terrain.vertex_buffer.slice(..));
+                    pass.set_index_buffer(
+                        terrain.index_buffer.slice(..),
+                        wgpu::IndexFormat::Uint32,
+                    );
+                    pass.draw_indexed(0..terrain.index_count, 0, 0..1);
                 } else {
                     pass.set_pipeline(&pipelines.terrain);
+                    pass.set_bind_group(0, bind_group, &[]);
+                    // W08 (E2): clipmap mode draws the coarse proxy grid —
+                    // `vs_terrain_depth` consumes dense position+uv vertices,
+                    // not the clipmap grid/morph layout.
+                    if let Some(proxy) = &terrain.shadow_proxy {
+                        pass.set_vertex_buffer(0, proxy.vertex_buffer.slice(..));
+                        pass.set_index_buffer(
+                            proxy.index_buffer.slice(..),
+                            wgpu::IndexFormat::Uint32,
+                        );
+                        pass.draw_indexed(0..proxy.index_count, 0, 0..1);
+                    } else {
+                        pass.set_vertex_buffer(0, terrain.vertex_buffer.slice(..));
+                        pass.set_index_buffer(
+                            terrain.index_buffer.slice(..),
+                            wgpu::IndexFormat::Uint32,
+                        );
+                        pass.draw_indexed(0..terrain.index_count, 0, 0..1);
+                    }
                 }
-                pass.set_bind_group(0, bind_group, &[]);
-                pass.set_vertex_buffer(0, terrain.vertex_buffer.slice(..));
-                pass.set_index_buffer(terrain.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
-                pass.draw_indexed(0..terrain.index_count, 0, 0..1);
             }
         }
     }
