@@ -194,6 +194,15 @@ Cache `.wasm` assets with immutable content hashing, or invalidate the wasm asse
   micro-detail, specular-AA tiers, debug views) with deterministic fallback
   diagnostics in `getTerrainMaterialReport()`, matched against native
   `terrain-material-v1` goldens at SSIM >= 0.98
+- terrain clipmaps, streaming, COGs, overlays, and virtual textures (W08):
+  `terrain.geometry` clipmap rings at a camera-invariant triangle budget,
+  `terrain.streaming` height pyramids driven by `TerrainStreamer` over
+  `ArrayHeightSource`/`FunctionHeightSource`/`CogHeightSource`,
+  `RangeScheduler` byte-range access with OPFS/IndexedDB/CacheStorage
+  persistent caches and vendored-geotiff `CogDataset` (worker or main
+  thread), composited `terrain.overlays` with CRS placement, and paged
+  `material.virtualTexture` albedo with source registration and stats —
+  matched against native `clipmap-seam-v1` and `terrain-vt-v1` goldens
 - `setCamera(camera)`
 - `resize({ width, height, devicePixelRatio })`
 - `render()`
@@ -211,6 +220,8 @@ typed lights, BRDF materials, PBR/KTX2 textures, cached IBL, filtered and
 cascaded shadows, perspective/orthographic cameras with orbit/fly controls,
 camera keyframe animation and terrain camera rigs, screenshots, HDR/AOV/EXR
 capture, offline accumulation and denoising, frame sequences, video export,
+clipmap terrain geometry, streamed height pyramids, COG range reads with
+persistent byte caches, raster overlays, and albedo virtual texturing,
 and TypeScript declarations. This is the implemented release
 surface, not the final parity boundary.
 
@@ -219,7 +230,7 @@ surface, not the final parity boundary.
 | Worker `OffscreenCanvas` and browser-headless output | Current gap | [R10-R11](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#runtime-gpu-and-platform-foundations), [W02](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w02--general-scenerender-graph-resources-diagnostics-and-config) |
 | COPC/EPT/LAZ point streaming | Current gap | [G02-G03](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#geospatial-data-geometry-acceleration-and-ray-rendering), [W16](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w16--point-clouds-and-ogc-3d-tiles) |
 | OGC 3D Tiles | Current gap | [G04](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#geospatial-data-geometry-acceleration-and-ray-rendering), [W16](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w16--point-clouds-and-ogc-3d-tiles) |
-| COG and raster streaming/overlays | Current gap | [T09-T11](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#terrain-and-large-raster-scenes), [W08](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w08--clipmaps-streaming-cog-raster-overlays-and-virtual-textures) |
+| COG, raster streaming/overlays, clipmaps, and virtual texturing | Supported | [T08-T11](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#terrain-and-large-raster-scenes), [W08](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w08--clipmaps-streaming-cog-raster-overlays-and-virtual-textures), [browser-api.md](docs/browser-api.md#terrain-clipmaps-streaming-cogs-overlays-and-virtual-textures-w08) |
 | Mapbox Style subset | Current gap | [M03](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#product-scene-styling-packaging-cartography-and-utilities), [W19](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w19--mapbox-style-bundles-variants-and-review-layers) |
 
 Python wheels, PyO3/NumPy bindings, native windows, stdin/TCP control, and CMake

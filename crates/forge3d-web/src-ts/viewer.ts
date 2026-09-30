@@ -5,19 +5,32 @@ import {
   type CameraProjectionKind,
   Forge3DError,
   Forge3DRuntime,
+  normalizeTerrainMaterial,
   type FlyView,
   type Forge3DRuntimeCapabilities,
   type Forge3DRuntimeOptions,
   type Forge3DViewerOptions,
   type HeightAoOptions,
+  type HeightStreamingStats,
+  type HeightTileCompletion,
+  type HeightTilePlan,
+  type LodSelectionReport,
+  type MaterialVtSourceImage,
   type OrbitView,
   type ResizeInput,
   type SunVisibilityOptions,
   type TerrainColorRampInput,
   type TerrainColormapInput,
   type TerrainDebugView,
+  type TerrainGeometryInput,
+  type TerrainGeometryReport,
   type TerrainHeightmapInput,
   type TerrainHeightmapSourceInput,
+  type TerrainMaterialInput,
+  type TerrainMaterialVtStats,
+  type TerrainOverlayReport,
+  type TerrainOverlaysInput,
+  type TerrainStreamingInput,
   type ViewerCapabilities,
   type ViewerDiagnostics,
   type ViewerResourceBudget,
@@ -56,6 +69,26 @@ interface ViewerRuntime {
   resize(size: ResizeInput): void;
   render(): boolean;
   screenshot(): Promise<Blob>;
+  getTerrainGeometryReport?(): TerrainGeometryReport;
+  getTerrainOverlayReport?(): TerrainOverlayReport;
+  planHeightTiles?(maxRequests: number): HeightTilePlan;
+  completeHeightTile?(
+    lod: number,
+    x: number,
+    y: number,
+    heights: Float32Array,
+  ): HeightTileCompletion;
+  failHeightTile?(lod: number, x: number, y: number): void;
+  getHeightStreamingStats?(): HeightStreamingStats;
+  getLodSelection?(): LodSelectionReport | null;
+  registerMaterialVtSource?(
+    materialIndex: number,
+    family: string,
+    image: MaterialVtSourceImage,
+    fallback?: [number, number, number, number],
+  ): void;
+  clearMaterialVtSources?(): void;
+  getMaterialVtStats?(): TerrainMaterialVtStats;
   dispose(): void;
 }
 
@@ -110,6 +143,20 @@ export class Forge3DViewer {
   #controls: ViewerControls | undefined;
   #scheduler: RenderScheduler | undefined;
   #resizeController: ResizeController | undefined;
+  /** W08: registered VT sources retained across device-loss replay. */
+  readonly #vtSources = new Map<
+    string,
+    {
+      materialIndex: number;
+      family: string;
+      image: MaterialVtSourceImage;
+      fallback?: [number, number, number, number];
+    }
+  >();
+  readonly #frameListeners = new Set<
+    (timestamp: number) => boolean | void
+  >();
+  readonly #recoveryListeners = new Set<() => void>();
   #status: ViewerStatus = "initializing";
   #terminalError: Forge3DError | undefined;
   #capabilities: Forge3DRuntimeCapabilities;
@@ -401,6 +448,199 @@ export class Forge3DViewer {
     }
   }
 
+  /** W08: forward `getTerrainGeometryReport` to the live runtime. */
+  getTerrainGeometryReport(): TerrainGeometryReport {
+    const runtime = this.#operationalRuntime();
+    return this.#callRuntime(() => {
+      const report = runtime.getTerrainGeometryReport?.();
+      if (report === undefined) {
+        throw new Forge3DError(
+          "UNSUPPORTED_FEATURE",
+          "Runtime does not report terrain geometry",
+        );
+      }
+      return report;
+    });
+  }
+
+  /** W08: forward `getTerrainOverlayReport` to the live runtime. */
+  getTerrainOverlayReport(): TerrainOverlayReport {
+    const runtime = this.#operationalRuntime();
+    return this.#callRuntime(() => {
+      const report = runtime.getTerrainOverlayReport?.();
+      if (report === undefined) {
+        throw new Forge3DError(
+          "UNSUPPORTED_FEATURE",
+          "Runtime does not report terrain overlays",
+        );
+      }
+      return report;
+    });
+  }
+
+  /** W08: forward `planHeightTiles` — used by `TerrainStreamer`. */
+  planHeightTiles(maxRequests: number): HeightTilePlan {
+    const runtime = this.#operationalRuntime();
+    return this.#callRuntime(() => {
+      const plan = runtime.planHeightTiles?.(maxRequests);
+      if (plan === undefined) {
+        throw new Forge3DError(
+          "UNSUPPORTED_FEATURE",
+          "Runtime does not implement height streaming",
+        );
+      }
+      return plan;
+    });
+  }
+
+  /** W08: forward `completeHeightTile` — used by `TerrainStreamer`. */
+  completeHeightTile(
+    lod: number,
+    x: number,
+    y: number,
+    heights: Float32Array,
+  ): HeightTileCompletion {
+    const runtime = this.#operationalRuntime();
+    return this.#callRuntime(() => {
+      const completion = runtime.completeHeightTile?.(lod, x, y, heights);
+      if (completion === undefined) {
+        throw new Forge3DError(
+          "UNSUPPORTED_FEATURE",
+          "Runtime does not implement height streaming",
+        );
+      }
+      return completion;
+    });
+  }
+
+  /** W08: forward `failHeightTile` — used by `TerrainStreamer`. */
+  failHeightTile(lod: number, x: number, y: number): void {
+    const runtime = this.#operationalRuntime();
+    this.#callRuntime(() => {
+      if (runtime.failHeightTile === undefined) {
+        throw new Forge3DError(
+          "UNSUPPORTED_FEATURE",
+          "Runtime does not implement height streaming",
+        );
+      }
+      runtime.failHeightTile(lod, x, y);
+    });
+  }
+
+  /** W08: forward `getHeightStreamingStats`. */
+  getHeightStreamingStats(): HeightStreamingStats {
+    const runtime = this.#operationalRuntime();
+    return this.#callRuntime(() => {
+      const stats = runtime.getHeightStreamingStats?.();
+      if (stats === undefined) {
+        throw new Forge3DError(
+          "UNSUPPORTED_FEATURE",
+          "Runtime does not implement height streaming",
+        );
+      }
+      return stats;
+    });
+  }
+
+  /** W08: forward `getLodSelection`. */
+  getLodSelection(): LodSelectionReport | null {
+    const runtime = this.#operationalRuntime();
+    return this.#callRuntime(() => {
+      if (runtime.getLodSelection === undefined) {
+        throw new Forge3DError(
+          "UNSUPPORTED_FEATURE",
+          "Runtime does not implement height streaming",
+        );
+      }
+      return runtime.getLodSelection();
+    });
+  }
+
+  /** W08: forward `registerMaterialVtSource`; the registration is
+   * retained and replayed after device-loss recovery. */
+  registerMaterialVtSource(
+    materialIndex: number,
+    family: string,
+    image: MaterialVtSourceImage,
+    fallback?: [number, number, number, number],
+  ): void {
+    const runtime = this.#operationalRuntime();
+    this.#callRuntime(() => {
+      if (runtime.registerMaterialVtSource === undefined) {
+        throw new Forge3DError(
+          "UNSUPPORTED_FEATURE",
+          "Runtime does not implement material virtual texturing",
+        );
+      }
+      runtime.registerMaterialVtSource(materialIndex, family, image, fallback);
+    });
+    this.#vtSources.set(`${materialIndex}:${family}`, {
+      materialIndex,
+      family,
+      image: cloneVtSourceImage(image),
+      ...(fallback !== undefined ? { fallback: [...fallback] } : {}),
+    });
+  }
+
+  /** W08: forward `clearMaterialVtSources`; also clears the retained
+   * replay set. */
+  clearMaterialVtSources(): void {
+    const runtime = this.#operationalRuntime();
+    this.#callRuntime(() => {
+      if (runtime.clearMaterialVtSources === undefined) {
+        throw new Forge3DError(
+          "UNSUPPORTED_FEATURE",
+          "Runtime does not implement material virtual texturing",
+        );
+      }
+      runtime.clearMaterialVtSources();
+    });
+    this.#vtSources.clear();
+  }
+
+  /** W08: forward `getMaterialVtStats`. */
+  getMaterialVtStats(): TerrainMaterialVtStats {
+    const runtime = this.#operationalRuntime();
+    return this.#callRuntime(() => {
+      const stats = runtime.getMaterialVtStats?.();
+      if (stats === undefined) {
+        throw new Forge3DError(
+          "UNSUPPORTED_FEATURE",
+          "Runtime does not implement material virtual texturing",
+        );
+      }
+      return stats;
+    });
+  }
+
+  /** Registers `listener` invoked once per successfully completed
+   * device-loss recovery (after the terrain/VT replay). Returns an
+   * unsubscribe function. Used by `TerrainStreamer`. */
+  addRecoveryListener(listener: () => void): () => void {
+    this.#recoveryListeners.add(listener);
+    return () => {
+      this.#recoveryListeners.delete(listener);
+    };
+  }
+
+  /** Registers `listener` invoked each submitted frame; returning
+   * `true` keeps the render loop alive. Used by `TerrainStreamer`'s
+   * `autoUpdate`. Returns an unsubscribe function. */
+  addFrameListener(
+    listener: (timestamp: number) => boolean | void,
+  ): () => void {
+    this.#frameListeners.add(listener);
+    return () => {
+      this.#frameListeners.delete(listener);
+    };
+  }
+
+  /** Schedules a render on the viewer's scheduler (no-op when the
+   * scheduler is suspended or the viewer is recovering). */
+  requestRender(): void {
+    this.#scheduler?.requestRender();
+  }
+
   setView(view: OrbitView): void {
     const runtime = this.#operationalRuntime();
     this.#controller.setView(view);
@@ -481,6 +721,9 @@ export class Forge3DViewer {
     if (this.disposed) {
       return;
     }
+    this.#vtSources.clear();
+    this.#frameListeners.clear();
+    this.#recoveryListeners.clear();
     this.#disposeOwnedResources(true);
     this.#transition("disposed");
   }
@@ -535,7 +778,18 @@ export class Forge3DViewer {
         this.#runtime !== undefined &&
         !this.#resizeController?.suspended,
       onError: (error) => this.#handleRuntimeError(Forge3DError.from(error)),
-      onFrame: (timestamp) => this.#controls?.onAnimationFrame(timestamp) ?? false,
+      onFrame: (timestamp) => {
+        let pending =
+          this.#controls?.onAnimationFrame(timestamp) ?? false;
+        for (const listener of this.#frameListeners) {
+          try {
+            pending = listener(timestamp) === true || pending;
+          } catch {
+            // A frame listener must not break the render loop.
+          }
+        }
+        return pending;
+      },
       resources: this.#resources,
     });
 
@@ -757,6 +1011,19 @@ export class Forge3DViewer {
       if (this.#runtime !== replacement || recoveryController.signal.aborted) {
         return;
       }
+      // W08: replay the retained VT sources before the terrain: the runtime
+      // snapshots VT sources when a terrain is committed, so sources
+      // registered after `setTerrain` would never reach the replayed frame.
+      for (const source of this.#vtSources.values()) {
+        replacement.registerMaterialVtSource?.(
+          source.materialIndex,
+          source.family,
+          cloneVtSourceImage(source.image),
+          source.fallback === undefined
+            ? undefined
+            : [...source.fallback],
+        );
+      }
       if (this.#terrainReplay?.kind === "direct") {
         replacement.setTerrain(this.#terrainReplay.value);
       } else if (this.#terrainReplay?.kind === "source") {
@@ -781,6 +1048,13 @@ export class Forge3DViewer {
         this.#controls?.resume();
         this.#scheduler?.resume();
         this.#scheduler?.requestRender();
+        for (const listener of this.#recoveryListeners) {
+          try {
+            listener();
+          } catch {
+            // A recovery listener must not break the replay.
+          }
+        }
       }
     } catch (error) {
       if (
@@ -1036,6 +1310,11 @@ interface TerrainMetadataCarrier {
   heightAo?: HeightAoOptions;
   sunVisibility?: SunVisibilityOptions;
   debugView?: TerrainDebugView;
+  geometry?: TerrainGeometryInput;
+  bounds?: [number, number, number, number];
+  streaming?: TerrainStreamingInput;
+  overlays?: TerrainOverlaysInput;
+  material?: TerrainMaterialInput;
 }
 
 function cloneColorRamp(ramp: TerrainColorRampInput): TerrainColorRampInput {
@@ -1098,6 +1377,76 @@ function copyTerrainMetadata(
   if (source.debugView !== undefined) {
     target.debugView = source.debugView;
   }
+  if (source.geometry !== undefined) {
+    const clipmap = source.geometry.clipmap;
+    target.geometry = {
+      ...(source.geometry.mode !== undefined
+        ? { mode: source.geometry.mode }
+        : {}),
+      ...(clipmap !== undefined
+        ? {
+            clipmap: {
+              ...clipmap,
+              ...(clipmap.baseCellSize !== undefined
+                ? {
+                    baseCellSize: [
+                      clipmap.baseCellSize[0],
+                      clipmap.baseCellSize[1],
+                    ],
+                  }
+                : {}),
+            },
+          }
+        : {}),
+    };
+  }
+  if (source.bounds !== undefined) {
+    target.bounds = [
+      source.bounds[0],
+      source.bounds[1],
+      source.bounds[2],
+      source.bounds[3],
+    ];
+  }
+  if (source.streaming !== undefined) {
+    target.streaming = { ...source.streaming };
+  }
+  if (source.overlays !== undefined) {
+    target.overlays = {
+      ...source.overlays,
+      ...(source.overlays.layers !== undefined
+        ? {
+            layers: source.overlays.layers.map((layer) => ({
+              ...layer,
+              image: {
+                width: layer.image.width,
+                height: layer.image.height,
+                data: layer.image.data.slice(),
+              },
+              ...(layer.extent !== undefined
+                ? { extent: [...layer.extent] as typeof layer.extent }
+                : {}),
+              ...(layer.crsBounds !== undefined
+                ? {
+                    crsBounds: [...layer.crsBounds] as typeof layer.crsBounds,
+                  }
+                : {}),
+            })),
+          }
+        : {}),
+    };
+  }
+  if (source.material !== undefined) {
+    target.material = normalizeTerrainMaterial(source.material);
+  }
+}
+
+function cloneVtSourceImage(image: MaterialVtSourceImage): MaterialVtSourceImage {
+  return {
+    width: image.width,
+    height: image.height,
+    data: image.data.slice(),
+  };
 }
 
 function cloneTerrain(terrain: TerrainHeightmapInput): TerrainHeightmapInput {

@@ -699,6 +699,239 @@ const report = session.getTerrainMaterialReport();
   >= 0.98; the historical POM golden passes with the least margin (about
   0.980, against 0.985 between native 1.34 and `1f4084a` themselves).
 
+## Terrain Clipmaps, Streaming, COGs, Overlays, And Virtual Textures (W08)
+
+W08 ports the native terrain-scale systems (T08-T11, T14): clipmap ring
+geometry, streamed height pyramids, COG range access and byte caches,
+composited overlay stacks, and paged albedo virtual texturing. Every
+piece is opt-in on the terrain input; a terrain without `geometry`,
+`streaming`, `overlays`, or `material.virtualTexture` renders the
+unfeatured path byte-identically. `capabilities` reports per-feature
+support booleans (`terrainClipmap`, `terrainStreaming`, `terrainOverlays`,
+`terrainVirtualTexture`) plus the negotiated per-stage limits
+(`maxSampledTexturesPerShaderStage`, `maxStorageBuffersPerShaderStage`)
+the commits were validated against — a commit exceeding the negotiated
+sampled-texture limit rejects at validation, not at draw.
+
+### Clipmap Geometry
+
+`terrain.geometry = { mode: "clipmap", clipmap }` swaps the dense grid
+for the native clipmap rings (`ringCount`, `ringResolution`,
+`centerResolution`, `skirtDepth`, `morphRange`, `baseCellSize` —
+`streaming` implies clipmap geometry). Clipmaps require
+`renderMode: "perspective"`. `getTerrainGeometryReport()` reports the
+committed geometry: `vertexCount`, `indexCount`, `triangleCount` (always
+equal to `triangleBudget` and camera-invariant), `fullResolutionTriangles`,
+`triangleReductionPercent`, ring `centers`, and `shadowCasterResolution`
+— clipmap terrains cast shadows through a coarse proxy caster rather than
+the full ring mesh. The free functions
+`generateClipmapMesh(config, center, terrainExtent)` and
+`calculateTriangleReduction(full, clipmap)` expose the same mesh and
+reduction math off-GPU, and `selectLodTilesReference(input)` is the CPU
+mirror of the GPU `clipmap_lod_select` pass (view-projection, camera,
+fov, pixel error budget, tile bounds → the same visible set sorted by
+`(distance, tileId)`).
+
+### Height Streaming
+
+`terrain.streaming = { width, height, tileSize, maxResidentBytes, lodBias,
+prefetchMarginTiles, maxInFlight, coalescePolicy }` declares a virtual
+height pyramid; `heights` then carries the coarsest pyramid level and
+finer tiles page in around the view center. The runtime contract is
+explicit: `planHeightTiles(maxRequests)` returns `{requests, cancelled}`,
+`completeHeightTile(lod, x, y, heights)` uploads a fetched tile and
+reports `{accepted, evicted}` (LRU), `failHeightTile(lod, x, y)` cancels
+a request, `getHeightStreamingStats()` reports residency, budget,
+`converged`, and the latest `lodSelection`, and `getLodSelection()`
+returns the GPU-selected tile set (`null` before the first readback).
+
+`TerrainStreamer` drives that contract from a `HeightTileSource`:
+
+```ts
+const streamer = await TerrainStreamer.create(runtimeOrViewer, source, {
+  maxResidentBytes: 8 * 1024 * 1024,
+  maxInFlight: 4,
+});
+await streamer.whenConverged();
+```
+
+- Sources: `ArrayHeightSource` (dense array, point subsample),
+  `FunctionHeightSource` (`sample(lod, x, y)`), and `CogHeightSource`
+  (a `CogDataset`; IFD `l` maps to pyramid lod `l` when dimensions match,
+  coarser missing levels point-subsample the coarsest IFD). Custom sources
+  implement `readTile(lod, x, y, {signal, priority}) -> Float32Array`;
+  `heightPyramidLodCount(w, h, tileSize)` gives the pyramid depth.
+- `streamer.update()` advances one frame of planning/upload,
+  `whenConverged({timeoutFrames})` resolves when the working set is
+  resident, `stats()` folds runtime stats with source counters, and
+  `dispose()` aborts in-flight fetches. `autoUpdate` drives updates from
+  the viewer's frame loop.
+- A viewer-bound streamer keeps the coarse base and its source caches
+  across device-loss recovery: resident tiles re-upload to the recovered
+  device without any network refetch.
+
+### Range Scheduling, CORS, And Byte Caches
+
+`RangeScheduler` is the HTTP range engine under `CogDataset`: dedupe,
+bounded-gap coalescing, priority queue, `maxConcurrent` in-flight limit,
+per-subscriber `AbortSignal` cancellation, and memory → persistent →
+network lookup order. `request(source, offset, length, {priority,
+signal})` resolves a `Uint8Array`; `stats()` counts `httpRequests`,
+`bytesRequested`, `bytesTransferred`, `memoryHits`, `persistentHits`,
+`deduplicated`, `coalesced`, `cancelled`, `offlineServed`. Servers must
+honor byte ranges: responses need `Accept-Ranges: bytes`, and cross-origin
+reads additionally need
+`Access-Control-Expose-Headers: Content-Range, Content-Length, ETag`. A
+`200` to a range request is `IO_ERROR` with reason `range-not-supported`
+(the underlying fetch is aborted so the full body is never downloaded),
+and a `416` is `IO_ERROR` with reason `range-not-satisfiable`. Every
+`206` must carry `Content-Range: bytes a-b/total` with `a` equal to the
+requested offset and `b` equal to its last byte (`b` may be smaller only
+when the range stops at the end of the file); a missing or mismatched
+header is `IO_ERROR` with reason `content-range-mismatch`, and a body
+shorter than that range is `IO_ERROR` as well. Each of these failures
+counts once in `stats().failed`. Once a response has supplied a strong
+`ETag`, later requests to that source send it as `If-Match`; a `412`, or
+a `200` to such a conditional request, means the resource changed: the
+scheduler drops the stored validator together with every cache entry
+written under it and retries the request once without `If-Match`.
+Cancelled requests reject `REQUEST_CANCELLED` (also after their range was
+coalesced into a larger fetch, which is aborted once all of its
+subscribers cancel).
+
+Persistent byte caches give the scheduler offline replay. All three
+adapters — `OpfsByteCache`, `IndexedDbByteCache`,
+`CacheStorageByteCache` — extend a SHA-256 digest-checked base: every
+stored entry is verified on read, and a checksum failure deletes the
+entry (bumped into `stats().checksumFailures`) and falls through to
+refetch. Cache keys embed the source validator (`ETag`, else
+`Last-Modified`, else the file size), so bytes stored under a validator
+the server no longer reports are never served. A throwing store is
+treated as a miss. `createPersistentByteCache({name, prefer})`
+picks the first available backend in `prefer` order (default OPFS →
+IndexedDB → CacheStorage) or `null`; `opfsByteStore`,
+`indexedDbByteStore`, and `cacheStorageByteStore` are the raw stores for
+custom adapters. Entries survive reload, so a second session serves the
+same ranges with `persistentHits`/`offlineServed` and zero network bytes.
+
+### Cloud-Optimized GeoTIFFs
+
+`CogDataset.open(url, {cacheSizeMb, scheduler, persistentCache,
+workerPool})` reads tiled COGs entirely through the `RangeScheduler`
+(header, IFDs and tile bytes alike — a single tile read touches a few
+percent of the file) using the vendored geotiff 3.0.5 decoder.
+
+- Metadata: `width`, `height`, `overviewCount`, `bounds`, `geoTransform`,
+  `crs`, `nodata`, `bitsPerSample`, `sampleFormat`, `samplesPerPixel`,
+  `compression`; `ifdInfo(level)` reports tile geometry per IFD and
+  `selectOverview`/`selectOverviewForResolution` map lods/resolutions to
+  overview levels.
+- `readTile(x, y, lod)` returns the decoded tile as `Float32Array`,
+  `readTileRgba` the RGBA8 form (palette/expansion applied), and
+  `readOverviewRgba(level)` a whole overview image; all honor
+  `{signal, priority}` and the decoded-tile byte-budgeted LRU
+  (`stats()` → `cacheHits`, `memoryUsedBytes`, `range`, `persistent`).
+- With a `Forge3DWorkerPool`, decode jobs run in a real module worker
+  registering `createCogWorkerHandler()` — CSP requires
+  `worker-src 'self'` (no `blob:` workers). The main-thread fallback
+  produces identical bytes.
+- `dispose()` aborts in-flight range requests; a disposed dataset rejects
+  `RUNTIME_DISPOSED`.
+
+### Terrain Overlays
+
+`terrain.overlays = { enabled, globalOpacity, resolutionScale, layers }`
+drapes raster imagery onto the terrain. Layers composite onto the fully
+composited albedo before lighting, so draped overlays receive the same
+sun, IBL and shadowing as the terrain albedo. Each layer accepts an
+`image` (browser image source or `{width, height, data}` RGBA8 via
+`decodeOverlayImage`), `opacity`, `blendMode`, `visible`, `zOrder`, and
+exactly one placement: `extent` `[u0, v0, u1, v1]` UV rect, or
+`crs` + `crsBounds` `[minx, miny, maxx, maxy]` for geographic placement.
+Layers sort by `zOrder` (stable by input order) and blend in linear space
+with `a = layerAlpha * globalOpacity`: `normal` = `b(1-a) + s a`,
+`multiply` = `b(1-a) + b s a`, `overlay` = `b(1-a) + ov a` with
+`ov = b < 0.5 ? 2bs : 1 - 2(1-b)(1-s)`. CRS ids normalize
+(`epsg:4326`/`CRS:84` → `EPSG:4326`, `EPSG:900913` → `EPSG:3857`); a layer
+CRS may differ from the terrain CRS only when the pair is transformable —
+identical CRS or `EPSG:4326` ↔ `EPSG:3857` — anything else rejects with
+the native `crs_mismatch` error. `getTerrainOverlayReport()` reports the
+planned stack (`layerCount`, planned `width`/`height`, `downscaled`,
+`gpuBytes`, per-layer `{name, blendMode, zOrder}`); the pure-TS
+`normalizeTerrainOverlays`, `getTerrainOverlayDefaults`,
+`isTerrainOverlayLayerVisible`, and `terrainOverlayVisibleLayers` mirror
+the commit-path validation exactly.
+
+### Virtual Texturing
+
+`terrain.material.virtualTexture` adds paged albedo texturing to the W07
+material path (native tv20 contract):
+
+```ts
+material: {
+  virtualTexture: {
+    enabled: true,
+    atlasSize: 2048,
+    residencyBudgetMb: 64,
+    maxMipLevels: 6,
+    useFeedback: true,
+    layers: [{ family: "albedo", virtualSizePx: [2048, 2048] }],
+  },
+}
+runtime.registerMaterialVtSource(materialIndex, "albedo", {width, height, data}, fallback);
+```
+
+- Per the 1f4084a contract only `albedo` is paged: `normal`/`mask`
+  families surface the `vt_unsupported_family` diagnostic in
+  `validateTerrainVtSupport` (the pure-TS report is identical to the wasm
+  free function for the same input) and reject the terrain commit with a
+  blocking `UNSUPPORTED_FEATURE`-class error before any allocation.
+- `material.virtualTexture: { enabled: false }` renders byte-identically
+  to omitting the block entirely, even with sources registered.
+- `getMaterialVtStats()` reports `enabled`, `residentPages`,
+  `totalPages`, `cacheBudgetPages`/`cacheBudgetMb`, `cacheHits`,
+  `cacheMisses`, `missRate`, `tilesStreamed`, `evictions`,
+  `avgUploadMs`/`lastUploadMs`, `residentMegabytes`, `sourceCount`, and
+  `feedbackRequests`. With `useFeedback` the shader writes its required
+  pages into a feedback buffer the runtime drains each frame, so requests
+  are demand-driven and non-blocking.
+- The public pyramid contract stays floor-based
+  (`floor(log2(max(pagesX, pagesY))) + 1`, matching native 1.38's
+  `VTLayerFamily::full_pyramid_levels`), while the runtime page-table
+  pyramid runs the complete mip chain to 1×1 (`ceil(log2(max_dim)) + 1`),
+  clamped only by `maxMipLevels` — the same split the native 1.38
+  runtime exhibits (at the `terrain-vt-v1` golden params both sides page
+  480 total / 20 resident pages).
+
+### Device-Loss Replay And Memory
+
+`Forge3DViewer` and `Forge3DSession` retain the full terrain input —
+geometry, bounds, streaming declaration, overlays and
+`material.virtualTexture` — plus the registered VT sources. After a
+`DEVICE_LOST` recovery they rebuild the runtime, restore camera and size,
+register the retained VT sources first (the runtime reads VT sources when
+a terrain is committed), then replay the terrain. The viewer then calls
+every listener added with `viewer.addRecoveryListener(listener)` (it
+returns a detach function); `TerrainStreamer` registers one to resume
+streaming, and
+streamed tiles re-upload from its retained tile cache with zero new
+network bytes.
+
+`getMemoryReport().categories` charges the W08 allocations to the
+existing categories: `textures` holds the streamed height atlas + page
+table (`terrain:height-stream`), the overlay composite array
+(`terrain:overlays`) and the VT atlas, page table and feedback ring
+(`terrain:vt`); `buffers` holds the clipmap mesh, geometry uniform and
+shadow proxy (`terrain:clipmap`) and the GPU LOD-selection buffers
+(`terrain:lod-select`). The streaming charge is the whole allocated
+`slotsPerRow × rows` atlas. A terrain commit sizes all of these from the
+validated inputs and admits them together before anything is allocated:
+over budget it throws `RESOURCE_LIMIT_EXCEEDED` and leaves the ledger and
+the committed terrain untouched. A streaming atlas or VT `atlasSize`
+larger than `maxTextureDimension2D` is `RESOURCE_LIMIT_EXCEEDED` too.
+`commit → render → release` cycles return the ledger to the empty-scene
+state.
+
 ## Browser IO
 
 `runtime.setTerrainFromSource(terrain)` accepts little-endian f32 heightmap bytes
