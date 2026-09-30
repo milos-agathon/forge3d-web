@@ -711,7 +711,14 @@ support booleans (`terrainClipmap`, `terrainStreaming`, `terrainOverlays`,
 `terrainVirtualTexture`) plus the negotiated per-stage limits
 (`maxSampledTexturesPerShaderStage`, `maxStorageBuffersPerShaderStage`)
 the commits were validated against — a commit exceeding the negotiated
-sampled-texture limit rejects at validation, not at draw.
+sampled-texture limit rejects at validation, not at draw. Untextured
+terrain fits every W08 feature in the WebGPU default of 16 sampled textures
+per stage, so the booleans are `true` on every WebGPU device (VT also needs
+3 storage buffers per stage). Terrain shading reads material 0, and a
+textured material 0 binds five more sampled textures: with it, streaming
+needs 17, overlays 18 and virtual texturing 19. Such commits, including a
+later `setMaterials` that textures material 0 under an active W08 terrain,
+fail atomically with `UNSUPPORTED_FEATURE` naming the textured material.
 
 ### Clipmap Geometry
 

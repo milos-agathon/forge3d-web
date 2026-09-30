@@ -582,6 +582,14 @@ impl Forge3DRuntime {
             &JsValue::from_f64(self.max_storage_buffers_per_shader_stage as f64),
         );
         let clipmap_ok = sampled >= terrain::W08_SAMPLED_TEXTURES_CLIPMAP;
+        // Feature booleans describe the untextured terrain profile; a
+        // textured material 0 binds five more sampled textures and its W08
+        // commits report typed UNSUPPORTED_FEATURE when they no longer fit.
+        let w08 = terrain::W08Slots::for_limits(
+            sampled,
+            self.max_storage_buffers_per_shader_stage,
+            false,
+        );
         set_js_property(
             &capabilities_value,
             "terrainClipmap",
@@ -590,20 +598,17 @@ impl Forge3DRuntime {
         set_js_property(
             &capabilities_value,
             "terrainStreaming",
-            &JsValue::from_bool(clipmap_ok && sampled >= terrain::W08_SAMPLED_TEXTURES_STREAMING),
+            &JsValue::from_bool(clipmap_ok && w08.page_table),
         );
         set_js_property(
             &capabilities_value,
             "terrainOverlays",
-            &JsValue::from_bool(sampled >= terrain::W08_SAMPLED_TEXTURES_OVERLAYS),
+            &JsValue::from_bool(w08.overlays),
         );
         set_js_property(
             &capabilities_value,
             "terrainVirtualTexture",
-            &JsValue::from_bool(
-                sampled >= terrain::W08_SAMPLED_TEXTURES_VT
-                    && self.max_storage_buffers_per_shader_stage >= terrain::W08_STORAGE_BUFFERS_VT,
-            ),
+            &JsValue::from_bool(w08.vt),
         );
         self.adapter_diagnostics
             .populate_capabilities(&capabilities_value);

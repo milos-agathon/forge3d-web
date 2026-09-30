@@ -47,8 +47,9 @@ function capSampledTextures(cap: number): () => void {
 
 const UNSUPPORTED = { code: "UNSUPPORTED_FEATURE" };
 
-// Expected per feature for each device cap: null = commit succeeds.
-const GATES: Array<{
+// Textured material 0 (the textured pipeline profile binds the five scene
+// TextureSet textures): expected per feature for each device cap.
+const TEXTURED_GATES: Array<{
   cap: number;
   streaming: boolean;
   overlays: boolean;
@@ -64,27 +65,70 @@ test.describe("W08 limit gates and typed resource errors", () => {
     skipRenderAssertionsWhenProbing(webgpuAvailability);
   });
 
-  for (const gate of GATES) {
-    test(`maxSampledTexturesPerShaderStage ${gate.cap}: capabilities and typed UNSUPPORTED_FEATURE`, async ({ page }) => {
+  for (const { cap } of TEXTURED_GATES) {
+    test(`maxSampledTexturesPerShaderStage ${cap}: untextured terrain gets every W08 feature`, async ({ page }) => {
       test.slow();
-      await page.addInitScript(capSampledTextures(gate.cap));
+      await page.addInitScript(capSampledTextures(cap));
       const r = await probe(page, "limitGates");
-      expect(r.caps.maxSampledTexturesPerShaderStage, JSON.stringify(r.caps)).toBe(gate.cap);
-      expect(r.caps.terrainClipmap).toBe(true);
-      expect(r.clipmap, JSON.stringify(r.clipmap)).toBeNull();
-      expect(r.caps.terrainStreaming).toBe(gate.streaming);
-      expect(r.caps.terrainOverlays).toBe(gate.overlays);
-      expect(r.caps.terrainVirtualTexture).toBe(gate.vt);
-      for (const feature of ["streaming", "overlays", "vt"] as const) {
-        if (gate[feature]) {
-          expect(r[feature], `${feature} at cap ${gate.cap}: ${JSON.stringify(r[feature])}`).toBeNull();
-        } else {
-          expect(r[feature], `${feature} at cap ${gate.cap}`).toMatchObject(UNSUPPORTED);
-          expect(r[feature].message).toContain(`device has ${gate.cap}`);
-        }
+      expect(r.caps.maxSampledTexturesPerShaderStage, JSON.stringify(r.caps)).toBe(cap);
+      for (const flag of [
+        "terrainClipmap",
+        "terrainStreaming",
+        "terrainOverlays",
+        "terrainVirtualTexture",
+      ] as const) {
+        expect(r.caps[flag], flag).toBe(true);
+      }
+      for (const feature of ["clipmap", "streaming", "overlays", "vt"] as const) {
+        expect(r[feature], `${feature} at cap ${cap}: ${JSON.stringify(r[feature])}`).toBeNull();
       }
     });
   }
+
+  for (const gate of TEXTURED_GATES) {
+    test(`maxSampledTexturesPerShaderStage ${gate.cap}: textured material 0 gates W08 with typed UNSUPPORTED_FEATURE`, async ({ page }) => {
+      test.slow();
+      await page.addInitScript(capSampledTextures(gate.cap));
+      const r = await probe(page, "limitGatesTextured");
+      expect(r.sampled).toBe(gate.cap);
+      expect(r.texturedCommit, JSON.stringify(r.texturedCommit)).toBeNull();
+      expect(r.attempts.clipmap, JSON.stringify(r.attempts.clipmap)).toBeNull();
+      expect(r.renders.clipmap).toBeGreaterThan(0);
+      for (const feature of ["streaming", "overlays", "vt"] as const) {
+        if (gate[feature]) {
+          expect(r.attempts[feature], `${feature}: ${JSON.stringify(r.attempts[feature])}`).toBeNull();
+          expect(r.renders[feature], `${feature} render`).toBeGreaterThan(0);
+        } else {
+          expect(r.attempts[feature], feature).toMatchObject(UNSUPPORTED);
+          expect(r.attempts[feature].message).toContain(`device has ${gate.cap}`);
+          expect(r.attempts[feature].message).toContain("terrain material 0 is textured");
+        }
+      }
+      // Reverse order: overlays committed untextured always fit; texturing
+      // material 0 afterwards is refused atomically where it cannot fit.
+      expect(r.overlaysUntextured, JSON.stringify(r.overlaysUntextured)).toBeNull();
+      if (gate.overlays) {
+        expect(r.reverseMaterial, JSON.stringify(r.reverseMaterial)).toBeNull();
+      } else {
+        expect(r.reverseMaterial).toMatchObject(UNSUPPORTED);
+        expect(r.reverseMaterial.message).toContain("terrain overlays");
+        expect(r.reverseLedgerEqual).toBe(true);
+        expect(r.reverseFrame.byteEqual, JSON.stringify(r.reverseFrame)).toBe(true);
+      }
+    });
+  }
+
+  test("textured material 0 with every W08 feature renders when the device allows it", async ({ page }) => {
+    test.slow();
+    const r = await probe(page, "limitGatesTextured");
+    test.skip(r.sampled < 19, `adapter exposes ${r.sampled} sampled textures (< 19)`);
+    expect(r.texturedCommit).toBeNull();
+    for (const feature of ["clipmap", "streaming", "overlays", "vt"] as const) {
+      expect(r.attempts[feature], `${feature}: ${JSON.stringify(r.attempts[feature])}`).toBeNull();
+      expect(r.renders[feature], `${feature} render`).toBeGreaterThan(0);
+    }
+    expect(r.reverseMaterial).toBeNull();
+  });
 
   test("atlases beyond maxTextureDimension2D are RESOURCE_LIMIT_EXCEEDED and change nothing", async ({ page }) => {
     test.slow();

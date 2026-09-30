@@ -30,6 +30,10 @@ const TEX_NORMAL: u64 = 1 << 17;
 const TEX_METALLIC_ROUGHNESS: u64 = 1 << 18;
 const TEX_OCCLUSION: u64 = 1 << 19;
 const TEX_EMISSIVE: u64 = 1 << 20;
+const TEX_ALL: u64 = TEX_BASE | TEX_NORMAL | TEX_METALLIC_ROUGHNESS | TEX_OCCLUSION | TEX_EMISSIVE;
+/// Material `flags` bits that select a scene `TextureSet` texture
+/// (base, normal, metallic-roughness, occlusion, emissive).
+pub(crate) const SCENE_TEXTURE_FLAGS: u32 = 0x1f;
 const LIGHT_DEBUG_BOUNDS: u64 = 1 << 21;
 const IBL: u64 = 1 << 22;
 const SHADOWS: u64 = 1 << 23;
@@ -125,6 +129,24 @@ impl ShaderFeatures {
             features = features.with(1 << (SHADOW_FILTER_BASE + lane), true);
         }
         features
+    }
+
+    /// Replaces the scene-texture regions with the ones `flags` selects.
+    /// Terrain shading reads material 0 only, so its variants use material
+    /// 0's flags instead of the union over every material.
+    pub(crate) fn with_texture_flags(self, flags: u32) -> Self {
+        Self(self.0 & !TEX_ALL)
+            .with(TEX_BASE, flags & 1 != 0)
+            .with(TEX_NORMAL, flags & 2 != 0)
+            .with(TEX_METALLIC_ROUGHNESS, flags & 4 != 0)
+            .with(TEX_OCCLUSION, flags & 8 != 0)
+            .with(TEX_EMISSIVE, flags & 16 != 0)
+    }
+
+    /// Whether the variant samples the scene `TextureSet` (group 2). Only
+    /// such variants need group 2 in their pipeline layout.
+    pub(crate) fn samples_scene_textures(self) -> bool {
+        self.0 & TEX_ALL != 0
     }
 
     /// Adds the terrain render-mode region (`0` perspective, `1` screen).
@@ -284,6 +306,40 @@ pub(super) fn lighting_features(
     )
 }
 
+/// Texture flags of material 0 — the only material terrain shading reads.
+pub(super) fn terrain_texture_flags(
+    material_state: &forge3d_core::materials::MaterialState,
+) -> u32 {
+    material_state
+        .pack_materials()
+        .first()
+        .map_or(0, |material| material.flags & SCENE_TEXTURE_FLAGS)
+}
+
+/// Shared-lighting features for terrain pipelines: the scene-texture regions
+/// follow material 0 alone (see [`ShaderFeatures::with_texture_flags`]).
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+pub(super) fn terrain_lighting_features(
+    lighting: &super::lighting::LightingResources,
+    ibl: &super::ibl::IblResources,
+    shadows: &super::shadows::ShadowResources,
+) -> ShaderFeatures {
+    lighting_features(lighting, ibl, shadows)
+        .with_texture_flags(terrain_texture_flags(&lighting.material_state))
+}
+
+/// [`terrain_lighting_features`] for the runtime's committed state.
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+pub(super) fn runtime_terrain_lighting_features(
+    runtime: &super::Forge3DRuntime,
+) -> Result<ShaderFeatures, WebError> {
+    let features = runtime_lighting_features(runtime)?;
+    let flags = runtime.lighting.as_ref().map_or(0, |lighting| {
+        terrain_texture_flags(&lighting.material_state)
+    });
+    Ok(features.with_texture_flags(flags))
+}
+
 /// Shared-lighting features for the runtime's committed state.
 #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
 pub(super) fn runtime_lighting_features(
@@ -316,12 +372,15 @@ pub(super) fn sync_pipelines(runtime: &mut super::Forge3DRuntime) -> Result<(), 
         return Ok(());
     };
     let format = surface.config.format;
+    let terrain_features = runtime.lighting.as_ref().map_or(features, |lighting| {
+        features.with_texture_flags(terrain_texture_flags(&lighting.material_state))
+    });
     if let (Some(terrain), Some(cache)) = (
         runtime.terrain.as_mut(),
         runtime.terrain_pipeline_cache.as_mut(),
     ) {
-        if terrain.features != terrain.specialize(features) {
-            terrain.use_variant(&context, cache, features, format);
+        if terrain.features != terrain.specialize(terrain_features) {
+            terrain.use_variant(&context, cache, terrain_features, format);
         }
     }
     if let (Some(scene), Some(textures), Some(ibl)) = (

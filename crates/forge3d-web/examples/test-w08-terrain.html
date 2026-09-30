@@ -23,6 +23,8 @@
       import {
         Forge3DError,
         Forge3DRuntime,
+        Forge3DScene,
+        TextureSet,
         calculateTriangleReduction,
         generateClipmapMesh,
         selectLodTilesReference,
@@ -625,6 +627,69 @@
         }
       }
 
+      // Material snapshots with an untextured / textured material 0 (the
+      // only material terrain shading reads). A textured material 0 moves
+      // terrain to the pipeline profile that binds the scene TextureSet.
+      function materialSnapshot(textured) {
+        const scene = Forge3DScene.create();
+        if (textured) {
+          scene.setMaterial("default", {
+            id: "default",
+            brdf: "cooktorrance-ggx",
+            baseColor: [1, 1, 1, 1],
+            roughness: 0.6,
+            textures: new TextureSet({
+              baseColor: {
+                width: 2,
+                height: 2,
+                format: "rgba8unorm-srgb",
+                colorSpace: "srgb",
+                data: new Uint8Array([
+                  230, 220, 200, 255, 120, 140, 90, 255,
+                  120, 140, 90, 255, 230, 220, 200, 255,
+                ]),
+              },
+            }),
+          });
+        }
+        return scene.snapshot().materials;
+      }
+
+      function attemptMaterials(runtime, textured) {
+        try {
+          runtime.setMaterials(materialSnapshot(textured));
+          return null;
+        } catch (error) {
+          const typed = Forge3DError.from(error);
+          return { code: typed.code, message: typed.message };
+        }
+      }
+
+      // Hovers over the small probe terrains (centered on the origin);
+      // clipmap rings follow the camera, so it must stay over the terrain.
+      const OVERHEAD_CAM = {
+        position: [0, 500, -60],
+        target: [0, 0, 60],
+        up: [0, 1, 0],
+        fovYDegrees: 55,
+        near: 1,
+        far: 20000,
+      };
+
+      async function nonClearPixels(runtime, camera = OVERHEAD_CAM) {
+        runtime.setCamera(camera);
+        runtime.render();
+        const rgba = await runtime.readRgba();
+        const clear = CLEAR.map((channel) => Math.round(channel * 255));
+        let count = 0;
+        for (let i = 0; i < rgba.length; i += 4) {
+          if (rgba[i] !== clear[0] || rgba[i + 1] !== clear[1] || rgba[i + 2] !== clear[2]) {
+            count += 1;
+          }
+        }
+        return count;
+      }
+
       function smallClipmapTerrain() {
         return denseTerrain(65, {
           mode: "clipmap",
@@ -692,6 +757,59 @@
               streaming: attemptCommit(runtime, streamedTerrain1025()),
               overlays: attemptCommit(runtime, overlayTerrain()),
               vt: attemptCommit(runtime, vtTerrain()),
+            };
+          } finally {
+            runtime.dispose();
+          }
+        },
+
+        // W08 (E0) with a textured material 0: the textured pipeline profile
+        // binds the scene TextureSet, so W08 slots need 5 more sampled
+        // textures. Commits in either order are gated with typed errors, and
+        // every accepted combination renders.
+        async limitGatesTextured() {
+          const runtime = await createRuntime();
+          try {
+            // Control: the same clipmap terrain rendered untextured.
+            const untexturedClipmap = attemptCommit(runtime, smallClipmapTerrain());
+            const untexturedRender =
+              untexturedClipmap === null ? await nonClearPixels(runtime) : null;
+            const texturedCommit = attemptMaterials(runtime, true);
+            const attempts = {};
+            const renders = {};
+            for (const [name, build, camera] of [
+              ["clipmap", smallClipmapTerrain, OVERHEAD_CAM],
+              ["streaming", streamedTerrain1025, grazingCameras()[1]],
+              ["overlays", overlayTerrain, OVERHEAD_CAM],
+              ["vt", () => vtTerrain(), OVERHEAD_CAM],
+            ]) {
+              attempts[name] = attemptCommit(runtime, build());
+              renders[name] =
+                attempts[name] === null ? await nonClearPixels(runtime, camera) : null;
+            }
+            // Reverse order: overlays committed untextured, then texturing
+            // material 0 must be refused atomically where it cannot fit.
+            attemptMaterials(runtime, false);
+            const overlaysUntextured = attemptCommit(runtime, overlayTerrain());
+            runtime.setCamera(grazingCameras()[1]);
+            runtime.render();
+            const frameBefore = await runtime.readRgba();
+            const ledgerBefore = ledgerSnapshot(runtime);
+            const reverseMaterial = attemptMaterials(runtime, true);
+            runtime.render();
+            const frameAfter = await runtime.readRgba();
+            return {
+              sampled: runtime.getCapabilities().maxSampledTexturesPerShaderStage,
+              untexturedClipmap,
+              untexturedRender,
+              texturedCommit,
+              attempts,
+              renders,
+              overlaysUntextured,
+              reverseMaterial,
+              reverseLedgerEqual:
+                JSON.stringify(ledgerSnapshot(runtime)) === JSON.stringify(ledgerBefore),
+              reverseFrame: framesEqual(frameBefore, frameAfter),
             };
           } finally {
             runtime.dispose();

@@ -23,15 +23,104 @@ pub(super) const TERRAIN_SUN_KEY: &str = "terrain:sun-visibility";
 pub(super) const TERRAIN_ANALYSIS_FALLBACK_KEY: &str = "terrain:analysis-fallback";
 pub(super) const TERRAIN_ANALYSIS_FALLBACK_BYTES: u64 = 4;
 pub(super) const DEPTH_TEXTURE_KEY: &str = "depth";
-// W08 (E0): fragment-visible sampled-texture budget per feature. The base
-// pipeline exposes 16; a uniform-only clipmap needs no extra texture, the
-// height page table (binding 13) makes 17, the overlay array (binding 14)
-// makes 18, and the VT page table (binding 17) makes 19.
-pub(super) const W08_SAMPLED_TEXTURES_CLIPMAP: u32 = 16;
-pub(super) const W08_SAMPLED_TEXTURES_STREAMING: u32 = 17;
-pub(super) const W08_SAMPLED_TEXTURES_OVERLAYS: u32 = 18;
-pub(super) const W08_SAMPLED_TEXTURES_VT: u32 = 19;
+// W08 (E0): fragment-visible sampled-texture budget. Outside W08 the terrain
+// pipeline samples 11 textures (group 0 heightmap/AO/sun/material albedo+aux,
+// the LTC LUT, the IBL and shadow maps); only a textured material 0 adds the
+// five scene `TextureSet` textures of group 2. The W08 slots stack on top:
+// the height page table (binding 13), then the overlay array (14), then the
+// VT page table (17). Untextured terrain therefore fits every W08 slot in
+// the WebGPU default of 16; textured terrain needs 17 / 18 / 19.
+pub(super) const TERRAIN_BASE_SAMPLED_TEXTURES: u32 = 11;
+pub(super) const TERRAIN_SCENE_TEXTURE_SLOTS: u32 = 5;
+pub(super) const W08_SAMPLED_TEXTURES_CLIPMAP: u32 =
+    TERRAIN_BASE_SAMPLED_TEXTURES + TERRAIN_SCENE_TEXTURE_SLOTS;
 pub(super) const W08_STORAGE_BUFFERS_VT: u32 = 3;
+
+/// Which stacked W08 group-0 slots a terrain pipeline profile can declare.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct W08Slots {
+    /// Binding 13 (streamed height page table).
+    pub(super) page_table: bool,
+    /// Bindings 14-16 (overlay composite, sampler, uniform).
+    pub(super) overlays: bool,
+    /// Bindings 17-19 (VT page table, uniform, feedback ring).
+    pub(super) vt: bool,
+}
+
+impl W08Slots {
+    /// Slots that fit the negotiated limits for the untextured
+    /// (`scene_textures == false`) or textured pipeline profile.
+    pub(super) fn for_limits(sampled: u32, storage_buffers: u32, scene_textures: bool) -> Self {
+        let headroom = sampled.saturating_sub(Self::base(scene_textures));
+        Self {
+            page_table: headroom >= 1,
+            overlays: headroom >= 2,
+            vt: headroom >= 3 && storage_buffers >= W08_STORAGE_BUFFERS_VT,
+        }
+    }
+
+    pub(super) fn of_device(device: &wgpu::Device, scene_textures: bool) -> Self {
+        let limits = device.limits();
+        Self::for_limits(
+            limits.max_sampled_textures_per_shader_stage,
+            limits.max_storage_buffers_per_shader_stage,
+            scene_textures,
+        )
+    }
+
+    fn base(scene_textures: bool) -> u32 {
+        TERRAIN_BASE_SAMPLED_TEXTURES
+            + if scene_textures {
+                TERRAIN_SCENE_TEXTURE_SLOTS
+            } else {
+                0
+            }
+    }
+
+    /// Sampled-texture limit the `stack`-th W08 slot (1 = page table,
+    /// 2 = overlays, 3 = VT) needs in the given profile.
+    pub(super) fn required(scene_textures: bool, stack: u32) -> u32 {
+        Self::base(scene_textures) + stack
+    }
+
+    /// Whether a group-0 binding belongs to this profile's layout.
+    pub(super) fn keeps(self, binding: u32) -> bool {
+        match binding {
+            13 => self.page_table,
+            14..=16 => self.overlays,
+            17..=19 => self.vt,
+            _ => true,
+        }
+    }
+}
+
+/// Typed `UNSUPPORTED_FEATURE` for a W08 feature the profile cannot bind.
+pub(super) fn w08_limit_error(
+    feature: &str,
+    stack: u32,
+    scene_textures: bool,
+    sampled: u32,
+) -> WebError {
+    let storage = if stack == 3 {
+        format!(" and maxStorageBuffersPerShaderStage >= {W08_STORAGE_BUFFERS_VT}")
+    } else {
+        String::new()
+    };
+    let textured = if scene_textures {
+        format!(
+            " (terrain material 0 is textured, which binds {TERRAIN_SCENE_TEXTURE_SLOTS} more sampled textures)"
+        )
+    } else {
+        String::new()
+    };
+    WebError::new(
+        Forge3DErrorCode::UnsupportedFeature,
+        format!(
+            "{feature} requires maxSampledTexturesPerShaderStage >= {}{storage}, device has {sampled}{textured}",
+            W08Slots::required(scene_textures, stack)
+        ),
+    )
+}
 pub(super) const TERRAIN_CLIPMAP_KEY: &str = "terrain:clipmap";
 pub(super) const TERRAIN_HEIGHT_STREAM_KEY: &str = "terrain:height-stream";
 pub(super) const TERRAIN_LOD_SELECT_KEY: &str = "terrain:lod-select";
@@ -340,15 +429,17 @@ pub(super) fn set_terrain_options_runtime(
         .debug_view
         .map(crate::inputs::TerrainDebugViewOption::to_core)
         .unwrap_or(TerrainDebugView::None);
-    let features = super::shader_variants::runtime_lighting_features(runtime)?;
+    let features = super::shader_variants::runtime_terrain_lighting_features(runtime)?;
     let mut candidate = select_terrain_candidate(runtime, terrain, &height_ao, &sun_visibility)?;
     let color_ramp = candidate.options.color_ramp.clone();
     let material = candidate.options.material.take();
     let overlays_input = candidate.options.overlays.take();
     let validated = candidate.options.validate()?;
     // W08 (E0): the extended group-0 layout needs the negotiated
-    // maxSampledTexturesPerShaderStage budget.
+    // maxSampledTexturesPerShaderStage budget of this terrain's profile.
     let sampled = runtime.max_sampled_textures_per_shader_stage;
+    let scene_textures = features.samples_scene_textures();
+    let slots = W08Slots::of_device(&context.device, scene_textures);
     if validated.input.clipmap_geometry().is_some() && sampled < W08_SAMPLED_TEXTURES_CLIPMAP {
         return Err(WebError::new(
             Forge3DErrorCode::UnsupportedFeature,
@@ -357,12 +448,12 @@ pub(super) fn set_terrain_options_runtime(
             ),
         ));
     }
-    if validated.input.streaming.is_some() && sampled < W08_SAMPLED_TEXTURES_STREAMING {
-        return Err(WebError::new(
-            Forge3DErrorCode::UnsupportedFeature,
-            format!(
-                "terrain streaming requires maxSampledTexturesPerShaderStage >= {W08_SAMPLED_TEXTURES_STREAMING}, device has {sampled}"
-            ),
+    if validated.input.streaming.is_some() && !slots.page_table {
+        return Err(w08_limit_error(
+            "terrain streaming",
+            1,
+            scene_textures,
+            sampled,
         ));
     }
     // W08 (E5): visible overlays need the extended sampled-texture budget;
@@ -370,12 +461,12 @@ pub(super) fn set_terrain_options_runtime(
     let overlay_settings = overlays_input
         .as_ref()
         .filter(|settings| settings.enabled && settings.has_visible_layers());
-    if overlay_settings.is_some() && !overlays_supported(&context.device) {
-        return Err(WebError::new(
-            Forge3DErrorCode::UnsupportedFeature,
-            format!(
-                "terrain overlays require maxSampledTexturesPerShaderStage >= {W08_SAMPLED_TEXTURES_OVERLAYS}, device has {sampled}"
-            ),
+    if overlay_settings.is_some() && !slots.overlays {
+        return Err(w08_limit_error(
+            "terrain overlays",
+            2,
+            scene_textures,
+            sampled,
         ));
     }
     // W08 (E6): material VT — blocking diagnostics first (an invalid
@@ -410,12 +501,12 @@ pub(super) fn set_terrain_options_runtime(
             ));
         }
     }
-    if vt_settings.is_some() && !vt_supported(&context.device) {
-        return Err(WebError::new(
-            Forge3DErrorCode::UnsupportedFeature,
-            format!(
-                "terrain virtual texturing requires maxSampledTexturesPerShaderStage >= {W08_SAMPLED_TEXTURES_VT} and maxStorageBuffersPerShaderStage >= {W08_STORAGE_BUFFERS_VT}, device has {sampled}"
-            ),
+    if vt_settings.is_some() && !slots.vt {
+        return Err(w08_limit_error(
+            "terrain virtual texturing",
+            3,
+            scene_textures,
+            sampled,
         ));
     }
     // W08 (E0): the streaming height atlas and the VT atlas are single 2D
@@ -940,36 +1031,27 @@ pub(super) struct TerrainAnalysisOutput {
     pub(super) height: u32,
 }
 
-/// Whether the negotiated device limit exposes binding 13 (page table).
-/// Binding 12 (geometry uniform) is unconditional — it costs no extra
-/// sampled texture.
-pub(super) fn page_table_supported(device: &wgpu::Device) -> bool {
-    device.limits().max_sampled_textures_per_shader_stage >= W08_SAMPLED_TEXTURES_STREAMING
+/// Group-0 layout for one pipeline profile, shared by the init-time
+/// validation pipeline and every terrain bind group of that profile.
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+pub(super) fn terrain_bind_group_layout(
+    device: &wgpu::Device,
+    slots: W08Slots,
+) -> wgpu::BindGroupLayout {
+    let entries = terrain_layout_entries(slots);
+    device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+        label: Some("forge3d-web-terrain-bind-group-layout"),
+        entries: &entries,
+    })
 }
 
-/// W08 (E5): group-0 overlay bindings 14-16 exist when the negotiated
-/// sampled-texture limit covers them.
-fn overlays_supported(device: &wgpu::Device) -> bool {
-    device.limits().max_sampled_textures_per_shader_stage >= W08_SAMPLED_TEXTURES_OVERLAYS
-}
-
-/// W08 (E6): group-0 VT bindings 17-19 need the 19th sampled texture plus
-/// the storage-buffer headroom the native runtime negotiates.
-fn vt_supported(device: &wgpu::Device) -> bool {
-    let limits = device.limits();
-    limits.max_sampled_textures_per_shader_stage >= W08_SAMPLED_TEXTURES_VT
-        && limits.max_storage_buffers_per_shader_stage >= W08_STORAGE_BUFFERS_VT
-}
-
-/// Group-0 layout shared by the init-time validation pipeline and every
-/// terrain bind group, so the validated pipeline can be reused as-is.
+/// Group-0 layout entries for the W08 `slots` of a pipeline profile.
 ///
 /// W08 (E0): binding 12 (`TerrainGeometryUniform`) is always present —
 /// grid-mode bind groups fill it with a zeroed uniform so shaders never
-/// read it — and binding 13 (height page table) is appended when the
-/// negotiated `maxSampledTexturesPerShaderStage` reaches 17.
-#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
-pub(super) fn terrain_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
+/// read it — and the stacked W08 slots (13, 14-16, 17-19) are appended when
+/// the profile's sampled-texture budget covers them.
+pub(super) fn terrain_layout_entries(slots: W08Slots) -> Vec<wgpu::BindGroupLayoutEntry> {
     let material = super::terrain_material::material_layout_entries();
     let mut entries = vec![
         wgpu::BindGroupLayoutEntry {
@@ -1057,7 +1139,7 @@ pub(super) fn terrain_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGrou
             count: None,
         },
     ];
-    if page_table_supported(device) {
+    if slots.page_table {
         // W08 (E3): `height_page_table` — u32 array, one layer per lod. The
         // streaming-aware height helpers run in both vertex and fragment
         // code, so both stages need visibility.
@@ -1075,7 +1157,7 @@ pub(super) fn terrain_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGrou
     // W08 (E5): overlay composite texture + sampler + control/modes uniform
     // (bindings 14-16). Entries exist whenever the negotiated limit covers
     // them — off-by-default states bind 1x1 transparent fallbacks.
-    if overlays_supported(device) {
+    if slots.overlays {
         entries.extend([
             wgpu::BindGroupLayoutEntry {
                 binding: 14,
@@ -1107,7 +1189,7 @@ pub(super) fn terrain_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGrou
     }
     // W08 (E6): VT page table (unfilterable RGBA32Float), VT uniforms and
     // the fragment-written feedback ring (bindings 17-19).
-    if vt_supported(device) {
+    if slots.vt {
         entries.extend([
             wgpu::BindGroupLayoutEntry {
                 binding: 17,
@@ -1141,18 +1223,30 @@ pub(super) fn terrain_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGrou
             },
         ]);
     }
-    device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-        label: Some("forge3d-web-terrain-bind-group-layout"),
-        entries: &entries,
-    })
+    entries
 }
 
 /// Feature-specialized terrain pipelines for one runtime, keyed by shader
 /// features and surface format. Init-time validation compiles the variant for
 /// the default state; terrain commits and renders reuse or add variants.
+///
+/// Two pipeline profiles share the cache: *untextured* variants (material 0
+/// has no scene textures) bind an empty group 2, which leaves room for every
+/// W08 slot within the WebGPU default limit; *textured* variants bind the
+/// scene `TextureSet` and a group 0 trimmed to the W08 slots that still fit.
 pub(super) struct TerrainPipelineCache {
+    /// Group 0 of the untextured profile.
     pub(super) bind_group_layout: wgpu::BindGroupLayout,
+    /// W08 slots of the untextured profile.
+    pub(super) slots: W08Slots,
+    /// Group 0 of the textured profile when it differs from the untextured one.
+    textured_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    /// W08 slots of the textured profile.
+    pub(super) textured_slots: W08Slots,
+    /// Empty group 2 bound by untextured variants.
+    pub(super) empty_bind_group: wgpu::BindGroup,
     pipeline_layout: wgpu::PipelineLayout,
+    textured_pipeline_layout: wgpu::PipelineLayout,
     variants: std::collections::HashMap<(u64, wgpu::TextureFormat), TerrainPipelineVariant>,
     /// Offline capture pipelines keyed by capture-specialized features.
     capture_variants:
@@ -1173,20 +1267,53 @@ impl TerrainPipelineCache {
         texture_layout: &wgpu::BindGroupLayout,
         ibl_layout: &wgpu::BindGroupLayout,
     ) -> Self {
-        let bind_group_layout = terrain_bind_group_layout(device);
+        let slots = W08Slots::of_device(device, false);
+        let textured_slots = W08Slots::of_device(device, true);
+        let bind_group_layout = terrain_bind_group_layout(device, slots);
+        let textured_bind_group_layout =
+            (textured_slots != slots).then(|| terrain_bind_group_layout(device, textured_slots));
+        let empty_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("forge3d-web-terrain-empty-group-layout"),
+            entries: &[],
+        });
+        let empty_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("forge3d-web-terrain-empty-group"),
+            layout: &empty_layout,
+            entries: &[],
+        });
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("forge3d-web-terrain-pipeline-layout"),
             bind_group_layouts: &[
                 Some(&bind_group_layout),
                 Some(lighting_layout),
-                Some(texture_layout),
+                Some(&empty_layout),
                 Some(ibl_layout),
             ],
             immediate_size: 0,
         });
+        let textured_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("forge3d-web-terrain-textured-pipeline-layout"),
+                bind_group_layouts: &[
+                    Some(
+                        textured_bind_group_layout
+                            .as_ref()
+                            .unwrap_or(&bind_group_layout),
+                    ),
+                    Some(lighting_layout),
+                    Some(texture_layout),
+                    Some(ibl_layout),
+                ],
+                immediate_size: 0,
+            });
         Self {
             bind_group_layout,
+            slots,
+            textured_bind_group_layout,
+            textured_slots,
+            empty_bind_group,
             pipeline_layout,
+            textured_pipeline_layout,
             variants: std::collections::HashMap::new(),
             capture_variants: std::collections::HashMap::new(),
         }
@@ -1202,7 +1329,11 @@ impl TerrainPipelineCache {
         pass: super::offline::CapturePass,
     ) -> wgpu::RenderPipeline {
         let features = features.with_capture();
-        let pipeline_layout = &self.pipeline_layout;
+        let pipeline_layout = if features.samples_scene_textures() {
+            &self.textured_pipeline_layout
+        } else {
+            &self.pipeline_layout
+        };
         self.capture_variants
             .entry((features.bits(), pass))
             .or_insert_with(|| {
@@ -1221,6 +1352,32 @@ impl TerrainPipelineCache {
             .clone()
     }
 
+    /// Group-0 layout and W08 slots of the profile `features` select.
+    pub(super) fn group0_for(
+        &self,
+        features: ShaderFeatures,
+    ) -> (&wgpu::BindGroupLayout, W08Slots) {
+        if features.samples_scene_textures() {
+            (
+                self.textured_bind_group_layout
+                    .as_ref()
+                    .unwrap_or(&self.bind_group_layout),
+                self.textured_slots,
+            )
+        } else {
+            (&self.bind_group_layout, self.slots)
+        }
+    }
+
+    /// The textured profile's group-0 layout when it differs from the
+    /// untextured one (a device that cannot fit every W08 slot next to the
+    /// scene textures).
+    pub(super) fn textured_group0(&self) -> Option<(&wgpu::BindGroupLayout, W08Slots)> {
+        self.textured_bind_group_layout
+            .as_ref()
+            .map(|layout| (layout, self.textured_slots))
+    }
+
     /// Returns the pipeline for `features`, compiling it on first use.
     pub(super) fn variant(
         &mut self,
@@ -1228,7 +1385,11 @@ impl TerrainPipelineCache {
         features: ShaderFeatures,
         surface_format: wgpu::TextureFormat,
     ) -> TerrainPipelineVariant {
-        let pipeline_layout = &self.pipeline_layout;
+        let pipeline_layout = if features.samples_scene_textures() {
+            &self.textured_pipeline_layout
+        } else {
+            &self.pipeline_layout
+        };
         self.variants
             .entry((features.bits(), surface_format))
             .or_insert_with(|| {
@@ -1405,47 +1566,46 @@ struct W08BindingFallbacks {
 }
 
 impl W08BindingFallbacks {
-    fn new(device: &wgpu::Device) -> Self {
-        let (overlay_texture, overlay_view, overlay_sampler, overlay_uniform) =
-            if overlays_supported(device) {
-                let texture = device.create_texture(&wgpu::TextureDescriptor {
-                    label: Some("forge3d-web-terrain-overlay-fallback"),
-                    size: wgpu::Extent3d {
-                        width: 1,
-                        height: 1,
-                        depth_or_array_layers: 1,
-                    },
-                    mip_level_count: 1,
-                    sample_count: 1,
-                    dimension: wgpu::TextureDimension::D2,
-                    format: wgpu::TextureFormat::Rgba8UnormSrgb,
-                    usage: wgpu::TextureUsages::TEXTURE_BINDING,
-                    view_formats: &[],
-                });
-                let view = texture.create_view(&wgpu::TextureViewDescriptor {
-                    dimension: Some(wgpu::TextureViewDimension::D2Array),
-                    ..Default::default()
-                });
-                let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-                    label: Some("forge3d-web-terrain-overlay-fallback-sampler"),
-                    address_mode_u: wgpu::AddressMode::ClampToEdge,
-                    address_mode_v: wgpu::AddressMode::ClampToEdge,
-                    address_mode_w: wgpu::AddressMode::ClampToEdge,
-                    mag_filter: wgpu::FilterMode::Linear,
-                    min_filter: wgpu::FilterMode::Linear,
-                    ..Default::default()
-                });
-                let uniform = device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("forge3d-web-terrain-overlay-fallback-uniform"),
-                    size: std::mem::size_of::<TerrainOverlayUniformGpu>() as u64,
-                    usage: wgpu::BufferUsages::UNIFORM,
-                    mapped_at_creation: false,
-                });
-                (Some(texture), Some(view), Some(sampler), Some(uniform))
-            } else {
-                (None, None, None, None)
-            };
-        let (vt_page_texture, vt_page_view, vt_uniform, vt_feedback) = if vt_supported(device) {
+    fn new(device: &wgpu::Device, slots: W08Slots) -> Self {
+        let (overlay_texture, overlay_view, overlay_sampler, overlay_uniform) = if slots.overlays {
+            let texture = device.create_texture(&wgpu::TextureDescriptor {
+                label: Some("forge3d-web-terrain-overlay-fallback"),
+                size: wgpu::Extent3d {
+                    width: 1,
+                    height: 1,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format: wgpu::TextureFormat::Rgba8UnormSrgb,
+                usage: wgpu::TextureUsages::TEXTURE_BINDING,
+                view_formats: &[],
+            });
+            let view = texture.create_view(&wgpu::TextureViewDescriptor {
+                dimension: Some(wgpu::TextureViewDimension::D2Array),
+                ..Default::default()
+            });
+            let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+                label: Some("forge3d-web-terrain-overlay-fallback-sampler"),
+                address_mode_u: wgpu::AddressMode::ClampToEdge,
+                address_mode_v: wgpu::AddressMode::ClampToEdge,
+                address_mode_w: wgpu::AddressMode::ClampToEdge,
+                mag_filter: wgpu::FilterMode::Linear,
+                min_filter: wgpu::FilterMode::Linear,
+                ..Default::default()
+            });
+            let uniform = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("forge3d-web-terrain-overlay-fallback-uniform"),
+                size: std::mem::size_of::<TerrainOverlayUniformGpu>() as u64,
+                usage: wgpu::BufferUsages::UNIFORM,
+                mapped_at_creation: false,
+            });
+            (Some(texture), Some(view), Some(sampler), Some(uniform))
+        } else {
+            (None, None, None, None)
+        };
+        let (vt_page_texture, vt_page_view, vt_uniform, vt_feedback) = if slots.vt {
             let texture = device.create_texture(&wgpu::TextureDescriptor {
                 label: Some("forge3d-web-terrain-vt-page-fallback"),
                 size: wgpu::Extent3d {
@@ -1548,13 +1708,64 @@ pub(super) struct TerrainRenderResources {
     /// Fallback resources for W08 binding slots the layout exposes but this
     /// commit does not use.
     w08_fallbacks: W08BindingFallbacks,
-    /// Whether the pipeline layout declares bindings 14-16.
-    has_overlay_bindings: bool,
-    /// Whether the pipeline layout declares bindings 17-19.
-    has_vt_bindings: bool,
+    /// W08 slots of the untextured profile (the superset `bind_group` binds).
+    slots: W08Slots,
+    /// Group 0 for textured variants when their layout drops W08 slots.
+    textured_bind_group: Option<wgpu::BindGroup>,
+    /// Empty group 2 bound by untextured variants.
+    empty_bind_group: wgpu::BindGroup,
 }
 
 impl TerrainRenderResources {
+    /// Group-0 and group-2 bind groups for the active pipeline profile:
+    /// textured variants bind `scene_textures` (the material-0 `TextureSet`),
+    /// untextured variants an empty group 2.
+    pub(super) fn profile_bind_groups<'a>(
+        &'a self,
+        scene_textures: &'a wgpu::BindGroup,
+    ) -> (&'a wgpu::BindGroup, &'a wgpu::BindGroup) {
+        if self.features.samples_scene_textures() {
+            (
+                self.textured_bind_group
+                    .as_ref()
+                    .unwrap_or(&self.bind_group),
+                scene_textures,
+            )
+        } else {
+            (&self.bind_group, &self.empty_bind_group)
+        }
+    }
+
+    /// Refuses a material commit that would texture material 0 while this
+    /// terrain uses W08 slots the textured profile cannot bind (the commit is
+    /// rejected before anything changes).
+    pub(super) fn check_material_textures(
+        &self,
+        device: &wgpu::Device,
+        material0_flags: u32,
+    ) -> Result<(), WebError> {
+        if material0_flags & super::shader_variants::SCENE_TEXTURE_FLAGS == 0 {
+            return Ok(());
+        }
+        let slots = W08Slots::of_device(device, true);
+        let sampled = device.limits().max_sampled_textures_per_shader_stage;
+        if self.streaming.is_some() && !slots.page_table {
+            return Err(w08_limit_error("terrain streaming", 1, true, sampled));
+        }
+        if self.overlays.is_some() && !slots.overlays {
+            return Err(w08_limit_error("terrain overlays", 2, true, sampled));
+        }
+        if self.vt.is_some() && !slots.vt {
+            return Err(w08_limit_error(
+                "terrain virtual texturing",
+                3,
+                true,
+                sampled,
+            ));
+        }
+        Ok(())
+    }
+
     /// Applies this terrain's mode, W08 geometry regions and material
     /// regions to `features`.
     pub(super) fn specialize(&self, features: ShaderFeatures) -> ShaderFeatures {
@@ -1603,12 +1814,13 @@ impl TerrainRenderResources {
         }
         let mut streaming_state = None;
         if let Some(streaming_config) = terrain.streaming.as_ref() {
-            if !page_table_supported(&context.device) {
-                return Err(WebError::new(
-                    Forge3DErrorCode::UnsupportedFeature,
-                    format!(
-                        "terrain streaming requires maxSampledTexturesPerShaderStage >= {W08_SAMPLED_TEXTURES_STREAMING}, device has {sampled_limit}"
-                    ),
+            let scene_textures = features.samples_scene_textures();
+            if !pipeline_cache.group0_for(features).1.page_table {
+                return Err(w08_limit_error(
+                    "terrain streaming",
+                    1,
+                    scene_textures,
+                    sampled_limit,
                 ));
             }
             streaming_state = Some(super::terrain_w08::HeightStreamingState::new(
@@ -1695,7 +1907,7 @@ impl TerrainRenderResources {
         // Binding 13 exists only when the negotiated limit exposes it; a
         // 1x1x1 u32 layer is bound when the layout has the slot but this
         // terrain is not streaming.
-        let (page_table_view, page_table_fallback) = if page_table_supported(&context.device) {
+        let (page_table_view, page_table_fallback) = if pipeline_cache.slots.page_table {
             match &streaming_state {
                 Some(stream) => (Some(stream.page_table_view.clone()), None),
                 None => {
@@ -1792,9 +2004,10 @@ impl TerrainRenderResources {
             .as_ref()
             .map(|output| &output.view)
             .unwrap_or(&analysis_fallback_view);
-        let has_overlay_bindings = overlays_supported(&context.device);
-        let has_vt_bindings = vt_supported(&context.device);
-        let w08_fallbacks = W08BindingFallbacks::new(&context.device);
+        let slots = pipeline_cache.slots;
+        let has_overlay_bindings = slots.overlays;
+        let has_vt_bindings = slots.vt;
+        let w08_fallbacks = W08BindingFallbacks::new(&context.device, slots);
         // W08 (E6): under VT, bindings 8/9 are the atlas + VT sampler.
         let vt_binding = vt.as_ref().map(|vt| (&vt.atlas_view, &vt.atlas_sampler));
         let [m7, m8, m9, m10, m11] = material.bind_group_entries(vt_binding);
@@ -1927,6 +2140,22 @@ impl TerrainRenderResources {
                 layout: &bind_group_layout,
                 entries: &terrain_entries,
             });
+        // Textured variants on a device that cannot also fit every W08 slot
+        // use a trimmed group 0 (same resources, fewer W08 bindings).
+        let textured_bind_group = pipeline_cache.textured_group0().map(|(layout, textured)| {
+            let entries = terrain_entries
+                .iter()
+                .filter(|entry| textured.keeps(entry.binding))
+                .cloned()
+                .collect::<Vec<_>>();
+            context
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("forge3d-web-terrain-textured-bind-group"),
+                    layout,
+                    entries: &entries,
+                })
+        });
         let variant = pipeline_cache.variant(
             &context.device,
             features
@@ -1974,8 +2203,9 @@ impl TerrainRenderResources {
             overlays,
             vt,
             w08_fallbacks,
-            has_overlay_bindings,
-            has_vt_bindings,
+            slots,
+            textured_bind_group,
+            empty_bind_group: pipeline_cache.empty_bind_group.clone(),
         })
     }
 
@@ -2020,7 +2250,7 @@ impl TerrainRenderResources {
     pub(super) fn capture_bind_group(
         &self,
         device: &wgpu::Device,
-        layout: &wgpu::BindGroupLayout,
+        (layout, profile): (&wgpu::BindGroupLayout, W08Slots),
         camera_buffer: &wgpu::Buffer,
     ) -> wgpu::BindGroup {
         // Streaming terrain binds the mosaic atlas, matching `bind_group`.
@@ -2093,7 +2323,7 @@ impl TerrainRenderResources {
                 resource: wgpu::BindingResource::TextureView(view),
             });
         }
-        if self.has_overlay_bindings {
+        if self.slots.overlays {
             let (view, sampler, uniform) = self
                 .overlays
                 .as_ref()
@@ -2124,7 +2354,7 @@ impl TerrainRenderResources {
                 },
             ]);
         }
-        if self.has_vt_bindings {
+        if self.slots.vt {
             let (page_view, uniform, feedback) = self
                 .vt
                 .as_ref()
@@ -2161,6 +2391,7 @@ impl TerrainRenderResources {
                 },
             ]);
         }
+        entries.retain(|entry| profile.keeps(entry.binding));
         device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("forge3d-web-terrain-capture-bind-group"),
             layout,
@@ -4112,3 +4343,126 @@ fn fs_capture_surface(input: VertexOutput) -> CaptureSurfaceOutput {
 
 "#,
 );
+
+#[cfg(test)]
+mod w08_slot_tests {
+    use super::*;
+
+    fn fragment_textures(entries: &[wgpu::BindGroupLayoutEntry]) -> u32 {
+        entries
+            .iter()
+            .filter(|entry| {
+                entry.visibility.contains(wgpu::ShaderStages::FRAGMENT)
+                    && matches!(entry.ty, wgpu::BindingType::Texture { .. })
+            })
+            .count() as u32
+    }
+
+    /// Fragment sampled textures of a terrain pipeline profile, counted from
+    /// the real layout entries of groups 0-3.
+    fn pipeline_textures(slots: W08Slots, scene_textures: bool) -> u32 {
+        let mut count = fragment_textures(&terrain_layout_entries(slots))
+            + fragment_textures(&super::super::lighting::lighting_layout_entries())
+            + fragment_textures(&super::super::ibl::ibl_layout_entries())
+            + fragment_textures(&super::super::shadows::shadow_layout_entries());
+        if scene_textures {
+            count += fragment_textures(&super::super::textures::texture_layout_entries());
+        }
+        count
+    }
+
+    const NONE: W08Slots = W08Slots {
+        page_table: false,
+        overlays: false,
+        vt: false,
+    };
+
+    #[test]
+    fn base_constants_match_the_real_layouts() {
+        assert_eq!(
+            pipeline_textures(NONE, false),
+            TERRAIN_BASE_SAMPLED_TEXTURES
+        );
+        assert_eq!(
+            pipeline_textures(NONE, true),
+            TERRAIN_BASE_SAMPLED_TEXTURES + TERRAIN_SCENE_TEXTURE_SLOTS
+        );
+        let stacked = [
+            W08Slots {
+                page_table: true,
+                ..NONE
+            },
+            W08Slots {
+                page_table: true,
+                overlays: true,
+                vt: false,
+            },
+            W08Slots {
+                page_table: true,
+                overlays: true,
+                vt: true,
+            },
+        ];
+        for (stack, slots) in (1u32..).zip(stacked) {
+            for scene_textures in [false, true] {
+                assert_eq!(
+                    pipeline_textures(slots, scene_textures),
+                    W08Slots::required(scene_textures, stack),
+                    "stack {stack} textured {scene_textures}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn untextured_terrain_fits_every_w08_slot_in_the_webgpu_default() {
+        let slots = W08Slots::for_limits(16, 8, false);
+        assert_eq!(
+            slots,
+            W08Slots {
+                page_table: true,
+                overlays: true,
+                vt: true
+            }
+        );
+        assert!(pipeline_textures(slots, false) <= 16);
+        // A textured material 0 leaves no W08 headroom at the default.
+        assert_eq!(W08Slots::for_limits(16, 8, true), NONE);
+    }
+
+    #[test]
+    fn profiles_never_exceed_the_negotiated_limit() {
+        for sampled in 16..=24 {
+            for scene_textures in [false, true] {
+                let slots = W08Slots::for_limits(sampled, 8, scene_textures);
+                assert!(
+                    pipeline_textures(slots, scene_textures) <= sampled,
+                    "sampled {sampled} textured {scene_textures}"
+                );
+            }
+        }
+        // Textured thresholds: 17 page table, 18 overlays, 19 VT.
+        assert!(W08Slots::for_limits(17, 8, true).page_table);
+        assert!(!W08Slots::for_limits(17, 8, true).overlays);
+        assert!(W08Slots::for_limits(18, 8, true).overlays);
+        assert!(!W08Slots::for_limits(18, 8, true).vt);
+        assert!(W08Slots::for_limits(19, 8, true).vt);
+        // VT also needs the storage-buffer headroom.
+        assert!(!W08Slots::for_limits(24, W08_STORAGE_BUFFERS_VT - 1, false).vt);
+    }
+
+    #[test]
+    fn keeps_drops_only_the_missing_w08_bindings() {
+        let slots = W08Slots {
+            page_table: true,
+            overlays: false,
+            vt: false,
+        };
+        for binding in [0, 5, 8, 12, 13] {
+            assert!(slots.keeps(binding), "binding {binding}");
+        }
+        for binding in 14..=19 {
+            assert!(!slots.keeps(binding), "binding {binding}");
+        }
+    }
+}

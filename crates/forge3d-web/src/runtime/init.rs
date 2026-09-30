@@ -264,8 +264,8 @@ async fn validate_terrain_shader_and_pipeline(
         &textures.bind_group_layout,
         &ibl.bind_group_layout,
     );
-    let features =
-        super::shader_variants::lighting_features(lighting, ibl, shadows).with_terrain_mode(0);
+    let features = super::shader_variants::terrain_lighting_features(lighting, ibl, shadows)
+        .with_terrain_mode(0);
     cache.variant(&context.device, features, surface_format);
 
     if let Some(error) = scope.pop().await {

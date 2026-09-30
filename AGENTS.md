@@ -64,7 +64,7 @@
 
 ## W08: Clipmaps, Streaming, COG, Overlays, VT (2026-09-28)
 
-- The terrain pipeline layout already uses all 16 default WebGPU fragment sampled-texture slots; W08 raises `maxSampledTexturesPerShaderStage` to `min(adapter, 24)` in `forge3d-core/src/gpu/runtime.rs` and gates W08 features on the negotiated limit (capability booleans). Count bindings before adding any fragment texture.
+- (Superseded by "W08 on 16-texture devices" below.) The terrain pipeline layout already uses all 16 default WebGPU fragment sampled-texture slots; W08 raises `maxSampledTexturesPerShaderStage` to `min(adapter, 24)` in `forge3d-core/src/gpu/runtime.rs` and gates W08 features on the negotiated limit (capability booleans). Count bindings before adding any fragment texture.
 - WGSL `vec2<f32>` has 8-byte alignment in storage structs; mirror Rust `#[repr(C)]` structs with explicit offset tests (`lod_select_layouts_match_wgsl`), or readback data is silently garbage.
 - geotiff 3.0.5's `Pool` spawns `blob:` workers (violates the locked `worker-src 'self'`). Decode in the package worker pool with `getDecoder(compression, params)`; `getDecoderParameters` is not exported, so build the params on the main thread.
 - "No W08 input = HEAD bytes" was proven by building HEAD in a C: worktree and hashing page outputs in both trees; use this whenever shared shader code is refactored. Never tune W04/W07 shading to chase a new golden: isolate the new feature (e.g. the VT golden compares albedo AOVs).
@@ -85,3 +85,9 @@
 - `test:package-consumer` refuses a dirty tree, so it had never run for W08; when it did, its static server lacked `Range` support and the COG probe correctly failed with `range-not-supported`. Any harness server that hosts COG fixtures must answer single `bytes=` ranges with 206.
 - A metric needs a negative control that exercises the real failure mode: `morphRange 0` cannot break seams (coarse-boundary vertices are forced to the coarse LOD), so the seam test clears `CLIPMAP_FLAG_COARSE_BOUNDARY` to prove `max_height_discontinuity` detects a > 1e-4-of-range step.
 - The infrastructure test pins the exact Playwright spec list; add every new spec there.
+
+## W08 on 16-texture devices (2026-09-30)
+
+- CI's SwiftShader adapter (and WebGPU's default) exposes 16 fragment sampled textures, and 5 of the terrain's 16 were the scene `TextureSet` (group 2), which terrain only samples when material 0 is textured. The terrain pipeline cache now has two profiles: untextured variants bind an empty group 2 and every W08 slot (11 + 3 <= 16); textured variants keep the old 17/18/19 thresholds. Variant `tex_*` bits for terrain come from material 0 (`terrain_lighting_features`), not the union over materials.
+- The pipeline layout counts every BGL entry, used or not: an unused group in the layout still consumes slots. `w08_slot_tests` count the real layout entries so the 11/5 constants cannot drift.
+- Emulate a low-limit adapter by overriding `adapter.limits` in an init script (see `w08_limits.spec.ts`); a global cap overrides per-test caps, so expect those tests to disagree under it.

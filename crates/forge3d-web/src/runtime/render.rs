@@ -435,10 +435,11 @@ pub(super) fn encode_scene_render_pass(
             runtime.textures.as_ref(),
             runtime.ibl.as_ref(),
         ) {
+            let (group0, group2) = terrain.profile_bind_groups(textures.bind_group_for(0));
             render_pass.set_pipeline(&terrain.pipeline);
-            render_pass.set_bind_group(0, &terrain.bind_group, &[]);
+            render_pass.set_bind_group(0, group0, &[]);
             render_pass.set_bind_group(1, &lighting.bind_group, &[]);
-            render_pass.set_bind_group(2, textures.bind_group_for(0), &[]);
+            render_pass.set_bind_group(2, group2, &[]);
             render_pass.set_bind_group(3, &ibl.bind_group, &[]);
             render_pass.set_vertex_buffer(0, terrain.vertex_buffer.slice(..));
             render_pass.set_index_buffer(terrain.index_buffer.slice(..), wgpu::IndexFormat::Uint32);

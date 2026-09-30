@@ -28,12 +28,13 @@ test.describe("W08 terrain clipmap geometry + streamed heightfield", () => {
     expect(r.deviceState).toBe("ready");
     expect(typeof r.maxSampledTexturesPerShaderStage).toBe("number");
     expect(r.maxSampledTexturesPerShaderStage).toBeGreaterThanOrEqual(16);
-    // The clipmap path only needs the WebGPU-default 16 sampled textures;
-    // streaming/overlays/VT need the raised limits the adapter supports.
+    // Untextured terrain fits every W08 slot in the WebGPU-default 16
+    // sampled textures (a textured material 0 is gated per commit; see
+    // w08_limits.spec.ts).
     expect(r.terrainClipmap).toBe(true);
-    if (r.maxSampledTexturesPerShaderStage >= 17) {
-      expect(r.terrainStreaming).toBe(true);
-    }
+    expect(r.terrainStreaming).toBe(true);
+    expect(r.terrainOverlays).toBe(true);
+    expect(r.terrainVirtualTexture).toBe(true);
   });
 
   test("clipmap renders a steep DEM crack-free in the central region (all clear pixels counted)", async ({
