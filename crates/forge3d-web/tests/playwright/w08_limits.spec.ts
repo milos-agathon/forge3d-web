@@ -70,6 +70,11 @@ test.describe("W08 limit gates and typed resource errors", () => {
       test.slow();
       await page.addInitScript(capSampledTextures(cap));
       const r = await probe(page, "limitGates");
+      // The init script can only lower the adapter's limit.
+      test.skip(
+        r.caps.maxSampledTexturesPerShaderStage < cap,
+        `adapter exposes ${r.caps.maxSampledTexturesPerShaderStage} sampled textures (< ${cap})`,
+      );
       expect(r.caps.maxSampledTexturesPerShaderStage, JSON.stringify(r.caps)).toBe(cap);
       for (const flag of [
         "terrainClipmap",
@@ -90,6 +95,11 @@ test.describe("W08 limit gates and typed resource errors", () => {
       test.slow();
       await page.addInitScript(capSampledTextures(gate.cap));
       const r = await probe(page, "limitGatesTextured");
+      // The init script can only lower the adapter's limit.
+      test.skip(
+        r.sampled < gate.cap,
+        `adapter exposes ${r.sampled} sampled textures (< ${gate.cap})`,
+      );
       expect(r.sampled).toBe(gate.cap);
       expect(r.texturedCommit, JSON.stringify(r.texturedCommit)).toBeNull();
       expect(r.attempts.clipmap, JSON.stringify(r.attempts.clipmap)).toBeNull();
