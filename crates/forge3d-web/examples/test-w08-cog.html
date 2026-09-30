@@ -514,7 +514,16 @@
       });
 
       api.rangeIgnored = async (url) => {
-        const scheduler = new RangeScheduler();
+        // Record the signal of every fetch the scheduler issues, so the
+        // abort is observed in the page on every engine (a route-fulfilled
+        // body may complete before the network layer can report it).
+        const signals = [];
+        const scheduler = new RangeScheduler({
+          fetch: (input, init) => {
+            signals.push(init.signal);
+            return fetch(input, init);
+          },
+        });
         try {
           await CogDataset.open(url, { scheduler });
           return { code: "NONE" };
@@ -525,6 +534,8 @@
             reason: normalized.details?.reason ?? null,
             message: normalized.message,
             range: scheduler.stats(),
+            fetches: signals.length,
+            fetchesAborted: signals.filter((signal) => signal.aborted).length,
           };
         }
       };

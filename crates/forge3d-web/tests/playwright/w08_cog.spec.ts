@@ -317,6 +317,7 @@ test.describe("W08 COG: range scheduler + geotiff over a mocked range server", (
 
   test("range-ignoring server produces a typed error without a full download", async ({
     page,
+    browserName,
   }) => {
     const truth = fixtureTruth("rainier-cog.tif");
     const stats = await installRangeServer(page);
@@ -324,15 +325,20 @@ test.describe("W08 COG: range scheduler + geotiff over a mocked range server", (
     expect(r.code).toBe("IO_ERROR");
     expect(r.reason, JSON.stringify(r)).toBe("range-not-supported");
     // The H3 fix: the fetch is aborted and the response body cancelled, so
-    // (a) the page consumed a bounded prefix only, and (b) the aborted
-    // request surfaces at the network layer.
+    // (a) the page consumed a bounded prefix only, and (b) every fetch the
+    // scheduler issued was aborted.
     expect(r.range.bytesTransferred).toBeLessThan(truth.sizeBytes);
-    // The aborted fetch surfaces as a failed request at the network layer.
-    await expect
-      .poll(() => abortedRequestCount(stats), {
-        message: "fetch must be aborted on a range-ignored 200",
-      })
-      .toBeGreaterThan(0);
+    expect(r.fetches, JSON.stringify(r)).toBeGreaterThan(0);
+    expect(r.fetchesAborted, "fetch must be aborted on a range-ignored 200").toBe(r.fetches);
+    // Chromium also reports the abort at the network layer; Firefox may
+    // finish a route-fulfilled body before the abort lands.
+    if (browserName === "chromium") {
+      await expect
+        .poll(() => abortedRequestCount(stats), {
+          message: "Chromium surfaces the aborted fetch as a failed request",
+        })
+        .toBeGreaterThan(0);
+    }
   });
 
   test("AbortSignal mid-flight rejects REQUEST_CANCELLED and aborts the fetch", async ({
