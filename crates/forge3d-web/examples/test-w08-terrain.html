@@ -1,0 +1,1400 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forge3D W08 Terrain Clipmap/Streaming Test</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        background: #000;
+      }
+
+      canvas {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="w08-canvas" width="512" height="384"></canvas>
+    <canvas id="w08-canvas-b" width="512" height="384"></canvas>
+    <script type="module">
+      import {
+        Forge3DError,
+        Forge3DRuntime,
+        Forge3DScene,
+        TextureSet,
+        calculateTriangleReduction,
+        generateClipmapMesh,
+        selectLodTilesReference,
+        viewProjection,
+      } from "../src-ts/index.ts";
+      import { simulateRuntimeDeviceLossForTests } from "../src-ts/runtime-internals.ts";
+
+      const canvas = document.querySelector("#w08-canvas");
+      const canvasB = document.querySelector("#w08-canvas-b");
+      // Distinctive clear color: any clear pixel inside the rasterized
+      // footprint is a crack or an uncovered region.
+      const CLEAR = [1, 0, 1, 1];
+      const W = canvas.width;
+      const H = canvas.height;
+
+      async function createRuntime(target = canvas) {
+        return Forge3DRuntime.create(target, {
+          width: W,
+          height: H,
+          devicePixelRatio: 1,
+          clearColor: CLEAR,
+          diagnostics: true,
+        });
+      }
+
+      // ---------------------------------------------------------------------
+      // Image metrics
+      // ---------------------------------------------------------------------
+
+      // Interior-hole metric for the fly-through (its cameras legitimately
+      // see sky/background past the DEM edge): clear pixels whose 8
+      // neighbors are all non-clear — holes strictly inside the rasterized
+      // footprint.
+      function enclosedClearPixels(rgba, w, h) {
+        return enclosedClearCoords(rgba, w, h).length;
+      }
+
+      function enclosedClearCoords(rgba, w, h) {
+        const at = (x, y) => {
+          const i = (y * w + x) * 4;
+          return rgba[i] === 255 && rgba[i + 1] === 0 && rgba[i + 2] === 255 && rgba[i + 3] === 255;
+        };
+        const holes = [];
+        for (let y = 1; y < h - 1; y += 1) {
+          for (let x = 1; x < w - 1; x += 1) {
+            if (!at(x, y)) continue;
+            let enclosed = true;
+            for (const [dx, dy] of [[-1, 0], [1, 0], [0, -1], [0, 1], [-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+              if (at(x + dx, y + dy)) {
+                enclosed = false;
+                break;
+              }
+            }
+            if (enclosed) holes.push([x, y]);
+          }
+        }
+        return holes;
+      }
+
+      // Counts pixels exactly equal to the clear color in `rgba` inside the
+      // central `fraction` box (e.g. 0.6 -> middle 60%). Unlike the retired
+      // `enclosedClearPixels`, this catches 1-px crack lines: every clear
+      // pixel inside the footprint is a failure.
+      function centralClearPixels(rgba, w, h, fraction = 0.6) {
+        const x0 = Math.floor((w * (1 - fraction)) / 2);
+        const y0 = Math.floor((h * (1 - fraction)) / 2);
+        const x1 = Math.ceil(w * (1 + fraction) / 2);
+        const y1 = Math.ceil(h * (1 + fraction) / 2);
+        let count = 0;
+        for (let y = y0; y < y1; y += 1) {
+          for (let x = x0; x < x1; x += 1) {
+            const i = (y * w + x) * 4;
+            if (
+              rgba[i] === 255 &&
+              rgba[i + 1] === 0 &&
+              rgba[i + 2] === 255 &&
+              rgba[i + 3] === 255
+            ) {
+              count += 1;
+            }
+          }
+        }
+        return count;
+      }
+
+      // Crops the central `fraction` box out of an rgba frame.
+      function cropCenter(rgba, w, h, fraction = 0.6) {
+        const x0 = Math.floor((w * (1 - fraction)) / 2);
+        const y0 = Math.floor((h * (1 - fraction)) / 2);
+        const cw = Math.ceil(w * fraction);
+        const ch = Math.ceil(h * fraction);
+        const out = new Uint8ClampedArray(cw * ch * 4);
+        for (let y = 0; y < ch; y += 1) {
+          const src = ((y0 + y) * w + x0) * 4;
+          out.set(rgba.subarray(src, src + cw * 4), y * cw * 4);
+        }
+        return { data: out, width: cw, height: ch };
+      }
+
+      function framesEqual(a, b) {
+        if (a.length !== b.length) return { byteEqual: false, maxDiff: -1 };
+        let maxDiff = 0;
+        for (let i = 0; i < a.length; i += 1) {
+          const d = Math.abs(a[i] - b[i]);
+          if (d > maxDiff) maxDiff = d;
+        }
+        return { byteEqual: maxDiff === 0, maxDiff };
+      }
+
+      // Gaussian SSIM — identical algorithm to test-w07-materials.html.
+      function gaussianWindow(size, sigma) {
+        const weights = new Float64Array(size);
+        let sum = 0;
+        for (let index = 0; index < size; index += 1) {
+          const coordinate = index - (size - 1) / 2;
+          weights[index] = Math.exp(-0.5 * (coordinate / sigma) ** 2);
+          sum += weights[index];
+        }
+        return weights.map((value) => value / sum);
+      }
+
+      function filterChannel(channel, width, height, weights) {
+        const half = (weights.length - 1) / 2;
+        const temp = new Float64Array(width * height);
+        const out = new Float64Array(width * height);
+        for (let y = 0; y < height; y += 1) {
+          for (let x = 0; x < width; x += 1) {
+            let sum = 0;
+            for (let k = -half; k <= half; k += 1) {
+              const sx = x + k;
+              if (sx >= 0 && sx < width) sum += channel[y * width + sx] * weights[k + half];
+            }
+            temp[y * width + x] = sum;
+          }
+        }
+        for (let y = 0; y < height; y += 1) {
+          for (let x = 0; x < width; x += 1) {
+            let sum = 0;
+            for (let k = -half; k <= half; k += 1) {
+              const sy = y + k;
+              if (sy >= 0 && sy < height) sum += temp[sy * width + x] * weights[k + half];
+            }
+            out[y * width + x] = sum;
+          }
+        }
+        return out;
+      }
+
+      function ssimRgba(a, b, width, height) {
+        const weights = gaussianWindow(11, 1.5);
+        const pixels = width * height;
+        const c1 = (0.01 * 255) ** 2;
+        const c2 = (0.03 * 255) ** 2;
+        let total = 0;
+        for (let channel = 0; channel < 3; channel += 1) {
+          const x = new Float64Array(pixels);
+          const y = new Float64Array(pixels);
+          for (let index = 0; index < pixels; index += 1) {
+            x[index] = a[index * 4 + channel];
+            y[index] = b[index * 4 + channel];
+          }
+          const xx = x.map((v) => v * v);
+          const yy = y.map((v) => v * v);
+          const xy = x.map((v, i) => v * y[i]);
+          const muX = filterChannel(x, width, height, weights);
+          const muY = filterChannel(y, width, height, weights);
+          const sXX = filterChannel(xx, width, height, weights);
+          const sYY = filterChannel(yy, width, height, weights);
+          const sXY = filterChannel(xy, width, height, weights);
+          let sum = 0;
+          for (let index = 0; index < pixels; index += 1) {
+            const mx2 = muX[index] * muX[index];
+            const my2 = muY[index] * muY[index];
+            const cov = sXY[index] - muX[index] * muY[index];
+            sum +=
+              ((2 * muX[index] * muY[index] + c1) * (2 * cov + c2)) /
+              ((mx2 + my2 + c1) * (sXX[index] - mx2 + sYY[index] - my2 + c2));
+          }
+          total += sum / pixels;
+        }
+        return total / 3;
+      }
+
+      // Mean absolute difference over RGB, in 0..255 units.
+      function meanAbsDiff(a, b) {
+        let total = 0;
+        for (let index = 0; index < a.length; index += 4) {
+          total +=
+            Math.abs(a[index] - b[index]) +
+            Math.abs(a[index + 1] - b[index + 1]) +
+            Math.abs(a[index + 2] - b[index + 2]);
+        }
+        return total / ((a.length / 4) * 3);
+      }
+
+      function compareCentral(a, b, w, h, fraction = 0.6) {
+        const ca = cropCenter(a, w, h, fraction);
+        const cb = cropCenter(b, w, h, fraction);
+        return {
+          meanAbs: meanAbsDiff(ca.data, cb.data),
+          ssim: ssimRgba(ca.data, cb.data, ca.width, ca.height),
+        };
+      }
+
+      // ---------------------------------------------------------------------
+      // Fixtures
+      // ---------------------------------------------------------------------
+
+      function steepHeights(n) {
+        const heights = new Float32Array(n * n);
+        for (let z = 0; z < n; z += 1) {
+          for (let x = 0; x < n; x += 1) {
+            heights[z * n + x] =
+              500 * Math.sin(x * 0.09) * Math.cos(z * 0.07) +
+              300 * (x / (n - 1)) +
+              150 * Math.sin((x + z) * 0.21);
+          }
+        }
+        return heights;
+      }
+
+      // Crack-test DEM: a +z ramp (gradient ~1.27) with steep bumps, so a low
+      // camera inside the extent looking uphill sees terrain fill the frame.
+      function crackHeights(n) {
+        const spacing = 4;
+        const heights = new Float32Array(n * n);
+        for (let z = 0; z < n; z += 1) {
+          for (let x = 0; x < n; x += 1) {
+            const wx = (x - (n - 1) / 2) * spacing;
+            const wz = (z - (n - 1) / 2) * spacing;
+            heights[z * n + x] =
+              ((wz + ((n - 1) * spacing) / 2) / ((n - 1) * spacing)) * 2600 +
+              600 * Math.sin(wx * 0.018) * Math.cos(wz * 0.013) +
+              300 * Math.sin((wx + wz) * 0.031);
+          }
+        }
+        return heights;
+      }
+
+      const FIXTURE_CLIPMAP = {
+        ringCount: 8,
+        ringResolution: 64,
+        centerResolution: 64,
+        skirtDepth: 60,
+        morphRange: 0.3,
+      };
+
+      function clipmapTerrain(n, clipmap, heights) {
+        return {
+          width: n,
+          height: n,
+          heights: heights ?? steepHeights(n),
+          spacing: [4, 4],
+          exaggeration: 1,
+          renderMode: "perspective",
+          geometry: {
+            mode: "clipmap",
+            clipmap: { ...FIXTURE_CLIPMAP, ...(clipmap ?? {}) },
+          },
+        };
+      }
+
+      function denseTerrain(n, geometry, heights, spacing) {
+        return {
+          width: n,
+          height: n,
+          heights: heights ?? steepHeights(n),
+          spacing: spacing ?? [4, 4],
+          exaggeration: 1,
+          renderMode: "perspective",
+          ...(geometry === undefined ? {} : { geometry }),
+        };
+      }
+
+      // Grazing cameras sweeping across the terrain edge.
+      function grazingCameras() {
+        return [-0.35, 0.0, 0.35].map((offset) => ({
+          position: [512 + offset * 400, 55, -60],
+          target: [512 + offset * 400, 40, 512],
+          up: [0, 1, 0],
+          fovYDegrees: 55,
+          near: 1,
+          far: 8000,
+        }));
+      }
+
+      // Crack test camera: inside the DEM extent, polar ~72deg (view ~18deg
+      // below horizontal toward the rising slope) so the central region is
+      // entirely terrain; steep relief stresses the ring stitch.
+      const CRACK_CAM = {
+        position: [0, 1300, -900],
+        target: [0, 600, 800],
+        up: [0, 1, 0],
+        fovYDegrees: 55,
+        near: 1,
+        far: 20000,
+      };
+      // Negative control: same position looking away from the ramp, past the
+      // -z footprint edge; the metric must find clear pixels.
+      const CRACK_CAM_PAST_EDGE = {
+        ...CRACK_CAM,
+        target: [0, 600, -2500],
+      };
+
+      // Streaming fixture: virtual 16385x16385 pyramid, tile 256, 8 lods,
+      // coarsest committed level 129x129.
+      const VIRTUAL_N = 16385;
+      const TILE = 256;
+      const LOD_COUNT = 8;
+      const BASE_DIMS = 129;
+
+      function fineHeight(i, j) {
+        return (
+          800 * Math.sin(i * 0.0035) * Math.cos(j * 0.0031) +
+          250 * Math.sin(i * 0.043) * Math.sin(j * 0.037)
+        );
+      }
+
+      function coarseBase() {
+        const heights = new Float32Array(BASE_DIMS * BASE_DIMS);
+        for (let j = 0; j < BASE_DIMS; j += 1) {
+          for (let i = 0; i < BASE_DIMS; i += 1) {
+            heights[j * BASE_DIMS + i] = fineHeight(i * 128, j * 128);
+          }
+        }
+        return heights;
+      }
+
+      function streamedTerrain() {
+        return {
+          width: BASE_DIMS,
+          height: BASE_DIMS,
+          heights: coarseBase(),
+          spacing: [1, 1],
+          exaggeration: 1,
+          renderMode: "perspective",
+          geometry: {
+            mode: "clipmap",
+            clipmap: {
+              ringCount: 8,
+              ringResolution: 64,
+              centerResolution: 64,
+              skirtDepth: 60,
+              morphRange: 0.3,
+            },
+          },
+          streaming: {
+            width: VIRTUAL_N,
+            height: VIRTUAL_N,
+            tileSize: TILE,
+            maxResidentBytes: 32 << 20,
+            lodBias: 0,
+            prefetchMarginTiles: 1,
+            maxInFlight: 128,
+            coalescePolicy: "prefer-coarse",
+          },
+        };
+      }
+
+      function dimsLod(lod) {
+        return ((VIRTUAL_N - 1) >>> lod) + 1;
+      }
+
+      function tileHeights(lod, x, y) {
+        const w = Math.min(TILE, dimsLod(lod) - x * TILE);
+        const h = Math.min(TILE, dimsLod(lod) - y * TILE);
+        const heights = new Float32Array(w * h);
+        for (let j = 0; j < h; j += 1) {
+          for (let i = 0; i < w; i += 1) {
+            const fi = Math.min((x * TILE + i) << lod, VIRTUAL_N - 1);
+            const fj = Math.min((y * TILE + j) << lod, VIRTUAL_N - 1);
+            heights[j * w + i] = fineHeight(fi, fj);
+          }
+        }
+        return heights;
+      }
+
+      // Drain planned requests until the queue is empty.
+      function drainRequests(runtime, maxRequests, tileSource = tileHeights) {
+        let rounds = 0;
+        const totals = { requests: 0, cancelled: 0 };
+        while (rounds < 60) {
+          rounds += 1;
+          const plan = runtime.planHeightTiles(maxRequests);
+          totals.cancelled += plan.cancelled.length;
+          if (plan.requests.length === 0) break;
+          totals.requests += plan.requests.length;
+          for (const request of plan.requests) {
+            runtime.completeHeightTile(
+              request.lod,
+              request.x,
+              request.y,
+              tileSource(request.lod, request.x, request.y),
+            );
+          }
+        }
+        return totals;
+      }
+
+      // lod-0 tile list mirroring the runtime's GPU input (world bounds +
+      // coarse-base height range), for selectLodTilesReference parity.
+      function referenceTiles() {
+        const tilesX = Math.ceil(dimsLod(0) / TILE);
+        const tilesY = tilesX;
+        const origin = -((VIRTUAL_N - 1) * 0.5);
+        const base = coarseBase();
+        const shift = LOD_COUNT - 1;
+        const tiles = [];
+        for (let y = 0; y < tilesY; y += 1) {
+          for (let x = 0; x < tilesX; x += 1) {
+            const i0 = Math.min(x * TILE, VIRTUAL_N - 1);
+            const j0 = Math.min(y * TILE, VIRTUAL_N - 1);
+            const i1 = Math.min((x + 1) * TILE, VIRTUAL_N - 1);
+            const j1 = Math.min((y + 1) * TILE, VIRTUAL_N - 1);
+            let min = Infinity;
+            let max = -Infinity;
+            for (let cj = Math.min(j0 >> shift, BASE_DIMS - 1); cj <= Math.min(j1 >> shift, BASE_DIMS - 1); cj += 1) {
+              for (let ci = Math.min(i0 >> shift, BASE_DIMS - 1); ci <= Math.min(i1 >> shift, BASE_DIMS - 1); ci += 1) {
+                const v = base[cj * BASE_DIMS + ci];
+                if (v < min) min = v;
+                if (v > max) max = v;
+              }
+            }
+            tiles.push({
+              lod: 0,
+              x,
+              y,
+              boundsMin: [origin + i0, origin + j0],
+              boundsMax: [origin + i1, origin + j1],
+              heightMin: min,
+              heightMax: max,
+            });
+          }
+        }
+        return tiles;
+      }
+
+      const STREAM_CAM = {
+        position: [2400, 900, -1800],
+        target: [1200, 0, 2400],
+        up: [0, 1, 0],
+        fovYDegrees: 55,
+        near: 5,
+        far: 40000,
+      };
+
+      // clipmap-seam-v1 overlay layers: three distinct blend modes and
+      // z-orders draped over the virtual terrain.
+      function seamOverlayImage(seed) {
+        const size = 64;
+        const data = new Uint8Array(size * size * 4);
+        for (let i = 0; i < size * size; i += 1) {
+          const u = (i % size) / size;
+          const v = Math.floor(i / size) / size;
+          data[i * 4] = (seed * 53 + Math.round(u * 180)) & 0xff;
+          data[i * 4 + 1] = (seed * 91 + Math.round(v * 160)) & 0xff;
+          data[i * 4 + 2] = (seed * 37 + Math.round((u + v) * 90)) & 0xff;
+          data[i * 4 + 3] = Math.round(120 + 100 * u * v) & 0xff;
+        }
+        return { width: size, height: size, data };
+      }
+
+      function flythroughCameras() {
+        return [0, 1, 2, 3].map((step) => ({
+          ...STREAM_CAM,
+          position: [STREAM_CAM.position[0] + step * 900, STREAM_CAM.position[1] - step * 120, STREAM_CAM.position[2] + step * 700],
+          target: [STREAM_CAM.target[0] + step * 900, STREAM_CAM.target[1], STREAM_CAM.target[2] + step * 700],
+        }));
+      }
+
+      // ---------------------------------------------------------------------
+      // Streaming parity fixture: virtual 1025x1025 pyramid, tile 256,
+      // lod dims 1025/513/257/129 -> lodCount 4, base 129x129 committed.
+      // ---------------------------------------------------------------------
+
+      const VIRTUAL1025 = 1025;
+      const LOD_COUNT1025 = 4;
+      const BASE1025 = 129;
+
+      function fineHeight1025(i, j) {
+        return (
+          700 * Math.sin(i * 0.011) * Math.cos(j * 0.009) +
+          260 * Math.sin(i * 0.047) * Math.sin(j * 0.039) +
+          120 * Math.sin((i + j) * 0.083)
+        );
+      }
+
+      function denseHeights1025() {
+        const heights = new Float32Array(VIRTUAL1025 * VIRTUAL1025);
+        for (let j = 0; j < VIRTUAL1025; j += 1) {
+          for (let i = 0; i < VIRTUAL1025; i += 1) {
+            heights[j * VIRTUAL1025 + i] = fineHeight1025(i, j);
+          }
+        }
+        return heights;
+      }
+
+      function base1025() {
+        const heights = new Float32Array(BASE1025 * BASE1025);
+        for (let j = 0; j < BASE1025; j += 1) {
+          for (let i = 0; i < BASE1025; i += 1) {
+            heights[j * BASE1025 + i] = fineHeight1025(i * 8, j * 8);
+          }
+        }
+        return heights;
+      }
+
+      function dimsLod1025(lod) {
+        return ((VIRTUAL1025 - 1) >>> lod) + 1;
+      }
+
+      function tileHeights1025(lod, x, y) {
+        const w = Math.min(TILE, dimsLod1025(lod) - x * TILE);
+        const h = Math.min(TILE, dimsLod1025(lod) - y * TILE);
+        const heights = new Float32Array(w * h);
+        for (let j = 0; j < h; j += 1) {
+          for (let i = 0; i < w; i += 1) {
+            const fi = Math.min((x * TILE + i) << lod, VIRTUAL1025 - 1);
+            const fj = Math.min((y * TILE + j) << lod, VIRTUAL1025 - 1);
+            heights[j * w + i] = fineHeight1025(fi, fj);
+          }
+        }
+        return heights;
+      }
+
+      // Identical clipmap config + camera for the streamed and dense renders.
+      const PARITY_CLIPMAP = {
+        ringCount: 6,
+        ringResolution: 64,
+        centerResolution: 128,
+        skirtDepth: 60,
+        morphRange: 0.3,
+      };
+      // Near-nadir camera over the snapped center. Heights render at
+      // (h - domain_min) * exaggeration, so the DEM surface sits ~900-2000
+      // units up: the former y=550 camera was under the terrain and both
+      // parity frames were pure clear color. At y=2400 the frame is fully
+      // covered (asserted via `centralClear`).
+      const PARITY_CAM = {
+        position: [0, 2400, 264],
+        target: [0, 0, 0],
+        up: [0, 1, 0],
+        fovYDegrees: 40,
+        near: 1,
+        far: 40000,
+      };
+
+      // Explicit shared height domain: the streamed commit only sees the
+      // 129x129 coarse base, whose min/max differ from the dense 1025x1025
+      // data, and the domain drives world y and every height_norm.
+      const DOMAIN1025 = [-1100, 1100];
+
+      function streamedTerrain1025() {
+        return {
+          width: BASE1025,
+          height: BASE1025,
+          heights: base1025(),
+          spacing: [4, 4],
+          exaggeration: 1,
+          domain: [...DOMAIN1025],
+          renderMode: "perspective",
+          geometry: { mode: "clipmap", clipmap: { ...PARITY_CLIPMAP } },
+          streaming: {
+            width: VIRTUAL1025,
+            height: VIRTUAL1025,
+            tileSize: TILE,
+            maxResidentBytes: 48 << 20,
+            lodBias: 0,
+            prefetchMarginTiles: 0,
+            maxInFlight: 128,
+            coalescePolicy: "prefer-coarse",
+          },
+        };
+      }
+
+      function denseTerrain1025() {
+        return {
+          width: VIRTUAL1025,
+          height: VIRTUAL1025,
+          heights: denseHeights1025(),
+          spacing: [4, 4],
+          exaggeration: 1,
+          domain: [...DOMAIN1025],
+          renderMode: "perspective",
+          geometry: { mode: "clipmap", clipmap: { ...PARITY_CLIPMAP } },
+        };
+      }
+
+      // ---------------------------------------------------------------------
+      // Cases
+      // ---------------------------------------------------------------------
+
+      function attemptCommit(runtime, terrain) {
+        try {
+          runtime.setTerrain(terrain);
+          return null;
+        } catch (error) {
+          const typed = Forge3DError.from(error);
+          return { code: typed.code, message: typed.message };
+        }
+      }
+
+      // Material snapshots with an untextured / textured material 0 (the
+      // only material terrain shading reads). A textured material 0 moves
+      // terrain to the pipeline profile that binds the scene TextureSet.
+      function materialSnapshot(textured) {
+        const scene = Forge3DScene.create();
+        if (textured) {
+          scene.setMaterial("default", {
+            id: "default",
+            brdf: "cooktorrance-ggx",
+            baseColor: [1, 1, 1, 1],
+            roughness: 0.6,
+            textures: new TextureSet({
+              baseColor: {
+                width: 2,
+                height: 2,
+                format: "rgba8unorm-srgb",
+                colorSpace: "srgb",
+                data: new Uint8Array([
+                  230, 220, 200, 255, 120, 140, 90, 255,
+                  120, 140, 90, 255, 230, 220, 200, 255,
+                ]),
+              },
+            }),
+          });
+        }
+        return scene.snapshot().materials;
+      }
+
+      function attemptMaterials(runtime, textured) {
+        try {
+          runtime.setMaterials(materialSnapshot(textured));
+          return null;
+        } catch (error) {
+          const typed = Forge3DError.from(error);
+          return { code: typed.code, message: typed.message };
+        }
+      }
+
+      // Hovers over the small probe terrains (centered on the origin);
+      // clipmap rings follow the camera, so it must stay over the terrain.
+      const OVERHEAD_CAM = {
+        position: [0, 500, -60],
+        target: [0, 0, 60],
+        up: [0, 1, 0],
+        fovYDegrees: 55,
+        near: 1,
+        far: 20000,
+      };
+
+      async function nonClearPixels(runtime, camera = OVERHEAD_CAM) {
+        runtime.setCamera(camera);
+        runtime.render();
+        const rgba = await runtime.readRgba();
+        const clear = CLEAR.map((channel) => Math.round(channel * 255));
+        let count = 0;
+        for (let i = 0; i < rgba.length; i += 4) {
+          if (rgba[i] !== clear[0] || rgba[i + 1] !== clear[1] || rgba[i + 2] !== clear[2]) {
+            count += 1;
+          }
+        }
+        return count;
+      }
+
+      function smallClipmapTerrain() {
+        return denseTerrain(65, {
+          mode: "clipmap",
+          clipmap: { ringCount: 2, ringResolution: 16, centerResolution: 16 },
+        });
+      }
+
+      function overlayTerrain() {
+        return {
+          ...denseTerrain(65),
+          overlays: {
+            layers: [
+              {
+                name: "gate",
+                image: seamOverlayImage(0),
+                opacity: 1,
+                blendMode: "normal",
+                zOrder: 0,
+              },
+            ],
+          },
+        };
+      }
+
+      function vtTerrain(atlasSize = 1024) {
+        return {
+          ...denseTerrain(65),
+          material: {
+            albedoMode: "material",
+            virtualTexture: {
+              enabled: true,
+              atlasSize,
+              layers: [{ family: "albedo", virtualSizePx: [496, 496] }],
+            },
+          },
+        };
+      }
+
+      function ledgerSnapshot(runtime) {
+        const report = runtime.getMemoryReport();
+        return {
+          currentBytes: report.currentBytes,
+          allocationCount: report.allocationCount,
+          categories: report.categories,
+        };
+      }
+
+      const w08 = {
+        // E0 gates: capability booleans and typed UNSUPPORTED_FEATURE per
+        // W08 feature (the spec lowers the adapter's
+        // maxSampledTexturesPerShaderStage before the runtime is created).
+        async limitGates() {
+          const runtime = await createRuntime();
+          try {
+            const caps = runtime.getCapabilities();
+            return {
+              caps: {
+                maxSampledTexturesPerShaderStage: caps.maxSampledTexturesPerShaderStage,
+                terrainClipmap: caps.terrainClipmap,
+                terrainStreaming: caps.terrainStreaming,
+                terrainOverlays: caps.terrainOverlays,
+                terrainVirtualTexture: caps.terrainVirtualTexture,
+              },
+              clipmap: attemptCommit(runtime, smallClipmapTerrain()),
+              streaming: attemptCommit(runtime, streamedTerrain1025()),
+              overlays: attemptCommit(runtime, overlayTerrain()),
+              vt: attemptCommit(runtime, vtTerrain()),
+            };
+          } finally {
+            runtime.dispose();
+          }
+        },
+
+        // W08 (E0) with a textured material 0: the textured pipeline profile
+        // binds the scene TextureSet, so W08 slots need 5 more sampled
+        // textures. Commits in either order are gated with typed errors, and
+        // every accepted combination renders.
+        async limitGatesTextured() {
+          const runtime = await createRuntime();
+          try {
+            // Control: the same clipmap terrain rendered untextured.
+            const untexturedClipmap = attemptCommit(runtime, smallClipmapTerrain());
+            const untexturedRender =
+              untexturedClipmap === null ? await nonClearPixels(runtime) : null;
+            const texturedCommit = attemptMaterials(runtime, true);
+            const attempts = {};
+            const renders = {};
+            for (const [name, build, camera] of [
+              ["clipmap", smallClipmapTerrain, OVERHEAD_CAM],
+              ["streaming", streamedTerrain1025, grazingCameras()[1]],
+              ["overlays", overlayTerrain, OVERHEAD_CAM],
+              ["vt", () => vtTerrain(), OVERHEAD_CAM],
+            ]) {
+              attempts[name] = attemptCommit(runtime, build());
+              renders[name] =
+                attempts[name] === null ? await nonClearPixels(runtime, camera) : null;
+            }
+            // Reverse order: overlays committed untextured, then texturing
+            // material 0 must be refused atomically where it cannot fit.
+            attemptMaterials(runtime, false);
+            const overlaysUntextured = attemptCommit(runtime, overlayTerrain());
+            runtime.setCamera(grazingCameras()[1]);
+            runtime.render();
+            const frameBefore = await runtime.readRgba();
+            const ledgerBefore = ledgerSnapshot(runtime);
+            const reverseMaterial = attemptMaterials(runtime, true);
+            runtime.render();
+            const frameAfter = await runtime.readRgba();
+            return {
+              sampled: runtime.getCapabilities().maxSampledTexturesPerShaderStage,
+              untexturedClipmap,
+              untexturedRender,
+              texturedCommit,
+              attempts,
+              renders,
+              overlaysUntextured,
+              reverseMaterial,
+              reverseLedgerEqual:
+                JSON.stringify(ledgerSnapshot(runtime)) === JSON.stringify(ledgerBefore),
+              reverseFrame: framesEqual(frameBefore, frameAfter),
+            };
+          } finally {
+            runtime.dispose();
+          }
+        },
+
+        // Atlases larger than maxTextureDimension2D are typed
+        // RESOURCE_LIMIT_EXCEEDED, and the rejected commit changes nothing.
+        async atlasDimensionLimits() {
+          const runtime = await createRuntime();
+          try {
+            const max = runtime.getCapabilities().maxTextureDimension2D;
+            runtime.setTerrain(denseTerrain(65));
+            runtime.setCamera(grazingCameras()[1]);
+            runtime.render();
+            const frameBefore = await runtime.readRgba();
+            const ledgerBefore = ledgerSnapshot(runtime);
+            // Enough 256^2 slots that ceil(sqrt(slots)) * 256 > max.
+            const perRow = Math.floor(max / TILE) + 1;
+            const streaming = streamedTerrain1025();
+            streaming.streaming.maxResidentBytes = perRow * perRow * TILE * TILE * 4;
+            const streamingError = attemptCommit(runtime, streaming);
+            const vtError = attemptCommit(runtime, vtTerrain(max * 2));
+            runtime.render();
+            const frameAfter = await runtime.readRgba();
+            return {
+              max,
+              streamingError,
+              vtError,
+              ledgerBefore,
+              ledgerAfter: ledgerSnapshot(runtime),
+              frame: framesEqual(frameBefore, frameAfter),
+            };
+          } finally {
+            runtime.dispose();
+          }
+        },
+
+        // W08 memory pre-check: a commit whose W08 allocations do not fit
+        // is rejected before anything is allocated; the ledger and the
+        // committed terrain are exactly as before.
+        async w08MemoryPrecheck() {
+          const runtime = await Forge3DRuntime.create(canvas, {
+            width: W,
+            height: H,
+            devicePixelRatio: 1,
+            clearColor: CLEAR,
+            diagnostics: true,
+            memoryBudgetBytes: 96 << 20,
+            overflowPolicy: "reject",
+          });
+          try {
+            runtime.setTerrain(denseTerrain(65));
+            runtime.setCamera(grazingCameras()[1]);
+            runtime.render();
+            const frameBefore = await runtime.readRgba();
+            const ledgerBefore = ledgerSnapshot(runtime);
+            // 88 MiB height atlas: the base terrain fits, the W08 block
+            // does not.
+            const streaming = streamedTerrain1025();
+            streaming.streaming.maxResidentBytes = 88 << 20;
+            const streamingError = attemptCommit(runtime, streaming);
+            const ledgerAfterStreaming = ledgerSnapshot(runtime);
+            // An 8192^2 RGBA8 VT atlas (256 MiB) with an overlay stack does
+            // not fit either.
+            const vtError = attemptCommit(runtime, {
+              ...vtTerrain(8192),
+              overlays: overlayTerrain().overlays,
+            });
+            runtime.render();
+            const frameAfter = await runtime.readRgba();
+            return {
+              streamingError,
+              vtError,
+              ledgerBefore,
+              ledgerAfterStreaming,
+              ledgerAfter: ledgerSnapshot(runtime),
+              frame: framesEqual(frameBefore, frameAfter),
+            };
+          } finally {
+            runtime.dispose();
+          }
+        },
+
+        // E0 evidence: negotiated limits + feature booleans.
+        async capabilities() {
+          const runtime = await createRuntime();
+          try {
+            return runtime.getCapabilities();
+          } finally {
+            runtime.dispose();
+          }
+        },
+
+        // (a) Crack test: steep-relief clipmap (fixture 8/64/64 and the
+        // morphRange 0 / skirtDepth 0 variants) from a grazing camera whose
+        // central region is entirely terrain. Counts ALL clear-color pixels
+        // in the central 60% box — a 1-px crack line counts.
+        async crack() {
+          const runtime = await createRuntime();
+          try {
+            const n = 513;
+            const heights = crackHeights(n);
+            const report = (() => {
+              runtime.setTerrain(clipmapTerrain(n, {}, heights));
+              const r = runtime.getTerrainGeometryReport();
+              return r;
+            })();
+            const configs = [
+              { name: "fixture", clipmap: {} },
+              { name: "morphRange0", clipmap: { morphRange: 0 } },
+              { name: "skirtDepth0", clipmap: { skirtDepth: 0 } },
+            ];
+            const renders = [];
+            for (const cfg of configs) {
+              runtime.setTerrain(clipmapTerrain(n, cfg.clipmap, heights));
+              runtime.setCamera(CRACK_CAM);
+              runtime.render();
+              const rgba = await runtime.readRgba();
+              renders.push({
+                name: cfg.name,
+                centralClear: centralClearPixels(rgba, W, H, 0.6),
+              });
+            }
+            // Negative control: the same camera aimed past the -z edge must
+            // produce clear pixels or the metric itself is broken.
+            runtime.setTerrain(clipmapTerrain(n, {}, heights));
+            runtime.setCamera(CRACK_CAM_PAST_EDGE);
+            runtime.render();
+            const past = await runtime.readRgba();
+            return {
+              report,
+              renders,
+              negativeControl: centralClearPixels(past, W, H, 0.6),
+            };
+          } finally {
+            runtime.dispose();
+          }
+        },
+
+        // (b) Geometry parity: the same dense DEM as `geometry: grid` vs
+        // clipmap (baseCellSize = spacing), camera inside the center block.
+        // Compares the central region by mean abs diff and SSIM — proves the
+        // world/uv mapping, not just coverage.
+        async gridClipmapParity() {
+          const n = 257;
+          const heights = steepHeights(n);
+          const parityClipmap = {
+            ringCount: 4,
+            ringResolution: 64,
+            centerResolution: 128,
+            skirtDepth: 60,
+            morphRange: 0.3,
+          };
+          const renderDense = async (geometry) => {
+            const r = await createRuntime();
+            try {
+              r.setTerrain(denseTerrain(n, geometry, heights));
+              r.setCamera(PARITY_CAM);
+              r.render();
+              return await r.readRgba();
+            } finally {
+              r.dispose();
+            }
+          };
+          const grid = await renderDense({ mode: "grid" });
+          const clipmap = await renderDense({
+            mode: "clipmap",
+            clipmap: parityClipmap,
+          });
+          return {
+            ...compareCentral(grid, clipmap, W, H, 0.6),
+            diff: framesEqual(grid, clipmap),
+          };
+        },
+
+        // (c) Streaming parity: converged virtual 1025x1025 (tile 256, 4
+        // lods, 129x129 base) vs a dense clipmap commit of the identical DEM
+        // with the same clipmap config and camera.
+        async streamingParity() {
+          const runtime = await createRuntime();
+          try {
+            runtime.setTerrain(streamedTerrain1025());
+            runtime.setCamera(PARITY_CAM);
+            runtime.render();
+            const totals = drainRequests(runtime, 128, tileHeights1025);
+            runtime.render();
+            runtime.render();
+            const stats = runtime.getHeightStreamingStats();
+            const streamed = await runtime.readRgba();
+
+            const dense = await createRuntime(canvasB);
+            try {
+              dense.setTerrain(denseTerrain1025());
+              dense.setCamera(PARITY_CAM);
+              dense.render();
+              const denseRgba = await dense.readRgba();
+              return {
+                ...compareCentral(streamed, denseRgba, W, H, 0.6),
+                diff: framesEqual(streamed, denseRgba),
+                centralClear: centralClearPixels(denseRgba, W, H),
+                stats,
+                requests: totals.requests,
+              };
+            } finally {
+              dense.dispose();
+            }
+          } finally {
+            runtime.dispose();
+          }
+        },
+
+        // (a2) Material shading under streaming: the material path's height
+        // reads (tm_shade raw sample, POM height, height lod) must go
+        // through the streaming page table, so material+streaming matches
+        // the dense material render of the same DEM.
+        async materialStreamingParity() {
+          const material = {
+            albedoMode: "material",
+            colormapStrength: 0,
+            hueVariation: 0,
+            pom: {
+              enabled: true,
+              scale: 0.04,
+              minSteps: 8,
+              maxSteps: 24,
+              refineSteps: 4,
+              occlusion: true,
+              shadow: true,
+            },
+          };
+          const runtime = await createRuntime();
+          try {
+            runtime.setTerrain({ ...streamedTerrain1025(), material });
+            runtime.setCamera(PARITY_CAM);
+            runtime.render();
+            const totals = drainRequests(runtime, 128, tileHeights1025);
+            runtime.render();
+            runtime.render();
+            const stats = runtime.getHeightStreamingStats();
+            const streamed = await runtime.readRgba();
+
+            const dense = await createRuntime(canvasB);
+            try {
+              dense.setTerrain({ ...denseTerrain1025(), material });
+              dense.setCamera(PARITY_CAM);
+              dense.render();
+              const denseRgba = await dense.readRgba();
+              const materialReport = dense.getTerrainMaterialReport?.() ?? null;
+              // Guard: the material path is really active (the frame differs
+              // from the same dense DEM without a material).
+              dense.setTerrain(denseTerrain1025());
+              dense.render();
+              const plainRgba = await dense.readRgba();
+              return {
+                ...compareCentral(streamed, denseRgba, W, H, 0.6),
+                diff: framesEqual(streamed, denseRgba),
+                materialEffect: framesEqual(denseRgba, plainRgba),
+                materialReport,
+                centralClear: centralClearPixels(denseRgba, W, H),
+                stats,
+                requests: totals.requests,
+              };
+            } finally {
+              dense.dispose();
+            }
+          } finally {
+            runtime.dispose();
+          }
+        },
+
+        // (b-legacy) No-geometry vs explicit `geometry: { mode: "grid" }`
+        // byte parity.
+        async gridIdentity() {
+          const renderDense = async (geometry) => {
+            const runtime = await createRuntime();
+            try {
+              runtime.setTerrain(denseTerrain(257, geometry));
+              runtime.setCamera(grazingCameras()[1]);
+              runtime.render();
+              return await runtime.readRgba();
+            } finally {
+              runtime.dispose();
+            }
+          };
+          const a = await renderDense(undefined);
+          const b = await renderDense({ mode: "grid" });
+          return framesEqual(a, b);
+        },
+
+        // (c-legacy) Streamed 16385x16385 fly-through: hole count per frame,
+        // residency bound, convergence, coarse-vs-converged diff, GPU LOD
+        // selection vs the CPU reference for the same camera.
+        async streaming() {
+          const runtime = await createRuntime();
+          try {
+            runtime.setTerrain(streamedTerrain());
+            const cameras = flythroughCameras();
+            const frames = [];
+            let maxResident = 0;
+            for (const camera of cameras) {
+              runtime.setCamera(camera);
+              runtime.render();
+              const totals = drainRequests(runtime, 64);
+              const stats = runtime.getHeightStreamingStats();
+              maxResident = Math.max(maxResident, stats.residentHeightBytes);
+              const rgba = await runtime.readRgba();
+              frames.push({
+                holes: enclosedClearPixels(rgba, W, H),
+                requests: totals.requests,
+                converged: stats.converged,
+                residentHeightBytes: stats.residentHeightBytes,
+                plannedTiles: stats.plannedTiles,
+                plannedResident: stats.plannedResident,
+                residentTiles: stats.residentTiles,
+              });
+            }
+
+            // Coarse-only frame: fresh runtime on the second canvas, no
+            // tiles completed.
+            const coarseOnly = await (async () => {
+              const r2 = await createRuntime(canvasB);
+              try {
+                r2.setTerrain(streamedTerrain());
+                r2.setCamera(cameras[cameras.length - 1]);
+                r2.render();
+                return await r2.readRgba();
+              } finally {
+                r2.dispose();
+              }
+            })();
+            runtime.setCamera(cameras[cameras.length - 1]);
+            runtime.render();
+            const converged = await runtime.readRgba();
+            const convergedDiff = framesEqual(coarseOnly, converged);
+
+            // GPU LOD vs CPU reference for the same camera. Render a few
+            // frames so the non-blocking readback has landed.
+            runtime.render();
+            runtime.render();
+            const gpu = runtime.getLodSelection();
+            let reference = null;
+            let lodMatch = null;
+            if (gpu !== null) {
+              const cam = cameras[cameras.length - 1];
+              reference = await selectLodTilesReference({
+                viewProj: Array.from(viewProjection(
+                  cam.position,
+                  cam.target,
+                  cam.up,
+                  cam.fovYDegrees,
+                  W / H,
+                  cam.near,
+                  cam.far,
+                )),
+                cameraPos: cam.position,
+                viewportHeight: H,
+                fovY: (cam.fovYDegrees * Math.PI) / 180,
+                maxLod: LOD_COUNT - 1,
+                tiles: referenceTiles(),
+              });
+              const gpuById = new Map(gpu.tiles.map((t) => [t.tileId, t]));
+              const refVisible = reference.tiles.filter((t) => t.visible);
+              let mismatches = 0;
+              for (const tile of refVisible) {
+                const g = gpuById.get(tile.tileId);
+                if (g === undefined || g.selectedLod !== tile.selectedLod) mismatches += 1;
+              }
+              lodMatch = {
+                gpuVisible: gpu.visibleCount,
+                refVisible: reference.visibleCount,
+                gpuTriangles: gpu.totalTriangles,
+                refTriangles: reference.totalTriangles,
+                mismatches,
+                equal:
+                  gpu.visibleCount === reference.visibleCount &&
+                  gpu.totalTriangles === reference.totalTriangles &&
+                  mismatches === 0,
+              };
+            }
+            const stats = runtime.getHeightStreamingStats();
+            return {
+              frames,
+              maxResident,
+              maxResidentBytes: 32 << 20,
+              convergedDiff,
+              convergedStats: stats,
+              lodMatch,
+            };
+          } finally {
+            runtime.dispose();
+          }
+        },
+
+        // (d) Simulated device loss: identical commit + tile replay must
+        // produce a byte-identical frame on the recovered device.
+        async deviceLoss() {
+          const commitAndRender = async (runtime) => {
+            runtime.setTerrain(streamedTerrain());
+            runtime.setCamera(STREAM_CAM);
+            runtime.render();
+            drainRequests(runtime, 64);
+            runtime.render();
+            runtime.render();
+            return await runtime.readRgba();
+          };
+          const a = await createRuntime();
+          const before = await commitAndRender(a);
+          const capabilities = a.getCapabilities();
+          simulateRuntimeDeviceLossForTests(a);
+          a.dispose();
+          const b = await createRuntime();
+          const after = await commitAndRender(b);
+          b.dispose();
+          return { ...framesEqual(before, after), capabilities };
+        },
+
+        // E7 free helpers sanity: mesh generation, reduction, CPU LOD.
+        async helpers() {
+          const mesh = await generateClipmapMesh(
+            { ringCount: 4, ringResolution: 64, centerResolution: 64, skirtDepth: 10, morphRange: 0.3 },
+            [0, 0],
+            8192,
+          );
+          const reduction = await calculateTriangleReduction(
+            2 * 8192 * 8192,
+            mesh.triangleCount,
+          );
+          const tiles = [
+            {
+              lod: 0, x: 0, y: 0,
+              boundsMin: [-100, -100], boundsMax: [0, 0],
+              heightMin: 0, heightMax: 100,
+            },
+            {
+              lod: 0, x: 1, y: 0,
+              boundsMin: [0, -100], boundsMax: [100, 0],
+              heightMin: 0, heightMax: 100,
+            },
+          ];
+          const select = (cam) =>
+            selectLodTilesReference({
+              viewProj: Array.from(viewProjection(
+                cam.position, cam.target, cam.up, cam.fovYDegrees, W / H, cam.near, cam.far,
+              )),
+              cameraPos: cam.position,
+              viewportHeight: H,
+              fovY: (cam.fovYDegrees * Math.PI) / 180,
+              maxLod: 7,
+              tiles,
+            });
+          const selection = await select(STREAM_CAM);
+          // Frustum controls: straight at both tiles, and turned away.
+          const facing = { position: [0, 300, -400], target: [0, 50, -50], up: [0, 1, 0], fovYDegrees: 55, near: 1, far: 5000 };
+          const selectionFacing = await select(facing);
+          const selectionAway = await select({ ...facing, target: [0, 300, -1200] });
+          return {
+            vertexCount: mesh.vertexCount,
+            indexCount: mesh.indexCount,
+            triangleCount: mesh.triangleCount,
+            ringsCount: mesh.ringsCount,
+            triangleReductionPercent: mesh.triangleReductionPercent,
+            reduction,
+            positionsLength: mesh.positions.length,
+            morphLength: mesh.morphData.length,
+            indicesLength: mesh.indices.length,
+            selection,
+            selectionFacing,
+            selectionAway,
+          };
+        },
+
+        // (f) clipmap-seam-v1 budget acceptance: virtual 16385x16385 /
+        // ring 8 / tile 256 with 3 overlay layers. The clipmap triangle
+        // count equals the closed-form budget and is camera-invariant;
+        // resident bytes stay within budget through an 8-position
+        // fly-through; the overlay stack is deterministic.
+        async seamBudget() {
+          const terrain = streamedTerrain();
+          terrain.overlays = {
+            layers: [0, 1, 2].map((seed) => ({
+              name: `seam-${seed}`,
+              image: seamOverlayImage(seed),
+              opacity: 0.75,
+              blendMode: ["normal", "multiply", "overlay"][seed],
+              zOrder: seed,
+            })),
+          };
+          const runtime = await createRuntime();
+          try {
+            runtime.setTerrain(terrain);
+            const cameras = Array.from({ length: 8 }, (_, step) => ({
+              ...STREAM_CAM,
+              position: [
+                STREAM_CAM.position[0] + step * 700,
+                STREAM_CAM.position[1] - step * 90,
+                STREAM_CAM.position[2] + step * 500,
+              ],
+              target: [
+                STREAM_CAM.target[0] + step * 700,
+                STREAM_CAM.target[1],
+                STREAM_CAM.target[2] + step * 500,
+              ],
+            }));
+            const perCamera = [];
+            const frameTimesMs = [];
+            let maxResident = 0;
+            let peakGpuBytes = 0;
+            for (const camera of cameras) {
+              runtime.setCamera(camera);
+              runtime.render();
+              drainRequests(runtime, 64);
+              const start = performance.now();
+              runtime.render();
+              await runtime.readRgba();
+              frameTimesMs.push(performance.now() - start);
+              const report = runtime.getTerrainGeometryReport();
+              const stats = runtime.getHeightStreamingStats();
+              maxResident = Math.max(maxResident, stats.residentHeightBytes);
+              peakGpuBytes = Math.max(peakGpuBytes, runtime.getMemoryReport().currentBytes);
+              const frame = await runtime.readRgba();
+              // Diagnostic: total clear pixels + their bounding box tell
+              // whether an enclosed hole sits at the silhouette boundary
+              // or deep inside the rasterized footprint.
+              let clearCount = 0;
+              let cx0 = W, cx1 = -1, cy0 = H, cy1 = -1;
+              for (let py = 0; py < H; py += 1) {
+                for (let px = 0; px < W; px += 1) {
+                  const o = (py * W + px) * 4;
+                  if (
+                    frame[o] === 255 && frame[o + 1] === 0 &&
+                    frame[o + 2] === 255 && frame[o + 3] === 255
+                  ) {
+                    clearCount += 1;
+                    if (px < cx0) cx0 = px;
+                    if (px > cx1) cx1 = px;
+                    if (py < cy0) cy0 = py;
+                    if (py > cy1) cy1 = py;
+                  }
+                }
+              }
+              perCamera.push({
+                triangleCount: report.triangleCount,
+                triangleBudget: report.triangleBudget,
+                residentHeightBytes: stats.residentHeightBytes,
+                residentTiles: stats.residentTiles,
+                tileSize: stats.tileSize,
+                statsMaxResidentBytes: stats.maxResidentBytes,
+                evictions: stats.evictions,
+                converged: stats.converged,
+                holes: enclosedClearPixels(frame, W, H),
+                // Interior crack metric (matches the dedicated crack
+                // test): clear pixels inside the central 60% box — sky
+                // slivers at a grazing silhouette stay outside it.
+                centralHoles: centralClearPixels(frame, W, H),
+                holeCoords: enclosedClearCoords(frame, W, H),
+                clearCount,
+                clearBox: [cx0, cy0, cx1, cy1],
+              });
+            }
+            runtime.render();
+            const frameA = await runtime.readRgba();
+            runtime.render();
+            const frameB = await runtime.readRgba();
+            const deterministic = framesEqual(frameA, frameB).byteEqual;
+            const overlayReport = runtime.getTerrainOverlayReport();
+            const sorted = [...frameTimesMs].sort((a, b) => a - b);
+            return {
+              cameraCount: cameras.length,
+              perCamera,
+              maxResident,
+              maxResidentBytes: 32 << 20,
+              peakGpuBytes,
+              frameTimeP95Ms: sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * 0.95) - 1)],
+              adapter: runtime.getCapabilities().adapterInfo?.description ?? null,
+              deterministic,
+              overlayReport,
+            };
+          } finally {
+            runtime.dispose();
+          }
+        },
+      };
+
+      window.__forge3dW08 = w08;
+    </script>
+  </body>
+</html>

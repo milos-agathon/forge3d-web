@@ -1,0 +1,158 @@
+{
+  "generator": "w08-fixture-generator-v1",
+  "rasterio": "1.4.3",
+  "gdal": "3.9.3",
+  "sources": {
+    "rainier-cog.tif": {
+      "source": "D:\\forge3d\\assets\\tif\\dem_rainier.tif",
+      "sourceSha256": "875b243474b151175f76037acd60c2149ac2e46fba9ba2bbce0c9a6998015dd3"
+    },
+    "landcover-rgba-cog.tif": {
+      "source": "D:\\forge3d\\assets\\tif\\switzerland_land_cover.tif",
+      "sourceSha256": "6b254585be4982ed9e8da63b8536ecc2f5fa4c64c6545db06c73eb1fe39a8f7f"
+    }
+  },
+  "outputs": {
+    "predictor-deflate-u16.tif": {
+      "sizeBytes": 328,
+      "sha256": "68c6c2be099b9f06adc28d4e17e712f7a9b005f3ba35a415275da1d7c5cd1b78"
+    },
+    "rainier-cog.tif": {
+      "sizeBytes": 1536165,
+      "sha256": "ca8db82d906056938c8f56f286f6c8f323be5d6173f07a712292955cce7a0e21"
+    },
+    "landcover-rgba-cog.tif": {
+      "sizeBytes": 35459,
+      "sha256": "8a825fdb218508dfb3393013176735d88846b3f364ce41fccac07f918c4a06ee"
+    }
+  },
+  "provenance": {
+    "rainier-cog.tif": {
+      "source": "D:\\forge3d\\assets\\tif\\dem_rainier.tif",
+      "sourceSha256": "875b243474b151175f76037acd60c2149ac2e46fba9ba2bbce0c9a6998015dd3",
+      "window": {
+        "col": 543,
+        "row": 543,
+        "size": 1024
+      },
+      "transform": [
+        0.00014215501239953575,
+        0.0,
+        -121.83283173110011,
+        0.0,
+        -0.00014215501239953315,
+        46.92276210456464
+      ]
+    },
+    "landcover-rgba-cog.tif": {
+      "source": "D:\\forge3d\\assets\\tif\\switzerland_land_cover.tif",
+      "sourceSha256": "6b254585be4982ed9e8da63b8536ecc2f5fa4c64c6545db06c73eb1fe39a8f7f",
+      "window": {
+        "col": 11000,
+        "row": 5500,
+        "width": 512,
+        "height": 512
+      },
+      "transform": [
+        0.00021134896933993572,
+        0.0,
+        8.186499014913565,
+        0.0,
+        -0.00021134896933993556,
+        46.74050419121429
+      ],
+      "palette": [
+        [
+          32,
+          32,
+          32
+        ],
+        [
+          64,
+          45,
+          29
+        ],
+        [
+          97,
+          71,
+          42
+        ],
+        [
+          128,
+          96,
+          60
+        ],
+        [
+          41,
+          84,
+          32
+        ],
+        [
+          63,
+          124,
+          46
+        ],
+        [
+          99,
+          163,
+          62
+        ],
+        [
+          142,
+          196,
+          90
+        ],
+        [
+          184,
+          150,
+          84
+        ],
+        [
+          215,
+          197,
+          133
+        ],
+        [
+          105,
+          122,
+          139
+        ],
+        [
+          140,
+          165,
+          184
+        ],
+        [
+          54,
+          96,
+          133
+        ],
+        [
+          88,
+          141,
+          190
+        ],
+        [
+          170,
+          170,
+          170
+        ],
+        [
+          235,
+          235,
+          235
+        ]
+      ]
+    }
+  },
+  "clipmapSeamV1": {
+    "parameters": {
+      "virtualWidth": 16385,
+      "virtualHeight": 16385,
+      "ringCount": 8,
+      "tileSize": 256,
+      "overlayCount": 3
+    },
+    "sha256": "6ae5736c535f6f8a3a01777c0a3b23f6f47db0c5aa58308eb1ad0fd11efec4f8"
+  }
+}

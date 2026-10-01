@@ -26,7 +26,7 @@ fn validate(label: &str, source: &str) {
 fn variant_sweep() -> Vec<ShaderFeatures> {
     let all = ShaderFeatures::ALL.bits();
     let mut sets = vec![all, 0];
-    for bit in 0..41 {
+    for bit in 0..45 {
         sets.push(1 << bit);
         sets.push(all & !(1 << bit));
     }
@@ -245,4 +245,94 @@ fn terrain_mode_selects_exactly_one_render_path() {
     let screen = features.with_terrain_mode(1).bits();
     assert_ne!(screen & super::TERRAIN_SCREEN, 0);
     assert_eq!(screen & super::TERRAIN_PERSPECTIVE, 0);
+}
+
+/// W08 (E7): every W08 feature-region combination naga-validates —
+/// clipmap, streaming, overlays and VT flags × material × capture.
+#[test]
+fn w08_terrain_variants_are_valid_wgsl() {
+    for w08 in [
+        super::TERRAIN_CLIPMAP,
+        super::TERRAIN_CLIPMAP | super::TERRAIN_STREAMING,
+        super::TERRAIN_STREAMING,
+        super::TERRAIN_OVERLAYS,
+        super::TERRAIN_VT,
+        super::TERRAIN_CLIPMAP
+            | super::TERRAIN_STREAMING
+            | super::TERRAIN_OVERLAYS
+            | super::TERRAIN_VT,
+    ] {
+        for material in [false, true] {
+            for capture in [false, true] {
+                let mut features = ShaderFeatures::from_bits(w08).with_terrain_mode(0);
+                if material {
+                    features = features.with_terrain_material(true);
+                }
+                if capture {
+                    features = features.with_capture();
+                }
+                validate(
+                    &format!("terrain w08 {:#x}", features.bits()),
+                    &specialize(TERRAIN_SHADER, features),
+                );
+            }
+        }
+    }
+}
+
+/// W08 (E7): the E4 GPU LOD-selection compute shader naga-validates.
+#[test]
+fn clipmap_lod_select_shader_is_valid_wgsl() {
+    validate(
+        "clipmap_lod_select",
+        include_str!("../clipmap_lod_select.wgsl"),
+    );
+}
+
+/// W08 zero-regression guard (E7): specialized sources for feature sets
+/// without W08 bits contain no W08-specific identifiers, and the height
+/// helpers introduced by E3 expand to exactly the pre-W08 texture calls.
+#[test]
+fn no_w08_variants_contain_no_w08_identifiers() {
+    const W08: u64 = super::TERRAIN_CLIPMAP
+        | super::TERRAIN_STREAMING
+        | super::TERRAIN_OVERLAYS
+        | super::TERRAIN_VT;
+    for features in variant_sweep() {
+        let features = ShaderFeatures::from_bits(features.bits() & !W08).with_terrain_mode(0);
+        let source = specialize(TERRAIN_SHADER, features);
+        // Scan code only — comments may legitimately mention the W08 names.
+        let code: String = source
+            .lines()
+            .map(|line| line.split("//").next().unwrap_or(""))
+            .collect::<Vec<_>>()
+            .join("\n");
+        for ident in [
+            "terrain_geometry",
+            "height_page_table",
+            "TerrainGeometryUniform",
+            "mode_flags",
+            "ring_data_lod",
+            "skirt_depth",
+            "slots_per_row",
+            "terrain_clipmap",
+            "terrain_streaming",
+            "terrain_overlay",
+            "terrain_vt",
+        ] {
+            assert!(
+                !code.contains(ident),
+                "no-W08 variant {:#x} contains W08 identifier {ident}",
+                features.bits()
+            );
+        }
+        // Helper expansion parity with the pre-W08 calls.
+        assert!(
+            source.contains("return textureSampleLevel(heightmap, nearest_sampler, uv, 0.0).r;")
+        );
+        assert!(source.contains(
+            "return textureLoad(heightmap, clamp(texel, vec2<i32>(0, 0), max_texel), 0).r;"
+        ));
+        assert!(source.contains("return textureDimensions(heightmap);"));
+    }
 }

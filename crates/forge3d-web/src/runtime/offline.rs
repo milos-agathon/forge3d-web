@@ -480,7 +480,14 @@ fn create_session(
         bytemuck::bytes_of(&initial),
     );
 
-    let lighting_features = super::shader_variants::runtime_lighting_features(runtime)?;
+    // W08 (E3/E6): upload dirty page-table layers accumulated since the
+    // last display frame and run the VT residency pass so capture samples
+    // resident tiles correctly.
+    if let Some(terrain) = runtime.terrain.as_mut() {
+        terrain.prepare_w08_frame(context, &camera, width, height);
+    }
+
+    let lighting_features = super::shader_variants::runtime_terrain_lighting_features(runtime)?;
     let terrain = match (
         runtime.terrain.as_ref(),
         runtime.terrain_pipeline_cache.as_mut(),
@@ -491,7 +498,7 @@ fn create_session(
             let surface_pipeline =
                 surface.then(|| cache.capture_variant(device, features, CapturePass::Surface));
             let bind_group =
-                terrain.capture_bind_group(device, &cache.bind_group_layout, &camera_buffer);
+                terrain.capture_bind_group(device, cache.group0_for(features), &camera_buffer);
             Some(TerrainCapture {
                 bind_group,
                 primary,
@@ -575,7 +582,13 @@ fn create_session(
         label: Some("forge3d-web-offline-reference"),
     });
     super::shadows::encode_shadow_passes(runtime, &mut encoder);
+    if let Some(terrain) = runtime.terrain.as_ref() {
+        terrain.encode_w08_frame_start(&mut encoder);
+    }
     encode_capture(runtime, &session, &mut encoder, false);
+    if let Some(terrain) = runtime.terrain.as_ref() {
+        terrain.encode_w08_frame_end(&mut encoder);
+    }
     for (source, destination) in [
         (&session.targets.depth, &session.targets.depth_ref),
         (&session.targets.id, &session.targets.id_ref),
@@ -590,6 +603,9 @@ fn create_session(
         );
     }
     context.queue.submit(std::iter::once(encoder.finish()));
+    if let Some(terrain) = runtime.terrain.as_mut() {
+        terrain.begin_w08_map(context);
+    }
     Ok(session)
 }
 
@@ -677,9 +693,10 @@ fn encode_capture(
             };
             if let Some(pipeline) = pipeline {
                 pass.set_pipeline(pipeline);
+                let (_, group2) = terrain.profile_bind_groups(textures.bind_group_for(0));
                 pass.set_bind_group(0, &capture.bind_group, &[]);
                 pass.set_bind_group(1, &lighting.bind_group, &[]);
-                pass.set_bind_group(2, textures.bind_group_for(0), &[]);
+                pass.set_bind_group(2, group2, &[]);
                 pass.set_bind_group(3, &ibl.bind_group, &[]);
                 pass.set_vertex_buffer(0, terrain.vertex_buffer.slice(..));
                 pass.set_index_buffer(terrain.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
@@ -794,7 +811,13 @@ async fn accumulate_samples(
                 label: Some("forge3d-web-offline-sample"),
             });
         super::shadows::encode_shadow_passes(runtime, &mut encoder);
+        if let Some(terrain) = runtime.terrain.as_ref() {
+            terrain.encode_w08_frame_start(&mut encoder);
+        }
         encode_capture(runtime, session, &mut encoder, true);
+        if let Some(terrain) = runtime.terrain.as_ref() {
+            terrain.encode_w08_frame_end(&mut encoder);
+        }
         let pipelines = runtime.offline_pipelines.as_ref().ok_or_else(|| {
             WebError::new(
                 Forge3DErrorCode::InternalError,
@@ -809,6 +832,9 @@ async fn accumulate_samples(
             session.height,
         );
         context.queue.submit(std::iter::once(encoder.finish()));
+        if let Some(terrain) = runtime.terrain.as_mut() {
+            terrain.begin_w08_map(&context);
+        }
         session.total_samples += 1;
     }
     wait_for_queue(&context).await?;

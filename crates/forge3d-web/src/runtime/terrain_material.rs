@@ -104,6 +104,7 @@ pub(super) fn plan_material(
             layer_images: vec![None; 4],
             detail_normal: None,
             masks: [None, None, None],
+            virtual_texture: None,
         };
         let mut plan = plan_material(Some(&default), false, domain, max_dimension, texture_budget);
         plan.report.enabled = false;
@@ -367,7 +368,15 @@ impl TerrainMaterialResources {
         }
     }
 
-    pub(super) fn bind_group_entries(&self) -> [wgpu::BindGroupEntry<'_>; 5] {
+    /// Group-0 material entries (bindings 7-11). W08 (E6): when VT is
+    /// enabled the caller passes the atlas view + VT sampler for bindings
+    /// 8/9 — the shader's triplanar samples route through the page table.
+    pub(super) fn bind_group_entries<'a>(
+        &'a self,
+        vt_binding: Option<(&'a wgpu::TextureView, &'a wgpu::Sampler)>,
+    ) -> [wgpu::BindGroupEntry<'a>; 5] {
+        let (albedo_view, albedo_sampler) =
+            vt_binding.unwrap_or((&self.albedo_view, &self.albedo_sampler));
         [
             wgpu::BindGroupEntry {
                 binding: 7,
@@ -375,11 +384,11 @@ impl TerrainMaterialResources {
             },
             wgpu::BindGroupEntry {
                 binding: 8,
-                resource: wgpu::BindingResource::TextureView(&self.albedo_view),
+                resource: wgpu::BindingResource::TextureView(albedo_view),
             },
             wgpu::BindGroupEntry {
                 binding: 9,
-                resource: wgpu::BindingResource::Sampler(&self.albedo_sampler),
+                resource: wgpu::BindingResource::Sampler(albedo_sampler),
             },
             wgpu::BindGroupEntry {
                 binding: 10,
@@ -535,6 +544,7 @@ mod tests {
             settings,
             detail_normal: None,
             masks: [None, None, None],
+            virtual_texture: None,
         };
         assert_eq!(
             TerrainMaterialRegions::for_material(None, false),
@@ -591,6 +601,7 @@ mod tests {
             settings,
             detail_normal: None,
             masks: [None, None, None],
+            virtual_texture: None,
         };
         let plan = plan_material(Some(&options), false, [10.0, 20.0], 8192, u64::MAX);
         assert!(plan.report.enabled);

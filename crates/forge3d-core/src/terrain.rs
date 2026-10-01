@@ -22,6 +22,14 @@ pub struct TerrainHeightmapInput {
     pub nodata: Option<f32>,
     pub crs: Option<String>,
     pub render_mode: TerrainRenderMode,
+    /// Geometry resolution (W08): `Grid` is the historical dense mesh;
+    /// `Clipmap` carries the resolved A1 clipmap configuration.
+    pub geometry: TerrainGeometry,
+    /// Terrain extent in `crs` units `[minx, miny, maxx, maxy]` (CRS overlays).
+    pub bounds: Option<[f32; 4]>,
+    /// Virtual streamed heightfield (W08): the committed `width`/`height`/
+    /// `heights` are the coarsest pyramid level.
+    pub streaming: Option<TerrainStreaming>,
 }
 
 #[derive(Debug, Clone, Default, PartialEq)]
@@ -32,6 +40,93 @@ pub struct TerrainGridOptions {
     pub nodata: Option<f32>,
     pub crs: Option<String>,
     pub render_mode: Option<TerrainRenderMode>,
+    pub geometry: Option<TerrainGeometryOptions>,
+    pub bounds: Option<[f32; 4]>,
+    pub streaming: Option<TerrainStreamingOptions>,
+}
+
+/// Requested geometry mode on the `geometry` input block (W08/E1).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TerrainGeometryMode {
+    Grid,
+    Clipmap,
+}
+
+/// Optional clipmap overrides on `geometry.clipmap` (absent fields take the
+/// A1 defaults; `base_cell_size` defaults to the terrain spacing per axis).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct TerrainClipmapOptions {
+    pub ring_count: Option<u32>,
+    pub ring_resolution: Option<u32>,
+    pub center_resolution: Option<u32>,
+    pub skirt_depth: Option<f32>,
+    pub morph_range: Option<f32>,
+    pub base_cell_size: Option<[f32; 2]>,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct TerrainGeometryOptions {
+    pub mode: TerrainGeometryMode,
+    pub clipmap: Option<TerrainClipmapOptions>,
+}
+
+/// Resolved geometry on the committed input.
+#[derive(Debug, Clone, PartialEq)]
+pub enum TerrainGeometry {
+    Grid,
+    Clipmap(TerrainClipmapGeometry),
+}
+
+/// Resolved clipmap configuration (A1 defaults applied).
+#[derive(Debug, Clone, PartialEq)]
+pub struct TerrainClipmapGeometry {
+    pub ring_count: u32,
+    pub ring_resolution: u32,
+    pub center_resolution: u32,
+    pub skirt_depth: f32,
+    pub morph_range: f32,
+    /// World size of one level-0 grid unit per axis.
+    pub base_cell_size: [f32; 2],
+}
+
+/// Queue LOD-coalescing policy for streamed height tiles.
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub enum TerrainCoalescePolicy {
+    #[default]
+    PreferCoarse,
+    PreferFine,
+}
+
+/// Optional streamed-heightfield declaration on `streaming` (W08/E1).
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct TerrainStreamingOptions {
+    /// Finest-level sample dimensions of the virtual heightfield.
+    pub width: Option<u32>,
+    pub height: Option<u32>,
+    pub tile_size: Option<u32>,
+    pub max_resident_bytes: Option<u64>,
+    pub lod_bias: Option<i32>,
+    pub prefetch_margin_tiles: Option<u32>,
+    pub max_in_flight: Option<u32>,
+    pub coalesce_policy: Option<TerrainCoalescePolicy>,
+}
+
+/// Resolved streaming declaration on the committed input.
+#[derive(Debug, Clone, PartialEq)]
+pub struct TerrainStreaming {
+    /// Finest-level sample dimensions of the virtual heightfield.
+    pub width: u32,
+    pub height: u32,
+    pub tile_size: u32,
+    pub max_resident_bytes: u64,
+    /// `floor(max_resident_bytes / (tile_size^2 * 4))` atlas slots.
+    pub slot_capacity: u32,
+    /// Pyramid depth (`dims(lod_count - 1)` fits in one tile on both axes).
+    pub lod_count: u32,
+    pub lod_bias: i32,
+    pub prefetch_margin_tiles: u32,
+    pub max_in_flight: u32,
+    pub coalesce_policy: TerrainCoalescePolicy,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -372,6 +467,35 @@ impl TerrainHeightmapInput {
             requested_domain
         };
 
+        if let Some(bounds) = options.bounds {
+            if !bounds.iter().all(|value| value.is_finite())
+                || bounds[0] > bounds[2]
+                || bounds[1] > bounds[3]
+            {
+                return Err(Forge3dError::InvalidInput {
+                    field: "terrain.bounds".to_string(),
+                    message: "terrain bounds must be finite and ordered [minx, miny, maxx, maxy]"
+                        .to_string(),
+                });
+            }
+        }
+
+        let streaming = options
+            .streaming
+            .as_ref()
+            .map(|streaming| resolve_streaming_options(streaming, width, height))
+            .transpose()?;
+        let geometry = resolve_geometry_options(&options, streaming.is_some(), spacing)?;
+        let render_mode = options.render_mode.unwrap_or_default();
+        if matches!(geometry, TerrainGeometry::Clipmap(_))
+            && render_mode == TerrainRenderMode::Screen
+        {
+            return Err(Forge3dError::InvalidInput {
+                field: "terrain.geometry".to_string(),
+                message: "terrain.geometry clipmap requires renderMode perspective".to_string(),
+            });
+        }
+
         Ok(Self {
             width,
             height,
@@ -383,8 +507,57 @@ impl TerrainHeightmapInput {
             domain,
             nodata: options.nodata,
             crs: options.crs,
-            render_mode: options.render_mode.unwrap_or_default(),
+            render_mode,
+            geometry,
+            bounds: options.bounds,
+            streaming,
         })
+    }
+
+    /// Finest-level sample dimensions of the committed heightfield:
+    /// the streaming pyramid's virtual dims when streaming, else `width` x
+    /// `height` (which is also the coarsest streamed level).
+    pub fn heightfield_dims(&self) -> (u32, u32) {
+        self.streaming.as_ref().map_or_else(
+            || (self.width, self.height),
+            |streaming| (streaming.width, streaming.height),
+        )
+    }
+
+    /// World XZ of finest-level sample `(0, 0)`, identical to the grid
+    /// convention: `(-(W-1) * sx / 2, -(H-1) * sz / 2)`.
+    pub fn heightfield_origin(&self) -> [f32; 2] {
+        let (width, height) = self.heightfield_dims();
+        [
+            -(width.saturating_sub(1) as f32) * self.spacing[0] * 0.5,
+            -(height.saturating_sub(1) as f32) * self.spacing[1] * 0.5,
+        ]
+    }
+
+    /// Effective world-XZ extent `[minx, minz, maxx, maxz]` over the
+    /// finest-level heightfield footprint (explicit `bounds` when committed,
+    /// else derived from spacing and `heightfield_dims`).
+    pub fn resolved_bounds(&self) -> [f32; 4] {
+        if let Some(bounds) = self.bounds {
+            return bounds;
+        }
+        let origin = self.heightfield_origin();
+        let (width, height) = self.heightfield_dims();
+        [
+            origin[0],
+            origin[1],
+            origin[0] + width.saturating_sub(1) as f32 * self.spacing[0],
+            origin[1] + height.saturating_sub(1) as f32 * self.spacing[1],
+        ]
+    }
+
+    /// The resolved clipmap configuration, when `geometry` resolved to
+    /// clipmap (explicit or implied by `streaming`).
+    pub fn clipmap_geometry(&self) -> Option<&TerrainClipmapGeometry> {
+        match &self.geometry {
+            TerrainGeometry::Clipmap(geometry) => Some(geometry),
+            TerrainGeometry::Grid => None,
+        }
     }
 
     pub fn is_valid_sample(value: f32, nodata: Option<f32>) -> bool {
@@ -866,6 +1039,281 @@ impl TerrainHeightmapInput {
             }
         }
         Ok(output)
+    }
+}
+
+fn resolve_geometry_options(
+    options: &TerrainGridOptions,
+    streaming: bool,
+    spacing: [f32; 2],
+) -> Result<TerrainGeometry> {
+    let Some(geometry) = &options.geometry else {
+        // Streaming implies clipmap geometry (A1 defaults) when no geometry
+        // block was committed.
+        return Ok(if streaming {
+            TerrainGeometry::Clipmap(TerrainClipmapGeometry::with_spacing(spacing))
+        } else {
+            TerrainGeometry::Grid
+        });
+    };
+    match geometry.mode {
+        TerrainGeometryMode::Grid => {
+            if streaming {
+                return Err(Forge3dError::InvalidInput {
+                    field: "terrain.streaming".to_string(),
+                    message: "terrain.streaming requires clipmap geometry".to_string(),
+                });
+            }
+            Ok(TerrainGeometry::Grid)
+        }
+        TerrainGeometryMode::Clipmap => Ok(TerrainGeometry::Clipmap(
+            TerrainClipmapGeometry::resolve(geometry.clipmap.as_ref(), spacing)?,
+        )),
+    }
+}
+
+fn resolve_streaming_options(
+    streaming: &TerrainStreamingOptions,
+    width: u32,
+    height: u32,
+) -> Result<TerrainStreaming> {
+    let (Some(pyramid_width), Some(pyramid_height)) = (streaming.width, streaming.height) else {
+        return Err(Forge3dError::InvalidInput {
+            field: "terrain.streaming".to_string(),
+            message: "terrain.streaming requires width and height".to_string(),
+        });
+    };
+    if pyramid_width < 2 || pyramid_height < 2 {
+        return Err(Forge3dError::InvalidInput {
+            field: "terrain.streaming.dimensions".to_string(),
+            message: format!(
+                "pyramid dimensions must be >= 2, got {pyramid_width}x{pyramid_height}"
+            ),
+        });
+    }
+    let tile_size = streaming.tile_size.unwrap_or(256);
+    if tile_size < 16 {
+        return Err(Forge3dError::InvalidInput {
+            field: "terrain.streaming.tileSize".to_string(),
+            message: format!("tile_size must be >= 16, got {tile_size}"),
+        });
+    }
+    // B2: lod_count is the smallest n such that dims(n - 1) fits in one tile.
+    let mut lod_count = 1u32;
+    loop {
+        let div = 1u64 << (lod_count - 1);
+        let (w, h) = (
+            (pyramid_width as u64).div_ceil(div),
+            (pyramid_height as u64).div_ceil(div),
+        );
+        if w <= tile_size as u64 && h <= tile_size as u64 {
+            break;
+        }
+        lod_count += 1;
+    }
+    let coarsest_div = 1u64 << (lod_count - 1);
+    let coarsest = (
+        (pyramid_width as u64).div_ceil(coarsest_div) as u32,
+        (pyramid_height as u64).div_ceil(coarsest_div) as u32,
+    );
+    if (width, height) != coarsest {
+        return Err(Forge3dError::InvalidInput {
+            field: "terrain.streaming".to_string(),
+            message: format!(
+                "terrain.streaming requires heights at the coarsest pyramid level ({}x{})",
+                coarsest.0, coarsest.1
+            ),
+        });
+    }
+    let max_resident_bytes = streaming.max_resident_bytes.unwrap_or(64 * 1024 * 1024);
+    let slot_bytes = u64::from(tile_size)
+        .checked_mul(u64::from(tile_size))
+        .and_then(|bytes| bytes.checked_mul(4))
+        .ok_or_else(|| Forge3dError::InvalidInput {
+            field: "terrain.streaming.tileSize".to_string(),
+            message: "tile_size byte accounting overflowed".to_string(),
+        })?;
+    let slot_capacity = max_resident_bytes / slot_bytes;
+    let needed = {
+        let (tx, ty) = (
+            coarsest.0.div_ceil(tile_size),
+            coarsest.1.div_ceil(tile_size),
+        );
+        u64::from(tx) * u64::from(ty) + 1
+    };
+    if slot_capacity < needed {
+        return Err(Forge3dError::ResourceLimitExceeded {
+            resource: "terrain.streaming".to_string(),
+            message: format!(
+                "terrain.streaming maxResidentBytes {max_resident_bytes} admits {slot_capacity} slots but the coarsest level needs {needed}"
+            ),
+        });
+    }
+    let max_in_flight = streaming.max_in_flight.unwrap_or(16);
+    if max_in_flight == 0 {
+        return Err(Forge3dError::InvalidInput {
+            field: "terrain.streaming.maxInFlight".to_string(),
+            message: "terrain.streaming maxInFlight must be at least 1".to_string(),
+        });
+    }
+    let slot_capacity =
+        u32::try_from(slot_capacity).map_err(|_| Forge3dError::ResourceLimitExceeded {
+            resource: "terrain.streaming".to_string(),
+            message: format!("slot capacity {slot_capacity} exceeds u32"),
+        })?;
+    Ok(TerrainStreaming {
+        width: pyramid_width,
+        height: pyramid_height,
+        tile_size,
+        max_resident_bytes,
+        slot_capacity,
+        lod_count,
+        lod_bias: streaming.lod_bias.unwrap_or(0),
+        prefetch_margin_tiles: streaming.prefetch_margin_tiles.unwrap_or(1),
+        max_in_flight,
+        coalesce_policy: streaming.coalesce_policy.unwrap_or_default(),
+    })
+}
+
+impl TerrainStreaming {
+    /// Height-atlas slot grid `(slots_per_row, rows)`: `ceil(sqrt(slots))`
+    /// slots per row, enough rows for `slot_capacity`.
+    pub fn atlas_grid(&self) -> (u32, u32) {
+        let slots_per_row = ((self.slot_capacity as f64).sqrt().ceil() as u32).max(1);
+        let rows = self.slot_capacity.div_ceil(slots_per_row).max(1);
+        (slots_per_row, rows)
+    }
+
+    /// Height-atlas texel extent `(slots_per_row * tile, rows * tile)`.
+    pub fn atlas_extent(&self) -> (u64, u64) {
+        let (slots_per_row, rows) = self.atlas_grid();
+        (
+            u64::from(slots_per_row) * u64::from(self.tile_size),
+            u64::from(rows) * u64::from(self.tile_size),
+        )
+    }
+
+    /// E0: the R32Float atlas is one 2D texture, so both extents must fit
+    /// `maxTextureDimension2D`.
+    pub fn validate_atlas_dimension(&self, max_texture_dimension_2d: u32) -> Result<()> {
+        let (width, height) = self.atlas_extent();
+        let max = u64::from(max_texture_dimension_2d);
+        if width > max || height > max {
+            let (slots_per_row, rows) = self.atlas_grid();
+            return Err(Forge3dError::ResourceLimitExceeded {
+                resource: "terrain.streaming".to_string(),
+                message: format!(
+                    "terrain.streaming height atlas {width}x{height} ({slots_per_row}x{rows} slots of {tile}) exceeds maxTextureDimension2D {max_texture_dimension_2d}; lower maxResidentBytes",
+                    tile = self.tile_size,
+                ),
+            });
+        }
+        Ok(())
+    }
+}
+
+impl TerrainClipmapGeometry {
+    /// A1 defaults with `base_cell_size` equal to the terrain spacing.
+    fn with_spacing(spacing: [f32; 2]) -> Self {
+        Self {
+            ring_count: 4,
+            ring_resolution: 64,
+            center_resolution: 64,
+            skirt_depth: 10.0,
+            morph_range: 0.3,
+            base_cell_size: spacing,
+        }
+    }
+
+    fn resolve(clipmap: Option<&TerrainClipmapOptions>, spacing: [f32; 2]) -> Result<Self> {
+        let default = Self::with_spacing(spacing);
+        let mut resolved = match clipmap {
+            Some(clipmap) => Self {
+                ring_count: clipmap.ring_count.unwrap_or(default.ring_count),
+                ring_resolution: clipmap.ring_resolution.unwrap_or(default.ring_resolution),
+                center_resolution: clipmap
+                    .center_resolution
+                    .unwrap_or(default.center_resolution),
+                skirt_depth: clipmap.skirt_depth.unwrap_or(default.skirt_depth),
+                morph_range: clipmap.morph_range.unwrap_or(default.morph_range),
+                base_cell_size: clipmap.base_cell_size.unwrap_or(spacing),
+            },
+            None => default,
+        };
+        resolved.validate()?;
+        // Native `with_morph_range` clamps to [0, 1].
+        resolved.morph_range = resolved.morph_range.clamp(0.0, 1.0);
+        Ok(resolved)
+    }
+
+    /// Mirrors `ClipmapConfig` validation (feature-gated module) so the
+    /// wording is identical for non-webgpu builds.
+    fn validate(&self) -> Result<()> {
+        if !(1..=16).contains(&self.ring_count) {
+            return Err(Forge3dError::InvalidInput {
+                field: "clipmap.ring_count".to_string(),
+                message: format!("ring_count must be in [1, 16], got {}", self.ring_count),
+            });
+        }
+        if self.ring_resolution < 4 || !self.ring_resolution.is_multiple_of(2) {
+            return Err(Forge3dError::InvalidInput {
+                field: "clipmap.ring_resolution".to_string(),
+                message: format!(
+                    "ring_resolution must be even and >= 4, got {}",
+                    self.ring_resolution
+                ),
+            });
+        }
+        if self.center_resolution < 4 || !self.center_resolution.is_multiple_of(2) {
+            return Err(Forge3dError::InvalidInput {
+                field: "clipmap.center_resolution".to_string(),
+                message: format!(
+                    "center_resolution must be even and >= 4, got {}",
+                    self.center_resolution
+                ),
+            });
+        }
+        if !self.skirt_depth.is_finite() || self.skirt_depth < 0.0 {
+            return Err(Forge3dError::InvalidInput {
+                field: "clipmap.skirt_depth".to_string(),
+                message: format!(
+                    "skirt_depth must be finite and >= 0, got {}",
+                    self.skirt_depth
+                ),
+            });
+        }
+        if self.morph_range.is_nan() {
+            return Err(Forge3dError::InvalidInput {
+                field: "clipmap.morph_range".to_string(),
+                message: "morph_range must not be NaN".to_string(),
+            });
+        }
+        if !self.base_cell_size[0].is_finite()
+            || self.base_cell_size[0] <= 0.0
+            || !self.base_cell_size[1].is_finite()
+            || self.base_cell_size[1] <= 0.0
+        {
+            return Err(Forge3dError::InvalidInput {
+                field: "clipmap.base_cell_size".to_string(),
+                message: "base_cell_size must be finite and greater than zero".to_string(),
+            });
+        }
+        Ok(())
+    }
+}
+
+#[cfg(feature = "webgpu")]
+impl TerrainClipmapGeometry {
+    /// Equivalent `terrain_clipmap` configuration for the clipmap mesh/layout
+    /// APIs (values already validated by `resolve`).
+    pub fn clipmap_config(&self) -> Result<crate::terrain_clipmap::ClipmapConfig> {
+        crate::terrain_clipmap::ClipmapConfig::new(
+            self.ring_count,
+            self.ring_resolution,
+            self.center_resolution,
+            self.skirt_depth,
+            self.morph_range,
+        )
     }
 }
 
@@ -1576,5 +2024,389 @@ mod tests {
             endpoints(&saddle_input(vec![-2.0, 2.0, 2.0, -2.0])),
             [([0.25, -0.5], [0.5, -0.25]), ([-0.5, 0.25], [-0.25, 0.5])],
         );
+    }
+
+    // ---- W08/E1 geometry, bounds, and streaming resolution ----
+
+    use super::{
+        TerrainGeometry, TerrainGeometryMode, TerrainGeometryOptions, TerrainRenderMode,
+        TerrainStreamingOptions,
+    };
+
+    fn streaming_input(options: TerrainStreamingOptions) -> TerrainGridOptions {
+        TerrainGridOptions {
+            spacing: Some([1.0, 1.0]),
+            streaming: Some(options),
+            ..TerrainGridOptions::default()
+        }
+    }
+
+    /// 16385x16385 pyramid (8 levels, coarsest 129x129) matching the W08
+    /// browser fixture.
+    fn pyramid_streaming() -> TerrainStreamingOptions {
+        TerrainStreamingOptions {
+            width: Some(16385),
+            height: Some(16385),
+            tile_size: Some(256),
+            ..TerrainStreamingOptions::default()
+        }
+    }
+
+    #[test]
+    fn geometry_defaults_to_grid() {
+        let input = TerrainHeightmapInput::new(4, 4, vec![1.0; 16]).unwrap();
+
+        assert_eq!(input.geometry, TerrainGeometry::Grid);
+        assert!(input.clipmap_geometry().is_none());
+        assert!(input.streaming.is_none());
+    }
+
+    #[test]
+    fn explicit_grid_geometry_matches_default() {
+        let default_input = TerrainHeightmapInput::new(4, 4, vec![1.0; 16]).unwrap();
+        let explicit = TerrainHeightmapInput::with_options(
+            4,
+            4,
+            vec![1.0; 16],
+            TerrainGridOptions {
+                geometry: Some(TerrainGeometryOptions {
+                    mode: TerrainGeometryMode::Grid,
+                    clipmap: None,
+                }),
+                ..TerrainGridOptions::default()
+            },
+        )
+        .unwrap();
+
+        assert_eq!(default_input, explicit);
+    }
+
+    #[test]
+    fn streaming_requires_width_and_height() {
+        let error = TerrainHeightmapInput::with_options(
+            4,
+            4,
+            vec![1.0; 16],
+            streaming_input(TerrainStreamingOptions {
+                width: Some(1024),
+                ..TerrainStreamingOptions::default()
+            }),
+        )
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "Invalid input terrain.streaming: terrain.streaming requires width and height"
+        );
+    }
+
+    #[test]
+    fn streaming_requires_minimum_pyramid_dims() {
+        let error = TerrainHeightmapInput::with_options(
+            4,
+            4,
+            vec![1.0; 16],
+            streaming_input(TerrainStreamingOptions {
+                width: Some(1),
+                height: Some(1),
+                ..TerrainStreamingOptions::default()
+            }),
+        )
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "Invalid input terrain.streaming.dimensions: pyramid dimensions must be >= 2, got 1x1"
+        );
+    }
+
+    #[test]
+    fn streaming_requires_tile_size_at_least_16() {
+        let error = TerrainHeightmapInput::with_options(
+            4,
+            4,
+            vec![1.0; 16],
+            streaming_input(TerrainStreamingOptions {
+                tile_size: Some(8),
+                ..pyramid_streaming()
+            }),
+        )
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "Invalid input terrain.streaming.tileSize: tile_size must be >= 16, got 8"
+        );
+    }
+
+    #[test]
+    fn streaming_requires_coarsest_level_heights() {
+        // 16385 pyramid needs the coarsest 129x129 level committed.
+        let error = TerrainHeightmapInput::with_options(
+            64,
+            64,
+            vec![1.0; 64 * 64],
+            streaming_input(pyramid_streaming()),
+        )
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "Invalid input terrain.streaming: terrain.streaming requires heights at the coarsest pyramid level (129x129)"
+        );
+    }
+
+    #[test]
+    fn streaming_resolves_pyramid_and_implies_clipmap() {
+        let input = TerrainHeightmapInput::with_options(
+            129,
+            129,
+            vec![1.0; 129 * 129],
+            streaming_input(pyramid_streaming()),
+        )
+        .unwrap();
+
+        let streaming = input.streaming.as_ref().unwrap();
+        assert_eq!((streaming.width, streaming.height), (16385, 16385));
+        assert_eq!(streaming.tile_size, 256);
+        assert_eq!(streaming.lod_count, 8);
+        assert_eq!(streaming.lod_bias, 0);
+        assert_eq!(streaming.prefetch_margin_tiles, 1);
+        assert_eq!(streaming.max_in_flight, 16);
+        // 64 MiB default / (256*256*4) = 256 slots.
+        assert_eq!(streaming.max_resident_bytes, 64 * 1024 * 1024);
+        assert_eq!(streaming.slot_capacity, 256);
+        assert_eq!(streaming.atlas_grid(), (16, 16));
+        assert_eq!(streaming.atlas_extent(), (4096, 4096));
+        streaming.validate_atlas_dimension(4096).unwrap();
+        let TerrainGeometry::Clipmap(clipmap) = &input.geometry else {
+            panic!("streaming must imply clipmap geometry");
+        };
+        assert_eq!(clipmap.ring_count, 4);
+        assert_eq!(clipmap.ring_resolution, 64);
+        assert_eq!(clipmap.center_resolution, 64);
+        assert_eq!(clipmap.base_cell_size, [1.0, 1.0]);
+        assert_eq!(input.heightfield_dims(), (16385, 16385));
+    }
+
+    #[test]
+    fn streaming_resident_budget_must_fit_coarsest_plus_slot() {
+        // Coarsest 129x129 fits one tile; +1 reserve => 2 slots.
+        let error = TerrainHeightmapInput::with_options(
+            129,
+            129,
+            vec![1.0; 129 * 129],
+            streaming_input(TerrainStreamingOptions {
+                max_resident_bytes: Some(256 * 256 * 4),
+                ..pyramid_streaming()
+            }),
+        )
+        .unwrap_err();
+
+        assert!(error
+            .to_string()
+            .contains("admits 1 slots but the coarsest level needs 2"));
+    }
+
+    #[test]
+    fn streaming_rejects_zero_max_in_flight() {
+        let error = TerrainHeightmapInput::with_options(
+            129,
+            129,
+            vec![1.0; 129 * 129],
+            streaming_input(TerrainStreamingOptions {
+                max_in_flight: Some(0),
+                ..pyramid_streaming()
+            }),
+        )
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "Invalid input terrain.streaming.maxInFlight: terrain.streaming maxInFlight must be at least 1"
+        );
+    }
+
+    #[test]
+    fn streaming_rejects_explicit_grid_geometry() {
+        let error = TerrainHeightmapInput::with_options(
+            129,
+            129,
+            vec![1.0; 129 * 129],
+            TerrainGridOptions {
+                spacing: Some([1.0, 1.0]),
+                geometry: Some(TerrainGeometryOptions {
+                    mode: TerrainGeometryMode::Grid,
+                    clipmap: None,
+                }),
+                streaming: Some(pyramid_streaming()),
+                ..TerrainGridOptions::default()
+            },
+        )
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "Invalid input terrain.streaming: terrain.streaming requires clipmap geometry"
+        );
+    }
+
+    #[test]
+    fn clipmap_requires_perspective_render_mode() {
+        let error = TerrainHeightmapInput::with_options(
+            4,
+            4,
+            vec![1.0; 16],
+            TerrainGridOptions {
+                render_mode: Some(TerrainRenderMode::Screen),
+                geometry: Some(TerrainGeometryOptions {
+                    mode: TerrainGeometryMode::Clipmap,
+                    clipmap: None,
+                }),
+                ..TerrainGridOptions::default()
+            },
+        )
+        .unwrap_err();
+
+        assert_eq!(
+            error.to_string(),
+            "Invalid input terrain.geometry: terrain.geometry clipmap requires renderMode perspective"
+        );
+    }
+
+    #[test]
+    fn clipmap_options_resolve_and_validate() {
+        let options = |clipmap: super::TerrainClipmapOptions| TerrainGridOptions {
+            geometry: Some(TerrainGeometryOptions {
+                mode: TerrainGeometryMode::Clipmap,
+                clipmap: Some(clipmap),
+            }),
+            spacing: Some([2.0, 4.0]),
+            ..TerrainGridOptions::default()
+        };
+
+        // Default resolution inherits spacing as base_cell_size.
+        let input = TerrainHeightmapInput::with_options(
+            4,
+            4,
+            vec![1.0; 16],
+            options(super::TerrainClipmapOptions::default()),
+        )
+        .unwrap();
+        let clipmap = input.clipmap_geometry().unwrap();
+        assert_eq!(clipmap.base_cell_size, [2.0, 4.0]);
+        assert_eq!(clipmap.morph_range, 0.3);
+
+        // morph_range clamps to [0, 1] like native `with_morph_range`.
+        let input = TerrainHeightmapInput::with_options(
+            4,
+            4,
+            vec![1.0; 16],
+            options(super::TerrainClipmapOptions {
+                morph_range: Some(2.5),
+                ring_count: Some(8),
+                ..super::TerrainClipmapOptions::default()
+            }),
+        )
+        .unwrap();
+        let clipmap = input.clipmap_geometry().unwrap();
+        assert_eq!(clipmap.morph_range, 1.0);
+        assert_eq!(clipmap.ring_count, 8);
+
+        let error = TerrainHeightmapInput::with_options(
+            4,
+            4,
+            vec![1.0; 16],
+            options(super::TerrainClipmapOptions {
+                ring_count: Some(0),
+                ..super::TerrainClipmapOptions::default()
+            }),
+        )
+        .unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "Invalid input clipmap.ring_count: ring_count must be in [1, 16], got 0"
+        );
+
+        let error = TerrainHeightmapInput::with_options(
+            4,
+            4,
+            vec![1.0; 16],
+            options(super::TerrainClipmapOptions {
+                ring_resolution: Some(63),
+                ..super::TerrainClipmapOptions::default()
+            }),
+        )
+        .unwrap_err();
+        assert_eq!(
+            error.to_string(),
+            "Invalid input clipmap.ring_resolution: ring_resolution must be even and >= 4, got 63"
+        );
+    }
+
+    #[test]
+    fn bounds_validate_and_resolve() {
+        let error = TerrainHeightmapInput::with_options(
+            4,
+            4,
+            vec![1.0; 16],
+            TerrainGridOptions {
+                bounds: Some([10.0, 0.0, 0.0, 10.0]),
+                ..TerrainGridOptions::default()
+            },
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("terrain bounds must be finite"));
+
+        // 5x5 @ spacing 2.0: origin (-4, -4) => bounds [-4, -4, 4, 4].
+        let input = TerrainHeightmapInput::with_options(
+            5,
+            5,
+            vec![1.0; 25],
+            TerrainGridOptions {
+                spacing: Some([2.0, 2.0]),
+                ..TerrainGridOptions::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(input.resolved_bounds(), [-4.0, -4.0, 4.0, 4.0]);
+
+        let input = TerrainHeightmapInput::with_options(
+            5,
+            5,
+            vec![1.0; 25],
+            TerrainGridOptions {
+                spacing: Some([2.0, 2.0]),
+                bounds: Some([-100.0, -50.0, 100.0, 50.0]),
+                ..TerrainGridOptions::default()
+            },
+        )
+        .unwrap();
+        assert_eq!(input.resolved_bounds(), [-100.0, -50.0, 100.0, 50.0]);
+    }
+
+    #[test]
+    fn streaming_atlas_larger_than_the_device_dimension_is_resource_limit_exceeded() {
+        let mut options = pyramid_streaming();
+        // 2048 slots of 256x256 => 46 x 45 slots => 11776 x 11520 texels.
+        options.max_resident_bytes = Some(2048 * 256 * 256 * 4);
+        let input = TerrainHeightmapInput::with_options(
+            129,
+            129,
+            vec![1.0; 129 * 129],
+            streaming_input(options),
+        )
+        .unwrap();
+        let streaming = input.streaming.as_ref().unwrap();
+        assert_eq!(streaming.atlas_grid(), (46, 45));
+        assert_eq!(streaming.atlas_extent(), (11776, 11520));
+        match streaming.validate_atlas_dimension(8192).unwrap_err() {
+            crate::error::Forge3dError::ResourceLimitExceeded { resource, message } => {
+                assert_eq!(resource, "terrain.streaming");
+                assert!(message.contains("maxTextureDimension2D 8192"), "{message}");
+            }
+            other => panic!("expected ResourceLimitExceeded, got {other:?}"),
+        }
+        streaming.validate_atlas_dimension(16384).unwrap();
     }
 }

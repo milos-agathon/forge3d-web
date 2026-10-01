@@ -4,7 +4,7 @@
   "manifestId": "forge3d-composite-baseline-v1",
   "sourcePlan": {
     "path": "docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md",
-    "sha256": "15186a6dbfc523a287c0cb3c233dfeb56689490e1109291721034fac09d77980"
+    "sha256": "6e102ee39005ecb901e6069067d57a77167b2bb7d15c205dbd6429b956719cda"
   },
   "baselineLayers": [
     {
@@ -723,7 +723,7 @@
       "title": "Clipmap rings, GPU LOD and geomorph seams",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W08",
       "nativeCapability": "Clipmap rings, GPU LOD and geomorph seams: 1f4084a:src/terrain/clipmap/**, tests/test_clipmap_structure.py, tests/test_gpu_lod_selection.py, tests/test_geomorph_seams.py",
       "requiredWebOutcome": "Replace whole-grid-only path with stable-budget crack-free camera-relative clipmaps",
@@ -747,7 +747,7 @@
       "title": "Async tiled height/overlay IO, dedupe, cancellation, backpressure, coalescing and prefetch",
       "lifecycle": "FI",
       "evidenceGrade": "C",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W08",
       "nativeCapability": "Async tiled height/overlay IO, dedupe, cancellation, backpressure, coalescing and prefetch: 1f4084a:src/terrain/page_table/**, src/terrain/stream/**, CHANGELOG.md 0.51-0.60",
       "requiredWebOutcome": "Add priority range scheduler, cache, camera prefetch and telemetry",
@@ -770,7 +770,7 @@
       "title": "COG ranges, IFD/overviews/tile stats",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W08",
       "nativeCapability": "COG ranges, IFD/overviews/tile stats: 1f4084a:python/forge3d/cog.py:37-346, tests/test_cog_streaming.py, examples/cog_streaming_demo.py",
       "requiredWebOutcome": "Add GeoTIFF/COG worker, overview selection, cache, nodata/transform/CRS metadata",
@@ -796,7 +796,7 @@
       "title": "Draped raster overlays, transforms, z-order and Normal/Multiply/Overlay blends",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W08",
       "nativeCapability": "Draped raster overlays, transforms, z-order and Normal/Multiply/Overlay blends: 1f4084a:src/terrain/page_table/overlay_loader.rs, tests/test_terrain_overlay_stack.py, examples/bosnia_terrain_landcover_viewer.py",
       "requiredWebOutcome": "Add ordered lit/shadowed raster layers with opacity, extent and CRS transforms",
@@ -866,7 +866,7 @@
       "title": "Albedo virtual texturing",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W08",
       "nativeCapability": "Albedo virtual texturing: 1f4084a:src/core/virtual_texture/**, src/terrain/renderer/virtual_texture.rs, tests/test_tv20_virtual_texturing.py",
       "requiredWebOutcome": "Add page table, feedback, residency, upload, cache and stats for albedo pages",
@@ -889,7 +889,7 @@
       "title": "Normal/mask virtual-texture families are explicitly unsupported",
       "lifecycle": "DA",
       "evidenceGrade": "B",
-      "status": "G→C",
+      "status": "C",
       "ownerTask": "W08",
       "nativeCapability": "Normal/mask virtual-texture families are explicitly unsupported: 1f4084a:tests/test_tv20_virtual_texturing.py",
       "requiredWebOutcome": "Return the same typed unsupported-family diagnostics; do not advertise residency",
@@ -2615,7 +2615,7 @@
       "contract": "Replace whole-grid-only path with stable-budget crack-free camera-relative clipmaps",
       "owner": "W08",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T08"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T08"
       ],
       "tests": [
         "port clipmap/geomorph/LOD/COG/overlay/VT tests; mocked range server; dedupe/cancel/prefetch/eviction/checksum/offline cases; albedo VT goldens and normal/mask diagnostics."
@@ -2628,7 +2628,7 @@
       "contract": "Add priority range scheduler, cache, camera prefetch and telemetry",
       "owner": "W08",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T09"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T09"
       ],
       "tests": [
         "port clipmap/geomorph/LOD/COG/overlay/VT tests; mocked range server; dedupe/cancel/prefetch/eviction/checksum/offline cases; albedo VT goldens and normal/mask diagnostics."
@@ -2641,7 +2641,7 @@
       "contract": "Add GeoTIFF/COG worker, overview selection, cache, nodata/transform/CRS metadata",
       "owner": "W08",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T10"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T10"
       ],
       "tests": [
         "port clipmap/geomorph/LOD/COG/overlay/VT tests; mocked range server; dedupe/cancel/prefetch/eviction/checksum/offline cases; albedo VT goldens and normal/mask diagnostics."
@@ -2654,7 +2654,7 @@
       "contract": "Add ordered lit/shadowed raster layers with opacity, extent and CRS transforms",
       "owner": "W08",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T11"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T11"
       ],
       "tests": [
         "port clipmap/geomorph/LOD/COG/overlay/VT tests; mocked range server; dedupe/cancel/prefetch/eviction/checksum/offline cases; albedo VT goldens and normal/mask diagnostics."
@@ -2693,7 +2693,7 @@
       "contract": "Add page table, feedback, residency, upload, cache and stats for albedo pages",
       "owner": "W08",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T14a"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T14a"
       ],
       "tests": [
         "port clipmap/geomorph/LOD/COG/overlay/VT tests; mocked range server; dedupe/cancel/prefetch/eviction/checksum/offline cases; albedo VT goldens and normal/mask diagnostics."
@@ -2706,7 +2706,7 @@
       "contract": "Return the same typed unsupported-family diagnostics; do not advertise residency",
       "owner": "W08",
       "evidence": [
-        "tracked G→C closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T14b"
+        "tracked C closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T14b"
       ],
       "tests": [
         "port clipmap/geomorph/LOD/COG/overlay/VT tests; mocked range server; dedupe/cancel/prefetch/eviction/checksum/offline cases; albedo VT goldens and normal/mask diagnostics."
@@ -3951,7 +3951,7 @@
     {
       "kind": "composite-inventory",
       "path": "crates/forge3d-web/tests/parity/composite-inventory.json",
-      "sha256": "6d53361c5bfbea5dcfd45a081a871c77c081af48ef14e4e2b34733a2e54bdc48",
+      "sha256": "97320d6bd43472468a90bf9285137b8626abbcee577e60a01e8da9e1ddd81c2a",
       "recordCount": 6531
     },
     {

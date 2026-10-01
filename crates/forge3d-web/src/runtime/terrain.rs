@@ -23,6 +23,109 @@ pub(super) const TERRAIN_SUN_KEY: &str = "terrain:sun-visibility";
 pub(super) const TERRAIN_ANALYSIS_FALLBACK_KEY: &str = "terrain:analysis-fallback";
 pub(super) const TERRAIN_ANALYSIS_FALLBACK_BYTES: u64 = 4;
 pub(super) const DEPTH_TEXTURE_KEY: &str = "depth";
+// W08 (E0): fragment-visible sampled-texture budget. Outside W08 the terrain
+// pipeline samples 11 textures (group 0 heightmap/AO/sun/material albedo+aux,
+// the LTC LUT, the IBL and shadow maps); only a textured material 0 adds the
+// five scene `TextureSet` textures of group 2. The W08 slots stack on top:
+// the height page table (binding 13), then the overlay array (14), then the
+// VT page table (17). Untextured terrain therefore fits every W08 slot in
+// the WebGPU default of 16; textured terrain needs 17 / 18 / 19.
+pub(super) const TERRAIN_BASE_SAMPLED_TEXTURES: u32 = 11;
+pub(super) const TERRAIN_SCENE_TEXTURE_SLOTS: u32 = 5;
+pub(super) const W08_SAMPLED_TEXTURES_CLIPMAP: u32 =
+    TERRAIN_BASE_SAMPLED_TEXTURES + TERRAIN_SCENE_TEXTURE_SLOTS;
+pub(super) const W08_STORAGE_BUFFERS_VT: u32 = 3;
+
+/// Which stacked W08 group-0 slots a terrain pipeline profile can declare.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct W08Slots {
+    /// Binding 13 (streamed height page table).
+    pub(super) page_table: bool,
+    /// Bindings 14-16 (overlay composite, sampler, uniform).
+    pub(super) overlays: bool,
+    /// Bindings 17-19 (VT page table, uniform, feedback ring).
+    pub(super) vt: bool,
+}
+
+impl W08Slots {
+    /// Slots that fit the negotiated limits for the untextured
+    /// (`scene_textures == false`) or textured pipeline profile.
+    pub(super) fn for_limits(sampled: u32, storage_buffers: u32, scene_textures: bool) -> Self {
+        let headroom = sampled.saturating_sub(Self::base(scene_textures));
+        Self {
+            page_table: headroom >= 1,
+            overlays: headroom >= 2,
+            vt: headroom >= 3 && storage_buffers >= W08_STORAGE_BUFFERS_VT,
+        }
+    }
+
+    pub(super) fn of_device(device: &wgpu::Device, scene_textures: bool) -> Self {
+        let limits = device.limits();
+        Self::for_limits(
+            limits.max_sampled_textures_per_shader_stage,
+            limits.max_storage_buffers_per_shader_stage,
+            scene_textures,
+        )
+    }
+
+    fn base(scene_textures: bool) -> u32 {
+        TERRAIN_BASE_SAMPLED_TEXTURES
+            + if scene_textures {
+                TERRAIN_SCENE_TEXTURE_SLOTS
+            } else {
+                0
+            }
+    }
+
+    /// Sampled-texture limit the `stack`-th W08 slot (1 = page table,
+    /// 2 = overlays, 3 = VT) needs in the given profile.
+    pub(super) fn required(scene_textures: bool, stack: u32) -> u32 {
+        Self::base(scene_textures) + stack
+    }
+
+    /// Whether a group-0 binding belongs to this profile's layout.
+    pub(super) fn keeps(self, binding: u32) -> bool {
+        match binding {
+            13 => self.page_table,
+            14..=16 => self.overlays,
+            17..=19 => self.vt,
+            _ => true,
+        }
+    }
+}
+
+/// Typed `UNSUPPORTED_FEATURE` for a W08 feature the profile cannot bind.
+pub(super) fn w08_limit_error(
+    feature: &str,
+    stack: u32,
+    scene_textures: bool,
+    sampled: u32,
+) -> WebError {
+    let storage = if stack == 3 {
+        format!(" and maxStorageBuffersPerShaderStage >= {W08_STORAGE_BUFFERS_VT}")
+    } else {
+        String::new()
+    };
+    let textured = if scene_textures {
+        format!(
+            " (terrain material 0 is textured, which binds {TERRAIN_SCENE_TEXTURE_SLOTS} more sampled textures)"
+        )
+    } else {
+        String::new()
+    };
+    WebError::new(
+        Forge3DErrorCode::UnsupportedFeature,
+        format!(
+            "{feature} requires maxSampledTexturesPerShaderStage >= {}{storage}, device has {sampled}{textured}",
+            W08Slots::required(scene_textures, stack)
+        ),
+    )
+}
+pub(super) const TERRAIN_CLIPMAP_KEY: &str = "terrain:clipmap";
+pub(super) const TERRAIN_HEIGHT_STREAM_KEY: &str = "terrain:height-stream";
+pub(super) const TERRAIN_LOD_SELECT_KEY: &str = "terrain:lod-select";
+pub(super) const TERRAIN_OVERLAYS_KEY: &str = "terrain:overlays";
+pub(super) const TERRAIN_VT_KEY: &str = "terrain:vt";
 pub(super) const TERRAIN_UNIFORM_BYTES: u64 = (std::mem::size_of::<CameraUniform>()
     + std::mem::size_of::<ColorRampUniform>()
     + std::mem::size_of::<TerrainParamsUniform>())
@@ -47,7 +150,26 @@ pub(super) fn analysis_texture_bytes(
         .and_then(|pixels| pixels.checked_mul(4))
 }
 
-pub(super) fn terrain_memory_keys() -> [&'static str; 7] {
+/// Pre-checked W08 ledger sizes of one terrain commit.
+struct W08Bytes {
+    clipmap: u64,
+    height_stream: u64,
+    lod_select: u64,
+    overlays: u64,
+    vt: u64,
+}
+
+impl W08Bytes {
+    fn total(&self) -> u64 {
+        self.clipmap
+            .saturating_add(self.height_stream)
+            .saturating_add(self.lod_select)
+            .saturating_add(self.overlays)
+            .saturating_add(self.vt)
+    }
+}
+
+pub(super) fn terrain_memory_keys() -> [&'static str; 12] {
     [
         TERRAIN_MESH_KEY,
         TERRAIN_HEIGHTMAP_KEY,
@@ -56,6 +178,11 @@ pub(super) fn terrain_memory_keys() -> [&'static str; 7] {
         TERRAIN_SUN_KEY,
         TERRAIN_ANALYSIS_FALLBACK_KEY,
         super::terrain_material::TERRAIN_MATERIAL_KEY,
+        TERRAIN_CLIPMAP_KEY,
+        TERRAIN_HEIGHT_STREAM_KEY,
+        TERRAIN_LOD_SELECT_KEY,
+        TERRAIN_OVERLAYS_KEY,
+        TERRAIN_VT_KEY,
     ]
 }
 
@@ -130,12 +257,18 @@ fn select_terrain_candidate(
         max_texture_dimension_2d: runtime.max_texture_dimension_2d,
         max_buffer_size: runtime.max_buffer_size,
     };
+    // Clipmap geometry builds its own fixed-size mesh; committed heights for
+    // streaming are the coarsest pyramid level and must not be resampled.
+    let clipmap = terrain.geometry.as_ref().is_some_and(|geometry| {
+        geometry.mode == Some(crate::inputs::TerrainGeometryModeOption::Clipmap)
+    }) || terrain.streaming.is_some();
     let requested = runtime.requested_quality;
     let requested_allocation = crate::inputs::validate_terrain_allocation(
         terrain.width,
         terrain.height,
         terrain.heights.len(),
         limits,
+        !clipmap,
     )?;
     let requested_bytes = terrain_total_bytes(
         &requested_allocation,
@@ -155,7 +288,10 @@ fn select_terrain_candidate(
     let ladder = quality_ladder_from(requested);
     let levels: &[QualityLevel] = match runtime.overflow_policy {
         OverflowPolicy::Reject => &ladder[..1],
-        OverflowPolicy::Downscale => ladder,
+        // Height payloads are never resampled under clipmap geometry: for
+        // streaming they are the coarsest pyramid level.
+        OverflowPolicy::Downscale if !clipmap => ladder,
+        OverflowPolicy::Downscale => &ladder[..1],
     };
     for level in levels {
         let relative =
@@ -173,6 +309,7 @@ fn select_terrain_candidate(
             height,
             (width * height) as usize,
             limits,
+            !clipmap,
         )?;
         let ao_bytes =
             analysis_output_bytes(height_ao.enabled, height_ao.resolution_scale, width, height)?;
@@ -229,6 +366,10 @@ fn select_terrain_candidate(
                     debug_view: terrain.debug_view,
                     render_mode: terrain.render_mode,
                     material: terrain.material.take(),
+                    geometry: terrain.geometry.take(),
+                    bounds: terrain.bounds,
+                    streaming: terrain.streaming.take(),
+                    overlays: terrain.overlays.take(),
                 },
                 allocation,
                 total_bytes: total,
@@ -288,11 +429,99 @@ pub(super) fn set_terrain_options_runtime(
         .debug_view
         .map(crate::inputs::TerrainDebugViewOption::to_core)
         .unwrap_or(TerrainDebugView::None);
-    let features = super::shader_variants::runtime_lighting_features(runtime)?;
+    let features = super::shader_variants::runtime_terrain_lighting_features(runtime)?;
     let mut candidate = select_terrain_candidate(runtime, terrain, &height_ao, &sun_visibility)?;
     let color_ramp = candidate.options.color_ramp.clone();
     let material = candidate.options.material.take();
+    let overlays_input = candidate.options.overlays.take();
     let validated = candidate.options.validate()?;
+    // W08 (E0): the extended group-0 layout needs the negotiated
+    // maxSampledTexturesPerShaderStage budget of this terrain's profile.
+    let sampled = runtime.max_sampled_textures_per_shader_stage;
+    let scene_textures = features.samples_scene_textures();
+    let slots = W08Slots::of_device(&context.device, scene_textures);
+    if validated.input.clipmap_geometry().is_some() && sampled < W08_SAMPLED_TEXTURES_CLIPMAP {
+        return Err(WebError::new(
+            Forge3DErrorCode::UnsupportedFeature,
+            format!(
+                "terrain clipmap requires maxSampledTexturesPerShaderStage >= {W08_SAMPLED_TEXTURES_CLIPMAP}, device has {sampled}"
+            ),
+        ));
+    }
+    if validated.input.streaming.is_some() && !slots.page_table {
+        return Err(w08_limit_error(
+            "terrain streaming",
+            1,
+            scene_textures,
+            sampled,
+        ));
+    }
+    // W08 (E5): visible overlays need the extended sampled-texture budget;
+    // disabled/invisible overlay inputs are no-ops and never gate.
+    let overlay_settings = overlays_input
+        .as_ref()
+        .filter(|settings| settings.enabled && settings.has_visible_layers());
+    if overlay_settings.is_some() && !slots.overlays {
+        return Err(w08_limit_error(
+            "terrain overlays",
+            2,
+            scene_textures,
+            sampled,
+        ));
+    }
+    // W08 (E6): material VT — blocking diagnostics first (an invalid
+    // declaration reports `vt_unsupported_family` etc. on every device),
+    // then the capability gate; both reject before anything is allocated.
+    let vt_settings = material
+        .as_ref()
+        .and_then(|options| options.virtual_texture.as_ref())
+        .filter(|settings| settings.enabled);
+    if let Some(settings) = vt_settings {
+        let report = forge3d_core::terrain_vt::validate_terrain_vt_support(settings, None);
+        if !report.diagnostics.is_empty() {
+            let details = serde::Serialize::serialize(
+                &vt_support_report_json(&report),
+                &serde_wasm_bindgen::Serializer::json_compatible(),
+            )
+            .unwrap_or(JsValue::NULL);
+            return Err(WebError::with_details(
+                Forge3DErrorCode::UnsupportedFeature,
+                format!(
+                    "terrain virtual texturing has blocking diagnostics: {}",
+                    report
+                        .diagnostics
+                        .iter()
+                        .map(|diagnostic| {
+                            format!("{} ({})", diagnostic.code, diagnostic.object_id)
+                        })
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                ),
+                details,
+            ));
+        }
+    }
+    if vt_settings.is_some() && !slots.vt {
+        return Err(w08_limit_error(
+            "terrain virtual texturing",
+            3,
+            scene_textures,
+            sampled,
+        ));
+    }
+    // W08 (E0): the streaming height atlas and the VT atlas are single 2D
+    // textures; both must fit maxTextureDimension2D (typed
+    // RESOURCE_LIMIT_EXCEEDED instead of a device validation error).
+    if let Some(streaming) = validated.input.streaming.as_ref() {
+        streaming
+            .validate_atlas_dimension(runtime.max_texture_dimension_2d)
+            .map_err(map_core_error)?;
+    }
+    if let Some(settings) = vt_settings {
+        settings
+            .validate_atlas_dimension(runtime.max_texture_dimension_2d)
+            .map_err(map_core_error)?;
+    }
     // Material textures take what the ledger can still admit after the
     // terrain; the core assembler halves them (not below 256) to fit.
     let material_budget = runtime
@@ -326,12 +555,133 @@ pub(super) fn set_terrain_options_runtime(
             ),
         ));
     }
+    // W08 (E5): plan the overlay composites with the terrain georeference.
+    // Streamed heightfields resolve to the virtual finest dims (coarse
+    // base x 2^(lod_count-1), capped by max_dim per the design).
+    let overlay_plan = match overlay_settings {
+        Some(settings) => {
+            let georef = forge3d_core::terrain_overlay::TerrainGeoreference {
+                crs: validated.input.crs.clone(),
+                bounds: validated
+                    .input
+                    .bounds
+                    .map(|b| [b[0] as f64, b[1] as f64, b[2] as f64, b[3] as f64]),
+            };
+            let (terrain_w, terrain_h) = match &validated.input.streaming {
+                Some(streaming) => (
+                    (u64::from(validated.input.width) << (streaming.lod_count - 1))
+                        .min(u64::from(runtime.max_texture_dimension_2d))
+                        as u32,
+                    (u64::from(validated.input.height) << (streaming.lod_count - 1))
+                        .min(u64::from(runtime.max_texture_dimension_2d))
+                        as u32,
+                ),
+                None => (validated.input.width, validated.input.height),
+            };
+            let overlay_budget = material_budget.saturating_sub(material_bytes);
+            let plan = forge3d_core::terrain_overlay::plan_overlays(
+                settings,
+                &georef,
+                terrain_w,
+                terrain_h,
+                runtime.max_texture_dimension_2d,
+                overlay_budget,
+            )
+            .map_err(map_core_error)?;
+            (!plan.layers.is_empty()).then_some(plan)
+        }
+        None => None,
+    };
+    // W08 (E6): VT albedo runtime — the registry feeds prepared sources;
+    // page-table layers = material_count x max_mip.
+    let vt_plan = match vt_settings {
+        Some(settings) => {
+            let layer = settings.selected_layer().ok_or_else(|| {
+                WebError::new(
+                    Forge3DErrorCode::UnsupportedFeature,
+                    "terrain virtual texturing requires the albedo family",
+                )
+            })?;
+            let material_count = material
+                .as_ref()
+                .map(|options| options.settings.material_set.len() as u32)
+                .unwrap_or(1)
+                .max(1);
+            let plan = super::terrain_vt::TerrainVtPlan::new(
+                &runtime.vt_registry,
+                layer,
+                settings,
+                material_count,
+            )?;
+            Some((plan, layer, settings))
+        }
+        None => None,
+    };
+    // W08 (E7): the clipmap mesh is CPU state; build it once here so its
+    // buffer sizes join the pre-check.
+    let clipmap_state = match validated.input.clipmap_geometry() {
+        Some(geometry) => Some(super::terrain_w08::ClipmapGeometryState::new(
+            geometry,
+            &validated.input,
+            [runtime.camera.position[0], runtime.camera.position[2]],
+        )?),
+        None => None,
+    };
+    // W08 pre-check: every W08 allocation is sized from the validated
+    // inputs and admitted together with the terrain and material before
+    // anything is created, so a rejected commit leaves the ledger and the
+    // committed terrain exactly as they were.
+    let (stream_bytes, lod_select_bytes) = match validated.input.streaming.as_ref() {
+        Some(streaming) => (
+            super::terrain_w08::streaming_gpu_bytes(streaming)?,
+            super::terrain_w08::streaming_lod_select_gpu_bytes(streaming)?,
+        ),
+        None => (0, 0),
+    };
+    let w08_bytes = W08Bytes {
+        clipmap: clipmap_state
+            .as_ref()
+            .map_or(0, super::terrain_w08::ClipmapGeometryState::gpu_bytes),
+        height_stream: stream_bytes,
+        lod_select: lod_select_bytes,
+        overlays: overlay_plan
+            .as_ref()
+            .map_or(0, TerrainOverlayState::gpu_bytes_for),
+        vt: vt_plan.as_ref().map_or(0, |(plan, _, _)| plan.gpu_bytes),
+    };
+    let required = candidate
+        .total_bytes
+        .saturating_add(material_bytes)
+        .saturating_add(w08_bytes.total());
+    if !runtime
+        .memory
+        .fits_after_release(&terrain_memory_keys(), required)
+    {
+        return Err(WebError::new(
+            Forge3DErrorCode::ResourceLimitExceeded,
+            format!(
+                "terrain W08 resources (clipmap {}, height-stream {}, lod-select {}, overlays {}, vt {} bytes) exceed the memory budget after the terrain and material",
+                w08_bytes.clipmap,
+                w08_bytes.height_stream,
+                w08_bytes.lod_select,
+                w08_bytes.overlays,
+                w08_bytes.vt,
+            ),
+        ));
+    }
     let material_resources = super::terrain_material::TerrainMaterialResources::new(
         &context,
         material_plan,
         material.as_ref(),
         screen,
     );
+    let overlays = overlay_plan.map(|plan| TerrainOverlayState::new(&context, plan));
+    let vt = match vt_plan {
+        Some((plan, layer, settings)) => Some(super::terrain_vt::TerrainVtState::new(
+            &context, plan, layer, settings,
+        )?),
+        None => None,
+    };
     let resources = TerrainRenderResources::new(
         &context,
         surface_format,
@@ -352,37 +702,73 @@ pub(super) fn set_terrain_options_runtime(
         })?,
         features,
         material_resources,
+        overlays,
+        vt,
+        clipmap_state,
     )?;
     let (mesh_bytes, texture_bytes, uniform_bytes) = terrain_gpu_bytes(&candidate.allocation)?;
-    runtime
-        .memory
-        .replace(TERRAIN_MESH_KEY, MemoryCategory::Buffers, mesh_bytes)?;
-    runtime.memory.replace(
-        TERRAIN_HEIGHTMAP_KEY,
-        MemoryCategory::Textures,
-        texture_bytes,
-    )?;
-    runtime
-        .memory
-        .replace(TERRAIN_UNIFORMS_KEY, MemoryCategory::Buffers, uniform_bytes)?;
-    runtime
-        .memory
-        .replace(TERRAIN_AO_KEY, MemoryCategory::Textures, candidate.ao_bytes)?;
-    runtime.memory.replace(
-        TERRAIN_SUN_KEY,
-        MemoryCategory::Textures,
-        candidate.sun_bytes,
-    )?;
-    runtime.memory.replace(
-        TERRAIN_ANALYSIS_FALLBACK_KEY,
-        MemoryCategory::Textures,
-        TERRAIN_ANALYSIS_FALLBACK_BYTES,
-    )?;
-    runtime.memory.replace(
-        super::terrain_material::TERRAIN_MATERIAL_KEY,
-        MemoryCategory::Textures,
-        material_bytes,
-    )?;
+    // W08 (E7): clipmap mesh + geometry uniform + shadow proxy, streamed
+    // atlas/page-table, and the LOD-select buffers all get their own ledger
+    // keys. The committed dense base texture stays under
+    // `terrain:heightmap` in streaming mode (it is the analysis/shadow
+    // input); the streamed key covers the atlas + page table. The charges
+    // are the pre-checked sizes (same functions), swapped in atomically.
+    debug_assert_eq!(resources.clipmap_gpu_bytes(), w08_bytes.clipmap);
+    debug_assert_eq!(resources.streaming_gpu_bytes(), w08_bytes.height_stream);
+    debug_assert_eq!(resources.lod_select_gpu_bytes(), w08_bytes.lod_select);
+    debug_assert_eq!(resources.overlay_gpu_bytes(), w08_bytes.overlays);
+    debug_assert_eq!(resources.vt_gpu_bytes(), w08_bytes.vt);
+    runtime.memory.replace_all(&[
+        (TERRAIN_MESH_KEY, MemoryCategory::Buffers, mesh_bytes),
+        (
+            TERRAIN_HEIGHTMAP_KEY,
+            MemoryCategory::Textures,
+            texture_bytes,
+        ),
+        (TERRAIN_UNIFORMS_KEY, MemoryCategory::Buffers, uniform_bytes),
+        (TERRAIN_AO_KEY, MemoryCategory::Textures, candidate.ao_bytes),
+        (
+            TERRAIN_SUN_KEY,
+            MemoryCategory::Textures,
+            candidate.sun_bytes,
+        ),
+        (
+            TERRAIN_ANALYSIS_FALLBACK_KEY,
+            MemoryCategory::Textures,
+            TERRAIN_ANALYSIS_FALLBACK_BYTES,
+        ),
+        (
+            super::terrain_material::TERRAIN_MATERIAL_KEY,
+            MemoryCategory::Textures,
+            material_bytes,
+        ),
+        (
+            TERRAIN_CLIPMAP_KEY,
+            MemoryCategory::Buffers,
+            resources.clipmap_gpu_bytes(),
+        ),
+        (
+            TERRAIN_HEIGHT_STREAM_KEY,
+            MemoryCategory::Textures,
+            resources.streaming_gpu_bytes(),
+        ),
+        (
+            TERRAIN_LOD_SELECT_KEY,
+            MemoryCategory::Buffers,
+            resources.lod_select_gpu_bytes(),
+        ),
+        // W08 (E5/E6): overlay composite array + VT atlas/page-table.
+        (
+            TERRAIN_OVERLAYS_KEY,
+            MemoryCategory::Textures,
+            resources.overlay_gpu_bytes(),
+        ),
+        (
+            TERRAIN_VT_KEY,
+            MemoryCategory::Textures,
+            resources.vt_gpu_bytes(),
+        ),
+    ])?;
     if candidate.effective_quality != runtime.requested_quality {
         runtime.memory.record_downgrade(LedgerDowngrade {
             requested: runtime.requested_quality,
@@ -645,95 +1031,222 @@ pub(super) struct TerrainAnalysisOutput {
     pub(super) height: u32,
 }
 
-/// Group-0 layout shared by the init-time validation pipeline and every
-/// terrain bind group, so the validated pipeline can be reused as-is.
+/// Group-0 layout for one pipeline profile, shared by the init-time
+/// validation pipeline and every terrain bind group of that profile.
 #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
-pub(super) fn terrain_bind_group_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
-    let material = super::terrain_material::material_layout_entries();
+pub(super) fn terrain_bind_group_layout(
+    device: &wgpu::Device,
+    slots: W08Slots,
+) -> wgpu::BindGroupLayout {
+    let entries = terrain_layout_entries(slots);
     device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
         label: Some("forge3d-web-terrain-bind-group-layout"),
-        entries: &[
-            wgpu::BindGroupLayoutEntry {
-                binding: 0,
-                visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Texture {
-                    sample_type: wgpu::TextureSampleType::Float { filterable: false },
-                    view_dimension: wgpu::TextureViewDimension::D2,
-                    multisampled: false,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 1,
-                visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::NonFiltering),
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 2,
-                visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 3,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 4,
-                visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Buffer {
-                    ty: wgpu::BufferBindingType::Uniform,
-                    has_dynamic_offset: false,
-                    min_binding_size: None,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 5,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Texture {
-                    sample_type: wgpu::TextureSampleType::Float { filterable: false },
-                    view_dimension: wgpu::TextureViewDimension::D2,
-                    multisampled: false,
-                },
-                count: None,
-            },
-            wgpu::BindGroupLayoutEntry {
-                binding: 6,
-                visibility: wgpu::ShaderStages::FRAGMENT,
-                ty: wgpu::BindingType::Texture {
-                    sample_type: wgpu::TextureSampleType::Float { filterable: false },
-                    view_dimension: wgpu::TextureViewDimension::D2,
-                    multisampled: false,
-                },
-                count: None,
-            },
-            material[0],
-            material[1],
-            material[2],
-            material[3],
-            material[4],
-        ],
+        entries: &entries,
     })
+}
+
+/// Group-0 layout entries for the W08 `slots` of a pipeline profile.
+///
+/// W08 (E0): binding 12 (`TerrainGeometryUniform`) is always present —
+/// grid-mode bind groups fill it with a zeroed uniform so shaders never
+/// read it — and the stacked W08 slots (13, 14-16, 17-19) are appended when
+/// the profile's sampled-texture budget covers them.
+pub(super) fn terrain_layout_entries(slots: W08Slots) -> Vec<wgpu::BindGroupLayoutEntry> {
+    let material = super::terrain_material::material_layout_entries();
+    let mut entries = vec![
+        wgpu::BindGroupLayoutEntry {
+            binding: 0,
+            visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+            ty: wgpu::BindingType::Texture {
+                sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                view_dimension: wgpu::TextureViewDimension::D2,
+                multisampled: false,
+            },
+            count: None,
+        },
+        wgpu::BindGroupLayoutEntry {
+            binding: 1,
+            visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+            ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::NonFiltering),
+            count: None,
+        },
+        wgpu::BindGroupLayoutEntry {
+            binding: 2,
+            visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+            ty: wgpu::BindingType::Buffer {
+                ty: wgpu::BufferBindingType::Uniform,
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        wgpu::BindGroupLayoutEntry {
+            binding: 3,
+            visibility: wgpu::ShaderStages::FRAGMENT,
+            ty: wgpu::BindingType::Buffer {
+                ty: wgpu::BufferBindingType::Uniform,
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        wgpu::BindGroupLayoutEntry {
+            binding: 4,
+            visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+            ty: wgpu::BindingType::Buffer {
+                ty: wgpu::BufferBindingType::Uniform,
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+        wgpu::BindGroupLayoutEntry {
+            binding: 5,
+            visibility: wgpu::ShaderStages::FRAGMENT,
+            ty: wgpu::BindingType::Texture {
+                sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                view_dimension: wgpu::TextureViewDimension::D2,
+                multisampled: false,
+            },
+            count: None,
+        },
+        wgpu::BindGroupLayoutEntry {
+            binding: 6,
+            visibility: wgpu::ShaderStages::FRAGMENT,
+            ty: wgpu::BindingType::Texture {
+                sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                view_dimension: wgpu::TextureViewDimension::D2,
+                multisampled: false,
+            },
+            count: None,
+        },
+        material[0],
+        material[1],
+        material[2],
+        material[3],
+        material[4],
+        // W08 (E2/E3): clipmap + streaming parameters. Always bound — a
+        // zeroed uniform for plain grid inputs — so one layout serves every
+        // terrain variant.
+        wgpu::BindGroupLayoutEntry {
+            binding: 12,
+            visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+            ty: wgpu::BindingType::Buffer {
+                ty: wgpu::BufferBindingType::Uniform,
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
+    ];
+    if slots.page_table {
+        // W08 (E3): `height_page_table` — u32 array, one layer per lod. The
+        // streaming-aware height helpers run in both vertex and fragment
+        // code, so both stages need visibility.
+        entries.push(wgpu::BindGroupLayoutEntry {
+            binding: 13,
+            visibility: wgpu::ShaderStages::VERTEX | wgpu::ShaderStages::FRAGMENT,
+            ty: wgpu::BindingType::Texture {
+                sample_type: wgpu::TextureSampleType::Uint,
+                view_dimension: wgpu::TextureViewDimension::D2Array,
+                multisampled: false,
+            },
+            count: None,
+        });
+    }
+    // W08 (E5): overlay composite texture + sampler + control/modes uniform
+    // (bindings 14-16). Entries exist whenever the negotiated limit covers
+    // them — off-by-default states bind 1x1 transparent fallbacks.
+    if slots.overlays {
+        entries.extend([
+            wgpu::BindGroupLayoutEntry {
+                binding: 14,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Texture {
+                    sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    view_dimension: wgpu::TextureViewDimension::D2Array,
+                    multisampled: false,
+                },
+                count: None,
+            },
+            wgpu::BindGroupLayoutEntry {
+                binding: 15,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                count: None,
+            },
+            wgpu::BindGroupLayoutEntry {
+                binding: 16,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            },
+        ]);
+    }
+    // W08 (E6): VT page table (unfilterable RGBA32Float), VT uniforms and
+    // the fragment-written feedback ring (bindings 17-19).
+    if slots.vt {
+        entries.extend([
+            wgpu::BindGroupLayoutEntry {
+                binding: 17,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Texture {
+                    sample_type: wgpu::TextureSampleType::Float { filterable: false },
+                    view_dimension: wgpu::TextureViewDimension::D2Array,
+                    multisampled: false,
+                },
+                count: None,
+            },
+            wgpu::BindGroupLayoutEntry {
+                binding: 18,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            },
+            wgpu::BindGroupLayoutEntry {
+                binding: 19,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Storage { read_only: false },
+                    has_dynamic_offset: false,
+                    min_binding_size: None,
+                },
+                count: None,
+            },
+        ]);
+    }
+    entries
 }
 
 /// Feature-specialized terrain pipelines for one runtime, keyed by shader
 /// features and surface format. Init-time validation compiles the variant for
 /// the default state; terrain commits and renders reuse or add variants.
+///
+/// Two pipeline profiles share the cache: *untextured* variants (material 0
+/// has no scene textures) bind an empty group 2, which leaves room for every
+/// W08 slot within the WebGPU default limit; *textured* variants bind the
+/// scene `TextureSet` and a group 0 trimmed to the W08 slots that still fit.
 pub(super) struct TerrainPipelineCache {
+    /// Group 0 of the untextured profile.
     pub(super) bind_group_layout: wgpu::BindGroupLayout,
+    /// W08 slots of the untextured profile.
+    pub(super) slots: W08Slots,
+    /// Group 0 of the textured profile when it differs from the untextured one.
+    textured_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    /// W08 slots of the textured profile.
+    pub(super) textured_slots: W08Slots,
+    /// Empty group 2 bound by untextured variants.
+    pub(super) empty_bind_group: wgpu::BindGroup,
     pipeline_layout: wgpu::PipelineLayout,
+    textured_pipeline_layout: wgpu::PipelineLayout,
     variants: std::collections::HashMap<(u64, wgpu::TextureFormat), TerrainPipelineVariant>,
     /// Offline capture pipelines keyed by capture-specialized features.
     capture_variants:
@@ -754,20 +1267,53 @@ impl TerrainPipelineCache {
         texture_layout: &wgpu::BindGroupLayout,
         ibl_layout: &wgpu::BindGroupLayout,
     ) -> Self {
-        let bind_group_layout = terrain_bind_group_layout(device);
+        let slots = W08Slots::of_device(device, false);
+        let textured_slots = W08Slots::of_device(device, true);
+        let bind_group_layout = terrain_bind_group_layout(device, slots);
+        let textured_bind_group_layout =
+            (textured_slots != slots).then(|| terrain_bind_group_layout(device, textured_slots));
+        let empty_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("forge3d-web-terrain-empty-group-layout"),
+            entries: &[],
+        });
+        let empty_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("forge3d-web-terrain-empty-group"),
+            layout: &empty_layout,
+            entries: &[],
+        });
         let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("forge3d-web-terrain-pipeline-layout"),
             bind_group_layouts: &[
                 Some(&bind_group_layout),
                 Some(lighting_layout),
-                Some(texture_layout),
+                Some(&empty_layout),
                 Some(ibl_layout),
             ],
             immediate_size: 0,
         });
+        let textured_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("forge3d-web-terrain-textured-pipeline-layout"),
+                bind_group_layouts: &[
+                    Some(
+                        textured_bind_group_layout
+                            .as_ref()
+                            .unwrap_or(&bind_group_layout),
+                    ),
+                    Some(lighting_layout),
+                    Some(texture_layout),
+                    Some(ibl_layout),
+                ],
+                immediate_size: 0,
+            });
         Self {
             bind_group_layout,
+            slots,
+            textured_bind_group_layout,
+            textured_slots,
+            empty_bind_group,
             pipeline_layout,
+            textured_pipeline_layout,
             variants: std::collections::HashMap::new(),
             capture_variants: std::collections::HashMap::new(),
         }
@@ -783,7 +1329,11 @@ impl TerrainPipelineCache {
         pass: super::offline::CapturePass,
     ) -> wgpu::RenderPipeline {
         let features = features.with_capture();
-        let pipeline_layout = &self.pipeline_layout;
+        let pipeline_layout = if features.samples_scene_textures() {
+            &self.textured_pipeline_layout
+        } else {
+            &self.pipeline_layout
+        };
         self.capture_variants
             .entry((features.bits(), pass))
             .or_insert_with(|| {
@@ -802,6 +1352,32 @@ impl TerrainPipelineCache {
             .clone()
     }
 
+    /// Group-0 layout and W08 slots of the profile `features` select.
+    pub(super) fn group0_for(
+        &self,
+        features: ShaderFeatures,
+    ) -> (&wgpu::BindGroupLayout, W08Slots) {
+        if features.samples_scene_textures() {
+            (
+                self.textured_bind_group_layout
+                    .as_ref()
+                    .unwrap_or(&self.bind_group_layout),
+                self.textured_slots,
+            )
+        } else {
+            (&self.bind_group_layout, self.slots)
+        }
+    }
+
+    /// The textured profile's group-0 layout when it differs from the
+    /// untextured one (a device that cannot fit every W08 slot next to the
+    /// scene textures).
+    pub(super) fn textured_group0(&self) -> Option<(&wgpu::BindGroupLayout, W08Slots)> {
+        self.textured_bind_group_layout
+            .as_ref()
+            .map(|layout| (layout, self.textured_slots))
+    }
+
     /// Returns the pipeline for `features`, compiling it on first use.
     pub(super) fn variant(
         &mut self,
@@ -809,7 +1385,11 @@ impl TerrainPipelineCache {
         features: ShaderFeatures,
         surface_format: wgpu::TextureFormat,
     ) -> TerrainPipelineVariant {
-        let pipeline_layout = &self.pipeline_layout;
+        let pipeline_layout = if features.samples_scene_textures() {
+            &self.textured_pipeline_layout
+        } else {
+            &self.pipeline_layout
+        };
         self.variants
             .entry((features.bits(), surface_format))
             .or_insert_with(|| {
@@ -829,6 +1409,250 @@ impl TerrainPipelineCache {
     }
 }
 
+/// GPU buffers for the coarse proxy grid drawn by the shadow depth pass in
+/// clipmap mode (E2); the dense clipmap mesh is never shadow-suitable.
+pub(super) struct ShadowProxyMesh {
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    pub(super) vertex_buffer: wgpu::Buffer,
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    pub(super) index_buffer: wgpu::Buffer,
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    pub(super) index_count: u32,
+    /// GPU bytes for `terrain:clipmap` ledger accounting.
+    pub(super) bytes: u64,
+}
+
+/// WGSL `TerrainOverlayUniform` mirror (binding 16): 48 bytes.
+#[repr(C)]
+#[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
+pub(super) struct TerrainOverlayUniformGpu {
+    /// [layer count, global opacity, 0, 0].
+    pub control: [f32; 4],
+    /// Blend-mode discriminant per layer lane (`array<vec4<u32>, 2>`).
+    pub modes: [u32; 8],
+}
+
+impl TerrainOverlayUniformGpu {
+    fn from_plan(plan: &forge3d_core::terrain_overlay::OverlayPlan) -> Self {
+        let mut modes = [0u32; 8];
+        for (index, layer) in plan.layers.iter().enumerate() {
+            modes[index] = match layer.blend_mode {
+                forge3d_core::terrain_overlay::OverlayBlendMode::Normal => 0,
+                forge3d_core::terrain_overlay::OverlayBlendMode::Multiply => 1,
+                forge3d_core::terrain_overlay::OverlayBlendMode::Overlay => 2,
+            };
+        }
+        Self {
+            control: [plan.layers.len() as f32, plan.global_opacity, 0.0, 0.0],
+            modes,
+        }
+    }
+}
+
+/// W08 (E5): GPU block for the planned overlay stack — one RGBA8UnormSrgb
+/// layer per planned composite at bindings 14/15/16.
+pub(super) struct TerrainOverlayState {
+    pub plan: forge3d_core::terrain_overlay::OverlayPlan,
+    texture_view: wgpu::TextureView,
+    sampler: wgpu::Sampler,
+    uniform_buffer: wgpu::Buffer,
+    /// Texture + uniform bytes (ledger `terrain:overlays`).
+    gpu_bytes: u64,
+}
+
+impl TerrainOverlayState {
+    fn new(context: &GpuContext, plan: forge3d_core::terrain_overlay::OverlayPlan) -> Self {
+        let device = &context.device;
+        let layers = plan.layers.len().max(1) as u32;
+        let width = plan.width.max(1);
+        let height = plan.height.max(1);
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("forge3d-web-terrain-overlays"),
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: layers,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
+        });
+        for (index, layer) in plan.layers.iter().enumerate() {
+            let (data, pitch) =
+                super::terrain_vt::pad_rows(&layer.rgba, width as usize * 4, height as usize);
+            context.queue.write_texture(
+                wgpu::TexelCopyTextureInfo {
+                    texture: &texture,
+                    mip_level: 0,
+                    origin: wgpu::Origin3d {
+                        x: 0,
+                        y: 0,
+                        z: index as u32,
+                    },
+                    aspect: wgpu::TextureAspect::All,
+                },
+                &data,
+                wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(pitch),
+                    rows_per_image: Some(height),
+                },
+                wgpu::Extent3d {
+                    width,
+                    height,
+                    depth_or_array_layers: 1,
+                },
+            );
+        }
+        let texture_view = texture.create_view(&wgpu::TextureViewDescriptor {
+            label: Some("forge3d-web-terrain-overlays"),
+            dimension: Some(wgpu::TextureViewDimension::D2Array),
+            ..Default::default()
+        });
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("forge3d-web-terrain-overlay-sampler"),
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Linear,
+            mipmap_filter: wgpu::MipmapFilterMode::Nearest,
+            ..Default::default()
+        });
+        let uniform = TerrainOverlayUniformGpu::from_plan(&plan);
+        let uniform_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("forge3d-web-terrain-overlay-uniform"),
+            contents: bytemuck::bytes_of(&uniform),
+            usage: wgpu::BufferUsages::UNIFORM,
+        });
+        Self {
+            gpu_bytes: Self::gpu_bytes_for(&plan),
+            plan,
+            texture_view,
+            sampler,
+            uniform_buffer,
+        }
+    }
+
+    /// Texture + uniform bytes (ledger `terrain:overlays`).
+    pub(super) fn gpu_bytes(&self) -> u64 {
+        self.gpu_bytes
+    }
+
+    /// Ledger bytes a plan will allocate (commit pre-check).
+    pub(super) fn gpu_bytes_for(plan: &forge3d_core::terrain_overlay::OverlayPlan) -> u64 {
+        plan.gpu_bytes + std::mem::size_of::<TerrainOverlayUniformGpu>() as u64
+    }
+}
+
+/// 1x1 transparent / zeroed fallbacks for the W08 binding slots the layout
+/// exposes but this terrain does not use (grid + non-overlay/VT commits).
+struct W08BindingFallbacks {
+    overlay_view: Option<wgpu::TextureView>,
+    overlay_sampler: Option<wgpu::Sampler>,
+    overlay_uniform: Option<wgpu::Buffer>,
+    vt_page_view: Option<wgpu::TextureView>,
+    vt_uniform: Option<wgpu::Buffer>,
+    vt_feedback: Option<wgpu::Buffer>,
+    // Keeps the fallback textures alive (views hold refs but we keep the
+    // handles for clarity).
+    #[allow(dead_code)]
+    overlay_texture: Option<wgpu::Texture>,
+    #[allow(dead_code)]
+    vt_page_texture: Option<wgpu::Texture>,
+}
+
+impl W08BindingFallbacks {
+    fn new(device: &wgpu::Device, slots: W08Slots) -> Self {
+        let (overlay_texture, overlay_view, overlay_sampler, overlay_uniform) = if slots.overlays {
+            let texture = device.create_texture(&wgpu::TextureDescriptor {
+                label: Some("forge3d-web-terrain-overlay-fallback"),
+                size: wgpu::Extent3d {
+                    width: 1,
+                    height: 1,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format: wgpu::TextureFormat::Rgba8UnormSrgb,
+                usage: wgpu::TextureUsages::TEXTURE_BINDING,
+                view_formats: &[],
+            });
+            let view = texture.create_view(&wgpu::TextureViewDescriptor {
+                dimension: Some(wgpu::TextureViewDimension::D2Array),
+                ..Default::default()
+            });
+            let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+                label: Some("forge3d-web-terrain-overlay-fallback-sampler"),
+                address_mode_u: wgpu::AddressMode::ClampToEdge,
+                address_mode_v: wgpu::AddressMode::ClampToEdge,
+                address_mode_w: wgpu::AddressMode::ClampToEdge,
+                mag_filter: wgpu::FilterMode::Linear,
+                min_filter: wgpu::FilterMode::Linear,
+                ..Default::default()
+            });
+            let uniform = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("forge3d-web-terrain-overlay-fallback-uniform"),
+                size: std::mem::size_of::<TerrainOverlayUniformGpu>() as u64,
+                usage: wgpu::BufferUsages::UNIFORM,
+                mapped_at_creation: false,
+            });
+            (Some(texture), Some(view), Some(sampler), Some(uniform))
+        } else {
+            (None, None, None, None)
+        };
+        let (vt_page_texture, vt_page_view, vt_uniform, vt_feedback) = if slots.vt {
+            let texture = device.create_texture(&wgpu::TextureDescriptor {
+                label: Some("forge3d-web-terrain-vt-page-fallback"),
+                size: wgpu::Extent3d {
+                    width: 1,
+                    height: 1,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format: wgpu::TextureFormat::Rgba32Float,
+                usage: wgpu::TextureUsages::TEXTURE_BINDING,
+                view_formats: &[],
+            });
+            let view = texture.create_view(&wgpu::TextureViewDescriptor {
+                dimension: Some(wgpu::TextureViewDimension::D2Array),
+                ..Default::default()
+            });
+            let uniform = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("forge3d-web-terrain-vt-fallback-uniform"),
+                size: std::mem::size_of::<super::terrain_vt::TerrainVTUniformsGpu>() as u64,
+                usage: wgpu::BufferUsages::UNIFORM,
+                mapped_at_creation: false,
+            });
+            let feedback = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("forge3d-web-terrain-vt-fallback-feedback"),
+                size: 16,
+                usage: wgpu::BufferUsages::STORAGE,
+                mapped_at_creation: false,
+            });
+            (Some(texture), Some(view), Some(uniform), Some(feedback))
+        } else {
+            (None, None, None, None)
+        };
+        Self {
+            overlay_view,
+            overlay_sampler,
+            overlay_uniform,
+            vt_page_view,
+            vt_uniform,
+            vt_feedback,
+            overlay_texture,
+            vt_page_texture,
+        }
+    }
+}
+
 pub(super) struct TerrainRenderResources {
     pub(super) pipeline: wgpu::RenderPipeline,
     /// Shader features the current `pipeline` was specialized for.
@@ -838,6 +1662,10 @@ pub(super) struct TerrainRenderResources {
     pub(super) vertex_buffer: wgpu::Buffer,
     pub(super) index_buffer: wgpu::Buffer,
     pub(super) index_count: u32,
+    /// Vertex-buffer element count (clipmap mesh is constant-size; the
+    /// layout update rewrites contents only).
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    pub(super) vertex_count: u32,
     pub(super) render_mode: u32,
     camera_buffer: wgpu::Buffer,
     #[allow(dead_code)]
@@ -856,15 +1684,97 @@ pub(super) struct TerrainRenderResources {
     #[allow(dead_code)]
     sampler: wgpu::Sampler,
     pub(super) material: super::terrain_material::TerrainMaterialResources,
+    /// W08 (E2/E3): `TerrainGeometryUniform` at binding 12 — zeroed for
+    /// plain grid terrain.
+    geometry_buffer: wgpu::Buffer,
+    /// Texture bound at binding 13 when the negotiated limit exposes it:
+    /// the streaming page table, or a 1x1x1 fallback layer otherwise.
+    #[allow(dead_code)]
+    page_table_view: Option<wgpu::TextureView>,
+    /// Keeps the fallback page-table texture alive.
+    #[allow(dead_code)]
+    page_table_fallback: Option<wgpu::Texture>,
+    /// W08 clipmap mesh state; `RefCell` because camera updates rewrite the
+    /// fixed-size vertex/index buffers through `&self`.
+    pub(super) clipmap: Option<std::cell::RefCell<super::terrain_w08::ClipmapGeometryState>>,
+    /// W08 streamed heightfield state (mosaic + atlas + LOD-select pass).
+    pub(super) streaming: Option<super::terrain_w08::HeightStreamingState>,
+    /// Coarse shadow-caster proxy used only in clipmap mode.
+    pub(super) shadow_proxy: Option<ShadowProxyMesh>,
+    /// W08 (E5): planned overlay composite state (bindings 14-16).
+    pub(super) overlays: Option<TerrainOverlayState>,
+    /// W08 (E6): material virtual texturing (bindings 8/9 atlas + 17-19).
+    pub(super) vt: Option<super::terrain_vt::TerrainVtState>,
+    /// Fallback resources for W08 binding slots the layout exposes but this
+    /// commit does not use.
+    w08_fallbacks: W08BindingFallbacks,
+    /// W08 slots of the untextured profile (the superset `bind_group` binds).
+    slots: W08Slots,
+    /// Group 0 for textured variants when their layout drops W08 slots.
+    textured_bind_group: Option<wgpu::BindGroup>,
+    /// Empty group 2 bound by untextured variants.
+    empty_bind_group: wgpu::BindGroup,
 }
 
 impl TerrainRenderResources {
-    /// Applies this terrain's mode and material regions to `features`.
+    /// Group-0 and group-2 bind groups for the active pipeline profile:
+    /// textured variants bind `scene_textures` (the material-0 `TextureSet`),
+    /// untextured variants an empty group 2.
+    pub(super) fn profile_bind_groups<'a>(
+        &'a self,
+        scene_textures: &'a wgpu::BindGroup,
+    ) -> (&'a wgpu::BindGroup, &'a wgpu::BindGroup) {
+        if self.features.samples_scene_textures() {
+            (
+                self.textured_bind_group
+                    .as_ref()
+                    .unwrap_or(&self.bind_group),
+                scene_textures,
+            )
+        } else {
+            (&self.bind_group, &self.empty_bind_group)
+        }
+    }
+
+    /// Refuses a material commit that would texture material 0 while this
+    /// terrain uses W08 slots the textured profile cannot bind (the commit is
+    /// rejected before anything changes).
+    pub(super) fn check_material_textures(
+        &self,
+        device: &wgpu::Device,
+        material0_flags: u32,
+    ) -> Result<(), WebError> {
+        if material0_flags & super::shader_variants::SCENE_TEXTURE_FLAGS == 0 {
+            return Ok(());
+        }
+        let slots = W08Slots::of_device(device, true);
+        let sampled = device.limits().max_sampled_textures_per_shader_stage;
+        if self.streaming.is_some() && !slots.page_table {
+            return Err(w08_limit_error("terrain streaming", 1, true, sampled));
+        }
+        if self.overlays.is_some() && !slots.overlays {
+            return Err(w08_limit_error("terrain overlays", 2, true, sampled));
+        }
+        if self.vt.is_some() && !slots.vt {
+            return Err(w08_limit_error(
+                "terrain virtual texturing",
+                3,
+                true,
+                sampled,
+            ));
+        }
+        Ok(())
+    }
+
+    /// Applies this terrain's mode, W08 geometry regions and material
+    /// regions to `features`.
     pub(super) fn specialize(&self, features: ShaderFeatures) -> ShaderFeatures {
         features
             .with_terrain_mode(self.render_mode)
             .with_terrain_material(self.material.shader_enabled)
             .with_terrain_material_regions(self.material.regions)
+            .with_terrain_w08(self.clipmap.is_some(), self.streaming.is_some())
+            .with_terrain_w08_h2b(self.overlays.is_some(), self.vt.is_some())
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -883,9 +1793,73 @@ impl TerrainRenderResources {
         pipeline_cache: &mut TerrainPipelineCache,
         features: ShaderFeatures,
         material: super::terrain_material::TerrainMaterialResources,
+        overlays: Option<TerrainOverlayState>,
+        vt: Option<super::terrain_vt::TerrainVtState>,
+        clipmap_state: Option<super::terrain_w08::ClipmapGeometryState>,
     ) -> Result<Self, WebError> {
-        let (vertex_buffer, index_buffer, index_count) =
-            create_terrain_mesh_buffers(context, terrain)?;
+        // W08 (E0): commit-time capability checks against the negotiated
+        // device limits; the layout only exposes the page-table binding when
+        // the sampled-texture budget reached binding 13.
+        let sampled_limit = context
+            .device
+            .limits()
+            .max_sampled_textures_per_shader_stage;
+        if clipmap_state.is_some() && sampled_limit < W08_SAMPLED_TEXTURES_CLIPMAP {
+            return Err(WebError::new(
+                Forge3DErrorCode::UnsupportedFeature,
+                format!(
+                    "terrain clipmap requires maxSampledTexturesPerShaderStage >= {W08_SAMPLED_TEXTURES_CLIPMAP}, device has {sampled_limit}"
+                ),
+            ));
+        }
+        let mut streaming_state = None;
+        if let Some(streaming_config) = terrain.streaming.as_ref() {
+            let scene_textures = features.samples_scene_textures();
+            if !pipeline_cache.group0_for(features).1.page_table {
+                return Err(w08_limit_error(
+                    "terrain streaming",
+                    1,
+                    scene_textures,
+                    sampled_limit,
+                ));
+            }
+            streaming_state = Some(super::terrain_w08::HeightStreamingState::new(
+                context,
+                terrain,
+                streaming_config,
+            )?);
+        }
+
+        let (vertex_buffer, index_buffer, index_count, vertex_count) =
+            if let Some(clipmap) = &clipmap_state {
+                // Fixed-size clipmap buffers; `update_layout` rewrites them
+                // in place when the snapped ring centers move.
+                let vertex_buffer =
+                    context
+                        .device
+                        .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                            label: Some("forge3d-web-terrain-clipmap-vertices"),
+                            contents: bytemuck::cast_slice(&clipmap.vertices),
+                            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+                        });
+                let index_buffer =
+                    context
+                        .device
+                        .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                            label: Some("forge3d-web-terrain-clipmap-indices"),
+                            contents: bytemuck::cast_slice(&clipmap.indices),
+                            usage: wgpu::BufferUsages::INDEX | wgpu::BufferUsages::COPY_DST,
+                        });
+                (
+                    vertex_buffer,
+                    index_buffer,
+                    clipmap.indices.len() as u32,
+                    clipmap.vertices.len() as u32,
+                )
+            } else {
+                let (vb, ib, ic) = create_terrain_mesh_buffers(context, terrain)?;
+                (vb, ib, ic, terrain.width.saturating_mul(terrain.height))
+            };
         let (height_texture, height_view) = create_height_texture(context, terrain);
         let camera_uniform = create_camera_uniform(camera, width, height)?;
         let color_ramp_uniform = ColorRampUniform::from_options(color_ramp, clear_color);
@@ -912,6 +1886,83 @@ impl TerrainRenderResources {
                 contents: bytemuck::bytes_of(&params_uniform),
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             });
+        // W08 (E2/E3): binding 12 is unconditional — a zeroed uniform for
+        // plain grid terrain so one layout serves every variant.
+        let geometry_uniform = match &clipmap_state {
+            Some(clipmap) => super::terrain_w08::TerrainGeometryUniform::for_input(
+                terrain,
+                clipmap,
+                streaming_state.as_ref(),
+            ),
+            None => super::terrain_w08::TerrainGeometryUniform::grid(),
+        };
+        let geometry_buffer =
+            context
+                .device
+                .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("forge3d-web-terrain-geometry-uniform"),
+                    contents: bytemuck::bytes_of(&geometry_uniform),
+                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                });
+        // Binding 13 exists only when the negotiated limit exposes it; a
+        // 1x1x1 u32 layer is bound when the layout has the slot but this
+        // terrain is not streaming.
+        let (page_table_view, page_table_fallback) = if pipeline_cache.slots.page_table {
+            match &streaming_state {
+                Some(stream) => (Some(stream.page_table_view.clone()), None),
+                None => {
+                    let texture = context.device.create_texture(&wgpu::TextureDescriptor {
+                        label: Some("forge3d-web-terrain-page-table-fallback"),
+                        size: wgpu::Extent3d {
+                            width: 1,
+                            height: 1,
+                            depth_or_array_layers: 1,
+                        },
+                        mip_level_count: 1,
+                        sample_count: 1,
+                        dimension: wgpu::TextureDimension::D2,
+                        format: wgpu::TextureFormat::R32Uint,
+                        usage: wgpu::TextureUsages::TEXTURE_BINDING,
+                        view_formats: &[],
+                    });
+                    let view = texture.create_view(&wgpu::TextureViewDescriptor {
+                        dimension: Some(wgpu::TextureViewDimension::D2Array),
+                        ..Default::default()
+                    });
+                    (Some(view), Some(texture))
+                }
+            }
+        } else {
+            (None, None)
+        };
+        // Clipmap shadows draw a coarse proxy grid (E2); the dense clipmap
+        // mesh layout is not what `vs_terrain_depth` consumes.
+        let shadow_proxy = clipmap_state.as_ref().map(|_| {
+            let (vertices, indices) = super::terrain_w08::shadow_proxy_mesh(terrain);
+            let vertex_buffer =
+                context
+                    .device
+                    .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("forge3d-web-terrain-shadow-proxy-vertices"),
+                        contents: bytemuck::cast_slice(&vertices),
+                        usage: wgpu::BufferUsages::VERTEX,
+                    });
+            let index_buffer =
+                context
+                    .device
+                    .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("forge3d-web-terrain-shadow-proxy-indices"),
+                        contents: bytemuck::cast_slice(&indices),
+                        usage: wgpu::BufferUsages::INDEX,
+                    });
+            ShadowProxyMesh {
+                vertex_buffer,
+                index_buffer,
+                index_count: indices.len() as u32,
+                bytes: (vertices.len() * std::mem::size_of::<TerrainVertex>()
+                    + indices.len() * std::mem::size_of::<u32>()) as u64,
+            }
+        });
         let sampler = context.device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("forge3d-web-terrain-nearest-sampler"),
             address_mode_u: wgpu::AddressMode::ClampToEdge,
@@ -953,48 +2004,158 @@ impl TerrainRenderResources {
             .as_ref()
             .map(|output| &output.view)
             .unwrap_or(&analysis_fallback_view);
-        let [m7, m8, m9, m10, m11] = material.bind_group_entries();
+        let slots = pipeline_cache.slots;
+        let has_overlay_bindings = slots.overlays;
+        let has_vt_bindings = slots.vt;
+        let w08_fallbacks = W08BindingFallbacks::new(&context.device, slots);
+        // W08 (E6): under VT, bindings 8/9 are the atlas + VT sampler.
+        let vt_binding = vt.as_ref().map(|vt| (&vt.atlas_view, &vt.atlas_sampler));
+        let [m7, m8, m9, m10, m11] = material.bind_group_entries(vt_binding);
+        // Binding 0 is the mosaic atlas under streaming (the committed dense
+        // heights already live in its pinned coarsest slots); the dense
+        // `height_texture` stays the analysis/AO input either way.
+        let bound_height_view = streaming_state
+            .as_ref()
+            .map(|stream| &stream.atlas_view)
+            .unwrap_or(&height_view);
+        let mut terrain_entries = vec![
+            m7,
+            m8,
+            m9,
+            m10,
+            m11,
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: wgpu::BindingResource::TextureView(bound_height_view),
+            },
+            wgpu::BindGroupEntry {
+                binding: 1,
+                resource: wgpu::BindingResource::Sampler(&sampler),
+            },
+            wgpu::BindGroupEntry {
+                binding: 2,
+                resource: camera_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 3,
+                resource: color_ramp_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 4,
+                resource: params_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 5,
+                resource: wgpu::BindingResource::TextureView(ao_view),
+            },
+            wgpu::BindGroupEntry {
+                binding: 6,
+                resource: wgpu::BindingResource::TextureView(sun_view),
+            },
+            wgpu::BindGroupEntry {
+                binding: 12,
+                resource: geometry_buffer.as_entire_binding(),
+            },
+        ];
+        if let Some(view) = &page_table_view {
+            terrain_entries.push(wgpu::BindGroupEntry {
+                binding: 13,
+                resource: wgpu::BindingResource::TextureView(view),
+            });
+        }
+        // W08 (E5): overlay slots — the planned composite or the 1x1
+        // transparent fallback (uniform layer count = 0).
+        if has_overlay_bindings {
+            let (view, sampler, uniform) = overlays
+                .as_ref()
+                .map(|state| (&state.texture_view, &state.sampler, &state.uniform_buffer))
+                .or(
+                    match (
+                        &w08_fallbacks.overlay_view,
+                        &w08_fallbacks.overlay_sampler,
+                        &w08_fallbacks.overlay_uniform,
+                    ) {
+                        (Some(v), Some(s), Some(b)) => Some((v, s, b)),
+                        _ => None,
+                    },
+                )
+                .expect("overlay bindings exist in the layout");
+            terrain_entries.extend([
+                wgpu::BindGroupEntry {
+                    binding: 14,
+                    resource: wgpu::BindingResource::TextureView(view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 15,
+                    resource: wgpu::BindingResource::Sampler(sampler),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 16,
+                    resource: uniform.as_entire_binding(),
+                },
+            ]);
+        }
+        // W08 (E6): VT slots — the committed VT block or the zeroed
+        // fallback (config0.x = 0 disables the path).
+        if has_vt_bindings {
+            let (page_view, uniform, feedback) = vt
+                .as_ref()
+                .map(|state| {
+                    (
+                        &state.page_table_view,
+                        &state.uniform_buffer,
+                        &state.feedback_buffer,
+                    )
+                })
+                .or(
+                    match (
+                        &w08_fallbacks.vt_page_view,
+                        &w08_fallbacks.vt_uniform,
+                        &w08_fallbacks.vt_feedback,
+                    ) {
+                        (Some(v), Some(u), Some(f)) => Some((v, u, f)),
+                        _ => None,
+                    },
+                )
+                .expect("vt bindings exist in the layout");
+            terrain_entries.extend([
+                wgpu::BindGroupEntry {
+                    binding: 17,
+                    resource: wgpu::BindingResource::TextureView(page_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 18,
+                    resource: uniform.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 19,
+                    resource: feedback.as_entire_binding(),
+                },
+            ]);
+        }
         let bind_group = context
             .device
             .create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("forge3d-web-terrain-bind-group"),
                 layout: &bind_group_layout,
-                entries: &[
-                    m7,
-                    m8,
-                    m9,
-                    m10,
-                    m11,
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: wgpu::BindingResource::TextureView(&height_view),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: wgpu::BindingResource::Sampler(&sampler),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: camera_buffer.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 3,
-                        resource: color_ramp_buffer.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 4,
-                        resource: params_buffer.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 5,
-                        resource: wgpu::BindingResource::TextureView(ao_view),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 6,
-                        resource: wgpu::BindingResource::TextureView(sun_view),
-                    },
-                ],
+                entries: &terrain_entries,
             });
+        // Textured variants on a device that cannot also fit every W08 slot
+        // use a trimmed group 0 (same resources, fewer W08 bindings).
+        let textured_bind_group = pipeline_cache.textured_group0().map(|(layout, textured)| {
+            let entries = terrain_entries
+                .iter()
+                .filter(|entry| textured.keeps(entry.binding))
+                .cloned()
+                .collect::<Vec<_>>();
+            context
+                .device
+                .create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("forge3d-web-terrain-textured-bind-group"),
+                    layout,
+                    entries: &entries,
+                })
+        });
         let variant = pipeline_cache.variant(
             &context.device,
             features
@@ -1003,7 +2164,9 @@ impl TerrainRenderResources {
                     forge3d_core::terrain::TerrainRenderMode::Screen => 1,
                 })
                 .with_terrain_material(material.shader_enabled)
-                .with_terrain_material_regions(material.regions),
+                .with_terrain_material_regions(material.regions)
+                .with_terrain_w08(clipmap_state.is_some(), streaming_state.is_some())
+                .with_terrain_w08_h2b(overlays.is_some(), vt.is_some()),
             surface_format,
         );
 
@@ -1014,6 +2177,7 @@ impl TerrainRenderResources {
             vertex_buffer,
             index_buffer,
             index_count,
+            vertex_count,
             render_mode: match terrain.render_mode {
                 forge3d_core::terrain::TerrainRenderMode::Perspective => 0,
                 forge3d_core::terrain::TerrainRenderMode::Screen => 1,
@@ -1030,6 +2194,18 @@ impl TerrainRenderResources {
             analysis_fallback_view,
             sampler,
             material,
+            geometry_buffer,
+            page_table_view,
+            page_table_fallback,
+            clipmap: clipmap_state.map(std::cell::RefCell::new),
+            streaming: streaming_state,
+            shadow_proxy,
+            overlays,
+            vt,
+            w08_fallbacks,
+            slots,
+            textured_bind_group,
+            empty_bind_group: pipeline_cache.empty_bind_group.clone(),
         })
     }
 
@@ -1044,6 +2220,27 @@ impl TerrainRenderResources {
         context
             .queue
             .write_buffer(&self.camera_buffer, 0, bytemuck::bytes_of(&uniform));
+        // W08 (E2): snap clipmap ring centers to the camera; the fixed-size
+        // vertex/index buffers are rewritten in place on change.
+        if let Some(clipmap) = &self.clipmap {
+            let camera_xz = [camera.position[0], camera.position[2]];
+            if let Some((vertices, indices)) = clipmap.borrow_mut().update_layout(camera_xz) {
+                context
+                    .queue
+                    .write_buffer(&self.vertex_buffer, 0, bytemuck::cast_slice(vertices));
+                context
+                    .queue
+                    .write_buffer(&self.index_buffer, 0, bytemuck::cast_slice(indices));
+            }
+        }
+        // W08 (E4): LOD-select params follow the display camera.
+        if let Some(streaming) = &self.streaming {
+            if let Some(lod_select) = &streaming.lod_select {
+                let aspect = width.max(1) as f32 / height.max(1) as f32;
+                let max_lod = streaming.pyramid.lod_count() - 1;
+                lod_select.update_params(context, camera, height.max(1) as f32, max_lod, aspect)?;
+            }
+        }
         Ok(())
     }
 
@@ -1053,12 +2250,19 @@ impl TerrainRenderResources {
     pub(super) fn capture_bind_group(
         &self,
         device: &wgpu::Device,
-        layout: &wgpu::BindGroupLayout,
+        (layout, profile): (&wgpu::BindGroupLayout, W08Slots),
         camera_buffer: &wgpu::Buffer,
     ) -> wgpu::BindGroup {
-        let height_view = self
-            .height_texture
-            .create_view(&wgpu::TextureViewDescriptor::default());
+        // Streaming terrain binds the mosaic atlas, matching `bind_group`.
+        let fallback_height_view;
+        let height_view = if let Some(streaming) = &self.streaming {
+            &streaming.atlas_view
+        } else {
+            fallback_height_view = self
+                .height_texture
+                .create_view(&wgpu::TextureViewDescriptor::default());
+            &fallback_height_view
+        };
         let ao_view = self
             .ao_output
             .as_ref()
@@ -1069,45 +2273,129 @@ impl TerrainRenderResources {
             .as_ref()
             .map(|output| &output.view)
             .unwrap_or(&self.analysis_fallback_view);
-        let [m7, m8, m9, m10, m11] = self.material.bind_group_entries();
+        let vt_binding = self
+            .vt
+            .as_ref()
+            .map(|vt| (&vt.atlas_view, &vt.atlas_sampler));
+        let [m7, m8, m9, m10, m11] = self.material.bind_group_entries(vt_binding);
+        let mut entries = vec![
+            m7,
+            m8,
+            m9,
+            m10,
+            m11,
+            wgpu::BindGroupEntry {
+                binding: 0,
+                resource: wgpu::BindingResource::TextureView(height_view),
+            },
+            wgpu::BindGroupEntry {
+                binding: 1,
+                resource: wgpu::BindingResource::Sampler(&self.sampler),
+            },
+            wgpu::BindGroupEntry {
+                binding: 2,
+                resource: camera_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 3,
+                resource: self.color_ramp_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 4,
+                resource: self.params_buffer.as_entire_binding(),
+            },
+            wgpu::BindGroupEntry {
+                binding: 5,
+                resource: wgpu::BindingResource::TextureView(ao_view),
+            },
+            wgpu::BindGroupEntry {
+                binding: 6,
+                resource: wgpu::BindingResource::TextureView(sun_view),
+            },
+            wgpu::BindGroupEntry {
+                binding: 12,
+                resource: self.geometry_buffer.as_entire_binding(),
+            },
+        ];
+        if let Some(view) = &self.page_table_view {
+            entries.push(wgpu::BindGroupEntry {
+                binding: 13,
+                resource: wgpu::BindingResource::TextureView(view),
+            });
+        }
+        if self.slots.overlays {
+            let (view, sampler, uniform) = self
+                .overlays
+                .as_ref()
+                .map(|state| (&state.texture_view, &state.sampler, &state.uniform_buffer))
+                .or(
+                    match (
+                        &self.w08_fallbacks.overlay_view,
+                        &self.w08_fallbacks.overlay_sampler,
+                        &self.w08_fallbacks.overlay_uniform,
+                    ) {
+                        (Some(v), Some(s), Some(b)) => Some((v, s, b)),
+                        _ => None,
+                    },
+                )
+                .expect("overlay bindings exist in the layout");
+            entries.extend([
+                wgpu::BindGroupEntry {
+                    binding: 14,
+                    resource: wgpu::BindingResource::TextureView(view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 15,
+                    resource: wgpu::BindingResource::Sampler(sampler),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 16,
+                    resource: uniform.as_entire_binding(),
+                },
+            ]);
+        }
+        if self.slots.vt {
+            let (page_view, uniform, feedback) = self
+                .vt
+                .as_ref()
+                .map(|state| {
+                    (
+                        &state.page_table_view,
+                        &state.uniform_buffer,
+                        &state.feedback_buffer,
+                    )
+                })
+                .or(
+                    match (
+                        &self.w08_fallbacks.vt_page_view,
+                        &self.w08_fallbacks.vt_uniform,
+                        &self.w08_fallbacks.vt_feedback,
+                    ) {
+                        (Some(v), Some(u), Some(f)) => Some((v, u, f)),
+                        _ => None,
+                    },
+                )
+                .expect("vt bindings exist in the layout");
+            entries.extend([
+                wgpu::BindGroupEntry {
+                    binding: 17,
+                    resource: wgpu::BindingResource::TextureView(page_view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 18,
+                    resource: uniform.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 19,
+                    resource: feedback.as_entire_binding(),
+                },
+            ]);
+        }
+        entries.retain(|entry| profile.keeps(entry.binding));
         device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("forge3d-web-terrain-capture-bind-group"),
             layout,
-            entries: &[
-                m7,
-                m8,
-                m9,
-                m10,
-                m11,
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: wgpu::BindingResource::TextureView(&height_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: wgpu::BindingResource::Sampler(&self.sampler),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: camera_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: self.color_ramp_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
-                    resource: self.params_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 5,
-                    resource: wgpu::BindingResource::TextureView(ao_view),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 6,
-                    resource: wgpu::BindingResource::TextureView(sun_view),
-                },
-            ],
+            entries: &entries,
         })
     }
 
@@ -1124,6 +2412,671 @@ impl TerrainRenderResources {
         self.pipeline = variant.pipeline;
         self.features = variant.features;
     }
+
+    // -------------------------------------------------------------------
+    // W08 (E7): geometry report, streaming wasm API, frame hooks, ledger.
+    // -------------------------------------------------------------------
+
+    /// `getTerrainGeometryReport` (E2/E7). Grid inputs report their dense
+    /// dims with `triangleBudget == triangleCount`; clipmap inputs report
+    /// the A1/A7 fields (ring config, snapped centers, budget, reduction).
+    pub(super) fn geometry_report(&self) -> JsValue {
+        use super::device_health::set_js_property;
+        let report = js_sys::Object::new();
+        let render_mode = if self.render_mode == 1 {
+            "screen"
+        } else {
+            "perspective"
+        };
+        set_js_property(&report, "renderMode", &JsValue::from_str(render_mode));
+        if let Some(clipmap) = &self.clipmap {
+            let clipmap = clipmap.borrow();
+            set_js_property(&report, "mode", &JsValue::from_str("clipmap"));
+            set_js_property(
+                &report,
+                "ringCount",
+                &JsValue::from_f64(clipmap.config.ring_count as f64),
+            );
+            set_js_property(
+                &report,
+                "ringResolution",
+                &JsValue::from_f64(clipmap.config.ring_resolution as f64),
+            );
+            set_js_property(
+                &report,
+                "centerResolution",
+                &JsValue::from_f64(clipmap.config.center_resolution as f64),
+            );
+            set_js_property(
+                &report,
+                "skirtDepth",
+                &JsValue::from_f64(clipmap.config.skirt_depth as f64),
+            );
+            set_js_property(
+                &report,
+                "morphRange",
+                &JsValue::from_f64(clipmap.config.morph_range as f64),
+            );
+            set_js_property(
+                &report,
+                "baseCellSize",
+                &serde_wasm_bindgen::to_value(&clipmap.s0).unwrap_or(JsValue::NULL),
+            );
+            set_js_property(
+                &report,
+                "vertexCount",
+                &JsValue::from_f64(clipmap.vertices.len() as f64),
+            );
+            set_js_property(
+                &report,
+                "indexCount",
+                &JsValue::from_f64(clipmap.indices.len() as f64),
+            );
+            set_js_property(
+                &report,
+                "triangleCount",
+                &JsValue::from_f64(clipmap.indices.len() as f64 / 3.0),
+            );
+            set_js_property(
+                &report,
+                "triangleBudget",
+                &JsValue::from_f64(clipmap.triangle_budget as f64),
+            );
+            set_js_property(
+                &report,
+                "fullResolutionTriangles",
+                &JsValue::from_f64(clipmap.full_resolution_triangles as f64),
+            );
+            set_js_property(
+                &report,
+                "triangleReductionPercent",
+                &JsValue::from_f64(f64::from(
+                    forge3d_core::terrain_clipmap::calculate_triangle_reduction(
+                        clipmap.full_resolution_triangles,
+                        clipmap.triangle_budget,
+                    ),
+                )),
+            );
+            set_js_property(
+                &report,
+                "centers",
+                &serde_wasm_bindgen::to_value(&clipmap.centers_world()).unwrap_or(JsValue::NULL),
+            );
+            set_js_property(
+                &report,
+                "shadowCasterResolution",
+                &serde_wasm_bindgen::to_value(&clipmap.shadow_caster).unwrap_or(JsValue::NULL),
+            );
+        } else {
+            set_js_property(&report, "mode", &JsValue::from_str("grid"));
+            let triangles = u64::from(self.index_count) / 3;
+            set_js_property(
+                &report,
+                "vertexCount",
+                &JsValue::from_f64(f64::from(self.vertex_count)),
+            );
+            set_js_property(
+                &report,
+                "indexCount",
+                &JsValue::from_f64(f64::from(self.index_count)),
+            );
+            set_js_property(
+                &report,
+                "triangleCount",
+                &JsValue::from_f64(triangles as f64),
+            );
+            set_js_property(
+                &report,
+                "triangleBudget",
+                &JsValue::from_f64(triangles as f64),
+            );
+            set_js_property(
+                &report,
+                "fullResolutionTriangles",
+                &JsValue::from_f64(triangles as f64),
+            );
+            set_js_property(&report, "triangleReductionPercent", &JsValue::from_f64(0.0));
+            set_js_property(
+                &report,
+                "shadowCasterResolution",
+                &serde_wasm_bindgen::to_value(&[self.height_width, self.height_height])
+                    .unwrap_or(JsValue::NULL),
+            );
+        }
+        report.into()
+    }
+
+    /// `planHeightTiles` (E3): plans clipmap-driven requests and returns
+    /// `{requests: [{lod,x,y,priority,prefetch}], cancelled: [{lod,x,y}]}`.
+    /// Requires clipmap + streaming; the shared native error is returned
+    /// otherwise.
+    pub(super) fn plan_height_tiles(&mut self, max_requests: u32) -> Result<JsValue, WebError> {
+        use super::device_health::set_js_property;
+        let (Some(clipmap), Some(streaming)) = (&self.clipmap, &mut self.streaming) else {
+            return Err(height_streaming_not_enabled());
+        };
+        let (layout, config) = {
+            let clipmap = clipmap.borrow();
+            (clipmap.layout.clone(), clipmap.config.clone())
+        };
+        let (requests, cancelled) = streaming.plan(&layout, &config, max_requests);
+        let requests_js = js_sys::Array::new();
+        for tile in &requests {
+            let entry = js_sys::Object::new();
+            set_js_property(&entry, "lod", &JsValue::from_f64(tile.id.lod as f64));
+            set_js_property(&entry, "x", &JsValue::from_f64(tile.id.x as f64));
+            set_js_property(&entry, "y", &JsValue::from_f64(tile.id.y as f64));
+            set_js_property(&entry, "prefetch", &JsValue::from_bool(tile.prefetch));
+            set_js_property(&entry, "priority", &JsValue::from_f64(tile.priority as f64));
+            requests_js.push(&entry);
+        }
+        let cancelled_js = js_sys::Array::new();
+        for id in &cancelled {
+            let entry = js_sys::Object::new();
+            set_js_property(&entry, "lod", &JsValue::from_f64(id.lod as f64));
+            set_js_property(&entry, "x", &JsValue::from_f64(id.x as f64));
+            set_js_property(&entry, "y", &JsValue::from_f64(id.y as f64));
+            cancelled_js.push(&entry);
+        }
+        let out = js_sys::Object::new();
+        set_js_property(&out, "requests", &requests_js);
+        set_js_property(&out, "cancelled", &cancelled_js);
+        Ok(out.into())
+    }
+
+    /// `completeHeightTile` (E3): uploads `heights` (packed row-major tile
+    /// data matching `tile_rect`) into the mosaic; returns
+    /// `{accepted, evicted: {lod,x,y}|null}`.
+    pub(super) fn complete_height_tile(
+        &mut self,
+        context: &GpuContext,
+        tile: forge3d_core::terrain_stream::TileId,
+        heights: &[f32],
+    ) -> Result<JsValue, WebError> {
+        use super::device_health::set_js_property;
+        let Some(streaming) = &mut self.streaming else {
+            return Err(height_streaming_not_enabled());
+        };
+        let outcome = streaming.complete(context, tile, heights)?;
+        let out = js_sys::Object::new();
+        set_js_property(&out, "accepted", &JsValue::from_bool(outcome.is_some()));
+        let evicted = outcome
+            .and_then(|outcome| outcome.evicted)
+            .map(|id| {
+                let entry = js_sys::Object::new();
+                set_js_property(&entry, "lod", &JsValue::from_f64(id.lod as f64));
+                set_js_property(&entry, "x", &JsValue::from_f64(id.x as f64));
+                set_js_property(&entry, "y", &JsValue::from_f64(id.y as f64));
+                entry.into()
+            })
+            .unwrap_or(JsValue::NULL);
+        set_js_property(&out, "evicted", &evicted);
+        Ok(out.into())
+    }
+
+    /// `failHeightTile` (E3): releases the in-flight slot and counts it.
+    pub(super) fn fail_height_tile(
+        &mut self,
+        tile: forge3d_core::terrain_stream::TileId,
+    ) -> Result<(), WebError> {
+        let Some(streaming) = &mut self.streaming else {
+            return Err(height_streaming_not_enabled());
+        };
+        streaming.fail(tile);
+        Ok(())
+    }
+
+    /// `getHeightStreamingStats` (E3): the spec's stats object —
+    /// `{enabled, center, lodCount, tileSize, residentTiles,
+    /// residentFineTiles, residentHeightBytes, maxResidentBytes,
+    /// coarsePrefilled, tilesRequested, tilesUploaded, pending, cancelled,
+    /// droppedByPolicy, backpressure, deduplicated, failed, evictions,
+    /// plannedTiles, plannedResident, converged, lodSelection}`.
+    pub(super) fn height_streaming_stats(&self) -> Result<JsValue, WebError> {
+        use super::device_health::set_js_property;
+        let Some(streaming) = &self.streaming else {
+            return Err(height_streaming_not_enabled());
+        };
+        let counters = streaming.queue.counters();
+        let mosaic = streaming.mosaic.stats();
+        let planned_resident = streaming
+            .last_plan
+            .iter()
+            .filter(|tile| streaming.mosaic.lookup(tile.id).is_some())
+            .count();
+        let out = js_sys::Object::new();
+        let set = |name: &str, value: f64| set_js_property(&out, name, &JsValue::from_f64(value));
+        set_js_property(&out, "enabled", &JsValue::from_bool(true));
+        let center = self
+            .clipmap
+            .as_ref()
+            .and_then(|clipmap| clipmap.borrow().centers_world().into_iter().next())
+            .unwrap_or([0.0, 0.0]);
+        set_js_property(
+            &out,
+            "center",
+            &serde_wasm_bindgen::to_value(&center).unwrap_or(JsValue::NULL),
+        );
+        set("lodCount", streaming.pyramid.lod_count() as f64);
+        set("tileSize", streaming.pyramid.tile_size() as f64);
+        set("residentTiles", streaming.mosaic.resident_count() as f64);
+        set("residentFineTiles", streaming.resident_fine_tiles() as f64);
+        set(
+            "residentHeightBytes",
+            streaming.mosaic.resident_bytes() as f64,
+        );
+        set("maxResidentBytes", streaming.max_resident_bytes as f64);
+        set_js_property(
+            &out,
+            "coarsePrefilled",
+            &JsValue::from_bool(streaming.coarse_prefilled),
+        );
+        set("tilesRequested", counters.requests as f64);
+        set("tilesUploaded", streaming.tiles_uploaded as f64);
+        set("pending", streaming.queue.pending().len() as f64);
+        set("cancelled", counters.canceled as f64);
+        set("droppedByPolicy", counters.dropped_by_policy as f64);
+        set("backpressure", counters.backpressure as f64);
+        set("deduplicated", counters.deduplicated as f64);
+        set("failed", streaming.tiles_failed as f64);
+        set("evictions", mosaic.evictions as f64);
+        set("plannedTiles", streaming.last_plan.len() as f64);
+        set("plannedResident", planned_resident as f64);
+        set_js_property(
+            &out,
+            "converged",
+            &JsValue::from_bool(streaming.converged()),
+        );
+        // Per-ring data LODs, identical to the ring_data_lod uniform table.
+        let ring_lods = self
+            .clipmap
+            .as_ref()
+            .map(|cell| {
+                let clipmap = cell.borrow();
+                let last = streaming.pyramid.lod_count() - 1;
+                (0..clipmap.config.ring_count)
+                    .map(|ring| {
+                        (ring as i64 + streaming.plan.lod_bias as i64).clamp(0, last as i64) as u32
+                    })
+                    .collect::<Vec<u32>>()
+            })
+            .unwrap_or_default();
+        set_js_property(
+            &out,
+            "ringDataLods",
+            &serde_wasm_bindgen::to_value(&ring_lods).unwrap_or(JsValue::NULL),
+        );
+        let lod_selection = js_sys::Object::new();
+        if let Some(lod_select) = &streaming.lod_select {
+            let (visible, triangles) = lod_select
+                .latest
+                .as_ref()
+                .map(|latest| (latest.visible_count, latest.total_triangles))
+                .unwrap_or((0, 0));
+            set_js_property(
+                &lod_selection,
+                "visibleTiles",
+                &JsValue::from_f64(visible as f64),
+            );
+            set_js_property(
+                &lod_selection,
+                "totalTriangles",
+                &JsValue::from_f64(triangles as f64),
+            );
+            set_js_property(
+                &lod_selection,
+                "frame",
+                &JsValue::from_f64(lod_select.frame as f64),
+            );
+        }
+        set_js_property(&out, "lodSelection", &lod_selection);
+        Ok(out.into())
+    }
+
+    /// `getLodSelection` (E4): latest harvested GPU LOD selection — `null`
+    /// before the first readback lands (native `try_read` semantics).
+    pub(super) fn lod_selection(&self) -> Result<JsValue, WebError> {
+        use super::device_health::set_js_property;
+        let Some(streaming) = &self.streaming else {
+            return Err(height_streaming_not_enabled());
+        };
+        let Some(lod_select) = &streaming.lod_select else {
+            return Ok(JsValue::NULL);
+        };
+        let Some(latest) = &lod_select.latest else {
+            return Ok(JsValue::NULL);
+        };
+        let out = js_sys::Object::new();
+        let tiles = js_sys::Array::new();
+        for tile in &latest.tiles {
+            let (lod, x, y) = forge3d_core::terrain_clipmap::unpack_tile_id(tile.tile_id);
+            let entry = js_sys::Object::new();
+            set_js_property(&entry, "tileId", &JsValue::from_f64(tile.tile_id as f64));
+            set_js_property(&entry, "lod", &JsValue::from_f64(lod as f64));
+            set_js_property(&entry, "x", &JsValue::from_f64(x as f64));
+            set_js_property(&entry, "y", &JsValue::from_f64(y as f64));
+            set_js_property(&entry, "distance", &JsValue::from_f64(tile.distance as f64));
+            set_js_property(
+                &entry,
+                "selectedLod",
+                &JsValue::from_f64(tile.selected_lod as f64),
+            );
+            tiles.push(&entry);
+        }
+        set_js_property(&out, "frame", &JsValue::from_f64(latest.frame as f64));
+        set_js_property(
+            &out,
+            "visibleCount",
+            &JsValue::from_f64(latest.visible_count as f64),
+        );
+        set_js_property(
+            &out,
+            "totalTriangles",
+            &JsValue::from_f64(latest.total_triangles as f64),
+        );
+        set_js_property(&out, "tiles", &tiles);
+        Ok(out.into())
+    }
+
+    /// Per-frame W08 maintenance before the frame encoder is built
+    /// (`render_runtime`, `begin_offline`/`accumulate`): harvests the
+    /// pending LOD readback, uploads dirty page-table layers, rolls the
+    /// mosaic's LRU frame counter, and runs the VT residency pass (feedback
+    /// harvest + request collection + tile uploads).
+    pub(super) fn prepare_w08_frame(
+        &mut self,
+        context: &GpuContext,
+        camera: &forge3d_core::camera::CameraInput,
+        width: u32,
+        height: u32,
+    ) {
+        if let Some(streaming) = &mut self.streaming {
+            if let Some(lod_select) = &mut streaming.lod_select {
+                lod_select.harvest(context);
+                if let Some(latest) = &lod_select.latest {
+                    streaming.lod_visibility = Some(latest.visible_ids.clone());
+                }
+            }
+            streaming.mosaic.begin_frame();
+            streaming.flush_page_table(context);
+        }
+        if let Some(vt) = &mut self.vt {
+            let span = (self.height_width.saturating_sub(1) as f32 * self.params.spacing[0])
+                .max(self.height_height.saturating_sub(1) as f32 * self.params.spacing[1])
+                .max(1.0);
+            vt.frame(
+                context,
+                camera,
+                width.max(1),
+                height.max(1),
+                self.render_mode == 1,
+                span,
+            );
+        }
+    }
+
+    /// Encodes the per-frame buffer clears that must land before the terrain
+    /// pass (VT feedback ring).
+    pub(super) fn encode_w08_frame_start(&self, encoder: &mut wgpu::CommandEncoder) {
+        if let Some(vt) = &self.vt {
+            vt.encode_frame_start(encoder);
+        }
+    }
+
+    /// Encodes the LOD-selection dispatch + staging copy (skipped while a
+    /// readback is in flight — the render never stalls on the map).
+    pub(super) fn encode_w08_compute(&mut self, encoder: &mut wgpu::CommandEncoder) {
+        if let Some(streaming) = &mut self.streaming {
+            if let Some(lod_select) = &mut streaming.lod_select {
+                lod_select.encode_frame(encoder);
+            }
+        }
+    }
+
+    /// Encodes the post-pass copies that must land after the terrain pass
+    /// (VT feedback ring -> MAP_READ staging).
+    pub(super) fn encode_w08_frame_end(&self, encoder: &mut wgpu::CommandEncoder) {
+        if let Some(vt) = &self.vt {
+            vt.encode_frame_end(encoder);
+        }
+    }
+
+    /// Starts the non-blocking staging maps after the frame's submission.
+    pub(super) fn begin_w08_map(&mut self, context: &GpuContext) {
+        if let Some(streaming) = &mut self.streaming {
+            if let Some(lod_select) = &mut streaming.lod_select {
+                lod_select.begin_map(context);
+            }
+        }
+        if let Some(vt) = &mut self.vt {
+            vt.begin_feedback_map();
+        }
+    }
+
+    /// `terrain:clipmap` ledger bytes: clipmap vertex/index + geometry
+    /// uniform + shadow-proxy buffers (0 for grid terrain).
+    pub(super) fn clipmap_gpu_bytes(&self) -> u64 {
+        let Some(clipmap) = &self.clipmap else {
+            return 0;
+        };
+        let bytes = clipmap.borrow().gpu_bytes();
+        debug_assert_eq!(
+            bytes,
+            (clipmap.borrow().vertices.len() * std::mem::size_of::<TerrainVertex>()
+                + clipmap.borrow().indices.len() * std::mem::size_of::<u32>()) as u64
+                + std::mem::size_of::<super::terrain_w08::TerrainGeometryUniform>() as u64
+                + self.shadow_proxy.as_ref().map_or(0, |proxy| proxy.bytes)
+        );
+        bytes
+    }
+
+    /// `terrain:height-stream` ledger bytes: atlas + page table (0 without
+    /// streaming).
+    pub(super) fn streaming_gpu_bytes(&self) -> u64 {
+        self.streaming
+            .as_ref()
+            .map_or(0, |stream| stream.gpu_bytes())
+    }
+
+    /// `terrain:lod-select` ledger bytes (0 without streaming).
+    pub(super) fn lod_select_gpu_bytes(&self) -> u64 {
+        self.streaming.as_ref().map_or(0, |stream| {
+            stream.lod_select.as_ref().map_or(0, |lod| lod.gpu_bytes())
+        })
+    }
+
+    /// `terrain:overlays` ledger bytes (0 without overlays).
+    pub(super) fn overlay_gpu_bytes(&self) -> u64 {
+        self.overlays
+            .as_ref()
+            .map_or(0, TerrainOverlayState::gpu_bytes)
+    }
+
+    /// `terrain:vt` ledger bytes (0 without material VT).
+    pub(super) fn vt_gpu_bytes(&self) -> u64 {
+        self.vt
+            .as_ref()
+            .map_or(0, super::terrain_vt::TerrainVtState::gpu_bytes)
+    }
+
+    /// W08 (E5): `getTerrainOverlayReport` body — `enabled:false` zeros
+    /// when the committed terrain has no visible overlay plan.
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    pub(super) fn overlay_report(&self) -> JsValue {
+        use super::device_health::set_js_property;
+        let out = js_sys::Object::new();
+        let value = JsValue::from(out.clone());
+        match &self.overlays {
+            Some(state) => {
+                let plan = &state.plan;
+                set_js_property(&value, "enabled", &JsValue::from_bool(true));
+                set_js_property(
+                    &value,
+                    "layerCount",
+                    &JsValue::from_f64(plan.layers.len() as f64),
+                );
+                set_js_property(&value, "width", &JsValue::from_f64(plan.width as f64));
+                set_js_property(&value, "height", &JsValue::from_f64(plan.height as f64));
+                set_js_property(
+                    &value,
+                    "requestedWidth",
+                    &JsValue::from_f64(plan.requested_width as f64),
+                );
+                set_js_property(
+                    &value,
+                    "requestedHeight",
+                    &JsValue::from_f64(plan.requested_height as f64),
+                );
+                set_js_property(&value, "downscaled", &JsValue::from_bool(plan.downscaled));
+                set_js_property(
+                    &value,
+                    "gpuBytes",
+                    &JsValue::from_f64(plan.gpu_bytes as f64),
+                );
+                set_js_property(
+                    &value,
+                    "globalOpacity",
+                    &JsValue::from_f64(f64::from(plan.global_opacity)),
+                );
+                let layers = js_sys::Array::new();
+                for layer in &plan.layers {
+                    let entry = js_sys::Object::new();
+                    let entry_value = JsValue::from(entry.clone());
+                    set_js_property(&entry_value, "name", &JsValue::from_str(&layer.name));
+                    set_js_property(
+                        &entry_value,
+                        "blendMode",
+                        &JsValue::from_str(layer.blend_mode.as_str()),
+                    );
+                    set_js_property(
+                        &entry_value,
+                        "zOrder",
+                        &JsValue::from_f64(f64::from(layer.z_order)),
+                    );
+                    layers.push(&entry);
+                }
+                set_js_property(&value, "layers", &layers);
+            }
+            None => {
+                set_js_property(&value, "enabled", &JsValue::from_bool(false));
+                set_js_property(&value, "layerCount", &JsValue::from_f64(0.0));
+                set_js_property(&value, "width", &JsValue::from_f64(0.0));
+                set_js_property(&value, "height", &JsValue::from_f64(0.0));
+                set_js_property(&value, "requestedWidth", &JsValue::from_f64(0.0));
+                set_js_property(&value, "requestedHeight", &JsValue::from_f64(0.0));
+                set_js_property(&value, "downscaled", &JsValue::from_bool(false));
+                set_js_property(&value, "gpuBytes", &JsValue::from_f64(0.0));
+                set_js_property(&value, "globalOpacity", &JsValue::from_f64(1.0));
+                set_js_property(&value, "layers", &js_sys::Array::new());
+            }
+        }
+        value
+    }
+
+    /// W08 (E6): `getMaterialVtStats` body — camelCase core `VtStats`,
+    /// all zeros when VT is disabled.
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    pub(super) fn vt_stats_report(&self) -> JsValue {
+        let stats = self.vt.as_ref().map(|vt| vt.stats()).unwrap_or_default();
+        vt_stats_js(self.vt.is_some(), &stats)
+    }
+}
+
+/// W08 (E6): shared `getMaterialVtStats` object shape — same keys the
+/// committed-terrain path reports, so a disabled/failed commit still
+/// yields a zeroed stats object instead of `null`.
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+pub(super) fn vt_stats_js(enabled: bool, stats: &forge3d_core::terrain_vt::VtStats) -> JsValue {
+    use super::device_health::set_js_property;
+    let out = js_sys::Object::new();
+    let value = JsValue::from(out.clone());
+    set_js_property(&value, "enabled", &JsValue::from_bool(enabled));
+    set_js_property(
+        &value,
+        "residentPages",
+        &JsValue::from_f64(stats.resident_pages as f64),
+    );
+    set_js_property(
+        &value,
+        "totalPages",
+        &JsValue::from_f64(stats.total_pages as f64),
+    );
+    set_js_property(
+        &value,
+        "cacheBudgetPages",
+        &JsValue::from_f64(stats.cache_budget_pages as f64),
+    );
+    set_js_property(
+        &value,
+        "cacheBudgetMb",
+        &JsValue::from_f64(f64::from(stats.cache_budget_mb)),
+    );
+    set_js_property(
+        &value,
+        "cacheHits",
+        &JsValue::from_f64(stats.cache_hits as f64),
+    );
+    set_js_property(
+        &value,
+        "cacheMisses",
+        &JsValue::from_f64(stats.cache_misses as f64),
+    );
+    set_js_property(
+        &value,
+        "missRate",
+        &JsValue::from_f64(f64::from(stats.miss_rate)),
+    );
+    set_js_property(
+        &value,
+        "tilesStreamed",
+        &JsValue::from_f64(stats.tiles_streamed as f64),
+    );
+    set_js_property(
+        &value,
+        "evictions",
+        &JsValue::from_f64(stats.evictions as f64),
+    );
+    set_js_property(
+        &value,
+        "avgUploadMs",
+        &JsValue::from_f64(f64::from(stats.avg_upload_ms)),
+    );
+    set_js_property(
+        &value,
+        "lastUploadMs",
+        &JsValue::from_f64(f64::from(stats.last_upload_ms)),
+    );
+    set_js_property(
+        &value,
+        "residentMegabytes",
+        &JsValue::from_f64(f64::from(stats.resident_megabytes)),
+    );
+    set_js_property(
+        &value,
+        "sourceCount",
+        &JsValue::from_f64(stats.source_count as f64),
+    );
+    set_js_property(
+        &value,
+        "feedbackRequests",
+        &JsValue::from_f64(stats.feedback_requests as f64),
+    );
+    value
+}
+
+/// Shared E3 error for every streaming entry point when the committed
+/// terrain has no `streaming` declaration.
+pub(super) fn height_streaming_not_enabled() -> WebError {
+    WebError::new(
+        Forge3DErrorCode::InvalidInput,
+        "height streaming not enabled",
+    )
+}
+
+/// JSON mirror of core `VtSupportReport` re-exported for the commit error
+/// details; the implementation lives next to the `virtualTexture` parser.
+fn vt_support_report_json(report: &forge3d_core::terrain_vt::VtSupportReport) -> serde_json::Value {
+    crate::terrain_material_input::vt_support_report_json(report)
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
@@ -1572,6 +3525,7 @@ pub(super) const TERRAIN_SHADER: &str = concat!(
     include_str!("shadow_lighting.wgsl"),
     include_str!("lighting.wgsl"),
     include_str!("terrain_material.wgsl"),
+    include_str!("terrain_w08.wgsl"),
     r#"
 struct VertexInput {
     @builtin(vertex_index) vertex_index: u32,
@@ -1636,6 +3590,37 @@ struct TerrainSample {
 @group(0) @binding(5) var ao_texture: texture_2d<f32>;
 @group(0) @binding(6) var sun_texture: texture_2d<f32>;
 
+// #if terrain_clipmap || terrain_streaming
+// W08 (E2/E3): clipmap + streamed heightfield parameters (group 0, binding
+// 12). One clipmap grid unit equals `base_cell_size` world units; `anchor` is
+// world XZ of grid unit (0,0). `hf_*` describe the finest level: the
+// committed dense heightfield when not streaming, the virtual dims when
+// `heightmap` is the slot atlas.
+struct TerrainGeometryUniform {
+    s0: vec2<f32>,
+    anchor: vec2<f32>,
+    skirt_depth: f32,
+    ring_count: u32,
+    mode_flags: u32,
+    lod_count: u32,
+    hf_origin: vec2<f32>,
+    hf_spacing: vec2<f32>,
+    hf_dims: vec2<u32>,
+    tile_size: u32,
+    slots_per_row: u32,
+    base_dims: vec2<u32>,
+    morph_range: f32,
+    _pad0: f32,
+    ring_data_lod: array<vec4<u32>, 4>,
+}
+@group(0) @binding(12) var<uniform> terrain_geometry: TerrainGeometryUniform;
+// #endif
+// #if terrain_streaming
+// W08 (E3): mosaic page table — one u32 layer per lod, texel = tile,
+// value = atlas slot + 1 (0 = absent).
+@group(0) @binding(13) var height_page_table: texture_2d_array<u32>;
+// #endif
+
 fn is_nan_height(value: f32) -> bool {
     let bits = bitcast<u32>(value);
     return (bits & 0x7f800000u) == 0x7f800000u && (bits & 0x007fffffu) != 0u;
@@ -1686,8 +3671,83 @@ fn vs_main(input: VertexInput) -> VertexOutput {
         return output;
     }
     // #endif
+    // #if terrain_clipmap
+    // W08 (E2): clipmap vertex path — exact port of core
+    // `clipmap_vertex_position` (DESIGN A5). `position = [grid_x, morph,
+    // grid_z]` holds absolute integer grid units relative to
+    // `terrain_geometry.anchor` (one unit = `s0` world units per axis);
+    // `uv = [ring, flags]` with CLIPMAP_FLAG_SKIRT = 1,
+    // CLIPMAP_FLAG_COARSE_BOUNDARY = 2, CLIPMAP_FLAG_INNER_BOUNDARY = 4.
+    // Runs before the dense-grid path whenever the committed geometry is
+    // clipmap (`mode_flags` bit 0); the grid block remains for
+    // `mode_flags == 0`.
+    if ((terrain_geometry.mode_flags & 1u) != 0u) {
+        let ring = u32(input.uv.x);
+        let flags = u32(input.uv.y);
+        let grid = vec2<i32>(
+            i32(round(input.position.x)),
+            i32(round(input.position.z)),
+        );
+        // A5: k = max(morph, 0); skirt vertices carry morph = -1 -> k = 0.
+        let k = max(input.position.y, 0.0);
+        // A5: step = 1 << (ring + 1); coarse = grid - rem_euclid(grid, step)
+        // on integer coords (WGSL % keeps the dividend's sign, so wrap).
+        let step = 1i << (ring + 1u);
+        let rem = ((grid % vec2<i32>(step)) + vec2<i32>(step)) % vec2<i32>(step);
+        let coarse = grid - rem;
+        // A5 endpoint-exact selects — never `mix` at k == 0 or k == 1.
+        var p = vec2<f32>(grid);
+        if (k >= 1.0) {
+            p = vec2<f32>(coarse);
+        } else if (k > 0.0) {
+            p = vec2<f32>(grid) * (1.0 - k) + vec2<f32>(coarse) * k;
+        }
+        // A5: lod_f = data_lod(ring); lod_c = data_lod of the coarser RING
+        // index `min(ring + 1, ring_count - 1)` (not `lod_f + 1`).
+        let last_ring = terrain_geometry.ring_count - 1u;
+        let lod_f = terrain_ring_data_lod(ring);
+        let lod_c = terrain_ring_data_lod(min(ring + 1u, last_ring));
+        // A5: kh = 1 on COARSE_BOUNDARY vertices, else k.
+        var kh = k;
+        if ((flags & 2u) != 0u) {
+            kh = 1.0;
+        }
+        // A5: world = anchor + p * s0 — grid units map through `s0`.
+        let world_xz = terrain_geometry.anchor + p * terrain_geometry.s0;
+        // A5 endpoint-exact selects on kh.
+        var raw_height = terrain_height_world(world_xz, lod_f);
+        if (kh >= 1.0) {
+            raw_height = terrain_height_world(world_xz, lod_c);
+        } else if (kh > 0.0) {
+            raw_height = raw_height * (1.0 - kh)
+                + terrain_height_world(world_xz, lod_c) * kh;
+        }
+        // Finest-level heightmap uv from the world XZ; fragments outside
+        // [0, 1] take the uncovered (clear-color) path in the fragment.
+        let uv_fine = (world_xz - terrain_geometry.hf_origin)
+            / (vec2<f32>(terrain_geometry.hf_dims - vec2<u32>(1u, 1u))
+                * terrain_geometry.hf_spacing);
+        var height = select(params.domain_min, raw_height, is_valid_height(raw_height));
+        // #if terrain_material
+        height = tm_height_geom(raw_height);
+        // #endif
+        // A5: `if flags & SKIRT { h -= skirt_depth_world }` — skirt_depth is
+        // a world-unit offset applied after exaggeration; `output.height`
+        // keeps the sampled height so shading is unchanged.
+        var world_y = (height - params.domain_min) * params.exaggeration;
+        if ((flags & 1u) != 0u) {
+            world_y = world_y - terrain_geometry.skirt_depth;
+        }
+        output.height = raw_height;
+        output.uv = uv_fine;
+        let world_position = vec3<f32>(world_xz.x, world_y, world_xz.y);
+        output.position = camera.view_projection * vec4<f32>(world_position, 1.0);
+        output.world_position = world_position;
+        return output;
+    }
+    // #endif
     // #if terrain_perspective
-    let raw_height = textureSampleLevel(heightmap, nearest_sampler, input.uv, 0.0).r;
+    let raw_height = terrain_height_nearest(input.uv);
     var height = select(params.domain_min, raw_height, is_valid_height(raw_height));
     // #if terrain_material
     height = tm_height_geom(raw_height);
@@ -1734,9 +3794,23 @@ fn terrain_perspective_sample(input: VertexOutput) -> TerrainSample {
     // #if terrain_material
     return tm_perspective_sample(input);
     // #else
-    let valid_height = is_valid_height(input.height);
+    var valid_height = is_valid_height(input.height);
+    // #if terrain_clipmap
+    // W08 (E2): clipmap fragments outside the finest-level heightfield
+    // footprint (uv outside [0, 1]) take the uncovered path — identical to
+    // nodata. Grid-terrain uvs are always in range; clipmap ring/skirt
+    // fragments may fall outside when the layout overhangs the edge.
+    valid_height = valid_height
+        && all(input.uv >= vec2<f32>(0.0))
+        && all(input.uv <= vec2<f32>(1.0));
+    // #endif
     let t = clamp((input.height - params.domain_min) * params.inv_domain_span, 0.0, 1.0);
-    let base_color = sample_color_ramp(t);
+    var base_color = sample_color_ramp(t);
+    // #if terrain_overlay
+    // W08 (E5): the same overlay stack applied to the ramp albedo before
+    // lighting (mirrors the `tm_shade` apply site).
+    base_color = terrain_apply_overlays(base_color, input.uv);
+    // #endif
     let normal = terrain_normal(input.uv);
     // camera_forward.w flags an orthographic camera: parallel view rays.
     var view_vector = camera.camera_position.xyz - input.world_position;
@@ -1839,8 +3913,133 @@ fn screen_color_ramp(t: f32) -> vec3<f32> {
     return mix(screen_color_ramp_entry(i0), screen_color_ramp_entry(i0 + 1), f);
 }
 
+// Height lookup helpers (W08/E3). Without `terrain_streaming` these expand
+// to exactly the previous `textureDimensions`/`textureLoad`/
+// `textureSampleLevel` calls on the dense `heightmap`; under streaming
+// `heightmap` is the slot atlas and lod-0 dims/uv span come from
+// `terrain_geometry` instead.
+fn terrain_height_dims() -> vec2<u32> {
+    // #if terrain_streaming
+    return terrain_geometry.hf_dims;
+    // #else
+    return textureDimensions(heightmap);
+    // #endif
+}
+
+fn terrain_height_load(texel: vec2<i32>) -> f32 {
+    // #if terrain_streaming
+    return terrain_height_load_lod(texel, 0u);
+    // #else
+    let dims = vec2<i32>(terrain_height_dims());
+    let max_texel = dims - vec2<i32>(1, 1);
+    return textureLoad(heightmap, clamp(texel, vec2<i32>(0, 0), max_texel), 0).r;
+    // #endif
+}
+
+// #if terrain_streaming
+// Atlas fetch through the page table: `l` steps coarser from `lod` until a
+// resident tile answers (the coarsest level is always resident).
+fn terrain_height_load_lod(texel: vec2<i32>, lod: u32) -> f32 {
+    for (var lp = lod; lp < terrain_geometry.lod_count; lp = lp + 1u) {
+        let shift = lp - lod;
+        let t = texel >> vec2<u32>(shift, shift);
+        let dims_l = vec2<i32>(
+            (terrain_geometry.hf_dims - vec2<u32>(1u, 1u)) >> vec2<u32>(lp, lp)
+        ) + vec2<i32>(1, 1);
+        let tc = clamp(t, vec2<i32>(0, 0), dims_l - vec2<i32>(1, 1));
+        let tile = vec2<u32>(tc) / vec2<u32>(
+            terrain_geometry.tile_size, terrain_geometry.tile_size);
+        let entry = textureLoad(height_page_table, vec2<i32>(tile), i32(lp), 0).r;
+        if (entry != 0u) {
+            let slot = entry - 1u;
+            let slot_origin = vec2<u32>(
+                slot % terrain_geometry.slots_per_row,
+                slot / terrain_geometry.slots_per_row,
+            ) * terrain_geometry.tile_size;
+            let local = vec2<u32>(tc) % vec2<u32>(
+                terrain_geometry.tile_size, terrain_geometry.tile_size);
+            return textureLoad(heightmap, vec2<i32>(slot_origin + local), 0).r;
+        }
+    }
+    return 0.0;
+}
+
+// Bilinear level-`lod` height at heightmap uv (texel centers at
+// `(i + 0.5) / dims`, clamp-to-edge) through the page table: the
+// streaming counterpart of every fragment-stage `heightmap` sample.
+fn terrain_height_bilinear_lod(uv: vec2<f32>, lod: u32) -> f32 {
+    let dims_l = vec2<i32>(
+        (terrain_geometry.hf_dims - vec2<u32>(1u, 1u)) >> vec2<u32>(lod, lod)
+    ) + vec2<i32>(1, 1);
+    let g = uv * vec2<f32>(dims_l) - vec2<f32>(0.5, 0.5);
+    let base = vec2<i32>(floor(g));
+    let frac = g - vec2<f32>(base);
+    let max_texel = dims_l - vec2<i32>(1, 1);
+    let b0 = clamp(base, vec2<i32>(0, 0), max_texel);
+    let b1 = clamp(base + vec2<i32>(1, 1), vec2<i32>(0, 0), max_texel);
+    let h00 = terrain_height_load_lod(vec2<i32>(b0.x, b0.y), lod);
+    let h10 = terrain_height_load_lod(vec2<i32>(b1.x, b0.y), lod);
+    let h01 = terrain_height_load_lod(vec2<i32>(b0.x, b1.y), lod);
+    let h11 = terrain_height_load_lod(vec2<i32>(b1.x, b1.y), lod);
+    return mix(mix(h00, h10, frac.x), mix(h01, h11, frac.x), frac.y);
+}
+// #else
+fn terrain_height_load_lod(texel: vec2<i32>, lod: u32) -> f32 {
+    return terrain_height_load(texel);
+}
+// #endif
+
+// Nearest = `floor(uv * dims)` (E3); identical to the previous level-0
+// nearest-sample call on the dense texture when not streaming.
+fn terrain_height_nearest(uv: vec2<f32>) -> f32 {
+    // #if terrain_streaming
+    let dims = vec2<i32>(terrain_height_dims());
+    let texel = clamp(
+        vec2<i32>(floor(uv * vec2<f32>(dims))),
+        vec2<i32>(0, 0),
+        dims - vec2<i32>(1, 1),
+    );
+    return terrain_height_load(texel);
+    // #else
+    return textureSampleLevel(heightmap, nearest_sampler, uv, 0.0).r;
+    // #endif
+}
+
+// #if terrain_clipmap
+// World-space bilinear height over the level-`lod` heightfield (E3). Without
+// streaming only lod 0 exists (`terrain_height_load_lod` ignores `lod`);
+// under streaming the ring's `data_lod` row of the page table is walked.
+fn terrain_height_world(world_xz: vec2<f32>, lod: u32) -> f32 {
+    let g = (world_xz - terrain_geometry.hf_origin) / terrain_geometry.hf_spacing;
+    let scale = f32(1u << lod);
+    let gl = g / scale;
+    let lod_dims = vec2<i32>(
+        (terrain_geometry.hf_dims - vec2<u32>(1u, 1u)) >> vec2<u32>(lod, lod)
+    ) + vec2<i32>(1, 1);
+    let base = vec2<i32>(floor(gl));
+    let frac = gl - vec2<f32>(base);
+    let b0 = clamp(base, vec2<i32>(0, 0), lod_dims - vec2<i32>(1, 1));
+    let b1 = clamp(base + vec2<i32>(1, 1), vec2<i32>(0, 0), lod_dims - vec2<i32>(1, 1));
+    let h00 = terrain_height_load_lod(vec2<i32>(b0.x, b0.y), lod);
+    let h10 = terrain_height_load_lod(vec2<i32>(b1.x, b0.y), lod);
+    let h01 = terrain_height_load_lod(vec2<i32>(b0.x, b1.y), lod);
+    let h11 = terrain_height_load_lod(vec2<i32>(b1.x, b1.y), lod);
+    return mix(mix(h00, h10, frac.x), mix(h01, h11, frac.x), frac.y);
+}
+
+// Per-ring data lod the vertex stage walks: `clamp(ring + lod_bias)` under
+// streaming, always 0 on the dense heightfield.
+fn terrain_ring_data_lod(ring: u32) -> u32 {
+    // #if terrain_streaming
+    return terrain_geometry.ring_data_lod[ring / 4u][ring % 4u];
+    // #else
+    return 0u;
+    // #endif
+}
+// #endif
+
 fn terrain_normal(uv: vec2<f32>) -> vec3<f32> {
-    let dimensions = textureDimensions(heightmap);
+    let dimensions = terrain_height_dims();
     let max_texel = vec2<i32>(i32(dimensions.x) - 1, i32(dimensions.y) - 1);
     let scaled_uv = uv * vec2<f32>(f32(dimensions.x - 1u), f32(dimensions.y - 1u));
     let center = vec2<i32>(i32(round(scaled_uv.x)), i32(round(scaled_uv.y)));
@@ -1855,7 +4054,7 @@ fn terrain_normal(uv: vec2<f32>) -> vec3<f32> {
 }
 
 fn height_at(texel: vec2<i32>, max_texel: vec2<i32>) -> f32 {
-    return textureLoad(heightmap, clamp(texel, vec2<i32>(0, 0), max_texel), 0).r;
+    return terrain_height_load(clamp(texel, vec2<i32>(0, 0), max_texel));
 }
 
 fn height_or_center(texel: vec2<i32>, max_texel: vec2<i32>, center_height: f32) -> f32 {
@@ -1878,7 +4077,13 @@ fn screen_height_sample(uv_in: vec2<f32>) -> f32 {
     // through the nearest sampler (not `floor(uv * dims)`) keeps the
     // hardware's sub-texel coordinate rounding, exactly like native.
     let uv = clamp(uv_in, vec2<f32>(0.0, 0.0), vec2<f32>(1.0, 1.0));
+    // #if terrain_streaming
+    // Under streaming `heightmap` is the slot atlas: the material path's
+    // height reads (tm_shade, POM, coverage) go through the page table.
+    return terrain_height_bilinear_lod(uv, 0u);
+    // #else
     return textureSampleLevel(heightmap, nearest_sampler, uv, 0.0).r;
+    // #endif
 }
 
 fn screen_hue_variation(
@@ -2138,3 +4343,126 @@ fn fs_capture_surface(input: VertexOutput) -> CaptureSurfaceOutput {
 
 "#,
 );
+
+#[cfg(test)]
+mod w08_slot_tests {
+    use super::*;
+
+    fn fragment_textures(entries: &[wgpu::BindGroupLayoutEntry]) -> u32 {
+        entries
+            .iter()
+            .filter(|entry| {
+                entry.visibility.contains(wgpu::ShaderStages::FRAGMENT)
+                    && matches!(entry.ty, wgpu::BindingType::Texture { .. })
+            })
+            .count() as u32
+    }
+
+    /// Fragment sampled textures of a terrain pipeline profile, counted from
+    /// the real layout entries of groups 0-3.
+    fn pipeline_textures(slots: W08Slots, scene_textures: bool) -> u32 {
+        let mut count = fragment_textures(&terrain_layout_entries(slots))
+            + fragment_textures(&super::super::lighting::lighting_layout_entries())
+            + fragment_textures(&super::super::ibl::ibl_layout_entries())
+            + fragment_textures(&super::super::shadows::shadow_layout_entries());
+        if scene_textures {
+            count += fragment_textures(&super::super::textures::texture_layout_entries());
+        }
+        count
+    }
+
+    const NONE: W08Slots = W08Slots {
+        page_table: false,
+        overlays: false,
+        vt: false,
+    };
+
+    #[test]
+    fn base_constants_match_the_real_layouts() {
+        assert_eq!(
+            pipeline_textures(NONE, false),
+            TERRAIN_BASE_SAMPLED_TEXTURES
+        );
+        assert_eq!(
+            pipeline_textures(NONE, true),
+            TERRAIN_BASE_SAMPLED_TEXTURES + TERRAIN_SCENE_TEXTURE_SLOTS
+        );
+        let stacked = [
+            W08Slots {
+                page_table: true,
+                ..NONE
+            },
+            W08Slots {
+                page_table: true,
+                overlays: true,
+                vt: false,
+            },
+            W08Slots {
+                page_table: true,
+                overlays: true,
+                vt: true,
+            },
+        ];
+        for (stack, slots) in (1u32..).zip(stacked) {
+            for scene_textures in [false, true] {
+                assert_eq!(
+                    pipeline_textures(slots, scene_textures),
+                    W08Slots::required(scene_textures, stack),
+                    "stack {stack} textured {scene_textures}"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn untextured_terrain_fits_every_w08_slot_in_the_webgpu_default() {
+        let slots = W08Slots::for_limits(16, 8, false);
+        assert_eq!(
+            slots,
+            W08Slots {
+                page_table: true,
+                overlays: true,
+                vt: true
+            }
+        );
+        assert!(pipeline_textures(slots, false) <= 16);
+        // A textured material 0 leaves no W08 headroom at the default.
+        assert_eq!(W08Slots::for_limits(16, 8, true), NONE);
+    }
+
+    #[test]
+    fn profiles_never_exceed_the_negotiated_limit() {
+        for sampled in 16..=24 {
+            for scene_textures in [false, true] {
+                let slots = W08Slots::for_limits(sampled, 8, scene_textures);
+                assert!(
+                    pipeline_textures(slots, scene_textures) <= sampled,
+                    "sampled {sampled} textured {scene_textures}"
+                );
+            }
+        }
+        // Textured thresholds: 17 page table, 18 overlays, 19 VT.
+        assert!(W08Slots::for_limits(17, 8, true).page_table);
+        assert!(!W08Slots::for_limits(17, 8, true).overlays);
+        assert!(W08Slots::for_limits(18, 8, true).overlays);
+        assert!(!W08Slots::for_limits(18, 8, true).vt);
+        assert!(W08Slots::for_limits(19, 8, true).vt);
+        // VT also needs the storage-buffer headroom.
+        assert!(!W08Slots::for_limits(24, W08_STORAGE_BUFFERS_VT - 1, false).vt);
+    }
+
+    #[test]
+    fn keeps_drops_only_the_missing_w08_bindings() {
+        let slots = W08Slots {
+            page_table: true,
+            overlays: false,
+            vt: false,
+        };
+        for binding in [0, 5, 8, 12, 13] {
+            assert!(slots.keeps(binding), "binding {binding}");
+        }
+        for binding in 14..=19 {
+            assert!(!slots.keeps(binding), "binding {binding}");
+        }
+    }
+}

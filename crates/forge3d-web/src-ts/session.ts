@@ -28,6 +28,14 @@ import type {
   SceneSnapshot,
   SessionStatus,
   ShadowReport,
+  HeightStreamingStats,
+  HeightTileCompletion,
+  HeightTilePlan,
+  LodSelectionReport,
+  MaterialVtSourceImage,
+  TerrainGeometryReport,
+  TerrainMaterialVtStats,
+  TerrainOverlayReport,
   TerrainMaterialReport,
   ShadowSnapshot,
   TerrainHeightmapInput,
@@ -56,6 +64,26 @@ export interface SessionRuntimeLike {
   setShadows?(shadows: ShadowSnapshot): void;
   getShadowReport?(): ShadowReport;
   getTerrainMaterialReport?(): TerrainMaterialReport;
+  getTerrainGeometryReport?(): TerrainGeometryReport;
+  getTerrainOverlayReport?(): TerrainOverlayReport;
+  planHeightTiles?(maxRequests: number): HeightTilePlan;
+  completeHeightTile?(
+    lod: number,
+    x: number,
+    y: number,
+    heights: Float32Array,
+  ): HeightTileCompletion;
+  failHeightTile?(lod: number, x: number, y: number): void;
+  getHeightStreamingStats?(): HeightStreamingStats;
+  getLodSelection?(): LodSelectionReport | null;
+  registerMaterialVtSource?(
+    materialIndex: number,
+    family: string,
+    image: MaterialVtSourceImage,
+    fallback?: [number, number, number, number],
+  ): void;
+  clearMaterialVtSources?(): void;
+  getMaterialVtStats?(): TerrainMaterialVtStats;
   setScene?(scene: SceneSnapshot): void;
   setCamera?(camera: CameraInput): void;
   setDeviceLostHandler?(handler: ((error: unknown) => void) | undefined): void;
@@ -106,6 +134,16 @@ export class Forge3DSession {
   #camera: CameraInput | undefined;
   #appliedRevision = -1;
   #committedSnapshot: SceneSnapshot | undefined;
+  /** W08: registered VT sources retained across device-loss replay. */
+  readonly #vtSources = new Map<
+    string,
+    {
+      materialIndex: number;
+      family: string;
+      image: MaterialVtSourceImage;
+      fallback?: [number, number, number, number];
+    }
+  >();
   #sceneReservation: { requestedBytes: number } | undefined;
   #stats: RenderStats = {
     frameIndex: 0,
@@ -253,6 +291,155 @@ export class Forge3DSession {
       );
     }
     return report;
+  }
+
+  /** W08: forward `getTerrainGeometryReport` to the live runtime. */
+  getTerrainGeometryReport(): TerrainGeometryReport {
+    const runtime = this.#runtimeOrThrow();
+    const report = runtime.getTerrainGeometryReport?.();
+    if (report === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not report terrain geometry",
+      );
+    }
+    return report;
+  }
+
+  /** W08: forward `getTerrainOverlayReport` to the live runtime. */
+  getTerrainOverlayReport(): TerrainOverlayReport {
+    const runtime = this.#runtimeOrThrow();
+    const report = runtime.getTerrainOverlayReport?.();
+    if (report === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not report terrain overlays",
+      );
+    }
+    return report;
+  }
+
+  /** W08: forward `planHeightTiles` — used by `TerrainStreamer`. */
+  planHeightTiles(maxRequests: number): HeightTilePlan {
+    const runtime = this.#runtimeOrThrow();
+    const plan = runtime.planHeightTiles?.(maxRequests);
+    if (plan === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not implement height streaming",
+      );
+    }
+    return plan;
+  }
+
+  /** W08: forward `completeHeightTile` — used by `TerrainStreamer`. */
+  completeHeightTile(
+    lod: number,
+    x: number,
+    y: number,
+    heights: Float32Array,
+  ): HeightTileCompletion {
+    const runtime = this.#runtimeOrThrow();
+    const completion = runtime.completeHeightTile?.(lod, x, y, heights);
+    if (completion === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not implement height streaming",
+      );
+    }
+    return completion;
+  }
+
+  /** W08: forward `failHeightTile` — used by `TerrainStreamer`. */
+  failHeightTile(lod: number, x: number, y: number): void {
+    const runtime = this.#runtimeOrThrow();
+    if (runtime.failHeightTile === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not implement height streaming",
+      );
+    }
+    runtime.failHeightTile(lod, x, y);
+  }
+
+  /** W08: forward `getHeightStreamingStats`. */
+  getHeightStreamingStats(): HeightStreamingStats {
+    const runtime = this.#runtimeOrThrow();
+    const stats = runtime.getHeightStreamingStats?.();
+    if (stats === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not implement height streaming",
+      );
+    }
+    return stats;
+  }
+
+  /** W08: forward `getLodSelection`. */
+  getLodSelection(): LodSelectionReport | null {
+    const runtime = this.#runtimeOrThrow();
+    if (runtime.getLodSelection === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not implement height streaming",
+      );
+    }
+    return runtime.getLodSelection();
+  }
+
+  /** W08: forward `registerMaterialVtSource`; the registration is
+   * retained and replayed after device-loss recovery. */
+  registerMaterialVtSource(
+    materialIndex: number,
+    family: string,
+    image: MaterialVtSourceImage,
+    fallback?: [number, number, number, number],
+  ): void {
+    const runtime = this.#runtimeOrThrow();
+    if (runtime.registerMaterialVtSource === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not implement material virtual texturing",
+      );
+    }
+    runtime.registerMaterialVtSource(materialIndex, family, image, fallback);
+    this.#vtSources.set(`${materialIndex}:${family}`, {
+      materialIndex,
+      family,
+      image: {
+        width: image.width,
+        height: image.height,
+        data: image.data.slice(),
+      },
+      ...(fallback !== undefined ? { fallback: [...fallback] } : {}),
+    });
+  }
+
+  /** W08: forward `clearMaterialVtSources`; also clears the retained
+   * replay set. */
+  clearMaterialVtSources(): void {
+    const runtime = this.#runtimeOrThrow();
+    if (runtime.clearMaterialVtSources === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not implement material virtual texturing",
+      );
+    }
+    runtime.clearMaterialVtSources();
+    this.#vtSources.clear();
+  }
+
+  /** W08: forward `getMaterialVtStats`. */
+  getMaterialVtStats(): TerrainMaterialVtStats {
+    const runtime = this.#runtimeOrThrow();
+    const stats = runtime.getMaterialVtStats?.();
+    if (stats === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not implement material virtual texturing",
+      );
+    }
+    return stats;
   }
 
   setScene(scene: Forge3DScene): void {
@@ -673,6 +860,22 @@ export class Forge3DSession {
       try {
         this.#capabilitiesBase = replacement.getCapabilities();
         this.#attachLossHandler(replacement);
+        // W08: replay retained VT sources before the committed scene: the
+        // runtime snapshots VT sources when the terrain is committed.
+        for (const source of this.#vtSources.values()) {
+          replacement.registerMaterialVtSource?.(
+            source.materialIndex,
+            source.family,
+            {
+              width: source.image.width,
+              height: source.image.height,
+              data: source.image.data.slice(),
+            },
+            source.fallback === undefined
+              ? undefined
+              : [...source.fallback],
+          );
+        }
         if (
           this.#committedSnapshot !== undefined &&
           this.#scene !== undefined

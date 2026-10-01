@@ -432,6 +432,14 @@ pub(super) fn apply_material_state(
             "Runtime lighting resources are not available",
         )
     })?;
+    // W08 (E0): texturing material 0 moves terrain to the textured pipeline
+    // profile; refuse before anything changes if its W08 slots no longer fit.
+    if let Some(terrain) = runtime.terrain.as_ref() {
+        terrain.check_material_textures(
+            &context.device,
+            super::shader_variants::terrain_texture_flags(state),
+        )?;
+    }
     let mut planned = runtime.memory.clone();
     let textures = super::textures::build_texture_resources(
         &context,

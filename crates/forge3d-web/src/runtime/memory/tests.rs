@@ -149,3 +149,51 @@ fn disabled_shadow_moment_allocation_reports_actual_one_layer_bytes() {
     let (_, moments, _) = crate::runtime::shadows::shadow_ledger_bytes(&vsm, 256, 3).unwrap();
     assert_eq!(moments, 256 * 256 * 16 * 3);
 }
+
+#[test]
+fn ledger_replace_all_swaps_a_key_set_that_sequential_replace_would_overflow() {
+    let budget = 1000;
+    let mut ledger = MemoryLedger::new(budget, QualityLevel::High).unwrap();
+    ledger
+        .replace_all(&[
+            ("terrain:vt", MemoryCategory::Textures, 700),
+            ("terrain:height-stream", MemoryCategory::Textures, 0),
+        ])
+        .unwrap();
+    // Replacing height-stream first (700 + 700 > 1000) would fail midway.
+    assert!(ledger
+        .replace("terrain:height-stream", MemoryCategory::Textures, 700)
+        .is_err());
+    ledger
+        .replace_all(&[
+            ("terrain:vt", MemoryCategory::Textures, 0),
+            ("terrain:height-stream", MemoryCategory::Textures, 700),
+        ])
+        .unwrap();
+    assert_eq!(ledger.current_bytes(), 700);
+    assert_eq!(ledger.admitted_bytes("terrain:vt"), None);
+    assert_eq!(ledger.admitted_bytes("terrain:height-stream"), Some(700));
+}
+
+#[test]
+fn ledger_replace_all_rejection_leaves_the_ledger_untouched() {
+    let mut ledger = MemoryLedger::new(1000, QualityLevel::High).unwrap();
+    ledger
+        .replace_all(&[
+            ("terrain:mesh", MemoryCategory::Buffers, 100),
+            ("terrain:vt", MemoryCategory::Textures, 200),
+            ("depth", MemoryCategory::Textures, 300),
+        ])
+        .unwrap();
+    let err = ledger
+        .replace_all(&[
+            ("terrain:mesh", MemoryCategory::Buffers, 50),
+            ("terrain:vt", MemoryCategory::Textures, 700),
+        ])
+        .unwrap_err();
+    assert_eq!(err.code(), Forge3DErrorCode::ResourceLimitExceeded);
+    assert_eq!(ledger.current_bytes(), 600);
+    assert_eq!(ledger.admitted_bytes("terrain:mesh"), Some(100));
+    assert_eq!(ledger.admitted_bytes("terrain:vt"), Some(200));
+    assert_eq!(ledger.admitted_bytes("depth"), Some(300));
+}

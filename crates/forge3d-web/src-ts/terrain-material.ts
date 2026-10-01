@@ -637,6 +637,69 @@ export function normalizeTerrainMaterial(
       sigmaScale: positive(specularAa.sigmaScale, 1, "specularAa.sigmaScale"),
     },
     debugView: oneOf(input.debugView, "none", DEBUG_VIEWS, "debugView"),
+    virtualTexture: virtualTexture(input.virtualTexture),
+  };
+}
+
+/**
+ * W08 (E6): pass `material.virtualTexture` through to the runtime, which
+ * owns validation and commit diagnostics (non-albedo families reject the
+ * terrain commit with the support report in `details`).
+ */
+function virtualTexture(
+  value: unknown,
+): import("./index.js").TerrainVirtualTextureInput | null {
+  if (value === undefined || value === null) {
+    return null;
+  }
+  if (!isRecord(value)) {
+    throw invalid("virtualTexture", "must be an object");
+  }
+  const layers = value.layers;
+  return {
+    ...(value.enabled !== undefined
+      ? { enabled: bool(value.enabled, false, "virtualTexture.enabled") }
+      : {}),
+    ...(value.atlasSize !== undefined
+      ? {
+          atlasSize: finite(value.atlasSize, 1024, "virtualTexture.atlasSize"),
+        }
+      : {}),
+    ...(value.residencyBudgetMb !== undefined
+      ? {
+          residencyBudgetMb: finite(
+            value.residencyBudgetMb,
+            24,
+            "virtualTexture.residencyBudgetMb",
+          ),
+        }
+      : {}),
+    ...(value.maxMipLevels !== undefined
+      ? {
+          maxMipLevels: finite(
+            value.maxMipLevels,
+            4,
+            "virtualTexture.maxMipLevels",
+          ),
+        }
+      : {}),
+    ...(value.useFeedback !== undefined
+      ? {
+          useFeedback: bool(
+            value.useFeedback,
+            true,
+            "virtualTexture.useFeedback",
+          ),
+        }
+      : {}),
+    ...(Array.isArray(layers)
+      ? {
+          layers: layers.map((layer) => {
+            const entry = section(layer, "virtualTexture.layers[]");
+            return { ...entry } as import("./index.js").TerrainVtLayerInput;
+          }),
+        }
+      : {}),
   };
 }
 

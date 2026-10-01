@@ -71,6 +71,17 @@ export interface Forge3DRuntimeCapabilities {
   surfaceFormats?: string[];
   preferredCanvasFormat?: string;
   timestampQuery?: boolean;
+  /** W08 (E0): negotiated per-stage limits the W08 features were checked against. */
+  maxSampledTexturesPerShaderStage?: number;
+  maxStorageBuffersPerShaderStage?: number;
+  /** W08 (E0): clipmap geometry supported at the negotiated limits. */
+  terrainClipmap?: boolean;
+  /** W08 (E0): streamed heightfield supported at the negotiated limits. */
+  terrainStreaming?: boolean;
+  /** W08 (E0): overlay stack supported at the negotiated limits. */
+  terrainOverlays?: boolean;
+  /** W08 (E0): virtual texturing supported at the negotiated limits. */
+  terrainVirtualTexture?: boolean;
 }
 
 export type ViewerStatus =
@@ -188,6 +199,499 @@ export interface TerrainHeightmapInput {
   renderMode?: TerrainRenderMode;
   /** Terrain PBR/POM material; omitted keeps the unmaterialed terrain. */
   material?: TerrainMaterialInput;
+  /** W08: geometry mode — clipmap ring geometry or the default dense grid. */
+  geometry?: TerrainGeometryInput;
+  /** W08: world XZ bounds override `[minX, minZ, maxX, maxZ]`. */
+  bounds?: [number, number, number, number];
+  /** W08: streamed heightfield pyramid; implies clipmap geometry. */
+  streaming?: TerrainStreamingInput;
+  /** W08 (E5): composited overlay layers over the terrain albedo. */
+  overlays?: TerrainOverlaysInput;
+}
+
+/** W08 clipmap ring options (A1 defaults apply to absent fields). */
+export interface TerrainClipmapInput {
+  ringCount?: number;
+  ringResolution?: number;
+  centerResolution?: number;
+  skirtDepth?: number;
+  morphRange?: number;
+  baseCellSize?: [number, number];
+}
+
+export type TerrainGeometryMode = "grid" | "clipmap";
+
+/** W08 terrain geometry selection; `streaming` implies `clipmap`. */
+export interface TerrainGeometryInput {
+  mode?: TerrainGeometryMode;
+  clipmap?: TerrainClipmapInput;
+}
+
+export type TerrainCoalescePolicy = "prefer-coarse" | "prefer-fine";
+
+/** W08 streamed heightfield options; `heights` then holds the coarsest level. */
+export interface TerrainStreamingInput {
+  /** Virtual heightfield width in samples. */
+  width?: number;
+  /** Virtual heightfield height in samples. */
+  height?: number;
+  tileSize?: number;
+  maxResidentBytes?: number;
+  lodBias?: number;
+  prefetchMarginTiles?: number;
+  maxInFlight?: number;
+  coalescePolicy?: TerrainCoalescePolicy;
+}
+
+/** W08 (E5): `terrain.overlays` — composited image layers over the
+ * terrain albedo, applied in linear space before lighting. */
+export interface TerrainOverlaysInput {
+  enabled?: boolean;
+  globalOpacity?: number;
+  resolutionScale?: number;
+  layers?: TerrainOverlayLayerInput[];
+}
+
+/** One W08 overlay layer; `extent` (uv) and `crs`/`crsBounds` are mutually
+ * exclusive placements. */
+export interface TerrainOverlayLayerInput {
+  name?: string;
+  image: TerrainMaterialImage;
+  /** `[u0, v0, u1, v1]` uv extent placement. */
+  extent?: [number, number, number, number];
+  /** Layer CRS id (e.g. `"EPSG:4326"`); requires `crsBounds`. */
+  crs?: string;
+  /** `[minx, miny, maxx, maxy]` bounds in `crs` units. */
+  crsBounds?: [number, number, number, number];
+  opacity?: number;
+  blendMode?: "normal" | "multiply" | "overlay";
+  visible?: boolean;
+  zOrder?: number;
+}
+
+/** W08 (E5) `getTerrainOverlayReport` shape — `enabled:false` zeros when
+ * the committed terrain has no visible overlay plan. */
+export interface TerrainOverlayReport {
+  enabled: boolean;
+  layerCount: number;
+  width: number;
+  height: number;
+  requestedWidth: number;
+  requestedHeight: number;
+  downscaled: boolean;
+  gpuBytes: number;
+  globalOpacity: number;
+  layers: { name: string; blendMode: string; zOrder: number }[];
+}
+
+export type TerrainVtFamily = "albedo" | "normal" | "mask";
+
+/** One `material.virtualTexture.layers[i]` entry (W08/E6); only `albedo`
+ * is paged by the runtime, other families fail commit validation. */
+export interface TerrainVtLayerInput {
+  family?: TerrainVtFamily;
+  virtualSizePx?: [number, number];
+  tileSize?: number;
+  tileBorder?: number;
+  fallback?: [number, number, number, number];
+}
+
+/** W08 (E6): `material.virtualTexture` — paged albedo texturing for the
+ * terrain material path. */
+export interface TerrainVirtualTextureInput {
+  enabled?: boolean;
+  atlasSize?: number;
+  residencyBudgetMb?: number;
+  maxMipLevels?: number;
+  useFeedback?: boolean;
+  layers?: TerrainVtLayerInput[];
+}
+
+/** One registered VT source image (W08/E6): full-resolution RGBA8 pixels
+ * for one `(materialIndex, family)` virtual texture; the runtime pages
+ * from it. */
+export interface MaterialVtSourceImage {
+  width: number;
+  height: number;
+  data: Uint8Array;
+}
+
+/** W08 (E6) `getMaterialVtStats` shape — camelCase core `VtStats`. */
+export interface TerrainMaterialVtStats {
+  enabled: boolean;
+  residentPages: number;
+  totalPages: number;
+  cacheBudgetPages: number;
+  cacheBudgetMb: number;
+  cacheHits: number;
+  cacheMisses: number;
+  missRate: number;
+  tilesStreamed: number;
+  evictions: number;
+  avgUploadMs: number;
+  lastUploadMs: number;
+  residentMegabytes: number;
+  sourceCount: number;
+  feedbackRequests: number;
+}
+
+/** W08 (E6) `validateTerrainVtSupport` report. */
+export interface TerrainVtSupportReport {
+  status: string;
+  diagnostics: {
+    code: string;
+    severity: string;
+    message: string;
+    remediation: string;
+    supportLevel: string;
+    layerId: string;
+    objectId: string;
+    details: Record<string, string>;
+  }[];
+  layerSummaries: {
+    layerId: string;
+    layerType: string;
+    supportLevel: string;
+    diagnosticCodes: string[];
+    enabled: boolean;
+    families: string[];
+    nativeSupportedFamily: string;
+  }[];
+  supportedFeatures: Record<string, string>;
+  unsupportedFeatures: Record<string, string>;
+}
+
+/** W08 (E7) `getTerrainGeometryReport` shape; ring fields are clipmap-only. */
+export interface TerrainGeometryReport {
+  mode: TerrainGeometryMode;
+  renderMode: TerrainRenderMode;
+  ringCount?: number;
+  ringResolution?: number;
+  centerResolution?: number;
+  skirtDepth?: number;
+  morphRange?: number;
+  baseCellSize?: [number, number];
+  vertexCount: number;
+  indexCount: number;
+  triangleCount: number;
+  triangleBudget: number;
+  fullResolutionTriangles: number;
+  triangleReductionPercent: number;
+  centers?: [number, number][];
+  shadowCasterResolution: [number, number];
+}
+
+/** One planned height-tile request from `planHeightTiles`. */
+export interface HeightTileRequest {
+  lod: number;
+  x: number;
+  y: number;
+  priority: number;
+  prefetch: boolean;
+}
+
+export interface HeightTileId {
+  lod: number;
+  x: number;
+  y: number;
+}
+
+/** `planHeightTiles` result — new requests plus cancelled in-flight tiles. */
+export interface HeightTilePlan {
+  requests: HeightTileRequest[];
+  cancelled: HeightTileId[];
+}
+
+/** `completeHeightTile` result — `evicted` is the LRU casualty, if any. */
+export interface HeightTileCompletion {
+  accepted: boolean;
+  evicted: HeightTileId | null;
+}
+
+/** W08 (E3) `getHeightStreamingStats` shape. */
+export interface HeightStreamingStats {
+  enabled: boolean;
+  center: [number, number];
+  lodCount: number;
+  tileSize: number;
+  residentTiles: number;
+  residentFineTiles: number;
+  residentHeightBytes: number;
+  maxResidentBytes: number;
+  coarsePrefilled: boolean;
+  tilesRequested: number;
+  tilesUploaded: number;
+  pending: number;
+  cancelled: number;
+  droppedByPolicy: number;
+  backpressure: number;
+  deduplicated: number;
+  failed: number;
+  evictions: number;
+  plannedTiles: number;
+  plannedResident: number;
+  converged: boolean;
+  lodSelection: {
+    visibleTiles: number;
+    totalTriangles: number;
+    frame: number;
+  };
+}
+
+/** One tile in the latest GPU LOD selection. */
+export interface LodSelectionTile {
+  tileId: number;
+  lod: number;
+  x: number;
+  y: number;
+  distance: number;
+  selectedLod: number;
+}
+
+/** W08 (E4) `getLodSelection` shape — `null` before the first readback. */
+export interface LodSelectionReport {
+  frame: number;
+  visibleCount: number;
+  totalTriangles: number;
+  tiles: LodSelectionTile[];
+}
+
+/** W08 (A4/E7) `generateClipmapMesh` result — `positions` are xz pairs. */
+export interface ClipmapMeshResult {
+  positions: Float32Array;
+  uvs: Float32Array;
+  morphData: Float32Array;
+  indices: Uint32Array;
+  vertexCount: number;
+  indexCount: number;
+  triangleCount: number;
+  ringsCount: number;
+  triangleReductionPercent: number;
+}
+
+/** `selectLodTilesReference` input tile; `tileId` or `(lod, x, y)`. */
+export interface LodReferenceTile {
+  tileId?: number;
+  lod?: number;
+  x?: number;
+  y?: number;
+  boundsMin: [number, number];
+  boundsMax: [number, number];
+  heightMin?: number;
+  heightMax?: number;
+}
+
+/** `selectLodTilesReference` input — CPU mirror of the GPU LOD pass. */
+export interface LodSelectReferenceInput {
+  /** Column-major 4x4 view-projection matrix (16 floats). */
+  viewProj: number[];
+  cameraPos: [number, number, number];
+  viewportHeight: number;
+  /** Vertical field of view in radians. */
+  fovY: number;
+  maxLod: number;
+  pixelErrorBudget?: number;
+  tiles: LodReferenceTile[];
+}
+
+/** `selectLodTilesReference` result — every input tile sorted by
+ * `(distance, tileId)`. */
+export interface LodSelectReferenceResult {
+  tiles: (LodSelectionTile & { visible: boolean })[];
+  visibleCount: number;
+  totalTriangles: number;
+}
+
+/** W08 (F5): overlay blend mode values accepted by `blendMode`. */
+export type OverlayBlendMode = "normal" | "multiply" | "overlay";
+
+/** W08 (F2): {@link MemoryByteCache} statistics. */
+export interface MemoryByteCacheStats {
+  hits: number;
+  misses: number;
+  evictions: number;
+  bytes: number;
+  budgetBytes: number;
+  entries: number;
+}
+
+/** W08 (F2): persistent adapter statistics. `entries`/`bytes` count
+ * writes performed by this adapter instance. */
+export interface PersistentByteCacheStats {
+  hits: number;
+  misses: number;
+  checksumFailures: number;
+  entries: number;
+  bytes: number;
+}
+
+/** W08 (F2): digest-verified persistent byte cache (OPFS / IndexedDB /
+ * CacheStorage). Cache keys embed the source validator so stale bytes
+ * never hit. */
+export interface PersistentByteCache {
+  readonly kind: string;
+  get(key: string): Promise<Uint8Array | undefined>;
+  put(key: string, bytes: Uint8Array): Promise<void>;
+  delete(key: string): Promise<void>;
+  clear(): Promise<void>;
+  stats(): PersistentByteCacheStats;
+}
+
+/** Minimal in-memory byte-cache contract accepted by `RangeScheduler`. */
+export interface MemoryByteCacheLike {
+  get(key: string): Uint8Array | undefined;
+  put(key: string, bytes: Uint8Array): void;
+  /** Used to drop entries keyed by a validator the server rejected. */
+  delete?(key: string): unknown;
+  stats?(): MemoryByteCacheStats;
+}
+
+/** W08 (F1): `RangeScheduler.stats()` shape. */
+export interface RangeSchedulerStats {
+  requested: number;
+  deduplicated: number;
+  coalesced: number;
+  httpRequests: number;
+  bytesRequested: number;
+  bytesTransferred: number;
+  memoryHits: number;
+  persistentHits: number;
+  misses: number;
+  cancelled: number;
+  failed: number;
+  inFlight: number;
+  peakInFlight: number;
+  queued: number;
+  offlineServed: number;
+}
+
+/** W08 (F3): `CogDataset.ifdInfo(level)` shape (native `IfdInfo`). */
+export interface IfdInfo {
+  width: number;
+  height: number;
+  tileWidth: number;
+  tileHeight: number;
+  tilesAcross: number;
+  tilesDown: number;
+  bitsPerSample: number;
+  compression: number;
+  tileCount: number;
+}
+
+/** W08 (F3): `CogDataset.stats()` — decoded-tile cache stats plus the
+ * range scheduler and persistent-cache stats. */
+export interface CogStats {
+  cacheHits: number;
+  cacheMisses: number;
+  cacheEvictions: number;
+  memoryUsedBytes: number;
+  memoryBudgetBytes: number;
+  hitRatePercent: number;
+  range: RangeSchedulerStats;
+  persistent: PersistentByteCacheStats | null;
+}
+
+/** W08 (F3): `CogDataset.open` options. */
+export interface CogDatasetOptions {
+  /** Decoded-tile LRU budget in MiB; default 256. */
+  cacheSizeMb?: number;
+  scheduler?: import("./range-scheduler.js").RangeScheduler;
+  persistentCache?: PersistentByteCache;
+  workerPool?: import("./browser-resources.js").Forge3DWorkerPool;
+  signal?: AbortSignal;
+}
+
+/** W08 (F4): a heightfield pyramid tile source for `TerrainStreamer`.
+ * `readTile(lod, x, y)` returns the pyramid tile rect clipped at the
+ * edge (B2) as `tileHeight * tileWidth` float32 heights. */
+export interface HeightTileSource {
+  readonly width: number;
+  readonly height: number;
+  readonly tileSize: number;
+  /** Source nodata; `TerrainStreamer` commits it as `terrain.nodata`
+   * when `options.terrain.nodata` is unset. */
+  readonly nodata?: number | null;
+  readTile(
+    lod: number,
+    x: number,
+    y: number,
+    options?: { signal?: AbortSignal; priority?: number },
+  ): Promise<Float32Array>;
+}
+
+/** W08 (F4): `TerrainStreamer.create` options. */
+export interface TerrainStreamerOptions {
+  /** Partial terrain input merged over the streamer's defaults
+   * (spacing, domain, material, overlays, crs, ...). */
+  terrain?: Partial<TerrainHeightmapInput>;
+  clipmap?: TerrainClipmapInput;
+  maxResidentBytes?: number;
+  maxInFlight?: number;
+  /** Uploads applied per `update()`; default 8. */
+  maxUploadsPerFrame?: number;
+  coalescePolicy?: TerrainCoalescePolicy;
+  prefetchMarginTiles?: number;
+  lodBias?: number;
+  /** Drive `update()` from the viewer's render loop when the target
+   * exposes a frame hook. */
+  autoUpdate?: boolean;
+  /** Fetch/upload error sink (async work has no thrower). */
+  onError?: (error: unknown) => void;
+  signal?: AbortSignal;
+}
+
+/** W08 (F4): `TerrainStreamer.stats()` = runtime stats + source stats. */
+export interface TerrainStreamerStats {
+  runtime: HeightStreamingStats;
+  uploadedTiles: number;
+  pendingFetches: number;
+  queuedFetches: number;
+  converged: boolean;
+}
+
+/** W08 (F5): normalized overlay settings (native `OverlaySettings`
+ * resolution). `enabled` defaults true when the block is present. */
+export interface NormalizedTerrainOverlays {
+  enabled: boolean;
+  globalOpacity: number;
+  resolutionScale: number;
+  layers: NormalizedTerrainOverlayLayer[];
+}
+
+/** W08 (F5): normalized overlay layer (native `OverlayLayer`
+ * resolution). Exactly one placement: `extent` or `crs` + `crsBounds`. */
+export interface NormalizedTerrainOverlayLayer {
+  name: string;
+  image: TerrainMaterialImage;
+  extent?: [number, number, number, number];
+  crs?: string;
+  crsBounds?: [number, number, number, number];
+  opacity: number;
+  blendMode: OverlayBlendMode;
+  visible: boolean;
+  zOrder: number;
+}
+
+/** W08 (F5): `TerrainVtLayerInput` under the native naming. */
+export type TerrainVtLayerFamilyInput = TerrainVtLayerInput;
+
+/** W08 (F5): normalized VT layer family (native `VTLayerFamily`). */
+export interface NormalizedTerrainVtLayerFamily {
+  family: "albedo" | "mask" | "normal";
+  virtualSizePx: [number, number];
+  tileSize: number;
+  tileBorder: number;
+  fallback: [number, number, number, number];
+}
+
+/** W08 (F5): normalized VT settings (native `TerrainVTSettings`). */
+export interface NormalizedTerrainVirtualTexture {
+  enabled: boolean;
+  atlasSize: number;
+  residencyBudgetMb: number;
+  maxMipLevels: number;
+  useFeedback: boolean;
+  layers: NormalizedTerrainVtLayerFamily[];
 }
 
 export interface TerrainColorRampInput {
@@ -396,6 +900,8 @@ export interface TerrainMaterialInput {
   detail?: TerrainDetailInput;
   specularAa?: TerrainSpecularAaInput;
   debugView?: TerrainMaterialDebugView;
+  /** W08 (E6): paged virtual texturing for the material albedo. */
+  virtualTexture?: TerrainVirtualTextureInput | null;
 }
 
 export interface TerrainMaterialLayerSnapshot {
@@ -450,6 +956,8 @@ export interface TerrainMaterialSnapshot {
   };
   specularAa: Required<TerrainSpecularAaInput>;
   debugView: TerrainMaterialDebugView;
+  /** W08 (E6): paged virtual texturing; `null` disables it. */
+  virtualTexture: TerrainVirtualTextureInput | null;
 }
 
 export type TerrainMaterialDiagnosticCode =
@@ -621,6 +1129,14 @@ export interface TerrainHeightmapSourceInput {
   renderMode?: TerrainRenderMode;
   /** Terrain PBR/POM material; omitted keeps the unmaterialed terrain. */
   material?: TerrainMaterialInput;
+  /** W08: geometry mode — clipmap ring geometry or the default dense grid. */
+  geometry?: TerrainGeometryInput;
+  /** W08: world XZ bounds override `[minX, minZ, maxX, maxZ]`. */
+  bounds?: [number, number, number, number];
+  /** W08: streamed heightfield pyramid; implies clipmap geometry. */
+  streaming?: TerrainStreamingInput;
+  /** W08 (E5): composited overlay layers over the terrain albedo. */
+  overlays?: TerrainOverlaysInput;
 }
 
 export interface CameraInput {
@@ -2042,6 +2558,26 @@ interface WasmRuntime {
   setShadows?(shadows: ShadowSnapshot): void;
   getShadowReport?(): ShadowReport;
   getTerrainMaterialReport?(): TerrainMaterialReport;
+  getTerrainGeometryReport?(): TerrainGeometryReport;
+  planHeightTiles?(maxRequests: number): HeightTilePlan;
+  completeHeightTile?(
+    lod: number,
+    x: number,
+    y: number,
+    heights: Float32Array,
+  ): HeightTileCompletion;
+  failHeightTile?(lod: number, x: number, y: number): void;
+  getHeightStreamingStats?(): HeightStreamingStats;
+  getLodSelection?(): LodSelectionReport | null;
+  getTerrainOverlayReport?(): TerrainOverlayReport;
+  registerMaterialVtSource?(
+    materialIndex: number,
+    family: string,
+    image: MaterialVtSourceImage,
+    fallback?: [number, number, number, number],
+  ): void;
+  clearMaterialVtSources?(): void;
+  getMaterialVtStats?(): TerrainMaterialVtStats;
   setCamera(camera: CameraInput): void;
   resize(size: ResizeInput): void;
   render(): boolean;
@@ -2082,6 +2618,18 @@ interface WasmBridge extends Partial<OfflineWasmExports> {
     maxTextureDimension2D: number,
     maxBufferSize: number,
   ): Promise<TerrainHeightmapInput>;
+  generateClipmapMesh?(
+    config: TerrainClipmapInput,
+    center: [number, number],
+    terrainExtent: number,
+  ): ClipmapMeshResult;
+  calculateTriangleReduction?(full: number, clipmap: number): number;
+  selectLodTilesReference?(
+    input: LodSelectReferenceInput,
+  ): LodSelectReferenceResult;
+  validateTerrainVtSupport?(
+    settings: TerrainVirtualTextureInput,
+  ): TerrainVtSupportReport;
   default?: (options?: { module_or_path: unknown }) => Promise<unknown>;
 }
 
@@ -2472,6 +3020,182 @@ export class Forge3DRuntime {
       );
     }
     return this.#inner.getTerrainMaterialReport.call(this.#inner);
+  }
+
+  /** W08 (E7): committed terrain geometry — grid counts or clipmap budget. */
+  getTerrainGeometryReport(): TerrainGeometryReport {
+    this.#assertNotDisposed();
+    if (this.#inner.getTerrainGeometryReport === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not report terrain geometry",
+      );
+    }
+    return this.#inner.getTerrainGeometryReport.call(this.#inner);
+  }
+
+  /** W08 (E3): plan streamed height-tile requests for the current layout. */
+  planHeightTiles(maxRequests: number): HeightTilePlan {
+    this.#assertNotDisposed();
+    if (this.#inner.planHeightTiles === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not support height streaming",
+      );
+    }
+    try {
+      return this.#inner.planHeightTiles.call(this.#inner, maxRequests);
+    } catch (error) {
+      throw Forge3DError.from(error);
+    }
+  }
+
+  /** W08 (E3): deliver fetched tile heights for a pending request. */
+  completeHeightTile(
+    lod: number,
+    x: number,
+    y: number,
+    heights: Float32Array,
+  ): HeightTileCompletion {
+    this.#assertNotDisposed();
+    if (this.#inner.completeHeightTile === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not support height streaming",
+      );
+    }
+    try {
+      return this.#inner.completeHeightTile.call(
+        this.#inner,
+        lod,
+        x,
+        y,
+        heights,
+      );
+    } catch (error) {
+      throw Forge3DError.from(error);
+    }
+  }
+
+  /** W08 (E3): release an in-flight tile request, counted failed. */
+  failHeightTile(lod: number, x: number, y: number): void {
+    this.#assertNotDisposed();
+    if (this.#inner.failHeightTile === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not support height streaming",
+      );
+    }
+    try {
+      this.#inner.failHeightTile.call(this.#inner, lod, x, y);
+    } catch (error) {
+      throw Forge3DError.from(error);
+    }
+  }
+
+  /** W08 (E3): streamed-heightfield residency/queue statistics. */
+  getHeightStreamingStats(): HeightStreamingStats {
+    this.#assertNotDisposed();
+    if (this.#inner.getHeightStreamingStats === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not support height streaming",
+      );
+    }
+    try {
+      return this.#inner.getHeightStreamingStats.call(this.#inner);
+    } catch (error) {
+      throw Forge3DError.from(error);
+    }
+  }
+
+  /** W08 (E4): latest GPU LOD selection; `null` before the first readback. */
+  getLodSelection(): LodSelectionReport | null {
+    this.#assertNotDisposed();
+    if (this.#inner.getLodSelection === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not support height streaming",
+      );
+    }
+    try {
+      return this.#inner.getLodSelection.call(this.#inner);
+    } catch (error) {
+      throw Forge3DError.from(error);
+    }
+  }
+
+  /** W08 (E5): committed overlay plan — sizes, layer order, GPU bytes. */
+  getTerrainOverlayReport(): TerrainOverlayReport {
+    this.#assertNotDisposed();
+    if (this.#inner.getTerrainOverlayReport === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not report terrain overlays",
+      );
+    }
+    return this.#inner.getTerrainOverlayReport.call(this.#inner);
+  }
+
+  /** W08 (E6): register an albedo source image for material
+   * `materialIndex`. Sources persist across terrain re-commits until
+   * cleared or the runtime is disposed. */
+  registerMaterialVtSource(
+    materialIndex: number,
+    family: TerrainVtFamily,
+    image: MaterialVtSourceImage,
+    fallback?: [number, number, number, number],
+  ): void {
+    this.#assertNotDisposed();
+    if (this.#inner.registerMaterialVtSource === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not support terrain virtual texturing",
+      );
+    }
+    try {
+      this.#inner.registerMaterialVtSource.call(
+        this.#inner,
+        materialIndex,
+        family,
+        image,
+        fallback,
+      );
+    } catch (error) {
+      throw Forge3DError.from(error);
+    }
+  }
+
+  /** W08 (E6): drop every registered VT source image. */
+  clearMaterialVtSources(): void {
+    this.#assertNotDisposed();
+    if (this.#inner.clearMaterialVtSources === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not support terrain virtual texturing",
+      );
+    }
+    try {
+      this.#inner.clearMaterialVtSources.call(this.#inner);
+    } catch (error) {
+      throw Forge3DError.from(error);
+    }
+  }
+
+  /** W08 (E6): VT residency/feedback statistics; zeros when VT is off. */
+  getMaterialVtStats(): TerrainMaterialVtStats {
+    this.#assertNotDisposed();
+    if (this.#inner.getMaterialVtStats === undefined) {
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not support terrain virtual texturing",
+      );
+    }
+    try {
+      return this.#inner.getMaterialVtStats.call(this.#inner);
+    } catch (error) {
+      throw Forge3DError.from(error);
+    }
   }
 
   getRenderStats(): RenderStats {
@@ -3168,6 +3892,10 @@ interface TerrainMetadataTarget {
   renderMode?: TerrainRenderMode;
   /** Terrain PBR/POM material; omitted keeps the unmaterialed terrain. */
   material?: TerrainMaterialInput;
+  geometry?: TerrainGeometryInput;
+  bounds?: [number, number, number, number];
+  streaming?: TerrainStreamingInput;
+  overlays?: TerrainOverlaysInput;
 }
 
 function copyTerrainMetadata(
@@ -3216,6 +3944,64 @@ function copyTerrainMetadata(
   }
   if (source.material !== undefined) {
     target.material = normalizeTerrainMaterial(source.material);
+  }
+  if (source.geometry !== undefined) {
+    const geometry = source.geometry;
+    const clipmap = geometry.clipmap;
+    target.geometry = {
+      ...(geometry.mode !== undefined ? { mode: geometry.mode } : {}),
+      ...(clipmap !== undefined
+        ? {
+            clipmap: {
+              ...clipmap,
+              ...(clipmap.baseCellSize !== undefined
+                ? {
+                    baseCellSize: [
+                      clipmap.baseCellSize[0],
+                      clipmap.baseCellSize[1],
+                    ],
+                  }
+                : {}),
+            },
+          }
+        : {}),
+    };
+  }
+  if (source.bounds !== undefined) {
+    target.bounds = [
+      source.bounds[0],
+      source.bounds[1],
+      source.bounds[2],
+      source.bounds[3],
+    ];
+  }
+  if (source.streaming !== undefined) {
+    target.streaming = { ...source.streaming };
+  }
+  if (source.overlays !== undefined) {
+    target.overlays = {
+      ...source.overlays,
+      ...(source.overlays.layers !== undefined
+        ? {
+            layers: source.overlays.layers.map((layer) => ({
+              ...layer,
+              image: {
+                width: layer.image.width,
+                height: layer.image.height,
+                data: layer.image.data.slice(),
+              },
+              ...(layer.extent !== undefined
+                ? { extent: [...layer.extent] as typeof layer.extent }
+                : {}),
+              ...(layer.crsBounds !== undefined
+                ? {
+                    crsBounds: [...layer.crsBounds] as typeof layer.crsBounds,
+                  }
+                : {}),
+            })),
+          }
+        : {}),
+    };
   }
 }
 
@@ -3307,6 +4093,27 @@ function normalizeCapabilities(
   if (capabilities.timestampQuery !== undefined) {
     normalized.timestampQuery = capabilities.timestampQuery === true;
   }
+  if (capabilities.maxSampledTexturesPerShaderStage !== undefined) {
+    normalized.maxSampledTexturesPerShaderStage =
+      capabilities.maxSampledTexturesPerShaderStage;
+  }
+  if (capabilities.maxStorageBuffersPerShaderStage !== undefined) {
+    normalized.maxStorageBuffersPerShaderStage =
+      capabilities.maxStorageBuffersPerShaderStage;
+  }
+  if (capabilities.terrainClipmap !== undefined) {
+    normalized.terrainClipmap = capabilities.terrainClipmap === true;
+  }
+  if (capabilities.terrainStreaming !== undefined) {
+    normalized.terrainStreaming = capabilities.terrainStreaming === true;
+  }
+  if (capabilities.terrainOverlays !== undefined) {
+    normalized.terrainOverlays = capabilities.terrainOverlays === true;
+  }
+  if (capabilities.terrainVirtualTexture !== undefined) {
+    normalized.terrainVirtualTexture =
+      capabilities.terrainVirtualTexture === true;
+  }
   return normalized;
 }
 
@@ -3393,6 +4200,44 @@ export {
   Ktx2Loader,
 } from "./textures.js";
 export { decodeRgbe, IblCache, ImageBasedLighting } from "./ibl.js";
+export {
+  MemoryByteCache,
+  DigestCheckedByteCache,
+  opfsByteStore,
+  indexedDbByteStore,
+  cacheStorageByteStore,
+  OpfsByteCache,
+  IndexedDbByteCache,
+  CacheStorageByteCache,
+  createPersistentByteCache,
+} from "./byte-cache.js";
+export type {
+  PersistentByteStore,
+  PersistentByteCacheAdapterOptions,
+  PersistentByteCacheKind,
+  CreatePersistentByteCacheOptions,
+} from "./byte-cache.js";
+export type {
+  RangeFetchLike,
+  RangeSchedulerOptions,
+} from "./range-scheduler.js";
+export { RangeScheduler } from "./range-scheduler.js";
+export { CogDataset, createCogWorkerHandler } from "./cog.js";
+export {
+  ArrayHeightSource,
+  FunctionHeightSource,
+  CogHeightSource,
+  TerrainStreamer,
+  heightPyramidLodCount,
+} from "./terrain-streaming.js";
+export {
+  decodeOverlayImage,
+  getTerrainOverlayDefaults,
+  isTerrainOverlayLayerVisible,
+  normalizeTerrainOverlays,
+  normalizeTerrainVirtualTexture,
+  terrainOverlayVisibleLayers,
+} from "./terrain-overlay.js";
 export { CascadedShadowConfig, ShadowConfig } from "./shadows.js";
 export {
   apertureToFStop,
@@ -3492,6 +4337,99 @@ export {
   writeFrames,
 } from "./frame-stream.js";
 export { encodeVideo, muxEncodedVideo, probeVideoCodecs } from "./video.js";
+
+async function w08WasmBridge(): Promise<WasmBridge> {
+  const record = getWasmBridgeCoordinator().record;
+  return record !== undefined ? record.promise : loadWasmBridge();
+}
+
+/**
+ * W08 (A4/E7): generate the crack-free clipmap ring mesh for `config` at
+ * `center` — `{positions (xz pairs), uvs, morphData, indices, ...}`.
+ */
+export async function generateClipmapMesh(
+  config: TerrainClipmapInput,
+  center: [number, number],
+  terrainExtent: number,
+): Promise<ClipmapMeshResult> {
+  const bridge = await w08WasmBridge();
+  if (bridge.generateClipmapMesh === undefined) {
+    throw new Forge3DError(
+      "UNSUPPORTED_FEATURE",
+      "The Forge3D WASM bridge does not export the W08 terrain helpers",
+    );
+  }
+  try {
+    return bridge.generateClipmapMesh(config, center, terrainExtent);
+  } catch (error) {
+    throw Forge3DError.from(error);
+  }
+}
+
+/**
+ * W08 (A4/E7): triangle-count reduction percent of a clipmap mesh versus
+ * the full-resolution grid covering the same extent.
+ */
+export async function calculateTriangleReduction(
+  full: number,
+  clipmap: number,
+): Promise<number> {
+  const bridge = await w08WasmBridge();
+  if (bridge.calculateTriangleReduction === undefined) {
+    throw new Forge3DError(
+      "UNSUPPORTED_FEATURE",
+      "The Forge3D WASM bridge does not export the W08 terrain helpers",
+    );
+  }
+  try {
+    return bridge.calculateTriangleReduction(full, clipmap);
+  } catch (error) {
+    throw Forge3DError.from(error);
+  }
+}
+
+/**
+ * W08 (E4/E7): CPU reference LOD selection — the expected result of the
+ * GPU `clipmap_lod_select` pass for the same tiles and camera.
+ */
+export async function selectLodTilesReference(
+  input: LodSelectReferenceInput,
+): Promise<LodSelectReferenceResult> {
+  const bridge = await w08WasmBridge();
+  if (bridge.selectLodTilesReference === undefined) {
+    throw new Forge3DError(
+      "UNSUPPORTED_FEATURE",
+      "The Forge3D WASM bridge does not export the W08 terrain helpers",
+    );
+  }
+  try {
+    return bridge.selectLodTilesReference(input);
+  } catch (error) {
+    throw Forge3DError.from(error);
+  }
+}
+
+/**
+ * W08 (E6): evaluate `material.virtualTexture` settings against the
+ * supported feature table — the same report a failed terrain commit
+ * attaches to `details`.
+ */
+export async function validateTerrainVtSupport(
+  settings: TerrainVirtualTextureInput,
+): Promise<TerrainVtSupportReport> {
+  const bridge = await w08WasmBridge();
+  if (bridge.validateTerrainVtSupport === undefined) {
+    throw new Forge3DError(
+      "UNSUPPORTED_FEATURE",
+      "The Forge3D WASM bridge does not export the W08 terrain helpers",
+    );
+  }
+  try {
+    return bridge.validateTerrainVtSupport(settings);
+  } catch (error) {
+    throw Forge3DError.from(error);
+  }
+}
 
 registerOfflineWasmLoader(async () => {
   const record = getWasmBridgeCoordinator().record;

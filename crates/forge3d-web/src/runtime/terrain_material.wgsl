@@ -223,15 +223,28 @@ fn tm_height_unit(raw_height: f32) -> f32 {
 }
 
 fn tm_height_lod(duv_dx: vec2<f32>, duv_dy: vec2<f32>) -> f32 {
+    // #if terrain_streaming
+    // `heightmap` is the slot atlas: lod-0 dims come from the streaming
+    // geometry uniform. Every material height read is a lod-0 sample
+    // (`terrain_height_bilinear_lod(uv, 0u)`), exactly like the dense
+    // single-level texture, so the height lod clamps to 0 as it does there.
+    let dims = vec2<f32>(terrain_height_dims());
+    let max_lod = 0.0;
+    // #else
     let dims = vec2<f32>(textureDimensions(heightmap, 0));
     let max_lod = f32(textureNumLevels(heightmap) - 1u);
+    // #endif
     let rho = max(length(duv_dx * dims), length(duv_dy * dims));
     return clamp(log2(max(rho, 1.0)), 0.0, max_lod);
 }
 
 /// Native `calculate_normal_lod_aware` on the unit screen tile (Y-up vector).
 fn tm_screen_height_normal(uv: vec2<f32>, lod: f32) -> vec3<f32> {
+    // #if terrain_streaming
+    let dims = vec2<f32>(terrain_height_dims());
+    // #else
     let dims = vec2<f32>(textureDimensions(heightmap, 0));
+    // #endif
     let texel_uv = exp2(lod) / dims;
     let offset_x = vec2<f32>(texel_uv.x, 0.0);
     let offset_y = vec2<f32>(0.0, texel_uv.y);
@@ -251,7 +264,11 @@ fn tm_screen_height_normal(uv: vec2<f32>, lod: f32) -> vec3<f32> {
 
 /// True Y-up heightfield normal on the physical grid (perspective mode).
 fn tm_perspective_normal(uv: vec2<f32>) -> vec3<f32> {
+    // #if terrain_streaming
+    let dimensions = terrain_height_dims();
+    // #else
     let dimensions = textureDimensions(heightmap);
+    // #endif
     let max_texel = vec2<i32>(i32(dimensions.x) - 1, i32(dimensions.y) - 1);
     let scaled_uv = uv * vec2<f32>(f32(dimensions.x - 1u), f32(dimensions.y - 1u));
     let center = vec2<i32>(i32(round(scaled_uv.x)), i32(round(scaled_uv.y)));
@@ -291,6 +308,14 @@ fn tm_sample_triplanar(
     let uv_z = world_pos.xy * scale;
     let ddx_world = dpdx_world * scale;
     let ddy_world = dpdy_world * scale;
+    // #if terrain_vt
+    // W08 (E6): routed through the VT page-table lookup (exact native
+    // `sample_material_layer_uv` port); binding 8/9 are the atlas + VT
+    // sampler in this variant.
+    let color_x = tm_sample_material_layer_uv(uv_x, ddx_world.yz, ddy_world.yz, f32(layer));
+    let color_y = tm_sample_material_layer_uv(uv_y, ddx_world.xz, ddy_world.xz, f32(layer));
+    let color_z = tm_sample_material_layer_uv(uv_z, ddx_world.xy, ddy_world.xy, f32(layer));
+    // #else
     let color_x = textureSampleGrad(
         terrain_material_albedo, terrain_material_sampler, uv_x, layer, ddx_world.yz, ddy_world.yz,
     ).rgb;
@@ -300,6 +325,7 @@ fn tm_sample_triplanar(
     let color_z = textureSampleGrad(
         terrain_material_albedo, terrain_material_sampler, uv_z, layer, ddx_world.xy, ddy_world.xy,
     ).rgb;
+    // #endif
     return color_x * weights.x + color_y * weights.y + color_z * weights.z;
 }
 
@@ -965,6 +991,13 @@ fn tm_shade(surface: TmSurface) -> TerrainSample {
     let layer_weights = TmLayerWeights(0.0, 0.0, 0.0);
     let subsurface = TmSubsurface(0.0, vec3<f32>(1.0));
     // #endif
+    // #if terrain_overlay
+    // W08 (E5): the planned overlay stack drapes the fully-composited
+    // albedo — after albedo-mode selection, detail noise, hue variation
+    // and material layers, before any lighting term — so the captured
+    // albedo AOV equals exactly `overlay_stack(base_albedo)`.
+    albedo = terrain_apply_overlays(albedo, surface.uv);
+    // #endif
     occlusion = clamp(occlusion, terrain_material.clamp2.x, terrain_material.clamp2.y);
 
     // P3 split roughness: Toksvig only widens the specular lobe.
@@ -1246,6 +1279,13 @@ fn tm_perspective_sample(input: VertexOutput) -> TerrainSample {
     surface.duv_dy = duv_dy;
     surface.height_lod = height_lod;
     surface.covered = is_valid_height(input.height);
+    // #if terrain_clipmap
+    // W08 (E2): clipmap fragments outside the heightfield footprint (uv
+    // outside [0, 1]) take the uncovered path — identical to nodata.
+    surface.covered = surface.covered
+        && all(uv >= vec2<f32>(0.0))
+        && all(uv <= vec2<f32>(1.0));
+    // #endif
     var result = tm_shade(surface);
     if (!result.covered) {
         result.radiance = color_ramp.clear_color.xyz;

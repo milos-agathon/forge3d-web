@@ -50,6 +50,18 @@ pub mod timing;
 #[cfg(feature = "webgpu")]
 pub mod terrain_material;
 
+#[cfg(feature = "webgpu")]
+pub mod terrain_clipmap;
+
+#[cfg(feature = "webgpu")]
+pub mod terrain_stream;
+
+#[cfg(feature = "webgpu")]
+pub mod terrain_overlay;
+
+#[cfg(feature = "webgpu")]
+pub mod terrain_vt;
+
 pub const WORKSPACE_SPLIT_PHASE: u8 = 5;
 
 pub fn phase() -> u8 {

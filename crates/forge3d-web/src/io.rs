@@ -38,7 +38,11 @@ pub async fn load_terrain_heightmap_source(
                 "terrain source width * height overflowed",
             )
         })?;
-    let allocation = validate_terrain_allocation(width, height, expected_count, limits)?;
+    let metadata = read_terrain_metadata(&input)?;
+    let clipmap = metadata.geometry.as_ref().is_some_and(|geometry| {
+        geometry.mode == Some(crate::inputs::TerrainGeometryModeOption::Clipmap)
+    }) || metadata.streaming.is_some();
+    let allocation = validate_terrain_allocation(width, height, expected_count, limits, !clipmap)?;
     let expected_bytes = usize::try_from(allocation.sample_bytes).map_err(|_| {
         WebError::new(
             Forge3DErrorCode::ResourceLimitExceeded,
@@ -65,7 +69,6 @@ pub async fn load_terrain_heightmap_source(
             format!("Terrain source body could not be decoded: {error}"),
         )
     })?;
-    let metadata = read_terrain_metadata(&input)?;
 
     Ok(TerrainHeightmapOptions {
         width,
@@ -82,6 +85,10 @@ pub async fn load_terrain_heightmap_source(
         debug_view: metadata.debug_view,
         render_mode: metadata.render_mode,
         material: None,
+        geometry: metadata.geometry,
+        bounds: metadata.bounds,
+        streaming: metadata.streaming,
+        overlays: metadata.overlays,
     })
 }
 

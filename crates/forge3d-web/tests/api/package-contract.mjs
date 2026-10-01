@@ -41,9 +41,14 @@ assertEqual(
   "mediabunny must stay pinned to the dependency-lock version",
 );
 assertEqual(
+  packageJson.devDependencies?.geotiff,
+  "3.0.5",
+  "geotiff must stay pinned to the dependency-lock version",
+);
+assertEqual(
   packageJson.dependencies,
   undefined,
-  "lock-controlled ktx-parse and mediabunny are vendored into dist, so the package has no runtime dependencies",
+  "lock-controlled ktx-parse, mediabunny and geotiff are vendored into dist, so the package has no runtime dependencies",
 );
 assertIncludes(packageJson.files, "docs", "package files must include docs");
 assertIncludes(packageJson.files, "types", "package files must include types");
@@ -235,11 +240,51 @@ assertNotIncludes(
   "import(\"mediabunny\")",
   "dist must not leave a bare mediabunny specifier for no-bundler consumers",
 );
+const distCog = readText(join(root, "dist", "cog.js"));
+assertIncludes(
+  distCog,
+  "import(\"./vendor/geotiff.js\")",
+  "dist cog must lazily import the vendored geotiff wrapper",
+);
+assertNotIncludes(
+  distCog,
+  "import(\"geotiff\")",
+  "dist must not leave a bare geotiff specifier for no-bundler consumers",
+);
+// The generated geotiff ESM wrapper must evaluate, not merely exist.
+globalThis.self ??= globalThis;
+const vendoredGeotiff = await import(
+  pathToFileURL(join(root, "dist", "vendor", "geotiff.js")).href
+);
+for (const name of ["default", "GeoTIFF", "fromUrl", "fromArrayBuffer", "getDecoder"]) {
+  assertEqual(
+    typeof vendoredGeotiff[name] === "function" || typeof vendoredGeotiff[name] === "object",
+    true,
+    `dist/vendor/geotiff.js must export ${name}`,
+  );
+}
+for (const vendored of ["ktx-parse.js", "geotiff.umd.js"]) {
+  assertNotIncludes(
+    readText(join(root, "dist", "vendor", vendored)),
+    "sourceMappingURL",
+    `dist/vendor/${vendored} must not reference an unshipped source map`,
+  );
+}
 const assetManifest = readJson(join(root, "dist", "asset-manifest.json"));
 assertIncludes(
   assetManifest.assets.map((asset) => asset.path),
   "dist/vendor/mediabunny.js",
   "asset manifest must pin the vendored mediabunny bundle",
+);
+assertIncludes(
+  assetManifest.assets.map((asset) => asset.path),
+  "dist/vendor/geotiff.umd.js",
+  "asset manifest must pin the vendored geotiff UMD bundle",
+);
+assertIncludes(
+  assetManifest.assets.map((asset) => asset.path),
+  "dist/vendor/geotiff.js",
+  "asset manifest must pin the generated geotiff ESM wrapper",
 );
 for (const asset of assetManifest.assets) {
   const digest = createHash("sha256")
@@ -278,6 +323,9 @@ for (const expected of [
   "dist/vendor/ktx-parse.LICENSE",
   "dist/vendor/mediabunny.js",
   "dist/vendor/mediabunny.LICENSE",
+  "dist/vendor/geotiff.umd.js",
+  "dist/vendor/geotiff.js",
+  "dist/vendor/geotiff.LICENSE",
   "dist/asset-manifest.json",
   "docs/support-matrix.md",
   "docs/release-checklist.md",

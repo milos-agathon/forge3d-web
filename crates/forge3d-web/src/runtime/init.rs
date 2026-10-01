@@ -217,6 +217,8 @@ pub(super) async fn create_runtime(
         disposed: false,
         max_texture_dimension_2d: limits.max_texture_dimension_2d,
         max_buffer_size: limits.max_buffer_size,
+        max_sampled_textures_per_shader_stage: limits.max_sampled_textures_per_shader_stage,
+        max_storage_buffers_per_shader_stage: limits.max_storage_buffers_per_shader_stage,
         surface_format,
         preferred_alpha_mode: options.alpha_mode.preferred_wgpu(),
         device_lost_callback: None,
@@ -236,6 +238,7 @@ pub(super) async fn create_runtime(
         },
         offline: None,
         offline_pipelines: None,
+        vt_registry: forge3d_core::terrain_vt::VtSourceRegistry::new(),
     })
 }
 
@@ -261,8 +264,8 @@ async fn validate_terrain_shader_and_pipeline(
         &textures.bind_group_layout,
         &ibl.bind_group_layout,
     );
-    let features =
-        super::shader_variants::lighting_features(lighting, ibl, shadows).with_terrain_mode(0);
+    let features = super::shader_variants::terrain_lighting_features(lighting, ibl, shadows)
+        .with_terrain_mode(0);
     cache.variant(&context.device, features, surface_format);
 
     if let Some(error) = scope.pop().await {
