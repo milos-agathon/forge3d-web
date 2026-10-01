@@ -4,7 +4,7 @@
   "manifestId": "forge3d-composite-baseline-v1",
   "sourcePlan": {
     "path": "docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md",
-    "sha256": "6e102ee39005ecb901e6069067d57a77167b2bb7d15c205dbd6429b956719cda"
+    "sha256": "68433445a120057fe239601411bd8be0aa021c48b320b1f00f736dfd4ff410f8"
   },
   "baselineLayers": [
     {
@@ -842,10 +842,10 @@
       "title": "Scatter transforms/filters/masks, QEM LOD/HLOD, contact/blend and wind",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W09",
       "nativeCapability": "Scatter transforms/filters/masks, QEM LOD/HLOD, contact/blend and wind: 1f4084a:python/forge3d/terrain_scatter.py, tests/test_terrain_tv13_lod_pipeline.py, tests/test_terrain_tv21_blending.py, tests/test_tv22_scatter_wind.py",
-      "requiredWebOutcome": "Add deterministic generators, instancing, LOD/HLOD, contact/blend and time-driven wind",
+      "requiredWebOutcome": "Deterministic PCG64 generators, filters/masks, bounded QEM, instancing, LOD/HLOD, contact/blend and explicit time-driven wind are implemented and verified",
       "nativeEvidence": [
         "1f4084a:python/forge3d/terrain_scatter.py",
         "tests/test_terrain_tv13_lod_pipeline.py",
@@ -910,10 +910,10 @@
       "title": "SH L2 terrain irradiance and reflection probes",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W09",
       "nativeCapability": "SH L2 terrain irradiance and reflection probes: 1f4084a:src/terrain/probes/**, tests/test_terrain_probes.py, tests/test_terrain_reflection_probe_exports.py",
-      "requiredWebOutcome": "Add deterministic baker, runtime blending/debug and memory reports",
+      "requiredWebOutcome": "Native SH L2/reflection bakers, GPU grid blending/box projection, debug modes and admitted memory reports are implemented and verified",
       "nativeEvidence": [
         "1f4084a:src/terrain/probes/**",
         "tests/test_terrain_probes.py",
@@ -2677,10 +2677,10 @@
       "id": "target:T13",
       "capabilityId": "T13",
       "kind": "web-api",
-      "contract": "Add deterministic generators, instancing, LOD/HLOD, contact/blend and time-driven wind",
+      "contract": "Deterministic PCG64 generators, filters/masks, bounded QEM, instancing, LOD/HLOD, contact/blend and explicit time-driven wind are implemented and verified",
       "owner": "W09",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T13"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T13"
       ],
       "tests": [
         "port scatter/TV13/TV21/TV22/probe tests; deterministic seeds; bounds, activation and invalid-wind cases; memory and visual goldens."
@@ -2716,10 +2716,10 @@
       "id": "target:T15",
       "capabilityId": "T15",
       "kind": "web-api",
-      "contract": "Add deterministic baker, runtime blending/debug and memory reports",
+      "contract": "Native SH L2/reflection bakers, GPU grid blending/box projection, debug modes and admitted memory reports are implemented and verified",
       "owner": "W09",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T15"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T15"
       ],
       "tests": [
         "port scatter/TV13/TV21/TV22/probe tests; deterministic seeds; bounds, activation and invalid-wind cases; memory and visual goldens."
@@ -3951,7 +3951,7 @@
     {
       "kind": "composite-inventory",
       "path": "crates/forge3d-web/tests/parity/composite-inventory.json",
-      "sha256": "97320d6bd43472468a90bf9285137b8626abbcee577e60a01e8da9e1ddd81c2a",
+      "sha256": "4f4d7a434cce6132642304b4497ce0c9eb708e92c54f6537384b15d1dac23080",
       "recordCount": 6531
     },
     {

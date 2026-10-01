@@ -133,3 +133,14 @@ To reproduce the W08 byte comparison, rebuild clean commit
 `2dc0b9e1b343095233dea1bd73edc64578547009`, copy its `dist` directory to this
 package's ignored `pkg/w08-base` directory, and run the W09 browser spec with
 `FORGE3D_W09_COMPARE_W08=1`. Each WASM build runs in a fresh Window realm.
+
+Verified on 2026-10-01: 365 core Rust tests, 171 web Rust tests, 704 TypeScript
+unit tests, API/declaration checks, all 15 parity-verifier tests, 88 browser
+regressions across W04/W06/W07/W08/W09, and the installed-tarball W09 lane.
+The adapter reported NVIDIA Ampere, non-fallback. This is Chromium preflight
+and package acceptance evidence; browser-family release qualification stays
+with the existing physical lab matrix. Flat/ridge native payloads have SH
+max error 0 and reflection SSIM 1; GPU irradiance max error is 5.83e-8 and
+GPU box-projected reflections are exact. Scatter/probe release returns the
+ledger to its 213,572-byte baseline, and all three rejected commits preserve
+the previous frame hash and ledger.
