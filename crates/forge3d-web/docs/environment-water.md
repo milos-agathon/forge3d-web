@@ -106,3 +106,6 @@ browser compositor regression goldens, distinct from the native probes.
 `npm run test:package-consumer:w10` installs a packed package in a clean
 consumer and runs environment, offline, worker, recovery and golden checks
 alongside the existing W03-W09 package checks.
+
+See [W10 verification](w10-verification.md) for the clean-commit installed
+package observations and qualification limits.

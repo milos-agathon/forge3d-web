@@ -48,4 +48,27 @@ and clouds retain clipped ray marching. Screen reflections have screen-depth
 visibility; planar reflections use existing scene LOD and omit recursive
 atmosphere/water. The compositor has no default-on effects.
 
-The clean installed-package acceptance run is recorded separately when complete.
+## Clean installed-package acceptance
+
+`npm run test:package-consumer:w10` passed from clean implementation commit
+`8cf321f4198ba17d7d339b11e3280dd3209aeef1`. The exact tarball SHA-256 is
+`e95ca4a6761e94bb9067bb7858dc40cff26d76ba05d8c33dbf2abd443e7972a6`.
+Stable Chrome 154.0.8037.58 used no launch flags and a non-fallback
+`nvidia / ampere` adapter on Windows 10.0.26300. The tested implementation
+commit excludes this subsequent documentation-only evidence record.
+
+The [machine-readable observations](w10-clean-package-acceptance.json) retain
+all W10 results. Native sky/cloud probes have zero maximum error; the water
+wave probe has maximum error 1.1920928955078125e-7. All three browser frame
+goldens have SSIM 1. Disabling clouds/water gives SSIM 0.89051/0.81024,
+respectively. The contributing density volume changes 2,282 pixels inside
+its bounds and zero bytes across 21,806 outside pixels. Half-resolution and
+froxel mean byte errors are 0.09398/0.04990. The occluded-ray control darkens
+1,087 channels. Repeated offline capture and device-loss recovery are exact.
+
+API/type checks, six documentation checks, 118 browser-harness checks and
+installed W03-W09 regression contracts pass in the same run. This portable
+W10 package lane does not run the POSIX infrastructure suite or establish
+full release, cross-browser or pinned reference-hardware qualification.
+Raw package/fixture evidence and the tarball remain in
+`test-results/browser-gate/` within the worktree.

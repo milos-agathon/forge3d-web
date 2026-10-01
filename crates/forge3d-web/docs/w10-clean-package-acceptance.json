@@ -1,0 +1,392 @@
+{
+  "date": "2026-10-01",
+  "command": "npm run test:package-consumer:w10",
+  "exitCode": 0,
+  "result": "PASS",
+  "commit": "8cf321f4198ba17d7d339b11e3280dd3209aeef1",
+  "tarball": "forge3d-web-1.26.3.tgz",
+  "packageSha256": "e95ca4a6761e94bb9067bb7858dc40cff26d76ba05d8c33dbf2abd443e7972a6",
+  "fixture": "test-interactive-viewer.html",
+  "evidenceMode": "required",
+  "gateScope": "w10-package-acceptance",
+  "worktreeCleanAtRun": true,
+  "browser": {
+    "name": "chrome",
+    "version": "154.0.8037.58",
+    "channel": "chrome",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36"
+  },
+  "os": {
+    "name": "win32",
+    "version": "10.0.26300",
+    "build": "10.0.26300"
+  },
+  "architecture": "x64",
+  "headed": false,
+  "launchArguments": [],
+  "adapter": {
+    "available": true,
+    "fallback": false,
+    "identity": "nvidia / ampere",
+    "limits": {
+      "maxTextureDimension2D": 16384,
+      "maxBufferSize": 2147483648
+    }
+  },
+  "qualification": "Local W10 installed-tarball acceptance; pinned W00 physical hardware and historical native full-scene parity remain unqualified.",
+  "checks": {
+    "api": "PASS",
+    "releaseHardening": "PASS",
+    "documentation": {
+      "passed": 6,
+      "skipped": 0
+    },
+    "browserHarness": {
+      "passed": 118,
+      "skipped": 0
+    },
+    "installedPackageW03W09": "PASS",
+    "installedPackageW10": "PASS"
+  },
+  "w10": {
+    "render": {
+      "covered": 13248,
+      "plain": "ffc19150ac6069be16854d38f791a6ef95ae712bfed3844860b2f07bf29cca80",
+      "sky": {
+        "delta": 75.12949625651042,
+        "hash": "b99e0005b38d33543d139b3c1af4864a95cc445279f2d031fb9f4d686d95ef38",
+        "report": {
+          "effectHeight": 128,
+          "effectWidth": 192,
+          "gpuBytes": 591376,
+          "height": 128,
+          "historyValid": true,
+          "resolutionScale": 1,
+          "steps": 32,
+          "volumeCount": 0,
+          "waterCount": 0,
+          "width": 192
+        }
+      },
+      "fog": {
+        "delta": 66.98435465494792,
+        "hash": "acf77beefd82460c2bfd52e066f11c24fa5f29b8620c939a8261fd6c6db30c76",
+        "report": {
+          "effectHeight": 128,
+          "effectWidth": 192,
+          "gpuBytes": 591376,
+          "height": 128,
+          "historyValid": true,
+          "resolutionScale": 1,
+          "steps": 32,
+          "volumeCount": 0,
+          "waterCount": 0,
+          "width": 192
+        }
+      },
+      "volume": {
+        "delta": 74.1028340657552,
+        "hash": "32f5f7f7026b1b80f2447d2a8b81a98b1e409dc5543b99d2e6b1a21d33092be4",
+        "report": {
+          "effectHeight": 128,
+          "effectWidth": 192,
+          "gpuBytes": 591380,
+          "height": 128,
+          "historyValid": true,
+          "resolutionScale": 1,
+          "steps": 32,
+          "volumeCount": 1,
+          "waterCount": 0,
+          "width": 192
+        }
+      },
+      "cloud": {
+        "delta": 65.63485717773438,
+        "hash": "0124fb89578777fc8ca5067c6006fab5351c8b4e5ff0b66239c95d614ee1b1a4",
+        "report": {
+          "effectHeight": 128,
+          "effectWidth": 192,
+          "gpuBytes": 591376,
+          "height": 128,
+          "historyValid": true,
+          "resolutionScale": 1,
+          "steps": 32,
+          "volumeCount": 0,
+          "waterCount": 0,
+          "width": 192
+        },
+        "timeDelta": 0.9965108235677084,
+        "repeat": "0124fb89578777fc8ca5067c6006fab5351c8b4e5ff0b66239c95d614ee1b1a4"
+      },
+      "water": {
+        "delta": 72.9617207845052,
+        "hash": "27d49d44f2b13574a438197451a08dbee1e3cabd813006c22ade4148c0610fed",
+        "report": {
+          "effectHeight": 128,
+          "effectWidth": 192,
+          "gpuBytes": 788076,
+          "height": 128,
+          "historyValid": true,
+          "resolutionScale": 1,
+          "steps": 32,
+          "volumeCount": 0,
+          "waterCount": 1,
+          "width": 192
+        }
+      },
+      "cleared": "ffc19150ac6069be16854d38f791a6ef95ae712bfed3844860b2f07bf29cca80",
+      "released": 0,
+      "generalCovered": 13336,
+      "generalDelta": 36.499675064987
+    },
+    "bounds": {
+      "max": 0,
+      "outsideMax": 0,
+      "outsidePixels": 21806,
+      "insideChanged": 2282,
+      "baseline": "b99e0005b38d33543d139b3c1af4864a95cc445279f2d031fb9f4d686d95ef38",
+      "outside": "b99e0005b38d33543d139b3c1af4864a95cc445279f2d031fb9f4d686d95ef38"
+    },
+    "masks": {
+      "transparent": true,
+      "frames": {
+        "water-mask": {
+          "nonzero": 35667,
+          "hash": "93a419381af2cceb4f586931e40c33ccdca40f5bd4fea590b37ea30d29feec5e"
+        },
+        "foam": {
+          "nonzero": 12741,
+          "hash": "471bc53891112135eccba078def26ab1a6484638c1e8ebfa03fe380a99c2de7e"
+        },
+        "reflection": {
+          "nonzero": 35667,
+          "hash": "0d4eafb4cfbe14df0e8cc50b9550b507671bfe25446a2aa910d5b941b8a86a50"
+        }
+      },
+      "zero": 0
+    },
+    "budget": {
+      "code": "RESOURCE_LIMIT_EXCEEDED",
+      "before": "852e70423290164f41519d26e453262c93f6542025d66d349e88f838e2151bfc",
+      "after": "852e70423290164f41519d26e453262c93f6542025d66d349e88f838e2151bfc",
+      "bytes": 804948,
+      "afterBytes": 804948,
+      "report": {
+        "effectHeight": 144,
+        "effectWidth": 224,
+        "gpuBytes": 775696,
+        "height": 144,
+        "historyValid": true,
+        "resolutionScale": 1,
+        "steps": 32,
+        "volumeCount": 0,
+        "waterCount": 0,
+        "width": 224
+      },
+      "released": 0,
+      "ledger": {
+        "currentBytes": 342596,
+        "peakBytes": 1118292,
+        "budgetBytes": 2097152,
+        "utilization": 0.1633625030517578,
+        "allocationCount": 14,
+        "categories": {
+          "buffers": 76516,
+          "textures": 266080,
+          "staging": 0,
+          "readback": 0,
+          "tile-cache": 0,
+          "render-bundles": 0,
+          "other": 0
+        },
+        "effectiveQuality": "high",
+        "downgrades": []
+      }
+    },
+    "offline": {
+      "captureRepeat": true,
+      "display": "0e632b3d7d78c794b6c49154ed37bb338fa3c828af12ef724a94375d91e7379b",
+      "keys": [
+        "frame",
+        "hdrFrame",
+        "aovFrame",
+        "totalSamples",
+        "denoised",
+        "denoiseGuides",
+        "tonemapOperator"
+      ],
+      "nonzero": true,
+      "waterIds": [
+        4294967280
+      ],
+      "report": {
+        "effectHeight": 128,
+        "effectWidth": 192,
+        "gpuBytes": 788076,
+        "height": 128,
+        "historyValid": false,
+        "resolutionScale": 1,
+        "steps": 32,
+        "volumeCount": 0,
+        "waterCount": 1,
+        "width": 192
+      }
+    },
+    "recovery": {
+      "same": true,
+      "report": {
+        "effectHeight": 128,
+        "effectWidth": 192,
+        "gpuBytes": 591380,
+        "height": 128,
+        "historyValid": true,
+        "resolutionScale": 1,
+        "steps": 32,
+        "volumeCount": 0,
+        "waterCount": 1,
+        "width": 192
+      },
+      "attempts": 1
+    },
+    "quality": {
+      "halfDelta": 0.09398396809895833,
+      "froxelDelta": 0.049896240234375,
+      "froxelReport": {
+        "effectHeight": 128,
+        "effectWidth": 192,
+        "gpuBytes": 787976,
+        "height": 128,
+        "historyValid": true,
+        "resolutionScale": 1,
+        "steps": 64,
+        "volumeCount": 0,
+        "waterCount": 0,
+        "width": 192
+      },
+      "valid": true,
+      "cameraReset": false,
+      "freshDelta": 0,
+      "occlusionDelta": 0.026570638020833332,
+      "darkened": 1087
+    },
+    "native": [
+      {
+        "name": "sky-0-2",
+        "mse": 0,
+        "psnr": 99,
+        "ssim": 1,
+        "maxAbs": 0,
+        "controlSsim": 0.0005772085576689101
+      },
+      {
+        "name": "sky-0-8",
+        "mse": 0,
+        "psnr": 99,
+        "ssim": 1,
+        "maxAbs": 0,
+        "controlSsim": 0.0005820876554521864
+      },
+      {
+        "name": "sky-1-2",
+        "mse": 0,
+        "psnr": 99,
+        "ssim": 1,
+        "maxAbs": 0,
+        "controlSsim": 0.0002408411212936539
+      },
+      {
+        "name": "sky-1-8",
+        "mse": 0,
+        "psnr": 99,
+        "ssim": 1,
+        "maxAbs": 0,
+        "controlSsim": 0.0018045925432328379
+      },
+      {
+        "name": "cloud-scattering",
+        "mse": 0,
+        "psnr": 99,
+        "ssim": 1,
+        "maxAbs": 0,
+        "controlSsim": 0.0003656488177997676
+      },
+      {
+        "name": "water-waves",
+        "mse": 4.549583366292298e-16,
+        "psnr": 99,
+        "ssim": 0.9999999999996955,
+        "maxAbs": 1.1920928955078125e-07,
+        "controlSsim": 0.00017169380950034073
+      }
+    ],
+    "worker": {
+      "covered": 24576,
+      "delta": 8.57745361328125
+    },
+    "downscale": {
+      "selected": {
+        "effectHeight": 64,
+        "effectWidth": 96,
+        "gpuBytes": 222736,
+        "height": 128,
+        "historyValid": false,
+        "resolutionScale": 0.5,
+        "steps": 32,
+        "volumeCount": 0,
+        "waterCount": 0,
+        "width": 192
+      },
+      "code": "RESOURCE_LIMIT_EXCEEDED",
+      "before": "82de89f479e4462554cf88a55388b900569d9fcacddc21e9eb6634e4a9074225",
+      "after": "82de89f479e4462554cf88a55388b900569d9fcacddc21e9eb6634e4a9074225",
+      "bytes": 436308,
+      "afterBytes": 436308,
+      "width": 192,
+      "height": 128
+    },
+    "cloudsAndWaves": {
+      "modes": {
+        "billboard": "f3160a8b02bcd916c6b28718c7701e0d350d41759a53f2f747060bd81735ffdd",
+        "volumetric": "0124fb89578777fc8ca5067c6006fab5351c8b4e5ff0b66239c95d614ee1b1a4",
+        "hybrid": "0124fb89578777fc8ca5067c6006fab5351c8b4e5ff0b66239c95d614ee1b1a4"
+      },
+      "firstSeed": "3a4883f69a075ebffa6b441e77fd1d378c0f3f6de2d32ddbf4ce88c878be2c7c",
+      "secondSeed": "f0b96ddec94ea84bbe4e86e433f2414ac2075f59c42a85faaf9808111359393b",
+      "shadowDelta": 3.769195556640625,
+      "planarDelta": 0.013783772786458334,
+      "waveDelta": 3.6910807291666665
+    },
+    "goldens": {
+      "sky": {
+        "mse": 0,
+        "psnr": 99,
+        "ssim": 1,
+        "maxAbs": 0,
+        "controlSsim": 0.0016162390755493615,
+        "disabledSsim": 1
+      },
+      "cloud": {
+        "mse": 0,
+        "psnr": 99,
+        "ssim": 1,
+        "maxAbs": 0,
+        "controlSsim": 0.002069103483730182,
+        "disabledSsim": 0.8905077904006657
+      },
+      "water": {
+        "mse": 0,
+        "psnr": 99,
+        "ssim": 1,
+        "maxAbs": 0,
+        "controlSsim": 0.0012028286002025263,
+        "disabledSsim": 0.8102401259292494
+      }
+    },
+    "restoreLights": {
+      "baseline": "604531ca9676f8890204f633bae74a98009311bc54bcea0a5de0e3d3be60ac31",
+      "sun": "5e4a1be693a235212f265f091efdff3f99ffd1c097d20f61516989aa8266e8a7",
+      "cleared": "604531ca9676f8890204f633bae74a98009311bc54bcea0a5de0e3d3be60ac31",
+      "sceneCleared": "604531ca9676f8890204f633bae74a98009311bc54bcea0a5de0e3d3be60ac31"
+    }
+  }
+}
