@@ -293,7 +293,8 @@ try {
   mkdirSync(w09GoldenDirectory, {recursive:true});
   copyFileSync(join(packageRoot, "tests", "golden", "w09", "probes.json"), join(w09GoldenDirectory, "probes.json"));
   const w10Fixture = readFileSync(join(packageRoot, "examples", "test-w10.html"), "utf8")
-    .replace(/const api\s*=[\s\S]*?;\n/, 'const api=await import("/node_modules/@forge3d/web/dist/index.js");\n')
+    .replaceAll("../dist/index.js", "/node_modules/@forge3d/web/dist/index.js")
+    .replaceAll("../src-ts/index.ts", "/node_modules/@forge3d/web/dist/index.js")
     .replace("../src-ts/viewer.ts", "/node_modules/@forge3d/web/dist/viewer.js");
   writeFileSync(join(consumerDirectory, "test-w10.html"), w10Fixture);
   copyFileSync(join(packageRoot,"examples","w10-acceptance.js"),join(consumerDirectory,"w10-acceptance.js"));
