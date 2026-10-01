@@ -1,11 +1,13 @@
 # W09 review remediation evidence
 
-The fourteen review findings have implementation or test corrections. The owner
-independently re-verified native divergence repros, byte-exact fixtures and the
-367/174/711 test totals plus 17 W09 browser checks. T13/T15 code artifacts are
-complete; reference-hardware acceptance remains unqualified. The owner has
-authorized committing these corrections and running the clean-commit package
-gate. No push, publication or release is authorized.
+All fourteen review findings are closed. The owner independently re-verified
+native divergence repros, byte-exact fixtures and the 367/174/711 test totals
+plus 17 W09 browser checks. Corrections and all new fixtures are committed in
+`5424bc7fd43f353574190b312c1921934f4542a7`; the clean-commit W09 package gate
+passes for that exact revision. The documentation follow-up records this run
+and does not claim a package certificate for its own later revision.
+Reference-hardware acceptance remains unqualified. No push, publication or
+release was performed.
 
 The historical reflection baker has one behavior-preserving source deviation:
 `hammersley_2d` uses `bits.rotate_right(16)` instead of
@@ -94,6 +96,29 @@ The tested local tarball SHA-256 was `b8c8cf43d761189b2f279eafac8505db1f1ca37819
 was tested before adding this final evidence document to the source snapshot;
 it is not a clean-commit or published-package certificate.
 
+## Clean-commit installed-package acceptance
+
+`npm run test:package-consumer:w09` completed with exit code zero on clean
+commit `5424bc7fd43f353574190b312c1921934f4542a7`. It rebuilt WASM, TypeScript,
+self-hosted dist and the example, passed API/release-hardening checks, all six
+documentation tests and 118 browser-harness tests with no skips, then packed
+and installed the exact tarball in an independent consumer.
+
+The default required lane used installed Chrome `154.0.8037.58`, headless,
+with no extra launch arguments and a non-fallback `nvidia / ampere` adapter.
+The installed W09 scatter, scene/time, worker, HLOD, probe edge/stress/rejection,
+cancellation, native payload and GPU SH/reflection comparisons passed.
+Native SH payload max error remains zero; flat/ridge GPU SH and reflection
+errors match the values above after the rotation rewrite. The separate viewer
+benchmark submitted all 600 measured frames with zero skipped frames.
+
+The accepted tarball SHA-256 is
+`0fc393364d088d66b61f121f348d452e6b1f4388f59dbb8fc523b23b522c8e9f`.
+See [recorded acceptance](w09-clean-package-acceptance.json) for the exact
+revision, browser/adapter metadata, results and retained raw evidence hashes.
+The package gate reports `PASS`; Windows RTX 3070 hardware observations remain
+**Chromium preflight**, with no integrated or Ubuntu/Vulkan budget qualification.
+
 ## Remaining required evidence
 
 - **reference-integrated: BLOCKED on INF-00.** Only pinned `FW-WIN-I12-01`,
@@ -102,12 +127,10 @@ it is not a clean-commit or published-package certificate.
   attest that machine's exact adapter, driver and OS; no substitute is allowed.
 - **reference-discrete: ABSENT.** Qualifying runs require `FW-LNX-NV-01` on
   Ubuntu/Vulkan. The available Windows RTX 3070 is Chromium preflight.
-- Physical/branded browser, cross-backend render portability, reference-hardware
+- Headed browser, cross-backend render portability, reference-hardware
   hashes and full reference CPU/frame-time budget qualifications are unrun.
-- `test:package-consumer:w09` requires a clean committed tree. Its run is
-  pending the owner-authorized remediation commit; prior local consumer
-  observations supplement it without weakening the clean-tree guard. Full Windows release infrastructure
-  also retains the existing POSIX/symlink prerequisites.
+- The full Windows release infrastructure retains its existing POSIX/symlink
+  prerequisites; the narrower W09 clean-package gate now passes as recorded above.
 - Strict Clippy does not pass. The combined core/web all-targets WebGPU lane
   stops on 36 core findings in unchanged files after the rotation fix. Web-only no-deps lint reports
   29 existing input/offline/terrain/IBL/test findings after the new placement

@@ -169,11 +169,13 @@ They do not qualify `reference-discrete`, which requires Ubuntu/Vulkan on
 unprovisioned. Substituting another integrated adapter is not permitted; a
 qualifying run must attest that machine's exact adapter, driver and OS.
 
-`npm run test:package-consumer:w09` remains the clean-commit tarball gate.
-A local installed-tarball check of this dirty review snapshot is supplemental
-Chromium preflight evidence; it does not replace that gate. No commit, publish
-or physical-browser qualification is implied. See [review evidence](w09-review-evidence.md)
-for observed checks, measured values, and remaining blockers.
+`npm run test:package-consumer:w09` passed in its required lane on clean commit
+`5424bc7fd43f353574190b312c1921934f4542a7`, using installed Chrome 154 and a
+non-fallback NVIDIA adapter without extra launch flags. This closes the W09
+clean-package gate; the Windows RTX 3070 still qualifies only as Chromium
+preflight for hardware budgets. See [review evidence](w09-review-evidence.md)
+and [recorded package acceptance](w09-clean-package-acceptance.json) for the
+tested revision, tarball hash and remaining reference-hardware blockers.
 
 The package entrypoint exposes the population/LOD constructors, wind settings,
 probe class, capture-material defaults and their types. Probe packing, grid
