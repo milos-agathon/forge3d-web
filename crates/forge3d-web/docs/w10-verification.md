@@ -110,5 +110,12 @@ cannot acquire a WebGPU adapter; WebKit preflight has no navigator.gpu. Both
 required availability gates failed, so neither is qualified. No test is
 silently skipped or reported as cross-browser success.
 
-The prior clean-package record on 8cf321f is historical evidence only. A new
-clean-commit package run must qualify these changes before completion.
+The clean installed-package gate passed on `abfdfa195da14fa74376090861f92c9a3f74c574`
+with a clean worktree and stable Chrome 154.0.8037.93, without launch flags.
+The tarball SHA-256 is
+`f74f0fcd8c9109a6a93227676d5831c8f406eaaf0ca3767e7c18a8a0147efba3`.
+The run passed all 118 harness and six documentation checks, W03-W09 installed
+consumer checks, all W10 behavioral contracts and the five native scene
+comparisons above. [Committed acceptance evidence](w10-clean-package-acceptance.json)
+records the package/browser binding, observations and retained proof hashes.
+This record supersedes the earlier 8cf321f acceptance record.
