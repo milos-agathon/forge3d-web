@@ -46,7 +46,7 @@ test("accepts the exhaustive stored W00 baseline", () => {
     constraints: 7,
     inventoryRecords: 6531,
     mappings: 6531,
-    fixtures: 9,
+    fixtures: 10,
     hardwareProfiles: 2,
     dependencyAssets: 12,
     lockControlledConsumers: 0,

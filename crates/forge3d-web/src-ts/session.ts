@@ -1,4 +1,6 @@
 import { Forge3DError, Forge3DRuntime } from "./index.js";
+import type { ScatterBatchSnapshot, ScatterFrameStats, ScatterMemoryReport } from "./scatter-types.js";
+import type { TerrainProbeSnapshot, TerrainProbeMemoryReport } from "./terrain-probes.js";
 import { cloneCameraInput, validateCameraInput } from "./camera.js";
 import { captureOnce, renderOffline as renderOfflineTarget } from "./offline.js";
 import type { AovFrame, HdrFrame } from "./frames.js";
@@ -85,6 +87,12 @@ export interface SessionRuntimeLike {
   clearMaterialVtSources?(): void;
   getMaterialVtStats?(): TerrainMaterialVtStats;
   setScene?(scene: SceneSnapshot): void;
+  setScatterBatches?(batches: ScatterBatchSnapshot[]): void;
+  setLightingProbes?(probes: TerrainProbeSnapshot | null): void;
+  setTimeSeconds?(seconds: number): void;
+  getScatterStats?(): ScatterFrameStats;
+  getScatterMemoryReport?(): ScatterMemoryReport;
+  getProbeMemoryReport?(): TerrainProbeMemoryReport;
   setCamera?(camera: CameraInput): void;
   setDeviceLostHandler?(handler: ((error: unknown) => void) | undefined): void;
   resize?(size: ResizeInput): void;
@@ -252,6 +260,18 @@ export class Forge3DSession {
   getMemoryReport(): MemoryReport {
     return this.#tracker.report();
   }
+
+  setTimeSeconds(seconds: number): void {
+    const runtime = this.#runtimeOrThrow();
+    if (!Number.isFinite(seconds)) throw new Forge3DError("INVALID_INPUT", "timeSeconds must be finite");
+    if (!runtime.setTimeSeconds) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support scatter time");
+    runtime.setTimeSeconds(seconds);
+    if (this.#committedSnapshot) this.#committedSnapshot.timeSeconds = seconds;
+    this.#scene?.setTimeSeconds(seconds);
+  }
+  getScatterStats(): ScatterFrameStats { const r = this.#runtimeOrThrow(); if (!r.getScatterStats) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not report scatter"); return r.getScatterStats(); }
+  getScatterMemoryReport(): ScatterMemoryReport { const r = this.#runtimeOrThrow(); if (!r.getScatterMemoryReport) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not report scatter"); return r.getScatterMemoryReport(); }
+  getProbeMemoryReport(): TerrainProbeMemoryReport { const r = this.#runtimeOrThrow(); if (!r.getProbeMemoryReport) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not report probes"); return r.getProbeMemoryReport(); }
 
   async precomputeIbl(input: IblSnapshot): Promise<IblSnapshot> {
     const runtime = this.#runtimeOrThrow();
@@ -787,6 +807,15 @@ export class Forge3DSession {
     runtime.setMaterials?.(clonePayload(snapshot.materials));
     runtime.setIbl?.(clonePayload(snapshot.ibl));
     runtime.setShadows?.(clonePayload(snapshot.shadows));
+    if (snapshot.scatter !== undefined) {
+      if (!runtime.setScatterBatches) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support terrain scatter");
+      runtime.setScatterBatches(clonePayload(snapshot.scatter));
+    }
+    if (snapshot.probes !== undefined) {
+      if (!runtime.setLightingProbes) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support terrain probes");
+      runtime.setLightingProbes(clonePayload(snapshot.probes));
+    }
+    if (snapshot.timeSeconds !== undefined) runtime.setTimeSeconds?.(snapshot.timeSeconds);
   }
 
   #attachLossHandler(runtime: SessionRuntimeLike): void {

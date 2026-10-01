@@ -20,7 +20,6 @@ use build::{bundle_estimate_bytes, checked_scene_bytes};
 use parse::{ParsedNodeKind, ParsedScene};
 use plan::compile_scene_plan;
 
-#[cfg(target_arch = "wasm32")]
 pub(super) use geometry::LitVertex;
 pub(super) use gpu::NativeScene;
 
@@ -61,6 +60,9 @@ struct SceneResourcePlan {
     context: forge3d_core::gpu::GpuContext,
     memory: super::memory::MemoryLedger,
     scene: Option<NativeScene>,
+    scatter: Option<super::scatter::ScatterResources>,
+    time_seconds: f32,
+    probes: super::probes::Prepared,
     textures: super::textures::TextureResources,
     ibl: super::ibl::IblResources,
     shadows: super::shadows::ShadowResources,
@@ -99,6 +101,29 @@ fn prepare_scene(
         .clone();
     let aspect = runtime.width as f32 / runtime.height.max(1) as f32;
     let mut planned = runtime.memory.clone();
+    // Admit the complete W09 replacement together, including swaps between
+    // scatter and probes, before allocating any new GPU resource.
+    let scatter_bytes = super::scatter::planned_bytes(&parsed.scatter)?;
+    let probe_bytes = super::probes::planned_bytes(parsed.probes.as_ref())?;
+    planned.replace_all(&[
+        (
+            super::scatter::KEY,
+            MemoryCategory::Buffers,
+            scatter_bytes.saturating_sub(8),
+        ),
+        (
+            super::scatter::TEXTURES_KEY,
+            MemoryCategory::Textures,
+            if scatter_bytes > 0 { 8 } else { 0 },
+        ),
+        (
+            super::probes::KEY,
+            MemoryCategory::Buffers,
+            probe_bytes.saturating_sub(64),
+        ),
+    ])?;
+    let scatter = super::scatter::build(runtime, parsed.scatter.clone(), &mut planned)?;
+    let probes = super::probes::prepare(runtime, parsed.probes.as_ref(), &mut planned)?;
 
     let built = if parsed.nodes.is_empty() && parsed.passes.is_empty() {
         None
@@ -280,6 +305,9 @@ fn prepare_scene(
         context,
         memory: planned,
         scene,
+        scatter,
+        time_seconds: parsed.time_seconds,
+        probes,
         textures,
         ibl: ibl_resources,
         shadows: shadow_resources,
@@ -295,6 +323,9 @@ fn commit_scene_plan(runtime: &mut Forge3DRuntime, plan: SceneResourcePlan) {
         context,
         memory,
         scene,
+        scatter,
+        time_seconds,
+        probes,
         textures,
         ibl,
         shadows,
@@ -317,6 +348,9 @@ fn commit_scene_plan(runtime: &mut Forge3DRuntime, plan: SceneResourcePlan) {
     super::ibl::commit_ibl(runtime, ibl);
     super::shadows::rebuild_terrain_depth_binding(runtime);
     runtime.scene = scene;
+    runtime.scatter = scatter;
+    runtime.time_seconds = time_seconds;
+    super::probes::commit(runtime, probes);
 }
 
 fn commit_scene(runtime: &mut Forge3DRuntime, parsed: ParsedScene) -> Result<(), WebError> {

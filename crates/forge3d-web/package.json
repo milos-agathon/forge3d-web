@@ -66,6 +66,7 @@
     "test:infrastructure": "node scripts/run-infrastructure-tests.mjs",
     "test:package": "npm run test:release-hardening && npm run test:browser-harness && npm run test:infrastructure && node tests/api/package-contract.mjs",
     "test:package-consumer": "node scripts/build-browser-test-package.mjs",
+    "test:package-consumer:w09": "node scripts/build-browser-test-package.mjs --w09",
     "test:unit": "vitest run",
     "test:browser": "playwright test --project=chromium-preflight",
     "test:browser:chromium": "playwright test --project=chromium-preflight",

@@ -187,6 +187,14 @@ pub(super) fn bundle_estimate_bytes(geometry: &BuiltGeometry) -> u64 {
 
 pub(crate) fn scene_pass_draws(runtime: &Forge3DRuntime) -> Vec<PassDraw> {
     let mut passes = Vec::new();
+    if let Some(scatter) = runtime.scatter.as_ref() {
+        passes.push(PassDraw {
+            name: "scatter".into(),
+            group: PassGroup::World,
+            draws: scatter.stats.effective_draws,
+            triangles: scatter.triangles(),
+        });
+    }
     let Some(scene) = runtime.scene.as_ref() else {
         if let Some(terrain) = runtime.terrain.as_ref() {
             passes.push(PassDraw {

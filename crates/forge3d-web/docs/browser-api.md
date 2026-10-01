@@ -12,6 +12,9 @@ a platform support claim.
 
 ## Public API
 
+For W09 population, wind, local SH/reflection lighting, reports and recovery,
+see [Terrain scatter and probes](terrain-scatter-probes.md).
+
 ```ts
 import {
   Forge3DRuntime,

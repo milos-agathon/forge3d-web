@@ -1346,7 +1346,7 @@ impl TerrainPipelineCache {
                     pipeline_layout,
                     &shader,
                     pass.entry_point(),
-                    &pass.color_targets(),
+                    &pass.color_targets_for(features.capture_blend()),
                 )
             })
             .clone()
@@ -1677,6 +1677,7 @@ pub(super) struct TerrainRenderResources {
     pub(super) height_texture: wgpu::Texture,
     pub(super) height_width: u32,
     pub(super) height_height: u32,
+    pub(super) heightfield_origin: [f32; 2],
     pub(super) ao_output: Option<TerrainAnalysisOutput>,
     pub(super) sun_output: Option<TerrainAnalysisOutput>,
     #[allow(dead_code)]
@@ -2189,6 +2190,7 @@ impl TerrainRenderResources {
             height_texture,
             height_width: terrain.width,
             height_height: terrain.height,
+            heightfield_origin: terrain.heightfield_origin(),
             ao_output,
             sun_output,
             analysis_fallback_view,
@@ -3524,6 +3526,7 @@ pub(super) const TERRAIN_SHADER: &str = concat!(
     include_str!("ibl_lighting.wgsl"),
     include_str!("shadow_lighting.wgsl"),
     include_str!("lighting.wgsl"),
+    include_str!("terrain_probes.wgsl"),
     include_str!("terrain_material.wgsl"),
     include_str!("terrain_w08.wgsl"),
     r#"

@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Forge3D W09 contracts</title>
+<canvas id="canvas" width="192" height="128"></canvas>
+<script type="module">
+const api = new URLSearchParams(location.search).has("dist") ? await import("../dist/index.js") : await import("../src-ts/index.ts");
+const {Forge3DRuntime,Forge3DScene,Forge3DSession,Forge3DViewer,TerrainScatterSource,TerrainScatterBatch,TerrainLightingProbes,makeScatterTransform,seededScatterTransforms}=api;
+const canvas=document.querySelector("canvas");
+const camera={position:[0,24,48],target:[0,4,0],up:[0,1,0],fovYDegrees:50,near:.1,far:500};
+const terrain={width:33,height:33,heights:new Float32Array(1089),spacing:[2,2],bounds:[-32,-32,32,32],domain:[0,1],renderMode:"perspective"};
+const source=new TerrainScatterSource(terrain.heights,33,33,{terrainWidth:64,origin:[-32,-32]});
+const mesh={positions:new Float32Array([-3,0,0,3,0,0,-3,12,0,3,12,0]),normals:new Float32Array([0,0,1,0,0,1,0,0,1,0,0,1]),indices:new Uint32Array([0,1,2,2,1,3])};
+const transforms=Float32Array.from([...makeScatterTransform([-10,0,0]),...makeScatterTransform([10,0,0])]);
+const batch=(extra={})=>new TerrainScatterBatch({levels:[{mesh,maxDistance:70},{mesh}],transforms,color:[.8,.12,.05,1],...extra});
+const hash=async bytes=>Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes)),b=>b.toString(16).padStart(2,"0")).join("");
+const frame=async r=>{r.render();return r.readRgba();};
+const delta=(a,b)=>a.reduce((sum,x,i)=>sum+Math.abs(x-b[i]),0)/a.length;
+const probes=()=>TerrainLightingProbes.bake(source,{grid:{origin:[-24,-24],spacing:[16,16],dims:[4,4],heightOffset:5,edgeBlend:[8,8]},rayCount:32,reflectionResolution:4,reflectionSamples:8});
+window.__w09={
+ async reflections() {
+  const truth=(await (await fetch("/tests/golden/w09/probes.json")).json()).cases[0];
+  const p=await TerrainLightingProbes.bake(source,{grid:{origin:[0,0],spacing:[64,64],dims:[1,1],heightOffset:5},rayCount:64,reflectionResolution:4,reflectionSamples:8});p.setDebug("reflections");
+  const r=await Forge3DRuntime.create(canvas,{width:192,height:128,devicePixelRatio:1});
+  try{r.setTerrain(terrain);r.setCamera({...camera,position:[0,50,0],target:[0,0,0],up:[0,0,-1],projection:"orthographic",orthographicHeight:8});r.setLightingProbes(p);
+   const cap=await r.capture({samples:1,aovs:["id"]}),ids=cap.aovFrame.id(),hdr=cap.hdrFrame.data,actual=[],expected=[];
+   // Native face +Z (public +Y), roughness .5 selects mip 1. Box projection
+   // maps the orthographic reflection ray onto the probe's upper box plane.
+   for(let row=48;row<80;row++)for(let col=80;col<112;col++){
+    const i=row*192+col;if(!ids[i])throw new Error("uncovered reflection comparison pixel");
+    const x=(col+.5-96)*8/128,z=(row+.5-64)*8/128,u=.5+x/64,v=.5-z/64;
+    for(let c=0;c<3;c++){const at=(xx,yy)=>truth.reflectionMips[1][(4*4+yy*2+xx)*4+c];actual.push(hdr[i*4+c]);expected.push((1-v)*((1-u)*at(0,0)+u*at(1,0))+v*((1-u)*at(0,1)+u*at(1,1)));}
+   }
+   const metric=await api.compareImages(new Float32Array(actual),new Float32Array(expected),{width:32,height:32,channels:3});return{count:actual.length/3,maxAbs:Math.max(...actual.map((x,i)=>Math.abs(x-expected[i]))),ssim:metric.ssim};
+  }finally{r.dispose();p.dispose();}
+ },
+ async baseline() {
+  const baselineUrl="/pkg/w08-base/index.js";
+  const bridge=new URLSearchParams(location.search).has("old")?await import(/* @vite-ignore */ baselineUrl):api;
+  const r=await bridge.Forge3DRuntime.create(canvas,{width:192,height:128,devicePixelRatio:1});
+  try{r.setTerrain(terrain);r.setCamera({...camera,position:[0,50,0],target:[0,0,0],up:[0,0,-1]});const rgba=await frame(r),capture=await r.capture({samples:1,aovs:["id"]});return{rgba:await hash(rgba),hdr:await hash(capture.hdrFrame.data),covered:Array.from(capture.aovFrame.id()).filter(id=>id>0).length};}finally{r.dispose();}
+ },
+ async budgets() {
+  const measure=await Forge3DRuntime.create(canvas,{width:192,height:128,devicePixelRatio:1});
+  measure.setTerrain(terrain);const baseBytes=measure.getMemoryReport().currentBytes;measure.dispose();
+  const budget=baseBytes+300000;
+  const r=await Forge3DRuntime.create(canvas,{width:192,height:128,devicePixelRatio:1,memoryBudgetBytes:budget,overflowPolicy:"reject"});
+  try {
+   r.setTerrain(terrain);r.setCamera(camera);r.setScatterBatches([batch()]);
+   const before=await hash(await frame(r)),beforeBytes=r.getMemoryReport().currentBytes;
+   const many=new Float32Array(5000*16);for(let i=0;i<5000;i++)many.set(makeScatterTransform([-10,0,0]),i*16);
+   const failures=[];
+   try{r.setScatterBatches([batch({transforms:many})]);}catch(e){failures.push(e.code);}
+   const p=await probes(),large=p.snapshot();large.reflectionResolution=64;large.reflectionMips=Array.from({length:7},(_,i)=>new Float32Array(16*6*(64>>i)**2*4));
+   try{r.setLightingProbes(large);}catch(e){failures.push(e.code);}
+   const rejectedScene=Forge3DScene.create();rejectedScene.addNode({kind:"terrain",name:"terrain",terrain});rejectedScene.setScatterBatches([batch({transforms:many})]);
+   try{r.setScene(rejectedScene.snapshot());}catch(e){failures.push(e.code);}finally{rejectedScene.dispose();}
+   const after=await hash(await frame(r)),afterBytes=r.getMemoryReport().currentBytes;
+   r.setLightingProbes(p);const report=r.getProbeMemoryReport(),scatterReport=r.getScatterMemoryReport(),admitted=r.getMemoryReport().currentBytes;
+   r.setScatterBatches([]);r.setLightingProbes(null);const released=r.getMemoryReport().currentBytes;
+   return{failures,before,after,beforeBytes,afterBytes,budget,admitted,released,baseBytes,report,scatterReport};
+  }finally{r.dispose();}
+ },
+ async irradiance() {
+  const truth=(await (await fetch("/tests/golden/w09/probes.json")).json()).cases[0];
+  const p=await TerrainLightingProbes.bake(source,{grid:{origin:[0,0],spacing:[64,64],dims:[1,1],heightOffset:5},rayCount:64,reflectionResolution:4,reflectionSamples:8});p.setDebug("irradiance");
+  const r=await Forge3DRuntime.create(canvas,{width:192,height:128,devicePixelRatio:1});
+  try{r.setTerrain(terrain);r.setCamera({...camera,position:[0,50,0],target:[0,0,0],up:[0,0,-1]});r.setLightingProbes(p);const capture=await r.capture({samples:1,aovs:["normal","id"]});
+   const ids=capture.aovFrame.id(),normals=capture.aovFrame.normal(),hdr=capture.hdrFrame.data;
+   const actual=[],expected=[];
+   for(let i=0;i<ids.length;i++){if(!ids[i] || i%192<80 || i%192>=112 || Math.floor(i/192)<56 || Math.floor(i/192)>=72)continue;const basis=api.probeShBasis(Array.from(normals.subarray(i*3,i*3+3)));for(let c=0;c<3;c++){actual.push(hdr[i*4+c]);expected.push(Math.max(0,basis.reduce((sum,b,k)=>sum+b*truth.coefficients[k*3+c],0)));}}
+   if(actual.length===0)throw new Error("irradiance comparison has no covered pixels");
+   const metric=await api.compareImages(new Float32Array(actual),new Float32Array(expected),{width:actual.length/3,height:1,channels:3});return{count:actual.length/3,maxAbs:Math.max(...actual.map((v,i)=>Math.abs(v-expected[i]))),ssim:metric.ssim};
+  }finally{r.dispose();p.dispose();}
+ },
+ async worker() {
+  const worker=new Worker(new URL("./test-w09-worker.js",import.meta.url),{type:"module"});
+  const c=document.createElement("canvas");c.width=192;c.height=128;document.body.append(c);
+  const scene=Forge3DScene.create();scene.addNode({kind:"terrain",name:"terrain",terrain});scene.setScatterBatches([batch({wind:{enabled:true,amplitude:2}})]);scene.setTimeSeconds(.37);scene.setLightingProbes(await probes());
+  let renderer;
+  try {renderer=await api.Forge3DWorkerRenderer.create(c,{worker,controls:false,resize:false,session:{runtime:{width:192,height:128,devicePixelRatio:1}}});await renderer.setScene(scene);await renderer.setCamera(camera);await renderer.render();const rgba=await renderer.readRgba();return{hash:await hash(rgba),nonempty:rgba.some(x=>x>0),sourceCount:scene.getScatterBatches()[0].transforms.length};}
+  finally{await renderer?.dispose();worker.terminate();scene.dispose();c.remove();}
+ },
+ async blending() {
+  const r=await Forge3DRuntime.create(canvas,{width:192,height:128,devicePixelRatio:1});
+  try {
+   r.setTerrain(terrain);r.setCamera(camera);r.setScatterBatches([batch()]);
+   const plain=await frame(r);
+   r.setScatterBatches([batch({terrainBlend:{enabled:true,buryDepth:1,fadeDistance:10}})]);
+   const blended=await frame(r), capture=await r.capture({samples:8,aovs:["id","normal"]});
+   r.setScatterBatches([batch({terrainContact:{enabled:true,distance:10,strength:.9,verticalWeight:0}})]);
+   const contact=await frame(r);
+   r.setScatterBatches([batch({wind:{enabled:true,amplitude:3,rigidity:1}})]);r.setTimeSeconds(.37);const rigid=await frame(r);
+   const noopHashes=[];
+   for(const wind of [{enabled:true,amplitude:0,gustStrength:2},{enabled:true,amplitude:3,bendStart:1},{enabled:true,amplitude:3,fadeStart:1,fadeEnd:2}]){r.setScatterBatches([batch({wind})]);noopHashes.push(await hash(await frame(r)));}
+   r.setScatterBatches([batch({wind:{enabled:true,amplitude:3,rigidity:.2}})]);
+   const noGust=await frame(r);r.setScatterBatches([batch({wind:{enabled:true,amplitude:3,rigidity:.2,gustStrength:2}})]);const gust=await frame(r);
+   const images=[];for await(const f of api.renderFrames(r,{frameCount:2,fps:3,cameraAt:()=>camera,mode:"display"}))images.push(await hash(f.frame.data));
+   return{blendDelta:delta(plain,blended),contactDelta:delta(plain,contact),captureIds:Array.from(new Set(capture.aovFrame.id())).filter(x=>x>=0x100000),rigidHash:await hash(rigid),plainHash:await hash(plain),noopHashes,gustDelta:delta(gust,noGust),sequence:images};
+  }finally{r.dispose();}
+ },
+ async native() {
+  const golden=await (await fetch("/tests/golden/w09/probes.json")).json(), cases=[];
+  for(const truth of golden.cases){
+   const s=new TerrainScatterSource(new Float32Array(truth.heights),33,33,{terrainWidth:64});
+   const p=await TerrainLightingProbes.bake(s,{grid:{origin:[32,32],spacing:[16,16],dims:[1,1],heightOffset:5},rayCount:64,reflectionResolution:4,reflectionSamples:8});
+   const actual=p.snapshot(), maxAbs=Math.max(...actual.coefficients.map((x,i)=>Math.abs(x-truth.coefficients[i])));
+   const metrics=await api.compareImages(actual.reflectionMips[0],new Float32Array(truth.reflectionMips[0]),{width:4,height:24,channels:4,compareChannels:3});
+   const negative=new Float32Array(actual.reflectionMips[0]);for(let i=0;i<negative.length;i+=4){negative[i]=0;negative[i+1]=1;negative[i+2]=0;}
+   const control=await api.compareImages(negative,new Float32Array(truth.reflectionMips[0]),{width:4,height:24,channels:4,compareChannels:3});
+   cases.push({ridge:truth.ridge,maxAbs,ssim:metrics.ssim,controlSsim:control.ssim});
+  }
+  return cases;
+ },
+ async render() {
+  const r=await Forge3DRuntime.create(canvas,{width:192,height:128,devicePixelRatio:1,memoryBudgetBytes:16*1024*1024,clearColor:[.04,.08,.12,1]});
+  try {
+   r.setTerrain(terrain);r.setCamera(camera);
+   const baseline=await frame(r);
+   r.setScatterBatches([batch()]);
+   const fixed=await frame(r), fixedHash=await hash(fixed);
+   r.setTimeSeconds(.37);const disabled=await frame(r);
+   r.setScatterBatches([batch({wind:{enabled:true,amplitude:3,rigidity:.2}})]);
+   r.setTimeSeconds(0);const wind0=await frame(r);
+   r.setTimeSeconds(.37);const wind1=await frame(r),windHash=await hash(wind1);
+   const repeat=await frame(r);
+   const stats=r.getScatterStats(), memory=r.getScatterMemoryReport();
+   const capture=await r.capture({samples:1,aovs:["id","depth","normal","albedo"]});
+   const ids=capture.aovFrame.id();
+   const p=await probes(); const p2=await probes();
+   const ps=p.snapshot(); r.setLightingProbes(p);const lit=await frame(r);
+   const probeMemory=r.getProbeMemoryReport();
+   p.setDebug("weight");r.setLightingProbes(p);const debug=await frame(r);
+   p.setStrength(0);p.setDebug("none");r.setLightingProbes(p);const zero=await frame(r);
+   r.setLightingProbes(null); const noProbe=await frame(r);
+   r.setScatterBatches([batch({transforms:Float32Array.from([...makeScatterTransform([5,0,5]),...makeScatterTransform([20,0,5])]),hlod:{distance:20,clusterRadius:64,simplifyRatio:1}})]);
+   r.setCamera({...camera,position:[0,24,150]});await frame(r);const hlod=r.getScatterStats();
+   r.setScatterBatches([batch({maxDrawDistance:20})]);await frame(r);const culled=r.getScatterStats();
+   r.setScatterBatches([]);r.setCamera(camera);const cleared=await frame(r);
+   return {baselineHash:await hash(baseline),clearedHash:await hash(cleared),fixedHash,disabledHash:await hash(disabled),scatterDelta:delta(fixed,baseline),windDelta:delta(wind0,wind1),windHash,repeatHash:await hash(repeat),stats,memory,probeMemory,probeDelta:delta(lit,noProbe),debugDelta:delta(debug,noProbe),zeroHash:await hash(zero),noProbeHash:await hash(noProbe),bakeExact:await hash(ps.coefficients)===await hash(p2.snapshot().coefficients),reflectionExact:await hash(ps.reflectionMips[1])===await hash(p2.snapshot().reflectionMips[1]),scatterIds:Array.from(new Set(ids)).filter(x=>x>=0x100000),hlod,culled,ledger:r.getMemoryReport()};
+  } finally {r.dispose();}
+ },
+ async scene() {
+  const scene=Forge3DScene.create();scene.addNode({kind:"terrain",name:"w09-terrain",terrain});scene.setScatterBatches([batch({wind:{enabled:true,amplitude:2}})]);scene.setTimeSeconds(.37);scene.setLightingProbes(await probes());
+  const session=await Forge3DSession.create(canvas,{runtime:{width:192,height:128,devicePixelRatio:1}});
+  try {session.setScene(scene);session.setCamera(camera);session.render();const a=await session.readRgba();const c=await session.capture({samples:1,aovs:["id"]});return{hash:await hash(a),nonempty:a.some(x=>x>0),ids:Array.from(new Set(c.aovFrame.id())).filter(x=>x>=0x100000)};}finally{session.dispose();scene.dispose();}
+ },
+ async recovery() {
+  const viewer=await Forge3DViewer.create(canvas,{controls:false,resize:false,runtime:{width:192,height:128,devicePixelRatio:1,diagnostics:true}});
+  try {
+   viewer.setTerrain(terrain);viewer.setCamera(camera);viewer.setScatterBatches([batch({wind:{enabled:true,amplitude:2}})]);viewer.setTimeSeconds(.37);viewer.setLightingProbes(await probes());
+   viewer.render();const a=await viewer.screenshot();
+   const {simulateViewerDeviceLossForTests}=await import("../src-ts/viewer.ts");simulateViewerDeviceLossForTests(viewer);
+   const deadline=performance.now()+10000;
+   while(viewer.getDiagnostics().recoveryAttempts<1 || viewer.status==="recovering"){if(performance.now()>deadline)throw new Error("recovery timed out");await new Promise(resolve=>setTimeout(resolve,10));}
+   viewer.render();const b=await viewer.screenshot();
+   return{same:await hash(await a.arrayBuffer())===await hash(await b.arrayBuffer()),stats:viewer.getScatterStats(),probeMemory:viewer.getProbeMemoryReport(),diagnostics:viewer.getDiagnostics()};
+  }finally{viewer.dispose();}
+ }
+};
+</script></html>

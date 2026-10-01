@@ -1072,7 +1072,7 @@ fn tm_shade(surface: TmSurface) -> TerrainSample {
     let diffuse_raw = base_diffuse + edge_bright - edge_dark;
     let diffuse_lit = diffuse_raw * ao_shadow_factor;
 
-    let ibl_split = tm_ibl_split(
+    var ibl_split = tm_ibl_split(
         surface.shading_normal,
         surface.view_dir,
         albedo,
@@ -1080,6 +1080,9 @@ fn tm_shade(surface: TmSurface) -> TerrainSample {
         metallic,
         f0,
     );
+    let local = local_probe_lighting(surface.world_pos, surface.shading_normal, surface.view_dir, specular_roughness);
+    ibl_split.diffuse = mix(ibl_split.diffuse, albedo * local.irradiance * (1.0 - metallic), local.weight);
+    ibl_split.specular = mix(ibl_split.specular, local.reflection * f0, local.reflection_weight);
     let ibl_diffuse_factor = length(ibl_split.diffuse) * forge3d_ibl.intensity;
     let ibl_term = ibl_diffuse_factor * TM_AMBIENT_FLOOR * 0.35;
     var terrain_sss = vec3<f32>(0.0);
@@ -1102,7 +1105,7 @@ fn tm_shade(surface: TmSurface) -> TerrainSample {
     shaded = shaded * max(forge3d_lighting.exposure, 0.0);
 
     var result: TerrainSample;
-    result.radiance = shaded;
+    result.radiance = local_probe_debug(shaded, local);
     result.albedo = albedo;
     result.normal = surface.shading_normal;
     result.covered = surface.covered;

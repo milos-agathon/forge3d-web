@@ -1,4 +1,8 @@
 import { iblFromSnapshot, ImageBasedLighting } from "./ibl.js";
+import { TerrainScatterBatch, scatterMemoryReport, normalizeScatterBatches } from "./terrain-scatter.js";
+import type { ScatterBatchInput, ScatterBatchSnapshot } from "./scatter-types.js";
+import { TerrainLightingProbes } from "./terrain-probes.js";
+import type { TerrainProbeSnapshot } from "./terrain-probes.js";
 import { Forge3DError } from "./index.js";
 import {
   buildShadowReport,
@@ -87,6 +91,9 @@ export class Forge3DScene {
   #nextId = 0;
   #revision = 0;
   #disposed = false;
+  #scatter: ScatterBatchSnapshot[] | undefined;
+  #probes: TerrainProbeSnapshot | null | undefined;
+  #timeSeconds = 0;
 
   private constructor() {
     this.#lights = new LightCollection();
@@ -132,6 +139,26 @@ export class Forge3DScene {
 
   get revision(): number {
     return this.#revision;
+  }
+
+  setScatterBatches(batches: readonly (TerrainScatterBatch | ScatterBatchInput | ScatterBatchSnapshot)[]): void {
+    this.#assertOperational();
+    const snapshots = normalizeScatterBatches(batches);
+    this.#scatter = snapshots; this.#revision++;
+  }
+
+  getScatterBatches(): ScatterBatchSnapshot[] { this.#assertOperational(); return structuredClone(this.#scatter ?? []); }
+
+  setLightingProbes(probes: TerrainLightingProbes | TerrainProbeSnapshot | null): void {
+    this.#assertOperational();
+    this.#probes = probes === null ? null : probes instanceof TerrainLightingProbes ? probes.snapshot() : new TerrainLightingProbes(probes).snapshot();
+    this.#revision++;
+  }
+
+  setTimeSeconds(time: number): void {
+    this.#assertOperational();
+    if (!Number.isFinite(time)) throw invalid("timeSeconds must be finite");
+    this.#timeSeconds = time; this.#revision++;
   }
 
   addNode(node: SceneNodeInput, parent?: SceneNodeId): SceneNodeId {
@@ -393,6 +420,8 @@ export class Forge3DScene {
       materials: this.#materials.snapshot(),
       ibl: this.#ibl?.snapshot() ?? null,
       shadows: this.#shadowSnapshot(),
+      ...(this.#scatter !== undefined ? { scatter: structuredClone(this.#scatter), timeSeconds: this.#timeSeconds } : {}),
+      ...(this.#probes !== undefined ? { probes: structuredClone(this.#probes) } : {}),
     };
   }
 
@@ -420,6 +449,9 @@ export class Forge3DScene {
     copy.#shadowConfig = this.#shadowConfig.copy();
     copy.#shadowCsm = this.#shadowCsm.copy();
     copy.#shadowsConfigured = this.#shadowsConfigured;
+    copy.#scatter = this.#scatter === undefined ? undefined : structuredClone(this.#scatter);
+    copy.#probes = this.#probes === undefined ? undefined : structuredClone(this.#probes);
+    copy.#timeSeconds = this.#timeSeconds;
     return copy;
   }
 
@@ -430,6 +462,8 @@ export class Forge3DScene {
       total = checkedAdd(total, nodeByteEstimate(node.node));
     }
     total = checkedAdd(total, this.#ibl?.estimatedGpuBytes() ?? 0);
+    total = checkedAdd(total, scatterMemoryReport(this.#scatter ?? []).gpuBytes);
+    if (this.#probes) total = checkedAdd(total, new TerrainLightingProbes(this.#probes).memoryReport().gpuBytes);
     return checkedAdd(
       total,
       this.#shadowConfig.estimatedGpuBytes(
@@ -629,6 +663,7 @@ export class Forge3DScene {
   }
 
   dispose(): void {
+    this.#scatter = undefined; this.#probes = undefined;
     this.#disposed = true;
   }
 

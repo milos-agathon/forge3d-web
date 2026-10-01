@@ -3957,8 +3957,8 @@
     {
       "kind": "fixture-contracts",
       "path": "crates/forge3d-web/tests/parity/fixture-contracts.json",
-      "sha256": "5ee922848a3ef3c92e34fa7f5506925523334f3edba438cd981b4618571eaab9",
-      "recordCount": 9
+      "sha256": "bb9fddd526c564437d104c49bf4fdaccadb17b8f2d4b49239a8bd474688e933c",
+      "recordCount": 10
     },
     {
       "kind": "hardware-profiles",
@@ -53034,6 +53034,7 @@
     "dem-synthetic-v1",
     "terrain-material-v1",
     "clipmap-seam-v1",
+    "scatter-probes-v1",
     "volume-temporal-v1",
     "crs-epsg-v1",
     "mesh-io-v1",

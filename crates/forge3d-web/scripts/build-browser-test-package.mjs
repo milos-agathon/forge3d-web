@@ -39,6 +39,10 @@ import { resolvePackageGateMode } from "./package-gate-mode.mjs";
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const repositoryRoot = resolve(packageRoot, "..", "..");
+const w09Only = process.argv.slice(2).includes("--w09");
+if (process.argv.slice(2).some(argument => argument !== "--w09")) {
+  throw new Error("Only --w09 is supported; omit it for the full release gate");
+}
 const evidenceMode = resolvePackageGateMode(
   process.env.FORGE3D_PACKAGE_GATE_MODE,
 );
@@ -58,7 +62,16 @@ const consumerDirectory = join(temporaryRoot, "consumer");
 
 try {
   run("npm", ["run", "build"], packageRoot);
-  run("npm", ["run", "test:package"], packageRoot);
+  if (w09Only) {
+    // A portable W09 package acceptance lane. The full release command still
+    // requires the infrastructure suite (including POSIX runner/host tests).
+    run("npm", ["run", "test:api"], packageRoot);
+    run("npm", ["run", "test:release-hardening"], packageRoot);
+    run("npm", ["run", "test:browser-harness"], packageRoot);
+    run(process.execPath, ["tests/api/package-contract.mjs"], packageRoot);
+  } else {
+    run("npm", ["run", "test:package"], packageRoot);
+  }
   mkdirSync(packDirectory);
   const packResult = JSON.parse(
     run(
@@ -271,6 +284,13 @@ try {
     ),
     join(w08FixtureDirectory, "predictor-deflate-u16.tif"),
   );
+  const w09Fixture = readFileSync(join(packageRoot, "examples", "test-w09.html"), "utf8")
+    .replace('const api = new URLSearchParams(location.search).has("dist") ? await import("../dist/index.js") : await import("../src-ts/index.ts");', 'const api = await import("/node_modules/@forge3d/web/dist/index.js");');
+  writeFileSync(join(consumerDirectory, "test-w09.html"), w09Fixture);
+  writeFileSync(join(consumerDirectory, "test-w09-worker.js"), readFileSync(join(packageRoot, "examples", "test-w09-worker.js"), "utf8").replace('../src-ts/index.ts', '/node_modules/@forge3d/web/dist/index.js'));
+  const w09GoldenDirectory = join(consumerDirectory, "tests", "golden", "w09");
+  mkdirSync(w09GoldenDirectory, {recursive:true});
+  copyFileSync(join(packageRoot, "tests", "golden", "w09", "probes.json"), join(w09GoldenDirectory, "probes.json"));
   const benchmarkDirectory = join(
     consumerDirectory,
     "tests",
@@ -318,6 +338,7 @@ try {
     packageSha256,
     fixture: "test-interactive-viewer.html",
     evidenceMode,
+    gateScope: w09Only ? "w09-package-acceptance" : "full-release",
   };
   writeFileSync(
     join(consumerDirectory, "package-evidence.json"),
@@ -363,6 +384,7 @@ try {
       runViewerBenchmark,
       browserProfile,
     );
+    browserResult.gateScope = w09Only ? "w09-package-acceptance" : "full-release";
     const browserEvidenceJson = JSON.stringify(browserResult, null, 2);
     writeFileSync(join(consumerDirectory, "browser-gate.json"), browserEvidenceJson);
     mkdirSync(evidenceDirectory, { recursive: true });
@@ -962,6 +984,13 @@ async function runInstalledPackageBrowserGate(
         `installed-package W08 COG/clipmap/overlay/VT surface failed: ${JSON.stringify(w08Package)}`,
       );
     }
+    await page.goto(`${origin}/test-w09.html`, {waitUntil:"networkidle"});
+    await page.waitForFunction(()=>window.__w09!==undefined);
+    const w09Package = await page.evaluate(async()=>({render:await window.__w09.render(),scene:await window.__w09.scene(),native:await window.__w09.native(),worker:await window.__w09.worker(),budgets:await window.__w09.budgets(),irradiance:await window.__w09.irradiance(),reflections:await window.__w09.reflections()}));
+    const w09=w09Package.render;
+    if (!(w09.scatterDelta>.2 && w09.windDelta>.05 && w09.stats.visibleInstances===2 && w09.scatterIds.length===2 && w09.bakeExact && w09.reflectionExact && w09.zeroHash===w09.noProbeHash && w09.baselineHash===w09.clearedHash && w09.hlod.hlodCoveredInstances===2 && w09Package.scene.ids.length===2 && w09Package.worker.sourceCount===32 && w09Package.native.every(c=>c.maxAbs<=1e-3 && c.ssim>=.98 && c.controlSsim<.98) && w09Package.irradiance.ssim>=.98 && w09Package.reflections.ssim>=.98 && w09Package.budgets.failures.length===3 && w09Package.budgets.before===w09Package.budgets.after)) {
+      throw new Error(`installed-package W09 contract failed: ${JSON.stringify(w09Package)}`);
+    }
     if (pageErrors.length > 0) {
       throw new Error(`installed-package page errors: ${pageErrors.join("; ")}`);
     }
@@ -998,6 +1027,7 @@ async function runInstalledPackageBrowserGate(
         frames: w06Package.frames,
         video: w06Package.video,
       },
+      w09Package,
       w08Package: {
         mainThread: w08Package.mainThread,
         worker: w08Package.worker,

@@ -67,6 +67,9 @@ fn empty_scene_retains_parsed_lighting_state() {
         .validated()
         .expect("default lighting is valid");
     let parsed = ParsedScene {
+        scatter: Vec::new(),
+        time_seconds: 0.0,
+        probes: None,
         nodes: Vec::new(),
         passes: Vec::new(),
         lighting: lighting.clone(),

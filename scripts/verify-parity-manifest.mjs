@@ -35,6 +35,7 @@ const requiredFixtures = [
   "dem-synthetic-v1",
   "terrain-material-v1",
   "clipmap-seam-v1",
+  "scatter-probes-v1",
   "volume-temporal-v1",
   "crs-epsg-v1",
   "mesh-io-v1",

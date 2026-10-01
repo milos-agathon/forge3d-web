@@ -248,6 +248,7 @@ dependencies = [
  "bytemuck",
  "exr",
  "glam",
+ "serde",
  "serde_json",
  "thiserror 1.0.69",
  "wgpu",

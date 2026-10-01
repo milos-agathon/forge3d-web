@@ -6,6 +6,7 @@ pub(crate) const WORLD_SHADER: &str = concat!(
     include_str!("../ibl_lighting.wgsl"),
     include_str!("../shadow_lighting.wgsl"),
     include_str!("../lighting.wgsl"),
+    include_str!("../terrain_probes.wgsl"),
     r#"
 struct CameraUniform {
     view_projection: mat4x4<f32>,
@@ -252,6 +253,7 @@ pub(crate) fn create_world_capture_pipeline(
     layouts: [&wgpu::BindGroupLayout; 4],
     shader: &wgpu::ShaderModule,
     pass: crate::runtime::offline::CapturePass,
+    blend: bool,
 ) -> wgpu::RenderPipeline {
     build_world_pipeline(
         device,
@@ -259,7 +261,7 @@ pub(crate) fn create_world_capture_pipeline(
         shader,
         pass.entry_point(),
         capture_vertex_layout(),
-        &pass.color_targets(),
+        &pass.color_targets_for(blend),
     )
 }
 

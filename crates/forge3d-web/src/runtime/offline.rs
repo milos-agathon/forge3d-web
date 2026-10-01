@@ -100,6 +100,13 @@ impl CapturePass {
             })
             .collect()
     }
+    pub(crate) fn color_targets_for(self, blend: bool) -> Vec<Option<wgpu::ColorTargetState>> {
+        let mut targets = self.color_targets();
+        if blend && self == Self::Primary {
+            targets[0].as_mut().unwrap().format = wgpu::TextureFormat::Rgba16Float;
+        }
+        targets
+    }
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
@@ -423,7 +430,13 @@ pub(super) fn begin_offline_runtime(
 
     let accum_pixel = pixel_bytes(width, height, 16);
     check_storage_binding(&context, accum_pixel, "offline accumulation")?;
-    let target_bytes = CaptureTargets::planned_bytes(width, height, surface, overlay);
+    let blend = runtime.scatter.as_ref().is_some_and(|s| s.transparent());
+    let target_bytes = CaptureTargets::planned_bytes(width, height, surface, overlay)
+        .saturating_sub(if blend {
+            pixel_bytes(width, height, 8)
+        } else {
+            0
+        });
     let accum_bytes = if surface {
         accum_pixel.saturating_mul(3)
     } else {
@@ -519,7 +532,14 @@ fn create_session(
         None => None,
     };
 
-    let targets = CaptureTargets::new(device, width, height, surface, overlay);
+    let targets = CaptureTargets::new(
+        device,
+        width,
+        height,
+        surface,
+        overlay,
+        lighting_features.capture_blend(),
+    );
     let accum_bytes = pixel_bytes(width, height, 16);
     let accum_color = storage_buffer(device, "forge3d-web-offline-accum-color", accum_bytes);
     let surface_bytes = if surface { accum_bytes } else { 16 };
@@ -577,6 +597,7 @@ fn create_session(
     };
 
     // Unjittered reference pass: depth, ID and motion AOVs.
+    super::scatter::prepare(runtime, Some(&initial))?;
     super::shadows::refresh_shadow_state(runtime)?;
     let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor {
         label: Some("forge3d-web-offline-reference"),
@@ -711,6 +732,9 @@ fn encode_capture(
         {
             scene.draw_capture_world(&mut pass, *which, camera, textures, ibl);
         }
+        if let Some(scatter) = runtime.scatter.as_ref() {
+            scatter.draw(&mut pass, runtime, Some(*which));
+        }
     }
     if session.overlay && surface {
         if let Some(scene) = runtime.scene.as_ref() {
@@ -784,6 +808,7 @@ async fn accumulate_samples(
         context
             .queue
             .write_buffer(&session.camera_buffer, 0, bytemuck::bytes_of(&uniform));
+        super::scatter::prepare(runtime, Some(&uniform))?;
         let mut flags = 0;
         if session.surface {
             flags |= ACCUMULATE_SURFACE;

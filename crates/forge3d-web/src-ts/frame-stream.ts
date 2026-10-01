@@ -20,6 +20,7 @@ export interface FrameRenderTarget {
   readonly width: number;
   readonly height: number;
   setCamera(camera: CameraInput): void;
+  setTimeSeconds?(seconds: number): void;
   render(): boolean;
   readRgba(): Promise<Uint8Array>;
   capture(options?: CaptureOptions): Promise<CaptureResult>;
@@ -104,6 +105,7 @@ export async function* renderFrames(
     const timestampUs = frameTimestampUs(index, fps);
     const durationUs = frameTimestampUs(index + 1, fps) - timestampUs;
     target.setCamera(camera);
+    target.setTimeSeconds?.(time);
     const previous = previousCamera ?? camera;
     let rendered: RenderedFrame;
     if (mode === "display") {

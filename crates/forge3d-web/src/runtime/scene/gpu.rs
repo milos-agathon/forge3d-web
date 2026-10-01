@@ -254,6 +254,17 @@ impl NativeScene {
         });
     }
 
+    pub(crate) fn set_lighting_binding(
+        &mut self,
+        context: &GpuContext,
+        group: wgpu::BindGroup,
+        textures: &TextureResources,
+        ibl: &IblResources,
+    ) {
+        self.lighting_bind_group = group;
+        self.encode_bundles(context, textures, ibl);
+    }
+
     pub(crate) fn rebuild_overlays(
         &mut self,
         context: &GpuContext,
@@ -404,12 +415,14 @@ impl NativeScene {
                 layouts,
                 &shader,
                 CapturePass::Primary,
+                features.capture_blend(),
             );
             let surface = create_world_capture_pipeline(
                 &context.device,
                 layouts,
                 &shader,
                 CapturePass::Surface,
+                features.capture_blend(),
             );
             self.capture_world = Some((current, primary, surface));
         }

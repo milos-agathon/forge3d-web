@@ -27,6 +27,7 @@ export function simulateRuntimeDeviceLossForTests(runtime: object): void {
 
 /** Stateless WASM exports used by the W06 frame/offline helpers. */
 export interface OfflineWasmExports {
+  bakeTerrainProbe?(input: unknown): { coefficients: number[]; reflectionMips: number[][] };
   exrChannelNames(prefix: string, channelCount: number): string[];
   encodeExr(input: unknown): Uint8Array;
   decodeExr(bytes: Uint8Array, maxDimension: number, maxPixels: number): unknown;
