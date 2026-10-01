@@ -369,3 +369,6 @@ landuse/landuse/glad_cropland_2019.tif
 
 # Workspace-local Vite cache
 /node_modules/
+
+# Installed-native W10 acceptance references are committed fixtures.
+!crates/forge3d-web/tests/golden/w10/native/*.png
