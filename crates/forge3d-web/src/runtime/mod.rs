@@ -2,6 +2,7 @@ mod analysis;
 mod canvas;
 mod device_health;
 mod diagnostics;
+mod environment;
 mod ibl;
 mod init;
 mod lighting;
@@ -55,6 +56,7 @@ pub struct Forge3DRuntime {
     #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
     terrain_pipeline_cache: Option<terrain::TerrainPipelineCache>,
     scene: Option<scene::NativeScene>,
+    environment: Option<environment::EnvironmentResources>,
     scatter: Option<scatter::ScatterResources>,
     time_seconds: f32,
     probe_count: u32,
@@ -145,6 +147,7 @@ impl Forge3DRuntime {
         self.terrain = None;
         self.terrain_pipeline_cache = None;
         self.scene = None;
+        self.environment = None;
         self.scatter = None;
         self.lighting = None;
         self.textures = None;
@@ -189,6 +192,24 @@ impl Forge3DRuntime {
     pub fn set_scene(&mut self, snapshot: JsValue) -> Result<(), JsValue> {
         self.guard_mutation()?;
         scene::set_scene_runtime(self, snapshot).map_err(to_js_error)
+    }
+
+    #[wasm_bindgen(js_name = setEnvironment)]
+    pub fn set_environment(&mut self, snapshot: JsValue) -> Result<(), JsValue> {
+        self.guard_mutation()?;
+        environment::set(self, snapshot).map_err(to_js_error)
+    }
+    #[wasm_bindgen(js_name = getEnvironmentMemoryReport)]
+    pub fn get_environment_memory_report(&self) -> Result<JsValue, JsValue> {
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        let value = if let Some(e) = &self.environment {
+            let (w, h) = e.snapshot.effect_size(self.width, self.height);
+            serde_json::json!({"gpuBytes":e.snapshot.gpu_bytes(self.width,self.height),"width":self.width,"height":self.height,"effectWidth":w,"effectHeight":h,"resolutionScale":e.snapshot.resolution_scale,"steps":e.snapshot.steps,"volumeCount":e.snapshot.volumes.len(),"waterCount":e.snapshot.water.len(),"historyValid":e.history_valid.get()})
+        } else {
+            serde_json::json!({"gpuBytes":0,"width":self.width,"height":self.height,"effectWidth":0,"effectHeight":0,"resolutionScale":0,"steps":0,"volumeCount":0,"waterCount":0,"historyValid":false})
+        };
+        serde::Serialize::serialize(&value, &serde_wasm_bindgen::Serializer::json_compatible())
+            .map_err(|e| to_js_error(environment::invalid(e.to_string())))
     }
 
     #[wasm_bindgen(js_name = setScatterBatches)]
@@ -912,6 +933,7 @@ mod tests {
             terrain: None,
             terrain_pipeline_cache: None,
             scene: None,
+            environment: None,
             scatter: None,
             time_seconds: 0.0,
             probe_count: 0,

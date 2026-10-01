@@ -1,3 +1,5 @@
+import { Forge3DEnvironment } from "./environment.js";
+import type { EnvironmentInput, EnvironmentSnapshot } from "./environment.js";
 import { iblFromSnapshot, ImageBasedLighting } from "./ibl.js";
 import { TerrainScatterBatch, scatterMemoryReport, normalizeScatterBatches } from "./terrain-scatter.js";
 import type { ScatterBatchInput, ScatterBatchSnapshot } from "./scatter-types.js";
@@ -94,6 +96,7 @@ export class Forge3DScene {
   #scatter: ScatterBatchSnapshot[] | undefined;
   #probes: TerrainProbeSnapshot | null | undefined;
   #timeSeconds = 0;
+  #environment: Forge3DEnvironment | null | undefined;
 
   private constructor() {
     this.#lights = new LightCollection();
@@ -155,6 +158,22 @@ export class Forge3DScene {
     this.#revision++;
   }
 
+  setEnvironment(
+    input: Forge3DEnvironment | EnvironmentInput | EnvironmentSnapshot | null,
+  ): void {
+    this.#assertOperational();
+    this.#environment =
+      input === null
+        ? null
+        : input instanceof Forge3DEnvironment
+          ? input.copy()
+          : new Forge3DEnvironment(input);
+    this.#revision++;
+  }
+  getEnvironment(): EnvironmentSnapshot | null {
+    this.#assertOperational();
+    return this.#environment?.snapshot(this.#timeSeconds) ?? null;
+  }
   setTimeSeconds(time: number): void {
     this.#assertOperational();
     if (!Number.isFinite(time)) throw invalid("timeSeconds must be finite");
@@ -412,11 +431,17 @@ export class Forge3DScene {
     for (const root of this.#roots) {
       visit(root);
     }
+    const environment=this.#environment?.snapshot(this.#timeSeconds)??null;
+    const lighting=this.#lights.snapshot();
+    const environmentLighting=environment?structuredClone(lighting):undefined;
+    if(environment){const sun=lighting.lights.find(l=>l.type==="directional");if(sun&&sun.type==="directional"){sun.direction=environment.sunDirection.map(x=>-x) as [number,number,number];sun.color=[...environment.sunColor];sun.intensity=environment.sunDirection[1]>0?environment.sunIntensity:0;}}
     return {
+      ...(this.#environment!==undefined?{environment,timeSeconds:this.#timeSeconds}:{}),
+      ...(environmentLighting?{environmentLighting}:{}),
       revision: this.#revision,
       nodes,
       passes: cloneValue(this.#passes) as ScenePassInput[],
-      lighting: this.#lights.snapshot(),
+      lighting,
       materials: this.#materials.snapshot(),
       ibl: this.#ibl?.snapshot() ?? null,
       shadows: this.#shadowSnapshot(),
@@ -452,6 +477,7 @@ export class Forge3DScene {
     copy.#scatter = this.#scatter === undefined ? undefined : structuredClone(this.#scatter);
     copy.#probes = this.#probes === undefined ? undefined : structuredClone(this.#probes);
     copy.#timeSeconds = this.#timeSeconds;
+    copy.#environment = this.#environment?.copy() ?? this.#environment;
     return copy;
   }
 

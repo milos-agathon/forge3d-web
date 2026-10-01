@@ -25,7 +25,7 @@ pub(crate) struct Target {
 }
 
 impl Target {
-    fn new(
+    pub(crate) fn new(
         device: &wgpu::Device,
         label: &str,
         format: wgpu::TextureFormat,

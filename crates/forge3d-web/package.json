@@ -74,7 +74,9 @@
     "test:browser:edge": "playwright test --project=edge-stable",
     "test:browser:firefox-preflight": "playwright test --project=firefox-preflight",
     "test:browser:webkit": "playwright test --project=webkit-preflight",
-    "classify:browser:webkit": "node scripts/classify-webkit-preflight.mjs"
+    "classify:browser:webkit": "node scripts/classify-webkit-preflight.mjs",
+    "test:package-consumer:w10": "node scripts/build-browser-test-package.mjs --w10",
+    "test:w10": "vitest run tests/unit/environment.test.ts && playwright test tests/playwright/w10_environment.spec.ts --project=chromium-preflight"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",

@@ -841,6 +841,9 @@ pub(super) fn set_camera_runtime(
         scene.update_camera(context, &camera, runtime.width, runtime.height)?;
     }
     runtime.camera = camera;
+    if let Some(e) = &runtime.environment {
+        e.history_valid.set(false);
+    }
     if let (Some(shadows), Some(prepared)) = (runtime.shadows.as_mut(), prepared_shadows) {
         prepared.write(context, shadows);
     }
@@ -848,16 +851,10 @@ pub(super) fn set_camera_runtime(
 }
 
 pub(super) fn resize_runtime(runtime: &mut Forge3DRuntime, size: JsValue) -> Result<(), WebError> {
-    let context = runtime.context.as_ref().ok_or_else(|| {
+    let context = runtime.context.clone().ok_or_else(|| {
         WebError::new(
             Forge3DErrorCode::RuntimeDisposed,
             "Runtime GPU context is not available",
-        )
-    })?;
-    let surface_state = runtime.surface_state.as_mut().ok_or_else(|| {
-        WebError::new(
-            Forge3DErrorCode::RuntimeDisposed,
-            "Runtime surface state is not available",
         )
     })?;
 
@@ -900,29 +897,52 @@ pub(super) fn resize_runtime(runtime: &mut Forge3DRuntime, size: JsValue) -> Res
         }
         _ => None,
     };
+    let mut resized_memory = runtime.memory.clone();
+    let environment_bytes = runtime
+        .environment
+        .as_ref()
+        .map_or(0, |e| e.snapshot.gpu_bytes(width, height));
+    resized_memory.replace_all(&[
+        (DEPTH_TEXTURE_KEY, MemoryCategory::Textures, depth_bytes),
+        (
+            super::environment::KEY,
+            MemoryCategory::Textures,
+            environment_bytes,
+        ),
+    ])?;
+    let resized_environment =
+        super::environment::prepare_resize(runtime, width, height, &mut resized_memory)?;
+    let surface_state = runtime.surface_state.as_mut().ok_or_else(|| {
+        WebError::new(
+            Forge3DErrorCode::RuntimeDisposed,
+            "Runtime surface state is not available",
+        )
+    })?;
     runtime.canvas.set_width(width);
     runtime.canvas.set_height(height);
     surface_state
-        .resize(context, width, height)
+        .resize(&context, width, height)
         .map_err(map_core_error)?;
     runtime.width = width;
     runtime.height = height;
-    runtime.depth_attachment = Some(DepthAttachment::new(context, width, height));
+    runtime.memory = resized_memory;
+    runtime.environment = resized_environment;
+    runtime.depth_attachment = Some(DepthAttachment::new(&context, width, height));
     runtime
         .memory
         .replace(DEPTH_TEXTURE_KEY, MemoryCategory::Textures, depth_bytes)?;
 
     if let Some(terrain) = runtime.terrain.as_ref() {
-        terrain.update_camera(context, &runtime.camera, width, height)?;
+        terrain.update_camera(&context, &runtime.camera, width, height)?;
     }
     if let Some(scene) = runtime.scene.as_mut() {
-        scene.update_camera(context, &runtime.camera, width, height)?;
+        scene.update_camera(&context, &runtime.camera, width, height)?;
         if let (Some(textures), Some(ibl)) = (runtime.textures.as_ref(), runtime.ibl.as_ref()) {
-            scene.rebuild_overlays(context, textures, ibl, width, height);
+            scene.rebuild_overlays(&context, textures, ibl, width, height);
         }
     }
     if let (Some(shadows), Some(prepared)) = (runtime.shadows.as_mut(), prepared_shadows) {
-        prepared.write(context, shadows);
+        prepared.write(&context, shadows);
     }
     Ok(())
 }
@@ -955,7 +975,7 @@ impl DepthAttachment {
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
             format: DEPTH_FORMAT,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         });
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
@@ -966,9 +986,9 @@ impl DepthAttachment {
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub(super) struct CameraUniform {
-    view_projection: [[f32; 4]; 4],
-    camera_position: [f32; 4],
-    camera_forward: [f32; 4],
+    pub(super) view_projection: [[f32; 4]; 4],
+    pub(super) camera_position: [f32; 4],
+    pub(super) camera_forward: [f32; 4],
 }
 
 const MAX_COLOR_RAMP_STOPS: usize = 8;
@@ -3876,6 +3896,7 @@ fn vs_main(input: VertexInput) -> VertexOutput {
 
 @fragment
 fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
+    if (camera.camera_position.w < 0.0 && input.world_position.y < camera.camera_forward.w) { discard; }
     if (params.debug_view == 1u) {
         return vec4<f32>(vec3<f32>(analysis_gray(input.uv, 1u)), 1.0);
     }

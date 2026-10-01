@@ -4,7 +4,7 @@
   "manifestId": "forge3d-composite-baseline-v1",
   "sourcePlan": {
     "path": "docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md",
-    "sha256": "dd56740e67aa8dad29bac6672ba7d89fe81666afd1dd62f1d9ac82e6eea27a5c"
+    "sha256": "9c549af0d40ce94d7c9d621857322993334e7b939cf2f02ee26c81f756fde167"
   },
   "baselineLayers": [
     {

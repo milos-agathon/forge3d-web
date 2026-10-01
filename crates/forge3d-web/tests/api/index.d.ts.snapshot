@@ -2282,6 +2282,9 @@ export interface ShadowCascadeInfo {
 }
 
 export interface SceneSnapshot {
+  /** Authoring lights retained while the environment synchronizes the sun. */
+  environmentLighting?: LightingSnapshot;
+  environment?:EnvironmentSnapshot|null;
   scatter?: ScatterBatchSnapshot[];
   probes?: TerrainProbeSnapshot | null;
   timeSeconds?: number;
@@ -2494,6 +2497,8 @@ export declare class Forge3DScene {
   setScatterBatches(batches: readonly (TerrainScatterBatch | ScatterBatchInput | ScatterBatchSnapshot)[]): void;
   setLightingProbes(probes: TerrainLightingProbes | TerrainProbeSnapshot | null): void;
   setTimeSeconds(seconds: number): void;
+  setEnvironment(input:Forge3DEnvironment|EnvironmentInput|EnvironmentSnapshot|null):void;
+  getEnvironment():EnvironmentSnapshot|null;
   getScatterBatches(): ScatterBatchSnapshot[];
   static create(): Forge3DScene;
   readonly disposed: boolean;
@@ -2631,6 +2636,8 @@ export interface RenderStats {
 
 export declare class Forge3DSession {
   setTimeSeconds(seconds: number): void;
+  setEnvironment(input:Forge3DEnvironment|EnvironmentInput|EnvironmentSnapshot|null):void;
+  getEnvironmentMemoryReport():EnvironmentMemoryReport;
   getScatterStats(): ScatterFrameStats;
   getScatterMemoryReport(): ScatterMemoryReport;
   getProbeMemoryReport(): TerrainProbeMemoryReport;
@@ -2714,6 +2721,8 @@ export declare class Forge3DSession {
  */
 export declare class Forge3DRuntime {
   setTimeSeconds(seconds: number): void;
+  setEnvironment(input:Forge3DEnvironment|EnvironmentInput|EnvironmentSnapshot|null):void;
+  getEnvironmentMemoryReport():EnvironmentMemoryReport;
   getScatterStats(): ScatterFrameStats;
   getScatterMemoryReport(): ScatterMemoryReport;
   getProbeMemoryReport(): TerrainProbeMemoryReport;
@@ -2824,6 +2833,8 @@ export declare class Forge3DRuntime {
  */
 export declare class Forge3DViewer {
   setTimeSeconds(seconds: number): void;
+  setEnvironment(input:Forge3DEnvironment|EnvironmentInput|EnvironmentSnapshot|null):void;
+  getEnvironmentMemoryReport():EnvironmentMemoryReport;
   getScatterStats(): ScatterFrameStats;
   getScatterMemoryReport(): ScatterMemoryReport;
   getProbeMemoryReport(): TerrainProbeMemoryReport;
@@ -4163,3 +4174,56 @@ export declare function decodeOverlayImage(
 export declare function normalizeTerrainVirtualTexture(
   input?: TerrainVirtualTextureInput,
 ): NormalizedTerrainVirtualTexture;
+
+export type EnvironmentDebug = "none" | "transmittance" | "clouds" | "water-mask" | "foam" | "reflection";
+export interface SunPosition { azimuth: number; elevation: number; direction: [number,number,number]; daytime: boolean }
+export interface SunInput { latitude: number; longitude: number; utc: string; color?: [number,number,number]; intensity?: number; timeScale?: number }
+export interface SkyInput { model?: "preetham"|"hosek-wilkie"; turbidity?: number; groundAlbedo?: number; sunSize?: number; exposure?: number }
+export interface FogInput { mode?:"uniform"|"height"|"exponential"; scattering?:number; absorption?:number; density?: number; height?: number; falloff?: number; color?: [number,number,number]; anisotropy?: number; godRays?: boolean }
+export interface CloudsInput { color?:[number,number,number]; scatterStrength?:number; mode?: "billboard"|"volumetric"|"hybrid"; preset?: "static"|"gentle"|"moderate"|"stormy"; density?: number; coverage?: number; scale?: number; height?: number; thickness?: number; wind?: [number,number]; seed?: number; shadowStrength?: number; absorption?: number; anisotropy?: number; ambient?: number; fadeDistance?: number }
+export interface DensityVolumeInput { bounds: [number,number,number,number,number,number]; density?: number; color?: [number,number,number]; anisotropy?: number; dimensions?: [number,number,number]; data?: Float32Array|number[] }
+export interface WaterLayerInput { bounds: [number,number,number,number]; height?: number; shallowColor?: [number,number,number]; deepColor?: [number,number,number]; depthScale?: number; alpha?: number; waveAmplitude?: number; waveFrequency?: number; waveSpeed?: number; flow?: [number,number]; roughness?: number; reflection?: "sky"|"screen"|"planar"; reflectionStrength?: number; foamWidth?: number; foamIntensity?: number; maskDimensions?: [number,number]; mask?: Float32Array|number[] }
+export interface SunClock {latitude:number;longitude:number;unixSeconds:number;timeScale:number}
+export interface EnvironmentInput { sunClock?:SunClock|null; sun?: SunInput; sunDirection?: [number,number,number]; sunColor?: [number,number,number]; sunIntensity?: number; sky?: SkyInput|null; fog?: FogInput|null; clouds?: CloudsInput|null; volumes?: DensityVolumeInput[]; water?: WaterLayerInput[]; quality?: "low"|"medium"|"high"|"ultra"; resolutionScale?: 0.5|1; steps?: number; temporalWeight?: number; volumetricMode?: "raymarch"|"froxel"; maxDistance?: number; debug?: EnvironmentDebug }
+export interface EnvironmentSnapshot { sunClock:SunClock|null; sky: Required<SkyInput>|null; fog: Required<FogInput>|null; clouds: Required<Omit<CloudsInput,"preset">>|null; volumes: (Required<Omit<DensityVolumeInput,"data">>&{data:number[]})[]; water: (Required<Omit<WaterLayerInput,"mask">>&{mask:number[]})[]; sunDirection: [number,number,number]; sunColor: [number,number,number]; sunIntensity: number; resolutionScale: 0.5|1; steps: number; temporalWeight: number; volumetricMode: "raymarch"|"froxel"; maxDistance: number; debug: EnvironmentDebug }
+export interface EnvironmentMemoryReport { gpuBytes: number; width: number; height: number; effectWidth: number; effectHeight: number; resolutionScale: number; steps: number; volumeCount: number; waterCount: number; historyValid: boolean }
+export declare function sunPosition(latitude:number,longitude:number,utc:string):SunPosition;
+export declare function environmentMemoryReport(snapshot:EnvironmentSnapshot,width:number,height:number):EnvironmentMemoryReport;
+export declare class Forge3DEnvironment {
+  constructor(input?:EnvironmentInput);
+  snapshot(timeSeconds?:number):EnvironmentSnapshot;
+  copy():Forge3DEnvironment;
+  memoryReport(width:number,height:number):EnvironmentMemoryReport;
+}
+
+export interface DensityVolumePresetInput {
+  preset: "valley_fog" | "plume" | "localized_haze";
+  bounds: DensityVolumeInput["bounds"];
+  dimensions?: [number, number, number];
+  densityScale?: number;
+  edgeSoftness?: number;
+  noiseStrength?: number;
+  floorOffset?: number;
+  ceiling?: number;
+  plumeSpread?: number;
+  wind?: [number, number, number];
+  seed?: number;
+  color?: [number, number, number];
+  anisotropy?: number;
+  terrain?: {
+    heights: Float32Array;
+    width: number;
+    height: number;
+    bounds: [number, number, number, number];
+    domainMin?: number;
+    exaggeration?: number;
+  };
+}
+export interface DensityVolumeGenerationOptions {
+  signal?: AbortSignal;
+  onProgress?: (fraction: number) => void;
+}
+export declare function generateDensityVolume(input: DensityVolumePresetInput, options?: DensityVolumeGenerationOptions): Promise<DensityVolumeInput>;
+
+/** Water layer i writes AOV_ID_WATER_BASE + i. */
+export declare const AOV_ID_WATER_BASE = 4294967280;

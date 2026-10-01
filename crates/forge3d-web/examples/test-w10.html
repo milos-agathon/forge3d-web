@@ -1,0 +1,810 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><title>W10 environment acceptance</title
+  ><canvas width="192" height="128"></canvas>
+  <script type="module">
+    const api = new URLSearchParams(location.search).has("dist")
+      ? await import("../dist/index.js")
+      : await import("../src-ts/index.ts");
+    const {
+      Forge3DRuntime,
+      Forge3DScene,
+      Forge3DSession,
+      Forge3DViewer,
+      Forge3DEnvironment,
+    } = api;
+    const canvas = document.querySelector("canvas");
+    const camera = {
+      position: [0, 18, 40],
+      target: [0, 4, 0],
+      up: [0, 1, 0],
+      near: 0.1,
+      far: 500,
+      fovYDegrees: 55,
+    };
+    const terrain = {
+      width: 33,
+      height: 33,
+      heights: Float32Array.from({ length: 1089 }, (_, i) =>
+        Math.max(
+          0,
+          8 *
+            Math.exp(
+              -(((i % 33) - 18) ** 2 + (Math.floor(i / 33) - 13) ** 2) / 30,
+            ),
+        ),
+      ),
+      domain: [0, 8],
+      spacing: [2, 2],
+      bounds: [-32, -32, 32, 32],
+    };
+    const hash = async (a) =>
+      [...new Uint8Array(await crypto.subtle.digest("SHA-256", a))]
+        .map((x) => x.toString(16).padStart(2, "0"))
+        .join("");
+    const delta = (a, b) =>
+      a.reduce((s, v, i) => s + Math.abs(v - b[i]), 0) / a.length;
+    const covered = (a) =>
+      a.reduce(
+        (n, _, i) =>
+          n +
+          (i % 4 === 0 && (a[i] !== 6 || a[i + 1] !== 9 || a[i + 2] !== 14)
+            ? 1
+            : 0),
+        0,
+      );
+    const base = {
+      sky: { model: "hosek-wilkie" },
+      sunDirection: [0.3, 0.7, 0.2],
+      maxDistance: 500,
+      steps: 32,
+      resolutionScale: 1,
+    };
+    async function create(extra = {}) {
+      const r = await Forge3DRuntime.create(canvas, {
+        width: 192,
+        height: 128,
+        devicePixelRatio: 1,
+        clearColor: [6 / 255, 9 / 255, 14 / 255, 1],
+        ...extra,
+      });
+      r.setCamera(camera);
+      r.setTerrain(terrain);
+      return r;
+    }
+    window.__w10 = {
+      async restoreLights() {
+        const r = await create();
+        const scene = Forge3DScene.create();
+        scene.addTerrain(terrain);
+        scene.clearLights();
+        scene.addLight({
+          type: "directional",
+          direction: [0.6, -0.4, 0.2],
+          color: [0.7, 0.9, 1],
+          intensity: 2,
+        });
+        try {
+          r.setScene(scene.snapshot());
+          const baseline = await hash(await r.readRgba());
+          scene.setEnvironment({
+            ...base,
+            sun: { latitude: 51.5, longitude: 0, utc: "2024-06-21T12:00:00Z" },
+          });
+          r.setScene(scene.snapshot());
+          const sun = await hash(await r.readRgba());
+          r.setEnvironment({
+            ...base,
+            sunDirection: [-0.2, 0.8, 0.3],
+            fog: { density: 0.01 },
+          });
+          await r.readRgba();
+          r.resize({ width: 224, height: 144, devicePixelRatio: 1 });
+          r.resize({ width: 192, height: 128, devicePixelRatio: 1 });
+          r.setEnvironment(null);
+          const cleared = await hash(await r.readRgba());
+          scene.setEnvironment(null);
+          r.setScene(scene.snapshot());
+          return {
+            baseline,
+            sun,
+            cleared,
+            sceneCleared: await hash(await r.readRgba()),
+          };
+        } finally {
+          r.dispose();
+          scene.dispose();
+        }
+      },
+
+      async native() {
+        const { nativeProbes } = await import("./w10-native-probes.js");
+        return nativeProbes(api);
+      },
+      async quality() {
+        const r = await create();
+        try {
+          const input = {
+            ...base,
+            fog: {
+              density: 0.02,
+              godRays: false,
+              mode: "height",
+              falloff: 0.03,
+            },
+            steps: 64,
+          };
+          r.setEnvironment(input);
+          const full = await r.readRgba();
+          r.setEnvironment({ ...input, resolutionScale: 0.5 });
+          const half = await r.readRgba();
+          r.setEnvironment({ ...input, volumetricMode: "froxel" });
+          const froxel = await r.readRgba();
+          const froxelReport = r.getEnvironmentMemoryReport();
+          r.setEnvironment({ ...input, temporalWeight: 0.8 });
+          await r.readRgba();
+          await r.readRgba();
+          const valid = r.getEnvironmentMemoryReport().historyValid;
+          r.setCamera({ ...camera, position: [8, 20, 40] });
+          const cameraReset = r.getEnvironmentMemoryReport().historyValid;
+          const moved = await r.readRgba();
+          r.setEnvironment(input);
+          const fresh = await r.readRgba();
+          r.setCamera(camera);
+          const scene = Forge3DScene.create();
+          const heights = Float32Array.from(terrain.heights);
+          for (let y = 0; y < 33; y++)
+            for (let x = 15; x < 18; x++) heights[y * 33 + x] = 22;
+          scene.addTerrain({ ...terrain, heights, domain: [0, 22] });
+          scene.clearLights();
+          scene.addLight({
+            type: "directional",
+            color: [1, 1, 1],
+            intensity: 6,
+            direction: [-1, -0.3, 0],
+            castsShadow: true,
+          });
+          scene.setShadows(
+            { enabled: true, mapSize: 512 },
+            { enabled: true, cascadeCount: 2, maxDistance: 100 },
+          );
+          r.setScene(scene.snapshot());
+          scene.dispose();
+          const occlusion = {
+            ...input,
+            sunDirection: [1, 0.3, 0],
+            sunIntensity: 6,
+            fog: {
+              density: 0.05,
+              anisotropy: 0.3,
+              color: [0, 0, 0],
+              mode: "uniform",
+              godRays: false,
+            },
+            maxDistance: 100,
+          };
+          r.setEnvironment(occlusion);
+          const lit = await r.readRgba();
+          r.setEnvironment({
+            ...occlusion,
+            fog: { ...occlusion.fog, godRays: true },
+          });
+          const occluded = await r.readRgba();
+          const dim = (a, b) =>
+            a.reduce((n, x, i) => n + (i % 4 < 3 && b[i] < x ? 1 : 0), 0);
+          return {
+            halfDelta: delta(full, half),
+            froxelDelta: delta(full, froxel),
+            froxelReport,
+            valid,
+            cameraReset,
+            freshDelta: delta(moved, fresh),
+            occlusionDelta: delta(lit, occluded),
+            darkened: dim(lit, occluded),
+          };
+        } finally {
+          r.dispose();
+        }
+      },
+      async worker() {
+        const worker = new Worker(
+          new URL("./test-w10-worker.js", import.meta.url),
+          { type: "module" },
+        );
+        const c = document.createElement("canvas");
+        c.width = 192;
+        c.height = 128;
+        document.body.append(c);
+        const scene = Forge3DScene.create();
+        scene.addTerrain(terrain);
+        scene.setEnvironment({
+          ...base,
+          sun: {
+            latitude: 51.5,
+            longitude: 0,
+            utc: "2024-06-21T06:00:00Z",
+            timeScale: 3600,
+          },
+          clouds: {
+            height: 20,
+            thickness: 20,
+            scale: 12,
+            coverage: 0.9,
+            wind: [1, 0],
+          },
+          water: [{ bounds: [-25, -25, 25, 25], height: 3 }],
+        });
+        let renderer;
+        try {
+          renderer = await api.Forge3DWorkerRenderer.create(c, {
+            worker,
+            controls: false,
+            resize: false,
+            session: {
+              runtime: { width: 192, height: 128, devicePixelRatio: 1 },
+            },
+          });
+          await renderer.setScene(scene);
+          await renderer.setCamera(camera);
+          await renderer.render();
+          const a = await renderer.readRgba();
+          scene.setTimeSeconds(6);
+          await renderer.setScene(scene);
+          await renderer.render();
+          const b = await renderer.readRgba();
+          return { covered: covered(a), delta: delta(a, b) };
+        } finally {
+          await renderer?.dispose();
+          worker.terminate();
+          scene.dispose();
+          c.remove();
+        }
+      },
+      async downscale() {
+        const probe = await create();
+        const baseline = probe.getMemoryReport().currentBytes;
+        probe.dispose();
+        const budget =
+          baseline +
+          new Forge3DEnvironment({
+            ...base,
+            resolutionScale: 0.5,
+            steps: 32,
+            fog: { density: 0.02 },
+          }).memoryReport(192, 128).gpuBytes +
+          192 * 128 * 8 +
+          16384;
+        const r = await create({
+          memoryBudgetBytes: budget,
+          overflowPolicy: "downscale",
+        });
+        try {
+          r.setEnvironment({ ...base, steps: 64, fog: { density: 0.02 } });
+          const selected = r.getEnvironmentMemoryReport(),
+            before = await hash(await r.readRgba()),
+            bytes = r.getMemoryReport().currentBytes;
+          let code;
+          try {
+            r.resize({ width: 4000, height: 3000, devicePixelRatio: 1 });
+          } catch (e) {
+            code = e.code;
+          }
+          return {
+            selected,
+            code,
+            before,
+            after: await hash(await r.readRgba()),
+            bytes,
+            afterBytes: r.getMemoryReport().currentBytes,
+            width: r.width,
+            height: r.height,
+          };
+        } finally {
+          r.dispose();
+        }
+      },
+      async cloudsAndWaves() {
+        const r = await create();
+        try {
+          const clouds = {
+            height: 20,
+            thickness: 20,
+            scale: 12,
+            coverage: 0.9,
+            density: 1,
+            wind: [0, 0],
+            fadeDistance: 500,
+          };
+          const modes = {};
+          for (const mode of ["billboard", "volumetric", "hybrid"]) {
+            r.setEnvironment({ ...base, clouds: { ...clouds, mode } });
+            modes[mode] = await hash(await r.readRgba());
+          }
+          r.setEnvironment({ ...base, clouds: { ...clouds, seed: 16777216 } });
+          const firstSeed = await hash(await r.readRgba());
+          r.setEnvironment({ ...base, clouds: { ...clouds, seed: 16777217 } });
+          const secondSeed = await hash(await r.readRgba());
+          r.setEnvironment({
+            ...base,
+            clouds: { ...clouds, shadowStrength: 0 },
+          });
+          const noShadow = await r.readRgba();
+          r.setEnvironment({
+            ...base,
+            clouds: { ...clouds, shadowStrength: 1 },
+          });
+          const shadow = await r.readRgba();
+          const water = {
+            bounds: [-25, -25, 25, 25],
+            height: 3,
+            waveAmplitude: 0.4,
+            waveFrequency: 0.3,
+            foamWidth: 3,
+          };
+          r.setEnvironment({
+            ...base,
+            water: [{ ...water, reflection: "sky" }],
+          });
+          const sky = await r.readRgba();
+          r.setEnvironment({
+            ...base,
+            water: [{ ...water, reflection: "planar" }],
+          });
+          const planar = await r.readRgba();
+          r.setTimeSeconds(4);
+          const waves = await r.readRgba();
+          return {
+            modes,
+            firstSeed,
+            secondSeed,
+            shadowDelta: delta(noShadow, shadow),
+            planarDelta: delta(sky, planar),
+            waveDelta: delta(planar, waves),
+          };
+        } finally {
+          r.dispose();
+        }
+      },
+      async goldens() {
+        const frame = await this.frames();
+        const result = {};
+        for (const [name, values] of Object.entries(frame.images)) {
+          const response = await fetch(`/tests/golden/w10/${name}.rgba`);
+          if (!response.ok) throw new Error(`missing golden ${name}`);
+          const reference = new Uint8Array(await response.arrayBuffer());
+          const actual = Float32Array.from(values, (x) => x / 255),
+            native = Float32Array.from(reference, (x) => x / 255);
+          const metrics = await api.compareImages(actual, native, {
+            width: frame.width,
+            height: frame.height,
+            channels: 4,
+            compareChannels: 3,
+          });
+          const control = await api.compareImages(
+            new Float32Array(actual.length),
+            native,
+            {
+              width: frame.width,
+              height: frame.height,
+              channels: 4,
+              compareChannels: 3,
+            },
+          );
+          const disabled = await api.compareImages(
+            Float32Array.from(frame.images.sky, (x) => x / 255),
+            native,
+            {
+              width: frame.width,
+              height: frame.height,
+              channels: 4,
+              compareChannels: 3,
+            },
+          );
+          result[name] = {
+            ...metrics,
+            controlSsim: control.ssim,
+            disabledSsim: disabled.ssim,
+          };
+        }
+        return result;
+      },
+      async frames() {
+        const r = await create();
+        try {
+          const images = {},
+            pngs = {};
+          for (const [name, input] of Object.entries({
+            sky: base,
+            cloud: {
+              ...base,
+              clouds: {
+                height: 20,
+                thickness: 20,
+                scale: 12,
+                coverage: 0.9,
+                density: 1,
+                wind: [0, 0],
+                seed: 13,
+                fadeDistance: 500,
+              },
+            },
+            water: {
+              ...base,
+              water: [
+                {
+                  bounds: [-25, -25, 25, 25],
+                  height: 3,
+                  reflection: "planar",
+                  foamWidth: 3,
+                },
+              ],
+            },
+          })) {
+            r.setEnvironment(input);
+            const rgba = await r.readRgba();
+            images[name] = Array.from(rgba);
+            pngs[name] = Array.from(
+              new Uint8Array(
+                await (await api.encodePng(192, 128, rgba)).arrayBuffer(),
+              ),
+            );
+          }
+          return { width: 192, height: 128, images, pngs };
+        } finally {
+          r.dispose();
+        }
+      },
+      async render() {
+        const r = await create();
+        try {
+          const plain = await r.readRgba();
+          const results = { covered: covered(plain), plain: await hash(plain) };
+          for (const [name, input] of Object.entries({
+            sky: base,
+            fog: {
+              ...base,
+              fog: { density: 0.035, falloff: 0.02, godRays: false },
+            },
+            volume: {
+              ...base,
+              volumes: [
+                {
+                  bounds: [-8, 0, -8, 8, 12, 8],
+                  density: 0.15,
+                  color: [1, 0.2, 0.1],
+                },
+              ],
+            },
+            cloud: {
+              ...base,
+              clouds: {
+                height: 20,
+                thickness: 20,
+                scale: 12,
+                coverage: 0.9,
+                density: 1,
+                wind: [3, 1],
+                fadeDistance: 500,
+              },
+            },
+            water: {
+              ...base,
+              water: [
+                {
+                  bounds: [-25, -25, 25, 25],
+                  height: 3,
+                  reflection: "planar",
+                  foamWidth: 3,
+                },
+              ],
+            },
+          })) {
+            r.setEnvironment(input);
+            const frame = await r.readRgba();
+            results[name] = {
+              delta: delta(plain, frame),
+              hash: await hash(frame),
+              report: r.getEnvironmentMemoryReport(),
+            };
+            if (name === "cloud") {
+              r.setTimeSeconds(12);
+              const time = await r.readRgba();
+              r.setTimeSeconds(0);
+              const again = await r.readRgba();
+              results.cloud.timeDelta = delta(frame, time);
+              results.cloud.repeat = await hash(again);
+            }
+          }
+          r.setEnvironment(null);
+          results.cleared = await hash(await r.readRgba());
+          results.released = r.getEnvironmentMemoryReport().gpuBytes;
+          const scene = Forge3DScene.create();
+          try {
+            scene.addGroundPlane({
+              name: "atmosphere-plane",
+              size: [64, 64],
+              color: [0.7, 0.4, 0.2, 1],
+            });
+            r.setScene(scene.snapshot());
+            const without = await r.readRgba();
+            const capture = await r.capture({ samples: 1, aovs: ["id"] });
+            const ids = capture.aovFrame.id();
+            r.setEnvironment({
+              ...base,
+              fog: { density: 0.035, mode: "uniform", godRays: false },
+            });
+            const withFog = await r.readRgba();
+            let sum = 0,
+              count = 0;
+            for (let i = 0; i < ids.length; i++)
+              if (ids[i] > 0) {
+                count++;
+                for (let c = 0; c < 3; c++)
+                  sum += Math.abs(without[i * 4 + c] - withFog[i * 4 + c]);
+              }
+            results.generalCovered = count;
+            results.generalDelta = sum / Math.max(1, count * 3);
+          } finally {
+            scene.dispose();
+          }
+          return results;
+        } finally {
+          r.dispose();
+        }
+      },
+      async bounds() {
+        const r = await create();
+        try {
+          r.setEnvironment(base);
+          const baseline = await r.readRgba();
+          r.setEnvironment({
+            ...base,
+            volumes: [
+              { bounds: [1000, 1000, 1000, 1001, 1001, 1001], density: 1 },
+            ],
+          });
+          const outside = await r.readRgba();
+          const bounds = [-8, 0, -8, 8, 12, 8];
+          const volume = await api.generateDensityVolume({
+            preset: "localized_haze",
+            bounds,
+            dimensions: [8, 6, 8],
+            densityScale: 8,
+            color: [1, 0.2, 0.1],
+          });
+          r.setEnvironment({ ...base, volumes: [volume] });
+          const partial = await r.readRgba();
+          const cpuCamera = new api.Camera(camera);
+          let outsideMax = 0,
+            outsidePixels = 0,
+            insideChanged = 0;
+          for (let y = 0; y < 128; y++)
+            for (let x = 0; x < 192; x++) {
+              const ray = cpuCamera.screenRay(x + 0.5, y + 0.5, {
+                width: 192,
+                height: 128,
+              });
+              let near = 0,
+                far = 500;
+              for (let axis = 0; axis < 3; axis++) {
+                const d = ray.direction[axis],
+                  o = ray.origin[axis];
+                if (Math.abs(d) < 1e-7) {
+                  if (o < bounds[axis] || o > bounds[axis + 3]) far = -1;
+                } else {
+                  const a = (bounds[axis] - o) / d,
+                    b = (bounds[axis + 3] - o) / d;
+                  near = Math.max(near, Math.min(a, b));
+                  far = Math.min(far, Math.max(a, b));
+                }
+              }
+              const offset = (y * 192 + x) * 4;
+              const changed = Math.max(
+                ...[0, 1, 2].map((c) =>
+                  Math.abs(baseline[offset + c] - partial[offset + c]),
+                ),
+              );
+              if (far <= near) {
+                outsidePixels++;
+                outsideMax = Math.max(outsideMax, changed);
+              } else if (changed > 1) {
+                insideChanged++;
+              }
+            }
+          return {
+            max: baseline.reduce(
+              (m, x, i) => Math.max(m, Math.abs(x - outside[i])),
+              0,
+            ),
+            outsideMax,
+            outsidePixels,
+            insideChanged,
+            baseline: await hash(baseline),
+            outside: await hash(outside),
+          };
+        } finally {
+          r.dispose();
+        }
+      },
+      async masks() {
+        const r = await create();
+        try {
+          const water = {
+            bounds: [-25, -25, 25, 25],
+            height: 3,
+            waveAmplitude: 0,
+            reflection: "sky",
+            foamWidth: 3,
+            foamIntensity: 1,
+          };
+          const frames = {};
+          for (const debug of ["water-mask", "foam", "reflection"]) {
+            r.setEnvironment({ ...base, water: [water], debug });
+            const a = await r.readRgba();
+            frames[debug] = {
+              nonzero: a.reduce(
+                (n, x, i) => n + (i % 4 < 3 && x > 0 ? 1 : 0),
+                0,
+              ),
+              hash: await hash(a),
+            };
+          }
+          r.setEnvironment({
+            ...base,
+            water: [{ ...water, mask: [0] }],
+            debug: "water-mask",
+          });
+          const zero = await r.readRgba();
+          r.setEnvironment(base);
+          const plain = await hash(await r.readRgba());
+          r.setEnvironment({ ...base, water: [{ ...water, alpha: 0 }] });
+          const transparent = await hash(await r.readRgba());
+          return {
+            transparent: plain === transparent,
+            frames,
+            zero: zero.reduce((m, x, i) => Math.max(m, i % 4 < 3 ? x : 0), 0),
+          };
+        } finally {
+          r.dispose();
+        }
+      },
+      async budget() {
+        const r = await create({
+          memoryBudgetBytes: 2 * 1024 * 1024,
+          overflowPolicy: "reject",
+        });
+        try {
+          r.setEnvironment({ ...base, fog: { density: 0.01 } });
+          const before = await hash(await r.readRgba()),
+            bytes = r.getMemoryReport().currentBytes;
+          let code;
+          try {
+            r.setEnvironment({
+              ...base,
+              volumes: [
+                {
+                  bounds: [-8, 0, -8, 8, 12, 8],
+                  dimensions: [128, 128, 64],
+                  data: new Float32Array(128 * 128 * 64).fill(1),
+                },
+              ],
+            });
+          } catch (e) {
+            code = e.code;
+          }
+          const after = await hash(await r.readRgba());
+          const afterBytes = r.getMemoryReport().currentBytes;
+          r.resize({ width: 224, height: 144, devicePixelRatio: 1 });
+          r.render();
+          const report = r.getEnvironmentMemoryReport();
+          r.setEnvironment(null);
+          return {
+            code,
+            before,
+            after,
+            bytes,
+            afterBytes,
+            report,
+            released: r.getEnvironmentMemoryReport().gpuBytes,
+            ledger: r.getMemoryReport(),
+          };
+        } finally {
+          r.dispose();
+        }
+      },
+      async offline() {
+        const scene = Forge3DScene.create();
+        scene.addTerrain(terrain);
+        scene.setEnvironment({
+          ...base,
+          temporalWeight: 0.8,
+          clouds: { height: 25, thickness: 10, scale: 12, coverage: 0.8 },
+          water: [
+            { bounds: [-25, -25, 25, 25], height: 3, reflection: "planar" },
+          ],
+        });
+        const session = await Forge3DSession.create(canvas, {
+          runtime: { width: 192, height: 128, devicePixelRatio: 1 },
+        });
+        try {
+          session.setCamera(camera);
+          session.setScene(scene);
+          session.render();
+          const display = await session.readRgba();
+          const result = await session.capture({
+            samples: 1,
+            aovs: ["depth", "normal", "albedo", "id", "motion"],
+          });
+          const frame = result.hdrFrame;
+          session.render();
+          const second = await session.capture({
+            samples: 1,
+            aovs: ["depth", "normal", "albedo", "id", "motion"],
+          });
+          const captureRepeat =
+            (await hash(frame.data)) === (await hash(second.hdrFrame.data));
+          return {
+            captureRepeat,
+            display: await hash(display),
+            keys: Object.keys(result),
+            nonzero: !!frame,
+            waterIds: Array.from(new Set(result.aovFrame.id())).filter(
+              (x) => x >= api.AOV_ID_WATER_BASE,
+            ),
+            report: session.getEnvironmentMemoryReport(),
+          };
+        } finally {
+          session.dispose();
+          scene.dispose();
+        }
+      },
+      async recovery() {
+        const viewer = await Forge3DViewer.create(canvas, {
+          runtime: {
+            width: 192,
+            height: 128,
+            devicePixelRatio: 1,
+            diagnostics: true,
+          },
+          controls: false,
+          resize: false,
+          diagnostics: true,
+        });
+        try {
+          viewer.setTerrain(terrain);
+          viewer.setCamera(camera);
+          viewer.setEnvironment({
+            ...base,
+            fog: { density: 0.01 },
+            water: [{ bounds: [-20, -20, 20, 20], height: 3 }],
+          });
+          viewer.render();
+          const a = await viewer.screenshot();
+          const before = await hash(await a.arrayBuffer());
+          const { simulateViewerDeviceLossForTests } = await import(
+            "../src-ts/viewer.ts"
+          );
+          simulateViewerDeviceLossForTests(viewer);
+          const deadline = performance.now() + 15000;
+          while (
+            viewer.getDiagnostics().recoveryAttempts < 1 ||
+            viewer.status === "recovering"
+          ) {
+            if (performance.now() > deadline)
+              throw new Error("recovery timed out");
+            await new Promise((r) => setTimeout(r, 20));
+          }
+          viewer.render();
+          const b = await viewer.screenshot();
+          return {
+            same: before === (await hash(await b.arrayBuffer())),
+            report: viewer.getEnvironmentMemoryReport(),
+            attempts: viewer.getDiagnostics().recoveryAttempts,
+          };
+        } finally {
+          viewer.dispose();
+        }
+      },
+    };
+  </script>
+</html>

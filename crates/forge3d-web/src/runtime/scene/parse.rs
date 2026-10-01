@@ -77,6 +77,8 @@ pub(super) struct ParsedPass {
 
 #[derive(Debug, Clone)]
 pub(super) struct ParsedScene {
+    pub environment: Option<forge3d_core::environment::Environment>,
+    pub environment_lighting: Option<forge3d_core::lighting::LightingState>,
     pub scatter: Vec<forge3d_core::terrain_scatter::ScatterBatch>,
     pub time_seconds: f32,
     pub probes: Option<crate::runtime::probes::Snapshot>,
@@ -174,6 +176,15 @@ pub(super) fn parse_snapshot(value: &JsValue) -> Result<ParsedScene, WebError> {
     let time_seconds = optional_number(&get_property(value, "timeSeconds")?, "timeSeconds", 0.0)?;
     let probes = crate::runtime::probes::parse(get_property(value, "probes")?)?;
     Ok(ParsedScene {
+        environment: crate::runtime::environment::parse(get_property(value, "environment")?)?,
+        environment_lighting: {
+            let value = get_property(value, "environmentLighting")?;
+            if value.is_null() || value.is_undefined() {
+                None
+            } else {
+                Some(crate::runtime::lighting::lighting_state_from_js(&value)?)
+            }
+        },
         scatter,
         time_seconds,
         probes,

@@ -424,3 +424,6 @@ mod tests {
         }
     }
 }
+
+#[cfg(feature = "webgpu")]
+pub mod environment;

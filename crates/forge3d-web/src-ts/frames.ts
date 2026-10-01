@@ -15,6 +15,8 @@ import { loadOfflineWasm } from "./runtime-internals.js";
 export const EXR_MIME_TYPE = "image/x-exr";
 /** AOV object ID written for background pixels. */
 export const AOV_ID_BACKGROUND = 0;
+/** Water layer i writes AOV_ID_WATER_BASE + i. */
+export const AOV_ID_WATER_BASE = 0xfffffff0;
 /** AOV object ID written for terrain pixels. */
 export const AOV_ID_TERRAIN = 1;
 /** Scene node `n` writes AOV object ID `n + AOV_ID_SCENE_NODE_BASE`. */

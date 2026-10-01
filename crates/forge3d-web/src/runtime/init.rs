@@ -205,6 +205,7 @@ pub(super) async fn create_runtime(
         terrain: None,
         terrain_pipeline_cache: Some(terrain_pipeline_cache),
         scene: None,
+        environment: None,
         scatter: None,
         time_seconds: 0.0,
         probe_count: 0,

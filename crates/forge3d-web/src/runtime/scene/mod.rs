@@ -60,6 +60,7 @@ struct SceneResourcePlan {
     context: forge3d_core::gpu::GpuContext,
     memory: super::memory::MemoryLedger,
     scene: Option<NativeScene>,
+    environment: Option<super::environment::EnvironmentResources>,
     scatter: Option<super::scatter::ScatterResources>,
     time_seconds: f32,
     probes: super::probes::Prepared,
@@ -122,6 +123,18 @@ fn prepare_scene(
             probe_bytes.saturating_sub(64),
         ),
     ])?;
+    let mut environment =
+        super::environment::prepare(runtime, parsed.environment.as_ref(), &mut planned)?;
+    if let Some(e) = &mut environment {
+        e.original_lighting = Some((
+            parsed
+                .environment_lighting
+                .as_ref()
+                .unwrap_or(&parsed.lighting)
+                .clone(),
+            parsed.light_ids.clone(),
+        ));
+    }
     let scatter = super::scatter::build(runtime, parsed.scatter.clone(), &mut planned)?;
     let probes = super::probes::prepare(runtime, parsed.probes.as_ref(), &mut planned)?;
 
@@ -306,6 +319,7 @@ fn prepare_scene(
         context,
         memory: planned,
         scene,
+        environment,
         scatter,
         time_seconds: parsed.time_seconds,
         probes,
@@ -324,6 +338,7 @@ fn commit_scene_plan(runtime: &mut Forge3DRuntime, plan: SceneResourcePlan) {
         context,
         memory,
         scene,
+        environment,
         scatter,
         time_seconds,
         probes,
@@ -349,6 +364,7 @@ fn commit_scene_plan(runtime: &mut Forge3DRuntime, plan: SceneResourcePlan) {
     super::ibl::commit_ibl(runtime, ibl);
     super::shadows::rebuild_terrain_depth_binding(runtime);
     runtime.scene = scene;
+    runtime.environment = environment;
     runtime.scatter = scatter;
     runtime.time_seconds = time_seconds;
     super::probes::commit(runtime, probes);

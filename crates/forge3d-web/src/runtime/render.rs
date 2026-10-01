@@ -33,6 +33,7 @@ pub(super) fn render_runtime(runtime: &mut Forge3DRuntime) -> Result<bool, WebEr
     let timestamp_slot = runtime.query_ring.as_mut().and_then(|ring| ring.acquire());
     let frame_start = now_ms();
 
+    super::environment::refresh(runtime)?;
     super::shadows::refresh_shadow_state(runtime)?;
     super::shader_variants::sync_pipelines(runtime)?;
     super::scatter::prepare(runtime, None)?;
@@ -347,6 +348,7 @@ pub(super) fn recreate_surface(
     }
     runtime.surface_format = format!("{new_format:?}");
     runtime.surface_state = Some(state);
+    super::environment::resize(runtime, runtime.width, runtime.height)?;
     Ok(SurfaceRecoveryReport {
         old_format,
         new_format,
@@ -389,6 +391,11 @@ pub(super) fn encode_scene_render_pass(
     label: &'static str,
     timestamp_slot: Option<usize>,
 ) {
+    let destination = view;
+    let view = runtime.environment.as_ref().map_or(view, |e| &e.world.view);
+    if let Some(e) = &runtime.environment {
+        e.reflection.encode(runtime, encoder);
+    }
     let depth_stencil_attachment =
         runtime
             .depth_attachment
@@ -397,7 +404,11 @@ pub(super) fn encode_scene_render_pass(
                 view: &depth.view,
                 depth_ops: Some(wgpu::Operations {
                     load: wgpu::LoadOp::Clear(1.0),
-                    store: wgpu::StoreOp::Discard,
+                    store: if runtime.environment.is_some() {
+                        wgpu::StoreOp::Store
+                    } else {
+                        wgpu::StoreOp::Discard
+                    },
                 }),
                 stencil_ops: None,
             });
@@ -460,6 +471,22 @@ pub(super) fn encode_scene_render_pass(
             scatter.draw(&mut render_pass, runtime, None);
         }
     }
+
+    if let (Some(e), Some(depth), Some(surface)) = (
+        &runtime.environment,
+        &runtime.depth_attachment,
+        &runtime.surface_state,
+    ) {
+        e.encode(
+            runtime,
+            encoder,
+            view,
+            &depth.view,
+            destination,
+            surface.config.format,
+        );
+    }
+    let view = destination;
 
     let overlay_writes = timestamp_slot.and_then(|slot| {
         runtime
