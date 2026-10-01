@@ -184,6 +184,71 @@
       ]
     },
     {
+      "id": "scatter-probes-v1",
+      "ownerTasks": [
+        "W09"
+      ],
+      "capabilityIds": [
+        "T13",
+        "T15"
+      ],
+      "provenance": [
+        "bf8db93:python/forge3d/terrain_scatter.py",
+        "bf8db93:src/terrain/probes/heightfield_baker.rs",
+        "bf8db93:src/terrain/probes/reflection_baker.rs",
+        "scripts/generate-w09-fixtures.py"
+      ],
+      "generator": {
+        "kind": "deterministic-contract-spec",
+        "version": "1",
+        "seed": 0,
+        "parameters": {
+          "width": 192,
+          "height": 128,
+          "terrainSamples": [
+            33,
+            33
+          ],
+          "instances": 2,
+          "probeDims": [
+            4,
+            4
+          ],
+          "reflectionResolution": 4,
+          "rayCount": 64,
+          "seeds": [
+            42,
+            123
+          ],
+          "windTimeSeconds": 0.37
+        },
+        "sha256": "5e3ae8851bdd49b1c3d4af5c4636762d4cd348f52d3862daed0182f461641e27"
+      },
+      "tolerances": {
+        "transformMaxAbs": 0.00001,
+        "boundsDiagonalSlack": 0.00001,
+        "shMaxAbs": 0.001,
+        "probeSsimMinimum": 0.98,
+        "fixedSeedTimeHashesExact": true
+      },
+      "budgets": [
+        {
+          "profileId": "reference-discrete",
+          "cpuBytes": 67108864,
+          "gpuBytes": 16777216,
+          "frameTimeP95Ms": 16.7,
+          "durationSeconds": 60
+        },
+        {
+          "profileId": "reference-integrated",
+          "cpuBytes": 67108864,
+          "gpuBytes": 16777216,
+          "frameTimeP95Ms": 33.3,
+          "durationSeconds": 60
+        }
+      ]
+    },
+    {
       "id": "volume-temporal-v1",
       "ownerTasks": [
         "W10",

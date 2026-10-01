@@ -20,6 +20,15 @@ import { getTerrainColormap, TerrainDataset } from "./terrain-dataset.js";
 import { normalizeTerrainMaterial } from "./terrain-material.js";
 import type { TextureSet } from "./textures.js";
 import { cloneCameraInput } from "./camera.js";
+import type { ScatterBatchSnapshot, ScatterFrameStats, ScatterMemoryReport } from "./scatter-types.js";
+import type { TerrainProbeSnapshot } from "./terrain-probes.js";
+import { TerrainScatterBatch, normalizeScatterBatches } from "./terrain-scatter.js";
+import type { ScatterBatchInput } from "./scatter-types.js";
+import { TerrainLightingProbes, validateProbeSnapshot, type TerrainProbeMemoryReport } from "./terrain-probes.js";
+export { TerrainScatterBatch, ScatterWindSettings, TerrainScatterSource, makeScatterTransform, seededScatterTransforms, gridScatterTransforms, bilinearScatterSample, simplifyScatterMesh, autoScatterLodLevels, scatterMeshBounds, scatterTransformBounds } from "./terrain-scatter.js";
+export type * from "./scatter-types.js";
+export { TerrainLightingProbes, getTerrainProbeMaterialDefaults } from "./terrain-probes.js";
+export type { TerrainProbeGrid, TerrainProbeBakeOptions, TerrainProbeSnapshot, TerrainProbeMemoryReport, ProbeReflectionMaterial, ProbeReflectionLighting } from "./terrain-probes.js";
 
 export type Forge3DErrorCode =
   | "WEBGPU_UNAVAILABLE"
@@ -2245,6 +2254,9 @@ export interface SceneSnapshot {
   materials: MaterialCollectionSnapshot;
   ibl: IblSnapshot | null;
   shadows: ShadowSnapshot;
+  scatter?: ScatterBatchSnapshot[];
+  probes?: TerrainProbeSnapshot | null;
+  timeSeconds?: number;
 }
 
 export type IblQuality = "low" | "medium" | "high" | "ultra";
@@ -2551,6 +2563,12 @@ interface WasmRuntime {
   setTerrain(terrain: TerrainHeightmapInput): void;
   setTerrainFromSource(terrain: TerrainHeightmapSourceInput): Promise<void>;
   setScene?(scene: SceneSnapshot): void;
+  setScatterBatches?(batches: ScatterBatchSnapshot[]): void;
+  setLightingProbes?(probes: TerrainProbeSnapshot | null): void;
+  setTimeSeconds?(seconds: number): void;
+  getScatterStats?(): ScatterFrameStats;
+  getScatterMemoryReport?(): ScatterMemoryReport;
+  getProbeMemoryReport?(): TerrainProbeMemoryReport;
   setLighting?(lighting: LightingSnapshot): void;
   setMaterials?(materials: MaterialCollectionSnapshot): void;
   setIbl?(ibl: IblSnapshot | null): void;
@@ -2952,6 +2970,46 @@ export class Forge3DRuntime {
       );
     }
     this.#runOrQueue(() => this.#inner.setLighting?.(lighting));
+  }
+
+  setScatterBatches(batches: readonly (TerrainScatterBatch | ScatterBatchInput | ScatterBatchSnapshot)[]): void {
+    this.#assertNotDisposed();
+    if (!this.#inner.setScatterBatches) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support terrain scatter");
+    const snapshot = normalizeScatterBatches(batches);
+    this.#runOrQueue(() => this.#inner.setScatterBatches!(snapshot));
+  }
+
+  setLightingProbes(probes: TerrainLightingProbes | TerrainProbeSnapshot | null): void {
+    this.#assertNotDisposed();
+    if (!this.#inner.setLightingProbes) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support terrain probes");
+    const snapshot = probes instanceof TerrainLightingProbes ? probes.snapshot() : structuredClone(probes);
+    if (snapshot) validateProbeSnapshot(snapshot);
+    this.#runOrQueue(() => this.#inner.setLightingProbes!(snapshot));
+  }
+
+  setTimeSeconds(seconds: number): void {
+    this.#assertNotDisposed();
+    if (!Number.isFinite(seconds)) throw new Forge3DError("INVALID_INPUT", "timeSeconds must be finite");
+    if (!this.#inner.setTimeSeconds) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support scatter time");
+    this.#runOrQueue(() => this.#inner.setTimeSeconds!(seconds));
+  }
+
+  getScatterStats(): ScatterFrameStats {
+    this.#assertNotDisposed();
+    if (!this.#inner.getScatterStats) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not report scatter state");
+    return this.#inner.getScatterStats();
+  }
+
+  getScatterMemoryReport(): ScatterMemoryReport {
+    this.#assertNotDisposed();
+    if (!this.#inner.getScatterMemoryReport) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not report scatter memory");
+    return this.#inner.getScatterMemoryReport();
+  }
+
+  getProbeMemoryReport(): TerrainProbeMemoryReport {
+    this.#assertNotDisposed();
+    if (!this.#inner.getProbeMemoryReport) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not report probe memory");
+    return this.#inner.getProbeMemoryReport();
   }
 
   setMaterials(materials: MaterialCollectionSnapshot): void {

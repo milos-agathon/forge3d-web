@@ -26,7 +26,10 @@ fn validate(label: &str, source: &str) {
 fn variant_sweep() -> Vec<ShaderFeatures> {
     let all = ShaderFeatures::ALL.bits();
     let mut sets = vec![all, 0];
-    for bit in 0..45 {
+    for bit in 0..u64::BITS {
+        if all & (1 << bit) == 0 {
+            continue;
+        }
         sets.push(1 << bit);
         sets.push(all & !(1 << bit));
     }
@@ -334,5 +337,15 @@ fn no_w08_variants_contain_no_w08_identifiers() {
             "return textureLoad(heightmap, clamp(texel, vec2<i32>(0, 0), max_texel), 0).r;"
         ));
         assert!(source.contains("return textureDimensions(heightmap);"));
+    }
+}
+
+#[test]
+fn no_probe_variants_omit_storage_reads_and_bindings() {
+    for template in [TERRAIN_SHADER, WORLD_SHADER] {
+        let without = specialize(template, ShaderFeatures::ALL.with_probes(false));
+        assert!(!without.contains("local_probe"));
+        let with = specialize(template, ShaderFeatures::ALL.with_probes(true));
+        assert!(with.contains("var<storage, read> local_probes"));
     }
 }

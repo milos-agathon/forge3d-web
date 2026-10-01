@@ -77,6 +77,9 @@ pub(super) struct ParsedPass {
 
 #[derive(Debug, Clone)]
 pub(super) struct ParsedScene {
+    pub scatter: Vec<forge3d_core::terrain_scatter::ScatterBatch>,
+    pub time_seconds: f32,
+    pub probes: Option<crate::runtime::probes::Snapshot>,
     pub nodes: Vec<ParsedNode>,
     pub passes: Vec<ParsedPass>,
     pub lighting: forge3d_core::lighting::LightingState,
@@ -162,7 +165,18 @@ pub(super) fn parse_snapshot(value: &JsValue) -> Result<ParsedScene, WebError> {
         return Err(invalid("scene snapshot shadows is required"));
     }
     let shadows = crate::runtime::shadows::shadows_from_js(&shadows_value)?;
+    let scatter_value = get_property(value, "scatter")?;
+    let scatter = if scatter_value.is_undefined() {
+        Vec::new()
+    } else {
+        crate::runtime::scatter::parse(scatter_value)?
+    };
+    let time_seconds = optional_number(&get_property(value, "timeSeconds")?, "timeSeconds", 0.0)?;
+    let probes = crate::runtime::probes::parse(get_property(value, "probes")?)?;
     Ok(ParsedScene {
+        scatter,
+        time_seconds,
+        probes,
         nodes,
         passes,
         lighting,

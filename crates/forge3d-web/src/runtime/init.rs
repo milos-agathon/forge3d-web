@@ -205,6 +205,16 @@ pub(super) async fn create_runtime(
         terrain: None,
         terrain_pipeline_cache: Some(terrain_pipeline_cache),
         scene: None,
+        scatter: None,
+        time_seconds: 0.0,
+        probe_count: 0,
+        reflection_probe_count: 0,
+        probe_bytes: 64,
+        probe_position_bytes: 0,
+        probe_coefficient_bytes: 0,
+        probe_irradiance_position_bytes: 0,
+        probe_reflection_position_bytes: 0,
+        probe_reflection_bytes: 0,
         lighting: Some(lighting),
         textures: Some(textures),
         ibl: Some(ibl),
@@ -260,7 +270,8 @@ async fn validate_terrain_shader_and_pipeline(
         .push_error_scope(wgpu::ErrorFilter::Validation);
     let mut cache = TerrainPipelineCache::new(
         &context.device,
-        &lighting.bind_group_layout,
+        &lighting.base_bind_group_layout,
+        &lighting.probe_bind_group_layout,
         &textures.bind_group_layout,
         &ibl.bind_group_layout,
     );

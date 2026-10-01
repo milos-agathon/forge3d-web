@@ -1,3 +1,9 @@
+import type { TerrainScatterBatch, ScatterBatchInput, ScatterBatchSnapshot, ScatterFrameStats, ScatterMemoryReport } from "./terrain-scatter.js";
+import type { TerrainLightingProbes, TerrainProbeSnapshot, TerrainProbeMemoryReport } from "./terrain-probes.js";
+export { TerrainScatterBatch, ScatterWindSettings, TerrainScatterSource, makeScatterTransform, seededScatterTransforms, gridScatterTransforms, bilinearScatterSample, simplifyScatterMesh, autoScatterLodLevels, scatterMeshBounds, scatterTransformBounds } from "./terrain-scatter.js";
+export type * from "./scatter-types.js";
+export { TerrainLightingProbes, getTerrainProbeMaterialDefaults } from "./terrain-probes.js";
+export type { TerrainProbeGrid, TerrainProbeBakeOptions, TerrainProbeSnapshot, TerrainProbeMemoryReport, ProbeReflectionMaterial, ProbeReflectionLighting } from "./terrain-probes.js";
 /**
  * Stable Forge3D browser error codes. Unknown generated or platform errors are
  * normalized before they cross the public TypeScript facade.
@@ -2276,6 +2282,9 @@ export interface ShadowCascadeInfo {
 }
 
 export interface SceneSnapshot {
+  scatter?: ScatterBatchSnapshot[];
+  probes?: TerrainProbeSnapshot | null;
+  timeSeconds?: number;
   revision: number;
   nodes: SceneNodeSnapshot[];
   passes: ScenePassInput[];
@@ -2482,6 +2491,10 @@ export declare class CascadedShadowConfig {
 }
 
 export declare class Forge3DScene {
+  setScatterBatches(batches: readonly (TerrainScatterBatch | ScatterBatchInput | ScatterBatchSnapshot)[]): void;
+  setLightingProbes(probes: TerrainLightingProbes | TerrainProbeSnapshot | null): void;
+  setTimeSeconds(seconds: number): void;
+  getScatterBatches(): ScatterBatchSnapshot[];
   static create(): Forge3DScene;
   readonly disposed: boolean;
   readonly revision: number;
@@ -2617,6 +2630,11 @@ export interface RenderStats {
 }
 
 export declare class Forge3DSession {
+  setTimeSeconds(seconds: number): void;
+  getScatterStats(): ScatterFrameStats;
+  getScatterMemoryReport(): ScatterMemoryReport;
+  getProbeMemoryReport(): TerrainProbeMemoryReport;
+
   static create(
     canvas: HTMLCanvasElement | OffscreenCanvas,
     options?: Forge3DSessionOptions,
@@ -2695,6 +2713,13 @@ export declare class Forge3DSession {
  * methods reject or throw Forge3DError with code RUNTIME_DISPOSED.
  */
 export declare class Forge3DRuntime {
+  setTimeSeconds(seconds: number): void;
+  getScatterStats(): ScatterFrameStats;
+  getScatterMemoryReport(): ScatterMemoryReport;
+  getProbeMemoryReport(): TerrainProbeMemoryReport;
+  setScatterBatches(batches: readonly (TerrainScatterBatch | ScatterBatchInput | ScatterBatchSnapshot)[]): void;
+  setLightingProbes(probes: TerrainLightingProbes | TerrainProbeSnapshot | null): void;
+
   static create(
     canvas: HTMLCanvasElement | OffscreenCanvas,
     options?: Forge3DRuntimeOptions,
@@ -2798,6 +2823,13 @@ export declare class Forge3DRuntime {
  * device-loss recovery. dispose() synchronously releases all owned resources.
  */
 export declare class Forge3DViewer {
+  setTimeSeconds(seconds: number): void;
+  getScatterStats(): ScatterFrameStats;
+  getScatterMemoryReport(): ScatterMemoryReport;
+  getProbeMemoryReport(): TerrainProbeMemoryReport;
+  setScatterBatches(batches: readonly (TerrainScatterBatch | ScatterBatchInput | ScatterBatchSnapshot)[]): void;
+  setLightingProbes(probes: TerrainLightingProbes | TerrainProbeSnapshot | null): void;
+
   static create(
     canvas: HTMLCanvasElement,
     options?: Forge3DViewerOptions,
@@ -3061,6 +3093,7 @@ export declare class Forge3DWorkerRenderer {
   ): Promise<Forge3DWorkerRenderer>;
   readonly disposed: boolean;
   setScene(scene: Forge3DScene): Promise<void>;
+  setCamera(camera: CameraInput): Promise<void>;
   render(): Promise<boolean>;
   resize(size: ResizeInput): Promise<void>;
   screenshot(): Promise<Blob>;

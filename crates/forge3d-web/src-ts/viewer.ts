@@ -37,6 +37,8 @@ import {
   type ViewerStatus,
 } from "./index.js";
 import { OrbitController } from "./orbit-controller.js";
+import { TerrainScatterBatch, normalizeScatterBatches, type ScatterBatchInput, type ScatterBatchSnapshot, type ScatterFrameStats, type ScatterMemoryReport } from "./terrain-scatter.js";
+import { TerrainLightingProbes, validateProbeSnapshot, type TerrainProbeSnapshot, type TerrainProbeMemoryReport } from "./terrain-probes.js";
 import { CameraController } from "./camera-controllers.js";
 import { validateCameraInput } from "./camera.js";
 import { RenderScheduler } from "./render-scheduler.js";
@@ -64,6 +66,12 @@ interface ViewerRuntime {
   ): void;
   simulateDeviceLossForTesting?(): void;
   setTerrain(terrain: TerrainHeightmapInput): void;
+  setScatterBatches?(batches: ScatterBatchSnapshot[]): void;
+  setLightingProbes?(probes: TerrainProbeSnapshot | null): void;
+  setTimeSeconds?(seconds: number): void;
+  getScatterStats?(): ScatterFrameStats;
+  getScatterMemoryReport?(): ScatterMemoryReport;
+  getProbeMemoryReport?(): TerrainProbeMemoryReport;
   setTerrainFromSource(terrain: TerrainHeightmapSourceInput): Promise<void>;
   setCamera(camera: CameraInput): void;
   resize(size: ResizeInput): void;
@@ -168,6 +176,9 @@ export class Forge3DViewer {
   #generation = 0;
   #activeRuntimes = 0;
   #recoveryAttempts = 0;
+  #scatterReplay: ScatterBatchSnapshot[] | undefined;
+  #probeReplay: TerrainProbeSnapshot | null | undefined;
+  #scatterTime = 0;
   #recoveryPromise: Promise<void> | undefined;
   #recoveryController: AbortController | undefined;
   #recoveringFromGeneration: number | undefined;
@@ -555,6 +566,30 @@ export class Forge3DViewer {
       return runtime.getLodSelection();
     });
   }
+
+  setScatterBatches(batches: readonly (TerrainScatterBatch | ScatterBatchInput | ScatterBatchSnapshot)[]): void {
+    const runtime = this.#operationalRuntime(), snapshot = normalizeScatterBatches(batches);
+    this.#callRuntime(() => { if (!runtime.setScatterBatches) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support terrain scatter"); runtime.setScatterBatches(snapshot); });
+    this.#scatterReplay = structuredClone(snapshot); this.#scheduler?.requestRender();
+  }
+
+  setLightingProbes(probes: TerrainLightingProbes | TerrainProbeSnapshot | null): void {
+    const runtime = this.#operationalRuntime(), snapshot = probes instanceof TerrainLightingProbes ? probes.snapshot() : structuredClone(probes);
+    if (snapshot) validateProbeSnapshot(snapshot);
+    this.#callRuntime(() => { if (!runtime.setLightingProbes) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support terrain probes"); runtime.setLightingProbes(snapshot); });
+    this.#probeReplay = structuredClone(snapshot); this.#scheduler?.requestRender();
+  }
+
+  setTimeSeconds(seconds: number): void {
+    const runtime = this.#operationalRuntime();
+    if (!Number.isFinite(seconds)) throw new Forge3DError("INVALID_INPUT", "timeSeconds must be finite");
+    this.#callRuntime(() => { if (!runtime.setTimeSeconds) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support scatter time"); runtime.setTimeSeconds(seconds); });
+    this.#scatterTime = seconds; this.#scheduler?.requestRender();
+  }
+
+  getScatterStats(): ScatterFrameStats { const runtime = this.#operationalRuntime(); return this.#callRuntime(() => { if (!runtime.getScatterStats) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not report scatter"); return runtime.getScatterStats(); }); }
+  getScatterMemoryReport(): ScatterMemoryReport { const runtime = this.#operationalRuntime(); return this.#callRuntime(() => { if (!runtime.getScatterMemoryReport) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not report scatter"); return runtime.getScatterMemoryReport(); }); }
+  getProbeMemoryReport(): TerrainProbeMemoryReport { const runtime = this.#operationalRuntime(); return this.#callRuntime(() => { if (!runtime.getProbeMemoryReport) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not report probes"); return runtime.getProbeMemoryReport(); }); }
 
   /** W08: forward `registerMaterialVtSource`; the registration is
    * retained and replayed after device-loss recovery. */
@@ -1042,6 +1077,14 @@ export class Forge3DViewer {
       ) {
         return;
       }
+      if (this.#scatterReplay !== undefined) {
+        if (!replacement.setScatterBatches || !replacement.setTimeSeconds) throw new Forge3DError("UNSUPPORTED_FEATURE", "Recovery runtime does not support terrain scatter");
+        replacement.setScatterBatches(structuredClone(this.#scatterReplay)); replacement.setTimeSeconds(this.#scatterTime);
+      }
+      if (this.#probeReplay !== undefined) {
+        if (!replacement.setLightingProbes) throw new Forge3DError("UNSUPPORTED_FEATURE", "Recovery runtime does not support terrain probes");
+        replacement.setLightingProbes(structuredClone(this.#probeReplay));
+      }
       this.#terminalError = undefined;
       if (this.#initializationComplete) {
         this.#transition("ready");
@@ -1189,6 +1232,7 @@ export class Forge3DViewer {
   }
 
   #disposeOwnedResources(transitionRuntime: boolean): void {
+    this.#scatterReplay = undefined; this.#probeReplay = undefined;
     this.#sourceController?.abort();
     this.#sourceController = undefined;
     this.#recoveryController?.abort();

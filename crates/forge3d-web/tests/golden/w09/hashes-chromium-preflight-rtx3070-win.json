@@ -1,0 +1,29 @@
+{
+  "qualification": "Chromium preflight only; not reference-discrete or reference-integrated",
+  "viewport": {
+    "width": 192,
+    "height": 128,
+    "devicePixelRatio": 1
+  },
+  "hardware": {
+    "adapter": "NVIDIA GeForce RTX 3070",
+    "driverVersion": "32.0.16.1060",
+    "osVersion": "10.0.26300.9550",
+    "displayVersion": "26H2",
+    "backend": "ANGLE D3D11"
+  },
+  "oracle": {
+    "seed": 42,
+    "timeSeconds": 0.37,
+    "display": "26b75a99fd0652ebf36b47e038d0a63f72715a42611020253f8d996cd56b33a3",
+    "hdr": "9530845cd8c4e1fa1c7c8e6c279f52da13f517b6cb3bd95d3a5f8d462d52ae7a",
+    "ids": "1ef4db7cd070822c7335279737bbe49c76672ddccfb4853d7699264d2b27345c",
+    "adapter": {
+      "vendor": "nvidia",
+      "architecture": "ampere",
+      "device": "",
+      "description": ""
+    },
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36"
+  }
+}

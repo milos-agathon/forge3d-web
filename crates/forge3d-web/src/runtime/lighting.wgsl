@@ -397,6 +397,12 @@ fn forge3d_evaluate_lighting(
         ambient = ambient * tex_occlusion.r;
     }
     // #endif
+    // #if probes
+    let local = local_probe_lighting(world_position, n, v, surface.y);
+    let local_fresnel = mix(vec3<f32>(0.04), base_color, surface.x);
+    ambient = mix(ambient, base_color * local.irradiance * (1.0 - surface.x), local.weight);
+    ambient = ambient + local.reflection * local_fresnel * local.reflection_weight;
+    // #endif
     var result = (ambient + direct) * max(forge3d_lighting.exposure, 0.0);
     // #if tex_emissive
     if ((material.flags & 16u) != 0u) {
@@ -407,7 +413,11 @@ fn forge3d_evaluate_lighting(
         result = mix(result, vec3<f32>(1.0, 0.0, 1.0), 0.75);
     }
     result = forge3d_shadow_debug_color(result, world_position, n, view_depth);
+    // #if probes
+    return local_probe_debug(max(result, vec3<f32>(0.0)), local);
+    // #else
     return max(result, vec3<f32>(0.0));
+    // #endif
 }
 
 // #if capture

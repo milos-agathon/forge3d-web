@@ -35,6 +35,7 @@ pub(super) fn render_runtime(runtime: &mut Forge3DRuntime) -> Result<bool, WebEr
 
     super::shadows::refresh_shadow_state(runtime)?;
     super::shader_variants::sync_pipelines(runtime)?;
+    super::scatter::prepare(runtime, None)?;
     // W08 (E3-E6): harvest the pending readbacks, run the VT residency
     // pass and roll the mosaic LRU frame before encoding.
     if let Some(terrain) = runtime.terrain.as_mut() {
@@ -454,6 +455,9 @@ pub(super) fn encode_scene_render_pass(
             if let Some(bundle) = scene.world_bundle.as_ref() {
                 render_pass.execute_bundles(std::iter::once(bundle));
             }
+        }
+        if let Some(scatter) = runtime.scatter.as_ref() {
+            scatter.draw(&mut render_pass, runtime, None);
         }
     }
 

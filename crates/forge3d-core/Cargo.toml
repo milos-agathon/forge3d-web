@@ -16,7 +16,7 @@ crate-type = ["lib"]
 [features]
 default = []
 gpu = ["dep:wgpu", "dep:bytemuck"]
-webgpu = ["gpu"]
+webgpu = ["gpu", "dep:serde"]
 
 [dependencies]
 async-trait.workspace = true
@@ -25,6 +25,7 @@ exr = { version = "=1.74.2", default-features = false }
 bytemuck = { workspace = true, optional = true }
 glam.workspace = true
 thiserror.workspace = true
+serde = { workspace = true, optional = true }
 wgpu = { workspace = true, optional = true }
 
 [dev-dependencies]

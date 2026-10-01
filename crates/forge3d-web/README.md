@@ -203,6 +203,12 @@ Cache `.wasm` assets with immutable content hashing, or invalidate the wasm asse
   thread), composited `terrain.overlays` with CRS placement, and paged
   `material.virtualTexture` albedo with source registration and stats —
   matched against native `clipmap-seam-v1` and `terrain-vt-v1` goldens
+- terrain scatter and local probes (W09): `TerrainScatterSource` generators,
+  `TerrainScatterBatch` with QEM LOD/HLOD, wind, contact/blend and memory/stats,
+  and `TerrainLightingProbes.bake` with native SH L2/reflections, grid blending,
+  roughness mips, box projection and debug modes, retained across scene,
+  worker, viewer recovery and HDR/AOV capture; see
+  [terrain-scatter-probes.md](docs/terrain-scatter-probes.md)
 - `setCamera(camera)`
 - `resize({ width, height, devicePixelRatio })`
 - `render()`
@@ -221,7 +227,8 @@ cascaded shadows, perspective/orthographic cameras with orbit/fly controls,
 camera keyframe animation and terrain camera rigs, screenshots, HDR/AOV/EXR
 capture, offline accumulation and denoising, frame sequences, video export,
 clipmap terrain geometry, streamed height pyramids, COG range reads with
-persistent byte caches, raster overlays, and albedo virtual texturing,
+persistent byte caches, raster overlays, albedo virtual texturing,
+terrain scatter/LOD/HLOD/wind and local SH/reflection probes,
 and TypeScript declarations. This is the implemented release
 surface, not the final parity boundary.
 
@@ -231,6 +238,7 @@ surface, not the final parity boundary.
 | COPC/EPT/LAZ point streaming | Current gap | [G02-G03](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#geospatial-data-geometry-acceleration-and-ray-rendering), [W16](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w16--point-clouds-and-ogc-3d-tiles) |
 | OGC 3D Tiles | Current gap | [G04](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#geospatial-data-geometry-acceleration-and-ray-rendering), [W16](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w16--point-clouds-and-ogc-3d-tiles) |
 | COG, raster streaming/overlays, clipmaps, and virtual texturing | Supported | [T08-T11](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#terrain-and-large-raster-scenes), [W08](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w08--clipmaps-streaming-cog-raster-overlays-and-virtual-textures), [browser-api.md](docs/browser-api.md#terrain-clipmaps-streaming-cogs-overlays-and-virtual-textures-w08) |
+| Terrain scatter, LOD/HLOD, wind and local SH/reflection probes | Implemented and verified | [T13/T15](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#terrain-and-large-raster-scenes), [W09](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w09--terrain-scatter-lodhlod-wind-and-lighting-probes), [API guide](docs/terrain-scatter-probes.md) |
 | Mapbox Style subset | Current gap | [M03](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#product-scene-styling-packaging-cartography-and-utilities), [W19](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w19--mapbox-style-bundles-variants-and-review-layers) |
 
 Python wheels, PyO3/NumPy bindings, native windows, stdin/TCP control, and CMake

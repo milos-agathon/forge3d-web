@@ -35,6 +35,7 @@ pub(super) const TERRAIN_SCENE_TEXTURE_SLOTS: u32 = 5;
 pub(super) const W08_SAMPLED_TEXTURES_CLIPMAP: u32 =
     TERRAIN_BASE_SAMPLED_TEXTURES + TERRAIN_SCENE_TEXTURE_SLOTS;
 pub(super) const W08_STORAGE_BUFFERS_VT: u32 = 3;
+pub(super) const W09_STORAGE_BUFFERS_VT_PROBES: u32 = 4;
 
 /// Which stacked W08 group-0 slots a terrain pipeline profile can declare.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -51,20 +52,35 @@ impl W08Slots {
     /// Slots that fit the negotiated limits for the untextured
     /// (`scene_textures == false`) or textured pipeline profile.
     pub(super) fn for_limits(sampled: u32, storage_buffers: u32, scene_textures: bool) -> Self {
+        Self::for_limits_with_probes(sampled, storage_buffers, scene_textures, false)
+    }
+
+    pub(super) fn for_limits_with_probes(
+        sampled: u32,
+        storage_buffers: u32,
+        scene_textures: bool,
+        probes: bool,
+    ) -> Self {
         let headroom = sampled.saturating_sub(Self::base(scene_textures));
+        let vt_storage = if probes {
+            W09_STORAGE_BUFFERS_VT_PROBES
+        } else {
+            W08_STORAGE_BUFFERS_VT
+        };
         Self {
             page_table: headroom >= 1,
             overlays: headroom >= 2,
-            vt: headroom >= 3 && storage_buffers >= W08_STORAGE_BUFFERS_VT,
+            vt: headroom >= 3 && storage_buffers >= vt_storage,
         }
     }
 
-    pub(super) fn of_device(device: &wgpu::Device, scene_textures: bool) -> Self {
+    pub(super) fn of_device(device: &wgpu::Device, scene_textures: bool, probes: bool) -> Self {
         let limits = device.limits();
-        Self::for_limits(
+        Self::for_limits_with_probes(
             limits.max_sampled_textures_per_shader_stage,
             limits.max_storage_buffers_per_shader_stage,
             scene_textures,
+            probes,
         )
     }
 
@@ -100,9 +116,15 @@ pub(super) fn w08_limit_error(
     stack: u32,
     scene_textures: bool,
     sampled: u32,
+    probes: bool,
 ) -> WebError {
     let storage = if stack == 3 {
-        format!(" and maxStorageBuffersPerShaderStage >= {W08_STORAGE_BUFFERS_VT}")
+        let required = if probes {
+            W09_STORAGE_BUFFERS_VT_PROBES
+        } else {
+            W08_STORAGE_BUFFERS_VT
+        };
+        format!(" and maxStorageBuffersPerShaderStage >= {required}")
     } else {
         String::new()
     };
@@ -439,7 +461,8 @@ pub(super) fn set_terrain_options_runtime(
     // maxSampledTexturesPerShaderStage budget of this terrain's profile.
     let sampled = runtime.max_sampled_textures_per_shader_stage;
     let scene_textures = features.samples_scene_textures();
-    let slots = W08Slots::of_device(&context.device, scene_textures);
+    let probes = features.probes();
+    let slots = W08Slots::of_device(&context.device, scene_textures, probes);
     if validated.input.clipmap_geometry().is_some() && sampled < W08_SAMPLED_TEXTURES_CLIPMAP {
         return Err(WebError::new(
             Forge3DErrorCode::UnsupportedFeature,
@@ -454,6 +477,7 @@ pub(super) fn set_terrain_options_runtime(
             1,
             scene_textures,
             sampled,
+            probes,
         ));
     }
     // W08 (E5): visible overlays need the extended sampled-texture budget;
@@ -467,6 +491,7 @@ pub(super) fn set_terrain_options_runtime(
             2,
             scene_textures,
             sampled,
+            probes,
         ));
     }
     // W08 (E6): material VT — blocking diagnostics first (an invalid
@@ -507,6 +532,7 @@ pub(super) fn set_terrain_options_runtime(
             3,
             scene_textures,
             sampled,
+            probes,
         ));
     }
     // W08 (E0): the streaming height atlas and the VT atlas are single 2D
@@ -1240,13 +1266,20 @@ pub(super) struct TerrainPipelineCache {
     /// W08 slots of the untextured profile.
     pub(super) slots: W08Slots,
     /// Group 0 of the textured profile when it differs from the untextured one.
-    textured_bind_group_layout: Option<wgpu::BindGroupLayout>,
+    textured_bind_group_layout: wgpu::BindGroupLayout,
     /// W08 slots of the textured profile.
     pub(super) textured_slots: W08Slots,
+    /// Probe variants reserve one additional fragment storage buffer.
+    probe_bind_group_layout: wgpu::BindGroupLayout,
+    probe_slots: W08Slots,
+    probe_textured_bind_group_layout: wgpu::BindGroupLayout,
+    probe_textured_slots: W08Slots,
     /// Empty group 2 bound by untextured variants.
     pub(super) empty_bind_group: wgpu::BindGroup,
     pipeline_layout: wgpu::PipelineLayout,
     textured_pipeline_layout: wgpu::PipelineLayout,
+    probe_pipeline_layout: wgpu::PipelineLayout,
+    probe_textured_pipeline_layout: wgpu::PipelineLayout,
     variants: std::collections::HashMap<(u64, wgpu::TextureFormat), TerrainPipelineVariant>,
     /// Offline capture pipelines keyed by capture-specialized features.
     capture_variants:
@@ -1264,14 +1297,19 @@ impl TerrainPipelineCache {
     pub(super) fn new(
         device: &wgpu::Device,
         lighting_layout: &wgpu::BindGroupLayout,
+        probe_lighting_layout: &wgpu::BindGroupLayout,
         texture_layout: &wgpu::BindGroupLayout,
         ibl_layout: &wgpu::BindGroupLayout,
     ) -> Self {
-        let slots = W08Slots::of_device(device, false);
-        let textured_slots = W08Slots::of_device(device, true);
+        let slots = W08Slots::of_device(device, false, false);
+        let textured_slots = W08Slots::of_device(device, true, false);
+        let probe_slots = W08Slots::of_device(device, false, true);
+        let probe_textured_slots = W08Slots::of_device(device, true, true);
         let bind_group_layout = terrain_bind_group_layout(device, slots);
-        let textured_bind_group_layout =
-            (textured_slots != slots).then(|| terrain_bind_group_layout(device, textured_slots));
+        let textured_bind_group_layout = terrain_bind_group_layout(device, textured_slots);
+        let probe_bind_group_layout = terrain_bind_group_layout(device, probe_slots);
+        let probe_textured_bind_group_layout =
+            terrain_bind_group_layout(device, probe_textured_slots);
         let empty_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("forge3d-web-terrain-empty-group-layout"),
             entries: &[],
@@ -1295,12 +1333,30 @@ impl TerrainPipelineCache {
             device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("forge3d-web-terrain-textured-pipeline-layout"),
                 bind_group_layouts: &[
-                    Some(
-                        textured_bind_group_layout
-                            .as_ref()
-                            .unwrap_or(&bind_group_layout),
-                    ),
+                    Some(&textured_bind_group_layout),
                     Some(lighting_layout),
+                    Some(texture_layout),
+                    Some(ibl_layout),
+                ],
+                immediate_size: 0,
+            });
+        let probe_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("forge3d-web-terrain-probe-pipeline-layout"),
+                bind_group_layouts: &[
+                    Some(&probe_bind_group_layout),
+                    Some(probe_lighting_layout),
+                    Some(&empty_layout),
+                    Some(ibl_layout),
+                ],
+                immediate_size: 0,
+            });
+        let probe_textured_pipeline_layout =
+            device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("forge3d-web-terrain-probe-textured-pipeline-layout"),
+                bind_group_layouts: &[
+                    Some(&probe_textured_bind_group_layout),
+                    Some(probe_lighting_layout),
                     Some(texture_layout),
                     Some(ibl_layout),
                 ],
@@ -1311,9 +1367,15 @@ impl TerrainPipelineCache {
             slots,
             textured_bind_group_layout,
             textured_slots,
+            probe_bind_group_layout,
+            probe_slots,
+            probe_textured_bind_group_layout,
+            probe_textured_slots,
             empty_bind_group,
             pipeline_layout,
             textured_pipeline_layout,
+            probe_pipeline_layout,
+            probe_textured_pipeline_layout,
             variants: std::collections::HashMap::new(),
             capture_variants: std::collections::HashMap::new(),
         }
@@ -1329,10 +1391,11 @@ impl TerrainPipelineCache {
         pass: super::offline::CapturePass,
     ) -> wgpu::RenderPipeline {
         let features = features.with_capture();
-        let pipeline_layout = if features.samples_scene_textures() {
-            &self.textured_pipeline_layout
-        } else {
-            &self.pipeline_layout
+        let pipeline_layout = match (features.probes(), features.samples_scene_textures()) {
+            (false, false) => &self.pipeline_layout,
+            (false, true) => &self.textured_pipeline_layout,
+            (true, false) => &self.probe_pipeline_layout,
+            (true, true) => &self.probe_textured_pipeline_layout,
         };
         self.capture_variants
             .entry((features.bits(), pass))
@@ -1346,7 +1409,7 @@ impl TerrainPipelineCache {
                     pipeline_layout,
                     &shader,
                     pass.entry_point(),
-                    &pass.color_targets(),
+                    &pass.color_targets_for(features.capture_blend()),
                 )
             })
             .clone()
@@ -1357,15 +1420,14 @@ impl TerrainPipelineCache {
         &self,
         features: ShaderFeatures,
     ) -> (&wgpu::BindGroupLayout, W08Slots) {
-        if features.samples_scene_textures() {
-            (
-                self.textured_bind_group_layout
-                    .as_ref()
-                    .unwrap_or(&self.bind_group_layout),
-                self.textured_slots,
-            )
-        } else {
-            (&self.bind_group_layout, self.slots)
+        match (features.probes(), features.samples_scene_textures()) {
+            (false, false) => (&self.bind_group_layout, self.slots),
+            (false, true) => (&self.textured_bind_group_layout, self.textured_slots),
+            (true, false) => (&self.probe_bind_group_layout, self.probe_slots),
+            (true, true) => (
+                &self.probe_textured_bind_group_layout,
+                self.probe_textured_slots,
+            ),
         }
     }
 
@@ -1373,9 +1435,18 @@ impl TerrainPipelineCache {
     /// untextured one (a device that cannot fit every W08 slot next to the
     /// scene textures).
     pub(super) fn textured_group0(&self) -> Option<(&wgpu::BindGroupLayout, W08Slots)> {
-        self.textured_bind_group_layout
-            .as_ref()
-            .map(|layout| (layout, self.textured_slots))
+        Some((&self.textured_bind_group_layout, self.textured_slots))
+    }
+
+    pub(super) fn probe_group0(&self, scene_textures: bool) -> (&wgpu::BindGroupLayout, W08Slots) {
+        if scene_textures {
+            (
+                &self.probe_textured_bind_group_layout,
+                self.probe_textured_slots,
+            )
+        } else {
+            (&self.probe_bind_group_layout, self.probe_slots)
+        }
     }
 
     /// Returns the pipeline for `features`, compiling it on first use.
@@ -1385,10 +1456,11 @@ impl TerrainPipelineCache {
         features: ShaderFeatures,
         surface_format: wgpu::TextureFormat,
     ) -> TerrainPipelineVariant {
-        let pipeline_layout = if features.samples_scene_textures() {
-            &self.textured_pipeline_layout
-        } else {
-            &self.pipeline_layout
+        let pipeline_layout = match (features.probes(), features.samples_scene_textures()) {
+            (false, false) => &self.pipeline_layout,
+            (false, true) => &self.textured_pipeline_layout,
+            (true, false) => &self.probe_pipeline_layout,
+            (true, true) => &self.probe_textured_pipeline_layout,
         };
         self.variants
             .entry((features.bits(), surface_format))
@@ -1677,6 +1749,7 @@ pub(super) struct TerrainRenderResources {
     pub(super) height_texture: wgpu::Texture,
     pub(super) height_width: u32,
     pub(super) height_height: u32,
+    pub(super) heightfield_origin: [f32; 2],
     pub(super) ao_output: Option<TerrainAnalysisOutput>,
     pub(super) sun_output: Option<TerrainAnalysisOutput>,
     #[allow(dead_code)]
@@ -1708,10 +1781,13 @@ pub(super) struct TerrainRenderResources {
     /// Fallback resources for W08 binding slots the layout exposes but this
     /// commit does not use.
     w08_fallbacks: W08BindingFallbacks,
-    /// W08 slots of the untextured profile (the superset `bind_group` binds).
-    slots: W08Slots,
     /// Group 0 for textured variants when their layout drops W08 slots.
     textured_bind_group: Option<wgpu::BindGroup>,
+    /// Group 0 for probe variants, whose lighting group consumes one more
+    /// fragment-stage storage-buffer slot than the W08 baseline.
+    probe_bind_group: wgpu::BindGroup,
+    /// Group 0 for textured probe variants.
+    probe_textured_bind_group: wgpu::BindGroup,
     /// Empty group 2 bound by untextured variants.
     empty_bind_group: wgpu::BindGroup,
 }
@@ -1724,15 +1800,19 @@ impl TerrainRenderResources {
         &'a self,
         scene_textures: &'a wgpu::BindGroup,
     ) -> (&'a wgpu::BindGroup, &'a wgpu::BindGroup) {
-        if self.features.samples_scene_textures() {
-            (
+        match (
+            self.features.probes(),
+            self.features.samples_scene_textures(),
+        ) {
+            (false, false) => (&self.bind_group, &self.empty_bind_group),
+            (false, true) => (
                 self.textured_bind_group
                     .as_ref()
                     .unwrap_or(&self.bind_group),
                 scene_textures,
-            )
-        } else {
-            (&self.bind_group, &self.empty_bind_group)
+            ),
+            (true, false) => (&self.probe_bind_group, &self.empty_bind_group),
+            (true, true) => (&self.probe_textured_bind_group, scene_textures),
         }
     }
 
@@ -1747,13 +1827,26 @@ impl TerrainRenderResources {
         if material0_flags & super::shader_variants::SCENE_TEXTURE_FLAGS == 0 {
             return Ok(());
         }
-        let slots = W08Slots::of_device(device, true);
+        let probes = self.features.probes();
+        let slots = W08Slots::of_device(device, true, probes);
         let sampled = device.limits().max_sampled_textures_per_shader_stage;
         if self.streaming.is_some() && !slots.page_table {
-            return Err(w08_limit_error("terrain streaming", 1, true, sampled));
+            return Err(w08_limit_error(
+                "terrain streaming",
+                1,
+                true,
+                sampled,
+                probes,
+            ));
         }
         if self.overlays.is_some() && !slots.overlays {
-            return Err(w08_limit_error("terrain overlays", 2, true, sampled));
+            return Err(w08_limit_error(
+                "terrain overlays",
+                2,
+                true,
+                sampled,
+                probes,
+            ));
         }
         if self.vt.is_some() && !slots.vt {
             return Err(w08_limit_error(
@@ -1761,6 +1854,7 @@ impl TerrainRenderResources {
                 3,
                 true,
                 sampled,
+                probes,
             ));
         }
         Ok(())
@@ -1821,6 +1915,7 @@ impl TerrainRenderResources {
                     1,
                     scene_textures,
                     sampled_limit,
+                    features.probes(),
                 ));
             }
             streaming_state = Some(super::terrain_w08::HeightStreamingState::new(
@@ -2133,29 +2228,40 @@ impl TerrainRenderResources {
                 },
             ]);
         }
-        let bind_group = context
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("forge3d-web-terrain-bind-group"),
-                layout: &bind_group_layout,
-                entries: &terrain_entries,
-            });
-        // Textured variants on a device that cannot also fit every W08 slot
-        // use a trimmed group 0 (same resources, fewer W08 bindings).
-        let textured_bind_group = pipeline_cache.textured_group0().map(|(layout, textured)| {
-            let entries = terrain_entries
-                .iter()
-                .filter(|entry| textured.keeps(entry.binding))
-                .cloned()
-                .collect::<Vec<_>>();
-            context
-                .device
-                .create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: Some("forge3d-web-terrain-textured-bind-group"),
-                    layout,
-                    entries: &entries,
-                })
+        let create_profile_group =
+            |label: &'static str, layout: &wgpu::BindGroupLayout, profile: W08Slots| {
+                let entries = terrain_entries
+                    .iter()
+                    .filter(|entry| profile.keeps(entry.binding))
+                    .cloned()
+                    .collect::<Vec<_>>();
+                context
+                    .device
+                    .create_bind_group(&wgpu::BindGroupDescriptor {
+                        label: Some(label),
+                        layout,
+                        entries: &entries,
+                    })
+            };
+        let bind_group =
+            create_profile_group("forge3d-web-terrain-bind-group", &bind_group_layout, slots);
+        // Each profile owns a group 0 whose W08 bindings match the storage
+        // and sampled-texture budget of its pipeline layout.
+        let textured_bind_group = pipeline_cache.textured_group0().map(|(layout, profile)| {
+            create_profile_group("forge3d-web-terrain-textured-bind-group", layout, profile)
         });
+        let (probe_layout, probe_profile) = pipeline_cache.probe_group0(false);
+        let probe_bind_group = create_profile_group(
+            "forge3d-web-terrain-probe-bind-group",
+            probe_layout,
+            probe_profile,
+        );
+        let (probe_textured_layout, probe_textured_profile) = pipeline_cache.probe_group0(true);
+        let probe_textured_bind_group = create_profile_group(
+            "forge3d-web-terrain-probe-textured-bind-group",
+            probe_textured_layout,
+            probe_textured_profile,
+        );
         let variant = pipeline_cache.variant(
             &context.device,
             features
@@ -2189,6 +2295,7 @@ impl TerrainRenderResources {
             height_texture,
             height_width: terrain.width,
             height_height: terrain.height,
+            heightfield_origin: terrain.heightfield_origin(),
             ao_output,
             sun_output,
             analysis_fallback_view,
@@ -2203,8 +2310,9 @@ impl TerrainRenderResources {
             overlays,
             vt,
             w08_fallbacks,
-            slots,
             textured_bind_group,
+            probe_bind_group,
+            probe_textured_bind_group,
             empty_bind_group: pipeline_cache.empty_bind_group.clone(),
         })
     }
@@ -2323,7 +2431,7 @@ impl TerrainRenderResources {
                 resource: wgpu::BindingResource::TextureView(view),
             });
         }
-        if self.slots.overlays {
+        if profile.overlays {
             let (view, sampler, uniform) = self
                 .overlays
                 .as_ref()
@@ -2354,7 +2462,7 @@ impl TerrainRenderResources {
                 },
             ]);
         }
-        if self.slots.vt {
+        if profile.vt {
             let (page_view, uniform, feedback) = self
                 .vt
                 .as_ref()
@@ -3524,6 +3632,7 @@ pub(super) const TERRAIN_SHADER: &str = concat!(
     include_str!("ibl_lighting.wgsl"),
     include_str!("shadow_lighting.wgsl"),
     include_str!("lighting.wgsl"),
+    include_str!("terrain_probes.wgsl"),
     include_str!("terrain_material.wgsl"),
     include_str!("terrain_w08.wgsl"),
     r#"
@@ -4347,6 +4456,41 @@ fn fs_capture_surface(input: VertexOutput) -> CaptureSurfaceOutput {
 #[cfg(test)]
 mod w08_slot_tests {
     use super::*;
+    #[test]
+    fn vt_storage_limits_count_actual_probe_and_base_layouts() {
+        let storage = |entries: &[wgpu::BindGroupLayoutEntry]| {
+            entries
+                .iter()
+                .filter(|entry| {
+                    entry.visibility.contains(wgpu::ShaderStages::FRAGMENT)
+                        && matches!(
+                            entry.ty,
+                            wgpu::BindingType::Buffer {
+                                ty: wgpu::BufferBindingType::Storage { .. },
+                                ..
+                            }
+                        )
+                })
+                .count() as u32
+        };
+        let all = W08Slots {
+            page_table: true,
+            overlays: true,
+            vt: true,
+        };
+        let terrain = storage(&terrain_layout_entries(all));
+        assert_eq!(
+            terrain + storage(&super::super::lighting::lighting_layout_entries()),
+            W08_STORAGE_BUFFERS_VT
+        );
+        assert_eq!(
+            terrain + storage(&super::super::lighting::lighting_layout_entries_with_probes()),
+            W09_STORAGE_BUFFERS_VT_PROBES
+        );
+        assert!(W08Slots::for_limits_with_probes(24, 3, false, false).vt);
+        assert!(!W08Slots::for_limits_with_probes(24, 3, false, true).vt);
+        assert!(W08Slots::for_limits_with_probes(24, 4, false, true).vt);
+    }
 
     fn fragment_textures(entries: &[wgpu::BindGroupLayoutEntry]) -> u32 {
         entries

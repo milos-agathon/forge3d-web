@@ -61,10 +61,26 @@ const TERRAIN_STREAMING: u64 = 1 << 42;
 const TERRAIN_OVERLAYS: u64 = 1 << 43;
 /// W08 terrain virtual texturing (group-0 bindings 17-19 + binding 8 atlas).
 const TERRAIN_VT: u64 = 1 << 44;
+/// W09 transparent scatter needs a core-WebGPU blendable HDR capture target.
+const CAPTURE_BLEND: u64 = 1 << 45;
+/// W09 local irradiance/reflection probes and their storage binding.
+const PROBES: u64 = 1 << 46;
 #[cfg(test)]
-const ALL_BITS: u64 = (1 << 45) - 1;
+const ALL_BITS: u64 = (1 << 47) - 1;
 
 impl ShaderFeatures {
+    pub(crate) fn capture_blend(self) -> bool {
+        self.0 & CAPTURE_BLEND != 0
+    }
+    pub(crate) fn with_capture_blend(self, enabled: bool) -> Self {
+        Self((self.0 & !CAPTURE_BLEND) | if enabled { CAPTURE_BLEND } else { 0 })
+    }
+    pub(crate) fn probes(self) -> bool {
+        self.0 & PROBES != 0
+    }
+    pub(crate) fn with_probes(self, enabled: bool) -> Self {
+        Self(self.0 & !PROBES).with(PROBES, enabled)
+    }
     /// Every region: the unspecialized template.
     #[cfg(test)]
     pub(crate) const ALL: Self = Self(ALL_BITS);
@@ -226,6 +242,7 @@ impl ShaderFeatures {
             "terrain_streaming" => TERRAIN_STREAMING,
             "terrain_overlay" | "terrain_overlays" => TERRAIN_OVERLAYS,
             "terrain_vt" => TERRAIN_VT,
+            "probes" => PROBES,
             other => {
                 if let Some(model) = other.strip_prefix("brdf_") {
                     let model: u32 = model.parse().expect("brdf feature index");
@@ -350,7 +367,12 @@ pub(super) fn runtime_lighting_features(
         runtime.ibl.as_ref(),
         runtime.shadows.as_ref(),
     ) {
-        (Some(lighting), Some(ibl), Some(shadows)) => Ok(lighting_features(lighting, ibl, shadows)),
+        (Some(lighting), Some(ibl), Some(shadows)) => Ok(lighting_features(lighting, ibl, shadows)
+            .with_probes(runtime.probe_count > 0)
+            .with(
+                CAPTURE_BLEND,
+                runtime.scatter.as_ref().is_some_and(|s| s.transparent()),
+            )),
         _ => Err(WebError::new(
             Forge3DErrorCode::RuntimeDisposed,
             "Runtime lighting resources are not available",

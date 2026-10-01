@@ -211,6 +211,14 @@ export class Forge3DWorkerRenderer {
     }
   }
 
+  /** Copies the camera to the worker session; await this before rendering it. */
+  async setCamera(camera: CameraInput): Promise<void> {
+    this.#assertLive();
+    const owned = structuredClone(camera);
+    await this.#client.call("setCamera", owned);
+    this.#state.camera = owned;
+  }
+
   render(): Promise<boolean> {
     this.#assertLive();
     return this.#client.call<boolean>("render");
@@ -458,6 +466,9 @@ function reconstructScene(snapshot: SceneSnapshot): Forge3DScene {
   }
   restoreSceneIbl(scene, snapshot.ibl ?? null);
   restoreSceneShadows(scene, snapshot.shadows ?? defaultShadowSnapshot());
+  if (snapshot.scatter !== undefined) scene.setScatterBatches(snapshot.scatter);
+  if (snapshot.probes !== undefined) scene.setLightingProbes(snapshot.probes);
+  if (snapshot.timeSeconds !== undefined) scene.setTimeSeconds(snapshot.timeSeconds);
   return scene;
 }
 

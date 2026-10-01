@@ -27,6 +27,8 @@ export function simulateRuntimeDeviceLossForTests(runtime: object): void {
 
 /** Stateless WASM exports used by the W06 frame/offline helpers. */
 export interface OfflineWasmExports {
+  bakeTerrainProbe?(input: unknown): { coefficients: number[]; reflectionMips: number[][] };
+  bakeTerrainProbeGrids?(input: unknown): { coefficients: number[]; reflectionMips: number[][] };
   exrChannelNames(prefix: string, channelCount: number): string[];
   encodeExr(input: unknown): Uint8Array;
   decodeExr(bytes: Uint8Array, maxDimension: number, maxPixels: number): unknown;
@@ -47,6 +49,38 @@ export function loadOfflineWasm(): Promise<OfflineWasmExports> {
     return Promise.reject(new Error("Forge3D WASM loader is not registered"));
   }
   return offlineWasmLoader();
+}
+
+interface WasmCoordinatorRecord {
+  selectedUrl: string;
+}
+
+/**
+ * Resolves the exact realm-selected WASM URL for the probe worker. Loading the
+ * offline bridge first preserves the facade's one-WASM-URL-per-realm contract,
+ * including an already selected custom `wasmUrl`.
+ */
+export async function loadProbeWorkerWasmAssets(): Promise<{
+  wasmModuleUrl: string;
+  wasmUrl: string;
+}> {
+  await loadOfflineWasm();
+  const key = Symbol.for("@forge3d/web.wasm-bridge-coordinator");
+  const coordinator = (globalThis as Record<PropertyKey, unknown>)[key] as
+    | { record?: WasmCoordinatorRecord }
+    | undefined;
+  const selectedUrl = coordinator?.record?.selectedUrl;
+  if (typeof selectedUrl !== "string") {
+    throw new Error("Forge3D WASM coordinator did not select a worker URL");
+  }
+  const sourceModule = new URL(import.meta.url).pathname.includes("/src-ts/");
+  return {
+    wasmModuleUrl: new URL(
+      sourceModule ? "../pkg/forge3d_web.js" : "./forge3d_web.js",
+      import.meta.url,
+    ).href,
+    wasmUrl: selectedUrl,
+  };
 }
 
 function requiredRuntimeInternals(runtime: object): RuntimeInternalAccess {

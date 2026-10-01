@@ -7,8 +7,10 @@ mod init;
 mod lighting;
 mod memory;
 pub(crate) mod offline;
+mod probes;
 mod readback;
 mod render;
+mod scatter;
 mod scene;
 mod shader_variants;
 mod shadows;
@@ -53,6 +55,16 @@ pub struct Forge3DRuntime {
     #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
     terrain_pipeline_cache: Option<terrain::TerrainPipelineCache>,
     scene: Option<scene::NativeScene>,
+    scatter: Option<scatter::ScatterResources>,
+    time_seconds: f32,
+    probe_count: u32,
+    reflection_probe_count: u32,
+    probe_bytes: u64,
+    probe_position_bytes: u64,
+    probe_coefficient_bytes: u64,
+    probe_irradiance_position_bytes: u64,
+    probe_reflection_position_bytes: u64,
+    probe_reflection_bytes: u64,
     lighting: Option<lighting::LightingResources>,
     textures: Option<textures::TextureResources>,
     ibl: Option<ibl::IblResources>,
@@ -133,6 +145,7 @@ impl Forge3DRuntime {
         self.terrain = None;
         self.terrain_pipeline_cache = None;
         self.scene = None;
+        self.scatter = None;
         self.lighting = None;
         self.textures = None;
         self.ibl = None;
@@ -176,6 +189,78 @@ impl Forge3DRuntime {
     pub fn set_scene(&mut self, snapshot: JsValue) -> Result<(), JsValue> {
         self.guard_mutation()?;
         scene::set_scene_runtime(self, snapshot).map_err(to_js_error)
+    }
+
+    #[wasm_bindgen(js_name = setScatterBatches)]
+    pub fn set_scatter_batches(&mut self, batches: JsValue) -> Result<(), JsValue> {
+        self.guard_mutation()?;
+        scatter::set(self, batches).map_err(to_js_error)
+    }
+
+    #[wasm_bindgen(js_name = setTimeSeconds)]
+    pub fn set_time_seconds(&mut self, time: f32) -> Result<(), JsValue> {
+        self.guard_mutation()?;
+        if !time.is_finite() {
+            return Err(to_js_error(scatter::invalid("timeSeconds must be finite")));
+        }
+        self.time_seconds = time;
+        Ok(())
+    }
+
+    #[wasm_bindgen(js_name = setLightingProbes)]
+    pub fn set_lighting_probes(&mut self, input: JsValue) -> Result<(), JsValue> {
+        self.guard_mutation()?;
+        probes::set(self, input).map_err(to_js_error)
+    }
+
+    #[wasm_bindgen(js_name = getProbeMemoryReport)]
+    pub fn get_probe_memory_report(&self) -> Result<JsValue, JsValue> {
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        #[derive(serde::Serialize)]
+        #[serde(rename_all = "camelCase")]
+        struct Report {
+            probe_count: u64,
+            irradiance_probe_count: u64,
+            reflection_probe_count: u64,
+            gpu_bytes: u64,
+            coefficient_bytes: u64,
+            position_bytes: u64,
+            irradiance_position_bytes: u64,
+            reflection_position_bytes: u64,
+            reflection_bytes: u64,
+        }
+        serde_wasm_bindgen::to_value(&Report {
+            probe_count: u64::from(self.probe_count),
+            irradiance_probe_count: u64::from(self.probe_count),
+            reflection_probe_count: u64::from(self.reflection_probe_count),
+            gpu_bytes: self.probe_bytes,
+            coefficient_bytes: self.probe_coefficient_bytes,
+            position_bytes: self.probe_position_bytes,
+            irradiance_position_bytes: self.probe_irradiance_position_bytes,
+            reflection_position_bytes: self.probe_reflection_position_bytes,
+            reflection_bytes: self.probe_reflection_bytes,
+        })
+        .map_err(|e| to_js_error(scatter::invalid(e.to_string())))
+    }
+
+    #[wasm_bindgen(js_name = getScatterStats)]
+    pub fn get_scatter_stats(&self) -> Result<JsValue, JsValue> {
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        let stats = self
+            .scatter
+            .as_ref()
+            .map(|s| s.stats.clone())
+            .unwrap_or_default();
+        serde_wasm_bindgen::to_value(&stats)
+            .map_err(|e| to_js_error(scatter::invalid(e.to_string())))
+    }
+
+    #[wasm_bindgen(js_name = getScatterMemoryReport)]
+    pub fn get_scatter_memory_report(&self) -> Result<JsValue, JsValue> {
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        let default = scatter::MemoryReport::default();
+        serde_wasm_bindgen::to_value(self.scatter.as_ref().map_or(&default, |s| &s.memory))
+            .map_err(|e| to_js_error(scatter::invalid(e.to_string())))
     }
 
     #[wasm_bindgen(js_name = setLighting)]
@@ -827,6 +912,16 @@ mod tests {
             terrain: None,
             terrain_pipeline_cache: None,
             scene: None,
+            scatter: None,
+            time_seconds: 0.0,
+            probe_count: 0,
+            reflection_probe_count: 0,
+            probe_coefficient_bytes: 0,
+            probe_irradiance_position_bytes: 0,
+            probe_reflection_position_bytes: 0,
+            probe_reflection_bytes: 0,
+            probe_bytes: 64,
+            probe_position_bytes: 0,
             lighting: None,
             textures: None,
             ibl: None,

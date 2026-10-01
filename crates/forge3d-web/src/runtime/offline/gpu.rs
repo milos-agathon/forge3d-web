@@ -77,6 +77,7 @@ impl CaptureTargets {
         height: u32,
         surface: bool,
         overlay: bool,
+        blend: bool,
     ) -> Self {
         let (sw, sh) = if surface { (width, height) } else { (1, 1) };
         let (ow, oh) = if overlay { (width, height) } else { (1, 1) };
@@ -84,7 +85,11 @@ impl CaptureTargets {
         Self {
             color: target(
                 "forge3d-web-capture-color",
-                CAPTURE_COLOR_FORMAT,
+                if blend {
+                    wgpu::TextureFormat::Rgba16Float
+                } else {
+                    CAPTURE_COLOR_FORMAT
+                },
                 width,
                 height,
             ),

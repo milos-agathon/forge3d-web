@@ -26,6 +26,7 @@ try {
   const facadeBPath = emitFacadeCopy("copy-b");
   const facadeA = await import(pathToFileURL(facadeAPath));
   const facadeB = await import(pathToFileURL(facadeBPath));
+  for (const name of ["packTerrainProbes", "validateProbeSnapshot", "normalizeProbeGrid", "normalizeScatterBatches", "selectScatterLods", "scatterMemoryReport", "probeShBasis", "probeCubeDirection"]) assert.equal(name in facadeA, false, `internal W09 helper exported: ${name}`);
   const internalsA = await import(
     pathToFileURL(join(dirname(facadeAPath), "runtime-internals.js"))
   );
@@ -33,6 +34,19 @@ try {
   assert.deepEqual(
     Object.keys(facadeA).sort(),
     [
+      "ScatterWindSettings",
+      "TerrainLightingProbes",
+      "TerrainScatterBatch",
+      "TerrainScatterSource",
+      "autoScatterLodLevels",
+      "bilinearScatterSample",
+      "getTerrainProbeMaterialDefaults",
+      "gridScatterTransforms",
+      "makeScatterTransform",
+      "scatterMeshBounds",
+      "scatterTransformBounds",
+      "seededScatterTransforms",
+      "simplifyScatterMesh",
       "AOV_ID_BACKGROUND",
       "AOV_ID_SCENE_NODE_BASE",
       "AOV_ID_TERRAIN",
@@ -181,7 +195,7 @@ try {
       "writeExr",
       "writeFrames",
       "yawPitchFromDirection",
-    ],
+    ].sort(),
     "the implemented facade must export the frozen runtime, viewer, scene, session, and config surface",
   );
   // W05 camera math runs from the emitted package without WebGPU or WASM.

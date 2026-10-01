@@ -16,7 +16,8 @@ use crate::error::{map_core_error, Forge3DErrorCode, WebError};
 
 pub(super) const LIGHTING_BUFFER_BYTES: u64 = (MAX_LIGHTS * std::mem::size_of::<PackedLight>())
     as u64
-    + std::mem::size_of::<forge3d_core::lighting::LightingUniform>() as u64;
+    + std::mem::size_of::<forge3d_core::lighting::LightingUniform>() as u64
+    + 64;
 pub(super) const LTC_TEXTURE_BYTES: u64 = 2 * (LTC_LUT_SIZE * LTC_LUT_SIZE * 16) as u64;
 pub(super) const MATERIAL_BUFFER_BYTES: u64 =
     (MAX_MATERIALS as usize * std::mem::size_of::<PackedMaterial>()
@@ -34,6 +35,7 @@ pub(super) fn lighting_memory_keys() -> [&'static str; 3] {
 
 #[allow(dead_code)]
 pub(super) struct LightingResources {
+    pub probe_buffer: wgpu::Buffer,
     pub lights_buffer: wgpu::Buffer,
     pub uniform_buffer: wgpu::Buffer,
     pub materials_buffer: wgpu::Buffer,
@@ -42,7 +44,11 @@ pub(super) struct LightingResources {
     /// amplitude in `.r`, so area lights take a single sampled-texture slot.
     pub ltc_lut_view: wgpu::TextureView,
     pub ltc_sampler: wgpu::Sampler,
+    /// Layout used by shaders with the probe region omitted.
+    pub base_bind_group_layout: wgpu::BindGroupLayout,
+    /// Layout matching the currently committed lighting bind group.
     pub bind_group_layout: wgpu::BindGroupLayout,
+    pub probe_bind_group_layout: wgpu::BindGroupLayout,
     pub bind_group: wgpu::BindGroup,
     pub(super) state: LightingState,
     pub(super) light_ids: Vec<u32>,
@@ -94,6 +100,13 @@ impl LightingResources {
                     contents: bytemuck::bytes_of(&material_state.uniform()),
                     usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
                 });
+        let probe_buffer = context
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("local-probes-fallback"),
+                contents: &[0; 64],
+                usage: wgpu::BufferUsages::STORAGE,
+            });
 
         let lut = forge3d_core::lighting::generate_ltc_lut();
         let mut lut_rows: Vec<[f32; 4]> = lut.matrix.clone();
@@ -121,38 +134,24 @@ impl LightingResources {
                     label: Some("forge3d-web-lighting-bind-group-layout"),
                     entries: &lighting_layout_entries(),
                 });
-        let bind_group = context
-            .device
-            .create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("forge3d-web-lighting-bind-group"),
-                layout: &bind_group_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: lights_buffer.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: uniform_buffer.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: wgpu::BindingResource::TextureView(&ltc_lut_view),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 4,
-                        resource: wgpu::BindingResource::Sampler(&ltc_sampler),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 5,
-                        resource: materials_buffer.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 6,
-                        resource: material_uniform_buffer.as_entire_binding(),
-                    },
-                ],
-            });
+        let probe_bind_group_layout =
+            context
+                .device
+                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    label: Some("forge3d-web-probe-lighting-bind-group-layout"),
+                    entries: &lighting_layout_entries_with_probes(),
+                });
+        let bind_group = create_lighting_bind_group(
+            &context.device,
+            &bind_group_layout,
+            &lights_buffer,
+            &uniform_buffer,
+            &ltc_lut_view,
+            &ltc_sampler,
+            &materials_buffer,
+            &material_uniform_buffer,
+            None,
+        );
 
         memory.replace(
             LIGHTING_BUFFER_KEY,
@@ -171,13 +170,16 @@ impl LightingResources {
         )?;
 
         let resources = Self {
+            probe_buffer,
             lights_buffer,
             uniform_buffer,
             materials_buffer,
             material_uniform_buffer,
             ltc_lut_view,
             ltc_sampler,
+            base_bind_group_layout: bind_group_layout.clone(),
             bind_group_layout,
+            probe_bind_group_layout,
             bind_group,
             state: state.clone(),
             light_ids,
@@ -186,6 +188,30 @@ impl LightingResources {
         resources.write_state(context, state);
         resources.write_materials(context, material_state);
         Ok(resources)
+    }
+
+    pub(super) fn bind_group_for_probes(
+        &self,
+        context: &forge3d_core::gpu::GpuContext,
+        probe_buffer: Option<&wgpu::Buffer>,
+    ) -> (wgpu::BindGroupLayout, wgpu::BindGroup) {
+        let layout = if probe_buffer.is_some() {
+            &self.probe_bind_group_layout
+        } else {
+            &self.base_bind_group_layout
+        };
+        let group = create_lighting_bind_group(
+            &context.device,
+            layout,
+            &self.lights_buffer,
+            &self.uniform_buffer,
+            &self.ltc_lut_view,
+            &self.ltc_sampler,
+            &self.materials_buffer,
+            &self.material_uniform_buffer,
+            probe_buffer,
+        );
+        (layout.clone(), group)
     }
 
     #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
@@ -307,9 +333,82 @@ fn upload_ltc_texture(
     texture.create_view(&wgpu::TextureViewDescriptor::default())
 }
 
+#[allow(clippy::too_many_arguments)]
+fn create_lighting_bind_group(
+    device: &wgpu::Device,
+    layout: &wgpu::BindGroupLayout,
+    lights: &wgpu::Buffer,
+    uniforms: &wgpu::Buffer,
+    ltc_lut: &wgpu::TextureView,
+    ltc_sampler: &wgpu::Sampler,
+    materials: &wgpu::Buffer,
+    material_uniforms: &wgpu::Buffer,
+    probes: Option<&wgpu::Buffer>,
+) -> wgpu::BindGroup {
+    let mut entries = vec![
+        wgpu::BindGroupEntry {
+            binding: 0,
+            resource: lights.as_entire_binding(),
+        },
+        wgpu::BindGroupEntry {
+            binding: 1,
+            resource: uniforms.as_entire_binding(),
+        },
+        wgpu::BindGroupEntry {
+            binding: 2,
+            resource: wgpu::BindingResource::TextureView(ltc_lut),
+        },
+        wgpu::BindGroupEntry {
+            binding: 4,
+            resource: wgpu::BindingResource::Sampler(ltc_sampler),
+        },
+        wgpu::BindGroupEntry {
+            binding: 5,
+            resource: materials.as_entire_binding(),
+        },
+        wgpu::BindGroupEntry {
+            binding: 6,
+            resource: material_uniforms.as_entire_binding(),
+        },
+    ];
+    if let Some(probes) = probes {
+        entries.push(wgpu::BindGroupEntry {
+            binding: 3,
+            resource: probes.as_entire_binding(),
+        });
+    }
+    device.create_bind_group(&wgpu::BindGroupDescriptor {
+        label: Some(if probes.is_some() {
+            "forge3d-web-probe-lighting-bind-group"
+        } else {
+            "forge3d-web-lighting-bind-group"
+        }),
+        layout,
+        entries: &entries,
+    })
+}
+
 #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
-pub(super) fn lighting_layout_entries() -> [wgpu::BindGroupLayoutEntry; 6] {
-    [
+pub(super) fn lighting_layout_entries() -> Vec<wgpu::BindGroupLayoutEntry> {
+    lighting_layout_entries_for(false)
+}
+
+pub(super) fn lighting_layout_entries_with_probes() -> Vec<wgpu::BindGroupLayoutEntry> {
+    lighting_layout_entries_for(true)
+}
+
+fn lighting_layout_entries_for(probes: bool) -> Vec<wgpu::BindGroupLayoutEntry> {
+    let mut entries = vec![
+        wgpu::BindGroupLayoutEntry {
+            binding: 3,
+            visibility: wgpu::ShaderStages::FRAGMENT,
+            ty: wgpu::BindingType::Buffer {
+                ty: wgpu::BufferBindingType::Storage { read_only: true },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        },
         wgpu::BindGroupLayoutEntry {
             binding: 0,
             visibility: wgpu::ShaderStages::FRAGMENT,
@@ -366,7 +465,11 @@ pub(super) fn lighting_layout_entries() -> [wgpu::BindGroupLayoutEntry; 6] {
             },
             count: None,
         },
-    ]
+    ];
+    if !probes {
+        entries.remove(0);
+    }
+    entries
 }
 
 #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
@@ -1041,10 +1144,10 @@ mod tests {
     fn lighting_byte_accounting_matches_the_gpu_layout() {
         assert_eq!(std::mem::size_of::<PackedLight>(), 112);
         assert_eq!(std::mem::size_of::<PackedMaterial>(), 64);
-        assert_eq!(LIGHTING_BUFFER_BYTES, 64 * 112 + 32);
+        assert_eq!(LIGHTING_BUFFER_BYTES, 64 * 112 + 32 + 64);
         assert_eq!(LTC_TEXTURE_BYTES, 2 * 64 * 64 * 16);
         assert_eq!(MATERIAL_BUFFER_BYTES, 256 * 64 + 16);
-        assert_eq!(LIGHTING_TOTAL_BYTES, 154_672);
+        assert_eq!(LIGHTING_TOTAL_BYTES, 154_736);
         assert_eq!(lighting_memory_keys().len(), 3);
     }
 

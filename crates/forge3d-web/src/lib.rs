@@ -2,6 +2,7 @@ pub mod error;
 pub mod inputs;
 pub mod io;
 pub mod offline_api;
+pub mod probe_api;
 pub mod runtime;
 pub mod terrain_material_input;
 
