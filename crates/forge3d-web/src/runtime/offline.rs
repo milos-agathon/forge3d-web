@@ -617,7 +617,7 @@ fn create_session(
     };
 
     if let Some(e) = &runtime.environment {
-        e.update_capture(context, &initial);
+        e.update_capture(context, &initial, runtime.terrain.as_ref());
     }
     // Unjittered reference pass: depth, ID and motion AOVs.
     super::scatter::prepare(runtime, Some(&initial))?;
@@ -883,7 +883,7 @@ async fn accumulate_samples(
         );
         super::environment::refresh(runtime)?;
         if let Some(e) = &runtime.environment {
-            e.update_capture(&context, &uniform);
+            e.update_capture(&context, &uniform, runtime.terrain.as_ref());
         }
         super::shadows::refresh_shadow_state(runtime)?;
         let mut encoder = context

@@ -136,6 +136,42 @@ pub(super) fn refresh(runtime: &mut Forge3DRuntime) -> Result<(), WebError> {
     if let Some(e) = &runtime.environment {
         e.update(runtime)?;
     }
+    if let (Some(terrain), Some(context)) = (&runtime.terrain, &runtime.context) {
+        let mut values = [[0.0f32; 4]; 8];
+        if let Some(e) = &runtime.environment {
+            if let Some(sky) = &e.snapshot.sky {
+                let sun = e.snapshot.sun_at(runtime.time_seconds);
+                values[0] = [
+                    u32::from(sky.aerial_perspective) as f32,
+                    sky.aerial_density,
+                    0.,
+                    0.,
+                ];
+                values[1] = [sun[0], sun[1], sun[2], sky.turbidity];
+                values[2] = [
+                    sky.ground_albedo,
+                    sky.sun_size,
+                    sky.sun_intensity,
+                    sky.exposure,
+                ];
+                values[3][0] = u32::from(sky.model == "hosek-wilkie") as f32;
+                let vp = runtime
+                    .camera
+                    .view_projection_matrix(runtime.width as f32 / runtime.height as f32)
+                    .map_err(crate::error::map_core_error)?;
+                values[4..].copy_from_slice(
+                    &glam::Mat4::from_cols_array_2d(&vp)
+                        .inverse()
+                        .to_cols_array_2d(),
+                );
+            }
+        }
+        context.queue.write_buffer(
+            &terrain.material.uniform_buffer,
+            std::mem::size_of::<forge3d_core::terrain_material::TerrainMaterialUniform>() as u64,
+            bytemuck::cast_slice(&values),
+        );
+    }
     Ok(())
 }
 pub(super) fn prepare_resize(

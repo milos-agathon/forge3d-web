@@ -35,6 +35,9 @@ pub struct Sky {
     pub ground_albedo: f32,
     pub sun_size: f32,
     pub exposure: f32,
+    pub sun_intensity: f32,
+    pub aerial_perspective: bool,
+    pub aerial_density: f32,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -48,10 +51,14 @@ pub struct Fog {
     pub color: [f32; 3],
     pub anisotropy: f32,
     pub god_rays: bool,
+    pub shaft_intensity: f32,
+    pub shaft_samples: u32,
+    pub use_shadows: bool,
 }
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Clouds {
+    pub render_path: String,
     pub color: [f32; 3],
     pub scatter_strength: f32,
     pub mode: String,
@@ -61,6 +68,7 @@ pub struct Clouds {
     pub height: f32,
     pub thickness: f32,
     pub wind: [f32; 2],
+    pub animation_speed: f32,
     pub seed: u32,
     pub shadow_strength: f32,
     pub absorption: f32,
@@ -81,6 +89,16 @@ pub struct DensityVolume {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct WaterLayer {
+    pub mode: String,
+    pub fresnel_power: f32,
+    pub hue_shift: f32,
+    pub tint_color: [f32; 3],
+    pub tint_strength: f32,
+    pub ripple_scale: f32,
+    pub ripple_speed: f32,
+    pub refraction_strength: f32,
+    pub shore_attenuation_width: f32,
+    pub wave_distortion_strength: f32,
     pub bounds: [f32; 4],
     pub height: f32,
     pub shallow_color: [f32; 3],

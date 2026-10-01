@@ -38,10 +38,23 @@ snapshots, workers and viewer recovery.
 
 ## Atmosphere and density volumes
 
+Sky controls include `aerialPerspective` (default true), `aerialDensity`
+(default 1) and sky-level `sunIntensity` (default 1), separate from the
+directional light intensity. Turbidity, ground albedo, sun size, sky intensity,
+exposure and aerial density affect covered terrain pixels. Setting density to
+zero or disabling aerial perspective removes this contribution. Screen terrain
+uses the native aerial formula before tonemapping; perspective terrain and
+general geometry use the shared depth compositor. Fog in-scatter samples the
+sky when enabled, otherwise the configured fog color. `sunSize` is the native
+scale (default 1), not an angular radius.
+
 Preetham and the native analytic Hosek-Wilkie approximation share a depth
 composition pass for terrain and general geometry. Fog modes are `uniform`,
 `height` (falloff above a base height) and `exponential`. Scattering and
-absorption control extinction; HG anisotropy is bounded to -0.95..0.95.
+absorption control extinction; HG anisotropy accepts the native -1..1 range.
+Fog defaults match native: uniform, anisotropy 0, god rays off and falloff 0.1.
+`shaftIntensity` defaults to 1, `shaftSamples` to 32 (8..128), and `useShadows`
+to true. `useShadows: false` bypasses occlusion for scattered shafts.
 `godRays` samples configured cascaded shadow maps, with screen depth occlusion
 when shadow maps are disabled.
 
@@ -63,12 +76,22 @@ and returns no partial field on cancellation.
 
 ## Clouds and water
 
-Cloud modes are `billboard` (one slab sample), `volumetric` and `hybrid`
-(volumetric nearby, billboard at distance). Wind presets are `static`,
-`gentle`, `moderate` and `stormy`; explicit XZ wind overrides their speed.
-Coverage, density, thickness, scale, seed, color, scatter strength, absorption
-and ambient light are independent controls. Native cloud scattering uses the
-scene IBL. Projected cloud density casts terrain and general geometry shadows.
+Clouds expose `renderPath: "world" | "native"`. The default world path preserves
+depth-clipped clouds and projected terrain shadows: billboard is one slab
+sample, volumetric ray-marches, and hybrid selects the distant slab sample.
+The native path reproduces the public native renderer's indexed clip-space
+quad and billboard/volumetric/hybrid density modulation. The pinned native
+vertex shader uses clip-space XY directly; it does not transform instances
+into world-facing billboards. The web native path evaluates the quantized R8
+noise/shape texels analytically and uses the native default IBL tint. Its fixed
+noise ignores `seed`, and it has no world occlusion, height placement or cloud
+shadows, matching that native pass. Use the world path for seeded clouds and
+scene IBL lighting.
+
+Presets static/gentle/moderate/stormy set wind strength 0/0.2/0.5/1.2 and
+`animationSpeed` 0/0.3/0.8/2. Explicit XZ wind overrides strength/direction;
+animation speed multiplies elapsed time independently. Density, coverage,
+scale, color, scatter strength, absorption and ambient remain independent.
 
 Water bounds are `[minX,minZ,maxX,maxZ]`. Explicit masks use X-fastest values
 0..1 and `maskDimensions`. Automatic DEM water detection remains removed.
@@ -76,6 +99,29 @@ Water has depth color, the three native wave terms, upward wave normals,
 Fresnel/specular light and shoreline foam. Reflection tiers are analytic
 `sky`, depth-tested `screen`, and `planar`. Planar layers render mirrored
 terrain/scene/scatter with clipping below the plane. Four layers are supported.
+Water controls also include `fresnelPower`, `hueShift` (radians), `tintColor`,
+`tintStrength`, `rippleScale`, `rippleSpeed`, `refractionStrength`,
+`shoreAttenuationWidth` (world units) and `waveDistortionStrength`. Modes are
+`disabled`, `transparent`, `reflective` and `animated`; only animated mode
+displaces the surface, and transparent suppresses reflection blending.
+
+`TerrainMaterialInput.waterMask` independently ports native masked terrain
+water, with nearest sampling, native depth color, directional wave normals,
+IOR 1.33 Fresnel and GGX sun/IBL. It uses the auxiliary texture alpha channel
+and reports `water` in `maskChannels`. Mask data is owned Uint8 coverage or
+shore-distance values, 0..255; dimensions match the terrain UV convention.
+
+Deliberate water divergences preserve the existing explicit-layer appearance:
+mode defaults to animated (native transparent), tint/ripples/refraction default
+to zero (native 0.2/1/0.3). Existing web alpha 0.8, wave amplitude/frequency/speed
+0.05/3/0.5, reflection strength 0.6 and foam remain unchanged; native surface
+defaults are 0.7, 0.1/2/1, 0.8 and foam off. Explicit plane foam/refraction use
+world depth and screen samples rather than native pixel-width foam and its
+procedural refraction tint. Masked terrain water currently uses IBL reflections;
+the explicit water layers own mirrored scene reflection passes. Historical
+water-reflection image agreement therefore does not prove equivalence for
+every masked-terrain planar-reflection scene.
+
 Debug views are `water-mask`, `foam`, `reflection`, `clouds` and `transmittance`.
 
 Offline HDR captures include atmosphere and water. Water surface depth,
@@ -103,6 +149,11 @@ sources and independent Rust executables. GPU probes compare native sky,
 cloud scattering and water wave arithmetic with max error <1e-3 and SSIM
 >=0.98, including negative controls. Full-frame cloud/water/sky images are
 browser compositor regression goldens, distinct from the native probes.
+`tests/playwright/w10_native.spec.ts` additionally compares actual web renders
+against installed-native atmosphere, masked-water and cloud scenes at SSIM
+>=0.98, including the applicable historical terrain PNGs. The native fixture
+manifest records source commits, native versions, binary hashes and image
+hashes. See the regeneration instructions in the verification document.
 `npm run test:package-consumer:w10` installs a packed package in a clean
 consumer and runs environment, offline, worker, recovery and golden checks
 alongside the existing W03-W09 package checks.

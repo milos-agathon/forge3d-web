@@ -5,7 +5,7 @@ import {
 } from "../browser/webgpu-fixture";
 declare global {
   interface Window {
-    __w10: Record<string, () => Promise<any>>;
+    __w10: Record<string, (...args:any[]) => Promise<any>>;
   }
 }
 for (const dist of [false, true])
@@ -170,7 +170,7 @@ test("W10 cloud modes, terrain shadows, planar reflections and waves", async ({
   expect(r.planarDelta).toBeGreaterThan(0.01);
   expect(r.waveDelta).toBeGreaterThan(0.01);
 });
-import { writeFileSync } from "node:fs";
+import { writeFileSync, readFileSync } from "node:fs";
 test("W10 rendered sky, cloud and water golden images", async ({
   page,
   webgpuAvailability,
@@ -245,4 +245,39 @@ test("W10 sky, clouds, froxel and planar water fit 16 sampled-texture devices", 
   expect(r.render.water.delta).toBeGreaterThan(0.1);
   expect(r.quality.froxelDelta).toBeLessThan(1);
   expect(errors).toEqual([]);
+});
+
+test("W10 sky-driven aerial controls and rendered sunrise change covered terrain", async ({page,webgpuAvailability})=>{
+  skipRenderAssertionsWhenProbing(webgpuAvailability);
+  await page.goto("/examples/test-w10.html");await page.waitForFunction(()=>window.__w10!==undefined);
+  const r=await page.evaluate(()=>window.__w10.aerial!());console.log("Aerial",r);
+  expect(r.covered).toBeGreaterThan(1000);
+  for(const [name,value] of Object.entries<number>(r.controls))expect(value,name).toBeGreaterThan(0.15);
+  expect(r.disabledDelta).toBe(0);expect(r.zeroDelta).toBe(0);
+  expect(r.sunriseElevation).toBeGreaterThan(-2);expect(r.sunriseElevation).toBeLessThan(5);
+  expect(r.sunriseDelta).toBeGreaterThan(0.15);expect(r.sunriseHash).toBe(r.sunriseRepeat);
+});
+test("W10 native water controls affect rendered pixels",async({page,webgpuAvailability})=>{
+ skipRenderAssertionsWhenProbing(webgpuAvailability);
+ await page.goto("/examples/test-w10.html");await page.waitForFunction(()=>window.__w10!==undefined);
+ const r=await page.evaluate(()=>window.__w10.waterControls!());console.log("Water controls",r);
+ expect(r.disabledMatches).toBe(true);
+ for(const [name,value] of Object.entries<number>(r))if(name!=="disabledMatches")expect(value,name).toBeGreaterThan(0.001);
+});
+test("W10 volume-temporal-v1 at its recorded 1920x1080 dimensions",async({page,webgpuAvailability})=>{
+ skipRenderAssertionsWhenProbing(webgpuAvailability);
+ const contract=JSON.parse(readFileSync(new URL("../golden/w10/volume-temporal-v1.json",import.meta.url),"utf8"));
+ await page.goto("/examples/test-w10.html");await page.waitForFunction(()=>window.__w10!==undefined);
+ const r=await page.evaluate(c=>window.__w10.bounds!(c.width,c.height,c),contract);console.log("Volume temporal",r);
+ expect(r.width).toBe(contract.width);expect(r.height).toBe(contract.height);expect(r.historyValid).toBe(true);
+ expect(r.max).toBeLessThanOrEqual(contract.outsideMaxByteDifference);expect(r.outsideMax).toBeLessThanOrEqual(contract.outsideMaxByteDifference);
+ expect(r.outsidePixels).toBeGreaterThan(10000);expect(r.insideChanged).toBeGreaterThan(contract.minimumContributingPixels);
+});
+test("W10 absent environment preserves W09 display and HDR bytes",async({page,webgpuAvailability})=>{
+ skipRenderAssertionsWhenProbing(webgpuAvailability);
+ const contract=JSON.parse(readFileSync(new URL("../golden/w10/w09-preservation.json",import.meta.url),"utf8"));
+ await page.goto("/examples/test-w10.html");await page.waitForFunction(()=>window.__w10!==undefined);
+ const result=await page.evaluate(()=>window.__w10.preservation!());
+ expect(result).toEqual(contract.frames);
+ for(const r of Object.values<any>(result))expect(r.covered).toBeGreaterThan(1000);
 });

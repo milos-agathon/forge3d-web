@@ -34,7 +34,7 @@ export function environmentMemoryReport(
     width * height * 4 +
     effectWidth * effectHeight * 20 +
     (8 * 16 +
-      4 * 32 +
+      4 * 48 +
       s.volumes.reduce((n, v) => n + v.data.length, 0) +
       s.water.reduce((n, w) => n + w.mask.length, 0)) *
       4 +

@@ -14,10 +14,10 @@ describe("W10 native UTC ephemeris and owned configuration", () => {
   it("matches 48 independently executed native sun vectors", () => {
     for (const c of truth.cases) {
       const s = sunPosition(c.latitude, c.longitude, c.utc);
-      expect(s.azimuth).toBeCloseTo(c.azimuth, 8);
-      expect(s.elevation).toBeCloseTo(c.elevation, 8);
+      expect(Math.abs(s.azimuth-c.azimuth)).toBeLessThanOrEqual(truth.tolerances.angularDegrees);
+      expect(Math.abs(s.elevation-c.elevation)).toBeLessThanOrEqual(truth.tolerances.angularDegrees);
       s.direction.forEach((v, i) =>
-        expect(Math.abs(v - c.direction[i])).toBeLessThan(1e-6),
+        expect(Math.abs(v - c.direction[i])).toBeLessThanOrEqual(truth.tolerances.directionAbs),
       );
     }
   });
@@ -88,7 +88,7 @@ describe("W10 native UTC ephemeris and owned configuration", () => {
       { clouds: { seed: 1.5 } },
       { resolutionScale: 0.7 },
       { steps: 9.5 },
-      { fog: { anisotropy: 1 } },
+      { fog: { anisotropy: 1.001 } },
     ])
       expect(() => normalizeEnvironment(input as any)).toThrow();
   });
@@ -112,6 +112,18 @@ describe("W10 native UTC ephemeris and owned configuration", () => {
     expect(s.clouds!.wind).toEqual([0, 0]);
     expect(normalizeEnvironment(JSON.parse(JSON.stringify(s)))).toEqual(s);
   });
+});
+
+it("uses native sky/fog defaults and accepts HG endpoints without NaN inputs",()=>{
+  const s=normalizeEnvironment({sky:{},fog:{},clouds:{preset:"gentle"}});
+  expect(s.sky).toMatchObject({sunSize:1,groundAlbedo:0.3,sunIntensity:1,aerialPerspective:true,aerialDensity:1});
+  expect(s.fog).toMatchObject({mode:"uniform",anisotropy:0,godRays:false,falloff:0.1,shaftIntensity:1,shaftSamples:32,useShadows:true});
+  expect(s.clouds!.animationSpeed).toBe(0.3);
+  for(const anisotropy of [-1,1])expect(normalizeEnvironment({fog:{anisotropy}}).fog!.anisotropy).toBe(anisotropy);
+});
+
+it("rejects invalid new native controls at the authoring boundary",()=>{
+  for(const input of [{sky:{aerialDensity:-1}},{sky:{aerialPerspective:1}},{fog:{shaftSamples:9.5}},{fog:{useShadows:1}},{fog:{shaftIntensity:11}},{clouds:{animationSpeed:NaN}},{water:[{bounds:[0,0,1,1],fresnelPower:0}]},{water:[{bounds:[0,0,1,1],mode:"unknown"}]}])expect(()=>normalizeEnvironment(input as any)).toThrow();
 });
 import { generateDensityVolume } from "../../src-ts/density-volume.js";
 const densities = JSON.parse(
@@ -219,4 +231,19 @@ it("raw JavaScript shape errors are rejected before normalization", () => {
     { water: [{ bounds: null }] },
   ])
     expect(() => normalizeEnvironment(input as any)).toThrow();
+});
+
+it("locks installed-native scene references and historical PNG provenance", () => {
+  const root = new URL("../golden/w10/native/", import.meta.url);
+  const manifest = JSON.parse(readFileSync(new URL("manifest.json", root), "utf8"));
+  expect(manifest.tolerances.ssimMin).toBe(0.98);
+  for (const variant of manifest.variants) {
+    expect(createHash("sha256").update(readFileSync(new URL(`${variant.id}.rgba`, root))).digest("hex")).toBe(variant.sha256);
+    if (variant.historical) {
+      const h = variant.historical;
+      const source = execFileSync("git", ["show", `${h.commit}:${h.path}`]);
+      expect(createHash("sha256").update(source).digest("hex")).toBe(h.sha256);
+      expect(readFileSync(new URL(`${variant.id}-historical.png`, root))).toEqual(source);
+    }
+  }
 });

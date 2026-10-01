@@ -3653,6 +3653,9 @@ pub(super) const TERRAIN_SHADER: &str = concat!(
     include_str!("shadow_lighting.wgsl"),
     include_str!("lighting.wgsl"),
     include_str!("terrain_probes.wgsl"),
+    include_str!("environment/sky.wgsl"),
+    include_str!("terrain_atmosphere.wgsl"),
+    include_str!("terrain_water.wgsl"),
     include_str!("terrain_material.wgsl"),
     include_str!("terrain_w08.wgsl"),
     r#"

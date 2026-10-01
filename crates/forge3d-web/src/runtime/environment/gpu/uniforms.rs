@@ -16,6 +16,8 @@ impl EnvironmentResources {
         let s = &self.snapshot;
         let mut p = [[0.; 4]; 19];
         p[5][3] = 1.;
+        p[16][2] = 1.;
+        p[16][3] = 32.;
         p[0] = [
             runtime.camera.position[0],
             runtime.camera.position[1],
@@ -39,6 +41,12 @@ impl EnvironmentResources {
             p[3] = [sky.turbidity, sky.ground_albedo, sky.sun_size, sky.exposure];
             p[9][2] = if sky.model == "hosek-wilkie" { 1. } else { 0. };
             p[9][3] = 1.;
+            p[18] = [
+                u32::from(sky.aerial_perspective) as f32,
+                sky.aerial_density,
+                sky.sun_intensity,
+                u32::from(runtime.terrain.as_ref().is_some_and(|t| t.render_mode == 1)) as f32,
+            ];
         } else {
             p[3] = [2., 0.2, 0.00465, 1.];
         }
@@ -51,6 +59,8 @@ impl EnvironmentResources {
                 u32::from(f.god_rays) as f32,
             ];
             p[12][2] = 1.;
+            p[16][2] = f.shaft_intensity;
+            p[16][3] = f.shaft_samples as f32;
             p[14][1] = match f.mode.as_str() {
                 "uniform" => 0.,
                 "height" => 1.,
@@ -61,7 +71,7 @@ impl EnvironmentResources {
         }
         if let Some(c) = &s.clouds {
             p[6] = [c.density, c.coverage, c.scale, c.height];
-            p[7] = [c.thickness, c.wind[0], c.wind[1], 0.];
+            p[7] = [c.thickness, c.wind[0], c.wind[1], c.animation_speed];
             p[8] = [c.shadow_strength, c.absorption, c.anisotropy, c.ambient];
             p[9][0] = c.fade_distance;
             p[9][1] = match c.mode.as_str() {
@@ -74,7 +84,8 @@ impl EnvironmentResources {
         }
         let (ew, eh) = s.effect_size(self.width, self.height);
         p[10] = [self.width as f32, self.height as f32, ew as f32, eh as f32];
-        p[16] = [runtime.camera.near, runtime.camera.far, 0., 0.];
+        p[16][0] = runtime.camera.near;
+        p[16][1] = runtime.camera.far;
         p[11] = [
             s.max_distance,
             s.steps as f32,
@@ -108,7 +119,12 @@ impl EnvironmentResources {
                 vp,
                 previous: self.previous_vp.get(),
                 p,
-                bits: [s.clouds.as_ref().map_or(0, |c| c.seed), 0, 0, 0],
+                bits: [
+                    s.clouds.as_ref().map_or(0, |c| c.seed),
+                    u32::from(s.fog.as_ref().is_none_or(|f| f.use_shadows)),
+                    u32::from(s.clouds.as_ref().is_some_and(|c| c.render_path == "native")),
+                    0,
+                ],
             }),
         );
         self.reflection.update(runtime)?;
@@ -118,6 +134,7 @@ impl EnvironmentResources {
         &self,
         context: &GpuContext,
         camera: &crate::runtime::terrain::CaptureCameraUniform,
+        terrain: Option<&crate::runtime::terrain::TerrainRenderResources>,
     ) {
         self.history_valid.set(false);
         context.queue.write_buffer(
@@ -126,6 +143,17 @@ impl EnvironmentResources {
             bytemuck::bytes_of(&0.0f32),
         );
         let matrix = glam::Mat4::from_cols_array_2d(&camera.base.view_projection);
+        if let Some(terrain) = terrain {
+            // Screen-terrain aerial perspective samples the same jittered sky ray
+            // as the offline pass; keep its appended matrix synchronized.
+            context.queue.write_buffer(
+                &terrain.material.uniform_buffer,
+                std::mem::size_of::<forge3d_core::terrain_material::TerrainMaterialUniform>()
+                    as u64
+                    + 64,
+                bytemuck::cast_slice(&matrix.inverse().to_cols_array()),
+            );
+        }
         context.queue.write_buffer(
             &self.uniform,
             0,
@@ -154,7 +182,7 @@ impl EnvironmentResources {
         context.queue.write_buffer(
             &self.uniform,
             192 + 16 * 16,
-            bytemuck::bytes_of(&camera.capture_params),
+            bytemuck::cast_slice(&camera.capture_params[..2]),
         );
     }
 }

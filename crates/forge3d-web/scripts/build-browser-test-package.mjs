@@ -296,6 +296,12 @@ try {
     .replace(/const api\s*=[\s\S]*?;\n/, 'const api=await import("/node_modules/@forge3d/web/dist/index.js");\n')
     .replace("../src-ts/viewer.ts", "/node_modules/@forge3d/web/dist/viewer.js");
   writeFileSync(join(consumerDirectory, "test-w10.html"), w10Fixture);
+  copyFileSync(join(packageRoot,"examples","w10-acceptance.js"),join(consumerDirectory,"w10-acceptance.js"));
+  writeFileSync(join(consumerDirectory,"test-w10-native.html"),readFileSync(join(packageRoot,"examples","test-w07-materials.html"),"utf8")
+    .replaceAll("../src-ts/index.ts","/node_modules/@forge3d/web/dist/index.js")
+    .replaceAll("../src-ts/session.ts","/node_modules/@forge3d/web/dist/session.js")
+    .replaceAll("../src-ts/runtime-internals.ts","/node_modules/@forge3d/web/dist/runtime-internals.js"));
+
   copyFileSync(join(packageRoot, "examples", "w10-native-probes.js"), join(consumerDirectory, "w10-native-probes.js"));
   writeFileSync(join(consumerDirectory, "test-w10-worker.js"), readFileSync(join(packageRoot, "examples", "test-w10-worker.js"), "utf8").replace("../src-ts/index.ts", "/node_modules/@forge3d/web/dist/index.js"));
   cpSync(join(packageRoot, "tests", "golden", "w10"), join(consumerDirectory, "tests", "golden", "w10"), {recursive:true});
@@ -417,7 +423,7 @@ try {
       "test-w07-package.html",
       "test-w08-package.html",
       "test-w08-cog-worker.js",
-      ...(w10Only ? ["test-w10.html", "test-w10-worker.js", "w10-native-probes.js", "w10-runtime-sky.wgsl", "w10-runtime-effects.wgsl"] : []),
+      ...(w10Only ? ["test-w10.html", "test-w10-native.html", "w10-acceptance.js", "test-w10-worker.js", "w10-native-probes.js", "w10-runtime-sky.wgsl", "w10-runtime-effects.wgsl"] : []),
     ]) {
       copyFileSync(join(consumerDirectory, file), join(retainedFixture, file));
     }
@@ -1003,8 +1009,19 @@ async function runInstalledPackageBrowserGate(
     }
     await page.goto(`${origin}/test-w10.html`, {waitUntil:"networkidle"});
     await page.waitForFunction(()=>window.__w10!==undefined);
-    const w10Package = await page.evaluate(async()=>({render:await window.__w10.render(),bounds:await window.__w10.bounds(),masks:await window.__w10.masks(),budget:await window.__w10.budget(),offline:await window.__w10.offline(),recovery:await window.__w10.recovery(),quality:await window.__w10.quality(),native:await window.__w10.native(),worker:await window.__w10.worker(),downscale:await window.__w10.downscale(),cloudsAndWaves:await window.__w10.cloudsAndWaves(),goldens:await window.__w10.goldens(),restoreLights:await window.__w10.restoreLights()}));
+    const w10Package = await page.evaluate(async()=>({render:await window.__w10.render(),bounds:await window.__w10.bounds(),masks:await window.__w10.masks(),budget:await window.__w10.budget(),offline:await window.__w10.offline(),recovery:await window.__w10.recovery(),quality:await window.__w10.quality(),native:await window.__w10.native(),worker:await window.__w10.worker(),downscale:await window.__w10.downscale(),cloudsAndWaves:await window.__w10.cloudsAndWaves(),goldens:await window.__w10.goldens(),restoreLights:await window.__w10.restoreLights(),aerial:await window.__w10.aerial(),waterControls:await window.__w10.waterControls(),preservation:await window.__w10.preservation(),volumeTemporal:await (async()=>{const c=await(await fetch("/tests/golden/w10/volume-temporal-v1.json")).json();return window.__w10.bounds(c.width,c.height,c);})()}));
     const e=w10Package;
+    if (!(e.aerial.covered>1000 && Object.values(e.aerial.controls).every(x=>x>.15) && e.aerial.disabledDelta===0 && e.aerial.zeroDelta===0 && e.aerial.sunriseDelta>.15 && e.aerial.sunriseHash===e.aerial.sunriseRepeat && e.waterControls.disabledMatches && Object.entries(e.waterControls).filter(([k])=>k!=="disabledMatches").every(([,v])=>v>.001) && e.volumeTemporal.width===1920 && e.volumeTemporal.height===1080 && e.volumeTemporal.historyValid && e.volumeTemporal.outsideMax<=1 && e.volumeTemporal.insideChanged>20))throw new Error(`W10 added acceptance contracts failed: ${JSON.stringify(e)}`);
+    const preservation=JSON.parse(readFileSync(join(packageRoot,"tests/golden/w10/w09-preservation.json"),"utf8"));
+    if(JSON.stringify(e.preservation)!==JSON.stringify(preservation.frames))throw new Error("W10 absent environment changed W09 bytes");
+    await page.goto(`${origin}/test-w10-native.html`,{waitUntil:"networkidle"});
+    await page.waitForFunction(()=>typeof window.__w10NativeTerrain==="function");
+    e.nativeScenes=await page.evaluate(()=>window.__w10NativeTerrain());
+    for(const [name,r] of Object.entries(e.nativeScenes)) {
+      delete r.actual;
+      if(!(r.ssim>=.98 && r.historicalSsim>=.98 && (r.controlSsim===undefined || r.controlSsim<.98)))throw new Error(`Native W10 scene ${name} failed: ${JSON.stringify(r)}`);
+    }
+
     if (!(e.render.covered>1000 && e.render.generalCovered>1000 && e.render.generalDelta>.1 && e.render.plain===e.render.cleared && e.render.cloud.hash===e.render.cloud.repeat && e.render.cloud.timeDelta>.01 && e.bounds.max<=1 && e.bounds.outsideMax<=1 && e.bounds.outsidePixels>10000 && e.bounds.insideChanged>20 && e.masks.zero===0 && e.masks.transparent && e.budget.code==="RESOURCE_LIMIT_EXCEEDED" && e.budget.before===e.budget.after && e.budget.bytes===e.budget.afterBytes && e.budget.report.width===224 && e.offline.nonzero && e.offline.captureRepeat && e.offline.waterIds.includes(4294967280) && e.recovery.same && e.recovery.attempts===1 && e.quality.halfDelta<2 && e.quality.froxelDelta<1 && e.quality.cameraReset===false && e.quality.occlusionDelta>.01 && e.native.every(c=>c.maxAbs<1e-3&&c.ssim>=.98&&c.controlSsim<.98) && e.worker.delta>.1 && e.downscale.selected.resolutionScale===.5 && e.downscale.before===e.downscale.after && e.cloudsAndWaves.firstSeed!==e.cloudsAndWaves.secondSeed && e.cloudsAndWaves.shadowDelta>.1 && e.cloudsAndWaves.planarDelta>.01 && e.cloudsAndWaves.waveDelta>.01 && e.restoreLights.baseline===e.restoreLights.cleared && e.restoreLights.baseline===e.restoreLights.sceneCleared && e.goldens.cloud.disabledSsim<.98 && e.goldens.water.disabledSsim<.98 && Object.values(e.goldens).every(c=>c.ssim>=.98&&c.controlSsim<.98))) throw new Error(`installed-package W10 contract failed: ${JSON.stringify(e)}`);
     if (pageErrors.length > 0) {
       throw new Error(`installed-package page errors: ${pageErrors.join("; ")}`);

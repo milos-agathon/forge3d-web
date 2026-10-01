@@ -32,16 +32,19 @@ export function normalizeEnvironment(
             "sky model",
           ),
           turbidity: num(input.sky.turbidity ?? 2, 1, 10, "turbidity"),
-          groundAlbedo: num(input.sky.groundAlbedo ?? 0.2, 0, 1, "albedo"),
-          sunSize: num(input.sky.sunSize ?? 0.00465, 0.0001, 0.1, "sun size"),
+          groundAlbedo: num(input.sky.groundAlbedo ?? 0.3, 0, 1, "albedo"),
+          sunSize: num(input.sky.sunSize ?? 1, 0, 100, "sun size"),
           exposure: num(input.sky.exposure ?? 1, 0, 100, "exposure"),
+          sunIntensity: num(input.sky.sunIntensity ?? 1, 0, 1000, "sky sun intensity"),
+          aerialPerspective: input.sky.aerialPerspective ?? true,
+          aerialDensity: num(input.sky.aerialDensity ?? 1, 0, 100, "aerial density"),
         };
   const fog =
     input.fog == null
       ? null
       : {
           mode: choice(
-            input.fog.mode ?? "height",
+            input.fog.mode ?? "uniform",
             ["uniform", "height", "exponential"],
             "fog mode",
           ),
@@ -49,17 +52,21 @@ export function normalizeEnvironment(
           absorption: num(input.fog.absorption ?? 0.1, 0, 1, "absorption"),
           density: num(input.fog.density ?? 0.01, 0, 100, "fog density"),
           height: num(input.fog.height ?? 0, -1e7, 1e7, "fog height"),
-          falloff: num(input.fog.falloff ?? 0.01, 0, 100, "fog falloff"),
+          falloff: num(input.fog.falloff ?? 0.1, 0, 100, "fog falloff"),
           color: rgb(input.fog.color ?? [0.6, 0.7, 0.8], "fog color"),
           anisotropy: num(
-            input.fog.anisotropy ?? 0.3,
-            -0.95,
-            0.95,
+            input.fog.anisotropy ?? 0,
+            -1,
+            1,
             "fog anisotropy",
           ),
-          godRays: input.fog.godRays ?? true,
+          godRays: input.fog.godRays ?? false,
+          shaftIntensity: num(input.fog.shaftIntensity ?? 1, 0, 10, "shaft intensity"),
+          shaftSamples: num(input.fog.shaftSamples ?? 32, 8, 128, "shaft samples"),
+          useShadows: input.fog.useShadows ?? true,
         };
-  if (fog && typeof fog.godRays !== "boolean") fail("godRays must be boolean");
+  if (sky && typeof sky.aerialPerspective !== "boolean") fail("aerialPerspective must be boolean");
+  if (fog && (typeof fog.godRays !== "boolean" || typeof fog.useShadows !== "boolean" || !Number.isInteger(fog.shaftSamples))) fail("invalid shaft controls");
   const c = input.clouds;
   const preset = c && "preset" in c ? (c.preset ?? "moderate") : "moderate";
   choice(preset, ["static", "gentle", "moderate", "stormy"], "cloud preset");
@@ -68,6 +75,7 @@ export function normalizeEnvironment(
     c == null
       ? null
       : {
+          renderPath: choice(c.renderPath ?? "world", ["native", "world"], "cloud render path"),
           color: rgb(c.color ?? [0.6, 0.8, 1], "cloud color"),
           scatterStrength: num(
             c.scatterStrength ?? 1.2,
@@ -86,6 +94,7 @@ export function normalizeEnvironment(
           height: num(c.height ?? 150, -1e7, 1e7, "cloud height"),
           thickness: num(c.thickness ?? 80, 0.001, 1e7, "cloud thickness"),
           wind: vec(c.wind ?? [speed, 0], 2, "cloud wind") as [number, number],
+          animationSpeed: num(c.animationSpeed ?? { static: 0, gentle: 0.3, moderate: 0.8, stormy: 2 }[preset], 0, 100, "animation speed"),
           seed: num(c.seed ?? 0, 0, 4294967295, "seed"),
           shadowStrength: num(
             c.shadowStrength ?? 0.5,
@@ -94,7 +103,7 @@ export function normalizeEnvironment(
             "cloud shadow strength",
           ),
           absorption: num(c.absorption ?? 0.8, 0, 100, "absorption"),
-          anisotropy: num(c.anisotropy ?? 0.3, -0.95, 0.95, "cloud anisotropy"),
+          anisotropy: num(c.anisotropy ?? 0.3, -1, 1, "cloud anisotropy"),
           ambient: num(c.ambient ?? 0.4, 0, 100, "ambient"),
           fadeDistance: num(
             c.fadeDistance ?? 1000,
@@ -131,7 +140,7 @@ export function normalizeEnvironment(
       data,
       density: num(v.density ?? 0.01, 0, 100, "volume density"),
       color: rgb(v.color ?? [0.8, 0.8, 0.8], "volume color"),
-      anisotropy: num(v.anisotropy ?? 0, -0.95, 0.95, "volume anisotropy"),
+      anisotropy: num(v.anisotropy ?? 0, -1, 1, "volume anisotropy"),
     };
   });
   if (
@@ -161,6 +170,16 @@ export function normalizeEnvironment(
     return {
       bounds,
       height: num(w.height ?? 0, -1e7, 1e7, "water height"),
+      mode: choice(w.mode ?? "animated", ["disabled", "transparent", "reflective", "animated"], "water mode"),
+      fresnelPower: num(w.fresnelPower ?? 5, 0.01, 100, "fresnel power"),
+      hueShift: num(w.hueShift ?? 0, -100, 100, "hue shift"),
+      tintColor: rgb(w.tintColor ?? [0, 0.8, 1], "tint color"),
+      tintStrength: num(w.tintStrength ?? 0, 0, 1, "tint strength"),
+      rippleScale: num(w.rippleScale ?? 0, 0, 1e5, "ripple scale"),
+      rippleSpeed: num(w.rippleSpeed ?? 0.5, -1e5, 1e5, "ripple speed"),
+      refractionStrength: num(w.refractionStrength ?? 0, 0, 1, "refraction strength"),
+      shoreAttenuationWidth: num(w.shoreAttenuationWidth ?? 0, 0, 1e7, "shore attenuation width"),
+      waveDistortionStrength: num(w.waveDistortionStrength ?? 0.01, 0, 100, "wave distortion strength"),
       shallowColor: rgb(w.shallowColor ?? [0.1, 0.3, 0.5], "shallow color"),
       deepColor: rgb(w.deepColor ?? [0.02, 0.08, 0.2], "deep color"),
       depthScale: num(w.depthScale ?? 10, 0.001, 1e7, "depth scale"),

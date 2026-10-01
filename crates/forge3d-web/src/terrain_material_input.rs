@@ -23,8 +23,8 @@ pub struct TerrainMaterialOptions {
     pub settings: TerrainMaterialSettings,
     pub layer_images: Vec<Option<TerrainLayerImage>>,
     pub detail_normal: Option<TerrainLayerImage>,
-    /// Snow, rock and wetness coverage masks.
-    pub masks: [Option<TerrainMaskImage>; 3],
+    /// Snow, rock, wetness and water coverage masks.
+    pub masks: [Option<TerrainMaskImage>; 4],
     /// `material.virtualTexture` (W08/E6): absent = VT off.
     pub virtual_texture: Option<TerrainVtSettings>,
 }
@@ -278,6 +278,9 @@ struct SpecularAaJs {
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub(crate) struct TerrainMaterialJs {
+    #[serde(skip_deserializing)]
+    #[allow(dead_code)]
+    water_mask: Option<()>,
     albedo_mode: Option<AlbedoModeJs>,
     colormap_strength: Option<f32>,
     gamma: Option<f32>,
@@ -722,7 +725,7 @@ pub fn read_terrain_material(
         Some(detail) => layer_image(get(&detail, "normalMap")?, "detail.normalMap")?,
         None => None,
     };
-    let mut masks: [Option<TerrainMaskImage>; 3] = [None, None, None];
+    let mut masks: [Option<TerrainMaskImage>; 4] = [None, None, None, None];
     if let Some(layers) = get(&material, "layers")? {
         for (index, name) in ["snow", "rock", "wetness"].iter().enumerate() {
             if let Some(layer) = get(&layers, name)? {
@@ -730,6 +733,7 @@ pub fn read_terrain_material(
             }
         }
     }
+    masks[3] = mask_image(get(&material, "waterMask")?, "waterMask")?;
     let virtual_texture = parsed
         .virtual_texture
         .as_ref()

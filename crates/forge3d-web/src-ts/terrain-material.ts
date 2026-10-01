@@ -638,6 +638,7 @@ export function normalizeTerrainMaterial(
     },
     debugView: oneOf(input.debugView, "none", DEBUG_VIEWS, "debugView"),
     virtualTexture: virtualTexture(input.virtualTexture),
+    waterMask: mask(input.waterMask, "waterMask"),
   };
 }
 
@@ -749,11 +750,12 @@ export function estimateTerrainMaterialBytes(input: TerrainMaterialInput | undef
     material.layers.snow.mask,
     material.layers.rock.mask,
     material.layers.wetness.mask,
+    material.waterMask,
   ]) {
     if (image !== null) {
       auxWidth = Math.max(auxWidth, image.width);
       auxHeight = Math.max(auxHeight, image.height);
     }
   }
-  return albedo + auxWidth * auxHeight * 4 * 2 + TERRAIN_MATERIAL_UNIFORM_BYTES;
+  return albedo + auxWidth * auxHeight * 4 * 2 + TERRAIN_MATERIAL_UNIFORM_BYTES + 128;
 }

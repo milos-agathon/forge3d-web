@@ -54,8 +54,10 @@ impl Environment {
             if !["preetham", "hosek-wilkie"].contains(&s.model.as_str())
                 || !range(s.turbidity, 1.0, 10.0)
                 || !range(s.ground_albedo, 0.0, 1.0)
-                || !range(s.sun_size, 0.0001, 0.1)
+                || !range(s.sun_size, 0.0, 100.0)
                 || !range(s.exposure, 0.0, 100.0)
+                || !range(s.sun_intensity, 0.0, 1000.0)
+                || !range(s.aerial_density, 0.0, 100.0)
             {
                 return bad();
             }
@@ -67,14 +69,17 @@ impl Environment {
                 || !range(f.density, 0.0, 100.0)
                 || !f.height.is_finite()
                 || !range(f.falloff, 0.0, 100.0)
+                || !range(f.shaft_intensity, 0.0, 10.0)
+                || !(8..=128).contains(&f.shaft_samples)
                 || !color(&f.color)
-                || !range(f.anisotropy, -0.95, 0.95)
+                || !range(f.anisotropy, -1.0, 1.0)
             {
                 return bad();
             }
         }
         if let Some(c) = &self.clouds {
-            if !color(&c.color)
+            if !["native", "world"].contains(&c.render_path.as_str())
+                || !color(&c.color)
                 || !range(c.scatter_strength, 0.0, 100.0)
                 || !["billboard", "volumetric", "hybrid"].contains(&c.mode.as_str())
                 || !range(c.density, 0.0, 100.0)
@@ -83,9 +88,10 @@ impl Environment {
                 || !c.height.is_finite()
                 || !range(c.thickness, 0.001, 1e7)
                 || !finite(&c.wind)
+                || !range(c.animation_speed, 0.0, 100.0)
                 || !range(c.shadow_strength, 0.0, 1.0)
                 || !range(c.absorption, 0.0, 100.0)
-                || !range(c.anisotropy, -0.95, 0.95)
+                || !range(c.anisotropy, -1.0, 1.0)
                 || !range(c.ambient, 0.0, 100.0)
                 || !range(c.fade_distance, 0.001, 1e7)
             {
@@ -98,7 +104,7 @@ impl Environment {
                 || (0..3).any(|i| v.bounds[i] >= v.bounds[i + 3])
                 || !range(v.density, 0.0, 100.0)
                 || !color(&v.color)
-                || !range(v.anisotropy, -0.95, 0.95)
+                || !range(v.anisotropy, -1.0, 1.0)
             {
                 return bad();
             }
@@ -120,7 +126,17 @@ impl Environment {
             return bad();
         }
         for w in &self.water {
-            if !finite(&w.bounds)
+            if !["disabled", "transparent", "reflective", "animated"].contains(&w.mode.as_str())
+                || !range(w.fresnel_power, 0.01, 100.0)
+                || !range(w.hue_shift, -100.0, 100.0)
+                || !color(&w.tint_color)
+                || !range(w.tint_strength, 0.0, 1.0)
+                || !range(w.ripple_scale, 0.0, 1e5)
+                || !range(w.ripple_speed, -1e5, 1e5)
+                || !range(w.refraction_strength, 0.0, 1.0)
+                || !range(w.shore_attenuation_width, 0.0, 1e7)
+                || !range(w.wave_distortion_strength, 0.0, 100.0)
+                || !finite(&w.bounds)
                 || w.bounds[0] >= w.bounds[2]
                 || w.bounds[1] >= w.bounds[3]
                 || !w.height.is_finite()
@@ -164,7 +180,7 @@ impl Environment {
     /// Payload buffer stores volume descriptors, voxel samples and explicit masks.
     pub fn payload_floats(&self) -> usize {
         8 * 16
-            + 4 * 32
+            + 4 * 48
             + self.volumes.iter().map(|v| v.data.len()).sum::<usize>()
             + self.water.iter().map(|w| w.mask.len()).sum::<usize>()
     }

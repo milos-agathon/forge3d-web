@@ -893,6 +893,8 @@ export interface TerrainSpecularAaInput {
  * all-default material reproduces the unmaterialed terrain image.
  */
 export interface TerrainMaterialInput {
+  /** Native terrain water coverage/shore-distance mask. */
+  waterMask?: TerrainMaterialMask | null;
   albedoMode?: TerrainAlbedoMode;
   colormapStrength?: number;
   gamma?: number;
@@ -926,6 +928,7 @@ export interface TerrainMaterialLayerSnapshot {
 
 /** Fully resolved, validated terrain material. */
 export interface TerrainMaterialSnapshot {
+  waterMask: TerrainMaterialMask | null;
   albedoMode: TerrainAlbedoMode;
   colormapStrength: number;
   gamma: number;
@@ -998,7 +1001,7 @@ export interface TerrainMaterialReport {
   textureWidth: number;
   textureHeight: number;
   mipLevels: number;
-  maskChannels: ("snow" | "rock" | "wetness")[];
+  maskChannels: ("snow" | "rock" | "wetness" | "water")[];
   detailNormalMap: boolean;
   gpuBytes: number;
   diagnostics: TerrainMaterialDiagnostic[];

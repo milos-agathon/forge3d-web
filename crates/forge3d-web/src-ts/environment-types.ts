@@ -24,6 +24,9 @@ export interface SkyInput {
   turbidity?: number;
   groundAlbedo?: number;
   sunSize?: number;
+  sunIntensity?: number;
+  aerialPerspective?: boolean;
+  aerialDensity?: number;
   exposure?: number;
 }
 export interface FogInput {
@@ -36,8 +39,13 @@ export interface FogInput {
   color?: [number, number, number];
   anisotropy?: number;
   godRays?: boolean;
+  shaftIntensity?: number;
+  shaftSamples?: number;
+  useShadows?: boolean;
 }
 export interface CloudsInput {
+  /** Native clip-space quad, or depth-clipped world-space clouds. */
+  renderPath?: "native" | "world";
   color?: [number, number, number];
   scatterStrength?: number;
   mode?: "billboard" | "volumetric" | "hybrid";
@@ -48,6 +56,7 @@ export interface CloudsInput {
   height?: number;
   thickness?: number;
   wind?: [number, number];
+  animationSpeed?: number;
   seed?: number;
   shadowStrength?: number;
   absorption?: number;
@@ -66,6 +75,16 @@ export interface DensityVolumeInput {
 export interface WaterLayerInput {
   bounds: [number, number, number, number];
   height?: number;
+  mode?: "disabled" | "transparent" | "reflective" | "animated";
+  fresnelPower?: number;
+  hueShift?: number;
+  tintColor?: [number, number, number];
+  tintStrength?: number;
+  rippleScale?: number;
+  rippleSpeed?: number;
+  refractionStrength?: number;
+  shoreAttenuationWidth?: number;
+  waveDistortionStrength?: number;
   shallowColor?: [number, number, number];
   deepColor?: [number, number, number];
   depthScale?: number;

@@ -64,6 +64,8 @@ struct TerrainMaterialUniform {
     rock_variation: vec4<f32>,
     wetness_variation: vec4<f32>,
     height_curve_lut: array<vec4<f32>, 64>,
+    atmosphere: array<vec4<f32>, 4>,
+    atmosphere_inv: mat4x4<f32>,
 };
 
 @group(0) @binding(7) var<uniform> terrain_material: TerrainMaterialUniform;
@@ -943,6 +945,12 @@ fn tm_shade(surface: TmSurface) -> TerrainSample {
         surface.dpdx_world,
         surface.dpdy_world,
     );
+    if((u32(terrain_material.detail1.w+0.5)&8u)!=0u){
+      let dims=textureDimensions(terrain_material_aux);
+      let coord=clamp(vec2<i32>(surface.parallax_uv*vec2<f32>(dims)),vec2<i32>(0),vec2<i32>(dims)-1);
+      let mask=textureLoad(terrain_material_aux,coord,1,0).a;
+      if(mask>0.001){return tm_native_water(surface,height_norm,mask);}
+    }
     let overlay_rgb = tm_colormap(height_norm);
     let albedo_mode = u32(terrain_material.control.y + 0.5);
     let colormap_strength = clamp(terrain_material.control.z, 0.0, 1.0);
@@ -1109,6 +1117,7 @@ fn tm_shade(surface: TmSurface) -> TerrainSample {
     let spec_capped = min(spec_contrib, albedo * 0.20);
     var shaded = lit_albedo + spec_capped + terrain_sss;
     shaded = shaded * max(forge3d_lighting.exposure, 0.0);
+    if(params.render_mode==1u&&terrain_material.atmosphere[0].x>0.5){shaded=tm_aerial(shaded,surface);}
 
     var result: TerrainSample;
     // #if probes

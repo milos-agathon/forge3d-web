@@ -343,11 +343,13 @@
           };
           r.setEnvironment({
             ...base,
+            sky: {...base.sky,aerialPerspective:false},
             water: [{ ...water, reflection: "sky" }],
           });
           const sky = await r.readRgba();
           r.setEnvironment({
             ...base,
+            sky: {...base.sky,aerialPerspective:false},
             water: [{ ...water, reflection: "planar" }],
           });
           const planar = await r.readRgba();
@@ -552,8 +554,8 @@
           r.dispose();
         }
       },
-      async bounds() {
-        const r = await create();
+      async bounds(width = 192, height = 128, contract = null) {
+        const r = await create({width,height});
         try {
           r.setEnvironment(base);
           const baseline = await r.readRgba();
@@ -564,25 +566,26 @@
             ],
           });
           const outside = await r.readRgba();
-          const bounds = [-8, 0, -8, 8, 12, 8];
+          const bounds = contract?.bounds ?? [-8, 0, -8, 8, 12, 8];
           const volume = await api.generateDensityVolume({
-            preset: "localized_haze",
+            preset: contract?.densityPreset ?? "localized_haze",
             bounds,
-            dimensions: [8, 6, 8],
-            densityScale: 8,
+            dimensions: contract?.dimensions ?? [8, 6, 8],
+            densityScale: contract?.densityScale ?? 8,
             color: [1, 0.2, 0.1],
           });
-          r.setEnvironment({ ...base, volumes: [volume] });
+          r.setEnvironment({ ...base, volumes: [volume], temporalWeight:contract?.temporalWeight ?? 0, steps:contract?.steps ?? base.steps,resolutionScale:contract?.resolutionScale ?? base.resolutionScale });
+          await r.readRgba();
           const partial = await r.readRgba();
           const cpuCamera = new api.Camera(camera);
           let outsideMax = 0,
             outsidePixels = 0,
             insideChanged = 0;
-          for (let y = 0; y < 128; y++)
-            for (let x = 0; x < 192; x++) {
+          for (let y = 0; y < height; y++)
+            for (let x = 0; x < width; x++) {
               const ray = cpuCamera.screenRay(x + 0.5, y + 0.5, {
-                width: 192,
-                height: 128,
+                width,
+                height,
               });
               let near = 0,
                 far = 500;
@@ -598,7 +601,7 @@
                   far = Math.min(far, Math.max(a, b));
                 }
               }
-              const offset = (y * 192 + x) * 4;
+              const offset = (y * width + x) * 4;
               const changed = Math.max(
                 ...[0, 1, 2].map((c) =>
                   Math.abs(baseline[offset + c] - partial[offset + c]),
@@ -616,6 +619,7 @@
               (m, x, i) => Math.max(m, Math.abs(x - outside[i])),
               0,
             ),
+            width,height,historyValid:r.getEnvironmentMemoryReport().historyValid,
             outsideMax,
             outsidePixels,
             insideChanged,
@@ -806,5 +810,7 @@
         }
       },
     };
+    const {acceptance} = await import("./w10-acceptance.js");
+    Object.assign(window.__w10,acceptance({api,create,camera,terrain,base,hash,delta}));
   </script>
 </html>

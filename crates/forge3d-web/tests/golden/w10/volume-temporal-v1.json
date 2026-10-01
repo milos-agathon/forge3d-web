@@ -1,0 +1,15 @@
+{
+  "fixture": "volume-temporal-v1",
+  "width": 1920,
+  "height": 1080,
+  "bounds": [-8, 0, -8, 8, 12, 8],
+  "densityPreset": "localized_haze",
+  "dimensions": [8, 6, 8],
+  "densityScale": 8,
+  "resolutionScale": 1,
+  "steps": 32,
+  "temporalWeight": 0.8,
+  "outsideMaxByteDifference": 1,
+  "minimumContributingPixels": 20,
+  "test": "tests/playwright/w10_environment.spec.ts"
+}

@@ -43,6 +43,7 @@ def main():
         azimuth, elevation, *direction = map(float, row.split(","))
         case.update(azimuth=azimuth, elevation=elevation, direction=direction)
     truth.update(commit=DEEP, path=path, sha256=digest(source), executor="rustc original native source (no web implementation)")
+    truth.update(fixture="sun-vector-v1", tolerances=dict(angularDegrees=5e-9, directionAbs=1e-6, directionConvention="native to_direction: Y up, east -X, north -Z"))
     save("sun", truth)
     path = "src/viewer/terrain/volume_density.rs"
     source = native(TV6, path)

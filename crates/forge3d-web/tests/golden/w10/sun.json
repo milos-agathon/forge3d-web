@@ -580,5 +580,11 @@
         0.9174872
       ]
     }
-  ]
+  ],
+  "fixture": "sun-vector-v1",
+  "tolerances": {
+    "angularDegrees": 5e-09,
+    "directionAbs": 1e-06,
+    "directionConvention": "native to_direction: Y up, east -X, north -Z"
+  }
 }
