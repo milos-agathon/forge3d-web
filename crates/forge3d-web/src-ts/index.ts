@@ -25,8 +25,10 @@ import type { TerrainProbeSnapshot } from "./terrain-probes.js";
 import { TerrainScatterBatch, normalizeScatterBatches } from "./terrain-scatter.js";
 import type { ScatterBatchInput } from "./scatter-types.js";
 import { TerrainLightingProbes, validateProbeSnapshot, type TerrainProbeMemoryReport } from "./terrain-probes.js";
-export * from "./terrain-scatter.js";
-export * from "./terrain-probes.js";
+export { TerrainScatterBatch, ScatterWindSettings, TerrainScatterSource, makeScatterTransform, seededScatterTransforms, gridScatterTransforms, bilinearScatterSample, simplifyScatterMesh, autoScatterLodLevels, scatterMeshBounds, scatterTransformBounds } from "./terrain-scatter.js";
+export type * from "./scatter-types.js";
+export { TerrainLightingProbes, getTerrainProbeMaterialDefaults } from "./terrain-probes.js";
+export type { TerrainProbeGrid, TerrainProbeBakeOptions, TerrainProbeSnapshot, TerrainProbeMemoryReport, ProbeReflectionMaterial, ProbeReflectionLighting } from "./terrain-probes.js";
 
 export type Forge3DErrorCode =
   | "WEBGPU_UNAVAILABLE"

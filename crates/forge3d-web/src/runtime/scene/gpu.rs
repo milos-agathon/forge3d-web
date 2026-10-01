@@ -257,12 +257,20 @@ impl NativeScene {
     pub(crate) fn set_lighting_binding(
         &mut self,
         context: &GpuContext,
+        layout: wgpu::BindGroupLayout,
         group: wgpu::BindGroup,
+        probes: bool,
         textures: &TextureResources,
         ibl: &IblResources,
     ) {
+        self.lighting_layout = layout;
         self.lighting_bind_group = group;
-        self.encode_bundles(context, textures, ibl);
+        self.capture_world = None;
+        if self.world_features.probes() == probes {
+            self.encode_bundles(context, textures, ibl);
+        } else {
+            self.world_bundle = None;
+        }
     }
 
     pub(crate) fn rebuild_overlays(

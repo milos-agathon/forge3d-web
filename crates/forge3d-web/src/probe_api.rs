@@ -1,4 +1,4 @@
-//! Stateless W09 baker. The math is the pinned native bf8db93 implementation.
+//! Stateless W09 bakers. The math is the pinned native bf8db93 implementation.
 use crate::error::{to_js_error, Forge3DErrorCode, WebError};
 use forge3d_core::terrain_probes::{
     baker::ProbeBaker,
@@ -13,6 +13,9 @@ use forge3d_core::terrain_probes::{
 use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 
+const MAX_IRRADIANCE_PROBES: usize = 4096;
+const MAX_REFLECTION_PROBES: usize = 256;
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct Input {
@@ -22,7 +25,12 @@ struct Input {
     terrain_width: f32,
     #[serde(default)]
     terrain_origin: [f32; 2],
-    position: [f32; 3],
+    #[serde(default)]
+    position: Option<[f32; 3]>,
+    #[serde(default)]
+    irradiance_positions: Vec<f32>,
+    #[serde(default)]
+    reflection_positions: Vec<f32>,
     sky_color: [f32; 3],
     sky_intensity: f32,
     ray_count: u32,
@@ -33,6 +41,7 @@ struct Input {
     reflection_material: Option<ReflectionTerrainMaterial>,
     reflection_lighting: Option<Lighting>,
 }
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct Environment {
@@ -40,6 +49,7 @@ struct Environment {
     height: u32,
     data: Vec<f32>,
 }
+
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct Lighting {
@@ -50,19 +60,23 @@ struct Lighting {
     environment_intensity: f32,
     environment_rotation_rad: f32,
 }
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct Output {
     coefficients: Vec<f32>,
     reflection_mips: Vec<Vec<f32>>,
 }
+
 fn invalid(message: impl Into<String>) -> JsValue {
     to_js_error(WebError::new(Forge3DErrorCode::InvalidInput, message))
 }
 
-#[wasm_bindgen(js_name = bakeTerrainProbe)]
-pub fn bake_terrain_probe(value: JsValue) -> Result<JsValue, JsValue> {
-    let i: Input = serde_wasm_bindgen::from_value(value).map_err(|e| invalid(e.to_string()))?;
+fn parse(value: JsValue) -> Result<Input, JsValue> {
+    serde_wasm_bindgen::from_value(value).map_err(|e| invalid(e.to_string()))
+}
+
+fn validate_common(i: &Input) -> Result<(), JsValue> {
     if i.width < 2
         || i.height < 2
         || u64::from(i.width) * u64::from(i.height) > 16_777_216
@@ -70,9 +84,9 @@ pub fn bake_terrain_probe(value: JsValue) -> Result<JsValue, JsValue> {
         || !i
             .heights
             .iter()
-            .chain(&i.position)
             .chain(&i.sky_color)
             .chain(&i.terrain_color)
+            .chain(&i.terrain_origin)
             .all(|v| v.is_finite())
         || ![i.terrain_width, i.sky_intensity, i.max_trace_distance]
             .iter()
@@ -91,25 +105,48 @@ pub fn bake_terrain_probe(value: JsValue) -> Result<JsValue, JsValue> {
             "invalid probe bake dimensions, values or work limits",
         ));
     }
-    // Browser terrain is y-up, [0,width]^2. The native baker is z-up and centered.
-    let half = i.terrain_width * 0.5;
-    let centered = [
-        i.position[0] - i.terrain_origin[0] - half,
-        i.position[2] - i.terrain_origin[1] - half,
-    ];
-    if i.terrain_origin.iter().any(|v| !v.is_finite()) || centered.iter().any(|v| v.abs() > half) {
-        return Err(invalid("probe position must lie over the source terrain"));
+    Ok(())
+}
+
+fn placement(i: &Input, positions: &[f32], limit: usize) -> Result<ProbePlacement, JsValue> {
+    if positions.is_empty()
+        || !positions.len().is_multiple_of(3)
+        || positions.len() / 3 > limit
+        || positions.iter().any(|value| !value.is_finite())
+    {
+        return Err(invalid("invalid probe placement dimensions or values"));
     }
-    let placement = ProbePlacement::new(
+    let half = i.terrain_width * 0.5;
+    let positions_ws: Result<Vec<[f32; 3]>, JsValue> = positions
+        .chunks_exact(3)
+        .map(|position| {
+            // Browser terrain is y-up, [origin, origin + width]^2. Native is z-up and centered.
+            let centered = [
+                position[0] - i.terrain_origin[0] - half,
+                position[2] - i.terrain_origin[1] - half,
+            ];
+            if centered.iter().any(|value| value.abs() > half) {
+                return Err(invalid("probe position must lie over the source terrain"));
+            }
+            Ok([centered[0], centered[1], position[1]])
+        })
+        .collect();
+    let positions_ws = positions_ws?;
+    let count = u32::try_from(positions_ws.len())
+        .map_err(|_| invalid("probe placement count overflowed"))?;
+    Ok(ProbePlacement::new(
         ProbeGridDesc {
-            origin: centered,
+            origin: [0.0, 0.0],
             spacing: [1.0, 1.0],
-            dims: [1, 1],
+            dims: [count, 1],
             height_offset: 1.0,
             influence_radius: 1.0,
         },
-        vec![[centered[0], centered[1], i.position[1]]],
-    );
+        positions_ws,
+    ))
+}
+
+fn bake_irradiance(i: &Input, placement: &ProbePlacement) -> Result<Vec<f32>, JsValue> {
     let analytical = HeightfieldAnalyticalBaker {
         heightfield: i.heights.clone(),
         height_dims: (i.width, i.height),
@@ -119,66 +156,20 @@ pub fn bake_terrain_probe(value: JsValue) -> Result<JsValue, JsValue> {
         ray_count: i.ray_count,
         max_trace_distance: i.max_trace_distance,
     };
-    let sh = analytical
-        .bake(&placement)
+    let baked = analytical
+        .bake(placement)
         .map_err(|e| invalid(e.to_string()))?;
-    let mut env = HdrImage {
-        width: 1,
-        height: 1,
-        data: i.sky_color.to_vec(),
-    };
-    let mut lighting = ReflectionCaptureLighting {
-        env_image: None,
-        env_intensity: i.sky_intensity,
-        env_rotation_rad: 0.0,
-        light_dir: [0.0, 0.0, 1.0],
-        light_color: [1.0; 3],
-        light_intensity: 1.0,
-    };
-    if let Some(l) = i.reflection_lighting {
-        if !l
-            .light_direction
-            .iter()
-            .chain(&l.light_color)
-            .chain(
-                [
-                    l.light_intensity,
-                    l.environment_intensity,
-                    l.environment_rotation_rad,
-                ]
-                .iter(),
-            )
-            .all(|v| v.is_finite())
-            || l.light_direction.iter().map(|v| v * v).sum::<f32>() < 1e-12
-            || l.light_intensity < 0.0
-            || l.environment_intensity < 0.0
-        {
-            return Err(invalid("invalid reflection lighting"));
-        }
-        if let Some(e) = l.environment {
-            let pixels = u64::from(e.width) * u64::from(e.height);
-            if pixels == 0
-                || pixels > 262144
-                || e.data.len() as u64 != pixels * 3
-                || e.data.iter().any(|v| !v.is_finite() || *v < 0.0)
-            {
-                return Err(invalid("invalid probe environment"));
-            }
-            env = HdrImage {
-                width: e.width,
-                height: e.height,
-                data: e.data,
-            };
-        }
-        lighting.env_intensity = l.environment_intensity;
-        lighting.env_rotation_rad = l.environment_rotation_rad;
-        lighting.light_dir = l.light_direction;
-        lighting.light_color = l.light_color;
-        lighting.light_intensity = l.light_intensity;
-    }
-    lighting.env_image = Some(&env);
+    Ok(baked
+        .probes
+        .iter()
+        .flat_map(|probe| probe.coeffs.iter().flatten().copied())
+        .collect())
+}
+
+fn reflection_material(i: &Input) -> Result<ReflectionTerrainMaterial, JsValue> {
     let material = i
         .reflection_material
+        .clone()
         .unwrap_or_else(|| ReflectionTerrainMaterial {
             albedo_mode: ReflectionAlbedoMode::Material,
             colormap_strength: 0.0,
@@ -232,20 +223,85 @@ pub fn bake_terrain_probe(value: JsValue) -> Result<JsValue, JsValue> {
     {
         return Err(invalid("invalid reflection terrain material"));
     }
-    if let Some(o) = &material.overlay {
-        if o.stops.len() > 64
-            || ![o.domain.0, o.domain.1, o.strength, o.offset]
-                .iter()
-                .all(|v| v.is_finite())
-            || o.domain.0 >= o.domain.1
-            || o.stops
-                .iter()
-                .any(|(p, c)| !p.is_finite() || c.iter().any(|v| !v.is_finite()))
+    if let Some(overlay) = &material.overlay {
+        if overlay.stops.len() > 64
+            || ![
+                overlay.domain.0,
+                overlay.domain.1,
+                overlay.strength,
+                overlay.offset,
+            ]
+            .iter()
+            .all(|v| v.is_finite())
+            || overlay.domain.0 >= overlay.domain.1
+            || overlay.stops.iter().any(|(position, color)| {
+                !position.is_finite() || color.iter().any(|v| !v.is_finite())
+            })
         {
             return Err(invalid("invalid reflection overlay"));
         }
     }
-    let reflection = HeightfieldReflectionBaker {
+    Ok(material)
+}
+
+fn bake_reflection(i: &Input, placement: &ProbePlacement) -> Result<Vec<Vec<f32>>, JsValue> {
+    let material = reflection_material(i)?;
+    let mut environment = HdrImage {
+        width: 1,
+        height: 1,
+        data: i.sky_color.to_vec(),
+    };
+    let mut lighting = ReflectionCaptureLighting {
+        env_image: None,
+        env_intensity: i.sky_intensity,
+        env_rotation_rad: 0.0,
+        light_dir: [0.0, 0.0, 1.0],
+        light_color: [1.0; 3],
+        light_intensity: 1.0,
+    };
+    if let Some(source) = &i.reflection_lighting {
+        if !source
+            .light_direction
+            .iter()
+            .chain(&source.light_color)
+            .chain(
+                [
+                    source.light_intensity,
+                    source.environment_intensity,
+                    source.environment_rotation_rad,
+                ]
+                .iter(),
+            )
+            .all(|v| v.is_finite())
+            || source.light_direction.iter().map(|v| v * v).sum::<f32>() < 1e-12
+            || source.light_intensity < 0.0
+            || source.environment_intensity < 0.0
+        {
+            return Err(invalid("invalid reflection lighting"));
+        }
+        if let Some(image) = &source.environment {
+            let pixels = u64::from(image.width) * u64::from(image.height);
+            if pixels == 0
+                || pixels > 262144
+                || image.data.len() as u64 != pixels * 3
+                || image.data.iter().any(|v| !v.is_finite() || *v < 0.0)
+            {
+                return Err(invalid("invalid probe environment"));
+            }
+            environment = HdrImage {
+                width: image.width,
+                height: image.height,
+                data: image.data.clone(),
+            };
+        }
+        lighting.env_intensity = source.environment_intensity;
+        lighting.env_rotation_rad = source.environment_rotation_rad;
+        lighting.light_dir = source.light_direction;
+        lighting.light_color = source.light_color;
+        lighting.light_intensity = source.light_intensity;
+    }
+    lighting.env_image = Some(&environment);
+    let baker = HeightfieldReflectionBaker {
         heightfield: &i.heights,
         height_dims: (i.width, i.height),
         terrain_span: [i.terrain_width; 2],
@@ -258,16 +314,48 @@ pub fn bake_terrain_probe(value: JsValue) -> Result<JsValue, JsValue> {
         material,
         lighting,
     };
-    let cube = reflection
-        .bake(&placement)
-        .map_err(|e| invalid(e.to_string()))?;
-    let output = Output {
-        coefficients: sh.probes[0].coeffs.iter().flatten().copied().collect(),
-        reflection_mips: cube.probes[0]
-            .mips
-            .iter()
-            .map(|m| m.texels.iter().flatten().copied().collect())
-            .collect(),
-    };
-    serde_wasm_bindgen::to_value(&output).map_err(|e| invalid(e.to_string()))
+    let baked = baker.bake(placement).map_err(|e| invalid(e.to_string()))?;
+    let mut levels = Vec::with_capacity(baked.mip_level_count as usize);
+    for level in 0..baked.mip_level_count as usize {
+        levels.push(
+            baked
+                .probes
+                .iter()
+                .flat_map(|probe| probe.mips[level].texels.iter().flatten().copied())
+                .collect(),
+        );
+    }
+    Ok(levels)
+}
+
+fn serialize(output: &Output) -> Result<JsValue, JsValue> {
+    serde_wasm_bindgen::to_value(output).map_err(|e| invalid(e.to_string()))
+}
+
+/// Backward-compatible single-position combined baker.
+#[wasm_bindgen(js_name = bakeTerrainProbe)]
+pub fn bake_terrain_probe(value: JsValue) -> Result<JsValue, JsValue> {
+    let input = parse(value)?;
+    validate_common(&input)?;
+    let position = input
+        .position
+        .ok_or_else(|| invalid("probe position is required"))?;
+    let placement = placement(&input, &position, 1)?;
+    serialize(&Output {
+        coefficients: bake_irradiance(&input, &placement)?,
+        reflection_mips: bake_reflection(&input, &placement)?,
+    })
+}
+
+/// Batch baker used by the browser worker for native-shape independent grids.
+#[wasm_bindgen(js_name = bakeTerrainProbeGrids)]
+pub fn bake_terrain_probe_grids(value: JsValue) -> Result<JsValue, JsValue> {
+    let input = parse(value)?;
+    validate_common(&input)?;
+    let irradiance = placement(&input, &input.irradiance_positions, MAX_IRRADIANCE_PROBES)?;
+    let reflection = placement(&input, &input.reflection_positions, MAX_REFLECTION_PROBES)?;
+    serialize(&Output {
+        coefficients: bake_irradiance(&input, &irradiance)?,
+        reflection_mips: bake_reflection(&input, &reflection)?,
+    })
 }

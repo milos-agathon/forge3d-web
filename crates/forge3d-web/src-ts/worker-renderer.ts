@@ -211,6 +211,7 @@ export class Forge3DWorkerRenderer {
     }
   }
 
+  /** Copies the camera to the worker session; await this before rendering it. */
   async setCamera(camera: CameraInput): Promise<void> {
     this.#assertLive();
     const owned = structuredClone(camera);

@@ -58,7 +58,13 @@ pub struct Forge3DRuntime {
     scatter: Option<scatter::ScatterResources>,
     time_seconds: f32,
     probe_count: u32,
+    reflection_probe_count: u32,
     probe_bytes: u64,
+    probe_position_bytes: u64,
+    probe_coefficient_bytes: u64,
+    probe_irradiance_position_bytes: u64,
+    probe_reflection_position_bytes: u64,
+    probe_reflection_bytes: u64,
     lighting: Option<lighting::LightingResources>,
     textures: Option<textures::TextureResources>,
     ibl: Option<ibl::IblResources>,
@@ -210,22 +216,29 @@ impl Forge3DRuntime {
     #[wasm_bindgen(js_name = getProbeMemoryReport)]
     pub fn get_probe_memory_report(&self) -> Result<JsValue, JsValue> {
         ensure_not_disposed_error(self).map_err(to_js_error)?;
-        let count = u64::from(self.probe_count);
         #[derive(serde::Serialize)]
         #[serde(rename_all = "camelCase")]
         struct Report {
             probe_count: u64,
+            irradiance_probe_count: u64,
+            reflection_probe_count: u64,
             gpu_bytes: u64,
             coefficient_bytes: u64,
             position_bytes: u64,
+            irradiance_position_bytes: u64,
+            reflection_position_bytes: u64,
             reflection_bytes: u64,
         }
         serde_wasm_bindgen::to_value(&Report {
-            probe_count: count,
+            probe_count: u64::from(self.probe_count),
+            irradiance_probe_count: u64::from(self.probe_count),
+            reflection_probe_count: u64::from(self.reflection_probe_count),
             gpu_bytes: self.probe_bytes,
-            coefficient_bytes: count * 108,
-            position_bytes: count * 12,
-            reflection_bytes: self.probe_bytes.saturating_sub(64 + count * 160),
+            coefficient_bytes: self.probe_coefficient_bytes,
+            position_bytes: self.probe_position_bytes,
+            irradiance_position_bytes: self.probe_irradiance_position_bytes,
+            reflection_position_bytes: self.probe_reflection_position_bytes,
+            reflection_bytes: self.probe_reflection_bytes,
         })
         .map_err(|e| to_js_error(scatter::invalid(e.to_string())))
     }
@@ -902,7 +915,13 @@ mod tests {
             scatter: None,
             time_seconds: 0.0,
             probe_count: 0,
+            reflection_probe_count: 0,
+            probe_coefficient_bytes: 0,
+            probe_irradiance_position_bytes: 0,
+            probe_reflection_position_bytes: 0,
+            probe_reflection_bytes: 0,
             probe_bytes: 64,
+            probe_position_bytes: 0,
             lighting: None,
             textures: None,
             ibl: None,

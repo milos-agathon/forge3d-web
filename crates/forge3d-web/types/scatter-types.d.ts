@@ -110,7 +110,11 @@ export interface ScatterGeneratorOptions {
     scale?: readonly [number, number];
     yawDegrees?: readonly [number, number];
     filters?: ScatterFilters;
-    mask?: Float32Array;
+    mask?: Float32Array | {
+        data: Float32Array;
+        width: number;
+        height: number;
+    };
     maxAttempts?: number;
     minDistance?: number;
     edgeMargin?: number;

@@ -14,6 +14,9 @@ a platform support claim.
 
 For W09 population, wind, local SH/reflection lighting, reports and recovery,
 see [Terrain scatter and probes](terrain-scatter-probes.md).
+`Forge3DWorkerRenderer.setCamera(camera): Promise<void>` copies the camera to
+the worker session. Await it before `render()` or `readRgba()`; the retained
+camera is replayed with the scene after worker recovery.
 
 ```ts
 import {

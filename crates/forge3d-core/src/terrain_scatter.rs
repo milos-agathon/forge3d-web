@@ -132,8 +132,15 @@ impl Bounds {
     fn valid(&self) -> bool {
         finite(&self.min) && finite(&self.max) && (0..3).all(|a| self.min[a] <= self.max[a])
     }
-    fn contains_instance(&self, point: Vec3, row: &[f32], wind: &Wind, slack: f32) -> bool {
-        let maximum = if wind.enabled && wind.amplitude > 0.0 {
+    fn contains_instance(
+        &self,
+        point: Vec3,
+        row: &[f32],
+        wind: &Wind,
+        include_wind: bool,
+        slack: f32,
+    ) -> bool {
+        let maximum = if include_wind && wind.enabled && wind.amplitude > 0.0 {
             wind.amplitude * (1.0 - wind.rigidity) + wind.gust_strength
         } else {
             0.0
@@ -239,7 +246,7 @@ impl ScatterBatch {
             return Err("invalid scatter population bounds".into());
         }
         let diagonal = Vec3::from(self.bounds.max).distance(self.bounds.min.into());
-        let slack = diagonal.max(1.0) * 1e-5;
+        let slack = diagonal * 1e-5;
         // Precompute local corners once per level, then validate the serialized bounds.
         let corners: Vec<Vec3> = self
             .levels
@@ -268,6 +275,7 @@ impl ScatterBatch {
                     matrix.transform_point3(*corner),
                     row,
                     &self.wind,
+                    true,
                     slack,
                 ) {
                     return Err("scatter bounds do not contain every LOD instance".into());
@@ -277,7 +285,7 @@ impl ScatterBatch {
         let mut membership = std::collections::BTreeSet::new();
         for cluster in &self.clusters {
             cluster.mesh.validate()?;
-            if cluster.instance_indices.is_empty()
+            if cluster.instance_indices.len() < 2
                 || !finite(&cluster.center)
                 || !cluster.radius.is_finite()
                 || cluster.radius < 0.0
@@ -297,32 +305,26 @@ impl ScatterBatch {
                         matrix.transform_point3(*corner),
                         &self.transforms[id * 16..id * 16 + 16],
                         &self.wind,
+                        false,
                         slack,
                     ) {
                         return Err("HLOD bounds do not contain their instances".into());
                     }
                 }
             }
-            for bits in 0..8 {
-                let point = Vec3::new(
-                    if bits & 1 == 0 {
-                        cluster.bounds.min[0]
-                    } else {
-                        cluster.bounds.max[0]
-                    },
-                    if bits & 2 == 0 {
-                        cluster.bounds.min[1]
-                    } else {
-                        cluster.bounds.max[1]
-                    },
-                    if bits & 4 == 0 {
-                        cluster.bounds.min[2]
-                    } else {
-                        cluster.bounds.max[2]
-                    },
-                );
-                if point.distance(cluster.center.into()) > cluster.radius + slack {
-                    return Err("HLOD sphere does not contain its bounds".into());
+            for point in cluster.mesh.positions.chunks_exact(3) {
+                if !(0..3).all(|a| {
+                    point[a] >= cluster.bounds.min[a] - slack
+                        && point[a] <= cluster.bounds.max[a] + slack
+                        && point[a] >= self.bounds.min[a] - slack
+                        && point[a] <= self.bounds.max[a] + slack
+                }) {
+                    return Err("HLOD bounds do not contain their static mesh".into());
+                }
+                if Vec3::new(point[0], point[1], point[2]).distance(cluster.center.into())
+                    > cluster.radius + slack
+                {
+                    return Err("HLOD sphere does not contain its static mesh".into());
                 }
             }
         }
@@ -342,12 +344,9 @@ impl ScatterBatch {
         let mut covered = std::collections::BTreeSet::new();
         let max = self.max_draw_distance.unwrap_or(f32::INFINITY);
         for (i, c) in self.clusters.iter().enumerate() {
-            if eye.distance(c.center.into()) - c.radius
-                > self.hlod.as_ref().map_or(f32::INFINITY, |h| h.distance)
-                && c.instance_indices.iter().all(|&id| {
-                    let t = &self.transforms[id * 16..];
-                    eye.distance(Vec3::new(t[3], t[7], t[11])) <= max
-                })
+            let surface_distance = eye.distance(c.center.into()) - c.radius;
+            if surface_distance > self.hlod.as_ref().map_or(f32::INFINITY, |h| h.distance)
+                && surface_distance < max
             {
                 selected.clusters.push(i);
                 covered.extend(c.instance_indices.iter().copied());
@@ -383,6 +382,51 @@ impl ScatterBatch {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn tiny_population_slack_scales_with_actual_diagonal() {
+        let mut b = batch();
+        for index in [0, 5, 10] {
+            b.transforms[index] = 0.01;
+        }
+        b.bounds.min = [-0.01, 0.0, 0.0];
+        b.bounds.max = [0.01, 0.1, 0.0];
+        b.validate().unwrap();
+        let diagonal = Vec3::from(b.bounds.max).distance(b.bounds.min.into());
+        b.bounds.max[1] -= diagonal * 1e-5 * 2.0;
+        assert!(b.validate().unwrap_err().contains("contain"));
+    }
+    #[test]
+    fn hlod_static_sphere_and_animated_population_bounds_are_independent() {
+        let mut b = batch();
+        b.transforms.extend_from_within(..16);
+        b.wind.enabled = true;
+        b.wind.amplitude = 20.0;
+        b.wind.rigidity = 0.0;
+        b.bounds.min = [-21.0, 0.0, -20.0];
+        b.bounds.max = [21.0, 10.0, 20.0];
+        b.hlod = Some(Hlod {
+            distance: 30.0,
+            cluster_radius: 64.0,
+            simplify_ratio: 1.0,
+        });
+        b.clusters.push(Cluster {
+            mesh: b.levels[1].mesh.clone(),
+            instance_indices: vec![0, 1],
+            bounds: b.bounds.clone(),
+            center: [0.0; 3],
+            radius: 10.1,
+        });
+        b.validate().unwrap();
+        b.clusters[0].radius = 0.0;
+        assert!(b.validate().unwrap_err().contains("static mesh"));
+        b.clusters[0].radius = 100.0;
+        b.clusters[0].mesh.positions[0] = 50.0;
+        assert!(b.validate().unwrap_err().contains("static mesh"));
+        b.clusters[0].mesh.positions[0] = -1.0;
+        b.clusters[0].instance_indices.pop();
+        assert!(b.validate().unwrap_err().contains("HLOD"));
+    }
+
     fn batch() -> ScatterBatch {
         serde_json::from_value(serde_json::json!({
         "name":"test","levels":[{"mesh":{"positions":[-1,0,0,1,0,0,0,10,0],"normals":[0,0,1,0,0,1,0,0,1],"indices":[0,1,2]},"maxDistance":30},{"mesh":{"positions":[-1,0,0,1,0,0,0,10,0],"normals":[0,0,1,0,0,1,0,0,1],"indices":[0,1,2]}}],

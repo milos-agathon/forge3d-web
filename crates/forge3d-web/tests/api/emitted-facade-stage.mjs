@@ -26,6 +26,7 @@ try {
   const facadeBPath = emitFacadeCopy("copy-b");
   const facadeA = await import(pathToFileURL(facadeAPath));
   const facadeB = await import(pathToFileURL(facadeBPath));
+  for (const name of ["packTerrainProbes", "validateProbeSnapshot", "normalizeProbeGrid", "normalizeScatterBatches", "selectScatterLods", "scatterMemoryReport", "probeShBasis", "probeCubeDirection"]) assert.equal(name in facadeA, false, `internal W09 helper exported: ${name}`);
   const internalsA = await import(
     pathToFileURL(join(dirname(facadeAPath), "runtime-internals.js"))
   );
@@ -42,18 +43,10 @@ try {
       "getTerrainProbeMaterialDefaults",
       "gridScatterTransforms",
       "makeScatterTransform",
-      "normalizeProbeGrid",
-      "normalizeScatterBatches",
-      "packTerrainProbes",
-      "probeCubeDirection",
-      "probeShBasis",
-      "scatterMemoryReport",
       "scatterMeshBounds",
       "scatterTransformBounds",
       "seededScatterTransforms",
-      "selectScatterLods",
       "simplifyScatterMesh",
-      "validateProbeSnapshot",
       "AOV_ID_BACKGROUND",
       "AOV_ID_SCENE_NODE_BASE",
       "AOV_ID_TERRAIN",

@@ -13,24 +13,92 @@ const transforms=Float32Array.from([...makeScatterTransform([-10,0,0]),...makeSc
 const batch=(extra={})=>new TerrainScatterBatch({levels:[{mesh,maxDistance:70},{mesh}],transforms,color:[.8,.12,.05,1],...extra});
 const hash=async bytes=>Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",bytes)),b=>b.toString(16).padStart(2,"0")).join("");
 const frame=async r=>{r.render();return r.readRgba();};
+// Historical native SH L2 basis, with public y-up converted to native z-up.
+const nativeShBasis=([x,z,y])=>[.282095,.488603*y,.488603*z,.488603*x,1.092548*x*y,1.092548*y*z,.315392*(3*z*z-1),1.092548*x*z,.546274*(x*x-y*y)];
 const delta=(a,b)=>a.reduce((sum,x,i)=>sum+Math.abs(x-b[i]),0)/a.length;
 const probes=()=>TerrainLightingProbes.bake(source,{grid:{origin:[-24,-24],spacing:[16,16],dims:[4,4],heightOffset:5,edgeBlend:[8,8]},rayCount:32,reflectionResolution:4,reflectionSamples:8});
 window.__w09={
- async reflections() {
-  const truth=(await (await fetch("/tests/golden/w09/probes.json")).json()).cases[0];
-  const p=await TerrainLightingProbes.bake(source,{grid:{origin:[0,0],spacing:[64,64],dims:[1,1],heightOffset:5},rayCount:64,reflectionResolution:4,reflectionSamples:8});p.setDebug("reflections");
+ async hlodPixels(){
   const r=await Forge3DRuntime.create(canvas,{width:192,height:128,devicePixelRatio:1});
-  try{r.setTerrain(terrain);r.setCamera({...camera,position:[0,50,0],target:[0,0,0],up:[0,0,-1],projection:"orthographic",orthographicHeight:8});r.setLightingProbes(p);
-   const cap=await r.capture({samples:1,aovs:["id"]}),ids=cap.aovFrame.id(),hdr=cap.hdrFrame.data,actual=[],expected=[];
-   // Native face +Z (public +Y), roughness .5 selects mip 1. Box projection
-   // maps the orthographic reflection ray onto the probe's upper box plane.
-   for(let row=48;row<80;row++)for(let col=80;col<112;col++){
-    const i=row*192+col;if(!ids[i])throw new Error("uncovered reflection comparison pixel");
-    const x=(col+.5-96)*8/128,z=(row+.5-64)*8/128,u=.5+x/64,v=.5-z/64;
-    for(let c=0;c<3;c++){const at=(xx,yy)=>truth.reflectionMips[1][(4*4+yy*2+xx)*4+c];actual.push(hdr[i*4+c]);expected.push((1-v)*((1-u)*at(0,0)+u*at(1,0))+v*((1-u)*at(0,1)+u*at(1,1)));}
-   }
-   const metric=await api.compareImages(new Float32Array(actual),new Float32Array(expected),{width:32,height:32,channels:3});return{count:actual.length/3,maxAbs:Math.max(...actual.map((x,i)=>Math.abs(x-expected[i]))),ssim:metric.ssim};
+  try{
+   r.setTerrain(terrain);r.setCamera({...camera,position:[0,24,100]});
+   const extra={transforms:Float32Array.from([...makeScatterTransform([5,8,5],0,.5),...makeScatterTransform([15,8,5],0,.5)]),hlod:{distance:20,clusterRadius:64,simplifyRatio:1}};
+   r.setScatterBatches([batch({...extra,wind:{enabled:true,amplitude:3,rigidity:.2}})]);
+   r.setTimeSeconds(0);const a=await frame(r);r.setTimeSeconds(.37);const b=await frame(r);
+   const clustered=r.getScatterStats();r.setScatterBatches([batch(extra)]);const staticFrame=await frame(r);
+   const cap=await r.capture({samples:1,aovs:["id"]});
+   return{a:await hash(a),b:await hash(b),static:await hash(staticFrame),ids:Array.from(new Set(cap.aovFrame.id())).filter(x=>x>=0x100000),clustered};
+  }finally{r.dispose();}
+ },
+ async probeBehavior(){
+  const r=await Forge3DRuntime.create(canvas,{width:192,height:128,devicePixelRatio:1});
+  const p=await probes();
+  try{
+   r.setTerrain(terrain);r.setCamera({...camera,position:[0,50,0],target:[0,0,0],up:[0,0,-1]});p.setDebug("weight");r.setLightingProbes(p);
+   const cap=await r.capture({samples:1,aovs:["id"]});const hdr=cap.hdrFrame.data,ids=cap.aovFrame.id();
+   const value=(col,row)=>{const i=row*192+col;if(!ids[i])throw new Error("weight probe pixel not covered");return hdr[i*4];};
+   const center=value(96,64),edge=value(35,64),outside=value(22,64);
+   const stress=await TerrainLightingProbes.bake(source,{grid:{origin:[-28,-28],spacing:[8,8],dims:[8,8],heightOffset:5},rayCount:32,reflectionResolution:2,reflectionSamples:8});
+   r.setLightingProbes(stress);const stressCount=r.getProbeMemoryReport().probeCount,stressResolution=stress.snapshot().reflectionResolution;const before=await hash(await frame(r));
+   const invalid=stress.snapshot();invalid.coefficients[0]=NaN;let rejected=false;try{r.setLightingProbes(invalid);}catch(e){rejected=e.code==="INVALID_INPUT";}
+   const after=await hash(await frame(r));r.setLightingProbes(null);const cleared=await hash(await frame(r));stress.dispose();
+   return{center,edge,outside,stressCount,stressResolution,rejected,before,after,cleared};
   }finally{r.dispose();p.dispose();}
+ },
+ async cancelBake(){
+  const NativeWorker=globalThis.Worker,controller=new AbortController();let dispatched;
+  const posted=new Promise(resolve=>dispatched=resolve);
+  globalThis.Worker=class extends NativeWorker{postMessage(...args){super.postMessage(...args);dispatched();}};
+  try{
+   const pending=TerrainLightingProbes.bake(source,{grid:{origin:[-24,-24],spacing:[16,16],dims:[4,4]},rayCount:4096,reflectionResolution:64,reflectionSamples:256,signal:controller.signal}).then(()=>({completed:true}),e=>({code:e.code}));
+   await posted;let responsive=false;await new Promise(resolve=>requestAnimationFrame(()=>{responsive=true;controller.abort();resolve();}));
+   return{responsive,...await pending};
+  }finally{globalThis.Worker=NativeWorker;}
+ },
+ async budgetRun(durationSeconds){
+  const r=await Forge3DRuntime.create(canvas,{width:192,height:128,devicePixelRatio:1,memoryBudgetBytes:16*1024*1024});
+  const p=await TerrainLightingProbes.bake(source,{grid:{origin:[-24,-24],spacing:[16,16],dims:[4,4],heightOffset:5,edgeBlend:[8,8]},rayCount:64,reflectionResolution:4,reflectionSamples:8});
+  try{
+   r.setTerrain(terrain);r.setCamera(camera);r.setScatterBatches([batch({wind:{enabled:true,amplitude:3,rigidity:.2}})]);r.setLightingProbes(p);
+   const bridge=await import("../pkg/forge3d_web.js"),wasm=await bridge.default();
+   const samples=[],start=performance.now();let covered=0;
+   while(performance.now()-start<durationSeconds*1000){r.setTimeSeconds((performance.now()-start)/1000);const a=performance.now();await frame(r);samples.push(performance.now()-a);}
+   const cap=await r.capture({samples:1,aovs:["id"]});covered=Array.from(cap.aovFrame.id()).filter(id=>id>=0x100000).length;
+   samples.sort((a,b)=>a-b);const snapshot=p.snapshot(),info=(await navigator.gpu.requestAdapter()).info;
+   const ownedArrayBytes=source.heights.byteLength+source.slopes.byteLength+snapshot.positions.byteLength+snapshot.coefficients.byteLength+snapshot.reflectionMips.reduce((n,m)=>n+m.byteLength,0)+transforms.byteLength+mesh.positions.byteLength+mesh.normals.byteLength+mesh.indices.byteLength;
+   return{durationSeconds:(performance.now()-start)/1000,frames:samples.length,p95Ms:samples[Math.ceil(samples.length*.95)-1],gpuBytes:r.getMemoryReport().currentBytes,wasmBytes:wasm.memory.buffer.byteLength,ownedArrayBytes,covered,jsHeapBytes:performance.memory?.usedJSHeapSize??null,adapter:{vendor:info.vendor,architecture:info.architecture,device:info.device,description:info.description}};
+  }finally{r.dispose();p.dispose();}
+ },
+
+ async reflections() {
+  const golden=await (await fetch("/tests/golden/w09/probes.json")).json(),truth=golden.cases[2];
+  const snapshot={grid:{origin:[0,0],spacing:[64,64],dims:[1,1],heightOffset:5,edgeBlend:[64,64]},positions:new Float32Array([0,0,0]),coefficients:new Float32Array(truth.coefficients),reflectionResolution:4,reflectionMips:truth.reflectionMips.map(m=>new Float32Array(m)),sceneBounds:{min:[-32,-32,-32],max:[32,32,32]},strength:1,reflectionStrength:1,debug:"reflections"};
+  const r=await Forge3DRuntime.create(canvas,{width:192,height:128,devicePixelRatio:1}),scene=Forge3DScene.create(),actual=[],expected=[],faces=new Set();
+  const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],norm=a=>{const l=Math.hypot(...a);return a.map(v=>v/l);};
+  const sampleCube=(direction,roughness)=>{
+   const [x,y,z]=direction,a=direction.map(Math.abs);let face,u,v;
+   if(a[0]>=a[1]&&a[0]>=a[2]){face=x>0?0:1;u=(x>0?-z:z)/a[0];v=-y/a[0];}
+   else if(a[1]>=a[0]&&a[1]>=a[2]){face=y>0?2:3;u=x/a[1];v=(y>0?z:-z)/a[1];}
+   else{face=z>0?4:5;u=(z>0?x:-x)/a[2];v=-y/a[2];}faces.add(face);u=.5*(u+1);v=.5*(v+1);
+   const mip=roughness*roughness*2,l0=Math.floor(mip),l1=Math.min(l0+1,2),f=mip-l0;
+   const at=level=>{const size=4>>level,px=Math.max(0,Math.min(size-1,u*size-.5)),py=Math.max(0,Math.min(size-1,v*size-.5)),x0=Math.floor(px),y0=Math.floor(py),x1=Math.min(x0+1,size-1),y1=Math.min(y0+1,size-1),tx=px-x0,ty=py-y0;
+    return [0,1,2].map(c=>{const val=(xx,yy)=>truth.reflectionMips[level][(face*size*size+yy*size+xx)*4+c];return (1-ty)*((1-tx)*val(x0,y0)+tx*val(x1,y0))+ty*((1-tx)*val(x0,y1)+tx*val(x1,y1));});};
+   const a0=at(l0),a1=at(l1);return a0.map((v,c)=>v*(1-f)+a1[c]*f);
+  };
+  let node;
+  try{
+   for(const n of [[1,0,0],[-1,0,0],[0,1,0],[0,-1,0],[0,0,1],[0,0,-1]])for(const roughness of [.25,.5,1]){
+    const rotation=n[1]===-1?[1,0,0,0]:norm([...cross([0,1,0],n),1+n[1]]),up=Math.abs(n[1])===1?[0,0,-1]:[0,1,0],right=norm(cross(n.map(v=>-v),up)),screenUp=cross(right,n.map(v=>-v)),eye=n.map(v=>v*20);
+    if(node!==undefined)scene.removeNode(node);node=scene.addGroundPlane({name:"probe-face",size:[8,8],color:[1,1,1,1],materialSlot:"probe",transform:{rotation}});scene.setMaterial("probe",{id:"probe",roughness});scene.setLightingProbes(snapshot);r.setScene(scene.snapshot());r.setCamera({...camera,position:eye,target:[0,0,0],up,projection:"orthographic",orthographicHeight:8});
+    const cap=await r.capture({samples:1,aovs:["id"]}),ids=cap.aovFrame.id(),hdr=cap.hdrFrame.data;
+    for(let row=48;row<80;row++)for(let col=80;col<112;col++){
+     const i=row*192+col;if(!ids[i])throw new Error("uncovered reflection face comparison");const sx=(col+.5-96)*8/128,sy=(64-row-.5)*8/128,pos=right.map((v,a)=>v*sx+screenUp[a]*sy),view=n,dot=view.reduce((s,v,a)=>s+v*n[a],0),dir=n.map((v,a)=>2*dot*v-view[a]);
+     const travel=Math.max(Math.min(...dir.map((v,a)=>v>1e-4?(32-pos[a])/v:v< -1e-4?(-32-pos[a])/v:1e9)),0),corrected=norm(pos.map((v,a)=>v+dir[a]*travel)),wanted=sampleCube([corrected[0],corrected[2],corrected[1]],roughness);
+     for(let c=0;c<3;c++){actual.push(hdr[i*4+c]);expected.push(wanted[c]);}
+    }
+   }
+   const metric=await api.compareImages(new Float32Array(actual),new Float32Array(expected),{width:32,height:32*18,channels:3});return{count:actual.length/3,maxAbs:actual.reduce((m,v,i)=>Math.max(m,Math.abs(v-expected[i])),0),ssim:metric.ssim,faces:[...faces].sort(),cases:18};
+  }finally{r.dispose();scene.dispose();}
  },
  async baseline() {
   const baselineUrl="/pkg/w08-base/index.js";
@@ -59,16 +127,18 @@ window.__w09={
    return{failures,before,after,beforeBytes,afterBytes,budget,admitted,released,baseBytes,report,scatterReport};
   }finally{r.dispose();}
  },
- async irradiance() {
-  const truth=(await (await fetch("/tests/golden/w09/probes.json")).json()).cases[0];
-  const p=await TerrainLightingProbes.bake(source,{grid:{origin:[0,0],spacing:[64,64],dims:[1,1],heightOffset:5},rayCount:64,reflectionResolution:4,reflectionSamples:8});p.setDebug("irradiance");
+ async irradiance(caseIndex=0) {
+  const golden=await (await fetch("/tests/golden/w09/probes.json")).json(),truth=golden.cases[caseIndex];
+  const localTerrain={...terrain,heights:new Float32Array(truth.heights),domain:[0,20]};
+  const localSource=new TerrainScatterSource(localTerrain.heights,33,33,{terrainWidth:64,origin:[-32,-32],domainMin:0});
+  const p=await TerrainLightingProbes.bake(localSource,{grid:{origin:[0,0],spacing:[64,64],dims:[1,1],heightOffset:5},rayCount:64,reflectionResolution:4,reflectionSamples:8});p.setDebug("irradiance");
   const r=await Forge3DRuntime.create(canvas,{width:192,height:128,devicePixelRatio:1});
-  try{r.setTerrain(terrain);r.setCamera({...camera,position:[0,50,0],target:[0,0,0],up:[0,0,-1]});r.setLightingProbes(p);const capture=await r.capture({samples:1,aovs:["normal","id"]});
+  try{r.setTerrain({...localTerrain,material:api.getTerrainMaterialDefaults()});r.setCamera({...camera,position:[0,50,0],target:[0,0,0],up:[0,0,-1]});r.setLightingProbes(p);const capture=await r.capture({samples:1,aovs:["normal","id"]});
    const ids=capture.aovFrame.id(),normals=capture.aovFrame.normal(),hdr=capture.hdrFrame.data;
-   const actual=[],expected=[];
-   for(let i=0;i<ids.length;i++){if(!ids[i] || i%192<80 || i%192>=112 || Math.floor(i/192)<56 || Math.floor(i/192)>=72)continue;const basis=api.probeShBasis(Array.from(normals.subarray(i*3,i*3+3)));for(let c=0;c<3;c++){actual.push(hdr[i*4+c]);expected.push(Math.max(0,basis.reduce((sum,b,k)=>sum+b*truth.coefficients[k*3+c],0)));}}
+   const actual=[],expected=[],normalDirections=new Set();
+   for(let i=0;i<ids.length;i++){if(!ids[i])continue;normalDirections.add(Array.from(normals.subarray(i*3,i*3+3)).map(v=>v.toFixed(3)).join(","));const basis=nativeShBasis(Array.from(normals.subarray(i*3,i*3+3)));for(let c=0;c<3;c++){actual.push(hdr[i*4+c]);expected.push(Math.max(0,basis.reduce((sum,b,k)=>sum+b*truth.coefficients[k*3+c],0)));}}
    if(actual.length===0)throw new Error("irradiance comparison has no covered pixels");
-   const metric=await api.compareImages(new Float32Array(actual),new Float32Array(expected),{width:actual.length/3,height:1,channels:3});return{count:actual.length/3,maxAbs:Math.max(...actual.map((v,i)=>Math.abs(v-expected[i]))),ssim:metric.ssim};
+   const metric=await api.compareImages(new Float32Array(actual),new Float32Array(expected),{width:actual.length/3,height:1,channels:3});return{count:actual.length/3,maxAbs:Math.max(...actual.map((v,i)=>Math.abs(v-expected[i]))),ssim:metric.ssim,normalDirections:normalDirections.size,center:hdr[(64*192+96)*4],flatNativeUp:Math.max(0,nativeShBasis([0,1,0]).reduce((sum,b,k)=>sum+b*golden.cases[0].coefficients[k*3],0))};
   }finally{r.dispose();p.dispose();}
  },
  async worker() {
@@ -76,7 +146,9 @@ window.__w09={
   const c=document.createElement("canvas");c.width=192;c.height=128;document.body.append(c);
   const scene=Forge3DScene.create();scene.addNode({kind:"terrain",name:"terrain",terrain});scene.setScatterBatches([batch({wind:{enabled:true,amplitude:2}})]);scene.setTimeSeconds(.37);scene.setLightingProbes(await probes());
   let renderer;
-  try {renderer=await api.Forge3DWorkerRenderer.create(c,{worker,controls:false,resize:false,session:{runtime:{width:192,height:128,devicePixelRatio:1}}});await renderer.setScene(scene);await renderer.setCamera(camera);await renderer.render();const rgba=await renderer.readRgba();return{hash:await hash(rgba),nonempty:rgba.some(x=>x>0),sourceCount:scene.getScatterBatches()[0].transforms.length};}
+  const workerTimeHash=async()=>{scene.setTimeSeconds(0);await renderer.setScene(scene);await renderer.render();return hash(await renderer.readRgba());};
+  const workerStaticHash=async()=>{scene.setScatterBatches([]);await renderer.setScene(scene);await renderer.render();return hash(await renderer.readRgba());};
+  try {renderer=await api.Forge3DWorkerRenderer.create(c,{worker,controls:false,resize:false,session:{runtime:{width:192,height:128,devicePixelRatio:1}}});await renderer.setScene(scene);await renderer.setCamera(camera);await renderer.render();const rgba=await renderer.readRgba();return{hash:await hash(rgba),nonempty:rgba.some(x=>x>0),timeHash:await workerTimeHash(),staticHash:await workerStaticHash()};}
   finally{await renderer?.dispose();worker.terminate();scene.dispose();c.remove();}
  },
  async blending() {
@@ -101,12 +173,15 @@ window.__w09={
   const golden=await (await fetch("/tests/golden/w09/probes.json")).json(), cases=[];
   for(const truth of golden.cases){
    const s=new TerrainScatterSource(new Float32Array(truth.heights),33,33,{terrainWidth:64});
-   const p=await TerrainLightingProbes.bake(s,{grid:{origin:[32,32],spacing:[16,16],dims:[1,1],heightOffset:5},rayCount:64,reflectionResolution:4,reflectionSamples:8});
+   const p=await TerrainLightingProbes.bake(s,{grid:{origin:[(truth.position??[32,5,32])[0],(truth.position??[32,5,32])[2]],spacing:[16,16],dims:[1,1],heightOffset:5},rayCount:64,reflectionResolution:4,reflectionSamples:8,...(truth.reflectionLighting?{reflectionLighting:{...truth.reflectionLighting,environment:{...truth.reflectionLighting.environment,data:new Float32Array(truth.reflectionLighting.environment.data)}}}:{})});
    const actual=p.snapshot(), maxAbs=Math.max(...actual.coefficients.map((x,i)=>Math.abs(x-truth.coefficients[i])));
    const metrics=await api.compareImages(actual.reflectionMips[0],new Float32Array(truth.reflectionMips[0]),{width:4,height:24,channels:4,compareChannels:3});
    const negative=new Float32Array(actual.reflectionMips[0]);for(let i=0;i<negative.length;i+=4){negative[i]=0;negative[i+1]=1;negative[i+2]=0;}
    const control=await api.compareImages(negative,new Float32Array(truth.reflectionMips[0]),{width:4,height:24,channels:4,compareChannels:3});
-   cases.push({ridge:truth.ridge,maxAbs,ssim:metrics.ssim,controlSsim:control.ssim});
+   const mipSsim=[];for(let l=0;l<actual.reflectionMips.length;l++){const size=4>>l,m=await api.compareImages(actual.reflectionMips[l],new Float32Array(truth.reflectionMips[l]),{width:size,height:size*6,channels:4,compareChannels:3});mipSsim.push(m.ssim);}
+   const swapped=actual.reflectionMips[0].slice(),faceSize=4*4*4;swapped.set(actual.reflectionMips[0].subarray(faceSize,faceSize*2),0);swapped.set(actual.reflectionMips[0].subarray(0,faceSize),faceSize);
+   const faceControl=await api.compareImages(swapped,new Float32Array(truth.reflectionMips[0]),{width:4,height:24,channels:4,compareChannels:3});
+   cases.push({name:truth.name,ridge:truth.ridge,maxAbs,ssim:metrics.ssim,mipSsim,faceControlSsim:faceControl.ssim,reflectionHash:await hash(actual.reflectionMips[0]),controlSsim:control.ssim});
   }
   return cases;
  },
@@ -135,13 +210,17 @@ window.__w09={
    r.setCamera({...camera,position:[0,24,150]});await frame(r);const hlod=r.getScatterStats();
    r.setScatterBatches([batch({maxDrawDistance:20})]);await frame(r);const culled=r.getScatterStats();
    r.setScatterBatches([]);r.setCamera(camera);const cleared=await frame(r);
-   return {baselineHash:await hash(baseline),clearedHash:await hash(cleared),fixedHash,disabledHash:await hash(disabled),scatterDelta:delta(fixed,baseline),windDelta:delta(wind0,wind1),windHash,repeatHash:await hash(repeat),stats,memory,probeMemory,probeDelta:delta(lit,noProbe),debugDelta:delta(debug,noProbe),zeroHash:await hash(zero),noProbeHash:await hash(noProbe),bakeExact:await hash(ps.coefficients)===await hash(p2.snapshot().coefficients),reflectionExact:await hash(ps.reflectionMips[1])===await hash(p2.snapshot().reflectionMips[1]),scatterIds:Array.from(new Set(ids)).filter(x=>x>=0x100000),hlod,culled,ledger:r.getMemoryReport()};
+   r.setScatterBatches([batch({transforms:seededScatterTransforms(source,{seed:42,count:32,scale:[.8,1.4]}),wind:{enabled:true,amplitude:3,rigidity:.2}})]);r.setTimeSeconds(.37);
+   const seeded=await frame(r),seededCapture=await r.capture({samples:1,aovs:["id"]});
+   const adapterInfo=(await navigator.gpu.requestAdapter()).info;
+   const hashOracle={seed:42,timeSeconds:.37,display:await hash(seeded),hdr:await hash(seededCapture.hdrFrame.data),ids:await hash(seededCapture.aovFrame.id()),adapter:{vendor:adapterInfo.vendor,architecture:adapterInfo.architecture,device:adapterInfo.device,description:adapterInfo.description},userAgent:navigator.userAgent};
+   return {hashOracle,baselineHash:await hash(baseline),clearedHash:await hash(cleared),fixedHash,disabledHash:await hash(disabled),scatterDelta:delta(fixed,baseline),windDelta:delta(wind0,wind1),windHash,repeatHash:await hash(repeat),stats,memory,probeMemory,probeDelta:delta(lit,noProbe),debugDelta:delta(debug,noProbe),zeroHash:await hash(zero),noProbeHash:await hash(noProbe),bakeExact:await hash(ps.coefficients)===await hash(p2.snapshot().coefficients),reflectionExact:await hash(ps.reflectionMips[1])===await hash(p2.snapshot().reflectionMips[1]),scatterIds:Array.from(new Set(ids)).filter(x=>x>=0x100000),hlod,culled,ledger:r.getMemoryReport()};
   } finally {r.dispose();}
  },
  async scene() {
   const scene=Forge3DScene.create();scene.addNode({kind:"terrain",name:"w09-terrain",terrain});scene.setScatterBatches([batch({wind:{enabled:true,amplitude:2}})]);scene.setTimeSeconds(.37);scene.setLightingProbes(await probes());
   const session=await Forge3DSession.create(canvas,{runtime:{width:192,height:128,devicePixelRatio:1}});
-  try {session.setScene(scene);session.setCamera(camera);session.render();const a=await session.readRgba();const c=await session.capture({samples:1,aovs:["id"]});return{hash:await hash(a),nonempty:a.some(x=>x>0),ids:Array.from(new Set(c.aovFrame.id())).filter(x=>x>=0x100000)};}finally{session.dispose();scene.dispose();}
+  try {session.setScene(scene);session.setCamera(camera);session.render();const a=await session.readRgba();const c=await session.capture({samples:1,aovs:["id"]});return{hash:await hash(a),nonempty:a.some(x=>x>0),ids:Array.from(new Set(c.aovFrame.id())).filter(x=>x>=0x100000),timeHash:await (async()=>{scene.setTimeSeconds(0);session.setScene(scene);session.render();return hash(await session.readRgba());})()};}finally{session.dispose();scene.dispose();}
  },
  async recovery() {
   const viewer=await Forge3DViewer.create(canvas,{controls:false,resize:false,runtime:{width:192,height:128,devicePixelRatio:1,diagnostics:true}});

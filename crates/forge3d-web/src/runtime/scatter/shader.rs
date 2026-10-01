@@ -70,9 +70,9 @@ fn scatter_shade(lit: vec3<f32>, initial_alpha: f32, position: vec3<f32>, normal
     var alpha = initial_alpha; var shaded = lit;
     if (scatter_settings.height_scale.w > 0.5) {
         let delta = scatter_height_delta(position);
-        if (scatter_settings.blend.x > 0.5) { alpha *= smoothstep(-max(scatter_settings.blend.y,1e-4), scatter_settings.blend.z, delta); }
+        if (scatter_settings.blend.x > 0.5) { alpha *= smoothstep(-max(scatter_settings.blend.y,1e-4), max(scatter_settings.blend.z,1e-4), delta); }
         if (scatter_settings.contact.x > 0.5) {
-            let proximity = 1.0 - smoothstep(0.0, scatter_settings.contact.y, abs(delta));
+            let proximity = 1.0 - smoothstep(0.0, max(scatter_settings.contact.y,1e-4), abs(delta));
             let sides = mix(1.0, clamp(1.0 - abs(normal.y), 0.0, 1.0), scatter_settings.contact.w);
             shaded *= 1.0 - proximity * sides * scatter_settings.contact.z;
         }

@@ -40,17 +40,26 @@ session.setScene(scene);
 Matrices are row-major affine 4x4 values; translation occupies offsets 3, 7,
 and 11. `makeScatterTransform` uses native yaw degrees and uniform scale.
 Random and jittered-grid placement use NumPy-compatible SeedSequence/PCG64.
-`gridScatterTransforms` also accepts a density `mask` matching the heightmap,
+`gridScatterTransforms` also accepts a density `mask`: a legacy heightmap-sized
+`Float32Array`, or `{ data: Float32Array, width, height }` at any resolution.
+Rectangular masks are bilinearly resampled in native RNG order. It also accepts
 `densityScale`, slope/elevation filters, edge margin and minimum distance.
 Impossible requested populations throw `INVALID_INPUT`.
 
 LOD thresholds increase strictly; only the last level may omit a threshold.
-HLOD cells merge the coarsest geometry. A cluster activates beyond its bounding
-sphere and only when all members remain inside the draw distance. Original
-instances then stop drawing. Bounds contain all LODs and maximum wind offsets.
-QEM uses deterministic quadric-cost edge collapses and recomputed normals;
-the CPU work limit is 4096 triangles per simplification. Larger sources throw
-`RESOURCE_LIMIT_EXCEEDED`; prepare a smaller scatter asset first.
+HLOD uses native three-dimensional grid cells, leaving singleton cells as
+individual draws. Clusters merge the coarsest geometry, use the mean instance
+translation as their center, and include mesh radius and instance scale in the
+activation sphere. Activation uses `distance(eye, center) - radius`, strictly
+between the HLOD threshold and draw distance. Covered instances stop drawing;
+instances still obey their own draw-distance cull. Cluster draws have zero wind.
+Population bounds contain every LOD and maximum wind offsets; the static HLOD
+sphere is separate from those conservative bounds. Containment slack is exactly
+the actual population diagonal times `1e-5`, including tiny scenes.
+QEM ports the native midpoint quadric heap with deterministic edge ordering,
+generation checks, boundary costs and recomputed normals. It has no 4096-triangle
+cap. The 4096-triangle halving workload measured 2082.11 ms before and 64.51 ms
+after this change on the same local workload.
 
 `setTimeSeconds` on the runtime, viewer or session selects deterministic wind
 time. `renderFrames` advances this time to the frame timestamp automatically.
@@ -94,9 +103,22 @@ equirectangular interleaved RGB Float32Array environment with intensity and
 rotation. Irradiance uses the analytical constant-sky input. Explicit bake
 settings are retained independently of runtime materials and IBL.
 
-Baking yields between probes and accepts an AbortSignal. Limits are 256 probes,
-64x64 reflection faces, 4096 SH rays, 256 reflection samples and a configurable
-output budget (64 MiB by default). Memory reports separate buffer bytes, fallback texture bytes and total GPU bytes.
+Baking runs one grid request in a self-hosted module worker. An AbortSignal
+terminates a dispatched request without blocking the browser. Missing worker
+support raises `UNSUPPORTED_FEATURE`.
+`grid` supports up to 4096 irradiance probes; optional `reflectionGrid` supports
+up to 256 reflection probes. Omission retains the combined-grid API, limited by
+the reflection count. Counts are dimension products, so a `4096 x 1` irradiance
+grid is valid. Explicit snapshots pair `reflectionGrid` and
+`reflectionPositions`; legacy snapshots share their placement fields.
+Other limits are 64x64 reflection faces, 4096 SH rays, 256 reflection samples
+and a configurable output budget (64 MiB by default). Baking resolutions below
+four are raised to the historical native baker's four-texel minimum; validated
+prebaked snapshots can retain one- or two-texel faces.
+Memory reports retain `probeCount` and add `irradianceProbeCount`,
+`reflectionProbeCount`, `irradiancePositionBytes` and `reflectionPositionBytes`.
+`positionBytes` counts the owned placement fields, counting a legacy shared
+field once. GPU bytes include packed coefficient, placement and reflection data.
 Runtime admission also checks the device
 storage binding limit and the runtime memory ledger.
 
@@ -108,39 +130,55 @@ HDR arrays remain float32. Opaque captures keep the existing RGBA32Float target.
 
 ## Verification
 
-`scripts/generate-w09-fixtures.py` executes historical Python and Rust source
-directly in an independent oracle. Transform fixtures use NumPy PCG64; probe
-fixtures cover flat terrain and an occluding ridge. Unit and browser tests
-check transform max error <=1e-5, containing bounds, repeat hashes, wind no-ops,
-LOD/HLOD activation, SH max error <=1e-3 and reflection SSIM >=0.98. A deliberately
-wrong cubemap must fail the SSIM threshold. Browser tests also check nonempty
-scatter IDs, source/dist parity, scene/worker capture and recovery.
+`scripts/generate-w09-fixtures.py` executes historical `bf8db93` Python and
+Rust code independently of the web implementation. Fixtures include filtered
+and resampled-mask placement, QEM geometry, 3D HLOD geometry/activation, LOD
+selection, wind uniforms, flat/ridge SH, and asymmetric off-center cubemaps with
+directional lighting and rotated environments. The shader oracle executes the
+historical WGSL and current port on the GPU for wind, contact and blend.
 
-The `scatter-probes-v1` manifest admits 16 MiB GPU / 64 MiB CPU for the
-192x128 acceptance scene. GPU allocation, rejection and release are tested;
-the manifest's longer reference-hardware performance run remains a separate
-lab contract. The native SH debug comparison uses 512 covered interior pixels,
-and the roughness/box-projection reflection comparison uses 1024 covered pixels.
+The accepted tolerances remain transform max error `1e-5`, SH max error `1e-3`
+and reflection SSIM `0.98`. Wrong-direction and swapped-face controls fail.
+GPU SH comparisons cover 22,528 flat and 24,576 ridge pixels and three ridge
+normals. Reflection sampling covers six faces, three roughness values and
+18,432 covered pixels. Source/dist, worker frame/time, static HLOD pixels,
+64-probe stress, edge/outside weights, rejection retention, clear, cancellation,
+capture and recovery are checked. Probe-free shared shader text resolves
+byte-identically to W08, and independently rebuilt W08 display/HDR frames match.
 
-`npm run test:package-consumer:w09` rebuilds a clean HEAD, installs its tarball
-in a separate consumer, runs API/package/documentation checks and browser
-acceptance (including W09 worker rendering and native parity). Evidence records
-`gateScope: "w09-package-acceptance"`. The default `test:package-consumer`
-continues to require the full release infrastructure suite. On Windows, its
-POSIX runner tests need Bash and file-symlink privileges.
+Fixed seed/time display, HDR and ID hashes are pinned in
+`tests/golden/w09/hashes-chromium-preflight-rtx3070-win.json`, with adapter,
+driver, OS and browser metadata. On that exact preflight profile run:
 
-To reproduce the W08 byte comparison, rebuild clean commit
-`2dc0b9e1b343095233dea1bd73edc64578547009`, copy its `dist` directory to this
-package's ignored `pkg/w08-base` directory, and run the W09 browser spec with
-`FORGE3D_W09_COMPARE_W08=1`. Each WASM build runs in a fresh Window realm.
+```powershell
+$env:FORGE3D_WEBGPU_REQUIRED = "1"
+$env:FORGE3D_W09_COMPARE_W08 = "1"
+$env:FORGE3D_W09_PINNED_HASH_PROFILE = "chromium-preflight-rtx3070-win"
+npm run test:browser -- tests/playwright/w09_scatter_probes.spec.ts
+```
 
-Verified on 2026-10-01: 365 core Rust tests, 171 web Rust tests, 704 TypeScript
-unit tests, API/declaration checks, all 15 parity-verifier tests, 88 browser
-regressions across W04/W06/W07/W08/W09, and the installed-tarball W09 lane.
-The adapter reported NVIDIA Ampere, non-fallback. This is Chromium preflight
-and package acceptance evidence; browser-family release qualification stays
-with the existing physical lab matrix. Flat/ridge native payloads have SH
-max error 0 and reflection SSIM 1; GPU irradiance max error is 5.83e-8 and
-GPU box-projected reflections are exact. Scatter/probe release returns the
-ledger to its 213,572-byte baseline, and all three rejected commits preserve
-the previous frame hash and ledger.
+The W08 comparison requires a clean build of commit
+`2dc0b9e1b343095233dea1bd73edc64578547009` copied to ignored `pkg/w08-base`.
+Every WASM build is compared in a fresh Window realm.
+
+`scatter-probes-v1` retains its 16 MiB GPU / 64 MiB CPU budgets and 60-second
+reference-hardware run. Windows RTX 3070 results are **Chromium preflight**.
+They do not qualify `reference-discrete`, which requires Ubuntu/Vulkan on
+`FW-LNX-NV-01`. The integrated budget is **blocked on INF-00**: pinned
+`FW-WIN-I12-01` (`forge3d-web` + `hw-win-intel12`) is in maintenance and
+unprovisioned. Substituting another integrated adapter is not permitted; a
+qualifying run must attest that machine's exact adapter, driver and OS.
+
+`npm run test:package-consumer:w09` remains the clean-commit tarball gate.
+A local installed-tarball check of this dirty review snapshot is supplemental
+Chromium preflight evidence; it does not replace that gate. No commit, publish
+or physical-browser qualification is implied. See [review evidence](w09-review-evidence.md)
+for observed checks, measured values, and remaining blockers.
+
+The package entrypoint exposes the population/LOD constructors, wind settings,
+probe class, capture-material defaults and their types. Probe packing, grid
+normalization, SH/cube basis and scatter selection/accounting helpers are
+implementation details and are no longer root exports.
+
+`Forge3DWorkerRenderer.setCamera(camera)` returns a promise. Await it before
+rendering; it copies the input to the worker session and retains it for recovery.

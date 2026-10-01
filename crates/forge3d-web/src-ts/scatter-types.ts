@@ -43,6 +43,6 @@ export interface ScatterMemoryReport {
 export interface ScatterFilters { minSlopeDegrees?: number; maxSlopeDegrees?: number; minElevation?: number; maxElevation?: number }
 export interface ScatterGeneratorOptions {
   seed?: number; count: number; scale?: readonly [number, number]; yawDegrees?: readonly [number, number];
-  filters?: ScatterFilters; mask?: Float32Array; maxAttempts?: number; minDistance?: number;
+  filters?: ScatterFilters; mask?: Float32Array | { data: Float32Array; width: number; height: number }; maxAttempts?: number; minDistance?: number;
   edgeMargin?: number; densityScale?: number;
 }

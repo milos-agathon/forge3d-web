@@ -591,7 +591,8 @@ fn direction_to_face_uv(direction: [f32; 3]) -> (usize, f32, f32) {
 
 fn hammersley_2d(i: u32, n: u32) -> [f32; 2] {
     let mut bits = i;
-    bits = (bits << 16) | (bits >> 16);
+    // Equivalent to the historical native half-word swap; satisfies strict Clippy.
+    bits = bits.rotate_right(16);
     bits = ((bits & 0x5555_5555) << 1) | ((bits & 0xAAAA_AAAA) >> 1);
     bits = ((bits & 0x3333_3333) << 2) | ((bits & 0xCCCC_CCCC) >> 2);
     bits = ((bits & 0x0F0F_0F0F) << 4) | ((bits & 0xF0F0_F0F0) >> 4);

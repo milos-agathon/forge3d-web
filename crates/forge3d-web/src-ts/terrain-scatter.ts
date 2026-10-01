@@ -1,4 +1,4 @@
-import { finite, scatterInvalid, validateScatterMesh, scatterMeshBounds, scatterTransformBounds, scatterTransformPoint, mergeScatterBounds, simplifyScatterMesh, recomputeScatterNormals } from "./scatter-mesh.js";
+import { finite, scatterInvalid, validateScatterMesh, scatterMeshBounds, scatterTransformBounds, mergeScatterBounds, simplifyScatterMesh } from "./scatter-mesh.js";
 import type { ScatterBatchInput, ScatterBatchSnapshot, ScatterWindInput, ScatterWindSnapshot, ScatterBounds, ScatterCluster, ScatterFrameStats, ScatterMemoryReport } from "./scatter-types.js";
 export type * from "./scatter-types.js";
 export { makeScatterTransform, TerrainScatterSource, seededScatterTransforms, gridScatterTransforms, bilinearScatterSample } from "./scatter-source.js";
@@ -24,28 +24,69 @@ function validateTransform(t: Float32Array): void {
   const det = t[0]! * (t[5]! * t[10]! - t[6]! * t[9]!) - t[1]! * (t[4]! * t[10]! - t[6]! * t[8]!) + t[2]! * (t[4]! * t[9]! - t[5]! * t[8]!);
   if (Math.abs(det) < 1e-12) scatterInvalid("transform linear matrix must be nonsingular");
 }
+function f32(value: number): number { return Math.fround(value); }
+function nativeTransformPoint(m: ArrayLike<number>, p: ArrayLike<number>): [number, number, number] {
+  return [0, 1, 2].map(row => {
+    let value=f32(m[row*4]!*p[0]!);value=f32(value+f32(m[row*4+1]!*p[1]!));value=f32(value+f32(m[row*4+2]!*p[2]!));return f32(value+m[row*4+3]!);
+  }) as [number, number, number];
+}
+function nativeDistance(a:readonly [number,number,number],b:readonly [number,number,number]):number {
+  const x=f32(a[0]-b[0]),y=f32(a[1]-b[1]),z=f32(a[2]-b[2]);
+  return f32(Math.sqrt(f32(f32(f32(x*x)+f32(y*y))+f32(z*z))));
+}
+function nativeTransformNormal(m: ArrayLike<number>, n: ArrayLike<number>): [number, number, number] {
+  const a=m[0]!,b=m[1]!,c=m[2]!,d=m[4]!,e=m[5]!,f=m[6]!,g=m[8]!,h=m[9]!,i=m[10]!;
+  const det=f32(f32(a*f32(e*i-f*h))-f32(b*f32(d*i-f*g))+f32(c*f32(d*h-e*g)));
+  const cofactor=[f32(e*i-f*h),f32(f*g-d*i),f32(d*h-e*g),f32(c*h-b*i),f32(a*i-c*g),f32(b*g-a*h),f32(b*f-c*e),f32(c*d-a*f),f32(a*e-b*d)];
+  const transformed=[0,1,2].map(row=>f32(f32(f32(cofactor[row*3]!*n[0]!)+f32(cofactor[row*3+1]!*n[1]!))+f32(cofactor[row*3+2]!*n[2]!))/det) as [number,number,number];
+  const length=f32(Math.sqrt(f32(f32(transformed[0]*transformed[0])+f32(transformed[1]*transformed[1])+f32(transformed[2]*transformed[2]))));
+  return length > 0 ? transformed.map(value=>f32(value/length)) as [number,number,number] : [0,0,0];
+}
+function meshOriginRadius(mesh: ScatterBatchSnapshot["levels"][number]["mesh"]): number {
+  let radius=0;
+  for(let offset=0;offset<mesh.positions.length;offset+=3){
+    const x=mesh.positions[offset]!,y=mesh.positions[offset+1]!,z=mesh.positions[offset+2]!;
+    radius=Math.max(radius,f32(Math.sqrt(f32(f32(f32(x*x)+f32(y*y))+f32(z*z)))));
+  }
+  return radius;
+}
+function maxInstanceScale(m:ArrayLike<number>):number {
+  const axis=(a:number,b:number,c:number)=>f32(Math.sqrt(f32(f32(f32(a*a)+f32(b*b))+f32(c*c))));
+  return Math.max(axis(m[0]!,m[4]!,m[8]!),axis(m[1]!,m[5]!,m[9]!),axis(m[2]!,m[6]!,m[10]!));
+}
 function clusters(snapshot: ScatterBatchSnapshot): ScatterCluster[] {
   if (!snapshot.hlod) return [];
   const cells = new Map<string, number[]>(), radius = snapshot.hlod.clusterRadius;
   for (let i = 0; i < snapshot.transforms.length / 16; i++) {
-    const key = `${Math.floor(snapshot.transforms[i * 16 + 3]! / radius)}:${Math.floor(snapshot.transforms[i * 16 + 11]! / radius)}`;
+    const key = `${Math.floor(snapshot.transforms[i * 16 + 3]! / radius)}:${Math.floor(snapshot.transforms[i * 16 + 7]! / radius)}:${Math.floor(snapshot.transforms[i * 16 + 11]! / radius)}`;
     const cell = cells.get(key); if (cell) cell.push(i); else cells.set(key, [i]);
   }
-  const source = snapshot.levels[snapshot.levels.length - 1]!.mesh;
-  return [...cells.values()].map(ids => {
-    const positions: number[] = [], indices: number[] = [], allBounds: ScatterBounds[] = [];
+  const source = snapshot.levels[snapshot.levels.length - 1]!.mesh, baseRadius=meshOriginRadius(source), result:ScatterCluster[]=[];
+  for(const ids of cells.values()) {
+    if(ids.length<2)continue;
+    const positions: number[] = [], normals:number[] = [], indices: number[] = [], allBounds: ScatterBounds[] = [];
+    const centerSum:[number,number,number]=[0,0,0];
     for (const id of ids) {
       const m = snapshot.transforms.subarray(id * 16, id * 16 + 16), offset = positions.length / 3;
-      for (let i = 0; i < source.positions.length; i += 3) positions.push(...scatterTransformPoint(m, source.positions.subarray(i, i + 3)));
+      for (let i = 0; i < source.positions.length; i += 3) {
+        positions.push(...nativeTransformPoint(m, source.positions.subarray(i, i + 3)));
+        normals.push(...nativeTransformNormal(m,source.normals.subarray(i,i+3)));
+      }
       for (const index of source.indices) indices.push(index + offset);
-      // Bounds cover the original instance, every LOD and potential animated displacement.
+      centerSum[0]=f32(centerSum[0]+m[3]!);centerSum[1]=f32(centerSum[1]+m[7]!);centerSum[2]=f32(centerSum[2]+m[11]!);
       allBounds.push(instanceBounds(snapshot, id));
     }
-    const mesh = { positions: new Float32Array(positions), normals: new Float32Array(positions.length), indices: new Uint32Array(indices) };
-    recomputeScatterNormals(mesh);
-    const bounds = mergeScatterBounds(allBounds), center = bounds.min.map((x, a) => (x + bounds.max[a]!) / 2) as [number, number, number];
-    return { mesh: simplifyScatterMesh(mesh, snapshot.hlod!.simplifyRatio), instanceIndices: ids, bounds, center, radius: Math.hypot(...bounds.max.map((x, a) => x - center[a]!)) };
-  });
+    const center=centerSum.map(value=>f32(value/ids.length)) as [number,number,number];
+    let clusterRadius=0;
+    for(const id of ids){
+      const offset=id*16,distance=nativeDistance([snapshot.transforms[offset+3]!,snapshot.transforms[offset+7]!,snapshot.transforms[offset+11]!],center);
+      clusterRadius=Math.max(clusterRadius,f32(distance+f32(baseRadius*maxInstanceScale(snapshot.transforms.subarray(offset,offset+16)))));
+    }
+    const mesh = simplifyScatterMesh({ positions: new Float32Array(positions), normals: new Float32Array(normals), indices: new Uint32Array(indices) }, snapshot.hlod.simplifyRatio);
+    if(!mesh.positions.length||!mesh.indices.length)continue;
+    result.push({ mesh, instanceIndices: [...ids], bounds: mergeScatterBounds(allBounds), center, radius: clusterRadius });
+  }
+  return result;
 }
 function instanceBounds(snapshot: ScatterBatchSnapshot, id: number): ScatterBounds {
   const m = snapshot.transforms.subarray(id * 16, id * 16 + 16);
@@ -124,12 +165,12 @@ export function selectScatterLods(batches: readonly ScatterBatchSnapshot[], eye:
   const stats: ScatterFrameStats = { batchCount: batches.length, totalInstances: 0, visibleInstances: 0, culledInstances: 0, lodInstanceCounts: [], hlodClusterDraws: 0, hlodCoveredInstances: 0, effectiveDraws: 0 };
   for (const b of batches) {
     const covered = new Set<number>(), counts = b.levels.map(() => 0);
-    for (const c of b.clusters) if (Math.hypot(...c.center.map((x, a) => x - eye[a]!)) - c.radius > b.hlod!.distance && c.instanceIndices.every(id => Math.hypot(b.transforms[id * 16 + 3]! - eye[0], b.transforms[id * 16 + 7]! - eye[1], b.transforms[id * 16 + 11]! - eye[2]) <= (b.maxDrawDistance ?? Infinity))) {
+    for (const c of b.clusters) { const surfaceDistance=f32(nativeDistance(c.center,eye)-c.radius); if (surfaceDistance > b.hlod!.distance && surfaceDistance < (b.maxDrawDistance ?? Infinity)) {
       c.instanceIndices.forEach(id => covered.add(id)); stats.hlodClusterDraws++; stats.effectiveDraws++;
-    }
+    }}
     for (let i = 0; i < b.transforms.length / 16; i++) {
       stats.totalInstances++;
-      const d = Math.hypot(b.transforms[i * 16 + 3]! - eye[0], b.transforms[i * 16 + 7]! - eye[1], b.transforms[i * 16 + 11]! - eye[2]);
+      const d = nativeDistance([b.transforms[i * 16 + 3]!,b.transforms[i * 16 + 7]!,b.transforms[i * 16 + 11]!],eye);
       if (d > (b.maxDrawDistance ?? Infinity)) { stats.culledInstances++; continue; }
       stats.visibleInstances++; if (covered.has(i)) { stats.hlodCoveredInstances++; continue; }
       let level = b.levels.findIndex(l => d <= (l.maxDistance ?? Infinity)); if (level < 0) level = b.levels.length - 1;

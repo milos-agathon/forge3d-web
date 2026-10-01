@@ -60,11 +60,34 @@ function ranges(options: Pick<ScatterGeneratorOptions, "scale" | "yawDegrees">):
   if (scale[0] > scale[1] || yaw[0] > yaw[1]) scatterInvalid("ranges must be ordered");
   return { scale, yaw };
 }
+interface ScatterDensityMask { data: Float32Array; width: number; height: number }
+function densityMask(mask: unknown, source: TerrainScatterSource): ScatterDensityMask | undefined {
+  if (mask === undefined) return undefined;
+  let data: unknown, width: unknown, height: unknown;
+  if (mask instanceof Float32Array) {
+    data = mask; width = source.width; height = source.height;
+    if (mask.length !== source.width * source.height) scatterInvalid("legacy mask dimensions must match terrain");
+  } else if (mask !== null && typeof mask === "object") {
+    ({ data, width, height } = mask as { data?: unknown; width?: unknown; height?: unknown });
+  }
+  if (!(data instanceof Float32Array) || !Number.isSafeInteger(width) || !Number.isSafeInteger(height)
+      || (width as number) < 1 || (height as number) < 1 || data.length !== (width as number) * (height as number)) {
+    scatterInvalid("mask requires positive width/height and matching Float32Array data");
+  }
+  for (const value of data) finite(value, "mask");
+  return { data, width: width as number, height: height as number };
+}
+function sampleDensityMask(mask: ScatterDensityMask, source: TerrainScatterSource, row: number, col: number): number {
+  const maskRow = row / Math.max(source.height - 1, 1) * Math.max(mask.height - 1, 1);
+  const maskCol = col / Math.max(source.width - 1, 1) * Math.max(mask.width - 1, 1);
+  return Math.max(0, Math.min(1, bilinearScatterSample(mask.data, mask.width, mask.height, maskRow, maskCol)));
+}
 function placementPolicy(source:TerrainScatterSource,options:Pick<ScatterGeneratorOptions,"minDistance"|"edgeMargin"|"densityScale">) {
   const minimum=finite(options.minDistance??0,"minDistance",0),margin=finite(options.edgeMargin??0,"edgeMargin",0,Math.max(0,source.terrainWidth/2-1e-6)),density=finite(options.densityScale??1,"densityScale",0);
   const cells=new Map<string,[number,number,number][]>();
-  return {density,accept(p:[number,number,number]):boolean {
-    if(p[0]<source.origin[0]+margin||p[0]>source.origin[0]+source.terrainWidth-margin||p[2]<source.origin[1]+margin||p[2]>source.origin[1]+source.terrainWidth-margin)return false;
+  return {density,inside(p:readonly [number,number,number]):boolean {
+    return p[0]>=source.origin[0]+margin&&p[0]<=source.origin[0]+source.terrainWidth-margin&&p[2]>=source.origin[1]+margin&&p[2]<=source.origin[1]+source.terrainWidth-margin;
+  },acceptDistance(p:[number,number,number]):boolean {
     if(!minimum)return true;
     const x=Math.floor(p[0]/minimum),z=Math.floor(p[2]/minimum);
     for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++)for(const q of cells.get(`${x+dx}:${z+dz}`)??[])if(Math.hypot(q[0]-p[0],q[2]-p[2])<minimum)return false;
@@ -77,15 +100,15 @@ export function seededScatterTransforms(source: TerrainScatterSource, options: S
   const limit = options.maxAttempts ?? Math.max(count * 10, count + 1), filters = options.filters ?? {};
   if (!Number.isSafeInteger(limit) || limit < 1 || limit > 10_000_000) scatterInvalid("maxAttempts must be in [1, 10000000]");
   validateFilters(filters); const { scale, yaw } = ranges(options), random = scatterRandom(options.seed ?? 0);
-  const policy=placementPolicy(source,options), mask = options.mask;
-  if (mask) { if (mask.length !== source.heights.length) scatterInvalid("mask dimensions must match terrain"); for (const x of mask) finite(x, "mask"); }
+  const policy=placementPolicy(source,options), mask = densityMask(options.mask, source);
   const accepted: Float32Array[] = [];
   for (let attempt = 0; attempt < limit && accepted.length < count; attempt++) {
     const r = random() * Math.max(source.height - 1, 1), c = random() * Math.max(source.width - 1, 1);
     if (!accepts(source, r, c, filters)) continue;
-    if ((mask || policy.density !== 1) && random() >= Math.max(0, Math.min(1, (mask ? bilinearScatterSample(mask, source.width, source.height, r, c) : 1)*policy.density))) continue;
     const p = source.pixelToContract(r, c);
-    if (!policy.accept(p)) continue;
+    if (!policy.inside(p)) continue;
+    if ((mask || policy.density !== 1) && random() > Math.max(0, Math.min(1, (mask ? sampleDensityMask(mask, source, r, c) : 1)*policy.density))) continue;
+    if (!policy.acceptDistance(p)) continue;
     const angle = yaw[0] + random() * (yaw[1] - yaw[0]), size = scale[0] + random() * (scale[1] - scale[0]);
     accepted.push(makeScatterTransform(p, angle, size));
   }
@@ -97,17 +120,18 @@ export function gridScatterTransforms(source: TerrainScatterSource, options: Omi
   const cells = Math.ceil(source.terrainWidth / spacing); if (cells * cells > 1_000_000) scatterInvalid("grid exceeds 1000000 cells");
   const random = scatterRandom(options.seed ?? 0), { scale, yaw } = ranges(options), filters = options.filters ?? {}, out: number[] = [];
   validateFilters(filters);
-  const policy=placementPolicy(source,options);
-  if (options.mask) { if (options.mask.length !== source.heights.length) scatterInvalid("mask dimensions must match terrain"); options.mask.forEach(x => finite(x, "mask")); }
+  const policy=placementPolicy(source,options), mask=densityMask(options.mask, source);
   for (let z = 0; z < cells; z++) for (let x = 0; x < cells; x++) {
     if ((x + 0.5) * spacing > source.terrainWidth || (z + 0.5) * spacing > source.terrainWidth) continue;
     const px = Math.max(0, Math.min(source.terrainWidth, (x + 0.5) * spacing + (random() - 0.5) * spacing * jitter));
     const pz = Math.max(0, Math.min(source.terrainWidth, (z + 0.5) * spacing + (random() - 0.5) * spacing * jitter));
     const [r, c] = source.contractToPixel(px+source.origin[0], pz+source.origin[1]);
-    if ((options.mask || policy.density !== 1) && random() >= Math.max(0, Math.min(1, (options.mask ? bilinearScatterSample(options.mask, source.width, source.height, r, c) : 1)*policy.density))) continue;
+    const p=source.pixelToContract(r,c);
+    if (!policy.inside(p)) continue;
+    if ((mask || policy.density !== 1) && random() > Math.max(0, Math.min(1, (mask ? sampleDensityMask(mask, source, r, c) : 1)*policy.density))) continue;
     if (!accepts(source, r, c, filters)) continue;
-    if (!policy.accept(source.pixelToContract(r,c))) continue;
-    out.push(...makeScatterTransform(source.pixelToContract(r, c), yaw[0] + random() * (yaw[1] - yaw[0]), scale[0] + random() * (scale[1] - scale[0])));
+    if (!policy.acceptDistance(p)) continue;
+    out.push(...makeScatterTransform(p, yaw[0] + random() * (yaw[1] - yaw[0]), scale[0] + random() * (scale[1] - scale[0])));
   }
   if (!out.length) scatterInvalid("grid generated zero accepted transforms");
   return new Float32Array(out);

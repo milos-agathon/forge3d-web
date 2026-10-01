@@ -269,7 +269,8 @@ fn prepare_scene(
                         .as_ref()
                         .map(|shadows| shadows.control)
                         .unwrap_or([0; 4]),
-                ),
+                )
+                .with_probes(runtime.probe_count > 0),
             )?;
             let vertex_bytes = scene
                 .world_vertex_bytes()

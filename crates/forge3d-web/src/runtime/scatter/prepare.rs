@@ -126,6 +126,7 @@ impl ScatterResources {
                         mapping,
                         height_scale,
                         stream,
+                        true,
                     ),
                 );
             }
@@ -159,6 +160,7 @@ impl ScatterResources {
                         mapping,
                         height_scale,
                         stream,
+                        false,
                     ),
                 );
             }
@@ -230,9 +232,10 @@ fn settings(
     mapping: [f32; 4],
     height: [f32; 4],
     stream: [u32; 4],
+    wind_enabled: bool,
 ) -> Settings {
     let w = &batch.wind;
-    let active = w.enabled && w.amplitude > 0.0;
+    let active = wind_enabled && w.enabled && w.amplitude > 0.0;
     let angle = w.direction_degrees.to_radians();
     Settings {
         phase: if active {
@@ -255,7 +258,11 @@ fn settings(
         } else {
             [0.0; 4]
         },
-        fade: [w.bend_start, w.bend_extent, w.fade_start, w.fade_end],
+        fade: if active {
+            [w.bend_start, w.bend_extent, w.fade_start, w.fade_end]
+        } else {
+            [0.0; 4]
+        },
         blend: [
             u32::from(batch.terrain_blend.enabled) as f32,
             batch.terrain_blend.bury_depth,
@@ -271,5 +278,38 @@ fn settings(
         mapping,
         height,
         stream,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn wind_uniforms_match_executed_historical_native_and_clusters_disable_them() {
+        let batch: ScatterBatch = serde_json::from_value(serde_json::json!({
+            "name":"native wind", "levels":[], "transforms":[], "color":[1,1,1,1], "maxDrawDistance":null,
+            "wind":{"enabled":true,"directionDegrees":123,"speed":0.5,"amplitude":2,"rigidity":0.2,"bendStart":0.1,"bendExtent":0.8,"gustStrength":1,"gustFrequency":0.3,"fadeStart":5,"fadeEnd":100},
+            "terrainBlend":{"enabled":false,"buryDepth":0.75,"fadeDistance":2.5},
+            "terrainContact":{"enabled":false,"distance":3,"strength":0.35,"verticalWeight":0.65},
+            "hlod":null,"clusters":[],"bounds":{"min":[0,0,0],"max":[0,0,0]}
+        })).unwrap();
+        let truth: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../tests/golden/w09/scatter-runtime.json"
+        ))
+        .unwrap();
+        let active = settings(&batch, 0.37, 12.0, [0.0; 4], [0.0; 4], [0; 4], true);
+        for (values, field) in [
+            (active.phase, "phase"),
+            (active.vector, "vector"),
+            (active.fade, "fade"),
+        ] {
+            for (i, value) in values.iter().enumerate() {
+                assert_eq!(*value, truth["wind"][field][i].as_f64().unwrap() as f32);
+            }
+        }
+        let cluster = settings(&batch, 0.37, 12.0, [0.0; 4], [0.0; 4], [0; 4], false);
+        assert_eq!(cluster.phase, [0.0; 4]);
+        assert_eq!(cluster.vector, [0.0; 4]);
+        assert_eq!(cluster.fade, [0.0; 4]);
     }
 }
