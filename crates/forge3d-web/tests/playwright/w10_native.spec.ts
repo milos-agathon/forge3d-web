@@ -1,6 +1,5 @@
-import { expect, skipRenderAssertionsWhenProbing, test } from "../browser/webgpu-fixture";
+import { expect, skipRenderAssertionsWhenProbing, test, type Page } from "../browser/webgpu-fixture";
 import { readFileSync, writeFileSync } from "node:fs";
-import type { Page } from "@playwright/test";
 import { reflectionContributionPasses } from "../../examples/w10-reflection-metrics.js";
 
 // Keep each native oracle within the existing per-test execution budget.
