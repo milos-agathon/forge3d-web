@@ -4634,7 +4634,10 @@ mod w08_slot_tests {
                         let group2 = super::super::environment::reflection::masked_layout_entries(
                             textured, reflection, aerial,
                         );
-                        let group3 = super::super::ibl::ibl_layout_entries();
+                        let group3 = super::super::ibl::ibl_layout_entries()
+                            .into_iter()
+                            .chain(super::super::shadows::shadow_layout_entries())
+                            .collect::<Vec<_>>();
                         assert!(
                             fragment_textures(&group0)
                                 + fragment_textures(&group1)
