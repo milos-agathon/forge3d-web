@@ -343,4 +343,3 @@ fn eval_sky(view_dir: vec3<f32>, params: SkyParams) -> vec3<f32> {
 
     return sky_color;
 }
-
