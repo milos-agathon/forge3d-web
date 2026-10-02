@@ -110,6 +110,19 @@ pub(super) fn set(
 ) -> Result<(), WebError> {
     let s = parse(value)?;
     let mut planned = runtime.memory.clone();
+    if let Some(fx) = &runtime.postfx {
+        let bytes = super::postfx::planned_bytes(
+            &fx.config,
+            runtime.width,
+            runtime.height,
+            s.is_some(),
+            runtime.scatter.as_ref().is_some_and(|s| s.transparent()),
+        );
+        planned.replace_all(&[
+            (KEY, MemoryCategory::Textures, 0),
+            (super::postfx::KEY, MemoryCategory::Textures, bytes),
+        ])?;
+    }
     let mut env = prepare(runtime, s.as_ref(), &mut planned)?;
     let original = runtime
         .environment

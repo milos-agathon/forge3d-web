@@ -1,4 +1,8 @@
 import { Forge3DEnvironment, normalizeEnvironment } from "./environment.js";
+import { PostFxChain, normalizePostFx, resolvePostFx } from "./postfx.js";
+import type { PostFxInput, PostFxChainInput, PostFxSnapshot, PostFxReport, PostFxFrame } from "./postfx.js";
+export { PostFxChain, normalizePostFx, createIdentityColorLut } from "./postfx.js";
+export type * from "./postfx.js";
 import type { EnvironmentInput, EnvironmentSnapshot, EnvironmentMemoryReport } from "./environment.js";
 export { Forge3DEnvironment, sunPosition, environmentMemoryReport } from "./environment.js";
 export type * from "./environment.js";
@@ -2257,6 +2261,7 @@ export interface SceneSnapshot {
   /** Authoring lights retained while the environment synchronizes the sun. */
   environmentLighting?: LightingSnapshot;
   environment?: EnvironmentSnapshot | null;
+  postFx?: PostFxSnapshot | null;
   revision: number;
   nodes: SceneNodeSnapshot[];
   passes: ScenePassInput[];
@@ -2574,6 +2579,10 @@ interface WasmRuntime {
   setTerrainFromSource(terrain: TerrainHeightmapSourceInput): Promise<void>;
   setEnvironment?(snapshot: EnvironmentSnapshot | null): void;
   getEnvironmentMemoryReport?(): EnvironmentMemoryReport;
+  setPostFx?(snapshot: PostFxSnapshot | null): void;
+  getPostFxReport?(): PostFxReport;
+  resetPostFxHistory?(): void;
+  readPostFxIntermediate?(name: string): Promise<PostFxFrame>;
   setScene?(scene: SceneSnapshot): void;
   setScatterBatches?(batches: ScatterBatchSnapshot[]): void;
   setLightingProbes?(probes: TerrainProbeSnapshot | null): void;
@@ -2724,6 +2733,7 @@ export class Forge3DRuntime {
   #nativeDisposed = false;
   #screenshotPromise: Promise<Blob> | undefined;
   #readbackPromise: Promise<unknown> | undefined;
+  #rgbaReadbackPromise: Promise<Uint8Array> | undefined;
   #pendingMutations: Array<() => void> = [];
   #offlineActive = false;
   #deviceLossError: Forge3DError | undefined;
@@ -2936,8 +2946,9 @@ export class Forge3DRuntime {
         "Runtime does not support readback",
       );
     }
-    if (this.#readbackPromise !== undefined) {
-      return this.#readbackPromise as Promise<Uint8Array>;
+    while (this.#readbackPromise !== undefined) {
+      if(this.#rgbaReadbackPromise===this.#readbackPromise)return this.#rgbaReadbackPromise;
+      await this.#readbackPromise.catch(()=>undefined);this.#assertNotDisposed();
     }
     if (this.#screenshotPromise !== undefined) {
       await this.#screenshotPromise.catch(() => undefined);
@@ -2955,6 +2966,7 @@ export class Forge3DRuntime {
       },
     );
     this.#readbackPromise = result;
+    this.#rgbaReadbackPromise = result;
     void result.then(
       () => this.#completeCaptureSafely(result),
       () => this.#completeCaptureSafely(result),
@@ -3000,6 +3012,28 @@ export class Forge3DRuntime {
           ? input.snapshot()
           : normalizeEnvironment(input);
     this.#runOrQueue(() => this.#inner.setEnvironment!(snapshot));
+  }
+  setPostFx(input: PostFxChain | PostFxChainInput | PostFxSnapshot | readonly PostFxInput[] | null): void {
+    this.#assertNotDisposed();
+    if (!this.#inner.setPostFx) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support post-FX");
+    const snapshot = resolvePostFx(input);
+    this.#runOrQueue(() => this.#inner.setPostFx!(snapshot));
+  }
+  getPostFxReport(): PostFxReport {
+    this.#assertNotDisposed();
+    if (!this.#inner.getPostFxReport) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not report post-FX");
+    return this.#inner.getPostFxReport();
+  }
+  resetPostFxHistory(): void {
+    this.#assertNotDisposed();
+    if (!this.#inner.resetPostFxHistory) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support temporal history");
+    this.#runOrQueue(() => this.#inner.resetPostFxHistory!());
+  }
+  async readPostFxIntermediate(name: string): Promise<PostFxFrame> {
+    this.#assertNotDisposed();
+    this.#assertNoOffline();
+    if (!this.#inner.readPostFxIntermediate) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not expose post-FX intermediates");
+    return this.#offlineReadback(() => this.#inner.readPostFxIntermediate!(name));
   }
   getEnvironmentMemoryReport(): EnvironmentMemoryReport {
     this.#assertNotDisposed();
@@ -3609,12 +3643,8 @@ export class Forge3DRuntime {
   }
 
   async #exclusiveReadback<T>(operation: () => Promise<T>): Promise<T> {
-    if (this.#readbackPromise !== undefined) {
-      await this.#readbackPromise.catch(() => undefined);
-      this.#assertNotDisposed();
-    }
-    if (this.#screenshotPromise !== undefined) {
-      await this.#screenshotPromise.catch(() => undefined);
+    while (this.#readbackPromise !== undefined || this.#screenshotPromise !== undefined) {
+      await (this.#readbackPromise ?? this.#screenshotPromise)!.catch(() => undefined);
       this.#assertNotDisposed();
     }
     const result = operation().then(

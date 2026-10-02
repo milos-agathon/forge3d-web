@@ -1,4 +1,6 @@
 import { Forge3DEnvironment } from "./environment.js";
+import { PostFxChain, normalizePostFx, resolvePostFx } from "./postfx.js";
+import type { PostFxInput, PostFxChainInput, PostFxSnapshot } from "./postfx.js";
 import type { EnvironmentInput, EnvironmentSnapshot } from "./environment.js";
 import { iblFromSnapshot, ImageBasedLighting } from "./ibl.js";
 import { TerrainScatterBatch, scatterMemoryReport, normalizeScatterBatches } from "./terrain-scatter.js";
@@ -97,6 +99,7 @@ export class Forge3DScene {
   #probes: TerrainProbeSnapshot | null | undefined;
   #timeSeconds = 0;
   #environment: Forge3DEnvironment | null | undefined;
+  #postFx: PostFxSnapshot | null | undefined;
 
   private constructor() {
     this.#lights = new LightCollection();
@@ -170,6 +173,12 @@ export class Forge3DScene {
           : new Forge3DEnvironment(input);
     this.#revision++;
   }
+  setPostFx(input: PostFxChain | PostFxChainInput | PostFxSnapshot | readonly PostFxInput[] | null): void {
+    this.#assertOperational();
+    this.#postFx = resolvePostFx(input);
+    this.#revision++;
+  }
+  getPostFx(): PostFxSnapshot | null { this.#assertOperational(); return structuredClone(this.#postFx ?? null); }
   getEnvironment(): EnvironmentSnapshot | null {
     this.#assertOperational();
     return this.#environment?.snapshot(this.#timeSeconds) ?? null;
@@ -437,6 +446,7 @@ export class Forge3DScene {
     if(environment){const sun=lighting.lights.find(l=>l.type==="directional");if(sun&&sun.type==="directional"){sun.direction=environment.sunDirection.map(x=>-x) as [number,number,number];sun.color=[...environment.sunColor];sun.intensity=environment.sunDirection[1]>0?environment.sunIntensity:0;}}
     return {
       ...(this.#environment!==undefined?{environment,timeSeconds:this.#timeSeconds}:{}),
+      ...(this.#postFx !== undefined ? {postFx: structuredClone(this.#postFx)} : {}),
       ...(environmentLighting?{environmentLighting}:{}),
       revision: this.#revision,
       nodes,
@@ -478,6 +488,7 @@ export class Forge3DScene {
     copy.#probes = this.#probes === undefined ? undefined : structuredClone(this.#probes);
     copy.#timeSeconds = this.#timeSeconds;
     copy.#environment = this.#environment?.copy() ?? this.#environment;
+    copy.#postFx = structuredClone(this.#postFx);
     return copy;
   }
 

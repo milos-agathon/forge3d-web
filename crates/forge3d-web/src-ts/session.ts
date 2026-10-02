@@ -1,4 +1,6 @@
 import { Forge3DEnvironment, normalizeEnvironment } from "./environment.js";
+import { PostFxChain, normalizePostFx, resolvePostFx } from "./postfx.js";
+import type { PostFxInput, PostFxChainInput, PostFxSnapshot, PostFxReport, PostFxFrame } from "./postfx.js";
 import type { EnvironmentInput, EnvironmentSnapshot, EnvironmentMemoryReport } from "./environment.js";
 import { Forge3DError, Forge3DRuntime } from "./index.js";
 import type { ScatterBatchSnapshot, ScatterFrameStats, ScatterMemoryReport } from "./scatter-types.js";
@@ -90,6 +92,10 @@ export interface SessionRuntimeLike {
   getMaterialVtStats?(): TerrainMaterialVtStats;
   setEnvironment?(snapshot:EnvironmentSnapshot|null):void;
   getEnvironmentMemoryReport?():EnvironmentMemoryReport;
+  setPostFx?(snapshot:PostFxSnapshot|null):void;
+  getPostFxReport?():PostFxReport;
+  resetPostFxHistory?():void;
+  readPostFxIntermediate?(name:string):Promise<PostFxFrame>;
   setScene?(scene: SceneSnapshot): void;
   setScatterBatches?(batches: ScatterBatchSnapshot[]): void;
   setLightingProbes?(probes: TerrainProbeSnapshot | null): void;
@@ -284,6 +290,20 @@ export class Forge3DSession {
     this.#scene?.setEnvironment(input);
     if (this.#committedSnapshot) this.#committedSnapshot.environment = snapshot;
   }
+  setPostFx(input:PostFxChain|PostFxChainInput|PostFxSnapshot|readonly PostFxInput[]|null):void {
+    const runtime=this.#runtimeOrThrow();
+    if(!runtime.setPostFx)throw new Forge3DError("UNSUPPORTED_FEATURE","Runtime does not support post-FX");
+    const snapshot=resolvePostFx(input);
+    runtime.setPostFx(snapshot);
+    this.#scene?.setPostFx(input);
+    if(this.#committedSnapshot)this.#committedSnapshot.postFx=snapshot;
+  }
+  getPostFxReport():PostFxReport {
+    const runtime=this.#runtimeOrThrow();
+    if(!runtime.getPostFxReport)throw new Forge3DError("UNSUPPORTED_FEATURE","Runtime does not report post-FX");return runtime.getPostFxReport();
+  }
+  resetPostFxHistory():void {const runtime=this.#runtimeOrThrow();if(!runtime.resetPostFxHistory)throw new Forge3DError("UNSUPPORTED_FEATURE","Runtime does not support temporal history");runtime.resetPostFxHistory();}
+  async readPostFxIntermediate(name:string):Promise<PostFxFrame> {const runtime=this.#runtimeOrThrow();if(!runtime.readPostFxIntermediate)throw new Forge3DError("UNSUPPORTED_FEATURE","Runtime does not expose post-FX intermediates");return runtime.readPostFxIntermediate(name);}
   getEnvironmentMemoryReport(): EnvironmentMemoryReport {
     const runtime = this.#runtimeOrThrow();
     if (!runtime.getEnvironmentMemoryReport)
@@ -848,6 +868,7 @@ export class Forge3DSession {
       runtime.setLightingProbes(clonePayload(snapshot.probes));
     }
     if (snapshot.environment !== undefined) {if(!runtime.setEnvironment)throw new Forge3DError("UNSUPPORTED_FEATURE","Runtime does not support environment");runtime.setEnvironment(snapshot.environment);}
+    if(snapshot.postFx!==undefined){if(!runtime.setPostFx)throw new Forge3DError("UNSUPPORTED_FEATURE","Runtime does not support post-FX");runtime.setPostFx(clonePayload(snapshot.postFx));}
     if (snapshot.timeSeconds !== undefined) runtime.setTimeSeconds?.(snapshot.timeSeconds);
   }
 

@@ -29,6 +29,7 @@ struct VertexInput {
     @location(5) tangent: vec4<f32>,
     // #if capture
     @location(6) object_id: u32,
+    @location(12) previous_position: vec3<f32>,
     // #endif
 };
 
@@ -46,6 +47,7 @@ struct VertexOutput {
     @location(5) tangent: vec4<f32>,
     // #if capture
     @interpolate(flat) @location(6) object_id: u32,
+    @location(7) previous_position: vec3<f32>,
     // #endif
 };
 
@@ -63,6 +65,7 @@ fn vs_main(input: VertexInput) -> VertexOutput {
     output.tangent = input.tangent;
     // #if capture
     output.object_id = input.object_id;
+    output.previous_position = input.previous_position;
     // #endif
     return output;
 }
@@ -125,7 +128,7 @@ fn fs_capture_primary(input: VertexOutput) -> CapturePrimaryOutput {
     output.depth = clamp((view_depth - near) / max(far - near, 1e-5), 0.0, 1.0);
     output.id = input.object_id;
     let current = camera.motion_current * vec4<f32>(input.world_position, 1.0);
-    let previous = camera.motion_previous * vec4<f32>(input.world_position, 1.0);
+    let previous = camera.motion_previous * vec4<f32>(input.previous_position, 1.0);
     var motion = vec2<f32>(0.0);
     if (abs(current.w) > 1e-12 && abs(previous.w) > 1e-12) {
         motion = (current.xy / current.w - previous.xy / previous.w)
@@ -140,11 +143,11 @@ fn fs_capture_surface(input: VertexOutput) -> CaptureSurfaceOutput {
     var output: CaptureSurfaceOutput;
     output.albedo = vec4<f32>(
         forge3d_surface_albedo(input.color.rgb, input.material_index, input.uv),
-        1.0,
+        forge3d_material(input.material_index).surface.x,
     );
     output.normal = vec4<f32>(
         forge3d_surface_normal(input.normal, input.tangent, input.material_index, input.uv),
-        1.0,
+        forge3d_material(input.material_index).surface.y,
     );
     return output;
 }
@@ -186,14 +189,15 @@ const LIT_VERTEX_ATTRIBUTES: [wgpu::VertexAttribute; 6] = wgpu::vertex_attr_arra
     5 => Float32x4
 ];
 /// Capture pipelines also read the per-node object ID (AOV `id`).
-const CAPTURE_VERTEX_ATTRIBUTES: [wgpu::VertexAttribute; 7] = wgpu::vertex_attr_array![
+const CAPTURE_VERTEX_ATTRIBUTES: [wgpu::VertexAttribute; 8] = wgpu::vertex_attr_array![
     0 => Float32x3,
     1 => Float32x4,
     2 => Float32x3,
     3 => Float32x2,
     4 => Uint32,
     5 => Float32x4,
-    6 => Uint32
+    6 => Uint32,
+    12 => Float32x3
 ];
 const OVERLAY_VERTEX_ATTRIBUTES: [wgpu::VertexAttribute; 2] =
     wgpu::vertex_attr_array![0 => Float32x3, 1 => Float32x4];
@@ -394,8 +398,8 @@ mod tests {
 
     #[test]
     fn vertex_layouts_match_the_struct_sizes() {
-        assert_eq!(lit_vertex_layout().array_stride, 72);
-        assert_eq!(capture_vertex_layout().array_stride, 72);
+        assert_eq!(lit_vertex_layout().array_stride, 84);
+        assert_eq!(capture_vertex_layout().array_stride, 84);
         assert_eq!(CAPTURE_VERTEX_ATTRIBUTES[6].offset, 68);
         assert_eq!(
             CAPTURE_VERTEX_ATTRIBUTES[6].format,

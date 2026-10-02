@@ -1,3 +1,7 @@
+import type { PostFxChain } from "./postfx.js";
+import type { PostFxInput, PostFxChainInput, PostFxSnapshot, PostFxReport, PostFxFrame } from "./postfx-types.js";
+export { PostFxChain, normalizePostFx, createIdentityColorLut } from "./postfx.js";
+export type * from "./postfx-types.js";
 import type { TerrainScatterBatch, ScatterBatchInput, ScatterBatchSnapshot, ScatterFrameStats, ScatterMemoryReport } from "./terrain-scatter.js";
 import type { TerrainLightingProbes, TerrainProbeSnapshot, TerrainProbeMemoryReport } from "./terrain-probes.js";
 export { TerrainScatterBatch, ScatterWindSettings, TerrainScatterSource, makeScatterTransform, seededScatterTransforms, gridScatterTransforms, bilinearScatterSample, simplifyScatterMesh, autoScatterLodLevels, scatterMeshBounds, scatterTransformBounds } from "./terrain-scatter.js";
@@ -2285,6 +2289,7 @@ export interface ShadowCascadeInfo {
 }
 
 export interface SceneSnapshot {
+  postFx?:PostFxSnapshot|null;
   /** Authoring lights retained while the environment synchronizes the sun. */
   environmentLighting?: LightingSnapshot;
   environment?:EnvironmentSnapshot|null;
@@ -2500,6 +2505,8 @@ export declare class Forge3DScene {
   setScatterBatches(batches: readonly (TerrainScatterBatch | ScatterBatchInput | ScatterBatchSnapshot)[]): void;
   setLightingProbes(probes: TerrainLightingProbes | TerrainProbeSnapshot | null): void;
   setTimeSeconds(seconds: number): void;
+  setPostFx(input:PostFxChain|PostFxChainInput|PostFxSnapshot|readonly PostFxInput[]|null):void;
+  getPostFx():PostFxSnapshot|null;
   setEnvironment(input:Forge3DEnvironment|EnvironmentInput|EnvironmentSnapshot|null):void;
   getEnvironment():EnvironmentSnapshot|null;
   getScatterBatches(): ScatterBatchSnapshot[];
@@ -2639,6 +2646,10 @@ export interface RenderStats {
 
 export declare class Forge3DSession {
   setTimeSeconds(seconds: number): void;
+  setPostFx(input:PostFxChain|PostFxChainInput|PostFxSnapshot|readonly PostFxInput[]|null):void;
+  getPostFxReport():PostFxReport;
+  resetPostFxHistory():void;
+  readPostFxIntermediate(name:string):Promise<PostFxFrame>;
   setEnvironment(input:Forge3DEnvironment|EnvironmentInput|EnvironmentSnapshot|null):void;
   getEnvironmentMemoryReport():EnvironmentMemoryReport;
   getScatterStats(): ScatterFrameStats;
@@ -2724,6 +2735,10 @@ export declare class Forge3DSession {
  */
 export declare class Forge3DRuntime {
   setTimeSeconds(seconds: number): void;
+  setPostFx(input:PostFxChain|PostFxChainInput|PostFxSnapshot|readonly PostFxInput[]|null):void;
+  getPostFxReport():PostFxReport;
+  resetPostFxHistory():void;
+  readPostFxIntermediate(name:string):Promise<PostFxFrame>;
   setEnvironment(input:Forge3DEnvironment|EnvironmentInput|EnvironmentSnapshot|null):void;
   getEnvironmentMemoryReport():EnvironmentMemoryReport;
   getScatterStats(): ScatterFrameStats;
@@ -2836,6 +2851,10 @@ export declare class Forge3DRuntime {
  */
 export declare class Forge3DViewer {
   setTimeSeconds(seconds: number): void;
+  setPostFx(input:PostFxChain|PostFxChainInput|PostFxSnapshot|readonly PostFxInput[]|null):void;
+  getPostFxReport():PostFxReport;
+  resetPostFxHistory():void;
+  readPostFxIntermediate(name:string):Promise<PostFxFrame>;
   setEnvironment(input:Forge3DEnvironment|EnvironmentInput|EnvironmentSnapshot|null):void;
   getEnvironmentMemoryReport():EnvironmentMemoryReport;
   getScatterStats(): ScatterFrameStats;

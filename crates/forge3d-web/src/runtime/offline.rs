@@ -193,10 +193,10 @@ const DENOISE_NORMAL: u32 = 2;
 const DENOISE_DEPTH: u32 = 4;
 const DENOISE_EDGE: u32 = 8;
 
-struct TerrainCapture {
-    bind_group: wgpu::BindGroup,
-    primary: wgpu::RenderPipeline,
-    surface: Option<wgpu::RenderPipeline>,
+pub(super) struct TerrainCapture {
+    pub(super) bind_group: wgpu::BindGroup,
+    pub(super) primary: wgpu::RenderPipeline,
+    pub(super) surface: Option<wgpu::RenderPipeline>,
 }
 
 pub(crate) struct OfflineSession {
@@ -681,6 +681,42 @@ fn encode_capture(
     encoder: &mut wgpu::CommandEncoder,
     surface: bool,
 ) {
+    encode_capture_view(
+        runtime,
+        &CaptureView {
+            width: session.width,
+            height: session.height,
+            targets: &session.targets,
+            terrain: session.terrain.as_ref(),
+            scene_camera: session.scene_camera.as_ref(),
+            environment_source: session.environment_source.as_ref(),
+            surface: session.surface,
+            overlay: session.overlay,
+            realtime: false,
+        },
+        encoder,
+        surface,
+    );
+}
+
+/// The same linear G-buffer encoder is used by offline capture and W11.
+pub(super) struct CaptureView<'a> {
+    pub width: u32,
+    pub height: u32,
+    pub targets: &'a CaptureTargets,
+    pub terrain: Option<&'a TerrainCapture>,
+    pub scene_camera: Option<&'a wgpu::BindGroup>,
+    pub environment_source: Option<&'a gpu::Target>,
+    pub surface: bool,
+    pub overlay: bool,
+    pub realtime: bool,
+}
+pub(super) fn encode_capture_view(
+    runtime: &Forge3DRuntime,
+    session: &CaptureView<'_>,
+    encoder: &mut wgpu::CommandEncoder,
+    surface: bool,
+) {
     let (Some(lighting), Some(textures), Some(ibl)) = (
         runtime.lighting.as_ref(),
         runtime.textures.as_ref(),
@@ -776,7 +812,9 @@ fn encode_capture(
                 depth_or_array_layers: 1,
             },
         );
-        e.history_valid.set(false);
+        if !session.realtime {
+            e.history_valid.set(false);
+        }
         e.encode(
             runtime,
             encoder,
@@ -792,7 +830,9 @@ fn encode_capture(
             targets,
             surface && session.surface,
         );
-        e.history_valid.set(false);
+        if !session.realtime {
+            e.history_valid.set(false);
+        }
     }
     if session.overlay && surface {
         if let Some(scene) = runtime.scene.as_ref() {

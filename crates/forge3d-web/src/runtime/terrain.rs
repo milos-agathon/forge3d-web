@@ -905,6 +905,19 @@ pub(super) fn resize_runtime(runtime: &mut Forge3DRuntime, size: JsValue) -> Res
     resized_memory.replace_all(&[
         (DEPTH_TEXTURE_KEY, MemoryCategory::Textures, depth_bytes),
         (
+            super::postfx::KEY,
+            MemoryCategory::Textures,
+            runtime.postfx.as_ref().map_or(0, |fx| {
+                super::postfx::planned_bytes(
+                    &fx.config,
+                    width,
+                    height,
+                    runtime.environment.is_some(),
+                    runtime.scatter.as_ref().is_some_and(|s| s.transparent()),
+                )
+            }),
+        ),
+        (
             super::environment::KEY,
             MemoryCategory::Textures,
             environment_bytes,
@@ -912,6 +925,7 @@ pub(super) fn resize_runtime(runtime: &mut Forge3DRuntime, size: JsValue) -> Res
     ])?;
     let resized_environment =
         super::environment::prepare_resize(runtime, width, height, &mut resized_memory)?;
+    let resized_postfx = super::postfx::prepare_resize(runtime, width, height)?;
     let surface_state = runtime.surface_state.as_mut().ok_or_else(|| {
         WebError::new(
             Forge3DErrorCode::RuntimeDisposed,
@@ -927,6 +941,7 @@ pub(super) fn resize_runtime(runtime: &mut Forge3DRuntime, size: JsValue) -> Res
     runtime.height = height;
     runtime.memory = resized_memory;
     runtime.environment = resized_environment;
+    runtime.postfx = resized_postfx;
     runtime.depth_attachment = Some(DepthAttachment::new(&context, width, height));
     runtime
         .memory
@@ -4531,8 +4546,8 @@ fn fs_capture_primary(input: VertexOutput) -> CapturePrimaryOutput {
 fn fs_capture_surface(input: VertexOutput) -> CaptureSurfaceOutput {
     let shaded = terrain_capture_sample(input);
     var output: CaptureSurfaceOutput;
-    output.albedo = select(vec4<f32>(0.0), vec4<f32>(shaded.albedo, 1.0), shaded.covered);
-    output.normal = select(vec4<f32>(0.0), vec4<f32>(shaded.normal, 1.0), shaded.covered);
+    output.albedo = select(vec4<f32>(0.0), vec4<f32>(shaded.albedo, forge3d_material(0u).surface.x), shaded.covered);
+    output.normal = select(vec4<f32>(0.0), vec4<f32>(shaded.normal, forge3d_material(0u).surface.y), shaded.covered);
     return output;
 }
 // #endif

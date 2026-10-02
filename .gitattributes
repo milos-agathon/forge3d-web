@@ -13,6 +13,8 @@ crates/forge3d-web/tests/golden/w07/*.f32 binary
 crates/forge3d-web/tests/golden/w07/*.png binary
 *.rgba binary
 *.f32 binary
+crates/forge3d-web/tests/golden/w11/native/*.wgsl text eol=lf
+crates/forge3d-web/tests/golden/w11/native/*.rs text eol=lf
 
 crates/forge3d-web/tests/golden/w10/source/**/*.wgsl text eol=lf
 crates/forge3d-web/tests/golden/w10/source/**/*.rs text eol=lf

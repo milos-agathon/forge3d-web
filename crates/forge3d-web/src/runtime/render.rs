@@ -30,7 +30,11 @@ pub(super) fn render_runtime(runtime: &mut Forge3DRuntime) -> Result<bool, WebEr
         .create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("forge3d-web-scene-encoder"),
         });
-    let timestamp_slot = runtime.query_ring.as_mut().and_then(|ring| ring.acquire());
+    let timestamp_slot = if runtime.postfx.is_none() {
+        runtime.query_ring.as_mut().and_then(|ring| ring.acquire())
+    } else {
+        None
+    };
     let frame_start = now_ms();
 
     super::environment::refresh(runtime)?;
@@ -47,13 +51,17 @@ pub(super) fn render_runtime(runtime: &mut Forge3DRuntime) -> Result<bool, WebEr
         // W08 (E6): clear the VT feedback ring before the pass writes it.
         terrain.encode_w08_frame_start(&mut encoder);
     }
-    encode_scene_render_pass(
-        runtime,
-        &mut encoder,
-        &view,
-        "forge3d-web-scene-pass",
-        timestamp_slot,
-    );
+    if runtime.postfx.is_some() {
+        super::postfx::encode(runtime, &mut encoder, &view, true)?;
+    } else {
+        encode_scene_render_pass(
+            runtime,
+            &mut encoder,
+            &view,
+            "forge3d-web-scene-pass",
+            timestamp_slot,
+        );
+    }
     if let Some(terrain) = runtime.terrain.as_ref() {
         // W08 (E6): copy the written feedback ring to the staging buffer.
         terrain.encode_w08_frame_end(&mut encoder);
@@ -68,6 +76,12 @@ pub(super) fn render_runtime(runtime: &mut Forge3DRuntime) -> Result<bool, WebEr
     }
 
     context.queue.submit(std::iter::once(encoder.finish()));
+    if let Some(scene) = runtime.scene.as_mut() {
+        scene.advance_motion(&context);
+    }
+    if let Some(scatter) = runtime.scatter.as_mut() {
+        scatter.advance_motion(runtime.time_seconds);
+    }
     if let Some(terrain) = runtime.terrain.as_mut() {
         terrain.begin_w08_map(&context);
     }
@@ -81,7 +95,11 @@ pub(super) fn render_runtime(runtime: &mut Forge3DRuntime) -> Result<bool, WebEr
 
 fn record_frame_stats(runtime: &mut Forge3DRuntime, frame_ms: f64) -> Result<(), WebError> {
     let passes = scene_pass_draws(runtime);
-    let gpu = runtime.query_ring.as_ref().and_then(|ring| ring.latest());
+    let gpu = if runtime.postfx.is_none() {
+        runtime.query_ring.as_ref().and_then(|ring| ring.latest())
+    } else {
+        None
+    };
     let (world_ms, overlay_ms, source) = match gpu {
         Some(timing) => (
             timing.world_ms,
@@ -349,6 +367,7 @@ pub(super) fn recreate_surface(
     runtime.surface_format = format!("{new_format:?}");
     runtime.surface_state = Some(state);
     super::environment::resize(runtime, runtime.width, runtime.height)?;
+    runtime.postfx = super::postfx::prepare_resize(runtime, runtime.width, runtime.height)?;
     Ok(SurfaceRecoveryReport {
         old_format,
         new_format,

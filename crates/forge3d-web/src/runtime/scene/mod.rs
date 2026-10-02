@@ -57,6 +57,7 @@ pub(super) fn set_scene_runtime(
 }
 
 struct SceneResourcePlan {
+    postfx: Option<super::postfx::Resources>,
     context: forge3d_core::gpu::GpuContext,
     memory: super::memory::MemoryLedger,
     scene: Option<NativeScene>,
@@ -102,6 +103,31 @@ fn prepare_scene(
         .clone();
     let aspect = runtime.width as f32 / runtime.height.max(1) as f32;
     let mut planned = runtime.memory.clone();
+    let postfx_config = parsed
+        .postfx
+        .clone()
+        .unwrap_or_else(|| runtime.postfx.as_ref().map(|fx| fx.config.clone()));
+    // Reserve the replacement HDR graph before quality selection in dependent
+    // passes, so removing a large chain can fund an environment replacement.
+    planned.replace_all(&[
+        (
+            super::postfx::KEY,
+            MemoryCategory::Textures,
+            postfx_config.as_ref().map_or(0, |config| {
+                super::postfx::planned_bytes(
+                    config,
+                    runtime.width,
+                    runtime.height,
+                    parsed.environment.is_some(),
+                    parsed
+                        .scatter
+                        .iter()
+                        .any(|s| s.color[3] < 1. || s.terrain_blend.enabled),
+                )
+            }),
+        ),
+        (super::environment::KEY, MemoryCategory::Textures, 0),
+    ])?;
     // Admit the complete W09 replacement together, including swaps between
     // scatter and probes, before allocating any new GPU resource.
     let scatter_bytes = super::scatter::planned_bytes(&parsed.scatter)?;
@@ -163,7 +189,7 @@ fn prepare_scene(
         let (graph, node_map) = build_graph(parsed)?;
         let implicit = implicit_passes(runtime, parsed, &graph, &node_map);
         let plan = compile_scene_plan(&implicit, &parsed.passes, runtime.width, runtime.height)?;
-        let geometry = build::build_geometry(
+        let mut geometry = build::build_geometry(
             &graph,
             &node_map,
             &parsed.nodes,
@@ -171,6 +197,9 @@ fn prepare_scene(
             runtime.width,
             runtime.height,
         );
+        if let Some(previous) = &runtime.scene {
+            previous.prepare_motion(&mut geometry);
+        }
         Some((geometry, plan.pass_names))
     };
 
@@ -334,7 +363,15 @@ fn prepare_scene(
         }
     };
 
+    let postfx = super::postfx::prepare_scene(
+        runtime,
+        postfx_config,
+        environment.is_some(),
+        scatter.as_ref().is_some_and(|s| s.transparent()),
+        &mut planned,
+    )?;
     Ok(SceneResourcePlan {
+        postfx,
         context,
         memory: planned,
         scene,
@@ -354,6 +391,7 @@ fn prepare_scene(
 
 fn commit_scene_plan(runtime: &mut Forge3DRuntime, plan: SceneResourcePlan) {
     let SceneResourcePlan {
+        postfx,
         context,
         memory,
         scene,
@@ -384,6 +422,7 @@ fn commit_scene_plan(runtime: &mut Forge3DRuntime, plan: SceneResourcePlan) {
     super::shadows::rebuild_terrain_depth_binding(runtime);
     runtime.scene = scene;
     runtime.environment = environment;
+    runtime.postfx = postfx;
     runtime.scatter = scatter;
     runtime.time_seconds = time_seconds;
     super::probes::commit(runtime, probes);

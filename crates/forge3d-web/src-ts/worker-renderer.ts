@@ -467,6 +467,7 @@ function reconstructScene(snapshot: SceneSnapshot): Forge3DScene {
   restoreSceneIbl(scene, snapshot.ibl ?? null);
   restoreSceneShadows(scene, snapshot.shadows ?? defaultShadowSnapshot());
   if (snapshot.environment !== undefined) scene.setEnvironment(snapshot.environment);
+  if (snapshot.postFx !== undefined) scene.setPostFx(snapshot.postFx);
   if (snapshot.scatter !== undefined) scene.setScatterBatches(snapshot.scatter);
   if (snapshot.probes !== undefined) scene.setLightingProbes(snapshot.probes);
   if (snapshot.timeSeconds !== undefined) scene.setTimeSeconds(snapshot.timeSeconds);

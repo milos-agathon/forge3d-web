@@ -1,6 +1,9 @@
 use super::*;
 
 impl ScatterResources {
+    pub(crate) fn advance_motion(&mut self, time: f32) {
+        self.previous_time = Some(time);
+    }
     pub(crate) fn transparent(&self) -> bool {
         self.batches
             .iter()
@@ -122,6 +125,7 @@ impl ScatterResources {
                     settings(
                         &batch.input,
                         runtime.time_seconds,
+                        self.previous_time.unwrap_or(runtime.time_seconds),
                         draw.max_height,
                         mapping,
                         height_scale,
@@ -156,6 +160,7 @@ impl ScatterResources {
                     settings(
                         &batch.input,
                         runtime.time_seconds,
+                        self.previous_time.unwrap_or(runtime.time_seconds),
                         draw.max_height,
                         mapping,
                         height_scale,
@@ -270,6 +275,7 @@ fn upload(
 fn settings(
     batch: &ScatterBatch,
     time: f32,
+    previous_time: f32,
     max_height: f32,
     mapping: [f32; 4],
     height: [f32; 4],
@@ -320,6 +326,16 @@ fn settings(
         mapping,
         height,
         stream,
+        previous_phase: if active {
+            [
+                previous_time * w.speed * std::f32::consts::TAU,
+                previous_time * w.gust_frequency * std::f32::consts::TAU,
+                w.gust_strength,
+                w.rigidity,
+            ]
+        } else {
+            [0.; 4]
+        },
     }
 }
 
@@ -339,7 +355,7 @@ mod tests {
             "../../../tests/golden/w09/scatter-runtime.json"
         ))
         .unwrap();
-        let active = settings(&batch, 0.37, 12.0, [0.0; 4], [0.0; 4], [0; 4], true);
+        let active = settings(&batch, 0.37, 0.37, 12.0, [0.0; 4], [0.0; 4], [0; 4], true);
         for (values, field) in [
             (active.phase, "phase"),
             (active.vector, "vector"),
@@ -349,7 +365,7 @@ mod tests {
                 assert_eq!(*value, truth["wind"][field][i].as_f64().unwrap() as f32);
             }
         }
-        let cluster = settings(&batch, 0.37, 12.0, [0.0; 4], [0.0; 4], [0; 4], false);
+        let cluster = settings(&batch, 0.37, 0.37, 12.0, [0.0; 4], [0.0; 4], [0; 4], false);
         assert_eq!(cluster.phase, [0.0; 4]);
         assert_eq!(cluster.vector, [0.0; 4]);
         assert_eq!(cluster.fade, [0.0; 4]);

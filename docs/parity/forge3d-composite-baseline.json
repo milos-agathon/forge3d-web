@@ -4,7 +4,7 @@
   "manifestId": "forge3d-composite-baseline-v1",
   "sourcePlan": {
     "path": "docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md",
-    "sha256": "093946c203c70808288a32b441adb957e918b7119b7347c4aa8499d8fe835834"
+    "sha256": "d5d2c74fe733399783c32213bbfddbaeed5823c29d77b3630e33c3ba33438994"
   },
   "baselineLayers": [
     {
@@ -1241,7 +1241,7 @@
       "title": "G-buffer/HZB, SSAO/GTAO, SSGI, SSR, temporal/bilateral passes",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W11",
       "nativeCapability": "G-buffer/HZB, SSAO/GTAO, SSGI, SSR, temporal/bilateral passes: 1f4084a:src/core/screen_space_effects/**, src/passes/ssgi.rs, src/passes/ssr.rs, tests/test_ssgi_ssr_wiring.py",
       "requiredWebOutcome": "Add toggleable stack with debug/AOV outputs and IBL fallback",
@@ -1288,7 +1288,7 @@
       "title": "Bloom, DoF/tilt-shift, lens distortion/CA/vignette",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W11",
       "nativeCapability": "Bloom, DoF/tilt-shift, lens distortion/CA/vignette: 1f4084a:src/core/bloom/**, src/core/dof/**, src/shaders/lens_effects.wgsl, tests/test_bloom_effect.py, tests/test_dof.py, tests/test_lens_effects.py",
       "requiredWebOutcome": "Add composable post-FX chain, quality settings and debug views",
@@ -1314,7 +1314,7 @@
       "title": "Motion vectors/blur, TAA and accumulation AA",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W11",
       "nativeCapability": "Motion vectors/blur, TAA and accumulation AA: 1f4084a:src/core/taa.rs, src/viewer/terrain/motion_blur.rs, tests/test_motion_vectors.py, tests/test_taa_convergence.py, tests/test_accumulation_aa.py",
       "requiredWebOutcome": "Add camera/object velocity, jitter/history invalidation, TAA and shutter sampling",
@@ -1339,7 +1339,7 @@
       "title": "HDR, ACES/Reinhard/gamma/LUT, denoise and color-space correctness",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W11",
       "nativeCapability": "HDR, ACES/Reinhard/gamma/LUT, denoise and color-space correctness: 1f4084a:src/core/hdr.rs, src/core/tonemap.rs, tests/test_tonemap_lut.py, tests/test_terrain_render_color_space.py, tests/test_denoise_settings.py",
       "requiredWebOutcome": "Add linear HDR graph, selectable tonemap/exposure/LUT and no double conversion",
@@ -2901,7 +2901,7 @@
       "contract": "Add toggleable stack with debug/AOV outputs and IBL fallback",
       "owner": "W11",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P11"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P11"
       ],
       "tests": [
         "port P5/bloom/DoF/lens/motion/TAA/tonemap/color tests; history invalidation; pass-order snapshots; native-golden SSIM >= 0.98."
@@ -2927,7 +2927,7 @@
       "contract": "Add composable post-FX chain, quality settings and debug views",
       "owner": "W11",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P13"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P13"
       ],
       "tests": [
         "port P5/bloom/DoF/lens/motion/TAA/tonemap/color tests; history invalidation; pass-order snapshots; native-golden SSIM >= 0.98."
@@ -2940,7 +2940,7 @@
       "contract": "Add camera/object velocity, jitter/history invalidation, TAA and shutter sampling",
       "owner": "W11",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P14"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P14"
       ],
       "tests": [
         "port P5/bloom/DoF/lens/motion/TAA/tonemap/color tests; history invalidation; pass-order snapshots; native-golden SSIM >= 0.98."
@@ -2953,7 +2953,7 @@
       "contract": "Add linear HDR graph, selectable tonemap/exposure/LUT and no double conversion",
       "owner": "W11",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P15"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P15"
       ],
       "tests": [
         "port P5/bloom/DoF/lens/motion/TAA/tonemap/color tests; history invalidation; pass-order snapshots; native-golden SSIM >= 0.98."
@@ -3951,7 +3951,7 @@
     {
       "kind": "composite-inventory",
       "path": "crates/forge3d-web/tests/parity/composite-inventory.json",
-      "sha256": "baf1e9611cae5b8a6f0be63b42c9c20601b720deed3e394350fbb8803d3b5db8",
+      "sha256": "97fbb384360a36d5a59fe564d0b78c37584fd32669255ede1d39b14b432ae6de",
       "recordCount": 6531
     },
     {

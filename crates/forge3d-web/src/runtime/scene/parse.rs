@@ -77,6 +77,7 @@ pub(super) struct ParsedPass {
 
 #[derive(Debug, Clone)]
 pub(super) struct ParsedScene {
+    pub postfx: Option<Option<forge3d_core::postfx::PostFxConfig>>,
     pub environment: Option<forge3d_core::environment::Environment>,
     pub environment_lighting: Option<forge3d_core::lighting::LightingState>,
     pub scatter: Vec<forge3d_core::terrain_scatter::ScatterBatch>,
@@ -176,6 +177,14 @@ pub(super) fn parse_snapshot(value: &JsValue) -> Result<ParsedScene, WebError> {
     let time_seconds = optional_number(&get_property(value, "timeSeconds")?, "timeSeconds", 0.0)?;
     let probes = crate::runtime::probes::parse(get_property(value, "probes")?)?;
     Ok(ParsedScene {
+        postfx: {
+            let fx = get_property(value, "postFx")?;
+            if fx.is_undefined() {
+                None
+            } else {
+                Some(crate::runtime::postfx::parse(fx)?)
+            }
+        },
         environment: crate::runtime::environment::parse(get_property(value, "environment")?)?,
         environment_lighting: {
             let value = get_property(value, "environmentLighting")?;

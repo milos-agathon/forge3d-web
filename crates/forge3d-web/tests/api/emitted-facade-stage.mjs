@@ -34,6 +34,9 @@ try {
   assert.deepEqual(
     Object.keys(facadeA).sort(),
     [
+      "PostFxChain",
+      "normalizePostFx",
+      "createIdentityColorLut",
       "Forge3DEnvironment",
       "sunPosition",
       "environmentMemoryReport",

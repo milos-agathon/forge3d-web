@@ -994,3 +994,13 @@ for aborted source reads.
 ## W10 environment and water
 
 `Forge3DEnvironment`, `sunPosition`, `generateDensityVolume`, and `environmentMemoryReport` provide UTC sun animation, shared atmosphere, clouds and explicit water layers. Runtime, scene, session and viewer expose `setEnvironment`; runtime, session and viewer expose `getEnvironmentMemoryReport`. See [environment and water](environment-water.md) for configuration, budgets, capture guides and native verification.
+
+## W11 ordered HDR and post-FX
+
+`PostFxChain`, `normalizePostFx` and `createIdentityColorLut` expose SSAO/GTAO,
+SSGI/SSR with IBL fallback, bloom, DoF/tilt, lens, motion blur, temporal and
+accumulation AA, denoise and selectable HDR tonemap. Runtime, session and viewer
+provide `setPostFx`, `getPostFxReport`, `resetPostFxHistory` and
+`readPostFxIntermediate`; scene snapshots retain the graph for worker replay.
+See the [HDR and post-FX guide](postfx-hdr.md) for ordering, defaults, transfer,
+histories, formats, budgets and independent native verification.

@@ -6,6 +6,7 @@ pub(super) fn shader(features: ShaderFeatures) -> String {
         .replace("output.position = camera.view_projection * vec4<f32>(input.position, 1.0);", VERTEX)
         .replace("output.normal = input.normal;", "output.normal = scatter_normal;")
         .replace("output.world_position = input.position;", "output.world_position = scatter_position;")
+        .replace("output.previous_position = input.previous_position;", "output.previous_position = scatter_previous_position;")
         .replace("output.object_id = input.object_id;", "output.object_id = u32(input.instance_meta.x);")
         .replace("return vec4<f32>(lit, alpha);", "return scatter_shade(lit, alpha, input.world_position, forge3d_safe_direction(input.normal));")
         .replace("var output: CaptureSurfaceOutput;", "let visibility = scatter_shade(vec3<f32>(1.0), 1.0, input.world_position, forge3d_safe_direction(input.normal));\nvar output: CaptureSurfaceOutput;");
@@ -14,6 +15,7 @@ pub(super) fn shader(features: ShaderFeatures) -> String {
 const VERTEX: &str = r#"
     let matrix = transpose(mat4x4<f32>(input.instance_row0, input.instance_row1, input.instance_row2, input.instance_row3));
     var scatter_position = (matrix * vec4<f32>(input.position, 1.0)).xyz;
+    var scatter_previous_position = scatter_position;
     let c0 = matrix[0].xyz; let c1 = matrix[1].xyz; let c2 = matrix[2].xyz;
     let determinant = dot(c0, cross(c1, c2));
     var scatter_normal = forge3d_safe_direction((cross(c1, c2) * input.normal.x + cross(c2, c0) * input.normal.y + cross(c0, c1) * input.normal.z) / determinant);
@@ -26,11 +28,16 @@ const VERTEX: &str = r#"
         let spatial = dot(scatter_position, direction_world) * 0.1;
         let sway = sin(scatter_settings.wind_phase.x + spatial) * (1.0 - scatter_settings.wind_phase.w) * amplitude;
         let gust = sin(scatter_settings.wind_phase.y + spatial * 0.37) * scatter_settings.wind_phase.z;
+        let old_sway = sin(scatter_settings.previous_phase.x + spatial) * (1.0 - scatter_settings.previous_phase.w) * amplitude;
+        let old_gust = sin(scatter_settings.previous_phase.y + spatial * 0.37) * scatter_settings.previous_phase.z;
+        var old_displacement = (matrix * vec4<f32>(direction_local * (old_sway + old_gust) * bend, 0.0)).xyz;
         var displacement = (matrix * vec4<f32>(direction_local * (sway + gust) * bend, 0.0)).xyz;
         if (scatter_settings.wind_fade.w > scatter_settings.wind_fade.z) {
             displacement *= 1.0 - smoothstep(scatter_settings.wind_fade.z, scatter_settings.wind_fade.w, distance(scatter_position, camera.camera_position.xyz));
+            old_displacement *= 1.0 - smoothstep(scatter_settings.wind_fade.z, scatter_settings.wind_fade.w, distance(scatter_position, camera.camera_position.xyz));
         }
         scatter_position += displacement;
+        scatter_previous_position += old_displacement;
         scatter_normal = normalize(scatter_normal + direction_world * length(displacement) * 0.3 * max(dot(scatter_normal, normalize(c1)), 0.0));
     }
     output.position = camera.view_projection * vec4<f32>(scatter_position, 1.0);
@@ -39,6 +46,7 @@ const HELPERS: &str = r#"
 struct ScatterSettings {
     wind_phase: vec4<f32>, wind_vector: vec4<f32>, wind_fade: vec4<f32>,
     blend: vec4<f32>, contact: vec4<f32>, height_mapping: vec4<f32>, height_scale: vec4<f32>, streaming: vec4<u32>,
+    previous_phase: vec4<f32>,
 }
 @group(0) @binding(1) var<uniform> scatter_settings: ScatterSettings;
 @group(0) @binding(2) var scatter_height: texture_2d<f32>;

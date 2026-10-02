@@ -67,6 +67,7 @@ fn empty_scene_retains_parsed_lighting_state() {
         .validated()
         .expect("default lighting is valid");
     let parsed = ParsedScene {
+        postfx: None,
         environment: None,
         environment_lighting: None,
         scatter: Vec::new(),
