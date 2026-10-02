@@ -141,3 +141,21 @@ consumer checks, all W10 behavioral contracts and the original five native scene
 comparisons. [Committed acceptance evidence](w10-clean-package-acceptance.json)
 records the package/browser binding, observations and retained proof hashes.
 This record supersedes the earlier 8cf321f acceptance record.
+
+## Reassessment acceptance, 2026-10-02
+
+The clean installed-package W10 gate passed on `62304b2b2b73944eebeb3005aba2dbf3be45dc51`,
+with stable Chrome 154.0.8037.93 and the explicit local preservation profile.
+Its tarball SHA-256 is `68327172d691e46e8986d556f8aaee1c0be85eee938fdf1255c43806426c114c`.
+All 118 harness and six documentation checks pass. The installed native-image,
+aerial-off control, strong W00-bound volume, profile-gated preservation and
+masked-planar display/HDR contracts pass. The [reassessment acceptance record](w10-reassessment-acceptance.json)
+retains observed contracts, browser/adapter identity, source/package binding
+and proof hashes. The previous acceptance record remains historical evidence.
+
+P10 remains Partial: the pinned native vertex entry point emits
+`vec4(in.position.xy, 0, 1)` from an indexed clip-space quad. It has no world
+camera transform or world cloud pass to use as a native image oracle. Closing
+world-path parity requires a defined world-space reference; changing the
+compatibility default to the native quad is a separate behavior decision.
+No world-path qualification is inferred from the native-quad SSIM.
