@@ -510,7 +510,7 @@
             } finally {scene.dispose();}
           });
         }
-          if(onlyVariant)return results;
+          if(onlyVariant&&onlyVariant!=="cloud")return results;
           const cloud=manifest.variants.find(v=>v.id==="cloud");
           const runtime=await Forge3DRuntime.create(canvas,{width:192,height:128,devicePixelRatio:1,clearColor:cloud.web.clearColor});
           try {

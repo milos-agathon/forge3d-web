@@ -1,14 +1,17 @@
 import { expect, skipRenderAssertionsWhenProbing, test } from "../browser/webgpu-fixture";
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { reflectionContributionPasses } from "../../examples/w10-reflection-metrics.js";
 
-test("W10 terrain agrees with independently rendered native and historical scenes", async ({page,webgpuAvailability}) => {
+// Keep each native oracle within the existing per-test execution budget.
+// A single aggregate batch can exceed it on the hosted software adapter.
+const nativeManifest = JSON.parse(readFileSync(new URL("../golden/w10/native/manifest.json", import.meta.url), "utf8"));
+for (const { id: variant } of nativeManifest.variants) test(`W10 ${variant} agrees with independently rendered native and historical scenes`, async ({page,webgpuAvailability}) => {
   skipRenderAssertionsWhenProbing(webgpuAvailability);
   await page.goto("/examples/test-w07-materials.html");
   await page.waitForFunction(() => typeof (window as any).__w10NativeTerrain === "function");
-  const results = await page.evaluate(() => (window as any).__w10NativeTerrain());
+  const results = await page.evaluate(name => (window as any).__w10NativeTerrain(name), variant);
   console.log("Native results",Object.fromEntries(Object.entries<any>(results).map(([k,v])=>[k,{...v,actual:undefined}])));
-  expect(results).toHaveProperty("terrain-water-planar");
+  expect(Object.keys(results)).toEqual([variant]);
   for(const [name,r] of Object.entries<any>(results)) {
     writeFileSync(`test-results/w10-${name}-web.rgba`,Buffer.from(r.actual));
     expect(r.ssim,name).toBeGreaterThanOrEqual(0.98);
