@@ -903,7 +903,7 @@ impl TerrainMaterialSettings {
     }
 
     /// Packs the GPU uniform. `mask_bits` marks uploaded snow (1), rock (2)
-    /// and wetness (4) masks; `has_detail_map` marks an uploaded normal map.
+    /// wetness (4) and water (8) masks; `has_detail_map` marks an uploaded normal map.
     pub fn pack(
         &self,
         domain: [f32; 2],
@@ -1023,7 +1023,7 @@ impl TerrainMaterialSettings {
                     .fade_end
                     .max(self.detail.fade_start.max(0.0) + 1.0),
                 flag(has_detail_map && self.detail.detail_strength > 0.0),
-                (mask_bits & 7) as f32,
+                (mask_bits & 15) as f32,
             ],
             debug: [self.debug_view.lane(), 0.0, 0.0, 0.0],
             snow_params0: [

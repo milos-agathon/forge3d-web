@@ -443,6 +443,30 @@ impl NativeScene {
         }
     }
 
+    pub(crate) fn draw_reflection(
+        &self,
+        pass: &mut wgpu::RenderPass<'_>,
+        camera: &wgpu::BindGroup,
+        textures: &TextureResources,
+        ibl: &IblResources,
+    ) {
+        let Some(buffer) = &self.world_vertex_buffer else {
+            return;
+        };
+        pass.set_pipeline(&self.world_pipeline);
+        pass.set_bind_group(0, camera, &[]);
+        pass.set_bind_group(1, &self.lighting_bind_group, &[]);
+        pass.set_bind_group(3, &ibl.bind_group, &[]);
+        pass.set_vertex_buffer(0, buffer.slice(..));
+        for range in &self.world_ranges {
+            pass.set_bind_group(2, textures.bind_group_for(range.material_index), &[]);
+            pass.draw(
+                range.first_vertex..range.first_vertex + range.vertex_count,
+                0..1,
+            );
+        }
+    }
+
     /// Draws the world geometry into an open capture pass.
     #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
     pub(crate) fn draw_capture_world(

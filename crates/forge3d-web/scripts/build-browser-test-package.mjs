@@ -39,9 +39,10 @@ import { resolvePackageGateMode } from "./package-gate-mode.mjs";
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const repositoryRoot = resolve(packageRoot, "..", "..");
-const w09Only = process.argv.slice(2).includes("--w09");
-if (process.argv.slice(2).some(argument => argument !== "--w09")) {
-  throw new Error("Only --w09 is supported; omit it for the full release gate");
+const w10Only = process.argv.slice(2).includes("--w10");
+const w09Only = process.argv.slice(2).includes("--w09") || w10Only;
+if (process.argv.slice(2).some(argument => argument !== "--w09" && argument !== "--w10")) {
+  throw new Error("Only --w09 and --w10 are supported; omit it for the full release gate");
 }
 const evidenceMode = resolvePackageGateMode(
   process.env.FORGE3D_PACKAGE_GATE_MODE,
@@ -291,6 +292,22 @@ try {
   const w09GoldenDirectory = join(consumerDirectory, "tests", "golden", "w09");
   mkdirSync(w09GoldenDirectory, {recursive:true});
   copyFileSync(join(packageRoot, "tests", "golden", "w09", "probes.json"), join(w09GoldenDirectory, "probes.json"));
+  const w10Fixture = readFileSync(join(packageRoot, "examples", "test-w10.html"), "utf8")
+    .replaceAll("../dist/index.js", "/node_modules/@forge3d/web/dist/index.js")
+    .replaceAll("../src-ts/index.ts", "/node_modules/@forge3d/web/dist/index.js")
+    .replace("../src-ts/viewer.ts", "/node_modules/@forge3d/web/dist/viewer.js");
+  writeFileSync(join(consumerDirectory, "test-w10.html"), w10Fixture);
+  copyFileSync(join(packageRoot,"examples","w10-acceptance.js"),join(consumerDirectory,"w10-acceptance.js"));
+  writeFileSync(join(consumerDirectory,"test-w10-native.html"),readFileSync(join(packageRoot,"examples","test-w07-materials.html"),"utf8")
+    .replaceAll("../src-ts/index.ts","/node_modules/@forge3d/web/dist/index.js")
+    .replaceAll("../src-ts/session.ts","/node_modules/@forge3d/web/dist/session.js")
+    .replaceAll("../src-ts/runtime-internals.ts","/node_modules/@forge3d/web/dist/runtime-internals.js"));
+
+  copyFileSync(join(packageRoot, "examples", "w10-reflection-metrics.js"), join(consumerDirectory, "w10-reflection-metrics.js"));
+  copyFileSync(join(packageRoot, "examples", "w10-native-probes.js"), join(consumerDirectory, "w10-native-probes.js"));
+  writeFileSync(join(consumerDirectory, "test-w10-worker.js"), readFileSync(join(packageRoot, "examples", "test-w10-worker.js"), "utf8").replace("../src-ts/index.ts", "/node_modules/@forge3d/web/dist/index.js"));
+  cpSync(join(packageRoot, "tests", "golden", "w10"), join(consumerDirectory, "tests", "golden", "w10"), {recursive:true});
+  for (const name of ["sky", "effects"]) copyFileSync(join(packageRoot, "src", "runtime", "environment", `${name}.wgsl`), join(consumerDirectory, `w10-runtime-${name}.wgsl`));
   const benchmarkDirectory = join(
     consumerDirectory,
     "tests",
@@ -338,7 +355,7 @@ try {
     packageSha256,
     fixture: "test-interactive-viewer.html",
     evidenceMode,
-    gateScope: w09Only ? "w09-package-acceptance" : "full-release",
+    gateScope: w10Only ? "w10-package-acceptance" : w09Only ? "w09-package-acceptance" : "full-release",
   };
   writeFileSync(
     join(consumerDirectory, "package-evidence.json"),
@@ -384,7 +401,7 @@ try {
       runViewerBenchmark,
       browserProfile,
     );
-    browserResult.gateScope = w09Only ? "w09-package-acceptance" : "full-release";
+    browserResult.gateScope = w10Only ? "w10-package-acceptance" : w09Only ? "w09-package-acceptance" : "full-release";
     const browserEvidenceJson = JSON.stringify(browserResult, null, 2);
     writeFileSync(join(consumerDirectory, "browser-gate.json"), browserEvidenceJson);
     mkdirSync(evidenceDirectory, { recursive: true });
@@ -408,6 +425,7 @@ try {
       "test-w07-package.html",
       "test-w08-package.html",
       "test-w08-cog-worker.js",
+      ...(w10Only ? ["test-w10.html", "test-w10-native.html", "w10-acceptance.js", "test-w10-worker.js", "w10-native-probes.js", "w10-reflection-metrics.js", "w10-runtime-sky.wgsl", "w10-runtime-effects.wgsl"] : []),
     ]) {
       copyFileSync(join(consumerDirectory, file), join(retainedFixture, file));
     }
@@ -991,6 +1009,31 @@ async function runInstalledPackageBrowserGate(
     if (!(w09.scatterDelta>.2 && w09.windDelta>.05 && w09.stats.visibleInstances===2 && w09.scatterIds.length===2 && w09.bakeExact && w09.reflectionExact && w09.zeroHash===w09.noProbeHash && w09.baselineHash===w09.clearedHash && w09.hlod.hlodCoveredInstances===2 && w09Package.scene.ids.length===2 && w09Package.worker.nonempty && w09Package.worker.hash!==w09Package.worker.staticHash && w09Package.worker.hash!==w09Package.worker.timeHash && w09Package.scene.hash!==w09Package.scene.timeHash && w09Package.hlodPixels.a===w09Package.hlodPixels.b && w09Package.hlodPixels.a===w09Package.hlodPixels.static && w09Package.hlodPixels.ids.length===1 && w09Package.probeBehavior.outside===0 && w09Package.probeBehavior.center>w09Package.probeBehavior.edge && w09Package.probeBehavior.edge>0 && w09Package.probeBehavior.stressCount===64 && w09Package.probeBehavior.rejected && w09Package.probeBehavior.before===w09Package.probeBehavior.after && w09Package.probeBehavior.cleared!==w09Package.probeBehavior.before && w09Package.cancelBake.responsive && w09Package.cancelBake.code==="REQUEST_CANCELLED" && w09Package.native.every(c=>c.maxAbs<=1e-3 && c.ssim>=.98 && c.controlSsim<.98) && w09Package.irradiance.maxAbs<=1e-3 && w09Package.irradiance.ssim>=.98 && w09Package.ridge.maxAbs<=1e-3 && w09Package.ridge.ssim>=.98 && w09Package.ridge.normalDirections>1 && w09Package.ridge.center<w09Package.ridge.flatNativeUp && w09Package.reflections.count===18*1024 && w09Package.reflections.faces.length===6 && w09Package.reflections.maxAbs<=1e-3 && w09Package.reflections.ssim>=.98 && w09Package.budgets.failures.length===3 && w09Package.budgets.before===w09Package.budgets.after)) {
       throw new Error(`installed-package W09 contract failed: ${JSON.stringify(w09Package)}`);
     }
+    await page.goto(`${origin}/test-w10.html`, {waitUntil:"networkidle"});
+    await page.waitForFunction(()=>window.__w10!==undefined);
+    const w10Package = await page.evaluate(async()=>({render:await window.__w10.render(),bounds:await window.__w10.bounds(),masks:await window.__w10.masks(),budget:await window.__w10.budget(),offline:await window.__w10.offline(),recovery:await window.__w10.recovery(),quality:await window.__w10.quality(),native:await window.__w10.native(),worker:await window.__w10.worker(),downscale:await window.__w10.downscale(),cloudsAndWaves:await window.__w10.cloudsAndWaves(),goldens:await window.__w10.goldens(),restoreLights:await window.__w10.restoreLights(),aerial:await window.__w10.aerial(),waterControls:await window.__w10.waterControls(),preservation:await window.__w10.preservation(),volumeTemporal:await (async()=>{const c=await(await fetch("/tests/golden/w10/volume-temporal-v1.json")).json();return window.__w10.bounds(c.width,c.height,c);})()}));
+    const e=w10Package;
+    if (!(e.aerial.covered>1000 && Object.values(e.aerial.controls).every(x=>x>.15) && e.aerial.disabledDelta===0 && e.aerial.zeroDelta===0 && e.aerial.sunriseDelta>.15 && e.aerial.sunriseHash===e.aerial.sunriseRepeat && e.waterControls.disabledMatches && Object.entries(e.waterControls).filter(([k])=>k!=="disabledMatches").every(([,v])=>v>.001) && e.volumeTemporal.width===1920 && e.volumeTemporal.height===1080 && e.volumeTemporal.historyValid && e.volumeTemporal.outsideMax<=1 && e.volumeTemporal.insideChanged>100000 && e.volumeTemporal.insideChanged/(1920*1080)>.05))throw new Error(`W10 added acceptance contracts failed: ${JSON.stringify(e)}`);
+    const preservation=JSON.parse(readFileSync(join(packageRoot,"tests/golden/w10/w09-preservation.json"),"utf8"));
+    const identity=await page.evaluate(async()=>{const a=await navigator.gpu.requestAdapter();if(!a)throw new Error("No WebGPU adapter");return {vendor:a.info.vendor,architecture:a.info.architecture,device:a.info.device,description:a.info.description,fallback:a.info.isFallbackAdapter};});
+    const {checkPreservationProfile}=await import("../tests/browser/w10-preservation-profile.mjs");
+    e.preservationPinned=checkPreservationProfile(preservation,process.env.FORGE3D_W10_PINNED_HASH_PROFILE,{platform:process.platform,browser:await browser.version(),adapter:identity});
+    if(e.preservationPinned && JSON.stringify(e.preservation)!==JSON.stringify(preservation.frames))throw new Error("W10 absent environment changed W09 bytes");
+    if(JSON.stringify(e.preservation)!==JSON.stringify(await page.evaluate(()=>window.__w10.preservation())))throw new Error("W10 absent environment is nondeterministic");
+    await page.goto(`${origin}/test-w10-native.html`,{waitUntil:"networkidle"});
+    await page.waitForFunction(()=>typeof window.__w10NativeTerrain==="function");
+    e.nativeScenes=await page.evaluate(()=>window.__w10NativeTerrain());
+    e.maskedTerrain=await page.evaluate(()=>window.__w10MaskedTerrain());
+    if(!(e.maskedTerrain.delta>.1 && e.maskedTerrain.changed>100 && e.maskedTerrain.landMax===0 && e.maskedTerrain.repeat===0 && e.maskedTerrain.cleared===0 && e.maskedTerrain.hdrDelta>1e-4 && e.maskedTerrain.hdrRepeat===0 && e.maskedTerrain.guidesStable && e.maskedTerrain.covered>1000))throw new Error("W10 masked-terrain reflection contract failed");
+    const {reflectionContributionPasses}=await import("../examples/w10-reflection-metrics.js");
+    if(!e.nativeScenes["terrain-water-planar"])throw new Error("W10 native planar contribution oracle missing");
+    for(const [name,r] of Object.entries(e.nativeScenes)) {
+      delete r.actual;
+      if(name==="terrain-water-planar" && !(reflectionContributionPasses(r.reflectionContribution) && r.reflectionNegativeControls.halfAmplitudeRejected && r.reflectionNegativeControls.displacedRejected && r.disabledNativeSsim>=.98))throw new Error(`W10 native planar contribution contract failed: ${JSON.stringify(r.reflectionContribution)}`);
+      if(!(r.ssim>=.98 && r.historicalSsim>=.98 && (r.controlSsim===undefined || r.controlSsim<.98)))throw new Error(`Native W10 scene ${name} failed: ${JSON.stringify(r)}`);
+    }
+
+    if (!(e.render.covered>1000 && e.render.generalCovered>1000 && e.render.generalDelta>.1 && e.render.plain===e.render.cleared && e.render.cloud.hash===e.render.cloud.repeat && e.render.cloud.timeDelta>.01 && e.bounds.max<=1 && e.bounds.outsideMax<=1 && e.bounds.outsidePixels>10000 && e.bounds.insideChanged>20 && e.masks.zero===0 && e.masks.transparent && e.budget.code==="RESOURCE_LIMIT_EXCEEDED" && e.budget.before===e.budget.after && e.budget.bytes===e.budget.afterBytes && e.budget.report.width===224 && e.offline.nonzero && e.offline.captureRepeat && e.offline.waterIds.includes(4294967280) && e.recovery.same && e.recovery.attempts===1 && e.quality.halfDelta<2 && e.quality.froxelDelta<1 && e.quality.cameraReset===false && e.quality.occlusionDelta>.01 && e.native.every(c=>c.maxAbs<1e-3&&c.ssim>=.98&&c.controlSsim<.98) && e.worker.delta>.1 && e.downscale.selected.resolutionScale===.5 && e.downscale.before===e.downscale.after && e.cloudsAndWaves.firstSeed!==e.cloudsAndWaves.secondSeed && e.cloudsAndWaves.shadowDelta>.1 && e.cloudsAndWaves.planarDelta>.01 && e.cloudsAndWaves.waveDelta>.01 && e.restoreLights.baseline===e.restoreLights.cleared && e.restoreLights.baseline===e.restoreLights.sceneCleared && e.goldens.cloud.disabledSsim<.98 && e.goldens.water.disabledSsim<.98 && Object.values(e.goldens).every(c=>c.ssim>=.98&&c.controlSsim<.98))) throw new Error(`installed-package W10 contract failed: ${JSON.stringify(e)}`);
     if (pageErrors.length > 0) {
       throw new Error(`installed-package page errors: ${pageErrors.join("; ")}`);
     }
@@ -1028,6 +1071,7 @@ async function runInstalledPackageBrowserGate(
         video: w06Package.video,
       },
       w09Package,
+      w10Package,
       w08Package: {
         mainThread: w08Package.mainThread,
         worker: w08Package.worker,

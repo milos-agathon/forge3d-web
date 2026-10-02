@@ -34,6 +34,10 @@ try {
   assert.deepEqual(
     Object.keys(facadeA).sort(),
     [
+      "Forge3DEnvironment",
+      "sunPosition",
+      "environmentMemoryReport",
+      "generateDensityVolume",
       "ScatterWindSettings",
       "TerrainLightingProbes",
       "TerrainScatterBatch",
@@ -48,6 +52,7 @@ try {
       "seededScatterTransforms",
       "simplifyScatterMesh",
       "AOV_ID_BACKGROUND",
+      "AOV_ID_WATER_BASE",
       "AOV_ID_SCENE_NODE_BASE",
       "AOV_ID_TERRAIN",
       "AovFrame",

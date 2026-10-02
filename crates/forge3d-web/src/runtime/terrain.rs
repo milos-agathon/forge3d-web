@@ -841,6 +841,9 @@ pub(super) fn set_camera_runtime(
         scene.update_camera(context, &camera, runtime.width, runtime.height)?;
     }
     runtime.camera = camera;
+    if let Some(e) = &runtime.environment {
+        e.history_valid.set(false);
+    }
     if let (Some(shadows), Some(prepared)) = (runtime.shadows.as_mut(), prepared_shadows) {
         prepared.write(context, shadows);
     }
@@ -848,16 +851,10 @@ pub(super) fn set_camera_runtime(
 }
 
 pub(super) fn resize_runtime(runtime: &mut Forge3DRuntime, size: JsValue) -> Result<(), WebError> {
-    let context = runtime.context.as_ref().ok_or_else(|| {
+    let context = runtime.context.clone().ok_or_else(|| {
         WebError::new(
             Forge3DErrorCode::RuntimeDisposed,
             "Runtime GPU context is not available",
-        )
-    })?;
-    let surface_state = runtime.surface_state.as_mut().ok_or_else(|| {
-        WebError::new(
-            Forge3DErrorCode::RuntimeDisposed,
-            "Runtime surface state is not available",
         )
     })?;
 
@@ -900,29 +897,52 @@ pub(super) fn resize_runtime(runtime: &mut Forge3DRuntime, size: JsValue) -> Res
         }
         _ => None,
     };
+    let mut resized_memory = runtime.memory.clone();
+    let environment_bytes = runtime
+        .environment
+        .as_ref()
+        .map_or(0, |e| e.snapshot.gpu_bytes(width, height));
+    resized_memory.replace_all(&[
+        (DEPTH_TEXTURE_KEY, MemoryCategory::Textures, depth_bytes),
+        (
+            super::environment::KEY,
+            MemoryCategory::Textures,
+            environment_bytes,
+        ),
+    ])?;
+    let resized_environment =
+        super::environment::prepare_resize(runtime, width, height, &mut resized_memory)?;
+    let surface_state = runtime.surface_state.as_mut().ok_or_else(|| {
+        WebError::new(
+            Forge3DErrorCode::RuntimeDisposed,
+            "Runtime surface state is not available",
+        )
+    })?;
     runtime.canvas.set_width(width);
     runtime.canvas.set_height(height);
     surface_state
-        .resize(context, width, height)
+        .resize(&context, width, height)
         .map_err(map_core_error)?;
     runtime.width = width;
     runtime.height = height;
-    runtime.depth_attachment = Some(DepthAttachment::new(context, width, height));
+    runtime.memory = resized_memory;
+    runtime.environment = resized_environment;
+    runtime.depth_attachment = Some(DepthAttachment::new(&context, width, height));
     runtime
         .memory
         .replace(DEPTH_TEXTURE_KEY, MemoryCategory::Textures, depth_bytes)?;
 
     if let Some(terrain) = runtime.terrain.as_ref() {
-        terrain.update_camera(context, &runtime.camera, width, height)?;
+        terrain.update_camera(&context, &runtime.camera, width, height)?;
     }
     if let Some(scene) = runtime.scene.as_mut() {
-        scene.update_camera(context, &runtime.camera, width, height)?;
+        scene.update_camera(&context, &runtime.camera, width, height)?;
         if let (Some(textures), Some(ibl)) = (runtime.textures.as_ref(), runtime.ibl.as_ref()) {
-            scene.rebuild_overlays(context, textures, ibl, width, height);
+            scene.rebuild_overlays(&context, textures, ibl, width, height);
         }
     }
     if let (Some(shadows), Some(prepared)) = (runtime.shadows.as_mut(), prepared_shadows) {
-        prepared.write(context, shadows);
+        prepared.write(&context, shadows);
     }
     Ok(())
 }
@@ -955,7 +975,7 @@ impl DepthAttachment {
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
             format: DEPTH_FORMAT,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         });
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
@@ -966,9 +986,9 @@ impl DepthAttachment {
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 pub(super) struct CameraUniform {
-    view_projection: [[f32; 4]; 4],
-    camera_position: [f32; 4],
-    camera_forward: [f32; 4],
+    pub(super) view_projection: [[f32; 4]; 4],
+    pub(super) camera_position: [f32; 4],
+    pub(super) camera_forward: [f32; 4],
 }
 
 const MAX_COLOR_RAMP_STOPS: usize = 8;
@@ -1280,6 +1300,7 @@ pub(super) struct TerrainPipelineCache {
     textured_pipeline_layout: wgpu::PipelineLayout,
     probe_pipeline_layout: wgpu::PipelineLayout,
     probe_textured_pipeline_layout: wgpu::PipelineLayout,
+    masked_layouts: Vec<wgpu::PipelineLayout>,
     variants: std::collections::HashMap<(u64, wgpu::TextureFormat), TerrainPipelineVariant>,
     /// Offline capture pipelines keyed by capture-specialized features.
     capture_variants:
@@ -1362,7 +1383,46 @@ impl TerrainPipelineCache {
                 ],
                 immediate_size: 0,
             });
+        let mut masked_layouts = Vec::new();
+        for (group0, lights, textured) in [
+            (&bind_group_layout, lighting_layout, false),
+            (&textured_bind_group_layout, lighting_layout, true),
+            (&probe_bind_group_layout, probe_lighting_layout, false),
+            (
+                &probe_textured_bind_group_layout,
+                probe_lighting_layout,
+                true,
+            ),
+        ] {
+            for reflection in [false, true] {
+                for aerial in [false, true] {
+                    if reflection
+                        && textured
+                        && device.limits().max_sampled_textures_per_shader_stage < 20
+                    {
+                        masked_layouts.push(textured_pipeline_layout.clone());
+                        continue;
+                    }
+                    let group2 = super::environment::reflection::masked_layout(
+                        device, textured, reflection, aerial,
+                    );
+                    masked_layouts.push(device.create_pipeline_layout(
+                        &wgpu::PipelineLayoutDescriptor {
+                            label: Some("terrain-environment-pipeline-layout"),
+                            bind_group_layouts: &[
+                                Some(group0),
+                                Some(lights),
+                                Some(&group2),
+                                Some(ibl_layout),
+                            ],
+                            immediate_size: 0,
+                        },
+                    ));
+                }
+            }
+        }
         Self {
+            masked_layouts,
             bind_group_layout,
             slots,
             textured_bind_group_layout,
@@ -1391,11 +1451,18 @@ impl TerrainPipelineCache {
         pass: super::offline::CapturePass,
     ) -> wgpu::RenderPipeline {
         let features = features.with_capture();
-        let pipeline_layout = match (features.probes(), features.samples_scene_textures()) {
-            (false, false) => &self.pipeline_layout,
-            (false, true) => &self.textured_pipeline_layout,
-            (true, false) => &self.probe_pipeline_layout,
-            (true, true) => &self.probe_textured_pipeline_layout,
+        let pipeline_layout = if features.masked_reflection() || features.aerial() {
+            &self.masked_layouts[usize::from(features.probes()) * 8
+                + usize::from(features.samples_scene_textures()) * 4
+                + usize::from(features.masked_reflection()) * 2
+                + usize::from(features.aerial())]
+        } else {
+            match (features.probes(), features.samples_scene_textures()) {
+                (false, false) => &self.pipeline_layout,
+                (false, true) => &self.textured_pipeline_layout,
+                (true, false) => &self.probe_pipeline_layout,
+                (true, true) => &self.probe_textured_pipeline_layout,
+            }
         };
         self.capture_variants
             .entry((features.bits(), pass))
@@ -1456,11 +1523,18 @@ impl TerrainPipelineCache {
         features: ShaderFeatures,
         surface_format: wgpu::TextureFormat,
     ) -> TerrainPipelineVariant {
-        let pipeline_layout = match (features.probes(), features.samples_scene_textures()) {
-            (false, false) => &self.pipeline_layout,
-            (false, true) => &self.textured_pipeline_layout,
-            (true, false) => &self.probe_pipeline_layout,
-            (true, true) => &self.probe_textured_pipeline_layout,
+        let pipeline_layout = if features.masked_reflection() || features.aerial() {
+            &self.masked_layouts[usize::from(features.probes()) * 8
+                + usize::from(features.samples_scene_textures()) * 4
+                + usize::from(features.masked_reflection()) * 2
+                + usize::from(features.aerial())]
+        } else {
+            match (features.probes(), features.samples_scene_textures()) {
+                (false, false) => &self.pipeline_layout,
+                (false, true) => &self.textured_pipeline_layout,
+                (true, false) => &self.probe_pipeline_layout,
+                (true, true) => &self.probe_textured_pipeline_layout,
+            }
         };
         self.variants
             .entry((features.bits(), surface_format))
@@ -1826,6 +1900,14 @@ impl TerrainRenderResources {
     ) -> Result<(), WebError> {
         if material0_flags & super::shader_variants::SCENE_TEXTURE_FLAGS == 0 {
             return Ok(());
+        }
+        if self.features.masked_reflection()
+            && device.limits().max_sampled_textures_per_shader_stage < 20
+        {
+            return Err(WebError::new(
+                Forge3DErrorCode::UnsupportedFeature,
+                "textured masked-terrain reflections require 20 sampled textures",
+            ));
         }
         let probes = self.features.probes();
         let slots = W08Slots::of_device(device, true, probes);
@@ -3633,6 +3715,9 @@ pub(super) const TERRAIN_SHADER: &str = concat!(
     include_str!("shadow_lighting.wgsl"),
     include_str!("lighting.wgsl"),
     include_str!("terrain_probes.wgsl"),
+    include_str!("environment/sky.wgsl"),
+    include_str!("terrain_atmosphere.wgsl"),
+    include_str!("terrain_water.wgsl"),
     include_str!("terrain_material.wgsl"),
     include_str!("terrain_w08.wgsl"),
     r#"
@@ -3876,6 +3961,8 @@ fn vs_main(input: VertexInput) -> VertexOutput {
 
 @fragment
 fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
+    if ((camera.camera_position.w == -1.0 || camera.camera_position.w == -3.0) && input.world_position.y < camera.camera_forward.w) { discard; }
+    if ((camera.camera_position.w == -2.0 || camera.camera_position.w == -4.0) && input.world_position.z < camera.camera_forward.w) { discard; }
     if (params.debug_view == 1u) {
         return vec4<f32>(vec3<f32>(analysis_gray(input.uv, 1u)), 1.0);
     }
@@ -4515,6 +4602,62 @@ mod w08_slot_tests {
         count
     }
 
+    #[test]
+    fn w10_optional_bindings_fit_their_real_profiles() {
+        let uniform_count = |entries: &[wgpu::BindGroupLayoutEntry]| {
+            entries
+                .iter()
+                .filter(|e| {
+                    e.visibility.contains(wgpu::ShaderStages::FRAGMENT)
+                        && matches!(
+                            e.ty,
+                            wgpu::BindingType::Buffer {
+                                ty: wgpu::BufferBindingType::Uniform,
+                                ..
+                            }
+                        )
+                })
+                .count()
+        };
+        for textured in [false, true] {
+            for probes in [false, true] {
+                for reflection in [false, true] {
+                    for aerial in [false, true] {
+                        let cap = if textured && reflection { 20 } else { 16 };
+                        let slots = W08Slots::for_limits_with_probes(cap, 8, textured, probes);
+                        let group0 = terrain_layout_entries(slots);
+                        let group1 = if probes {
+                            super::super::lighting::lighting_layout_entries_with_probes()
+                        } else {
+                            super::super::lighting::lighting_layout_entries()
+                        };
+                        let group2 = super::super::environment::reflection::masked_layout_entries(
+                            textured, reflection, aerial,
+                        );
+                        let group3 = super::super::ibl::ibl_layout_entries()
+                            .into_iter()
+                            .chain(super::super::shadows::shadow_layout_entries())
+                            .collect::<Vec<_>>();
+                        assert!(
+                            fragment_textures(&group0)
+                                + fragment_textures(&group1)
+                                + fragment_textures(&group2)
+                                + fragment_textures(&group3)
+                                <= cap
+                        );
+                        assert!(
+                            uniform_count(&group0)
+                                + uniform_count(&group1)
+                                + uniform_count(&group2)
+                                + uniform_count(&group3)
+                                <= 12
+                        );
+                        assert_eq!(uniform_count(&group2), usize::from(reflection || aerial));
+                    }
+                }
+            }
+        }
+    }
     const NONE: W08Slots = W08Slots {
         page_table: false,
         overlays: false,
@@ -4609,4 +4752,23 @@ mod w08_slot_tests {
             assert!(!slots.keeps(binding), "binding {binding}");
         }
     }
+}
+
+pub(super) fn reflection_pipeline(
+    device: &wgpu::Device,
+    runtime: &super::Forge3DRuntime,
+    features: ShaderFeatures,
+    format: wgpu::TextureFormat,
+) -> wgpu::RenderPipeline {
+    let textures = runtime.textures.as_ref().unwrap();
+    let ibl = runtime.ibl.as_ref().unwrap();
+    let lighting = runtime.lighting.as_ref().unwrap();
+    let mut cache = TerrainPipelineCache::new(
+        device,
+        &lighting.bind_group_layout,
+        &lighting.probe_bind_group_layout,
+        &textures.bind_group_layout,
+        &ibl.bind_group_layout,
+    );
+    cache.variant(device, features, format).pipeline
 }

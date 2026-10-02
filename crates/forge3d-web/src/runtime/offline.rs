@@ -13,7 +13,7 @@
 //! display path is untouched; scene mutations are rejected while it is open
 //! (the TypeScript facade queues them instead).
 
-mod gpu;
+pub(super) mod gpu;
 #[cfg(test)]
 mod tests;
 
@@ -213,6 +213,7 @@ pub(crate) struct OfflineSession {
     terrain: Option<TerrainCapture>,
     scene_camera: Option<wgpu::BindGroup>,
     targets: CaptureTargets,
+    environment_source: Option<gpu::Target>,
     accum_color: wgpu::Buffer,
     accum_albedo: wgpu::Buffer,
     accum_normal: wgpu::Buffer,
@@ -431,8 +432,13 @@ pub(super) fn begin_offline_runtime(
     let accum_pixel = pixel_bytes(width, height, 16);
     check_storage_binding(&context, accum_pixel, "offline accumulation")?;
     let blend = runtime.scatter.as_ref().is_some_and(|s| s.transparent());
-    let target_bytes = CaptureTargets::planned_bytes(width, height, surface, overlay)
-        .saturating_sub(if blend {
+    let environment_bytes = if runtime.environment.is_some() {
+        pixel_bytes(width, height, if blend { 8 } else { 16 })
+    } else {
+        0
+    };
+    let target_bytes = environment_bytes
+        + CaptureTargets::planned_bytes(width, height, surface, overlay).saturating_sub(if blend {
             pixel_bytes(width, height, 8)
         } else {
             0
@@ -475,6 +481,7 @@ fn create_session(
     surface: bool,
     overlay: bool,
 ) -> Result<OfflineSession, WebError> {
+    super::environment::refresh(runtime)?;
     let device = &context.device;
     let (width, height) = (runtime.width, runtime.height);
     let camera = runtime.camera;
@@ -586,6 +593,19 @@ fn create_session(
         camera_buffer,
         terrain,
         scene_camera,
+        environment_source: runtime.environment.as_ref().map(|_| {
+            gpu::Target::new(
+                device,
+                "offline-environment-source",
+                if lighting_features.capture_blend() {
+                    wgpu::TextureFormat::Rgba16Float
+                } else {
+                    CAPTURE_COLOR_FORMAT
+                },
+                width,
+                height,
+            )
+        }),
         targets,
         accum_color,
         accum_albedo,
@@ -596,6 +616,9 @@ fn create_session(
         screen_terrain,
     };
 
+    if let Some(e) = &runtime.environment {
+        e.update_capture(context, &initial, runtime.terrain.as_ref());
+    }
     // Unjittered reference pass: depth, ID and motion AOVs.
     super::scatter::prepare(runtime, Some(&initial))?;
     super::shadows::refresh_shadow_state(runtime)?;
@@ -665,6 +688,9 @@ fn encode_capture(
     ) else {
         return;
     };
+    if let Some(e) = &runtime.environment {
+        e.reflection.encode(runtime, encoder);
+    }
     let targets = &session.targets;
     let clear = runtime.clear_color.map(f64::from);
     let passes: &[CapturePass] = if surface && session.surface {
@@ -717,7 +743,11 @@ fn encode_capture(
                 let (_, group2) = terrain.profile_bind_groups(textures.bind_group_for(0));
                 pass.set_bind_group(0, &capture.bind_group, &[]);
                 pass.set_bind_group(1, &lighting.bind_group, &[]);
-                pass.set_bind_group(2, group2, &[]);
+                let masked_group = runtime
+                    .environment
+                    .as_ref()
+                    .and_then(|e| e.reflection.material_group(runtime));
+                pass.set_bind_group(2, masked_group.as_ref().unwrap_or(group2), &[]);
                 pass.set_bind_group(3, &ibl.bind_group, &[]);
                 pass.set_vertex_buffer(0, terrain.vertex_buffer.slice(..));
                 pass.set_index_buffer(terrain.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
@@ -735,6 +765,34 @@ fn encode_capture(
         if let Some(scatter) = runtime.scatter.as_ref() {
             scatter.draw(&mut pass, runtime, Some(*which));
         }
+    }
+    if let (Some(e), Some(source)) = (&runtime.environment, &session.environment_source) {
+        encoder.copy_texture_to_texture(
+            targets.color.texture.as_image_copy(),
+            source.texture.as_image_copy(),
+            wgpu::Extent3d {
+                width: session.width,
+                height: session.height,
+                depth_or_array_layers: 1,
+            },
+        );
+        e.history_valid.set(false);
+        e.encode(
+            runtime,
+            encoder,
+            &source.view,
+            &targets.depth_stencil.view,
+            &targets.color.view,
+            targets.color.texture.format(),
+        );
+        e.encode_water_aovs(
+            runtime,
+            encoder,
+            &source.view,
+            targets,
+            surface && session.surface,
+        );
+        e.history_valid.set(false);
     }
     if session.overlay && surface {
         if let Some(scene) = runtime.scene.as_ref() {
@@ -829,6 +887,10 @@ async fn accumulate_samples(
                 flags,
             }),
         );
+        super::environment::refresh(runtime)?;
+        if let Some(e) = &runtime.environment {
+            e.update_capture(&context, &uniform, runtime.terrain.as_ref());
+        }
         super::shadows::refresh_shadow_state(runtime)?;
         let mut encoder = context
             .device

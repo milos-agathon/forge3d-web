@@ -256,6 +256,8 @@ __pycache__/
 !crates/forge3d-web/tests/golden/w07/*.png
 !crates/forge3d-web/tests/golden/w08/
 !crates/forge3d-web/tests/golden/w08/*.png
+!crates/forge3d-web/tests/golden/w10/
+!crates/forge3d-web/tests/golden/w10/*.png
 !docs/gallery/images/*.png
 !docs/gallery/images/*.jpg
 !docs/gallery/thumbs/*.png
@@ -364,3 +366,10 @@ landuse/landuse/glad_cropland_2019.tif
 !examples/germany_terrain_landcover_viewer.py
 !examples/khumbu_icefall_sentinel_timelapse.py
 !examples/turkiye_river_basins_3d.py
+
+# Workspace-local Vite cache
+/node_modules/
+
+# Installed-native W10 acceptance references are committed fixtures.
+!crates/forge3d-web/tests/golden/w10/native/*.png
+!crates/forge3d-web/tests/golden/w10/source/**/*.png

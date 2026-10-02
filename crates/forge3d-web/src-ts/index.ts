@@ -1,3 +1,7 @@
+import { Forge3DEnvironment, normalizeEnvironment } from "./environment.js";
+import type { EnvironmentInput, EnvironmentSnapshot, EnvironmentMemoryReport } from "./environment.js";
+export { Forge3DEnvironment, sunPosition, environmentMemoryReport } from "./environment.js";
+export type * from "./environment.js";
 import {
   registerOfflineWasmLoader,
   registerRuntimeInternals,
@@ -889,6 +893,8 @@ export interface TerrainSpecularAaInput {
  * all-default material reproduces the unmaterialed terrain image.
  */
 export interface TerrainMaterialInput {
+  /** Native terrain water coverage/shore-distance mask. */
+  waterMask?: TerrainMaterialMask | null;
   albedoMode?: TerrainAlbedoMode;
   colormapStrength?: number;
   gamma?: number;
@@ -922,6 +928,7 @@ export interface TerrainMaterialLayerSnapshot {
 
 /** Fully resolved, validated terrain material. */
 export interface TerrainMaterialSnapshot {
+  waterMask: TerrainMaterialMask | null;
   albedoMode: TerrainAlbedoMode;
   colormapStrength: number;
   gamma: number;
@@ -994,7 +1001,7 @@ export interface TerrainMaterialReport {
   textureWidth: number;
   textureHeight: number;
   mipLevels: number;
-  maskChannels: ("snow" | "rock" | "wetness")[];
+  maskChannels: ("snow" | "rock" | "wetness" | "water")[];
   detailNormalMap: boolean;
   gpuBytes: number;
   diagnostics: TerrainMaterialDiagnostic[];
@@ -2247,6 +2254,9 @@ export interface ShadowCascadeInfo {
 }
 
 export interface SceneSnapshot {
+  /** Authoring lights retained while the environment synchronizes the sun. */
+  environmentLighting?: LightingSnapshot;
+  environment?: EnvironmentSnapshot | null;
   revision: number;
   nodes: SceneNodeSnapshot[];
   passes: ScenePassInput[];
@@ -2562,6 +2572,8 @@ interface WasmRuntime {
   simulateDeviceLossForTesting?(): void;
   setTerrain(terrain: TerrainHeightmapInput): void;
   setTerrainFromSource(terrain: TerrainHeightmapSourceInput): Promise<void>;
+  setEnvironment?(snapshot: EnvironmentSnapshot | null): void;
+  getEnvironmentMemoryReport?(): EnvironmentMemoryReport;
   setScene?(scene: SceneSnapshot): void;
   setScatterBatches?(batches: ScatterBatchSnapshot[]): void;
   setLightingProbes?(probes: TerrainProbeSnapshot | null): void;
@@ -2972,6 +2984,32 @@ export class Forge3DRuntime {
     this.#runOrQueue(() => this.#inner.setLighting?.(lighting));
   }
 
+  setEnvironment(
+    input: Forge3DEnvironment | EnvironmentInput | EnvironmentSnapshot | null,
+  ): void {
+    this.#assertNotDisposed();
+    if (!this.#inner.setEnvironment)
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not support environment",
+      );
+    const snapshot =
+      input === null
+        ? null
+        : input instanceof Forge3DEnvironment
+          ? input.snapshot()
+          : normalizeEnvironment(input);
+    this.#runOrQueue(() => this.#inner.setEnvironment!(snapshot));
+  }
+  getEnvironmentMemoryReport(): EnvironmentMemoryReport {
+    this.#assertNotDisposed();
+    if (!this.#inner.getEnvironmentMemoryReport)
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not report environment memory",
+      );
+    return this.#inner.getEnvironmentMemoryReport();
+  }
   setScatterBatches(batches: readonly (TerrainScatterBatch | ScatterBatchInput | ScatterBatchSnapshot)[]): void {
     this.#assertNotDisposed();
     if (!this.#inner.setScatterBatches) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support terrain scatter");
@@ -4363,6 +4401,7 @@ export {
 } from "./display-adapters.js";
 export {
   AOV_ID_BACKGROUND,
+  AOV_ID_WATER_BASE,
   AOV_ID_SCENE_NODE_BASE,
   AOV_ID_TERRAIN,
   AovFrame,
@@ -4507,3 +4546,6 @@ registerOfflineWasmLoader(async () => {
   }
   return bridge as unknown as OfflineWasmExports;
 });
+
+export { generateDensityVolume } from "./density-volume.js";
+export type { DensityVolumePresetInput, DensityVolumeGenerationOptions } from "./density-volume.js";

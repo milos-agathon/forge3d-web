@@ -773,6 +773,8 @@ pub(super) fn materials_and_textures_from_js(value: &JsValue) -> Result<ParsedMa
 pub(super) struct TextureResources {
     pub bind_group_layout: wgpu::BindGroupLayout,
     bind_groups: BTreeMap<u32, wgpu::BindGroup>,
+    material_views: BTreeMap<u32, [wgpu::TextureView; 5]>,
+    material_samplers: BTreeMap<u32, wgpu::Sampler>,
     _textures: Vec<wgpu::Texture>,
     _samplers: Vec<wgpu::Sampler>,
     pub payload_bytes: u64,
@@ -831,6 +833,8 @@ impl TextureResources {
                     label: Some("forge3d-web-textures-bind-group-layout"),
                     entries: &texture_layout_entries(),
                 });
+        let mut material_views = BTreeMap::new();
+        let mut material_samplers = BTreeMap::new();
         let mut keep_textures = Vec::new();
         let mut keep_samplers = Vec::new();
         let fallback_pixels: [[u8; 4]; 5] = [
@@ -994,11 +998,18 @@ impl TextureResources {
                     layout: &bind_group_layout,
                     entries: &entries,
                 });
+            material_views.insert(
+                *index,
+                std::array::from_fn(|i| views[i].as_ref().unwrap_or(&fallback_views[i]).clone()),
+            );
+            material_samplers.insert(*index, sampler.clone());
             bind_groups.insert(*index, bind_group);
         }
         Ok(Self {
             bind_group_layout,
             bind_groups,
+            material_views,
+            material_samplers,
             _textures: keep_textures,
             _samplers: keep_samplers,
             payload_bytes,
@@ -1006,6 +1017,22 @@ impl TextureResources {
     }
 
     #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    pub(super) fn masked_entries(&self) -> Vec<wgpu::BindGroupEntry<'_>> {
+        let views = self.material_views.get(&0).expect("material 0");
+        let mut entries: Vec<_> = views
+            .iter()
+            .enumerate()
+            .map(|(i, v)| wgpu::BindGroupEntry {
+                binding: i as u32,
+                resource: wgpu::BindingResource::TextureView(v),
+            })
+            .collect();
+        entries.push(wgpu::BindGroupEntry {
+            binding: 5,
+            resource: wgpu::BindingResource::Sampler(self.material_samplers.get(&0).unwrap()),
+        });
+        entries
+    }
     pub(super) fn bind_group_for(&self, material_index: u32) -> &wgpu::BindGroup {
         self.bind_groups
             .get(&material_index)

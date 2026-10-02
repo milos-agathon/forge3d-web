@@ -40,6 +40,7 @@ pub(crate) struct TerrainMaterialRegions {
     pub layers: bool,
     pub debug: bool,
     pub albedo: bool,
+    pub water: bool,
 }
 
 impl TerrainMaterialRegions {
@@ -54,6 +55,7 @@ impl TerrainMaterialRegions {
             detail: s.detail.enabled || (has_detail_map && s.detail.detail_strength > 0.0),
             layers: s.layers.snow_enabled || s.layers.rock_enabled || s.layers.wetness_enabled,
             debug,
+            water: material.masks[3].is_some(),
             albedo: s.albedo_mode != forge3d_core::terrain_material::AlbedoMode::Colormap
                 || s.debug_view
                     == forge3d_core::terrain_material::TerrainMaterialDebugView::MaterialAlbedo,
@@ -103,7 +105,7 @@ pub(super) fn plan_material(
             settings: forge3d_core::terrain_material::TerrainMaterialSettings::default(),
             layer_images: vec![None; 4],
             detail_normal: None,
-            masks: [None, None, None],
+            masks: [None, None, None, None],
             virtual_texture: None,
         };
         let mut plan = plan_material(Some(&default), false, domain, max_dimension, texture_budget);
@@ -123,7 +125,7 @@ pub(super) fn plan_material(
             1,
             u64::MAX,
         );
-        let aux = assemble_aux_array(None, [None, None, None], 1);
+        let aux = assemble_aux_array(None, [None, None, None, None], 1);
         let gpu_bytes = uniform_bytes() + albedo.byte_len() + aux.byte_len();
         return TerrainMaterialPlan {
             uniform: TerrainMaterialUniform::disabled(),
@@ -154,6 +156,7 @@ pub(super) fn plan_material(
         material.masks[0].as_ref(),
         material.masks[1].as_ref(),
         material.masks[2].as_ref(),
+        material.masks[3].as_ref(),
     ];
     let aux = assemble_aux_array(material.detail_normal.as_ref(), masks, max_dimension);
     let mut diagnostics = albedo.diagnostics.clone();
@@ -288,11 +291,12 @@ impl TerrainMaterialResources {
         material: Option<&TerrainMaterialOptions>,
         screen: bool,
     ) -> Self {
+        let packed_uniform = bytemuck::bytes_of(&plan.uniform);
         let uniform_buffer = context
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("forge3d-web-terrain-material-uniform"),
-                contents: bytemuck::bytes_of(&plan.uniform),
+                contents: &packed_uniform,
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             });
         // Native `GpuMaterialSet` stores albedo as Rgba8UnormSrgb, including
@@ -487,7 +491,7 @@ pub(super) fn report_js(report: Option<&TerrainMaterialReport>) -> JsValue {
         &JsValue::from_f64(f64::from(report.mip_levels)),
     );
     let masks = js_sys::Array::new();
-    for (bit, name) in ["snow", "rock", "wetness"].iter().enumerate() {
+    for (bit, name) in ["snow", "rock", "wetness", "water"].iter().enumerate() {
         if report.mask_bits & (1 << bit) != 0 {
             masks.push(&JsValue::from_str(name));
         }
@@ -543,7 +547,7 @@ mod tests {
             layer_images: vec![None; settings.material_set.len()],
             settings,
             detail_normal: None,
-            masks: [None, None, None],
+            masks: [None, None, None, None],
             virtual_texture: None,
         };
         assert_eq!(
@@ -600,7 +604,7 @@ mod tests {
             layer_images: vec![None; settings.material_set.len()],
             settings,
             detail_normal: None,
-            masks: [None, None, None],
+            masks: [None, None, None, None],
             virtual_texture: None,
         };
         let plan = plan_material(Some(&options), false, [10.0, 20.0], 8192, u64::MAX);

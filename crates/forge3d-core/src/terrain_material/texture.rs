@@ -53,7 +53,7 @@ impl TerrainMaterialArray {
 }
 
 /// Two-layer auxiliary array: layer 0 is the tangent-space detail normal map,
-/// layer 1 packs the snow (R), rock (G) and wetness (B) coverage masks.
+/// layer 1 packs snow (R), rock (G), wetness (B) and water (A) masks.
 #[derive(Debug, Clone, PartialEq)]
 pub struct TerrainAuxArray {
     pub width: u32,
@@ -284,7 +284,7 @@ pub fn assemble_material_array(
 /// Builds the detail-normal/mask array at the largest provided size.
 pub fn assemble_aux_array(
     detail_normal: Option<&TerrainLayerImage>,
-    masks: [Option<&TerrainMaskImage>; 3],
+    masks: [Option<&TerrainMaskImage>; 4],
     max_dimension: u32,
 ) -> TerrainAuxArray {
     let mut diagnostics = Vec::new();
@@ -300,7 +300,7 @@ pub fn assemble_aux_array(
         }
         ok
     });
-    let mut valid_masks: [Option<&TerrainMaskImage>; 3] = [None; 3];
+    let mut valid_masks: [Option<&TerrainMaskImage>; 4] = [None; 4];
     for (index, mask) in masks.iter().enumerate() {
         if let Some(mask) = mask {
             if mask.width > 0
@@ -313,7 +313,7 @@ pub fn assemble_aux_array(
                     code: "terrain-material-mask-invalid",
                     message: format!(
                         "{} mask has inconsistent size or data; mask ignored",
-                        ["snow", "rock", "wetness"][index]
+                        ["snow", "rock", "wetness", "water"][index]
                     ),
                     layer: Some(index as u32),
                 });

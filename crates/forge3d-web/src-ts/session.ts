@@ -1,3 +1,5 @@
+import { Forge3DEnvironment, normalizeEnvironment } from "./environment.js";
+import type { EnvironmentInput, EnvironmentSnapshot, EnvironmentMemoryReport } from "./environment.js";
 import { Forge3DError, Forge3DRuntime } from "./index.js";
 import type { ScatterBatchSnapshot, ScatterFrameStats, ScatterMemoryReport } from "./scatter-types.js";
 import type { TerrainProbeSnapshot, TerrainProbeMemoryReport } from "./terrain-probes.js";
@@ -86,6 +88,8 @@ export interface SessionRuntimeLike {
   ): void;
   clearMaterialVtSources?(): void;
   getMaterialVtStats?(): TerrainMaterialVtStats;
+  setEnvironment?(snapshot:EnvironmentSnapshot|null):void;
+  getEnvironmentMemoryReport?():EnvironmentMemoryReport;
   setScene?(scene: SceneSnapshot): void;
   setScatterBatches?(batches: ScatterBatchSnapshot[]): void;
   setLightingProbes?(probes: TerrainProbeSnapshot | null): void;
@@ -261,6 +265,34 @@ export class Forge3DSession {
     return this.#tracker.report();
   }
 
+  setEnvironment(
+    input: Forge3DEnvironment | EnvironmentInput | EnvironmentSnapshot | null,
+  ): void {
+    const runtime = this.#runtimeOrThrow();
+    if (!runtime.setEnvironment)
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not support environment",
+      );
+    const snapshot =
+      input === null
+        ? null
+        : input instanceof Forge3DEnvironment
+          ? input.snapshot()
+          : normalizeEnvironment(input);
+    runtime.setEnvironment(snapshot);
+    this.#scene?.setEnvironment(input);
+    if (this.#committedSnapshot) this.#committedSnapshot.environment = snapshot;
+  }
+  getEnvironmentMemoryReport(): EnvironmentMemoryReport {
+    const runtime = this.#runtimeOrThrow();
+    if (!runtime.getEnvironmentMemoryReport)
+      throw new Forge3DError(
+        "UNSUPPORTED_FEATURE",
+        "Runtime does not report environment memory",
+      );
+    return runtime.getEnvironmentMemoryReport();
+  }
   setTimeSeconds(seconds: number): void {
     const runtime = this.#runtimeOrThrow();
     if (!Number.isFinite(seconds)) throw new Forge3DError("INVALID_INPUT", "timeSeconds must be finite");
@@ -803,7 +835,7 @@ export class Forge3DSession {
       runtime.setScene(snapshot);
       return;
     }
-    runtime.setLighting?.(clonePayload(snapshot.lighting));
+    runtime.setLighting?.(clonePayload(snapshot.environmentLighting ?? snapshot.lighting));
     runtime.setMaterials?.(clonePayload(snapshot.materials));
     runtime.setIbl?.(clonePayload(snapshot.ibl));
     runtime.setShadows?.(clonePayload(snapshot.shadows));
@@ -815,6 +847,7 @@ export class Forge3DSession {
       if (!runtime.setLightingProbes) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support terrain probes");
       runtime.setLightingProbes(clonePayload(snapshot.probes));
     }
+    if (snapshot.environment !== undefined) {if(!runtime.setEnvironment)throw new Forge3DError("UNSUPPORTED_FEATURE","Runtime does not support environment");runtime.setEnvironment(snapshot.environment);}
     if (snapshot.timeSeconds !== undefined) runtime.setTimeSeconds?.(snapshot.timeSeconds);
   }
 

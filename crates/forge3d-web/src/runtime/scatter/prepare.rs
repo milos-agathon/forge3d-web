@@ -168,6 +168,48 @@ impl ScatterResources {
         self.stats = stats;
         Ok(())
     }
+    pub(crate) fn draw_reflection(
+        &self,
+        pass: &mut wgpu::RenderPass<'_>,
+        runtime: &Forge3DRuntime,
+        camera: &wgpu::Buffer,
+    ) {
+        let context = runtime.context.as_ref().expect("context");
+        let (height, pages) = match runtime.terrain.as_ref() {
+            Some(t) => match t.streaming.as_ref() {
+                Some(s) => (s.atlas_view.clone(), s.page_table_view.clone()),
+                None => (
+                    t.height_texture.create_view(&Default::default()),
+                    self.fallback_pages.clone(),
+                ),
+            },
+            None => (self.fallback_height.clone(), self.fallback_pages.clone()),
+        };
+        pass.set_pipeline(&self.pipeline);
+        pass.set_bind_group(1, &runtime.lighting.as_ref().unwrap().bind_group, &[]);
+        pass.set_bind_group(2, runtime.textures.as_ref().unwrap().bind_group_for(0), &[]);
+        pass.set_bind_group(3, &runtime.ibl.as_ref().unwrap().bind_group, &[]);
+        for batch in &self.batches {
+            for draw in batch.levels.iter().chain(&batch.clusters) {
+                if draw.count == 0 {
+                    continue;
+                }
+                let binding = group(
+                    &context.device,
+                    &self.layout,
+                    camera,
+                    &draw.settings,
+                    &height,
+                    &pages,
+                );
+                pass.set_bind_group(0, &binding, &[]);
+                pass.set_vertex_buffer(0, draw.vertex.slice(..));
+                pass.set_vertex_buffer(1, draw.instances.slice(..));
+                pass.set_index_buffer(draw.index.slice(..), wgpu::IndexFormat::Uint32);
+                pass.draw_indexed(0..draw.index_count, 0, 0..draw.count);
+            }
+        }
+    }
     pub(crate) fn draw(
         &self,
         pass: &mut wgpu::RenderPass<'_>,

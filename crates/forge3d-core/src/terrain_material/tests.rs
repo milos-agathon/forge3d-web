@@ -367,7 +367,7 @@ fn invalid_layer_textures_fall_back_to_base_color_with_a_diagnostic() {
 
 #[test]
 fn aux_array_packs_detail_normals_and_masks_with_neutral_defaults() {
-    let empty = assemble_aux_array(None, [None, None, None], 8192);
+    let empty = assemble_aux_array(None, [None, None, None, None], 8192);
     assert_eq!((empty.width, empty.height, empty.mask_bits), (1, 1, 0));
     assert_eq!(empty.normal, vec![128, 128, 255, 255]);
     assert_eq!(empty.masks, vec![255, 255, 255, 255]);
@@ -383,9 +383,18 @@ fn aux_array_packs_detail_normals_and_masks_with_neutral_defaults() {
         height: 2,
         values: vec![0],
     };
-    let aux = assemble_aux_array(None, [None, Some(&rock), Some(&broken)], 8192);
+    let aux = assemble_aux_array(None, [None, Some(&rock), Some(&broken), None], 8192);
     assert_eq!((aux.width, aux.height, aux.mask_bits), (2, 2, 0b010));
     assert_eq!(&aux.masks[..8], &[255, 0, 255, 255, 255, 64, 255, 255]);
     assert_eq!(aux.diagnostics[0].code, "terrain-material-mask-invalid");
     assert_eq!(aux.diagnostics[0].layer, Some(2));
+    let water = assemble_aux_array(None, [None, None, None, Some(&rock)], 8192);
+    assert_eq!(water.mask_bits, 8);
+    assert_eq!(&water.masks[..8], &[255, 255, 255, 0, 255, 255, 255, 64]);
+    assert_eq!(
+        TerrainMaterialSettings::default()
+            .pack([0., 1.], water.mask_bits, false)
+            .detail1[3],
+        8.
+    );
 }

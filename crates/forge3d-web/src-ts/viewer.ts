@@ -1,3 +1,5 @@
+import { Forge3DEnvironment, normalizeEnvironment } from "./environment.js";
+import type { EnvironmentInput, EnvironmentSnapshot, EnvironmentMemoryReport } from "./environment.js";
 import {
   type CameraControllerMode,
   type CameraInput,
@@ -66,6 +68,8 @@ interface ViewerRuntime {
   ): void;
   simulateDeviceLossForTesting?(): void;
   setTerrain(terrain: TerrainHeightmapInput): void;
+  setEnvironment?(snapshot: EnvironmentSnapshot|null):void;
+  getEnvironmentMemoryReport?():EnvironmentMemoryReport;
   setScatterBatches?(batches: ScatterBatchSnapshot[]): void;
   setLightingProbes?(probes: TerrainProbeSnapshot | null): void;
   setTimeSeconds?(seconds: number): void;
@@ -176,6 +180,7 @@ export class Forge3DViewer {
   #generation = 0;
   #activeRuntimes = 0;
   #recoveryAttempts = 0;
+  #environmentReplay:EnvironmentSnapshot|null|undefined;
   #scatterReplay: ScatterBatchSnapshot[] | undefined;
   #probeReplay: TerrainProbeSnapshot | null | undefined;
   #scatterTime = 0;
@@ -567,6 +572,38 @@ export class Forge3DViewer {
     });
   }
 
+  setEnvironment(
+    input: Forge3DEnvironment | EnvironmentInput | EnvironmentSnapshot | null,
+  ): void {
+    const runtime = this.#operationalRuntime();
+    const snapshot =
+      input === null
+        ? null
+        : input instanceof Forge3DEnvironment
+          ? input.snapshot()
+          : normalizeEnvironment(input);
+    this.#callRuntime(() => {
+      if (!runtime.setEnvironment)
+        throw new Forge3DError(
+          "UNSUPPORTED_FEATURE",
+          "Runtime does not support environment",
+        );
+      runtime.setEnvironment(snapshot);
+    });
+    this.#environmentReplay = structuredClone(snapshot);
+    this.#scheduler?.requestRender();
+  }
+  getEnvironmentMemoryReport(): EnvironmentMemoryReport {
+    const runtime = this.#operationalRuntime();
+    return this.#callRuntime(() => {
+      if (!runtime.getEnvironmentMemoryReport)
+        throw new Forge3DError(
+          "UNSUPPORTED_FEATURE",
+          "Runtime does not report environment memory",
+        );
+      return runtime.getEnvironmentMemoryReport();
+    });
+  }
   setScatterBatches(batches: readonly (TerrainScatterBatch | ScatterBatchInput | ScatterBatchSnapshot)[]): void {
     const runtime = this.#operationalRuntime(), snapshot = normalizeScatterBatches(batches);
     this.#callRuntime(() => { if (!runtime.setScatterBatches) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support terrain scatter"); runtime.setScatterBatches(snapshot); });
@@ -1077,6 +1114,7 @@ export class Forge3DViewer {
       ) {
         return;
       }
+      if(this.#environmentReplay!==undefined){if(!replacement.setEnvironment)throw new Forge3DError("UNSUPPORTED_FEATURE","Recovery runtime does not support environment");replacement.setEnvironment(structuredClone(this.#environmentReplay));}
       if (this.#scatterReplay !== undefined) {
         if (!replacement.setScatterBatches || !replacement.setTimeSeconds) throw new Forge3DError("UNSUPPORTED_FEATURE", "Recovery runtime does not support terrain scatter");
         replacement.setScatterBatches(structuredClone(this.#scatterReplay)); replacement.setTimeSeconds(this.#scatterTime);
@@ -1232,6 +1270,7 @@ export class Forge3DViewer {
   }
 
   #disposeOwnedResources(transitionRuntime: boolean): void {
+    this.#environmentReplay = undefined;
     this.#scatterReplay = undefined; this.#probeReplay = undefined;
     this.#sourceController?.abort();
     this.#sourceController = undefined;

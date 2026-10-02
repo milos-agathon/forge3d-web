@@ -990,3 +990,7 @@ Invalid dimensions, non-finite camera values, unsupported runtime options,
 wrong typed-array lengths, and invalid byte ranges use `INVALID_INPUT`. Browser
 IO uses `IO_ERROR` for fetch/CORS/body/range failures and `REQUEST_CANCELLED`
 for aborted source reads.
+
+## W10 environment and water
+
+`Forge3DEnvironment`, `sunPosition`, `generateDensityVolume`, and `environmentMemoryReport` provide UTC sun animation, shared atmosphere, clouds and explicit water layers. Runtime, scene, session and viewer expose `setEnvironment`; runtime, session and viewer expose `getEnvironmentMemoryReport`. See [environment and water](environment-water.md) for configuration, budgets, capture guides and native verification.

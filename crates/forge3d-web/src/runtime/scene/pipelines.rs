@@ -69,6 +69,7 @@ fn vs_main(input: VertexInput) -> VertexOutput {
 
 @fragment
 fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
+    if (camera.camera_position.w < 0.0 && input.world_position.y < camera.camera_forward.w) { discard; }
     return world_shade(input);
 }
 

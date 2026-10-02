@@ -459,13 +459,14 @@ function reconstructScene(snapshot: SceneSnapshot): Forge3DScene {
     scene.addPass(pass);
   }
   if (snapshot.lighting !== undefined) {
-    restoreSceneLighting(scene, snapshot.lighting);
+    restoreSceneLighting(scene, snapshot.environmentLighting ?? snapshot.lighting);
   }
   if (snapshot.materials !== undefined) {
     restoreSceneMaterials(scene, snapshot.materials);
   }
   restoreSceneIbl(scene, snapshot.ibl ?? null);
   restoreSceneShadows(scene, snapshot.shadows ?? defaultShadowSnapshot());
+  if (snapshot.environment !== undefined) scene.setEnvironment(snapshot.environment);
   if (snapshot.scatter !== undefined) scene.setScatterBatches(snapshot.scatter);
   if (snapshot.probes !== undefined) scene.setLightingProbes(snapshot.probes);
   if (snapshot.timeSeconds !== undefined) scene.setTimeSeconds(snapshot.timeSeconds);

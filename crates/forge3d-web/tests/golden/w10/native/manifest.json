@@ -1,0 +1,174 @@
+{
+  "fixture": "w10-native-scene-v1",
+  "provenance": {
+    "native": "forge3d 1.26.0",
+    "wheelSha256": "0b610d9292158d141498ee52427fd2def20f689b6835d32373667e0ea1901dfb",
+    "generator": "scripts/generate-w10-render-goldens.py",
+    "rendererSourceCommit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+    "sceneSourceCommit": "1f4084a",
+    "sourceSha256": "33b9e0c600deb1dc111d985f56679fc383c35baeee2d960b70ff4890f0f9d464"
+  },
+  "tolerances": {
+    "ssimMin": 0.98
+  },
+  "scene": {
+    "width": 192,
+    "height": 128,
+    "terrainSpan": 2.8,
+    "zScale": 1.45,
+    "sun": {
+      "azimuthDeg": 135.0,
+      "elevationDeg": 24.0,
+      "intensity": 2.4
+    },
+    "camera": {
+      "radius": 5.0,
+      "phiDeg": 138.0,
+      "thetaDeg": 63.0,
+      "fovDeg": 54.0
+    },
+    "stops": [
+      [
+        0.0,
+        "#18391f"
+      ],
+      [
+        0.38,
+        "#4e7c35"
+      ],
+      [
+        0.65,
+        "#8f7a4a"
+      ],
+      [
+        0.82,
+        "#b8ac88"
+      ],
+      [
+        1.0,
+        "#f2f4f7"
+      ]
+    ],
+    "hdrBlue": 128,
+    "clip": [
+      0.1,
+      6000.0
+    ],
+    "terrainSize": 96,
+    "heightsFile": "heights.f32"
+  },
+  "variants": [
+    {
+      "id": "baseline",
+      "width": 192,
+      "height": 128,
+      "sha256": "51e1002b4e965c906f0062e5a14e53b6b310810fe89bfdff295147c18c1704cf",
+      "web": {}
+    },
+    {
+      "id": "terrain-atmosphere",
+      "width": 192,
+      "height": 128,
+      "sha256": "694eaf07bee5274f62e88f6a8478ca65c8c6cf3ed8d4dbaf4f8cfb0aa7daa3e3",
+      "web": {
+        "sky": {
+          "turbidity": 5.5,
+          "groundAlbedo": 0.35,
+          "sunIntensity": 1.8,
+          "sunSize": 1.6,
+          "aerialDensity": 2.8,
+          "exposure": 1.1
+        },
+        "elevation": 12
+      },
+      "historical": {
+        "commit": "1f4084a",
+        "path": "tests/golden/terrain/terrain_atmosphere.png",
+        "sha256": "c7a948e59d0196a52898fd322adc3a9958f2f98fba85bfed9d102af7e157b1d6"
+      }
+    },
+    {
+      "id": "terrain-water",
+      "width": 192,
+      "height": 128,
+      "sha256": "15b1bf738a930335b0983b935edd16dbcce0aa29eb565696d1975d6f1197245a",
+      "web": {
+        "water": true,
+        "elevation": 18
+      },
+      "historical": {
+        "commit": "1f4084a",
+        "path": "tests/golden/terrain/terrain_water.png",
+        "sha256": "8f92cd18beee7e486b4dd82fcaaa342373d5ae53e97407ec72be3f7f50dd2b67"
+      }
+    },
+    {
+      "id": "terrain-water-reflection",
+      "width": 256,
+      "height": 160,
+      "sha256": "f12eccc1958aac067063a3299c89c03d7608b65b8e5547e51c82bbf5b2a2a057",
+      "web": {
+        "water": true,
+        "reflection": true,
+        "elevation": 15
+      },
+      "historical": {
+        "commit": "1f4084a",
+        "path": "tests/golden/terrain/terrain_water_reflection.png",
+        "sha256": "c93d69fb40a32e27c915ce407740fdbcd130dab5bbb6c32a501e558875120396"
+      }
+    },
+    {
+      "id": "terrain-water-planar",
+      "width": 256,
+      "height": 160,
+      "sha256": "2197acec7a872b1b91b520aca63edad6b9cd074f22acb541147ddf32a4bc0d7d",
+      "web": {
+        "water": true,
+        "reflection": true,
+        "elevation": 15,
+        "maskScale": 0.8,
+        "planar": {
+          "fresnelPower": 0.1,
+          "waveDistortionStrength": 0.2,
+          "shoreAttenuationWidth": 0.01
+        }
+      },
+      "reflectionControl": {
+        "sha256": "408fc07215b48541728ad41c1335a7811dc8875bbafb0551d56c4d59a6d6413c",
+        "meanByteDifference": 0.858575439453125
+      }
+    },
+    {
+      "id": "cloud",
+      "width": 192,
+      "height": 128,
+      "sha256": "c58a034e9f146ddd73124bf85111717bded7eb3dbb6477b4298e36f48084b0a7",
+      "native": "forge3d 1.34.0",
+      "extensionSha256": "026a6a76a078c1e9be606d36a5a843ab7c944c845df12dc899505663aee24dc0",
+      "web": {
+        "clearColor": [
+          0.02,
+          0.02,
+          0.03,
+          1
+        ],
+        "sunDirection": [
+          0.5,
+          0.8,
+          0.6
+        ],
+        "sunIntensity": 1,
+        "clouds": {
+          "renderPath": "native",
+          "mode": "volumetric",
+          "color": [
+            0.58,
+            0.72,
+            0.92
+          ]
+        }
+      }
+    }
+  ]
+}

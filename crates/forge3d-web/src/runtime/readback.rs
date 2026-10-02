@@ -16,6 +16,8 @@ pub(super) async fn screenshot_runtime(runtime: &mut Forge3DRuntime) -> Result<B
 }
 
 pub(super) async fn read_rgba_runtime(runtime: &mut Forge3DRuntime) -> Result<Vec<u8>, WebError> {
+    super::environment::refresh(runtime)?;
+    super::shadows::refresh_shadow_state(runtime)?;
     super::shader_variants::sync_pipelines(runtime)?;
     super::scatter::prepare(runtime, None)?;
     let context = runtime.context.clone().ok_or_else(|| {
@@ -106,6 +108,7 @@ async fn capture_frame_rgba(
             label: Some("forge3d-web-readback-encoder"),
         });
 
+    super::shadows::encode_shadow_passes(runtime, &mut encoder);
     encode_scene_render_pass(
         runtime,
         &mut encoder,
