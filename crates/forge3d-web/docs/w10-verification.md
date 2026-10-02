@@ -204,3 +204,14 @@ records the fresh source/package/browser binding, contracts and proof hashes.
 The previous acceptance records remain historical evidence. The follow-up
 commit adds only this evidence and verification prose; shipped renderer/TS
 code matches the clean package snapshot.
+
+## Portable native fixture checks
+
+The unit suite reads exact native blobs committed under
+`tests/golden/w10/source/<commit>/<original path>` so shallow GitHub checkouts
+do not need native Git history. All six source snapshots and three historical
+PNGs were extracted from the recorded native commits and checked against their
+existing SHA-256 pins. Source equality, historical PNG equality, native RGBA
+hashes, reflection controls and tolerances are unchanged. The native generators
+write these snapshots from Git bytes when refreshing their fixtures; text
+snapshots use LF on every platform.

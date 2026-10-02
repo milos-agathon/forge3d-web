@@ -184,8 +184,7 @@ describe("W10 TV6 density presets", () => {
   });
 });
 import { createHash } from "node:crypto";
-import { execFileSync } from "node:child_process";
-it("locks reference fixtures to actual native git source bytes", () => {
+it("locks reference fixtures to pinned native source snapshots", () => {
   for (const name of [
     "sky",
     "clouds",
@@ -201,7 +200,7 @@ it("locks reference fixtures to actual native git source bytes", () => {
       ),
     );
     const p = fixture.provenance ?? fixture;
-    const bytes = execFileSync("git", ["show", `${p.commit}:${p.path}`]);
+    const bytes = readFileSync(new URL(`../golden/w10/source/${p.commit}/${p.path}`, import.meta.url));
     expect(createHash("sha256").update(bytes).digest("hex")).toBe(p.sha256);
     if (fixture.source) expect(fixture.source).toBe(bytes.toString());
   }
@@ -249,7 +248,7 @@ it("locks installed-native scene references and historical PNG provenance", () =
     }
     if (variant.historical) {
       const h = variant.historical;
-      const source = execFileSync("git", ["show", `${h.commit}:${h.path}`]);
+      const source = readFileSync(new URL(`../golden/w10/source/${h.commit}/${h.path}`, import.meta.url));
       expect(createHash("sha256").update(source).digest("hex")).toBe(h.sha256);
       expect(readFileSync(new URL(`${variant.id}-historical.png`, root))).toEqual(source);
     }

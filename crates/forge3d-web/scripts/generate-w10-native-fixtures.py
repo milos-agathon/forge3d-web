@@ -11,7 +11,11 @@ DEEP = "bf8db93233e5158f6d226991fc5d230832c2d806"
 TV6 = "1f4084a"
 
 def native(commit, path):
-    return subprocess.check_output(["git", "show", f"{commit}:{path}"], cwd=ROOT).decode()
+    data = subprocess.check_output(["git", "show", f"{commit}:{path}"], cwd=ROOT)
+    snapshot = FIXTURES / "source" / commit / path
+    snapshot.parent.mkdir(parents=True, exist_ok=True)
+    snapshot.write_bytes(data)
+    return data.decode()
 
 def digest(source):
     return hashlib.sha256(source.encode()).hexdigest()

@@ -79,6 +79,9 @@ def main():
             if name not in ("baseline", "terrain-water-planar"):
                 native_path = "tests/golden/terrain/" + name.replace("-", "_") + ".png"
                 original = subprocess.check_output(["git", "show", f"{COMMIT}:{native_path}"], cwd=ROOT)
+                snapshot = OUT.parent / "source" / COMMIT / native_path
+                snapshot.parent.mkdir(parents=True, exist_ok=True)
+                snapshot.write_bytes(original)
                 (OUT / f"{name}-historical.png").write_bytes(original)
                 record["historical"] = dict(commit=COMMIT, path=native_path, sha256=sha(original))
             records.append(record)
