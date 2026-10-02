@@ -23,7 +23,7 @@ export function environmentMemoryReport(
   const planar = s.water.filter((w) => w.reflection === "planar").length;
   const reflectionBytes =
     (planar ? width * height : 1) * 4 * (Math.max(1, s.water.length) + 1) +
-    planar * 96;
+    planar * 96 + (s.water.some(w => w.terrainMask) ? 96 : 0);
   const froxelBytes =
     s.volumetricMode === "froxel"
       ? Math.ceil(width / 8) * Math.ceil(height / 8) * s.steps * 8

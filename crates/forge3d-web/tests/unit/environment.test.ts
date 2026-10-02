@@ -239,6 +239,14 @@ it("locks installed-native scene references and historical PNG provenance", () =
   expect(manifest.tolerances.ssimMin).toBe(0.98);
   for (const variant of manifest.variants) {
     expect(createHash("sha256").update(readFileSync(new URL(`${variant.id}.rgba`, root))).digest("hex")).toBe(variant.sha256);
+    if (variant.reflectionControl) {
+      const control=readFileSync(new URL(`${variant.id}-disabled.rgba`,root));
+      expect(createHash("sha256").update(control).digest("hex")).toBe(variant.reflectionControl.sha256);
+      const image=readFileSync(new URL(`${variant.id}.rgba`,root));
+      const delta=image.reduce((sum,byte,i)=>sum+Math.abs(byte-control[i]!),0)/image.length;
+      expect(delta).toBe(variant.reflectionControl.meanByteDifference);
+      expect(delta).toBeGreaterThan(.5);
+    }
     if (variant.historical) {
       const h = variant.historical;
       const source = execFileSync("git", ["show", `${h.commit}:${h.path}`]);
@@ -246,4 +254,37 @@ it("locks installed-native scene references and historical PNG provenance", () =
       expect(readFileSync(new URL(`${variant.id}-historical.png`, root))).toEqual(source);
     }
   }
+});
+
+it("uses W00 volume bounds and reserves W11 convergence tolerances",()=>{
+  const c=JSON.parse(readFileSync(new URL("../golden/w10/volume-temporal-v1.json",import.meta.url),"utf8"));
+  const w00=JSON.parse(readFileSync(new URL("../parity/fixture-contracts.json",import.meta.url),"utf8"));
+  const fixture=(Array.isArray(w00)?w00:w00.fixtures).find((f:any)=>f.id===c.fixture);
+  expect(c.bounds).toEqual(fixture.generator.parameters.boundedVolume);
+  expect(c.minimumContributingPixels).toBeGreaterThanOrEqual(100000);
+  expect(c.scope).toContain("W11");
+});
+it("validates owned masked-terrain and foam controls",()=>{
+  const water={bounds:[-1,-1,1,1] as [number,number,number,number],terrainMask:true,reflection:"planar" as const,foamNoiseScale:32};
+  const e=new Forge3DEnvironment({water:[water]});
+  expect(e.copy().snapshot().water[0]).toMatchObject({terrainMask:true,foamNoiseScale:32});
+  expect(()=>new Forge3DEnvironment({water:[water,water]})).toThrow();
+  for(const foamNoiseScale of [0,NaN,Infinity])expect(()=>new Forge3DEnvironment({water:[{...water,foamNoiseScale}]})).toThrow();
+  expect(environmentMemoryReport(e.snapshot(),192,128).gpuBytes-environmentMemoryReport(new Forge3DEnvironment({water:[{...water,terrainMask:false}]}).snapshot(),192,128).gpuBytes).toBe(96);
+});
+it("pins W09 hashes only for the explicitly selected, matching profile", async()=>{
+  const {checkPreservationProfile}=await import("../browser/w10-preservation-profile.mjs");
+  const c=JSON.parse(readFileSync(new URL("../golden/w10/w09-preservation.json",import.meta.url),"utf8"));
+  const observed={platform:c.profile.platform,browser:c.profile.browser,adapter:{...c.profile.adapter}};
+  expect(checkPreservationProfile(c,undefined,{platform:"linux",browser:"different",adapter:{vendor:"google"}})).toBe(false);
+  expect(checkPreservationProfile(c,c.profile.id,observed)).toBe(true);
+  expect(()=>checkPreservationProfile(c,"unknown",observed)).toThrow();
+  expect(()=>checkPreservationProfile(c,c.profile.id,{...observed,platform:"linux"})).toThrow();
+  expect(()=>checkPreservationProfile(c,c.profile.id,{...observed,browser:"different"})).toThrow();
+  expect(()=>checkPreservationProfile(c,c.profile.id,{...observed,adapter:{...observed.adapter,architecture:"swiftshader"}})).toThrow();
+});
+
+it("matches native water mode, shore, distortion and foam-noise defaults",()=>{
+ expect(normalizeEnvironment({water:[{bounds:[0,0,1,1]}]}).water[0]).toMatchObject({mode:"transparent",shoreAttenuationWidth:0.3,waveDistortionStrength:0.02,foamNoiseScale:20,terrainMask:false});
+ expect(()=>normalizeEnvironment({water:[{bounds:[0,0,1,1],terrainMask:1}]} as any)).toThrow();
 });

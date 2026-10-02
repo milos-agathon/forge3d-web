@@ -1,8 +1,12 @@
+mod bindings;
 use super::gpu::Target;
 use crate::{
     error::{map_core_error, WebError},
     runtime::Forge3DRuntime,
 };
+pub(crate) use bindings::masked_layout;
+#[cfg(test)]
+pub(crate) use bindings::masked_layout_entries;
 use forge3d_core::{environment::Environment, gpu::GpuContext};
 struct Layer {
     index: usize,
@@ -14,6 +18,9 @@ pub(crate) struct ReflectionTargets {
     pub array_view: wgpu::TextureView,
     depth: Target,
     layers: Vec<Layer>,
+    sampler: wgpu::Sampler,
+    format: wgpu::TextureFormat,
+    pipelines: std::cell::RefCell<std::collections::HashMap<u64, wgpu::RenderPipeline>>,
 }
 impl ReflectionTargets {
     pub fn new(
@@ -65,7 +72,15 @@ impl ReflectionTargets {
                 }),
             })
             .collect();
+        let sampler = context.device.create_sampler(&wgpu::SamplerDescriptor {
+            mag_filter: wgpu::FilterMode::Linear,
+            min_filter: wgpu::FilterMode::Linear,
+            ..Default::default()
+        });
         Self {
+            sampler,
+            format,
+            pipelines: Default::default(),
             _texture: texture,
             array_view,
             depth,
@@ -81,29 +96,95 @@ impl ReflectionTargets {
                 .view_projection_matrix(runtime.width as f32 / runtime.height as f32)
                 .map_err(map_core_error)?,
         );
+        self.update_camera(
+            context,
+            &e.snapshot,
+            vp,
+            runtime.camera.position.into(),
+            runtime.camera.target.into(),
+            runtime.terrain.as_ref().is_some_and(|t| t.render_mode == 1),
+            &e.uniform,
+        );
+        Ok(())
+    }
+    pub fn update_capture(
+        &self,
+        context: &GpuContext,
+        snapshot: &Environment,
+        camera: &crate::runtime::terrain::CaptureCameraUniform,
+        screen: bool,
+        uniform: &wgpu::Buffer,
+    ) {
+        let position = glam::Vec3::from_slice(&camera.base.camera_position);
+        let target = position + glam::Vec3::from_slice(&camera.base.camera_forward);
+        self.update_camera(
+            context,
+            snapshot,
+            glam::Mat4::from_cols_array_2d(&camera.base.view_projection),
+            position,
+            target,
+            screen,
+            uniform,
+        );
+    }
+    #[allow(clippy::too_many_arguments)]
+    fn update_camera(
+        &self,
+        context: &GpuContext,
+        snapshot: &Environment,
+        vp: glam::Mat4,
+        eye: glam::Vec3,
+        target: glam::Vec3,
+        screen: bool,
+        uniform: &wgpu::Buffer,
+    ) {
         for layer in &self.layers {
-            let height = e.snapshot.water[layer.index].height;
+            let water = &snapshot.water[layer.index];
+            let height = water.height;
+            let screen_masked = water.terrain_mask && screen;
             let reflect = glam::Mat4::from_cols(
                 glam::Vec4::X,
                 -glam::Vec4::Y,
                 glam::Vec4::Z,
                 glam::vec4(0., 2. * height, 0., 1.),
             );
-            let position = reflect.transform_point3(runtime.camera.position.into());
-            let fwd = reflect
-                .transform_vector3(
-                    glam::Vec3::from(runtime.camera.target)
-                        - glam::Vec3::from(runtime.camera.position),
+            let reflect = if screen_masked {
+                glam::Mat4::from_cols(
+                    glam::Vec4::X,
+                    glam::Vec4::Y,
+                    -glam::Vec4::Z,
+                    glam::vec4(0., 0., 2. * height, 1.),
                 )
-                .normalize();
+            } else {
+                reflect
+            };
+            if water.terrain_mask {
+                let mut values = Vec::from((vp * reflect).to_cols_array());
+                values.extend_from_slice(&[
+                    water.reflection_strength,
+                    water.fresnel_power,
+                    water.wave_distortion_strength,
+                    water.shore_attenuation_width,
+                ]);
+                values.extend_from_slice(&[layer.index as f32, 0., 0., 0.]);
+                context
+                    .queue
+                    .write_buffer(uniform, 512, bytemuck::cast_slice(&values));
+            }
+            let position = reflect.transform_point3(eye);
+            let fwd = reflect.transform_vector3(target - eye).normalize();
             let mut data = Vec::from((vp * reflect).to_cols_array());
-            data.extend_from_slice(&[position.x, position.y, position.z, -1.]);
+            data.extend_from_slice(&[
+                position.x,
+                position.y,
+                position.z,
+                if screen_masked { -2. } else { -1. },
+            ]);
             data.extend_from_slice(&[fwd.x, fwd.y, fwd.z, height]);
             context
                 .queue
                 .write_buffer(&layer.camera, 0, bytemuck::cast_slice(&data));
         }
-        Ok(())
     }
     pub fn encode(&self, runtime: &Forge3DRuntime, encoder: &mut wgpu::CommandEncoder) {
         let (Some(context), Some(textures), Some(ibl), Some(lighting)) = (
@@ -135,7 +216,20 @@ impl ReflectionTargets {
                     depth_slice: None,
                     resolve_target: None,
                     ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                        load: wgpu::LoadOp::Clear(
+                            if runtime.environment.as_ref().unwrap().snapshot.water[layer.index]
+                                .terrain_mask
+                            {
+                                wgpu::Color {
+                                    r: 0.1,
+                                    g: 0.1,
+                                    b: 0.15,
+                                    a: 1.,
+                                }
+                            } else {
+                                wgpu::Color::TRANSPARENT
+                            },
+                        ),
                         store: wgpu::StoreOp::Store,
                     },
                 })],
@@ -153,7 +247,21 @@ impl ReflectionTargets {
             });
             if let (Some(t), Some(group)) = (runtime.terrain.as_ref(), terrain_group.as_ref()) {
                 let (_, group2) = t.profile_bind_groups(textures.bind_group_for(0));
-                pass.set_pipeline(&t.pipeline);
+                let features = t.features.with_masked_reflection(false).with_aerial(false);
+                let reflection_pipeline = self
+                    .pipelines
+                    .borrow_mut()
+                    .entry(features.bits())
+                    .or_insert_with(|| {
+                        super::super::terrain::reflection_pipeline(
+                            &context.device,
+                            runtime,
+                            features,
+                            self.format,
+                        )
+                    })
+                    .clone();
+                pass.set_pipeline(&reflection_pipeline);
                 pass.set_bind_group(0, group, &[]);
                 pass.set_bind_group(1, &lighting.bind_group, &[]);
                 pass.set_bind_group(2, group2, &[]);

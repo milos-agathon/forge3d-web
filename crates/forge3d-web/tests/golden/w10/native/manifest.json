@@ -119,6 +119,28 @@
       }
     },
     {
+      "id": "terrain-water-planar",
+      "width": 256,
+      "height": 160,
+      "sha256": "2197acec7a872b1b91b520aca63edad6b9cd074f22acb541147ddf32a4bc0d7d",
+      "web": {
+        "water": true,
+        "reflection": true,
+        "elevation": 15,
+        "maskScale": 0.8,
+        "planar": {
+          "fresnelPower": 0.1,
+          "waveDistortionStrength": 0.2,
+          "shoreAttenuationWidth": 0.01
+        }
+      },
+      "reflectionControl": {
+        "sha256": "408fc07215b48541728ad41c1335a7811dc8875bbafb0551d56c4d59a6d6413c",
+        "meanByteDifference": 0.858575439453125,
+        "minimumContributionFraction": 0.5
+      }
+    },
+    {
       "id": "cloud",
       "width": 192,
       "height": 128,

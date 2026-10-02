@@ -1,8 +1,8 @@
 # W10 verification
 
-W10 remains **Partial** in both the ledger and section status. T17/P08/P09
-local contracts are implemented and verified. T16/P10 include passing native
-scene comparisons and deliberate renderer divergences described in
+W10 remains **Partial** in both the ledger and section status. T16/T17/P08/P09
+local contracts are implemented and verified. P10 retains a renderer divergence
+described in
 [environment and water](environment-water.md). Reference-hardware acceptance
 remains open; local rendering success is not a physical-hardware qualification.
 Changes live on `codex/w10-environment`, not the main checkout.
@@ -19,9 +19,10 @@ All comparisons require SSIM >=0.98; disabled clouds/water must fail it.
 | Scene | Installed-native SSIM | Historical SSIM | Disabled control SSIM |
 |---|---:|---:|---:|
 | Baseline terrain | 0.999548 | n/a | n/a |
-| Atmosphere/aerial | 0.998647 | 0.998647 | covered-pixel controls below |
+| Atmosphere/aerial | 0.998647 | 0.998647 | 0.948778 (aerial off) |
 | Masked terrain water | 0.999281 | 0.999281 | 0.865832 |
 | Water-reflection fixture | 0.999475 | 0.999475 | 0.784951 |
+| Masked planar reflection | 0.999543 | n/a | enabled/disabled contribution checked below |
 | Native cloud quad | 0.999783 | n/a | 0.961629 |
 
 Terrain references use an isolated installed wheel built from pinned native
@@ -33,10 +34,19 @@ therefore uses a separately installed forge3d 1.34.0 Scene renderer. The
 manifest records each version, the pinned wheel hash, cloud extension hash,
 scene source digest and image hashes. No native arithmetic is patched.
 
-The reflection fixture's SSIM chiefly measures masked-water shading. It does
-not establish every native masked-terrain planar-reflection scenario. Mirrored
-scene reflections belong to explicit water layers in this port; their enabled
-vs sky-only behavior is tested separately. Native clouds use a clip-space quad;
+The historical binary reflection mask has zero native reflection contribution
+in this scene. `terrain-water-planar` instead uses a 0.8 shore-distance mask:
+the independent native enabled/disabled difference is 0.858575 mean RGBA bytes,
+and web is 0.769425, changing 8,886 water pixels. Enabled and disabled frames
+each exceed SSIM 0.98 against their own native reference. Web contribution must
+exceed half the native contribution, so an inert reflection cannot pass. Land
+pixels remain exactly unchanged, repeated rendering is identical and clearing
+the environment restores the original frame. The mask/control hashes and
+contribution metric are integrity-checked. The same test runs with a 16-texture
+adapter cap. Reflections use a nonrecursive mirrored terrain/scene/scatter pass,
+including the current offline capture camera. HDR enabled/disabled captures
+prove a nonzero reflection contribution, repeat exactly and preserve terrain IDs
+without creating a plane AOV. Native clouds use a clip-space quad;
 the default depth-clipped world cloud path remains a documented approximation.
 Native-path cloud IBL uses the native default tint, not arbitrary scene IBL.
 
@@ -52,15 +62,22 @@ Native-path cloud IBL uses the native default tint, not arbitrary scene IBL.
   aerial perspective and density zero each restore covered pixels exactly.
 - A rendered London sunrise at 2024-06-21 04:00 UTC (elevation 1.245 degrees)
   differs from noon by 33.12 mean covered RGB bytes and repeats exactly.
-- `volume-temporal-v1.json` runs at 1920x1080, bounds [-8,0,-8,8,12,8], with
+- `volume-temporal-v1.json` runs at 1920x1080, W00 bounds [-10,-5,-10,10,20,10], with
   8x6x8 localized-haze density, 32 steps, full resolution and temporal weight
-  0.8. History is valid after repeated renders. There are 158,318 contributing
-  inside pixels and zero changed bytes across 1,878,324 outside pixels, checked
+  0.8. History is valid after repeated renders. There are 382,690 contributing
+  inside pixels and zero changed bytes across 1,553,056 outside pixels, checked
   against independent CPU ray/box intersections; the limit is one byte.
+  Acceptance requires >100,000 contributing pixels and >5% of the frame. The
+  contract explicitly reserves temporal convergence/disocclusion/flicker for W11.
 - `w09-preservation.json` comes from an independent `git archive` export and
   WASM build of main 7b738f9. No environment preserves display and HDR SHA-256
   exactly for terrain/material/ground and scatter/probes scenes. Both frames
-  require more than 1,000 covered pixels. The committed browser test checks it.
+  require more than 1,000 covered pixels. Exact hashes run only when `FORGE3D_W10_PINNED_HASH_PROFILE` selects
+  `windows-nvidia-ampere-chrome154`. The record includes Windows, Chrome
+  154.0.8037.93, NVIDIA/Ampere and the operator-identified RTX 3070; device and
+  description strings are redacted by WebGPU. A selected profile must match
+  every recorded observable identity field. Other adapters check coverage and
+  repeated current display/HDR frames without consuming RTX hashes.
 - Fog defaults are native uniform, phase g=0, shafts off and falloff 0.1;
   anisotropy accepts [-1,1]. Sky-driven fog and aerial composition, water
   Fresnel/tint/ripple/refraction/shore/distortion controls, native cloud modes
@@ -90,16 +107,21 @@ images verbatim. Native regeneration repeats the recorded hashes.
 For W09 preservation, build an independent 7b738f9 archive with a separate
 target directory. Copy `test-w10.html`, `w10-acceptance.js`,
 `w10-native-probes.js` and `test-w10-worker.js` into its examples directory,
-serve with Vite, then run `node scripts/generate-w10-w09-preservation.mjs
+serve with Vite, select `FORGE3D_W10_PINNED_HASH_PROFILE`, then run
+`node scripts/generate-w10-w09-preservation.mjs
 http://127.0.0.1:<baseline-port>` from this package. The generator uses the
 baseline runtime rather than the W10 runtime.
 
 ## Verification and qualification
 
-369 core and 177 web Rust tests pass; fmt is clean. 727 TypeScript tests pass.
+369 core and 180 web Rust tests pass; fmt is clean. 731 TypeScript tests pass.
 API snapshots/typechecks, parity inventory, six documentation checks and the
-13-test browser inventory classifier pass. All 20 W10 stable Chrome checks
-pass with no launch flags; all 20 Chromium preflight checks also pass. The clean installed-package lane now includes
+13-test browser inventory classifier pass. The 62 W07–W10 Chrome checks pass (the W07 timing check passed in isolation
+after a contended-run failure); the existing W09-versus-W08 comparison is skipped
+because its separate W08 package is unavailable. All 22 W10 Chromium preflight
+checks pass with the pinned-profile variable unset. The 13-test exact browser
+inventory classifier passes. Full infrastructure tests encounter existing
+Windows POSIX/symlink restrictions; the portable W10 package lane is used. The clean installed-package lane now includes
 aerial controls, sunrise, native images, full-size volume and W09 preservation
 in addition to the earlier W03-W09 and W10 checks.
 
@@ -107,15 +129,15 @@ Pinned integrated FW-WIN-I12-01 remains blocked on INF-00; pinned discrete
 Ubuntu/Vulkan FW-LNX-NV-01 is unavailable here. This Windows NVIDIA Ampere
 adapter does not substitute for either profile. Windows Firefox preflight
 cannot acquire a WebGPU adapter; WebKit preflight has no navigator.gpu. Both
-required availability gates failed, so neither is qualified. No test is
+required availability gates failed, so neither is qualified. Neither failed availability gate is
 silently skipped or reported as cross-browser success.
 
-The clean installed-package gate passed on `abfdfa195da14fa74376090861f92c9a3f74c574`
+The prior clean installed-package gate passed on `abfdfa195da14fa74376090861f92c9a3f74c574`
 with a clean worktree and stable Chrome 154.0.8037.93, without launch flags.
 The tarball SHA-256 is
 `f74f0fcd8c9109a6a93227676d5831c8f406eaaf0ca3767e7c18a8a0147efba3`.
 The run passed all 118 harness and six documentation checks, W03-W09 installed
-consumer checks, all W10 behavioral contracts and the five native scene
-comparisons above. [Committed acceptance evidence](w10-clean-package-acceptance.json)
+consumer checks, all W10 behavioral contracts and the original five native scene
+comparisons. [Committed acceptance evidence](w10-clean-package-acceptance.json)
 records the package/browser binding, observations and retained proof hashes.
 This record supersedes the earlier 8cf321f acceptance record.

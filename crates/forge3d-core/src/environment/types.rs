@@ -89,6 +89,10 @@ pub struct DensityVolume {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct WaterLayer {
+    #[serde(default)]
+    pub terrain_mask: bool,
+    #[serde(default = "default_foam_noise_scale")]
+    pub foam_noise_scale: f32,
     pub mode: String,
     pub fresnel_power: f32,
     pub hue_shift: f32,
@@ -116,4 +120,8 @@ pub struct WaterLayer {
     pub foam_intensity: f32,
     pub mask_dimensions: [u32; 2],
     pub mask: Vec<f32>,
+}
+
+fn default_foam_noise_scale() -> f32 {
+    20.0
 }

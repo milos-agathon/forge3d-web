@@ -36,7 +36,7 @@
       ),
       domain: [0, 8],
       spacing: [2, 2],
-      bounds: [-32, -32, 32, 32],
+      mode: "animated", shoreAttenuationWidth: 0, waveDistortionStrength: 0.01, bounds: [-32, -32, 32, 32],
     };
     const hash = async (a) =>
       [...new Uint8Array(await crypto.subtle.digest("SHA-256", a))]
@@ -232,7 +232,7 @@
             coverage: 0.9,
             wind: [1, 0],
           },
-          water: [{ bounds: [-25, -25, 25, 25], height: 3 }],
+          water: [{ mode: "animated", shoreAttenuationWidth: 0, waveDistortionStrength: 0.01, bounds: [-25, -25, 25, 25], height: 3 }],
         });
         let renderer;
         try {
@@ -335,7 +335,7 @@
           });
           const shadow = await r.readRgba();
           const water = {
-            bounds: [-25, -25, 25, 25],
+            mode: "animated", shoreAttenuationWidth: 0, waveDistortionStrength: 0.01, bounds: [-25, -25, 25, 25],
             height: 3,
             waveAmplitude: 0.4,
             waveFrequency: 0.3,
@@ -434,7 +434,7 @@
               ...base,
               water: [
                 {
-                  bounds: [-25, -25, 25, 25],
+                  mode: "animated", shoreAttenuationWidth: 0, waveDistortionStrength: 0.01, bounds: [-25, -25, 25, 25],
                   height: 3,
                   reflection: "planar",
                   foamWidth: 3,
@@ -493,7 +493,7 @@
               ...base,
               water: [
                 {
-                  bounds: [-25, -25, 25, 25],
+                  mode: "animated", shoreAttenuationWidth: 0, waveDistortionStrength: 0.01, bounds: [-25, -25, 25, 25],
                   height: 3,
                   reflection: "planar",
                   foamWidth: 3,
@@ -634,7 +634,7 @@
         const r = await create();
         try {
           const water = {
-            bounds: [-25, -25, 25, 25],
+            mode: "animated", shoreAttenuationWidth: 0, waveDistortionStrength: 0.01, bounds: [-25, -25, 25, 25],
             height: 3,
             waveAmplitude: 0,
             reflection: "sky",
@@ -724,7 +724,7 @@
           temporalWeight: 0.8,
           clouds: { height: 25, thickness: 10, scale: 12, coverage: 0.8 },
           water: [
-            { bounds: [-25, -25, 25, 25], height: 3, reflection: "planar" },
+            { mode: "animated", shoreAttenuationWidth: 0, waveDistortionStrength: 0.01, bounds: [-25, -25, 25, 25], height: 3, reflection: "planar" },
           ],
         });
         const session = await Forge3DSession.create(canvas, {
@@ -780,7 +780,7 @@
           viewer.setEnvironment({
             ...base,
             fog: { density: 0.01 },
-            water: [{ bounds: [-20, -20, 20, 20], height: 3 }],
+            water: [{ mode: "animated", shoreAttenuationWidth: 0, waveDistortionStrength: 0.01, bounds: [-20, -20, 20, 20], height: 3 }],
           });
           viewer.render();
           const a = await viewer.screenshot();

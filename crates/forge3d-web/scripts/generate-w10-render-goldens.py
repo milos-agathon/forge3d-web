@@ -54,6 +54,7 @@ def main():
         ("terrain-water", dict(water_mask=mask, light_elevation_deg=18), dict(water=True, elevation=18)),
         ("terrain-water-reflection", dict(water_mask=mask, light_elevation_deg=15, sun_intensity=2.8, size_px=(256,160), msaa_samples=4, cam_radius=4.3, cam_phi_deg=142, cam_theta_deg=42, albedo_mode="mix", colormap_strength=0.35, reflection=ReflectionSettings(enabled=True,intensity=1,fresnel_power=3,wave_strength=0.05,shore_atten_width=0.12)), dict(water=True, reflection=True, elevation=15)),
     ]
+    variants.append(("terrain-water-planar", dict(water_mask=mask*0.8, light_elevation_deg=15, sun_intensity=2.8, size_px=(256,160), msaa_samples=4, cam_radius=4.3, cam_phi_deg=142, cam_theta_deg=42, albedo_mode="mix", colormap_strength=0.35, reflection=ReflectionSettings(enabled=True,intensity=1,fresnel_power=0.1,wave_strength=0.2,shore_atten_width=0.01)), dict(water=True,reflection=True,elevation=15,maskScale=0.8,planar=dict(fresnelPower=0.1,waveDistortionStrength=0.2,shoreAttenuationWidth=0.01))))
     records = []
     with tempfile.TemporaryDirectory(prefix="w10-native-") as tmp:
         hdr = Path(tmp) / "environment.hdr"
@@ -67,7 +68,15 @@ def main():
             Image.fromarray(image).save(OUT / f"{name}.png")
             (OUT / f"{name}.rgba").write_bytes(image.tobytes())
             record = dict(id=name, width=image.shape[1], height=image.shape[0], sha256=sha(image.tobytes()), web=web)
-            if name != "baseline":
+            if name == "terrain-water-planar":
+                disabled_kwargs = dict(kwargs, reflection=ReflectionSettings(enabled=False))
+                control = np.ascontiguousarray(scope["_render_scene"](renderer, f3d.MaterialSet.terrain_default(), ibl, heights, scope["_build_overlay"](), **disabled_kwargs))
+                contribution = float(np.mean(np.abs(image.astype(float)-control.astype(float))))
+                assert contribution > 0.5, "Native planar control has no contribution"
+                Image.fromarray(control).save(OUT / "terrain-water-planar-disabled.png")
+                (OUT / "terrain-water-planar-disabled.rgba").write_bytes(control.tobytes())
+                record["reflectionControl"] = dict(sha256=sha(control.tobytes()), meanByteDifference=contribution, minimumContributionFraction=0.5)
+            if name not in ("baseline", "terrain-water-planar"):
                 native_path = "tests/golden/terrain/" + name.replace("-", "_") + ".png"
                 original = subprocess.check_output(["git", "show", f"{COMMIT}:{native_path}"], cwd=ROOT)
                 (OUT / f"{name}-historical.png").write_bytes(original)

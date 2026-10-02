@@ -349,3 +349,38 @@ fn no_probe_variants_omit_storage_reads_and_bindings() {
         assert!(with.contains("var<storage, read> local_probes"));
     }
 }
+
+#[test]
+fn absent_environment_and_water_mask_remove_w10_shader_code() {
+    let features = ShaderFeatures::ALL
+        .with_aerial(false)
+        .with_masked_reflection(false);
+    let features = ShaderFeatures::from_bits(features.bits() & !super::TM_WATER);
+    let source = specialize(TERRAIN_SHADER, features);
+    for ident in [
+        "tm_aerial",
+        "tm_native_water",
+        "terrain_environment",
+        "masked_water",
+        "atmosphere_inv",
+    ] {
+        assert!(!source.contains(ident), "absent W10 input retains {ident}");
+    }
+    validate("W10 disabled", &source);
+}
+#[test]
+fn environment_and_masked_reflection_variants_validate_independently() {
+    for aerial in [false, true] {
+        for reflection in [false, true] {
+            let features = ShaderFeatures::ALL
+                .with_aerial(aerial)
+                .with_masked_reflection(reflection);
+            for mode in [0, 1] {
+                validate(
+                    "W10 optional terrain",
+                    &specialize(TERRAIN_SHADER, features.with_terrain_mode(mode)),
+                );
+            }
+        }
+    }
+}

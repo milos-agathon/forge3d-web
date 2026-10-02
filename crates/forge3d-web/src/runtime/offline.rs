@@ -688,6 +688,9 @@ fn encode_capture(
     ) else {
         return;
     };
+    if let Some(e) = &runtime.environment {
+        e.reflection.encode(runtime, encoder);
+    }
     let targets = &session.targets;
     let clear = runtime.clear_color.map(f64::from);
     let passes: &[CapturePass] = if surface && session.surface {
@@ -740,7 +743,11 @@ fn encode_capture(
                 let (_, group2) = terrain.profile_bind_groups(textures.bind_group_for(0));
                 pass.set_bind_group(0, &capture.bind_group, &[]);
                 pass.set_bind_group(1, &lighting.bind_group, &[]);
-                pass.set_bind_group(2, group2, &[]);
+                let masked_group = runtime
+                    .environment
+                    .as_ref()
+                    .and_then(|e| e.reflection.material_group(runtime));
+                pass.set_bind_group(2, masked_group.as_ref().unwrap_or(group2), &[]);
                 pass.set_bind_group(3, &ibl.bind_group, &[]);
                 pass.set_vertex_buffer(0, terrain.vertex_buffer.slice(..));
                 pass.set_index_buffer(terrain.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
@@ -760,7 +767,6 @@ fn encode_capture(
         }
     }
     if let (Some(e), Some(source)) = (&runtime.environment, &session.environment_source) {
-        e.reflection.encode(runtime, encoder);
         encoder.copy_texture_to_texture(
             targets.color.texture.as_image_copy(),
             source.texture.as_image_copy(),

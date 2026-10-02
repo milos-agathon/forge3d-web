@@ -37,8 +37,8 @@ export function acceptance({api,create,camera,terrain,base,hash,delta}) {
     async waterControls() {
       const r=await create();
       try {
-        const water={bounds:[-25,-25,25,25],height:3,reflection:"planar",waveAmplitude:0.05,foamWidth:3};
-        const settings={fresnelPower:1,hueShift:2,tintStrength:0.8,rippleScale:2,refractionStrength:1,shoreAttenuationWidth:8,waveDistortionStrength:3};
+        const water={mode:"animated",shoreAttenuationWidth:0,waveDistortionStrength:0.01,bounds:[-25,-25,25,25],height:3,reflection:"planar",waveAmplitude:0.05,foamWidth:3};
+        const settings={fresnelPower:1,hueShift:2,tintStrength:0.8,rippleScale:2,refractionStrength:1,shoreAttenuationWidth:8,waveDistortionStrength:3,foamNoiseScale:64};
         r.setEnvironment({...base,sky:{...base.sky,aerialPerspective:false},water:[water]});
         const baseline=await r.readRgba(),result={};
         for(const [key,value] of Object.entries(settings)) {

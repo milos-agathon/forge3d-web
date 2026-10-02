@@ -20,5 +20,19 @@
       "hdr": "cb31422b5b375dbe984871b68d7a3779dadac44555a13d02acea4bc29e56f878",
       "covered": 14552
     }
+  },
+  "profile": {
+    "id": "windows-nvidia-ampere-chrome154",
+    "platform": "win32",
+    "browser": "154.0.8037.93",
+    "adapter": {
+      "vendor": "nvidia",
+      "architecture": "ampere",
+      "device": "",
+      "description": "",
+      "fallback": false
+    },
+    "hardware": "NVIDIA GeForce RTX 3070 (operator identified); WebGPU redacts device/description",
+    "qualification": "Local regression profile; not a pinned reference-hardware qualification"
   }
 }

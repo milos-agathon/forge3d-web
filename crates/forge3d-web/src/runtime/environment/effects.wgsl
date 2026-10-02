@@ -192,6 +192,7 @@ fn wave_normal(uv:vec2<f32>,time:f32,amplitude:f32,frequency:f32,speed:f32)->vec
  let eps=0.01;let h=simple_wave(uv,time,amplitude,frequency,speed);let x=simple_wave(uv+vec2<f32>(eps,0.),time,amplitude,frequency,speed);let z=simple_wave(uv+vec2<f32>(0.,eps),time,amplitude,frequency,speed);return normalize(vec3<f32>(h-x,eps,h-z));
 }
 fn water_hit(origin:vec3<f32>,dir:vec3<f32>,limit:f32,w:u32)->vec2<f32>{
+ if(data[128u+w*48u+42u]>0.5){return vec2<f32>(0.);}
  if(abs(dir.y)<1e-6){return vec2<f32>(-1.,0.);}
  let b=128u+w*48u;let bounds=v4(b);let prop=v4(b+4u);let wave=v4(b+16u);let flow=v4(b+24u).zw;
  if(prop.y<=0.||prop.w<0.5){return vec2<f32>(-1.,0.);}
@@ -225,13 +226,13 @@ fn upscaled(uv:vec2<f32>)->vec4<f32>{let dims=vec2<i32>(textureDimensions(effect
  // Project cloud density along the sun to darken terrain and general geometry.
  if(z<0.999999&&env.p[12].w>0.5&&env.p[1].y>0.001){let t=(env.p[6].w+env.p[7].x*0.5-hit.y)/env.p[1].y;if(t>0.){let d=cloud_density(hit+env.p[1].xyz*t);base=vec4<f32>(base.rgb*(1.-env.p[8].x*(1.-exp(-d*env.p[7].x*0.02))),base.a);}}
  var water_mask=0.;var foam_value=0.;var reflected=vec3<f32>(0.);var closest=length(hit-origin);
- for(var w=0u;w<u32(env.p[11].w);w++){let b=128u+w*48u;let prop=v4(b+4u);let h=water_hit(origin,dir,closest,w);if(h.x<=0.||h.y<=0.){continue;}let t=h.x;let mask=h.y;let p=origin+dir*t;water_mask=mask;closest=t;
+ for(var w=0u;w<u32(env.p[11].w);w++){let b=128u+w*48u;let prop=v4(b+4u);if(data[b+42u]>0.5){continue;}let h=water_hit(origin,dir,closest,w);if(h.x<=0.||h.y<=0.){continue;}let t=h.x;let mask=h.y;let p=origin+dir*t;water_mask=mask;closest=t;
  let wave=v4(b+16u);var light=v4(b+20u);if(prop.w<1.5){light.x=0.;}let misc=v4(b+24u);let normal=surface_normal(p.xz+misc.zw*env.p[0].w,b);let r=reflect(dir,normal);reflected=sky_color(r);
  if(light.z>0.5&&light.z<1.5){let clip=env.vp*vec4<f32>(p+r*max(1.,length(hit-p)),1.);let ruv=clip.xy/clip.w*vec2<f32>(0.5,-0.5)+0.5;if(clip.w>0.&&all(ruv>vec2<f32>(0.))&&all(ruv<vec2<f32>(1.))&&depth_at(ruv)<0.999999){reflected=textureSampleLevel(scene_color,linear_sampler,ruv,0.).rgb;}}
  if(light.z>1.5){let ruv=clamp(i.uv+normal.xz*wave.x*data[b+40u],vec2<f32>(0.001),vec2<f32>(0.999));let tex=textureSampleLevel(reflections,linear_sampler,ruv,i32(w),0.);reflected=mix(reflected,tex.rgb,tex.a);}
  let depth=max(0.,p.y-hit.y);let controls=v4(b+36u);let tint=v4(b+32u);var body=mix(hue_shift(mix(v4(b+8u).xyz,v4(b+12u).xyz,1.-exp(-depth/prop.z)),controls.x),tint.rgb,tint.a);
  let refracted_uv=clamp(i.uv+normal.xz*controls.z*0.03,vec2<f32>(0.001),vec2<f32>(0.999));if(depth_at(refracted_uv)>=z){body=mix(body,textureSampleLevel(scene_color,linear_sampler,refracted_uv,0.).rgb,controls.z*exp(-depth/prop.z));}let fresnel=0.02+0.98*pow(1.-clamp(dot(-dir,normal),0.,1.),light.w);let spec=pow(max(0.,dot(r,env.p[1].xyz)),mix(256.,8.,light.y))*env.p[1].w;var color=mix(body,reflected,fresnel*light.x)+env.p[2].xyz*spec;
- foam_value=(1.-smoothstep(0.,max(misc.x,0.001),depth))*misc.y*(0.6+0.4*noise_seed(vec3<f32>(p.xz*0.3+misc.zw*env.p[0].w,0.),0u));color=mix(color,vec3<f32>(1.),foam_value);base=vec4<f32>(mix(base.rgb,color,prop.y*mask*select(1.,smoothstep(0.,max(controls.w,0.001),depth),controls.w>0.)),1.);
+ foam_value=(1.-smoothstep(0.,max(misc.x,0.001),depth))*misc.y*(0.6+0.4*noise_seed(vec3<f32>(p.xz*0.3*(data[b+41u]/20.)+misc.zw*env.p[0].w,0.),0u));color=mix(color,vec3<f32>(1.),foam_value);base=vec4<f32>(mix(base.rgb,color,prop.y*mask*select(1.,smoothstep(0.,max(controls.w,0.001),depth),controls.w>0.)),1.);
  }
  let fx=upscaled(i.uv);var result=base.rgb*fx.a+fx.rgb;
  if(z<0.999999&&env.p[18].x>0.5&&env.p[9].w>0.5&&env.p[18].w<0.5){result=aerial_perspective(result,dir,closest);}

@@ -123,6 +123,25 @@ fn prepare_scene(
             probe_bytes.saturating_sub(64),
         ),
     ])?;
+    if parsed.environment.as_ref().is_some_and(|e| {
+        e.water
+            .iter()
+            .any(|w| w.terrain_mask && w.mode != "disabled" && w.reflection == "planar")
+    }) {
+        let textured = super::shader_variants::terrain_texture_flags(&parsed.materials) != 0;
+        let required = if textured { 20 } else { 15 };
+        if context
+            .device
+            .limits()
+            .max_sampled_textures_per_shader_stage
+            < required
+        {
+            return Err(WebError::new(
+                Forge3DErrorCode::UnsupportedFeature,
+                format!("masked-terrain reflections require {required} sampled textures"),
+            ));
+        }
+    }
     let mut environment =
         super::environment::prepare(runtime, parsed.environment.as_ref(), &mut planned)?;
     if let Some(e) = &mut environment {

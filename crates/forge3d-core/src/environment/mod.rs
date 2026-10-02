@@ -153,6 +153,7 @@ impl Environment {
                 || !range(w.reflection_strength, 0.0, 1.0)
                 || !range(w.foam_width, 0.0, 1e7)
                 || !range(w.foam_intensity, 0.0, 1.0)
+                || !range(w.foam_noise_scale, 1.0, 1e5)
             {
                 return bad();
             }
@@ -164,6 +165,9 @@ impl Environment {
             {
                 return bad();
             }
+        }
+        if self.water.iter().filter(|w| w.terrain_mask).count() > 1 {
+            return Err("at most one masked-terrain reflection layer".into());
         }
         Ok(())
     }
@@ -212,7 +216,13 @@ impl Environment {
         } else {
             1
         };
-        pixels * 4 * (self.water.len().max(1) as u64 + 1) + n * 96
+        pixels * 4 * (self.water.len().max(1) as u64 + 1)
+            + n * 96
+            + if self.water.iter().any(|w| w.terrain_mask) {
+                96
+            } else {
+                0
+            }
     }
     pub fn effect_size(&self, width: u32, height: u32) -> (u32, u32) {
         let divisor = if self.resolution_scale == 0.5 { 2 } else { 1 };

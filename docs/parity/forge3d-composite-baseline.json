@@ -4,7 +4,7 @@
   "manifestId": "forge3d-composite-baseline-v1",
   "sourcePlan": {
     "path": "docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md",
-    "sha256": "0168640f99a280a0aa5292ce1e94068621f2d0e50f02b17fbacb04755731d6f5"
+    "sha256": "1d9f0ba9e746e7dc2b753ebb77dc3f21a6b6dca601bea7f205e9a4788dcc3a52"
   },
   "baselineLayers": [
     {
@@ -933,7 +933,7 @@
       "title": "Water material/mask, waves, foam and planar reflections",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "P",
+      "status": "I",
       "ownerTask": "W10",
       "nativeCapability": "Water material/mask, waves, foam and planar reflections: 1f4084a:src/core/water_surface/**, src/terrain/renderer/water_reflection/**, tests/golden/terrain/terrain_water_reflection.png",
       "requiredWebOutcome": "Add water layer with depth color, animation, Fresnel/specular, foam and reflection tiers",
@@ -2732,7 +2732,7 @@
       "contract": "Add water layer with depth color, animation, Fresnel/specular, foam and reflection tiers",
       "owner": "W10",
       "evidence": [
-        "tracked P closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T16"
+        "current browser baseline and docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T16"
       ],
       "tests": [
         "port sun/sky/volumetric/TV6/water/atmosphere/cloud tests; sunrise, occluded god rays, reflection/foam masks, deterministic wind and half-res upscale."
@@ -3951,7 +3951,7 @@
     {
       "kind": "composite-inventory",
       "path": "crates/forge3d-web/tests/parity/composite-inventory.json",
-      "sha256": "02fc97ef12f82f17537a749582e77ff6470c73b4897565a1a68e1beed1f21b38",
+      "sha256": "63b34c7361bf12eed1d50e6a56bddd882c473d3394756e31916fff9221312d12",
       "recordCount": 6531
     },
     {

@@ -73,6 +73,9 @@ export interface DensityVolumeInput {
   data?: Float32Array | number[];
 }
 export interface WaterLayerInput {
+  /** Apply planar reflections to TerrainMaterialInput.waterMask instead of a plane. */
+  terrainMask?: boolean;
+  foamNoiseScale?: number;
   bounds: [number, number, number, number];
   height?: number;
   mode?: "disabled" | "transparent" | "reflective" | "animated";

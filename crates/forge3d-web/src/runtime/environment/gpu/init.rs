@@ -18,7 +18,11 @@ impl EnvironmentResources {
         let previous_depth = Target::new(device, ew, eh, wgpu::TextureFormat::R32Float);
         let uniform = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("environment-uniform"),
-            size: 512,
+            size: if snapshot.water.iter().any(|w| w.terrain_mask) {
+                608
+            } else {
+                512
+            },
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });

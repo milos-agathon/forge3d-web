@@ -136,6 +136,13 @@ impl EnvironmentResources {
         camera: &crate::runtime::terrain::CaptureCameraUniform,
         terrain: Option<&crate::runtime::terrain::TerrainRenderResources>,
     ) {
+        self.reflection.update_capture(
+            context,
+            &self.snapshot,
+            camera,
+            terrain.is_some_and(|t| t.render_mode == 1),
+            &self.uniform,
+        );
         self.history_valid.set(false);
         context.queue.write_buffer(
             &self.uniform,
@@ -143,17 +150,6 @@ impl EnvironmentResources {
             bytemuck::bytes_of(&0.0f32),
         );
         let matrix = glam::Mat4::from_cols_array_2d(&camera.base.view_projection);
-        if let Some(terrain) = terrain {
-            // Screen-terrain aerial perspective samples the same jittered sky ray
-            // as the offline pass; keep its appended matrix synchronized.
-            context.queue.write_buffer(
-                &terrain.material.uniform_buffer,
-                std::mem::size_of::<forge3d_core::terrain_material::TerrainMaterialUniform>()
-                    as u64
-                    + 64,
-                bytemuck::cast_slice(&matrix.inverse().to_cols_array()),
-            );
-        }
         context.queue.write_buffer(
             &self.uniform,
             0,

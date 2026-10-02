@@ -170,7 +170,9 @@ export function normalizeEnvironment(
     return {
       bounds,
       height: num(w.height ?? 0, -1e7, 1e7, "water height"),
-      mode: choice(w.mode ?? "animated", ["disabled", "transparent", "reflective", "animated"], "water mode"),
+      terrainMask: w.terrainMask ?? false,
+      foamNoiseScale: num(w.foamNoiseScale ?? 20, 1, 1e5, "foam noise scale"),
+      mode: choice(w.mode ?? "transparent", ["disabled", "transparent", "reflective", "animated"], "water mode"),
       fresnelPower: num(w.fresnelPower ?? 5, 0.01, 100, "fresnel power"),
       hueShift: num(w.hueShift ?? 0, -100, 100, "hue shift"),
       tintColor: rgb(w.tintColor ?? [0, 0.8, 1], "tint color"),
@@ -178,8 +180,8 @@ export function normalizeEnvironment(
       rippleScale: num(w.rippleScale ?? 0, 0, 1e5, "ripple scale"),
       rippleSpeed: num(w.rippleSpeed ?? 0.5, -1e5, 1e5, "ripple speed"),
       refractionStrength: num(w.refractionStrength ?? 0, 0, 1, "refraction strength"),
-      shoreAttenuationWidth: num(w.shoreAttenuationWidth ?? 0, 0, 1e7, "shore attenuation width"),
-      waveDistortionStrength: num(w.waveDistortionStrength ?? 0.01, 0, 100, "wave distortion strength"),
+      shoreAttenuationWidth: num(w.shoreAttenuationWidth ?? 0.3, 0, 1e7, "shore attenuation width"),
+      waveDistortionStrength: num(w.waveDistortionStrength ?? 0.02, 0, 100, "wave distortion strength"),
       shallowColor: rgb(w.shallowColor ?? [0.1, 0.3, 0.5], "shallow color"),
       deepColor: rgb(w.deepColor ?? [0.02, 0.08, 0.2], "deep color"),
       depthScale: num(w.depthScale ?? 10, 0.001, 1e7, "depth scale"),
@@ -206,6 +208,8 @@ export function normalizeEnvironment(
       mask,
     };
   });
+  if (water.some(w => typeof w.terrainMask !== "boolean")) fail("terrainMask must be boolean");
+  if (water.filter(w => w.terrainMask).length > 1) fail("at most one masked-terrain reflection layer");
   if (water.length > 4) fail("at most four water layers");
   const sun =
     "sun" in input && input.sun

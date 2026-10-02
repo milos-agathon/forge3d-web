@@ -1012,14 +1012,21 @@ async function runInstalledPackageBrowserGate(
     await page.waitForFunction(()=>window.__w10!==undefined);
     const w10Package = await page.evaluate(async()=>({render:await window.__w10.render(),bounds:await window.__w10.bounds(),masks:await window.__w10.masks(),budget:await window.__w10.budget(),offline:await window.__w10.offline(),recovery:await window.__w10.recovery(),quality:await window.__w10.quality(),native:await window.__w10.native(),worker:await window.__w10.worker(),downscale:await window.__w10.downscale(),cloudsAndWaves:await window.__w10.cloudsAndWaves(),goldens:await window.__w10.goldens(),restoreLights:await window.__w10.restoreLights(),aerial:await window.__w10.aerial(),waterControls:await window.__w10.waterControls(),preservation:await window.__w10.preservation(),volumeTemporal:await (async()=>{const c=await(await fetch("/tests/golden/w10/volume-temporal-v1.json")).json();return window.__w10.bounds(c.width,c.height,c);})()}));
     const e=w10Package;
-    if (!(e.aerial.covered>1000 && Object.values(e.aerial.controls).every(x=>x>.15) && e.aerial.disabledDelta===0 && e.aerial.zeroDelta===0 && e.aerial.sunriseDelta>.15 && e.aerial.sunriseHash===e.aerial.sunriseRepeat && e.waterControls.disabledMatches && Object.entries(e.waterControls).filter(([k])=>k!=="disabledMatches").every(([,v])=>v>.001) && e.volumeTemporal.width===1920 && e.volumeTemporal.height===1080 && e.volumeTemporal.historyValid && e.volumeTemporal.outsideMax<=1 && e.volumeTemporal.insideChanged>20))throw new Error(`W10 added acceptance contracts failed: ${JSON.stringify(e)}`);
+    if (!(e.aerial.covered>1000 && Object.values(e.aerial.controls).every(x=>x>.15) && e.aerial.disabledDelta===0 && e.aerial.zeroDelta===0 && e.aerial.sunriseDelta>.15 && e.aerial.sunriseHash===e.aerial.sunriseRepeat && e.waterControls.disabledMatches && Object.entries(e.waterControls).filter(([k])=>k!=="disabledMatches").every(([,v])=>v>.001) && e.volumeTemporal.width===1920 && e.volumeTemporal.height===1080 && e.volumeTemporal.historyValid && e.volumeTemporal.outsideMax<=1 && e.volumeTemporal.insideChanged>100000 && e.volumeTemporal.insideChanged/(1920*1080)>.05))throw new Error(`W10 added acceptance contracts failed: ${JSON.stringify(e)}`);
     const preservation=JSON.parse(readFileSync(join(packageRoot,"tests/golden/w10/w09-preservation.json"),"utf8"));
-    if(JSON.stringify(e.preservation)!==JSON.stringify(preservation.frames))throw new Error("W10 absent environment changed W09 bytes");
+    const identity=await page.evaluate(async()=>{const a=await navigator.gpu.requestAdapter();if(!a)throw new Error("No WebGPU adapter");return {vendor:a.info.vendor,architecture:a.info.architecture,device:a.info.device,description:a.info.description,fallback:a.info.isFallbackAdapter};});
+    const {checkPreservationProfile}=await import("../tests/browser/w10-preservation-profile.mjs");
+    e.preservationPinned=checkPreservationProfile(preservation,process.env.FORGE3D_W10_PINNED_HASH_PROFILE,{platform:process.platform,browser:await browser.version(),adapter:identity});
+    if(e.preservationPinned && JSON.stringify(e.preservation)!==JSON.stringify(preservation.frames))throw new Error("W10 absent environment changed W09 bytes");
+    if(JSON.stringify(e.preservation)!==JSON.stringify(await page.evaluate(()=>window.__w10.preservation())))throw new Error("W10 absent environment is nondeterministic");
     await page.goto(`${origin}/test-w10-native.html`,{waitUntil:"networkidle"});
     await page.waitForFunction(()=>typeof window.__w10NativeTerrain==="function");
     e.nativeScenes=await page.evaluate(()=>window.__w10NativeTerrain());
+    e.maskedTerrain=await page.evaluate(()=>window.__w10MaskedTerrain());
+    if(!(e.maskedTerrain.delta>.1 && e.maskedTerrain.changed>100 && e.maskedTerrain.landMax===0 && e.maskedTerrain.repeat===0 && e.maskedTerrain.cleared===0 && e.maskedTerrain.hdrDelta>1e-4 && e.maskedTerrain.hdrRepeat===0 && e.maskedTerrain.guidesStable && e.maskedTerrain.covered>1000))throw new Error("W10 masked-terrain reflection contract failed");
     for(const [name,r] of Object.entries(e.nativeScenes)) {
       delete r.actual;
+      if(r.reflectionDelta!==undefined && !(r.reflectionDelta>r.nativeReflectionDelta*.5 && r.disabledNativeSsim>=.98))throw new Error("W10 native planar contribution contract failed");
       if(!(r.ssim>=.98 && r.historicalSsim>=.98 && (r.controlSsim===undefined || r.controlSsim<.98)))throw new Error(`Native W10 scene ${name} failed: ${JSON.stringify(r)}`);
     }
 

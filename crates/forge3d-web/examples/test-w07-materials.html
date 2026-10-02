@@ -479,13 +479,14 @@
           if(variant.web.reflection){spec.width=256;spec.height=160;spec.sun.intensity=2.8;spec.camera={radius:4.3,phiDeg:142,thetaDeg:42,fovDeg:54};}
           const scene=Forge3DScene.create();
           const material=variant.web.reflection?{albedoMode:"mix",colormapStrength:0.35}:{};
-          if(variant.web.water)material.waterMask={width:96,height:96,data:Uint8Array.from(mask,x=>Math.round(x*255))};
+          if(variant.web.water)material.waterMask={width:96,height:96,data:Uint8Array.from(mask,x=>Math.round(x*255*(variant.web.maskScale??1)))};
           scene.addTerrain(terrainInput(spec,heights,{material}));
           scene.clearLights();const direction=lightDirection(spec.sun);
           scene.addLight({type:"directional",color:[1,1,1],intensity:spec.sun.intensity,direction,castsShadow:true});
           scene.setImageBasedLighting(await ImageBasedLighting.fromRGBE(hdrBytes(128),{quality:"medium",intensity:1,prefilter:"native"}));
           scene.setShadows(shadowInput(),CSM);
           if(variant.web.sky)scene.setEnvironment({sky:variant.web.sky,sunDirection:direction.map(x=>-x),sunColor:[1,1,1],sunIntensity:spec.sun.intensity,resolutionScale:1});
+          if(variant.web.planar)scene.setEnvironment({sunDirection:direction.map(x=>-x),sunColor:[1,1,1],sunIntensity:spec.sun.intensity,water:[{bounds:[-1,-1,1,1],height:0,terrainMask:true,mode:"reflective",reflection:"planar",reflectionStrength:1,...variant.web.planar}],resolutionScale:1});
           results[variant.id]=await withSession(spec.width,spec.height,async session=>{
             try {
               session.setScene(scene);session.setCamera(cameraInput(spec));
@@ -493,6 +494,13 @@
               const expected=await decodePng(root+variant.id+".png",spec.width,spec.height);
               const historical=variant.historical?await decodePng(root+variant.id+"-historical.png",spec.width,spec.height):expected;
               const metrics={ssim:ssimRgba(actual,expected,spec.width,spec.height),historicalSsim:ssimRgba(actual,historical,spec.width,spec.height),meanAbs:meanAbsDiff(actual,expected),actual:Array.from(actual)};
+              if(variant.web.planar){
+                const expectedDisabled=await decodePng(root+variant.id+"-disabled.png",spec.width,spec.height);
+                scene.setEnvironment(null);session.setScene(scene);const disabled=await session.readRgba();
+                metrics.reflectionDelta=meanAbsDiff(actual,disabled);metrics.nativeReflectionDelta=variant.reflectionControl.meanByteDifference;
+                metrics.disabledNativeSsim=ssimRgba(disabled,expectedDisabled,spec.width,spec.height);
+              }
+              if(variant.web.sky){scene.setEnvironment({sky:{...variant.web.sky,aerialPerspective:false},sunDirection:direction.map(x=>-x),sunColor:[1,1,1],sunIntensity:spec.sun.intensity,resolutionScale:1});session.setScene(scene);const control=await session.readRgba();metrics.controlSsim=ssimRgba(control,expected,spec.width,spec.height);}
               if(variant.web.water){scene.addTerrain(terrainInput(spec,heights,{material:{}}));session.setScene(scene);const control=await session.readRgba();metrics.controlSsim=ssimRgba(control,expected,spec.width,spec.height);}
               return metrics;
             } finally {scene.dispose();}
@@ -509,6 +517,44 @@
           }finally{runtime.dispose();}
           return results;
         };
+
+      window.__w10MaskedTerrain = async () => {
+        const root="/tests/golden/w10/native/";
+        const manifest=await (await fetch(root+"manifest.json")).json();
+        const heights=new Float32Array(await (await fetch(root+"heights.f32")).arrayBuffer());
+        const mask=new Float32Array(await (await fetch(root+"water-mask.f32")).arrayBuffer());
+        const spec={...manifest.scene,width:256,height:160,sun:{...manifest.scene.sun,elevationDeg:15,intensity:2.8},camera:{radius:4.3,phiDeg:142,thetaDeg:42,fovDeg:54}};
+        const scene=Forge3DScene.create(),direction=lightDirection(spec.sun);
+        scene.addTerrain(terrainInput(spec,heights,{material:{albedoMode:"mix",colormapStrength:0.35,waterMask:{width:96,height:96,data:Uint8Array.from(mask,x=>Math.round(x*255*.8))}}}));
+        scene.clearLights();scene.addLight({type:"directional",color:[1,1,1],intensity:2.8,direction});
+        scene.setImageBasedLighting(await ImageBasedLighting.fromRGBE(hdrBytes(128),{quality:"medium",intensity:1,prefilter:"native"}));
+        return withSession(256,160,async session=>{
+          try {
+            session.setScene(scene);session.setCamera(cameraInput(spec));
+            const baseline=await session.readRgba();
+            const baselineCapture=await session.capture({samples:1,aovs:["id"]});
+            scene.setEnvironment({sunDirection:direction.map(x=>-x),sunColor:[1,1,1],sunIntensity:2.8,water:[{terrainMask:true,mode:"reflective",bounds:[-1,-1,1,1],height:0,reflection:"planar",reflectionStrength:1,fresnelPower:0.1,waveDistortionStrength:0.2,shoreAttenuationWidth:0.01}],resolutionScale:1});
+            session.setScene(scene);const reflected=await session.readRgba();
+            const repeated=await session.readRgba();
+            const reflectedCapture=await session.capture({samples:1,aovs:["id"]});
+            const repeatedCapture=await session.capture({samples:1,aovs:["id"]});
+            const hdrDelta=meanAbsDiff(baselineCapture.hdrFrame.data,reflectedCapture.hdrFrame.data);
+            const hdrRepeat=meanAbsDiff(reflectedCapture.hdrFrame.data,repeatedCapture.hdrFrame.data);
+            const ids=reflectedCapture.aovFrame.id(), oldIds=baselineCapture.aovFrame.id();
+            const guidesStable=ids.every((v,i)=>v===oldIds[i]&&v<0xfffffff0);
+            const covered=ids.filter(v=>v>0).length;
+            let changed=0,landMax=0;
+            for(let y=0;y<160;y++)for(let x=0;x<256;x++){
+              const offset=(y*256+x)*4;
+              const d=Math.max(...[0,1,2].map(c=>Math.abs(baseline[offset+c]-reflected[offset+c])));
+              const water=mask[Math.min(95,Math.floor((1-(y+.5)/160)*48))*96+Math.min(95,Math.floor((x+.5)/256*48))]>.001;
+              if(water&&d>1)changed++;if(!water)landMax=Math.max(landMax,d);
+            }
+            scene.setEnvironment(null);session.setScene(scene);const cleared=await session.readRgba();
+            return {delta:meanAbsDiff(baseline,reflected),changed,landMax,repeat:meanAbsDiff(reflected,repeated),cleared:meanAbsDiff(baseline,cleared),hdrDelta,hdrRepeat,guidesStable,covered};
+          }finally{scene.dispose();}
+        });
+      };
 
       // ---------------------------------------------------------------------
       // Deterministic synthetic textures for textured/perspective checks

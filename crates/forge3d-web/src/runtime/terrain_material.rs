@@ -40,6 +40,7 @@ pub(crate) struct TerrainMaterialRegions {
     pub layers: bool,
     pub debug: bool,
     pub albedo: bool,
+    pub water: bool,
 }
 
 impl TerrainMaterialRegions {
@@ -54,6 +55,7 @@ impl TerrainMaterialRegions {
             detail: s.detail.enabled || (has_detail_map && s.detail.detail_strength > 0.0),
             layers: s.layers.snow_enabled || s.layers.rock_enabled || s.layers.wetness_enabled,
             debug,
+            water: material.masks[3].is_some(),
             albedo: s.albedo_mode != forge3d_core::terrain_material::AlbedoMode::Colormap
                 || s.debug_view
                     == forge3d_core::terrain_material::TerrainMaterialDebugView::MaterialAlbedo,
@@ -85,7 +87,7 @@ pub(super) struct TerrainMaterialPlan {
 }
 
 fn uniform_bytes() -> u64 {
-    std::mem::size_of::<TerrainMaterialUniform>() as u64 + 128
+    std::mem::size_of::<TerrainMaterialUniform>() as u64
 }
 
 /// Plans the material arrays. `texture_budget` is what the ledger can admit
@@ -289,8 +291,7 @@ impl TerrainMaterialResources {
         material: Option<&TerrainMaterialOptions>,
         screen: bool,
     ) -> Self {
-        let mut packed_uniform = bytemuck::bytes_of(&plan.uniform).to_vec();
-        packed_uniform.resize(packed_uniform.len() + 128, 0);
+        let packed_uniform = bytemuck::bytes_of(&plan.uniform);
         let uniform_buffer = context
             .device
             .create_buffer_init(&wgpu::util::BufferInitDescriptor {

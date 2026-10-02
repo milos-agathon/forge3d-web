@@ -52,7 +52,10 @@ const TM_DETAIL: u64 = 1 << 37;
 const TM_LAYERS: u64 = 1 << 38;
 const TM_DEBUG: u64 = 1 << 39;
 const TM_ALBEDO: u64 = 1 << 40;
-const TM_ALL: u64 = TM_POM | TM_DETAIL | TM_LAYERS | TM_DEBUG | TM_ALBEDO;
+const TM_WATER: u64 = 1 << 47;
+const TM_AERIAL: u64 = 1 << 48;
+const MASKED_REFLECTION: u64 = 1 << 49;
+const TM_ALL: u64 = TM_WATER | TM_POM | TM_DETAIL | TM_LAYERS | TM_DEBUG | TM_ALBEDO;
 /// W08 clipmap geometry branch (geometry uniform + clipmap vs_main).
 const TERRAIN_CLIPMAP: u64 = 1 << 41;
 /// W08 streamed heightfield (atlas + page-table height helpers).
@@ -66,7 +69,7 @@ const CAPTURE_BLEND: u64 = 1 << 45;
 /// W09 local irradiance/reflection probes and their storage binding.
 const PROBES: u64 = 1 << 46;
 #[cfg(test)]
-const ALL_BITS: u64 = (1 << 47) - 1;
+const ALL_BITS: u64 = (1 << 50) - 1;
 
 impl ShaderFeatures {
     pub(crate) fn capture_blend(self) -> bool {
@@ -84,6 +87,19 @@ impl ShaderFeatures {
     /// Every region: the unspecialized template.
     #[cfg(test)]
     pub(crate) const ALL: Self = Self(ALL_BITS);
+
+    pub(crate) fn aerial(self) -> bool {
+        self.0 & TM_AERIAL != 0
+    }
+    pub(crate) fn masked_reflection(self) -> bool {
+        self.0 & MASKED_REFLECTION != 0
+    }
+    pub(crate) fn with_masked_reflection(self, enabled: bool) -> Self {
+        Self(self.0 & !MASKED_REFLECTION).with(MASKED_REFLECTION, enabled)
+    }
+    pub(crate) fn with_aerial(self, enabled: bool) -> Self {
+        Self(self.0 & !TM_AERIAL).with(TM_AERIAL, enabled)
+    }
 
     pub(crate) fn bits(self) -> u64 {
         self.0
@@ -191,6 +207,7 @@ impl ShaderFeatures {
             .with(TM_LAYERS, regions.layers)
             .with(TM_DEBUG, regions.debug)
             .with(TM_ALBEDO, regions.albedo)
+            .with(TM_WATER, regions.water)
     }
 
     /// Adds or clears the W08 terrain clipmap/streaming regions.
@@ -238,6 +255,10 @@ impl ShaderFeatures {
             "tm_layers" => TM_LAYERS,
             "tm_debug" => TM_DEBUG,
             "tm_albedo" => TM_ALBEDO,
+            "tm_water" => TM_WATER,
+            "tm_aerial" => TM_AERIAL,
+            "tm_environment" => TM_AERIAL | MASKED_REFLECTION,
+            "masked_reflection" => MASKED_REFLECTION,
             "terrain_clipmap" => TERRAIN_CLIPMAP,
             "terrain_streaming" => TERRAIN_STREAMING,
             "terrain_overlay" | "terrain_overlays" => TERRAIN_OVERLAYS,
@@ -354,7 +375,29 @@ pub(super) fn runtime_terrain_lighting_features(
     let flags = runtime.lighting.as_ref().map_or(0, |lighting| {
         terrain_texture_flags(&lighting.material_state)
     });
-    Ok(features.with_texture_flags(flags))
+    Ok(terrain_environment_features(
+        runtime,
+        features.with_texture_flags(flags),
+    ))
+}
+
+fn terrain_environment_features(
+    runtime: &super::Forge3DRuntime,
+    features: ShaderFeatures,
+) -> ShaderFeatures {
+    features
+        .with_aerial(runtime.environment.as_ref().is_some_and(|e| {
+            e.snapshot
+                .sky
+                .as_ref()
+                .is_some_and(|s| s.aerial_perspective && s.aerial_density > 0.)
+        }))
+        .with_masked_reflection(runtime.environment.as_ref().is_some_and(|e| {
+            e.snapshot
+                .water
+                .iter()
+                .any(|w| w.terrain_mask && w.mode != "disabled" && w.reflection == "planar")
+        }))
 }
 
 /// Shared-lighting features for the runtime's committed state.
@@ -394,9 +437,12 @@ pub(super) fn sync_pipelines(runtime: &mut super::Forge3DRuntime) -> Result<(), 
         return Ok(());
     };
     let format = surface.config.format;
-    let terrain_features = runtime.lighting.as_ref().map_or(features, |lighting| {
-        features.with_texture_flags(terrain_texture_flags(&lighting.material_state))
-    });
+    let terrain_features = terrain_environment_features(
+        runtime,
+        runtime.lighting.as_ref().map_or(features, |lighting| {
+            features.with_texture_flags(terrain_texture_flags(&lighting.material_state))
+        }),
+    );
     if let (Some(terrain), Some(cache)) = (
         runtime.terrain.as_mut(),
         runtime.terrain_pipeline_cache.as_mut(),

@@ -72,6 +72,8 @@ pub(super) fn pack(s: &Environment) -> Vec<f32> {
             w.shore_attenuation_width,
         ]);
         out[b + 40] = w.wave_distortion_strength;
+        out[b + 41] = w.foam_noise_scale;
+        out[b + 42] = u32::from(w.terrain_mask) as f32;
     }
     out
 }

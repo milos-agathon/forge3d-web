@@ -51,7 +51,7 @@ pub(crate) struct EnvironmentResources {
     effect: Target,
     history: Target,
     previous_depth: Target,
-    uniform: wgpu::Buffer,
+    pub(in crate::runtime::environment) uniform: wgpu::Buffer,
     payload: wgpu::Buffer,
     layout: wgpu::BindGroupLayout,
     sampler: wgpu::Sampler,
