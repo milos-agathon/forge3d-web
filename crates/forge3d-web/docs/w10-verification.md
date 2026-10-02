@@ -190,3 +190,17 @@ These changes close the stale material-memory estimate and masked-reflection
 amplitude findings. W10 remains Partial; T16/T17/P08/P09 remain I and P10
 remains P. P10 world-cloud parity and the pinned hardware/Firefox/WebKit
 qualifications above remain open.
+
+The clean installed-package gate passed on
+`756566f02dd661bdf8160dba22301425afb63d27`, stable Chrome 154.0.8037.93,
+with the explicit matching preservation profile and no launch flags. Tarball
+SHA-256 is `f14b16b8b3da9f090bbc839751a8dc5fac306d275898c25f1f60c2abff4ed4b2`.
+All 118 harness and six documentation checks pass, along with W03-W09 and
+W10 installed contracts. Exact W09 display/HDR hashes remain unchanged.
+Signed reflection metrics equal the bundled Chromium observations above;
+HDR contribution is 0.013730781206201451, with exact repeat, land and guide
+preservation. [Reflection acceptance evidence](w10-reflection-acceptance.json)
+records the fresh source/package/browser binding, contracts and proof hashes.
+The previous acceptance records remain historical evidence. The follow-up
+commit adds only this evidence and verification prose; shipped renderer/TS
+code matches the clean package snapshot.
