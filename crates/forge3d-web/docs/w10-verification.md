@@ -20,9 +20,9 @@ All comparisons require SSIM >=0.98; disabled clouds/water must fail it.
 |---|---:|---:|---:|
 | Baseline terrain | 0.999548 | n/a | n/a |
 | Atmosphere/aerial | 0.998647 | 0.998647 | 0.948778 (aerial off) |
-| Masked terrain water | 0.999281 | 0.999281 | 0.865832 |
-| Water-reflection fixture | 0.999475 | 0.999475 | 0.784951 |
-| Masked planar reflection | 0.999543 | n/a | enabled/disabled contribution checked below |
+| Masked terrain water | 0.999801 | 0.999801 | 0.865832 |
+| Water-reflection fixture | 0.999673 | 0.999673 | 0.784951 |
+| Masked planar reflection | 0.999614 | n/a | enabled/disabled contribution checked below |
 | Native cloud quad | 0.999783 | n/a | 0.961629 |
 
 Terrain references use an isolated installed wheel built from pinned native
@@ -35,19 +35,32 @@ manifest records each version, the pinned wheel hash, cloud extension hash,
 scene source digest and image hashes. No native arithmetic is patched.
 
 The historical binary reflection mask has zero native reflection contribution
-in this scene. `terrain-water-planar` instead uses a 0.8 shore-distance mask:
-the independent native enabled/disabled difference is 0.858575 mean RGBA bytes,
-and web is 0.769425, changing 8,886 water pixels. Enabled and disabled frames
-each exceed SSIM 0.98 against their own native reference. Web contribution must
-exceed half the native contribution, so an inert reflection cannot pass. Land
-pixels remain exactly unchanged, repeated rendering is identical and clearing
-the environment restores the original frame. The mask/control hashes and
-contribution metric are integrity-checked. The same test runs with a 16-texture
-adapter cap. Reflections use a nonrecursive mirrored terrain/scene/scatter pass,
-including the current offline capture camera. HDR enabled/disabled captures
-prove a nonzero reflection contribution, repeat exactly and preserve terrain IDs
-without creating a plane AOV. Native clouds use a clip-space quad;
-the default depth-clipped world cloud path remains a documented approximation.
+in this scene. `terrain-water-planar` instead uses a 0.8 shore-distance mask.
+Its enabled-minus-disabled **signed RGB** contribution is compared directly
+against the independent native pair. Acceptance requires a web/native mean
+absolute RGB ratio in [0.9,1.1], signed Pearson correlation >=0.98, changed-pixel
+intersection-over-union >=0.98 and nonzero-channel sign agreement >=0.99.
+Half-strength, displaced, inverted and inert controls fail this gate. Both
+full frames must also exceed SSIM 0.98 against their own native references.
+The same native contribution test runs with a 16-texture adapter cap and
+through the installed-package lane; a missing oracle fails closed.
+
+The corrected native screen path preserves the pinned renderer's column-array
+matrix products and shader eye extraction. Masked reflection samples retain
+native display encoding; Fresnel and XZ wave distortion match the source.
+Water uses specular-only IBL and the native blue-channel sun intensity, while
+land retains its existing lighting. No independent image was regenerated.
+Three Rust tests lock noncommuting draw/sample products, nonzero plane height
+and rolled capture-camera up recovery. The TS terrain-material estimate now
+matches the original uniform and arrays, without the removed 128-byte charge.
+
+Land pixels remain exactly unchanged, repeated rendering is identical and
+clearing the environment restores the original frame. HDR enabled/disabled
+captures prove a nonzero reflection contribution, repeat exactly and preserve
+terrain IDs without creating a plane AOV. Reflections use a nonrecursive
+mirrored terrain/scene/scatter pass, including the current offline capture
+camera. Native clouds use a clip-space quad; the default depth-clipped world
+cloud path remains a documented approximation.
 Native-path cloud IBL uses the native default tint, not arbitrary scene IBL.
 
 ## Recorded behavioral contracts
@@ -114,16 +127,19 @@ baseline runtime rather than the W10 runtime.
 
 ## Verification and qualification
 
-369 core and 180 web Rust tests pass; fmt is clean. 731 TypeScript tests pass.
+369 core and 183 web Rust tests pass; fmt is clean. 733 TypeScript tests pass.
 API snapshots/typechecks, parity inventory, six documentation checks and the
-13-test browser inventory classifier pass. The 62 W07–W10 Chrome checks pass (the W07 timing check passed in isolation
-after a contended-run failure); the existing W09-versus-W08 comparison is skipped
-because its separate W08 package is unavailable. All 22 W10 Chromium preflight
-checks pass with the pinned-profile variable unset. The 13-test exact browser
-inventory classifier passes. Full infrastructure tests encounter existing
-Windows POSIX/symlink restrictions; the portable W10 package lane is used. The clean installed-package lane now includes
-aerial controls, sunrise, native images, full-size volume and W09 preservation
-in addition to the earlier W03-W09 and W10 checks.
+13-test browser inventory classifier pass. All 80 W07-W10 bundled Chromium
+regressions pass, including all 22 W10 checks and strict native reflection
+parity under the 16-texture cap. The existing W09-versus-W08 comparison is
+skipped because its separate W08 package is unavailable. The pinned hash
+profile is unset in this bundled-browser run; the clean installed-package
+lane selects the matching stable Chrome profile explicitly.
+
+Full infrastructure tests encounter existing Windows POSIX/symlink
+restrictions; the portable W10 package lane is used. The clean lane includes
+W03-W09 installed contracts, aerial controls, sunrise, native images, the
+full-size bounded volume, W09 preservation and signed reflection parity.
 
 Pinned integrated FW-WIN-I12-01 remains blocked on INF-00; pinned discrete
 Ubuntu/Vulkan FW-LNX-NV-01 is unavailable here. This Windows NVIDIA Ampere
@@ -159,3 +175,18 @@ camera transform or world cloud pass to use as a native image oracle. Closing
 world-path parity requires a defined world-space reference; changing the
 compatibility default to the native quad is a separate behavior decision.
 No world-path qualification is inferred from the native-quad SSIM.
+
+## Reflection amplitude closure, 2026-10-02
+
+The unchanged native enabled/disabled oracle now measures 1.1436279296875
+mean absolute RGB bytes for web and 1.1447672526041666 for native: ratio
+0.9990047558452821. Signed Pearson correlation is 0.9998729413720909.
+Changed-pixel sets are identical (8,886 pixels), and every nonzero native
+channel sign agrees. The adapter and 16-texture cap produce the same results.
+Half-strength and displaced controls fail. Enabled/disabled native SSIM is
+0.999614 / 0.999602.
+
+These changes close the stale material-memory estimate and masked-reflection
+amplitude findings. W10 remains Partial; T16/T17/P08/P09 remain I and P10
+remains P. P10 world-cloud parity and the pinned hardware/Firefox/WebKit
+qualifications above remain open.

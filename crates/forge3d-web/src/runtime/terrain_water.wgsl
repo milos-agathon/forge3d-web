@@ -23,7 +23,9 @@ fn tm_native_water(surface:TmSurface,height:f32,mask:f32)->TerrainSample {
  let dy=(wave1+wave2+wave3)*ws+cross_wave*wc;
  let normal=normalize(vec3<f32>(dx,1.,dy));
  let rough=0.02;let f0=vec3<f32>(pow((1.33-1.)/(1.33+1.),2.));
- let ibl=tm_ibl_split(normal,surface.view_dir,albedo,rough,0.,f0);
+ // Native water has no diffuse surface reflectance; its blue albedo colors
+ // underwater scatter only. The IBL fallback being replaced is pure specular.
+ let ibl=tm_ibl_split(normal,surface.view_dir,vec3<f32>(0.),rough,0.,f0);
  let nv=max(dot(normal,surface.view_dir),0.001);
  let nl=max(dot(normal,surface.light_dir),0.);
  let half_vector=normalize(surface.view_dir+surface.light_dir);
@@ -34,15 +36,16 @@ fn tm_native_water(surface:TmSurface,height:f32,mask:f32)->TerrainSample {
  let fresnel=f0+(vec3<f32>(1.)-f0)*pow(1.-vh,5.);
  let k=alpha/2.;let geometry=(nv/(nv*(1.-k)+k))*(nl/(nl*(1.-k)+k));
  let direct=distribution*fresnel*geometry/(4.*nv*nl+0.0001);
- let sun=direct*vec3<f32>(1.,0.98,0.95)*surface.sun_intensity*nl;
+ // Native water reads the uploaded blue light component; land uses RGB length.
+ let sun=direct*vec3<f32>(1.,0.98,0.95)*surface.native_water_sun_intensity*nl;
  var combined=(ibl.diffuse+ibl.specular)*forge3d_ibl.intensity;
  // #if masked_reflection
  let clip=terrain_environment.masked_vp*vec4<f32>(surface.world_pos,1.);
  if(abs(clip.w)>=0.001){
   let shore=smoothstep(0.,max(terrain_environment.masked_controls.w,0.0001),depth);
-  let uv=clamp(clip.xy/clip.w*vec2<f32>(0.5,-0.5)+0.5+select(normal.xz,normal.xy,params.render_mode==1u)*terrain_environment.masked_controls.z*0.1*shore,vec2<f32>(0.001),vec2<f32>(0.999));
+  let uv=clamp(clip.xy/clip.w*vec2<f32>(0.5,-0.5)+0.5+normal.xz*terrain_environment.masked_controls.z*shore,vec2<f32>(0.001),vec2<f32>(0.999));
   let reflection=textureSampleLevel(masked_water_texture,masked_water_sampler,uv,i32(terrain_environment.masked_layer.x),0.).rgb;
-  let fresnel=0.02+0.98*pow(1.-nv,terrain_environment.masked_controls.y);
+  let fresnel=clamp(pow(1.-max(dot(normal,surface.view_dir),0.),terrain_environment.masked_controls.y),0.,1.);
   combined=mix(combined,reflection,clamp(fresnel*terrain_environment.masked_controls.x*shore,0.,1.));
  }
  // #endif

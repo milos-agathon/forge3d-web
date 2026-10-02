@@ -303,6 +303,7 @@ try {
     .replaceAll("../src-ts/session.ts","/node_modules/@forge3d/web/dist/session.js")
     .replaceAll("../src-ts/runtime-internals.ts","/node_modules/@forge3d/web/dist/runtime-internals.js"));
 
+  copyFileSync(join(packageRoot, "examples", "w10-reflection-metrics.js"), join(consumerDirectory, "w10-reflection-metrics.js"));
   copyFileSync(join(packageRoot, "examples", "w10-native-probes.js"), join(consumerDirectory, "w10-native-probes.js"));
   writeFileSync(join(consumerDirectory, "test-w10-worker.js"), readFileSync(join(packageRoot, "examples", "test-w10-worker.js"), "utf8").replace("../src-ts/index.ts", "/node_modules/@forge3d/web/dist/index.js"));
   cpSync(join(packageRoot, "tests", "golden", "w10"), join(consumerDirectory, "tests", "golden", "w10"), {recursive:true});
@@ -424,7 +425,7 @@ try {
       "test-w07-package.html",
       "test-w08-package.html",
       "test-w08-cog-worker.js",
-      ...(w10Only ? ["test-w10.html", "test-w10-native.html", "w10-acceptance.js", "test-w10-worker.js", "w10-native-probes.js", "w10-runtime-sky.wgsl", "w10-runtime-effects.wgsl"] : []),
+      ...(w10Only ? ["test-w10.html", "test-w10-native.html", "w10-acceptance.js", "test-w10-worker.js", "w10-native-probes.js", "w10-reflection-metrics.js", "w10-runtime-sky.wgsl", "w10-runtime-effects.wgsl"] : []),
     ]) {
       copyFileSync(join(consumerDirectory, file), join(retainedFixture, file));
     }
@@ -1024,9 +1025,11 @@ async function runInstalledPackageBrowserGate(
     e.nativeScenes=await page.evaluate(()=>window.__w10NativeTerrain());
     e.maskedTerrain=await page.evaluate(()=>window.__w10MaskedTerrain());
     if(!(e.maskedTerrain.delta>.1 && e.maskedTerrain.changed>100 && e.maskedTerrain.landMax===0 && e.maskedTerrain.repeat===0 && e.maskedTerrain.cleared===0 && e.maskedTerrain.hdrDelta>1e-4 && e.maskedTerrain.hdrRepeat===0 && e.maskedTerrain.guidesStable && e.maskedTerrain.covered>1000))throw new Error("W10 masked-terrain reflection contract failed");
+    const {reflectionContributionPasses}=await import("../examples/w10-reflection-metrics.js");
+    if(!e.nativeScenes["terrain-water-planar"])throw new Error("W10 native planar contribution oracle missing");
     for(const [name,r] of Object.entries(e.nativeScenes)) {
       delete r.actual;
-      if(r.reflectionDelta!==undefined && !(r.reflectionDelta>r.nativeReflectionDelta*.5 && r.disabledNativeSsim>=.98))throw new Error("W10 native planar contribution contract failed");
+      if(name==="terrain-water-planar" && !(reflectionContributionPasses(r.reflectionContribution) && r.reflectionNegativeControls.halfAmplitudeRejected && r.reflectionNegativeControls.displacedRejected && r.disabledNativeSsim>=.98))throw new Error(`W10 native planar contribution contract failed: ${JSON.stringify(r.reflectionContribution)}`);
       if(!(r.ssim>=.98 && r.historicalSsim>=.98 && (r.controlSsim===undefined || r.controlSsim<.98)))throw new Error(`Native W10 scene ${name} failed: ${JSON.stringify(r)}`);
     }
 

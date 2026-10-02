@@ -3961,8 +3961,8 @@ fn vs_main(input: VertexInput) -> VertexOutput {
 
 @fragment
 fn fs_main(input: VertexOutput) -> @location(0) vec4<f32> {
-    if (camera.camera_position.w == -1.0 && input.world_position.y < camera.camera_forward.w) { discard; }
-    if (camera.camera_position.w == -2.0 && input.world_position.z < camera.camera_forward.w) { discard; }
+    if ((camera.camera_position.w == -1.0 || camera.camera_position.w == -3.0) && input.world_position.y < camera.camera_forward.w) { discard; }
+    if ((camera.camera_position.w == -2.0 || camera.camera_position.w == -4.0) && input.world_position.z < camera.camera_forward.w) { discard; }
     if (params.debug_view == 1u) {
         return vec4<f32>(vec3<f32>(analysis_gray(input.uv, 1u)), 1.0);
     }

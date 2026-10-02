@@ -136,8 +136,7 @@
       },
       "reflectionControl": {
         "sha256": "408fc07215b48541728ad41c1335a7811dc8875bbafb0551d56c4d59a6d6413c",
-        "meanByteDifference": 0.858575439453125,
-        "minimumContributionFraction": 0.5
+        "meanByteDifference": 0.858575439453125
       }
     },
     {

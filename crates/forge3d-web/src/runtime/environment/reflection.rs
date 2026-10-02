@@ -1,4 +1,5 @@
 mod bindings;
+mod native;
 use super::gpu::Target;
 use crate::{
     error::{map_core_error, WebError},
@@ -8,6 +9,11 @@ pub(crate) use bindings::masked_layout;
 #[cfg(test)]
 pub(crate) use bindings::masked_layout_entries;
 use forge3d_core::{environment::Environment, gpu::GpuContext};
+// Camera markers consumed by terrain WGSL: the masked pass retains the
+// native renderer's display-encoded reflection samples in its color target.
+const MASKED_WORLD_REFLECTION: f32 = -3.;
+const MASKED_SCREEN_REFLECTION: f32 = -4.;
+
 struct Layer {
     index: usize,
     view: wgpu::TextureView,
@@ -102,6 +108,7 @@ impl ReflectionTargets {
             vp,
             runtime.camera.position.into(),
             runtime.camera.target.into(),
+            runtime.camera.up.into(),
             runtime.terrain.as_ref().is_some_and(|t| t.render_mode == 1),
             &e.uniform,
         );
@@ -117,12 +124,14 @@ impl ReflectionTargets {
     ) {
         let position = glam::Vec3::from_slice(&camera.base.camera_position);
         let target = position + glam::Vec3::from_slice(&camera.base.camera_forward);
+        let up = native::camera_up(glam::Mat4::from_cols_array_2d(&camera.motion_current));
         self.update_camera(
             context,
             snapshot,
             glam::Mat4::from_cols_array_2d(&camera.base.view_projection),
             position,
             target,
+            up,
             screen,
             uniform,
         );
@@ -135,6 +144,7 @@ impl ReflectionTargets {
         vp: glam::Mat4,
         eye: glam::Vec3,
         target: glam::Vec3,
+        up: glam::Vec3,
         screen: bool,
         uniform: &wgpu::Buffer,
     ) {
@@ -148,18 +158,25 @@ impl ReflectionTargets {
                 glam::Vec4::Z,
                 glam::vec4(0., 2. * height, 0., 1.),
             );
-            let reflect = if screen_masked {
-                glam::Mat4::from_cols(
-                    glam::Vec4::X,
-                    glam::Vec4::Y,
-                    -glam::Vec4::Z,
-                    glam::vec4(0., 0., 2. * height, 1.),
+            let (sampling_vp, draw_vp, position, fwd) = if screen_masked {
+                let camera = native::screen_camera(vp, eye, target, up, height);
+                (
+                    camera.sampling_vp,
+                    camera.draw_vp,
+                    camera.position,
+                    camera.forward,
                 )
             } else {
-                reflect
+                let reflected_vp = vp * reflect;
+                (
+                    reflected_vp,
+                    reflected_vp,
+                    reflect.transform_point3(eye),
+                    reflect.transform_vector3(target - eye).normalize(),
+                )
             };
             if water.terrain_mask {
-                let mut values = Vec::from((vp * reflect).to_cols_array());
+                let mut values = Vec::from(sampling_vp.to_cols_array());
                 values.extend_from_slice(&[
                     water.reflection_strength,
                     water.fresnel_power,
@@ -171,14 +188,18 @@ impl ReflectionTargets {
                     .queue
                     .write_buffer(uniform, 512, bytemuck::cast_slice(&values));
             }
-            let position = reflect.transform_point3(eye);
-            let fwd = reflect.transform_vector3(target - eye).normalize();
-            let mut data = Vec::from((vp * reflect).to_cols_array());
+            let mut data = Vec::from(draw_vp.to_cols_array());
             data.extend_from_slice(&[
                 position.x,
                 position.y,
                 position.z,
-                if screen_masked { -2. } else { -1. },
+                if screen_masked {
+                    MASKED_SCREEN_REFLECTION
+                } else if water.terrain_mask {
+                    MASKED_WORLD_REFLECTION
+                } else {
+                    -1.
+                },
             ]);
             data.extend_from_slice(&[fwd.x, fwd.y, fwd.z, height]);
             context

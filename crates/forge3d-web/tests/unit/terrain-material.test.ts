@@ -136,7 +136,7 @@ describe("normalizeTerrainMaterial", () => {
   it("estimates GPU bytes from the first texture and the auxiliary maps", () => {
     expect(estimateTerrainMaterialBytes(undefined)).toBe(0);
     // Four flat layers: one texel each, a 1x1 two-layer aux array, the uniform.
-    expect(estimateTerrainMaterialBytes({})).toBe(4 * 4 + 1 * 1 * 4 * 2 + TERRAIN_MATERIAL_UNIFORM_BYTES + 128);
+    expect(estimateTerrainMaterialBytes({})).toBe(4 * 4 + 1 * 1 * 4 * 2 + TERRAIN_MATERIAL_UNIFORM_BYTES);
     const textured = estimateTerrainMaterialBytes({
       materialSet: [
         { texture: { width: 4, height: 4, data: new Uint8Array(64) } },
@@ -145,7 +145,7 @@ describe("normalizeTerrainMaterial", () => {
       detail: { strength: 0.5, normalMap: { width: 8, height: 2, data: new Uint8Array(64) } },
     });
     const mipChain = (4 * 4 + 2 * 2 + 1) * 2 * 4;
-    expect(textured).toBe(mipChain + 8 * 2 * 4 * 2 + TERRAIN_MATERIAL_UNIFORM_BYTES + 128);
+    expect(textured).toBe(mipChain + 8 * 2 * 4 * 2 + TERRAIN_MATERIAL_UNIFORM_BYTES);
   });
 });
 

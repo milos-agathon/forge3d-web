@@ -32,6 +32,8 @@
       import { setSessionRuntimeFactoryForTests } from "../src-ts/session.ts";
       import { simulateRuntimeDeviceLossForTests } from "../src-ts/runtime-internals.ts";
 
+      import { reflectionContributionMetrics, reflectionContributionNegativeControls } from "./w10-reflection-metrics.js";
+
       const GOLDEN_ROOT = "/tests/golden/w07/";
       const canvas = document.querySelector("#w07-canvas");
       const perfCanvas = document.querySelector("#w07-perf");
@@ -468,13 +470,13 @@
       }
 
       // Independent native W10 images reuse W07's exact scene setup.
-      window.__w10NativeTerrain = async () => {
+      window.__w10NativeTerrain = async (onlyVariant) => {
         const root = "/tests/golden/w10/native/";
         const manifest = await (await fetch(root + "manifest.json")).json();
         const heights = new Float32Array(await (await fetch(root + "heights.f32")).arrayBuffer());
         const mask = new Float32Array(await (await fetch(root + "water-mask.f32")).arrayBuffer());
         const results={};
-        for(const variant of manifest.variants.filter(v=>v.id!=="cloud")) {
+        for(const variant of manifest.variants.filter(v=>v.id!=="cloud"&&(!onlyVariant||v.id===onlyVariant))) {
           const spec = {...manifest.scene, sun: {...manifest.scene.sun,elevationDeg:variant.web.elevation??24}};
           if(variant.web.reflection){spec.width=256;spec.height=160;spec.sun.intensity=2.8;spec.camera={radius:4.3,phiDeg:142,thetaDeg:42,fovDeg:54};}
           const scene=Forge3DScene.create();
@@ -499,6 +501,8 @@
                 scene.setEnvironment(null);session.setScene(scene);const disabled=await session.readRgba();
                 metrics.reflectionDelta=meanAbsDiff(actual,disabled);metrics.nativeReflectionDelta=variant.reflectionControl.meanByteDifference;
                 metrics.disabledNativeSsim=ssimRgba(disabled,expectedDisabled,spec.width,spec.height);
+                metrics.reflectionContribution=reflectionContributionMetrics(actual,disabled,expected,expectedDisabled);
+                metrics.reflectionNegativeControls=reflectionContributionNegativeControls(expected,expectedDisabled);
               }
               if(variant.web.sky){scene.setEnvironment({sky:{...variant.web.sky,aerialPerspective:false},sunDirection:direction.map(x=>-x),sunColor:[1,1,1],sunIntensity:spec.sun.intensity,resolutionScale:1});session.setScene(scene);const control=await session.readRgba();metrics.controlSsim=ssimRgba(control,expected,spec.width,spec.height);}
               if(variant.web.water){scene.addTerrain(terrainInput(spec,heights,{material:{}}));session.setScene(scene);const control=await session.readRgba();metrics.controlSsim=ssimRgba(control,expected,spec.width,spec.height);}
@@ -506,6 +510,7 @@
             } finally {scene.dispose();}
           });
         }
+          if(onlyVariant)return results;
           const cloud=manifest.variants.find(v=>v.id==="cloud");
           const runtime=await Forge3DRuntime.create(canvas,{width:192,height:128,devicePixelRatio:1,clearColor:cloud.web.clearColor});
           try {

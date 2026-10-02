@@ -129,7 +129,12 @@ The masked profile needs 15 sampled textures, or 20 with scene material-0
 textures; unsupported commits are rejected before allocation. Native binary
 masks can have zero fallback depth and suppress reflections through shore
 attenuation. The committed shore-distance-mask oracle avoids that degeneracy
-and checks both reflection contribution and unchanged land pixels.
+and checks signed RGB amplitude, spatial correlation, changed-pixel overlap,
+sign agreement and unchanged land pixels against independent native frames.
+Masked screen reflections preserve the pinned native matrix-array convention
+and display-encoded samples. Water uses native Fresnel/distortion, specular-only
+IBL and blue-channel sun intensity. The regression gate rejects half-strength,
+displaced and inert reflections.
 
 Debug views are `water-mask`, `foam`, `reflection`, `clouds` and `transmittance`.
 

@@ -75,7 +75,7 @@ def main():
                 assert contribution > 0.5, "Native planar control has no contribution"
                 Image.fromarray(control).save(OUT / "terrain-water-planar-disabled.png")
                 (OUT / "terrain-water-planar-disabled.rgba").write_bytes(control.tobytes())
-                record["reflectionControl"] = dict(sha256=sha(control.tobytes()), meanByteDifference=contribution, minimumContributionFraction=0.5)
+                record["reflectionControl"] = dict(sha256=sha(control.tobytes()), meanByteDifference=contribution)
             if name not in ("baseline", "terrain-water-planar"):
                 native_path = "tests/golden/terrain/" + name.replace("-", "_") + ".png"
                 original = subprocess.check_output(["git", "show", f"{COMMIT}:{native_path}"], cwd=ROOT)

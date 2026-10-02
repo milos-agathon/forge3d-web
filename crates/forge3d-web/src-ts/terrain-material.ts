@@ -757,5 +757,5 @@ export function estimateTerrainMaterialBytes(input: TerrainMaterialInput | undef
       auxHeight = Math.max(auxHeight, image.height);
     }
   }
-  return albedo + auxWidth * auxHeight * 4 * 2 + TERRAIN_MATERIAL_UNIFORM_BYTES + 128;
+  return albedo + auxWidth * auxHeight * 4 * 2 + TERRAIN_MATERIAL_UNIFORM_BYTES;
 }

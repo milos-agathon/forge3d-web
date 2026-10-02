@@ -787,6 +787,7 @@ struct TmLight {
     // Travel direction in the shared Y-up frame.
     travel: vec3<f32>,
     intensity: f32,
+    native_water_intensity: f32,
 };
 
 /// First shadow-casting directional light; falls back to any directional.
@@ -810,7 +811,7 @@ fn tm_primary_light() -> TmLight {
             }
         }
     }
-    return TmLight(light_travel, length(light_color));
+    return TmLight(light_travel, length(light_color), light_color.b);
 }
 
 struct TmIblSplit {
@@ -878,7 +879,11 @@ fn tm_output_encode(linear: vec3<f32>) -> vec3<f32> {
             vec3<f32>(1.0 / max(terrain_material.control.w, 0.1)),
         );
     }
-    if (params.output_srgb == 1u) {
+    // Native masked planar reflections sample display-encoded RGB from an
+    // Rgba8Unorm target. Keep that value when the reflected camera is marked;
+    // an sRGB web target then stores/samples the same encoded contribution.
+    let native_reflection = camera.camera_position.w == -3.0 || camera.camera_position.w == -4.0;
+    if (params.output_srgb == 1u && !native_reflection) {
         return srgb_eotf_decode(encoded);
     }
     return encoded;
@@ -906,6 +911,7 @@ struct TmSurface {
     view_distance: f32,
     light_dir: vec3<f32>,
     sun_intensity: f32,
+    native_water_sun_intensity: f32,
     shadow_factor: f32,
     dpdx_world: vec3<f32>,
     dpdy_world: vec3<f32>,
@@ -1217,6 +1223,7 @@ fn tm_screen_sample(input: VertexOutput) -> TerrainSample {
     surface.view_distance = view_distance;
     surface.light_dir = light_dir;
     surface.sun_intensity = light.intensity;
+    surface.native_water_sun_intensity = light.native_water_intensity;
     surface.shadow_factor = mix(1.0 - TM_SHADOW_IBL_FACTOR, 1.0, shadow_visibility);
     surface.dpdx_world = dpdx_world;
     surface.dpdy_world = dpdy_world;
@@ -1296,6 +1303,7 @@ fn tm_perspective_sample(input: VertexOutput) -> TerrainSample {
     surface.view_distance = view_distance;
     surface.light_dir = light_dir;
     surface.sun_intensity = light.intensity;
+    surface.native_water_sun_intensity = light.native_water_intensity;
     surface.shadow_factor = mix(1.0 - TM_SHADOW_IBL_FACTOR, 1.0, shadow_visibility);
     surface.dpdx_world = dpdx_world;
     surface.dpdy_world = dpdy_world;
