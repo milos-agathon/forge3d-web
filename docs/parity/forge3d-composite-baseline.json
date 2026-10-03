@@ -4,7 +4,7 @@
   "manifestId": "forge3d-composite-baseline-v1",
   "sourcePlan": {
     "path": "docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md",
-    "sha256": "d5d2c74fe733399783c32213bbfddbaeed5823c29d77b3630e33c3ba33438994"
+    "sha256": "7f8a08589c422b57dde904df7b7e5b6d0cb438c71d1c6484fa10c3523d442375"
   },
   "baselineLayers": [
     {
@@ -819,7 +819,7 @@
       "title": "Draped vector overlays",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W12",
       "nativeCapability": "Draped vector overlays: 1f4084a:src/vector/layer.rs, tests/test_vector_overlay_drape.py, examples/luxembourg_rail_overlay.py",
       "requiredWebOutcome": "Add terrain-aware point/line/polygon layers with depth bias and picking",
@@ -829,7 +829,7 @@
         "examples/luxembourg_rail_overlay.py"
       ],
       "requiredTests": [
-        "port vector/OIT/picking tests; pixel-accurate IDs; AA joins/caps; culling fallback; lasso ordering; WBOIT versus dual-source selection."
+        "tests/unit/vector.test.ts, tests/unit/w12-native-provenance.test.ts, tests/playwright/w12_vector.spec.ts and test:package-consumer:w12; exact IDs/color alignment, every point shape/cap/join, atlas alpha/LOD, CPU/GPU equivalence, lasso ordering, actual dual-source and forced WBOIT fallback, HDR/AOV drape, resize/recovery and 30 allocation replacement cycles."
       ],
       "acceptance": [
         "color/pick align, IDs survive edits, drape avoids z-fighting and effective fallback mode is observable."
@@ -1265,7 +1265,7 @@
       "title": "Standard/WBOIT/dual-source OIT",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W12",
       "nativeCapability": "Standard/WBOIT/dual-source OIT: 1f4084a:src/core/dual_source_oit/**, src/vector/oit/**, tests/test_oit_transparency.py",
       "requiredWebOutcome": "Add capability-selected OIT, WBOIT fallback and observable effective mode",
@@ -1275,7 +1275,7 @@
         "tests/test_oit_transparency.py"
       ],
       "requiredTests": [
-        "port vector/OIT/picking tests; pixel-accurate IDs; AA joins/caps; culling fallback; lasso ordering; WBOIT versus dual-source selection."
+        "tests/unit/vector.test.ts, tests/unit/w12-native-provenance.test.ts, tests/playwright/w12_vector.spec.ts and test:package-consumer:w12; exact IDs/color alignment, every point shape/cap/join, atlas alpha/LOD, CPU/GPU equivalence, lasso ordering, actual dual-source and forced WBOIT fallback, HDR/AOV drape, resize/recovery and 30 allocation replacement cycles."
       ],
       "acceptance": [
         "color/pick align, IDs survive edits, drape avoids z-fighting and effective fallback mode is observable."
@@ -1364,7 +1364,7 @@
       "title": "Point impostors/atlas/LOD/shapes, AA lines/caps/joins, polygons and graphs",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W12",
       "nativeCapability": "Point impostors/atlas/LOD/shapes, AA lines/caps/joins, polygons and graphs: 1f4084a:src/vector/point/**, src/vector/line.rs, src/vector/polygon.rs, src/vector/graph.rs, CHANGELOG.md 0.80",
       "requiredWebOutcome": "Add batched styled point/line/polygon/graph layers and public handles",
@@ -1376,7 +1376,7 @@
         "CHANGELOG.md"
       ],
       "requiredTests": [
-        "port vector/OIT/picking tests; pixel-accurate IDs; AA joins/caps; culling fallback; lasso ordering; WBOIT versus dual-source selection."
+        "tests/unit/vector.test.ts, tests/unit/w12-native-provenance.test.ts, tests/playwright/w12_vector.spec.ts and test:package-consumer:w12; exact IDs/color alignment, every point shape/cap/join, atlas alpha/LOD, CPU/GPU equivalence, lasso ordering, actual dual-source and forced WBOIT fallback, HDR/AOV drape, resize/recovery and 30 allocation replacement cycles."
       ],
       "acceptance": [
         "color/pick align, IDs survive edits, drape avoids z-fighting and effective fallback mode is observable."
@@ -1389,7 +1389,7 @@
       "title": "Vector extrusion, batching, frustum culling and indirect draws",
       "lifecycle": "FI",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W12",
       "nativeCapability": "Vector extrusion, batching, frustum culling and indirect draws: 1f4084a:src/vector/extrusion.rs, src/vector/batch/**, src/vector/indirect/**, src/vector/gpu_extrusion/**",
       "requiredWebOutcome": "Add GPU extrusion/compute culling with deterministic CPU fallback",
@@ -1400,7 +1400,7 @@
         "src/vector/gpu_extrusion/**"
       ],
       "requiredTests": [
-        "port vector/OIT/picking tests; pixel-accurate IDs; AA joins/caps; culling fallback; lasso ordering; WBOIT versus dual-source selection."
+        "tests/unit/vector.test.ts, tests/unit/w12-native-provenance.test.ts, tests/playwright/w12_vector.spec.ts and test:package-consumer:w12; exact IDs/color alignment, every point shape/cap/join, atlas alpha/LOD, CPU/GPU equivalence, lasso ordering, actual dual-source and forced WBOIT fallback, HDR/AOV drape, resize/recovery and 30 allocation replacement cycles."
       ],
       "acceptance": [
         "color/pick align, IDs survive edits, drape avoids z-fighting and effective fallback mode is observable."
@@ -1413,7 +1413,7 @@
       "title": "Vector OIT/pick-map and RGBA compositing",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W12",
       "nativeCapability": "Vector OIT/pick-map and RGBA compositing: 1f4084a:src/vector/api/**, src/vector/oit/**, tests/test_vector_overlay_rendering.py",
       "requiredWebOutcome": "Add aligned color+pick targets and premultiplied compositing",
@@ -1423,7 +1423,7 @@
         "tests/test_vector_overlay_rendering.py"
       ],
       "requiredTests": [
-        "port vector/OIT/picking tests; pixel-accurate IDs; AA joins/caps; culling fallback; lasso ordering; WBOIT versus dual-source selection."
+        "tests/unit/vector.test.ts, tests/unit/w12-native-provenance.test.ts, tests/playwright/w12_vector.spec.ts and test:package-consumer:w12; exact IDs/color alignment, every point shape/cap/join, atlas alpha/LOD, CPU/GPU equivalence, lasso ordering, actual dual-source and forced WBOIT fallback, HDR/AOV drape, resize/recovery and 30 allocation replacement cycles."
       ],
       "acceptance": [
         "color/pick align, IDs survive edits, drape avoids z-fighting and effective fallback mode is observable."
@@ -1436,7 +1436,7 @@
       "title": "ID/rich picking, terrain hit, selection/highlight/lasso",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W12",
       "nativeCapability": "ID/rich picking, terrain hit, selection/highlight/lasso: 1f4084a:src/picking/**, tests/test_picking_ipc.py, tests/test_picking_premium.py",
       "requiredWebOutcome": "Add async point/rect/lasso picks, stable IDs and selection state",
@@ -1446,7 +1446,7 @@
         "tests/test_picking_premium.py"
       ],
       "requiredTests": [
-        "port vector/OIT/picking tests; pixel-accurate IDs; AA joins/caps; culling fallback; lasso ordering; WBOIT versus dual-source selection."
+        "tests/unit/vector.test.ts, tests/unit/w12-native-provenance.test.ts, tests/playwright/w12_vector.spec.ts and test:package-consumer:w12; exact IDs/color alignment, every point shape/cap/join, atlas alpha/LOD, CPU/GPU equivalence, lasso ordering, actual dual-source and forced WBOIT fallback, HDR/AOV drape, resize/recovery and 30 allocation replacement cycles."
       ],
       "acceptance": [
         "color/pick align, IDs survive edits, drape avoids z-fighting and effective fallback mode is observable."
@@ -2667,10 +2667,19 @@
       "contract": "Add terrain-aware point/line/polygon layers with depth bias and picking",
       "owner": "W12",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T12"
+        "crates/forge3d-web/src-ts/vector-layers.ts",
+        "crates/forge3d-web/src-ts/vector-geometry.ts",
+        "crates/forge3d-web/src-ts/vector-picking.ts",
+        "crates/forge3d-core/src/vector.rs",
+        "crates/forge3d-web/src/runtime/vector/",
+        "crates/forge3d-web/tests/golden/w12/provenance.json",
+        "crates/forge3d-web/docs/w12-verification.md"
       ],
       "tests": [
-        "port vector/OIT/picking tests; pixel-accurate IDs; AA joins/caps; culling fallback; lasso ordering; WBOIT versus dual-source selection."
+        "crates/forge3d-web/tests/unit/vector.test.ts",
+        "crates/forge3d-web/tests/unit/w12-native-provenance.test.ts",
+        "crates/forge3d-web/tests/playwright/w12_vector.spec.ts",
+        "npm run test:package-consumer:w12"
       ]
     },
     {
@@ -2914,10 +2923,19 @@
       "contract": "Add capability-selected OIT, WBOIT fallback and observable effective mode",
       "owner": "W12",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:P12"
+        "crates/forge3d-web/src-ts/vector-layers.ts",
+        "crates/forge3d-web/src-ts/vector-geometry.ts",
+        "crates/forge3d-web/src-ts/vector-picking.ts",
+        "crates/forge3d-core/src/vector.rs",
+        "crates/forge3d-web/src/runtime/vector/",
+        "crates/forge3d-web/tests/golden/w12/provenance.json",
+        "crates/forge3d-web/docs/w12-verification.md"
       ],
       "tests": [
-        "port vector/OIT/picking tests; pixel-accurate IDs; AA joins/caps; culling fallback; lasso ordering; WBOIT versus dual-source selection."
+        "crates/forge3d-web/tests/unit/vector.test.ts",
+        "crates/forge3d-web/tests/unit/w12-native-provenance.test.ts",
+        "crates/forge3d-web/tests/playwright/w12_vector.spec.ts",
+        "npm run test:package-consumer:w12"
       ]
     },
     {
@@ -2966,10 +2984,19 @@
       "contract": "Add batched styled point/line/polygon/graph layers and public handles",
       "owner": "W12",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:V01"
+        "crates/forge3d-web/src-ts/vector-layers.ts",
+        "crates/forge3d-web/src-ts/vector-geometry.ts",
+        "crates/forge3d-web/src-ts/vector-picking.ts",
+        "crates/forge3d-core/src/vector.rs",
+        "crates/forge3d-web/src/runtime/vector/",
+        "crates/forge3d-web/tests/golden/w12/provenance.json",
+        "crates/forge3d-web/docs/w12-verification.md"
       ],
       "tests": [
-        "port vector/OIT/picking tests; pixel-accurate IDs; AA joins/caps; culling fallback; lasso ordering; WBOIT versus dual-source selection."
+        "crates/forge3d-web/tests/unit/vector.test.ts",
+        "crates/forge3d-web/tests/unit/w12-native-provenance.test.ts",
+        "crates/forge3d-web/tests/playwright/w12_vector.spec.ts",
+        "npm run test:package-consumer:w12"
       ]
     },
     {
@@ -2979,10 +3006,19 @@
       "contract": "Add GPU extrusion/compute culling with deterministic CPU fallback",
       "owner": "W12",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:V02"
+        "crates/forge3d-web/src-ts/vector-layers.ts",
+        "crates/forge3d-web/src-ts/vector-geometry.ts",
+        "crates/forge3d-web/src-ts/vector-picking.ts",
+        "crates/forge3d-core/src/vector.rs",
+        "crates/forge3d-web/src/runtime/vector/",
+        "crates/forge3d-web/tests/golden/w12/provenance.json",
+        "crates/forge3d-web/docs/w12-verification.md"
       ],
       "tests": [
-        "port vector/OIT/picking tests; pixel-accurate IDs; AA joins/caps; culling fallback; lasso ordering; WBOIT versus dual-source selection."
+        "crates/forge3d-web/tests/unit/vector.test.ts",
+        "crates/forge3d-web/tests/unit/w12-native-provenance.test.ts",
+        "crates/forge3d-web/tests/playwright/w12_vector.spec.ts",
+        "npm run test:package-consumer:w12"
       ]
     },
     {
@@ -2992,10 +3028,19 @@
       "contract": "Add aligned color+pick targets and premultiplied compositing",
       "owner": "W12",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:V03"
+        "crates/forge3d-web/src-ts/vector-layers.ts",
+        "crates/forge3d-web/src-ts/vector-geometry.ts",
+        "crates/forge3d-web/src-ts/vector-picking.ts",
+        "crates/forge3d-core/src/vector.rs",
+        "crates/forge3d-web/src/runtime/vector/",
+        "crates/forge3d-web/tests/golden/w12/provenance.json",
+        "crates/forge3d-web/docs/w12-verification.md"
       ],
       "tests": [
-        "port vector/OIT/picking tests; pixel-accurate IDs; AA joins/caps; culling fallback; lasso ordering; WBOIT versus dual-source selection."
+        "crates/forge3d-web/tests/unit/vector.test.ts",
+        "crates/forge3d-web/tests/unit/w12-native-provenance.test.ts",
+        "crates/forge3d-web/tests/playwright/w12_vector.spec.ts",
+        "npm run test:package-consumer:w12"
       ]
     },
     {
@@ -3005,10 +3050,19 @@
       "contract": "Add async point/rect/lasso picks, stable IDs and selection state",
       "owner": "W12",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:V04"
+        "crates/forge3d-web/src-ts/vector-layers.ts",
+        "crates/forge3d-web/src-ts/vector-geometry.ts",
+        "crates/forge3d-web/src-ts/vector-picking.ts",
+        "crates/forge3d-core/src/vector.rs",
+        "crates/forge3d-web/src/runtime/vector/",
+        "crates/forge3d-web/tests/golden/w12/provenance.json",
+        "crates/forge3d-web/docs/w12-verification.md"
       ],
       "tests": [
-        "port vector/OIT/picking tests; pixel-accurate IDs; AA joins/caps; culling fallback; lasso ordering; WBOIT versus dual-source selection."
+        "crates/forge3d-web/tests/unit/vector.test.ts",
+        "crates/forge3d-web/tests/unit/w12-native-provenance.test.ts",
+        "crates/forge3d-web/tests/playwright/w12_vector.spec.ts",
+        "npm run test:package-consumer:w12"
       ]
     },
     {
@@ -3951,7 +4005,7 @@
     {
       "kind": "composite-inventory",
       "path": "crates/forge3d-web/tests/parity/composite-inventory.json",
-      "sha256": "97fbb384360a36d5a59fe564d0b78c37584fd32669255ede1d39b14b432ae6de",
+      "sha256": "3caf1604af811c18233a601fffa5b8e2a41b03ff190c0cfdf0a8108127aa24fd",
       "recordCount": 6531
     },
     {

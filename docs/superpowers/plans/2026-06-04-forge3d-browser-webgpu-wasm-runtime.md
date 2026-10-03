@@ -217,7 +217,7 @@ constraints reaching `I`.
 | T09 | FI/C | Async tiled height/overlay IO, dedupe, cancellation, backpressure, coalescing and prefetch: `1f4084a:src/terrain/page_table/**`, `src/terrain/stream/**`, `CHANGELOG.md` 0.51-0.60 | Add priority range scheduler, cache, camera prefetch and telemetry | I | W08 |
 | T10 | FP/A | COG ranges, IFD/overviews/tile stats: `1f4084a:python/forge3d/cog.py:37-346`, `tests/test_cog_streaming.py`, `examples/cog_streaming_demo.py` | Add GeoTIFF/COG worker, overview selection, cache, nodata/transform/CRS metadata | I | W08 |
 | T11 | FP/A | Draped raster overlays, transforms, z-order and Normal/Multiply/Overlay blends: `1f4084a:src/terrain/page_table/overlay_loader.rs`, `tests/test_terrain_overlay_stack.py`, `examples/bosnia_terrain_landcover_viewer.py` | Add ordered lit/shadowed raster layers with opacity, extent and CRS transforms | I | W08 |
-| T12 | FP/A | Draped vector overlays: `1f4084a:src/vector/layer.rs`, `tests/test_vector_overlay_drape.py`, `examples/luxembourg_rail_overlay.py` | Add terrain-aware point/line/polygon layers with depth bias and picking | G | W12 |
+| T12 | FP/A | Draped vector overlays: `1f4084a:src/vector/layer.rs`, `tests/test_vector_overlay_drape.py`, `examples/luxembourg_rail_overlay.py` | Add terrain-aware point/line/polygon layers with depth bias and picking | I | W12 |
 | T13 | FP/A | Scatter transforms/filters/masks, QEM LOD/HLOD, contact/blend and wind: `1f4084a:python/forge3d/terrain_scatter.py`, `tests/test_terrain_tv13_lod_pipeline.py`, `tests/test_terrain_tv21_blending.py`, `tests/test_tv22_scatter_wind.py` | Deterministic PCG64 generators, filters/masks, native heap QEM, instancing, LOD/HLOD, contact/blend and explicit time-driven wind are implemented and verified | I | W09 |
 | T14a | FP/A | Albedo virtual texturing: `1f4084a:src/core/virtual_texture/**`, `src/terrain/renderer/virtual_texture.rs`, `tests/test_tv20_virtual_texturing.py` | Add page table, feedback, residency, upload, cache and stats for albedo pages | I | W08 |
 | T14b | DA/B | Normal/mask virtual-texture families are explicitly unsupported: `1f4084a:tests/test_tv20_virtual_texturing.py` | Return the same typed unsupported-family diagnostics; do not advertise residency | C | W08 |
@@ -241,7 +241,7 @@ constraints reaching `I`.
 | P09 | FP/A | Preetham/Hosek sky, height fog, HG volumetrics/god rays/density volumes: `1f4084a:src/shaders/sky.wgsl`, `src/shaders/volumetric.wgsl`, `tests/test_volumetrics_sky.py`, `tests/test_fog_offline.py` | Add shared sky/atmosphere with temporal/froxel paths and bounded volumes | I | W10 |
 | P10 | FP/B | Realtime clouds and cloud shadows: `1f4084a:src/core/clouds/**`, `src/core/cloud_shadows/**`, `src/scene/py_api/clouds.rs`, `tests/test_api_contracts.py` | Add billboard/volumetric/hybrid clouds, presets, wind/noise and terrain shadows | P | W10 |
 | P11 | FP/A | G-buffer/HZB, SSAO/GTAO, SSGI, SSR, temporal/bilateral passes: `1f4084a:src/core/screen_space_effects/**`, `src/passes/ssgi.rs`, `src/passes/ssr.rs`, `tests/test_ssgi_ssr_wiring.py` | Add toggleable stack with debug/AOV outputs and IBL fallback | I | W11 |
-| P12 | FP/A | Standard/WBOIT/dual-source OIT: `1f4084a:src/core/dual_source_oit/**`, `src/vector/oit/**`, `tests/test_oit_transparency.py` | Add capability-selected OIT, WBOIT fallback and observable effective mode | G | W12 |
+| P12 | FP/A | Standard/WBOIT/dual-source OIT: `1f4084a:src/core/dual_source_oit/**`, `src/vector/oit/**`, `tests/test_oit_transparency.py` | Add capability-selected OIT, WBOIT fallback and observable effective mode | I | W12 |
 | P13 | FP/A | Bloom, DoF/tilt-shift, lens distortion/CA/vignette: `1f4084a:src/core/bloom/**`, `src/core/dof/**`, `src/shaders/lens_effects.wgsl`, `tests/test_bloom_effect.py`, `tests/test_dof.py`, `tests/test_lens_effects.py` | Add composable post-FX chain, quality settings and debug views | I | W11 |
 | P14 | FP/A | Motion vectors/blur, TAA and accumulation AA: `1f4084a:src/core/taa.rs`, `src/viewer/terrain/motion_blur.rs`, `tests/test_motion_vectors.py`, `tests/test_taa_convergence.py`, `tests/test_accumulation_aa.py` | Add camera/object velocity, jitter/history invalidation, TAA and shutter sampling | I | W11 |
 | P15 | FP/A | HDR, ACES/Reinhard/gamma/LUT, denoise and color-space correctness: `1f4084a:src/core/hdr.rs`, `src/core/tonemap.rs`, `tests/test_tonemap_lut.py`, `tests/test_terrain_render_color_space.py`, `tests/test_denoise_settings.py` | Add linear HDR graph, selectable tonemap/exposure/LUT and no double conversion | I | W11 |
@@ -250,10 +250,10 @@ constraints reaching `I`.
 
 | ID | Life/evidence | Native capability and repository evidence | Current web comparison and required result | Status | Task |
 |---|---|---|---|---|---|
-| V01 | FP/A | Point impostors/atlas/LOD/shapes, AA lines/caps/joins, polygons and graphs: `1f4084a:src/vector/point/**`, `src/vector/line.rs`, `src/vector/polygon.rs`, `src/vector/graph.rs`, `CHANGELOG.md` 0.80 | Add batched styled point/line/polygon/graph layers and public handles | G | W12 |
-| V02 | FI/A | Vector extrusion, batching, frustum culling and indirect draws: `1f4084a:src/vector/extrusion.rs`, `src/vector/batch/**`, `src/vector/indirect/**`, `src/vector/gpu_extrusion/**` | Add GPU extrusion/compute culling with deterministic CPU fallback | G | W12 |
-| V03 | FP/A | Vector OIT/pick-map and RGBA compositing: `1f4084a:src/vector/api/**`, `src/vector/oit/**`, `tests/test_vector_overlay_rendering.py` | Add aligned color+pick targets and premultiplied compositing | G | W12 |
-| V04 | FP/A | ID/rich picking, terrain hit, selection/highlight/lasso: `1f4084a:src/picking/**`, `tests/test_picking_ipc.py`, `tests/test_picking_premium.py` | Add async point/rect/lasso picks, stable IDs and selection state | G | W12 |
+| V01 | FP/A | Point impostors/atlas/LOD/shapes, AA lines/caps/joins, polygons and graphs: `1f4084a:src/vector/point/**`, `src/vector/line.rs`, `src/vector/polygon.rs`, `src/vector/graph.rs`, `CHANGELOG.md` 0.80 | Add batched styled point/line/polygon/graph layers and public handles | I | W12 |
+| V02 | FI/A | Vector extrusion, batching, frustum culling and indirect draws: `1f4084a:src/vector/extrusion.rs`, `src/vector/batch/**`, `src/vector/indirect/**`, `src/vector/gpu_extrusion/**` | Add GPU extrusion/compute culling with deterministic CPU fallback | I | W12 |
+| V03 | FP/A | Vector OIT/pick-map and RGBA compositing: `1f4084a:src/vector/api/**`, `src/vector/oit/**`, `tests/test_vector_overlay_rendering.py` | Add aligned color+pick targets and premultiplied compositing | I | W12 |
+| V04 | FP/A | ID/rich picking, terrain hit, selection/highlight/lasso: `1f4084a:src/picking/**`, `tests/test_picking_ipc.py`, `tests/test_picking_premium.py` | Add async point/rect/lasso picks, stable IDs and selection state | I | W12 |
 | V05 | FP/A | Point labels, atlas, zoom/depth/horizon, stable IDs, native text rectangles and 3D text meshes: `1f4084a:src/labels/**`, `tests/test_label_api_public_workflow.py`, `tests/test_label_api_stable_ids.py` | Add font atlas and label/text layers with deterministic IDs and placement/removal | G | W13 |
 | V06a | FP/A | Flat-line and callout placement: `1f4084a:src/labels/line_label.rs`, `src/labels/callout.rs`, `tests/test_label_api_line_edge_cases.py` | Add geometry placement, leaders and collision integration | G | W13 |
 | V06b | DA/B | Curved, terrain-elevated and repeated-path cases are partly experimental: `1f4084a:src/labels/curved.rs`, `tests/test_p2_advanced_labels_repeated_curved.py`, `tests/test_label_plan_terrain.py` | Implement supported cases and return exact typed experimental diagnostics for the remainder | G→C | W13 |
@@ -446,7 +446,7 @@ is still not functionally complete and does not change any matrix row to `I`.
 | W09 | Full | T13/T15 implementation artifacts are present: native heap QEM, filtered/resampled-mask placement, static 3D HLOD and native activation, independent 4096/256 probe grids, cancellable worker baking, probe shader variants and exact layout gates. Expanded historical native fixtures, actual GPU wind/blend/contact math, asymmetric probe orientation/roughness checks, pinned Chromium-preflight hashes and source/dist/worker/capture/recovery checks close the inline review findings. 367 core, 174 web and 711 TypeScript tests pass; 91 shared browser regressions pass. Approved internal helpers are removed from root exports and worker setCamera is documented. See `crates/forge3d-web/docs/w09-review-evidence.md` for exact observations and limits. | Acceptance remains unqualified: integrated scatter-probes-v1 budget blocked on INF-00 for pinned FW-WIN-I12-01; reference-discrete Ubuntu/Vulkan FW-LNX-NV-01 absent. Windows RTX 3070 results are Chromium preflight only. The required clean-commit W09 installed-package gate passed on 5424bc7 (Chrome 154); strict lint still fails on existing findings as documented. |
 | W10 | Partial | Sky-driven aerial perspective, native API controls and fog defaults, sun-vector-v1, rendered sunrise, W09 byte preservation and 1920x1080 volume-temporal-v1 are implemented and tested. Installed-native atmosphere/water/cloud images and historical terrain PNGs exceed SSIM 0.98. See `crates/forge3d-web/docs/w10-verification.md`. | P10 retains the documented world cloud approximation; masked-terrain planar reflection now meets a signed RGB amplitude and spatial gate against an independent native oracle. Pinned integrated/discrete performance is unqualified; Windows Firefox/WebKit preflights fail WebGPU availability. |
 | W11 | Implemented | `forge3d-core/src/postfx`, web runtime `postfx`, typed `PostFxChain`, worker/recovery replay, independent historical shader oracles and package consumer probes implement P11/P13-P15. | Maintain native SSIM, temporal, format, budget and installed-tarball gates documented in `crates/forge3d-web/docs/postfx-hdr.md`. |
-| W12 | None | Active source has no vector, picking, OIT, selection or layer-handle module. | Implement T12/P12/V01-V04 geometry, render, pick and fallback paths. |
+| W12 | Full | `crates/forge3d-web/src-ts/vector-{types,layers,geometry,picking}.ts`, `crates/forge3d-core/src/vector.rs` and `crates/forge3d-web/src/runtime/vector/` implement T12/P12/V01-V04. Shared color/pick/AOV coverage; bilinear terrain drape; closed extrusion; GPU and CPU projection/culling; standard/WBOIT/dual-source modes; stable IDs, rich picks and selection. Eight browser cases, the installed-tarball gate and both examples are recorded in `crates/forge3d-web/docs/w12-verification.md`. | None in W12 scope; physical-browser release qualification remains separate. |
 | W13 | None | Active source has no labels, shaping/font, declutter, callout or `LabelPlan` module. | Implement V05-V07 typography, placement, diagnostics and deterministic plan API. |
 | W14 | None | Active source has no CRS transform, dataset registry, PROJ-WASM adapter, grids or integrity cache. | Implement G01/E06 transforms, registry, fixtures and offline cache. |
 | W15 | None | Active source has no geometry, mesh, importer/exporter, building or glTF/OBJ/STL module. | Implement G05a-G05b/G06-G08 data/IO/mesh/building paths and diagnostics. |
@@ -736,18 +736,23 @@ task remains unambiguous when read or reviewed in isolation.
 
 ### W12 — Vector Layers, Drape, OIT, Culling, Picking, And Selection
 
-- Code status: **None** — no direct vector/picking/OIT implementation artifact exists; see the working-tree ledger above.
+- Code status: **Full** — direct implementations and verified acceptance evidence are listed in `crates/forge3d-web/docs/w12-verification.md`.
 
 - Scope: T12, P12 and V01-V04.
 - Files/APIs: port vector/picking modules and shaders; TS layer handles/styles,
   drape, pick queries/events, selection, highlights and lasso.
 - Dependencies: W02/W03/W04/W11.
-- Tests: port vector/OIT/picking tests; pixel-accurate IDs; AA joins/caps;
-  culling fallback; lasso ordering; WBOIT versus dual-source selection.
+- Tests: `tests/unit/vector.test.ts`, `tests/unit/w12-native-provenance.test.ts`,
+  `tests/playwright/w12_vector.spec.ts` and `test:package-consumer:w12`; exact
+  IDs/color alignment, every point shape/cap/join, atlas alpha/LOD, CPU/GPU
+  equivalence, lasso ordering, actual dual-source and forced WBOIT fallback,
+  HDR/AOV drape, resize/recovery and 30 allocation replacement cycles.
 - Acceptance: color/pick align, IDs survive edits, drape avoids z-fighting and
   effective fallback mode is observable.
 - Definition of done: rows pass unit/browser/package tests plus Luxembourg and
-  picking examples.
+  picking examples. Both render covered features and support selection in the
+  installed consumer. Local Chromium and Chrome pass; other physical-browser
+  qualification is outside this W12 evidence.
 
 ### W13 — Labels, Typography, Declutter, Callouts, And LabelPlan
 

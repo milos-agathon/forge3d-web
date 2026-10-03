@@ -1136,8 +1136,21 @@ function main() {
     kind: row.lifecycle === "XC" || equivalentCapabilityIds.has(row.id) ? "equivalent" : "web-api",
     contract: row.requiredWebOutcome,
     owner: row.ownerTask,
-    evidence: row.status === "I" ? [`current browser baseline and ${planPath}:${row.id}`] : [`tracked ${row.status} closure state in ${planPath}:${row.id}`],
-    tests: row.requiredTests,
+    evidence: row.ownerTask === "W12" && row.status === "I" ? [
+      "crates/forge3d-web/src-ts/vector-layers.ts",
+      "crates/forge3d-web/src-ts/vector-geometry.ts",
+      "crates/forge3d-web/src-ts/vector-picking.ts",
+      "crates/forge3d-core/src/vector.rs",
+      "crates/forge3d-web/src/runtime/vector/",
+      "crates/forge3d-web/tests/golden/w12/provenance.json",
+      "crates/forge3d-web/docs/w12-verification.md",
+    ] : row.status === "I" ? [`current browser baseline and ${planPath}:${row.id}`] : [`tracked ${row.status} closure state in ${planPath}:${row.id}`],
+    tests: row.ownerTask === "W12" && row.status === "I" ? [
+      "crates/forge3d-web/tests/unit/vector.test.ts",
+      "crates/forge3d-web/tests/unit/w12-native-provenance.test.ts",
+      "crates/forge3d-web/tests/playwright/w12_vector.spec.ts",
+      "npm run test:package-consumer:w12",
+    ] : row.requiredTests,
   }));
   const tombstoneTargets = tombstones.map((item) => ({ id: item.targetId, capabilityId: item.capabilityId, kind: "tombstone", contract: item.disposition, owner: capabilities.find((row) => row.id === item.capabilityId)?.ownerTask ?? "W00", evidence: item.evidence, tests: [`W00 tombstone ledger contract for ${item.id}`] }));
   const manifest = {

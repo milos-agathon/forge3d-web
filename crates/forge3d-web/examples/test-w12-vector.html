@@ -56,11 +56,12 @@ window.__w12Lifecycle=async()=>{
  const session=await Forge3DSession.create(c,{recovery:{deviceLoss:"once"}}),scene=Forge3DScene.create(),l=shapes();scene.setVectorLayers(l);session.setCamera(camera);session.setScene(scene);session.render();const before=await session.readVectorPickMap();
  await simulateRuntimeDeviceLossForTests(liveRuntime);await session.whenReady();session.render();const after=await session.readVectorPickMap();const recoveryDelta=diff(before.ids,after.ids);
  session.resize({width:64,height:48,devicePixelRatio:1});session.render();const resized=await session.readVectorPickMap();session.dispose();setSessionRuntimeFactoryForTests(undefined);scene.dispose();c.remove();
- runtime.setVectorLayers(null);const baseline=runtime.getMemoryReport().currentBytes;let stable=true;for(let i=0;i<3;i++){runtime.setVectorLayers(shapes());await runtime.readVectorPickMap();runtime.setVectorLayers(null);stable&&=runtime.getMemoryReport().currentBytes===baseline;}
+ runtime.setVectorLayers(null);const baseline=runtime.getMemoryReport().currentBytes;let stable=true;for(let i=0;i<30;i++){runtime.setVectorLayers(shapes());await runtime.readVectorPickMap();runtime.setVectorLayers(null);stable&&=runtime.getMemoryReport().currentBytes===baseline;}
  const budgetCanvas=document.createElement("canvas");budgetCanvas.width=16;budgetCanvas.height=16;const small=await Forge3DRuntime.create(budgetCanvas,{diagnostics:true,memoryBudgetBytes:4*1024*1024});let budget;try{const many=new VectorLayers();many.add({name:"huge",features:Array.from({length:5000},(_,i)=>({id:i+1,kind:"point",position:[0,0,0]}))});small.setVectorLayers(many);}catch(e){budget=e.code;}const rollback=small.getVectorReport().featureCount;small.dispose();
  return {recoveryDelta,resized:[resized.width,resized.height],stable,budget,rollback};
 };
 window.__w12Runtime=runtime;window.__w12Ready=true;document.querySelector("pre").textContent="Vector runtime ready";
+window.addEventListener("pagehide",()=>runtime.dispose(),{once:true});
 window.__w12Wrappers=async()=>{
  const scene=Forge3DScene.create();scene.setVectorLayers(shapes());
  const offscreen=await Forge3DOffscreenRenderer.create({width:128,height:96});offscreen.setScene(scene);offscreen.render();const offscreenReport=offscreen.getVectorReport();offscreen.dispose();

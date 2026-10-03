@@ -39,7 +39,7 @@ impostor. Atlases use RGBA8 bytes and fixed square tiles; `atlasTile` selects a
 tile, `lodThreshold` suppresses points smaller than the specified pixel size.
 Polylines support butt/round/square caps and miter/bevel/round joins, with a
 miter limit. Polygons triangulate concave boundaries and holes; nonzero
-`extrusion` adds a raised roof and walls. `addGraph` validates all node references
+`extrusion` adds a closed prism with a raised roof, base and walls. `addGraph` validates all node references
 and draws edges below nodes. Layer `zOrder` defines stable draw order.
 
 `setOit("auto")` uses weighted blended transparency (WBOIT). Standard alpha
@@ -57,6 +57,7 @@ ID, layer, geometry kind, properties, depth and world position. Area queries
 deduplicate IDs and sort numerically. Coordinates use device pixels with an
 upper-left origin. `bind(canvas, options)` converts CSS pointer coordinates,
 supports click/hover callbacks and selection, and returns a detach function.
+Hover input is coalesced behind one in-flight readback and clicks take priority.
 Dispose the picker to detach all listeners. Abort signals are checked before and
 after readback and during area scans. `pickVectorTerrain` casts a camera ray into
 the same bilinear heightfield and returns elevation, normal and distance.

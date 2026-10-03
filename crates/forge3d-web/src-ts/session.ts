@@ -297,7 +297,7 @@ export class Forge3DSession {
     if (this.#committedSnapshot) this.#committedSnapshot.environment = snapshot;
   }
   getVectorReport():VectorReport {const runtime=this.#runtimeOrThrow();if(!runtime.getVectorReport)throw new Forge3DError("UNSUPPORTED_FEATURE","Vector report unavailable");return runtime.getVectorReport();}
-  async readVectorPickMap():Promise<VectorPickMap> {const runtime=this.#runtimeOrThrow();if(!runtime.readVectorPickMap)throw new Forge3DError("UNSUPPORTED_FEATURE","Vector picking unavailable");return runtime.readVectorPickMap();}
+  async readVectorPickMap():Promise<VectorPickMap> {const runtime=this.#runtimeOrThrow();if(!runtime.readVectorPickMap)throw new Forge3DError("UNSUPPORTED_FEATURE","Vector picking unavailable");this.#syncScene(runtime);return runtime.readVectorPickMap();}
   setPostFx(input:PostFxChain|PostFxChainInput|PostFxSnapshot|readonly PostFxInput[]|null):void {
     const runtime=this.#runtimeOrThrow();
     if(!runtime.setPostFx)throw new Forge3DError("UNSUPPORTED_FEATURE","Runtime does not support post-FX");

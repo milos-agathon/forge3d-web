@@ -62,11 +62,13 @@ try{
  const drape=await page.evaluate(()=>window.__w12Drape());assert.ok(drape.count>100);assert.ok(drape.minY>.25);assert.ok(drape.maxY>.45);assert.ok(drape.postDelta>10);assert.equal(drape.restoreDelta,0);assert.ok(drape.aovCovered>100);assert.equal(drape.hdrFinite,true);
  const lifecycle=await page.evaluate(()=>window.__w12Lifecycle());assert.equal(lifecycle.recoveryDelta,0);assert.deepEqual(lifecycle.resized,[64,48]);assert.equal(lifecycle.stable,true);assert.equal(lifecycle.budget,"RESOURCE_LIMIT_EXCEEDED");assert.equal(lifecycle.rollback,0);
  const wrappers=await page.evaluate(()=>window.__w12Wrappers());assert.deepEqual(wrappers.ids,[7,12,4294967295]);assert.equal(wrappers.report.featureCount,3);assert.equal(wrappers.offscreenReport.featureCount,3);
+ await page.addInitScript(()=>{const gpu=navigator.gpu,request=gpu.requestAdapter.bind(gpu);gpu.requestAdapter=async options=>{const adapter=await request(options);if(adapter)Object.defineProperty(adapter,"features",{value:new Set([...adapter.features].filter(f=>f!=="dual-source-blending"))});return adapter;};});
+ await page.reload();await page.waitForFunction(()=>window.__w12Ready);const fallback=await page.evaluate(()=>window.__w12Oit());assert.equal(fallback.dualReport.effectiveOit,"wboit");assert.equal(fallback.dualReport.fallbackReason,"dual-source-blending-unavailable");assert.ok(fallback.dualDelta<=1);
  await page.goto(`${origin}/examples/luxembourg-vector.html`);await page.waitForFunction(()=>window.__luxembourg,null,{timeout:120000});
  const lux=await page.evaluate(async()=>{const {runtime,layers}=window.__luxembourg;const map=await runtime.readVectorPickMap();return {features:layers.snapshot().layers[0].features.length,covered:map.ids.reduce((n,id)=>n+Number(id!==0),0)};});assert.equal(lux.features,2035);assert.ok(lux.covered>1000);
  await page.goto(`${origin}/examples/vector-picking.html`);await page.waitForFunction(()=>window.__picking);await page.locator("#lasso").click();await page.waitForFunction(()=>window.__picking.layers.getSelection("active")?.ids.length===3);
  assert.deepEqual(errors,[]);assert.ok(requests.some(url=>url.endsWith("forge3d_web_bg.wasm")));assert.ok(requests.every(url=>!url.includes("src-ts/")));
- const evidence={revision,packageSha256:digest,browser:browser.version(),rendering,oit,styles,drape,lifecycle,wrappers,luxembourg:lux};
+ const evidence={revision,packageSha256:digest,browser:browser.version(),rendering,oit,fallback,styles,drape,lifecycle,wrappers,luxembourg:lux};
  const results=join(root,"test-results","w12-package");mkdirSync(results,{recursive:true});writeFileSync(join(results,"evidence.json"),JSON.stringify(evidence,null,2));
  console.log(JSON.stringify({ok:true,revision,packageSha256:digest,luxembourg:lux,covered:rendering.covered,workerIds:wrappers.ids}));
 }finally{
