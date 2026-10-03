@@ -1,5 +1,5 @@
 import { VectorLayers } from "./vector-layers.js";
-import type { VectorSnapshot, VectorReport, VectorPickMap } from "./vector-types.js";
+import type { VectorSnapshot, VectorReport, VectorPickMap, VectorPickRegion } from "./vector-types.js";
 import { Forge3DEnvironment, normalizeEnvironment } from "./environment.js";
 import type { EnvironmentInput, EnvironmentSnapshot, EnvironmentMemoryReport } from "./environment.js";
 import { PostFxChain, resolvePostFx } from "./postfx.js";
@@ -76,7 +76,7 @@ interface ViewerRuntime {
   getEnvironmentMemoryReport?():EnvironmentMemoryReport;
   setVectorLayers?(input:VectorLayers|VectorSnapshot|null,terrain?:TerrainHeightmapInput):void;
   getVectorReport?():VectorReport;
-  readVectorPickMap?():Promise<VectorPickMap>;
+  readVectorPickMap?(region?:VectorPickRegion):Promise<VectorPickMap>;
   setPostFx?(snapshot:PostFxSnapshot|null):void;
   getPostFxReport?():PostFxReport;
   resetPostFxHistory?():void;
@@ -619,11 +619,11 @@ export class Forge3DViewer {
   }
   setVectorLayers(input:VectorLayers|VectorSnapshot|null,terrain?:TerrainHeightmapInput):void {
     const runtime=this.#operationalRuntime();const snapshot=input instanceof VectorLayers?input.snapshot():input;
-    this.#callRuntime(()=>{if(!runtime.setVectorLayers)throw new Forge3DError("UNSUPPORTED_FEATURE","Vector layers unavailable");runtime.setVectorLayers(snapshot,terrain);});
+    this.#callRuntime(()=>{if(!runtime.setVectorLayers)throw new Forge3DError("UNSUPPORTED_FEATURE","Vector layers unavailable");runtime.setVectorLayers(input,terrain);});
     this.#vectorsReplay={snapshot:structuredClone(snapshot),...(terrain?{terrain:structuredClone(terrain)}:{})};this.#scheduler?.requestRender();
   }
   getVectorReport():VectorReport {const runtime=this.#operationalRuntime();if(!runtime.getVectorReport)throw new Forge3DError("UNSUPPORTED_FEATURE","Vector report unavailable");return runtime.getVectorReport();}
-  async readVectorPickMap():Promise<VectorPickMap> {const runtime=this.#operationalRuntime();if(!runtime.readVectorPickMap)throw new Forge3DError("UNSUPPORTED_FEATURE","Vector picking unavailable");return runtime.readVectorPickMap();}
+  async readVectorPickMap(region?:VectorPickRegion):Promise<VectorPickMap> {const runtime=this.#operationalRuntime();if(!runtime.readVectorPickMap)throw new Forge3DError("UNSUPPORTED_FEATURE","Vector picking unavailable");return runtime.readVectorPickMap(region);}
   setPostFx(input:PostFxChain|PostFxChainInput|PostFxSnapshot|readonly PostFxInput[]|null):void {
     const runtime=this.#operationalRuntime(), snapshot=resolvePostFx(input);
     this.#callRuntime(()=>{if(!runtime.setPostFx)throw new Forge3DError("UNSUPPORTED_FEATURE","Runtime does not support post-FX");runtime.setPostFx(snapshot);});

@@ -62,6 +62,7 @@ try {
       "AOV_ID_WATER_BASE",
       "AOV_ID_SCENE_NODE_BASE",
       "AOV_ID_TERRAIN",
+      "AOV_ID_VECTOR",
       "AovFrame",
       "ArrayHeightSource",
       "BorrowedWasmView",

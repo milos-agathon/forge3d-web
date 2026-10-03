@@ -63,7 +63,7 @@ pub fn project(vertex: &VectorVertex, vp: Mat4, viewport: Vec2) -> ProjectedVert
             if factor <= vertex.next[3] {
                 miter * offset.x * factor
             } else {
-                normal * offset.x
+                n1 * offset.x
             }
         } else {
             normal * offset.x + d * offset.y
@@ -74,6 +74,12 @@ pub fn project(vertex: &VectorVertex, vp: Mat4, viewport: Vec2) -> ProjectedVert
     clip.x += screen_offset.x * 2. / viewport.x * clip.w;
     clip.y += screen_offset.y * 2. / viewport.y * clip.w;
     clip.z -= vertex.options[0] * 1e-5 * clip.w;
+    // Canonical clip storage avoids backend-specific multiply reassociation.
+    // 19 fractional bits are shared with WGSL, well below a raster subpixel.
+    clip = Vec4::from_array(
+        clip.to_array()
+            .map(|v| (v * 524288.).round_ties_even() / 524288.),
+    );
     let uv = Vec2::new(vertex.offset[2], vertex.offset[3]);
     let atlas_origin = Vec2::new(vertex.atlas[0], vertex.atlas[1]);
     let atlas_size = Vec2::new(vertex.atlas[2], vertex.atlas[3]);

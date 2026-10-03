@@ -292,6 +292,7 @@ impl Params {
     }
 }
 pub(super) fn invalidate(runtime: &mut Forge3DRuntime, reason: &'static str, rebuild: bool) {
+    super::vector::invalidate_pick(runtime);
     if let Some(fx) = &mut runtime.postfx {
         fx.temporal.reset(reason);
         fx.last_camera = None;

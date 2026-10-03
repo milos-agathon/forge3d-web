@@ -90,6 +90,31 @@
       "source": "examples/luxembourg_rail_overlay.py",
       "file": "examples__luxembourg_rail_overlay.py",
       "sha256": "cebb05f58507c1613f7f0748442e659f1460283b6a9194f64aed24529704bb72"
+    },
+    {
+      "commit": "1f4084af428dc699bdcd108b029736cb73903926",
+      "source": "src/core/dual_source_oit/controls.rs",
+      "file": "src__core__dual_source_oit__controls.rs",
+      "sha256": "ebc99d291c78fdd2fe4f2ef00bc2138acc48076e0527231e6aadbe7c3d89e5d2"
+    },
+    {
+      "commit": "1f4084af428dc699bdcd108b029736cb73903926",
+      "source": "src/core/dual_source_oit/pipeline.rs",
+      "file": "src__core__dual_source_oit__pipeline.rs",
+      "sha256": "70321419a545bc66d7282e41c6b83f45762818382e9768206ab45816a04152b2"
+    },
+    {
+      "commit": "1f4084af428dc699bdcd108b029736cb73903926",
+      "source": "src/core/dual_source_oit/mod.rs",
+      "file": "src__core__dual_source_oit__mod.rs",
+      "sha256": "7efe901cd691375ededb4b511e4968b4c1e45da9fe34658a87f5788dbf2e3b4a"
+    },
+    {
+      "commit": "1f4084af428dc699bdcd108b029736cb73903926",
+      "source": "src/shaders/oit_dual_source_compose.wgsl",
+      "file": "src__shaders__oit_dual_source_compose.wgsl",
+      "sha256": "3c149611498a9e9f1d736c458fac23fc7017440995a44fff9c800d075aa14edc"
     }
-  ]
+  ],
+  "contractCommit": "1f4084af428dc699bdcd108b029736cb73903926"
 }

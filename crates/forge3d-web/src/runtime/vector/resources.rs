@@ -2,6 +2,7 @@ use super::*;
 impl Resources {
     pub(super) fn new(c: &GpuContext, packet: Packet, width: u32, height: u32, bytes: u64) -> Self {
         let d = &c.device;
+        gpu::register(d);
         let storage = wgpu::BufferUsages::STORAGE;
         let vertices: Vec<_> = packet
             .vertices
@@ -37,7 +38,7 @@ impl Resources {
             d,
             "vector:projected",
             &vec![0; vertices.len().max(1) * 80],
-            storage,
+            storage | wgpu::BufferUsages::COPY_SRC,
         );
         let scratch = gpu::buffer(
             d,
@@ -48,25 +49,31 @@ impl Resources {
         let commands = gpu::buffer(
             d,
             "vector:commands",
-            &vec![0; 16 + vertices.len() / 3 * 4],
-            storage | wgpu::BufferUsages::INDIRECT,
+            &vec![0; command_bytes(vertices.len() / 3) as usize],
+            storage | wgpu::BufferUsages::INDIRECT | wgpu::BufferUsages::COPY_SRC,
         );
         let uniform = gpu::buffer(d, "vector:camera", &[0; 144], wgpu::BufferUsages::UNIFORM);
         let gpu = packet.culling != "cpu" && d.limits().max_storage_buffers_per_shader_stage >= 4;
         let compute = if gpu {
             let cs = wgpu::ShaderStages::COMPUTE;
-            let layout = d.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("vector:compute"),
-                entries: &[
-                    gpu::storage(0, true, cs),
-                    gpu::storage(1, false, cs),
-                    gpu::storage(2, false, cs),
-                    gpu::storage(3, false, cs),
-                    gpu::uniform(4, cs),
-                ],
-            });
+            let layout = gpu::layout(
+                d,
+                &wgpu::BindGroupLayoutDescriptor {
+                    label: Some("vector:compute"),
+                    entries: &[
+                        gpu::storage(0, true, cs),
+                        gpu::storage(1, false, cs),
+                        gpu::storage(2, false, cs),
+                        gpu::storage(3, false, cs),
+                        gpu::uniform(4, cs),
+                    ],
+                },
+            );
             let compute_shader = gpu::module(d, include_str!("project.wgsl"));
             let expand = gpu::compute(d, &layout, &compute_shader, "expand");
+            let scan_triangles = gpu::compute(d, &layout, &compute_shader, "scan_triangles");
+            let scan_blocks = gpu::compute(d, &layout, &compute_shader, "scan_blocks");
+            let scan_supers = gpu::compute(d, &layout, &compute_shader, "scan_supers");
             let compact = gpu::compute(d, &layout, &compute_shader, "compact");
             let compute_group = gpu::bind(
                 d,
@@ -82,26 +89,32 @@ impl Resources {
             Some(Compute {
                 group: compute_group,
                 expand,
+                scan_triangles,
+                scan_blocks,
+                scan_supers,
                 compact,
             })
         } else {
             None
         };
         let vf = wgpu::ShaderStages::VERTEX_FRAGMENT;
-        let draw_layout = d.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("vector:draw"),
-            entries: &[
-                gpu::storage(0, true, wgpu::ShaderStages::VERTEX),
-                gpu::uniform(1, vf),
-                gpu::texture(2, false, true),
-                wgpu::BindGroupLayoutEntry {
-                    binding: 3,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-                    count: None,
-                },
-            ],
-        });
+        let draw_layout = gpu::layout(
+            d,
+            &wgpu::BindGroupLayoutDescriptor {
+                label: Some("vector:draw"),
+                entries: &[
+                    gpu::storage(0, true, wgpu::ShaderStages::VERTEX),
+                    gpu::uniform(1, vf),
+                    gpu::texture(2, false, true),
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 3,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                ],
+            },
+        );
         let atlas = Target::new(
             d,
             "vector:atlas",
@@ -147,7 +160,10 @@ impl Resources {
         draw_source.push_str(include_str!("draw.wgsl"));
         if mode == "dual-source" {
             draw_source.insert_str(0, "enable dual_source_blending;\n");
-            draw_source.push_str("\nstruct Dual { @location(0) @blend_src(0) color:vec4<f32>, @location(0) @blend_src(1) alpha:vec4<f32> }; @fragment fn fs_dual(v:Out)->Dual {let c=coverage(v);return Dual(vec4<f32>(c.rgb*c.a,c.a),vec4<f32>(c.a));}");
+            // Native 1f4084a medium quality: controls.rs and
+            // oit_dual_source.wgsl. WebGPU marks the native color1 output
+            // as the second blend source of location 0.
+            draw_source.push_str("\nstruct Dual { @location(0) @blend_src(0) color:vec4<f32>, @location(0) @blend_src(1) alpha:vec4<f32> }; @fragment fn fs_dual(v:Out)->Dual {if(v.color.a>=1.0){discard;}let c=coverage(v);let normalized_depth=clamp(v.clip.z*0.5+0.5,0.0,1.0);let depth_weight=clamp(c.a*pow(1.0-normalized_depth,2.0),0.001,1000.0);let alpha=pow(c.a,1.1);return Dual(vec4<f32>(c.rgb*alpha,alpha),vec4<f32>(alpha,depth_weight,1.0,1.0/8.0));}");
         }
         let shader = gpu::module(d, &draw_source);
         let add = wgpu::BlendState {
@@ -215,6 +231,17 @@ impl Resources {
             &colors,
             Some(false),
         );
+        let opaque_pipeline = gpu::pipeline(
+            d,
+            &draw_layout,
+            &shader,
+            "fs_opaque",
+            &[gpu::target(
+                wgpu::TextureFormat::Rgba16Float,
+                Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
+            )],
+            Some(true),
+        );
         let pick_pipeline = gpu::pipeline(
             d,
             &draw_layout,
@@ -250,15 +277,9 @@ impl Resources {
             Some(false),
         );
         let make = |name, format| Target::new(d, name, format, width, height);
-        let highlight_values: Vec<_> = packet
-            .highlights
-            .iter()
-            .map(|h| Highlight {
-                ids: [h[0] as u32, h[1] as u32, h[2] as u32, 0],
-                color: [h[4] as f32, h[5] as f32, h[6] as f32, h[7] as f32],
-                options: [h[8] as f32, h[9] as f32, h[10] as f32, h[11] as f32],
-            })
-            .collect();
+        let highlight_values = highlight_values(&packet.highlights);
+        let (highlight_count, highlight_radius, highlight_bound) =
+            highlight_settings(&highlight_values);
         let highlights = gpu::buffer(
             d,
             "vector:highlights",
@@ -273,18 +294,78 @@ impl Resources {
             }),
             storage,
         );
-        let resolve_layout = d.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("vector:resolve"),
-            entries: &[
-                gpu::texture(0, false, false),
-                gpu::texture(1, false, false),
-                gpu::texture(2, true, false),
-                gpu::texture(3, false, false),
-                gpu::storage(4, true, wgpu::ShaderStages::FRAGMENT),
-                gpu::uniform(5, wgpu::ShaderStages::FRAGMENT),
-            ],
-        });
+        let highlight_layout = gpu::layout(
+            d,
+            &wgpu::BindGroupLayoutDescriptor {
+                label: Some("vector:highlight-cache"),
+                entries: &[
+                    gpu::texture(0, false, false),
+                    gpu::texture(1, false, false),
+                    gpu::texture(2, true, false),
+                    gpu::texture(3, false, false),
+                    gpu::storage(4, true, wgpu::ShaderStages::FRAGMENT),
+                    gpu::uniform(5, wgpu::ShaderStages::FRAGMENT),
+                    gpu::texture(6, false, false),
+                    gpu::storage(7, true, wgpu::ShaderStages::FRAGMENT),
+                ],
+            },
+        );
+        let resolve_layout = gpu::layout(
+            d,
+            &wgpu::BindGroupLayoutDescriptor {
+                label: Some("vector:resolve"),
+                entries: &[
+                    gpu::texture(0, false, false),
+                    gpu::texture(1, false, false),
+                    gpu::texture(2, true, false),
+                    gpu::texture(3, false, false),
+                    gpu::storage(4, true, wgpu::ShaderStages::FRAGMENT),
+                    gpu::uniform(5, wgpu::ShaderStages::FRAGMENT),
+                    gpu::texture(6, false, false),
+                    gpu::storage(7, true, wgpu::ShaderStages::FRAGMENT),
+                    gpu::texture(8, false, false),
+                    gpu::texture(9, false, false),
+                ],
+            },
+        );
         let resolve_shader = gpu::module(d, include_str!("resolve.wgsl"));
+        let highlight_pipeline = gpu::pipeline(
+            d,
+            &highlight_layout,
+            &resolve_shader,
+            "fs_highlight",
+            &[
+                gpu::target(wgpu::TextureFormat::Rgba16Float, None),
+                gpu::target(wgpu::TextureFormat::Rgba16Float, None),
+            ],
+            None,
+        );
+        let highlight_bounds = gpu::buffer(d, "vector:highlight-bounds", &[0; 16], storage);
+        let cs = wgpu::ShaderStages::COMPUTE;
+        let bounds_layout = gpu::layout(
+            d,
+            &wgpu::BindGroupLayoutDescriptor {
+                label: Some("vector:highlight-bounds"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: cs,
+                        ty: wgpu::BindingType::Texture {
+                            sample_type: wgpu::TextureSampleType::Uint,
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            multisampled: false,
+                        },
+                        count: None,
+                    },
+                    gpu::storage(1, true, cs),
+                    gpu::storage(2, false, cs),
+                    gpu::uniform(3, cs),
+                ],
+            },
+        );
+        let bounds_shader = gpu::module(d, include_str!("highlight-bounds.wgsl"));
+        let bounds_reset = gpu::compute(d, &bounds_layout, &bounds_shader, "reset");
+        let bounds_reduce = gpu::compute(d, &bounds_layout, &bounds_shader, "reduce");
         Self {
             packet,
             vertices,
@@ -296,10 +377,12 @@ impl Resources {
             _scratch: scratch,
             draw_group,
             color_pipeline,
+            opaque_pipeline,
             pick_pipeline,
             aov_pipeline,
             surface_pipeline,
             accum: make("vector:accum", wgpu::TextureFormat::Rgba16Float),
+            opaque: make("vector:opaque", wgpu::TextureFormat::Rgba16Float),
             reveal: make("vector:reveal", wgpu::TextureFormat::R16Float),
             id: make("vector:id", wgpu::TextureFormat::R32Uint),
             depth: make("vector:depth", wgpu::TextureFormat::R32Float),
@@ -307,6 +390,18 @@ impl Resources {
             background: make("vector:background", wgpu::TextureFormat::Rgba32Float),
             background16: make("vector:background16", wgpu::TextureFormat::Rgba16Float),
             highlights,
+            highlight_count,
+            highlight_radius,
+            highlight_bound,
+            highlight_bounds,
+            bounds_layout,
+            bounds_reset,
+            bounds_reduce,
+            highlight_overlay: make("vector:highlight-overlay", wgpu::TextureFormat::Rgba16Float),
+            highlight_tint: make("vector:highlight-tint", wgpu::TextureFormat::Rgba16Float),
+            highlight_layout,
+            highlight_pipeline,
+            highlight_bounds_dirty: std::cell::Cell::new(true),
             resolve_layout,
             resolve_shader,
             resolve_pipelines: Default::default(),
@@ -316,6 +411,9 @@ impl Resources {
             bytes,
             width,
             height,
+            pick_dirty: std::cell::Cell::new(true),
+            pick_renders: std::cell::Cell::new(0),
+            pick_readback_peak: std::cell::Cell::new(0),
         }
     }
 }

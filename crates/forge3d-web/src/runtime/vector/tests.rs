@@ -11,6 +11,10 @@ fn shaders_validate_with_exact_storage_contracts() {
             ),
         ),
         ("resolve", include_str!("resolve.wgsl").to_string()),
+        (
+            "highlight-bounds",
+            include_str!("highlight-bounds.wgsl").to_string(),
+        ),
     ] {
         let module = naga::front::wgsl::parse_str(&source)
             .unwrap_or_else(|e| panic!("{name}: {}", e.emit_to_string(&source)));

@@ -110,6 +110,7 @@ impl CaptureFrame {
                 surface: true,
                 overlay: false,
                 realtime: true,
+                vector_view_projection: None,
             },
             encoder,
             true,

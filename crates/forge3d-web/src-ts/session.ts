@@ -1,6 +1,5 @@
 import { VectorLayers } from "./vector-layers.js";
-import { compileVectorPacket, type VectorPacket } from "./vector-geometry.js";
-import type { VectorSnapshot, VectorReport, VectorPickMap } from "./vector-types.js";
+import type { VectorSnapshot, VectorReport, VectorPickMap, VectorPickRegion } from "./vector-types.js";
 import { Forge3DEnvironment, normalizeEnvironment } from "./environment.js";
 import { PostFxChain, normalizePostFx, resolvePostFx } from "./postfx.js";
 import type { PostFxInput, PostFxChainInput, PostFxSnapshot, PostFxReport, PostFxFrame } from "./postfx.js";
@@ -97,7 +96,7 @@ export interface SessionRuntimeLike {
   getEnvironmentMemoryReport?():EnvironmentMemoryReport;
   setVectorLayers?(snapshot:VectorLayers|VectorSnapshot|null,terrain?:TerrainHeightmapInput):void;
   getVectorReport?():VectorReport;
-  readVectorPickMap?():Promise<VectorPickMap>;
+  readVectorPickMap?(region?:VectorPickRegion):Promise<VectorPickMap>;
   setPostFx?(snapshot:PostFxSnapshot|null):void;
   getPostFxReport?():PostFxReport;
   resetPostFxHistory?():void;
@@ -297,7 +296,7 @@ export class Forge3DSession {
     if (this.#committedSnapshot) this.#committedSnapshot.environment = snapshot;
   }
   getVectorReport():VectorReport {const runtime=this.#runtimeOrThrow();if(!runtime.getVectorReport)throw new Forge3DError("UNSUPPORTED_FEATURE","Vector report unavailable");return runtime.getVectorReport();}
-  async readVectorPickMap():Promise<VectorPickMap> {const runtime=this.#runtimeOrThrow();if(!runtime.readVectorPickMap)throw new Forge3DError("UNSUPPORTED_FEATURE","Vector picking unavailable");this.#syncScene(runtime);return runtime.readVectorPickMap();}
+  async readVectorPickMap(region?:VectorPickRegion):Promise<VectorPickMap> {const runtime=this.#runtimeOrThrow();if(!runtime.readVectorPickMap)throw new Forge3DError("UNSUPPORTED_FEATURE","Vector picking unavailable");this.#syncScene(runtime);return runtime.readVectorPickMap(region);}
   setPostFx(input:PostFxChain|PostFxChainInput|PostFxSnapshot|readonly PostFxInput[]|null):void {
     const runtime=this.#runtimeOrThrow();
     if(!runtime.setPostFx)throw new Forge3DError("UNSUPPORTED_FEATURE","Runtime does not support post-FX");

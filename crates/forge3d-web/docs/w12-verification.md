@@ -1,64 +1,150 @@
 # W12 verification
 
-T12, P12 and V01–V04 have public APIs, runtime implementations, declarations,
-documentation, examples and unit/browser/installed-package acceptance gates.
-The implementation was checked against the historical sources rather than the
-previous task ledger. The 18 source files in `tests/golden/w12/native` retain
-their original bytes and SHA-256 hashes from
-`bf8db93233e5158f6d226991fc5d230832c2d806`.
+The corrected T12, P12 and V01–V04 implementation is checked against native
+`1f4084af428dc699bdcd108b029736cb73903926`. The original 18 pinned files retain
+their `bf8db93233e5158f6d226991fc5d230832c2d806` bytes and checksums and are
+also verified byte-for-byte at `1f4084a`. Four additional fixtures pin native
+dual-source controls, pipeline, defaults and compose, for 22 sources total.
+The Luxembourg conversion remains 2,035 rail paths / 23,277 positions.
 
-| Row | Implementation and behavior |
+The implementation writes opaque vectors into depth first, draws translucent
+vectors against that depth, and then draws picks. Auto chooses available
+dual-source or reports the WBOIT fallback. The dual-source test independently
+evaluates native medium controls and compose, within one RGBA8 code value, in
+both orders. WBOIT order probes now use different depths. Miter, bevel, segment
+quad and cap assertions compare covered pixels.
+
+GPU projection uses a hierarchical stable prefix sum and exposes actual output
+bytes for comparison with `project_and_cull`, including sparse visibility across
+200,000 triangles. Highlights use sorted lookup and one bounded neighbourhood
+scan, then reuse cached effect targets until their inputs change. Geometry and
+pipelines survive selection/hover/time changes, including scene commits.
+Point picks stage one pixel and area picks stage their clamped bounding box;
+clean pick targets are reused. Capture uses reserved vector ID `0xffffffef`,
+camera-facing normals, and per-sample projection jitter while retaining the
+unjittered reference ID pass. See [vector layers](vector-layers.md) for the public
+contracts, limits, AOV namespace and scene absent/null semantics.
+
+All eight inherited browser cases remain. The 15 added cases below have their
+probes in `examples/test-w12-vector.html` and equivalent assertions in
+`scripts/test-w12-package.mjs`. Existing pixel, coverage, ID, precision, memory
+and timing thresholds were preserved. The former dual-source-equals-standard
+comparison was replaced, as requested, by the independent native equation.
+The original 18-source count and every checksum remain locked while the four
+new sources are additionally required.
+
+| Finding | Browser test name |
 | --- | --- |
-| T12 | Terrain-aware point, line and polygon topology; bilinear displayed elevation, terrain-spacing subdivision and depth bias; shared visible color and pick geometry. |
-| P12 | Premultiplied standard alpha, native weighted-blended weight/reveal resolve, negotiated dual-source blending, and an observable WBOIT fallback. |
-| V01 | Stable mutable layer handles, six point shapes, atlas tiles with alpha and isolated filtering, pixel LOD, AA polylines with three caps and joins, concave polygon holes and graphs. |
-| V02 | Closed polygon prisms, GPU projection/extrusion/culling, stable indirect compaction and a matching deterministic CPU implementation. |
-| V03 | Shared coverage and depth tests across color, full uint32 ID, world-position, depth and capture AOV passes; premultiplied resolve and HDR post-FX integration. |
-| V04 | Async point/rectangle/lasso rich hits; bounded terrain ray queries; numeric ID ordering, cancellation and disposal; pointer events, named selection, hover, tint, outline, glow and pulse. |
+| H1 | `H1 opaque nearest surface owns color and pick ID in auto/standard and both orders` |
+| H2 | `H2 24px miter contains bevel, bevel contains segment quads, limit falls back and cap pixels differ` |
+| H3 | `H3 dual-source matches independent native medium CPU equation within one code value in both orders` |
+| M1 | `M1 auto chooses available dual-source and reports unavailable-feature fallback` |
+| M2 | `M2 vector feature 1 uses reserved ID AOV distinct from terrain and retains full pick ID` |
+| M3 | `M3 draped flat polygon normal faces camera and matches terrain within 1e-3` |
+| M4 | `M4 sixteen offline samples have fractional vector edge coverage and unchanged reference ID AOV` |
+| L1 | `L1 absent scene vectors retain runtime layers and explicit null removes them` |
+| L2 | `L2 vector geometry limits throw the public Forge3DError with RESOURCE_LIMIT_EXCEEDED` |
+| L4 | `L4 graph styles retain drape and only an explicitly set input overrides both` |
+| M5 | `M5 stable parallel compaction is byte-identical to project_and_cull and 200k GPU triangles are no slower` |
+| M6 | `M6 2000 selected IDs with 32px outline/glow cost at most twice the unselected frame and exceed old cap` |
+| M7 | `M7 point picking uses at most three padded rows at 1920x1080 and clean picks do not render` |
+| M8 | `M8 selection hover and time commits create no pipelines or vertex buffers` |
+| M8 | `M8 Luxembourg selection commits in less than 50ms without geometry or pipeline creation` |
+| L3 | The M6 test also commits 5,000 selected feature IDs, proving the arbitrary 4,096 cap was removed. |
 
-`tests/playwright/w12_vector.spec.ts` contains eight tests. Both local Chromium
-and installed Chrome pass them on Windows. Covered-image assertions prevent
-blank-frame comparisons. The probes check exact CPU/GPU IDs and at most one
-RGBA8 code-value difference, all shape/cap/join combinations, invisible atlas
-tiles and LOD, frustum rejection, ID preservation after edits, rich queries,
-selection, terrain drape, HDR capture, resize, device-loss replay, 30 allocation
-replacement cycles and budget rejection without changing the committed state.
-The dual-source test covers the available hardware path; an adapter override
-also exercises the unavailable-feature fallback in a real browser.
+The new probes were copied into a detached `dda099f` checkout and run against
+its own built WASM. They fail there and pass on the corrected implementation.
+Local baseline failure logs are retained outside Playwright's output directory:
 
-The installed-tarball gate runs these probes against emitted `dist` modules and
-WASM in a separate npm consumer, including a real module worker and offscreen
-renderer. It verifies that no source TypeScript URLs are requested. Evidence
-includes the exact Git revision and tarball digest and is saved under
-`test-results/w12-package/evidence.json`. The gate requires a clean committed
-worktree. The Luxembourg example renders all 2,035 original rail paths (23,277
-positions) from the native GeoPackage; its synthetic demonstration relief is
-identified in the UI because the original example's DEM was an external input.
-The picking example exercises pointer selection and visible-feature lasso.
+- `C:\devin-target\w12-baseline-regressions.log`: H1/H2/H3/M1/M4/L1/L2/L4 failures;
+  H2 loses 66 bevel pixels, dual-source differs from native by 94 code values,
+  and the 16-sample capture has zero fractional edge pixels.
+- `C:\devin-target\w12-baseline-corrected.log`: explicit terrain upload fixes the
+  probe setup; M2 receives vector ID 1, M3's normal error is 2, M6 costs
+  2,455.6 ms versus 9.2 ms unselected, and M7 peaks at 49,766,400 staging bytes
+  against its 768-byte limit.
+- `C:\devin-target\w12-baseline-performance.log`: M5 lacks the GPU projection
+  diagnostic and the Luxembourg selection commit takes 917.5 ms against 50 ms.
+- `C:\devin-target\w12-baseline-m8.log`: the updated M8 counter probe also
+  rejects the baseline's unavailable creation counters.
 
-Validation also passes the complete TypeScript suite (768 tests), the core
-WebGPU suite (379 tests), the web runtime suite (189 tests), public API and docs
-checks, and the seven inherited W11 browser regressions. The generated parity
-manifest references the actual W12 sources and gates while retaining the frozen
-baseline inventories.
+Frame benchmarks warm three frames and compare medians of nine synchronized
+render/readback frames. They assert 200k-triangle GPU time <= CPU time and
+2,000 selected IDs with outline/glow 32 <= 2x unselected time, without loosening
+either bound. These measurements qualify the tested local adapter.
 
-Reproduce from `crates/forge3d-web`:
+Required source gates:
+
+| Command (from `crates/forge3d-web`) | Result |
+| --- | --- |
+| `npm run test:w12` | 14 unit tests in 2 files; 23 Chromium browser tests |
+| `npm run test:unit` | 768 tests in 51 files |
+| `npm run test:api` | Both TypeScript projects, public snapshot and emitted facade pass |
+| `npm run verify:parity` | 15 verifier tests; 84 capabilities / 6,531 mappings; zero untracked, duplicate, unresolved, schema or lock errors |
+| `python scripts/generate-w12-native-fixtures.py --check` | 22 sources; 2,035 paths / 23,277 positions |
+| `cargo test -p forge3d-core --features webgpu` | 379 tests; 0 failed |
+| `cargo test -p forge3d-web` | 189 tests; 0 failed |
+
+No spec file was added; the existing infrastructure spec list remains correct.
+
+The installed-tarball gate requires a clean commit. It builds and installs the
+package in a separate consumer, executes every mirrored W12 probe through
+`dist`, verifies module worker/offscreen behavior, exercises both adapter cases,
+and renders both examples. It rejects source TypeScript requests and page errors.
+The clean installed consumer passed all mirrored cases, including the module
+worker, offscreen renderer and both examples, on Chromium 148.0.7778.96.
+T12, P12 and V01–V04 therefore retain I.
+
+The documentation evidence revision is
+`7b18ec1fabe32ae0f405601cf0df9bf8844d27c9`; its installed tarball SHA-256 is
+`df1e29580f7fb8bf27e59fac1c7d4e2ca273b0df85bfa8c5b86cb346b0d6f8c1`.
+Its immutable copied record is
+`C:\devin-target\w12-evidence\candidate-evidence.json`. That candidate and
+the final commit have identical runtime, tests, scripts, fixtures and declarations;
+only documentation changes in the final amend.
+The package gate is rerun last on the final clean commit, with its authoritative
+revision and tarball SHA-256 copied to
+`C:\devin-target\w12-evidence\final-evidence.json`. Keeping that final record
+outside Git avoids embedding a commit's own hash inside itself.
+
+| Installed probe | Measured result in the documentation evidence |
+| --- | --- |
+| H1 | Center [255,0,0,255], pick 1, zero color/ID mismatches in all four cases |
+| H2 | Zero missing bevel/quad pixels, 78 extra miter pixels; exact bevel fallback |
+| H3 | Native CPU RGB matches exactly in both orders (delta 0) |
+| M1 | Available dual-source and forced-unavailable WBOIT/fallback both pass |
+| M2/M3 | Vector AOV 4294967279 versus terrain 1; pick 1; both normals [0,1,0] |
+| M4 | 94 fractional edge pixels at 16 samples versus 0 at one; ID delta 0 |
+| M5 | GPU/CPU bytes identical, including the large sparse compaction; 4.0 ms GPU <= 56.9 ms CPU |
+| M6/L3 | 5.1 ms selected <= 2 x 4.1 ms plain; 5,000 selected features accepted |
+| M7 | Actual ledger staging peak 768 bytes; clean picks add zero renders; bounded area picks pass |
+| M8 | No pipeline or vertex-buffer creations on selection/hover/time or scene highlight commits; Luxembourg commit 0.4 ms |
+| L1/L2/L4 | Absent keeps/null removes; public resource error; graph drape inheritance and explicit override pass |
+
+These are observed values; the assertions continue to enforce their original
+bounds rather than pinning this particular machine's timings.
+
+Reproduce in this order, with the package consumer last. Copy its evidence before
+running any further command because another Playwright invocation wipes
+`test-results/`.
 
 ```powershell
 $env:CARGO_TARGET_DIR = 'C:\devin-target\forge3d-web'
 npm run build:wasm
 npm run test:w12
-npm run test:package-consumer:w12
 npm run test:unit
 npm run test:api
 npm run verify:parity
 python scripts/generate-w12-native-fixtures.py --check
 cargo test -p forge3d-core --features webgpu
 cargo test -p forge3d-web
+# Commit the reviewed changes, then confirm git status --porcelain is empty.
+New-Item -ItemType Directory -Force C:\devin-target\w12-evidence | Out-Null
+npm run test:package-consumer:w12
+if ($LASTEXITCODE -ne 0) { throw 'W12 installed-package gate failed' }
+Copy-Item -LiteralPath test-results\w12-package\evidence.json `
+  -Destination C:\devin-target\w12-evidence\final-evidence.json
 ```
 
-This is W12 acceptance on the tested local browsers. It does not qualify the
-separate release hardware matrix. Edge could not launch because its executable
-is not installed; Firefox, Safari and WebKit were not qualified here. Clippy
-runs successfully with inherited warnings, but strict `-D warnings` stops on
-existing warnings outside the W12 modules.
+The current evidence covers local Chromium on Windows. Other browser and
+release hardware profiles were not rerun for these corrections.

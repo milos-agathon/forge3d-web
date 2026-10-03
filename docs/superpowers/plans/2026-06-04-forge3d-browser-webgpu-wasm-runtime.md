@@ -446,7 +446,7 @@ is still not functionally complete and does not change any matrix row to `I`.
 | W09 | Full | T13/T15 implementation artifacts are present: native heap QEM, filtered/resampled-mask placement, static 3D HLOD and native activation, independent 4096/256 probe grids, cancellable worker baking, probe shader variants and exact layout gates. Expanded historical native fixtures, actual GPU wind/blend/contact math, asymmetric probe orientation/roughness checks, pinned Chromium-preflight hashes and source/dist/worker/capture/recovery checks close the inline review findings. 367 core, 174 web and 711 TypeScript tests pass; 91 shared browser regressions pass. Approved internal helpers are removed from root exports and worker setCamera is documented. See `crates/forge3d-web/docs/w09-review-evidence.md` for exact observations and limits. | Acceptance remains unqualified: integrated scatter-probes-v1 budget blocked on INF-00 for pinned FW-WIN-I12-01; reference-discrete Ubuntu/Vulkan FW-LNX-NV-01 absent. Windows RTX 3070 results are Chromium preflight only. The required clean-commit W09 installed-package gate passed on 5424bc7 (Chrome 154); strict lint still fails on existing findings as documented. |
 | W10 | Partial | Sky-driven aerial perspective, native API controls and fog defaults, sun-vector-v1, rendered sunrise, W09 byte preservation and 1920x1080 volume-temporal-v1 are implemented and tested. Installed-native atmosphere/water/cloud images and historical terrain PNGs exceed SSIM 0.98. See `crates/forge3d-web/docs/w10-verification.md`. | P10 retains the documented world cloud approximation; masked-terrain planar reflection now meets a signed RGB amplitude and spatial gate against an independent native oracle. Pinned integrated/discrete performance is unqualified; Windows Firefox/WebKit preflights fail WebGPU availability. |
 | W11 | Implemented | `forge3d-core/src/postfx`, web runtime `postfx`, typed `PostFxChain`, worker/recovery replay, independent historical shader oracles and package consumer probes implement P11/P13-P15. | Maintain native SSIM, temporal, format, budget and installed-tarball gates documented in `crates/forge3d-web/docs/postfx-hdr.md`. |
-| W12 | Full | `crates/forge3d-web/src-ts/vector-{types,layers,geometry,picking}.ts`, `crates/forge3d-core/src/vector.rs` and `crates/forge3d-web/src/runtime/vector/` implement T12/P12/V01-V04. Shared color/pick/AOV coverage; bilinear terrain drape; closed extrusion; GPU and CPU projection/culling; standard/WBOIT/dual-source modes; stable IDs, rich picks and selection. Eight browser cases, the installed-tarball gate and both examples are recorded in `crates/forge3d-web/docs/w12-verification.md`. | None in W12 scope; physical-browser release qualification remains separate. |
+| W12 | Full | `crates/forge3d-web/src-ts/vector-{types,layers,geometry,picking}.ts`, `crates/forge3d-core/src/vector.rs` and `crates/forge3d-web/src/runtime/vector/` implement T12/P12/V01-V04. Shared color/pick/AOV coverage; bilinear terrain drape; closed extrusion; GPU and CPU projection/culling; standard/WBOIT/dual-source modes; stable IDs, rich picks and selection. Twenty-three browser cases, the installed-tarball gate and both examples are recorded in `crates/forge3d-web/docs/w12-verification.md`. | None in W12 scope; physical-browser release qualification remains separate. |
 | W13 | None | Active source has no labels, shaping/font, declutter, callout or `LabelPlan` module. | Implement V05-V07 typography, placement, diagnostics and deterministic plan API. |
 | W14 | None | Active source has no CRS transform, dataset registry, PROJ-WASM adapter, grids or integrity cache. | Implement G01/E06 transforms, registry, fixtures and offline cache. |
 | W15 | None | Active source has no geometry, mesh, importer/exporter, building or glTF/OBJ/STL module. | Implement G05a-G05b/G06-G08 data/IO/mesh/building paths and diagnostics. |
@@ -736,7 +736,7 @@ task remains unambiguous when read or reviewed in isolation.
 
 ### W12 — Vector Layers, Drape, OIT, Culling, Picking, And Selection
 
-- Code status: **Full** — direct implementations and verified acceptance evidence are listed in `crates/forge3d-web/docs/w12-verification.md`.
+- Code status: **Full** — required source correction gates and the clean installed-package gate pass; exact evidence and test names are recorded in `crates/forge3d-web/docs/w12-verification.md`.
 
 - Scope: T12, P12 and V01-V04.
 - Files/APIs: port vector/picking modules and shaders; TS layer handles/styles,
@@ -746,12 +746,17 @@ task remains unambiguous when read or reviewed in isolation.
   `tests/playwright/w12_vector.spec.ts` and `test:package-consumer:w12`; exact
   IDs/color alignment, every point shape/cap/join, atlas alpha/LOD, CPU/GPU
   equivalence, lasso ordering, actual dual-source and forced WBOIT fallback,
-  HDR/AOV drape, resize/recovery and 30 allocation replacement cycles.
+  HDR/AOV drape, resize/recovery and 30 allocation replacement cycles. The 15
+  correction cases additionally cover nearest opaque surfaces, native medium
+  dual-source, miter/cap pixel geometry, AOV namespace/normal/jitter, 200k stable
+  parallel compaction, 2000 selections, bounded readback, incremental resources,
+  scene retention, public limit errors and graph drape. All are mirrored in dist.
 - Acceptance: color/pick align, IDs survive edits, drape avoids z-fighting and
   effective fallback mode is observable.
 - Definition of done: rows pass unit/browser/package tests plus Luxembourg and
   picking examples. Both render covered features and support selection in the
-  installed consumer. Local Chromium and Chrome pass; other physical-browser
+  installed consumer. Corrected source and dist probes pass local Chromium; exact
+  revision/digest and baseline failures are recorded in W12 verification. Other physical-browser
   qualification is outside this W12 evidence.
 
 ### W13 — Labels, Typography, Declutter, Callouts, And LabelPlan

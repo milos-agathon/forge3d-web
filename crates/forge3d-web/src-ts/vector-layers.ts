@@ -75,6 +75,9 @@ export class VectorLayers {
     readonly #selections = new Map<string, VectorSelectionSet>();
     #nextId = 1;
     #revision = 0;
+    #geometryRevision = 0;
+    #highlightRevision = 0;
+    #knownFeatureIds: Set<number> | undefined;
     #disposed = false;
     #oit: VectorOitMode = "auto";
     #culling: VectorSnapshot["culling"] = "auto";
@@ -82,6 +85,8 @@ export class VectorLayers {
     #hoverStyle: VectorSelectionStyle = selectionStyle({ color: [.5, .8, 1, .3] });
     #time = 0;
     get revision(): number { return this.#revision; }
+    get geometryRevision(): number { return this.#geometryRevision; }
+    get highlightRevision(): number { return this.#highlightRevision; }
     get disposed(): boolean { return this.#disposed; }
     #guard(): void { if (this.#disposed)
         throw new Forge3DError("RUNTIME_DISPOSED", "Vector layers are disposed"); }
@@ -92,6 +97,8 @@ export class VectorLayers {
         this.#layers.set(id, layer);
         this.#nextId++;
         this.#revision++;
+        this.#geometryRevision++;
+        this.#knownFeatureIds = undefined;
         return new VectorLayer(this, id);
     }
     addGraph(input: VectorGraphInput): {
@@ -104,8 +111,9 @@ export class VectorLayers {
             throw vectorInvalid("graph edge references unknown node"); return { id: e.id, kind: "line", positions: [a, b], ...(e.style ? { style: e.style } : {}), ...(e.properties ? { properties: e.properties } : {}) }; });
         const nodes: VectorFeature[] = input.nodes.map(n => ({ id: n.id, kind: "point", position: n.position, ...(n.style ? { style: n.style } : {}), ...(n.properties ? { properties: n.properties } : {}) }));
         // Validate the whole graph before mutating either layer.
-        const edgeInput = { name: `${input.name}:edges`, features: edges, style: { ...input.edgeStyle, drape: input.drape ?? false }, zOrder: 0 };
-        const nodeInput = { name: `${input.name}:nodes`, features: nodes, style: { ...input.nodeStyle, drape: input.drape ?? false }, zOrder: 1 };
+        const drape = input.drape === undefined ? {} : { drape: input.drape };
+        const edgeInput = { name: `${input.name}:edges`, features: edges, style: { ...input.edgeStyle, ...drape }, zOrder: 0 };
+        const nodeInput = { name: `${input.name}:nodes`, features: nodes, style: { ...input.nodeStyle, ...drape }, zOrder: 1 };
         this.#normalize({ ...edgeInput, layerId: this.#nextId });
         this.#normalize({ ...nodeInput, layerId: this.#nextId + 1 });
         const ids = [...edges, ...nodes].map(f => f.id);
@@ -145,33 +153,35 @@ export class VectorLayers {
     }
     getLayer(id: number): VectorLayerSnapshot { this.#guard(); const layer = this.#layers.get(id); if (!layer)
         throw vectorInvalid("unknown vector layer"); return structuredClone(layer); }
-    updateLayer(id: number, input: Partial<VectorLayerInput>): void { const current = this.getLayer(id); const next = this.#normalize({ ...current, ...input, layerId: id }, id); this.#layers.set(id, next); this.#pruneSelection(); this.#revision++; }
+    updateLayer(id: number, input: Partial<VectorLayerInput>): void { const current = this.getLayer(id); const next = this.#normalize({ ...current, ...input, layerId: id }, id); this.#layers.set(id, next); this.#knownFeatureIds = undefined; this.#pruneSelection(); this.#revision++; this.#geometryRevision++; }
     removeLayer(id: number): void { this.#guard(); if (!this.#layers.delete(id))
-        throw vectorInvalid("unknown vector layer"); this.#pruneSelection(); this.#revision++; }
-    #pruneSelection(): void { const ids = new Set([...this.#layers.values()].flatMap(l => l.features.map(f => f.id))); for (const set of this.#selections.values())
+        throw vectorInvalid("unknown vector layer"); this.#knownFeatureIds = undefined; this.#pruneSelection(); this.#revision++; this.#geometryRevision++; }
+    #knownIds(): Set<number> { return this.#knownFeatureIds ??= new Set([...this.#layers.values()].flatMap(l => l.features.map(f => f.id))); }
+    #pruneSelection(): void { const ids = this.#knownIds(); for (const set of this.#selections.values())
         set.ids = set.ids.filter(id => ids.has(id)); if (this.#hover !== null && !ids.has(this.#hover))
         this.#hover = null; }
     setOit(mode: VectorOitMode): void { this.#guard(); if (!["auto", "standard", "wboit", "dual-source"].includes(mode))
-        throw vectorInvalid("invalid OIT mode"); this.#oit = mode; this.#revision++; }
+        throw vectorInvalid("invalid OIT mode"); this.#oit = mode; this.#revision++; this.#geometryRevision++; }
     setCulling(mode: VectorSnapshot["culling"]): void { this.#guard(); if (!["auto", "cpu", "gpu"].includes(mode))
-        throw vectorInvalid("invalid culling mode"); this.#culling = mode; this.#revision++; }
+        throw vectorInvalid("invalid culling mode"); this.#culling = mode; this.#revision++; this.#geometryRevision++; }
     setSelection(name: string, ids: readonly number[], style: VectorSelectionStyle = {}, visible = true): void { this.#guard(); if (!name.trim() || typeof visible !== "boolean")
-        throw vectorInvalid("invalid selection name or visibility"); const known = new Set([...this.#layers.values()].flatMap(l => l.features.map(f => f.id))); for (const id of ids) {
+        throw vectorInvalid("invalid selection name or visibility"); const known = this.#knownIds(); for (const id of ids) {
         validateVectorId(id);
         if (!known.has(id))
             throw vectorInvalid("selection references unknown ID");
-    } this.#selections.set(name, { name, ids: [...new Set(ids)].sort((a, b) => a - b), visible, style: selectionStyle(style) }); this.#revision++; }
+    } this.#selections.set(name, { name, ids: [...new Set(ids)].sort((a, b) => a - b), visible, style: selectionStyle(style) }); this.#revision++; this.#highlightRevision++; }
     getSelection(name: string): VectorSelectionSet | undefined { this.#guard(); const s = this.#selections.get(name); return s ? structuredClone(s) : undefined; }
     removeSelection(name: string): boolean { this.#guard(); const removed = this.#selections.delete(name); if (removed)
-        this.#revision++; return removed; }
+        { this.#revision++; this.#highlightRevision++; } return removed; }
     setHover(id: number | null, style?: VectorSelectionStyle): void { this.#guard(); if (id !== null) {
         validateVectorId(id);
-        if (![...this.#layers.values()].some(l => l.features.some(f => f.id === id)))
+        if (!this.#knownIds().has(id))
             throw vectorInvalid("hover references unknown ID");
     } this.#hover = id; if (style)
-        this.#hoverStyle = selectionStyle(style); this.#revision++; }
+        this.#hoverStyle = selectionStyle(style); this.#revision++; this.#highlightRevision++; }
     setTimeSeconds(time: number): void { this.#guard(); if (!Number.isFinite(time))
-        throw vectorInvalid("time must be finite"); this.#time = time; this.#revision++; }
+        throw vectorInvalid("time must be finite"); this.#time = time; this.#revision++; this.#highlightRevision++; }
+    highlightSnapshot(): Pick<VectorSnapshot, "selections" | "hover" | "hoverStyle" | "timeSeconds"> { this.#guard(); return { selections: structuredClone([...this.#selections.values()]), hover: this.#hover, hoverStyle: structuredClone(this.#hoverStyle), timeSeconds: this.#time }; }
     snapshot(): VectorSnapshot { this.#guard(); return { layers: structuredClone([...this.#layers.values()].sort((a, b) => a.zOrder - b.zOrder || a.layerId - b.layerId)), oit: this.#oit, culling: this.#culling, selections: structuredClone([...this.#selections.values()]), hover: this.#hover, hoverStyle: structuredClone(this.#hoverStyle), timeSeconds: this.#time }; }
     static from(snapshot: VectorSnapshot): VectorLayers { const result = new VectorLayers(); for (const layer of snapshot.layers) {
         if (result.#layers.has(layer.layerId))
@@ -182,5 +192,5 @@ export class VectorLayers {
     } result.setOit(snapshot.oit); result.setCulling(snapshot.culling); for (const s of snapshot.selections)
         result.setSelection(s.name, s.ids, s.style, s.visible); result.setHover(snapshot.hover, snapshot.hoverStyle); result.setTimeSeconds(snapshot.timeSeconds); return result; }
     copy(): VectorLayers { return VectorLayers.from(this.snapshot()); }
-    dispose(): void { this.#layers.clear(); this.#selections.clear(); this.#hover = null; this.#disposed = true; this.#revision++; }
+    dispose(): void { this.#layers.clear(); this.#selections.clear(); this.#knownFeatureIds = undefined; this.#hover = null; this.#disposed = true; this.#revision++; this.#geometryRevision++; this.#highlightRevision++; }
 }

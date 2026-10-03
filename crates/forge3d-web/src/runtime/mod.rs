@@ -218,9 +218,21 @@ impl Forge3DRuntime {
         vector::report(self).map_err(to_js_error)
     }
     #[wasm_bindgen(js_name = readVectorPickMap)]
-    pub async fn read_vector_pick_map(&mut self) -> Result<JsValue, JsValue> {
+    pub async fn read_vector_pick_map(&mut self, region: JsValue) -> Result<JsValue, JsValue> {
         self.guard_mutation()?;
-        vector::read_pick_map(self).await.map_err(to_js_error)
+        vector::read_pick_map(self, region)
+            .await
+            .map_err(to_js_error)
+    }
+    #[wasm_bindgen(js_name = updateVectorHighlights)]
+    pub fn update_vector_highlights(&mut self, value: JsValue) -> Result<(), JsValue> {
+        self.guard_mutation()?;
+        vector::update_highlights_js(self, value).map_err(to_js_error)
+    }
+    #[wasm_bindgen(js_name = readVectorProjection)]
+    pub async fn read_vector_projection(&mut self) -> Result<JsValue, JsValue> {
+        self.guard_mutation()?;
+        vector::read_projection(self).await.map_err(to_js_error)
     }
     #[wasm_bindgen(js_name = setPostFx)]
     pub fn set_post_fx(&mut self, input: JsValue) -> Result<(), JsValue> {

@@ -105,7 +105,13 @@ export interface VectorReport {
     gpuBytes: number;
     width: number;
     height: number;
+    pipelineCreations: number;
+    vertexBufferCreations: number;
+    pickRenderCount: number;
+    pickReadbackPeakBytes: number;
 }
+export interface VectorPickRegion { x: number; y: number; width: number; height: number; }
+export interface VectorProjectionReport { gpu: Uint8Array; cpu: Uint8Array; vertexCount: number; byteIdentical: boolean; }
 export interface PickOptions {
     signal?: AbortSignal;
 }
@@ -129,6 +135,9 @@ export interface TerrainPickResult {
     distance: number;
 }
 export interface VectorPickMap {
+    /** Origin of a bounded readback in full viewport device pixels. */
+    x?: number;
+    y?: number;
     width: number;
     height: number;
     ids: Uint32Array;

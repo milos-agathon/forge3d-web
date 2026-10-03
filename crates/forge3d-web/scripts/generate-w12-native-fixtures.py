@@ -18,8 +18,11 @@ manifest = json.loads((BASE / "provenance.json").read_text(encoding="utf-8"))
 commit = manifest["baselineCommit"]
 assert commit == "bf8db93233e5158f6d226991fc5d230832c2d806"
 for entry in manifest["sources"]:
-    data = subprocess.check_output(["git", "-C", str(ROOT), "show", f"{commit}:{entry['source']}"])
+    data = subprocess.check_output(["git", "-C", str(ROOT), "show", f"{entry.get('commit', commit)}:{entry['source']}"])
     assert hashlib.sha256(data).hexdigest() == entry["sha256"]
+    if "commit" not in entry:
+        contract = subprocess.check_output(["git", "-C", str(ROOT), "show", f"{manifest['contractCommit']}:{entry['source']}"])
+        assert contract == data, f"Native contract drift: {entry['source']}"
     destination = BASE / "native" / entry["file"]
     if "--check" in sys.argv:
         assert destination.read_bytes() == data

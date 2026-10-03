@@ -19,11 +19,14 @@ fn coverage(v:Out)->vec4<f32> {
  if(color.a<=.01){discard;}return color;
 }
 struct Weighted { @location(0) accum:vec4<f32>, @location(1) reveal:vec4<f32> };
-@fragment fn fs_weighted(v:Out)->Weighted {let c=coverage(v);let depth=length(v.world-params.eye.xyz);let weight=c.a*clamp(.03/(1e-5+pow(depth/200.0,4.0)),.01,3000.0);return Weighted(vec4<f32>(c.rgb*c.a,c.a)*weight,vec4<f32>(c.a));}
-@fragment fn fs_standard(v:Out)->@location(0) vec4<f32>{let c=coverage(v);return vec4<f32>(c.rgb*c.a,c.a);}
+@fragment fn fs_opaque(v:Out)->@location(0) vec4<f32>{if(v.color.a<1.0){discard;}let c=coverage(v);return vec4<f32>(c.rgb*c.a,c.a);}
+@fragment fn fs_weighted(v:Out)->Weighted {if(v.color.a>=1.0){discard;}let c=coverage(v);let depth=length(v.world-params.eye.xyz);let weight=c.a*clamp(.03/(1e-5+pow(depth/200.0,4.0)),.01,3000.0);return Weighted(vec4<f32>(c.rgb*c.a,c.a)*weight,vec4<f32>(c.a));}
+@fragment fn fs_standard(v:Out)->@location(0) vec4<f32>{if(v.color.a>=1.0){discard;}let c=coverage(v);return vec4<f32>(c.rgb*c.a,c.a);}
 struct Pick { @location(0) id:u32, @location(1) depth:f32, @location(2) world:vec4<f32> };
 @fragment fn fs_pick(v:Out)->Pick {let c=coverage(v);return Pick(v.tags.x,v.clip.z,vec4<f32>(v.world,1));}
 struct Aov { @location(0) depth:f32, @location(1) id:u32 };
-@fragment fn fs_aov(v:Out)->Aov {let c=coverage(v);return Aov(clamp((dot(v.world-params.eye.xyz,params.forward.xyz)-params.camera.x)/(params.camera.y-params.camera.x),0.0,1.0),v.tags.x);}
+// Reserved AOV namespace: full feature IDs are available in fs_pick only.
+const AOV_ID_VECTOR:u32=0xffffffefu;
+@fragment fn fs_aov(v:Out)->Aov {let c=coverage(v);return Aov(clamp((dot(v.world-params.eye.xyz,params.forward.xyz)-params.camera.x)/(params.camera.y-params.camera.x),0.0,1.0),AOV_ID_VECTOR);}
 struct Surface { @location(0) albedo:vec4<f32>, @location(1) normal:vec4<f32> };
-@fragment fn fs_surface(v:Out)->Surface {let c=coverage(v);let n=cross(dpdx(v.world),dpdy(v.world));return Surface(c,vec4<f32>(n/max(length(n),1e-6),1));}
+@fragment fn fs_surface(v:Out)->Surface {let c=coverage(v);var n=cross(dpdx(v.world),dpdy(v.world));if(dot(n,params.eye.xyz-v.world)<0.0){n=-n;}return Surface(c,vec4<f32>(n/max(length(n),1e-6),1));}

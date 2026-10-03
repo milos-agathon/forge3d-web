@@ -3,9 +3,9 @@ import { Camera } from "./camera.js";
 import { TerrainDataset } from "./terrain-dataset.js";
 import { VectorLayers, vectorInvalid } from "./vector-layers.js";
 import type { CameraInput, TerrainHeightmapInput } from "./index.js";
-import type { PickOptions, TerrainPickResult, VectorPickMap, VectorPickResult, VectorSnapshot } from "./vector-types.js";
+import type { PickOptions, TerrainPickResult, VectorPickMap, VectorPickRegion, VectorPickResult, VectorSnapshot } from "./vector-types.js";
 export interface VectorPickTarget {
-    readVectorPickMap(): Promise<VectorPickMap>;
+    readVectorPickMap(region?: VectorPickRegion): Promise<VectorPickMap>;
 }
 function abort(signal?: AbortSignal): void { if (signal?.aborted)
     throw new Forge3DError("REQUEST_CANCELLED", "Pick was cancelled"); }
@@ -32,10 +32,10 @@ export class VectorPicker {
     #guard(): void { if (this.#disposed)
         throw new Forge3DError("RUNTIME_DISPOSED", "Picker is disposed"); }
     #snapshot(): VectorSnapshot { return this.layers instanceof VectorLayers ? this.layers.snapshot() : this.layers(); }
-    async #map(options: PickOptions): Promise<{
+    async #map(options: PickOptions, region: VectorPickRegion): Promise<{
         map: VectorPickMap;
         snapshot: VectorSnapshot;
-    }> { this.#guard(); abort(options.signal); const snapshot = this.#snapshot(); const map = await this.target.readVectorPickMap(); this.#guard(); abort(options.signal); return { map, snapshot }; }
+    }> { this.#guard(); abort(options.signal); const snapshot = this.#snapshot(); const map = await this.target.readVectorPickMap(region); this.#guard(); abort(options.signal); return { map, snapshot }; }
     #result(map: VectorPickMap, snapshot: VectorSnapshot, index: number): VectorPickResult | null {
         const id = map.ids[index] ?? 0;
         if (id === 0)
@@ -43,25 +43,25 @@ export class VectorPicker {
         for (const layer of snapshot.layers) {
             const feature = layer.features.find(f => f.id === id);
             if (feature)
-                return { id, layerId: layer.layerId, layerName: layer.name, kind: feature.kind, properties: structuredClone(feature.properties ?? {}), pixel: [index % map.width, Math.floor(index / map.width)], depth: map.depth[index] ?? 1, worldPosition: [map.worldPositions[index * 3] ?? 0, map.worldPositions[index * 3 + 1] ?? 0, map.worldPositions[index * 3 + 2] ?? 0] };
+                return { id, layerId: layer.layerId, layerName: layer.name, kind: feature.kind, properties: structuredClone(feature.properties ?? {}), pixel: [(map.x ?? 0) + index % map.width, (map.y ?? 0) + Math.floor(index / map.width)], depth: map.depth[index] ?? 1, worldPosition: [map.worldPositions[index * 3] ?? 0, map.worldPositions[index * 3 + 1] ?? 0, map.worldPositions[index * 3 + 2] ?? 0] };
         }
         return null;
     }
     async point(x: number, y: number, options: PickOptions = {}): Promise<VectorPickResult | null> { if (!Number.isFinite(x) || !Number.isFinite(y))
-        throw vectorInvalid("pick coordinates must be finite"); const { map, snapshot } = await this.#map(options); const px = Math.floor(x), py = Math.floor(y); if (px < 0 || py < 0 || px >= map.width || py >= map.height)
+        throw vectorInvalid("pick coordinates must be finite"); const x0 = Math.floor(x), y0 = Math.floor(y); const { map, snapshot } = await this.#map(options, { x: x0, y: y0, width: 1, height: 1 }); const px = x0 - (map.x ?? 0), py = y0 - (map.y ?? 0); if (px < 0 || py < 0 || px >= map.width || py >= map.height)
         return null; return this.#result(map, snapshot, py * map.width + px); }
     async rect(x: number, y: number, width: number, height: number, options: PickOptions = {}): Promise<VectorPickResult[]> { if ([x, y, width, height].some(v => !Number.isFinite(v)) || width < 0 || height < 0)
-        throw vectorInvalid("invalid pick rectangle"); const { map, snapshot } = await this.#map(options); return this.#area(map, snapshot, (px, py) => px >= x && px < x + width && py >= y && py < y + height, options); }
+        throw vectorInvalid("invalid pick rectangle"); const x0 = Math.floor(x), y0 = Math.floor(y); const { map, snapshot } = await this.#map(options, { x: x0, y: y0, width: Math.ceil(x + width) - x0, height: Math.ceil(y + height) - y0 }); return this.#area(map, snapshot, (px, py) => px >= x && px < x + width && py >= y && py < y + height, options); }
     async lasso(points: readonly (readonly [
         number,
         number
     ])[], options: PickOptions = {}): Promise<VectorPickResult[]> { if (points.length < 3 || points.length > 1000 || points.some(p => p.length !== 2 || p.some(x => !Number.isFinite(x))))
-        throw vectorInvalid("lasso needs 3 to 1000 finite points"); const { map, snapshot } = await this.#map(options); return this.#area(map, snapshot, (x, y) => vectorLassoContains(x, y, points), options); }
+        throw vectorInvalid("lasso needs 3 to 1000 finite points"); const x0 = Math.floor(Math.min(...points.map(p => p[0]))), y0 = Math.floor(Math.min(...points.map(p => p[1]))); const { map, snapshot } = await this.#map(options, { x: x0, y: y0, width: Math.ceil(Math.max(...points.map(p => p[0]))) - x0, height: Math.ceil(Math.max(...points.map(p => p[1]))) - y0 }); return this.#area(map, snapshot, (x, y) => vectorLassoContains(x, y, points), options); }
     #area(map: VectorPickMap, snapshot: VectorSnapshot, contains: (x: number, y: number) => boolean, options: PickOptions): VectorPickResult[] { const ids = new Map<number, VectorPickResult>(); for (let i = 0; i < map.ids.length; i++) {
         if (i % map.width === 0)
             abort(options.signal);
         const id = map.ids[i] ?? 0;
-        if (id && !ids.has(id) && contains(i % map.width + .5, Math.floor(i / map.width) + .5)) {
+        if (id && !ids.has(id) && contains((map.x ?? 0) + i % map.width + .5, (map.y ?? 0) + Math.floor(i / map.width) + .5)) {
             const hit = this.#result(map, snapshot, i);
             if (hit)
                 ids.set(id, hit);

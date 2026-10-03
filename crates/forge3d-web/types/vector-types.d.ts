@@ -86,6 +86,10 @@ export interface VectorSnapshot {
     timeSeconds: number;
 }
 export interface VectorReport {
+    pipelineCreations:number;
+    vertexBufferCreations:number;
+    pickRenderCount:number;
+    pickReadbackPeakBytes:number;
     requestedOit: VectorOitMode;
     effectiveOit: "standard" | "wboit" | "dual-source";
     fallbackReason: string | null;
@@ -97,6 +101,8 @@ export interface VectorReport {
     width: number;
     height: number;
 }
+export interface VectorPickRegion { x:number; y:number; width:number; height:number; }
+export interface VectorProjectionReport { gpu:Uint8Array; cpu:Uint8Array; vertexCount:number; byteIdentical:boolean; }
 export interface PickOptions {
     signal?: AbortSignal;
 }
@@ -117,6 +123,8 @@ export interface TerrainPickResult {
     distance: number;
 }
 export interface VectorPickMap {
+    x?:number;
+    y?:number;
     width: number;
     height: number;
     ids: Uint32Array;

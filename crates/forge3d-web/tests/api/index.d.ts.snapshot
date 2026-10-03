@@ -1,5 +1,5 @@
 import type { VectorLayers } from "./vector-layers.js";
-import type { VectorSnapshot, VectorReport, VectorPickMap } from "./vector-types.js";
+import type { VectorSnapshot, VectorReport, VectorPickMap, VectorPickRegion, VectorProjectionReport } from "./vector-types.js";
 export { VectorLayers, VectorLayer } from "./vector-layers.js";
 export { VectorPicker, pickVectorTerrain } from "./vector-picking.js";
 export type { VectorPickTarget } from "./vector-picking.js";
@@ -2657,6 +2657,7 @@ export interface RenderStats {
 export declare class Forge3DSession {
   getVectorReport():VectorReport;
   readVectorPickMap():Promise<VectorPickMap>;
+  readVectorPickMap(region:VectorPickRegion):Promise<VectorPickMap>;
 
   setTimeSeconds(seconds: number): void;
   setPostFx(input:PostFxChain|PostFxChainInput|PostFxSnapshot|readonly PostFxInput[]|null):void;
@@ -2749,7 +2750,9 @@ export declare class Forge3DSession {
 export declare class Forge3DRuntime {
   setVectorLayers(input:VectorLayers|VectorSnapshot|null,terrain?:TerrainHeightmapInput):void;
   getVectorReport():VectorReport;
+  readVectorProjection():Promise<VectorProjectionReport>;
   readVectorPickMap():Promise<VectorPickMap>;
+  readVectorPickMap(region:VectorPickRegion):Promise<VectorPickMap>;
 
   setTimeSeconds(seconds: number): void;
   setPostFx(input:PostFxChain|PostFxChainInput|PostFxSnapshot|readonly PostFxInput[]|null):void;
@@ -2870,6 +2873,7 @@ export declare class Forge3DViewer {
   setVectorLayers(input:VectorLayers|VectorSnapshot|null,terrain?:TerrainHeightmapInput):void;
   getVectorReport():VectorReport;
   readVectorPickMap():Promise<VectorPickMap>;
+  readVectorPickMap(region:VectorPickRegion):Promise<VectorPickMap>;
 
   setTimeSeconds(seconds: number): void;
   setPostFx(input:PostFxChain|PostFxChainInput|PostFxSnapshot|readonly PostFxInput[]|null):void;
@@ -3143,6 +3147,7 @@ export interface WorkerRendererDiagnostics {
 export declare class Forge3DWorkerRenderer {
   getVectorReport():Promise<VectorReport>;
   readVectorPickMap():Promise<VectorPickMap>;
+  readVectorPickMap(region:VectorPickRegion):Promise<VectorPickMap>;
 
   static create(
     canvas: HTMLCanvasElement,
@@ -3182,6 +3187,7 @@ export declare class Forge3DOffscreenRenderer {
   render(): boolean;
   getVectorReport(): VectorReport;
   readVectorPickMap(): Promise<VectorPickMap>;
+  readVectorPickMap(region:VectorPickRegion):Promise<VectorPickMap>;
   capture(kind: OffscreenOutput["kind"]): Promise<OffscreenOutput>;
   write(sink: BrowserByteSink): Promise<ByteWriteResult>;
   dispose(): void;
@@ -3409,6 +3415,8 @@ export interface AovFrameInit {
 export declare const EXR_MIME_TYPE: "image/x-exr";
 export declare const AOV_ID_BACKGROUND: 0;
 export declare const AOV_ID_TERRAIN: 1;
+/** Reserved object ID for all vector fragments; full feature IDs use the pick map. */
+export declare const AOV_ID_VECTOR: 4294967279;
 export declare const AOV_ID_SCENE_NODE_BASE: 2;
 /** AOV object ID of a scene node (`node.id + 2`). */
 export declare function aovObjectId(nodeId: number): number;

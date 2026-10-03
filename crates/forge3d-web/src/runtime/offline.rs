@@ -39,6 +39,9 @@ use gpu::{
 /// node.
 pub(crate) const AOV_ID_TERRAIN: u32 = 1;
 pub(crate) const AOV_ID_SCENE_NODE_BASE: u32 = 2;
+/// Reserved vector surface ID. Full uint32 feature IDs remain in the pick map.
+/// Scene object IDs stay below this value; water IDs start at 0xfffffff0.
+pub(crate) const AOV_ID_VECTOR: u32 = 0xffffffef;
 
 pub(crate) const CAPTURE_COLOR_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba32Float;
 pub(crate) const CAPTURE_DEPTH_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::R32Float;
@@ -629,7 +632,13 @@ fn create_session(
     if let Some(terrain) = runtime.terrain.as_ref() {
         terrain.encode_w08_frame_start(&mut encoder);
     }
-    encode_capture(runtime, &session, &mut encoder, false);
+    encode_capture(
+        runtime,
+        &session,
+        &mut encoder,
+        false,
+        Some(initial.base.view_projection),
+    );
     if let Some(terrain) = runtime.terrain.as_ref() {
         terrain.encode_w08_frame_end(&mut encoder);
     }
@@ -680,6 +689,7 @@ fn encode_capture(
     session: &OfflineSession,
     encoder: &mut wgpu::CommandEncoder,
     surface: bool,
+    vector_view_projection: Option<[[f32; 4]; 4]>,
 ) {
     encode_capture_view(
         runtime,
@@ -693,6 +703,7 @@ fn encode_capture(
             surface: session.surface,
             overlay: session.overlay,
             realtime: false,
+            vector_view_projection,
         },
         encoder,
         surface,
@@ -710,6 +721,7 @@ pub(super) struct CaptureView<'a> {
     pub surface: bool,
     pub overlay: bool,
     pub realtime: bool,
+    pub vector_view_projection: Option<[[f32; 4]; 4]>,
 }
 pub(super) fn encode_capture_view(
     runtime: &Forge3DRuntime,
@@ -802,7 +814,13 @@ pub(super) fn encode_capture_view(
             scatter.draw(&mut pass, runtime, Some(*which));
         }
     }
-    super::vector::encode_capture(runtime, encoder, targets, surface && session.surface, None);
+    super::vector::encode_capture(
+        runtime,
+        encoder,
+        targets,
+        surface && session.surface,
+        session.vector_view_projection,
+    );
     if let (Some(e), Some(source)) = (&runtime.environment, &session.environment_source) {
         encoder.copy_texture_to_texture(
             targets.color.texture.as_image_copy(),
@@ -942,7 +960,13 @@ async fn accumulate_samples(
         if let Some(terrain) = runtime.terrain.as_ref() {
             terrain.encode_w08_frame_start(&mut encoder);
         }
-        encode_capture(runtime, session, &mut encoder, true);
+        encode_capture(
+            runtime,
+            session,
+            &mut encoder,
+            true,
+            Some(uniform.base.view_projection),
+        );
         if let Some(terrain) = runtime.terrain.as_ref() {
             terrain.encode_w08_frame_end(&mut encoder);
         }

@@ -1,8 +1,8 @@
 import { VectorLayers } from "./vector-layers.js";
 import type { CameraInput, TerrainHeightmapInput } from "./index.js";
-import type { PickOptions, TerrainPickResult, VectorPickMap, VectorPickResult, VectorSnapshot } from "./vector-types.js";
+import type { PickOptions, TerrainPickResult, VectorPickMap, VectorPickRegion, VectorPickResult, VectorSnapshot } from "./vector-types.js";
 export interface VectorPickTarget {
-    readVectorPickMap(): Promise<VectorPickMap>;
+    readVectorPickMap(region?: VectorPickRegion): Promise<VectorPickMap>;
 }
 export declare function vectorLassoContains(x: number, y: number, points: readonly (readonly [number, number])[]): boolean;
 /** Queries use device pixels, with deterministic numeric-ID ordering for areas. */

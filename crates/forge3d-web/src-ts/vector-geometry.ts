@@ -1,4 +1,5 @@
 import { normalizeVectorStyle, vectorInvalid, VectorLayers } from "./vector-layers.js";
+import { Forge3DError } from "./index.js";
 import { TerrainDataset } from "./terrain-dataset.js";
 import type { TerrainHeightmapInput } from "./index.js";
 import type { VectorPosition, VectorSnapshot, VectorSelectionStyle } from "./vector-types.js";
@@ -15,6 +16,22 @@ export interface VectorPacket {
     highlights: number[][];
 }
 type P = VectorPosition;
+function resourceLimit(): Forge3DError { return new Forge3DError("RESOURCE_LIMIT_EXCEEDED", "Vector geometry or atlas exceeds the bounded vector budget"); }
+/** Highlight changes do not clone or tessellate geometry. IDs are sorted for GPU lookup. */
+export function compileVectorHighlights(source: VectorLayers | Pick<VectorSnapshot, "selections" | "hover" | "hoverStyle" | "timeSeconds">, timeSeconds?: number): number[][] {
+    const snapshot = source instanceof VectorLayers ? source.highlightSnapshot() : source;
+    const highlights = new Map<number, number[]>();
+    function highlight(id: number, s: VectorSelectionStyle) {
+        const c = s.color ?? [1, .8, 0, .5];
+        highlights.set(id, [id, s.outline ? 1 : 0, s.glow ? 1 : 0, 0, ...c, s.outlineWidth ?? 2, s.glowIntensity ?? .5, s.glowRadius ?? 8, (s.pulseSpeed ?? 0) > 0 ? Math.sin((timeSeconds ?? snapshot.timeSeconds) * (s.pulseSpeed ?? 0)) * .5 + .5 : 1]);
+    }
+    for (const selection of snapshot.selections)
+        if (selection.visible)
+            for (const id of selection.ids)
+                highlight(id, selection.style);
+    if (snapshot.hover !== null) highlight(snapshot.hover, snapshot.hoverStyle);
+    return [...highlights.values()].sort((a, b) => a[0]! - b[0]!);
+}
 const cross = (a: P, b: P, c: P) => (b[0] - a[0]) * (c[2] - a[2]) - (b[2] - a[2]) * (c[0] - a[0]);
 function inside(p: P, a: P, b: P, c: P): boolean { return cross(a, b, p) >= -1e-10 && cross(b, c, p) >= -1e-10 && cross(c, a, p) >= -1e-10; }
 function area(r: P[]): number { return r.reduce((sum, p, i) => { const q = r[(i + 1) % r.length]!; return sum + p[0] * q[2] - q[0] * p[2]; }, 0) / 2; }
@@ -88,19 +105,12 @@ export function compileVectorPacket(source: VectorLayers | VectorSnapshot, terra
     const atlasWidth = Math.max(1, ...layers.map(l => l.atlas?.width ?? 0));
     const atlasHeight = Math.max(1, layers.reduce((n, l) => n + (l.atlas?.height ?? 0), 0));
     if (atlasHeight > 4096)
-        throw new Forge3DResourceError();
+        throw resourceLimit();
     const rgba = new Uint8Array(atlasWidth * atlasHeight * 4);
     rgba.fill(255);
     const vertices: number[][] = [];
     let atlasY = 0, featureCount = 0;
-    const highlights: number[][] = [];
-    function highlight(id: number, s: VectorSelectionStyle) { const c = s.color ?? [1, .8, 0, .5]; highlights.push([id, s.outline ? 1 : 0, s.glow ? 1 : 0, 0, ...c, s.outlineWidth ?? 2, s.glowIntensity ?? .5, s.glowRadius ?? 8, (s.pulseSpeed ?? 0) > 0 ? Math.sin(snapshot.timeSeconds * (s.pulseSpeed ?? 0)) * .5 + .5 : 1]); }
-    for (const selection of snapshot.selections)
-        if (selection.visible)
-            for (const id of selection.ids)
-                highlight(id, selection.style);
-    if (snapshot.hover !== null)
-        highlight(snapshot.hover, snapshot.hoverStyle);
+    const highlights = compileVectorHighlights(snapshot);
     for (const layer of layers) {
         const atlas = layer.atlas;
         if (atlas) {
@@ -131,7 +141,7 @@ export function compileVectorPacket(source: VectorLayers | VectorSnapshot, terra
                     const a = originals[i]!, b = originals[i + 1]!;
                     const n = s.drape && dataset ? Math.max(1, Math.ceil(Math.hypot(b[0] - a[0], b[2] - a[2]) / Math.min(...dataset.spacing))) : 1;
                     if (n > 100000)
-                        throw new Forge3DResourceError();
+                        throw resourceLimit();
                     for (let j = 0; j < n; j++) {
                         const t = j / n;
                         dense.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]);
@@ -144,7 +154,7 @@ export function compileVectorPacket(source: VectorLayers | VectorSnapshot, terra
                     const a = ps[i]!, b = ps[i + 1]!;
                     if (a.every((x, k) => x === b[k]))
                         continue;
-                    const start = i === 0 && s.cap === "square" ? -w : 0, end = i === ps.length - 2 && s.cap === "square" ? w : 0;
+                    const start = i === 0 && s.cap === "square" ? -w - 1 : 0, end = i === ps.length - 2 && s.cap === "square" ? w + 1 : 0;
                     const quad: [
                         [
                             P,
@@ -170,12 +180,16 @@ export function compileVectorPacket(source: VectorLayers | VectorSnapshot, terra
                         point(p, s.lineWidth, 1);
                     else
                         for (const side of [-1, 1]) {
+                            // The bevel wedge covers the gap between the segment quads.
+                            // A miter adds its tip triangle; it must not replace that wedge.
                             emit(p, a, p, 2, [side * w, 0], [side, 0], 0);
-                            if (s.join === "miter")
-                                emit(p, a, b, 3, [side * w, 0], [side, 0], 0);
-                            else
-                                emit(p, p, p, 0, [0, 0], [0, 0], 0);
+                            emit(p, p, p, 0, [0, 0], [0, 0], 0);
                             emit(p, p, b, 2, [side * w, 0], [side, 0], 0);
+                            if (s.join === "miter") {
+                                emit(p, a, p, 2, [side * w, 0], [side, 0], 0);
+                                emit(p, a, b, 3, [side * w, 0], [side, 0], 0);
+                                emit(p, p, b, 2, [side * w, 0], [side, 0], 0);
+                            }
                         }
                 }
             }
@@ -185,7 +199,7 @@ export function compileVectorPacket(source: VectorLayers | VectorSnapshot, terra
                 const longest = Math.max(...triangles.flatMap(t => t.map((p, i) => edgeLength(p, t[(i + 1) % 3]!))));
                 const levels = s.drape && dataset ? Math.max(0, Math.ceil(Math.log2(longest / Math.min(...dataset.spacing)))) : 0;
                 if (levels > 9 || triangles.length * 4 ** levels * 3 + vertices.length > 3000000)
-                    throw new Forge3DResourceError();
+                    throw resourceLimit();
                 const midpoint = (a: P, b: P): P => [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2, (a[2] + b[2]) / 2];
                 const roof = (a: P, b: P, c: P, level: number): void => {
                     if (level === 0) {
@@ -224,13 +238,9 @@ export function compileVectorPacket(source: VectorLayers | VectorSnapshot, terra
                         }
             }
             if (vertices.length > 3000000)
-                throw new Forge3DResourceError();
+                throw resourceLimit();
         }
         atlasY += atlas?.height ?? 0;
     }
     return { vertices, oit: snapshot.oit, culling: snapshot.culling, featureCount, atlas: { width: atlasWidth, height: atlasHeight, rgba: [...rgba] }, highlights };
-}
-class Forge3DResourceError extends Error {
-    readonly code = "RESOURCE_LIMIT_EXCEEDED";
-    constructor() { super("Vector geometry or atlas exceeds the bounded vector budget"); }
 }

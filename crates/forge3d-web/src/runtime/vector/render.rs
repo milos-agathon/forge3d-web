@@ -1,6 +1,6 @@
 use super::*;
 impl Resources {
-    fn prepare_frame(
+    pub(super) fn prepare_frame(
         &self,
         runtime: &Forge3DRuntime,
         encoder: &mut wgpu::CommandEncoder,
@@ -33,8 +33,15 @@ impl Resources {
             pass.set_bind_group(0, &compute.group, &[]);
             pass.set_pipeline(&compute.expand);
             pass.dispatch_workgroups((self.vertices.len() as u32 / 3).div_ceil(64).max(1), 1, 1);
-            pass.set_pipeline(&compute.compact);
+            let blocks = (self.vertices.len() as u32 / 3).div_ceil(256).max(1);
+            pass.set_pipeline(&compute.scan_triangles);
+            pass.dispatch_workgroups(blocks, 1, 1);
+            pass.set_pipeline(&compute.scan_blocks);
+            pass.dispatch_workgroups(blocks.div_ceil(256), 1, 1);
+            pass.set_pipeline(&compute.scan_supers);
             pass.dispatch_workgroups(1, 1, 1);
+            pass.set_pipeline(&compute.compact);
+            pass.dispatch_workgroups((self.vertices.len() as u32 / 3).div_ceil(64).max(1), 1, 1);
         } else {
             let vertices = forge3d_core::vector::project_and_cull(
                 &self.vertices,
@@ -65,6 +72,19 @@ impl Resources {
         vp: Option<[[f32; 4]; 4]>,
     ) {
         self.prepare_frame(runtime, encoder, vp);
+        if vp.is_some() {
+            self.highlight_bounds_dirty.set(true);
+        }
+        // The opaque pass establishes the nearest visible vector surface.
+        // OIT is then tested against terrain/scene and this vector depth.
+        {
+            let colors = [gpu::attachment(
+                &self.opaque.view,
+                Some(wgpu::Color::TRANSPARENT),
+            )];
+            let mut pass = gpu::pass(encoder, &colors, Some(depth), true);
+            self.draw(&mut pass, &self.opaque_pipeline);
+        }
         let mut colors = vec![gpu::attachment(
             &self.accum.view,
             Some(wgpu::Color::TRANSPARENT),
@@ -91,6 +111,8 @@ impl Resources {
         ];
         let mut pass = gpu::pass(encoder, &colors, Some(depth), true);
         self.draw(&mut pass, &self.pick_pipeline);
+        self.pick_renders.set(self.pick_renders.get() + 1);
+        self.pick_dirty.set(vp.is_some());
     }
     fn resolve(
         &self,
@@ -101,17 +123,72 @@ impl Resources {
         background: Option<&Target>,
     ) {
         let c = runtime.context.as_ref().expect("live context");
+        let mut mode_bytes = bytemuck::cast_slice(&[
+            if self.mode == "wboit" {
+                1
+            } else if self.mode == "dual-source" {
+                2
+            } else {
+                0
+            },
+            self.highlight_count,
+            u32::from(background.is_some()),
+            self.highlight_radius | if format.is_srgb() { 65536 } else { 0 },
+        ])
+        .to_vec();
+        mode_bytes.extend_from_slice(bytemuck::cast_slice(&[self.highlight_bound, 0., 0., 0.]));
         let uniform = gpu::buffer(
             &c.device,
             "vector:resolve-mode",
-            bytemuck::cast_slice(&[
-                u32::from(self.mode == "wboit"),
-                self.packet.highlights.len() as u32,
-                u32::from(background.is_some()),
-                0,
-            ]),
+            &mode_bytes,
             wgpu::BufferUsages::UNIFORM,
         );
+        let dirty = self.highlight_bounds_dirty.replace(false);
+        if self.highlight_radius > 0 && dirty {
+            let group = gpu::bind(
+                &c.device,
+                &self.bounds_layout,
+                &[
+                    B::TextureView(&self.id.view),
+                    self.highlights.as_entire_binding(),
+                    self.highlight_bounds.as_entire_binding(),
+                    uniform.as_entire_binding(),
+                ],
+            );
+            let mut pass = encoder.begin_compute_pass(&wgpu::ComputePassDescriptor {
+                label: Some("vector:highlight-bounds"),
+                timestamp_writes: None,
+            });
+            pass.set_bind_group(0, &group, &[]);
+            pass.set_pipeline(&self.bounds_reset);
+            pass.dispatch_workgroups(1, 1, 1);
+            pass.set_pipeline(&self.bounds_reduce);
+            pass.dispatch_workgroups(self.width.div_ceil(8), self.height.div_ceil(8), 1);
+        }
+        if dirty {
+            let group = gpu::bind(
+                &c.device,
+                &self.highlight_layout,
+                &[
+                    B::TextureView(&self.accum.view),
+                    B::TextureView(&self.reveal.view),
+                    B::TextureView(&self.id.view),
+                    B::TextureView(&background.unwrap_or(&self.background).view),
+                    self.highlights.as_entire_binding(),
+                    uniform.as_entire_binding(),
+                    B::TextureView(&self.opaque.view),
+                    self.highlight_bounds.as_entire_binding(),
+                ],
+            );
+            let colors = [
+                gpu::attachment(&self.highlight_overlay.view, Some(wgpu::Color::TRANSPARENT)),
+                gpu::attachment(&self.highlight_tint.view, Some(wgpu::Color::TRANSPARENT)),
+            ];
+            let mut pass = gpu::pass(encoder, &colors, None, false);
+            pass.set_pipeline(&self.highlight_pipeline);
+            pass.set_bind_group(0, &group, &[]);
+            pass.draw(0..3, 0..1);
+        }
         let group = gpu::bind(
             &c.device,
             &self.resolve_layout,
@@ -122,6 +199,10 @@ impl Resources {
                 B::TextureView(&background.unwrap_or(&self.background).view),
                 self.highlights.as_entire_binding(),
                 uniform.as_entire_binding(),
+                B::TextureView(&self.opaque.view),
+                self.highlight_bounds.as_entire_binding(),
+                B::TextureView(&self.highlight_overlay.view),
+                B::TextureView(&self.highlight_tint.view),
             ],
         );
         let mut pipelines = self.resolve_pipelines.borrow_mut();

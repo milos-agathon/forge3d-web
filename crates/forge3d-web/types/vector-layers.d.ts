@@ -20,6 +20,9 @@ export declare class VectorLayer {
 export declare class VectorLayers {
     #private;
     get revision(): number;
+    get geometryRevision():number;
+    get highlightRevision():number;
+    highlightSnapshot():Pick<VectorSnapshot,"selections"|"hover"|"hoverStyle"|"timeSeconds">;
     get disposed(): boolean;
     add(input: VectorLayerInput): VectorLayer;
     addGraph(input: VectorGraphInput): {

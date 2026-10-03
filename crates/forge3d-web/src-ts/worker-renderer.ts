@@ -1,4 +1,4 @@
-import type { VectorReport, VectorPickMap } from "./vector-types.js";
+import type { VectorReport, VectorPickMap, VectorPickRegion } from "./vector-types.js";
 import { Forge3DError } from "./index.js";
 import type {
   CameraInput,
@@ -176,7 +176,7 @@ export class Forge3DWorkerRenderer {
   }
 
   async getVectorReport():Promise<VectorReport> {this.#assertLive();return await this.#client.call("getVectorReport",null) as VectorReport;}
-  async readVectorPickMap():Promise<VectorPickMap> {this.#assertLive();return await this.#client.call("readVectorPickMap",null) as VectorPickMap;}
+  async readVectorPickMap(region?:VectorPickRegion):Promise<VectorPickMap> {this.#assertLive();return await this.#client.call("readVectorPickMap",region??null) as VectorPickMap;}
   async setScene(scene: Forge3DScene): Promise<void> {
     this.#assertLive();
     if (!(scene instanceof Forge3DScene) || scene.disposed) {
@@ -391,7 +391,7 @@ export function installForge3DWorkerHost(scope?: Worker): () => void {
         return true;
       },
       getVectorReport: async ()=> (await session()).getVectorReport(),
-      readVectorPickMap: async ()=> (await session()).readVectorPickMap(),
+      readVectorPickMap: async (payload)=> (await session()).readVectorPickMap(payload == null ? undefined : payload as VectorPickRegion),
       setScene: async (payload) => {
         const snapshot = payload as SceneSnapshot;
         const scene = reconstructScene(snapshot);

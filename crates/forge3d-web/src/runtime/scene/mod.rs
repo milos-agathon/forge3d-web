@@ -57,7 +57,8 @@ pub(super) fn set_scene_runtime(
 }
 
 struct SceneResourcePlan {
-    vectors: Option<super::vector::Resources>,
+    vectors: Option<Option<super::vector::Resources>>,
+    vector_highlights: Option<super::vector::HighlightUpdate>,
     postfx: Option<super::postfx::Resources>,
     context: forge3d_core::gpu::GpuContext,
     memory: super::memory::MemoryLedger,
@@ -108,23 +109,31 @@ fn prepare_scene(
         .postfx
         .clone()
         .unwrap_or_else(|| runtime.postfx.as_ref().map(|fx| fx.config.clone()));
+    let vector_packet = parsed
+        .vectors
+        .as_ref()
+        .map(|packet| packet.as_ref())
+        .unwrap_or_else(|| runtime.vectors.as_ref().map(|v| v.packet()));
+    let reuse_vectors = parsed.vectors.is_none()
+        || vector_packet.is_some_and(|p| super::vector::same_geometry(runtime, p));
+    let vector_bytes = if reuse_vectors {
+        super::vector::retained_bytes(runtime)
+    } else {
+        super::vector::planned_bytes(vector_packet, runtime.width, runtime.height)
+    };
     // Reserve the replacement HDR graph before quality selection in dependent
     // passes, so removing a large chain can fund an environment replacement.
     planned.replace_all(&[
         (
             super::vector::KEY,
             MemoryCategory::Textures,
-            super::vector::texture_bytes(parsed.vectors.as_ref(), runtime.width, runtime.height),
+            super::vector::texture_bytes(vector_packet, runtime.width, runtime.height),
         ),
         (
             super::vector::BUFFER_KEY,
             MemoryCategory::Buffers,
-            super::vector::planned_bytes(parsed.vectors.as_ref(), runtime.width, runtime.height)
-                - super::vector::texture_bytes(
-                    parsed.vectors.as_ref(),
-                    runtime.width,
-                    runtime.height,
-                ),
+            vector_bytes
+                - super::vector::texture_bytes(vector_packet, runtime.width, runtime.height),
         ),
         (
             super::postfx::KEY,
@@ -386,15 +395,33 @@ fn prepare_scene(
         scatter.as_ref().is_some_and(|s| s.transparent()),
         &mut planned,
     )?;
-    let vectors = super::vector::prepare(
-        runtime,
-        parsed.vectors.clone(),
-        &mut planned,
-        runtime.width,
-        runtime.height,
-    )?;
+    let vector_highlights = if parsed.vectors.is_some() && reuse_vectors {
+        Some(super::vector::prepare_scene_highlights(
+            runtime,
+            vector_packet.expect("retained packet"),
+            &mut planned,
+        )?)
+    } else {
+        None
+    };
+    let vectors = if let Some(packet) = &parsed.vectors {
+        if reuse_vectors {
+            None
+        } else {
+            Some(super::vector::prepare(
+                runtime,
+                packet.clone(),
+                &mut planned,
+                runtime.width,
+                runtime.height,
+            )?)
+        }
+    } else {
+        None
+    };
     Ok(SceneResourcePlan {
         vectors,
+        vector_highlights,
         postfx,
         context,
         memory: planned,
@@ -416,6 +443,7 @@ fn prepare_scene(
 fn commit_scene_plan(runtime: &mut Forge3DRuntime, plan: SceneResourcePlan) {
     let SceneResourcePlan {
         vectors,
+        vector_highlights,
         postfx,
         context,
         memory,
@@ -433,6 +461,9 @@ fn commit_scene_plan(runtime: &mut Forge3DRuntime, plan: SceneResourcePlan) {
         materials,
     } = plan;
     runtime.memory = memory;
+    if let Some(update) = vector_highlights {
+        super::vector::apply_highlights(runtime, update);
+    }
     let lighting_resources = runtime
         .lighting
         .as_mut()
@@ -448,7 +479,9 @@ fn commit_scene_plan(runtime: &mut Forge3DRuntime, plan: SceneResourcePlan) {
     runtime.scene = scene;
     runtime.environment = environment;
     runtime.postfx = postfx;
-    runtime.vectors = vectors;
+    if let Some(vectors) = vectors {
+        runtime.vectors = vectors;
+    }
     runtime.scatter = scatter;
     runtime.time_seconds = time_seconds;
     super::probes::commit(runtime, probes);

@@ -1,3 +1,4 @@
+import {registerSceneVectorPacket,getSceneVectorPacket} from "./runtime-internals.js";
 import { VectorLayers } from "./vector-layers.js";
 import { compileVectorPacket } from "./vector-geometry.js";
 import type { VectorSnapshot } from "./vector-types.js";
@@ -453,7 +454,7 @@ export class Forge3DScene {
     const lighting=this.#lights.snapshot();
     const environmentLighting=environment?structuredClone(lighting):undefined;
     if(environment){const sun=lighting.lights.find(l=>l.type==="directional");if(sun&&sun.type==="directional"){sun.direction=environment.sunDirection.map(x=>-x) as [number,number,number];sun.color=[...environment.sunColor];sun.intensity=environment.sunDirection[1]>0?environment.sunIntensity:0;}}
-    return {
+    const snapshot:SceneSnapshot = {
       ...(this.#environment!==undefined?{environment,timeSeconds:this.#timeSeconds}:{}),
       ...(this.#postFx !== undefined ? {postFx: structuredClone(this.#postFx)} : {}),
       ...(environmentLighting?{environmentLighting}:{}),
@@ -468,6 +469,9 @@ export class Forge3DScene {
       ...(this.#scatter !== undefined ? { scatter: structuredClone(this.#scatter), timeSeconds: this.#timeSeconds } : {}),
       ...(this.#probes !== undefined ? { probes: structuredClone(this.#probes) } : {}),
     };
+    const packet=getSceneVectorPacket(this,snapshot.revision);
+    if(packet)registerSceneVectorPacket(snapshot,snapshot.revision,packet);
+    return snapshot;
   }
 
   copy(): Forge3DScene {
@@ -505,7 +509,7 @@ export class Forge3DScene {
   }
 
   estimatedGpuBytes(): number {
-    let vectorBytes=0;if(this.#vectors){const terrain=[...this.#nodes.values()].find(n=>n.node.kind==="terrain")?.node;const packet=compileVectorPacket(this.#vectors,terrain?.kind==="terrain"?terrain.terrain:undefined);vectorBytes=packet.vertices.length*288+packet.atlas.rgba.length+packet.highlights.length*48+176;}
+    let vectorBytes=0;if(this.#vectors){const terrain=[...this.#nodes.values()].find(n=>n.node.kind==="terrain")?.node;const packet=compileVectorPacket(this.#vectors,terrain?.kind==="terrain"?terrain.terrain:undefined);registerSceneVectorPacket(this,this.revision,packet);vectorBytes=packet.vertices.length*288+packet.atlas.rgba.length+packet.highlights.length*48+176;}
     let total =vectorBytes+
       this.#lights.estimatedGpuBytes() + this.#materials.estimatedGpuBytes();
     for (const node of this.#nodes.values()) {
