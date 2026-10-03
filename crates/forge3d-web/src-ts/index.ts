@@ -1,3 +1,10 @@
+import { VectorLayers } from "./vector-layers.js";
+import { compileVectorPacket, type VectorPacket } from "./vector-geometry.js";
+import type { VectorSnapshot, VectorReport, VectorPickMap } from "./vector-types.js";
+export { VectorLayers, VectorLayer } from "./vector-layers.js";
+export { VectorPicker, pickVectorTerrain } from "./vector-picking.js";
+export type { VectorPickTarget } from "./vector-picking.js";
+export type * from "./vector-types.js";
 import { Forge3DEnvironment, normalizeEnvironment } from "./environment.js";
 import { PostFxChain, normalizePostFx, resolvePostFx } from "./postfx.js";
 import type { PostFxInput, PostFxChainInput, PostFxSnapshot, PostFxReport, PostFxFrame } from "./postfx.js";
@@ -2258,6 +2265,7 @@ export interface ShadowCascadeInfo {
 }
 
 export interface SceneSnapshot {
+  vectors?: VectorSnapshot | null;
   /** Authoring lights retained while the environment synchronizes the sun. */
   environmentLighting?: LightingSnapshot;
   environment?: EnvironmentSnapshot | null;
@@ -2579,6 +2587,9 @@ interface WasmRuntime {
   setTerrainFromSource(terrain: TerrainHeightmapSourceInput): Promise<void>;
   setEnvironment?(snapshot: EnvironmentSnapshot | null): void;
   getEnvironmentMemoryReport?(): EnvironmentMemoryReport;
+  setVectorLayers?(packet: VectorPacket | null): void;
+  getVectorReport?(): VectorReport;
+  readVectorPickMap?(): Promise<VectorPickMap>;
   setPostFx?(snapshot: PostFxSnapshot | null): void;
   getPostFxReport?(): PostFxReport;
   resetPostFxHistory?(): void;
@@ -2982,7 +2993,9 @@ export class Forge3DRuntime {
         "Runtime does not support scenes",
       );
     }
-    this.#runOrQueue(() => this.#inner.setScene?.(scene));
+    const terrain=scene.nodes.find(n=>n.node.kind==="terrain")?.node;
+    const vectorPacket=scene.vectors?compileVectorPacket(scene.vectors,terrain?.kind==="terrain"?terrain.terrain:undefined):null;
+    this.#runOrQueue(() => this.#inner.setScene?.({...scene,vectorPacket} as SceneSnapshot));
   }
 
   setLighting(lighting: LightingSnapshot): void {
@@ -3012,6 +3025,22 @@ export class Forge3DRuntime {
           ? input.snapshot()
           : normalizeEnvironment(input);
     this.#runOrQueue(() => this.#inner.setEnvironment!(snapshot));
+  }
+  setVectorLayers(input: VectorLayers | VectorSnapshot | null, terrain?: TerrainHeightmapInput): void {
+    this.#assertNotDisposed();
+    if (!this.#inner.setVectorLayers) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support vector layers");
+    const packet=input===null?null:compileVectorPacket(input,terrain);
+    this.#runOrQueue(()=>this.#inner.setVectorLayers!(packet));
+  }
+  getVectorReport(): VectorReport {
+    this.#assertNotDisposed();
+    if(!this.#inner.getVectorReport)throw new Forge3DError("UNSUPPORTED_FEATURE","Runtime does not report vector mode");
+    return this.#inner.getVectorReport();
+  }
+  async readVectorPickMap(): Promise<VectorPickMap> {
+    this.#assertNotDisposed();this.#assertNoOffline();
+    if(!this.#inner.readVectorPickMap)throw new Forge3DError("UNSUPPORTED_FEATURE","Runtime does not support vector picking");
+    return this.#offlineReadback(()=>this.#inner.readVectorPickMap!());
   }
   setPostFx(input: PostFxChain | PostFxChainInput | PostFxSnapshot | readonly PostFxInput[] | null): void {
     this.#assertNotDisposed();

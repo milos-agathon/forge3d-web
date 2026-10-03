@@ -1,3 +1,9 @@
+import type { VectorLayers } from "./vector-layers.js";
+import type { VectorSnapshot, VectorReport, VectorPickMap } from "./vector-types.js";
+export { VectorLayers, VectorLayer } from "./vector-layers.js";
+export { VectorPicker, pickVectorTerrain } from "./vector-picking.js";
+export type { VectorPickTarget } from "./vector-picking.js";
+export type * from "./vector-types.js";
 import type { PostFxChain } from "./postfx.js";
 import type { PostFxInput, PostFxChainInput, PostFxSnapshot, PostFxReport, PostFxFrame } from "./postfx-types.js";
 export { PostFxChain, normalizePostFx, createIdentityColorLut } from "./postfx.js";
@@ -2289,6 +2295,7 @@ export interface ShadowCascadeInfo {
 }
 
 export interface SceneSnapshot {
+  vectors?:VectorSnapshot|null;
   postFx?:PostFxSnapshot|null;
   /** Authoring lights retained while the environment synchronizes the sun. */
   environmentLighting?: LightingSnapshot;
@@ -2502,6 +2509,9 @@ export declare class CascadedShadowConfig {
 }
 
 export declare class Forge3DScene {
+  setVectorLayers(input:VectorLayers|VectorSnapshot|null):void;
+  getVectorLayers():VectorSnapshot|null;
+
   setScatterBatches(batches: readonly (TerrainScatterBatch | ScatterBatchInput | ScatterBatchSnapshot)[]): void;
   setLightingProbes(probes: TerrainLightingProbes | TerrainProbeSnapshot | null): void;
   setTimeSeconds(seconds: number): void;
@@ -2645,6 +2655,9 @@ export interface RenderStats {
 }
 
 export declare class Forge3DSession {
+  getVectorReport():VectorReport;
+  readVectorPickMap():Promise<VectorPickMap>;
+
   setTimeSeconds(seconds: number): void;
   setPostFx(input:PostFxChain|PostFxChainInput|PostFxSnapshot|readonly PostFxInput[]|null):void;
   getPostFxReport():PostFxReport;
@@ -2734,6 +2747,10 @@ export declare class Forge3DSession {
  * methods reject or throw Forge3DError with code RUNTIME_DISPOSED.
  */
 export declare class Forge3DRuntime {
+  setVectorLayers(input:VectorLayers|VectorSnapshot|null,terrain?:TerrainHeightmapInput):void;
+  getVectorReport():VectorReport;
+  readVectorPickMap():Promise<VectorPickMap>;
+
   setTimeSeconds(seconds: number): void;
   setPostFx(input:PostFxChain|PostFxChainInput|PostFxSnapshot|readonly PostFxInput[]|null):void;
   getPostFxReport():PostFxReport;
@@ -2850,6 +2867,10 @@ export declare class Forge3DRuntime {
  * device-loss recovery. dispose() synchronously releases all owned resources.
  */
 export declare class Forge3DViewer {
+  setVectorLayers(input:VectorLayers|VectorSnapshot|null,terrain?:TerrainHeightmapInput):void;
+  getVectorReport():VectorReport;
+  readVectorPickMap():Promise<VectorPickMap>;
+
   setTimeSeconds(seconds: number): void;
   setPostFx(input:PostFxChain|PostFxChainInput|PostFxSnapshot|readonly PostFxInput[]|null):void;
   getPostFxReport():PostFxReport;
@@ -3120,6 +3141,9 @@ export interface WorkerRendererDiagnostics {
 }
 
 export declare class Forge3DWorkerRenderer {
+  getVectorReport():Promise<VectorReport>;
+  readVectorPickMap():Promise<VectorPickMap>;
+
   static create(
     canvas: HTMLCanvasElement,
     options: Forge3DWorkerRendererOptions,
@@ -3156,6 +3180,8 @@ export declare class Forge3DOffscreenRenderer {
   readonly disposed: boolean;
   setScene(scene: Forge3DScene): void;
   render(): boolean;
+  getVectorReport(): VectorReport;
+  readVectorPickMap(): Promise<VectorPickMap>;
   capture(kind: OffscreenOutput["kind"]): Promise<OffscreenOutput>;
   write(sink: BrowserByteSink): Promise<ByteWriteResult>;
   dispose(): void;

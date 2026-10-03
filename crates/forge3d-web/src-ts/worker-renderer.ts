@@ -1,3 +1,4 @@
+import type { VectorReport, VectorPickMap } from "./vector-types.js";
 import { Forge3DError } from "./index.js";
 import type {
   CameraInput,
@@ -174,6 +175,8 @@ export class Forge3DWorkerRenderer {
     return this.#disposed;
   }
 
+  async getVectorReport():Promise<VectorReport> {this.#assertLive();return await this.#client.call("getVectorReport",null) as VectorReport;}
+  async readVectorPickMap():Promise<VectorPickMap> {this.#assertLive();return await this.#client.call("readVectorPickMap",null) as VectorPickMap;}
   async setScene(scene: Forge3DScene): Promise<void> {
     this.#assertLive();
     if (!(scene instanceof Forge3DScene) || scene.disposed) {
@@ -387,6 +390,8 @@ export function installForge3DWorkerHost(scope?: Worker): () => void {
         await session();
         return true;
       },
+      getVectorReport: async ()=> (await session()).getVectorReport(),
+      readVectorPickMap: async ()=> (await session()).readVectorPickMap(),
       setScene: async (payload) => {
         const snapshot = payload as SceneSnapshot;
         const scene = reconstructScene(snapshot);
@@ -467,6 +472,7 @@ function reconstructScene(snapshot: SceneSnapshot): Forge3DScene {
   restoreSceneIbl(scene, snapshot.ibl ?? null);
   restoreSceneShadows(scene, snapshot.shadows ?? defaultShadowSnapshot());
   if (snapshot.environment !== undefined) scene.setEnvironment(snapshot.environment);
+  if (snapshot.vectors !== undefined) scene.setVectorLayers(snapshot.vectors);
   if (snapshot.postFx !== undefined) scene.setPostFx(snapshot.postFx);
   if (snapshot.scatter !== undefined) scene.setScatterBatches(snapshot.scatter);
   if (snapshot.probes !== undefined) scene.setLightingProbes(snapshot.probes);

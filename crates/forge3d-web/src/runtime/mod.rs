@@ -22,6 +22,7 @@ mod terrain_vt;
 mod terrain_w08;
 mod textures;
 mod timing;
+mod vector;
 
 use canvas::RuntimeCanvas;
 use device_health::{ensure_device_healthy_error, set_js_property};
@@ -59,6 +60,7 @@ pub struct Forge3DRuntime {
     scene: Option<scene::NativeScene>,
     environment: Option<environment::EnvironmentResources>,
     postfx: Option<postfx::Resources>,
+    vectors: Option<vector::Resources>,
     scatter: Option<scatter::ScatterResources>,
     time_seconds: f32,
     probe_count: u32,
@@ -151,6 +153,7 @@ impl Forge3DRuntime {
         self.scene = None;
         self.environment = None;
         self.postfx = None;
+        self.vectors = None;
         self.scatter = None;
         self.lighting = None;
         self.textures = None;
@@ -203,6 +206,21 @@ impl Forge3DRuntime {
         environment::set(self, snapshot).map_err(to_js_error)?;
         postfx::invalidate(self, "scene", true);
         Ok(())
+    }
+    #[wasm_bindgen(js_name = setVectorLayers)]
+    pub fn set_vector_layers(&mut self, input: JsValue) -> Result<(), JsValue> {
+        self.guard_mutation()?;
+        vector::set(self, input).map_err(to_js_error)
+    }
+    #[wasm_bindgen(js_name = getVectorReport)]
+    pub fn get_vector_report(&self) -> Result<JsValue, JsValue> {
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        vector::report(self).map_err(to_js_error)
+    }
+    #[wasm_bindgen(js_name = readVectorPickMap)]
+    pub async fn read_vector_pick_map(&mut self) -> Result<JsValue, JsValue> {
+        self.guard_mutation()?;
+        vector::read_pick_map(self).await.map_err(to_js_error)
     }
     #[wasm_bindgen(js_name = setPostFx)]
     pub fn set_post_fx(&mut self, input: JsValue) -> Result<(), JsValue> {
@@ -1026,6 +1044,7 @@ mod tests {
             offline: None,
             offline_pipelines: None,
             postfx: None,
+            vectors: None,
             vt_registry: forge3d_core::terrain_vt::VtSourceRegistry::new(),
         };
 

@@ -57,6 +57,7 @@ pub(super) fn set_scene_runtime(
 }
 
 struct SceneResourcePlan {
+    vectors: Option<super::vector::Resources>,
     postfx: Option<super::postfx::Resources>,
     context: forge3d_core::gpu::GpuContext,
     memory: super::memory::MemoryLedger,
@@ -110,6 +111,21 @@ fn prepare_scene(
     // Reserve the replacement HDR graph before quality selection in dependent
     // passes, so removing a large chain can fund an environment replacement.
     planned.replace_all(&[
+        (
+            super::vector::KEY,
+            MemoryCategory::Textures,
+            super::vector::texture_bytes(parsed.vectors.as_ref(), runtime.width, runtime.height),
+        ),
+        (
+            super::vector::BUFFER_KEY,
+            MemoryCategory::Buffers,
+            super::vector::planned_bytes(parsed.vectors.as_ref(), runtime.width, runtime.height)
+                - super::vector::texture_bytes(
+                    parsed.vectors.as_ref(),
+                    runtime.width,
+                    runtime.height,
+                ),
+        ),
         (
             super::postfx::KEY,
             MemoryCategory::Textures,
@@ -370,7 +386,15 @@ fn prepare_scene(
         scatter.as_ref().is_some_and(|s| s.transparent()),
         &mut planned,
     )?;
+    let vectors = super::vector::prepare(
+        runtime,
+        parsed.vectors.clone(),
+        &mut planned,
+        runtime.width,
+        runtime.height,
+    )?;
     Ok(SceneResourcePlan {
+        vectors,
         postfx,
         context,
         memory: planned,
@@ -391,6 +415,7 @@ fn prepare_scene(
 
 fn commit_scene_plan(runtime: &mut Forge3DRuntime, plan: SceneResourcePlan) {
     let SceneResourcePlan {
+        vectors,
         postfx,
         context,
         memory,
@@ -423,6 +448,7 @@ fn commit_scene_plan(runtime: &mut Forge3DRuntime, plan: SceneResourcePlan) {
     runtime.scene = scene;
     runtime.environment = environment;
     runtime.postfx = postfx;
+    runtime.vectors = vectors;
     runtime.scatter = scatter;
     runtime.time_seconds = time_seconds;
     super::probes::commit(runtime, probes);

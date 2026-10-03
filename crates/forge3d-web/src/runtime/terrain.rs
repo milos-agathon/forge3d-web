@@ -903,6 +903,28 @@ pub(super) fn resize_runtime(runtime: &mut Forge3DRuntime, size: JsValue) -> Res
         .as_ref()
         .map_or(0, |e| e.snapshot.gpu_bytes(width, height));
     resized_memory.replace_all(&[
+        (
+            super::vector::KEY,
+            MemoryCategory::Textures,
+            super::vector::texture_bytes(
+                runtime.vectors.as_ref().map(|v| v.packet()),
+                width,
+                height,
+            ),
+        ),
+        (
+            super::vector::BUFFER_KEY,
+            MemoryCategory::Buffers,
+            super::vector::planned_bytes(
+                runtime.vectors.as_ref().map(|v| v.packet()),
+                width,
+                height,
+            ) - super::vector::texture_bytes(
+                runtime.vectors.as_ref().map(|v| v.packet()),
+                width,
+                height,
+            ),
+        ),
         (DEPTH_TEXTURE_KEY, MemoryCategory::Textures, depth_bytes),
         (
             super::postfx::KEY,
@@ -923,6 +945,8 @@ pub(super) fn resize_runtime(runtime: &mut Forge3DRuntime, size: JsValue) -> Res
             environment_bytes,
         ),
     ])?;
+    let resized_vectors =
+        super::vector::prepare_resize(runtime, &mut resized_memory, width, height)?;
     let resized_environment =
         super::environment::prepare_resize(runtime, width, height, &mut resized_memory)?;
     let resized_postfx = super::postfx::prepare_resize(runtime, width, height)?;
@@ -942,6 +966,7 @@ pub(super) fn resize_runtime(runtime: &mut Forge3DRuntime, size: JsValue) -> Res
     runtime.memory = resized_memory;
     runtime.environment = resized_environment;
     runtime.postfx = resized_postfx;
+    runtime.vectors = resized_vectors;
     runtime.depth_attachment = Some(DepthAttachment::new(&context, width, height));
     runtime
         .memory

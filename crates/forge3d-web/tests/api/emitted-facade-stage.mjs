@@ -34,6 +34,10 @@ try {
   assert.deepEqual(
     Object.keys(facadeA).sort(),
     [
+      "VectorLayers",
+      "VectorLayer",
+      "VectorPicker",
+      "pickVectorTerrain",
       "PostFxChain",
       "normalizePostFx",
       "createIdentityColorLut",

@@ -285,3 +285,5 @@ scene, session, viewer and module workers retain the typed graph. See the
 [HDR and post-FX guide](docs/postfx-hdr.md) and
 [example](examples/test-w11-postfx.html). Run `npm run test:w11` and
 `npm run test:package-consumer:w11` for native image and installed package gates.
+
+Vector layers support point shapes/atlases, AA caps/joins, polygon extrusion, terrain draping, capability-selected transparency, stable IDs, picking and named selections. See [vector layers](docs/vector-layers.md).

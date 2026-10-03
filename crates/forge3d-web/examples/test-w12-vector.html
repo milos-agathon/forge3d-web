@@ -1,0 +1,72 @@
+<!doctype html><html><head><meta charset="utf-8"><title>W12 vector and picking contracts</title></head><body>
+<canvas id="canvas" width="128" height="96"></canvas><pre id="status">Starting vector tests</pre>
+<script type="module">
+import {Forge3DRuntime,Forge3DScene,Forge3DSession,Forge3DOffscreenRenderer,Forge3DWorkerRenderer,VectorLayers,VectorLayer,VectorPicker,Camera} from "../src-ts/index.ts";
+import {setSessionRuntimeFactoryForTests} from "../src-ts/session.ts";
+import {simulateRuntimeDeviceLossForTests} from "../src-ts/runtime-internals.ts";
+const canvas=document.querySelector("canvas"),camera={position:[0,8,0],target:[0,0,0],up:[0,0,-1],fovYDegrees:50,near:.1,far:30};
+const runtime=await Forge3DRuntime.create(canvas,{diagnostics:true,devicePixelRatio:1,clearColor:[0,0,0,1]});runtime.setCamera(camera);
+const diff=(a,b)=>Math.max(...a.map((v,i)=>Math.abs(v-b[i])));
+function shapes(){const l=new VectorLayers();l.add({name:"features",features:[
+ {id:4294967295,kind:"point",position:[0,.2,0],style:{pointSize:24,color:[1,.2,0,1]}},
+ {id:12,kind:"line",positions:[[-2,.1,1],[-1,.1,1],[-1,.1,-1]],style:{lineWidth:7,cap:"round",join:"miter",color:[0,1,0,1]}},
+ {id:7,kind:"polygon",rings:[[[.6,.1,-1.5],[2,.1,-1.5],[2,.1,1.5],[.6,.1,1.5]],[[1,.1,-.5],[1,.1,.5],[1.6,.1,.5],[1.6,.1,-.5]]],style:{color:[0,.2,1,1],extrusion:.2}}
+ ]});return l;}
+window.__w12Render=async()=>{
+ const layers=shapes();runtime.setVectorLayers(layers);const gpu=await runtime.readRgba(),map=await runtime.readVectorPickMap(),report=runtime.getVectorReport();
+ const covered=map.ids.reduce((n,id)=>n+Number(id!==0),0),ids=[...new Set(map.ids)].filter(x=>x).sort((a,b)=>a-b);
+ let alignment=0;for(let i=0;i<map.ids.length;i++){if(map.ids[i]&&gpu[i*4]+gpu[i*4+1]+gpu[i*4+2]===0)alignment++;}
+ layers.setCulling("cpu");runtime.setVectorLayers(layers);const cpu=await runtime.readRgba(),cpuMap=await runtime.readVectorPickMap(),cpuReport=runtime.getVectorReport();
+ const picker=new VectorPicker(runtime,layers),point=await picker.point(64,48),lasso=await picker.lasso([[0,0],[128,0],[128,96],[0,96]]);
+ layers.setSelection("active",[4294967295],{color:[0,1,1,.8],outline:true,outlineWidth:2,glow:true,glowRadius:3});runtime.setVectorLayers(layers);const highlighted=await runtime.readRgba();
+ const h=layers.getLayer(1);const updated=h.features.map(f=>f.id===4294967295?{...f,position:[.3,.2,0]}:f);new VectorLayer(layers,1).update({features:updated});runtime.setVectorLayers(layers);const edited=await runtime.readVectorPickMap();
+ const controller=new AbortController();controller.abort();let cancel;try{await picker.point(64,48,{signal:controller.signal});}catch(e){cancel=e.code;}picker.dispose();
+ runtime.setVectorLayers(null);const after=runtime.getVectorReport();
+ return {covered,ids,alignment,delta:diff(gpu,cpu),idDelta:diff(map.ids,cpuMap.ids),report,cpuReport,point:point?.id,lasso:lasso.map(h=>h.id),highlightDelta:diff(cpu,highlighted),editedIds:[...new Set(edited.ids)],cancel,after};
+};
+window.__w12Oit=async()=>{
+ const l=new VectorLayers(),a={id:20,kind:"point",position:[0,.2,0],style:{pointSize:32,color:[1,0,0,.45]}},b={id:30,kind:"point",position:[0,.2,0],style:{pointSize:32,color:[0,0,1,.6]}};
+ const handle=l.add({name:"alpha",features:[a,b]});l.setOit("wboit");runtime.setVectorLayers(l);const weighted=await runtime.readRgba();handle.update({features:[b,a]});runtime.setVectorLayers(l);const reverse=await runtime.readRgba();
+ l.setOit("standard");runtime.setVectorLayers(l);const standard=await runtime.readRgba();handle.update({features:[a,b]});runtime.setVectorLayers(l);const standardReverse=await runtime.readRgba();
+ l.setOit("dual-source");runtime.setVectorLayers(l);const dual=await runtime.readRgba(),dualReport=runtime.getVectorReport();
+ const center=[...weighted.slice((48*128+64)*4,(48*128+64)*4+4)];runtime.setVectorLayers(null);
+ return {weightedDelta:diff(weighted,reverse),standardDelta:diff(standard,standardReverse),dualDelta:diff(dual,dualReport.effectiveOit==="wboit"?weighted:standardReverse),center,dualReport};
+};
+window.__w12Styles=async()=>{
+ const l=new VectorLayers(),rgba=new Uint8Array(4*2*4);for(let y=0;y<2;y++)for(let x=2;x<4;x++)rgba.set([255,255,255,255],(y*4+x)*4);
+ const features=["circle","square","diamond","triangle","texture","sphere"].map((shape,i)=>({id:100+i,kind:"point",position:[-2.5+i,.2,-1.7],style:{shape,atlasTile:1,pointSize:14,color:[1,1,1,1]}}));
+ features.push({id:201,kind:"point",position:[0,.2,2],style:{shape:"texture",atlasTile:0,pointSize:14}},{id:202,kind:"point",position:[1,.2,2],style:{pointSize:14,lodThreshold:15}},{id:203,kind:"point",position:[1000,.2,2],style:{pointSize:14}});
+ l.add({name:"atlas-shapes",atlas:{width:4,height:2,tileSize:2,rgba},features});
+ let id=300;for(const [row,cap] of ["butt","square","round"].entries())for(const [col,join] of ["miter","bevel","round"].entries()){const x=-2.5+col*2,y=-.5+row*.9;l.add({name:`${cap}-${join}`,features:[{id:id++,kind:"line",positions:[[x,.2,y],[x+.7,.2,y],[x+.7,.2,y+.5]]}],style:{cap,join,lineWidth:5,color:[0,1,0,1]}});}
+ runtime.setVectorLayers(l);const gpu=await runtime.readRgba(),map=await runtime.readVectorPickMap();l.setCulling("cpu");runtime.setVectorLayers(l);const cpu=await runtime.readRgba(),cpuMap=await runtime.readVectorPickMap();
+ const ids=[...new Set(map.ids)].filter(Boolean).sort((a,b)=>a-b);let aa=0;for(let i=0;i<map.ids.length;i++)if(map.ids[i]>=300&&gpu[i*4+1]>0&&gpu[i*4+1]<255)aa++;
+ runtime.setVectorLayers(null);return {ids,aa,delta:diff(gpu,cpu),idDelta:diff(map.ids,cpuMap.ids)};
+};
+window.__w12Drape=async()=>{
+ const terrain={width:17,height:17,heights:Float32Array.from({length:289},(_,i)=>Math.sin(i%17/16*Math.PI)*.5),domain:[0,1],spacing:[.4,.4]};
+ const scene=Forge3DScene.create();scene.addTerrain(terrain);const l=new VectorLayers();l.add({name:"drape",features:[{id:42,kind:"line",positions:[[-2,0,0],[0,0,0],[2,0,0]]}],style:{drape:true,drapeOffset:.02,lineWidth:5,color:[1,0,0,1]}});scene.setVectorLayers(l);runtime.setScene(scene.snapshot());
+ const map=await runtime.readVectorPickMap(),count=map.ids.reduce((n,id)=>n+Number(id===42),0);const heights=[];for(let i=0;i<map.ids.length;i++)if(map.ids[i]===42)heights.push(map.worldPositions[i*3+1]);
+ const plain=await runtime.readRgba();runtime.setPostFx([{kind:"bloom",threshold:.1,strength:.5},{kind:"tonemap",operator:"aces"}]);runtime.render();const hdr=await runtime.readPostFxIntermediate("color"),aov=await runtime.readVectorPickMap(),post=await runtime.readRgba();
+ runtime.setPostFx(null);const restored=await runtime.readRgba();runtime.setVectorLayers(null);scene.dispose();
+ return {count,minY:Math.min(...heights),maxY:Math.max(...heights),postDelta:diff(plain,post),restoreDelta:diff(plain,restored),aovCovered:aov.ids.reduce((n,id)=>n+Number(id===42),0),hdrFinite:hdr.data.every(Number.isFinite)};
+};
+window.__w12Lifecycle=async()=>{
+ const c=document.createElement("canvas");c.width=96;c.height=64;document.body.append(c);
+ let liveRuntime;setSessionRuntimeFactoryForTests(async(canvas,options)=>{liveRuntime=await Forge3DRuntime.create(canvas,{...options,diagnostics:true});return liveRuntime;});
+ const session=await Forge3DSession.create(c,{recovery:{deviceLoss:"once"}}),scene=Forge3DScene.create(),l=shapes();scene.setVectorLayers(l);session.setCamera(camera);session.setScene(scene);session.render();const before=await session.readVectorPickMap();
+ await simulateRuntimeDeviceLossForTests(liveRuntime);await session.whenReady();session.render();const after=await session.readVectorPickMap();const recoveryDelta=diff(before.ids,after.ids);
+ session.resize({width:64,height:48,devicePixelRatio:1});session.render();const resized=await session.readVectorPickMap();session.dispose();setSessionRuntimeFactoryForTests(undefined);scene.dispose();c.remove();
+ runtime.setVectorLayers(null);const baseline=runtime.getMemoryReport().currentBytes;let stable=true;for(let i=0;i<3;i++){runtime.setVectorLayers(shapes());await runtime.readVectorPickMap();runtime.setVectorLayers(null);stable&&=runtime.getMemoryReport().currentBytes===baseline;}
+ const budgetCanvas=document.createElement("canvas");budgetCanvas.width=16;budgetCanvas.height=16;const small=await Forge3DRuntime.create(budgetCanvas,{diagnostics:true,memoryBudgetBytes:4*1024*1024});let budget;try{const many=new VectorLayers();many.add({name:"huge",features:Array.from({length:5000},(_,i)=>({id:i+1,kind:"point",position:[0,0,0]}))});small.setVectorLayers(many);}catch(e){budget=e.code;}const rollback=small.getVectorReport().featureCount;small.dispose();
+ return {recoveryDelta,resized:[resized.width,resized.height],stable,budget,rollback};
+};
+window.__w12Runtime=runtime;window.__w12Ready=true;document.querySelector("pre").textContent="Vector runtime ready";
+window.__w12Wrappers=async()=>{
+ const scene=Forge3DScene.create();scene.setVectorLayers(shapes());
+ const offscreen=await Forge3DOffscreenRenderer.create({width:128,height:96});offscreen.setScene(scene);offscreen.render();const offscreenReport=offscreen.getVectorReport();offscreen.dispose();
+ const c=document.createElement("canvas");c.width=128;c.height=96;document.body.append(c);
+ const worker=new Worker(new URL("./w12-worker.js",import.meta.url),{type:"module"});const renderer=await Forge3DWorkerRenderer.create(c,{worker,session:{devicePixelRatio:1}});
+ try{await renderer.setScene(scene);await renderer.setCamera(camera);await renderer.render();const map=await renderer.readVectorPickMap(),report=await renderer.getVectorReport();return {offscreenReport,ids:[...new Set(map.ids)].filter(Boolean).sort((a,b)=>a-b),report};}
+ finally{renderer.dispose();worker.terminate();scene.dispose();c.remove();}
+};
+</script></body></html>

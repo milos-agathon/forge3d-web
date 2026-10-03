@@ -19,3 +19,5 @@ crates/forge3d-web/tests/golden/w11/native/*.rs text eol=lf
 crates/forge3d-web/tests/golden/w10/source/**/*.wgsl text eol=lf
 crates/forge3d-web/tests/golden/w10/source/**/*.rs text eol=lf
 crates/forge3d-web/tests/golden/w10/source/**/*.png binary
+crates/forge3d-web/tests/golden/w12/native/** -text
+crates/forge3d-web/assets/w12/*.json text eol=lf

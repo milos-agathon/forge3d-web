@@ -94,7 +94,7 @@ pub(super) async fn create_runtime(
             if options.timestamp_mode.timestamp_queries_requested() {
                 features |= wgpu::Features::TIMESTAMP_QUERY;
             }
-            features
+            features | wgpu::Features::DUAL_SOURCE_BLENDING
         },
         required_limits: wgpu::Limits::downlevel_webgl2_defaults(),
         label: Some("forge3d-web-device".to_string()),
@@ -207,6 +207,7 @@ pub(super) async fn create_runtime(
         scene: None,
         environment: None,
         postfx: None,
+        vectors: None,
         scatter: None,
         time_seconds: 0.0,
         probe_count: 0,

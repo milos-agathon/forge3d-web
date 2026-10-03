@@ -423,7 +423,7 @@ pub(super) fn encode_scene_render_pass(
                 view: &depth.view,
                 depth_ops: Some(wgpu::Operations {
                     load: wgpu::LoadOp::Clear(1.0),
-                    store: if runtime.environment.is_some() {
+                    store: if runtime.environment.is_some() || runtime.vectors.is_some() {
                         wgpu::StoreOp::Store
                     } else {
                         wgpu::StoreOp::Discard
@@ -495,6 +495,13 @@ pub(super) fn encode_scene_render_pass(
         }
     }
 
+    if let (Some(depth), Some(surface)) = (&runtime.depth_attachment, &runtime.surface_state) {
+        let format = runtime
+            .environment
+            .as_ref()
+            .map_or(surface.config.format, |e| e.world.texture.format());
+        super::vector::encode(runtime, encoder, view, format, &depth.view);
+    }
     if let (Some(e), Some(depth), Some(surface)) = (
         &runtime.environment,
         &runtime.depth_attachment,

@@ -52,7 +52,6 @@ pub const DEFAULT_WASM_INACTIVE_MODULE_ROOTS: &[&str] = &[
     "tiles3d",
     "util",
     "uv",
-    "vector",
     "viewer",
 ];
 

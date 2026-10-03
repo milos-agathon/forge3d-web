@@ -1,0 +1,172 @@
+//! W12 reference projection/extrusion and conservative clip-space culling.
+use glam::{Mat4, Vec2, Vec3, Vec4};
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+#[cfg_attr(feature = "gpu", derive(bytemuck::Pod, bytemuck::Zeroable))]
+pub struct VectorVertex {
+    pub position: [f32; 4],
+    pub previous: [f32; 4],
+    pub next: [f32; 4],
+    pub offset: [f32; 4],
+    pub color: [f32; 4],
+    pub meta: [u32; 4],
+    pub atlas: [f32; 4],
+    pub options: [f32; 4],
+}
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+#[cfg_attr(feature = "gpu", derive(bytemuck::Pod, bytemuck::Zeroable))]
+pub struct ProjectedVertex {
+    pub clip: [f32; 4],
+    pub color: [f32; 4],
+    pub uv: [f32; 4],
+    pub world: [f32; 4],
+    pub meta: [u32; 4],
+}
+fn direction(a: Vec4, b: Vec4, viewport: Vec2) -> Vec2 {
+    let d = (b.truncate().truncate() / b.w.max(1e-6) - a.truncate().truncate() / a.w.max(1e-6))
+        * viewport;
+    if d.length_squared() < 1e-10 {
+        Vec2::X
+    } else {
+        d.normalize()
+    }
+}
+pub fn project(vertex: &VectorVertex, vp: Mat4, viewport: Vec2) -> ProjectedVertex {
+    let world = Vec3::new(
+        vertex.position[0],
+        vertex.position[1] + vertex.position[3],
+        vertex.position[2],
+    );
+    let mut clip = vp * world.extend(1.);
+    let a = vp * Vec3::from_slice(&vertex.previous[..3]).extend(1.);
+    let b = vp * Vec3::from_slice(&vertex.next[..3]).extend(1.);
+    let offset = Vec2::new(vertex.offset[0], vertex.offset[1]);
+    let expansion = vertex.previous[3] as u32;
+    let screen_offset = if expansion == 1 {
+        offset
+    } else if expansion >= 2 {
+        let d = direction(a, b, viewport);
+        let normal = Vec2::new(-d.y, d.x);
+        if expansion == 3 {
+            let d0 = direction(a, clip, viewport);
+            let d1 = direction(clip, b, viewport);
+            let n0 = Vec2::new(-d0.y, d0.x);
+            let n1 = Vec2::new(-d1.y, d1.x);
+            let sum = n0 + n1;
+            let miter = if sum.length_squared() > 1e-10 {
+                sum.normalize()
+            } else {
+                n1
+            };
+            let factor = 1. / miter.dot(n1).abs().max(1e-4);
+            if factor <= vertex.next[3] {
+                miter * offset.x * factor
+            } else {
+                normal * offset.x
+            }
+        } else {
+            normal * offset.x + d * offset.y
+        }
+    } else {
+        Vec2::ZERO
+    };
+    clip.x += screen_offset.x * 2. / viewport.x * clip.w;
+    clip.y += screen_offset.y * 2. / viewport.y * clip.w;
+    clip.z -= vertex.options[0] * 1e-5 * clip.w;
+    let uv = Vec2::new(vertex.offset[2], vertex.offset[3]);
+    let atlas_origin = Vec2::new(vertex.atlas[0], vertex.atlas[1]);
+    let atlas_size = Vec2::new(vertex.atlas[2], vertex.atlas[3]);
+    let half_texel = Vec2::new(vertex.options[2], vertex.options[3]);
+    let atlas = (atlas_origin + (uv * Vec2::new(0.5, -0.5) + Vec2::splat(0.5)) * atlas_size).clamp(
+        atlas_origin + half_texel,
+        atlas_origin + atlas_size - half_texel,
+    );
+    let mut color = vertex.color;
+    if expansion == 1
+        && offset.abs().max_element() * 2. / uv.abs().max_element().max(1.) < vertex.options[1]
+    {
+        color[3] = 0.;
+    }
+    ProjectedVertex {
+        clip: clip.to_array(),
+        color,
+        uv: [uv.x, uv.y, atlas.x, atlas.y],
+        world: world.extend(1.).to_array(),
+        meta: vertex.meta,
+    }
+}
+pub fn triangle_visible(vertices: &[ProjectedVertex]) -> bool {
+    !(0..7).any(|plane| {
+        vertices.iter().all(|v| {
+            let [x, y, z, w] = v.clip;
+            match plane {
+                0 => x < -w,
+                1 => x > w,
+                2 => y < -w,
+                3 => y > w,
+                4 => z < 0.,
+                5 => z > w,
+                _ => w <= 0.,
+            }
+        })
+    }) && vertices.iter().any(|v| v.color[3] > 0.)
+}
+pub fn project_and_cull(
+    vertices: &[VectorVertex],
+    vp: Mat4,
+    viewport: Vec2,
+) -> Vec<ProjectedVertex> {
+    let mut output = Vec::with_capacity(vertices.len());
+    for triangle in vertices.chunks_exact(3) {
+        let projected: Vec<_> = triangle.iter().map(|v| project(v, vp, viewport)).collect();
+        if triangle_visible(&projected) {
+            output.extend(projected);
+        }
+    }
+    output
+}
+/// Native McGuire/Mara weighted transparency contract.
+pub fn oit_weight(depth: f32, alpha: f32) -> f32 {
+    alpha * (0.03 / (1e-5 + (depth / 200.).powi(4))).clamp(1e-2, 3e3)
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn gpu_storage_layouts() {
+        assert_eq!(std::mem::size_of::<VectorVertex>(), 128);
+        assert_eq!(std::mem::offset_of!(VectorVertex, meta), 80);
+        assert_eq!(std::mem::size_of::<ProjectedVertex>(), 80);
+        assert_eq!(std::mem::offset_of!(ProjectedVertex, meta), 64);
+    }
+    #[test]
+    fn extrusion_and_billboard_have_pixel_units() {
+        let v = VectorVertex {
+            position: [0., 0., 0.5, 0.1],
+            previous: [0., 0., 0., 1.],
+            offset: [10., 20., 1., 1.],
+            color: [1.; 4],
+            ..Default::default()
+        };
+        let p = project(&v, Mat4::IDENTITY, Vec2::new(200., 400.));
+        assert!((p.clip[0] - 0.1).abs() < 1e-6);
+        assert!((p.clip[1] - 0.2).abs() < 1e-6);
+        assert_eq!(p.world[1], 0.1);
+    }
+    #[test]
+    fn conservative_culling_keeps_intersecting_triangles() {
+        let p = |x| ProjectedVertex {
+            clip: [x, 0., 0.5, 1.],
+            color: [1.; 4],
+            ..Default::default()
+        };
+        assert!(triangle_visible(&[p(-2.), p(0.), p(2.)]));
+        assert!(!triangle_visible(&[p(2.), p(3.), p(4.)]));
+    }
+    #[test]
+    fn native_weight_is_alpha_scaled() {
+        assert_eq!(oit_weight(0., 0.5), 1500.);
+        assert!((oit_weight(200., 0.5) - 0.01499985).abs() < 1e-6);
+    }
+}

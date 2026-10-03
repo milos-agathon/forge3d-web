@@ -8,6 +8,7 @@ import type {
 } from "./index.js";
 import { writeByteSink } from "./browser-io.js";
 import { Forge3DSession } from "./session.js";
+import type { VectorReport, VectorPickMap } from "./vector-types.js";
 
 interface CanvasLike {
   width: number;
@@ -65,6 +66,16 @@ export class Forge3DOffscreenRenderer {
   render(): boolean {
     this.#assertLive();
     return this.#session.render();
+  }
+
+  getVectorReport(): VectorReport {
+    this.#assertLive();
+    return this.#session.getVectorReport();
+  }
+
+  readVectorPickMap(): Promise<VectorPickMap> {
+    this.#assertLive();
+    return this.#session.readVectorPickMap();
   }
 
   async capture(kind: OffscreenOutput["kind"]): Promise<OffscreenOutput> {

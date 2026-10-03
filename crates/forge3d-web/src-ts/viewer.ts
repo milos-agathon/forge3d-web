@@ -1,3 +1,5 @@
+import { VectorLayers } from "./vector-layers.js";
+import type { VectorSnapshot, VectorReport, VectorPickMap } from "./vector-types.js";
 import { Forge3DEnvironment, normalizeEnvironment } from "./environment.js";
 import type { EnvironmentInput, EnvironmentSnapshot, EnvironmentMemoryReport } from "./environment.js";
 import { PostFxChain, resolvePostFx } from "./postfx.js";
@@ -72,6 +74,9 @@ interface ViewerRuntime {
   setTerrain(terrain: TerrainHeightmapInput): void;
   setEnvironment?(snapshot: EnvironmentSnapshot|null):void;
   getEnvironmentMemoryReport?():EnvironmentMemoryReport;
+  setVectorLayers?(input:VectorLayers|VectorSnapshot|null,terrain?:TerrainHeightmapInput):void;
+  getVectorReport?():VectorReport;
+  readVectorPickMap?():Promise<VectorPickMap>;
   setPostFx?(snapshot:PostFxSnapshot|null):void;
   getPostFxReport?():PostFxReport;
   resetPostFxHistory?():void;
@@ -187,6 +192,7 @@ export class Forge3DViewer {
   #activeRuntimes = 0;
   #recoveryAttempts = 0;
   #environmentReplay:EnvironmentSnapshot|null|undefined;
+  #vectorsReplay:{snapshot:VectorSnapshot|null;terrain?:TerrainHeightmapInput}|undefined;
   #postFxReplay:PostFxSnapshot|null|undefined;
   #scatterReplay: ScatterBatchSnapshot[] | undefined;
   #probeReplay: TerrainProbeSnapshot | null | undefined;
@@ -611,6 +617,13 @@ export class Forge3DViewer {
       return runtime.getEnvironmentMemoryReport();
     });
   }
+  setVectorLayers(input:VectorLayers|VectorSnapshot|null,terrain?:TerrainHeightmapInput):void {
+    const runtime=this.#operationalRuntime();const snapshot=input instanceof VectorLayers?input.snapshot():input;
+    this.#callRuntime(()=>{if(!runtime.setVectorLayers)throw new Forge3DError("UNSUPPORTED_FEATURE","Vector layers unavailable");runtime.setVectorLayers(snapshot,terrain);});
+    this.#vectorsReplay={snapshot:structuredClone(snapshot),...(terrain?{terrain:structuredClone(terrain)}:{})};this.#scheduler?.requestRender();
+  }
+  getVectorReport():VectorReport {const runtime=this.#operationalRuntime();if(!runtime.getVectorReport)throw new Forge3DError("UNSUPPORTED_FEATURE","Vector report unavailable");return runtime.getVectorReport();}
+  async readVectorPickMap():Promise<VectorPickMap> {const runtime=this.#operationalRuntime();if(!runtime.readVectorPickMap)throw new Forge3DError("UNSUPPORTED_FEATURE","Vector picking unavailable");return runtime.readVectorPickMap();}
   setPostFx(input:PostFxChain|PostFxChainInput|PostFxSnapshot|readonly PostFxInput[]|null):void {
     const runtime=this.#operationalRuntime(), snapshot=resolvePostFx(input);
     this.#callRuntime(()=>{if(!runtime.setPostFx)throw new Forge3DError("UNSUPPORTED_FEATURE","Runtime does not support post-FX");runtime.setPostFx(snapshot);});
@@ -1137,6 +1150,7 @@ export class Forge3DViewer {
         return;
       }
       if(this.#environmentReplay!==undefined){if(!replacement.setEnvironment)throw new Forge3DError("UNSUPPORTED_FEATURE","Recovery runtime does not support environment");replacement.setEnvironment(structuredClone(this.#environmentReplay));}
+      if(this.#vectorsReplay!==undefined){if(!replacement.setVectorLayers)throw new Forge3DError("UNSUPPORTED_FEATURE","Recovery vectors unavailable");replacement.setVectorLayers(structuredClone(this.#vectorsReplay.snapshot),this.#vectorsReplay.terrain);}
       if(this.#postFxReplay!==undefined){if(!replacement.setPostFx)throw new Forge3DError("UNSUPPORTED_FEATURE","Recovery runtime does not support post-FX");replacement.setPostFx(structuredClone(this.#postFxReplay));}
       if (this.#scatterReplay !== undefined) {
         if (!replacement.setScatterBatches || !replacement.setTimeSeconds) throw new Forge3DError("UNSUPPORTED_FEATURE", "Recovery runtime does not support terrain scatter");

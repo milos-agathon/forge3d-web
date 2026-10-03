@@ -1,3 +1,6 @@
+import { VectorLayers } from "./vector-layers.js";
+import { compileVectorPacket } from "./vector-geometry.js";
+import type { VectorSnapshot } from "./vector-types.js";
 import { Forge3DEnvironment } from "./environment.js";
 import { PostFxChain, normalizePostFx, resolvePostFx } from "./postfx.js";
 import type { PostFxInput, PostFxChainInput, PostFxSnapshot } from "./postfx.js";
@@ -92,6 +95,9 @@ export class Forge3DScene {
   #shadowConfig = new ShadowConfig();
   #shadowCsm = new CascadedShadowConfig();
   #shadowsConfigured = false;
+  #vectors: VectorLayers | undefined;
+  #vectorRevision = -1;
+  #vectorsConfigured = false;
   #nextId = 0;
   #revision = 0;
   #disposed = false;
@@ -144,6 +150,7 @@ export class Forge3DScene {
   }
 
   get revision(): number {
+    if(this.#vectors && this.#vectorRevision!==this.#vectors.revision){this.#vectorRevision=this.#vectors.revision;this.#revision++;}
     return this.#revision;
   }
 
@@ -173,6 +180,8 @@ export class Forge3DScene {
           : new Forge3DEnvironment(input);
     this.#revision++;
   }
+  setVectorLayers(input:VectorLayers|VectorSnapshot|null):void {this.#assertOperational();this.#vectorsConfigured=true;this.#vectors=input===null?undefined:input instanceof VectorLayers?input:VectorLayers.from(input);this.#vectorRevision=-1;this.#revision++;}
+  getVectorLayers():VectorSnapshot|null {this.#assertOperational();return this.#vectors?.snapshot()??null;}
   setPostFx(input: PostFxChain | PostFxChainInput | PostFxSnapshot | readonly PostFxInput[] | null): void {
     this.#assertOperational();
     this.#postFx = resolvePostFx(input);
@@ -448,7 +457,8 @@ export class Forge3DScene {
       ...(this.#environment!==undefined?{environment,timeSeconds:this.#timeSeconds}:{}),
       ...(this.#postFx !== undefined ? {postFx: structuredClone(this.#postFx)} : {}),
       ...(environmentLighting?{environmentLighting}:{}),
-      revision: this.#revision,
+      revision: this.revision,
+      ...(this.#vectorsConfigured?{vectors:this.#vectors?.snapshot()??null}:{}),
       nodes,
       passes: cloneValue(this.#passes) as ScenePassInput[],
       lighting,
@@ -488,12 +498,15 @@ export class Forge3DScene {
     copy.#probes = this.#probes === undefined ? undefined : structuredClone(this.#probes);
     copy.#timeSeconds = this.#timeSeconds;
     copy.#environment = this.#environment?.copy() ?? this.#environment;
+    copy.#vectors = this.#vectors?.copy();
+    copy.#vectorsConfigured = this.#vectorsConfigured;
     copy.#postFx = structuredClone(this.#postFx);
     return copy;
   }
 
   estimatedGpuBytes(): number {
-    let total =
+    let vectorBytes=0;if(this.#vectors){const terrain=[...this.#nodes.values()].find(n=>n.node.kind==="terrain")?.node;const packet=compileVectorPacket(this.#vectors,terrain?.kind==="terrain"?terrain.terrain:undefined);vectorBytes=packet.vertices.length*288+packet.atlas.rgba.length+packet.highlights.length*48+176;}
+    let total =vectorBytes+
       this.#lights.estimatedGpuBytes() + this.#materials.estimatedGpuBytes();
     for (const node of this.#nodes.values()) {
       total = checkedAdd(total, nodeByteEstimate(node.node));
@@ -700,6 +713,7 @@ export class Forge3DScene {
   }
 
   dispose(): void {
+    this.#vectors=undefined;
     this.#scatter = undefined; this.#probes = undefined;
     this.#disposed = true;
   }

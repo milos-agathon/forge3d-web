@@ -802,6 +802,7 @@ pub(super) fn encode_capture_view(
             scatter.draw(&mut pass, runtime, Some(*which));
         }
     }
+    super::vector::encode_capture(runtime, encoder, targets, surface && session.surface, None);
     if let (Some(e), Some(source)) = (&runtime.environment, &session.environment_source) {
         encoder.copy_texture_to_texture(
             targets.color.texture.as_image_copy(),
