@@ -10,6 +10,17 @@ export function adaptNativeDofSource(code) {
     .replace("final_color.rgb = mix(final_color.rgb, vec3<f32>(1.0, 1.0, 0.0), coc_overlay * 0.3);", "final_color = vec4<f32>(mix(final_color.rgb, vec3<f32>(1.0, 1.0, 0.0), coc_overlay * 0.3), final_color.a);")
     .replace(/textureSample\((\w+), (\w+), (\w+)\)/g, "textureSampleLevel($1, $2, $3, 0.0)");
 }
+export function nativeSsrInputs(packedNormals, worldNormals, projection, matrices) {
+  const normal = new Float32Array(packedNormals), camera = new Float32Array(matrices);
+  // The pinned fallback shader multiplies this channel directly by the mip
+  // count. Web IBL uses perceptual roughness squared for the same source LOD.
+  for (let i = 3; i < normal.length; i += 4) normal[i] = worldNormals[i] ** 2;
+  // Despite the field's historical name, fallback_env divides NDC by these
+  // entries as focal lengths. Supply projection scales to reconstruct the
+  // same ray; the other native effects retain the true inverse projection.
+  camera[48] = projection[0]; camera[53] = projection[5];
+  return {normal, camera};
+}
 function half(x) {
   const f = new Float32Array([x]), bits = new Uint32Array(f.buffer)[0];
   const sign = (bits >>> 16) & 0x8000, exp = ((bits >>> 23) & 255) - 112, mantissa = bits & 0x7fffff;
@@ -39,7 +50,7 @@ export async function nativeComparisons(api, r, camera) {
   const adapter = await navigator.gpu.requestAdapter(), device = await adapter.requestDevice();
   const width = r.width, height = r.height, resources = [], errors = [];
   device.addEventListener("uncapturederror", e => errors.push(e.error.message));
-  const sampler = device.createSampler({magFilter: "linear", minFilter: "linear", addressModeU: "clamp-to-edge", addressModeV: "clamp-to-edge"});
+  const sampler = device.createSampler({magFilter: "linear", minFilter: "linear", mipmapFilter: "linear", addressModeU: "clamp-to-edge", addressModeV: "clamp-to-edge"});
   const buffer = data => { const b = device.createBuffer({size: data.byteLength, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST}); device.queue.writeBuffer(b, 0, data); resources.push(b); return b; };
   function texture(data, format = "rgba16float") {
     const t = device.createTexture({size: [width, height], format, usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.COPY_SRC | GPUTextureUsage.COPY_DST}); resources.push(t);
@@ -140,6 +151,8 @@ export async function nativeComparisons(api, r, camera) {
       return t.createView({dimension:"cube"});
     }
     const diffuse=cube(prepared.irradiance,prepared.irradianceSize),specular=cube(prepared.specular,prepared.specularSize,prepared.specularMipCount);
+    const ssrInputs=nativeSsrInputs(packed,normal.data,projection,matrices);
+    const ssrNormal=texture(ssrInputs.normal,"rgba32float"),ssrCamera=buffer(ssrInputs.camera);
     const hit=texture(new Float32Array(width*height*4)),empty=texture(new Float32Array(width*height*4));
     const rgbOnly = data => data.filter((_,i)=>i%4!==3);
     for(const kind of ["ssgi","ssr"]){
@@ -152,7 +165,7 @@ export async function nativeComparisons(api, r, camera) {
       }else{
         const p=new ArrayBuffer(32),f=new Float32Array(p),u=new Uint32Array(p);u[0]=4;f[1]=.001;f[2]=.001;f[3]=1;f[4]=1/width;f[5]=1/height;
         const counters=device.createBuffer({size:32,usage:GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_DST});resources.push(counters);
-        output=await dispatch(await source("src/shaders/ssr/fallback_env.wgsl"),"cs_fallback",[[0,empty],[1,hit],[2,nativeDepth],[3,nativeNormal],[4,specular],[5,sampler],[6,"output"],[7,buffer(new Uint8Array(p))],[8,cam],[9,counters]]);
+        output=await dispatch(await source("src/shaders/ssr/fallback_env.wgsl"),"cs_fallback",[[0,empty],[1,hit],[2,nativeDepth],[3,ssrNormal],[4,specular],[5,sampler],[6,"output"],[7,buffer(new Uint8Array(p))],[8,ssrCamera],[9,counters]]);
       }
       const expected=rgbOnly(await read(output)),actual=rgbOnly((await r.readPostFxIntermediate(kind+":trace")).data);
       for(let i=0;i<width*height;i++)if(depth.data[i]>=.999){expected.fill(0,i*3,i*3+3);actual.fill(0,i*3,i*3+3);}

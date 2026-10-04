@@ -118,3 +118,11 @@ WebGPU device and historical sources, with documented format/validation
 adaptations. High-quality DoF is the lowest observed SSIM (0.9920); TAA and
 denoise exceed 0.9999. Implementation acceptance does not replace the separately
 managed physical-browser release gates.
+
+The SSR reference adapter supplies projection focal scales to the historical
+`inv_proj_matrix` entries that its fallback shader divides by. It also maps the
+web G-buffer's perceptual roughness to the native shader's linear mip fraction
+by squaring it, and uses linear mip filtering on both devices. These adaptations
+make the reflection rays and fractional source LOD agree; leaving normal alpha
+at zero compared mip zero against the renderer's roughness-dependent sample.
+The shader sources, SSIM threshold and failing negative controls remain pinned.
