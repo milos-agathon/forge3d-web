@@ -22,6 +22,15 @@ the same correctness checks. Its evidence records the mode and browser profile.
 These modes qualify timing evidence for the selected host; the historical local
 measurements below do not establish performance on hosted macOS adapters.
 
+GPU projection uses an all-ones `u32` uniform mask between binary32 matrix
+products, sums and depth-bias operations. The mask preserves every bit while
+retaining integer representation boundaries during shader compilation; the CPU
+uses the same scalar operation order. The absolute `2^-19` clip storage grid and
+strict byte comparisons remain unchanged. A fused-arithmetic negative control
+crosses that storage boundary, and a large-coordinate regression preserves the
+0.125 residual after subtracting a 1,048,576 translation. Shader layout tests
+check the new integer field at byte 120 of the existing 128-byte uniform.
+
 ## Review corrections after 55cfe2c
 
 Dual-source vector resolve retains the native medium accumulation controls

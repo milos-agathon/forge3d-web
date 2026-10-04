@@ -37,7 +37,9 @@ struct Params {
     viewport: [f32; 4],
     eye: [f32; 4],
     forward: [f32; 4],
-    camera: [f32; 4],
+    camera: [f32; 2],
+    projection_round_mask: u32,
+    padding: u32,
 }
 #[repr(C)]
 #[derive(Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]

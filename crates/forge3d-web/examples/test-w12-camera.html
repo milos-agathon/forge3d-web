@@ -167,6 +167,19 @@ function projectedFeatures(bytes) {
     }
     return [...features.values()];
 }
+function projectionDifferences(projection) {
+    const gpu = new DataView(projection.gpu.buffer, projection.gpu.byteOffset, projection.gpu.byteLength);
+    const cpu = new DataView(projection.cpu.buffer, projection.cpu.byteOffset, projection.cpu.byteLength);
+    const differences = [];
+    for (let offset = 0; offset < Math.min(gpu.byteLength, cpu.byteLength); offset += 4) {
+        const gpuBits = gpu.getUint32(offset, true), cpuBits = cpu.getUint32(offset, true);
+        if (gpuBits !== cpuBits && differences.length < 16) differences.push({
+            vertex: Math.floor(offset / 80), component: (offset % 80) / 4,
+            gpu: gpu.getFloat32(offset, true), cpu: cpu.getFloat32(offset, true), gpuBits, cpuBits,
+        });
+    }
+    return differences;
+}
 async function depthRuntime(distance) {
     const canvas = document.createElement("canvas");
     canvas.width = viewport.width; canvas.height = viewport.height;
@@ -274,6 +287,7 @@ window.__w12DepthOcclusion = async () => {
             cpuCovered: cpuMap.ids.reduce((n, id) => n + Number(id !== 0), 0),
             colorDelta: maxDelta(gpu, cpu), idDelta: maxDelta(gpuMap.ids, cpuMap.ids),
             byteIdentical: projection.byteIdentical, vertexCount: projection.vertexCount,
+            projectionDifferences: projectionDifferences(projection),
             gpuReport, cpuReport: runtime.getVectorReport() });
     } finally { runtime.dispose(); layers.dispose(); }
     return rows;

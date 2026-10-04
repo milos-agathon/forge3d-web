@@ -21,7 +21,12 @@ impl Resources {
             ],
             eye: camera.camera_position,
             forward: camera.camera_forward,
-            camera: [runtime.camera.near, runtime.camera.far, 0., 0.],
+            camera: [runtime.camera.near, runtime.camera.far],
+            // A dynamic all-ones integer mask preserves every binary32 bit,
+            // while preventing shader compilation from folding the rounding
+            // barriers into fused matrix/depth-bias expressions.
+            projection_round_mask: u32::MAX,
+            padding: 0,
         };
         c.queue
             .write_buffer(&self.uniform, 0, bytemuck::bytes_of(&params));
@@ -124,11 +129,7 @@ impl Resources {
     ) {
         let c = runtime.context.as_ref().expect("live context");
         let mut mode_bytes = bytemuck::cast_slice(&[
-            if self.mode == "wboit" {
-                1
-            } else {
-                0
-            },
+            if self.mode == "wboit" { 1 } else { 0 },
             self.highlight_count,
             u32::from(background.is_some()),
             self.highlight_radius,

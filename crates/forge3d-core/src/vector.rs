@@ -32,20 +32,31 @@ fn direction(a: Vec4, b: Vec4, viewport: Vec2) -> Vec2 {
         d.normalize()
     }
 }
+// Keep the scalar binary32 operation order used by the shader's dynamic
+// representation barriers. In particular, preserve residuals after large translations;
+// rounding matrix products onto a coarser grid would lose those residuals.
+fn projection_transform(vp: Mat4, point: Vec4) -> Vec4 {
+    let columns = vp.to_cols_array_2d();
+    let point = point.to_array();
+    Vec4::from_array(std::array::from_fn(|row| {
+        let products: [f32; 4] = std::array::from_fn(|column| columns[column][row] * point[column]);
+        ((products[0] + products[1]) + products[2]) + products[3]
+    }))
+}
 pub fn project(vertex: &VectorVertex, vp: Mat4, viewport: Vec2) -> ProjectedVertex {
     let world = Vec3::new(
         vertex.position[0],
         vertex.position[1] + vertex.position[3],
         vertex.position[2],
     );
-    let mut clip = vp * world.extend(1.);
-    let a = vp * Vec3::from_slice(&vertex.previous[..3]).extend(1.);
-    let b = vp * Vec3::from_slice(&vertex.next[..3]).extend(1.);
+    let mut clip = projection_transform(vp, world.extend(1.));
     let offset = Vec2::new(vertex.offset[0], vertex.offset[1]);
     let expansion = vertex.previous[3] as u32;
     let screen_offset = if expansion == 1 {
         offset
     } else if expansion >= 2 {
+        let a = projection_transform(vp, Vec3::from_slice(&vertex.previous[..3]).extend(1.));
+        let b = projection_transform(vp, Vec3::from_slice(&vertex.next[..3]).extend(1.));
         let d = direction(a, b, viewport);
         let normal = Vec2::new(-d.y, d.x);
         if expansion == 3 {
@@ -73,9 +84,9 @@ pub fn project(vertex: &VectorVertex, vp: Mat4, viewport: Vec2) -> ProjectedVert
     };
     clip.x += screen_offset.x * 2. / viewport.x * clip.w;
     clip.y += screen_offset.y * 2. / viewport.y * clip.w;
-    clip.z -= vertex.options[0] * 1e-5 * clip.w;
+    clip.z -= (vertex.options[0] * 1e-5) * clip.w;
     let biased_clip = clip;
-    // Canonical clip storage avoids backend-specific multiply reassociation.
+    // Canonical clip storage shares the shader's retained subpixel precision.
     // 19 fractional bits are shared with WGSL, well below a raster subpixel.
     clip = Vec4::from_array(
         clip.to_array()
@@ -215,6 +226,38 @@ mod tests {
                 }
             }
         }
+    }
+    #[test]
+    fn projection_preserves_large_coordinate_cancellation() {
+        let vp = Mat4::from_translation(Vec3::new(-1048576., 0., 0.));
+        let vertex = VectorVertex {
+            position: [1048576.125, 0., 0.5, 0.],
+            color: [1.; 4],
+            ..Default::default()
+        };
+        let projected = project(&vertex, vp, Vec2::new(128., 96.));
+        assert_eq!(projected.clip[0], 0.125);
+        assert_eq!(projected.clip[3], 1.);
+    }
+    #[test]
+    fn fused_matrix_control_crosses_the_directed_depth_storage_boundary() {
+        let vp = Mat4::perspective_rh(50_f32.to_radians(), 4. / 3., 0.1, 30.)
+            * Mat4::look_at_rh(Vec3::new(0., 8., 0.), Vec3::ZERO, -Vec3::Z);
+        let height = 0.6692236065864563_f32;
+        let vertex = VectorVertex {
+            position: [0., height, 0., 0.],
+            color: [1.; 4],
+            options: [0.01, 0., 0., 0.],
+            ..Default::default()
+        };
+        let split = projection_transform(vp, Vec4::new(0., height, 0., 1.));
+        let fused_z = vp.y_axis.z.mul_add(height, vp.w_axis.z);
+        assert_eq!(split.z.to_bits().abs_diff(fused_z.to_bits()), 1);
+        let bias = (vertex.options[0] * 1e-5) * split.w;
+        let fused_storage = ((fused_z - bias) * 524288.).floor() / 524288.;
+        let projected = project(&vertex, vp, Vec2::new(128., 96.));
+        assert_ne!(projected.clip[2].to_bits(), fused_storage.to_bits());
+        assert_eq!(projected.clip[2] - fused_storage, 1. / 524288.);
     }
     #[test]
     fn native_weight_is_alpha_scaled() {

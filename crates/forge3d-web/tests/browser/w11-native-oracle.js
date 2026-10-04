@@ -3,6 +3,13 @@
 const root = "/tests/golden/w11/native/";
 const source = name => fetch(root + name.replaceAll("/", "__")).then(r => { if (!r.ok) throw Error(name); return r.text(); });
 const encode = x => x <= .0031308 ? x * 12.92 : 1.055 * Math.max(x, 0) ** (1 / 2.4) - .055;
+export function adaptNativeDofSource(code) {
+  // Preserve the historical RGB debug overlay and alpha while avoiding a
+  // multi-component swizzle assignment, which Firefox's Naga parser rejects.
+  return code
+    .replace("final_color.rgb = mix(final_color.rgb, vec3<f32>(1.0, 1.0, 0.0), coc_overlay * 0.3);", "final_color = vec4<f32>(mix(final_color.rgb, vec3<f32>(1.0, 1.0, 0.0), coc_overlay * 0.3), final_color.a);")
+    .replace(/textureSample\((\w+), (\w+), (\w+)\)/g, "textureSampleLevel($1, $2, $3, 0.0)");
+}
 function half(x) {
   const f = new Float32Array([x]), bits = new Uint32Array(f.buffer)[0];
   const sign = (bits >>> 16) & 0x8000, exp = ((bits >>> 23) & 255) - 112, mantissa = bits & 0x7fffff;
@@ -88,7 +95,7 @@ export async function nativeComparisons(api, r, camera) {
       r.setPostFx([{kind: "dof", id: "focus", aperture: 1, focusDistance: 1, quality, tiltPitch: .25, tiltYaw: -.15}]); r.render();
       const params = new ArrayBuffer(80), f = new Float32Array(params), u = new Uint32Array(params);
       f.set([1, 1, 50, 36, 1, maxBlur]); u[6] = samples; u[7] = level; f.set([width, height, 1 / width, 1 / height], 12); f[18] = .25; f[19] = -.15;
-      const code = (await source("src/shaders/dof.wgsl")).replace(/textureSample\((\w+), (\w+), (\w+)\)/g, "textureSampleLevel($1, $2, $3, 0.0)");
+      const code = adaptNativeDofSource(await source("src/shaders/dof.wgsl"));
       const out = await dispatch(code, "cs_dof", [[0, buffer(new Uint8Array(params))], [1, input], [2, dofDepth], [3, sampler], [4, "output"]]);
       const expected = await read(out), actual = await r.readPostFxIntermediate("focus:resolve");
       results["dof-" + quality] = {...imageMetrics(expected, actual.data, width, height), control: imageMetrics(expected, color.data, width, height).ssim};

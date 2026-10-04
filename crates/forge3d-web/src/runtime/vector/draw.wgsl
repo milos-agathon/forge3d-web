@@ -1,5 +1,5 @@
 struct Projected { clip:vec4<f32>, color:vec4<f32>, uv:vec4<f32>, world:vec4<f32>, tags:vec4<u32> };
-struct Params { vp:mat4x4<f32>, viewport:vec4<f32>, eye:vec4<f32>, forward:vec4<f32>, camera:vec4<f32> };
+struct Params { vp:mat4x4<f32>, viewport:vec4<f32>, eye:vec4<f32>, forward:vec4<f32>, camera:vec2<f32>, projection_round_mask:u32, padding:u32 };
 @group(0) @binding(0) var<storage,read> vertices:array<Projected>;
 @group(0) @binding(1) var<uniform> params:Params;
 @group(0) @binding(2) var atlas:texture_2d<f32>;

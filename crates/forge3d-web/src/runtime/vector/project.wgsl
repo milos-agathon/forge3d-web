@@ -1,6 +1,6 @@
 struct Source { position:vec4<f32>, previous:vec4<f32>, next:vec4<f32>, offset:vec4<f32>, color:vec4<f32>, tags:vec4<u32>, atlas:vec4<f32>, options:vec4<f32> };
 struct Projected { clip:vec4<f32>, color:vec4<f32>, uv:vec4<f32>, world:vec4<f32>, tags:vec4<u32> };
-struct Params { vp:mat4x4<f32>, viewport:vec4<f32>, eye:vec4<f32>, forward:vec4<f32>, camera:vec4<f32> };
+struct Params { vp:mat4x4<f32>, viewport:vec4<f32>, eye:vec4<f32>, forward:vec4<f32>, camera:vec2<f32>, projection_round_mask:u32, padding:u32 };
 @group(0) @binding(0) var<storage,read> source:array<Source>;
 @group(0) @binding(1) var<storage,read_write> scratch:array<Projected>;
 @group(0) @binding(2) var<storage,read_write> output:array<Projected>;
@@ -10,16 +10,31 @@ fn direction(a:vec4<f32>,b:vec4<f32>)->vec2<f32> {
  let d=(b.xy/max(b.w,1e-6)-a.xy/max(a.w,1e-6))*params.viewport.xy;
  if(dot(d,d)<1e-10){return vec2<f32>(1,0);}return normalize(d);
 }
+// Host sets this dynamic mask to all ones: every binary32 bit is preserved.
+// The shader compiler cannot fold the unknown integer AND into an identity
+// and contract products/sums into FMAs. A constant identity bitcast cannot
+// provide that boundary. Keep the same scalar operation order on the CPU.
+fn projection_round(value:f32)->f32 {
+ return bitcast<f32>(bitcast<u32>(value)&params.projection_round_mask);
+}
+fn projection_round4(value:vec4<f32>)->vec4<f32> {
+ return bitcast<vec4<f32>>(bitcast<vec4<u32>>(value)&vec4<u32>(params.projection_round_mask));
+}
+fn projection_transform(point:vec4<f32>)->vec4<f32> {
+ let x=projection_round4(params.vp[0]*point.x);let y=projection_round4(params.vp[1]*point.y);
+ let z=projection_round4(params.vp[2]*point.z);let w=projection_round4(params.vp[3]*point.w);
+ return projection_round4(projection_round4(projection_round4(x+y)+z)+w);
+}
 fn project(v:Source)->Projected {
- let world=vec3<f32>(v.position.x,v.position.y+v.position.w,v.position.z);
- var clip=params.vp*vec4<f32>(world,1);
- let a=params.vp*vec4<f32>(v.previous.xyz,1);let b=params.vp*vec4<f32>(v.next.xyz,1);
+ let world=vec3<f32>(v.position.x,projection_round(v.position.y+v.position.w),v.position.z);
+ var clip=projection_transform(vec4<f32>(world,1));
  let expansion=u32(v.previous.w);var offset=vec2<f32>(0);
  if(expansion==1u){offset=v.offset.xy;}
- if(expansion>=2u){let d=direction(a,b);let n=vec2<f32>(-d.y,d.x);offset=n*v.offset.x+d*v.offset.y;
+ if(expansion>=2u){let a=projection_transform(vec4<f32>(v.previous.xyz,1));let b=projection_transform(vec4<f32>(v.next.xyz,1));let d=direction(a,b);let n=vec2<f32>(-d.y,d.x);offset=n*v.offset.x+d*v.offset.y;
   if(expansion==3u){let d0=direction(a,clip);let d1=direction(clip,b);let n0=vec2<f32>(-d0.y,d0.x);let n1=vec2<f32>(-d1.y,d1.x);let sum=n0+n1;var miter=n1;if(dot(sum,sum)>1e-10){miter=normalize(sum);}let factor=1.0/max(abs(dot(miter,n1)),1e-4);if(factor<=v.next.w){offset=miter*v.offset.x*factor;}else{offset=n1*v.offset.x;}}
  }
- clip=vec4<f32>(clip.xy+offset*2.0/params.viewport.xy*clip.w,clip.z-v.options.x*1e-5*clip.w,clip.w);
+ let bias=projection_round(projection_round(v.options.x*1e-5)*clip.w);
+ clip=vec4<f32>(clip.xy+offset*2.0/params.viewport.xy*clip.w,projection_round(clip.z-bias),clip.w);
  let biased_clip=clip;
  // Match the CPU clip storage precision across GPU arithmetic backends.
  clip=round(clip*524288.0)/524288.0;

@@ -26,7 +26,40 @@ fn shaders_validate_with_exact_storage_contracts() {
         .unwrap_or_else(|e| panic!("{name}: {e:?}"));
     }
     assert_eq!(std::mem::size_of::<Params>(), 128);
+    assert_eq!(std::mem::offset_of!(Params, camera), 112);
+    assert_eq!(std::mem::offset_of!(Params, projection_round_mask), 120);
+    assert_eq!(std::mem::offset_of!(Params, padding), 124);
     assert_eq!(std::mem::size_of::<Highlight>(), 48);
+}
+#[test]
+fn projection_and_draw_uniform_offsets_match_rust() {
+    for source in [include_str!("project.wgsl"), include_str!("draw.wgsl")] {
+        let module = naga::front::wgsl::parse_str(source).unwrap();
+        let params = module
+            .types
+            .iter()
+            .find(|(_, ty)| ty.name.as_deref() == Some("Params"))
+            .unwrap()
+            .1;
+        let naga::TypeInner::Struct { members, span } = &params.inner else {
+            panic!("Params must be a struct");
+        };
+        assert_eq!(*span, 128);
+        for (name, offset) in [
+            ("camera", 112),
+            ("projection_round_mask", 120),
+            ("padding", 124),
+        ] {
+            assert_eq!(
+                members
+                    .iter()
+                    .find(|member| member.name.as_deref() == Some(name))
+                    .unwrap()
+                    .offset,
+                offset
+            );
+        }
+    }
 }
 #[test]
 fn dual_source_selection_has_a_truthful_fallback() {
