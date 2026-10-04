@@ -18,6 +18,7 @@ use crate::runtime::textures::TextureResources;
 pub(crate) struct OverlayGeometry {
     pub bounds: [f32; 4],
     pub color: [f32; 4],
+    pub mesh: Option<Vec<[f32; 3]>>,
 }
 
 #[derive(Debug, Clone)]
@@ -285,17 +286,21 @@ impl NativeScene {
         let mut ranges = Vec::with_capacity(self.overlays.len());
         for overlay in &self.overlays {
             let first_vertex = vertices.len() as u32;
-            vertices.extend_from_slice(&super::geometry::overlay_vertices(
-                overlay.bounds,
-                overlay.color,
-                width,
-                height,
-            ));
+            let mesh = overlay
+                .mesh
+                .as_ref()
+                .map(|m| super::geometry::glyph_overlay_vertices(m, overlay.color, width, height))
+                .unwrap_or_else(|| {
+                    super::geometry::overlay_vertices(overlay.bounds, overlay.color, width, height)
+                        .to_vec()
+                });
+            let vertex_count = mesh.len() as u32;
+            vertices.extend(mesh);
             ranges.push(DrawRange {
                 pass: "overlay".to_string(),
                 first_vertex,
-                vertex_count: 6,
-                triangles: 2,
+                vertex_count,
+                triangles: u64::from(vertex_count) / 3,
                 material_index: 0,
             });
         }

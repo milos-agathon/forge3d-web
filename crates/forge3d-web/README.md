@@ -276,3 +276,5 @@ Apache-2.0 OR MIT.
 ### W10 environment and water
 
 UTC sun animation, Preetham/Hosek sky, depth-correct fog and bounded volumes, froxel/temporal paths, clouds/shadows and explicit water masks/waves/foam/reflections are implemented through `Forge3DEnvironment`. See the [environment and water guide](docs/environment-water.md) for APIs, limits and verification.
+
+Label layers, HarfBuzz shaping, native diagnostic boundaries and deterministic placement are documented in [the label guide](docs/labels.md).

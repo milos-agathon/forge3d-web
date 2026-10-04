@@ -17,3 +17,10 @@ crates/forge3d-web/tests/golden/w07/*.png binary
 crates/forge3d-web/tests/golden/w10/source/**/*.wgsl text eol=lf
 crates/forge3d-web/tests/golden/w10/source/**/*.rs text eol=lf
 crates/forge3d-web/tests/golden/w10/source/**/*.png binary
+
+# W13 assets are digest-pinned; preserve upstream bytes on every platform.
+crates/forge3d-web/assets/harfbuzz/** -text
+crates/forge3d-web/assets/fonts/** -text
+crates/forge3d-web/assets/harfbuzz/provenance.json text eol=lf
+crates/forge3d-web/assets/fonts/provenance.json text eol=lf
+crates/forge3d-web/assets/harfbuzz/index.d.mts text eol=lf

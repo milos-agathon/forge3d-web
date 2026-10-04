@@ -1,6 +1,9 @@
+import { Forge3DScene } from "./scene.js";
+import type { LabelLayer, LabelPlacementReport, LabelRenderOptions } from './labels.js';
 import { Forge3DEnvironment, normalizeEnvironment } from "./environment.js";
 import type { EnvironmentInput, EnvironmentSnapshot, EnvironmentMemoryReport } from "./environment.js";
 import {
+  type SceneSnapshot,
   type CameraControllerMode,
   type CameraInput,
   type CameraInputEvent,
@@ -68,6 +71,7 @@ interface ViewerRuntime {
   ): void;
   simulateDeviceLossForTesting?(): void;
   setTerrain(terrain: TerrainHeightmapInput): void;
+  setScene?(scene: SceneSnapshot): void;
   setEnvironment?(snapshot: EnvironmentSnapshot|null):void;
   getEnvironmentMemoryReport?():EnvironmentMemoryReport;
   setScatterBatches?(batches: ScatterBatchSnapshot[]): void;
@@ -169,6 +173,12 @@ export class Forge3DViewer {
     (timestamp: number) => boolean | void
   >();
   readonly #recoveryListeners = new Set<() => void>();
+  #labelLayer: LabelLayer | undefined;
+  #labelScene: Forge3DScene | undefined;
+  #labelOptions: Omit<LabelRenderOptions,"viewport"|"camera"> = {};
+  #labelSignature = "";
+  #labelUnsubscribe: (()=>void) | undefined;
+  #labelReport: LabelPlacementReport | undefined;
   #status: ViewerStatus = "initializing";
   #terminalError: Forge3DError | undefined;
   #capabilities: Forge3DRuntimeCapabilities;
@@ -325,6 +335,45 @@ export class Forge3DViewer {
     this.#pushCamera(runtime);
   }
 
+  setLabels(layer: LabelLayer | null, options: Omit<LabelRenderOptions, "viewport" | "camera"> = {}): void {
+    const runtime = this.#operationalRuntime();
+    if (!runtime.setScene) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime cannot render label layers");
+    if (this.#labelLayer && this.#labelScene) this.#labelLayer.detach(this.#labelScene);
+    this.#labelUnsubscribe?.();
+    this.#labelUnsubscribe = undefined;
+    this.#labelLayer = layer ?? undefined;
+    if (layer) this.#labelUnsubscribe = layer.addChangeListener(() => this.#scheduler?.requestRender());
+    this.#labelOptions = {...options};
+    this.#labelSignature = "";
+    this.#labelScene ??= Forge3DScene.create();
+    this.#refreshLabels(runtime);
+    this.#scheduler?.requestRender();
+  }
+
+  getLabelReport(): LabelPlacementReport | undefined {
+    return this.#labelReport ? structuredClone(this.#labelReport) : undefined;
+  }
+
+  #refreshLabels(runtime: ViewerRuntime): void {
+    if (!this.#labelScene || !runtime.setScene) return;
+    const camera = this.#effectiveCamera();
+    const signature = JSON.stringify([this.#labelLayer?.revision ?? -1, this.#labelLayer?.disposed ?? false, camera, runtime.width, runtime.height]);
+    if (signature === this.#labelSignature) return;
+    if (this.#labelLayer && !this.#labelLayer.disposed) {
+      this.#labelReport = this.#labelLayer.attach(this.#labelScene, {
+        ...this.#labelOptions, camera, viewport: {width: runtime.width, height: runtime.height},
+      });
+    } else {
+      for (const node of this.#labelScene.getNodes()) this.#labelScene.removeNode(node.id);
+      this.#labelReport = undefined;
+    }
+    if (this.#environmentReplay !== undefined) this.#labelScene.setEnvironment(this.#environmentReplay);
+    if (this.#scatterReplay !== undefined) this.#labelScene.setScatterBatches(this.#scatterReplay);
+    if (this.#probeReplay !== undefined) this.#labelScene.setLightingProbes(this.#probeReplay);
+    this.#labelScene.setTimeSeconds(this.#scatterTime);
+    runtime.setScene(this.#labelScene.snapshot());
+    this.#labelSignature = signature;
+  }
   /** Camera currently rendered (active controller plus projection). */
   getCamera(): CameraInput {
     return this.#effectiveCamera();
@@ -776,6 +825,7 @@ export class Forge3DViewer {
     }
     validateScreenshotBudget(runtime.width, runtime.height, this.#budget);
     this.#callRuntime(() => runtime.setCamera(this.#effectiveCamera()));
+    this.#refreshLabels(runtime);
     const promise = runtime.screenshot().catch((error: unknown) => {
       const normalized = Forge3DError.from(error);
       this.#routeDeviceLoss(normalized);
@@ -793,6 +843,9 @@ export class Forge3DViewer {
     if (this.disposed) {
       return;
     }
+    if(this.#labelLayer&&this.#labelScene)this.#labelLayer.detach(this.#labelScene);
+    this.#labelUnsubscribe?.();this.#labelUnsubscribe=undefined;
+    this.#labelScene?.dispose();this.#labelScene=undefined;this.#labelLayer=undefined;
     this.#vtSources.clear();
     this.#frameListeners.clear();
     this.#recoveryListeners.clear();
@@ -843,6 +896,7 @@ export class Forge3DViewer {
         if (current === undefined || this.#status !== "ready") {
           return false;
         }
+        this.#refreshLabels(current);
         return current.render();
       },
       canRender: () =>
@@ -1074,6 +1128,8 @@ export class Forge3DViewer {
         return;
       }
       replacement.setCamera(this.#effectiveCamera());
+      this.#labelSignature="";
+      this.#refreshLabels(replacement);
       if (this.#runtime !== replacement || recoveryController.signal.aborted) {
         return;
       }

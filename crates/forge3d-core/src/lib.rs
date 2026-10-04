@@ -427,3 +427,5 @@ mod tests {
 
 #[cfg(feature = "webgpu")]
 pub mod environment;
+
+pub mod labels;

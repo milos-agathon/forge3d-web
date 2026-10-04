@@ -1,3 +1,4 @@
+import './verify-w13-assets.mjs';
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -133,6 +134,8 @@ const assetManifest = [
   ["dist/vendor/geotiff.js", "geotiff@3.0.5"],
   ["assets/basis/basis_transcoder.js", "basis_universal@2.0.3"],
   ["assets/basis/basis_transcoder.wasm", "basis_universal@2.0.3"],
+  ...["index.mjs","harfbuzz.js","harfbuzz.wasm"].map(file => ["assets/harfbuzz/" + file, "harfbuzzjs@1.6.0"]),
+  ...["NotoSans","NotoSansArabic","NotoSansDevanagari"].map(font => ["assets/fonts/" + font + "-Regular.ttf", "noto-fonts@ffebf8c1ee449e544955a7e813c54f9b73848eac"]),
 ].map(([path, source]) => ({
   path,
   source,
@@ -164,3 +167,9 @@ function readRequired(path) {
   }
   return readFileSync(path, "utf8");
 }
+
+for (const file of ["label-features", "label-declutter", "label-types", "label-diagnostics", "label-candidates", "label-cases", "label-plan", "label-mesh", "typography", "labels"]) {
+  const declaration = readRequired(join(dist, file + ".d.ts")).replace(/from (["'])\.\/(scene|camera)\.js\1/g, 'from "./index.js"');
+  writeFileSync(join(root, "types", file + ".d.ts"), declaration);
+}
+copyRequired(join(repoRoot, "docs", "parity", "label-case-contract.json"), join(root, "docs", "label-case-contract.json"));

@@ -1136,8 +1136,8 @@ function main() {
     kind: row.lifecycle === "XC" || equivalentCapabilityIds.has(row.id) ? "equivalent" : "web-api",
     contract: row.requiredWebOutcome,
     owner: row.ownerTask,
-    evidence: row.status === "I" ? [`current browser baseline and ${planPath}:${row.id}`] : [`tracked ${row.status} closure state in ${planPath}:${row.id}`],
-    tests: row.requiredTests,
+    evidence: row.ownerTask === "W13" ? ["docs/parity/w13-implementation.md", "docs/parity/label-case-contract.json", "docs/parity/w13-native-test-coverage.json", "crates/forge3d-web/src-ts/labels.ts", "crates/forge3d-web/src-ts/label-plan.ts", "crates/forge3d-web/src-ts/typography.ts", "crates/forge3d-core/src/labels/mod.rs"] : row.status === "I" ? [`current browser baseline and ${planPath}:${row.id}`] : [`tracked ${row.status} closure state in ${planPath}:${row.id}`],
+    tests: row.ownerTask === "W13" ? ["crates/forge3d-web/tests/unit/labels.test.ts", "crates/forge3d-web/tests/unit/label-workflows.test.ts", "crates/forge3d-web/tests/unit/label-contract-record.test.ts", "crates/forge3d-web/tests/playwright/w13_labels.spec.ts", "crates/forge3d-web/scripts/test-w13-package-consumer.mjs"] : row.requiredTests,
   }));
   const tombstoneTargets = tombstones.map((item) => ({ id: item.targetId, capabilityId: item.capabilityId, kind: "tombstone", contract: item.disposition, owner: capabilities.find((row) => row.id === item.capabilityId)?.ownerTask ?? "W00", evidence: item.evidence, tests: [`W00 tombstone ledger contract for ${item.id}`] }));
   const manifest = {

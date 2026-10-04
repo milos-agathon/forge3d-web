@@ -2117,6 +2117,8 @@ export interface GroundPlaneNodeInput extends SceneNodeBase {
 }
 
 export interface TextMeshNodeInput extends SceneNodeBase {
+  /** W13: real glyph triangles, XYZ triples, owned by the node. */
+  vertices?: Float32Array;
   kind: "text-mesh";
   text: string;
   size: number;
@@ -2124,6 +2126,8 @@ export interface TextMeshNodeInput extends SceneNodeBase {
 }
 
 export interface OverlayNodeInput extends SceneNodeBase {
+  /** W13: pixel-space glyph triangles, XYZ triples. */
+  vertices?: Float32Array;
   kind: "overlay";
   bounds: [number, number, number, number];
   color: [number, number, number, number];
@@ -4549,3 +4553,16 @@ registerOfflineWasmLoader(async () => {
 
 export { generateDensityVolume } from "./density-volume.js";
 export type { DensityVolumePresetInput, DensityVolumeGenerationOptions } from "./density-volume.js";
+
+export { FontAtlas, FontFallbackRange, TypographySettings } from './typography.js';
+export type { FontSource, FontAtlasOptions } from './typography.js';
+export { LabelLayer, LabelManager, LabelStyle, LabelFlags } from './labels.js';
+export type { LabelRenderOptions, LabelPlacementReport } from './labels.js';
+export { LabelPlan, KeepoutRegion, PriorityClass, LABEL_REJECTION_REASONS } from './label-plan.js';
+export type * from './label-types.js';
+
+export { LabelCollisionIndex, declutterLabels } from './label-declutter.js';
+export type { LabelDeclutterCandidate, LabelDeclutterConfig, LabelDeclutterResult } from './label-declutter.js';
+
+export {LabelFeatureSource} from './label-features.js';
+export type {LabelFeature,LabelFeatureOptions} from './label-features.js';

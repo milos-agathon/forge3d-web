@@ -76,11 +76,14 @@
     "test:browser:webkit": "playwright test --project=webkit-preflight",
     "classify:browser:webkit": "node scripts/classify-webkit-preflight.mjs",
     "test:package-consumer:w10": "node scripts/build-browser-test-package.mjs --w10",
-    "test:w10": "vitest run tests/unit/environment.test.ts && playwright test tests/playwright/w10_environment.spec.ts tests/playwright/w10_native.spec.ts --project=chromium-preflight"
+    "test:w10": "vitest run tests/unit/environment.test.ts && playwright test tests/playwright/w10_environment.spec.ts tests/playwright/w10_native.spec.ts --project=chromium-preflight",
+    "test:w13": "vitest run tests/unit/labels.test.ts tests/unit/label-workflows.test.ts tests/unit/label-contract-record.test.ts && playwright test tests/playwright/w13_labels.spec.ts --project=chromium-preflight",
+    "test:package-consumer:w13": "node scripts/test-w13-package-consumer.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
     "geotiff": "3.0.5",
+    "harfbuzzjs": "1.6.0",
     "ktx-parse": "1.1.0",
     "mediabunny": "1.58.0",
     "selenium-webdriver": "4.35.0",

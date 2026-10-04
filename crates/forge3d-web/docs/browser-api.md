@@ -994,3 +994,7 @@ for aborted source reads.
 ## W10 environment and water
 
 `Forge3DEnvironment`, `sunPosition`, `generateDensityVolume`, and `environmentMemoryReport` provide UTC sun animation, shared atmosphere, clouds and explicit water layers. Runtime, scene, session and viewer expose `setEnvironment`; runtime, session and viewer expose `getEnvironmentMemoryReport`. See [environment and water](environment-water.md) for configuration, budgets, capture guides and native verification.
+
+## Labels and typography
+
+See [Labels, typography and deterministic placement](labels.md) for FontAtlas, LabelLayer, LabelPlan, stable IDs, actual glyph rendering, native diagnostics and the installed-tarball W13 verification workflow.
