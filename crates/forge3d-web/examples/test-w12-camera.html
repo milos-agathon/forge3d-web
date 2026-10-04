@@ -1,0 +1,281 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>W12 camera cache regressions</title></head>
+<body><pre>W12 camera probes ready</pre><script type="module">
+import { Forge3DRuntime, Forge3DScene, VectorLayers, VectorPicker, Camera } from "../src-ts/index.ts";
+import { compileVectorPacket } from "../src-ts/vector-geometry.ts";
+import { registerSceneVectorPacket } from "../src-ts/runtime-internals.ts";
+
+const viewport = { width: 128, height: 96 };
+const camera = { position: [0, 8, 0], target: [0, 0, 0], up: [0, 0, -1], fovYDegrees: 50, near: .1, far: 30 };
+const position = [1.5, .2, 0];
+const highlightStyle = { color: [0, 1, 0, .8], outline: true, outlineWidth: 3, glow: false };
+const changedCamera = mutation => mutation === "translation"
+    ? { ...camera, position: [3, 8, 0], target: [3, 0, 0] }
+    : { ...camera, fovYDegrees: 25 };
+const maxDelta = (a, b) => a.reduce((n, value, i) => Math.max(n, Math.abs(value - b[i])), 0);
+function screenCenter(input) {
+    const point = new Camera(input).worldToScreen(position, viewport);
+    return [Math.floor(point.x), Math.floor(point.y)];
+}
+async function fixture() {
+    const canvas = document.createElement("canvas");
+    canvas.width = viewport.width; canvas.height = viewport.height;
+    const runtime = await Forge3DRuntime.create(canvas, {
+        diagnostics: true, devicePixelRatio: 1, clearColor: [0, 0, 0, 1],
+    });
+    const layers = new VectorLayers();
+    layers.setOit("standard");
+    layers.add({ name: "moving screen position", features: [{
+        id: 1, kind: "point", position,
+        style: { shape: "square", pointSize: 14, color: [1, 0, 0, 1] },
+    }] });
+    runtime.setCamera(camera); runtime.setVectorLayers(layers);
+    return { runtime, layers };
+}
+function setHighlight(layers, kind) {
+    if (kind === "selection") layers.setSelection("active", [1], highlightStyle);
+    else layers.setHover(1, highlightStyle);
+}
+
+// Read the moved frame before any highlight edit. A second, explicitly dirtied
+// render is an independent reference for where the cached overlay belongs.
+window.__w12CameraHighlight = async (kind, mutation) => {
+    const { runtime, layers } = await fixture();
+    try {
+        setHighlight(layers, kind); runtime.setVectorLayers(layers);
+        const before = await runtime.readRgba();
+        const oldMap = await runtime.readVectorPickMap();
+        runtime.setCamera(changedCamera(mutation));
+        const moved = await runtime.readRgba();
+        const newMap = await runtime.readVectorPickMap();
+        let oldCovered = 0, covered = 0, overlapping = 0, tinted = 0, staleGreen = 0;
+        for (let i = 0; i < newMap.ids.length; i++) {
+            if (oldMap.ids[i] === 1) oldCovered++;
+            if (newMap.ids[i] === 1) {
+                covered++;
+                if (oldMap.ids[i] === 1) overlapping++;
+                if (moved[i * 4 + 1] > 100) tinted++;
+            }
+            if (before[i * 4 + 1] > 8 && moved[i * 4 + 1] > 8 && newMap.ids[i] === 0) staleGreen++;
+        }
+        // Reapplying the same style bumps the highlight revision without
+        // changing the intended pixels or moving the camera again.
+        setHighlight(layers, kind); runtime.setVectorLayers(layers);
+        const fresh = await runtime.readRgba();
+        return { kind, mutation, oldCovered, covered, overlapping, tinted, staleGreen,
+            freshDelta: maxDelta(moved, fresh), oldCenter: screenCenter(camera),
+            newCenter: screenCenter(changedCamera(mutation)) };
+    } finally { runtime.dispose(); layers.dispose(); }
+};
+
+const summarize = hit => hit === null ? null : {
+    id: hit.id, pixel: hit.pixel, depth: hit.depth, worldPosition: hit.worldPosition,
+};
+async function query(picker, method, [x, y]) {
+    if (method === "point") return summarize(await picker.point(x, y));
+    const hits = method === "rect"
+        ? await picker.rect(x - 2, y - 2, 4, 4)
+        : await picker.lasso([[x - 2, y - 2], [x + 2, y - 2], [x + 2, y + 2], [x - 2, y + 2]]);
+    return hits.map(summarize);
+}
+
+// Every method warms its own old-view pick cache, then queries immediately
+// after setCamera, before any screenshot, render, or other picking call.
+window.__w12CameraPicks = async mutation => {
+    const { runtime, layers } = await fixture();
+    const picker = new VectorPicker(runtime, layers);
+    try {
+        const cases = [], oldCenter = screenCenter(camera), next = changedCamera(mutation);
+        for (const method of ["point", "rect", "lasso"]) {
+            runtime.setCamera(camera); runtime.render();
+            const warmed = await query(picker, method, oldCenter);
+            const before = runtime.getVectorReport().pickRenderCount;
+            runtime.setCamera(next);
+            const immediate = await query(picker, method, oldCenter);
+            const afterImmediate = runtime.getVectorReport().pickRenderCount;
+            runtime.render();
+            const fresh = await query(picker, method, oldCenter);
+            const newHit = await query(picker, method, screenCenter(next));
+            cases.push({ method, warmed, immediate, fresh, newHit,
+                immediateRenders: afterImmediate - before });
+        }
+        return { mutation, oldCenter, newCenter: screenCenter(next), cases };
+    } finally { picker.dispose(); runtime.dispose(); layers.dispose(); }
+};
+
+// A zero-offset drape depends on its tiny negative depth bias to sit above
+// terrain. Nearby camera heights straddle the old clip-depth rounding step.
+window.__w12NearDrape = async () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = viewport.width; canvas.height = viewport.height;
+    const runtime = await Forge3DRuntime.create(canvas, {
+        diagnostics: true, devicePixelRatio: 1, clearColor: [0, 0, 0, 1],
+    });
+    const scene = Forge3DScene.create();
+    const terrain = { width: 3, height: 3, heights: new Float32Array(9), domain: [0, 1], spacing: [.004, .004] };
+    const layers = new VectorLayers();
+    try {
+        scene.addTerrain(terrain); runtime.setTerrain(terrain); runtime.setScene(scene.snapshot());
+        layers.setOit("standard");
+        layers.add({ name: "near zero-offset drape", features: [{ id: 1, kind: "polygon",
+            rings: [[[-.002, 0, -.002], [.002, 0, -.002], [.002, 0, .002], [-.002, 0, .002]]],
+        }], style: { color: [1, 0, 0, 1], drape: true, drapeOffset: 0, depthBias: .1 } });
+        const rows = [];
+        for (const height of [.01, .0101]) for (const culling of ["cpu", "gpu"]) {
+            runtime.setCamera({ ...camera, position: [0, height, 0], near: .001, far: .03 });
+            layers.setCulling(culling); runtime.setVectorLayers(layers, terrain);
+            const rgba = await runtime.readRgba(), map = await runtime.readVectorPickMap();
+            const projection = await runtime.readVectorProjection();
+            let red = 0, picked = 0, aligned = 0;
+            for (let i = 0; i < map.ids.length; i++) {
+                const isRed = rgba[i * 4] > 200 && rgba[i * 4 + 1] < 20 && rgba[i * 4 + 2] < 20;
+                if (isRed) red++;
+                if (map.ids[i] === 1) { picked++; if (isRed) aligned++; }
+            }
+            rows.push({ height, culling, red, picked, aligned, byteIdentical: projection.byteIdentical,
+                vertexCount: projection.vertexCount, report: runtime.getVectorReport() });
+        }
+        return rows;
+    } finally { runtime.dispose(); scene.dispose(); layers.dispose(); }
+};
+
+function depthSquare(id, y, half, color) {
+    return { id, kind: "polygon", rings: [[[-half, y, -half], [half, y, -half],
+        [half, y, half], [-half, y, half]]], style: { color, depthBias: .01 } };
+}
+function commitZeroBias(runtime, scene, layers, terrain) {
+    scene.setVectorLayers(layers);
+    const snapshot = scene.snapshot(), packet = compileVectorPacket(layers, terrain);
+    // Public styles enforce a positive minimum bias. This diagnostic control
+    // removes bias in the compiled vertices to isolate projection precision.
+    for (const vertex of packet.vertices) vertex[28] = 0;
+    registerSceneVectorPacket(snapshot, snapshot.revision, packet);
+    runtime.setScene(snapshot);
+    return packet;
+}
+function projectedFeatures(bytes) {
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength), features = new Map();
+    for (let offset = 0; offset < bytes.byteLength; offset += 80) {
+        const id = view.getUint32(offset + 64, true), y = view.getFloat32(offset + 52, true);
+        if (!features.has(id)) {
+            const clip = Array.from({ length: 4 }, (_, i) => view.getFloat32(offset + i * 4, true));
+            features.set(id, { id, clip, depth: clip[2] / clip[3], alpha: view.getFloat32(offset + 28, true),
+                minWorldY: y, maxWorldY: y, vertices: 0 });
+        }
+        const feature = features.get(id);
+        feature.vertices++; feature.minWorldY = Math.min(feature.minWorldY, y); feature.maxWorldY = Math.max(feature.maxWorldY, y);
+    }
+    return [...features.values()];
+}
+async function depthRuntime(distance) {
+    const canvas = document.createElement("canvas");
+    canvas.width = viewport.width; canvas.height = viewport.height;
+    const runtime = await Forge3DRuntime.create(canvas, {
+        diagnostics: true, devicePixelRatio: 1, clearColor: [0, 0, 0, 1],
+    });
+    runtime.setCamera({ ...camera, position: [0, distance, 0], near: .1, far: 2000 });
+    return runtime;
+}
+function depthReference(distance, gap) {
+    const near = .1, far = 2000;
+    const depth = distance => far / (far - near) - far * near / ((far - near) * distance);
+    const front = depth(distance), back = depth(distance + gap);
+    const coarseFront = Math.floor(front * 2 ** 19) / 2 ** 19;
+    const coarseBack = Math.floor(back * 2 ** 19) / 2 ** 19;
+    return { front, back, separation: back - front, coarseFront, coarseBack };
+}
+
+// These gaps have ~1e-6 true NDC separation: ordinary and far surfaces remain
+// distinct at depth-buffer precision, while the proposed 2^-19 floor erases
+// their ordering and even moves the hidden surface in front of terrain.
+window.__w12DepthOcclusion = async () => {
+    const rows = [];
+    for (const { distance, gap } of [{ distance: 100.1, gap: .1 }, { distance: 990, gap: 10 }]) {
+        const reference = depthReference(distance, gap), half = distance * .2;
+        for (const culling of ["cpu", "gpu"]) {
+            const runtime = await depthRuntime(distance), scene = Forge3DScene.create();
+            const terrain = { width: 3, height: 3, heights: new Float32Array(9),
+                domain: [0, 1], spacing: [distance * .4, distance * .4] };
+            const layers = new VectorLayers();
+            try {
+                scene.addTerrain(terrain); runtime.setTerrain(terrain); runtime.setScene(scene.snapshot());
+                const baseline = await runtime.readRgba();
+                let terrainCovered = 0;
+                for (let i = 0; i < baseline.length; i += 4)
+                    if (baseline[i] + baseline[i + 1] + baseline[i + 2] > 0) terrainCovered++;
+                layers.setOit("standard"); layers.setCulling(culling);
+                layers.add({ name: "hidden behind terrain", features: [depthSquare(1, -gap, half, [1, 0, 0, 1])] });
+                for (const depthBias of [0, .01]) {
+                    if (depthBias === 0) commitZeroBias(runtime, scene, layers, terrain);
+                    else runtime.setVectorLayers(layers, terrain);
+                    const rgba = await runtime.readRgba(), map = await runtime.readVectorPickMap();
+                    const projection = await runtime.readVectorProjection();
+                    let red = 0, picked = 0;
+                    for (let i = 0; i < map.ids.length; i++) {
+                        if (rgba[i * 4] > 200 && rgba[i * 4 + 1] < 20 && rgba[i * 4 + 2] < 20) red++;
+                        if (map.ids[i]) picked++;
+                    }
+                    rows.push({ kind: "terrain", distance, gap, culling, depthBias, reference, terrainCovered, red, picked,
+                        terrainDelta: maxDelta(rgba, baseline), byteIdentical: projection.byteIdentical,
+                        vertexCount: projection.vertexCount, report: runtime.getVectorReport() });
+                }
+            } finally { runtime.dispose(); scene.dispose(); layers.dispose(); }
+
+            const stackRuntime = await depthRuntime(distance), stackScene = Forge3DScene.create();
+            const stack = new VectorLayers();
+            try {
+                stack.setOit("standard"); stack.setCulling(culling);
+                const front = depthSquare(1, 0, half, [1, 0, 0, 1]);
+                const back = depthSquare(2, -gap, half, [0, 0, 1, 1]);
+                const handle = stack.add({ name: "close opaque depth order", features: [front, back] });
+                for (const mode of ["standard", "wboit", "dual-source", "auto"]) for (const reverse of [false, true]) {
+                    stack.setOit(mode);
+                    handle.update({ features: reverse ? [back, front] : [front, back] });
+                    const packet = commitZeroBias(stackRuntime, stackScene, stack);
+                    const rgba = await stackRuntime.readRgba(), map = await stackRuntime.readVectorPickMap();
+                    const projection = await stackRuntime.readVectorProjection();
+                    let covered = 0, wrongPick = 0, wrongColor = 0;
+                    for (let i = 0; i < map.ids.length; i++) if (map.ids[i]) {
+                        covered++;
+                        if (map.ids[i] !== 1) wrongPick++;
+                        if (rgba[i * 4] !== 255 || rgba[i * 4 + 1] !== 0 || rgba[i * 4 + 2] !== 0) wrongColor++;
+                    }
+                    const center = 48 * 128 + 64;
+                    rows.push({ kind: "vectors", distance, gap, culling, mode, reverse, reference, covered, wrongPick, wrongColor,
+                        centerId: map.ids[center], centerColor: [...rgba.slice(center * 4, center * 4 + 4)],
+                        byteIdentical: projection.byteIdentical, vertexCount: projection.vertexCount,
+                        projected: projectedFeatures(projection.cpu),
+                        source: [1, 2].map(id => { const v = packet.vertices.find(v => v[20] === id);
+                            return { id, position: v.slice(0, 3), extrusion: v[3], color: v.slice(16, 20), depthBias: v[28] }; }),
+                        report: stackRuntime.getVectorReport() });
+                }
+            } finally { stackRuntime.dispose(); stackScene.dispose(); stack.dispose(); }
+        }
+    }
+    const runtime = await depthRuntime(8), layers = new VectorLayers();
+    try {
+        runtime.setCamera(camera); layers.setOit("standard"); layers.setCulling("gpu");
+        const features = [{ id: 1, kind: "point", position: [0, .6931099891662598, 0],
+            style: { shape: "square", pointSize: 12, color: [1, 0, 0, 1], depthBias: .01 } }];
+        for (let i = 0; i < 333; i++) {
+            const x = -2.5 + i % 23 / 22 * 5, z = -2 + Math.floor(i / 23) / 14 * 4;
+            const y = .02 + (i * .61803398875 % 1) * 1.8;
+            features.push({ id: i + 2, kind: "polygon", rings: [[[x, y, z], [x + .08, y, z], [x, y, z + .08]]],
+                style: { color: [1, 0, 0, 1], depthBias: .01 } });
+        }
+        layers.add({ name: "varied projection arithmetic", features }); runtime.setVectorLayers(layers);
+        const gpu = await runtime.readRgba(), gpuMap = await runtime.readVectorPickMap();
+        const projection = await runtime.readVectorProjection(), gpuReport = runtime.getVectorReport();
+        layers.setCulling("cpu"); runtime.setVectorLayers(layers);
+        const cpu = await runtime.readRgba(), cpuMap = await runtime.readVectorPickMap();
+        rows.push({ kind: "arithmetic", sensitiveWorldHeight: .6931099891662598,
+            gpuCovered: gpuMap.ids.reduce((n, id) => n + Number(id !== 0), 0),
+            cpuCovered: cpuMap.ids.reduce((n, id) => n + Number(id !== 0), 0),
+            colorDelta: maxDelta(gpu, cpu), idDelta: maxDelta(gpuMap.ids, cpuMap.ids),
+            byteIdentical: projection.byteIdentical, vertexCount: projection.vertexCount,
+            gpuReport, cpuReport: runtime.getVectorReport() });
+    } finally { runtime.dispose(); layers.dispose(); }
+    return rows;
+};
+window.__w12CameraReady = true;
+</script></body></html>

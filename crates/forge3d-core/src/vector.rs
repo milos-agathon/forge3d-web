@@ -74,12 +74,25 @@ pub fn project(vertex: &VectorVertex, vp: Mat4, viewport: Vec2) -> ProjectedVert
     clip.x += screen_offset.x * 2. / viewport.x * clip.w;
     clip.y += screen_offset.y * 2. / viewport.y * clip.w;
     clip.z -= vertex.options[0] * 1e-5 * clip.w;
+    let biased_clip = clip;
     // Canonical clip storage avoids backend-specific multiply reassociation.
     // 19 fractional bits are shared with WGSL, well below a raster subpixel.
     clip = Vec4::from_array(
         clip.to_array()
             .map(|v| (v * 524288.).round_ties_even() / 524288.),
     );
+    // Direct depth rounding towards the camera: z down and w up ensure that
+    // canonicalization never reverses the bias. This is an absolute clip grid,
+    // so its NDC error shrinks with distance, retaining far depth precision.
+    // Keep the existing storage outside the depth range for clip culling.
+    if vertex.options[0] > 0.
+        && biased_clip.w > 0.
+        && biased_clip.z >= 0.
+        && biased_clip.z <= biased_clip.w
+    {
+        clip.z = (biased_clip.z * 524288.).floor() / 524288.;
+        clip.w = (biased_clip.w * 524288.).ceil() / 524288.;
+    }
     let uv = Vec2::new(vertex.offset[2], vertex.offset[3]);
     let atlas_origin = Vec2::new(vertex.atlas[0], vertex.atlas[1]);
     let atlas_size = Vec2::new(vertex.atlas[2], vertex.atlas[3]);
@@ -169,6 +182,39 @@ mod tests {
         };
         assert!(triangle_visible(&[p(-2.), p(0.), p(2.)]));
         assert!(!triangle_visible(&[p(2.), p(3.), p(4.)]));
+    }
+    #[test]
+    fn near_coplanar_drapes_never_round_behind_the_surface() {
+        for height in [0.01, 0.0101, 0.0102, 0.011] {
+            let vp = Mat4::perspective_rh(50_f32.to_radians(), 4. / 3., 0.001, 0.03)
+                * Mat4::look_at_rh(Vec3::new(0., height, 0.), Vec3::ZERO, -Vec3::Z);
+            let surface = vp * Vec4::new(0.002, 0., 0.002, 1.);
+            let surface_depth = surface.z / surface.w;
+            for bias in [0.01, 0.1, 10.] {
+                let vertex = VectorVertex {
+                    position: [0.002, 0., 0.002, 0.],
+                    color: [1.; 4],
+                    options: [bias, 0., 0., 0.],
+                    ..Default::default()
+                };
+                let projected = project(&vertex, vp, Vec2::new(128., 96.));
+                let depth = projected.clip[2] / projected.clip[3];
+                assert!(
+                    depth <= surface_depth,
+                    "height={height}, bias={bias}, depth={depth}, surface={surface_depth}"
+                );
+                let storage_bound = 2. / (524288. * surface.w) + 1e-7;
+                assert!(surface_depth - depth < bias * 1e-5 + storage_bound);
+                for (axis, pixels) in [(0, 128.), (1, 96.)] {
+                    let displacement = (projected.clip[axis] / projected.clip[3]
+                        - surface[axis] / surface.w)
+                        .abs()
+                        * pixels
+                        * 0.5;
+                    assert!(displacement < 1. / 16.);
+                }
+            }
+        }
     }
     #[test]
     fn native_weight_is_alpha_scaled() {

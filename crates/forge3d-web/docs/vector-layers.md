@@ -122,7 +122,7 @@ sources. The original 18 files are also checked byte-for-byte against `1f4084a`.
 reject empty renders and exercise ID/color alignment, CPU/GPU output, WBOIT order
 independence, fallback, drape, HDR/AOV integration, resize, recovery and memory.
 
-W12 acceptance uses `npm run test:w12` (14 unit / 23 browser cases),
+W12 acceptance uses `npm run test:w12` (14 unit tests plus the vector and camera browser suites),
 `npm run test:unit` (768 cases), `npm run test:api`, `npm run verify:parity`,
 `python scripts/generate-w12-native-fixtures.py --check` (22 sources),
 `cargo test -p forge3d-core --features webgpu` (379 cases), and
@@ -131,11 +131,14 @@ W12 acceptance uses `npm run test:w12` (14 unit / 23 browser cases),
 `npm run test:package-consumer:w12` last on a clean commit and immediately copy
 `test-results/w12-package/evidence.json` outside that directory.
 
-The documented clean-consumer evidence revision is
+The earlier clean-consumer evidence revision is
 `7b18ec1fabe32ae0f405601cf0df9bf8844d27c9`, tarball SHA-256
 `df1e29580f7fb8bf27e59fac1c7d4e2ca273b0df85bfa8c5b86cb346b0d6f8c1`.
-The final clean-commit rerun is retained at
+The earlier final clean-commit rerun is retained at
 `C:\devin-target\w12-evidence\final-evidence.json` with its exact revision
-and digest. [W12 verification](w12-verification.md) maps each finding to its
-browser test, records measured results and explains the documentation-only
-amend and final evidence retention.
+and digest. The corrections to `55cfe2c` retain their own final evidence at
+`C:\devin-target\w12-evidence\r123-final-evidence.json`. They keep vector
+accumulation in scene colour, apply W11 tone mapping and output encoding once,
+and invalidate pick and selection/hover caches after camera changes.
+[W12 verification](w12-verification.md) maps the findings to browser tests and
+documents both the earlier evidence and these corrections.

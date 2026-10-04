@@ -847,6 +847,9 @@ pub(super) fn set_camera_runtime(
     if let (Some(shadows), Some(prepared)) = (runtime.shadows.as_mut(), prepared_shadows) {
         prepared.write(context, shadows);
     }
+    // Pick targets and highlight bounds contain pixels from the previous view.
+    // Invalidate only after the complete camera update succeeds.
+    super::vector::invalidate_pick(runtime);
     Ok(())
 }
 

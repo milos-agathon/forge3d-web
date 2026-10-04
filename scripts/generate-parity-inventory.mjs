@@ -1149,6 +1149,7 @@ function main() {
       "crates/forge3d-web/tests/unit/vector.test.ts",
       "crates/forge3d-web/tests/unit/w12-native-provenance.test.ts",
       "crates/forge3d-web/tests/playwright/w12_vector.spec.ts",
+      "crates/forge3d-web/tests/playwright/w12_camera.spec.ts",
       "npm run test:package-consumer:w12",
     ] : row.requiredTests,
   }));

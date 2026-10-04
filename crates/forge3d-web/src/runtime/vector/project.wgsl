@@ -20,8 +20,15 @@ fn project(v:Source)->Projected {
   if(expansion==3u){let d0=direction(a,clip);let d1=direction(clip,b);let n0=vec2<f32>(-d0.y,d0.x);let n1=vec2<f32>(-d1.y,d1.x);let sum=n0+n1;var miter=n1;if(dot(sum,sum)>1e-10){miter=normalize(sum);}let factor=1.0/max(abs(dot(miter,n1)),1e-4);if(factor<=v.next.w){offset=miter*v.offset.x*factor;}else{offset=n1*v.offset.x;}}
  }
  clip=vec4<f32>(clip.xy+offset*2.0/params.viewport.xy*clip.w,clip.z-v.options.x*1e-5*clip.w,clip.w);
+ let biased_clip=clip;
  // Match the CPU clip storage precision across GPU arithmetic backends.
  clip=round(clip*524288.0)/524288.0;
+ // Direct absolute clip rounding towards the camera. Its NDC error shrinks
+ // with distance, and z down/w up cannot reverse the bias.
+ if(v.options.x>0.0&&biased_clip.w>0.0&&biased_clip.z>=0.0&&biased_clip.z<=biased_clip.w){
+  clip.z=floor(biased_clip.z*524288.0)/524288.0;
+  clip.w=ceil(biased_clip.w*524288.0)/524288.0;
+ }
  var color=v.color;if(expansion==1u&&max(abs(v.offset.x),abs(v.offset.y))*2.0/max(1.0,max(abs(v.offset.z),abs(v.offset.w)))<v.options.y){color.a=0;}
  let uv=v.offset.zw;let atlas=clamp(v.atlas.xy+(uv*vec2<f32>(.5,-.5)+vec2<f32>(.5))*v.atlas.zw,v.atlas.xy+v.options.zw,v.atlas.xy+v.atlas.zw-v.options.zw);
  return Projected(clip,color,vec4<f32>(uv,atlas),vec4<f32>(world,1),v.tags);

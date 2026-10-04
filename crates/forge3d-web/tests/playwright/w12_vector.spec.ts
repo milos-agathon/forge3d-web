@@ -108,13 +108,39 @@ test("H2 24px miter contains bevel, bevel contains segment quads, limit falls ba
     expect(r.roundMissing,JSON.stringify(r)).toBe(0);
     expect(r.squareMissing).toBe(0);
 });
-test("H3 dual-source matches independent native medium CPU equation within one code value in both orders", async ({ page }) => {
+test("H3 dual-source matches the independent native medium accumulation equation within one code value in both orders", async ({ page }) => {
     const cases = await page.evaluate(() => (window as any).__w12DualEquation());
     expect(cases).toHaveLength(2);
     for (const r of cases) {
         expect(r.report.effectiveOit).toBe("dual-source");
         expect(r.actual[0]+r.actual[2]).toBeGreaterThan(30);
         expect(r.delta, JSON.stringify(r)).toBeLessThanOrEqual(1);
+    }
+});
+test("R1 isolated opaque colors agree across OIT modes and W11 receives scene color with exactly one output transfer", async ({ page }) => {
+    test.setTimeout(120000);
+    const r = await page.evaluate(() => (window as any).__w12ColorTransfer());
+    expect(r.available).toBe(true);
+    expect(r.opaque).toHaveLength(24);
+    expect(r.hdr).toHaveLength(48);
+    for (const c of r.opaque) {
+        const context = JSON.stringify({mode:c.mode,color:c.color,disjoint:c.disjoint});
+        expect(c.actual, context).toEqual(c.expected);
+        expect(c.pick, context).toBe(1);
+        expect(c.covered, context).toBeGreaterThan(100);
+        if (c.disjoint) expect(c.disjointCovered, context).toBeGreaterThan(100);
+        else expect(c.disjointCovered, context).toBe(0);
+        expect(c.report.effectiveOit, context).toBe(c.mode === "auto" ? "dual-source" : c.mode);
+        expect(c.report.fallbackReason, context).toBeNull();
+    }
+    for (const c of r.hdr) {
+        const context = JSON.stringify(c);
+        expect(c.report.effectiveOit, context).toBe(c.mode === "auto" ? "dual-source" : c.mode);
+        expect(c.hdrDelta, context).toBeLessThanOrEqual(.001);
+        expect(c.mappedDelta, context).toBeLessThanOrEqual(.001);
+        expect(c.displayDelta, context).toBeLessThanOrEqual(1);
+        expect(c.postfxReport.outputEncoding, context).toBe("srgb");
+        expect(c.postfxReport.passOrder, context).toEqual(["gbuffer:primary","gbuffer:surface","hzb","map:resolve","output:srgb","overlay"]);
     }
 });
 test("M1 auto chooses available dual-source and reports unavailable-feature fallback", async ({ page }) => {
@@ -185,10 +211,11 @@ test("M5 stable parallel compaction is byte-identical to project_and_cull and 20
     expect(r.largeByteDelta).toBe(0);
     expect(r.gpu.median,JSON.stringify(r)).toBeLessThanOrEqual(r.cpu.median);
 });
-test("M6 2000 selected IDs with 32px outline/glow cost at most twice the unselected frame and exceed old cap", async ({ page }) => {
+test("M6 2000 selected IDs with recomputed 32px outline/glow cost at most twice the unselected frame and exceed old cap", async ({ page }) => {
     test.setTimeout(120000);
     const r=await page.evaluate(()=>(window as any).__w12Incremental());
     expect(r.green).toBeGreaterThan(100);
+    expect(r.recomputedFrames).toBe(12);
     expect(r.selected.median,JSON.stringify(r)).toBeLessThanOrEqual(r.plain.median*2);
     expect(r.aboveCap.featureCount).toBe(5000);
 });

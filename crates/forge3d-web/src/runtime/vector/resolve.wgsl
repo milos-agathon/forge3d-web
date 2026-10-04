@@ -25,7 +25,6 @@ fn strength(h:Highlight,distance:f32)->f32 {
  if(h.ids.z!=0u&&distance<=h.options.z){value=max(value,exp(-distance*distance/max(1.0,h.options.z*h.options.z*.25))*h.options.y*h.options.w);}
  return min(value,1.0);
 }
-fn linearize(x:vec3<f32>)->vec3<f32>{return select(pow((x+vec3<f32>(.055))/1.055,vec3<f32>(2.4)),x/12.92,x<=vec3<f32>(.04045));}
 struct Effect { @location(0) overlay:vec4<f32>, @location(1) tint:vec4<f32> };
 fn effect(p:vec2<i32>)->Effect {
  var tint=vec4<f32>(0);var overlay=vec4<f32>(0);
@@ -73,9 +72,7 @@ fn effect(p:vec2<i32>)->Effect {
  color=vec4<f32>(mix(color.rgb,tint.rgb*color.a,tint.a),color.a);
  color=overlay+color*(1.0-overlay.a);
  if(mode.values.z!=0u){let bg=textureLoad(background,p,0);color=color+bg*(1.0-color.a);}
- if(mode.values.x==2u&&a.a>0.0){
-  let mapped=pow(max(color.rgb,vec3<f32>(0))/(vec3<f32>(1)+max(color.rgb,vec3<f32>(0))),vec3<f32>(1.0/2.2));
-  color=vec4<f32>(select(mapped,linearize(mapped),(mode.values.w&65536u)!=0u),color.a);
- }
+ // Resolve only scene color. Native dual-source accumulation keeps its
+ // alpha weighting and decay; tone mapping and transfer belong to output.
  return color;
 }

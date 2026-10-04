@@ -163,7 +163,7 @@ impl Resources {
             // Native 1f4084a medium quality: controls.rs and
             // oit_dual_source.wgsl. WebGPU marks the native color1 output
             // as the second blend source of location 0.
-            draw_source.push_str("\nstruct Dual { @location(0) @blend_src(0) color:vec4<f32>, @location(0) @blend_src(1) alpha:vec4<f32> }; @fragment fn fs_dual(v:Out)->Dual {if(v.color.a>=1.0){discard;}let c=coverage(v);let normalized_depth=clamp(v.clip.z*0.5+0.5,0.0,1.0);let depth_weight=clamp(c.a*pow(1.0-normalized_depth,2.0),0.001,1000.0);let alpha=pow(c.a,1.1);return Dual(vec4<f32>(c.rgb*alpha,alpha),vec4<f32>(alpha,depth_weight,1.0,1.0/8.0));}");
+            draw_source.push_str("\nstruct Dual { @location(0) @blend_src(0) color:vec4<f32>, @location(0) @blend_src(1) alpha:vec4<f32> }; @fragment fn fs_dual(v:Out)->Dual {if(v.opaque!=0u){discard;}let c=coverage(v);let normalized_depth=clamp(v.clip.z*0.5+0.5,0.0,1.0);let depth_weight=clamp(c.a*pow(1.0-normalized_depth,2.0),0.001,1000.0);let alpha=pow(c.a,1.1);return Dual(vec4<f32>(c.rgb*alpha,alpha),vec4<f32>(alpha,depth_weight,1.0,1.0/8.0));}");
         }
         let shader = gpu::module(d, &draw_source);
         let add = wgpu::BlendState {

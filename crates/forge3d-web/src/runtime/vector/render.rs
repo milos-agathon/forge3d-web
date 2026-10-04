@@ -126,14 +126,12 @@ impl Resources {
         let mut mode_bytes = bytemuck::cast_slice(&[
             if self.mode == "wboit" {
                 1
-            } else if self.mode == "dual-source" {
-                2
             } else {
                 0
             },
             self.highlight_count,
             u32::from(background.is_some()),
-            self.highlight_radius | if format.is_srgb() { 65536 } else { 0 },
+            self.highlight_radius,
         ])
         .to_vec();
         mode_bytes.extend_from_slice(bytemuck::cast_slice(&[self.highlight_bound, 0., 0., 0.]));

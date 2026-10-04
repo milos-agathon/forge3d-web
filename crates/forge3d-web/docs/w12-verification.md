@@ -1,5 +1,70 @@
 # W12 verification
 
+## Review corrections after 55cfe2c
+
+Dual-source vector resolve retains the native medium accumulation controls
+(`alpha^1.1` and `0.875` destination decay), but returns scene colour without
+Reinhard or gamma conversion. W11 owns tone mapping and output encoding.
+Opaque red, grey 0.2 and white must match standard, WBOIT, dual-source and auto,
+both alone and beside a disjoint translucent feature. The colour probe also
+checks HDR input, Reinhard output and the final sRGB pixel against independent
+equations for opaque and translucent input.
+
+Opaque/translucent pass classification also uses a flat source-alpha flag.
+Perspective interpolation of alpha 1 can round below 1, otherwise routing an
+opaque surface into the translucent pass without depth writes. Ordinary/far
+overlapping surfaces retain nearest colour and pick ID in all four OIT modes
+and both draw orders.
+
+Successful camera changes invalidate both pick and highlight targets. Selection
+and hover tests compare actual feature coverage with the moved tint and outline;
+immediate point, rectangle and lasso queries must equal queries after rendering.
+The camera cases include view translation and projection changes. Resize creates
+fresh dirty targets, and capture already invalidates its temporary projection.
+
+The review's previously unverified depth concern also reproduced: with a flat
+zero-offset drape and camera height 0.0101, independent clip z/w rounding put the
+polygon behind terrain (zero red or picked pixels in CPU and GPU modes), while
+height 0.01 covered 1,764 pixels. Positive biased depth now rounds clip z down and
+w up on the existing absolute `2^-19` storage grid. This cannot reverse the bias;
+its NDC error shrinks with distance, preserving ordinary/far depth precision.
+Unbiased and outside-depth vertices retain their previous storage. Near-drape tests check
+both heights and projection paths; ordinary/far tests reject hidden terrain
+geometry and verify close opaque ordering in both draw orders. A varied-height
+projection case includes an arithmetic-sensitive vertex and exact CPU/GPU IDs.
+The core regression also bounds near-camera screen displacement below 1/16 pixel.
+
+The distant-depth probes also reject a coarser `2^-19` NDC floor. Its negative
+control is retained in `C:\devin-target\w12-r123-depth-coarse.log`; a surface
+behind terrain became visible and nearby opaque layers changed ordering.
+
+The new tests failed against the original 55cfe2c WASM. Baseline logs are retained
+at `C:\devin-target\w12-r123-color-baseline.log`,
+`C:\devin-target\w12-r123-camera-baseline.log` and
+`C:\devin-target\w12-r123-depth-baseline.log`. These failures include the wrong
+HDR input, missing moved highlights, stale picks, and invisible near drapes.
+
+These regressions are covered in `w12_vector.spec.ts` and `w12_camera.spec.ts`,
+and mirrored by the installed consumer through built `dist` modules. The M6
+benchmark now dirties the highlight targets on each measured selected frame,
+retaining the original two-times bound. Its old cached-frame measurement below
+describes the earlier evidence only.
+
+The final evidence for these corrections is retained separately at
+`C:\devin-target\w12-evidence\r123-final-evidence.json`, with the exact tested
+commit and tarball digest. The prior records below describe 55cfe2c and its
+pre-amend candidate; they are historical evidence, not the correction's package.
+
+Correction source gates passed on local Windows Chromium: W12 has 14 unit and
+32 browser tests; W11 has 21 unit and 7 browser tests; the complete unit suite
+has 768 tests in 51 files. API/type checks, parity verification, the 22 pinned
+fixtures, and the infrastructure spec inventory pass. Rust core has 380 passing
+tests and web has 189. The installed-tarball gate runs last on the clean commit
+and mirrors the colour, camera, near-drape and 41 depth-occlusion/arithmetic cases.
+Other browser and hardware profiles remain outside this evidence.
+
+## Earlier W12 evidence
+
 The corrected T12, P12 and V01–V04 implementation is checked against native
 `1f4084af428dc699bdcd108b029736cb73903926`. The original 18 pinned files retain
 their `bf8db93233e5158f6d226991fc5d230832c2d806` bytes and checksums and are
@@ -10,7 +75,7 @@ The Luxembourg conversion remains 2,035 rail paths / 23,277 positions.
 The implementation writes opaque vectors into depth first, draws translucent
 vectors against that depth, and then draws picks. Auto chooses available
 dual-source or reports the WBOIT fallback. The dual-source test independently
-evaluates native medium controls and compose, within one RGBA8 code value, in
+evaluates native medium accumulation controls, within one RGBA8 code value, in
 both orders. WBOIT order probes now use different depths. Miter, bevel, segment
 quad and cap assertions compare covered pixels.
 
@@ -37,7 +102,7 @@ new sources are additionally required.
 | --- | --- |
 | H1 | `H1 opaque nearest surface owns color and pick ID in auto/standard and both orders` |
 | H2 | `H2 24px miter contains bevel, bevel contains segment quads, limit falls back and cap pixels differ` |
-| H3 | `H3 dual-source matches independent native medium CPU equation within one code value in both orders` |
+| H3 | `H3 dual-source matches the independent native medium accumulation equation within one code value in both orders` |
 | M1 | `M1 auto chooses available dual-source and reports unavailable-feature fallback` |
 | M2 | `M2 vector feature 1 uses reserved ID AOV distinct from terrain and retains full pick ID` |
 | M3 | `M3 draped flat polygon normal faces camera and matches terrain within 1e-3` |
@@ -85,7 +150,7 @@ Required source gates:
 | `cargo test -p forge3d-core --features webgpu` | 379 tests; 0 failed |
 | `cargo test -p forge3d-web` | 189 tests; 0 failed |
 
-No spec file was added; the existing infrastructure spec list remains correct.
+The camera regression spec is registered in the infrastructure spec list.
 
 The installed-tarball gate requires a clean commit. It builds and installs the
 package in a separate consumer, executes every mirrored W12 probe through
