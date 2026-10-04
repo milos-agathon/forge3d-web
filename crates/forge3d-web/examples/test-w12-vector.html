@@ -31,7 +31,7 @@ window.__w12Oit=async()=>{
  l.setOit("standard");runtime.setVectorLayers(l);const standard=await runtime.readRgba();handle.update({features:[a,b]});runtime.setVectorLayers(l);const standardReverse=await runtime.readRgba();
  l.setOit("dual-source");runtime.setVectorLayers(l);const dual=await runtime.readRgba(),dualReport=runtime.getVectorReport();
  const center=[...weighted.slice((48*128+64)*4,(48*128+64)*4+4)];const ac=Math.pow(.45,1.1),bc=Math.pow(.6,1.1),native=[ac*.875,0,bc].map(v=>Math.round(v*255));const nativeDelta=diff([...dual.slice((48*128+64)*4,(48*128+64)*4+3)],native);runtime.setVectorLayers(null);
- return {weightedDelta:diff(weighted,reverse),standardDelta:diff(standard,standardReverse),dualDelta:dualReport.effectiveOit==="wboit"?diff(dual,weighted):nativeDelta,center,dualReport};
+ return {available:runtime.getCapabilities().features?.includes("dual-source-blending")??false,weightedDelta:diff(weighted,reverse),standardDelta:diff(standard,standardReverse),dualDelta:dualReport.effectiveOit==="wboit"?diff(dual,weighted):nativeDelta,center,dualReport};
 };
 window.__w12Styles=async()=>{
  const l=new VectorLayers(),rgba=new Uint8Array(4*2*4);for(let y=0;y<2;y++)for(let x=2;x<4;x++)rgba.set([255,255,255,255],(y*4+x)*4);
@@ -95,9 +95,9 @@ window.__w12ColorTransfer=async()=>{
    if(alpha===1)opaque.push({mode,color:color.name,disjoint,actual:[...plain.slice(index*4,index*4+4)],expected:[...color.rgb.map(v=>Math.round(v*255)),255],pick:map.ids[index],covered:map.ids.reduce((n,id)=>n+Number(id===1),0),disjointCovered:map.ids.reduce((n,id)=>n+Number(id===2),0),report});
    r.setPostFx([{kind:"tonemap",id:"map",operator:"reinhard",exposure:1}]);r.render();
    const raw=await r.readPostFxIntermediate("color"),mapped=await r.readPostFxIntermediate("map:resolve"),output=await r.readRgba();
-   // Auto and explicit dual-source must exercise the real feature, while
-   // expectations remain independent of the runtime's reported choice.
-   const weight=alpha===1?1:(mode==="dual-source"||mode==="auto")?alpha**1.1:alpha;
+   // Derive the independent equation from negotiated capability, then test
+   // the runtime report separately so an incorrect fallback cannot self-pass.
+   const weight=alpha===1?1:available&&(mode==="dual-source"||mode==="auto")?alpha**1.1:alpha;
    const expectedHdr=color.rgb.map(v=>v*weight),expectedMapped=expectedHdr.map(v=>2*v/(1+2*v)),expectedDisplay=expectedMapped.map(v=>Math.round(srgb(v)*255));
    const actual=[...raw.data.slice(index*4,index*4+3)],actualMapped=[...mapped.data.slice(index*4,index*4+3)],display=[...output.slice(index*4,index*4+3)];
    hdr.push({mode,color:color.name,alpha,disjoint,actual,mapped:actualMapped,display,expectedHdr,expectedMapped,expectedDisplay,hdrDelta:diff(actual,expectedHdr),mappedDelta:diff(actualMapped,expectedMapped),displayDelta:diff(display,expectedDisplay),report,postfxReport:r.getPostFxReport()});

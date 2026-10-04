@@ -1,4 +1,5 @@
 import { expect, test, skipRenderAssertionsWhenProbing } from "../browser/webgpu-fixture";
+import { expectVectorOit, maskDualSource } from "../browser/w12-oit";
 
 test.beforeEach(async ({ page, webgpuAvailability }) => {
     skipRenderAssertionsWhenProbing(webgpuAvailability);
@@ -52,8 +53,12 @@ test("near zero-offset drapes retain depth bias and identical CPU/GPU projection
     }
 });
 
-test("ordinary and far depths preserve terrain occlusion and nearest opaque order", async ({ page }) => {
+for (const masked of [false, true]) test(`ordinary and far depths preserve terrain occlusion and nearest opaque order with ${masked ? "masked dual-source" : "adapter capabilities"}`, async ({ page }) => {
     test.setTimeout(120000);
+    if (masked) {
+        await maskDualSource(page);
+        await page.waitForFunction(() => (window as any).__w12CameraReady);
+    }
     const rows = await page.evaluate(() => (window as any).__w12DepthOcclusion());
     expect(rows).toHaveLength(41);
     for (const row of rows) {
@@ -83,7 +88,9 @@ test("ordinary and far depths preserve terrain occlusion and nearest opaque orde
             expect(row.picked, message).toBe(0);
             expect(row.terrainDelta, message).toBe(0);
         } else {
-            expect(row.report.effectiveOit, message).toBe(row.mode === "auto" ? "dual-source" : row.mode);
+            expect(typeof row.available, message).toBe("boolean");
+            if (masked) expect(row.available, message).toBe(false);
+            expectVectorOit(row.report, row.mode, row.available, message);
             expect(row.covered, message).toBeGreaterThan(100);
             expect(row.wrongPick, message).toBe(0);
             expect(row.wrongColor, message).toBe(0);

@@ -242,6 +242,7 @@ window.__w12DepthOcclusion = async () => {
                     }
                     const center = 48 * 128 + 64;
                     rows.push({ kind: "vectors", distance, gap, culling, mode, reverse, reference, covered, wrongPick, wrongColor,
+                        available: stackRuntime.getCapabilities().features?.includes("dual-source-blending") ?? false,
                         centerId: map.ids[center], centerColor: [...rgba.slice(center * 4, center * 4 + 4)],
                         byteIdentical: projection.byteIdentical, vertexCount: projection.vertexCount,
                         projected: projectedFeatures(projection.cpu),

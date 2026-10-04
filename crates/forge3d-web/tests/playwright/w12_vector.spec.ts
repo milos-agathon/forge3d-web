@@ -1,4 +1,6 @@
 import { expect, test, skipRenderAssertionsWhenProbing } from "../browser/webgpu-fixture";
+import { expectVectorOit, maskDualSource } from "../browser/w12-oit";
+import { resolveSourceBenchmarkEvidenceMode } from "../browser/playwright-project-metadata";
 test.beforeEach(async ({ page, webgpuAvailability }) => { skipRenderAssertionsWhenProbing(webgpuAvailability); await page.goto("/examples/test-w12-vector.html"); await page.waitForFunction(() => (window as any).__w12Ready); });
 test("W12 visible point/AA line/polygon pixels have exact stable pick IDs and CPU/GPU parity", async ({ page }) => {
     const errors: string[] = [];
@@ -25,9 +27,7 @@ test("W12 WBOIT is order independent and dual-source fallback is observable", as
     expect(r.weightedDelta).toBeLessThanOrEqual(1);
     expect(r.standardDelta).toBeGreaterThan(20);
     expect(r.dualDelta).toBeLessThanOrEqual(1);
-    expect(["wboit", "dual-source"]).toContain(r.dualReport.effectiveOit);
-    if (r.dualReport.effectiveOit === "wboit")
-        expect(r.dualReport.fallbackReason).toBe("dual-source-blending-unavailable");
+    expectVectorOit(r.dualReport, "dual-source", r.available);
 });
 test("W12 all point shapes, atlas alpha/LOD and cap/join styles use identical GPU/CPU coverage", async ({ page }) => {
     const r = await page.evaluate(() => (window as any).__w12Styles());
@@ -37,13 +37,14 @@ test("W12 all point shapes, atlas alpha/LOD and cap/join styles use identical GP
     expect(r.idDelta).toBe(0);
 });
 test("W12 an adapter without dual-source blending renders through the reported WBOIT fallback", async ({ page }) => {
-    await page.addInitScript(() => { const gpu = navigator.gpu; const request = gpu.requestAdapter.bind(gpu); gpu.requestAdapter = async (options) => { const adapter = await request(options); if (adapter)
-        Object.defineProperty(adapter, "features", { value: new Set([...adapter.features].filter(f => f !== "dual-source-blending")) }); return adapter; }; });
-    await page.reload();
+    await maskDualSource(page);
     await page.waitForFunction(() => (window as any).__w12Ready);
     const r = await page.evaluate(() => (window as any).__w12Oit());
-    expect(r.dualReport.effectiveOit).toBe("wboit");
-    expect(r.dualReport.fallbackReason).toBe("dual-source-blending-unavailable");
+    expect(r.available).toBe(false);
+    expectVectorOit(r.dualReport, "dual-source", false);
+    expect(r.center[0] + r.center[2]).toBeGreaterThan(30);
+    expect(r.weightedDelta).toBeLessThanOrEqual(1);
+    expect(r.standardDelta).toBeGreaterThan(20);
     expect(r.dualDelta).toBeLessThanOrEqual(1);
 });
 test("W12 draped IDs survive terrain occlusion and the HDR post-FX capture path", async ({ page }) => {
@@ -109,18 +110,25 @@ test("H2 24px miter contains bevel, bevel contains segment quads, limit falls ba
     expect(r.squareMissing).toBe(0);
 });
 test("H3 dual-source matches the independent native medium accumulation equation within one code value in both orders", async ({ page }) => {
+    const available = await page.evaluate(() => (window as any).__w12Runtime.getCapabilities().features?.includes("dual-source-blending") ?? false);
+    test.skip(!available, "This adapter lacks optional dual-source blending; WBOIT fallback is covered separately.");
     const cases = await page.evaluate(() => (window as any).__w12DualEquation());
     expect(cases).toHaveLength(2);
     for (const r of cases) {
-        expect(r.report.effectiveOit).toBe("dual-source");
+        expectVectorOit(r.report, "dual-source", true);
         expect(r.actual[0]+r.actual[2]).toBeGreaterThan(30);
         expect(r.delta, JSON.stringify(r)).toBeLessThanOrEqual(1);
     }
 });
-test("R1 isolated opaque colors agree across OIT modes and W11 receives scene color with exactly one output transfer", async ({ page }) => {
+for (const masked of [false, true]) test(`R1 isolated opaque colors and W11 output transfer with ${masked ? "masked dual-source" : "adapter capabilities"}`, async ({ page }) => {
     test.setTimeout(120000);
+    if (masked) {
+        await maskDualSource(page);
+        await page.waitForFunction(() => (window as any).__w12Ready);
+    }
     const r = await page.evaluate(() => (window as any).__w12ColorTransfer());
-    expect(r.available).toBe(true);
+    expect(typeof r.available).toBe("boolean");
+    if (masked) expect(r.available).toBe(false);
     expect(r.opaque).toHaveLength(24);
     expect(r.hdr).toHaveLength(48);
     for (const c of r.opaque) {
@@ -130,12 +138,11 @@ test("R1 isolated opaque colors agree across OIT modes and W11 receives scene co
         expect(c.covered, context).toBeGreaterThan(100);
         if (c.disjoint) expect(c.disjointCovered, context).toBeGreaterThan(100);
         else expect(c.disjointCovered, context).toBe(0);
-        expect(c.report.effectiveOit, context).toBe(c.mode === "auto" ? "dual-source" : c.mode);
-        expect(c.report.fallbackReason, context).toBeNull();
+        expectVectorOit(c.report, c.mode, r.available, context);
     }
     for (const c of r.hdr) {
         const context = JSON.stringify(c);
-        expect(c.report.effectiveOit, context).toBe(c.mode === "auto" ? "dual-source" : c.mode);
+        expectVectorOit(c.report, c.mode, r.available, context);
         expect(c.hdrDelta, context).toBeLessThanOrEqual(.001);
         expect(c.mappedDelta, context).toBeLessThanOrEqual(.001);
         expect(c.displayDelta, context).toBeLessThanOrEqual(1);
@@ -145,15 +152,13 @@ test("R1 isolated opaque colors agree across OIT modes and W11 receives scene co
 });
 test("M1 auto chooses available dual-source and reports unavailable-feature fallback", async ({ page }) => {
     let r = await page.evaluate(() => (window as any).__w12Auto());
-    expect(r.available).toBe(true);
-    expect(r.report.effectiveOit).toBe("dual-source");
-    expect(r.report.fallbackReason).toBeNull();
-    await page.addInitScript(() => { const gpu=navigator.gpu, request=gpu.requestAdapter.bind(gpu); gpu.requestAdapter=async options=>{const adapter=await request(options);if(adapter)Object.defineProperty(adapter,"features",{value:new Set([...adapter.features].filter(f=>f!=="dual-source-blending"))});return adapter;}; });
-    await page.reload(); await page.waitForFunction(() => (window as any).__w12Ready);
+    expect(typeof r.available).toBe("boolean");
+    expectVectorOit(r.report, "auto", r.available);
+    await maskDualSource(page);
+    await page.waitForFunction(() => (window as any).__w12Ready);
     r = await page.evaluate(() => (window as any).__w12Auto());
     expect(r.available).toBe(false);
-    expect(r.report.effectiveOit).toBe("wboit");
-    expect(r.report.fallbackReason).toBe("dual-source-blending-unavailable");
+    expectVectorOit(r.report, "auto", false);
 });
 test("M2 vector feature 1 uses reserved ID AOV distinct from terrain and retains full pick ID", async ({ page }) => {
     const r = await page.evaluate(() => (window as any).__w12Aovs());
@@ -199,8 +204,9 @@ test("L4 graph styles retain drape and only an explicitly set input overrides bo
     expect(r[2].minY).toBeCloseTo(.77,4);
 });
 
-test("M5 stable parallel compaction is byte-identical to project_and_cull and 200k GPU triangles are no slower", async ({ page }) => {
+test("M5 stable parallel compaction is byte-identical to project_and_cull and 200k GPU triangles are no slower", async ({ page, webgpuAvailability }, testInfo) => {
     test.setTimeout(180000);
+    const mode = resolveSourceBenchmarkEvidenceMode(webgpuAvailability.project, process.env.FORGE3D_SOURCE_BENCHMARK_MODE);
     const r=await page.evaluate(()=>(window as any).__w12Compaction());
     expect(r.vertexCount).toBeGreaterThan(6);
     expect(r.gpuBytes).toBe(r.cpuBytes);
@@ -209,14 +215,17 @@ test("M5 stable parallel compaction is byte-identical to project_and_cull and 20
     expect(r.triangleCount).toBe(200000);
     expect(r.largeVertexCount).toBeGreaterThan(5000);
     expect(r.largeByteDelta).toBe(0);
-    expect(r.gpu.median,JSON.stringify(r)).toBeLessThanOrEqual(r.cpu.median);
+    await testInfo.attach("w12-compaction-timings.json", { body: JSON.stringify({ mode, gpu: r.gpu, cpu: r.cpu }), contentType: "application/json" });
+    if (mode === "required") expect(r.gpu.median,JSON.stringify(r)).toBeLessThanOrEqual(r.cpu.median);
 });
-test("M6 2000 selected IDs with recomputed 32px outline/glow cost at most twice the unselected frame and exceed old cap", async ({ page }) => {
+test("M6 2000 selected IDs with recomputed 32px outline/glow cost at most twice the unselected frame and exceed old cap", async ({ page, webgpuAvailability }, testInfo) => {
     test.setTimeout(120000);
+    const mode = resolveSourceBenchmarkEvidenceMode(webgpuAvailability.project, process.env.FORGE3D_SOURCE_BENCHMARK_MODE);
     const r=await page.evaluate(()=>(window as any).__w12Incremental());
     expect(r.green).toBeGreaterThan(100);
     expect(r.recomputedFrames).toBe(12);
-    expect(r.selected.median,JSON.stringify(r)).toBeLessThanOrEqual(r.plain.median*2);
+    await testInfo.attach("w12-selection-timings.json", { body: JSON.stringify({ mode, selected: r.selected, plain: r.plain }), contentType: "application/json" });
+    if (mode === "required") expect(r.selected.median,JSON.stringify(r)).toBeLessThanOrEqual(r.plain.median*2);
     expect(r.aboveCap.featureCount).toBe(5000);
 });
 test("M7 point picking uses at most three padded rows at 1920x1080 and clean picks do not render", async ({ page }) => {
@@ -245,11 +254,13 @@ test("M8 selection hover and time commits create no pipelines or vertex buffers"
     expect(r.sceneBefore.pipelineCreations).toBe(r.before.pipelineCreations);
     expect(r.sceneAfter.pipelineCreations).toBe(r.before.pipelineCreations);
 });
-test("M8 Luxembourg selection commits in less than 50ms without geometry or pipeline creation", async ({ page }) => {
+test("M8 Luxembourg selection commits in less than 50ms without geometry or pipeline creation", async ({ page, webgpuAvailability }, testInfo) => {
     test.setTimeout(120000);
+    const mode = resolveSourceBenchmarkEvidenceMode(webgpuAvailability.project, process.env.FORGE3D_SOURCE_BENCHMARK_MODE);
     await page.goto("/examples/luxembourg-vector.html");await page.waitForFunction(()=>(window as any).__luxembourg);
     const r=await page.evaluate(()=>{const {runtime,layers,terrain}=(window as any).__luxembourg;const before=runtime.getVectorReport();const start=performance.now();layers.setSelection("active",[1,2,3],{outline:true,outlineWidth:32,glow:true,glowRadius:32});runtime.setVectorLayers(layers,terrain);return {ms:performance.now()-start,before,after:runtime.getVectorReport()};});
-    expect(r.ms,JSON.stringify(r)).toBeLessThan(50);
+    await testInfo.attach("w12-selection-commit-timing.json", { body: JSON.stringify({ mode, ms: r.ms }), contentType: "application/json" });
+    if (mode === "required") expect(r.ms,JSON.stringify(r)).toBeLessThan(50);
     expect(r.after.pipelineCreations).toBe(r.before.pipelineCreations);
     expect(r.after.vertexBufferCreations).toBe(r.before.vertexBufferCreations);
 });

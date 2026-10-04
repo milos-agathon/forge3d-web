@@ -1,5 +1,27 @@
 # W12 verification
 
+## Hosted CI capability and performance policy
+
+Dual-source blending is optional. The colour-transfer, automatic OIT and
+depth-ordering probes assert the negotiated mode and fallback reason while
+retaining all pixel, HDR, coverage and picking checks on adapters without it.
+The independent dual-source equation comparison runs only when that feature is
+available; the forced-unavailable probes still check WBOIT rendering and colour
+transfer.
+
+W12 timings follow the existing browser evidence modes. Source preflight lanes
+use `probe`: they retain correctness and resource assertions and attach measured
+timings as observations. Branded source lanes use `required` and enforce the
+unchanged GPU <= CPU, selected <= 2x plain and selection-commit < 50 ms bounds.
+`FORGE3D_SOURCE_BENCHMARK_MODE` cannot downgrade a branded lane.
+
+The W12 installed consumer uses `FORGE3D_PACKAGE_GATE_MODE` (default `required`)
+and the shared installed-browser profile. Required mode uses unflagged branded
+Chrome and enforces the same timing bounds; probe mode records timings and runs
+the same correctness checks. Its evidence records the mode and browser profile.
+These modes qualify timing evidence for the selected host; the historical local
+measurements below do not establish performance on hosted macOS adapters.
+
 ## Review corrections after 55cfe2c
 
 Dual-source vector resolve retains the native medium accumulation controls
