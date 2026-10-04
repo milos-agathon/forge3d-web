@@ -21,8 +21,9 @@ export function nativeSsrInputs(packedNormals, worldNormals, projection, matrice
   camera[48] = projection[0]; camera[53] = projection[5];
   return {normal, camera};
 }
+const halfFloat=new Float32Array(1),halfBits=new Uint32Array(halfFloat.buffer);
 function half(x) {
-  const f = new Float32Array([x]), bits = new Uint32Array(f.buffer)[0];
+  halfFloat[0]=x;const bits=halfBits[0];
   const sign = (bits >>> 16) & 0x8000, exp = ((bits >>> 23) & 255) - 112, mantissa = bits & 0x7fffff;
   if (exp <= 0) return exp < -10 ? sign : sign | (((mantissa | 0x800000) + (1 << (12 - exp))) >>> (14 - exp));
   // Rounding may carry into the exponent (e.g. 0.49999997 -> 0.5).
@@ -31,6 +32,24 @@ function half(x) {
 function fromHalf(bits) {
   const sign = bits & 0x8000 ? -1 : 1, exp = (bits >>> 10) & 31, mantissa = bits & 1023;
   return sign * (exp ? 2 ** (exp - 15) * (1 + mantissa / 1024) : 2 ** -14 * mantissa / 1024);
+}
+export function referenceSpecularCube(size, levels) {
+  let texels=0;for(let mip=0;mip<levels;mip++)texels+=6*Math.max(1,size>>mip)**2;
+  const data=new Uint16Array(texels*4);let offset=0;
+  for(let mip=0;mip<levels;mip++){
+    const dim=Math.max(1,size>>mip);
+    for(let face=0;face<6;face++)for(let y=0;y<dim;y++)for(let x=0;x<dim;x++){
+      const u=(x+.5)/dim*2-1,v=(y+.5)/dim*2-1;
+      let dx,dy,dz;
+      switch(face){case 0:dx=1;dy=-v;dz=-u;break;case 1:dx=-1;dy=-v;dz=u;break;case 2:dx=u;dy=1;dz=v;break;case 3:dx=u;dy=-1;dz=-v;break;case 4:dx=u;dy=-v;dz=1;break;default:dx=-u;dy=-v;dz=-1;}
+      const length=Math.hypot(dx,dy,dz);
+      data[offset++]=half(.08+.07*dx/length+2*mip);
+      data[offset++]=half(.12+.07*dy/length+2*mip);
+      data[offset++]=half(.16+.07*dz/length+2*mip);
+      data[offset++]=half(1);
+    }
+  }
+  return new Uint8Array(data.buffer);
 }
 export function imageMetrics(a, b, width, height, channels = 4) {
   let ssim = 0, windows = 0, maxAbs = 0, mae = 0;
@@ -144,7 +163,11 @@ export async function nativeComparisons(api, r, camera) {
     const denoiseExpected=await read(nativeDenoise),denoiseActual=await r.readPostFxIntermediate("noise:atrous-0");
     results.denoise={...imageMetrics(denoiseExpected,denoiseActual.data,width,height),control:imageMetrics(denoiseExpected,new Float32Array(denoiseExpected.length),width,height).ssim};
     const ibl = await api.ImageBasedLighting.fromLinear({width:4,height:2,data:Float32Array.from({length:32},(_,i)=>[.12,.24,.36,1][i%4])},{quality:"low"});
-    const readyIbl=await ibl.prepare(r);const prepared=readyIbl.snapshot().prepared;r.setIbl(readyIbl.snapshot());
+    const readyIbl=await ibl.prepare(r),iblSnapshot=readyIbl.snapshot(),prepared=iblSnapshot.prepared;
+    // Exercise SSR against known directional texels and distinct mip radiance.
+    // Convolution is covered by W04/W10; its device-specific output must not
+    // determine the independent fallback shader's input pattern.
+    prepared.specular=referenceSpecularCube(prepared.specularSize,prepared.specularMipCount);r.setIbl(iblSnapshot);
     function cube(bytes,size,levels=1){
       const t=device.createTexture({size:[size,size,6],mipLevelCount:levels,format:"rgba16float",usage:GPUTextureUsage.TEXTURE_BINDING|GPUTextureUsage.COPY_DST});resources.push(t);
       let offset=0;for(let mip=0;mip<levels;mip++){const dim=Math.max(1,size>>mip),length=dim*dim*6*8;device.queue.writeTexture({texture:t,mipLevel:mip},bytes.subarray(offset,offset+length),{bytesPerRow:dim*8,rowsPerImage:dim},[dim,dim,6]);offset+=length;}
@@ -158,7 +181,7 @@ export async function nativeComparisons(api, r, camera) {
     for(const kind of ["ssgi","ssr"]){
       r.setPostFx([{kind,id:kind,maxDistance:.001,thickness:.001,intensity:1,steps:4,samples:1,bilateralRadius:0,temporalWeight:0}]);r.render();
       const alb=texture((await r.readPostFxIntermediate("albedo")).data);
-      let output;
+      let output,roughnessControl;
       if(kind==="ssgi"){
         const p=new ArrayBuffer(160),f=new Float32Array(p),u=new Uint32Array(p);f[0]=.001;f[1]=1;u[2]=4;f[4]=1/width;f[5]=1/height;
         output=await dispatch(await source("src/shaders/ssgi/shade.wgsl"),"cs_shade",[[0,input],[1,sampler],[2,diffuse],[3,sampler],[4,hit],[5,"output"],[6,buffer(new Uint8Array(p))],[7,cam],[8,nativeNormal],[9,alb]]);
@@ -166,11 +189,15 @@ export async function nativeComparisons(api, r, camera) {
         const p=new ArrayBuffer(32),f=new Float32Array(p),u=new Uint32Array(p);u[0]=4;f[1]=.001;f[2]=.001;f[3]=1;f[4]=1/width;f[5]=1/height;
         const counters=device.createBuffer({size:32,usage:GPUBufferUsage.STORAGE|GPUBufferUsage.COPY_DST});resources.push(counters);
         output=await dispatch(await source("src/shaders/ssr/fallback_env.wgsl"),"cs_fallback",[[0,empty],[1,hit],[2,nativeDepth],[3,ssrNormal],[4,specular],[5,sampler],[6,"output"],[7,buffer(new Uint8Array(p))],[8,ssrCamera],[9,counters]]);
+        const wrong=await dispatch(await source("src/shaders/ssr/fallback_env.wgsl"),"cs_fallback",[[0,empty],[1,hit],[2,nativeDepth],[3,nativeNormal],[4,specular],[5,sampler],[6,"output"],[7,buffer(new Uint8Array(p))],[8,ssrCamera],[9,counters]]);
+        roughnessControl=rgbOnly(await read(wrong));
       }
       const expected=rgbOnly(await read(output)),actual=rgbOnly((await r.readPostFxIntermediate(kind+":trace")).data);
       for(let i=0;i<width*height;i++)if(depth.data[i]>=.999){expected.fill(0,i*3,i*3+3);actual.fill(0,i*3,i*3+3);}
       results[kind+"-ibl-fallback"]={...imageMetrics(expected,actual,width,height,3),control:imageMetrics(expected,new Float32Array(expected.length),width,height,3).ssim};
       if(kind==="ssr"){
+        for(let i=0;i<width*height;i++)if(depth.data[i]>=.999)roughnessControl.fill(0,i*3,i*3+3);
+        results["ssr-ibl-fallback"].roughnessControl=imageMetrics(expected,roughnessControl,width,height,3).ssim;
         const composed=await r.readPostFxIntermediate("ssr:composite"),base=await r.readPostFxIntermediate("color");
         results.ssrMissCompositeDelta=imageMetrics(base.data,composed.data,width,height).mae;
       }

@@ -1,7 +1,7 @@
 import {readFileSync} from "node:fs";
 import {createHash} from "node:crypto";
 import {expect,it} from "vitest";
-import {adaptNativeDofSource,nativeSsrInputs} from "../browser/w11-native-oracle.js";
+import {adaptNativeDofSource,nativeSsrInputs,referenceSpecularCube} from "../browser/w11-native-oracle.js";
 it("pins every independent W11 native shader source",()=>{
   const base=new URL("../golden/w11/",import.meta.url),manifest=JSON.parse(readFileSync(new URL("provenance.json",base),"utf8"));
   expect(manifest.baselineCommit).toBe("bf8db93233e5158f6d226991fc5d230832c2d806");expect(manifest.sources.length).toBe(17);
@@ -26,6 +26,21 @@ it("maps native SSR inputs to matching view rays and fractional specular LOD",()
   }
   expect(Array.from(input.normal).filter((_,i)=>i%4!==3)).toEqual(Array.from(packed).filter((_,i)=>i%4!==3));
   expect(packed[3]).toBe(0);expect(matrices[48]).toBeCloseTo(1/projection[0]);
+});
+it("provides finite directional radiance and distinct mips for SSR reference sampling",()=>{
+  const bytes=referenceSpecularCube(4,3),values=new Uint16Array(bytes.buffer);
+  const decode=(bits:number)=>2**(((bits>>10)&31)-15)*(1+(bits&1023)/1024);
+  expect(bytes.byteLength).toBe((4*4+2*2+1)*6*8);
+  for(let i=0;i<values.length;i++){
+    if(i%4===3){expect(values[i]).toBe(0x3c00);continue;}
+    expect(decode(values[i]!)).toBeGreaterThan(2/255);
+    expect(decode(values[i]!)).toBeLessThan(5);
+  }
+  const last=(4*4+2*2)*6*4;
+  expect(decode(values[last]!)).toBeCloseTo(4.15,2); // +X face centre
+  expect(decode(values[last+4]!)).toBeCloseTo(4.01,2); // -X face centre
+  expect(decode(values[last+1]!)).toBeCloseTo(4.12,2);
+  expect(decode(values[last]!)-decode(values[0]!)).toBeGreaterThan(3.9);
 });
 it("adapts the pinned DOF debug overlay without changing its RGB expression or alpha",()=>{
   const source=readFileSync(new URL("../golden/w11/native/src__shaders__dof.wgsl",import.meta.url),"utf8");

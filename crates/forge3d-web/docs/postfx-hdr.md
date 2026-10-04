@@ -126,3 +126,9 @@ by squaring it, and uses linear mip filtering on both devices. These adaptations
 make the reflection rays and fractional source LOD agree; leaving normal alpha
 at zero compared mip zero against the renderer's roughness-dependent sample.
 The shader sources, SSIM threshold and failing negative controls remain pinned.
+SSR additionally uses a supplied directional cube with distinct HDR mip values,
+so the comparison exercises ray direction and fractional LOD independently of
+IBL convolution. A zero-roughness reference must fail SSIM 0.98, reproducing the
+former missing-alpha input bug. The W07 exact device-loss replay probe prepares
+IBL once and reuploads those same texels after recovery; W04/W10 retain coverage
+of live convolution, native image parity and IBL cache/recovery behavior.
