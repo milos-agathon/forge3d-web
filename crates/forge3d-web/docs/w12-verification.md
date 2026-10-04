@@ -63,6 +63,16 @@ tests and web has 189. The installed-tarball gate runs last on the clean commit
 and mirrors the colour, camera, near-drape and 41 depth-occlusion/arithmetic cases.
 Other browser and hardware profiles remain outside this evidence.
 
+The full `test:infrastructure` suite is not green on this Windows host:
+`C:\devin-target\w12-r123-infrastructure-git-bash.log` records 606 passed,
+3 symlink-creation `EPERM` failures and 1 skipped (610 total), while
+`C:\devin-target\w12-r123-infrastructure-full.log` records 605 passed,
+the same 3 failures plus a workflow-selector failure, and 1 skipped.
+The selector passes in the Git Bash run, and all affected tests are unchanged
+from main. An independent run on untouched main (`bdda869`) also fails the same
+3 symlink tests, confirming they predate W12. The 3 symlink checks remain
+unverified until rerun on a host that permits symlink creation.
+
 ## Earlier W12 evidence
 
 The corrected T12, P12 and V01–V04 implementation is checked against native
