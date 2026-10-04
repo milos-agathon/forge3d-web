@@ -34,6 +34,13 @@ try {
   assert.deepEqual(
     Object.keys(facadeA).sort(),
     [
+      "VectorLayers",
+      "VectorLayer",
+      "VectorPicker",
+      "pickVectorTerrain",
+      "PostFxChain",
+      "normalizePostFx",
+      "createIdentityColorLut",
       "Forge3DEnvironment",
       "sunPosition",
       "environmentMemoryReport",
@@ -55,6 +62,7 @@ try {
       "AOV_ID_WATER_BASE",
       "AOV_ID_SCENE_NODE_BASE",
       "AOV_ID_TERRAIN",
+      "AOV_ID_VECTOR",
       "AovFrame",
       "ArrayHeightSource",
       "BorrowedWasmView",

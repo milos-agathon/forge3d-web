@@ -847,6 +847,9 @@ pub(super) fn set_camera_runtime(
     if let (Some(shadows), Some(prepared)) = (runtime.shadows.as_mut(), prepared_shadows) {
         prepared.write(context, shadows);
     }
+    // Pick targets and highlight bounds contain pixels from the previous view.
+    // Invalidate only after the complete camera update succeeds.
+    super::vector::invalidate_pick(runtime);
     Ok(())
 }
 
@@ -903,15 +906,53 @@ pub(super) fn resize_runtime(runtime: &mut Forge3DRuntime, size: JsValue) -> Res
         .as_ref()
         .map_or(0, |e| e.snapshot.gpu_bytes(width, height));
     resized_memory.replace_all(&[
+        (
+            super::vector::KEY,
+            MemoryCategory::Textures,
+            super::vector::texture_bytes(
+                runtime.vectors.as_ref().map(|v| v.packet()),
+                width,
+                height,
+            ),
+        ),
+        (
+            super::vector::BUFFER_KEY,
+            MemoryCategory::Buffers,
+            super::vector::planned_bytes(
+                runtime.vectors.as_ref().map(|v| v.packet()),
+                width,
+                height,
+            ) - super::vector::texture_bytes(
+                runtime.vectors.as_ref().map(|v| v.packet()),
+                width,
+                height,
+            ),
+        ),
         (DEPTH_TEXTURE_KEY, MemoryCategory::Textures, depth_bytes),
+        (
+            super::postfx::KEY,
+            MemoryCategory::Textures,
+            runtime.postfx.as_ref().map_or(0, |fx| {
+                super::postfx::planned_bytes(
+                    &fx.config,
+                    width,
+                    height,
+                    runtime.environment.is_some(),
+                    runtime.scatter.as_ref().is_some_and(|s| s.transparent()),
+                )
+            }),
+        ),
         (
             super::environment::KEY,
             MemoryCategory::Textures,
             environment_bytes,
         ),
     ])?;
+    let resized_vectors =
+        super::vector::prepare_resize(runtime, &mut resized_memory, width, height)?;
     let resized_environment =
         super::environment::prepare_resize(runtime, width, height, &mut resized_memory)?;
+    let resized_postfx = super::postfx::prepare_resize(runtime, width, height)?;
     let surface_state = runtime.surface_state.as_mut().ok_or_else(|| {
         WebError::new(
             Forge3DErrorCode::RuntimeDisposed,
@@ -927,6 +968,8 @@ pub(super) fn resize_runtime(runtime: &mut Forge3DRuntime, size: JsValue) -> Res
     runtime.height = height;
     runtime.memory = resized_memory;
     runtime.environment = resized_environment;
+    runtime.postfx = resized_postfx;
+    runtime.vectors = resized_vectors;
     runtime.depth_attachment = Some(DepthAttachment::new(&context, width, height));
     runtime
         .memory
@@ -4531,8 +4574,8 @@ fn fs_capture_primary(input: VertexOutput) -> CapturePrimaryOutput {
 fn fs_capture_surface(input: VertexOutput) -> CaptureSurfaceOutput {
     let shaded = terrain_capture_sample(input);
     var output: CaptureSurfaceOutput;
-    output.albedo = select(vec4<f32>(0.0), vec4<f32>(shaded.albedo, 1.0), shaded.covered);
-    output.normal = select(vec4<f32>(0.0), vec4<f32>(shaded.normal, 1.0), shaded.covered);
+    output.albedo = select(vec4<f32>(0.0), vec4<f32>(shaded.albedo, forge3d_material(0u).surface.x), shaded.covered);
+    output.normal = select(vec4<f32>(0.0), vec4<f32>(shaded.normal, forge3d_material(0u).surface.y), shaded.covered);
     return output;
 }
 // #endif

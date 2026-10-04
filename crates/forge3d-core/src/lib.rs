@@ -8,6 +8,9 @@ pub mod codecs;
 
 pub mod offline;
 
+#[cfg(feature = "webgpu")]
+pub mod postfx;
+
 #[cfg(feature = "gpu")]
 pub mod gpu;
 
@@ -427,3 +430,4 @@ mod tests {
 
 #[cfg(feature = "webgpu")]
 pub mod environment;
+pub mod vector;

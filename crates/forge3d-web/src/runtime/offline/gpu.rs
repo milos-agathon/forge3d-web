@@ -459,6 +459,17 @@ pub(crate) async fn read_texture(
     width: u32,
     height: u32,
 ) -> Result<(Vec<u8>, forge3d_core::readback::ReadbackLayout), WebError> {
+    read_texture_mip(context, texture, format, width, height, 0).await
+}
+
+pub(crate) async fn read_texture_mip(
+    context: &GpuContext,
+    texture: &wgpu::Texture,
+    format: forge3d_core::readback::ReadbackFormat,
+    width: u32,
+    height: u32,
+    mip_level: u32,
+) -> Result<(Vec<u8>, forge3d_core::readback::ReadbackLayout), WebError> {
     let layout = format
         .layout(width, height)
         .map_err(crate::error::map_core_error)?;
@@ -475,7 +486,7 @@ pub(crate) async fn read_texture(
     encoder.copy_texture_to_buffer(
         wgpu::TexelCopyTextureInfo {
             texture,
-            mip_level: 0,
+            mip_level,
             origin: wgpu::Origin3d::ZERO,
             aspect: wgpu::TextureAspect::All,
         },

@@ -38,15 +38,18 @@ pub(crate) fn build(
         report.total_instances += batch.transforms.len() / 16;
         report.hlod_cluster_count += batch.clusters.len();
         for l in &batch.levels {
-            report.vertex_buffer_bytes += (l.mesh.positions.len() / 3 * 72) as u64;
+            report.vertex_buffer_bytes +=
+                (l.mesh.positions.len() / 3 * std::mem::size_of::<LitVertex>()) as u64;
             report.index_buffer_bytes += (l.mesh.indices.len() * 4) as u64;
             report.instance_buffer_bytes += (batch.transforms.len() / 16 * 80) as u64;
-            report.uniform_buffer_bytes += 128;
+            report.uniform_buffer_bytes += std::mem::size_of::<Settings>() as u64;
         }
         for c in &batch.clusters {
-            report.hlod_buffer_bytes +=
-                (c.mesh.positions.len() / 3 * 72 + c.mesh.indices.len() * 4 + 80) as u64;
-            report.uniform_buffer_bytes += 128;
+            report.hlod_buffer_bytes += (c.mesh.positions.len() / 3
+                * std::mem::size_of::<LitVertex>()
+                + c.mesh.indices.len() * 4
+                + 80) as u64;
+            report.uniform_buffer_bytes += std::mem::size_of::<Settings>() as u64;
         }
     }
     report.total_buffer_bytes = report
@@ -60,11 +63,13 @@ pub(crate) fn build(
     if inputs.iter().any(|b| {
         (b.transforms.len() / 16 * 80) as u64 > runtime.max_buffer_size
             || b.levels.iter().any(|l| {
-                (l.mesh.positions.len() / 3 * 72) as u64 > runtime.max_buffer_size
+                (l.mesh.positions.len() / 3 * std::mem::size_of::<LitVertex>()) as u64
+                    > runtime.max_buffer_size
                     || (l.mesh.indices.len() * 4) as u64 > runtime.max_buffer_size
             })
             || b.clusters.iter().any(|c| {
-                (c.mesh.positions.len() / 3 * 72) as u64 > runtime.max_buffer_size
+                (c.mesh.positions.len() / 3 * std::mem::size_of::<LitVertex>()) as u64
+                    > runtime.max_buffer_size
                     || (c.mesh.indices.len() * 4) as u64 > runtime.max_buffer_size
             })
     }) {
@@ -156,6 +161,7 @@ pub(crate) fn build(
         })
         .collect();
     Ok(Some(ScatterResources {
+        previous_time: None,
         batches,
         camera,
         layout,

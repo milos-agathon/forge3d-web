@@ -113,7 +113,8 @@ jobs:
     name: Web Runtime / Browser Preflight
     needs: build-and-contract
     runs-on: macos-15
-    timeout-minutes: 60
+    # Chromium (~37 min) and Firefox (~23 min) run after the build/setup steps.
+    timeout-minutes: 90
 
     steps:
       - name: Check out the protected source

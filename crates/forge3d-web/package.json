@@ -76,7 +76,11 @@
     "test:browser:webkit": "playwright test --project=webkit-preflight",
     "classify:browser:webkit": "node scripts/classify-webkit-preflight.mjs",
     "test:package-consumer:w10": "node scripts/build-browser-test-package.mjs --w10",
-    "test:w10": "vitest run tests/unit/environment.test.ts && playwright test tests/playwright/w10_environment.spec.ts tests/playwright/w10_native.spec.ts --project=chromium-preflight"
+    "test:w10": "vitest run tests/unit/environment.test.ts && playwright test tests/playwright/w10_environment.spec.ts tests/playwright/w10_native.spec.ts --project=chromium-preflight",
+    "test:package-consumer:w11": "node scripts/build-browser-test-package.mjs --w11",
+    "test:w11": "vitest run tests/unit/postfx.test.ts tests/unit/w11-native-provenance.test.ts && playwright test tests/playwright/w11_postfx.spec.ts --project=chromium-preflight",
+    "test:package-consumer:w12": "node scripts/test-w12-package.mjs",
+    "test:w12": "vitest run tests/unit/vector.test.ts tests/unit/w12-native-provenance.test.ts && playwright test tests/playwright/w12_vector.spec.ts tests/playwright/w12_camera.spec.ts --project=chromium-preflight"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",

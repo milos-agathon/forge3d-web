@@ -77,6 +77,8 @@ pub(super) struct ParsedPass {
 
 #[derive(Debug, Clone)]
 pub(super) struct ParsedScene {
+    pub postfx: Option<Option<forge3d_core::postfx::PostFxConfig>>,
+    pub vectors: Option<Option<crate::runtime::vector::Packet>>,
     pub environment: Option<forge3d_core::environment::Environment>,
     pub environment_lighting: Option<forge3d_core::lighting::LightingState>,
     pub scatter: Vec<forge3d_core::terrain_scatter::ScatterBatch>,
@@ -99,6 +101,12 @@ pub(super) fn invalid(message: impl Into<String>) -> WebError {
 pub(super) fn validate_node_topology(nodes: &[ParsedNode]) -> Result<(), WebError> {
     let mut seen = BTreeSet::new();
     for node in nodes {
+        if node.id
+            >= crate::runtime::offline::AOV_ID_VECTOR
+                - crate::runtime::offline::AOV_ID_SCENE_NODE_BASE
+        {
+            return Err(invalid("scene node ID overlaps the reserved AOV namespace"));
+        }
         if !seen.insert(node.id) {
             return Err(invalid(format!("duplicate scene node id {}", node.id)));
         }
@@ -176,6 +184,22 @@ pub(super) fn parse_snapshot(value: &JsValue) -> Result<ParsedScene, WebError> {
     let time_seconds = optional_number(&get_property(value, "timeSeconds")?, "timeSeconds", 0.0)?;
     let probes = crate::runtime::probes::parse(get_property(value, "probes")?)?;
     Ok(ParsedScene {
+        vectors: {
+            let vectors = get_property(value, "vectorPacket")?;
+            if vectors.is_undefined() {
+                None
+            } else {
+                Some(crate::runtime::vector::parse(vectors)?)
+            }
+        },
+        postfx: {
+            let fx = get_property(value, "postFx")?;
+            if fx.is_undefined() {
+                None
+            } else {
+                Some(crate::runtime::postfx::parse(fx)?)
+            }
+        },
         environment: crate::runtime::environment::parse(get_property(value, "environment")?)?,
         environment_lighting: {
             let value = get_property(value, "environmentLighting")?;
@@ -204,8 +228,18 @@ fn parse_node(value: &JsValue) -> Result<ParsedNode, WebError> {
     if !value.is_object() {
         return Err(invalid("scene node snapshot must be an object"));
     }
-    let id = finite_number(&get_property(value, "id")?, "node.id")?;
-    if id < 0.0 || id.fract() != 0.0 {
+    let id = get_property(value, "id")?
+        .as_f64()
+        .filter(|n| n.is_finite())
+        .ok_or_else(|| invalid("node.id must be finite"))?;
+    if id < 0.0
+        || id.fract() != 0.0
+        || id
+            >= f64::from(
+                crate::runtime::offline::AOV_ID_VECTOR
+                    - crate::runtime::offline::AOV_ID_SCENE_NODE_BASE,
+            )
+    {
         return Err(invalid("scene node id must be a nonnegative integer"));
     }
     let parent_value = get_property(value, "parent")?;

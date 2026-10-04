@@ -57,6 +57,9 @@ pub(super) fn set_scene_runtime(
 }
 
 struct SceneResourcePlan {
+    vectors: Option<Option<super::vector::Resources>>,
+    vector_highlights: Option<super::vector::HighlightUpdate>,
+    postfx: Option<super::postfx::Resources>,
     context: forge3d_core::gpu::GpuContext,
     memory: super::memory::MemoryLedger,
     scene: Option<NativeScene>,
@@ -102,6 +105,54 @@ fn prepare_scene(
         .clone();
     let aspect = runtime.width as f32 / runtime.height.max(1) as f32;
     let mut planned = runtime.memory.clone();
+    let postfx_config = parsed
+        .postfx
+        .clone()
+        .unwrap_or_else(|| runtime.postfx.as_ref().map(|fx| fx.config.clone()));
+    let vector_packet = parsed
+        .vectors
+        .as_ref()
+        .map(|packet| packet.as_ref())
+        .unwrap_or_else(|| runtime.vectors.as_ref().map(|v| v.packet()));
+    let reuse_vectors = parsed.vectors.is_none()
+        || vector_packet.is_some_and(|p| super::vector::same_geometry(runtime, p));
+    let vector_bytes = if reuse_vectors {
+        super::vector::retained_bytes(runtime)
+    } else {
+        super::vector::planned_bytes(vector_packet, runtime.width, runtime.height)
+    };
+    // Reserve the replacement HDR graph before quality selection in dependent
+    // passes, so removing a large chain can fund an environment replacement.
+    planned.replace_all(&[
+        (
+            super::vector::KEY,
+            MemoryCategory::Textures,
+            super::vector::texture_bytes(vector_packet, runtime.width, runtime.height),
+        ),
+        (
+            super::vector::BUFFER_KEY,
+            MemoryCategory::Buffers,
+            vector_bytes
+                - super::vector::texture_bytes(vector_packet, runtime.width, runtime.height),
+        ),
+        (
+            super::postfx::KEY,
+            MemoryCategory::Textures,
+            postfx_config.as_ref().map_or(0, |config| {
+                super::postfx::planned_bytes(
+                    config,
+                    runtime.width,
+                    runtime.height,
+                    parsed.environment.is_some(),
+                    parsed
+                        .scatter
+                        .iter()
+                        .any(|s| s.color[3] < 1. || s.terrain_blend.enabled),
+                )
+            }),
+        ),
+        (super::environment::KEY, MemoryCategory::Textures, 0),
+    ])?;
     // Admit the complete W09 replacement together, including swaps between
     // scatter and probes, before allocating any new GPU resource.
     let scatter_bytes = super::scatter::planned_bytes(&parsed.scatter)?;
@@ -163,7 +214,7 @@ fn prepare_scene(
         let (graph, node_map) = build_graph(parsed)?;
         let implicit = implicit_passes(runtime, parsed, &graph, &node_map);
         let plan = compile_scene_plan(&implicit, &parsed.passes, runtime.width, runtime.height)?;
-        let geometry = build::build_geometry(
+        let mut geometry = build::build_geometry(
             &graph,
             &node_map,
             &parsed.nodes,
@@ -171,6 +222,9 @@ fn prepare_scene(
             runtime.width,
             runtime.height,
         );
+        if let Some(previous) = &runtime.scene {
+            previous.prepare_motion(&mut geometry);
+        }
         Some((geometry, plan.pass_names))
     };
 
@@ -334,7 +388,41 @@ fn prepare_scene(
         }
     };
 
+    let postfx = super::postfx::prepare_scene(
+        runtime,
+        postfx_config,
+        environment.is_some(),
+        scatter.as_ref().is_some_and(|s| s.transparent()),
+        &mut planned,
+    )?;
+    let vector_highlights = if parsed.vectors.is_some() && reuse_vectors {
+        Some(super::vector::prepare_scene_highlights(
+            runtime,
+            vector_packet.expect("retained packet"),
+            &mut planned,
+        )?)
+    } else {
+        None
+    };
+    let vectors = if let Some(packet) = &parsed.vectors {
+        if reuse_vectors {
+            None
+        } else {
+            Some(super::vector::prepare(
+                runtime,
+                packet.clone(),
+                &mut planned,
+                runtime.width,
+                runtime.height,
+            )?)
+        }
+    } else {
+        None
+    };
     Ok(SceneResourcePlan {
+        vectors,
+        vector_highlights,
+        postfx,
         context,
         memory: planned,
         scene,
@@ -354,6 +442,9 @@ fn prepare_scene(
 
 fn commit_scene_plan(runtime: &mut Forge3DRuntime, plan: SceneResourcePlan) {
     let SceneResourcePlan {
+        vectors,
+        vector_highlights,
+        postfx,
         context,
         memory,
         scene,
@@ -370,6 +461,9 @@ fn commit_scene_plan(runtime: &mut Forge3DRuntime, plan: SceneResourcePlan) {
         materials,
     } = plan;
     runtime.memory = memory;
+    if let Some(update) = vector_highlights {
+        super::vector::apply_highlights(runtime, update);
+    }
     let lighting_resources = runtime
         .lighting
         .as_mut()
@@ -384,6 +478,10 @@ fn commit_scene_plan(runtime: &mut Forge3DRuntime, plan: SceneResourcePlan) {
     super::shadows::rebuild_terrain_depth_binding(runtime);
     runtime.scene = scene;
     runtime.environment = environment;
+    runtime.postfx = postfx;
+    if let Some(vectors) = vectors {
+        runtime.vectors = vectors;
+    }
     runtime.scatter = scatter;
     runtime.time_seconds = time_seconds;
     super::probes::commit(runtime, probes);
