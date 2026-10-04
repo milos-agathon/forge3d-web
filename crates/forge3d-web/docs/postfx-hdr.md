@@ -129,6 +129,15 @@ The shader sources, SSIM threshold and failing negative controls remain pinned.
 SSR additionally uses a supplied directional cube with distinct HDR mip values,
 so the comparison exercises ray direction and fractional LOD independently of
 IBL convolution. A zero-roughness reference must fail SSIM 0.98, reproducing the
-former missing-alpha input bug. The W07 exact device-loss replay probe prepares
+former missing-alpha input bug. The native SSR reference uses nearest spatial
+taps and linear mip interpolation: on SwiftShader its linear cube-edge taps
+lost radiance (SSIM 0.957), while the renderer matched the cube's known formula
+at SSIM 0.999997. The smooth directional cube bounds the spatial sampling
+difference. Both native and runtime images must additionally meet SSIM 0.98
+against independently reconstructed analytic world-reflection radiance. The
+probe requires over 1,000 covered pixels and zero hit alpha on every covered
+pixel, so it proves the intended environment-only case. The renderer retains
+linear spatial and mip filtering, and the 17 historical shader hashes remain
+unchanged. The W07 exact device-loss replay probe prepares
 IBL once and reuploads those same texels after recovery; W04/W10 retain coverage
 of live convolution, native image parity and IBL cache/recovery behavior.

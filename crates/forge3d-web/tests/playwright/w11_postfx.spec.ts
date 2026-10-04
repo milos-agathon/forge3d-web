@@ -26,6 +26,8 @@ test("W11 independent native shader images meet SSIM 0.98",async({page,webgpuAva
   skipRenderAssertionsWhenProbing(webgpuAvailability);await page.goto("/examples/test-w11-postfx.html");await page.waitForFunction(()=>(window as any).__w11Ready);
   const r=await page.evaluate(()=>(window as any).__w11Native());console.log("W11 native",JSON.stringify(r));
   expect(r["ssr-ibl-fallback"].roughnessControl).toBeLessThan(.98);
+  const ssr=r["ssr-ibl-fallback"];expect(ssr.covered).toBeGreaterThan(1000);expect(ssr.missPixels).toBe(ssr.covered);
+  expect(ssr.analytic.runtime.ssim).toBeGreaterThanOrEqual(.98);expect(ssr.analytic.native.ssim).toBeGreaterThanOrEqual(.98);
   for(const [name,result] of Object.entries(r) as [string,any][]){if(typeof result==="number"){expect(result,name).toBeLessThan(.0005);continue;}expect(result.ssim,name).toBeGreaterThanOrEqual(.98);expect(result.control,name).toBeLessThan(.98);}
 });
 test("W11 history, object motion, resize and 30 allocation cycles",async({page,webgpuAvailability})=>{

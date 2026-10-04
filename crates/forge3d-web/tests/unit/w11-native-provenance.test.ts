@@ -1,7 +1,7 @@
 import {readFileSync} from "node:fs";
 import {createHash} from "node:crypto";
 import {expect,it} from "vitest";
-import {adaptNativeDofSource,nativeSsrInputs,referenceSpecularCube} from "../browser/w11-native-oracle.js";
+import {adaptNativeDofSource,nativeSsrInputs,referenceSpecularCube,referenceSsrImage} from "../browser/w11-native-oracle.js";
 it("pins every independent W11 native shader source",()=>{
   const base=new URL("../golden/w11/",import.meta.url),manifest=JSON.parse(readFileSync(new URL("provenance.json",base),"utf8"));
   expect(manifest.baselineCommit).toBe("bf8db93233e5158f6d226991fc5d230832c2d806");expect(manifest.sources.length).toBe(17);
@@ -41,6 +41,16 @@ it("provides finite directional radiance and distinct mips for SSR reference sam
   expect(decode(values[last+4]!)).toBeCloseTo(4.01,2); // -X face centre
   expect(decode(values[last+1]!)).toBeCloseTo(4.12,2);
   expect(decode(values[last]!)-decode(values[0]!)).toBeGreaterThan(3.9);
+});
+it("derives SSR analytic radiance from world reflection, camera orientation and fractional LOD",()=>{
+  const identity=new Float32Array([1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1]),projection=identity.slice();projection[0]=projection[5]=2;
+  const image=(normal:number[],view=identity,depth=.5)=>referenceSsrImage(1,1,new Float32Array(normal),projection,view,new Float32Array([depth]),5);
+  const forward=image([0,0,1,.5]);expect(forward[0]).toBeCloseTo(2.08,5);expect(forward[1]).toBeCloseTo(2.12,5);expect(forward[2]).toBeCloseTo(2.23,5);
+  expect(image([0,1,0,.5])[2]).toBeCloseTo(2.09,5);
+  const rotated=new Float32Array([0,0,-1,0,0,1,0,0,1,0,0,0,0,0,0,1]);
+  expect(image([0,1,0,.5],rotated)[0]).toBeCloseTo(2.01,5);
+  expect(image([0,0,1,.4])[0]).toBeCloseTo(forward[0]!-.72,5);
+  expect(Array.from(image([0,0,1,.5],identity,1))).toEqual([0,0,0]);
 });
 it("adapts the pinned DOF debug overlay without changing its RGB expression or alpha",()=>{
   const source=readFileSync(new URL("../golden/w11/native/src__shaders__dof.wgsl",import.meta.url),"utf8");
