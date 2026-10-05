@@ -12,7 +12,7 @@ unsupported creation returns `{ok:false,id:null,diagnostics}` before allocation.
 Run `npm run dev` in this package and open
 `/examples/test-w13-labels.html`. The fixture exposes its workflows as
 `window.__w13.render()`, `outline()`, `depth()`, `session()`, `viewer()`,
-`viewerReview()`, `lineReview()` and `contracts()`. `npm run test:w13` runs their assertions, and
+`viewerReview()`, `viewerBudget()`, `lineReview()` and `contracts()`. `npm run test:w13` runs their assertions, and
 `npm run test:package-consumer:w13` runs them from an isolated installed tarball
 with a strict CSP. Both commands exercise real WebGPU glyph triangles and fail
 on blank output. The outline comparison includes holes and a blank negative
@@ -54,8 +54,10 @@ Use `layer.attach(scene, {viewport, camera, zoom})` with `Forge3DScene`,
 changes in this workflow; `Forge3DViewer.setLabels` handles that automatically.
 Session capture and scene copying retain expanded glyph vertices. Attaching
 an empty label layer to a viewer preserves terrain lighting byte-for-byte.
-Label validation/budget errors clear labels and their report, invoke `onError` once
-per invalid revision, and leave the viewer ready. A label edit retries placement.
+Label validation/budget errors clear labels and their report, and leave the viewer
+ready. Camera, viewport, layer edits and recovery retry placement. Frame failures
+invoke `onError` once for an ongoing failure; direct `setLabels` and `screenshot`
+failures use only their throw/rejection channel.
 Existing text-mesh/overlay inputs without vertices retain their rectangle path.
 
 ## Coordinates, visibility and styling
@@ -220,8 +222,14 @@ that displays multi-glyph text backwards. Plan records and diagnostics retain th
 native contract. A fitting repeated line gets one centered instance when its
 repeat spacing leaves no complete interior instance; the 90% fit rule still applies.
 
-Viewer label errors clear labels and `getLabelReport()`, report the invalid revision
-once, and retry after a layer edit or explicit `setLabels`. Camera motion, resize and
-device recovery retain the cleared state. A capture that first encounters the error
-rejects its promise; later captures show the cleared scene. Invalid layer replacement
-also clears the old layer's pixels. Environment, scatter and probe state still replay.
+Viewer label errors clear labels and `getLabelReport()`. A changed camera, canvas
+size, layer revision, device recovery or explicit `setLabels` retries placement,
+so labels return as soon as they fit. Identical attempted inputs reuse the cleared
+scene until an input changes. Repeated failures from the same revision and error
+cause are reported once; a successful layout resets notification suppression.
+
+Errors raised by `setLabels` throw to its caller. Label errors first encountered
+by `screenshot` reject its promise. These caller paths do not invoke `onError`;
+only background frame/recovery label failures use that callback. Invalid layer
+replacement also clears the old layer's pixels. Environment, scatter and probe
+state still replay.

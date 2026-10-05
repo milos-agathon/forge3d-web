@@ -179,6 +179,7 @@ try {
     "session",
     "viewer",
     "viewerReview",
+    "viewerBudget",
     "lineReview",
     "contracts",
   ]) {
@@ -233,8 +234,28 @@ try {
       results.viewerReview.recoveryCleared &&
       results.viewerReview.replacementCleared &&
       results.viewerReview.errors.filter((code) => code !== "DEVICE_LOST")
-        .length === 3,
+        .length === 1,
     "Installed terrain lighting or recoverable label error failure",
+  );
+  assert(
+    results.viewerBudget.cameraRejected &&
+      results.viewerBudget.hidden === 0 &&
+      results.viewerBudget.callerErrors === 0 &&
+      results.viewerBudget.beforeCovered > 200 &&
+      results.viewerBudget.restoredCovered ===
+        results.viewerBudget.beforeCovered &&
+      results.viewerBudget.restoredDiff.max === 0 &&
+      JSON.stringify(results.viewerBudget.restoredAccepted) ===
+        JSON.stringify([results.viewerBudget.id]) &&
+      results.viewerBudget.resizeRejected &&
+      results.viewerBudget.resizeCallerErrors === 0 &&
+      results.viewerBudget.resizeRestoredDiff.max === 0 &&
+      results.viewerBudget.frameErrors === 1 &&
+      results.viewerBudget.repeatedFrameErrors === 1 &&
+      results.viewerBudget.frameRestoredDiff.max === 0 &&
+      results.viewerBudget.unchangedRevision &&
+      results.viewerBudget.status === "ready",
+    "Installed camera/viewport budget recovery or error-channel failure",
   );
   assert(
     results.lineReview.forwardCovered > 200 &&

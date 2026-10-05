@@ -9,7 +9,8 @@ the primary checkout is detached. No subagents were used.
 The [inline review follow-up](w13-review-fixes.md) records all 12 corrections
 and their independent controls. The [second review follow-up](w13-second-review-fixes.md)
 records six subsequent corrections, including clearing invalid viewer labels and
-readable reversed paths.
+readable reversed paths. The [third review follow-up](w13-third-review-fixes.md)
+restores camera/viewport retries and separates caller errors from frame callbacks.
 
 ## Behavior and native evidence
 
@@ -77,8 +78,8 @@ npm run build:example
 ```
 
 The full parity and dependency-lock gate passed with 6,531 mapped records and
-zero unresolved items or lock violations. The complete TypeScript suite passed 865 tests, including 129 W13 tests, with
-`node node_modules/vitest/vitest.mjs run --maxWorkers=2`. Rust core passed 80 tests (31 label tests), and the web crate passed 183 tests. Nine W13 WebGPU tests and two shared W02 runtime/lifecycle regressions passed. The W13 tests cover source and dist rendering, independent Canvas
+zero unresolved items or lock violations. The complete TypeScript suite passed 866 tests, including 129 W13 tests, with
+`node node_modules/vitest/vitest.mjs run --maxWorkers=2`. Rust core passed 80 tests (31 label tests), and the web crate passed 183 tests. Eleven W13 WebGPU tests and two shared W02 runtime/lifecycle regressions passed. The W13 tests cover source and dist rendering, independent Canvas
 outline comparison including holes and a blank negative control, depth
 occlusion, capture, resize, replay, session copying, viewer edits/device recovery,
 font lifetime and exact experimental results. They assert nonblank pixels and

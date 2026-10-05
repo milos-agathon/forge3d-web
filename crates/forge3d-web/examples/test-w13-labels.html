@@ -457,7 +457,11 @@
               position: [4 + i, 4, 6],
               target: [i, 0.3, 0],
             });
-            await viewer.screenshot();
+            try {
+              await viewer.screenshot();
+            } catch (e) {
+              if (!e.message.includes("budget")) throw e;
+            }
           }
           reportAfterMotion = viewer.getLabelReport() === undefined;
           const moved = await image(await viewer.screenshot());
@@ -557,6 +561,130 @@
           goodPixels,
           errors,
         };
+      },
+      async viewerBudget() {
+        const atlas = await FontAtlas.defaultLatin(),
+          layer = new LabelLayer(atlas),
+          errors = [];
+        const viewer = await api.Forge3DViewer.create(canvas, {
+          runtime: {
+            ...viewport,
+            devicePixelRatio: 1,
+            clearColor: [0, 0, 0, 1],
+          },
+          controls: false,
+          resize: false,
+          onError: (e) => errors.push(e.code),
+        });
+        const cameraA = {
+          position: [0, 10, 100],
+          target: [0, 0, 0],
+          up: [0, 1, 0],
+          near: 0.1,
+          far: 1000,
+          fovYDegrees: 45,
+          projection: "orthographic",
+          orthographicHeight: 50,
+        };
+        const cameraB = {
+          ...cameraA,
+          position: [50, 10, 100],
+          target: [50, 0, 0],
+          orthographicHeight: 160,
+        };
+        const image = async (blob) => {
+          const bitmap = await createImageBitmap(blob),
+            c = new OffscreenCanvas(bitmap.width, bitmap.height),
+            ctx = c.getContext("2d");
+          ctx.drawImage(bitmap, 0, 0);
+          bitmap.close();
+          return ctx.getImageData(0, 0, c.width, c.height).data;
+        };
+        const rejectCapture = async () => {
+          let promise;
+          try {
+            promise = viewer.screenshot();
+          } catch {
+            throw Error("Label capture threw synchronously");
+          }
+          try {
+            await promise;
+            return false;
+          } catch (e) {
+            if (!e.message.includes("Label mesh byte budget exceeded")) throw e;
+            return promise instanceof Promise;
+          }
+        };
+        const frame = () =>
+          new Promise((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(resolve)),
+          );
+        try {
+          viewer.setCamera(cameraA);
+          const style = {
+            fontSize: 36,
+            color: [1, 1, 1, 1],
+            haloWidth: 0,
+            horizonFadeAngle: 0,
+          };
+          const id = layer.addLabel("W", [0, 0, 0], style).id;
+          layer.addLabel("W", [100, 0, 0], style);
+          const revision = layer.revision;
+          viewer.setLabels(layer);
+          const singleBytes = viewer.getLabelReport().vertexBytes;
+          const before = await image(await viewer.screenshot());
+          viewer.setLabels(layer, { maxVertexBytes: singleBytes * 1.5 });
+          viewer.setCamera(cameraB);
+          const cameraRejected = await rejectCapture();
+          const hidden = covered(await image(await viewer.screenshot()));
+          const callerErrors = errors.length;
+          viewer.setCamera(cameraA);
+          const restored = await image(await viewer.screenshot());
+          const restoredAccepted = viewer.getLabelReport()?.accepted ?? [];
+          viewer.resize({ width: 1400, height: 256, devicePixelRatio: 1 });
+          const resizeRejected = await rejectCapture();
+          const resizeCallerErrors = errors.length;
+          viewer.resize({ ...viewport, devicePixelRatio: 1 });
+          const resizedBack = await image(await viewer.screenshot());
+          viewer.setCamera(cameraB);
+          await frame();
+          const frameErrors = errors.length;
+          for (let i = 1; i <= 3; i++) {
+            viewer.setCamera({
+              ...cameraB,
+              position: [50 + i, 10, 100],
+              target: [50 + i, 0, 0],
+            });
+            await frame();
+          }
+          const repeatedFrameErrors = errors.length;
+          viewer.setCamera(cameraA);
+          const frameRestored = await image(await viewer.screenshot());
+          return {
+            singleBytes,
+            budget: singleBytes * 1.5,
+            beforeCovered: covered(before),
+            cameraRejected,
+            hidden,
+            callerErrors,
+            restoredCovered: covered(restored),
+            restoredDiff: diff(before, restored),
+            restoredAccepted,
+            id,
+            resizeRejected,
+            resizeCallerErrors,
+            resizeRestoredDiff: diff(before, resizedBack),
+            frameErrors,
+            repeatedFrameErrors,
+            frameRestoredDiff: diff(before, frameRestored),
+            unchangedRevision: layer.revision === revision,
+            status: viewer.status,
+          };
+        } finally {
+          viewer.dispose();
+          layer.dispose();
+          atlas.dispose();
+        }
       },
       async lineReview() {
         const atlas = await FontAtlas.create(),

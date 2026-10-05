@@ -1,6 +1,6 @@
 {
   "scope": "W13-only installed tarball, Chromium preflight on win32",
-  "packageSha256": "e809b0758e273b521771abe67c972758dd92f01c74a06467aae0ce70556153ca",
+  "packageSha256": "495bc15f9807abc502b067d04634f2ec6868c1544b26ed777bfe2b9f12b3a2d8",
   "browser": "148.0.7778.96",
   "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; worker-src 'self'; style-src 'self'; img-src 'self' blob:; object-src 'none'",
   "remoteRequests": [],
@@ -126,10 +126,39 @@
       "goodPixels": 4350,
       "errors": [
         "INTERNAL_ERROR",
-        "INTERNAL_ERROR",
-        "DEVICE_LOST",
-        "INTERNAL_ERROR"
+        "DEVICE_LOST"
       ]
+    },
+    "viewerBudget": {
+      "singleBytes": 10248,
+      "budget": 15372,
+      "beforeCovered": 301,
+      "cameraRejected": true,
+      "hidden": 0,
+      "callerErrors": 0,
+      "restoredCovered": 301,
+      "restoredDiff": {
+        "sum": 0,
+        "max": 0
+      },
+      "restoredAccepted": [
+        1
+      ],
+      "id": 1,
+      "resizeRejected": true,
+      "resizeCallerErrors": 0,
+      "resizeRestoredDiff": {
+        "sum": 0,
+        "max": 0
+      },
+      "frameErrors": 1,
+      "repeatedFrameErrors": 1,
+      "frameRestoredDiff": {
+        "sum": 0,
+        "max": 0
+      },
+      "unchangedRevision": true,
+      "status": "ready"
     },
     "lineReview": {
       "forwardCovered": 337,

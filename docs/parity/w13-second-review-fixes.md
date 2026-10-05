@@ -1,7 +1,10 @@
 # W13 second inline review fixes
 
 Follow-up to `1d7e235` on `codex/w13-labels`, in the same managed worktree.
-All six supplied findings were verified against source and corrected. No
+This historical record describes `efbcdb2`. Its revision-only failure suppression
+and duplicate caller notifications were subsequently corrected in the
+[third review follow-up](w13-third-review-fixes.md). The linked package evidence
+now records that latest run. The six supplied findings were checked against source. No
 subagents were used. Native contracts remain pinned to `1f4084a`; line placement
 uses the deepest `bf8db93233e5158f6d226991fc5d230832c2d806` source reference.
 
@@ -53,7 +56,7 @@ The sparse repeated `ROAD` covered 219 pixels with one accepted label and no
 rejections. The prior terrain-lighting negative control still differs by 39398
 channel units, maximum 18; the depth-test negative control remains visible.
 
-Final tested tarball SHA-256: `e809b0758e273b521771abe67c972758dd92f01c74a06467aae0ce70556153ca`.
+Tarball SHA-256 tested for `efbcdb2`: `e809b0758e273b521771abe67c972758dd92f01c74a06467aae0ce70556153ca`.
 
 ## Limits
 

@@ -94,7 +94,7 @@ for (const name of [
       expect(r.repaired).toBe(true);
       expect(
         r.errors.filter((code: string) => code !== "DEVICE_LOST"),
-      ).toHaveLength(3);
+      ).toHaveLength(1);
     }
     if (name === "lineReview") {
       expect(r.forwardCovered).toBeGreaterThan(200);
@@ -128,3 +128,31 @@ for (const name of [
       ]);
     }
   });
+
+for (const dist of [false, true]) {
+  test(`W13 viewer budget recovery (${dist ? "dist" : "source"})`, async ({
+    page,
+    webgpuAvailability,
+  }) => {
+    skipRenderAssertionsWhenProbing(webgpuAvailability);
+    await page.goto("/examples/test-w13-labels.html" + (dist ? "?dist" : ""));
+    await page.waitForFunction(() => !!window.__w13);
+    const r = await page.evaluate(() => window.__w13.viewerBudget!());
+    expect(r.singleBytes).toBeGreaterThan(0);
+    expect(r.cameraRejected).toBe(true);
+    expect(r.hidden).toBe(0);
+    expect(r.callerErrors).toBe(0);
+    expect(r.beforeCovered).toBeGreaterThan(200);
+    expect(r.restoredCovered).toBe(r.beforeCovered);
+    expect(r.restoredDiff.max).toBe(0);
+    expect(r.restoredAccepted).toEqual([r.id]);
+    expect(r.resizeRejected).toBe(true);
+    expect(r.resizeCallerErrors).toBe(0);
+    expect(r.resizeRestoredDiff.max).toBe(0);
+    expect(r.frameErrors).toBe(1);
+    expect(r.repeatedFrameErrors).toBe(1);
+    expect(r.frameRestoredDiff.max).toBe(0);
+    expect(r.unchangedRevision).toBe(true);
+    expect(r.status).toBe("ready");
+  });
+}

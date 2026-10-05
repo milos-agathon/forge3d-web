@@ -178,7 +178,7 @@ export class Forge3DViewer {
   #labelScene: Forge3DScene | undefined;
   #labelOptions: Omit<LabelRenderOptions,"viewport"|"camera"> = {};
   #labelSignature = "";
-  #labelFailureSignature = "";
+  #labelErrorKey = "";
   #labelUnsubscribe: (()=>void) | undefined;
   #labelReport: LabelPlacementReport | undefined;
   #status: ViewerStatus = "initializing";
@@ -347,7 +347,7 @@ export class Forge3DViewer {
     if (layer) this.#labelUnsubscribe = layer.addChangeListener(() => this.#scheduler?.requestRender());
     this.#labelOptions = {...options};
     this.#labelSignature = "";
-    this.#labelFailureSignature = "";
+    this.#labelErrorKey = "";
     if (!this.#labelScene) {
       this.#labelScene = Forge3DScene.create();
       // A scene starts with only the key; the viewer runtime also has a fill.
@@ -386,15 +386,8 @@ export class Forge3DViewer {
     const state = JSON.stringify([this.#labelLayer?.revision ?? -1, this.#labelLayer?.disposed ?? false]);
     const signature = JSON.stringify([state, camera, runtime.width, runtime.height]);
     if (signature === this.#labelSignature) return;
-    // Failed label state remains empty across camera/size changes and recovery.
-    // Only a layer edit or explicit setLabels call retries label generation.
-    if (state === this.#labelFailureSignature) {
-      this.#clearLabelScene();
-      this.#commitLabelScene(runtime);
-      this.#labelSignature = signature;
-      return;
-    }
-    this.#labelFailureSignature = "";
+    // Camera/viewport changes can make a previously over-budget layout fit.
+    // Cache the full attempted input; the error key only deduplicates reporting.
     try {
       let report: LabelPlacementReport | undefined;
       if (this.#labelLayer && !this.#labelLayer.disposed) {
@@ -407,6 +400,7 @@ export class Forge3DViewer {
       this.#commitLabelScene(runtime);
       this.#labelReport = report;
       this.#labelSignature = signature;
+      this.#labelErrorKey = "";
     } catch (error) {
       const normalized = Forge3DError.from(error);
       if (normalized.code === "DEVICE_LOST") throw normalized;
@@ -414,10 +408,12 @@ export class Forge3DViewer {
       // If clearing itself fails, propagate the runtime error; stale GPU nodes
       // cannot be treated as a successfully recovered label state.
       this.#commitLabelScene(runtime);
-      this.#labelFailureSignature = state;
+      const errorKey = JSON.stringify([state, normalized.code, normalized.message]);
+      const notify = reportOnly && errorKey !== this.#labelErrorKey;
+      this.#labelErrorKey = errorKey;
       this.#labelSignature = signature;
-      this.#emitError(normalized);
       if (!reportOnly) throw normalized;
+      if (notify) this.#emitError(normalized);
     }
   }
   #refreshLabelsSafely(runtime: ViewerRuntime): void {
