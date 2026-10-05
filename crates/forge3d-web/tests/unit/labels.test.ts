@@ -450,3 +450,31 @@ describe("W13 review shaping and geometry regressions", () => {
     expect(p.accepted[0]?.candidate.anchor[0]).toBeCloseTo(50, 5);
   });
 });
+
+describe("W13 reversed path reading order", () => {
+  it.each(["AB", "مرحبا"])(
+    "keeps the shaped glyph order for %s on a reversed path",
+    (text) => {
+      const shape = atlas.shape(text, { fontSize: 20 });
+      const forward = lineTextMesh(
+        shape,
+        [
+          [100, 100, 0],
+          [300, 100, 0],
+        ],
+        100,
+      );
+      const reversed = lineTextMesh(
+        shape,
+        [
+          [300, 100, 0],
+          [100, 100, 0],
+        ],
+        100,
+      );
+      expect(forward.length).toBeGreaterThan(0);
+      // Byte-identical full meshes prove every glyph remains in shaped order.
+      expect(reversed).toEqual(forward);
+    },
+  );
+});

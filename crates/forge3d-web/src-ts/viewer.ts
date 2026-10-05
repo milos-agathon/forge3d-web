@@ -178,6 +178,7 @@ export class Forge3DViewer {
   #labelScene: Forge3DScene | undefined;
   #labelOptions: Omit<LabelRenderOptions,"viewport"|"camera"> = {};
   #labelSignature = "";
+  #labelFailureSignature = "";
   #labelUnsubscribe: (()=>void) | undefined;
   #labelReport: LabelPlacementReport | undefined;
   #status: ViewerStatus = "initializing";
@@ -346,6 +347,7 @@ export class Forge3DViewer {
     if (layer) this.#labelUnsubscribe = layer.addChangeListener(() => this.#scheduler?.requestRender());
     this.#labelOptions = {...options};
     this.#labelSignature = "";
+    this.#labelFailureSignature = "";
     if (!this.#labelScene) {
       this.#labelScene = Forge3DScene.create();
       // A scene starts with only the key; the viewer runtime also has a fill.
@@ -353,19 +355,46 @@ export class Forge3DViewer {
         this.#labelScene.addLight(light);
       }
     }
-    this.#refreshLabels(runtime);
-    this.#scheduler?.requestRender();
+    try {
+      this.#callRuntime(() => this.#refreshLabels(runtime));
+    } finally {
+      this.#scheduler?.requestRender();
+    }
   }
 
   getLabelReport(): LabelPlacementReport | undefined {
     return this.#labelReport ? structuredClone(this.#labelReport) : undefined;
   }
 
-  #refreshLabels(runtime: ViewerRuntime): void {
+  #commitLabelScene(runtime: ViewerRuntime): void {
+    const scene = this.#labelScene!;
+    if (this.#environmentReplay !== undefined) scene.setEnvironment(this.#environmentReplay);
+    if (this.#scatterReplay !== undefined) scene.setScatterBatches(this.#scatterReplay);
+    if (this.#probeReplay !== undefined) scene.setLightingProbes(this.#probeReplay);
+    scene.setTimeSeconds(this.#scatterTime);
+    runtime.setScene!(scene.snapshot());
+  }
+  #clearLabelScene(): void {
+    const scene = this.#labelScene!;
+    this.#labelLayer?.detach(scene);
+    for (const node of scene.getNodes()) scene.removeNode(node.id);
+    this.#labelReport = undefined;
+  }
+  #refreshLabels(runtime: ViewerRuntime, reportOnly = false): void {
     if (!this.#labelScene || !runtime.setScene) return;
     const camera = this.#effectiveCamera();
-    const signature = JSON.stringify([this.#labelLayer?.revision ?? -1, this.#labelLayer?.disposed ?? false, camera, runtime.width, runtime.height]);
+    const state = JSON.stringify([this.#labelLayer?.revision ?? -1, this.#labelLayer?.disposed ?? false]);
+    const signature = JSON.stringify([state, camera, runtime.width, runtime.height]);
     if (signature === this.#labelSignature) return;
+    // Failed label state remains empty across camera/size changes and recovery.
+    // Only a layer edit or explicit setLabels call retries label generation.
+    if (state === this.#labelFailureSignature) {
+      this.#clearLabelScene();
+      this.#commitLabelScene(runtime);
+      this.#labelSignature = signature;
+      return;
+    }
+    this.#labelFailureSignature = "";
     try {
       let report: LabelPlacementReport | undefined;
       if (this.#labelLayer && !this.#labelLayer.disposed) {
@@ -373,30 +402,28 @@ export class Forge3DViewer {
           ...this.#labelOptions, camera, viewport: {width: runtime.width, height: runtime.height},
         });
       } else {
-        for (const node of this.#labelScene.getNodes()) this.#labelScene.removeNode(node.id);
+        this.#clearLabelScene();
       }
-      if (this.#environmentReplay !== undefined) this.#labelScene.setEnvironment(this.#environmentReplay);
-      if (this.#scatterReplay !== undefined) this.#labelScene.setScatterBatches(this.#scatterReplay);
-      if (this.#probeReplay !== undefined) this.#labelScene.setLightingProbes(this.#probeReplay);
-      this.#labelScene.setTimeSeconds(this.#scatterTime);
-      runtime.setScene(this.#labelScene.snapshot());
+      this.#commitLabelScene(runtime);
       this.#labelReport = report;
-    } finally {
-      // Invalid label state is retried only after an edit, camera/size change or
-      // explicit setLabels call, rather than emitting an error every frame.
       this.#labelSignature = signature;
-    }
-  }
-  #refreshLabelsSafely(runtime: ViewerRuntime): void {
-    try {
-      this.#refreshLabels(runtime);
     } catch (error) {
       const normalized = Forge3DError.from(error);
       if (normalized.code === "DEVICE_LOST") throw normalized;
-      // Label validation/allocation is recoverable. Keep the last committed
-      // GPU scene and let the next label edit retry; render errors still fail.
+      this.#clearLabelScene();
+      // If clearing itself fails, propagate the runtime error; stale GPU nodes
+      // cannot be treated as a successfully recovered label state.
+      this.#commitLabelScene(runtime);
+      this.#labelFailureSignature = state;
+      this.#labelSignature = signature;
       this.#emitError(normalized);
+      if (!reportOnly) throw normalized;
     }
+  }
+  #refreshLabelsSafely(runtime: ViewerRuntime): void {
+    // Only label errors followed by a successful empty-scene commit are caught.
+    // Runtime/device errors during the clear still reach the runtime handler.
+    this.#refreshLabels(runtime, true);
   }
   /** Camera currently rendered (active controller plus projection). */
   getCamera(): CameraInput {
@@ -849,8 +876,10 @@ export class Forge3DViewer {
     }
     validateScreenshotBudget(runtime.width, runtime.height, this.#budget);
     this.#callRuntime(() => runtime.setCamera(this.#effectiveCamera()));
-    this.#refreshLabels(runtime);
-    const promise = runtime.screenshot().catch((error: unknown) => {
+    const promise = Promise.resolve().then(() => {
+      this.#refreshLabels(runtime);
+      return runtime.screenshot();
+    }).catch((error: unknown) => {
       const normalized = Forge3DError.from(error);
       this.#routeDeviceLoss(normalized);
       throw normalized;

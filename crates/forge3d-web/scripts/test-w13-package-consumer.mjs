@@ -179,6 +179,7 @@ try {
     "session",
     "viewer",
     "viewerReview",
+    "lineReview",
     "contracts",
   ]) {
     results[name] = await page.evaluate((name) => window.__w13[name](), name);
@@ -223,9 +224,25 @@ try {
       results.viewerReview.oneLightDiff.sum > 1000 &&
       results.viewerReview.stateAfterError === "ready" &&
       results.viewerReview.repaired &&
-      results.viewerReview.retained &&
-      results.viewerReview.errors.length === 1,
+      results.viewerReview.cleared &&
+      results.viewerReview.goodPixels > 1000 &&
+      results.viewerReview.clearedDiff.max === 0 &&
+      results.viewerReview.cameraClearDiff.max === 0 &&
+      results.viewerReview.reportAfterMotion &&
+      results.viewerReview.screenshotRejected &&
+      results.viewerReview.recoveryCleared &&
+      results.viewerReview.replacementCleared &&
+      results.viewerReview.errors.filter((code) => code !== "DEVICE_LOST")
+        .length === 3,
     "Installed terrain lighting or recoverable label error failure",
+  );
+  assert(
+    results.lineReview.forwardCovered > 200 &&
+      results.lineReview.reverseDiff.max === 0 &&
+      results.lineReview.repeatedCovered > 100 &&
+      results.lineReview.accepted.length === 1 &&
+      results.lineReview.rejected.length === 0,
+    "Installed line reading order or sparse repeat failure",
   );
   assert(
     results.contracts.nodes > 1 &&

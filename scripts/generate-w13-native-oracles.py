@@ -90,6 +90,7 @@ with tempfile.TemporaryDirectory(prefix='forge3d-w13-oracle-') as temp:
         {'id':'c','text':'Ridge','geometry':{'type':'LineString','coordinates':[[10,10],[90,10]]},'placement_preset':'line','terrain_mode':'required'},
         {'id':'c','text':'Ridge','geometry':{'type':'LineString','coordinates':[[10,10],[90,10]]},'repeat_distance':20,'requires_terrain':True},
         {'id':'c','text':'Null','geometry':{'type':'Point','coordinates':[None,5]}},
+        {'id':'c','text':'NullZ','geometry':{'type':'Point','coordinates':[1,2,None]}},
     ]
     for label in review_labels:
         native.LabelPlan.compile(labels=[label], camera={}, viewport=[100,100])
@@ -102,6 +103,11 @@ with tempfile.TemporaryDirectory(prefix='forge3d-w13-oracle-') as temp:
         ([{'id':'flat','type':'Point','coordinates':[10,20],'name':'Flat'}], {}),
         ([{'id':'crs','geometry':{'type':'Point','coordinates':[10,20]},'properties':{'name':'Same'}}], {'crs':'EPSG:4326','target_crs':'epsg:4326'}),
         ([{'id':'null','geometry':{'type':'Point','coordinates':[10,20]},'properties':{'name':None}}], {}),
+        ([{'id':'null-geometry','type':'Feature','geometry':None,'properties':{'name':'N'}}], {}),
+        ([{'id':'fallback','type':'Point','coordinates':[],'position':[3,4],'name':'P'}], {}),
+        ([{'id':'null-z','type':'Point','coordinates':[1,2,None],'name':'Z'}], {}),
+        ([{'id':'null-z-line','type':'LineString','coordinates':[[1,2,None],[3,4,None]],'name':'Z'}], {}),
+        ([{'id':'null-z-polygon','type':'Polygon','coordinates':[[[1,2,None],[3,4,None],[3,2,None],[1,2,None]]],'name':'Z'}], {}),
     ]:
         package.map_scene.LabelLayer.from_features(features,**kwargs)
         FEATURE_CASES[-1]['source']='review regression via pinned native LabelLayer.from_features'

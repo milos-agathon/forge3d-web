@@ -1,6 +1,6 @@
 {
   "scope": "W13-only installed tarball, Chromium preflight on win32",
-  "packageSha256": "f0c48085f9795a74b264401033262505c6f6611b17ebf6c5f9410d3bbc8fefca",
+  "packageSha256": "e809b0758e273b521771abe67c972758dd92f01c74a06467aae0ce70556153ca",
   "browser": "148.0.7778.96",
   "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; worker-src 'self'; style-src 'self'; img-src 'self' blob:; object-src 'none'",
   "remoteRequests": [],
@@ -110,10 +110,38 @@
       },
       "stateAfterError": "ready",
       "repaired": true,
-      "retained": true,
+      "cleared": true,
+      "clearedDiff": {
+        "sum": 0,
+        "max": 0
+      },
+      "cameraClearDiff": {
+        "sum": 0,
+        "max": 0
+      },
+      "reportAfterMotion": true,
+      "recoveryCleared": true,
+      "screenshotRejected": true,
+      "replacementCleared": true,
+      "goodPixels": 4350,
       "errors": [
+        "INTERNAL_ERROR",
+        "INTERNAL_ERROR",
+        "DEVICE_LOST",
         "INTERNAL_ERROR"
       ]
+    },
+    "lineReview": {
+      "forwardCovered": 337,
+      "reverseDiff": {
+        "sum": 0,
+        "max": 0
+      },
+      "repeatedCovered": 219,
+      "accepted": [
+        3
+      ],
+      "rejected": []
     },
     "contracts": {
       "id": 1,

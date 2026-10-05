@@ -42,6 +42,7 @@ for (const name of [
   "session",
   "viewer",
   "viewerReview",
+  "lineReview",
   "contracts",
 ])
   test(`W13 ${name}`, async ({ page, webgpuAvailability }) => {
@@ -82,9 +83,25 @@ for (const name of [
       expect(r.detachedDiff.max).toBe(0);
       expect(r.oneLightDiff.sum).toBeGreaterThan(1000);
       expect(r.stateAfterError).toBe("ready");
-      expect(r.retained).toBe(true);
+      expect(r.cleared).toBe(true);
+      expect(r.goodPixels).toBeGreaterThan(1000);
+      expect(r.clearedDiff.max).toBe(0);
+      expect(r.cameraClearDiff.max).toBe(0);
+      expect(r.reportAfterMotion).toBe(true);
+      expect(r.screenshotRejected).toBe(true);
+      expect(r.recoveryCleared).toBe(true);
+      expect(r.replacementCleared).toBe(true);
       expect(r.repaired).toBe(true);
-      expect(r.errors).toHaveLength(1);
+      expect(
+        r.errors.filter((code: string) => code !== "DEVICE_LOST"),
+      ).toHaveLength(3);
+    }
+    if (name === "lineReview") {
+      expect(r.forwardCovered).toBeGreaterThan(200);
+      expect(r.reverseDiff.max).toBe(0);
+      expect(r.repeatedCovered).toBeGreaterThan(100);
+      expect(r.accepted).toHaveLength(1);
+      expect(r.rejected).toEqual([]);
     }
     if (name === "contracts") {
       expect(r.glyphCount).toBeGreaterThan(4);

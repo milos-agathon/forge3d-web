@@ -167,20 +167,23 @@ export function labelStrokeMesh(
   return new Float32Array(mesh);
 }
 
-// Mirrors native line_label.rs: center and along both center the text width,
-// sample each glyph's advance midpoint, and normalize its local tangent.
+// Center and along sample each shaped glyph's advance midpoint. Unlike native
+// line_label.rs, reverse path traversal as well as angles to keep reading order.
 export function lineTextMesh(
   shaped: ShapedText,
   points: readonly LabelPoint[],
   center: number,
 ): Float32Array {
   const advances = shaped.glyphs.reduce((sum, g) => sum + g.xAdvance, 0);
+  const midpointAngle = interpolateLabelLine(points, center).angle;
+  const reverse = midpointAngle > Math.PI / 2 || midpointAngle < -Math.PI / 2;
   let pen = 0;
   const result: number[] = [];
   for (const glyph of shaped.glyphs) {
+    const offset = pen + glyph.xAdvance / 2 - advances / 2;
     const location = interpolateLabelLine(
       points,
-      center - advances / 2 + pen + glyph.xAdvance / 2,
+      center + (reverse ? -offset : offset),
     );
     const angle =
       location.angle > Math.PI / 2

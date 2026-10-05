@@ -7,7 +7,9 @@ used. Existing linked worktrees and local branches were removed as requested;
 the primary checkout is detached. No subagents were used.
 
 The [inline review follow-up](w13-review-fixes.md) records all 12 corrections
-and their independent controls.
+and their independent controls. The [second review follow-up](w13-second-review-fixes.md)
+records six subsequent corrections, including clearing invalid viewer labels and
+readable reversed paths.
 
 ## Behavior and native evidence
 
@@ -38,7 +40,7 @@ read and executed from `1f4084af428dc699bdcd108b029736cb73903926`.
 [Coverage](w13-native-test-coverage.json) maps 87 definitions in 30 native label
 files to browser ports, including the canonical TestLabelBindings proxy.
 `generate-w13-native-oracles.py` executes 43 original native tests and records
-50 compiler and 21 feature recipe calls, including additional review probes. Browser tests compare complete native
+51 compiler and 26 feature recipe calls, including additional review probes. Browser tests compare complete native
 outputs except Python float spellings inside ordering-key JSON strings; numeric
 values compare at 1e-9, with signed zero normalized. No accepted/rejected order,
 ID, candidate, coordinate, score, diagnostic detail or reason is omitted.
@@ -75,7 +77,8 @@ npm run build:example
 ```
 
 The full parity and dependency-lock gate passed with 6,531 mapped records and
-zero unresolved items or lock violations. The complete TypeScript suite passed 847 tests, including 114 W13 tests. Rust core passed 80 tests (31 label tests), and the web crate passed 183 tests. Eight W13 WebGPU tests and two shared W02 runtime/lifecycle regressions passed. The W13 tests cover source and dist rendering, independent Canvas
+zero unresolved items or lock violations. The complete TypeScript suite passed 865 tests, including 129 W13 tests, with
+`node node_modules/vitest/vitest.mjs run --maxWorkers=2`. Rust core passed 80 tests (31 label tests), and the web crate passed 183 tests. Nine W13 WebGPU tests and two shared W02 runtime/lifecycle regressions passed. The W13 tests cover source and dist rendering, independent Canvas
 outline comparison including holes and a blank negative control, depth
 occlusion, capture, resize, replay, session copying, viewer edits/device recovery,
 font lifetime and exact experimental results. They assert nonblank pixels and

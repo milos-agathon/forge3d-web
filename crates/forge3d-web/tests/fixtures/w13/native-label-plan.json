@@ -15851,6 +15851,68 @@
       }
     },
     {
+      "source": "review regression via pinned native LabelPlan.compile",
+      "input": {
+        "labels": [
+          {
+            "id": "c",
+            "text": "NullZ",
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                1,
+                2,
+                null
+              ]
+            }
+          }
+        ],
+        "camera": {},
+        "viewport": [
+          100,
+          100
+        ]
+      },
+      "expected": {
+        "payload_version": 1,
+        "seed": 0,
+        "accepted": [],
+        "rejected": [
+          {
+            "label_id": "c",
+            "source_id": "c",
+            "candidate_id": null,
+            "reason": "invalid_geometry",
+            "diagnostic_refs": [],
+            "details": {}
+          }
+        ],
+        "diagnostics": [
+          {
+            "code": "label_rejection_summary",
+            "severity": "warning",
+            "message": "1 label candidates were rejected during placement.",
+            "remediation": "Inspect rejection reasons and adjust priorities, keepouts, glyph coverage, or geometry.",
+            "support_level": "underdeveloped",
+            "layer_id": "labels",
+            "object_id": null,
+            "details": {
+              "rejection_counts": {
+                "invalid_geometry": 1
+              },
+              "total": 1
+            }
+          }
+        ],
+        "bounds": {
+          "keepouts": [],
+          "priority_rules": [],
+          "screen": null,
+          "world": null
+        }
+      }
+    },
+    {
       "source": "review no-data sampler via pinned native LabelPlan.compile",
       "input": {
         "labels": [

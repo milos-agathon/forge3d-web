@@ -1611,6 +1611,306 @@
       }
     },
     {
+      "source": "review regression via pinned native LabelLayer.from_features",
+      "input": {
+        "features": [
+          {
+            "id": "null-geometry",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+              "name": "N"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels",
+        "labels": [],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": [
+          {
+            "code": "placeholder_fallback",
+            "severity": "error",
+            "message": "Requested workflow would use placeholder or non-renderable fallback output.",
+            "remediation": "Use a renderable supported path or keep the workflow blocked before render.",
+            "support_level": "placeholder/fallback",
+            "layer_id": "labels",
+            "object_id": "null-geometry",
+            "details": {
+              "feature": "label invalid geometry"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "source": "review regression via pinned native LabelLayer.from_features",
+      "input": {
+        "features": [
+          {
+            "id": "fallback",
+            "type": "Point",
+            "coordinates": [],
+            "position": [
+              3,
+              4
+            ],
+            "name": "P"
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                3,
+                4
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "fallback",
+            "placement_kind": "point",
+            "properties": {
+              "id": "fallback",
+              "name": "P",
+              "position": [
+                3,
+                4
+              ]
+            },
+            "source_id": "fallback",
+            "terrain_mode": "auto",
+            "text": "P"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": []
+      }
+    },
+    {
+      "source": "review regression via pinned native LabelLayer.from_features",
+      "input": {
+        "features": [
+          {
+            "id": "null-z",
+            "type": "Point",
+            "coordinates": [
+              1,
+              2,
+              null
+            ],
+            "name": "Z"
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                1,
+                2,
+                null
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "null-z",
+            "placement_kind": "point",
+            "properties": {
+              "id": "null-z",
+              "name": "Z"
+            },
+            "source_id": "null-z",
+            "terrain_mode": "auto",
+            "text": "Z"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": []
+      }
+    },
+    {
+      "source": "review regression via pinned native LabelLayer.from_features",
+      "input": {
+        "features": [
+          {
+            "id": "null-z-line",
+            "type": "LineString",
+            "coordinates": [
+              [
+                1,
+                2,
+                null
+              ],
+              [
+                3,
+                4,
+                null
+              ]
+            ],
+            "name": "Z"
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                [
+                  1,
+                  2,
+                  null
+                ],
+                [
+                  3,
+                  4,
+                  null
+                ]
+              ],
+              "type": "LineString"
+            },
+            "geometry_type": "LineString",
+            "id": "null-z-line",
+            "placement_kind": "line",
+            "properties": {
+              "id": "null-z-line",
+              "name": "Z"
+            },
+            "source_id": "null-z-line",
+            "terrain_mode": "auto",
+            "text": "Z"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": []
+      }
+    },
+    {
+      "source": "review regression via pinned native LabelLayer.from_features",
+      "input": {
+        "features": [
+          {
+            "id": "null-z-polygon",
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  1,
+                  2,
+                  null
+                ],
+                [
+                  3,
+                  4,
+                  null
+                ],
+                [
+                  3,
+                  2,
+                  null
+                ],
+                [
+                  1,
+                  2,
+                  null
+                ]
+              ]
+            ],
+            "name": "Z"
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                [
+                  [
+                    1,
+                    2,
+                    null
+                  ],
+                  [
+                    3,
+                    4,
+                    null
+                  ],
+                  [
+                    3,
+                    2,
+                    null
+                  ],
+                  [
+                    1,
+                    2,
+                    null
+                  ]
+                ]
+              ],
+              "type": "Polygon"
+            },
+            "geometry_type": "Polygon",
+            "id": "null-z-polygon",
+            "placement_kind": "polygon",
+            "properties": {
+              "id": "null-z-polygon",
+              "name": "Z"
+            },
+            "source_id": "null-z-polygon",
+            "terrain_mode": "auto",
+            "text": "Z"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": []
+      }
+    },
+    {
       "source": "review no-data sampler via pinned native LabelLayer.from_features",
       "input": {
         "terrain_sampling": "required",

@@ -664,3 +664,58 @@ describe("W13 review regression cases", () => {
     }
   });
 });
+
+describe("W13 second review regressions", () => {
+  it.each([0, 60, 80, 95, 200])(
+    "keeps a fitting line visible at repeat distance %s",
+    (repeatDistance) => {
+      const layer = new LabelLayer(atlas);
+      const id = layer.addLineLabel(
+        "ROAD",
+        [
+          [10, 100, 0],
+          [110, 100, 0],
+        ],
+        {
+          fontSize: 18,
+          haloWidth: 0,
+          repeatDistance,
+        },
+      ).id;
+      const report = layer.render({ viewport: { width: 300, height: 200 } });
+      expect(report.accepted).toEqual([id]);
+      expect(report.rejected).toEqual([]);
+      expect(report.glyphCount).toBeGreaterThanOrEqual(4);
+      layer.dispose();
+    },
+  );
+  it("keeps real repeated instances while sparse spacing falls back to one centered instance", () => {
+    const layer = new LabelLayer(atlas);
+    layer.addLineLabel(
+      "ROAD",
+      [
+        [10, 100, 0],
+        [370, 100, 0],
+      ],
+      {
+        fontSize: 18,
+        haloWidth: 0,
+        repeatDistance: 90,
+      },
+    );
+    const report = layer.render({ viewport: { width: 400, height: 200 } });
+    expect(report.glyphCount).toBe(12);
+    expect(report.rejected).toEqual([]);
+    layer.dispose();
+  });
+  it("ingests null elevation, then rejects it at compilation rather than ingestion", () => {
+    const source = LabelFeatureSource.fromFeatures([
+      { id: "null-z", type: "Point", coordinates: [1, 2, null], name: "Z" },
+    ]);
+    expect(source.labels).toHaveLength(1);
+    expect(source.diagnostics).toEqual([]);
+    const plan = source.compileLabels({ viewport: [100, 100] });
+    expect(plan.accepted).toEqual([]);
+    expect(plan.rejected[0]?.reason).toBe("invalid_geometry");
+  });
+});

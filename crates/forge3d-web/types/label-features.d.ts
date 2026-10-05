@@ -9,7 +9,7 @@ export interface LabelFeature {
     geometry?: {
         type?: string;
         coordinates?: unknown;
-    };
+    } | null;
     [key: string]: unknown;
 }
 export interface LabelFeatureOptions {

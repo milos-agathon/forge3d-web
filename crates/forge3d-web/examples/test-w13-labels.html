@@ -369,6 +369,7 @@
         const viewer = await api.Forge3DViewer.create(canvas, {
           runtime: {
             ...viewport,
+            diagnostics: true,
             devicePixelRatio: 1,
             clearColor: [0, 0, 0, 1],
           },
@@ -406,7 +407,14 @@
           detachedDiff,
           stateAfterError,
           repaired,
-          retained;
+          cleared,
+          clearedDiff,
+          cameraClearDiff,
+          reportAfterMotion,
+          recoveryCleared,
+          screenshotRejected,
+          replacementCleared,
+          goodPixels;
         try {
           viewer.setCamera({
             position: [4, 4, 6],
@@ -430,8 +438,10 @@
             haloWidth: 0,
             horizonFadeAngle: 0,
           });
-          await viewer.screenshot();
-          const beforeError = viewer.getLabelReport();
+          const goodFrame = await image(await viewer.screenshot());
+          goodPixels = diff(baseline, goodFrame).sum;
+          if (!viewer.getLabelReport().accepted.includes(good.id))
+            throw Error("Good label was not visible");
           const bad = layer.addLabel("W".repeat(1000), [0, 1, 0], {
             fontSize: 20,
             haloWidth: 0,
@@ -439,14 +449,79 @@
           });
           await labelError;
           stateAfterError = viewer.status;
-          retained =
-            JSON.stringify(viewer.getLabelReport()) ===
-            JSON.stringify(beforeError);
+          cleared = viewer.getLabelReport() === undefined;
+          clearedDiff = diff(baseline, await image(await viewer.screenshot()));
+          for (let i = 1; i <= 10; i++) {
+            viewer.setCamera({
+              ...actualCamera,
+              position: [4 + i, 4, 6],
+              target: [i, 0.3, 0],
+            });
+            await viewer.screenshot();
+          }
+          reportAfterMotion = viewer.getLabelReport() === undefined;
+          const moved = await image(await viewer.screenshot());
+          viewer.setLabels(null);
+          cameraClearDiff = diff(moved, await image(await viewer.screenshot()));
+          viewer.setCamera(actualCamera);
+          // Force a new attempted invalid state, and call capture before RAF.
           layer.removeLabel(bad.id);
+          viewer.setLabels(layer, { maxVertexBytes: 100000 });
+          const badAgain = layer.addLabel("W".repeat(1000), [0, 1, 0], {
+            fontSize: 20,
+            haloWidth: 0,
+            horizonFadeAngle: 0,
+          });
+          let capture;
+          try {
+            capture = viewer.screenshot();
+          } catch {
+            throw Error("Capture threw synchronously");
+          }
+          screenshotRejected = capture instanceof Promise;
+          try {
+            await capture;
+            screenshotRejected = false;
+          } catch (e) {
+            screenshotRejected &&= e.message.includes("budget");
+          }
+          const { simulateViewerDeviceLossForTests } = await import(
+            "../src-ts/viewer.ts"
+          );
+          const recovery = new Promise((resolve) => {
+            const unsubscribe = viewer.addRecoveryListener(() => {
+              unsubscribe();
+              resolve();
+            });
+          });
+          simulateViewerDeviceLossForTests(viewer);
+          await recovery;
+          recoveryCleared =
+            viewer.getLabelReport() === undefined && viewer.status === "ready";
+          layer.removeLabel(badAgain.id);
           await viewer.screenshot();
           repaired =
             viewer.getLabelReport().accepted.includes(good.id) &&
             viewer.status === "ready";
+          const replacement = new LabelLayer(atlas);
+          try {
+            replacement.addLabel("W".repeat(1000), [0, 1, 0], {
+              fontSize: 20,
+              haloWidth: 0,
+              horizonFadeAngle: 0,
+            });
+            try {
+              viewer.setLabels(replacement, { maxVertexBytes: 100000 });
+            } catch (e) {
+              if (!e.message.includes("budget")) throw e;
+            }
+            replacementCleared =
+              viewer.getLabelReport() === undefined &&
+              diff(baseline, await image(await viewer.screenshot())).max === 0;
+          } finally {
+            viewer.setLabels(null);
+            replacement.dispose();
+          }
         } finally {
           viewer.dispose();
           layer.dispose();
@@ -472,9 +547,75 @@
           oneLightDiff,
           stateAfterError,
           repaired,
-          retained,
+          cleared,
+          clearedDiff,
+          cameraClearDiff,
+          reportAfterMotion,
+          recoveryCleared,
+          screenshotRejected,
+          replacementCleared,
+          goodPixels,
           errors,
         };
+      },
+      async lineReview() {
+        const atlas = await FontAtlas.create(),
+          layer = new LabelLayer(atlas),
+          scene = Forge3DScene.create(),
+          runtime = await create();
+        try {
+          const style = { fontSize: 32, color: [1, 1, 1, 1], haloWidth: 0 };
+          layer.addLineLabel(
+            "AB",
+            [
+              [70, 100, 0],
+              [310, 100, 0],
+            ],
+            style,
+          );
+          layer.attach(scene, { viewport });
+          runtime.setScene(scene.snapshot());
+          const forward = await runtime.readRgba();
+          layer.clearLabels();
+          layer.addLineLabel(
+            "AB",
+            [
+              [310, 100, 0],
+              [70, 100, 0],
+            ],
+            style,
+          );
+          layer.attach(scene, { viewport });
+          runtime.setScene(scene.snapshot());
+          const reverse = await runtime.readRgba();
+          layer.clearLabels();
+          layer.addLineLabel(
+            "ROAD",
+            [
+              [100, 180, 0],
+              [200, 180, 0],
+            ],
+            {
+              ...style,
+              fontSize: 18,
+              repeatDistance: 200,
+            },
+          );
+          const report = layer.attach(scene, { viewport });
+          runtime.setScene(scene.snapshot());
+          return {
+            forwardCovered: covered(forward),
+            reverseDiff: diff(forward, reverse),
+            repeatedCovered: covered(await runtime.readRgba()),
+            accepted: report.accepted,
+            rejected: report.rejected,
+          };
+        } finally {
+          runtime.dispose();
+          scene.dispose();
+          layer.dispose();
+          atlas.dispose();
+        }
       },
       async contracts() {
         const atlas = await FontAtlas.create(),

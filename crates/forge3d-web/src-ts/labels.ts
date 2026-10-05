@@ -717,13 +717,16 @@ export class LabelLayer {
         result.rejected.push({ id: label.id, reason: "line_too_short" });
         continue;
       }
-      const distances =
+      let distances =
         points && repeat > 0
           ? Array.from(
               { length: Math.min(10000, Math.floor(length / repeat) + 1) },
               (_, i) => i * repeat,
             ).filter((d) => d >= advance / 2 && d <= length - advance / 2)
           : [length / 2];
+      // A fitting line always gets one complete instance, even when the repeat
+      // spacing leaves no interior center from the regular distance grid.
+      if (!distances.length) distances = [length / 2];
       const block = points ? undefined : shapedTextMesh(shape);
       let hasInk = false,
         onScreen = false,
@@ -806,9 +809,7 @@ export class LabelLayer {
           reason: !hasInk
             ? "empty_glyphs"
             : !onScreen
-              ? distances.length
-                ? "outside_view"
-                : "line_too_short"
+              ? "outside_view"
               : "keepout_region",
         });
     }

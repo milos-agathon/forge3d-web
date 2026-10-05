@@ -1,7 +1,7 @@
 import { labelCase } from "./label-cases.js";
 import { LabelPlan } from "./label-plan.js";
 import { labelCompare, labelDiagnostic } from "./label-diagnostics.js";
-import { labelCoordinates, labelLinePoints } from "./label-candidates.js";
+import { labelCoordinates } from "./label-candidates.js";
 import type {
   LabelDiagnostic,
   LabelRecord,
@@ -14,7 +14,7 @@ export interface LabelFeature {
   source_id?: string;
   type?: string;
   properties?: Record<string, unknown>;
-  geometry?: { type?: string; coordinates?: unknown };
+  geometry?: { type?: string; coordinates?: unknown } | null;
   [key: string]: unknown;
 }
 export interface LabelFeatureOptions {
@@ -33,6 +33,26 @@ export interface LabelFeatureOptions {
     fromCrs: string,
     toCrs: string,
   ) => readonly (readonly number[])[];
+}
+// Feature ingestion checks only x/y, as native _is_coordinate does. The
+// compiler separately validates elevation and every remaining coordinate.
+function featureCoordinate(value: unknown): boolean {
+  return (
+    Array.isArray(value) &&
+    value.length >= 2 &&
+    value
+      .slice(0, 2)
+      .every(
+        (v) =>
+          (typeof v === "number" ||
+            typeof v === "boolean" ||
+            (typeof v === "string" && v.trim() !== "")) &&
+          !Number.isNaN(Number(v)),
+      )
+  );
+}
+function nativeTruthy(value: unknown): boolean {
+  return Array.isArray(value) ? value.length > 0 : !!value;
 }
 function nativeText(value: unknown): string {
   return value == null
@@ -135,24 +155,32 @@ export class LabelFeatureSource {
           `feature-${index}`,
       );
       index++;
+      const flatType = [feature.geometry_type, feature.type].find(nativeTruthy);
+      const flatCoordinates = [
+        feature.coordinates,
+        feature.position,
+        feature.world_pos,
+      ].find(nativeTruthy);
       const g = structuredClone(
-          feature.geometry ?? {
-            type: String(feature.geometry_type ?? feature.type ?? ""),
-            coordinates:
-              feature.coordinates ?? feature.position ?? feature.world_pos,
-          },
+          feature.geometry && typeof feature.geometry === "object"
+            ? feature.geometry
+            : flatType && flatCoordinates !== undefined
+              ? { type: String(flatType), coordinates: flatCoordinates }
+              : {},
         ),
         kind = (g.type ?? "").toLowerCase();
       const valid =
         kind === "point"
-          ? !!labelCoordinates(g.coordinates)
+          ? featureCoordinate(g.coordinates)
           : kind === "linestring"
-            ? !!labelLinePoints(g.coordinates)
+            ? Array.isArray(g.coordinates) &&
+              g.coordinates.length >= 2 &&
+              g.coordinates.every(featureCoordinate)
             : kind === "polygon"
               ? Array.isArray(g.coordinates) &&
                 Array.isArray(g.coordinates[0]) &&
                 g.coordinates[0].length >= 4 &&
-                g.coordinates[0].every((p: unknown) => !!labelCoordinates(p))
+                g.coordinates[0].every(featureCoordinate)
               : !!g.type;
       if (!valid) {
         diagnostics.push(
@@ -239,8 +267,9 @@ export class LabelFeatureSource {
             ),
           );
         else if (kind === "point") {
-          const p = labelCoordinates(g.coordinates)!,
-            value = options.terrainSampler.sample(...p);
+          const p = labelCoordinates(g.coordinates);
+          if (!p) throw Error("Invalid label terrain coordinates");
+          const value = options.terrainSampler.sample(...p);
           sample =
             typeof value === "number"
               ? { elevation: value, source: "terrain_sampler", visible: true }

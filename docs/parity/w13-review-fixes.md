@@ -2,7 +2,9 @@
 
 Follow-up to `9b45195` in the same `codex/w13-labels` worktree. All 12 supplied
 findings were checked against code and immutable native sources, then corrected.
-No subagents were used. Native references are `1f4084a` for Python contracts and
+This is the historical record for `1d7e235`; its retained-scene error policy was
+subsequently corrected in the [second review](w13-second-review-fixes.md). The linked
+package evidence now contains the latest run. No subagents were used. Native references are `1f4084a` for Python contracts and
 `bf8db93233e5158f6d226991fc5d230832c2d806:src/labels/line_label.rs` for placement.
 
 | Finding | Correction and regression evidence |
@@ -42,7 +44,7 @@ units (maximum 18), and 1918 visible glyph pixels when depth testing is disabled
 versus zero when hidden with depth testing. The viewer remained `ready` after
 one label error, retained its report and recovered after removing the bad label.
 
-Final tested tarball SHA-256: `f0c48085f9795a74b264401033262505c6f6611b17ebf6c5f9410d3bbc8fefca`.
+Tarball SHA-256 tested for `1d7e235`: `f0c48085f9795a74b264401033262505c6f6611b17ebf6c5f9410d3bbc8fefca`.
 
 ## Limits
 
