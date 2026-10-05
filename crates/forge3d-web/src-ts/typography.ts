@@ -397,7 +397,20 @@ export class FontAtlas {
         kerningApplied: settings.kerning,
         tracking: settings.tracking,
       };
-    for (const [lineIndex, line] of lines.entries()) {
+    for (const [lineIndex, sourceLine] of lines.entries()) {
+      // Tabs are four spaces; CR in CRLF is layout control, never glyph zero.
+      let line = "";
+      const clusters: number[] = [];
+      for (let i = 0; i < sourceLine.length; i++) {
+        const replacement =
+          sourceLine[i] === "\t"
+            ? "    "
+            : sourceLine[i] === "\r"
+              ? ""
+              : sourceLine[i]!;
+        line += replacement;
+        for (let j = 0; j < replacement.length; j++) clusters.push(i);
+      }
       const whole = this.#fonts.find((f) =>
         Array.from(line).every(
           (c) =>
@@ -460,7 +473,7 @@ export class FontAtlas {
               settings.tracking;
             glyphs.push({
               glyphId: info.codepoint,
-              cluster: clusterBase + run.start + info.cluster,
+              cluster: clusterBase + clusters[run.start + info.cluster]!,
               fontId: run.font.id,
               x: pen + p.xOffset / 64,
               y:
@@ -481,7 +494,7 @@ export class FontAtlas {
         }
       }
       width = Math.max(width, pen - (glyphs.length ? settings.tracking : 0));
-      clusterBase += line.length + 1;
+      clusterBase += sourceLine.length + 1;
     }
     return {
       glyphs,

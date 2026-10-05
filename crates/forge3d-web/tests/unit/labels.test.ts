@@ -9,7 +9,7 @@ import { FontAtlas, TypographySettings } from "../../src-ts/typography.js";
 import { LabelLayer, LabelStyle } from "../../src-ts/labels.js";
 import { Forge3DScene } from "../../src-ts/scene.js";
 import { Camera } from "../../src-ts/camera.js";
-import { glyphOutlineMesh } from "../../src-ts/label-mesh.js";
+import { glyphOutlineMesh, lineTextMesh } from "../../src-ts/label-mesh.js";
 import { labelSeedUnit } from "../../src-ts/label-candidates.js";
 import { LABEL_CASES } from "../../src-ts/label-cases.js";
 import type {
@@ -396,5 +396,57 @@ describe("W13 geometry and manifest boundaries", () => {
     expect(new Set(manifest.cases.map((c: { id: string }) => c.id)).size).toBe(
       manifest.cases.length,
     );
+  });
+});
+
+describe("W13 review shaping and geometry regressions", () => {
+  it("lays out tabs as whitespace while preserving original source clusters", () => {
+    const shaped = atlas.shape("A\tB"),
+      expanded = atlas.shape("A    B");
+    expect(shaped.diagnostics).toEqual([]);
+    expect(shaped.width).toBe(expanded.width);
+    expect(shaped.glyphs.map((g) => g.cluster)).toEqual([0, 1, 1, 1, 1, 2]);
+    expect(shaped.glyphs.every((g) => g.glyphId > 0)).toBe(true);
+    expect(shaped.glyphs.slice(1, 5).every((g) => g.path.length === 0)).toBe(
+      true,
+    );
+    expect(atlas.shape("A\r\nB").glyphs.every((g) => g.glyphId > 0)).toBe(true);
+  });
+  it("positions individual glyphs on both sides of a polyline bend", () => {
+    const shape = atlas.shape("WWWW", { fontSize: 20 }),
+      width = shape.width;
+    const points: LabelPoint[] = [
+      [10, 100, 0],
+      [10 + width / 2 + 8, 100, 0],
+      [10 + width / 2 + 8, 20, 0],
+    ];
+    const mesh = lineTextMesh(shape, points, width / 2 + 18);
+    let horizontal = 0,
+      vertical = 0;
+    for (let i = 0; i < mesh.length; i += 3) {
+      if (mesh[i]! < points[1]![0] - 2) horizontal++;
+      if (mesh[i + 1]! < 85) vertical++;
+    }
+    expect(horizontal).toBeGreaterThan(10);
+    expect(vertical).toBeGreaterThan(10);
+  });
+  it("compiles a 200000-vertex polygon without spreading vertices into the JS stack", () => {
+    const ring = Array.from({ length: 200000 }, (_, i) => [
+      50 + 30 * Math.cos((i / 200000) * Math.PI * 2),
+      50 + 30 * Math.sin((i / 200000) * Math.PI * 2),
+    ]);
+    ring.push(ring[0]!);
+    const p = LabelPlan.compile({
+      labels: [
+        {
+          id: "large",
+          text: "Park",
+          geometry: { type: "Polygon", coordinates: [ring] },
+        },
+      ],
+      viewport: [100, 100],
+    });
+    expect(p.accepted[0]?.label_id).toBe("large");
+    expect(p.accepted[0]?.candidate.anchor[0]).toBeCloseTo(50, 5);
   });
 });

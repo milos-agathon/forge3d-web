@@ -1,6 +1,6 @@
 {
   "scope": "W13-only installed tarball, Chromium preflight on win32",
-  "packageSha256": "d0bad4112cccbeca0d3a19b2bf5084016e1534859e925d7f47403f151d6c7b4e",
+  "packageSha256": "f0c48085f9795a74b264401033262505c6f6611b17ebf6c5f9410d3bbc8fefca",
   "browser": "148.0.7778.96",
   "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; worker-src 'self'; style-src 'self'; img-src 'self' blob:; object-src 'none'",
   "remoteRequests": [],
@@ -72,6 +72,7 @@
       "negativeControlAgreement": 0.7864593301435406
     },
     "depth": {
+      "negativeControlVisible": 1918,
       "visible": 1918,
       "hidden": 0,
       "capture": 0,
@@ -93,10 +94,31 @@
       "viewerDisposed": true,
       "fontStillAlive": true
     },
+    "viewerReview": {
+      "terrainCovered": 2266,
+      "attachedDiff": {
+        "sum": 0,
+        "max": 0
+      },
+      "detachedDiff": {
+        "sum": 0,
+        "max": 0
+      },
+      "oneLightDiff": {
+        "sum": 39398,
+        "max": 18
+      },
+      "stateAfterError": "ready",
+      "repaired": true,
+      "retained": true,
+      "errors": [
+        "INTERNAL_ERROR"
+      ]
+    },
     "contracts": {
       "id": 1,
-      "glyphCount": 20,
-      "nodes": 5,
+      "glyphCount": 12,
+      "nodes": 3,
       "curved": {
         "ok": false,
         "id": null,
@@ -138,7 +160,7 @@
         30,
         42
       ],
-      "pick": 1,
+      "pick": null,
       "serialized": true,
       "fonts": [
         "NotoSans",
@@ -150,8 +172,8 @@
   },
   "bundled": {
     "id": 1,
-    "glyphCount": 20,
-    "nodes": 5,
+    "glyphCount": 12,
+    "nodes": 3,
     "curved": {
       "ok": false,
       "id": null,
@@ -193,7 +215,7 @@
       30,
       42
     ],
-    "pick": 1,
+    "pick": null,
     "serialized": true,
     "fonts": [
       "NotoSans",

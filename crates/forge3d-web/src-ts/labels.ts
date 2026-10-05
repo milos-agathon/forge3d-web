@@ -16,7 +16,7 @@ import type {
   TypographyInput,
   KeepoutRegionInput,
 } from "./label-types.js";
-import { labelCompare, labelDiagnostic } from "./label-diagnostics.js";
+import { labelDiagnostic } from "./label-diagnostics.js";
 import { labelCase } from "./label-cases.js";
 import {
   interpolateLabelLine,
@@ -25,7 +25,7 @@ import {
   labelLinePoints,
   labelRectsIntersect,
 } from "./label-candidates.js";
-import { labelStrokeMesh, shapedTextMesh } from "./label-mesh.js";
+import { labelStrokeMesh, shapedTextMesh, lineTextMesh } from "./label-mesh.js";
 export class LabelFlags {
   underline = false;
   smallCaps = false;
@@ -244,7 +244,7 @@ export class LabelLayer {
     style: LabelStyleInput = {},
   ): LabelOperationResult {
     this.#assert();
-    if (!text.trim())
+    if (!text.length)
       return this.#failure(
         "placeholder_fallback",
         { feature: "empty label text" },
@@ -346,10 +346,25 @@ export class LabelLayer {
     terrainMode?: string,
   ): LabelOperationResult {
     this.#assert();
-    if (terrainMode && terrainMode !== "flat") {
+    if (terrainMode && !["none", "flat"].includes(terrainMode)) {
       const c = labelCase("viewer-terrain-line");
       return this.#failure(c.code!, { feature: c.feature }, "pending");
     }
+    if (!text.length)
+      return this.#failure(
+        "placeholder_fallback",
+        { feature: "empty line label text" },
+        "pending",
+      );
+    const missing = this.#atlas.validateText(text);
+    if (missing.length)
+      return {
+        ok: false,
+        id: null,
+        diagnostics: missing.map((d) =>
+          labelDiagnostic("missing_glyphs", d.details),
+        ),
+      };
     const points = labelLinePoints(path);
     if (!points || !labelLineLength(points))
       return this.#failure(
@@ -363,7 +378,7 @@ export class LabelLayer {
       ).point,
       result = this.addLabel(text, center, {
         ...style,
-        placement: style.placement ?? "along",
+        placement: style.placement ?? "center",
       });
     if (result.id !== null) this.#labels.get(result.id)!.path = points;
     return result;
@@ -378,6 +393,13 @@ export class LabelLayer {
     position: LabelPoint,
     style: LabelStyleInput = {},
   ): LabelOperationResult {
+    this.#assert();
+    if (!text.length)
+      return this.#failure(
+        "placeholder_fallback",
+        { feature: "empty callout text" },
+        "pending",
+      );
     const r = this.addLabel(text, position, {
       ...style,
       leader: true,
@@ -394,7 +416,7 @@ export class LabelLayer {
     const old = this.#labels.get(id);
     if (!old) return false;
     const text = patch.text ?? old.text;
-    if (!text.trim() || !this.#atlas.covers(text))
+    if (!text.length || !this.#atlas.covers(text))
       throw Error("Updated label has empty text or missing glyphs");
     const position = patch.position
       ? labelCoordinates(patch.position)
@@ -498,7 +520,7 @@ export class LabelLayer {
         throw Error("Invalid or duplicate label ID");
       if (
         !atlas.covers(label.text) ||
-        !label.text.trim() ||
+        !label.text.length ||
         !labelCoordinates(label.position)
       )
         throw Error("Invalid label snapshot contents");
@@ -617,6 +639,7 @@ export class LabelLayer {
         shape = this.#atlas.shape(text, {
           ...this.#typography,
           fontSize: style.fontSize,
+          ...(label.path ? { multiline: false } : {}),
         });
       if (shape.diagnostics.length) {
         result.diagnostics.push(...shape.diagnostics);
@@ -683,59 +706,71 @@ export class LabelLayer {
         result.rejected.push({ id: label.id, reason: "outside_view" });
         continue;
       }
-      const points = path as LabelPoint[] | undefined,
+      // Placement length is screen arclength, independent of projected depth.
+      const points = (path as LabelPoint[] | undefined)?.map(
+          (p): LabelPoint => [p[0], p[1], 0],
+        ),
         length = points ? labelLineLength(points) : 0,
+        advance = shape.glyphs.reduce((sum, g) => sum + g.xAdvance, 0),
         repeat = style.repeatDistance;
-      const locations = points
-        ? repeat > 0
-          ? Array.from(
-              { length: Math.min(10000, Math.floor(length / repeat) + 1) },
-              (_, i) => interpolateLabelLine(points, i * repeat),
-            )
-          : [interpolateLabelLine(points, length / 2)]
-        : [
-            {
-              point: [screen.x, screen.y, screen.depth] as LabelPoint,
-              angle: style.rotation,
-            },
-          ];
-      const mesh = shapedTextMesh(shape);
-      if (!mesh.length) {
-        result.rejected.push({ id: label.id, reason: "empty_glyphs" });
+      if (points && advance > length * 0.9) {
+        result.rejected.push({ id: label.id, reason: "line_too_short" });
         continue;
       }
-      candidateBytes += mesh.byteLength;
-      if (candidateBytes > budget)
-        throw Error("Label candidate mesh byte budget exceeded");
-      eligible.add(label.id);
-      for (const location of locations) {
+      const distances =
+        points && repeat > 0
+          ? Array.from(
+              { length: Math.min(10000, Math.floor(length / repeat) + 1) },
+              (_, i) => i * repeat,
+            ).filter((d) => d >= advance / 2 && d <= length - advance / 2)
+          : [length / 2];
+      const block = points ? undefined : shapedTextMesh(shape);
+      let hasInk = false,
+        onScreen = false,
+        unblocked = false;
+      for (const distance of distances) {
+        const location = points
+          ? interpolateLabelLine(points, distance)
+          : {
+              point: [screen.x, screen.y, screen.depth] as LabelPoint,
+              angle: style.rotation,
+            };
         const x = location.point[0] + style.offset[0],
           y = location.point[1] + style.offset[1],
-          rawAngle =
-            points && style.placement === "along"
-              ? location.angle
-              : style.rotation,
+          rawAngle = points ? location.angle : style.rotation,
           angle = points
             ? rawAngle > Math.PI / 2
               ? rawAngle - Math.PI
               : rawAngle < -Math.PI / 2
                 ? rawAngle + Math.PI
                 : rawAngle
-            : rawAngle,
-          c = Math.cos(angle),
-          s = Math.sin(angle);
+            : rawAngle;
+        const mesh = points
+          ? lineTextMesh(shape, points, distance)
+          : new Float32Array(block!);
+        if (!mesh.length) continue;
+        hasInk = true;
+        const c = Math.cos(angle),
+          sin = Math.sin(angle);
         let x0 = Infinity,
           y0 = Infinity,
           x1 = -Infinity,
           y1 = -Infinity;
         for (let i = 0; i < mesh.length; i += 3) {
-          const px = x + c * mesh[i]! + s * mesh[i + 1]!,
-            py = y + s * mesh[i]! - c * mesh[i + 1]!;
+          const a = mesh[i]!,
+            b = -mesh[i + 1]!;
+          const px = points ? a + style.offset[0] : x + c * a - sin * b;
+          const py = points ? -b + style.offset[1] : y + sin * a + c * b;
+          mesh[i] = px;
+          mesh[i + 1] = py;
           x0 = Math.min(x0, px);
           x1 = Math.max(x1, px);
           y0 = Math.min(y0, py);
           y1 = Math.max(y1, py);
         }
+        candidateBytes += mesh.byteLength;
+        if (candidateBytes > budget)
+          throw Error("Label candidate mesh byte budget exceeded");
         const rect: LabelRect = [
           x0 - style.haloWidth,
           y0 - style.haloWidth,
@@ -744,8 +779,11 @@ export class LabelLayer {
         ];
         if (rect[2] < 0 || rect[0] > width || rect[3] < 0 || rect[1] > height)
           continue;
+        onScreen = true;
         if (options.keepouts?.some((k) => labelRectsIntersect(rect, k.bounds)))
           continue;
+        unblocked = true;
+        eligible.add(label.id);
         if (placements.length >= 10000)
           throw Error("Label placement budget exceeded");
         placements.push({
@@ -762,6 +800,17 @@ export class LabelLayer {
           advance: shape.width,
         });
       }
+      if (!unblocked)
+        result.rejected.push({
+          id: label.id,
+          reason: !hasInk
+            ? "empty_glyphs"
+            : !onScreen
+              ? distances.length
+                ? "outside_view"
+                : "line_too_short"
+              : "keepout_region",
+        });
     }
     // Each repeated instance has its own collision ID. The solver optimizes the
     // complete candidate set, using the native f32 energy and seeded annealing.
@@ -786,13 +835,6 @@ export class LabelLayer {
         c = Math.cos(angle),
         s = Math.sin(angle),
         mesh = new Float32Array(p.mesh);
-      for (let i = 0; i < mesh.length; i += 3) {
-        const a = mesh[i]!,
-          b = -mesh[i + 1]!;
-        mesh[i] = x + c * a - s * b;
-        mesh[i + 1] = y + s * a + c * b;
-        mesh[i + 2] = 0;
-      }
       const world = style.depthTest && camera !== undefined;
       if (style.leader || label.callout) {
         const leader = labelStrokeMesh(

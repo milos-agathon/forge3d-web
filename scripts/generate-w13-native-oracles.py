@@ -23,7 +23,8 @@ def source(path):
 def serial(value):
     if hasattr(value,'to_dict'): return serial(value.to_dict())
     if isinstance(value,dict): return {str(k):serial(v) for k,v in value.items()}
-    if isinstance(value,(tuple,list,set)): return [serial(v) for v in value]
+    if isinstance(value,set): return [serial(v) for v in sorted(value,key=str)]
+    if isinstance(value,(tuple,list)): return [serial(v) for v in value]
     if value is None or isinstance(value,(str,int,float,bool)): return value
     raise TypeError(type(value).__name__)
 
@@ -79,6 +80,34 @@ with tempfile.TemporaryDirectory(prefix='forge3d-w13-oracle-') as temp:
     import pytest
     status=pytest.main(['-q','--confcutdir',str(base),'-k','not docs and not support_docs and not quickstart_names',*paths])
     if status: raise SystemExit(status)
+
+    # Review regressions are additional probes of the immutable implementation,
+    # not invented expected payloads and not counted as original pytest tests.
+    review_labels = [
+        {'id':'c','text':'River','position':[10,10],'placement_preset':'Curved'},
+        {'id':'c','text':'River','position':[10,10],'placement_preset':'CURVED'},
+        {'id':'c','text':'Road','geometry':{'type':'LineString','coordinates':[[10,10],[90,10]]},'placement_preset':'Road'},
+        {'id':'c','text':'Ridge','geometry':{'type':'LineString','coordinates':[[10,10],[90,10]]},'placement_preset':'line','terrain_mode':'required'},
+        {'id':'c','text':'Ridge','geometry':{'type':'LineString','coordinates':[[10,10],[90,10]]},'repeat_distance':20,'requires_terrain':True},
+        {'id':'c','text':'Null','geometry':{'type':'Point','coordinates':[None,5]}},
+    ]
+    for label in review_labels:
+        native.LabelPlan.compile(labels=[label], camera={}, viewport=[100,100])
+        CASES[-1]['source']='review regression via pinned native LabelPlan.compile'
+    class MissingTerrain:
+        def sample(self,*args): return None
+    native.LabelPlan.compile(labels=[{'id':'c','text':'DEM','position':[10,10],'terrain_mode':'required'}],camera={},viewport=[100,100],terrain=MissingTerrain())
+    CASES[-1]['source']='review no-data sampler via pinned native LabelPlan.compile'
+    for features,kwargs in [
+        ([{'id':'flat','type':'Point','coordinates':[10,20],'name':'Flat'}], {}),
+        ([{'id':'crs','geometry':{'type':'Point','coordinates':[10,20]},'properties':{'name':'Same'}}], {'crs':'EPSG:4326','target_crs':'epsg:4326'}),
+        ([{'id':'null','geometry':{'type':'Point','coordinates':[10,20]},'properties':{'name':None}}], {}),
+    ]:
+        package.map_scene.LabelLayer.from_features(features,**kwargs)
+        FEATURE_CASES[-1]['source']='review regression via pinned native LabelLayer.from_features'
+    package.map_scene.LabelLayer.from_features([{'id':'no-data','type':'Point','coordinates':[10,20],'name':'DEM'}],terrain_sampling='required',terrain_sampler=lambda *args:None)
+    FEATURE_CASES[-1]['source']='review no-data sampler via pinned native LabelLayer.from_features'
+    FEATURE_CASES[-1]['input']['terrain_sampler']='no-data'
 
 output=ROOT/'crates/forge3d-web/tests/fixtures/w13/native-label-plan.json'
 output.parent.mkdir(parents=True,exist_ok=True)

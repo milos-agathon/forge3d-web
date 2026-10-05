@@ -17,6 +17,7 @@ import {
   stableLabelJson,
 } from "./label-diagnostics.js";
 import {
+  labelBounds,
   labelCoordinates,
   labelLinePoints,
   labelRect,
@@ -101,7 +102,9 @@ function sampleTerrain(
   if (
     coords &&
     (record.requires_terrain ||
-      ["required", "sample", "terrain"].includes(record.terrain_mode ?? ""))
+      ["required", "sample", "terrain"].includes(
+        (record.terrain_mode ?? "").toLowerCase(),
+      ))
   ) {
     if (!terrain)
       return { source: "terrain_sampler", unavailable: true, visible: false };
@@ -109,7 +112,13 @@ function sampleTerrain(
       const value = terrain.sample(...coords);
       return typeof value === "number"
         ? { elevation: value, source: "terrain_sampler", visible: true }
-        : structuredClone(value);
+        : value && typeof value === "object"
+          ? structuredClone(value)
+          : {
+              source: terrain.constructor.name,
+              unavailable: true,
+              visible: false,
+            };
     }
     return { source: "terrain_sampler", unavailable: true, visible: false };
   }
@@ -263,25 +272,13 @@ export class LabelPlan {
         candidates: LabelCandidate[],
         screen: [number, number, number, number],
         world: [number, number, number, number, number, number];
-      if (r.curved_text || r.placement_preset === "curved") {
+      if (
+        r.curved_text ||
+        (r.placement_preset ?? "").toLowerCase() === "curved"
+      ) {
         const c = labelCase("plan-curved");
         diagnostics.push(labelDiagnostic(c.code!, { feature: c.feature }, id));
         reject(c.reason!, { placement: "curved_text" }, undefined, [c.code!]);
-        continue;
-      }
-      if (
-        t === "linestring" &&
-        (r.requires_terrain ||
-          ["required", "sample", "terrain"].includes(r.terrain_mode ?? ""))
-      ) {
-        const c = labelCase("plan-terrain-line");
-        diagnostics.push(labelDiagnostic(c.code!, { feature: c.feature }, id));
-        reject(
-          c.reason!,
-          { terrain_mode: r.terrain_mode ?? "required" },
-          undefined,
-          [c.code!],
-        );
         continue;
       }
       const score =
@@ -310,7 +307,9 @@ export class LabelPlan {
       } else if (t === "linestring") {
         if (
           r.repeat_distance === undefined &&
-          !["road", "river", "line"].includes(r.placement_preset ?? "")
+          !["road", "river", "line"].includes(
+            (r.placement_preset ?? "").toLowerCase(),
+          )
         ) {
           reject(labelCase("plan-flat-unconfigured").reason!, {
             geometry_type: type,
@@ -326,15 +325,8 @@ export class LabelPlan {
           continue;
         }
         candidate = candidates[0]!;
-        const xs = points.map((p) => p[0]),
-          ys = points.map((p) => p[1]),
-          z = candidate.anchor[2];
-        screen = [
-          Math.min(...xs),
-          Math.min(...ys),
-          Math.max(...xs),
-          Math.max(...ys),
-        ];
+        const z = candidate.anchor[2];
+        screen = labelBounds(points);
         world = [screen[0], screen[1], z, screen[2], screen[3], z];
       } else if (t === "polygon") {
         const poly = polygonLabelCandidates(

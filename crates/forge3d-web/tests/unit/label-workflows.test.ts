@@ -43,11 +43,14 @@ describe("Native feature/MapScene label recipe outcomes", () => {
           ...(i.terrain_sampler
             ? {
                 terrainSampler: {
-                  sample: (x, y, z) => ({
-                    elevation: x + y + z,
-                    source: "unit-test",
-                    visible: true,
-                  }),
+                  sample: (x, y, z) =>
+                    i.terrain_sampler === "no-data"
+                      ? null
+                      : {
+                          elevation: x + y + z,
+                          source: "unit-test",
+                          visible: true,
+                        },
                 },
               }
             : {}),
@@ -324,7 +327,8 @@ describe("Native public label state, style and fallback contracts", () => {
     expect(mesh?.kind).toBe("overlay");
     if (mesh?.kind !== "overlay") throw Error("mesh");
     const xs = Array.from(mesh.vertices!).filter((_, i) => i % 3 === 0);
-    expect(Math.min(...xs)).toBeGreaterThanOrEqual(60);
+    expect(Math.min(...xs)).toBeGreaterThan(50);
+    expect(Math.max(...xs)).toBeLessThan(70);
     layer.clearLabels();
     const id = layer.addLabel("Horizon", [0, 0, 0]).id,
       camera = new Camera({ position: [0, 0, 8], target: [0, 0, 0] });
@@ -392,7 +396,7 @@ describe("Native public label state, style and fallback contracts", () => {
   });
 });
 describe("W13 final boundary checks", () => {
-  it("keeps terrain line plans diagnostic and never allocates experimental layer IDs", () => {
+  it("accepts configured terrain line plans as native does, while the viewer API remains diagnostic", () => {
     const plan = LabelPlan.compile({
       labels: [
         {
@@ -412,17 +416,31 @@ describe("W13 final boundary checks", () => {
       viewport: [300, 200],
       terrain: { sample: () => 50 },
     });
-    expect(plan.accepted).toEqual([]);
-    expect(plan.rejected[0]?.reason).toBe("unsupported_geometry_type");
-    expect(
-      plan.diagnostics.some(
-        (d) =>
-          d.code === "experimental_feature" &&
-          d.details.feature === "terrain-elevated line labels",
-      ),
-    ).toBe(true);
+    expect(plan.accepted[0]?.candidate.candidate_id).toBe(
+      "terrain-line:repeat-0",
+    );
+    expect(plan.diagnostics).toEqual([]);
     const layer = new LabelLayer(atlas);
-    expect(layer.addPlan(plan).ids).toEqual({});
+    expect(
+      layer.addLineLabel(
+        "Ridge",
+        [
+          [0, 0, 0],
+          [100, 0, 0],
+        ],
+        {},
+        "required",
+      ),
+    ).toMatchObject({
+      ok: false,
+      id: null,
+      diagnostics: [
+        {
+          code: "experimental_feature",
+          details: { feature: "terrain-elevated line labels" },
+        },
+      ],
+    });
     expect(layer.size).toBe(0);
     layer.dispose();
   });
@@ -535,5 +553,114 @@ describe("Native declutter and spatial collision integration", () => {
     ).toEqual([1]);
     expect(plan.serialize()).toBe(before);
     layer.dispose();
+  });
+});
+
+describe("W13 review regression cases", () => {
+  it("reports no-data terrain samples without crashing in either ingestion or compilation", () => {
+    class MissingTerrain {
+      sample() {
+        return undefined;
+      }
+    }
+    const plan = LabelPlan.compile({
+      labels: [
+        { id: "a", text: "DEM", position: [10, 10], terrain_mode: "REQUIRED" },
+      ],
+      viewport: [100, 100],
+      terrain: new MissingTerrain(),
+    });
+    expect(plan.rejected[0]).toMatchObject({
+      reason: "terrain_occluded",
+      details: {
+        terrain_sample: {
+          source: "MissingTerrain",
+          unavailable: true,
+          visible: false,
+        },
+      },
+    });
+    expect(
+      plan.diagnostics.some((d) => d.code === "placeholder_fallback"),
+    ).toBe(true);
+    for (const missing of [null, undefined]) {
+      const source = LabelFeatureSource.fromFeatures(
+        [{ id: "a", type: "Point", coordinates: [10, 10], name: "DEM" }],
+        {
+          terrainSampling: "required",
+          terrainSampler: { sample: () => missing },
+        },
+      );
+      expect(
+        source.compileLabels({ viewport: [100, 100] }).rejected[0]?.reason,
+      ).toBe("terrain_occluded");
+    }
+  });
+  it("keeps per-API empty-text diagnostics, native validation order and whitespace IDs", () => {
+    const layer = new LabelLayer(atlas);
+    expect(layer.addLineLabel("", [])).toMatchObject({
+      ok: false,
+      id: null,
+      diagnostics: [{ details: { feature: "empty line label text" } }],
+    });
+    expect(layer.addCallout("", [0, 0, 0])).toMatchObject({
+      ok: false,
+      id: null,
+      diagnostics: [{ details: { feature: "empty callout text" } }],
+    });
+    expect(layer.addLabel("   ", [0, 0, 0]).id).toBe(1);
+    expect(
+      layer.render({ viewport: { width: 300, height: 200 } }).rejected,
+    ).toEqual([{ id: 1, reason: "empty_glyphs" }]);
+    expect(
+      layer.addLineLabel(
+        "Road",
+        [
+          [0, 50, 0],
+          [100, 50, 0],
+        ],
+        {},
+        "none",
+      ).id,
+    ).toBe(2);
+    expect(LabelLayer.fromJSON(atlas, layer.snapshot()).snapshot()).toEqual(
+      layer.snapshot(),
+    );
+    layer.dispose();
+  });
+  it("reports keepout and off-screen rejections before collision solving", () => {
+    const layer = new LabelLayer(atlas);
+    layer.addLabel("A", [30, 70, 0], { haloWidth: 0 });
+    expect(
+      layer.render({
+        viewport: { width: 300, height: 200 },
+        keepouts: [
+          { region_id: "all", kind: "title", bounds: [0, 0, 300, 200] },
+        ],
+      }).rejected,
+    ).toEqual([{ id: 1, reason: "keepout_region" }]);
+    layer.updateLabel(1, { position: [5000, 70, 0] });
+    expect(
+      layer.render({ viewport: { width: 300, height: 200 } }).rejected,
+    ).toEqual([{ id: 1, reason: "outside_view" }]);
+    layer.dispose();
+  });
+  it("requires actual text-to-path fit for both native line placement modes", () => {
+    for (const placement of ["center", "along"] as const) {
+      const layer = new LabelLayer(atlas);
+      layer.addLineLabel(
+        "Long road name",
+        [
+          [0, 0, 0],
+          [30, 0, 0],
+          [30, 30, 0],
+        ],
+        { placement, fontSize: 20, haloWidth: 0 },
+      );
+      const report = layer.render({ viewport: { width: 300, height: 200 } });
+      expect(report.nodes).toEqual([]);
+      expect(report.rejected).toEqual([{ id: 1, reason: "line_too_short" }]);
+      layer.dispose();
+    }
   });
 });

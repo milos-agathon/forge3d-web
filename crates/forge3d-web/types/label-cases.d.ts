@@ -70,10 +70,8 @@ export declare const LABEL_CASES: readonly [{
     readonly outcome: "render";
 }, {
     readonly id: "plan-terrain-line";
-    readonly outcome: "diagnostic";
-    readonly code: "experimental_feature";
-    readonly feature: "terrain-elevated line labels";
-    readonly reason: "unsupported_geometry_type";
+    readonly outcome: "render";
+    readonly requires: "Configured line/repeat preset; native compiler preserves supplied terrain samples without elevating each vertex";
 }, {
     readonly id: "feature-line-unconfigured";
     readonly outcome: "diagnostic";

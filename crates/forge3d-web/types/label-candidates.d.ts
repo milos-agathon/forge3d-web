@@ -1,5 +1,6 @@
 import type { LabelCandidate, LabelPoint, LabelRecord, LabelRect } from "./label-types.js";
 export declare function labelCoordinates(value: unknown): LabelPoint | undefined;
+export declare function labelBounds(points: readonly LabelPoint[]): LabelRect;
 export declare function labelRect(value: readonly number[]): LabelRect;
 export declare function labelRectsIntersect(a: readonly number[], b: readonly number[]): boolean;
 export declare function labelSeedUnit(key: string): number;

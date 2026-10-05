@@ -5386,17 +5386,17 @@
         ],
         "glyph_atlas": {
           "glyphs": [
-            "e",
+            "A",
             "M",
-            "p",
-            "t",
-            "g",
-            "i",
             "c",
             "d",
-            "s",
+            "e",
+            "g",
+            "i",
             "n",
-            "A"
+            "p",
+            "s",
+            "t"
           ]
         },
         "typography": {
@@ -5763,17 +5763,17 @@
         ],
         "glyph_atlas": {
           "glyphs": [
-            "e",
+            "A",
             "M",
-            "p",
-            "t",
-            "g",
-            "i",
             "c",
             "d",
-            "s",
+            "e",
+            "g",
+            "i",
             "n",
-            "A"
+            "p",
+            "s",
+            "t"
           ]
         },
         "typography": {
@@ -8675,59 +8675,59 @@
         ],
         "glyph_atlas": {
           "glyphs": [
-            "G",
-            "J",
-            "q",
-            "M",
-            "p",
-            "I",
-            "W",
-            "i",
-            "c",
-            "v",
-            "s",
-            "U",
             " ",
-            "B",
             "A",
-            "a",
-            "f",
-            "H",
-            "T",
-            "b",
-            "E",
-            "y",
-            "t",
-            "g",
-            "R",
-            "l",
-            "d",
-            "S",
-            "X",
-            "n",
-            "w",
-            "O",
-            "P",
+            "B",
+            "C",
             "D",
-            "h",
-            "e",
-            "N",
+            "E",
+            "F",
+            "G",
+            "H",
+            "I",
+            "J",
             "K",
             "L",
-            "z",
-            "k",
+            "M",
+            "N",
+            "O",
+            "P",
+            "Q",
+            "R",
+            "S",
+            "T",
+            "U",
+            "V",
+            "W",
+            "X",
             "Y",
             "Z",
+            "a",
+            "b",
+            "c",
+            "d",
+            "e",
+            "f",
+            "g",
+            "h",
+            "i",
+            "j",
+            "k",
+            "l",
             "m",
-            "r",
-            "C",
-            "Q",
-            "x",
+            "n",
             "o",
+            "p",
+            "q",
+            "r",
+            "s",
+            "t",
             "u",
-            "F",
-            "V",
-            "j"
+            "v",
+            "w",
+            "x",
+            "y",
+            "z"
           ]
         },
         "seed": 11
@@ -9604,59 +9604,59 @@
         ],
         "glyph_atlas": {
           "glyphs": [
-            "G",
-            "J",
-            "q",
-            "M",
-            "p",
-            "I",
-            "W",
-            "i",
-            "c",
-            "v",
-            "s",
-            "U",
             " ",
-            "B",
             "A",
-            "a",
-            "f",
-            "H",
-            "T",
-            "b",
-            "E",
-            "y",
-            "t",
-            "g",
-            "R",
-            "l",
-            "d",
-            "S",
-            "X",
-            "n",
-            "w",
-            "O",
-            "P",
+            "B",
+            "C",
             "D",
-            "h",
-            "e",
-            "N",
+            "E",
+            "F",
+            "G",
+            "H",
+            "I",
+            "J",
             "K",
             "L",
-            "z",
-            "k",
+            "M",
+            "N",
+            "O",
+            "P",
+            "Q",
+            "R",
+            "S",
+            "T",
+            "U",
+            "V",
+            "W",
+            "X",
             "Y",
             "Z",
+            "a",
+            "b",
+            "c",
+            "d",
+            "e",
+            "f",
+            "g",
+            "h",
+            "i",
+            "j",
+            "k",
+            "l",
             "m",
-            "r",
-            "C",
-            "Q",
-            "x",
+            "n",
             "o",
+            "p",
+            "q",
+            "r",
+            "s",
+            "t",
             "u",
-            "F",
-            "V",
-            "j"
+            "v",
+            "w",
+            "x",
+            "y",
+            "z"
           ]
         },
         "seed": 11
@@ -10954,21 +10954,21 @@
         "glyph_atlas": {
           "glyphs": [
             "C",
-            "e",
             "G",
-            "p",
-            "y",
-            "t",
-            "g",
-            "l",
-            "i",
-            "o",
             "L",
-            "c",
-            "n",
-            "d",
             "a",
-            "h"
+            "c",
+            "d",
+            "e",
+            "g",
+            "h",
+            "i",
+            "l",
+            "n",
+            "o",
+            "p",
+            "t",
+            "y"
           ]
         },
         "seed": 17
@@ -11445,21 +11445,21 @@
         "glyph_atlas": {
           "glyphs": [
             "C",
-            "e",
             "G",
-            "p",
-            "y",
-            "t",
-            "g",
-            "l",
-            "i",
-            "o",
             "L",
-            "c",
-            "n",
-            "d",
             "a",
-            "h"
+            "c",
+            "d",
+            "e",
+            "g",
+            "h",
+            "i",
+            "l",
+            "n",
+            "o",
+            "p",
+            "t",
+            "y"
           ]
         },
         "seed": 17
@@ -15134,6 +15134,798 @@
             "details": {
               "rejection_counts": {
                 "unsupported_geometry_type": 1
+              },
+              "total": 1
+            }
+          }
+        ],
+        "bounds": {
+          "keepouts": [],
+          "priority_rules": [],
+          "screen": null,
+          "world": null
+        }
+      }
+    },
+    {
+      "source": "review regression via pinned native LabelPlan.compile",
+      "input": {
+        "labels": [
+          {
+            "id": "c",
+            "text": "River",
+            "position": [
+              10,
+              10
+            ],
+            "placement_preset": "Curved"
+          }
+        ],
+        "camera": {},
+        "viewport": [
+          100,
+          100
+        ]
+      },
+      "expected": {
+        "payload_version": 1,
+        "seed": 0,
+        "accepted": [],
+        "rejected": [
+          {
+            "label_id": "c",
+            "source_id": "c",
+            "candidate_id": null,
+            "reason": "unsupported_geometry_type",
+            "diagnostic_refs": [
+              "experimental_feature"
+            ],
+            "details": {
+              "placement": "curved_text"
+            }
+          }
+        ],
+        "diagnostics": [
+          {
+            "code": "experimental_feature",
+            "severity": "warning",
+            "message": "Requested workflow uses a feature that is not production-stable.",
+            "remediation": "Treat this path as experimental or use a documented supported alternative.",
+            "support_level": "experimental",
+            "layer_id": "labels",
+            "object_id": "c",
+            "details": {
+              "feature": "advanced curved labels"
+            }
+          },
+          {
+            "code": "label_rejection_summary",
+            "severity": "warning",
+            "message": "1 label candidates were rejected during placement.",
+            "remediation": "Inspect rejection reasons and adjust priorities, keepouts, glyph coverage, or geometry.",
+            "support_level": "underdeveloped",
+            "layer_id": "labels",
+            "object_id": null,
+            "details": {
+              "rejection_counts": {
+                "unsupported_geometry_type": 1
+              },
+              "total": 1
+            }
+          }
+        ],
+        "bounds": {
+          "keepouts": [],
+          "priority_rules": [],
+          "screen": null,
+          "world": null
+        }
+      }
+    },
+    {
+      "source": "review regression via pinned native LabelPlan.compile",
+      "input": {
+        "labels": [
+          {
+            "id": "c",
+            "text": "River",
+            "position": [
+              10,
+              10
+            ],
+            "placement_preset": "CURVED"
+          }
+        ],
+        "camera": {},
+        "viewport": [
+          100,
+          100
+        ]
+      },
+      "expected": {
+        "payload_version": 1,
+        "seed": 0,
+        "accepted": [],
+        "rejected": [
+          {
+            "label_id": "c",
+            "source_id": "c",
+            "candidate_id": null,
+            "reason": "unsupported_geometry_type",
+            "diagnostic_refs": [
+              "experimental_feature"
+            ],
+            "details": {
+              "placement": "curved_text"
+            }
+          }
+        ],
+        "diagnostics": [
+          {
+            "code": "experimental_feature",
+            "severity": "warning",
+            "message": "Requested workflow uses a feature that is not production-stable.",
+            "remediation": "Treat this path as experimental or use a documented supported alternative.",
+            "support_level": "experimental",
+            "layer_id": "labels",
+            "object_id": "c",
+            "details": {
+              "feature": "advanced curved labels"
+            }
+          },
+          {
+            "code": "label_rejection_summary",
+            "severity": "warning",
+            "message": "1 label candidates were rejected during placement.",
+            "remediation": "Inspect rejection reasons and adjust priorities, keepouts, glyph coverage, or geometry.",
+            "support_level": "underdeveloped",
+            "layer_id": "labels",
+            "object_id": null,
+            "details": {
+              "rejection_counts": {
+                "unsupported_geometry_type": 1
+              },
+              "total": 1
+            }
+          }
+        ],
+        "bounds": {
+          "keepouts": [],
+          "priority_rules": [],
+          "screen": null,
+          "world": null
+        }
+      }
+    },
+    {
+      "source": "review regression via pinned native LabelPlan.compile",
+      "input": {
+        "labels": [
+          {
+            "id": "c",
+            "text": "Road",
+            "geometry": {
+              "type": "LineString",
+              "coordinates": [
+                [
+                  10,
+                  10
+                ],
+                [
+                  90,
+                  10
+                ]
+              ]
+            },
+            "placement_preset": "Road"
+          }
+        ],
+        "camera": {},
+        "viewport": [
+          100,
+          100
+        ]
+      },
+      "expected": {
+        "payload_version": 1,
+        "seed": 0,
+        "accepted": [
+          {
+            "label_id": "c",
+            "source_id": "c",
+            "text": "Road",
+            "geometry_type": "LineString",
+            "candidate": {
+              "candidate_id": "c:repeat-0",
+              "candidate_type": "line_repeat",
+              "anchor": [
+                50.0,
+                10.0,
+                0.0
+              ],
+              "score": 0.0,
+              "bounds": [
+                50.0,
+                10.0,
+                50.0,
+                10.0
+              ],
+              "terrain_sample": {},
+              "details": {
+                "distance_along": 40.0,
+                "line_length": 80.0,
+                "placement_preset": "Road",
+                "repeat_distance": 0.0
+              }
+            },
+            "candidates": [
+              {
+                "candidate_id": "c:repeat-0",
+                "candidate_type": "line_repeat",
+                "anchor": [
+                  50.0,
+                  10.0,
+                  0.0
+                ],
+                "score": 0.0,
+                "bounds": [
+                  50.0,
+                  10.0,
+                  50.0,
+                  10.0
+                ],
+                "terrain_sample": {},
+                "details": {
+                  "distance_along": 40.0,
+                  "line_length": 80.0,
+                  "placement_preset": "Road",
+                  "repeat_distance": 0.0
+                }
+              }
+            ],
+            "priority_class": "default",
+            "screen_bounds": [
+              10.0,
+              10.0,
+              90.0,
+              10.0
+            ],
+            "world_bounds": [
+              10.0,
+              10.0,
+              0.0,
+              90.0,
+              10.0,
+              0.0
+            ],
+            "typography": {},
+            "glyphs": [
+              "R",
+              "o",
+              "a",
+              "d"
+            ]
+          }
+        ],
+        "rejected": [],
+        "diagnostics": [],
+        "bounds": {
+          "keepouts": [],
+          "priority_rules": [],
+          "screen": [
+            10.0,
+            10.0,
+            90.0,
+            10.0
+          ],
+          "world": [
+            10.0,
+            10.0,
+            0.0,
+            90.0,
+            10.0,
+            0.0
+          ]
+        }
+      }
+    },
+    {
+      "source": "review regression via pinned native LabelPlan.compile",
+      "input": {
+        "labels": [
+          {
+            "id": "c",
+            "text": "Ridge",
+            "geometry": {
+              "type": "LineString",
+              "coordinates": [
+                [
+                  10,
+                  10
+                ],
+                [
+                  90,
+                  10
+                ]
+              ]
+            },
+            "placement_preset": "line",
+            "terrain_mode": "required"
+          }
+        ],
+        "camera": {},
+        "viewport": [
+          100,
+          100
+        ]
+      },
+      "expected": {
+        "payload_version": 1,
+        "seed": 0,
+        "accepted": [
+          {
+            "label_id": "c",
+            "source_id": "c",
+            "text": "Ridge",
+            "geometry_type": "LineString",
+            "candidate": {
+              "candidate_id": "c:repeat-0",
+              "candidate_type": "line_repeat",
+              "anchor": [
+                50.0,
+                10.0,
+                0.0
+              ],
+              "score": 0.0,
+              "bounds": [
+                50.0,
+                10.0,
+                50.0,
+                10.0
+              ],
+              "terrain_sample": {},
+              "details": {
+                "distance_along": 40.0,
+                "line_length": 80.0,
+                "placement_preset": "line",
+                "repeat_distance": 0.0
+              }
+            },
+            "candidates": [
+              {
+                "candidate_id": "c:repeat-0",
+                "candidate_type": "line_repeat",
+                "anchor": [
+                  50.0,
+                  10.0,
+                  0.0
+                ],
+                "score": 0.0,
+                "bounds": [
+                  50.0,
+                  10.0,
+                  50.0,
+                  10.0
+                ],
+                "terrain_sample": {},
+                "details": {
+                  "distance_along": 40.0,
+                  "line_length": 80.0,
+                  "placement_preset": "line",
+                  "repeat_distance": 0.0
+                }
+              }
+            ],
+            "priority_class": "default",
+            "screen_bounds": [
+              10.0,
+              10.0,
+              90.0,
+              10.0
+            ],
+            "world_bounds": [
+              10.0,
+              10.0,
+              0.0,
+              90.0,
+              10.0,
+              0.0
+            ],
+            "typography": {},
+            "glyphs": [
+              "R",
+              "i",
+              "d",
+              "g",
+              "e"
+            ]
+          }
+        ],
+        "rejected": [],
+        "diagnostics": [],
+        "bounds": {
+          "keepouts": [],
+          "priority_rules": [],
+          "screen": [
+            10.0,
+            10.0,
+            90.0,
+            10.0
+          ],
+          "world": [
+            10.0,
+            10.0,
+            0.0,
+            90.0,
+            10.0,
+            0.0
+          ]
+        }
+      }
+    },
+    {
+      "source": "review regression via pinned native LabelPlan.compile",
+      "input": {
+        "labels": [
+          {
+            "id": "c",
+            "text": "Ridge",
+            "geometry": {
+              "type": "LineString",
+              "coordinates": [
+                [
+                  10,
+                  10
+                ],
+                [
+                  90,
+                  10
+                ]
+              ]
+            },
+            "repeat_distance": 20,
+            "requires_terrain": true
+          }
+        ],
+        "camera": {},
+        "viewport": [
+          100,
+          100
+        ]
+      },
+      "expected": {
+        "payload_version": 1,
+        "seed": 0,
+        "accepted": [
+          {
+            "label_id": "c",
+            "source_id": "c",
+            "text": "Ridge",
+            "geometry_type": "LineString",
+            "candidate": {
+              "candidate_id": "c:repeat-0",
+              "candidate_type": "line_repeat",
+              "anchor": [
+                10.0,
+                10.0,
+                0.0
+              ],
+              "score": 0.0,
+              "bounds": [
+                10.0,
+                10.0,
+                10.0,
+                10.0
+              ],
+              "terrain_sample": {},
+              "details": {
+                "distance_along": 0.0,
+                "line_length": 80.0,
+                "placement_preset": "line",
+                "repeat_distance": 20.0
+              }
+            },
+            "candidates": [
+              {
+                "candidate_id": "c:repeat-0",
+                "candidate_type": "line_repeat",
+                "anchor": [
+                  10.0,
+                  10.0,
+                  0.0
+                ],
+                "score": 0.0,
+                "bounds": [
+                  10.0,
+                  10.0,
+                  10.0,
+                  10.0
+                ],
+                "terrain_sample": {},
+                "details": {
+                  "distance_along": 0.0,
+                  "line_length": 80.0,
+                  "placement_preset": "line",
+                  "repeat_distance": 20.0
+                }
+              },
+              {
+                "candidate_id": "c:repeat-1",
+                "candidate_type": "line_repeat",
+                "anchor": [
+                  30.0,
+                  10.0,
+                  0.0
+                ],
+                "score": -0.001,
+                "bounds": [
+                  30.0,
+                  10.0,
+                  30.0,
+                  10.0
+                ],
+                "terrain_sample": {},
+                "details": {
+                  "distance_along": 20.0,
+                  "line_length": 80.0,
+                  "placement_preset": "line",
+                  "repeat_distance": 20.0
+                }
+              },
+              {
+                "candidate_id": "c:repeat-2",
+                "candidate_type": "line_repeat",
+                "anchor": [
+                  50.0,
+                  10.0,
+                  0.0
+                ],
+                "score": -0.002,
+                "bounds": [
+                  50.0,
+                  10.0,
+                  50.0,
+                  10.0
+                ],
+                "terrain_sample": {},
+                "details": {
+                  "distance_along": 40.0,
+                  "line_length": 80.0,
+                  "placement_preset": "line",
+                  "repeat_distance": 20.0
+                }
+              },
+              {
+                "candidate_id": "c:repeat-3",
+                "candidate_type": "line_repeat",
+                "anchor": [
+                  70.0,
+                  10.0,
+                  0.0
+                ],
+                "score": -0.003,
+                "bounds": [
+                  70.0,
+                  10.0,
+                  70.0,
+                  10.0
+                ],
+                "terrain_sample": {},
+                "details": {
+                  "distance_along": 60.0,
+                  "line_length": 80.0,
+                  "placement_preset": "line",
+                  "repeat_distance": 20.0
+                }
+              },
+              {
+                "candidate_id": "c:repeat-4",
+                "candidate_type": "line_repeat",
+                "anchor": [
+                  90.0,
+                  10.0,
+                  0.0
+                ],
+                "score": -0.004,
+                "bounds": [
+                  90.0,
+                  10.0,
+                  90.0,
+                  10.0
+                ],
+                "terrain_sample": {},
+                "details": {
+                  "distance_along": 80.0,
+                  "line_length": 80.0,
+                  "placement_preset": "line",
+                  "repeat_distance": 20.0
+                }
+              }
+            ],
+            "priority_class": "default",
+            "screen_bounds": [
+              10.0,
+              10.0,
+              90.0,
+              10.0
+            ],
+            "world_bounds": [
+              10.0,
+              10.0,
+              0.0,
+              90.0,
+              10.0,
+              0.0
+            ],
+            "typography": {},
+            "glyphs": [
+              "R",
+              "i",
+              "d",
+              "g",
+              "e"
+            ]
+          }
+        ],
+        "rejected": [],
+        "diagnostics": [],
+        "bounds": {
+          "keepouts": [],
+          "priority_rules": [],
+          "screen": [
+            10.0,
+            10.0,
+            90.0,
+            10.0
+          ],
+          "world": [
+            10.0,
+            10.0,
+            0.0,
+            90.0,
+            10.0,
+            0.0
+          ]
+        }
+      }
+    },
+    {
+      "source": "review regression via pinned native LabelPlan.compile",
+      "input": {
+        "labels": [
+          {
+            "id": "c",
+            "text": "Null",
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                null,
+                5
+              ]
+            }
+          }
+        ],
+        "camera": {},
+        "viewport": [
+          100,
+          100
+        ]
+      },
+      "expected": {
+        "payload_version": 1,
+        "seed": 0,
+        "accepted": [],
+        "rejected": [
+          {
+            "label_id": "c",
+            "source_id": "c",
+            "candidate_id": null,
+            "reason": "invalid_geometry",
+            "diagnostic_refs": [],
+            "details": {}
+          }
+        ],
+        "diagnostics": [
+          {
+            "code": "label_rejection_summary",
+            "severity": "warning",
+            "message": "1 label candidates were rejected during placement.",
+            "remediation": "Inspect rejection reasons and adjust priorities, keepouts, glyph coverage, or geometry.",
+            "support_level": "underdeveloped",
+            "layer_id": "labels",
+            "object_id": null,
+            "details": {
+              "rejection_counts": {
+                "invalid_geometry": 1
+              },
+              "total": 1
+            }
+          }
+        ],
+        "bounds": {
+          "keepouts": [],
+          "priority_rules": [],
+          "screen": null,
+          "world": null
+        }
+      }
+    },
+    {
+      "source": "review no-data sampler via pinned native LabelPlan.compile",
+      "input": {
+        "labels": [
+          {
+            "id": "c",
+            "text": "DEM",
+            "position": [
+              10,
+              10
+            ],
+            "terrain_mode": "required"
+          }
+        ],
+        "camera": {},
+        "viewport": [
+          100,
+          100
+        ],
+        "terrain": {
+          "samples": {
+            "c": {
+              "source": "MissingTerrain",
+              "unavailable": true,
+              "visible": false
+            }
+          }
+        }
+      },
+      "expected": {
+        "payload_version": 1,
+        "seed": 0,
+        "accepted": [],
+        "rejected": [
+          {
+            "label_id": "c",
+            "source_id": "c",
+            "candidate_id": "c:center",
+            "reason": "terrain_occluded",
+            "diagnostic_refs": [
+              "label_rejection_summary",
+              "placeholder_fallback"
+            ],
+            "details": {
+              "terrain_sample": {
+                "source": "MissingTerrain",
+                "unavailable": true,
+                "visible": false
+              }
+            }
+          }
+        ],
+        "diagnostics": [
+          {
+            "code": "placeholder_fallback",
+            "severity": "error",
+            "message": "Requested workflow would use placeholder or non-renderable fallback output.",
+            "remediation": "Use a renderable supported path or keep the workflow blocked before render.",
+            "support_level": "placeholder/fallback",
+            "layer_id": "labels",
+            "object_id": "c",
+            "details": {
+              "feature": "terrain_sampler"
+            }
+          },
+          {
+            "code": "label_rejection_summary",
+            "severity": "warning",
+            "message": "1 label candidates were rejected during placement.",
+            "remediation": "Inspect rejection reasons and adjust priorities, keepouts, glyph coverage, or geometry.",
+            "support_level": "underdeveloped",
+            "layer_id": "labels",
+            "object_id": null,
+            "details": {
+              "rejection_counts": {
+                "terrain_occluded": 1
               },
               "total": 1
             }

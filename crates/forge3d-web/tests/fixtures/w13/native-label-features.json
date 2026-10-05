@@ -1452,6 +1452,214 @@
         },
         "diagnostics": []
       }
+    },
+    {
+      "source": "review regression via pinned native LabelLayer.from_features",
+      "input": {
+        "features": [
+          {
+            "id": "flat",
+            "type": "Point",
+            "coordinates": [
+              10,
+              20
+            ],
+            "name": "Flat"
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                10,
+                20
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "flat",
+            "placement_kind": "point",
+            "properties": {
+              "id": "flat",
+              "name": "Flat"
+            },
+            "source_id": "flat",
+            "terrain_mode": "auto",
+            "text": "Flat"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": []
+      }
+    },
+    {
+      "source": "review regression via pinned native LabelLayer.from_features",
+      "input": {
+        "crs": "EPSG:4326",
+        "target_crs": "epsg:4326",
+        "features": [
+          {
+            "id": "crs",
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                10,
+                20
+              ]
+            },
+            "properties": {
+              "name": "Same"
+            }
+          }
+        ],
+        "transform_coords": "xy=[1000,2000]"
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                10,
+                20
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "crs",
+            "placement_kind": "point",
+            "properties": {
+              "name": "Same"
+            },
+            "source_id": "crs",
+            "terrain_mode": "auto",
+            "text": "Same"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "crs": "epsg:4326",
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": []
+      }
+    },
+    {
+      "source": "review regression via pinned native LabelLayer.from_features",
+      "input": {
+        "features": [
+          {
+            "id": "null",
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                10,
+                20
+              ]
+            },
+            "properties": {
+              "name": null
+            }
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                10,
+                20
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "null",
+            "placement_kind": "point",
+            "properties": {
+              "name": null
+            },
+            "source_id": "null",
+            "terrain_mode": "auto",
+            "text": "None"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": []
+      }
+    },
+    {
+      "source": "review no-data sampler via pinned native LabelLayer.from_features",
+      "input": {
+        "terrain_sampling": "required",
+        "terrain_sampler": "no-data",
+        "features": [
+          {
+            "id": "no-data",
+            "type": "Point",
+            "coordinates": [
+              10,
+              20
+            ],
+            "name": "DEM"
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                10,
+                20
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "no-data",
+            "placement_kind": "point",
+            "properties": {
+              "id": "no-data",
+              "name": "DEM"
+            },
+            "source_id": "no-data",
+            "terrain_mode": "required",
+            "text": "DEM"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "terrain_sampling": "required"
+        },
+        "diagnostics": []
+      }
     }
   ]
 }

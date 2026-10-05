@@ -36,7 +36,14 @@ for (const dist of [false, true]) {
     expect(errors).toEqual([]);
   });
 }
-for (const name of ["outline", "depth", "session", "viewer", "contracts"])
+for (const name of [
+  "outline",
+  "depth",
+  "session",
+  "viewer",
+  "viewerReview",
+  "contracts",
+])
   test(`W13 ${name}`, async ({ page, webgpuAvailability }) => {
     skipRenderAssertionsWhenProbing(webgpuAvailability);
     await page.goto("/examples/test-w13-labels.html");
@@ -53,6 +60,7 @@ for (const name of ["outline", "depth", "session", "viewer", "contracts"])
       expect(r.visible).toBeGreaterThan(500);
       expect(r.hidden).toBe(0);
       expect(r.capture).toBe(0);
+      expect(r.negativeControlVisible).toBeGreaterThan(500);
     }
     if (name === "session") {
       expect(r.before).toBeGreaterThan(1000);
@@ -67,6 +75,16 @@ for (const name of ["outline", "depth", "session", "viewer", "contracts"])
       expect(r.accepted).toEqual([1]);
       expect(r.viewerDisposed).toBe(true);
       expect(r.fontStillAlive).toBe(true);
+    }
+    if (name === "viewerReview") {
+      expect(r.terrainCovered).toBeGreaterThan(1000);
+      expect(r.attachedDiff.max).toBe(0);
+      expect(r.detachedDiff.max).toBe(0);
+      expect(r.oneLightDiff.sum).toBeGreaterThan(1000);
+      expect(r.stateAfterError).toBe("ready");
+      expect(r.retained).toBe(true);
+      expect(r.repaired).toBe(true);
+      expect(r.errors).toHaveLength(1);
     }
     if (name === "contracts") {
       expect(r.glyphCount).toBeGreaterThan(4);

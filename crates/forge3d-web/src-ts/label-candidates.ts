@@ -6,8 +6,33 @@ import type {
 } from "./label-types.js";
 export function labelCoordinates(value: unknown): LabelPoint | undefined {
   if (!Array.isArray(value) || value.length < 2) return undefined;
-  const v = [Number(value[0]), Number(value[1]), Number(value[2] ?? 0)];
-  return v.every(Number.isFinite) ? (v as LabelPoint) : undefined;
+  // Python float(None) and float("") fail; JavaScript Number coerces them to zero.
+  const valid = value.every(
+    (v) =>
+      (typeof v === "number" ||
+        typeof v === "boolean" ||
+        (typeof v === "string" && v.trim() !== "")) &&
+      Number.isFinite(Number(v)),
+  );
+  if (!valid) return undefined;
+  return [
+    Number(value[0]),
+    Number(value[1]),
+    value.length > 2 ? Number(value[2]) : 0,
+  ];
+}
+export function labelBounds(points: readonly LabelPoint[]): LabelRect {
+  let x0 = Infinity,
+    y0 = Infinity,
+    x1 = -Infinity,
+    y1 = -Infinity;
+  for (const [x, y] of points) {
+    x0 = Math.min(x0, x);
+    y0 = Math.min(y0, y);
+    x1 = Math.max(x1, x);
+    y1 = Math.max(y1, y);
+  }
+  return [x0, y0, x1, y1];
 }
 export function labelRect(value: readonly number[]): LabelRect {
   return [
@@ -305,12 +330,7 @@ export function polygonLabelCandidates(
     }
     return hit;
   };
-  const xs = ring.map((p) => p[0]),
-    ys = ring.map((p) => p[1]),
-    minX = Math.min(...xs),
-    maxX = Math.max(...xs),
-    minY = Math.min(...ys),
-    maxY = Math.max(...ys);
+  const [minX, minY, maxX, maxY] = labelBounds(ring);
   let visual = centroid,
     best = -Infinity;
   for (let ix = 0; ix < 12; ix++)
@@ -318,9 +338,11 @@ export function polygonLabelCandidates(
       const x = minX + ((ix + 0.5) * (maxX - minX)) / 12,
         y = minY + ((iy + 0.5) * (maxY - minY)) / 12;
       if (!inside(x, y)) continue;
-      const distance = Math.min(
-        ...ring.slice(0, -1).map((p) => (x - p[0]) ** 2 + (y - p[1]) ** 2),
-      );
+      let distance = Infinity;
+      for (let i = 0; i < ring.length - 1; i++) {
+        const p = ring[i]!;
+        distance = Math.min(distance, (x - p[0]) ** 2 + (y - p[1]) ** 2);
+      }
       if (
         distance > best ||
         (distance === best &&

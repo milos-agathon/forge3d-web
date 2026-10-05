@@ -1,4 +1,5 @@
-import type { ShapedText } from "./label-types.js";
+import { interpolateLabelLine } from "./label-candidates.js";
+import type { LabelPoint, ShapedText } from "./label-types.js";
 // Scan-convert flattened outlines to non-overlapping trapezoids. Each slab is
 // bounded by contour vertices, so holes retain the font's nonzero winding rule.
 export function glyphOutlineMesh(
@@ -164,4 +165,44 @@ export function labelStrokeMesh(
     );
   }
   return new Float32Array(mesh);
+}
+
+// Mirrors native line_label.rs: center and along both center the text width,
+// sample each glyph's advance midpoint, and normalize its local tangent.
+export function lineTextMesh(
+  shaped: ShapedText,
+  points: readonly LabelPoint[],
+  center: number,
+): Float32Array {
+  const advances = shaped.glyphs.reduce((sum, g) => sum + g.xAdvance, 0);
+  let pen = 0;
+  const result: number[] = [];
+  for (const glyph of shaped.glyphs) {
+    const location = interpolateLabelLine(
+      points,
+      center - advances / 2 + pen + glyph.xAdvance / 2,
+    );
+    const angle =
+      location.angle > Math.PI / 2
+        ? location.angle - Math.PI
+        : location.angle < -Math.PI / 2
+          ? location.angle + Math.PI
+          : location.angle;
+    const c = Math.cos(angle),
+      sin = Math.sin(angle);
+    const mesh = glyphOutlineMesh(glyph.path);
+    for (let i = 0; i < mesh.length; i += 3) {
+      const x = mesh[i]! + glyph.x - pen - glyph.xAdvance / 2;
+      const y = glyph.y - mesh[i + 1]!;
+      result.push(
+        location.point[0] + c * x - sin * y,
+        location.point[1] + sin * x + c * y,
+        0,
+      );
+    }
+    pen += glyph.xAdvance;
+    if (result.length > 9_000_000)
+      throw Error("Label mesh exceeds one million triangles");
+  }
+  return new Float32Array(result);
 }

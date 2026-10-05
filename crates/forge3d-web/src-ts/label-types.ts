@@ -110,7 +110,11 @@ export interface LabelPlanData {
   };
 }
 export interface LabelTerrainSampler {
-  sample(x: number, y: number, z: number): Record<string, unknown> | number;
+  sample(
+    x: number,
+    y: number,
+    z: number,
+  ): Record<string, unknown> | number | null | undefined;
 }
 export interface LabelPlanOptions {
   labels: readonly LabelRecord[] | Record<string, LabelRecord>;

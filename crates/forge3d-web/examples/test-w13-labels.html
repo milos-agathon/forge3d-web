@@ -220,7 +220,9 @@
           layer.attach(scene, { viewport, camera: Camera.fromInput(camera) });
           runtime.setScene(scene.snapshot());
           const visible = await runtime.readRgba();
-          // A black world text rectangle at z=0 is a depth-writing occluder in front of the label at z=-2.
+          // Commit the occluder BEFORE the glyphs: draw order cannot hide the
+          // label unless the world pipeline actually tests its depth.
+          layer.detach(scene);
           scene.addNode({
             kind: "text-mesh",
             name: "occluder",
@@ -229,10 +231,16 @@
             color: [0, 0, 0, 1],
             transform: { translation: [-6, -6, 0] },
           });
+          layer.attach(scene, { viewport, camera: Camera.fromInput(camera) });
           runtime.setScene(scene.snapshot());
           const hidden = await runtime.readRgba();
           const capture = await runtime.capture({ samples: 1, aovs: ["id"] });
+          layer.updateLabel(id.id, { style: { depthTest: false } });
+          layer.attach(scene, { viewport, camera: Camera.fromInput(camera) });
+          runtime.setScene(scene.snapshot());
+          const negativeControlVisible = covered(await runtime.readRgba());
           return {
+            negativeControlVisible,
             visible: covered(visible),
             hidden: covered(hidden),
             capture: covered(capture.frame.toRgba8()),
@@ -349,6 +357,124 @@
           layer.dispose();
           atlas.dispose();
         }
+      },
+      async viewerReview() {
+        const atlas = await FontAtlas.defaultLatin(),
+          layer = new LabelLayer(atlas),
+          errors = [];
+        let rejectLabelError;
+        const labelError = new Promise(
+          (resolve) => (rejectLabelError = resolve),
+        );
+        const viewer = await api.Forge3DViewer.create(canvas, {
+          runtime: {
+            ...viewport,
+            devicePixelRatio: 1,
+            clearColor: [0, 0, 0, 1],
+          },
+          controls: false,
+          resize: false,
+          onError: (error) => {
+            errors.push(error.code);
+            rejectLabelError(error);
+          },
+        });
+        const terrain = {
+          width: 32,
+          height: 32,
+          bounds: [-2, -2, 2, 2],
+          domain: [0, 1],
+          heights: Float32Array.from(
+            { length: 32 * 32 },
+            (_, i) =>
+              0.4 +
+              0.2 * Math.sin((i % 32) / 5) * Math.cos(Math.floor(i / 32) / 5),
+          ),
+        };
+        const image = async (blob) => {
+          const bitmap = await createImageBitmap(blob),
+            c = new OffscreenCanvas(bitmap.width, bitmap.height),
+            ctx = c.getContext("2d");
+          ctx.drawImage(bitmap, 0, 0);
+          bitmap.close();
+          return ctx.getImageData(0, 0, c.width, c.height).data;
+        };
+        let actualCamera,
+          baseline,
+          terrainCovered,
+          attachedDiff,
+          detachedDiff,
+          stateAfterError,
+          repaired,
+          retained;
+        try {
+          viewer.setCamera({
+            position: [4, 4, 6],
+            target: [0, 0.3, 0],
+            up: [0, 1, 0],
+            near: 0.1,
+            far: 100,
+            fovYDegrees: 45,
+          });
+          actualCamera = viewer.getCamera();
+          viewer.setTerrain(terrain);
+          baseline = await image(await viewer.screenshot());
+          terrainCovered = covered(baseline);
+          viewer.setLabels(layer);
+          attachedDiff = diff(baseline, await image(await viewer.screenshot()));
+          viewer.setLabels(null);
+          detachedDiff = diff(baseline, await image(await viewer.screenshot()));
+          viewer.setLabels(layer, { maxVertexBytes: 100000 });
+          const good = layer.addLabel("A", [0, 1, 0], {
+            fontSize: 20,
+            haloWidth: 0,
+            horizonFadeAngle: 0,
+          });
+          await viewer.screenshot();
+          const beforeError = viewer.getLabelReport();
+          const bad = layer.addLabel("W".repeat(1000), [0, 1, 0], {
+            fontSize: 20,
+            haloWidth: 0,
+            horizonFadeAngle: 0,
+          });
+          await labelError;
+          stateAfterError = viewer.status;
+          retained =
+            JSON.stringify(viewer.getLabelReport()) ===
+            JSON.stringify(beforeError);
+          layer.removeLabel(bad.id);
+          await viewer.screenshot();
+          repaired =
+            viewer.getLabelReport().accepted.includes(good.id) &&
+            viewer.status === "ready";
+        } finally {
+          viewer.dispose();
+          layer.dispose();
+          atlas.dispose();
+        }
+        // Recreate the original one-light failure on the SAME terrain/camera.
+        const runtime = await create();
+        let oneLightDiff;
+        try {
+          runtime.setCamera(actualCamera);
+          runtime.setTerrain(terrain);
+          const one = new api.LightCollection();
+          one.add(api.LightCollection.defaults().values()[0]);
+          runtime.setLighting(one.snapshot());
+          oneLightDiff = diff(baseline, await runtime.readRgba());
+        } finally {
+          runtime.dispose();
+        }
+        return {
+          terrainCovered,
+          attachedDiff,
+          detachedDiff,
+          oneLightDiff,
+          stateAfterError,
+          repaired,
+          retained,
+          errors,
+        };
       },
       async contracts() {
         const atlas = await FontAtlas.create(),

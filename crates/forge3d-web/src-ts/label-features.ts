@@ -34,6 +34,18 @@ export interface LabelFeatureOptions {
     toCrs: string,
   ) => readonly (readonly number[])[];
 }
+function nativeText(value: unknown): string {
+  return value == null
+    ? "None"
+    : typeof value === "boolean"
+      ? value
+        ? "True"
+        : "False"
+      : String(value);
+}
+function sameCrs(a: string, b: string): boolean {
+  return a.trim().toLowerCase() === b.trim().toLowerCase();
+}
 function expressionText(
   expression: unknown,
   props: Record<string, unknown>,
@@ -43,9 +55,12 @@ function expressionText(
     const template = /^\{([^{}]+)\}$/.exec(expression);
     if (template)
       return template[1]! in props
-        ? [String(props[template[1]!]), null]
+        ? [nativeText(props[template[1]!]), null]
         : ["", template[1]!];
-    return [String(props[expression] ?? expression), null];
+    return [
+      expression in props ? nativeText(props[expression]) : expression,
+      null,
+    ];
   }
   const evaluate = (e: unknown): unknown => {
     if (!Array.isArray(e)) return e;
@@ -98,7 +113,7 @@ export class LabelFeatureSource {
     this.glyphAtlas = options.glyphAtlas;
     if (options.crs) {
       this.metadata.crs = options.targetCrs ?? options.crs;
-      if (options.targetCrs && options.targetCrs !== options.crs)
+      if (options.targetCrs && !sameCrs(options.targetCrs, options.crs))
         this.metadata.source_crs = options.crs;
     }
     this.metadata.terrain_sampling = options.terrainSampling ?? "auto";
@@ -120,7 +135,13 @@ export class LabelFeatureSource {
           `feature-${index}`,
       );
       index++;
-      const g = structuredClone(feature.geometry ?? {}),
+      const g = structuredClone(
+          feature.geometry ?? {
+            type: String(feature.geometry_type ?? feature.type ?? ""),
+            coordinates:
+              feature.coordinates ?? feature.position ?? feature.world_pos,
+          },
+        ),
         kind = (g.type ?? "").toLowerCase();
       const valid =
         kind === "point"
@@ -158,7 +179,7 @@ export class LabelFeatureSource {
       if (
         options.crs &&
         options.targetCrs &&
-        options.crs !== options.targetCrs
+        !sameCrs(options.crs, options.targetCrs)
       ) {
         if (!options.transformCoords)
           throw Error("Label CRS conversion requires transformCoords");
@@ -223,7 +244,9 @@ export class LabelFeatureSource {
           sample =
             typeof value === "number"
               ? { elevation: value, source: "terrain_sampler", visible: true }
-              : structuredClone(value);
+              : value && typeof value === "object"
+                ? structuredClone(value)
+                : {};
           if (sample.elevation !== undefined) {
             if (!Number.isFinite(sample.elevation))
               throw Error("Invalid terrain elevation");
@@ -258,7 +281,9 @@ export class LabelFeatureSource {
               : "polygon",
         properties,
         terrain_mode: options.terrainSampling ?? "auto",
-        ...(sample ? { terrain_sample: sample } : {}),
+        ...(sample && Object.keys(sample).length
+          ? { terrain_sample: sample }
+          : {}),
       });
     }
     labels.sort(
@@ -336,7 +361,9 @@ export class LabelFeatureSource {
       if (
         r.geometry_type === "LineString" &&
         r.repeat_distance === undefined &&
-        !["road", "river", "line"].includes(r.placement_preset ?? "")
+        !["road", "river", "line"].includes(
+          (r.placement_preset ?? "").toLowerCase(),
+        )
       )
         diagnostics.push(
           labelDiagnostic(

@@ -178,6 +178,7 @@ try {
     "depth",
     "session",
     "viewer",
+    "viewerReview",
     "contracts",
   ]) {
     results[name] = await page.evaluate((name) => window.__w13[name](), name);
@@ -203,7 +204,8 @@ try {
   assert(
     results.depth.visible > 500 &&
       results.depth.hidden === 0 &&
-      results.depth.capture === 0,
+      results.depth.capture === 0 &&
+      results.depth.negativeControlVisible > 500,
     "Installed depth failure",
   );
   assert(
@@ -213,6 +215,17 @@ try {
       results.viewer.recovered > 500 &&
       results.viewer.fontStillAlive,
     "Installed viewer lifecycle failure",
+  );
+  assert(
+    results.viewerReview.terrainCovered > 1000 &&
+      results.viewerReview.attachedDiff.max === 0 &&
+      results.viewerReview.detachedDiff.max === 0 &&
+      results.viewerReview.oneLightDiff.sum > 1000 &&
+      results.viewerReview.stateAfterError === "ready" &&
+      results.viewerReview.repaired &&
+      results.viewerReview.retained &&
+      results.viewerReview.errors.length === 1,
+    "Installed terrain lighting or recoverable label error failure",
   );
   assert(
     results.contracts.nodes > 1 &&

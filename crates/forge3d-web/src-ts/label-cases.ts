@@ -89,10 +89,9 @@ export const LABEL_CASES = [
   },
   {
     id: "plan-terrain-line",
-    outcome: "diagnostic",
-    code: "experimental_feature",
-    feature: "terrain-elevated line labels",
-    reason: "unsupported_geometry_type",
+    outcome: "render",
+    requires:
+      "Configured line/repeat preset; native compiler preserves supplied terrain samples without elevating each vertex",
   },
   {
     id: "feature-line-unconfigured",
