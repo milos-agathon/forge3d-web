@@ -140,11 +140,34 @@ Verification commands:
 
 The earlier 933-test pass was checkout-dependent: the fixture digest used CRLF
 bytes while Git checks out LF. Default remote dataset URLs also returned 404.
-The previous completion claim is withdrawn. The corrective working checkout
-passes 942 unit tests, ten Chromium W14 cases, public declarations and the
-strict-CSP/offline installed package consumer. Full live default fetches pass
-for all ten remote files. A separate clean checkout is still being checked;
-completion status remains provisional until that check finishes.
+The previous completion claim is withdrawn. The corrective implementation at
+`6dcf61a` was verified in a separate detached checkout, starting with `npm ci`, fresh package outputs and a full build
+(including recompilation of both Rust crates). The same clean checkout then
+verified `9181165`, which only adds published EPSG cases to the browser harness.
+The checkout was clean after verification. All 942 unit tests, ten Chromium
+W14 cases, public API/declaration checks, nine documentation checks, fifteen
+parity tests, the emitted package contract and the strict-CSP/offline installed
+consumer passed. The live integration gate downloaded every one of the ten
+remote datasets using default registry settings and verified full size/digests.
+CI runs both the offline installed-package and live dataset gates.
+
+The corrected fixture is UTF-8/LF, SHA-256
+`2f37bf8784e94e35a209ed930d7815f17412820dc4fc0108e5e36cc9ba79e723`.
+The independent and published controls measured maximum errors of
+0.007733375794487074 m projected, 9.082683283256898e-8 geographic degrees,
+and 9.313225746154785e-10 m projected round trip. Both grid paths have zero
+error against their independent controls. The geographic value is an oracle
+comparison, not a self round trip.
+
+Automatic terrain alignment matches the independent frame byte for byte in
+RGBA and pick IDs, with 618 visible vector pixels and three stable feature IDs.
+The absolute-coordinate negative control has zero visible vector pixels.
+Three aligned labels have maximum horizontal error 9.313225746154785e-10 m.
+Failed and superseded ingestion retain the committed reference image. The
+installed consumer reports 14197342 live asset bytes, a 16777216-byte WASM heap,
+zero GPU allocations, and zero workers, assets, heap or reservations after
+settled disposal. Reports are `test-results/w14-package-consumer.json` and
+`test-results/w14-remote-datasets.json`.
 
 The aggregate `test:package` reaches unrelated infrastructure tests that need
 Windows symlink privileges unavailable to this process. Three tests fail with
@@ -152,9 +175,9 @@ Windows symlink privileges unavailable to this process. Three tests fail with
 `firefox-viewer-contract.test.mjs` and `runner-distribution.test.mjs`;
 these files are unchanged from the starting commit. Selecting Git's Bash in
 the command's PATH resolves the separate WindowsApps Bash-selector failure.
-The browser-harness suite passes all 118 tests; infrastructure then reports
+The browser-harness suite passes; infrastructure then reports
 606 passes, three symlink failures and one skipped test. The W14 spec inventory
-and automatic shared WebGPU guard pass all 13 classifier tests. The independent
+and automatic shared WebGPU guard pass. The independent
 `package-contract.mjs` passes. No host security settings were changed.
 
 ```powershell

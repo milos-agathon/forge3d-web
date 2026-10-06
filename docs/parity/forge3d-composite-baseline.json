@@ -4,7 +4,7 @@
   "manifestId": "forge3d-composite-baseline-v1",
   "sourcePlan": {
     "path": "docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md",
-    "sha256": "5e216f273123d4c9a10d295736f9d7cc296731df47b8655c632f51666598572d"
+    "sha256": "d518d32e0aeb4a8ca32415228f18d6cb6f5ed4a7cae57c5238c7c0cbdbbc6a1b"
   },
   "baselineLayers": [
     {
@@ -1553,7 +1553,7 @@
       "title": "CRS parsing, EPSG/WKT and coordinate/geometry reprojection",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "E",
+      "status": "I",
       "ownerTask": "W14",
       "nativeCapability": "CRS parsing, EPSG/WKT and coordinate/geometry reprojection: 1f4084a:python/forge3d/crs.py, tests/test_crs_reproject.py, tests/test_crs_auto.py",
       "requiredWebOutcome": "Add PROJ-WASM worker, grid assets, typed metadata and automatic layer reprojection",
@@ -2216,7 +2216,7 @@
       "title": "Dataset registry/fetch and bundled mini_dem/boundaries",
       "lifecycle": "XC",
       "evidenceGrade": "A",
-      "status": "E",
+      "status": "I",
       "ownerTask": "W14",
       "nativeCapability": "Dataset registry/fetch and bundled mini_dem/boundaries: 1f4084a:python/forge3d/datasets.py, python/forge3d/data/mini_dem.npy, tests/test_datasets.py",
       "requiredWebOutcome": "ESM registry/assets, fetch/cache/integrity and reproducible fixtures",
@@ -4071,7 +4071,7 @@
     {
       "kind": "composite-inventory",
       "path": "crates/forge3d-web/tests/parity/composite-inventory.json",
-      "sha256": "caf92c41e730b60b657c16401696ca7ca75c6ba16c54476f0d0338bee6de443c",
+      "sha256": "256206ba95d867656535262efe99f4d7b992616300b7cceb79d46d69347cb86d",
       "recordCount": 6531
     },
     {
