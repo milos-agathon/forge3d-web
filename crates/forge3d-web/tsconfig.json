@@ -6,6 +6,7 @@
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
     "strict": true,
     "declaration": true,
+    "newLine": "lf",
     "emitDeclarationOnly": false,
     "outDir": "dist",
     "rootDir": "src-ts",
