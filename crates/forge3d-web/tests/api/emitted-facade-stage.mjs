@@ -34,6 +34,8 @@ try {
   assert.deepEqual(
     Object.keys(facadeA).sort(),
     [
+      "LabelFeatureSource", "LabelCollisionIndex", "declutterLabels",
+      "FontAtlas", "FontFallbackRange", "TypographySettings", "LabelLayer", "LabelManager", "LabelStyle", "LabelFlags", "LabelPlan", "KeepoutRegion", "PriorityClass", "LABEL_REJECTION_REASONS",
       "VectorLayers",
       "VectorLayer",
       "VectorPicker",

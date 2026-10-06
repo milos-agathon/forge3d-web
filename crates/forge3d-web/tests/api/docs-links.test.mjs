@@ -9,6 +9,7 @@ const documents = [
   "README.md",
   "docs/superpowers/specs/2026-06-05-forge3d-browser-webgpu-wasm-migration-goals.md",
   "crates/forge3d-web/README.md",
+  "crates/forge3d-web/docs/labels.md",
   "crates/forge3d-web/docs/support-matrix.md",
   "crates/forge3d-web/docs/release-checklist.md",
 ];

@@ -1,0 +1,865 @@
+{
+  "schemaVersion": 1,
+  "baseline": "1f4084af428dc699bdcd108b029736cb73903926",
+  "deepNative": "bf8db93233e5158f6d226991fc5d230832c2d806",
+  "policy": "Every native label test definition is assigned a browser outcome port. OS paths/IPC/PyO3/GeoDataFrame mechanisms adapt to font URLs, typed IDs, ESM exports and feature rows. W18 consumes the label-only recipe/validation adapter; W14 supplies CRS transforms. No unrelated MapScene or PROJ implementation is claimed.",
+  "nativeTestFiles": 30,
+  "definitions": [
+    {
+      "nativeFile": "tests/test_label_api_configuration_truth.py",
+      "definition": "test_set_label_typography_mutates_state_and_layout_metrics",
+      "nativeFileSha256": "705932d08e945ff395e27cc2f6cc2659e8acf885a7c19476b51ebbe0f5e6b09f",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_label_api_configuration_truth.py",
+      "definition": "test_set_declutter_algorithm_mutates_placement_policy_state",
+      "nativeFileSha256": "705932d08e945ff395e27cc2f6cc2659e8acf885a7c19476b51ebbe0f5e6b09f",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_label_api_diagnostics.py",
+      "definition": "test_empty_label_text_returns_placeholder_diagnostic_without_sending_command",
+      "nativeFileSha256": "660aaff7269b098f3c9e0954888ecb42cac52db43a4a3ce5fa8aea7968ea19e5",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_label_api_diagnostics.py",
+      "definition": "test_invalid_line_geometry_returns_placeholder_diagnostic",
+      "nativeFileSha256": "660aaff7269b098f3c9e0954888ecb42cac52db43a4a3ce5fa8aea7968ea19e5",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_label_api_diagnostics.py",
+      "definition": "test_missing_glyphs_return_structured_diagnostic_before_render",
+      "nativeFileSha256": "660aaff7269b098f3c9e0954888ecb42cac52db43a4a3ce5fa8aea7968ea19e5",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_label_api_diagnostics.py",
+      "definition": "test_curved_label_and_terrain_unavailable_paths_are_typed_diagnostics",
+      "nativeFileSha256": "660aaff7269b098f3c9e0954888ecb42cac52db43a4a3ce5fa8aea7968ea19e5",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_label_api_docs_support.py",
+      "definition": "test_label_support_matrix_covers_public_api_support_levels",
+      "nativeFileSha256": "a3c6b12bbe41bfbf8d52da7ade4d1aa8fd6bd3172d4136f89865fb9db50c3142",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-contract-record.test.ts"
+      ],
+      "contract": "Public browser guide, support boundaries, executable workflows and typed API exports."
+    },
+    {
+      "nativeFile": "tests/test_label_api_docs_support.py",
+      "definition": "test_label_docs_do_not_overclaim_experimental_paths",
+      "nativeFileSha256": "a3c6b12bbe41bfbf8d52da7ade4d1aa8fd6bd3172d4136f89865fb9db50c3142",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-contract-record.test.ts"
+      ],
+      "contract": "Public browser guide, support boundaries, executable workflows and typed API exports."
+    },
+    {
+      "nativeFile": "tests/test_label_api_docs_support.py",
+      "definition": "test_public_docs_prefer_viewerhandle_label_workflow_over_raw_ipc",
+      "nativeFileSha256": "a3c6b12bbe41bfbf8d52da7ade4d1aa8fd6bd3172d4136f89865fb9db50c3142",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-contract-record.test.ts"
+      ],
+      "contract": "Public browser guide, support boundaries, executable workflows and typed API exports."
+    },
+    {
+      "nativeFile": "tests/test_label_api_docs_support.py",
+      "definition": "test_label_contract_matches_current_viewerhandle_signatures",
+      "nativeFileSha256": "a3c6b12bbe41bfbf8d52da7ade4d1aa8fd6bd3172d4136f89865fb9db50c3142",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-contract-record.test.ts"
+      ],
+      "contract": "Public browser guide, support boundaries, executable workflows and typed API exports."
+    },
+    {
+      "nativeFile": "tests/test_label_api_docs_support.py",
+      "definition": "test_label_api_truth_artifacts_live_in_public_docs_not_speckit_state",
+      "nativeFileSha256": "a3c6b12bbe41bfbf8d52da7ade4d1aa8fd6bd3172d4136f89865fb9db50c3142",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-contract-record.test.ts"
+      ],
+      "contract": "Public browser guide, support boundaries, executable workflows and typed API exports."
+    },
+    {
+      "nativeFile": "tests/test_label_api_line_curved_paths.py",
+      "definition": "test_line_label_fixtures_emit_ordered_glyph_instances_with_tangent_rotation",
+      "nativeFileSha256": "284634c9c6cef4c6178aa5012f87ed7d2d0bdeb7e5126792f73269a150a0e653",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_label_api_line_curved_paths.py",
+      "definition": "test_curved_label_returns_experimental_diagnostic_instead_of_success",
+      "nativeFileSha256": "284634c9c6cef4c6178aa5012f87ed7d2d0bdeb7e5126792f73269a150a0e653",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_label_api_line_edge_cases.py",
+      "definition": "test_reverse_line_label_applies_upside_down_avoidance",
+      "nativeFileSha256": "a7242eb1a36ce7a8f3ada73f1083ef41549bc1dc5d27f20a160780ce64de685f",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_label_api_line_edge_cases.py",
+      "definition": "test_terrain_elevated_line_label_returns_diagnostic_when_sampling_unavailable",
+      "nativeFileSha256": "a7242eb1a36ce7a8f3ada73f1083ef41549bc1dc5d27f20a160780ce64de685f",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_label_api_public_workflow.py",
+      "definition": "test_high_level_label_workflow_uses_public_viewer_methods",
+      "nativeFileSha256": "f333e6beebaeb19908eb940b633e0912fba5bc19063a8e642d46f2ad3d96b06f",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_label_api_public_workflow.py",
+      "definition": "test_public_label_workflow_does_not_call_raw_viewer_ipc_helpers",
+      "nativeFileSha256": "f333e6beebaeb19908eb940b633e0912fba5bc19063a8e642d46f2ad3d96b06f",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_label_api_quickstart.py",
+      "definition": "test_label_api_truth_example_exists_and_avoids_raw_ipc_helpers",
+      "nativeFileSha256": "8772f0fb032f6600eb21718f2b09decb61a576051920723b8e907b17f8173004",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-contract-record.test.ts"
+      ],
+      "contract": "Public browser guide, support boundaries, executable workflows and typed API exports."
+    },
+    {
+      "nativeFile": "tests/test_label_api_quickstart.py",
+      "definition": "test_label_api_truth_example_runs_and_reports_expected_support_statuses",
+      "nativeFileSha256": "8772f0fb032f6600eb21718f2b09decb61a576051920723b8e907b17f8173004",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_label_api_quickstart.py",
+      "definition": "test_label_api_truth_workflow_is_deterministic_for_fixed_inputs",
+      "nativeFileSha256": "8772f0fb032f6600eb21718f2b09decb61a576051920723b8e907b17f8173004",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_label_api_quickstart.py",
+      "definition": "test_label_api_truth_quickstart_points_to_runnable_example",
+      "nativeFileSha256": "8772f0fb032f6600eb21718f2b09decb61a576051920723b8e907b17f8173004",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-contract-record.test.ts"
+      ],
+      "contract": "Public browser guide, support boundaries, executable workflows and typed API exports."
+    },
+    {
+      "nativeFile": "tests/test_label_api_stable_ids.py",
+      "definition": "test_add_label_returns_stable_created_id_and_sends_it_to_viewer",
+      "nativeFileSha256": "d9570e1f68e0713d32daa0730041f253bae4432299532b89120280da1863f85d",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_label_api_stable_ids.py",
+      "definition": "test_add_label_rejects_success_response_without_created_id",
+      "nativeFileSha256": "d9570e1f68e0713d32daa0730041f253bae4432299532b89120280da1863f85d",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_label_api_stable_ids.py",
+      "definition": "test_add_labels_preserves_input_order_with_per_input_diagnostics",
+      "nativeFileSha256": "d9570e1f68e0713d32daa0730041f253bae4432299532b89120280da1863f85d",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_label_api_stable_ids.py",
+      "definition": "test_line_label_callout_and_overlay_creation_return_stable_ids",
+      "nativeFileSha256": "d9570e1f68e0713d32daa0730041f253bae4432299532b89120280da1863f85d",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_label_api_state_noops.py",
+      "definition": "test_atlas_enabled_and_clear_update_serializable_label_state",
+      "nativeFileSha256": "0f69890a2a9a6482b99940978245c08224bbf15260e5e159750bf0344defad38",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_label_api_state_noops.py",
+      "definition": "test_remove_label_changes_known_state_and_diagnoses_missing_id",
+      "nativeFileSha256": "0f69890a2a9a6482b99940978245c08224bbf15260e5e159750bf0344defad38",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_label_plan_contract.py",
+      "definition": "test_label_plan_public_contract_and_roundtrip",
+      "nativeFileSha256": "3b866a975939d458ca6e553badbe9f428d1f6998adaf70d9b14e2b0e764a4073",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_label_plan_contract.py",
+      "definition": "test_label_plan_rejects_empty_sources_without_placeholder_success",
+      "nativeFileSha256": "3b866a975939d458ca6e553badbe9f428d1f6998adaf70d9b14e2b0e764a4073",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_label_plan_determinism.py",
+      "definition": "test_label_plan_compile_is_stable_for_fixed_inputs",
+      "nativeFileSha256": "44990ac48c2c6f4004defec25513337d8d767848b117e32f1add9f76de5c27dc",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_label_plan_determinism.py",
+      "definition": "test_label_plan_normalizes_equivalent_source_order",
+      "nativeFileSha256": "44990ac48c2c6f4004defec25513337d8d767848b117e32f1add9f76de5c27dc",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_label_plan_determinism.py",
+      "definition": "test_label_plan_serialization_is_independent_of_mapping_key_order",
+      "nativeFileSha256": "44990ac48c2c6f4004defec25513337d8d767848b117e32f1add9f76de5c27dc",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_label_plan_docs.py",
+      "definition": "test_label_plan_guide_documents_core_contract_and_boundaries",
+      "nativeFileSha256": "ea9d06e07285bfb75845f0897ea1f98251b351bc124b60eb30478a7c38ee91dc",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-contract-record.test.ts"
+      ],
+      "contract": "Public browser guide, support boundaries, executable workflows and typed API exports."
+    },
+    {
+      "nativeFile": "tests/test_label_plan_docs.py",
+      "definition": "test_label_plan_support_matrix_and_api_reference_are_current",
+      "nativeFileSha256": "ea9d06e07285bfb75845f0897ea1f98251b351bc124b60eb30478a7c38ee91dc",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-contract-record.test.ts"
+      ],
+      "contract": "Public browser guide, support boundaries, executable workflows and typed API exports."
+    },
+    {
+      "nativeFile": "tests/test_label_plan_keepouts.py",
+      "definition": "test_required_keepout_region_kinds_reject_intersecting_candidates",
+      "nativeFileSha256": "496e2da0f4ef837d96cba5ace0de10927fdbd57be434d67c22ec0a59f2e49e73",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_label_plan_keepouts.py",
+      "definition": "test_non_intersecting_keepout_region_is_retained_without_rejection",
+      "nativeFileSha256": "496e2da0f4ef837d96cba5ace0de10927fdbd57be434d67c22ec0a59f2e49e73",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_label_plan_payloads.py",
+      "definition": "test_render_and_export_payloads_preserve_real_plan_data",
+      "nativeFileSha256": "5e31c4ac5e6d0d616af5be55d648a5dbcb8fb16c836d6afbcfa2012cb7d5bfdd",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_label_plan_payloads.py",
+      "definition": "test_unsupported_payload_backend_returns_typed_diagnostic_not_empty_success",
+      "nativeFileSha256": "5e31c4ac5e6d0d616af5be55d648a5dbcb8fb16c836d6afbcfa2012cb7d5bfdd",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_label_plan_point_candidates.py",
+      "definition": "test_point_label_generates_required_candidate_types_in_stable_order",
+      "nativeFileSha256": "c03b7275fd880527af2acfe4fc2966bd4462ce1c78eea00d96c86b3243f81969",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_label_plan_point_candidates.py",
+      "definition": "test_radial_candidates_are_seeded_and_roundtrip_deterministic",
+      "nativeFileSha256": "c03b7275fd880527af2acfe4fc2966bd4462ce1c78eea00d96c86b3243f81969",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_label_plan_polygon_candidates.py",
+      "definition": "test_polygon_label_generates_centroid_and_visual_center_candidates",
+      "nativeFileSha256": "a76549315727627b8e56ae5cb698125e1ba9c2bb3af4bcd15373b7d7e95ec18a",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_label_plan_polygon_candidates.py",
+      "definition": "test_concave_polygon_uses_visual_center_when_centroid_is_unsuitable",
+      "nativeFileSha256": "a76549315727627b8e56ae5cb698125e1ba9c2bb3af4bcd15373b7d7e95ec18a",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_label_plan_polygon_candidates.py",
+      "definition": "test_invalid_polygon_geometry_is_rejected_with_reason_code",
+      "nativeFileSha256": "a76549315727627b8e56ae5cb698125e1ba9c2bb3af4bcd15373b7d7e95ec18a",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_label_plan_priority.py",
+      "definition": "test_priority_classes_determine_collision_winner_and_loser",
+      "nativeFileSha256": "60b484881186bf25afe6b9155dc45ef69fd2dc901642c5241eca5d952bba60dc",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_label_plan_priority.py",
+      "definition": "test_equal_priority_ties_use_stable_label_ordering",
+      "nativeFileSha256": "60b484881186bf25afe6b9155dc45ef69fd2dc901642c5241eca5d952bba60dc",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_label_plan_quickstart.py",
+      "definition": "test_label_plan_quickstart_names_public_api_and_required_scenarios",
+      "nativeFileSha256": "1e27e94c20f926680c004ed31ed044ee9edaacd34093c29d066b06396ea12f70",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-contract-record.test.ts"
+      ],
+      "contract": "Public browser guide, support boundaries, executable workflows and typed API exports."
+    },
+    {
+      "nativeFile": "tests/test_label_plan_quickstart.py",
+      "definition": "test_label_plan_quickstart_scenario_is_executable_and_reproducible",
+      "nativeFileSha256": "1e27e94c20f926680c004ed31ed044ee9edaacd34093c29d066b06396ea12f70",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_label_plan_rejection_reasons.py",
+      "definition": "test_label_plan_retains_every_required_rejection_reason",
+      "nativeFileSha256": "7c56c330341200a0923c1d74face4dc03f00dc497ac5cf094b75f93a477c0c15",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_label_plan_rejection_reasons.py",
+      "definition": "test_rejected_labels_keep_candidate_identity_and_structured_details",
+      "nativeFileSha256": "7c56c330341200a0923c1d74face4dc03f00dc497ac5cf094b75f93a477c0c15",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_label_plan_terrain.py",
+      "definition": "test_terrain_sampler_updates_point_elevation_and_candidate_samples",
+      "nativeFileSha256": "f7bc7e98b405e379009cadc17f921b514c58b321262f5af059c39aa07d3c2971",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_label_plan_terrain.py",
+      "definition": "test_unavailable_required_terrain_sampler_returns_typed_diagnostic",
+      "nativeFileSha256": "f7bc7e98b405e379009cadc17f921b514c58b321262f5af059c39aa07d3c2971",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_label_plan_terrain.py",
+      "definition": "test_terrain_visibility_rejects_occluded_label_with_sample_details",
+      "nativeFileSha256": "f7bc7e98b405e379009cadc17f921b514c58b321262f5af059c39aa07d3c2971",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_labels_pybindings.py",
+      "definition": "TestLabelBindings (proxy to test_api_contracts.py)",
+      "nativeFileSha256": "0bd80089ab7469cfaf9d700a04309f19053949d0e45a9ec7ec383c4c4138309e",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_label_plan_integration.py",
+      "definition": "test_label_layer_compiles_deterministic_label_plan_and_rejection_summary",
+      "nativeFileSha256": "46d5d98d218b2278b1886612f3c9b1d045e5428c5a7ebc157add4ab866c3afce",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_p1_label_expressions_plan_diagnostics.py",
+      "definition": "test_label_layer_supports_prd_expression_subset",
+      "nativeFileSha256": "42f72d012d9a0a91004d9ecbddddae17572f7f44c684e11e2944f4b0f93cb57f",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_p1_label_expressions_plan_diagnostics.py",
+      "definition": "test_label_layer_reports_missing_expression_field_before_render",
+      "nativeFileSha256": "42f72d012d9a0a91004d9ecbddddae17572f7f44c684e11e2944f4b0f93cb57f",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_p1_label_expressions_plan_diagnostics.py",
+      "definition": "test_label_layer_compile_labels_produces_deterministic_accepted_and_rejected_plan",
+      "nativeFileSha256": "42f72d012d9a0a91004d9ecbddddae17572f7f44c684e11e2944f4b0f93cb57f",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_p1_label_expressions_plan_diagnostics.py",
+      "definition": "test_mapscene_validate_reports_line_label_incomplete_and_missing_glyphs_before_render",
+      "nativeFileSha256": "42f72d012d9a0a91004d9ecbddddae17572f7f44c684e11e2944f4b0f93cb57f",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_p1_label_layer_crs_terrain.py",
+      "definition": "test_label_layer_crs_transform_uses_forge3d_crs_utilities",
+      "nativeFileSha256": "d89580b990a0fe67484e6498badd452b9d3215b2fa7689bc4dceb749925d10ed",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Native feature recipe oracles; browser row/style/CRS/sampler adapters; compiled plan and layer-scoped summary."
+    },
+    {
+      "nativeFile": "tests/test_p1_label_layer_crs_terrain.py",
+      "definition": "test_label_layer_required_terrain_sampling_applies_sampler_to_world_position",
+      "nativeFileSha256": "d89580b990a0fe67484e6498badd452b9d3215b2fa7689bc4dceb749925d10ed",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Native feature recipe oracles; browser row/style/CRS/sampler adapters; compiled plan and layer-scoped summary."
+    },
+    {
+      "nativeFile": "tests/test_p1_label_layer_crs_terrain.py",
+      "definition": "test_label_layer_required_terrain_sampling_without_sampler_is_diagnostic_bearing",
+      "nativeFileSha256": "d89580b990a0fe67484e6498badd452b9d3215b2fa7689bc4dceb749925d10ed",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Native feature recipe oracles; browser row/style/CRS/sampler adapters; compiled plan and layer-scoped summary."
+    },
+    {
+      "nativeFile": "tests/test_p1_label_layer_geometry.py",
+      "definition": "test_label_layer_from_features_ingests_point_line_and_polygon_candidates_deterministically",
+      "nativeFileSha256": "c514d3e5a12665fe2fd2db1668fbcaef95f002a3285fdc808b3cef623d67adcc",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Native feature recipe oracles; browser row/style/CRS/sampler adapters; compiled plan and layer-scoped summary."
+    },
+    {
+      "nativeFile": "tests/test_p1_label_layer_geometry.py",
+      "definition": "test_label_layer_from_features_reports_invalid_and_unsupported_geometry_with_feature_ids",
+      "nativeFileSha256": "c514d3e5a12665fe2fd2db1668fbcaef95f002a3285fdc808b3cef623d67adcc",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Native feature recipe oracles; browser row/style/CRS/sampler adapters; compiled plan and layer-scoped summary."
+    },
+    {
+      "nativeFile": "tests/test_p1_label_layer_geometry.py",
+      "definition": "test_label_layer_from_geodataframe_like_object_preserves_geometry_and_crs",
+      "nativeFileSha256": "c514d3e5a12665fe2fd2db1668fbcaef95f002a3285fdc808b3cef623d67adcc",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Native feature recipe oracles; browser row/style/CRS/sampler adapters; compiled plan and layer-scoped summary."
+    },
+    {
+      "nativeFile": "tests/test_p1_label_layer_geometry.py",
+      "definition": "test_label_layer_from_style_layer_uses_text_field_and_validates_geometry",
+      "nativeFileSha256": "c514d3e5a12665fe2fd2db1668fbcaef95f002a3285fdc808b3cef623d67adcc",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Native feature recipe oracles; browser row/style/CRS/sampler adapters; compiled plan and layer-scoped summary."
+    },
+    {
+      "nativeFile": "tests/test_p1_typography_font_support.py",
+      "definition": "test_default_latin_font_atlas_loads_bundled_ascii_coverage",
+      "nativeFileSha256": "48f8cfa5737ab64602d8e5dcc1f560b8137aa8c71fe1c840b23936e7dc4ffbf9",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Real font coverage/fallback, missing asset diagnostic, metrics, multiline/callout metadata and HarfBuzz shaping."
+    },
+    {
+      "nativeFile": "tests/test_p1_typography_font_support.py",
+      "definition": "test_font_atlas_from_missing_ttf_or_otf_returns_typed_diagnostic",
+      "nativeFileSha256": "48f8cfa5737ab64602d8e5dcc1f560b8137aa8c71fe1c840b23936e7dc4ffbf9",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Real font coverage/fallback, missing asset diagnostic, metrics, multiline/callout metadata and HarfBuzz shaping."
+    },
+    {
+      "nativeFile": "tests/test_p1_typography_font_support.py",
+      "definition": "test_font_fallback_ranges_are_deterministic_and_queryable",
+      "nativeFileSha256": "48f8cfa5737ab64602d8e5dcc1f560b8137aa8c71fe1c840b23936e7dc4ffbf9",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Real font coverage/fallback, missing asset diagnostic, metrics, multiline/callout metadata and HarfBuzz shaping."
+    },
+    {
+      "nativeFile": "tests/test_p1_typography_font_support.py",
+      "definition": "test_font_atlas_reports_unicode_coverage_gap_before_render",
+      "nativeFileSha256": "48f8cfa5737ab64602d8e5dcc1f560b8137aa8c71fe1c840b23936e7dc4ffbf9",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Real font coverage/fallback, missing asset diagnostic, metrics, multiline/callout metadata and HarfBuzz shaping."
+    },
+    {
+      "nativeFile": "tests/test_p1_typography_font_support.py",
+      "definition": "test_typography_metrics_reflect_kerning_tracking_and_line_height",
+      "nativeFileSha256": "48f8cfa5737ab64602d8e5dcc1f560b8137aa8c71fe1c840b23936e7dc4ffbf9",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Real font coverage/fallback, missing asset diagnostic, metrics, multiline/callout metadata and HarfBuzz shaping."
+    },
+    {
+      "nativeFile": "tests/test_p1_typography_font_support.py",
+      "definition": "test_typography_multiline_and_callout_layout_metadata_is_explicit",
+      "nativeFileSha256": "48f8cfa5737ab64602d8e5dcc1f560b8137aa8c71fe1c840b23936e7dc4ffbf9",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Real font coverage/fallback, missing asset diagnostic, metrics, multiline/callout metadata and HarfBuzz shaping."
+    },
+    {
+      "nativeFile": "tests/test_p1_typography_font_support.py",
+      "definition": "test_docs_record_complex_script_shaping_as_non_blocking_p1_deferral",
+      "nativeFileSha256": "48f8cfa5737ab64602d8e5dcc1f560b8137aa8c71fe1c840b23936e7dc4ffbf9",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-contract-record.test.ts"
+      ],
+      "contract": "Public browser guide, support boundaries, executable workflows and typed API exports."
+    },
+    {
+      "nativeFile": "tests/test_p2_advanced_label_rules.py",
+      "definition": "test_cartographic_priority_preset_orders_multi_class_labels",
+      "nativeFileSha256": "6b69addc8f09584bd52ac75fa3ae7ea26050315527e98adda74e6f1f9c915c28",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_p2_advanced_label_rules.py",
+      "definition": "test_leader_line_callout_records_deterministic_candidate_details",
+      "nativeFileSha256": "6b69addc8f09584bd52ac75fa3ae7ea26050315527e98adda74e6f1f9c915c28",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_p2_advanced_labels_repeated_curved.py",
+      "definition": "test_repeated_line_labels_are_deterministic_with_repeat_distance",
+      "nativeFileSha256": "591626c419e6257f605d10cbf4f847fc483586c0375145213b33cf27905d6abe",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_p2_advanced_labels_repeated_curved.py",
+      "definition": "test_curved_line_labels_are_explicitly_experimental_not_silent_success",
+      "nativeFileSha256": "591626c419e6257f605d10cbf4f847fc483586c0375145213b33cf27905d6abe",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_p2_complex_shaping_decision.py",
+      "definition": "test_complex_script_shaping_is_non_blocking_experimental_diagnostic",
+      "nativeFileSha256": "c3008f21762c5e159a3c90affe2ed547c1c724b15697c299973a2d45a535956a",
+      "ports": [
+        "crates/forge3d-web/tests/unit/labels.test.ts"
+      ],
+      "contract": "Immutable native compiler oracle, including accepted/rejected order, candidates, diagnostics, IDs, reasons and payloads."
+    },
+    {
+      "nativeFile": "tests/test_p2_complex_shaping_decision.py",
+      "definition": "test_label_support_docs_record_shaping_deferral",
+      "nativeFileSha256": "c3008f21762c5e159a3c90affe2ed547c1c724b15697c299973a2d45a535956a",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-contract-record.test.ts"
+      ],
+      "contract": "Public browser guide, support boundaries, executable workflows and typed API exports."
+    },
+    {
+      "nativeFile": "tests/test_api_contracts.py",
+      "definition": "test_label_style_registered",
+      "nativeFileSha256": "874bf2305a3dcf2933b3fd7c991da2fa73014e109ddf9e4d6076070f025501d9",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_api_contracts.py",
+      "definition": "test_label_flags_registered",
+      "nativeFileSha256": "874bf2305a3dcf2933b3fd7c991da2fa73014e109ddf9e4d6076070f025501d9",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_api_contracts.py",
+      "definition": "test_label_style_defaults",
+      "nativeFileSha256": "874bf2305a3dcf2933b3fd7c991da2fa73014e109ddf9e4d6076070f025501d9",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_api_contracts.py",
+      "definition": "test_label_flags_defaults",
+      "nativeFileSha256": "874bf2305a3dcf2933b3fd7c991da2fa73014e109ddf9e4d6076070f025501d9",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_api_contracts.py",
+      "definition": "test_label_style_set_fields",
+      "nativeFileSha256": "874bf2305a3dcf2933b3fd7c991da2fa73014e109ddf9e4d6076070f025501d9",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_api_contracts.py",
+      "definition": "test_label_flags_set",
+      "nativeFileSha256": "874bf2305a3dcf2933b3fd7c991da2fa73014e109ddf9e4d6076070f025501d9",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_api_contracts.py",
+      "definition": "test_label_style_color_tuple",
+      "nativeFileSha256": "874bf2305a3dcf2933b3fd7c991da2fa73014e109ddf9e4d6076070f025501d9",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_api_contracts.py",
+      "definition": "test_label_style_repr",
+      "nativeFileSha256": "874bf2305a3dcf2933b3fd7c991da2fa73014e109ddf9e4d6076070f025501d9",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    },
+    {
+      "nativeFile": "tests/test_api_contracts.py",
+      "definition": "test_label_style_from_kwargs",
+      "nativeFileSha256": "874bf2305a3dcf2933b3fd7c991da2fa73014e109ddf9e4d6076070f025501d9",
+      "ports": [
+        "crates/forge3d-web/tests/unit/label-workflows.test.ts",
+        "crates/forge3d-web/tests/unit/labels.test.ts",
+        "crates/forge3d-web/tests/playwright/w13_labels.spec.ts"
+      ],
+      "contract": "Typed public label workflow, stable IDs/configuration/removal/diagnostics, native style defaults, actual glyphs and viewer replay."
+    }
+  ]
+}

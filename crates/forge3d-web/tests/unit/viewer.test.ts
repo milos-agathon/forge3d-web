@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { FontAtlas } from "../../src-ts/typography.js";
+import { LabelLayer } from "../../src-ts/labels.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   type CameraInput,
@@ -5,6 +8,7 @@ import {
   type Forge3DRuntimeCapabilities,
   type Forge3DRuntimeOptions,
   type ResizeInput,
+  type SceneSnapshot,
   type TerrainHeightmapInput,
   type TerrainHeightmapSourceInput,
 } from "../../src-ts/index.js";
@@ -30,6 +34,8 @@ class FakeRuntime {
   readonly sizes: ResizeInput[] = [];
   renderError: Forge3DError | undefined;
   cameraError: Forge3DError | undefined;
+  sceneError: Forge3DError | undefined;
+  scenes: SceneSnapshot[] = [];
   resizeError: Forge3DError | undefined;
   renderSubmitted = true;
   screenshotError: Forge3DError | undefined;
@@ -70,6 +76,11 @@ class FakeRuntime {
 
   lose(error = new Forge3DError("DEVICE_LOST", "test loss")): void {
     this.lossHandler?.(error);
+  }
+
+  setScene(scene: SceneSnapshot): void {
+    if (this.sceneError) throw this.sceneError;
+    this.scenes.push(scene);
   }
 
   setTerrain(terrain: TerrainHeightmapInput): void {
@@ -841,6 +852,153 @@ describe("Forge3DViewer", () => {
     await vi.waitFor(() => expect(viewer.status).toBe("ready"));
     expect(index).toBe(2);
     expect(viewer.getDiagnostics().recoveryAttempts).toBe(1);
+  });
+
+  it("clears failed labels and uses only the caller channel for capture and replacement errors", async () => {
+    const runtime = new FakeRuntime(), errors: Forge3DError[] = [];
+    setViewerRuntimeFactoryForTests({create: async () => runtime});
+    const viewer = await Forge3DViewer.create({} as HTMLCanvasElement, {
+      controls: false, resize: false, onError: (e) => errors.push(e),
+    });
+    const atlas = await reviewAtlas(), layer = new LabelLayer(atlas), replacement = new LabelLayer(atlas);
+    try {
+      viewer.setLabels(layer, {maxVertexBytes: 100000});
+      const good = layer.addLabel("A", [0, 0, 0], {fontSize: 20, horizonFadeAngle: 0}).id;
+      await viewer.screenshot();
+      expect(viewer.getLabelReport()?.accepted).toContain(good);
+      const bad = layer.addLabel("W".repeat(1000), [0, 0, 0], {fontSize: 20, horizonFadeAngle: 0}).id;
+      const capture = viewer.screenshot();
+      expect(capture).toBeInstanceOf(Promise);
+      await expect(capture).rejects.toThrow("budget");
+      expect(viewer.status).toBe("ready");
+      expect(viewer.getLabelReport()).toBeUndefined();
+      expect(runtime.scenes.at(-1)?.nodes).toEqual([]);
+      for (let i = 1; i <= 10; i++) {
+        viewer.setView({...viewer.getView(), target: [i, 0, 0]});
+        rafCallbacks.shift()?.(i * 16);
+        await viewer.screenshot();
+      }
+      viewer.resize({width: 128, height: 96, devicePixelRatio: 1});
+      await expect(viewer.screenshot()).rejects.toThrow("budget");
+      await viewer.screenshot();
+      expect(viewer.getLabelReport()).toBeUndefined();
+      expect(errors).toHaveLength(0);
+      expect(runtime.scenes.at(-1)?.nodes).toEqual([]);
+      layer.removeLabel(bad!);
+      viewer.setView({...viewer.getView(), target: [0, 0, 0]});
+      await viewer.screenshot();
+      expect(viewer.getLabelReport()?.accepted).toContain(good);
+      replacement.addLabel("W".repeat(1000), [0, 0, 0], {horizonFadeAngle: 0});
+      expect(() => viewer.setLabels(replacement, {maxVertexBytes: 100000})).toThrow("budget");
+      expect(viewer.getLabelReport()).toBeUndefined();
+      expect(runtime.scenes.at(-1)?.nodes).toEqual([]);
+      await viewer.screenshot();
+      expect(errors).toHaveLength(0);
+    } finally {viewer.dispose(); layer.dispose(); replacement.dispose(); atlas.dispose();}
+  });
+
+  it("retries failed labels after recovery without repeating the handled error", async () => {
+    const runtimes = [new FakeRuntime(), new FakeRuntime()], errors: Forge3DError[] = [];
+    let index = 0;
+    setViewerRuntimeFactoryForTests({create: async () => runtimes[index++]!});
+    const viewer = await Forge3DViewer.create({} as HTMLCanvasElement, {
+      controls: false, resize: false, onError: (e) => errors.push(e),
+    });
+    const atlas = await reviewAtlas(), layer = new LabelLayer(atlas);
+    try {
+      viewer.setLabels(layer, {maxVertexBytes: 100000});
+      const bad = layer.addLabel("W".repeat(1000), [0, 0, 0], {horizonFadeAngle: 0}).id;
+      await expect(viewer.screenshot()).rejects.toThrow("budget");
+      runtimes[0]!.lose();
+      await vi.waitFor(() => expect(viewer.status).toBe("ready"));
+      expect(index).toBe(2);
+      expect(runtimes[1]!.scenes.at(-1)?.nodes).toEqual([]);
+      expect(viewer.getLabelReport()).toBeUndefined();
+      expect(errors.filter(e => e.code !== "DEVICE_LOST")).toHaveLength(0);
+      layer.removeLabel(bad!);
+      const id = layer.addLabel("A", [0, 0, 0], {horizonFadeAngle: 0}).id;
+      await viewer.screenshot();
+      expect(viewer.getLabelReport()?.accepted).toContain(id);
+    } finally {viewer.dispose(); layer.dispose(); atlas.dispose();}
+  });
+
+  it("retries budget failures on camera and size changes, deduplicating only frame notifications", async () => {
+    const runtime = new FakeRuntime(), errors: Forge3DError[] = [];
+    setViewerRuntimeFactoryForTests({create: async () => runtime});
+    const viewer = await Forge3DViewer.create({} as HTMLCanvasElement, {
+      controls: false, resize: false, onError: (e) => errors.push(e),
+    });
+    const atlas = await reviewAtlas(), layer = new LabelLayer(atlas);
+    const cameraA: CameraInput = {
+      position: [0, 10, 100], target: [0, 0, 0], up: [0, 1, 0],
+      near: 0.1, far: 1000, fovYDegrees: 45,
+      projection: "orthographic", orthographicHeight: 50,
+    };
+    const cameraB: CameraInput = {...cameraA,
+      position: [50, 10, 100], target: [50, 0, 0], orthographicHeight: 160,
+    };
+    try {
+      viewer.resize({width: 384, height: 256, devicePixelRatio: 1});
+      viewer.setCamera(cameraA);
+      const id = layer.addLabel("W", [0, 0, 0], {fontSize: 36, haloWidth: 0, horizonFadeAngle: 0}).id;
+      layer.addLabel("W", [100, 0, 0], {fontSize: 36, haloWidth: 0, horizonFadeAngle: 0});
+      const revision = layer.revision;
+      viewer.setLabels(layer);
+      const bytes = viewer.getLabelReport()!.vertexBytes;
+      expect(viewer.getLabelReport()!.accepted).toEqual([id]);
+      viewer.setLabels(layer, {maxVertexBytes: bytes * 1.5});
+      viewer.setCamera(cameraB);
+      await expect(viewer.screenshot()).rejects.toThrow("Label mesh byte budget exceeded");
+      expect(viewer.getLabelReport()).toBeUndefined();
+      expect(runtime.scenes.at(-1)?.nodes).toEqual([]);
+      expect(errors).toHaveLength(0);
+      viewer.setCamera(cameraA);
+      await viewer.screenshot();
+      expect(viewer.getLabelReport()?.accepted).toEqual([id]);
+      expect(viewer.getLabelReport()?.vertexBytes).toBe(bytes);
+      // Frame failures use onError once; changed inputs still retry placement.
+      viewer.setCamera(cameraB);
+      rafCallbacks.shift()?.(16);
+      expect(errors).toHaveLength(1);
+      expect(viewer.getLabelReport()).toBeUndefined();
+      for (let i = 1; i <= 3; i++) {
+        viewer.setCamera({...cameraB, position: [50+i, 10, 100], target: [50+i, 0, 0]});
+        rafCallbacks.shift()?.(16 + i*16);
+      }
+      expect(errors).toHaveLength(1);
+      viewer.setCamera(cameraA);
+      await viewer.screenshot();
+      expect(viewer.getLabelReport()?.accepted).toEqual([id]);
+      // With the same camera, widening the canvas admits the second label.
+      viewer.resize({width: 1400, height: 256, devicePixelRatio: 1});
+      await expect(viewer.screenshot()).rejects.toThrow("Label mesh byte budget exceeded");
+      expect(errors).toHaveLength(1);
+      viewer.resize({width: 384, height: 256, devicePixelRatio: 1});
+      await viewer.screenshot();
+      expect(viewer.getLabelReport()?.accepted).toEqual([id]);
+      expect(layer.revision).toBe(revision);
+      expect(viewer.status).toBe("ready");
+    } finally {viewer.dispose(); layer.dispose(); atlas.dispose();}
+  });
+
+  it("routes label scene device loss from screenshot into recovery through a rejected promise", async () => {
+    const first = new FakeRuntime(), second = new FakeRuntime();
+    let index = 0;
+    setViewerRuntimeFactoryForTests({create: async () => [first, second][index++]!});
+    const viewer = await Forge3DViewer.create({} as HTMLCanvasElement, {controls: false, resize: false});
+    const atlas = await reviewAtlas(), layer = new LabelLayer(atlas);
+    try {
+      viewer.setLabels(layer);
+      layer.addLabel("A", [0, 0, 0], {horizonFadeAngle: 0});
+      first.sceneError = new Forge3DError("DEVICE_LOST", "label scene commit loss");
+      const capture = viewer.screenshot();
+      expect(capture).toBeInstanceOf(Promise);
+      await expect(capture).rejects.toMatchObject({code: "DEVICE_LOST"});
+      await vi.waitFor(() => expect(viewer.status).toBe("ready"));
+      expect(index).toBe(2);
+      expect(viewer.getDiagnostics().recoveryAttempts).toBe(1);
+      expect(second.scenes.at(-1)?.nodes.length).toBeGreaterThan(0);
+    } finally {viewer.dispose(); layer.dispose(); atlas.dispose();}
   });
 
   it("handles rejected screenshot cleanup without an unhandled branch", async () => {
@@ -2188,4 +2346,10 @@ function pointerEvent(
     Object.defineProperty(event, name, { configurable: true, value });
   }
   return event;
+}
+
+async function reviewAtlas(): Promise<FontAtlas> {
+  return FontAtlas.create({fonts: [{id: "NotoSans", data: new Uint8Array(readFileSync(
+    new URL("../../assets/fonts/NotoSans-Regular.ttf", import.meta.url),
+  ))}]});
 }

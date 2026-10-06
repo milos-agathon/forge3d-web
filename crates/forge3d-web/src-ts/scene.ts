@@ -834,11 +834,13 @@ export function estimateSceneTriangles(
         );
         break;
       case "ground-plane":
-      case "overlay":
         triangles = checkedAdd(triangles, 2);
         break;
+      case "overlay":
+        triangles = checkedAdd(triangles, node.vertices ? node.vertices.length / 9 : 2);
+        break;
       case "text-mesh":
-        triangles = checkedAdd(triangles, checkedMultiply(node.text.length, 2));
+        triangles = checkedAdd(triangles, node.vertices ? node.vertices.length / 9 : checkedMultiply(node.text.length, 2));
         break;
       default:
         break;
@@ -893,6 +895,9 @@ function normalizeTransform(
 }
 
 function validateByKind(node: SceneNodeInput): void {
+  if ((node.kind === "text-mesh" || node.kind === "overlay") && node.vertices !== undefined) {
+    if (!(node.vertices instanceof Float32Array) || node.vertices.length < 9 || node.vertices.length % 9 !== 0 || node.vertices.length > 9_000_000 || !node.vertices.every(Number.isFinite)) throw invalid("glyph vertices must be finite XYZ triangles within one million triangles");
+  }
   switch (node.kind) {
     case "group":
       break;
@@ -1305,9 +1310,9 @@ function nodeByteEstimate(node: SceneNodeInput): number {
     case "ground-plane":
       return 6 * 7 * 4;
     case "text-mesh":
-      return checkedMultiply(node.text.length, 6 * 7 * 4);
+      return node.vertices ? checkedMultiply(node.vertices.length / 3, 84) : checkedMultiply(node.text.length, 6 * 7 * 4);
     case "overlay":
-      return 6 * 6 * 4;
+      return node.vertices ? checkedMultiply(node.vertices.length / 3, 28) : 6 * 6 * 4;
     default:
       return 0;
   }

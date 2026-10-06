@@ -95,15 +95,24 @@ pub(super) fn build_geometry(
                     material_index: material_index_of(node),
                 });
             }
-            ParsedNodeKind::TextMesh { text, size, color } => {
+            ParsedNodeKind::TextMesh {
+                text,
+                mesh,
+                size,
+                color,
+            } => {
                 let first_vertex = geometry.world_vertices.len() as u32;
-                let vertices = geometry::text_mesh_vertices(
-                    world,
-                    text,
-                    *size,
-                    *color,
-                    material_index_of(node),
-                );
+                let vertices = if let Some(mesh) = mesh {
+                    geometry::glyph_world_vertices(world, mesh, *color, material_index_of(node))
+                } else {
+                    geometry::text_mesh_vertices(
+                        world,
+                        text,
+                        *size,
+                        *color,
+                        material_index_of(node),
+                    )
+                };
                 let vertex_count = vertices.len() as u32;
                 geometry.world_vertices.extend(vertices);
                 geometry.world_ranges.push(DrawRange {
@@ -118,8 +127,9 @@ pub(super) fn build_geometry(
                 bounds,
                 color,
                 z_index,
+                mesh,
             } => {
-                overlay_nodes.push((node.id, *z_index, *bounds, *color));
+                overlay_nodes.push((node.id, *z_index, *bounds, *color, mesh.clone()));
             }
             _ => {}
         }
@@ -129,20 +139,27 @@ pub(super) fn build_geometry(
         }
         first_unassigned = geometry.world_vertices.len();
     }
-    overlay_nodes.sort_by_key(|(id, z_index, _, _)| (*z_index, *id));
-    for (_id, _z_index, bounds, color) in overlay_nodes {
+    overlay_nodes.sort_by_key(|(id, z_index, _, _, _)| (*z_index, *id));
+    for (_id, _z_index, bounds, color, mesh) in overlay_nodes {
         let first_vertex = geometry.overlay_vertices.len() as u32;
-        geometry
-            .overlay_vertices
-            .extend_from_slice(&geometry::overlay_vertices(bounds, color, width, height));
+        let vertices = mesh
+            .as_ref()
+            .map(|m| geometry::glyph_overlay_vertices(m, color, width, height))
+            .unwrap_or_else(|| geometry::overlay_vertices(bounds, color, width, height).to_vec());
+        let vertex_count = vertices.len() as u32;
+        geometry.overlay_vertices.extend(vertices);
         geometry.overlay_ranges.push(DrawRange {
             pass: "overlay".to_string(),
             first_vertex,
-            vertex_count: 6,
-            triangles: 2,
+            vertex_count,
+            triangles: u64::from(vertex_count) / 3,
             material_index: 0,
         });
-        geometry.overlays.push(OverlayGeometry { bounds, color });
+        geometry.overlays.push(OverlayGeometry {
+            bounds,
+            color,
+            mesh,
+        });
     }
     geometry
 }

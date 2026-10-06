@@ -1,0 +1,284 @@
+{
+  "scope": "W13-only installed tarball, Chromium preflight on win32",
+  "packageSha256": "495bc15f9807abc502b067d04634f2ec6868c1544b26ed777bfe2b9f12b3a2d8",
+  "browser": "148.0.7778.96",
+  "csp": "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; connect-src 'self'; worker-src 'self'; style-src 'self'; img-src 'self' blob:; object-src 'none'",
+  "remoteRequests": [],
+  "pageErrors": [],
+  "results": {
+    "render": {
+      "covered": 3449,
+      "accepted": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "glyphCount": 21,
+      "bytes": 295680,
+      "deterministic": true,
+      "replay": true,
+      "resizeRoundTrip": true,
+      "resizedCovered": 3449,
+      "captureCovered": 3449,
+      "captureDiff": {
+        "sum": 0,
+        "max": 0
+      },
+      "clearMatches": true,
+      "before": {
+        "currentBytes": 452672,
+        "peakBytes": 19720256,
+        "budgetBytes": 536870912,
+        "utilization": 0.0008431673049926758,
+        "allocationCount": 12,
+        "categories": {
+          "buffers": 319920,
+          "textures": 131216,
+          "staging": 0,
+          "readback": 0,
+          "tile-cache": 0,
+          "render-bundles": 1536,
+          "other": 0
+        },
+        "effectiveQuality": "high",
+        "downgrades": []
+      },
+      "after": {
+        "currentBytes": 548576,
+        "peakBytes": 19720256,
+        "budgetBytes": 536870912,
+        "utilization": 0.0010218024253845215,
+        "allocationCount": 10,
+        "categories": {
+          "buffers": 24144,
+          "textures": 524432,
+          "staging": 0,
+          "readback": 0,
+          "tile-cache": 0,
+          "render-bundles": 0,
+          "other": 0
+        },
+        "effectiveQuality": "high",
+        "downgrades": []
+      },
+      "shapingHash": "f7a2bc48a5705456969b00d293bb880df9afb5b67c6923d17c3a47f89c3902eb"
+    },
+    "outline": {
+      "agreement": 0.9979425837320575,
+      "covered": 4498,
+      "expectedCovered": 4463,
+      "holes": 2082,
+      "negativeControlAgreement": 0.7864593301435406
+    },
+    "depth": {
+      "negativeControlVisible": 1918,
+      "visible": 1918,
+      "hidden": 0,
+      "capture": 0,
+      "id": 1
+    },
+    "session": {
+      "before": 1153,
+      "disabled": 0,
+      "copiedNodes": 1
+    },
+    "viewer": {
+      "before": 1071,
+      "disabled": 0,
+      "resized": 1071,
+      "recovered": 1071,
+      "accepted": [
+        1
+      ],
+      "viewerDisposed": true,
+      "fontStillAlive": true
+    },
+    "viewerReview": {
+      "terrainCovered": 2266,
+      "attachedDiff": {
+        "sum": 0,
+        "max": 0
+      },
+      "detachedDiff": {
+        "sum": 0,
+        "max": 0
+      },
+      "oneLightDiff": {
+        "sum": 39398,
+        "max": 18
+      },
+      "stateAfterError": "ready",
+      "repaired": true,
+      "cleared": true,
+      "clearedDiff": {
+        "sum": 0,
+        "max": 0
+      },
+      "cameraClearDiff": {
+        "sum": 0,
+        "max": 0
+      },
+      "reportAfterMotion": true,
+      "recoveryCleared": true,
+      "screenshotRejected": true,
+      "replacementCleared": true,
+      "goodPixels": 4350,
+      "errors": [
+        "INTERNAL_ERROR",
+        "DEVICE_LOST"
+      ]
+    },
+    "viewerBudget": {
+      "singleBytes": 10248,
+      "budget": 15372,
+      "beforeCovered": 301,
+      "cameraRejected": true,
+      "hidden": 0,
+      "callerErrors": 0,
+      "restoredCovered": 301,
+      "restoredDiff": {
+        "sum": 0,
+        "max": 0
+      },
+      "restoredAccepted": [
+        1
+      ],
+      "id": 1,
+      "resizeRejected": true,
+      "resizeCallerErrors": 0,
+      "resizeRestoredDiff": {
+        "sum": 0,
+        "max": 0
+      },
+      "frameErrors": 1,
+      "repeatedFrameErrors": 1,
+      "frameRestoredDiff": {
+        "sum": 0,
+        "max": 0
+      },
+      "unchangedRevision": true,
+      "status": "ready"
+    },
+    "lineReview": {
+      "forwardCovered": 337,
+      "reverseDiff": {
+        "sum": 0,
+        "max": 0
+      },
+      "repeatedCovered": 219,
+      "accepted": [
+        3
+      ],
+      "rejected": []
+    },
+    "contracts": {
+      "id": 1,
+      "glyphCount": 12,
+      "nodes": 3,
+      "curved": {
+        "ok": false,
+        "id": null,
+        "diagnostics": [
+          {
+            "code": "experimental_feature",
+            "severity": "warning",
+            "message": "Requested workflow uses a feature that is not production-stable.",
+            "remediation": "Treat this path as experimental or use a documented supported alternative.",
+            "support_level": "experimental",
+            "layer_id": "labels",
+            "object_id": "pending",
+            "details": {
+              "feature": "curved labels"
+            }
+          }
+        ]
+      },
+      "elevated": {
+        "ok": false,
+        "id": null,
+        "diagnostics": [
+          {
+            "code": "experimental_feature",
+            "severity": "warning",
+            "message": "Requested workflow uses a feature that is not production-stable.",
+            "remediation": "Treat this path as experimental or use a documented supported alternative.",
+            "support_level": "experimental",
+            "layer_id": "labels",
+            "object_id": "pending",
+            "details": {
+              "feature": "terrain-elevated line labels"
+            }
+          }
+        ]
+      },
+      "terrain": [
+        20,
+        30,
+        42
+      ],
+      "pick": null,
+      "serialized": true,
+      "fonts": [
+        "NotoSans",
+        "NotoSansArabic",
+        "NotoSansDevanagari"
+      ],
+      "shapingHash": "f7a2bc48a5705456969b00d293bb880df9afb5b67c6923d17c3a47f89c3902eb"
+    }
+  },
+  "bundled": {
+    "id": 1,
+    "glyphCount": 12,
+    "nodes": 3,
+    "curved": {
+      "ok": false,
+      "id": null,
+      "diagnostics": [
+        {
+          "code": "experimental_feature",
+          "severity": "warning",
+          "message": "Requested workflow uses a feature that is not production-stable.",
+          "remediation": "Treat this path as experimental or use a documented supported alternative.",
+          "support_level": "experimental",
+          "layer_id": "labels",
+          "object_id": "pending",
+          "details": {
+            "feature": "curved labels"
+          }
+        }
+      ]
+    },
+    "elevated": {
+      "ok": false,
+      "id": null,
+      "diagnostics": [
+        {
+          "code": "experimental_feature",
+          "severity": "warning",
+          "message": "Requested workflow uses a feature that is not production-stable.",
+          "remediation": "Treat this path as experimental or use a documented supported alternative.",
+          "support_level": "experimental",
+          "layer_id": "labels",
+          "object_id": "pending",
+          "details": {
+            "feature": "terrain-elevated line labels"
+          }
+        }
+      ]
+    },
+    "terrain": [
+      20,
+      30,
+      42
+    ],
+    "pick": null,
+    "serialized": true,
+    "fonts": [
+      "NotoSans",
+      "NotoSansArabic",
+      "NotoSansDevanagari"
+    ],
+    "shapingHash": "f7a2bc48a5705456969b00d293bb880df9afb5b67c6923d17c3a47f89c3902eb"
+  }
+}

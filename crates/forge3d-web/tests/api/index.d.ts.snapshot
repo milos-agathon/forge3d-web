@@ -2158,6 +2158,7 @@ export interface GroundPlaneNodeInput extends SceneNodeBase {
 }
 
 export interface TextMeshNodeInput extends SceneNodeBase {
+  vertices?: Float32Array;
   kind: "text-mesh";
   text: string;
   size: number;
@@ -2165,6 +2166,7 @@ export interface TextMeshNodeInput extends SceneNodeBase {
 }
 
 export interface OverlayNodeInput extends SceneNodeBase {
+  vertices?: Float32Array;
   kind: "overlay";
   bounds: [number, number, number, number];
   color: [number, number, number, number];
@@ -2870,6 +2872,8 @@ export declare class Forge3DRuntime {
  * device-loss recovery. dispose() synchronously releases all owned resources.
  */
 export declare class Forge3DViewer {
+  setLabels(layer: import("./labels.js").LabelLayer | null, options?: Omit<import("./labels.js").LabelRenderOptions,"viewport"|"camera">): void;
+  getLabelReport(): import("./labels.js").LabelPlacementReport | undefined;
   setVectorLayers(input:VectorLayers|VectorSnapshot|null,terrain?:TerrainHeightmapInput):void;
   getVectorReport():VectorReport;
   readVectorPickMap():Promise<VectorPickMap>;
@@ -4285,3 +4289,16 @@ export declare function generateDensityVolume(input: DensityVolumePresetInput, o
 
 /** Water layer i writes AOV_ID_WATER_BASE + i. */
 export declare const AOV_ID_WATER_BASE = 4294967280;
+
+export { FontAtlas, FontFallbackRange, TypographySettings } from './typography.js';
+export type { FontSource, FontAtlasOptions } from './typography.js';
+export { LabelLayer, LabelManager, LabelStyle, LabelFlags } from './labels.js';
+export type { LabelRenderOptions, LabelPlacementReport } from './labels.js';
+export { LabelPlan, KeepoutRegion, PriorityClass, LABEL_REJECTION_REASONS } from './label-plan.js';
+export type * from './label-types.js';
+
+export { LabelCollisionIndex, declutterLabels } from './label-declutter.js';
+export type { LabelDeclutterCandidate, LabelDeclutterConfig, LabelDeclutterResult } from './label-declutter.js';
+
+export {LabelFeatureSource} from './label-features.js';
+export type {LabelFeature,LabelFeatureOptions} from './label-features.js';

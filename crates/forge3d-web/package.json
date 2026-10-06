@@ -80,11 +80,14 @@
     "test:package-consumer:w11": "node scripts/build-browser-test-package.mjs --w11",
     "test:w11": "vitest run tests/unit/postfx.test.ts tests/unit/w11-native-provenance.test.ts && playwright test tests/playwright/w11_postfx.spec.ts --project=chromium-preflight",
     "test:package-consumer:w12": "node scripts/test-w12-package.mjs",
-    "test:w12": "vitest run tests/unit/vector.test.ts tests/unit/w12-native-provenance.test.ts && playwright test tests/playwright/w12_vector.spec.ts tests/playwright/w12_camera.spec.ts --project=chromium-preflight"
+    "test:w12": "vitest run tests/unit/vector.test.ts tests/unit/w12-native-provenance.test.ts && playwright test tests/playwright/w12_vector.spec.ts tests/playwright/w12_camera.spec.ts --project=chromium-preflight",
+    "test:w13": "vitest run tests/unit/labels.test.ts tests/unit/label-workflows.test.ts tests/unit/label-contract-record.test.ts && playwright test tests/playwright/w13_labels.spec.ts --project=chromium-preflight",
+    "test:package-consumer:w13": "node scripts/test-w13-package-consumer.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
     "geotiff": "3.0.5",
+    "harfbuzzjs": "1.6.0",
     "ktx-parse": "1.1.0",
     "mediabunny": "1.58.0",
     "selenium-webdriver": "4.35.0",

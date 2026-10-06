@@ -1,0 +1,1965 @@
+{
+  "baseline": "1f4084af428dc699bdcd108b029736cb73903926",
+  "cases": [
+    {
+      "source": "tests/test_p1_label_layer_geometry.py:test_label_layer_from_features_ingests_point_line_and_polygon_candidates_deterministically",
+      "input": {
+        "layer_id": "labels.assets",
+        "crs": "EPSG:4326",
+        "features": [
+          {
+            "type": "Feature",
+            "id": "road-2",
+            "properties": {
+              "name": "Main Road"
+            },
+            "geometry": {
+              "type": "LineString",
+              "coordinates": [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  1.0,
+                  1.0
+                ]
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "id": "city-1",
+            "properties": {
+              "name": "Alpha"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                0.25,
+                0.5,
+                12.0
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "id": "park-3",
+            "properties": {
+              "name": "Central Park"
+            },
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    0.1,
+                    0.1
+                  ],
+                  [
+                    0.4,
+                    0.1
+                  ],
+                  [
+                    0.4,
+                    0.4
+                  ],
+                  [
+                    0.1,
+                    0.4
+                  ],
+                  [
+                    0.1,
+                    0.1
+                  ]
+                ]
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels.assets",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                0.25,
+                0.5,
+                12.0
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "city-1",
+            "placement_kind": "point",
+            "properties": {
+              "name": "Alpha"
+            },
+            "source_id": "city-1",
+            "terrain_mode": "auto",
+            "text": "Alpha"
+          },
+          {
+            "geometry": {
+              "coordinates": [
+                [
+                  [
+                    0.1,
+                    0.1
+                  ],
+                  [
+                    0.4,
+                    0.1
+                  ],
+                  [
+                    0.4,
+                    0.4
+                  ],
+                  [
+                    0.1,
+                    0.4
+                  ],
+                  [
+                    0.1,
+                    0.1
+                  ]
+                ]
+              ],
+              "type": "Polygon"
+            },
+            "geometry_type": "Polygon",
+            "id": "park-3",
+            "placement_kind": "polygon",
+            "properties": {
+              "name": "Central Park"
+            },
+            "source_id": "park-3",
+            "terrain_mode": "auto",
+            "text": "Central Park"
+          },
+          {
+            "geometry": {
+              "coordinates": [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  1.0,
+                  1.0
+                ]
+              ],
+              "type": "LineString"
+            },
+            "geometry_type": "LineString",
+            "id": "road-2",
+            "placement_kind": "line",
+            "properties": {
+              "name": "Main Road"
+            },
+            "source_id": "road-2",
+            "terrain_mode": "auto",
+            "text": "Main Road"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "crs": "EPSG:4326",
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": []
+      }
+    },
+    {
+      "source": "tests/test_p1_label_layer_geometry.py:test_label_layer_from_features_ingests_point_line_and_polygon_candidates_deterministically",
+      "input": {
+        "layer_id": "labels.assets",
+        "crs": "EPSG:4326",
+        "features": [
+          {
+            "type": "Feature",
+            "id": "park-3",
+            "properties": {
+              "name": "Central Park"
+            },
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    0.1,
+                    0.1
+                  ],
+                  [
+                    0.4,
+                    0.1
+                  ],
+                  [
+                    0.4,
+                    0.4
+                  ],
+                  [
+                    0.1,
+                    0.4
+                  ],
+                  [
+                    0.1,
+                    0.1
+                  ]
+                ]
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "id": "city-1",
+            "properties": {
+              "name": "Alpha"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                0.25,
+                0.5,
+                12.0
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "id": "road-2",
+            "properties": {
+              "name": "Main Road"
+            },
+            "geometry": {
+              "type": "LineString",
+              "coordinates": [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  1.0,
+                  1.0
+                ]
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels.assets",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                0.25,
+                0.5,
+                12.0
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "city-1",
+            "placement_kind": "point",
+            "properties": {
+              "name": "Alpha"
+            },
+            "source_id": "city-1",
+            "terrain_mode": "auto",
+            "text": "Alpha"
+          },
+          {
+            "geometry": {
+              "coordinates": [
+                [
+                  [
+                    0.1,
+                    0.1
+                  ],
+                  [
+                    0.4,
+                    0.1
+                  ],
+                  [
+                    0.4,
+                    0.4
+                  ],
+                  [
+                    0.1,
+                    0.4
+                  ],
+                  [
+                    0.1,
+                    0.1
+                  ]
+                ]
+              ],
+              "type": "Polygon"
+            },
+            "geometry_type": "Polygon",
+            "id": "park-3",
+            "placement_kind": "polygon",
+            "properties": {
+              "name": "Central Park"
+            },
+            "source_id": "park-3",
+            "terrain_mode": "auto",
+            "text": "Central Park"
+          },
+          {
+            "geometry": {
+              "coordinates": [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  1.0,
+                  1.0
+                ]
+              ],
+              "type": "LineString"
+            },
+            "geometry_type": "LineString",
+            "id": "road-2",
+            "placement_kind": "line",
+            "properties": {
+              "name": "Main Road"
+            },
+            "source_id": "road-2",
+            "terrain_mode": "auto",
+            "text": "Main Road"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "crs": "EPSG:4326",
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": []
+      }
+    },
+    {
+      "source": "tests/test_p1_label_layer_geometry.py:test_label_layer_from_features_reports_invalid_and_unsupported_geometry_with_feature_ids",
+      "input": {
+        "layer_id": "labels.geometry",
+        "features": [
+          {
+            "type": "Feature",
+            "id": "good",
+            "properties": {
+              "name": "Valid"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                0.0,
+                0.0
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "id": "empty",
+            "properties": {
+              "name": "Empty"
+            },
+            "geometry": {}
+          },
+          {
+            "type": "Feature",
+            "id": "bad-point",
+            "properties": {
+              "name": "Bad Point"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": []
+            }
+          },
+          {
+            "type": "Feature",
+            "id": "multi",
+            "properties": {
+              "name": "Multi"
+            },
+            "geometry": {
+              "type": "MultiPoint",
+              "coordinates": [
+                [
+                  0.0,
+                  0.0
+                ]
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels.geometry",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                0.0,
+                0.0
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "good",
+            "placement_kind": "point",
+            "properties": {
+              "name": "Valid"
+            },
+            "source_id": "good",
+            "terrain_mode": "auto",
+            "text": "Valid"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": [
+          {
+            "code": "placeholder_fallback",
+            "severity": "error",
+            "message": "Requested workflow would use placeholder or non-renderable fallback output.",
+            "remediation": "Use a renderable supported path or keep the workflow blocked before render.",
+            "support_level": "placeholder/fallback",
+            "layer_id": "labels.geometry",
+            "object_id": "empty",
+            "details": {
+              "feature": "label invalid geometry"
+            }
+          },
+          {
+            "code": "placeholder_fallback",
+            "severity": "error",
+            "message": "Requested workflow would use placeholder or non-renderable fallback output.",
+            "remediation": "Use a renderable supported path or keep the workflow blocked before render.",
+            "support_level": "placeholder/fallback",
+            "layer_id": "labels.geometry",
+            "object_id": "bad-point",
+            "details": {
+              "feature": "label invalid geometry"
+            }
+          },
+          {
+            "code": "unsupported_feature",
+            "severity": "error",
+            "message": "Requested MapScene feature is not supported by the MVP workflow.",
+            "remediation": "Remove the feature or use a documented supported MapScene path.",
+            "support_level": "unsupported",
+            "layer_id": "labels.geometry",
+            "object_id": "multi",
+            "details": {
+              "feature": "label geometry type MultiPoint"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "source": "tests/test_p1_label_layer_geometry.py:test_label_layer_from_geodataframe_like_object_preserves_geometry_and_crs",
+      "input": {
+        "text": "name",
+        "crs": "EPSG:3857",
+        "target_crs": null,
+        "terrain_sampling": "auto",
+        "terrain_sampler": "elevation=x+y+z",
+        "typography": null,
+        "layer_id": "labels.gdf",
+        "glyph_atlas": null,
+        "metadata": null,
+        "features": [
+          {
+            "type": "Feature",
+            "id": "city-a",
+            "properties": {
+              "name": "Alpha"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                0.5,
+                0.25
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels.gdf",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                0.5,
+                0.25
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "city-a",
+            "placement_kind": "point",
+            "properties": {
+              "name": "Alpha"
+            },
+            "source_id": "city-a",
+            "terrain_mode": "auto",
+            "text": "Alpha"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "crs": "EPSG:3857",
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": []
+      }
+    },
+    {
+      "source": "tests/test_p1_label_layer_geometry.py:test_label_layer_from_style_layer_uses_text_field_and_validates_geometry",
+      "input": {
+        "text": "{label}",
+        "crs": null,
+        "target_crs": null,
+        "terrain_sampling": "auto",
+        "terrain_sampler": "elevation=x+y+z",
+        "layer_id": "labels.style",
+        "glyph_atlas": null,
+        "metadata": null,
+        "features": [
+          {
+            "type": "Feature",
+            "id": "city-1",
+            "properties": {
+              "label": "Styled City"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                0.0,
+                0.0
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "id": "unsupported",
+            "properties": {
+              "name": "Unsupported"
+            },
+            "geometry": {
+              "type": "GeometryCollection",
+              "geometries": []
+            }
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels.style",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                0.0,
+                0.0
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "city-1",
+            "placement_kind": "point",
+            "properties": {
+              "label": "Styled City"
+            },
+            "source_id": "city-1",
+            "terrain_mode": "auto",
+            "text": "Styled City"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": [
+          {
+            "code": "unsupported_feature",
+            "severity": "error",
+            "message": "Requested MapScene feature is not supported by the MVP workflow.",
+            "remediation": "Remove the feature or use a documented supported MapScene path.",
+            "support_level": "unsupported",
+            "layer_id": "labels.style",
+            "object_id": "unsupported",
+            "details": {
+              "feature": "label geometry type GeometryCollection"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "source": "tests/test_p1_label_layer_crs_terrain.py:test_label_layer_crs_transform_uses_forge3d_crs_utilities",
+      "input": {
+        "layer_id": "labels.crs",
+        "crs": "EPSG:4326",
+        "target_crs": "EPSG:3857",
+        "features": [
+          {
+            "type": "Feature",
+            "id": "city-1",
+            "properties": {
+              "name": "Alpha"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                10.0,
+                20.0
+              ]
+            }
+          }
+        ],
+        "transform_coords": "xy=[1000,2000]"
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels.crs",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                1000.0,
+                2000.0
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "city-1",
+            "placement_kind": "point",
+            "properties": {
+              "name": "Alpha"
+            },
+            "source_id": "city-1",
+            "terrain_mode": "auto",
+            "text": "Alpha"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "crs": "EPSG:3857",
+          "source_crs": "EPSG:4326",
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": []
+      }
+    },
+    {
+      "source": "tests/test_p1_label_layer_crs_terrain.py:test_label_layer_required_terrain_sampling_applies_sampler_to_world_position",
+      "input": {
+        "layer_id": "labels.terrain",
+        "crs": "EPSG:4326",
+        "terrain_sampling": "required",
+        "terrain_sampler": "elevation=x+y+z",
+        "features": [
+          {
+            "type": "Feature",
+            "id": "city-1",
+            "properties": {
+              "name": "Alpha"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                10.0,
+                20.0
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels.terrain",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                10.0,
+                20.0,
+                30.0
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "city-1",
+            "placement_kind": "point",
+            "properties": {
+              "name": "Alpha"
+            },
+            "source_id": "city-1",
+            "terrain_mode": "required",
+            "terrain_sample": {
+              "elevation": 30.0,
+              "source": "unit-test",
+              "visible": true
+            },
+            "text": "Alpha"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "crs": "EPSG:4326",
+          "terrain_sampling": "required"
+        },
+        "diagnostics": []
+      }
+    },
+    {
+      "source": "tests/test_p1_label_layer_crs_terrain.py:test_label_layer_required_terrain_sampling_without_sampler_is_diagnostic_bearing",
+      "input": {
+        "layer_id": "labels.terrain.missing",
+        "crs": "EPSG:4326",
+        "terrain_sampling": "required",
+        "features": [
+          {
+            "type": "Feature",
+            "id": "city-1",
+            "properties": {
+              "name": "Alpha"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                10.0,
+                20.0
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels.terrain.missing",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                10.0,
+                20.0
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "city-1",
+            "placement_kind": "point",
+            "properties": {
+              "name": "Alpha"
+            },
+            "source_id": "city-1",
+            "terrain_mode": "required",
+            "text": "Alpha"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "crs": "EPSG:4326",
+          "terrain_sampling": "required"
+        },
+        "diagnostics": [
+          {
+            "code": "unavailable_terrain_sampler",
+            "severity": "warning",
+            "message": "Terrain-height sampling was requested but no terrain sampler is available.",
+            "remediation": "Provide a terrain sampler or choose a label terrain policy that does not require sampling.",
+            "support_level": "underdeveloped",
+            "layer_id": "labels.terrain.missing",
+            "object_id": "city-1",
+            "details": {}
+          }
+        ]
+      }
+    },
+    {
+      "source": "tests/test_p1_label_expressions_plan_diagnostics.py:test_label_layer_supports_prd_expression_subset",
+      "input": {
+        "text": "{name}",
+        "features": [
+          {
+            "type": "Feature",
+            "id": "city-1",
+            "properties": {
+              "name": "Alpha",
+              "kind": "city",
+              "fallback": "Beta"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                0.0,
+                0.0
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                0.0,
+                0.0
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "city-1",
+            "placement_kind": "point",
+            "properties": {
+              "fallback": "Beta",
+              "kind": "city",
+              "name": "Alpha"
+            },
+            "source_id": "city-1",
+            "terrain_mode": "auto",
+            "text": "Alpha"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": []
+      }
+    },
+    {
+      "source": "tests/test_p1_label_expressions_plan_diagnostics.py:test_label_layer_supports_prd_expression_subset",
+      "input": {
+        "text": [
+          "get",
+          "name"
+        ],
+        "features": [
+          {
+            "type": "Feature",
+            "id": "city-1",
+            "properties": {
+              "name": "Alpha",
+              "kind": "city",
+              "fallback": "Beta"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                0.0,
+                0.0
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                0.0,
+                0.0
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "city-1",
+            "placement_kind": "point",
+            "properties": {
+              "fallback": "Beta",
+              "kind": "city",
+              "name": "Alpha"
+            },
+            "source_id": "city-1",
+            "terrain_mode": "auto",
+            "text": "Alpha"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": []
+      }
+    },
+    {
+      "source": "tests/test_p1_label_expressions_plan_diagnostics.py:test_label_layer_supports_prd_expression_subset",
+      "input": {
+        "text": [
+          "concat",
+          [
+            "get",
+            "kind"
+          ],
+          ":",
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "features": [
+          {
+            "type": "Feature",
+            "id": "city-1",
+            "properties": {
+              "name": "Alpha",
+              "kind": "city",
+              "fallback": "Beta"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                0.0,
+                0.0
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                0.0,
+                0.0
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "city-1",
+            "placement_kind": "point",
+            "properties": {
+              "fallback": "Beta",
+              "kind": "city",
+              "name": "Alpha"
+            },
+            "source_id": "city-1",
+            "terrain_mode": "auto",
+            "text": "city:Alpha"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": []
+      }
+    },
+    {
+      "source": "tests/test_p1_label_expressions_plan_diagnostics.py:test_label_layer_supports_prd_expression_subset",
+      "input": {
+        "text": [
+          "coalesce",
+          [
+            "get",
+            "missing"
+          ],
+          [
+            "get",
+            "fallback"
+          ]
+        ],
+        "features": [
+          {
+            "type": "Feature",
+            "id": "city-1",
+            "properties": {
+              "name": "Alpha",
+              "kind": "city",
+              "fallback": "Beta"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                0.0,
+                0.0
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                0.0,
+                0.0
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "city-1",
+            "placement_kind": "point",
+            "properties": {
+              "fallback": "Beta",
+              "kind": "city",
+              "name": "Alpha"
+            },
+            "source_id": "city-1",
+            "terrain_mode": "auto",
+            "text": "Beta"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": []
+      }
+    },
+    {
+      "source": "tests/test_p1_label_expressions_plan_diagnostics.py:test_label_layer_supports_prd_expression_subset",
+      "input": {
+        "text": [
+          "upcase",
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "features": [
+          {
+            "type": "Feature",
+            "id": "city-1",
+            "properties": {
+              "name": "Alpha",
+              "kind": "city",
+              "fallback": "Beta"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                0.0,
+                0.0
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                0.0,
+                0.0
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "city-1",
+            "placement_kind": "point",
+            "properties": {
+              "fallback": "Beta",
+              "kind": "city",
+              "name": "Alpha"
+            },
+            "source_id": "city-1",
+            "terrain_mode": "auto",
+            "text": "ALPHA"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": []
+      }
+    },
+    {
+      "source": "tests/test_p1_label_expressions_plan_diagnostics.py:test_label_layer_supports_prd_expression_subset",
+      "input": {
+        "text": [
+          "downcase",
+          [
+            "get",
+            "name"
+          ]
+        ],
+        "features": [
+          {
+            "type": "Feature",
+            "id": "city-1",
+            "properties": {
+              "name": "Alpha",
+              "kind": "city",
+              "fallback": "Beta"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                0.0,
+                0.0
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                0.0,
+                0.0
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "city-1",
+            "placement_kind": "point",
+            "properties": {
+              "fallback": "Beta",
+              "kind": "city",
+              "name": "Alpha"
+            },
+            "source_id": "city-1",
+            "terrain_mode": "auto",
+            "text": "alpha"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": []
+      }
+    },
+    {
+      "source": "tests/test_p1_label_expressions_plan_diagnostics.py:test_label_layer_reports_missing_expression_field_before_render",
+      "input": {
+        "text": [
+          "get",
+          "missing"
+        ],
+        "layer_id": "labels.missing-field",
+        "features": [
+          {
+            "type": "Feature",
+            "id": "city-1",
+            "properties": {
+              "name": "Alpha"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                0.0,
+                0.0
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels.missing-field",
+        "labels": [],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": [
+          {
+            "code": "missing_label_field",
+            "severity": "error",
+            "message": "Label text expression references a missing feature field.",
+            "remediation": "Provide the referenced property or change the label text expression.",
+            "support_level": "unsupported",
+            "layer_id": "labels.missing-field",
+            "object_id": "city-1",
+            "details": {
+              "field": "missing"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "source": "tests/test_p1_label_expressions_plan_diagnostics.py:test_label_layer_compile_labels_produces_deterministic_accepted_and_rejected_plan",
+      "input": {
+        "layer_id": "labels.plan",
+        "metadata": {
+          "seed": 7
+        },
+        "features": [
+          {
+            "type": "Feature",
+            "id": "accepted",
+            "properties": {
+              "name": "Alpha"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                10.0,
+                10.0
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "id": "outside",
+            "properties": {
+              "name": "Far"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                999.0,
+                999.0
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels.plan",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                10.0,
+                10.0
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "accepted",
+            "placement_kind": "point",
+            "properties": {
+              "name": "Alpha"
+            },
+            "source_id": "accepted",
+            "terrain_mode": "auto",
+            "text": "Alpha"
+          },
+          {
+            "geometry": {
+              "coordinates": [
+                999.0,
+                999.0
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "outside",
+            "placement_kind": "point",
+            "properties": {
+              "name": "Far"
+            },
+            "source_id": "outside",
+            "terrain_mode": "auto",
+            "text": "Far"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "seed": 7,
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": []
+      }
+    },
+    {
+      "source": "tests/test_p1_label_expressions_plan_diagnostics.py:test_mapscene_validate_reports_line_label_incomplete_and_missing_glyphs_before_render",
+      "input": {
+        "layer_id": "labels.diagnostics",
+        "glyph_atlas": {
+          "glyphs": [
+            "R",
+            "o",
+            "a",
+            "d"
+          ]
+        },
+        "features": [
+          {
+            "type": "Feature",
+            "id": "road-1",
+            "properties": {
+              "name": "Road"
+            },
+            "geometry": {
+              "type": "LineString",
+              "coordinates": [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  10.0,
+                  10.0
+                ]
+              ]
+            }
+          },
+          {
+            "type": "Feature",
+            "id": "city-1",
+            "properties": {
+              "name": "Alpha"
+            },
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                10.0,
+                10.0
+              ]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels.diagnostics",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                10.0,
+                10.0
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "city-1",
+            "placement_kind": "point",
+            "properties": {
+              "name": "Alpha"
+            },
+            "source_id": "city-1",
+            "terrain_mode": "auto",
+            "text": "Alpha"
+          },
+          {
+            "geometry": {
+              "coordinates": [
+                [
+                  0.0,
+                  0.0
+                ],
+                [
+                  10.0,
+                  10.0
+                ]
+              ],
+              "type": "LineString"
+            },
+            "geometry_type": "LineString",
+            "id": "road-1",
+            "placement_kind": "line",
+            "properties": {
+              "name": "Road"
+            },
+            "source_id": "road-1",
+            "terrain_mode": "auto",
+            "text": "Road"
+          }
+        ],
+        "glyph_atlas": {
+          "glyphs": [
+            "R",
+            "o",
+            "a",
+            "d"
+          ]
+        },
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": []
+      }
+    },
+    {
+      "source": "review regression via pinned native LabelLayer.from_features",
+      "input": {
+        "features": [
+          {
+            "id": "flat",
+            "type": "Point",
+            "coordinates": [
+              10,
+              20
+            ],
+            "name": "Flat"
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                10,
+                20
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "flat",
+            "placement_kind": "point",
+            "properties": {
+              "id": "flat",
+              "name": "Flat"
+            },
+            "source_id": "flat",
+            "terrain_mode": "auto",
+            "text": "Flat"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": []
+      }
+    },
+    {
+      "source": "review regression via pinned native LabelLayer.from_features",
+      "input": {
+        "crs": "EPSG:4326",
+        "target_crs": "epsg:4326",
+        "features": [
+          {
+            "id": "crs",
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                10,
+                20
+              ]
+            },
+            "properties": {
+              "name": "Same"
+            }
+          }
+        ],
+        "transform_coords": "xy=[1000,2000]"
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                10,
+                20
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "crs",
+            "placement_kind": "point",
+            "properties": {
+              "name": "Same"
+            },
+            "source_id": "crs",
+            "terrain_mode": "auto",
+            "text": "Same"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "crs": "epsg:4326",
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": []
+      }
+    },
+    {
+      "source": "review regression via pinned native LabelLayer.from_features",
+      "input": {
+        "features": [
+          {
+            "id": "null",
+            "geometry": {
+              "type": "Point",
+              "coordinates": [
+                10,
+                20
+              ]
+            },
+            "properties": {
+              "name": null
+            }
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                10,
+                20
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "null",
+            "placement_kind": "point",
+            "properties": {
+              "name": null
+            },
+            "source_id": "null",
+            "terrain_mode": "auto",
+            "text": "None"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": []
+      }
+    },
+    {
+      "source": "review regression via pinned native LabelLayer.from_features",
+      "input": {
+        "features": [
+          {
+            "id": "null-geometry",
+            "type": "Feature",
+            "geometry": null,
+            "properties": {
+              "name": "N"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels",
+        "labels": [],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": [
+          {
+            "code": "placeholder_fallback",
+            "severity": "error",
+            "message": "Requested workflow would use placeholder or non-renderable fallback output.",
+            "remediation": "Use a renderable supported path or keep the workflow blocked before render.",
+            "support_level": "placeholder/fallback",
+            "layer_id": "labels",
+            "object_id": "null-geometry",
+            "details": {
+              "feature": "label invalid geometry"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "source": "review regression via pinned native LabelLayer.from_features",
+      "input": {
+        "features": [
+          {
+            "id": "fallback",
+            "type": "Point",
+            "coordinates": [],
+            "position": [
+              3,
+              4
+            ],
+            "name": "P"
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                3,
+                4
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "fallback",
+            "placement_kind": "point",
+            "properties": {
+              "id": "fallback",
+              "name": "P",
+              "position": [
+                3,
+                4
+              ]
+            },
+            "source_id": "fallback",
+            "terrain_mode": "auto",
+            "text": "P"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": []
+      }
+    },
+    {
+      "source": "review regression via pinned native LabelLayer.from_features",
+      "input": {
+        "features": [
+          {
+            "id": "null-z",
+            "type": "Point",
+            "coordinates": [
+              1,
+              2,
+              null
+            ],
+            "name": "Z"
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                1,
+                2,
+                null
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "null-z",
+            "placement_kind": "point",
+            "properties": {
+              "id": "null-z",
+              "name": "Z"
+            },
+            "source_id": "null-z",
+            "terrain_mode": "auto",
+            "text": "Z"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": []
+      }
+    },
+    {
+      "source": "review regression via pinned native LabelLayer.from_features",
+      "input": {
+        "features": [
+          {
+            "id": "null-z-line",
+            "type": "LineString",
+            "coordinates": [
+              [
+                1,
+                2,
+                null
+              ],
+              [
+                3,
+                4,
+                null
+              ]
+            ],
+            "name": "Z"
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                [
+                  1,
+                  2,
+                  null
+                ],
+                [
+                  3,
+                  4,
+                  null
+                ]
+              ],
+              "type": "LineString"
+            },
+            "geometry_type": "LineString",
+            "id": "null-z-line",
+            "placement_kind": "line",
+            "properties": {
+              "id": "null-z-line",
+              "name": "Z"
+            },
+            "source_id": "null-z-line",
+            "terrain_mode": "auto",
+            "text": "Z"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": []
+      }
+    },
+    {
+      "source": "review regression via pinned native LabelLayer.from_features",
+      "input": {
+        "features": [
+          {
+            "id": "null-z-polygon",
+            "type": "Polygon",
+            "coordinates": [
+              [
+                [
+                  1,
+                  2,
+                  null
+                ],
+                [
+                  3,
+                  4,
+                  null
+                ],
+                [
+                  3,
+                  2,
+                  null
+                ],
+                [
+                  1,
+                  2,
+                  null
+                ]
+              ]
+            ],
+            "name": "Z"
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                [
+                  [
+                    1,
+                    2,
+                    null
+                  ],
+                  [
+                    3,
+                    4,
+                    null
+                  ],
+                  [
+                    3,
+                    2,
+                    null
+                  ],
+                  [
+                    1,
+                    2,
+                    null
+                  ]
+                ]
+              ],
+              "type": "Polygon"
+            },
+            "geometry_type": "Polygon",
+            "id": "null-z-polygon",
+            "placement_kind": "polygon",
+            "properties": {
+              "id": "null-z-polygon",
+              "name": "Z"
+            },
+            "source_id": "null-z-polygon",
+            "terrain_mode": "auto",
+            "text": "Z"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "terrain_sampling": "auto"
+        },
+        "diagnostics": []
+      }
+    },
+    {
+      "source": "review no-data sampler via pinned native LabelLayer.from_features",
+      "input": {
+        "terrain_sampling": "required",
+        "terrain_sampler": "no-data",
+        "features": [
+          {
+            "id": "no-data",
+            "type": "Point",
+            "coordinates": [
+              10,
+              20
+            ],
+            "name": "DEM"
+          }
+        ]
+      },
+      "expected": {
+        "kind": "label_layer",
+        "layer_id": "labels",
+        "labels": [
+          {
+            "geometry": {
+              "coordinates": [
+                10,
+                20
+              ],
+              "type": "Point"
+            },
+            "geometry_type": "Point",
+            "id": "no-data",
+            "placement_kind": "point",
+            "properties": {
+              "id": "no-data",
+              "name": "DEM"
+            },
+            "source_id": "no-data",
+            "terrain_mode": "required",
+            "text": "DEM"
+          }
+        ],
+        "glyph_atlas": {},
+        "typography": {},
+        "priority_rules": [],
+        "plan": null,
+        "metadata": {
+          "terrain_sampling": "required"
+        },
+        "diagnostics": []
+      }
+    }
+  ]
+}

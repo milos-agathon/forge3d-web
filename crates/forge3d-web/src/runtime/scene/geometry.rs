@@ -301,3 +301,47 @@ mod tests {
         assert!((vertex - Vec3::new(2.0, 0.0, 0.0)).length() < 1e-5);
     }
 }
+
+/// W13: font outlines become genuine triangles through the existing scene path.
+pub(super) fn glyph_world_vertices(
+    world: Mat4,
+    points: &[[f32; 3]],
+    color: [f32; 4],
+    material_index: u32,
+) -> Vec<LitVertex> {
+    points
+        .iter()
+        .map(|&p| {
+            LitVertex::transformed(
+                world,
+                p,
+                color,
+                Vec3::Z.into(),
+                [0.0, 0.0],
+                material_index,
+                [1.0, 0.0, 0.0, 1.0],
+            )
+        })
+        .collect()
+}
+pub(super) fn glyph_overlay_vertices(
+    points: &[[f32; 3]],
+    color: [f32; 4],
+    width: u32,
+    height: u32,
+) -> Vec<OverlayVertex> {
+    points
+        .iter()
+        .map(|p| {
+            OverlayVertex::transformed(
+                Mat4::IDENTITY,
+                [
+                    p[0] / width.max(1) as f32 * 2.0 - 1.0,
+                    1.0 - p[1] / height.max(1) as f32 * 2.0,
+                    p[2],
+                ],
+                color,
+            )
+        })
+        .collect()
+}

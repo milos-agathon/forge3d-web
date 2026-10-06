@@ -28,11 +28,13 @@ pub(super) enum ParsedNodeKind {
     },
     TextMesh {
         text: String,
+        mesh: Option<Vec<[f32; 3]>>,
         size: f32,
         color: [f32; 4],
     },
     Overlay {
         bounds: [f32; 4],
+        mesh: Option<Vec<[f32; 3]>>,
         color: [f32; 4],
         z_index: i32,
     },
@@ -277,6 +279,7 @@ fn parse_node(value: &JsValue) -> Result<ParsedNode, WebError> {
             color: number_tuple::<4>(&get_property(&node, "color")?, "node.color")?,
         },
         "text-mesh" => ParsedNodeKind::TextMesh {
+            mesh: parse_glyph_mesh(&node)?,
             text: required_string(&get_property(&node, "text")?, "node.text")?,
             size: {
                 let size = finite_number(&get_property(&node, "size")?, "node.size")?;
@@ -288,6 +291,7 @@ fn parse_node(value: &JsValue) -> Result<ParsedNode, WebError> {
             color: number_tuple::<4>(&get_property(&node, "color")?, "node.color")?,
         },
         "overlay" => ParsedNodeKind::Overlay {
+            mesh: parse_glyph_mesh(&node)?,
             bounds: number_tuple::<4>(&get_property(&node, "bounds")?, "node.bounds")?,
             color: number_tuple::<4>(&get_property(&node, "color")?, "node.color")?,
             z_index: optional_number(&get_property(&node, "zIndex")?, "node.zIndex", 0.0)? as i32,
@@ -330,4 +334,30 @@ fn parse_pass(value: &JsValue) -> Result<ParsedPass, WebError> {
         writes: optional_string_array(&get_property(value, "writes")?, "pass.writes")?,
         depends_on: optional_string_array(&get_property(value, "dependsOn")?, "pass.dependsOn")?,
     })
+}
+
+#[cfg(target_arch = "wasm32")]
+fn parse_glyph_mesh(node: &JsValue) -> Result<Option<Vec<[f32; 3]>>, WebError> {
+    use wasm_bindgen::JsCast;
+    let value = get_property(node, "vertices")?;
+    if value.is_undefined() {
+        return Ok(None);
+    }
+    if !value.is_instance_of::<js_sys::Float32Array>() {
+        return Err(invalid("glyph vertices must be Float32Array"));
+    }
+    let array = js_sys::Float32Array::from(value);
+    let count = array.length();
+    if !(9..=9_000_000).contains(&count) || !count.is_multiple_of(9) {
+        return Err(invalid(
+            "glyph vertices must contain XYZ triangles within one million triangles",
+        ));
+    }
+    let values = array.to_vec();
+    if values.iter().any(|v| !v.is_finite()) {
+        return Err(invalid("glyph vertices must be finite"));
+    }
+    Ok(Some(
+        values.chunks_exact(3).map(|v| [v[0], v[1], v[2]]).collect(),
+    ))
 }
