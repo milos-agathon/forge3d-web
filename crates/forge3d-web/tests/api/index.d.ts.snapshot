@@ -1,3 +1,13 @@
+import type { VectorLayers } from "./vector-layers.js";
+import type { VectorSnapshot, VectorReport, VectorPickMap, VectorPickRegion, VectorProjectionReport } from "./vector-types.js";
+export { VectorLayers, VectorLayer } from "./vector-layers.js";
+export { VectorPicker, pickVectorTerrain } from "./vector-picking.js";
+export type { VectorPickTarget } from "./vector-picking.js";
+export type * from "./vector-types.js";
+import type { PostFxChain } from "./postfx.js";
+import type { PostFxInput, PostFxChainInput, PostFxSnapshot, PostFxReport, PostFxFrame } from "./postfx-types.js";
+export { PostFxChain, normalizePostFx, createIdentityColorLut } from "./postfx.js";
+export type * from "./postfx-types.js";
 import type { TerrainScatterBatch, ScatterBatchInput, ScatterBatchSnapshot, ScatterFrameStats, ScatterMemoryReport } from "./terrain-scatter.js";
 import type { TerrainLightingProbes, TerrainProbeSnapshot, TerrainProbeMemoryReport } from "./terrain-probes.js";
 export { TerrainScatterBatch, ScatterWindSettings, TerrainScatterSource, makeScatterTransform, seededScatterTransforms, gridScatterTransforms, bilinearScatterSample, simplifyScatterMesh, autoScatterLodLevels, scatterMeshBounds, scatterTransformBounds } from "./terrain-scatter.js";
@@ -2287,6 +2297,8 @@ export interface ShadowCascadeInfo {
 }
 
 export interface SceneSnapshot {
+  vectors?:VectorSnapshot|null;
+  postFx?:PostFxSnapshot|null;
   /** Authoring lights retained while the environment synchronizes the sun. */
   environmentLighting?: LightingSnapshot;
   environment?:EnvironmentSnapshot|null;
@@ -2499,9 +2511,14 @@ export declare class CascadedShadowConfig {
 }
 
 export declare class Forge3DScene {
+  setVectorLayers(input:VectorLayers|VectorSnapshot|null):void;
+  getVectorLayers():VectorSnapshot|null;
+
   setScatterBatches(batches: readonly (TerrainScatterBatch | ScatterBatchInput | ScatterBatchSnapshot)[]): void;
   setLightingProbes(probes: TerrainLightingProbes | TerrainProbeSnapshot | null): void;
   setTimeSeconds(seconds: number): void;
+  setPostFx(input:PostFxChain|PostFxChainInput|PostFxSnapshot|readonly PostFxInput[]|null):void;
+  getPostFx():PostFxSnapshot|null;
   setEnvironment(input:Forge3DEnvironment|EnvironmentInput|EnvironmentSnapshot|null):void;
   getEnvironment():EnvironmentSnapshot|null;
   getScatterBatches(): ScatterBatchSnapshot[];
@@ -2640,7 +2657,15 @@ export interface RenderStats {
 }
 
 export declare class Forge3DSession {
+  getVectorReport():VectorReport;
+  readVectorPickMap():Promise<VectorPickMap>;
+  readVectorPickMap(region:VectorPickRegion):Promise<VectorPickMap>;
+
   setTimeSeconds(seconds: number): void;
+  setPostFx(input:PostFxChain|PostFxChainInput|PostFxSnapshot|readonly PostFxInput[]|null):void;
+  getPostFxReport():PostFxReport;
+  resetPostFxHistory():void;
+  readPostFxIntermediate(name:string):Promise<PostFxFrame>;
   setEnvironment(input:Forge3DEnvironment|EnvironmentInput|EnvironmentSnapshot|null):void;
   getEnvironmentMemoryReport():EnvironmentMemoryReport;
   getScatterStats(): ScatterFrameStats;
@@ -2725,7 +2750,17 @@ export declare class Forge3DSession {
  * methods reject or throw Forge3DError with code RUNTIME_DISPOSED.
  */
 export declare class Forge3DRuntime {
+  setVectorLayers(input:VectorLayers|VectorSnapshot|null,terrain?:TerrainHeightmapInput):void;
+  getVectorReport():VectorReport;
+  readVectorProjection():Promise<VectorProjectionReport>;
+  readVectorPickMap():Promise<VectorPickMap>;
+  readVectorPickMap(region:VectorPickRegion):Promise<VectorPickMap>;
+
   setTimeSeconds(seconds: number): void;
+  setPostFx(input:PostFxChain|PostFxChainInput|PostFxSnapshot|readonly PostFxInput[]|null):void;
+  getPostFxReport():PostFxReport;
+  resetPostFxHistory():void;
+  readPostFxIntermediate(name:string):Promise<PostFxFrame>;
   setEnvironment(input:Forge3DEnvironment|EnvironmentInput|EnvironmentSnapshot|null):void;
   getEnvironmentMemoryReport():EnvironmentMemoryReport;
   getScatterStats(): ScatterFrameStats;
@@ -2839,7 +2874,16 @@ export declare class Forge3DRuntime {
 export declare class Forge3DViewer {
   setLabels(layer: import("./labels.js").LabelLayer | null, options?: Omit<import("./labels.js").LabelRenderOptions,"viewport"|"camera">): void;
   getLabelReport(): import("./labels.js").LabelPlacementReport | undefined;
+  setVectorLayers(input:VectorLayers|VectorSnapshot|null,terrain?:TerrainHeightmapInput):void;
+  getVectorReport():VectorReport;
+  readVectorPickMap():Promise<VectorPickMap>;
+  readVectorPickMap(region:VectorPickRegion):Promise<VectorPickMap>;
+
   setTimeSeconds(seconds: number): void;
+  setPostFx(input:PostFxChain|PostFxChainInput|PostFxSnapshot|readonly PostFxInput[]|null):void;
+  getPostFxReport():PostFxReport;
+  resetPostFxHistory():void;
+  readPostFxIntermediate(name:string):Promise<PostFxFrame>;
   setEnvironment(input:Forge3DEnvironment|EnvironmentInput|EnvironmentSnapshot|null):void;
   getEnvironmentMemoryReport():EnvironmentMemoryReport;
   getScatterStats(): ScatterFrameStats;
@@ -3105,6 +3149,10 @@ export interface WorkerRendererDiagnostics {
 }
 
 export declare class Forge3DWorkerRenderer {
+  getVectorReport():Promise<VectorReport>;
+  readVectorPickMap():Promise<VectorPickMap>;
+  readVectorPickMap(region:VectorPickRegion):Promise<VectorPickMap>;
+
   static create(
     canvas: HTMLCanvasElement,
     options: Forge3DWorkerRendererOptions,
@@ -3141,6 +3189,9 @@ export declare class Forge3DOffscreenRenderer {
   readonly disposed: boolean;
   setScene(scene: Forge3DScene): void;
   render(): boolean;
+  getVectorReport(): VectorReport;
+  readVectorPickMap(): Promise<VectorPickMap>;
+  readVectorPickMap(region:VectorPickRegion):Promise<VectorPickMap>;
   capture(kind: OffscreenOutput["kind"]): Promise<OffscreenOutput>;
   write(sink: BrowserByteSink): Promise<ByteWriteResult>;
   dispose(): void;
@@ -3368,6 +3419,8 @@ export interface AovFrameInit {
 export declare const EXR_MIME_TYPE: "image/x-exr";
 export declare const AOV_ID_BACKGROUND: 0;
 export declare const AOV_ID_TERRAIN: 1;
+/** Reserved object ID for all vector fragments; full feature IDs use the pick map. */
+export declare const AOV_ID_VECTOR: 4294967279;
 export declare const AOV_ID_SCENE_NODE_BASE: 2;
 /** AOV object ID of a scene node (`node.id + 2`). */
 export declare function aovObjectId(nodeId: number): number;

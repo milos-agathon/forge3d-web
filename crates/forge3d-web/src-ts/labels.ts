@@ -601,7 +601,7 @@ export class LabelLayer {
           );
           vertices.set(p, i);
         }
-      result.vertexBytes += (vertices.length / 3) * (world ? 72 : 28);
+      result.vertexBytes += (vertices.length / 3) * (world ? 84 : 28);
       if (result.vertexBytes > budget)
         throw Error("Label mesh byte budget exceeded");
       return world

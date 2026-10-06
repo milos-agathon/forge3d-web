@@ -73,7 +73,7 @@ pub(super) async fn read_rgba_runtime(runtime: &mut Forge3DRuntime) -> Result<Ve
 }
 
 async fn capture_frame_rgba(
-    runtime: &Forge3DRuntime,
+    runtime: &mut Forge3DRuntime,
     context: &GpuContext,
     format: wgpu::TextureFormat,
     layout: &forge3d_core::readback::ReadbackLayout,
@@ -109,13 +109,17 @@ async fn capture_frame_rgba(
         });
 
     super::shadows::encode_shadow_passes(runtime, &mut encoder);
-    encode_scene_render_pass(
-        runtime,
-        &mut encoder,
-        &view,
-        "forge3d-web-readback-pass",
-        None,
-    );
+    if runtime.postfx.is_some() {
+        super::postfx::encode(runtime, &mut encoder, &view, false)?;
+    } else {
+        encode_scene_render_pass(
+            runtime,
+            &mut encoder,
+            &view,
+            "forge3d-web-readback-pass",
+            None,
+        );
+    }
     encoder.copy_texture_to_buffer(
         wgpu::TexelCopyTextureInfo {
             texture: &texture,

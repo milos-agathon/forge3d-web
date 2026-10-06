@@ -1,0 +1,120 @@
+{
+  "baselineCommit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+  "sources": [
+    {
+      "source": "src/vector/point/types.rs",
+      "file": "src__vector__point__types.rs",
+      "sha256": "38c6b8fab8aecd0e2a31283941c9bd777bfc6b847a70ddf01223ee4d991b03c3"
+    },
+    {
+      "source": "src/vector/line_types.rs",
+      "file": "src__vector__line_types.rs",
+      "sha256": "6ba4667603ff6c89a0696647ca14134c90d0573ddd326907ca75317597074177"
+    },
+    {
+      "source": "src/vector/oit/blend.rs",
+      "file": "src__vector__oit__blend.rs",
+      "sha256": "294fa0b5cd73746c624a81ac3ab29dc955565a988a6228cf3b85f52f54779ffd"
+    },
+    {
+      "source": "src/vector/extrusion.rs",
+      "file": "src__vector__extrusion.rs",
+      "sha256": "a4bd88dc347d5ba7eeae9c7278b30abc53e4934a704f4ac1d496edfad7fc03a2"
+    },
+    {
+      "source": "src/vector/batch/frustum.rs",
+      "file": "src__vector__batch__frustum.rs",
+      "sha256": "2f7e98aabdfc187ea3e279adeb7a4fdb27b6bc4e679e6816c55db960550d354a"
+    },
+    {
+      "source": "src/picking/lasso.rs",
+      "file": "src__picking__lasso.rs",
+      "sha256": "49235a500d7a80101f58fb2f82430a17961b253bb57f941edcfbcc4d7803ff48"
+    },
+    {
+      "source": "src/picking/selection.rs",
+      "file": "src__picking__selection.rs",
+      "sha256": "c6893f5dc48db31e5d3de50b913cf60bbf23bd3df8e9208433d2adcadfed0e97"
+    },
+    {
+      "source": "src/picking/highlight.rs",
+      "file": "src__picking__highlight.rs",
+      "sha256": "3a731a3014e2d85eb9de8b43dccb72c7ca5c1f86fd2bc6522eb3b85214be4c10"
+    },
+    {
+      "source": "src/shaders/point_instanced.wgsl",
+      "file": "src__shaders__point_instanced.wgsl",
+      "sha256": "2427cb1b364775e0c83309d724865f346ce86839d7b5de113d015107776203dc"
+    },
+    {
+      "source": "src/shaders/line_aa.wgsl",
+      "file": "src__shaders__line_aa.wgsl",
+      "sha256": "d81bf226a5f3d972faa466ff1efb323f3f4fbf89bb0e351d3963087fef14581a"
+    },
+    {
+      "source": "src/shaders/oit_compose.wgsl",
+      "file": "src__shaders__oit_compose.wgsl",
+      "sha256": "f7932527734887fe2772d634708a7333f9d381774e0465c3ec68ceb9f00ace87"
+    },
+    {
+      "source": "src/shaders/oit_dual_source.wgsl",
+      "file": "src__shaders__oit_dual_source.wgsl",
+      "sha256": "6c5b212b08e67ecb5393ec81fa63164452cb8352060eef1012aff082c614dbe9"
+    },
+    {
+      "source": "tests/test_oit_transparency.py",
+      "file": "tests__test_oit_transparency.py",
+      "sha256": "1f5c33dade0b7e53626ff9529154e7fb87c4d1f85b08e4e8df82c934e808ac02"
+    },
+    {
+      "source": "tests/test_vector_overlay_drape.py",
+      "file": "tests__test_vector_overlay_drape.py",
+      "sha256": "10d58982dbd8ce821332f29b3d058ab8f949dd3d20c81f8e6334313317875dde"
+    },
+    {
+      "source": "tests/test_vector_overlay_rendering.py",
+      "file": "tests__test_vector_overlay_rendering.py",
+      "sha256": "4c95cacc41d74354f3d6f33dbc702fa41631064fd106c8b25b4c777f610386e3"
+    },
+    {
+      "source": "tests/test_picking_ipc.py",
+      "file": "tests__test_picking_ipc.py",
+      "sha256": "9f339ac5455782ea79dbff055ebdda841cc72522bdc3d293059bbed4fba4adf3"
+    },
+    {
+      "source": "tests/test_picking_premium.py",
+      "file": "tests__test_picking_premium.py",
+      "sha256": "e96b5a4ab5ddebe25ccb3e90c1526e7f23cee02932a6adbef9e844e3551a2b7e"
+    },
+    {
+      "source": "examples/luxembourg_rail_overlay.py",
+      "file": "examples__luxembourg_rail_overlay.py",
+      "sha256": "cebb05f58507c1613f7f0748442e659f1460283b6a9194f64aed24529704bb72"
+    },
+    {
+      "commit": "1f4084af428dc699bdcd108b029736cb73903926",
+      "source": "src/core/dual_source_oit/controls.rs",
+      "file": "src__core__dual_source_oit__controls.rs",
+      "sha256": "ebc99d291c78fdd2fe4f2ef00bc2138acc48076e0527231e6aadbe7c3d89e5d2"
+    },
+    {
+      "commit": "1f4084af428dc699bdcd108b029736cb73903926",
+      "source": "src/core/dual_source_oit/pipeline.rs",
+      "file": "src__core__dual_source_oit__pipeline.rs",
+      "sha256": "70321419a545bc66d7282e41c6b83f45762818382e9768206ab45816a04152b2"
+    },
+    {
+      "commit": "1f4084af428dc699bdcd108b029736cb73903926",
+      "source": "src/core/dual_source_oit/mod.rs",
+      "file": "src__core__dual_source_oit__mod.rs",
+      "sha256": "7efe901cd691375ededb4b511e4968b4c1e45da9fe34658a87f5788dbf2e3b4a"
+    },
+    {
+      "commit": "1f4084af428dc699bdcd108b029736cb73903926",
+      "source": "src/shaders/oit_dual_source_compose.wgsl",
+      "file": "src__shaders__oit_dual_source_compose.wgsl",
+      "sha256": "3c149611498a9e9f1d736c458fac23fc7017440995a44fff9c800d075aa14edc"
+    }
+  ],
+  "contractCommit": "1f4084af428dc699bdcd108b029736cb73903926"
+}

@@ -1,5 +1,5 @@
 use crate::runtime::{offline::CapturePass, terrain::DEPTH_FORMAT};
-const VERTEX_ATTRIBUTES: [wgpu::VertexAttribute; 7] = wgpu::vertex_attr_array![0=>Float32x3,1=>Float32x4,2=>Float32x3,3=>Float32x2,4=>Uint32,5=>Float32x4,6=>Uint32];
+const VERTEX_ATTRIBUTES: [wgpu::VertexAttribute; 8] = wgpu::vertex_attr_array![0=>Float32x3,1=>Float32x4,2=>Float32x3,3=>Float32x2,4=>Uint32,5=>Float32x4,6=>Uint32,12=>Float32x3];
 const INSTANCE_ATTRIBUTES: [wgpu::VertexAttribute; 5] =
     wgpu::vertex_attr_array![7=>Float32x4,8=>Float32x4,9=>Float32x4,10=>Float32x4,11=>Float32x4];
 pub(super) fn camera_layout(device: &wgpu::Device) -> wgpu::BindGroupLayout {
@@ -78,7 +78,7 @@ pub(super) fn create(
             compilation_options: Default::default(),
             buffers: &[
                 wgpu::VertexBufferLayout {
-                    array_stride: 72,
+                    array_stride: std::mem::size_of::<crate::runtime::scene::LitVertex>() as u64,
                     step_mode: wgpu::VertexStepMode::Vertex,
                     attributes: &VERTEX_ATTRIBUTES,
                 },

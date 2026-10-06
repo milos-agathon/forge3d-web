@@ -278,3 +278,13 @@ Apache-2.0 OR MIT.
 UTC sun animation, Preetham/Hosek sky, depth-correct fog and bounded volumes, froxel/temporal paths, clouds/shadows and explicit water masks/waves/foam/reflections are implemented through `Forge3DEnvironment`. See the [environment and water guide](docs/environment-water.md) for APIs, limits and verification.
 
 Label layers, HarfBuzz shaping, native diagnostic boundaries and deterministic placement are documented in [the label guide](docs/labels.md).
+### W11 HDR and post-FX
+
+An ordered `PostFxChain` provides AO/GI/reflections, bloom, DoF, lens, motion
+blur, temporal/accumulation AA, denoise, tonemap and linear LUTs. Runtime,
+scene, session, viewer and module workers retain the typed graph. See the
+[HDR and post-FX guide](docs/postfx-hdr.md) and
+[example](examples/test-w11-postfx.html). Run `npm run test:w11` and
+`npm run test:package-consumer:w11` for native image and installed package gates.
+
+Vector layers support point shapes/atlases, AA caps/joins, polygon extrusion, terrain draping, capability-selected transparency, stable IDs, picking and named selections. See [vector layers](docs/vector-layers.md).

@@ -90,3 +90,9 @@ function requiredRuntimeInternals(runtime: object): RuntimeInternalAccess {
   }
   return access;
 }
+
+// Reuse topology compiled for scene budget admission in that same scene snapshot.
+// Weak keys keep the private packet out of public snapshots and worker payloads.
+const sceneVectorPackets = new WeakMap<object, { revision:number; packet:import("./vector-geometry.js").VectorPacket }>();
+export function registerSceneVectorPacket(source:object, revision:number, packet:import("./vector-geometry.js").VectorPacket):void {sceneVectorPackets.set(source,{revision,packet});}
+export function getSceneVectorPacket(source:object, revision:number):import("./vector-geometry.js").VectorPacket|undefined {const entry=sceneVectorPackets.get(source);return entry?.revision===revision?entry.packet:undefined;}

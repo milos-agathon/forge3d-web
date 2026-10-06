@@ -873,7 +873,16 @@
 
               // Device-loss replay keeps the material.
               const material = { albedoMode: "mix", colormapStrength: 0.4, pom: { enabled: true }, layers: { snow: { enabled: true, altitudeMin: 0.7, altitudeBlend: 0.2 } } };
-              const before = await renderScene(session, spec, material);
+              // Replay identical uploaded IBL texels. Fresh convolution on a
+              // second device can round differently; W04/W10 cover that path.
+              const replayScene = await buildScene(spec, material);
+              const replayIbl = await replayScene.getImageBasedLighting().prepare(session);
+              replayScene.setImageBasedLighting(replayIbl);
+              session.setScene(replayScene);
+              session.setCamera(cameraInput(spec));
+              session.render();
+              const before = await session.readRgba();
+              const iblModeBefore = session.getScene().getImageBasedLighting().report.effectiveMode;
               const reportBefore = session.getTerrainMaterialReport();
               const generation = createdRuntimes.length;
               simulateRuntimeDeviceLossForTests(createdRuntimes.at(-1));
@@ -901,6 +910,8 @@
                 status: session.status,
                 generations: createdRuntimes.length,
                 byteEqual: bytesEqual(before, after),
+                iblModeBefore,
+                iblModeAfter: session.getScene().getImageBasedLighting().report.effectiveMode,
                 differing,
                 maxDiff,
                 firstPixel: firstPixel < 0 ? null : { x: firstPixel % spec.width, y: Math.floor(firstPixel / spec.width) },

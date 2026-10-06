@@ -39,10 +39,11 @@ import { resolvePackageGateMode } from "./package-gate-mode.mjs";
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const repositoryRoot = resolve(packageRoot, "..", "..");
-const w10Only = process.argv.slice(2).includes("--w10");
+const w11Only = process.argv.slice(2).includes("--w11");
+const w10Only = process.argv.slice(2).includes("--w10") || w11Only;
 const w09Only = process.argv.slice(2).includes("--w09") || w10Only;
-if (process.argv.slice(2).some(argument => argument !== "--w09" && argument !== "--w10")) {
-  throw new Error("Only --w09 and --w10 are supported; omit it for the full release gate");
+if (process.argv.slice(2).some(argument => argument !== "--w09" && argument !== "--w10" && argument !== "--w11")) {
+  throw new Error("Only --w09, --w10 and --w11 are supported; omit it for the full release gate");
 }
 const evidenceMode = resolvePackageGateMode(
   process.env.FORGE3D_PACKAGE_GATE_MODE,
@@ -308,6 +309,15 @@ try {
   writeFileSync(join(consumerDirectory, "test-w10-worker.js"), readFileSync(join(packageRoot, "examples", "test-w10-worker.js"), "utf8").replace("../src-ts/index.ts", "/node_modules/@forge3d/web/dist/index.js"));
   cpSync(join(packageRoot, "tests", "golden", "w10"), join(consumerDirectory, "tests", "golden", "w10"), {recursive:true});
   for (const name of ["sky", "effects"]) copyFileSync(join(packageRoot, "src", "runtime", "environment", `${name}.wgsl`), join(consumerDirectory, `w10-runtime-${name}.wgsl`));
+  const w11Fixture = readFileSync(join(packageRoot,"examples","test-w11-postfx.html"),"utf8")
+    .replaceAll("../src-ts/index.ts","/node_modules/@forge3d/web/dist/index.js")
+    .replaceAll("../src-ts/runtime-internals.ts","/node_modules/@forge3d/web/dist/runtime-internals.js")
+    .replaceAll("../src-ts/viewer.ts","/node_modules/@forge3d/web/dist/viewer.js");
+  writeFileSync(join(consumerDirectory,"test-w11-postfx.html"),w11Fixture);
+  writeFileSync(join(consumerDirectory,"test-w11-worker.js"),readFileSync(join(packageRoot,"examples","test-w11-worker.js"),"utf8").replace("../src-ts/index.ts","/node_modules/@forge3d/web/dist/index.js"));
+  mkdirSync(join(consumerDirectory,"tests","browser"),{recursive:true});
+  copyFileSync(join(packageRoot,"tests","browser","w11-native-oracle.js"),join(consumerDirectory,"tests","browser","w11-native-oracle.js"));
+  cpSync(join(packageRoot,"tests","golden","w11"),join(consumerDirectory,"tests","golden","w11"),{recursive:true});
   const benchmarkDirectory = join(
     consumerDirectory,
     "tests",
@@ -355,7 +365,7 @@ try {
     packageSha256,
     fixture: "test-interactive-viewer.html",
     evidenceMode,
-    gateScope: w10Only ? "w10-package-acceptance" : w09Only ? "w09-package-acceptance" : "full-release",
+    gateScope: w11Only ? "w11-package-acceptance" : w10Only ? "w10-package-acceptance" : w09Only ? "w09-package-acceptance" : "full-release",
   };
   writeFileSync(
     join(consumerDirectory, "package-evidence.json"),
@@ -401,7 +411,7 @@ try {
       runViewerBenchmark,
       browserProfile,
     );
-    browserResult.gateScope = w10Only ? "w10-package-acceptance" : w09Only ? "w09-package-acceptance" : "full-release";
+    browserResult.gateScope = w11Only ? "w11-package-acceptance" : w10Only ? "w10-package-acceptance" : w09Only ? "w09-package-acceptance" : "full-release";
     const browserEvidenceJson = JSON.stringify(browserResult, null, 2);
     writeFileSync(join(consumerDirectory, "browser-gate.json"), browserEvidenceJson);
     mkdirSync(evidenceDirectory, { recursive: true });
@@ -425,6 +435,7 @@ try {
       "test-w07-package.html",
       "test-w08-package.html",
       "test-w08-cog-worker.js",
+      ...(w11Only ? ["test-w11-postfx.html", "test-w11-worker.js"] : []),
       ...(w10Only ? ["test-w10.html", "test-w10-native.html", "w10-acceptance.js", "test-w10-worker.js", "w10-native-probes.js", "w10-reflection-metrics.js", "w10-runtime-sky.wgsl", "w10-runtime-effects.wgsl"] : []),
     ]) {
       copyFileSync(join(consumerDirectory, file), join(retainedFixture, file));
@@ -1034,6 +1045,16 @@ async function runInstalledPackageBrowserGate(
     }
 
     if (!(e.render.covered>1000 && e.render.generalCovered>1000 && e.render.generalDelta>.1 && e.render.plain===e.render.cleared && e.render.cloud.hash===e.render.cloud.repeat && e.render.cloud.timeDelta>.01 && e.bounds.max<=1 && e.bounds.outsideMax<=1 && e.bounds.outsidePixels>10000 && e.bounds.insideChanged>20 && e.masks.zero===0 && e.masks.transparent && e.budget.code==="RESOURCE_LIMIT_EXCEEDED" && e.budget.before===e.budget.after && e.budget.bytes===e.budget.afterBytes && e.budget.report.width===224 && e.offline.nonzero && e.offline.captureRepeat && e.offline.waterIds.includes(4294967280) && e.recovery.same && e.recovery.attempts===1 && e.quality.halfDelta<2 && e.quality.froxelDelta<1 && e.quality.cameraReset===false && e.quality.occlusionDelta>.01 && e.native.every(c=>c.maxAbs<1e-3&&c.ssim>=.98&&c.controlSsim<.98) && e.worker.delta>.1 && e.downscale.selected.resolutionScale===.5 && e.downscale.before===e.downscale.after && e.cloudsAndWaves.firstSeed!==e.cloudsAndWaves.secondSeed && e.cloudsAndWaves.shadowDelta>.1 && e.cloudsAndWaves.planarDelta>.01 && e.cloudsAndWaves.waveDelta>.01 && e.restoreLights.baseline===e.restoreLights.cleared && e.restoreLights.baseline===e.restoreLights.sceneCleared && e.goldens.cloud.disabledSsim<.98 && e.goldens.water.disabledSsim<.98 && Object.values(e.goldens).every(c=>c.ssim>=.98&&c.controlSsim<.98))) throw new Error(`installed-package W10 contract failed: ${JSON.stringify(e)}`);
+    let w11Package;
+    if(w11Only){
+      await page.goto(`${origin}/test-w11-postfx.html`,{waitUntil:"networkidle"});
+      await page.waitForFunction(()=>window.__w11Ready===true);
+      w11Package=await page.evaluate(async()=>({effects:await window.__w11Effects(),temporal:await window.__w11Temporal(),recovery:await window.__w11Recovery(),native:await window.__w11Native(),lifecycle:await window.__w11Lifecycle(),contracts:await window.__w11Contracts(),worker:await window.__w11Worker()}));
+      const w=w11Package,t=w.temporal,c=w.contracts;
+      if(!(w.native["ssr-ibl-fallback"].roughnessControl<.98))throw new Error(`installed-package SSR roughness control failed: ${JSON.stringify(w.native["ssr-ibl-fallback"])}`);
+      {const ssr=w.native["ssr-ibl-fallback"];if(!(ssr.covered>1000&&ssr.missPixels===ssr.covered&&ssr.analytic.runtime.ssim>=.98&&ssr.analytic.native.ssim>=.98))throw new Error(`installed-package SSR analytic reference failed: ${JSON.stringify(ssr)}`);}
+      if(!(w.effects.covered>1000 && w.effects.maxHdr>1 && w.effects.disabledDelta===0 && ["ssao","gtao","ssgi","ssr","bloom","dof","lens"].every(k=>w.effects[k].delta>.02) && Object.values(w.effects).filter(v=>v&&typeof v==="object").every(v=>v.finite) && t.initialError>.01 && t.errors[7]<=.05*t.initialError && t.flicker<=1/255 && t.jitterFlicker<=1/255 && t.maxHzbError===0 && t.freezeDelta===0 && t.cameraMotion>1 && t.blurDelta>.0001 && w.recovery.delta===0 && w.recovery.attempts===1 && !w.recovery.invalid.historyValid && Object.values(w.native).every(v=>typeof v==="number"?v<.0005:v.ssim>=.98&&v.control<.98) && w.lifecycle.cycles.every(v=>v===0) && w.lifecycle.readDelta===0 && w.lifecycle.moved>1 && w.lifecycle.stationary<1e-5 && Object.values(c.views).every(Boolean) && c.transferError<=1 && c.budgetCode==="RESOURCE_LIMIT_EXCEEDED" && c.rollbackDelta===0 && c.bytes===c.afterBytes && c.invalidCode==="INVALID_INPUT" && c.format.gbufferFormat==="rgba16float" && c.windMotion>1 && c.windStationary<1e-5 && w.worker.delta===0 && w.worker.disabledDelta>1))throw new Error(`installed-package W11 contract failed: ${JSON.stringify(w)}`);
+    }
     if (pageErrors.length > 0) {
       throw new Error(`installed-package page errors: ${pageErrors.join("; ")}`);
     }
@@ -1072,6 +1093,7 @@ async function runInstalledPackageBrowserGate(
       },
       w09Package,
       w10Package,
+      ...(w11Package ? {w11Package} : {}),
       w08Package: {
         mainThread: w08Package.mainThread,
         worker: w08Package.worker,

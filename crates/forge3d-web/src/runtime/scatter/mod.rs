@@ -27,17 +27,20 @@ pub(super) fn planned_bytes(inputs: &[ScatterBatch]) -> Result<u64, WebError> {
         for l in &b.levels {
             bytes = bytes
                 .checked_add(
-                    (l.mesh.positions.len() / 3 * 72
+                    (l.mesh.positions.len() / 3 * std::mem::size_of::<LitVertex>()
                         + l.mesh.indices.len() * 4
                         + b.transforms.len() / 16 * 80
-                        + 128) as u64,
+                        + std::mem::size_of::<Settings>()) as u64,
                 )
                 .ok_or_else(|| invalid("scatter accounting overflow"))?;
         }
         for c in &b.clusters {
             bytes = bytes
                 .checked_add(
-                    (c.mesh.positions.len() / 3 * 72 + c.mesh.indices.len() * 4 + 80 + 128) as u64,
+                    (c.mesh.positions.len() / 3 * std::mem::size_of::<LitVertex>()
+                        + c.mesh.indices.len() * 4
+                        + 80
+                        + std::mem::size_of::<Settings>()) as u64,
                 )
                 .ok_or_else(|| invalid("scatter accounting overflow"))?;
         }
@@ -77,6 +80,7 @@ struct Settings {
     mapping: [f32; 4],
     height: [f32; 4],
     stream: [u32; 4],
+    previous_phase: [f32; 4],
 }
 struct Draw {
     vertex: wgpu::Buffer,
@@ -95,6 +99,7 @@ struct Batch {
     id_start: u32,
 }
 pub(super) struct ScatterResources {
+    previous_time: Option<f32>,
     batches: Vec<Batch>,
     camera: wgpu::Buffer,
     layout: wgpu::BindGroupLayout,
@@ -138,6 +143,22 @@ pub(super) fn set(
 ) -> Result<(), WebError> {
     let inputs = parse(value)?;
     let mut memory = runtime.memory.clone();
+    if let Some(fx) = &runtime.postfx {
+        let blend = inputs
+            .iter()
+            .any(|b| b.color[3] < 1. || b.terrain_blend.enabled);
+        memory.replace(
+            super::postfx::KEY,
+            MemoryCategory::Textures,
+            super::postfx::planned_bytes(
+                &fx.config,
+                runtime.width,
+                runtime.height,
+                runtime.environment.is_some(),
+                blend,
+            ),
+        )?;
+    }
     let resources = build(runtime, inputs, &mut memory)?;
     runtime.scatter = resources;
     runtime.memory = memory;

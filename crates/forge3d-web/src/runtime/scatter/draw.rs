@@ -78,6 +78,7 @@ pub(super) fn draw(
             material_index: 0,
             tangent: [1.0, 0.0, 0.0, 1.0],
             object_id: 0,
+            previous_position: p.try_into().unwrap(),
         })
         .collect();
     let vertex = context
@@ -102,7 +103,7 @@ pub(super) fn draw(
     });
     let settings = context.device.create_buffer(&wgpu::BufferDescriptor {
         label: Some("scatter-settings"),
-        size: 128,
+        size: std::mem::size_of::<Settings>() as u64,
         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         mapped_at_creation: false,
     });

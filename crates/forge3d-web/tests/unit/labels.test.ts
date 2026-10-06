@@ -300,7 +300,31 @@ describe("W13 labels, declutter and scene ownership", () => {
       camera,
     });
     expect(report.accepted).toEqual([1]);
-    expect(report.nodes[0]?.kind).toBe("text-mesh");
+    const node = report.nodes[0];
+    if (node?.kind !== "text-mesh") throw Error("expected world glyph mesh");
+    // LitVertex includes W11's previous world position for motion capture.
+    const bytes = report.nodes.reduce((total, mesh) => {
+      if (mesh.kind !== "text-mesh") throw Error("expected world glyph mesh");
+      return total + (mesh.vertices!.length / 3) * 84;
+    }, 0);
+    expect(report.vertexBytes).toBe(bytes);
+    const scene = Forge3DScene.create(),
+      baseline = scene.estimatedGpuBytes();
+    layer.attach(scene, {
+      viewport: { width: 300, height: 150 },
+      camera,
+      maxVertexBytes: bytes,
+    });
+    expect(scene.estimatedGpuBytes() - baseline).toBe(bytes);
+    expect(() =>
+      layer.render({
+        viewport: { width: 300, height: 150 },
+        camera,
+        maxVertexBytes: bytes - 1,
+      }),
+    ).toThrow("Label mesh byte budget exceeded");
+    layer.detach(scene);
+    scene.dispose();
     layer.addLabel("Behind", [0, 0, 10]);
     expect(
       layer

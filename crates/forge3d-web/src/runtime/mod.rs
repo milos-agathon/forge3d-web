@@ -8,6 +8,7 @@ mod init;
 mod lighting;
 mod memory;
 pub(crate) mod offline;
+mod postfx;
 mod probes;
 mod readback;
 mod render;
@@ -21,6 +22,7 @@ mod terrain_vt;
 mod terrain_w08;
 mod textures;
 mod timing;
+mod vector;
 
 use canvas::RuntimeCanvas;
 use device_health::{ensure_device_healthy_error, set_js_property};
@@ -57,6 +59,8 @@ pub struct Forge3DRuntime {
     terrain_pipeline_cache: Option<terrain::TerrainPipelineCache>,
     scene: Option<scene::NativeScene>,
     environment: Option<environment::EnvironmentResources>,
+    postfx: Option<postfx::Resources>,
+    vectors: Option<vector::Resources>,
     scatter: Option<scatter::ScatterResources>,
     time_seconds: f32,
     probe_count: u32,
@@ -148,6 +152,8 @@ impl Forge3DRuntime {
         self.terrain_pipeline_cache = None;
         self.scene = None;
         self.environment = None;
+        self.postfx = None;
+        self.vectors = None;
         self.scatter = None;
         self.lighting = None;
         self.textures = None;
@@ -197,7 +203,59 @@ impl Forge3DRuntime {
     #[wasm_bindgen(js_name = setEnvironment)]
     pub fn set_environment(&mut self, snapshot: JsValue) -> Result<(), JsValue> {
         self.guard_mutation()?;
-        environment::set(self, snapshot).map_err(to_js_error)
+        environment::set(self, snapshot).map_err(to_js_error)?;
+        postfx::invalidate(self, "scene", true);
+        Ok(())
+    }
+    #[wasm_bindgen(js_name = setVectorLayers)]
+    pub fn set_vector_layers(&mut self, input: JsValue) -> Result<(), JsValue> {
+        self.guard_mutation()?;
+        vector::set(self, input).map_err(to_js_error)
+    }
+    #[wasm_bindgen(js_name = getVectorReport)]
+    pub fn get_vector_report(&self) -> Result<JsValue, JsValue> {
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        vector::report(self).map_err(to_js_error)
+    }
+    #[wasm_bindgen(js_name = readVectorPickMap)]
+    pub async fn read_vector_pick_map(&mut self, region: JsValue) -> Result<JsValue, JsValue> {
+        self.guard_mutation()?;
+        vector::read_pick_map(self, region)
+            .await
+            .map_err(to_js_error)
+    }
+    #[wasm_bindgen(js_name = updateVectorHighlights)]
+    pub fn update_vector_highlights(&mut self, value: JsValue) -> Result<(), JsValue> {
+        self.guard_mutation()?;
+        vector::update_highlights_js(self, value).map_err(to_js_error)
+    }
+    #[wasm_bindgen(js_name = readVectorProjection)]
+    pub async fn read_vector_projection(&mut self) -> Result<JsValue, JsValue> {
+        self.guard_mutation()?;
+        vector::read_projection(self).await.map_err(to_js_error)
+    }
+    #[wasm_bindgen(js_name = setPostFx)]
+    pub fn set_post_fx(&mut self, input: JsValue) -> Result<(), JsValue> {
+        self.guard_mutation()?;
+        postfx::set(self, input).map_err(to_js_error)
+    }
+    #[wasm_bindgen(js_name = getPostFxReport)]
+    pub fn get_post_fx_report(&self) -> Result<JsValue, JsValue> {
+        ensure_not_disposed_error(self).map_err(to_js_error)?;
+        postfx::report(self).map_err(to_js_error)
+    }
+    #[wasm_bindgen(js_name = resetPostFxHistory)]
+    pub fn reset_post_fx_history(&mut self) -> Result<(), JsValue> {
+        self.guard_mutation()?;
+        postfx::invalidate(self, "explicit", false);
+        Ok(())
+    }
+    #[wasm_bindgen(js_name = readPostFxIntermediate)]
+    pub async fn read_post_fx_intermediate(&mut self, name: String) -> Result<JsValue, JsValue> {
+        self.guard_mutation()?;
+        postfx::read_intermediate(self, &name)
+            .await
+            .map_err(to_js_error)
     }
     #[wasm_bindgen(js_name = getEnvironmentMemoryReport)]
     pub fn get_environment_memory_report(&self) -> Result<JsValue, JsValue> {
@@ -215,7 +273,9 @@ impl Forge3DRuntime {
     #[wasm_bindgen(js_name = setScatterBatches)]
     pub fn set_scatter_batches(&mut self, batches: JsValue) -> Result<(), JsValue> {
         self.guard_mutation()?;
-        scatter::set(self, batches).map_err(to_js_error)
+        scatter::set(self, batches).map_err(to_js_error)?;
+        postfx::invalidate(self, "scene", true);
+        Ok(())
     }
 
     #[wasm_bindgen(js_name = setTimeSeconds)]
@@ -231,7 +291,9 @@ impl Forge3DRuntime {
     #[wasm_bindgen(js_name = setLightingProbes)]
     pub fn set_lighting_probes(&mut self, input: JsValue) -> Result<(), JsValue> {
         self.guard_mutation()?;
-        probes::set(self, input).map_err(to_js_error)
+        probes::set(self, input).map_err(to_js_error)?;
+        postfx::invalidate(self, "scene", true);
+        Ok(())
     }
 
     #[wasm_bindgen(js_name = getProbeMemoryReport)]
@@ -287,19 +349,25 @@ impl Forge3DRuntime {
     #[wasm_bindgen(js_name = setLighting)]
     pub fn set_lighting(&mut self, snapshot: JsValue) -> Result<(), JsValue> {
         self.guard_mutation()?;
-        lighting::set_lighting_runtime(self, snapshot).map_err(to_js_error)
+        lighting::set_lighting_runtime(self, snapshot).map_err(to_js_error)?;
+        postfx::invalidate(self, "scene", true);
+        Ok(())
     }
 
     #[wasm_bindgen(js_name = setMaterials)]
     pub fn set_materials(&mut self, snapshot: JsValue) -> Result<(), JsValue> {
         self.guard_mutation()?;
-        lighting::set_materials_runtime(self, snapshot).map_err(to_js_error)
+        lighting::set_materials_runtime(self, snapshot).map_err(to_js_error)?;
+        postfx::invalidate(self, "scene", true);
+        Ok(())
     }
 
     #[wasm_bindgen(js_name = setIbl)]
     pub fn set_ibl(&mut self, input: JsValue) -> Result<(), JsValue> {
         self.guard_mutation()?;
-        ibl::set_ibl_runtime(self, input).map_err(to_js_error)
+        ibl::set_ibl_runtime(self, input).map_err(to_js_error)?;
+        postfx::invalidate(self, "scene", true);
+        Ok(())
     }
 
     #[wasm_bindgen(js_name = precomputeIbl)]
@@ -313,7 +381,9 @@ impl Forge3DRuntime {
     #[wasm_bindgen(js_name = setShadows)]
     pub fn set_shadows(&mut self, snapshot: JsValue) -> Result<(), JsValue> {
         self.guard_mutation()?;
-        shadows::set_shadows_runtime(self, snapshot).map_err(to_js_error)
+        shadows::set_shadows_runtime(self, snapshot).map_err(to_js_error)?;
+        postfx::invalidate(self, "scene", true);
+        Ok(())
     }
 
     #[wasm_bindgen(js_name = getShadowReport)]
@@ -482,7 +552,9 @@ impl Forge3DRuntime {
     #[wasm_bindgen(js_name = setTerrain)]
     pub fn set_terrain(&mut self, terrain: JsValue) -> Result<(), JsValue> {
         self.guard_mutation()?;
-        set_terrain_runtime(self, terrain).map_err(to_js_error)
+        set_terrain_runtime(self, terrain).map_err(to_js_error)?;
+        postfx::invalidate(self, "scene", true);
+        Ok(())
     }
 
     #[wasm_bindgen(js_name = setTerrainFromSource)]
@@ -497,7 +569,9 @@ impl Forge3DRuntime {
             .await
             .map_err(to_js_error)?;
         self.guard_mutation()?;
-        set_terrain_options_runtime(self, terrain).map_err(to_js_error)
+        set_terrain_options_runtime(self, terrain).map_err(to_js_error)?;
+        postfx::invalidate(self, "scene", true);
+        Ok(())
     }
 
     #[wasm_bindgen(js_name = readTerrainHeights)]
@@ -981,6 +1055,8 @@ mod tests {
             },
             offline: None,
             offline_pipelines: None,
+            postfx: None,
+            vectors: None,
             vt_registry: forge3d_core::terrain_vt::VtSourceRegistry::new(),
         };
 

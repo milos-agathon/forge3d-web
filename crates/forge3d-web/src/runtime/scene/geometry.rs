@@ -11,6 +11,8 @@ pub(crate) struct LitVertex {
     pub tangent: [f32; 4],
     /// Capture AOV object ID; `build_geometry` assigns one per node.
     pub object_id: u32,
+    /// Previous committed world position for object motion in the G-buffer.
+    pub previous_position: [f32; 3],
 }
 
 #[repr(C)]
@@ -71,6 +73,7 @@ impl LitVertex {
             material_index,
             tangent,
             object_id: 0,
+            previous_position: position.into(),
         }
     }
 }
@@ -213,8 +216,8 @@ mod tests {
     const WHITE: [f32; 4] = [1.0, 1.0, 1.0, 1.0];
 
     #[test]
-    fn lit_vertex_is_72_bytes_and_overlay_vertex_is_28() {
-        assert_eq!(std::mem::size_of::<LitVertex>(), 72);
+    fn lit_vertex_is_84_bytes_and_overlay_vertex_is_28() {
+        assert_eq!(std::mem::size_of::<LitVertex>(), 84);
         assert_eq!(std::mem::offset_of!(LitVertex, object_id), 68);
         assert_eq!(std::mem::offset_of!(LitVertex, material_index), 48);
         assert_eq!(std::mem::offset_of!(LitVertex, tangent), 52);

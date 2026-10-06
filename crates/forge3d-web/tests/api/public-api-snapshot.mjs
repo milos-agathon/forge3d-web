@@ -17,6 +17,11 @@ const docs = readText(docsPath);
 assertEqual(normalize(types), normalize(snapshot), "types/index.d.ts changed without updating the public API snapshot");
 
 for (const expected of [
+  'export { PostFxChain, normalizePostFx, createIdentityColorLut } from "./postfx.js"',
+  'postFx?:PostFxSnapshot|null',
+  'getPostFxReport():PostFxReport',
+  'resetPostFxHistory():void',
+  'readPostFxIntermediate(name:string):Promise<PostFxFrame>',
   "export type Forge3DErrorCode",
   "export declare class Forge3DError extends Error",
   "export interface Forge3DRuntimeOptions",

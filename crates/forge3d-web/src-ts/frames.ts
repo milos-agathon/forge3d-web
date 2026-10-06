@@ -19,6 +19,8 @@ export const AOV_ID_BACKGROUND = 0;
 export const AOV_ID_WATER_BASE = 0xfffffff0;
 /** AOV object ID written for terrain pixels. */
 export const AOV_ID_TERRAIN = 1;
+/** All vector surfaces use this reserved AOV ID. Feature IDs are in the pick map. */
+export const AOV_ID_VECTOR = 0xffffffef;
 /** Scene node `n` writes AOV object ID `n + AOV_ID_SCENE_NODE_BASE`. */
 export const AOV_ID_SCENE_NODE_BASE = 2;
 
@@ -44,8 +46,8 @@ function expectLength(name: string, actual: number, expected: number): void {
 
 /** AOV object ID of a scene node (`node.id + 2`). */
 export function aovObjectId(nodeId: number): number {
-  if (!Number.isSafeInteger(nodeId) || nodeId < 0) {
-    throw invalid("nodeId must be a non-negative integer");
+  if (!Number.isSafeInteger(nodeId) || nodeId < 0 || nodeId >= AOV_ID_VECTOR - AOV_ID_SCENE_NODE_BASE) {
+    throw invalid("nodeId must be a non-negative integer below the reserved vector AOV namespace");
   }
   return nodeId + AOV_ID_SCENE_NODE_BASE;
 }

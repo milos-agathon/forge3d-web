@@ -1,10 +1,22 @@
+import { VectorLayers } from "./vector-layers.js";
+import { compileVectorHighlights, compileVectorPacket, type VectorPacket } from "./vector-geometry.js";
+import type { VectorSnapshot, VectorReport, VectorPickMap, VectorPickRegion, VectorProjectionReport } from "./vector-types.js";
+export { VectorLayers, VectorLayer } from "./vector-layers.js";
+export { VectorPicker, pickVectorTerrain } from "./vector-picking.js";
+export type { VectorPickTarget } from "./vector-picking.js";
+export type * from "./vector-types.js";
 import { Forge3DEnvironment, normalizeEnvironment } from "./environment.js";
+import { PostFxChain, normalizePostFx, resolvePostFx } from "./postfx.js";
+import type { PostFxInput, PostFxChainInput, PostFxSnapshot, PostFxReport, PostFxFrame } from "./postfx.js";
+export { PostFxChain, normalizePostFx, createIdentityColorLut } from "./postfx.js";
+export type * from "./postfx.js";
 import type { EnvironmentInput, EnvironmentSnapshot, EnvironmentMemoryReport } from "./environment.js";
 export { Forge3DEnvironment, sunPosition, environmentMemoryReport } from "./environment.js";
 export type * from "./environment.js";
 import {
   registerOfflineWasmLoader,
   registerRuntimeInternals,
+  getSceneVectorPacket,
   type OfflineWasmExports,
 } from "./runtime-internals.js";
 import {
@@ -2258,9 +2270,11 @@ export interface ShadowCascadeInfo {
 }
 
 export interface SceneSnapshot {
+  vectors?: VectorSnapshot | null;
   /** Authoring lights retained while the environment synchronizes the sun. */
   environmentLighting?: LightingSnapshot;
   environment?: EnvironmentSnapshot | null;
+  postFx?: PostFxSnapshot | null;
   revision: number;
   nodes: SceneNodeSnapshot[];
   passes: ScenePassInput[];
@@ -2578,6 +2592,15 @@ interface WasmRuntime {
   setTerrainFromSource(terrain: TerrainHeightmapSourceInput): Promise<void>;
   setEnvironment?(snapshot: EnvironmentSnapshot | null): void;
   getEnvironmentMemoryReport?(): EnvironmentMemoryReport;
+  setVectorLayers?(packet: VectorPacket | null): void;
+  updateVectorHighlights?(highlights: number[][]): void;
+  getVectorReport?(): VectorReport;
+  readVectorPickMap?(region?: VectorPickRegion): Promise<VectorPickMap>;
+  readVectorProjection?(): Promise<VectorProjectionReport>;
+  setPostFx?(snapshot: PostFxSnapshot | null): void;
+  getPostFxReport?(): PostFxReport;
+  resetPostFxHistory?(): void;
+  readPostFxIntermediate?(name: string): Promise<PostFxFrame>;
   setScene?(scene: SceneSnapshot): void;
   setScatterBatches?(batches: ScatterBatchSnapshot[]): void;
   setLightingProbes?(probes: TerrainProbeSnapshot | null): void;
@@ -2728,9 +2751,11 @@ export class Forge3DRuntime {
   #nativeDisposed = false;
   #screenshotPromise: Promise<Blob> | undefined;
   #readbackPromise: Promise<unknown> | undefined;
+  #rgbaReadbackPromise: Promise<Uint8Array> | undefined;
   #pendingMutations: Array<() => void> = [];
   #offlineActive = false;
   #deviceLossError: Forge3DError | undefined;
+  #vectorState: { input: VectorLayers | VectorSnapshot; terrain: TerrainHeightmapInput | undefined; geometryRevision: number; highlightRevision: number } | undefined;
 
   private constructor(
     inner: WasmRuntime,
@@ -2940,8 +2965,9 @@ export class Forge3DRuntime {
         "Runtime does not support readback",
       );
     }
-    if (this.#readbackPromise !== undefined) {
-      return this.#readbackPromise as Promise<Uint8Array>;
+    while (this.#readbackPromise !== undefined) {
+      if(this.#rgbaReadbackPromise===this.#readbackPromise)return this.#rgbaReadbackPromise;
+      await this.#readbackPromise.catch(()=>undefined);this.#assertNotDisposed();
     }
     if (this.#screenshotPromise !== undefined) {
       await this.#screenshotPromise.catch(() => undefined);
@@ -2959,6 +2985,7 @@ export class Forge3DRuntime {
       },
     );
     this.#readbackPromise = result;
+    this.#rgbaReadbackPromise = result;
     void result.then(
       () => this.#completeCaptureSafely(result),
       () => this.#completeCaptureSafely(result),
@@ -2974,7 +3001,14 @@ export class Forge3DRuntime {
         "Runtime does not support scenes",
       );
     }
-    this.#runOrQueue(() => this.#inner.setScene?.(scene));
+    const terrain = scene.nodes.find(n => n.node.kind === "terrain")?.node;
+    const vectorTerrain = terrain?.kind === "terrain" ? terrain.terrain : undefined;
+    const vectors = scene.vectors;
+    const payload = vectors === undefined ? scene : { ...scene, vectorPacket: vectors === null ? null : getSceneVectorPacket(scene,scene.revision) ?? compileVectorPacket(vectors, vectorTerrain) };
+    this.#runOrQueue(() => {
+      this.#inner.setScene?.(payload as SceneSnapshot);
+      if (vectors !== undefined) this.#vectorState = vectors === null ? undefined : { input: vectors, terrain: vectorTerrain, geometryRevision: -1, highlightRevision: -1 };
+    });
   }
 
   setLighting(lighting: LightingSnapshot): void {
@@ -3005,6 +3039,67 @@ export class Forge3DRuntime {
           : normalizeEnvironment(input);
     this.#runOrQueue(() => this.#inner.setEnvironment!(snapshot));
   }
+  setVectorLayers(input: VectorLayers | VectorSnapshot | null, terrain?: TerrainHeightmapInput): void {
+    this.#assertNotDisposed();
+    if (!this.#inner.setVectorLayers) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support vector layers");
+    const previous = this.#vectorState;
+    if (input instanceof VectorLayers && previous?.input === input && previous.terrain === terrain && previous.geometryRevision === input.geometryRevision && this.#inner.updateVectorHighlights) {
+      if (previous.highlightRevision !== input.highlightRevision) {
+        const highlights = compileVectorHighlights(input);
+        const revision = input.highlightRevision;
+        this.#runOrQueue(() => {
+          this.#inner.updateVectorHighlights!(highlights);
+          if (this.#vectorState === previous) previous.highlightRevision = revision;
+        });
+      }
+      return;
+    }
+    const packet = input === null ? null : compileVectorPacket(input, terrain);
+    const geometryRevision = input instanceof VectorLayers ? input.geometryRevision : -1;
+    const highlightRevision = input instanceof VectorLayers ? input.highlightRevision : -1;
+    this.#runOrQueue(() => {
+      this.#inner.setVectorLayers!(packet);
+      this.#vectorState = input === null ? undefined : { input, terrain, geometryRevision, highlightRevision };
+    });
+  }
+  getVectorReport(): VectorReport {
+    this.#assertNotDisposed();
+    if(!this.#inner.getVectorReport)throw new Forge3DError("UNSUPPORTED_FEATURE","Runtime does not report vector mode");
+    return this.#inner.getVectorReport();
+  }
+  async readVectorPickMap(region?: VectorPickRegion): Promise<VectorPickMap> {
+    this.#assertNotDisposed();this.#assertNoOffline();
+    if(!this.#inner.readVectorPickMap)throw new Forge3DError("UNSUPPORTED_FEATURE","Runtime does not support vector picking");
+    if (region && ([region.x, region.y, region.width, region.height].some(v => !Number.isFinite(v)) || region.width < 0 || region.height < 0)) throw new Forge3DError("INVALID_INPUT", "Invalid vector pick readback region");
+    return this.#offlineReadback(()=>this.#inner.readVectorPickMap!(region));
+  }
+  async readVectorProjection(): Promise<VectorProjectionReport> {
+    this.#assertNotDisposed();this.#assertNoOffline();
+    if (!this.#inner.readVectorProjection) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not expose vector projection diagnostics");
+    return this.#offlineReadback(() => this.#inner.readVectorProjection!());
+  }
+  setPostFx(input: PostFxChain | PostFxChainInput | PostFxSnapshot | readonly PostFxInput[] | null): void {
+    this.#assertNotDisposed();
+    if (!this.#inner.setPostFx) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support post-FX");
+    const snapshot = resolvePostFx(input);
+    this.#runOrQueue(() => this.#inner.setPostFx!(snapshot));
+  }
+  getPostFxReport(): PostFxReport {
+    this.#assertNotDisposed();
+    if (!this.#inner.getPostFxReport) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not report post-FX");
+    return this.#inner.getPostFxReport();
+  }
+  resetPostFxHistory(): void {
+    this.#assertNotDisposed();
+    if (!this.#inner.resetPostFxHistory) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support temporal history");
+    this.#runOrQueue(() => this.#inner.resetPostFxHistory!());
+  }
+  async readPostFxIntermediate(name: string): Promise<PostFxFrame> {
+    this.#assertNotDisposed();
+    this.#assertNoOffline();
+    if (!this.#inner.readPostFxIntermediate) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not expose post-FX intermediates");
+    return this.#offlineReadback(() => this.#inner.readPostFxIntermediate!(name));
+  }
   getEnvironmentMemoryReport(): EnvironmentMemoryReport {
     this.#assertNotDisposed();
     if (!this.#inner.getEnvironmentMemoryReport)
@@ -3033,7 +3128,11 @@ export class Forge3DRuntime {
     this.#assertNotDisposed();
     if (!Number.isFinite(seconds)) throw new Forge3DError("INVALID_INPUT", "timeSeconds must be finite");
     if (!this.#inner.setTimeSeconds) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support scatter time");
-    this.#runOrQueue(() => this.#inner.setTimeSeconds!(seconds));
+    const highlights = this.#vectorState ? compileVectorHighlights(this.#vectorState.input, seconds) : undefined;
+    this.#runOrQueue(() => {
+      this.#inner.setTimeSeconds!(seconds);
+      if (highlights) this.#inner.updateVectorHighlights?.(highlights);
+    });
   }
 
   getScatterStats(): ScatterFrameStats {
@@ -3613,12 +3712,8 @@ export class Forge3DRuntime {
   }
 
   async #exclusiveReadback<T>(operation: () => Promise<T>): Promise<T> {
-    if (this.#readbackPromise !== undefined) {
-      await this.#readbackPromise.catch(() => undefined);
-      this.#assertNotDisposed();
-    }
-    if (this.#screenshotPromise !== undefined) {
-      await this.#screenshotPromise.catch(() => undefined);
+    while (this.#readbackPromise !== undefined || this.#screenshotPromise !== undefined) {
+      await (this.#readbackPromise ?? this.#screenshotPromise)!.catch(() => undefined);
       this.#assertNotDisposed();
     }
     const result = operation().then(
@@ -4408,6 +4503,7 @@ export {
   AOV_ID_WATER_BASE,
   AOV_ID_SCENE_NODE_BASE,
   AOV_ID_TERRAIN,
+  AOV_ID_VECTOR,
   AovFrame,
   aovObjectId,
   encodePng,

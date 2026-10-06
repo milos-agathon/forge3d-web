@@ -998,3 +998,16 @@ for aborted source reads.
 ## Labels and typography
 
 See [Labels, typography and deterministic placement](labels.md) for FontAtlas, LabelLayer, LabelPlan, stable IDs, actual glyph rendering, native diagnostics and the installed-tarball W13 verification workflow.
+## W11 ordered HDR and post-FX
+
+`PostFxChain`, `normalizePostFx` and `createIdentityColorLut` expose SSAO/GTAO,
+SSGI/SSR with IBL fallback, bloom, DoF/tilt, lens, motion blur, temporal and
+accumulation AA, denoise and selectable HDR tonemap. Runtime, session and viewer
+provide `setPostFx`, `getPostFxReport`, `resetPostFxHistory` and
+`readPostFxIntermediate`; scene snapshots retain the graph for worker replay.
+See the [HDR and post-FX guide](postfx-hdr.md) for ordering, defaults, transfer,
+histories, formats, budgets and independent native verification.
+
+## Vector layers and picking
+
+`VectorLayers` and stable `VectorLayer` handles batch styled points, AA lines, polygons, graphs and terrain-draped geometry. `VectorPicker` provides cancellable point/rect/lasso queries and pointer events. Scene/session, runtime, viewer and worker paths expose vector reports and pick maps. See [vector-layers.md](vector-layers.md) for OIT fallback, selection and lifecycle contracts.

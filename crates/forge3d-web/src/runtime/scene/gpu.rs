@@ -40,6 +40,7 @@ pub(super) struct BuiltGeometry {
 }
 
 pub(crate) struct NativeScene {
+    motion_vertices: Vec<LitVertex>,
     camera_layout: wgpu::BindGroupLayout,
     camera_buffer: wgpu::Buffer,
     camera_bind_group: wgpu::BindGroup,
@@ -135,6 +136,7 @@ impl NativeScene {
         let overlay_pipeline = create_overlay_pipeline(&context.device, format, &overlay_shader);
 
         let mut scene = Self {
+            motion_vertices: geometry.world_vertices.clone(),
             camera_layout,
             camera_buffer,
             camera_bind_group,
@@ -164,6 +166,43 @@ impl NativeScene {
         Ok(scene)
     }
 
+    pub(super) fn prepare_motion(&self, geometry: &mut BuiltGeometry) {
+        use std::collections::BTreeMap;
+        let mut old: BTreeMap<u32, Vec<&LitVertex>> = BTreeMap::new();
+        for v in &self.motion_vertices {
+            old.entry(v.object_id).or_default().push(v);
+        }
+        let mut current: BTreeMap<u32, Vec<&mut LitVertex>> = BTreeMap::new();
+        for v in &mut geometry.world_vertices {
+            current.entry(v.object_id).or_default().push(v);
+        }
+        for (id, mut vertices) in current {
+            if let Some(previous) = old.get(&id) {
+                if previous.len() == vertices.len() {
+                    for (v, p) in vertices.iter_mut().zip(previous) {
+                        v.previous_position = p.position;
+                    }
+                }
+            }
+        }
+    }
+    pub(crate) fn advance_motion(&mut self, context: &GpuContext) {
+        if self
+            .motion_vertices
+            .iter()
+            .all(|v| v.previous_position == v.position)
+        {
+            return;
+        }
+        for v in &mut self.motion_vertices {
+            v.previous_position = v.position;
+        }
+        if let Some(buffer) = &self.world_vertex_buffer {
+            context
+                .queue
+                .write_buffer(buffer, 0, bytemuck::cast_slice(&self.motion_vertices));
+        }
+    }
     fn upload_geometry(&mut self, context: &GpuContext, geometry: &BuiltGeometry) {
         self.world_vertex_buffer = if geometry.world_vertices.is_empty() {
             None
@@ -174,7 +213,7 @@ impl NativeScene {
                     .create_buffer_init(&wgpu::util::BufferInitDescriptor {
                         label: Some("forge3d-web-scene-world-vertices"),
                         contents: bytemuck::cast_slice(&geometry.world_vertices),
-                        usage: wgpu::BufferUsages::VERTEX,
+                        usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
                     }),
             )
         };

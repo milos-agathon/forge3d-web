@@ -1286,3 +1286,14 @@ async function compileW08Declarations(
 }
 
 void compileW08Declarations;
+
+import {PostFxChain,normalizePostFx,createIdentityColorLut,type PostFxInput,type PostFxSnapshot,type PostFxReport,type PostFxFrame,type PostFxQuality,type PostFxDebugView,type PostFxHistoryReason} from "../../types/index";
+async function compileW11Declarations(runtime:Forge3DRuntime,session:Forge3DSession,viewer:Forge3DViewer,scene:Forge3DScene):Promise<void>{
+  const quality:PostFxQuality="high",debug:PostFxDebugView="effect";
+  const effects:PostFxInput[]=[{kind:"gtao",id:"ao"},{kind:"ssgi"},{kind:"ssr"},{kind:"bloom",quality},{kind:"dof",tiltPitch:.2},{kind:"motion-blur",shutter:.5},{kind:"taa",jitter:true},{kind:"accumulation-aa",enabled:false},{kind:"denoise"},{kind:"tonemap",operator:"aces",lut:createIdentityColorLut(4)},{kind:"lens",chromaticAberration:.01}];
+  const chain=new PostFxChain({effects,debug:{view:debug,effectId:"ao"}});chain.copy().setEnabled("ao",false);const snapshot:PostFxSnapshot=normalizePostFx(chain.toJSON());
+  scene.setPostFx(chain);const owned=scene.getPostFx();runtime.setPostFx(snapshot);session.setPostFx(chain);viewer.setPostFx(effects);
+  for(const target of [runtime,session,viewer]){const report:PostFxReport=target.getPostFxReport();const reason:PostFxHistoryReason=report.historyReason;target.resetPostFxHistory();const frame:PostFxFrame=await target.readPostFxIntermediate("color");void [frame.data,frame.channels,reason];target.setPostFx(null);}
+  void [owned,snapshot];
+}
+void compileW11Declarations;
