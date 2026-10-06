@@ -58,6 +58,8 @@ export interface VectorAtlas {
     rgba: Uint8Array;
 }
 export interface VectorLayerInput {
+    /** Horizontal map CRS, when coordinates carry geospatial metadata. */
+    crs?: string;
     name: string;
     features: VectorFeature[];
     style?: VectorStyle;

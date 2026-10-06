@@ -34,6 +34,8 @@ try {
   assert.deepEqual(
     Object.keys(facadeA).sort(),
     [
+      'CrsTransformer', 'crsToEpsg', 'crsFromRasterMetadata', 'crsFromGeoJson', 'projAvailable',
+      'DatasetRegistry', 'DATASET_BASE_URL', 'decodeDatasetNpy', 'reprojectVectorLayer', 'reprojectLabelFeatures',
       "LabelFeatureSource", "LabelCollisionIndex", "declutterLabels",
       "FontAtlas", "FontFallbackRange", "TypographySettings", "LabelLayer", "LabelManager", "LabelStyle", "LabelFlags", "LabelPlan", "KeepoutRegion", "PriorityClass", "LABEL_REJECTION_REASONS",
       "VectorLayers",

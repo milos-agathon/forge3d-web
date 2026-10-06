@@ -322,7 +322,9 @@
       ],
       "provenance": [
         "1f4084a:tests/test_crs_reproject.py",
-        "EPSG:4326/EPSG:3857/EPSG:32632 published control points"
+        "scripts/generate-w14-fixtures.py",
+        "crates/forge3d-web/tests/fixtures/w14/crs-epsg-v1.json",
+        "Independent pyproj 3.7.2 / PROJ 9.5.1 EPSG and grid controls"
       ],
       "generator": {
         "kind": "deterministic-contract-spec",
@@ -332,12 +334,30 @@
           "geographicCrs": "EPSG:4326",
           "projectedCrs": [
             "EPSG:3857",
-            "EPSG:32632"
+            "EPSG:32632",
+            "EPSG:32654",
+            "EPSG:32732"
           ],
           "pointCount": 32,
-          "includesAxisOrderCases": true
+          "includesAxisOrderCases": true,
+          "controlFixture": {
+            "path": "crates/forge3d-web/tests/fixtures/w14/crs-epsg-v1.json",
+            "sha256": "06e99ce7b2e2b48c149c89f4dd92ab54d6fc6beb7b13b9de8569f6234b005113",
+            "oracle": {
+              "implementation": "pyproj",
+              "version": "3.7.2",
+              "projVersion": "9.5.1",
+              "nativeSource": "1f4084af428dc699bdcd108b029736cb73903926:python/forge3d/crs.py"
+            }
+          },
+          "gridFixture": {
+            "name": "us_noaa_conus.tif",
+            "sha256": "44611d823c48e5347500ee6afe40ff33d2b88cf817bf59f705ed4a4c3bd687d7",
+            "version": "proj-data-conus-v1",
+            "pointCount": 3
+          }
         },
-        "sha256": "d118df580b6ddd0c8a684eae329aa411ce83950c885ad8d72689d6c0868ff60a"
+        "sha256": "6d29ef75dcfa77bd65cb334e659a78f5167fe0d1c0f5898d2d65b3f5d1c03d48"
       },
       "tolerances": {
         "geographicDegrees": 1e-7,

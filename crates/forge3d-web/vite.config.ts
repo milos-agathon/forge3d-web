@@ -1,6 +1,7 @@
 import { defineConfig } from "vite";
 import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
+import { readFileSync } from 'node:fs';
 
 import { realmFixturePlugin } from "./tests/browser/realm-fixture-server.mjs";
 
@@ -16,6 +17,15 @@ export default defineConfig({
       name: "forge3d-source-wasm-route",
       configureServer(server) {
         server.middlewares.use((request, response, next) => {
+          // The pinned module must be served byte-for-byte: Vite's HMR/import
+          // rewrites would invalidate its runtime integrity check.
+          if (request.url?.split('?')[0] === '/assets/proj/proj-emscripten.js') {
+            const bytes=readFileSync(new URL('./assets/proj/proj-emscripten.js',import.meta.url));
+            response.setHeader('content-type','text/javascript');
+            response.setHeader('content-length',bytes.length);
+            response.end(bytes);
+            return;
+          }
           if (request.url === "/tests/slow-terrain-status") {
             response.setHeader("content-type", "application/json");
             response.end(

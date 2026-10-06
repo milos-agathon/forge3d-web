@@ -4302,3 +4302,10 @@ export type { LabelDeclutterCandidate, LabelDeclutterConfig, LabelDeclutterResul
 
 export {LabelFeatureSource} from './label-features.js';
 export type {LabelFeature,LabelFeatureOptions} from './label-features.js';
+
+export { CrsTransformer, crsToEpsg, crsFromRasterMetadata, crsFromGeoJson, projAvailable } from './crs.js';
+export type * from './crs-types.js';
+export { DatasetRegistry, DATASET_BASE_URL, decodeDatasetNpy } from './datasets.js';
+export type * from './dataset-types.js';
+export { reprojectVectorLayer, reprojectLabelFeatures } from './crs-layers.js';
+export type { GeospatialVectorLayerInput, CrsLayerTarget } from './crs-layers.js';

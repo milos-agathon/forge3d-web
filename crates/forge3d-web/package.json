@@ -82,7 +82,9 @@
     "test:package-consumer:w12": "node scripts/test-w12-package.mjs",
     "test:w12": "vitest run tests/unit/vector.test.ts tests/unit/w12-native-provenance.test.ts && playwright test tests/playwright/w12_vector.spec.ts tests/playwright/w12_camera.spec.ts --project=chromium-preflight",
     "test:w13": "vitest run tests/unit/labels.test.ts tests/unit/label-workflows.test.ts tests/unit/label-contract-record.test.ts && playwright test tests/playwright/w13_labels.spec.ts --project=chromium-preflight",
-    "test:package-consumer:w13": "node scripts/test-w13-package-consumer.mjs"
+    "test:package-consumer:w13": "node scripts/test-w13-package-consumer.mjs",
+    "test:w14": "vitest run tests/unit/w14-crs.test.ts tests/unit/w14-datasets.test.ts tests/unit/w14-native-contract.test.ts && playwright test tests/playwright/w14_foundation.spec.ts --project=chromium-preflight",
+    "test:package-consumer:w14": "node scripts/test-w14-package-consumer.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
@@ -90,6 +92,7 @@
     "harfbuzzjs": "1.6.0",
     "ktx-parse": "1.1.0",
     "mediabunny": "1.58.0",
+    "proj-wasm": "0.1.0-alpha9",
     "selenium-webdriver": "4.35.0",
     "typescript": "^6.0.3",
     "vite": "^8.0.16",

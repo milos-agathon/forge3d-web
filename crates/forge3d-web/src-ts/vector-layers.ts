@@ -1,4 +1,7 @@
 import { Forge3DError } from "./index.js";
+import { reprojectVectorLayer, type GeospatialVectorLayerInput, type CrsLayerTarget } from './crs-layers.js';
+import type { CrsTransformer } from './crs.js';
+import type { CrsTransformOptions } from './crs-types.js';
 import type { VectorFeature, VectorGraphInput, VectorLayerInput, VectorLayerSnapshot, VectorOitMode, VectorSelectionSet, VectorSelectionStyle, VectorSnapshot, VectorStyle } from "./vector-types.js";
 export type * from "./vector-types.js";
 export function vectorInvalid(message: string): Forge3DError { return new Forge3DError("INVALID_INPUT", message); }
@@ -100,6 +103,13 @@ export class VectorLayers {
         this.#geometryRevision++;
         this.#knownFeatureIds = undefined;
         return new VectorLayer(this, id);
+    }
+    /** Reproject to a terrain's CRS before committing the layer transaction. */
+    async addGeospatial(input: GeospatialVectorLayerInput, target: CrsLayerTarget, transformer: CrsTransformer, options: CrsTransformOptions = {}): Promise<VectorLayer> {
+        this.#guard();
+        const converted = await reprojectVectorLayer(transformer, input, target, options);
+        this.#guard();
+        return this.add(converted);
     }
     addGraph(input: VectorGraphInput): {
         nodes: VectorLayer;

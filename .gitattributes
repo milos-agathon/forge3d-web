@@ -37,3 +37,17 @@ crates/forge3d-web/types/label-*.d.ts text eol=lf
 crates/forge3d-web/types/labels.d.ts text eol=lf
 crates/forge3d-web/types/typography.d.ts text eol=lf
 crates/forge3d-web/docs/label-case-contract.json text eol=lf
+
+# W14 hashes preserve the raw upstream modules, database, grids and native blobs.
+crates/forge3d-web/assets/proj/** -text
+# Preserve the digest-pinned upstream notices, including Markdown hard breaks.
+crates/forge3d-web/assets/proj/GRID-LICENSE.txt -whitespace
+crates/forge3d-web/assets/proj/PROJ-COPYING -whitespace
+crates/forge3d-web/assets/datasets/** -text
+crates/forge3d-web/assets/proj/provenance.json text eol=lf
+crates/forge3d-web/assets/datasets/provenance.json text eol=lf
+crates/forge3d-web/tests/golden/w14/native/** -text
+crates/forge3d-web/tests/fixtures/w14/*.json text eol=lf
+crates/forge3d-web/types/crs*.d.ts text eol=lf
+crates/forge3d-web/types/dataset*.d.ts text eol=lf
+crates/forge3d-web/types/vector*.d.ts text eol=lf

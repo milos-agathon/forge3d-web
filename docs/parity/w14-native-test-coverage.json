@@ -1,0 +1,522 @@
+{
+  "schemaVersion": 1,
+  "baseline": "1f4084af428dc699bdcd108b029736cb73903926",
+  "deepNative": "bf8db93233e5158f6d226991fc5d230832c2d806",
+  "nativeTestFiles": 3,
+  "policy": "Every native test definition has an explicit tested browser outcome. The CRS/data source blobs are identical at the deep-native and reconciliation commits. Filesystem paths adapt to URLs/content-addressed storage; no native fallback or silent identity is admitted.",
+  "snapshots": [
+    {
+      "nativePath": "python/forge3d/crs.py",
+      "sha256": "8210768f542b21df4bda7bea8a744ab5321b62c9cc843aebffbdf43ec6d6d4ac",
+      "deepNativeSha256": "8210768f542b21df4bda7bea8a744ab5321b62c9cc843aebffbdf43ec6d6d4ac"
+    },
+    {
+      "nativePath": "python/forge3d/datasets.py",
+      "sha256": "4498465d69a62d2182381ece0ccd60cc070dbdfb04b0446d7776d52ac96d9c75",
+      "deepNativeSha256": "4498465d69a62d2182381ece0ccd60cc070dbdfb04b0446d7776d52ac96d9c75"
+    },
+    {
+      "nativePath": "src/geo/reproject.rs",
+      "sha256": "a9c81eda05287a7a4c239683e90099983b9448e03614278b1cbe732592cb6289",
+      "deepNativeSha256": "a9c81eda05287a7a4c239683e90099983b9448e03614278b1cbe732592cb6289"
+    },
+    {
+      "nativePath": "tests/test_crs_auto.py",
+      "sha256": "d3537897424bbb783bf0ef0b194525da822e2abdfa83408542ad1cc3769cb58c",
+      "deepNativeSha256": "d3537897424bbb783bf0ef0b194525da822e2abdfa83408542ad1cc3769cb58c"
+    },
+    {
+      "nativePath": "tests/test_crs_reproject.py",
+      "sha256": "666f226cfcb543721738efa8c0ccae17dfe4b3597a3d5ef3ad9dbd7be6b94d35",
+      "deepNativeSha256": "666f226cfcb543721738efa8c0ccae17dfe4b3597a3d5ef3ad9dbd7be6b94d35"
+    },
+    {
+      "nativePath": "tests/test_datasets.py",
+      "sha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0",
+      "deepNativeSha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0"
+    }
+  ],
+  "definitions": [
+    {
+      "nativeFile": "tests/test_crs_reproject.py",
+      "definition": "test_returns_bool",
+      "nativeFileSha256": "666f226cfcb543721738efa8c0ccae17dfe4b3597a3d5ef3ad9dbd7be6b94d35",
+      "nativeContract": "proj_available returns a boolean.",
+      "adaptation": "ESM, worker capability and typed float/nested arrays replace Python imports, optional native/pyproj backends and NumPy. The stronger W00 numerical tolerances apply.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-crs.test.ts",
+          "test": "reports unavailable worker backends and never returns a silent identity"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_crs_reproject.py",
+      "definition": "test_epsg_4326",
+      "nativeFileSha256": "666f226cfcb543721738efa8c0ccae17dfe4b3597a3d5ef3ad9dbd7be6b94d35",
+      "nativeContract": "Parse EPSG:4326 (WGS84).",
+      "adaptation": "Synchronous lexical EPSG parsing and asynchronous PROJ database/WKT identification are explicit browser APIs.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-crs.test.ts",
+          "test": "extracts raster/vector metadata without inventing a projected CRS"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_crs_reproject.py",
+      "definition": "test_epsg_32654",
+      "nativeFileSha256": "666f226cfcb543721738efa8c0ccae17dfe4b3597a3d5ef3ad9dbd7be6b94d35",
+      "nativeContract": "Parse EPSG:32654 (UTM zone 54N).",
+      "adaptation": "Synchronous lexical EPSG parsing and asynchronous PROJ database/WKT identification are explicit browser APIs.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-crs.test.ts",
+          "test": "extracts raster/vector metadata without inventing a projected CRS"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_crs_reproject.py",
+      "definition": "test_lowercase_epsg",
+      "nativeFileSha256": "666f226cfcb543721738efa8c0ccae17dfe4b3597a3d5ef3ad9dbd7be6b94d35",
+      "nativeContract": "Parse lowercase epsg prefix.",
+      "adaptation": "Synchronous lexical EPSG parsing and asynchronous PROJ database/WKT identification are explicit browser APIs.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-crs.test.ts",
+          "test": "extracts raster/vector metadata without inventing a projected CRS"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_crs_reproject.py",
+      "definition": "test_invalid_format",
+      "nativeFileSha256": "666f226cfcb543721738efa8c0ccae17dfe4b3597a3d5ef3ad9dbd7be6b94d35",
+      "nativeContract": "Non-EPSG aliases are backend-dependent: either unresolved or canonical EPSG.",
+      "adaptation": "Synchronous lexical EPSG parsing and asynchronous PROJ database/WKT identification are explicit browser APIs.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-crs.test.ts",
+          "test": "extracts raster/vector metadata without inventing a projected CRS"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_crs_reproject.py",
+      "definition": "test_invalid_number",
+      "nativeFileSha256": "666f226cfcb543721738efa8c0ccae17dfe4b3597a3d5ef3ad9dbd7be6b94d35",
+      "nativeContract": "EPSG with non-numeric code returns None.",
+      "adaptation": "Synchronous lexical EPSG parsing and asynchronous PROJ database/WKT identification are explicit browser APIs.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-crs.test.ts",
+          "test": "extracts raster/vector metadata without inventing a projected CRS"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_crs_reproject.py",
+      "definition": "test_empty_array",
+      "nativeFileSha256": "666f226cfcb543721738efa8c0ccae17dfe4b3597a3d5ef3ad9dbd7be6b94d35",
+      "nativeContract": "Empty coordinate array returns empty array.",
+      "adaptation": "ESM, worker capability and typed float/nested arrays replace Python imports, optional native/pyproj backends and NumPy. The stronger W00 numerical tolerances apply.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-crs.test.ts",
+          "test": "supports empty arrays, copied identity, XYZ/T and 10000 points"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_crs_reproject.py",
+      "definition": "test_same_crs_returns_copy",
+      "nativeFileSha256": "666f226cfcb543721738efa8c0ccae17dfe4b3597a3d5ef3ad9dbd7be6b94d35",
+      "nativeContract": "Same source and target CRS returns a copy.",
+      "adaptation": "ESM, worker capability and typed float/nested arrays replace Python imports, optional native/pyproj backends and NumPy. The stronger W00 numerical tolerances apply.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-crs.test.ts",
+          "test": "supports empty arrays, copied identity, XYZ/T and 10000 points"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_crs_reproject.py",
+      "definition": "test_invalid_shape_raises",
+      "nativeFileSha256": "666f226cfcb543721738efa8c0ccae17dfe4b3597a3d5ef3ad9dbd7be6b94d35",
+      "nativeContract": "Invalid coordinate shape raises ValueError.",
+      "adaptation": "ESM, worker capability and typed float/nested arrays replace Python imports, optional native/pyproj backends and NumPy. The stronger W00 numerical tolerances apply.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/playwright/w14_foundation.spec.ts",
+          "test": "W14 CRS controls, WKT and axis order"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_crs_reproject.py",
+      "definition": "test_wgs84_to_utm",
+      "nativeFileSha256": "666f226cfcb543721738efa8c0ccae17dfe4b3597a3d5ef3ad9dbd7be6b94d35",
+      "nativeContract": "Transform WGS84 to UTM zone 54N.",
+      "adaptation": "ESM, worker capability and typed float/nested arrays replace Python imports, optional native/pyproj backends and NumPy. The stronger W00 numerical tolerances apply.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-crs.test.ts",
+          "test": "matches independent projected and geographic controls"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_crs_reproject.py",
+      "definition": "test_roundtrip",
+      "nativeFileSha256": "666f226cfcb543721738efa8c0ccae17dfe4b3597a3d5ef3ad9dbd7be6b94d35",
+      "nativeContract": "WGS84 -> UTM -> WGS84 roundtrip preserves coordinates.",
+      "adaptation": "ESM, worker capability and typed float/nested arrays replace Python imports, optional native/pyproj backends and NumPy. The stronger W00 numerical tolerances apply.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-crs.test.ts",
+          "test": "matches independent projected and geographic controls"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_crs_reproject.py",
+      "definition": "test_multiple_points",
+      "nativeFileSha256": "666f226cfcb543721738efa8c0ccae17dfe4b3597a3d5ef3ad9dbd7be6b94d35",
+      "nativeContract": "Transform multiple points at once.",
+      "adaptation": "ESM, worker capability and typed float/nested arrays replace Python imports, optional native/pyproj backends and NumPy. The stronger W00 numerical tolerances apply.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-crs.test.ts",
+          "test": "retains the native Fuji multipoint ordering and range"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_crs_reproject.py",
+      "definition": "test_no_backend_raises",
+      "nativeFileSha256": "666f226cfcb543721738efa8c0ccae17dfe4b3597a3d5ef3ad9dbd7be6b94d35",
+      "nativeContract": "If no backend available and different CRS, should raise or return original.",
+      "adaptation": "ESM, worker capability and typed float/nested arrays replace Python imports, optional native/pyproj backends and NumPy. The stronger W00 numerical tolerances apply.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-crs.test.ts",
+          "test": "reports unavailable worker backends and never returns a silent identity"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_crs_reproject.py",
+      "definition": "test_float32_input",
+      "nativeFileSha256": "666f226cfcb543721738efa8c0ccae17dfe4b3597a3d5ef3ad9dbd7be6b94d35",
+      "nativeContract": "Float32 input is handled correctly.",
+      "adaptation": "ESM, worker capability and typed float/nested arrays replace Python imports, optional native/pyproj backends and NumPy. The stronger W00 numerical tolerances apply.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/playwright/w14_foundation.spec.ts",
+          "test": "W14 CRS controls, WKT and axis order"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_crs_reproject.py",
+      "definition": "test_list_input",
+      "nativeFileSha256": "666f226cfcb543721738efa8c0ccae17dfe4b3597a3d5ef3ad9dbd7be6b94d35",
+      "nativeContract": "List input is converted to array.",
+      "adaptation": "ESM, worker capability and typed float/nested arrays replace Python imports, optional native/pyproj backends and NumPy. The stronger W00 numerical tolerances apply.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-crs.test.ts",
+          "test": "supports empty arrays, copied identity, XYZ/T and 10000 points"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_crs_reproject.py",
+      "definition": "test_large_batch",
+      "nativeFileSha256": "666f226cfcb543721738efa8c0ccae17dfe4b3597a3d5ef3ad9dbd7be6b94d35",
+      "nativeContract": "Handle large coordinate arrays efficiently.",
+      "adaptation": "ESM, worker capability and typed float/nested arrays replace Python imports, optional native/pyproj backends and NumPy. The stronger W00 numerical tolerances apply.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-crs.test.ts",
+          "test": "supports empty arrays, copied identity, XYZ/T and 10000 points"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_crs_auto.py",
+      "definition": "test_legacy_render_polygons_removed",
+      "nativeFileSha256": "d3537897424bbb783bf0ef0b194525da822e2abdfa83408542ad1cc3769cb58c",
+      "nativeContract": "The old CRS-via-render_polygons path no longer exists.",
+      "adaptation": "ESM, worker capability and typed float/nested arrays replace Python imports, optional native/pyproj backends and NumPy. The stronger W00 numerical tolerances apply.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-native-contract.test.ts",
+          "test": "exports the public native-equivalent ESM CRS and dataset surface"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_crs_auto.py",
+      "definition": "test_terrain_crs_default_none",
+      "nativeFileSha256": "d3537897424bbb783bf0ef0b194525da822e2abdfa83408542ad1cc3769cb58c",
+      "nativeContract": null,
+      "adaptation": "TerrainDataset.crs retains optional metadata and supplies the automatic layer target CRS.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-crs.test.ts",
+          "test": "retains the native terrain CRS default and explicit state"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_crs_auto.py",
+      "definition": "test_terrain_crs_can_be_set",
+      "nativeFileSha256": "d3537897424bbb783bf0ef0b194525da822e2abdfa83408542ad1cc3769cb58c",
+      "nativeContract": null,
+      "adaptation": "TerrainDataset.crs retains optional metadata and supplies the automatic layer target CRS.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-crs.test.ts",
+          "test": "retains the native terrain CRS default and explicit state"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_crs_auto.py",
+      "definition": "test_terrain_crs_epsg_4326",
+      "nativeFileSha256": "d3537897424bbb783bf0ef0b194525da822e2abdfa83408542ad1cc3769cb58c",
+      "nativeContract": null,
+      "adaptation": "TerrainDataset.crs retains optional metadata and supplies the automatic layer target CRS.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-crs.test.ts",
+          "test": "retains the native terrain CRS default and explicit state"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_crs_auto.py",
+      "definition": "test_crs_module_importable",
+      "nativeFileSha256": "d3537897424bbb783bf0ef0b194525da822e2abdfa83408542ad1cc3769cb58c",
+      "nativeContract": null,
+      "adaptation": "ESM, worker capability and typed float/nested arrays replace Python imports, optional native/pyproj backends and NumPy. The stronger W00 numerical tolerances apply.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-native-contract.test.ts",
+          "test": "exports the public native-equivalent ESM CRS and dataset surface"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_crs_auto.py",
+      "definition": "test_proj_available_accessible",
+      "nativeFileSha256": "d3537897424bbb783bf0ef0b194525da822e2abdfa83408542ad1cc3769cb58c",
+      "nativeContract": null,
+      "adaptation": "ESM, worker capability and typed float/nested arrays replace Python imports, optional native/pyproj backends and NumPy. The stronger W00 numerical tolerances apply.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-crs.test.ts",
+          "test": "reports unavailable worker backends and never returns a silent identity"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_crs_auto.py",
+      "definition": "test_crs_to_epsg_parses_wgs84",
+      "nativeFileSha256": "d3537897424bbb783bf0ef0b194525da822e2abdfa83408542ad1cc3769cb58c",
+      "nativeContract": null,
+      "adaptation": "Synchronous lexical EPSG parsing and asynchronous PROJ database/WKT identification are explicit browser APIs.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-crs.test.ts",
+          "test": "extracts raster/vector metadata without inventing a projected CRS"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_crs_auto.py",
+      "definition": "test_transform_coords_identity",
+      "nativeFileSha256": "d3537897424bbb783bf0ef0b194525da822e2abdfa83408542ad1cc3769cb58c",
+      "nativeContract": null,
+      "adaptation": "ESM, worker capability and typed float/nested arrays replace Python imports, optional native/pyproj backends and NumPy. The stronger W00 numerical tolerances apply.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-crs.test.ts",
+          "test": "supports empty arrays, copied identity, XYZ/T and 10000 points"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_datasets.py",
+      "definition": "test_mini_dem_loads_with_expected_shape_and_dtype",
+      "nativeFileSha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0",
+      "nativeContract": "The bundled mini DEM should be a small float32 height grid.",
+      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the LFS repository endpoint is immutable at the baseline commit. Kind loader success uses small verified fixtures with the native kinds and filenames.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
+          "test": "loads native DEM and boundaries exactly, with defensive typed buffers"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_datasets.py",
+      "definition": "test_mini_dem_path_exists",
+      "nativeFileSha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0",
+      "nativeContract": "The packaged mini DEM path resolves to a real file.",
+      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the LFS repository endpoint is immutable at the baseline commit. Kind loader success uses small verified fixtures with the native kinds and filenames.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
+          "test": "preserves the complete native registry, kinds, descriptions and known hashes"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_datasets.py",
+      "definition": "test_sample_boundaries_load_as_geojson",
+      "nativeFileSha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0",
+      "nativeContract": "The bundled boundary sample should parse as a small feature collection.",
+      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the LFS repository endpoint is immutable at the baseline commit. Kind loader success uses small verified fixtures with the native kinds and filenames.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
+          "test": "loads native DEM and boundaries exactly, with defensive typed buffers"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_datasets.py",
+      "definition": "test_registry_lists_bundled_and_remote_datasets",
+      "nativeFileSha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0",
+      "nativeContract": "The registry should expose the Phase 2 bundled and fetchable names.",
+      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the LFS repository endpoint is immutable at the baseline commit. Kind loader success uses small verified fixtures with the native kinds and filenames.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
+          "test": "preserves the complete native registry, kinds, descriptions and known hashes"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_datasets.py",
+      "definition": "test_list_datasets_returns_named_records",
+      "nativeFileSha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0",
+      "nativeContract": "list_datasets() should produce metadata rows with stable names.",
+      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the LFS repository endpoint is immutable at the baseline commit. Kind loader success uses small verified fixtures with the native kinds and filenames.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
+          "test": "preserves the complete native registry, kinds, descriptions and known hashes"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_datasets.py",
+      "definition": "test_fetch_returns_bundled_path_for_bundled_dataset",
+      "nativeFileSha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0",
+      "nativeContract": "fetch() should resolve bundled datasets without network access.",
+      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the LFS repository endpoint is immutable at the baseline commit. Kind loader success uses small verified fixtures with the native kinds and filenames.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
+          "test": "caches exact bytes across instances, refuses offline misses and corrupted entries"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_datasets.py",
+      "definition": "test_fetch_dem_prefers_local_asset_checkout",
+      "nativeFileSha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0",
+      "nativeContract": "Large DEM samples should resolve locally inside the repo checkout when present.",
+      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the LFS repository endpoint is immutable at the baseline commit. Kind loader success uses small verified fixtures with the native kinds and filenames.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
+          "test": "serves each native fetch-kind through the verified browser cache adapter"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_datasets.py",
+      "definition": "test_fetch_cityjson_prefers_local_asset_checkout",
+      "nativeFileSha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0",
+      "nativeContract": "CityJSON samples should resolve locally when the repo assets are present.",
+      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the LFS repository endpoint is immutable at the baseline commit. Kind loader success uses small verified fixtures with the native kinds and filenames.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
+          "test": "serves each native fetch-kind through the verified browser cache adapter"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_datasets.py",
+      "definition": "test_fetch_copc_prefers_local_asset_checkout",
+      "nativeFileSha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0",
+      "nativeContract": "Point cloud samples should resolve locally when the repo assets are present.",
+      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the LFS repository endpoint is immutable at the baseline commit. Kind loader success uses small verified fixtures with the native kinds and filenames.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
+          "test": "serves each native fetch-kind through the verified browser cache adapter"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_datasets.py",
+      "definition": "test_fetch_rejects_unknown_dataset",
+      "nativeFileSha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0",
+      "nativeContract": "Unknown dataset names should fail with a helpful error.",
+      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the LFS repository endpoint is immutable at the baseline commit. Kind loader success uses small verified fixtures with the native kinds and filenames.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
+          "test": "preserves the complete native registry, kinds, descriptions and known hashes"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_datasets.py",
+      "definition": "test_fetch_kind_validation_rejects_wrong_registry_kind",
+      "nativeFileSha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0",
+      "nativeContract": "Kind-specific helpers should reject datasets from the wrong category.",
+      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the LFS repository endpoint is immutable at the baseline commit. Kind loader success uses small verified fixtures with the native kinds and filenames.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
+          "test": "loads native DEM and boundaries exactly, with defensive typed buffers"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_datasets.py",
+      "definition": "test_default_dataset_base_url_uses_live_repository_path",
+      "nativeFileSha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0",
+      "nativeContract": "The fallback download base URL should use the live GitHub repository.",
+      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the LFS repository endpoint is immutable at the baseline commit. Kind loader success uses small verified fixtures with the native kinds and filenames.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
+          "test": "preserves the complete native registry, kinds, descriptions and known hashes"
+        }
+      ]
+    },
+    {
+      "nativeFile": "tests/test_datasets.py",
+      "definition": "test_default_dataset_base_url_uses_github_lfs_media_endpoint",
+      "nativeFileSha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0",
+      "nativeContract": "Remote asset downloads should fetch Git LFS media, not pointer files.",
+      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the LFS repository endpoint is immutable at the baseline commit. Kind loader success uses small verified fixtures with the native kinds and filenames.",
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
+          "test": "preserves the complete native registry, kinds, descriptions and known hashes"
+        }
+      ]
+    }
+  ]
+}
