@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 import * as api from "../../src-ts/index.js";
@@ -12,16 +11,24 @@ describe("W13 native test inventory and public documentation ports", () => {
     const c = JSON.parse(read("docs/parity/w13-native-test-coverage.json"));
     expect(c.baseline).toBe("1f4084af428dc699bdcd108b029736cb73903926");
     expect(c.definitions.length).toBeGreaterThan(80);
-    const sources = new Map<string, string>();
+    const nativeRoot = "crates/forge3d-web/tests/golden/w13/native";
+    const files = [
+      ...new Set(
+        c.definitions.map((d: { nativeFile: string }) => d.nativeFile),
+      ),
+    ] as string[];
+    expect(files.length).toBe(c.nativeTestFiles);
+    expect(readdirSync(resolve(root, nativeRoot)).sort()).toEqual(
+      files.map((file) => file.replaceAll("/", "__")).sort(),
+    );
+    const sources = new Map<string, Buffer>();
     for (const d of c.definitions) {
       if (!sources.has(d.nativeFile))
         sources.set(
           d.nativeFile,
-          execFileSync("git", ["show", `${c.baseline}:${d.nativeFile}`], {
-            cwd: root,
-            encoding: "utf8",
-            maxBuffer: 2 * 1024 * 1024,
-          }),
+          readFileSync(
+            resolve(root, nativeRoot, d.nativeFile.replaceAll("/", "__")),
+          ),
         );
       expect(
         createHash("sha256").update(sources.get(d.nativeFile)!).digest("hex"),

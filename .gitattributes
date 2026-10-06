@@ -28,3 +28,6 @@ crates/forge3d-web/assets/fonts/provenance.json text eol=lf
 crates/forge3d-web/assets/harfbuzz/index.d.mts text eol=lf
 crates/forge3d-web/tests/golden/w12/native/** -text
 crates/forge3d-web/assets/w12/*.json text eol=lf
+
+# W13 native test snapshots retain the exact pinned Git blob bytes.
+crates/forge3d-web/tests/golden/w13/native/** -text

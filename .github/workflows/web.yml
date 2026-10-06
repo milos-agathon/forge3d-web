@@ -101,6 +101,10 @@ jobs:
           FORGE3D_PACKAGE_GATE_MODE: probe
         run: npm run test:package-consumer
 
+      - name: Test W13 installed labels and shaping assets
+        working-directory: crates/forge3d-web
+        run: npm run test:package-consumer:w13
+
       - name: Upload exact-tarball browser evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:

@@ -7,9 +7,13 @@ files=subprocess.check_output(['git','ls-tree','-r','--name-only',BASELINE,'test
 files=[p for p in files if any(t in p for t in ['test_label_api_','test_label_plan_','test_labels_pybindings','test_mapscene_label_plan','test_p1_label_','test_p1_typography_font','test_p2_advanced_label','test_p2_complex_shaping'])]
 files.append('tests/test_api_contracts.py')
 UNIT='crates/forge3d-web/tests/unit/'
+SNAPSHOTS=ROOT/'crates/forge3d-web/tests/golden/w13/native'
+SNAPSHOTS.mkdir(parents=True,exist_ok=True)
 rows=[]
 for path in files:
- source=subprocess.check_output(['git','show',f'{BASELINE}:{path}'],cwd=ROOT,text=True,encoding='utf-8')
+ source_bytes=subprocess.check_output(['git','show',f'{BASELINE}:{path}'],cwd=ROOT)
+ source=source_bytes.decode('utf-8')
+ (SNAPSHOTS/path.replace('/','__')).write_bytes(source_bytes)
  tree=ast.parse(source)
  if path.endswith('test_api_contracts.py'): tree=next(n for n in tree.body if isinstance(n,ast.ClassDef) and n.name=='TestLabelBindings')
  functions=[n.name for n in ast.walk(tree) if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef)) and n.name.startswith('test_')]

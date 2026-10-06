@@ -46,6 +46,14 @@ outputs except Python float spellings inside ordering-key JSON strings; numeric
 values compare at 1e-9, with signed zero normalized. No accepted/rejected order,
 ID, candidate, coordinate, score, diagnostic detail or reason is omitted.
 
+The native coverage gate reads 30 verbatim test snapshots from
+`crates/forge3d-web/tests/golden/w13/native`, checks the original SHA-256 for
+all 87 definitions and verifies the mapped browser ports. The coverage generator
+extracts these bytes from the pinned Git commit; the gate requires no historical
+Git objects in CI's shallow checkout. Required Windows CI also runs the W13
+installed-tarball and Vite consumer workflow.
+
+
 ## Reproducible commands
 
 From the repository:
