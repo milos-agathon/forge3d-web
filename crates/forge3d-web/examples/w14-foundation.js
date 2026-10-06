@@ -31,12 +31,12 @@ window.__w14 = {
       let projectedError = 0,
         geographicError = 0,
         roundTripError = 0;
-      for (const c of fixture.cases) {
+      for (const c of [...fixture.cases,...fixture.published.cases]) {
         const output = await crs.transformCoords(c.points, c.source, c.target);
         const difference = Math.max(...output.flat().map((n,i)=>Math.abs(n-c.expected.flat()[i])));
-        if (c.target === "EPSG:4326") geographicError = Math.max(geographicError,difference);
+        if (["EPSG:4326","EPSG:4277"].includes(c.target)) geographicError = Math.max(geographicError,difference);
         else projectedError = Math.max(projectedError,difference);
-        if (c.target !== "EPSG:4326") {
+        if (!["EPSG:4326","EPSG:4277"].includes(c.target)) {
           const back = await crs.transformCoords(output,c.target,c.source);
           const again = await crs.transformCoords(back,c.source,c.target);
           roundTripError = Math.max(roundTripError,...again.flat().map((n,i)=>Math.abs(n-output.flat()[i])));
