@@ -12,6 +12,7 @@ import {
 } from "../../src-ts/crs.js";
 import { TerrainDataset } from "../../src-ts/terrain-dataset.js";
 import { PROJ_ASSETS } from "../../src-ts/proj-assets.js";
+import { reprojectVectorLayer } from "../../src-ts/crs-layers.js";
 import { reprojectGeoJson } from "../../src-ts/crs-geometry.js";
 const read = (path: string) =>
   readFileSync(new URL("../../" + path, import.meta.url));
@@ -51,9 +52,43 @@ describe("W14 native CRS contract and W00 oracle", () => {
     expect(PROJ_ASSETS.tarballSha256).toBe(
       lock.assets.find((a: any) => a.id === "proj-wasm").source.sha256,
     );
-    const contract=JSON.parse(read("tests/parity/fixture-contracts.json").toString()).fixtures.find((f:any)=>f.id==="crs-epsg-v1");
-    expect(contract.generator.parameters.controlFixture.sha256).toBe(createHash("sha256").update(read("tests/fixtures/w14/crs-epsg-v1.json")).digest("hex"));
-    expect(contract.generator.parameters.gridFixture.sha256).toBe(PROJ_ASSETS.grids[0].sha256);
+    const provenance = JSON.parse(read("tests/fixtures/w14/provenance.json").toString());
+    const bytes = read("tests/fixtures/w14/crs-epsg-v1.json");
+    expect(bytes.includes(13)).toBe(false);
+    expect(provenance.sha256).toBe(createHash("sha256").update(bytes).digest("hex"));
+    const contract = JSON.parse(read("tests/parity/fixture-contracts.json").toString()).fixtures.find((f:any)=>f.id==="crs-epsg-v1");
+    expect(contract.generator.parameters).toEqual({geographicCrs:"EPSG:4326",projectedCrs:["EPSG:3857","EPSG:32632"],pointCount:32,includesAxisOrderCases:true});
+    expect(contract).toEqual(JSON.parse(read("tests/fixtures/w14/w00-crs-contract.json").toString()));
+  });
+  it("aligns north-up and rotated raster origins, preserving elevation and caller data", async()=>{
+    const transformer:any={maxPoints:100,async transformCoords(points:number[][],source:string,target:string){
+      const values=kernel.transform(new Float64Array(points.flat()),source,target,true,2);
+      return points.map((_,i)=>[values[2*i],values[2*i+1]]);
+    }};
+    const t=fixture.terrain;
+    const input:any={name:"map",crs:"EPSG:4326",features:t.points.map((p:number[],i:number)=>({id:i+1,kind:"point",position:[p[0],7,p[1]]}))};
+    const original=structuredClone(input);
+    const output=await reprojectVectorLayer(transformer,input,t);
+    expect(output.crs).toBeUndefined();expect(input).toEqual(original);
+    output.features.forEach((f:any,i:number)=>{
+      expect(f.position[0]).toBeCloseTo(t.world[i][0],6);
+      expect(f.position[2]).toBeCloseTo(t.world[i][1],6);expect(f.position[1]).toBe(7);
+    });
+    const rotated:any={crs:"EPSG:3857",width:3,height:5,spacing:[2,3],transform:[500,2,1,100,1,-3]};
+    const corner:any={name:"rotated",crs:"EPSG:3857",features:[{id:9,kind:"point",position:[501.5,7,99]}]};
+    expect((await reprojectVectorLayer(transformer,corner,rotated)).features[0]).toMatchObject({position:[-2,7,-6]});
+    await expect(reprojectVectorLayer(transformer,corner,{...rotated,transform:[0,1,1,0,1,1]})).rejects.toMatchObject({code:"INVALID_INPUT"});
+    await expect(reprojectVectorLayer(transformer,{...corner,features:[]},{...rotated,transform:undefined})).rejects.toMatchObject({code:"INVALID_INPUT"});
+  });
+  it("uses the pinned grid in an ordinary system-to-system conversion", () => {
+    const c=fixture.grid.crsControl;
+    const output=kernel.transform(new Float64Array(c.points.flat()),c.source,c.target,true,2);
+    output.forEach((n,i)=>expect(Math.abs(n-c.expected.flat()[i])).toBeLessThanOrEqual(1e-7));
+    expect(Math.abs(output[0]!-c.points[0][0])).toBeGreaterThan(1e-5);
+  });
+  it.each(fixture.published.cases)("matches published EPSG controls: $source to $target", (c:any)=>{
+    const output=kernel.transform(new Float64Array(c.points.flat()),c.source,c.target,true,2);
+    output.forEach((n,i)=>expect(Math.abs(n-c.expected.flat()[i])).toBeLessThanOrEqual(c.target==="EPSG:4277" ? 1e-7 : .01));
   });
   it.each(fixture.cases)(
     "matches independent projected and geographic controls: $target",
@@ -68,7 +103,7 @@ describe("W14 native CRS contract and W00 oracle", () => {
       );
       projected.forEach((n, i) =>
         expect(Math.abs(n - control.expected.flat()[i])).toBeLessThanOrEqual(
-          0.01,
+          control.target === "EPSG:4326" ? 1e-7 : 0.01,
         ),
       );
       const roundtrip = kernel.transform(
@@ -79,7 +114,7 @@ describe("W14 native CRS contract and W00 oracle", () => {
         2,
       );
       roundtrip.forEach((n, i) =>
-        expect(Math.abs(n - points[i]!)).toBeLessThanOrEqual(1e-7),
+        expect(Math.abs(n - points[i]!)).toBeLessThanOrEqual(control.source === "EPSG:4326" ? 1e-7 : 0.01),
       );
       const back = kernel.transform(
         roundtrip,

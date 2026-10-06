@@ -193,6 +193,7 @@ export class CrsTransformer {
       {
         kind: "init",
         moduleUrl: new URL("proj-emscripten.js", base).href,
+        moduleSource: assets.get("proj-emscripten.js")!,
         wasm,
         database,
         grids,
@@ -201,6 +202,7 @@ export class CrsTransformer {
       [
         wasm.buffer,
         database.buffer,
+        assets.get("proj-emscripten.js")!.buffer,
         ...Object.values(grids).map((g) => g.buffer),
       ],
     );

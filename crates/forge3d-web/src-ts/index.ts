@@ -1,4 +1,6 @@
 import { VectorLayers } from "./vector-layers.js";
+import { CrsTransformer } from "./crs.js";
+import { reprojectVectorLayer, type CrsLayerTarget } from "./crs-layers.js";
 import { compileVectorHighlights, compileVectorPacket, type VectorPacket } from "./vector-geometry.js";
 import type { VectorSnapshot, VectorReport, VectorPickMap, VectorPickRegion, VectorProjectionReport } from "./vector-types.js";
 export { VectorLayers, VectorLayer } from "./vector-layers.js";
@@ -218,6 +220,8 @@ export interface TerrainHeightmapInput {
   domain?: [number, number];
   nodata?: number;
   crs?: string;
+  /** GDAL pixel-corner affine [x0, dx, rotationX, y0, rotationY, dy]. */
+  transform?: [number, number, number, number, number, number];
   heightAo?: HeightAoOptions;
   sunVisibility?: SunVisibilityOptions;
   debugView?: TerrainDebugView;
@@ -1151,6 +1155,7 @@ export interface TerrainHeightmapSourceInput {
   domain?: [number, number];
   nodata?: number;
   crs?: string;
+  transform?: [number, number, number, number, number, number];
   heightAo?: HeightAoOptions;
   sunVisibility?: SunVisibilityOptions;
   debugView?: TerrainDebugView;
@@ -2756,6 +2761,9 @@ export class Forge3DRuntime {
   #offlineActive = false;
   #deviceLossError: Forge3DError | undefined;
   #vectorState: { input: VectorLayers | VectorSnapshot; terrain: TerrainHeightmapInput | undefined; geometryRevision: number; highlightRevision: number } | undefined;
+  #geospatialTerrain: TerrainDataset | TerrainHeightmapInput | undefined;
+  #geospatialVectorEpoch = 0;
+  #geospatialVectorAbort: AbortController | undefined;
 
   private constructor(
     inner: WasmRuntime,
@@ -3007,6 +3015,8 @@ export class Forge3DRuntime {
     const payload = vectors === undefined ? scene : { ...scene, vectorPacket: vectors === null ? null : getSceneVectorPacket(scene,scene.revision) ?? compileVectorPacket(vectors, vectorTerrain) };
     this.#runOrQueue(() => {
       this.#inner.setScene?.(payload as SceneSnapshot);
+      this.#geospatialVectorEpoch++;this.#geospatialVectorAbort?.abort();
+      this.#geospatialTerrain=vectorTerrain;
       if (vectors !== undefined) this.#vectorState = vectors === null ? undefined : { input: vectors, terrain: vectorTerrain, geometryRevision: -1, highlightRevision: -1 };
     });
   }
@@ -3039,11 +3049,22 @@ export class Forge3DRuntime {
           : normalizeEnvironment(input);
     this.#runOrQueue(() => this.#inner.setEnvironment!(snapshot));
   }
-  setVectorLayers(input: VectorLayers | VectorSnapshot | null, terrain?: TerrainHeightmapInput): void {
+  /** CRS-tagged layers project into the retained terrain frame; await before rendering. */
+  setVectorLayers(input: VectorLayers | VectorSnapshot | null, terrain?: TerrainHeightmapInput | TerrainDataset): void | Promise<void> {
     this.#assertNotDisposed();
     if (!this.#inner.setVectorLayers) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support vector layers");
+    const epoch=++this.#geospatialVectorEpoch;
+    this.#geospatialVectorAbort?.abort();
+    const geospatial=input instanceof VectorLayers ? input.hasGeospatialLayers : input?.layers.some(layer=>layer.crs !== undefined);
+    if (geospatial) {
+      const snapshot=input instanceof VectorLayers ? input.snapshot() : structuredClone(input!);
+      const target=terrain ?? this.#geospatialTerrain;
+      if (!target) throw new Forge3DError("INVALID_INPUT", "Geospatial vectors require a georeferenced terrain");
+      return this.#setGeospatialVectors(snapshot,target,epoch);
+    }
+    const renderTerrain=terrain instanceof TerrainDataset ? terrain.toTerrainInput() : terrain;
     const previous = this.#vectorState;
-    if (input instanceof VectorLayers && previous?.input === input && previous.terrain === terrain && previous.geometryRevision === input.geometryRevision && this.#inner.updateVectorHighlights) {
+    if (input instanceof VectorLayers && previous?.input === input && previous.terrain === renderTerrain && previous.geometryRevision === input.geometryRevision && this.#inner.updateVectorHighlights) {
       if (previous.highlightRevision !== input.highlightRevision) {
         const highlights = compileVectorHighlights(input);
         const revision = input.highlightRevision;
@@ -3054,13 +3075,39 @@ export class Forge3DRuntime {
       }
       return;
     }
-    const packet = input === null ? null : compileVectorPacket(input, terrain);
+    const packet = input === null ? null : compileVectorPacket(input, renderTerrain);
     const geometryRevision = input instanceof VectorLayers ? input.geometryRevision : -1;
     const highlightRevision = input instanceof VectorLayers ? input.highlightRevision : -1;
     this.#runOrQueue(() => {
       this.#inner.setVectorLayers!(packet);
-      this.#vectorState = input === null ? undefined : { input, terrain, geometryRevision, highlightRevision };
+      this.#vectorState = input === null ? undefined : { input, terrain: renderTerrain, geometryRevision, highlightRevision };
     });
+  }
+  async #setGeospatialVectors(snapshot: VectorSnapshot, target: TerrainDataset | TerrainHeightmapInput, epoch: number): Promise<void> {
+    const local=await this.#reprojectVectorSnapshot(snapshot,target,epoch);
+    this.#assertNotDisposed();
+    if (epoch !== this.#geospatialVectorEpoch) throw new Forge3DError("REQUEST_CANCELLED", "Terrain or vectors changed during reprojection");
+    this.setVectorLayers(local,target instanceof TerrainDataset ? target.toTerrainInput() : target);
+  }
+  async #reprojectVectorSnapshot(snapshot: VectorSnapshot, target: TerrainDataset | TerrainHeightmapInput, epoch: number): Promise<VectorSnapshot> {
+    const frame: CrsLayerTarget={crs:target.crs,width:target.width,height:target.height,
+      ...(target.spacing ? {spacing:[...target.spacing]} : {}),
+      ...(target.transform ? {transform:[...target.transform]} : {})};
+    const abort=new AbortController();this.#geospatialVectorAbort=abort;
+    const transformer=await CrsTransformer.create({signal:abort.signal});
+    try {
+      const layers=[];
+      for (const layer of snapshot.layers) {
+        const converted=layer.crs === undefined ? layer : await reprojectVectorLayer(transformer,{...layer,crs:layer.crs},frame,{signal:abort.signal});
+        layers.push({...layer,...converted});
+        if (converted.crs === undefined) delete layers[layers.length-1]!.crs;
+      }
+      this.#assertNotDisposed();
+      if (epoch !== this.#geospatialVectorEpoch) throw new Forge3DError("REQUEST_CANCELLED", "Terrain or vectors changed during reprojection");
+      // Commit only after every layer has projected successfully. The caller's
+      // buffers and layer handles keep their original geographic coordinates.
+      return {...snapshot,layers};
+    } finally {transformer.dispose();if(this.#geospatialVectorAbort===abort)this.#geospatialVectorAbort=undefined;}
   }
   getVectorReport(): VectorReport {
     this.#assertNotDisposed();
@@ -3443,10 +3490,12 @@ export class Forge3DRuntime {
     return report;
   }
 
-  setTerrain(terrain: TerrainHeightmapInput): void {
+  setTerrain(terrain: TerrainHeightmapInput | TerrainDataset): void {
     this.#assertNotDisposed();
-    const normalized = normalizeTerrainHeightmapInput(terrain);
-    this.#runOrQueue(() => this.#inner.setTerrain(normalized));
+    const normalized = normalizeTerrainHeightmapInput(terrain instanceof TerrainDataset ? terrain.toTerrainInput() : terrain);
+    this.#geospatialVectorEpoch++;
+    this.#geospatialVectorAbort?.abort();
+    this.#runOrQueue(() => {this.#inner.setTerrain(normalized);this.#geospatialTerrain=terrain;});
   }
 
   async setTerrainFromSource(
@@ -3476,6 +3525,9 @@ export class Forge3DRuntime {
         this.#assertNotDisposed();
       }
       this.#inner.setTerrain(decoded);
+      this.#geospatialVectorEpoch++;
+      this.#geospatialVectorAbort?.abort();
+      this.#geospatialTerrain=decoded;
     } catch (error) {
       throw Forge3DError.from(error);
     }
@@ -3751,6 +3803,7 @@ export class Forge3DRuntime {
   }
 
   dispose(): void {
+    this.#geospatialVectorAbort?.abort();
     if (this.#disposeRequested) {
       return;
     }
@@ -4081,6 +4134,7 @@ interface TerrainMetadataTarget {
   domain?: [number, number];
   nodata?: number;
   crs?: string;
+  transform?: [number, number, number, number, number, number];
   heightAo?: HeightAoOptions;
   sunVisibility?: SunVisibilityOptions;
   debugView?: TerrainDebugView;
@@ -4112,6 +4166,7 @@ function copyTerrainMetadata(
   if (source.crs !== undefined) {
     target.crs = source.crs;
   }
+  if ("transform" in source && source.transform !== undefined) target.transform = [...source.transform];
   if (source.heightAo !== undefined) {
     target.heightAo = { ...source.heightAo };
   }

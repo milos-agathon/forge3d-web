@@ -10,6 +10,10 @@ export interface DatasetMetadata {
     format: string;
     sha256: string;
     byteLength?: number;
+    /** Native repository storage; ordinary Git blobs use the raw endpoint. */
+    gitLfs?: boolean;
+    /** Original native registry digest, if stale relative to its committed asset. */
+    nativeSha256?: string;
     crs?: string;
     version?: string;
     coordinateSpace?: "geographic" | "projected" | "normalized";

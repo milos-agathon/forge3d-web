@@ -24,7 +24,7 @@ def digest(data):
 
 def write_json(path, value):
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value, indent=2, ensure_ascii=False) + '\n', encoding='utf-8')
+    path.write_text(json.dumps(value, indent=2, ensure_ascii=False) + '\n', encoding='utf-8', newline='\n')
 
 assets = WEB / 'assets/datasets'
 assets.mkdir(parents=True, exist_ok=True)
@@ -35,7 +35,7 @@ for name in ['mini_dem.npy', 'sample_boundaries.geojson']:
     if data.startswith(b'version https://git-lfs'):
         expected = re.search(rb'oid sha256:([0-9a-f]{64})',data).group(1).decode()
         expected_size = int(re.search(rb'size (\d+)',data).group(1))
-        data = urllib.request.urlopen(f'https://media.githubusercontent.com/media/milos-agathon/forge3d/{COMMIT}/{path}').read()
+        data = urllib.request.urlopen(f'https://media.githubusercontent.com/media/milos-agathon/forge3d/main/{path}').read()
         if digest(data) != expected or len(data) != expected_size:
             raise RuntimeError('Native LFS fixture differs from the pinned Git pointer')
     (assets / name).write_bytes(data)
@@ -48,8 +48,15 @@ for node in ast.walk(source):
 write_json(assets / 'provenance.json', {'schemaVersion': 1, 'sourceCommit': COMMIT, 'bundled': provenance, 'remote': records})
 catalog = [dict(name='mini_dem', kind='dem', bundled=True, filename='mini_dem.npy', relativeUrl='mini_dem.npy', sha256=provenance[0]['sha256'], byteLength=provenance[0]['byteLength'], description='Native synthetic 256×256 float32 DEM.', format='npy'), dict(name='sample_boundaries', kind='vector', bundled=True, filename='sample_boundaries.geojson', relativeUrl='sample_boundaries.geojson', sha256=provenance[1]['sha256'], byteLength=provenance[1]['byteLength'], description='Native tutorial boundary polygons in normalized terrain coordinates.', format='geojson', coordinateSpace='normalized')]
 for record in sorted(records, key=lambda r:r['name']):
-    catalog.append(dict(name=record['name'], kind=record['kind'], bundled=False, filename=record['filename'], relativeUrl=record['relative_url'], sha256=record['known_hash'].split(':')[1], description=record['description'], format=record['filename'].split('.')[-1]))
-(WEB / 'src-ts/dataset-catalog.ts').write_text('// Generated from native datasets.py by scripts/generate-w14-fixtures.py.\nimport type { DatasetMetadata } from "./dataset-types.js";\nexport const DATASET_CATALOG: readonly DatasetMetadata[] = ' + json.dumps(catalog, indent=2, ensure_ascii=False) + ';\n', encoding='utf-8')
+    storage = json.loads((assets / 'remote-storage.json').read_text())['entries'][record['name']]
+    lfs, size = storage['gitLfs'], storage['byteLength']
+    native_hash = record['known_hash'].split(':')[1]
+    served_hash = native_hash if lfs else digest(native('assets/' + record['relative_url']))
+    entry = dict(name=record['name'], kind=record['kind'], bundled=False, filename=record['filename'], relativeUrl=record['relative_url'], sha256=served_hash, byteLength=size, gitLfs=lfs, description=record['description'], format=record['filename'].split('.')[-1])
+    if native_hash != served_hash:
+        entry['nativeSha256'] = native_hash
+    catalog.append(entry)
+(WEB / 'src-ts/dataset-catalog.ts').write_text('// Generated from native datasets.py by scripts/generate-w14-fixtures.py.\nimport type { DatasetMetadata } from "./dataset-types.js";\nexport const DATASET_CATALOG: readonly DatasetMetadata[] = ' + json.dumps(catalog, indent=2, ensure_ascii=False) + ';\n', encoding='utf-8', newline='\n')
 fixture_dir = WEB / 'tests/fixtures/w14'
 fixture_dir.mkdir(parents=True, exist_ok=True)
 coords = [[float(lon), float(lat)] for lat in [0, 20, 40, 60] for lon in np.linspace(6.1, 11.9, 8)]
@@ -61,6 +68,12 @@ for target in ['EPSG:3857', 'EPSG:32632', 'EPSG:32654', 'EPSG:32732']:
     transformer = pyproj.Transformer.from_crs('EPSG:4326',target,always_xy=True)
     expected = [list(transformer.transform(*p)) for p in points]
     cases.append(dict(source='EPSG:4326',target=target,points=points,expected=expected))
+    # Independent inverse inputs are rounded map coordinates, never output from
+    # the browser (or its forward transformation).
+    inverse_points = [[round(x, 2), round(y, 2)] for x, y in expected]
+    inverse = pyproj.Transformer.from_crs(target, 'EPSG:4326', always_xy=True)
+    cases.append(dict(source=target, target='EPSG:4326', points=inverse_points,
+                      expected=[list(inverse.transform(*p)) for p in inverse_points]))
 grid = WEB / 'assets/proj/us_noaa_conus.tif'
 if not grid.exists():
     raise RuntimeError('Prepare the pinned W14 PROJ/grid assets before generating controls')
@@ -68,7 +81,30 @@ pipeline = '+proj=pipeline +step +proj=unitconvert +xy_in=deg +xy_out=rad +step 
 grid_points = [[-100,40],[-90,35],[-110,45]]
 grid_transformer = pyproj.Transformer.from_pipeline(pipeline.replace('us_noaa_conus.tif',grid.as_posix()))
 grid_reference = dict(name=grid.name,sha256=digest(grid.read_bytes()),pipeline=pipeline,points=grid_points,expected=[list(grid_transformer.transform(*p)) for p in grid_points])
+grid_crs = '+proj=longlat +ellps=clrk66 +nadgrids=us_noaa_conus.tif +type=crs'
+grid_system = pyproj.Transformer.from_crs(grid_crs.replace(grid.name, grid.as_posix()), 'EPSG:4326', always_xy=True)
+grid_reference['crsControl'] = dict(source=grid_crs, target='EPSG:4326', points=grid_points,
+                                  expected=[list(grid_system.transform(*p)) for p in grid_points])
+origin_northing = pyproj.Transformer.from_crs(4326,32632,always_xy=True).transform(9,40)[1]
+terrain_xy = [[500000,origin_northing],[499920,origin_northing+40],[500080,origin_northing-40]]
+terrain_inverse = pyproj.Transformer.from_crs(32632,4326,always_xy=True)
+terrain_control = dict(crs='EPSG:32632', transform=[499835,10,0,origin_northing+165,0,-10],
+    width=33,height=33,spacing=[10,10],points=[list(terrain_inverse.transform(*p)) for p in terrain_xy],
+    world=[[0,0],[-80,-40],[80,40]])
 write_json(fixture_dir / 'crs-epsg-v1.json', {'id':'crs-epsg-v1','oracle':{'implementation':'pyproj','version':pyproj.__version__,'projVersion':pyproj.proj_version_str,'nativeSource':COMMIT+':python/forge3d/crs.py'},'tolerances':{'geographicDegrees':1e-7,'projectedMeters':.01,'roundTripMeters':.02},'cases':cases,'grid':grid_reference,'projJson':pyproj.CRS(32632).to_json_dict(),'wkt':{'wgs84':pyproj.CRS(4326).to_wkt(),'utm32':pyproj.CRS(32632).to_wkt(),'utm32NoId':pyproj.CRS(32632).to_wkt(version='WKT1_GDAL')}})
+fixture_path=fixture_dir / 'crs-epsg-v1.json'
+fixture_value=json.loads(fixture_path.read_text())
+fixture_value['terrain']=terrain_control
+# Published EPSG Guidance Note 7-2 examples, independent of pyproj generation.
+fixture_value['published']=dict(source='https://www.iogp.org/bookstore/wp-content/uploads/sites/2/woocommerce_uploads/2017/01/373-07-02.pdf',
+    edition='December 2024', cases=[
+      dict(page=53,source='EPSG:4326',target='EPSG:3857',points=[[-100-20/60,24+22/60+54.433/3600]],expected=[[-11169055.58,2800000.00]]),
+      dict(page=63,source='EPSG:4277',target='EPSG:27700',points=[[.5,50.5]],expected=[[577274.99,69740.50]]),
+      dict(page=63,source='EPSG:27700',target='EPSG:4277',points=[[577274.99,69740.50]],expected=[[.5,50.5]])])
+write_json(fixture_path,fixture_value)
+write_json(fixture_dir / 'provenance.json', dict(schemaVersion=1, role='Supplemental W14 controls; the W00 crs-epsg-v1 contract is unchanged',
+    path='crs-epsg-v1.json', sha256=digest((fixture_dir / 'crs-epsg-v1.json').read_bytes()), encoding='UTF-8 LF',
+    generator='scripts/generate-w14-fixtures.py', oracle=dict(pyproj=pyproj.__version__, proj=pyproj.proj_version_str)))
 for path in ['python/forge3d/crs.py','python/forge3d/datasets.py','tests/test_crs_reproject.py','tests/test_crs_auto.py','tests/test_datasets.py','src/geo/reproject.rs']:
     out = WEB / 'tests/golden/w14/native' / path.replace('/', '__')
     out.parent.mkdir(parents=True, exist_ok=True)
@@ -118,7 +154,7 @@ for path in ['tests/test_crs_reproject.py','tests/test_crs_auto.py','tests/test_
             continue
         if path.endswith('test_datasets.py'):
             title, port = data_ports[node.name], data_unit
-            adaptation = 'Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the LFS repository endpoint is immutable at the baseline commit. Kind loader success uses small verified fixtures with the native kinds and filenames.'
+            adaptation = 'Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the live native LFS repository endpoint serves bytes pinned by the native SHA-256. Kind loader success uses small verified fixtures with the native kinds and filenames.'
         elif node.name.startswith('test_terrain_crs_'):
             title, port = 'retains the native terrain CRS default and explicit state', crs_unit
             adaptation = 'TerrainDataset.crs retains optional metadata and supplies the automatic layer target CRS.'

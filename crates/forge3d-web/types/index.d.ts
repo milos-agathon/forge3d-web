@@ -226,6 +226,7 @@ export interface TerrainHeightmapInput {
   nodata?: number;
   /** Optional CRS identifier retained as metadata. */
   crs?: string;
+  transform?: [number, number, number, number, number, number];
   /** Optional GPU ambient-occlusion settings. */
   heightAo?: HeightAoOptions;
   /** Optional GPU sun-visibility settings. */
@@ -1076,6 +1077,7 @@ export interface TerrainHeightmapSourceInput {
   domain?: [number, number];
   nodata?: number;
   crs?: string;
+  transform?: [number, number, number, number, number, number];
   heightAo?: HeightAoOptions;
   sunVisibility?: SunVisibilityOptions;
   debugView?: TerrainDebugView;
@@ -2750,7 +2752,7 @@ export declare class Forge3DSession {
  * methods reject or throw Forge3DError with code RUNTIME_DISPOSED.
  */
 export declare class Forge3DRuntime {
-  setVectorLayers(input:VectorLayers|VectorSnapshot|null,terrain?:TerrainHeightmapInput):void;
+  setVectorLayers(input:VectorLayers|VectorSnapshot|null,terrain?:TerrainHeightmapInput|TerrainDataset):void|Promise<void>;
   getVectorReport():VectorReport;
   readVectorProjection():Promise<VectorProjectionReport>;
   readVectorPickMap():Promise<VectorPickMap>;
@@ -2785,7 +2787,7 @@ export declare class Forge3DRuntime {
   getCapabilities(): Forge3DRuntimeCapabilities;
   getRenderStats(): RenderStats;
   getMemoryReport(): MemoryReport;
-  setTerrain(terrain: TerrainHeightmapInput): void;
+  setTerrain(terrain: TerrainHeightmapInput|TerrainDataset): void;
   setTerrainFromSource(terrain: TerrainHeightmapSourceInput): Promise<void>;
   setScene(scene: SceneSnapshot): void;
   setLighting(lighting: LightingSnapshot): void;
@@ -2874,7 +2876,7 @@ export declare class Forge3DRuntime {
 export declare class Forge3DViewer {
   setLabels(layer: import("./labels.js").LabelLayer | null, options?: Omit<import("./labels.js").LabelRenderOptions,"viewport"|"camera">): void;
   getLabelReport(): import("./labels.js").LabelPlacementReport | undefined;
-  setVectorLayers(input:VectorLayers|VectorSnapshot|null,terrain?:TerrainHeightmapInput):void;
+  setVectorLayers(input:VectorLayers|VectorSnapshot|null,terrain?:TerrainHeightmapInput):void|Promise<void>;
   getVectorReport():VectorReport;
   readVectorPickMap():Promise<VectorPickMap>;
   readVectorPickMap(region:VectorPickRegion):Promise<VectorPickMap>;
@@ -3928,7 +3930,7 @@ export interface RangeSchedulerOptions {
 
 /** W08 (F1): HTTP range request scheduler — dedupe, coalescing,
  * priority queue, bounded concurrency, per-subscriber cancellation,
- * memory → persistent → network lookup. Requires servers to honor
+ * memory â†’ persistent â†’ network lookup. Requires servers to honor
  * `Range` (HTTP 206); a 200 to a range request fails fast. */
 export declare class RangeScheduler {
   constructor(options?: RangeSchedulerOptions);
@@ -4230,7 +4232,7 @@ export declare function decodeOverlayImage(
 ): Promise<TerrainMaterialImage>;
 
 /** W08 (F5): normalize + validate `material.virtualTexture` exactly as
- * the commit path does; `undefined` → the disabled core default. */
+ * the commit path does; `undefined` â†’ the disabled core default. */
 export declare function normalizeTerrainVirtualTexture(
   input?: TerrainVirtualTextureInput,
 ): NormalizedTerrainVirtualTexture;

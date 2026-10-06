@@ -1,0 +1,50 @@
+{
+  "id": "crs-epsg-v1",
+  "ownerTasks": [
+    "W14"
+  ],
+  "capabilityIds": [
+    "G01"
+  ],
+  "provenance": [
+    "1f4084a:tests/test_crs_reproject.py",
+    "EPSG:4326/EPSG:3857/EPSG:32632 published control points"
+  ],
+  "generator": {
+    "kind": "deterministic-contract-spec",
+    "version": "1",
+    "seed": 0,
+    "parameters": {
+      "geographicCrs": "EPSG:4326",
+      "projectedCrs": [
+        "EPSG:3857",
+        "EPSG:32632"
+      ],
+      "pointCount": 32,
+      "includesAxisOrderCases": true
+    },
+    "sha256": "d118df580b6ddd0c8a684eae329aa411ce83950c885ad8d72689d6c0868ff60a"
+  },
+  "tolerances": {
+    "geographicDegrees": 1e-07,
+    "projectedMeters": 0.01,
+    "roundTripMeters": 0.02,
+    "missingGridMustFail": true
+  },
+  "budgets": [
+    {
+      "profileId": "reference-discrete",
+      "cpuBytes": 268435456,
+      "gpuBytes": 67108864,
+      "frameTimeP95Ms": 16.7,
+      "durationSeconds": 60
+    },
+    {
+      "profileId": "reference-integrated",
+      "cpuBytes": 268435456,
+      "gpuBytes": 67108864,
+      "frameTimeP95Ms": 33.3,
+      "durationSeconds": 60
+    }
+  ]
+}

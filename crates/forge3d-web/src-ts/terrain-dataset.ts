@@ -1032,6 +1032,7 @@ export class TerrainDataset {
     if (this.crs !== undefined) {
       input.crs = this.crs;
     }
+    if (this.transform !== undefined) input.transform = [...this.transform];
     return input;
   }
 

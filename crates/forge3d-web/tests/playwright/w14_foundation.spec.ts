@@ -8,6 +8,39 @@ declare global {
     __w14: any;
   }
 }
+test("W14 geographic vectors align with terrain in a real render", async ({page,webgpuAvailability}) => {
+  skipRenderAssertionsWhenProbing(webgpuAvailability);
+  await page.goto("/examples/crs-datasets.html?dist");
+  await page.waitForFunction(()=>!!window.__w14);
+  const r=await page.evaluate(()=>window.__w14.alignment());
+  expect(r.ids).toEqual([701,702,703]);
+  expect(r.labelCount).toBe(3);
+  expect(r.labelError).toBeLessThanOrEqual(.01);
+  expect(r.pickPixels).toBeGreaterThan(100);
+  expect(r.referencePixels).toBe(r.pickPixels);
+  expect(r.pickEqual && r.rgbaEqual && r.inputIntact && r.terrainVisible).toBe(true);
+  expect(r.negativePixels).toBe(0);
+  expect(r.failure.code).toBe("INVALID_INPUT");
+  expect(r.cancelled.code).toBe("REQUEST_CANCELLED");
+  expect(r.failureAtomic && r.cancelAtomic).toBe(true);
+});
+test("W14 rejects a different factory on the worker module import", async ({page})=>{
+  let reads=0;
+  await page.route("**/assets/proj/proj-emscripten.js",async route=>{
+    const response=await route.fetch();
+    const text=await response.text();
+    await route.fulfill({response,body:++reads === 1 ? text : text.replace("var Module=moduleArg;","throw new Error('tampered factory executed');var Module=moduleArg;")});
+  });
+  await page.goto("/examples/crs-datasets.html?dist");
+  await page.waitForFunction(()=>!!window.__w14);
+  const result=await page.evaluate(async()=>{
+    try { const crs=await window.__w14.api.CrsTransformer.create({cache:null});crs.dispose();return null; }
+    catch(e:any){return {code:e.code,details:e.details,message:e.message};}
+  });
+  expect(reads).toBe(2);
+  expect(result).toMatchObject({code:"IO_ERROR",details:{kind:"asset-integrity",asset:"proj-emscripten.js"}});
+  expect(result?.message).not.toContain("tampered factory executed");
+});
 for (const dist of [false, true]) {
   test(`W14 CRS controls, WKT and axis order (${dist ? "dist" : "source"})`, async ({
     page,
@@ -73,6 +106,7 @@ test("W14 grids never fall back to identity; missing best grid is structured", a
   const r = await page.evaluate(() => window.__w14.grids());
   expect(r.shifted).toHaveLength(3);
   expect(r.gridError).toBeLessThanOrEqual(1e-7);
+  expect(r.systemGridError).toBeLessThanOrEqual(1e-7);
   expect(r.missing.details.kind).toBe("crs-missing-grid");
   expect(r.bestMissing.details.kind).toBe("crs-missing-grid");
   expect(r.optional.code).toBe("INVALID_INPUT");

@@ -5,6 +5,7 @@ import { ProjKernel, type ProjModule } from "./proj-kernel.js";
 interface Request {
   kind: "init" | "metadata" | "transform" | "pipeline";
   moduleUrl?: string;
+  moduleSource?: Uint8Array;
   wasm?: Uint8Array;
   database?: Uint8Array;
   grids?: Record<string, Uint8Array>;
@@ -34,6 +35,13 @@ scope.addEventListener("message", (event) => {
           wasmBinary: Uint8Array;
           printErr: (line: string) => void;
         }) => Promise<ProjModule>;
+        // Emscripten's pinned ESM has exactly one declaration and one export.
+        // Compare the function the worker actually loaded with the verified
+        // bytes before invoking it; a second HTTP response may differ.
+        const expected = new TextDecoder("utf-8", { fatal: true }).decode(req.moduleSource!);
+        const actual = Function.prototype.toString.call(factory) + "export default PROJModule;\n";
+        if (actual !== expected)
+          throw new Forge3DError("IO_ERROR", "Loaded PROJ factory differs from verified module", { kind: "asset-integrity", asset: "proj-emscripten.js" });
         const module = await factory({
           wasmBinary: req.wasm!,
           printErr: () => {},

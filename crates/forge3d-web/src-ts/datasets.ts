@@ -14,7 +14,7 @@ import type { CrsGeoJson } from "./crs-types.js";
 export type * from "./dataset-types.js";
 const VERSION = "native-1f4084af428dc699bdcd108b029736cb73903926";
 export const DATASET_BASE_URL =
-  "https://media.githubusercontent.com/media/milos-agathon/forge3d/1f4084af428dc699bdcd108b029736cb73903926/assets/";
+  "https://media.githubusercontent.com/media/milos-agathon/forge3d/main/assets/";
 
 /** Registry and verified byte loader. Remote format decoding belongs to W15/W16. */
 export class DatasetRegistry {
@@ -105,7 +105,9 @@ export class DatasetRegistry {
     const base = entry.bundled
       ? (this.#options.bundledBaseUrl ??
         new URL("../assets/datasets/", import.meta.url))
-      : (this.#options.baseUrl ?? DATASET_BASE_URL);
+      : (this.#options.baseUrl ?? (entry.gitLfs === false
+          ? "https://raw.githubusercontent.com/milos-agathon/forge3d/main/assets/"
+          : DATASET_BASE_URL));
     const directory = new URL(base, import.meta.url);
     if (!directory.pathname.endsWith("/")) directory.pathname += "/";
     const result = new URL(entry.relativeUrl, directory);
@@ -167,7 +169,7 @@ export class DatasetRegistry {
     options: DatasetFetchOptions,
   ): Promise<Uint8Array> {
     const metadata = this.info(name);
-    if (metadata.kind !== kind)
+    if (!metadata.bundled && metadata.kind !== kind)
       throw new Forge3DError(
         "INVALID_INPUT",
         `Dataset '${name}' has kind '${metadata.kind}', expected '${kind}'`,

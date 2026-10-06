@@ -354,7 +354,7 @@
       "definition": "test_mini_dem_loads_with_expected_shape_and_dtype",
       "nativeFileSha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0",
       "nativeContract": "The bundled mini DEM should be a small float32 height grid.",
-      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the LFS repository endpoint is immutable at the baseline commit. Kind loader success uses small verified fixtures with the native kinds and filenames.",
+      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the live native LFS repository endpoint serves bytes pinned by the native SHA-256. Kind loader success uses small verified fixtures with the native kinds and filenames.",
       "ports": [
         {
           "file": "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
@@ -367,7 +367,7 @@
       "definition": "test_mini_dem_path_exists",
       "nativeFileSha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0",
       "nativeContract": "The packaged mini DEM path resolves to a real file.",
-      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the LFS repository endpoint is immutable at the baseline commit. Kind loader success uses small verified fixtures with the native kinds and filenames.",
+      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the live native LFS repository endpoint serves bytes pinned by the native SHA-256. Kind loader success uses small verified fixtures with the native kinds and filenames.",
       "ports": [
         {
           "file": "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
@@ -380,7 +380,7 @@
       "definition": "test_sample_boundaries_load_as_geojson",
       "nativeFileSha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0",
       "nativeContract": "The bundled boundary sample should parse as a small feature collection.",
-      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the LFS repository endpoint is immutable at the baseline commit. Kind loader success uses small verified fixtures with the native kinds and filenames.",
+      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the live native LFS repository endpoint serves bytes pinned by the native SHA-256. Kind loader success uses small verified fixtures with the native kinds and filenames.",
       "ports": [
         {
           "file": "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
@@ -393,7 +393,7 @@
       "definition": "test_registry_lists_bundled_and_remote_datasets",
       "nativeFileSha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0",
       "nativeContract": "The registry should expose the Phase 2 bundled and fetchable names.",
-      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the LFS repository endpoint is immutable at the baseline commit. Kind loader success uses small verified fixtures with the native kinds and filenames.",
+      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the live native LFS repository endpoint serves bytes pinned by the native SHA-256. Kind loader success uses small verified fixtures with the native kinds and filenames.",
       "ports": [
         {
           "file": "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
@@ -406,7 +406,7 @@
       "definition": "test_list_datasets_returns_named_records",
       "nativeFileSha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0",
       "nativeContract": "list_datasets() should produce metadata rows with stable names.",
-      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the LFS repository endpoint is immutable at the baseline commit. Kind loader success uses small verified fixtures with the native kinds and filenames.",
+      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the live native LFS repository endpoint serves bytes pinned by the native SHA-256. Kind loader success uses small verified fixtures with the native kinds and filenames.",
       "ports": [
         {
           "file": "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
@@ -419,7 +419,7 @@
       "definition": "test_fetch_returns_bundled_path_for_bundled_dataset",
       "nativeFileSha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0",
       "nativeContract": "fetch() should resolve bundled datasets without network access.",
-      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the LFS repository endpoint is immutable at the baseline commit. Kind loader success uses small verified fixtures with the native kinds and filenames.",
+      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the live native LFS repository endpoint serves bytes pinned by the native SHA-256. Kind loader success uses small verified fixtures with the native kinds and filenames.",
       "ports": [
         {
           "file": "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
@@ -432,7 +432,7 @@
       "definition": "test_fetch_dem_prefers_local_asset_checkout",
       "nativeFileSha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0",
       "nativeContract": "Large DEM samples should resolve locally inside the repo checkout when present.",
-      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the LFS repository endpoint is immutable at the baseline commit. Kind loader success uses small verified fixtures with the native kinds and filenames.",
+      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the live native LFS repository endpoint serves bytes pinned by the native SHA-256. Kind loader success uses small verified fixtures with the native kinds and filenames.",
       "ports": [
         {
           "file": "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
@@ -445,7 +445,7 @@
       "definition": "test_fetch_cityjson_prefers_local_asset_checkout",
       "nativeFileSha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0",
       "nativeContract": "CityJSON samples should resolve locally when the repo assets are present.",
-      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the LFS repository endpoint is immutable at the baseline commit. Kind loader success uses small verified fixtures with the native kinds and filenames.",
+      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the live native LFS repository endpoint serves bytes pinned by the native SHA-256. Kind loader success uses small verified fixtures with the native kinds and filenames.",
       "ports": [
         {
           "file": "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
@@ -458,7 +458,7 @@
       "definition": "test_fetch_copc_prefers_local_asset_checkout",
       "nativeFileSha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0",
       "nativeContract": "Point cloud samples should resolve locally when the repo assets are present.",
-      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the LFS repository endpoint is immutable at the baseline commit. Kind loader success uses small verified fixtures with the native kinds and filenames.",
+      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the live native LFS repository endpoint serves bytes pinned by the native SHA-256. Kind loader success uses small verified fixtures with the native kinds and filenames.",
       "ports": [
         {
           "file": "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
@@ -471,7 +471,7 @@
       "definition": "test_fetch_rejects_unknown_dataset",
       "nativeFileSha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0",
       "nativeContract": "Unknown dataset names should fail with a helpful error.",
-      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the LFS repository endpoint is immutable at the baseline commit. Kind loader success uses small verified fixtures with the native kinds and filenames.",
+      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the live native LFS repository endpoint serves bytes pinned by the native SHA-256. Kind loader success uses small verified fixtures with the native kinds and filenames.",
       "ports": [
         {
           "file": "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
@@ -484,7 +484,7 @@
       "definition": "test_fetch_kind_validation_rejects_wrong_registry_kind",
       "nativeFileSha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0",
       "nativeContract": "Kind-specific helpers should reject datasets from the wrong category.",
-      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the LFS repository endpoint is immutable at the baseline commit. Kind loader success uses small verified fixtures with the native kinds and filenames.",
+      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the live native LFS repository endpoint serves bytes pinned by the native SHA-256. Kind loader success uses small verified fixtures with the native kinds and filenames.",
       "ports": [
         {
           "file": "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
@@ -497,7 +497,7 @@
       "definition": "test_default_dataset_base_url_uses_live_repository_path",
       "nativeFileSha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0",
       "nativeContract": "The fallback download base URL should use the live GitHub repository.",
-      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the LFS repository endpoint is immutable at the baseline commit. Kind loader success uses small verified fixtures with the native kinds and filenames.",
+      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the live native LFS repository endpoint serves bytes pinned by the native SHA-256. Kind loader success uses small verified fixtures with the native kinds and filenames.",
       "ports": [
         {
           "file": "crates/forge3d-web/tests/unit/w14-datasets.test.ts",
@@ -510,7 +510,7 @@
       "definition": "test_default_dataset_base_url_uses_github_lfs_media_endpoint",
       "nativeFileSha256": "c957235679ef7b29f19df89d08eb8b7ed8398069c624ee80a10e8fbcb4f4a6f0",
       "nativeContract": "Remote asset downloads should fetch Git LFS media, not pointer files.",
-      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the LFS repository endpoint is immutable at the baseline commit. Kind loader success uses small verified fixtures with the native kinds and filenames.",
+      "adaptation": "Native filesystem paths/local checkout become package URLs and digest-verified cache bytes; the live native LFS repository endpoint serves bytes pinned by the native SHA-256. Kind loader success uses small verified fixtures with the native kinds and filenames.",
       "ports": [
         {
           "file": "crates/forge3d-web/tests/unit/w14-datasets.test.ts",

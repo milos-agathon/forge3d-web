@@ -112,8 +112,8 @@ try {
   );
   writeFileSync(
     join(consumer, "consumer.ts"),
-    `import {CrsTransformer,DatasetRegistry,VectorLayers,crsToEpsg,crsFromRasterMetadata,reprojectLabelFeatures,type CrsMetadata,type DatasetMetadata} from '@forge3d/web';
-async function use(){const crs=await CrsTransformer.create();const m:CrsMetadata=await crs.parseCrs('EPSG:32632');const a:Float64Array=await crs.transformCoords(new Float32Array([9,40]),'EPSG:4326','EPSG:32632');const nested:number[][]=await crs.transformCoords([[9,40]],'EPSG:4326','EPSG:32632');const registry=new DatasetRegistry();const d:DatasetMetadata=registry.info('mini_dem');const dem=await registry.miniDem({offline:true});const vectors=new VectorLayers();await vectors.addGeospatial({name:'point',crs:'EPSG:4326',features:[{id:1,kind:'point',position:[9,0,40]}]},'EPSG:32632',crs);void [m,a,nested,d,dem,crsToEpsg('epsg:4326'),crsFromRasterMetadata({epsg:32632}),reprojectLabelFeatures];crs.dispose();registry.dispose();vectors.dispose();}void use;`,
+    `import {CrsTransformer,DatasetRegistry,VectorLayers,TerrainDataset,type Forge3DRuntime,crsToEpsg,crsFromRasterMetadata,reprojectLabelFeatures,type CrsMetadata,type DatasetMetadata} from '@forge3d/web';
+async function use(runtime:Forge3DRuntime){const crs=await CrsTransformer.create();const m:CrsMetadata=await crs.parseCrs('EPSG:32632');const a:Float64Array=await crs.transformCoords(new Float32Array([9,40]),'EPSG:4326','EPSG:32632');const nested:number[][]=await crs.transformCoords([[9,40]],'EPSG:4326','EPSG:32632');const registry=new DatasetRegistry();const d:DatasetMetadata=registry.info('mini_dem');const dem=await registry.miniDem({offline:true});const vectors=new VectorLayers();await vectors.addGeospatial({name:'point',crs:'EPSG:4326',features:[{id:1,kind:'point',position:[9,0,40]}]},'EPSG:32632',crs);const terrain=TerrainDataset.fromArray({width:2,height:2,heights:new Float32Array(4),crs:'EPSG:32632',transform:[499990,10,0,4427770,0,-10],spacing:[10,10]});runtime.setTerrain(terrain);await runtime.setVectorLayers(vectors);void [m,a,nested,d,dem,crsToEpsg('epsg:4326'),crsFromRasterMetadata({epsg:32632}),reprojectLabelFeatures];crs.dispose();registry.dispose();vectors.dispose();}void use;`,
   );
   run(
     process.execPath,
@@ -191,6 +191,7 @@ async function use(){const crs=await CrsTransformer.create();const m:CrsMetadata
   for (const name of [
     "coordinates",
     "geometry",
+    "alignment",
     "grids",
     "datasets",
     "lifetime",
@@ -217,7 +218,15 @@ async function use(){const crs=await CrsTransformer.create();const m:CrsMetadata
   for (const label of g.labels)
     assert(Math.abs(label.geometry.coordinates[0] - 500000) <= 0.01);
   const grids = results.grids;
-  assert(grids.shifted.length === 3 && grids.gridError <= 1e-7);
+  assert(grids.shifted.length === 3 && grids.gridError <= 1e-7 && grids.systemGridError <= 1e-7);
+  const alignment=results.alignment;
+  assert.deepEqual(alignment.ids,[701,702,703]);
+  assert(alignment.labelCount === 3 && alignment.labelError <= .01);
+  assert(alignment.pickPixels>100 && alignment.pickEqual && alignment.rgbaEqual && alignment.inputIntact && alignment.terrainVisible);
+  assert.equal(alignment.negativePixels,0);
+  assert.equal(alignment.failure.code,"INVALID_INPUT");
+  assert.equal(alignment.cancelled.code,"REQUEST_CANCELLED");
+  assert(alignment.failureAtomic && alignment.cancelAtomic);
   assert.equal(grids.missing.details.kind, "crs-missing-grid");
   assert.equal(grids.bestMissing.details.kind, "crs-missing-grid");
   assert.equal(grids.optional.code, "INVALID_INPUT");

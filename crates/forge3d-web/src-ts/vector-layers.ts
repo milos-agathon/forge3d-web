@@ -91,6 +91,7 @@ export class VectorLayers {
     get geometryRevision(): number { return this.#geometryRevision; }
     get highlightRevision(): number { return this.#highlightRevision; }
     get disposed(): boolean { return this.#disposed; }
+    get hasGeospatialLayers(): boolean { this.#guard();return [...this.#layers.values()].some(layer=>layer.crs !== undefined); }
     #guard(): void { if (this.#disposed)
         throw new Forge3DError("RUNTIME_DISPOSED", "Vector layers are disposed"); }
     add(input: VectorLayerInput): VectorLayer {

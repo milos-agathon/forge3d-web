@@ -31,6 +31,8 @@ export const DATASET_CATALOG: readonly DatasetMetadata[] = [
     "filename": "Mount_Fuji_30m.tif",
     "relativeUrl": "tif/Mount_Fuji_30m.tif",
     "sha256": "cff39b4e02d7ba13c48f3d8b1a4080d40ada753ade62fa951459fe4e01e98b48",
+    "byteLength": 28077356,
+    "gitLfs": true,
     "description": "Mount Fuji DEM used in labels and buildings examples.",
     "format": "tif"
   },
@@ -41,6 +43,8 @@ export const DATASET_CATALOG: readonly DatasetMetadata[] = [
     "filename": "luxembourg_dem.tif",
     "relativeUrl": "tif/luxembourg_dem.tif",
     "sha256": "c332f7abb41a911449596f86277e05ef340cef37620115c1c78a56af35cc83e8",
+    "byteLength": 7835392,
+    "gitLfs": true,
     "description": "Luxembourg DEM used with the rail overlay gallery example.",
     "format": "tif"
   },
@@ -51,6 +55,8 @@ export const DATASET_CATALOG: readonly DatasetMetadata[] = [
     "filename": "luxembourg_rail.gpkg",
     "relativeUrl": "gpkg/luxembourg_rail.gpkg",
     "sha256": "980dc1659c712c67a80c9b57acf31eb3b26b14213f69a5c6c7f7ffb84385e1ec",
+    "byteLength": 1454080,
+    "gitLfs": false,
     "description": "Rail network overlay used in the Luxembourg gallery scene.",
     "format": "gpkg"
   },
@@ -60,9 +66,12 @@ export const DATASET_CATALOG: readonly DatasetMetadata[] = [
     "bundled": false,
     "filename": "mount_fuji_buildings.geojson",
     "relativeUrl": "geojson/mount_fuji_buildings.geojson",
-    "sha256": "19a124e80b12c7cd7181020d70e1b2e2004acc7a8b8a72b3463a701575c07f6e",
+    "sha256": "3e2b88beb62b74517208e93433d7beff6d3017115485be5f5899a80f9e8b9f6e",
+    "byteLength": 13257,
+    "gitLfs": false,
     "description": "GeoJSON building footprints used in the Mount Fuji buildings demo.",
-    "format": "geojson"
+    "format": "geojson",
+    "nativeSha256": "19a124e80b12c7cd7181020d70e1b2e2004acc7a8b8a72b3463a701575c07f6e"
   },
   {
     "name": "mount-fuji-places",
@@ -71,6 +80,8 @@ export const DATASET_CATALOG: readonly DatasetMetadata[] = [
     "filename": "Mount_Fuji_places.gpkg",
     "relativeUrl": "gpkg/Mount_Fuji_places.gpkg",
     "sha256": "9e46ad2e55ba9b945b3dc5c29ad29e80d881a32d4a90ecf8a2637f864567a530",
+    "byteLength": 106496,
+    "gitLfs": false,
     "description": "Sample placenames around Mount Fuji for labels and callouts.",
     "format": "gpkg"
   },
@@ -81,6 +92,8 @@ export const DATASET_CATALOG: readonly DatasetMetadata[] = [
     "filename": "MtStHelens.laz",
     "relativeUrl": "lidar/MtStHelens.laz",
     "sha256": "4474530433fda8c40fbb621ed4dd78b02c9c90cbe4ef33588a73883663d5bd57",
+    "byteLength": 9493209,
+    "gitLfs": false,
     "description": "LAZ point cloud used in the point cloud tutorial and gallery entry.",
     "format": "laz"
   },
@@ -91,6 +104,8 @@ export const DATASET_CATALOG: readonly DatasetMetadata[] = [
     "filename": "dem_rainier.tif",
     "relativeUrl": "tif/dem_rainier.tif",
     "sha256": "875b243474b151175f76037acd60c2149ac2e46fba9ba2bbce0c9a6998015dd3",
+    "byteLength": 9455957,
+    "gitLfs": true,
     "description": "Mount Rainier DEM used in viewer tutorials and gallery scenes.",
     "format": "tif"
   },
@@ -100,9 +115,12 @@ export const DATASET_CATALOG: readonly DatasetMetadata[] = [
     "bundled": false,
     "filename": "sample_buildings.city.json",
     "relativeUrl": "geojson/sample_buildings.city.json",
-    "sha256": "378a25afdd4932de4038b310216078181fb7eb9b19bb0f658045893371ba91c7",
+    "sha256": "b580f03628a86da237a0c5b9bb023a3893ec72d7422170ab02a48bb150db2f17",
+    "byteLength": 3382,
+    "gitLfs": false,
     "description": "Small CityJSON building set for tutorial and test scenes.",
-    "format": "json"
+    "format": "json",
+    "nativeSha256": "378a25afdd4932de4038b310216078181fb7eb9b19bb0f658045893371ba91c7"
   },
   {
     "name": "swiss",
@@ -111,6 +129,8 @@ export const DATASET_CATALOG: readonly DatasetMetadata[] = [
     "filename": "switzerland_dem.tif",
     "relativeUrl": "tif/switzerland_dem.tif",
     "sha256": "d09d229fa265749720a6b4bd40c440799f43286bf2d401d732ea77f89d0bd478",
+    "byteLength": 29156558,
+    "gitLfs": true,
     "description": "Swiss Alps DEM used in overlay and legend examples.",
     "format": "tif"
   },
@@ -121,6 +141,8 @@ export const DATASET_CATALOG: readonly DatasetMetadata[] = [
     "filename": "switzerland_land_cover.tif",
     "relativeUrl": "tif/switzerland_land_cover.tif",
     "sha256": "6b254585be4982ed9e8da63b8536ecc2f5fa4c64c6545db06c73eb1fe39a8f7f",
+    "byteLength": 234276875,
+    "gitLfs": true,
     "description": "Swiss land-cover raster used as a draped terrain overlay.",
     "format": "tif"
   }

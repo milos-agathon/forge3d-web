@@ -26,6 +26,7 @@ export declare class VectorLayers {
     get geometryRevision(): number;
     get highlightRevision(): number;
     get disposed(): boolean;
+    get hasGeospatialLayers(): boolean;
     add(input: VectorLayerInput): VectorLayer;
     /** Reproject to a terrain's CRS before committing the layer transaction. */
     addGeospatial(input: GeospatialVectorLayerInput, target: CrsLayerTarget, transformer: CrsTransformer, options?: CrsTransformOptions): Promise<VectorLayer>;

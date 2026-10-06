@@ -12,6 +12,9 @@ const dependency = json("../../docs/parity/dependency-lock.json").assets.find(
 );
 const npm = json("package-lock.json").packages["node_modules/proj-wasm"];
 const provenance = json("assets/proj/provenance.json");
+const factory = (await import(new URL("assets/proj/proj-emscripten.js", root))).default;
+assert(Function.prototype.toString.call(factory) + "export default PROJModule;\n" === read("assets/proj/proj-emscripten.js").toString(),
+  "Pinned module must contain only the PROJ factory declaration and export");
 assert(
   npm.version === "0.1.0-alpha9" &&
     npm.integrity === dependency.source.integrity &&

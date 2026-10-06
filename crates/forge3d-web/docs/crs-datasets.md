@@ -58,11 +58,28 @@ An identity transform still validates the CRS and returns a fresh copy.
 Feature and FeatureCollection, including polygon holes, nested topology, null
 feature geometries, Z/T, properties and IDs. Bounds are recomputed. GeoJSON
 horizontal coordinates always use XY order. `VectorLayers.addGeospatial()`
-reprojects to a supplied terrain's `crs` or an explicit CRS before committing;
-a failed conversion leaves layers and IDs intact. Vector renderer coordinates
+reprojects to a supplied terrain's `crs` and local frame, or an explicit absolute
+CRS, before committing; a failed conversion leaves layers and IDs intact. Vector renderer coordinates
 are Y-up: X/Z form the map plane and Y is preserved elevation.
 `reprojectVectorLayer()` provides the same conversion without insertion.
 `reprojectLabelFeatures()` bridges asynchronous PROJ to W13 label recipes.
+
+For automatic rendering, pass a georeferenced `TerrainDataset` to
+`runtime.setTerrain(dataset)`, add layers carrying their source `crs`, then
+`await runtime.setVectorLayers(layers)`. This ordinary ingestion method projects
+every tagged layer to the retained terrain CRS and converts the result into its
+centered X/Z sample grid. A new worker is disposed after each ingestion. Await
+completion before rendering; failed or superseded ingestion commits no layers.
+Caller arrays retain their source coordinates. Submit edits again through this
+method. Untagged local layers keep the synchronous rendering path.
+
+The terrain requires its dimensions, spacing and GDAL six-element pixel-corner
+`transform: [x0, dx, rotationX, y0, rotationY, dy]`. Sample (0,0) lies at pixel
+(0.5,0.5). Inverting the affine handles north-up rasters, rotation and large
+projected origins; local spacing and terrain centering match the renderer.
+Missing or singular transforms fail explicitly. `reprojectLabelFeatures()` uses
+the same local frame when passed a terrain dataset. An explicit CRS string
+continues to return absolute CRS coordinates for non-rendering uses.
 
 ## Grids, precision and deployment
 
@@ -78,29 +95,46 @@ filenames. Every grid is digest-checked before entering the worker filesystem.
 explicit PROJ pipelines and requires every named grid to be supplied; its input
 units and steps are the pipeline's contract. The bundled conus fixture alone
 does not satisfy modern NADCON5 operations; those fail until their best grids
-are supplied.
+are supplied. A system-to-system transform from
+`+proj=longlat +ellps=clrk66 +nadgrids=us_noaa_conus.tif +type=crs` to
+`EPSG:4326` uses the bundled grid without a hand-written pipeline. Default
+EPSG NAD27-to-NAD83 operations still require the newer grids.
 
 Serve the package's `dist/` and `assets/` directories together without modifying
 the pinned PROJ module. JavaScript and worker modules use `script-src 'self'`
 and `worker-src 'self'`; WASM compilation requires `'wasm-unsafe-eval'` where
 the browser enforces it. There is no dependency CDN. Local files must be served
 over HTTP(S). The repository Vite middleware serves the pinned module unchanged
-so HMR cannot invalidate its hash. Bundlers should serve the package directories
+so HMR cannot change its source. The worker compares the loaded factory's exact
+source with the digest-verified module bytes before invoking it. A second HTTP
+response with changed factory code is rejected. Build verification also checks
+that the pinned module contains only that declaration and its export. The host
+must still trust its worker/module loader and same-origin scripts; this is not
+browser SRI protection against arbitrary top-level module injection. Bundlers should serve the package directories
 as static assets; projection asset paths are relative to the installed module.
 
-The independent `crs-epsg-v1` pyproj controls cover 32 WGS84 points in Web
-Mercator and UTM 32N, Fuji in UTM 54N, and UTM 32S. Acceptance is 1e-7 degrees,
-0.01 m projected and 0.02 m projected round trips. Axis-order, WKT and actual
-nonidentity grid cases are also tested.
+The W00 `crs-epsg-v1` contract is preserved byte for byte as a JSON record.
+Supplemental W14 controls separately pin UTF-8/LF fixture bytes. Independent
+pyproj controls cover forward and inverse Web Mercator, UTM 32N, Fuji UTM 54N
+and UTM 32S. Inverse inputs are rounded projected coordinates, with independently
+computed geographic expectations. Published EPSG Guidance Note 7-2 examples
+also test Web Mercator and British National Grid in both directions. Acceptance
+is 1e-7 geographic degrees, 0.01 m projected and 0.02 m projected round trips.
+The geographic metric compares against the independent inverse oracle, rather
+than self round trips. Axis-order, WKT and both grid APIs are also tested.
 
 ## Dataset registry and offline cache
 
 `available()`, `bundled()`, `remote()`, `listDatasets()`, `datasetInfo()` and
 `info(name)` expose defensive metadata for the two native bundled fixtures
 and all ten remote native records. `fetch()`, `fetchDem()`, `fetchCityJson()`
-and `fetchCopc()` return verified bytes; format-specific helpers check registry
-kinds. The remote LFS media base is pinned to native commit `1f4084a`, retaining
-all native SHA-256 values. Override `baseUrl` to self-host remote datasets and
+and `fetchCopc()` return verified bytes; format-specific helpers check remote
+registry kinds and accept bundled names, matching native behavior. Default URLs
+use the native repository's `main` branch, selecting Git LFS media for five
+raster files and raw Git URLs for five ordinary blobs. Content is pinned by
+SHA-256 and size. Two stale native building-file digests are retained as
+`nativeSha256`; the fetch digest pins their actual committed Git bytes. Storage
+provenance records the verified data-repository tree. Override `baseUrl` to self-host remote datasets and
 `bundledBaseUrl` to relocate fixtures. Supply `entries` for an application
 registry. Unknown names and wrong kinds produce `INVALID_INPUT`; HTTP errors
 and digest mismatches produce `IO_ERROR` with structured details.
@@ -146,7 +180,9 @@ worker and rejects pending work. It releases memory but preserves shared
 persistent cache entries. GPU device loss has no effect on these CPU services.
 
 Run `npm run test:w14`, `npm run test:api`, `npm run test:package-consumer:w14`
-and `npm run verify:parity`. Asset preparation and fixture regeneration are
+and `npm run verify:parity`. `npm run test:datasets:remote` downloads all ten
+remote datasets through their real default URLs and verifies full bytes; CI
+runs this live integration gate separately from the offline package test. Asset preparation and fixture regeneration are
 explicit maintainer operations (`prepare-w14-assets.mjs` and
 `scripts/generate-w14-fixtures.py`); normal builds verify pinned checked-in bytes.
 The package consumer runs without Python, bare runtime imports or a repository

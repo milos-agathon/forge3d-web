@@ -79,7 +79,7 @@ interface ViewerRuntime {
   setScene?(scene: SceneSnapshot): void;
   setEnvironment?(snapshot: EnvironmentSnapshot|null):void;
   getEnvironmentMemoryReport?():EnvironmentMemoryReport;
-  setVectorLayers?(input:VectorLayers|VectorSnapshot|null,terrain?:TerrainHeightmapInput):void;
+  setVectorLayers?(input:VectorLayers|VectorSnapshot|null,terrain?:TerrainHeightmapInput):void|Promise<void>;
   getVectorReport?():VectorReport;
   readVectorPickMap?(region?:VectorPickRegion):Promise<VectorPickMap>;
   setPostFx?(snapshot:PostFxSnapshot|null):void;
@@ -713,10 +713,11 @@ export class Forge3DViewer {
       return runtime.getEnvironmentMemoryReport();
     });
   }
-  setVectorLayers(input:VectorLayers|VectorSnapshot|null,terrain?:TerrainHeightmapInput):void {
+  setVectorLayers(input:VectorLayers|VectorSnapshot|null,terrain?:TerrainHeightmapInput):void|Promise<void> {
     const runtime=this.#operationalRuntime();const snapshot=input instanceof VectorLayers?input.snapshot():input;
-    this.#callRuntime(()=>{if(!runtime.setVectorLayers)throw new Forge3DError("UNSUPPORTED_FEATURE","Vector layers unavailable");runtime.setVectorLayers(input,terrain);});
-    this.#vectorsReplay={snapshot:structuredClone(snapshot),...(terrain?{terrain:structuredClone(terrain)}:{})};this.#scheduler?.requestRender();
+    const result=this.#callRuntime(()=>{if(!runtime.setVectorLayers)throw new Forge3DError("UNSUPPORTED_FEATURE","Vector layers unavailable");return runtime.setVectorLayers(input,terrain);});
+    const commit=()=>{this.#vectorsReplay={snapshot:structuredClone(snapshot),...(terrain?{terrain:structuredClone(terrain)}:{})};this.#scheduler?.requestRender();};
+    if(result instanceof Promise)return result.then(commit);commit();
   }
   getVectorReport():VectorReport {const runtime=this.#operationalRuntime();if(!runtime.getVectorReport)throw new Forge3DError("UNSUPPORTED_FEATURE","Vector report unavailable");return runtime.getVectorReport();}
   async readVectorPickMap(region?:VectorPickRegion):Promise<VectorPickMap> {const runtime=this.#operationalRuntime();if(!runtime.readVectorPickMap)throw new Forge3DError("UNSUPPORTED_FEATURE","Vector picking unavailable");return runtime.readVectorPickMap(region);}
@@ -1255,7 +1256,7 @@ export class Forge3DViewer {
         return;
       }
       if(this.#environmentReplay!==undefined){if(!replacement.setEnvironment)throw new Forge3DError("UNSUPPORTED_FEATURE","Recovery runtime does not support environment");replacement.setEnvironment(structuredClone(this.#environmentReplay));}
-      if(this.#vectorsReplay!==undefined){if(!replacement.setVectorLayers)throw new Forge3DError("UNSUPPORTED_FEATURE","Recovery vectors unavailable");replacement.setVectorLayers(structuredClone(this.#vectorsReplay.snapshot),this.#vectorsReplay.terrain);}
+      if(this.#vectorsReplay!==undefined){if(!replacement.setVectorLayers)throw new Forge3DError("UNSUPPORTED_FEATURE","Recovery vectors unavailable");await replacement.setVectorLayers(structuredClone(this.#vectorsReplay.snapshot),this.#vectorsReplay.terrain);}
       if(this.#postFxReplay!==undefined){if(!replacement.setPostFx)throw new Forge3DError("UNSUPPORTED_FEATURE","Recovery runtime does not support post-FX");replacement.setPostFx(structuredClone(this.#postFxReplay));}
       if (this.#scatterReplay !== undefined) {
         if (!replacement.setScatterBatches || !replacement.setTimeSeconds) throw new Forge3DError("UNSUPPORTED_FEATURE", "Recovery runtime does not support terrain scatter");
@@ -1532,6 +1533,7 @@ interface TerrainMetadataCarrier {
   domain?: [number, number];
   nodata?: number;
   crs?: string;
+  transform?: [number, number, number, number, number, number];
   heightAo?: HeightAoOptions;
   sunVisibility?: SunVisibilityOptions;
   debugView?: TerrainDebugView;
@@ -1593,6 +1595,7 @@ function copyTerrainMetadata(
   if (source.crs !== undefined) {
     target.crs = source.crs;
   }
+  if(source.transform!==undefined)target.transform=[...source.transform];
   if (source.heightAo !== undefined) {
     target.heightAo = { ...source.heightAo };
   }

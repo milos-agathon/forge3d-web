@@ -1,6 +1,6 @@
 # W14 — CRS and dataset foundation
 
-W14 closes G01 and E06 with public TypeScript APIs, a real PROJ WASM worker,
+W14 implements G01 and E06 with public TypeScript APIs, a real PROJ WASM worker,
 the complete native dataset registry, and verified browser storage. The
 [package guide](../../crates/forge3d-web/docs/crs-datasets.md) describes use,
 deployment, precision, grid requirements, cancellation and resource lifetime.
@@ -19,10 +19,16 @@ exports. Regeneration fails if the two native source snapshots diverge.
 Native Python/NumPy/backend detection becomes ESM, float arrays and explicit
 worker capability errors. Filesystem paths and local checkout lookup become
 package-relative HTTP URLs and content-addressed browser caches. Remote URLs
-retain the native Git LFS media endpoint but freeze the baseline commit for
-reproducibility. The registry preserves every native remote name, kind,
-description, filename and SHA-256. Small verified fixtures exercise the three
-format-specific fetch helpers; remote file decoding belongs to W15/W16.
+use the live native repository's main branch with size/digest pinning. Five
+raster assets use Git LFS media; five ordinary Git blobs use the raw endpoint.
+The registry preserves every native remote name, kind, description and filename.
+Two stale native hashes are exposed as `nativeSha256`: Fuji buildings had a
+CRLF digest while Git serves LF; sample CityJSON differs from its registry digest.
+Fetch hashes pin the actual committed native blobs. `remote-storage.json` records
+data-repository tree `043a032cf00bee20a2299514484f811de8a53e9f`, storage and blob IDs.
+A live gate fetches all ten datasets without mocks and checks complete bytes.
+Bundled names work through all kind helpers, matching native behavior. Remote
+file decoding belongs to W15/W16.
 The native boundary fixture uses normalized terrain coordinates and is marked
 as such, without an invented EPSG code.
 
@@ -37,9 +43,13 @@ as such, without an invented EPSG code.
   allocations released in finally blocks. Networking is disabled in every
   context. `ONLY_BEST=YES` and `ALLOW_BALLPARK=NO` prevent approximate
   fallback; required missing grids return structured names and errors.
-- `VectorLayers.addGeospatial()` commits after successful conversion, preserving
-  feature IDs and elevation. A terrain dataset's optional CRS supplies the
-  target. The asynchronous label bridge supports all W13 coordinate forms.
+- Ordinary `await runtime.setVectorLayers(layers)` automatically projects
+  CRS-tagged input into the retained terrain CRS and affine frame. GDAL pixel
+  centers map to the renderer's centered X/Z sample grid, including rotation.
+  Failed/superseded ingestion leaves committed layers intact; owned workers
+  are disposed. Callers retain source coordinates. `addGeospatial()` and the
+  label bridge also align through a terrain dataset. Explicit CRS-string
+  targets continue to return absolute projected coordinates.
 - `DatasetRegistry`: all 12 native records, safe URL resolution, generic and
   kind-specific verified fetches, exact bundled DEM/boundaries, non-executable
   NPY decoding, progress, cancellation and diagnostics.
@@ -61,7 +71,12 @@ The dependency remains exactly `proj-wasm@0.1.0-alpha9`, using the W00 tarball
 SHA-256/SRI. `prepare-w14-assets.mjs` compares each installed upstream file
 against the verified archive. Normal packaging verifies checked-in file
 digests against the W00 dependency lock and retains all assets in the emitted
-package manifest. The module, WASM, database and configuration are unmodified.
+package manifest. The module, WASM, database and configuration are unmodified. Before invoking
+PROJ, the worker compares the factory it actually imported with the verified
+source bytes. A different second HTTP response fails before factory invocation.
+Build verification asserts the single-declaration/export module shape. The
+same-origin worker/module loader remains trusted; this is not a browser SRI
+sandbox for arbitrary top-level script injection.
 PROJ database metadata reports PROJ 9.8.1, EPSG v12.029 and PROJ data 1.24.
 
 The conus grid is frozen as `proj-data-conus-v1`, 173029 bytes, SHA-256
@@ -86,15 +101,25 @@ by the W00 lock; the review does not change that classification.
 ## Verification
 
 The fixture generator uses independent pyproj 3.7.2 / PROJ 9.5.1 controls:
-32 WGS84 points in Web Mercator and UTM 32N, Fuji in UTM 54N, southern
-hemisphere UTM 32S, authority axis order, WKT/PROJJSON, and three US points
-through the real pinned grid. Required tolerances are 1e-7 geographic degrees,
+forward and inverse controls for 32 points in Web Mercator, UTM 32N and
+UTM 32S, plus Fuji UTM 54N. Rounded projected inverse inputs have independent
+geographic expectations. Geographic error measures this oracle comparison.
+Published EPSG Guidance Note 7-2 examples supplement those controls (Web
+Mercator and forward/inverse British National Grid). The original W00
+`crs-epsg-v1` contract record is restored exactly and tested against its frozen
+pre-W14 copy; supplemental controls have their own UTF-8/LF provenance/hash.
+Authority axis order, WKT/PROJJSON and three US grid points are also tested,
+including an ordinary CRS-to-CRS conversion using the named bundled grid. Required tolerances are 1e-7 geographic degrees,
 0.01 m projected and 0.02 m projected round trips.
 
 The browser suite exercises source and emitted modules, all GeoJSON geometry
 types, vector/label transactionality, persistent offline cache, expected-digest
 poisoning, real grid corruption, setup/worker cancellation, memory admission,
-backend absence, disposal and an actual destroyed GPU device.
+backend absence, disposal and an actual destroyed GPU device. A real terrain
+render compares automatically projected vectors with independent local control
+positions: both RGBA and pick IDs match, with nonempty coverage. Absolute
+projected-coordinate negative controls have zero visible picks. Terrain-aligned
+labels, ingestion failure and superseding cancellation are asserted as well.
 
 `test:package-consumer:w14` packs and installs a fresh tarball into a temporary
 consumer outside the checkout. Its TypeScript client imports only
@@ -113,14 +138,13 @@ change the broader browser release-support or physical hardware matrix.
 
 Verification commands:
 
-The final run passed 933 unit tests, eight Chromium W14 browser cases, public
-API/declaration checks, nine documentation link checks, the emitted package
-contract, and the isolated strict-CSP/offline tarball consumer. Observed maxima
-were 9.313225746154785e-10 m projected, 1.4210854715202004e-14 degrees
-geographic, 9.313225746154785e-10 m projected round trip, and zero grid error
-against the independent oracle. The live worker reported 14197342 asset bytes,
-a 16777216-byte WASM heap and zero GPU allocations; settled disposal reported
-zero workers, pending calls, assets, heap and reservations.
+The earlier 933-test pass was checkout-dependent: the fixture digest used CRLF
+bytes while Git checks out LF. Default remote dataset URLs also returned 404.
+The previous completion claim is withdrawn. The corrective working checkout
+passes 942 unit tests, ten Chromium W14 cases, public declarations and the
+strict-CSP/offline installed package consumer. Full live default fetches pass
+for all ten remote files. A separate clean checkout is still being checked;
+completion status remains provisional until that check finishes.
 
 The aggregate `test:package` reaches unrelated infrastructure tests that need
 Windows symlink privileges unavailable to this process. Three tests fail with
@@ -143,6 +167,7 @@ npm run test:api
 npm run test:docs
 npx playwright test tests/playwright/w14_foundation.spec.ts --project=chromium-preflight
 npm run test:package-consumer:w14
+npm run test:datasets:remote
 npm run test:package
 npm run verify:parity
 ```

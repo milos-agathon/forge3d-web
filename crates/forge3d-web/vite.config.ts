@@ -18,7 +18,7 @@ export default defineConfig({
       configureServer(server) {
         server.middlewares.use((request, response, next) => {
           // The pinned module must be served byte-for-byte: Vite's HMR/import
-          // rewrites would invalidate its runtime integrity check.
+            // rewrites would change the factory source checked by the worker.
           if (request.url?.split('?')[0] === '/assets/proj/proj-emscripten.js') {
             const bytes=readFileSync(new URL('./assets/proj/proj-emscripten.js',import.meta.url));
             response.setHeader('content-type','text/javascript');

@@ -50,18 +50,24 @@ describe("W14 native datasets and verified storage", () => {
       native = JSON.parse(new TextDecoder().decode(read("provenance.json")));
     expect(registry.bundled()).toEqual(["mini_dem", "sample_boundaries"]);
     expect(registry.remote()).toHaveLength(10);
-    for (const n of native.remote)
-      expect(registry.info(n.name)).toMatchObject({
+    for (const n of native.remote) {
+      const metadata=registry.info(n.name);
+      expect(metadata.nativeSha256 ?? metadata.sha256).toBe(n.known_hash.slice(7));
+      expect(metadata).toMatchObject({
         kind: n.kind,
         filename: n.filename,
-        sha256: n.known_hash.slice(7),
         description: n.description,
       });
+    }
+    expect(registry.info("sample-buildings").sha256).toBe("b580f03628a86da237a0c5b9bb023a3893ec72d7422170ab02a48bb150db2f17");
+    expect(registry.info("mount-fuji-buildings").sha256).toBe("3e2b88beb62b74517208e93433d7beff6d3017115485be5f5899a80f9e8b9f6e");
+    expect(registry.url("sample-buildings").hostname).toBe("raw.githubusercontent.com");
+    expect(registry.url("rainier").hostname).toBe("media.githubusercontent.com");
     const info = registry.info("rainier");
     info.sha256 = "changed";
     expect(registry.info("rainier").sha256).not.toBe("changed");
     expect(DATASET_BASE_URL).toContain(
-      "media.githubusercontent.com/media/milos-agathon/forge3d/1f4084a",
+      "media.githubusercontent.com/media/milos-agathon/forge3d/main/",
     );
     expect(() => registry.info("unknown")).toThrow("Unknown dataset");
     expect(registry.url("rainier").href).toContain("tif/dem_rainier.tif");
@@ -99,6 +105,8 @@ describe("W14 native datasets and verified storage", () => {
     expect(
       (await registry.sampleBoundaries()).features!.length,
     ).toBeGreaterThanOrEqual(3);
+    expect(await registry.fetchCityJson("sample_boundaries")).toEqual(await registry.fetch("sample_boundaries"));
+    expect(await registry.fetchCopc("mini_dem")).toEqual(await registry.fetch("mini_dem"));
     dem.data.fill(0);
     expect(Math.max(...(await registry.miniDem()).data)).toBeGreaterThan(500);
     expect(() => decodeDatasetNpy(new Uint8Array([1, 2, 3]))).toThrow();

@@ -1,0 +1,66 @@
+{
+  "repository": "milos-agathon/forge3d",
+  "commit": "043a032cf00bee20a2299514484f811de8a53e9f",
+  "entries": {
+    "rainier": {
+      "gitLfs": true,
+      "byteLength": 9455957,
+      "path": "assets/tif/dem_rainier.tif",
+      "blobSha": "71725c479f32ba7b46db6ee905673325a2316ace"
+    },
+    "fuji": {
+      "gitLfs": true,
+      "byteLength": 28077356,
+      "path": "assets/tif/Mount_Fuji_30m.tif",
+      "blobSha": "45c200951e48cdbff649b8eb3b38ac47191c66b6"
+    },
+    "swiss": {
+      "gitLfs": true,
+      "byteLength": 29156558,
+      "path": "assets/tif/switzerland_dem.tif",
+      "blobSha": "4618e346daf34fdbdfac979ccdbb09d8358e9465"
+    },
+    "luxembourg": {
+      "gitLfs": true,
+      "byteLength": 7835392,
+      "path": "assets/tif/luxembourg_dem.tif",
+      "blobSha": "997515cd3bb1b002973de62c3dafdd7d5cc348e7"
+    },
+    "swiss-land-cover": {
+      "gitLfs": true,
+      "byteLength": 234276875,
+      "path": "assets/tif/switzerland_land_cover.tif",
+      "blobSha": "e369dc6243f44c9605955c10cda8785063ec63a7"
+    },
+    "luxembourg-rail": {
+      "gitLfs": false,
+      "byteLength": 1454080,
+      "path": "assets/gpkg/luxembourg_rail.gpkg",
+      "blobSha": "ec72b1ac00713274fbb7fc66df9a41eb1155cd81"
+    },
+    "mount-fuji-places": {
+      "gitLfs": false,
+      "byteLength": 106496,
+      "path": "assets/gpkg/Mount_Fuji_places.gpkg",
+      "blobSha": "aa85d4f99fb12a7072bbb6462e98c474a3313b55"
+    },
+    "sample-buildings": {
+      "gitLfs": false,
+      "byteLength": 3382,
+      "path": "assets/geojson/sample_buildings.city.json",
+      "blobSha": "9121be97f47c2fdfc0598ee8fa1c743109e281f9"
+    },
+    "mount-fuji-buildings": {
+      "gitLfs": false,
+      "byteLength": 13257,
+      "path": "assets/geojson/mount_fuji_buildings.geojson",
+      "blobSha": "b7858e8a3d16b860fe5e8ec2344c59de6a38d360"
+    },
+    "mt-st-helens": {
+      "gitLfs": false,
+      "byteLength": 9493209,
+      "path": "assets/lidar/MtStHelens.laz",
+      "blobSha": "7b87c360e871b7999716ac19d55050eb8fb390ed"
+    }
+  }
+}

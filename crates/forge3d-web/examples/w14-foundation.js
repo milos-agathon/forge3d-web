@@ -33,35 +33,14 @@ window.__w14 = {
         roundTripError = 0;
       for (const c of fixture.cases) {
         const output = await crs.transformCoords(c.points, c.source, c.target);
-        output
-          .flat()
-          .forEach(
-            (n, i) =>
-              (projectedError = Math.max(
-                projectedError,
-                Math.abs(n - c.expected.flat()[i]),
-              )),
-          );
-        const back = await crs.transformCoords(output, c.target, c.source);
-        back
-          .flat()
-          .forEach(
-            (n, i) =>
-              (geographicError = Math.max(
-                geographicError,
-                Math.abs(n - c.points.flat()[i]),
-              )),
-          );
-        const again = await crs.transformCoords(back, c.source, c.target);
-        again
-          .flat()
-          .forEach(
-            (n, i) =>
-              (roundTripError = Math.max(
-                roundTripError,
-                Math.abs(n - output.flat()[i]),
-              )),
-          );
+        const difference = Math.max(...output.flat().map((n,i)=>Math.abs(n-c.expected.flat()[i])));
+        if (c.target === "EPSG:4326") geographicError = Math.max(geographicError,difference);
+        else projectedError = Math.max(projectedError,difference);
+        if (c.target !== "EPSG:4326") {
+          const back = await crs.transformCoords(output,c.target,c.source);
+          const again = await crs.transformCoords(back,c.source,c.target);
+          roundTripError = Math.max(roundTripError,...again.flat().map((n,i)=>Math.abs(n-output.flat()[i])));
+        }
       }
       const xy = await crs.transformCoords(
         [[9, 40]],
@@ -109,6 +88,54 @@ window.__w14 = {
     } finally {
       crs.dispose();
     }
+  },
+  async alignment() {
+    const canvas=document.createElement("canvas");canvas.width=256;canvas.height=256;document.body.append(canvas);
+    const r=await api.Forge3DRuntime.create(canvas,{width:256,height:256,devicePixelRatio:1});
+    const t=fixture.terrain, heights=Float32Array.from({length:t.width*t.height},(_,i)=>20*Math.exp(-((i%33-16)**2+(Math.floor(i/33)-16)**2)/40));
+    const terrain=api.TerrainDataset.fromArray({...t,heights,domain:[0,30],renderMode:"perspective"});
+    const layers=new VectorLayers();
+    const feature=(id,position)=>({id,kind:"point",position});
+    const style={pointSize:14,color:[1,0,0,1],drape:true,drapeOffset:1};
+    const frame=async()=>{r.render();return {rgba:Array.from(await r.readRgba()),pick:await r.readVectorPickMap()};};
+    try {
+      r.setTerrain(terrain);
+      r.setCamera({position:[0,450,0],target:[0,0,0],up:[0,0,-1],fovYDegrees:50,near:.1,far:2000});
+      const input={name:"geographic",crs:"EPSG:4326",features:t.points.map((p,i)=>feature(701+i,[p[0],0,p[1]])),style};
+      layers.add(input);
+      const before=JSON.stringify(layers.snapshot());
+      // The ordinary runtime entry point discovers the source and terrain CRS.
+      await r.setVectorLayers(layers);
+      const geographic=await frame();
+      const crs=await CrsTransformer.create({cache:cache()});
+      let labelError,labelCount;
+      try {
+        const labels=await reprojectLabelFeatures(crs,t.points.map((p,i)=>({id:i+1,properties:{name:String(i)},type:"Point",coordinates:[...p,0]})),"EPSG:4326",terrain);
+        labelCount=labels.labels.length;
+        labelError=Math.max(...labels.labels.map((f,i)=>Math.max(Math.abs(f.geometry.coordinates[0]-t.world[i][0]),Math.abs(f.geometry.coordinates[1]-t.world[i][1]))));
+      } finally {crs.dispose();}
+      const manual=new VectorLayers();manual.add({name:"local",features:t.world.map((p,i)=>feature(701+i,[p[0],0,p[1]])),style});
+      r.setVectorLayers(manual,terrain);
+      const reference=await frame();
+      const bad=layers.snapshot();bad.layers[0].crs="EPSG:99999999";
+      const failure=await error(()=>r.setVectorLayers(bad));
+      const afterFailure=await frame();
+      const pending=error(()=>r.setVectorLayers(layers));
+      r.setVectorLayers(manual,terrain);
+      const cancelled=await pending;
+      const afterCancel=await frame();
+      const absolute=new VectorLayers();absolute.add({name:"broken absolute",features:t.world.map((p,i)=>feature(701+i,[500000+p[0],0,terrain.transform[3]-165-p[1]])),style});
+      r.setVectorLayers(absolute,terrain);
+      const negative=await frame();
+      const visible=p=>Array.from(p.ids).filter(id=>id>0).length;
+      const ids=Array.from(new Set(geographic.pick.ids)).filter(id=>id>0).sort();
+      return {ids,labelError,labelCount,failure,cancelled,
+        failureAtomic:reference.rgba.every((v,i)=>v===afterFailure.rgba[i]),
+        cancelAtomic:reference.rgba.every((v,i)=>v===afterCancel.rgba[i]),pickPixels:visible(geographic.pick),referencePixels:visible(reference.pick),negativePixels:visible(negative.pick),
+        pickEqual:Array.from(geographic.pick.ids).every((v,i)=>v===reference.pick.ids[i]),
+        rgbaEqual:geographic.rgba.every((v,i)=>v===reference.rgba[i]),inputIntact:before===JSON.stringify(layers.snapshot()),
+        terrainVisible:reference.rgba.filter((v,i)=>i%4!==3&&v!==reference.rgba[i%4]).length>1000};
+    } finally {r.dispose();layers.dispose();canvas.remove();}
   },
   async geometry() {
     const crs = await CrsTransformer.create({ cache: cache() });
@@ -271,6 +298,7 @@ window.__w14 = {
     try {
       return {
         shifted: await crs.transformPipeline(fixture.grid.points, pipeline),
+        systemGridError: Math.max(...(await crs.transformCoords(fixture.grid.crsControl.points,fixture.grid.crsControl.source,fixture.grid.crsControl.target)).flat().map((n,i)=>Math.abs(n-fixture.grid.crsControl.expected.flat()[i]))),
         gridError: Math.max(
           ...(await crs.transformPipeline(fixture.grid.points, pipeline))
             .flat()
@@ -386,7 +414,7 @@ window.__w14 = {
 };
 document.querySelector("#run")?.addEventListener("click", async () => {
   const output = document.querySelector("#result");
-  output.textContent = "Loading…";
+  output.textContent = "LoadingÃ¢â‚¬Â¦";
   try {
     const [coordinates, datasets] = await Promise.all([
       window.__w14.coordinates(),

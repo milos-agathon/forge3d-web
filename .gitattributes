@@ -51,3 +51,5 @@ crates/forge3d-web/tests/fixtures/w14/*.json text eol=lf
 crates/forge3d-web/types/crs*.d.ts text eol=lf
 crates/forge3d-web/types/dataset*.d.ts text eol=lf
 crates/forge3d-web/types/vector*.d.ts text eol=lf
+crates/forge3d-web/tests/fixtures/w14/provenance.json text eol=lf
+crates/forge3d-web/assets/datasets/remote-storage.json text eol=lf
