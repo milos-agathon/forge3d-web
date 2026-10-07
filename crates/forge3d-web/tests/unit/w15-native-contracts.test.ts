@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
+import { spawnSync } from "node:child_process";
+import { crossCheckNativeHistory } from "./w15-native-history.js";
 import * as f from "../../src-ts/index.js";
 const fixture = (name: string) =>
   JSON.parse(
@@ -278,6 +280,30 @@ describe("W15 historical native contract adaptations", () => {
   });
 });
 describe("W15 native audit provenance", () => {
+  it.skipIf(spawnSync("git", ["--version"]).status !== 0)(
+    "optional history rejects changed bytes and skips unavailable commits",
+    () => {
+      const path =
+        "crates/forge3d-web/tests/fixtures/w15/native/bf8db93233e5/src/geometry/primitives.rs";
+      const bytes = readFileSync(
+        new URL("../../../../" + path, import.meta.url),
+      );
+      expect(crossCheckNativeHistory("HEAD", path, bytes)).toBe(true);
+      const changed = Buffer.from(bytes);
+      changed[0] ^= 1;
+      expect(() => crossCheckNativeHistory("HEAD", path, changed)).toThrow(
+        "Frozen native bytes differ from Git",
+      );
+      expect(
+        crossCheckNativeHistory(
+          "0000000000000000000000000000000000000000",
+          path,
+          changed,
+        ),
+      ).toBe(false);
+    },
+  );
+
   it("pins every native suite and requires concrete browser ports", () => {
     const audit = JSON.parse(
       readFileSync(
@@ -291,18 +317,16 @@ describe("W15 native audit provenance", () => {
     for (const suite of audit.suites) {
       if (suite.importedSuite) {
         const imported = suite.importedSuite;
-        expect(
-          createHash("sha256")
-            .update(
-              readFileSync(
-                new URL(
-                  `../fixtures/w15/native/${imported.revision.slice(0, 12)}/${imported.nativePath}`,
-                  import.meta.url,
-                ),
-              ),
-            )
-            .digest("hex"),
-        ).toBe(imported.sha256);
+        const bytes = readFileSync(
+          new URL(
+            `../fixtures/w15/native/${imported.revision.slice(0, 12)}/${imported.nativePath}`,
+            import.meta.url,
+          ),
+        );
+        expect(createHash("sha256").update(bytes).digest("hex")).toBe(
+          imported.sha256,
+        );
+        crossCheckNativeHistory(imported.revision, imported.nativePath, bytes);
       }
       const source = readFileSync(
         new URL(
@@ -313,6 +337,7 @@ describe("W15 native audit provenance", () => {
       expect(createHash("sha256").update(source).digest("hex")).toBe(
         suite.sha256,
       );
+      crossCheckNativeHistory(suite.revision, suite.nativePath, source);
       expect(suite.ports.length).toBeGreaterThan(0);
       for (const port of suite.ports) {
         const file = readFileSync(
@@ -337,6 +362,7 @@ describe("W15 native audit provenance", () => {
           ),
         ),
       ).toEqual(bytes);
+      crossCheckNativeHistory(asset.revision, asset.nativePath, bytes);
     }
   });
 });

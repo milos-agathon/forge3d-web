@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
+import { crossCheckNativeHistory } from "./w15-native-history.js";
 import * as f from "../../src-ts/index.js";
 import type { MeshBuffers } from "../../src-ts/index.js";
 const golden = JSON.parse(
@@ -78,6 +79,7 @@ describe("W15 independently executed native geometry", () => {
         ),
       );
       expect(createHash("sha256").update(bytes).digest("hex")).toBe(p.sha256);
+      crossCheckNativeHistory(p.revision, p.path, bytes);
     }
   });
   for (const kind of ["plane", "sphere", "cylinder", "cone", "torus"] as const)

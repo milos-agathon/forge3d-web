@@ -147,3 +147,11 @@ freezes those exact original bytes, separately from its compiled scaffolds.
 A follow-up source/dist browser test caps the reported adapter texture limit,
 checks the actual negotiated device has exactly 16 sampled textures per stage,
 and renders both scalar buildings and UV/normal-mapped instanced meshes.
+
+Available-history hardening: frozen hashes are always required. When a pinned
+commit is present locally, the test also reads its original blob through
+`git show` and demands byte equality. Missing historical commits in shallow CI
+checkouts skip only this extra comparison. A negative control changes fixture
+bytes and proves the available-history check rejects the change; an unavailable
+commit control preserves the shallow-checkout path. These checks make no
+network requests.
