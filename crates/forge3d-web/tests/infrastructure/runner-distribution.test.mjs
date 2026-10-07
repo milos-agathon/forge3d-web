@@ -24,7 +24,12 @@ test("locks immutable files, modes, symlinks, and narrow transient paths", () =>
     mkdirSync(join(root, "bin"));
     writeFileSync(join(root, "bin", "Runner.Listener"), "immutable");
     chmodSync(join(root, "bin", "Runner.Listener"), 0o755);
-    symlinkSync("bin/Runner.Listener", join(root, "run"));
+    // Junctions exercise a real link on Windows without symlink privileges.
+    symlinkSync(
+      process.platform === "win32" ? join(root, "bin") : "bin/Runner.Listener",
+      join(root, "run"),
+      process.platform === "win32" ? "junction" : "file",
+    );
     const manifest = createRunnerDistributionManifest({
       runnerVersion: "2.336.0",
       generatedAt: "2026-07-28T12:00:00.000Z",
@@ -82,7 +87,7 @@ test("rejects a transient root changed to a symlink without walking it", () => {
         },
       ],
     });
-    symlinkSync(outside, join(root, "_work"));
+    symlinkSync(outside, join(root, "_work"), process.platform === "win32" ? "junction" : "dir");
     assert.throws(
       () =>
         verifyRunnerTree({

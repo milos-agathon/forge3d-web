@@ -189,16 +189,15 @@ zero GPU allocations, and zero workers, assets, heap or reservations after
 settled disposal. Reports are `test-results/w14-package-consumer.json` and
 `test-results/w14-remote-datasets.json`.
 
-The aggregate `test:package` reaches unrelated infrastructure tests that need
-Windows symlink privileges unavailable to this process. Three tests fail with
-`EPERM` creating file/directory symlinks in
-`firefox-viewer-contract.test.mjs` and `runner-distribution.test.mjs`;
-these files are unchanged from the starting commit. Selecting Git's Bash in
-the command's PATH resolves the separate WindowsApps Bash-selector failure.
-The browser-harness suite passes; infrastructure then reports
-606 passes, three symlink failures and one skipped test. The W14 spec inventory
-and automatic shared WebGPU guard pass. The independent
-`package-contract.mjs` passes. No host security settings were changed.
+The initial aggregate `test:package` had three Windows `EPERM` failures creating
+symlink fixtures. The fixtures now use real directory junctions on Windows and
+file/directory symlinks on Unix, preserving the linked-source and distribution
+integrity assertions without requiring host privilege changes. The aggregate
+package check passes: nine documentation checks, 118 browser-harness tests,
+609 infrastructure tests with one existing Unix-UID-only skip on Windows,
+and the emitted package contract. Git's Bash is selected in the command's PATH
+to avoid the unrelated WindowsApps Bash-selector failure. The W14 spec inventory
+and shared WebGPU guard pass. No host security settings were changed.
 
 ```powershell
 $env:CARGO_TARGET_DIR = 'C:\devin-target\forge3d-web'
