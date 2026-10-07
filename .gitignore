@@ -1,4 +1,5 @@
 # AI files
+.tools/
 .claude
 docs/prompt.md
 CLAUDE.md

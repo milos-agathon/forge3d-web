@@ -4,7 +4,7 @@
   "manifestId": "forge3d-composite-baseline-v1",
   "sourcePlan": {
     "path": "docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md",
-    "sha256": "329c4d119c93d64da11fa5f0570f4610105d264cd5318baab249bb9284ae1011"
+    "sha256": "7b3ec58d776608c07ea68c2a39fd96e0b3a8b43f9d29faedda7cc96e0738ec86"
   },
   "baselineLayers": [
     {
@@ -1579,10 +1579,10 @@
       "title": "LAZ/COPC/EPT hierarchy/octree/bounds/data",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W16",
       "nativeCapability": "LAZ/COPC/EPT hierarchy/octree/bounds/data: 1f4084a:python/forge3d/pointcloud.py, src/pointcloud/{copc,copc_decode,ept,octree}.rs, tests/test_copc_laz_fixture.py",
-      "requiredWebOutcome": "Add browser range IO, LAZ decoder WASM, hierarchy loaders, cancellation/cache",
+      "requiredWebOutcome": "Browser range IO, pinned LAZ WASM, lazy hierarchy loaders, cancellation and bounded caches pass independent real-data/package tests",
       "nativeEvidence": [
         "1f4084a:python/forge3d/pointcloud.py",
         "src/pointcloud/{copc,copc_decode,ept,octree}.rs",
@@ -1605,10 +1605,10 @@
       "title": "Point GPU buffers/budgets/SSE/LOD/colors/viewer controls",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "P",
       "ownerTask": "W16",
       "nativeCapability": "Point GPU buffers/budgets/SSE/LOD/colors/viewer controls: 1f4084a:src/pointcloud/renderer.rs, src/pointcloud/traversal.rs, tests/test_pointcloud_gpu_integration.py, tests/test_pointcloud_lod.py",
-      "requiredWebOutcome": "Add GPU point renderer, octree selection, adaptive budget, styles and stats",
+      "requiredWebOutcome": "GPU billboards, octree/SSE, adaptive budget, styles, integer picks and retained recovery implemented; pinned reference hardware qualification pending",
       "nativeEvidence": [
         "1f4084a:src/pointcloud/renderer.rs",
         "src/pointcloud/traversal.rs",
@@ -1629,10 +1629,10 @@
       "title": "OGC 3D Tiles traversal/SSE/cache/b3dm/pnts",
       "lifecycle": "FP",
       "evidenceGrade": "B",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W16",
       "nativeCapability": "OGC 3D Tiles traversal/SSE/cache/b3dm/pnts: 1f4084a:src/tiles3d/**, python/forge3d/tiles3d.py, tests/test_3dtiles_parse.py, tests/test_3dtiles_sse.py; underdeveloped MapScene integration is separately tracked by M02b",
-      "requiredWebOutcome": "Add relative-URL loader, bounds, SSE/cache, b3dm/pnts decode and asset diagnostics",
+      "requiredWebOutcome": "Relative/external URI loading, bounds/transforms, native SSE, bounded caches, W15 B3DM and PNTS decode with typed asset diagnostics verified",
       "nativeEvidence": [
         "1f4084a:src/tiles3d/**",
         "python/forge3d/tiles3d.py",
@@ -3190,10 +3190,11 @@
       "id": "target:G02",
       "capabilityId": "G02",
       "kind": "web-api",
-      "contract": "Add browser range IO, LAZ decoder WASM, hierarchy loaders, cancellation/cache",
+      "contract": "Browser range IO, pinned LAZ WASM, lazy hierarchy loaders, cancellation and bounded caches pass independent real-data/package tests",
       "owner": "W16",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:G02"
+        "crates/forge3d-web/docs/w16-evidence.md",
+        "crates/forge3d-web/tests/fixtures/w16/copc-ept-tiles-v1.json"
       ],
       "tests": [
         "port COPC/LAZ/EPT, point-buffer/LOD and tile parse/SSE tests; corrupt chunks, cancellation, external URIs, pressure, picking and loss."
@@ -3203,10 +3204,11 @@
       "id": "target:G03",
       "capabilityId": "G03",
       "kind": "web-api",
-      "contract": "Add GPU point renderer, octree selection, adaptive budget, styles and stats",
+      "contract": "GPU billboards, octree/SSE, adaptive budget, styles, integer picks and retained recovery implemented; pinned reference hardware qualification pending",
       "owner": "W16",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:G03"
+        "crates/forge3d-web/docs/w16-evidence.md",
+        "crates/forge3d-web/tests/fixtures/w16/copc-ept-tiles-v1.json"
       ],
       "tests": [
         "port COPC/LAZ/EPT, point-buffer/LOD and tile parse/SSE tests; corrupt chunks, cancellation, external URIs, pressure, picking and loss."
@@ -3216,10 +3218,11 @@
       "id": "target:G04",
       "capabilityId": "G04",
       "kind": "web-api",
-      "contract": "Add relative-URL loader, bounds, SSE/cache, b3dm/pnts decode and asset diagnostics",
+      "contract": "Relative/external URI loading, bounds/transforms, native SSE, bounded caches, W15 B3DM and PNTS decode with typed asset diagnostics verified",
       "owner": "W16",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:G04"
+        "crates/forge3d-web/docs/w16-evidence.md",
+        "crates/forge3d-web/tests/fixtures/w16/copc-ept-tiles-v1.json"
       ],
       "tests": [
         "port COPC/LAZ/EPT, point-buffer/LOD and tile parse/SSE tests; corrupt chunks, cancellation, external URIs, pressure, picking and loss."
@@ -53250,7 +53253,7 @@
   ],
   "dependencyLock": {
     "path": "docs/parity/dependency-lock.json",
-    "sha256": "c569747eed3f2ce617c6f4d153d51958fa544b567a5c4203fa29671e7757437a",
+    "sha256": "6ffa4dce27ab79aca4b573ca53db2eff199792c87c2890d0713633830221b93d",
     "requiredAssetIds": [
       "harfbuzzjs",
       "proj-wasm",

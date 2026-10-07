@@ -87,13 +87,16 @@
     "test:package-consumer:w14": "node scripts/test-w14-package-consumer.mjs",
     "test:datasets:remote": "npm run build:ts && node scripts/test-w14-remote-datasets.mjs",
     "test:package-consumer:w15": "node scripts/test-w15-package-consumer.mjs",
-    "test:w15": "vitest run tests/unit/w15-geometry.test.ts tests/unit/w15-io.test.ts tests/unit/w15-buildings.test.ts tests/unit/w15-native-contracts.test.ts && playwright test tests/playwright/w15_geometry.spec.ts --project=chromium-preflight"
+    "test:w15": "vitest run tests/unit/w15-geometry.test.ts tests/unit/w15-io.test.ts tests/unit/w15-buildings.test.ts tests/unit/w15-native-contracts.test.ts && playwright test tests/playwright/w15_geometry.spec.ts --project=chromium-preflight",
+    "test:w16": "vitest run tests/unit/w16-pointcloud.test.ts tests/unit/w16-tiles.test.ts tests/unit/w16-provenance.test.ts && playwright test tests/playwright/w16_pointcloud.spec.ts --project=chromium-preflight",
+    "test:package-consumer:w16": "node scripts/test-w16-package-consumer.mjs"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
     "geotiff": "3.0.5",
     "harfbuzzjs": "1.6.0",
     "ktx-parse": "1.1.0",
+    "laz-perf": "0.0.7",
     "mediabunny": "1.58.0",
     "proj-wasm": "0.1.0-alpha9",
     "selenium-webdriver": "4.35.0",

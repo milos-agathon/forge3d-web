@@ -1,0 +1,2346 @@
+{
+  "schemaVersion": 1,
+  "fixtureId": "copc-ept-tiles-v1",
+  "oracle": {
+    "laspy": "2.7.0",
+    "lazrs": "0.8.2"
+  },
+  "autzen": {
+    "count": 110000,
+    "positionsSha256": "73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23",
+    "colorsSha256": "d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b",
+    "bounds": {
+      "min": [
+        636001.76,
+        848935.2000000001,
+        406.26
+      ],
+      "max": [
+        637179.22,
+        849497.9,
+        520.51
+      ]
+    },
+    "firstPositions": [
+      637177.98,
+      849393.9500000001,
+      411.19,
+      637177.3,
+      849396.9500000001,
+      411.25,
+      637176.34,
+      849400.84,
+      411.01
+    ],
+    "firstColors": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "copc": {
+    "count": 100000,
+    "positionsSha256": "b34e5bf4f8638af1d4613e293e6a66189395cfc86ff72bc9aa2a461553e4e731",
+    "colorsSha256": "886715e4051e827f4fe215df3053af3f85ad0d352db2c829c7487af6d78efe30",
+    "bounds": {
+      "min": [
+        -8242746.0,
+        4966506.0,
+        -50.0
+      ],
+      "max": [
+        -8242446.0,
+        4966706.0,
+        50.0
+      ]
+    },
+    "firstPositions": [
+      -8242596.0,
+      4966706.0,
+      0.0,
+      -8242596.0,
+      4966506.0,
+      0.0,
+      -8242595.16,
+      4966606.0,
+      50.0
+    ],
+    "firstColors": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "copcRoot": {
+    "count": 66272,
+    "positionsSha256": "43ec2795a7fbad7e12936d197030cd235edc0314a77f9710c0060d32685dfc42",
+    "colorsSha256": "ebbd86704cbc47349cef646184810965b296fe7bd0cf14e0aa4340107dbe988e",
+    "bounds": {
+      "min": [
+        -8242746.0,
+        4966506.0,
+        -50.0
+      ],
+      "max": [
+        -8242446.01,
+        4966706.0,
+        50.0
+      ]
+    },
+    "firstPositions": [
+      -8242596.0,
+      4966706.0,
+      0.0,
+      -8242596.0,
+      4966506.0,
+      0.0,
+      -8242595.16,
+      4966606.0,
+      50.0
+    ],
+    "firstColors": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ]
+  },
+  "copcInfo": {
+    "center": [
+      -8242596.0,
+      4966656.0,
+      100.0
+    ],
+    "halfSize": 150.0,
+    "spacing": 2.34375
+  },
+  "ept": {
+    "count": 128,
+    "positionsSha256": "fa22f39c88539934b51194e12968350692cae0d3dc588dd970194dbf92a567c2",
+    "colorsSha256": "a1a4f5721c1c4610af7f71078f3a68c330536d679803b0e0507ee8dc10c5dfca"
+  },
+  "workloadEpt": {
+    "count": 1000000,
+    "hierarchyDepth": 8,
+    "cameraKeyframes": 64,
+    "derivation": "Autzen samples rescaled into valid node bounds; independent byte-defined EPT records",
+    "nodes": [
+      {
+        "key": "0-0-0-0",
+        "count": 111111,
+        "positionsSha256": "668c61a7460d65bb1b102db09f65a748255a2e430f181f8ee14de67f77e00ad9",
+        "colorsSha256": "88647dfbfbeaf4e5391e9e30b868792c2913064d224c153884dfa4e430aa3e11"
+      },
+      {
+        "key": "1-0-0-0",
+        "count": 111111,
+        "positionsSha256": "c9998faa00dfdd97d48f53b96c9240445bcd6f48b88fbd5a5bf457fe4306b560",
+        "colorsSha256": "88647dfbfbeaf4e5391e9e30b868792c2913064d224c153884dfa4e430aa3e11"
+      },
+      {
+        "key": "2-0-0-0",
+        "count": 111111,
+        "positionsSha256": "67621d32c07a0b184fd60bb069367b9082c4de70408c287177083564871cc809",
+        "colorsSha256": "88647dfbfbeaf4e5391e9e30b868792c2913064d224c153884dfa4e430aa3e11"
+      },
+      {
+        "key": "3-0-0-0",
+        "count": 111111,
+        "positionsSha256": "9c2071b816893efebb0fb70af8fb40bf3d66e144f8faaacd32fd90cd1dbdb939",
+        "colorsSha256": "88647dfbfbeaf4e5391e9e30b868792c2913064d224c153884dfa4e430aa3e11"
+      },
+      {
+        "key": "4-0-0-0",
+        "count": 111111,
+        "positionsSha256": "6176cd038d738e682c0c0666db2e6637c216829f7de5c0c32fdf68f37aaae50f",
+        "colorsSha256": "88647dfbfbeaf4e5391e9e30b868792c2913064d224c153884dfa4e430aa3e11"
+      },
+      {
+        "key": "5-0-0-0",
+        "count": 111111,
+        "positionsSha256": "38367f5ecc221f85a6d7c6d4b3826b7ce49652e615c5828c8576a9d38ccef2d0",
+        "colorsSha256": "88647dfbfbeaf4e5391e9e30b868792c2913064d224c153884dfa4e430aa3e11"
+      },
+      {
+        "key": "6-0-0-0",
+        "count": 111111,
+        "positionsSha256": "7e60fa6392827cdef39b395c91e37ba45dc845f8da3de699e283f058d0fa07af",
+        "colorsSha256": "88647dfbfbeaf4e5391e9e30b868792c2913064d224c153884dfa4e430aa3e11"
+      },
+      {
+        "key": "7-0-0-0",
+        "count": 111111,
+        "positionsSha256": "0eed0e8f0f71df9273a9b9cb0a5d2910b8529173bae578ce18e35e6d5a3f86f1",
+        "colorsSha256": "88647dfbfbeaf4e5391e9e30b868792c2913064d224c153884dfa4e430aa3e11"
+      },
+      {
+        "key": "8-0-0-0",
+        "count": 55556,
+        "positionsSha256": "c8c3d13d1d851c2d7d2f31ee29d6d9e5981bb44931b3cdf5547a37b9fbac7cc4",
+        "colorsSha256": "899c2e8e4a45c23cc4c0eff29de25e1100657f095b2d79e5868b31e613afaee9"
+      },
+      {
+        "key": "8-1-0-0",
+        "count": 55556,
+        "positionsSha256": "85b8fe2ee17163980eef8015fb86b4c5ac2bc9c2fcdf5cdb121c491a9a8b3444",
+        "colorsSha256": "899c2e8e4a45c23cc4c0eff29de25e1100657f095b2d79e5868b31e613afaee9"
+      }
+    ]
+  },
+  "nativeSources": [
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "path": "src/pointcloud/copc.rs",
+      "fixture": "native/src__pointcloud__copc.rs",
+      "sha256": "105d8104d1a94f27f5a9eee998fa83b77bfd09e462b2d9b0442d6d8291a62784"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "path": "src/pointcloud/copc_decode.rs",
+      "fixture": "native/src__pointcloud__copc_decode.rs",
+      "sha256": "2964aded00afa4d390c0575b93e35fada6761268c800530662e2b73b124dc633"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "path": "src/pointcloud/ept.rs",
+      "fixture": "native/src__pointcloud__ept.rs",
+      "sha256": "041f62ebbfc86764878235e7495c4005c9592a94285f8debd0d6b5c3c858cca5"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "path": "src/pointcloud/octree.rs",
+      "fixture": "native/src__pointcloud__octree.rs",
+      "sha256": "554efc11d526339c270efe6f28c45de61478d2a34dbf5e2b3f0c2762b4e7227a"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "path": "src/pointcloud/renderer.rs",
+      "fixture": "native/src__pointcloud__renderer.rs",
+      "sha256": "444416fc04238cd4b8bab89e4740df129300ff367f0cdc0215d90e9d6fe6f548"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "path": "src/pointcloud/traversal.rs",
+      "fixture": "native/src__pointcloud__traversal.rs",
+      "sha256": "a29f83025eef7ff754f4a1fddf702334635dd7f27f1e42560e0a412007bcea58"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "path": "src/tiles3d/b3dm.rs",
+      "fixture": "native/src__tiles3d__b3dm.rs",
+      "sha256": "c29d1875db96843f809864fb0e75811ac3f37168022ee6b7e58e05f6baed8a62"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "path": "src/tiles3d/pnts.rs",
+      "fixture": "native/src__tiles3d__pnts.rs",
+      "sha256": "d95dab2eb1bbf37c73b98362cfa59cd78a017757083d35f48aa2cbc4088f0303"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "path": "src/tiles3d/bounds.rs",
+      "fixture": "native/src__tiles3d__bounds.rs",
+      "sha256": "dd2742d36814b274ff894d5a3dc0f159b3201d42692ccfb23b35b849e9e62fec"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "path": "src/tiles3d/sse.rs",
+      "fixture": "native/src__tiles3d__sse.rs",
+      "sha256": "5f06001a9280587ca0d787d6acab409eaaf7cb7d9bc637c3d1dcc5a7db1a9e84"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "path": "src/tiles3d/traversal.rs",
+      "fixture": "native/src__tiles3d__traversal.rs",
+      "sha256": "0aa84db925c7c905392285281d0ae4cd61f40c9aa777a87fd938d1874fe6d864"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "path": "src/tiles3d/tileset.rs",
+      "fixture": "native/src__tiles3d__tileset.rs",
+      "sha256": "9e53ee6827fc74df8a47d770722a5414357096b1957625ec1ed480a2f2168a6d"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "path": "src/tiles3d/tile.rs",
+      "fixture": "native/src__tiles3d__tile.rs",
+      "sha256": "0b55186615dd78aed706dd638670d68a86d4d089cc2e385a219e602a7ddd1c5d"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "path": "python/forge3d/pointcloud.py",
+      "fixture": "native/python__forge3d__pointcloud.py",
+      "sha256": "023ecb21529200ab51b515a46c37b92c3f9d512981e16bc42dd428c751ee0004"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "path": "python/forge3d/tiles3d.py",
+      "fixture": "native/python__forge3d__tiles3d.py",
+      "sha256": "7242342e590aeb725944ce12f730f3cf4f4f685ecb9a366746651bda7351955a"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "path": "tests/test_api_contracts.py",
+      "fixture": "native/tests__test_api_contracts.py",
+      "sha256": "b72adad34bf597aa7f0a1392c30c634e547cc354bd35c246637ff5ea3915fd46"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "path": "tests/test_copc_laz_fixture.py",
+      "fixture": "native/tests__test_copc_laz_fixture.py",
+      "sha256": "67748ab0de092dbbddde194e9e68bc318dbdc3e883b0e1b12b2392c3a1f356f3"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "path": "tests/test_pointcloud_gpu_integration.py",
+      "fixture": "native/tests__test_pointcloud_gpu_integration.py",
+      "sha256": "50f83613c9da5db62a37540f858cf7d48ab7c8a06990875a9f8bd51fdb0d2c8f"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "path": "tests/test_pointcloud_lod.py",
+      "fixture": "native/tests__test_pointcloud_lod.py",
+      "sha256": "c1994c8c167012edab8f2cf5552372326a31033935074cae0e679125c5a1baa0"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "path": "tests/test_3dtiles_parse.py",
+      "fixture": "native/tests__test_3dtiles_parse.py",
+      "sha256": "f7f125cdc63ae77f6ac01a9e277f59913777d48adede6ad461bc35b3a100bef8"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "path": "tests/test_3dtiles_sse.py",
+      "fixture": "native/tests__test_3dtiles_sse.py",
+      "sha256": "e9eb7914a7f54b95b1f6540ea87cf9681e2a04b04b9aa441787f114fc4ef69d1"
+    }
+  ],
+  "upstream": {
+    "lazCommit": "f2e7491902dc06bf4ce0a4577d3af3b98f280b2a",
+    "copcCommit": "9515f411a7588e067c242dc908143eeb308d4868"
+  },
+  "cameraSelections": [
+    {
+      "source": "copc",
+      "view": {
+        "position": [
+          -8242566.0,
+          4966716.0,
+          700.0
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 100000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "1-1-1-0",
+          "pointCount": 4689,
+          "sse": 250.275230529
+        },
+        {
+          "key": "1-0-1-0",
+          "pointCount": 4571,
+          "sse": 247.851200228
+        },
+        {
+          "key": "1-1-0-0",
+          "pointCount": 12347,
+          "sse": 245.496266065
+        },
+        {
+          "key": "1-0-0-0",
+          "pointCount": 12121,
+          "sse": 243.207206606
+        }
+      ]
+    },
+    {
+      "source": "copc",
+      "view": {
+        "position": [
+          -8242566.0,
+          4966716.0,
+          3000100.0
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 100000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "0-0-0-0",
+          "pointCount": 66272,
+          "sse": 0.112901595
+        }
+      ]
+    },
+    {
+      "source": "ept",
+      "view": {
+        "position": [
+          637216.182,
+          849375.959,
+          721.3050000000466
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 100000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "0-0-0-0",
+          "pointCount": 128,
+          "sse": 561.012535276
+        }
+      ]
+    },
+    {
+      "source": "ept",
+      "view": {
+        "position": [
+          637216.182,
+          849375.959,
+          1243172.7650001862
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 100000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "0-0-0-0",
+          "pointCount": 128,
+          "sse": 0.112901595
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636614.4,
+          848512.0,
+          13824.0
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "7-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.652478472
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636613.9069160112,
+          848522.0369551698,
+          15078.619396218377
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "7-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.598318831
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636612.4324127133,
+          848531.9772489745,
+          16321.156121806442
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "7-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.552862292
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636609.9906903789,
+          848541.7251509508,
+          17539.643868857118
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "7-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.514523634
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636606.6052641291,
+          848551.1867834742,
+          18722.34793427315
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "6-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.9643632
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636602.3087374693,
+          848560.271025851,
+          19857.87823137277
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "6-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.909284464
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636597.1424882998,
+          848568.8903918612,
+          20935.298982650907
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "6-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.862539609
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636591.1562704244,
+          848576.9618722984,
+          21944.234037294664
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "6-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.822921959
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636584.4077343935,
+          848584.4077343935,
+          22874.96679918781
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "6-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.789470172
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636576.9618722984,
+          848591.1562704244,
+          23718.533803043032
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "6-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.76141686
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636568.8903918612,
+          848597.1424882998,
+          24466.81103747258
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "6-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.738150079
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636560.271025851,
+          848602.3087374693,
+          25112.592183658944
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "6-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.719184344
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636551.1867834742,
+          848606.6052641291,
+          25649.65801614447
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "6-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.704138798
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636541.7251509508,
+          848609.9906903789,
+          26072.836297372276
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "6-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.692720876
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636531.9772489745,
+          848612.4324127133,
+          26378.05158916135
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "6-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.684714228
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636522.0369551698,
+          848613.9069160112,
+          26562.364501404118
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "6-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.679970085
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636512.0,
+          848614.4,
+          26624.0
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "6-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.678401463
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636501.9630448302,
+          848613.9069160112,
+          26562.36450140412
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "6-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.679979833
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636492.0227510255,
+          848612.4324127133,
+          26378.05158916135
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "6-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.684734039
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636482.2748490492,
+          848609.9906903789,
+          26072.836297372276
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "6-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.6927514
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636472.8132165258,
+          848606.6052641291,
+          25649.65801614447
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "6-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.704181062
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636463.728974149,
+          848602.3087374693,
+          25112.592183658944
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "6-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.719239816
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636455.1096081388,
+          848597.1424882998,
+          24466.81103747258
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "6-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.738220769
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636447.0381277016,
+          848591.1562704244,
+          23718.533803043036
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "6-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.761505457
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636439.5922656065,
+          848584.4077343935,
+          22874.96679918781
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "6-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.78958025
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636432.8437295756,
+          848576.9618722984,
+          21944.234037294664
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "6-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.823058257
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636426.8575117002,
+          848568.8903918612,
+          20935.298982650907
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "6-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.862708432
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636421.6912625307,
+          848560.271025851,
+          19857.87823137277
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "6-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.909494262
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636417.3947358709,
+          848551.1867834742,
+          18722.34793427315
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "6-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.964625401
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636414.0093096211,
+          848541.7251509508,
+          17539.64386885712
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "7-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.514689947
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636411.5675872867,
+          848531.9772489745,
+          16321.156121806447
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "7-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.553073781
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636410.0930839888,
+          848522.0369551698,
+          15078.619396218379
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "7-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.598590858
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636409.6,
+          848512.0,
+          13824.000000000004
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "7-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.652833013
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636410.0930839888,
+          848501.9630448302,
+          12569.380603781625
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "7-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.717872501
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636411.5675872867,
+          848492.0227510255,
+          11326.843878193557
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "7-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.796436007
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636414.0093096211,
+          848482.2748490492,
+          10108.356131142886
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "7-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.892152312
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636417.3947358709,
+          848472.8132165258,
+          8925.652065726852
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "8-1-0-0",
+          "pointCount": 55556,
+          "sse": 0.504840366
+        },
+        {
+          "key": "8-0-0-0",
+          "pointCount": 55556,
+          "sse": 0.504829935
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636421.6912625307,
+          848463.728974149,
+          7790.121768627229
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "8-1-0-0",
+          "pointCount": 55556,
+          "sse": 0.578029283
+        },
+        {
+          "key": "8-0-0-0",
+          "pointCount": 55556,
+          "sse": 0.578013462
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636426.8575117002,
+          848455.1096081388,
+          6712.701017349095
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "8-1-0-0",
+          "pointCount": 55556,
+          "sse": 0.670125164
+        },
+        {
+          "key": "8-0-0-0",
+          "pointCount": 55556,
+          "sse": 0.670100208
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636432.8437295756,
+          848447.0381277016,
+          5703.765962705341
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "8-1-0-0",
+          "pointCount": 55556,
+          "sse": 0.787454663
+        },
+        {
+          "key": "8-0-0-0",
+          "pointCount": 55556,
+          "sse": 0.787413597
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636439.5922656065,
+          848439.5922656065,
+          4773.033200812192
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "8-1-0-0",
+          "pointCount": 55556,
+          "sse": 0.938765899
+        },
+        {
+          "key": "8-0-0-0",
+          "pointCount": 55556,
+          "sse": 0.938695228
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636447.0381277016,
+          848432.8437295756,
+          3929.4661969569706
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "8-1-0-0",
+          "pointCount": 55556,
+          "sse": 1.13595469
+        },
+        {
+          "key": "8-0-0-0",
+          "pointCount": 55556,
+          "sse": 1.135827342
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636455.1096081388,
+          848426.8575117002,
+          3181.188962527421
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "8-1-0-0",
+          "pointCount": 55556,
+          "sse": 1.394388513
+        },
+        {
+          "key": "8-0-0-0",
+          "pointCount": 55556,
+          "sse": 1.394148707
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636463.728974149,
+          848421.6912625307,
+          2535.407816341057
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "8-1-0-0",
+          "pointCount": 55556,
+          "sse": 1.731346225
+        },
+        {
+          "key": "8-0-0-0",
+          "pointCount": 55556,
+          "sse": 1.730878471
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636472.8132165258,
+          848417.3947358709,
+          1998.3419838555326
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "8-1-0-0",
+          "pointCount": 55556,
+          "sse": 2.158882075
+        },
+        {
+          "key": "8-0-0-0",
+          "pointCount": 55556,
+          "sse": 2.157957489
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636482.2748490492,
+          848414.0093096211,
+          1575.1637026277272
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "8-1-0-0",
+          "pointCount": 55556,
+          "sse": 2.665082708
+        },
+        {
+          "key": "8-0-0-0",
+          "pointCount": 55556,
+          "sse": 2.663308863
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636492.0227510255,
+          848411.5675872867,
+          1269.9484108386519
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "8-1-0-0",
+          "pointCount": 55556,
+          "sse": 3.184073711
+        },
+        {
+          "key": "8-0-0-0",
+          "pointCount": 55556,
+          "sse": 3.180988409
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636501.9630448302,
+          848410.0930839888,
+          1085.6354985958792
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "8-1-0-0",
+          "pointCount": 55556,
+          "sse": 3.585097717
+        },
+        {
+          "key": "8-0-0-0",
+          "pointCount": 55556,
+          "sse": 3.580605889
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636512.0,
+          848409.6,
+          1024.0
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "8-1-0-0",
+          "pointCount": 55556,
+          "sse": 3.729028272
+        },
+        {
+          "key": "8-0-0-0",
+          "pointCount": 55556,
+          "sse": 3.723872553
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636522.0369551698,
+          848410.0930839888,
+          1085.6354985958792
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "8-1-0-0",
+          "pointCount": 55556,
+          "sse": 3.562366662
+        },
+        {
+          "key": "8-0-0-0",
+          "pointCount": 55556,
+          "sse": 3.557782315
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636531.9772489745,
+          848411.5675872867,
+          1269.9484108386505
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "8-1-0-0",
+          "pointCount": 55556,
+          "sse": 3.152548499
+        },
+        {
+          "key": "8-0-0-0",
+          "pointCount": 55556,
+          "sse": 3.149309054
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636541.7251509508,
+          848414.0093096211,
+          1575.1637026277256
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "8-1-0-0",
+          "pointCount": 55556,
+          "sse": 2.63759386
+        },
+        {
+          "key": "8-0-0-0",
+          "pointCount": 55556,
+          "sse": 2.635660796
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636551.1867834742,
+          848417.3947358709,
+          1998.3419838555312
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "8-1-0-0",
+          "pointCount": 55556,
+          "sse": 2.139578781
+        },
+        {
+          "key": "8-0-0-0",
+          "pointCount": 55556,
+          "sse": 2.138528416
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636560.271025851,
+          848421.6912625307,
+          2535.4078163410554
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "8-1-0-0",
+          "pointCount": 55556,
+          "sse": 1.719047731
+        },
+        {
+          "key": "8-0-0-0",
+          "pointCount": 55556,
+          "sse": 1.718493768
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636568.8903918612,
+          848426.8575117002,
+          3181.188962527418
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "8-1-0-0",
+          "pointCount": 55556,
+          "sse": 1.386797618
+        },
+        {
+          "key": "8-0-0-0",
+          "pointCount": 55556,
+          "sse": 1.386502222
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636576.9618722984,
+          848432.8437295756,
+          3929.466196956968
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "8-1-0-0",
+          "pointCount": 55556,
+          "sse": 1.131258966
+        },
+        {
+          "key": "8-0-0-0",
+          "pointCount": 55556,
+          "sse": 1.131096315
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636584.4077343935,
+          848439.5922656065,
+          4773.0332008121895
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "8-1-0-0",
+          "pointCount": 55556,
+          "sse": 0.935807475
+        },
+        {
+          "key": "8-0-0-0",
+          "pointCount": 55556,
+          "sse": 0.935714199
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636591.1562704244,
+          848447.0381277016,
+          5703.765962705332
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "8-1-0-0",
+          "pointCount": 55556,
+          "sse": 0.785543757
+        },
+        {
+          "key": "8-0-0-0",
+          "pointCount": 55556,
+          "sse": 0.785487942
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636597.1424882998,
+          848455.1096081388,
+          6712.701017349093
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "8-1-0-0",
+          "pointCount": 55556,
+          "sse": 0.668857393
+        },
+        {
+          "key": "8-0-0-0",
+          "pointCount": 55556,
+          "sse": 0.668822586
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636602.3087374693,
+          848463.728974149,
+          7790.121768627227
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "8-1-0-0",
+          "pointCount": 55556,
+          "sse": 0.577165776
+        },
+        {
+          "key": "8-0-0-0",
+          "pointCount": 55556,
+          "sse": 0.577143216
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636606.6052641291,
+          848472.8132165258,
+          8925.652065726843
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "8-1-0-0",
+          "pointCount": 55556,
+          "sse": 0.504237447
+        },
+        {
+          "key": "8-0-0-0",
+          "pointCount": 55556,
+          "sse": 0.504222295
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636609.9906903789,
+          848482.2748490492,
+          10108.35613114288
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "7-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.891286979
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636612.4324127133,
+          848492.0227510255,
+          11326.843878193553
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "7-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.79580487
+        }
+      ]
+    },
+    {
+      "source": "workload-ept",
+      "view": {
+        "position": [
+          636613.9069160112,
+          848501.9630448302,
+          12569.380603781625
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "options": {
+        "pointBudget": 1000000,
+        "mode": "replace"
+      },
+      "nodes": [
+        {
+          "key": "7-0-0-0",
+          "pointCount": 111111,
+          "sse": 0.717403436
+        }
+      ]
+    }
+  ],
+  "tileSelections": [
+    {
+      "view": {
+        "position": [
+          0,
+          0,
+          10
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "nodes": [
+        {
+          "uri": "colored.pnts",
+          "depth": 0,
+          "sse": 1303.675323681
+        },
+        {
+          "uri": "triangle.b3dm",
+          "depth": 1,
+          "sse": 0.0
+        }
+      ]
+    },
+    {
+      "view": {
+        "position": [
+          0,
+          0,
+          10000
+        ],
+        "viewportHeight": 1080,
+        "fovY": 0.7853981633974483
+      },
+      "nodes": [
+        {
+          "uri": "colored.pnts",
+          "depth": 0,
+          "sse": 1.303675324
+        }
+      ]
+    }
+  ],
+  "sseDecimalPlaces": 9,
+  "performance": {
+    "durationMs": 600000,
+    "viewport": [
+      1920,
+      1080
+    ],
+    "profiles": {
+      "reference-discrete": {
+        "p95Ms": 16.7,
+        "cpuBudgetBytes": 1610612736,
+        "gpuBudgetBytes": 3221225472
+      },
+      "reference-integrated": {
+        "p95Ms": 33.3,
+        "cpuBudgetBytes": 1073741824,
+        "gpuBudgetBytes": 2147483648
+      }
+    },
+    "localBudgetBytes": 268435456,
+    "localQualification": "Chromium preflight; publish exact adapter rather than inferring W00 hardware qualification"
+  },
+  "tolerances": {
+    "boundsRelative": 1e-05,
+    "initialRangeFraction": 0.25
+  },
+  "files": [
+    {
+      "path": "autzen_trim.laz",
+      "bytes": 603353,
+      "sha256": "75867b3e75cfc3c2e96da9f753c04c9fbaa6a59468dea13e2859f3109b38bd66"
+    },
+    {
+      "path": "colored.pnts",
+      "bytes": 152,
+      "sha256": "9028a0e5e861140b13afe0aac980cbd254f358044847cc7c3529f756edb46eb3"
+    },
+    {
+      "path": "copc-js.LICENSE",
+      "bytes": 1071,
+      "sha256": "8fb5b4508a39ae3e34be45065c2eacbd5353961870e98eba5906c256669fb794"
+    },
+    {
+      "path": "ellipsoid.copc.laz",
+      "bytes": 630740,
+      "sha256": "aff4293e3b7fa825ebc4b8a9cdf357c47f9b8ff460094639a8dc84ebf5a90edb"
+    },
+    {
+      "path": "ept/ept-data/0-0-0-0.bin",
+      "bytes": 4096,
+      "sha256": "89e74d25d7a0dde79972a31fbe7777dbb5cd4d47e8080fffd15f1a53e292d017"
+    },
+    {
+      "path": "ept/ept-hierarchy/0-0-0-0.json",
+      "bytes": 15,
+      "sha256": "70d66225a7bbaaecc064b09ab68c931950e6cf225fb609225fe0c578049bd815"
+    },
+    {
+      "path": "ept/ept.json",
+      "bytes": 641,
+      "sha256": "3dca2b6fe627890b9f8e5e298421131079485a3247923ceb3634452137e39142"
+    },
+    {
+      "path": "external.json",
+      "bytes": 141,
+      "sha256": "666e9e1843dcf4cb4df698ab28196d8a7b846992b864f8ffead0c845a45343b1"
+    },
+    {
+      "path": "laz-perf.LICENSE",
+      "bytes": 11347,
+      "sha256": "959f77033ba56a3b146faf5c02f9162071f2d0bff4b8b6f1c2193a4b41127d39"
+    },
+    {
+      "path": "native/python__forge3d__pointcloud.py",
+      "bytes": 22563,
+      "sha256": "023ecb21529200ab51b515a46c37b92c3f9d512981e16bc42dd428c751ee0004"
+    },
+    {
+      "path": "native/python__forge3d__tiles3d.py",
+      "bytes": 13196,
+      "sha256": "7242342e590aeb725944ce12f730f3cf4f4f685ecb9a366746651bda7351955a"
+    },
+    {
+      "path": "native/src__pointcloud__copc.rs",
+      "bytes": 11754,
+      "sha256": "105d8104d1a94f27f5a9eee998fa83b77bfd09e462b2d9b0442d6d8291a62784"
+    },
+    {
+      "path": "native/src__pointcloud__copc_decode.rs",
+      "bytes": 5091,
+      "sha256": "2964aded00afa4d390c0575b93e35fada6761268c800530662e2b73b124dc633"
+    },
+    {
+      "path": "native/src__pointcloud__ept.rs",
+      "bytes": 9614,
+      "sha256": "041f62ebbfc86764878235e7495c4005c9592a94285f8debd0d6b5c3c858cca5"
+    },
+    {
+      "path": "native/src__pointcloud__octree.rs",
+      "bytes": 4586,
+      "sha256": "554efc11d526339c270efe6f28c45de61478d2a34dbf5e2b3f0c2762b4e7227a"
+    },
+    {
+      "path": "native/src__pointcloud__renderer.rs",
+      "bytes": 11666,
+      "sha256": "444416fc04238cd4b8bab89e4740df129300ff367f0cdc0215d90e9d6fe6f548"
+    },
+    {
+      "path": "native/src__pointcloud__traversal.rs",
+      "bytes": 5899,
+      "sha256": "a29f83025eef7ff754f4a1fddf702334635dd7f27f1e42560e0a412007bcea58"
+    },
+    {
+      "path": "native/src__tiles3d__b3dm.rs",
+      "bytes": 16550,
+      "sha256": "c29d1875db96843f809864fb0e75811ac3f37168022ee6b7e58e05f6baed8a62"
+    },
+    {
+      "path": "native/src__tiles3d__bounds.rs",
+      "bytes": 5362,
+      "sha256": "dd2742d36814b274ff894d5a3dc0f159b3201d42692ccfb23b35b849e9e62fec"
+    },
+    {
+      "path": "native/src__tiles3d__pnts.rs",
+      "bytes": 14753,
+      "sha256": "d95dab2eb1bbf37c73b98362cfa59cd78a017757083d35f48aa2cbc4088f0303"
+    },
+    {
+      "path": "native/src__tiles3d__sse.rs",
+      "bytes": 5003,
+      "sha256": "5f06001a9280587ca0d787d6acab409eaaf7cb7d9bc637c3d1dcc5a7db1a9e84"
+    },
+    {
+      "path": "native/src__tiles3d__tile.rs",
+      "bytes": 4229,
+      "sha256": "0b55186615dd78aed706dd638670d68a86d4d089cc2e385a219e602a7ddd1c5d"
+    },
+    {
+      "path": "native/src__tiles3d__tileset.rs",
+      "bytes": 5657,
+      "sha256": "9e53ee6827fc74df8a47d770722a5414357096b1957625ec1ed480a2f2168a6d"
+    },
+    {
+      "path": "native/src__tiles3d__traversal.rs",
+      "bytes": 9180,
+      "sha256": "0aa84db925c7c905392285281d0ae4cd61f40c9aa777a87fd938d1874fe6d864"
+    },
+    {
+      "path": "native/tests__test_3dtiles_parse.py",
+      "bytes": 7946,
+      "sha256": "f7f125cdc63ae77f6ac01a9e277f59913777d48adede6ad461bc35b3a100bef8"
+    },
+    {
+      "path": "native/tests__test_3dtiles_sse.py",
+      "bytes": 6893,
+      "sha256": "e9eb7914a7f54b95b1f6540ea87cf9681e2a04b04b9aa441787f114fc4ef69d1"
+    },
+    {
+      "path": "native/tests__test_api_contracts.py",
+      "bytes": 63392,
+      "sha256": "b72adad34bf597aa7f0a1392c30c634e547cc354bd35c246637ff5ea3915fd46"
+    },
+    {
+      "path": "native/tests__test_copc_laz_fixture.py",
+      "bytes": 348,
+      "sha256": "67748ab0de092dbbddde194e9e68bc318dbdc3e883b0e1b12b2392c3a1f356f3"
+    },
+    {
+      "path": "native/tests__test_pointcloud_gpu_integration.py",
+      "bytes": 2874,
+      "sha256": "50f83613c9da5db62a37540f858cf7d48ab7c8a06990875a9f8bd51fdb0d2c8f"
+    },
+    {
+      "path": "native/tests__test_pointcloud_lod.py",
+      "bytes": 7089,
+      "sha256": "c1994c8c167012edab8f2cf5552372326a31033935074cae0e679125c5a1baa0"
+    },
+    {
+      "path": "quantized.pnts",
+      "bytes": 248,
+      "sha256": "ea01a70f69342b1abafac13d73a1e1096cc7033e4ee84e8196dec7a10793be73"
+    },
+    {
+      "path": "tileset.json",
+      "bytes": 320,
+      "sha256": "c007000493989e01308de657dbadcd29b8fdd95eeb0f16eb52b1b88d72ca8c09"
+    },
+    {
+      "path": "triangle.b3dm",
+      "bytes": 1100,
+      "sha256": "6c22e577cd25d57bcb0c80d5ca88959d3a5baba6b1bf4bf8db96c016bba3df8e"
+    },
+    {
+      "path": "upstream.json",
+      "bytes": 126,
+      "sha256": "5f14a3b2033d2fb09bf433ae1b3a8c9711cb5e331433f97d3b6c7295c248310e"
+    },
+    {
+      "path": "workload-ept/ept-data/0-0-0-0.bin",
+      "bytes": 1999998,
+      "sha256": "a7971bc54fc48db621041c647d31da2a2042aac7354ea1959b33386e606d3f73"
+    },
+    {
+      "path": "workload-ept/ept-data/1-0-0-0.bin",
+      "bytes": 1999998,
+      "sha256": "a8b425e34f7b272272a9cc758cdfa1ba86315bb4a1149b4220cfc8d4911a39ad"
+    },
+    {
+      "path": "workload-ept/ept-data/2-0-0-0.bin",
+      "bytes": 1999998,
+      "sha256": "4f466c7f858188903a591bd019e4f7b2206bdb6189e8169b51ee35bb026885e1"
+    },
+    {
+      "path": "workload-ept/ept-data/3-0-0-0.bin",
+      "bytes": 1999998,
+      "sha256": "fb425531ca5e523c434299d569e6815e6f60a15c957c4224d15923f319d687b8"
+    },
+    {
+      "path": "workload-ept/ept-data/4-0-0-0.bin",
+      "bytes": 1999998,
+      "sha256": "6e8369b9240bb03dd8e1dc35ef42a074e2596791127ee10970eabf810fb9bf0f"
+    },
+    {
+      "path": "workload-ept/ept-data/5-0-0-0.bin",
+      "bytes": 1999998,
+      "sha256": "bdba37e55ce17831624e2d44b44c401aa6eac5e0855beecb5cfcd7e84376522a"
+    },
+    {
+      "path": "workload-ept/ept-data/6-0-0-0.bin",
+      "bytes": 1999998,
+      "sha256": "0060394914ab5223a15e64fc10a8168b8d02675a23d28ec9cdc43e0b5e2de572"
+    },
+    {
+      "path": "workload-ept/ept-data/7-0-0-0.bin",
+      "bytes": 1999998,
+      "sha256": "cc15c7f0315e5fecc78b3098e44cc610f8a455812fac117a96d56c9f823a85e6"
+    },
+    {
+      "path": "workload-ept/ept-data/8-0-0-0.bin",
+      "bytes": 1000008,
+      "sha256": "42c339c50e025f91725377eae85a6083c11492795ac99f58f9ea6f6eb4dd3bcc"
+    },
+    {
+      "path": "workload-ept/ept-data/8-1-0-0.bin",
+      "bytes": 1000008,
+      "sha256": "6ce424a937f7cb7e32e5ca435ccc78b10abd19fce83395b17f52d6e833b02d13"
+    },
+    {
+      "path": "workload-ept/ept-hierarchy/0-0-0-0.json",
+      "bytes": 188,
+      "sha256": "72061a41d5537c80ca3b1dd73dd7d3190a455cce2aa8e1657f31db62b4b5501b"
+    },
+    {
+      "path": "workload-ept/ept.json",
+      "bytes": 701,
+      "sha256": "0df72e4c4dd11e18347cd83fe464a4fda59fb539f893dff612c5f1c0e273b6fa"
+    }
+  ]
+}

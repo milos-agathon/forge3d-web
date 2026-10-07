@@ -64,3 +64,16 @@ crates/forge3d-web/types/geometry.d.ts text eol=lf
 crates/forge3d-web/types/image-io.d.ts text eol=lf
 crates/forge3d-web/types/mesh*.d.ts text eol=lf
 crates/forge3d-web/types/scatter-types.d.ts text eol=lf
+
+# W16 codec, fixture and native-reference hashes preserve exact upstream bytes.
+crates/forge3d-web/assets/laz/** -text
+crates/forge3d-web/assets/laz/laz-perf.js -whitespace
+crates/forge3d-web/assets/laz/provenance.json text eol=lf
+crates/forge3d-web/tests/fixtures/w16/** -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+crates/forge3d-web/tests/fixtures/w16/native/** -whitespace
+crates/forge3d-web/types/pointcloud*.d.ts text eol=lf
+crates/forge3d-web/types/tiles3d*.d.ts text eol=lf
+crates/forge3d-web/types/copc.d.ts text eol=lf
+crates/forge3d-web/types/ept.d.ts text eol=lf
+crates/forge3d-web/types/laz-decoder.d.ts text eol=lf
+crates/forge3d-web/docs/w16-local-evidence.json text eol=lf
