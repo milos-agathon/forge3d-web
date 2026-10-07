@@ -155,7 +155,7 @@ helper reconstructs its bitangent and loses that sign. The native unit-box
 constructor also has malformed face coordinates; browser boxes retain unit
 bounds, 24 vertices, 12 triangles and closed topology instead of copying that
 defect. These deliberate differences are recorded in the W15 parity evidence.
-The native audit records 33 suites (117 test definitions including the imported
+The native audit records 33 suites (103 direct and 14 imported test definitions, including the imported
 TBN class) with source hashes, named browser ports and explicit W18 boundaries.
 The actual native sample CityJSON is checked byte for byte and parses into five
 meshes. Independent manually encoded OBJ/MTL/STL/glTF/GLB fixtures and their hashes avoid

@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
 import { readFileSync } from "node:fs";
-import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import * as f from "../../src-ts/index.js";
 const fixture = (name: string) =>
@@ -295,18 +294,22 @@ describe("W15 native audit provenance", () => {
         expect(
           createHash("sha256")
             .update(
-              execFileSync("git", [
-                "show",
-                `${imported.revision}:${imported.nativePath}`,
-              ]),
+              readFileSync(
+                new URL(
+                  `../fixtures/w15/native/${imported.revision.slice(0, 12)}/${imported.nativePath}`,
+                  import.meta.url,
+                ),
+              ),
             )
             .digest("hex"),
         ).toBe(imported.sha256);
       }
-      const source = execFileSync("git", [
-        "show",
-        `${suite.revision}:${suite.nativePath}`,
-      ]);
+      const source = readFileSync(
+        new URL(
+          `../fixtures/w15/native/${suite.revision.slice(0, 12)}/${suite.nativePath}`,
+          import.meta.url,
+        ),
+      );
       expect(createHash("sha256").update(source).digest("hex")).toBe(
         suite.sha256,
       );
@@ -327,7 +330,12 @@ describe("W15 native audit provenance", () => {
         asset.sha256,
       );
       expect(
-        execFileSync("git", ["show", `${asset.revision}:${asset.nativePath}`]),
+        readFileSync(
+          new URL(
+            `../fixtures/w15/native/${asset.revision.slice(0, 12)}/${asset.nativePath}`,
+            import.meta.url,
+          ),
+        ),
       ).toEqual(bytes);
     }
   });

@@ -6,6 +6,7 @@ import {
 declare global {
   interface Window {
     __w15: any;
+    __w15SampledLimit: number;
   }
 }
 for (const dist of [false, true]) {
@@ -96,6 +97,55 @@ for (const dist of [false, true]) {
     expect(r.albedoError).toBeLessThanOrEqual(1e-5);
     expect(r.idsEqual).toBe(true);
     expect(r.uvNegativeDelta).toBeGreaterThan(0.1);
+  });
+  test(`W15 ${mode}: scalar buildings and textured meshes work at 16 sampled textures`, async ({
+    page,
+    webgpuAvailability,
+  }) => {
+    skipRenderAssertionsWhenProbing(webgpuAvailability);
+    await page.addInitScript(() => {
+      if (typeof GPU === "undefined") return;
+      const requestAdapter = GPU.prototype.requestAdapter;
+      GPU.prototype.requestAdapter = async function (...args) {
+        const adapter = await requestAdapter.apply(this, args);
+        if (!adapter) return adapter;
+        const real = adapter.limits,
+          limits: Record<string, number> = {};
+        for (const key in real) limits[key] = (real as any)[key];
+        limits.maxSampledTexturesPerShaderStage = Math.min(
+          16,
+          real.maxSampledTexturesPerShaderStage,
+        );
+        Object.defineProperty(adapter, "limits", {
+          value: limits,
+          configurable: true,
+        });
+        const requestDevice = adapter.requestDevice.bind(adapter);
+        Object.defineProperty(adapter, "requestDevice", {
+          value: async (...args: any[]) => {
+            const device = await requestDevice(...args);
+            window.__w15SampledLimit =
+              device.limits.maxSampledTexturesPerShaderStage;
+            return device;
+          },
+        });
+        return adapter;
+      };
+    });
+    await open(page);
+    const buildings = await page.evaluate(() => window.__w15.buildings());
+    expect(await page.evaluate(() => window.__w15SampledLimit)).toBe(16);
+    expect(Object.keys(buildings.counts)).toHaveLength(2);
+    expect(
+      Object.values(buildings.counts).every((n) => (n as number) > 100),
+    ).toBe(true);
+    const mesh = await page.evaluate(() => window.__w15.textures());
+    expect(await page.evaluate(() => window.__w15SampledLimit)).toBe(16);
+    expect(mesh.covered).toBeGreaterThan(100);
+    expect(mesh.idsEqual).toBe(true);
+    expect(mesh.normalError).toBeLessThanOrEqual(1e-5);
+    expect(mesh.albedoError).toBeLessThanOrEqual(1e-5);
+    expect(mesh.uvNegativeDelta).toBeGreaterThan(0.1);
   });
   test(`W15 ${mode}: replacement, budget failure and resize`, async ({
     page,

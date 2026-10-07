@@ -17,11 +17,17 @@ with tempfile.TemporaryDirectory(prefix='forge3d-w15-native-') as directory:
     for name in MODULES:
         path = f'src/geometry/{name}.rs'
         data = subprocess.check_output(['git', 'show', f'{REVISION}:{path}'], cwd=ROOT)
+        frozen = ROOT / 'crates/forge3d-web/tests/fixtures/w15/native' / REVISION[:12] / path
+        frozen.parent.mkdir(parents=True, exist_ok=True)
+        frozen.write_bytes(data)
         compiled = data.replace(b'#[cfg(feature = "extension-module")]\n',b'') if name == 'subdivision' else data
         (scratch / path).write_bytes(compiled)
         provenance.append({'revision': REVISION, 'path': path, 'sha256': hashlib.sha256(data).hexdigest()})
     for path in ['src/mesh/tbn.rs','src/uv/unwrap.rs']:
         data = subprocess.check_output(['git','show',f'{REVISION}:{path}'],cwd=ROOT)
+        frozen = ROOT / 'crates/forge3d-web/tests/fixtures/w15/native' / REVISION[:12] / path
+        frozen.parent.mkdir(parents=True, exist_ok=True)
+        frozen.write_bytes(data)
         provenance.append({'revision':REVISION,'path':path,'sha256':hashlib.sha256(data).hexdigest()})
         if path.endswith('tbn.rs'): (scratch/'src/tbn.rs').write_bytes(data)
         else:

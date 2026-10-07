@@ -20,12 +20,14 @@ input f32 coordinates to avoid an equivalent 0/1 seam changing sides with
 JavaScript versus Rust trigonometric rounding.
 
 [The native audit](w15-native-audit.json) pins 33 historical/final native suites
-and 117 definitions, including `test_mesh_tbn.py`'s imported canonical TBN class.
+and 117 definitions (103 direct plus 14 imported), including `test_mesh_tbn.py`'s imported canonical TBN class.
 It names concrete browser test ports and explains the Python/filesystem and
 W18 MapScene adaptations. Its generator rejects missing browser ports. Unit
-tests recheck the source digests against Git and the frozen native sample
+tests recheck the source digests against exact frozen Git blobs and the native sample
 CityJSON against its archived bytes; that sample produces all five real meshes.
-This is a source and outcome audit, not a claim that PyO3 or Python runs in browsers.
+The raw native blobs live under `tests/fixtures/w15/native`, preserving their
+bytes through shallow Git checkouts in CI. Both generators freeze the original
+blobs while reading the pinned commits. This is a source and outcome audit, not a claim that PyO3 or Python runs in browsers.
 
 Two deliberate corrections preserve useful existing browser behavior. The
 native primitive box has malformed face coordinates; browser unit boxes have
@@ -134,3 +136,14 @@ Unix-only skip on Windows). The W15/W04/W09 browser run passed 30 cases with
 one existing W09 baseline-fixture skip. Five core scatter boundary tests and
 the web scatter display/capture WGSL validator passed. The installed tarball
 consumer passed all six workflows without page errors or external requests.
+
+## PR CI portability follow-up
+
+The audit count is 103 direct definitions plus 14 imported canonical TBN
+methods, totaling 117. Both numeric-source and suite-source provenance checks
+use byte-preserved frozen blobs, so CI's default shallow checkout needs no
+archived Git objects. Regeneration still reads the pinned Git commits and
+freezes those exact original bytes, separately from its compiled scaffolds.
+A follow-up source/dist browser test caps the reported adapter texture limit,
+checks the actual negotiated device has exactly 16 sampled textures per stage,
+and renders both scalar buildings and UV/normal-mapped instanced meshes.

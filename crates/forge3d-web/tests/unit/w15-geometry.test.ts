@@ -1,7 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { execFileSync } from "node:child_process";
 import * as f from "../../src-ts/index.js";
 import type { MeshBuffers } from "../../src-ts/index.js";
 const golden = JSON.parse(
@@ -72,7 +71,12 @@ function compare(m: MeshBuffers, ref: any, reordered = false) {
 describe("W15 independently executed native geometry", () => {
   it("pins compiled source hashes rather than prior claims", () => {
     for (const p of golden.provenance) {
-      const bytes = execFileSync("git", ["show", `${p.revision}:${p.path}`]);
+      const bytes = readFileSync(
+        new URL(
+          `../fixtures/w15/native/${p.revision.slice(0, 12)}/${p.path}`,
+          import.meta.url,
+        ),
+      );
       expect(createHash("sha256").update(bytes).digest("hex")).toBe(p.sha256);
     }
   });

@@ -56,3 +56,4 @@ crates/forge3d-web/assets/datasets/remote-storage.json text eol=lf
 
 # W15 IO fixtures and archived controls are byte/digest pinned.
 crates/forge3d-web/tests/fixtures/w15/** -text
+crates/forge3d-web/tests/fixtures/w15/native/** -whitespace

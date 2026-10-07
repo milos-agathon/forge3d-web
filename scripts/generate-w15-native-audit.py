@@ -43,7 +43,11 @@ GROUPS = [
  (FINAL, ["test_p2_building_texture_docs"], [("crates/forge3d-web/docs/geometry-mesh-io.md","A scalar fallback cannot be reported")]),
 ]
 def blob(revision, path):
- return subprocess.check_output(["git","show",revision+":"+path],cwd=ROOT)
+ data = subprocess.check_output(["git","show",revision+":"+path],cwd=ROOT)
+ frozen = ROOT/"crates/forge3d-web/tests/fixtures/w15/native"/revision[:12]/path
+ frozen.parent.mkdir(parents=True,exist_ok=True)
+ frozen.write_bytes(data)
+ return data
 def definitions(source):
  return [n.name for n in ast.walk(ast.parse(source)) if isinstance(n,(ast.FunctionDef,ast.AsyncFunctionDef)) and n.name.startswith("test_")]
 for _,_,ports in GROUPS:
