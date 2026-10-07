@@ -8,6 +8,10 @@ pub struct ScatterMesh {
     pub positions: Vec<f32>,
     pub normals: Vec<f32>,
     pub indices: Vec<u32>,
+    #[serde(default)]
+    pub uvs: Vec<f32>,
+    #[serde(default)]
+    pub tangents: Vec<f32>,
 }
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
@@ -70,6 +74,8 @@ pub struct Cluster {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ScatterBatch {
+    #[serde(default)]
+    pub material_index: u32,
     pub levels: Vec<ScatterLevel>,
     pub transforms: Vec<f32>,
     pub color: [f32; 4],
@@ -111,6 +117,14 @@ fn positive(x: f32) -> bool {
 }
 impl ScatterMesh {
     pub fn validate(&self) -> Result<(), String> {
+        let vertices = self.positions.len() / 3;
+        if (!self.uvs.is_empty() && self.uvs.len() != vertices * 2)
+            || (!self.tangents.is_empty() && self.tangents.len() != vertices * 4)
+            || !finite(&self.uvs)
+            || !finite(&self.tangents)
+        {
+            return Err("invalid mesh UV/tangent attributes".into());
+        }
         if self.positions.is_empty()
             || !self.positions.len().is_multiple_of(3)
             || self.positions.len() != self.normals.len()
@@ -154,6 +168,9 @@ impl Bounds {
 }
 impl ScatterBatch {
     pub fn validate(&self) -> Result<(), String> {
+        if self.material_index >= crate::materials::MAX_MATERIALS {
+            return Err("material index exceeds scene limit".into());
+        }
         if self.levels.is_empty()
             || self.levels.len() > 32
             || self.transforms.is_empty()
@@ -467,5 +484,21 @@ mod tests {
         let mut b = batch();
         b.transforms[15] = 0.0;
         assert!(b.validate().unwrap_err().contains("affine"));
+    }
+    #[test]
+    fn mesh_attributes_and_material_slots_are_bounded_at_wasm_boundary() {
+        let mut b = batch();
+        assert_eq!(b.material_index, 0);
+        b.levels[0].mesh.uvs = vec![0.0; 6];
+        b.levels[0].mesh.tangents = vec![1.0; 12];
+        b.material_index = 255;
+        b.validate().unwrap();
+        b.material_index = 256;
+        assert!(b.validate().is_err());
+        b.material_index = 0;
+        b.levels[0].mesh.uvs.pop();
+        assert!(b.validate().is_err());
+        b.levels[0].mesh.uvs.push(f32::NAN);
+        assert!(b.validate().is_err());
     }
 }

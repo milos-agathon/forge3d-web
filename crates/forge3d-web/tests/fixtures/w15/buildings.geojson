@@ -1,0 +1,1 @@
+{"type":"FeatureCollection","features":[{"type":"Feature","id":"house","properties":{"height":4,"building":"house","building:material":"brick"},"geometry":{"type":"Polygon","coordinates":[[[0,0],[4,0],[4,3],[0,3],[0,0]]]}},{"type":"Feature","id":"office","properties":{"height":3,"building":"office"},"geometry":{"type":"Polygon","coordinates":[[[6,0],[8,0],[8,3],[6,3],[6,0]]]}}]}

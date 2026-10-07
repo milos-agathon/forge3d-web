@@ -4311,3 +4311,28 @@ export { DatasetRegistry, DATASET_BASE_URL, decodeDatasetNpy } from './datasets.
 export type * from './dataset-types.js';
 export { reprojectVectorLayer, reprojectLabelFeatures } from './crs-layers.js';
 export type { GeospatialVectorLayerInput, CrsLayerTarget } from './crs-layers.js';
+export { cloneMesh, meshBounds, meshBytes, recomputeMeshNormals, attachMeshTangents, transferMesh, mergeMeshes, MeshLayer, MESH_IDENTITY, MAX_MESH_BYTES } from './mesh.js';
+export type { MeshBuffers, MeshInput, MeshBounds } from './mesh.js';
+export { generatePrimitive, extrudePolygon, generateRibbon, generateTube, generateThickPolyline } from './geometry.js';
+export type { PrimitiveKind, PrimitiveOptions, ExtrudeOptions, RibbonOptions, TubeOptions, JoinStyle } from './geometry.js';
+export { validateMesh, weldMesh, transformMesh, centerMesh, scaleMesh, flipMeshAxis, swapMeshAxes, subdivideMesh, subdivideMeshAdaptive, displaceHeightmap, displaceProcedural, simplifyMesh, generateMeshLods, planarMeshUv, sphericalMeshUv } from './mesh-processing.js';
+export type { MeshValidationIssue, MeshValidationReport, WeldOptions, SubdivisionOptions, AdaptiveSubdivisionOptions, HeightmapDisplacement } from './mesh-processing.js';
+export { parseObj, parseMtl, encodeObj, encodeMtl } from './mesh-obj.js';
+export type { ObjImport, ObjMaterial } from './mesh-obj.js';
+export { parseStl, encodeStl } from './mesh-stl.js';
+export { loadGltf, decodeGltf, encodeGlb } from './mesh-gltf.js';
+export type { GltfLoadOptions, GltfAsset, GltfPrimitive } from './mesh-gltf.js';
+export { MeshIo, loadObj, loadMesh, exportMesh, exportMeshToSink } from './mesh-io.js';
+export type { MeshFormat, MeshLoadOptions, MeshExportOptions, MeshIoOptions } from './mesh-io.js';
+export { loadHdr, exportHdr, loadImage, exportImage } from './image-io.js';
+export type { RasterImage } from './image-io.js';
+export { BuildingLayer, loadBuildings, parseGeoJsonBuildings, parseCityJsonBuildings, meshFromMultiPolygonZ, loadBuildingTilesMetadata } from './buildings.js';
+export type { BuildingInput, BuildingRecord, BuildingLayerOptions, BuildingLoadOptions } from './buildings.js';
+export { buildingMaterialFromName, buildingMaterialFromTags, roofMaterialFromTags, parseBuildingColor, inferRoofType } from './building-materials.js';
+export type { BuildingMaterial, RoofType } from './building-materials.js';
+export { diagnoseBuildingTextures } from './building-diagnostics.js';
+export type { BuildingTextureRequest, BuildingDiagnostic, BuildingTextureReport } from './building-diagnostics.js';
+export { createMeshWorkerHandler } from './mesh-worker.js';
+export type { MeshWorkerRequest } from './mesh-worker.js';
+
+import { CrsTransformer } from "./crs.js";

@@ -4,7 +4,7 @@
   "manifestId": "forge3d-composite-baseline-v1",
   "sourcePlan": {
     "path": "docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md",
-    "sha256": "7595483a04642a16921a471bb01d047926a26842c29f905b5bf88dbcd0c3ec0a"
+    "sha256": "329c4d119c93d64da11fa5f0570f4610105d264cd5318baab249bb9284ae1011"
   },
   "baselineLayers": [
     {
@@ -1653,7 +1653,7 @@
       "title": "GeoJSON/CityJSON/3D Tiles buildings, roofs, extrusion, LOD and scalar materials",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W15",
       "nativeCapability": "GeoJSON/CityJSON/3D Tiles buildings, roofs, extrusion, LOD and scalar materials: 1f4084a:python/forge3d/buildings.py, src/import/osm_buildings.rs, tests/test_buildings_cityjson.py, tests/test_buildings_roof.py",
       "requiredWebOutcome": "Add functional geometry, LOD and scalar-material paths",
@@ -1677,7 +1677,7 @@
       "title": "Textured-building output is diagnostic-only",
       "lifecycle": "DA",
       "evidenceGrade": "B",
-      "status": "G→C",
+      "status": "C",
       "ownerTask": "W15",
       "nativeCapability": "Textured-building output is diagnostic-only: 1f4084a:tests/test_p2_building_texture_diagnostics.py, tests/test_p2_textured_building_mapscene.py",
       "requiredWebOutcome": "Preserve path/UV/format diagnostics and never report a scalar fallback as textured success",
@@ -1699,7 +1699,7 @@
       "title": "Primitive meshes, polygon extrusion, thick polylines, ribbons/tubes",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W15",
       "nativeCapability": "Primitive meshes, polygon extrusion, thick polylines, ribbons/tubes: 1f4084a:src/geometry/primitives.rs, extrude.rs, thick_polyline.rs, curves.rs; 7b08af8:tests/test_f1_extrude.py",
       "requiredWebOutcome": "Add transferable typed mesh constructors",
@@ -1724,7 +1724,7 @@
       "title": "Weld/validate/normals, UV/TBN, subdivision/displacement/transforms/simplify/LOD/instancing",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W15",
       "nativeCapability": "Weld/validate/normals, UV/TBN, subdivision/displacement/transforms/simplify/LOD/instancing: 1f4084a:src/geometry/**, src/mesh/tbn.rs; 7b08af8:tests/test_f8_weld.py, tests/test_f11_subdivision.py, tests/test_f14_transform.py",
       "requiredWebOutcome": "Port deterministic algorithms and preserve validation/index/dtype contracts",
@@ -1749,7 +1749,7 @@
       "title": "OBJ/MTL, STL, plain glTF/GLB, MultiPolygonZ and image/HDR IO",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "E",
+      "status": "I",
       "ownerTask": "W15",
       "nativeCapability": "OBJ/MTL, STL, plain glTF/GLB, MultiPolygonZ and image/HDR IO: 1f4084a:python/forge3d/io.py:496-686, src/io/**, src/formats/hdr.rs; 7b08af8:tests/test_f4_obj_import.py, tests/test_f6_stl_export.py, tests/test_f18_gltf_import.py",
       "requiredWebOutcome": "Add async URL/File/Blob loaders and Blob/stream exporters; Draco is a separate unverified tombstone",
@@ -3232,10 +3232,19 @@
       "contract": "Add functional geometry, LOD and scalar-material paths",
       "owner": "W15",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:G05a"
+        "docs/parity/w15-implementation.md",
+        "docs/parity/w15-native-audit.json",
+        "crates/forge3d-web/docs/geometry-mesh-io.md",
+        "crates/forge3d-web/src-ts/buildings.ts",
+        "crates/forge3d-web/src-ts/building-materials.ts"
       ],
       "tests": [
-        "port geometry/TBN/IO/CityJSON/building tests; OBJ/STL round trips, plain glTF/GLB fixtures, topology diagnostics, LOD bounds and instancing."
+        "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+        "crates/forge3d-web/tests/unit/w15-io.test.ts",
+        "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+        "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+        "crates/forge3d-web/tests/playwright/w15_geometry.spec.ts",
+        "crates/forge3d-web/scripts/test-w15-package-consumer.mjs"
       ]
     },
     {
@@ -3245,10 +3254,19 @@
       "contract": "Preserve path/UV/format diagnostics and never report a scalar fallback as textured success",
       "owner": "W15",
       "evidence": [
-        "tracked G→C closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:G05b"
+        "docs/parity/w15-implementation.md",
+        "docs/parity/w15-native-audit.json",
+        "crates/forge3d-web/docs/geometry-mesh-io.md",
+        "crates/forge3d-web/src-ts/building-diagnostics.ts",
+        "crates/forge3d-web/src-ts/buildings.ts"
       ],
       "tests": [
-        "port geometry/TBN/IO/CityJSON/building tests; OBJ/STL round trips, plain glTF/GLB fixtures, topology diagnostics, LOD bounds and instancing."
+        "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+        "crates/forge3d-web/tests/unit/w15-io.test.ts",
+        "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+        "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+        "crates/forge3d-web/tests/playwright/w15_geometry.spec.ts",
+        "crates/forge3d-web/scripts/test-w15-package-consumer.mjs"
       ]
     },
     {
@@ -3258,10 +3276,19 @@
       "contract": "Add transferable typed mesh constructors",
       "owner": "W15",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:G06"
+        "docs/parity/w15-implementation.md",
+        "docs/parity/w15-native-audit.json",
+        "crates/forge3d-web/docs/geometry-mesh-io.md",
+        "crates/forge3d-web/src-ts/geometry.ts",
+        "crates/forge3d-web/src-ts/mesh.ts"
       ],
       "tests": [
-        "port geometry/TBN/IO/CityJSON/building tests; OBJ/STL round trips, plain glTF/GLB fixtures, topology diagnostics, LOD bounds and instancing."
+        "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+        "crates/forge3d-web/tests/unit/w15-io.test.ts",
+        "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+        "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+        "crates/forge3d-web/tests/playwright/w15_geometry.spec.ts",
+        "crates/forge3d-web/scripts/test-w15-package-consumer.mjs"
       ]
     },
     {
@@ -3271,10 +3298,20 @@
       "contract": "Port deterministic algorithms and preserve validation/index/dtype contracts",
       "owner": "W15",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:G07"
+        "docs/parity/w15-implementation.md",
+        "docs/parity/w15-native-audit.json",
+        "crates/forge3d-web/docs/geometry-mesh-io.md",
+        "crates/forge3d-web/src-ts/mesh-processing.ts",
+        "crates/forge3d-web/src-ts/mesh-worker.ts",
+        "crates/forge3d-web/src/runtime/scatter/draw.rs"
       ],
       "tests": [
-        "port geometry/TBN/IO/CityJSON/building tests; OBJ/STL round trips, plain glTF/GLB fixtures, topology diagnostics, LOD bounds and instancing."
+        "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+        "crates/forge3d-web/tests/unit/w15-io.test.ts",
+        "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+        "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+        "crates/forge3d-web/tests/playwright/w15_geometry.spec.ts",
+        "crates/forge3d-web/scripts/test-w15-package-consumer.mjs"
       ]
     },
     {
@@ -3284,10 +3321,22 @@
       "contract": "Add async URL/File/Blob loaders and Blob/stream exporters; Draco is a separate unverified tombstone",
       "owner": "W15",
       "evidence": [
-        "tracked E closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:G08"
+        "docs/parity/w15-implementation.md",
+        "docs/parity/w15-native-audit.json",
+        "crates/forge3d-web/docs/geometry-mesh-io.md",
+        "crates/forge3d-web/src-ts/mesh-io.ts",
+        "crates/forge3d-web/src-ts/mesh-gltf.ts",
+        "crates/forge3d-web/src-ts/mesh-obj.ts",
+        "crates/forge3d-web/src-ts/mesh-stl.ts",
+        "crates/forge3d-web/src-ts/image-io.ts"
       ],
       "tests": [
-        "port geometry/TBN/IO/CityJSON/building tests; OBJ/STL round trips, plain glTF/GLB fixtures, topology diagnostics, LOD bounds and instancing."
+        "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+        "crates/forge3d-web/tests/unit/w15-io.test.ts",
+        "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+        "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+        "crates/forge3d-web/tests/playwright/w15_geometry.spec.ts",
+        "crates/forge3d-web/scripts/test-w15-package-consumer.mjs"
       ]
     },
     {
@@ -3632,10 +3681,19 @@
       "contract": "Do not report scalar fallback as textured success.",
       "owner": "W15",
       "evidence": [
-        "1f4084a:tests/test_p2_building_texture_diagnostics.py"
+        "docs/parity/w15-implementation.md",
+        "docs/parity/w15-native-audit.json",
+        "crates/forge3d-web/docs/geometry-mesh-io.md",
+        "crates/forge3d-web/src-ts/building-diagnostics.ts",
+        "crates/forge3d-web/src-ts/buildings.ts"
       ],
       "tests": [
-        "W00 tombstone ledger contract for textured-buildings"
+        "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+        "crates/forge3d-web/tests/unit/w15-io.test.ts",
+        "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+        "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+        "crates/forge3d-web/tests/playwright/w15_geometry.spec.ts",
+        "crates/forge3d-web/scripts/test-w15-package-consumer.mjs"
       ]
     },
     {
@@ -3671,10 +3729,22 @@
       "contract": "Not a parity claim; any implementation is a separately versioned feature.",
       "owner": "W15",
       "evidence": [
-        "1f4084a:CHANGELOG.md F13"
+        "docs/parity/w15-implementation.md",
+        "docs/parity/w15-native-audit.json",
+        "crates/forge3d-web/docs/geometry-mesh-io.md",
+        "crates/forge3d-web/src-ts/mesh-io.ts",
+        "crates/forge3d-web/src-ts/mesh-gltf.ts",
+        "crates/forge3d-web/src-ts/mesh-obj.ts",
+        "crates/forge3d-web/src-ts/mesh-stl.ts",
+        "crates/forge3d-web/src-ts/image-io.ts"
       ],
       "tests": [
-        "W00 tombstone ledger contract for ply-import"
+        "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+        "crates/forge3d-web/tests/unit/w15-io.test.ts",
+        "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+        "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+        "crates/forge3d-web/tests/playwright/w15_geometry.spec.ts",
+        "crates/forge3d-web/scripts/test-w15-package-consumer.mjs"
       ]
     },
     {
@@ -3684,10 +3754,22 @@
       "contract": "Not a parity claim; preserve final rejection diagnostics.",
       "owner": "W15",
       "evidence": [
-        "1f4084a:tests/test_api_contracts.py"
+        "docs/parity/w15-implementation.md",
+        "docs/parity/w15-native-audit.json",
+        "crates/forge3d-web/docs/geometry-mesh-io.md",
+        "crates/forge3d-web/src-ts/mesh-io.ts",
+        "crates/forge3d-web/src-ts/mesh-gltf.ts",
+        "crates/forge3d-web/src-ts/mesh-obj.ts",
+        "crates/forge3d-web/src-ts/mesh-stl.ts",
+        "crates/forge3d-web/src-ts/image-io.ts"
       ],
       "tests": [
-        "W00 tombstone ledger contract for draco-decode"
+        "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+        "crates/forge3d-web/tests/unit/w15-io.test.ts",
+        "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+        "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+        "crates/forge3d-web/tests/playwright/w15_geometry.spec.ts",
+        "crates/forge3d-web/scripts/test-w15-package-consumer.mjs"
       ]
     },
     {

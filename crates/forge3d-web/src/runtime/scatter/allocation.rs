@@ -130,6 +130,7 @@ pub(crate) fn build(
                         &fallback_pages,
                         &l.mesh,
                         input.color,
+                        input.material_index,
                         input.transforms.len() / 16,
                     )
                 })
@@ -146,6 +147,7 @@ pub(crate) fn build(
                         &fallback_pages,
                         &c.mesh,
                         input.color,
+                        input.material_index,
                         1,
                     )
                 })

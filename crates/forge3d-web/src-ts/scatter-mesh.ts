@@ -16,7 +16,12 @@ export function validateScatterMesh(mesh: ScatterMesh): ScatterMesh {
   for (const x of mesh.positions) finite(x, "position");
   for (const x of mesh.normals) finite(x, "normal");
   for (const i of mesh.indices) if (i >= mesh.positions.length / 3) scatterInvalid("index out of bounds");
-  return { positions: mesh.positions.slice(), normals: mesh.normals.slice(), indices: mesh.indices.slice() };
+  const result: ScatterMesh = { positions: mesh.positions.slice(), normals: mesh.normals.slice(), indices: mesh.indices.slice() };
+  for (const [key,width] of [["uvs",2],["tangents",4]] as const) {
+    const data=mesh[key];
+    if(data!==undefined){if(!(data instanceof Float32Array)||data.length!==0&&data.length!==mesh.positions.length/3*width)scatterInvalid(`${key} count mismatch`);for(const x of data)finite(x,key);result[key]=data.slice();}
+  }
+  return result;
 }
 export function scatterMeshBounds(mesh: ScatterMesh): ScatterBounds {
   const min: [number, number, number] = [Infinity, Infinity, Infinity];

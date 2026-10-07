@@ -5,6 +5,7 @@ pub(super) fn shader(features: ShaderFeatures) -> String {
     let source = WORLD_SHADER.replacen("struct VertexInput {", &format!("struct VertexInput {{\n{input}"), 1)
         .replace("output.position = camera.view_projection * vec4<f32>(input.position, 1.0);", VERTEX)
         .replace("output.normal = input.normal;", "output.normal = scatter_normal;")
+        .replace("output.tangent = input.tangent;", "output.tangent = scatter_tangent;")
         .replace("output.world_position = input.position;", "output.world_position = scatter_position;")
         .replace("output.previous_position = input.previous_position;", "output.previous_position = scatter_previous_position;")
         .replace("output.object_id = input.object_id;", "output.object_id = u32(input.instance_meta.x);")
@@ -40,6 +41,9 @@ const VERTEX: &str = r#"
         scatter_previous_position += old_displacement;
         scatter_normal = normalize(scatter_normal + direction_world * length(displacement) * 0.3 * max(dot(scatter_normal, normalize(c1)), 0.0));
     }
+    let tangent_raw = (matrix * vec4<f32>(input.tangent.xyz, 0.0)).xyz;
+    let tangent_direction = forge3d_safe_direction(tangent_raw - scatter_normal * dot(scatter_normal, tangent_raw));
+    let scatter_tangent = vec4<f32>(tangent_direction, input.tangent.w * select(1.0, -1.0, determinant < 0.0));
     output.position = camera.view_projection * vec4<f32>(scatter_position, 1.0);
 "#;
 const HELPERS: &str = r#"

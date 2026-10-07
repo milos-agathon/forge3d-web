@@ -195,6 +195,15 @@ impl ScatterResources {
         pass.set_bind_group(2, runtime.textures.as_ref().unwrap().bind_group_for(0), &[]);
         pass.set_bind_group(3, &runtime.ibl.as_ref().unwrap().bind_group, &[]);
         for batch in &self.batches {
+            pass.set_bind_group(
+                2,
+                runtime
+                    .textures
+                    .as_ref()
+                    .unwrap()
+                    .bind_group_for(batch.input.material_index),
+                &[],
+            );
             for draw in batch.levels.iter().chain(&batch.clusters) {
                 if draw.count == 0 {
                     continue;
@@ -230,6 +239,15 @@ impl ScatterResources {
         pass.set_bind_group(2, runtime.textures.as_ref().unwrap().bind_group_for(0), &[]);
         pass.set_bind_group(3, &runtime.ibl.as_ref().unwrap().bind_group, &[]);
         for b in &self.batches {
+            pass.set_bind_group(
+                2,
+                runtime
+                    .textures
+                    .as_ref()
+                    .unwrap()
+                    .bind_group_for(b.input.material_index),
+                &[],
+            );
             for d in b.levels.iter().chain(&b.clusters) {
                 if d.count == 0 {
                     continue;
