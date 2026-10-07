@@ -52,6 +52,13 @@ for (const dist of [false, true]) {
     const r = await page.evaluate(() => window.__w16.ranged());
     expect(r.points).toBeGreaterThan(0);
     expect(r.points).toBeLessThanOrEqual(5000);
+    expect(r.keys).toContain("0-0-0-0");
+    expect(r.rootPositions).toBe(r.expected.root.positionsSha256);
+    expect(r.rootColors).toBe(r.expected.root.colorsSha256);
+    expect(r.expected.root.bounds).toEqual(r.expected.bounds);
+    expect(r.coveredPixels).toBeGreaterThan(150);
+    expect(r.negativeKeys).toEqual([]);
+    expect(r.negativeCoveredPixels).toBe(0);
     expect(r.fraction).toBeLessThanOrEqual(0.25);
     expect(
       r.requests.every((x: any) => x.range !== null && x.status === 206),
@@ -124,14 +131,21 @@ for (const dist of [false, true]) {
       r.stable.memoryBudgetBytes,
     );
   });
-  test(`W16 ${mode}: million-point native camera records and B3DM scene integration`, async ({
+  test(`W16 ${mode}: branching native REPLACE and independent ADD/frustum cameras, B3DM integration`, async ({
     page,
     webgpuAvailability,
   }) => {
     skipRenderAssertionsWhenProbing(webgpuAvailability);
+    test.setTimeout(180000);
     await open(page);
     const r = await page.evaluate(() => window.__w16.workload());
     expect(r.count).toBe(1000000);
+    expect(r.layerCameras).toBe(64);
+    expect(r.cullingDifferences).toBe(64);
+    expect(r.manifest.workloadEpt.topology.branchNodes).toBeGreaterThan(400);
+    expect(
+      r.manifest.workloadEpt.selectionCoverage.uniqueAdditiveSets,
+    ).toBeGreaterThanOrEqual(32);
     expect(r.cameras).toEqual(
       r.manifest.cameraSelections
         .filter((x: any) => x.source === "workload-ept")
@@ -163,14 +177,27 @@ test("W16 10-minute real-data camera traversal retains budget and records adapte
   test.setTimeout(700000);
   await page.goto("/examples/pointcloud-tiles.html?dist");
   await page.waitForFunction(() => !!window.__w16);
-  const result = await page.evaluate(() => window.__w16.soak());
+  const target = process.env.FORGE3D_W16_PROFILE ?? "reference-discrete";
+  const result = await page.evaluate(
+    (target) => window.__w16.soak(600000, target),
+    target,
+  );
   expect(result.durationMs).toBeGreaterThanOrEqual(600000);
   expect(result.frames).toBeGreaterThan(1000);
-  expect(result.selectionCount).toBeGreaterThan(1);
+  expect(result.selectionCount).toBeGreaterThanOrEqual(32);
+  expect(result.keyframesVisited).toBe(64);
+  expect(result.coveredPixels).toBeGreaterThan(150);
+  expect(result.minPoints).toBeLessThan(result.maxPoints);
+  expect(result.maxPoints).toBeLessThanOrEqual(300000);
+  expect(result.maxCpuBytes).toBeLessThanOrEqual(result.budgets.cpuBudgetBytes);
+  expect(result.stats.peakGpuBytes).toBeLessThanOrEqual(
+    result.budgets.gpuBudgetBytes,
+  );
+  expect(result.disposed.gpuBytes).toBe(0);
   expect(result.stats.peakGpuBytes).toBeLessThanOrEqual(
     result.stats.memoryBudgetBytes,
   );
-  expect(result.frameP95Ms).toBeLessThanOrEqual(16.7);
+  expect(result.frameP95Ms).toBeLessThanOrEqual(result.budgets.p95Ms);
   const { mkdirSync, writeFileSync } = await import("node:fs");
   mkdirSync("test-results", { recursive: true });
   writeFileSync(

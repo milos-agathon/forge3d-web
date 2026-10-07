@@ -185,6 +185,10 @@ export class PointCloudTraverser {
         !boundsInView(node.bounds, view.viewProjection)
       )
         continue;
+      // Additive samples require their admitted ancestors as the coarse base.
+      // Never load or select detail below a node rejected by the point budget.
+      if (this.mode === "add" && used + node.pointCount > this.pointBudget)
+        continue;
       const sse = computePointSse(node.bounds, view),
         refine =
           node.depth < this.maxDepth &&

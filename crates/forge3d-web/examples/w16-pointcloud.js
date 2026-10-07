@@ -176,7 +176,9 @@ async function io() {
   }
 }
 async function ranged() {
-  const requests = [],
+  const manifest = await (await fetch(url("copc-ept-tiles-v1.json"))).json(),
+    expected = manifest.overviewCopc,
+    requests = [],
     fetcher = async (u, init) => {
       const r = await fetch(u, init);
       requests.push({
@@ -186,14 +188,29 @@ async function ranged() {
       });
       return r;
     };
-  const d = await api.openCopc(url("ellipsoid.copc.laz"), { fetch: fetcher }),
+  const d = await api.openCopc(url("overview.copc.laz"), { fetch: fetcher }),
     layer = new api.PointCloudLayer(d, {
-      pointBudget: 5000,
+      ...expected.options,
       ownsDataset: true,
+      // This source stores low-valued 16-bit RGB. Use actual elevations for
+      // coverage while independently checking the unchanged RGB bytes below.
+      style: { pointSize: 3, colorMode: "elevation" },
     });
-  const view = ortho(d.bounds);
+  const view = expected.view;
   await layer.update(view);
+  const root = await d.readPoints("0-0-0-0"),
+    r = await api.PointCloudRenderer.create(new OffscreenCanvas(640, 480));
+  r.setLayers([layer]);
+  await r.render(view);
+  const pixels = await r.readRgba();
+  let coveredPixels = 0;
+  for (let i = 0; i < pixels.length; i += 4)
+    if (Math.max(...pixels.subarray(i, i + 3)) >= 20) coveredPixels++;
   const result = {
+    expected,
+    rootPositions: await hash(root.positions),
+    rootColors: await hash(root.colors),
+    coveredPixels,
     points: layer.stats().pointsRendered,
     keys: layer.stats().selectedKeys,
     requests,
@@ -202,6 +219,17 @@ async function ranged() {
     fraction:
       d.stats().ranges.bytesTransferred / d.io.scheduler.fileSize(d.source),
   };
+  layer.traverser.setPointBudget(expected.root.count - 1);
+  await layer.update(view);
+  r.setLayers([layer]);
+  await r.render(view);
+  result.negativeKeys = layer.stats().selectedKeys;
+  const empty = await r.readRgba();
+  result.negativeCoveredPixels = 0;
+  for (let i = 0; i < empty.length; i += 4)
+    if (Math.max(...empty.subarray(i, i + 3)) >= 20)
+      result.negativeCoveredPixels++;
+  r.dispose();
   layer.dispose();
   return result;
 }
@@ -485,12 +513,38 @@ async function workload() {
       });
     }
     const cameras = [];
+    let layerCameras = 0,
+      cullingDifferences = 0;
     for (const record of manifest.cameraSelections.filter(
       (r) => r.source === "workload-ept",
     )) {
-      const selected = await new api.PointCloudTraverser(
-        record.options,
-      ).visibleNodes(d, record.view);
+      let selected;
+      if (record.options.mode === "add") {
+        const l = new api.PointCloudLayer(d, record.options);
+        try {
+          selected = await l.update(record.view);
+          const withoutFrustum = await new api.PointCloudTraverser(
+            record.options,
+          ).visibleNodes(d, { ...record.view, viewProjection: undefined });
+          if (
+            selected
+              .map((n) => n.key)
+              .sort()
+              .join() !==
+            withoutFrustum
+              .map((n) => n.key)
+              .sort()
+              .join()
+          )
+            cullingDifferences++;
+          layerCameras++;
+        } finally {
+          l.dispose();
+        }
+      } else
+        selected = await new api.PointCloudTraverser(
+          record.options,
+        ).visibleNodes(d, record.view);
       cameras.push(
         selected.map((n) => ({
           key: n.key,
@@ -499,29 +553,38 @@ async function workload() {
         })),
       );
     }
-    return { count: d.totalPoints, nodes, cameras, manifest };
+    return {
+      count: d.totalPoints,
+      nodes,
+      cameras,
+      manifest,
+      layerCameras,
+      cullingDifferences,
+    };
   } finally {
     d.dispose();
     owner.dispose();
   }
 }
-async function soak(durationMs = 600000) {
+async function soak(durationMs = 600000, targetProfile = "reference-discrete") {
   layer?.dispose();
   pool?.dispose();
   pool = workerPool();
   const manifest = await (await fetch(url("copc-ept-tiles-v1.json"))).json(),
     keyframes = manifest.cameraSelections.filter(
-      (r) => r.source === "workload-ept",
+      (r) => r.source === "workload-ept" && r.options.mode === "add",
     ),
     dataset = await api.openEpt(url("workload-ept/ept.json"), {
       workerPool: pool.pool,
     });
+  if (!manifest.performance.profiles[targetProfile])
+    throw Error("Unknown W16 target profile");
   layer = new api.PointCloudLayer(dataset, {
     ownsDataset: true,
-    pointBudget: 1000000,
+    ...keyframes[0].options,
     style: { pointSize: 2, colorMode: "elevation" },
   });
-  liveView = ortho(dataset.bounds);
+  liveView = keyframes[0].view;
   renderer ??= await api.PointCloudRenderer.create(canvas);
   renderer.resize(1920, 1080);
   const start = performance.now(),
@@ -531,39 +594,56 @@ async function soak(durationMs = 600000) {
   let frames = 0,
     maxBytes = 0,
     maxCpuBytes = 0;
-  const center = layer.origin;
+  let minPoints = Infinity,
+    maxPoints = 0;
   let baseline = 0;
   while (performance.now() - start < durationMs) {
     const frameStart = performance.now(),
-      angle = frames * 0.003,
-      c = Math.cos(angle),
-      s = Math.sin(angle),
       index = Math.floor(frames / 30) % 64,
-      v = {
-        ...liveView,
-        ...keyframes[index].view,
-        viewProjection: [...liveView.viewProjection],
-      };
+      t = (frames % 30) / 30,
+      v =
+        t === 0
+          ? keyframes[index].view
+          : interpolateTopdown(
+              keyframes[index].view,
+              keyframes[(index + 1) % 64].view,
+              t,
+              layer.origin[2],
+            );
     visited.add(index);
-    const scale = liveView.viewProjection[0];
-    v.viewProjection[0] = scale * c;
-    v.viewProjection[1] = scale * s;
-    v.viewProjection[4] = -scale * s;
-    v.viewProjection[5] = scale * c;
-    v.viewProjection[12] = -scale * (center[0] * c - center[1] * s);
-    v.viewProjection[13] = -scale * (center[0] * s + center[1] * c);
-    await layer.update(v);
+    const selected = await layer.update(v);
+    if (
+      frames % 30 === 0 &&
+      JSON.stringify(
+        selected.map((n) => ({
+          key: n.key,
+          pointCount: n.pointCount,
+          sse: Number(n.sse.toFixed(9)),
+        })),
+      ) !== JSON.stringify(keyframes[index].nodes)
+    )
+      throw Error(
+        "Soak selection differs from the independent ADD/frustum oracle",
+      );
     renderer.setLayers([layer]);
     await renderer.render(v);
     const elapsed = performance.now() - frameStart;
     times.push(elapsed);
     layer.recordFrameTime(elapsed);
-    selections.add(layer.stats().selectedKeys.join(","));
+    const layerStats = layer.stats();
+    selections.add([...layerStats.selectedKeys].sort().join(","));
+    minPoints = Math.min(minPoints, layerStats.pointsRendered);
+    maxPoints = Math.max(maxPoints, layerStats.pointsRendered);
+    if (
+      layerStats.pointsRendered > keyframes[index].options.pointBudget ||
+      !layerStats.selectedKeys.includes("0-0-0-0")
+    )
+      throw Error("Soak lost its coarse root or exceeded point budget");
     frames++;
     maxBytes = Math.max(maxBytes, renderer.getStats().gpuBytes);
     maxCpuBytes = Math.max(
       maxCpuBytes,
-      layer.stats().cpuBytes +
+      layerStats.cpuBytes +
         dataset.stats().decoded.cacheUsed +
         dataset.stats().compressed.bytes,
     );
@@ -590,6 +670,8 @@ async function soak(durationMs = 600000) {
     selectionCount: selections.size,
     keyframesVisited: visited.size,
     totalPoints: dataset.totalPoints,
+    minPoints,
+    maxPoints,
     coveredPixels,
     dataset: dataset.stats(),
     viewport: [1920, 1080],
@@ -600,6 +682,9 @@ async function soak(durationMs = 600000) {
       description: info.description,
     },
     profile: "local-chromium-preflight",
+    targetProfile,
+    budgets: manifest.performance.profiles[targetProfile],
+    referenceHardwareQualified: false,
     qualification:
       "W00 reference hardware is not inferred from a preflight run",
   };
@@ -609,6 +694,36 @@ async function soak(durationMs = 600000) {
   pool.dispose();
   renderer = layer = pool = undefined;
   return result;
+}
+function interpolateTopdown(a, b, t, centerZ) {
+  const [x, y, z] = a.position.map((v, i) => v + (b.position[i] - v) * t),
+    height = z - centerZ,
+    near = 0.01 * height,
+    far = 8 * height,
+    f = 1 / Math.tan(a.fovY / 2),
+    depth = far / (near - far);
+  return {
+    ...a,
+    position: [x, y, z],
+    viewProjection: [
+      f / (16 / 9),
+      0,
+      0,
+      0,
+      0,
+      f,
+      0,
+      0,
+      0,
+      0,
+      depth,
+      -1,
+      (-x * f) / (16 / 9),
+      -y * f,
+      -z * depth + (near * far) / (near - far),
+      z,
+    ],
+  };
 }
 window.__w16 = {
   api,

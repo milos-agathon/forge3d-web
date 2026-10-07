@@ -5,6 +5,7 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT.parents[1] / '.tools/python'))
 import laspy
+from w16_fixture_workload import build_branching_ept, build_overview_copc, topdown_view, additive_reference, in_frustum
 from laspy import CopcReader
 DEST = ROOT / 'tests/fixtures/w16'
 DEST.mkdir(parents=True, exist_ok=True)
@@ -34,30 +35,16 @@ mins=xyz.min(axis=0);maxs=xyz.max(axis=0);span=float(max(maxs-mins));bounds=list
 (ept/'ept.json').write_text(json.dumps({'bounds':bounds,'boundsConforming':list(mins)+list(maxs),'points':128,'span':128,'schema':schema,'dataType':'binary','hierarchyType':'json','srs':{'authority':'EPSG','horizontal':2992}}),encoding='utf8')
 (ept/'ept-data/0-0-0-0.bin').write_bytes(records)
 (ept/'ept-hierarchy/0-0-0-0.json').write_text('{"0-0-0-0":128}',encoding='utf8')
-# W00 workload: one million real-source samples, eight octree levels and 64
-# deterministic cameras. An affine resampling places Autzen samples inside
-# each node; it does not invent successful decoder output or replace the
-# original unmodified COPC/LAZ conformance fixtures above.
-workload=DEST/'workload-ept';(workload/'ept-data').mkdir(parents=True,exist_ok=True);(workload/'ept-hierarchy').mkdir(exist_ok=True)
-worigin=np.array([636000.,848000.,0.]);wspan=1024.;hierarchy={};wnodes=[]
-wsource=np.column_stack((autzen.x,autzen.y,autzen.z));normalized=(wsource-wsource.min(axis=0))/(wsource.max(axis=0)-wsource.min(axis=0))
-wcolors=(np.column_stack((autzen.red,autzen.green,autzen.blue)).astype(np.uint16)>>8).astype(np.uint8)
-for depth in range(9):
-    variants=[(0,111111)] if depth<8 else [(0,55556),(1,55556)]
-    for x,count in variants:
-        key=f'{depth}-{x}-0-0';hierarchy[key]=count
-        if not count:continue
-        indices=np.arange(count)%len(autzen.points);width=wspan/2**depth;base=worigin+np.array([x*width,0,0]);p=base+(normalized[indices]*.8+.1)*width
-        ints=np.rint((p-worigin)/.001).astype('<i4');xyz_values=ints.astype(np.float64)*.001+worigin
-        dtype=np.dtype([('X','<i4'),('Y','<i4'),('Z','<i4'),('Red','u1'),('Green','u1'),('Blue','u1'),('Intensity','<u2'),('Classification','u1')]);records=np.empty(count,dtype=dtype)
-        for a,name in enumerate(['X','Y','Z']):records[name]=ints[:,a]
-        for a,name in enumerate(['Red','Green','Blue']):records[name]=wcolors[indices,a]
-        records['Intensity']=autzen.intensity[indices];records['Classification']=autzen.classification[indices]
-        (workload/'ept-data'/f'{key}.bin').write_bytes(records.tobytes())
-        wnodes.append({'key':key,'count':count,'positionsSha256':digest(xyz_values.astype('<f8').tobytes()),'colorsSha256':digest(wcolors[indices].tobytes())})
-wschema=[{'name':n,'type':'signed','size':4,'scale':.001,'offset':float(worigin[i])} for i,n in enumerate(['X','Y','Z'])]+[{'name':n,'type':'unsigned','size':1} for n in ['Red','Green','Blue']]+[{'name':'Intensity','type':'unsigned','size':2},{'name':'Classification','type':'unsigned','size':1}]
-(workload/'ept.json').write_text(json.dumps({'bounds':list(worigin)+list(worigin+wspan),'points':1000000,'span':128,'schema':wschema,'dataType':'binary','hierarchyType':'json','srs':{'authority':'EPSG','horizontal':2992}}),encoding='utf8')
-(workload/'ept-hierarchy/0-0-0-0.json').write_text(json.dumps(hierarchy),encoding='utf8')
+# W00 pins dimensions and budgets; this branching spatial layout is W16's design.
+workload_meta = build_branching_ept(autzen, DEST)
+workload=DEST/'workload-ept'; wspan=1024.
+overview_path, overview_root, overview_data, overview_chunks = build_overview_copc(autzen, DEST)
+overview_bounds = expectation(overview_data.points)['bounds']
+overview_center = [(a+b)/2 for a,b in zip(overview_bounds['min'],overview_bounds['max'])]
+overview_view = topdown_view(overview_center,4*max(np.array(overview_bounds['max'])-overview_bounds['min']),480,4/3)
+overview_meta = {'count':len(overview_data.points),'chunks':overview_chunks,'root':expectation(overview_root),'bounds':overview_bounds,'view':overview_view,'options':{'mode':'add','pointBudget':5000},'derivation':'Two real Autzen patches; second translated in X. Coarse 512-point sample contains all XYZ extrema and every occupied octant; eight additive leaf buckets. Independently compressed and decoded by laspy/lazrs.'}
+assert overview_meta['root']['bounds']==overview_bounds
+
 def tile(magic,feature,binary,payload=b'',batch=None):
     ft=json.dumps(feature,separators=(',',':')).encode();ft+=b' '*(-(28+len(ft))%8)
     bt=b'' if batch is None else json.dumps(batch,separators=(',',':')).encode()
@@ -103,9 +90,45 @@ for source,dataset in [('copc',pc_native.CopcDataset(DEST/'ellipsoid.copc.laz'))
           'nodes':[{'key':str(n.key),'pointCount':n.point_count,'sse':round(float(renderer._compute_screen_size(n.bounds,tuple(camera))),9)} for n in visible]})
 wdataset=pc_native.open_ept(workload/'ept.json');wcenter=wdataset.bounds.center()
 for i in range(64):
-    angle=i/64*2*np.pi;distance=wspan*(.5+25*(1+np.sin(angle))/2);camera=[wcenter[0]+np.cos(angle)*wspan*.1,wcenter[1]+np.sin(angle)*wspan*.1,wcenter[2]+distance]
-    renderer=pc_native.PointCloudRenderer(point_budget=1000000,viewport_height=1080,fov_y=np.pi/4);visible=renderer.get_visible_nodes(wdataset,tuple(camera))
-    camera_records.append({'source':'workload-ept','view':{'position':camera,'viewportHeight':1080,'fovY':float(np.pi/4)},'options':{'pointBudget':1000000,'mode':'replace'},'nodes':[{'key':str(n.key),'pointCount':n.point_count,'sse':round(float(renderer._compute_screen_size(n.bounds,tuple(camera))),9)} for n in visible]})
+    angle=i/64*2*np.pi;distance=wspan*2**(-1+8*i/63)
+    camera=[wcenter[0]+np.cos(angle)*wspan*.2,wcenter[1]+np.sin(angle)*wspan*.2,wcenter[2]+distance]
+    renderer=pc_native.PointCloudRenderer(point_budget=1000000,viewport_height=1080,fov_y=np.pi/4)
+    visible=renderer.get_visible_nodes(wdataset,tuple(camera))
+    camera_records.append({'source':'workload-ept','oracle':'native-public-replace','view':{'position':camera,'viewportHeight':1080,'fovY':float(np.pi/4)},'options':{'pointBudget':1000000,'mode':'replace'},'nodes':[{'key':str(n.key),'pointCount':n.point_count,'sse':round(float(renderer._compute_screen_size(n.bounds,tuple(camera))),9)} for n in visible]})
+# Native public API has neither ADD nor frustum selection. Retain the exact
+# native REPLACE records above, and independently extend its SSE/priority with
+# the required ADD policy and homogeneous-corner frustum oracle in Python.
+add_options={'pointBudget':300000,'mode':'add','maxDepth':8,'minSpacing':.01,'sseThreshold':2}
+add_records=[]
+for i in range(64):
+    angle=i/64*2*np.pi
+    center=[wcenter[0]+np.cos(angle)*wspan*.28,wcenter[1]+np.sin(angle)*wspan*.28,wcenter[2]]
+    view=topdown_view(center,wspan*(.85+.3*np.sin(angle*2)))
+    renderer=pc_native.PointCloudRenderer(point_budget=add_options['pointBudget'],viewport_height=1080,fov_y=np.pi/4)
+    nodes=additive_reference(wdataset,renderer,view,add_options)
+    keys={n['key'] for n in nodes}
+    for key in keys:
+        d,x,y,z=map(int,key.split('-'))
+        if d: assert f'{d-1}-{x//2}-{y//2}-{z//2}' in keys
+    assert sum(n['pointCount'] for n in nodes)<=add_options['pointBudget']
+    record={'source':'workload-ept','oracle':'independent-additive-policy/native-SSE','view':view,'options':add_options,'nodes':nodes}
+    add_records.append(record)
+    camera_records.append(record)
+unique=len({tuple(sorted(n['key'] for n in r['nodes'])) for r in add_records})
+assert unique>=32, unique
+all_nodes=[wdataset.root_node()]
+for node in all_nodes: all_nodes.extend(wdataset.children(node.key))
+all_bounds=[n.bounds for n in all_nodes]
+culled=[sum(not in_frustum(bounds,r['view']) for bounds in all_bounds) for r in add_records]
+assert min(culled)>0
+negative_options={**add_options,'pointBudget':wdataset.root_node().point_count-1}
+assert additive_reference(wdataset,renderer,add_records[0]['view'],negative_options)==[]
+assert additive_reference(wdataset,renderer,add_records[0]['view'],negative_options,allow_orphans=True)
+workload_meta['selectionCoverage']={'uniqueAdditiveSets':unique,'minCulledNodes':min(culled),'maxCulledNodes':max(culled),'orphanNegativeControl':True}
+overview_dataset=pc_native.CopcDataset(overview_path)
+overview_meta['nodes']=additive_reference(overview_dataset,pc_native.PointCloudRenderer(point_budget=5000,viewport_height=480,fov_y=np.pi/4),overview_view,{**add_options,'pointBudget':5000})
+assert overview_meta['nodes'][0]['key']=='0-0-0-0'
+
 tile_records=[]
 for camera in [[0,0,10],[0,0,10000]]:
     renderer=tiles_native.Tiles3dRenderer();renderer.set_viewport(1080,np.pi/4)
@@ -113,7 +136,7 @@ for camera in [[0,0,10],[0,0,10000]]:
     tile_records.append({'view':{'position':camera,'viewportHeight':1080,'fovY':float(np.pi/4)},'nodes':[{'uri':n.tile.content.uri,'depth':n.depth,'sse':round(float(n.sse),9)} for n in visible]})
 manifest={'schemaVersion':1,'fixtureId':'copc-ept-tiles-v1','oracle':{'laspy':laspy.__version__,'lazrs':'0.8.2'},'autzen':expectation(autzen.points),'copc':expectation(copc.points),'copcRoot':root_expected,'copcInfo':copc_info,
  'ept':{'count':128,'positionsSha256':digest(xyz.tobytes()),'colorsSha256':digest(rgb.tobytes()) if rgb is not None else digest(bytes([255]*384))},
- 'workloadEpt':{'count':1000000,'hierarchyDepth':8,'cameraKeyframes':64,'derivation':'Autzen samples rescaled into valid node bounds; independent byte-defined EPT records','nodes':wnodes},
+ 'workloadEpt':workload_meta,'overviewCopc':overview_meta,
  'nativeSources':native,'upstream':json.loads((DEST/'upstream.json').read_text(encoding='utf-8-sig')),
  'cameraSelections':camera_records,'tileSelections':tile_records,'sseDecimalPlaces':9,
  'performance':{'durationMs':600000,'viewport':[1920,1080],'profiles':{'reference-discrete':{'p95Ms':16.7,'cpuBudgetBytes':1610612736,'gpuBudgetBytes':3221225472},'reference-integrated':{'p95Ms':33.3,'cpuBudgetBytes':1073741824,'gpuBudgetBytes':2147483648}},'localBudgetBytes':268435456,'localQualification':'Chromium preflight; publish exact adapter rather than inferring W00 hardware qualification'},

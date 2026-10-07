@@ -4,6 +4,10 @@ W16 provides browser datasets, bounded caches, octree/SSE selection, GPU point
 rendering and OGC tile content. All decoder assets are self-hosted in the npm
 package. See [W16 evidence](w16-evidence.md) for fixtures, limits and verification.
 
+W16 acceptance remains pending: physical reference-profile qualification and
+the dependency lock's mandatory laz-perf security review are open. Current
+codec consumption is experimental conformance testing.
+
 ## Load and render points
 
 ```ts
@@ -48,8 +52,10 @@ A 200 response to Range is rejected without consuming the full response body.
 
 COPC/EPT samples are additive across levels, so layers default to `mode: 'add'`.
 The standalone traverser defaults to native leaf selection (`replace`). Budgets
-are strict, including cameras inside nodes. Oversized ancestors can still be
-refined to children that fit. A stable heap prioritizes projected bounds.
+are strict, including cameras inside nodes. ADD selection stops below an
+ancestor rejected by budget, so every detail sample retains its coarse base.
+A budget smaller than the root count selects nothing. REPLACE selection can
+refine an oversized ancestor into children that fit. A stable heap prioritizes projected bounds.
 `maxDepth`, `minSpacing`, `sseThreshold` and the optional homogeneous frustum
 control selection. Adaptive budgeting uses a p95 sample window and hysteresis;
 call `recordFrameTime` with the complete frame duration.

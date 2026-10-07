@@ -223,6 +223,13 @@ const view:PointView={position:[0,0,10],viewportHeight:1080,fovY:Math.PI/4};cons
   assert.equal(io.worker.mode, "transferable");
   const ranges = await page.evaluate(() => window.__w16.ranged());
   assert(ranges.points > 0 && ranges.points <= 5000);
+  assert(ranges.keys.includes("0-0-0-0"));
+  assert.equal(ranges.rootPositions, ranges.expected.root.positionsSha256);
+  assert.equal(ranges.rootColors, ranges.expected.root.colorsSha256);
+  assert.deepEqual(ranges.expected.root.bounds, ranges.expected.bounds);
+  assert(ranges.coveredPixels > 150);
+  assert.deepEqual(ranges.negativeKeys, []);
+  assert.equal(ranges.negativeCoveredPixels, 0);
   assert(ranges.fraction <= 0.25);
   assert(ranges.requests.every((r) => r.range !== null && r.status === 206));
   const failures = await page.evaluate(() => window.__w16.failures());
@@ -232,6 +239,12 @@ const view:PointView={position:[0,0,10],viewportHeight:1080,fovY:Math.PI/4};cons
   assert.equal(failures.corrupt.code, "INVALID_INPUT");
   const workload = await page.evaluate(() => window.__w16.workload());
   assert.equal(workload.count, 1000000);
+  assert.equal(workload.layerCameras, 64);
+  assert.equal(workload.cullingDifferences, 64);
+  assert(workload.manifest.workloadEpt.topology.branchNodes > 400);
+  assert(
+    workload.manifest.workloadEpt.selectionCoverage.uniqueAdditiveSets >= 32,
+  );
   for (let i = 0; i < workload.nodes.length; i++) {
     const a = workload.nodes[i],
       e = workload.manifest.workloadEpt.nodes[i];
@@ -308,7 +321,11 @@ const view:PointView={position:[0,0,10],viewportHeight:1080,fovY:Math.PI/4};cons
     ),
   );
   if (process.env.FORGE3D_W16_SOAK === "1") {
-    const result = await page.evaluate(() => window.__w16.soak());
+    const target = process.env.FORGE3D_W16_PROFILE ?? "reference-discrete";
+    const result = await page.evaluate(
+      (target) => window.__w16.soak(600000, target),
+      target,
+    );
     writeFileSync(
       join(root, "test-results/w16-soak.json"),
       JSON.stringify(
@@ -325,12 +342,15 @@ const view:PointView={position:[0,0,10],viewportHeight:1080,fovY:Math.PI/4};cons
     assert(result.durationMs >= 600000);
     assert.equal(result.keyframesVisited, 64);
     assert.equal(result.totalPoints, 1000000);
-    assert(result.selectionCount > 1);
+    assert(result.selectionCount >= 32);
+    assert(result.minPoints < result.maxPoints);
+    assert(result.maxPoints <= 300000);
     assert(result.coveredPixels > 150);
-    assert(result.maxCpuBytes <= 1.5 * 1024 ** 3);
+    assert(result.maxCpuBytes <= result.budgets.cpuBudgetBytes);
+    assert(result.stats.peakGpuBytes <= result.budgets.gpuBudgetBytes);
     assert(result.stats.peakGpuBytes <= result.stats.memoryBudgetBytes);
     assert.equal(result.disposed.gpuBytes, 0);
-    assert(result.frameP95Ms <= 16.7);
+    assert(result.frameP95Ms <= result.budgets.p95Ms);
     assert.deepEqual(errors, []);
     assert.deepEqual(remote, []);
     console.log(JSON.stringify(result, null, 2));

@@ -1,114 +1,127 @@
-# W16 implementation and evidence
+# W16 implementation and acceptance evidence
 
-Implementation covers G02-G04. The fresh worktree starts at W15 commit
-`f0287e5b1594542635f8b088e2ae88d7be8ec435`; W15 is needed for B3DM's plain-glTF
-decoder. No previous completion claims were used as verification.
+W16 acceptance is pending. G02, G03 and G04 remain `P`: the runtime and local
+conformance tests exist, but the pinned W00 physical reference-profile runs and
+the mandatory laz-perf security review are open. The original required outcomes
+and acceptance criteria in the plan and baseline are preserved.
 
-## Independent references
+The worktree starts at W15 commit `f0287e5b1594542635f8b088e2ae88d7be8ec435`;
+B3DM calls W15's plain-glTF decoder. No previous completion claim substitutes
+for executable verification.
 
-`tests/fixtures/w16/copc-ept-tiles-v1.json` pins fixture bytes, deepest native
-sources at `bf8db93233e5158f6d226991fc5d230832c2d806`, the upstream COPC/LAZ
-commits and laspy 2.7.0/lazrs 0.8.2 expectations. The original Autzen LAZ has
-110,000 points; the original ellipsoid COPC has 100,000, with 66,272 in its root
-chunk. Source and installed browser decoders compare exact Float64 coordinate
-and RGB byte hashes with the independent decoder.
+## Independent fixtures and selection references
 
-W00's million-point, eight-level, 64-camera workload is `workload-ept`. It
-resamples real Autzen coordinates into valid octree cells using explicit affine
-scales and encodes binary records independently in Python. Its ten positive
-data nodes total exactly 1,000,000 points. Each decoded node's coordinates and
-colors are hash-checked. The pinned native public traverser generates camera
-keys/counts and SSE records. SSE is recorded at nine decimal places to exclude
-irrelevant last-bit differences between NumPy and JavaScript transcendental
-functions. Bounds are checked against the 1e-5 dataset-span tolerance.
+`tests/fixtures/w16/copc-ept-tiles-v1.json` pins every fixture and 21 native
+source/test files at `bf8db93233e5158f6d226991fc5d230832c2d806`. Original
+Autzen LAZ (110,000 points) and ellipsoid COPC (100,000 points, five chunks)
+retain exact Float64 position/RGB hashes from laspy 2.7.0 and lazrs 0.8.2.
+Original ellipsoid data remains the full-chunk decode conformance test.
 
-The native Python `open_copc` wrapper never sets `_is_copc` and falls back to a
-flat LAS dataset. Golden generation constructs native `CopcDataset` directly.
-Other discovered native defects are intentionally fixed in the browser:
-hierarchy page references/empty parents are retained; format-specific LAS RGB
-offsets and LAS bounds offsets are correct; priority visits the highest entry;
-budgets remain strict even inside a node. The native replacement selection is
-preserved separately from additive COPC/EPT rendering.
+The range-overview fixture is a separately generated 200,000-point COPC:
+two real Autzen patches, the second translated in X. Its 512-point coarse root
+includes every XYZ extremum and every occupied octant. Eight additive leaves
+contain the remaining points. Independent laspy whole-file and CopcReader
+decoding validate the file, including its LASzip chunk table and hierarchy EVLR.
+The overview admits that root at a 5,000-point budget, checks its exact decoded
+hashes and whole-dataset extent, requires visible GPU coverage, and measures
+only actual Range/206 responses. A budget below the root count must produce
+no selected keys and a clear frame. A detail-only patch cannot pass this probe.
 
-`tests/test_copc_laz_fixture.py` is a proxy. Canonical native Section 18 tests
-are included in the reference set, alongside point GPU/LOD and tile parse/SSE
-tests. The independent real-fixture browser tests replace extension-only native
-construction gates with actual decoding, drawing and integer readback.
+W00 already pins one million points, depth eight and 64 camera keyframes in
+`tests/parity/fixture-contracts.json` at the W15 base. **The spatial layout and
+camera path are new W16 fixture design**, not a previously established W00
+workload. `workload-ept` independently resamples Autzen into octree cells;
+it is a synthetic stress layout, not an unmodified million-point survey.
+Its 1,865 positive nodes total exactly one million points, with 457 branching
+parents and nodes at every depth from zero through eight. Every node's decoded
+coordinates and colors are checked against independently encoded Python bytes.
 
-## Decoder review
+There are two distinct selection references:
 
-`laz-perf@0.0.7` is pinned by npm integrity and W00 dependency lock. Its web
-factory/WASM are copied without modification except an ESM export footer.
-The npm archive omits a license file; Apache-2.0 text is copied from pinned
-upstream and shipped with per-asset SHA-256 provenance. Runtime codec requests
-stay under `script-src 'self'`, `worker-src 'self'` and `connect-src 'self'`.
+- 64 exact native public REPLACE records, executing pinned Python code.
+- 64 independent Python ADD/frustum records, executing the same native bounds,
+  priority and SSE helpers with explicit additive admission and six homogeneous
+  clipping planes. The native public API provides neither ADD nor frustum
+  selection, so these records are policy-oracle references, not a native ADD API.
 
-Boundary validation rejects unsafe 64-bit offsets, short headers/VLR/pages,
-bad record lengths/counts, corrupt layered chunk counts/stream lengths, invalid table spans,
-nonfinite data and budget overflow. Native heap allocations and decoder objects
-are freed in `finally`. The WASM runtime isolates native memory and traps are
-reported as typed failures. Decode yields between record batches to deliver
-cancellation; workers provide the preferred isolation for large/untrusted
-files. WASM does not guarantee every malformed arithmetic stream can be
-recognized by this experimental upstream decoder; valid counts/hashes and
-representative corrupt cases are tested, without claiming a codec audit.
+The ADD views couple camera position to a perspective matrix, pan and zoom,
+produce 64 distinct unordered selections, and cull 354–1,154 fixture nodes.
+Generation asserts strict budget and ancestor closure. Its negative control
+reintroduces rejected-parent descent and demonstrates orphan detail selection.
+Browser tests exercise these records through the actual default ADD layer;
+disabling the frustum changes all 64 selections. SSE is compared at nine
+decimal places to exclude insignificant NumPy/JavaScript last-bit differences.
 
-## Verification records
+## Sustained traversal and memory
 
-Executable verification is in unit tests, source/dist Playwright and
-`scripts/test-w16-package-consumer.mjs`. Installed output generates
-`test-results/w16-package-consumer.json` with tarball hash, browser version,
-exact decoded data, range bytes, CSP/off-origin requests, drawing, picks,
-device destruction/recovery and zero disposal allocation. The explicit
-ten-minute run generates `test-results/w16-soak.json` with actual adapter,
-1080p frame p95, 64 visited keyframes, selection changes and CPU/GPU allocation.
+The soak traverses the same ADD/frustum keyframes with interpolated camera
+poses, checks exact oracle selections at keyframes and retains the coarse root.
+It awaits GPU completion and canvas presentation every frame. Reports include
+visited keyframes, distinct unordered selections, minimum/maximum drawn points,
+covered pixels, adapter, browser, tracked CPU bytes and peak GPU allocation.
+Tracked CPU bytes cover layer buffers and compressed/decoded caches; they are
+not a measurement of the browser's complete process heap.
 
-W00 budgets for this fixture are 1.5/1 GiB CPU and 3/2 GiB GPU, with p95
-16.7/33.3 ms for reference discrete/integrated profiles. The local renderer
-uses a stricter 256 MiB GPU limit. The actual host is Windows; it cannot attest
-the pinned Ubuntu/Vulkan reference-discrete or Iris Xe reference-integrated
-machines. Local Chromium preflight results do not qualify those hardware rows.
+Both Playwright and the installed-package harness enforce profile CPU/GPU
+budgets and p95: discrete 1.5 GiB/3 GiB/16.7 ms, integrated
+1 GiB/2 GiB/33.3 ms. The renderer also enforces its stricter local 256 MiB cap.
+`FORGE3D_W16_PROFILE` chooses the target limits; choosing a name does not
+qualify the physical hardware. The local Windows/NVIDIA Chromium host cannot
+attest the pinned Ubuntu/Vulkan RTX 3070 or Windows Iris Xe machines.
 
-### Local run, 2026-10-07
+Run `npm run test:w16` for routine source/dist conformance. Run
+`FORGE3D_W16_SOAK=1 npm run test:package-consumer:w16` for a ten-minute static,
+installed-tarball traversal. Reports go to `test-results/w16-package-consumer.json`
+and `test-results/w16-soak.json`; retained evidence is in
+[w16-local-evidence.json](w16-local-evidence.json).
 
-[Stored results](w16-local-evidence.json) record Chromium 148.0.7778.96 on
-Windows with an NVIDIA Ampere adapter. Both the final conformance tarball and
-the ten-minute tarball are identified by SHA-256. All 152 emitted runtime modules
-and self-hosted assets are byte-identical between them; documentation and the
-additional full-COPC assertions were finalized after the soak.
+### Revised local run, 2026-10-07
 
-| Check | Measured result |
+Chromium 148.0.7778.96 on Windows/NVIDIA Ampere passed the static installed
+tarball checks, including the complete ten-minute run. The observed tarball is
+`a6a6e54c20c1c02c38e517858ed998e3a4a7b46c3e65ad61a8f62cc2ef49c994`.
+All 269 current dist/asset files match that tarball byte-for-byte; documentation
+updates after the run are excluded from the runtime binding.
+
+| Check | Revised measured result |
 | --- | --- |
-| Full unit suite | 1,076 passing tests across 64 files; 41 W16 tests |
-| Source/dist browser examples | Eight passing cases; the explicit installed ten-minute run is recorded below |
-| Installed real data | LAZ 110,000; COPC 100,000 across all five ranged chunks; EPT 128; workload EPT 1,000,000 |
-| Independent coordinate/color hashes | All original-file COPC chunks, LAZ, EPT and ten workload nodes match laspy/lazrs/byte-defined expectations |
-| Initial ranged COPC view | 6.1154% of fixture bytes; every body request uses Range and receives 206 |
-| Native camera selection | 64 workload camera records match; point/tile SSE and bounds contracts pass |
-| 1080p sustained traversal | 600,053.1 ms; 33,393 frames; frame p95 10.2 ms; seven selection sets |
-| Tracked peak allocations | CPU 78,000,889 bytes; GPU 56,883,312 bytes; GPU returns to zero after disposal |
-| Final-frame rendering | 430,640 covered pixels, preventing blank-frame success |
-| GPU workflows | Exact RGB/elevation/classification samples, grayscale within one quantization LSB, aligned integer picks, actual device destruction/recovery and preserved rejected replacements |
-| Package gates | API/type snapshots, production example, 11 doc checks, 118 browser-harness checks, 609 infrastructure checks and package contract pass; one Unix-UID check is inapplicable on Windows |
-| Dependency/provenance | Parity gate passes; 49 pinned fixture/codec streams match Git index bytes |
+| Unit suite | 1,077 passed across 64 files |
+| Source/dist browsers | Eight W16 cases and 26 neighboring W14/W15 cases passed |
+| Installed decoding and selections | Original real data hashes, all 1,865 workload-node hashes, 64 native REPLACE and 64 independent ADD/frustum records passed |
+| Root-inclusive ranged overview | 33,160 / 1,263,516 bytes (2.6242%); 2,739 points including the 512-point root; 1,913 covered pixels; rejected-root negative control selects/draws zero |
+| Sustained 1080p traversal | 600,049.4 ms; 33,268 frames; 14.2 ms p95; all 64 keyframes; 693 selection sets |
+| Tracked peak allocations | CPU 42,918,791 bytes; GPU 42,771,504 bytes; GPU zero after disposal |
+| Package/parity gates | API/type snapshots, 15 parity checks, 11 docs, 118 browser-harness checks, 609 infrastructure checks and package contract passed; one Unix-UID check skipped on Windows |
+| Git provenance | All 1,902 pinned fixture/native streams match staged Git bytes |
 
-The explicit installed soak ran to completion. The normal Playwright command
-skips its ten-minute case unless `FORGE3D_W16_SOAK=1`; this keeps routine runs
-short while preserving a separate executable acceptance check. W14/W15 browser
-regression checks also passed all 26 cases.
+These are local preflight results against the discrete target limits. They do
+not qualify either pinned W00 physical reference machine or complete the codec
+security review.
 
-## Coverage mapping
+## Codec review remains open
 
-| Native behavior | Browser implementation / evidence |
-| --- | --- |
-| COPC LAS/VLR/hierarchy/chunks | `copc.ts`, `pointcloud-las.ts`, `laz-decoder.ts`; original COPC coordinate/color hashes and ranged initial view |
-| EPT schema, page refs, binary/LASzip | `ept.ts`, `PointSource`; asymmetric reordered schema, million-point workload, shared-page cancellation/offline tests |
-| Point buffers, colors, viewer stride | `PointBuffer`; exact six/twelve-float interleaves, defaults and transferable ownership |
-| LOD/SSE/budgets/stats | heap traverser, adaptive controller, transactional layers; pinned native camera records and sustained workload |
-| GPU style/picking/loss/pressure | compact instanced renderer; covered RGB negative controls, integer picks, actual destroyed device, retained replay and bounded allocation |
-| Tile parsing/SSE/transforms/cache | `Tileset`, `TilesetTraverser`, `Tiles3dLayer`; native camera records, external URLs/cycles, shear/region bounds |
-| PNTS/B3DM | `tiles3d-content.ts`; real byte-defined RGB/quantized/RTC points and W15 GLB triangle with batch metadata |
+`laz-perf@0.0.7` is pinned by npm integrity and the dependency lock. Its WASM
+and web factory are unchanged except for an ESM export footer. Pinned upstream
+Apache-2.0 text is supplied because the npm archive omits the license file.
+Asset SHA-256 provenance and same-origin CSP checks are executable.
 
-OGC source: [3D Tiles 1.0 specification](https://docs.ogc.org/cs/18-053r2/18-053r2.html).
-COPC source: [COPC specification](https://copc.io/).
-EPT source: [Entwine specification](https://entwine.io/entwine-point-tile.html).
+Boundary validation, allocation limits, cancellation, `finally` cleanup and
+representative corrupt-input tests are implemented. These tests do **not**
+complete the lock's mandatory security review before consumption. The codec
+is exercised in experimental conformance probes; W16 is not accepted for
+release consumption. Review still needs documented advisory triage, validation
+of the binary/source provenance relationship, and review of malformed arithmetic
+streams and worst-case worker CPU/allocation behavior. WASM trapping alone
+does not establish those properties. No completed codec audit is claimed.
+
+## Superseded evidence
+
+[w16-initial-evidence.json](w16-initial-evidence.json) preserves the earlier
+package hashes and ten-minute measurements as historical data. Its ten-node
+chain, root-skipping 6.1% range probe and timing do not validate the revised
+branching workload or current runtime. They must not be cited as W16 acceptance.
+
+GPU picking, styles, actual device destruction/recovery, rejected replacement
+retention, PNTS/RTC and B3DM scene coverage retain executable negative controls.
+Relative/external tile URLs, cycles, transforms, cache pressure and cancellation
+remain covered by the unit and installed-package tests.

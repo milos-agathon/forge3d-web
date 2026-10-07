@@ -284,6 +284,28 @@ function dataset(): PointCloudDataset {
   };
 }
 describe("W16 selection, cancellation and layer ownership", () => {
+  it("never descends below an additive node rejected by budget", async () => {
+    const d = dataset(),
+      calls: string[] = [],
+      children = d.children.bind(d);
+    d.children = async (key, signal) => {
+      calls.push(key);
+      return children(key, signal);
+    };
+    expect(
+      await new PointCloudTraverser({
+        mode: "add",
+        pointBudget: 3,
+      }).visibleNodes(d, view),
+    ).toEqual([]);
+    expect(calls).toEqual([]);
+    const selected = await new PointCloudTraverser({
+      mode: "add",
+      pointBudget: 7,
+    }).visibleNodes(d, view);
+    expect(selected.map((n) => n.key)).toEqual(["0-0-0-0", "1-1-1-1"]);
+    expect(calls).not.toContain("1-0-0-0");
+  });
   it("reproduces native leaf priority and enforces budget inside a node", async () => {
     const d = dataset(),
       traverser = new PointCloudTraverser({ pointBudget: 6 });

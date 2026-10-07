@@ -26,4 +26,15 @@ it("W16 fixtures and deepest native sources retain independent provenance", () =
   expect(manifest.copc.count).toBe(100000);
   expect(manifest.copcRoot.count).toBe(66272);
   expect(manifest.performance.durationMs).toBe(600000);
+  expect(manifest.workloadEpt.topology.nodeCount).toBe(1865);
+  expect(manifest.workloadEpt.topology.branchNodes).toBe(457);
+  expect(manifest.workloadEpt.selectionCoverage.uniqueAdditiveSets).toBe(64);
+  expect(manifest.workloadEpt.selectionCoverage.minCulledNodes).toBeGreaterThan(
+    0,
+  );
+  expect(manifest.overviewCopc.count).toBe(200000);
+  expect(manifest.overviewCopc.root.count).toBe(512);
+  expect(manifest.overviewCopc.root.bounds).toEqual(
+    manifest.overviewCopc.bounds,
+  );
 });
