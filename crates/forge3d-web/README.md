@@ -59,6 +59,11 @@ const resident = await runtime.readTerrainAnalysis("sun-visibility");
 
 ## Install
 
+CRS transforms and the native dataset registry are available through
+`CrsTransformer` and `DatasetRegistry`. The package includes pinned PROJ
+WASM/database/grid assets, both bundled native datasets, and verified persistent
+offline caches. See the [CRS and dataset guide](docs/crs-datasets.md).
+
 ```bash
 npm install @forge3d/web
 ```

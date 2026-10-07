@@ -1,7 +1,16 @@
 /** Vector IDs reserve zero for background and remain stable across edits. */
 export type VectorFeatureId = number;
-export type VectorPosition = [number, number, number];
-export type VectorColor = [number, number, number, number];
+export type VectorPosition = [
+    number,
+    number,
+    number
+];
+export type VectorColor = [
+    number,
+    number,
+    number,
+    number
+];
 export type VectorOitMode = "auto" | "standard" | "wboit" | "dual-source";
 export type VectorPointShape = "circle" | "square" | "diamond" | "triangle" | "texture" | "sphere";
 export interface VectorStyle {
@@ -49,6 +58,8 @@ export interface VectorAtlas {
     rgba: Uint8Array;
 }
 export interface VectorLayerInput {
+    /** Horizontal map CRS, when coordinates carry geospatial metadata. */
+    crs?: string;
     name: string;
     features: VectorFeature[];
     style?: VectorStyle;
@@ -86,10 +97,6 @@ export interface VectorSnapshot {
     timeSeconds: number;
 }
 export interface VectorReport {
-    pipelineCreations:number;
-    vertexBufferCreations:number;
-    pickRenderCount:number;
-    pickReadbackPeakBytes:number;
     requestedOit: VectorOitMode;
     effectiveOit: "standard" | "wboit" | "dual-source";
     fallbackReason: string | null;
@@ -100,9 +107,23 @@ export interface VectorReport {
     gpuBytes: number;
     width: number;
     height: number;
+    pipelineCreations: number;
+    vertexBufferCreations: number;
+    pickRenderCount: number;
+    pickReadbackPeakBytes: number;
 }
-export interface VectorPickRegion { x:number; y:number; width:number; height:number; }
-export interface VectorProjectionReport { gpu:Uint8Array; cpu:Uint8Array; vertexCount:number; byteIdentical:boolean; }
+export interface VectorPickRegion {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+}
+export interface VectorProjectionReport {
+    gpu: Uint8Array;
+    cpu: Uint8Array;
+    vertexCount: number;
+    byteIdentical: boolean;
+}
 export interface PickOptions {
     signal?: AbortSignal;
 }
@@ -112,7 +133,10 @@ export interface VectorPickResult {
     layerName: string;
     kind: VectorFeature["kind"];
     properties: Record<string, unknown>;
-    pixel: [number, number];
+    pixel: [
+        number,
+        number
+    ];
     depth: number;
     worldPosition: VectorPosition;
 }
@@ -123,8 +147,9 @@ export interface TerrainPickResult {
     distance: number;
 }
 export interface VectorPickMap {
-    x?:number;
-    y?:number;
+    /** Origin of a bounded readback in full viewport device pixels. */
+    x?: number;
+    y?: number;
     width: number;
     height: number;
     ids: Uint32Array;

@@ -1,4 +1,7 @@
 import { Forge3DError } from "./index.js";
+import { type GeospatialVectorLayerInput, type CrsLayerTarget } from './crs-layers.js';
+import type { CrsTransformer } from './crs.js';
+import type { CrsTransformOptions } from './crs-types.js';
 import type { VectorFeature, VectorGraphInput, VectorLayerInput, VectorLayerSnapshot, VectorOitMode, VectorSelectionSet, VectorSelectionStyle, VectorSnapshot, VectorStyle } from "./vector-types.js";
 export type * from "./vector-types.js";
 export declare function vectorInvalid(message: string): Forge3DError;
@@ -20,11 +23,13 @@ export declare class VectorLayer {
 export declare class VectorLayers {
     #private;
     get revision(): number;
-    get geometryRevision():number;
-    get highlightRevision():number;
-    highlightSnapshot():Pick<VectorSnapshot,"selections"|"hover"|"hoverStyle"|"timeSeconds">;
+    get geometryRevision(): number;
+    get highlightRevision(): number;
     get disposed(): boolean;
+    get hasGeospatialLayers(): boolean;
     add(input: VectorLayerInput): VectorLayer;
+    /** Reproject to a terrain's CRS before committing the layer transaction. */
+    addGeospatial(input: GeospatialVectorLayerInput, target: CrsLayerTarget, transformer: CrsTransformer, options?: CrsTransformOptions): Promise<VectorLayer>;
     addGraph(input: VectorGraphInput): {
         nodes: VectorLayer;
         edges: VectorLayer;
@@ -39,6 +44,7 @@ export declare class VectorLayers {
     removeSelection(name: string): boolean;
     setHover(id: number | null, style?: VectorSelectionStyle): void;
     setTimeSeconds(time: number): void;
+    highlightSnapshot(): Pick<VectorSnapshot, "selections" | "hover" | "hoverStyle" | "timeSeconds">;
     snapshot(): VectorSnapshot;
     static from(snapshot: VectorSnapshot): VectorLayers;
     copy(): VectorLayers;

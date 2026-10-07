@@ -1055,6 +1055,13 @@ function npmAsset(id, values) {
 
 function buildDependencyLock() {
   const assets = Object.entries(npmSources).map(([id, values]) => npmAsset(id, values));
+  const proj=assets.find(asset=>asset.id==="proj-wasm");
+  const projProvenance=JSON.parse(readFileSync(join(repositoryRoot,"crates/forge3d-web/assets/proj/provenance.json"),"utf8"));
+  proj.build.artifacts.push(...[...projProvenance.assets,...projProvenance.grids,...projProvenance.notices].map(asset=>({name:"assets/proj/"+asset.name,sha256:asset.sha256})));
+  proj.fixtureProvenance.push("crates/forge3d-web/assets/proj/provenance.json","crates/forge3d-web/tests/fixtures/w14/crs-epsg-v1.json","docs/parity/w14-native-test-coverage.json");
+  proj.build.provenance += "; unmodified Emscripten artifacts compared to the digest-verified archive; proj-data-conus-v1 grid and notices are artifact-pinned";
+  proj.review.security = "Experimental dependency: W14 fixture conformance, malformed CRS/shape/grid inputs, SHA-256 poisoning negative controls, offline strict-CSP installed consumer and advisory review completed; see docs/parity/w14-implementation.md";
+  proj.review.license = "Retain proj-wasm MIT LICENSE, upstream PROJ-COPYING and NOAA public-domain grid attribution; all notices ship with the package";
   assets.push({
     id: "basis-universal",
     package: "basis_universal",
@@ -1152,6 +1159,10 @@ function main() {
       "crates/forge3d-web/tests/playwright/w12_camera.spec.ts",
       "npm run test:package-consumer:w12",
     ] : row.requiredTests,
+    ...(row.ownerTask==="W14"?{
+      evidence:["docs/parity/w14-implementation.md","docs/parity/w14-native-test-coverage.json","crates/forge3d-web/src-ts/crs.ts","crates/forge3d-web/src-ts/proj-kernel.ts","crates/forge3d-web/src-ts/datasets.ts","crates/forge3d-web/assets/proj/provenance.json","crates/forge3d-web/assets/datasets/provenance.json"],
+      tests:["crates/forge3d-web/tests/unit/w14-crs.test.ts","crates/forge3d-web/tests/unit/w14-datasets.test.ts","crates/forge3d-web/tests/unit/w14-native-contract.test.ts","crates/forge3d-web/tests/playwright/w14_foundation.spec.ts","crates/forge3d-web/scripts/test-w14-package-consumer.mjs"],
+    }:{}),
   }));
   const tombstoneTargets = tombstones.map((item) => ({ id: item.targetId, capabilityId: item.capabilityId, kind: "tombstone", contract: item.disposition, owner: capabilities.find((row) => row.id === item.capabilityId)?.ownerTask ?? "W00", evidence: item.evidence, tests: [`W00 tombstone ledger contract for ${item.id}`] }));
   const manifest = {

@@ -263,7 +263,7 @@ constraints reaching `I`.
 
 | ID | Life/evidence | Native capability and repository evidence | Current web comparison and required result | Status | Task |
 |---|---|---|---|---|---|
-| G01 | FP/A | CRS parsing, EPSG/WKT and coordinate/geometry reprojection: `1f4084a:python/forge3d/crs.py`, `tests/test_crs_reproject.py`, `tests/test_crs_auto.py` | Add PROJ-WASM worker, grid assets, typed metadata and automatic layer reprojection | E | W14 |
+| G01 | FP/A | CRS parsing, EPSG/WKT and coordinate/geometry reprojection: `1f4084a:python/forge3d/crs.py`, `tests/test_crs_reproject.py`, `tests/test_crs_auto.py` | Add PROJ-WASM worker, grid assets, typed metadata and automatic layer reprojection | I | W14 |
 | G02 | FP/A | LAZ/COPC/EPT hierarchy/octree/bounds/data: `1f4084a:python/forge3d/pointcloud.py`, `src/pointcloud/{copc,copc_decode,ept,octree}.rs`, `tests/test_copc_laz_fixture.py` | Add browser range IO, LAZ decoder WASM, hierarchy loaders, cancellation/cache | G | W16 |
 | G03 | FP/A | Point GPU buffers/budgets/SSE/LOD/colors/viewer controls: `1f4084a:src/pointcloud/renderer.rs`, `src/pointcloud/traversal.rs`, `tests/test_pointcloud_gpu_integration.py`, `tests/test_pointcloud_lod.py` | Add GPU point renderer, octree selection, adaptive budget, styles and stats | G | W16 |
 | G04 | FP/B | OGC 3D Tiles traversal/SSE/cache/b3dm/pnts: `1f4084a:src/tiles3d/**`, `python/forge3d/tiles3d.py`, `tests/test_3dtiles_parse.py`, `tests/test_3dtiles_sse.py`; underdeveloped MapScene integration is separately tracked by M02b | Add relative-URL loader, bounds, SSE/cache, b3dm/pnts decode and asset diagnostics | G | W16 |
@@ -300,7 +300,7 @@ constraints reaching `I`.
 | E03 | XC/A | Paths and synchronous files across native loaders/exporters: `1f4084a:crates/forge3d-core/src/io/source.rs`, `python/forge3d/io.py`, `bundle.py`, `export.py` | URL/File/Blob/ArrayBuffer/streams/File System Access/OPFS/download Blob | E | W02 |
 | E04 | XC/B | NumPy zero-copy, Matplotlib/IPython/Jupyter widgets: `1f4084a:python/forge3d/widgets.py`, `helpers/ipython_display.py`, `helpers/mpl_display.py`, `tests/test_widgets.py` | TypedArray ownership/shape, borrowed WASM views, `ImageBitmap`, custom element/notebook adapter | E | W02 |
 | E05 | XC/A | OS/native TIFF/LAZ/KTX2/HDR/EXR/OIDN/code caches: `1f4084a:src/terrain/cog/**`, `src/pointcloud/copc_decode.rs`, `src/loaders/ktx2/**`, `src/formats/hdr.rs`, `src/util/exr_write.rs`, `python/forge3d/denoise_oidn.py` | Pinned WASM codecs, browser caches and measurable WebGPU denoiser; typed capability errors | E | W22 |
-| E06 | XC/A | Dataset registry/fetch and bundled `mini_dem`/boundaries: `1f4084a:python/forge3d/datasets.py`, `python/forge3d/data/mini_dem.npy`, `tests/test_datasets.py` | ESM registry/assets, fetch/cache/integrity and reproducible fixtures | G | W14 |
+| E06 | XC/A | Dataset registry/fetch and bundled `mini_dem`/boundaries: `1f4084a:python/forge3d/datasets.py`, `python/forge3d/data/mini_dem.npy`, `tests/test_datasets.py` | ESM registry/assets, fetch/cache/integrity and reproducible fixtures | I | W14 |
 | E07 | XC/A | PNG/array/display helpers: `1f4084a:python/forge3d/_png.py`, `tests/test_png_io_fallback.py` | ImageData/typed-array PNG encode/decode and browser display adapters | E | W21 |
 
 ### Browser-Equivalent Rationale
@@ -448,7 +448,7 @@ is still not functionally complete and does not change any matrix row to `I`.
 | W11 | Implemented | `forge3d-core/src/postfx`, web runtime `postfx`, typed `PostFxChain`, worker/recovery replay, independent historical shader oracles and package consumer probes implement P11/P13-P15. | Maintain native SSIM, temporal, format, budget and installed-tarball gates documented in `crates/forge3d-web/docs/postfx-hdr.md`. |
 | W12 | Full | `crates/forge3d-web/src-ts/vector-{types,layers,geometry,picking}.ts`, `crates/forge3d-core/src/vector.rs` and `crates/forge3d-web/src/runtime/vector/` implement T12/P12/V01-V04. Shared color/pick/AOV coverage; bilinear terrain drape; closed extrusion; GPU and CPU projection/culling; standard/WBOIT/dual-source modes; stable IDs, rich picks and selection. Twenty-three browser cases, the installed-tarball gate and both examples are recorded in `crates/forge3d-web/docs/w12-verification.md`. | None in W12 scope; physical-browser release qualification remains separate. |
 | W13 | Implemented | Label manager, real glyph meshes, pinned HarfBuzz/fonts, native collision/declutter, callouts, feature adapters and deterministic `LabelPlan`; W13 unit/browser/tarball evidence is recorded in `docs/parity/w13-implementation.md`. | V05/V06a/V07 render; V06b preserves exact per-case diagnostics alongside supported repeats and terrain points. |
-| W14 | None | Active source has no CRS transform, dataset registry, PROJ-WASM adapter, grids or integrity cache. | Implement G01/E06 transforms, registry, fixtures and offline cache. |
+| W14 | Implemented; W14 acceptance verified | Real pinned PROJ worker, EPSG/WKT/geometry and vector/label reprojection, complete native dataset registry, verified assets and persistent offline cache. | Clean-checkout unit/build gates, installed/offline package, all ten live remote fetches, rendered terrain alignment and aggregate package checks pass. See docs/parity/w14-implementation.md. |
 | W15 | None | Active source has no geometry, mesh, importer/exporter, building or glTF/OBJ/STL module. | Implement G05a-G05b/G06-G08 data/IO/mesh/building paths and diagnostics. |
 | W16 | None | Active source has no pointcloud, COPC/EPT/LAZ or `tiles3d` module. | Implement G02-G04 loaders, decoders, traversal, GPU render, caches and diagnostics. |
 | W17 | None | Active source has no accel/BVH, SDF/CSG or path-tracing module. | Implement G09-G11 CPU/WASM and WebGPU tracing, AOV and progressive APIs. |
@@ -782,7 +782,7 @@ task remains unambiguous when read or reviewed in isolation.
 
 ### W14 — CRS And Dataset Foundation
 
-- Code status: **None** — no direct CRS/dataset/PROJ implementation artifact exists; see the working-tree ledger above.
+- Code status: **Implemented; W14 acceptance verified** — separate clean checkout passes 944 unit tests, full build, twelve browser cases and installed/offline package acceptance; all ten real remote datasets fetch from an immutable commit with pinned hashes. UTF-8 fixture content, independent inverse/published controls, asymmetric terrain alignment and pre-execution PROJ integrity checks meet acceptance. Aggregate package checks pass with portable link fixtures. See [W14 evidence](../../parity/w14-implementation.md).
 
 - Scope: G01 and E06.
 - Files/APIs: TS CRS transforms and dataset registry/fetch/cache/integrity;

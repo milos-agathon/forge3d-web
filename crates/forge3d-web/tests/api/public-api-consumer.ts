@@ -1297,3 +1297,18 @@ async function compileW11Declarations(runtime:Forge3DRuntime,session:Forge3DSess
   void [owned,snapshot];
 }
 void compileW11Declarations;
+
+import {CrsTransformer,DatasetRegistry,VectorLayers,crsFromRasterMetadata,reprojectLabelFeatures,type CrsMetadata,type DatasetMetadata} from "../../types/index";
+async function compileW14Declarations():Promise<void>{
+  const crs=await CrsTransformer.create({bundledGrids:true,maxPoints:10000});
+  const metadata:CrsMetadata=await crs.parseCrs("EPSG:32632");
+  const coordinates:Float64Array=await crs.transformCoords(new Float32Array([9,40]),"EPSG:4326","EPSG:32632");
+  const points:number[][]=await crs.transformCoords([[9,40]],"EPSG:4326","EPSG:32632");
+  const registry=new DatasetRegistry(),dataset:DatasetMetadata=registry.info("mini_dem");
+  const dem=await registry.miniDem({offline:true});
+  const layers=new VectorLayers();await layers.addGeospatial({name:"point",crs:"EPSG:4326",features:[{id:1,kind:"point",position:[9,0,40]}]}, {crs:"EPSG:32632"},crs);
+  const labels=await reprojectLabelFeatures(crs,[{id:"point",type:"Point",position:[9,40]}],"EPSG:4326","EPSG:32632");
+  void [metadata,coordinates,points,dataset,dem,labels,crsFromRasterMetadata({epsg:32632})];
+  layers.dispose();registry.dispose();crs.dispose();
+}
+void compileW14Declarations;

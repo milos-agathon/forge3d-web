@@ -41,12 +41,18 @@ test("Firefox profile observation rejects malformed, conflicting, and linked rel
     assert.throws(() => observeWebGpuPreferences(profile), /conflicting WebGPU preferences/u);
   });
   withProfile((profile) => {
-    const outside = join(tmpdir(), `ffx03-user-${process.pid}-${Date.now()}.js`);
+    const outsideRoot = mkdtempSync(join(tmpdir(), "ffx03-linked-source-"));
+    const outside = join(outsideRoot, "user.js");
     writeFileSync(outside, 'user_pref("dom.webgpu.enabled", true);\n');
     try {
-      symlinkSync(outside, join(profile, "user.js"));
+      // Both file symlinks and directory junctions are unsafe profile sources.
+      symlinkSync(
+        process.platform === "win32" ? outsideRoot : outside,
+        join(profile, "user.js"),
+        process.platform === "win32" ? "junction" : "file",
+      );
       assert.throws(() => observeWebGpuPreferences(profile), /unsafe/u);
-    } finally { rmSync(outside, { force: true }); }
+    } finally { rmSync(outsideRoot, { recursive: true, force: true }); }
   });
 });
 

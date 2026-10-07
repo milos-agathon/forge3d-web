@@ -1,4 +1,6 @@
 import './verify-w13-assets.mjs';
+import './verify-w14-assets.mjs';
+import { embedProjWorker } from './embed-proj-worker.mjs';
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -10,6 +12,8 @@ const dist = join(root, "dist");
 const pkg = join(root, "pkg");
 
 mkdirSync(dist, { recursive: true });
+const projWorkerPath = join(dist, 'crs-worker.js');
+writeFileSync(projWorkerPath, embedProjWorker(readRequired(projWorkerPath)));
 
 copyRequired(join(pkg, "forge3d_web.js"), join(dist, "forge3d_web.js"));
 copyRequired(join(pkg, "forge3d_web_bg.wasm"), join(dist, "forge3d_web_bg.wasm"));
@@ -128,6 +132,10 @@ for (const file of readdirSync(dist)) {
 
 // Package asset manifest: SHA-256 of every emitted self-hosted third-party asset.
 const assetManifest = [
+  ['dist/crs-worker.js', 'proj-wasm@0.1.0-alpha9 (verified embedded factory)'],
+  ...['proj-emscripten.js','proj-emscripten.wasm','proj.db','proj.ini'].map(file=>['assets/proj/'+file,'proj-wasm@0.1.0-alpha9']),
+  ['assets/proj/us_noaa_conus.tif','proj-data-conus-v1'],
+  ...['mini_dem.npy','sample_boundaries.geojson'].map(file=>['assets/datasets/'+file,'native@1f4084af428dc699bdcd108b029736cb73903926']),
   ["dist/vendor/ktx-parse.js", "ktx-parse@1.1.0"],
   ["dist/vendor/mediabunny.js", "mediabunny@1.58.0"],
   ["dist/vendor/geotiff.umd.js", "geotiff@3.0.5"],
@@ -171,5 +179,8 @@ function readRequired(path) {
 for (const file of ["label-features", "label-declutter", "label-types", "label-diagnostics", "label-candidates", "label-cases", "label-plan", "label-mesh", "typography", "labels"]) {
   const declaration = readRequired(join(dist, file + ".d.ts")).replace(/from (["'])\.\/(scene|camera)\.js\1/g, 'from "./index.js"');
   writeFileSync(join(root, "types", file + ".d.ts"), declaration);
+}
+for (const file of ['crs','crs-types','crs-layers','dataset-types','datasets','vector-types','vector-layers']) {
+  copyRequired(join(dist,file+'.d.ts'),join(root,'types',file+'.d.ts'));
 }
 copyRequired(join(repoRoot, "docs", "parity", "label-case-contract.json"), join(root, "docs", "label-case-contract.json"));
