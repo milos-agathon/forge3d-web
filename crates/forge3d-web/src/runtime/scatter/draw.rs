@@ -64,19 +64,29 @@ pub(super) fn draw(
     pages: &wgpu::TextureView,
     mesh: &ScatterMesh,
     color: [f32; 4],
+    material_index: u32,
     capacity: usize,
 ) -> Draw {
     let vertices: Vec<LitVertex> = mesh
         .positions
         .chunks_exact(3)
         .zip(mesh.normals.chunks_exact(3))
-        .map(|(p, n)| LitVertex {
+        .enumerate()
+        .map(|(index, (p, n))| LitVertex {
             position: p.try_into().unwrap(),
             normal: n.try_into().unwrap(),
             color,
-            uv: [0.0; 2],
-            material_index: 0,
-            tangent: [1.0, 0.0, 0.0, 1.0],
+            uv: mesh
+                .uvs
+                .get(index * 2..index * 2 + 2)
+                .map(|v| v.try_into().unwrap())
+                .unwrap_or([0.0; 2]),
+            material_index,
+            tangent: mesh
+                .tangents
+                .get(index * 4..index * 4 + 4)
+                .map(|v| v.try_into().unwrap())
+                .unwrap_or([1.0, 0.0, 0.0, 1.0]),
             object_id: 0,
             previous_position: p.try_into().unwrap(),
         })

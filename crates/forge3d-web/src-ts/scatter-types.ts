@@ -3,6 +3,9 @@ export interface ScatterMesh {
   positions: Float32Array;
   normals: Float32Array;
   indices: Uint32Array;
+  /** W15 optional mesh texture coordinates and handed tangents. */
+  uvs?: Float32Array;
+  tangents?: Float32Array;
 }
 export interface ScatterLevel { mesh: ScatterMesh; maxDistance?: number }
 export interface ScatterWindInput {
@@ -15,6 +18,8 @@ export interface ScatterHlodPolicy { distance: number; clusterRadius: number; si
 export interface ScatterBlendInput { enabled?: boolean; buryDepth?: number; fadeDistance?: number }
 export interface ScatterContactInput { enabled?: boolean; distance?: number; strength?: number; verticalWeight?: number }
 export interface ScatterBatchInput {
+  /** W15: index in the scene's material collection (default zero). */
+  materialIndex?: number;
   levels: readonly ScatterLevel[];
   /** N row-major affine 4x4 transforms. Translation occupies offsets 3, 7, 11. */
   transforms: Float32Array;
@@ -25,6 +30,7 @@ export interface ScatterBatchInput {
 export interface ScatterBounds { min: [number, number, number]; max: [number, number, number] }
 export interface ScatterCluster { mesh: ScatterMesh; instanceIndices: number[]; bounds: ScatterBounds; center: [number, number, number]; radius: number }
 export interface ScatterBatchSnapshot {
+  materialIndex?: number;
   levels: ScatterLevel[]; transforms: Float32Array; name: string;
   color: [number, number, number, number]; maxDrawDistance: number | null;
   wind: ScatterWindSnapshot; hlod: Required<ScatterHlodPolicy> | null;

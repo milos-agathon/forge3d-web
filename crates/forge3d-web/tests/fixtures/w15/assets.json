@@ -1,0 +1,61 @@
+{
+  "id": "mesh-io-v1-assets",
+  "generator": "scripts/generate-w15-fixtures.mjs",
+  "assets": [
+    {
+      "name": "triangle.gltf",
+      "byteLength": 1049,
+      "sha256": "82b7a7b88836d091b66ce87424ef8ec42a1a1859c7bf4eb4f684e18ce06b7c83"
+    },
+    {
+      "name": "triangle.glb",
+      "byteLength": 996,
+      "sha256": "fac1b89cb641109a796ab9c1e84df3c894e395ac78ef41ec581e8622badf4682"
+    },
+    {
+      "name": "triangle-external.gltf",
+      "byteLength": 880,
+      "sha256": "5f8145c145c853a059a6dcf44e25de50d3d5e412d66769b34294e50f8cef4ff6"
+    },
+    {
+      "name": "triangle.bin",
+      "byteLength": 108,
+      "sha256": "85e81ec1bdee5d3fe7c5e8632073199d888162f2e4d87fe0d32aeb7c3e0979ad"
+    },
+    {
+      "name": "triangle.obj",
+      "byteLength": 144,
+      "sha256": "3f3d3f490f6b4af229516deeabb0e217f378f3769102c3859bb2553d46c1fdda"
+    },
+    {
+      "name": "triangle.mtl",
+      "byteLength": 77,
+      "sha256": "da2986d55fdfc87aa3d7af566f0abc7033f66019bb1e9df2526cfbc0084ded84"
+    },
+    {
+      "name": "triangle.stl",
+      "byteLength": 134,
+      "sha256": "e2085d55e08b993e8032ead15ea192856ecd937acae3398b789e4dfcb80798b3"
+    },
+    {
+      "name": "triangle-expected.json",
+      "byteLength": 101,
+      "sha256": "c6edf8dbe1dedde2696e7c50c0a21498e7e8c78f1430509f0e52adc123830fe6"
+    },
+    {
+      "name": "buildings.geojson",
+      "byteLength": 381,
+      "sha256": "9efc83679ae27eaff87974e97bd009375f2a56b40b67372298eae03a791c9bb0"
+    },
+    {
+      "name": "buildings.city.json",
+      "byteLength": 584,
+      "sha256": "9bf8267a40a3fd459db1ae51a4c6e2cb4662bdd699edf75f7deb089d5d0e629e"
+    },
+    {
+      "name": "texture-diagnostics.json",
+      "byteLength": 175,
+      "sha256": "7684ac708bee05b2be4551d58d08ec94f6a50e998ce1a0951534412b61e1729f"
+    }
+  ]
+}

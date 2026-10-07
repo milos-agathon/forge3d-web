@@ -85,7 +85,9 @@
     "test:package-consumer:w13": "node scripts/test-w13-package-consumer.mjs",
     "test:w14": "vitest run tests/unit/w14-crs.test.ts tests/unit/w14-datasets.test.ts tests/unit/w14-native-contract.test.ts && playwright test tests/playwright/w14_foundation.spec.ts --project=chromium-preflight",
     "test:package-consumer:w14": "node scripts/test-w14-package-consumer.mjs",
-    "test:datasets:remote": "npm run build:ts && node scripts/test-w14-remote-datasets.mjs"
+    "test:datasets:remote": "npm run build:ts && node scripts/test-w14-remote-datasets.mjs",
+    "test:package-consumer:w15": "node scripts/test-w15-package-consumer.mjs",
+    "test:w15": "vitest run tests/unit/w15-geometry.test.ts tests/unit/w15-io.test.ts tests/unit/w15-buildings.test.ts tests/unit/w15-native-contracts.test.ts && playwright test tests/playwright/w15_geometry.spec.ts --project=chromium-preflight"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",

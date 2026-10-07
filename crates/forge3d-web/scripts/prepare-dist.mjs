@@ -184,3 +184,6 @@ for (const file of ['crs','crs-types','crs-layers','dataset-types','datasets','v
   copyRequired(join(dist,file+'.d.ts'),join(root,'types',file+'.d.ts'));
 }
 copyRequired(join(repoRoot, "docs", "parity", "label-case-contract.json"), join(root, "docs", "label-case-contract.json"));
+for (const file of ['mesh','geometry','mesh-processing','mesh-obj','mesh-stl','mesh-gltf','mesh-io','image-io','mesh-worker','buildings','building-materials','building-diagnostics','scatter-types']) {
+  writeFileSync(join(root,'types',file+'.d.ts'),readRequired(join(dist,file+'.d.ts')).replace(/from (["'])\.\/terrain-scatter\.js\1/g,'from "./index.js"'));
+}

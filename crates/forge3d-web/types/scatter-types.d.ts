@@ -3,6 +3,9 @@ export interface ScatterMesh {
     positions: Float32Array;
     normals: Float32Array;
     indices: Uint32Array;
+    /** W15 optional mesh texture coordinates and handed tangents. */
+    uvs?: Float32Array;
+    tangents?: Float32Array;
 }
 export interface ScatterLevel {
     mesh: ScatterMesh;
@@ -39,6 +42,8 @@ export interface ScatterContactInput {
     verticalWeight?: number;
 }
 export interface ScatterBatchInput {
+    /** W15: index in the scene's material collection (default zero). */
+    materialIndex?: number;
     levels: readonly ScatterLevel[];
     /** N row-major affine 4x4 transforms. Translation occupies offsets 3, 7, 11. */
     transforms: Float32Array;
@@ -62,6 +67,7 @@ export interface ScatterCluster {
     radius: number;
 }
 export interface ScatterBatchSnapshot {
+    materialIndex?: number;
     levels: ScatterLevel[];
     transforms: Float32Array;
     name: string;

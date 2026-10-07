@@ -102,13 +102,20 @@ function errorEnvelope(id: number, error: Forge3DError): ErrorEnvelope {
 }
 
 function collectTransfer(value: unknown): Transferable[] {
-  if (value instanceof ArrayBuffer) {
-    return [value];
-  }
-  if (ArrayBuffer.isView(value)) {
-    return value.buffer instanceof ArrayBuffer ? [value.buffer] : [];
-  }
-  return [];
+  const buffers = new Set<ArrayBuffer>();
+  const seen = new Set<object>();
+  const visit = (item: unknown): void => {
+    if (item instanceof ArrayBuffer) buffers.add(item);
+    else if (ArrayBuffer.isView(item)) {
+      if (item.buffer instanceof ArrayBuffer) buffers.add(item.buffer);
+    } else if (item && typeof item === "object" && !seen.has(item)) {
+      seen.add(item);
+      if (Array.isArray(item)) item.forEach(visit);
+      else if (Object.getPrototypeOf(item) === Object.prototype) Object.values(item).forEach(visit);
+    }
+  };
+  visit(value);
+  return [...buffers];
 }
 
 export class Forge3DMessageClient {

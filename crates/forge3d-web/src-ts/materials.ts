@@ -592,6 +592,11 @@ export class MaterialCollection {
           { field: "materials" },
         );
       }
+      // Reuse a vacant GPU slot once the monotonic allocator reaches its limit.
+      const used = new Set([...this.#slots.values()].map((entry) => entry.index));
+      if (this.#nextIndex >= this.#maxMaterials || used.has(this.#nextIndex)) {
+        this.#nextIndex = Array.from({ length: this.#maxMaterials }, (_, i) => i).find((i) => !used.has(i))!;
+      }
       this.#slots.set(slot, {
         index: this.#nextIndex,
         material: normalized,
@@ -669,7 +674,9 @@ export class MaterialCollection {
   }
 
   copy(): MaterialCollection {
-    return MaterialCollection.from(this.snapshot());
+    const copy = MaterialCollection.from(this.snapshot());
+    copy.#nextIndex = this.#nextIndex;
+    return copy;
   }
 
   estimatedGpuBytes(): number {

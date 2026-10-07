@@ -64,13 +64,15 @@ function clusters(snapshot: ScatterBatchSnapshot): ScatterCluster[] {
   const source = snapshot.levels[snapshot.levels.length - 1]!.mesh, baseRadius=meshOriginRadius(source), result:ScatterCluster[]=[];
   for(const ids of cells.values()) {
     if(ids.length<2)continue;
-    const positions: number[] = [], normals:number[] = [], indices: number[] = [], allBounds: ScatterBounds[] = [];
+    const positions: number[] = [], normals:number[] = [], uvs:number[] = [], tangents:number[] = [], indices: number[] = [], allBounds: ScatterBounds[] = [];
     const centerSum:[number,number,number]=[0,0,0];
     for (const id of ids) {
       const m = snapshot.transforms.subarray(id * 16, id * 16 + 16), offset = positions.length / 3;
       for (let i = 0; i < source.positions.length; i += 3) {
         positions.push(...nativeTransformPoint(m, source.positions.subarray(i, i + 3)));
-        normals.push(...nativeTransformNormal(m,source.normals.subarray(i,i+3)));
+        const normal=nativeTransformNormal(m,source.normals.subarray(i,i+3));normals.push(...normal);
+        if(source.uvs?.length)uvs.push(source.uvs[i/3*2]!,source.uvs[i/3*2+1]!);
+        if(source.tangents?.length){const v=i/3*4,t=source.tangents,raw=[0,1,2].map(a=>m[a*4]!*t[v]!+m[a*4+1]!*t[v+1]!+m[a*4+2]!*t[v+2]!),dot=raw.reduce((n,x,a)=>n+x*normal[a]!,0),ortho=raw.map((x,a)=>x-dot*normal[a]!),length=Math.hypot(...ortho),det=m[0]!*(m[5]!*m[10]!-m[6]!*m[9]!)-m[1]!*(m[4]!*m[10]!-m[6]!*m[8]!)+m[2]!*(m[4]!*m[9]!-m[5]!*m[8]!);tangents.push(...ortho.map(x=>length?x/length:0),t[v+3]!*(det<0?-1:1));}
       }
       for (const index of source.indices) indices.push(index + offset);
       centerSum[0]=f32(centerSum[0]+m[3]!);centerSum[1]=f32(centerSum[1]+m[7]!);centerSum[2]=f32(centerSum[2]+m[11]!);
@@ -82,7 +84,9 @@ function clusters(snapshot: ScatterBatchSnapshot): ScatterCluster[] {
       const offset=id*16,distance=nativeDistance([snapshot.transforms[offset+3]!,snapshot.transforms[offset+7]!,snapshot.transforms[offset+11]!],center);
       clusterRadius=Math.max(clusterRadius,f32(distance+f32(baseRadius*maxInstanceScale(snapshot.transforms.subarray(offset,offset+16)))));
     }
-    const mesh = simplifyScatterMesh({ positions: new Float32Array(positions), normals: new Float32Array(normals), indices: new Uint32Array(indices) }, snapshot.hlod.simplifyRatio);
+    if((uvs.length||tangents.length)&&snapshot.hlod.simplifyRatio!==1)scatterInvalid('textured HLOD requires simplifyRatio 1; generate explicit UV-aware LODs first');
+    const mesh = simplifyScatterMesh({ ...(uvs.length?{uvs:new Float32Array(uvs)}:{}),...(tangents.length?{tangents:new Float32Array(tangents)}:{}),positions: new Float32Array(positions), normals: new Float32Array(normals), indices: new Uint32Array(indices) }, snapshot.hlod.simplifyRatio);
+    if(snapshot.hlod.simplifyRatio===1){if(uvs.length)mesh.uvs=new Float32Array(uvs);if(tangents.length)mesh.tangents=new Float32Array(tangents);}
     if(!mesh.positions.length||!mesh.indices.length)continue;
     result.push({ mesh, instanceIndices: [...ids], bounds: mergeScatterBounds(allBounds), center, radius: clusterRadius });
   }
@@ -126,6 +130,7 @@ export class TerrainScatterBatch {
     finite(terrainBlend.buryDepth, "buryDepth", 0); finite(terrainBlend.fadeDistance, "fadeDistance", Number.MIN_VALUE);
     finite(terrainContact.distance, "contact distance", Number.MIN_VALUE); finite(terrainContact.strength, "contact strength", 0, 1); finite(terrainContact.verticalWeight, "verticalWeight", 0, 1);
     this.#value = { levels, transforms, color, maxDrawDistance, hlod, terrainBlend, terrainContact, name: input.name ?? "scatter", wind: new ScatterWindSettings(input.wind).snapshot(), bounds: { min: [0, 0, 0], max: [0, 0, 0] }, clusters: [] };
+    if(input.materialIndex!==undefined){finite(input.materialIndex,"materialIndex",0,255);if(!Number.isInteger(input.materialIndex))scatterInvalid("materialIndex must be integer");this.#value.materialIndex=input.materialIndex;}
     this.#value.bounds = mergeScatterBounds(Array.from({ length: transforms.length / 16 }, (_, id) => instanceBounds(this.#value, id)));
     this.#value.clusters = clusters(this.#value);
   }

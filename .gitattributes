@@ -53,3 +53,14 @@ crates/forge3d-web/types/dataset*.d.ts text eol=lf
 crates/forge3d-web/types/vector*.d.ts text eol=lf
 crates/forge3d-web/tests/fixtures/w14/provenance.json text eol=lf
 crates/forge3d-web/assets/datasets/remote-storage.json text eol=lf
+
+# W15 IO fixtures and archived controls are byte/digest pinned.
+crates/forge3d-web/tests/fixtures/w15/** -text
+crates/forge3d-web/tests/fixtures/w15/native/** -whitespace
+
+# W15 declarations are regenerated with LF endings by prepare-dist on every platform.
+crates/forge3d-web/types/building*.d.ts text eol=lf
+crates/forge3d-web/types/geometry.d.ts text eol=lf
+crates/forge3d-web/types/image-io.d.ts text eol=lf
+crates/forge3d-web/types/mesh*.d.ts text eol=lf
+crates/forge3d-web/types/scatter-types.d.ts text eol=lf

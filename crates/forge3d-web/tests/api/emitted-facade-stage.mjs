@@ -34,6 +34,10 @@ try {
   assert.deepEqual(
     Object.keys(facadeA).sort(),
     [
+      'BuildingLayer','MAX_MESH_BYTES','MESH_IDENTITY','MeshIo','MeshLayer',
+      'attachMeshTangents','buildingMaterialFromName','buildingMaterialFromTags','centerMesh','cloneMesh','createMeshWorkerHandler','decodeGltf','diagnoseBuildingTextures','displaceHeightmap','displaceProcedural',
+      'encodeGlb','encodeMtl','encodeObj','encodeStl','exportHdr','exportImage','exportMesh','exportMeshToSink','extrudePolygon','flipMeshAxis','generateMeshLods','generatePrimitive','generateRibbon','generateThickPolyline','generateTube',
+      'inferRoofType','loadBuildingTilesMetadata','loadBuildings','loadGltf','loadHdr','loadImage','loadMesh','loadObj','mergeMeshes','meshBounds','meshBytes','meshFromMultiPolygonZ','parseBuildingColor','parseCityJsonBuildings','parseGeoJsonBuildings','parseMtl','parseObj','parseStl','planarMeshUv','recomputeMeshNormals','roofMaterialFromTags','scaleMesh','simplifyMesh','sphericalMeshUv','subdivideMesh','subdivideMeshAdaptive','swapMeshAxes','transferMesh','transformMesh','validateMesh','weldMesh',
       'CrsTransformer', 'crsToEpsg', 'crsFromRasterMetadata', 'crsFromGeoJson', 'projAvailable',
       'DatasetRegistry', 'DATASET_BASE_URL', 'decodeDatasetNpy', 'reprojectVectorLayer', 'reprojectLabelFeatures',
       "LabelFeatureSource", "LabelCollisionIndex", "declutterLabels",

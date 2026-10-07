@@ -1,0 +1,742 @@
+{
+  "schemaVersion": 1,
+  "deepNative": "bf8db93233e5158f6d226991fc5d230832c2d806",
+  "reconciliation": "1f4084af428dc699bdcd108b029736cb73903926",
+  "policy": "Source-audited native suite inventory with named browser outcome ports. This records explicit adaptations and owner boundaries; it does not claim Python/PyO3/MapScene APIs run in browsers. Independent executed numeric kernels are mesh-io-v1.json.",
+  "suites": [
+    {
+      "revision": "7b08af8",
+      "nativePath": "tests/test_f1_extrude.py",
+      "sha256": "cc04d1e177b80b366be7db8dbc2774d41f1475ee650ca3ca2fc182c88b7fc1fc",
+      "definitions": [
+        "test_extrude_square_counts",
+        "test_extrude_rejects_invalid_polygon"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+          "test": "square extrusion preserves native 24 vertices / 12 triangles"
+        },
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+          "test": "dtype, dimensions, path, and non-finite input are typed errors"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "7b08af8",
+      "nativePath": "tests/test_f2_osm_buildings.py",
+      "sha256": "3c59155ac1e330482285f62e6daf8cce4307d4890cbfdd20c43cb02d6cc3a671",
+      "definitions": [
+        "test_osm_buildings_extrude_merges_meshes_and_respects_heights"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+          "test": "GeoJSON buildings are actual indexed volumes with stable IDs/materials"
+        },
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+          "test": "custom GeoJSON height keys and MultiPolygon IDs retain native geometry"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "7b08af8",
+      "nativePath": "tests/test_f2_osm_geojson.py",
+      "sha256": "3178e2de37bb353902eb1cdbd1ef34caaca69392d08edf6a9c95aa0c3d5cb3dd",
+      "definitions": [
+        "test_osm_buildings_from_geojson_featurecollection"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+          "test": "GeoJSON buildings are actual indexed volumes with stable IDs/materials"
+        },
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+          "test": "custom GeoJSON height keys and MultiPolygon IDs retain native geometry"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "7b08af8",
+      "nativePath": "tests/test_f3_thick_polyline.py",
+      "sha256": "acf25732154a7f51164089494c010f9631a73d5e48a1a4a40b88933282a6225f",
+      "definitions": [
+        "test_thick_polyline_bevel_width_consistent",
+        "test_thick_polyline_miter_wider_than_bevel"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+          "test": "miter bevel and round ribbon joins preserve native corner spans and counts"
+        },
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+          "test": "planar UV displacement equals native XY sampling and bevel depth/width is consistent"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "7b08af8",
+      "nativePath": "tests/test_f17_curves_joins.py",
+      "sha256": "26c03e1d75f79c8a5193fc5fd0b1e41d0e9c462670c3c13c300904baa691348f",
+      "definitions": [
+        "test_ribbon_join_miter_has_greater_corner_span_than_bevel",
+        "test_ribbon_join_round_reasonable_span"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+          "test": "miter bevel and round ribbon joins preserve native corner spans and counts"
+        },
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+          "test": "planar UV displacement equals native XY sampling and bevel depth/width is consistent"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "7b08af8",
+      "nativePath": "tests/test_f4_obj_import.py",
+      "sha256": "d6d86910a33bb20343a1aed3d0dfa3ae63cb000642fd1fe3db70bc3875922914",
+      "definitions": [
+        "test_load_obj_minimal_triangle"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-io.test.ts",
+          "test": "OBJ negative indices, groups, materials, UVs and normal fidelity"
+        },
+        {
+          "file": "crates/forge3d-web/tests/playwright/w15_geometry.spec.ts",
+          "test": "browser format fidelity, image/HDR IO and typed failures"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "7b08af8",
+      "nativePath": "tests/test_f4_obj_import_neg_indices.py",
+      "sha256": "a6f4a6e7765c8b2a02617399c442ca19c499c667bfb3d2f6ecab9ec67149d288",
+      "definitions": [
+        "test_negative_indices_positions_only",
+        "test_negative_indices_full_vt_vn"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-io.test.ts",
+          "test": "OBJ negative indices, groups, materials, UVs and normal fidelity"
+        },
+        {
+          "file": "crates/forge3d-web/tests/playwright/w15_geometry.spec.ts",
+          "test": "browser format fidelity, image/HDR IO and typed failures"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "7b08af8",
+      "nativePath": "tests/test_f5_groups_roundtrip.py",
+      "sha256": "19b52da6c25a35119ce93ccb77e521f4e4e9b7212fb3f70d4b215a7e2b4f2c0d",
+      "definitions": [
+        "test_groups_and_materials_roundtrip"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-io.test.ts",
+          "test": "OBJ negative indices, groups, materials, UVs and normal fidelity"
+        },
+        {
+          "file": "crates/forge3d-web/tests/playwright/w15_geometry.spec.ts",
+          "test": "browser format fidelity, image/HDR IO and typed failures"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "7b08af8",
+      "nativePath": "tests/test_f5_obj_export.py",
+      "sha256": "d2877161340dd8b287bb76fd2e2751168d1bfea2d66a2a19b700a517d30fd2f4",
+      "definitions": [
+        "test_export_then_import_roundtrip"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-io.test.ts",
+          "test": "OBJ negative indices, groups, materials, UVs and normal fidelity"
+        },
+        {
+          "file": "crates/forge3d-web/tests/playwright/w15_geometry.spec.ts",
+          "test": "browser format fidelity, image/HDR IO and typed failures"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "7b08af8",
+      "nativePath": "tests/test_f4_obj_import_polygons.py",
+      "sha256": "6e28bceab8d3a8fac8093e59e69d10c43582ed977ee26f514c175a496e1427b5",
+      "definitions": [
+        "test_quad_triangulation_positions_only",
+        "test_ngon_triangulation_with_vt_vn",
+        "test_missing_uv_and_normal"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-io.test.ts",
+          "test": "OBJ fans triangulate, and normals are generated if absent"
+        },
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-io.test.ts",
+          "test": "OBJ handles missing attributes and rejects corrupt references"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "7b08af8",
+      "nativePath": "tests/test_f6_stl_export.py",
+      "sha256": "11face540db450df60bc40ba3f150b2a62f85d9e89998ba04e6eda0e4a6134bb",
+      "definitions": [
+        "test_stl_export_tetrahedron_watertight"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-io.test.ts",
+          "test": "binary and ASCII STL roundtrip geometry, facet count, and normals"
+        },
+        {
+          "file": "crates/forge3d-web/tests/playwright/w15_geometry.spec.ts",
+          "test": "browser format fidelity, image/HDR IO and typed failures"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "7b08af8",
+      "nativePath": "tests/test_f7_multipolygonz_obj.py",
+      "sha256": "b4c1b9ce203ec88f3631349053a5868c55065f660b22baf7beb83f6d1b708edb",
+      "definitions": [
+        "test_single_ring_square",
+        "test_two_rings_merged"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+          "test": "MultiPolygonZ exports disjoint surfaces with native counts and normals"
+        },
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+          "test": "MultiPolygonZ handles non-horizontal surfaces, holes and exact source elevations"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "7b08af8",
+      "nativePath": "tests/test_f8_weld.py",
+      "sha256": "b9bc558f15dbadf53232e50875469c392087bd85521b8799442397b687d608fa",
+      "definitions": [
+        "test_weld_merges_duplicate_vertices",
+        "test_weld_respects_uv_epsilon"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+          "test": "historical weld tolerances and collapsed vertex count are preserved"
+        },
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+          "test": "weld preserves UV seams and removes collapsed triangles deterministically"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "7b08af8",
+      "nativePath": "tests/test_f9_primitives.py",
+      "sha256": "d04b91e5fecd7303857ef5c3e53e7143bcf051038a46065e55d020b13e4d6899",
+      "definitions": [
+        "test_plane_resolution",
+        "test_sphere_normals_unit_length",
+        "test_torus_not_empty"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+          "test": "exact topology and f32 attributes <=1e-5"
+        },
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+          "test": "unit box has per-face normals/UVs and a closed geometric boundary"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "7b08af8",
+      "nativePath": "tests/test_f10_uv_unwrap.py",
+      "sha256": "cb99baeb47ec7ba51d3878e4621dd8a08b66eeaa44481bcbfb94e7e4eb2debae",
+      "definitions": [
+        "test_planar_unwrap_xy_from_z_axis",
+        "test_spherical_unwrap_cube"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+          "test": "UV unwrap and merge retain shape and offsets"
+        },
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+          "test": "native spherical unwrap uses bounding-box radius"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "7b08af8",
+      "nativePath": "tests/test_f11_subdivision.py",
+      "sha256": "64e5429c7127ddfa6744ceeb01f29a3ba52167f42e814642e6b8d027c825d0b4",
+      "definitions": [
+        "test_subdivide_quad_once",
+        "test_subdivide_multiple_levels_counts"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+          "test": "Loop subdivision matches native geometry and oriented topology"
+        },
+        {
+          "file": "crates/forge3d-web/tests/playwright/w15_geometry.spec.ts",
+          "test": "real worker transfers both directions"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "7b08af8",
+      "nativePath": "tests/test_f11_subdivision_creases.py",
+      "sha256": "be596065bd6d2abf3cef77533cdd60cc19b20ebcedd1cc8b7bd1afd68f1ae4f9",
+      "definitions": [
+        "test_interior_edge_point_changes_with_crease"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+          "test": "crease edge positions follow the native smooth and midpoint rules"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "7b08af8",
+      "nativePath": "tests/test_f12_displacement.py",
+      "sha256": "eb57994b967baeb4d4f8dc85d6592c72422cd108a209639e33d8abcab290dbcc",
+      "definitions": [
+        "test_displace_heightmap_on_plane",
+        "test_displace_procedural_changes_positions"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+          "test": "native displacement and normal recomputation"
+        },
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+          "test": "planar UV displacement equals native XY sampling and bevel depth/width is consistent"
+        },
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+          "test": "registered native TBN wrappers adapt to typed attributes and facade exports"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "7b08af8",
+      "nativePath": "tests/test_f12_uv_tangents.py",
+      "sha256": "c80fd5c3e705180f73228b01f2f0f91caad9c4da5a899d1336fa5bfbf2397dee",
+      "definitions": [
+        "test_uv_space_matches_xy_for_planar_unwrap",
+        "test_generate_tangents_output_valid"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+          "test": "native displacement and normal recomputation"
+        },
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+          "test": "planar UV displacement equals native XY sampling and bevel depth/width is consistent"
+        },
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+          "test": "registered native TBN wrappers adapt to typed attributes and facade exports"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "7b08af8",
+      "nativePath": "tests/test_f14_transform.py",
+      "sha256": "054180c68c05d1fbb7b4024a5ec16a5b50effbb1047bce7ade3573fe5639f4ec",
+      "definitions": [
+        "test_center_mesh_moves_to_origin_without_altering_topology",
+        "test_scale_mesh_applies_pivot_and_reports_winding_flip",
+        "test_flip_mesh_axis_updates_normals_and_winding",
+        "test_swap_mesh_axes",
+        "test_mesh_bounds_returns_expected_extents"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+          "test": "native pivot, reflection and inverse-transpose"
+        },
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+          "test": "transforms reject singularity and retain ownership"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "7b08af8",
+      "nativePath": "tests/test_f15_validate.py",
+      "sha256": "479e105a6ecbd92028127df344dbc2a87447a0f3ea7b25a88aadb3842bfbced6",
+      "definitions": [
+        "test_validation_clean_mesh",
+        "test_validation_detects_duplicate",
+        "test_validation_detects_non_manifold"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+          "test": "validation diagnoses invalid indices, duplicates, degenerates and non-manifold edges"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "7b08af8",
+      "nativePath": "tests/test_f16_instancing.py",
+      "sha256": "f2f4a51298763fc96533ce8408fc3ba3f1685536ab0471266597ec0807a5ec54",
+      "definitions": [
+        "test_f16_instancing_basic_counts_and_transform"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+          "test": "native CPU instance expansion adapts to owned shared GPU batches"
+        },
+        {
+          "file": "crates/forge3d-web/tests/playwright/w15_geometry.spec.ts",
+          "test": "UV textures and instanced TBN match transformed mesh"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "7b08af8",
+      "nativePath": "tests/test_f17_curves.py",
+      "sha256": "699354a500926b9e34fc1b50ecc6456d879ea2e1bd408561476ecf7b1b095c27",
+      "definitions": [
+        "test_generate_ribbon_counts",
+        "test_generate_tube_counts"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+          "test": "native ribbon taper and joins"
+        },
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-geometry.test.ts",
+          "test": "native tube parallel transport, counts and caps"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "7b08af8",
+      "nativePath": "tests/test_f18_gltf_import.py",
+      "sha256": "81e3f160f7fb86818f6df170e36b4088c67544e29712654ac9e5480bba407f77",
+      "definitions": [
+        "test_f18_gltf_import_minimal_triangle"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-io.test.ts",
+          "test": "independently encoded plain format"
+        },
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-io.test.ts",
+          "test": "glTF external buffers use a resolver and aggregate budget"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "1f4084af428dc699bdcd108b029736cb73903926",
+      "nativePath": "tests/test_buildings_cityjson.py",
+      "sha256": "b9b2769af2a6483ea7c4286334931777f9015c6bf61045d794e52edba1971c1d",
+      "definitions": [
+        "test_add_buildings_cityjson_import",
+        "test_cityjson_simple_cube",
+        "test_cityjson_with_crs",
+        "test_cityjson_multiple_buildings",
+        "test_cityjson_lod_selection",
+        "test_cityjson_building_part",
+        "test_cityjson_file_not_found",
+        "test_cityjson_invalid_format",
+        "test_cityjson_transform_application",
+        "test_sample_cityjson_dataset_contains_renderable_geometry"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+          "test": "native sample CityJSON contains all five real meshes and BuildingParts"
+        },
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+          "test": "CityJSON transform/CRS/highest LOD/source axes are exact"
+        },
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+          "test": "missing HTTP sources and malformed building formats return typed browser errors"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "1f4084af428dc699bdcd108b029736cb73903926",
+      "nativePath": "tests/test_buildings_extrude.py",
+      "sha256": "d337c404f27a419bf223065acda9417e44f8fb0a08e43c53b0e40178bebc6eed",
+      "definitions": [
+        "test_import_buildings_module",
+        "test_building_dataclass",
+        "test_building_bounds",
+        "test_building_layer_properties",
+        "test_add_buildings_from_geojson",
+        "test_add_buildings_with_height_key",
+        "test_add_buildings_file_not_found",
+        "test_add_buildings_multipolygon",
+        "test_extrusion_vertex_count"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+          "test": "GeoJSON buildings are actual indexed volumes with stable IDs/materials"
+        },
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+          "test": "custom GeoJSON height keys and MultiPolygon IDs retain native geometry"
+        },
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+          "test": "missing HTTP sources and malformed building formats return typed browser errors"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "1f4084af428dc699bdcd108b029736cb73903926",
+      "nativePath": "tests/test_buildings_materials.py",
+      "sha256": "35aa61e16f5ba36d8761eca3b75b48ffc951554183ff3652473262ee7bbe0878",
+      "definitions": [
+        "test_material_from_name_brick",
+        "test_material_from_name_glass",
+        "test_material_from_name_steel",
+        "test_material_from_name_concrete",
+        "test_material_from_name_wood",
+        "test_material_from_name_unknown",
+        "test_material_from_tags_explicit",
+        "test_material_from_tags_building_type",
+        "test_building_material_dataclass",
+        "test_building_material_from_dict",
+        "test_building_material_to_dict",
+        "test_material_differentiation"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+          "test": "all native material value records and differentiation adapt without Python dataclasses"
+        },
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+          "test": "native scalar presets, inference and color parsing"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "1f4084af428dc699bdcd108b029736cb73903926",
+      "nativePath": "tests/test_buildings_roof.py",
+      "sha256": "a7cdb0d3b95ba0991ade17dc22872415549c13d84d59789b334644698e996422",
+      "definitions": [
+        "test_infer_roof_type_import",
+        "test_infer_roof_type_explicit_tag",
+        "test_infer_roof_type_case_insensitive",
+        "test_infer_roof_type_from_building_type",
+        "test_infer_roof_type_default",
+        "test_infer_roof_type_all_types",
+        "test_infer_roof_type_lean_to",
+        "test_infer_roof_type_explicit_overrides_building",
+        "test_infer_roof_type_priority",
+        "test_infer_roof_apartments",
+        "test_infer_roof_shed_building",
+        "test_infer_roof_commercial",
+        "test_infer_roof_unknown_value",
+        "test_infer_roof_numeric_value",
+        "test_infer_roof_church"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+          "test": "native roof inference"
+        },
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+          "test": "native roof defaults, priority, aliases, and Orthodox inference"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "1f4084af428dc699bdcd108b029736cb73903926",
+      "nativePath": "tests/test_mesh_tbn.py",
+      "sha256": "ed59b1d3a5d4e21041a6870a9cc793f2eb4a4ffc674ddd53cab3d0ae650cb8b5",
+      "definitions": [],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+          "test": "registered native TBN wrappers adapt to typed attributes and facade exports"
+        },
+        {
+          "file": "crates/forge3d-web/tests/playwright/w15_geometry.spec.ts",
+          "test": "UV textures and instanced TBN match transformed mesh"
+        }
+      ],
+      "adaptation": "PyO3 registration and dict fields become callable ESM exports and packed positions/normals/UVs/handed tangents. Native TBN plane width/height count points; primitive resolution counts cells, so use [width-1,height-1]. Correct W04 mirrored handedness is retained.",
+      "importedSuite": {
+        "revision": "1f4084af428dc699bdcd108b029736cb73903926",
+        "nativePath": "tests/test_api_contracts.py",
+        "sha256": "874bf2305a3dcf2933b3fd7c991da2fa73014e109ddf9e4d6076070f025501d9",
+        "class": "TestTbnFunctionsExported",
+        "definitions": [
+          "test_mesh_generate_cube_tbn_registered",
+          "test_mesh_generate_plane_tbn_registered",
+          "test_cube_tbn_dict_keys",
+          "test_cube_tbn_vertex_count",
+          "test_cube_tbn_index_count",
+          "test_cube_tbn_data_count",
+          "test_cube_vertex_dict_structure",
+          "test_cube_tbn_dict_structure",
+          "test_plane_tbn_4x4_vertex_count",
+          "test_plane_tbn_4x4_index_count",
+          "test_plane_tbn_4x4_tbn_count",
+          "test_plane_tbn_rejects_small_dimensions",
+          "test_python_wrapper_uses_native_path",
+          "test_python_wrapper_plane_native_path"
+        ]
+      }
+    },
+    {
+      "revision": "1f4084af428dc699bdcd108b029736cb73903926",
+      "nativePath": "tests/test_p1_building_workflow_support.py",
+      "sha256": "0fda5d6a44955d39a07911b2f8fa17491aade9a09c07c3f11363274a95b3df97",
+      "definitions": [
+        "test_building_validation_distinguishes_support_statuses",
+        "test_cityjson_and_geojson_building_render_prep_stays_diagnostic_bearing",
+        "test_building_summary_includes_geometry_count_bounds_and_material_status",
+        "test_textured_pbr_buildings_are_explicitly_unsupported_when_not_implemented",
+        "test_zero_geometry_building_fallback_cannot_be_mistaken_for_success",
+        "test_building_docs_record_scalar_pbr_and_textured_pbr_status"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-native-contracts.test.ts",
+          "test": "empty building geometry and missing appearance assets cannot imply success"
+        },
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+          "test": "valid assets/UVs still diagnose unsupported textured PBR; Pro is explicit"
+        },
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+          "test": "GeoJSON buildings are actual indexed volumes with stable IDs/materials"
+        }
+      ],
+      "adaptation": "W15 tests direct BuildingLayer geometry/metadata and blocking native diagnostics. The MapScene product wrapper belongs to W18; scalar native placeholder behavior becomes verified functional geometry, while textured requests and zero geometry stay explicit errors."
+    },
+    {
+      "revision": "1f4084af428dc699bdcd108b029736cb73903926",
+      "nativePath": "tests/test_p2_building_texture_diagnostics.py",
+      "sha256": "312b02b29cfb769fbcd96d4f4330d227b8b9f162d104b82dc1183a41a3cd9bdd",
+      "definitions": [
+        "test_missing_uv_path_format_and_scalar_fallback_are_diagnosed",
+        "test_pro_gated_textured_import_remains_explicitly_pro_gated"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+          "test": "exact missing path/UV/format/scalar-fallback diagnostics never imply success"
+        },
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+          "test": "blocking building diagnostics prevent scene mutation and scalar fallback"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    },
+    {
+      "revision": "1f4084af428dc699bdcd108b029736cb73903926",
+      "nativePath": "tests/test_p2_textured_building_mapscene.py",
+      "sha256": "37707ef9075299c6c0504e38876a8add3526012f9235f240a1980202ea3d8842",
+      "definitions": [
+        "test_textured_building_fixture_is_explicitly_diagnostic_only",
+        "test_textured_building_render_is_blocked_without_silent_scalar_success"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+          "test": "exact missing path/UV/format/scalar-fallback diagnostics never imply success"
+        },
+        {
+          "file": "crates/forge3d-web/tests/unit/w15-buildings.test.ts",
+          "test": "blocking building diagnostics prevent scene mutation and scalar fallback"
+        }
+      ],
+      "adaptation": "W15 tests direct BuildingLayer geometry/metadata and blocking native diagnostics. The MapScene product wrapper belongs to W18; scalar native placeholder behavior becomes verified functional geometry, while textured requests and zero geometry stay explicit errors."
+    },
+    {
+      "revision": "1f4084af428dc699bdcd108b029736cb73903926",
+      "nativePath": "tests/test_p2_building_texture_docs.py",
+      "sha256": "53896db74a250a17e44ab2f6d0b98ee3e6558d4c27a9ae77bf7921c5e3e96917",
+      "definitions": [
+        "test_building_texture_matrix_documents_prerequisites_and_fallbacks",
+        "test_building_docs_do_not_present_scalar_fallback_as_textured_success"
+      ],
+      "ports": [
+        {
+          "file": "crates/forge3d-web/docs/geometry-mesh-io.md",
+          "test": "A scalar fallback cannot be reported"
+        }
+      ],
+      "adaptation": "Python/NumPy and synchronous filesystem IO become public ESM, owned f32/u32 buffers and asynchronous URL/File/Blob IO. Geometry uses the native source axes; rendering explicitly converts to Y-up."
+    }
+  ],
+  "assets": [
+    {
+      "revision": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "nativePath": "assets/geojson/sample_buildings.city.json",
+      "file": "crates/forge3d-web/tests/fixtures/w15/native-sample-buildings.city.json",
+      "sha256": "b580f03628a86da237a0c5b9bb023a3893ec72d7422170ab02a48bb150db2f17"
+    }
+  ]
+}

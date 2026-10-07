@@ -109,6 +109,10 @@ jobs:
         working-directory: crates/forge3d-web
         run: npm run test:package-consumer:w14
 
+      - name: Test W15 installed geometry, mesh IO and building workflows
+        working-directory: crates/forge3d-web
+        run: npm run test:package-consumer:w15
+
       - name: Fetch all W14 remote datasets through default registry URLs
         working-directory: crates/forge3d-web
         run: npm run test:datasets:remote

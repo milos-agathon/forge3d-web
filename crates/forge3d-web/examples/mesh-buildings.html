@@ -1,0 +1,34 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Forge3D meshes and buildings</title>
+  <style>
+    body {
+      font: 16px system-ui;
+      margin: 2rem;
+      background: #f4f3ef;
+      color: #242424;
+    }
+    canvas {
+      display: block;
+      margin: 1rem 0;
+      max-width: 100%;
+    }
+    button {
+      padding: 0.7rem 1rem;
+    }
+    pre {
+      white-space: pre-wrap;
+    }
+  </style>
+  <h1>Meshes and buildings</h1>
+  <p>
+    Load indexed geometry, render scalar building materials, and export browser
+    files.
+  </p>
+  <canvas id="canvas" width="256" height="160"></canvas>
+  <button id="run">Render buildings and check geometry IO</button>
+  <pre id="result">Ready</pre>
+  <script type="module" src="./w15-geometry.js"></script>
+</html>
