@@ -155,3 +155,9 @@ checkouts skip only this extra comparison. A negative control changes fixture
 bytes and proves the available-history check rejects the change; an unavailable
 commit control preserves the shallow-checkout path. These checks make no
 network requests.
+
+The first PR CI run passed build, Rust/TypeScript contracts and package checks,
+but its generic installed-tarball gate refused the tree after generation marked
+the thirteen W15 declarations modified. Those generated outputs now have explicit
+LF checkout attributes, matching the existing W13/W14 declaration rules and the
+TypeScript compiler setting. The clean-worktree requirement remains enforced.
