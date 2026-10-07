@@ -14,6 +14,7 @@ import { TerrainDataset } from "../../src-ts/terrain-dataset.js";
 import { PROJ_ASSETS } from "../../src-ts/proj-assets.js";
 import { reprojectVectorLayer } from "../../src-ts/crs-layers.js";
 import { reprojectGeoJson } from "../../src-ts/crs-geometry.js";
+import { verifiedProjFactory, embedProjWorker } from '../../scripts/embed-proj-worker.mjs';
 const read = (path: string) =>
   readFileSync(new URL("../../" + path, import.meta.url));
 const fixture = JSON.parse(
@@ -21,6 +22,7 @@ const fixture = JSON.parse(
 );
 let kernel: ProjKernel;
 beforeAll(async () => {
+  verifiedProjFactory();
   const factory = createRequire(import.meta.url)(
     "../../assets/proj/proj-emscripten.js",
   ).default;
@@ -33,6 +35,22 @@ beforeAll(async () => {
   });
 });
 describe("W14 native CRS contract and W00 oracle", () => {
+  it("preserves Unicode in regenerated fixture metadata and example text", () => {
+    expect(fixture.projJson.area).toContain('6°E');
+    expect(fixture.wkt.utm32).toContain('6°E');
+    expect(read('tests/fixtures/w14/crs-epsg-v1.json').toString('utf8')).not.toMatch(/[ÂÃ]/u);
+    expect(read('examples/w14-foundation.js').toString('utf8')).toContain('"Loading…"');
+  });
+  it("rejects injected top-level PROJ code before embedding or evaluation", () => {
+    const bytes = read('assets/proj/proj-emscripten.js');
+    const injected = Buffer.concat([Buffer.from('globalThis.__w14Injected = true;\n'), bytes]);
+    expect(() => verifiedProjFactory(injected)).toThrow('W14 asset mismatch');
+    const embedded = embedProjWorker('/* worker */\n');
+    expect(embedded).toContain(verifiedProjFactory());
+    expect(embedProjWorker(embedded)).toBe(embedded);
+    expect(() => embedProjWorker(embedded.replace('var Module=moduleArg;', 'throw Error("executed");var Module=moduleArg;'))).toThrow('Previously embedded PROJ factory changed');
+    expect((globalThis as any).__w14Injected).toBeUndefined();
+  });
   it("pins every PROJ/database/grid asset to the dependency lock and exact digest", () => {
     for (const a of [...PROJ_ASSETS.assets, ...PROJ_ASSETS.grids])
       expect(

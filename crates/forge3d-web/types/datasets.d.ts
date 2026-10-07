@@ -1,7 +1,7 @@
 import type { DatasetMetadata, DatasetRegistryOptions, DatasetFetchOptions, DatasetDem, DatasetDiagnostics } from "./dataset-types.js";
 import type { CrsGeoJson } from "./crs-types.js";
 export type * from "./dataset-types.js";
-export declare const DATASET_BASE_URL = "https://media.githubusercontent.com/media/milos-agathon/forge3d/main/assets/";
+export declare const DATASET_BASE_URL = "https://media.githubusercontent.com/media/milos-agathon/forge3d/043a032cf00bee20a2299514484f811de8a53e9f/assets/";
 /** Registry and verified byte loader. Remote format decoding belongs to W15/W16. */
 export declare class DatasetRegistry {
     #private;

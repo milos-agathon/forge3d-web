@@ -29,6 +29,8 @@ const temp = mkdtempSync(join(tmpdir(), "forge3d-w14-consumer-")),
   consumer = join(temp, "consumer"),
   pack = join(temp, "pack");
 let browser, server;
+const projScriptRequests = [];
+let hostileModuleExecutions = 0;
 function run(command, args, cwd = root) {
   const invocation = resolveCommandInvocation(command, args);
   const r = spawnSync(invocation.command, invocation.args, {
@@ -140,13 +142,24 @@ async function use(runtime:Forge3DRuntime){const crs=await CrsTransformer.create
       const pathname = decodeURIComponent(
         new URL(req.url, "http://localhost").pathname,
       );
+      if (pathname === '/w14-module-executed') {
+        hostileModuleExecutions++;
+        res.end('executed');
+        return;
+      }
       let path = resolve(consumer, "." + pathname);
       const rel = relative(consumer, path);
       if (rel.startsWith("..") || isAbsolute(rel))
         throw Error("outside consumer");
       if (statSync(path).isDirectory()) path = join(path, "index.html");
-      const data = readFileSync(path),
-        mime =
+      let data = readFileSync(path);
+      // Byte fetches get the pinned reference. Any executable import gets a
+      // hostile top-level response, reproducing the former second-fetch flaw.
+      if (pathname.endsWith('/assets/proj/proj-emscripten.js') && req.headers['sec-fetch-dest'] === 'script') {
+        projScriptRequests.push(pathname);
+        data = Buffer.concat([Buffer.from("fetch('/w14-module-executed');throw Error('hostile module executed');\n"), data]);
+      }
+      const mime =
           {
             ".html": "text/html",
             ".js": "text/javascript",
@@ -227,6 +240,10 @@ async function use(runtime:Forge3DRuntime){const crs=await CrsTransformer.create
   assert.equal(alignment.failure.code,"INVALID_INPUT");
   assert.equal(alignment.cancelled.code,"REQUEST_CANCELLED");
   assert(alignment.failureAtomic && alignment.cancelAtomic);
+  assert(alignment.heightError <= 1e-4);
+  assert.deepEqual(alignment.axisControls.map(c=>c.axis),['east-west','north-south']);
+  for(const control of alignment.axisControls)
+    assert(control.pickPixels>100 && control.heightError>5 && !control.rgbaEqual);
   assert.equal(grids.missing.details.kind, "crs-missing-grid");
   assert.equal(grids.bestMissing.details.kind, "crs-missing-grid");
   assert.equal(grids.optional.code, "INVALID_INPUT");
@@ -259,6 +276,8 @@ async function use(runtime:Forge3DRuntime){const crs=await CrsTransformer.create
   await context.setOffline(false);
   assert.deepEqual(errors, []);
   assert.deepEqual(remote, []);
+  assert.deepEqual(projScriptRequests, []);
+  assert.equal(hostileModuleExecutions, 0);
   mkdirSync(join(root, "test-results"), { recursive: true });
   writeFileSync(
     join(root, "test-results/w14-package-consumer.json"),
@@ -271,6 +290,8 @@ async function use(runtime:Forge3DRuntime){const crs=await CrsTransformer.create
         csp,
         networkOffline: true,
         noRemoteRequests: true,
+        noProjAssetScriptImports: true,
+        hostileModuleExecutions,
         results,
       },
       null,

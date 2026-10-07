@@ -2,9 +2,15 @@ import { Forge3DError } from "./index.js";
 import { serveForge3DMessagePort } from "./message-protocol.js";
 import { ProjKernel, type ProjModule } from "./proj-kernel.js";
 
+// The build and dev server append this declaration from digest-verified bytes.
+// No PROJ asset is imported as executable code at runtime.
+declare function PROJModule(options: {
+  wasmBinary: Uint8Array;
+  printErr: (line: string) => void;
+}): Promise<ProjModule>;
+
 interface Request {
   kind: "init" | "metadata" | "transform" | "pipeline";
-  moduleUrl?: string;
   moduleSource?: Uint8Array;
   wasm?: Uint8Array;
   database?: Uint8Array;
@@ -30,19 +36,13 @@ scope.addEventListener("message", (event) => {
     async run(payload) {
       const req = payload as Request;
       if (req.kind === "init") {
-        const factory = (await import(/* @vite-ignore */ req.moduleUrl!))
-          .default as (options: {
-          wasmBinary: Uint8Array;
-          printErr: (line: string) => void;
-        }) => Promise<ProjModule>;
-        // Emscripten's pinned ESM has exactly one declaration and one export.
-        // Compare the function the worker actually loaded with the verified
-        // bytes before invoking it; a second HTTP response may differ.
+        // The embedded declaration cannot run until invoked here. Compare its
+        // exact source to the digest-verified reference before the first call.
         const expected = new TextDecoder("utf-8", { fatal: true }).decode(req.moduleSource!);
-        const actual = Function.prototype.toString.call(factory) + "export default PROJModule;\n";
+        const actual = Function.prototype.toString.call(PROJModule) + "export default PROJModule;\n";
         if (actual !== expected)
-          throw new Forge3DError("IO_ERROR", "Loaded PROJ factory differs from verified module", { kind: "asset-integrity", asset: "proj-emscripten.js" });
-        const module = await factory({
+          throw new Forge3DError("IO_ERROR", "Embedded PROJ factory differs from verified module", { kind: "asset-integrity", asset: "proj-emscripten.js" });
+        const module = await PROJModule({
           wasmBinary: req.wasm!,
           printErr: () => {},
         });

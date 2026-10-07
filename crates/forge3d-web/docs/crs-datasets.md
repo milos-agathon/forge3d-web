@@ -101,16 +101,18 @@ are supplied. A system-to-system transform from
 EPSG NAD27-to-NAD83 operations still require the newer grids.
 
 Serve the package's `dist/` and `assets/` directories together without modifying
-the pinned PROJ module. JavaScript and worker modules use `script-src 'self'`
+the pinned PROJ bytes or emitted worker. JavaScript and worker modules use `script-src 'self'`
 and `worker-src 'self'`; WASM compilation requires `'wasm-unsafe-eval'` where
 the browser enforces it. There is no dependency CDN. Local files must be served
-over HTTP(S). The repository Vite middleware serves the pinned module unchanged
-so HMR cannot change its source. The worker compares the loaded factory's exact
-source with the digest-verified module bytes before invoking it. A second HTTP
-response with changed factory code is rejected. Build verification also checks
-that the pinned module contains only that declaration and its export. The host
-must still trust its worker/module loader and same-origin scripts; this is not
-browser SRI protection against arbitrary top-level module injection. Bundlers should serve the package directories
+over HTTP(S). Packaging verifies the PROJ module's digest before embedding its
+factory declaration in `dist/crs-worker.js`. No PROJ asset URL is imported as
+executable JavaScript. The transformer fetches the original module only as
+verified reference data; the worker compares the embedded factory's exact source
+before calling it and receives verified WASM/database/grid bytes. A hostile second module response
+has no execution path. The dev server embeds the same verified declaration after
+TypeScript compilation and serves worker bytes without HMR rewriting. The host
+must trust the application worker and its ordinary same-origin dependencies.
+Bundlers should serve the package directories
 as static assets; projection asset paths are relative to the installed module.
 
 The W00 `crs-epsg-v1` contract is preserved byte for byte as a JSON record.
@@ -130,7 +132,7 @@ than self round trips. Axis-order, WKT and both grid APIs are also tested.
 and all ten remote native records. `fetch()`, `fetchDem()`, `fetchCityJson()`
 and `fetchCopc()` return verified bytes; format-specific helpers check remote
 registry kinds and accept bundled names, matching native behavior. Default URLs
-use the native repository's `main` branch, selecting Git LFS media for five
+use data-repository commit `043a032cf00bee20a2299514484f811de8a53e9f`, selecting Git LFS media for five
 raster files and raw Git URLs for five ordinary blobs. Content is pinned by
 SHA-256 and size. Two stale native building-file digests are retained as
 `nativeSha256`; the fetch digest pins their actual committed Git bytes. Storage

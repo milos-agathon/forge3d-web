@@ -35,7 +35,7 @@ for name in ['mini_dem.npy', 'sample_boundaries.geojson']:
     if data.startswith(b'version https://git-lfs'):
         expected = re.search(rb'oid sha256:([0-9a-f]{64})',data).group(1).decode()
         expected_size = int(re.search(rb'size (\d+)',data).group(1))
-        data = urllib.request.urlopen(f'https://media.githubusercontent.com/media/milos-agathon/forge3d/main/{path}').read()
+        data = urllib.request.urlopen(f'https://media.githubusercontent.com/media/milos-agathon/forge3d/043a032cf00bee20a2299514484f811de8a53e9f/{path}').read()
         if digest(data) != expected or len(data) != expected_size:
             raise RuntimeError('Native LFS fixture differs from the pinned Git pointer')
     (assets / name).write_bytes(data)
@@ -48,7 +48,7 @@ for node in ast.walk(source):
 write_json(assets / 'provenance.json', {'schemaVersion': 1, 'sourceCommit': COMMIT, 'bundled': provenance, 'remote': records})
 catalog = [dict(name='mini_dem', kind='dem', bundled=True, filename='mini_dem.npy', relativeUrl='mini_dem.npy', sha256=provenance[0]['sha256'], byteLength=provenance[0]['byteLength'], description='Native synthetic 256×256 float32 DEM.', format='npy'), dict(name='sample_boundaries', kind='vector', bundled=True, filename='sample_boundaries.geojson', relativeUrl='sample_boundaries.geojson', sha256=provenance[1]['sha256'], byteLength=provenance[1]['byteLength'], description='Native tutorial boundary polygons in normalized terrain coordinates.', format='geojson', coordinateSpace='normalized')]
 for record in sorted(records, key=lambda r:r['name']):
-    storage = json.loads((assets / 'remote-storage.json').read_text())['entries'][record['name']]
+    storage = json.loads((assets / 'remote-storage.json').read_text(encoding='utf-8'))['entries'][record['name']]
     lfs, size = storage['gitLfs'], storage['byteLength']
     native_hash = record['known_hash'].split(':')[1]
     served_hash = native_hash if lfs else digest(native('assets/' + record['relative_url']))
@@ -93,7 +93,7 @@ terrain_control = dict(crs='EPSG:32632', transform=[499835,10,0,origin_northing+
     world=[[0,0],[-80,-40],[80,40]])
 write_json(fixture_dir / 'crs-epsg-v1.json', {'id':'crs-epsg-v1','oracle':{'implementation':'pyproj','version':pyproj.__version__,'projVersion':pyproj.proj_version_str,'nativeSource':COMMIT+':python/forge3d/crs.py'},'tolerances':{'geographicDegrees':1e-7,'projectedMeters':.01,'roundTripMeters':.02},'cases':cases,'grid':grid_reference,'projJson':pyproj.CRS(32632).to_json_dict(),'wkt':{'wgs84':pyproj.CRS(4326).to_wkt(),'utm32':pyproj.CRS(32632).to_wkt(),'utm32NoId':pyproj.CRS(32632).to_wkt(version='WKT1_GDAL')}})
 fixture_path=fixture_dir / 'crs-epsg-v1.json'
-fixture_value=json.loads(fixture_path.read_text())
+fixture_value=json.loads(fixture_path.read_text(encoding='utf-8'))
 fixture_value['terrain']=terrain_control
 # Published EPSG Guidance Note 7-2 examples, independent of pyproj generation.
 fixture_value['published']=dict(source='https://www.iogp.org/bookstore/wp-content/uploads/sites/2/woocommerce_uploads/2017/01/373-07-02.pdf',

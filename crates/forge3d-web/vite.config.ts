@@ -2,6 +2,8 @@ import { defineConfig } from "vite";
 import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
 import { readFileSync } from 'node:fs';
+import { transpileModule, ModuleKind, ScriptTarget } from 'typescript';
+import { embedProjWorker } from './scripts/embed-proj-worker.mjs';
 
 import { realmFixturePlugin } from "./tests/browser/realm-fixture-server.mjs";
 
@@ -17,8 +19,21 @@ export default defineConfig({
       name: "forge3d-source-wasm-route",
       configureServer(server) {
         server.middlewares.use((request, response, next) => {
-          // The pinned module must be served byte-for-byte: Vite's HMR/import
-            // rewrites would change the factory source checked by the worker.
+          // Append the verified declaration after transpilation so Vite cannot
+          // rewrite its source. The PROJ asset is fetched only as reference data.
+          if (request.url?.split('?')[0] === '/dist/crs-worker.js') {
+            response.setHeader('content-type', 'text/javascript');
+            response.end(readFileSync(new URL('./dist/crs-worker.js', import.meta.url)));
+            return;
+          }
+          if (request.url?.split('?')[0] === '/src-ts/crs-worker.ts') {
+            const source = readFileSync(new URL('./src-ts/crs-worker.ts', import.meta.url), 'utf8');
+            const worker = transpileModule(source, { compilerOptions: { module: ModuleKind.ES2022, target: ScriptTarget.ES2022 } }).outputText
+              .replace(/from "\.\/([a-z-]+)\.js"/g, 'from "/src-ts/$1.ts"');
+            response.setHeader('content-type', 'text/javascript');
+            response.end(embedProjWorker(worker));
+            return;
+          }
           if (request.url?.split('?')[0] === '/assets/proj/proj-emscripten.js') {
             const bytes=readFileSync(new URL('./assets/proj/proj-emscripten.js',import.meta.url));
             response.setHeader('content-type','text/javascript');

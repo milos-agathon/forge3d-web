@@ -92,12 +92,26 @@ window.__w14 = {
   async alignment() {
     const canvas=document.createElement("canvas");canvas.width=256;canvas.height=256;document.body.append(canvas);
     const r=await api.Forge3DRuntime.create(canvas,{width:256,height:256,devicePixelRatio:1});
-    const t=fixture.terrain, heights=Float32Array.from({length:t.width*t.height},(_,i)=>20*Math.exp(-((i%33-16)**2+(Math.floor(i/33)-16)**2)/40));
-    const terrain=api.TerrainDataset.fromArray({...t,heights,domain:[0,30],renderMode:"perspective"});
+    const t=fixture.terrain;
+    // Distinct east/west and north/south slopes plus an off-center summit.
+    const heights=Float32Array.from({length:t.width*t.height},(_,i)=>{
+      const col=i%t.width,row=Math.floor(i/t.width);
+      return 2+.5*col+.25*row+18*Math.exp(-((col-8)**2+(row-12)**2)/20);
+    });
+    const terrain=api.TerrainDataset.fromArray({...t,heights,domain:[0,40],renderMode:"perspective"});
+    // Independent raster control samples: center, northwest, southeast.
+    const sampleIndices=[16*t.width+16,12*t.width+8,20*t.width+24];
+    const expectedHeights=sampleIndices.map(i=>heights[i]+1);
     const layers=new VectorLayers();
     const feature=(id,position)=>({id,kind:"point",position});
     const style={pointSize:14,color:[1,0,0,1],drape:true,drapeOffset:1};
     const frame=async()=>{r.render();return {rgba:Array.from(await r.readRgba()),pick:await r.readVectorPickMap()};};
+    const heightError=pick=>{
+      let maximum=0;
+      for(let i=0;i<pick.ids.length;i++)if(pick.ids[i])
+        maximum=Math.max(maximum,Math.abs(pick.worldPositions[i*3+1]-expectedHeights[pick.ids[i]-701]));
+      return maximum;
+    };
     try {
       r.setTerrain(terrain);
       r.setCamera({position:[0,450,0],target:[0,0,0],up:[0,0,-1],fovYDegrees:50,near:.1,far:2000});
@@ -114,7 +128,8 @@ window.__w14 = {
         labelCount=labels.labels.length;
         labelError=Math.max(...labels.labels.map((f,i)=>Math.max(Math.abs(f.geometry.coordinates[0]-t.world[i][0]),Math.abs(f.geometry.coordinates[1]-t.world[i][1]))));
       } finally {crs.dispose();}
-      const manual=new VectorLayers();manual.add({name:"local",features:t.world.map((p,i)=>feature(701+i,[p[0],0,p[1]])),style});
+      // Reference heights come directly from raster indices, bypassing draping.
+      const manual=new VectorLayers();manual.add({name:"local",features:t.world.map((p,i)=>feature(701+i,[p[0],expectedHeights[i],p[1]])),style:{...style,drape:false}});
       r.setVectorLayers(manual,terrain);
       const reference=await frame();
       const bad=layers.snapshot();bad.layers[0].crs="EPSG:99999999";
@@ -128,8 +143,21 @@ window.__w14 = {
       r.setVectorLayers(absolute,terrain);
       const negative=await frame();
       const visible=p=>Array.from(p.ids).filter(id=>id>0).length;
+      const axisControls=[];
+      for(const axis of ["east-west","north-south"]){
+        const reversed=Float32Array.from(heights,(_,i)=>{
+          const col=i%t.width,row=Math.floor(i/t.width);
+          return heights[(axis==="north-south" ? t.height-1-row : row)*t.width+(axis==="east-west" ? t.width-1-col : col)];
+        });
+        const flipped=api.TerrainDataset.fromArray({...t,heights:reversed,domain:[0,40],renderMode:"perspective"});
+        r.setTerrain(flipped);
+        await r.setVectorLayers(layers);
+        const result=await frame();
+        axisControls.push({axis,pickPixels:visible(result.pick),heightError:heightError(result.pick),
+          rgbaEqual:result.rgba.every((v,i)=>v===reference.rgba[i])});
+      }
       const ids=Array.from(new Set(geographic.pick.ids)).filter(id=>id>0).sort();
-      return {ids,labelError,labelCount,failure,cancelled,
+      return {ids,labelError,labelCount,failure,cancelled,expectedHeights,heightError:heightError(geographic.pick),axisControls,
         failureAtomic:reference.rgba.every((v,i)=>v===afterFailure.rgba[i]),
         cancelAtomic:reference.rgba.every((v,i)=>v===afterCancel.rgba[i]),pickPixels:visible(geographic.pick),referencePixels:visible(reference.pick),negativePixels:visible(negative.pick),
         pickEqual:Array.from(geographic.pick.ids).every((v,i)=>v===reference.pick.ids[i]),
@@ -414,7 +442,7 @@ window.__w14 = {
 };
 document.querySelector("#run")?.addEventListener("click", async () => {
   const output = document.querySelector("#result");
-  output.textContent = "LoadingÃ¢â‚¬Â¦";
+  output.textContent = "Loading…";
   try {
     const [coordinates, datasets] = await Promise.all([
       window.__w14.coordinates(),

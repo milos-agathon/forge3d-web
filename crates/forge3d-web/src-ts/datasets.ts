@@ -14,7 +14,7 @@ import type { CrsGeoJson } from "./crs-types.js";
 export type * from "./dataset-types.js";
 const VERSION = "native-1f4084af428dc699bdcd108b029736cb73903926";
 export const DATASET_BASE_URL =
-  "https://media.githubusercontent.com/media/milos-agathon/forge3d/main/assets/";
+  "https://media.githubusercontent.com/media/milos-agathon/forge3d/043a032cf00bee20a2299514484f811de8a53e9f/assets/";
 
 /** Registry and verified byte loader. Remote format decoding belongs to W15/W16. */
 export class DatasetRegistry {
@@ -106,7 +106,7 @@ export class DatasetRegistry {
       ? (this.#options.bundledBaseUrl ??
         new URL("../assets/datasets/", import.meta.url))
       : (this.#options.baseUrl ?? (entry.gitLfs === false
-          ? "https://raw.githubusercontent.com/milos-agathon/forge3d/main/assets/"
+          ? "https://raw.githubusercontent.com/milos-agathon/forge3d/043a032cf00bee20a2299514484f811de8a53e9f/assets/"
           : DATASET_BASE_URL));
     const directory = new URL(base, import.meta.url);
     if (!directory.pathname.endsWith("/")) directory.pathname += "/";

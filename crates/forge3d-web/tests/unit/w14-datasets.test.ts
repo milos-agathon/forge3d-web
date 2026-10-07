@@ -66,9 +66,13 @@ describe("W14 native datasets and verified storage", () => {
     const info = registry.info("rainier");
     info.sha256 = "changed";
     expect(registry.info("rainier").sha256).not.toBe("changed");
-    expect(DATASET_BASE_URL).toContain(
-      "media.githubusercontent.com/media/milos-agathon/forge3d/main/",
-    );
+    const storage = JSON.parse(new TextDecoder().decode(read("remote-storage.json")));
+    expect(storage.commit).toMatch(/^[a-f0-9]{40}$/);
+    expect(DATASET_BASE_URL).toContain(`/forge3d/${storage.commit}/assets/`);
+    for (const name of registry.remote()) {
+      expect(registry.url(name).pathname).toContain(`/forge3d/${storage.commit}/`);
+      expect(registry.url(name).pathname.endsWith(storage.entries[name].path)).toBe(true);
+    }
     expect(() => registry.info("unknown")).toThrow("Unknown dataset");
     expect(registry.url("rainier").href).toContain("tif/dem_rainier.tif");
     expect(registry.info("sample_boundaries")).toMatchObject({

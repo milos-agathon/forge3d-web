@@ -192,7 +192,6 @@ export class CrsTransformer {
     await this.run(
       {
         kind: "init",
-        moduleUrl: new URL("proj-emscripten.js", base).href,
         moduleSource: assets.get("proj-emscripten.js")!,
         wasm,
         database,

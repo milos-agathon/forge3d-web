@@ -19,7 +19,7 @@ exports. Regeneration fails if the two native source snapshots diverge.
 Native Python/NumPy/backend detection becomes ESM, float arrays and explicit
 worker capability errors. Filesystem paths and local checkout lookup become
 package-relative HTTP URLs and content-addressed browser caches. Remote URLs
-use the live native repository's main branch with size/digest pinning. Five
+pin data-repository commit `043a032cf00bee20a2299514484f811de8a53e9f` with size/digest checks. Five
 raster assets use Git LFS media; five ordinary Git blobs use the raw endpoint.
 The registry preserves every native remote name, kind, description and filename.
 Two stale native hashes are exposed as `nativeSha256`: Fuji buildings had a
@@ -71,12 +71,15 @@ The dependency remains exactly `proj-wasm@0.1.0-alpha9`, using the W00 tarball
 SHA-256/SRI. `prepare-w14-assets.mjs` compares each installed upstream file
 against the verified archive. Normal packaging verifies checked-in file
 digests against the W00 dependency lock and retains all assets in the emitted
-package manifest. The module, WASM, database and configuration are unmodified. Before invoking
-PROJ, the worker compares the factory it actually imported with the verified
-source bytes. A different second HTTP response fails before factory invocation.
-Build verification asserts the single-declaration/export module shape. The
-same-origin worker/module loader remains trusted; this is not a browser SRI
-sandbox for arbitrary top-level script injection.
+package manifest. The original module, WASM, database and configuration remain
+unmodified. Packaging checks the module digest before embedding its factory
+declaration into the application worker. Development uses the same checked
+declaration after transpilation. The worker compares that declaration against
+verified reference bytes before invoking it. No PROJ asset URL is imported as
+executable code, so a hostile second response or injected top-level asset code
+cannot run. Build verification evaluates no third-party module. The emitted
+worker is covered by the package asset manifest. The application worker and its
+ordinary same-origin dependencies remain the host's trusted code.
 PROJ database metadata reports PROJ 9.8.1, EPSG v12.029 and PROJ data 1.24.
 
 The conus grid is frozen as `proj-data-conus-v1`, 173029 bytes, SHA-256
@@ -117,7 +120,11 @@ types, vector/label transactionality, persistent offline cache, expected-digest
 poisoning, real grid corruption, setup/worker cancellation, memory admission,
 backend absence, disposal and an actual destroyed GPU device. A real terrain
 render compares automatically projected vectors with independent local control
-positions: both RGBA and pick IDs match, with nonempty coverage. Absolute
+positions and explicit heights from three raster samples: both RGBA and pick
+IDs match, with nonempty coverage. An asymmetric slope and off-center summit
+make both axis orientations observable. Reversing either axis changes the
+render and produces height errors greater than 5 m against the control samples.
+Absolute
 projected-coordinate negative controls have zero visible picks. Terrain-aligned
 labels, ingestion failure and superseding cancellation are asserted as well.
 
@@ -152,7 +159,7 @@ remote datasets using default registry settings and verified full size/digests.
 CI runs both the offline installed-package and live dataset gates.
 
 The corrected fixture is UTF-8/LF, SHA-256
-`2f37bf8784e94e35a209ed930d7815f17412820dc4fc0108e5e36cc9ba79e723`.
+`14876bb676e5860f33384368e74e50251af6ad3d4ffff0f8b2371e2d5c2234ea`.
 The independent and published controls measured maximum errors of
 0.007733375794487074 m projected, 9.082683283256898e-8 geographic degrees,
 and 9.313225746154785e-10 m projected round trip. Both grid paths have zero
@@ -160,7 +167,11 @@ error against their independent controls. The geographic value is an oracle
 comparison, not a self round trip.
 
 Automatic terrain alignment matches the independent frame byte for byte in
-RGBA and pick IDs, with 618 visible vector pixels and three stable feature IDs.
+RGBA and pick IDs, with 622 visible vector pixels and three stable feature IDs.
+Explicit raster-sample heights differ by at most 0.0000019073486328125 m in the
+GPU pick readback. East/west and north/south reversal controls retain visible
+coverage but produce errors of 9.99995231628418 m and 15.266280174255371 m,
+respectively, and different rendered images.
 The absolute-coordinate negative control has zero visible vector pixels.
 Three aligned labels have maximum horizontal error 9.313225746154785e-10 m.
 Failed and superseded ingestion retain the committed reference image. The

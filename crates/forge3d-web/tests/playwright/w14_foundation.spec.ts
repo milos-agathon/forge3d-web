@@ -23,23 +23,65 @@ test("W14 geographic vectors align with terrain in a real render", async ({page,
   expect(r.failure.code).toBe("INVALID_INPUT");
   expect(r.cancelled.code).toBe("REQUEST_CANCELLED");
   expect(r.failureAtomic && r.cancelAtomic).toBe(true);
+  expect(r.heightError).toBeLessThanOrEqual(1e-4);
+  expect(r.axisControls.map((c:any)=>c.axis)).toEqual(["east-west","north-south"]);
+  for(const control of r.axisControls){
+    expect(control.pickPixels).toBeGreaterThan(100);
+    expect(control.heightError).toBeGreaterThan(5);
+    expect(control.rgbaEqual).toBe(false);
+  }
 });
-test("W14 rejects a different factory on the worker module import", async ({page})=>{
-  let reads=0;
+test("W14 never imports a second PROJ response containing hostile top-level code", async ({page})=>{
+  let reads=0,executed=0;
+  await page.route("**/w14-module-executed",async route=>{executed++;await route.fulfill({body:"executed"});});
   await page.route("**/assets/proj/proj-emscripten.js",async route=>{
     const response=await route.fetch();
     const text=await response.text();
-    await route.fulfill({response,body:++reads === 1 ? text : text.replace("var Module=moduleArg;","throw new Error('tampered factory executed');var Module=moduleArg;")});
+    await route.fulfill({response,body:++reads === 1 ? text : "fetch('/w14-module-executed');throw Error('hostile top-level code executed');\n"+text});
   });
   await page.goto("/examples/crs-datasets.html?dist");
   await page.waitForFunction(()=>!!window.__w14);
   const result=await page.evaluate(async()=>{
-    try { const crs=await window.__w14.api.CrsTransformer.create({cache:null});crs.dispose();return null; }
-    catch(e:any){return {code:e.code,details:e.details,message:e.message};}
+    const crs=await window.__w14.api.CrsTransformer.create({cache:null});
+    try {return await crs.transformCoords([[9,40]],"EPSG:4326","EPSG:32632");}
+    finally {crs.dispose();}
   });
-  expect(reads).toBe(2);
+  expect(reads).toBe(1);
+  expect(result[0][0]).toBeCloseTo(500000,2);
+  expect(executed).toBe(0);
+});
+test("W14 rejects hostile top-level PROJ asset bytes without executing them", async ({page})=>{
+  let executed=0;
+  await page.route("**/w14-module-executed",async route=>{executed++;await route.fulfill({body:"executed"});});
+  await page.route("**/assets/proj/proj-emscripten.js",async route=>{
+    const response=await route.fetch();
+    await route.fulfill({response,body:"fetch('/w14-module-executed');\n"+await response.text()});
+  });
+  await page.goto("/examples/crs-datasets.html?dist");
+  await page.waitForFunction(()=>!!window.__w14);
+  const result=await page.evaluate(async()=>{
+    try {await window.__w14.api.CrsTransformer.create({cache:null});return null;}
+    catch(e:any){return {code:e.code,details:e.details};}
+  });
   expect(result).toMatchObject({code:"IO_ERROR",details:{kind:"asset-integrity",asset:"proj-emscripten.js"}});
-  expect(result?.message).not.toContain("tampered factory executed");
+  expect(executed).toBe(0);
+});
+test("W14 checks the embedded factory before its body can execute", async ({page})=>{
+  let executed=0;
+  await page.route("**/w14-module-executed",async route=>{executed++;await route.fulfill({body:"executed"});});
+  await page.route("**/dist/crs-worker.js",async route=>{
+    const response=await route.fetch();
+    const body=(await response.text()).replace("var Module=moduleArg;","fetch('/w14-module-executed');throw Error('hostile factory executed');var Module=moduleArg;");
+    await route.fulfill({response,body});
+  });
+  await page.goto("/examples/crs-datasets.html?dist");
+  await page.waitForFunction(()=>!!window.__w14);
+  const result=await page.evaluate(async()=>{
+    try {await window.__w14.api.CrsTransformer.create({cache:null});return null;}
+    catch(e:any){return {code:e.code,details:e.details};}
+  });
+  expect(result).toMatchObject({code:"IO_ERROR",details:{kind:"asset-integrity",asset:"proj-emscripten.js"}});
+  expect(executed).toBe(0);
 });
 for (const dist of [false, true]) {
   test(`W14 CRS controls, WKT and axis order (${dist ? "dist" : "source"})`, async ({
