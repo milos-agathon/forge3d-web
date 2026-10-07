@@ -147,15 +147,24 @@ Verification commands:
 
 The earlier 933-test pass was checkout-dependent: the fixture digest used CRLF
 bytes while Git checks out LF. Default remote dataset URLs also returned 404.
-The previous completion claim is withdrawn. The corrective implementation at
-`6dcf61a` was verified in a separate detached checkout, starting with `npm ci`, fresh package outputs and a full build
-(including recompilation of both Rust crates). The same clean checkout then
-verified `9181165`, which only adds published EPSG cases to the browser harness.
-The checkout was clean after verification. All 942 unit tests, ten Chromium
-W14 cases, public API/declaration checks, nine documentation checks, fifteen
-parity tests, the emitted package contract and the strict-CSP/offline installed
-consumer passed. The live integration gate downloaded every one of the ten
-remote datasets using default registry settings and verified full size/digests.
+The previous completion claim is withdrawn. Follow-up review also found that
+the LF fixture's free text contained double-encoded Unicode, downloads used a
+mutable branch, the rendered terrain was symmetric, and the module check ran
+after import. Commit `57b96e6` fixes all four. Explicit UTF-8 reads preserve degree
+symbols even when the generator runs with Windows legacy encoding; repeated
+regeneration produces the same fixture bytes.
+
+On 2026-10-07, `57b96e6` was verified in a new detached checkout with `npm ci`,
+fresh package outputs and a full build, including recompilation of both Rust
+crates. All 944 unit tests, twelve Chromium W14 cases, public API/declaration
+checks, nine documentation checks, fifteen parity tests, the prepared emitted
+package contract and the strict-CSP/offline installed consumer passed. The
+hostile-code controls prove that raw PROJ assets are never imported as scripts,
+injected top-level bytes are rejected without execution, and a changed embedded
+factory is rejected before its body executes. The live integration gate
+downloaded all ten remote datasets from the immutable data commit using default
+settings and verified 319872562 bytes against the pinned sizes/digests. Both
+media and raw endpoints return HTTP 200 with `Access-Control-Allow-Origin: *`.
 CI runs both the offline installed-package and live dataset gates.
 
 The corrected fixture is UTF-8/LF, SHA-256
@@ -202,6 +211,8 @@ npm run test:docs
 npx playwright test tests/playwright/w14_foundation.spec.ts --project=chromium-preflight
 npm run test:package-consumer:w14
 npm run test:datasets:remote
+npm run prepare-dist # restore packaging rewrites after test:datasets:remote's TypeScript build
+node tests/api/package-contract.mjs
 npm run test:package
 npm run verify:parity
 ```

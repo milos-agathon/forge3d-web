@@ -782,7 +782,7 @@ task remains unambiguous when read or reviewed in isolation.
 
 ### W14 — CRS And Dataset Foundation
 
-- Code status: **Implemented; W14 acceptance verified** — separate clean checkout passes 942 unit tests, full build, ten browser cases and installed/offline package acceptance; all ten real remote datasets fetch with pinned hashes. Independent inverse/published controls and terrain render alignment meet acceptance. Aggregate package still has three unrelated Windows symlink-permission failures. See [W14 evidence](../../parity/w14-implementation.md).
+- Code status: **Implemented; W14 acceptance verified** — separate clean checkout passes 944 unit tests, full build, twelve browser cases and installed/offline package acceptance; all ten real remote datasets fetch from an immutable commit with pinned hashes. UTF-8 fixture content, independent inverse/published controls, asymmetric terrain alignment and pre-execution PROJ integrity checks meet acceptance. Aggregate package still has three unrelated Windows symlink-permission failures. See [W14 evidence](../../parity/w14-implementation.md).
 
 - Scope: G01 and E06.
 - Files/APIs: TS CRS transforms and dataset registry/fetch/cache/integrity;
