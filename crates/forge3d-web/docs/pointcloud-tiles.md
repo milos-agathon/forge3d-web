@@ -8,6 +8,11 @@ W16 acceptance remains pending: physical reference-profile qualification and
 the dependency lock's mandatory laz-perf security review are open. Current
 codec consumption is experimental conformance testing.
 
+`renderer.getStats(false)` reads allocation counters without computing the
+timing percentile. Use it when polling each frame; call `getStats()` when a
+timing report is needed. The acceptance soak still times the complete update,
+cache misses, upload and GPU completion path.
+
 ## Load and render points
 
 ```ts

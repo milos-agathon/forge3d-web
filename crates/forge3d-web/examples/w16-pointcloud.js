@@ -566,6 +566,19 @@ async function workload() {
     owner.dispose();
   }
 }
+async function tileReferences() {
+  const corpus = await (await fetch(url('tile-traversal-v2.json'))).json(), actual = [];
+  for (const [name, document] of Object.entries(corpus.documents)) {
+    const tiles = api.Tileset.fromJson(document, url('tileset.json'));
+    try {
+      for (const record of corpus.records.filter(r => r.document === name)) {
+        actual.push(new api.TilesetTraverser(record.options).visibleTiles(tiles, record.view)
+          .map(n => ({ uri: n.tile.content.uri.split('/').at(-1), depth: n.depth, sse: Number(n.sse.toFixed(9)) })));
+      }
+    } finally { tiles.dispose(); }
+  }
+  return { actual, expected: corpus.records.map(r => r.nodes), coverage: corpus.coverage };
+}
 async function soak(durationMs = 600000, targetProfile = "reference-discrete") {
   layer?.dispose();
   pool?.dispose();
@@ -589,6 +602,7 @@ async function soak(durationMs = 600000, targetProfile = "reference-discrete") {
   renderer.resize(1920, 1080);
   const start = performance.now(),
     times = [],
+    phaseTimes = { update: [], upload: [], render: [] },
     selections = new Set(),
     visited = new Set();
   let frames = 0,
@@ -612,6 +626,7 @@ async function soak(durationMs = 600000, targetProfile = "reference-discrete") {
             );
     visited.add(index);
     const selected = await layer.update(v);
+    const updated = performance.now();
     if (
       frames % 30 === 0 &&
       JSON.stringify(
@@ -626,8 +641,12 @@ async function soak(durationMs = 600000, targetProfile = "reference-discrete") {
         "Soak selection differs from the independent ADD/frustum oracle",
       );
     renderer.setLayers([layer]);
+    const uploaded = performance.now();
     await renderer.render(v);
     const elapsed = performance.now() - frameStart;
+    phaseTimes.update.push(updated - frameStart);
+    phaseTimes.upload.push(uploaded - updated);
+    phaseTimes.render.push(performance.now() - uploaded);
     times.push(elapsed);
     layer.recordFrameTime(elapsed);
     const layerStats = layer.stats();
@@ -640,14 +659,15 @@ async function soak(durationMs = 600000, targetProfile = "reference-discrete") {
     )
       throw Error("Soak lost its coarse root or exceeded point budget");
     frames++;
-    maxBytes = Math.max(maxBytes, renderer.getStats().gpuBytes);
+    const frameStats = renderer.getStats(false);
+    maxBytes = Math.max(maxBytes, frameStats.gpuBytes);
     maxCpuBytes = Math.max(
       maxCpuBytes,
       layerStats.cpuBytes +
         dataset.stats().decoded.cacheUsed +
         dataset.stats().compressed.bytes,
     );
-    baseline = Math.max(baseline, renderer.getStats().gpuBytes);
+    baseline = Math.max(baseline, frameStats.gpuBytes);
     await new Promise(requestAnimationFrame);
   }
   times.sort((a, b) => a - b);
@@ -667,6 +687,11 @@ async function soak(durationMs = 600000, targetProfile = "reference-discrete") {
     maxCpuBytes,
     stats,
     frameP95Ms: times[Math.ceil(times.length * 0.95) - 1],
+    measurement: { coldStartIncluded: true, timedStages: ['camera', 'layer.update (including fetch/decode misses)', 'setLayers', 'render through onSubmittedWorkDone'], presentationWaitBetweenSamples: true },
+    phases: Object.fromEntries(Object.entries(phaseTimes).map(([name, values]) => {
+      values.sort((a, b) => a - b);
+      return [name, { p50Ms: values[Math.floor(values.length / 2)], p95Ms: values[Math.ceil(values.length * .95) - 1], maxMs: values.at(-1) }];
+    })),
     selectionCount: selections.size,
     keyframesVisited: visited.size,
     totalPoints: dataset.totalPoints,
@@ -735,6 +760,7 @@ window.__w16 = {
   workload,
   soak,
   meshRendering,
+  tileReferences,
 };
 status.textContent = "Ready. Choose a dataset.";
 document.querySelector("#demo").onclick = () =>

@@ -249827,6 +249827,11 @@
       "sha256": "ea01a70f69342b1abafac13d73a1e1096cc7033e4ee84e8196dec7a10793be73"
     },
     {
+      "path": "tile-traversal-v2.json",
+      "bytes": 1294851,
+      "sha256": "8c7b75dd6ef7706f22baaab7f8a1d061ba733c5c3511edeab9eae9493139d91e"
+    },
+    {
       "path": "tileset.json",
       "bytes": 320,
       "sha256": "c007000493989e01308de657dbadcd29b8fdd95eeb0f16eb52b1b88d72ca8c09"
@@ -259176,5 +259181,12 @@
       "bytes": 701,
       "sha256": "0df72e4c4dd11e18347cd83fe464a4fda59fb539f893dff612c5f1c0e273b6fa"
     }
-  ]
+  ],
+  "expandedTileCoverage": {
+    "records": 256,
+    "camerasPerDocument": 64,
+    "nodesPerDocument": 85,
+    "uniqueSelections": 40,
+    "refineNegativeControl": true
+  }
 }

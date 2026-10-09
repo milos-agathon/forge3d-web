@@ -82,7 +82,7 @@ export function computePointSse(bounds: PointBounds, view: PointView): number {
 }
 /** Stable max heap avoids sorting the whole frontier for each visited node. */
 class PointFrontier {
-  #heap: { node: PointNode; priority: number; order: number }[] = [];
+  #heap: { node: PointNode; priority: number; sse: number; order: number }[] = [];
   #order = 0;
   #before(
     a: { priority: number; order: number },
@@ -96,8 +96,8 @@ class PointFrontier {
   get length(): number {
     return this.#heap.length;
   }
-  push(node: PointNode, priority: number): void {
-    const entry = { node, priority, order: this.#order++ };
+  push(node: PointNode, priority: number, sse: number): void {
+    const entry = { node, priority, sse, order: this.#order++ };
     let i = this.#heap.length;
     this.#heap.push(entry);
     while (i) {
@@ -108,7 +108,7 @@ class PointFrontier {
     }
     this.#heap[i] = entry;
   }
-  pop(): PointNode {
+  pop(): { node: PointNode; priority: number; sse: number } {
     const root = this.#heap[0]!,
       last = this.#heap.pop()!;
     if (this.#heap.length) {
@@ -126,7 +126,7 @@ class PointFrontier {
       }
       this.#heap[i] = last;
     }
-    return root.node;
+    return root;
   }
 }
 export class PointCloudTraverser {
@@ -170,16 +170,18 @@ export class PointCloudTraverser {
     const queue = new PointFrontier(),
       result: VisiblePointNode[] = [];
     let used = 0;
-    const priority = (n: PointNode) => {
+    const fovFactor = 2 * Math.tan(view.fovY / 2);
+    const enqueue = (n: PointNode) => {
       const d = pointDistance(boundsCenter(n.bounds), view.position),
         r = boundsRadius(n.bounds);
-      return d < r ? Number.MAX_VALUE : r / Math.max(d, 0.001);
+      queue.push(n, d < r ? Number.MAX_VALUE : r / Math.max(d, 0.001),
+        ((r / Math.max(0.001, d)) * view.viewportHeight) / fovFactor);
     };
     const root = dataset.rootNode();
-    queue.push(root, priority(root));
+    enqueue(root);
     while (queue.length && used < this.pointBudget) {
       pointCancelled(signal);
-      const node = queue.pop();
+      const { node, priority, sse } = queue.pop();
       if (
         node.depth > this.maxDepth ||
         !boundsInView(node.bounds, view.viewProjection)
@@ -189,8 +191,7 @@ export class PointCloudTraverser {
       // Never load or select detail below a node rejected by the point budget.
       if (this.mode === "add" && used + node.pointCount > this.pointBudget)
         continue;
-      const sse = computePointSse(node.bounds, view),
-        refine =
+      const refine =
           node.depth < this.maxDepth &&
           sse > this.sseThreshold &&
           node.spacing >= this.minSpacing;
@@ -198,11 +199,11 @@ export class PointCloudTraverser {
       pointCancelled(signal);
       if (this.mode === "add" || !children.length) {
         if (used + node.pointCount <= this.pointBudget) {
-          result.push({ ...node, priority: priority(node), sse });
+          result.push({ ...node, priority, sse });
           used += node.pointCount;
         }
       }
-      for (const child of children) queue.push(child, priority(child));
+      for (const child of children) enqueue(child);
     }
     return result;
   }

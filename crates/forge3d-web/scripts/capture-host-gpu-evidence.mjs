@@ -170,6 +170,8 @@ function liveEvidence(platform) {
     sessionType: process.env.XDG_SESSION_TYPE ?? "",
     waylandDisplay: process.env.WAYLAND_DISPLAY ?? "",
     driver: tryRun("glxinfo", ["-B"]) || tryRun("vulkaninfo", ["--summary"]),
+    // W00 qualification needs the Vulkan device API even when glxinfo succeeds.
+    vulkan: tryRun("vulkaninfo", ["--summary"]),
   };
 }
 

@@ -15,6 +15,8 @@ import { validateSaf03EvidenceEnvelope } from "./saf03-proof-validator.mjs";
 import { assertExactSafariRoute, validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
 import { validateFfx04LifecycleProof } from "./ffx04-lifecycle-proof-validator.mjs";
 import { FFX04_LANES, isFfx04Lane } from "./ffx04-lanes.mjs";
+import { isW16Lane, W16_LANES } from './w16-lanes.mjs';
+import { qualifyW16Proof } from './w16-hardware-proof-validator.mjs';
 
 const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
 const CHR04_REQUIRED_LANES = new Set(Object.keys(CHR04_LANES));
@@ -35,6 +37,10 @@ export function createAutomatedMatrixRecord({
     promotion.labInfrastructureDigest,
   );
   assertRuntimeProvenance(evidence);
+  const w16Qualification = isW16Lane(promotion.lane) ? qualifyW16Proof(evidence.w16Proof, {
+    lane: promotion.lane, assetId: promotion.assetId, platform: W16_LANES[promotion.lane].platform,
+    runId: run.id, jobId: evidence.jobId, commit: promotion.trustedSha, packageSha256: evidence.packageSha256,
+  }, attestation, hostInventory) : null;
   if (CHR03_REQUIRED_LANES.has(promotion.lane)) {
     validateChr03HardwareProof(evidence.chr03Proof, {
       lane: promotion.lane,
@@ -193,11 +199,12 @@ export function createAutomatedMatrixRecord({
     ...(evidence.inventoryCapturedAt
       ? { inventoryCapturedAt: evidence.inventoryCapturedAt }
       : {}),
-    hostInventory: safariTrackpadRecord
+    hostInventory: safariTrackpadRecord || w16Qualification
       ? structuredClone(hostInventory)
       : null,
     route: safariTrackpadRecord ? structuredClone(evidence.route) : null,
     result: "PASS",
+    ...(w16Qualification ? { w16Proof: structuredClone(evidence.w16Proof), w16Qualification } : {}),
     infrastructureError: null,
     workflow: {
       runId: run.id,
@@ -221,6 +228,7 @@ export function createAutomatedMatrixRecord({
     } : {}),
     saf04Proof: evidence.saf04Proof ? structuredClone(evidence.saf04Proof) : null,
     ffx04Proof: evidence.ffx04Proof ? structuredClone(evidence.ffx04Proof) : null,
+    ...(w16Qualification ? { hardwareJobId: evidence.jobId } : {}),
     ...(isFfx04Lane(promotion.lane)
       ? { fixtureApplicationUrl: evidence.route.applicationUrl, sourceJobId: evidence.jobId }
       : {}),
@@ -369,6 +377,13 @@ export function finalizeMatrixRecord({
   attestation,
   selectedRun,
 }) {
+  if (isW16Lane(source?.lane)) {
+    qualifyW16Proof(source.w16Proof, {
+      lane: source.lane, assetId: source.assetId, platform: W16_LANES[source.lane].platform,
+      runId: source.workflow?.runId, jobId: source.hardwareJobId,
+      commit: source.trustedSha, packageSha256: source.packageSha256,
+    }, source.adapterAttestation, source.hostInventory);
+  }
   const allowedWorkflowPaths = new Set([
     ".github/workflows/browser-hardware.yml",
     ".github/workflows/submit-browser-manual-evidence.yml",

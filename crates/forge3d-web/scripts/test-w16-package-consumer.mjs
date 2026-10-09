@@ -260,6 +260,10 @@ const view:PointView={position:[0,0,10],viewportHeight:1080,fovY:Math.PI/4};cons
       .map((r) => r.nodes),
   );
   const rendering = await page.evaluate(() => window.__w16.rendering());
+  const tileReferences = await page.evaluate(() => window.__w16.tileReferences());
+  assert.deepEqual(tileReferences.actual, tileReferences.expected);
+  assert.equal(tileReferences.coverage.records, 256);
+  assert(tileReferences.coverage.uniqueSelections >= 20);
   assert(rendering.lost);
   assert.equal(rendering.pressure.code, "RESOURCE_LIMIT_EXCEEDED");
   assert.equal(rendering.pressure.before, rendering.pressure.after);
@@ -298,6 +302,7 @@ const view:PointView={position:[0,0,10],viewportHeight:1080,fovY:Math.PI/4};cons
     rendering,
     meshes,
     workload,
+    tileReferences,
     pageErrors: errors,
     externalRequests: remote,
   };
@@ -322,38 +327,53 @@ const view:PointView={position:[0,0,10],viewportHeight:1080,fovY:Math.PI/4};cons
   );
   if (process.env.FORGE3D_W16_SOAK === "1") {
     const target = process.env.FORGE3D_W16_PROFILE ?? "reference-discrete";
-    const result = await page.evaluate(
-      (target) => window.__w16.soak(600000, target),
-      target,
-    );
-    writeFileSync(
-      join(root, "test-results/w16-soak.json"),
-      JSON.stringify(
+    const runs = Number(process.env.FORGE3D_W16_RUNS ?? 1);
+    assert(Number.isInteger(runs) && runs >= 1 && runs <= 3, 'W16_RUNS must be 1..3');
+    const retained = process.env.FORGE3D_W16_RETAIN_REPORTS === '1';
+    const batchId = new Date().toISOString().replaceAll(/[^0-9TZ]/gu, '');
+    if (retained) mkdirSync(join(root, 'docs/w16-runs'), { recursive: true });
+    for (let runIndex = 1; runIndex <= runs; runIndex++) {
+      console.log(`Starting W16 ten-minute installed-tarball run ${runIndex}/${runs}`);
+      const result = await page.evaluate(
+        (target) => window.__w16.soak(600000, target),
+        target,
+      );
+      const observed = JSON.stringify(
         {
           ...result,
           verifiedAt: new Date().toISOString(),
           browserVersion: browser.version(),
           packageSha256: sha256,
+          runIndex,
+          batchId,
+          fixtureSha256: createHash('sha256').update(readFileSync(join(root, 'tests/fixtures/w16/copc-ept-tiles-v1.json'))).digest('hex'),
+          cameraHarnessSha256: createHash('sha256').update(readFileSync(join(root, 'examples/w16-pointcloud.js'))).digest('hex'),
         },
         null,
         2,
-      ) + "\n",
-    );
-    assert(result.durationMs >= 600000);
-    assert.equal(result.keyframesVisited, 64);
-    assert.equal(result.totalPoints, 1000000);
-    assert(result.selectionCount >= 32);
-    assert(result.minPoints < result.maxPoints);
-    assert(result.maxPoints <= 300000);
-    assert(result.coveredPixels > 150);
-    assert(result.maxCpuBytes <= result.budgets.cpuBudgetBytes);
-    assert(result.stats.peakGpuBytes <= result.budgets.gpuBudgetBytes);
-    assert(result.stats.peakGpuBytes <= result.stats.memoryBudgetBytes);
-    assert.equal(result.disposed.gpuBytes, 0);
-    assert(result.frameP95Ms <= result.budgets.p95Ms);
-    assert.deepEqual(errors, []);
-    assert.deepEqual(remote, []);
-    console.log(JSON.stringify(result, null, 2));
+      ) + "\n";
+      writeFileSync(join(root, 'test-results/w16-soak.json'), observed);
+      writeFileSync(join(root, `test-results/w16-soak-${runIndex}.json`), observed);
+      if (retained) writeFileSync(join(root, `docs/w16-runs/installed-${batchId}-${runIndex}.json`), observed);
+      console.log(JSON.stringify({ runIndex, frames: result.frames, frameP95Ms: result.frameP95Ms,
+        phases: result.phases, adapter: result.adapter, maxCpuBytes: result.maxCpuBytes,
+        peakGpuBytes: result.stats.peakGpuBytes }));
+      assert(result.durationMs >= 600000);
+      assert.equal(result.keyframesVisited, 64);
+      assert.equal(result.totalPoints, 1000000);
+      assert(result.selectionCount >= 32);
+      assert(result.minPoints < result.maxPoints);
+      assert(result.maxPoints <= 300000);
+      assert(result.coveredPixels > 150);
+      assert(result.maxCpuBytes <= result.budgets.cpuBudgetBytes);
+      assert(result.stats.peakGpuBytes <= result.budgets.gpuBudgetBytes);
+      assert(result.stats.peakGpuBytes <= result.stats.memoryBudgetBytes);
+      assert.equal(result.disposed.gpuBytes, 0);
+      assert(result.frameP95Ms <= result.budgets.p95Ms,
+        `W16 p95 ${result.frameP95Ms.toFixed(1)} ms exceeds ${result.budgets.p95Ms} ms`);
+      assert.deepEqual(errors, []);
+      assert.deepEqual(remote, []);
+    }
   }
 } finally {
   await browser?.close();

@@ -136,6 +136,7 @@ export class EptDataset implements PointCloudDataset {
   readonly hierarchy = new Map<string, number>();
   readonly #pages = new Set<string>();
   readonly #pending = new Map<string, Promise<void>>();
+  readonly #keys = new Map<string, { key: OctreeKey; children: string[] }>();
   private constructor(
     readonly url: string,
     readonly info: EptInfo,
@@ -203,9 +204,15 @@ export class EptDataset implements PointCloudDataset {
   }
   #node(key: string): PointNode {
     pointLive(this.io.disposed);
-    const k = OctreeKey.parse(key),
-      n = this.hierarchy.get(key);
+    const n = this.hierarchy.get(key);
     if (n === undefined) pointError("EPT node missing");
+    let cached = this.#keys.get(key);
+    if (!cached) {
+      const k = OctreeKey.parse(key);
+      cached = { key: k, children: k.depth === 30 ? [] : Array.from({ length: 8 }, (_, o) => k.child(o).toString()) };
+      this.#keys.set(key, cached);
+    }
+    const k = cached.key;
     return {
       key,
       depth: k.depth,
@@ -215,12 +222,7 @@ export class EptDataset implements PointCloudDataset {
         (this.bounds.max[0] - this.bounds.min[0]) /
         this.info.span /
         2 ** k.depth,
-      children:
-        k.depth === 30
-          ? []
-          : Array.from({ length: 8 }, (_, o) => k.child(o).toString()).filter(
-              (x) => this.hierarchy.has(x),
-            ),
+      children: cached.children.filter(x => this.hierarchy.has(x)),
     };
   }
   rootNode(): PointNode {
@@ -297,5 +299,6 @@ export class EptDataset implements PointCloudDataset {
     this.hierarchy.clear();
     this.#pages.clear();
     this.#pending.clear();
+    this.#keys.clear();
   }
 }

@@ -29,7 +29,8 @@ export declare class PointCloudRenderer {
     pick(x: number, y: number, signal?: AbortSignal): Promise<PointPickResult | null>;
     /** Recreates device resources and replays retained CPU layers without dataset IO. */
     recover(): Promise<void>;
-    getStats(): {
+    /** Pass false for per-frame allocation polling; the default includes timing percentiles. */
+    getStats(includeTimings?: boolean): {
         frames: number;
         pointsRendered: number;
         gpuBytes: number;

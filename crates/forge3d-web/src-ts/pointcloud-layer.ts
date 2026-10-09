@@ -154,7 +154,9 @@ export class PointCloudLayer {
         if (!staged.has(key)) buffer.dispose();
       this.#nodes = staged;
       this.#selected = selected;
-      return selected.map((n) => structuredClone(n));
+      return selected.map(n => ({ ...n, children: [...n.children], bounds: {
+        min: [...n.bounds.min] as PointVec3, max: [...n.bounds.max] as PointVec3,
+      } }));
     } catch (e) {
       for (const [key, b] of staged)
         if (this.#nodes.get(key) !== b) b.dispose();

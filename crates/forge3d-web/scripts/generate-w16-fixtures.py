@@ -6,6 +6,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT.parents[1] / '.tools/python'))
 import laspy
 from w16_fixture_workload import build_branching_ept, build_overview_copc, topdown_view, additive_reference, in_frustum
+from w16_fixture_tiles import build_tile_references
 from laspy import CopcReader
 DEST = ROOT / 'tests/fixtures/w16'
 DEST.mkdir(parents=True, exist_ok=True)
@@ -79,6 +80,7 @@ def native_module(name, filename):
     return module
 pc_native=native_module('w16_native_points','python__forge3d__pointcloud.py')
 tiles_native=native_module('w16_native_tiles','python__forge3d__tiles3d.py')
+expanded_tile_coverage = build_tile_references(DEST, tiles_native)
 camera_records=[]
 for source,dataset in [('copc',pc_native.CopcDataset(DEST/'ellipsoid.copc.laz')),('ept',pc_native.open_ept(ept/'ept.json'))]:
     center=dataset.bounds.center();span=max(dataset.bounds.size())
@@ -139,6 +141,7 @@ manifest={'schemaVersion':1,'fixtureId':'copc-ept-tiles-v1','oracle':{'laspy':la
  'workloadEpt':workload_meta,'overviewCopc':overview_meta,
  'nativeSources':native,'upstream':json.loads((DEST/'upstream.json').read_text(encoding='utf-8-sig')),
  'cameraSelections':camera_records,'tileSelections':tile_records,'sseDecimalPlaces':9,
+ 'expandedTileCoverage':expanded_tile_coverage,
  'performance':{'durationMs':600000,'viewport':[1920,1080],'profiles':{'reference-discrete':{'p95Ms':16.7,'cpuBudgetBytes':1610612736,'gpuBudgetBytes':3221225472},'reference-integrated':{'p95Ms':33.3,'cpuBudgetBytes':1073741824,'gpuBudgetBytes':2147483648}},'localBudgetBytes':268435456,'localQualification':'Chromium preflight; publish exact adapter rather than inferring W00 hardware qualification'},
  'tolerances':{'boundsRelative':1e-5,'initialRangeFraction':0.25}}
 manifest['files']=[{'path':str(p.relative_to(DEST)).replace('\\','/'),'bytes':p.stat().st_size,'sha256':digest(p.read_bytes())} for p in sorted(DEST.rglob('*')) if p.is_file() and p.name!='copc-ept-tiles-v1.json']

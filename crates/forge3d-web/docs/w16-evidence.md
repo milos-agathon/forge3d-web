@@ -1,8 +1,8 @@
 # W16 implementation and acceptance evidence
 
 W16 acceptance is pending. G02, G03 and G04 remain `P`: the runtime and local
-conformance tests exist, but the pinned W00 physical reference-profile runs and
-the mandatory laz-perf security review are open. The original required outcomes
+conformance tests exist, but the local discrete-target p95 fails, the pinned W00 physical
+reference-profile runs and the mandatory laz-perf security review are open. The original required outcomes
 and acceptance criteria in the plan and baseline are preserved.
 
 The worktree starts at W15 commit `f0287e5b1594542635f8b088e2ae88d7be8ec435`;
@@ -52,6 +52,24 @@ Browser tests exercise these records through the actual default ADD layer;
 disabling the frustum changes all 64 selections. SSE is compared at nine
 decimal places to exclude insignificant NumPy/JavaScript last-bit differences.
 
+The 3D Tiles references now include `tile-traversal-v2.json`: four branching
+85-node tilesets (ADD, REPLACE, mixed and inherited refinement), 64 cameras
+each and 256 exact native selection/SSE records. They cover box and sphere
+bounds, contentless parents, varying viewport/FOV/SSE and ADD depth limits,
+producing 40 distinct selections. A native ADD-to-REPLACE negative control
+must change the selected set. Unit, source/dist browser and installed-package
+tests execute the same records. The original two-camera real-payload probe
+also remains.
+
+`scripts/w16_fixture_tiles.py` executes the pinned native `Tiles3dRenderer`
+directly. Inherited refinement uses native Tile objects with empty refinement
+strings: its JSON parser otherwise inserts REPLACE for omitted refinement.
+The native REPLACE depth cap drops refined children beyond the cap, while
+web retains the coarse parent; REPLACE records therefore use the full depth.
+Native code ignores world transforms and uses longitude/latitude directly
+for region centers. Transform, region, external URL, cancellation and cache
+extensions retain unit coverage and are not claimed as native parity here.
+
 ## Sustained traversal and memory
 
 The soak traverses the same ADD/frustum keyframes with interpolated camera
@@ -75,13 +93,14 @@ installed-tarball traversal. Reports go to `test-results/w16-package-consumer.js
 and `test-results/w16-soak.json`; retained evidence is in
 [w16-local-evidence.json](w16-local-evidence.json).
 
-### Revised local run, 2026-10-07
+### Historical local run, 2026-10-07 — performance claim withdrawn
 
-Chromium 148.0.7778.96 on Windows/NVIDIA Ampere passed the static installed
-tarball checks, including the complete ten-minute run. The observed tarball is
+Chromium 148.0.7778.96 on Windows/NVIDIA Ampere reported a pass in one static
+installed-tarball run. This historical measurement did not reproduce in review
+and is not current local performance or acceptance evidence. Its observed tarball is
 `a6a6e54c20c1c02c38e517858ed998e3a4a7b46c3e65ad61a8f62cc2ef49c994`.
-All 269 current dist/asset files match that tarball byte-for-byte; documentation
-updates after the run are excluded from the runtime binding.
+At recording, all 269 dist/asset files matched that tarball byte-for-byte.
+That binding describes the historical runtime; the optimization below changes it.
 
 | Check | Revised measured result |
 | --- | --- |
@@ -94,9 +113,85 @@ updates after the run are excluded from the runtime binding.
 | Package/parity gates | API/type snapshots, 15 parity checks, 11 docs, 118 browser-harness checks, 609 infrastructure checks and package contract passed; one Unix-UID check skipped on Windows |
 | Git provenance | All 1,902 pinned fixture/native streams match staged Git bytes |
 
-These are local preflight results against the discrete target limits. They do
-not qualify either pinned W00 physical reference machine or complete the codec
-security review.
+The original report is retained in [w16-oct07-evidence.json](w16-oct07-evidence.json).
+Its 14.2 ms p95 cannot support acceptance: three later review runs failed. The
+full required timed path includes `layer.update`, fetch/decode misses, buffer
+installation and awaited GPU completion. Camera cadence uses requestAnimationFrame
+between samples; idle presentation waits are outside the measured frame work.
+
+### Review failures reported 2026-10-09
+
+| Harness | Host condition | p95 | Discrete target | Verdict |
+| --- | --- | --- | --- | --- |
+| Source/dist soak | Unit tests running concurrently | 18.7 ms | 16.7 ms | Failed; unsuitable acceptance conditions |
+| Source/dist soak | Idle | 19.8 ms | 16.7 ms | Failed |
+| Official installed-tarball soak | Idle | 22.3 ms; 26,768 frames | 16.7 ms | Failed |
+
+These results are reviewer-reported, not independently rerun measurements. The
+installed run passed all preceding conformance checks and exact selections, with
+42.9 MB tracked CPU and 42.8 MB GPU allocations within budget. No failing run is
+discarded or replaced by the historical 14.2 ms observation. New measurements
+are recorded separately in [w16-local-evidence.json](w16-local-evidence.json).
+
+### Failure reproduced and runtime optimized, 2026-10-09
+
+A separate ten-minute source run of `4efd5e7`, with stage instrumentation and
+no concurrent tests/builds, failed at **20.1 ms p95 over 28,301 frames**. Update
+p95 was 10.6 ms, upload 2.1 ms and awaited GPU render 9.7 ms; these per-stage
+percentiles are not additive. This reproduces the review's local failure.
+Only benchmark stdout survives for that run: a subsequent Playwright invocation
+cleared its temporary full JSON. The retained evidence records that limitation
+and does not reconstruct unretained browser, duration or allocation fields.
+
+The optimized runtime removes temporary arrays from homogeneous frustum tests,
+memoizes EPT key/child-name derivation while preserving fresh hierarchy reads,
+computes traversal priority/SSE once per queued node, copies selected records
+explicitly, and packs GPU attributes from one owned data copy per node instead
+of allocating objects per point. Per-frame allocation polling also avoids
+repeatedly sorting the growing renderer timing history. Public timing statistics
+remain enabled by default.
+
+The point budget, camera path, cold cache misses and full timed update/upload/
+GPU path are unchanged. Repeat measurements use one freshly installed tarball
+and are saved before assertions under `docs/w16-runs`. Set
+`FORGE3D_W16_SOAK=1 FORGE3D_W16_RUNS=3 FORGE3D_W16_RETAIN_REPORTS=1` when
+running `npm run test:package-consumer:w16` to retain three sequential runs.
+These local measurements cannot qualify either unavailable W00 machine.
+
+The first optimized installed-tarball run **failed at 18.3 ms p95**, against
+16.7 ms. It ran for 600,100.4 ms with 34,536 frames, all 64 keyframes and 693
+selection sets. CPU peak was 42,918,791 bytes and GPU peak 42,770,544 bytes,
+with zero GPU allocation after disposal. Update/upload/render p95 values were
+7.0/0.8/12.6 ms. These observations show lower update cost but do not establish
+a passing full frame or a reproducible explanation for the historical 14.2 ms.
+The strict harness aborted at this failure; the requested second and third
+repeats were not run. No outlier was excluded.
+
+[The complete failing soak report](w16-runs/installed-1.json) and
+[compact conformance report](w16-runs/conformance.json) are retained. Its
+tarball SHA-256 is `c01ecf448f34c3740a2038d29fde0814b97c2ba2e392f12d0af4051e9acf39ab`.
+[Runtime file hashes](w16-runs/runtime-files.json) bind all 269 current dist/asset
+files byte-for-byte to that installed tarball. The full temporary conformance
+JSON repeats fixture manifests and selections; the compact report retains
+observed hashes/counts and its complete-report digest.
+
+Current checks: 1,078 unit tests, eight source/dist browser cases, the installed
+conformance probes, 616 infrastructure contracts (one Unix-UID check skipped on
+Windows), 15 parity checks, 11 documentation checks, 118 browser-harness checks,
+API/type snapshots and the package contract pass. The ten-minute performance
+gate fails. Hardware lane tests are synthetic contracts/dry runs only.
+
+### W00 hardware lanes remain pending
+
+`w16-reference-discrete` routes to FW-LNX-NV-01 and `w16-reference-integrated`
+routes to FW-WIN-I12-01 in the existing hardware matrix and `browser-hardware.yml`.
+They are task acceptance lanes in `acceptanceLanes`; the existing 24 browser
+support rows retain their scope.
+The existing promotion, lab readiness, nonce-bound fixture, headed Chrome,
+page/host attestation and finalization path is retained. W16 qualification also
+requires the pinned W00 OS/driver observations and a complete ten-minute run.
+Only matrix/contract validation is authorized here. FW-WIN-I12-01 remains
+blocked on INF-00; FW-LNX-NV-01 is not provisioned. Neither profile has a run.
 
 ## Codec review remains open
 

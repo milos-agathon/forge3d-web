@@ -49,6 +49,26 @@ function document(refine = "REPLACE") {
   };
 }
 describe("W16 native OGC tile parsing, bounds and SSE", () => {
+  it('matches 256 branching native tile camera records across ADD, REPLACE, mixed and inherited refinement', () => {
+    const corpus = JSON.parse(new TextDecoder().decode(fixture('tile-traversal-v2.json')));
+    expect(corpus.coverage.records).toBe(256);
+    expect(corpus.coverage.uniqueSelections).toBeGreaterThanOrEqual(20);
+    for (const [name, document] of Object.entries(corpus.documents)) {
+      const tiles = Tileset.fromJson(document, 'https://example.org/tileset.json');
+      try {
+        expect(tiles.tileCount).toBe(85);
+        for (const record of corpus.records.filter((r: any) => r.document === name)) {
+          const selected = new TilesetTraverser(record.options).visibleTiles(tiles, record.view);
+          expect(selected.map(n => ({ uri: new URL(n.tile.content!.uri).pathname.slice(1), depth: n.depth, sse: Number(n.sse.toFixed(9)) }))).toEqual(record.nodes);
+        }
+      } finally { tiles.dispose(); }
+    }
+    const add = Tileset.fromJson(corpus.documents.ADD, 'https://example.org/tileset.json');
+    const record = corpus.records.find((r: any) => r.document === 'ADD' && r.options.maxDepth === 3);
+    add.root.refine = 'REPLACE';
+    expect(new TilesetTraverser(record.options).visibleTiles(add, record.view).map(n => new URL(n.tile.content!.uri).pathname.slice(1))).not.toEqual(record.nodes.map((n: any) => n.uri));
+    add.dispose();
+  });
   it("bounds wide geographic regions around their SSE center", () => {
     const region = new TileBoundingVolume({
       region: [-Math.PI / 2, -Math.PI / 4, Math.PI / 2, Math.PI / 4, 0, 200],

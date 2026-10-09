@@ -1,439 +1,181 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "task": "W16",
-  "evidenceStatus": "Local conformance and sustained traversal verified; acceptance pending",
-  "baseCommit": "f0287e5b1594542635f8b088e2ae88d7be8ec435",
-  "fixtureSha256": "0c801dbe8f36cdf3d9f2e3c74b9cb0c08518a7e6c3c400859c30fbce3d89a0cf",
+  "evidenceStatus": "Local performance failure remains after optimization; hardware and security acceptance pending",
   "referenceHardwareQualified": false,
+  "capabilityStatus": {
+    "G02": "P",
+    "G03": "P",
+    "G04": "P"
+  },
   "openAcceptance": [
-    "Pinned W00 physical reference-profile runs",
+    "Local discrete-target ten-minute p95 remains above 16.7 ms",
+    "FW-WIN-I12-01: INF-00 blocked",
+    "FW-LNX-NV-01: not provisioned",
     "Mandatory laz-perf security review"
   ],
-  "supersededEvidence": "w16-initial-evidence.json",
-  "runtimeBinding": {
-    "fileCount": 269,
-    "sha256": "f27ea661c66c5483a3a15315b61061466f8dff760271d15fe15b9952f6579575",
-    "statement": "Every current dist/asset file matches the observed installed tarball. Documentation updated after this run is not part of this runtime-byte binding."
+  "historicalEvidence": {
+    "file": "w16-oct07-evidence.json",
+    "observedP95Ms": 14.2,
+    "acceptanceClaimWithdrawn": true,
+    "reason": "Not reproduced by the reviewer or the independent ten-minute source run"
   },
-  "checks": {
-    "unit": {
-      "passed": 1077,
-      "files": 64
+  "reviewerReportedRuns": [
+    {
+      "harness": "source/dist",
+      "hostCondition": "unit tests concurrent",
+      "p95Ms": 18.7,
+      "measuredPass": false,
+      "acceptanceEligible": false
     },
-    "browser": {
-      "w16Passed": 8,
-      "neighborW14W15Passed": 26,
-      "defaultSoakSkipped": true
+    {
+      "harness": "source/dist",
+      "hostCondition": "idle",
+      "p95Ms": 19.8,
+      "measuredPass": false,
+      "acceptanceEligible": true
     },
-    "api": "passed",
-    "parity": {
-      "passed": 15,
-      "lockConsumers": 51
-    },
-    "pinnedGitIndexStreams": 1902,
-    "package": {
-      "docsPassed": 11,
-      "browserHarnessPassed": 118,
-      "infrastructurePassed": 609,
-      "infrastructureSkipped": 1,
-      "contract": "passed",
-      "shell": "Git Bash; Windows Store bash stub cannot run the unrelated selector test"
+    {
+      "harness": "official installed tarball",
+      "hostCondition": "idle",
+      "p95Ms": 22.3,
+      "frames": 26768,
+      "measuredPass": false,
+      "acceptanceEligible": true
     }
-  },
-  "conformance": {
-    "verifiedAt": "2026-10-07T20:41:02.275Z",
-    "browserVersion": "148.0.7778.96",
-    "platform": "win32",
-    "packageSha256": "a6a6e54c20c1c02c38e517858ed998e3a4a7b46c3e65ad61a8f62cc2ef49c994",
-    "counts": {
-      "laz": 110000,
-      "copc": 100000,
-      "ept": 128,
-      "workloadEpt": 1000000,
-      "overviewCopc": 200000
-    },
-    "originalCopcChunks": 5,
-    "workload": {
-      "nodeCount": 1865,
-      "branchNodes": 457,
-      "nodesByDepth": [
-        1,
-        8,
-        64,
-        128,
-        128,
-        256,
-        256,
-        512,
-        512
-      ],
-      "uniqueAdditiveSets": 64,
-      "minCulledNodes": 354,
-      "maxCulledNodes": 1154,
-      "orphanNegativeControl": true,
-      "decodedNodes": 1865,
-      "layerCameras": 64,
-      "cullingDifferences": 64,
-      "referenceOracle": "64 native REPLACE and 64 independent Python ADD/frustum policy records"
-    },
-    "ranges": {
-      "expected": {
-        "count": 200000,
-        "chunks": 9,
-        "root": {
-          "count": 512,
-          "positionsSha256": "677050a451c1a19e2abb00b5ac9f07a8a100c2d06987496df01da1d8ea912949",
-          "colorsSha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca",
-          "bounds": {
-            "min": [
-              636075.3,
-              848935.2000000001,
-              406.46000000000004
-            ],
-            "max": [
-              638556.68,
-              849469.42,
-              520.51
-            ]
-          },
-          "firstPositions": [
-            637177.98,
-            849393.9500000001,
-            411.19,
-            637161.74,
-            849197.99,
-            411.09000000000003,
-            637168.99,
-            849065.74,
-            413.62
-          ],
-          "firstColors": [
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0,
-            0
-          ]
-        },
-        "bounds": {
-          "min": [
-            636075.3,
-            848935.2000000001,
-            406.46000000000004
-          ],
-          "max": [
-            638556.68,
-            849469.42,
-            520.51
-          ]
-        },
-        "view": {
-          "position": [
-            637315.99,
-            849202.31,
-            10389.00500000002
-          ],
-          "viewportHeight": 480,
-          "fovY": 0.7853981633974483,
-          "viewProjection": [
-            1.8106601717798212,
-            0,
-            0,
-            0,
-            0,
-            2.414213562373095,
-            0,
-            0,
-            0,
-            0,
-            -1.0012515644555695,
-            -1,
-            -1153962.679931427,
-            -2050155.7340005615,
-            10302.628085106402,
-            10389.00500000002
-          ]
-        },
-        "options": {
-          "mode": "add",
-          "pointBudget": 5000
-        },
-        "derivation": "Two real Autzen patches; second translated in X. Coarse 512-point sample contains all XYZ extrema and every occupied octant; eight additive leaf buckets. Independently compressed and decoded by laspy/lazrs.",
-        "nodes": [
-          {
-            "key": "0-0-0-0",
-            "pointCount": 512,
-            "sse": 125.446216511
-          },
-          {
-            "key": "1-0-0-1",
-            "pointCount": 1113,
-            "sse": 66.6092626
-          },
-          {
-            "key": "1-1-0-1",
-            "pointCount": 1114,
-            "sse": 66.6092626
-          }
-        ]
-      },
-      "rootPositions": "677050a451c1a19e2abb00b5ac9f07a8a100c2d06987496df01da1d8ea912949",
-      "rootColors": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca",
-      "coveredPixels": 1913,
-      "points": 2739,
-      "keys": [
-        "0-0-0-0",
-        "1-0-0-1",
-        "1-1-0-1"
-      ],
-      "requests": [
-        {
-          "range": "bytes=0-374",
-          "status": 206,
-          "bytes": 375
-        },
-        {
-          "range": "bytes=375-1828",
-          "status": 206,
-          "bytes": 1454
-        },
-        {
-          "range": "bytes=1263228-1263515",
-          "status": 206,
-          "bytes": 288
-        },
-        {
-          "range": "bytes=1837-10318",
-          "status": 206,
-          "bytes": 8482
-        },
-        {
-          "range": "bytes=1181586-1192861",
-          "status": 206,
-          "bytes": 11276
-        },
-        {
-          "range": "bytes=1192862-1204146",
-          "status": 206,
-          "bytes": 11285
-        }
-      ],
-      "bytes": 33160,
-      "total": 1263516,
-      "fraction": 0.026244226428474193,
-      "negativeKeys": [],
-      "negativeCoveredPixels": 0
-    },
-    "deviceLoss": true,
-    "picks": [
-      {
-        "id": 1,
-        "layerName": "pointcloud",
-        "nodeKey": "0-0-0-0",
-        "pointIndex": 0,
-        "position": [
-          -0.6000000238418579,
-          0,
-          0
-        ],
-        "color": [
-          255,
-          0,
-          0,
-          255
-        ]
-      },
-      {
-        "id": 2,
-        "layerName": "pointcloud",
-        "nodeKey": "0-0-0-0",
-        "pointIndex": 1,
-        "position": [
-          0,
-          0,
-          0
-        ],
-        "color": [
-          0,
-          255,
-          0,
-          255
-        ]
-      },
-      {
-        "id": 3,
-        "layerName": "pointcloud",
-        "nodeKey": "0-0-0-0",
-        "pointIndex": 2,
-        "position": [
-          0.6000000238418579,
-          0,
-          0
-        ],
-        "color": [
-          0,
-          0,
-          255,
-          255
-        ]
-      }
-    ],
-    "styles": {
-      "rgb": [
-        0,
-        255,
-        0
-      ],
-      "elevation": [
-        0,
-        0,
-        255
-      ],
-      "intensity": [
-        127,
-        127,
-        127
-      ],
-      "classification": [
-        51,
-        102,
-        153
-      ]
-    },
-    "pressure": {
-      "code": "RESOURCE_LIMIT_EXCEEDED",
-      "before": "0b52f7c1bf2e7815f915301c38bd59e753cdd4c67bea7c2115505d5f2798d7b7",
-      "after": "0b52f7c1bf2e7815f915301c38bd59e753cdd4c67bea7c2115505d5f2798d7b7",
-      "recovered": "0b52f7c1bf2e7815f915301c38bd59e753cdd4c67bea7c2115505d5f2798d7b7",
-      "baseline": 49360,
-      "bytes": 49360,
-      "pick": {
-        "id": 2,
-        "layerName": "pointcloud",
-        "nodeKey": "0-0-0-0",
-        "pointIndex": 1,
-        "position": [
-          0,
-          0,
-          0
-        ],
-        "color": [
-          0,
-          255,
-          0,
-          255
-        ]
-      },
-      "peak": 65744,
-      "budget": 81920
-    },
-    "meshes": {
-      "covered": 4323,
-      "negative": 0,
-      "triangles": 1
-    },
-    "pageErrors": [],
-    "externalRequests": []
-  },
-  "soak": {
-    "durationMs": 600049.400000006,
-    "frames": 33268,
-    "baseline": 34483120,
-    "maxBytes": 34483120,
-    "maxCpuBytes": 42918791,
-    "stats": {
-      "frames": 33268,
-      "pointsRendered": 299806,
-      "gpuBytes": 34477104,
-      "peakGpuBytes": 42771504,
-      "memoryBudgetBytes": 268435456,
-      "bufferCreations": 27935,
-      "p95Ms": 7.299999997019768,
-      "disposed": false,
-      "deviceLost": false
-    },
-    "frameP95Ms": 14.200000002980232,
-    "selectionCount": 693,
-    "keyframesVisited": 64,
-    "totalPoints": 1000000,
-    "minPoints": 299520,
-    "maxPoints": 299994,
-    "coveredPixels": 97073,
-    "dataset": {
-      "ranges": {
-        "requested": 0,
-        "deduplicated": 0,
-        "coalesced": 0,
-        "httpRequests": 0,
-        "bytesRequested": 0,
-        "bytesTransferred": 0,
-        "memoryHits": 0,
-        "persistentHits": 0,
-        "misses": 0,
-        "cancelled": 0,
-        "failed": 0,
-        "inFlight": 0,
-        "peakInFlight": 0,
-        "queued": 0,
-        "offlineServed": 0
-      },
-      "compressed": {
-        "hits": 0,
-        "misses": 970,
-        "evictions": 0,
-        "bytes": 12742331,
-        "budgetBytes": 33554432,
-        "entries": 970
-      },
-      "decoded": {
-        "cacheUsed": 21176640,
-        "cacheBudget": 33554432,
-        "entryCount": 968,
-        "hits": 26967,
-        "misses": 968,
-        "evictions": 0,
-        "peakBytes": 21176640
-      },
-      "disposed": false,
-      "nodeCount": 1865,
-      "totalPoints": 1000000
-    },
-    "viewport": [
-      1920,
-      1080
-    ],
+  ],
+  "reproducedBeforeOptimization": {
+    "reportedAt": "2026-10-09",
+    "runtimeCommit": "4efd5e7",
+    "harness": "source with phase instrumentation; ten-minute profile-w16.mjs run",
+    "concurrentTestsOrBuilds": false,
+    "minimumDurationMs": 600000,
+    "frameP95Ms": 20.099999994039536,
+    "frames": 28301,
+    "measuredPass": false,
+    "limitMs": 16.7,
     "adapter": {
       "vendor": "nvidia",
       "architecture": "ampere",
       "device": "",
       "description": ""
     },
-    "profile": "local-chromium-preflight",
-    "targetProfile": "reference-discrete",
-    "budgets": {
-      "p95Ms": 16.7,
-      "cpuBudgetBytes": 1610612736,
-      "gpuBudgetBytes": 3221225472
+    "phases": {
+      "update": {
+        "p50Ms": 5.799999982118607,
+        "p95Ms": 10.599999994039536,
+        "maxMs": 641.0999999940395
+      },
+      "upload": {
+        "p50Ms": 0.09999999403953552,
+        "p95Ms": 2.0999999940395355,
+        "maxMs": 181.5
+      },
+      "render": {
+        "p50Ms": 6.5,
+        "p95Ms": 9.699999988079071,
+        "maxMs": 106.09999999403954
+      }
     },
-    "referenceHardwareQualified": false,
-    "qualification": "W00 reference hardware is not inferred from a preflight run",
-    "disposed": {
-      "frames": 33268,
-      "pointsRendered": 0,
-      "gpuBytes": 0,
-      "peakGpuBytes": 42771504,
-      "memoryBudgetBytes": 268435456,
-      "bufferCreations": 27935,
-      "p95Ms": 0,
-      "disposed": true,
-      "deviceLost": false
-    },
-    "verifiedAt": "2026-10-07T20:51:02.574Z",
+    "provenance": "Metrics retained from benchmark stdout. Playwright subsequently cleared test-results, including its full temporary JSON; unretained duration/browser/memory fields are not reconstructed. Subsequent full reports are retained separately under docs/w16-runs."
+  },
+  "optimizedRuns": [
+    {
+      "file": "w16-runs/installed-1.json",
+      "sha256": "3030ff694ad71028b21397ada2d41220a1f55966b7b4430c1c15134aa4bac200",
+      "verifiedAt": "2026-10-09T20:06:22.539Z",
+      "browserVersion": "148.0.7778.96",
+      "durationMs": 600100.400000006,
+      "frames": 34536,
+      "frameP95Ms": 18.30000001192093,
+      "limitMs": 16.7,
+      "measuredPass": false,
+      "selectionCount": 693,
+      "keyframesVisited": 64,
+      "maxCpuBytes": 42918791,
+      "peakGpuBytes": 42770544,
+      "phases": {
+        "update": {
+          "p50Ms": 3,
+          "p95Ms": 7,
+          "maxMs": 2754.0999999940395
+        },
+        "upload": {
+          "p50Ms": 0.19999998807907104,
+          "p95Ms": 0.800000011920929,
+          "maxMs": 80
+        },
+        "render": {
+          "p50Ms": 7.5999999940395355,
+          "p95Ms": 12.600000023841858,
+          "maxMs": 140.09999999403954
+        }
+      },
+      "concurrentTestsOrBuilds": false,
+      "referenceHardwareQualified": false
+    }
+  ],
+  "runtimeBinding": {
+    "packageSha256": "c01ecf448f34c3740a2038d29fde0814b97c2ba2e392f12d0af4051e9acf39ab",
+    "fileCount": 269,
+    "sha256": "907f7960530a51094c773d137ac612f965e9b77b08744942f5fdd9257de0f145",
+    "file": "w16-runs/runtime-files.json",
+    "fixtureSha256": "580cc9241e850f3e83c4b82cb17e3acd7cc5fba2e42ed68509fa39234c2fd5ad",
+    "cameraHarnessSha256": "bca37e74cb030c86661d92eb5bd928dd524c9c84c94c86f1e39616009040f67c",
+    "statement": "Every current dist/asset file matches the measured installed tarball. Later documentation edits do not change these runtime bytes."
+  },
+  "conformance": {
+    "file": "w16-runs/conformance.json",
+    "verifiedAt": "2026-10-09T19:56:21.645Z",
     "browserVersion": "148.0.7778.96",
-    "packageSha256": "a6a6e54c20c1c02c38e517858ed998e3a4a7b46c3e65ad61a8f62cc2ef49c994"
+    "platform": "win32",
+    "rangeFraction": 0.026244226428474193,
+    "tileCoverage": {
+      "records": 256,
+      "camerasPerDocument": 64,
+      "nodesPerDocument": 85,
+      "uniqueSelections": 40,
+      "refineNegativeControl": true
+    },
+    "deviceLoss": true,
+    "pageErrors": [],
+    "externalRequests": [],
+    "sha256": "fd1c06426dd8c9971988f56d530fc098a336a36ba6559184d391928cf7455bc0"
+  },
+  "checks": {
+    "unit": {
+      "passed": 1078,
+      "files": 64
+    },
+    "browser": {
+      "sourceDistPassed": 8,
+      "routineSoakSkipped": true
+    },
+    "installedPackage": {
+      "conformance": "passed",
+      "soak": "failed",
+      "repeatRequest": {
+        "requested": 3,
+        "completed": 1,
+        "aborted": "First run failed the strict p95 assertion"
+      }
+    },
+    "api": "passed",
+    "parity": {
+      "passed": 15,
+      "lockControlledConsumers": 52
+    },
+    "package": {
+      "docsPassed": 11,
+      "browserHarnessPassed": 118,
+      "infrastructurePassed": 616,
+      "infrastructureSkipped": 1,
+      "contract": "passed"
+    },
+    "hardware": {
+      "matrix": "valid; not provisioned",
+      "syntheticLaneContractsPassed": 7,
+      "dispatched": false
+    }
   }
 }

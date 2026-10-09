@@ -334,24 +334,26 @@ export class PointCloudRenderer {
                 0.001,
                 layer.dataset.bounds.max[2] - layer.dataset.bounds.min[2],
               );
+            // Copy each owned attribute once, instead of allocating a point
+            // object, subarrays and JS coordinate/color arrays for every point.
+            const data = source.data(), components = data.colorComponents ?? 3;
             for (let i = 0; i < source.pointCount; i++) {
-              const p = source.point(i);
               for (let a = 0; a < 3; a++)
                 v.setFloat32(
                   i * 32 + a * 4,
-                  p.position[a]! - snapshot.origin[a]!,
+                  data.positions[i * 3 + a]! - snapshot.origin[a]!,
                   true,
                 );
               for (let a = 0; a < 4; a++)
-                v.setUint8(i * 32 + 12 + a, p.color[a] ?? 255);
+                v.setUint8(i * 32 + 12 + a, a < components ? data.colors?.[i * components + a] ?? 255 : 255);
               v.setUint32(i * 32 + 16, id.base + i, true);
-              v.setFloat32(i * 32 + 20, p.intensity / 65535, true);
+              v.setFloat32(i * 32 + 20, (data.intensities?.[i] ?? 32768) / 65535, true);
               v.setFloat32(
                 i * 32 + 24,
-                (p.position[2] - layer.dataset.bounds.min[2]) / range,
+                (data.positions[i * 3 + 2]! - layer.dataset.bounds.min[2]) / range,
                 true,
               );
-              v.setUint32(i * 32 + 28, p.classification, true);
+              v.setUint32(i * 32 + 28, data.classifications?.[i] ?? 0, true);
             }
             const buffer = this.#device.createBuffer({
               size: raw.byteLength,
@@ -608,8 +610,9 @@ export class PointCloudRenderer {
     this.#recoverySources.clear();
     if (this.#view) await this.render(this.#view);
   }
-  getStats() {
-    const times = [...this.#durations].sort((a, b) => a - b);
+  /** Pass false for per-frame allocation polling; the default includes timing percentiles. */
+  getStats(includeTimings = true) {
+    const times = includeTimings ? [...this.#durations].sort((a, b) => a - b) : [];
     return {
       frames: this.#frames,
       pointsRendered: Array.from(this.#layers.values()).reduce(

@@ -77,3 +77,7 @@ crates/forge3d-web/types/copc.d.ts text eol=lf
 crates/forge3d-web/types/ept.d.ts text eol=lf
 crates/forge3d-web/types/laz-decoder.d.ts text eol=lf
 crates/forge3d-web/docs/w16-local-evidence.json text eol=lf
+# Preserve measured report and camera-harness hashes across Windows checkouts.
+crates/forge3d-web/docs/w16-*-evidence.json text eol=lf
+crates/forge3d-web/docs/w16-runs/*.json text eol=lf
+crates/forge3d-web/examples/w16-pointcloud.js text eol=lf

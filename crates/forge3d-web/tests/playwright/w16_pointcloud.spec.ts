@@ -139,6 +139,10 @@ for (const dist of [false, true]) {
     test.setTimeout(180000);
     await open(page);
     const r = await page.evaluate(() => window.__w16.workload());
+    const tiles = await page.evaluate(() => window.__w16.tileReferences());
+    expect(tiles.actual).toEqual(tiles.expected);
+    expect(tiles.coverage.records).toBe(256);
+    expect(tiles.coverage.uniqueSelections).toBeGreaterThanOrEqual(20);
     expect(r.count).toBe(1000000);
     expect(r.layerCameras).toBe(64);
     expect(r.cullingDifferences).toBe(64);
@@ -182,6 +186,11 @@ test("W16 10-minute real-data camera traversal retains budget and records adapte
     (target) => window.__w16.soak(600000, target),
     target,
   );
+  // Persist the observation before assertions so a failing acceptance run
+  // leaves its measured p95, adapter and allocations available for review.
+  const { mkdirSync, writeFileSync } = await import('node:fs');
+  mkdirSync('test-results', { recursive: true });
+  writeFileSync('test-results/w16-soak.json', JSON.stringify(result, null, 2) + '\n');
   expect(result.durationMs).toBeGreaterThanOrEqual(600000);
   expect(result.frames).toBeGreaterThan(1000);
   expect(result.selectionCount).toBeGreaterThanOrEqual(32);
@@ -198,10 +207,4 @@ test("W16 10-minute real-data camera traversal retains budget and records adapte
     result.stats.memoryBudgetBytes,
   );
   expect(result.frameP95Ms).toBeLessThanOrEqual(result.budgets.p95Ms);
-  const { mkdirSync, writeFileSync } = await import("node:fs");
-  mkdirSync("test-results", { recursive: true });
-  writeFileSync(
-    "test-results/w16-soak.json",
-    JSON.stringify(result, null, 2) + "\n",
-  );
 });

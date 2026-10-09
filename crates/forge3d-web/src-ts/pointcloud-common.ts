@@ -82,7 +82,7 @@ export function boundsCenter(b: PointBounds): PointVec3 {
   return b.min.map((x, i) => (x + b.max[i]!) / 2) as unknown as PointVec3;
 }
 export function boundsRadius(b: PointBounds): number {
-  return Math.hypot(...b.min.map((x, i) => b.max[i]! - x)) / 2;
+  return Math.hypot(b.max[0] - b.min[0], b.max[1] - b.min[1], b.max[2] - b.min[2]) / 2;
 }
 export function pointDistance(a: PointVec3, b: PointVec3): number {
   return Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
@@ -90,32 +90,23 @@ export function pointDistance(a: PointVec3, b: PointVec3): number {
 /** Test all six homogeneous planes without dividing by w or culling a crossing box. */
 export function boundsInView(b: PointBounds, m?: ArrayLike<number>): boolean {
   if (!m) return true;
-  const clips: number[][] = [];
+  // Intersection of outside-plane masks preserves the homogeneous-corner
+  // test, including crossing boxes and WebGPU's near plane, without arrays.
+  let outside = 63;
   for (let o = 0; o < 8; o++) {
-    const p = [0, 1, 2].map((i) => (o & (1 << i) ? b.max[i]! : b.min[i]!));
-    clips.push(
-      [0, 1, 2, 3].map(
-        (r) =>
-          m[r]! * p[0]! + m[r + 4]! * p[1]! + m[r + 8]! * p[2]! + m[r + 12]!,
-      ),
-    );
+    const x = o & 1 ? b.max[0] : b.min[0],
+      y = o & 2 ? b.max[1] : b.min[1],
+      z = o & 4 ? b.max[2] : b.min[2],
+      cx = m[0]! * x + m[4]! * y + m[8]! * z + m[12]!,
+      cy = m[1]! * x + m[5]! * y + m[9]! * z + m[13]!,
+      cz = m[2]! * x + m[6]! * y + m[10]! * z + m[14]!,
+      cw = m[3]! * x + m[7]! * y + m[11]! * z + m[15]!;
+    outside &= (cx + cw < 0 ? 1 : 0) | (cw - cx < 0 ? 2 : 0) |
+      (cy + cw < 0 ? 4 : 0) | (cw - cy < 0 ? 8 : 0) |
+      (cz < 0 ? 16 : 0) | (cw - cz < 0 ? 32 : 0);
+    if (!outside) return true;
   }
-  return ![0, 1, 2, 3, 4, 5].some((plane) =>
-    clips.every(
-      (c) =>
-        (plane === 0
-          ? c[0]! + c[3]!
-          : plane === 1
-            ? c[3]! - c[0]!
-            : plane === 2
-              ? c[1]! + c[3]!
-              : plane === 3
-                ? c[3]! - c[1]!
-                : plane === 4
-                  ? c[2]!
-                  : c[3]! - c[2]!) < 0,
-    ),
-  );
+  return false;
 }
 export function pointJson(bytes: Uint8Array): Record<string, unknown> {
   try {

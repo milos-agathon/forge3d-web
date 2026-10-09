@@ -37,4 +37,7 @@ it("W16 fixtures and deepest native sources retain independent provenance", () =
   expect(manifest.overviewCopc.root.bounds).toEqual(
     manifest.overviewCopc.bounds,
   );
+  expect(manifest.expandedTileCoverage.records).toBe(256);
+  expect(manifest.expandedTileCoverage.nodesPerDocument).toBe(85);
+  expect(manifest.expandedTileCoverage.uniqueSelections).toBeGreaterThanOrEqual(20);
 });
