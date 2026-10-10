@@ -648,3 +648,24 @@ preserves the original group-specific checks. The complete subsequent suite
 passed all 1,090 tests (including eight new transport negative controls).
 All earlier failures remain in the record. These test-harness changes do not
 alter runtime or fuzz bytes, hardware profiles or W16 acceptance status.
+
+### Retained IBL cache assertion timeout
+
+[CI run 38092372800](https://github.com/milos-agathon/forge3d-web/actions/runs/38092372800)
+on `3704fd21e9b8613dcad8027279e185d742a6501c` built WASM successfully, then
+failed one unit: IBL cache byte round-trip took 5,261 ms against its unchanged
+five-second limit. W06, the W16 provenance audit (831 ms), and all eight
+transport negative controls passed. The [complete raw failed job log](w16-runs/raw-stdout/ci-3704fd2-ibl-cache-timeout.log)
+is retained as 177,639 bytes, SHA-256
+`bfd7258942208738f84a8135071f0f9b672c53d049d7da50dec557655004563c`.
+
+The low-tier IBL payload contains 3,341,312 bytes. Its three equality checks
+previously materialized 6,682,624 numeric JavaScript array entries before
+Vitest compared them. Those assertions, and the equivalent large prepared
+cache-hit comparison, now use native `Buffer.compare` over the complete
+`Uint8Array` views with explicit byte offsets and lengths. Length checks,
+every payload byte, backend/miss/hit/metadata assertions, real Response
+serialization, hashing and corrupt-cache negative controls remain exercised.
+No test timeout, runtime, fixture or acceptance budget changes. The fresh
+complete local suite passed all 1,090 tests after this correction; final-head
+CI must still pass. The original failed run remains a failure in the record.
