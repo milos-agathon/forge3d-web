@@ -3,6 +3,7 @@ import {
   expect,
   skipRenderAssertionsWhenProbing,
 } from "../browser/webgpu-fixture";
+import { captureW16Soak, validateW16HostState } from '../../scripts/w16-host-state.mjs';
 declare global {
   interface Window {
     __w16: any;
@@ -182,15 +183,21 @@ test("W16 10-minute real-data camera traversal retains budget and records adapte
   await page.goto("/examples/pointcloud-tiles.html?dist");
   await page.waitForFunction(() => !!window.__w16);
   const target = process.env.FORGE3D_W16_PROFILE ?? "reference-discrete";
-  const result = await page.evaluate(
-    (target) => window.__w16.soak(600000, target),
-    target,
-  );
-  // Persist the observation before assertions so a failing acceptance run
-  // leaves its measured p95, adapter and allocations available for review.
   const { mkdirSync, writeFileSync } = await import('node:fs');
   mkdirSync('test-results', { recursive: true });
+  let result;
+  try {
+    result = await captureW16Soak(() => page.evaluate(
+      (target) => window.__w16.soak(600000, target), target),
+      { binding: { kind: 'local-playwright', targetProfile: target } });
+  } catch (error: any) {
+    writeFileSync('test-results/w16-soak.json', JSON.stringify(error.w16Observation, null, 2) + '\n');
+    throw error;
+  }
+  // Persist the observation before assertions so a failing acceptance run
+  // leaves its measured p95, adapter and allocations available for review.
   writeFileSync('test-results/w16-soak.json', JSON.stringify(result, null, 2) + '\n');
+  validateW16HostState(result.hostState, { durationMs: result.durationMs });
   expect(result.durationMs).toBeGreaterThanOrEqual(600000);
   expect(result.frames).toBeGreaterThan(1000);
   expect(result.selectionCount).toBeGreaterThanOrEqual(32);

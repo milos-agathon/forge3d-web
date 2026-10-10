@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { validateW16HostState } from './w16-host-state.mjs';
 
 // Run after retained official soaks, before a test runner clears test-results.
 // Preserve the historical/reviewer reports and bind current runtime bytes to
@@ -18,6 +19,11 @@ const runs = readdirSync(join(root, 'docs/w16-runs'))
   .map(name => ({ file: `w16-runs/${name}`, report: readJson(`docs/w16-runs/${name}`) }))
   .filter(({ report }) => report.packageSha256 === conformance.packageSha256);
 assert(runs.length > 0, 'At least one complete retained run is required');
+const batchId = runs.at(-1).report.batchId;
+assert(/^[0-9TZ]+$/u.test(batchId ?? ''), 'A new batch with sampled host state is required');
+const runtimeFile = `w16-runs/runtime-files-${batchId}.json`;
+const conformanceFile = `w16-runs/conformance-${batchId}.json`;
+const evidenceFile = `w16-runs/evidence-${batchId}.json`;
 let installed;
 for (const name of readdirSync(tmpdir()).filter(name => name.startsWith('forge3d-w16-consumer-'))) {
   const pack = join(tmpdir(), name, 'pack');
@@ -44,6 +50,9 @@ evidence.optimizedRuns = runs.map(({ file, report }) => {
   assert.equal(report.cameraHarnessSha256, cameraHarnessSha256);
   assert(report.durationMs >= 600000 && report.frames > 1000);
   assert.equal(report.keyframesVisited, 64);
+  const hostCapture = validateW16HostState(report.hostState, { durationMs: report.durationMs,
+    binding: { packageSha256: report.packageSha256, runIndex: report.runIndex, batchId: report.batchId,
+      targetProfile: report.targetProfile, fixtureSha256, cameraHarnessSha256 } });
   const measuredPass = Number.isFinite(report.frameP95Ms) && report.frameP95Ms >= 0 &&
     report.frameP95Ms <= report.budgets.p95Ms && report.totalPoints === 1000000 &&
     report.selectionCount >= 32 && report.minPoints > 0 && report.minPoints < report.maxPoints &&
@@ -59,7 +68,9 @@ evidence.optimizedRuns = runs.map(({ file, report }) => {
     limitMs: report.budgets.p95Ms, measuredPass,
     selectionCount: report.selectionCount, keyframesVisited: report.keyframesVisited,
     maxCpuBytes: report.maxCpuBytes, peakGpuBytes: report.stats.peakGpuBytes,
-    phases: report.phases, concurrentTestsOrBuilds: false, referenceHardwareQualified: false };
+    phases: report.phases, hostState: { ...hostCapture, startedAt: report.hostState.startedAt,
+      endedAt: report.hostState.endedAt, sources: [...new Set(report.hostState.samples.map(sample => sample.gpu.source))] },
+    concurrentTestsOrBuilds: false, referenceHardwareQualified: false };
 });
 const passed = evidence.optimizedRuns.every(run => run.measuredPass);
 const previous = evidence.previousOptimizationEvidence
@@ -83,7 +94,7 @@ if (previous) evidence.performanceReproducibility = {
   unchangedDistAndAssets: sameRuntime,
   previousFailure,
   explanationEstablished: false,
-  statement: 'Current observations do not withdraw earlier failures or establish a performance fix. Host-state differences were not measured.',
+  statement: 'Current observations do not withdraw earlier failures or establish a performance fix. Current reports retain sampled host state; earlier reports cannot establish matching host conditions.',
 };
 evidence.checks.installedPackage.soak = passed ? 'passed in current batch' : 'failed';
 evidence.checks.installedPackage.repeatRequest = {
@@ -91,10 +102,10 @@ evidence.checks.installedPackage.repeatRequest = {
   ...(!passed ? { aborted: 'First failing run stopped the strict acceptance harness' } : {}),
 };
 evidence.runtimeBinding = { packageSha256: conformance.packageSha256, fileCount: bindings.length,
-  sha256: runtimeSha256, file: 'w16-runs/runtime-files.json',
+  sha256: runtimeSha256, file: runtimeFile,
   fixtureSha256, cameraHarnessSha256,
   statement: 'Every current dist/asset file matches the measured installed tarball. Later documentation edits do not change these runtime bytes.' };
-evidence.conformance = { file: 'w16-runs/conformance.json', verifiedAt: conformance.verifiedAt,
+evidence.conformance = { file: conformanceFile, verifiedAt: conformance.verifiedAt,
   browserVersion: conformance.browserVersion, platform: conformance.platform,
   rangeFraction: conformance.ranges.fraction, tileCoverage: conformance.tileReferences.coverage,
   deviceLoss: conformance.rendering.lost, pageErrors: conformance.pageErrors,
@@ -111,9 +122,9 @@ const compact = { ...conformance, io,
   fullTemporaryReportSha256: hash(readFileSync(join(root, 'test-results/w16-package-consumer.json'))),
   statement: 'Compact retained conformance report; exhaustive assertions passed before the soak. Repeated fixture manifests and selection arrays are represented by their hashes.' };
 assert.equal(compact.tileReferences.actualSha256, compact.tileReferences.expectedSha256);
-writeFileSync(join(root, 'docs/w16-runs/conformance.json'), JSON.stringify(compact, null, 2) + '\n');
-evidence.conformance.sha256 = hash(readFileSync(join(root, 'docs/w16-runs/conformance.json')));
-writeFileSync(join(root, 'docs/w16-runs/runtime-files.json'), JSON.stringify(bindings, null, 2) + '\n');
-writeFileSync(join(root, 'docs/w16-local-evidence.json'), JSON.stringify(evidence, null, 2) + '\n');
-console.log(JSON.stringify({ runtimeBinding: evidence.runtimeBinding, runs: evidence.optimizedRuns.map(run =>
+writeFileSync(join(root, 'docs', conformanceFile), JSON.stringify(compact, null, 2) + '\n', { flag: 'wx' });
+evidence.conformance.sha256 = hash(readFileSync(join(root, 'docs', conformanceFile)));
+writeFileSync(join(root, 'docs', runtimeFile), JSON.stringify(bindings, null, 2) + '\n', { flag: 'wx' });
+writeFileSync(join(root, 'docs', evidenceFile), JSON.stringify(evidence, null, 2) + '\n', { flag: 'wx' });
+console.log(JSON.stringify({ evidenceFile, runtimeBinding: evidence.runtimeBinding, runs: evidence.optimizedRuns.map(run =>
   ({ frames: run.frames, p95Ms: run.frameP95Ms, measuredPass: run.measuredPass })) }, null, 2));

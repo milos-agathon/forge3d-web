@@ -134,6 +134,7 @@ export const labConfigurationFiles = [
   "crates/forge3d-web/scripts/w16-lanes.mjs",
   "crates/forge3d-web/scripts/w16-hardware-acceptance.mjs",
   "crates/forge3d-web/scripts/w16-hardware-proof-validator.mjs",
+  "crates/forge3d-web/scripts/w16-host-state.mjs",
   "crates/forge3d-web/tests/parity/hardware-profiles.json",
   "crates/forge3d-web/scripts/browser-launch-provenance.mjs",
   "crates/forge3d-web/scripts/browser-process-registry.mjs",

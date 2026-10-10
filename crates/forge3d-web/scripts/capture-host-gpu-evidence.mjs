@@ -131,28 +131,36 @@ function tryRun(command, args) {
   }
 }
 
+// Shared with the soak sampler so non-NVIDIA observations use the same host
+// capture probes as the adapter attestation instead of inventing a GPU identity.
+export function hostGpuProbeCommands(platform) {
+  if (platform === 'win32') return [['videoControllers', 'powershell.exe', [
+    '-NoProfile', '-Command',
+    'Get-CimInstance Win32_VideoController | Select-Object Name,DriverVersion,DriverDate,Status | ConvertTo-Json -Compress',
+  ]]];
+  if (platform === 'darwin') return [['systemProfiler', 'system_profiler', ['SPDisplaysDataType', '-json']]];
+  return [['lspci', 'lspci', ['-nnk']]];
+}
+
 function liveEvidence(platform) {
+  const [[, command, args]] = hostGpuProbeCommands(platform);
   if (platform === "darwin") {
     return {
       systemProfiler: sanitizeMacDisplayEvidence(
-        JSON.parse(run("system_profiler", ["SPDisplaysDataType", "-json"])),
+        JSON.parse(run(command, args)),
       ),
     };
   }
   if (platform === "win32") {
     return {
       videoControllers: JSON.parse(
-        run("powershell.exe", [
-          "-NoProfile",
-          "-Command",
-          "Get-CimInstance Win32_VideoController | Select-Object Name,DriverVersion,DriverDate,Status | ConvertTo-Json -Compress",
-        ]),
+        run(command, args),
       ),
     };
   }
   const sessionId = process.env.XDG_SESSION_ID ?? "";
   return {
-    lspci: run("lspci", ["-nnk"]),
+    lspci: run(command, args),
     nvidiaSmi: tryRun("nvidia-smi", [
       "--query-gpu=name,driver_version",
       "--format=csv,noheader",

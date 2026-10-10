@@ -22,6 +22,7 @@ import {
 import { fileURLToPath } from "node:url";
 import { chromium } from "@playwright/test";
 import { resolveCommandInvocation } from "./command-executable.mjs";
+import { captureW16Soak, validateW16HostState } from './w16-host-state.mjs';
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const temp = mkdtempSync(join(tmpdir(), "forge3d-w16-consumer-")),
   consumer = join(temp, "consumer"),
@@ -337,30 +338,32 @@ const view:PointView={position:[0,0,10],viewportHeight:1080,fovY:Math.PI/4};cons
     if (retained) mkdirSync(join(root, 'docs/w16-runs'), { recursive: true });
     for (let runIndex = 1; runIndex <= runs; runIndex++) {
       console.log(`Starting W16 ten-minute installed-tarball run ${runIndex}/${runs}`);
-      const result = await page.evaluate(
-        (target) => window.__w16.soak(600000, target),
-        target,
-      );
-      const observed = JSON.stringify(
-        {
-          ...result,
+      const binding = { packageSha256: sha256, runIndex, batchId, targetProfile: target,
+        fixtureSha256: createHash('sha256').update(readFileSync(join(root, 'tests/fixtures/w16/copc-ept-tiles-v1.json'))).digest('hex'),
+        cameraHarnessSha256: createHash('sha256').update(readFileSync(join(root, 'examples/w16-pointcloud.js'))).digest('hex') };
+      const retain = (result) => {
+        const observed = JSON.stringify({ ...result,
           verifiedAt: new Date().toISOString(),
           browserVersion: browser.version(),
-          packageSha256: sha256,
-          runIndex,
-          batchId,
-          fixtureSha256: createHash('sha256').update(readFileSync(join(root, 'tests/fixtures/w16/copc-ept-tiles-v1.json'))).digest('hex'),
-          cameraHarnessSha256: createHash('sha256').update(readFileSync(join(root, 'examples/w16-pointcloud.js'))).digest('hex'),
-        },
-        null,
-        2,
-      ) + "\n";
-      writeFileSync(join(root, 'test-results/w16-soak.json'), observed);
-      writeFileSync(join(root, `test-results/w16-soak-${runIndex}.json`), observed);
-      if (retained) writeFileSync(join(root, `docs/w16-runs/installed-${batchId}-${runIndex}.json`), observed);
+          ...binding }, null, 2) + '\n';
+        writeFileSync(join(root, 'test-results/w16-soak.json'), observed);
+        writeFileSync(join(root, `test-results/w16-soak-${runIndex}.json`), observed);
+        writeFileSync(join(root, `test-results/w16-soak-${batchId}-${runIndex}.json`), observed, { flag: 'wx' });
+        if (retained) writeFileSync(join(root, `docs/w16-runs/installed-${batchId}-${runIndex}.json`), observed, { flag: 'wx' });
+      };
+      let result;
+      try {
+        result = await captureW16Soak(() => page.evaluate(
+          (target) => window.__w16.soak(600000, target), target), { binding });
+      } catch (error) {
+        retain(error.w16Observation);
+        throw error;
+      }
+      retain(result);
       console.log(JSON.stringify({ runIndex, frames: result.frames, frameP95Ms: result.frameP95Ms,
         phases: result.phases, adapter: result.adapter, maxCpuBytes: result.maxCpuBytes,
         peakGpuBytes: result.stats.peakGpuBytes }));
+      validateW16HostState(result.hostState, { durationMs: result.durationMs, binding });
       assert(result.durationMs >= 600000);
       assert.equal(result.keyframesVisited, 64);
       assert.equal(result.totalPoints, 1000000);

@@ -404,6 +404,12 @@ export async function executeHardwareBrowserLane({
     return record;
   } catch (error) {
     primaryError = error;
+    if (isW16Lane(lane)) writeJson(outputPath, {
+      schemaVersion: 1, result: 'FAIL', binding: { ...binding, platform },
+      error: { name: error.name, message: error.message },
+      ...(pageResult?.w16Proof ? { w16Proof: pageResult.w16Proof } : {}),
+      ...error.w16Observation,
+    });
     throw error;
   } finally {
     if (!sessionClosed) {

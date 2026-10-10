@@ -1,4 +1,5 @@
 import { resolveW16Lane } from './w16-lanes.mjs';
+import { validateW16HostState } from './w16-host-state.mjs';
 export function validateW16Proof(proof, binding) {
   const lane = resolveW16Lane({ ...binding, required: true });
   if (!Number.isInteger(binding.runId) || binding.runId < 1 || !Number.isInteger(binding.jobId) || binding.jobId < 1 ||
@@ -8,6 +9,7 @@ export function validateW16Proof(proof, binding) {
   for (const key of ['lane', 'assetId', 'platform', 'runId', 'jobId', 'commit', 'packageSha256'])
     if (proof.binding?.[key] !== binding[key]) throw new Error(`W16 binding mismatch: ${key}`);
   const r = proof.soak;
+  validateW16HostState(r?.hostState, { durationMs: r?.durationMs, binding: proof.binding });
   for (const value of [r?.durationMs, r?.frames, r?.keyframesVisited, r?.totalPoints, r?.selectionCount,
     r?.minPoints, r?.maxPoints, r?.coveredPixels, r?.stats?.memoryBudgetBytes])
     if (!Number.isFinite(value)) throw new Error('W16 measurement missing or non-finite');

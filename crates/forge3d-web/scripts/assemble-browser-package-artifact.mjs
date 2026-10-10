@@ -102,6 +102,7 @@ export function assembleBrowserPackageArtifact({
     "w16-lanes.mjs",
     "w16-hardware-acceptance.mjs",
     "w16-hardware-proof-validator.mjs",
+    "w16-host-state.mjs",
     "browser-launch-provenance.mjs",
     "browser-run-provenance.mjs",
     "browser-session-runtime.mjs",
