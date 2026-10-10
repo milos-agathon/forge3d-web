@@ -14,6 +14,11 @@ const readJson = path => JSON.parse(readFileSync(join(root, path), 'utf8'));
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const evidence = readJson('docs/w16-local-evidence.json');
 const conformance = readJson('test-results/w16-package-consumer.json');
+// Historical checks describe their own run, not this newly measured package.
+// Record only checks this consumer executed; bind other fresh gates separately.
+evidence.previousChecks = { file: 'w16-local-evidence.json',
+  statement: 'Historical gate counts are retained in the original report and are not fresh measurements for this batch.' };
+evidence.checks = { installedPackage: { conformance: 'passed' }, api: 'passed as part of installed consumer' };
 const runs = readdirSync(join(root, 'docs/w16-runs'))
   .filter(name => /^installed-(?:[0-9TZ]+-)?[1-3]\.json$/u.test(name)).sort()
   .map(name => ({ file: `w16-runs/${name}`, report: readJson(`docs/w16-runs/${name}`) }))

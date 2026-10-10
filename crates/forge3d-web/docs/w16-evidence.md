@@ -349,3 +349,43 @@ registered runners and no LAB_INFRA_READY variable. Both reference lanes are
 pending, with no attested reports. No hardware dispatch, runner registration,
 credential creation, protected-setting change or substitute qualification was
 performed. A local passing run cannot qualify either reference host.
+
+### Final local installed-package run with host capture
+
+[The complete ten-minute report](w16-runs/installed-20261010T135319734Z-1.json)
+passed on clean runtime commit `0e53772` with Chromium `148.0.7778.96`:
+600,054.4 ms, 35,861 frames, **10.0 ms p95**, all 64 keyframes and 693 selection
+sets. It drew 299,520–299,994 points and covered 94,616 pixels. Tracked CPU
+peak was 42,918,791 bytes; GPU peak was 42,762,352 bytes, zero after disposal.
+The complete update/fetch/decode/upload/awaited-GPU path remains timed.
+
+The report embeds **121 host samples**, maximum observed gap **5,015.93 ms**.
+Windows release was `10.0.26300`; NVIDIA RTX 3070 driver was `610.60`.
+P-state observations were P8: 109, P5: 6, P0: 5, P3: 1. Graphics/SM clocks ranged
+210–1,725 MHz; memory clock 405–7,001 MHz; GPU utilization 0–41%; device-wide
+memory 880–1,560 MiB, including other GPU users. CPU load ranged 6.08–23.70%.
+The power scheme remained `Lenovo Default` (GUID
+`3a072fe5-9e0d-4cd1-ba25-1b4c556dba80`). Full GPU process tables are retained
+per sample, including the test Chromium and other desktop/Python/browser/app
+processes. No other agent tests or builds ran during the traversal. This shared
+desktop observation does not establish an explanation for October 9 failures.
+
+[Batch evidence](w16-runs/evidence-20261010T135319734Z.json),
+[installed conformance](w16-runs/conformance-20261010T135319734Z.json), and
+[runtime bindings](w16-runs/runtime-files-20261010T135319734Z.json) bind all
+273 current dist/asset files to measured tarball SHA-256
+`3d557369c4fbf99768e141c675c0e1edc22277736417b79c7442dc3d2e5dcf7f`.
+Their runtime digest is
+`6c046d4ace930909ec93b8efee9b89b14b89ef3fe2f5079beb6713eb773eef7a`.
+Later evidence-only package contents can change the tarball digest; the runtime
+bindings compare every measured dist/asset byte directly to the installed pack.
+
+Final sequential local gates: **1,082 units** in 64 files; **15 parity checks**
+with 53 lock-controlled consumers; **619 infrastructure checks passed**, one
+existing Unix-UID check skipped on Windows; **47 W16 units and ten source/dist
+browser cases passed**. The optional routine source soak was skipped because
+the explicit installed-package command above executed the full ten-minute run.
+No tests were weakened or removed. Build/API checks within the installed
+consumer also passed. The final 260-case fuzz gate is bound in the security
+review. PR CI is tracked on the current PR head; required check results must be
+green before task 4 is complete.
