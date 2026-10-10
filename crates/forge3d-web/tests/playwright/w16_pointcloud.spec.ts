@@ -57,8 +57,8 @@ for (const dist of [false, true]) {
         .map((x) => x.toString(16).padStart(2, "0")).join("");
       const runs = [];
       for (const reason of ["abort", "deadline"]) {
-        let created = 0, terminated = 0, entered!: () => void;
-        const stuck = new Promise<void>((resolve) => { entered = resolve; });
+        let created = 0, terminated = 0, entered!: () => void, startupFailed!: (error: Error) => void;
+        const stuck = new Promise<void>((resolve, reject) => { entered = resolve; startupFailed = reject; });
         const pool = new api.Forge3DWorkerPool({
           size: 1, jobTimeoutMs: 10_000,
           mainThreadHandler: api.createPointCloudWorkerHandler(),
@@ -68,6 +68,12 @@ for (const dist of [false, true]) {
             worker.addEventListener("message", ({ data }) => {
               if (data.state === "stuck-wasm-entered") entered();
             });
+            worker.addEventListener("error", (event) => startupFailed(new Error(
+              `Stuck-WASM worker failed to start: ${event.message}`,
+            )));
+            worker.addEventListener("messageerror", () => startupFailed(new Error(
+              "Stuck-WASM worker could not deserialize its startup message",
+            )));
             const channel = new MessageChannel();
             worker.postMessage({ port: channel.port2 }, [channel.port2]);
             return { port: channel.port1, terminate: () => { terminated += 1; worker.terminate(); } };
@@ -78,8 +84,10 @@ for (const dist of [false, true]) {
           const failure = pool.run({ kind: "test-stuck-wasm" }, {
             signal: controller.signal, timeoutMs: reason === "deadline" ? 1500 : 10_000,
             requireHardStop: true,
-          }).then(() => ({ code: "unexpected-success" }), (error) => ({ code: error.code, details: error.details }));
-          await stuck;
+          }).then(() => ({ code: "unexpected-success" }), (error) => ({ code: error.code, message: error.message, details: error.details }));
+          await Promise.race([stuck, failure.then((error) => {
+            throw new Error(`Stuck-WASM entry was not observed before the bounded job ended: ${JSON.stringify(error)}`);
+          })]);
           // The recovery job is already waiting when the stuck worker is killed.
           const recovered = pool.run({ kind: "laz-file", bytes }, { requireHardStop: true });
           if (reason === "abort") controller.abort();
