@@ -1,0 +1,688 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "d0d3047e05221421fa0b02b3da4e93797edb2c52",
+  "published": {
+    "bytes": 214351,
+    "sha256": "9c1802bc31b567dd4aa1ce9ab010e7e51e095dc42af8379b474ae6f221a9327f",
+    "sections": [
+      {
+        "name": "type",
+        "id": 1,
+        "offset": 8,
+        "payloadBytes": 450,
+        "payloadSha256": "88ca1b5cf84e28f2be0f7aa3adf9baf569a6b9b91b1b9545974e3611e594c4da"
+      },
+      {
+        "name": "import",
+        "id": 2,
+        "offset": 461,
+        "payloadBytes": 704,
+        "payloadSha256": "9599c671a555c594bc771940e227e553f89f55603c652fc65a47fa0a65d9594f"
+      },
+      {
+        "name": "function",
+        "id": 3,
+        "offset": 1168,
+        "payloadBytes": 589,
+        "payloadSha256": "146af97bc6567ff606f146916659257c9398bf574fac49bcc8b87eecb9427acd"
+      },
+      {
+        "name": "table",
+        "id": 4,
+        "offset": 1760,
+        "payloadBytes": 7,
+        "payloadSha256": "f07048f12ac8dcd65c654f567e6b5dabdb99134632f15d230fdc22d351d4e6fd"
+      },
+      {
+        "name": "memory",
+        "id": 5,
+        "offset": 1769,
+        "payloadBytes": 6,
+        "payloadSha256": "a908c9427543ca5b3dc928e5ab8b7ea64ed40e52d94d10fa28d0e618eb038990"
+      },
+      {
+        "name": "global",
+        "id": 6,
+        "offset": 1777,
+        "payloadBytes": 23,
+        "payloadSha256": "7849d75256069f70cc6fa58b033041e481852b08b35cd7cc9d4cf545e2813932"
+      },
+      {
+        "name": "export",
+        "id": 7,
+        "offset": 1802,
+        "payloadBytes": 438,
+        "payloadSha256": "5c84ba56808e9530c5a9b97567df05c90f52762ce1e276e4a8c6234485752477"
+      },
+      {
+        "name": "element",
+        "id": 9,
+        "offset": 2243,
+        "payloadBytes": 755,
+        "payloadSha256": "d7e29d2604612f3e136e611f839d950b6e43100380b327b2688907a5257f1604"
+      },
+      {
+        "name": "code",
+        "id": 10,
+        "offset": 3001,
+        "payloadBytes": 192524,
+        "payloadSha256": "997aa7077323984a8597c31194ac4977c6c7d00ef2f01b55695b392cce0031a5"
+      },
+      {
+        "name": "data",
+        "id": 11,
+        "offset": 195529,
+        "payloadBytes": 18818,
+        "payloadSha256": "319330f06da1daa9534252a8a758022042e55a04d5e7ab823763599135113287"
+      }
+    ],
+    "imports": [
+      {
+        "module": "env",
+        "name": "_embind_register_class",
+        "kind": 0,
+        "typeIndex": 36
+      },
+      {
+        "module": "env",
+        "name": "_embind_register_class_constructor",
+        "kind": 0,
+        "typeIndex": 11
+      },
+      {
+        "module": "env",
+        "name": "_embind_register_class_function",
+        "kind": 0,
+        "typeIndex": 22
+      },
+      {
+        "module": "env",
+        "name": "__cxa_allocate_exception",
+        "kind": 0,
+        "typeIndex": 0
+      },
+      {
+        "module": "env",
+        "name": "__cxa_throw",
+        "kind": 0,
+        "typeIndex": 5
+      },
+      {
+        "module": "env",
+        "name": "_embind_register_void",
+        "kind": 0,
+        "typeIndex": 2
+      },
+      {
+        "module": "env",
+        "name": "_embind_register_bool",
+        "kind": 0,
+        "typeIndex": 10
+      },
+      {
+        "module": "env",
+        "name": "_embind_register_integer",
+        "kind": 0,
+        "typeIndex": 10
+      },
+      {
+        "module": "env",
+        "name": "_embind_register_float",
+        "kind": 0,
+        "typeIndex": 5
+      },
+      {
+        "module": "env",
+        "name": "_embind_register_std_string",
+        "kind": 0,
+        "typeIndex": 2
+      },
+      {
+        "module": "env",
+        "name": "_embind_register_std_wstring",
+        "kind": 0,
+        "typeIndex": 5
+      },
+      {
+        "module": "env",
+        "name": "_embind_register_emval",
+        "kind": 0,
+        "typeIndex": 2
+      },
+      {
+        "module": "env",
+        "name": "_embind_register_memory_view",
+        "kind": 0,
+        "typeIndex": 5
+      },
+      {
+        "module": "env",
+        "name": "emscripten_memcpy_big",
+        "kind": 0,
+        "typeIndex": 5
+      },
+      {
+        "module": "env",
+        "name": "emscripten_resize_heap",
+        "kind": 0,
+        "typeIndex": 0
+      },
+      {
+        "module": "wasi_snapshot_preview1",
+        "name": "fd_write",
+        "kind": 0,
+        "typeIndex": 7
+      },
+      {
+        "module": "wasi_snapshot_preview1",
+        "name": "fd_close",
+        "kind": 0,
+        "typeIndex": 0
+      },
+      {
+        "module": "env",
+        "name": "abort",
+        "kind": 0,
+        "typeIndex": 12
+      },
+      {
+        "module": "wasi_snapshot_preview1",
+        "name": "environ_sizes_get",
+        "kind": 0,
+        "typeIndex": 3
+      },
+      {
+        "module": "wasi_snapshot_preview1",
+        "name": "environ_get",
+        "kind": 0,
+        "typeIndex": 3
+      },
+      {
+        "module": "env",
+        "name": "strftime_l",
+        "kind": 0,
+        "typeIndex": 8
+      },
+      {
+        "module": "env",
+        "name": "_embind_register_bigint",
+        "kind": 0,
+        "typeIndex": 18
+      },
+      {
+        "module": "wasi_snapshot_preview1",
+        "name": "fd_seek",
+        "kind": 0,
+        "typeIndex": 8
+      }
+    ],
+    "exports": [
+      {
+        "name": "memory",
+        "kind": 2,
+        "index": 0
+      },
+      {
+        "name": "__wasm_call_ctors",
+        "kind": 0,
+        "index": 23
+      },
+      {
+        "name": "__indirect_function_table",
+        "kind": 1,
+        "index": 0
+      },
+      {
+        "name": "malloc",
+        "kind": 0,
+        "index": 162
+      },
+      {
+        "name": "free",
+        "kind": 0,
+        "index": 163
+      },
+      {
+        "name": "__getTypeName",
+        "kind": 0,
+        "index": 153
+      },
+      {
+        "name": "_embind_initialize_bindings",
+        "kind": 0,
+        "index": 154
+      },
+      {
+        "name": "__errno_location",
+        "kind": 0,
+        "index": 161
+      },
+      {
+        "name": "fflush",
+        "kind": 0,
+        "index": 173
+      },
+      {
+        "name": "emscripten_stack_init",
+        "kind": 0,
+        "index": 599
+      },
+      {
+        "name": "emscripten_stack_get_free",
+        "kind": 0,
+        "index": 600
+      },
+      {
+        "name": "emscripten_stack_get_base",
+        "kind": 0,
+        "index": 601
+      },
+      {
+        "name": "emscripten_stack_get_end",
+        "kind": 0,
+        "index": 602
+      },
+      {
+        "name": "stackSave",
+        "kind": 0,
+        "index": 596
+      },
+      {
+        "name": "stackRestore",
+        "kind": 0,
+        "index": 597
+      },
+      {
+        "name": "stackAlloc",
+        "kind": 0,
+        "index": 598
+      },
+      {
+        "name": "__cxa_is_pointer_type",
+        "kind": 0,
+        "index": 587
+      },
+      {
+        "name": "dynCall_viijii",
+        "kind": 0,
+        "index": 603
+      },
+      {
+        "name": "dynCall_ji",
+        "kind": 0,
+        "index": 604
+      },
+      {
+        "name": "dynCall_jiji",
+        "kind": 0,
+        "index": 605
+      },
+      {
+        "name": "dynCall_iiiiij",
+        "kind": 0,
+        "index": 606
+      },
+      {
+        "name": "dynCall_iiiiijj",
+        "kind": 0,
+        "index": 607
+      },
+      {
+        "name": "dynCall_iiiiiijj",
+        "kind": 0,
+        "index": 608
+      }
+    ],
+    "memories": [
+      {
+        "imported": false,
+        "flags": 1,
+        "minimumPages": 4,
+        "maximumPages": 32768
+      }
+    ]
+  },
+  "rebuilt": {
+    "bytes": 214351,
+    "sha256": "9c1802bc31b567dd4aa1ce9ab010e7e51e095dc42af8379b474ae6f221a9327f",
+    "sections": [
+      {
+        "name": "type",
+        "id": 1,
+        "offset": 8,
+        "payloadBytes": 450,
+        "payloadSha256": "88ca1b5cf84e28f2be0f7aa3adf9baf569a6b9b91b1b9545974e3611e594c4da"
+      },
+      {
+        "name": "import",
+        "id": 2,
+        "offset": 461,
+        "payloadBytes": 704,
+        "payloadSha256": "9599c671a555c594bc771940e227e553f89f55603c652fc65a47fa0a65d9594f"
+      },
+      {
+        "name": "function",
+        "id": 3,
+        "offset": 1168,
+        "payloadBytes": 589,
+        "payloadSha256": "146af97bc6567ff606f146916659257c9398bf574fac49bcc8b87eecb9427acd"
+      },
+      {
+        "name": "table",
+        "id": 4,
+        "offset": 1760,
+        "payloadBytes": 7,
+        "payloadSha256": "f07048f12ac8dcd65c654f567e6b5dabdb99134632f15d230fdc22d351d4e6fd"
+      },
+      {
+        "name": "memory",
+        "id": 5,
+        "offset": 1769,
+        "payloadBytes": 6,
+        "payloadSha256": "a908c9427543ca5b3dc928e5ab8b7ea64ed40e52d94d10fa28d0e618eb038990"
+      },
+      {
+        "name": "global",
+        "id": 6,
+        "offset": 1777,
+        "payloadBytes": 23,
+        "payloadSha256": "7849d75256069f70cc6fa58b033041e481852b08b35cd7cc9d4cf545e2813932"
+      },
+      {
+        "name": "export",
+        "id": 7,
+        "offset": 1802,
+        "payloadBytes": 438,
+        "payloadSha256": "5c84ba56808e9530c5a9b97567df05c90f52762ce1e276e4a8c6234485752477"
+      },
+      {
+        "name": "element",
+        "id": 9,
+        "offset": 2243,
+        "payloadBytes": 755,
+        "payloadSha256": "d7e29d2604612f3e136e611f839d950b6e43100380b327b2688907a5257f1604"
+      },
+      {
+        "name": "code",
+        "id": 10,
+        "offset": 3001,
+        "payloadBytes": 192524,
+        "payloadSha256": "997aa7077323984a8597c31194ac4977c6c7d00ef2f01b55695b392cce0031a5"
+      },
+      {
+        "name": "data",
+        "id": 11,
+        "offset": 195529,
+        "payloadBytes": 18818,
+        "payloadSha256": "319330f06da1daa9534252a8a758022042e55a04d5e7ab823763599135113287"
+      }
+    ],
+    "imports": [
+      {
+        "module": "env",
+        "name": "_embind_register_class",
+        "kind": 0,
+        "typeIndex": 36
+      },
+      {
+        "module": "env",
+        "name": "_embind_register_class_constructor",
+        "kind": 0,
+        "typeIndex": 11
+      },
+      {
+        "module": "env",
+        "name": "_embind_register_class_function",
+        "kind": 0,
+        "typeIndex": 22
+      },
+      {
+        "module": "env",
+        "name": "__cxa_allocate_exception",
+        "kind": 0,
+        "typeIndex": 0
+      },
+      {
+        "module": "env",
+        "name": "__cxa_throw",
+        "kind": 0,
+        "typeIndex": 5
+      },
+      {
+        "module": "env",
+        "name": "_embind_register_void",
+        "kind": 0,
+        "typeIndex": 2
+      },
+      {
+        "module": "env",
+        "name": "_embind_register_bool",
+        "kind": 0,
+        "typeIndex": 10
+      },
+      {
+        "module": "env",
+        "name": "_embind_register_integer",
+        "kind": 0,
+        "typeIndex": 10
+      },
+      {
+        "module": "env",
+        "name": "_embind_register_float",
+        "kind": 0,
+        "typeIndex": 5
+      },
+      {
+        "module": "env",
+        "name": "_embind_register_std_string",
+        "kind": 0,
+        "typeIndex": 2
+      },
+      {
+        "module": "env",
+        "name": "_embind_register_std_wstring",
+        "kind": 0,
+        "typeIndex": 5
+      },
+      {
+        "module": "env",
+        "name": "_embind_register_emval",
+        "kind": 0,
+        "typeIndex": 2
+      },
+      {
+        "module": "env",
+        "name": "_embind_register_memory_view",
+        "kind": 0,
+        "typeIndex": 5
+      },
+      {
+        "module": "env",
+        "name": "emscripten_memcpy_big",
+        "kind": 0,
+        "typeIndex": 5
+      },
+      {
+        "module": "env",
+        "name": "emscripten_resize_heap",
+        "kind": 0,
+        "typeIndex": 0
+      },
+      {
+        "module": "wasi_snapshot_preview1",
+        "name": "fd_write",
+        "kind": 0,
+        "typeIndex": 7
+      },
+      {
+        "module": "wasi_snapshot_preview1",
+        "name": "fd_close",
+        "kind": 0,
+        "typeIndex": 0
+      },
+      {
+        "module": "env",
+        "name": "abort",
+        "kind": 0,
+        "typeIndex": 12
+      },
+      {
+        "module": "wasi_snapshot_preview1",
+        "name": "environ_sizes_get",
+        "kind": 0,
+        "typeIndex": 3
+      },
+      {
+        "module": "wasi_snapshot_preview1",
+        "name": "environ_get",
+        "kind": 0,
+        "typeIndex": 3
+      },
+      {
+        "module": "env",
+        "name": "strftime_l",
+        "kind": 0,
+        "typeIndex": 8
+      },
+      {
+        "module": "env",
+        "name": "_embind_register_bigint",
+        "kind": 0,
+        "typeIndex": 18
+      },
+      {
+        "module": "wasi_snapshot_preview1",
+        "name": "fd_seek",
+        "kind": 0,
+        "typeIndex": 8
+      }
+    ],
+    "exports": [
+      {
+        "name": "memory",
+        "kind": 2,
+        "index": 0
+      },
+      {
+        "name": "__wasm_call_ctors",
+        "kind": 0,
+        "index": 23
+      },
+      {
+        "name": "__indirect_function_table",
+        "kind": 1,
+        "index": 0
+      },
+      {
+        "name": "malloc",
+        "kind": 0,
+        "index": 162
+      },
+      {
+        "name": "free",
+        "kind": 0,
+        "index": 163
+      },
+      {
+        "name": "__getTypeName",
+        "kind": 0,
+        "index": 153
+      },
+      {
+        "name": "_embind_initialize_bindings",
+        "kind": 0,
+        "index": 154
+      },
+      {
+        "name": "__errno_location",
+        "kind": 0,
+        "index": 161
+      },
+      {
+        "name": "fflush",
+        "kind": 0,
+        "index": 173
+      },
+      {
+        "name": "emscripten_stack_init",
+        "kind": 0,
+        "index": 599
+      },
+      {
+        "name": "emscripten_stack_get_free",
+        "kind": 0,
+        "index": 600
+      },
+      {
+        "name": "emscripten_stack_get_base",
+        "kind": 0,
+        "index": 601
+      },
+      {
+        "name": "emscripten_stack_get_end",
+        "kind": 0,
+        "index": 602
+      },
+      {
+        "name": "stackSave",
+        "kind": 0,
+        "index": 596
+      },
+      {
+        "name": "stackRestore",
+        "kind": 0,
+        "index": 597
+      },
+      {
+        "name": "stackAlloc",
+        "kind": 0,
+        "index": 598
+      },
+      {
+        "name": "__cxa_is_pointer_type",
+        "kind": 0,
+        "index": 587
+      },
+      {
+        "name": "dynCall_viijii",
+        "kind": 0,
+        "index": 603
+      },
+      {
+        "name": "dynCall_ji",
+        "kind": 0,
+        "index": 604
+      },
+      {
+        "name": "dynCall_jiji",
+        "kind": 0,
+        "index": 605
+      },
+      {
+        "name": "dynCall_iiiiij",
+        "kind": 0,
+        "index": 606
+      },
+      {
+        "name": "dynCall_iiiiijj",
+        "kind": 0,
+        "index": 607
+      },
+      {
+        "name": "dynCall_iiiiiijj",
+        "kind": 0,
+        "index": 608
+      }
+    ],
+    "memories": [
+      {
+        "imported": false,
+        "flags": 1,
+        "minimumPages": 4,
+        "maximumPages": 32768
+      }
+    ]
+  },
+  "byteIdentical": true,
+  "byteDifferences": []
+}

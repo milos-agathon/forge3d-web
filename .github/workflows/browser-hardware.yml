@@ -26,6 +26,8 @@ on:
           - chrome-beta-linux-rtx3070
           - edge-linux-rtx3070
           - firefox-nightly-linux-rtx3070
+          - w16-reference-discrete
+          - w16-reference-integrated
           - manual-mobile-multitouch
           - manual-safari-trackpad
       assetId:

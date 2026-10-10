@@ -1,0 +1,1 @@
+{"asset": {"version": "1.0"}, "geometricError": 100, "root": {"boundingVolume": {"sphere": [0, 0, 0, 2]}, "geometricError": 10, "refine": "ADD", "content": {"uri": "colored.pnts"}, "children": [{"boundingVolume": {"box": [4, 5, 6, 2, 0, 0, 0, 2, 0, 0, 0, 2]}, "geometricError": 0, "content": {"uri": "triangle.b3dm"}}]}}

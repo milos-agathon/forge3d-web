@@ -1,0 +1,140 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-10-10T13:29:45.092494+00:00",
+  "sourceCommit": "d0d3047e05221421fa0b02b3da4e93797edb2c52",
+  "licenseCommit": "f2e7491902dc06bf4ce0a4577d3af3b98f280b2a",
+  "captures": {
+    "osvNpm": {
+      "url": "https://api.osv.dev/v1/query",
+      "request": {
+        "version": "0.0.7",
+        "package": {
+          "name": "laz-perf",
+          "ecosystem": "npm"
+        }
+      },
+      "status": 200,
+      "responseSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response": {}
+    },
+    "osvPublishedSource": {
+      "url": "https://api.osv.dev/v1/query",
+      "request": {
+        "commit": "d0d3047e05221421fa0b02b3da4e93797edb2c52"
+      },
+      "status": 200,
+      "responseSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response": {}
+    },
+    "osvLicenseSource": {
+      "url": "https://api.osv.dev/v1/query",
+      "request": {
+        "commit": "f2e7491902dc06bf4ce0a4577d3af3b98f280b2a"
+      },
+      "status": 200,
+      "responseSha256": "44136fa355b3678a1146ad16f7e8649e94fb4fc21fe77e8310c060f61caaff8a",
+      "response": {}
+    },
+    "githubReviewed": {
+      "url": "https://api.github.com/advisories?ecosystem=npm&affects=laz-perf%400.0.7&type=reviewed&per_page=100",
+      "request": null,
+      "status": 200,
+      "responseSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "response": []
+    },
+    "githubUnreviewed": {
+      "url": "https://api.github.com/advisories?ecosystem=npm&affects=laz-perf%400.0.7&type=unreviewed&per_page=100",
+      "request": null,
+      "status": 200,
+      "responseSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "response": []
+    },
+    "githubMalware": {
+      "url": "https://api.github.com/advisories?ecosystem=npm&affects=laz-perf%400.0.7&type=malware&per_page=100",
+      "request": null,
+      "status": 200,
+      "responseSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "response": []
+    },
+    "githubUpstream": {
+      "url": "https://api.github.com/repos/hobuinc/laz-perf/security-advisories?per_page=100",
+      "request": null,
+      "status": 200,
+      "responseSha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945",
+      "response": []
+    },
+    "npmMetadata": {
+      "url": "https://registry.npmjs.org/laz-perf/0.0.7",
+      "request": null,
+      "status": 200,
+      "responseSha256": "55f656e364e35ab39cad7d475232b2af64fa1589ef58173df938455688f3da34",
+      "response": {
+        "dist": {
+          "shasum": "949da3e04134e0a9fc56a0a3a909d84be484bf5a",
+          "tarball": "https://registry.npmjs.org/laz-perf/-/laz-perf-0.0.7.tgz",
+          "fileCount": 21,
+          "integrity": "sha512-2xRqm/f/2UqDS5qqkjOyDb6uVIjkVw6SGmQlMoTQliVWkZhPfIbUJTubUl3mTloaWqKcjlS/urmP1CYoxelsEg==",
+          "signatures": [
+            {
+              "sig": "MEUCIQCqCRPvNXoFOsSazJVG/xsOhyKNudrsGHGeo5ycyvy+XgIgeZIaCnbyr4kBzKL0b6gRpR2a1RMEO23PsdPtnT0sFA0=",
+              "keyid": "SHA256:DhQ8wR5APBvFHLF/+Tc+AYvPOdTpcIDqOhxsBHRwC7U"
+            }
+          ],
+          "unpackedSize": 1215348
+        },
+        "main": "lib/node/index.js",
+        "name": "laz-perf",
+        "types": "./lib/node/index.d.ts",
+        "browser": "lib/web/index.js",
+        "gitHead": "d0d3047e05221421fa0b02b3da4e93797edb2c52",
+        "license": "Apache-2.0",
+        "scripts": {
+          "test": "jest",
+          "wasm": "./wasm.sh",
+          "build": "./bundle.sh",
+          "prepare": "npm run wasm && npm run build"
+        },
+        "_npmUser": {
+          "name": "connormanning",
+          "email": "connor@hobu.co"
+        },
+        "homepage": "https://github.com/hobuinc/laz-perf",
+        "keywords": [
+          "3d",
+          "laz",
+          "laszip",
+          "point cloud",
+          "lidar",
+          "gis"
+        ],
+        "_npmVersion": "11.0.0",
+        "description": "LAZ implementation compiled to WASM via Emscripten for LAZ support in a browser",
+        "directories": {},
+        "maintainers": [
+          {
+            "name": "connormanning",
+            "email": "connor@hobu.co"
+          }
+        ],
+        "_nodeVersion": "22.12.0",
+        "_hasShrinkwrap": false,
+        "devDependencies": {
+          "jest": "^28.1.2",
+          "tslib": "^2.3.1",
+          "ts-jest": "^28.0.5",
+          "prettier": "^2.7.1",
+          "typescript": "^4.5.5",
+          "@types/jest": "^28.1.4",
+          "@types/emscripten": "^1.39.6"
+        },
+        "_npmOperationalInternal": {
+          "tmp": "tmp/laz-perf_0.0.7_1739928988243_0.15538844386648876",
+          "host": "s3://npm-registry-packages-npm-production"
+        },
+        "_id": "laz-perf@0.0.7",
+        "version": "0.0.7"
+      }
+    }
+  },
+  "interpretation": "Empty lists mean no published matching advisory; they do not certify safety."
+}

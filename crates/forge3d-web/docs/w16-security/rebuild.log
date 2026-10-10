@@ -1,0 +1,119 @@
+commit d0d3047e05221421fa0b02b3da4e93797edb2c52
+Author:     Sébastien Guimmara <5512096+sguimmara@users.noreply.github.com>
+AuthorDate: Mon Feb 10 17:26:25 2025 +0100
+Commit:     GitHub <noreply@github.com>
+CommitDate: Mon Feb 10 11:26:25 2025 -0500
+
+    Disable emscripten dynamic execution (#159)
+    
+    * (wasm|bundle).sh: use /usr/bin/env for portability
+    
+    * Emscripten: disable dynamic execution to avoid CSP violations (#158)
+    
+    * js: update laz-perf.js and laz-perf.wasm
+commit 21611d2a507fad73385120d89e05a794666070ae
+Author:     Derek Schuff <dschuff@chromium.org>
+AuthorDate: Wed Aug 24 09:57:40 2022 -0700
+Commit:     GitHub <noreply@github.com>
+CommitDate: Wed Aug 24 09:57:40 2022 -0700
+
+    3.1.20 (#1095)
+emcc (Emscripten gcc/clang-like replacement + linker emulating GNU ld) 3.1.20 (5d878c99921ec247d34fb26a20b5a13d60d69e93)
+Copyright (C) 2014 the Emscripten authors (see AUTHORS.txt)
+This is free and open source software under the MIT license.
+There is NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+cmake version 3.28.3
+
+CMake suite maintained and supported by Kitware (kitware.com/cmake).
+Python 3.12.3
+Linux DESKTOP-6IEVQ7I 6.6.87.2-microsoft-standard-WSL2 #1 SMP PREEMPT_DYNAMIC Thu Jun  5 18:30:46 UTC 2025 x86_64 x86_64 x86_64 GNU/Linux
+-- WASM Emscripten output has been enabled
+FLAGS: --bind -s ASSERTIONS=1 -s INITIAL_MEMORY=262144 -s TOTAL_STACK=65536 -s ALLOW_MEMORY_GROWTH=1 -s WASM=1 -s "BINARYEN_METHOD='native-wasm'" -s MODULARIZE=1 -s DYNAMIC_EXECUTION=0 -s EXPORT_NAME=createLazPerf -s ENVIRONMENT=web
+-- Configuring done (14.4s)
+-- Generating done (0.4s)
+-- Build files have been written to: /mnt/c/temp/w16-laz-perf-rebuilt
+Change Dir: '/mnt/c/temp/w16-laz-perf-rebuilt'
+
+Run Build Command(s): /usr/bin/cmake -E env VERBOSE=1 /usr/bin/gmake -f Makefile -j1 laz-perf
+/usr/bin/cmake -S/mnt/c/temp/w16-laz-perf-review-src -B/mnt/c/temp/w16-laz-perf-rebuilt --check-build-system CMakeFiles/Makefile.cmake 0
+/usr/bin/gmake  -f CMakeFiles/Makefile2 laz-perf
+gmake[1]: Entering directory '/mnt/c/temp/w16-laz-perf-rebuilt'
+/usr/bin/cmake -S/mnt/c/temp/w16-laz-perf-review-src -B/mnt/c/temp/w16-laz-perf-rebuilt --check-build-system CMakeFiles/Makefile.cmake 0
+/usr/bin/cmake -E cmake_progress_start /mnt/c/temp/w16-laz-perf-rebuilt/CMakeFiles 18
+/usr/bin/gmake  -f CMakeFiles/Makefile2 cpp/emscripten/CMakeFiles/laz-perf.dir/all
+gmake[2]: Entering directory '/mnt/c/temp/w16-laz-perf-rebuilt'
+/usr/bin/gmake  -f cpp/CMakeFiles/lazperf_s.dir/build.make cpp/CMakeFiles/lazperf_s.dir/depend
+gmake[3]: Entering directory '/mnt/c/temp/w16-laz-perf-rebuilt'
+cd /mnt/c/temp/w16-laz-perf-rebuilt && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /mnt/c/temp/w16-laz-perf-review-src /mnt/c/temp/w16-laz-perf-review-src/cpp /mnt/c/temp/w16-laz-perf-rebuilt /mnt/c/temp/w16-laz-perf-rebuilt/cpp /mnt/c/temp/w16-laz-perf-rebuilt/cpp/CMakeFiles/lazperf_s.dir/DependInfo.cmake "--color="
+gmake[3]: Leaving directory '/mnt/c/temp/w16-laz-perf-rebuilt'
+/usr/bin/gmake  -f cpp/CMakeFiles/lazperf_s.dir/build.make cpp/CMakeFiles/lazperf_s.dir/build
+gmake[3]: Entering directory '/mnt/c/temp/w16-laz-perf-rebuilt'
+[  5%] Building CXX object cpp/CMakeFiles/lazperf_s.dir/lazperf/charbuf.cpp.o
+cd /mnt/c/temp/w16-laz-perf-rebuilt/cpp && /mnt/c/temp/w16-emsdk-3.1.20/upstream/emscripten/em++   -O3 -DNDEBUG -std=gnu++11 -Wall -Wextra -Wpointer-arith -Wcast-align -Wcast-qual -Wno-error=parentheses -Wno-error=cast-qual -Wredundant-decls -Wno-unused-parameter -Wno-unused-variable -Wno-long-long -Wno-unknown-pragmas -Wno-deprecated-declarations -Wno-unknown-warning-option -MD -MT cpp/CMakeFiles/lazperf_s.dir/lazperf/charbuf.cpp.o -MF CMakeFiles/lazperf_s.dir/lazperf/charbuf.cpp.o.d -o CMakeFiles/lazperf_s.dir/lazperf/charbuf.cpp.o -c /mnt/c/temp/w16-laz-perf-review-src/cpp/lazperf/charbuf.cpp
+[ 11%] Building CXX object cpp/CMakeFiles/lazperf_s.dir/lazperf/detail/field_byte10.cpp.o
+cd /mnt/c/temp/w16-laz-perf-rebuilt/cpp && /mnt/c/temp/w16-emsdk-3.1.20/upstream/emscripten/em++   -O3 -DNDEBUG -std=gnu++11 -Wall -Wextra -Wpointer-arith -Wcast-align -Wcast-qual -Wno-error=parentheses -Wno-error=cast-qual -Wredundant-decls -Wno-unused-parameter -Wno-unused-variable -Wno-long-long -Wno-unknown-pragmas -Wno-deprecated-declarations -Wno-unknown-warning-option -MD -MT cpp/CMakeFiles/lazperf_s.dir/lazperf/detail/field_byte10.cpp.o -MF CMakeFiles/lazperf_s.dir/lazperf/detail/field_byte10.cpp.o.d -o CMakeFiles/lazperf_s.dir/lazperf/detail/field_byte10.cpp.o -c /mnt/c/temp/w16-laz-perf-review-src/cpp/lazperf/detail/field_byte10.cpp
+[ 16%] Building CXX object cpp/CMakeFiles/lazperf_s.dir/lazperf/detail/field_byte14.cpp.o
+cd /mnt/c/temp/w16-laz-perf-rebuilt/cpp && /mnt/c/temp/w16-emsdk-3.1.20/upstream/emscripten/em++   -O3 -DNDEBUG -std=gnu++11 -Wall -Wextra -Wpointer-arith -Wcast-align -Wcast-qual -Wno-error=parentheses -Wno-error=cast-qual -Wredundant-decls -Wno-unused-parameter -Wno-unused-variable -Wno-long-long -Wno-unknown-pragmas -Wno-deprecated-declarations -Wno-unknown-warning-option -MD -MT cpp/CMakeFiles/lazperf_s.dir/lazperf/detail/field_byte14.cpp.o -MF CMakeFiles/lazperf_s.dir/lazperf/detail/field_byte14.cpp.o.d -o CMakeFiles/lazperf_s.dir/lazperf/detail/field_byte14.cpp.o -c /mnt/c/temp/w16-laz-perf-review-src/cpp/lazperf/detail/field_byte14.cpp
+[ 22%] Building CXX object cpp/CMakeFiles/lazperf_s.dir/lazperf/detail/field_gpstime10.cpp.o
+cd /mnt/c/temp/w16-laz-perf-rebuilt/cpp && /mnt/c/temp/w16-emsdk-3.1.20/upstream/emscripten/em++   -O3 -DNDEBUG -std=gnu++11 -Wall -Wextra -Wpointer-arith -Wcast-align -Wcast-qual -Wno-error=parentheses -Wno-error=cast-qual -Wredundant-decls -Wno-unused-parameter -Wno-unused-variable -Wno-long-long -Wno-unknown-pragmas -Wno-deprecated-declarations -Wno-unknown-warning-option -MD -MT cpp/CMakeFiles/lazperf_s.dir/lazperf/detail/field_gpstime10.cpp.o -MF CMakeFiles/lazperf_s.dir/lazperf/detail/field_gpstime10.cpp.o.d -o CMakeFiles/lazperf_s.dir/lazperf/detail/field_gpstime10.cpp.o -c /mnt/c/temp/w16-laz-perf-review-src/cpp/lazperf/detail/field_gpstime10.cpp
+[ 27%] Building CXX object cpp/CMakeFiles/lazperf_s.dir/lazperf/detail/field_nir14.cpp.o
+cd /mnt/c/temp/w16-laz-perf-rebuilt/cpp && /mnt/c/temp/w16-emsdk-3.1.20/upstream/emscripten/em++   -O3 -DNDEBUG -std=gnu++11 -Wall -Wextra -Wpointer-arith -Wcast-align -Wcast-qual -Wno-error=parentheses -Wno-error=cast-qual -Wredundant-decls -Wno-unused-parameter -Wno-unused-variable -Wno-long-long -Wno-unknown-pragmas -Wno-deprecated-declarations -Wno-unknown-warning-option -MD -MT cpp/CMakeFiles/lazperf_s.dir/lazperf/detail/field_nir14.cpp.o -MF CMakeFiles/lazperf_s.dir/lazperf/detail/field_nir14.cpp.o.d -o CMakeFiles/lazperf_s.dir/lazperf/detail/field_nir14.cpp.o -c /mnt/c/temp/w16-laz-perf-review-src/cpp/lazperf/detail/field_nir14.cpp
+[ 33%] Building CXX object cpp/CMakeFiles/lazperf_s.dir/lazperf/detail/field_point10.cpp.o
+cd /mnt/c/temp/w16-laz-perf-rebuilt/cpp && /mnt/c/temp/w16-emsdk-3.1.20/upstream/emscripten/em++   -O3 -DNDEBUG -std=gnu++11 -Wall -Wextra -Wpointer-arith -Wcast-align -Wcast-qual -Wno-error=parentheses -Wno-error=cast-qual -Wredundant-decls -Wno-unused-parameter -Wno-unused-variable -Wno-long-long -Wno-unknown-pragmas -Wno-deprecated-declarations -Wno-unknown-warning-option -MD -MT cpp/CMakeFiles/lazperf_s.dir/lazperf/detail/field_point10.cpp.o -MF CMakeFiles/lazperf_s.dir/lazperf/detail/field_point10.cpp.o.d -o CMakeFiles/lazperf_s.dir/lazperf/detail/field_point10.cpp.o -c /mnt/c/temp/w16-laz-perf-review-src/cpp/lazperf/detail/field_point10.cpp
+[ 38%] Building CXX object cpp/CMakeFiles/lazperf_s.dir/lazperf/detail/field_point14.cpp.o
+cd /mnt/c/temp/w16-laz-perf-rebuilt/cpp && /mnt/c/temp/w16-emsdk-3.1.20/upstream/emscripten/em++   -O3 -DNDEBUG -std=gnu++11 -Wall -Wextra -Wpointer-arith -Wcast-align -Wcast-qual -Wno-error=parentheses -Wno-error=cast-qual -Wredundant-decls -Wno-unused-parameter -Wno-unused-variable -Wno-long-long -Wno-unknown-pragmas -Wno-deprecated-declarations -Wno-unknown-warning-option -MD -MT cpp/CMakeFiles/lazperf_s.dir/lazperf/detail/field_point14.cpp.o -MF CMakeFiles/lazperf_s.dir/lazperf/detail/field_point14.cpp.o.d -o CMakeFiles/lazperf_s.dir/lazperf/detail/field_point14.cpp.o -c /mnt/c/temp/w16-laz-perf-review-src/cpp/lazperf/detail/field_point14.cpp
+[ 44%] Building CXX object cpp/CMakeFiles/lazperf_s.dir/lazperf/detail/field_rgb10.cpp.o
+cd /mnt/c/temp/w16-laz-perf-rebuilt/cpp && /mnt/c/temp/w16-emsdk-3.1.20/upstream/emscripten/em++   -O3 -DNDEBUG -std=gnu++11 -Wall -Wextra -Wpointer-arith -Wcast-align -Wcast-qual -Wno-error=parentheses -Wno-error=cast-qual -Wredundant-decls -Wno-unused-parameter -Wno-unused-variable -Wno-long-long -Wno-unknown-pragmas -Wno-deprecated-declarations -Wno-unknown-warning-option -MD -MT cpp/CMakeFiles/lazperf_s.dir/lazperf/detail/field_rgb10.cpp.o -MF CMakeFiles/lazperf_s.dir/lazperf/detail/field_rgb10.cpp.o.d -o CMakeFiles/lazperf_s.dir/lazperf/detail/field_rgb10.cpp.o -c /mnt/c/temp/w16-laz-perf-review-src/cpp/lazperf/detail/field_rgb10.cpp
+[ 50%] Building CXX object cpp/CMakeFiles/lazperf_s.dir/lazperf/detail/field_rgb14.cpp.o
+cd /mnt/c/temp/w16-laz-perf-rebuilt/cpp && /mnt/c/temp/w16-emsdk-3.1.20/upstream/emscripten/em++   -O3 -DNDEBUG -std=gnu++11 -Wall -Wextra -Wpointer-arith -Wcast-align -Wcast-qual -Wno-error=parentheses -Wno-error=cast-qual -Wredundant-decls -Wno-unused-parameter -Wno-unused-variable -Wno-long-long -Wno-unknown-pragmas -Wno-deprecated-declarations -Wno-unknown-warning-option -MD -MT cpp/CMakeFiles/lazperf_s.dir/lazperf/detail/field_rgb14.cpp.o -MF CMakeFiles/lazperf_s.dir/lazperf/detail/field_rgb14.cpp.o.d -o CMakeFiles/lazperf_s.dir/lazperf/detail/field_rgb14.cpp.o -c /mnt/c/temp/w16-laz-perf-review-src/cpp/lazperf/detail/field_rgb14.cpp
+[ 55%] Building CXX object cpp/CMakeFiles/lazperf_s.dir/lazperf/filestream.cpp.o
+cd /mnt/c/temp/w16-laz-perf-rebuilt/cpp && /mnt/c/temp/w16-emsdk-3.1.20/upstream/emscripten/em++   -O3 -DNDEBUG -std=gnu++11 -Wall -Wextra -Wpointer-arith -Wcast-align -Wcast-qual -Wno-error=parentheses -Wno-error=cast-qual -Wredundant-decls -Wno-unused-parameter -Wno-unused-variable -Wno-long-long -Wno-unknown-pragmas -Wno-deprecated-declarations -Wno-unknown-warning-option -MD -MT cpp/CMakeFiles/lazperf_s.dir/lazperf/filestream.cpp.o -MF CMakeFiles/lazperf_s.dir/lazperf/filestream.cpp.o.d -o CMakeFiles/lazperf_s.dir/lazperf/filestream.cpp.o -c /mnt/c/temp/w16-laz-perf-review-src/cpp/lazperf/filestream.cpp
+[ 61%] Building CXX object cpp/CMakeFiles/lazperf_s.dir/lazperf/header.cpp.o
+cd /mnt/c/temp/w16-laz-perf-rebuilt/cpp && /mnt/c/temp/w16-emsdk-3.1.20/upstream/emscripten/em++   -O3 -DNDEBUG -std=gnu++11 -Wall -Wextra -Wpointer-arith -Wcast-align -Wcast-qual -Wno-error=parentheses -Wno-error=cast-qual -Wredundant-decls -Wno-unused-parameter -Wno-unused-variable -Wno-long-long -Wno-unknown-pragmas -Wno-deprecated-declarations -Wno-unknown-warning-option -MD -MT cpp/CMakeFiles/lazperf_s.dir/lazperf/header.cpp.o -MF CMakeFiles/lazperf_s.dir/lazperf/header.cpp.o.d -o CMakeFiles/lazperf_s.dir/lazperf/header.cpp.o -c /mnt/c/temp/w16-laz-perf-review-src/cpp/lazperf/header.cpp
+[ 66%] Building CXX object cpp/CMakeFiles/lazperf_s.dir/lazperf/lazperf.cpp.o
+cd /mnt/c/temp/w16-laz-perf-rebuilt/cpp && /mnt/c/temp/w16-emsdk-3.1.20/upstream/emscripten/em++   -O3 -DNDEBUG -std=gnu++11 -Wall -Wextra -Wpointer-arith -Wcast-align -Wcast-qual -Wno-error=parentheses -Wno-error=cast-qual -Wredundant-decls -Wno-unused-parameter -Wno-unused-variable -Wno-long-long -Wno-unknown-pragmas -Wno-deprecated-declarations -Wno-unknown-warning-option -MD -MT cpp/CMakeFiles/lazperf_s.dir/lazperf/lazperf.cpp.o -MF CMakeFiles/lazperf_s.dir/lazperf/lazperf.cpp.o.d -o CMakeFiles/lazperf_s.dir/lazperf/lazperf.cpp.o -c /mnt/c/temp/w16-laz-perf-review-src/cpp/lazperf/lazperf.cpp
+[ 72%] Building CXX object cpp/CMakeFiles/lazperf_s.dir/lazperf/readers.cpp.o
+cd /mnt/c/temp/w16-laz-perf-rebuilt/cpp && /mnt/c/temp/w16-emsdk-3.1.20/upstream/emscripten/em++   -O3 -DNDEBUG -std=gnu++11 -Wall -Wextra -Wpointer-arith -Wcast-align -Wcast-qual -Wno-error=parentheses -Wno-error=cast-qual -Wredundant-decls -Wno-unused-parameter -Wno-unused-variable -Wno-long-long -Wno-unknown-pragmas -Wno-deprecated-declarations -Wno-unknown-warning-option -MD -MT cpp/CMakeFiles/lazperf_s.dir/lazperf/readers.cpp.o -MF CMakeFiles/lazperf_s.dir/lazperf/readers.cpp.o.d -o CMakeFiles/lazperf_s.dir/lazperf/readers.cpp.o -c /mnt/c/temp/w16-laz-perf-review-src/cpp/lazperf/readers.cpp
+[ 77%] Building CXX object cpp/CMakeFiles/lazperf_s.dir/lazperf/vlr.cpp.o
+cd /mnt/c/temp/w16-laz-perf-rebuilt/cpp && /mnt/c/temp/w16-emsdk-3.1.20/upstream/emscripten/em++   -O3 -DNDEBUG -std=gnu++11 -Wall -Wextra -Wpointer-arith -Wcast-align -Wcast-qual -Wno-error=parentheses -Wno-error=cast-qual -Wredundant-decls -Wno-unused-parameter -Wno-unused-variable -Wno-long-long -Wno-unknown-pragmas -Wno-deprecated-declarations -Wno-unknown-warning-option -MD -MT cpp/CMakeFiles/lazperf_s.dir/lazperf/vlr.cpp.o -MF CMakeFiles/lazperf_s.dir/lazperf/vlr.cpp.o.d -o CMakeFiles/lazperf_s.dir/lazperf/vlr.cpp.o -c /mnt/c/temp/w16-laz-perf-review-src/cpp/lazperf/vlr.cpp
+[ 83%] Building CXX object cpp/CMakeFiles/lazperf_s.dir/lazperf/writers.cpp.o
+cd /mnt/c/temp/w16-laz-perf-rebuilt/cpp && /mnt/c/temp/w16-emsdk-3.1.20/upstream/emscripten/em++   -O3 -DNDEBUG -std=gnu++11 -Wall -Wextra -Wpointer-arith -Wcast-align -Wcast-qual -Wno-error=parentheses -Wno-error=cast-qual -Wredundant-decls -Wno-unused-parameter -Wno-unused-variable -Wno-long-long -Wno-unknown-pragmas -Wno-deprecated-declarations -Wno-unknown-warning-option -MD -MT cpp/CMakeFiles/lazperf_s.dir/lazperf/writers.cpp.o -MF CMakeFiles/lazperf_s.dir/lazperf/writers.cpp.o.d -o CMakeFiles/lazperf_s.dir/lazperf/writers.cpp.o -c /mnt/c/temp/w16-laz-perf-review-src/cpp/lazperf/writers.cpp
+[ 88%] Linking CXX static library liblazperf_s.a
+cd /mnt/c/temp/w16-laz-perf-rebuilt/cpp && /usr/bin/cmake -P CMakeFiles/lazperf_s.dir/cmake_clean_target.cmake
+cd /mnt/c/temp/w16-laz-perf-rebuilt/cpp && /usr/bin/cmake -E cmake_link_script CMakeFiles/lazperf_s.dir/link.txt --verbose=1
+/mnt/c/temp/w16-emsdk-3.1.20/upstream/emscripten/emar qc liblazperf_s.a CMakeFiles/lazperf_s.dir/lazperf/charbuf.cpp.o CMakeFiles/lazperf_s.dir/lazperf/detail/field_byte10.cpp.o CMakeFiles/lazperf_s.dir/lazperf/detail/field_byte14.cpp.o CMakeFiles/lazperf_s.dir/lazperf/detail/field_gpstime10.cpp.o CMakeFiles/lazperf_s.dir/lazperf/detail/field_nir14.cpp.o CMakeFiles/lazperf_s.dir/lazperf/detail/field_point10.cpp.o CMakeFiles/lazperf_s.dir/lazperf/detail/field_point14.cpp.o CMakeFiles/lazperf_s.dir/lazperf/detail/field_rgb10.cpp.o CMakeFiles/lazperf_s.dir/lazperf/detail/field_rgb14.cpp.o CMakeFiles/lazperf_s.dir/lazperf/filestream.cpp.o CMakeFiles/lazperf_s.dir/lazperf/header.cpp.o CMakeFiles/lazperf_s.dir/lazperf/lazperf.cpp.o CMakeFiles/lazperf_s.dir/lazperf/readers.cpp.o CMakeFiles/lazperf_s.dir/lazperf/vlr.cpp.o CMakeFiles/lazperf_s.dir/lazperf/writers.cpp.o
+/mnt/c/temp/w16-emsdk-3.1.20/upstream/emscripten/emranlib liblazperf_s.a
+gmake[3]: Leaving directory '/mnt/c/temp/w16-laz-perf-rebuilt'
+[ 88%] Built target lazperf_s
+/usr/bin/gmake  -f cpp/emscripten/CMakeFiles/laz-perf.dir/build.make cpp/emscripten/CMakeFiles/laz-perf.dir/depend
+gmake[3]: Entering directory '/mnt/c/temp/w16-laz-perf-rebuilt'
+cd /mnt/c/temp/w16-laz-perf-rebuilt && /usr/bin/cmake -E cmake_depends "Unix Makefiles" /mnt/c/temp/w16-laz-perf-review-src /mnt/c/temp/w16-laz-perf-review-src/cpp/emscripten /mnt/c/temp/w16-laz-perf-rebuilt /mnt/c/temp/w16-laz-perf-rebuilt/cpp/emscripten /mnt/c/temp/w16-laz-perf-rebuilt/cpp/emscripten/CMakeFiles/laz-perf.dir/DependInfo.cmake "--color="
+gmake[3]: Leaving directory '/mnt/c/temp/w16-laz-perf-rebuilt'
+/usr/bin/gmake  -f cpp/emscripten/CMakeFiles/laz-perf.dir/build.make cpp/emscripten/CMakeFiles/laz-perf.dir/build
+gmake[3]: Entering directory '/mnt/c/temp/w16-laz-perf-rebuilt'
+[ 94%] Building CXX object cpp/emscripten/CMakeFiles/laz-perf.dir/laz-perf.cpp.o
+cd /mnt/c/temp/w16-laz-perf-rebuilt/cpp/emscripten && /mnt/c/temp/w16-emsdk-3.1.20/upstream/emscripten/em++  @CMakeFiles/laz-perf.dir/includes_CXX.rsp --bind -s ASSERTIONS=1 -s INITIAL_MEMORY=262144 -s TOTAL_STACK=65536 -s ALLOW_MEMORY_GROWTH=1 -s WASM=1 -s "BINARYEN_METHOD='native-wasm'" -s MODULARIZE=1 -s DYNAMIC_EXECUTION=0 -s EXPORT_NAME=createLazPerf -s ENVIRONMENT=web -O3 -DNDEBUG -std=gnu++17 -MD -MT cpp/emscripten/CMakeFiles/laz-perf.dir/laz-perf.cpp.o -MF CMakeFiles/laz-perf.dir/laz-perf.cpp.o.d -o CMakeFiles/laz-perf.dir/laz-perf.cpp.o -c /mnt/c/temp/w16-laz-perf-review-src/cpp/emscripten/laz-perf.cpp
+em++: warning: linker setting ignored during compilation: 'ASSERTIONS' [-Wunused-command-line-argument]
+em++: warning: linker setting ignored during compilation: 'INITIAL_MEMORY' [-Wunused-command-line-argument]
+em++: warning: linker setting ignored during compilation: 'TOTAL_STACK' [-Wunused-command-line-argument]
+em++: warning: linker setting ignored during compilation: 'ALLOW_MEMORY_GROWTH' [-Wunused-command-line-argument]
+em++: warning: linker setting ignored during compilation: 'WASM' [-Wunused-command-line-argument]
+em++: warning: linker setting ignored during compilation: 'BINARYEN_METHOD' [-Wunused-command-line-argument]
+em++: warning: linker setting ignored during compilation: 'MODULARIZE' [-Wunused-command-line-argument]
+em++: warning: linker setting ignored during compilation: 'DYNAMIC_EXECUTION' [-Wunused-command-line-argument]
+em++: warning: linker setting ignored during compilation: 'EXPORT_NAME' [-Wunused-command-line-argument]
+em++: warning: linker setting ignored during compilation: 'ENVIRONMENT' [-Wunused-command-line-argument]
+em++: warning: linker flag ignored during compilation: '--bind' [-Wunused-command-line-argument]
+em++: warning: argument unused during compilation: '-lembind' [-Wunused-command-line-argument]
+[100%] Linking CXX executable laz-perf.js
+cd /mnt/c/temp/w16-laz-perf-rebuilt/cpp/emscripten && /usr/bin/cmake -E cmake_link_script CMakeFiles/laz-perf.dir/link.txt --verbose=1
+/mnt/c/temp/w16-emsdk-3.1.20/upstream/emscripten/em++ --bind -s ASSERTIONS=1 -s INITIAL_MEMORY=262144 -s TOTAL_STACK=65536 -s ALLOW_MEMORY_GROWTH=1 -s WASM=1 -s "BINARYEN_METHOD='native-wasm'" -s MODULARIZE=1 -s DYNAMIC_EXECUTION=0 -s EXPORT_NAME=createLazPerf -s ENVIRONMENT=web -O3 -DNDEBUG @CMakeFiles/laz-perf.dir/objects1.rsp -o laz-perf.js @CMakeFiles/laz-perf.dir/linkLibs.rsp
+gmake[3]: Leaving directory '/mnt/c/temp/w16-laz-perf-rebuilt'
+[100%] Built target laz-perf
+gmake[2]: Leaving directory '/mnt/c/temp/w16-laz-perf-rebuilt'
+/usr/bin/cmake -E cmake_progress_start /mnt/c/temp/w16-laz-perf-rebuilt/CMakeFiles 0
+gmake[1]: Leaving directory '/mnt/c/temp/w16-laz-perf-rebuilt'
+
+9c1802bc31b567dd4aa1ce9ab010e7e51e095dc42af8379b474ae6f221a9327f  /mnt/c/temp/w16-laz-perf-rebuilt/cpp/emscripten/laz-perf.wasm
+d9a91a08979dd9f717884e33c9f61997e79122da2c02be8414a5d7e99061985e  /mnt/c/temp/w16-laz-perf-rebuilt/cpp/emscripten/laz-perf.js

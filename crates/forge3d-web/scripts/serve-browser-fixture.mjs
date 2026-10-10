@@ -285,6 +285,10 @@ function fileResponse({ fixtureRoot, route, request, headers }) {
 function resolveApplicationRoute(relativePath) {
   const fixed = applicationRoutes.get(relativePath);
   if (fixed) return fixed;
+  if (/^examples\/(?:pointcloud-tiles\.html|w16-(?:pointcloud|worker)\.js)$/u.test(relativePath))
+    return { file: relativePath, contentType: relativePath.endsWith('.html') ? 'text/html; charset=utf-8' : 'text/javascript; charset=utf-8' };
+  if (/^tests\/fixtures\/w16\/(?:[a-z0-9_-]+\/)*[a-zA-Z0-9_.-]+\.(?:json|bin|laz|pnts|b3dm)$/u.test(relativePath))
+    return { file: relativePath, contentType: relativePath.endsWith('.json') ? 'application/json; charset=utf-8' : 'application/octet-stream', ranges: true };
   if (
     /^node_modules\/@forge3d\/web\/dist\/[a-z0-9_-]+\.(?:js|wasm)$/u.test(
       relativePath,

@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "createdAt": "2026-10-10T21:57:32.031Z",
+  "scope": "Additive byte-preserving copies of retained stdout; original reports and logs remain untouched.",
+  "note": "Existing capture hashes identify captured bytes. Follow rawArchive for platform-independent verification; sourceGitBlobSha256 records the prior Git-normalized text.",
+  "archives": [
+    {
+      "source": "crates/forge3d-web/docs/w16-runs/ci-aa91f6c-native-camera-timeout.log",
+      "sourceGitHead": "42645ff68180327a5412d242cf89e9bd54434975",
+      "capturedBytes": 279556,
+      "capturedSha256": "8a3f5c16fac441b9293ecc49d2b26327bfc08d218b1531c301b64484c08451da",
+      "sourceGitBlobBytes": 279556,
+      "sourceGitBlobSha256": "8a3f5c16fac441b9293ecc49d2b26327bfc08d218b1531c301b64484c08451da",
+      "rawArchive": "crates/forge3d-web/docs/w16-runs/raw-stdout/ci-aa91f6c-native-camera-timeout.log",
+      "archiveSha256": "8a3f5c16fac441b9293ecc49d2b26327bfc08d218b1531c301b64484c08451da",
+      "difference": "none",
+      "crlfCount": 0
+    },
+    {
+      "source": "crates/forge3d-web/docs/w16-runs/hard-stop-initial-test-failure.log",
+      "sourceGitHead": "42645ff68180327a5412d242cf89e9bd54434975",
+      "capturedBytes": 6464,
+      "capturedSha256": "6077758435c6556f46ea63c09adf21b05362dd5309221c116ce46e0a6809349c",
+      "sourceGitBlobBytes": 6378,
+      "sourceGitBlobSha256": "b86cab1b1bea4a02392853ed4e659400eeef760b3cfcfb27f9bf29437106b406",
+      "rawArchive": "crates/forge3d-web/docs/w16-runs/raw-stdout/hard-stop-initial-test-failure.log",
+      "archiveSha256": "6077758435c6556f46ea63c09adf21b05362dd5309221c116ce46e0a6809349c",
+      "difference": "Git CRLF-to-LF normalization only",
+      "crlfCount": 86
+    },
+    {
+      "source": "crates/forge3d-web/docs/w16-runs/installed-20261010T182246586Z-failure.log",
+      "sourceGitHead": "42645ff68180327a5412d242cf89e9bd54434975",
+      "capturedBytes": 2800,
+      "capturedSha256": "b6422a4ad7c27b7de301b5ea4bc35a969301a41c8930a1eeb288162bc891e1ae",
+      "sourceGitBlobBytes": 2756,
+      "sourceGitBlobSha256": "9e80a6c2ab00185ebac7d7d4ec4466f5f2dab91370a373c2914645dcb251c96a",
+      "rawArchive": "crates/forge3d-web/docs/w16-runs/raw-stdout/installed-20261010T182246586Z-failure.log",
+      "archiveSha256": "b6422a4ad7c27b7de301b5ea4bc35a969301a41c8930a1eeb288162bc891e1ae",
+      "difference": "Git CRLF-to-LF normalization only",
+      "crlfCount": 44
+    },
+    {
+      "source": "crates/forge3d-web/docs/w16-runs/installed-20261010T203221986Z-retry.log",
+      "sourceGitHead": "42645ff68180327a5412d242cf89e9bd54434975",
+      "capturedBytes": 2321,
+      "capturedSha256": "7f03ddb088e8f405b7b7cb9cb0a7b157d1ba3f442b30851cc100b0486de2a976",
+      "sourceGitBlobBytes": 2292,
+      "sourceGitBlobSha256": "daede82cfb0651e7850d004bfb64244e3e29c3bc8f5af379eeb73a222ba72616",
+      "rawArchive": "crates/forge3d-web/docs/w16-runs/raw-stdout/installed-20261010T203221986Z-retry.log",
+      "archiveSha256": "7f03ddb088e8f405b7b7cb9cb0a7b157d1ba3f442b30851cc100b0486de2a976",
+      "difference": "Git CRLF-to-LF normalization only",
+      "crlfCount": 29
+    },
+    {
+      "source": "crates/forge3d-web/docs/w16-runs/unit-native-audit-timeout-followup.log",
+      "sourceGitHead": "42645ff68180327a5412d242cf89e9bd54434975",
+      "capturedBytes": 7634,
+      "capturedSha256": "65af08132825d41e80fe31c5a43e6c12690d1eaecfca3bba47cd5f601326a682",
+      "sourceGitBlobBytes": 7506,
+      "sourceGitBlobSha256": "68871a3238689c627f65c4884176a8c380d2fb48e48f4ed90ba210adf4e75632",
+      "rawArchive": "crates/forge3d-web/docs/w16-runs/raw-stdout/unit-native-audit-timeout-followup.log",
+      "archiveSha256": "65af08132825d41e80fe31c5a43e6c12690d1eaecfca3bba47cd5f601326a682",
+      "difference": "Git CRLF-to-LF normalization only",
+      "crlfCount": 128
+    }
+  ]
+}

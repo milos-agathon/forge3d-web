@@ -1,0 +1,266 @@
+{
+  "schemaVersion": 1,
+  "task": "W16",
+  "fixtureId": "copc-ept-tiles-v1",
+  "baseCommit": "f0287e5b1594542635f8b088e2ae88d7be8ec435",
+  "operatingSystem": {
+    "release": "10.0.26300",
+    "version": "Windows 11 Home"
+  },
+  "runtimeBinding": {
+    "fileCount": 152,
+    "sha256": "0c1ad836eab3e85d5337bc4168bfe57e0691947075f4c85cfbd4242d9ce0a16c",
+    "statement": "Every emitted JS/WASM module and self-hosted asset is byte-identical between the final conformance package and the ten-minute installed package."
+  },
+  "conformance": {
+    "verifiedAt": "2026-10-07T19:21:03.009Z",
+    "browserVersion": "148.0.7778.96",
+    "platform": "win32",
+    "packageSha256": "10ed3445603b6d1cf4f6d366d0ea8d4d68487f8639ea7f53a518e3123b3efb1d",
+    "counts": {
+      "laz": 110000,
+      "copc": 100000,
+      "ept": 128,
+      "workloadEpt": 1000000
+    },
+    "copcChunks": 5,
+    "hashes": {
+      "laz": {
+        "positions": "73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23",
+        "colors": "d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"
+      },
+      "copc": {
+        "positions": "b34e5bf4f8638af1d4613e293e6a66189395cfc86ff72bc9aa2a461553e4e731",
+        "colors": "886715e4051e827f4fe215df3053af3f85ad0d352db2c829c7487af6d78efe30"
+      },
+      "copcRoot": {
+        "positions": "43ec2795a7fbad7e12936d197030cd235edc0314a77f9710c0060d32685dfc42",
+        "colors": "ebbd86704cbc47349cef646184810965b296fe7bd0cf14e0aa4340107dbe988e"
+      },
+      "ept": {
+        "positions": "fa22f39c88539934b51194e12968350692cae0d3dc588dd970194dbf92a567c2",
+        "colors": "a1a4f5721c1c4610af7f71078f3a68c330536d679803b0e0507ee8dc10c5dfca"
+      },
+      "workloadNodes": [
+        {
+          "key": "0-0-0-0",
+          "count": 111111,
+          "positions": "668c61a7460d65bb1b102db09f65a748255a2e430f181f8ee14de67f77e00ad9",
+          "colors": "88647dfbfbeaf4e5391e9e30b868792c2913064d224c153884dfa4e430aa3e11"
+        },
+        {
+          "key": "1-0-0-0",
+          "count": 111111,
+          "positions": "c9998faa00dfdd97d48f53b96c9240445bcd6f48b88fbd5a5bf457fe4306b560",
+          "colors": "88647dfbfbeaf4e5391e9e30b868792c2913064d224c153884dfa4e430aa3e11"
+        },
+        {
+          "key": "2-0-0-0",
+          "count": 111111,
+          "positions": "67621d32c07a0b184fd60bb069367b9082c4de70408c287177083564871cc809",
+          "colors": "88647dfbfbeaf4e5391e9e30b868792c2913064d224c153884dfa4e430aa3e11"
+        },
+        {
+          "key": "3-0-0-0",
+          "count": 111111,
+          "positions": "9c2071b816893efebb0fb70af8fb40bf3d66e144f8faaacd32fd90cd1dbdb939",
+          "colors": "88647dfbfbeaf4e5391e9e30b868792c2913064d224c153884dfa4e430aa3e11"
+        },
+        {
+          "key": "4-0-0-0",
+          "count": 111111,
+          "positions": "6176cd038d738e682c0c0666db2e6637c216829f7de5c0c32fdf68f37aaae50f",
+          "colors": "88647dfbfbeaf4e5391e9e30b868792c2913064d224c153884dfa4e430aa3e11"
+        },
+        {
+          "key": "5-0-0-0",
+          "count": 111111,
+          "positions": "38367f5ecc221f85a6d7c6d4b3826b7ce49652e615c5828c8576a9d38ccef2d0",
+          "colors": "88647dfbfbeaf4e5391e9e30b868792c2913064d224c153884dfa4e430aa3e11"
+        },
+        {
+          "key": "6-0-0-0",
+          "count": 111111,
+          "positions": "7e60fa6392827cdef39b395c91e37ba45dc845f8da3de699e283f058d0fa07af",
+          "colors": "88647dfbfbeaf4e5391e9e30b868792c2913064d224c153884dfa4e430aa3e11"
+        },
+        {
+          "key": "7-0-0-0",
+          "count": 111111,
+          "positions": "0eed0e8f0f71df9273a9b9cb0a5d2910b8529173bae578ce18e35e6d5a3f86f1",
+          "colors": "88647dfbfbeaf4e5391e9e30b868792c2913064d224c153884dfa4e430aa3e11"
+        },
+        {
+          "key": "8-0-0-0",
+          "count": 55556,
+          "positions": "c8c3d13d1d851c2d7d2f31ee29d6d9e5981bb44931b3cdf5547a37b9fbac7cc4",
+          "colors": "899c2e8e4a45c23cc4c0eff29de25e1100657f095b2d79e5868b31e613afaee9"
+        },
+        {
+          "key": "8-1-0-0",
+          "count": 55556,
+          "positions": "85b8fe2ee17163980eef8015fb86b4c5ac2bc9c2fcdf5cdb121c491a9a8b3444",
+          "colors": "899c2e8e4a45c23cc4c0eff29de25e1100657f095b2d79e5868b31e613afaee9"
+        }
+      ]
+    },
+    "nativeCameraRecords": 64,
+    "rangeFraction": 0.06115356565304246,
+    "rangeBytes": 38572,
+    "rangeOnly": true,
+    "pointStyles": {
+      "rgb": [
+        0,
+        255,
+        0
+      ],
+      "elevation": [
+        0,
+        0,
+        255
+      ],
+      "intensity": [
+        127,
+        127,
+        127
+      ],
+      "classification": [
+        51,
+        102,
+        153
+      ]
+    },
+    "pickedIndices": [
+      0,
+      1,
+      2
+    ],
+    "deviceDestroyedAndRecovered": true,
+    "rejectedReplacementPreserved": true,
+    "b3dmCoveredPixels": 4323,
+    "b3dmNegativePixels": 0,
+    "disposedGpuBytes": 0,
+    "pageErrors": [],
+    "externalRequests": []
+  },
+  "soak": {
+    "durationMs": 600053.0999999978,
+    "frames": 33393,
+    "baseline": 56883312,
+    "maxBytes": 56883312,
+    "maxCpuBytes": 78000889,
+    "stats": {
+      "frames": 33393,
+      "pointsRendered": 444444,
+      "gpuBytes": 39105520,
+      "peakGpuBytes": 56883312,
+      "memoryBudgetBytes": 268435456,
+      "bufferCreations": 294,
+      "p95Ms": 9.899999998509884,
+      "disposed": false,
+      "deviceLost": false
+    },
+    "frameP95Ms": 10.199999999254942,
+    "selectionCount": 7,
+    "keyframesVisited": 64,
+    "totalPoints": 1000000,
+    "coveredPixels": 430640,
+    "dataset": {
+      "ranges": {
+        "requested": 0,
+        "deduplicated": 0,
+        "coalesced": 0,
+        "httpRequests": 0,
+        "bytesRequested": 0,
+        "bytesTransferred": 0,
+        "memoryHits": 0,
+        "persistentHits": 0,
+        "misses": 0,
+        "cancelled": 0,
+        "failed": 0,
+        "inFlight": 0,
+        "peakInFlight": 0,
+        "queued": 0,
+        "offlineServed": 0
+      },
+      "compressed": {
+        "hits": 0,
+        "misses": 12,
+        "evictions": 0,
+        "bytes": 18000889,
+        "budgetBytes": 33554432,
+        "entries": 12
+      },
+      "decoded": {
+        "cacheUsed": 30000000,
+        "cacheBudget": 33554432,
+        "entryCount": 10,
+        "hits": 284,
+        "misses": 10,
+        "evictions": 0,
+        "peakBytes": 30000000
+      },
+      "disposed": false,
+      "nodeCount": 10,
+      "totalPoints": 1000000
+    },
+    "viewport": [
+      1920,
+      1080
+    ],
+    "adapter": {
+      "vendor": "nvidia",
+      "architecture": "ampere",
+      "device": "",
+      "description": ""
+    },
+    "profile": "local-chromium-preflight",
+    "qualification": "W00 reference hardware is not inferred from a preflight run",
+    "disposed": {
+      "frames": 33393,
+      "pointsRendered": 0,
+      "gpuBytes": 0,
+      "peakGpuBytes": 56883312,
+      "memoryBudgetBytes": 268435456,
+      "bufferCreations": 294,
+      "p95Ms": 0,
+      "disposed": true,
+      "deviceLost": false
+    },
+    "verifiedAt": "2026-10-07T19:19:08.258Z",
+    "browserVersion": "148.0.7778.96",
+    "packageSha256": "6c40508ac0786c214ffadbb999238b7c2e9280b3ef2811c8b370a0318b21ac5d"
+  },
+  "qualification": {
+    "profile": "local-chromium-preflight",
+    "referenceDiscrete": false,
+    "referenceIntegrated": false,
+    "reason": "This Windows NVIDIA Ampere host does not match either pinned W00 physical reference profile."
+  },
+  "validation": {
+    "unit": {
+      "files": 64,
+      "passed": 1076,
+      "w16Passed": 41
+    },
+    "api": true,
+    "parity": true,
+    "productionExample": true,
+    "sourceDistBrowser": {
+      "passed": 8,
+      "explicitSoakSkipped": 1,
+      "installedSoakCompleted": true
+    },
+    "package": {
+      "docsPassed": 11,
+      "browserHarnessPassed": 118,
+      "infrastructurePassed": 609,
+      "infrastructureSkipped": 1,
+      "contract": true
+    },
+    "neighborBrowser": {
+      "w14w15Passed": 26
+    }
+  },
+  "evidenceStatus": "Superseded: initial chain workload and root-skipping range probe. Historical measurements do not validate the revised runtime or branching workload."
+}

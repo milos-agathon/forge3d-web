@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { Buffer } from "node:buffer";
 
 import { Forge3DError } from "../../src-ts/index.js";
 import type {
@@ -24,6 +25,16 @@ function expectCode(factory: () => unknown, code: string): Forge3DError {
     return error as Forge3DError;
   }
   throw new Error("expected Forge3DError");
+}
+
+function expectSameBytes(actual: Uint8Array, expected: Uint8Array, name: string): void {
+  // Compare the complete byte views, including lengths, without materializing
+  // million-element JS arrays for the native low-quality IBL payload.
+  expect(actual.byteLength, name).toBe(expected.byteLength);
+  expect(Buffer.compare(
+    Buffer.from(actual.buffer, actual.byteOffset, actual.byteLength),
+    Buffer.from(expected.buffer, expected.byteOffset, expected.byteLength),
+  ), name).toBe(0);
 }
 
 async function expectCodeAsync(
@@ -845,9 +856,9 @@ describe("IblCache", () => {
     const hit = await cache.get(key);
     expect(hit).toBeDefined();
     expect(hit!.irradianceSize).toBe(payload.irradianceSize);
-    expect(Array.from(hit!.irradiance)).toEqual(Array.from(payload.irradiance));
-    expect(Array.from(hit!.specular)).toEqual(Array.from(payload.specular));
-    expect(Array.from(hit!.brdfLut)).toEqual(Array.from(payload.brdfLut));
+    expectSameBytes(hit!.irradiance, payload.irradiance, "cached irradiance bytes");
+    expectSameBytes(hit!.specular, payload.specular, "cached specular bytes");
+    expectSameBytes(hit!.brdfLut, payload.brdfLut, "cached BRDF bytes");
     expect(store.data.keys().next().value).toContain("/.forge3d/ibl/");
   });
 
@@ -921,9 +932,8 @@ describe("ImageBasedLighting.prepare caching", () => {
     expect(second.report.cacheHit).toBe(true);
     expect(second.report.cacheBackend).toBe("cache-storage");
     expect(second.report.effectiveMode).toBe("prepared-upload");
-    expect(Array.from(second.snapshot().prepared!.specular)).toEqual(
-      Array.from(first.snapshot().prepared!.specular),
-    );
+    expectSameBytes(second.snapshot().prepared!.specular,
+      first.snapshot().prepared!.specular, "cache-hit prepared specular bytes");
   });
 
   it("treats a higher-quality cached entry as a miss", async () => {

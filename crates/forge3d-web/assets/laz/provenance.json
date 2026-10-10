@@ -1,0 +1,20 @@
+{
+  "package": "laz-perf",
+  "version": "0.0.7",
+  "integrity": "sha512-2xRqm/f/2UqDS5qqkjOyDb6uVIjkVw6SGmQlMoTQliVWkZhPfIbUJTubUl3mTloaWqKcjlS/urmP1CYoxelsEg==",
+  "adapter": "UMD factory plus ESM export",
+  "assets": [
+    {
+      "file": "laz-perf.js",
+      "sha256": "ff4e6a64c14e1cf2a7ad4c2bf4f0e926d0c61a1c0257810d8bc3df3b8651098d"
+    },
+    {
+      "file": "laz-perf.wasm",
+      "sha256": "9c1802bc31b567dd4aa1ce9ab010e7e51e095dc42af8379b474ae6f221a9327f"
+    },
+    {
+      "file": "laz-perf.LICENSE",
+      "sha256": "959f77033ba56a3b146faf5c02f9162071f2d0bff4b8b6f1c2193a4b41127d39"
+    }
+  ]
+}

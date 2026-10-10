@@ -1,0 +1,184 @@
+{
+  "schemaVersion": 3,
+  "task": "W16",
+  "evidenceStatus": "Local performance failure remains after optimization; hardware and security acceptance pending",
+  "referenceHardwareQualified": false,
+  "capabilityStatus": {
+    "G02": "P",
+    "G03": "P",
+    "G04": "P"
+  },
+  "openAcceptance": [
+    "Local discrete-target ten-minute p95 remains above 16.7 ms",
+    "FW-WIN-I12-01: INF-00 blocked",
+    "FW-LNX-NV-01: not provisioned",
+    "Mandatory laz-perf security review"
+  ],
+  "historicalEvidence": {
+    "file": "w16-oct07-evidence.json",
+    "observedP95Ms": 14.2,
+    "acceptanceClaimWithdrawn": true,
+    "reason": "Not reproduced by the reviewer or the independent ten-minute source run"
+  },
+  "reviewerReportedRuns": [
+    {
+      "harness": "source/dist",
+      "hostCondition": "unit tests concurrent",
+      "p95Ms": 18.7,
+      "measuredPass": false,
+      "acceptanceEligible": false
+    },
+    {
+      "harness": "source/dist",
+      "hostCondition": "idle",
+      "p95Ms": 19.8,
+      "measuredPass": false,
+      "acceptanceEligible": true
+    },
+    {
+      "harness": "official installed tarball",
+      "hostCondition": "idle",
+      "p95Ms": 22.3,
+      "frames": 26768,
+      "measuredPass": false,
+      "acceptanceEligible": true
+    }
+  ],
+  "reproducedBeforeOptimization": {
+    "reportedAt": "2026-10-09",
+    "runtimeCommit": "4efd5e7",
+    "harness": "source with phase instrumentation; ten-minute profile-w16.mjs run",
+    "concurrentTestsOrBuilds": false,
+    "minimumDurationMs": 600000,
+    "frameP95Ms": 20.099999994039536,
+    "frames": 28301,
+    "measuredPass": false,
+    "limitMs": 16.7,
+    "adapter": {
+      "vendor": "nvidia",
+      "architecture": "ampere",
+      "device": "",
+      "description": ""
+    },
+    "phases": {
+      "update": {
+        "p50Ms": 5.799999982118607,
+        "p95Ms": 10.599999994039536,
+        "maxMs": 641.0999999940395
+      },
+      "upload": {
+        "p50Ms": 0.09999999403953552,
+        "p95Ms": 2.0999999940395355,
+        "maxMs": 181.5
+      },
+      "render": {
+        "p50Ms": 6.5,
+        "p95Ms": 9.699999988079071,
+        "maxMs": 106.09999999403954
+      }
+    },
+    "provenance": "Metrics retained from benchmark stdout. Playwright subsequently cleared test-results, including its full temporary JSON; unretained duration/browser/memory fields are not reconstructed. Subsequent full reports are retained separately under docs/w16-runs."
+  },
+  "optimizedRuns": [
+    {
+      "file": "w16-runs/installed-1.json",
+      "sha256": "3030ff694ad71028b21397ada2d41220a1f55966b7b4430c1c15134aa4bac200",
+      "verifiedAt": "2026-10-09T20:06:22.539Z",
+      "browserVersion": "148.0.7778.96",
+      "durationMs": 600100.400000006,
+      "frames": 34536,
+      "frameP95Ms": 18.30000001192093,
+      "limitMs": 16.7,
+      "measuredPass": false,
+      "selectionCount": 693,
+      "keyframesVisited": 64,
+      "maxCpuBytes": 42918791,
+      "peakGpuBytes": 42770544,
+      "phases": {
+        "update": {
+          "p50Ms": 3,
+          "p95Ms": 7,
+          "maxMs": 2754.0999999940395
+        },
+        "upload": {
+          "p50Ms": 0.19999998807907104,
+          "p95Ms": 0.800000011920929,
+          "maxMs": 80
+        },
+        "render": {
+          "p50Ms": 7.5999999940395355,
+          "p95Ms": 12.600000023841858,
+          "maxMs": 140.09999999403954
+        }
+      },
+      "concurrentTestsOrBuilds": false,
+      "referenceHardwareQualified": false
+    }
+  ],
+  "runtimeBinding": {
+    "packageSha256": "c01ecf448f34c3740a2038d29fde0814b97c2ba2e392f12d0af4051e9acf39ab",
+    "fileCount": 269,
+    "sha256": "907f7960530a51094c773d137ac612f965e9b77b08744942f5fdd9257de0f145",
+    "file": "w16-runs/oct09-runtime-files.json",
+    "fixtureSha256": "580cc9241e850f3e83c4b82cb17e3acd7cc5fba2e42ed68509fa39234c2fd5ad",
+    "cameraHarnessSha256": "bca37e74cb030c86661d92eb5bd928dd524c9c84c94c86f1e39616009040f67c",
+    "statement": "Every current dist/asset file matches the measured installed tarball. Later documentation edits do not change these runtime bytes."
+  },
+  "conformance": {
+    "file": "w16-runs/oct09-conformance.json",
+    "verifiedAt": "2026-10-09T19:56:21.645Z",
+    "browserVersion": "148.0.7778.96",
+    "platform": "win32",
+    "rangeFraction": 0.026244226428474193,
+    "tileCoverage": {
+      "records": 256,
+      "camerasPerDocument": 64,
+      "nodesPerDocument": 85,
+      "uniqueSelections": 40,
+      "refineNegativeControl": true
+    },
+    "deviceLoss": true,
+    "pageErrors": [],
+    "externalRequests": [],
+    "sha256": "fd1c06426dd8c9971988f56d530fc098a336a36ba6559184d391928cf7455bc0"
+  },
+  "checks": {
+    "unit": {
+      "passed": 1078,
+      "files": 64
+    },
+    "browser": {
+      "sourceDistPassed": 8,
+      "routineSoakSkipped": true
+    },
+    "installedPackage": {
+      "conformance": "passed",
+      "soak": "failed",
+      "repeatRequest": {
+        "requested": 3,
+        "completed": 1,
+        "aborted": "First run failed the strict p95 assertion"
+      }
+    },
+    "api": "passed",
+    "parity": {
+      "passed": 15,
+      "lockControlledConsumers": 52
+    },
+    "package": {
+      "docsPassed": 11,
+      "browserHarnessPassed": 118,
+      "infrastructurePassed": 616,
+      "infrastructureSkipped": 1,
+      "contract": "passed"
+    },
+    "hardware": {
+      "matrix": "valid; not provisioned",
+      "syntheticLaneContractsPassed": 7,
+      "dispatched": false
+    }
+  },
+  "archivedFromCommit": "3c80bc7",
+  "archiveNote": "Observed metrics and file hashes preserved; retained file references relocated.",
+  "originalEvidenceSha256": "3ca8cb14322ed789b3cce227ab76aafc6fdeb4efe572f955bfac888414bce594"
+}

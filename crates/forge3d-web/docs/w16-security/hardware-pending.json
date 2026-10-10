@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "observedAt": "2026-10-10T13:49:33Z",
+  "repository": "milos-agathon/forge3d-web",
+  "pullRequest": "https://github.com/milos-agathon/forge3d-web/pull/46",
+  "repositoryVariables": { "variables": [], "total_count": 0 },
+  "registeredRunners": { "total_count": 0, "runners": [] },
+  "labInfraReady": false,
+  "readinessReason": "LAB_INFRA_READY is absent; zero registered runners; hardware matrix retains INF-00 bootstrap maintenance and unprovisioned reference assets.",
+  "lanes": [
+    { "lane": "w16-reference-discrete", "assetId": "FW-LNX-NV-01", "status": "pending", "report": null, "reason": "Exact Ubuntu/Vulkan RTX 3070 reference host is not provisioned." },
+    { "lane": "w16-reference-integrated", "assetId": "FW-WIN-I12-01", "status": "pending", "report": null, "reason": "Exact Windows Iris Xe reference host is blocked on INF-00." }
+  ],
+  "dispatchPerformed": false,
+  "laboratorySettingsChanged": false,
+  "substituteHardwareUsed": false
+}

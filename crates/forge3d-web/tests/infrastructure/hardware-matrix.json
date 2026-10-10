@@ -58,6 +58,7 @@
         "edge-windows-intel12",
         "firefox-windows-intel12"
       ],
+      "acceptanceLanes": ["w16-reference-integrated"],
       "controller": {
         "identity": "controller:FW-WIN-I12-01",
         "state": "unprovisioned",
@@ -110,6 +111,7 @@
         "chrome-linux-rtx3070",
         "edge-linux-rtx3070"
       ],
+      "acceptanceLanes": ["w16-reference-discrete"],
       "controller": {
         "identity": "controller:FW-LNX-NV-01",
         "state": "unprovisioned",

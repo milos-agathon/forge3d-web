@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "seed": 1450659856,
+  "prng": "xorshift32",
+  "mutationsPerSource": 64,
+  "deadlineMs": 1000,
+  "completionBoundMs": 3000,
+  "maxDecodedBytes": 8388608,
+  "sources": [
+    { "file": "overview.copc.laz", "kind": "laz-chunk", "hierarchyEntry": 0 },
+    { "file": "overview.copc.laz", "kind": "laz-chunk", "hierarchyEntry": 1 },
+    { "file": "ellipsoid.copc.laz", "kind": "laz-chunk", "hierarchyEntry": 0 },
+    { "file": "autzen_trim.laz", "kind": "laz-file" }
+  ],
+  "mutations": [
+    "truncate at seeded offset",
+    "flip seeded compressed-stream bits (preserve chunk layer directory)",
+    "overwrite seeded compressed-stream run with zero or 255",
+    "forge chunk layered count or LAS file point count",
+    "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+    "append seeded bytes"
+  ]
+}

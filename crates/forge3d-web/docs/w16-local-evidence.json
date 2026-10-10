@@ -1,0 +1,284 @@
+{
+  "schemaVersion": 3,
+  "task": "W16",
+  "evidenceStatus": "Current local installed-package runs pass with unchanged runtime; earlier failure remains unexplained; hardware and security acceptance pending",
+  "referenceHardwareQualified": false,
+  "capabilityStatus": {
+    "G02": "P",
+    "G03": "P",
+    "G04": "P"
+  },
+  "openAcceptance": [
+    "Unexplained local p95 variation with unchanged dist/asset bytes; earlier 18.3 ms failure remains valid",
+    "FW-WIN-I12-01: INF-00 blocked",
+    "FW-LNX-NV-01: not provisioned",
+    "Mandatory laz-perf security review"
+  ],
+  "historicalEvidence": {
+    "file": "w16-oct07-evidence.json",
+    "observedP95Ms": 14.2,
+    "acceptanceClaimWithdrawn": true,
+    "reason": "Not reproduced by the reviewer or the independent ten-minute source run"
+  },
+  "reviewerReportedRuns": [
+    {
+      "harness": "source/dist",
+      "hostCondition": "unit tests concurrent",
+      "p95Ms": 18.7,
+      "measuredPass": false,
+      "acceptanceEligible": false
+    },
+    {
+      "harness": "source/dist",
+      "hostCondition": "idle",
+      "p95Ms": 19.8,
+      "measuredPass": false,
+      "acceptanceEligible": true
+    },
+    {
+      "harness": "official installed tarball",
+      "hostCondition": "idle",
+      "p95Ms": 22.3,
+      "frames": 26768,
+      "measuredPass": false,
+      "acceptanceEligible": true
+    }
+  ],
+  "reproducedBeforeOptimization": {
+    "reportedAt": "2026-10-09",
+    "runtimeCommit": "4efd5e7",
+    "harness": "source with phase instrumentation; ten-minute profile-w16.mjs run",
+    "concurrentTestsOrBuilds": false,
+    "minimumDurationMs": 600000,
+    "frameP95Ms": 20.099999994039536,
+    "frames": 28301,
+    "measuredPass": false,
+    "limitMs": 16.7,
+    "adapter": {
+      "vendor": "nvidia",
+      "architecture": "ampere",
+      "device": "",
+      "description": ""
+    },
+    "phases": {
+      "update": {
+        "p50Ms": 5.799999982118607,
+        "p95Ms": 10.599999994039536,
+        "maxMs": 641.0999999940395
+      },
+      "upload": {
+        "p50Ms": 0.09999999403953552,
+        "p95Ms": 2.0999999940395355,
+        "maxMs": 181.5
+      },
+      "render": {
+        "p50Ms": 6.5,
+        "p95Ms": 9.699999988079071,
+        "maxMs": 106.09999999403954
+      }
+    },
+    "provenance": "Metrics retained from benchmark stdout. Playwright subsequently cleared test-results, including its full temporary JSON; unretained duration/browser/memory fields are not reconstructed. Subsequent full reports are retained separately under docs/w16-runs."
+  },
+  "optimizedRuns": [
+    {
+      "file": "w16-runs/installed-20261010T121312939Z-1.json",
+      "sha256": "b3027013e3ee3b8b5c5c26e57295a60b0d62353b0402a0e641453b1520c4d163",
+      "verifiedAt": "2026-10-10T12:23:13.224Z",
+      "browserVersion": "148.0.7778.96",
+      "durationMs": 600063.2999999821,
+      "frames": 35105,
+      "frameP95Ms": 8.299999982118607,
+      "limitMs": 16.7,
+      "measuredPass": true,
+      "selectionCount": 693,
+      "keyframesVisited": 64,
+      "maxCpuBytes": 42918791,
+      "peakGpuBytes": 42770544,
+      "phases": {
+        "update": {
+          "p50Ms": 1,
+          "p95Ms": 1.800000011920929,
+          "maxMs": 507.09999999403954
+        },
+        "upload": {
+          "p50Ms": 0.09999999403953552,
+          "p95Ms": 0.30000001192092896,
+          "maxMs": 58.400000005960464
+        },
+        "render": {
+          "p50Ms": 4.699999988079071,
+          "p95Ms": 6.9000000059604645,
+          "maxMs": 143.40000000596046
+        }
+      },
+      "concurrentTestsOrBuilds": false,
+      "referenceHardwareQualified": false
+    },
+    {
+      "file": "w16-runs/installed-20261010T121312939Z-2.json",
+      "sha256": "26ae1a7d9d702ab1cfc7a761eb558d0a0079150837634ae806631b39819087bf",
+      "verifiedAt": "2026-10-10T12:33:13.554Z",
+      "browserVersion": "148.0.7778.96",
+      "durationMs": 600037.599999994,
+      "frames": 35250,
+      "frameP95Ms": 8.899999976158142,
+      "limitMs": 16.7,
+      "measuredPass": true,
+      "selectionCount": 693,
+      "keyframesVisited": 64,
+      "maxCpuBytes": 42918791,
+      "peakGpuBytes": 42773904,
+      "phases": {
+        "update": {
+          "p50Ms": 1.0999999940395355,
+          "p95Ms": 2,
+          "maxMs": 569.7999999821186
+        },
+        "upload": {
+          "p50Ms": 0.09999999403953552,
+          "p95Ms": 0.30000001192092896,
+          "maxMs": 35.599999994039536
+        },
+        "render": {
+          "p50Ms": 5,
+          "p95Ms": 7.0999999940395355,
+          "maxMs": 142
+        }
+      },
+      "concurrentTestsOrBuilds": false,
+      "referenceHardwareQualified": false
+    },
+    {
+      "file": "w16-runs/installed-20261010T121312939Z-3.json",
+      "sha256": "24d9022fbc82329f3b583b341b9febf7a85cfeb0babc2733476b6f198a516013",
+      "verifiedAt": "2026-10-10T12:43:13.807Z",
+      "browserVersion": "148.0.7778.96",
+      "durationMs": 600058.2999999821,
+      "frames": 35278,
+      "frameP95Ms": 9.399999976158142,
+      "limitMs": 16.7,
+      "measuredPass": true,
+      "selectionCount": 693,
+      "keyframesVisited": 64,
+      "maxCpuBytes": 42918791,
+      "peakGpuBytes": 42774864,
+      "phases": {
+        "update": {
+          "p50Ms": 1.4000000059604645,
+          "p95Ms": 2.4000000059604645,
+          "maxMs": 500.39999997615814
+        },
+        "upload": {
+          "p50Ms": 0.09999999403953552,
+          "p95Ms": 0.4000000059604645,
+          "maxMs": 34.5
+        },
+        "render": {
+          "p50Ms": 5.199999988079071,
+          "p95Ms": 7.299999982118607,
+          "maxMs": 132.2000000178814
+        }
+      },
+      "concurrentTestsOrBuilds": false,
+      "referenceHardwareQualified": false
+    }
+  ],
+  "runtimeBinding": {
+    "packageSha256": "f89a3fb82b6784d65c5bbf543a2d5cb2ffff5f95289034ad5553b19c009d653d",
+    "fileCount": 269,
+    "sha256": "907f7960530a51094c773d137ac612f965e9b77b08744942f5fdd9257de0f145",
+    "file": "w16-runs/runtime-files.json",
+    "fixtureSha256": "580cc9241e850f3e83c4b82cb17e3acd7cc5fba2e42ed68509fa39234c2fd5ad",
+    "cameraHarnessSha256": "6c5525c6533b7ef51c00121074b6e8dbf91c2e0862204a2adeb9d7b83ddff7ed",
+    "statement": "Every current dist/asset file matches the measured installed tarball. Later documentation edits do not change these runtime bytes."
+  },
+  "conformance": {
+    "file": "w16-runs/conformance.json",
+    "verifiedAt": "2026-10-10T12:13:12.781Z",
+    "browserVersion": "148.0.7778.96",
+    "platform": "win32",
+    "rangeFraction": 0.026244226428474193,
+    "tileCoverage": {
+      "records": 256,
+      "camerasPerDocument": 64,
+      "nodesPerDocument": 85,
+      "uniqueSelections": 40,
+      "refineNegativeControl": true
+    },
+    "deviceLoss": true,
+    "pageErrors": [],
+    "externalRequests": [],
+    "sha256": "788ad8727fa04a4e98203f0b59ccb01c8d6c685a174bbc83439511f8d41f83d9"
+  },
+  "checks": {
+    "unit": {
+      "passed": 1078,
+      "files": 64
+    },
+    "browser": {
+      "sourceDistPassed": 8,
+      "routineSoakSkipped": true
+    },
+    "installedPackage": {
+      "conformance": "passed",
+      "soak": "passed in current batch",
+      "repeatRequest": {
+        "requested": 3,
+        "completed": 3
+      }
+    },
+    "api": "passed",
+    "parity": {
+      "passed": 15,
+      "lockControlledConsumers": 52
+    },
+    "package": {
+      "docsPassed": 11,
+      "browserHarnessPassed": 118,
+      "infrastructurePassed": 616,
+      "infrastructureSkipped": 1,
+      "contract": "passed",
+      "infrastructureShell": "Existing Git Bash via process-local PATH; no persistent setting changed",
+      "earlierAttempt": {
+        "failed": 1,
+        "test": "the workflow selector gate accepts only positive-decimal syntax at runtime",
+        "isolatedRerun": "failed with bash resolving to Windows Apps alias",
+        "finalFullRerun": "616 passed, 0 failed, 1 Unix-only skipped with existing Git Bash"
+      }
+    },
+    "hardware": {
+      "matrix": "valid; not provisioned",
+      "syntheticLaneContractsPassed": 7,
+      "dispatched": false
+    },
+    "verificationDate": "2026-10-10"
+  },
+  "previousOptimizationEvidence": {
+    "file": "w16-oct09-evidence.json",
+    "observedP95Ms": 18.3,
+    "measuredPass": false
+  },
+  "renderPathInvestigation": {
+    "file": "w16-runs/render-path-probes-oct10.json",
+    "sha256": "658021789f11058d2dcc354f0749eb52bc7adc7b9ab9145a3d46f2f2c6ef4282",
+    "prototypePatch": "w16-runs/render-path-prototype.patch",
+    "prototypePatchSha256": "7e96c2be83c9fa18f8290e2d6adba2a2bcdb27c606bc5bf809ac00eef0dd56be",
+    "productionChange": false,
+    "shortDiagnosticOnly": true,
+    "baselineP95Ms": 10.399999976158142,
+    "alternativeP95Ms": [
+      10.900000005960464,
+      11,
+      10.599999994039536
+    ],
+    "observedImprovement": false,
+    "statement": "Four sequential 60-second probes showed no improvement from direct presentation or on-demand picking on this host; these are not acceptance runs."
+  },
+  "performanceReproducibility": {
+    "previousEvidence": "w16-oct09-evidence.json",
+    "unchangedDistAndAssets": true,
+    "previousFailure": true,
+    "explanationEstablished": false,
+    "statement": "Current observations do not withdraw earlier failures or establish a performance fix. Host-state differences were not measured."
+  }
+}

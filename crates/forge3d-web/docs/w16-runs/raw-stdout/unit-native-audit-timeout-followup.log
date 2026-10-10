@@ -1,0 +1,128 @@
+
+> @forge3d/web@1.26.3 test:unit
+> vitest run --reporter=default --reporter=json --outputFile=C:/temp/w16-followup-unit-camera-fix.json
+
+
+ RUN  v4.0.18 D:/forge3d-web/.worktrees/w16/crates/forge3d-web
+
+ ✓ tests/unit/w16-provenance.test.ts (1 test) 990ms
+   ✓ W16 fixtures and deepest native sources retain independent provenance  988ms
+ ✓ tests/unit/orbit-controller.test.ts (6 tests) 2131ms
+     ✓ keeps ten thousand randomized finite deltas valid  2119ms
+ ✓ tests/unit/w10-reflection-metrics.test.ts (2 tests) 130ms
+ ✓ tests/unit/w15-buildings.test.ts (26 tests) 107ms
+ ✓ tests/unit/browser-resources.test.ts (19 tests) 150ms
+ ✓ tests/unit/range-scheduler.test.ts (27 tests) 155ms
+ ✓ tests/unit/w15-io.test.ts (19 tests) 172ms
+ ✓ tests/unit/terrain-scatter.test.ts (14 tests) 254ms
+ ✓ tests/unit/terrain-streaming.test.ts (20 tests) 242ms
+ ✓ tests/unit/message-protocol.test.ts (12 tests) 279ms
+ ✓ tests/unit/display-adapters.test.ts (7 tests) 311ms
+ ✓ tests/unit/w06-frames.test.ts (8 tests) 431ms
+     ✓ muxes identical chunks to identical bytes regardless of wall-clock time  339ms
+ ✓ tests/unit/w16-tiles.test.ts (18 tests) 473ms
+     ✓ matches 256 branching native tile camera records across ADD, REPLACE, mixed and inherited refinement  311ms
+ ✓ tests/unit/label-workflows.test.ts (52 tests) 523ms
+ ✓ tests/unit/cog.test.ts (19 tests) 648ms
+ ✓ tests/unit/w11-native-provenance.test.ts (5 tests) 40ms
+ ✓ tests/unit/environment.test.ts (20 tests) 1208ms
+     ✓ matches six independently executed native fields including ground locking  761ms
+ ✓ tests/unit/terrain-probes.test.ts (6 tests) 88ms
+ ✓ tests/unit/viewer-camera.test.ts (5 tests) 94ms
+ ✓ tests/unit/label-contract-record.test.ts (3 tests) 99ms
+ ✓ tests/unit/vector.test.ts (13 tests) 65ms
+ ✓ tests/unit/browser-io.test.ts (20 tests) 137ms
+ ✓ tests/unit/session.test.ts (24 tests) 272ms
+ ✓ tests/unit/byte-cache.test.ts (16 tests) 240ms
+ ✓ tests/unit/terrain-dataset.test.ts (38 tests) 178ms
+ ✓ tests/unit/scene.test.ts (33 tests) 39ms
+ ✓ tests/unit/viewer-controls.test.ts (15 tests) 82ms
+ ✓ tests/unit/textures.test.ts (42 tests) 33ms
+ ✓ tests/unit/camera.test.ts (18 tests) 27ms
+ ✓ tests/unit/w15-geometry.test.ts (33 tests) 2784ms
+     ✓ pins compiled source hashes rather than prior claims  2507ms
+ ✓ tests/unit/camera-rigs.test.ts (38 tests) 2754ms
+     ✓ never violates the minimum at any playback time  2187ms
+ ✓ tests/unit/materials.test.ts (18 tests) 20ms
+ ✓ tests/unit/offscreen-renderer.test.ts (9 tests) 29ms
+ ✓ tests/unit/postfx.test.ts (20 tests) 23ms
+ ✓ tests/unit/terrain-material.test.ts (7 tests) 18ms
+ ✓ tests/unit/camera-animation.test.ts (14 tests) 23ms
+ ✓ tests/unit/lighting.test.ts (23 tests) 26ms
+ ✓ tests/unit/w14-native-contract.test.ts (2 tests) 24ms
+ ✓ tests/unit/camera-controllers.test.ts (14 tests) 24ms
+ ✓ tests/unit/labels.test.ts (74 tests) 3238ms
+     ✓ compiles a 200000-vertex polygon without spreading vertices into the JS stack  2201ms
+ ✓ tests/unit/renderer-config.test.ts (16 tests) 19ms
+ ✓ tests/unit/w06-offline.test.ts (9 tests) 14ms
+ ✓ tests/unit/terrain-overlays.test.ts (14 tests) 14ms
+ ✓ tests/unit/shadows.test.ts (23 tests) 21ms
+ ✓ tests/unit/w14-datasets.test.ts (10 tests) 3523ms
+     ✓ loads native DEM and boundaries exactly, with defensive typed buffers  1843ms
+     ✓ caches exact bytes across instances, refuses offline misses and corrupted entries  1590ms
+ ✓ tests/unit/w16-pointcloud.test.ts (28 tests) 3633ms
+     ✓ matches recorded real-data native camera keys/counts and quantized SSE exactly  3316ms
+ ✓ tests/unit/w14-crs.test.ts (27 tests) 3501ms
+     ✓ supports empty arrays, copied identity, XYZ/T and 10000 points  535ms
+     ✓ does not leak native allocations on repeated success and failure  1623ms
+     ✓ recomputes bounds for large geometry without argument-spread limits  309ms
+ ✓ tests/unit/playwright-project-metadata.test.ts (16 tests) 13ms
+ ✓ tests/unit/w12-native-provenance.test.ts (1 test) 9ms
+ ✓ tests/unit/viewer-interaction-observation.test.ts (12 tests) 6ms
+ ✓ tests/unit/ownership.test.ts (6 tests) 9ms
+ ✓ tests/unit/evidence-mode.test.ts (3 tests) 5ms
+ ✓ tests/unit/render-scheduler.test.ts (4 tests) 6ms
+ ✓ tests/unit/memory-policy.test.ts (9 tests) 8ms
+ ✓ tests/unit/terrain-vt.test.ts (10 tests) 9ms
+ ✓ tests/unit/source-launch-observation.test.ts (3 tests) 8ms
+ ✓ tests/unit/resize-controller.test.ts (5 tests) 9ms
+ ✓ tests/unit/viewer-visibility-lifecycle.test.ts (10 tests) 8ms
+ ✓ tests/unit/playwright-launch-diagnostics.test.ts (5 tests) 7ms
+ ✓ tests/unit/playwright-config.test.ts (7 tests) 10ms
+ ✓ tests/unit/worker-renderer.test.ts (12 tests) 5318ms
+     ✓ leaves no listeners or pointers after 30 cycles  4582ms
+ ✓ tests/unit/viewer.test.ts (45 tests) 5587ms
+     ✓ clears failed labels and uses only the caller channel for capture and replacement errors  3435ms
+     ✓ retries failed labels after recovery without repeating the handled error  566ms
+ ✓ tests/unit/ibl.test.ts (34 tests) 6721ms
+     ✓ round-trips prepared payloads through cache storage byte-identically  3713ms
+     ✓ round-trips through OPFS  485ms
+     ✓ reports a miss then a hit with byte-identical payloads  1128ms
+     ✓ treats a higher-quality cached entry as a miss  690ms
+ ❯ tests/unit/w15-native-contracts.test.ts (13 tests | 1 failed) 8674ms
+     ✓ crease edge positions follow the native smooth and midpoint rules 5ms
+     ✓ historical weld tolerances and collapsed vertex count are preserved 2ms
+     ✓ miter bevel and round ribbon joins preserve native corner spans and counts 1ms
+     ✓ MultiPolygonZ exports disjoint surfaces with native counts and normals 2ms
+     ✓ native CPU instance expansion adapts to owned shared GPU batches 7ms
+     ✓ registered native TBN wrappers adapt to typed attributes and facade exports 5ms
+     ✓ native sample CityJSON contains all five real meshes and BuildingParts 7ms
+     ✓ custom GeoJSON height keys and MultiPolygon IDs retain native geometry 3ms
+     ✓ all native material value records and differentiation adapt without Python dataclasses 3ms
+     ✓ empty building geometry and missing appearance assets cannot imply success 8ms
+     ✓ missing HTTP sources and malformed building formats return typed browser errors 61ms
+     ✓ optional history rejects changed bytes and skips unavailable commits  749ms
+     × pins every native suite and requires concrete browser ports 7816ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/unit/w15-native-contracts.test.ts > W15 native audit provenance > pins every native suite and requires concrete browser ports
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/unit/w15-native-contracts.test.ts:307:3
+    305|   );
+    306| 
+    307|   it("pins every native suite and requires concrete browser ports", ()…
+       |   ^
+    308|     const audit = JSON.parse(
+    309|       readFileSync(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 63 passed (64)
+      Tests  1 failed | 1081 passed (1082)
+   Start at  20:54:56
+   Duration  16.83s (transform 96.35s, setup 0ms, import 179.07s, tests 55.69s, environment 11ms)
+
+JSON report written to C:/temp/w16-followup-unit-camera-fix.json

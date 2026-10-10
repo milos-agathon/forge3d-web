@@ -3101,11 +3101,26 @@ export type WorkerExecutionMode =
   | "transferable"
   | "main-thread";
 
+/** Owned workers can be terminated even while a native WASM call is stuck. */
+export interface Forge3DOwnedWorker {
+  port: MessagePort;
+  terminate(): void;
+}
+
+export interface Forge3DWorkerRunOptions extends Forge3DMessageCallOptions {
+  /** Enqueue-to-completion deadline. Defaults to the pool's jobTimeoutMs. */
+  timeoutMs?: number;
+  /** Reject execution modes that cannot terminate a synchronous native call. */
+  requireHardStop?: boolean;
+}
+
 export interface Forge3DWorkerPoolOptions {
   size?: number;
   maxQueued?: number;
+  /** Enqueue-to-completion deadline in milliseconds; defaults to 30,000. */
+  jobTimeoutMs?: number;
   preferSharedArrayBuffer?: boolean;
-  workerFactory?: (index: number) => MessagePort;
+  workerFactory?: (index: number) => MessagePort | Forge3DOwnedWorker;
   mainThreadHandler: Forge3DMessageHandler;
 }
 
@@ -3121,7 +3136,7 @@ export declare class Forge3DWorkerPool {
   constructor(options: Forge3DWorkerPoolOptions);
   run<T = unknown>(
     payload: unknown,
-    options?: Forge3DMessageCallOptions,
+    options?: Forge3DWorkerRunOptions,
   ): Promise<T>;
   getDiagnostics(): WorkerPoolDiagnostics;
   dispose(): void;
@@ -4336,3 +4351,27 @@ export { createMeshWorkerHandler } from './mesh-worker.js';
 export type { MeshWorkerRequest } from './mesh-worker.js';
 
 import { CrsTransformer } from "./crs.js";
+export type * from './pointcloud-types.js';
+export { PointBuffer, pointDataBytes, transferPointData } from './pointcloud-buffer.js';
+export { OctreeKey, PointCloudTraverser, computePointSse } from './pointcloud-octree.js';
+export { CopcDataset, parseCopcHierarchy } from './copc.js';
+export type { CopcInfo, CopcHierarchyEntry } from './copc.js';
+export { EptDataset, parseEptBinary } from './ept.js';
+export type { EptInfo, EptDimension } from './ept.js';
+export { LazDataset, openCopc, openEpt, openLaz, openPointCloud, createPointCloudWorkerHandler } from './pointcloud.js';
+export type { PointCloudWorkerRequest } from './pointcloud.js';
+export { decodeLaz, decodeLazChunk } from './laz-decoder.js';
+export { parseLasHeader, parseLasRecords } from './pointcloud-las.js';
+export type { LasHeader } from './pointcloud-las.js';
+export { PointCloudLayer, AdaptivePointBudget, reprojectPointData } from './pointcloud-layer.js';
+export type { PointCloudLayerOptions, AdaptivePointBudgetOptions } from './pointcloud-layer.js';
+export { PointCloudRenderer } from './pointcloud-renderer.js';
+export type { PointRendererOptions, PointPickResult } from './pointcloud-renderer.js';
+export { Tileset, TilesetTraverser, loadTileset, computeTileSse } from './tiles3d.js';
+export type * from './tiles3d.js';
+export { TileBoundingVolume, wgs84ToEcef } from './tiles3d-bounds.js';
+export type { TileBoundsInput } from './tiles3d-bounds.js';
+export { decodeB3dm, decodePnts } from './tiles3d-content.js';
+export type { B3dmContent, PntsContent } from './tiles3d-content.js';
+export { Tiles3dLayer } from './tiles3d-layer.js';
+export type { TilePayload, LoadedTile, Tiles3dLayerOptions } from './tiles3d-layer.js';

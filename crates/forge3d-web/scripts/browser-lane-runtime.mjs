@@ -25,6 +25,8 @@ import { validateSaf02Conformance } from "./saf02-conformance-validator.mjs";
 import { validateSaf04HardwareProof } from "./saf04-hardware-proof-validator.mjs";
 import { validateFfx04LifecycleProof } from "./ffx04-lifecycle-proof-validator.mjs";
 import { isFfx04Lane } from "./ffx04-lanes.mjs";
+import { isW16Lane, resolveW16Lane } from './w16-lanes.mjs';
+import { validateW16Proof } from './w16-hardware-proof-validator.mjs';
 
 const CHR03_REQUIRED_LANES = new Set(Object.keys(CHR03_STABLE_LANES));
 const CHR04_REQUIRED_LANES = new Set(Object.keys(CHR04_LANES));
@@ -51,6 +53,10 @@ const DESKTOP_LANES = new Map([
 ]);
 
 export function resolveLaneRuntime({ lane, assetId, platform, architecture = platform === "darwin" ? "arm64" : "x64", required }) {
+  if (isW16Lane(lane)) {
+    const { profile } = resolveW16Lane({ lane, assetId, platform, required });
+    return { driver: 'playwright-chrome', browser: 'chrome', supportAssertions: true, manual: false, mobile: false, profile };
+  }
   if (lane === "infrastructure-canary") {
     return {
       driver: "infrastructure-canary",
@@ -146,7 +152,7 @@ export async function executeHardwareBrowserLane({
     throw new Error("FFX-03 runtime requires the authorized required boolean");
   }
   const runtime = resolveLaneRuntime({ lane, assetId, platform, architecture,
-    required: isFfx03Lane(lane) ? required : undefined });
+    required: isFfx03Lane(lane) || isW16Lane(lane) ? required : undefined });
   const manualLifecycle = runtime.manual || mediaChallenge !== null;
   if (
     manualLifecycle &&
@@ -263,6 +269,11 @@ export async function executeHardwareBrowserLane({
         return pageResult.adapter;
       },
       assertions: async () => {
+        if (isW16Lane(lane)) {
+          if (typeof session.runW16 !== 'function') throw new Error('W16 hardware harness unavailable');
+          pageResult.w16Proof = await session.runW16({ lane, binding, platform, route });
+          validateW16Proof(pageResult.w16Proof, { ...binding, platform });
+        }
         if (lane === "safari-macos-m2") {
           validateSaf02Conformance(pageResult.saf02Proof, {
             lane, assetId, hostId, runId: binding.runId, jobId: binding.jobId,
@@ -340,6 +351,7 @@ export async function executeHardwareBrowserLane({
       saf02Proof: pageResult.saf02Proof ?? null,
       saf04Proof: pageResult.saf04Proof ?? null,
       ffx04Proof: pageResult.ffx04Proof ?? null,
+      ...(isW16Lane(lane) ? { w16Proof: pageResult.w16Proof } : {}),
       headed: true,
       driver: provenance.driver,
       system: provenance.system,
@@ -392,6 +404,12 @@ export async function executeHardwareBrowserLane({
     return record;
   } catch (error) {
     primaryError = error;
+    if (isW16Lane(lane)) writeJson(outputPath, {
+      schemaVersion: 1, result: 'FAIL', binding: { ...binding, platform },
+      error: { name: error.name, message: error.message },
+      ...(pageResult?.w16Proof ? { w16Proof: pageResult.w16Proof } : {}),
+      ...error.w16Observation,
+    });
     throw error;
   } finally {
     if (!sessionClosed) {

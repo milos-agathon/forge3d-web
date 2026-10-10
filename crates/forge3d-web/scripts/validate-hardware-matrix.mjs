@@ -3,6 +3,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { sha256Hex } from "./canonical-json.mjs";
+import { W16_LANES } from './w16-lanes.mjs';
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const matrixPath = join(
@@ -116,6 +117,13 @@ export function validateHardwareMatrix(matrix, { requireProvisioned = false } = 
   }
 
   const serialized = JSON.stringify(matrix);
+  for (const [lane, expected] of Object.entries(W16_LANES)) {
+    const owners = matrix.hosts.filter(h => h.acceptanceLanes?.includes(lane));
+    if (owners.length !== 1 || owners[0].assetId !== expected.assetId)
+      throw new Error(`W16 lane must have its exact single host: ${lane}`);
+  }
+  if (matrix.hosts.some(h => h.acceptanceLanes?.some(lane => !Object.hasOwn(W16_LANES, lane))))
+    throw new Error('Unknown hardware acceptance lane');
   if (/"(?:serial|udid|bluetoothAddress|encodedJitConfig)"\s*:/iu.test(serialized)) {
     throw new Error("hardware matrix contains a forbidden stable identifier or credential");
   }
