@@ -1,9 +1,9 @@
 // Diagnostic-only worker: run the production handler and observe its actual
 // memory. No altered codec, allocation cap, or synthetic decoder is substituted.
-let memories = [], peakWasmBytes = 0;
+let currentMemory, peakWasmBytes = 0;
 function observe(memory) {
   if (!(memory instanceof WebAssembly.Memory)) return;
-  if (!memories.includes(memory)) memories.push(memory);
+  currentMemory = memory;
   peakWasmBytes = Math.max(peakWasmBytes, memory.buffer.byteLength);
   self.postMessage({ fuzzMemoryBytes: peakWasmBytes });
 }
@@ -27,10 +27,10 @@ self.onmessage = async ({ data }) => {
   api.serveForge3DMessagePort(data.port, { run: async (request, context) => {
     try {
       const points = await handler(request, context);
-      for (const memory of memories) observe(memory);
+      observe(currentMemory);
       return { points, peakWasmBytes };
     } catch (error) {
-      for (const memory of memories) observe(memory);
+      observe(currentMemory);
       throw error;
     }
   }});

@@ -49,12 +49,15 @@ for (const [sourceIndex, source] of seed.sources.entries()) {
     assert(count > 0 && start >= 0 && length > 0 && start + length <= bytes.length);
   }
   const original = bytes.subarray(start, start + length);
+  const expectedControl = sourceIndex === 0 ? manifest.overviewCopc.root
+    : sourceIndex === 2 ? manifest.copcRoot : sourceIndex === 3 ? manifest.autzen : undefined;
   const recordLength = bytes.readUInt16LE(105), pointFormat = bytes[104] & 63;
   const layers = source.kind === 'laz-chunk' ? 9 + (pointFormat >= 7 ? 1 : 0) + (pointFormat === 8 ? 1 : 0) + recordLength - (pointFormat === 6 ? 30 : pointFormat === 7 ? 36 : 38) : 0;
   const streamStart = source.kind === 'laz-chunk' ? recordLength + 4 + 4 * layers : bytes.readUInt32LE(96);
   const add = (data, mutation, number) => corpus.push({ id: `${sourceIndex}-${number}`, source, sourceSha256: pinned.sha256,
     sourceRange: { start, length }, headerBytes: [...bytes.subarray(0, 375)], count,
-    bytes: Buffer.from(data), sha256: hash(data), mutation });
+    bytes: Buffer.from(data), sha256: hash(data), mutation,
+    ...(mutation === 'valid real control' && expectedControl ? { expectedControl } : {}) });
   add(original, 'valid real control', 'control');
   for (let i = 0; i < seed.mutationsPerSource; i++) {
     let data = Buffer.from(original), mode = i % 6;
@@ -128,7 +131,14 @@ try {
           (data.colors && data.colors.length !== count * 3)) throw Error('Invalid point output');
         const outputBytes = Object.values(data).reduce((sum, value) => sum + (ArrayBuffer.isView(value) ? value.byteLength : 0), 0);
         if (outputBytes > seed.maxDecodedBytes) throw Error('Output exceeded byte limit');
-        return { outcome:'valid', count, outputBytes, elapsedMs:performance.now()-before, peakWasmBytes:state.peakWasmBytes };
+        let controlHashes;
+        if (entry.expectedControl) {
+          const digest = async array => Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', array.buffer)), byte => byte.toString(16).padStart(2,'0')).join('');
+          controlHashes = { positionsSha256:await digest(data.positions), colorsSha256:await digest(data.colors) };
+          if (count !== entry.expectedControl.count || controlHashes.positionsSha256 !== entry.expectedControl.positionsSha256 || controlHashes.colorsSha256 !== entry.expectedControl.colorsSha256)
+            throw Error('Real control differs from independent fixture oracle');
+        }
+        return { outcome:'valid', count, outputBytes, ...(controlHashes ? {controlHashes}:{}), elapsedMs:performance.now()-before, peakWasmBytes:state.peakWasmBytes };
       } catch (error) {
         return {outcome: error instanceof api.Forge3DError ? 'typed-error' : 'untyped-error', code:error.code,
           message:String(error.message), elapsedMs:performance.now()-before, peakWasmBytes:state.peakWasmBytes};
@@ -141,12 +151,14 @@ try {
   const recovery = await page.evaluate(async entry => {
     const state = window.__fuzz, header = state.api.parseLasHeader(new Uint8Array(entry.headerBytes));
     const output = await state.pool.run({kind:entry.source.kind, bytes:new Uint8Array(entry.bytes), header, count:entry.count, maxBytes:8388608}, {timeoutMs:1000, requireHardStop:true});
+    await new Promise(resolve => setTimeout(resolve,0));
     const report = { count:output.points.positions.length / 3, created:state.created, terminated:state.terminated, diagnostics:state.pool.getDiagnostics() };
     state.pool.dispose(); return report;
   }, {...corpus[0], bytes:[...corpus[0].bytes]});
   const report = {schemaVersion:1, recordedAt:new Date().toISOString(), gitHead:process.env.FORGE3D_REVIEW_SHA ?? null,
     browser:browser.version(), platform:process.platform, seedSha256:hash(seedBytes), fixtureManifestSha256:hash(manifestBytes),
-    codecWasmSha256:hash(wasm), corpusSha256, seed:seed.seed, cases:results.length, bounds:{deadlineMs:seed.deadlineMs,
+    codecWasmSha256:hash(wasm), scriptSha256:hash(readFileSync(fileURLToPath(import.meta.url))),
+    workerSha256:hash(readFileSync(resolve(root,'scripts/w16-laz-fuzz-worker.mjs'))), corpusSha256, seed:seed.seed, cases:results.length, bounds:{deadlineMs:seed.deadlineMs,
       completionBoundMs:seed.completionBoundMs, maxDecodedBytes:seed.maxDecodedBytes, wasm:memoryLimits,
       note:'WASM high water observed at instantiate/grow; JS input/output limits are separate. Browser/process RSS is not attributed per job. Deadline termination bounds CPU residency; declared WASM maximum is not a smaller per-job heap cap.'},
     valid:results.filter(r=>r.outcome==='valid').length, typedErrors:results.filter(r=>r.outcome==='typed-error').length,
