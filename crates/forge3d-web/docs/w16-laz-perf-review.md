@@ -155,10 +155,27 @@ WASM high-water observations. Recovery must decode the real root again with
 zero active/queued jobs after the corpus. The script writes the report before
 asserting its aggregate bounds, so failures remain available for diagnosis.
 
-Execution summary: pending the coordinated sequential fuzz run. Bind
-`docs/w16-security/fuzz-report.json` and record the actual counts, elapsed-time
-maximum, observed heap maximum and recovery result before completing this
-evidence section. This pending summary is not an independent sign-off.
+The final clean-tree run on `b869e17acf58f1c68770d0079700e1d4bfb2f18d`,
+Windows/Chromium `148.0.7778.96`, completed **260 cases: 120 valid outputs,
+129 INVALID_INPUT errors and 11 RESOURCE_LIMIT_EXCEEDED errors**. There were
+zero untyped errors. Maximum job time was **157 ms**, below the 1,000 ms
+deadline and 3,000 ms completion bound. Peak observed WASM heap was
+**7,274,496 bytes**, below the binary's declared 2 GiB ceiling; input and
+decoded-output allocations remained within their separate 8 MiB checks.
+The real 512-point root decoded again after the corpus, with zero active or
+queued jobs. No case in this corpus needed deadline termination; the separate
+source/dist infinite-WASM tests exercise termination, replacement and queued
+real-LAZ recovery on both abort and deadline.
+
+[The complete final report](w16-security/fuzz-report.json) has SHA-256
+`33ef7407b94ba3283caa425ec1b35aa7c87e8b0d70367a4e4d216f760b5c7fd5`.
+It binds the seed, deterministic corpus, fixture manifest, unchanged codec,
+script and diagnostic worker bytes. Successful and typed-error heap telemetry
+travels with the job result, avoiding ordering assumptions between separate
+worker message channels. [The initial debugging observation](w16-security/fuzz-initial-debug.json)
+is preserved separately; it preceded the final decoder-hardening rebuild and
+is not the final source/artifact binding. These observations do not supply
+independent sign-off.
 
 ## (d) Remaining risks and sign-off
 

@@ -313,3 +313,39 @@ GPU picking, styles, actual device destruction/recovery, rejected replacement
 retention, PNTS/RTC and B3DM scene coverage retain executable negative controls.
 Relative/external tile URLs, cycles, transforms, cache pressure and cancellation
 remain covered by the unit and installed-package tests.
+
+## Completion hardening and security evidence, 2026-10-10
+
+PR [#46](https://github.com/milos-agathon/forge3d-web/pull/46) carries the W16
+runtime and acceptance work. W16 remains Partial and G02/G03/G04 remain P.
+No plan requirements, W00 profiles or budgets were changed.
+
+`7ea0b8c` and `bc532ba` add owned worker handles, 30-second default job
+deadlines measured from enqueue, and immediate worker termination/replacement
+on abort or timeout. Direct LAZ APIs also run behind an owned worker. Queued
+jobs retain independent deadlines; downgraded unowned replacements cannot run
+native decode. Native failures discard poisoned decoder instances and cleanup
+cannot hide the original typed error. Source/dist infinite-WASM probes prove
+typed REQUEST_CANCELLED and RESOURCE_LIMIT_EXCEEDED outcomes, queued real-LAZ
+hash recovery and successful direct decoding. `356a264` fixes the test worker's
+initialization-message race; [the original two timeout failures](w16-runs/hard-stop-initial-test-failure.log)
+are retained. The complete rerun passed 47 W16 units and all ten browser cases.
+
+`9b29d39` records host GPU state and other GPU processes, CPU load and power
+plan every five seconds, including start/end and failed observations. New
+reports validate actual sample gaps of at most ten seconds and bind the capture
+to the exact job/package/fixture. The recorder writes unique batch filenames;
+all earlier reports, including October 9 failures, remain intact.
+
+[The laz-perf review](w16-laz-perf-review.md) now includes advisory triage,
+an exact pinned-source/Emscripten rebuild matching npm's WASM and factory,
+and [the final 260-case worker fuzz report](w16-security/fuzz-report.json).
+All cases completed with valid output or a typed error, within recorded bounds,
+and real-data recovery passed. **Independent sign-off remains pending**;
+reviewer and approval date are unset. This agent has not approved the codec.
+
+[The live lab observation](w16-security/hardware-pending.json) records zero
+registered runners and no LAB_INFRA_READY variable. Both reference lanes are
+pending, with no attested reports. No hardware dispatch, runner registration,
+credential creation, protected-setting change or substitute qualification was
+performed. A local passing run cannot qualify either reference host.
