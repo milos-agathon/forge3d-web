@@ -146,7 +146,10 @@ node scripts/fuzz-w16-laz.mjs
 
 The seed fixes a 1,000 ms execution deadline, 3,000 ms observed-completion bound
 and an 8 MiB input/decoded-output limit. Each case must yield validated output
-or a `Forge3DError`; every control must match the independent point/color hashes.
+or a `Forge3DError`. All four controls must produce valid output; the two COPC
+roots and Autzen must also match the independent point/color hashes. The detail
+chunk control is checked against its pinned hierarchy count and array layout;
+no independent point/color hash is claimed for that slice.
 The report retains each mutation hash, outcome/code, elapsed time and actual
 WASM high-water observations. Recovery must decode the real root again with
 zero active/queued jobs after the corpus. The script writes the report before

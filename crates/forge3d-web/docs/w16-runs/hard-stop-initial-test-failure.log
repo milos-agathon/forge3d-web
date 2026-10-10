@@ -1,0 +1,86 @@
+
+> @forge3d/web@1.26.3 test:w16
+> vitest run tests/unit/w16-pointcloud.test.ts tests/unit/w16-tiles.test.ts tests/unit/w16-provenance.test.ts && playwright test tests/playwright/w16_pointcloud.spec.ts --project=chromium-preflight
+
+
+ RUN  v4.0.18 D:/forge3d-web/.worktrees/w16/crates/forge3d-web
+
+ ✓ tests/unit/w16-provenance.test.ts (1 test) 278ms
+ ✓ tests/unit/w16-tiles.test.ts (18 tests) 139ms
+ ✓ tests/unit/w16-pointcloud.test.ts (28 tests) 625ms
+     ✓ matches recorded real-data native camera keys/counts and quantized SSE exactly  531ms
+
+ Test Files  3 passed (3)
+      Tests  47 passed (47)
+   Start at  15:40:25
+   Duration  2.84s (transform 1.80s, setup 0ms, import 4.10s, tests 1.04s, environment 0ms)
+
+[WebServer] (node:40556) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 11 tests using 1 worker
+
+(node:40848) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:40848) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  1 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:20:3 › W16 source: independent LAZ/COPC/EPT counts, positions, colors and W15 b3dm (2.0s)
+  x   2 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:49:3 › W16 source: abort and deadline terminate stuck WASM workers, then decode real LAZ (30.1s)
+(node:12604) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:12604) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  3 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:111:3 › W16 source: initial view uses <=25% ranged bytes and typed failures (1.2s)
+  ok  4 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:138:3 › W16 source: covered point colors, aligned GPU picking, resize, recovery and allocation cycles (816ms)
+  ok  5 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:197:3 › W16 source: branching native REPLACE and independent ADD/frustum cameras, B3DM integration (11.7s)
+  ok  6 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:20:3 › W16 dist: independent LAZ/COPC/EPT counts, positions, colors and W15 b3dm (2.5s)
+  x   7 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:49:3 › W16 dist: abort and deadline terminate stuck WASM workers, then decode real LAZ (30.0s)
+(node:40428) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:40428) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  8 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:111:3 › W16 dist: initial view uses <=25% ranged bytes and typed failures (1.3s)
+  ok  9 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:138:3 › W16 dist: covered point colors, aligned GPU picking, resize, recovery and allocation cycles (882ms)
+  ok 10 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:197:3 › W16 dist: branching native REPLACE and independent ADD/frustum cameras, B3DM integration (12.0s)
+  -  11 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:235:1 › W16 10-minute real-data camera traversal retains budget and records adapter
+
+
+  1) [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:49:3 › W16 source: abort and deadline terminate stuck WASM workers, then decode real LAZ 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: page.evaluate: Test timeout of 30000ms exceeded.
+
+      49 |   test(`W16 ${mode}: abort and deadline terminate stuck WASM workers, then decode real LAZ`, async ({ page }) => {
+      50 |     await open(page);
+    > 51 |     const result = await page.evaluate(async (dist) => {
+         |                               ^
+      52 |       const api = await (dist ? import("/dist/index.js") : import("/src-ts/index.ts"));
+      53 |       const bytes = new Uint8Array(await (await fetch("/tests/fixtures/w16/autzen_trim.laz")).arrayBuffer());
+      54 |       const manifest = await (await fetch("/tests/fixtures/w16/copc-ept-tiles-v1.json")).json();
+        at D:\forge3d-web\.worktrees\w16\crates\forge3d-web\tests\playwright\w16_pointcloud.spec.ts:51:31
+
+    Error Context: test-results\w16_pointcloud-W16-source--04c7f-orkers-then-decode-real-LAZ-chromium-preflight\error-context.md
+
+  2) [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:49:3 › W16 dist: abort and deadline terminate stuck WASM workers, then decode real LAZ 
+
+    [31mTest timeout of 30000ms exceeded.[39m
+
+    Error: page.evaluate: Test timeout of 30000ms exceeded.
+
+      49 |   test(`W16 ${mode}: abort and deadline terminate stuck WASM workers, then decode real LAZ`, async ({ page }) => {
+      50 |     await open(page);
+    > 51 |     const result = await page.evaluate(async (dist) => {
+         |                               ^
+      52 |       const api = await (dist ? import("/dist/index.js") : import("/src-ts/index.ts"));
+      53 |       const bytes = new Uint8Array(await (await fetch("/tests/fixtures/w16/autzen_trim.laz")).arrayBuffer());
+      54 |       const manifest = await (await fetch("/tests/fixtures/w16/copc-ept-tiles-v1.json")).json();
+        at D:\forge3d-web\.worktrees\w16\crates\forge3d-web\tests\playwright\w16_pointcloud.spec.ts:51:31
+
+    Error Context: test-results\w16_pointcloud-W16-dist-ab-39925-orkers-then-decode-real-LAZ-chromium-preflight\error-context.md
+
+  2 failed
+    [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:49:3 › W16 source: abort and deadline terminate stuck WASM workers, then decode real LAZ 
+    [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:49:3 › W16 dist: abort and deadline terminate stuck WASM workers, then decode real LAZ 
+  1 skipped
+  8 passed (1.7m)

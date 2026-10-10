@@ -129,6 +129,7 @@ try {
         if (!Number.isInteger(count) || count < 0 || ![...data.positions].every(Number.isFinite) ||
           data.intensities?.length !== count || data.classifications?.length !== count ||
           (data.colors && data.colors.length !== count * 3)) throw Error('Invalid point output');
+        if (entry.source.kind === 'laz-chunk' && count !== entry.count) throw Error('Chunk output count differs from pinned hierarchy');
         const outputBytes = Object.values(data).reduce((sum, value) => sum + (ArrayBuffer.isView(value) ? value.byteLength : 0), 0);
         if (outputBytes > seed.maxDecodedBytes) throw Error('Output exceeded byte limit');
         let controlHashes;
