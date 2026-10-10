@@ -26,6 +26,8 @@ The npm web WASM also exactly matches the published source commit's checked-in
 `js/src/laz-perf.wasm`. [The comparison](w16-security/published-source-comparison.json)
 records every section hash, import, export and memory limit. The source tree
 at the release commit is `7345a176f1454c4cdcc33f037e272b10e8960a49`.
+The [toolchain manifest](w16-security/toolchain.json) binds the source/SDK
+trees, observed compiler/linker/optimizer digests and rebuilt assets.
 
 ## (a) OSV and GitHub advisory triage
 
