@@ -105,8 +105,12 @@ export class PointSource {
   ): Promise<PointData> {
     const s = this.signal(signal),
       pool = this.options.workerPool;
+    const kind = (request as { kind?: unknown } | undefined)?.kind;
+    const native = kind === "laz-file" || kind === "laz-chunk";
     const result = pool
-      ? ((await pool.run(request, { signal: s })) as PointData)
+      ? (native && pool.getDiagnostics().mode === "main-thread"
+        ? await main(s)
+        : ((await pool.run(request, { signal: s, requireHardStop: native })) as PointData))
       : await main(s);
     pointCancelled(s);
     pointLive(this.disposed);

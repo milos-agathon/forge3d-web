@@ -46,6 +46,68 @@ for (const dist of [false, true]) {
     expect(r.tiles.mesh.slice(0, 3)).toEqual([4, 5, 6]);
     expect(r.worker.mode).toBe("transferable");
   });
+  test(`W16 ${mode}: abort and deadline terminate stuck WASM workers, then decode real LAZ`, async ({ page }) => {
+    await open(page);
+    const result = await page.evaluate(async (dist) => {
+      const api = await (dist ? import("/dist/index.js") : import("/src-ts/index.ts"));
+      const bytes = new Uint8Array(await (await fetch("/tests/fixtures/w16/autzen_trim.laz")).arrayBuffer());
+      const manifest = await (await fetch("/tests/fixtures/w16/copc-ept-tiles-v1.json")).json();
+      const hash = async (array: ArrayBufferView) => [...new Uint8Array(await crypto.subtle.digest("SHA-256",
+        array.buffer.slice(array.byteOffset, array.byteOffset + array.byteLength) as ArrayBuffer))]
+        .map((x) => x.toString(16).padStart(2, "0")).join("");
+      const runs = [];
+      for (const reason of ["abort", "deadline"]) {
+        let created = 0, terminated = 0, entered!: () => void;
+        const stuck = new Promise<void>((resolve) => { entered = resolve; });
+        const pool = new api.Forge3DWorkerPool({
+          size: 1, jobTimeoutMs: 10_000,
+          mainThreadHandler: api.createPointCloudWorkerHandler(),
+          workerFactory: () => {
+            created += 1;
+            const worker = new Worker("/examples/test-w16-stuck-worker.js" + (dist ? "?dist" : ""), { type: "module" });
+            worker.addEventListener("message", ({ data }) => {
+              if (data.state === "stuck-wasm-entered") entered();
+            });
+            const channel = new MessageChannel();
+            worker.postMessage({ port: channel.port2 }, [channel.port2]);
+            return { port: channel.port1, terminate: () => { terminated += 1; worker.terminate(); } };
+          },
+        });
+        try {
+          const controller = new AbortController(), start = performance.now();
+          const failure = pool.run({ kind: "test-stuck-wasm" }, {
+            signal: controller.signal, timeoutMs: reason === "deadline" ? 1500 : 10_000,
+            requireHardStop: true,
+          }).then(() => ({ code: "unexpected-success" }), (error) => ({ code: error.code, details: error.details }));
+          await stuck;
+          // The recovery job is already waiting when the stuck worker is killed.
+          const recovered = pool.run({ kind: "laz-file", bytes }, { requireHardStop: true });
+          if (reason === "abort") controller.abort();
+          const error = await failure, elapsedMs = performance.now() - start;
+          const data = await recovered;
+          runs.push({ reason, error, elapsedMs, created, terminated,
+            positions: await hash(data.positions), colors: await hash(data.colors),
+            count: data.positions.length / 3, diagnostics: pool.getDiagnostics() });
+        } finally { pool.dispose(); }
+      }
+      // Public direct calls use their own terminable worker, too.
+      const direct = await api.decodeLaz(bytes, { timeoutMs: 10_000 });
+      return { runs, expected: manifest.autzen,
+        direct: { count: direct.positions.length / 3, positions: await hash(direct.positions) } };
+    }, dist);
+    for (const run of result.runs) {
+      expect(run.error.code).toBe(run.reason === "abort" ? "REQUEST_CANCELLED" : "RESOURCE_LIMIT_EXCEEDED");
+      if (run.reason === "deadline") expect(run.error.details.reason).toBe("worker-deadline-exceeded");
+      expect(run.elapsedMs).toBeLessThan(5000);
+      expect(run.created).toBe(2);
+      expect(run.terminated).toBe(1);
+      expect(run.count).toBe(result.expected.count);
+      expect(run.positions).toBe(result.expected.positionsSha256);
+      expect(run.colors).toBe(result.expected.colorsSha256);
+      expect(run.diagnostics).toMatchObject({ active: 0, queued: 0, disposed: false });
+    }
+    expect(result.direct).toEqual({ count: result.expected.count, positions: result.expected.positionsSha256 });
+  });
   test(`W16 ${mode}: initial view uses <=25% ranged bytes and typed failures`, async ({
     page,
   }) => {

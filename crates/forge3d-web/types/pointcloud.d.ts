@@ -54,5 +54,5 @@ export type PointCloudWorkerRequest = {
     schema: EptDimension[];
     maxBytes?: number;
 };
-/** The same handler runs in the W02 pool's real workers or its main-thread adapter. */
+/** Real owned workers call the local decoder; main-thread calls use a dedicated worker. */
 export declare function createPointCloudWorkerHandler(): Forge3DMessageHandler;

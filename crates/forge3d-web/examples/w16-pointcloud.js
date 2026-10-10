@@ -31,7 +31,7 @@ function workerPool() {
       workers.push(worker);
       const c = new MessageChannel();
       worker.postMessage({ port: c.port2 }, [c.port2]);
-      return c.port1;
+      return { port: c.port1, terminate: () => worker.terminate() };
     },
   });
   return {

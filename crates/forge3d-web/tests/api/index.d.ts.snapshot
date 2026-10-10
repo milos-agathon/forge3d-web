@@ -3101,11 +3101,26 @@ export type WorkerExecutionMode =
   | "transferable"
   | "main-thread";
 
+/** Owned workers can be terminated even while a native WASM call is stuck. */
+export interface Forge3DOwnedWorker {
+  port: MessagePort;
+  terminate(): void;
+}
+
+export interface Forge3DWorkerRunOptions extends Forge3DMessageCallOptions {
+  /** Enqueue-to-completion deadline. Defaults to the pool's jobTimeoutMs. */
+  timeoutMs?: number;
+  /** Reject execution modes that cannot terminate a synchronous native call. */
+  requireHardStop?: boolean;
+}
+
 export interface Forge3DWorkerPoolOptions {
   size?: number;
   maxQueued?: number;
+  /** Enqueue-to-completion deadline in milliseconds; defaults to 30,000. */
+  jobTimeoutMs?: number;
   preferSharedArrayBuffer?: boolean;
-  workerFactory?: (index: number) => MessagePort;
+  workerFactory?: (index: number) => MessagePort | Forge3DOwnedWorker;
   mainThreadHandler: Forge3DMessageHandler;
 }
 
@@ -3121,7 +3136,7 @@ export declare class Forge3DWorkerPool {
   constructor(options: Forge3DWorkerPoolOptions);
   run<T = unknown>(
     payload: unknown,
-    options?: Forge3DMessageCallOptions,
+    options?: Forge3DWorkerRunOptions,
   ): Promise<T>;
   getDiagnostics(): WorkerPoolDiagnostics;
   dispose(): void;

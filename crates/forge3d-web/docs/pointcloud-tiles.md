@@ -78,7 +78,28 @@ the picking ID namespaces each layer/node/point and returns its original index.
 
 Pass an existing W02 `Forge3DWorkerPool` with `createPointCloudWorkerHandler` to
 datasets to decode in real workers. The handler supports whole LAZ, COPC chunks
-and EPT binary. The same handler works through W02's main-thread fallback.
+and EPT binary. Return `{port, terminate: () => worker.terminate()}` from the
+pool's `workerFactory`, so the pool owns each native worker's lifecycle. It
+terminates and replaces the worker on abort or deadline, including a decoder
+stuck inside one synchronous WASM call. `jobTimeoutMs` defaults to 30,000 ms;
+`pool.run(payload, {timeoutMs})` overrides the enqueue-to-completion deadline
+for one job. Queued jobs also expire and release their queue slot. Successful
+jobs clear their timers and abort listeners. Disposal terminates owned workers.
+
+LAZ/COPC/LASzip EPT datasets require this owned-worker path when a pool is
+supplied. Legacy pools returning bare ports cannot stop native calls and are
+rejected with `UNSUPPORTED_FEATURE` for these requests. EPT binary retains the
+W02 main-thread and bare-port modes. Without a supplied pool, `decodeLaz` and
+`decodeLazChunk` create a self-hosted dedicated worker and dispose it after the
+job; their `timeoutMs` option has the same 30-second default. A main-thread pool
+also uses this dedicated worker for native decoding. Environments without
+Worker support reject compressed decoding with `UNSUPPORTED_FEATURE`.
+
+The real stuck-WASM negative control in the W16 browser suite proves both
+`REQUEST_CANCELLED` on abort and `RESOURCE_LIMIT_EXCEEDED` on deadline, followed
+by a real LAZ decode with the independent fixture hashes. Main-thread and
+bare-port jobs outside native decoding can only cancel cooperatively; their
+execution slot stays occupied until the handler returns after a deadline.
 `transferPointData` copies into owned transferable arrays so caller buffers are
 not detached. See [the worker example](https://github.com/milos-agathon/forge3d/blob/main/crates/forge3d-web/examples/w16-worker.js).
 

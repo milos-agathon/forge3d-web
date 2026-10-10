@@ -11,6 +11,7 @@ import { PointSource } from "./pointcloud-source.js";
 import { parseLasHeader } from "./pointcloud-las.js";
 import type { LasHeader } from "./pointcloud-las.js";
 import { decodeLaz, decodeLazChunk } from "./laz-decoder.js";
+import { decodeLazLocal, decodeLazChunkLocal } from "./laz-decoder-local.js";
 import { CopcDataset } from "./copc.js";
 import { EptDataset, parseEptBinary } from "./ept.js";
 import type { EptDimension } from "./ept.js";
@@ -131,7 +132,7 @@ export type PointCloudWorkerRequest =
       schema: EptDimension[];
       maxBytes?: number;
     };
-/** The same handler runs in the W02 pool's real workers or its main-thread adapter. */
+/** Real owned workers call the local decoder; main-thread calls use a dedicated worker. */
 export function createPointCloudWorkerHandler(): Forge3DMessageHandler {
   return async (payload, context) => {
     const req = payload as PointCloudWorkerRequest;
@@ -144,9 +145,12 @@ export function createPointCloudWorkerHandler(): Forge3DMessageHandler {
     };
     switch (req.kind) {
       case "laz-file":
-        return decodeLaz(req.bytes, options);
+        return typeof (globalThis as { importScripts?: unknown }).importScripts === "function"
+          ? decodeLazLocal(req.bytes, options) : decodeLaz(req.bytes, options);
       case "laz-chunk":
-        return decodeLazChunk(req.bytes, req.header, req.count, options);
+        return typeof (globalThis as { importScripts?: unknown }).importScripts === "function"
+          ? decodeLazChunkLocal(req.bytes, req.header, req.count, options)
+          : decodeLazChunk(req.bytes, req.header, req.count, options);
       case "ept-binary":
         return parseEptBinary(req.bytes, req.schema, options);
       default:

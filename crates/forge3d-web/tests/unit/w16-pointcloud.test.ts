@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import {
   PointBuffer,
@@ -15,6 +15,7 @@ import {
   PointCloudLayer,
   AdaptivePointBudget,
   Forge3DError,
+  Forge3DWorkerPool,
 } from "../../src-ts/index.js";
 import { PointCache } from "../../src-ts/pointcloud-common.js";
 import { PointSource } from "../../src-ts/pointcloud-source.js";
@@ -34,6 +35,62 @@ const view = {
   fovY: Math.PI / 4,
 };
 const header = parseLasHeader(fixture("ellipsoid.copc.laz"));
+describe("W16 decoder hard-stop admission and queue bounds", () => {
+  it("rejects LAZ dispatch without a terminable worker and validates timeout bounds", async () => {
+    const channel = new MessageChannel();
+    const pool = new Forge3DWorkerPool({ workerFactory: () => channel.port1,
+      mainThreadHandler: () => undefined });
+    try {
+      await expect(pool.run({}, { requireHardStop: true })).rejects.toMatchObject({
+        code: "UNSUPPORTED_FEATURE", details: { reason: "worker-hard-stop-unavailable" },
+      });
+      for (const timeoutMs of [0, -1, NaN, 1.5, 2 ** 31])
+        await expect(pool.run({}, { timeoutMs })).rejects.toMatchObject({ code: "INVALID_INPUT" });
+      expect(pool.getDiagnostics()).toMatchObject({ active: 0, queued: 0 });
+    } finally { pool.dispose(); channel.port2.close(); }
+  });
+  it("expires queued jobs and aborts queued jobs without transferring their input", async () => {
+    vi.useFakeTimers();
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const seen: unknown[] = [];
+    const pool = new Forge3DWorkerPool({ mainThreadHandler: async (payload) => { seen.push(payload); await gate; } });
+    try {
+      const active = pool.run("active");
+      await Promise.resolve();
+      const bytes = new Uint8Array([1, 2, 3]);
+      const expired = pool.run(bytes, { timeoutMs: 10, transfer: [bytes.buffer] });
+      const deadline = expect(expired).rejects.toMatchObject({ code: "RESOURCE_LIMIT_EXCEEDED",
+        details: { reason: "worker-deadline-exceeded", timeoutMs: 10 } });
+      await vi.advanceTimersByTimeAsync(10);
+      await deadline;
+      const controller = new AbortController();
+      const aborted = pool.run(bytes, { signal: controller.signal, transfer: [bytes.buffer] });
+      controller.abort();
+      await expect(aborted).rejects.toMatchObject({ code: "REQUEST_CANCELLED" });
+      expect(bytes.byteLength).toBe(3);
+      expect(pool.getDiagnostics()).toMatchObject({ active: 1, queued: 0 });
+      release(); await active;
+      expect(seen).toEqual(["active"]);
+    } finally { pool.dispose(); vi.useRealTimers(); }
+  });
+  it("terminates owned workers on dispose and clears all job timers", async () => {
+    vi.useFakeTimers();
+    const channel = new MessageChannel(), terminate = vi.fn();
+    const pool = new Forge3DWorkerPool({ size: 1,
+      workerFactory: () => ({ port: channel.port1, terminate }), mainThreadHandler: () => undefined });
+    try {
+      const active = pool.run("active", { requireHardStop: true });
+      const queued = pool.run("queued");
+      pool.dispose();
+      await expect(active).rejects.toMatchObject({ code: "RUNTIME_DISPOSED" });
+      await expect(queued).rejects.toMatchObject({ code: "RUNTIME_DISPOSED" });
+      expect(terminate).toHaveBeenCalledOnce();
+      expect(vi.getTimerCount()).toBe(0);
+      expect(pool.getDiagnostics()).toMatchObject({ active: 0, queued: 0 });
+    } finally { pool.dispose(); channel.port2.close(); vi.useRealTimers(); }
+  });
+});
 describe("W16 native point buffer and octree contracts", () => {
   it("retains immutable point arrays after another owner releases its handle", () => {
     const original = new PointBuffer({
