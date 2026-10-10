@@ -416,3 +416,41 @@ This follow-up changes tests and evidence only. The shipped decoder, assets,
 fuzz corpus and worker path are unchanged. Codec concurrency limits remain a
 proposed sign-off condition for the independent reviewer; this agent has not
 approved the codec. W16 remains Partial and G02/G03/G04 remain P.
+
+### Retained review-follow-up soak failure
+
+The clean `8094575` rerun passed all 1,082 units, 15 parity checks, 619
+infrastructure checks (one existing skip), 47 W16 units and all ten source/dist
+browser cases. Installed conformance and API/build checks passed, but
+[the ten-minute soak](w16-runs/installed-20261010T182246586Z-1.json) failed:
+600,086.9 ms, 29,276 frames, **33.7 ms p95** against the unchanged 16.7 ms limit.
+[Its failure log](w16-runs/installed-20261010T182246586Z-failure.log),
+[batch evidence](w16-runs/evidence-20261010T182246586Z.json),
+[conformance](w16-runs/conformance-20261010T182246586Z.json), and
+[runtime binding](w16-runs/runtime-files-20261010T182246586Z.json) are retained.
+
+All 273 runtime/asset hashes match the earlier passing batch exactly, with
+digest `6c046d4ace930909ec93b8efee9b89b14b89ef3fe2f5079beb6713eb773eef7a`.
+The browser, 1920x1080 viewport, fixture and camera harness also match. The
+observed package SHA-256 is
+`436cf662e16a1dfe148255b3612e2f1cf0f41f52d55bc1cd8ec48902209d8d5c`;
+documentation-only package contents differ. Update/upload/render p95 values
+were 20.2/1.3/12.8 ms. Tracked CPU and GPU peaks were 42,918,791 and 42,770,544
+bytes, with zero GPU bytes after disposal. Coverage, all 64 keyframes, 693
+selection sets and real-data counts passed.
+
+The report retains 121 host samples, maximum gap 5,041.11 ms. Host CPU load
+ranged 20.41–100%, mean 86.07%, versus mean 11.84% in the passing batch.
+RTX 3070 driver `610.60` was observed in P8 96 times, P5 10 times and P0 15
+times. Graphics/SM clocks ranged 210–1,725 MHz, memory clocks 405–7,001 MHz,
+GPU utilization 0–100%, and total device memory 1,165–1,804 MiB. The power
+scheme remained Lenovo Default. Full GPU process tables are retained.
+
+A subsequent read-only CPU process probe found Python PID 7212 consuming
+roughly 20 cores, alongside other Python and rustc activity. A later
+[post-run snapshot](w16-runs/host-processes-after-20261010T182246586Z.json)
+records changed process activity. These post-run snapshots do not attribute
+individual processes to historical CPU samples or prove causation. No other
+tests or builds were started by this agent during the soak; competing desktop
+processes were not stopped. The failed observation remains valid and does not
+establish an explanation for October 9 failures.
