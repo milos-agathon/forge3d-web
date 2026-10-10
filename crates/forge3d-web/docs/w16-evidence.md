@@ -545,3 +545,30 @@ The remaining acceptance items are independent laz-perf sign-off (reviewer
 and date unset) and both attested W00 reference hardware lanes. The lab remains
 unready with zero registered runners. This local Windows run is not either
 reference hardware lane. W16 remains Partial and G02/G03/G04 remain P.
+
+### Portable stdout hash bindings
+
+The Windows stdout files were retained with CRLF line endings, but Git's
+default text normalization stored LF blobs for four of the five retained
+logs. No text or measured values differ. Original logs and every JSON report
+remain unchanged. Additive [raw stdout archives](w16-runs/stdout-archives.json)
+now preserve those retained file bytes, protected by a narrowly scoped
+`-text -diff` attribute. The manifest records each raw SHA-256, its prior Git
+blob SHA-256 and the exact CRLF-to-LF difference, if any.
+
+For the latest passing run, the immutable batch evidence's stdout hash is
+`7f03ddb088e8f405b7b7cb9cb0a7b157d1ba3f442b30851cc100b0486de2a976`.
+It identifies the 2,321 captured bytes in
+[the raw archive](w16-runs/raw-stdout/installed-20261010T203221986Z-retry.log).
+The original Git-normalized text is 2,292 bytes with SHA-256
+`daede82cfb0651e7850d004bfb64244e3e29c3bc8f5af379eeb73a222ba72616`:
+the only difference is 29 CR bytes. Platform-independent capture-hash
+verification should follow the manifest's `rawArchive` path. Copies of the
+failed soak, initial hard-stop failure, native audit failure and full failed
+CI log are also retained in that directory. All archive hashes are checked
+against their staged Git blob bytes before publication.
+
+This storage correction changes no runtime, asset, fixture, camera harness,
+test assertion, budget or existing report. The final archive commit still
+requires its own green PR CI. Independent codec sign-off and both exact W00
+hardware lanes remain pending; W16 stays Partial and G02/G03/G04 stay P.
