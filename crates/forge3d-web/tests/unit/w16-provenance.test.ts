@@ -1,5 +1,6 @@
 import { it, expect } from "vitest";
 import { readFileSync } from "node:fs";
+import { readFile } from "node:fs/promises";
 import { createHash } from "node:crypto";
 const base = new URL("../fixtures/w16/", import.meta.url),
   manifest = JSON.parse(
@@ -7,21 +8,24 @@ const base = new URL("../fixtures/w16/", import.meta.url),
   );
 // This integrity audit reads every fixture; its timeout is a cold-storage
 // allowance, separate from the W00 performance budgets and soak gates.
-it("W16 fixtures and deepest native sources retain independent provenance", () => {
+it("W16 fixtures and deepest native sources retain independent provenance", async () => {
   expect(manifest.fixtureId).toBe("copc-ept-tiles-v1");
   expect(manifest.nativeSources).toHaveLength(21);
   for (const source of manifest.nativeSources) {
     expect(source.commit).toBe("bf8db93233e5158f6d226991fc5d230832c2d806");
-    expect(
-      createHash("sha256")
-        .update(readFileSync(new URL(source.fixture, base)))
-        .digest("hex"),
-    ).toBe(source.sha256);
   }
-  for (const file of manifest.files) {
-    const bytes = readFileSync(new URL(file.path, base));
-    expect(bytes.length).toBe(file.bytes);
-    expect(createHash("sha256").update(bytes).digest("hex")).toBe(file.sha256);
+  // Bound cold-file I/O concurrency instead of serially opening ~1,900 files.
+  // Every native and fixture byte still receives its independent hash check.
+  for (const group of [{ files: manifest.nativeSources, checkLength: false },
+    { files: manifest.files, checkLength: true }]) {
+    const files = group.files;
+    for (let offset = 0; offset < files.length; offset += 16) {
+      await Promise.all(files.slice(offset, offset + 16).map(async (file: any) => {
+        const bytes = await readFile(new URL(group.checkLength ? file.path : file.fixture, base));
+        if (group.checkLength) expect(bytes.length).toBe(file.bytes);
+        expect(createHash("sha256").update(bytes).digest("hex")).toBe(file.sha256);
+      }));
+    }
   }
   expect(manifest.oracle).toEqual({ laspy: "2.7.0", lazrs: "0.8.2" });
   expect(manifest.autzen.count).toBe(110000);

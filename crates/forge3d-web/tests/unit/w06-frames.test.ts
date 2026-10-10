@@ -16,6 +16,9 @@ import { AovFrame, aovObjectId, encodePng, Frame, HdrFrame } from "../../src-ts/
 import { CameraAnimation } from "../../src-ts/camera-animation.js";
 import type { CameraInput, CaptureOptions } from "../../src-ts/index.js";
 import { encodeVideo, muxEncodedVideo, probeVideoCodecs } from "../../src-ts/video.js";
+// Load the real muxer with the test module, before the functional test's deadline.
+// Its cold dependency transform is setup work; byte determinism still uses real muxing.
+import "mediabunny";
 
 function frame(value = 7, width = 3, height = 2): Frame {
   return new Frame(width, height, new Uint8Array(width * height * 4).fill(value));

@@ -17,7 +17,8 @@ jobs:
   build-and-contract:
     name: Web Runtime / Build And Contract Tests
     runs-on: windows-latest
-    timeout-minutes: 30
+    # Full corpus plus bounded live-download retries; test and runtime budgets are unchanged.
+    timeout-minutes: 40
 
     steps:
       - name: Check out the protected source
@@ -126,6 +127,7 @@ jobs:
 
       - name: Fetch all W14 remote datasets through default registry URLs
         working-directory: crates/forge3d-web
+        timeout-minutes: 10
         run: npm run test:datasets:remote
 
       - name: Upload exact-tarball browser evidence

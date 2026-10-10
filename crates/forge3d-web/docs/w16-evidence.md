@@ -572,3 +572,78 @@ This storage correction changes no runtime, asset, fixture, camera harness,
 test assertion, budget or existing report. The final archive commit still
 requires its own green PR CI. Independent codec sign-off and both exact W00
 hardware lanes remain pending; W16 stays Partial and G02/G03/G04 stay P.
+
+### Retained final-head live-download failure and bounded transport retries
+
+[CI run 38089675110](https://github.com/milos-agathon/forge3d-web/actions/runs/38089675110)
+on `a5d3a8f4e9cdba1cfcafd6ff2b40961b51064638` failed in the last W14 live
+dataset step, after the unit, package, infrastructure, installed W16 and worker
+fuzz gates had passed. The [complete raw job log](w16-runs/raw-stdout/ci-a5d3a8f-remote-dataset-failure.log)
+is retained as 772,592 bytes, SHA-256
+`4a158502d07a72d32ca04bad2c4d32bf32562683f45990a83e44f674f4da0db7`.
+The fuzz result was 260 cases, 120 valid, 140 typed errors, zero untyped,
+266.4 ms maximum, 7,274,496 bytes observed WASM heap, and successful real-data
+recovery. Required Browser Preflight and optional WebKit did not run because
+their build dependency failed.
+
+Nine remote datasets passed their exact size and SHA checks. The tenth,
+`swiss-land-cover`, failed with `IO_ERROR`, `kind: asset-io`, reason
+`TypeError: terminated`. Its stream ended after approximately 70.24 seconds,
+before the unchanged 120-second fetch deadline. The step ran from
+22:27:18 to 22:28:48 UTC on October 10; CI recorded exit code 1 and normal
+cleanup, without a timeout annotation. This is an observed transport failure,
+not a recorded runner timeout. Partial body chunks are local until complete
+size/SHA verification; the harness also disables persistent caching.
+
+The live harness now permits at most three attempts for only that exact
+typed error, the current asset name, and that exact reason. Each attempt uses
+a fresh 120-second signal, with 1- and 2-second backoffs. Every failed attempt
+is printed and retained in the JSON report, including exhausted or fatal
+attempts. Integrity, HTTP, validation, cancellation, resource and other
+transport errors remain fatal. All ten real default URLs, full byte counts
+and SHA assertions remain required; no fixture fallback is used.
+
+Eight negative-control unit tests exercise the real registry body/verification
+path to prove interrupted-stream recovery, fatal corrupt bytes even when a
+later response would be valid, exhausted retries, and no retry of resource,
+cancellation, HTTP and other transport errors, with a separate synthetic
+mismatched-asset classification check. A ten-minute
+bound applies to the whole remote CI step. Build-job scheduling allowance is
+40 minutes because preceding checks consumed about 28 minutes 20 seconds in
+the failed run, leaving insufficient retry time under its former 30-minute
+allowance. This margin does not change a test timeout, decoder deadline,
+soak duration or W00 budget. This correction changes no shipped runtime,
+asset, fixture or fuzz corpus; the retained 10.5 ms clean soak still binds the
+same runtime/asset hashes. Later CI status is tracked on the PR. Codec
+approval and both exact hardware reports remain pending, with W16 Partial
+and G02/G03/G04 P.
+
+### Cold setup and fixture audit follow-up
+
+The subsequent full local unit run captured two timeout failures: the W06
+mux determinism test took 5,412 ms against its five-second limit, and W16's
+fixture provenance audit took 32,154 ms against its thirty-second limit.
+[The raw failure log](w16-runs/raw-stdout/unit-cold-setup-timeout-followup.log)
+is retained as 8,492 bytes with SHA-256
+`4245f3299dd83f9378420fbe0c3b1fd1ccdd72b4615e9ac346798ec7ad9f2f90`.
+These failures establish timeout exhaustion; they do not establish a specific
+CPU, disk or antivirus cause.
+
+W06 now imports the actual `mediabunny` dependency during module setup,
+before its functional test deadline. The test still creates real muxers at
+two dates a day apart, checks every output byte and validation error, and
+restores Date. W16 uses at most sixteen asynchronous reads per batch, rather
+than serial synchronous opens of 1,903 files (22,081,709 bytes in total).
+Both independent native-source hashes and every fixture hash/length remain
+required. No timeout or assertion is relaxed by these changes.
+
+The first audit refactor incorrectly applied a fixture length assertion to
+native-source entries, whose manifest has no length field; that development
+failure is retained in [its raw log](w16-runs/raw-stdout/unit-async-audit-refactor-failure.log),
+6,399 bytes, SHA-256
+`227541bf0f823fc8944f4715d0020dc63d6ca6003690613a05309add115e865a`.
+The corrected test selects the proper manifest field for each group and
+preserves the original group-specific checks. The complete subsequent suite
+passed all 1,090 tests (including eight new transport negative controls).
+All earlier failures remain in the record. These test-harness changes do not
+alter runtime or fuzz bytes, hardware profiles or W16 acceptance status.
