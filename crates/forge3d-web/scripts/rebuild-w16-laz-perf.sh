@@ -22,6 +22,16 @@ fi
 # Set up this audit SDK with ./emsdk install 3.1.20 && ./emsdk activate 3.1.20.
 EMSDK_QUIET=1 source "$sdk_root/emsdk_env.sh"
 emcc --version | head -1 | grep -F '3.1.20 (5d878c99921ec247d34fb26a20b5a13d60d69e93)'
+# Bind the official Linux SDK components as well as its version/release map.
+(
+  cd "$sdk_root"
+  sha256sum --check <<'DIGESTS'
+d030baf6e1cb92bba926250611f82b559299b58f71764ac8076136d6a4d4aa87  upstream/bin/clang
+d2d9b34cef790d3c87957f2d88c9bb68de7f91b8abdcacb9d0cc0395034ffc5e  upstream/bin/wasm-ld
+6f51546e8f579bb3d179e787b59974f83bb210fc05c11cafd971880295e337a6  upstream/bin/wasm-opt
+1a86c691c861bdc4606448c0de98936d3bb2dae173e13d8aba5586a1dbda9d0e  upstream/emscripten/emcc.py
+DIGESTS
+)
 mkdir -p "$build_root"
 {
   git -C "$source_root" log -1 --format=fuller

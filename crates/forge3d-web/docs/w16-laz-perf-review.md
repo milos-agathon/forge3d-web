@@ -113,8 +113,9 @@ python scripts/review-w16-laz-perf.py compare \
   --output /tmp/w16-laz-comparison.json
 ```
 
-The helper checks both Git commits and the Emscripten version/revision before
-building. It requires a new build directory and never writes `assets/laz`.
+The helper checks both Git commits, the Emscripten version/revision and the
+four Linux SDK component digests before building. It requires a new build
+directory and never writes `assets/laz`.
 The shipped factory retains the existing ESM export footer; the shipped WASM
 remains the exact npm binary. A successful rebuild establishes the tested
 binary/source relationship, not correctness of all decoder paths.
