@@ -125,6 +125,7 @@ try {
       const before = performance.now();
       try {
         const output = await pool.run(request, { timeoutMs:seed.deadlineMs, requireHardStop:true });
+        state.peakWasmBytes = Math.max(state.peakWasmBytes, output.peakWasmBytes);
         const data = output.points, count = data.positions.length / 3;
         if (!Number.isInteger(count) || count < 0 || ![...data.positions].every(Number.isFinite) ||
           data.intensities?.length !== count || data.classifications?.length !== count ||
@@ -141,6 +142,7 @@ try {
         }
         return { outcome:'valid', count, outputBytes, ...(controlHashes ? {controlHashes}:{}), elapsedMs:performance.now()-before, peakWasmBytes:state.peakWasmBytes };
       } catch (error) {
+        if (Number.isSafeInteger(error.details?.fuzzPeakWasmBytes)) state.peakWasmBytes = Math.max(state.peakWasmBytes, error.details.fuzzPeakWasmBytes);
         return {outcome: error instanceof api.Forge3DError ? 'typed-error' : 'untyped-error', code:error.code,
           message:String(error.message), elapsedMs:performance.now()-before, peakWasmBytes:state.peakWasmBytes};
       }

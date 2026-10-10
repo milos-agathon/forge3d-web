@@ -31,6 +31,8 @@ self.onmessage = async ({ data }) => {
       return { points, peakWasmBytes };
     } catch (error) {
       observe(currentMemory);
+      if (error instanceof api.Forge3DError) throw new api.Forge3DError(error.code, error.message,
+        { ...(error.details && typeof error.details === 'object' ? error.details : {}), fuzzPeakWasmBytes: peakWasmBytes });
       throw error;
     }
   }});
