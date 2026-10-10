@@ -1,0 +1,4150 @@
+{
+  "schemaVersion": 1,
+  "recordedAt": "2026-10-10T13:39:00.618Z",
+  "gitHead": "9b29d39a0cc6c55347faed8f5e94a43c01f97b18",
+  "browser": "148.0.7778.96",
+  "platform": "win32",
+  "seedSha256": "2c65222c7ffffbe3d7e454107c66199a4d682dae9a7fc2f76a8932fb86516d8b",
+  "fixtureManifestSha256": "580cc9241e850f3e83c4b82cb17e3acd7cc5fba2e42ed68509fa39234c2fd5ad",
+  "codecWasmSha256": "9c1802bc31b567dd4aa1ce9ab010e7e51e095dc42af8379b474ae6f221a9327f",
+  "scriptSha256": "7be85243b5000bb6653ed48f14eeff27f50a2b0d8a13874d2386eee2e6157fa8",
+  "workerSha256": "55a2e54b045b2bc266e94979d44478f26052da8254289176dceab0e07d6d1392",
+  "corpusSha256": "f87f3d1bfccec1013f2d237fc82dd888d427351e9eabffe289d0ad3f5471bdaf",
+  "seed": 1450659856,
+  "cases": 260,
+  "bounds": {
+    "deadlineMs": 1000,
+    "completionBoundMs": 3000,
+    "maxDecodedBytes": 8388608,
+    "wasm": {
+      "initialBytes": 262144,
+      "maximumBytes": 2147483648
+    },
+    "note": "WASM high water observed at instantiate/grow; JS input/output limits are separate. Browser/process RSS is not attributed per job. Deadline termination bounds CPU residency; declared WASM maximum is not a smaller per-job heap cap."
+  },
+  "valid": 120,
+  "typedErrors": 140,
+  "maxElapsedMs": 163.9000000357628,
+  "peakObservedWasmBytes": 20185088,
+  "recovery": {
+    "count": 512,
+    "created": 1,
+    "terminated": 0,
+    "diagnostics": {
+      "mode": "transferable",
+      "size": 1,
+      "active": 0,
+      "queued": 0,
+      "disposed": false
+    }
+  },
+  "results": [
+    {
+      "id": "0-control",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "9bc9d8b93f864662dd14aa813480a7cc13a0fcd982d3274a31b4d1701fbcbac0",
+      "mutation": "valid real control",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "controlHashes": {
+        "positionsSha256": "677050a451c1a19e2abb00b5ac9f07a8a100c2d06987496df01da1d8ea912949",
+        "colorsSha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca"
+      },
+      "elapsedMs": 97.30000001192093,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-0",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 780,
+      "inputSha256": "0ab181b042feb8e86806b156d37a5ae3d31e79650a6d670aac1d2c0071dae078",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 0.699999988079071,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-1",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "3edb8368186526da9d3d604ece299f7e3c6e24988437310c3b13610996a8ca99",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 4.099999964237213,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-2",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "410b1d66fb485f921e1774e102390bfe7f95e4fdce21efd9c21a11e5965f93a5",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 3,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-3",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "9471a079dabc206cba2ef7021aa268798535916ad7c0d5a5fa0f3bb2de709c61",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 0.5999999642372131,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-4",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "9bc9d8b93f864662dd14aa813480a7cc13a0fcd982d3274a31b4d1701fbcbac0",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 4.699999988079071,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-5",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8494,
+      "inputSha256": "629dc8de1033cb91d2a395011a9c8e29a89a63e8374f95c1107e80e15d925153",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 0.7000000476837158,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-6",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 2844,
+      "inputSha256": "79d46f23c3f542cff46e0db70add651c9464bb3aa22f0ea43aa3353eb2934004",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 0.5,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-7",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "de17352a088db9d5f42d01177bdcc59ee8ec9a06fdbb0399df74e8e216fab0c0",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 4,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-8",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "7605fac87674dc9250470fa00564c51153bca79b2de1e150c1be2adf2202e429",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 3.200000047683716,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-9",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "b73d3220e7adf79b37feb10e0d6eb84efce5c5162acb0cc519026ed53d607526",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 0.3999999761581421,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-10",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "89beccb19750efa197fa36282e8bf5656a5d7251482b7856c6b5b782d4c2d87e",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 3.199999988079071,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-11",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8498,
+      "inputSha256": "62a7e8f1b273286086babfd2023e3953502a41bad5ce7c37f2c14b0dee3e63f2",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 0.8999999761581421,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-12",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 1256,
+      "inputSha256": "b4073eb269fcf35ec90dd10b7941981614b6067035b2c547a6260d3090c488c8",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 0.5999999642372131,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-13",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "68c24424308ebc66b4e7d60be09c657cabbe0741b70543d83650e20516211dd9",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 2.899999976158142,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-14",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "2b25534c1dd3db501003b0a2756affeed0eb025d8c80f9ce5eda5c7d5021fa9d",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 3.399999976158142,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-15",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "026dae262fd42319efa7285a6c51f4194633830879d0913540dcc05be7d63069",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 0.2999999523162842,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-16",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "482373d7d599ed3668563188cc2c413785521fd29ce5e8907639a9343ebd5a01",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 2.400000035762787,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-17",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8499,
+      "inputSha256": "8f4f594e23968234dcace2813ccf34aeccd93c2fa524e91a2dea170db04b98a0",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 0.3999999761581421,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-18",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 1203,
+      "inputSha256": "1b3ff4b903c5d6f9f3fb8d62b6b1fd684606914c54d11bcbd04d1bc65a070b7e",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 0.40000003576278687,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-19",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "230b1ca0844262c790584769d74afe17c6c23aa3b7590c0ca557c65f3de93817",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 2.199999988079071,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-20",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "09e98712920f31725c03019937fc7a82ef7aa751c89ba4f0877e76a88a652df3",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 2.199999988079071,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-21",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "9a5da501d01cc634443f4ad20745610b3356d3c015a0f5242eb653454fb4c822",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 0.30000001192092896,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-22",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "990a05461563c5768ef9dbda01d472208e17fc50e092b8dd7403baa58241c888",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 2.399999976158142,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-23",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8501,
+      "inputSha256": "300de339265231b5bba171e7e28bba1aec19f0c80a724fee763f6dd45d0bbd40",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 0.3999999761581421,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-24",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 5068,
+      "inputSha256": "47f551673918c75fd8ce1db8a5adbca64df4e58bd8a0674eaa34d2296db7c7f7",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 0.10000002384185791,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-25",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "2c7d5b99fbe89266670be74cd914fa2abda4b2a44d15b536ed1a6fb37ed12290",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 2.5,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-26",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "c3a6022c4eb1c0f75cbb297c7558a113390c859287b301c3f96dbe0cdb3ee46b",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 2.199999988079071,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-27",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "7ed8b52f679bfba477a753230333cd68b36740f62e0fbb8061e8728b0f7a6e56",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 0.6000000238418579,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-28",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "7b6e892d406bd1ad1e189adc42410ecb6a8f2ba844806376f0da8d00835e3ce0",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 2.200000047683716,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-29",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8489,
+      "inputSha256": "0458efe5b88f0b9b8e4be6ae56c95655b38f7cbb08111edc6c974241ee9ea813",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 0.2999999523162842,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-30",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 23,
+      "inputSha256": "1689a6f62cf9726065bec4a50b065eeade6231481299b8b8aed44783020f090b",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "Truncated LAZ chunk",
+      "elapsedMs": 0.10000002384185791,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-31",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "01e2ea662f12bc5311681a06409a5ea98fd77bc635d04092322ba6af4c797d71",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 2.399999976158142,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-32",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "a3029da9db8ce8140ccf4f6dafaa6dcc5d19befbd470980671f7972b364b697a",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 2.600000023841858,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-33",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "33a0cc84ea02c45494ac0e652c96af94d4b42a3479e0ef86654e1406c354ad30",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 0.3999999761581421,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-34",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "9bc9d8b93f864662dd14aa813480a7cc13a0fcd982d3274a31b4d1701fbcbac0",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 2.300000011920929,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-35",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8501,
+      "inputSha256": "b84338e98a603e19d40cc2313cfeb7ab903029dc5c5515ebe1426031f0aed108",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 0.19999998807907104,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-36",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 5755,
+      "inputSha256": "d9739a2c77859a72ba18d4588c2cc2fb0098c96d6d9405a47d6265eb618e8ba9",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 0.30000001192092896,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-37",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "e0995707e0f629d3b6fbd8f2d96e37fa5e28b903089411cc931bac9d09d52676",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 2.300000011920929,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-38",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "932d13069ad52bd4794df1cfd623f4298d05fb5fff5cbee868c77157d3563962",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 2.099999964237213,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-39",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "352324d605d3626cbb8b704f7e525c5d9c109efda607dd2f1081cad580fc2ff9",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 0.2999999523162842,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-40",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "49cbb4a71642cb9a607dfe1683f07695a9e61220f36049aacd86b5aa123a64b0",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 2.400000035762787,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-41",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8487,
+      "inputSha256": "3cb478da3be4c00803d559ae21ca8348dbb6c692a3d1ade5b2a684c4f920c148",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 0.19999998807907104,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-42",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 6448,
+      "inputSha256": "d4edac26174745867796de64e48e2336ff9e74ceb1b622052ffcd44cbfede233",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 0.30000001192092896,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-43",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "b9f077e180d416271d5aa4b6b89800ddb4c50ab5941db72c699a9d8db56b9b34",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 2.099999964237213,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-44",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "c62227065d8e21a128760efc570171caf9fdf4ba9d9617fa50f41a9e47594e2a",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 2.300000011920929,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-45",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "e387614e700c6a35428188f6e098bb579dee3e0f78195d9ba18e14affcff4e52",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 0.09999996423721313,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-46",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "4c770e1ecfc9ab1ceecbff2f69b0e5ec869668ab1f0321fb0f7ba292c0663802",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 2.300000011920929,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-47",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8511,
+      "inputSha256": "95a00e535cac811678b77fd201c1c16c0758dcf59d1a655cf095e66270af49f2",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 0.2999999523162842,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-48",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 4869,
+      "inputSha256": "1df8cd59d6be5b6312b8f9714c90c8dd7c3f83319ca35bc28535577df888004e",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 0.2999999523162842,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-49",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "30334dfd326ebbea7127df28a75f0c9aa5ebeaf986a73cca3192a26e5caccd47",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 2.300000011920929,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-50",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "105892db9385b17a2f3f62f74ebec1ac0ab7186e6ea242b78993a594c23834c6",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 2.299999952316284,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-51",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "0dec1e33d86b90a590a7f4b8da62d408926f339689cd186438d39af062d84f63",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 0.30000001192092896,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-52",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "77c8e7cfe4d9e9848db106d94606eefc4bcd16936ba0d97857de1e63e80a48f8",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 2.399999976158142,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-53",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8485,
+      "inputSha256": "94293bff54f4fc0fd51dfb97220e8ae3423f1ebc76a5d601f172b555a079727a",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 0.2999999523162842,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-54",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 4833,
+      "inputSha256": "a474f5f7bda4879bc418bb66ff5df79f498cea588a975c63ab3402cb49453f42",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 0.19999998807907104,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-55",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "83ef5bdca2958a0331e721397ca989f498582172a72726ae1b01d49c6069cb55",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 2.399999976158142,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-56",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "3ab32d9824096d98205f80b843a46a677adb44eeeb586a4fa355f8d1ba06c785",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 2.599999964237213,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-57",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "c3059672e1bf8c0b87474144b77b49b842bf06f4a40c2912898d55522df88b36",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 0.3999999761581421,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-58",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "d9bd5106940c2d6748e16277e0b12edc15c5cc53bc7626e6f2ddc41aa4f9b284",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 2.699999988079071,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-59",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8501,
+      "inputSha256": "f6a5cd56ffb79c536901d2b6dae83a2c1fd6d4faba7e57ff6957962321e529ee",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 0.30000001192092896,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-60",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 7902,
+      "inputSha256": "ea20e54a5c5fcba9496df3da97f8590990bd15f1a3bc192457dcee88831d3cf0",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 0.19999998807907104,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-61",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "e6127eba1551ca340b9b480fac2f3da0623049aed280faa5ba8da38699f5d3bc",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 2.300000011920929,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-62",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "c93838b466573342252173e0df925a1a74bf9873eb80340746c71aee5984c2b6",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 512,
+      "outputBytes": 15360,
+      "elapsedMs": 2.100000023841858,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "0-63",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 8482,
+      "inputSha256": "f47acefe1e66941c10bfe57ae603acca7ff8a363f462198048b587ada7c74352",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 0.30000001192092896,
+      "peakWasmBytes": 5505024
+    },
+    {
+      "id": "1-control",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "5a6b745da7c1e030e73a1f1c8d51726828aa1c95e3d8962b2d1db60db3cd512c",
+      "mutation": "valid real control",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 63.80000001192093,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-0",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 179163,
+      "inputSha256": "889bfae5e6ab2ea9ef798e4374a9245095e264810cf1f2abb3a7d3176803fd28",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 6.200000047683716,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-1",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "cdb60ddd0b3394564e2e1a78725983b02ffdb8e7190be58eb093fcd2078a9485",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 75.69999998807907,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-2",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "0d5d6db2f74f366a3452ad90d6831d7db6994e138a1314963bdbba5e89130c57",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 66.29999995231628,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-3",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "814f540a51f1ebf4b8a24feffedc68e3e797107ea305d87d0c9c3a6bbd4358ed",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 14.399999976158142,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-4",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "35fdacadda709597a7917899cef34836df709983eef9664cf72c4064bd8e70c1",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 71,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-5",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423906,
+      "inputSha256": "cf5f9c1cdd10b07c8325084ad2fd50352c893efc71f5254657e03dff158ba574",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 13.900000035762787,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-6",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 336198,
+      "inputSha256": "e42ab32788017b515d46f9f126225606e367816f4cc7b5aa818a1d338b7c9500",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 11.400000035762787,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-7",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "f52a2b625e2f34f9faeb2c254162810956366e6665226235e03df5f220b06cfe",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 63,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-8",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "c6121a216dca59fc2a0262f5ffa87a99a10755bb51971b4f1ba7199d53fb207a",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 75.70000004768372,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-9",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "aabe42ce98e60ec7dc6a06336686d4a976ed8a73a60aa2e090bce2e559b8b811",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 13.900000035762787,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-10",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "5e134b549249d9f3613fe4ed141c56b17cb5508a8f9345d7c9fa1c4e658d3b8f",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 75.19999998807907,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-11",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423884,
+      "inputSha256": "1eb16c63e54e0ad46ab90603d7cc7b4b002ec7457b320b34d19ccbad12ad95bc",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 13.800000011920929,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-12",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 105967,
+      "inputSha256": "51099139909923723db3cecbf935444bece5a73484d1d9806a07b1dc193c68ea",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 2.699999988079071,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-13",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "14fdabade9455736a9cd5abdb7571feb312a7f9440946f2cf9a55b8ed962489e",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 63.89999997615814,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-14",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "2d6dd746fcc2071b7cad20aa8b09db58961e0340168b4460f4f9b983803545e9",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 83.5,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-15",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "032e7aaa3b772a0446538961536aab73eccdf9058f9e5b0fba48cbb5c6cc4d5a",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 13.5,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-16",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "26ea3fa59dde89a7b66219cfc1f32728c92aed32acde008dbdb38f4bb242bae1",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 68.69999998807907,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-17",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423911,
+      "inputSha256": "e828f2445f76e557a494501d69c27ab5a50aa9f5ad89d680648948103eac2c3e",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 13.800000011920929,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-18",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 140578,
+      "inputSha256": "3f97e1396b7e8e0a1286b17623b03bffd81fc218721a6479ce60dc84454654b1",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 4.700000047683716,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-19",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "5dc19b4d32e561c15958da393d73a46fb97370b5fd9cc2d6248dc58485ac7e19",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 66.80000001192093,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-20",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "f179b9d0d5e8a3f4d53c73c2de0bfbed15fd03d198d6b6a8742383a3994ec91e",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 59.5,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-21",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "18565e26a3a45691261896b044f8f4d71cec76435df3b925d62398eeb7f0d7c5",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 14.100000023841858,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-22",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "b4547f38cdc312ddef2706f9714aeead59ea19cf459d7664657d69e0cf643387",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 64.29999995231628,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-23",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423911,
+      "inputSha256": "1df19c7369d7f0fcd7b814d8226898b658c29e0cf2b2e71cd119316b638351ca",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 13.599999964237213,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-24",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 176296,
+      "inputSha256": "f56120c6627ef6cd36122f7ab8e716efbb8076552faea8b3028920136209708c",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 5.900000035762787,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-25",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "cb0599fb6e814f17f38b5027c82b46567a35ff852d7723dcb97b0d9305e0c29d",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 59.5,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-26",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "7edc61a5ec6a3ec735105574e3d1e1880ab57779b512b07fc49dfddc735f2ec7",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 58.59999996423721,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-27",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "e7566be1332ec7a11b15d6e1d29c55827fb50b7d0f76e93f0fc9fa99aa9befbd",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 13.5,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-28",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "5a6b745da7c1e030e73a1f1c8d51726828aa1c95e3d8962b2d1db60db3cd512c",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 66.69999998807907,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-29",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423890,
+      "inputSha256": "885c14dfc8264c1277af78c45b77208bef400096eb019d080b0d3c2d0c36cedf",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 13.199999988079071,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-30",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 132888,
+      "inputSha256": "730c50d1030bde8ed53c04b39776ec5bdb03baaa056eef6a4f9ed3e5b93ff6e6",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 5.400000035762787,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-31",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "ad2ec2f5aba0c53408a436f699a3dc5aec51aad90b65f81f81c78768cd06d67d",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 54,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-32",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "02495eea519726c5f2ba56d2b54510efaef8862df772b49afb7b0f1f92182783",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 64,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-33",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "6169fa77c5d9e6d86fbaf87738eb947fd6dbcd40f4d1115ae7d5f56bc25ce6c9",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 20.600000023841858,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-34",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "35677b3972596d708ee90d42979273ea5b485201f7d63007d0fe18f6b51208d3",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 85.30000001192093,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-35",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423882,
+      "inputSha256": "063b59a91c4e5b4e68af03d0f05474c5756cc8316929ed35c7d2d2782243bb3e",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 13.899999976158142,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-36",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 365475,
+      "inputSha256": "d470b0dbfaa3352e3dfdefef76fe516c56497b6b9edc1b7f9679eb52e1eda4db",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 12.300000011920929,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-37",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "5df8aeacf031ade784fdd4763b324118e370c68a2ae341020fda5131b0fa8369",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 59.799999952316284,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-38",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "9f51d2427f8b3304ed7788690dcd223fd8c06e61404466235b28268def70504e",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 58.39999997615814,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-39",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "132995b6672b87fc9c26f137104e965c5c7a0975f9f74db89b59d4206bbc5129",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 20.69999998807907,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-40",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "901ed66c510be9722c3ae49aec2c98d09fdead231eb349cb4a50f62fdcb88ab7",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 59.69999998807907,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-41",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423901,
+      "inputSha256": "ea50b586677a671e7f7cc089f6fff80d8f40f9045a2e86c90915d42477a682ad",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 13.200000047683716,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-42",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 107338,
+      "inputSha256": "22ea17cb463f2daa93654c466642a198c1c5ba63e32ef375b6d64943188107cd",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 3.699999988079071,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-43",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "c6334b1f125725ba05ceac0dec2885b1cf66372a7a9894491dbc3b69a52d57d5",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 98.19999998807907,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-44",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "b169781db4e0a7a761fbc691f1aee341fb24c1aeaa573fb584ac14bde89d4728",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 65.59999996423721,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-45",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "2121f80dfb433de539b7e4280f1f50e99206af795cf210fc2a2b990a5221bb2b",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 18,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-46",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "f5e5a9884cc751b75152bd1d265be92b3a4425594cde5399afa803dd01da5235",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 73.30000001192093,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-47",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423900,
+      "inputSha256": "bd4a1cdc28d1be31fdaaf167f289b8519a018e49e966c3acfc4d7f41d4b13948",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 20.19999998807907,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-48",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 395838,
+      "inputSha256": "fae20c87e5e25569a72c51cfefb4d4bdc81fb566f11a6e638be4269d931aeec9",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 13.400000035762787,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-49",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "d4aaa366b92b2070ad98de50af28f9e883b639b82adfbd16a9cbe9367424ddbc",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 57.69999998807907,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-50",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "a9f7960304af40796aff3db0490eade0a5a91910476a954ec2f3199059cb3aa9",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 55.5,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-51",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "550af479d1aa366bfef6df832a42fdca0901a5064a2042869476bad885bb2a1f",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 20.19999998807907,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-52",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "6cab334b1129e2e45332bf7c17fee2fd6a1e2f51c7d2a73ed547a39416731f33",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 114.70000004768372,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-53",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423907,
+      "inputSha256": "9217e89ebebdf400d847dafcdcfce2f9a30b8c5138b5882b6e1578117b8b6c20",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 20.5,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-54",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 253946,
+      "inputSha256": "84e73ff9e448f50e7f6b2a0cdff32e5eb46f6fa7719146cddcc3f5a8d4d4d3f2",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 12.899999976158142,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-55",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "16546ae9948604d011f8a77094882b2f5b254eb2d6b7af5d09813fcfa3d92964",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 63.19999998807907,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-56",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "e1e7220482183424bdc7765a0e5de24a9bf62edf0b31c20ae801b57efc6fb131",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 88.5,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-57",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "c48083e488183334fb49e894499e86ec26329d530f0890af08586608d2c81081",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 14.699999988079071,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-58",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "c6d3dd211687e390517374aef15ec7f6b77c0057e0a1b3fc4137eadbf47da5d8",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 60.10000002384186,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-59",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423901,
+      "inputSha256": "487648762df4b1b7734cb595cc3c07dcbd3d9e6eba77fa9f7b3bea76dc1ea84e",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 13.300000011920929,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-60",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 386672,
+      "inputSha256": "3122a3762f11f279cb0930455b2aec1be730246cde2c717a2d283e85d57475da",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 12.399999976158142,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-61",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "50fc823553c7ff8afa7f2be91982f03c28a3aafbb347de2d9a0ebad5c472a6ba",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 77.5,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-62",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "57751bd54b014be3d61389889806fe824c2ede50deb4915e518922eff7a0ac35",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 69449,
+      "outputBytes": 2083470,
+      "elapsedMs": 75.89999997615814,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "1-63",
+      "source": {
+        "file": "overview.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 1
+      },
+      "inputBytes": 423879,
+      "inputSha256": "aa9f06757849ecbf8cad2d21ae767f32b254b9916a03eb0ea85e066ccdfcc188",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 14.800000011920929,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-control",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "4b2688a89480c43159c2b76661b8cbfa705baf02f52cfd929bee93b560e88569",
+      "mutation": "valid real control",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "controlHashes": {
+        "positionsSha256": "43ec2795a7fbad7e12936d197030cd235edc0314a77f9710c0060d32685dfc42",
+        "colorsSha256": "ebbd86704cbc47349cef646184810965b296fe7bd0cf14e0aa4340107dbe988e"
+      },
+      "elapsedMs": 63.80000001192093,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-0",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 113021,
+      "inputSha256": "3069b7ddf6cf7c6ed7084fb4cb3382473663fdb4f3fac7b8f6e78634ee97f4ea",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 3.900000035762787,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-1",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "4d5e34bb00d444f70793c3fb94c213a24c93ddbcbf0d60ebcaa37e52d5bfc97e",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 68.10000002384186,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-2",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "c79f8e9754f8ee6c3993dd5cd521e0bdff3fe0fc76ea0031cfc577007140d051",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 83.59999996423721,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-3",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "92f6108f653e50275d285a7ad84ada90f2b8bc50b139be4d92e9f4616f9c584d",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 11.899999976158142,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-4",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "70f3d6416f54ce20b10893fda486dd1598f801b63a52521075947c119cd01681",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 76.30000001192093,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-5",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358503,
+      "inputSha256": "3b88cb45317c529169b7613bce75527972d2e675ad7ee187491f20adf0d48925",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 13.300000011920929,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-6",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 80563,
+      "inputSha256": "ec2091bde4df9220bd2cab9457f16efe1ecd202b0a7a84d965fe007d8c5bc8f1",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 2,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-7",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "8148f77de40bb30a4e206fec73629bf402291bef89bf50d3b883176c34511b56",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 50.700000047683716,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-8",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "524837a8ebce1d6d4e02000eb88397b7051a5f6e685dad7f37bf28b0c48a6946",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 52.59999996423721,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-9",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "eb1036f34a5bef8f6296e08e715075f8fde6adb91777ddda7a859766dfb7962d",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 12.199999988079071,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-10",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "2eb90534feefe34f49ec3f4118ec918d9d970eb66162892c34fe5fbfdbb7f66e",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 60.799999952316284,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-11",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358514,
+      "inputSha256": "9e2f44a3d56057e2839070f237273427fabe97adf5d82fc0ef41b9fff5646200",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 12.199999988079071,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-12",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 191937,
+      "inputSha256": "d29ce59235f10dc2480fba5b093f139023ad62486792422a7c2eaa08ea1e4bfd",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 10.100000023841858,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-13",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "6730fb57ace863e7567ad849650ef9d067bd10d66a73041beefb658deb035eac",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 55.5,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-14",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "5c97f77b74fdc99e05f341a76258b6aef455c8b63437d1ff56aa8425038a40a7",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 75.40000003576279,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-15",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "effb5df634b086758171113b6ec092c0c0258feb80cc1736dcc23e6de1ec3fff",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 11.699999988079071,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-16",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "ca8c05d43aacb7ae63942b0c0708fc787e78f17fe8fc0c22b240f8b950662019",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 56.10000002384186,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-17",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358502,
+      "inputSha256": "74b8a0b2ee315a41e523fbcc457c6e8df929e40d735e0f9e972b890d084f8c13",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 11.899999976158142,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-18",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 243235,
+      "inputSha256": "dddca88757f557c3d9ac28ff8171b3e7fbae2ab184e2a6e4593fe39508ca5372",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 8.300000011920929,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-19",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "63c703a8b2bc2f08f519b4258a34a372b48952bc7b7745955de02948e6ddbdd3",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 51.30000001192093,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-20",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "e3e9773ca12734dfdd473be16c40765961a93d6cd1921b811b03e951e3bd4086",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 65.80000001192093,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-21",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "388f0fc60947f49f23c60f7e06c2ac47e4b2b934f79f004644cefd82c63862c7",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 16.899999976158142,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-22",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "aed131259d11ff60730575ed10b14c34899887c9250de8e9f00f074b6dcd7ecb",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 78.60000002384186,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-23",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358505,
+      "inputSha256": "c9ef0704cb92e93fbf12077ef0580b737f30af5bdc52cc4332bae776e1aae40d",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 13.600000023841858,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-24",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 12193,
+      "inputSha256": "5f797bbd251753a1bd91c742d2b4f31c1104a84566e285f764c74a697c8c7699",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 0.5,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-25",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "50a2181a5a27b8d54f9caa8e7b5a03ca24ca4a0b1d836a367a51a8fae7ee2472",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 54.10000002384186,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-26",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "ff194b9cd693a18b6a9db14f7deda61e1db185335d17ae64f4cc87094e1261a6",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 55.5,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-27",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "d94811113e18a7229b53a0a92faf9397eddd98a48a3011983a584bc0b623a5f3",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 12.299999952316284,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-28",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "f239795f4698647dfd940ce6ba6aff655c83064ca3447b3507a7d549a1af1c34",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 60.90000003576279,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-29",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358507,
+      "inputSha256": "64d0fe3a398502ead9715e3bffd3faaf2547c776d7a4d2b98ed578f96c50b91e",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 11.399999976158142,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-30",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 14080,
+      "inputSha256": "ae7097504a5b44909c087408faedb04051ba12f9c415af016ba54aed6e5c8056",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 0.5,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-31",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "ff9617477a6c002ea7dcb0d9a963b71c55eb5d0f3c95f8faebf054e21f3e0b08",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 64.30000001192093,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-32",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "6f1684d3c6464a8ef54a68056033d0d11a2e3d0cde3f33fd75b2f67ea4bb0c6c",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 65.60000002384186,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-33",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "ffcea351c1f128b4d96e1792aa055ce0c111947b002bab8aad697b0e28375217",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 12.399999976158142,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-34",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "5b5e233885a2955b5fe670c4e5818bd5e3565886044f4f52d9d5466d675ff3a0",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 56.5,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-35",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358499,
+      "inputSha256": "4476fdf174a17d81217cc245ed0398c60bfe0c31f6cca9f29cf3d84fd0e6f186",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 12.700000047683716,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-36",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 187516,
+      "inputSha256": "78654b3967c89d0e29e906051340414f3ff831009c1b82e655b7c9fb14965b08",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 6.099999964237213,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-37",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "ca8107260fc7595337a856043ffb3afab5252e570b7a8ac0dd4f0969d0ef823c",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 63.80000001192093,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-38",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "c096d53d1142ba4ae186833718ab96f2916740e7fd2200cbb8cce495dce7582e",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 52.10000002384186,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-39",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "bd75d3a1565e83a29b6bdaeac28b0eac43a015e2fa0ba2c5a5e5c188841a132a",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 12.300000011920929,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-40",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "e64aaf17f673e828f821d081753db790b32c5f2008062b788bca1291e51e73c7",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 61.59999996423721,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-41",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358516,
+      "inputSha256": "c46640c40f731fe18043d526731876817112c80dd1cc9df73f2ca1fe3df293c2",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 14,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-42",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 83837,
+      "inputSha256": "7e3f20d199f9f230599a72d9983696c585942d640ef609cc9d53b6db0a0ac6e0",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 2.400000035762787,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-43",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "b8f41aed67173e0ff6b99b78d4476d4deacea4a508c89528bc9c259977caaf5b",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 54.69999998807907,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-44",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "5c755ff682f031e6ab0493bf37652a9396e809f0da5f014df25df78234235688",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 56.39999997615814,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-45",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "fcef72c4d11626cb1efbabf0445a0e1ea7f341b0a8c5ab08b24c65c636468227",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 13.300000011920929,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-46",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "223f58e9270abaaa968ee478f432907a705dab6fbbfd26cec69bdd2aa2c37533",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 88.79999995231628,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-47",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358512,
+      "inputSha256": "363a7868f0839daee83c95cab3f861cf91912925a46d1536e13ac6698428a360",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 21.30000001192093,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-48",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 173674,
+      "inputSha256": "68d9fe660289e41a582b4bf11303aed93cb28235537c06b1504b64ea0d325b2e",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 8.099999964237213,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-49",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "68b44d944a2b412376d7ab3397a30857dfc34e9161992f585d368be777279593",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 66,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-50",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "fcd587873b1c57a072d9a964c32e9ae17af684e3c67b68419c01567e91aafee4",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 57.60000002384186,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-51",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "99e7748a44d67ecf6743ec47dff42252d186026932f890a7742f96a31dbdb105",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 12.900000035762787,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-52",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "cec6635d554a7842474eae0a3f32f44d3f66dbf8376db58c4b4afb39893d4e4d",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 55.69999998807907,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-53",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358508,
+      "inputSha256": "bf15e8a6bc71cdff019643e5e50e800e9225c0185f94f26c90c18c06c2f01bc4",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 11.599999964237213,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-54",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 76700,
+      "inputSha256": "46464144edd075acc714d8d4166123cf648a65e6e37410efb495b837c85f75a2",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 2.099999964237213,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-55",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "fb70e24dde3cc19f2b26be23cf74f9e4f68c9cbed9f5f51a3877d40a6ca5b03e",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 56.39999997615814,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-56",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "b990866726e353b28f0596449f5068cecc715f28960943803d5ebdf5abb77b19",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 55.69999998807907,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-57",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "1fe5c2ebd1c25515ccdcfecc71ca416c9e2e1d72f79d7f1e6324b63215cb8f2a",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 14,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-58",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "5fe835f52150367d6e9b1a569fac1c48078854808e32464c78ae01f71d7454b5",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 56.60000002384186,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-59",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358511,
+      "inputSha256": "c9aa8c8ad14dd57f977e1f65d8c475ab38c42f2026cf686e65bf61f2d2ad4d06",
+      "mutation": "append seeded bytes",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 14.900000035762787,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-60",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 272818,
+      "inputSha256": "8ccfb22648483423d16200743c5abb7870e4a34d925e967bbc85fd9e12856c5a",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layer lengths differ from chunk bytes",
+      "elapsedMs": 8.899999976158142,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-61",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "0b0095c45c07cc0c490938f49dff1be1dd1ddc8628c2ea23a727c7c2a21680bd",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 52.80000001192093,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-62",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "1f7c3f304749de8ce1f3f7af3e8643fda56763c14494064349e5157002a5589d",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "valid",
+      "count": 66272,
+      "outputBytes": 1988160,
+      "elapsedMs": 61.40000003576279,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "2-63",
+      "source": {
+        "file": "ellipsoid.copc.laz",
+        "kind": "laz-chunk",
+        "hierarchyEntry": 0
+      },
+      "inputBytes": 358488,
+      "inputSha256": "8945722ac018e03ccec962d392c8ee4769a432ea97fd49109ea72bbf94a16483",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ layered chunk count differs from hierarchy",
+      "elapsedMs": 12.100000023841858,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "3-control",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "75867b3e75cfc3c2e96da9f753c04c9fbaa6a59468dea13e2859f3109b38bd66",
+      "mutation": "valid real control",
+      "outcome": "valid",
+      "count": 110000,
+      "outputBytes": 3300000,
+      "controlHashes": {
+        "positionsSha256": "73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23",
+        "colorsSha256": "d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"
+      },
+      "elapsedMs": 163.9000000357628,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "3-0",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 172120,
+      "inputSha256": "9b2b9aa3cb860aca2a79634d173a0d7d2858a6b98b9424036031b54b22d14aa3",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 6.100000023841858,
+      "peakWasmBytes": 6619136
+    },
+    {
+      "id": "3-1",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "3247c3ff9334a4b0b29e36ebf222ace85d662926160151b3227a292813a1f787",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 135.80000001192093,
+      "peakWasmBytes": 7995392
+    },
+    {
+      "id": "3-2",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "ff4f1eb4935299e960529a563af2528f93ccc7c31f078889aaf8e485ce7127d2",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 121.5,
+      "peakWasmBytes": 7995392
+    },
+    {
+      "id": "3-3",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "b8df34647c849e290a5e4f34a64b16b97207465384f6d351b2eb929623867c44",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "RESOURCE_LIMIT_EXCEEDED",
+      "message": "Point resource exceeds budget",
+      "elapsedMs": 19.30000001192093,
+      "peakWasmBytes": 7995392
+    },
+    {
+      "id": "3-4",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "04300581d1ea7156c3e1c33d414f45c3e660625b21de18ce898c36ca446344b4",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 110000,
+      "outputBytes": 3300000,
+      "elapsedMs": 123.5,
+      "peakWasmBytes": 7995392
+    },
+    {
+      "id": "3-5",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603365,
+      "inputSha256": "d0fb5f0e5b013727b8b6a1ba242502dcc65686ed467bf4df337c57614a56a6b6",
+      "mutation": "append seeded bytes",
+      "outcome": "valid",
+      "count": 110000,
+      "outputBytes": 3300000,
+      "elapsedMs": 117.20000004768372,
+      "peakWasmBytes": 7995392
+    },
+    {
+      "id": "3-6",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 552613,
+      "inputSha256": "96229cd7e4629756713b29d73f395ed5e3941af8483196b7a4367cc20912f518",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 19.400000035762787,
+      "peakWasmBytes": 7995392
+    },
+    {
+      "id": "3-7",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "5425a4f297d691358388b9b9cf78fda9cc3e85c56c36381055f4881cccfd6f43",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 96.89999997615814,
+      "peakWasmBytes": 9633792
+    },
+    {
+      "id": "3-8",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "9f63c13cb7da6db58d2ff7c5fa5e07aeb829ebb361ff33f40809aa3431cf1896",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 102.30000001192093,
+      "peakWasmBytes": 9633792
+    },
+    {
+      "id": "3-9",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "9c9da39bd4e18acf507b7589668fcc39f83bfb05b385097c983e5b3554afbc87",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "RESOURCE_LIMIT_EXCEEDED",
+      "message": "Point resource exceeds budget",
+      "elapsedMs": 19.19999998807907,
+      "peakWasmBytes": 9633792
+    },
+    {
+      "id": "3-10",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "ec60f4c62cbcb8e7eb8bded05b2fe1465b505078012acab35e91499f33cfd369",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 110000,
+      "outputBytes": 3300000,
+      "elapsedMs": 132.39999997615814,
+      "peakWasmBytes": 9633792
+    },
+    {
+      "id": "3-11",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603365,
+      "inputSha256": "441cfb369478291bad0028ead130fe5f495dad2d59dae95d7c05a028e4965f51",
+      "mutation": "append seeded bytes",
+      "outcome": "valid",
+      "count": 110000,
+      "outputBytes": 3300000,
+      "elapsedMs": 120.5,
+      "peakWasmBytes": 9633792
+    },
+    {
+      "id": "3-12",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 262069,
+      "inputSha256": "84ecccb569e2c25b1f096dfe65e744060451956cfe1b3ae213b69ca4a3d0c970",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 8.300000011920929,
+      "peakWasmBytes": 9633792
+    },
+    {
+      "id": "3-13",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "c358687fe19052a811168a1d811d1cdd1266eaba67cc50939c2ca4de6de3e455",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 56.5,
+      "peakWasmBytes": 9633792
+    },
+    {
+      "id": "3-14",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "40ea13d3f9cdd7c0ad3120d97d08b5010ea1346d60caee02865da6c9db33b0b2",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 104.89999997615814,
+      "peakWasmBytes": 9633792
+    },
+    {
+      "id": "3-15",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "a103574cab4192044f8e8d338d7b272de0e21dea0cbb8c2346ef9e5447597c8b",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "RESOURCE_LIMIT_EXCEEDED",
+      "message": "Point resource exceeds budget",
+      "elapsedMs": 19.100000023841858,
+      "peakWasmBytes": 9633792
+    },
+    {
+      "id": "3-16",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "06bbb236bff4ad54b2705d01bc049f7ce9e70b3d5af52bd40b0c461f62198101",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 110000,
+      "outputBytes": 3300000,
+      "elapsedMs": 120.60000002384186,
+      "peakWasmBytes": 9633792
+    },
+    {
+      "id": "3-17",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603385,
+      "inputSha256": "848f8a4784cebc39d3a7c51e07f13c3fc780afe33849d41be074b5ee31bc2146",
+      "mutation": "append seeded bytes",
+      "outcome": "valid",
+      "count": 110000,
+      "outputBytes": 3300000,
+      "elapsedMs": 117.40000003576279,
+      "peakWasmBytes": 9633792
+    },
+    {
+      "id": "3-18",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 368064,
+      "inputSha256": "76bc4ebce550b6d280e374723a46d0b59d869db20bfe61b47cd4de1225c8ee4b",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 12.100000023841858,
+      "peakWasmBytes": 9633792
+    },
+    {
+      "id": "3-19",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "fc4cb85d8e1eb31da929b3e9b120f9b4f97fb06d45c2cc553b3f83085d3670a5",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 95,
+      "peakWasmBytes": 11599872
+    },
+    {
+      "id": "3-20",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "2bf0eeb965541f169569cef74a8900206790b894ee2dfb49e3f512924bea5f1e",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 80.19999998807907,
+      "peakWasmBytes": 11599872
+    },
+    {
+      "id": "3-21",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "cb81f12f98e404e543a1feb639c81fef7d4c5b6a067af565da1f322759cea94c",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "RESOURCE_LIMIT_EXCEEDED",
+      "message": "Point resource exceeds budget",
+      "elapsedMs": 19.400000035762787,
+      "peakWasmBytes": 11599872
+    },
+    {
+      "id": "3-22",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "777296a92433c9ab5c5edefadc40821da9408a3335334cc85e6ae0a6c8f9f16a",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 110000,
+      "outputBytes": 3300000,
+      "elapsedMs": 130.39999997615814,
+      "peakWasmBytes": 11599872
+    },
+    {
+      "id": "3-23",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603380,
+      "inputSha256": "86d7505a3efda8aa8a2bb42dfd848549fb34d3b100945e2aeb22bc62dd71212f",
+      "mutation": "append seeded bytes",
+      "outcome": "valid",
+      "count": 110000,
+      "outputBytes": 3300000,
+      "elapsedMs": 120,
+      "peakWasmBytes": 11599872
+    },
+    {
+      "id": "3-24",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 368638,
+      "inputSha256": "c3c971db7c11f2cec81bee80860abfca8eb2b6d5c46a77fdbe9f76264a8afd69",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 12.400000035762787,
+      "peakWasmBytes": 11599872
+    },
+    {
+      "id": "3-25",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "b73be21e97bf8aff4ab6c0819ccf6680c0fe9118b2a438b0b2df363cd195a27c",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 104.69999998807907,
+      "peakWasmBytes": 11599872
+    },
+    {
+      "id": "3-26",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "4021bcd394ea7354d3a1e8ff3b60cdbce1e926aafefd6d4a226ca737da37c2bd",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 58.90000003576279,
+      "peakWasmBytes": 11599872
+    },
+    {
+      "id": "3-27",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "6d8d3d6f18ae8dcfe3b31592747d5d778765f9cc317c08a66d5d70ed7e4a4bb6",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "RESOURCE_LIMIT_EXCEEDED",
+      "message": "Point resource exceeds budget",
+      "elapsedMs": 21.900000035762787,
+      "peakWasmBytes": 11599872
+    },
+    {
+      "id": "3-28",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "76770f7fd07fe2eab879a16881d4d0cd852b6566664861e37a1056f31c4c837f",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 110000,
+      "outputBytes": 3300000,
+      "elapsedMs": 115.40000003576279,
+      "peakWasmBytes": 11599872
+    },
+    {
+      "id": "3-29",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603379,
+      "inputSha256": "150fe55d8dd2d7d14bb6a784bc16e7791e73d206f3551db6388646350d1fcafb",
+      "mutation": "append seeded bytes",
+      "outcome": "valid",
+      "count": 110000,
+      "outputBytes": 3300000,
+      "elapsedMs": 116.69999998807907,
+      "peakWasmBytes": 11599872
+    },
+    {
+      "id": "3-30",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 544303,
+      "inputSha256": "594adfe23635ba99ce5c56eb75fc1e1b09395986c387e8e2ed0960cbf5b70c9d",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 17.399999976158142,
+      "peakWasmBytes": 11599872
+    },
+    {
+      "id": "3-31",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "d5c7c16f249aa78a1703029cf66e058b76cbd465f5cad869eeb5624dafd9bf75",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 108.30000001192093,
+      "peakWasmBytes": 13959168
+    },
+    {
+      "id": "3-32",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "8389df06812b2b54841ae26046fb3559ab81684e10459fc7ecab3863c9000ddc",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 63.80000001192093,
+      "peakWasmBytes": 13959168
+    },
+    {
+      "id": "3-33",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "ca912a06bee94791b26ce1d6c7486bb54f5ca232d4d81c40200eb104141df240",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "RESOURCE_LIMIT_EXCEEDED",
+      "message": "Point resource exceeds budget",
+      "elapsedMs": 23.69999998807907,
+      "peakWasmBytes": 13959168
+    },
+    {
+      "id": "3-34",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "e22e8862d1d94b198e178d8d88e4fb82614a01ff71334cac34d2af90ec9c9df5",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 110000,
+      "outputBytes": 3300000,
+      "elapsedMs": 114.90000003576279,
+      "peakWasmBytes": 13959168
+    },
+    {
+      "id": "3-35",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603382,
+      "inputSha256": "e5271c796546c7e8ea7a43dbe277fcddb85301ea38f08f2f6d0d794c2edfb6e7",
+      "mutation": "append seeded bytes",
+      "outcome": "valid",
+      "count": 110000,
+      "outputBytes": 3300000,
+      "elapsedMs": 112.5,
+      "peakWasmBytes": 13959168
+    },
+    {
+      "id": "3-36",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 71234,
+      "inputSha256": "4bb9fa7594210adbc461f838a098f1753f29e7f1e2a688d0e73c090504ee5af2",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 2.300000011920929,
+      "peakWasmBytes": 13959168
+    },
+    {
+      "id": "3-37",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "54250d9d970e242e83cf6a81a235e9fdac26890162beb3711886a2414ae5dbfa",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 90.40000003576279,
+      "peakWasmBytes": 13959168
+    },
+    {
+      "id": "3-38",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "ff342ee77b79d2e54be94df4f3feb97d54b8132b625bd635bd65a7b92c8cdb57",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 70.69999998807907,
+      "peakWasmBytes": 13959168
+    },
+    {
+      "id": "3-39",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "40198ccf01dc971fb6056bd8aa97fe0ce939b68877aeb345d1d9664850c142f3",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "RESOURCE_LIMIT_EXCEEDED",
+      "message": "Point resource exceeds budget",
+      "elapsedMs": 20.399999976158142,
+      "peakWasmBytes": 13959168
+    },
+    {
+      "id": "3-40",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "e31046f665d86b7dc54e8ac2eea674ca9032a6cc8e52454131c280c6e899bb11",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 110000,
+      "outputBytes": 3300000,
+      "elapsedMs": 125.19999998807907,
+      "peakWasmBytes": 13959168
+    },
+    {
+      "id": "3-41",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603360,
+      "inputSha256": "af9b13c9feef305e4b343da5684e8785fd3eda1955daa13b7d1155358b5856e9",
+      "mutation": "append seeded bytes",
+      "outcome": "valid",
+      "count": 110000,
+      "outputBytes": 3300000,
+      "elapsedMs": 122.09999996423721,
+      "peakWasmBytes": 13959168
+    },
+    {
+      "id": "3-42",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 6547,
+      "inputSha256": "cfa882f25ce93fb59759adca9175054a57fd2b5257dd7a1b6efec9816773ea95",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 0.5999999642372131,
+      "peakWasmBytes": 13959168
+    },
+    {
+      "id": "3-43",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "cb93e7dcc3bca42ce5d560968a8ef756b11b0eeaea54f2d9cdf0ca748893df68",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 65.90000003576279,
+      "peakWasmBytes": 16777216
+    },
+    {
+      "id": "3-44",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "493936ec569149d59a31c2daf139099c66cffdf0236230d6058ca2bf2bf74e42",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 56.5,
+      "peakWasmBytes": 16777216
+    },
+    {
+      "id": "3-45",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "1ca5008dd29a09e56447febd87f3766b19389d21e8084e6920c78f45b9f8c842",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "RESOURCE_LIMIT_EXCEEDED",
+      "message": "Point resource exceeds budget",
+      "elapsedMs": 31,
+      "peakWasmBytes": 16777216
+    },
+    {
+      "id": "3-46",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "c87a5a045f24c3ccb61802393fec88cf3791067debc4cdf1d7418f533bb4e085",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 110000,
+      "outputBytes": 3300000,
+      "elapsedMs": 140.5999999642372,
+      "peakWasmBytes": 16777216
+    },
+    {
+      "id": "3-47",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603380,
+      "inputSha256": "92df19b7707e23d17a33935196d98ef589920115e1b11e5a00891353311bf149",
+      "mutation": "append seeded bytes",
+      "outcome": "valid",
+      "count": 110000,
+      "outputBytes": 3300000,
+      "elapsedMs": 124.89999997615814,
+      "peakWasmBytes": 16777216
+    },
+    {
+      "id": "3-48",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 41283,
+      "inputSha256": "cdb0a7bc47a292819cd7fadac29c77dad042482c19a2bff63bb5fa8e3745e5af",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 2.099999964237213,
+      "peakWasmBytes": 16777216
+    },
+    {
+      "id": "3-49",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "dc94b91396ad1999507cb229d26756e7e7d76e990c22619e4b77028a8cb8c5e0",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 65.5,
+      "peakWasmBytes": 16777216
+    },
+    {
+      "id": "3-50",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "421676ed8e352913db2f5ee6cabe358a4acaa06a609e4480ded3663effb09cc7",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 82.30000001192093,
+      "peakWasmBytes": 16777216
+    },
+    {
+      "id": "3-51",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "a19fa985118e834d9acd5a0579b6bf2ec3713f964e70e2c81c10ecd415ace643",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "RESOURCE_LIMIT_EXCEEDED",
+      "message": "Point resource exceeds budget",
+      "elapsedMs": 19.5,
+      "peakWasmBytes": 16777216
+    },
+    {
+      "id": "3-52",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "dbd32a71742a05bb447ba0ece53242c791e680c446152cebcde9412e246140b4",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 110000,
+      "outputBytes": 3300000,
+      "elapsedMs": 113.5,
+      "peakWasmBytes": 16777216
+    },
+    {
+      "id": "3-53",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603382,
+      "inputSha256": "f7f6603bd1238a7a7a97a6c6ecfc47bf8742e40d5d6e7b918c0fa91584985062",
+      "mutation": "append seeded bytes",
+      "outcome": "valid",
+      "count": 110000,
+      "outputBytes": 3300000,
+      "elapsedMs": 116,
+      "peakWasmBytes": 16777216
+    },
+    {
+      "id": "3-54",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 27923,
+      "inputSha256": "fb9cab7abd84a606228e4403396c4822074239cc831a6afb74b595c831ef1f93",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 0.8999999761581421,
+      "peakWasmBytes": 16777216
+    },
+    {
+      "id": "3-55",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "4fbcc5b189eb38dca4fe61b393687ff8cacce4a3152e6aa70d0725dc984ffaab",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 67.30000001192093,
+      "peakWasmBytes": 16777216
+    },
+    {
+      "id": "3-56",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "3f9b0374413db5e51e1a30d788ffaed17832de7dd6452ab468e1a10dff2e5744",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 110.40000003576279,
+      "peakWasmBytes": 16777216
+    },
+    {
+      "id": "3-57",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "9ac8d7914ba8ae278f3ee1219462c420d96746d8de4c4e0c1f56d53f2ef9c6a9",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "RESOURCE_LIMIT_EXCEEDED",
+      "message": "Point resource exceeds budget",
+      "elapsedMs": 19.5,
+      "peakWasmBytes": 16777216
+    },
+    {
+      "id": "3-58",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "c85138aa827d6583273e7121cb817b84d39ef8ac93014db239d2d17934de350e",
+      "mutation": "redistribute two chunk layer lengths preserving their sum, or flip LASzip VLR bytes",
+      "outcome": "valid",
+      "count": 110000,
+      "outputBytes": 3300000,
+      "elapsedMs": 127.30000001192093,
+      "peakWasmBytes": 16777216
+    },
+    {
+      "id": "3-59",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603375,
+      "inputSha256": "499a760b10c6c743f2c29a02c91d68fa25d15bb1cf2e807df53614714df92aa1",
+      "mutation": "append seeded bytes",
+      "outcome": "valid",
+      "count": 110000,
+      "outputBytes": 3300000,
+      "elapsedMs": 117.70000004768372,
+      "peakWasmBytes": 16777216
+    },
+    {
+      "id": "3-60",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 160870,
+      "inputSha256": "6fdfbca6e389564c5e8bee5b584350b4d6c813bb903e278e8b4ad6949f2f0c33",
+      "mutation": "truncate at seeded offset",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 5.400000035762787,
+      "peakWasmBytes": 16777216
+    },
+    {
+      "id": "3-61",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "b4bfe4f7763922663e1582cd20e33125e046e184740aebf172bc16a94c96fc19",
+      "mutation": "flip seeded compressed-stream bits (preserve chunk layer directory)",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 111,
+      "peakWasmBytes": 20185088
+    },
+    {
+      "id": "3-62",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "ca40e4b7092ec2c30a74e68352b0fe3289a7bf05e03a41c243e45eca5962242a",
+      "mutation": "overwrite seeded compressed-stream run with zero or 255",
+      "outcome": "typed-error",
+      "code": "INVALID_INPUT",
+      "message": "LAZ decompression failed",
+      "elapsedMs": 63.5,
+      "peakWasmBytes": 20185088
+    },
+    {
+      "id": "3-63",
+      "source": {
+        "file": "autzen_trim.laz",
+        "kind": "laz-file"
+      },
+      "inputBytes": 603353,
+      "inputSha256": "2358eb5e48227eafa052c519070dd58827462781c27ebe17c9b97926839a1554",
+      "mutation": "forge chunk layered count or LAS file point count",
+      "outcome": "typed-error",
+      "code": "RESOURCE_LIMIT_EXCEEDED",
+      "message": "Point resource exceeds budget",
+      "elapsedMs": 20.600000023841858,
+      "peakWasmBytes": 20185088
+    }
+  ]
+}
