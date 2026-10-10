@@ -483,8 +483,65 @@ in 64 files, with the W15 audit at 7,813 ms and W16 camera audit at 3,500 ms.
 Parity passed all 15 checks with 53 lock-controlled consumers; infrastructure
 passed 619 checks with one existing Unix-UID skip; W16 passed 47 units and all
 ten source/dist browser cases. The optional source soak remains disabled;
-the latest explicit installed-package soak above remains a retained failure.
+at this checkpoint the explicit installed-package soak above was a failure,
+which remains retained alongside the subsequent quiet-host retry below.
 No shipped runtime, asset, fuzz corpus or worker-path bytes changed. Current
 PR CI still requires a green run on the pushed final head. Independent codec
 sign-off and both exact W00 hardware lanes remain pending. W16 remains Partial
 and G02/G03/G04 remain P.
+
+### Quiet-host retry after the confirmed audit timeouts
+
+After the shared host had repeatedly reported 87–100% CPU load, a later
+five-second observation fell to 8.11%. Three further observations were
+10.95%, 13.13% and 14.95%. Only then was one additional installed-package
+run started on clean `581ca90547a34bed57f1275c5636f0c6603ce8ef`, using the
+unchanged `FORGE3D_W16_SOAK=1 npm run test:package-consumer:w16` gate.
+No other agent tests, builds or CI polling ran during that command. No
+competing process was stopped and no power plan or GPU setting was changed.
+
+[The complete report](w16-runs/installed-20261010T203221986Z-1.json) passed:
+600,074 ms, 35,272 frames, **10.5 ms p95**, against the unchanged 16.7 ms
+limit. [Its stdout](w16-runs/installed-20261010T203221986Z-retry.log),
+[batch evidence](w16-runs/evidence-20261010T203221986Z.json),
+[installed conformance](w16-runs/conformance-20261010T203221986Z.json), and
+[runtime bindings](w16-runs/runtime-files-20261010T203221986Z.json) are retained.
+All 64 keyframes and 693 selection sets were exercised; the workload remains
+one million points, with 299,520–299,994 admitted and 100,938 covered pixels.
+Update/upload/render p95 values were 3.3/0.5/7.6 ms. Tracked CPU and GPU peaks
+were 42,918,791 and 42,774,384 bytes, with zero GPU bytes after disposal.
+
+There are 121 host samples with maximum gap 5,015.82 ms. Windows release was
+`10.0.26300`, Chromium `148.0.7778.96`, and NVIDIA RTX 3070 driver `610.60`.
+P-state counts were P8: 71, P5: 18, P0: 31, P3: 1. Graphics/SM clocks ranged
+210–1,980 MHz and memory clocks 405–7,001 MHz. GPU utilization ranged 2–100%
+(mean 24.45%); device-wide memory was 1,121–2,246 MiB, including other users.
+CPU load ranged 11.28–20.84% (mean 16.64%). The power scheme remained
+Lenovo Default, GUID `3a072fe5-9e0d-4cd1-ba25-1b4c556dba80`. Complete GPU
+process tables retain other desktop/Python activity as well as the test browser.
+
+The measured package SHA-256 is
+`24f7d66de5f0507bce8d66fa83d3c4676d2003749c0482e623160571748f8c97`.
+All 273 runtime/asset hashes have digest
+`6c046d4ace930909ec93b8efee9b89b14b89ef3fe2f5079beb6713eb773eef7a`,
+identical to both earlier October 10 batches. Fixture, camera harness, viewport
+and browser also match. Only documentation changed package contents. The
+33.7 ms failure and every October 9 failure remain valid observations; this
+retry neither establishes causation nor explains October 9 variation. No
+runtime performance fix is claimed.
+
+Measured-head [CI run 38078029518](https://github.com/milos-agathon/forge3d-web/actions/runs/38078029518)
+passed Build And Contract Tests, Browser Preflight and optional WebKit. It
+passed all 1,082 units and 619 infrastructure checks (one existing skip);
+Chromium passed 258 cases with nine existing skips, Firefox 263 with four.
+The worker fuzz gate retained 260 cases: 120 valid, 140 typed errors, zero
+untyped; maximum decode time 156.4 ms and observed WASM heap 7,274,496 bytes,
+with real-data recovery. The fresh local 15-check parity gate and 47-unit /
+ten-browser-case W16 gate are bound in the batch evidence; their tested sources
+are identical to the measured head. Later evidence-only PR heads still require
+their own green CI result, tracked on the PR.
+
+The remaining acceptance items are independent laz-perf sign-off (reviewer
+and date unset) and both attested W00 reference hardware lanes. The lab remains
+unready with zero registered runners. This local Windows run is not either
+reference hardware lane. W16 remains Partial and G02/G03/G04 remain P.
