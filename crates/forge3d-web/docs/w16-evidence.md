@@ -633,9 +633,10 @@ W06 now imports the actual `mediabunny` dependency during module setup,
 before its functional test deadline. The test still creates real muxers at
 two dates a day apart, checks every output byte and validation error, and
 restores Date. W16 uses at most sixteen asynchronous reads per batch, rather
-than serial synchronous opens of 1,903 files (22,081,709 bytes in total).
-Both independent native-source hashes and every fixture hash/length remain
-required. No timeout or assertion is relaxed by these changes.
+than serial synchronous opens: 1,903 fixture entries (22,081,709 bytes), plus
+21 independent native-source entries (233,645 bytes), totaling 1,924 reads
+and 22,315,354 bytes. All 21 native-source hashes and every fixture hash/length
+remain required. No timeout or assertion is relaxed by these changes.
 
 The first audit refactor incorrectly applied a fixture length assertion to
 native-source entries, whose manifest has no length field; that development
