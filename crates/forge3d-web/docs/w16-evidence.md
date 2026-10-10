@@ -454,3 +454,37 @@ individual processes to historical CPU samples or prove causation. No other
 tests or builds were started by this agent during the soak; competing desktop
 processes were not stopped. The failed observation remains valid and does not
 establish an explanation for October 9 failures.
+
+### Confirmed native-audit harness timeouts
+
+CI run [38076912877](https://github.com/milos-agathon/forge3d-web/actions/runs/38076912877)
+on `aa91f6c` failed the W16 native-camera integrity test with the exact error
+`Test timed out in 5000ms`; its recorded duration was 5,233 ms. The complete
+[failed job log](w16-runs/ci-aa91f6c-native-camera-timeout.log) is retained.
+The W06 wall-clock test and W16 provenance test passed in that run. Browser
+Preflight was skipped by the failed build dependency; this run is not green.
+
+The camera test parses one 6.33 MB manifest and checks 132 unique camera
+selections against 46,831 native key/count/quantized-SSE records. Datasets and
+hierarchy pages are already reused. A per-test 30-second harness allowance
+keeps every comparison intact; it does not change traversal code or the W00
+frame-time gate.
+
+The subsequent local full-unit run exposed another confirmed five-second
+timeout in the inherited W15 native provenance audit, recorded at 7,816 ms.
+[That failure output](w16-runs/unit-native-audit-timeout-followup.log) is also
+retained. This audit hashes all 33 frozen suites and their imported sources,
+checks 68 concrete ports, and cross-checks available Git history. It receives
+the same per-test 30-second filesystem/subprocess allowance. Global Vitest
+timeouts, all audit assertions, history checks and runtime budgets are unchanged.
+
+After both targeted allowances, a fresh sequential run passed all 1,082 units
+in 64 files, with the W15 audit at 7,813 ms and W16 camera audit at 3,500 ms.
+Parity passed all 15 checks with 53 lock-controlled consumers; infrastructure
+passed 619 checks with one existing Unix-UID skip; W16 passed 47 units and all
+ten source/dist browser cases. The optional source soak remains disabled;
+the latest explicit installed-package soak above remains a retained failure.
+No shipped runtime, asset, fuzz corpus or worker-path bytes changed. Current
+PR CI still requires a green run on the pushed final head. Independent codec
+sign-off and both exact W00 hardware lanes remain pending. W16 remains Partial
+and G02/G03/G04 remain P.

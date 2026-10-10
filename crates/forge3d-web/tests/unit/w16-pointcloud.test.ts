@@ -461,6 +461,8 @@ describe("W16 selection, cancellation and layer ownership", () => {
     expect(d.stats().decoded.hits).toBe(1);
     d.dispose();
   });
+  // This integrity audit compares 132 fixture cameras and 46,831 native nodes.
+  // CI can exceed Vitest's default 5s; timing budgets are checked by the soak.
   it("matches recorded real-data native camera keys/counts and quantized SSE exactly", async () => {
     const m = JSON.parse(
         new TextDecoder().decode(fixture("copc-ept-tiles-v1.json")),
@@ -502,7 +504,7 @@ describe("W16 selection, cancellation and layer ownership", () => {
       ept.dispose();
       workload.dispose();
     }
-  });
+  }, 30_000);
   it("shares lazy EPT pages while cancelling one subscriber and preserving the other", async () => {
     let requests = 0,
       release: () => void = () => {};

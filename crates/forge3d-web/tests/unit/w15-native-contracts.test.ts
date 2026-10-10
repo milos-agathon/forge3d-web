@@ -304,6 +304,8 @@ describe("W15 native audit provenance", () => {
     },
   );
 
+  // Hash every frozen suite and cross-check available Git history without
+  // treating filesystem or subprocess scheduling as a runtime latency gate.
   it("pins every native suite and requires concrete browser ports", () => {
     const audit = JSON.parse(
       readFileSync(
@@ -364,5 +366,5 @@ describe("W15 native audit provenance", () => {
       ).toEqual(bytes);
       crossCheckNativeHistory(asset.revision, asset.nativePath, bytes);
     }
-  });
+  }, 30_000);
 });
