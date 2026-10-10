@@ -5,6 +5,8 @@ const base = new URL("../fixtures/w16/", import.meta.url),
   manifest = JSON.parse(
     readFileSync(new URL("copc-ept-tiles-v1.json", base), "utf8"),
   );
+// This integrity audit reads every fixture; its timeout is a cold-storage
+// allowance, separate from the W00 performance budgets and soak gates.
 it("W16 fixtures and deepest native sources retain independent provenance", () => {
   expect(manifest.fixtureId).toBe("copc-ept-tiles-v1");
   expect(manifest.nativeSources).toHaveLength(21);
@@ -40,4 +42,4 @@ it("W16 fixtures and deepest native sources retain independent provenance", () =
   expect(manifest.expandedTileCoverage.records).toBe(256);
   expect(manifest.expandedTileCoverage.nodesPerDocument).toBe(85);
   expect(manifest.expandedTileCoverage.uniqueSelections).toBeGreaterThanOrEqual(20);
-});
+}, 30_000);

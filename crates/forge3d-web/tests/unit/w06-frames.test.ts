@@ -1,5 +1,5 @@
 import { inflateSync } from "node:zlib";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { RenderConfig } from "../../src-ts/camera-animation.js";
 import {
@@ -194,13 +194,21 @@ describe("W06 video export diagnostics", () => {
 
   it("muxes identical chunks to identical bytes regardless of wall-clock time", async () => {
     const chunk = { data: new Uint8Array([1, 2, 3, 4]), type: "key" as const, timestampUs: 0, durationUs: 33333 };
-    for (const container of ["mp4", "webm"] as const) {
-      const options = { codec: "vp9" as const, container, width: 16, height: 16, fps: 30 };
-      const a = new Uint8Array(await (await muxEncodedVideo([chunk], options)).arrayBuffer());
-      await new Promise((resolve) => setTimeout(resolve, 1100));
-      const b = new Uint8Array(await (await muxEncodedVideo([chunk], options)).arrayBuffer());
-      expect(a, container).toEqual(b);
-      expect(a.length, container).toBeGreaterThan(32);
+    // Exercise different muxer creation times without waiting for the real clock.
+    // Async import and muxing still use real timers and performance.now().
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      for (const container of ["mp4", "webm"] as const) {
+        const options = { codec: "vp9" as const, container, width: 16, height: 16, fps: 30 };
+        vi.setSystemTime(new Date("2026-01-01T00:00:00Z"));
+        const a = new Uint8Array(await (await muxEncodedVideo([chunk], options)).arrayBuffer());
+        vi.setSystemTime(new Date("2026-01-02T00:00:00Z"));
+        const b = new Uint8Array(await (await muxEncodedVideo([chunk], options)).arrayBuffer());
+        expect(a, container).toEqual(b);
+        expect(a.length, container).toBeGreaterThan(32);
+      }
+    } finally {
+      vi.useRealTimers();
     }
     await expect(
       muxEncodedVideo([{ ...chunk, type: "delta" }], { codec: "vp9", width: 16, height: 16, fps: 30 }),

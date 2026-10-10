@@ -389,3 +389,30 @@ No tests were weakened or removed. Build/API checks within the installed
 consumer also passed. The final 260-case fuzz gate is bound in the security
 review. PR CI is tracked on the current PR head; required check results must be
 green before task 4 is complete.
+
+### Review follow-up: unit timing risks
+
+The independent spot-check reported one of four complete unit runs failing
+`w16-provenance` and `w06-frames`, followed by three passing runs. No original
+error output was captured, so neither a cold-disk timeout nor any other cause is
+confirmed. That observation remains part of this evidence.
+
+The W06 mux determinism test previously waited 1,100 ms for each container.
+It now controls only `Date`, comparing the same complete MP4/WebM output bytes
+at two fixed wall-clock values one day apart. Import, muxing, asynchronous
+timers and `performance.now()` stay real, and `Date` is restored in `finally`.
+All byte-equality, minimum-length and invalid-delta assertions are retained.
+The provenance audit has a per-test 30-second cold-storage allowance while
+still checking every native-source and fixture hash and every existing
+manifest assertion. This does not alter W00 budgets, worker deadlines or any
+performance gate.
+
+Two fresh baseline full-unit runs passed, followed by four consecutive full
+runs after these changes: 1,082 passes in 64 files each. The structured fourth
+run recorded 291.3 ms for mux determinism and 322.3 ms for provenance. These
+passing runs do not establish the original failure's cause.
+
+This follow-up changes tests and evidence only. The shipped decoder, assets,
+fuzz corpus and worker path are unchanged. Codec concurrency limits remain a
+proposed sign-off condition for the independent reviewer; this agent has not
+approved the codec. W16 remains Partial and G02/G03/G04 remain P.
