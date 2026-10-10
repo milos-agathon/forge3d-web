@@ -266,6 +266,13 @@ export class Forge3DWorkerPool {
   #tryDispatch(unit: PoolRun): boolean {
     const worker = this.#workers.find((candidate) => !candidate.busy);
     if (worker !== undefined) {
+      if (unit.options.requireHardStop && !worker.owned) {
+        this.#settleUnit(unit, () => unit.reject(new Forge3DError(
+          "UNSUPPORTED_FEATURE", "Replacement worker cannot terminate native calls",
+          { reason: "worker-hard-stop-unavailable" },
+        )));
+        return true;
+      }
       worker.busy = true;
       worker.run = unit;
       // The pool owns cancellation so it can terminate before releasing the slot.

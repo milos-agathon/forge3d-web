@@ -9,6 +9,7 @@ import {
 import { parseLasHeader, parseLasRecords } from "./pointcloud-las.js";
 import type { LasHeader } from "./pointcloud-las.js";
 import type { PointData } from "./pointcloud-types.js";
+import type { LazDecodeOptions } from "./laz-decoder.js";
 interface NativeDecoder {
   delete(): void;
   getPoint(pointer: number): void;
@@ -53,7 +54,6 @@ async function module(): Promise<LazModule> {
   });
   return modulePromise;
 }
-import type { LazDecodeOptions } from "./laz-decoder.js";
 /** Copies only one record out of the WASM heap at a time; all native allocations are freed. */
 async function decode(
   bytes: Uint8Array,
@@ -67,7 +67,8 @@ async function decode(
   pointCancelled(o.signal);
   let input = 0,
     output = 0,
-    decoder: NativeDecoder | undefined;
+    decoder: NativeDecoder | undefined,
+    decodeFailed = false;
   try {
     input = m._malloc(bytes.length + 64);
     output = m._malloc(header.recordLength);
@@ -107,12 +108,22 @@ async function decode(
     }
     return parseLasRecords(raw, count, header, o);
   } catch (e) {
+    decodeFailed = true;
+    // Emscripten's ABORT flag survives a trap; never cache that poisoned instance.
+    modulePromise = undefined;
     if (e instanceof Forge3DError) throw e;
     return pointError("LAZ decompression failed", "invalid-laz");
   } finally {
-    decoder?.delete();
-    if (output) m._free(output);
-    if (input) m._free(input);
+    let cleanupFailed = false;
+    const cleanup = (action: () => void) => {
+      try { action(); }
+      catch { cleanupFailed = true; modulePromise = undefined; }
+    };
+    cleanup(() => decoder?.delete());
+    if (output) cleanup(() => m._free(output));
+    if (input) cleanup(() => m._free(input));
+    // A cleanup trap must not replace the original typed decode error.
+    if (cleanupFailed && !decodeFailed) pointError("LAZ cleanup failed", "invalid-laz");
   }
 }
 /** Validate before spawning a worker, and again inside it before native allocation. */

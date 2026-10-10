@@ -90,6 +90,29 @@ describe("W16 decoder hard-stop admission and queue bounds", () => {
       expect(pool.getDiagnostics()).toMatchObject({ active: 0, queued: 0 });
     } finally { pool.dispose(); channel.port2.close(); vi.useRealTimers(); }
   });
+  it("rejects queued native work if a replacement factory downgrades to a bare port", async () => {
+    const channels = [new MessageChannel(), new MessageChannel()];
+    const terminate = vi.fn();
+    let created = 0;
+    const pool = new Forge3DWorkerPool({ size: 1,
+      workerFactory: () => created++ === 0
+        ? { port: channels[0]!.port1, terminate } : channels[1]!.port1,
+      mainThreadHandler: () => undefined,
+    });
+    try {
+      const controller = new AbortController();
+      const active = pool.run("active", { signal: controller.signal, requireHardStop: true });
+      const input = new Uint8Array([1, 2, 3]);
+      const queued = pool.run(input, { requireHardStop: true, transfer: [input.buffer] });
+      controller.abort();
+      await expect(active).rejects.toMatchObject({ code: "REQUEST_CANCELLED" });
+      await expect(queued).rejects.toMatchObject({ code: "UNSUPPORTED_FEATURE",
+        details: { reason: "worker-hard-stop-unavailable" } });
+      expect(terminate).toHaveBeenCalledOnce();
+      expect(input.byteLength).toBe(3);
+      expect(pool.getDiagnostics()).toMatchObject({ active: 0, queued: 0 });
+    } finally { pool.dispose(); channels.forEach((channel) => channel.port2.close()); }
+  });
 });
 describe("W16 native point buffer and octree contracts", () => {
   it("retains immutable point arrays after another owner releases its handle", () => {
