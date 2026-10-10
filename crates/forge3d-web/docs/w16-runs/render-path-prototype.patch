@@ -1,0 +1,631 @@
+diff --git a/crates/forge3d-web/src-ts/pointcloud-renderer.ts b/crates/forge3d-web/src-ts/pointcloud-renderer.ts
+--- a/crates/forge3d-web/src-ts/pointcloud-renderer.ts
++++ b/crates/forge3d-web/src-ts/pointcloud-renderer.ts
+@@ -16,6 +16,10 @@
+   clearColor?: readonly [number, number, number, number];
+   powerPreference?: "low-power" | "high-performance";
+   onDeviceLost?: (reason: string) => void;
++  /** Direct draws avoid a full-canvas copy; copy retains the offscreen presentation path. */
++  presentationMode?: "direct" | "copy";
++  /** On-demand draws IDs only for a pick; continuous includes IDs in every color pass. */
++  pickingMode?: "on-demand" | "continuous";
+ }
+ export interface PointPickResult {
+   id: number;
+@@ -38,6 +42,11 @@
+   nodes: Map<string, NodeGpu>;
+   bytes: number;
+ }
++interface RenderedPointFrame {
++  layers: Map<PointCloudLayer, LayerGpu>;
++  uniforms: Map<PointCloudLayer, Float32Array>;
++  clear: readonly [number, number, number, number];
++}
+ // WebGPU's stable flag values; TypeScript 6 DOM declares interfaces but omits these globals.
+ const GPUBufferUsage = { MAP_READ: 1, COPY_DST: 8, VERTEX: 32, UNIFORM: 64 };
+ const GPUTextureUsage = { COPY_SRC: 1, COPY_DST: 2, RENDER_ATTACHMENT: 16 };
+@@ -59,6 +68,8 @@
+ }
+ struct FOut {@location(0) color:vec4<f32>,@location(1) id:u32};
+ @fragment fn fs(in:VOut)->FOut {if(params.viewport.w>0.5&&dot(in.uv,in.uv)>1.){discard;}if(in.color.a<=0.){discard;}var out:FOut;out.color=in.color;out.id=in.id;return out;}
++@fragment fn fsColor(in:VOut)->@location(0) vec4<f32> {if(params.viewport.w>0.5&&dot(in.uv,in.uv)>1.){discard;}if(in.color.a<=0.){discard;}return in.color;}
++@fragment fn fsPick(in:VOut)->@location(0) u32 {if(params.viewport.w>0.5&&dot(in.uv,in.uv)>1.){discard;}if(in.color.a<=0.){discard;}return in.id;}
+ `;
+ /** Instanced billboards: 32 bytes/point, six generated vertices, depth-aligned integer picking. */
+ export class PointCloudRenderer {
+@@ -67,6 +78,8 @@
+   #context: GPUCanvasContext;
+   #format: GPUTextureFormat;
+   #pipeline: GPURenderPipeline;
++  #pickPipeline: GPURenderPipeline;
++  #bothPipeline: GPURenderPipeline;
+   #layout: GPUBindGroupLayout;
+   #layers = new Map<PointCloudLayer, LayerGpu>();
+   #ids = new Map<
+@@ -77,6 +90,17 @@
+   #color: GPUTexture | undefined;
+   #id: GPUTexture | undefined;
+   #depth: GPUTexture | undefined;
++  #frame: RenderedPointFrame | undefined;
++  #captureEnabled = false;
++  #pickEnabled = false;
++  #colorValid = false;
++  #idValid = false;
++  #presentationMode: "direct" | "copy";
++  #pickingMode: "on-demand" | "continuous";
++  #presentationCopies = 0;
++  #pickPasses = 0;
++  #capturePasses = 0;
++  #idFrames = 0;
+   #width = 0;
+   #height = 0;
+   #disposed = false;
+@@ -100,6 +124,13 @@
+   ) {
+     this.memoryBudgetBytes = options.memoryBudgetBytes ?? 256 * 1024 * 1024;
+     pointInteger(this.memoryBudgetBytes, "memoryBudgetBytes", 1);
++    this.#presentationMode = options.presentationMode ?? "direct";
++    this.#pickingMode = options.pickingMode ?? "on-demand";
++    if (!["direct", "copy"].includes(this.#presentationMode) ||
++        !["on-demand", "continuous"].includes(this.#pickingMode))
++      pointError("Invalid point renderer presentation/picking mode");
++    this.#captureEnabled = this.#presentationMode === "copy";
++    this.#pickEnabled = this.#pickingMode === "continuous";
+     this.#device = device;
+     const context = canvas.getContext("webgpu") as GPUCanvasContext | null;
+     if (!context)
+@@ -111,6 +142,8 @@
+     this.#format = navigator.gpu.getPreferredCanvasFormat();
+     this.#layout = this.#createLayout();
+     this.#pipeline = this.#createPipeline();
++    this.#pickPipeline = this.#createPipeline("pick");
++    this.#bothPipeline = this.#createPipeline("both");
+     this.#configure();
+     this.#watchLoss();
+   }
+@@ -148,7 +181,8 @@
+       device: this.#device,
+       format: this.#format,
+       alphaMode: "premultiplied",
+-      usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_DST,
++      usage: GPUTextureUsage.RENDER_ATTACHMENT |
++        (this.#presentationMode === "copy" ? GPUTextureUsage.COPY_DST : 0),
+     });
+   }
+   #watchLoss(): void {
+@@ -170,7 +204,7 @@
+       ],
+     });
+   }
+-  #createPipeline(): GPURenderPipeline {
++  #createPipeline(mode: "color" | "pick" | "both" = "color"): GPURenderPipeline {
+     const module = this.#device.createShaderModule({ code: SHADER });
+     return this.#device.createRenderPipeline({
+       layout: this.#device.createPipelineLayout({
+@@ -196,8 +230,8 @@
+       },
+       fragment: {
+         module,
+-        entryPoint: "fs",
+-        targets: [
++        entryPoint: mode === "pick" ? "fsPick" : mode === "both" ? "fs" : "fsColor",
++        targets: mode === "pick" ? [{ format: "r32uint" }] : [
+           {
+             format: this.#format,
+             blend: {
+@@ -213,7 +247,7 @@
+               },
+             },
+           },
+-          { format: "r32uint" },
++          ...(mode === "both" ? [{ format: "r32uint" as GPUTextureFormat }] : []),
+         ],
+       },
+       primitive: { topology: "triangle-list" },
+@@ -225,10 +259,16 @@
+     });
+   }
+   #bytes(): number {
++    const buffers = new Set<GPUBuffer>(this.#readbacks);
++    for (const layers of [this.#layers, this.#frame?.layers])
++      if (layers) for (const l of layers.values()) {
++        buffers.add(l.uniform);
++        for (const n of l.nodes.values()) buffers.add(n.buffer);
++      }
+     return (
+-      this.#width * this.#height * 12 +
+-      Array.from(this.#layers.values()).reduce((n, l) => n + l.bytes, 0) +
+-      Array.from(this.#readbacks).reduce((n, b) => n + b.size, 0)
++      this.#width * this.#height * 4 *
++        (Number(!!this.#color) + Number(!!this.#id) + Number(!!this.#depth)) +
++      Array.from(buffers).reduce((n, b) => n + b.size, 0)
+     );
+   }
+   #admit(additional: number): void {
+@@ -245,22 +285,24 @@
+       this.#device.limits.maxTextureDimension2D,
+     );
+     if (width === this.#width && height === this.#height) return;
+-    this.#admit(width * height * 12);
++    this.#admit(width * height * 4 * (1 + Number(this.#captureEnabled) + Number(this.#pickEnabled)));
+     const create = (format: GPUTextureFormat) =>
+       this.#device.createTexture({
+         size: [width, height],
+         format,
+         usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC,
+       });
+-    const color = create(this.#format),
+-      id = create("r32uint"),
++    const color = this.#captureEnabled ? create(this.#format) : undefined,
++      id = this.#pickEnabled ? create("r32uint") : undefined,
+       depth = create("depth32float");
++    this.#releaseFrame();
+     this.#color?.destroy();
+     this.#id?.destroy();
+     this.#depth?.destroy();
+     this.#color = color;
+     this.#id = id;
+     this.#depth = depth;
++    this.#colorValid = this.#idValid = false;
+     this.#width = width;
+     this.#height = height;
+     this.canvas.width = width;
+@@ -380,13 +422,15 @@
+       for (const [layer, old] of this.#layers) {
+         const next = staged.get(layer);
+         if (!next) {
+-          old.uniform.destroy();
++          if (this.#frame?.layers.get(layer)?.uniform !== old.uniform) old.uniform.destroy();
+           this.#ids.delete(layer);
+         }
+         for (const [key, n] of old.nodes)
+           if (next?.nodes.get(key) !== n) {
+-            n.buffer.destroy();
+-            n.retained.dispose();
++            if (this.#frame?.layers.get(layer)?.nodes.get(key) !== n) {
++              n.buffer.destroy();
++              n.retained.dispose();
++            }
+           }
+       }
+       this.#layers = staged;
+@@ -403,10 +447,11 @@
+     pointView(view);
+     if (!view.viewProjection)
+       pointError("Point rendering requires a view-projection matrix");
+-    if (!this.#color)
++    if (!this.#depth)
+       this.resize(this.canvas.width || 1, this.canvas.height || 1);
+     const start = performance.now();
+     this.#view = structuredClone(view);
++    const uniforms = new Map<PointCloudLayer, Float32Array>();
+     for (const [layer, gpu] of this.#layers) {
+       const { origin, style } = layer.snapshot(),
+         s = normalizePointStyle(style),
+@@ -427,24 +472,60 @@
+       raw[24] = ["rgb", "elevation", "intensity", "classification"].indexOf(
+         s.colorMode,
+       );
+-      this.#device.queue.writeBuffer(gpu.uniform, 0, raw);
+-    }
+-    const encoder = this.#device.createCommandEncoder(),
+-      clear = this.options.clearColor ?? [0.02, 0.03, 0.05, 1],
++      uniforms.set(layer, raw);
++    }
++    const frame: RenderedPointFrame = { layers: this.#layers, uniforms,
++      clear: [...(this.options.clearColor ?? [0.02, 0.03, 0.05, 1])] },
++      copy = this.#presentationMode === "copy",
++      continuous = this.#pickingMode === "continuous",
++      target = copy ? this.#color! : this.#context.getCurrentTexture(),
++      encoder = this.#device.createCommandEncoder();
++    this.#releaseFrame();
++    this.#frame = frame;
++    this.#colorValid = this.#idValid = false;
++    this.#draw(encoder, frame, target.createView(), continuous ? "both" : "color");
++    if (copy) {
++      encoder.copyTextureToTexture(
++        { texture: target },
++        { texture: this.#context.getCurrentTexture() },
++        [this.#width, this.#height],
++      );
++      this.#presentationCopies++;
++    }
++    if (continuous) this.#idFrames++;
++    this.#device.queue.submit([encoder.finish()]);
++    await this.#device.queue.onSubmittedWorkDone();
++    this.#guard();
++    pointCancelled(signal);
++    if (this.#frame === frame) {
++      this.#colorValid = copy;
++      this.#idValid = continuous;
++    }
++    this.#frames++;
++    this.#durations.push(performance.now() - start);
++    if (this.#durations.length > 36_000) this.#durations.shift();
++  }
++  #draw(encoder: GPUCommandEncoder, frame: RenderedPointFrame,
++    target: GPUTextureView, mode: "color" | "pick" | "both"): void {
++    for (const [layer, gpu] of frame.layers)
++      this.#device.queue.writeBuffer(gpu.uniform, 0, frame.uniforms.get(layer)!);
++    const
++      clear = frame.clear,
+       pass = encoder.beginRenderPass({
+-        colorAttachments: [
++        colorAttachments: mode === "pick" ? [{ view: target, clearValue: [0, 0, 0, 0],
++          loadOp: "clear", storeOp: "store" }] : [
+           {
+-            view: this.#color!.createView(),
++            view: target,
+             clearValue: [...clear],
+             loadOp: "clear",
+             storeOp: "store",
+           },
+-          {
++          ...(mode === "both" ? [{
+             view: this.#id!.createView(),
+             clearValue: [0, 0, 0, 0],
+-            loadOp: "clear",
+-            storeOp: "store",
+-          },
++            loadOp: "clear" as const,
++            storeOp: "store" as const,
++          }] : []),
+         ],
+         depthStencilAttachment: {
+           view: this.#depth!.createView(),
+@@ -453,8 +534,8 @@
+           depthStoreOp: "store",
+         },
+       });
+-    pass.setPipeline(this.#pipeline);
+-    for (const l of this.#layers.values()) {
++    pass.setPipeline(mode === "pick" ? this.#pickPipeline : mode === "both" ? this.#bothPipeline : this.#pipeline);
++    for (const l of frame.layers.values()) {
+       pass.setBindGroup(0, l.group);
+       for (const n of l.nodes.values()) {
+         pass.setVertexBuffer(0, n.buffer);
+@@ -462,18 +543,33 @@
+       }
+     }
+     pass.end();
+-    encoder.copyTextureToTexture(
+-      { texture: this.#color! },
+-      { texture: this.#context.getCurrentTexture() },
+-      [this.#width, this.#height],
+-    );
++  }
++  async #ensureImage(kind: "color" | "id", signal?: AbortSignal): Promise<GPUTexture> {
++    this.#guard();
++    pointCancelled(signal);
++    const frame = this.#frame;
++    if (!frame) pointError("Point frame not rendered");
++    let texture = kind === "color" ? this.#color : this.#id;
++    if (!texture) {
++      this.#admit(this.#width * this.#height * 4);
++      texture = this.#device.createTexture({ size: [this.#width, this.#height],
++        format: kind === "color" ? this.#format : "r32uint",
++        usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC });
++      if (kind === "color") { this.#color = texture; this.#captureEnabled = true; }
++      else { this.#id = texture; this.#pickEnabled = true; }
++    }
++    if (kind === "color" ? this.#colorValid : this.#idValid) return texture;
++    const encoder = this.#device.createCommandEncoder();
++    this.#draw(encoder, frame, texture.createView(), kind === "color" ? "color" : "pick");
+     this.#device.queue.submit([encoder.finish()]);
+     await this.#device.queue.onSubmittedWorkDone();
+     this.#guard();
+     pointCancelled(signal);
+-    this.#frames++;
+-    this.#durations.push(performance.now() - start);
+-    if (this.#durations.length > 36_000) this.#durations.shift();
++    if (this.#frame !== frame)
++      throw new Forge3DError("REQUEST_CANCELLED", "Point frame changed during readback");
++    if (kind === "color") { this.#colorValid = true; this.#capturePasses++; }
++    else { this.#idValid = true; this.#pickPasses++; }
++    return texture;
+   }
+   async #read(
+     texture: GPUTexture,
+@@ -519,9 +615,9 @@
+     }
+   }
+   async readRgba(signal?: AbortSignal): Promise<Uint8Array> {
+-    if (!this.#color) pointError("Point frame not rendered");
++    const color = await this.#ensureImage("color", signal);
+     const bytes = await this.#read(
+-      this.#color,
++      color,
+       this.#width,
+       this.#height,
+       0,
+@@ -543,25 +639,35 @@
+   ): Promise<PointPickResult | null> {
+     pointInteger(x, "pick x", 0, this.#width - 1);
+     pointInteger(y, "pick y", 0, this.#height - 1);
+-    if (!this.#id) pointError("Point frame not rendered");
+-    const bytes = await this.#read(this.#id, 1, 1, x, y, signal),
++    const frame = this.#frame;
++    if (!frame) pointError("Point frame not rendered");
++    // Keep the rendered attributes alive across async readback, even if a
++    // caller updates or disposes its layer while the pick is pending.
++    const candidates = Array.from(frame.layers, ([layer, gpu]) =>
++      Array.from(gpu.nodes, ([key, node]) => ({ layerName: layer.name, key,
++        baseId: node.baseId, retained: node.retained.retain() }))).flat();
++    try {
++    const texture = await this.#ensureImage("id", signal);
++    if (this.#frame !== frame)
++      throw new Forge3DError("REQUEST_CANCELLED", "Point frame changed during pick");
++    const bytes = await this.#read(texture, 1, 1, x, y, signal),
+       id = new DataView(bytes.buffer).getUint32(0, true);
+     if (!id) return null;
+-    for (const [layer, gpu] of this.#layers)
+-      for (const [key, node] of gpu.nodes)
++      for (const node of candidates)
+         if (id >= node.baseId && id < node.baseId + node.retained.pointCount) {
+           const index = id - node.baseId,
+             p = node.retained.point(index);
+           return {
+             id,
+-            layerName: layer.name,
+-            nodeKey: key,
++            layerName: node.layerName,
++            nodeKey: node.key,
+             pointIndex: index,
+             position: p.position,
+             color: p.color,
+           };
+         }
+     return null;
++    } finally { for (const node of candidates) node.retained.dispose(); }
+   }
+   /** Recreates device resources and replays retained CPU layers without dataset IO. */
+   async recover(): Promise<void> {
+@@ -597,6 +703,8 @@
+     this.#lost = false;
+     this.#layout = this.#createLayout();
+     this.#pipeline = this.#createPipeline();
++    this.#pickPipeline = this.#createPipeline("pick");
++    this.#bothPipeline = this.#createPipeline("both");
+     this.#configure();
+     this.#watchLoss();
+     this.resize(width || 1, height || 1);
+@@ -628,12 +736,17 @@
+       peakGpuBytes: this.#peakBytes,
+       memoryBudgetBytes: this.memoryBudgetBytes,
+       bufferCreations: this.#bufferCreations,
++      presentationCopies: this.#presentationCopies,
++      idFrames: this.#idFrames,
++      pickPasses: this.#pickPasses,
++      capturePasses: this.#capturePasses,
+       p95Ms: times.length ? times[Math.ceil(times.length * 0.95) - 1]! : 0,
+       disposed: this.#disposed,
+       deviceLost: this.#lost,
+     };
+   }
+   #release(): void {
++    this.#releaseFrame();
+     for (const l of this.#layers.values()) {
+       l.uniform.destroy();
+       for (const n of l.nodes.values()) {
+@@ -650,8 +763,22 @@
+     this.#color = undefined;
+     this.#id = undefined;
+     this.#depth = undefined;
++    this.#colorValid = this.#idValid = false;
+     this.#width = 0;
+     this.#height = 0;
++  }
++  #releaseFrame(): void {
++    if (!this.#frame) return;
++    for (const [layer, gpu] of this.#frame.layers) {
++      const current = this.#layers.get(layer);
++      if (current?.uniform !== gpu.uniform) gpu.uniform.destroy();
++      for (const [key, node] of gpu.nodes)
++        if (current?.nodes.get(key) !== node) {
++          node.buffer.destroy();
++          node.retained.dispose();
++        }
++    }
++    this.#frame = undefined;
+   }
+   dispose(): void {
+     if (this.#disposed) return;
+diff --git a/crates/forge3d-web/examples/w16-pointcloud.js b/crates/forge3d-web/examples/w16-pointcloud.js
+--- a/crates/forge3d-web/examples/w16-pointcloud.js
++++ b/crates/forge3d-web/examples/w16-pointcloud.js
+@@ -386,8 +386,10 @@
+     await l.update(far);
+     r.setLayers([l]);
+     await r.render(far);
+-    const before = await hash(await r.readRgba()),
+-      baseline = r.getStats().gpuBytes;
++    const before = await hash(await r.readRgba());
++    // Include lazy capture/pick attachments in the pressure baseline.
++    await r.pick(32, 32);
++    const baseline = r.getStats().gpuBytes;
+     await l.update(near);
+     let code;
+     try {
+@@ -415,6 +417,43 @@
+     r.dispose();
+     l.dispose();
+   }
++}
++async function renderPaths() {
++  const results = [];
++  const bounds = { min: [-1, -1, -1], max: [1, 1, 1] },
++    node = { key: "0-0-0-0", bounds, pointCount: 3, spacing: 1, depth: 0, children: [] },
++    data = { positions: new Float64Array([0, 0, 0.5, 0, 0, -0.5, 0, 0, -0.8]),
++      colors: new Uint8Array([255, 0, 0, 255, 0, 255, 0, 255, 0, 0, 255, 0]), colorComponents: 4 },
++    view = { position: [0, 0, 5], viewportHeight: 64, fovY: Math.PI / 4,
++      viewProjection: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, .1, 0, 0, 0, .5, 1] };
++  for (const presentationMode of ["copy", "direct"]) for (const pickingMode of ["continuous", "on-demand"]) {
++    const dataset = { bounds, totalPoints: 3, rootNode: () => node,
++        async children() { return []; }, async readPoints() { return data; }, dispose() {} },
++      l = new api.PointCloudLayer(dataset, { style: { pointSize: 18 } }),
++      r = await api.PointCloudRenderer.create(new OffscreenCanvas(64, 64), { presentationMode, pickingMode });
++    try {
++      await l.update(view);
++      r.setLayers([l]);
++      await r.render(view);
++      const normal = r.getStats();
++      // Defer until after presentation and change live styles/selection. Reads
++      // must still observe the last rendered green, opaque foreground point.
++      await new Promise(requestAnimationFrame);
++      l.setStyle({ pointSize: 2, opacity: 0 });
++      r.setLayers([]);
++      l.dispose();
++      const pixels = await r.readRgba(), pick = await r.pick(32, 32),
++        edge = await r.pick(40, 40), background = await r.pick(0, 0),
++        read = r.getStats();
++      await r.render(view);
++      const empty = await r.pick(32, 32);
++      results.push({ presentationMode, pickingMode, hash: await hash(pixels),
++        center: [...pixels.slice((32 * 64 + 32) * 4, (32 * 64 + 32) * 4 + 4)],
++        pick, edge, background, empty, normal, read, cleared: r.getStats() });
++    } finally { r.dispose(); l.dispose(); }
++    results.at(-1).disposed = r.getStats();
++  }
++  return results;
+ }
+ async function meshRendering() {
+   const tiles = new api.Tiles3dLayer(
+@@ -579,7 +618,7 @@
+   }
+   return { actual, expected: corpus.records.map(r => r.nodes), coverage: corpus.coverage };
+ }
+-async function soak(durationMs = 600000, targetProfile = "reference-discrete") {
++async function soak(durationMs = 600000, targetProfile = "reference-discrete", rendererOptions = {}) {
+   layer?.dispose();
+   pool?.dispose();
+   pool = workerPool();
+@@ -598,7 +637,8 @@
+     style: { pointSize: 2, colorMode: "elevation" },
+   });
+   liveView = keyframes[0].view;
+-  renderer ??= await api.PointCloudRenderer.create(canvas);
++  renderer?.dispose();
++  renderer = await api.PointCloudRenderer.create(canvas, rendererOptions);
+   renderer.resize(1920, 1080);
+   const start = performance.now(),
+     times = [],
+@@ -708,6 +748,8 @@
+     },
+     profile: "local-chromium-preflight",
+     targetProfile,
++    rendererOptions: { presentationMode: rendererOptions.presentationMode ?? "direct",
++      pickingMode: rendererOptions.pickingMode ?? "on-demand" },
+     budgets: manifest.performance.profiles[targetProfile],
+     referenceHardwareQualified: false,
+     qualification:
+@@ -761,6 +803,7 @@
+   soak,
+   meshRendering,
+   tileReferences,
++  renderPaths,
+ };
+ status.textContent = "Ready. Choose a dataset.";
+ document.querySelector("#demo").onclick = () =>
+diff --git a/crates/forge3d-web/tests/playwright/w16_pointcloud.spec.ts b/crates/forge3d-web/tests/playwright/w16_pointcloud.spec.ts
+--- a/crates/forge3d-web/tests/playwright/w16_pointcloud.spec.ts
++++ b/crates/forge3d-web/tests/playwright/w16_pointcloud.spec.ts
+@@ -168,6 +168,26 @@
+     expect(mesh.negative).toBe(0);
+     expect(mesh.triangles).toBe(1);
+   });
++  test(`W16 ${mode}: direct/copy and on-demand/continuous paths preserve delayed image and depth picks`, async ({ page, webgpuAvailability }) => {
++    skipRenderAssertionsWhenProbing(webgpuAvailability);
++    await open(page);
++    const paths = await page.evaluate(() => window.__w16.renderPaths());
++    expect(new Set(paths.map((r: any) => r.hash)).size).toBe(1);
++    for (const r of paths) {
++      expect(r.center).toEqual([0, 255, 0, 255]);
++      expect(r.pick.pointIndex).toBe(1);
++      expect(r.pick.color).toEqual([0, 255, 0, 255]);
++      expect(r.edge).toBeNull();
++      expect(r.background).toBeNull();
++      expect(r.empty).toBeNull();
++      expect(r.normal.presentationCopies).toBe(r.presentationMode === 'copy' ? 1 : 0);
++      expect(r.normal.idFrames).toBe(r.pickingMode === 'continuous' ? 1 : 0);
++      expect(r.read.pickPasses).toBe(r.pickingMode === 'on-demand' ? 1 : 0);
++      expect(r.read.capturePasses).toBe(r.presentationMode === 'direct' ? 1 : 0);
++      expect(r.cleared.gpuBytes).toBeLessThan(r.read.gpuBytes);
++      expect(r.disposed.gpuBytes).toBe(0);
++    }
++  });
+ }
+ test("W16 10-minute real-data camera traversal retains budget and records adapter", async ({
+   page,
+diff --git a/crates/forge3d-web/scripts/test-w16-package-consumer.mjs b/crates/forge3d-web/scripts/test-w16-package-consumer.mjs
+--- a/crates/forge3d-web/scripts/test-w16-package-consumer.mjs
++++ b/crates/forge3d-web/scripts/test-w16-package-consumer.mjs
+@@ -290,6 +290,20 @@
+   const meshes = await page.evaluate(() => window.__w16.meshRendering());
+   assert(meshes.covered > 100);
+   assert.equal(meshes.negative, 0);
++  const renderPaths = await page.evaluate(() => window.__w16.renderPaths());
++  assert.equal(new Set(renderPaths.map(r => r.hash)).size, 1);
++  for (const r of renderPaths) {
++    assert.deepEqual(r.center, [0, 255, 0, 255]);
++    assert.equal(r.pick.pointIndex, 1);
++    assert.equal(r.edge, null);
++    assert.equal(r.background, null);
++    assert.equal(r.empty, null);
++    assert.equal(r.normal.presentationCopies, r.presentationMode === 'copy' ? 1 : 0);
++    assert.equal(r.normal.idFrames, r.pickingMode === 'continuous' ? 1 : 0);
++    assert.equal(r.read.pickPasses, r.pickingMode === 'on-demand' ? 1 : 0);
++    assert.equal(r.read.capturePasses, r.presentationMode === 'direct' ? 1 : 0);
++    assert.equal(r.disposed.gpuBytes, 0);
++  }
+   const report = {
+     schemaVersion: 1,
+     verifiedAt: new Date().toISOString(),
+@@ -303,6 +317,7 @@
+     meshes,
+     workload,
+     tileReferences,
++    renderPaths,
+     pageErrors: errors,
+     externalRequests: remote,
+   };
+diff --git a/crates/forge3d-web/scripts/profile-w16-render-paths.mjs b/crates/forge3d-web/scripts/profile-w16-render-paths.mjs
+new file mode 100644
+--- /dev/null
++++ b/crates/forge3d-web/scripts/profile-w16-render-paths.mjs
+@@ -0,0 +1,36 @@
++import { chromium } from '@playwright/test';
++import { writeFileSync, readFileSync } from 'node:fs';
++import { createHash } from 'node:crypto';
++const durationMs = Number(process.env.FORGE3D_W16_PROFILE_MS ?? 60000);
++if (!Number.isFinite(durationMs) || durationMs < 30000 || durationMs > 600000)
++  throw new Error('Render-path probe duration must be 30000..600000 ms');
++const browser = await chromium.launch({ args: ['--enable-unsafe-webgpu',
++  ...(process.platform === 'win32' ? ['--use-angle=d3d11'] : [])] });
++const paths = [
++  { presentationMode: 'copy', pickingMode: 'continuous' },
++  { presentationMode: 'direct', pickingMode: 'continuous' },
++  { presentationMode: 'copy', pickingMode: 'on-demand' },
++  { presentationMode: 'direct', pickingMode: 'on-demand' },
++];
++const results = [];
++try {
++  const page = await browser.newPage();
++  await page.goto('http://127.0.0.1:57883/examples/pointcloud-tiles.html?dist');
++  await page.waitForFunction(() => !!window.__w16);
++  for (const options of paths) {
++    const timeout = setTimeout(() => void browser.close(), durationMs + 120000);
++    let result;
++    try {
++      result = await page.evaluate(({ durationMs, options }) =>
++        window.__w16.soak(durationMs, 'reference-discrete', options), { durationMs, options });
++    } finally { clearTimeout(timeout); }
++    results.push({ ...result, verifiedAt: new Date().toISOString() });
++    console.log(JSON.stringify({ options, frames: result.frames, p95Ms: result.frameP95Ms,
++      phases: result.phases, copies: result.stats.presentationCopies, idFrames: result.stats.idFrames }));
++    writeFileSync(process.env.FORGE3D_W16_OUTPUT ?? 'test-results/w16-render-paths.json',
++      JSON.stringify({ kind: 'short-render-path-probe; not acceptance', browserVersion: browser.version(),
++        requestedDurationMs: durationMs, concurrentTestsOrBuilds: false,
++        cameraHarnessSha256: createHash('sha256').update(readFileSync('examples/w16-pointcloud.js')).digest('hex'),
++        results }, null, 2) + '\n');
++  }
++} finally { await browser.close(); }

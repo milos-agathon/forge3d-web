@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
-  "verifiedAt": "2026-10-10T12:13:12.781Z",
+  "verifiedAt": "2026-10-09T19:56:21.645Z",
   "browserVersion": "148.0.7778.96",
   "platform": "win32",
-  "packageSha256": "f89a3fb82b6784d65c5bbf543a2d5cb2ffff5f95289034ad5553b19c009d653d",
+  "packageSha256": "c01ecf448f34c3740a2038d29fde0814b97c2ba2e392f12d0af4051e9acf39ab",
   "io": {
     "laz": {
       "count": 110000,
@@ -421,7 +421,7 @@
       "peakGpuBytes": 4915408,
       "memoryBudgetBytes": 268435456,
       "bufferCreations": 1,
-      "p95Ms": 9.400000005960464,
+      "p95Ms": 25.700000017881393,
       "disposed": false,
       "deviceLost": false
     },
@@ -432,7 +432,7 @@
       "peakGpuBytes": 4915408,
       "memoryBudgetBytes": 268435456,
       "bufferCreations": 2,
-      "p95Ms": 9.400000005960464,
+      "p95Ms": 23.600000023841858,
       "disposed": false,
       "deviceLost": false
     },
@@ -444,7 +444,7 @@
       "peakGpuBytes": 4915408,
       "memoryBudgetBytes": 268435456,
       "bufferCreations": 2,
-      "p95Ms": 14.5,
+      "p95Ms": 25.700000017881393,
       "disposed": false,
       "deviceLost": false
     },
@@ -11726,6 +11726,6 @@
   },
   "pageErrors": [],
   "externalRequests": [],
-  "fullTemporaryReportSha256": "d91b8887475685e4f6513423dd0e972c720a8c8afe8650c52450c0dd930d8c43",
+  "fullTemporaryReportSha256": "befe532558df4531bd002df95c72bd51efb23d5d89d4b3554174a4461d3b85bc",
   "statement": "Compact retained conformance report; exhaustive assertions passed before the soak. Repeated fixture manifests and selection arrays are represented by their hashes."
 }

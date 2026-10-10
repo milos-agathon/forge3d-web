@@ -80,4 +80,6 @@ crates/forge3d-web/docs/w16-local-evidence.json text eol=lf
 # Preserve measured report and camera-harness hashes across Windows checkouts.
 crates/forge3d-web/docs/w16-*-evidence.json text eol=lf
 crates/forge3d-web/docs/w16-runs/*.json text eol=lf
+# Unified patches contain space-prefixed blank context lines.
+crates/forge3d-web/docs/w16-runs/*.patch text eol=lf whitespace=-blank-at-eol
 crates/forge3d-web/examples/w16-pointcloud.js text eol=lf

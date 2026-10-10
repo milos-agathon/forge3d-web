@@ -180,6 +180,9 @@ const view:PointView={position:[0,0,10],viewportHeight:1080,fovY:Math.PI/4};cons
     errors = [],
     remote = [];
   page.on("pageerror", (e) => errors.push(e.message));
+  page.on("console", (message) => {
+    if (message.text().startsWith("W16 progress ")) console.log(message.text());
+  });
   page.on("request", (r) => {
     if (!r.url().startsWith(origin)) remote.push(r.url());
   });

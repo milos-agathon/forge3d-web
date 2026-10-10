@@ -608,6 +608,7 @@ async function soak(durationMs = 600000, targetProfile = "reference-discrete") {
   let frames = 0,
     maxBytes = 0,
     maxCpuBytes = 0;
+  let nextProgressMs = 60000;
   let minPoints = Infinity,
     maxPoints = 0;
   let baseline = 0;
@@ -668,6 +669,17 @@ async function soak(durationMs = 600000, targetProfile = "reference-discrete") {
         dataset.stats().compressed.bytes,
     );
     baseline = Math.max(baseline, frameStats.gpuBytes);
+    const progressMs = performance.now() - start;
+    if (progressMs >= nextProgressMs) {
+      const ordered = [...times].sort((a, b) => a - b);
+      console.log("W16 progress " + JSON.stringify({
+        elapsedMs: Math.round(progressMs), frames,
+        frameP95Ms: ordered[Math.min(ordered.length - 1, Math.floor(ordered.length * 0.95))],
+        keyframesVisited: visited.size, maxCpuBytes,
+        peakGpuBytes: frameStats.peakGpuBytes,
+      }));
+      nextProgressMs += 60000;
+    }
     await new Promise(requestAnimationFrame);
   }
   times.sort((a, b) => a - b);

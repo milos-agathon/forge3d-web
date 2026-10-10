@@ -1,7 +1,8 @@
 # W16 implementation and acceptance evidence
 
 W16 acceptance is pending. G02, G03 and G04 remain `P`: the runtime and local
-conformance tests exist, but the local discrete-target p95 fails, the pinned W00 physical
+conformance tests exist, but local p95 variation remains unexplained. The earlier
+18.3 ms failure and three current passes use identical dist/asset bytes. The pinned W00 physical
 reference-profile runs and the mandatory laz-perf security review are open. The original required outcomes
 and acceptance criteria in the plan and baseline are preserved.
 
@@ -168,18 +169,110 @@ The strict harness aborted at this failure; the requested second and third
 repeats were not run. No outlier was excluded.
 
 [The complete failing soak report](w16-runs/installed-1.json) and
-[compact conformance report](w16-runs/conformance.json) are retained. Its
+[compact conformance report](w16-runs/oct09-conformance.json) are retained. Its
 tarball SHA-256 is `c01ecf448f34c3740a2038d29fde0814b97c2ba2e392f12d0af4051e9acf39ab`.
-[Runtime file hashes](w16-runs/runtime-files.json) bind all 269 current dist/asset
+[Runtime file hashes](w16-runs/oct09-runtime-files.json) bind all 269 dist/asset
 files byte-for-byte to that installed tarball. The full temporary conformance
 JSON repeats fixture manifests and selections; the compact report retains
 observed hashes/counts and its complete-report digest.
 
-Current checks: 1,078 unit tests, eight source/dist browser cases, the installed
+October 9 checks: 1,078 unit tests, eight source/dist browser cases, the installed
 conformance probes, 616 infrastructure contracts (one Unix-UID check skipped on
 Windows), 15 parity checks, 11 documentation checks, 118 browser-harness checks,
 API/type snapshots and the package contract pass. The ten-minute performance
-gate fails. Hardware lane tests are synthetic contracts/dry runs only.
+gate failed. Hardware lane tests are synthetic contracts/dry runs only.
+
+### Render-path investigation, 2026-10-10
+
+The proposed GPU costs were tested independently and together: render directly
+into the current canvas texture, and populate the integer picking attachment
+only when a pick is requested. Four sequential 60-second probes used the same
+camera interpolation, cold caches, point budget and complete timed frame work.
+No other tests or builds ran concurrently. These are short diagnostic probes,
+not ten-minute acceptance runs.
+
+| Presentation | Picking attachment | Frames | Full-frame p95 | Render p95 |
+| --- | --- | --- | --- | --- |
+| Copy (existing) | Every frame (existing) | 3,470 | 10.4 ms | 6.8 ms |
+| Direct | Every frame | 3,456 | 10.9 ms | 6.9 ms |
+| Copy | On demand | 3,474 | 11.0 ms | 7.3 ms |
+| Direct | On demand | 3,459 | 10.6 ms | 7.1 ms |
+
+The prototype counters confirm zero presentation copies for direct mode and
+zero picking-attachment frames for on-demand mode during traversal. Its ten
+[source/dist correctness cases passed](w16-runs/render-path-conformance-oct10.json), including exact pixel equality, depth
+ordering, alpha-zero points, circular point edges and picking/capture after
+layer removal or disposal. No performance gain was observed on this host in
+these probes. The production renderer and its public API were restored to
+their exact `3c80bc7` bytes; neither speculative optimization is shipped.
+
+[Raw probe reports](w16-runs/render-path-probes-oct10.json) retain all phase
+timings, counters and allocations. The [prototype patch](w16-runs/render-path-prototype.patch)
+applies to `3c80bc7` for reproduction in a separate checkout. Build TypeScript
+and dist, serve the package with Vite on port 57883, then run
+`node scripts/profile-w16-render-paths.mjs`. That script defaults to four
+sequential one-minute probes; `FORGE3D_W16_PROFILE_MS` controls each duration.
+
+The prototype's copy/continuous baseline was also below the limit. Its shorter
+duration prevents a direct acceptance comparison with October 9. The short
+probes cannot establish why the observations differ: previous host power,
+thermal, driver and background-process state were not captured. A faster
+observation therefore does not establish a runtime fix or invalidate the
+earlier 18.3 ms failure. [Archived October 9 evidence](w16-oct09-evidence.json)
+preserves that failure and its installed-package conformance and byte binding.
+
+The new official installed-package repeats retain the unchanged renderer.
+The harness now emits one progress record per minute, after recording the
+timed frame and before requestAnimationFrame. This diagnostic sorting/logging
+is between samples. Update, fetch/decode misses, upload and awaited GPU work
+remain inside every measured frame; no measured stage is excluded.
+
+### Repeated installed-package observations, 2026-10-10
+
+Three sequential official ten-minute runs completed on local Windows/NVIDIA
+Ampere with Chromium 148.0.7778.96. No other test suite or build ran alongside
+the measured traversals. Each run created fresh dataset caches and kept the
+full update/upload/awaited GPU path, including fetch and decode misses.
+
+| Retained run | Duration | Frames | Full-frame p95 | Update/upload/render p95 | Verdict |
+| --- | --- | --- | --- | --- | --- |
+| [1](w16-runs/installed-20261010T121312939Z-1.json) | 600,063.3 ms | 35,105 | 8.3 ms | 1.8 / 0.3 / 6.9 ms | Passed locally |
+| [2](w16-runs/installed-20261010T121312939Z-2.json) | 600,037.6 ms | 35,250 | 8.9 ms | 2.0 / 0.3 / 7.1 ms | Passed locally |
+| [3](w16-runs/installed-20261010T121312939Z-3.json) | 600,058.3 ms | 35,278 | 9.4 ms | 2.4 / 0.4 / 7.3 ms | Passed locally |
+
+All three checked all 64 keyframes, produced 693 selection sets, retained the
+coarse root and drew between 299,520 and 299,994 points. Covered pixels were
+103,748 / 98,430 / 102,016. Tracked CPU peak was 42,918,791 bytes in every run;
+GPU peaks were 42,770,544 / 42,773,904 / 42,774,864 bytes, with zero after
+disposal. All selection, coverage, memory and cleanup assertions passed.
+Reports retain stage p50/p95/max summaries, not individual frame samples.
+
+The measured tarball SHA-256 is
+`f89a3fb82b6784d65c5bbf543a2d5cb2ffff5f95289034ad5553b19c009d653d`.
+[Current runtime bindings](w16-runs/runtime-files.json) and the
+[October 9 bindings](w16-runs/oct09-runtime-files.json) have the identical
+269-file digest `907f7960530a51094c773d137ac612f965e9b77b08744942f5fdd9257de0f145`.
+The camera harness changed only to emit the minute progress records described
+above. [Installed conformance](w16-runs/conformance.json) also passed all
+decoding, range, point/tile reference, picking and device-recovery assertions.
+The [current evidence](w16-local-evidence.json) binds those reports and preserves
+the previous failure separately.
+
+These are three observed local passes with unchanged dist/asset bytes, not a
+demonstrated performance fix. They do not explain the earlier 18.3 ms failure
+or qualify either W00 physical machine. Local reproducibility therefore stays
+open, the historical 14.2 ms acceptance claim remains withdrawn, and W16 stays
+Partial with G02/G03/G04 at `P`.
+
+October 10 checks: 1,078 unit tests, eight production source/dist browser cases,
+three installed soaks and their preceding conformance checks, 15 parity checks,
+11 documentation checks, 118 browser-harness checks, 616 infrastructure checks
+and the package contract passed; the Unix-only infrastructure check was skipped.
+The first package attempt failed the existing positive-decimal shell selector
+test, and the isolated rerun also failed: `bash` resolved to the Windows Apps
+alias. The complete rerun used the already installed Git Bash through a
+process-local PATH and passed. No persistent environment or workflow setting
+was changed.
 
 ### W00 hardware lanes remain pending
 

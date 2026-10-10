@@ -62,15 +62,36 @@ evidence.optimizedRuns = runs.map(({ file, report }) => {
     phases: report.phases, concurrentTestsOrBuilds: false, referenceHardwareQualified: false };
 });
 const passed = evidence.optimizedRuns.every(run => run.measuredPass);
+const previous = evidence.previousOptimizationEvidence
+  ? readJson(`docs/${evidence.previousOptimizationEvidence.file}`) : undefined;
+const runtimeSha256 = hash(Buffer.from(JSON.stringify(bindings)));
+const previousFailure = previous?.optimizedRuns.some(run => !run.measuredPass);
+const sameRuntime = previous?.runtimeBinding.sha256 === runtimeSha256;
+const unresolvedVariation = passed && previousFailure && sameRuntime;
 evidence.evidenceStatus = passed
-  ? 'Repeated local installed-package conformance and performance verified; hardware and security acceptance pending'
+  ? (unresolvedVariation
+    ? 'Current local installed-package runs pass with unchanged runtime; earlier failure remains unexplained; hardware and security acceptance pending'
+    : 'Current local installed-package conformance and performance verified; hardware and security acceptance pending')
   : 'Local performance failure remains after optimization; hardware and security acceptance pending';
 evidence.openAcceptance = [
   ...(!passed ? ['Local discrete-target ten-minute p95 remains above 16.7 ms'] : []),
+  ...(unresolvedVariation ? ['Unexplained local p95 variation with unchanged dist/asset bytes; earlier 18.3 ms failure remains valid'] : []),
   'FW-WIN-I12-01: INF-00 blocked', 'FW-LNX-NV-01: not provisioned', 'Mandatory laz-perf security review',
 ];
+if (previous) evidence.performanceReproducibility = {
+  previousEvidence: evidence.previousOptimizationEvidence.file,
+  unchangedDistAndAssets: sameRuntime,
+  previousFailure,
+  explanationEstablished: false,
+  statement: 'Current observations do not withdraw earlier failures or establish a performance fix. Host-state differences were not measured.',
+};
+evidence.checks.installedPackage.soak = passed ? 'passed in current batch' : 'failed';
+evidence.checks.installedPackage.repeatRequest = {
+  requested: Number(process.env.FORGE3D_W16_RUNS ?? runs.length), completed: runs.length,
+  ...(!passed ? { aborted: 'First failing run stopped the strict acceptance harness' } : {}),
+};
 evidence.runtimeBinding = { packageSha256: conformance.packageSha256, fileCount: bindings.length,
-  sha256: hash(Buffer.from(JSON.stringify(bindings))), file: 'w16-runs/runtime-files.json',
+  sha256: runtimeSha256, file: 'w16-runs/runtime-files.json',
   fixtureSha256, cameraHarnessSha256,
   statement: 'Every current dist/asset file matches the measured installed tarball. Later documentation edits do not change these runtime bytes.' };
 evidence.conformance = { file: 'w16-runs/conformance.json', verifiedAt: conformance.verifiedAt,
