@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "task": "W17",
-  "codeRevision": "e456ff6f04f1dfb9992f1f3c1eccfb6bda1ceed2",
-  "verifiedAt": "2026-10-11T15:41:30.205Z",
+  "codeRevision": "8171a0dd5a7e6edca12cf83244576763b115ec0d",
+  "verifiedAt": "2026-10-11T21:08:29.815Z",
   "branch": "codex/w17-tracing",
   "baseRevision": "5a16ee511545fb4385be89c6c0b53bdb759466b7",
   "status": {
@@ -29,18 +29,18 @@
   },
   "package": {
     "schemaVersion": 1,
-    "verifiedAt": "2026-10-11T15:41:30.205Z",
-    "revision": "e456ff6f04f1dfb9992f1f3c1eccfb6bda1ceed2",
-    "packageSha256": "aff28241e37a51b11068008761660f7c5f13c08c5b1f0973ab7f6831aa8019fc",
+    "verifiedAt": "2026-10-11T21:08:29.815Z",
+    "revision": "8171a0dd5a7e6edca12cf83244576763b115ec0d",
+    "packageSha256": "53283374b7ae4d349c34ce0bce4264c85d94442b4885e1c83e00114481220c54",
     "tarball": "forge3d-web-1.26.3.tgz",
     "installed": "temporary consumer node_modules/@forge3d/web",
     "exitCode": 0
   },
   "stressPackage": {
     "schemaVersion": 1,
-    "verifiedAt": "2026-10-11T15:32:31.940Z",
-    "revision": "566e6f29d121471889cb96c921cc51267e18a1d0",
-    "packageSha256": "077f8c0f7895f2cead86441fd1d2898926e231890b1567d0d81a476fd29f0504",
+    "verifiedAt": "2026-10-11T21:08:29.815Z",
+    "revision": "8171a0dd5a7e6edca12cf83244576763b115ec0d",
+    "packageSha256": "53283374b7ae4d349c34ce0bce4264c85d94442b4885e1c83e00114481220c54",
     "tarball": "forge3d-web-1.26.3.tgz",
     "installed": "temporary consumer node_modules/@forge3d/web",
     "exitCode": 0
@@ -48,11 +48,11 @@
   "browserReports": {
     "final-source": {
       "rawReport": "docs/parity/w17-runs/final-source.json",
-      "rawReportSha256": "8653ff817b2d860d5bed748814d45c8f5b4cfe00ec14effa3113f65d4080cad0",
+      "rawReportSha256": "6e76e161337986336f5f6d22b86635403aa3d35b6ea48f0921e2ac2c43f03831",
       "stats": {
-        "startTime": "2026-10-11T15:37:42.392Z",
-        "duration": 77022.236,
-        "expected": 7,
+        "startTime": "2026-10-11T20:52:57.539Z",
+        "duration": 62879.761999999995,
+        "expected": 9,
         "skipped": 0,
         "unexpected": 0,
         "flaky": 0
@@ -64,7 +64,7 @@
           "results": [
             {
               "status": "passed",
-              "durationMs": 13895
+              "durationMs": 8405
             }
           ]
         },
@@ -74,7 +74,27 @@
           "results": [
             {
               "status": "passed",
-              "durationMs": 10887
+              "durationMs": 7721
+            }
+          ]
+        },
+        {
+          "title": "W17 source: review regressions cover irregular BVHs, lit media, reuse and guiding parity",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 13503
+            }
+          ]
+        },
+        {
+          "title": "W17 source: failed recovery and device loss during compilation release real buffers",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1173
             }
           ]
         },
@@ -84,7 +104,7 @@
           "results": [
             {
               "status": "passed",
-              "durationMs": 21922
+              "durationMs": 13288
             }
           ]
         },
@@ -94,7 +114,7 @@
           "results": [
             {
               "status": "passed",
-              "durationMs": 1967
+              "durationMs": 1165
             }
           ]
         },
@@ -104,7 +124,7 @@
           "results": [
             {
               "status": "passed",
-              "durationMs": 2214
+              "durationMs": 1185
             }
           ]
         },
@@ -114,7 +134,7 @@
           "results": [
             {
               "status": "passed",
-              "durationMs": 11229
+              "durationMs": 8518
             }
           ]
         },
@@ -124,7 +144,7 @@
           "results": [
             {
               "status": "passed",
-              "durationMs": 7205
+              "durationMs": 3335
             }
           ]
         }
@@ -136,7 +156,7 @@
           "risMse": 31.2199529491182,
           "reuseMse": 4.084821753408268,
           "reuseChanged": true,
-          "guidingUpdates": 904,
+          "guidingUpdates": 1472,
           "guideRestored": true,
           "guideContinuation": true,
           "mediumMean": [
@@ -178,6 +198,60 @@
           "areaMean": 0.4292183742703249,
           "continuationMax": 0
         },
+        "review-regressions.json": {
+          "probes": 567,
+          "invalidLeaves": 0,
+          "refitStable": true,
+          "maxT": 4.76837158203125e-07,
+          "maxBary": 2.384185791015625e-07,
+          "maxOracle": 2.654790878298119e-06,
+          "parity": [
+            {
+              "cpu": 6.258487701416016e-07,
+              "engines": 0,
+              "covered": 110
+            },
+            {
+              "cpu": 8.344650268554688e-07,
+              "engines": 0,
+              "covered": 110
+            }
+          ],
+          "reuseMean": 0.63738227263093,
+          "reuseVarianceRatio": 0.33217298291108766,
+          "reuseExpected": 0.6366197723675814,
+          "absorptionRatio": 0.13469904734408764,
+          "absorptionExpected": 0.1353352832366127,
+          "mediumParity": {
+            "cpu": 3.772560949632723e-06,
+            "engines": 0,
+            "mean": 3.6954938846174628
+          },
+          "positiveMass": 0.9543419596739113,
+          "negativeMass": 0.045658043352887034,
+          "guidingVarianceRatio": 0.1537783018164331,
+          "aovRoundtripError": 0,
+          "visibilityPng": true,
+          "tileCoverage": 187,
+          "guidingParity": 1.3050412569217758e-07,
+          "guidingWeightsError": 1.9574736883727335e-07,
+          "axisError": 0,
+          "residualBuffers": 0,
+          "residualBytes": 0,
+          "createdBuffers": 782,
+          "destroyedBuffers": 782,
+          "peakGpuAllocatedBytes": 4743528,
+          "leakNegativeControl": true
+        },
+        "recovery-compilation.json": {
+          "recovery": "WEBGPU_ADAPTER_UNAVAILABLE",
+          "blocked": "DEVICE_LOST",
+          "recoveryResidual": 0,
+          "loss": "DEVICE_LOST",
+          "created": 10,
+          "destroyed": 10,
+          "residual": 0
+        },
         "trace-sdf-v1.json": {
           "fixtureId": "trace-sdf-v1",
           "triangles": 65536,
@@ -187,6 +261,7 @@
           "expectedTriangleHash": "eabef0a6725f603c3055eed2816eb7390074c95020c6c5121cd098bcd0ca258c",
           "lowerLayerProbes": 64,
           "sdfHitProbes": 128,
+          "sdfOffCenterProbes": 512,
           "rayHash": "28308ab5f030217375a430d37e0f90d0b3d56f7c519a51e5498f047374b102cc",
           "cpuHitHash": "4ec45f30e0e02f690fa72eb18e5b8f07d2379a104035fc0db931e78c8813c136",
           "wasmHitHash": "4ec45f30e0e02f690fa72eb18e5b8f07d2379a104035fc0db931e78c8813c136",
@@ -195,11 +270,11 @@
           "expectedHitHash": "4ec45f30e0e02f690fa72eb18e5b8f07d2379a104035fc0db931e78c8813c136",
           "maxT": 0,
           "maxBary": 0,
-          "maxSdf": 0,
+          "maxSdf": 7.175868188546985e-08,
           "idErrors": 0,
           "analyticErrors": 0,
           "materialErrors": 0,
-          "durationMs": 17966.700000047684,
+          "durationMs": 11884.099999964237,
           "adapter": {
             "vendor": "nvidia",
             "architecture": "ampere",
@@ -212,7 +287,7 @@
             "leafCount": 16384,
             "maxDepth": 14,
             "memoryUsageBytes": 6029264,
-            "buildTimeMs": 207.39999997615814,
+            "buildTimeMs": 133.20000004768372,
             "backend": "webgpu",
             "method": "lbvh"
           },
@@ -222,7 +297,7 @@
             "leafCount": 16384,
             "maxDepth": 14,
             "memoryUsageBytes": 6029264,
-            "buildTimeMs": 957.7999999523163,
+            "buildTimeMs": 350.30000001192093,
             "backend": "cpu",
             "method": "sah"
           }
@@ -260,12 +335,12 @@
     },
     "final-installed": {
       "rawReport": "docs/parity/w17-runs/final-installed.json",
-      "rawReportSha256": "0ee78aed4647a84ded47ec58369d0fdb5dda81a696c2cc0f65042f6ab0f218a4",
+      "rawReportSha256": "8d4dc54b1abbd1ab113e55442efae43612cf5e6084dde5f4d4a19c55384c6730",
       "stats": {
-        "startTime": "2026-10-11T15:40:16.643Z",
-        "duration": 73514.841,
-        "expected": 7,
-        "skipped": 1,
+        "startTime": "2026-10-11T20:57:17.106Z",
+        "duration": 672684.723,
+        "expected": 10,
+        "skipped": 0,
         "unexpected": 0,
         "flaky": 0
       },
@@ -275,8 +350,8 @@
           "project": "chromium-preflight",
           "results": [
             {
-              "status": "skipped",
-              "durationMs": 2669
+              "status": "passed",
+              "durationMs": 606610
             }
           ]
         },
@@ -286,7 +361,7 @@
           "results": [
             {
               "status": "passed",
-              "durationMs": 13687
+              "durationMs": 12180
             }
           ]
         },
@@ -296,7 +371,27 @@
           "results": [
             {
               "status": "passed",
-              "durationMs": 11186
+              "durationMs": 10195
+            }
+          ]
+        },
+        {
+          "title": "W17 dist: review regressions cover irregular BVHs, lit media, reuse and guiding parity",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 13904
+            }
+          ]
+        },
+        {
+          "title": "W17 dist: failed recovery and device loss during compilation release real buffers",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1184
             }
           ]
         },
@@ -306,7 +401,7 @@
           "results": [
             {
               "status": "passed",
-              "durationMs": 21506
+              "durationMs": 13627
             }
           ]
         },
@@ -316,7 +411,7 @@
           "results": [
             {
               "status": "passed",
-              "durationMs": 1809
+              "durationMs": 846
             }
           ]
         },
@@ -326,7 +421,7 @@
           "results": [
             {
               "status": "passed",
-              "durationMs": 2086
+              "durationMs": 1021
             }
           ]
         },
@@ -336,7 +431,7 @@
           "results": [
             {
               "status": "passed",
-              "durationMs": 11613
+              "durationMs": 9423
             }
           ]
         },
@@ -346,19 +441,56 @@
           "results": [
             {
               "status": "passed",
-              "durationMs": 7226
+              "durationMs": 2757
             }
           ]
         }
       ],
       "observations": {
+        "trace-soak.json": {
+          "fixtureId": "trace-sdf-v1",
+          "triangles": 65536,
+          "sdfPrimitives": 128,
+          "seed": 1597463007,
+          "width": 32,
+          "height": 20,
+          "sppPerFrame": 1,
+          "engine": "wavefront",
+          "elapsedMs": 600018.1999999881,
+          "frames": 35274,
+          "cameraKeys": 256,
+          "coverageMin": 127,
+          "replayErrors": 0,
+          "frameTimeP95Ms": 34,
+          "cpuPeak": 12269572,
+          "gpuPeak": 6624112,
+          "heapPeak": 109000000,
+          "residualBytes": 0,
+          "residualBuffers": 0,
+          "allocatedGpuPeak": 6624112,
+          "createdBuffers": 20,
+          "destroyedBuffers": 20,
+          "ledgerResidualBytes": 0,
+          "adapter": {
+            "vendor": "nvidia",
+            "architecture": "ampere",
+            "device": "",
+            "description": ""
+          },
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36",
+          "hardwareQualification": "unqualified-local-stress",
+          "physicalProfilesPending": [
+            "reference-discrete",
+            "reference-integrated"
+          ]
+        },
         "trace-features.json": {
           "varianceReduction": 0.9706364216557043,
           "baseMse": 1063.220312696772,
           "risMse": 31.2199529491182,
           "reuseMse": 4.084821753408268,
           "reuseChanged": true,
-          "guidingUpdates": 904,
+          "guidingUpdates": 1472,
           "guideRestored": true,
           "guideContinuation": true,
           "mediumMean": [
@@ -400,6 +532,60 @@
           "areaMean": 0.4292183742703249,
           "continuationMax": 0
         },
+        "review-regressions.json": {
+          "probes": 567,
+          "invalidLeaves": 0,
+          "refitStable": true,
+          "maxT": 4.76837158203125e-07,
+          "maxBary": 2.384185791015625e-07,
+          "maxOracle": 2.654790878298119e-06,
+          "parity": [
+            {
+              "cpu": 6.258487701416016e-07,
+              "engines": 0,
+              "covered": 110
+            },
+            {
+              "cpu": 8.344650268554688e-07,
+              "engines": 0,
+              "covered": 110
+            }
+          ],
+          "reuseMean": 0.63738227263093,
+          "reuseVarianceRatio": 0.33217298291108766,
+          "reuseExpected": 0.6366197723675814,
+          "absorptionRatio": 0.13469904734408764,
+          "absorptionExpected": 0.1353352832366127,
+          "mediumParity": {
+            "cpu": 3.772560949632723e-06,
+            "engines": 0,
+            "mean": 3.6954938846174628
+          },
+          "positiveMass": 0.9543419596739113,
+          "negativeMass": 0.045658043352887034,
+          "guidingVarianceRatio": 0.1537783018164331,
+          "aovRoundtripError": 0,
+          "visibilityPng": true,
+          "tileCoverage": 187,
+          "guidingParity": 1.3050412569217758e-07,
+          "guidingWeightsError": 1.9574736883727335e-07,
+          "axisError": 0,
+          "residualBuffers": 0,
+          "residualBytes": 0,
+          "createdBuffers": 782,
+          "destroyedBuffers": 782,
+          "peakGpuAllocatedBytes": 4743528,
+          "leakNegativeControl": true
+        },
+        "recovery-compilation.json": {
+          "recovery": "WEBGPU_ADAPTER_UNAVAILABLE",
+          "blocked": "DEVICE_LOST",
+          "recoveryResidual": 0,
+          "loss": "DEVICE_LOST",
+          "created": 10,
+          "destroyed": 10,
+          "residual": 0
+        },
         "trace-sdf-v1.json": {
           "fixtureId": "trace-sdf-v1",
           "triangles": 65536,
@@ -409,6 +595,7 @@
           "expectedTriangleHash": "eabef0a6725f603c3055eed2816eb7390074c95020c6c5121cd098bcd0ca258c",
           "lowerLayerProbes": 64,
           "sdfHitProbes": 128,
+          "sdfOffCenterProbes": 512,
           "rayHash": "28308ab5f030217375a430d37e0f90d0b3d56f7c519a51e5498f047374b102cc",
           "cpuHitHash": "4ec45f30e0e02f690fa72eb18e5b8f07d2379a104035fc0db931e78c8813c136",
           "wasmHitHash": "4ec45f30e0e02f690fa72eb18e5b8f07d2379a104035fc0db931e78c8813c136",
@@ -417,11 +604,11 @@
           "expectedHitHash": "4ec45f30e0e02f690fa72eb18e5b8f07d2379a104035fc0db931e78c8813c136",
           "maxT": 0,
           "maxBary": 0,
-          "maxSdf": 0,
+          "maxSdf": 7.175868188546985e-08,
           "idErrors": 0,
           "analyticErrors": 0,
           "materialErrors": 0,
-          "durationMs": 17831.700000047684,
+          "durationMs": 12396.199999988079,
           "adapter": {
             "vendor": "nvidia",
             "architecture": "ampere",
@@ -434,7 +621,7 @@
             "leafCount": 16384,
             "maxDepth": 14,
             "memoryUsageBytes": 6029264,
-            "buildTimeMs": 183.69999998807907,
+            "buildTimeMs": 132.89999997615814,
             "backend": "webgpu",
             "method": "lbvh"
           },
@@ -444,7 +631,7 @@
             "leafCount": 16384,
             "maxDepth": 14,
             "memoryUsageBytes": 6029264,
-            "buildTimeMs": 890.3999999761581,
+            "buildTimeMs": 314,
             "backend": "cpu",
             "method": "sah"
           }
@@ -482,11 +669,11 @@
     },
     "stress-installed": {
       "rawReport": "docs/parity/w17-runs/stress-installed.json",
-      "rawReportSha256": "3277f0bbe42a915c3879dfb78ca67388909f8193e28f721ddfea16b5f8b9a24b",
+      "rawReportSha256": "8d4dc54b1abbd1ab113e55442efae43612cf5e6084dde5f4d4a19c55384c6730",
       "stats": {
-        "startTime": "2026-10-11T15:21:20.323Z",
-        "duration": 671585.064,
-        "expected": 8,
+        "startTime": "2026-10-11T20:57:17.106Z",
+        "duration": 672684.723,
+        "expected": 10,
         "skipped": 0,
         "unexpected": 0,
         "flaky": 0
@@ -498,7 +685,7 @@
           "results": [
             {
               "status": "passed",
-              "durationMs": 608059
+              "durationMs": 606610
             }
           ]
         },
@@ -508,7 +695,7 @@
           "results": [
             {
               "status": "passed",
-              "durationMs": 11082
+              "durationMs": 12180
             }
           ]
         },
@@ -518,7 +705,27 @@
           "results": [
             {
               "status": "passed",
-              "durationMs": 9456
+              "durationMs": 10195
+            }
+          ]
+        },
+        {
+          "title": "W17 dist: review regressions cover irregular BVHs, lit media, reuse and guiding parity",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 13904
+            }
+          ]
+        },
+        {
+          "title": "W17 dist: failed recovery and device loss during compilation release real buffers",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1184
             }
           ]
         },
@@ -528,7 +735,7 @@
           "results": [
             {
               "status": "passed",
-              "durationMs": 18264
+              "durationMs": 13627
             }
           ]
         },
@@ -538,7 +745,7 @@
           "results": [
             {
               "status": "passed",
-              "durationMs": 1839
+              "durationMs": 846
             }
           ]
         },
@@ -548,7 +755,7 @@
           "results": [
             {
               "status": "passed",
-              "durationMs": 2155
+              "durationMs": 1021
             }
           ]
         },
@@ -558,7 +765,7 @@
           "results": [
             {
               "status": "passed",
-              "durationMs": 11908
+              "durationMs": 9423
             }
           ]
         },
@@ -568,7 +775,7 @@
           "results": [
             {
               "status": "passed",
-              "durationMs": 7054
+              "durationMs": 2757
             }
           ]
         }
@@ -583,16 +790,21 @@
           "height": 20,
           "sppPerFrame": 1,
           "engine": "wavefront",
-          "elapsedMs": 600019.1999999881,
-          "frames": 30842,
+          "elapsedMs": 600018.1999999881,
+          "frames": 35274,
           "cameraKeys": 256,
           "coverageMin": 127,
           "replayErrors": 0,
-          "frameTimeP95Ms": 36.19999998807907,
+          "frameTimeP95Ms": 34,
           "cpuPeak": 12269572,
           "gpuPeak": 6624112,
-          "heapPeak": 60300000,
+          "heapPeak": 109000000,
           "residualBytes": 0,
+          "residualBuffers": 0,
+          "allocatedGpuPeak": 6624112,
+          "createdBuffers": 20,
+          "destroyedBuffers": 20,
+          "ledgerResidualBytes": 0,
           "adapter": {
             "vendor": "nvidia",
             "architecture": "ampere",
@@ -612,7 +824,7 @@
           "risMse": 31.2199529491182,
           "reuseMse": 4.084821753408268,
           "reuseChanged": true,
-          "guidingUpdates": 904,
+          "guidingUpdates": 1472,
           "guideRestored": true,
           "guideContinuation": true,
           "mediumMean": [
@@ -650,8 +862,63 @@
             }
           ],
           "anisotropyChangesImage": true,
+          "zeroRoughness": true,
           "areaMean": 0.4292183742703249,
           "continuationMax": 0
+        },
+        "review-regressions.json": {
+          "probes": 567,
+          "invalidLeaves": 0,
+          "refitStable": true,
+          "maxT": 4.76837158203125e-07,
+          "maxBary": 2.384185791015625e-07,
+          "maxOracle": 2.654790878298119e-06,
+          "parity": [
+            {
+              "cpu": 6.258487701416016e-07,
+              "engines": 0,
+              "covered": 110
+            },
+            {
+              "cpu": 8.344650268554688e-07,
+              "engines": 0,
+              "covered": 110
+            }
+          ],
+          "reuseMean": 0.63738227263093,
+          "reuseVarianceRatio": 0.33217298291108766,
+          "reuseExpected": 0.6366197723675814,
+          "absorptionRatio": 0.13469904734408764,
+          "absorptionExpected": 0.1353352832366127,
+          "mediumParity": {
+            "cpu": 3.772560949632723e-06,
+            "engines": 0,
+            "mean": 3.6954938846174628
+          },
+          "positiveMass": 0.9543419596739113,
+          "negativeMass": 0.045658043352887034,
+          "guidingVarianceRatio": 0.1537783018164331,
+          "aovRoundtripError": 0,
+          "visibilityPng": true,
+          "tileCoverage": 187,
+          "guidingParity": 1.3050412569217758e-07,
+          "guidingWeightsError": 1.9574736883727335e-07,
+          "axisError": 0,
+          "residualBuffers": 0,
+          "residualBytes": 0,
+          "createdBuffers": 782,
+          "destroyedBuffers": 782,
+          "peakGpuAllocatedBytes": 4743528,
+          "leakNegativeControl": true
+        },
+        "recovery-compilation.json": {
+          "recovery": "WEBGPU_ADAPTER_UNAVAILABLE",
+          "blocked": "DEVICE_LOST",
+          "recoveryResidual": 0,
+          "loss": "DEVICE_LOST",
+          "created": 10,
+          "destroyed": 10,
+          "residual": 0
         },
         "trace-sdf-v1.json": {
           "fixtureId": "trace-sdf-v1",
@@ -662,6 +929,7 @@
           "expectedTriangleHash": "eabef0a6725f603c3055eed2816eb7390074c95020c6c5121cd098bcd0ca258c",
           "lowerLayerProbes": 64,
           "sdfHitProbes": 128,
+          "sdfOffCenterProbes": 512,
           "rayHash": "28308ab5f030217375a430d37e0f90d0b3d56f7c519a51e5498f047374b102cc",
           "cpuHitHash": "4ec45f30e0e02f690fa72eb18e5b8f07d2379a104035fc0db931e78c8813c136",
           "wasmHitHash": "4ec45f30e0e02f690fa72eb18e5b8f07d2379a104035fc0db931e78c8813c136",
@@ -670,11 +938,11 @@
           "expectedHitHash": "4ec45f30e0e02f690fa72eb18e5b8f07d2379a104035fc0db931e78c8813c136",
           "maxT": 0,
           "maxBary": 0,
-          "maxSdf": 0,
+          "maxSdf": 7.175868188546985e-08,
           "idErrors": 0,
           "analyticErrors": 0,
           "materialErrors": 0,
-          "durationMs": 14930.599999964237,
+          "durationMs": 12396.199999988079,
           "adapter": {
             "vendor": "nvidia",
             "architecture": "ampere",
@@ -687,7 +955,7 @@
             "leafCount": 16384,
             "maxDepth": 14,
             "memoryUsageBytes": 6029264,
-            "buildTimeMs": 195.70000004768372,
+            "buildTimeMs": 132.89999997615814,
             "backend": "webgpu",
             "method": "lbvh"
           },
@@ -697,7 +965,7 @@
             "leafCount": 16384,
             "maxDepth": 14,
             "memoryUsageBytes": 6029264,
-            "buildTimeMs": 666.8999999761581,
+            "buildTimeMs": 314,
             "backend": "cpu",
             "method": "sah"
           }
@@ -751,7 +1019,7 @@
     {
       "command": "node node_modules/vitest/vitest.mjs run --maxWorkers=2",
       "filesPassed": 68,
-      "passed": 1139
+      "passed": 1148
     },
     {
       "command": "npm run test:infrastructure",
@@ -777,16 +1045,16 @@
     {
       "command": "wasm-pack build (CARGO_TARGET_DIR=C:/devin-target/forge3d-web)",
       "status": "passed"
+    },
+    {
+      "command": "Compare frozen manifest entries with their recorded native Git objects",
+      "status": "passed",
+      "files": 99
     }
   ],
   "stressScope": {
-    "testedRevision": "566e6f29d121471889cb96c921cc51267e18a1d0",
-    "note": "The 600-second run predates the final zero-roughness boundary and asynchronous mutation/disposal fixes. The final revision passed all seven installed functional checks, including the new boundaries and GPU buffer lifetime checks. Shader sources are identical between the stress and final revisions.",
-    "unchangedShaderSha256": {
-      "crates/forge3d-web/src-ts/trace-wgsl.ts": "bcbbab3a408e6599cf6da42274349d65c58f65f3735c8e26966a66c555337ddd",
-      "crates/forge3d-web/src-ts/bvh-gpu.ts": "6858cab8669a149c4d3e956bba8100256355785d6e5f1f79ce9aa568b8ac405b",
-      "crates/forge3d-web/src-ts/trace-compute.ts": "31de9ae2b0e904b48b298a0863098af4a6bf7dc06eb38644d2cc16adaaa05ccc"
-    }
+    "testedRevision": "8171a0dd5a7e6edca12cf83244576763b115ec0d",
+    "note": "Functional installed checks and the 600-second stress use the same committed package/code revision. Local viewport remains 32x20, with real GPU allocation/destruction tracking."
   },
   "hardwareQualification": {
     "status": "not-qualified",
@@ -810,16 +1078,68 @@
   },
   "resolvedChecks": [
     {
-      "issue": "Playwright configuration was placed inside its cleaned output directory.",
-      "resolution": "Configuration moved to the temporary consumer directory; installed gates passed."
+      "issue": "Guiding variance became unstable during early online training.",
+      "resolution": "Continuation-radiance training retains the inverse-PDF weight and adds 20% uniform exploration; trained variance regression passes."
     },
     {
-      "issue": "New curved-surface specular comparison exceeded the 0.001 tolerance (maximum 0.003262758).",
-      "resolution": "Analytic single-sphere/plane normals remove finite-difference cancellation; original tolerance passes."
+      "issue": "Reused estimates were biased by selected-light age expiry.",
+      "resolution": "Compatible zero-weight trials retain their counts; deterministic sample-window expiry passes the independent seed ensemble."
     },
     {
-      "issue": "Existing W16 LAZ admission test exceeded its 5-second deadline during concurrent testing.",
-      "resolution": "The complete unit suite passed with two workers and unchanged W16 code."
+      "issue": "Browser adapters were reused after consuming their one device request.",
+      "resolution": "The lifecycle harness requests fresh adapters for each new device."
     }
-  ]
+  ],
+  "reviewFixes": "docs/parity/w17-review-fixes.md",
+  "reviewRegressions": {
+    "probes": 567,
+    "invalidLeaves": 0,
+    "refitStable": true,
+    "maxT": 4.76837158203125e-07,
+    "maxBary": 2.384185791015625e-07,
+    "maxOracle": 2.654790878298119e-06,
+    "parity": [
+      {
+        "cpu": 6.258487701416016e-07,
+        "engines": 0,
+        "covered": 110
+      },
+      {
+        "cpu": 8.344650268554688e-07,
+        "engines": 0,
+        "covered": 110
+      }
+    ],
+    "reuseMean": 0.63738227263093,
+    "reuseVarianceRatio": 0.33217298291108766,
+    "reuseExpected": 0.6366197723675814,
+    "absorptionRatio": 0.13469904734408764,
+    "absorptionExpected": 0.1353352832366127,
+    "mediumParity": {
+      "cpu": 3.772560949632723e-06,
+      "engines": 0,
+      "mean": 3.6954938846174628
+    },
+    "positiveMass": 0.9543419596739113,
+    "negativeMass": 0.045658043352887034,
+    "guidingVarianceRatio": 0.1537783018164331,
+    "aovRoundtripError": 0,
+    "visibilityPng": true,
+    "tileCoverage": 187,
+    "guidingParity": 1.3050412569217758e-07,
+    "guidingWeightsError": 1.9574736883727335e-07,
+    "axisError": 0,
+    "residualBuffers": 0,
+    "residualBytes": 0,
+    "createdBuffers": 782,
+    "destroyedBuffers": 782,
+    "peakGpuAllocatedBytes": 4743528,
+    "leakNegativeControl": true
+  },
+  "previousVerification": {
+    "functionalRevision": "e456ff6f04f1dfb9992f1f3c1eccfb6bda1ceed2",
+    "stressRevision": "566e6f29d121471889cb96c921cc51267e18a1d0",
+    "evidenceCommit": "ab5e331",
+    "note": "Historical reports remain available in Git at the evidence commit; current reports replace those observations."
+  }
 }

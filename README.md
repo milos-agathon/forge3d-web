@@ -88,4 +88,4 @@ Apache-2.0 OR MIT.
 Geometry, mesh processing, OBJ/STL/glTF, image/HDR IO and building layers: [browser guide](crates/forge3d-web/docs/geometry-mesh-io.md).
 
 BVH/LBVH, SDF/CSG and progressive WebGPU path tracing: [browser guide](crates/forge3d-web/docs/tracing.md).
-Measured W17 checks, tested revisions and package digests: [local evidence](docs/parity/w17-local-evidence.json).
+Measured W17 checks, tested revisions and package digests: [local evidence](docs/parity/w17-local-evidence.json). Corrections and regression coverage: [W17 review fixes](docs/parity/w17-review-fixes.md).

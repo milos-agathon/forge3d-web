@@ -1,6 +1,6 @@
 {
   "config": {
-    "configFile": "D:\\forge3d\\cache\\tmp\\forge3d-w17-consumer-8WgBdK\\w17-package.config.mts",
+    "configFile": "D:\\forge3d\\cache\\tmp\\forge3d-w17-consumer-wtSRVG\\w17-package.config.mts",
     "rootDir": "D:/forge3d-web/.worktrees/w17/crates/forge3d-web/tests/playwright",
     "forbidOnly": false,
     "fullyParallel": false,
@@ -190,70 +190,70 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 608059,
+                  "duration": 606610,
                   "errors": [],
                   "stdout": [
                     {
-                      "text": "W17 soak 30s, 1512 frames\n"
+                      "text": "W17 soak 30s, 1712 frames\n"
                     },
                     {
-                      "text": "W17 soak 60s, 3031 frames\n"
+                      "text": "W17 soak 60s, 3466 frames\n"
                     },
                     {
-                      "text": "W17 soak 90s, 4559 frames\n"
+                      "text": "W17 soak 90s, 5236 frames\n"
                     },
                     {
-                      "text": "W17 soak 120s, 6092 frames\n"
+                      "text": "W17 soak 120s, 6998 frames\n"
                     },
                     {
-                      "text": "W17 soak 150s, 7624 frames\n"
+                      "text": "W17 soak 150s, 8754 frames\n"
                     },
                     {
-                      "text": "W17 soak 180s, 9154 frames\n"
+                      "text": "W17 soak 180s, 10516 frames\n"
                     },
                     {
-                      "text": "W17 soak 210s, 10695 frames\n"
+                      "text": "W17 soak 210s, 12282 frames\n"
                     },
                     {
-                      "text": "W17 soak 240s, 12232 frames\n"
+                      "text": "W17 soak 240s, 14054 frames\n"
                     },
                     {
-                      "text": "W17 soak 270s, 13758 frames\n"
+                      "text": "W17 soak 270s, 15832 frames\n"
                     },
                     {
-                      "text": "W17 soak 300s, 15302 frames\n"
+                      "text": "W17 soak 300s, 17607 frames\n"
                     },
                     {
-                      "text": "W17 soak 330s, 16854 frames\n"
+                      "text": "W17 soak 330s, 19394 frames\n"
                     },
                     {
-                      "text": "W17 soak 360s, 18402 frames\n"
+                      "text": "W17 soak 360s, 21180 frames\n"
                     },
                     {
-                      "text": "W17 soak 390s, 19959 frames\n"
+                      "text": "W17 soak 390s, 22954 frames\n"
                     },
                     {
-                      "text": "W17 soak 420s, 21500 frames\n"
+                      "text": "W17 soak 420s, 24734 frames\n"
                     },
                     {
-                      "text": "W17 soak 450s, 23058 frames\n"
+                      "text": "W17 soak 450s, 26510 frames\n"
                     },
                     {
-                      "text": "W17 soak 480s, 24630 frames\n"
+                      "text": "W17 soak 480s, 28225 frames\n"
                     },
                     {
-                      "text": "W17 soak 510s, 26194 frames\n"
+                      "text": "W17 soak 510s, 29946 frames\n"
                     },
                     {
-                      "text": "W17 soak 540s, 27756 frames\n"
+                      "text": "W17 soak 540s, 31722 frames\n"
                     },
                     {
-                      "text": "W17 soak 570s, 29308 frames\n"
+                      "text": "W17 soak 570s, 33503 frames\n"
                     }
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-11T15:21:21.372Z",
+                  "startTime": "2026-10-11T20:57:17.660Z",
                   "annotations": [],
                   "attachments": [
                     {
@@ -264,7 +264,7 @@
                     {
                       "name": "trace-soak.json",
                       "contentType": "application/json",
-                      "body": "ewogICJmaXh0dXJlSWQiOiAidHJhY2Utc2RmLXYxIiwKICAidHJpYW5nbGVzIjogNjU1MzYsCiAgInNkZlByaW1pdGl2ZXMiOiAxMjgsCiAgInNlZWQiOiAxNTk3NDYzMDA3LAogICJ3aWR0aCI6IDMyLAogICJoZWlnaHQiOiAyMCwKICAic3BwUGVyRnJhbWUiOiAxLAogICJlbmdpbmUiOiAid2F2ZWZyb250IiwKICAiZWxhcHNlZE1zIjogNjAwMDE5LjE5OTk5OTk4ODEsCiAgImZyYW1lcyI6IDMwODQyLAogICJjYW1lcmFLZXlzIjogMjU2LAogICJjb3ZlcmFnZU1pbiI6IDEyNywKICAicmVwbGF5RXJyb3JzIjogMCwKICAiZnJhbWVUaW1lUDk1TXMiOiAzNi4xOTk5OTk5ODgwNzkwNywKICAiY3B1UGVhayI6IDEyMjY5NTcyLAogICJncHVQZWFrIjogNjYyNDExMiwKICAiaGVhcFBlYWsiOiA2MDMwMDAwMCwKICAicmVzaWR1YWxCeXRlcyI6IDAsCiAgImFkYXB0ZXIiOiB7CiAgICAidmVuZG9yIjogIm52aWRpYSIsCiAgICAiYXJjaGl0ZWN0dXJlIjogImFtcGVyZSIsCiAgICAiZGV2aWNlIjogIiIsCiAgICAiZGVzY3JpcHRpb24iOiAiIgogIH0sCiAgInVzZXJBZ2VudCI6ICJNb3ppbGxhLzUuMCAoV2luZG93cyBOVCAxMC4wOyBXaW42NDsgeDY0KSBBcHBsZVdlYktpdC81MzcuMzYgKEtIVE1MLCBsaWtlIEdlY2tvKSBIZWFkbGVzc0Nocm9tZS8xNDguMC43Nzc4Ljk2IFNhZmFyaS81MzcuMzYiLAogICJoYXJkd2FyZVF1YWxpZmljYXRpb24iOiAidW5xdWFsaWZpZWQtbG9jYWwtc3RyZXNzIiwKICAicGh5c2ljYWxQcm9maWxlc1BlbmRpbmciOiBbCiAgICAicmVmZXJlbmNlLWRpc2NyZXRlIiwKICAgICJyZWZlcmVuY2UtaW50ZWdyYXRlZCIKICBdCn0="
+                      "body": "ewogICJmaXh0dXJlSWQiOiAidHJhY2Utc2RmLXYxIiwKICAidHJpYW5nbGVzIjogNjU1MzYsCiAgInNkZlByaW1pdGl2ZXMiOiAxMjgsCiAgInNlZWQiOiAxNTk3NDYzMDA3LAogICJ3aWR0aCI6IDMyLAogICJoZWlnaHQiOiAyMCwKICAic3BwUGVyRnJhbWUiOiAxLAogICJlbmdpbmUiOiAid2F2ZWZyb250IiwKICAiZWxhcHNlZE1zIjogNjAwMDE4LjE5OTk5OTk4ODEsCiAgImZyYW1lcyI6IDM1Mjc0LAogICJjYW1lcmFLZXlzIjogMjU2LAogICJjb3ZlcmFnZU1pbiI6IDEyNywKICAicmVwbGF5RXJyb3JzIjogMCwKICAiZnJhbWVUaW1lUDk1TXMiOiAzNCwKICAiY3B1UGVhayI6IDEyMjY5NTcyLAogICJncHVQZWFrIjogNjYyNDExMiwKICAiaGVhcFBlYWsiOiAxMDkwMDAwMDAsCiAgInJlc2lkdWFsQnl0ZXMiOiAwLAogICJyZXNpZHVhbEJ1ZmZlcnMiOiAwLAogICJhbGxvY2F0ZWRHcHVQZWFrIjogNjYyNDExMiwKICAiY3JlYXRlZEJ1ZmZlcnMiOiAyMCwKICAiZGVzdHJveWVkQnVmZmVycyI6IDIwLAogICJsZWRnZXJSZXNpZHVhbEJ5dGVzIjogMCwKICAiYWRhcHRlciI6IHsKICAgICJ2ZW5kb3IiOiAibnZpZGlhIiwKICAgICJhcmNoaXRlY3R1cmUiOiAiYW1wZXJlIiwKICAgICJkZXZpY2UiOiAiIiwKICAgICJkZXNjcmlwdGlvbiI6ICIiCiAgfSwKICAidXNlckFnZW50IjogIk1vemlsbGEvNS4wIChXaW5kb3dzIE5UIDEwLjA7IFdpbjY0OyB4NjQpIEFwcGxlV2ViS2l0LzUzNy4zNiAoS0hUTUwsIGxpa2UgR2Vja28pIEhlYWRsZXNzQ2hyb21lLzE0OC4wLjc3NzguOTYgU2FmYXJpLzUzNy4zNiIsCiAgImhhcmR3YXJlUXVhbGlmaWNhdGlvbiI6ICJ1bnF1YWxpZmllZC1sb2NhbC1zdHJlc3MiLAogICJwaHlzaWNhbFByb2ZpbGVzUGVuZGluZyI6IFsKICAgICJyZWZlcmVuY2UtZGlzY3JldGUiLAogICAgInJlZmVyZW5jZS1pbnRlZ3JhdGVkIgogIF0KfQ=="
                     }
                   ]
                 }
@@ -293,12 +293,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 11082,
+                  "duration": 12180,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-11T15:31:29.706Z",
+                  "startTime": "2026-10-11T21:07:24.399Z",
                   "annotations": [],
                   "attachments": [
                     {
@@ -319,7 +319,7 @@
           ],
           "id": "54eb2effa5a4fa14b124-0735889fec2168535a96",
           "file": "w17_tracing.spec.ts",
-          "line": 43,
+          "line": 45,
           "column": 3
         },
         {
@@ -338,12 +338,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 9456,
+                  "duration": 10195,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-11T15:31:40.815Z",
+                  "startTime": "2026-10-11T21:07:36.598Z",
                   "annotations": [],
                   "attachments": [
                     {
@@ -354,7 +354,7 @@
                     {
                       "name": "trace-features.json",
                       "contentType": "application/json",
-                      "body": "ewogICJ2YXJpYW5jZVJlZHVjdGlvbiI6IDAuOTcwNjM2NDIxNjU1NzA0MywKICAiYmFzZU1zZSI6IDEwNjMuMjIwMzEyNjk2NzcyLAogICJyaXNNc2UiOiAzMS4yMTk5NTI5NDkxMTgyLAogICJyZXVzZU1zZSI6IDQuMDg0ODIxNzUzNDA4MjY4LAogICJyZXVzZUNoYW5nZWQiOiB0cnVlLAogICJndWlkaW5nVXBkYXRlcyI6IDkwNCwKICAiZ3VpZGVSZXN0b3JlZCI6IHRydWUsCiAgImd1aWRlQ29udGludWF0aW9uIjogdHJ1ZSwKICAibWVkaXVtTWVhbiI6IFsKICAgIDAuNjY5Njg2MzYyNjEyOTkyNSwKICAgIDAuNDQ4ODk5NTk0NjAxMjQzNzMsCiAgICAwLjMwMDkwMzMyMDMxMjUKICBdLAogICJtZWRpdW1FeHBlY3RlZCI6IFsKICAgIDAuNjcwMzIwMDQ2MDM1NjM5MywKICAgIDAuNDQ5MzI4OTY0MTE3MjIxNTYsCiAgICAwLjMwMTE5NDIxMTkxMjIwMjEKICBdLAogICJjbGFtcE1heCI6IDIsCiAgIm1hdGVyaWFscyI6IFsKICAgIHsKICAgICAgInNhbWUiOiB0cnVlLAogICAgICAiZmluaXRlIjogdHJ1ZSwKICAgICAgImNvdmVyZWQiOiA1MiwKICAgICAgImNwdVJlbGF0aXZlRXJyb3IiOiAwLjAwMDAyMjA1MzcxODU2Njg5NDUzLAogICAgICAiZGlyZWN0TWF4IjogMC41OTkxMTYwODY5NTk4Mzg5CiAgICB9LAogICAgewogICAgICAic2FtZSI6IHRydWUsCiAgICAgICJmaW5pdGUiOiB0cnVlLAogICAgICAiY292ZXJlZCI6IDUyLAogICAgICAiY3B1UmVsYXRpdmVFcnJvciI6IDEuMTkyMDkyODk1NTA3ODEyNWUtNywKICAgICAgImRpcmVjdE1heCI6IDAKICAgIH0sCiAgICB7CiAgICAgICJzYW1lIjogdHJ1ZSwKICAgICAgImZpbml0ZSI6IHRydWUsCiAgICAgICJjb3ZlcmVkIjogNTIsCiAgICAgICJjcHVSZWxhdGl2ZUVycm9yIjogOC4xMjExMzI4NTA2NDY5NzNlLTcsCiAgICAgICJkaXJlY3RNYXgiOiAwLjY5ODg1NjE3NDk0NTgzMTMKICAgIH0KICBdLAogICJhbmlzb3Ryb3B5Q2hhbmdlc0ltYWdlIjogdHJ1ZSwKICAiYXJlYU1lYW4iOiAwLjQyOTIxODM3NDI3MDMyNDksCiAgImNvbnRpbnVhdGlvbk1heCI6IDAKfQ=="
+                      "body": "ewogICJ2YXJpYW5jZVJlZHVjdGlvbiI6IDAuOTcwNjM2NDIxNjU1NzA0MywKICAiYmFzZU1zZSI6IDEwNjMuMjIwMzEyNjk2NzcyLAogICJyaXNNc2UiOiAzMS4yMTk5NTI5NDkxMTgyLAogICJyZXVzZU1zZSI6IDQuMDg0ODIxNzUzNDA4MjY4LAogICJyZXVzZUNoYW5nZWQiOiB0cnVlLAogICJndWlkaW5nVXBkYXRlcyI6IDE0NzIsCiAgImd1aWRlUmVzdG9yZWQiOiB0cnVlLAogICJndWlkZUNvbnRpbnVhdGlvbiI6IHRydWUsCiAgIm1lZGl1bU1lYW4iOiBbCiAgICAwLjY2OTY4NjM2MjYxMjk5MjUsCiAgICAwLjQ0ODg5OTU5NDYwMTI0MzczLAogICAgMC4zMDA5MDMzMjAzMTI1CiAgXSwKICAibWVkaXVtRXhwZWN0ZWQiOiBbCiAgICAwLjY3MDMyMDA0NjAzNTYzOTMsCiAgICAwLjQ0OTMyODk2NDExNzIyMTU2LAogICAgMC4zMDExOTQyMTE5MTIyMDIxCiAgXSwKICAiY2xhbXBNYXgiOiAyLAogICJtYXRlcmlhbHMiOiBbCiAgICB7CiAgICAgICJzYW1lIjogdHJ1ZSwKICAgICAgImZpbml0ZSI6IHRydWUsCiAgICAgICJjb3ZlcmVkIjogNTIsCiAgICAgICJjcHVSZWxhdGl2ZUVycm9yIjogMC4wMDAwMjIwNTM3MTg1NjY4OTQ1MywKICAgICAgImRpcmVjdE1heCI6IDAuNTk5MTE2MDg2OTU5ODM4OQogICAgfSwKICAgIHsKICAgICAgInNhbWUiOiB0cnVlLAogICAgICAiZmluaXRlIjogdHJ1ZSwKICAgICAgImNvdmVyZWQiOiA1MiwKICAgICAgImNwdVJlbGF0aXZlRXJyb3IiOiAxLjE5MjA5Mjg5NTUwNzgxMjVlLTcsCiAgICAgICJkaXJlY3RNYXgiOiAwCiAgICB9LAogICAgewogICAgICAic2FtZSI6IHRydWUsCiAgICAgICJmaW5pdGUiOiB0cnVlLAogICAgICAiY292ZXJlZCI6IDUyLAogICAgICAiY3B1UmVsYXRpdmVFcnJvciI6IDguMTIxMTMyODUwNjQ2OTczZS03LAogICAgICAiZGlyZWN0TWF4IjogMC42OTg4NTYxNzQ5NDU4MzEzCiAgICB9CiAgXSwKICAiYW5pc290cm9weUNoYW5nZXNJbWFnZSI6IHRydWUsCiAgInplcm9Sb3VnaG5lc3MiOiB0cnVlLAogICJhcmVhTWVhbiI6IDAuNDI5MjE4Mzc0MjcwMzI0OSwKICAiY29udGludWF0aW9uTWF4IjogMAp9"
                     }
                   ]
                 }
@@ -364,7 +364,97 @@
           ],
           "id": "54eb2effa5a4fa14b124-63f1ad11ea256c32b358",
           "file": "w17_tracing.spec.ts",
-          "line": 71,
+          "line": 73,
+          "column": 3
+        },
+        {
+          "title": "W17 dist: review regressions cover irregular BVHs, lit media, reuse and guiding parity",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 240000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium-preflight",
+              "projectName": "chromium-preflight",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 13904,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-11T21:07:46.806Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "forge3d-webgpu-probe.json",
+                      "contentType": "application/json",
+                      "body": "ewogICJwcm9qZWN0IjogewogICAgInByb2plY3QiOiAiY2hyb21pdW0tcHJlZmxpZ2h0IiwKICAgICJicm93c2VyTmFtZSI6ICJjaHJvbWl1bSIsCiAgICAiY2hhbm5lbCI6ICJwbGF5d3JpZ2h0IiwKICAgICJsYW5lIjogInByZWZsaWdodCIsCiAgICAibGF1bmNoT2JzZXJ2YXRpb24iOiAiY2hyb21pdW0tbGl2ZSIsCiAgICAid2ViZ3B1UmVxdWlyZWQiOiB0cnVlLAogICAgImxhdW5jaEFyZ3MiOiBbCiAgICAgICItLWVuYWJsZS11bnNhZmUtd2ViZ3B1IiwKICAgICAgIi0tdXNlLWFuZ2xlPWQzZDExIgogICAgXQogIH0sCiAgInByb2plY3RQb2xpY3lSZXF1aXJlZCI6IHRydWUsCiAgImFtYmllbnRSZXF1aXJlZCI6IGZhbHNlLAogICJyZXF1aXJlZCI6IHRydWUsCiAgImhhc05hdmlnYXRvckdwdSI6IHRydWUsCiAgImFkYXB0ZXJBdmFpbGFibGUiOiB0cnVlLAogICJzZWN1cmVDb250ZXh0IjogdHJ1ZSwKICAidXNlckFnZW50IjogIk1vemlsbGEvNS4wIChXaW5kb3dzIE5UIDEwLjA7IFdpbjY0OyB4NjQpIEFwcGxlV2ViS2l0LzUzNy4zNiAoS0hUTUwsIGxpa2UgR2Vja28pIEhlYWRsZXNzQ2hyb21lLzE0OC4wLjc3NzguOTYgU2FmYXJpLzUzNy4zNiIKfQ=="
+                    },
+                    {
+                      "name": "review-regressions.json",
+                      "contentType": "application/json",
+                      "body": "ewogICJwcm9iZXMiOiA1NjcsCiAgImludmFsaWRMZWF2ZXMiOiAwLAogICJyZWZpdFN0YWJsZSI6IHRydWUsCiAgIm1heFQiOiA0Ljc2ODM3MTU4MjAzMTI1ZS03LAogICJtYXhCYXJ5IjogMi4zODQxODU3OTEwMTU2MjVlLTcsCiAgIm1heE9yYWNsZSI6IDAuMDAwMDAyNjU0NzkwODc4Mjk4MTE5LAogICJwYXJpdHkiOiBbCiAgICB7CiAgICAgICJjcHUiOiA2LjI1ODQ4NzcwMTQxNjAxNmUtNywKICAgICAgImVuZ2luZXMiOiAwLAogICAgICAiY292ZXJlZCI6IDExMAogICAgfSwKICAgIHsKICAgICAgImNwdSI6IDguMzQ0NjUwMjY4NTU0Njg4ZS03LAogICAgICAiZW5naW5lcyI6IDAsCiAgICAgICJjb3ZlcmVkIjogMTEwCiAgICB9CiAgXSwKICAicmV1c2VNZWFuIjogMC42MzczODIyNzI2MzA5MywKICAicmV1c2VWYXJpYW5jZVJhdGlvIjogMC4zMzIxNzI5ODI5MTEwODc2NiwKICAicmV1c2VFeHBlY3RlZCI6IDAuNjM2NjE5NzcyMzY3NTgxNCwKICAiYWJzb3JwdGlvblJhdGlvIjogMC4xMzQ2OTkwNDczNDQwODc2NCwKICAiYWJzb3JwdGlvbkV4cGVjdGVkIjogMC4xMzUzMzUyODMyMzY2MTI3LAogICJtZWRpdW1QYXJpdHkiOiB7CiAgICAiY3B1IjogMC4wMDAwMDM3NzI1NjA5NDk2MzI3MjMsCiAgICAiZW5naW5lcyI6IDAsCiAgICAibWVhbiI6IDMuNjk1NDkzODg0NjE3NDYyOAogIH0sCiAgInBvc2l0aXZlTWFzcyI6IDAuOTU0MzQxOTU5NjczOTExMywKICAibmVnYXRpdmVNYXNzIjogMC4wNDU2NTgwNDMzNTI4ODcwMzQsCiAgImd1aWRpbmdWYXJpYW5jZVJhdGlvIjogMC4xNTM3NzgzMDE4MTY0MzMxLAogICJhb3ZSb3VuZHRyaXBFcnJvciI6IDAsCiAgInZpc2liaWxpdHlQbmciOiB0cnVlLAogICJ0aWxlQ292ZXJhZ2UiOiAxODcsCiAgImd1aWRpbmdQYXJpdHkiOiAxLjMwNTA0MTI1NjkyMTc3NThlLTcsCiAgImd1aWRpbmdXZWlnaHRzRXJyb3IiOiAxLjk1NzQ3MzY4ODM3MjczMzVlLTcsCiAgImF4aXNFcnJvciI6IDAsCiAgInJlc2lkdWFsQnVmZmVycyI6IDAsCiAgInJlc2lkdWFsQnl0ZXMiOiAwLAogICJjcmVhdGVkQnVmZmVycyI6IDc4MiwKICAiZGVzdHJveWVkQnVmZmVycyI6IDc4MiwKICAicGVha0dwdUFsbG9jYXRlZEJ5dGVzIjogNDc0MzUyOCwKICAibGVha05lZ2F0aXZlQ29udHJvbCI6IHRydWUKfQ=="
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "54eb2effa5a4fa14b124-ae6790abf73b0cc48037",
+          "file": "w17_tracing.spec.ts",
+          "line": 109,
+          "column": 3
+        },
+        {
+          "title": "W17 dist: failed recovery and device loss during compilation release real buffers",
+          "ok": true,
+          "tags": [],
+          "tests": [
+            {
+              "timeout": 120000,
+              "annotations": [],
+              "expectedStatus": "passed",
+              "projectId": "chromium-preflight",
+              "projectName": "chromium-preflight",
+              "results": [
+                {
+                  "workerIndex": 0,
+                  "parallelIndex": 0,
+                  "status": "passed",
+                  "duration": 1184,
+                  "errors": [],
+                  "stdout": [],
+                  "stderr": [],
+                  "retry": 0,
+                  "startTime": "2026-10-11T21:08:00.722Z",
+                  "annotations": [],
+                  "attachments": [
+                    {
+                      "name": "forge3d-webgpu-probe.json",
+                      "contentType": "application/json",
+                      "body": "ewogICJwcm9qZWN0IjogewogICAgInByb2plY3QiOiAiY2hyb21pdW0tcHJlZmxpZ2h0IiwKICAgICJicm93c2VyTmFtZSI6ICJjaHJvbWl1bSIsCiAgICAiY2hhbm5lbCI6ICJwbGF5d3JpZ2h0IiwKICAgICJsYW5lIjogInByZWZsaWdodCIsCiAgICAibGF1bmNoT2JzZXJ2YXRpb24iOiAiY2hyb21pdW0tbGl2ZSIsCiAgICAid2ViZ3B1UmVxdWlyZWQiOiB0cnVlLAogICAgImxhdW5jaEFyZ3MiOiBbCiAgICAgICItLWVuYWJsZS11bnNhZmUtd2ViZ3B1IiwKICAgICAgIi0tdXNlLWFuZ2xlPWQzZDExIgogICAgXQogIH0sCiAgInByb2plY3RQb2xpY3lSZXF1aXJlZCI6IHRydWUsCiAgImFtYmllbnRSZXF1aXJlZCI6IGZhbHNlLAogICJyZXF1aXJlZCI6IHRydWUsCiAgImhhc05hdmlnYXRvckdwdSI6IHRydWUsCiAgImFkYXB0ZXJBdmFpbGFibGUiOiB0cnVlLAogICJzZWN1cmVDb250ZXh0IjogdHJ1ZSwKICAidXNlckFnZW50IjogIk1vemlsbGEvNS4wIChXaW5kb3dzIE5UIDEwLjA7IFdpbjY0OyB4NjQpIEFwcGxlV2ViS2l0LzUzNy4zNiAoS0hUTUwsIGxpa2UgR2Vja28pIEhlYWRsZXNzQ2hyb21lLzE0OC4wLjc3NzguOTYgU2FmYXJpLzUzNy4zNiIKfQ=="
+                    },
+                    {
+                      "name": "recovery-compilation.json",
+                      "contentType": "application/json",
+                      "body": "ewogICJyZWNvdmVyeSI6ICJXRUJHUFVfQURBUFRFUl9VTkFWQUlMQUJMRSIsCiAgImJsb2NrZWQiOiAiREVWSUNFX0xPU1QiLAogICJyZWNvdmVyeVJlc2lkdWFsIjogMCwKICAibG9zcyI6ICJERVZJQ0VfTE9TVCIsCiAgImNyZWF0ZWQiOiAxMCwKICAiZGVzdHJveWVkIjogMTAsCiAgInJlc2lkdWFsIjogMAp9"
+                    }
+                  ]
+                }
+              ],
+              "status": "expected"
+            }
+          ],
+          "id": "54eb2effa5a4fa14b124-dba3cfc8f827326b2c29",
+          "file": "w17_tracing.spec.ts",
+          "line": 156,
           "column": 3
         },
         {
@@ -383,7 +473,7 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 18264,
+                  "duration": 13627,
                   "errors": [],
                   "stdout": [
                     {
@@ -437,7 +527,7 @@
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-11T15:31:50.314Z",
+                  "startTime": "2026-10-11T21:08:01.920Z",
                   "annotations": [],
                   "attachments": [
                     {
@@ -448,7 +538,7 @@
                     {
                       "name": "trace-sdf-v1.json",
                       "contentType": "application/json",
-                      "body": "ewogICJmaXh0dXJlSWQiOiAidHJhY2Utc2RmLXYxIiwKICAidHJpYW5nbGVzIjogNjU1MzYsCiAgInNkZlByaW1pdGl2ZXMiOiAxMjgsCiAgInJheXMiOiAxMDQ4NTc2LAogICJ0cmlhbmdsZUhhc2giOiAiZWFiZWYwYTY3MjVmNjAzYzMwNTVlZWQyODE2ZWI3MzkwMDc0Yzk1MDIwYzZjNTEyMWNkMDk4YmNkMGNhMjU4YyIsCiAgImV4cGVjdGVkVHJpYW5nbGVIYXNoIjogImVhYmVmMGE2NzI1ZjYwM2MzMDU1ZWVkMjgxNmViNzM5MDA3NGM5NTAyMGM2YzUxMjFjZDA5OGJjZDBjYTI1OGMiLAogICJsb3dlckxheWVyUHJvYmVzIjogNjQsCiAgInNkZkhpdFByb2JlcyI6IDEyOCwKICAicmF5SGFzaCI6ICIyODMwOGFiNWYwMzAyMTczNzVhNDMwZDM3ZTBmOTBkMGIzZDU2ZjdjNTE5YTUxZTU0OThmMDQ3Mzc0YjEwMmNjIiwKICAiY3B1SGl0SGFzaCI6ICI0ZWM0NWYzMGUwZTAyZjY5MGZhNzJlYjE4ZTViOGYwN2QyMzc5YTEwNDAzNWZjMGRiOTMxZTc4Yzg4MTNjMTM2IiwKICAid2FzbUhpdEhhc2giOiAiNGVjNDVmMzBlMGUwMmY2OTBmYTcyZWIxOGU1YjhmMDdkMjM3OWExMDQwMzVmYzBkYjkzMWU3OGM4ODEzYzEzNiIsCiAgImdwdUhpdEhhc2giOiAiNGVjNDVmMzBlMGUwMmY2OTBmYTcyZWIxOGU1YjhmMDdkMjM3OWExMDQwMzVmYzBkYjkzMWU3OGM4ODEzYzEzNiIsCiAgImV4cGVjdGVkUmF5SGFzaCI6ICIyODMwOGFiNWYwMzAyMTczNzVhNDMwZDM3ZTBmOTBkMGIzZDU2ZjdjNTE5YTUxZTU0OThmMDQ3Mzc0YjEwMmNjIiwKICAiZXhwZWN0ZWRIaXRIYXNoIjogIjRlYzQ1ZjMwZTBlMDJmNjkwZmE3MmViMThlNWI4ZjA3ZDIzNzlhMTA0MDM1ZmMwZGI5MzFlNzhjODgxM2MxMzYiLAogICJtYXhUIjogMCwKICAibWF4QmFyeSI6IDAsCiAgIm1heFNkZiI6IDAsCiAgImlkRXJyb3JzIjogMCwKICAiYW5hbHl0aWNFcnJvcnMiOiAwLAogICJtYXRlcmlhbEVycm9ycyI6IDAsCiAgImR1cmF0aW9uTXMiOiAxNDkzMC41OTk5OTk5NjQyMzcsCiAgImFkYXB0ZXIiOiB7CiAgICAidmVuZG9yIjogIm52aWRpYSIsCiAgICAiYXJjaGl0ZWN0dXJlIjogImFtcGVyZSIsCiAgICAiZGV2aWNlIjogIiIsCiAgICAiZGVzY3JpcHRpb24iOiAiIgogIH0sCiAgImdwdVRyZWUiOiB7CiAgICAidHJpYW5nbGVDb3VudCI6IDY1NTM2LAogICAgIm5vZGVDb3VudCI6IDMyNzY3LAogICAgImxlYWZDb3VudCI6IDE2Mzg0LAogICAgIm1heERlcHRoIjogMTQsCiAgICAibWVtb3J5VXNhZ2VCeXRlcyI6IDYwMjkyNjQsCiAgICAiYnVpbGRUaW1lTXMiOiAxOTUuNzAwMDAwMDQ3NjgzNzIsCiAgICAiYmFja2VuZCI6ICJ3ZWJncHUiLAogICAgIm1ldGhvZCI6ICJsYnZoIgogIH0sCiAgImNwdVRyZWUiOiB7CiAgICAidHJpYW5nbGVDb3VudCI6IDY1NTM2LAogICAgIm5vZGVDb3VudCI6IDMyNzY3LAogICAgImxlYWZDb3VudCI6IDE2Mzg0LAogICAgIm1heERlcHRoIjogMTQsCiAgICAibWVtb3J5VXNhZ2VCeXRlcyI6IDYwMjkyNjQsCiAgICAiYnVpbGRUaW1lTXMiOiA2NjYuODk5OTk5OTc2MTU4MSwKICAgICJiYWNrZW5kIjogImNwdSIsCiAgICAibWV0aG9kIjogInNhaCIKICB9Cn0="
+                      "body": "ewogICJmaXh0dXJlSWQiOiAidHJhY2Utc2RmLXYxIiwKICAidHJpYW5nbGVzIjogNjU1MzYsCiAgInNkZlByaW1pdGl2ZXMiOiAxMjgsCiAgInJheXMiOiAxMDQ4NTc2LAogICJ0cmlhbmdsZUhhc2giOiAiZWFiZWYwYTY3MjVmNjAzYzMwNTVlZWQyODE2ZWI3MzkwMDc0Yzk1MDIwYzZjNTEyMWNkMDk4YmNkMGNhMjU4YyIsCiAgImV4cGVjdGVkVHJpYW5nbGVIYXNoIjogImVhYmVmMGE2NzI1ZjYwM2MzMDU1ZWVkMjgxNmViNzM5MDA3NGM5NTAyMGM2YzUxMjFjZDA5OGJjZDBjYTI1OGMiLAogICJsb3dlckxheWVyUHJvYmVzIjogNjQsCiAgInNkZkhpdFByb2JlcyI6IDEyOCwKICAic2RmT2ZmQ2VudGVyUHJvYmVzIjogNTEyLAogICJyYXlIYXNoIjogIjI4MzA4YWI1ZjAzMDIxNzM3NWE0MzBkMzdlMGY5MGQwYjNkNTZmN2M1MTlhNTFlNTQ5OGYwNDczNzRiMTAyY2MiLAogICJjcHVIaXRIYXNoIjogIjRlYzQ1ZjMwZTBlMDJmNjkwZmE3MmViMThlNWI4ZjA3ZDIzNzlhMTA0MDM1ZmMwZGI5MzFlNzhjODgxM2MxMzYiLAogICJ3YXNtSGl0SGFzaCI6ICI0ZWM0NWYzMGUwZTAyZjY5MGZhNzJlYjE4ZTViOGYwN2QyMzc5YTEwNDAzNWZjMGRiOTMxZTc4Yzg4MTNjMTM2IiwKICAiZ3B1SGl0SGFzaCI6ICI0ZWM0NWYzMGUwZTAyZjY5MGZhNzJlYjE4ZTViOGYwN2QyMzc5YTEwNDAzNWZjMGRiOTMxZTc4Yzg4MTNjMTM2IiwKICAiZXhwZWN0ZWRSYXlIYXNoIjogIjI4MzA4YWI1ZjAzMDIxNzM3NWE0MzBkMzdlMGY5MGQwYjNkNTZmN2M1MTlhNTFlNTQ5OGYwNDczNzRiMTAyY2MiLAogICJleHBlY3RlZEhpdEhhc2giOiAiNGVjNDVmMzBlMGUwMmY2OTBmYTcyZWIxOGU1YjhmMDdkMjM3OWExMDQwMzVmYzBkYjkzMWU3OGM4ODEzYzEzNiIsCiAgIm1heFQiOiAwLAogICJtYXhCYXJ5IjogMCwKICAibWF4U2RmIjogNy4xNzU4NjgxODg1NDY5ODVlLTgsCiAgImlkRXJyb3JzIjogMCwKICAiYW5hbHl0aWNFcnJvcnMiOiAwLAogICJtYXRlcmlhbEVycm9ycyI6IDAsCiAgImR1cmF0aW9uTXMiOiAxMjM5Ni4xOTk5OTk5ODgwNzksCiAgImFkYXB0ZXIiOiB7CiAgICAidmVuZG9yIjogIm52aWRpYSIsCiAgICAiYXJjaGl0ZWN0dXJlIjogImFtcGVyZSIsCiAgICAiZGV2aWNlIjogIiIsCiAgICAiZGVzY3JpcHRpb24iOiAiIgogIH0sCiAgImdwdVRyZWUiOiB7CiAgICAidHJpYW5nbGVDb3VudCI6IDY1NTM2LAogICAgIm5vZGVDb3VudCI6IDMyNzY3LAogICAgImxlYWZDb3VudCI6IDE2Mzg0LAogICAgIm1heERlcHRoIjogMTQsCiAgICAibWVtb3J5VXNhZ2VCeXRlcyI6IDYwMjkyNjQsCiAgICAiYnVpbGRUaW1lTXMiOiAxMzIuODk5OTk5OTc2MTU4MTQsCiAgICAiYmFja2VuZCI6ICJ3ZWJncHUiLAogICAgIm1ldGhvZCI6ICJsYnZoIgogIH0sCiAgImNwdVRyZWUiOiB7CiAgICAidHJpYW5nbGVDb3VudCI6IDY1NTM2LAogICAgIm5vZGVDb3VudCI6IDMyNzY3LAogICAgImxlYWZDb3VudCI6IDE2Mzg0LAogICAgIm1heERlcHRoIjogMTQsCiAgICAibWVtb3J5VXNhZ2VCeXRlcyI6IDYwMjkyNjQsCiAgICAiYnVpbGRUaW1lTXMiOiAzMTQsCiAgICAiYmFja2VuZCI6ICJjcHUiLAogICAgIm1ldGhvZCI6ICJzYWgiCiAgfQp9"
                     }
                   ]
                 }
@@ -458,7 +548,7 @@
           ],
           "id": "54eb2effa5a4fa14b124-7f243f0b8140f6b44f46",
           "file": "w17_tracing.spec.ts",
-          "line": 106,
+          "line": 252,
           "column": 3
         },
         {
@@ -477,12 +567,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 1839,
+                  "duration": 846,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-11T15:32:08.611Z",
+                  "startTime": "2026-10-11T21:08:15.563Z",
                   "annotations": [],
                   "attachments": [
                     {
@@ -498,7 +588,7 @@
           ],
           "id": "54eb2effa5a4fa14b124-3664c73ef2d4072b0c01",
           "file": "w17_tracing.spec.ts",
-          "line": 136,
+          "line": 283,
           "column": 3
         },
         {
@@ -517,12 +607,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 2155,
+                  "duration": 1021,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-11T15:32:10.470Z",
+                  "startTime": "2026-10-11T21:08:16.421Z",
                   "annotations": [],
                   "attachments": [
                     {
@@ -538,7 +628,7 @@
           ],
           "id": "54eb2effa5a4fa14b124-9a7b89dded2e7e7f6d77",
           "file": "w17_tracing.spec.ts",
-          "line": 210,
+          "line": 357,
           "column": 3
         },
         {
@@ -557,7 +647,7 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 11908,
+                  "duration": 9423,
                   "errors": [],
                   "stdout": [
                     {
@@ -587,7 +677,7 @@
                   ],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-11T15:32:12.648Z",
+                  "startTime": "2026-10-11T21:08:17.455Z",
                   "annotations": [],
                   "attachments": [
                     {
@@ -608,7 +698,7 @@
           ],
           "id": "54eb2effa5a4fa14b124-ea10a52d74fd15dc091e",
           "file": "w17_tracing.spec.ts",
-          "line": 266,
+          "line": 413,
           "column": 3
         },
         {
@@ -627,12 +717,12 @@
                   "workerIndex": 0,
                   "parallelIndex": 0,
                   "status": "passed",
-                  "duration": 7054,
+                  "duration": 2757,
                   "errors": [],
                   "stdout": [],
                   "stderr": [],
                   "retry": 0,
-                  "startTime": "2026-10-11T15:32:24.576Z",
+                  "startTime": "2026-10-11T21:08:26.890Z",
                   "annotations": [],
                   "attachments": [
                     {
@@ -648,7 +738,7 @@
           ],
           "id": "54eb2effa5a4fa14b124-4dcf6da6694288d86e27",
           "file": "w17_tracing.spec.ts",
-          "line": 397,
+          "line": 544,
           "column": 3
         }
       ]
@@ -656,9 +746,9 @@
   ],
   "errors": [],
   "stats": {
-    "startTime": "2026-10-11T15:21:20.323Z",
-    "duration": 671585.064,
-    "expected": 8,
+    "startTime": "2026-10-11T20:57:17.106Z",
+    "duration": 672684.723,
+    "expected": 10,
     "skipped": 0,
     "unexpected": 0,
     "flaky": 0
