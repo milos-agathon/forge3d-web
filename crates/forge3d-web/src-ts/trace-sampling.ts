@@ -149,7 +149,10 @@ export function mergeReservoir(
   u: number,
   biasCorrection = true,
 ): void {
-  if (!source.count || source.selectedTarget <= 0) return;
+  if (!source.count) return;
+  // A compatible reservoir containing only zero-weight candidates still
+  // represents proposal trials. Dropping its count biases reused estimates.
+  if (source.selectedTarget <= 0) { r.count += source.count; return; }
   const weight = biasCorrection
     ? (target * source.weightSum) / source.selectedTarget
     : source.weightSum;

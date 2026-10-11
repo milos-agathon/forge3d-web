@@ -24,6 +24,7 @@ import {
 } from "./trace-math.js";
 import {
   cosineDirection,
+  hgPhase,
   sampleHg,
   localToWorld,
   emptyReservoir,
@@ -119,6 +120,44 @@ function lightContribution(
     f(cos),
   );
 }
+function chooseLight(scene: TraceScene, rng: TraceRng) {
+  const u = rng.next(),
+    v = rng.next(),
+    total = scene.lights.reduce((sum, l) => sum + l.weight, 0);
+  let remaining = u * total;
+  for (let i = 0; i < scene.lights.length; i++) {
+    const light = scene.lights[i]!;
+    remaining -= light.weight;
+    if (remaining < 0 || i + 1 === scene.lights.length)
+      return {
+        index: i,
+        pdf: light.weight / total,
+        u: clamp((remaining + light.weight) / light.weight),
+        v,
+      };
+  }
+  return { index: 0, pdf: 1, u: 0, v };
+}
+/** Analytic Beer transmittance on a finite or directional-light shadow segment. */
+export function mediumTransmittance(
+  scene: TraceScene,
+  origin: TraceVec3,
+  direction: TraceVec3,
+  distance: number,
+): TraceVec3 {
+  const m = scene.medium;
+  if (!m) return [1, 1, 1];
+  const interval = boundsInterval(m.bounds, {
+    origin,
+    direction,
+    tMin: 0,
+    tMax: distance,
+  });
+  if (!interval) return [1, 1, 1];
+  const sigma = add(m.sigmaA, m.sigmaS),
+    span = f(interval[1] - interval[0]);
+  return sigma.map((s) => f(Math.exp(-s * span))) as unknown as TraceVec3;
+}
 export function traceCpuSample(
   scene: TraceScene,
   s: CpuTraceSettings,
@@ -145,6 +184,7 @@ export function traceCpuSample(
     reservoir = emptyReservoir(),
     primaryReservoir = emptyReservoir();
   let guidingBin: number | undefined, guidingWeight: number | undefined;
+  let primaryEmission = 0;
   for (let bounce = 0; bounce < s.maxBounces; bounce++) {
     const hit = scene.intersect({ origin, direction }, s.mode);
     const m = scene.medium;
@@ -171,6 +211,46 @@ export function traceCpuSample(
               mul(m.sigmaS, 1 / Math.max(majorant, 1e-30)),
             ),
           );
+          if (scene.lights.length) {
+            const choice = chooseLight(scene, rng),
+              light = sampleTraceLight(
+                scene.lights[choice.index]!,
+                origin,
+                choice.u,
+                choice.v,
+              ),
+              phase = hgPhase(
+                clamp(dot(direction, light.direction), -1, 1),
+                m.g ?? 0,
+              );
+            if (
+              light.distance >= 1e-4 &&
+              !scene.intersect(
+                {
+                  origin: add(origin, mul(light.direction, 1e-4)),
+                  direction: light.direction,
+                  tMax: f(light.distance - 2e-4),
+                },
+                s.mode,
+              )
+            ) {
+              const lit = had(
+                throughput,
+                had(
+                  mul(light.radiance, f(phase / choice.pdf)),
+                  mediumTransmittance(
+                    scene,
+                    origin,
+                    light.direction,
+                    light.distance,
+                  ),
+                ),
+              );
+              beauty = add(beauty, lit);
+              if (bounce === 0) direct = add(direct, lit);
+              else indirect = add(indirect, lit);
+            }
+          }
           direction = localToWorld(
             sampleHg(rng.next(), rng.next(), m.g ?? 0).direction,
             direction,
@@ -217,25 +297,7 @@ export function traceCpuSample(
       lightV = 0;
     if (scene.lights.length) {
       reservoir = emptyReservoir();
-      const choose = () => {
-        const u = rng.next(),
-          v = rng.next();
-        const total = scene.lights.reduce((s, l) => s + l.weight, 0);
-        let remaining = u * total;
-        for (let i = 0; i < scene.lights.length; i++) {
-          remaining -= scene.lights[i]!.weight;
-          if (remaining < 0 || i + 1 === scene.lights.length)
-            return {
-              index: i,
-              pdf: scene.lights[i]!.weight / total,
-              u: clamp(
-                (remaining + scene.lights[i]!.weight) / scene.lights[i]!.weight,
-              ),
-              v,
-            };
-        }
-        return { index: 0, pdf: 1, u: 0, v };
-      };
+      const choose = () => chooseLight(scene, rng);
       if (s.restir) {
         for (let i = 0; i < s.restir.initialCandidates; i++) {
           const candidate = choose(),
@@ -282,7 +344,6 @@ export function traceCpuSample(
             const prev = reservoirs[pixel + dx]!;
             if (
               !prev.count ||
-              prev.selectedTarget <= 0 ||
               prev.age >= s.restir.maxTemporalAge ||
               prev.depth === undefined ||
               !prev.normal ||
@@ -329,6 +390,7 @@ export function traceCpuSample(
             if (x < 0 || x >= s.width || y < 0 || y >= s.height) continue;
             const prev = reservoirs[y * s.width + x]!;
             if (
+              !prev.count ||
               !prev.normal ||
               prev.depth === undefined ||
               Math.abs(prev.depth - hit.t) >
@@ -362,6 +424,9 @@ export function traceCpuSample(
           }
         }
         if (bounce === 0) {
+          // Expire the whole proposal history on a deterministic epoch, rather
+          // than conditioning admission on the age of a randomly selected light.
+          reservoir.age = sample % (s.restir.maxTemporalAge + 1);
           reservoir.position = p;
           reservoir.normal = n;
           reservoir.depth = hit.t;
@@ -416,6 +481,10 @@ export function traceCpuSample(
         lightU,
         lightV,
       );
+      lighting = had(
+        lighting,
+        mediumTransmittance(scene, p, light.direction, light.distance),
+      );
       if (
         scene.intersect(
           {
@@ -458,8 +527,12 @@ export function traceCpuSample(
         v = rng.next(),
         weight = 1;
       if (s.guiding) {
-        const pdf = s.guiding.pdf(pixel % s.width, Math.floor(pixel / s.width)),
-          bins = pdf.length;
+        const learned = s.guiding.pdf(
+            pixel % s.width,
+            Math.floor(pixel / s.width),
+          ),
+          bins = learned.length,
+          pdf = learned.map((p) => f(0.8 * p + 0.2 / bins));
         let sum = 0,
           bin = 0;
         for (; bin < bins - 1; bin++) {
@@ -471,7 +544,7 @@ export function traceCpuSample(
         weight = 1 / (bins * pdf[bin]!);
         if (bounce === 0) {
           guidingBin = bin;
-          guidingWeight = Math.max(0, luminance(lit));
+          primaryEmission = luminance(emission);
         }
       }
       direction = cosineDirection(u, v, n);
@@ -484,6 +557,13 @@ export function traceCpuSample(
       throughput = mul(throughput, 1 / survival);
     }
   }
+  // Credit only radiance returned after the guided bounce. Its inverse-PDF
+  // weight estimates the bin integral independently of selection frequency.
+  if (guidingBin !== undefined)
+    guidingWeight = Math.max(
+      0,
+      f(luminance(add(indirect, emission)) - primaryEmission),
+    );
   const lum = luminance(beauty);
   if (s.clamp > 0 && lum > s.clamp) {
     const scale = f(s.clamp / lum);
@@ -493,7 +573,8 @@ export function traceCpuSample(
     emission = mul(emission, scale);
   }
   record.set(beauty, 0);
-  record[3] = 1;
+  record[3] = guidingWeight ?? 0;
+  bits[23] = guidingBin ?? 0xffffffff;
   record.set(direct, 12);
   record.set(indirect, 16);
   record.set(emission, 20);
@@ -562,7 +643,9 @@ export function accumulateRecord(
   const ids = new Uint32Array(sum.buffer),
     inputIds = new Uint32Array(record.buffer);
   for (let i = 0; i < 28; i++) {
-    if (i === 7) {
+    if (i === 3 || i === 23) {
+      ids[off + i] = inputIds[i]!;
+    } else if (i === 7) {
       if (sample === 0) ids[off + i] = inputIds[i]!;
     } else if (i === 11) {
       if (sample === 0) sum[off + i] = record[i]!;

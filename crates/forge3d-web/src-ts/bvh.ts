@@ -66,7 +66,11 @@ export class BvhHandle {
   readonly nodes: BvhNode[];
   indices: Uint32Array;
   readonly stats: BvhStats;
-  constructor(input: readonly TraceTriangle[], options: BvhBuildOptions = {}) {
+  constructor(
+    input: readonly TraceTriangle[],
+    options: BvhBuildOptions = {},
+    build = true,
+  ) {
     const start = performance.now();
     const budget = integer(
       options.memoryBudgetBytes ?? 512 * 1024 * 1024,
@@ -80,7 +84,25 @@ export class BvhHandle {
     )
       traceInvalid("unknown BVH method");
     this.triangles = normalizeTriangles(input);
-    const tree = buildNodes(this.triangles, options);
+    // Preparation validates and owns primitives without performing a throwaway
+    // main-thread sort/build before the WASM or GPU builder.
+    const tree = build
+      ? buildNodes(this.triangles, options)
+      : {
+          nodes: [
+            {
+              ...this.triangles
+                .map(triangleBounds)
+                .reduce(unionBounds, emptyBounds()),
+              left: 0,
+              right: 0,
+              first: 0,
+              count: input.length,
+            },
+          ],
+          indices: Uint32Array.from(input, (_, i) => i),
+          maxDepth: 0,
+        };
     this.nodes = tree.nodes;
     this.indices = tree.indices;
     this.stats = {
@@ -94,10 +116,45 @@ export class BvhHandle {
       method: options.method ?? "sah",
     };
   }
+  /** Validated primitive storage for an external builder; no CPU tree build. */
+  static prepare(
+    input: readonly TraceTriangle[],
+    options: BvhBuildOptions = {},
+  ): BvhHandle {
+    return new BvhHandle(input, options, false);
+  }
+  clone(memoryBudgetBytes = 512 * 1024 * 1024): BvhHandle {
+    live(this.#disposed);
+    const copy = BvhHandle.prepare(this.triangles, {
+      method: this.stats.method,
+      memoryBudgetBytes,
+    });
+    copy.nodes.length = 0;
+    for (const node of structuredClone(this.nodes)) copy.nodes.push(node);
+    copy.indices = this.indices.slice();
+    Object.assign(copy.stats, this.stats);
+    return copy;
+  }
   get worldBounds(): TraceBounds {
     live(this.#disposed);
     const n = this.nodes[0]!;
-    return { min: n.min, max: n.max };
+    return { min: [...n.min], max: [...n.max] };
+  }
+  isGpu(): boolean {
+    live(this.#disposed);
+    return this.stats.backend === "webgpu";
+  }
+  isCpu(): boolean {
+    live(this.#disposed);
+    return this.stats.backend !== "webgpu";
+  }
+  validatePrimitives(): void {
+    live(this.#disposed);
+    normalizeTriangles(this.triangles);
+  }
+  getProperties(): BvhStats & { worldBounds: TraceBounds } {
+    live(this.#disposed);
+    return { ...this.stats, worldBounds: this.worldBounds };
   }
   intersect(input: TraceRay): TraceHit | undefined {
     live(this.#disposed);
@@ -114,7 +171,7 @@ export class BvhHandle {
           if (h && (!hit || h.t < hit.t || (h.t === hit.t && h.id < hit.id)))
             hit = h;
         }
-      } else {
+      } else if (n.left || n.right) {
         stack.push(n.right, n.left);
       }
     }

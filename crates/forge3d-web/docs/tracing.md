@@ -23,8 +23,10 @@ try {
 ```
 
 `buildBvh`, `buildBvhWasm`, and `buildBvhGpu` return a `BvhHandle` with
-`intersect`, `refit`, `stats`, packed buffers and `dispose`. Triangle IDs are
-unique nonzero uint32 values; material IDs index the scene material table.
+`intersect`, `refit`, `stats`, packed buffers and `dispose`.
+`isCpu`/`isGpu` identify the build backend; `getProperties` returns owned bounds
+and observed build statistics, and `validatePrimitives` checks the current inputs. Triangle IDs are
+unique uint32 values in 1..0xfffffffe; 0xffffffff identifies SDF hits, and zero identifies misses; material IDs index the scene material table.
 Ray directions need not have unit length. Returned `t` uses the supplied
 direction, and barycentrics are ordered `(v0, v1, v2)`. Refit preserves topology
 and IDs. `traceRaysGpu` runs ray batches on WebGPU; `evaluateSdfGpu` and
@@ -60,10 +62,16 @@ zero; the GGX sampling alpha retains its 0.001 numerical floor.
 Lights support point, directional and disc emitters, with color, intensity and
 sampling weight. Disc lights also carry a normal and radius; directional lights
 carry a direction. `restir` enables
-weighted reservoir candidates and temporal/spatial reuse. `RestirDI` exposes
+weighted reservoir candidates and temporal/spatial reuse. Compatible zero-weight
+histories retain their proposal counts. History expires on deterministic
+`maxTemporalAge + 1` sample windows, avoiding selection-dependent age bias. `RestirDI` exposes
 the native alias-table light-management contract. `OnlineGuidingGrid` has unit
-priors, directional-bin updates and normalized PDFs. A bounded homogeneous
-medium exposes RGB absorption/scattering coefficients and HG anisotropy.
+priors, directional-bin updates and normalized PDFs. Training uses inverse-PDF
+weighted radiance returned after the primary diffuse bounce, before firefly
+clamping. Sampling mixes 20% uniform exploration with the learned distribution. A bounded homogeneous
+medium exposes RGB absorption/scattering coefficients and HG anisotropy. Surface
+and in-medium light connections include Beer transmittance; scatter events sample
+analytic emitters with the HG phase function.
 `luminanceClamp` suppresses fireflies and scales lighting AOVs consistently.
 
 `enableSceneCache` enables bounded content-keyed LRU result reuse. A cache hit
@@ -71,13 +79,18 @@ restores accumulation, reservoirs and guiding weights for subsequent progressive
 samples; returned arrays are copied. `memoryReport` reports retained CPU/GPU/cache storage and
 admitted peak bytes. `dispose` is idempotent. A lost device returns
 `DEVICE_LOST`; `recover` creates or borrows a replacement device and replays the
-retained scene. A supplied `GPUDevice` remains owned by the caller.
+retained scene. Failed recovery keeps rendering unavailable with `DEVICE_LOST`
+until a successful explicit recovery. A supplied `GPUDevice` remains owned by the caller.
 
 The CPU ledger counts typed storage and a per-pixel reservoir allowance. Local
 stress evidence records the browser's available heap observation separately.
+`gpuBytes` sums retained GPU buffer sizes. Regression/stress harnesses independently
+count real allocations and destroys, including a deliberate leak negative control.
 
-W02's `createTraceWorkerHandler` supports transferable BVH, query and SDF
-requests. WASM workers load the existing package loader. Browser workers have
+W02's `createTraceWorkerHandler` returns transferable BVH, query and SDF
+packets. Ray results contain `records` (64 bytes per ray): position/t, normal/front,
+barycentric/pad as float32, then id/material/steps/kind as uint32. Zero ID is a miss.
+SDF results contain `distances: Float32Array` and `materials: Uint32Array`. WASM workers load the existing package loader. Browser workers have
 no filesystem or native-thread dependency.
 
 Run `npm run test:w17` for reference, shader, source and dist checks and
@@ -89,3 +102,21 @@ See [W17 evidence](w17-evidence.md) for observed acceptance and hardware limits.
 local stress test. Its 32×20 viewport and observed adapter are recorded explicitly.
 The W00 1920×1080 discrete/integrated hardware profiles require qualification on
 their pinned hosts; local stress results do not certify those profiles.
+
+Native public outcomes map to these browser APIs; G09/G10/G11 refer to the plan's capability rows:
+
+| Native surface | Browser equivalent | Proof |
+| --- | --- | --- |
+| `render_aovs` (G11) | `PathTracer.render` returns every typed AOV | convergence and feature probes |
+| `save_aovs` (G11) | `encodeTraceAovs(result, basename)` returns named EXR/PNG Blobs | all six HDR AOVs decoded and checked; visibility PNG decoded |
+| `iter_tiles` (G11) | `iterTraceTiles(width, height, tileSize)` yields scanline rectangles with clipped edges | unit coverage exactly once; installed edge-tile probe |
+| `TracerEngine` (G11) | `engine: "megakernel"` or `"wavefront"` | exact engine hashes and queue checks |
+| `BvhHandle.is_gpu/is_cpu/get_properties/validate_primitives` (G09) | `isGpu/isCpu/getProperties/validatePrimitives` | irregular GPU/WASM trees and unit validation |
+| `make_camera` (G11) | typed `TraceCamera` in `PathTracer.create`/`setCamera`; aspect follows output dimensions | geometry, camera and replay probes |
+| `make_sphere` (G10/G11) | `SdfPrimitive.sphere` plus typed `TraceMaterial` | sphere hits and material probes |
+| `add_triangle` (G09/G11) | `TraceSceneInput.triangles` through `setScene` | triangle/refit and nearest-hit probes |
+
+`encodeTraceAovs` uses W06's EXR encoder for albedo, normal, depth, direct, indirect
+and emission; visibility becomes an 8-bit PNG. Browser callers own the returned
+Blobs and choose a download or storage destination. `iterTraceTiles` partitions
+output coordinates; progressive rendering retains the full-frame accumulation.

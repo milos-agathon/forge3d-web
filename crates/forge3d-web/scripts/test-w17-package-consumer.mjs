@@ -80,11 +80,11 @@ for (const file of [
   assert(statSync(join(installed, file)).size > 0, file);
 writeFileSync(
   join(consumer, "consumer.ts"),
-  `import {PathTracer,SdfSceneBuilder,buildBvh,buildBvhWasm,buildBvhGpu,refitBvhGpu,traceRaysGpu,evaluateSdfGpu,evaluateSdfWasm,OnlineGuidingGrid,RestirDI,createTraceWorkerHandler,Forge3DWorkerPool,type TraceTriangle} from '@forge3d/web';
+  `import {PathTracer,SdfSceneBuilder,buildBvh,buildBvhWasm,buildBvhGpu,refitBvhGpu,traceRaysGpu,evaluateSdfGpu,evaluateSdfWasm,OnlineGuidingGrid,RestirDI,iterTraceTiles,encodeTraceAovs,createTraceWorkerHandler,Forge3DWorkerPool,type TraceTriangle} from '@forge3d/web';
 const triangles:TraceTriangle[]=[{v0:[-1,-1,0],v1:[1,-1,0],v2:[0,1,0],id:1}];
 const builder=new SdfSceneBuilder();builder.addSphere([0,0,0],1);const sdf=builder.build();const grid=new OnlineGuidingGrid(8,8);const restir=new RestirDI();restir.addLight({position:[0,3,5]});
 async function render(){const t=await PathTracer.create({width:8,height:8,guiding:grid,restir:{initialCandidates:8},engine:'wavefront'});await t.setScene({triangles,sdf});for await(const update of t.progressive({spp:4})){update.result.id[0];}await t.renderHdr();t.dispose();}
-const pool=new Forge3DWorkerPool({mainThreadHandler:createTraceWorkerHandler()});void [render,pool,buildBvh,buildBvhWasm,buildBvhGpu,refitBvhGpu,traceRaysGpu,evaluateSdfGpu,evaluateSdfWasm];`,
+const pool=new Forge3DWorkerPool({mainThreadHandler:createTraceWorkerHandler()});void [iterTraceTiles,encodeTraceAovs,render,pool,buildBvh,buildBvhWasm,buildBvhGpu,refitBvhGpu,traceRaysGpu,evaluateSdfGpu,evaluateSdfWasm];`,
 );
 run(
   process.execPath,

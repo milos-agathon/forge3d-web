@@ -21,5 +21,17 @@ export type TraceWorkerRequest = {
     scene: SdfSnapshot;
     points: readonly TraceVec3[];
 };
-/** Register with W02 WorkerPool/registerMessageHandlers; payloads use transferable typed buffers. */
+/** 64-byte query rows: position/t, normal/front, barycentric/pad, then
+ * id/material/steps/kind as uint32 bits. A zero id denotes a miss. */
+export interface TraceWorkerHits {
+    kind: "trace-rays";
+    count: number;
+    records: ArrayBuffer;
+}
+export interface TraceWorkerDistances {
+    kind: "evaluate-sdf";
+    distances: Float32Array;
+    materials: Uint32Array;
+}
+/** Register with W02 WorkerPool/registerMessageHandlers; responses use transferable typed buffers. */
 export declare function createTraceWorkerHandler(): Forge3DMessageHandler;

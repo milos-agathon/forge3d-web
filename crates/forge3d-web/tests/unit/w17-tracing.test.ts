@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { BvhHandle } from "../../src-ts/bvh.js";
 import {
   SdfPrimitive,
@@ -28,7 +28,14 @@ import {
   mediumRatio,
   traceBrdf,
 } from "../../src-ts/trace-bsdf.js";
-import { normalizeTraceMaterial } from "../../src-ts/trace-scene.js";
+import {
+  normalizeTraceMaterial,
+  TraceScene,
+} from "../../src-ts/trace-scene.js";
+import { iterTraceTiles } from "../../src-ts/trace-output.js";
+import { packTraceScene } from "../../src-ts/trace-gpu.js";
+import { TraceGpu } from "../../src-ts/trace-gpu.js";
+import { traceCpuSample, mediumTransmittance } from "../../src-ts/trace-cpu.js";
 const tri = (z: number, id: number): TraceTriangle => ({
   v0: [-1, -1, z],
   v1: [1, -1, z],
@@ -427,5 +434,399 @@ describe("W17 progressive rendering/lifecycle", () => {
     await expect(
       handler({ kind: "build-bvh", triangles: [tri(0, 1)] }, context),
     ).rejects.toMatchObject({ code: "REQUEST_CANCELLED" });
+  });
+});
+
+describe("W17 review regressions", () => {
+  it("host scene packing pins material, light, triangle and SDF word offsets", () => {
+    const sdf = SdfScene.singlePrimitive(
+      SdfPrimitive.sphere([2, 3, 4], 0.7, 1),
+    );
+    const scene = new TraceScene({
+      triangles: [
+        { v0: [1, 2, 3], v1: [4, 5, 6], v2: [7, 8, 9], id: 17, materialId: 1 },
+      ],
+      sdf,
+      materials: [
+        {},
+        {
+          albedo: [0.2, 0.3, 0.4],
+          metallic: 0.8,
+          emission: [0.5, 0.6, 0.7],
+          roughness: 0.4,
+          ior: 1.4,
+          ax: 0.1,
+          ay: 0.6,
+        },
+      ],
+      lights: [
+        {
+          type: "disc",
+          position: [3, 4, 5],
+          intensity: 7,
+          color: [0.2, 0.4, 0.6],
+          weight: 3,
+          normal: [0, 0, -1],
+          radius: 0.7,
+        },
+      ],
+    });
+    const p = packTraceScene(scene),
+      f = new Float32Array(p.bytes),
+      u = new Uint32Array(p.bytes),
+      material = p.offsets1[1]! + 12,
+      light = p.offsets1[2]!;
+    expect([...f.subarray(material, material + 12)]).toEqual([
+      ...new Float32Array([
+        0.2, 0.3, 0.4, 0.8, 0.5, 0.6, 0.7, 0.4, 1.4, 0.1, 0.6, 0,
+      ]),
+    ]);
+    expect([...f.subarray(light, light + 16)]).toEqual([
+      ...new Float32Array([
+        3, 4, 5, 7, 0.2, 0.4, 0.6, 3, 0, -1, 0, 2, 0, 0, -1, 0.7,
+      ]),
+    ]);
+    const tri = p.offsets0[0]!,
+      primitive = p.offsets0[3]!,
+      node = p.offsets1[0]!;
+    expect([...u.subarray(tri + 12, tri + 14)]).toEqual([17, 1]);
+    expect([...f.subarray(tri, tri + 3)]).toEqual([1, 2, 3]);
+    expect([...f.subarray(primitive + 4, primitive + 8)]).toEqual([
+      ...new Float32Array([2, 3, 4, 0.7]),
+    ]);
+    expect(u[primitive + 1]).toBe(1);
+    expect(u[node + 4]).toBe(1);
+    expect(u[node + 5]).toBe(1);
+    scene.dispose();
+    sdf.dispose();
+  });
+
+  it("scanline tile enumeration covers clipped edges exactly once", () => {
+    const tiles = [...iterTraceTiles(17, 11, 4)],
+      coverage = new Uint8Array(17 * 11);
+    for (const t of tiles)
+      for (let y = t.y; y < t.y + t.height; y++)
+        for (let x = t.x; x < t.x + t.width; x++) coverage[y * 17 + x]++;
+    expect(coverage.every((v) => v === 1)).toBe(true);
+    expect(tiles.at(-1)).toEqual({ x: 16, y: 8, width: 1, height: 3 });
+    expect(() => [...iterTraceTiles(17, 11, 0)]).toThrow();
+  });
+
+  it("equal explicit GGX axes override roughness for both evaluation and sampling", () => {
+    const explicit = normalizeTraceMaterial({
+      metallic: 1,
+      roughness: 0.5,
+      ax: 0.01,
+      ay: 0.01,
+    });
+    const equivalent = normalizeTraceMaterial({ metallic: 1, roughness: 0.1 });
+    const n: TraceVec3 = [0, 0, 1];
+    expect(traceBrdf(explicit, n, n, n)).toEqual(
+      traceBrdf(equivalent, n, n, n),
+    );
+    expect(
+      sampleGgx(
+        [0, 0, -1],
+        n,
+        explicit.albedo,
+        0.5,
+        0.4,
+        0.3,
+        explicit.ax,
+        explicit.ay,
+      ),
+    ).toEqual(
+      sampleGgx(
+        [0, 0, -1],
+        n,
+        explicit.albedo,
+        0.1,
+        0.4,
+        0.3,
+        equivalent.ax,
+        equivalent.ay,
+      ),
+    );
+  });
+  it("prepared/cloned trees avoid throwaway builds and empty leaves cannot recurse to root", () => {
+    const b = BvhHandle.prepare([tri(0, 1), tri(-2, 2)]);
+    expect(b.nodes).toHaveLength(1);
+    expect(b.isCpu()).toBe(true);
+    b.validatePrimitives();
+    const properties = b.getProperties();
+    properties.worldBounds.min[0] = 999;
+    expect(b.worldBounds.min[0]).toBe(-1);
+    const clone = b.clone();
+    expect(
+      clone.intersect({ origin: [0, 0, 5], direction: [0.02, 0.03, -1] })?.id,
+    ).toBe(1);
+    clone.nodes[0] = {
+      min: [1e30, 1e30, 1e30],
+      max: [-1e30, -1e30, -1e30],
+      left: 0,
+      right: 0,
+      first: 0,
+      count: 0,
+    };
+    expect(
+      clone.intersect({ origin: [0, 0, 5], direction: [0.02, 0.03, -1] }),
+    ).toBeUndefined();
+    expect(b.intersect({ origin: [0, 0, 5], direction: [0, 0, -1] })?.id).toBe(
+      1,
+    );
+    expect(
+      SdfScene.singlePrimitive(SdfPrimitive.sphere([0, 0, 0], 1)).intersect({
+        origin: [0, 0, 5],
+        direction: [0, 0, -1],
+      })?.id,
+    ).toBe(0xffffffff);
+    expect(() => new BvhHandle([tri(0, 0xffffffff)])).toThrow();
+    b.dispose();
+    clone.dispose();
+  });
+  it("worker ray/SDF responses transfer all data and preserve material bits and misses", async () => {
+    const handler = createTraceWorkerHandler(),
+      context = {
+        signal: new AbortController().signal,
+        requestId: "packet",
+        reportProgress: () => {},
+      } as any;
+    const hits = (await handler(
+      {
+        kind: "trace-rays",
+        triangles: [tri(0, 0xfffffffe)],
+        rays: [
+          { origin: [0, 0, 5], direction: [0, 0, -1] },
+          { origin: [5, 5, 5], direction: [0, 0, -1] },
+        ],
+      },
+      context,
+    )) as any;
+    const transferred = structuredClone(hits, { transfer: [hits.records] });
+    expect(hits.records.byteLength).toBe(0);
+    const words = new Uint32Array(transferred.records);
+    expect([words[12], words[15], words[28]]).toEqual([0xfffffffe, 0, 0]);
+    const sdf = SdfScene.singlePrimitive(
+      SdfPrimitive.sphere([0, 0, 0], 1, 0xffffffff),
+    );
+    const packet = (await handler(
+      {
+        kind: "evaluate-sdf",
+        scene: sdf.snapshot(),
+        points: [[0.3, 0.4, 0.5]],
+      },
+      context,
+    )) as any;
+    const copy = structuredClone(packet, {
+      transfer: [packet.distances.buffer, packet.materials.buffer],
+    });
+    expect(packet.distances.byteLength + packet.materials.byteLength).toBe(0);
+    expect(copy.materials[0]).toBe(0xffffffff);
+    expect(copy.distances[0]).toBeCloseTo(Math.sqrt(0.5) - 1, 6);
+    sdf.dispose();
+  });
+  it("lit absorption attenuates camera and shadow paths, and scattering sees analytic lights", async () => {
+    const options = {
+      width: 1,
+      height: 1,
+      backend: "cpu" as const,
+      seed: 123,
+      maxBounces: 1,
+      camera: {
+        origin: [0, 0, 5] as TraceVec3,
+        target: [0, 0, 0] as TraceVec3,
+        fovY: 0.01,
+      },
+    };
+    const base = {
+      triangles: [
+        {
+          v0: [-100, -100, 0],
+          v1: [100, -100, 0],
+          v2: [0, 100, 0],
+          id: 1,
+        } as TraceTriangle,
+      ],
+      materials: [{ albedo: [1, 1, 1] as TraceVec3 }],
+      lights: [{ position: [0, 0, 5] as TraceVec3, intensity: 100 }],
+      environment: [0, 0, 0] as TraceVec3,
+    };
+    const medium = {
+      sigmaA: [0.5, 0.5, 0.5] as TraceVec3,
+      sigmaS: [0, 0, 0] as TraceVec3,
+      bounds: {
+        min: [-100, -100, 0] as TraceVec3,
+        max: [100, 100, 2] as TraceVec3,
+      },
+    };
+    const t = await PathTracer.create(options);
+    await t.setScene(base);
+    const clear = await t.render();
+    const model = new TraceScene({ ...base, medium });
+    const settings = {
+      ...options,
+      camera: { ...options.camera, up: [0, 1, 0] as TraceVec3 },
+      mode: "hybrid" as const,
+      clamp: 0,
+      restir: undefined,
+      guiding: undefined,
+    };
+    let fogMean = 0;
+    for (let i = 0; i < 8192; i++)
+      fogMean +=
+        traceCpuSample(model, settings, 0, i, [emptyReservoir()]).record[0]! /
+        8192;
+    expect(fogMean / clear.color[0]!).toBeCloseTo(Math.exp(-2), 2);
+    expect(mediumTransmittance(model, [0, 0, 0], [0, 0, 1], 5)[0]).toBeCloseTo(
+      Math.exp(-1),
+      6,
+    );
+    model.dispose();
+    await t.setScene({
+      environment: [0, 0, 0],
+      lights: [{ position: [1, 0, 3], intensity: 100 }],
+      medium: { ...medium, sigmaA: [0, 0, 0], sigmaS: [0.5, 0.5, 0.5] },
+    });
+    expect((await t.render({ spp: 128 })).color[0]).toBeGreaterThan(0.01);
+    t.dispose();
+  }, 20000);
+  it("guiding ignores local direct light and credits the sampled continuation before clamping", () => {
+    const grid = new OnlineGuidingGrid(1, 1, 4);
+    const settings = {
+      width: 1,
+      height: 1,
+      seed: 42,
+      maxBounces: 2,
+      camera: {
+        origin: [0, 0, 5] as TraceVec3,
+        target: [0, 0, 0] as TraceVec3,
+        up: [0, 1, 0] as TraceVec3,
+        fovY: 1,
+      },
+      mode: "hybrid" as const,
+      clamp: 0,
+      restir: undefined,
+      guiding: grid,
+    };
+    const scene = new TraceScene({
+      triangles: [
+        { v0: [-100, -100, 0], v1: [100, -100, 0], v2: [0, 100, 0], id: 1 },
+      ],
+      lights: [{ position: [0, 0, 5], intensity: 100 }],
+      environment: [0, 0, 0],
+    });
+    const direct = traceCpuSample(scene, settings, 0, 0, [emptyReservoir()]);
+    expect(direct.record[0]).toBeGreaterThan(0);
+    expect(direct.guidingWeight).toBe(0);
+    const sky = new TraceScene({
+      triangles: scene.bvh!.triangles,
+      environment: [5, 5, 5],
+    });
+    const a = traceCpuSample(sky, settings, 0, 0, [emptyReservoir()]),
+      b = traceCpuSample(sky, { ...settings, clamp: 0.01 }, 0, 0, [
+        emptyReservoir(),
+      ]);
+    expect(a.guidingWeight).toBeGreaterThan(0);
+    expect(a.guidingWeight).toBe(b.guidingWeight);
+    expect(b.record[0]).toBeLessThan(a.record[0]!);
+    grid.dispose();
+    scene.dispose();
+    sky.dispose();
+  });
+  it("failed GPU recovery and failed rollback remain unavailable until explicit recovery", async () => {
+    const device = { destroy: vi.fn() } as unknown as GPUDevice;
+    const create = vi.spyOn(TraceGpu, "create").mockImplementation(
+      async () =>
+        ({
+          bytes: 0,
+          packed: { bytes: new ArrayBuffer(0) },
+          checkAlive: () => {},
+          dispose: () => {},
+          reset: () => {},
+          sample: async () => new Float32Array(28),
+          exportReservoirs: async () => new ArrayBuffer(80),
+          restore: () => {},
+        }) as unknown as TraceGpu,
+    );
+    vi.stubGlobal("navigator", { gpu: { requestAdapter: async () => null } });
+    try {
+      const t = await PathTracer.create({ width: 1, height: 1 }, { device });
+      await expect(t.recover()).rejects.toMatchObject({
+        code: "WEBGPU_ADAPTER_UNAVAILABLE",
+      });
+      await expect(t.render()).rejects.toMatchObject({ code: "DEVICE_LOST" });
+      await expect(t.progressive().next()).rejects.toMatchObject({
+        code: "DEVICE_LOST",
+      });
+      await t.recover(device);
+      await t.render();
+      create
+        .mockRejectedValueOnce(new Error("new pipeline failed"))
+        .mockRejectedValueOnce(new Error("rollback failed"));
+      await expect(t.setScene({})).rejects.toThrow("rollback failed");
+      await expect(t.render()).rejects.toMatchObject({ code: "DEVICE_LOST" });
+      t.dispose();
+    } finally {
+      create.mockRestore();
+      vi.unstubAllGlobals();
+    }
+  });
+  it("render holds its lock continuously through cache export, including microtask mutations", async () => {
+    let entered!: () => void, release!: () => void;
+    const exporting = new Promise<void>((r) => (entered = r)),
+      blocked = new Promise<void>((r) => (release = r));
+    let t: PathTracer,
+      accepted = 0;
+    const gpu = {
+      bytes: 0,
+      packed: { bytes: new ArrayBuffer(0) },
+      checkAlive: () => {},
+      dispose: () => {},
+      reset: () => {},
+      sample: async () => {
+        const data = new Float32Array(28);
+        data[0] = 0.8;
+        let left = 12;
+        const mutate = () => {
+          try {
+            t.reset();
+            accepted++;
+          } catch {}
+          if (--left) queueMicrotask(mutate);
+        };
+        queueMicrotask(mutate);
+        return data;
+      },
+      exportReservoirs: async () => {
+        entered();
+        await blocked;
+        return new ArrayBuffer(80);
+      },
+      restore: () => {},
+    } as unknown as TraceGpu;
+    const spy = vi.spyOn(TraceGpu, "create").mockResolvedValue(gpu);
+    try {
+      t = await PathTracer.create(
+        { width: 1, height: 1 },
+        { device: { destroy: () => {} } as GPUDevice },
+      );
+      t.enableSceneCache();
+      const render = t.render();
+      await exporting;
+      expect(accepted).toBe(0);
+      expect(() => t.reset()).toThrow("active");
+      await expect(t.setScene({})).rejects.toMatchObject({
+        code: "INVALID_INPUT",
+      });
+      release();
+      const result = await render;
+      expect(t.samples).toBe(1);
+      expect((await t.render()).color).toEqual(result.color);
+      expect(t.cacheStats().hits).toBe(1);
+      t.dispose();
+    } finally {
+      release();
+      spy.mockRestore();
+    }
   });
 });

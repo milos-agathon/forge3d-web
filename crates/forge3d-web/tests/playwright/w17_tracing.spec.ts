@@ -26,6 +26,8 @@ test("W17 dist: 600-second installed full-scene local stress", async ({
     contentType: "application/json",
   });
   expect(r.elapsedMs).toBeGreaterThanOrEqual(600000);
+  expect(r.residualBuffers).toBe(0);
+  expect(r.createdBuffers).toBe(r.destroyedBuffers);
   expect(r.frames).toBeGreaterThan(256);
   expect(r.cameraKeys).toBe(256);
   expect(r.coverageMin).toBeGreaterThan(0);
@@ -104,6 +106,149 @@ for (const dist of [false, true]) {
     expect(r.areaMean).toBeGreaterThan(0.1);
     expect(r.continuationMax).toBe(0);
   });
+  test(`W17 ${label}: review regressions cover irregular BVHs, lit media, reuse and guiding parity`, async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(240000);
+    await open(page);
+    const r = await page.evaluate(async () => {
+      const f = await import(/* @vite-ignore */ "/examples/w17-review.js");
+      return f.runReviewRegressions(window.__w17);
+    });
+    await testInfo.attach("review-regressions.json", {
+      body: JSON.stringify(r, null, 2),
+      contentType: "application/json",
+    });
+    expect(r.probes).toBeGreaterThan(500);
+    expect(r.invalidLeaves).toBe(0);
+    expect(r.refitStable).toBe(true);
+    expect(r.maxT).toBeLessThanOrEqual(1e-5);
+    expect(r.maxBary).toBeLessThanOrEqual(1e-5);
+    expect(r.maxOracle).toBeLessThanOrEqual(1e-5);
+    for (const p of r.parity) {
+      expect(p.cpu).toBeLessThan(0.001);
+      expect(p.engines).toBe(0);
+      expect(p.covered).toBeGreaterThan(100);
+    }
+    expect(Math.abs(r.reuseMean / r.reuseExpected - 1)).toBeLessThan(0.05);
+    expect(r.reuseVarianceRatio).toBeLessThan(0.75);
+    expect(Math.abs(r.absorptionRatio - r.absorptionExpected)).toBeLessThan(
+      0.015,
+    );
+    expect(r.mediumParity.mean).toBeGreaterThan(0.01);
+    expect(r.mediumParity.cpu).toBeLessThan(0.001);
+    expect(r.mediumParity.engines).toBe(0);
+    expect(r.positiveMass).toBeGreaterThan(0.75);
+    expect(r.negativeMass).toBeLessThan(0.25);
+    expect(r.guidingVarianceRatio).toBeLessThan(0.5);
+    expect(r.aovRoundtripError).toBeLessThan(1e-5);
+    expect(r.visibilityPng).toBe(true);
+    expect(r.tileCoverage).toBe(187);
+    expect(r.guidingParity).toBeLessThan(0.001);
+    expect(r.guidingWeightsError).toBeLessThan(0.001);
+    expect(r.axisError).toBeLessThan(0.001);
+    expect(r.createdBuffers).toBeGreaterThan(100);
+    expect(r.createdBuffers).toBe(r.destroyedBuffers);
+    expect(r.residualBuffers).toBe(0);
+    expect(r.residualBytes).toBe(0);
+    expect(r.leakNegativeControl).toBe(true);
+  });
+  test(`W17 ${label}: failed recovery and device loss during compilation release real buffers`, async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(120000);
+    await open(page);
+    const r = await page.evaluate(async () => {
+      const s = window.__w17,
+        adapter = await navigator.gpu.requestAdapter(),
+        device = await adapter!.requestDevice(),
+        tracker = (
+          await import(/* @vite-ignore */ "/examples/w17-memory.js")
+        ).trackGpuBuffers(device);
+      const t = await s.PathTracer.create({ width: 2, height: 2 }, { device });
+      const gpu = navigator.gpu,
+        request = Object.getOwnPropertyDescriptor(gpu, "requestAdapter");
+      let recovery, blocked;
+      try {
+        Object.defineProperty(gpu, "requestAdapter", {
+          configurable: true,
+          value: async () => null,
+        });
+        try {
+          await t.recover();
+        } catch (e: any) {
+          recovery = e.code;
+        }
+        try {
+          await t.render();
+        } catch (e: any) {
+          blocked = e.code;
+        }
+      } finally {
+        if (request) Object.defineProperty(gpu, "requestAdapter", request);
+        else delete (gpu as any).requestAdapter;
+      }
+      await t.recover(device);
+      await t.render();
+      t.dispose();
+      const recoveryResidual = tracker.count;
+      tracker.restore();
+      device.destroy();
+      const dying =
+          await (await navigator.gpu.requestAdapter())!.requestDevice(),
+        allocation = (
+          await import(/* @vite-ignore */ "/examples/w17-memory.js")
+        ).trackGpuBuffers(dying),
+        compile = dying.createComputePipelineAsync.bind(dying);
+      let enter!: () => void, release!: () => void;
+      const entered = new Promise<void>((r) => (enter = r)),
+        gate = new Promise<void>((r) => (release = r));
+      Object.defineProperty(dying, "createComputePipelineAsync", {
+        configurable: true,
+        value: async (desc: GPUComputePipelineDescriptor) => {
+          enter();
+          await gate;
+          return compile(desc);
+        },
+      });
+      const pending = s.PathTracer.create(
+        { width: 2, height: 2 },
+        { device: dying },
+      );
+      await entered;
+      dying.destroy();
+      await dying.lost;
+      release();
+      let loss;
+      try {
+        await pending;
+      } catch (e: any) {
+        loss = e.code;
+      }
+      const result = {
+        recovery,
+        blocked,
+        recoveryResidual,
+        loss,
+        created: allocation.created,
+        destroyed: allocation.destroyed,
+        residual: allocation.count,
+      };
+      allocation.restore();
+      return result;
+    });
+    await testInfo.attach("recovery-compilation.json", {
+      body: JSON.stringify(r, null, 2),
+      contentType: "application/json",
+    });
+    expect(r.recovery).toBe("WEBGPU_ADAPTER_UNAVAILABLE");
+    expect(r.blocked).toBe("DEVICE_LOST");
+    expect(r.recoveryResidual).toBe(0);
+    expect(r.loss).toBe("DEVICE_LOST");
+    expect(r.created).toBeGreaterThanOrEqual(10);
+    expect(r.created).toBe(r.destroyed);
+    expect(r.residual).toBe(0);
+  });
   test(`W17 ${label}: full trace-sdf-v1 analytic CPU/WASM/GPU workload`, async ({
     page,
   }, testInfo) => {
@@ -133,6 +278,7 @@ for (const dist of [false, true]) {
     expect(r.maxT).toBeLessThanOrEqual(1e-5);
     expect(r.maxBary).toBeLessThanOrEqual(1e-5);
     expect(r.maxSdf).toBeLessThanOrEqual(1e-4);
+    expect(r.sdfOffCenterProbes).toBe(512);
   });
   test(`W17 ${label}: CPU/WASM/GPU BVH hits, LBVH radix and topology-preserving refit`, async ({
     page,
@@ -526,16 +672,29 @@ for (const dist of [false, true]) {
           Math.abs(original.color[i] - replay.color[i]),
         );
       tracer.dispose();
+      const loopDevice =
+          await (await navigator.gpu.requestAdapter())!.requestDevice(),
+        tracker = (
+          await import(/* @vite-ignore */ "/examples/w17-memory.js")
+        ).trackGpuBuffers(loopDevice);
       let residual = 0;
       for (let i = 0; i < 30; i++) {
-        const t = await s.PathTracer.create({ width: 2, height: 2 });
+        const t = await s.PathTracer.create(
+          { width: 2, height: 2 },
+          { device: loopDevice },
+        );
         await t.render();
         t.dispose();
-        const m = t.memoryReport();
-        residual = Math.max(residual, m.cpuBytes + m.gpuBytes + m.cacheBytes);
+        residual = Math.max(residual, tracker.bytes);
       }
+      const disposalAllocationCount = tracker.created,
+        disposalResidualBuffers = tracker.count;
+      tracker.restore();
+      loopDevice.destroy();
       scene.sdf.dispose();
       return {
+        disposalAllocationCount,
+        disposalResidualBuffers,
         cache,
         cancelled,
         limited,
@@ -557,6 +716,8 @@ for (const dist of [false, true]) {
     expect(r.lost).toBe("DEVICE_LOST");
     expect(r.replayMax).toBe(0);
     expect(r.residual).toBe(0);
+    expect(r.disposalAllocationCount).toBeGreaterThanOrEqual(300);
+    expect(r.disposalResidualBuffers).toBe(0);
     expect(r.nodeLimit).toBe("RESOURCE_LIMIT_EXCEEDED");
     expect(r.bindingLimit).toBe("UNSUPPORTED_FEATURE");
     expect(r.midCancellation).toBe("REQUEST_CANCELLED");

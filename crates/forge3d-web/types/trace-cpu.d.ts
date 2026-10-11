@@ -18,6 +18,8 @@ export declare function cameraRay(s: CpuTraceSettings, pixel: number, rng: Trace
     origin: TraceVec3;
     direction: TraceVec3;
 };
+/** Analytic Beer transmittance on a finite or directional-light shadow segment. */
+export declare function mediumTransmittance(scene: TraceScene, origin: TraceVec3, direction: TraceVec3, distance: number): TraceVec3;
 export declare function traceCpuSample(scene: TraceScene, s: CpuTraceSettings, pixel: number, sample: number, reservoirs: TraceReservoir[]): {
     record: Float32Array;
     reservoir: TraceReservoir;

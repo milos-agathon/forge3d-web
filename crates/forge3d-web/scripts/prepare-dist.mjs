@@ -193,6 +193,6 @@ for (const file of ['pointcloud-types','pointcloud-common','pointcloud-octree','
   writeFileSync(join(root,'types',file+'.d.ts'),readRequired(join(dist,file+'.d.ts')).replace(/from (["'])\.\/(terrain-scatter|range-scheduler|byte-cache)\.js\1/g,'from "./index.js"'));
 }
 
-for (const file of ['trace-types','trace-math','bvh-build','bvh','bvh-gpu','sdf-primitive','sdf','trace-scene','trace-cpu','trace-bsdf','trace-light','trace-sampling','trace-compute','trace-gpu','path-tracer','trace-worker']) {
+for (const file of ['trace-types','trace-math','bvh-build','bvh','bvh-gpu','sdf-primitive','sdf','trace-scene','trace-cpu','trace-bsdf','trace-light','trace-sampling','trace-compute','trace-gpu','path-tracer','trace-worker','trace-output']) {
   writeFileSync(join(root,'types',file+'.d.ts'),readRequired(join(dist,file+'.d.ts')).replace(/from (["'])\.\/frames\.js\1/g,'from "./index.js"'));
 }

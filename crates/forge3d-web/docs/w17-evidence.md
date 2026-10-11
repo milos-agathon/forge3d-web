@@ -33,14 +33,22 @@ gradient.
 `trace-sdf-v1` contains 65,536 triangles, 128 sphere primitives (255 DAG nodes),
 1,048,576 analytic rays and seed 1597463007. An independent Python generator
 pins geometry, rays and expected hit bytes. Extra rays exercise the lower sheet
-and all 128 spheres. The image oracle integrates the fixture's Lambert/environment
+and all 128 spheres. The frozen million-ray set is an exact dyadic hash oracle,
+not numerical-tolerance evidence by itself. A separate 567-query regression uses
+rotated triangles, oblique non-dyadic rays and irregular leaf counts. Another
+512 samples check SDF values away from sphere centres against an analytic oracle. The image oracle integrates the fixture's Lambert/environment
 response analytically. The browser test checks strictly decreasing RMSE at
 1/4/16/64 spp, Gaussian-window SSIM ≥0.98 at 64 spp, exact repeat/engine hashes,
 CPU color tolerance 1e-5 and full pixel coverage. A blank-frame negative control
 must fail SSIM.
 
-ReSTIR is checked against an exhaustive 50-light reference, with error reduction
-above 40%. Media is checked against RGB Beer attenuation; GGX/glass/area lights
+Candidate RIS is checked against an exhaustive 50-light reference, with error reduction
+above 40%. Reuse is compared at equal sample/candidate counts, checked against
+an analytic two-light mean across eight seeds, and compared between CPU/GPU with
+zero-weight histories. Directional guiding learns an emissive wall and must reduce
+variance after training; clamped CPU/GPU weights are compared. Lit absorption
+checks both camera and shadow paths; RGB scattering checks actual in-medium
+lighting and CPU/GPU engine parity. Media is also checked against RGB Beer attenuation; GGX/glass/area lights
 must render covered finite images with engine agreement and CPU error below
 0.001 relative to max(1, CPU value). Unequal GGX axes must change the image;
 normal-incidence BRDF and reciprocity have independent unit checks. Cache continuation,
@@ -49,10 +57,14 @@ typed limits, device loss/replay and 30 disposal cycles are covered.
 Pending scene updates and device recovery hold the same mutation lock as
 rendering. Disposal during asynchronous pipeline creation releases the late GPU
 resources and rejects the pending operation. A browser regression counts actual
-GPU buffer destruction, independently of the tracer's memory ledger.
+GPU buffer destruction, independently of the tracer's memory ledger. All 30
+disposal cycles and the full-scene stress use the same allocation observer. A
+deliberately retained buffer proves the observer detects a leak. Failed recovery
+and device loss during pending pipeline creation must reject and release buffers.
 
 GPU storage layouts are independently checked by Naga: parameters 304 bytes,
-hit 64, path 192, reservoir 80 and pending queue 128, with eight storage bindings.
+hit 64, path 192, reservoir 80 and pending queue 128, with eight storage bindings. Every member offset is checked, including LBVH
+and query records. Host packing has independent material/light/scene assertions.
 SDF temporary arrays use per-invocation private storage. This avoids a driver
 compiler stall on the 255-node full fixture while retaining the same evaluator.
 
@@ -74,3 +86,6 @@ npm run test:package-consumer:w17 -- --soak
 cargo test -p forge3d-web --lib
 cargo test -p forge3d-core --lib --no-default-features --features webgpu
 ```
+
+Native public mappings, tile enumeration and AOV Blob export are listed in
+[the tracing guide](tracing.md) and covered by source/installed regressions.

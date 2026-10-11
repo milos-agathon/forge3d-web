@@ -1,3 +1,4 @@
+import { trackGpuBuffers } from "./w17-memory.js";
 import { makeTraceFixture, sha256 } from "./w17-fixture.js";
 
 // Local stress evidence records its own resolution and adapter. It cannot attest
@@ -5,7 +6,8 @@ import { makeTraceFixture, sha256 } from "./w17-fixture.js";
 export async function runTraceSoak(s, seconds = 600) {
   const adapter = await navigator.gpu.requestAdapter(),
     device = await adapter.requestDevice(),
-    scene = makeTraceFixture(s);
+    scene = makeTraceFixture(s),
+    allocation = trackGpuBuffers(device);
   const tracer = await s.PathTracer.create(
     {
       width: 32,
@@ -84,7 +86,12 @@ export async function runTraceSoak(s, seconds = 600) {
       cpuPeak,
       gpuPeak,
       heapPeak,
-      residualBytes: m.cpuBytes + m.gpuBytes + m.cacheBytes,
+      residualBytes: allocation.bytes,
+      residualBuffers: allocation.count,
+      allocatedGpuPeak: allocation.peakBytes,
+      createdBuffers: allocation.created,
+      destroyedBuffers: allocation.destroyed,
+      ledgerResidualBytes: m.cpuBytes + m.gpuBytes + m.cacheBytes,
       adapter: {
         vendor: adapter.info.vendor,
         architecture: adapter.info.architecture,
@@ -98,6 +105,7 @@ export async function runTraceSoak(s, seconds = 600) {
   } finally {
     tracer.dispose();
     scene.sdf.dispose();
+    allocation.restore();
     device.destroy();
   }
 }

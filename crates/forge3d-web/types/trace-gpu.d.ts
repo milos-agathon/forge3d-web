@@ -19,6 +19,8 @@ export declare class TraceGpu {
     readonly bytes: number;
     private constructor();
     static create(device: GPUDevice, scene: TraceScene, settings: CpuTraceSettings, budget: number, ownsDevice?: boolean, engine?: "megakernel" | "wavefront"): Promise<TraceGpu>;
+    /** Retained GPU allocations, independent of the admission estimate. */
+    get allocatedBytes(): number;
     checkAlive(): void;
     exportReservoirs(): Promise<ArrayBuffer>;
     restore(sum: Float32Array, reservoirs: ArrayBuffer): void;

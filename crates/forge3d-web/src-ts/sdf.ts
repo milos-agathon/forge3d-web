@@ -234,7 +234,7 @@ export class SdfScene {
       if (Math.abs(e.distance) <= eps) {
         const normal = this.normal(p, eps * 4);
         return {
-          id: options.id ?? 0xfffffffe,
+          id: options.id ?? 0xffffffff,
           materialId: e.materialId,
           t,
           barycentric: [0, 0, 0],

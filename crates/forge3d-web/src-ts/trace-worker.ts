@@ -16,7 +16,8 @@ export async function buildBvhWasm(
 ): Promise<BvhHandle> {
   if (options.method === "lbvh")
     traceInvalid("WASM builder uses SAH; GPU LBVH is buildBvhGpu");
-  const handle = new BvhHandle(triangles, options);
+  const start = performance.now();
+  const handle = BvhHandle.prepare(triangles, options);
   try {
     const wasm = await loadOfflineWasm(),
       result = wasm.buildTraceBvh(
@@ -36,6 +37,8 @@ export async function buildBvhWasm(
       nodeCount: result.nodes.length,
       maxDepth: result.maxDepth,
       leafCount: result.nodes.filter((n) => n.count > 0).length,
+      buildTimeMs: performance.now() - start,
+      memoryUsageBytes: handle.triangles.length * 68 + result.nodes.length * 48,
     });
     return handle;
   } catch (error) {
@@ -68,7 +71,19 @@ export type TraceWorkerRequest =
       rays: readonly TraceRay[];
     }
   | { kind: "evaluate-sdf"; scene: SdfSnapshot; points: readonly TraceVec3[] };
-/** Register with W02 WorkerPool/registerMessageHandlers; payloads use transferable typed buffers. */
+/** 64-byte query rows: position/t, normal/front, barycentric/pad, then
+ * id/material/steps/kind as uint32 bits. A zero id denotes a miss. */
+export interface TraceWorkerHits {
+  kind: "trace-rays";
+  count: number;
+  records: ArrayBuffer;
+}
+export interface TraceWorkerDistances {
+  kind: "evaluate-sdf";
+  distances: Float32Array;
+  materials: Uint32Array;
+}
+/** Register with W02 WorkerPool/registerMessageHandlers; responses use transferable typed buffers. */
 export function createTraceWorkerHandler(): Forge3DMessageHandler {
   return async (payload, context) => {
     cancelled(context.signal);
@@ -76,16 +91,23 @@ export function createTraceWorkerHandler(): Forge3DMessageHandler {
     if (request.kind === "evaluate-sdf") {
       const scene = SdfScene.fromSnapshot(request.scene);
       try {
-        const result = [];
+        const distances = new Float32Array(request.points.length),
+          materials = new Uint32Array(request.points.length);
         for (let i = 0; i < request.points.length; i++) {
           if (i % 1024 === 0) {
             await new Promise<void>((r) => setTimeout(r, 0));
             cancelled(context.signal);
           }
-          result.push(scene.evaluate(request.points[i]!));
+          const value = scene.evaluate(request.points[i]!);
+          distances[i] = value.distance;
+          materials[i] = value.materialId;
         }
         cancelled(context.signal);
-        return result;
+        return {
+          kind: "evaluate-sdf",
+          distances,
+          materials,
+        } satisfies TraceWorkerDistances;
       } finally {
         scene.dispose();
       }
@@ -105,15 +127,44 @@ export function createTraceWorkerHandler(): Forge3DMessageHandler {
                 stats: { ...tree.stats },
               }
             : await (async () => {
-                const hits = [];
+                const records = new ArrayBuffer(request.rays.length * 64),
+                  floats = new Float32Array(records),
+                  words = new Uint32Array(records);
                 for (let i = 0; i < request.rays.length; i++) {
                   if (i % 1024 === 0) {
                     await new Promise<void>((r) => setTimeout(r, 0));
                     cancelled(context.signal);
                   }
-                  hits.push(tree.intersect(request.rays[i]!));
+                  const hit = tree.intersect(request.rays[i]!);
+                  if (hit) {
+                    const at = i * 16;
+                    floats.set(
+                      [
+                        ...hit.position,
+                        hit.t,
+                        ...hit.normal,
+                        Number(hit.frontFace),
+                        ...hit.barycentric,
+                        0,
+                      ],
+                      at,
+                    );
+                    words.set(
+                      [
+                        hit.id,
+                        hit.materialId,
+                        hit.steps,
+                        Number(hit.kind === "sdf"),
+                      ],
+                      at + 12,
+                    );
+                  }
                 }
-                return hits;
+                return {
+                  kind: "trace-rays",
+                  count: request.rays.length,
+                  records,
+                } satisfies TraceWorkerHits;
               })();
         cancelled(context.signal);
         return result;

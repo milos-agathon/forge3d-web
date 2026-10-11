@@ -21,7 +21,7 @@ struct Query {o:vec4f,d:vec4f};
 struct Result {p:vec4f,n:vec4f,bary:vec4f,tags:vec4u};
 @group(0) @binding(2) var<storage,read> queries:array<Query>;
 @group(0) @binding(3) var<storage,read_write> results:array<Result>;
-@compute @workgroup_size(64) fn query_rays(@builtin(global_invocation_id) gid:vec3u){let i=gid.x;if(i>=params.dims.x){return;}let r=queries[i];let h=scene_hit(r.o.xyz,r.d.xyz,r.o.w,r.d.w);var result:Result;result.p=vec4f(h.p,h.t);result.n=vec4f(h.n,f32(h.front));result.bary=vec4f(h.bary,0.);result.tags=vec4u(h.id,h.material,h.steps,select(0u,1u,h.id==0xfffffffeu));results[i]=result;}
+@compute @workgroup_size(64) fn query_rays(@builtin(global_invocation_id) gid:vec3u){let i=gid.x;if(i>=params.dims.x){return;}let r=queries[i];let h=scene_hit(r.o.xyz,r.d.xyz,r.o.w,r.d.w);var result:Result;result.p=vec4f(h.p,h.t);result.n=vec4f(h.n,f32(h.front));result.bary=vec4f(h.bary,0.);result.tags=vec4u(h.id,h.material,h.steps,select(0u,1u,h.steps>0u));results[i]=result;}
 @compute @workgroup_size(64) fn evaluate_points(@builtin(global_invocation_id) gid:vec3u){let i=gid.x;if(i>=params.dims.x){return;}let value=sdf_eval(queries[i].o.xyz);var result:Result;result.p=vec4f(value.distance,0.,0.,0.);result.tags=vec4u(0u,value.material,0u,0u);results[i]=result;}
 `;
 /** One bounded cancellable compute batch. Dedicated buffers are destroyed on every exit. */

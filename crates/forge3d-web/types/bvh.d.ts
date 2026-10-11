@@ -7,8 +7,17 @@ export declare class BvhHandle {
     readonly nodes: BvhNode[];
     indices: Uint32Array;
     readonly stats: BvhStats;
-    constructor(input: readonly TraceTriangle[], options?: BvhBuildOptions);
+    constructor(input: readonly TraceTriangle[], options?: BvhBuildOptions, build?: boolean);
+    /** Validated primitive storage for an external builder; no CPU tree build. */
+    static prepare(input: readonly TraceTriangle[], options?: BvhBuildOptions): BvhHandle;
+    clone(memoryBudgetBytes?: number): BvhHandle;
     get worldBounds(): TraceBounds;
+    isGpu(): boolean;
+    isCpu(): boolean;
+    validatePrimitives(): void;
+    getProperties(): BvhStats & {
+        worldBounds: TraceBounds;
+    };
     intersect(input: TraceRay): TraceHit | undefined;
     refit(input: readonly TraceTriangle[]): void;
     /** 48-byte nodes: two padded vec3 bounds, four u32 topology words. */

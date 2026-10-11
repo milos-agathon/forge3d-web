@@ -4798,3 +4798,8 @@ export { traceRaysGpu, evaluateSdfGpu } from "./trace-compute.js";
 export { AliasTable, RestirDI, OnlineGuidingGrid, hgPhase, sampleHg, normalizeRestirConfig } from "./trace-sampling.js";
 export type { RestirConfig, TraceReservoir } from "./trace-sampling.js";
 export { buildBvhWasm, evaluateSdfWasm, createTraceWorkerHandler } from "./trace-worker.js";
+
+export type { TraceWorkerHits, TraceWorkerDistances } from "./trace-worker.js";
+
+export { iterTraceTiles, encodeTraceAovs } from "./trace-output.js";
+export type { TraceTile } from "./trace-output.js";

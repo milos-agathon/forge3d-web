@@ -149,12 +149,22 @@ export async function runTraceWorkload(s) {
       });
     for (const h of sphereHits)
       if (
-        h?.id !== 0xfffffffe ||
+        h?.id !== 0xffffffff ||
         Math.abs(h.t - 4) > 1e-5 ||
         h.materialId !== 0
       )
         analyticErrors++;
-    const points = Array.from({ length: 128 }, (_, i) => [140 + 3 * i, 0, 0]),
+    const offsets = [
+      [0.271, 0.433, 0.519],
+      [-1.173, 0.397, 0.291],
+      [0.623, -0.917, 0.371],
+      [-0.347, -0.583, 0.719],
+    ];
+    const points = Array.from({ length: 512 }, (_, i) => [
+        140 + 3 * Math.floor(i / 4) + offsets[i % 4][0],
+        offsets[i % 4][1],
+        offsets[i % 4][2],
+      ]),
       distances = await s.evaluateSdfGpu(scene.sdf, points, { device }),
       native = await s.evaluateSdfWasm(scene.sdf, points);
     let maxSdf = 0,
@@ -165,6 +175,15 @@ export async function runTraceWorkload(s) {
         maxSdf,
         Math.abs(c.distance - distances[i].distance),
         Math.abs(c.distance - native[i].distance),
+        Math.abs(
+          c.distance -
+            (Math.hypot(
+              Math.fround(points[i][0]) - (140 + 3 * Math.floor(i / 4)),
+              Math.fround(points[i][1]),
+              Math.fround(points[i][2]),
+            ) -
+              1),
+        ),
       );
       if (
         c.materialId !== distances[i].materialId ||
@@ -181,6 +200,7 @@ export async function runTraceWorkload(s) {
       expectedTriangleHash: manifest.triangleSha256,
       lowerLayerProbes: 64,
       sdfHitProbes: 128,
+      sdfOffCenterProbes: 512,
       rayHash: await sha256(rayBytes),
       cpuHitHash: await sha256(cpuBytes),
       wasmHitHash: await sha256(wasmBytes),

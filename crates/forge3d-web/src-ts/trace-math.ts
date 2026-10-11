@@ -113,6 +113,7 @@ export function boundsInterval(
   r: Required<TraceRay>,
   max = r.tMax,
 ): readonly [number, number] | undefined {
+  if (b.min.some((v, i) => v > b.max[i]!)) return;
   let lo = r.tMin,
     hi = max;
   for (let a = 0; a < 3; a++) {

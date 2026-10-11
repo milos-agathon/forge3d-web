@@ -130,21 +130,10 @@ export class TraceScene {
     }
     this.sdf = input.sdf?.cloneScene();
     this.bvh = input.bvh
-      ? new BvhHandle(input.bvh.triangles, {
-          method: "lbvh",
-          memoryBudgetBytes: budget,
-        })
+      ? input.bvh.clone(budget)
       : input.triangles?.length
         ? new BvhHandle(input.triangles, { memoryBudgetBytes: budget })
         : undefined;
-    if (input.bvh && this.bvh) {
-      input.bvh.packNodes();
-      this.bvh.nodes.length = 0;
-      for (const node of input.bvh.nodes)
-        this.bvh.nodes.push(structuredClone(node));
-      this.bvh.indices = input.bvh.indices.slice();
-      Object.assign(this.bvh.stats, input.bvh.stats);
-    }
     if (validateMaterials)
       try {
         for (const t of this.bvh?.triangles ?? [])

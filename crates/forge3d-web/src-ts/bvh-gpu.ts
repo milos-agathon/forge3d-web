@@ -23,7 +23,7 @@ var<workgroup> histogram:array<atomic<u32>,4>;
 @compute @workgroup_size(1) fn radix_prefix(){var total=0u;for(var bucket=0u;bucket<4u;bucket++){for(var block=0u;block<p.blocks;block++){let at=block*4u+bucket;let count=counts[at];counts[at]=total;total+=count;}}}
 var<workgroup> buckets:array<u32,256>;
 @compute @workgroup_size(256) fn radix_scatter(@builtin(global_invocation_id) gid:vec3u,@builtin(local_invocation_id) lid:vec3u,@builtin(workgroup_id) wid:vec3u){buckets[lid.x]=4u;if(gid.x<p.count){buckets[lid.x]=(pairs[gid.x].code>>p.shift)&3u;}workgroupBarrier();if(gid.x>=p.count){return;}let bucket=buckets[lid.x];var rank=0u;for(var j=0u;j<lid.x;j++){if(buckets[j]==bucket){rank++;}}sorted[counts[wid.x*4u+bucket]+rank]=pairs[gid.x];}
-@compute @workgroup_size(64) fn topology(@builtin(global_invocation_id) gid:vec3u){let i=gid.x;if(i>=p.nodes){return;}var n:Node;n.lo=vec4f(1e30);n.hi=vec4f(-1e30);if(i<p.leaves-1u){n.tags=vec4u(i*2u+1u,i*2u+2u,0u,0u);}else{let leaf=i-(p.leaves-1u);let span=(p.count+p.leaves-1u)/p.leaves;let first=min(p.count,leaf*span);n.tags=vec4u(0u,0u,first,min(span,p.count-first));}nodes[i]=n;if(i<p.count){indices[i]=pairs[i].index;}}
+@compute @workgroup_size(64) fn topology(@builtin(global_invocation_id) gid:vec3u){let i=gid.x;if(i>=p.nodes){return;}var n:Node;n.lo=vec4f(1e30);n.hi=vec4f(-1e30);if(i<p.leaves-1u){n.tags=vec4u(i*2u+1u,i*2u+2u,0u,0u);}else{let leaf=i-(p.leaves-1u);let base=p.count/p.leaves;let extra=p.count%p.leaves;let first=leaf*base+min(leaf,extra);let count=base+select(0u,1u,leaf<extra);n.tags=vec4u(0u,0u,first,count);}nodes[i]=n;if(i<p.count){indices[i]=pairs[i].index;}}
 @compute @workgroup_size(64) fn reorder(@builtin(global_invocation_id) gid:vec3u){let i=gid.x;if(i<p.count){indices[i]=pairs[i].index;}}
 @compute @workgroup_size(64) fn bounds(@builtin(global_invocation_id) gid:vec3u){let i=gid.x;if(i>=p.nodes||depths[i]!=p.level){return;}var n=nodes[i];var lo=vec3f(1e30);var hi=vec3f(-1e30);if(n.tags.w>0u){for(var j=0u;j<n.tags.w;j++){let t=triangles[indices[n.tags.z+j]];lo=min(lo,min(t.a.xyz,min(t.b.xyz,t.c.xyz)));hi=max(hi,max(t.a.xyz,max(t.b.xyz,t.c.xyz)));}}else if(n.tags.x!=0u||n.tags.y!=0u){lo=min(nodes[n.tags.x].lo.xyz,nodes[n.tags.y].lo.xyz);hi=max(nodes[n.tags.x].hi.xyz,nodes[n.tags.y].hi.xyz);}n.lo=vec4f(lo,0.);n.hi=vec4f(hi,0.);nodes[i]=n;}
 `;
@@ -245,9 +245,11 @@ export async function buildBvhGpu(
 ): Promise<BvhHandle> {
   if (options.maxLeafSize !== undefined && options.maxLeafSize !== 4)
     traceInvalid("GPU LBVH maxLeafSize is 4");
-  const handle = new BvhHandle(triangles, { ...options, method: "lbvh" });
+  const start = performance.now();
+  const handle = BvhHandle.prepare(triangles, { ...options, method: "lbvh" });
   try {
     await gpuBuild(handle, options, false);
+    handle.stats.buildTimeMs = performance.now() - start;
     return handle;
   } catch (error) {
     handle.dispose();

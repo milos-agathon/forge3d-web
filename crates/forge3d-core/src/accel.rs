@@ -61,6 +61,7 @@ impl Bvh {
         let mut ids = std::collections::HashSet::new();
         for t in &triangles {
             if t.id == 0
+                || t.id == u32::MAX
                 || !ids.insert(t.id)
                 || t.v0
                     .iter()
@@ -294,6 +295,8 @@ mod tests {
     #[test]
     fn reject_nonfinite_and_count_change() {
         assert!(Bvh::build(vec![], 4).is_err());
+        assert!(Bvh::build(vec![triangle(0., u32::MAX)], 4).is_err());
+        assert!(Bvh::build(vec![triangle(0., u32::MAX - 1)], 4).is_ok());
         let mut b = Bvh::build(vec![triangle(0., 1)], 4).unwrap();
         assert!(b.refit(vec![]).is_err());
     }

@@ -46,6 +46,17 @@ export async function runTraceFeatures(s) {
         },
         scene,
       );
+    const noReuse = await create(
+      {
+        maxBounces: 1,
+        restir: {
+          initialCandidates: 32,
+          temporalNeighbors: 0,
+          spatialNeighbors: 0,
+        },
+      },
+      scene,
+    );
     const base = await plain.render({ spp: 1 }),
       first = await ris.render({ spp: 1 }),
       reused = await ris.render({ spp: 4 });
@@ -71,11 +82,15 @@ export async function runTraceFeatures(s) {
     const mse = (r) =>
       r.color.reduce((a, v, i) => a + (v - reference[i]) ** 2, 0) /
       reference.length;
+    const independent = await noReuse.render({ spp: 4 });
     const varianceReduction = 1 - mse(first) / mse(base),
       reuseChanged =
-        (await sha256(first.color)) !== (await sha256(reused.color));
+        (await sha256(independent.color)) !== (await sha256(reused.color));
     const grid = new s.OnlineGuidingGrid(24, 16, 8),
-      guided = await create({ guiding: grid }, scene),
+      guided = await create(
+        { guiding: grid },
+        { ...scene, environment: [0.6, 0.7, 0.9] },
+      ),
       before = grid.snapshot();
     await guided.render({ spp: 4 });
     const after = grid.snapshot(),

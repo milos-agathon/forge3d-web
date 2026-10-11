@@ -410,6 +410,7 @@ export class TraceGpu {
         compilation.catch(() => cache!.delete(key));
       }
       const { layout, pipelines } = await compilation;
+      gpu.checkAlive();
       gpu.#pipelines = new Map(pipelines);
       for (let swap = 0; swap < 2; swap++) {
         const buffers = [
@@ -437,11 +438,18 @@ export class TraceGpu {
       const error = await device.popErrorScope();
       if (error)
         throw new Forge3DError("SHADER_COMPILATION_FAILED", error.message);
+      gpu.checkAlive();
       return gpu;
     } catch (error) {
+      const lost = gpu ? gpu.#lost : false;
       gpu?.dispose();
       if (!gpu && ownsDevice) device.destroy();
       await device.popErrorScope().catch(() => null);
+      if (lost)
+        throw new Forge3DError(
+          "DEVICE_LOST",
+          "Tracing device lost during pipeline creation",
+        );
       throw error;
     }
   }
@@ -449,6 +457,10 @@ export class TraceGpu {
     live(this.#disposed);
     if (this.#lost)
       throw new Forge3DError("DEVICE_LOST", "Tracing device lost");
+  }
+  /** Retained GPU allocations, independent of the admission estimate. */
+  get allocatedBytes(): number {
+    return this.#buffers.reduce((sum, buffer) => sum + buffer.size, 0);
   }
   checkAlive(): void {
     this.#guard();

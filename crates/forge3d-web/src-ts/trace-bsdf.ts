@@ -47,9 +47,9 @@ export function traceBrdf(
   const h = unit(add(view, light)),
     nh = Math.max(0, dot(n, h)),
     vh = Math.max(0, dot(view, h)),
-    a = Math.max(0.001, m.roughness * m.roughness);
+    a = m.ax;
   let D: number, G: number;
-  if (Math.abs(m.ax - m.ay) < 1e-4) {
+  if (m.ax === m.ay) {
     const d = nh * nh * (a * a - 1) + 1;
     D = (a * a) / (Math.PI * d * d);
     G = smithG1(nv, a) * smithG1(nl, a);
@@ -80,12 +80,12 @@ export function sampleGgx(
   ax = Math.max(0.001, roughness * roughness),
   ay = Math.max(0.001, roughness * roughness),
 ): { direction: TraceVec3; weight: TraceVec3 } {
-  const alpha = Math.max(0.001, roughness * roughness),
+  const alpha = ax,
     a2 = alpha * alpha,
     z = Math.sqrt((1 - u) / (1 + (a2 - 1) * u)),
     r = Math.sqrt(Math.max(0, 1 - z * z)),
     phi = 2 * Math.PI * v;
-  const aniso = Math.abs(ax - ay) >= 1e-4;
+  const aniso = ax !== ay;
   const h = localToWorld(
       aniso
         ? [
