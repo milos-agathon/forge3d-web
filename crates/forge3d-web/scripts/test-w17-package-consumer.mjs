@@ -151,7 +151,8 @@ try {
   const origin = `http://127.0.0.1:${server.address().port}`;
   const out = join(root, "test-results");
   mkdirSync(out, { recursive: true });
-  const config = join(out, "w17-package.config.mts");
+  // Playwright clears outputDir before workers import the config.
+  const config = join(temp, "w17-package.config.mts");
   writeFileSync(
     config,
     `import config from ${JSON.stringify(pathToFileURL(join(root, "playwright.config.ts")).href)};export default {...config,testDir:${JSON.stringify(join(root, "tests/playwright"))},testMatch:'w17_tracing.spec.ts',webServer:undefined,use:{...config.use,baseURL:${JSON.stringify(origin)}},reporter:[['list'],['json',{outputFile:${JSON.stringify(join(out, "w17-installed-playwright.json"))}}]]};`,
