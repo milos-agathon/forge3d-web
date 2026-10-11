@@ -1,0 +1,100 @@
+
+> @forge3d/web@1.26.3 test:unit
+> vitest run
+
+
+ RUN  v4.0.18 D:/forge3d-web/.worktrees/w16/crates/forge3d-web
+
+ ✓ tests/unit/w11-native-provenance.test.ts (5 tests) 31ms
+ ✓ tests/unit/w16-provenance.test.ts (1 test) 188ms
+ ✓ tests/unit/orbit-controller.test.ts (6 tests) 823ms
+     ✓ keeps ten thousand randomized finite deltas valid  811ms
+ ✓ tests/unit/label-contract-record.test.ts (3 tests) 52ms
+ ✓ tests/unit/range-scheduler.test.ts (27 tests) 135ms
+ ✓ tests/unit/w15-io.test.ts (19 tests) 196ms
+ ✓ tests/unit/browser-resources.test.ts (36 tests) 218ms
+ ✓ tests/unit/w15-geometry.test.ts (33 tests) 245ms
+ ✓ tests/unit/terrain-streaming.test.ts (20 tests) 240ms
+ ✓ tests/unit/display-adapters.test.ts (7 tests) 270ms
+ ✓ tests/unit/message-protocol.test.ts (12 tests) 276ms
+ ✓ tests/unit/terrain-scatter.test.ts (14 tests) 368ms
+ ✓ tests/unit/label-workflows.test.ts (52 tests) 555ms
+ ✓ tests/unit/w16-tiles.test.ts (18 tests) 588ms
+ ✓ tests/unit/cog.test.ts (19 tests) 760ms
+ ✓ tests/unit/byte-cache.test.ts (16 tests) 102ms
+ ✓ tests/unit/viewer-camera.test.ts (5 tests) 84ms
+ ✓ tests/unit/browser-io.test.ts (20 tests) 73ms
+ ✓ tests/unit/terrain-probes.test.ts (6 tests) 51ms
+ ✓ tests/unit/w06-frames.test.ts (8 tests) 123ms
+ ✓ tests/unit/vector.test.ts (13 tests) 45ms
+ ✓ tests/unit/w15-buildings.test.ts (26 tests) 110ms
+ ✓ tests/unit/environment.test.ts (20 tests) 1420ms
+     ✓ matches six independently executed native fields including ground locking  1038ms
+ ✓ tests/unit/remote-dataset-retry.test.ts (8 tests) 78ms
+ ✓ tests/unit/terrain-dataset.test.ts (38 tests) 165ms
+ ✓ tests/unit/w10-reflection-metrics.test.ts (2 tests) 92ms
+ ✓ tests/unit/textures.test.ts (42 tests) 34ms
+ ✓ tests/unit/session.test.ts (24 tests) 108ms
+ ✓ tests/unit/viewer-controls.test.ts (15 tests) 52ms
+ ✓ tests/unit/camera-animation.test.ts (14 tests) 30ms
+ ✓ tests/unit/scene.test.ts (33 tests) 50ms
+ ✓ tests/unit/camera-controllers.test.ts (14 tests) 31ms
+ ✓ tests/unit/offscreen-renderer.test.ts (9 tests) 30ms
+ ✓ tests/unit/ibl.test.ts (34 tests) 2504ms
+     ✓ round-trips prepared payloads through cache storage byte-identically  362ms
+     ✓ round-trips through OPFS  521ms
+     ✓ reports a miss then a hit with byte-identical payloads  322ms
+     ✓ treats a higher-quality cached entry as a miss  726ms
+ ✓ tests/unit/camera-rigs.test.ts (38 tests) 2482ms
+     ✓ never violates the minimum at any playback time  1879ms
+ ✓ tests/unit/camera.test.ts (18 tests) 29ms
+ ✓ tests/unit/lighting.test.ts (23 tests) 33ms
+ ✓ tests/unit/renderer-config.test.ts (16 tests) 31ms
+ ✓ tests/unit/w14-crs.test.ts (27 tests) 2708ms
+     ✓ supports empty arrays, copied identity, XYZ/T and 10000 points  508ms
+     ✓ does not leak native allocations on repeated success and failure  869ms
+ ✓ tests/unit/postfx.test.ts (20 tests) 20ms
+ ✓ tests/unit/materials.test.ts (18 tests) 25ms
+ ✓ tests/unit/shadows.test.ts (23 tests) 28ms
+ ✓ tests/unit/w12-native-provenance.test.ts (1 test) 13ms
+ ✓ tests/unit/w16-pointcloud.test.ts (28 tests) 2934ms
+     ✓ matches recorded real-data native camera keys/counts and quantized SSE exactly  2690ms
+ ✓ tests/unit/viewer-interaction-observation.test.ts (12 tests) 10ms
+ ✓ tests/unit/w14-native-contract.test.ts (2 tests) 28ms
+ ✓ tests/unit/playwright-project-metadata.test.ts (16 tests) 14ms
+ ✓ tests/unit/viewer-visibility-lifecycle.test.ts (10 tests) 7ms
+ ✓ tests/unit/w06-offline.test.ts (9 tests) 22ms
+ ✓ tests/unit/labels.test.ts (74 tests) 3255ms
+     ✓ makes world glyph triangles with depth and actual camera projection  464ms
+     ✓ compiles a 200000-vertex polygon without spreading vertices into the JS stack  1925ms
+ ✓ tests/unit/terrain-material.test.ts (7 tests) 18ms
+ ✓ tests/unit/source-launch-observation.test.ts (3 tests) 7ms
+ ✓ tests/unit/resize-controller.test.ts (5 tests) 9ms
+ ✓ tests/unit/terrain-overlays.test.ts (14 tests) 19ms
+ ✓ tests/unit/evidence-mode.test.ts (3 tests) 4ms
+ ✓ tests/unit/memory-policy.test.ts (9 tests) 8ms
+ ✓ tests/unit/terrain-vt.test.ts (10 tests) 7ms
+ ✓ tests/unit/ownership.test.ts (6 tests) 6ms
+ ✓ tests/unit/render-scheduler.test.ts (4 tests) 6ms
+ ✓ tests/unit/w14-datasets.test.ts (10 tests) 3658ms
+     ✓ loads native DEM and boundaries exactly, with defensive typed buffers  2044ms
+     ✓ caches exact bytes across instances, refuses offline misses and corrupted entries  1517ms
+ ✓ tests/unit/playwright-config.test.ts (7 tests) 7ms
+ ✓ tests/unit/playwright-launch-diagnostics.test.ts (5 tests) 5ms
+ ✓ tests/unit/w16-laz-admission.test.ts (10 tests) 3928ms
+     ✓ rejects public and supplied-pool subviews whose cloned backing stores exceed the remaining budget  3693ms
+ ✓ tests/unit/worker-renderer.test.ts (12 tests) 3990ms
+     ✓ leaves no listeners or pointers after 30 cycles  3254ms
+ ✓ tests/unit/viewer.test.ts (45 tests) 4099ms
+     ✓ clears failed labels and uses only the caller channel for capture and replacement errors  2274ms
+     ✓ retries failed labels after recovery without repeating the handled error  305ms
+ ✓ tests/unit/w15-native-contracts.test.ts (14 tests) 5243ms
+     ✓ batch history compares exact binary views and rejects missing or changed available blobs  870ms
+     ✓ optional history rejects changed bytes and skips unavailable commits  505ms
+     ✓ pins every native suite and requires concrete browser ports  3687ms
+
+ Test Files  66 passed (66)
+      Tests  1118 passed (1118)
+   Start at  10:15:37
+   Duration  8.76s (transform 32.09s, setup 0ms, import 84.53s, tests 42.78s, environment 16ms)
+

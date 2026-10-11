@@ -143,6 +143,134 @@ for (const dist of [false, true]) {
     expect(f.budget.code).toBe("RESOURCE_LIMIT_EXCEEDED");
     expect(f.corrupt.code).toBe("INVALID_INPUT");
   });
+  test(`W16 ${mode}: public file and chunk decoders hard-stop stuck WASM and bound waiting callers`, async ({ page }) => {
+    await open(page);
+    const result = await page.evaluate(async (dist) => {
+      const api = await (dist ? import("/dist/index.js") : import("/src-ts/index.ts"));
+      const file = new Uint8Array(await (await fetch("/tests/fixtures/w16/autzen_trim.laz")).arrayBuffer()),
+        copc = new Uint8Array(await (await fetch("/tests/fixtures/w16/ellipsoid.copc.laz")).arrayBuffer()),
+        header = api.parseLasHeader(copc), view = new DataView(copc.buffer),
+        hierarchyOffset = Number(view.getBigUint64(375 + 54 + 40, true)),
+        entry = new DataView(copc.buffer, hierarchyOffset, 32),
+        offset = Number(entry.getBigUint64(16, true)), length = entry.getInt32(24, true), count = entry.getInt32(28, true),
+        chunk = copc.slice(offset, offset + length),
+        manifest = await (await fetch("/tests/fixtures/w16/copc-ept-tiles-v1.json")).json();
+      const hash = async (array: ArrayBufferView) => [...new Uint8Array(await crypto.subtle.digest("SHA-256",
+        array.buffer.slice(array.byteOffset, array.byteOffset + array.byteLength) as ArrayBuffer))]
+        .map((x) => x.toString(16).padStart(2, "0")).join("");
+      const NativeWorker = Worker, runs = [];
+      for (const kind of ["file", "chunk"]) for (const reason of ["abort", "deadline"]) {
+        let created = 0, terminated = 0, entered!: () => void, startupFailed!: (error: Error) => void;
+        const stuck = new Promise<void>((resolve, reject) => { entered = resolve; startupFailed = reject; });
+        window.Worker = class extends NativeWorker {
+          constructor(url: string | URL, options?: WorkerOptions) {
+            const isLaz = String(url).includes("/laz-worker.");
+            super(isLaz ? "/examples/test-w16-stuck-worker.js?native" + (dist ? "&dist" : "") : url, options);
+            if (isLaz) {
+              created++;
+              this.addEventListener("message", ({ data }) => { if (data.state === "stuck-wasm-entered") entered(); });
+              this.addEventListener("error", (event) => startupFailed(new Error(event.message)));
+            }
+          }
+          terminate() { terminated++; super.terminate(); }
+        };
+        try {
+          const controller = new AbortController(), start = performance.now();
+          const decode = (options: any) => kind === "file" ? api.decodeLaz(file, options)
+            : api.decodeLazChunk(chunk, header, count, options);
+          const failure = decode({ signal: controller.signal, timeoutMs: reason === "deadline" ? 1500 : 10_000 })
+            .then(() => ({ code: "unexpected-success" }), (error: any) => ({ code: error.code, details: error.details }));
+          await Promise.race([stuck, failure.then((error: any) => {
+            throw Error(`Public decode ended before real stuck-WASM entry: ${JSON.stringify(error)}`);
+          })]);
+          const queuedController = new AbortController();
+          const queuedAbort = decode({ signal: queuedController.signal, timeoutMs: 10_000 })
+            .then(() => ({ code: "unexpected-success" }), (error: any) => ({ code: error.code }));
+          const queuedDeadline = decode({ timeoutMs: 20 })
+            .then(() => ({ code: "unexpected-success" }), (error: any) => ({ code: error.code, details: error.details }));
+          queuedController.abort();
+          const waiting = { abort: await queuedAbort, deadline: await queuedDeadline, created };
+          if (reason === "abort") controller.abort();
+          const error = await failure, elapsedMs = performance.now() - start;
+          const stopped = { created, terminated };
+          window.Worker = NativeWorker;
+          const recovered = await decode({ timeoutMs: 10_000 });
+          runs.push({ kind, reason, error, elapsedMs, waiting, stopped,
+            recovery: { count: recovered.positions.length / 3, positions: await hash(recovered.positions), colors: await hash(recovered.colors) } });
+        } finally { window.Worker = NativeWorker; }
+      }
+      return { runs, expected: { file: manifest.autzen, chunk: manifest.copcRoot } };
+    }, dist);
+    for (const run of result.runs) {
+      expect(run.error.code).toBe(run.reason === "abort" ? "REQUEST_CANCELLED" : "RESOURCE_LIMIT_EXCEEDED");
+      if (run.reason === "deadline") expect(run.error.details.reason).toBe("worker-deadline-exceeded");
+      expect(run.elapsedMs).toBeLessThan(5000);
+      expect(run.waiting.abort.code).toBe("REQUEST_CANCELLED");
+      expect(run.waiting.deadline).toMatchObject({ code: "RESOURCE_LIMIT_EXCEEDED", details: { reason: "worker-deadline-exceeded", timeoutMs: 20 } });
+      expect(run.waiting.created).toBe(1);
+      expect(run.stopped).toEqual({ created: 1, terminated: 1 });
+      const expected = result.expected[run.kind as "file" | "chunk"];
+      expect(run.recovery).toEqual({ count: expected.count, positions: expected.positionsSha256, colors: expected.colorsSha256 });
+    }
+  });
+  test(`W16 ${mode}: a supplied worker pool creates a fresh native heap for every decode`, async ({ page }) => {
+    await page.route("**/assets/laz/laz-perf.js", async (route) => {
+      const response = await route.fetch(), source = await response.text();
+      const instrumented = source.replace("export default createLazPerf;", `
+        let previousHeap;
+        export default async function(options) {
+          const module = await createLazPerf(options);
+          self.postMessage({ state: "native-heap-created", reused: module.HEAPU8.buffer === previousHeap });
+          previousHeap = module.HEAPU8.buffer;
+          return module;
+        }
+      `);
+      if (instrumented === source) throw Error("LAZ adapter instrumentation did not match");
+      await route.fulfill({ response, body: instrumented });
+    });
+    await open(page);
+    const result = await page.evaluate(async (dist) => {
+      const api = await (dist ? import("/dist/index.js") : import("/src-ts/index.ts"));
+      const bytes = new Uint8Array(await (await fetch("/tests/fixtures/w16/autzen_trim.laz")).arrayBuffer()), events: boolean[] = [],
+        manifest = await (await fetch("/tests/fixtures/w16/copc-ept-tiles-v1.json")).json();
+      let heapsObserved!: () => void;
+      const heaps = new Promise<void>((resolve) => { heapsObserved = resolve; });
+      const hash = async (array: ArrayBufferView) => [...new Uint8Array(await crypto.subtle.digest("SHA-256",
+        array.buffer.slice(array.byteOffset, array.byteOffset + array.byteLength) as ArrayBuffer))]
+        .map((x) => x.toString(16).padStart(2, "0")).join("");
+      const pool = new api.Forge3DWorkerPool({ size: 1, mainThreadHandler: api.createPointCloudWorkerHandler(),
+        workerFactory: () => {
+          const worker = new Worker("/examples/test-w16-stuck-worker.js" + (dist ? "?dist" : ""), { type: "module" });
+          worker.addEventListener("message", ({ data }) => {
+            if (data.state === "native-heap-created") {
+              events.push(data.reused); if (events.length === 2) heapsObserved();
+            }
+          });
+          const channel = new MessageChannel(); worker.postMessage({ port: channel.port2 }, [channel.port2]);
+          return { port: channel.port1, terminate: () => worker.terminate() };
+        } });
+      try {
+        const first = await api.openLaz(bytes, { workerPool: pool }), firstData = await first.readPoints("0-0-0-0"),
+          firstResult = { count: first.totalPoints, positions: await hash(firstData.positions), colors: await hash(firstData.colors) };
+        first.dispose();
+        const second = await api.openLaz(bytes, { workerPool: pool }), secondData = await second.readPoints("0-0-0-0"),
+          secondResult = { count: second.totalPoints, positions: await hash(secondData.positions), colors: await hash(secondData.colors) };
+        second.dispose();
+        // Worker telemetry and RPC results use different ports; await both
+        // observations instead of assuming cross-port message ordering.
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        try {
+          await Promise.race([heaps, new Promise<never>((_, reject) => {
+            timer = setTimeout(() => reject(Error("Missing fresh-heap telemetry for two completed decodes")), 1000);
+          })]);
+        } finally { clearTimeout(timer); }
+        return { events, results: [firstResult, secondResult], expected: manifest.autzen };
+      } finally { pool.dispose(); }
+    }, dist);
+    expect(result.events).toEqual([false, false]);
+    for (const run of result.results) expect(run).toEqual({ count: result.expected.count,
+      positions: result.expected.positionsSha256, colors: result.expected.colorsSha256 });
+  });
   test(`W16 ${mode}: covered point colors, aligned GPU picking, resize, recovery and allocation cycles`, async ({
     page,
     webgpuAvailability,

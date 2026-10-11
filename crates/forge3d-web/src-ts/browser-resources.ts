@@ -59,6 +59,20 @@ interface PoolWorker {
   index: number;
   run: PoolRun | undefined;
   busy: boolean;
+  retired: boolean;
+}
+
+// Admission can receive a pool from another package graph (source/dist or a
+// duplicate installation). Share metadata in the realm without retaining pools.
+const workerTimeoutRegistryKey = Symbol.for("@forge3d/web/worker-job-timeouts/v1"),
+  workerTimeoutRegistry = globalThis as unknown as Record<symbol,
+    WeakMap<Forge3DWorkerPool, number | undefined> | undefined>,
+  workerJobTimeouts = workerTimeoutRegistry[workerTimeoutRegistryKey] ??=
+    new WeakMap<Forge3DWorkerPool, number | undefined>();
+
+/** Internal admission helper; keep a caller-supplied pool's shorter deadline. */
+export function getWorkerJobTimeoutMs(pool: Forge3DWorkerPool): number | undefined {
+  return workerJobTimeouts.get(pool);
 }
 
 export class Forge3DWorkerPool {
@@ -67,7 +81,7 @@ export class Forge3DWorkerPool {
   readonly #maxQueued: number;
   readonly #handler: Forge3DWorkerPoolOptions["mainThreadHandler"];
   readonly #factory: Forge3DWorkerPoolOptions["workerFactory"];
-  readonly #jobTimeoutMs: number;
+  readonly #jobTimeoutMs: number | undefined;
   readonly #workers: PoolWorker[] = [];
   readonly #queue: PoolRun[] = [];
   #mainBusy = false;
@@ -91,7 +105,8 @@ export class Forge3DWorkerPool {
     }
     this.#handler = options.mainThreadHandler;
     this.#factory = options.workerFactory;
-    this.#jobTimeoutMs = checkedTimeout(options.jobTimeoutMs ?? 30_000);
+    this.#jobTimeoutMs = options.jobTimeoutMs === undefined
+      ? undefined : checkedTimeout(options.jobTimeoutMs);
     const size =
       options.size ??
       Math.min(
@@ -123,6 +138,7 @@ export class Forge3DWorkerPool {
     if (options.workerFactory === undefined) {
       this.#mode = "main-thread";
       this.#size = 1;
+      workerJobTimeouts.set(this, this.#jobTimeoutMs);
       return;
     }
     this.#mode = selectWorkerExecutionMode({
@@ -133,6 +149,9 @@ export class Forge3DWorkerPool {
     try {
       for (let index = 0; index < size; index += 1)
         this.#workers.push(this.#createWorker(index));
+      if (this.#jobTimeoutMs === undefined && this.#workers.every((worker) => worker.owned))
+        this.#jobTimeoutMs = 30_000;
+      workerJobTimeouts.set(this, this.#jobTimeoutMs);
     } catch (error) {
       this.dispose();
       throw Forge3DError.from(error);
@@ -153,9 +172,10 @@ export class Forge3DWorkerPool {
         new Forge3DError("REQUEST_CANCELLED", "Work was cancelled"),
       );
     }
-    let timeoutMs: number;
+    let timeoutMs: number | undefined;
     try {
-      timeoutMs = checkedTimeout(options.timeoutMs ?? this.#jobTimeoutMs);
+      timeoutMs = options.timeoutMs === undefined
+        ? this.#jobTimeoutMs : checkedTimeout(options.timeoutMs);
     } catch (error) {
       return Promise.reject(error);
     }
@@ -177,10 +197,12 @@ export class Forge3DWorkerPool {
         timer: undefined,
       };
       this.#requestId += 1;
-      unit.timer = setTimeout(() => this.#cancelUnit(unit, new Forge3DError(
-        "RESOURCE_LIMIT_EXCEEDED", "Worker job deadline exceeded",
-        { reason: "worker-deadline-exceeded", timeoutMs },
-      )), timeoutMs);
+      if (timeoutMs !== undefined) {
+        unit.timer = setTimeout(() => this.#cancelUnit(unit, new Forge3DError(
+          "RESOURCE_LIMIT_EXCEEDED", "Worker job deadline exceeded",
+          { reason: "worker-deadline-exceeded", timeoutMs },
+        )), timeoutMs);
+      }
       this.#dispatchOrQueue(unit);
     });
   }
@@ -218,8 +240,11 @@ export class Forge3DWorkerPool {
       if (worker.run) this.#settleUnit(worker.run, () => worker.run!.reject(error));
       worker.run = undefined;
       worker.busy = false;
-      try { worker.owned?.terminate(); } catch {}
-      worker.client.dispose();
+      if (!worker.retired) {
+        try { worker.owned?.terminate(); } catch {}
+        worker.client.dispose();
+        worker.retired = true;
+      }
     }
   }
 
@@ -264,8 +289,25 @@ export class Forge3DWorkerPool {
   }
 
   #tryDispatch(unit: PoolRun): boolean {
-    const worker = this.#workers.find((candidate) => !candidate.busy);
+    let worker = this.#workers.find((candidate) => !candidate.busy);
     if (worker !== undefined) {
+      if (worker.retired) {
+        try {
+          const replacement = this.#createWorker(worker.index);
+          this.#workers[this.#workers.indexOf(worker)] = replacement;
+          worker = replacement;
+        } catch (cause) {
+          // Reject both this caller and the queue if a replacement cannot start.
+          const failure = new Forge3DError("INTERNAL_ERROR", "Worker replacement failed",
+            { reason: "worker-replacement-failed", message: String(cause) });
+          this.#settleUnit(unit, () => unit.reject(failure));
+          for (const pending of this.#queue.splice(0))
+            this.#settleUnit(pending, () => pending.reject(failure));
+          this.dispose();
+          return true;
+        }
+      }
+      const activeWorker = worker;
       if (unit.options.requireHardStop && !worker.owned) {
         this.#settleUnit(unit, () => unit.reject(new Forge3DError(
           "UNSUPPORTED_FEATURE", "Replacement worker cannot terminate native calls",
@@ -277,14 +319,14 @@ export class Forge3DWorkerPool {
       worker.run = unit;
       // The pool owns cancellation so it can terminate before releasing the slot.
       Promise.resolve().then(() => {
-        if (worker.run !== unit || unit.settled) return;
+        if (activeWorker.run !== unit || unit.settled) return;
         const dispatch = this.#workerDispatchOptions(unit);
-        if (!worker.owned && unit.options.signal) dispatch.options.signal = unit.options.signal;
-        return worker.client.call("run", dispatch.payload, dispatch.options);
+        if (!activeWorker.owned && unit.options.signal) dispatch.options.signal = unit.options.signal;
+        return activeWorker.client.call("run", dispatch.payload, dispatch.options);
       })
         .then(
-          (result) => this.#finishWorker(worker, unit, () => unit.resolve(result)),
-          (error) => this.#finishWorker(worker, unit, () => unit.reject(Forge3DError.from(error))),
+          (result) => this.#finishWorker(activeWorker, unit, () => unit.resolve(result)),
+          (error) => this.#finishWorker(activeWorker, unit, () => unit.reject(Forge3DError.from(error))),
         );
       return true;
     }
@@ -371,7 +413,7 @@ export class Forge3DWorkerPool {
     if (owned && (typeof owned.terminate !== "function" || !owned.port))
       throw new Forge3DError("INVALID_INPUT", "Owned worker requires port and terminate");
     return { index, owned, client: new Forge3DMessageClient(owned ? owned.port : value as MessagePort),
-      busy: false, run: undefined };
+      busy: false, retired: false, run: undefined };
   }
 
   #finishWorker(worker: PoolWorker, unit: PoolRun, action: () => void): void {
@@ -391,19 +433,12 @@ export class Forge3DWorkerPool {
     if (this.#mainRun === unit) this.#mainAbort?.abort();
     if (worker?.owned) {
       worker.run = undefined;
+      worker.busy = false;
+      worker.retired = true;
       try { worker.owned.terminate(); } catch {}
       worker.client.dispose();
-      try {
-        const replacement = this.#createWorker(worker.index);
-        this.#workers[this.#workers.indexOf(worker)] = replacement;
-      } catch (cause) {
-        // Replacement failure must not strand queued callers or leak other workers.
-        const failure = new Forge3DError("INTERNAL_ERROR", "Worker replacement failed",
-          { reason: "worker-replacement-failed", message: String(cause) });
-        for (const pending of this.#queue.splice(0))
-          this.#settleUnit(pending, () => pending.reject(failure));
-        this.dispose();
-      }
+      // Only recreate a worker when another job needs it. Per-call pools dispose
+      // after cancellation and must not start an immediately discarded worker.
       this.#pump();
     }
     // Bare ports and main-thread handlers remain occupied until they return.

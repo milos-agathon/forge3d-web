@@ -86,3 +86,8 @@ crates/forge3d-web/examples/w16-pointcloud.js text eol=lf
 
 # Additive W16 stdout archives preserve capture bytes, including Windows CRLF.
 crates/forge3d-web/docs/w16-runs/raw-stdout/*.log -text -diff
+# Reporting corrections bind the exact prior summary bytes without normalization.
+crates/forge3d-web/docs/w16-runs/original-evidence/*.json -text
+# Reporting correction generators have exact hashes in portable evidence.
+crates/forge3d-web/scripts/w16-local-evidence.mjs text eol=lf
+crates/forge3d-web/scripts/repair-w16-evidence-reporting.mjs text eol=lf

@@ -12,6 +12,11 @@ import {
   POINT_MAX_BYTES,
 } from "./pointcloud-common.js";
 import { pointDataBytes, clonePointData } from "./pointcloud-buffer.js";
+import { lazAdmissionBytes, withLazAdmission, LAZ_DEFAULT_TIMEOUT_MS } from "./laz-admission.js";
+import { parseLasHeader } from "./pointcloud-las.js";
+import { validateLazDecode } from "./laz-decoder-local.js";
+import type { PointCloudWorkerRequest } from "./pointcloud.js";
+import { getWorkerJobTimeoutMs } from "./browser-resources.js";
 /** Dataset lifecycle, split compressed/decoded budgets and cancellable W02 worker dispatch. */
 export class PointSource {
   readonly scheduler: RangeScheduler;
@@ -107,15 +112,34 @@ export class PointSource {
       pool = this.options.workerPool;
     const kind = (request as { kind?: unknown } | undefined)?.kind;
     const native = kind === "laz-file" || kind === "laz-chunk";
-    const result = pool
+    const dispatch = async () => pool
       ? (native && pool.getDiagnostics().mode === "main-thread"
         ? await main(s)
-        : ((await pool.run(request, { signal: s, requireHardStop: native })) as PointData))
+        : native
+          ? await this.#decodeNative(request as PointCloudWorkerRequest, s)
+          : ((await pool.run(request, { signal: s })) as PointData))
       : await main(s);
+    const result = await dispatch();
     pointCancelled(s);
     pointLive(this.disposed);
     pointLimit(pointDataBytes(result), this.maxBytes);
     return result;
+  }
+  async #decodeNative(request: PointCloudWorkerRequest, signal: AbortSignal): Promise<PointData> {
+    if (request.kind === "ept-binary") throw new Error("Expected native LAZ request");
+    const chunk = request.kind === "laz-chunk",
+      header = chunk ? request.header : parseLasHeader(request.bytes),
+      count = chunk ? request.count : header.pointCount;
+    // Uncompressed LAS has no native heap and keeps the ordinary worker path.
+    if (!header.compressed)
+      return await this.options.workerPool!.run(request, { signal }) as PointData;
+    validateLazDecode(request.bytes, header, count, chunk,
+      { signal, ...(request.maxBytes !== undefined ? { maxBytes: request.maxBytes } : {}) });
+    const pool = this.options.workerPool!, timeoutMs = Math.min(LAZ_DEFAULT_TIMEOUT_MS,
+      getWorkerJobTimeoutMs(pool) ?? LAZ_DEFAULT_TIMEOUT_MS);
+    return withLazAdmission(lazAdmissionBytes(request.bytes.length, header.recordLength, count, request.bytes.buffer.byteLength), { signal, timeoutMs },
+      async (admittedSignal, remainingMs) => await pool.run(request,
+        { signal: admittedSignal, timeoutMs: remainingMs, requireHardStop: true }) as PointData);
   }
   cached(key: string): PointData | undefined {
     pointLive(this.disposed);

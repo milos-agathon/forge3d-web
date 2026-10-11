@@ -3108,7 +3108,7 @@ export interface Forge3DOwnedWorker {
 }
 
 export interface Forge3DWorkerRunOptions extends Forge3DMessageCallOptions {
-  /** Enqueue-to-completion deadline. Defaults to the pool's jobTimeoutMs. */
+  /** Enqueue-to-completion deadline. Uses the pool's deadline when omitted. */
   timeoutMs?: number;
   /** Reject execution modes that cannot terminate a synchronous native call. */
   requireHardStop?: boolean;
@@ -3117,7 +3117,8 @@ export interface Forge3DWorkerRunOptions extends Forge3DMessageCallOptions {
 export interface Forge3DWorkerPoolOptions {
   size?: number;
   maxQueued?: number;
-  /** Enqueue-to-completion deadline in milliseconds; defaults to 30,000. */
+  /** Enqueue-to-completion deadline in milliseconds. Defaults to 30,000 for
+   * owned worker pools; bare ports and main-thread handlers have no default. */
   jobTimeoutMs?: number;
   preferSharedArrayBuffer?: boolean;
   workerFactory?: (index: number) => MessagePort | Forge3DOwnedWorker;

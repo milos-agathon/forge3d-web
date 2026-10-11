@@ -1,0 +1,43 @@
+
+> @forge3d/web@1.26.3 verify:parity
+> node --test tests/parity/verify-parity-manifest.test.mjs && node ../../scripts/verify-parity-manifest.mjs
+
+✔ accepts the exhaustive stored W00 baseline (225.363ms)
+✔ locks npm and CI to the required pre-build parity gate (15.2039ms)
+✔ rejects a duplicate artifact mapping (194.7459ms)
+✔ rejects an inventory artifact without a mapping (183.7141ms)
+✔ rejects a mapping to an unresolved capability (188.9163ms)
+✔ rejects blank owner, evidence, and test fields (176.8288ms)
+✔ rejects a lock-controlled consumer without its dependency entry (167.5677ms)
+✔ rejects a non-exact lock-controlled consumer version (171.2078ms)
+✔ rejects a missing fixture tolerance and profile budget (162.8464ms)
+✔ rejects a fixture generator digest that does not match its contract (175.0309ms)
+✔ rejects incomplete reference hardware contracts (160.35ms)
+✔ rejects a discrete profile without timestamp-query (171.2171ms)
+✔ rejects stale stored evidence digests (164.713ms)
+✔ rejects experimental dependency entries without risk reviews (171.2158ms)
+✔ rejects EXR when the WASM rayon exclusion drifts (165.0651ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2785.5019
+{
+  "ok": true,
+  "capabilities": 84,
+  "constraints": 7,
+  "inventoryRecords": 6531,
+  "mappings": 6531,
+  "fixtures": 10,
+  "hardwareProfiles": 2,
+  "dependencyAssets": 12,
+  "lockControlledConsumers": 53,
+  "untracked": 0,
+  "duplicates": 0,
+  "unresolved": 0,
+  "schemaErrors": 0,
+  "lockViolations": 0
+}

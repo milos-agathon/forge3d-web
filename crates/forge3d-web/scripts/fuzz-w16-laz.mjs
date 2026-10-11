@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, readdirSync, writeFileSync, mkdirSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { dirname, resolve, relative, isAbsolute, extname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,6 +14,16 @@ const seedBytes = readFileSync(seedPath), seed = JSON.parse(seedBytes);
 const manifestBytes = readFileSync(resolve(root, 'tests/fixtures/w16/copc-ept-tiles-v1.json'));
 const manifest = JSON.parse(manifestBytes);
 const wasm = readFileSync(resolve(root, 'assets/laz/laz-perf.wasm'));
+// Bind the production implementation as well as the harness: a historical
+// fuzz pass must not silently qualify a later decoder or worker-pool change.
+const decoderBindings = ['src-ts', 'dist'].flatMap(directory =>
+  readdirSync(resolve(root, directory)).filter(name =>
+    /^(?:laz-.*|browser-io|browser-resources|message-protocol|index|pointcloud(?:-.*)?|copc|ept)\.(?:ts|js)$/u.test(name))
+    .map(name => {
+      const path = `${directory}/${name}`, bytes = readFileSync(resolve(root, path));
+      return { path, bytes: bytes.length, sha256: hash(bytes),
+        normalizedTextSha256: hash(Buffer.from(bytes.toString('utf8').replaceAll('\r\n', '\n'))) };
+    })).sort((a, b) => a.path.localeCompare(b.path));
 // Read the actual declared WASM linear-memory limit, rather than infer it from
 // the package's decoded-output budget (which is a different allocation).
 function wasmMemoryLimits(bytes) {
@@ -160,7 +170,8 @@ try {
   }, {...corpus[0], bytes:[...corpus[0].bytes]});
   const report = {schemaVersion:1, recordedAt:new Date().toISOString(), gitHead:process.env.FORGE3D_REVIEW_SHA ?? null,
     browser:browser.version(), platform:process.platform, seedSha256:hash(seedBytes), fixtureManifestSha256:hash(manifestBytes),
-    codecWasmSha256:hash(wasm), scriptSha256:hash(readFileSync(fileURLToPath(import.meta.url))),
+    codecWasmSha256:hash(wasm), codecJavaScriptSha256:hash(readFileSync(resolve(root, 'assets/laz/laz-perf.js'))),
+    decoderBindings, scriptSha256:hash(readFileSync(fileURLToPath(import.meta.url))),
     workerSha256:hash(readFileSync(resolve(root,'scripts/w16-laz-fuzz-worker.mjs'))), corpusSha256, seed:seed.seed, cases:results.length, bounds:{deadlineMs:seed.deadlineMs,
       completionBoundMs:seed.completionBoundMs, maxDecodedBytes:seed.maxDecodedBytes, wasm:memoryLimits,
       note:'WASM high water observed at instantiate/grow; JS input/output limits are separate. Browser/process RSS is not attributed per job. Deadline termination bounds CPU residency; declared WASM maximum is not a smaller per-job heap cap.'},

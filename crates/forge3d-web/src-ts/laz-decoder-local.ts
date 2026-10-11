@@ -34,25 +34,32 @@ type Factory = (o: {
   wasmBinary: Uint8Array;
   printErr: (s: string) => void;
 }) => Promise<LazModule>;
-let modulePromise: Promise<LazModule> | undefined;
+let codecPromise: Promise<{ factory: Factory; bytes: Uint8Array }> | undefined;
 async function module(): Promise<LazModule> {
-  modulePromise ??= (async () => {
+  codecPromise ??= (async () => {
     const url = new URL("../assets/laz/laz-perf.js", import.meta.url),
       wasm = new URL("../assets/laz/laz-perf.wasm", import.meta.url);
     const factory = (
       (await import(/* @vite-ignore */ url.href)) as { default: Factory }
     ).default;
     const bytes = await readByteSource(wasm, { maxBytes: 1024 * 1024 });
-    return factory({ wasmBinary: bytes, printErr: () => {} });
+    return { factory, bytes };
   })().catch((e) => {
-    modulePromise = undefined;
+    codecPromise = undefined;
     throw new Forge3DError(
       "WASM_LOAD_FAILED",
       "LAZ decoder could not be loaded",
       { reason: "laz-codec-unavailable", message: String(e) },
     );
   });
-  return modulePromise;
+  const { factory, bytes } = await codecPromise;
+  // ChunkDecoder's unchecked reads must never see another request's records.
+  // Cache only code and immutable bytes; every native job owns a fresh memory.
+  try { return await factory({ wasmBinary: bytes, printErr: () => {} }); }
+  catch (e) {
+    throw new Forge3DError("WASM_LOAD_FAILED", "LAZ decoder could not be instantiated",
+      { reason: "laz-codec-unavailable", message: String(e) });
+  }
 }
 /** Copies only one record out of the WASM heap at a time; all native allocations are freed. */
 async function decode(
@@ -109,15 +116,13 @@ async function decode(
     return parseLasRecords(raw, count, header, o);
   } catch (e) {
     decodeFailed = true;
-    // Emscripten's ABORT flag survives a trap; never cache that poisoned instance.
-    modulePromise = undefined;
     if (e instanceof Forge3DError) throw e;
     return pointError("LAZ decompression failed", "invalid-laz");
   } finally {
     let cleanupFailed = false;
     const cleanup = (action: () => void) => {
       try { action(); }
-      catch { cleanupFailed = true; modulePromise = undefined; }
+      catch { cleanupFailed = true; }
     };
     cleanup(() => decoder?.delete());
     if (output) cleanup(() => m._free(output));

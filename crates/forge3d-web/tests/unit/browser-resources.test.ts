@@ -7,6 +7,7 @@ import {
   BrowserStagingRing,
   BrowserTileCache,
   Forge3DWorkerPool,
+  getWorkerJobTimeoutMs,
   PromiseFence,
   mipLevelCount,
   selectTextureTranscodeFallback,
@@ -56,6 +57,187 @@ describe("selectWorkerExecutionMode", () => {
 });
 
 describe("Forge3DWorkerPool", () => {
+  it("retains explicit deadlines across independently imported package graphs", async () => {
+    const channel = new MessageChannel();
+    const pool = new Forge3DWorkerPool({ size: 1, jobTimeoutMs: 10,
+      workerFactory: () => ({ port: channel.port1, terminate: () => undefined }),
+      mainThreadHandler: () => undefined });
+    let otherPool: Forge3DWorkerPool | undefined;
+    try {
+      vi.resetModules();
+      const otherGraph = await import("../../src-ts/browser-resources.js");
+      expect(otherGraph.Forge3DWorkerPool).not.toBe(Forge3DWorkerPool);
+      expect(otherGraph.getWorkerJobTimeoutMs(pool)).toBe(10);
+      otherPool = new otherGraph.Forge3DWorkerPool({ jobTimeoutMs: 20,
+        mainThreadHandler: () => undefined });
+      expect(getWorkerJobTimeoutMs(otherPool)).toBe(20);
+    } finally { pool.dispose(); otherPool?.dispose(); channel.port2.close(); }
+  });
+
+  it.each(["main-thread", "bare-port"])(
+    "keeps legacy %s work alive beyond 30 seconds without an explicit deadline",
+    async (mode) => {
+      vi.useFakeTimers();
+      let release!: () => void;
+      let started!: () => void;
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      const running = new Promise<void>((resolve) => { started = resolve; });
+      const handler: Forge3DMessageHandler = async (payload) => {
+        started();
+        await gate;
+        return payload;
+      };
+      const channel = new MessageChannel();
+      const stop = serveForge3DMessagePort(channel.port2, { run: handler });
+      const pool = new Forge3DWorkerPool({ size: 1, mainThreadHandler: handler,
+        ...(mode === "bare-port" ? { workerFactory: () => channel.port1 } : {}) });
+      try {
+        let settled = false;
+        const outcome = pool.run("slow PROJ job").then(
+          (result) => { settled = true; return { result }; },
+          (error) => { settled = true; return { error }; },
+        );
+        await running;
+        await vi.advanceTimersByTimeAsync(60_000);
+        expect(settled).toBe(false);
+        expect(vi.getTimerCount()).toBe(0);
+        expect(pool.getDiagnostics()).toMatchObject({ active: 1, queued: 0 });
+        release();
+        expect(await outcome).toEqual({ result: "slow PROJ job" });
+      } finally {
+        release(); pool.dispose(); stop(); channel.port1.close(); vi.useRealTimers();
+      }
+    },
+  );
+
+  it.each([false, true])("defaults owned work to a 30-second deadline (requireHardStop=%s)", async (requireHardStop) => {
+    vi.useFakeTimers();
+    const channel = new MessageChannel();
+    const terminate = vi.fn();
+    const factory = vi.fn(() => ({ port: channel.port1, terminate }));
+    const pool = new Forge3DWorkerPool({ size: 1, workerFactory: factory,
+      mainThreadHandler: () => undefined });
+    try {
+      const pending = pool.run("stuck native job", { requireHardStop });
+      const rejected = expect(pending).rejects.toMatchObject({
+        code: "RESOURCE_LIMIT_EXCEEDED",
+        details: { reason: "worker-deadline-exceeded", timeoutMs: 30_000 },
+      });
+      await vi.advanceTimersByTimeAsync(29_999);
+      expect(terminate).not.toHaveBeenCalled();
+      await vi.advanceTimersByTimeAsync(1);
+      await rejected;
+      expect(factory).toHaveBeenCalledOnce();
+      expect(terminate).toHaveBeenCalledOnce();
+      expect(pool.getDiagnostics()).toMatchObject({ active: 0, queued: 0 });
+      expect(vi.getTimerCount()).toBe(0);
+      pool.dispose();
+      expect(terminate).toHaveBeenCalledOnce();
+    } finally { pool.dispose(); channel.port2.close(); vi.useRealTimers(); }
+  });
+
+  it.each(["main-thread", "bare-port"])("honors an explicit deadline for %s pools", async (mode) => {
+    vi.useFakeTimers();
+    const channel = new MessageChannel();
+    const pool = new Forge3DWorkerPool({ size: 1, jobTimeoutMs: 10,
+      mainThreadHandler: () => new Promise(() => {}),
+      ...(mode === "bare-port" ? { workerFactory: () => channel.port1 } : {}) });
+    try {
+      const rejected = expect(pool.run("stuck")).rejects.toMatchObject({
+        code: "RESOURCE_LIMIT_EXCEEDED", details: { timeoutMs: 10 },
+      });
+      await vi.advanceTimersByTimeAsync(10);
+      await rejected;
+      expect(pool.getDiagnostics().active).toBe(1);
+    } finally { pool.dispose(); channel.port1.close(); channel.port2.close(); vi.useRealTimers(); }
+  });
+
+  it.each([0, -1, NaN, 1.5, 2 ** 31])("rejects an invalid explicit pool deadline: %s", (jobTimeoutMs) => {
+    expect(() => new Forge3DWorkerPool({ jobTimeoutMs, mainThreadHandler: () => undefined }))
+      .toThrowError(expect.objectContaining({ code: "INVALID_INPUT" }));
+  });
+
+  it.each(["abort", "deadline"])("does not start a discarded replacement after %s", async (reason) => {
+    vi.useFakeTimers();
+    const channel = new MessageChannel();
+    const terminate = vi.fn();
+    const factory = vi.fn(() => ({ port: channel.port1, terminate }));
+    const pool = new Forge3DWorkerPool({ size: 1, workerFactory: factory,
+      mainThreadHandler: () => undefined });
+    try {
+      const controller = new AbortController();
+      const pending = pool.run("stuck", { requireHardStop: true,
+        signal: controller.signal, timeoutMs: 10 });
+      const rejected = expect(pending).rejects.toMatchObject({ code:
+        reason === "abort" ? "REQUEST_CANCELLED" : "RESOURCE_LIMIT_EXCEEDED" });
+      await Promise.resolve();
+      if (reason === "abort") controller.abort();
+      else await vi.advanceTimersByTimeAsync(10);
+      await rejected;
+      pool.dispose();
+      expect(factory).toHaveBeenCalledOnce();
+      expect(terminate).toHaveBeenCalledOnce();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally { pool.dispose(); channel.port2.close(); vi.useRealTimers(); }
+  });
+
+  it.each(["queued", "later"])("replaces a terminated worker when %s work needs it", async (successor) => {
+    const channels: MessageChannel[] = [];
+    const stops: Array<() => void> = [];
+    const terminate = vi.fn();
+    const factory = vi.fn(() => {
+      const channel = new MessageChannel();
+      channels.push(channel);
+      const instance = channels.length;
+      stops.push(serveForge3DMessagePort(channel.port2, { run: (payload) =>
+        instance === 1 ? new Promise(() => {}) : `decoded ${payload}` }));
+      return { port: channel.port1, terminate };
+    });
+    const pool = new Forge3DWorkerPool({ size: 1, workerFactory: factory,
+      mainThreadHandler: () => undefined });
+    try {
+      const controller = new AbortController();
+      const active = pool.run("stuck", { signal: controller.signal, requireHardStop: true });
+      let next = successor === "queued" ? pool.run("fixture", { requireHardStop: true }) : undefined;
+      await Promise.resolve();
+      controller.abort();
+      await expect(active).rejects.toMatchObject({ code: "REQUEST_CANCELLED" });
+      expect(factory).toHaveBeenCalledTimes(successor === "queued" ? 2 : 1);
+      next ??= pool.run("fixture", { requireHardStop: true });
+      await expect(next).resolves.toBe("decoded fixture");
+      expect(factory).toHaveBeenCalledTimes(2);
+      expect(terminate).toHaveBeenCalledOnce();
+      expect(pool.getDiagnostics()).toMatchObject({ active: 0, queued: 0 });
+    } finally {
+      pool.dispose(); stops.forEach((stop) => stop()); channels.forEach((channel) => channel.port2.close());
+    }
+  });
+
+  it("rejects every queued caller when a lazy replacement fails", async () => {
+    vi.useFakeTimers();
+    const channel = new MessageChannel();
+    const terminate = vi.fn();
+    const factory = vi.fn(() => {
+      if (factory.mock.calls.length > 1) throw new Error("worker startup failed");
+      return { port: channel.port1, terminate };
+    });
+    const pool = new Forge3DWorkerPool({ size: 1, workerFactory: factory,
+      mainThreadHandler: () => undefined });
+    try {
+      const controller = new AbortController();
+      const active = pool.run("stuck", { signal: controller.signal });
+      const first = pool.run("queued one"), second = pool.run("queued two");
+      controller.abort();
+      await expect(active).rejects.toMatchObject({ code: "REQUEST_CANCELLED" });
+      for (const pending of [first, second])
+        await expect(pending).rejects.toMatchObject({ code: "INTERNAL_ERROR",
+          details: { reason: "worker-replacement-failed" } });
+      expect(terminate).toHaveBeenCalledOnce();
+      expect(pool.getDiagnostics()).toMatchObject({ active: 0, queued: 0, disposed: true });
+      expect(vi.getTimerCount()).toBe(0);
+    } finally { pool.dispose(); channel.port2.close(); vi.useRealTimers(); }
+  });
+
   it("falls back to deterministic main-thread execution without a factory", async () => {
     const seen: Array<{ payload: unknown; requestId: number }> = [];
     const pool = new Forge3DWorkerPool({

@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os';
 import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { validateW16HostState } from './w16-host-state.mjs';
+import { deriveW16PerformanceEvidence, readW16PerformanceHistory, replaceUnmeasuredW16Concurrency,
+  w16ConcurrencyProvenance, w16CpuSummary, w16MeasuredPass } from './w16-local-evidence.mjs';
 
 // Run after retained official soaks, before a test runner clears test-results.
 // Preserve the historical/reviewer reports and bind current runtime bytes to
@@ -13,6 +15,9 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const readJson = path => JSON.parse(readFileSync(join(root, path), 'utf8'));
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const evidence = readJson('docs/w16-local-evidence.json');
+// A new batch is not a correction of the template's historical report.
+delete evidence.reportingCorrection;
+replaceUnmeasuredW16Concurrency(evidence);
 const conformance = readJson('test-results/w16-package-consumer.json');
 // Historical checks describe their own run, not this newly measured package.
 // Record only checks this consumer executed; bind other fresh gates separately.
@@ -58,15 +63,7 @@ evidence.optimizedRuns = runs.map(({ file, report }) => {
   const hostCapture = validateW16HostState(report.hostState, { durationMs: report.durationMs,
     binding: { packageSha256: report.packageSha256, runIndex: report.runIndex, batchId: report.batchId,
       targetProfile: report.targetProfile, fixtureSha256, cameraHarnessSha256 } });
-  const measuredPass = Number.isFinite(report.frameP95Ms) && report.frameP95Ms >= 0 &&
-    report.frameP95Ms <= report.budgets.p95Ms && report.totalPoints === 1000000 &&
-    report.selectionCount >= 32 && report.minPoints > 0 && report.minPoints < report.maxPoints &&
-    report.maxPoints <= 300000 && report.coveredPixels > 150 &&
-    Number.isFinite(report.maxCpuBytes) && report.maxCpuBytes > 0 &&
-    report.maxCpuBytes <= report.budgets.cpuBudgetBytes &&
-    Number.isFinite(report.stats.peakGpuBytes) && report.stats.peakGpuBytes > 0 &&
-    report.stats.peakGpuBytes <= report.budgets.gpuBudgetBytes &&
-    report.stats.peakGpuBytes <= report.stats.memoryBudgetBytes && report.disposed.gpuBytes === 0;
+  const measuredPass = w16MeasuredPass(report);
   return { file, sha256: hash(readFileSync(join(root, 'docs', file))),
     verifiedAt: report.verifiedAt, browserVersion: report.browserVersion,
     durationMs: report.durationMs, frames: report.frames, frameP95Ms: report.frameP95Ms,
@@ -74,33 +71,15 @@ evidence.optimizedRuns = runs.map(({ file, report }) => {
     selectionCount: report.selectionCount, keyframesVisited: report.keyframesVisited,
     maxCpuBytes: report.maxCpuBytes, peakGpuBytes: report.stats.peakGpuBytes,
     phases: report.phases, hostState: { ...hostCapture, startedAt: report.hostState.startedAt,
-      endedAt: report.hostState.endedAt, sources: [...new Set(report.hostState.samples.map(sample => sample.gpu.source))] },
-    concurrentTestsOrBuilds: false, referenceHardwareQualified: false };
+      endedAt: report.hostState.endedAt, sources: [...new Set(report.hostState.samples.map(sample => sample.gpu.source))],
+      cpuPercent: w16CpuSummary(report) },
+    concurrentTestsOrBuilds: w16ConcurrencyProvenance(), referenceHardwareQualified: false };
 });
 const passed = evidence.optimizedRuns.every(run => run.measuredPass);
-const previous = evidence.previousOptimizationEvidence
-  ? readJson(`docs/${evidence.previousOptimizationEvidence.file}`) : undefined;
 const runtimeSha256 = hash(Buffer.from(JSON.stringify(bindings)));
-const previousFailure = previous?.optimizedRuns.some(run => !run.measuredPass);
-const sameRuntime = previous?.runtimeBinding.sha256 === runtimeSha256;
-const unresolvedVariation = passed && previousFailure && sameRuntime;
-evidence.evidenceStatus = passed
-  ? (unresolvedVariation
-    ? 'Current local installed-package runs pass with unchanged runtime; earlier failure remains unexplained; hardware and security acceptance pending'
-    : 'Current local installed-package conformance and performance verified; hardware and security acceptance pending')
-  : 'Local performance failure remains after optimization; hardware and security acceptance pending';
-evidence.openAcceptance = [
-  ...(!passed ? ['Local discrete-target ten-minute p95 remains above 16.7 ms'] : []),
-  ...(unresolvedVariation ? ['Unexplained local p95 variation with unchanged dist/asset bytes; earlier 18.3 ms failure remains valid'] : []),
-  'FW-WIN-I12-01: INF-00 blocked', 'FW-LNX-NV-01: not provisioned', 'Mandatory laz-perf security review',
-];
-if (previous) evidence.performanceReproducibility = {
-  previousEvidence: evidence.previousOptimizationEvidence.file,
-  unchangedDistAndAssets: sameRuntime,
-  previousFailure,
-  explanationEstablished: false,
-  statement: 'Current observations do not withdraw earlier failures or establish a performance fix. Current reports retain sampled host state; earlier reports cannot establish matching host conditions.',
-};
+Object.assign(evidence, deriveW16PerformanceEvidence(evidence.optimizedRuns,
+  { sha256: runtimeSha256, evidenceFile }, readW16PerformanceHistory(join(root, 'docs'))));
+
 evidence.checks.installedPackage.soak = passed ? 'passed in current batch' : 'failed';
 evidence.checks.installedPackage.repeatRequest = {
   requested: Number(process.env.FORGE3D_W16_RUNS ?? runs.length), completed: runs.length,

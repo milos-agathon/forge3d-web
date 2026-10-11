@@ -1,0 +1,42 @@
+
+> @forge3d/web@1.26.3 test:w14
+> vitest run tests/unit/w14-crs.test.ts tests/unit/w14-datasets.test.ts tests/unit/w14-native-contract.test.ts && playwright test tests/playwright/w14_foundation.spec.ts --project=chromium-preflight
+
+
+ RUN  v4.0.18 D:/forge3d-web/.worktrees/w16/crates/forge3d-web
+
+ ✓ tests/unit/w14-native-contract.test.ts (2 tests) 18ms
+ ✓ tests/unit/w14-crs.test.ts (27 tests) 1095ms
+     ✓ does not leak native allocations on repeated success and failure  315ms
+ ✓ tests/unit/w14-datasets.test.ts (10 tests) 1420ms
+     ✓ loads native DEM and boundaries exactly, with defensive typed buffers  834ms
+     ✓ caches exact bytes across instances, refuses offline misses and corrupted entries  507ms
+
+ Test Files  3 passed (3)
+      Tests  39 passed (39)
+   Start at  10:13:01
+   Duration  5.35s (transform 7.14s, setup 0ms, import 11.28s, tests 2.53s, environment 0ms)
+
+[WebServer] (node:45144) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 12 tests using 1 worker
+
+(node:42504) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:42504) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  1 [chromium-preflight] › tests\playwright\w14_foundation.spec.ts:11:1 › W14 geographic vectors align with terrain in a real render (3.3s)
+  ok  2 [chromium-preflight] › tests\playwright\w14_foundation.spec.ts:34:1 › W14 never imports a second PROJ response containing hostile top-level code (914ms)
+  ok  3 [chromium-preflight] › tests\playwright\w14_foundation.spec.ts:53:1 › W14 rejects hostile top-level PROJ asset bytes without executing them (543ms)
+  ok  4 [chromium-preflight] › tests\playwright\w14_foundation.spec.ts:69:1 › W14 checks the embedded factory before its body can execute (778ms)
+  ok  5 [chromium-preflight] › tests\playwright\w14_foundation.spec.ts:87:3 › W14 CRS controls, WKT and axis order (source) (861ms)
+  ok  6 [chromium-preflight] › tests\playwright\w14_foundation.spec.ts:87:3 › W14 CRS controls, WKT and axis order (dist) (941ms)
+  ok  7 [chromium-preflight] › tests\playwright\w14_foundation.spec.ts:113:1 › W14 all GeoJSON topology and automatic vector/label reprojection are transactional (942ms)
+  ok  8 [chromium-preflight] › tests\playwright\w14_foundation.spec.ts:143:1 › W14 grids never fall back to identity; missing best grid is structured (996ms)
+  ok  9 [chromium-preflight] › tests\playwright\w14_foundation.spec.ts:157:1 › W14 persistent data/PROJ/grid cache survives new workers and asset network denial (1.3s)
+  ok 10 [chromium-preflight] › tests\playwright\w14_foundation.spec.ts:177:1 › W14 worker cancellation, admission limits and disposal release owned resources (845ms)
+  ok 11 [chromium-preflight] › tests\playwright\w14_foundation.spec.ts:198:1 › W14 CPU geospatial foundation survives a GPU device loss (920ms)
+  ok 12 [chromium-preflight] › tests\playwright\w14_foundation.spec.ts:210:1 › W14 validates persistent cache contents, grid digests, setup cancellation and backend absence (552ms)
+
+  12 passed (17.2s)

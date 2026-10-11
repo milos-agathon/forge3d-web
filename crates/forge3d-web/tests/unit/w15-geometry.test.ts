@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { crossCheckNativeHistory } from "./w15-native-history.js";
+import { crossCheckNativeHistoryBatch } from "./w15-native-history.js";
 import * as f from "../../src-ts/index.js";
 import type { MeshBuffers } from "../../src-ts/index.js";
 const golden = JSON.parse(
@@ -71,7 +71,7 @@ function compare(m: MeshBuffers, ref: any, reordered = false) {
 }
 describe("W15 independently executed native geometry", () => {
   it("pins compiled source hashes rather than prior claims", () => {
-    for (const p of golden.provenance) {
+    const sources = golden.provenance.map((p: { revision: string; path: string; sha256: string }) => {
       const bytes = readFileSync(
         new URL(
           `../fixtures/w15/native/${p.revision.slice(0, 12)}/${p.path}`,
@@ -79,8 +79,9 @@ describe("W15 independently executed native geometry", () => {
         ),
       );
       expect(createHash("sha256").update(bytes).digest("hex")).toBe(p.sha256);
-      crossCheckNativeHistory(p.revision, p.path, bytes);
-    }
+      return { revision: p.revision, path: p.path, bytes };
+    });
+    crossCheckNativeHistoryBatch(sources);
   });
   for (const kind of ["plane", "sphere", "cylinder", "cone", "torus"] as const)
     it(`${kind}: exact topology and f32 attributes <=1e-5`, () =>

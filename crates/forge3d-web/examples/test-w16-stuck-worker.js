@@ -1,5 +1,6 @@
 // Test-only negative control: a real synchronous WASM call that never returns.
 const dist = new URLSearchParams(location.search).has("dist");
+const native = new URLSearchParams(location.search).has("native");
 const apiReady = dist ? import("../dist/index.js") : import("../src-ts/index.ts");
 const spinBytes = new Uint8Array([
   0, 97, 115, 109, 1, 0, 0, 0,
@@ -15,7 +16,7 @@ self.addEventListener("message", async ({ data }) => {
   const api = await apiReady, handler = api.createPointCloudWorkerHandler();
   api.serveForge3DMessagePort(data.port, {
     run: async (payload, context) => {
-      if (payload.kind === "test-stuck-wasm") {
+      if (payload.kind === "test-stuck-wasm" || native) {
         const { instance } = await WebAssembly.instantiate(spinBytes);
         self.postMessage({ state: "stuck-wasm-entered" });
         instance.exports.spin();

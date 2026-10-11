@@ -1,9 +1,13 @@
 # W16 implementation and acceptance evidence
 
 W16 acceptance is pending. G02, G03 and G04 remain `P`: the runtime and local
-conformance tests exist, but local p95 variation remains unexplained. The earlier
-18.3 ms failure and three current passes use identical dist/asset bytes. The pinned W00 physical
-reference-profile runs and the mandatory laz-perf security review are open. The original required outcomes
+conformance tests exist, but local p95 variation remains unexplained. Retained
+October 9 failures are 18.7/19.8/22.3/20.1/18.3 ms. October 10 installed passes
+are 8.3/8.9/9.4/10.0/10.5 ms; the retained **33.7 ms failure** used the same
+273-file runtime digest as the 10.0/10.5 ms passes. The earlier 18.3 ms failure
+and 8.3/8.9/9.4 ms passes share the preceding runtime digest. All failures remain
+valid observations. The pinned W00 physical reference-profile runs and the
+mandatory laz-perf security review are open. The original required outcomes
 and acceptance criteria in the plan and baseline are preserved.
 
 The worktree starts at W15 commit `f0287e5b1594542635f8b088e2ae88d7be8ec435`;
@@ -541,7 +545,8 @@ ten-browser-case W16 gate are bound in the batch evidence; their tested sources
 are identical to the measured head. Later evidence-only PR heads still require
 their own green CI result, tracked on the PR.
 
-The remaining acceptance items are independent laz-perf sign-off (reviewer
+The remaining acceptance items include unexplained local p95 variation,
+independent laz-perf sign-off (reviewer
 and date unset) and both attested W00 reference hardware lanes. The lab remains
 unready with zero registered runners. This local Windows run is not either
 reference hardware lane. W16 remains Partial and G02/G03/G04 remain P.
@@ -550,13 +555,14 @@ reference hardware lane. W16 remains Partial and G02/G03/G04 remain P.
 
 The Windows stdout files were retained with CRLF line endings, but Git's
 default text normalization stored LF blobs for four of the five retained
-logs. No text or measured values differ. Original logs and every JSON report
-remain unchanged. Additive [raw stdout archives](w16-runs/stdout-archives.json)
+logs. No text or measured values differ. Original logs and every raw measured
+JSON report remain unchanged. Reporting-only summary corrections are described
+below. Additive [raw stdout archives](w16-runs/stdout-archives.json)
 now preserve those retained file bytes, protected by a narrowly scoped
 `-text -diff` attribute. The manifest records each raw SHA-256, its prior Git
 blob SHA-256 and the exact CRLF-to-LF difference, if any.
 
-For the latest passing run, the immutable batch evidence's stdout hash is
+For the latest passing run, the corrected batch summary retains its original stdout hash,
 `7f03ddb088e8f405b7b7cb9cb0a7b157d1ba3f442b30851cc100b0486de2a976`.
 It identifies the 2,321 captured bytes in
 [the raw archive](w16-runs/raw-stdout/installed-20261010T203221986Z-retry.log).
@@ -568,7 +574,34 @@ failed soak, initial hard-stop failure, native audit failure and full failed
 CI log are also retained in that directory. All archive hashes are checked
 against their staged Git blob bytes before publication.
 
-This storage correction changes no runtime, asset, fixture, camera harness,
+### Reporting corrections after independent review
+
+The October 10 10.0 ms and 10.5 ms summaries previously said performance was
+verified while a retained 33.7 ms failure had identical runtime bytes. Their
+status now preserves that unexplained variation. The recorder discovers every
+retained matching-runtime run instead of consulting only the manually selected
+October 9 predecessor. Derived status, acceptance items, matching runs and CPU
+means reproduce with [the reporting helper](../scripts/w16-local-evidence.mjs).
+Historical correction may consider later observations; it does not claim they
+were known at the original run time or that any additional run occurred.
+
+[The correction script](../scripts/repair-w16-evidence-reporting.mjs) retains
+each original summary in `w16-runs/original-evidence/`, with its exact byte count
+and SHA-256 recorded in `reportingCorrection`. Raw soak/conformance reports,
+runtime manifests, historical measurements, gate results and stdout bindings
+are unchanged. The generator and helper hashes bind how the derived fields were
+corrected. Original hand-edited fields remain in the archived summaries.
+
+The old `concurrentTestsOrBuilds: false` was an unsupported assertion: the
+recorder wrote a constant, while aggregate CPU load and GPU process tables
+cannot establish the absence of all concurrent builds or tests. It is now
+explicitly `status: unknown`, with the prior assertion retained as provenance.
+Statements elsewhere that the recording agent started no other tests or builds
+describe that agent's execution attestation; they do not measure every process
+on the shared host. The post-run Python/rustc snapshots neither identify the
+cause of the 33.7 ms failure nor withdraw it.
+
+The earlier stdout storage correction changed no runtime, asset, fixture, camera harness,
 test assertion, budget or existing report. The final archive commit still
 requires its own green PR CI. Independent codec sign-off and both exact W00
 hardware lanes remain pending; W16 stays Partial and G02/G03/G04 stay P.
@@ -669,3 +702,42 @@ serialization, hashing and corrupt-cache negative controls remain exercised.
 No test timeout, runtime, fixture or acceptance budget changes. The fresh
 complete local suite passed all 1,090 tests after this correction; final-head
 CI must still pass. The original failed run remains a failure in the record.
+
+### October 11 implementation and reporting review fixes
+
+Owned pools retain a 30-second default deadline; bare-port and main-thread
+pools retain no implicit deadline, preserving the W14 PROJ contract. Cancellation
+terminates an owned worker immediately and recreates it only for a queued or
+later job. Public LAZ file/chunk APIs and native dataset dispatch now share one
+active job, sixteen waiting jobs and 512 MiB of byte reservations per realm,
+including duplicate package graphs and caller-supplied pools. Reservations
+include the complete caller/worker backing buffers of typed-array subviews;
+waiting consumes the deadline and respects shorter configured pool deadlines.
+Every native decode instantiates fresh WASM memory. The codec's 2 GiB ceiling,
+unchecked reads within one job, separate realms and direct custom-handler
+dispatch remain independent-review risks; these wrapper changes supply no
+codec approval.
+
+The final local suite passed **1,118 units in 66 files**. Parity passed all
+15 checks; infrastructure passed 627 checks with one existing Unix-UID skip.
+W16 passed 57 units and all fourteen source/dist browser cases, including
+public file/chunk stuck-WASM abort/deadline, queued expiry without worker
+creation, exact termination counts, real recovery hashes and fresh-heap
+identity in a reused worker. The env-gated soak was skipped in that ordinary
+suite. W14 passed its unit suite and all twelve browser cases, including
+source/dist CRS and real PROJ cancellation. Build, TypeScript, API snapshot,
+documentation links and package-contract checks passed. Captured logs are
+retained under `w16-runs/raw-stdout/review-20261011-*.log`.
+
+A preceding full-unit run failed the unchanged W15 geometry provenance check
+at 5,980 ms against its existing 5,000 ms limit; 1,116 other units passed.
+[The complete captured failure](w16-runs/raw-stdout/review-20261011-w15-provenance-timeout.log)
+is retained. The helper now reads all nine actual historical source blobs in
+one binary `git cat-file --batch` call. Every frozen SHA check and complete byte
+comparison remains mandatory; binary subviews, changed/truncated bytes,
+missing blobs and absent commits have negative controls. No timeout changed.
+The earlier source-only heap test also exposed an incorrect development
+expectation of 128 points; the corrected test checks the manifest's 110,000
+points and complete position/color hashes for both decodes. Its initial tool
+output was not archived as a raw log; the final passing source/dist log is
+retained. No historical failed performance observation is withdrawn.

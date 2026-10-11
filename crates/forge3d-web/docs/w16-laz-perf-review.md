@@ -155,7 +155,7 @@ WASM high-water observations. Recovery must decode the real root again with
 zero active/queued jobs after the corpus. The script writes the report before
 asserting its aggregate bounds, so failures remain available for diagnosis.
 
-The final clean-tree run on `b869e17acf58f1c68770d0079700e1d4bfb2f18d`,
+The historical clean-tree run on `b869e17acf58f1c68770d0079700e1d4bfb2f18d`,
 Windows/Chromium `148.0.7778.96`, completed **260 cases: 120 valid outputs,
 129 INVALID_INPUT errors and 11 RESOURCE_LIMIT_EXCEEDED errors**. There were
 zero untyped errors. Maximum job time was **157 ms**, below the 1,000 ms
@@ -177,6 +177,13 @@ is preserved separately; it preceded the final decoder-hardening rebuild and
 is not the final source/artifact binding. These observations do not supply
 independent sign-off.
 
+The October 11 wrapper changes add shared public/dataset decode admission and
+fresh linear memory per job. The historical fuzz report above remains bound to
+its original source and codec bytes; it does not validate those later changes.
+A new report must bind the changed production source/dist and worker bytes as
+well as the unchanged codec and corpus. This reporting correction itself runs
+no fuzz or benchmark and makes no new passing claim.
+
 ## (d) Remaining risks and sign-off
 
 - `ChunkDecoder.open` receives an input pointer without a chunk byte length.
@@ -186,8 +193,12 @@ independent sign-off.
   not prove all arithmetic reads remain within their encoded streams.
   WASM traps at linear-memory boundaries, not at C++ allocation boundaries.
   A mutated stream may produce finite, structurally valid but incorrect points
-  or read other data in the same worker's heap. Real controls prove conformance;
-  mutation outputs are not authenticated source data.
+  or read other data in the current job's heap. Every native job now uses a fresh
+  module/linear memory, including on a reused caller-supplied worker. Only the
+  factory and immutable WASM bytes are cached, so prior-job bytes cannot be read.
+  This does not bound unchecked reads between allocations within the current
+  job. Real controls prove conformance; mutation outputs are not authenticated
+  source data.
 - The codec's **hard WASM ceiling is 2 GiB**, not the 8 MiB fuzz decoded-output
   budget or the layer's allocation ledger. A hostile internal allocation can
   grow memory before a job deadline fires. Fuzz heap observations bound this
@@ -195,9 +206,18 @@ independent sign-off.
   Browser/process RSS is not attributed per job by this harness.
 - Worker termination bounds stuck native CPU execution and releases the owned
   worker. Browser scheduling can delay deadline callbacks; the fuzz completion
-  bound is measured independently of the requested deadline. Concurrent caller
-  workers can multiply native-memory exposure. Independent review must assess
-  acceptable worker count, exposure and residual denial-of-service risk.
+  bound is measured independently of the requested deadline. Public
+  `decodeLaz`/`decodeLazChunk` and native dataset dispatch through supplied owned
+  pools now share **one active job, sixteen waiting jobs and 512 MiB of aggregate
+  wrapper-byte reservations per caller JavaScript realm**. That reservation
+  covers compressed input copies, raw records and parsed-point copies; it does
+  not limit the opaque native allocator or replace the 2 GiB WASM ceiling.
+  Waiting jobs are cancellable and the default 30-second deadline includes
+  admission/startup/decode; shorter configured pool deadlines apply from enqueue.
+  Separate tabs/worker realms and manually dispatching directly through a custom
+  worker handler remain outside the shared public/dataset gate and can multiply
+  native-memory exposure. Independent review must assess that scope, native
+  allocation exposure and residual denial-of-service risk.
 - This deterministic corpus is finite and does not replace coverage-guided
   native sanitizer fuzzing or analysis of all point formats/extra-byte paths.
   The audited build preserves the upstream Release flags, including `-DNDEBUG`.

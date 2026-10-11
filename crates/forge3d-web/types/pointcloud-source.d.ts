@@ -4,6 +4,7 @@ import { MemoryByteCache } from "./index.js";
 import { PointCache } from "./pointcloud-common.js";
 /** Dataset lifecycle, split compressed/decoded budgets and cancellable W02 worker dispatch. */
 export declare class PointSource {
+    #private;
     readonly options: PointDatasetOptions;
     readonly scheduler: RangeScheduler;
     readonly decoded: PointCache<PointData>;

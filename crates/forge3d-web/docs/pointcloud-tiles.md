@@ -80,9 +80,12 @@ Pass an existing W02 `Forge3DWorkerPool` with `createPointCloudWorkerHandler` to
 datasets to decode in real workers. The handler supports whole LAZ, COPC chunks
 and EPT binary. Return `{port, terminate: () => worker.terminate()}` from the
 pool's `workerFactory`, so the pool owns each native worker's lifecycle. It
-terminates and replaces the worker on abort or deadline, including a decoder
-stuck inside one synchronous WASM call. `jobTimeoutMs` defaults to 30,000 ms;
-`pool.run(payload, {timeoutMs})` overrides the enqueue-to-completion deadline
+terminates the worker on abort or deadline and creates a replacement only when
+another queued or later job dispatches, including after a decoder
+stuck inside one synchronous WASM call. Owned worker pools default to
+30,000 ms; bare-port and main-thread pools have no implicit deadline unless
+`jobTimeoutMs` or a per-job timeout is supplied. `pool.run(payload, {timeoutMs})`
+overrides the enqueue-to-completion deadline
 for one job. Queued jobs also expire and release their queue slot. Successful
 jobs clear their timers and abort listeners. Disposal terminates owned workers.
 
@@ -94,6 +97,25 @@ W02 main-thread and bare-port modes. Without a supplied pool, `decodeLaz` and
 job; their `timeoutMs` option has the same 30-second default. A main-thread pool
 also uses this dedicated worker for native decoding. Environments without
 Worker support reject compressed decoding with `UNSUPPORTED_FEATURE`.
+
+Public `decodeLaz`/`decodeLazChunk` and native dataset dispatch, including a
+caller-supplied owned pool, share admission within the caller's JavaScript realm:
+**one active native job, at most sixteen waiting jobs, and 512 MiB of aggregate
+wrapper-byte reservations**. Admission rejects excess jobs with
+`RESOURCE_LIMIT_EXCEEDED` before a worker starts. Reservations include compressed
+input copies, raw records and parsed-point copies; they exclude the codec's
+opaque allocator and its separate **2 GiB WASM ceiling**. Cancellation releases
+a waiting request. The default 30-second deadline includes admission waiting,
+worker/module startup and native execution; shorter configured pool deadlines
+are respected from the start of waiting.
+
+Each native job instantiates a fresh codec module and linear memory. A reused
+worker caches only the factory and immutable WASM bytes, so a later decode cannot
+read bytes from an earlier job's heap. Unchecked reads within the current job
+and hostile native allocations still require independent codec sign-off.
+Separate tabs/worker realms and manually dispatching jobs directly through a
+custom worker handler have their own lifecycles and are outside this shared
+public/dataset admission gate; the limit is not a process-wide memory bound.
 
 The real stuck-WASM negative control in the W16 browser suite proves both
 `REQUEST_CANCELLED` on abort and `RESOURCE_LIMIT_EXCEEDED` on deadline, followed

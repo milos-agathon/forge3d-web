@@ -1,7 +1,7 @@
 {
   "schemaVersion": 3,
   "task": "W16",
-  "evidenceStatus": "Current local installed-package conformance and performance verified; hardware and security acceptance pending",
+  "evidenceStatus": "Current local installed-package runs pass with unchanged runtime; retained failure remains unexplained; hardware and security acceptance pending",
   "referenceHardwareQualified": false,
   "capabilityStatus": {
     "G02": "P",
@@ -9,9 +9,10 @@
     "G04": "P"
   },
   "openAcceptance": [
-    "Independent laz-perf security review sign-off (reviewer and date pending)",
-    "FW-WIN-I12-01: INF-00 blocked; w16-reference-integrated pending",
-    "FW-LNX-NV-01: not provisioned; w16-reference-discrete pending"
+    "Unexplained local p95 variation with unchanged dist/asset bytes; retained failures at 33.7 ms remain valid",
+    "Independent laz-perf security sign-off; reviewer and date are unset",
+    "FW-LNX-NV-01 w16-reference-discrete: not provisioned, no attested report",
+    "FW-WIN-I12-01 w16-reference-integrated: INF-00 blocked, no attested report"
   ],
   "historicalEvidence": {
     "file": "w16-oct07-evidence.json",
@@ -47,7 +48,13 @@
     "reportedAt": "2026-10-09",
     "runtimeCommit": "4efd5e7",
     "harness": "source with phase instrumentation; ten-minute profile-w16.mjs run",
-    "concurrentTestsOrBuilds": false,
+    "concurrentTestsOrBuilds": {
+      "status": "unknown",
+      "source": "not measured by the W16 host sampler",
+      "statement": "Aggregate CPU load and GPU process tables do not establish whether other tests or builds ran.",
+      "legacyReportedValue": false,
+      "legacyProvenance": "Historical assertion without recorded verification; original JSON is retained separately."
+    },
     "minimumDurationMs": 600000,
     "frameP95Ms": 20.099999994039536,
     "frames": 28301,
@@ -119,7 +126,13 @@
           "nvidia-smi"
         ]
       },
-      "concurrentTestsOrBuilds": false,
+      "concurrentTestsOrBuilds": {
+        "status": "unknown",
+        "source": "not measured by the W16 host sampler",
+        "statement": "Aggregate CPU load and GPU process tables do not establish whether other tests or builds ran.",
+        "legacyReportedValue": false,
+        "legacyProvenance": "Historical assertion without recorded verification; original JSON is retained separately."
+      },
       "referenceHardwareQualified": false
     }
   ],
@@ -216,11 +229,72 @@
     "statement": "Four sequential 60-second probes showed no improvement from direct presentation or on-demand picking on this host; these are not acceptance runs."
   },
   "performanceReproducibility": {
-    "previousEvidence": "w16-oct09-evidence.json",
-    "unchangedDistAndAssets": false,
+    "runtimeSha256": "6c046d4ace930909ec93b8efee9b89b14b89ef3fe2f5079beb6713eb773eef7a",
+    "unchangedDistAndAssets": true,
     "previousFailure": true,
+    "unresolvedVariation": true,
     "explanationEstablished": false,
-    "statement": "Current observations do not withdraw earlier failures or establish a performance fix. Current reports retain sampled host state; earlier reports cannot establish matching host conditions."
+    "previousEvidence": "w16-runs/evidence-20261010T182246586Z.json",
+    "previousPassingEvidence": "w16-runs/evidence-20261010T203221986Z.json",
+    "meanCpuPercent": {
+      "current": 11.83698551319976,
+      "previousFailed": 86.06815228243137,
+      "previousPassing": 16.64292665198146
+    },
+    "matchingRuntimeRuns": [
+      {
+        "evidenceFile": "w16-runs/evidence-20261010T135319734Z.json",
+        "file": "w16-runs/installed-20261010T135319734Z-1.json",
+        "sha256": "b840d09b4e5f981438a90f38f27c7697bcc61fbc3a9fe34246dd0ebf74d5a5d5",
+        "runtimeSha256": "6c046d4ace930909ec93b8efee9b89b14b89ef3fe2f5079beb6713eb773eef7a",
+        "verifiedAt": "2026-10-10T14:03:20.339Z",
+        "frameP95Ms": 10,
+        "limitMs": 16.7,
+        "measuredPass": true,
+        "cpuPercent": {
+          "min": 6.080827772362596,
+          "max": 23.69712549661136,
+          "mean": 11.83698551319976,
+          "samples": 121,
+          "source": "retained hostState.samples[].cpuLoad.percent"
+        }
+      },
+      {
+        "evidenceFile": "w16-runs/evidence-20261010T182246586Z.json",
+        "file": "w16-runs/installed-20261010T182246586Z-1.json",
+        "sha256": "ece42c0b88fac4007fabbc9cb18854c49c36f3316400ddacd1806bc85b8b292c",
+        "runtimeSha256": "6c046d4ace930909ec93b8efee9b89b14b89ef3fe2f5079beb6713eb773eef7a",
+        "verifiedAt": "2026-10-10T18:32:47.710Z",
+        "frameP95Ms": 33.700000047683716,
+        "limitMs": 16.7,
+        "measuredPass": false,
+        "cpuPercent": {
+          "min": 20.412074748442745,
+          "max": 100,
+          "mean": 86.06815228243137,
+          "samples": 121,
+          "source": "retained hostState.samples[].cpuLoad.percent"
+        }
+      },
+      {
+        "evidenceFile": "w16-runs/evidence-20261010T203221986Z.json",
+        "file": "w16-runs/installed-20261010T203221986Z-1.json",
+        "sha256": "247a78784084a4c66f919b0aa434a15f498af877c329c7bdcbb877023ea57732",
+        "runtimeSha256": "6c046d4ace930909ec93b8efee9b89b14b89ef3fe2f5079beb6713eb773eef7a",
+        "verifiedAt": "2026-10-10T20:42:22.842Z",
+        "frameP95Ms": 10.5,
+        "limitMs": 16.7,
+        "measuredPass": true,
+        "cpuPercent": {
+          "min": 11.282865980767943,
+          "max": 20.841212245106554,
+          "mean": 16.64292665198146,
+          "samples": 121,
+          "source": "retained hostState.samples[].cpuLoad.percent"
+        }
+      }
+    ],
+    "statement": "Derived from every retained report with matching dist/asset bytes, including later observations when correcting a historical summary. Passing observations do not withdraw failures, prove causation, or establish a performance fix. CPU means derive only from retained samples; null means unavailable."
   },
   "previousChecks": {
     "file": "w16-local-evidence.json",
@@ -236,5 +310,28 @@
     "file": "w16-security/hardware-pending.json",
     "dispatched": false,
     "referenceHardwareQualified": false
+  },
+  "reportingCorrection": {
+    "kind": "reporting-only correction; no new run",
+    "original": {
+      "file": "w16-runs/original-evidence/evidence-20261010T135319734Z.json",
+      "sha256": "cd477f0f7ff1810280cc7e5bcbfd9de37b3d782218ba407682975290f3478653",
+      "bytes": 8213
+    },
+    "generator": {
+      "file": "scripts/repair-w16-evidence-reporting.mjs",
+      "sha256": "44e8e5f21e24de79ba42f72efb674fbd08bf75d781a12ad67b91baae0f7a26a1"
+    },
+    "helper": {
+      "file": "scripts/w16-local-evidence.mjs",
+      "sha256": "e2db723b906cc0b80e327edaa3f50bb2521af984d7e799d59a1b2edbc6e340cd"
+    },
+    "changedFields": [
+      "evidenceStatus",
+      "openAcceptance",
+      "performanceReproducibility",
+      "concurrentTestsOrBuilds (all nested historical claims)"
+    ],
+    "statement": "Original JSON bytes and every original field are preserved in the bound archive. Derived reporting now considers every retained matching-runtime run, including later contradictions to historical passes. Historical assertions about absent concurrent work lack measurement provenance and are marked unknown. No measured value, raw report, runtime binding, stdout hash, CI result or acceptance qualification was changed."
   }
 }

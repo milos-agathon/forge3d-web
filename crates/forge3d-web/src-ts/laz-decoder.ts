@@ -3,6 +3,7 @@ import { Forge3DWorkerPool } from "./browser-resources.js";
 import { parseLasHeader, parseLasRecords } from "./pointcloud-las.js";
 import { pointCancelled, pointError } from "./pointcloud-common.js";
 import { validateLazDecode } from "./laz-decoder-local.js";
+import { lazAdmissionBytes, withLazAdmission } from "./laz-admission.js";
 import type { LasHeader } from "./pointcloud-las.js";
 import type { PointData } from "./pointcloud-types.js";
 
@@ -22,6 +23,14 @@ async function decodeOwned(
   if (typeof Worker !== "function" || typeof MessageChannel !== "function")
     throw new Forge3DError("UNSUPPORTED_FEATURE", "LAZ decoding requires owned workers",
       { reason: "worker-hard-stop-unavailable" });
+  return withLazAdmission(lazAdmissionBytes(bytes.length, header.recordLength, count, bytes.buffer.byteLength), options,
+    (signal, timeoutMs) => dispatchOwned(bytes, header, count, chunk, { ...options, signal, timeoutMs }));
+}
+
+async function dispatchOwned(
+  bytes: Uint8Array, header: LasHeader, count: number, chunk: boolean,
+  options: LazDecodeOptions,
+): Promise<PointData> {
   const source = new URL(import.meta.url).pathname.includes("/src-ts/");
   let pool: Forge3DWorkerPool | undefined;
   try {
