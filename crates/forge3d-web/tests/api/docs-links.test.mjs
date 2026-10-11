@@ -13,6 +13,8 @@ const documents = [
   "crates/forge3d-web/docs/crs-datasets.md",
   "crates/forge3d-web/docs/pointcloud-tiles.md",
   "crates/forge3d-web/docs/w16-evidence.md",
+  "crates/forge3d-web/docs/tracing.md",
+  "crates/forge3d-web/docs/w17-evidence.md",
   "docs/parity/w14-implementation.md",
   "crates/forge3d-web/docs/support-matrix.md",
   "crates/forge3d-web/docs/release-checklist.md",

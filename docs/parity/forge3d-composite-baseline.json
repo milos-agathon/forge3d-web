@@ -4,7 +4,7 @@
   "manifestId": "forge3d-composite-baseline-v1",
   "sourcePlan": {
     "path": "docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md",
-    "sha256": "ad6ce5acaa422b40fb4b6e6c191e28b3cc572d6297b8c5f4da6a1141cc8f81e1"
+    "sha256": "bc7430fde9df64eba5c12ecc34c5da8828ce42795cd149bf7dea5fd016aa3d07"
   },
   "baselineLayers": [
     {
@@ -103,7 +103,7 @@
         "clean Rust/wasm/TypeScript/API/package/consumer checks, every Playwright project, physical browser evidence, loss/visibility/BFCache, memory soak, goldens and real data."
       ],
       "acceptance": [
-        "no G, P, E or G→C; every verified C row returns the exact typed status and is not advertised as rendering; visuals meet SSIM >= 0.98 or stricter row-specific threshold; numeric contracts meet manifest tolerances; disposal returns to baseline."
+        "no G, P, E or G\u2192C; every verified C row returns the exact typed status and is not advertised as rendering; visuals meet SSIM >= 0.98 or stricter row-specific threshold; numeric contracts meet manifest tolerances; disposal returns to baseline."
       ],
       "targetId": "target:R01",
       "xcLinks": []
@@ -1778,7 +1778,7 @@
       "title": "CPU BVH/SAH and GPU LBVH/radix/refit",
       "lifecycle": "FI",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W17",
       "nativeCapability": "CPU BVH/SAH and GPU LBVH/radix/refit: 1f4084a:src/accel/**; d14577a:tests/test_bvh_cpu_vs_gpu.py, tests/test_mesh_tracing_gpu.py",
       "requiredWebOutcome": "Add CPU/WASM builder and WebGPU LBVH/refit with stats/queries",
@@ -1801,7 +1801,7 @@
       "title": "SDF primitives/CSG/bounds/hybrid traversal",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W17",
       "nativeCapability": "SDF primitives/CSG/bounds/hybrid traversal: 1f4084a:src/sdf/**, tests/test_api_contracts.py; 852b74d:tests/test_sdf_python.py",
       "requiredWebOutcome": "Add same data model, CPU evaluate and WebGPU hybrid render",
@@ -1824,7 +1824,7 @@
       "title": "Deterministic path tracer, progressive/wavefront/hybrid, ReSTIR, AOV/cache/guiding/media/AO/bent-normal/firefly controls",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W17",
       "nativeCapability": "Deterministic path tracer, progressive/wavefront/hybrid, ReSTIR, AOV/cache/guiding/media/AO/bent-normal/firefly controls: 1f4084a:src/path_tracing/**; d14577a:tests/test_path_tracing_api.py, tests/test_wavefront_parity.py, tests/test_restir.py, tests/test_guiding.py, tests/test_media_hg.py",
       "requiredWebOutcome": "Add WebGPU tracer preserving the final public surface and final internal queues/acceleration",
@@ -1899,7 +1899,7 @@
       "title": "Point-cloud/P1, product-instancing and large-scene support summaries are underdeveloped diagnostics",
       "lifecycle": "DA",
       "evidenceGrade": "B",
-      "status": "G→C",
+      "status": "G\u2192C",
       "ownerTask": "W18",
       "nativeCapability": "Point-cloud/P1, product-instancing and large-scene support summaries are underdeveloped diagnostics: 1f4084a:tests/test_mapscene_support_status.py, tests/test_p2_large_scene_cache_lod_instancing.py",
       "requiredWebOutcome": "Preserve exact diagnostics until G02-G04/T13 behavior is integrated and tested",
@@ -3349,10 +3349,20 @@
       "contract": "Add CPU/WASM builder and WebGPU LBVH/refit with stats/queries",
       "owner": "W17",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:G09"
+        "crates/forge3d-web/docs/w17-evidence.md",
+        "crates/forge3d-web/docs/tracing.md",
+        "crates/forge3d-core/src/accel.rs",
+        "crates/forge3d-core/src/sdf/mod.rs",
+        "crates/forge3d-web/src-ts/trace-wgsl.ts",
+        "crates/forge3d-web/src-ts/path-tracer.ts",
+        "crates/forge3d-web/tests/fixtures/w17/trace-sdf-v1.json"
       ],
       "tests": [
-        "port final API SDF/BVH and shipped path-tracing behavior tests; deterministic seeds, BVH/refit, CSG distance/material, queue compaction, progressive cancellation, AOV/cache/ReSTIR/guiding/media."
+        "crates/forge3d-web/tests/unit/w17-tracing.test.ts",
+        "crates/forge3d-web/tests/unit/w17-provenance.test.ts",
+        "crates/forge3d-web/src/w17_shader_tests.rs",
+        "crates/forge3d-web/tests/playwright/w17_tracing.spec.ts",
+        "crates/forge3d-web/scripts/test-w17-package-consumer.mjs"
       ]
     },
     {
@@ -3362,10 +3372,20 @@
       "contract": "Add same data model, CPU evaluate and WebGPU hybrid render",
       "owner": "W17",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:G10"
+        "crates/forge3d-web/docs/w17-evidence.md",
+        "crates/forge3d-web/docs/tracing.md",
+        "crates/forge3d-core/src/accel.rs",
+        "crates/forge3d-core/src/sdf/mod.rs",
+        "crates/forge3d-web/src-ts/trace-wgsl.ts",
+        "crates/forge3d-web/src-ts/path-tracer.ts",
+        "crates/forge3d-web/tests/fixtures/w17/trace-sdf-v1.json"
       ],
       "tests": [
-        "port final API SDF/BVH and shipped path-tracing behavior tests; deterministic seeds, BVH/refit, CSG distance/material, queue compaction, progressive cancellation, AOV/cache/ReSTIR/guiding/media."
+        "crates/forge3d-web/tests/unit/w17-tracing.test.ts",
+        "crates/forge3d-web/tests/unit/w17-provenance.test.ts",
+        "crates/forge3d-web/src/w17_shader_tests.rs",
+        "crates/forge3d-web/tests/playwright/w17_tracing.spec.ts",
+        "crates/forge3d-web/scripts/test-w17-package-consumer.mjs"
       ]
     },
     {
@@ -3375,10 +3395,20 @@
       "contract": "Add WebGPU tracer preserving the final public surface and final internal queues/acceleration",
       "owner": "W17",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:G11"
+        "crates/forge3d-web/docs/w17-evidence.md",
+        "crates/forge3d-web/docs/tracing.md",
+        "crates/forge3d-core/src/accel.rs",
+        "crates/forge3d-core/src/sdf/mod.rs",
+        "crates/forge3d-web/src-ts/trace-wgsl.ts",
+        "crates/forge3d-web/src-ts/path-tracer.ts",
+        "crates/forge3d-web/tests/fixtures/w17/trace-sdf-v1.json"
       ],
       "tests": [
-        "port final API SDF/BVH and shipped path-tracing behavior tests; deterministic seeds, BVH/refit, CSG distance/material, queue compaction, progressive cancellation, AOV/cache/ReSTIR/guiding/media."
+        "crates/forge3d-web/tests/unit/w17-tracing.test.ts",
+        "crates/forge3d-web/tests/unit/w17-provenance.test.ts",
+        "crates/forge3d-web/src/w17_shader_tests.rs",
+        "crates/forge3d-web/tests/playwright/w17_tracing.spec.ts",
+        "crates/forge3d-web/scripts/test-w17-package-consumer.mjs"
       ]
     },
     {
@@ -3414,7 +3444,7 @@
       "contract": "Preserve exact diagnostics until G02-G04/T13 behavior is integrated and tested",
       "owner": "W18",
       "evidence": [
-        "tracked G→C closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:M02b"
+        "tracked G\u2192C closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:M02b"
       ],
       "tests": [
         "port all diagnostics/MapScene tests; serialization, support matrices, failure policy, recipe validation, PNG render and no-op detection."
@@ -4156,7 +4186,7 @@
     {
       "kind": "composite-inventory",
       "path": "crates/forge3d-web/tests/parity/composite-inventory.json",
-      "sha256": "4668fde341a6083e4759b92caaaf5d86a6d0e042dffe0d7e65739a8ca5aeaa98",
+      "sha256": "cad50a7e1ee0f5845ecfe8b21345a5f0fa4a272515c6b9048e2466244b42c8d4",
       "recordCount": 6531
     },
     {

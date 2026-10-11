@@ -92,3 +92,13 @@ crates/forge3d-web/docs/w16-runs/original-evidence/*.json -text
 crates/forge3d-web/scripts/w16-local-evidence.mjs text eol=lf
 crates/forge3d-web/scripts/repair-w16-evidence-reporting.mjs text eol=lf
 crates/forge3d-web/docs/w16-security/fuzz-review-*.json text eol=lf
+
+# W17 frozen references retain the exact pinned Git blob bytes.
+crates/forge3d-web/tests/fixtures/w17/native/** -text -whitespace
+crates/forge3d-web/tests/fixtures/w17/*.json text eol=lf
+crates/forge3d-web/types/trace*.d.ts text eol=lf
+crates/forge3d-web/types/bvh*.d.ts text eol=lf
+crates/forge3d-web/types/sdf*.d.ts text eol=lf
+crates/forge3d-web/types/path-tracer.d.ts text eol=lf
+crates/forge3d-web/docs/w17-*.json text eol=lf
+docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md text eol=lf

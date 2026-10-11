@@ -86,3 +86,5 @@ remain outside primary support.
 Apache-2.0 OR MIT.
 
 Geometry, mesh processing, OBJ/STL/glTF, image/HDR IO and building layers: [browser guide](crates/forge3d-web/docs/geometry-mesh-io.md).
+
+BVH/LBVH, SDF/CSG and progressive WebGPU path tracing: [browser guide](crates/forge3d-web/docs/tracing.md).

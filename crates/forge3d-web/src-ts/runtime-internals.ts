@@ -27,6 +27,8 @@ export function simulateRuntimeDeviceLossForTests(runtime: object): void {
 
 /** Stateless WASM exports used by the W06 frame/offline helpers. */
 export interface OfflineWasmExports {
+  buildTraceBvh(input:unknown,leafSize:number,budget:number):unknown;
+  evaluateTraceSdf(input:unknown,points:Float32Array):{distances:Float32Array;materials:Uint32Array};
   bakeTerrainProbe?(input: unknown): { coefficients: number[]; reflectionMips: number[][] };
   bakeTerrainProbeGrids?(input: unknown): { coefficients: number[]; reflectionMips: number[][] };
   exrChannelNames(prefix: string, channelCount: number): string[];

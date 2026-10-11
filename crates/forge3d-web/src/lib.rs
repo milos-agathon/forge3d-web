@@ -5,6 +5,10 @@ pub mod offline_api;
 pub mod probe_api;
 pub mod runtime;
 pub mod terrain_material_input;
+pub mod trace_api;
+
+#[cfg(test)]
+mod w17_shader_tests;
 
 pub use crate::error::Forge3DError;
 pub use crate::runtime::Forge3DRuntime;
