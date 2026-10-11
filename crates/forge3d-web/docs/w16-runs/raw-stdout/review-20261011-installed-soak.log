@@ -1,0 +1,29 @@
+
+> @forge3d/web@1.26.3 test:package-consumer:w16
+> node scripts/test-w16-package-consumer.mjs
+
+{
+  "packageSha256": "f6531653db178d62311be1399ff560691bf3f0ba02f36c23b2c9bc756726b7f8",
+  "counts": [
+    110000,
+    100000,
+    128,
+    1000000
+  ],
+  "rangeFraction": 0.026244226428474193,
+  "deviceLoss": true,
+  "pageErrors": [],
+  "externalRequests": []
+}
+Starting W16 ten-minute installed-tarball run 1/1
+W16 progress {"elapsedMs":60008,"frames":3482,"frameP95Ms":11.900000035762787,"keyframesVisited":64,"maxCpuBytes":42918791,"peakGpuBytes":34799728}
+W16 progress {"elapsedMs":120005,"frames":7018,"frameP95Ms":11,"keyframesVisited":64,"maxCpuBytes":42918791,"peakGpuBytes":34799728}
+W16 progress {"elapsedMs":180006,"frames":10562,"frameP95Ms":10.5,"keyframesVisited":64,"maxCpuBytes":42918791,"peakGpuBytes":34799728}
+W16 progress {"elapsedMs":240004,"frames":14095,"frameP95Ms":10,"keyframesVisited":64,"maxCpuBytes":42918791,"peakGpuBytes":34799728}
+W16 progress {"elapsedMs":300016,"frames":17634,"frameP95Ms":9.699999988079071,"keyframesVisited":64,"maxCpuBytes":42918791,"peakGpuBytes":34799728}
+W16 progress {"elapsedMs":360014,"frames":21169,"frameP95Ms":9.400000035762787,"keyframesVisited":64,"maxCpuBytes":42918791,"peakGpuBytes":34799728}
+W16 progress {"elapsedMs":420010,"frames":24707,"frameP95Ms":9.300000011920929,"keyframesVisited":64,"maxCpuBytes":42918791,"peakGpuBytes":34799728}
+W16 progress {"elapsedMs":480008,"frames":28250,"frameP95Ms":9.199999988079071,"keyframesVisited":64,"maxCpuBytes":42918791,"peakGpuBytes":34799728}
+W16 progress {"elapsedMs":540007,"frames":31793,"frameP95Ms":9.199999988079071,"keyframesVisited":64,"maxCpuBytes":42918791,"peakGpuBytes":34799728}
+W16 progress {"elapsedMs":600004,"frames":35333,"frameP95Ms":9.5,"keyframesVisited":64,"maxCpuBytes":42918791,"peakGpuBytes":34799728}
+{"runIndex":1,"frames":35333,"frameP95Ms":9.5,"phases":{"update":{"p50Ms":1.300000011920929,"p95Ms":2.199999988079071,"maxMs":591.1999999880791},"upload":{"p50Ms":0.10000002384185791,"p95Ms":0.40000003576278687,"maxMs":68},"render":{"p50Ms":5,"p95Ms":7.600000023841858,"maxMs":160.39999997615814}},"adapter":{"vendor":"nvidia","architecture":"ampere","device":"","description":""},"maxCpuBytes":42918791,"peakGpuBytes":42775120}

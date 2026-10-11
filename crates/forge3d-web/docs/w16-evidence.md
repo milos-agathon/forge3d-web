@@ -5,8 +5,9 @@ conformance tests exist, but local p95 variation remains unexplained. Retained
 October 9 failures are 18.7/19.8/22.3/20.1/18.3 ms. October 10 installed passes
 are 8.3/8.9/9.4/10.0/10.5 ms; the retained **33.7 ms failure** used the same
 273-file runtime digest as the 10.0/10.5 ms passes. The earlier 18.3 ms failure
-and 8.3/8.9/9.4 ms passes share the preceding runtime digest. All failures remain
-valid observations. The pinned W00 physical reference-profile runs and the
+and 8.3/8.9/9.4 ms passes share the preceding runtime digest. The October 11
+installed run passed at 9.5 ms on the revised 275-file runtime. All failures
+remain valid observations. The pinned W00 physical reference-profile runs and the
 mandatory laz-perf security review are open. The original required outcomes
 and acceptance criteria in the plan and baseline are preserved.
 
@@ -750,3 +751,40 @@ source/dist files as well as the codec and harness; [captured stdout](w16-runs/r
 is retained. Real-data recovery passed after the corpus. The old fuzz report
 remains unchanged and qualifies its original bytes only. Independent codec
 approval and both attested W00 reference hosts remain pending.
+
+### October 11 installed-package verification after review fixes
+
+On clean head `5eb592d93534f2d512f7547515c1e170846389c5`, installed conformance
+and a sequential ten-minute soak passed. The [raw soak report](w16-runs/installed-20261011T082503661Z-1.json)
+records 600,054.7 ms, 35,333 frames and **9.5 ms p95** against 16.7 ms, all
+64 keyframes, 693 selection sets and 299,520–299,994 points drawn. Update,
+upload and render p95 were 2.2/0.4/7.6 ms. CPU/GPU accounting peaked at
+42,918,791/42,775,120 bytes, with zero GPU bytes after disposal. The
+[conformance report](w16-runs/conformance-20261011T082503661Z.json) records
+successful device recovery and no page errors or external requests.
+
+The committed generator produced the [batch summary](w16-runs/evidence-20261011T082503661Z.json)
+directly from retained reports. Its [275-file binding](w16-runs/runtime-files-20261011T082503661Z.json)
+matches every installed/current runtime and asset byte, digest
+`d345aab9107fca5ed685a465b33f2b7f5b09dbd25b596ce2b5e23fc973266f12`;
+the measured tarball SHA-256 is
+`f6531653db178d62311be1399ff560691bf3f0ba02f36c23b2c9bc756726b7f8`.
+The raw soak report SHA-256 is
+`8dcce63dfce1d706bbb07d403d06c94a9a3c7d83ddff9046f0439bd5efc6e3e8`.
+[Complete captured stdout](w16-runs/raw-stdout/review-20261011-installed-soak.log)
+is retained as 2,297 bytes, SHA-256
+`4b887b94c7393c1acd92e6e6df29267e19eabbf7b50b9ecfbc463e466782bf01`.
+
+Host validation passed with 121 samples and a maximum gap of 5,016.3 ms.
+CPU load was 11.20–52.00% (mean 20.13%); RTX 3070 driver 610.60 reported
+67 P8, 29 P0 and 25 P5 samples, with Lenovo Default power. These samples
+do not measure test/build concurrency; the generator records it as unknown.
+The agent launched no other local tests or builds during this soak. This
+workload uses binary EPT fixtures, so its p95 does not measure LAZ startup or
+decode. Public LAZ cancellation, deadlines, admission and recovery are covered
+by the separate source/dist tests and freshly bound fuzz report above.
+
+This runtime differs from the earlier 273-file runtime. The new pass does not
+explain or withdraw the retained 33.7 ms failure or any October 9 failure.
+Independent codec approval and both attested reference hosts remain pending;
+W16 remains Partial and G02/G03/G04 remain P.
