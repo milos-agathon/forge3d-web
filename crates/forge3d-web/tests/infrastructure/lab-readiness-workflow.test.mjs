@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
-import { resolve } from "node:path";
+import { existsSync, readFileSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import test from "node:test";
 
 import { parse } from "yaml";
@@ -37,6 +37,7 @@ const workflowDocument = parse(workflow);
 const selectorValidationJob =
   workflowDocument.jobs["validate-readiness-selectors"];
 const selectorValidationStep = selectorValidationJob.steps[0];
+const bashExecutable = resolveBash();
 
 test("laboratory readiness accepts one package, four hosts, one manual canary, and one release", () => {
   for (const input of [
@@ -241,11 +242,28 @@ function block(startId, nextId) {
 
 function runSelectorValidation(environment) {
   return spawnSync(
-    "bash",
+    bashExecutable,
     ["-e", "-u", "-o", "pipefail", "-c", selectorValidationStep.run],
     {
       encoding: "utf8",
       env: { ...process.env, ...environment },
     },
   );
+}
+
+function resolveBash() {
+  if (process.platform !== "win32") return "bash";
+  // WindowsApps/bash.exe is a WSL launcher; it cannot execute this host-side
+  // gate with the environment supplied to spawnSync. Prefer the Git Bash
+  // paired with the Git executable already selected by PATH.
+  const gitPaths = spawnSync("where.exe", ["git"], { encoding: "utf8" });
+  for (const git of (gitPaths.stdout ?? "").trim().split(/\r?\n/u)) {
+    const bash = resolve(dirname(git), "../bin/bash.exe");
+    if (git && existsSync(bash)) return bash;
+  }
+  const bashPaths = spawnSync("where.exe", ["bash"], { encoding: "utf8" });
+  const bash = (bashPaths.stdout ?? "").trim().split(/\r?\n/u)
+    .find(path => path && !/[\\/]WindowsApps[\\/]/iu.test(path) && existsSync(path));
+  assert.ok(bash, "Install Git Bash or place a host Bash executable on PATH");
+  return bash;
 }

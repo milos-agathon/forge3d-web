@@ -19,6 +19,7 @@ import { runBrandedHardwareAcceptance } from "./chrome-hardware-acceptance.mjs";
 import { isChr03Lane } from "./chr03-lanes.mjs";
 import { isChr04Lane } from "./chr04-lanes.mjs";
 import { isFfx03Lane } from "./ffx03-lanes.mjs";
+import { runW16HardwareAcceptance } from './w16-hardware-acceptance.mjs';
 import { runSafariBrowserAcceptance } from "./safari-browser-acceptance.mjs";
 import { runFirefoxLifecycleAcceptance } from "./firefox-lifecycle-acceptance.mjs";
 import { projectSaf03Binding, validateSaf03SafariProof, validateSaf03TechnologyPreviewResult } from "./saf03-proof-validator.mjs";
@@ -358,6 +359,7 @@ async function openPlaywrightSession({ runtime, routeUrl, browserPolicy }) {
       },
       driverVersion,
       ...launch,
+      runW16: payload => runW16HardwareAcceptance(context, payload),
       runPage: (payload) => (
         (["chrome", "chrome-beta"].includes(runtime.browser) && isChr03Lane(payload.binding?.lane)) ||
         (runtime.browser === "msedge" && isChr04Lane(payload.binding?.lane))

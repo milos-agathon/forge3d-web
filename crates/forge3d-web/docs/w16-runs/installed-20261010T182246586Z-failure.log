@@ -1,0 +1,44 @@
+
+> @forge3d/web@1.26.3 test:package-consumer:w16
+> node scripts/test-w16-package-consumer.mjs
+
+{
+  "packageSha256": "436cf662e16a1dfe148255b3612e2f1cf0f41f52d55bc1cd8ec48902209d8d5c",
+  "counts": [
+    110000,
+    100000,
+    128,
+    1000000
+  ],
+  "rangeFraction": 0.026244226428474193,
+  "deviceLoss": true,
+  "pageErrors": [],
+  "externalRequests": []
+}
+Starting W16 ten-minute installed-tarball run 1/1
+W16 progress {"elapsedMs":60001,"frames":2742,"frameP95Ms":39.10000002384186,"keyframesVisited":64,"maxCpuBytes":42918791,"peakGpuBytes":34799728}
+W16 progress {"elapsedMs":120013,"frames":5616,"frameP95Ms":38.5,"keyframesVisited":64,"maxCpuBytes":42918791,"peakGpuBytes":34799728}
+W16 progress {"elapsedMs":180019,"frames":8548,"frameP95Ms":36.89999997615814,"keyframesVisited":64,"maxCpuBytes":42918791,"peakGpuBytes":34799728}
+W16 progress {"elapsedMs":240009,"frames":11529,"frameP95Ms":35.59999996423721,"keyframesVisited":64,"maxCpuBytes":42918791,"peakGpuBytes":34799728}
+W16 progress {"elapsedMs":300001,"frames":14425,"frameP95Ms":35.40000003576279,"keyframesVisited":64,"maxCpuBytes":42918791,"peakGpuBytes":34799728}
+W16 progress {"elapsedMs":360004,"frames":17510,"frameP95Ms":34.19999998807907,"keyframesVisited":64,"maxCpuBytes":42918791,"peakGpuBytes":34799728}
+W16 progress {"elapsedMs":420008,"frames":20531,"frameP95Ms":33.799999952316284,"keyframesVisited":64,"maxCpuBytes":42918791,"peakGpuBytes":34799728}
+W16 progress {"elapsedMs":480023,"frames":23404,"frameP95Ms":33.90000003576279,"keyframesVisited":64,"maxCpuBytes":42918791,"peakGpuBytes":34799728}
+W16 progress {"elapsedMs":540035,"frames":26296,"frameP95Ms":34,"keyframesVisited":64,"maxCpuBytes":42918791,"peakGpuBytes":34799728}
+W16 progress {"elapsedMs":600004,"frames":29276,"frameP95Ms":33.700000047683716,"keyframesVisited":64,"maxCpuBytes":42918791,"peakGpuBytes":34799728}
+{"runIndex":1,"frames":29276,"frameP95Ms":33.700000047683716,"phases":{"update":{"p50Ms":2.699999988079071,"p95Ms":20.200000047683716,"maxMs":863.5},"upload":{"p50Ms":0.19999998807907104,"p95Ms":1.2999999523162842,"maxMs":123.60000002384186},"render":{"p50Ms":7,"p95Ms":12.800000011920929,"maxMs":173.5}},"adapter":{"vendor":"nvidia","architecture":"ampere","device":"","description":""},"maxCpuBytes":42918791,"peakGpuBytes":42770544}
+node:internal/modules/run_main:105
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: W16 p95 33.7 ms exceeds 16.7 ms
+    at file:///D:/forge3d-web/.worktrees/w16/crates/forge3d-web/scripts/test-w16-package-consumer.mjs:378:7
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: false,
+  expected: true,
+  operator: '=='
+}
+
+Node.js v24.4.0

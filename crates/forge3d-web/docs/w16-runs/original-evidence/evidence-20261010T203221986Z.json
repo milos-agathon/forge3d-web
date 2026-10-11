@@ -1,0 +1,317 @@
+{
+  "schemaVersion": 3,
+  "task": "W16",
+  "evidenceStatus": "Current local installed-package conformance and performance verified; hardware and security acceptance pending",
+  "referenceHardwareQualified": false,
+  "capabilityStatus": {
+    "G02": "P",
+    "G03": "P",
+    "G04": "P"
+  },
+  "openAcceptance": [
+    "Independent laz-perf security sign-off; reviewer and date are unset",
+    "FW-LNX-NV-01 w16-reference-discrete: lab not ready, no attested report",
+    "FW-WIN-I12-01 w16-reference-integrated: INF-00 blocked, no attested report"
+  ],
+  "historicalEvidence": {
+    "file": "w16-oct07-evidence.json",
+    "observedP95Ms": 14.2,
+    "acceptanceClaimWithdrawn": true,
+    "reason": "Not reproduced by the reviewer or the independent ten-minute source run"
+  },
+  "reviewerReportedRuns": [
+    {
+      "harness": "source/dist",
+      "hostCondition": "unit tests concurrent",
+      "p95Ms": 18.7,
+      "measuredPass": false,
+      "acceptanceEligible": false
+    },
+    {
+      "harness": "source/dist",
+      "hostCondition": "idle",
+      "p95Ms": 19.8,
+      "measuredPass": false,
+      "acceptanceEligible": true
+    },
+    {
+      "harness": "official installed tarball",
+      "hostCondition": "idle",
+      "p95Ms": 22.3,
+      "frames": 26768,
+      "measuredPass": false,
+      "acceptanceEligible": true
+    }
+  ],
+  "reproducedBeforeOptimization": {
+    "reportedAt": "2026-10-09",
+    "runtimeCommit": "4efd5e7",
+    "harness": "source with phase instrumentation; ten-minute profile-w16.mjs run",
+    "concurrentTestsOrBuilds": false,
+    "minimumDurationMs": 600000,
+    "frameP95Ms": 20.099999994039536,
+    "frames": 28301,
+    "measuredPass": false,
+    "limitMs": 16.7,
+    "adapter": {
+      "vendor": "nvidia",
+      "architecture": "ampere",
+      "device": "",
+      "description": ""
+    },
+    "phases": {
+      "update": {
+        "p50Ms": 5.799999982118607,
+        "p95Ms": 10.599999994039536,
+        "maxMs": 641.0999999940395
+      },
+      "upload": {
+        "p50Ms": 0.09999999403953552,
+        "p95Ms": 2.0999999940395355,
+        "maxMs": 181.5
+      },
+      "render": {
+        "p50Ms": 6.5,
+        "p95Ms": 9.699999988079071,
+        "maxMs": 106.09999999403954
+      }
+    },
+    "provenance": "Metrics retained from benchmark stdout. Playwright subsequently cleared test-results, including its full temporary JSON; unretained duration/browser/memory fields are not reconstructed. Subsequent full reports are retained separately under docs/w16-runs."
+  },
+  "optimizedRuns": [
+    {
+      "file": "w16-runs/installed-20261010T203221986Z-1.json",
+      "sha256": "247a78784084a4c66f919b0aa434a15f498af877c329c7bdcbb877023ea57732",
+      "verifiedAt": "2026-10-10T20:42:22.842Z",
+      "browserVersion": "148.0.7778.96",
+      "durationMs": 600074,
+      "frames": 35272,
+      "frameP95Ms": 10.5,
+      "limitMs": 16.7,
+      "measuredPass": true,
+      "selectionCount": 693,
+      "keyframesVisited": 64,
+      "maxCpuBytes": 42918791,
+      "peakGpuBytes": 42774384,
+      "phases": {
+        "update": {
+          "p50Ms": 1.600000023841858,
+          "p95Ms": 3.300000011920929,
+          "maxMs": 548.2999999523163
+        },
+        "upload": {
+          "p50Ms": 0.10000002384185791,
+          "p95Ms": 0.5,
+          "maxMs": 68.40000003576279
+        },
+        "render": {
+          "p50Ms": 5.100000023841858,
+          "p95Ms": 7.599999964237213,
+          "maxMs": 157.10000002384186
+        }
+      },
+      "hostState": {
+        "sampleCount": 121,
+        "maxObservedGapMs": 5015.816300000006,
+        "startedAt": "2026-10-10T20:32:21.992Z",
+        "endedAt": "2026-10-10T20:42:22.842Z",
+        "sources": [
+          "nvidia-smi"
+        ],
+        "summary": {
+          "osRelease": "10.0.26300",
+          "gpuNames": [
+            "NVIDIA GeForce RTX 3070"
+          ],
+          "drivers": [
+            "610.60"
+          ],
+          "pStates": {
+            "P8": 71,
+            "P5": 18,
+            "P0": 31,
+            "P3": 1
+          },
+          "graphicsClockMHz": {
+            "min": 210,
+            "max": 1980,
+            "mean": 728.5537190082645
+          },
+          "smClockMHz": {
+            "min": 210,
+            "max": 1980,
+            "mean": 728.5537190082645
+          },
+          "memoryClockMHz": {
+            "min": 405,
+            "max": 7001,
+            "mean": 2295.4462809917354
+          },
+          "gpuUtilizationPercent": {
+            "min": 2,
+            "max": 100,
+            "mean": 24.454545454545453
+          },
+          "memoryUsedMiB": {
+            "min": 1121,
+            "max": 2246,
+            "mean": 1577.685950413223
+          },
+          "cpuPercent": {
+            "min": 11.282865980767943,
+            "max": 20.841212245106554,
+            "mean": 16.64292665198146
+          },
+          "powerPlans": [
+            "Power Scheme GUID: 3a072fe5-9e0d-4cd1-ba25-1b4c556dba80  (Lenovo Default)"
+          ],
+          "processTablesRetained": true,
+          "samples": 121,
+          "maxObservedGapMs": 5015.816300000006
+        }
+      },
+      "concurrentTestsOrBuilds": false,
+      "referenceHardwareQualified": false
+    }
+  ],
+  "runtimeBinding": {
+    "packageSha256": "24f7d66de5f0507bce8d66fa83d3c4676d2003749c0482e623160571748f8c97",
+    "fileCount": 273,
+    "sha256": "6c046d4ace930909ec93b8efee9b89b14b89ef3fe2f5079beb6713eb773eef7a",
+    "file": "w16-runs/runtime-files-20261010T203221986Z.json",
+    "fixtureSha256": "580cc9241e850f3e83c4b82cb17e3acd7cc5fba2e42ed68509fa39234c2fd5ad",
+    "cameraHarnessSha256": "3e227abef6101c180d5393af92f1973eae15c168c933679178c6aaf100b91c2e",
+    "statement": "Every current dist/asset file matches the measured installed tarball. Later documentation edits do not change these runtime bytes."
+  },
+  "conformance": {
+    "file": "w16-runs/conformance-20261010T203221986Z.json",
+    "verifiedAt": "2026-10-10T20:32:21.873Z",
+    "browserVersion": "148.0.7778.96",
+    "platform": "win32",
+    "rangeFraction": 0.026244226428474193,
+    "tileCoverage": {
+      "records": 256,
+      "camerasPerDocument": 64,
+      "nodesPerDocument": 85,
+      "uniqueSelections": 40,
+      "refineNegativeControl": true
+    },
+    "deviceLoss": true,
+    "pageErrors": [],
+    "externalRequests": [],
+    "sha256": "b17dab6f147f73754e0eb7043481e0138d5a7d358931db859236220ee6159569"
+  },
+  "checks": {
+    "installedPackage": {
+      "conformance": "passed",
+      "soak": "passed in current batch",
+      "repeatRequest": {
+        "requested": 1,
+        "completed": 1
+      },
+      "logFile": "w16-runs/installed-20261010T203221986Z-retry.log",
+      "logSha256": "7f03ddb088e8f405b7b7cb9cb0a7b157d1ba3f442b30851cc100b0486de2a976"
+    },
+    "api": "passed as part of installed consumer",
+    "unit": {
+      "passed": 1082,
+      "files": 64,
+      "failed": 0,
+      "source": "clean CI run 38078029518 on 581ca90"
+    },
+    "parity": {
+      "passed": 15,
+      "lockControlledConsumers": 53,
+      "source": "fresh sequential local gate with the same tested runtime and test sources",
+      "logSha256": "50abf1b0cc17743dc8450267d70e8df05478ebd93eef2a6a04b17026c26a8164"
+    },
+    "infrastructure": {
+      "passed": 619,
+      "failed": 0,
+      "skipped": 1,
+      "source": "clean CI run 38078029518 on 581ca90"
+    },
+    "w16": {
+      "unitPassed": 47,
+      "browserPassed": 10,
+      "optionalSourceSoakSkipped": 1,
+      "source": "fresh sequential source/dist local gate with the same tested runtime and test sources",
+      "logSha256": "c56f0de1c8a1c0c134f3ae68b5afc8efe10834b49ee0dc9a9d57378252350d2d"
+    }
+  },
+  "previousOptimizationEvidence": {
+    "file": "w16-oct09-evidence.json",
+    "observedP95Ms": 18.3,
+    "measuredPass": false
+  },
+  "renderPathInvestigation": {
+    "file": "w16-runs/render-path-probes-oct10.json",
+    "sha256": "658021789f11058d2dcc354f0749eb52bc7adc7b9ab9145a3d46f2f2c6ef4282",
+    "prototypePatch": "w16-runs/render-path-prototype.patch",
+    "prototypePatchSha256": "7e96c2be83c9fa18f8290e2d6adba2a2bcdb27c606bc5bf809ac00eef0dd56be",
+    "productionChange": false,
+    "shortDiagnosticOnly": true,
+    "baselineP95Ms": 10.399999976158142,
+    "alternativeP95Ms": [
+      10.900000005960464,
+      11,
+      10.599999994039536
+    ],
+    "observedImprovement": false,
+    "statement": "Four sequential 60-second probes showed no improvement from direct presentation or on-demand picking on this host; these are not acceptance runs."
+  },
+  "performanceReproducibility": {
+    "previousEvidence": "w16-runs/evidence-20261010T182246586Z.json",
+    "previousPassingEvidence": "w16-runs/evidence-20261010T135319734Z.json",
+    "unchangedDistAndAssets": true,
+    "previousFailure": true,
+    "explanationEstablished": false,
+    "meanCpuPercent": {
+      "current": 16.64292665198146,
+      "previousFailed": 86.0681522824,
+      "previousPassing": 11.8369855
+    },
+    "statement": "All 273 runtime/asset hashes, fixture and camera harness match the retained October 10 failed and passing batches. CPU load decreased before this single retry; the observations do not withdraw earlier failures, prove causation, or explain October 9 variation. No runtime performance change was made."
+  },
+  "previousChecks": {
+    "file": "w16-local-evidence.json",
+    "statement": "Historical gate counts are retained in the original report and are not fresh measurements for this batch."
+  },
+  "gitHead": "581ca90547a34bed57f1275c5636f0c6603ce8ef",
+  "cleanStart": true,
+  "review": {
+    "status": "pending independent sign-off",
+    "reviewer": null,
+    "date": null
+  },
+  "hardware": {
+    "discrete": "pending: FW-LNX-NV-01 not provisioned",
+    "integrated": "pending: FW-WIN-I12-01 / INF-00 blocked"
+  },
+  "ci": {
+    "head": "581ca90547a34bed57f1275c5636f0c6603ce8ef",
+    "url": "https://github.com/milos-agathon/forge3d-web/actions/runs/38078029518",
+    "checks": {
+      "Web Runtime / Build And Contract Tests": "success",
+      "Web Runtime / Browser Preflight": "success",
+      "Web Runtime / Playwright WebKit Engine Preflight": "success"
+    },
+    "chromium": {
+      "passed": 258,
+      "skipped": 9
+    },
+    "firefox": {
+      "passed": 263,
+      "skipped": 4
+    },
+    "fuzz": {
+      "cases": 260,
+      "valid": 120,
+      "typedErrors": 140,
+      "untypedErrors": 0,
+      "maxElapsedMs": 156.4,
+      "peakObservedWasmBytes": 7274496
+    },
+    "statement": "These green checks are on the measured code head. Subsequent evidence-only PR heads must independently pass CI; consult the current PR checks."
+  }
+}

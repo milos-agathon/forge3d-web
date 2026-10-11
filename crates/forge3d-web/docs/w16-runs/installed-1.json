@@ -1,0 +1,127 @@
+{
+  "durationMs": 600100.400000006,
+  "frames": 34536,
+  "baseline": 34483120,
+  "maxBytes": 34483120,
+  "maxCpuBytes": 42918791,
+  "stats": {
+    "frames": 34536,
+    "pointsRendered": 299776,
+    "gpuBytes": 34476144,
+    "peakGpuBytes": 42770544,
+    "memoryBudgetBytes": 268435456,
+    "bufferCreations": 29108,
+    "p95Ms": 12.600000023841858,
+    "disposed": false,
+    "deviceLost": false
+  },
+  "frameP95Ms": 18.30000001192093,
+  "measurement": {
+    "coldStartIncluded": true,
+    "timedStages": [
+      "camera",
+      "layer.update (including fetch/decode misses)",
+      "setLayers",
+      "render through onSubmittedWorkDone"
+    ],
+    "presentationWaitBetweenSamples": true
+  },
+  "phases": {
+    "update": {
+      "p50Ms": 3,
+      "p95Ms": 7,
+      "maxMs": 2754.0999999940395
+    },
+    "upload": {
+      "p50Ms": 0.19999998807907104,
+      "p95Ms": 0.800000011920929,
+      "maxMs": 80
+    },
+    "render": {
+      "p50Ms": 7.5999999940395355,
+      "p95Ms": 12.600000023841858,
+      "maxMs": 140.09999999403954
+    }
+  },
+  "selectionCount": 693,
+  "keyframesVisited": 64,
+  "totalPoints": 1000000,
+  "minPoints": 299520,
+  "maxPoints": 299994,
+  "coveredPixels": 109266,
+  "dataset": {
+    "ranges": {
+      "requested": 0,
+      "deduplicated": 0,
+      "coalesced": 0,
+      "httpRequests": 0,
+      "bytesRequested": 0,
+      "bytesTransferred": 0,
+      "memoryHits": 0,
+      "persistentHits": 0,
+      "misses": 0,
+      "cancelled": 0,
+      "failed": 0,
+      "inFlight": 0,
+      "peakInFlight": 0,
+      "queued": 0,
+      "offlineServed": 0
+    },
+    "compressed": {
+      "hits": 0,
+      "misses": 970,
+      "evictions": 0,
+      "bytes": 12742331,
+      "budgetBytes": 33554432,
+      "entries": 970
+    },
+    "decoded": {
+      "cacheUsed": 21176640,
+      "cacheBudget": 33554432,
+      "entryCount": 968,
+      "hits": 28140,
+      "misses": 968,
+      "evictions": 0,
+      "peakBytes": 21176640
+    },
+    "disposed": false,
+    "nodeCount": 1865,
+    "totalPoints": 1000000
+  },
+  "viewport": [
+    1920,
+    1080
+  ],
+  "adapter": {
+    "vendor": "nvidia",
+    "architecture": "ampere",
+    "device": "",
+    "description": ""
+  },
+  "profile": "local-chromium-preflight",
+  "targetProfile": "reference-discrete",
+  "budgets": {
+    "p95Ms": 16.7,
+    "cpuBudgetBytes": 1610612736,
+    "gpuBudgetBytes": 3221225472
+  },
+  "referenceHardwareQualified": false,
+  "qualification": "W00 reference hardware is not inferred from a preflight run",
+  "disposed": {
+    "frames": 34536,
+    "pointsRendered": 0,
+    "gpuBytes": 0,
+    "peakGpuBytes": 42770544,
+    "memoryBudgetBytes": 268435456,
+    "bufferCreations": 29108,
+    "p95Ms": 0,
+    "disposed": true,
+    "deviceLost": false
+  },
+  "verifiedAt": "2026-10-09T20:06:22.539Z",
+  "browserVersion": "148.0.7778.96",
+  "packageSha256": "c01ecf448f34c3740a2038d29fde0814b97c2ba2e392f12d0af4051e9acf39ab",
+  "runIndex": 1,
+  "fixtureSha256": "580cc9241e850f3e83c4b82cb17e3acd7cc5fba2e42ed68509fa39234c2fd5ad",
+  "cameraHarnessSha256": "bca37e74cb030c86661d92eb5bd928dd524c9c84c94c86f1e39616009040f67c"
+}

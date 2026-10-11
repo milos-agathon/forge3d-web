@@ -1,0 +1,47 @@
+
+> @forge3d/web@1.26.3 test:w16
+> vitest run tests/unit/w16-pointcloud.test.ts tests/unit/w16-tiles.test.ts tests/unit/w16-provenance.test.ts tests/unit/w16-laz-admission.test.ts && playwright test tests/playwright/w16_pointcloud.spec.ts --project=chromium-preflight
+
+
+ RUN  v4.0.18 D:/forge3d-web/.worktrees/w16/crates/forge3d-web
+
+ ✓ tests/unit/w16-tiles.test.ts (18 tests) 236ms
+ ✓ tests/unit/w16-pointcloud.test.ts (28 tests) 1915ms
+     ✓ matches recorded real-data native camera keys/counts and quantized SSE exactly  1772ms
+ ✓ tests/unit/w16-laz-admission.test.ts (10 tests) 4041ms
+     ✓ rejects public and supplied-pool subviews whose cloned backing stores exceed the remaining budget  3644ms
+ ✓ tests/unit/w16-provenance.test.ts (1 test) 14832ms
+   ✓ W16 fixtures and deepest native sources retain independent provenance  14830ms
+
+ Test Files  4 passed (4)
+      Tests  57 passed (57)
+   Start at  12:30:31
+   Duration  19.21s (transform 14.18s, setup 0ms, import 25.32s, tests 21.03s, environment 0ms)
+
+
+Running 15 tests using 1 worker
+
+(node:45984) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:45984) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  1 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:20:3 › W16 source: independent LAZ/COPC/EPT counts, positions, colors and W15 b3dm (5.6s)
+  ok  2 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:49:3 › W16 source: abort and deadline terminate stuck WASM workers, then decode real LAZ (5.5s)
+  ok  3 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:119:3 › W16 source: initial view uses <=25% ranged bytes and typed failures (1.7s)
+  ok  4 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:146:3 › W16 source: public file and chunk decoders hard-stop stuck WASM and bound waiting callers (8.2s)
+W16 native heap proof {"mode":"source","runs":[{"cached":false,"created":1,"heaps":[{"module":1,"memory":1,"buffer":1,"heapBytes":7274496},{"module":2,"memory":2,"buffer":2,"heapBytes":7274496}],"results":[{"count":110000,"positions":"73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23","colors":"d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"},{"count":110000,"positions":"73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23","colors":"d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"}]},{"cached":true,"created":1,"heaps":[{"module":1,"memory":1,"buffer":1,"heapBytes":7274496},{"module":1,"memory":1,"buffer":1,"heapBytes":7274496}],"results":[{"count":110000,"positions":"73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23","colors":"d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"},{"count":110000,"positions":"73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23","colors":"d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"}]}],"expected":{"count":110000,"positionsSha256":"73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23","colorsSha256":"d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b","bounds":{"min":[636001.76,848935.2000000001,406.26],"max":[637179.22,849497.9,520.51]},"firstPositions":[637177.98,849393.9500000001,411.19,637177.3,849396.9500000001,411.25,637176.34,849400.84,411.01],"firstColors":[0,0,0,0,0,0,0,0,0]}}
+  ok  5 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:216:3 › W16 source: a supplied worker pool creates a fresh native heap for every decode (3.4s)
+  ok  6 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:269:3 › W16 source: covered point colors, aligned GPU picking, resize, recovery and allocation cycles (2.2s)
+  ok  7 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:328:3 › W16 source: branching native REPLACE and independent ADD/frustum cameras, B3DM integration (25.3s)
+  ok  8 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:20:3 › W16 dist: independent LAZ/COPC/EPT counts, positions, colors and W15 b3dm (6.7s)
+  ok  9 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:49:3 › W16 dist: abort and deadline terminate stuck WASM workers, then decode real LAZ (5.1s)
+  ok 10 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:119:3 › W16 dist: initial view uses <=25% ranged bytes and typed failures (3.6s)
+  ok 11 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:146:3 › W16 dist: public file and chunk decoders hard-stop stuck WASM and bound waiting callers (6.6s)
+W16 native heap proof {"mode":"dist","runs":[{"cached":false,"created":1,"heaps":[{"module":1,"memory":1,"buffer":1,"heapBytes":7274496},{"module":2,"memory":2,"buffer":2,"heapBytes":7274496}],"results":[{"count":110000,"positions":"73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23","colors":"d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"},{"count":110000,"positions":"73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23","colors":"d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"}]},{"cached":true,"created":1,"heaps":[{"module":1,"memory":1,"buffer":1,"heapBytes":7274496},{"module":1,"memory":1,"buffer":1,"heapBytes":7274496}],"results":[{"count":110000,"positions":"73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23","colors":"d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"},{"count":110000,"positions":"73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23","colors":"d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"}]}],"expected":{"count":110000,"positionsSha256":"73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23","colorsSha256":"d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b","bounds":{"min":[636001.76,848935.2000000001,406.26],"max":[637179.22,849497.9,520.51]},"firstPositions":[637177.98,849393.9500000001,411.19,637177.3,849396.9500000001,411.25,637176.34,849400.84,411.01],"firstColors":[0,0,0,0,0,0,0,0,0]}}
+  ok 12 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:216:3 › W16 dist: a supplied worker pool creates a fresh native heap for every decode (1.9s)
+  ok 13 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:269:3 › W16 dist: covered point colors, aligned GPU picking, resize, recovery and allocation cycles (1.9s)
+  ok 14 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:328:3 › W16 dist: branching native REPLACE and independent ADD/frustum cameras, B3DM integration (27.6s)
+  -  15 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:366:1 › W16 10-minute real-data camera traversal retains budget and records adapter
+
+  1 skipped
+  14 passed (2.0m)

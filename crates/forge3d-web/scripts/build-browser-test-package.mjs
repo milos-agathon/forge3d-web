@@ -423,6 +423,10 @@ try {
     copyFileSync(tarball, join(evidenceDirectory, basename(tarball)));
     const retainedFixture = join(evidenceDirectory, "consumer-fixture");
     mkdirSync(retainedFixture, { recursive: true });
+    mkdirSync(join(retainedFixture, 'examples'), { recursive: true });
+    for (const file of ['pointcloud-tiles.html', 'w16-pointcloud.js', 'w16-worker.js'])
+      writeFileSync(join(retainedFixture, 'examples', file), readFileSync(join(packageRoot, 'examples', file), 'utf8')
+        .replaceAll('../dist/', '../node_modules/@forge3d/web/dist/'));
     for (const file of [
       "package.json",
       "package-evidence.json",
@@ -445,6 +449,7 @@ try {
       join(retainedFixture, "tests"),
       { recursive: true, force: false },
     );
+    cpSync(join(packageRoot, 'tests/fixtures/w16'), join(retainedFixture, 'tests/fixtures/w16'), { recursive: true });
     writeFileSync(
       join(retainedFixture, "tests", "browser", "adapter-attestation.js"),
       ts.transpileModule(

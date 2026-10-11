@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { crossCheckNativeHistory } from "./w15-native-history.js";
+import { crossCheckNativeHistory, crossCheckNativeHistoryBatch } from "./w15-native-history.js";
 import * as f from "../../src-ts/index.js";
 const fixture = (name: string) =>
   JSON.parse(
@@ -281,6 +281,32 @@ describe("W15 historical native contract adaptations", () => {
 });
 describe("W15 native audit provenance", () => {
   it.skipIf(spawnSync("git", ["--version"]).status !== 0)(
+    "batch history compares exact binary views and rejects missing or changed available blobs",
+    () => {
+      const path = "crates/forge3d-web/tests/fixtures/w15/triangle.bin";
+      const bytes = readFileSync(new URL("../../../../" + path, import.meta.url));
+      const backing = Buffer.concat([Buffer.from([9, 10, 0]), bytes, Buffer.from([0, 10, 9])]);
+      const view = backing.subarray(3, 3 + bytes.length);
+      expect(bytes.includes(0)).toBe(true);
+      expect(crossCheckNativeHistoryBatch([
+        { revision: "HEAD", path, bytes: view },
+        { revision: "0000000000000000000000000000000000000000", path, bytes: view },
+        { revision: "HEAD", path, bytes },
+      ])).toEqual([true, false, true]);
+      const changed = Buffer.from(bytes);
+      changed[changed.length - 1] ^= 1;
+      for (const invalid of [changed, bytes.subarray(0, bytes.length - 1)])
+        expect(() => crossCheckNativeHistoryBatch([
+          { revision: "HEAD", path, bytes },
+          { revision: "HEAD", path, bytes: invalid },
+        ])).toThrow("Frozen native bytes differ from Git");
+      expect(() => crossCheckNativeHistoryBatch([
+        { revision: "HEAD", path: path + ".missing", bytes },
+      ])).toThrow("Cannot read available native Git blob");
+    },
+  );
+
+  it.skipIf(spawnSync("git", ["--version"]).status !== 0)(
     "optional history rejects changed bytes and skips unavailable commits",
     () => {
       const path =
@@ -304,6 +330,8 @@ describe("W15 native audit provenance", () => {
     },
   );
 
+  // Hash every frozen suite and cross-check available Git history without
+  // treating filesystem or subprocess scheduling as a runtime latency gate.
   it("pins every native suite and requires concrete browser ports", () => {
     const audit = JSON.parse(
       readFileSync(
@@ -364,5 +392,5 @@ describe("W15 native audit provenance", () => {
       ).toEqual(bytes);
       crossCheckNativeHistory(asset.revision, asset.nativePath, bytes);
     }
-  });
+  }, 30_000);
 });

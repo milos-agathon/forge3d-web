@@ -1038,7 +1038,7 @@ function npmAsset(id, values) {
     version,
     ecosystem: "npm",
     source: { uri, sha256: digest, integrity },
-    license: { spdx: license, provenance: `registry package metadata and LICENSE content in ${packageName}@${version}`, review: `SPDX ${license} is compatible with Forge3D distribution when notices are retained` },
+    license: { spdx: license, provenance: id === "laz-perf" ? "npm package metadata; npm 0.0.7 omits its license, so retain COPYING from hobuinc/laz-perf commit f2e7491902dc06bf4ce0a4577d3af3b98f280b2a" : `registry package metadata and LICENSE content in ${packageName}@${version}`, review: `SPDX ${license} is compatible with Forge3D distribution when notices are retained` },
     build: { provenance: `immutable npm registry tarball ${packageName}@${version}`, toolchain: "npm 11 with package-lock integrity verification", flags: ["exact-version", "ignore-lifecycle-scripts-during-audit"], artifacts: [{ name: `${packageName}-${version}.tgz`, sha256: digest, sri: integrity }] },
     fixtureProvenance,
     ...(manifestFixtureIds.length ? { manifestFixtureIds } : {}),

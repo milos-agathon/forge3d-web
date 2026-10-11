@@ -1,5 +1,6 @@
 import './verify-w13-assets.mjs';
 import './verify-w14-assets.mjs';
+import './prepare-laz-assets.mjs';
 import { embedProjWorker } from './embed-proj-worker.mjs';
 import { createHash } from "node:crypto";
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -132,6 +133,7 @@ for (const file of readdirSync(dist)) {
 
 // Package asset manifest: SHA-256 of every emitted self-hosted third-party asset.
 const assetManifest = [
+  ...['laz-perf.js','laz-perf.wasm','laz-perf.LICENSE'].map(file=>['assets/laz/'+file,'laz-perf@0.0.7']),
   ['dist/crs-worker.js', 'proj-wasm@0.1.0-alpha9 (verified embedded factory)'],
   ...['proj-emscripten.js','proj-emscripten.wasm','proj.db','proj.ini'].map(file=>['assets/proj/'+file,'proj-wasm@0.1.0-alpha9']),
   ['assets/proj/us_noaa_conus.tif','proj-data-conus-v1'],
@@ -185,5 +187,8 @@ for (const file of ['crs','crs-types','crs-layers','dataset-types','datasets','v
 }
 copyRequired(join(repoRoot, "docs", "parity", "label-case-contract.json"), join(root, "docs", "label-case-contract.json"));
 for (const file of ['mesh','geometry','mesh-processing','mesh-obj','mesh-stl','mesh-gltf','mesh-io','image-io','mesh-worker','buildings','building-materials','building-diagnostics','scatter-types']) {
-  writeFileSync(join(root,'types',file+'.d.ts'),readRequired(join(dist,file+'.d.ts')).replace(/from (["'])\.\/terrain-scatter\.js\1/g,'from "./index.js"'));
+  writeFileSync(join(root,'types',file+'.d.ts'),readRequired(join(dist,file+'.d.ts')).replace(/from (["'])\.\/(terrain-scatter|range-scheduler|byte-cache)\.js\1/g,'from "./index.js"'));
+}
+for (const file of ['pointcloud-types','pointcloud-common','pointcloud-octree','pointcloud-buffer','pointcloud-las','pointcloud-source','pointcloud','laz-decoder','copc','ept','pointcloud-layer','pointcloud-renderer','tiles3d-bounds','tiles3d-content','tiles3d','tiles3d-layer']) {
+  writeFileSync(join(root,'types',file+'.d.ts'),readRequired(join(dist,file+'.d.ts')).replace(/from (["'])\.\/(terrain-scatter|range-scheduler|byte-cache)\.js\1/g,'from "./index.js"'));
 }

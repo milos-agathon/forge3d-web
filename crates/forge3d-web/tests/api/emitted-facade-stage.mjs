@@ -34,6 +34,8 @@ try {
   assert.deepEqual(
     Object.keys(facadeA).sort(),
     [
+      'AdaptivePointBudget','CopcDataset','EptDataset','LazDataset','OctreeKey','PointBuffer','PointCloudLayer','PointCloudRenderer','PointCloudTraverser','TileBoundingVolume','Tiles3dLayer','Tileset','TilesetTraverser',
+      'computePointSse','computeTileSse','createPointCloudWorkerHandler','decodeB3dm','decodeLaz','decodeLazChunk','decodePnts','loadTileset','openCopc','openEpt','openLaz','openPointCloud','parseCopcHierarchy','parseEptBinary','parseLasHeader','parseLasRecords','pointDataBytes','reprojectPointData','transferPointData','wgs84ToEcef',
       'BuildingLayer','MAX_MESH_BYTES','MESH_IDENTITY','MeshIo','MeshLayer',
       'attachMeshTangents','buildingMaterialFromName','buildingMaterialFromTags','centerMesh','cloneMesh','createMeshWorkerHandler','decodeGltf','diagnoseBuildingTextures','displaceHeightmap','displaceProcedural',
       'encodeGlb','encodeMtl','encodeObj','encodeStl','exportHdr','exportImage','exportMesh','exportMeshToSink','extrudePolygon','flipMeshAxis','generateMeshLods','generatePrimitive','generateRibbon','generateThickPolyline','generateTube',

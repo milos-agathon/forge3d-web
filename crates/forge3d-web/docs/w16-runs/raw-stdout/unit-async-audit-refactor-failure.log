@@ -1,0 +1,120 @@
+
+> @forge3d/web@1.26.3 test:unit
+> vitest run
+
+
+ RUN  v4.0.18 D:/forge3d-web/.worktrees/w16/crates/forge3d-web
+
+ ❯ tests/unit/w16-provenance.test.ts (1 test | 1 failed) 15ms
+   × W16 fixtures and deepest native sources retain independent provenance 14ms
+ ✓ tests/unit/w12-native-provenance.test.ts (1 test) 8ms
+ ✓ tests/unit/w11-native-provenance.test.ts (5 tests) 23ms
+ ✓ tests/unit/orbit-controller.test.ts (6 tests) 668ms
+     ✓ keeps ten thousand randomized finite deltas valid  658ms
+ ✓ tests/unit/w14-native-contract.test.ts (2 tests) 21ms
+ ✓ tests/unit/label-contract-record.test.ts (3 tests) 38ms
+ ✓ tests/unit/w15-buildings.test.ts (26 tests) 81ms
+ ✓ tests/unit/w15-io.test.ts (19 tests) 127ms
+ ✓ tests/unit/terrain-streaming.test.ts (20 tests) 201ms
+ ✓ tests/unit/terrain-scatter.test.ts (14 tests) 219ms
+ ✓ tests/unit/display-adapters.test.ts (7 tests) 305ms
+ ✓ tests/unit/w06-frames.test.ts (8 tests) 135ms
+ ✓ tests/unit/message-protocol.test.ts (12 tests) 295ms
+ ✓ tests/unit/label-workflows.test.ts (52 tests) 328ms
+ ✓ tests/unit/w16-tiles.test.ts (18 tests) 386ms
+ ✓ tests/unit/cog.test.ts (19 tests) 543ms
+ ✓ tests/unit/w10-reflection-metrics.test.ts (2 tests) 88ms
+ ✓ tests/unit/environment.test.ts (20 tests) 968ms
+     ✓ matches six independently executed native fields including ground locking  711ms
+ ✓ tests/unit/session.test.ts (24 tests) 92ms
+ ✓ tests/unit/terrain-dataset.test.ts (38 tests) 116ms
+ ✓ tests/unit/browser-resources.test.ts (19 tests) 139ms
+ ✓ tests/unit/viewer-camera.test.ts (5 tests) 80ms
+ ✓ tests/unit/range-scheduler.test.ts (27 tests) 151ms
+ ✓ tests/unit/browser-io.test.ts (20 tests) 65ms
+ ✓ tests/unit/terrain-probes.test.ts (6 tests) 57ms
+ ✓ tests/unit/remote-dataset-retry.test.ts (8 tests) 87ms
+ ✓ tests/unit/viewer-controls.test.ts (15 tests) 48ms
+ ✓ tests/unit/vector.test.ts (13 tests) 69ms
+ ✓ tests/unit/w15-geometry.test.ts (33 tests) 1510ms
+     ✓ pins compiled source hashes rather than prior claims  1338ms
+ ✓ tests/unit/scene.test.ts (33 tests) 54ms
+ ✓ tests/unit/byte-cache.test.ts (16 tests) 79ms
+ ✓ tests/unit/shadows.test.ts (23 tests) 28ms
+ ✓ tests/unit/camera-animation.test.ts (14 tests) 42ms
+ ✓ tests/unit/w14-crs.test.ts (27 tests) 1946ms
+     ✓ supports empty arrays, copied identity, XYZ/T and 10000 points  419ms
+     ✓ does not leak native allocations on repeated success and failure  606ms
+ ✓ tests/unit/camera.test.ts (18 tests) 26ms
+ ✓ tests/unit/textures.test.ts (42 tests) 46ms
+ ✓ tests/unit/camera-rigs.test.ts (38 tests) 2072ms
+     ✓ never violates the minimum at any playback time  1626ms
+ ✓ tests/unit/lighting.test.ts (23 tests) 33ms
+ ✓ tests/unit/offscreen-renderer.test.ts (9 tests) 37ms
+ ✓ tests/unit/playwright-project-metadata.test.ts (16 tests) 13ms
+ ✓ tests/unit/postfx.test.ts (20 tests) 24ms
+ ✓ tests/unit/camera-controllers.test.ts (14 tests) 31ms
+ ✓ tests/unit/w16-pointcloud.test.ts (28 tests) 2554ms
+     ✓ matches recorded real-data native camera keys/counts and quantized SSE exactly  2380ms
+ ✓ tests/unit/terrain-material.test.ts (7 tests) 21ms
+ ✓ tests/unit/renderer-config.test.ts (16 tests) 25ms
+ ✓ tests/unit/materials.test.ts (18 tests) 23ms
+ ✓ tests/unit/w06-offline.test.ts (9 tests) 17ms
+ ✓ tests/unit/viewer-visibility-lifecycle.test.ts (10 tests) 10ms
+ ✓ tests/unit/terrain-overlays.test.ts (14 tests) 19ms
+ ✓ tests/unit/viewer-interaction-observation.test.ts (12 tests) 10ms
+ ✓ tests/unit/labels.test.ts (74 tests) 2745ms
+     ✓ compiles a 200000-vertex polygon without spreading vertices into the JS stack  1988ms
+ ✓ tests/unit/evidence-mode.test.ts (3 tests) 3ms
+ ✓ tests/unit/memory-policy.test.ts (9 tests) 10ms
+ ✓ tests/unit/source-launch-observation.test.ts (3 tests) 6ms
+ ✓ tests/unit/render-scheduler.test.ts (4 tests) 6ms
+ ✓ tests/unit/terrain-vt.test.ts (10 tests) 7ms
+ ✓ tests/unit/resize-controller.test.ts (5 tests) 6ms
+ ✓ tests/unit/ownership.test.ts (6 tests) 6ms
+ ✓ tests/unit/playwright-config.test.ts (7 tests) 7ms
+ ✓ tests/unit/w14-datasets.test.ts (10 tests) 3173ms
+     ✓ loads native DEM and boundaries exactly, with defensive typed buffers  1773ms
+     ✓ caches exact bytes across instances, refuses offline misses and corrupted entries  1307ms
+ ✓ tests/unit/playwright-launch-diagnostics.test.ts (5 tests) 5ms
+ ✓ tests/unit/worker-renderer.test.ts (12 tests) 3542ms
+     ✓ leaves no listeners or pointers after 30 cycles  2828ms
+ ✓ tests/unit/viewer.test.ts (45 tests) 3677ms
+     ✓ clears failed labels and uses only the caller channel for capture and replacement errors  1950ms
+ ✓ tests/unit/w15-native-contracts.test.ts (13 tests) 4116ms
+     ✓ optional history rejects changed bytes and skips unavailable commits  536ms
+     ✓ pins every native suite and requires concrete browser ports  3496ms
+ ✓ tests/unit/ibl.test.ts (34 tests) 4501ms
+     ✓ round-trips prepared payloads through cache storage byte-identically  2594ms
+     ✓ round-trips through OPFS  308ms
+     ✓ reports a miss then a hit with byte-identical payloads  652ms
+     ✓ treats a higher-quality cached entry as a miss  433ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/unit/w16-provenance.test.ts > W16 fixtures and deepest native sources retain independent provenance
+AssertionError: expected 11754 to be undefined // Object.is equality
+
+- Expected: 
+undefined
+
++ Received: 
+11754
+
+ ❯ tests/unit/w16-provenance.test.ts:23:59
+     21|       await Promise.all(files.slice(offset, offset + 16).map(async (fi…
+     22|         const bytes = await readFile(new URL(file.fixture ?? file.path…
+     23|         if (file.path !== undefined) expect(bytes.length).toBe(file.by…
+       |                                                           ^
+     24|         expect(createHash("sha256").update(bytes).digest("hex")).toBe(…
+     25|       }));
+ ❯ tests/unit/w16-provenance.test.ts:21:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 64 passed (65)
+      Tests  1 failed | 1089 passed (1090)
+   Start at  00:38:52
+   Duration  6.98s (transform 22.06s, setup 0ms, import 64.56s, tests 35.78s, environment 12ms)
+

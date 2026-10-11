@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { canonicalJson, sha256Hex } from "./canonical-json.mjs";
+import { W16_LANES, isW16Lane } from './w16-lanes.mjs';
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const matrixPath = join(
@@ -51,8 +52,10 @@ export function validateHardwareDispatch(inputs, matrix) {
   );
   const required = parseBoolean(inputs.required);
   const { asset, host } = resolveAsset(inputs.assetId, matrix);
+  if (isW16Lane(inputs.lane) && (!required || asset !== null || host.assetId !== W16_LANES[inputs.lane].assetId))
+    throw new Error('W16 requires its exact physical host and required:true');
   const productLanes = new Set(
-    matrix.hosts.flatMap((candidate) => candidate.requiredBrowserLanes),
+    matrix.hosts.flatMap((candidate) => [...candidate.requiredBrowserLanes, ...(candidate.acceptanceLanes ?? [])]),
   );
   for (const lane of optionalChromeProbeHosts.keys()) productLanes.add(lane);
   for (const lane of optionalFirefoxProbeHosts.keys()) productLanes.add(lane);
@@ -105,7 +108,7 @@ export function validateHardwareDispatch(inputs, matrix) {
     if (requiredFirefoxHost && !required) {
       throw new Error("stable Firefox lanes reject required:false");
     }
-    if ((!probeHost && !host.requiredBrowserLanes.includes(inputs.lane) && inputs.lane !== "mobile-usb-controller") ||
+    if ((!probeHost && ![...host.requiredBrowserLanes, ...(host.acceptanceLanes ?? [])].includes(inputs.lane) && inputs.lane !== "mobile-usb-controller") ||
         (probeHost && probeHost !== host.assetId)) {
       throw new Error(`${inputs.lane} is not routed to ${host.assetId}`);
     }
