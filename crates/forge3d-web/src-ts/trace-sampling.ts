@@ -147,9 +147,12 @@ export function mergeReservoir(
   source: TraceReservoir,
   target: number,
   u: number,
+  biasCorrection = true,
 ): void {
   if (!source.count || source.selectedTarget <= 0) return;
-  const weight = (target * source.weightSum) / source.selectedTarget;
+  const weight = biasCorrection
+    ? (target * source.weightSum) / source.selectedTarget
+    : source.weightSum;
   r.count += source.count;
   r.weightSum += weight;
   if (weight > 0 && u * r.weightSum < weight) {

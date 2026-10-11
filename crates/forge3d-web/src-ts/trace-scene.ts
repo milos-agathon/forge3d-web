@@ -27,6 +27,8 @@ export interface EffectiveTraceMaterial {
   emission: TraceVec3;
   metallic: number;
   roughness: number;
+  ax: number;
+  ay: number;
   ior: number;
 }
 export const normalizeTraceMaterial = (
@@ -36,6 +38,18 @@ export const normalizeTraceMaterial = (
   emission: color(m.emission ?? [0, 0, 0], "emission"),
   metallic: scalar(m.metallic ?? 0, "metallic", 0, 1),
   roughness: scalar(m.roughness ?? 0.5, "roughness", 0.001, 1),
+  ax: scalar(
+    m.ax ?? Math.max(0.001, (m.roughness ?? 0.5) ** 2),
+    "ax",
+    0.001,
+    1,
+  ),
+  ay: scalar(
+    m.ay ?? Math.max(0.001, (m.roughness ?? 0.5) ** 2),
+    "ay",
+    0.001,
+    1,
+  ),
   ior: scalar(m.ior ?? 1, "ior", 1, 5),
 });
 export function color(v: TraceVec3, name: string, max = 1e10): TraceVec3 {

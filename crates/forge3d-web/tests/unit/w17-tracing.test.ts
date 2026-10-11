@@ -26,7 +26,9 @@ import {
   sampleDielectric,
   sampleGgx,
   mediumRatio,
+  traceBrdf,
 } from "../../src-ts/trace-bsdf.js";
+import { normalizeTraceMaterial } from "../../src-ts/trace-scene.js";
 const tri = (z: number, id: number): TraceTriangle => ({
   v0: [-1, -1, z],
   v1: [1, -1, z],
@@ -114,6 +116,12 @@ describe("W17 native BVH/SDF contracts", () => {
     const scene = SdfScene.singlePrimitive(
       SdfPrimitive.sphere([0, 0, 0], 1, 42),
     );
+    expect(scene.normal([0.6, 0, 0.8])).toEqual([
+      Math.fround(0.6),
+      0,
+      Math.fround(0.8),
+    ]);
+    expect(new SdfScene().normal([0, 0, 0])).toEqual([0, 0, 0]);
     expect(
       scene.intersect({ origin: [0, 0, 5], direction: [0, 0, -2] }),
     ).toMatchObject({ materialId: 42, t: 2 });
@@ -123,6 +131,41 @@ describe("W17 native BVH/SDF contracts", () => {
   });
 });
 describe("W17 shipped sampling contracts", () => {
+  it("anisotropic GGX changes scattering and preserves direct BRDF reciprocity", () => {
+    const material = normalizeTraceMaterial({
+      albedo: [0.7, 0.4, 0.2],
+      metallic: 1,
+      roughness: 0.3,
+      ax: 0.1,
+      ay: 0.7,
+    });
+    const n: TraceVec3 = [0, 0, 1],
+      v: TraceVec3 = [0, 0, 1],
+      l: TraceVec3 = [0.6, 0, 0.8];
+    const a = traceBrdf(material, n, v, l),
+      b = traceBrdf(material, n, l, v);
+    for (let c = 0; c < 3; c++) expect(a[c]).toBeCloseTo(b[c]!, 6);
+    const normalIncidence = traceBrdf(material, n, v, v);
+    for (let c = 0; c < 3; c++)
+      expect(normalIncidence[c]).toBeCloseTo(
+        material.albedo[c]! / (4 * Math.PI * 0.1 * 0.7),
+        6,
+      );
+    const iso = sampleGgx([0, 0, -1], n, material.albedo, 0.3, 0.4, 0.2);
+    const aniso = sampleGgx(
+      [0, 0, -1],
+      n,
+      material.albedo,
+      0.3,
+      0.4,
+      0.2,
+      0.1,
+      0.7,
+    );
+    expect(aniso.direction).not.toEqual(iso.direction);
+    expect(aniso.weight.every((x) => Number.isFinite(x) && x >= 0)).toBe(true);
+    expect(() => normalizeTraceMaterial({ ax: 0 })).toThrow();
+  });
   it("dielectric total internal reflection, GGX weights and RGB majorant ratios", () => {
     const d: TraceVec3 = [Math.sqrt(0.75), 0, -0.5];
     expect(sampleDielectric(d, [0, 0, 1], false, 1.5, 0.99)[2]).toBeGreaterThan(
@@ -168,6 +211,14 @@ describe("W17 shipped sampling contracts", () => {
     mergeReservoir(merged, r, 1, 0);
     expect(merged.sample).toBe(1);
     expect(reservoirWeight(merged)).toBe(2);
+    const biased = emptyReservoir();
+    mergeReservoir(biased, r, 0, 0, false);
+    expect(biased).toMatchObject({
+      sample: 1,
+      weightSum: 4,
+      selectedTarget: 0,
+      count: 1,
+    });
     expect(new RestirDI().sampleLight(0.5, 0.5)).toBeUndefined();
   });
   it("native guiding grid uniform prior, updates and disposal", () => {

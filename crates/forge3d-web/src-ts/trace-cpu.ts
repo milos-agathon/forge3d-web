@@ -4,7 +4,7 @@ import type {
   TraceResult,
   TraceTraversalMode,
 } from "./trace-types.js";
-import { TraceScene } from "./trace-scene.js";
+import { TraceScene, type EffectiveTraceMaterial } from "./trace-scene.js";
 import {
   TraceRng,
   sampleSeed,
@@ -23,7 +23,6 @@ import {
   ray,
 } from "./trace-math.js";
 import {
-  AliasTable,
   cosineDirection,
   sampleHg,
   localToWorld,
@@ -38,7 +37,12 @@ import type {
   OnlineGuidingGrid,
 } from "./trace-sampling.js";
 import { sampleTraceLight } from "./trace-light.js";
-import { sampleGgx, sampleDielectric, mediumRatio } from "./trace-bsdf.js";
+import {
+  traceBrdf,
+  sampleGgx,
+  sampleDielectric,
+  mediumRatio,
+} from "./trace-bsdf.js";
 export interface CpuTraceSettings {
   width: number;
   height: number;
@@ -97,22 +101,23 @@ export function cameraRay(
     ),
   };
 }
-const reflect = (d: TraceVec3, n: TraceVec3): TraceVec3 =>
-  sub(d, mul(n, f(2 * dot(d, n))));
 function lightContribution(
   scene: TraceScene,
   index: number,
   p: TraceVec3,
   n: TraceVec3,
-  albedo: TraceVec3,
-  mode: TraceTraversalMode,
+  material: EffectiveTraceMaterial,
+  view: TraceVec3,
   u = 0,
   v = 0,
 ): TraceVec3 {
   const l = sampleTraceLight(scene.lights[index]!, p, u, v),
     cos = Math.max(0, dot(n, l.direction));
   if (!cos || l.distance < 1e-4) return [0, 0, 0];
-  return mul(had(albedo, l.radiance), f(cos / Math.PI));
+  return mul(
+    had(traceBrdf(material, n, view, l.direction), l.radiance),
+    f(cos),
+  );
 }
 export function traceCpuSample(
   scene: TraceScene,
@@ -239,8 +244,8 @@ export function traceCpuSample(
               candidate.index,
               p,
               n,
-              material.albedo,
-              s.mode,
+              material,
+              mul(direction, -1),
               candidate.u,
               candidate.v,
             );
@@ -293,8 +298,8 @@ export function traceCpuSample(
                   prev.sample,
                   p,
                   n,
-                  material.albedo,
-                  s.mode,
+                  material,
+                  mul(direction, -1),
                   prev.u ?? 0,
                   prev.v ?? 0,
                 ),
@@ -303,11 +308,10 @@ export function traceCpuSample(
             );
             mergeReservoir(
               reservoir,
-              s.restir.biasCorrection
-                ? prev
-                : { ...prev, selectedTarget: target },
+              prev,
               target,
               rng.next(),
+              s.restir.biasCorrection,
             );
           }
         if (bounce === 0 && sample > 0 && s.restir.spatialNeighbors) {
@@ -340,8 +344,8 @@ export function traceCpuSample(
                   prev.sample,
                   p,
                   n,
-                  material.albedo,
-                  s.mode,
+                  material,
+                  mul(direction, -1),
                   prev.u ?? 0,
                   prev.v ?? 0,
                 ),
@@ -350,11 +354,10 @@ export function traceCpuSample(
             );
             mergeReservoir(
               reservoir,
-              s.restir.biasCorrection
-                ? prev
-                : { ...prev, selectedTarget: target },
+              prev,
               target,
               rng.next(),
+              s.restir.biasCorrection,
             );
           }
         }
@@ -379,8 +382,8 @@ export function traceCpuSample(
             reservoir.sample,
             p,
             n,
-            material.albedo,
-            s.mode,
+            material,
+            mul(direction, -1),
             lightU,
             lightV,
           ),
@@ -397,8 +400,8 @@ export function traceCpuSample(
             candidate.index,
             p,
             n,
-            material.albedo,
-            s.mode,
+            material,
+            mul(direction, -1),
             candidate.u,
             candidate.v,
           ),
@@ -445,6 +448,8 @@ export function traceCpuSample(
         material.roughness,
         rng.next(),
         rng.next(),
+        material.ax,
+        material.ay,
       );
       direction = sampled.direction;
       throughput = had(throughput, sampled.weight);

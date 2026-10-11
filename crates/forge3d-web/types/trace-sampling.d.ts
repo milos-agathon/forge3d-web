@@ -35,7 +35,7 @@ export interface TraceReservoir {
 }
 export declare const emptyReservoir: () => TraceReservoir;
 export declare function updateReservoir(r: TraceReservoir, sample: number, target: number, proposalPdf: number, u: number, count?: number): void;
-export declare function mergeReservoir(r: TraceReservoir, source: TraceReservoir, target: number, u: number): void;
+export declare function mergeReservoir(r: TraceReservoir, source: TraceReservoir, target: number, u: number, biasCorrection?: boolean): void;
 export declare const reservoirWeight: (r: TraceReservoir) => number;
 export declare class RestirDI {
     #private;

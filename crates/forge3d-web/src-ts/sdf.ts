@@ -185,7 +185,19 @@ export class SdfScene {
     return values.at(-1) ?? { distance: Infinity, materialId: 0 };
   }
   normal(point: TraceVec3, epsilon = 1e-4): TraceVec3 {
+    live(this.#disposed);
+    point = vec(point);
     scalar(epsilon, "epsilon", 1e-8);
+    const root = this.#nodes.at(-1);
+    if (!root) return [0, 0, 0];
+    if (root.leaf) {
+      const primitive = this.#primitives[root.left]!,
+        p = primitive.params;
+      const center: TraceVec3 = [p[0]!, p[1]!, p[2]!];
+      // Analytic gradients avoid cancellation in narrow specular highlights.
+      if (primitive.primitiveType === 0) return unit(sub(point, center));
+      if (primitive.primitiveType === 3) return unit(center);
+    }
     return unit([
       f(
         this.evaluate(add(point, [epsilon, 0, 0])).distance -

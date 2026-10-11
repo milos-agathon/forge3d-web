@@ -10,7 +10,7 @@ modules. Unit tests verify every frozen digest.
 | G09 | SAH, Morton/radix LBVH, refit, query, stats | Rust/WASM SAH; TypeScript reference; GPU 15-pass stable radix, heap topology and bottom-up refit; analytic million-ray test uses GPU-generated nodes |
 | G10 | Six primitives, six CSG operations, bounds, material selection, hybrid traversal | Shared packed 80/32-byte model; Rust/WASM and TypeScript topological evaluation; GPU sphere tracing and mesh/SDF nearest hit |
 | G11 | Deterministic progressive path tracing and queues | Independent pixel/sample xorshift streams; megakernel and ray/intersect/shade/shadow/scan/compact stages; exact engine replay hashes |
-| G11 | Lighting, materials, AOVs | Point/directional/disc emitters; Lambert, GGX and dielectric/TIR; linear beauty and lighting AOVs; depth/IDs, AO and bent normals; HDR/RGBA frame integration |
+| G11 | Lighting, materials, AOVs | Point/directional/disc emitters; Lambert, isotropic/anisotropic GGX and dielectric/TIR; direct BRDF and sampled bounces; linear beauty and lighting AOVs; depth/IDs, AO and bent normals; HDR/RGBA frame integration |
 | G11 | ReSTIR, guiding, media, cache | Weighted candidates and temporal/spatial reuse; online PDFs; RGB majorant free flight and HG; bounded content cache restoring progressive state |
 | W02 | Ownership and service contracts | Transferable worker packets, cancellation, explicit CPU backend, typed admission/device errors, idempotent disposal and loss replay |
 
@@ -24,6 +24,12 @@ stored-only performance controls and hardcoded zero metrics are replaced by
 bounded traversal and observed memory reports; synthetic statistics are not
 presented as measured behavior.
 
+Single sphere and plane normals use analytic gradients on CPU and GPU. The
+finite-difference sphere gradient amplified float cancellation in narrow GGX
+highlights; the analytic gradient fixes that without changing distance or hit
+semantics. CSG and the other primitives retain the shared central-difference
+gradient.
+
 `trace-sdf-v1` contains 65,536 triangles, 128 sphere primitives (255 DAG nodes),
 1,048,576 analytic rays and seed 1597463007. An independent Python generator
 pins geometry, rays and expected hit bytes. Extra rays exercise the lower sheet
@@ -35,7 +41,9 @@ must fail SSIM.
 
 ReSTIR is checked against an exhaustive 50-light reference, with error reduction
 above 40%. Media is checked against RGB Beer attenuation; GGX/glass/area lights
-must render covered finite images with engine agreement. Cache continuation,
+must render covered finite images with engine agreement and CPU error below
+0.001 relative to max(1, CPU value). Unequal GGX axes must change the image;
+normal-incidence BRDF and reciprocity have independent unit checks. Cache continuation,
 including guiding and reservoirs, must equal a fresh render. Cancellation,
 typed limits, device loss/replay and 30 disposal cycles are covered.
 

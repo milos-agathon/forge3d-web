@@ -6,6 +6,8 @@ export interface EffectiveTraceMaterial {
     emission: TraceVec3;
     metallic: number;
     roughness: number;
+    ax: number;
+    ay: number;
     ior: number;
 }
 export declare const normalizeTraceMaterial: (m: TraceMaterial) => EffectiveTraceMaterial;

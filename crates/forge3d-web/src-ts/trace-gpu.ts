@@ -38,7 +38,16 @@ export function packTraceScene(
   const materials = new Float32Array(scene.materials.length * 12);
   scene.materials.forEach((m, i) => {
     materials.set(
-      [...m.albedo, m.metallic, ...m.emission, m.roughness, m.ior, 0, 0, 0],
+      [
+        ...m.albedo,
+        m.metallic,
+        ...m.emission,
+        m.roughness,
+        m.ior,
+        m.ax,
+        m.ay,
+        0,
+      ],
       i * 12,
     );
   });

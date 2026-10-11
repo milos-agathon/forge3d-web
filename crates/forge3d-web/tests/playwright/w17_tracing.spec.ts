@@ -93,7 +93,11 @@ for (const dist of [false, true]) {
       expect(m.same).toBe(true);
       expect(m.finite).toBe(true);
       expect(m.covered).toBeGreaterThan(50);
+      expect(m.cpuRelativeError).toBeLessThan(0.001);
     }
+    expect(r.anisotropyChangesImage).toBe(true);
+    expect(r.materials[0].directMax).toBeGreaterThan(0.01);
+    expect(r.materials[2].directMax).toBeGreaterThan(0.01);
     expect(r.guideRestored).toBe(true);
     expect(r.guideContinuation).toBe(true);
     expect(r.areaMean).toBeGreaterThan(0.1);

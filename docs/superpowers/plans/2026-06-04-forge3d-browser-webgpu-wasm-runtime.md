@@ -836,7 +836,10 @@ task remains unambiguous when read or reviewed in isolation.
 
 ### W17 — BVH/LBVH, SDF/CSG, And Path Tracing
 
-- Code status: **None** — no direct BVH/SDF/path-tracing implementation artifact exists; see the working-tree ledger above.
+- Code status: **Implemented** — CPU/WASM and WebGPU acceleration, SDF/CSG,
+  progressive tracing and native public controls have implementation and
+  source/installed-package conformance tests. Physical W00 profile qualification
+  remains pending; see `crates/forge3d-web/docs/w17-evidence.md`.
 
 - Scope: G09-G11.
 - Files/APIs: port accel/SDF/path-tracing modules and WGSL; TS BVH, SDF scene,

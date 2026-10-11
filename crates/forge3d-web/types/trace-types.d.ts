@@ -55,6 +55,8 @@ export interface TraceMaterial {
     emission?: TraceVec3;
     metallic?: number;
     roughness?: number;
+    ax?: number;
+    ay?: number;
     ior?: number;
 }
 export interface TraceCamera {

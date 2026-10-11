@@ -52,7 +52,10 @@ and uint32 `id`. Depth and ID refer to the first sample. Normals are normalized
 after averaging. `renderHdr` returns W06's RGBA float `HdrFrame`; `renderRgba`
 returns a tone-mapped sRGB `Frame` suitable for W06 Blob export.
 
-Materials expose albedo, emission, metallic, roughness and dielectric IOR.
+Materials expose albedo, emission, metallic, roughness, anisotropic GGX axes
+`ax`/`ay`, and dielectric IOR. Axes default to roughness squared (minimum 0.001);
+unequal axes stretch the specular lobe. Direct lights and sampled bounces use
+the same Lambert/GGX mixture.
 Lights support point, directional and disc emitters, with color, intensity and
 sampling weight. Disc lights also carry a normal and radius; directional lights
 carry a direction. `restir` enables

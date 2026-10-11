@@ -116,23 +116,49 @@ export async function runTraceFeatures(s) {
         },
       ),
       clamped = await firefly.render();
-    const materials = [];
+    const materials = [],
+      materialHashes = [];
     for (const material of [
       { albedo: [0.7, 0.4, 0.2], metallic: 1, roughness: 0.25 },
       { albedo: [1, 1, 1], ior: 1.5 },
+      {
+        albedo: [0.7, 0.4, 0.2],
+        metallic: 1,
+        roughness: 0.25,
+        ax: 0.1,
+        ay: 0.7,
+      },
     ]) {
       const sdf = s.SdfScene.singlePrimitive(
           s.SdfPrimitive.sphere([0, 0, 0], 1),
         ),
-        mScene = { sdf, materials: [material], environment: [0.6, 0.7, 0.9] },
+        mScene = {
+          sdf,
+          materials: [material],
+          environment: [0.6, 0.7, 0.9],
+          lights: [{ position: [2, 3, 4], intensity: 20 }],
+        },
         a = await create({ engine: "megakernel", maxBounces: 6 }, mScene),
         b = await create({ engine: "wavefront", maxBounces: 6 }, mScene),
         ra = await a.render({ spp: 4 }),
         rb = await b.render({ spp: 4 });
+      const hash = await sha256(ra.color);
+      materialHashes.push(hash);
+      const cpu = await create({ backend: "cpu", maxBounces: 6 }, mScene),
+        rc = await cpu.render({ spp: 4 });
+      let cpuError = 0;
+      for (let i = 0; i < rc.color.length; i++)
+        cpuError = Math.max(
+          cpuError,
+          Math.abs(rc.color[i] - ra.color[i]) /
+            Math.max(1, Math.abs(rc.color[i])),
+        );
       materials.push({
-        same: (await sha256(ra.color)) === (await sha256(rb.color)),
+        same: hash === (await sha256(rb.color)),
         finite: ra.color.every(Number.isFinite),
         covered: ra.id.filter((x) => x !== 0).length,
+        cpuRelativeError: cpuError,
+        directMax: Math.max(...ra.direct),
       });
       sdf.dispose();
     }
@@ -204,6 +230,7 @@ export async function runTraceFeatures(s) {
       mediumExpected: [Math.exp(-0.4), Math.exp(-0.8), Math.exp(-1.2)],
       clampMax: Math.max(...clamped.color),
       materials,
+      anisotropyChangesImage: materialHashes[0] !== materialHashes[2],
       areaMean: area.color.reduce((a, b) => a + b) / area.color.length,
       continuationMax,
     };
