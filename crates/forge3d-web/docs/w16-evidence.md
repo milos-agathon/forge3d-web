@@ -788,3 +788,16 @@ This runtime differs from the earlier 273-file runtime. The new pass does not
 explain or withdraw the retained 33.7 ms failure or any October 9 failure.
 Independent codec approval and both attested reference hosts remain pending;
 W16 remains Partial and G02/G03/G04 remain P.
+
+### Retained October 11 CI plan-binding failure
+
+[CI run 38125582321](https://github.com/milos-agathon/forge3d-web/actions/runs/38125582321)
+on `493a14aaa4df163f43ce403f5a4def48bf809a55` failed the pre-build parity gate:
+the updated plan had SHA-256 `ad6ce5acaa422b40fb4b6e6c191e28b3cc572d6297b8c5f4da6a1141cc8f81e1`,
+while the generated manifest retained the prior digest. Fourteen other parity
+checks passed; subsequent build and browser jobs did not run. The
+[complete failed-job log](w16-runs/raw-stdout/ci-493a14a-parity-plan-digest.log)
+is retained as 65,848 bytes, SHA-256
+`28b176e8f99b13278fdb727a47ebded4b53bab2ff7dcaea883f012ea31055276`.
+Regenerating the committed parity inventory updates the plan binding; no
+runtime bytes, acceptance criteria or test deadlines change.
