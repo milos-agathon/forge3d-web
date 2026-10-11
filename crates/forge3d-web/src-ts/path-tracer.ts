@@ -227,32 +227,44 @@ export class PathTracer {
       false,
       this.engine,
     );
+    if (this.#disposed) {
+      gpu.dispose();
+      this.#guard();
+    }
     this.#gpu = gpu;
     this.#admit();
   }
   async setScene(input: TraceSceneInput): Promise<void> {
     this.#idle();
-    const replacement = new TraceScene(input, this.memoryBudgetBytes);
-    const packed = packTraceScene(
-      replacement,
-      this.#settings.guiding?.snapshot(),
-    );
-    if (this.backend === "webgpu" && packed.counts[3]! > 256) {
-      replacement.dispose();
-      traceLimit("SDF nodes", packed.counts[3]!, 256);
-    }
+    this.#busy = true;
     const old = this.#scene;
-    this.#scene = replacement;
+    let replacement: TraceScene | undefined;
     try {
+      replacement = new TraceScene(input, this.memoryBudgetBytes);
+      const packed = packTraceScene(
+        replacement,
+        this.#settings.guiding?.snapshot(),
+      );
+      if (this.backend === "webgpu" && packed.counts[3]! > 256)
+        traceLimit("SDF nodes", packed.counts[3]!, 256);
+      this.#scene = replacement;
       this.#admit(packed.bytes.byteLength);
       await this.#rebuildGpu();
+      this.#guard();
       old.dispose();
-      this.reset();
+      this.#resetState();
     } catch (error) {
+      replacement?.dispose();
+      if (this.#disposed) {
+        old.dispose();
+        throw error;
+      }
+      const changed = this.#scene !== old;
       this.#scene = old;
-      replacement.dispose();
-      await this.#rebuildGpu();
+      if (changed) await this.#rebuildGpu();
       throw error;
+    } finally {
+      this.#busy = false;
     }
   }
   async setCamera(camera: TraceCamera): Promise<void> {
@@ -269,6 +281,9 @@ export class PathTracer {
   }
   reset(): void {
     this.#idle();
+    this.#resetState();
+  }
+  #resetState(): void {
     this.#sum.fill(0);
     this.#samples = 0;
     this.#reservoirs = Array.from(
@@ -284,7 +299,7 @@ export class PathTracer {
     this.resetSceneCache();
   }
   resetSceneCache(): void {
-    this.#guard();
+    this.#idle();
     this.#cache.clear();
     this.#cacheHits = 0;
     this.#cacheMisses = 0;
@@ -309,7 +324,13 @@ export class PathTracer {
     this.#admit(this.width * this.height * 216);
     if (this.#gpu) {
       const previous = this.#sum;
-      this.#sum = await this.#gpu.sample(this.#samples, this.engine, signal);
+      const downloaded = await this.#gpu.sample(
+        this.#samples,
+        this.engine,
+        signal,
+      );
+      this.#guard();
+      this.#sum = downloaded;
       const grid = this.#settings.guiding;
       if (grid) {
         const bins = new Uint32Array(this.#sum.buffer);
@@ -341,6 +362,8 @@ export class PathTracer {
           cancelled(signal);
           this.#guard();
           await new Promise<void>((resolve) => setTimeout(resolve, 0));
+          this.#guard();
+          cancelled(signal);
         }
         const value = traceCpuSample(
           this.#scene,
@@ -516,14 +539,24 @@ export class PathTracer {
   async recover(device?: GPUDevice): Promise<void> {
     this.#idle();
     if (this.backend === "cpu") return;
-    this.#gpu?.dispose();
-    this.#gpu = undefined;
-    if (!this.#borrowed) this.#device?.destroy();
-    this.#device =
-      device ?? (await requestTraceDevice(this.width * this.height * 192));
-    this.#borrowed = !!device;
-    await this.#rebuildGpu();
-    this.reset();
+    this.#busy = true;
+    try {
+      this.#gpu?.dispose();
+      this.#gpu = undefined;
+      if (!this.#borrowed) this.#device?.destroy();
+      const replacement =
+        device ?? (await requestTraceDevice(this.width * this.height * 192));
+      if (this.#disposed) {
+        if (!device) replacement.destroy();
+        this.#guard();
+      }
+      this.#device = replacement;
+      this.#borrowed = !!device;
+      await this.#rebuildGpu();
+      this.#resetState();
+    } finally {
+      this.#busy = false;
+    }
   }
   memoryReport(): TraceMemoryReport {
     return {

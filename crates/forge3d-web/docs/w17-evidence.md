@@ -46,6 +46,10 @@ must render covered finite images with engine agreement and CPU error below
 normal-incidence BRDF and reciprocity have independent unit checks. Cache continuation,
 including guiding and reservoirs, must equal a fresh render. Cancellation,
 typed limits, device loss/replay and 30 disposal cycles are covered.
+Pending scene updates and device recovery hold the same mutation lock as
+rendering. Disposal during asynchronous pipeline creation releases the late GPU
+resources and rejects the pending operation. A browser regression counts actual
+GPU buffer destruction, independently of the tracer's memory ledger.
 
 GPU storage layouts are independently checked by Naga: parameters 304 bytes,
 hit 64, path 192, reservoir 80 and pending queue 128, with eight storage bindings.

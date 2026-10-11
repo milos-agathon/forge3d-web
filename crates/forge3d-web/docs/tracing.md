@@ -55,7 +55,8 @@ returns a tone-mapped sRGB `Frame` suitable for W06 Blob export.
 Materials expose albedo, emission, metallic, roughness, anisotropic GGX axes
 `ax`/`ay`, and dielectric IOR. Axes default to roughness squared (minimum 0.001);
 unequal axes stretch the specular lobe. Direct lights and sampled bounces use
-the same Lambert/GGX mixture.
+the same Lambert/GGX mixture. Roughness accepts the native 0..1 range, including
+zero; the GGX sampling alpha retains its 0.001 numerical floor.
 Lights support point, directional and disc emitters, with color, intensity and
 sampling weight. Disc lights also carry a normal and radius; directional lights
 carry a direction. `restir` enables
@@ -71,6 +72,9 @@ samples; returned arrays are copied. `memoryReport` reports retained CPU/GPU/cac
 admitted peak bytes. `dispose` is idempotent. A lost device returns
 `DEVICE_LOST`; `recover` creates or borrows a replacement device and replays the
 retained scene. A supplied `GPUDevice` remains owned by the caller.
+
+The CPU ledger counts typed storage and a per-pixel reservoir allowance. Local
+stress evidence records the browser's available heap observation separately.
 
 W02's `createTraceWorkerHandler` supports transferable BVH, query and SDF
 requests. WASM workers load the existing package loader. Browser workers have

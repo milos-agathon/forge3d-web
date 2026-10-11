@@ -186,6 +186,15 @@ export async function runTraceFeatures(s) {
         },
       ),
       area = await disc.render({ spp: 4 });
+    const smooth = await create(
+      {},
+      {
+        triangles: [plane],
+        materials: [{ roughness: 0, metallic: 1 }],
+        environment: [0.5, 0.5, 0.5],
+      },
+    );
+    const zeroRoughness = (await smooth.render()).color.every(Number.isFinite);
     // A cached frame must restore the progressive state, including reservoirs.
     ris.enableSceneCache();
     await ris.render({ spp: 4 });
@@ -231,6 +240,7 @@ export async function runTraceFeatures(s) {
       clampMax: Math.max(...clamped.color),
       materials,
       anisotropyChangesImage: materialHashes[0] !== materialHashes[2],
+      zeroRoughness,
       areaMean: area.color.reduce((a, b) => a + b) / area.color.length,
       continuationMax,
     };

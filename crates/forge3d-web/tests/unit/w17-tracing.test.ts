@@ -165,6 +165,11 @@ describe("W17 shipped sampling contracts", () => {
     expect(aniso.direction).not.toEqual(iso.direction);
     expect(aniso.weight.every((x) => Number.isFinite(x) && x >= 0)).toBe(true);
     expect(() => normalizeTraceMaterial({ ax: 0 })).toThrow();
+    expect(normalizeTraceMaterial({ roughness: 0 })).toMatchObject({
+      roughness: 0,
+      ax: 0.0010000000474974513,
+      ay: 0.0010000000474974513,
+    });
   });
   it("dielectric total internal reflection, GGX weights and RGB majorant ratios", () => {
     const d: TraceVec3 = [Math.sqrt(0.75), 0, -0.5];
@@ -243,6 +248,32 @@ describe("W17 shipped sampling contracts", () => {
   });
 });
 describe("W17 progressive rendering/lifecycle", () => {
+  it("serializes pending scene mutations and disposal cannot revive a tracer", async () => {
+    const t = await PathTracer.create({ width: 2, height: 2, backend: "cpu" });
+    const pending = t.setScene({ triangles: [tri(0, 1)] });
+    await expect(t.setScene({})).rejects.toMatchObject({
+      code: "INVALID_INPUT",
+      details: { reason: "trace-busy" },
+    });
+    await pending;
+    const disposed = t.setScene({ triangles: [tri(1, 1)] });
+    t.dispose();
+    await expect(disposed).rejects.toMatchObject({ code: "RUNTIME_DISPOSED" });
+    expect(t.memoryReport()).toMatchObject({
+      cpuBytes: 0,
+      gpuBytes: 0,
+      cacheBytes: 0,
+    });
+    const rendering = await PathTracer.create({
+      width: 2,
+      height: 2,
+      backend: "cpu",
+    });
+    const render = rendering.render();
+    rendering.dispose();
+    await expect(render).rejects.toMatchObject({ code: "RUNTIME_DISPOSED" });
+    expect(rendering.samples).toBe(0);
+  });
   it("reports unavailable WebGPU and admits the smaller explicit CPU working set", async () => {
     await expect(
       PathTracer.create({ width: 2, height: 2 }),

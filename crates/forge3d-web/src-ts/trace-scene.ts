@@ -37,7 +37,7 @@ export const normalizeTraceMaterial = (
   albedo: color(m.albedo ?? [0.7, 0.7, 0.7], "albedo", 1),
   emission: color(m.emission ?? [0, 0, 0], "emission"),
   metallic: scalar(m.metallic ?? 0, "metallic", 0, 1),
-  roughness: scalar(m.roughness ?? 0.5, "roughness", 0.001, 1),
+  roughness: scalar(m.roughness ?? 0.5, "roughness", 0, 1),
   ax: scalar(
     m.ax ?? Math.max(0.001, (m.roughness ?? 0.5) ** 2),
     "ax",

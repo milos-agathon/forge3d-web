@@ -96,6 +96,7 @@ for (const dist of [false, true]) {
       expect(m.cpuRelativeError).toBeLessThan(0.001);
     }
     expect(r.anisotropyChangesImage).toBe(true);
+    expect(r.zeroRoughness).toBe(true);
     expect(r.materials[0].directMax).toBeGreaterThan(0.01);
     expect(r.materials[2].directMax).toBeGreaterThan(0.01);
     expect(r.guideRestored).toBe(true);
@@ -413,6 +414,48 @@ for (const dist of [false, true]) {
         materials: [{ albedo: [0.8, 0.2, 0.1] }],
       };
       await tracer.setScene(scene);
+      const pendingScene = tracer.setScene(scene);
+      let mutationBusy;
+      try {
+        await tracer.setScene(scene);
+      } catch (e: any) {
+        mutationBusy = e.code;
+      }
+      await pendingScene;
+      const liveBuffers = new Set<GPUBuffer>();
+      const createBuffer = device.createBuffer.bind(device);
+      Object.defineProperty(device, "createBuffer", {
+        configurable: true,
+        value: (descriptor: GPUBufferDescriptor) => {
+          const b = createBuffer(descriptor),
+            destroy = b.destroy.bind(b);
+          liveBuffers.add(b);
+          Object.defineProperty(b, "destroy", {
+            value: () => {
+              liveBuffers.delete(b);
+              destroy();
+            },
+          });
+          return b;
+        },
+      });
+      let pendingDisposed;
+      try {
+        const dying = await s.PathTracer.create(
+          { width: 2, height: 2 },
+          { device },
+        );
+        const update = dying.setScene(scene);
+        dying.dispose();
+        try {
+          await update;
+        } catch (e: any) {
+          pendingDisposed = e.code;
+        }
+      } finally {
+        delete (device as any).createBuffer;
+      }
+      const pendingResidualBuffers = liveBuffers.size;
       const original = await tracer.render({ spp: 4 });
       tracer.enableSceneCache();
       await tracer.render({ spp: 1 });
@@ -503,6 +546,9 @@ for (const dist of [false, true]) {
         bindingLimit,
         midCancellation,
         afterCancellation,
+        mutationBusy,
+        pendingDisposed,
+        pendingResidualBuffers,
       };
     });
     expect(r.cache.hits).toBe(1);
@@ -515,5 +561,8 @@ for (const dist of [false, true]) {
     expect(r.bindingLimit).toBe("UNSUPPORTED_FEATURE");
     expect(r.midCancellation).toBe("REQUEST_CANCELLED");
     expect(r.afterCancellation).toBe(0);
+    expect(r.mutationBusy).toBe("INVALID_INPUT");
+    expect(r.pendingDisposed).toBe("RUNTIME_DISPOSED");
+    expect(r.pendingResidualBuffers).toBe(0);
   });
 }
