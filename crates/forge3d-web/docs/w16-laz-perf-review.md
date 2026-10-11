@@ -180,9 +180,17 @@ independent sign-off.
 The October 11 wrapper changes add shared public/dataset decode admission and
 fresh linear memory per job. The historical fuzz report above remains bound to
 its original source and codec bytes; it does not validate those later changes.
-A new report must bind the changed production source/dist and worker bytes as
-well as the unchanged codec and corpus. This reporting correction itself runs
-no fuzz or benchmark and makes no new passing claim.
+[The fresh run on ece3606](w16-security/fuzz-review-ece3606.json) passes all
+260 cases: 120 valid, 129 INVALID_INPUT and 11 RESOURCE_LIMIT_EXCEEDED, with
+zero untyped errors. Maximum job time is 214.8 ms, below the unchanged
+3,000 ms completion bound; the observed peak is 7,274,496 bytes. The real
+512-point root decodes after the corpus with zero active/queued jobs. Its
+SHA-256 is `4b232d0c4629ff79a4b967698ac4b46d1b29f29f95a76ceefb7ad3aa8c6b7d6f`.
+The report binds 53 production source/dist files, the codec JavaScript/WASM,
+seed, corpus, manifest, script and diagnostic worker. Exact local text hashes
+and CRLF-normalized text hashes distinguish checkout bytes from line-ending
+normalization. The preceding historical report remains unchanged. These
+finite observations supply no independent approval or worst-case heap bound.
 
 ## (d) Remaining risks and sign-off
 

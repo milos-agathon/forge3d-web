@@ -741,3 +741,12 @@ expectation of 128 points; the corrected test checks the manifest's 110,000
 points and complete position/color hashes for both decodes. Its initial tool
 output was not archived as a raw log; the final passing source/dist log is
 retained. No historical failed performance observation is withdrawn.
+
+Fresh fuzzing on clean implementation head `ece3606` passed 260 cases:
+120 valid, 129 INVALID_INPUT and 11 RESOURCE_LIMIT_EXCEEDED, zero untyped
+errors, maximum 214.8 ms and observed native heap peak 7,274,496 bytes.
+[The report](w16-security/fuzz-review-ece3606.json) binds 53 production
+source/dist files as well as the codec and harness; [captured stdout](w16-runs/raw-stdout/review-20261011-fuzz.log)
+is retained. Real-data recovery passed after the corpus. The old fuzz report
+remains unchanged and qualifies its original bytes only. Independent codec
+approval and both attested W00 reference hosts remain pending.

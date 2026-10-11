@@ -91,3 +91,4 @@ crates/forge3d-web/docs/w16-runs/original-evidence/*.json -text
 # Reporting correction generators have exact hashes in portable evidence.
 crates/forge3d-web/scripts/w16-local-evidence.mjs text eol=lf
 crates/forge3d-web/scripts/repair-w16-evidence-reporting.mjs text eol=lf
+crates/forge3d-web/docs/w16-security/fuzz-review-*.json text eol=lf

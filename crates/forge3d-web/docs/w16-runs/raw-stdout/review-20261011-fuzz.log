@@ -1,0 +1,27 @@
+W16 fuzz: 32/260
+W16 fuzz: 64/260
+W16 fuzz: 96/260
+W16 fuzz: 128/260
+W16 fuzz: 160/260
+W16 fuzz: 192/260
+W16 fuzz: 224/260
+W16 fuzz: 256/260
+{
+  "cases": 260,
+  "valid": 120,
+  "typedErrors": 140,
+  "maxElapsedMs": 214.80000001192093,
+  "peakObservedWasmBytes": 7274496,
+  "recovery": {
+    "count": 512,
+    "created": 1,
+    "terminated": 0,
+    "diagnostics": {
+      "mode": "transferable",
+      "size": 1,
+      "active": 0,
+      "queued": 0,
+      "disposed": false
+    }
+  }
+}
