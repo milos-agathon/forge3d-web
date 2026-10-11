@@ -213,63 +213,58 @@ for (const dist of [false, true]) {
       expect(run.recovery).toEqual({ count: expected.count, positions: expected.positionsSha256, colors: expected.colorsSha256 });
     }
   });
-  test(`W16 ${mode}: a supplied worker pool creates a fresh native heap for every decode`, async ({ page }) => {
-    await page.route("**/assets/laz/laz-perf.js", async (route) => {
-      const response = await route.fetch(), source = await response.text();
-      const instrumented = source.replace("export default createLazPerf;", `
-        let previousHeap;
-        export default async function(options) {
-          const module = await createLazPerf(options);
-          self.postMessage({ state: "native-heap-created", reused: module.HEAPU8.buffer === previousHeap });
-          previousHeap = module.HEAPU8.buffer;
-          return module;
-        }
-      `);
-      if (instrumented === source) throw Error("LAZ adapter instrumentation did not match");
-      await route.fulfill({ response, body: instrumented });
-    });
+  test(`W16 ${mode}: a supplied worker pool creates a fresh native heap for every decode`, async ({ page }, testInfo) => {
     await open(page);
     const result = await page.evaluate(async (dist) => {
       const api = await (dist ? import("/dist/index.js") : import("/src-ts/index.ts"));
-      const bytes = new Uint8Array(await (await fetch("/tests/fixtures/w16/autzen_trim.laz")).arrayBuffer()), events: boolean[] = [],
+      const bytes = new Uint8Array(await (await fetch("/tests/fixtures/w16/autzen_trim.laz")).arrayBuffer()),
         manifest = await (await fetch("/tests/fixtures/w16/copc-ept-tiles-v1.json")).json();
-      let heapsObserved!: () => void;
-      const heaps = new Promise<void>((resolve) => { heapsObserved = resolve; });
       const hash = async (array: ArrayBufferView) => [...new Uint8Array(await crypto.subtle.digest("SHA-256",
         array.buffer.slice(array.byteOffset, array.byteOffset + array.byteLength) as ArrayBuffer))]
         .map((x) => x.toString(16).padStart(2, "0")).join("");
-      const pool = new api.Forge3DWorkerPool({ size: 1, mainThreadHandler: api.createPointCloudWorkerHandler(),
-        workerFactory: () => {
-          const worker = new Worker("/examples/test-w16-stuck-worker.js" + (dist ? "?dist" : ""), { type: "module" });
-          worker.addEventListener("message", ({ data }) => {
-            if (data.state === "native-heap-created") {
-              events.push(data.reused); if (events.length === 2) heapsObserved();
-            }
-          });
-          const channel = new MessageChannel(); worker.postMessage({ port: channel.port2 }, [channel.port2]);
-          return { port: channel.port1, terminate: () => worker.terminate() };
-        } });
-      try {
-        const first = await api.openLaz(bytes, { workerPool: pool }), firstData = await first.readPoints("0-0-0-0"),
-          firstResult = { count: first.totalPoints, positions: await hash(firstData.positions), colors: await hash(firstData.colors) };
-        first.dispose();
-        const second = await api.openLaz(bytes, { workerPool: pool }), secondData = await second.readPoints("0-0-0-0"),
-          secondResult = { count: second.totalPoints, positions: await hash(secondData.positions), colors: await hash(secondData.colors) };
-        second.dispose();
-        // Worker telemetry and RPC results use different ports; await both
-        // observations instead of assuming cross-port message ordering.
-        let timer: ReturnType<typeof setTimeout> | undefined;
+      const runs = [];
+      for (const cached of [false, true]) {
+        let created = 0;
+        const pool = new api.Forge3DWorkerPool({ size: 1, mainThreadHandler: api.createPointCloudWorkerHandler(),
+          workerFactory: () => {
+            created++;
+            const worker = new Worker("/examples/test-w16-heap-worker.js?" + (dist ? "dist&" : "") + (cached ? "cached" : ""), { type: "module" });
+            const channel = new MessageChannel(); worker.postMessage({ port: channel.port2 }, [channel.port2]);
+            return { port: channel.port1, terminate: () => worker.terminate() };
+          } });
         try {
-          await Promise.race([heaps, new Promise<never>((_, reject) => {
-            timer = setTimeout(() => reject(Error("Missing fresh-heap telemetry for two completed decodes")), 1000);
-          })]);
-        } finally { clearTimeout(timer); }
-        return { events, results: [firstResult, secondResult], expected: manifest.autzen };
-      } finally { pool.dispose(); }
+          const results = [];
+          for (let i = 0; i < 2; i++) {
+            const dataset = await api.openLaz(bytes, { workerPool: pool });
+            try {
+              const data = await dataset.readPoints("0-0-0-0");
+              results.push({ count: dataset.totalPoints, positions: await hash(data.positions), colors: await hash(data.colors) });
+            } finally { dataset.dispose(); }
+          }
+          // Query the same RPC port after both jobs; worker imports need no
+          // Playwright route support and no cross-port telemetry ordering.
+          const heaps = await pool.run({ kind: "test-heap-observations" }, { timeoutMs: 1000, requireHardStop: true });
+          runs.push({ cached, created, heaps, results });
+        } finally { pool.dispose(); }
+      }
+      return { runs, expected: manifest.autzen };
     }, dist);
-    expect(result.events).toEqual([false, false]);
-    for (const run of result.results) expect(run).toEqual({ count: result.expected.count,
-      positions: result.expected.positionsSha256, colors: result.expected.colorsSha256 });
+    await testInfo.attach("w16-native-heap-proof.json", { body: JSON.stringify(result, null, 2), contentType: "application/json" });
+    console.log("W16 native heap proof " + JSON.stringify({ mode, ...result }));
+    for (const run of result.runs) {
+      expect(run.created).toBe(1);
+      expect(run.heaps).toHaveLength(2);
+      for (const output of run.results) expect(output).toEqual({ count: result.expected.count,
+        positions: result.expected.positionsSha256, colors: result.expected.colorsSha256 });
+    }
+    const assertFresh = (run: any) => {
+      expect(run.heaps[1].module).not.toBe(run.heaps[0].module);
+      expect(run.heaps[1].memory).not.toBe(run.heaps[0].memory);
+      expect(run.heaps[1].buffer).not.toBe(run.heaps[0].buffer);
+    };
+    assertFresh(result.runs[0]);
+    expect(result.runs[1].heaps[1]).toEqual(result.runs[1].heaps[0]);
+    expect(() => assertFresh(result.runs[1])).toThrow();
   });
   test(`W16 ${mode}: covered point colors, aligned GPU picking, resize, recovery and allocation cycles`, async ({
     page,

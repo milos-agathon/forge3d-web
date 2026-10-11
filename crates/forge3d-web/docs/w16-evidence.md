@@ -745,7 +745,9 @@ retained. No historical failed performance observation is withdrawn.
 
 Fresh fuzzing on clean implementation head `ece3606` passed 260 cases:
 120 valid, 129 INVALID_INPUT and 11 RESOURCE_LIMIT_EXCEEDED, zero untyped
-errors, maximum 214.8 ms and observed native heap peak 7,274,496 bytes.
+errors, maximum in-page case time 214.8 ms and observed native heap peak
+7,274,496 bytes. Case timing covers the worker job and its result/error checks;
+it excludes browser startup, payload delivery, recovery and cleanup.
 [The report](w16-security/fuzz-review-ece3606.json) binds 53 production
 source/dist files as well as the codec and harness; [captured stdout](w16-runs/raw-stdout/review-20261011-fuzz.log)
 is retained. Real-data recovery passed after the corpus. The old fuzz report
@@ -801,3 +803,56 @@ is retained as 65,848 bytes, SHA-256
 `28b176e8f99b13278fdb727a47ebded4b53bab2ff7dcaea883f012ea31055276`.
 Regenerating the committed parity inventory updates the plan binding; no
 runtime bytes, acceptance criteria or test deadlines change.
+
+### Retained October 11 Firefox heap-telemetry failure
+
+[CI run 38125845203](https://github.com/milos-agathon/forge3d-web/actions/runs/38125845203)
+on `ad993468c6bf8cf3e8b8a2a2148e85bf0efbe7d0` passed the required build and
+contract job, including 1,118 units, 627 infrastructure checks with one existing
+skip, installed consumers, all ten remote datasets and the 260-case fuzz
+corpus. Chromium passed 262 cases with nine skips. Firefox passed 265 cases
+with four skips but failed both source/dist fresh-heap telemetry cases:
+two real decodes completed, then the test did not observe two instrumentation
+events within its existing 1,000 ms bound. The public abort/deadline cases
+passed. This run supplies no Firefox ENGINE_PASS.
+
+The [complete failed browser-job log](w16-runs/raw-stdout/ci-ad99346-firefox-heap-telemetry.log)
+is retained as 335,859 bytes, SHA-256
+`843ebea28e282aec53d31a5e1b705f125142f4dc616f62beb4f4e7de352694df`.
+The optional WebKit classifier was green despite 271 cases failing without
+WebGPU; its ENGINE_PASS upload was skipped. WebKit remains NOT_PROVEN.
+
+The [route diagnostic](w16-runs/heap-review-route-probe.json), reproduced by
+[this script](w16-runs/heap-review-route-probe.mjs) from the package root,
+decoded 110,000 points in each engine. Chromium intercepted the worker import
+once with either route surface; Firefox intercepted neither and produced no
+injected telemetry. The replacement test therefore observes the unchanged
+production module, its actual `HEAPU8` and exported `WebAssembly.Memory` inside
+the owned test worker, then queries the same RPC port within the existing
+1,000 ms bound. Both positive jobs use the production handler in exactly one
+worker. A second real decode through the retained native module is the negative
+control: its count and complete position/color hashes still match the oracle,
+while the same freshness assertions reject its reused module, memory and
+buffer. Memory identity prevents growth from masquerading as a fresh heap.
+
+The [default-preference worker probe](w16-runs/heap-review-engine-probe.json)
+passed for Chromium and Firefox, source and dist, including both controls and
+all oracle hashes. It reproduces with
+`node docs/w16-runs/heap-review-engine-probe.mjs <output-json>` from the package
+root. Rerunning that script reproduced the identical 10,685-byte JSON, SHA-256
+`8719782f299222848fbfd6b8f7da61aa0d12ab2f51c540654ba2a7e087fe5943`.
+This decoder/instrumentation probe does not qualify WebGPU. The local guarded
+Chromium source/dist cases passed; the
+[local guarded Firefox run](w16-runs/raw-stdout/heap-review-firefox-adapter-guard.log)
+failed before the cases entered because no adapter was available. That failure
+is retained as 3,533 bytes, SHA-256
+`d4036cd5c34476ffbca65204efa60ddf7f328624dbd746daad4f7d11fcc5a40b`.
+No production runtime bytes, browser preferences, capability gates or test
+deadlines changed.
+
+After this replacement, the full local W16 suite passed all 57 units and
+fourteen Chromium source/dist cases, with the ordinary env-gated soak skip.
+The [complete rerun log](w16-runs/raw-stdout/review-20261011-w16-heap-fix.log)
+includes both heap proofs and their full oracle hashes: 7,012 bytes, SHA-256
+`5edd74a428c3098974fa0546e90d2aba01d2998e391d381ee9e4e471798fb5e5`.
+Fresh independent review found no issue with the replacement instrumentation.
