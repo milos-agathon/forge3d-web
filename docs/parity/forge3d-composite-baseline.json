@@ -103,7 +103,7 @@
         "clean Rust/wasm/TypeScript/API/package/consumer checks, every Playwright project, physical browser evidence, loss/visibility/BFCache, memory soak, goldens and real data."
       ],
       "acceptance": [
-        "no G, P, E or G\u2192C; every verified C row returns the exact typed status and is not advertised as rendering; visuals meet SSIM >= 0.98 or stricter row-specific threshold; numeric contracts meet manifest tolerances; disposal returns to baseline."
+        "no G, P, E or G→C; every verified C row returns the exact typed status and is not advertised as rendering; visuals meet SSIM >= 0.98 or stricter row-specific threshold; numeric contracts meet manifest tolerances; disposal returns to baseline."
       ],
       "targetId": "target:R01",
       "xcLinks": []
@@ -1899,7 +1899,7 @@
       "title": "Point-cloud/P1, product-instancing and large-scene support summaries are underdeveloped diagnostics",
       "lifecycle": "DA",
       "evidenceGrade": "B",
-      "status": "G\u2192C",
+      "status": "G→C",
       "ownerTask": "W18",
       "nativeCapability": "Point-cloud/P1, product-instancing and large-scene support summaries are underdeveloped diagnostics: 1f4084a:tests/test_mapscene_support_status.py, tests/test_p2_large_scene_cache_lod_instancing.py",
       "requiredWebOutcome": "Preserve exact diagnostics until G02-G04/T13 behavior is integrated and tested",
@@ -3444,7 +3444,7 @@
       "contract": "Preserve exact diagnostics until G02-G04/T13 behavior is integrated and tested",
       "owner": "W18",
       "evidence": [
-        "tracked G\u2192C closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:M02b"
+        "tracked G→C closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:M02b"
       ],
       "tests": [
         "port all diagnostics/MapScene tests; serialization, support matrices, failure policy, recipe validation, PNG render and no-op detection."
@@ -4186,7 +4186,7 @@
     {
       "kind": "composite-inventory",
       "path": "crates/forge3d-web/tests/parity/composite-inventory.json",
-      "sha256": "cad50a7e1ee0f5845ecfe8b21345a5f0fa4a272515c6b9048e2466244b42c8d4",
+      "sha256": "66508076d6713a645a3e432cd358525767104a2b18b4a7974037f2a61fcac311",
       "recordCount": 6531
     },
     {
