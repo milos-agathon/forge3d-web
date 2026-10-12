@@ -3,6 +3,13 @@
 Code revision: `8171a0dd5a7e6edca12cf83244576763b115ec0d` (base for this review: `ab5e331`).
 No subagents were used. The primary checkout is unchanged.
 
+A subsequent guiding CDF correction is recorded in [follow-up evidence](w17-guiding-fix-evidence.json).
+CPU and GPU now consume the same host-generated float32 probabilities and cumulative
+boundaries. A deterministic 32×24 floor/wall case reproduced CPU bin 7 versus GPU
+bin 6 before the fix; both select bin 7 afterward. Three seeds, including that
+boundary control, are compared after every sample through 32 spp on both GPU engines.
+The prior 600-second stress below remains bound to its original code revision.
+
 | Reported defect | Correction | Regression proof |
 | --- | --- | --- |
 | Empty GPU LBVH leaves and runaway traversal | Quotient/remainder leaf partition fills every leaf; CPU/GPU traversal rejects inverted bounds and zero-child leaves | 12 irregular counts, 567 CPU/WASM/GPU comparisons, topology-preserving refits |
