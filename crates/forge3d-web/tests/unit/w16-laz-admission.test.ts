@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { readFileSync } from "node:fs";
+import { Buffer } from "node:buffer";
 import { Forge3DWorkerPool, serveForge3DMessagePort, decodeLaz, parseLasHeader } from "../../src-ts/index.js";
 import { PointSource } from "../../src-ts/pointcloud-source.js";
 import { withLazAdmission, lazAdmissionBytes, LAZ_MAX_ADMITTED_BYTES, LAZ_MAX_QUEUED_JOBS } from "../../src-ts/laz-admission.js";
@@ -81,7 +82,7 @@ describe("W16 shared LAZ admission", () => {
         .rejects.toMatchObject({ code: "RESOURCE_LIMIT_EXCEEDED", details: { reason: "laz-admission-limit" } });
       expect(worker).not.toHaveBeenCalled(); expect(handler).not.toHaveBeenCalled();
       expect(owned.pool.getDiagnostics()).toMatchObject({ active: 0, queued: 0 });
-      expect(input).toEqual(bytes); expect(input.buffer.byteLength).toBe(bytes.length + 4096);
+      expect(Buffer.compare(input, bytes)).toBe(0); expect(input.buffer.byteLength).toBe(bytes.length + 4096);
     } finally { source.dispose(); owned.dispose(); release(); await active; await flush(); vi.unstubAllGlobals(); }
   });
   it("counts waiting time against the same deadline and preserves caller input on queued expiry", async () => {
