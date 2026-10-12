@@ -2,6 +2,7 @@ import { Forge3DError } from "./index.js";
 import { TRACE_PATH_WGSL } from "./trace-wgsl.js";
 import { TraceScene } from "./trace-scene.js";
 import type { CpuTraceSettings } from "./trace-cpu.js";
+import { packGuidingWeights } from "./trace-sampling.js";
 import {
   unit,
   sub,
@@ -15,6 +16,7 @@ const U = { MAP_READ: 1, COPY_SRC: 4, COPY_DST: 8, UNIFORM: 64, STORAGE: 128 };
 export function packTraceScene(
   scene: TraceScene,
   guiding?: Float32Array,
+  guidingBins = 8,
 ): {
   bytes: ArrayBuffer;
   offsets0: number[];
@@ -69,7 +71,11 @@ export function packTraceScene(
     ),
   );
   const lightOffset = push(lights.buffer),
-    guidingOffset = push(guiding?.slice().buffer ?? new ArrayBuffer(4));
+    guidingOffset = push(
+      guiding
+        ? packGuidingWeights(guiding, guidingBins).buffer
+        : new ArrayBuffer(4),
+    );
   const bytes = new ArrayBuffer(words * 4),
     target = new Uint8Array(bytes);
   let at = 0;
@@ -247,7 +253,11 @@ export class TraceGpu {
           available: device.limits.maxStorageBuffersPerShaderStage,
         },
       );
-    this.packed = packTraceScene(source, settings.guiding?.snapshot());
+    this.packed = packTraceScene(
+      source,
+      settings.guiding?.snapshot(),
+      settings.guiding?.binsPerCell,
+    );
     const n = settings.width * settings.height,
       blocks = Math.ceil(n / 256);
     if (this.packed.counts[3]! > 256)
@@ -511,7 +521,10 @@ export class TraceGpu {
     this.#guard();
     cancelled(signal);
     if (this.settings.guiding) {
-      const weights = this.settings.guiding.snapshot();
+      const weights = packGuidingWeights(
+        this.settings.guiding.snapshot(),
+        this.settings.guiding.binsPerCell,
+      );
       this.device.queue.writeBuffer(
         this.#scene,
         this.packed.offsets1[3]! * 4,

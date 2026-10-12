@@ -195,6 +195,7 @@ export class PathTracer {
     const packed = packTraceScene(
         this.#scene!,
         this.#settings.guiding?.snapshot(),
+        this.#settings.guiding?.binsPerCell,
       ),
       uniform = traceUniform(this.#scene!, this.#settings, packed, 0),
       suffix = new TextEncoder().encode(
@@ -233,8 +234,11 @@ export class PathTracer {
       this.memoryBudgetBytes -
         this.#cpuBytes() -
         this.#cacheBytes() -
-        packTraceScene(this.#scene!, this.#settings.guiding?.snapshot()).bytes
-          .byteLength,
+        packTraceScene(
+          this.#scene!,
+          this.#settings.guiding?.snapshot(),
+          this.#settings.guiding?.binsPerCell,
+        ).bytes.byteLength,
       false,
       this.engine,
     );
@@ -255,6 +259,7 @@ export class PathTracer {
       const packed = packTraceScene(
         replacement,
         this.#settings.guiding?.snapshot(),
+        this.#settings.guiding?.binsPerCell,
       );
       if (this.backend === "webgpu" && packed.counts[3]! > 256)
         traceLimit("SDF nodes", packed.counts[3]!, 256);
@@ -333,7 +338,11 @@ export class PathTracer {
     cancelled(signal);
     this.#checkBackend();
     // Readback replacement and decoded AOVs overlap the previous accumulation.
-    this.#admit(this.width * this.height * 216);
+    this.#admit(
+      this.width *
+        this.height *
+        (216 + (this.#settings.guiding?.binsPerCell ?? 0) * 16),
+    );
     if (this.#gpu) {
       const downloaded = await this.#gpu.sample(
         this.#samples,

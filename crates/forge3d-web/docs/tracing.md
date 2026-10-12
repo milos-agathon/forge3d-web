@@ -68,7 +68,12 @@ histories retain their proposal counts. History expires on deterministic
 the native alias-table light-management contract. `OnlineGuidingGrid` has unit
 priors, directional-bin updates and normalized PDFs. Training uses inverse-PDF
 weighted radiance returned after the primary diffuse bounce, before firefly
-clamping. Sampling mixes 20% uniform exploration with the learned distribution. A bounded homogeneous
+clamping. Sampling mixes 20% uniform exploration with the learned distribution.
+`sample(x, y, v)` returns the selected bin, remapped azimuth variate and importance
+weight. Both backends use host-generated float32 probabilities and cumulative
+boundaries; GPU drivers cannot change bin selection by rounding a division differently.
+The grid's raw weight snapshot and learned `pdf` retain their existing meanings.
+A bounded homogeneous
 medium exposes RGB absorption/scattering coefficients and HG anisotropy. Surface
 and in-medium light connections include Beer transmittance; scatter events sample
 analytic emitters with the HG phase function.

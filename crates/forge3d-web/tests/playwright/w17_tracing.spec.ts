@@ -153,6 +153,35 @@ for (const dist of [false, true]) {
     expect(r.residualBytes).toBe(0);
     expect(r.leakNegativeControl).toBe(true);
   });
+  test(`W17 ${label}: guided CPU and GPU paths agree at every trained sample`, async ({
+    page,
+  }, testInfo) => {
+    test.setTimeout(180000);
+    await open(page);
+    const r = await page.evaluate(async () => {
+      const f = await import(/* @vite-ignore */ "/examples/w17-review.js");
+      return f.runGuidingParity(window.__w17);
+    });
+    await testInfo.attach("guiding-parity.json", {
+      body: JSON.stringify(r, null, 2),
+      contentType: "application/json",
+    });
+    expect(r.checkpoints).toHaveLength(96);
+    expect(r.boundary.cpuBins).toEqual([7]);
+    expect(r.boundary.gpuBins).toEqual([7]);
+    for (const p of r.checkpoints) {
+      expect(p.covered).toBe(32 * 24);
+      expect(p.trained).toBeGreaterThan(100);
+      expect(p.color, `color at seed ${p.seed}, spp ${p.spp}`).toBeLessThan(
+        0.00001,
+      );
+      expect(p.weights, `weights at seed ${p.seed}, spp ${p.spp}`).toBeLessThan(
+        0.00001,
+      );
+      expect(p.engines).toBe(0);
+      expect(p.engineWeights).toBe(0);
+    }
+  });
   test(`W17 ${label}: failed recovery and device loss during compilation release real buffers`, async ({
     page,
   }, testInfo) => {

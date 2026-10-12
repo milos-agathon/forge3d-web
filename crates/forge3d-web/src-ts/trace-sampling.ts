@@ -152,7 +152,10 @@ export function mergeReservoir(
   if (!source.count) return;
   // A compatible reservoir containing only zero-weight candidates still
   // represents proposal trials. Dropping its count biases reused estimates.
-  if (source.selectedTarget <= 0) { r.count += source.count; return; }
+  if (source.selectedTarget <= 0) {
+    r.count += source.count;
+    return;
+  }
   const weight = biasCorrection
     ? (target * source.weightSum) / source.selectedTarget
     : source.weightSum;
@@ -239,6 +242,44 @@ export class RestirDI {
     return a > 0 ? ((a - b) / a) * 100 : 0;
   }
 }
+// Store probabilities and cumulative boundaries once on the host. Recomputing
+// the divisions in WGSL can move a boundary by one ULP on real GPU drivers.
+function guidingDistribution(
+  weights: Float32Array,
+  offset: number,
+  bins: number,
+  output: Float32Array,
+  target: number,
+): void {
+  let total = 0;
+  for (let bin = 0; bin < bins; bin++)
+    total = f(total + weights[offset + bin]!);
+  if (!Number.isFinite(total) || total <= 0)
+    traceInvalid("guiding total overflow");
+  const uniform = f(f(0.2) / bins);
+  let sum = 0;
+  for (let bin = 0; bin < bins; bin++) {
+    const pdf = f(f(f(f(0.8) * weights[offset + bin]!) / total) + uniform);
+    sum = f(sum + pdf);
+    output[target + bin] = pdf;
+    output[target + bins + bin] = sum;
+  }
+}
+/** Internal scene storage: raw weights, mixture probabilities, then CDF per cell. */
+export function packGuidingWeights(
+  weights: Float32Array,
+  bins: number,
+): Float32Array<ArrayBuffer> {
+  integer(bins, "binsPerCell", 1, 64);
+  if (weights.length % bins) traceInvalid("guiding snapshot dimensions differ");
+  const packed = new Float32Array(weights.length * 3);
+  for (let offset = 0; offset < weights.length; offset += bins) {
+    const target = offset * 3;
+    packed.set(weights.subarray(offset, offset + bins), target);
+    guidingDistribution(weights, offset, bins, packed, target + bins);
+  }
+  return packed;
+}
 /** Native OnlineGuidingGrid: one unit prior per directional bin. */
 export class OnlineGuidingGrid {
   #weights: Float32Array;
@@ -278,8 +319,29 @@ export class OnlineGuidingGrid {
   pdf(x: number, y: number): Float32Array {
     const offset = this.#offset(x, y),
       data = this.#weights.slice(offset, offset + this.binsPerCell),
-      sum = data.reduce((a, b) => a + b, 0);
+      sum = data.reduce((a, b) => f(a + b), 0);
     return data.map((v) => v / sum);
+  }
+  /** Sample the 80% learned / 20% uniform azimuth mixture in float32. */
+  sample(
+    x: number,
+    y: number,
+    v: number,
+  ): { bin: number; v: number; weight: number } {
+    const offset = this.#offset(x, y),
+      bins = this.binsPerCell;
+    v = scalar(v, "guiding sample", 0, 1);
+    const data = new Float32Array(bins * 2);
+    guidingDistribution(this.#weights, offset, bins, data, 0);
+    let bin = 0;
+    for (; bin < bins - 1; bin++) if (v < data[bins + bin]!) break;
+    const pdf = data[bin]!,
+      previous = bin === 0 ? 0 : data[bins + bin - 1]!;
+    return {
+      bin,
+      v: f(f(bin + clamp(f(f(v - previous) / pdf))) / bins),
+      weight: f(1 / f(bins * pdf)),
+    };
   }
   snapshot(): Float32Array {
     live(this.#disposed);

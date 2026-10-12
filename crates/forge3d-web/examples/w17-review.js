@@ -1,4 +1,121 @@
 import { trackGpuBuffers } from "./w17-memory.js";
+export async function runGuidingParity(s) {
+  const adapter = await navigator.gpu.requestAdapter(),
+    device = await adapter.requestDevice(),
+    tracers = [],
+    grids = [],
+    checkpoints = [];
+  let boundary;
+  const scene = {
+    triangles: [
+      { v0: [-100, -100, 0], v1: [100, -100, 0], v2: [0, 100, 0], id: 1 },
+      {
+        v0: [2, -100, 0],
+        v1: [2, 100, 0],
+        v2: [2, 100, 100],
+        materialId: 1,
+        id: 2,
+      },
+      {
+        v0: [2, -100, 0],
+        v1: [2, 100, 100],
+        v2: [2, -100, 100],
+        materialId: 1,
+        id: 3,
+      },
+    ],
+    materials: [
+      { albedo: [1, 1, 1] },
+      { albedo: [0, 0, 0], emission: [10, 10, 10] },
+    ],
+    environment: [0, 0, 0],
+  };
+  const error = (a, b) =>
+    a.reduce(
+      (m, v, i) => Math.max(m, Math.abs(v - b[i]) / Math.max(1, Math.abs(v))),
+      0,
+    );
+  try {
+    for (const [seed, fovY] of [
+      [42, 45],
+      [1597463007, 60],
+      [118605492, 45],
+    ]) {
+      const group = [];
+      for (const backend of ["cpu", "megakernel", "wavefront"]) {
+        const grid = new s.OnlineGuidingGrid(32, 24, 8);
+        // Pixel 400's seventh xorshift draw is 0.9464285969734192: exactly
+        // the f32 CDF boundary after bin 6 for these previously trained weights.
+        if (seed === 118605492) {
+          const weights = grid.snapshot();
+          weights.set([1, 10, 1, 9, 1, 1, 4, 1], 400 * 8);
+          grid.restore(weights);
+        }
+        grids.push(grid);
+        const t = await s.PathTracer.create(
+          {
+            width: 32,
+            height: 24,
+            seed,
+            maxBounces: 3,
+            backend: backend === "cpu" ? "cpu" : "webgpu",
+            engine: backend === "cpu" ? "megakernel" : backend,
+            camera: { origin: [0, 0, 1], target: [0, 0, 0], fovY },
+            guiding: grid,
+          },
+          { device },
+        );
+        tracers.push(t);
+        await t.setScene(scene);
+        group.push({ t, grid });
+      }
+      for (let spp = 1; spp <= 32; spp++) {
+        const result = [];
+        for (const { t } of group) result.push(await t.render({ spp: 1 }));
+        if (seed === 118605492 && spp === 1) {
+          const before = [1, 10, 1, 9, 1, 1, 4, 1];
+          const changed = (grid) =>
+            Array.from(grid.snapshot().slice(400 * 8, 401 * 8)).flatMap(
+              (w, bin) => (w !== before[bin] ? [bin] : []),
+            );
+          boundary = {
+            pixel: 400,
+            u: 0.9464285969734192,
+            cpuBins: changed(group[0].grid),
+            gpuBins: changed(group[1].grid),
+          };
+        }
+        checkpoints.push({
+          seed,
+          fovY,
+          spp,
+          color: error(result[0].color, result[1].color),
+          weights: error(group[0].grid.snapshot(), group[1].grid.snapshot()),
+          engines: error(result[1].color, result[2].color),
+          engineWeights: error(
+            group[1].grid.snapshot(),
+            group[2].grid.snapshot(),
+          ),
+          covered: result[1].id.filter((id) => id > 0).length,
+          trained: group[1].grid.snapshot().filter((weight) => weight > 1)
+            .length,
+        });
+      }
+    }
+    return {
+      width: 32,
+      height: 24,
+      bins: 8,
+      maxBounces: 3,
+      boundary,
+      checkpoints,
+    };
+  } finally {
+    for (const t of tracers) t.dispose();
+    for (const grid of grids) grid.dispose();
+    device.destroy();
+  }
+}
 export async function runReviewRegressions(s) {
   const adapter = await navigator.gpu.requestAdapter(),
     device = await adapter.requestDevice(),

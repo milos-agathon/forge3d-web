@@ -1,6 +1,6 @@
 import { TraceScene } from "./trace-scene.js";
 import type { CpuTraceSettings } from "./trace-cpu.js";
-export declare function packTraceScene(scene: TraceScene, guiding?: Float32Array): {
+export declare function packTraceScene(scene: TraceScene, guiding?: Float32Array, guidingBins?: number): {
     bytes: ArrayBuffer;
     offsets0: number[];
     offsets1: number[];

@@ -56,6 +56,8 @@ export declare class RestirDI {
     };
     calculateVarianceReduction(reference: Float32Array, test: Float32Array): number;
 }
+/** Internal scene storage: raw weights, mixture probabilities, then CDF per cell. */
+export declare function packGuidingWeights(weights: Float32Array, bins: number): Float32Array<ArrayBuffer>;
 /** Native OnlineGuidingGrid: one unit prior per directional bin. */
 export declare class OnlineGuidingGrid {
     #private;
@@ -66,6 +68,12 @@ export declare class OnlineGuidingGrid {
     dims(): readonly [number, number, number];
     update(x: number, y: number, bin: number, weight?: number): void;
     pdf(x: number, y: number): Float32Array;
+    /** Sample the 80% learned / 20% uniform azimuth mixture in float32. */
+    sample(x: number, y: number, v: number): {
+        bin: number;
+        v: number;
+        weight: number;
+    };
     snapshot(): Float32Array;
     restore(weights: Float32Array): void;
     reset(): void;

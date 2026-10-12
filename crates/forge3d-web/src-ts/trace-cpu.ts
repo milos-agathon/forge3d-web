@@ -527,23 +527,15 @@ export function traceCpuSample(
         v = rng.next(),
         weight = 1;
       if (s.guiding) {
-        const learned = s.guiding.pdf(
-            pixel % s.width,
-            Math.floor(pixel / s.width),
-          ),
-          bins = learned.length,
-          pdf = learned.map((p) => f(0.8 * p + 0.2 / bins));
-        let sum = 0,
-          bin = 0;
-        for (; bin < bins - 1; bin++) {
-          sum += pdf[bin]!;
-          if (v < sum) break;
-        }
-        const prev = sum - (bin < bins - 1 ? pdf[bin]! : 0);
-        v = f((bin + clamp((v - prev) / pdf[bin]!)) / bins);
-        weight = 1 / (bins * pdf[bin]!);
+        const sampled = s.guiding.sample(
+          pixel % s.width,
+          Math.floor(pixel / s.width),
+          v,
+        );
+        v = sampled.v;
+        weight = sampled.weight;
         if (bounce === 0) {
-          guidingBin = bin;
+          guidingBin = sampled.bin;
           primaryEmission = luminance(emission);
         }
       }

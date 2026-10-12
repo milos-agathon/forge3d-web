@@ -34,6 +34,7 @@ import {
 } from "../../src-ts/trace-scene.js";
 import { iterTraceTiles } from "../../src-ts/trace-output.js";
 import { packTraceScene } from "../../src-ts/trace-gpu.js";
+import { packGuidingWeights } from "../../src-ts/trace-sampling.js";
 import { TraceGpu } from "../../src-ts/trace-gpu.js";
 import { traceCpuSample, mediumTransmittance } from "../../src-ts/trace-cpu.js";
 const tri = (z: number, id: number): TraceTriangle => ({
@@ -241,6 +242,53 @@ describe("W17 shipped sampling contracts", () => {
     expect(grid.pdf(0, 0).reduce((a, b) => a + b)).toBeCloseTo(1, 6);
     grid.dispose();
     expect(() => grid.pdf(0, 0)).toThrow("disposed");
+  });
+  it("guiding chooses the next bin at a rounded CDF boundary", () => {
+    const grid = new OnlineGuidingGrid(1, 1, 8),
+      weights = new Float32Array([1, 10, 1, 9, 1, 1, 4, 1]);
+    grid.restore(weights);
+    // RNG-representable values. The old double CDF selected bin 5 at the
+    // first boundary; a real GPU recomputing divisions selected bin 6 at the last.
+    expect(grid.sample(0, 0, 0.8071428537368774).bin).toBe(6);
+    expect(grid.sample(0, 0, 0.9464285373687744).bin).toBe(7);
+    expect(grid.sample(0, 0, 0.9464285969734192).bin).toBe(7);
+    const packed = packGuidingWeights(weights, 8);
+    expect(packed.slice(0, 8)).toEqual(weights); // Cache keys retain raw weights.
+    expect(packed[16 + 6]).toBe(0.9464285373687744);
+    expect(grid.sample(0, 0, 0.9464285969734192).weight).toBe(
+      2.3333332538604736,
+    );
+    grid.dispose();
+    expect(() => grid.sample(0, 0, 0.5)).toThrow("disposed");
+  });
+  it("guiding uses float32 totals rather than double normalization", () => {
+    const grid = new OnlineGuidingGrid(1, 1, 8);
+    grid.restore(new Float32Array([16777216, 1, 1, 1, 1, 1, 1, 1]));
+    expect(grid.pdf(0, 0)[0]).toBe(1);
+    expect(grid.pdf(0, 0)[1]).toBe(2 ** -24);
+    grid.dispose();
+  });
+  it("packed guiding cells support all bin widths and keep cell distributions separate", () => {
+    for (const bins of [1, 3, 8, 64]) {
+      const grid = new OnlineGuidingGrid(2, 1, bins),
+        weights = grid.snapshot();
+      weights[bins] = 32;
+      grid.restore(weights);
+      const packed = packGuidingWeights(weights, bins);
+      expect(packed).toHaveLength(6 * bins);
+      expect(packed.slice(0, bins)).toEqual(weights.slice(0, bins));
+      expect(packed.slice(3 * bins, 4 * bins)).toEqual(weights.slice(bins));
+      expect(Math.abs(packed[3 * bins - 1]! - 1)).toBeLessThanOrEqual(
+        bins * 2 ** -23,
+      );
+      expect(Math.abs(packed[6 * bins - 1]! - 1)).toBeLessThanOrEqual(
+        bins * 2 ** -23,
+      );
+      expect(grid.sample(0, 0, 0).bin).toBe(0);
+      expect(grid.sample(0, 0, 1).bin).toBe(bins - 1);
+      expect(() => grid.sample(0, 0, NaN)).toThrow("out of range");
+      grid.dispose();
+    }
   });
   it("HG normalized for all shipped anisotropies and sampler PDF consistency", () => {
     for (const g of [-0.8, -0.2, 0, 0.4, 0.8]) {
