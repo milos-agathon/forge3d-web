@@ -45,11 +45,12 @@ for (const dist of [false, true]) {
   test(`W17 ${label}: interactive example renders a nonblank image`, async ({
     page,
   }, testInfo) => {
-    test.setTimeout(180000);
+    // Allow cold shader compilation and all 64 full-resolution SDF samples on macOS CI.
+    test.setTimeout(360000);
     await open(page);
     await page.getByRole("button", { name: "Render 64 samples" }).click();
     await expect(page.locator("#status")).toHaveText("64 / 64 samples", {
-      timeout: 150000,
+      timeout: 300000,
     });
     const range = await page.evaluate(() => {
       const v = document
