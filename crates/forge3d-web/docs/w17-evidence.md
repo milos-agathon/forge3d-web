@@ -56,6 +56,10 @@ precision. The focused local Firefox reproductions pass unchanged exact color
 hashes and direct/indirect AOV equality. The serial
 review seed ensemble allows 600 seconds for cold pipelines and GPU readbacks;
 phase timings identify any stalled workload without changing its assertions.
+All 11 source checks pass on local Firefox and Chromium, and all 11 installed
+Chromium checks pass on the committed correction. Raw reports, exact parity
+results and the installed tarball digest are bound to `0a46179` in
+[the Firefox correction evidence](../../../docs/parity/w17-firefox-fix-evidence.json).
 
 Candidate RIS is checked against an exhaustive 50-light reference, with error reduction
 above 40%. Reuse is compared at equal sample/candidate counts, checked against
