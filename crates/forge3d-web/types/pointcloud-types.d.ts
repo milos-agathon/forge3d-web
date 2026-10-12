@@ -45,6 +45,7 @@ export interface PointDatasetOptions {
 export interface PointView {
     position: PointVec3;
     viewportHeight: number;
+    /** Vertical field of view in radians. */
     fovY: number;
     /** Column-major WebGPU view-projection matrix (depth 0..1). */
     viewProjection?: readonly number[] | Float32Array | Float64Array;

@@ -1,0 +1,1323 @@
+{
+  "commit": "a55911f021925a3264e476374ce43d1b204f1073",
+  "sources": [
+    {
+      "path": "python/forge3d/diagnostics.py",
+      "sha256": "c573112c6d13ee80b76854c292f260c57748359adb731af98f08459c1bd0a145",
+      "historicalSha256": "c573112c6d13ee80b76854c292f260c57748359adb731af98f08459c1bd0a145",
+      "tests": []
+    },
+    {
+      "path": "python/forge3d/map_scene.py",
+      "sha256": "b6fec466b1629137919975d861c2079909596494a5b97c26bf2760c5217326c5",
+      "historicalSha256": "b6fec466b1629137919975d861c2079909596494a5b97c26bf2760c5217326c5",
+      "tests": []
+    },
+    {
+      "path": "python/forge3d/style.py",
+      "sha256": "6e0b772ec170a849597145f7c82c5552d03d5b5518c77bd2fe0079ca2841e25b",
+      "historicalSha256": "6e0b772ec170a849597145f7c82c5552d03d5b5518c77bd2fe0079ca2841e25b",
+      "tests": []
+    },
+    {
+      "path": "tests/test_diagnostics_bundle_serialization.py",
+      "sha256": "44fb51d47e2bb28c074836222c2b282169617bb038bf88aac8e1b8eb933f3804",
+      "historicalSha256": "44fb51d47e2bb28c074836222c2b282169617bb038bf88aac8e1b8eb933f3804",
+      "tests": [
+        "test_diagnostic_from_dict_roundtrip_preserves_bundle_ready_fields",
+        "test_validation_report_serialization_is_lossless_and_deterministic",
+        "test_validation_report_orders_diagnostics_by_stable_sort_key",
+        "test_diagnostic_details_are_json_serializable_and_sorted",
+        "test_empty_report_is_bundle_ready_ok_status"
+      ]
+    },
+    {
+      "path": "tests/test_diagnostics_contract.py",
+      "sha256": "ec775527b1400d421fe18a3824706451a4001772e000c5f264af50a2a15f5be9",
+      "historicalSha256": "ec775527b1400d421fe18a3824706451a4001772e000c5f264af50a2a15f5be9",
+      "tests": [
+        "test_diagnostic_preserves_required_fields",
+        "test_diagnostic_accepts_required_severities",
+        "test_diagnostic_accepts_prd_support_levels",
+        "test_diagnostic_rejects_unknown_severity_and_support_level",
+        "test_validation_report_rejects_unknown_support_summary_levels",
+        "test_validation_report_derives_status_and_policy_blocking",
+        "test_layer_summary_and_support_matrix_entry_contracts",
+        "test_severity_policy_and_public_exports"
+      ]
+    },
+    {
+      "path": "tests/test_diagnostics_no_op_policy.py",
+      "sha256": "17e89833cc2f53f4ef39ba85e68f943ffc99cefb402b09b681379aafff3b0f28",
+      "historicalSha256": "17e89833cc2f53f4ef39ba85e68f943ffc99cefb402b09b681379aafff3b0f28",
+      "tests": [
+        "test_warning_policy_does_not_turn_errors_into_success",
+        "test_experimental_warning_can_continue_or_block_by_policy"
+      ]
+    },
+    {
+      "path": "tests/test_diagnostics_quickstart.py",
+      "sha256": "0244dbc2440d74c692ec87c817827cf7e6107cc8d358a6919564cd69f4496d15",
+      "historicalSha256": "0244dbc2440d74c692ec87c817827cf7e6107cc8d358a6919564cd69f4496d15",
+      "tests": [
+        "test_quickstart_warning_policy_scenario_is_executable",
+        "test_quickstart_required_inventory_serializes_stably",
+        "test_quickstart_style_validation_scenario_emits_structured_diagnostics"
+      ]
+    },
+    {
+      "path": "tests/test_diagnostics_style_support.py",
+      "sha256": "580f4744d7306381ef9f174c62dacac80d959070d9b448befdf614c76fea27c5",
+      "historicalSha256": "580f4744d7306381ef9f174c62dacac80d959070d9b448befdf614c76fea27c5",
+      "tests": [
+        "test_style_support_accepts_local_fill_line_and_circle_layers",
+        "test_style_support_reports_unsupported_layer_types_and_fields",
+        "test_style_support_accepts_parsed_style_spec_without_claiming_mvt",
+        "test_parsed_style_support_reports_preserved_unsupported_fields",
+        "test_symbol_style_support_matches_underdeveloped_matrix_truth",
+        "test_supported_style_output_feeds_vector_overlay_config",
+        "test_symbol_style_output_feeds_future_label_layer_contract"
+      ]
+    },
+    {
+      "path": "tests/test_diagnostics_support_paths.py",
+      "sha256": "8a651ef4149bdd1e3858b01d39c3d30a43117c26ce22e31d69218c568f8cf53a",
+      "historicalSha256": "8a651ef4149bdd1e3858b01d39c3d30a43117c26ce22e31d69218c568f8cf53a",
+      "tests": [
+        "test_required_diagnostic_factories_cover_inventory_with_severity_and_ids",
+        "test_required_diagnostic_inventory_report_blocks_output_affecting_errors",
+        "test_building_layer_validator_reports_placeholder_fallback",
+        "test_public_tiles3d_validator_reports_incomplete_render_workflow",
+        "test_terrain_vt_validator_reports_non_albedo_families",
+        "test_label_validator_reports_experimental_paths_and_missing_glyphs",
+        "test_label_validator_preserves_missing_glyph_object_ids_per_label"
+      ]
+    },
+    {
+      "path": "tests/test_mapscene_docs.py",
+      "sha256": "e54e01359c1b3146713d0cf7bd1f535cda3207716e051f3e6a920b56109e5245",
+      "historicalSha256": "e54e01359c1b3146713d0cf7bd1f535cda3207716e051f3e6a920b56109e5245",
+      "tests": [
+        "test_mapscene_public_api_is_documented_with_truthful_support_levels",
+        "test_feature_004_artifacts_do_not_keep_stale_tbd_or_later_owned_wording",
+        "test_mapscene_validation_diagnostic_codes_are_documented",
+        "test_offline_mapscene_guide_links_canonical_examples_and_support_guides",
+        "test_support_matrices_record_current_mapscene_diagnostics_and_ownership",
+        "test_support_matrix_rows_use_prd_support_taxonomy",
+        "test_competitive_positioning_lists_required_non_goal_boundaries"
+      ]
+    },
+    {
+      "path": "tests/test_mapscene_examples.py",
+      "sha256": "a39ba4f932f5843bbf1ecb20764b27686f60686cddbfa7c9ecc1db774b95c700",
+      "historicalSha256": "a39ba4f932f5843bbf1ecb20764b27686f60686cddbfa7c9ecc1db774b95c700",
+      "tests": [
+        "test_canonical_mapscene_examples_exist_and_do_not_use_raw_ipc",
+        "test_terrain_raster_example_validates_renders_and_bundles",
+        "test_vector_labels_example_compiles_label_plan_and_bundles",
+        "test_buildings_labels_example_uses_honest_diagnostics_when_blocked",
+        "test_bundled_datasets_showcase_covers_specs_001_to_004",
+        "test_p1_assets_bundle_showcase_covers_spec_005"
+      ]
+    },
+    {
+      "path": "tests/test_mapscene_label_plan_integration.py",
+      "sha256": "46d5d98d218b2278b1886612f3c9b1d045e5428c5a7ebc157add4ab866c3afce",
+      "historicalSha256": "46d5d98d218b2278b1886612f3c9b1d045e5428c5a7ebc157add4ab866c3afce",
+      "tests": [
+        "test_label_layer_compiles_deterministic_label_plan_and_rejection_summary"
+      ]
+    },
+    {
+      "path": "tests/test_mapscene_quickstart.py",
+      "sha256": "f294d9e78978fbad3d9898a868e913070664dc7db95d234739f98609d5269ae6",
+      "historicalSha256": "f294d9e78978fbad3d9898a868e913070664dc7db95d234739f98609d5269ae6",
+      "tests": [
+        "test_mapscene_quickstart_points_to_canonical_examples",
+        "test_quickstart_vector_labels_scenario_is_executable",
+        "test_quickstart_negative_diagnostics_are_available_before_render",
+        "test_quickstart_building_scenario_preserves_blocking_diagnostics_in_bundle"
+      ]
+    },
+    {
+      "path": "tests/test_mapscene_recipe_contract.py",
+      "sha256": "cae34a9dcd317169b0108b338039f63bc2fa747a57e0aabd8a5ab9796d3ecb82",
+      "historicalSha256": "cae34a9dcd317169b0108b338039f63bc2fa747a57e0aabd8a5ab9796d3ecb82",
+      "tests": [
+        "test_mapscene_recipe_components_are_public_and_serializable",
+        "test_mapscene_constructor_accepts_recipe_keywords_without_raw_ipc"
+      ]
+    },
+    {
+      "path": "tests/test_mapscene_render_png.py",
+      "sha256": "765ccab823f4c3386eb54b564aadb99a2c915061a5b92243fe60ac4d338c8480",
+      "historicalSha256": "765ccab823f4c3386eb54b564aadb99a2c915061a5b92243fe60ac4d338c8480",
+      "tests": [
+        "test_render_writes_source_derived_png_for_supported_scene",
+        "test_render_uses_output_spec_path_for_supported_png",
+        "test_render_output_changes_when_source_data_changes",
+        "test_render_uses_native_offscreen_for_real_terrain_and_raster_assets",
+        "test_render_falls_back_when_native_adapter_is_unavailable"
+      ]
+    },
+    {
+      "path": "tests/test_mapscene_render_policy.py",
+      "sha256": "92ad378a8d7a621ffaf9289dc9b616eb06ae4d96f50c2703423ebb24268082ee",
+      "historicalSha256": "92ad378a8d7a621ffaf9289dc9b616eb06ae4d96f50c2703423ebb24268082ee",
+      "tests": [
+        "test_render_performs_validation_and_continues_on_warnings_by_default",
+        "test_render_fail_on_warning_blocks_and_does_not_write_png",
+        "test_render_errors_always_block_and_do_not_write_png",
+        "test_render_rejects_missing_output_path_without_noop_success"
+      ]
+    },
+    {
+      "path": "tests/test_mapscene_save_bundle.py",
+      "sha256": "14b8c530468e10616b10e70d351e03b730b9575dad2bde348486affc1b3c9217",
+      "historicalSha256": "14b8c530468e10616b10e70d351e03b730b9575dad2bde348486affc1b3c9217",
+      "tests": [
+        "test_save_bundle_writes_deterministic_review_bundle_with_label_plan",
+        "test_save_bundle_preserves_blocking_diagnostics_without_render_success_claim",
+        "test_save_bundle_preserves_missing_asset_diagnostics_without_renderability"
+      ]
+    },
+    {
+      "path": "tests/test_mapscene_support_status.py",
+      "sha256": "5e4fd055d7fe912197dfa5e61b60c49448a9cc141d9fbac93b4e7bbd50f5f0e2",
+      "historicalSha256": "5e4fd055d7fe912197dfa5e61b60c49448a9cc141d9fbac93b4e7bbd50f5f0e2",
+      "tests": [
+        "test_product_building_intent_reports_support_status_diagnostics",
+        "test_terrain_vt_and_3dtiles_intent_are_diagnosed_before_render",
+        "test_point_cloud_layer_reports_underdeveloped_render_path_before_render",
+        "test_unknown_recipe_layer_is_not_silently_ignored",
+        "test_render_and_save_bundle_do_not_hide_blocking_validation"
+      ]
+    },
+    {
+      "path": "tests/test_mapscene_validation.py",
+      "sha256": "8e22b33720fdb9cc9eb6641720d4ecfcdebd44cb37d4cf629c00d48f7c2650f4",
+      "historicalSha256": "8e22b33720fdb9cc9eb6641720d4ecfcdebd44cb37d4cf629c00d48f7c2650f4",
+      "tests": [
+        "test_validate_returns_structured_report_with_layer_summaries_and_memory_estimate",
+        "test_validate_reports_crs_mismatch_without_implicit_transform",
+        "test_validate_reports_missing_layer_crs_without_assuming_compatibility",
+        "test_validate_reports_missing_terrain_crs_without_assuming_compatibility",
+        "test_validate_reports_missing_glyphs_and_style_support_diagnostics",
+        "test_validate_uses_fatal_diagnostic_for_unsupported_output_format",
+        "test_validate_includes_building_geometry_count_in_gpu_memory_estimate",
+        "test_validate_reports_missing_source_identity_for_required_sources",
+        "test_validate_reports_missing_external_assets_before_render",
+        "test_validate_reports_unsupported_asset_formats_before_render",
+        "test_validate_reports_supported_building_source_asset_failures_before_render",
+        "test_validate_reports_supported_building_render_adapter_placeholder_before_render",
+        "test_validate_reports_vector_path_only_loader_placeholder_before_render",
+        "test_validate_reports_vector_and_label_layers_without_renderable_data"
+      ]
+    },
+    {
+      "path": "tests/test_p1_diagnostics_contract.py",
+      "sha256": "65c6165609c9b16dbcc77caf9d1db7e48af0764fa5a54d068577e88aac08d197",
+      "historicalSha256": "65c6165609c9b16dbcc77caf9d1db7e48af0764fa5a54d068577e88aac08d197",
+      "tests": [
+        "test_p1_feature_local_diagnostic_factories_are_structured_and_serializable",
+        "test_p1_warning_diagnostics_obey_fail_on_warning_policy",
+        "test_prd_p0_diagnostic_inventory_is_structured_serializable_and_actionable"
+      ]
+    },
+    {
+      "path": "tests/test_p2_diagnostics_contract.py",
+      "sha256": "12cb72b7da97b1f6dc7cb618d0f029c69de703d9847bc412ab9db79ab5276d59",
+      "historicalSha256": "12cb72b7da97b1f6dc7cb618d0f029c69de703d9847bc412ab9db79ab5276d59",
+      "tests": [
+        "test_p2_feature_local_diagnostic_factories_are_structured_and_serializable",
+        "test_p2_diagnostic_serialization_order_is_deterministic",
+        "test_mapscene_reports_building_texture_diagnostics_before_render",
+        "test_mapscene_reports_cache_lod_and_instancing_availability_diagnostics"
+      ]
+    },
+    {
+      "path": "tests/test_p2_large_scene_cache_lod_instancing.py",
+      "sha256": "f9c9d53c542744c8e85ff7c8a0b053037c73866becca46bcd44039064205607e",
+      "historicalSha256": "f9c9d53c542744c8e85ff7c8a0b053037c73866becca46bcd44039064205607e",
+      "tests": [
+        "test_cache_lod_and_instancing_status_are_normalized_by_layer_type",
+        "test_unavailable_terrain_cache_lod_stats_are_reported_before_render"
+      ]
+    },
+    {
+      "path": "tests/test_p2_textured_building_mapscene.py",
+      "sha256": "37707ef9075299c6c0504e38876a8add3526012f9235f240a1980202ea3d8842",
+      "historicalSha256": "37707ef9075299c6c0504e38876a8add3526012f9235f240a1980202ea3d8842",
+      "tests": [
+        "test_textured_building_fixture_is_explicitly_diagnostic_only",
+        "test_textured_building_render_is_blocked_without_silent_scalar_success"
+      ]
+    }
+  ],
+  "factories": [
+    {
+      "code": "crs_mismatch",
+      "args": [
+        "EPSG:4326",
+        "EPSG:3857"
+      ],
+      "kwargs": {
+        "layer_id": "layer",
+        "object_id": "object"
+      },
+      "expected": {
+        "code": "crs_mismatch",
+        "severity": "error",
+        "message": "Layer CRS differs from the scene or terrain CRS and no transform was provided.",
+        "remediation": "Use matching CRS metadata or provide an explicit transform before rendering.",
+        "support_level": "unsupported",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "layer_crs": "EPSG:3857",
+          "scene_crs": "EPSG:4326"
+        }
+      }
+    },
+    {
+      "code": "missing_glyphs",
+      "args": [
+        [
+          "é",
+          "ß"
+        ]
+      ],
+      "kwargs": {
+        "layer_id": "layer",
+        "object_id": "object"
+      },
+      "expected": {
+        "code": "missing_glyphs",
+        "severity": "warning",
+        "message": "2 glyphs are missing from the active atlas.",
+        "remediation": "Load an atlas with the missing glyphs or change label text before rendering.",
+        "support_level": "underdeveloped",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "count": 2,
+          "missing_glyphs": [
+            "ß",
+            "é"
+          ]
+        }
+      }
+    },
+    {
+      "code": "unsupported_style_field",
+      "args": [
+        "roads",
+        [
+          "line-gradient"
+        ]
+      ],
+      "kwargs": {},
+      "expected": {
+        "code": "unsupported_style_field",
+        "severity": "warning",
+        "message": "Style layer uses paint or layout fields that forge3d does not support.",
+        "remediation": "Remove unsupported fields or use the documented local feature styling subset.",
+        "support_level": "unsupported",
+        "layer_id": "roads",
+        "object_id": null,
+        "details": {
+          "fields": [
+            "line-gradient"
+          ]
+        }
+      }
+    },
+    {
+      "code": "unsupported_style_layer_type",
+      "args": [
+        "heat",
+        "heatmap"
+      ],
+      "kwargs": {},
+      "expected": {
+        "code": "unsupported_style_layer_type",
+        "severity": "error",
+        "message": "Style layer type is not supported by forge3d offline feature styling.",
+        "remediation": "Use a supported local feature layer type such as fill, line, or circle.",
+        "support_level": "unsupported",
+        "layer_id": "heat",
+        "object_id": null,
+        "details": {
+          "layer_type": "heatmap"
+        }
+      }
+    },
+    {
+      "code": "pro_gated_path",
+      "args": [
+        "native building import"
+      ],
+      "kwargs": {
+        "layer_id": "layer",
+        "object_id": "object"
+      },
+      "expected": {
+        "code": "pro_gated_path",
+        "severity": "error",
+        "message": "Requested workflow requires a Pro-gated native path.",
+        "remediation": "Enable the required Pro/native capability or choose a supported public path.",
+        "support_level": "Pro-gated",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "feature": "native building import"
+        }
+      }
+    },
+    {
+      "code": "placeholder_fallback",
+      "args": [
+        "zero geometry fallback"
+      ],
+      "kwargs": {
+        "layer_id": "layer",
+        "object_id": "object"
+      },
+      "expected": {
+        "code": "placeholder_fallback",
+        "severity": "error",
+        "message": "Requested workflow would use placeholder or non-renderable fallback output.",
+        "remediation": "Use a renderable supported path or keep the workflow blocked before render.",
+        "support_level": "placeholder/fallback",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "feature": "zero geometry fallback"
+        }
+      }
+    },
+    {
+      "code": "experimental_feature",
+      "args": [
+        "curved labels"
+      ],
+      "kwargs": {
+        "layer_id": "layer",
+        "object_id": "object"
+      },
+      "expected": {
+        "code": "experimental_feature",
+        "severity": "warning",
+        "message": "Requested workflow uses a feature that is not production-stable.",
+        "remediation": "Treat this path as experimental or use a documented supported alternative.",
+        "support_level": "experimental",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "feature": "curved labels"
+        }
+      }
+    },
+    {
+      "code": "vt_unsupported_family",
+      "args": [
+        "normal"
+      ],
+      "kwargs": {
+        "layer_id": "layer",
+        "object_id": "object"
+      },
+      "expected": {
+        "code": "vt_unsupported_family",
+        "severity": "error",
+        "message": "Requested terrain virtual-texturing family is not paged by the native runtime.",
+        "remediation": "Use the albedo VT family or wait for native normal/mask runtime support.",
+        "support_level": "unsupported",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "family": "normal",
+          "supported_family": "albedo"
+        }
+      }
+    },
+    {
+      "code": "python_public_3dtiles_incomplete",
+      "args": [],
+      "kwargs": {
+        "layer_id": "layer",
+        "object_id": "object"
+      },
+      "expected": {
+        "code": "python_public_3dtiles_incomplete",
+        "severity": "error",
+        "message": "Public Python 3D Tiles workflow cannot complete the requested render path.",
+        "remediation": "Use supported local fixtures only for validation, or wait for public MapScene integration.",
+        "support_level": "underdeveloped",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {}
+      }
+    },
+    {
+      "code": "estimated_gpu_memory",
+      "args": [
+        4096,
+        2048
+      ],
+      "kwargs": {
+        "layer_id": "layer",
+        "object_id": "object"
+      },
+      "expected": {
+        "code": "estimated_gpu_memory",
+        "severity": "warning",
+        "message": "Estimated GPU memory use exceeds the configured budget.",
+        "remediation": "Reduce layer resolution, simplify inputs, or increase the configured GPU memory budget.",
+        "support_level": "supported",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "budget_bytes": 2048,
+          "estimated_bytes": 4096
+        }
+      }
+    },
+    {
+      "code": "label_rejection_summary",
+      "args": [
+        {
+          "collision": 2,
+          "missing_glyph": 1
+        }
+      ],
+      "kwargs": {
+        "layer_id": "layer",
+        "object_id": "object"
+      },
+      "expected": {
+        "code": "label_rejection_summary",
+        "severity": "warning",
+        "message": "3 label candidates were rejected during placement.",
+        "remediation": "Inspect rejection reasons and adjust priorities, keepouts, glyph coverage, or geometry.",
+        "support_level": "underdeveloped",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "rejection_counts": {
+            "collision": 2,
+            "missing_glyph": 1
+          },
+          "total": 3
+        }
+      }
+    },
+    {
+      "code": "missing_label_field",
+      "args": [
+        "name"
+      ],
+      "kwargs": {
+        "layer_id": "layer",
+        "object_id": "object"
+      },
+      "expected": {
+        "code": "missing_label_field",
+        "severity": "error",
+        "message": "Label text expression references a missing feature field.",
+        "remediation": "Provide the referenced property or change the label text expression.",
+        "support_level": "unsupported",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "field": "name"
+        }
+      }
+    },
+    {
+      "code": "unicode_coverage_gap",
+      "args": [
+        [
+          "é",
+          "ß"
+        ]
+      ],
+      "kwargs": {
+        "layer_id": "layer",
+        "object_id": "object"
+      },
+      "expected": {
+        "code": "unicode_coverage_gap",
+        "severity": "warning",
+        "message": "Label text contains Unicode code points outside configured atlas coverage.",
+        "remediation": "Load an atlas or fallback range covering the missing code points before rendering.",
+        "support_level": "underdeveloped",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "count": 2,
+          "missing_glyphs": [
+            "ß",
+            "é"
+          ]
+        }
+      }
+    },
+    {
+      "code": "unsupported_tile_format",
+      "args": [
+        "i3dm"
+      ],
+      "kwargs": {
+        "layer_id": "layer",
+        "object_id": "object"
+      },
+      "expected": {
+        "code": "unsupported_tile_format",
+        "severity": "error",
+        "message": "3D Tiles source uses a format that is not supported by the public MapScene workflow.",
+        "remediation": "Use a supported local tileset JSON or B3DM fixture, or keep the layer diagnostic-only.",
+        "support_level": "unsupported",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "format": "i3dm",
+          "supported_formats": [
+            "b3dm",
+            "tileset.json"
+          ]
+        }
+      }
+    },
+    {
+      "code": "unsupported_tile_feature",
+      "args": [
+        "implicit tiling"
+      ],
+      "kwargs": {
+        "layer_id": "layer",
+        "object_id": "object"
+      },
+      "expected": {
+        "code": "unsupported_tile_feature",
+        "severity": "error",
+        "message": "3D Tiles content requires a feature not supported by the public MapScene workflow.",
+        "remediation": "Remove the unsupported tile feature or use a documented supported local fixture.",
+        "support_level": "unsupported",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "feature": "implicit tiling"
+        }
+      }
+    },
+    {
+      "code": "missing_external_asset",
+      "args": [
+        "raster"
+      ],
+      "kwargs": {
+        "layer_id": "layer",
+        "object_id": "object",
+        "path": "missing.tif"
+      },
+      "expected": {
+        "code": "missing_external_asset",
+        "severity": "error",
+        "message": "Scene or bundle references an external asset that cannot be found.",
+        "remediation": "Provide the referenced asset or update the scene/bundle to point at an available file.",
+        "support_level": "unsupported",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "layer_type": "raster",
+          "path": "missing.tif"
+        }
+      }
+    },
+    {
+      "code": "missing_texture_path",
+      "args": [
+        "missing.png"
+      ],
+      "kwargs": {
+        "layer_id": "layer",
+        "object_id": "object"
+      },
+      "expected": {
+        "code": "missing_texture_path",
+        "severity": "error",
+        "message": "Building material references a texture path that is missing or unreadable.",
+        "remediation": "Provide the referenced texture asset or remove the textured-material intent before rendering.",
+        "support_level": "unsupported",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "path": "missing.png"
+        }
+      }
+    },
+    {
+      "code": "missing_uvs",
+      "args": [],
+      "kwargs": {
+        "layer_id": "layer",
+        "object_id": "object"
+      },
+      "expected": {
+        "code": "missing_uvs",
+        "severity": "error",
+        "message": "Building material requests a texture but the affected geometry has no usable UVs.",
+        "remediation": "Provide UV coordinates for the textured geometry or use an explicit scalar-material fallback.",
+        "support_level": "unsupported",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {}
+      }
+    },
+    {
+      "code": "unsupported_texture_format",
+      "args": [
+        "dds"
+      ],
+      "kwargs": {
+        "layer_id": "layer",
+        "object_id": "object"
+      },
+      "expected": {
+        "code": "unsupported_texture_format",
+        "severity": "error",
+        "message": "Building material texture uses a format that is not supported by the current MapScene workflow.",
+        "remediation": "Use a documented supported texture format or keep the textured material diagnostic-only.",
+        "support_level": "unsupported",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "format": "dds",
+          "supported_formats": [
+            "jpeg",
+            "jpg",
+            "png",
+            "tif",
+            "tiff"
+          ]
+        }
+      }
+    },
+    {
+      "code": "unavailable_cache_lod_stats",
+      "args": [
+        "tiles3d",
+        [
+          "cache_hits",
+          "lod"
+        ]
+      ],
+      "kwargs": {
+        "layer_id": "layer",
+        "object_id": "object"
+      },
+      "expected": {
+        "code": "unavailable_cache_lod_stats",
+        "severity": "warning",
+        "message": "Requested cache or LOD statistics are not available for this layer.",
+        "remediation": "Use available layer metadata only, or add a renderer/stat source before relying on these stats.",
+        "support_level": "underdeveloped",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "layer_type": "tiles3d",
+          "unavailable_stats": [
+            "cache_hits",
+            "lod"
+          ]
+        }
+      }
+    },
+    {
+      "code": "unsupported_instancing_path",
+      "args": [
+        "product instances"
+      ],
+      "kwargs": {
+        "layer_id": "layer",
+        "object_id": "object"
+      },
+      "expected": {
+        "code": "unsupported_instancing_path",
+        "severity": "error",
+        "message": "Requested MapScene instancing workflow is not supported in this configuration.",
+        "remediation": "Use a supported non-instanced workflow or enable a documented instancing path with tests.",
+        "support_level": "unsupported",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "path": "product instances"
+        }
+      }
+    },
+    {
+      "code": "unavailable_terrain_sampler",
+      "args": [],
+      "kwargs": {
+        "layer_id": "layer",
+        "object_id": "object"
+      },
+      "expected": {
+        "code": "unavailable_terrain_sampler",
+        "severity": "warning",
+        "message": "Terrain-height sampling was requested but no terrain sampler is available.",
+        "remediation": "Provide a terrain sampler or choose a label terrain policy that does not require sampling.",
+        "support_level": "underdeveloped",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {}
+      }
+    }
+  ],
+  "report": {
+    "status": "error",
+    "diagnostics": [
+      {
+        "code": "crs_mismatch",
+        "severity": "error",
+        "message": "Layer CRS differs from the scene or terrain CRS and no transform was provided.",
+        "remediation": "Use matching CRS metadata or provide an explicit transform before rendering.",
+        "support_level": "unsupported",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "layer_crs": "EPSG:3857",
+          "scene_crs": "EPSG:4326"
+        }
+      },
+      {
+        "code": "missing_external_asset",
+        "severity": "error",
+        "message": "Scene or bundle references an external asset that cannot be found.",
+        "remediation": "Provide the referenced asset or update the scene/bundle to point at an available file.",
+        "support_level": "unsupported",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "layer_type": "raster",
+          "path": "missing.tif"
+        }
+      },
+      {
+        "code": "missing_label_field",
+        "severity": "error",
+        "message": "Label text expression references a missing feature field.",
+        "remediation": "Provide the referenced property or change the label text expression.",
+        "support_level": "unsupported",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "field": "name"
+        }
+      },
+      {
+        "code": "missing_texture_path",
+        "severity": "error",
+        "message": "Building material references a texture path that is missing or unreadable.",
+        "remediation": "Provide the referenced texture asset or remove the textured-material intent before rendering.",
+        "support_level": "unsupported",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "path": "missing.png"
+        }
+      },
+      {
+        "code": "missing_uvs",
+        "severity": "error",
+        "message": "Building material requests a texture but the affected geometry has no usable UVs.",
+        "remediation": "Provide UV coordinates for the textured geometry or use an explicit scalar-material fallback.",
+        "support_level": "unsupported",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {}
+      },
+      {
+        "code": "placeholder_fallback",
+        "severity": "error",
+        "message": "Requested workflow would use placeholder or non-renderable fallback output.",
+        "remediation": "Use a renderable supported path or keep the workflow blocked before render.",
+        "support_level": "placeholder/fallback",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "feature": "zero geometry fallback"
+        }
+      },
+      {
+        "code": "pro_gated_path",
+        "severity": "error",
+        "message": "Requested workflow requires a Pro-gated native path.",
+        "remediation": "Enable the required Pro/native capability or choose a supported public path.",
+        "support_level": "Pro-gated",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "feature": "native building import"
+        }
+      },
+      {
+        "code": "python_public_3dtiles_incomplete",
+        "severity": "error",
+        "message": "Public Python 3D Tiles workflow cannot complete the requested render path.",
+        "remediation": "Use supported local fixtures only for validation, or wait for public MapScene integration.",
+        "support_level": "underdeveloped",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {}
+      },
+      {
+        "code": "unsupported_instancing_path",
+        "severity": "error",
+        "message": "Requested MapScene instancing workflow is not supported in this configuration.",
+        "remediation": "Use a supported non-instanced workflow or enable a documented instancing path with tests.",
+        "support_level": "unsupported",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "path": "product instances"
+        }
+      },
+      {
+        "code": "unsupported_style_layer_type",
+        "severity": "error",
+        "message": "Style layer type is not supported by forge3d offline feature styling.",
+        "remediation": "Use a supported local feature layer type such as fill, line, or circle.",
+        "support_level": "unsupported",
+        "layer_id": "heat",
+        "object_id": null,
+        "details": {
+          "layer_type": "heatmap"
+        }
+      },
+      {
+        "code": "unsupported_texture_format",
+        "severity": "error",
+        "message": "Building material texture uses a format that is not supported by the current MapScene workflow.",
+        "remediation": "Use a documented supported texture format or keep the textured material diagnostic-only.",
+        "support_level": "unsupported",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "format": "dds",
+          "supported_formats": [
+            "jpeg",
+            "jpg",
+            "png",
+            "tif",
+            "tiff"
+          ]
+        }
+      },
+      {
+        "code": "unsupported_tile_feature",
+        "severity": "error",
+        "message": "3D Tiles content requires a feature not supported by the public MapScene workflow.",
+        "remediation": "Remove the unsupported tile feature or use a documented supported local fixture.",
+        "support_level": "unsupported",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "feature": "implicit tiling"
+        }
+      },
+      {
+        "code": "unsupported_tile_format",
+        "severity": "error",
+        "message": "3D Tiles source uses a format that is not supported by the public MapScene workflow.",
+        "remediation": "Use a supported local tileset JSON or B3DM fixture, or keep the layer diagnostic-only.",
+        "support_level": "unsupported",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "format": "i3dm",
+          "supported_formats": [
+            "b3dm",
+            "tileset.json"
+          ]
+        }
+      },
+      {
+        "code": "vt_unsupported_family",
+        "severity": "error",
+        "message": "Requested terrain virtual-texturing family is not paged by the native runtime.",
+        "remediation": "Use the albedo VT family or wait for native normal/mask runtime support.",
+        "support_level": "unsupported",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "family": "normal",
+          "supported_family": "albedo"
+        }
+      },
+      {
+        "code": "estimated_gpu_memory",
+        "severity": "warning",
+        "message": "Estimated GPU memory use exceeds the configured budget.",
+        "remediation": "Reduce layer resolution, simplify inputs, or increase the configured GPU memory budget.",
+        "support_level": "supported",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "budget_bytes": 2048,
+          "estimated_bytes": 4096
+        }
+      },
+      {
+        "code": "experimental_feature",
+        "severity": "warning",
+        "message": "Requested workflow uses a feature that is not production-stable.",
+        "remediation": "Treat this path as experimental or use a documented supported alternative.",
+        "support_level": "experimental",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "feature": "curved labels"
+        }
+      },
+      {
+        "code": "label_rejection_summary",
+        "severity": "warning",
+        "message": "3 label candidates were rejected during placement.",
+        "remediation": "Inspect rejection reasons and adjust priorities, keepouts, glyph coverage, or geometry.",
+        "support_level": "underdeveloped",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "rejection_counts": {
+            "collision": 2,
+            "missing_glyph": 1
+          },
+          "total": 3
+        }
+      },
+      {
+        "code": "missing_glyphs",
+        "severity": "warning",
+        "message": "2 glyphs are missing from the active atlas.",
+        "remediation": "Load an atlas with the missing glyphs or change label text before rendering.",
+        "support_level": "underdeveloped",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "count": 2,
+          "missing_glyphs": [
+            "ß",
+            "é"
+          ]
+        }
+      },
+      {
+        "code": "unavailable_cache_lod_stats",
+        "severity": "warning",
+        "message": "Requested cache or LOD statistics are not available for this layer.",
+        "remediation": "Use available layer metadata only, or add a renderer/stat source before relying on these stats.",
+        "support_level": "underdeveloped",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "layer_type": "tiles3d",
+          "unavailable_stats": [
+            "cache_hits",
+            "lod"
+          ]
+        }
+      },
+      {
+        "code": "unavailable_terrain_sampler",
+        "severity": "warning",
+        "message": "Terrain-height sampling was requested but no terrain sampler is available.",
+        "remediation": "Provide a terrain sampler or choose a label terrain policy that does not require sampling.",
+        "support_level": "underdeveloped",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {}
+      },
+      {
+        "code": "unicode_coverage_gap",
+        "severity": "warning",
+        "message": "Label text contains Unicode code points outside configured atlas coverage.",
+        "remediation": "Load an atlas or fallback range covering the missing code points before rendering.",
+        "support_level": "underdeveloped",
+        "layer_id": "layer",
+        "object_id": "object",
+        "details": {
+          "count": 2,
+          "missing_glyphs": [
+            "ß",
+            "é"
+          ]
+        }
+      },
+      {
+        "code": "unsupported_style_field",
+        "severity": "warning",
+        "message": "Style layer uses paint or layout fields that forge3d does not support.",
+        "remediation": "Remove unsupported fields or use the documented local feature styling subset.",
+        "support_level": "unsupported",
+        "layer_id": "roads",
+        "object_id": null,
+        "details": {
+          "fields": [
+            "line-gradient"
+          ]
+        }
+      }
+    ],
+    "layer_summaries": [],
+    "estimated_gpu_memory_bytes": null,
+    "supported_features": {},
+    "unsupported_features": {},
+    "render_blocked": true
+  },
+  "styles": [
+    {
+      "input": {
+        "layers": [
+          {
+            "id": "land",
+            "type": "fill",
+            "paint": {
+              "fill-color": "#447744"
+            }
+          },
+          {
+            "id": "roads",
+            "type": "line",
+            "paint": {
+              "line-width": 2
+            }
+          },
+          {
+            "id": "cities",
+            "type": "circle",
+            "paint": {
+              "circle-radius": 4
+            }
+          }
+        ]
+      },
+      "expected": {
+        "status": "ok",
+        "diagnostics": [],
+        "layer_summaries": [
+          {
+            "layer_id": "cities",
+            "layer_type": "circle",
+            "support_level": "supported",
+            "diagnostic_codes": [],
+            "object_count": null,
+            "bounds": null,
+            "memory_estimate_bytes": null,
+            "details": {}
+          },
+          {
+            "layer_id": "land",
+            "layer_type": "fill",
+            "support_level": "supported",
+            "diagnostic_codes": [],
+            "object_count": null,
+            "bounds": null,
+            "memory_estimate_bytes": null,
+            "details": {}
+          },
+          {
+            "layer_id": "roads",
+            "layer_type": "line",
+            "support_level": "supported",
+            "diagnostic_codes": [],
+            "object_count": null,
+            "bounds": null,
+            "memory_estimate_bytes": null,
+            "details": {}
+          }
+        ],
+        "estimated_gpu_memory_bytes": null,
+        "supported_features": {
+          "style.layer.circle": "supported",
+          "style.layer.fill": "supported",
+          "style.layer.line": "supported",
+          "style.local_provided_features": "supported"
+        },
+        "unsupported_features": {
+          "style.full_mapbox_spec": "unsupported",
+          "style.streamed_mvt": "non-goal"
+        },
+        "render_blocked": false
+      }
+    },
+    {
+      "input": {
+        "layers": [
+          {
+            "id": "roads",
+            "type": "line",
+            "paint": {
+              "line-color": "white",
+              "line-gradient": [
+                "get",
+                "speed"
+              ]
+            },
+            "layout": {
+              "line-sort-key": 10
+            }
+          },
+          {
+            "id": "heat",
+            "type": "heatmap"
+          }
+        ]
+      },
+      "expected": {
+        "status": "error",
+        "diagnostics": [
+          {
+            "code": "unsupported_style_layer_type",
+            "severity": "error",
+            "message": "Style layer type is not supported by forge3d offline feature styling.",
+            "remediation": "Use a supported local feature layer type such as fill, line, or circle.",
+            "support_level": "unsupported",
+            "layer_id": "heat",
+            "object_id": null,
+            "details": {
+              "layer_type": "heatmap"
+            }
+          },
+          {
+            "code": "unsupported_style_field",
+            "severity": "warning",
+            "message": "Style layer uses paint or layout fields that forge3d does not support.",
+            "remediation": "Remove unsupported fields or use the documented local feature styling subset.",
+            "support_level": "unsupported",
+            "layer_id": "roads",
+            "object_id": null,
+            "details": {
+              "fields": [
+                "line-gradient"
+              ],
+              "section": "paint"
+            }
+          },
+          {
+            "code": "unsupported_style_field",
+            "severity": "warning",
+            "message": "Style layer uses paint or layout fields that forge3d does not support.",
+            "remediation": "Remove unsupported fields or use the documented local feature styling subset.",
+            "support_level": "unsupported",
+            "layer_id": "roads",
+            "object_id": null,
+            "details": {
+              "fields": [
+                "line-sort-key"
+              ],
+              "section": "layout"
+            }
+          }
+        ],
+        "layer_summaries": [
+          {
+            "layer_id": "heat",
+            "layer_type": "heatmap",
+            "support_level": "unsupported",
+            "diagnostic_codes": [
+              "unsupported_style_layer_type"
+            ],
+            "object_count": null,
+            "bounds": null,
+            "memory_estimate_bytes": null,
+            "details": {}
+          },
+          {
+            "layer_id": "roads",
+            "layer_type": "line",
+            "support_level": "supported",
+            "diagnostic_codes": [
+              "unsupported_style_field",
+              "unsupported_style_field"
+            ],
+            "object_count": null,
+            "bounds": null,
+            "memory_estimate_bytes": null,
+            "details": {}
+          }
+        ],
+        "estimated_gpu_memory_bytes": null,
+        "supported_features": {
+          "style.layer.circle": "supported",
+          "style.layer.fill": "supported",
+          "style.layer.line": "supported",
+          "style.local_provided_features": "supported"
+        },
+        "unsupported_features": {
+          "style.full_mapbox_spec": "unsupported",
+          "style.streamed_mvt": "non-goal"
+        },
+        "render_blocked": true
+      }
+    },
+    {
+      "input": {
+        "layers": [
+          {
+            "id": "place-labels",
+            "type": "symbol",
+            "layout": {
+              "text-field": "{name}"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "status": "warning",
+        "diagnostics": [
+          {
+            "code": "experimental_feature",
+            "severity": "warning",
+            "message": "Requested workflow uses a feature that is not production-stable.",
+            "remediation": "Treat this path as experimental or use a documented supported alternative.",
+            "support_level": "experimental",
+            "layer_id": "place-labels",
+            "object_id": null,
+            "details": {
+              "feature": "symbol text layer"
+            }
+          }
+        ],
+        "layer_summaries": [
+          {
+            "layer_id": "place-labels",
+            "layer_type": "symbol",
+            "support_level": "underdeveloped",
+            "diagnostic_codes": [
+              "experimental_feature"
+            ],
+            "object_count": null,
+            "bounds": null,
+            "memory_estimate_bytes": null,
+            "details": {}
+          }
+        ],
+        "estimated_gpu_memory_bytes": null,
+        "supported_features": {
+          "style.layer.circle": "supported",
+          "style.layer.fill": "supported",
+          "style.layer.line": "supported",
+          "style.local_provided_features": "supported"
+        },
+        "unsupported_features": {
+          "style.full_mapbox_spec": "unsupported",
+          "style.layer.symbol": "underdeveloped",
+          "style.streamed_mvt": "non-goal"
+        },
+        "render_blocked": false
+      }
+    }
+  ]
+}

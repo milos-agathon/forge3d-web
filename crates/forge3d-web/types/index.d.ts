@@ -1,3 +1,14 @@
+export {validateStyleSupport} from './diagnostic-style.js';
+export type {DiagnosticStyleLayer} from './diagnostic-style.js';
+export { MapScene } from './map-scene.js';
+export type { MapSceneRenderResult, MapSceneReviewRecord } from './map-scene.js';
+export { SceneRecipe, TerrainSource, RasterOverlay, VectorOverlay, MapSceneBuildingLayer, MapSceneLabelLayer, MapScenePointCloudLayer, MapSceneTiles3DLayer, OrbitCamera, LightingPreset, OutputSpec, ReproducibilityProfile, MAP_SCENE_RECIPE_SCHEMA } from './map-recipe.js';
+export type * from './map-scene-types.js';
+export { Diagnostic, LayerSummary, SupportMatrixEntry, ValidationReport, RenderFailurePolicy, SeverityPolicy, SEVERITIES, SUPPORT_LEVELS, stableDiagnosticJson } from './diagnostics.js';
+export type * from './diagnostics.js';
+export { REQUIRED_DIAGNOSTIC_CODES, P1_FEATURE_DIAGNOSTIC_CODES, P2_FEATURE_DIAGNOSTIC_CODES, diagnosticFor, crsMismatchDiagnostic, missingGlyphsDiagnostic, unicodeCoverageGapDiagnostic, unsupportedStyleFieldDiagnostic, unsupportedStyleLayerTypeDiagnostic, proGatedPathDiagnostic, placeholderFallbackDiagnostic, experimentalFeatureDiagnostic, vtUnsupportedFamilyDiagnostic, pythonPublic3dtilesIncompleteDiagnostic, estimatedGpuMemoryDiagnostic, labelRejectionSummaryDiagnostic, missingLabelFieldDiagnostic, unsupportedTileFormatDiagnostic, unsupportedTileFeatureDiagnostic, missingExternalAssetDiagnostic, missingTexturePathDiagnostic, missingUvsDiagnostic, unsupportedTextureFormatDiagnostic, unavailableCacheLodStatsDiagnostic, unsupportedInstancingPathDiagnostic, unavailableTerrainSamplerDiagnostic, validateLabelSupport } from './diagnostic-paths.js';
+export type { DiagnosticScope } from './diagnostic-paths.js';
+export { getMapSceneSupportMatrix, MAP_SCENE_LAYER_KINDS } from './map-support.js';
 import type { VectorLayers } from "./vector-layers.js";
 import type { VectorSnapshot, VectorReport, VectorPickMap, VectorPickRegion, VectorProjectionReport } from "./vector-types.js";
 export { VectorLayers, VectorLayer } from "./vector-layers.js";

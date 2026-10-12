@@ -40,7 +40,7 @@ interface LayerGpu {
 }
 // WebGPU's stable flag values; TypeScript 6 DOM declares interfaces but omits these globals.
 const GPUBufferUsage = { MAP_READ: 1, COPY_DST: 8, VERTEX: 32, UNIFORM: 64 };
-const GPUTextureUsage = { COPY_SRC: 1, COPY_DST: 2, RENDER_ATTACHMENT: 16 };
+const GPUTextureUsage = { COPY_SRC: 1, COPY_DST: 2, TEXTURE_BINDING: 4, RENDER_ATTACHMENT: 16 };
 const GPUShaderStage = { VERTEX: 1, FRAGMENT: 2 };
 const GPUMapMode = { READ: 1 };
 const SHADER = `
@@ -77,6 +77,10 @@ export class PointCloudRenderer {
   #color: GPUTexture | undefined;
   #id: GPUTexture | undefined;
   #depth: GPUTexture | undefined;
+  #occlusionTexture: GPUTexture | undefined;
+  #occlusionData: Float32Array | undefined;
+  #occlusionPipeline: GPURenderPipeline | undefined;
+  #occlusionLayout: GPUBindGroupLayout | undefined;
   #width = 0;
   #height = 0;
   #disposed = false;
@@ -227,6 +231,7 @@ export class PointCloudRenderer {
   #bytes(): number {
     return (
       this.#width * this.#height * 12 +
+      (this.#occlusionTexture ? this.#width * this.#height * 4 : 0) +
       Array.from(this.#layers.values()).reduce((n, l) => n + l.bytes, 0) +
       Array.from(this.#readbacks).reduce((n, b) => n + b.size, 0)
     );
@@ -258,6 +263,9 @@ export class PointCloudRenderer {
     this.#color?.destroy();
     this.#id?.destroy();
     this.#depth?.destroy();
+    this.#occlusionTexture?.destroy();
+    this.#occlusionTexture = undefined;
+    this.#occlusionData = undefined;
     this.#color = color;
     this.#id = id;
     this.#depth = depth;
@@ -270,6 +278,37 @@ export class PointCloudRenderer {
     this.#install(
       layers.map((layer) => ({ layer, snapshot: layer.snapshot() })),
     );
+  }
+  /** W18: seed hardware depth before point draws, including translucent points. */
+  setOcclusionDepth(depth: Float32Array | null): void {
+    this.#guard();
+    if (depth === null) {
+      this.#occlusionTexture?.destroy();
+      this.#occlusionTexture = undefined;
+      this.#occlusionData = undefined;
+      return;
+    }
+    if (!this.#depth) this.resize(this.canvas.width || 1, this.canvas.height || 1);
+    if (!(depth instanceof Float32Array) || depth.length !== this.#width * this.#height || depth.some(v => !Number.isFinite(v) || v < 0 || v > 1))
+      pointError("Occlusion depth must match the frame and contain values in 0..1");
+    this.#admit(depth.byteLength);
+    const texture = this.#device.createTexture({size:[this.#width,this.#height],format:"r32float",usage:GPUTextureUsage.COPY_DST | GPUTextureUsage.TEXTURE_BINDING});
+    try {
+      if (!this.#occlusionPipeline) {
+        this.#occlusionLayout = this.#device.createBindGroupLayout({entries:[{binding:0,visibility:GPUShaderStage.FRAGMENT,texture:{sampleType:"unfilterable-float"}}]});
+        const module = this.#device.createShaderModule({code:`
+@group(0) @binding(0) var depth_map:texture_2d<f32>;
+@vertex fn vs(@builtin(vertex_index) id:u32)->@builtin(position) vec4<f32>{
+ let p=array<vec2<f32>,3>(vec2(-1.,-1.),vec2(3.,-1.),vec2(-1.,3.));return vec4(p[id],0.,1.);
+}
+@fragment fn fs(@builtin(position) pixel:vec4<f32>)->@builtin(frag_depth) f32{
+ return textureLoad(depth_map,vec2<i32>(pixel.xy),0).r;
+}`});
+        this.#occlusionPipeline = this.#device.createRenderPipeline({layout:this.#device.createPipelineLayout({bindGroupLayouts:[this.#occlusionLayout]}),vertex:{module,entryPoint:"vs"},fragment:{module,entryPoint:"fs",targets:[]},primitive:{topology:"triangle-list"},depthStencil:{format:"depth32float",depthWriteEnabled:true,depthCompare:"always"}});
+      }
+      this.#device.queue.writeTexture({texture},depth as Float32Array<ArrayBuffer>,{bytesPerRow:this.#width*4,rowsPerImage:this.#height},[this.#width,this.#height]);
+      this.#occlusionTexture?.destroy();this.#occlusionTexture=texture;this.#occlusionData=depth.slice();
+    } catch (error) {texture.destroy();throw error;}
   }
   #install(
     snapshots: { layer: PointCloudLayer; snapshot: PointCloudLayerSnapshot }[],
@@ -430,7 +469,13 @@ export class PointCloudRenderer {
       this.#device.queue.writeBuffer(gpu.uniform, 0, raw);
     }
     const encoder = this.#device.createCommandEncoder(),
-      clear = this.options.clearColor ?? [0.02, 0.03, 0.05, 1],
+      clear = this.options.clearColor ?? [0.02, 0.03, 0.05, 1];
+    if (this.#occlusionTexture) {
+      const seed = encoder.beginRenderPass({colorAttachments:[],depthStencilAttachment:{view:this.#depth!.createView(),depthClearValue:1,depthLoadOp:"clear",depthStoreOp:"store"}});
+      const group = this.#device.createBindGroup({layout:this.#occlusionLayout!,entries:[{binding:0,resource:this.#occlusionTexture.createView()}]});
+      seed.setPipeline(this.#occlusionPipeline!);seed.setBindGroup(0,group);seed.draw(3);seed.end();
+    }
+    const
       pass = encoder.beginRenderPass({
         colorAttachments: [
           {
@@ -449,7 +494,7 @@ export class PointCloudRenderer {
         depthStencilAttachment: {
           view: this.#depth!.createView(),
           depthClearValue: 1,
-          depthLoadOp: "clear",
+          depthLoadOp: this.#occlusionTexture ? "load" : "clear",
           depthStoreOp: "store",
         },
       });
@@ -496,7 +541,7 @@ export class PointCloudRenderer {
     try {
       const e = this.#device.createCommandEncoder();
       e.copyTextureToBuffer(
-        { texture, origin: [x, y] },
+        { texture, origin: [x, y], aspect: texture.format === "depth32float" ? "depth-only" : "all" },
         { buffer, bytesPerRow: stride, rowsPerImage: height },
         [width, height],
       );
@@ -536,6 +581,12 @@ export class PointCloudRenderer {
       }
     return bytes;
   }
+  /** W18: depth in WebGPU clip space for composition with raster scene AOVs. */
+  async readDepth(signal?: AbortSignal): Promise<Float32Array> {
+    if (!this.#depth) pointError("Point frame not rendered");
+    const bytes = await this.#read(this.#depth, this.#width, this.#height, 0, 0, signal);
+    return new Float32Array(bytes.buffer);
+  }
   async pick(
     x: number,
     y: number,
@@ -566,6 +617,7 @@ export class PointCloudRenderer {
   /** Recreates device resources and replays retained CPU layers without dataset IO. */
   async recover(): Promise<void> {
     pointLive(this.#disposed);
+    const occlusion = this.#occlusionData?.slice();
     const width = this.#width || this.canvas.width,
       height = this.#height || this.canvas.height;
     this.#recoverySnapshots ??= this.#retainedLayers.map((layer) => {
@@ -600,6 +652,7 @@ export class PointCloudRenderer {
     this.#configure();
     this.#watchLoss();
     this.resize(width || 1, height || 1);
+    if (occlusion) this.setOcclusionDepth(occlusion);
     this.#install(this.#recoverySnapshots);
     for (const [layer, gpu] of this.#layers)
       for (const [key, node] of gpu.nodes)
@@ -650,6 +703,10 @@ export class PointCloudRenderer {
     this.#color = undefined;
     this.#id = undefined;
     this.#depth = undefined;
+    this.#occlusionTexture?.destroy();
+    this.#occlusionTexture = undefined;
+    this.#occlusionPipeline = undefined;
+    this.#occlusionLayout = undefined;
     this.#width = 0;
     this.#height = 0;
   }
@@ -667,6 +724,7 @@ export class PointCloudRenderer {
         for (const { buffer } of snapshot.nodes) buffer.dispose();
     this.#recoverySnapshots = undefined;
     this.#recoverySources.clear();
+    this.#occlusionData = undefined;
     this.#context.unconfigure();
     this.#device.destroy();
   }

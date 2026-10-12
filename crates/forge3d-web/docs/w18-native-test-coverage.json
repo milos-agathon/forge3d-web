@@ -1,0 +1,932 @@
+{
+  "schemaVersion": 1,
+  "nativeCommit": "a55911f021925a3264e476374ce43d1b204f1073",
+  "testCount": 94,
+  "cases": [
+    {
+      "nativeFile": "tests/test_diagnostics_bundle_serialization.py",
+      "nativeTest": "test_diagnostic_from_dict_roundtrip_preserves_bundle_ready_fields",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "Lossless deterministic native Diagnostic/ValidationReport JSON is tested directly; no ZIP container is involved."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_bundle_serialization.py",
+      "nativeTest": "test_validation_report_serialization_is_lossless_and_deterministic",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "Lossless deterministic native Diagnostic/ValidationReport JSON is tested directly; no ZIP container is involved."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_bundle_serialization.py",
+      "nativeTest": "test_validation_report_orders_diagnostics_by_stable_sort_key",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "Lossless deterministic native Diagnostic/ValidationReport JSON is tested directly; no ZIP container is involved."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_bundle_serialization.py",
+      "nativeTest": "test_diagnostic_details_are_json_serializable_and_sorted",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "Lossless deterministic native Diagnostic/ValidationReport JSON is tested directly; no ZIP container is involved."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_bundle_serialization.py",
+      "nativeTest": "test_empty_report_is_bundle_ready_ok_status",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "Lossless deterministic native Diagnostic/ValidationReport JSON is tested directly; no ZIP container is involved."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_contract.py",
+      "nativeTest": "test_diagnostic_preserves_required_fields",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_contract.py",
+      "nativeTest": "test_diagnostic_accepts_required_severities",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_contract.py",
+      "nativeTest": "test_diagnostic_accepts_prd_support_levels",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_contract.py",
+      "nativeTest": "test_diagnostic_rejects_unknown_severity_and_support_level",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_contract.py",
+      "nativeTest": "test_validation_report_rejects_unknown_support_summary_levels",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_contract.py",
+      "nativeTest": "test_validation_report_derives_status_and_policy_blocking",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_contract.py",
+      "nativeTest": "test_layer_summary_and_support_matrix_entry_contracts",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_contract.py",
+      "nativeTest": "test_severity_policy_and_public_exports",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_no_op_policy.py",
+      "nativeTest": "test_warning_policy_does_not_turn_errors_into_success",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_no_op_policy.py",
+      "nativeTest": "test_experimental_warning_can_continue_or_block_by_policy",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_quickstart.py",
+      "nativeTest": "test_quickstart_warning_policy_scenario_is_executable",
+      "owner": "W18",
+      "webEvidence": [
+        "examples/mapscene.html",
+        "examples/w18-mapscene.js",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "Native terrain/raster, vector/labels and scalar building workflows are consolidated into an exercised browser example; review JSON retains diagnostic state. Bundle operations remain W19 and the complete example catalog is W23."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_quickstart.py",
+      "nativeTest": "test_quickstart_required_inventory_serializes_stably",
+      "owner": "W18",
+      "webEvidence": [
+        "examples/mapscene.html",
+        "examples/w18-mapscene.js",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "Native terrain/raster, vector/labels and scalar building workflows are consolidated into an exercised browser example; review JSON retains diagnostic state. Bundle operations remain W19 and the complete example catalog is W23."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_quickstart.py",
+      "nativeTest": "test_quickstart_style_validation_scenario_emits_structured_diagnostics",
+      "owner": "W18",
+      "webEvidence": [
+        "examples/mapscene.html",
+        "examples/w18-mapscene.js",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "Native terrain/raster, vector/labels and scalar building workflows are consolidated into an exercised browser example; review JSON retains diagnostic state. Bundle operations remain W19 and the complete example catalog is W23."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_style_support.py",
+      "nativeTest": "test_style_support_accepts_local_fill_line_and_circle_layers",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts",
+        "src-ts/diagnostic-style.ts"
+      ],
+      "adaptation": "Native support function executes into independent fixtures; raw and preserved parsed layer fields use the same diagnostic model."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_style_support.py",
+      "nativeTest": "test_style_support_reports_unsupported_layer_types_and_fields",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts",
+        "src-ts/diagnostic-style.ts"
+      ],
+      "adaptation": "Native support function executes into independent fixtures; raw and preserved parsed layer fields use the same diagnostic model."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_style_support.py",
+      "nativeTest": "test_style_support_accepts_parsed_style_spec_without_claiming_mvt",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts",
+        "src-ts/diagnostic-style.ts"
+      ],
+      "adaptation": "Native support function executes into independent fixtures; raw and preserved parsed layer fields use the same diagnostic model."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_style_support.py",
+      "nativeTest": "test_parsed_style_support_reports_preserved_unsupported_fields",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts",
+        "src-ts/diagnostic-style.ts"
+      ],
+      "adaptation": "Native support function executes into independent fixtures; raw and preserved parsed layer fields use the same diagnostic model."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_style_support.py",
+      "nativeTest": "test_symbol_style_support_matches_underdeveloped_matrix_truth",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts",
+        "src-ts/diagnostic-style.ts"
+      ],
+      "adaptation": "Native support function executes into independent fixtures; raw and preserved parsed layer fields use the same diagnostic model."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_style_support.py",
+      "nativeTest": "test_supported_style_output_feeds_vector_overlay_config",
+      "owner": "W19",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts",
+        "src-ts/diagnostic-style.ts"
+      ],
+      "adaptation": "Style-to-vector render mapping is M03/W19; W18 ports its diagnostic factories and standalone support assessment."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_style_support.py",
+      "nativeTest": "test_symbol_style_output_feeds_future_label_layer_contract",
+      "owner": "W19",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts",
+        "src-ts/diagnostic-style.ts"
+      ],
+      "adaptation": "Style-to-vector render mapping is M03/W19; W18 ports its diagnostic factories and standalone support assessment."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_support_paths.py",
+      "nativeTest": "test_required_diagnostic_factories_cover_inventory_with_severity_and_ids",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_support_paths.py",
+      "nativeTest": "test_required_diagnostic_inventory_report_blocks_output_affecting_errors",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_support_paths.py",
+      "nativeTest": "test_building_layer_validator_reports_placeholder_fallback",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/unit/w15-buildings.test.ts"
+      ],
+      "adaptation": "W15 geometry and material diagnostics are bridged with layer/object/material IDs; unavailable texture output remains blocked."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_support_paths.py",
+      "nativeTest": "test_public_tiles3d_validator_reports_incomplete_render_workflow",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "Historical placeholder is promoted only for a real W15/W16/W12 adapter. Browser layer-removal, selected-content, coverage and negative-control probes prove output; unsupported formats and empty selection remain blocking."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_support_paths.py",
+      "nativeTest": "test_terrain_vt_validator_reports_non_albedo_families",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_support_paths.py",
+      "nativeTest": "test_label_validator_reports_experimental_paths_and_missing_glyphs",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_diagnostics_support_paths.py",
+      "nativeTest": "test_label_validator_preserves_missing_glyph_object_ids_per_label",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_docs.py",
+      "nativeTest": "test_mapscene_public_api_is_documented_with_truthful_support_levels",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/api/docs-links.test.mjs",
+        "docs/mapscene-diagnostics.md"
+      ],
+      "adaptation": "Native quickstart, policy and no-IPC documentation is expressed using public ESM APIs."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_docs.py",
+      "nativeTest": "test_feature_004_artifacts_do_not_keep_stale_tbd_or_later_owned_wording",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/api/docs-links.test.mjs",
+        "docs/mapscene-diagnostics.md"
+      ],
+      "adaptation": "Native quickstart, policy and no-IPC documentation is expressed using public ESM APIs."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_docs.py",
+      "nativeTest": "test_mapscene_validation_diagnostic_codes_are_documented",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/api/docs-links.test.mjs",
+        "docs/mapscene-diagnostics.md"
+      ],
+      "adaptation": "Native quickstart, policy and no-IPC documentation is expressed using public ESM APIs."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_docs.py",
+      "nativeTest": "test_offline_mapscene_guide_links_canonical_examples_and_support_guides",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/api/docs-links.test.mjs",
+        "docs/mapscene-diagnostics.md"
+      ],
+      "adaptation": "Native quickstart, policy and no-IPC documentation is expressed using public ESM APIs."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_docs.py",
+      "nativeTest": "test_support_matrices_record_current_mapscene_diagnostics_and_ownership",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/api/docs-links.test.mjs",
+        "docs/mapscene-diagnostics.md"
+      ],
+      "adaptation": "Native quickstart, policy and no-IPC documentation is expressed using public ESM APIs."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_docs.py",
+      "nativeTest": "test_support_matrix_rows_use_prd_support_taxonomy",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/api/docs-links.test.mjs",
+        "docs/mapscene-diagnostics.md"
+      ],
+      "adaptation": "Native quickstart, policy and no-IPC documentation is expressed using public ESM APIs."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_docs.py",
+      "nativeTest": "test_competitive_positioning_lists_required_non_goal_boundaries",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/api/docs-links.test.mjs",
+        "docs/mapscene-diagnostics.md"
+      ],
+      "adaptation": "Native quickstart, policy and no-IPC documentation is expressed using public ESM APIs."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_examples.py",
+      "nativeTest": "test_canonical_mapscene_examples_exist_and_do_not_use_raw_ipc",
+      "owner": "W18",
+      "webEvidence": [
+        "examples/mapscene.html",
+        "examples/w18-mapscene.js",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "Native terrain/raster, vector/labels and scalar building workflows are consolidated into an exercised browser example; review JSON retains diagnostic state. Bundle operations remain W19 and the complete example catalog is W23."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_examples.py",
+      "nativeTest": "test_terrain_raster_example_validates_renders_and_bundles",
+      "owner": "W18",
+      "webEvidence": [
+        "examples/mapscene.html",
+        "examples/w18-mapscene.js",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "Native terrain/raster, vector/labels and scalar building workflows are consolidated into an exercised browser example; review JSON retains diagnostic state. Bundle operations remain W19 and the complete example catalog is W23."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_examples.py",
+      "nativeTest": "test_vector_labels_example_compiles_label_plan_and_bundles",
+      "owner": "W18",
+      "webEvidence": [
+        "examples/mapscene.html",
+        "examples/w18-mapscene.js",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "Native terrain/raster, vector/labels and scalar building workflows are consolidated into an exercised browser example; review JSON retains diagnostic state. Bundle operations remain W19 and the complete example catalog is W23."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_examples.py",
+      "nativeTest": "test_buildings_labels_example_uses_honest_diagnostics_when_blocked",
+      "owner": "W18",
+      "webEvidence": [
+        "examples/mapscene.html",
+        "examples/w18-mapscene.js",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "Native terrain/raster, vector/labels and scalar building workflows are consolidated into an exercised browser example; review JSON retains diagnostic state. Bundle operations remain W19 and the complete example catalog is W23."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_examples.py",
+      "nativeTest": "test_bundled_datasets_showcase_covers_specs_001_to_004",
+      "owner": "W18",
+      "webEvidence": [
+        "examples/mapscene.html",
+        "examples/w18-mapscene.js",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "Native terrain/raster, vector/labels and scalar building workflows are consolidated into an exercised browser example; review JSON retains diagnostic state. Bundle operations remain W19 and the complete example catalog is W23."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_examples.py",
+      "nativeTest": "test_p1_assets_bundle_showcase_covers_spec_005",
+      "owner": "W19",
+      "webEvidence": [
+        "examples/mapscene.html",
+        "examples/w18-mapscene.js",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "Native terrain/raster, vector/labels and scalar building workflows are consolidated into an exercised browser example; review JSON retains diagnostic state. Bundle operations remain W19 and the complete example catalog is W23."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_label_plan_integration.py",
+      "nativeTest": "test_label_layer_compiles_deterministic_label_plan_and_rejection_summary",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_quickstart.py",
+      "nativeTest": "test_mapscene_quickstart_points_to_canonical_examples",
+      "owner": "W18",
+      "webEvidence": [
+        "examples/mapscene.html",
+        "examples/w18-mapscene.js",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "Native terrain/raster, vector/labels and scalar building workflows are consolidated into an exercised browser example; review JSON retains diagnostic state. Bundle operations remain W19 and the complete example catalog is W23."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_quickstart.py",
+      "nativeTest": "test_quickstart_vector_labels_scenario_is_executable",
+      "owner": "W18",
+      "webEvidence": [
+        "examples/mapscene.html",
+        "examples/w18-mapscene.js",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "Native terrain/raster, vector/labels and scalar building workflows are consolidated into an exercised browser example; review JSON retains diagnostic state. Bundle operations remain W19 and the complete example catalog is W23."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_quickstart.py",
+      "nativeTest": "test_quickstart_negative_diagnostics_are_available_before_render",
+      "owner": "W18",
+      "webEvidence": [
+        "examples/mapscene.html",
+        "examples/w18-mapscene.js",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "Native terrain/raster, vector/labels and scalar building workflows are consolidated into an exercised browser example; review JSON retains diagnostic state. Bundle operations remain W19 and the complete example catalog is W23."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_quickstart.py",
+      "nativeTest": "test_quickstart_building_scenario_preserves_blocking_diagnostics_in_bundle",
+      "owner": "W18",
+      "webEvidence": [
+        "examples/mapscene.html",
+        "examples/w18-mapscene.js",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "Native terrain/raster, vector/labels and scalar building workflows are consolidated into an exercised browser example; review JSON retains diagnostic state. Bundle operations remain W19 and the complete example catalog is W23."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_recipe_contract.py",
+      "nativeTest": "test_mapscene_recipe_components_are_public_and_serializable",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_recipe_contract.py",
+      "nativeTest": "test_mapscene_constructor_accepts_recipe_keywords_without_raw_ipc",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_render_png.py",
+      "nativeTest": "test_render_writes_source_derived_png_for_supported_scene",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_render_png.py",
+      "nativeTest": "test_render_uses_output_spec_path_for_supported_png",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_render_png.py",
+      "nativeTest": "test_render_output_changes_when_source_data_changes",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_render_png.py",
+      "nativeTest": "test_render_uses_native_offscreen_for_real_terrain_and_raster_assets",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_render_png.py",
+      "nativeTest": "test_render_falls_back_when_native_adapter_is_unavailable",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_render_policy.py",
+      "nativeTest": "test_render_performs_validation_and_continues_on_warnings_by_default",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_render_policy.py",
+      "nativeTest": "test_render_fail_on_warning_blocks_and_does_not_write_png",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_render_policy.py",
+      "nativeTest": "test_render_errors_always_block_and_do_not_write_png",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_render_policy.py",
+      "nativeTest": "test_render_rejects_missing_output_path_without_noop_success",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_save_bundle.py",
+      "nativeTest": "test_save_bundle_writes_deterministic_review_bundle_with_label_plan",
+      "owner": "W19",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "ZIP/save/load and asset rewriting are M04/W19. W18 preserves typed recipe, diagnostic JSON, report hashes and renderability in reviewRecord."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_save_bundle.py",
+      "nativeTest": "test_save_bundle_preserves_blocking_diagnostics_without_render_success_claim",
+      "owner": "W19",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "ZIP/save/load and asset rewriting are M04/W19. W18 preserves typed recipe, diagnostic JSON, report hashes and renderability in reviewRecord."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_save_bundle.py",
+      "nativeTest": "test_save_bundle_preserves_missing_asset_diagnostics_without_renderability",
+      "owner": "W19",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "ZIP/save/load and asset rewriting are M04/W19. W18 preserves typed recipe, diagnostic JSON, report hashes and renderability in reviewRecord."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_support_status.py",
+      "nativeTest": "test_product_building_intent_reports_support_status_diagnostics",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_support_status.py",
+      "nativeTest": "test_terrain_vt_and_3dtiles_intent_are_diagnosed_before_render",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_support_status.py",
+      "nativeTest": "test_point_cloud_layer_reports_underdeveloped_render_path_before_render",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "Historical placeholder is promoted only for a real W15/W16/W12 adapter. Browser layer-removal, selected-content, coverage and negative-control probes prove output; unsupported formats and empty selection remain blocking."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_support_status.py",
+      "nativeTest": "test_unknown_recipe_layer_is_not_silently_ignored",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_support_status.py",
+      "nativeTest": "test_render_and_save_bundle_do_not_hide_blocking_validation",
+      "owner": "W19",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "ZIP/save/load and asset rewriting are M04/W19. W18 preserves typed recipe, diagnostic JSON, report hashes and renderability in reviewRecord."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_validation.py",
+      "nativeTest": "test_validate_returns_structured_report_with_layer_summaries_and_memory_estimate",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_validation.py",
+      "nativeTest": "test_validate_reports_crs_mismatch_without_implicit_transform",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_validation.py",
+      "nativeTest": "test_validate_reports_missing_layer_crs_without_assuming_compatibility",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_validation.py",
+      "nativeTest": "test_validate_reports_missing_terrain_crs_without_assuming_compatibility",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_validation.py",
+      "nativeTest": "test_validate_reports_missing_glyphs_and_style_support_diagnostics",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_validation.py",
+      "nativeTest": "test_validate_uses_fatal_diagnostic_for_unsupported_output_format",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_validation.py",
+      "nativeTest": "test_validate_includes_building_geometry_count_in_gpu_memory_estimate",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_validation.py",
+      "nativeTest": "test_validate_reports_missing_source_identity_for_required_sources",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_validation.py",
+      "nativeTest": "test_validate_reports_missing_external_assets_before_render",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_validation.py",
+      "nativeTest": "test_validate_reports_unsupported_asset_formats_before_render",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_validation.py",
+      "nativeTest": "test_validate_reports_supported_building_source_asset_failures_before_render",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_validation.py",
+      "nativeTest": "test_validate_reports_supported_building_render_adapter_placeholder_before_render",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "Historical placeholder is promoted only for a real W15/W16/W12 adapter. Browser layer-removal, selected-content, coverage and negative-control probes prove output; unsupported formats and empty selection remain blocking."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_validation.py",
+      "nativeTest": "test_validate_reports_vector_path_only_loader_placeholder_before_render",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "Historical placeholder is promoted only for a real W15/W16/W12 adapter. Browser layer-removal, selected-content, coverage and negative-control probes prove output; unsupported formats and empty selection remain blocking."
+    },
+    {
+      "nativeFile": "tests/test_mapscene_validation.py",
+      "nativeTest": "test_validate_reports_vector_and_label_layers_without_renderable_data",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_p1_diagnostics_contract.py",
+      "nativeTest": "test_p1_feature_local_diagnostic_factories_are_structured_and_serializable",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_p1_diagnostics_contract.py",
+      "nativeTest": "test_p1_warning_diagnostics_obey_fail_on_warning_policy",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_p1_diagnostics_contract.py",
+      "nativeTest": "test_prd_p0_diagnostic_inventory_is_structured_serializable_and_actionable",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_p2_diagnostics_contract.py",
+      "nativeTest": "test_p2_feature_local_diagnostic_factories_are_structured_and_serializable",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_p2_diagnostics_contract.py",
+      "nativeTest": "test_p2_diagnostic_serialization_order_is_deterministic",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_p2_diagnostics_contract.py",
+      "nativeTest": "test_mapscene_reports_building_texture_diagnostics_before_render",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_p2_diagnostics_contract.py",
+      "nativeTest": "test_mapscene_reports_cache_lod_and_instancing_availability_diagnostics",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-diagnostics.test.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_p2_large_scene_cache_lod_instancing.py",
+      "nativeTest": "test_cache_lod_and_instancing_status_are_normalized_by_layer_type",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_p2_large_scene_cache_lod_instancing.py",
+      "nativeTest": "test_unavailable_terrain_cache_lod_stats_are_reported_before_render",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/playwright/w18_mapscene.spec.ts"
+      ],
+      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+    },
+    {
+      "nativeFile": "tests/test_p2_textured_building_mapscene.py",
+      "nativeTest": "test_textured_building_fixture_is_explicitly_diagnostic_only",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/unit/w15-buildings.test.ts"
+      ],
+      "adaptation": "W15 geometry and material diagnostics are bridged with layer/object/material IDs; unavailable texture output remains blocked."
+    },
+    {
+      "nativeFile": "tests/test_p2_textured_building_mapscene.py",
+      "nativeTest": "test_textured_building_render_is_blocked_without_silent_scalar_success",
+      "owner": "W18",
+      "webEvidence": [
+        "tests/unit/w18-mapscene.test.ts",
+        "tests/unit/w15-buildings.test.ts"
+      ],
+      "adaptation": "W15 geometry and material diagnostics are bridged with layer/object/material IDs; unavailable texture output remains blocked."
+    }
+  ]
+}

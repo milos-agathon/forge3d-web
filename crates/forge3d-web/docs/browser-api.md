@@ -12,6 +12,9 @@ a platform support claim.
 
 ## Public API
 
+For typed recipes, validated multilayer PNG output, deterministic support reports,
+resource ownership and review records, see [MapScene and diagnostics](mapscene-diagnostics.md).
+
 For W09 population, wind, local SH/reflection lighting, reports and recovery,
 see [Terrain scatter and probes](terrain-scatter-probes.md).
 `Forge3DWorkerRenderer.setCamera(camera): Promise<void>` copies the camera to
