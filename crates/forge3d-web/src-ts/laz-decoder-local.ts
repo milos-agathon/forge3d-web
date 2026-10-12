@@ -6,7 +6,7 @@ import {
   pointCancelled,
   pointInteger,
 } from "./pointcloud-common.js";
-import { parseLasHeader, parseLasRecords } from "./pointcloud-las.js";
+import { LENGTHS, parseLasHeader, parseLasRecords } from "./pointcloud-las.js";
 import type { LasHeader } from "./pointcloud-las.js";
 import type { PointData } from "./pointcloud-types.js";
 import type { LazDecodeOptions } from "./laz-decoder.js";
@@ -137,6 +137,15 @@ export function validateLazDecode(
   o: LazDecodeOptions,
 ): void {
   pointCancelled(o.signal);
+  if (
+    !Number.isInteger(header.pointFormat) ||
+    header.pointFormat < 0 ||
+    header.pointFormat >= LENGTHS.length ||
+    !Number.isInteger(header.recordLength) ||
+    header.recordLength < LENGTHS[header.pointFormat]! ||
+    header.recordLength > 65535
+  )
+    pointError("Invalid LAZ record layout", "invalid-laz");
   pointInteger(count, "LAZ count");
   pointLimit(count * header.recordLength, o.maxBytes);
   pointLimit(bytes.length, o.maxBytes);

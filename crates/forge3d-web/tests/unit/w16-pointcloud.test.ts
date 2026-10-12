@@ -225,6 +225,31 @@ describe("W16 native point buffer and octree contracts", () => {
   });
 });
 describe("W16 LAS and hierarchy parsing", () => {
+  it.each([
+    { recordLength: 36.5 },
+    { recordLength: NaN },
+    { pointFormat: 6, recordLength: 29 },
+    { pointFormat: 7, recordLength: 35 },
+    { pointFormat: 8, recordLength: 37 },
+    { recordLength: 65536 },
+    { pointFormat: 6.5 },
+    { pointFormat: NaN },
+    { pointFormat: -1 },
+    { pointFormat: 11 },
+  ])("rejects caller-supplied LAZ layout %j before creating a worker", async (layout) => {
+    const worker = vi.fn();
+    vi.stubGlobal("Worker", worker);
+    try {
+      const pending = decodeLazChunk(new Uint8Array(256), { ...header, ...layout }, 1);
+      await expect(pending).rejects.toBeInstanceOf(Forge3DError);
+      await expect(pending).rejects.toMatchObject({ code: "INVALID_INPUT" });
+      if (layout.recordLength !== undefined)
+        await expect(pending).rejects.toMatchObject({ message: "Invalid LAZ record layout" });
+      expect(worker).not.toHaveBeenCalled();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
   it("rejects real chunk truncation and forged layer lengths before native allocation", async () => {
     const bytes = fixture("ellipsoid.copc.laz"),
       v = new DataView(bytes.buffer),

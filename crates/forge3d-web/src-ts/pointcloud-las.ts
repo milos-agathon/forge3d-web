@@ -20,7 +20,7 @@ export interface LasHeader {
   offset: PointVec3;
   bounds: PointBounds;
 }
-const LENGTHS = [20, 28, 26, 34, 57, 63, 30, 36, 38, 59, 67];
+export const LENGTHS = [20, 28, 26, 34, 57, 63, 30, 36, 38, 59, 67] as const;
 export function parseLasHeader(bytes: Uint8Array): LasHeader {
   if (
     bytes.length < 227 ||
@@ -38,7 +38,7 @@ export function parseLasHeader(bytes: Uint8Array): LasHeader {
     minor > 4 ||
     headerSize < 227 ||
     (minor === 4 && (headerSize < 375 || bytes.length < 375)) ||
-    format > 10 ||
+    format >= LENGTHS.length ||
     recordLength < LENGTHS[format]!
   )
     pointError("Invalid LAS version/record layout", "invalid-las");
