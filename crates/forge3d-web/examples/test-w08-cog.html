@@ -769,20 +769,30 @@
               errors.push(Forge3DError.from(error).message),
           });
           viewer.resetView();
-          let streamerStats = streamer.stats();
-          let guard0 = 0;
-          while (!streamerStats.converged && guard0 < 600) {
-            await streamer.update();
-            viewer.render();
-            let drain0 = 0;
-            while (streamer.stats().pendingFetches > 0 && drain0 < 600) {
-              await new Promise((resolve) => setTimeout(resolve, 0));
-              drain0 += 1;
+          // Tile residency can converge before the asynchronous GPU LOD
+          // readback. Compare both generations after that readback is harvested.
+          const settle = async () => {
+            let stats = streamer.stats();
+            for (let frame = 0; !stats.converged && frame < 600; frame += 1) {
+              await streamer.update();
+              viewer.render();
+              for (let drain = 0; streamer.stats().pendingFetches > 0 && drain < 600; drain += 1) {
+                await new Promise((resolve) => setTimeout(resolve, 0));
+              }
+              stats = streamer.stats();
             }
-            streamerStats = streamer.stats();
-            guard0 += 1;
-          }
-          viewer.render();
+            if (!stats.converged) throw new Error("Streaming residency did not settle within 600 frames");
+            // Only render here: another tile-planning cycle would change the
+            // residency snapshot as the first GPU visibility report arrives.
+            for (let frame = 0; frame < 600; frame += 1) {
+              viewer.render();
+              await new Promise((resolve) => requestAnimationFrame(resolve));
+              const lod = viewer.getLodSelection();
+              if (lod !== null) return { stats: streamer.stats(), lod };
+            }
+            throw new Error("GPU LOD did not settle within 600 frames");
+          };
+          const settledBefore = await settle();
           const before = await decodePng(await viewer.screenshot());
           const bytesBefore = scheduler.stats().bytesTransferred;
           const generationBefore = viewer.getDiagnostics().generation;
@@ -795,20 +805,7 @@
           for (let i = 0; i < 240 && viewer.status === "recovering"; i += 1) {
             await new Promise((resolve) => setTimeout(resolve, 50));
           }
-          let streamerStats2 = streamer.stats();
-          let guard = 0;
-          while (!streamerStats2.converged && guard < 600) {
-            await streamer.update();
-            viewer.render();
-            let drain = 0;
-            while (streamer.stats().pendingFetches > 0 && drain < 600) {
-              await new Promise((resolve) => setTimeout(resolve, 0));
-              drain += 1;
-            }
-            streamerStats2 = streamer.stats();
-            guard += 1;
-          }
-          viewer.render();
+          const settledAfter = await settle();
           const after = await decodePng(await viewer.screenshot());
           const bytesAfter = scheduler.stats().bytesTransferred;
           const identical =
@@ -842,10 +839,15 @@
             ssim: identical ? 1 : ssimMono(before, after),
             maxDiff: maxAbsDiff(before, after),
             replayBytes: bytesAfter - bytesBefore,
-            converged: streamerStats2.converged,
+            convergedBefore: settledBefore.stats.converged,
+            converged: settledAfter.stats.converged,
+            lodFrameBefore: settledBefore.lod.frame,
+            lodFrameAfter: settledAfter.lod.frame,
+            coveredBefore: WIDTH * HEIGHT - countClearPixels(before),
+            coveredAfter: WIDTH * HEIGHT - countClearPixels(after),
             diffCount,
             diffBox: [minX, minY, maxX, maxY],
-            streamerRuntime: streamerStats2.runtime,
+            streamerRuntime: settledAfter.stats.runtime,
             errors,
             viewerErrors,
           };

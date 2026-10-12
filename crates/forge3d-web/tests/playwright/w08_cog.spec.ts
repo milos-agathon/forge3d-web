@@ -412,14 +412,24 @@ test.describe("W08 COG: streaming, overlay, recovery, memory", () => {
 
   test("viewer device-loss recovery replays streaming with zero new network bytes", async ({
     page,
-  }) => {
+  }, testInfo) => {
     test.slow();
     test.setTimeout(300_000);
     const stats = await installRangeServer(page);
     const r = await probe(page, "viewerRecovery", cogUrl("rainier-cog.tif"));
+    await testInfo.attach("streaming-recovery.json", {
+      body: JSON.stringify(r, null, 2),
+      contentType: "application/json",
+    });
     expect(r.status).toBe("ready");
     expect(r.generationAfter).toBeGreaterThan(r.generationBefore);
     expect(r.replayBytes, "recovery must not refetch").toBe(0);
+    expect(r.convergedBefore).toBe(true);
+    expect(r.converged).toBe(true);
+    expect(r.lodFrameBefore).toBeGreaterThan(0);
+    expect(r.lodFrameAfter).toBeGreaterThan(0);
+    expect(r.coveredBefore).toBeGreaterThan(0);
+    expect(r.coveredAfter).toBeGreaterThan(0);
     expect(r.identical || r.ssim >= 0.999, `identical=${r.identical} ssim=${r.ssim}`).toBe(true);
     void stats;
   });
