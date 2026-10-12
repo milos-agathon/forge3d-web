@@ -2,6 +2,8 @@ import { type JsonValue } from './diagnostics.js';
 import type { SceneRecipeInput, TerrainSourceInput, RasterOverlayInput, VectorOverlayInput, MapSceneBuildingLayerInput, MapSceneLabelLayerInput, MapScenePointCloudLayerInput, MapSceneTiles3DLayerInput, OrbitCameraInput, LightingPresetInput, OutputSpecInput, ReproducibilityProfileInput } from './map-scene-types.js';
 import type { CameraInput } from './index.js';
 export declare const MAP_SCENE_RECIPE_SCHEMA = "forge3d.mapscene.recipe.v1";
+/** Browser serialization guard; explicit resource/recipe budgets may raise its default. */
+export declare function mapRecipeByteLimit(input: SceneRecipeInput): number;
 export declare function encodeMapData(value: unknown, maxBytes?: number): JsonValue;
 export declare function decodeMapData(value: unknown, maxBytes?: number): unknown;
 export declare function mapCamera(input: CameraInput | OrbitCameraInput): CameraInput;

@@ -1,5 +1,6 @@
 import { Forge3DScene } from './scene.js';
 import { Camera } from './camera.js';
+import { applyMapLighting, mapTerrainOverlays } from './map-settings.js';
 import { TerrainDataset } from './terrain-dataset.js';
 import { VectorLayers } from './vector-layers.js';
 import { MeshLayer } from './mesh.js';
@@ -18,7 +19,7 @@ import { mapProblem, resourceBytes } from './map-validation.js';
 import { mapCamera } from './map-recipe.js';
 import { mapCancelled } from './map-resource-loader.js';
 import type { SceneRecipeInput, PreparedMapResource, PreparedPointSource, MapSceneLabelLayerInput } from './map-scene-types.js';
-import type { TerrainHeightmapInput, TerrainOverlaysInput, ScatterBatchInput } from './index.js';
+import type { TerrainHeightmapInput, ScatterBatchInput } from './index.js';
 export interface PreparedMapLayers {
     scene: Forge3DScene;
     points: PointCloudLayer[];
@@ -40,14 +41,9 @@ export async function prepareMapLayers(input: SceneRecipeInput, resources: Reado
     const vectors = new VectorLayers();
     releases.push(() => vectors.dispose());
     let terrain = input.terrain ? structuredClone(resources.get(input.terrain.source.id)?.value) as TerrainHeightmapInput : undefined;
-    const raster = (input.layers ?? []).filter(l => l.kind === 'raster');
-    if (raster.length && terrain) {
-        const overlay: TerrainOverlaysInput = { ...(terrain.overlays ?? {}), enabled: true, layers: [...terrain.overlays?.layers ?? []] };
-        for (const l of raster) {
-            overlay.layers!.push({ ...l.options, name: l.layerId, image: resources.get(l.source.id)!.value as never });
-            layerObjects[l.layerId] = 1;
-        }
-        terrain.overlays = overlay;
+    if (terrain) {
+        const overlays = mapTerrainOverlays(input, terrain, resources);
+        if (overlays) terrain.overlays = overlays;
     }
     try {
         if (terrain) {
@@ -68,19 +64,7 @@ export async function prepareMapLayers(input: SceneRecipeInput, resources: Reado
             scene.setLightingProbes(input.lightingProbes);
         if (input.shadows)
             scene.setShadows(input.shadows, input.cascadedShadows);
-        if (input.lighting) {
-            scene.clearLights();
-            const p = input.lighting;
-            if (p.lights)
-                for (const l of p.lights)
-                    scene.addLight(l);
-            else {
-                const colors = { default: [1, 1, 1], daylight: [1, 0.95, 0.85], overcast: [0.8, 0.85, 1], sunset: [1, 0.55, 0.25] } as const;
-                if (!((p.name ?? 'default') in colors))
-                    throw Error('Unknown MapScene lighting preset');
-                scene.addLight({ type: 'directional', direction: p.sunDirection ?? [-0.4, -1, -0.5], color: [...colors[p.name ?? 'default']], intensity: p.intensity ?? 1 });
-            }
-        }
+        if (input.lighting) applyMapLighting(scene, input.lighting);
         const labelLayers = (input.layers ?? []).filter(l => l.kind === 'labels');
         let atlas: FontAtlas | undefined;
         if (labelLayers.length) {
@@ -94,7 +78,7 @@ export async function prepareMapLayers(input: SceneRecipeInput, resources: Reado
             const value = 'source' in l ? resources.get(l.source.id)?.value : undefined;
             try {
                 switch (l.kind) {
-                    case 'raster': break;
+                    case 'raster': layerObjects[l.layerId] = 1; break;
                     case 'vector':
                         vectors.add(value as never);
                         layerObjects[l.layerId] = (value as {
@@ -164,7 +148,9 @@ export async function prepareMapLayers(input: SceneRecipeInput, resources: Reado
                         if (plan.rejected.length)
                             diagnostics.push(labelRejectionSummaryDiagnostic(rejectionCounts, { layer_id: l.layerId }));
                         const result = label.addPlan(plan, l.style);
-                        diagnostics.push(...result.diagnostics.map(d => new Diagnostic({ ...d, layer_id: l.layerId } as DiagnosticInput)));
+                        // MapScene emits the native rejection factory above; addPlan
+                        // also returns the W13 plan summary, so do not emit it twice.
+                        diagnostics.push(...result.diagnostics.filter(d => d.code !== 'label_rejection_summary').map(d => new Diagnostic({ ...d, layer_id: l.layerId } as DiagnosticInput)));
                         if (l.coordinateSpace === 'world')
                             for (const item of label.snapshot().labels)
                                 label.updateLabel(item.id, { position: camera.screenToWorld(item.position[0], item.position[1], item.position[2], input.output) });

@@ -15,7 +15,7 @@ for (const dist of [false, true]) {
             test.setTimeout(120000);
             const result = await page.evaluate(() => window.__w18.renderExample());
             expect(result.status).toBe('ok');
-            expect(result.layers).toEqual(['annotation', 'buildings', 'imagery', 'instances', 'labels', 'mesh', 'points', 'roads', 'terrain']);
+            expect(result.layers).toEqual(['annotation', 'buildings', 'imagery', 'instances', 'labels', 'mesh', 'roads', 'terrain']);
             expect(result.coverage).toBeGreaterThan(1000);
             await expect(page.locator('#download')).toBeEnabled();
             await info.attach('mapscene.png', { body: await page.locator('canvas').screenshot(), contentType: 'image/png' });
@@ -31,18 +31,52 @@ for (const dist of [false, true]) {
             for (const [layer, pixels] of Object.entries(differences))
                 expect(pixels, layer).toBeGreaterThan(0);
         });
-        test(`W18 ${label}: point depth occludes hidden translucent points with a negative control`, async ({ page }) => {
-            const r = await page.evaluate(async () => { const { api, baseRecipe, renderRecipe } = window.__w18, r = baseRecipe(); r.camera = { position: [0, 0, 10], target: [0, 0, 0], up: [0, 1, 0], fovYDegrees: 45, near: .1, far: 100 }; delete r.terrain; delete r.lighting; r.layers = [{ kind: 'nodes', layerId: 'wall', nodes: [{ kind: 'text-mesh', name: 'wall', text: 'wall', size: 1, vertices: new Float32Array([-5, -5, 0, 5, -5, 0, -5, 5, 0, -5, 5, 0, 5, -5, 0, 5, 5, 0]), color: [0, .2, 1, 1] }] }]; const base = await renderRecipe(api, r), point = { kind: 'point-cloud', layerId: 'points', source: { id: 'p', format: 'points', crs: 'LOCAL', data: { positions: new Float32Array([0, 0, -1]), colors: new Uint8Array([255, 0, 0]) } }, style: { pointSize: 32, opacity: .5 } }; r.layers.push(point); const hidden = await renderRecipe(api, r); point.source.data.positions[2] = 1; const front = await renderRecipe(api, r); return { hiddenDiff: hidden.data.reduce((n: number, v: number, i: number) => n + (v !== base.data[i] ? 1 : 0), 0), frontDiff: front.data.reduce((n: number, v: number, i: number) => n + (v !== base.data[i] ? 1 : 0), 0), points: front.metrics.pointCount }; });
-            expect(r.hiddenDiff).toBe(0);
-            expect(r.frontDiff).toBeGreaterThan(200);
-            expect(r.points).toBe(1);
+        test(`W18 ${label}: M02b blocks nonempty points and tiles before network or GPU creation`, async ({ page }) => {
+            const r = await page.evaluate(async () => {
+                const { api, baseRecipe } = window.__w18, gpu = navigator.gpu, request = gpu.requestAdapter.bind(gpu), fetcher = window.fetch;
+                let requests = 0, fetches = 0; gpu.requestAdapter = async () => { requests++; throw Error('unexpected GPU request'); }; window.fetch = async () => { fetches++; throw Error('unexpected fetch'); };
+                const records = [];
+                try {
+                    for (const layer of [
+                        { kind: 'point-cloud', layerId: 'points', source: { id: 'p', format: 'points', crs: 'LOCAL', data: { positions: new Float32Array([0, 10, 0]) } }, supportLevel: 'supported' },
+                        { kind: 'point-cloud', layerId: 'las', source: { id: 'las', format: 'las', crs: 'LOCAL', url: new URL('/tests/fixtures/w16/tiny.las', location.href).href } },
+                        { kind: 'tiles3d', layerId: 'tiles', source: { id: 't', format: 'tileset.json', crs: 'LOCAL', url: new URL('/tests/fixtures/w16/tileset.json', location.href).href } },
+                    ]) {
+                        const recipe = baseRecipe(); recipe.layers = [layer]; const s = new api.MapScene(recipe), before = s.validate().toJSON(), prepared = (await s.prepare()).toJSON();
+                        let code; try { await s.render(); } catch (e: any) { code = e.code; }
+                        records.push({ before, prepared, code, review: await s.reviewRecord(), memory: s.getMemoryReport() }); s.dispose();
+                    }
+                } finally { gpu.requestAdapter = request; window.fetch = fetcher; }
+                return { records, requests, fetches };
+            });
+            expect(r.requests).toBe(0); expect(r.fetches).toBe(0);
+            for (const [i, row] of r.records.entries()) {
+                expect(row.before.status).toBe('error'); expect(row.prepared).toEqual(row.before);
+                expect(row.before.diagnostics.map((d: any) => d.code)).toContain(i === 2 ? 'python_public_3dtiles_incomplete' : 'placeholder_fallback');
+                expect(row.code).toBe('UNSUPPORTED_FEATURE'); expect(row.review.last_render).toBeNull(); expect(row.review.renderable).toBe(false); expect(row.memory.gpuBytes).toBe(0);
+            }
         });
-        test(`W18 ${label}: W16 tiles select, decode and render through MapScene`, async ({ page }) => {
-            const r = await page.evaluate(async () => { const { api, baseRecipe, renderRecipe } = window.__w18, r = baseRecipe(); r.layers = [{ kind: 'tiles3d', layerId: 'tiles', source: { id: 'tileset', format: 'tileset.json', crs: 'LOCAL', url: new URL('/tests/fixtures/w16/tileset.json', location.href).href }, traversal: { sseThreshold: .1 } }]; return await renderRecipe(api, r); });
-            expect(r.report.status).toBe('ok');
-            expect(r.layers).toContain('tiles');
-            expect(r.metrics.coveragePixels).toBeGreaterThan(1000);
-            expect(r.metrics.pointCount).toBeGreaterThan(0);
+        test(`W18 ${label}: JSON settings errors block during preflight without GPU work`, async ({ page }) => {
+            const rows = await page.evaluate(async () => {
+                const { api, baseRecipe } = window.__w18, gpu = navigator.gpu, request = gpu.requestAdapter.bind(gpu);
+                let requests = 0; gpu.requestAdapter = async () => { requests++; throw Error('unexpected GPU request'); };
+                const rows = [];
+                try {
+                    for (const setting of ['camera', 'lighting', 'opacity', 'overlay-key', 'overlay-count', 'label-style']) {
+                        const r = baseRecipe();
+                        if (setting === 'camera') r.camera = { kind: 'orbit-camera', target: [0, 0, 0], distance: 50, elevation: 80, fov: 10 };
+                        if (setting === 'lighting') r.lighting = { name: 'bogus' };
+                        if (setting.startsWith('op') || setting.startsWith('overlay')) r.layers = Array.from({ length: setting === 'overlay-count' ? 9 : 1 }, (_, i) => ({ kind: 'raster', layerId: 'overlay-' + i, source: { id: 'image-' + i, format: 'rgba', crs: 'LOCAL', data: { width: 1, height: 1, data: new Uint8Array([255, 0, 0, 255]) } }, options: setting === 'opacity' ? { opacity: 7 } : setting === 'overlay-key' ? { typo: true } : {} }));
+                        if (setting === 'label-style') r.layers = [{ kind: 'labels', layerId: 'labels', source: { id: 'l', format: 'labels', crs: 'LOCAL', data: [{ id: 'a', text: 'A', position: [10, 10, 0] }] }, style: { font_size: 80 } }];
+                        const s = api.MapScene.fromJSON(new api.SceneRecipe(r).serialize()), preflight = s.validate().toJSON(), prepared = (await s.prepare()).toJSON();
+                        let code; try { await s.render(); } catch (e: any) { code = e.code; }
+                        rows.push({ setting, preflight, prepared, code, review: await s.reviewRecord() }); s.dispose();
+                    }
+                } finally { gpu.requestAdapter = request; }
+                return { rows, requests };
+            });
+            expect(rows.requests).toBe(0);
+            for (const row of rows.rows) { expect(row.preflight.status).toBe('error'); expect(row.prepared).toEqual(row.preflight); expect(row.code).toBe('UNSUPPORTED_FEATURE'); expect(row.review.last_render).toBeNull(); expect(row.review.renderable).toBe(false); }
         });
         test(`W18 ${label}: validation and policies block before GPU creation`, async ({ page }) => {
             const r = await page.evaluate(async () => { const { api, baseRecipe } = window.__w18, recipe = baseRecipe(); recipe.layers = [{ kind: 'diagnostic', layerId: 'pro', feature: 'product', supportLevel: 'Pro-gated' }, { kind: 'unknown', layerId: 'unknown' }]; const s = new api.MapScene(recipe); let code; try {
@@ -84,6 +118,18 @@ for (const dist of [false, true]) {
             expect(r.record.last_render).toBeNull();
             expect(r.record.renderable).toBe(false);
             expect(r.memory.gpuBytes).toBe(0);
+        });
+        test(`W18 ${label}: warning policy retains label rejection reports and blocks strict output`, async ({ page }) => {
+            const r = await page.evaluate(async () => {
+                const { api, baseRecipe } = window.__w18, r = baseRecipe();
+                r.layers = [{ kind: 'labels', layerId: 'labels', source: { id: 'l', format: 'labels', crs: 'LOCAL', data: [{ id: 'city', text: 'Alpha', position: [120, 120, 0] }, { id: 'title', text: 'Beta', position: [24, 24, 0] }] }, keepouts: [{ region_id: 'title', kind: 'title', bounds: [0, 0, 64, 64], priority: 100 }] }];
+                const accepted = new api.MapScene(r), rendered = await accepted.render(), record = await accepted.reviewRecord(); accepted.dispose();
+                r.renderPolicy = 'fail_on_warning'; const blocked = new api.MapScene(r); let code; try { await blocked.render(); } catch (e: any) { code = e.code; }
+                const strict = await blocked.reviewRecord(), report = blocked.lastValidationReport.toJSON(), memory = blocked.getMemoryReport(); blocked.dispose();
+                return { status: rendered.report.status, codes: rendered.report.diagnostics.map((d: any) => d.code), png: rendered.blob.type, coverage: rendered.metrics.coveragePixels, record, strict, report, code, memory };
+            });
+            expect(r.status).toBe('warning'); expect(r.codes).toEqual(['label_rejection_summary']); expect(r.png).toBe('image/png'); expect(r.coverage).toBeGreaterThan(1000); expect(r.record.last_render).not.toBeNull();
+            expect(r.report.status).toBe('warning'); expect(r.code).toBe('UNSUPPORTED_FEATURE'); expect(r.strict.last_render).toBeNull(); expect(r.strict.renderable).toBe(false); expect(r.memory.gpuBytes).toBe(0);
         });
         test(`W18 ${label}: compiled plans preserve priority, keepouts, rejection diagnostics and replay`, async ({ page }) => {
             const r = await page.evaluate(async () => { const { api, baseRecipe } = window.__w18, r = baseRecipe(); r.reproducibility.seed = 1234; r.layers = [{ kind: 'labels', layerId: 'labels', source: { id: 'labels', format: 'labels', crs: 'LOCAL', data: [{ id: 'city', text: 'Alpha', position: [120, 120, 0], priority_class: 'cities' }, { id: 'park', text: 'Park', geometry: { type: 'Polygon', coordinates: [[[150, 150], [190, 150], [190, 180], [150, 180], [150, 150]]] }, priority_class: 'parks' }, { id: 'blocked-title', text: 'Beta', position: [24, 24, 0] }] }, keepouts: [{ region_id: 'title', kind: 'title', bounds: [0, 0, 64, 64], priority: 100 }], priorityRules: [{ name: 'cities', rank: 10 }, { name: 'parks', rank: 5 }] }]; const s = new api.MapScene(r), one = await s.prepare(), plan = s.compiledLabelPlans.labels, two = await s.prepare(), review = await s.reviewRecord(); const result = await s.render(); const restored = api.MapScene.fromJSON(s.toJSON()); await restored.prepare(); const replay = restored.compiledLabelPlans.labels; s.dispose(); restored.dispose(); return { one: one.toJSON(), two: two.toJSON(), plan, replay, review, png: result.blob.type }; });

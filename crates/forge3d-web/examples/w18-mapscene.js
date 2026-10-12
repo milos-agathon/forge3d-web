@@ -16,7 +16,6 @@ export function fullRecipe(api) {
         { kind: 'mesh', layerId: 'mesh', source: { id: 'mesh', format: 'mesh', crs: 'LOCAL', data: box }, transforms: transform(-5, 5, 2, 2) },
         { kind: 'buildings', layerId: 'buildings', source: { id: 'buildings', format: 'buildings', crs: 'LOCAL', data: [{ id: 'warehouse', mesh: box }] }, transforms: transform(5, 5, 2, 3) },
         { kind: 'scatter', layerId: 'instances', batches: [{ name: 'instances', levels: [{ mesh: box }], transforms: transform(0, 7, -5, 2), color: [.1, .9, .4, 1] }] },
-        { kind: 'point-cloud', layerId: 'points', source: { id: 'points', format: 'points', crs: 'LOCAL', data: { positions: new Float32Array([0, 10, 0, -6, 8, 0]), colors: new Uint8Array([255, 0, 255, 255, 180, 0]) } }, style: { pointSize: 12 } },
         { kind: 'labels', layerId: 'labels', source: { id: 'labels', format: 'labels', crs: 'LOCAL', data: [{ id: 'title', text: 'Harbor', geometry: { type: 'Point', coordinates: [36, 26, 0] } }] }, style: { fontSize: 15, color: [1, 1, 1, 1], haloWidth: 0 } },
         { kind: 'nodes', layerId: 'annotation', nodes: [{ kind: 'overlay', name: 'annotation', bounds: [218, 14, 28, 14], color: [1, .2, .1, .7] }] },
     ];

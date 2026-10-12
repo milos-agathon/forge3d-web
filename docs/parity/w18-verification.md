@@ -1,6 +1,12 @@
-# W18 implementation verification
+# Historical W18 implementation verification
 
-W18 implements M01, M02a and the M02b diagnostic contract in the worktree
+This record describes the implementation before the W18 review. Its MapScene
+point/tiles promotion and 94-definition coverage claim were rejected by that
+review. They are superseded by [the review fixes](w18-review-fixes.md); the raw
+historical test reports below remain evidence of what ran, not current M02b
+acceptance. MapScene point-cloud and tiles3d now retain blocking diagnostics.
+
+The original implementation claimed M01, M02a and the M02b diagnostic contract in the worktree
 `C:\Users\milos\.codex\worktrees\w18-mapscene\forge3d-web`, branch
 `codex/w18-mapscene`. Implementation commits are `5816826` and `1ed6e66`.
 
@@ -8,8 +14,8 @@ The [public contracts](../../crates/forge3d-web/docs/mapscene-diagnostics.md) co
 owned typed recipes, validation, completed layer adapters, real raster/point/trace
 PNG output, cancellation, disposal and deterministic review JSON. The
 [native audit](../../crates/forge3d-web/docs/w18-evidence.md) and
-[94-definition coverage ledger](../../crates/forge3d-web/docs/w18-native-test-coverage.json)
-record independent source/fixture verification and the seven W19-owned cases.
+[current 106-definition assertion ledger](../../crates/forge3d-web/docs/w18-native-test-coverage.json)
+now record the corrected audit and explicit assertion ownership.
 
 Verified on 2026-10-12:
 

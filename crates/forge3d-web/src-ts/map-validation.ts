@@ -10,12 +10,16 @@ import { Forge3DScene } from './scene.js';
 import { normalizeTerrainOverlays } from './terrain-overlay.js';
 import { iblFromSnapshot } from './ibl.js';
 import { Diagnostic, LayerSummary, ValidationReport, type SupportLevel } from './diagnostics.js';
-import { diagnosticFor, supportDiagnostic, validateLabelSupport, crsMismatchDiagnostic, estimatedGpuMemoryDiagnostic, placeholderFallbackDiagnostic, unavailableCacheLodStatsDiagnostic, unsupportedInstancingPathDiagnostic, vtUnsupportedFamilyDiagnostic } from './diagnostic-paths.js';
+import { diagnosticFor, supportDiagnostic, validateLabelSupport, crsMismatchDiagnostic, estimatedGpuMemoryDiagnostic, placeholderFallbackDiagnostic, vtUnsupportedFamilyDiagnostic } from './diagnostic-paths.js';
 import type { BuildingDiagnostic } from './building-diagnostics.js';
 import type { PointData } from './pointcloud-types.js';
-import { mapCamera, encodeMapData } from './map-recipe.js';
+import { mapCamera, encodeMapData, mapRecipeByteLimit } from './map-recipe.js';
+import { applyMapLighting, mapTerrainOverlays, validateMapSettings } from './map-settings.js';
+import { mapAvailability, nativeMapLayerType, mapLargeSceneSummary, mapBuildingOptions } from './map-support-details.js';
+import { pythonPublic3dtilesIncompleteDiagnostic, unsupportedTileFormatDiagnostic, unsupportedTileFeatureDiagnostic } from './diagnostic-paths.js';
+import { diagnoseBuildingTextures } from './building-diagnostics.js';
 import { MAP_SCENE_LAYER_KINDS } from './map-support.js';
-import type { MapResource, MapSceneResourceSummary, SceneRecipeInput, PreparedMapResource, MapSceneLayerInput } from './map-scene-types.js';
+import type { MapResource, MapSceneResourceSummary, SceneRecipeInput, PreparedMapResource, MapSceneLayerInput, MapLayerBase } from './map-scene-types.js';
 import type { TerrainHeightmapInput } from './index.js';
 import type { LabelPlanData } from './label-types.js';
 export const MAP_SCENE_DEFAULT_BUDGET = 512 * 1024 * 1024;
@@ -23,7 +27,7 @@ export const MAP_SCENE_DEFAULT_RESOURCE_LIMIT = 64 * 1024 * 1024;
 export function mapBuildingDiagnostic(d: BuildingDiagnostic, layerId: string): Diagnostic {
     const scope = { layer_id: layerId, object_id: d.objectId };
     if (d.code === 'unsupported_feature')
-        return mapProblem(d.code, 'Building textured PBR render path is not supported.', layerId, d.details);
+        return new Diagnostic({ ...mapProblem(d.code, 'Building textured PBR render path is not supported.', layerId, d.details).toJSON(), object_id: d.objectId });
     return diagnosticFor(d.code, d.details, scope);
 }
 export function mapProblem(code: string, message: string, layerId: string | null = null, details: Record<string, unknown> = {}, severity: 'error' | 'fatal' | 'warning' | 'info' = 'error', level: SupportLevel = 'unsupported'): Diagnostic {
@@ -63,7 +67,7 @@ export function validateMapRecipe(input: SceneRecipeInput, prepared: ReadonlyMap
     report: ValidationReport;
     resources: MapSceneResourceSummary[];
 } {
-    const diagnostics = [...extra], summaries: LayerSummary[] = [];
+    const diagnostics = [...extra, ...validateMapSettings(input)], summaries: LayerSummary[] = [];
     const resources: MapSceneResourceSummary[] = [];
     for (const d of extra)
         if (d.support_level === 'experimental')
@@ -75,7 +79,7 @@ export function validateMapRecipe(input: SceneRecipeInput, prepared: ReadonlyMap
             diagnostics.push(mapProblem('unsupported_recipe_field', 'A requested recipe field has no adapter.', layerId, { field: key })); };
     fields(input, ['terrain', 'layers', 'camera', 'crs', 'lighting', 'output', 'renderPolicy', 'diagnosticsPolicy', 'reproducibility', 'environment', 'postFx', 'shadows', 'cascadedShadows', 'lightingProbes', 'materials', 'ibl', 'timeSeconds', 'runtimeOptions', 'mapFurniture'], null);
     if (input.diagnosticsPolicy)
-        fields(input.diagnosticsPolicy, ['gpuMemoryBudgetBytes', 'maxResourceBytes', 'maxLayers', 'largeSceneSummary'], null);
+        fields(input.diagnosticsPolicy, ['gpuMemoryBudgetBytes', 'maxResourceBytes', 'maxRecipeBytes', 'maxLayers', 'maxOutputPixels', 'largeSceneSummary'], null);
     if (input.reproducibility)
         fields(input.reproducibility, ['seed', 'rendererBackend', 'pixelTolerance', 'assetHashesOrIds'], null);
     if (input.terrain)
@@ -84,8 +88,13 @@ export function validateMapRecipe(input: SceneRecipeInput, prepared: ReadonlyMap
         fields(input.lighting, ['name', 'lights', 'sunDirection', 'intensity'], null);
     if (input.runtimeOptions)
         fields(input.runtimeOptions, ['powerPreference', 'wasmUrl', 'clearColor', 'alphaMode', 'colorSpace', 'diagnostics', 'quality', 'overflowPolicy', 'timestampMode'], null);
+    const featureDiagnostics: Record<string, SupportLevel> = {};
     let estimate = 0;
     const preview = Forge3DScene.create();
+    if (input.lighting) {
+        try { applyMapLighting(preview, input.lighting); }
+        catch (error) { diagnostics.push(mapProblem('invalid_lighting', String(error))); }
+    }
     try {
         if (input.timeSeconds !== undefined)
             preview.setTimeSeconds(input.timeSeconds);
@@ -122,6 +131,10 @@ export function validateMapRecipe(input: SceneRecipeInput, prepared: ReadonlyMap
     const maxResource = input.diagnosticsPolicy?.maxResourceBytes ?? MAP_SCENE_DEFAULT_RESOURCE_LIMIT;
     if (!Number.isSafeInteger(maxResource) || maxResource < 1)
         diagnostics.push(mapProblem('invalid_resource_limit', 'Resource limit must be a positive safe integer.'));
+    for (const key of ['maxRecipeBytes', 'maxLayers', 'maxOutputPixels'] as const) {
+        const limit = input.diagnosticsPolicy?.[key];
+        if (limit !== undefined && (!Number.isSafeInteger(limit) || limit < 1)) diagnostics.push(mapProblem('invalid_resource_limit', 'Browser guard limits must be positive safe integers.', null, { field: key }));
+    }
     const output = input.output;
     if (output)
         fields(output, ['width', 'height', 'format'], null);
@@ -129,8 +142,8 @@ export function validateMapRecipe(input: SceneRecipeInput, prepared: ReadonlyMap
         diagnostics.push(mapProblem('invalid_output_size', 'Output dimensions must be positive integers.', null, {}, 'fatal'));
     else {
         estimate += output.width * output.height * 64;
-        if (output.width * output.height > 16777216)
-            diagnostics.push(mapProblem('resource_limit_exceeded', 'Map output exceeds the 16-megapixel limit.', null, {}, 'fatal'));
+        if (!Number.isSafeInteger(output.width * output.height) || output.width * output.height > (input.diagnosticsPolicy?.maxOutputPixels ?? 16777216))
+            diagnostics.push(mapProblem('resource_limit_exceeded', 'Map output exceeds its configured pixel limit.', null, {}, 'fatal'));
     }
     if (output?.format !== undefined && output.format !== 'png')
         diagnostics.push(mapProblem('unsupported_output_format', 'MapScene output format is not supported.', null, { format: output.format }, 'fatal'));
@@ -160,20 +173,51 @@ export function validateMapRecipe(input: SceneRecipeInput, prepared: ReadonlyMap
     const terrainResource = input.terrain?.source;
     const terrain = (terrainResource ? prepared.get(terrainResource.id)?.value ?? terrainResource.data : undefined) as TerrainHeightmapInput | undefined;
     const sceneCrs = input.crs ?? terrainResource?.crs ?? terrain?.crs;
-    const inspect = (layerId: string, kind: string, source: MapResource | undefined, value: unknown, layer?: MapSceneLayerInput) => {
+    const inspect = (layerId: string, kind: string, source: MapResource | undefined, value: unknown, layer?: MapSceneLayerInput | (MapLayerBase & { kind: 'terrain' })) => {
         let level: SupportLevel = layer?.supportLevel ?? 'supported', bytes = source ? prepared.get(source.id)?.bytes ?? resourceBytes(value) : resourceBytes(value), objects: number | null = null;
         if (!layerId || ids.has(layerId))
             diagnostics.push(mapProblem('duplicate_layer_id', 'Layer IDs must be unique and nonempty.', layerId));
         ids.add(layerId);
-        if (layer?.instancingPath)
-            diagnostics.push(unsupportedInstancingPathDiagnostic(layer.instancingPath, { layer_id: layerId }));
-        if (layer?.requestedStats?.length)
-            diagnostics.push(unavailableCacheLodStatsDiagnostic(kind, layer.requestedStats, { layer_id: layerId }));
-        const legacyStats = layer?.metadata?.unavailable_cache_lod_stats, legacyInstancing = layer?.metadata?.instancing;
-        if (Array.isArray(legacyStats) && legacyStats.length)
-            diagnostics.push(unavailableCacheLodStatsDiagnostic(kind, legacyStats.map(String), { layer_id: layerId }));
-        if (legacyInstancing && typeof legacyInstancing === 'object' && !Array.isArray(legacyInstancing) && legacyInstancing.requested)
-            diagnostics.push(unsupportedInstancingPathDiagnostic(String(legacyInstancing.path ?? 'product instancing'), { layer_id: layerId }));
+        const availability = mapAvailability(kind, layerId, layer);
+        diagnostics.push(...availability.diagnostics);
+        const details: Record<string, unknown> = { resource_id: source?.id ?? null, ...availability.details };
+        if (availability.diagnostics.some(d => d.code === 'unavailable_cache_lod_stats')) featureDiagnostics[`${nativeMapLayerType(kind)}.cache_lod_stats`] = 'underdeveloped';
+        if (availability.diagnostics.some(d => d.code === 'unsupported_instancing_path')) featureDiagnostics[`${nativeMapLayerType(kind)}.instancing`] = 'unsupported';
+        if (kind === 'point-cloud') {
+            diagnostics.push(placeholderFallbackDiagnostic('point cloud MapScene render path', { layer_id: layerId }));
+            featureDiagnostics['point_cloud.mapscene_render'] = 'placeholder/fallback';
+        }
+        if (kind === 'tiles3d') {
+            details.source_kind = source?.format ?? null;
+            for (const key of ['cache_budget', 'cache_stats', 'lod']) if (layer?.metadata?.[key] !== undefined) details[key] = layer.metadata[key];
+            if (source && !formats.tiles3d!.includes(source.format)) {
+                diagnostics.push(unsupportedTileFormatDiagnostic(source.format, { layer_id: layerId }));
+                featureDiagnostics['tiles3d.format'] = 'unsupported';
+            } else {
+                diagnostics.push(pythonPublic3dtilesIncompleteDiagnostic({ layer_id: layerId }));
+                featureDiagnostics['tiles3d.public_python_render'] = 'underdeveloped';
+            }
+            const features = layer?.metadata?.unsupported_features;
+            for (const feature of Array.isArray(features) ? features : []) {
+                diagnostics.push(unsupportedTileFeatureDiagnostic(String(feature), { layer_id: layerId }));
+                featureDiagnostics['tiles3d.feature'] = 'unsupported';
+            }
+            if (value && typeof value === 'object' && 'root' in value) {
+                const count = (node: any): number => 1 + (node?.children ?? []).reduce((n: number, child: unknown) => n + count(child), 0);
+                details.tile_count = count((value as any).root);
+            }
+        }
+        let textureSupport: SupportLevel | undefined;
+        if (kind === 'buildings' && layer?.kind === 'buildings') {
+            const texture = diagnoseBuildingTextures(mapBuildingOptions(layer).textures ?? [], layer.options?.proGated);
+            if (texture.texturedMaterials.length) {
+                diagnostics.push(...texture.diagnostics.map(d => mapBuildingDiagnostic(d, layerId)));
+                textureSupport = texture.supportLevel;
+                details.textured_material_status = texture.texturedMaterialStatus;
+                details.textured_materials = texture.texturedMaterials.map(t => ({ material_id: t.materialId, object_id: t.objectId, albedo_texture: t.albedoTexture ?? null, texture_format: t.textureFormat ?? t.albedoTexture?.split('.').at(-1) ?? '', uv_available: t.uvAvailable, scalar_fallback: t.scalarFallback ?? false }));
+                Object.assign(featureDiagnostics, texture.unsupportedFeatures);
+            }
+        }
         if (layer?.supportLevel) {
             const d = supportDiagnostic(kind, level, { layer_id: layerId });
             if (d)
@@ -205,13 +249,11 @@ export function validateMapRecipe(input: SceneRecipeInput, prepared: ReadonlyMap
                 const crs = source.crs ?? (value as {
                     crs?: string;
                 } | undefined)?.crs;
-                if (!sceneCrs || !crs)
+                if (typeof sceneCrs !== 'string' || !sceneCrs.trim() || typeof crs !== 'string' || !crs.trim())
                     diagnostics.push(mapProblem('missing_crs', 'Explicit scene and layer CRS metadata are required.', layerId, { scene_crs: sceneCrs ?? null, layer_crs: crs ?? null }));
                 else if (sceneCrs.trim().toUpperCase() !== crs.trim().toUpperCase())
                     diagnostics.push(crsMismatchDiagnostic(sceneCrs, crs, { layer_id: layerId }));
-                const signature = JSON.stringify(encodeMapData(kind === 'buildings' ? { source, options: (layer as Extract<MapSceneLayerInput, {
-                        kind: 'buildings';
-                    }>).options ?? {} } : source));
+                const signature = JSON.stringify(encodeMapData(kind === 'buildings' && layer?.kind === 'buildings' ? { source, options: mapBuildingOptions(layer) } : source, mapRecipeByteLimit(input)));
                 if (resourceIds.has(source.id) && resourceIds.get(source.id) !== signature)
                     diagnostics.push(mapProblem('duplicate_resource_id', 'Conflicting resources share an identity.', layerId, { resource_id: source.id }));
                 if (!resourceIds.has(source.id)) {
@@ -220,6 +262,8 @@ export function validateMapRecipe(input: SceneRecipeInput, prepared: ReadonlyMap
                 }
                 else
                     resources.find(r => r.id === source.id)!.layerIds.push(layerId);
+                if (source.maxBytes !== undefined && (!Number.isSafeInteger(source.maxBytes) || source.maxBytes < 1))
+                    diagnostics.push(mapProblem('invalid_resource_limit', 'Resource limit must be a positive safe integer.', layerId, { field: 'source.maxBytes' }));
                 if (bytes > (source.maxBytes ?? maxResource))
                     diagnostics.push(mapProblem('resource_limit_exceeded', 'Resource exceeds its byte limit.', layerId, { bytes, limit: source.maxBytes ?? maxResource }));
             }
@@ -240,7 +284,7 @@ export function validateMapRecipe(input: SceneRecipeInput, prepared: ReadonlyMap
                             break;
                         }
                         case 'raster':
-                            normalizeTerrainOverlays({ enabled: true, layers: [{ image: value as never }] });
+                            normalizeTerrainOverlays({ enabled: true, layers: [{ ...(layer?.kind === 'raster' ? layer.options : {}), image: value as never }] });
                             if (!input.terrain)
                                 throw Error('Raster overlays require terrain');
                             break;
@@ -272,13 +316,11 @@ export function validateMapRecipe(input: SceneRecipeInput, prepared: ReadonlyMap
                         }
                         case 'buildings':
                             if (Array.isArray(value) || value instanceof BuildingLayer) {
-                                const b = value instanceof BuildingLayer ? value : new BuildingLayer(value as never, (layer as {
-                                    options?: never;
-                                }).options);
+                                const b = value instanceof BuildingLayer ? value : new BuildingLayer(value as never, mapBuildingOptions(layer as Extract<MapSceneLayerInput, { kind: 'buildings' }>));
                                 try {
                                     objects = b.buildingCount;
                                     bytes = b.cpuBytes;
-                                    diagnostics.push(...b.validate().diagnostics.map(d => mapBuildingDiagnostic(d, layerId)));
+                                    if (!details.textured_materials) diagnostics.push(...b.validate().diagnostics.map(d => mapBuildingDiagnostic(d, layerId)));
                                 }
                                 finally {
                                     if (b !== value)
@@ -371,19 +413,23 @@ export function validateMapRecipe(input: SceneRecipeInput, prepared: ReadonlyMap
             level = support.support_level!;
         else if (layerDiagnostics.some(d => d.severity === 'error' || d.severity === 'fatal'))
             level = layer?.supportLevel ?? 'unsupported';
-        estimate += bytes * 2;
+        if (textureSupport) level = textureSupport;
+        const memoryEstimate = source && value === undefined && !prepared.has(source.id) ? (typeof layer?.metadata?.memory_estimate_bytes === 'number' && Number.isSafeInteger(layer.metadata.memory_estimate_bytes) && layer.metadata.memory_estimate_bytes >= 0 ? layer.metadata.memory_estimate_bytes : null) : bytes * 2;
+        estimate += memoryEstimate ?? 0;
         const plan = execution?.plans[layerId];
-        summaries.push(new LayerSummary({ layer_id: layerId, layer_type: kind, support_level: level, diagnostic_codes: layerDiagnostics.map(d => d.code), object_count: objects, memory_estimate_bytes: bytes * 2, details: { resource_id: source?.id ?? null, ...(plan ? { compiled_label_plan: { accepted_count: plan.accepted.length, rejected_count: plan.rejected.length, seed: plan.seed } } : {}) } }));
+        summaries.push(new LayerSummary({ layer_id: layerId, layer_type: nativeMapLayerType(kind), support_level: level, diagnostic_codes: layerDiagnostics.map(d => d.code), object_count: objects, memory_estimate_bytes: memoryEstimate, details: { ...details, ...(plan ? { compiled_label_plan: { accepted_count: plan.accepted.length, rejected_count: plan.rejected.length, seed: plan.seed } } : {}) } }));
     };
-    if (input.terrain?.requestedStats?.length)
-        diagnostics.push(unavailableCacheLodStatsDiagnostic('terrain', input.terrain.requestedStats, { layer_id: 'terrain' }));
+    // Add merged overlay failures before building summaries so their support
+    // status and diagnostic_codes cannot claim success after preflight failed.
+    try { mapTerrainOverlays(input, terrain, prepared, true); }
+    catch (error) { diagnostics.push(mapProblem('invalid_layer', String(error), (input.layers ?? []).find(l => l?.kind === 'raster')?.layerId ?? 'terrain')); }
     const vt = terrain?.material?.virtualTexture;
     if (vt?.enabled)
         for (const family of vt.layers ?? [])
             if (family.family !== undefined && family.family !== 'albedo')
                 diagnostics.push(vtUnsupportedFamilyDiagnostic(family.family, { layer_id: 'terrain' }));
     if (input.terrain)
-        inspect('terrain', 'terrain', terrainResource, terrain);
+        inspect('terrain', 'terrain', terrainResource, terrain, { kind: 'terrain', layerId: 'terrain', ...(input.terrain.requestedStats ? { requestedStats: input.terrain.requestedStats } : {}) });
     const layerFields: Record<string, string[]> = { raster: ['source', 'options'], vector: ['source'], labels: ['source', 'style', 'plan', 'priorityRules', 'typography', 'atlasGlyphs', 'keepouts', 'coordinateSpace'], buildings: ['source', 'options', 'transforms'], mesh: ['source', 'transforms'], 'point-cloud': ['source', 'style', 'traversal', 'origin'], tiles3d: ['source', 'traversal', 'origin'], nodes: ['nodes'], scatter: ['batches'], trace: ['triangles', 'sdf', 'materials', 'lights', 'environment', 'medium', 'samples', 'maxBounces'], diagnostic: ['feature'] };
     for (const [i, layer] of layers.entries()) {
         if (layer && typeof layer === 'object' && !Array.isArray(layer) && typeof layer.kind === 'string' && typeof layer.layerId === 'string') {
@@ -399,11 +445,8 @@ export function validateMapRecipe(input: SceneRecipeInput, prepared: ReadonlyMap
     }
     if (estimate > budget)
         diagnostics.push(estimatedGpuMemoryDiagnostic(estimate, budget));
-    if (input.diagnosticsPolicy?.largeSceneSummary) {
-        const entries = [...(input.terrain ? [{ layer_id: 'terrain', layer_type: 'terrain', requested_stats: [...input.terrain.requestedStats ?? []], instancing_path: null }] : []), ...layers.filter(l => l && typeof l === 'object').map(l => ({ layer_id: l.layerId, layer_type: l.kind, requested_stats: [...l.requestedStats ?? []], instancing_path: l.instancingPath ?? null }))].sort((a, b) => a.layer_id.localeCompare(b.layer_id));
-        summaries.push(new LayerSummary({ layer_id: 'large_scene.resources', layer_type: 'resource-summary', support_level: 'underdeveloped', diagnostic_codes: diagnostics.filter(d => d.code === 'unavailable_cache_lod_stats' || d.code === 'unsupported_instancing_path').map(d => d.code), memory_estimate_bytes: estimate, details: { cache_lod_status: entries, unavailable_stats: entries.filter(e => e.requested_stats.length).map(e => ({ layer_id: e.layer_id, stats: e.requested_stats })), instancing_status: Object.fromEntries(entries.filter(e => e.instancing_path).map(e => [e.layer_id, { path: e.instancing_path, support_level: 'unsupported' }])) } }));
-    }
-    const supported: Record<string, SupportLevel> = { 'mapscene.recipe': 'supported', 'mapscene.validation': 'supported' }, unsupported: Record<string, SupportLevel> = {};
+    if (input.diagnosticsPolicy?.largeSceneSummary) summaries.push(mapLargeSceneSummary(summaries, estimate, diagnostics));
+    const supported: Record<string, SupportLevel> = { 'mapscene.recipe': 'supported', 'mapscene.validation': 'supported' }, unsupported: Record<string, SupportLevel> = { ...featureDiagnostics };
     for (const s of summaries)
         (s.support_level === 'supported' ? supported : unsupported)[`layer:${s.layer_id}`] = s.support_level;
     return { report: new ValidationReport({ diagnostics, layer_summaries: summaries, estimated_gpu_memory_bytes: estimate, supported_features: supported, unsupported_features: unsupported }), resources: resources.sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0) };

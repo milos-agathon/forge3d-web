@@ -46,7 +46,8 @@ describe('W18 typed recipes and pre-render validation', () => {
         const r = recipe();
         r.layers = [{ kind: 'mesh', layerId: 'mesh', source: { id: 'z', format: 'mesh', crs: 'LOCAL', data: generatePrimitive('box') } }, { kind: 'point-cloud', layerId: 'points', source: { id: 'a', format: 'points', crs: 'LOCAL', data: { positions: new Float32Array([0, 4, 0]), colors: new Uint8Array([255, 0, 0]) } } }];
         const scene = new MapScene(r), report = scene.validate();
-        expect(report.status).toBe('ok');
+        expect(report.status).toBe('error');
+        expect(report.diagnostics.map(d => d.code)).toContain('placeholder_fallback');
         expect(report.layer_summaries.map(s => s.layer_id)).toEqual(['mesh', 'points', 'terrain']);
         expect(scene.resources.map(s => s.id)).toEqual(['a', 'dem', 'z']);
         expect(report.estimated_gpu_memory_bytes).toBeGreaterThan(32 * 24 * 4);
@@ -132,6 +133,8 @@ describe('W18 typed recipes and pre-render validation', () => {
         r.renderPolicy = 'fail_on_warning';
         const blocked = new MapScene(r);
         await expect(blocked.render()).rejects.toMatchObject({ code: 'UNSUPPORTED_FEATURE' });
+        expect(blocked.lastValidationReport?.status).toBe('warning');
+        expect(blocked.lastValidationReport?.diagnostics.map(d => d.code)).toEqual(['estimated_gpu_memory']);
         expect(blocked.getMemoryReport().gpuBytes).toBe(0);
         blocked.dispose();
     });
@@ -144,7 +147,7 @@ describe('W18 typed recipes and pre-render validation', () => {
         r.layers = [{ kind: 'scatter', layerId: 'instances', batches: [], requestedStats: ['lod'], instancingPath: 'product building instances' }];
         const s = new MapScene(r), report = s.validate(), summary = report.layer_summaries.find(l => l.layer_id === 'large_scene.resources')!;
         expect(summary.details.unavailable_stats).toEqual([{ layer_id: 'instances', stats: ['lod'] }, { layer_id: 'terrain', stats: ['cache'] }]);
-        expect(summary.details.instancing_status).toEqual({ instances: { path: 'product building instances', support_level: 'unsupported' } });
+        expect(summary.details.instancing_status).toEqual({ instances: { requested: true, path: 'product building instances', support_level: 'unsupported' } });
         expect(report.diagnostics.filter(d => d.code === 'unavailable_cache_lod_stats')).toHaveLength(2);
         expect(report.layer_summaries.find(l => l.layer_id === 'terrain')).toMatchObject({ support_level: 'underdeveloped', diagnostic_codes: ['unavailable_cache_lod_stats'] });
         expect(report.unsupported_features['layer:terrain']).toBe('underdeveloped');
@@ -216,9 +219,10 @@ describe('W18 resource loading, reports and ownership', () => {
         expect(() => s.validate()).toThrow('disposed');
         s.dispose();
     });
-    it('releases repeated inline point and mesh preparation without retaining old buffers', async () => {
+    it('releases repeated mesh preparation without retaining old buffers', async () => {
         const r = recipe();
         r.layers = [{ kind: 'point-cloud', layerId: 'points', source: { id: 'p', format: 'points', crs: 'LOCAL', data: { positions: new Float32Array([0, 4, 0]), colors: new Uint8Array([255, 0, 0]) } } }, { kind: 'mesh', layerId: 'mesh', source: { id: 'm', format: 'mesh', crs: 'LOCAL', data: generatePrimitive('box') } }];
+        r.layers = r.layers!.filter(l => l.kind !== 'point-cloud');
         const s = new MapScene(r);
         let bytes = 0;
         for (let i = 0; i < 12; i++) {

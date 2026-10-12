@@ -2,12 +2,12 @@
 
 W18 implements M01, M02a and the M02b diagnostic contract. Typed recipes own
 resource loading and execute W02-W17 layer adapters. PNG pixels come from actual
-WebGPU raster/point rendering or an explicitly requested W17 tracing backend.
+WebGPU raster rendering or an explicitly requested W17 tracing backend.
 There is no source-derived image fallback.
 
 ## Independent native audit
 
-The retained final native diagnostics, MapScene, style support source and 20 test
+The retained final native diagnostics, MapScene, style support source and 24 test
 files were re-read from `a55911f021925a3264e476374ce43d1b204f1073` and compared
 with `bf8db93233e5158f6d226991fc5d230832c2d806`. Exact Git blob bytes and hashes
 are retained in `tests/fixtures/w18/native/` and `tests/fixtures/w18/contract.json`.
@@ -15,8 +15,16 @@ The generator executes all 22 native diagnostic factories and the native style
 support function to obtain independent JSON oracles; expected values are never
 made by the TypeScript implementation.
 
-The [native coverage ledger](w18-native-test-coverage.json) names all 94 retained
-test definitions: 87 W18 contracts/workflows and seven cross-task W19 cases.
+The [native coverage ledger](w18-native-test-coverage.json) audits all 106 retained
+test definitions: 99 W18-owned assertion adaptations and seven deferred W19 cases.
+This is an inventory count, not a claim that 106 native tests are fully ported.
+Each entry names the web tests, tested assertion scope, browser substitutions and
+deferred archive/style/catalog assertions. The ledger gate parses actual test
+declarations; a nonempty file is no longer evidence of assertion coverage.
+The four previously omitted P1 tiles, P2 determinism/no-op, memory and bottleneck
+files now have explicit plan owners. Memory summaries belong to M02b; actual GPU
+allocator enforcement remains R07/W02. Seven semantic documentation tests check
+API truth, emitted diagnostic codes, links, support taxonomy and product boundaries.
 W18 ports deterministic diagnostic JSON, support/failure policies, typed recipes,
 CRS/source validation, LabelPlan integration, PNG output, no-op detection and
 product support summaries. Style-to-vector evaluation and ZIP/bundle asset rewrite,
@@ -26,9 +34,12 @@ migration remains W23; W18 consolidates its terrain/raster, vector/labels and sc
 building workflows into the executable MapScene example.
 
 Native migration-stage metadata-only sources and synthetic source-derived images
-are replaced with decoded asset buffers and real rendering. Historical point-cloud,
-vector loader, building and tiles placeholders are promoted only for exercised W12,
-W15 and W16 adapters. Unavailable texture/product instancing/cache telemetry,
+are replaced with decoded asset buffers and real rendering. Accepted W12 vector
+and W15 scalar building adapters render actual buffers. M02b preserves the exact
+point-cloud placeholder_fallback and tiles python_public_3dtiles_incomplete errors
+for every MapScene recipe, including nonempty data and explicit supported intent.
+G02-G04/W16 acceptance and independent laz-perf security sign-off remain pending.
+The gate was not changed. Unavailable texture/product instancing/cache telemetry,
 non-albedo VT, legacy Python 3D Tiles and explicit experimental intent retain
 structured blocking diagnostics. Native standalone experimental/glyph warnings
 keep their original factory severity. Explicit unverified recipe paths cannot turn
@@ -42,8 +53,9 @@ those warnings into a successful render record.
 - `npm run test:api`: package-entrypoint exports, strict source/consumer types and
   public declaration snapshot.
 - `npm run test:w18`: source and dist browser MapScene cases. Checks real multilayer
-  PNG output, one-layer removal changes, point depth occlusion with front/behind
-  controls, W16 tile selection, policy gates, replay/resize/disposal, priority and
+  PNG output, one-layer removal changes, retained M02b gates before fetch/GPU work,
+  JSON camera/style/traversal/raster/lighting errors, warning-policy output,
+  replay/resize/disposal, priority and
   keepout plans, device loss, cancellation after work, external F32/image/vector/
   label/OBJ resources, lighting/post-FX effects and real GPU trace hits.
 - Focused W16 covered-point/picking/resize/recovery/allocation cases verify the
@@ -66,3 +78,19 @@ owners and are not closed by W18.
 See [MapScene and diagnostics](mapscene-diagnostics.md) for public contracts,
 limits and browser substitutions. Bundle save/load and furniture/export have their
 existing W19/W20 ownership.
+
+## Review corrections
+
+The original reports in `docs/parity/w18-runs/` describe the superseded implementation
+that prematurely rendered MapScene points/tiles and used a file-existence coverage
+ledger. They do not establish current M02b conformance. Fresh repair verification
+is recorded in the repository's `docs/parity/w18-review-fixes.md`.
+
+Validation and preparation now use the same merged raster settings, including
+inherited overlays and all layer options. Unknown camera and nested setting keys
+and unknown lighting presets are user diagnostics before rendering. Native building
+texture, cache/LOD and instancing details survive in actual MapScene reports.
+Recipe byte limits honor explicit resource/recipe caps throughout construction and
+JSON replay; bounded base64 scanning avoids stack overflow for large inline DEMs.
+The 64 MiB, 128-layer and 16-megapixel guards are browser defaults; only the 512 MiB
+memory policy is native R07 parity.

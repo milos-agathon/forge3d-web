@@ -148,10 +148,13 @@ export class MapScene {
     render(options: MapSceneRenderOptions = {}): Promise<MapSceneRenderResult> {
         return this.#run(options.signal, async (signal) => {
             this.#lastRender = null;
+            let validationBlocked = false;
             try {
                 let report = this.#ready ? this.validate() : await this.#prepare(signal, options.onProgress);
-                if (report.renderBlocked(this.recipe.value.renderPolicy))
+                if (report.renderBlocked(this.recipe.value.renderPolicy)) {
+                    validationBlocked = true;
                     throw new Forge3DError('UNSUPPORTED_FEATURE', 'MapScene render blocked by diagnostics', { report: report.toJSON() });
+                }
                 if (!this.#layers)
                     throw new Forge3DError('INTERNAL_ERROR', 'MapScene prepared layers unavailable');
                 options.onProgress?.({ phase: 'render', completed: 0, total: 1 });
@@ -196,10 +199,11 @@ export class MapScene {
                 const e = Forge3DError.from(error);
                 this.#lastRender = null;
                 if (!this.#disposed) {
-                    this.#diagnostics.push(mapProblem(e.code === 'REQUEST_CANCELLED' ? 'render_cancelled' : 'render_failed', e.message, null, { error_code: e.code }));
-                    this.validate();
+                    if (validationBlocked) this.#diagnostics.push(...this.#layers?.diagnostics ?? []);
+                    else this.#diagnostics.push(mapProblem(e.code === 'REQUEST_CANCELLED' ? 'render_cancelled' : 'render_failed', e.message, null, { error_code: e.code }));
                 }
                 this.#release();
+                if (!this.#disposed) this.validate();
                 throw e;
             }
         });

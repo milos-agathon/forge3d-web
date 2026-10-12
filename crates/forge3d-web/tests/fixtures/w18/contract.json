@@ -225,6 +225,29 @@
       ]
     },
     {
+      "path": "tests/test_p1_tiles3d_support.py",
+      "sha256": "261620a13651b591c646ce5c02083d2d4b3059f043f8143698b502eebc0e3b8b",
+      "historicalSha256": "261620a13651b591c646ce5c02083d2d4b3059f043f8143698b502eebc0e3b8b",
+      "tests": [
+        "test_tiles3d_public_api_loads_supported_local_tileset_fixture",
+        "test_tiles3d_validation_distinguishes_supported_and_unsupported_formats",
+        "test_tiles3d_cache_statistics_are_exposed_in_layer_summary",
+        "test_tiles3d_lod_and_screen_space_error_config_is_public_metadata",
+        "test_tiles3d_unsupported_b3dm_or_glb_features_produce_typed_diagnostics",
+        "test_tiles3d_docs_state_no_full_cesium_runtime_parity"
+      ]
+    },
+    {
+      "path": "tests/test_p2_determinism_noop.py",
+      "sha256": "0635089af5458895b53523301365fe60a70a73441388068c5e76fed4ca351817",
+      "historicalSha256": "0635089af5458895b53523301365fe60a70a73441388068c5e76fed4ca351817",
+      "tests": [
+        "test_p2_validation_reports_are_deterministic_for_diagnostic_paths",
+        "test_p2_noop_success_paths_block_render",
+        "test_advanced_label_diagnostics_are_deterministic_not_silent_success"
+      ]
+    },
+    {
       "path": "tests/test_p2_diagnostics_contract.py",
       "sha256": "12cb72b7da97b1f6dc7cb618d0f029c69de703d9847bc412ab9db79ab5276d59",
       "historicalSha256": "12cb72b7da97b1f6dc7cb618d0f029c69de703d9847bc412ab9db79ab5276d59",
@@ -236,12 +259,29 @@
       ]
     },
     {
+      "path": "tests/test_p2_large_scene_bottlenecks.py",
+      "sha256": "fb1785a86c5234e77ad9389fd68f3c836a90f07ef1d176c5df28005b7ccc18be",
+      "historicalSha256": "fb1785a86c5234e77ad9389fd68f3c836a90f07ef1d176c5df28005b7ccc18be",
+      "tests": [
+        "test_bottleneck_layer_types_are_deterministic_from_known_memory_and_counts"
+      ]
+    },
+    {
       "path": "tests/test_p2_large_scene_cache_lod_instancing.py",
       "sha256": "f9c9d53c542744c8e85ff7c8a0b053037c73866becca46bcd44039064205607e",
       "historicalSha256": "f9c9d53c542744c8e85ff7c8a0b053037c73866becca46bcd44039064205607e",
       "tests": [
         "test_cache_lod_and_instancing_status_are_normalized_by_layer_type",
         "test_unavailable_terrain_cache_lod_stats_are_reported_before_render"
+      ]
+    },
+    {
+      "path": "tests/test_p2_large_scene_memory.py",
+      "sha256": "f7fc9ae6fbb091aae4dde42add7d07c565e17fd45b32389e5a9a8991d037cf70",
+      "historicalSha256": "f7fc9ae6fbb091aae4dde42add7d07c565e17fd45b32389e5a9a8991d037cf70",
+      "tests": [
+        "test_large_scene_memory_summary_uses_known_metadata_and_budget_diagnostic",
+        "test_large_scene_does_not_invent_memory_when_metadata_is_unavailable"
       ]
     },
     {

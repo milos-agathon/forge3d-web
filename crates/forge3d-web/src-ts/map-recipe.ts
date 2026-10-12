@@ -2,6 +2,15 @@ import { canonicalJson, RenderFailurePolicy, type JsonValue } from './diagnostic
 import type { SceneRecipeInput, TerrainSourceInput, RasterOverlayInput, VectorOverlayInput, MapSceneBuildingLayerInput, MapSceneLabelLayerInput, MapScenePointCloudLayerInput, MapSceneTiles3DLayerInput, OrbitCameraInput, LightingPresetInput, OutputSpecInput, ReproducibilityProfileInput } from './map-scene-types.js';
 import type { CameraInput } from './index.js';
 export const MAP_SCENE_RECIPE_SCHEMA = 'forge3d.mapscene.recipe.v1';
+/** Browser serialization guard; explicit resource/recipe budgets may raise its default. */
+export function mapRecipeByteLimit(input: SceneRecipeInput): number {
+    const policy = input?.diagnosticsPolicy;
+    const valid = (n: unknown): n is number => typeof n === 'number' && Number.isSafeInteger(n) && n > 0;
+    if (valid(policy?.maxRecipeBytes)) return policy.maxRecipeBytes;
+    const limits = [64 * 1024 * 1024, ...(valid(policy?.maxResourceBytes) ? [policy.maxResourceBytes] : [])];
+    for (const source of [input?.terrain?.source, ...(input?.layers ?? []).map(l => l && 'source' in l ? l.source : undefined)]) if (valid(source?.maxBytes)) limits.push(source.maxBytes);
+    return Math.max(...limits);
+}
 const arrays = { Uint8Array, Uint8ClampedArray, Uint16Array, Uint32Array, Int8Array, Int16Array, Int32Array, Float32Array, Float64Array };
 type ArrayName = keyof typeof arrays;
 export function encodeMapData(value: unknown, maxBytes = 64 * 1024 * 1024): JsonValue {
@@ -61,9 +70,16 @@ export function decodeMapData(value: unknown, maxBytes = 64 * 1024 * 1024): unkn
                 const name = v.$forge3d_array;
                 if (typeof name !== 'string' || !Object.hasOwn(arrays, name) || typeof v.base64 !== 'string' || Object.keys(v).length !== 2)
                     throw new TypeError('Invalid map array encoding');
-                if (!/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(v.base64))
+                // Scan bounded chunks: a repeated whole-string regexp over a large DEM
+                // can exhaust the JS regexp stack before the byte budget is checked.
+                const padding = v.base64.endsWith('==') ? 2 : v.base64.endsWith('=') ? 1 : 0;
+                const bodyLength = v.base64.length - padding;
+                if (v.base64.length % 4 || (padding && bodyLength < 2))
                     throw new TypeError('Invalid map array base64');
-                const length = Math.floor(v.base64.length * 3 / 4) - (v.base64.endsWith('==') ? 2 : v.base64.endsWith('=') ? 1 : 0);
+                for (let i = 0; i < bodyLength; i += 8192)
+                    if (/[^A-Za-z0-9+/]/.test(v.base64.slice(i, Math.min(i + 8192, bodyLength))))
+                        throw new TypeError('Invalid map array base64');
+                const length = Math.floor(v.base64.length * 3 / 4) - padding;
                 bytes += length;
                 if (bytes > maxBytes)
                     throw new RangeError('Map recipe exceeds serialized byte limit');
@@ -184,13 +200,14 @@ export class SceneRecipe {
         this.#input.renderPolicy = RenderFailurePolicy.validate(input.renderPolicy ?? RenderFailurePolicy.CONTINUE_ON_WARNING);
         this.#input.layers = [...this.#input.layers ?? []];
         // Construction rejects unserializable callbacks/handles; content validation stays report-based.
-        encodeMapData(this.#input);
+        encodeMapData(this.#input, mapRecipeByteLimit(this.#input));
     }
     get value(): SceneRecipeInput { return structuredClone(this.#input); }
-    toJSON(): JsonValue { return encodeMapData({ schema: MAP_SCENE_RECIPE_SCHEMA, recipe: this.#input }); }
+    toJSON(): JsonValue { return encodeMapData({ schema: MAP_SCENE_RECIPE_SCHEMA, recipe: this.#input }, mapRecipeByteLimit(this.#input)); }
     serialize(): string { return JSON.stringify(this.toJSON()); }
     static fromJSON(input: unknown): SceneRecipe {
-        const payload = decodeMapData(typeof input === 'string' ? JSON.parse(input) : input) as {
+        const raw = typeof input === 'string' ? JSON.parse(input) : input;
+        const payload = decodeMapData(raw, mapRecipeByteLimit(raw?.recipe)) as {
             schema?: string;
             recipe?: SceneRecipeInput;
         };

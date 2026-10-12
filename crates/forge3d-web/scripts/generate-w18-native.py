@@ -18,7 +18,9 @@ paths = ["python/forge3d/diagnostics.py", "python/forge3d/map_scene.py", "python
 paths += [p for p in subprocess.check_output(["git", "ls-tree", "-r", "--name-only", COMMIT, "tests"], cwd=ROOT).decode().splitlines()
           if p.startswith(("tests/test_diagnostics_", "tests/test_mapscene_")) or p in (
               "tests/test_p1_diagnostics_contract.py", "tests/test_p2_diagnostics_contract.py",
-              "tests/test_p2_large_scene_cache_lod_instancing.py", "tests/test_p2_textured_building_mapscene.py")]
+              "tests/test_p2_large_scene_cache_lod_instancing.py", "tests/test_p2_textured_building_mapscene.py",
+              "tests/test_p2_determinism_noop.py", "tests/test_p1_tiles3d_support.py",
+              "tests/test_p2_large_scene_memory.py", "tests/test_p2_large_scene_bottlenecks.py")]
 entries = []
 for path in paths:
     raw = source(path)

@@ -164,7 +164,11 @@ export interface SceneRecipeInput {
     diagnosticsPolicy?: {
         gpuMemoryBudgetBytes?: number;
         maxResourceBytes?: number;
+        /** Aggregate serialization guard, defaulting to the largest configured resource limit. */
+        maxRecipeBytes?: number;
         maxLayers?: number;
+        /** Browser output guard; default 16 megapixels, still subject to device/GPU budgets. */
+        maxOutputPixels?: number;
         largeSceneSummary?: boolean;
     };
     reproducibility?: ReproducibilityProfileInput;

@@ -13,6 +13,7 @@ import { decodeMapData, encodeMapData } from './map-recipe.js';
 import type { MapResource, PreparedMapResource, SceneRecipeInput, MapSceneProgress } from './map-scene-types.js';
 import { mapResources, resourceBytes, MAP_SCENE_DEFAULT_RESOURCE_LIMIT, mapProblem } from './map-validation.js';
 import { Diagnostic } from './diagnostics.js';
+import { mapBuildingOptions } from './map-support-details.js';
 import { missingExternalAssetDiagnostic } from './diagnostic-paths.js';
 export function mapCancelled(signal?: AbortSignal): void { if (signal?.aborted)
     throw new Forge3DError('REQUEST_CANCELLED', 'MapScene operation cancelled'); }
@@ -119,7 +120,7 @@ async function load(resource: MapResource, input: SceneRecipeInput, signal: Abor
     }
     if (resource.format === 'buildings' || resource.format === 'geojson' || resource.format === 'cityjson') {
         const options = input.layers?.find(l => l.kind === 'buildings' && l.source.id === resource.id);
-        const building = resource.format === 'buildings' ? new BuildingLayer(value as never, options?.kind === 'buildings' ? options.options : undefined) : await loadBuildings(new TextEncoder().encode(JSON.stringify(value)).buffer, { format: resource.format as 'geojson' | 'cityjson', signal, maxBytes, ...(options?.kind === 'buildings' ? options.options : {}), ...(crs ? { crs } : {}) });
+        const building = resource.format === 'buildings' ? new BuildingLayer(value as never, options?.kind === 'buildings' ? mapBuildingOptions(options) : undefined) : await loadBuildings(new TextEncoder().encode(JSON.stringify(value)).buffer, { format: resource.format as 'geojson' | 'cityjson', signal, maxBytes, ...(options?.kind === 'buildings' ? mapBuildingOptions(options) : {}), ...(crs ? { crs } : {}) });
         return { resource, value: building, bytes: building.cpuBytes, dispose: () => building.dispose() };
     }
     return { resource, value, bytes: resourceBytes(value) };

@@ -1,932 +1,1776 @@
 {
-  "schemaVersion": 1,
+  "schema": 2,
   "nativeCommit": "a55911f021925a3264e476374ce43d1b204f1073",
-  "testCount": 94,
+  "meaning": "Inventory and assertion-level ownership, not a count of fully ported native tests. Each adapted entry lists its tested scope and explicit browser substitutions; deferred assertions are not coverage.",
   "cases": [
     {
       "nativeFile": "tests/test_diagnostics_bundle_serialization.py",
       "nativeTest": "test_diagnostic_from_dict_roundtrip_preserves_bundle_ready_fields",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "preserves required diagnostic fields and severity policy public contracts"
+        }
       ],
-      "adaptation": "Lossless deterministic native Diagnostic/ValidationReport JSON is tested directly; no ZIP container is involved."
+      "assertionScope": "Required snake-case fields survive Diagnostic JSON roundtrip.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": [
+        {
+          "owner": "W19/M04",
+          "assertion": "ZIP/archive creation, assets and filesystem bundle paths are not ported by W18."
+        }
+      ]
     },
     {
       "nativeFile": "tests/test_diagnostics_bundle_serialization.py",
       "nativeTest": "test_validation_report_serialization_is_lossless_and_deterministic",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "compares full native report ordering and serialization"
+        }
       ],
-      "adaptation": "Lossless deterministic native Diagnostic/ValidationReport JSON is tested directly; no ZIP container is involved."
+      "assertionScope": "Full independently generated report JSON roundtrip is lossless and deterministic.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_diagnostics_bundle_serialization.py",
       "nativeTest": "test_validation_report_orders_diagnostics_by_stable_sort_key",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "compares full native report ordering and serialization"
+        }
       ],
-      "adaptation": "Lossless deterministic native Diagnostic/ValidationReport JSON is tested directly; no ZIP container is involved."
+      "assertionScope": "Reversed input diagnostics produce the exact native stable ordering.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_diagnostics_bundle_serialization.py",
       "nativeTest": "test_diagnostic_details_are_json_serializable_and_sorted",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "normalizes details, layer summaries, support matrices and empty reports"
+        }
       ],
-      "adaptation": "Lossless deterministic native Diagnostic/ValidationReport JSON is tested directly; no ZIP container is involved."
+      "assertionScope": "Nested object keys are sorted and JSON-safe details roundtrip.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_diagnostics_bundle_serialization.py",
       "nativeTest": "test_empty_report_is_bundle_ready_ok_status",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "normalizes details, layer summaries, support matrices and empty reports"
+        }
       ],
-      "adaptation": "Lossless deterministic native Diagnostic/ValidationReport JSON is tested directly; no ZIP container is involved."
+      "assertionScope": "Empty report has exact native ok status and empty bundle-ready fields.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": [
+        {
+          "owner": "W19/M04",
+          "assertion": "ZIP/archive creation, assets and filesystem bundle paths are not ported by W18."
+        }
+      ]
     },
     {
       "nativeFile": "tests/test_diagnostics_contract.py",
       "nativeTest": "test_diagnostic_preserves_required_fields",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "preserves required diagnostic fields and severity policy public contracts"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Required severity, message, remediation, IDs, support and details are retained.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_diagnostics_contract.py",
       "nativeTest": "test_diagnostic_accepts_required_severities",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "preserves required diagnostic fields and severity policy public contracts"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Every native severity is accepted.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_diagnostics_contract.py",
       "nativeTest": "test_diagnostic_accepts_prd_support_levels",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "preserves required diagnostic fields and severity policy public contracts"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Every PRD support level is accepted.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_diagnostics_contract.py",
       "nativeTest": "test_diagnostic_rejects_unknown_severity_and_support_level",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "rejects invalid severity, support, policy, details and counts"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Unknown severity and support level are rejected.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_diagnostics_contract.py",
       "nativeTest": "test_validation_report_rejects_unknown_support_summary_levels",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "rejects invalid severity, support, policy, details and counts"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Unknown report support feature levels are rejected.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_diagnostics_contract.py",
       "nativeTest": "test_validation_report_derives_status_and_policy_blocking",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "blocks output errors under both warning policies"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Errors block both policies; warnings follow configured failure policy.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_diagnostics_contract.py",
       "nativeTest": "test_layer_summary_and_support_matrix_entry_contracts",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "normalizes details, layer summaries, support matrices and empty reports"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "LayerSummary and SupportMatrixEntry fields and JSON roundtrip are asserted.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_diagnostics_contract.py",
       "nativeTest": "test_severity_policy_and_public_exports",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "preserves required diagnostic fields and severity policy public contracts"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Public severity and failure-policy methods validate values and derive status.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_diagnostics_no_op_policy.py",
       "nativeTest": "test_warning_policy_does_not_turn_errors_into_success",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "blocks output errors under both warning policies"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Continue-on-warning cannot convert errors into success.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_diagnostics_no_op_policy.py",
       "nativeTest": "test_experimental_warning_can_continue_or_block_by_policy",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "blocks output errors under both warning policies"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Experimental warnings continue or block according to warning policy.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_diagnostics_quickstart.py",
       "nativeTest": "test_quickstart_warning_policy_scenario_is_executable",
       "owner": "W18",
-      "webEvidence": [
-        "examples/mapscene.html",
-        "examples/w18-mapscene.js",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "blocks output errors under both warning policies"
+        }
       ],
-      "adaptation": "Native terrain/raster, vector/labels and scalar building workflows are consolidated into an exercised browser example; review JSON retains diagnostic state. Bundle operations remain W19 and the complete example catalog is W23."
+      "assertionScope": "Executable warning-policy examples retain errors and experimental warnings.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_diagnostics_quickstart.py",
       "nativeTest": "test_quickstart_required_inventory_serializes_stably",
       "owner": "W18",
-      "webEvidence": [
-        "examples/mapscene.html",
-        "examples/w18-mapscene.js",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "checks public required P1 and P2 inventories against actionable native factory reports"
+        }
       ],
-      "adaptation": "Native terrain/raster, vector/labels and scalar building workflows are consolidated into an exercised browser example; review JSON retains diagnostic state. Bundle operations remain W19 and the complete example catalog is W23."
+      "assertionScope": "Every required diagnostic code is actionable and roundtrips stably.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_diagnostics_quickstart.py",
       "nativeTest": "test_quickstart_style_validation_scenario_emits_structured_diagnostics",
       "owner": "W18",
-      "webEvidence": [
-        "examples/mapscene.html",
-        "examples/w18-mapscene.js",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "matches independent native style quickstart and support reports"
+        }
       ],
-      "adaptation": "Native terrain/raster, vector/labels and scalar building workflows are consolidated into an exercised browser example; review JSON retains diagnostic state. Bundle operations remain W19 and the complete example catalog is W23."
+      "assertionScope": "Native style quickstart diagnostics match independently generated JSON oracles.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives. W18 assesses style support separately; style evaluation/render mapping stays W19/M03.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_diagnostics_style_support.py",
       "nativeTest": "test_style_support_accepts_local_fill_line_and_circle_layers",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts",
-        "src-ts/diagnostic-style.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "matches independent native style quickstart and support reports"
+        }
       ],
-      "adaptation": "Native support function executes into independent fixtures; raw and preserved parsed layer fields use the same diagnostic model."
+      "assertionScope": "Independent native style oracles include accepted local fill/line/circle fields.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives. W18 assesses style support separately; style evaluation/render mapping stays W19/M03.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_diagnostics_style_support.py",
       "nativeTest": "test_style_support_reports_unsupported_layer_types_and_fields",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts",
-        "src-ts/diagnostic-style.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "matches independent native style quickstart and support reports"
+        }
       ],
-      "adaptation": "Native support function executes into independent fixtures; raw and preserved parsed layer fields use the same diagnostic model."
+      "assertionScope": "Independent native style oracles include unsupported layer and paint/layout fields.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives. W18 assesses style support separately; style evaluation/render mapping stays W19/M03.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_diagnostics_style_support.py",
       "nativeTest": "test_style_support_accepts_parsed_style_spec_without_claiming_mvt",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts",
-        "src-ts/diagnostic-style.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "preserves parsed style unsupported fields and refuses streamed MVT promotion"
+        }
       ],
-      "adaptation": "Native support function executes into independent fixtures; raw and preserved parsed layer fields use the same diagnostic model."
+      "assertionScope": "Parsed layer_type assessment retains streamed MVT non-goal scope.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives. W18 assesses style support separately; style evaluation/render mapping stays W19/M03.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_diagnostics_style_support.py",
       "nativeTest": "test_parsed_style_support_reports_preserved_unsupported_fields",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts",
-        "src-ts/diagnostic-style.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "preserves parsed style unsupported fields and refuses streamed MVT promotion"
+        }
       ],
-      "adaptation": "Native support function executes into independent fixtures; raw and preserved parsed layer fields use the same diagnostic model."
+      "assertionScope": "Parsed unsupported paint/layout fields survive and produce actionable diagnostics.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives. W18 assesses style support separately; style evaluation/render mapping stays W19/M03.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_diagnostics_style_support.py",
       "nativeTest": "test_symbol_style_support_matches_underdeveloped_matrix_truth",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts",
-        "src-ts/diagnostic-style.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "preserves parsed style unsupported fields and refuses streamed MVT promotion"
+        }
       ],
-      "adaptation": "Native support function executes into independent fixtures; raw and preserved parsed layer fields use the same diagnostic model."
+      "assertionScope": "Symbol support remains underdeveloped with warning status.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives. W18 assesses style support separately; style evaluation/render mapping stays W19/M03.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_diagnostics_style_support.py",
       "nativeTest": "test_supported_style_output_feeds_vector_overlay_config",
       "owner": "W19",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts",
-        "src-ts/diagnostic-style.ts"
-      ],
-      "adaptation": "Style-to-vector render mapping is M03/W19; W18 ports its diagnostic factories and standalone support assessment."
+      "status": "deferred",
+      "webTests": [],
+      "assertionScope": "Style evaluation output feeding vector configuration is deferred to M03/W19.",
+      "adaptation": "No W18 port is claimed: Style evaluation output feeding vector configuration is deferred to M03/W19.",
+      "deferredAssertions": [
+        {
+          "owner": "W19/M03",
+          "assertion": "Style evaluation output feeding vector configuration is deferred to M03/W19."
+        }
+      ]
     },
     {
       "nativeFile": "tests/test_diagnostics_style_support.py",
       "nativeTest": "test_symbol_style_output_feeds_future_label_layer_contract",
       "owner": "W19",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts",
-        "src-ts/diagnostic-style.ts"
-      ],
-      "adaptation": "Style-to-vector render mapping is M03/W19; W18 ports its diagnostic factories and standalone support assessment."
+      "status": "deferred",
+      "webTests": [],
+      "assertionScope": "Style evaluation output feeding label configuration is deferred to M03/W19.",
+      "adaptation": "No W18 port is claimed: Style evaluation output feeding label configuration is deferred to M03/W19.",
+      "deferredAssertions": [
+        {
+          "owner": "W19/M03",
+          "assertion": "Style evaluation output feeding label configuration is deferred to M03/W19."
+        }
+      ]
     },
     {
       "nativeFile": "tests/test_diagnostics_support_paths.py",
       "nativeTest": "test_required_diagnostic_factories_cover_inventory_with_severity_and_ids",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "checks public required P1 and P2 inventories against actionable native factory reports"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Required native factory inventory preserves structured severity, IDs and remediation.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_diagnostics_support_paths.py",
       "nativeTest": "test_required_diagnostic_inventory_report_blocks_output_affecting_errors",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "blocks output errors under both warning policies"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Output-affecting errors always block regardless of warning policy.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_diagnostics_support_paths.py",
       "nativeTest": "test_building_layer_validator_reports_placeholder_fallback",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/unit/w15-buildings.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "retains building product support intent and clears output under both policies"
+        }
       ],
-      "adaptation": "W15 geometry and material diagnostics are bridged with layer/object/material IDs; unavailable texture output remains blocked."
+      "assertionScope": "Explicit building fallback support produces placeholder_fallback and blocks output.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_diagnostics_support_paths.py",
       "nativeTest": "test_public_tiles3d_validator_reports_incomplete_render_workflow",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "preserves the public tiles validator diagnostic and local tile count"
+        }
       ],
-      "adaptation": "Historical placeholder is promoted only for a real W15/W16/W12 adapter. Browser layer-removal, selected-content, coverage and negative-control probes prove output; unsupported formats and empty selection remain blocking."
+      "assertionScope": "Actual MapScene tiles input has the exact native incomplete-workflow diagnostic.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_diagnostics_support_paths.py",
       "nativeTest": "test_terrain_vt_validator_reports_non_albedo_families",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-mapscene.test.ts",
+          "testName": "detects unsupported VT, product instancing and unavailable stats without fabricated telemetry"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Non-albedo terrain families produce blocking vt_unsupported_family diagnostics.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_diagnostics_support_paths.py",
       "nativeTest": "test_label_validator_reports_experimental_paths_and_missing_glyphs",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "preserves per-label glyph IDs and experimental diagnostics"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Curved/line labels and missing glyphs retain native factory diagnostics.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_diagnostics_support_paths.py",
       "nativeTest": "test_label_validator_preserves_missing_glyph_object_ids_per_label",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "preserves per-label glyph IDs and experimental diagnostics"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Missing glyph diagnostics preserve individual label IDs and missing characters.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_docs.py",
       "nativeTest": "test_mapscene_public_api_is_documented_with_truthful_support_levels",
       "owner": "W18",
-      "webEvidence": [
-        "tests/api/docs-links.test.mjs",
-        "docs/mapscene-diagnostics.md"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/api/w18-docs.test.mjs",
+          "testName": "documents the public MapScene API with truthful browser support levels"
+        }
       ],
-      "adaptation": "Native quickstart, policy and no-IPC documentation is expressed using public ESM APIs."
+      "assertionScope": "Public API documentation records truthful PNG, bundle and blocked product scope.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_docs.py",
       "nativeTest": "test_feature_004_artifacts_do_not_keep_stale_tbd_or_later_owned_wording",
       "owner": "W18",
-      "webEvidence": [
-        "tests/api/docs-links.test.mjs",
-        "docs/mapscene-diagnostics.md"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/api/w18-docs.test.mjs",
+          "testName": "removes stale completion and feature ownership wording from the MapScene guide"
+        }
       ],
-      "adaptation": "Native quickstart, policy and no-IPC documentation is expressed using public ESM APIs."
+      "assertionScope": "The current MapScene guide contains no stale TBD or feature ownership wording.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_docs.py",
       "nativeTest": "test_mapscene_validation_diagnostic_codes_are_documented",
       "owner": "W18",
-      "webEvidence": [
-        "tests/api/docs-links.test.mjs",
-        "docs/mapscene-diagnostics.md"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/api/w18-docs.test.mjs",
+          "testName": "documents every emitted MapScene validation code and the native required codes"
+        }
       ],
-      "adaptation": "Native quickstart, policy and no-IPC documentation is expressed using public ESM APIs."
+      "assertionScope": "All native required and web-emitted validation codes are documented.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_docs.py",
       "nativeTest": "test_offline_mapscene_guide_links_canonical_examples_and_support_guides",
       "owner": "W18",
-      "webEvidence": [
-        "tests/api/docs-links.test.mjs",
-        "docs/mapscene-diagnostics.md"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/api/w18-docs.test.mjs",
+          "testName": "links canonical browser examples and the actual layer support guides"
+        }
       ],
-      "adaptation": "Native quickstart, policy and no-IPC documentation is expressed using public ESM APIs."
+      "assertionScope": "Canonical executable browser example and actual support-guide links are present.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_docs.py",
       "nativeTest": "test_support_matrices_record_current_mapscene_diagnostics_and_ownership",
       "owner": "W18",
-      "webEvidence": [
-        "tests/api/docs-links.test.mjs",
-        "docs/mapscene-diagnostics.md"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/api/w18-docs.test.mjs",
+          "testName": "records current MapScene diagnostics and explicit support ownership"
+        }
       ],
-      "adaptation": "Native quickstart, policy and no-IPC documentation is expressed using public ESM APIs."
+      "assertionScope": "Current diagnostics and LabelPlan/building/tiles/VT owners are stated explicitly.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_docs.py",
       "nativeTest": "test_support_matrix_rows_use_prd_support_taxonomy",
       "owner": "W18",
-      "webEvidence": [
-        "tests/api/docs-links.test.mjs",
-        "docs/mapscene-diagnostics.md"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/api/w18-docs.test.mjs",
+          "testName": "uses only the PRD taxonomy in the MapScene support table"
+        }
       ],
-      "adaptation": "Native quickstart, policy and no-IPC documentation is expressed using public ESM APIs."
+      "assertionScope": "Every MapScene support-table row uses the PRD support taxonomy.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_docs.py",
       "nativeTest": "test_competitive_positioning_lists_required_non_goal_boundaries",
       "owner": "W18",
-      "webEvidence": [
-        "tests/api/docs-links.test.mjs",
-        "docs/mapscene-diagnostics.md"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/api/w18-docs.test.mjs",
+          "testName": "states the native product boundaries and incomplete Cesium workflow"
+        }
       ],
-      "adaptation": "Native quickstart, policy and no-IPC documentation is expressed using public ESM APIs."
+      "assertionScope": "All six native product boundaries and incomplete Cesium parity are documented.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_examples.py",
       "nativeTest": "test_canonical_mapscene_examples_exist_and_do_not_use_raw_ipc",
       "owner": "W18",
-      "webEvidence": [
-        "examples/mapscene.html",
-        "examples/w18-mapscene.js",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/api/w18-docs.test.mjs",
+          "testName": "links canonical browser examples and the actual layer support guides"
+        }
       ],
-      "adaptation": "Native terrain/raster, vector/labels and scalar building workflows are consolidated into an exercised browser example; review JSON retains diagnostic state. Bundle operations remain W19 and the complete example catalog is W23."
+      "assertionScope": "The consolidated canonical browser example has MapScene workflows and no raw IPC.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": [
+        {
+          "owner": "W19/M04",
+          "assertion": "ZIP/archive creation, assets and filesystem bundle paths are not ported by W18."
+        },
+        {
+          "owner": "W23",
+          "assertion": "Historical Python example files, dataset catalog names and per-script payloads are replaced by consolidated browser workflows."
+        }
+      ]
     },
     {
       "nativeFile": "tests/test_mapscene_examples.py",
       "nativeTest": "test_terrain_raster_example_validates_renders_and_bundles",
       "owner": "W18",
-      "webEvidence": [
-        "examples/mapscene.html",
-        "examples/w18-mapscene.js",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 source: multilayer example renders real geometry, glyphs and PNG"
+        },
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 dist: multilayer example renders real geometry, glyphs and PNG"
+        }
       ],
-      "adaptation": "Native terrain/raster, vector/labels and scalar building workflows are consolidated into an exercised browser example; review JSON retains diagnostic state. Bundle operations remain W19 and the complete example catalog is W23."
+      "assertionScope": "Actual terrain/raster source-derived PNG validates and renders without placeholders.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": [
+        {
+          "owner": "W19/M04",
+          "assertion": "ZIP/archive creation, assets and filesystem bundle paths are not ported by W18."
+        },
+        {
+          "owner": "W23",
+          "assertion": "Historical Python example files, dataset catalog names and per-script payloads are replaced by consolidated browser workflows."
+        }
+      ]
     },
     {
       "nativeFile": "tests/test_mapscene_examples.py",
       "nativeTest": "test_vector_labels_example_compiles_label_plan_and_bundles",
       "owner": "W18",
-      "webEvidence": [
-        "examples/mapscene.html",
-        "examples/w18-mapscene.js",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 source: compiled plans preserve priority, keepouts, rejection diagnostics and replay"
+        },
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 dist: compiled plans preserve priority, keepouts, rejection diagnostics and replay"
+        }
       ],
-      "adaptation": "Native terrain/raster, vector/labels and scalar building workflows are consolidated into an exercised browser example; review JSON retains diagnostic state. Bundle operations remain W19 and the complete example catalog is W23."
+      "assertionScope": "Actual labels preserve city/park acceptance and title keepout rejection.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": [
+        {
+          "owner": "W19/M04",
+          "assertion": "ZIP/archive creation, assets and filesystem bundle paths are not ported by W18."
+        },
+        {
+          "owner": "W23",
+          "assertion": "Historical Python example files, dataset catalog names and per-script payloads are replaced by consolidated browser workflows."
+        }
+      ]
     },
     {
       "nativeFile": "tests/test_mapscene_examples.py",
       "nativeTest": "test_buildings_labels_example_uses_honest_diagnostics_when_blocked",
       "owner": "W18",
-      "webEvidence": [
-        "examples/mapscene.html",
-        "examples/w18-mapscene.js",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "retains building product support intent and clears output under both policies"
+        }
       ],
-      "adaptation": "Native terrain/raster, vector/labels and scalar building workflows are consolidated into an exercised browser example; review JSON retains diagnostic state. Bundle operations remain W19 and the complete example catalog is W23."
+      "assertionScope": "Actual building Pro intent blocks render and retains diagnostics in review JSON.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": [
+        {
+          "owner": "W19/M04",
+          "assertion": "ZIP/archive creation, assets and filesystem bundle paths are not ported by W18."
+        },
+        {
+          "owner": "W23",
+          "assertion": "Historical Python example files, dataset catalog names and per-script payloads are replaced by consolidated browser workflows."
+        }
+      ]
     },
     {
       "nativeFile": "tests/test_mapscene_examples.py",
       "nativeTest": "test_bundled_datasets_showcase_covers_specs_001_to_004",
       "owner": "W18",
-      "webEvidence": [
-        "examples/mapscene.html",
-        "examples/w18-mapscene.js",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 source: multilayer example renders real geometry, glyphs and PNG"
+        },
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 dist: multilayer example renders real geometry, glyphs and PNG"
+        },
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 source: compiled plans preserve priority, keepouts, rejection diagnostics and replay"
+        },
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 dist: compiled plans preserve priority, keepouts, rejection diagnostics and replay"
+        }
       ],
-      "adaptation": "Native terrain/raster, vector/labels and scalar building workflows are consolidated into an exercised browser example; review JSON retains diagnostic state. Bundle operations remain W19 and the complete example catalog is W23."
+      "assertionScope": "Consolidated DEM/vector/building/label browser workflows produce covered PNG and deterministic plans.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": [
+        {
+          "owner": "W19/M04",
+          "assertion": "ZIP/archive creation, assets and filesystem bundle paths are not ported by W18."
+        },
+        {
+          "owner": "W23",
+          "assertion": "Historical Python example files, dataset catalog names and per-script payloads are replaced by consolidated browser workflows."
+        }
+      ]
     },
     {
       "nativeFile": "tests/test_mapscene_examples.py",
       "nativeTest": "test_p1_assets_bundle_showcase_covers_spec_005",
       "owner": "W19",
-      "webEvidence": [
-        "examples/mapscene.html",
-        "examples/w18-mapscene.js",
-        "tests/playwright/w18_mapscene.spec.ts"
-      ],
-      "adaptation": "Native terrain/raster, vector/labels and scalar building workflows are consolidated into an exercised browser example; review JSON retains diagnostic state. Bundle operations remain W19 and the complete example catalog is W23."
+      "status": "deferred",
+      "webTests": [],
+      "assertionScope": "P1 assets bundle showcase and ZIP roundtrip belong to M04/W19.",
+      "adaptation": "No W18 port is claimed: P1 assets bundle showcase and ZIP roundtrip belong to M04/W19.",
+      "deferredAssertions": [
+        {
+          "owner": "W19/M04",
+          "assertion": "P1 assets bundle showcase and ZIP roundtrip belong to M04/W19."
+        }
+      ]
     },
     {
       "nativeFile": "tests/test_mapscene_label_plan_integration.py",
       "nativeTest": "test_label_layer_compiles_deterministic_label_plan_and_rejection_summary",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 source: compiled plans preserve priority, keepouts, rejection diagnostics and replay"
+        },
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 dist: compiled plans preserve priority, keepouts, rejection diagnostics and replay"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "MapScene compiles deterministic plans with seed, priorities, keepouts and exact rejection summary.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_quickstart.py",
       "nativeTest": "test_mapscene_quickstart_points_to_canonical_examples",
       "owner": "W18",
-      "webEvidence": [
-        "examples/mapscene.html",
-        "examples/w18-mapscene.js",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/api/w18-docs.test.mjs",
+          "testName": "links canonical browser examples and the actual layer support guides"
+        }
       ],
-      "adaptation": "Native terrain/raster, vector/labels and scalar building workflows are consolidated into an exercised browser example; review JSON retains diagnostic state. Bundle operations remain W19 and the complete example catalog is W23."
+      "assertionScope": "Browser quickstart links the executable canonical recipe and support guides.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": [
+        {
+          "owner": "W23",
+          "assertion": "Historical Python example files, dataset catalog names and per-script payloads are replaced by consolidated browser workflows."
+        }
+      ]
     },
     {
       "nativeFile": "tests/test_mapscene_quickstart.py",
       "nativeTest": "test_quickstart_vector_labels_scenario_is_executable",
       "owner": "W18",
-      "webEvidence": [
-        "examples/mapscene.html",
-        "examples/w18-mapscene.js",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 source: compiled plans preserve priority, keepouts, rejection diagnostics and replay"
+        },
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 dist: compiled plans preserve priority, keepouts, rejection diagnostics and replay"
+        }
       ],
-      "adaptation": "Native terrain/raster, vector/labels and scalar building workflows are consolidated into an exercised browser example; review JSON retains diagnostic state. Bundle operations remain W19 and the complete example catalog is W23."
+      "assertionScope": "Executable vector/labels recipe has deterministic accepted/rejected labels and PNG output.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": [
+        {
+          "owner": "W23",
+          "assertion": "Historical Python example files, dataset catalog names and per-script payloads are replaced by consolidated browser workflows."
+        }
+      ]
     },
     {
       "nativeFile": "tests/test_mapscene_quickstart.py",
       "nativeTest": "test_quickstart_negative_diagnostics_are_available_before_render",
       "owner": "W18",
-      "webEvidence": [
-        "examples/mapscene.html",
-        "examples/w18-mapscene.js",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "reports CRS identity formats empty data and building source failures on actual MapScenes"
+        },
+        {
+          "file": "tests/unit/w18-mapscene.test.ts",
+          "testName": "preserves per-object missing glyphs in preflight and empty-layer summary codes"
+        },
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "compares full native report ordering and serialization"
+        }
       ],
-      "adaptation": "Native terrain/raster, vector/labels and scalar building workflows are consolidated into an exercised browser example; review JSON retains diagnostic state. Bundle operations remain W19 and the complete example catalog is W23."
+      "assertionScope": "CRS, missing glyphs and standalone style assessment diagnose before rendering.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": [
+        {
+          "owner": "W23",
+          "assertion": "Historical Python example files, dataset catalog names and per-script payloads are replaced by consolidated browser workflows."
+        }
+      ]
     },
     {
       "nativeFile": "tests/test_mapscene_quickstart.py",
       "nativeTest": "test_quickstart_building_scenario_preserves_blocking_diagnostics_in_bundle",
       "owner": "W18",
-      "webEvidence": [
-        "examples/mapscene.html",
-        "examples/w18-mapscene.js",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "retains building product support intent and clears output under both policies"
+        }
       ],
-      "adaptation": "Native terrain/raster, vector/labels and scalar building workflows are consolidated into an exercised browser example; review JSON retains diagnostic state. Bundle operations remain W19 and the complete example catalog is W23."
+      "assertionScope": "Building Pro intent preserves error report and no successful output in review JSON.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": [
+        {
+          "owner": "W19/M04",
+          "assertion": "ZIP/archive creation, assets and filesystem bundle paths are not ported by W18."
+        },
+        {
+          "owner": "W23",
+          "assertion": "Historical Python example files, dataset catalog names and per-script payloads are replaced by consolidated browser workflows."
+        }
+      ]
     },
     {
       "nativeFile": "tests/test_mapscene_recipe_contract.py",
       "nativeTest": "test_mapscene_recipe_components_are_public_and_serializable",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-mapscene.test.ts",
+          "testName": "serializes every required model and typed buffers without changing bits"
+        },
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "constructs every public MapScene recipe component without raw IPC"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Typed recipe components and array bits survive lossless serialization and input ownership.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_recipe_contract.py",
       "nativeTest": "test_mapscene_constructor_accepts_recipe_keywords_without_raw_ipc",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-mapscene.test.ts",
+          "testName": "serializes every required model and typed buffers without changing bits"
+        },
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "constructs every public MapScene recipe component without raw IPC"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "MapScene accepts the public typed recipe input without raw IPC and retains declared sources.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_render_png.py",
       "nativeTest": "test_render_writes_source_derived_png_for_supported_scene",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 source: multilayer example renders real geometry, glyphs and PNG"
+        },
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 dist: multilayer example renders real geometry, glyphs and PNG"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "PNG comes from real covered terrain, overlays, geometry and shaped glyphs.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_render_png.py",
       "nativeTest": "test_render_uses_output_spec_path_for_supported_png",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 source: recipe replay, repeated render, resize and disposal are deterministic"
+        },
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 dist: recipe replay, repeated render, resize and disposal are deterministic"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "OutputSpec dimensions produce the requested PNG/Frame size.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_render_png.py",
       "nativeTest": "test_render_output_changes_when_source_data_changes",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 source: each completed raster layer changes covered pixels"
+        },
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 dist: each completed raster layer changes covered pixels"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Removing each declared layer changes covered pixels, proving source-derived output.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_render_png.py",
       "nativeTest": "test_render_uses_native_offscreen_for_real_terrain_and_raster_assets",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 source: URL heightmap, image, vector, glyph records and OBJ render after preparation"
+        },
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 dist: URL heightmap, image, vector, glyph records and OBJ render after preparation"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Fetched F32, imagery, vector, labels and mesh assets render through actual WebGPU/WASM.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_render_png.py",
       "nativeTest": "test_render_falls_back_when_native_adapter_is_unavailable",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 source: GPU loss clears success and a later render recreates owners"
+        },
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 dist: GPU loss clears success and a later render recreates owners"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Unavailable/lost GPU blocks output; recovery recreates owners without claiming a synthetic fallback.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives. Browser GPU failure is explicit and clears success; the native synthetic-image fallback is deliberately not implemented.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_render_policy.py",
       "nativeTest": "test_render_performs_validation_and_continues_on_warnings_by_default",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-mapscene.test.ts",
+          "testName": "retains native memory warning semantics and enforces the stricter warning policy"
+        },
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 source: warning policy retains label rejection reports and blocks strict output"
+        },
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 dist: warning policy retains label rejection reports and blocks strict output"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Default policy retains an estimated_gpu_memory warning and allows preparation.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives. Continue-on-warning permits label rejection warnings to render; a one-byte GPU budget cannot authorize real allocations, so memory warning retention and strict failure are checked separately.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_render_policy.py",
       "nativeTest": "test_render_fail_on_warning_blocks_and_does_not_write_png",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-mapscene.test.ts",
+          "testName": "retains native memory warning semantics and enforces the stricter warning policy"
+        },
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 source: warning policy retains label rejection reports and blocks strict output"
+        },
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 dist: warning policy retains label rejection reports and blocks strict output"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Fail-on-warning rejects rendering before GPU work and leaves no output record.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives. Continue-on-warning permits label rejection warnings to render; a one-byte GPU budget cannot authorize real allocations, so memory warning retention and strict failure are checked separately.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_render_policy.py",
       "nativeTest": "test_render_errors_always_block_and_do_not_write_png",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 source: validation and policies block before GPU creation"
+        },
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 dist: validation and policies block before GPU creation"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Errors reject rendering under the default policy without writing output.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_render_policy.py",
       "nativeTest": "test_render_rejects_missing_output_path_without_noop_success",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-mapscene.test.ts",
+          "testName": "rejects missing and mismatched CRS, IDs, source data, formats and recipe fields"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Mandatory OutputSpec dimensions replace the native required filesystem output path.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_save_bundle.py",
       "nativeTest": "test_save_bundle_writes_deterministic_review_bundle_with_label_plan",
       "owner": "W19",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
-      ],
-      "adaptation": "ZIP/save/load and asset rewriting are M04/W19. W18 preserves typed recipe, diagnostic JSON, report hashes and renderability in reviewRecord."
+      "status": "deferred",
+      "webTests": [],
+      "assertionScope": "Deterministic ZIP assets, save/load and bundled LabelPlan belong to M04/W19.",
+      "adaptation": "No W18 port is claimed: Deterministic ZIP assets, save/load and bundled LabelPlan belong to M04/W19.",
+      "deferredAssertions": [
+        {
+          "owner": "W19/M04",
+          "assertion": "Deterministic ZIP assets, save/load and bundled LabelPlan belong to M04/W19."
+        }
+      ]
     },
     {
       "nativeFile": "tests/test_mapscene_save_bundle.py",
       "nativeTest": "test_save_bundle_preserves_blocking_diagnostics_without_render_success_claim",
       "owner": "W19",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
-      ],
-      "adaptation": "ZIP/save/load and asset rewriting are M04/W19. W18 preserves typed recipe, diagnostic JSON, report hashes and renderability in reviewRecord."
+      "status": "deferred",
+      "webTests": [],
+      "assertionScope": "ZIP preservation of blocking validation and non-renderability belongs to M04/W19.",
+      "adaptation": "No W18 port is claimed: ZIP preservation of blocking validation and non-renderability belongs to M04/W19.",
+      "deferredAssertions": [
+        {
+          "owner": "W19/M04",
+          "assertion": "ZIP preservation of blocking validation and non-renderability belongs to M04/W19."
+        }
+      ]
     },
     {
       "nativeFile": "tests/test_mapscene_save_bundle.py",
       "nativeTest": "test_save_bundle_preserves_missing_asset_diagnostics_without_renderability",
       "owner": "W19",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
-      ],
-      "adaptation": "ZIP/save/load and asset rewriting are M04/W19. W18 preserves typed recipe, diagnostic JSON, report hashes and renderability in reviewRecord."
+      "status": "deferred",
+      "webTests": [],
+      "assertionScope": "ZIP preservation of missing assets and non-renderability belongs to M04/W19.",
+      "adaptation": "No W18 port is claimed: ZIP preservation of missing assets and non-renderability belongs to M04/W19.",
+      "deferredAssertions": [
+        {
+          "owner": "W19/M04",
+          "assertion": "ZIP preservation of missing assets and non-renderability belongs to M04/W19."
+        }
+      ]
     },
     {
       "nativeFile": "tests/test_mapscene_support_status.py",
       "nativeTest": "test_product_building_intent_reports_support_status_diagnostics",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "retains building product support intent and clears output under both policies"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "All native building product support intents remain explicit and render-blocking.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_support_status.py",
       "nativeTest": "test_terrain_vt_and_3dtiles_intent_are_diagnosed_before_render",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-mapscene.test.ts",
+          "testName": "detects unsupported VT, product instancing and unavailable stats without fabricated telemetry"
+        },
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "preserves the public tiles validator diagnostic and local tile count"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Terrain normal/mask VT and MapScene 3D Tiles remain blocked before rendering.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_support_status.py",
       "nativeTest": "test_point_cloud_layer_reports_underdeveloped_render_path_before_render",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "preserves point-cloud fallback before preparation even for nonempty inline data"
+        }
       ],
-      "adaptation": "Historical placeholder is promoted only for a real W15/W16/W12 adapter. Browser layer-removal, selected-content, coverage and negative-control probes prove output; unsupported formats and empty selection remain blocking."
+      "assertionScope": "Nonempty points preserve exact placeholder_fallback gate and native summary support.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_support_status.py",
       "nativeTest": "test_unknown_recipe_layer_is_not_silently_ignored",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-mapscene.test.ts",
+          "testName": "detects conflicting resource/layer IDs, unknown layers and empty geometry"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Unknown layer types cannot be silently ignored.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_support_status.py",
       "nativeTest": "test_render_and_save_bundle_do_not_hide_blocking_validation",
       "owner": "W19",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
-      ],
-      "adaptation": "ZIP/save/load and asset rewriting are M04/W19. W18 preserves typed recipe, diagnostic JSON, report hashes and renderability in reviewRecord."
+      "status": "deferred",
+      "webTests": [],
+      "assertionScope": "Combined render-and-ZIP blocking contract belongs to M04/W19; W18 separately checks render blocking.",
+      "adaptation": "No W18 port is claimed: Combined render-and-ZIP blocking contract belongs to M04/W19; W18 separately checks render blocking.",
+      "deferredAssertions": [
+        {
+          "owner": "W19/M04",
+          "assertion": "Combined render-and-ZIP blocking contract belongs to M04/W19; W18 separately checks render blocking."
+        }
+      ]
     },
     {
       "nativeFile": "tests/test_mapscene_validation.py",
       "nativeTest": "test_validate_returns_structured_report_with_layer_summaries_and_memory_estimate",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-mapscene.test.ts",
+          "testName": "enumerates every layer and resource in deterministic order"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Actual MapScene returns structured reports with sorted resources and known memory.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_validation.py",
       "nativeTest": "test_validate_reports_crs_mismatch_without_implicit_transform",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "reports CRS identity formats empty data and building source failures on actual MapScenes"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Mismatched scene/source CRS errors carry both CRS identifiers without implicit transform.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_validation.py",
       "nativeTest": "test_validate_reports_missing_layer_crs_without_assuming_compatibility",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "reports CRS identity formats empty data and building source failures on actual MapScenes"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Missing layer CRS is an error without assuming compatibility.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_validation.py",
       "nativeTest": "test_validate_reports_missing_terrain_crs_without_assuming_compatibility",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "reports CRS identity formats empty data and building source failures on actual MapScenes"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Missing terrain CRS is an error without assuming compatibility.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_validation.py",
       "nativeTest": "test_validate_reports_missing_glyphs_and_style_support_diagnostics",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-mapscene.test.ts",
+          "testName": "preserves per-object missing glyphs in preflight and empty-layer summary codes"
+        },
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "matches independent native style quickstart and support reports"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "MapScene missing glyphs and standalone native style diagnostics preserve IDs and support.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives. W18 assesses style support separately; style evaluation/render mapping stays W19/M03.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_validation.py",
       "nativeTest": "test_validate_uses_fatal_diagnostic_for_unsupported_output_format",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-mapscene.test.ts",
+          "testName": "rejects missing and mismatched CRS, IDs, source data, formats and recipe fields"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Unsupported output format produces a blocking fatal diagnostic.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_validation.py",
       "nativeTest": "test_validate_includes_building_geometry_count_in_gpu_memory_estimate",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "prepares real GeoJSON buildings and includes geometry in memory estimates"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Known building geometry count and buffer bytes contribute to the memory estimate.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_validation.py",
       "nativeTest": "test_validate_reports_missing_source_identity_for_required_sources",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-mapscene.test.ts",
+          "testName": "rejects missing and mismatched CRS, IDs, source data, formats and recipe fields"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Required resources without source identity produce errors before rendering.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_validation.py",
       "nativeTest": "test_validate_reports_missing_external_assets_before_render",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-mapscene.test.ts",
+          "testName": "enumerates all failed external assets and never invents missing data"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Unresolved URL failures are enumerated during async preparation before rendering.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_validation.py",
       "nativeTest": "test_validate_reports_unsupported_asset_formats_before_render",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "reports CRS identity formats empty data and building source failures on actual MapScenes"
+        },
+        {
+          "file": "tests/unit/w18-mapscene.test.ts",
+          "testName": "rejects missing and mismatched CRS, IDs, source data, formats and recipe fields"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Unsupported resource formats expose the supported formats and block output.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_validation.py",
       "nativeTest": "test_validate_reports_supported_building_source_asset_failures_before_render",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "reports CRS identity formats empty data and building source failures on actual MapScenes"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Actual building URL and unsupported-format failures diagnose before GPU rendering.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_validation.py",
       "nativeTest": "test_validate_reports_supported_building_render_adapter_placeholder_before_render",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "prepares real GeoJSON buildings and includes geometry in memory estimates"
+        }
       ],
-      "adaptation": "Historical placeholder is promoted only for a real W15/W16/W12 adapter. Browser layer-removal, selected-content, coverage and negative-control probes prove output; unsupported formats and empty selection remain blocking."
+      "assertionScope": "Accepted W15 GeoJSON decoding replaces the native migration-stage building placeholder with real geometry.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_validation.py",
       "nativeTest": "test_validate_reports_vector_path_only_loader_placeholder_before_render",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 source: URL heightmap, image, vector, glyph records and OBJ render after preparation"
+        },
+        {
+          "file": "tests/playwright/w18_mapscene.spec.ts",
+          "testName": "W18 dist: URL heightmap, image, vector, glyph records and OBJ render after preparation"
+        }
       ],
-      "adaptation": "Historical placeholder is promoted only for a real W15/W16/W12 adapter. Browser layer-removal, selected-content, coverage and negative-control probes prove output; unsupported formats and empty selection remain blocking."
+      "assertionScope": "Accepted W12 JSON vector loading replaces the native migration-stage path-only placeholder with actual rendering.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_mapscene_validation.py",
       "nativeTest": "test_validate_reports_vector_and_label_layers_without_renderable_data",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "reports CRS identity formats empty data and building source failures on actual MapScenes"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Vector and label inputs without inline data or URL are render-blocking errors.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_p1_diagnostics_contract.py",
       "nativeTest": "test_p1_feature_local_diagnostic_factories_are_structured_and_serializable",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "checks public required P1 and P2 inventories against actionable native factory reports"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "All P1 factories retain native structured JSON fields, severity, IDs and remediation.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_p1_diagnostics_contract.py",
       "nativeTest": "test_p1_warning_diagnostics_obey_fail_on_warning_policy",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "retains glyph and unicode warning semantics under both failure policies"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Unicode coverage warnings obey both failure policies.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_p1_diagnostics_contract.py",
       "nativeTest": "test_prd_p0_diagnostic_inventory_is_structured_serializable_and_actionable",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "checks public required P1 and P2 inventories against actionable native factory reports"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "All PRD P0 factories cover the required inventory and roundtrip with actionable fields.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
+    },
+    {
+      "nativeFile": "tests/test_p1_tiles3d_support.py",
+      "nativeTest": "test_tiles3d_public_api_loads_supported_local_tileset_fixture",
+      "owner": "W18",
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "preserves the public tiles validator diagnostic and local tile count"
+        }
+      ],
+      "assertionScope": "Local tileset.json input preserves source_kind and tile_count while retaining M02b error.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
+    },
+    {
+      "nativeFile": "tests/test_p1_tiles3d_support.py",
+      "nativeTest": "test_tiles3d_validation_distinguishes_supported_and_unsupported_formats",
+      "owner": "W18",
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "preserves tile format, feature, cache and LOD metadata in public summaries"
+        }
+      ],
+      "assertionScope": "Unsupported tile formats expose native format diagnostics and feature flags.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
+    },
+    {
+      "nativeFile": "tests/test_p1_tiles3d_support.py",
+      "nativeTest": "test_tiles3d_cache_statistics_are_exposed_in_layer_summary",
+      "owner": "W18",
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "preserves tile format, feature, cache and LOD metadata in public summaries"
+        }
+      ],
+      "assertionScope": "Cache budget and cache_stats are retained in actual MapScene layer summary details.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
+    },
+    {
+      "nativeFile": "tests/test_p1_tiles3d_support.py",
+      "nativeTest": "test_tiles3d_lod_and_screen_space_error_config_is_public_metadata",
+      "owner": "W18",
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "preserves tile format, feature, cache and LOD metadata in public summaries"
+        }
+      ],
+      "assertionScope": "LOD maximum depth and screen-space error metadata are retained exactly.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
+    },
+    {
+      "nativeFile": "tests/test_p1_tiles3d_support.py",
+      "nativeTest": "test_tiles3d_unsupported_b3dm_or_glb_features_produce_typed_diagnostics",
+      "owner": "W18",
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "preserves tile format, feature, cache and LOD metadata in public summaries"
+        }
+      ],
+      "assertionScope": "Unsupported compression/extension features produce typed diagnostics and feature flags.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
+    },
+    {
+      "nativeFile": "tests/test_p1_tiles3d_support.py",
+      "nativeTest": "test_tiles3d_docs_state_no_full_cesium_runtime_parity",
+      "owner": "W18",
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/api/w18-docs.test.mjs",
+          "testName": "states the native product boundaries and incomplete Cesium workflow"
+        }
+      ],
+      "assertionScope": "Documentation states not full Cesium runtime parity with the incomplete-workflow code.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
+    },
+    {
+      "nativeFile": "tests/test_p2_determinism_noop.py",
+      "nativeTest": "test_p2_validation_reports_are_deterministic_for_diagnostic_paths",
+      "owner": "W18",
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "keeps combined P2 validation deterministic and blocks no-op render success"
+        }
+      ],
+      "assertionScope": "Repeated MapScene VT/texture/instancing validation produces identical report JSON.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
+    },
+    {
+      "nativeFile": "tests/test_p2_determinism_noop.py",
+      "nativeTest": "test_p2_noop_success_paths_block_render",
+      "owner": "W18",
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "keeps combined P2 validation deterministic and blocks no-op render success"
+        }
+      ],
+      "assertionScope": "Combined unsupported P2 product paths reject rendering with no sink writes or success record.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
+    },
+    {
+      "nativeFile": "tests/test_p2_determinism_noop.py",
+      "nativeTest": "test_advanced_label_diagnostics_are_deterministic_not_silent_success",
+      "owner": "W18",
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "keeps advanced label diagnostics and repeated placement deterministic"
+        }
+      ],
+      "assertionScope": "Curved/repeated label plan output and diagnostics are deterministic and do not silently succeed.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_p2_diagnostics_contract.py",
       "nativeTest": "test_p2_feature_local_diagnostic_factories_are_structured_and_serializable",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "checks public required P1 and P2 inventories against actionable native factory reports"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "P2 factories retain required typed fields, support levels and deterministic JSON.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_p2_diagnostics_contract.py",
       "nativeTest": "test_p2_diagnostic_serialization_order_is_deterministic",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-diagnostics.test.ts",
+          "testName": "compares full native report ordering and serialization"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Native report oracle covers exact ordering and roundtrip of P2 diagnostic paths.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_p2_diagnostics_contract.py",
       "nativeTest": "test_mapscene_reports_building_texture_diagnostics_before_render",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "reports native building texture diagnostics and scalar fallback before rendering"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Actual MapScene emits texture path/UV/format/fallback diagnostics with material and object IDs.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_p2_diagnostics_contract.py",
       "nativeTest": "test_mapscene_reports_cache_lod_and_instancing_availability_diagnostics",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-diagnostics.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "retains native building cache and instancing diagnostics and per-layer details"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Actual MapScene has native building_layer availability diagnostics and per-layer summary details.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
+    },
+    {
+      "nativeFile": "tests/test_p2_large_scene_bottlenecks.py",
+      "nativeTest": "test_bottleneck_layer_types_are_deterministic_from_known_memory_and_counts",
+      "owner": "W18",
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "orders bottleneck layers deterministically from known buffers and preserves report roundtrip"
+        }
+      ],
+      "assertionScope": "Bottleneck layer/type ordering is deterministic from known buffers and survives report roundtrip.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_p2_large_scene_cache_lod_instancing.py",
       "nativeTest": "test_cache_lod_and_instancing_status_are_normalized_by_layer_type",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "normalizes native cache LOD and instancing availability by layer type"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Native layer types normalize cache budget/stats/LOD/instancing and unavailable fields.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_p2_large_scene_cache_lod_instancing.py",
       "nativeTest": "test_unavailable_terrain_cache_lod_stats_are_reported_before_render",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/playwright/w18_mapscene.spec.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-mapscene.test.ts",
+          "testName": "enumerates terrain and layer cache/LOD/instancing limitations in the large-scene summary"
+        }
       ],
-      "adaptation": "TypedArray resources, asynchronous preparation, PNG Blob and canonical JSON replace Python objects/files."
+      "assertionScope": "Requested unavailable terrain cache/LOD data diagnoses before rendering and appears in summaries.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
+    },
+    {
+      "nativeFile": "tests/test_p2_large_scene_memory.py",
+      "nativeTest": "test_large_scene_memory_summary_uses_known_metadata_and_budget_diagnostic",
+      "owner": "W18",
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "summarizes known memory with budget diagnostics without inventing unresolved memory"
+        }
+      ],
+      "assertionScope": "Known decoded buffers and output allocations contribute to totals and budget warnings.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives. Browser estimates use decoded byte counts and output/transient costs, not native synthetic metadata constants (400/64/120/288); W02/R07 owns GPU allocator enforcement.",
+      "deferredAssertions": []
+    },
+    {
+      "nativeFile": "tests/test_p2_large_scene_memory.py",
+      "nativeTest": "test_large_scene_does_not_invent_memory_when_metadata_is_unavailable",
+      "owner": "W18",
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "summarizes known memory with budget diagnostics without inventing unresolved memory"
+        }
+      ],
+      "assertionScope": "Unresolved memory is null and omitted from known estimates with explicit unavailable memory status.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives. Browser estimates use decoded byte counts and output/transient costs, not native synthetic metadata constants (400/64/120/288); W02/R07 owns GPU allocator enforcement.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_p2_textured_building_mapscene.py",
       "nativeTest": "test_textured_building_fixture_is_explicitly_diagnostic_only",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/unit/w15-buildings.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "keeps textured building intent diagnostic-only even when asset and UV metadata are available"
+        }
       ],
-      "adaptation": "W15 geometry and material diagnostics are bridged with layer/object/material IDs; unavailable texture output remains blocked."
+      "assertionScope": "Texture intent remains diagnostic-only even with valid UV and asset metadata.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     },
     {
       "nativeFile": "tests/test_p2_textured_building_mapscene.py",
       "nativeTest": "test_textured_building_render_is_blocked_without_silent_scalar_success",
       "owner": "W18",
-      "webEvidence": [
-        "tests/unit/w18-mapscene.test.ts",
-        "tests/unit/w15-buildings.test.ts"
+      "status": "adapted",
+      "webTests": [
+        {
+          "file": "tests/unit/w18-review-regressions.test.ts",
+          "testName": "keeps textured building intent diagnostic-only even when asset and UV metadata are available"
+        }
       ],
-      "adaptation": "W15 geometry and material diagnostics are bridged with layer/object/material IDs; unavailable texture output remains blocked."
+      "assertionScope": "Textured building rendering rejects before output and cannot silently render scalar material.",
+      "adaptation": "Native snake-case diagnostic JSON is retained. Browser resources use owned typed buffers, asynchronous URL preparation, PNG Blob/Frame and review JSON instead of Python objects, filesystem paths and archives.",
+      "deferredAssertions": []
     }
   ]
 }
