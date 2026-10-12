@@ -48,6 +48,14 @@ An `AbortSignal` cancels at a sample boundary on GPU and periodically on CPU.
 Concurrent mutations are rejected. `setCamera`, `setScene`, and
 `setTraversalMode` reset accumulation.
 
+GPU radiance contributions and medium `log`/`exp` values have explicit float32
+rounding boundaries. This preserves exact megakernel/wavefront replay when a
+shader compiler would otherwise fuse an inline contribution with the running
+sum or reassociate arithmetic through a transcendental implementation.
+The boundary reinterprets the float bits, XORs the host-owned zero word
+`Params.extra.w`, and reinterprets them back; it does not reduce precision.
+Host packing tests require that word to retain its zero bit pattern.
+
 The result contains RGB `color`, `albedo`, `normal`, `direct`, `indirect`,
 `emission`, and `bentNormal`; scalar `depth`, `visibility`, `ao`, and `variance`;
 and uint32 `id`. Depth and ID refer to the first sample. Normals are normalized

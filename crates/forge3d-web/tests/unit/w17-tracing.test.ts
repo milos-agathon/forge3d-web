@@ -33,9 +33,8 @@ import {
   TraceScene,
 } from "../../src-ts/trace-scene.js";
 import { iterTraceTiles } from "../../src-ts/trace-output.js";
-import { packTraceScene } from "../../src-ts/trace-gpu.js";
+import { packTraceScene, traceUniform, TraceGpu } from "../../src-ts/trace-gpu.js";
 import { packGuidingWeights } from "../../src-ts/trace-sampling.js";
-import { TraceGpu } from "../../src-ts/trace-gpu.js";
 import { traceCpuSample, mediumTransmittance } from "../../src-ts/trace-cpu.js";
 const tri = (z: number, id: number): TraceTriangle => ({
   v0: [-1, -1, z],
@@ -545,6 +544,19 @@ describe("W17 review regressions", () => {
     expect(u[primitive + 1]).toBe(1);
     expect(u[node + 4]).toBe(1);
     expect(u[node + 5]).toBe(1);
+    const uniform = traceUniform(scene, {
+      width: 4,
+      height: 4,
+      seed: 42,
+      maxBounces: 3,
+      mode: "hybrid",
+      clamp: 1.25,
+      guiding: undefined,
+      restir: undefined,
+      camera: { origin: [0, 0, 5], target: [0, 0, 0], up: [0, 1, 0], fovY: 45 },
+    }, p, 2);
+    expect(new Float32Array(uniform)[42]).toBe(1.25);
+    expect(new Uint32Array(uniform)[43]).toBe(0);
     scene.dispose();
     sdf.dispose();
   });

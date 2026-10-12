@@ -93,7 +93,7 @@ for (const dist of [false, true]) {
       );
     expect(r.clampMax).toBeLessThanOrEqual(2.00001);
     for (const m of r.materials) {
-      expect(m.same).toBe(true);
+      expect(m.same, JSON.stringify(m)).toBe(true);
       expect(m.finite).toBe(true);
       expect(m.covered).toBeGreaterThan(50);
       expect(m.cpuRelativeError).toBeLessThan(0.001);
@@ -107,10 +107,82 @@ for (const dist of [false, true]) {
     expect(r.areaMean).toBeGreaterThan(0.1);
     expect(r.continuationMax).toBe(0);
   });
+  test(`W17 ${label}: scattering media preserve exact engine phase results`, async ({ page }, testInfo) => {
+    test.setTimeout(180000);
+    await open(page);
+    const r = await page.evaluate(async () => {
+      const s = window.__w17;
+      const { sha256 } = await import(/* @vite-ignore */ "/examples/w17-fixture.js");
+      const adapter = await navigator.gpu.requestAdapter();
+      const device = await adapter!.requestDevice();
+      const tracers = [];
+      try {
+        const scene = {
+          environment: [0, 0, 0],
+          lights: [{ position: [1, 0, 3], intensity: 100 }],
+          medium: {
+            sigmaA: [0.02, 0.04, 0.06],
+            sigmaS: [0.5, 0.4, 0.3],
+            g: 0.3,
+            bounds: { min: [-100, -100, 0], max: [100, 100, 4] },
+          },
+        };
+        const cases = [];
+        for (const maxBounces of [1, 2, 3]) {
+          const results = [];
+          for (const engine of ["megakernel", "wavefront", "cpu"]) {
+            const t = await s.PathTracer.create({
+              width: 16, height: 16, seed: 42, maxBounces,
+              camera: { origin: [0, 0, 5], target: [0, 0, 0], fovY: 0.01 },
+              ...(engine === "cpu" ? { backend: "cpu" } : { engine }),
+            }, { device });
+            tracers.push(t);
+            await t.setScene(scene);
+            results.push(await t.render({ spp: 4 }));
+          }
+          const [a, b, c] = results;
+          const error = (x: Float32Array, y: Float32Array) => x.reduce(
+            (m, v, i) => Math.max(m, Math.abs(v - y[i]) / Math.max(1, Math.abs(v))), 0,
+          );
+          cases.push({
+            maxBounces,
+            same: (await sha256(a.color)) === (await sha256(b.color)),
+            engines: error(a.color, b.color),
+            cpu: error(c.color, a.color),
+            mean: a.color.reduce((sum: number, v: number) => sum + v, 0) / a.color.length,
+            finite: results.every((v) => v.color.every(Number.isFinite)),
+            direct: error(a.direct, b.direct),
+            indirect: error(a.indirect, b.indirect),
+          });
+        }
+        return cases;
+      } finally {
+        for (const t of tracers) t.dispose();
+        device.destroy();
+      }
+    });
+    await testInfo.attach("medium-engines.json", {
+      body: JSON.stringify(r, null, 2),
+      contentType: "application/json",
+    });
+    for (const result of r) {
+      expect(result.finite).toBe(true);
+      expect(result.mean).toBeGreaterThan(0.01);
+      expect(result.cpu).toBeLessThan(0.001);
+      expect(result.engines, JSON.stringify(r)).toBe(0);
+      expect(result.direct, JSON.stringify(r)).toBe(0);
+      expect(result.indirect, JSON.stringify(r)).toBe(0);
+      expect(result.same).toBe(true);
+    }
+  });
   test(`W17 ${label}: review regressions cover irregular BVHs, lit media, reuse and guiding parity`, async ({
     page,
   }, testInfo) => {
-    test.setTimeout(240000);
+    // The seed ensemble and GPU readbacks run serially, including cold pipelines.
+    test.setTimeout(600000);
+    page.on("console", (message) => {
+      if (message.text().startsWith("W17 review")) console.log(message.text());
+    });
     await open(page);
     const r = await page.evaluate(async () => {
       const f = await import(/* @vite-ignore */ "/examples/w17-review.js");
@@ -527,9 +599,15 @@ for (const dist of [false, true]) {
       const c = await s.PathTracer.create({ ...options, backend: "cpu" });
       await c.setScene(scene);
       const cpu = await c.render({ spp: 64 });
-      let cpuMax = 0;
+      let cpuMax = 0,
+        waveMax = 0,
+        waveDifferent = 0;
       for (let i = 0; i < cpu.color.length; i++)
         cpuMax = Math.max(cpuMax, Math.abs(cpu.color[i] - final.color[i]));
+      for (let i = 0; i < wave.color.length; i++) {
+        waveMax = Math.max(waveMax, Math.abs(wave.color[i] - final.color[i]));
+        if (wave.color[i] !== final.color[i]) waveDifferent++;
+      }
       const cpuIds = cpu.id.every(
         (id: number, i: number) => id === final.id[i],
       );
@@ -543,6 +621,8 @@ for (const dist of [false, true]) {
         mse,
         covered,
         cpuMax,
+        waveMax,
+        waveDifferent,
         cpuIds,
         normal: [...final.normal.slice(0, 3)],
         depth: final.depth[0],
@@ -562,7 +642,11 @@ for (const dist of [false, true]) {
     expect(r.blankSsim).toBeLessThan(0.1);
     expect(r.covered).toBe(640);
     expect(r.cpuIds).toBe(true);
-    expect(r.waveHash).toBe(r.hashes[3]);
+    expect(r.waveHash, JSON.stringify({
+      waveMax: r.waveMax,
+      waveDifferent: r.waveDifferent,
+      cpuMax: r.cpuMax,
+    })).toBe(r.hashes[3]);
     expect(r.repeatHash).toBe(r.hashes[3]);
     expect(r.cpuMax).toBeLessThanOrEqual(1e-5);
     for (let i = 1; i < 4; i++) expect(r.rmse[i]).toBeLessThan(r.rmse[i - 1]);

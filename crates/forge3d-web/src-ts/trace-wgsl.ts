@@ -70,6 +70,10 @@ struct Reservoir {sample:u32,count:u32,weight:f32,importance:f32,age:u32,coords:
 @group(0) @binding(7) var<storage,read> history:array<Reservoir>;
 struct QueueItem {hit:Hit,shadowO:vec4f,shadowD:vec4f,shadowC:vec4f,shadowTags:vec4u};
 @group(0) @binding(8) var<storage,read_write> pending:array<QueueItem>;
+// extra.w is a host-owned zero word. The dynamic integer operation makes the
+// float32 result observable before accumulation and transcendental expansion.
+fn contribution(v:vec3f)->vec3f {return bitcast<vec3f>(bitcast<vec3u>(v)^vec3u(bitcast<u32>(params.extra.w)));}
+fn phase1(v:f32)->f32 {return bitcast<f32>(bitcast<u32>(v)^bitcast<u32>(params.extra.w));}
 fn rng(state:ptr<function,u32>)->f32 {var x=*state;x=x^(x<<13u);x=x^(x>>17u);x=x^(x<<5u);*state=x;return f32(x>>8u)/16777216.;}
 fn local_world(v:vec3f,n:vec3f)->vec3f {var axis=vec3f(0.,0.,1.);if(abs(n.z)>=0.999){axis=vec3f(0.,1.,0.);}let t=safe_unit(cross(axis,n));let b=cross(n,t);return safe_unit(t*v.x+b*v.y+n*v.z);}
 fn cosine(u:f32,v:f32,n:vec3f)->vec3f {let r=sqrt(u);let phi=6.28318530718*v;return local_world(vec3f(r*cos(phi),r*sin(phi),sqrt(1.-u)),n);}
@@ -100,22 +104,22 @@ fn initial(pixel:u32)->Path {
 }
 fn hg_phase(c:f32,g:f32)->f32 {let d=1.+g*g-2.*g*c;return (1.-g*g)/(12.56637061436*d*sqrt(d));}
 fn medium_trans(o:vec3f,d:vec3f,distance:f32)->vec3f {
-  if(params.mediumS.w<0.5){return vec3f(1.);}let interval=slab(params.mediumMin.xyz,params.mediumMax.xyz,o,d,0.,distance);if(interval.x>interval.y){return vec3f(1.);}return exp(-(params.mediumA.xyz+params.mediumS.xyz)*(interval.y-interval.x));
+  if(params.mediumS.w<0.5){return vec3f(1.);}let interval=slab(params.mediumMin.xyz,params.mediumMax.xyz,o,d,0.,distance);if(interval.x>interval.y){return vec3f(1.);}return exp(contribution(-(params.mediumA.xyz+params.mediumS.xyz)*(interval.y-interval.x)));
 }
 fn connect_light(input:Path,o:vec3f,d:vec3f,distance:f32,lit:vec3f,queued:bool,slot:u32)->Path {
-  var p=input;if(any(lit>vec3f(0.))){if(queued){pending[slot].shadowO=vec4f(o,0.00001);pending[slot].shadowD=vec4f(d,distance-0.0002);pending[slot].shadowC=vec4f(lit,select(2.,1.,p.tags.w==0u));}else if(scene_hit(o,d,0.00001,distance-0.0002).id==0u){p.c+=vec4f(lit,0.);if(p.tags.w==0u){p.direct+=vec4f(lit,0.);}else{p.indirect+=vec4f(lit,0.);}}}return p;
+  var p=input;let value=contribution(lit);if(any(value>vec3f(0.))){if(queued){pending[slot].shadowO=vec4f(o,0.00001);pending[slot].shadowD=vec4f(d,distance-0.0002);pending[slot].shadowC=vec4f(value,select(2.,1.,p.tags.w==0u));}else if(scene_hit(o,d,0.00001,distance-0.0002).id==0u){p.c+=vec4f(value,0.);if(p.tags.w==0u){p.direct+=vec4f(value,0.);}else{p.indirect+=vec4f(value,0.);}}}return p;
 }
 fn shade(input:Path,hit:Hit,queued:bool,slot:u32)->Path {
   var p=input;var state=p.tags.y;let bounce=p.tags.w;var light_index=0u;var light_uv=vec2f(0.);
   if(params.mediumS.w>0.5){let interval=slab(params.mediumMin.xyz,params.mediumMax.xyz,p.o.xyz,p.d.xyz,0.00001,hit.t);if(interval.x<=interval.y){
-    let sigma=params.mediumA.xyz+params.mediumS.xyz;let majorant=max(max(sigma.x,sigma.y),sigma.z);var flight=1e30;if(majorant>0.){flight=-log(max(1e-7,1.-rng(&state)))/majorant;}
-    if(flight<interval.y-interval.x){p.o=vec4f(p.o.xyz+p.d.xyz*(interval.x+flight),0.);p.t=vec4f(p.t.xyz*exp((vec3f(majorant)-sigma)*flight)*params.mediumS.xyz/max(majorant,1e-30),0.);
+    let sigma=params.mediumA.xyz+params.mediumS.xyz;let majorant=max(max(sigma.x,sigma.y),sigma.z);var flight=1e30;if(majorant>0.){flight=-phase1(log(max(1e-7,1.-rng(&state))))/majorant;}
+    if(flight<interval.y-interval.x){p.o=vec4f(p.o.xyz+p.d.xyz*(interval.x+flight),0.);p.t=vec4f(p.t.xyz*exp(contribution((vec3f(majorant)-sigma)*flight))*params.mediumS.xyz/max(majorant,1e-30),0.);
       if(params.mode.z>0u){let choice=choose_light(&state);let light=light_geometry(bitcast<u32>(choice.x),p.o.xyz,choice.zw);let phase=hg_phase(clamp(dot(p.d.xyz,light[0].xyz),-1.,1.),params.mediumA.w);let lit=p.t.xyz*light[1].xyz*(phase/choice.y)*medium_trans(p.o.xyz,light[0].xyz,light[0].w);if(light[0].w>=0.0001){p=connect_light(p,p.o.xyz+light[0].xyz*0.0001,light[0].xyz,light[0].w,lit,queued,slot);}}
       let u=rng(&state);let v=rng(&state);let g=params.mediumA.w;var z=1.-2.*u;if(abs(g)>=0.001){let a=(1.-g*g)/(1.-g+2.*g*u);z=(1.+g*g-a*a)/(2.*g);}z=clamp(z,-1.,1.);let r=sqrt(max(0.,1.-z*z));p.d=vec4f(local_world(vec3f(r*cos(6.28318530718*v),r*sin(6.28318530718*v),z),p.d.xyz),0.);p.tags.y=state;p.tags.w+=1u;if(p.tags.w>=params.dims.w){p.tags.z=0u;}return p;
-    }p.t=vec4f(p.t.xyz*exp((vec3f(majorant)-sigma)*(interval.y-interval.x)),0.);
+    }p.t=vec4f(p.t.xyz*exp(contribution((vec3f(majorant)-sigma)*(interval.y-interval.x))),0.);
   }}
-  if(hit.id==0u){let c=p.t.xyz*params.environment.xyz*(0.5+0.5*max(0.,p.d.y));p.c+=vec4f(c,0.);p.indirect+=vec4f(c,0.);p.tags.z=0u;p.tags.y=state;return p;}
-  let mat=params.offsets1.y+hit.material*12u;let albedo=sv(mat);let metallic=sf(mat+3u);let emission=p.t.xyz*sv(mat+4u);let roughness=sf(mat+7u);let ior=sf(mat+8u);p.c+=vec4f(emission,0.);p.emission+=vec4f(emission,0.);
+  if(hit.id==0u){let c=contribution(p.t.xyz*params.environment.xyz*(0.5+0.5*max(0.,p.d.y)));p.c+=vec4f(c,0.);p.indirect+=vec4f(c,0.);p.tags.z=0u;p.tags.y=state;return p;}
+  let mat=params.offsets1.y+hit.material*12u;let albedo=sv(mat);let metallic=sf(mat+3u);let emission=contribution(p.t.xyz*sv(mat+4u));let roughness=sf(mat+7u);let ior=sf(mat+8u);p.c+=vec4f(emission,0.);p.emission+=vec4f(emission,0.);
   if(bounce==0u){p.a=vec4f(albedo,0.);p.identity.x=hit.id;p.n=vec4f(hit.n,hit.t);p.direct.w=1.;let ad=cosine(rng(&state),rng(&state),hit.n);let occluded=scene_hit(hit.p+hit.n*0.0001,ad,0.00001,1.).id!=0u;p.indirect.w=select(1.,0.,occluded);p.bent=vec4f(select(ad,vec3f(0.),occluded),0.);}
   var lighting=vec3f(0.);
   if(params.mode.z>0u){if(params.mode.w==0u){let choice=choose_light(&state);light_index=bitcast<u32>(choice.x);light_uv=choice.zw;lighting=light_value(light_index,hit.p,hit.n,hit.material,-p.d.xyz,light_uv)/choice.y;}

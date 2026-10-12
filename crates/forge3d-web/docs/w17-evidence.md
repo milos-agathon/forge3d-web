@@ -42,6 +42,21 @@ response analytically. The browser test checks strictly decreasing RMSE at
 CPU color tolerance 1e-5 and full pixel coverage. A blank-frame negative control
 must fail SSIM.
 
+Headed Firefox 150.0.2 with default preferences reproduced one-ULP engine
+differences in the pre-correction `c389e72` runtime: maximum absolute color
+error was 5.960464477539063e-8 on 21 convergence channels and
+2.9802322387695312e-8 on 15 channels in the failing material comparison.
+WGSL [permits arithmetic fusion and reassociation](https://www.w3.org/TR/WGSL/#floating-point-reassociation-and-fusion).
+The runtime now places observable float32 bit boundaries around environment,
+emission and light contributions before accumulation. A separate scattering
+regression reproduced relative engine error of 3.2393490204208564e-7 after one
+bounce and 1.051981634241634e-6 after three. Float32 boundaries on the free-flight
+log result and medium exponent inputs remove that difference without reducing
+precision. The focused local Firefox reproductions pass unchanged exact color
+hashes and direct/indirect AOV equality. The serial
+review seed ensemble allows 600 seconds for cold pipelines and GPU readbacks;
+phase timings identify any stalled workload without changing its assertions.
+
 Candidate RIS is checked against an exhaustive 50-light reference, with error reduction
 above 40%. Reuse is compared at equal sample/candidate counts, checked against
 an analytic two-light mean across eight seeds, and compared between CPU/GPU with

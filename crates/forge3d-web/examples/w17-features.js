@@ -161,18 +161,26 @@ export async function runTraceFeatures(s) {
       materialHashes.push(hash);
       const cpu = await create({ backend: "cpu", maxBounces: 6 }, mScene),
         rc = await cpu.render({ spp: 4 });
-      let cpuError = 0;
+      let cpuError = 0,
+        engineError = 0,
+        engineDifferent = 0;
       for (let i = 0; i < rc.color.length; i++)
         cpuError = Math.max(
           cpuError,
           Math.abs(rc.color[i] - ra.color[i]) /
             Math.max(1, Math.abs(rc.color[i])),
         );
+      for (let i = 0; i < ra.color.length; i++) {
+        engineError = Math.max(engineError, Math.abs(ra.color[i] - rb.color[i]));
+        if (ra.color[i] !== rb.color[i]) engineDifferent++;
+      }
       materials.push({
         same: hash === (await sha256(rb.color)),
         finite: ra.color.every(Number.isFinite),
         covered: ra.id.filter((x) => x !== 0).length,
         cpuRelativeError: cpuError,
+        engineError,
+        engineDifferent,
         directMax: Math.max(...ra.direct),
       });
       sdf.dispose();

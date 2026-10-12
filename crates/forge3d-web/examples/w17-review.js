@@ -117,6 +117,9 @@ export async function runGuidingParity(s) {
   }
 }
 export async function runReviewRegressions(s) {
+  const started = performance.now();
+  const phase = (name) =>
+    console.log(`W17 review ${name}: ${Math.round(performance.now() - started)}ms`);
   const adapter = await navigator.gpu.requestAdapter(),
     device = await adapter.requestDevice(),
     track = trackGpuBuffers(device),
@@ -137,6 +140,7 @@ export async function runReviewRegressions(s) {
     );
   try {
     // Known barycentric target points on rotated triangles; oblique non-dyadic rays.
+    phase("BVH and refit");
     let maxT = 0,
       maxBary = 0,
       maxOracle = 0,
@@ -250,6 +254,7 @@ export async function runReviewRegressions(s) {
     );
     if (reserved[0]?.kind !== "mesh" || reserved[0].id !== 0xfffffffe)
       throw Error("Mesh/SDF identity collision");
+    phase("ReSTIR parity");
     const sdf = s.SdfScene.singlePrimitive(s.SdfPrimitive.sphere([0, 0, 0], 1));
     const sphere = {
       sdf,
@@ -321,6 +326,7 @@ export async function runReviewRegressions(s) {
     );
     let reuseMean = 0,
       reuseVariance = 0;
+    phase("ReSTIR seed ensemble");
     for (let seed = 0; seed < 8; seed++) {
       const t =
         seed === 0
@@ -375,6 +381,7 @@ export async function runReviewRegressions(s) {
       maxBounces: 3,
       camera: { origin: [0, 0, 5], target: [0, 0, 0], fovY: 0.01 },
     };
+    phase("Lit media");
     const clear = await create(volumeOptions, {
         ...flat,
         lights: [flat.lights[0]],
@@ -451,6 +458,7 @@ export async function runReviewRegressions(s) {
     };
     const ga = new s.OnlineGuidingGrid(8, 8, 8),
       gb = new s.OnlineGuidingGrid(8, 8, 8);
+    phase("Guiding and AOVs");
     const guided = await create({ ...guidingOptions, guiding: ga }, wall),
       guidedCpu = await create(
         { ...guidingOptions, backend: "cpu", guiding: gb },
@@ -507,6 +515,7 @@ export async function runReviewRegressions(s) {
       tileCoverage = tiles.reduce((n, t) => n + t.width * t.height, 0);
     const trained = ga.snapshot(),
       varianceOptions = { ...guidingOptions, luminanceClamp: 0 };
+    phase("Guiding variance");
     const learned = await create({ ...varianceOptions, guiding: ga }, wall),
       uniform = await create(varianceOptions, wall);
     ga.restore(trained);
@@ -544,6 +553,7 @@ export async function runReviewRegressions(s) {
         (await equiv.render({ spp: 4 })).color,
       );
     sdf.dispose();
+    phase("Finished");
     for (const t of tracers) t.dispose();
     const residualBuffers = track.count,
       residualBytes = track.bytes;

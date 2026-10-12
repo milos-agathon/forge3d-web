@@ -125,6 +125,7 @@ export function traceUniform(
   v.set(right, 28);
   v.set(up, 32);
   v.set(scene.environment, 36);
+  // extra.w must have zero bits: WGSL contribution barriers XOR this word.
   v.set(
     [Math.tan((s.camera.fovY * Math.PI) / 360), s.width / s.height, s.clamp, 0],
     40,
