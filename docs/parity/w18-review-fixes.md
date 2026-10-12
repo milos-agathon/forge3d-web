@@ -42,9 +42,19 @@ Observed on 2026-10-12 in the implementation worktree:
 | Shared W16 source/dist browser suite | 14 passed; optional ten-minute acceptance soak skipped |
 | Aggregate package gate | Passed; 22 documentation, 118 browser-harness, 627 infrastructure passes; one Unix-UID case skipped on Windows |
 | Parity | 15 tests passed; 6,531 mappings; zero untracked/duplicate/unresolved entries |
-| Clean installed W18 consumer | Pending final clean-checkout run |
+| Clean installed W18 consumer | Strict consumer compiled; 15 browser tests passed; no failures/skips/flaky tests |
 
 The [native audit](w18-runs/review-native-audit.json) records each exact file hash.
+The clean installed gate ran at implementation revision
+`5c6f79a9bb406eb45103b6f661a9714d19de14d2`. Its
+[raw browser report](w18-runs/review-installed-playwright.json) and
+[consumer record](w18-runs/review-package-consumer.json) bind tarball SHA-256
+`a8745af1266acbe33b48c0c28e0b67aeb408dc1dfd059eab5c71cda7033b6fe8`,
+independently recomputed after the run. Runtime modules and assets came exclusively
+from the separately installed tarball. The
+[observed CLI results](w18-runs/review-observations.json) record the final source/dist
+and unit completions; their full raw reports were not captured. Subsequent commits
+only record repository evidence and do not change the tested runtime.
 The old [verification record](w18-verification.md) and original raw runs remain
 historical evidence; their point/tiles promotion and broad coverage claim are
 superseded. Browser observations are local flagged Chromium preflight evidence,

@@ -1,0 +1,803 @@
+{
+  "config": {
+    "configFile": "D:\\forge3d\\cache\\tmp\\forge3d-w18-consumer-WVUrB8\\w18-package.config.mts",
+    "rootDir": "C:/Users/milos/.codex/worktrees/w18-mapscene/forge3d-web/crates/forge3d-web/tests/playwright",
+    "forbidOnly": false,
+    "fullyParallel": false,
+    "globalSetup": null,
+    "globalTeardown": null,
+    "globalTimeout": 0,
+    "grep": {},
+    "grepInvert": null,
+    "maxFailures": 0,
+    "metadata": {
+      "actualWorkers": 1
+    },
+    "preserveOutput": "always",
+    "projects": [
+      {
+        "outputDir": "C:/Users/milos/.codex/worktrees/w18-mapscene/forge3d-web/crates/forge3d-web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "forge3dBrowser": {
+            "project": "chromium-preflight",
+            "browserName": "chromium",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": [
+              "--enable-unsafe-webgpu",
+              "--use-angle=d3d11"
+            ]
+          }
+        },
+        "id": "chromium-preflight",
+        "name": "chromium-preflight",
+        "testDir": "C:/Users/milos/.codex/worktrees/w18-mapscene/forge3d-web/crates/forge3d-web/tests/playwright",
+        "testIgnore": [],
+        "testMatch": [
+          "w18_mapscene.spec.ts"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/Users/milos/.codex/worktrees/w18-mapscene/forge3d-web/crates/forge3d-web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "forge3dBrowser": {
+            "project": "chrome-stable",
+            "browserName": "chrome",
+            "channel": "chrome",
+            "lane": "branded",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": []
+          }
+        },
+        "id": "chrome-stable",
+        "name": "chrome-stable",
+        "testDir": "C:/Users/milos/.codex/worktrees/w18-mapscene/forge3d-web/crates/forge3d-web/tests/playwright",
+        "testIgnore": [],
+        "testMatch": [
+          "w18_mapscene.spec.ts"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/Users/milos/.codex/worktrees/w18-mapscene/forge3d-web/crates/forge3d-web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "forge3dBrowser": {
+            "project": "edge-stable",
+            "browserName": "edge",
+            "channel": "msedge",
+            "lane": "branded",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": []
+          }
+        },
+        "id": "edge-stable",
+        "name": "edge-stable",
+        "testDir": "C:/Users/milos/.codex/worktrees/w18-mapscene/forge3d-web/crates/forge3d-web/tests/playwright",
+        "testIgnore": [],
+        "testMatch": [
+          "w18_mapscene.spec.ts"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/Users/milos/.codex/worktrees/w18-mapscene/forge3d-web/crates/forge3d-web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "forge3dBrowser": {
+            "project": "firefox-preflight",
+            "browserName": "firefox",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "project-configuration",
+            "webgpuRequired": true,
+            "launchArgs": [],
+            "preferenceMode": "default",
+            "firefoxUserPrefs": {},
+            "supportLevel": "ENGINE_PASS"
+          }
+        },
+        "id": "firefox-preflight",
+        "name": "firefox-preflight",
+        "testDir": "C:/Users/milos/.codex/worktrees/w18-mapscene/forge3d-web/crates/forge3d-web/tests/playwright",
+        "testIgnore": [],
+        "testMatch": [
+          "w18_mapscene.spec.ts"
+        ],
+        "timeout": 30000
+      },
+      {
+        "outputDir": "C:/Users/milos/.codex/worktrees/w18-mapscene/forge3d-web/crates/forge3d-web/test-results",
+        "repeatEach": 1,
+        "retries": 0,
+        "metadata": {
+          "forge3dBrowser": {
+            "project": "webkit-preflight",
+            "browserName": "webkit",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "project-configuration",
+            "webgpuRequired": true,
+            "launchArgs": []
+          }
+        },
+        "id": "webkit-preflight",
+        "name": "webkit-preflight",
+        "testDir": "C:/Users/milos/.codex/worktrees/w18-mapscene/forge3d-web/crates/forge3d-web/tests/playwright",
+        "testIgnore": [],
+        "testMatch": [
+          "w18_mapscene.spec.ts"
+        ],
+        "timeout": 30000
+      }
+    ],
+    "quiet": false,
+    "reporter": [
+      [
+        "list",
+        null
+      ],
+      [
+        "json",
+        {
+          "outputFile": "C:\\Users\\milos\\.codex\\worktrees\\w18-mapscene\\forge3d-web\\crates\\forge3d-web\\test-results\\w18-installed-playwright.json"
+        }
+      ]
+    ],
+    "reportSlowTests": {
+      "max": 5,
+      "threshold": 300000
+    },
+    "shard": null,
+    "tags": [],
+    "updateSnapshots": "missing",
+    "updateSourceMethod": "patch",
+    "version": "1.60.0",
+    "workers": 1,
+    "webServer": null
+  },
+  "suites": [
+    {
+      "title": "w18_mapscene.spec.ts",
+      "file": "w18_mapscene.spec.ts",
+      "column": 0,
+      "line": 0,
+      "specs": [],
+      "suites": [
+        {
+          "title": "dist",
+          "file": "w18_mapscene.spec.ts",
+          "line": 9,
+          "column": 10,
+          "specs": [
+            {
+              "title": "W18 dist: post-processing cannot conceal empty geometry and overlay-only output is covered",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-preflight",
+                  "projectName": "chromium-preflight",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2539,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-12T19:09:33.066Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "forge3d-webgpu-probe.json",
+                          "contentType": "application/json",
+                          "body": "ewogICJwcm9qZWN0IjogewogICAgInByb2plY3QiOiAiY2hyb21pdW0tcHJlZmxpZ2h0IiwKICAgICJicm93c2VyTmFtZSI6ICJjaHJvbWl1bSIsCiAgICAiY2hhbm5lbCI6ICJwbGF5d3JpZ2h0IiwKICAgICJsYW5lIjogInByZWZsaWdodCIsCiAgICAibGF1bmNoT2JzZXJ2YXRpb24iOiAiY2hyb21pdW0tbGl2ZSIsCiAgICAid2ViZ3B1UmVxdWlyZWQiOiB0cnVlLAogICAgImxhdW5jaEFyZ3MiOiBbCiAgICAgICItLWVuYWJsZS11bnNhZmUtd2ViZ3B1IiwKICAgICAgIi0tdXNlLWFuZ2xlPWQzZDExIgogICAgXQogIH0sCiAgInByb2plY3RQb2xpY3lSZXF1aXJlZCI6IHRydWUsCiAgImFtYmllbnRSZXF1aXJlZCI6IGZhbHNlLAogICJyZXF1aXJlZCI6IHRydWUsCiAgImhhc05hdmlnYXRvckdwdSI6IHRydWUsCiAgImFkYXB0ZXJBdmFpbGFibGUiOiB0cnVlLAogICJzZWN1cmVDb250ZXh0IjogdHJ1ZSwKICAidXNlckFnZW50IjogIk1vemlsbGEvNS4wIChXaW5kb3dzIE5UIDEwLjA7IFdpbjY0OyB4NjQpIEFwcGxlV2ViS2l0LzUzNy4zNiAoS0hUTUwsIGxpa2UgR2Vja28pIEhlYWRsZXNzQ2hyb21lLzE0OC4wLjc3NzguOTYgU2FmYXJpLzUzNy4zNiIKfQ=="
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db01b54e712e1d61ebca-cf190416b5f0498ab593",
+              "file": "w18_mapscene.spec.ts",
+              "line": 10,
+              "column": 9
+            },
+            {
+              "title": "W18 dist: multilayer example renders real geometry, glyphs and PNG",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-preflight",
+                  "projectName": "chromium-preflight",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1743,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-12T19:09:35.727Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "forge3d-webgpu-probe.json",
+                          "contentType": "application/json",
+                          "body": "ewogICJwcm9qZWN0IjogewogICAgInByb2plY3QiOiAiY2hyb21pdW0tcHJlZmxpZ2h0IiwKICAgICJicm93c2VyTmFtZSI6ICJjaHJvbWl1bSIsCiAgICAiY2hhbm5lbCI6ICJwbGF5d3JpZ2h0IiwKICAgICJsYW5lIjogInByZWZsaWdodCIsCiAgICAibGF1bmNoT2JzZXJ2YXRpb24iOiAiY2hyb21pdW0tbGl2ZSIsCiAgICAid2ViZ3B1UmVxdWlyZWQiOiB0cnVlLAogICAgImxhdW5jaEFyZ3MiOiBbCiAgICAgICItLWVuYWJsZS11bnNhZmUtd2ViZ3B1IiwKICAgICAgIi0tdXNlLWFuZ2xlPWQzZDExIgogICAgXQogIH0sCiAgInByb2plY3RQb2xpY3lSZXF1aXJlZCI6IHRydWUsCiAgImFtYmllbnRSZXF1aXJlZCI6IGZhbHNlLAogICJyZXF1aXJlZCI6IHRydWUsCiAgImhhc05hdmlnYXRvckdwdSI6IHRydWUsCiAgImFkYXB0ZXJBdmFpbGFibGUiOiB0cnVlLAogICJzZWN1cmVDb250ZXh0IjogdHJ1ZSwKICAidXNlckFnZW50IjogIk1vemlsbGEvNS4wIChXaW5kb3dzIE5UIDEwLjA7IFdpbjY0OyB4NjQpIEFwcGxlV2ViS2l0LzUzNy4zNiAoS0hUTUwsIGxpa2UgR2Vja28pIEhlYWRsZXNzQ2hyb21lLzE0OC4wLjc3NzguOTYgU2FmYXJpLzUzNy4zNiIKfQ=="
+                        },
+                        {
+                          "name": "mapscene.png",
+                          "contentType": "image/png",
+                          "body": "iVBORw0KGgoAAAANSUhEUgAAAgAAAAGACAIAAABUQk3oAAAQAElEQVR4nOydWY8sW3bX14rMrKozn0uDETy4GxA82W2JB55wI575AEgY8+GYJD4FUttPiJe+jbAlBHY3COy2u+859wx1qjIzFnveaw8RmTWeqor/z+U8UTt2DBnVd/3XsPeO9ebsFQEAAFgeAwEAAFgkEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoawIAAFDyYqDfWvOLgelh82mUX+3k00jXAwIAAAA1xvr/8xerv7d56DmSP9uO//nT/s8uha7FUxaAt2/e/PCHv/3m7Ruz/f7d+1/84pfv3r+/Yc/bvTezcQ/XAgBcFeP7G+v/O2ePIEn+Xwbj/0MAGoyF/Td/+Ac//vHvmu1vv/35v/13/+Hdtz+/Yc/bvTezcQ/XAgCALk9ZAIxHb2z6P/vJ76dfb97zdu/tfq4FAABdMAoIAAAWCgQAAAAWCgQAAAAWCoaBHkaPEWppRw3pET7k6r3z44umzn/V/le9n/mrAACePBCAw+gxQi3tqCE9wsd8HhxfNHX+q/a/6v3MXwUA8OSBAFyft2/fes+6csb9CB+z989/8cv379+/efNm5gy/9+Mft338mf0ZSM0V8L78T37y++bHbNj2d+8OHqXvx/zaPRYAsEAgAIcxttL4yG3Kxdhu71l38X73z3727U//6I///N//gmKyZb6PPrPf+6Mf/nby0H1LsuCm/WfffnvwKH0tv6GPbe8KALAQliIA3tee2mt2mQ5Te40fPZUheffuX9Asxrs39v1nswmWto8xyj9ynr4x1sZ5T9rjfXlvwX/60z8yP8cc5THRw9sf/675Lt1jAQALZCkC4P3fKXudkjm3iPeyjZ2d8a+n+vh2k7HpRhjXO2r+WADAAkEK6FjasTc+bpjKpJt2k2OZ97Kn+viYw1yrq1jXO2r+WADAAlmKALQZc43Pnr+dGFfjacfe+LgBpVQAwCNlKQLgPd+f/vSPpzt0vGbt9f/ohz+cGc8DAACPDqSA5tBev62d9sbqEAAAPE4gAHP4UTe/93s/Ntb/229/3o7nOTgKaJ4wDwBzcQEAXwOsBXQYXz8wP7c+csZHGH7wPgEAwP2CCOAw7cgZXxuYHwV0DGFs/rt37Zj9mfNPxQ23dVcAgIUAAbgOekbuXZja+fPPz/W9u7sCADwxIACHaWcR39aIID8v1/yYE9JPcru5XFrvwdQejLPv282G+dUPPzUd/vwXv6zmJXSPAgCALhCAw7SziP2IIJMUuuEoIF9deP/+/U9+/5/+4b/+V6ndm/h21q6e69ve1dRRAADQ5SkLgPeX/fa8RzzVU7cX/d3qPWRDgd/23bpnO+aKxlKTdd6LOWjvHKZDtWJPWpXoR261n+qcU0cd/xwAAIuCN2ev6Imip3HND7Wc6jn/qhZywQGphZf12dr29oo08ZIWfZXbeiHMMc8BAOD5nbPhX75em0962Py3L+N/+n5nPulaPGUBAACA67EQAcA8AAAAWCgoAgMAQM2nUf5se023+j4xN2lula4LUkAAAFDzYqDfWvOLgelhY6z/r3by6bpSBQEAAICFghoAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAsFAgAAAAslDUBAI5kzfxsMJ9zfXYi56P5JAAePBAAAI7FWH/+O6f8cjXTRz7u6f9dyIc9AfDggQAAMIvy+vnlmt9u+NVqtv9AJgLwUcJIsnXRgPkZCYCHBgQAgDkKr389WDE41J9M/93GbMvlSB+28nFHH4gukRQCDw4IAAATON/fuvwHvf7qKNN5HGQ30iC0ZbpkuwHAwwMCAECf4Psb6//syoPljPUX4/uf760MAPBQgQCAm8LDCZ+8Il7TuBPZmU9j/0T2JCYFbjzfR+v8DkynTCck+5H2RTuv2O7tMoq1/sb0m59LlILBgwYCAG6Ksf6r1/+IN69k+71sP8rO/Hym3TmNlzJunQY8Sqzz/mlH3Nz/ZqAXa54QAPj+4BEBAQDXh0/erF7+9urV31+9/oe8fj5e/EYu35mf8dIowQenBOe0vwhhwejDgr2NCR5FZGBucDvKRd3Mo5hEv4zSPUQu4PuDRwMEAFwfY/1P/8EfrH/wj431t/b98jsrABdGAMyP2758P16+t2JgIoPtR9obPfhC41ZMSuXxRgZ7sZFBGwGIWFWwaTD4/uBxAAEA18dEAOtvfnfzt/6Jde33X3z+h7YfR2vxv7ehwMU7JwPfuY33MUf0WawMXMjoCwb7WDAYH0fBYJS++2/a91II22gnBtsBoFAE8CCBAIAbw8y0otUzGjamEkBnOzap//2l7M9l98m6/zYj9F4uvhttfPCdjQnMxtalibafTB/aWT2wkcFj0YAjMdb/g9AXwcoQ4GECAQA3QNz/ix0JRLYquiY3XJ59lt8khYybb5z93bmtB9gs0PfB+tvg4Dv3+d5qw+UHcgUD29+IhxtH5GoGY6gZPFJGN/8LU8DAQwUCAG6CULDRKxMHqHY2/0fDmo0wDCe0fsHy1unB5crUhE0KyOqBjQxcTJBzRGNME5EfSmTSSvsLKwYAgDsAAgCuj7HO4/lfjp//D63O2Bj6YW1nAwwr5pVdadxIAq9Z/W+MTVhg1MKkekzCx4YFn8eQI3rvf0abIPLV43eShhL5unEMC1zN4PEUDAB4wEAAwPUx3vru3X83Fn84ecOb16YAwJuXtH7u9ODUhQVEpCIDGyWYaoEJDEyy6Iw2r1bGmtucz6UpA9jIYPthdNVj8eOILvxoovdk291QIlswsEOJ3AwDDLUE4EZAAMD1MU76/t2f0P6cT94MJ9/w6Td88pZPnBKYtI8tC5/wsLFxwGDEYOVLBU4YTIiw4VAwoJBHsnXjL8M+FQw+pIKBSxP50aXv6dINJdp/stkhm1baxonHj3/uMQD3CwQAXB9jo/fv/nQ8/wteP3Pu/9vh9C2f/g0jA4MVAxMWmJ9Xw/olbV7YYUIrrwdDERZQigxO7d71c3OgqwBvXcHADiUiWz2OBQNfPbbjiN67NNHHcWdqBp/tJAM793j3eGcYAHDPQADA9TEO+3j+K7r8ztZ7V8+s129k4OS1zQi5gGA4cWJg44PXZHNEL41UBENvqwVrWy2wgQD7ggEpZfCRgUsQ2YLBkAsG30s1lMjNOJPdBzvqdPfFzj3O44j83OMRqgBACwQA3ABroC9MIGDNt8ngm/yMsenDZjQ1gPUrJwa2NjCcuI0gCW/dthcDExY859UpGT2oxxE5mEPEYCrMm5crm/DZ2YKBMfEmBWQSQU4MRj+OKJSO40IUvmCwN5HBhY0MHvPcYwDuCAgAuAluVI8rxkpuIpv0N26+jQme2zWCbILoBW3eWOtvNcBVC07f2l99WLBydeNVdxyRLxtsvDi4sMBeVLwM2BGln1Z57vH7XDq+iDmiXZx7bGoMebFSV3W4xYKBSHEmzAEGjwEIALgDjIH2FVrjgF86a24s+7CxkmAsvnX/3wynb2Kp4K1LE4XqMdnI4HkYV2r+91mNI6JQMHBxgx1KZI4yF2Jr2bdil6PwSuDSRHFQacgR+eqxKyDbQUd27vHudoaT+lWARspBBuYAg8cABADcBeK87J33f7MJDKUCk/Z5Pm5cwcDVDJwS/I04juiNSxy9dOOIzuw4IhMZ8IZ9cMA+LGA/lIjjm1qCRFjJ+eKWoPhMbhyRnXvsx5VepIKBm3OQFiu1deNLP70gzD2mOJRoL3Qh1PrwK7YByVB8Xdtrr979e+msP+YAg4cNb85eEQD3g7XdJiBYk4sJ2NWBbWRgJMEmiJzpt2kiFxCYz82bEC5YSXhFtmZwyn44aRefHfJZKWvTt7aGbCRhd+4XogiTjUOaKBUMvndr2H3ymSKrBz47NIg19KumMmFu4c3Kvism4ZeBuxit1++Nvk8BIf8DHjaIAMA9Ii4yoLC0g4oMNq5U8IL9z4mNDIYQGXwznP5Azn7AdkDRG3JhgY8JYsHACUmKDCbnHn+Jc49N6TgUDMqVq9PcY79Y6WVYlWjXLFa6dxHAXgmAjQBcuACvHzwqEAGAB4A13zYycPPF1n4okf3ZPHca8DZmh74Z/NyCEBC8crXll3bEkSkJTEUG4hI0LiyQcW8VyA4luujMPbY5orhy9S4vVhpea5PmHvua9KoUAJsygtcPHhkQAPCA4PiP2zDJnhNj4gdj4l3BYLA1g9e+aOx/yKWMjDzQ+qUrC59QmHjsskwpMqD25S157rGpVIfisFqsNJSOL96F9emsDHx2b7PZSX7pMeYeg8cNBAA8CGrTHxXAxAS88gGBKSBv7BJDazvjzLn/r60AbN5ynHVs55qt/QwDtySR+RlOnRi0kYFbsNoldmyx2s8aswWDMLTUL1E3qulm/gVnLiz4MCY98ENLBW4/eJRAAMDdsl6vnp2dmk+zvdvtz79cmM+2GxNFo09RAJIMcEjv23lhPkd0agcI2dGiL9zycy99XoiMGJhkkc8R2V/fuLrxszzDgOPc425k4CQhzj02CaJP4+6j5BkGflUiV0DepoKBm3vsCwZWRfZRDzD3GDwCIADgbnn18vnf/ds/MJ9m+8PHz//3L39tPv0uLv9h1jLAUQS0ABCHN88MFOz4SsJQolM3r9hGBjYOcKkhMqmhzVs/G5ns+nQvXQ3ZTjKwqxJxLzIIBYNRFQzsYqXutTY+U+THEcW5Zv41Bts899hGBuHtZph7DB46GAUE7grv+3/z9pX58QJgWs4vLn00QMr93u33FxeX5pOV85+8fvPrUMiAHY3DvHdZHPFvJLNicLkxMuCMu0n+vBQTGdhpxq9lY5TA/ZiNzRuxaaKXLjKwMhBnGPiCwSrNMFCLlUo193jwMACVngAAEABJREFUCaL4GoNYKvhO5Yj83GO3BIUY/djHmgEKBuBhgQgA3BXe9zfW/2AK6OOn87/41a8/fT4nKv19b/9dyxDa1WeceCtWB9yiEXaAjokJVinh46y8CQuMxber0ZFLE7mw4K2XhxQZ2FWJ1s/s6NJO0VhSZODDAmvQ95fWvu/OyWSKvBjk9x6/CzPO8nuPP9vpaWHGGV5lAx4KiADAbaIz/kYAku+f9upfE5vN+uLy0nwau7sf92Z7vx+HytyXMjCkbFEQAK8GztemnIGX3coNDTqj4ZlRAlnbYaO0dqbfxwQnb2XjC8g2OCD/DoM0ySAVDGzSaR1UxsH+dZjuvcfDLg0l+pCrx2FJou/U3ONPbobBhey3FCrPcZIBJAF8DRABgNtEZ/y1GMxjYoIvJgXkIoPP5+d/9de/+XT+pfX6B/WZ2j1RAMI76l1uyDXYHq5g4CID4RAZiK0hGyV4JaZmsH7jlcB8iq0bv/aTDMjNSrPiYScZpASRJmSHwlCiMUYGdrHSz36x0tGGBe/y3ONQQvjgF692c9PcqkR4uxn4GiACALdDm/E/nmHgk816tbLe9W63NRuroTD6blXQVgCcQpDzxl0dQKIG2G2SWIL1k3i34iKFHBlsz2Q4E/uaGpP/MUpgagbm0+eIvqEwiMh8vnIdnAyYYMLXnGMJOi5Wam7h1F+M/QwDuzKdkYHzUDCwc4/tanR1wcBGBh9DZCDuvcfhpcf7W16sFIAeEABwOxjrnzL+dEWM7//h46eLy63Zvry4HE3+pzT3w9CNA4IGhIy9qEE3am3m0BgiA5IYLghf2AqtcdX3721M4H5MCkisGLy26aD1G9nEsMBNMogRg3vbpf058y+xKQhvNxtsbXl9ZnNNp3/T+vh20pl7wdnWrT4UJpp9FwYUxRkGfu6xfbtZmHsMAQB3CAQA3A7GZJ+enhhHfr83Duy4Wq2HgQ8eNY6jrwybn0snALvdzpjnVRAA5+MPRS5oCJ+kckTuXMn7V0ZTUj6o3pawfLP/dQwdrAzYasHz0SrBCycGLh1kKwTfODF4m8TAjjUyMhBiglQz8AUDt7gFWS2wY5bCjDNTM/CL031yht5GBnZKgXqvmV2IwitEmGt2EcMCPwNZLVYKwI2BAIDbwdj9z58/D2wNkynnvnj+bLDv+TqA9/310CBr1gebsI8m3iZ/KrufN+x40PDKAKcCzixySv7kSCBLQEgRRT3gtIMlLOjjh+uYHH0IC8TUhFfPTXZoNJGBDQ7CUCIrBmtXOrblhJd2+OnwPGSK7FhSiqOJfO2Ywxy08N7jb/wkg9X+PM0hsKOJLuIqFJdpKNEHv1KFfbuZn3SGt5uBWwICAG6HcZTtdndxcem2R5PRNy1VHxMTpMig9f11N2OJgwAMcSBotv7iXyqffpyLrQQgJHu8+c/JIEntSQPSjvCmMfeb7FM2SVJpmU9cQPB8HJ6LW4jCKoG1/jZN5JTgrVOC1y4scDLAYWGiolpgU0br4r3H9h0GPuFzOYRlq33BIL3d7F1erHTnFisNc4/1e48x9xhcBwgAuH1MNPDp8/kwXFTtOjJofX9P9PqD6U9GP80TDnY/+u6kZIDC6EzKrr+2iS4wYNXAUQ84pY/8SyfdfWSpsAJg0vEf7Ygdfm8iA+KNDCfjYNJERg+Mxfdi8FZSjsjKg6kevwqRwfrMDUXdEDdjokymyI09NRbcFgzOfhCXJDqn3ccxvMbgXc4RhdLx924okZ1xRva1Nm7uMSIDcEUgAOB20Pl+4/sb/77tkyIDgyn5tr6/P8/gh24aT5+psfvBcefC3MfpwCSqBlCk/sPZZe62U5tfjUJiDxdduLGedGn9bCI/70xoPQ4ndiiRCQtsfPByNJHBJkYGa5cmsp++YGADCDtXOYQFKjIYViEs8HOPwyp1dhzREBYr/eRfYWb1wL3QZgxDS9/bYabbD/b1ZyZ62KvIQPaYewwOAgEANyKv53O44hsiA+YvRgN2+313VTjyAuCVwOVmvE/uNoLXn/x9n7yJIpDWhRBt9P02czk0KO1n/V1YNbH6CLcQhpzGHULbwb792Nhck5Z55wrIJjI4dZFBSBON66gEflCpjwzW/u1mYVUi9+rjId9KmLuwsTUDk0qSl3wSisAr85nHEblo4CIliFIBOb7tcp/ee0zQANAFAgBuCmdTeQAfGdj3J+5HmUhW+ISPrc5ysPjJ6HMnySMp16NNvxoGRPXIICGd28kZoWz2JSeHJEsAx75RD/buBt2LgOXCV3rZpIbG1d6+C9kogU0QjS4ycKOJfFjwpkwT+VUoXAqIXWQwxNcYGA0Y1u7VM8UNuhkG53ZlOvt2szDJgLZ+hsF3+b3H2+/z3OO9f+/xVk0ywNxjYIEAgCtTreJJIUvDfIwIHHd+m/T3Ln/M52ivnyRVcMWP/9fF35QVSnQc/9L+RQ9fuG713y9kmDgogqSVql2j+N9Xm/Xm2SuzfXH+cecWg5Pxox1KRHYckY0MrBi8GMM8g7d+0lnciAUDu8b1c7vYdRhK1DzTVDPYvFrZCvCO9Nxjt3h1fq3NxXsvBqFl+5HcawzCe4/B4oEAgOsTrKBaxvkWzhlSPaISPspljxltUXGAHuyjlYDLXyuPV2eAJG2w2ilFWBNHdYpfhi5NPzO9BsP6ZH3ybHNyZpv2lyv20mQc7UsR+5rgceTd7temzjuyKx3bgoGtHo9ODOKkszj32OaInru6cTP32EYGmxQZhOFL4b3HF7Q/j5HBxxgZuCXqLn4zXvy6eO/xaN9u5pat3qn1SlFGXhYQAHAFotPPyfrotXqOywMdxJn+8I6tnOiPSpDz+6JNf5Xfp2B9SQ3lpE7an2JiPx8V/xUiPdI0VSDsll/8wd2PTVcN61Pj+69Ong8rO8Dp1MQBZ2MqFfhz7Xbbi/NPJjIY2UQGxgQbc7wxZYORz1xY8FL8JAOvBGufJvLVY78q0fM493hTRwZh7jHbucemg40M3HtpXM7Hvff4ewnvMHBxQFiV6HtJrzEwRWY7yeDcJpekU70HTxUIALgayeunbP3zAs63cgWxL4g3PnTwRtWwHyFl/pNllzLlowoE/pjaqZWuUoUhRDkmCL/o3qEQLLG3XaRiWG9WJ8+M+z9swhoYq6GzGIbpaCID8+HuylQO9uN4vt+ZYgiPbOrGZ6ZmYCcZ2ILBy3HlFq/2083WfqVSHxn46WZuKNGwZj39mIfwGgPK38JifHw7VNTXDMKrj8MyRHHGmROG78NaFKZ67AYguTfbbAk8aSAA4AATGf+0KL9fqc2tyXMbuNX8T0ceVuO50wCV7k8jGqVr07kKAtJo0KozM5dV4qYeEL5l7/YoxBYhKFmt18/erk9M1v7AtOfVam0ig5P49mBznv320sUE25Hs2M1RjAP+ftzamsFoB5g+s2Jg3X8bGcRVKPxCFK9iZOBrBs948O+8HDrSZqR07SammchAfuAWlrh0y1HoVx+ryMC94Gw8/6vx0y/MNoEnDQQAHEuZ8Y+L81jfNr+h5TawVt6Nhc8VYPch6f/zNF2iNvsvaspvm9CuStXSbElUEubs6zPn9FHYsG+rN77/C5v52ZzRIUyssLZ13czehAPjflgN/oadTtmi7n4/7na7vY0MzvxQIhls9VjcJAOy8wzeUrFKnRpK5CYZcBhNtPLzKVzWKL3gjEitV+pqBp9szeDyQ36ZwcV3++//x9YtUUfgSQMBAJMop5+8PUxG372fPYhBXKXndhSAZW99//GS7TCV5PtH/19iYket8iNx8CbphE927Vmb7yQAuoSsv3CYFZySP5IG+hT3adL9J8/frk5fDKvDSx51GWxM8GIzPsv34/7Zbrfn5x+3253QxSguiU/f2WoBuZqBqQybmGD1yleMrQacBCXgtasZeD2wXv+ZjQzsJAMqIoNyvVKjKCu/0px7r7293OX77ebV/t2fjJ/+N4EnDQQAzNHP+BPp5fjDem3Dze2/cfn3w7gdrPXf6qE8U9ZfV3d1S3ckizODxThPqXfXg4JI1Y0l6sGwMumczfr0hbH+qyN8/ynMI1utT9rX5dhqwbgb+GJvSwSXLuKRcSRTPhjt87DrlYbIwL6owKWJghj4d5y9ce84e50SRDkyCKuWDuo9OZQjA4+tGXwaz39lE0fgqQMBAB24yfi7Rh5yvbddmfmmg4C87z8E3z+54q2ND5+SsvmqRRNstx/nM9GnGNIUDqu7iMr+iK3xbjbP325u4PvPY+Tl7NkLU1y4+PKZd1YAjN331n8YTfnB/Hs+2iUfTAb/N6NdOPVEhlO3At0LWy3wRePw9mP/tkv/jjO3ZKmJD1anbMOCib+WrRm4QUcDjMPTB39jUJPtYbEUjx7tU7yVZRhCAWDc7/e8za607b9qp4f5rJFfjN+N+PSpHhlkt5JLpq0bWpn76wyNUB6ZE9eBJpn9IhqZ6sOdbX3jISYYgu+/PrmR7z+PhMDHvhaNVpytv/k0T9tEAyZOshN6L0fzAEeT0TfPa2XnmvEp+VUorBLYVx/74UNsc0Rv2WeKTt7yxr7GgGNY4CcZcHyTgSkD7D/+cvf+T2X7PYGnDgQABOqMf7CDldGvfH/2AmDdf5O22F6M+8uUIxqMudyccvPOLP+GLzuWxpguu77Nl4F2bmV+Y9/2hdkVt4iPBEufMjPMagV/laknomLEjxKfKZFIzn3x3Un9o85prP/ZC+v7mw26M/yKSfvd5WbY20S9jgA4b3vDb6XUyuXo9GAndvG470dy7z2261Gf2cjADRkanfV3AmDTRGxrBrZgwD5TtDaZIvPH2uw//uLif/7H7V/+0fjxlwefHnjsQABAARd5f/Xq3db3V29tdB3cCqASFcKPltwPkuZPpWlRbsS6nUtFO+Pvr2hrMv5+wA+nHLxy9lmN0JemilvUaWP7lYakpohHp4LSGews39WG7YKdtD4521j3/658/3G0QdTFxaV9rcK43ZzKerBDTgcp4wCfC+LUYtcpNR9sXzq2tbIaWti+5NLKwKkMxsQ/d2GBH0r0xslAEoPX9setVzp++F/7X//X8bufU/mIoAFPEggASP5vNpvVDC8lALXv77eH5o1dPrdjBxqOl35MTRglZBd0tq/eNfZpLV9YbMZf5VukzeinJu+h60E+xbeIi/Jo45+G1qRpu+oLF0+g0ozUcTD2/sWbtUv4sEsB0Z3hfX9j/ff7cWWnVrjoilzt19XB86d5FG6lZ7eXnQbYT5sTYrc9Og2g/Uhf3CoRn91rDGymyOrBKqxXSl4MbMHgG7ZpojdGAGj3qUnc1Sk56MHTAAIALP3RPj33vx8BDMHrzzrhR9zILg3mCUv5239G975ccY7/Lk70JT26p709UaUAkb4Bao24Hx/qx3QyUb9MfWD8Krul3E78Ccede/dWeLtZp8JxPbTvv93axRjWTgCMDLhF6pyz7158JuKTQuLSQVbR3K9BA6wCsNv2nzYKsP0Ok+IAABAASURBVKuv+tlw4cetNW2/0XDmXnVp1ys1BQM7cMjUCb78Ne8+MKdHVtTecw0GPAkgAIumN9qHK6Ovfg1j/4cmAgi+P+kIILQwpTJyWmltz/tzZ5j3zDnxkjz05O/7X1j9KpULL7ojlcfFDT+xa6oizB0B0L8aZ/zLly+8rW3eer1+9uzUfNJtoH1/fRtDtLlu8blQDxCnBzKESkCZHbK5OAmfRmqDDLhqcdQAW9QwMcHevj1m/5Eu1y5TtB6HU1s9NkHb7r35y0peTa9+fDGgagMD8MiAACyXnPJWo32IqB3to4vAOeEz1MNAiyBAC0AaVxOuLHaoDznf2l/Q1VkLz7JyM2Pyh1V7NVq/cPCbs00mf/jA83HFbVNcHaq94yir1aDfe3y9mKD1/dPV0wvRvPX3T8BnhCTKgKoEZA0Y3dsUJJVGfGTgPv2sAoeddezEgbw2sE0QndhHN16YP64boqXyb62FlxCNpRuGBjw6IACLQzn9RL3RPm2un5u8P9sBihyzQNnxH7KzH0cNFesnh09v9ONnYMaUdFvyDm6ihLRQJxW7ijNw4/nr1eBUAEE9k26s9vn5xTBcppbrxQRd399f3j/Y/LDIp9Wc++9DAYpVgbGoEMTRQSZNJHWFYCyjgbjAUnyRztaliCQsw+G7MYsqs0ezPxVS5U3owcMHArBQguOv0j4z1j/k+gcVBwwc9aDr+LN/o8sQcksz1p99kj7O6yJtZkiU7SPS7eE4VR7wSpZamEinMIovTrVmzDyiKawLvStWTm5jAs9UZDDl+6erc3yqlJLvYWise2GaX5NOtKcfPtVIoWz9R1cOCBmiZP1HX2HmmBry0UUMmdjPPY4iwX7qBsVIrEnAVcO3oAEPHgjAgqh9fwo2xhuaTt5/6Iz3n8v+k6RU0hBOK6wuzeWdxByLtSyDHu0TbK8zNm47ufMpkTNGx7/y8ZmajHXnITB1C7+sbX60bnysIWtjAs9UZDDp+6vbifOrw1/MFdOd7x9Fbsyjg/ybNEWNFHJRQN4raeyQTwf5nS4xFOKJKibw0QYlAYgdivzSRJ0gP0O1CT14aEAAFkf0+slb6Giymet0fznMfyhqv3omsMr8qCBAVYCpsvicTX+6JTeAM7j0roiZ2mPP0v1nyiZaqs4UkhSUvmknBKg2s35UbWP+EgdoYwJPNzKwddjttuv7U3MPSgPsRxTLvFaGxAhg9DJAUQy4FIaxjBXGWB3QMYGSgSgG/hLMUXh8kys155jAf63mocQPxAQPEgjAIkijfVi1RI8/1nuHQgYGFQdwGgA6qLzQEMu8ReaniAaoEYDWn85jfnJChym/czGb/XTnIiE5TuSjhyJKYL/CpzbanP4tpIcnHlT6SOpyE9rIwC3uJnubARpnDmQqHwF1DChzznV5S+yTOWHAqK8EpDwP+/R/8Pr9kxxV/WDsC0AWBtbRAKsixLExQfo+iAkeBBCABaF9f/Yk68+19W+CAGpbcsKHetvxovoz2KtQcqzuL71fPVUIJmyJSvQkTQvTo+LMY67TD/k2qGuZKrmKWjEw8c00oI0MTMveVWMPHOjvPAhgVQ/pk1UrSodRRxmC626LAaSqvuLd92zrWXJ+qRYApyppeJG/pRS6SSHjpCO5LAkIAh4eEIAnC5f/cLRtccBPZ6xnOd6/zvj7lHSb/Vd5f2/3RQkAt6N9ggREy8HNiB1fC7ZtcQdXK/KLcua9BUsX4fgtS7svB135SgCStNzM+t8ISeFQ4V0X+RadnVefLUxFuozcetCje59P39/nSgBioog5SlO4S/HDVEni35TKEEv0F9I3Dr46EICnT/Zns88+Z/0HZf2bkT/1kg/x9eh13l9FADG542xyymlwnrBE+aVbnG1UqARU2f/8lZovKaXBKcu8Uh4n3aeUtrl8bl+HYlZcegJCqlVquy9SmFv9b/OVOSaN6taKolJztAffuShM/sMDAvAE0b4/h/8LuZdk/YuczzC9wk9vm8v8j8r85IldafhizrrEIIS0yS+8e+XiS57SWgcI1LHsoU/zDBL6dTUy89DCreYW5vLE90jI0EnOn1D88BXuyfsKYzqLhH5M+6iUTnbtKWabyvxQ3KsO1f9E5aHYI8Ri6i7yHwi+/0MEAvCUKb1+16J8/7Le287v1aFAbf2zfkS7zz65FGq/nBZ+8H5/0obSUY/BQbQM0fenMLxE54i637DM8oRNznum/PfOxGDJx+rzfL0IoEbaz677X/5aWHlt08tPqix+9aPO47UlyUXaRZQ/hSbjDvCggAA8KZLvH619+C0Yfaqtfxr5E17r2JOB8O5f1Z7c/yFrgPq018wzv2xLcr8lO/NFQiHOAyA9eDFpgKppKnMsImVOpzDVovpz/ymprSwHOshwVx2/ngnzJtsLkaj0eXwHsnQz/snwJi8+tmfvXilIPGdUCO21FyctowT/+FVAkFSkOjG8/gcNBOAJknMX3hlPRp9q35+175/y/vVI0Gz01QYxqVfE5MIvF9bfjwf1NyWSzX5RAnZ6wGEIj3LmK/Mc1KO256qvzpqXWqi6a09fX6HsqTJXwdzeOzJz1cL3L1uo9Ppje9/3p0P+fvGZnP10LamvW38SeNBAAJ4I0d5xsv7pdy7SNXmEz5Tvz8r3H4o6ga4cxHlhLgUULuRMe8hbxwx2iAkkvdjF59Q5DxkJhd8wd5W6GuCRaKZrHSiKmergyRpuFVCUctD0/IpBAAVrS6FoyzkjH5z1cIPR9Sahxusvs0BUZvb114txAzXZ/+jexwPikal8QNLEAalPugj04KEBAXhSpMRF7fsXKaDC93efU74/5wqwOpWOCTiITlgzLfj+/vJk16ynpuDLfk5S0gB981KFCrUMcOvwh2YJN1Ee0CT5yyw/Vc+upwH3brTMQ1sPtFkRc/Fy5GRq9S1pk01VZFD49b38/lwf7fWLSOXvRzmQSa8ftv5RAAF49GRn3/9DsSBLpfXvzPbyL3VxLYNqH0oNGPRJcgyhUv/R308RQHL8mbi0/lJqgP4iPsXDecm4zjcN+Rjl4k75+DS3p9dhIl7gw6e5ZYz1f3Eqpxu74ab0BpKN1bOcJSfjS5ue2qNHXmR+KPYvrX9pvdVJlfpEp18pU8frJ4Lv/xiAADwRotcfLHFO+HD/U+X9c2lXTfiq4wBWM4Gb2q+KAKLvn6IBbf2rOEClV+I03qABfiyRW7sgCAzF7xeySOqr55igLBo0NM1FNMB9Q89y3wpgKvMnazpZSVzthzqf6ReVkyk8+nKbkv+ed837+51YgVIfKs5GXa8fJv8xAAF4lJQp7JT4D0menH9nVaftePTe6PvhQMqyM9UzA5IG6PYmAvD3MOSUekjoCE8M+49fR4q8kP8iUmZ+Dj8Mfya60mM8IAApj3bv5oxjJaVn9+O2VDcVs/ZlHECFpfbHF/WAnN0prT+JPoRI1QzyPh011FECNODhAwF49DAXqf+kADr5w4UdT5l9DgZ9OOD+tzOBuxEAkSo/6HR+3/rrGb9caABJ2pmiGgqGJ4QGYWeOIShen6YlQZpHx9WxbYWAQ3Lr1hBpTXfAZv9XNvs/pO+hOlZK0PH6a99fiu3sv1/L61fBhNTJoW4IAB4BEIBHhvb9c9Za+f404fun3P2QtynmgEINoLfWfxCAai6YN/RpHYhIlAHuZH5FfQPW6Rru1Ifr70teE3jqgQil50BUpJ656at+5/6DLYKPqdzQtZDwht6+Bhjrb7L/Zxv7LvhwGz780D421Ra58tbLOEBtKx+ftCXXYlIJjqg+sTFa/zIYoUID5lQXPCQgAI+V5PVTMRqn7/s3n2mpH46uvX7tVzUiqF4UKAQKITuSUvA+EVStuZbqufEz1Ycpr/xcawBRfCFV8v3DHIGwNpz3/MOwf/etB/VY4iH5V2egejmeiby/2nvbAUA/AvC+/+mazmz2P5jsicNLr/9wHECNj9/z99voIfr+VJ6NqP5M1h+2/tEBAXg0JN80ZEVycoRzvZeoa/GHenR/mxcKswG4XOmhPwooGeYya5LtpOi13Si/RTB3y+kcv5s5Vguok9dJAjLzdI600sWJjxAAus0AYJLg+69ppax/yvb4u1FePBU+fpnxDyTrLCHnk7ZUz2C6809xnuzqFxn/wvrrjn5Th1/goQMBeGTkHEtw9v1Gyst3/X1lzZux/5ydfW6menHp9SsZIK0B/r91Vovxew2gYOUlzwLj5LZHl14FB5ydyVgnyF88rDqf8/6slzbmCd9/4gFWqbSZniuWk9XItCf3drDdyKPcpiRk339T+P7VZ7LAtctPs14/VcGBdHq2kYG35qonzUQA6j7BowMC8AhIDmlp/XNzNtA06/vnoZxqxu8QW2rNqJSg9f0tErIrzuSHV1KRzsRI/UWSQiSdSMdqOQkyQ/lEkh32CRvPPLGXDzza/j63czPQy81uXFsBuByHT9vN5f42BUDn/cXnyErfXyjLoqaMBvrbVUgg1VExwR/3k3bmldMf/fpwV00cQKoPfP9HBQTg0ZCtfy75NsaaZnx/NfCf9cB/Lsd6FiccimKyupto5zmbJ+XLxz7lF/D2Phr5MjJQB/jKp5QxQHhzgI4P0q1wfR2di0q3WT5Hmn/Mecso5QmFFzeuRtrLflBSNQptrxsTeN/fmH7r+6/93SrrHz8LH7zcMe37d3P60vf6iQ6M/yF1rfLeMjD5jxMIwAOlylQo3z+mybO57+d8Jt7zRZxHfMbDiwqBWu4tQIXnXbujzKWHqLpSXKSn0o50lpz5qTLtpRkOmSWezdXMwFfoXQuAvupmJa94LzKmXpf74cPF6uJaMYGx/q/OyM34rRNY0cJybqlG/uTusf1gTNAeRcr6V8ECkaisflEDiG2UowS4/Y8VCMAjwFt81lXJnPDpW/8q76+DgOj114UBnfHP1t/dQMrW5G1WqYrW+om++ej4Oztf5oQoZv91DFHl/5v4oLyMvsny6mEvVdc7XgAa3RhMEGCigCjBZCsEtBuHYcjvdjfRwHbPxywibR6ynfHrfX9/iaB2rkV5/VN+fbD6RFVWp/b9iaZHAUnf65cccNTxh5IR8NiBADw4tO/P+h+f4lFxwEHfP3n92cqHcZ8q759ngXEdTwR3L/yHr53UVAgofX+VCgmb3vQnsZB4EKt+HLtLSPzkJyBBCXjiKSkzfaQTfhMB0DGB394YL/50/yJOUTB3erkzMcFwsTvqdvyI1lITdf6Kgu2Ohjfa+tqjj2ebigPqUUCUYoz0KcrXV7meaP0ldydpD9X3AB4REIAHTzL6cYOjAsz7/pwTONr6s7b+Q2P9U3GBYpbfml/133nlgbP6b56r3JDqF710bg8SvYinM/rK4Ffxgb4y9fz7eEq/t7vzCAHo9dECkP8xT+90yLPNxI0a2o5+GdTiaZiYYLc3+SOimP0/2Vgl1l9JBzGlxe9HANpJTzmdIstP1B/130YMsT9VQQZNfxIKrWesAAAQAElEQVR49EAAHhC1758SPlT4/nSc75+Kt81Yfu7qRLp28vp7FHkZnogMqi9VrNYv+UKlpoj2ryX//5RFzheY3dm03KoAkEpa+SZj2V+fyT672ey3Lnb06YL2Llfksv98dmJH/VeXiM9JawE1Hn293bPG/s+orH+V5ZdGcyi4+lKcgeY+VQgAPXiMQAAeItHmq88gAFf2/ZsRPqX1175rtMlSNsxsh7yHpM1ksKe/Vw93lF5Srg4qGmnh5nSd2INnuk/eZy0AUaO4OX37i91eDcav19Y/mFHzuPeueGxCgc3KWn+T/ReVShHlWWeTrv16okkvPimB9Ob3tlUB/dmch1QLUcfrh61/MkAAHgTJYmnvP1j7aJE4jsY51vcfuNczJ5ES42gHWYb3dJGv1oZPktKyp/uUrhWojbU/awobtFJw8b2jltSXyhGA1oRqq7X9tWH3z5Nq+AgBUCfQXdJ1dV+W3tn8lzDVghdn8uyE3MN2a/1zeevJ8mqvP1/viJhAefpSBl11f/0pZWSQfQB/PzoO0MIE3/8pAAF4QGgZiLa+2EiScIzvz80bYIhLyx/MASfbG1/FTqwqkykQkbjh/+tv8z+UzGF0m1vXnbrZn2KbqXi1VzcCOPy7buO+Te8eqiq89Tm6xzft0rS7L2FX+XcZ/+xrV+4/Tfj16syzfv0hT7+uCpRef9qrL6S+EKz8kwQC8NWoEsqs/tG+P2XrzykRNFsDyO/4df/EtfvdWUU540zh3bqsHOTQItnpLW19sP8ci8PSN73u7iVl/2Xi20v6noVLqWUlPoW8o8nPFE+QyrNwx9B34wPdaSoySNtSHzVlH3lG6CqyL0/lT/DrtSHWHjopjz4/bO3jl4dK/RcR/Y+uFdT+ftERPAkgAA+CyvorGSCVt/GWet7rz7+G3pRX5o9Yg+LcbC8M0fd3uzjtkCAMrrnIe3gh8Y46K5fXi0P4PkJxYU91Ap78+pWQSD5lEQFIfDBC/dm30nftm0ox924i/8uqhaduuH8KnjORojomW97x+lvXnlKWv2ysIwDt4/fG/7RRAsXTpktUMoEQ4OkCAfgKaMPC5T/J9+SYril8/8n8jx7KycmdN//Rjv7tjNGvzxkeZXaTvx8se/3ulnDpcEYqjs1OrY8GOJpnNeQz3ksvjVK77TkfpZ9WcaFwquCGU+Vec6EW8Xk2PnsbDTDPRgZ19/K2/R1yurm8r/H9ZcL3L04XW4s4IG7nvmkfqTigGfWv44OsGem6vkc6WzhfsvtNCEGitsHjBgLwIEjJimj0uc3+T1t/bm1X+A87uf+kPP3mDe32JN4UeNdftUtepME5/apiwNE4cJnnoBQZCFXxgY4bSJ1hytBKb6ONAFppCYqmb0wrDXfc/eLCYbtj7vX5OuZPyh1qW5vv0rJPe/RT2zlBLzlBNOP1a39fef0iSmaU79//JPAEgQDcK7Xvr9INwahEQ+/7qeSPT+p0rL86vfj1OIXSXKji6tLx8dmvsszKKBPVlQAmZbI7Jy7O70MKSc64/2JSxw1J83KqIT+mOi5Qzyi1Fd68lLEDJ6nSTnnz8prO5YooQf25ii/MxXmU76y+m3oipXxJ6TxXX73M5qvAQKj25XVtILjy2t8vo4r8lKNRF7Unth/SAFHfAjwFIABfj5RdSdYtG3qqrb+KAPLBwUTn/0r9u3WTlx3yMDGnb/twfjuLO1YKT18kXpniKp0+uxOmM4UKAZVefLohztahMI7JOk/UCaQyspIfTmk851qU4a3/JWrfJ9n0KWVAbZfHlZ2SlmTzycqmcrCaQtnRLpzu+EU60YDMt0zP7K2Pmh//E248yUVp8cETBwJwTyRnkvU/0Q3ORp8oWfmUCGrsviX7fa1f35hFUdn8ZJZ5/lihmBBS7b3zU/6ViTpX116mpC/YjQlInS5s19JQPVUpu1Nj2lvlyGrjDbe/754A6PZKdUiP+pfmyVLpKUvhOyfrPyovXihHNjGbT1EvKJ2m6+NL8UvUmLKnjg9I3ZUUDy8LmR71X34Z8HRYrdanBO6eYL/jP8HQU3b5lblPXniR/8nHB/sS51jl/0ad7Qj/9cbt5GZKvZf03uJYCnaxf554hpx/IGV88pSt4qjaerAoZehsazVg9dUrK60zV6xPz3ov1T3V3ii1+YRhM/1x4hljY/zJSP7rhuOTlafSvmfXm2Y9fZmICeZ9/PaTaHrUv/rzxb+7CIz8skAEcIcUrmP0EZUhK7ZJ+/76LJKsaO25J8dT9Z2NBiZG+HSOdR/tnAAOfTi8nYUKz7p6vUt1Zv1UxJ3cRwMqH9X5TAVfTv30U5XyOxQXLZ87pcu5bdaJLK4P7lQFOnFA/npJvfJfKu0UqfUv+/j5DFL0r07f9fc7Pn4RGSSjXt6vFP8o669vR7rfrjwSPAUQAdwh2mYo1z85s+12UdNlVfTU+YGO5x5dOdceWqjrv3f3Uun1657TEUPj+6urFz0z7gqs2/2XkuJ5VU+wKE8XPZNWJgPO5bOL3bg6WREfFNFA3ptPyFkC0k/6Rsmnzk81tAiVP9rvPujU04TvP+fjy+QhpI6l+jZI/W9Ayj8MbP2TBxHAnVCafv1P4fsnolcu5TmkOmHjGxYedzpKWq8/tOT+U7ECUaws9/ooU5xPknu258/t6UCJd572xhkDkky69qCzyZXyovVzUWkcUbubm8m3NB2C6D+Qevl8dR/pj5f0L+TlWvOZvf6ONkT91U44VS2hOZ86nk3USYU6J09nCWZeuQvqZiV3Ia0KSgqgB08PRAB3QisAXHijladP1PF+8/FU2wKu+whRL0rwHBUTpP/mSy+eusdSMkVxr5R9Qheqj00tMcff2pT8FcovG47l6sw6elB+ejxWVw5aAS62qf7r6L+LPk+6ujbl2vJSMr5d157ogPsfWqY9+vkfqqMEovpapLerT/W0wZMHAnDLcLJFnGxR9dEecWRj2CVX+++zscjNf+dlO9fb6ly6JxU922ObdvK+eX0/pIx+0c5cX1f34bq9Mx+Om8fITFQFMqXYpF9LDc/Huh+RSo+5ekr5V+EyZxR9dt2/ddtFVFwx8yNtY5vKkTLB7+8ibxdxgD5S/SHBEwUCcMu0dqP3S9xufMy2vb1CY9bK30vPPdlWbZbKmICy16/3BotQRgxCZX5mInqINxL3stqudSVucKUKVYv29zsjhfKnVohirJF28tVnOVSI1PfzskLqj8r5nkVtFNvay04tHRM/GwG0ufvOp8ztpa7XL/W91U8YLAsIwJ3AE790JWHuAJpvzyZP6Jgz5L19D71juyciBtVIPcs+eeYmR0SlHtht1qZ24t70UbG/lop8Nt9T+/uFXtTCG9tUrOC2dbk+ev2s/gR5Oy2/1LX46dFJ/YcT6h3iTXhr5SnZdL+fik+S8sSxj/rrFds6amilANrwVIEA3AlXEoAmaLhSTDClJUXa4WBMQFeICfJeOrqnty4d2x2uyFQnVSj24Z71p/Lx5QxMEpXibMrf19GDcH0e5f4X7Uo+onGP31HUcxPt9VPpg9OEv0+t7y9X/iSqagb5flJ7+iuoO28fK1gUEIB74ihJOOaAbqNU//XyNWKCdCYiOhATKCtPTepmqufUmanRD5q8h+OP1S3z307HBIX+TqaGtMWPv4s09lO74I026G5SJGSylfaf44SPrz360pzrK+pnr62/FF+DisdaVAgIPGUgAPfEncYEnarAVWIC91nPK6YZX76yoSrRfqCn6i+pSbhj09V5SB9bK1np6Rc9qczPFEcV2yoamIwMKLRLKXXBWkfLTtRz+eWQyz/Vs+/jT48O6nn9VO4i6n2q5wYWBQTgq3EHMYFqlyvEBPP/5Re+PLXbuU90HY/w4oP1KUx22kvSP1Yr1jG+f+qpRI3VZ3sefWxHJKg4T1aX1NnNA2iy//HWsioEs5wlhHoGfVRevFx1vL9y5rP/Twc1AL7/soAAfDUeekwQHMbOYW43q6PC3sqOdyx149dTnb7XktAZBdQe2BxVHEvUv5z0HHxSTe2dpIfBxXmi7y9U2Pfaiy8S8T0fv/T3q6Mm/f2iP1ETH1BqjwEBwesHGQjAA2JaEvhqB3Q7yTViggnrX3bqHCtU227p+PVTscK0V97uPXyUPn+4sbSOXmpvporFvJA7Z6WXrK6Vv5d6HurJFJ4+6fYqDpC4nT9J6wq1/n5M8cRL6hFB8TL6r6EegKjt5p7BcoAAPCCOEoB7iwmobumt89PYYr23mENw2O4X9lqvU9TuzUdNxQTFhaZiAn0GZevbxYOy0Y8nznKivX6SbgQw6bM3IcL8CJ+pve1V1J1Q3u4LEVgwEIAHzcOJCdIRRF3r33wWFnzKZ6ep9uy4SruXZ8+T+xP1r160hx1ciEHe1i2+Qbfn7D+pOMBb21GZ4NguLrN/tPWnlL4pWopPEenbdEm/xu/YPC3Rm1I1gyUAAXjQPJCYQHputd5LPU+/Hx9EbSitD1MdMbTnb226biHq+vVuW2bbqYgJ0jk59cnd3NPTUUK6W+WJlz77nP9+yPc/xt+X9FRznyoQIep95ucAlgsE4JFxzzEBtdfpMWnxi73uU9kgavRg0ovXI0c7EQC3R0mvfaY/1boyoXO986gfZfFpwvpTnfcflUc/dnoqiy3StdlBG2LEEP6MQimEoDkNgO+/XCAAj4yvEhNIafIS4g1iIRtNECGkTnHIqkrRTgcqBEo5pDiq2mhvXnv6lPtwed25O1HRg/boVRww5fUTlUEATR474e93dCX2pHh+HZcQwesHfSAAjxiebToUE0xFA1N7r9fikHbvVKzQteNlux7DEw5T+aU6L1SfimpP35+AiSulid79rCaFu8g+O0nK/je+fPD0ZfanjSSK9mz9C3su2Y+PzyF/Y9FxAIl6kgQWDgTgEXMFAejEBOU6yBMxgTqsOIWoHEt7B8EyBT/0sK1v31dcWHaaaFf9SVv//tmYCl+4sPIT54/vvSQq17BrlKz2zaXns097+sWn9HvWXj8R9S+hn3++f3XHsPsgAQF4UhwlCdz01DEBT7QfdbXa+z7K+vtP6X8Wbi4V7UKlQ1s4vb69jRVizoqKHE7Zk/XZpLoWdZQg+/6j6HR8+hmn7L6y2OnIxkBrH1/dVKccIPmGGydfiodYt0AUlgkE4ElxbEzQ1wDuCEHTHjabmIB6vzQtvQqBTHrWpNqjbet74mWFwH+qaGCif9GT+lFIp/6s28MaSlL4/iTTPn7ZThNxAE0c20QblPtnjah0NAtH+O4ABCAAT5wpSWilgI87er698V+netYcP1NM9+lsC89EBqXXr6KBsmft9es+VAYo6YSqBjDl6cfIQIUIbm9nvc+2haKVV5ekZO1VrqfI+Iv62kUAAN8fWCAAT5zjBYCuEhOETZ7o3/T0+BRKsEHB9+8s50lduz/hm4f+U1UByWeg1qMvzyMUJKE4qrofJRtUqkLfly88dJnrM+/vT3v9C6HZnwAAC4RJREFUpHuqu5LC4gPQAQKwOKYSNvMxgd57XKzQbyldUu72P2YOQevhxj7avqtogIoWUjoh1PGFpWxR1+lFG9kEt17/rPXX/n7/KCrwPZLXH28ydhP1HFQcoNohBUADAVgcxwtA1fmoNxjz7CmOrhCUXn/0u6mTIyLlm8ftOnoI5zyyKiDlmFEpLD6VGpP2enMr/Ty+3uh49LNefzxx04d0TJDvgYpElvp6ALRAAMCMJHC/E3eOq3dP5Z6mW2pn13+qbMxU3KDbpT2D+qUTMcTz6FghN05kioq4QSVevI0maq2/BGNd/URnvrgtKb6Bjgz0rcfvFW9Hiq8az1h/VWT/gQYCAK4mALoS0MQHxXFthYCo3yKlIVYObT8+mLL7vbE9fkduJ+n3nJ9nEHMsLFJEIdGOc/TUK5+99P1rX14mIgORY7z+tE2U9UGoEhSqNwHIQABAwbzjfuWZBJNnbY+u/fdrWn+/PVsrLjx9KXNNSie0j5+igSJioDZqqX3/oo/E+m0rDPknn6Fy3an0+vOJpb5z6hxaRgMAOCAAoOAoAaApDTgwY6CIEtS/MQKY14kmX++3K1tfeuj5WOkc27H+TaWhNKeNrqixN+GLaEc+9Ky8/uaz3yfcldRevwjpUKCjXgJTD44DAgAOMCUJrRT0rPUB33+2vTiflO2FXW6sXmv72vZqFFD+LHtKdcVJO6vWBdIevbLppOODnNHp+fsUehfRQ/L1vWaoG0xKU29XX6b5dmDhQADAAY4XgKIzFzu079+sOXpg9SEprXDaJtGW7IhYodkmNXOt1YayHtCvCpQVAt+i44DCryea8frjsTLp9UsSDSr6k7p/WHZwJSAA4MrwxC88VQOYqBB0EkaTV9CZmfk7Otb6K09b9VeuPTVRAmnL27SoAalJBMrrKN+/tzfXA9Lliar+yvqXmqXOJWVzkf2HQgANBABcmQMCQP2AgHrzim9QIZj5dcLWF28ii567M9ySL9OsANp5E1mTF8rtqTAwn9+v/focMVB/L1UZf0rK0EpJulsADgABADeCJ5puVCGYOun8Uc321AhRat5BFv9Rxzb14SoKEelcRe8sRwTZz1Hl+svsv7qJ6PUX19BRSm391ddQn0U0ACkAE0AAwI04XgDoShWCOlPE9fElla2X6m6id6/7S/8M2po32zHv340S6kqANN79RK6fqIoYgn1XEUDOEfl7lTr7RAJTD64OBADcMrdWIeidb6ZFe/rTPYl6VnJy9SF9iJSuN9HkHALK2Xz9Q1Ta8XTypjYgydWPHr+OOFLH5lOojmn0dwSgBgIAbpkDAkA3qxDw5PH9qwo3lm+iQjCRL6rWAhLJ21NnSGqh8j9SRQNUZoeSv0/1+B99NiLRclKrFABXBQIA7pArVwjCNk+ciKkdLsr9rgfv6JrvqgwH1+uMlrbY553UWCDRdjpbf2rS9vH86vR63GdxFn28UgHdU58TgAYIALhDjhcAKo18kcfhur3z2oGpuEO1TFYIPNUYIemeLWy7neqd9c34Iv9rPf6n8fqJVFhQev11NJA1iSrhaIw/AMcCAQD3yjEVgl6f1venCWefZ1qmKwTagtOVKLL/hRJQtOFUjvnJl5HCpS+8fmqjgVwEVrul7o+RP+B4IADgXjkgADSlAR3fv50/PD+jWDcV2yE/c1g52goBddYczRoQRvwf5fXLTA0gKIBSGoz8AbcCBAB8NaYTRNy0UP1Px5Wfs+DTLcfc3VyFQGd+tFNOhZNfeP2ZMOYnm3Pt9WfbPmP9i1iBKqANYB4IAPhqHC8A1K0Q1NpQjhdqDq7ORId/VaN6aK5CkLVBqkpDb07vVCUgRwCSXP50IFWJHwLgFoAAgAfEVSsE2qZ3Uj9TCtPZnt+r8zz1MTLxmfar7L//faISkLJGvpP2/6kz0h8jf8DNgQCAB8QxAkDlBIAiDFA7/Hb7VjKujqfOVUsv3v/Sn08wta3zPD3fv2iXZNlFDfZXfTpIdxOAqwEBAA+Uq0YDkxWC3vkOtkjvFBPH9relKSyLWrinM/5Hcia/HfVfmvza08fIH3A91gTAY0TIpdwLmy3J+MftkL/3CXxvH9lZd91CsZ20DZXSfIvqVO2VFDewNeM6+5RrugfG+Wh/P6sERv6AuwURAHgETJeL61/KMGCqaDDp+6vM+3UqBD27rIRFJHv1sdCrd+ZSABFG/oB7ABEAeFIU3ngZDRyIDKhqkUYDpr1+X14IQUI/VqgrAb1oIMmBCLx+cB8gAgCPkvsdL9S2zFcLpmIF118ZdR0NFDFArAmTqg8TYeQPuGUQAYAni6jMjrDaLn1/9j582RK2uUz+F3XbpCWHYoV4Ojli1D+JTkNNfCvYenBLIAIAj56rRgPHjxfi9qSdluP3Bl8+Of9pDrBU43li/9bhpyoagBSAG4AIADx1dD0gthxTFWgjAxUHhIhC0gXaS7bbzaj/ehQQ5WsVOgFTD+4GRADgSTHl0B8aL9QczZPn69QRej0mUaP+9Ugevd6nSOPvz2oAtAFcD0QAYKF0xgvpGsCh8UJlVUBSwomkODfF06fzi7bpB9f7JADuEEQA4Ilz5fFCyvef8v+v0tLsVfadjhn1j5E/4M5ABABAmbOX5K53xgsRTc0bSE2kwgd1bnXOlOHRAQHlOnDv/mDrwR2ACAAsiAPRQNupVyigMkqYuU5/dyz1ivb/47+q9EsY+QPuGkQAANRIOYGASreeaXreQKKtEJQXaEf+5MNVIABTD+4URABgodzaeCF9Aj6mQmCRZuRPYfI7deBaC6AN4OYMBACYpbXPVPrs1dI9qSUN72n7E0b+gAcAIgAAAjcaL8QHzle1l6P+m8/OyJ9mG4AbgxoAAFegP15ovirgZhW0dYIDXj9sPbh7IAAABIoirrbUnI0x6z2sUjysjmfut5elYaJyvU99Fxj5A+4F1AAAuD7KlseM/8R2Mc5n9nQw9eDeQAQAQIfJaCD59bFdUnFAkrsvlF1/VtuTA0XdphBG/oD7BREAALdGFRDk7Wa8UN6J8T/g64EIAIADtHaZtb1uKwQxPtA7KO9QlQN//lYDprYBuFUQAQBw27Qme6pCAMsOviqIAAC4MocrBFLUAGJLTv/ovfPrfQJwdyACAOCe6FcIAPh6IAIA4EbcQoWgOA9G/oD7AxEAAF8BmHXwEEAEAMAtc9yM4rJCQBj5A74CiAAAAGChIAIA4A6ZHi+Um7jx/QG4HxABAADAQkEEAMA9cWi80FxPAO4CRAAAALBQEAEA8NVoKwTw/cF9gggAAAAWCiIAAB4E8P3B/YMIAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFgoEAAAAFsr/BwAA//9xmOHYAAAABklEQVQDAFcNwArDT/F2AAAAAElFTkSuQmCC"
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db01b54e712e1d61ebca-ebaa116009899d25fc1f",
+              "file": "w18_mapscene.spec.ts",
+              "line": 14,
+              "column": 9
+            },
+            {
+              "title": "W18 dist: each completed raster layer changes covered pixels",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 180000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-preflight",
+                  "projectName": "chromium-preflight",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 2748,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-12T19:09:37.483Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "forge3d-webgpu-probe.json",
+                          "contentType": "application/json",
+                          "body": "ewogICJwcm9qZWN0IjogewogICAgInByb2plY3QiOiAiY2hyb21pdW0tcHJlZmxpZ2h0IiwKICAgICJicm93c2VyTmFtZSI6ICJjaHJvbWl1bSIsCiAgICAiY2hhbm5lbCI6ICJwbGF5d3JpZ2h0IiwKICAgICJsYW5lIjogInByZWZsaWdodCIsCiAgICAibGF1bmNoT2JzZXJ2YXRpb24iOiAiY2hyb21pdW0tbGl2ZSIsCiAgICAid2ViZ3B1UmVxdWlyZWQiOiB0cnVlLAogICAgImxhdW5jaEFyZ3MiOiBbCiAgICAgICItLWVuYWJsZS11bnNhZmUtd2ViZ3B1IiwKICAgICAgIi0tdXNlLWFuZ2xlPWQzZDExIgogICAgXQogIH0sCiAgInByb2plY3RQb2xpY3lSZXF1aXJlZCI6IHRydWUsCiAgImFtYmllbnRSZXF1aXJlZCI6IGZhbHNlLAogICJyZXF1aXJlZCI6IHRydWUsCiAgImhhc05hdmlnYXRvckdwdSI6IHRydWUsCiAgImFkYXB0ZXJBdmFpbGFibGUiOiB0cnVlLAogICJzZWN1cmVDb250ZXh0IjogdHJ1ZSwKICAidXNlckFnZW50IjogIk1vemlsbGEvNS4wIChXaW5kb3dzIE5UIDEwLjA7IFdpbjY0OyB4NjQpIEFwcGxlV2ViS2l0LzUzNy4zNiAoS0hUTUwsIGxpa2UgR2Vja28pIEhlYWRsZXNzQ2hyb21lLzE0OC4wLjc3NzguOTYgU2FmYXJpLzUzNy4zNiIKfQ=="
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db01b54e712e1d61ebca-71c10fd333020482c6e6",
+              "file": "w18_mapscene.spec.ts",
+              "line": 23,
+              "column": 9
+            },
+            {
+              "title": "W18 dist: M02b blocks nonempty points and tiles before network or GPU creation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-preflight",
+                  "projectName": "chromium-preflight",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 473,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-12T19:09:40.246Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "forge3d-webgpu-probe.json",
+                          "contentType": "application/json",
+                          "body": "ewogICJwcm9qZWN0IjogewogICAgInByb2plY3QiOiAiY2hyb21pdW0tcHJlZmxpZ2h0IiwKICAgICJicm93c2VyTmFtZSI6ICJjaHJvbWl1bSIsCiAgICAiY2hhbm5lbCI6ICJwbGF5d3JpZ2h0IiwKICAgICJsYW5lIjogInByZWZsaWdodCIsCiAgICAibGF1bmNoT2JzZXJ2YXRpb24iOiAiY2hyb21pdW0tbGl2ZSIsCiAgICAid2ViZ3B1UmVxdWlyZWQiOiB0cnVlLAogICAgImxhdW5jaEFyZ3MiOiBbCiAgICAgICItLWVuYWJsZS11bnNhZmUtd2ViZ3B1IiwKICAgICAgIi0tdXNlLWFuZ2xlPWQzZDExIgogICAgXQogIH0sCiAgInByb2plY3RQb2xpY3lSZXF1aXJlZCI6IHRydWUsCiAgImFtYmllbnRSZXF1aXJlZCI6IGZhbHNlLAogICJyZXF1aXJlZCI6IHRydWUsCiAgImhhc05hdmlnYXRvckdwdSI6IHRydWUsCiAgImFkYXB0ZXJBdmFpbGFibGUiOiB0cnVlLAogICJzZWN1cmVDb250ZXh0IjogdHJ1ZSwKICAidXNlckFnZW50IjogIk1vemlsbGEvNS4wIChXaW5kb3dzIE5UIDEwLjA7IFdpbjY0OyB4NjQpIEFwcGxlV2ViS2l0LzUzNy4zNiAoS0hUTUwsIGxpa2UgR2Vja28pIEhlYWRsZXNzQ2hyb21lLzE0OC4wLjc3NzguOTYgU2FmYXJpLzUzNy4zNiIKfQ=="
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db01b54e712e1d61ebca-36b59c916b46c424610a",
+              "file": "w18_mapscene.spec.ts",
+              "line": 34,
+              "column": 9
+            },
+            {
+              "title": "W18 dist: JSON settings errors block during preflight without GPU work",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-preflight",
+                  "projectName": "chromium-preflight",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 480,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-12T19:09:40.730Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "forge3d-webgpu-probe.json",
+                          "contentType": "application/json",
+                          "body": "ewogICJwcm9qZWN0IjogewogICAgInByb2plY3QiOiAiY2hyb21pdW0tcHJlZmxpZ2h0IiwKICAgICJicm93c2VyTmFtZSI6ICJjaHJvbWl1bSIsCiAgICAiY2hhbm5lbCI6ICJwbGF5d3JpZ2h0IiwKICAgICJsYW5lIjogInByZWZsaWdodCIsCiAgICAibGF1bmNoT2JzZXJ2YXRpb24iOiAiY2hyb21pdW0tbGl2ZSIsCiAgICAid2ViZ3B1UmVxdWlyZWQiOiB0cnVlLAogICAgImxhdW5jaEFyZ3MiOiBbCiAgICAgICItLWVuYWJsZS11bnNhZmUtd2ViZ3B1IiwKICAgICAgIi0tdXNlLWFuZ2xlPWQzZDExIgogICAgXQogIH0sCiAgInByb2plY3RQb2xpY3lSZXF1aXJlZCI6IHRydWUsCiAgImFtYmllbnRSZXF1aXJlZCI6IGZhbHNlLAogICJyZXF1aXJlZCI6IHRydWUsCiAgImhhc05hdmlnYXRvckdwdSI6IHRydWUsCiAgImFkYXB0ZXJBdmFpbGFibGUiOiB0cnVlLAogICJzZWN1cmVDb250ZXh0IjogdHJ1ZSwKICAidXNlckFnZW50IjogIk1vemlsbGEvNS4wIChXaW5kb3dzIE5UIDEwLjA7IFdpbjY0OyB4NjQpIEFwcGxlV2ViS2l0LzUzNy4zNiAoS0hUTUwsIGxpa2UgR2Vja28pIEhlYWRsZXNzQ2hyb21lLzE0OC4wLjc3NzguOTYgU2FmYXJpLzUzNy4zNiIKfQ=="
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db01b54e712e1d61ebca-36bb588ad72727029ad3",
+              "file": "w18_mapscene.spec.ts",
+              "line": 59,
+              "column": 9
+            },
+            {
+              "title": "W18 dist: validation and policies block before GPU creation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-preflight",
+                  "projectName": "chromium-preflight",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 447,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-12T19:09:41.225Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "forge3d-webgpu-probe.json",
+                          "contentType": "application/json",
+                          "body": "ewogICJwcm9qZWN0IjogewogICAgInByb2plY3QiOiAiY2hyb21pdW0tcHJlZmxpZ2h0IiwKICAgICJicm93c2VyTmFtZSI6ICJjaHJvbWl1bSIsCiAgICAiY2hhbm5lbCI6ICJwbGF5d3JpZ2h0IiwKICAgICJsYW5lIjogInByZWZsaWdodCIsCiAgICAibGF1bmNoT2JzZXJ2YXRpb24iOiAiY2hyb21pdW0tbGl2ZSIsCiAgICAid2ViZ3B1UmVxdWlyZWQiOiB0cnVlLAogICAgImxhdW5jaEFyZ3MiOiBbCiAgICAgICItLWVuYWJsZS11bnNhZmUtd2ViZ3B1IiwKICAgICAgIi0tdXNlLWFuZ2xlPWQzZDExIgogICAgXQogIH0sCiAgInByb2plY3RQb2xpY3lSZXF1aXJlZCI6IHRydWUsCiAgImFtYmllbnRSZXF1aXJlZCI6IGZhbHNlLAogICJyZXF1aXJlZCI6IHRydWUsCiAgImhhc05hdmlnYXRvckdwdSI6IHRydWUsCiAgImFkYXB0ZXJBdmFpbGFibGUiOiB0cnVlLAogICJzZWN1cmVDb250ZXh0IjogdHJ1ZSwKICAidXNlckFnZW50IjogIk1vemlsbGEvNS4wIChXaW5kb3dzIE5UIDEwLjA7IFdpbjY0OyB4NjQpIEFwcGxlV2ViS2l0LzUzNy4zNiAoS0hUTUwsIGxpa2UgR2Vja28pIEhlYWRsZXNzQ2hyb21lLzE0OC4wLjc3NzguOTYgU2FmYXJpLzUzNy4zNiIKfQ=="
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db01b54e712e1d61ebca-b177f122a9069f2c63cb",
+              "file": "w18_mapscene.spec.ts",
+              "line": 81,
+              "column": 9
+            },
+            {
+              "title": "W18 dist: recipe replay, repeated render, resize and disposal are deterministic",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 120000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-preflight",
+                  "projectName": "chromium-preflight",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1329,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-12T19:09:41.685Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "forge3d-webgpu-probe.json",
+                          "contentType": "application/json",
+                          "body": "ewogICJwcm9qZWN0IjogewogICAgInByb2plY3QiOiAiY2hyb21pdW0tcHJlZmxpZ2h0IiwKICAgICJicm93c2VyTmFtZSI6ICJjaHJvbWl1bSIsCiAgICAiY2hhbm5lbCI6ICJwbGF5d3JpZ2h0IiwKICAgICJsYW5lIjogInByZWZsaWdodCIsCiAgICAibGF1bmNoT2JzZXJ2YXRpb24iOiAiY2hyb21pdW0tbGl2ZSIsCiAgICAid2ViZ3B1UmVxdWlyZWQiOiB0cnVlLAogICAgImxhdW5jaEFyZ3MiOiBbCiAgICAgICItLWVuYWJsZS11bnNhZmUtd2ViZ3B1IiwKICAgICAgIi0tdXNlLWFuZ2xlPWQzZDExIgogICAgXQogIH0sCiAgInByb2plY3RQb2xpY3lSZXF1aXJlZCI6IHRydWUsCiAgImFtYmllbnRSZXF1aXJlZCI6IGZhbHNlLAogICJyZXF1aXJlZCI6IHRydWUsCiAgImhhc05hdmlnYXRvckdwdSI6IHRydWUsCiAgImFkYXB0ZXJBdmFpbGFibGUiOiB0cnVlLAogICJzZWN1cmVDb250ZXh0IjogdHJ1ZSwKICAidXNlckFnZW50IjogIk1vemlsbGEvNS4wIChXaW5kb3dzIE5UIDEwLjA7IFdpbjY0OyB4NjQpIEFwcGxlV2ViS2l0LzUzNy4zNiAoS0hUTUwsIGxpa2UgR2Vja28pIEhlYWRsZXNzQ2hyb21lLzE0OC4wLjc3NzguOTYgU2FmYXJpLzUzNy4zNiIKfQ=="
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db01b54e712e1d61ebca-23e98538343cc7390cb3",
+              "file": "w18_mapscene.spec.ts",
+              "line": 94,
+              "column": 9
+            },
+            {
+              "title": "W18 dist: cancellation and output sink failures never produce a success record",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-preflight",
+                  "projectName": "chromium-preflight",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 933,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-12T19:09:43.027Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "forge3d-webgpu-probe.json",
+                          "contentType": "application/json",
+                          "body": "ewogICJwcm9qZWN0IjogewogICAgInByb2plY3QiOiAiY2hyb21pdW0tcHJlZmxpZ2h0IiwKICAgICJicm93c2VyTmFtZSI6ICJjaHJvbWl1bSIsCiAgICAiY2hhbm5lbCI6ICJwbGF5d3JpZ2h0IiwKICAgICJsYW5lIjogInByZWZsaWdodCIsCiAgICAibGF1bmNoT2JzZXJ2YXRpb24iOiAiY2hyb21pdW0tbGl2ZSIsCiAgICAid2ViZ3B1UmVxdWlyZWQiOiB0cnVlLAogICAgImxhdW5jaEFyZ3MiOiBbCiAgICAgICItLWVuYWJsZS11bnNhZmUtd2ViZ3B1IiwKICAgICAgIi0tdXNlLWFuZ2xlPWQzZDExIgogICAgXQogIH0sCiAgInByb2plY3RQb2xpY3lSZXF1aXJlZCI6IHRydWUsCiAgImFtYmllbnRSZXF1aXJlZCI6IGZhbHNlLAogICJyZXF1aXJlZCI6IHRydWUsCiAgImhhc05hdmlnYXRvckdwdSI6IHRydWUsCiAgImFkYXB0ZXJBdmFpbGFibGUiOiB0cnVlLAogICJzZWN1cmVDb250ZXh0IjogdHJ1ZSwKICAidXNlckFnZW50IjogIk1vemlsbGEvNS4wIChXaW5kb3dzIE5UIDEwLjA7IFdpbjY0OyB4NjQpIEFwcGxlV2ViS2l0LzUzNy4zNiAoS0hUTUwsIGxpa2UgR2Vja28pIEhlYWRsZXNzQ2hyb21lLzE0OC4wLjc3NzguOTYgU2FmYXJpLzUzNy4zNiIKfQ=="
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db01b54e712e1d61ebca-7eb2111ac2e21e1b9028",
+              "file": "w18_mapscene.spec.ts",
+              "line": 104,
+              "column": 9
+            },
+            {
+              "title": "W18 dist: warning policy retains label rejection reports and blocks strict output",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-preflight",
+                  "projectName": "chromium-preflight",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1016,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-12T19:09:43.975Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "forge3d-webgpu-probe.json",
+                          "contentType": "application/json",
+                          "body": "ewogICJwcm9qZWN0IjogewogICAgInByb2plY3QiOiAiY2hyb21pdW0tcHJlZmxpZ2h0IiwKICAgICJicm93c2VyTmFtZSI6ICJjaHJvbWl1bSIsCiAgICAiY2hhbm5lbCI6ICJwbGF5d3JpZ2h0IiwKICAgICJsYW5lIjogInByZWZsaWdodCIsCiAgICAibGF1bmNoT2JzZXJ2YXRpb24iOiAiY2hyb21pdW0tbGl2ZSIsCiAgICAid2ViZ3B1UmVxdWlyZWQiOiB0cnVlLAogICAgImxhdW5jaEFyZ3MiOiBbCiAgICAgICItLWVuYWJsZS11bnNhZmUtd2ViZ3B1IiwKICAgICAgIi0tdXNlLWFuZ2xlPWQzZDExIgogICAgXQogIH0sCiAgInByb2plY3RQb2xpY3lSZXF1aXJlZCI6IHRydWUsCiAgImFtYmllbnRSZXF1aXJlZCI6IGZhbHNlLAogICJyZXF1aXJlZCI6IHRydWUsCiAgImhhc05hdmlnYXRvckdwdSI6IHRydWUsCiAgImFkYXB0ZXJBdmFpbGFibGUiOiB0cnVlLAogICJzZWN1cmVDb250ZXh0IjogdHJ1ZSwKICAidXNlckFnZW50IjogIk1vemlsbGEvNS4wIChXaW5kb3dzIE5UIDEwLjA7IFdpbjY0OyB4NjQpIEFwcGxlV2ViS2l0LzUzNy4zNiAoS0hUTUwsIGxpa2UgR2Vja28pIEhlYWRsZXNzQ2hyb21lLzE0OC4wLjc3NzguOTYgU2FmYXJpLzUzNy4zNiIKfQ=="
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db01b54e712e1d61ebca-b9283ba8edcd37f7f8c3",
+              "file": "w18_mapscene.spec.ts",
+              "line": 122,
+              "column": 9
+            },
+            {
+              "title": "W18 dist: compiled plans preserve priority, keepouts, rejection diagnostics and replay",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-preflight",
+                  "projectName": "chromium-preflight",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1058,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-12T19:09:45.003Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "forge3d-webgpu-probe.json",
+                          "contentType": "application/json",
+                          "body": "ewogICJwcm9qZWN0IjogewogICAgInByb2plY3QiOiAiY2hyb21pdW0tcHJlZmxpZ2h0IiwKICAgICJicm93c2VyTmFtZSI6ICJjaHJvbWl1bSIsCiAgICAiY2hhbm5lbCI6ICJwbGF5d3JpZ2h0IiwKICAgICJsYW5lIjogInByZWZsaWdodCIsCiAgICAibGF1bmNoT2JzZXJ2YXRpb24iOiAiY2hyb21pdW0tbGl2ZSIsCiAgICAid2ViZ3B1UmVxdWlyZWQiOiB0cnVlLAogICAgImxhdW5jaEFyZ3MiOiBbCiAgICAgICItLWVuYWJsZS11bnNhZmUtd2ViZ3B1IiwKICAgICAgIi0tdXNlLWFuZ2xlPWQzZDExIgogICAgXQogIH0sCiAgInByb2plY3RQb2xpY3lSZXF1aXJlZCI6IHRydWUsCiAgImFtYmllbnRSZXF1aXJlZCI6IGZhbHNlLAogICJyZXF1aXJlZCI6IHRydWUsCiAgImhhc05hdmlnYXRvckdwdSI6IHRydWUsCiAgImFkYXB0ZXJBdmFpbGFibGUiOiB0cnVlLAogICJzZWN1cmVDb250ZXh0IjogdHJ1ZSwKICAidXNlckFnZW50IjogIk1vemlsbGEvNS4wIChXaW5kb3dzIE5UIDEwLjA7IFdpbjY0OyB4NjQpIEFwcGxlV2ViS2l0LzUzNy4zNiAoS0hUTUwsIGxpa2UgR2Vja28pIEhlYWRsZXNzQ2hyb21lLzE0OC4wLjc3NzguOTYgU2FmYXJpLzUzNy4zNiIKfQ=="
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db01b54e712e1d61ebca-83b810aed5a1b970f969",
+              "file": "w18_mapscene.spec.ts",
+              "line": 134,
+              "column": 9
+            },
+            {
+              "title": "W18 dist: GPU loss clears success and a later render recreates owners",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 90000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-preflight",
+                  "projectName": "chromium-preflight",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 987,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-12T19:09:46.072Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "forge3d-webgpu-probe.json",
+                          "contentType": "application/json",
+                          "body": "ewogICJwcm9qZWN0IjogewogICAgInByb2plY3QiOiAiY2hyb21pdW0tcHJlZmxpZ2h0IiwKICAgICJicm93c2VyTmFtZSI6ICJjaHJvbWl1bSIsCiAgICAiY2hhbm5lbCI6ICJwbGF5d3JpZ2h0IiwKICAgICJsYW5lIjogInByZWZsaWdodCIsCiAgICAibGF1bmNoT2JzZXJ2YXRpb24iOiAiY2hyb21pdW0tbGl2ZSIsCiAgICAid2ViZ3B1UmVxdWlyZWQiOiB0cnVlLAogICAgImxhdW5jaEFyZ3MiOiBbCiAgICAgICItLWVuYWJsZS11bnNhZmUtd2ViZ3B1IiwKICAgICAgIi0tdXNlLWFuZ2xlPWQzZDExIgogICAgXQogIH0sCiAgInByb2plY3RQb2xpY3lSZXF1aXJlZCI6IHRydWUsCiAgImFtYmllbnRSZXF1aXJlZCI6IGZhbHNlLAogICJyZXF1aXJlZCI6IHRydWUsCiAgImhhc05hdmlnYXRvckdwdSI6IHRydWUsCiAgImFkYXB0ZXJBdmFpbGFibGUiOiB0cnVlLAogICJzZWN1cmVDb250ZXh0IjogdHJ1ZSwKICAidXNlckFnZW50IjogIk1vemlsbGEvNS4wIChXaW5kb3dzIE5UIDEwLjA7IFdpbjY0OyB4NjQpIEFwcGxlV2ViS2l0LzUzNy4zNiAoS0hUTUwsIGxpa2UgR2Vja28pIEhlYWRsZXNzQ2hyb21lLzE0OC4wLjc3NzguOTYgU2FmYXJpLzUzNy4zNiIKfQ=="
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db01b54e712e1d61ebca-00c9c72b0bb057305559",
+              "file": "w18_mapscene.spec.ts",
+              "line": 145,
+              "column": 9
+            },
+            {
+              "title": "W18 dist: cancellation after GPU work clears an earlier success record",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-preflight",
+                  "projectName": "chromium-preflight",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 972,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-12T19:09:47.071Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "forge3d-webgpu-probe.json",
+                          "contentType": "application/json",
+                          "body": "ewogICJwcm9qZWN0IjogewogICAgInByb2plY3QiOiAiY2hyb21pdW0tcHJlZmxpZ2h0IiwKICAgICJicm93c2VyTmFtZSI6ICJjaHJvbWl1bSIsCiAgICAiY2hhbm5lbCI6ICJwbGF5d3JpZ2h0IiwKICAgICJsYW5lIjogInByZWZsaWdodCIsCiAgICAibGF1bmNoT2JzZXJ2YXRpb24iOiAiY2hyb21pdW0tbGl2ZSIsCiAgICAid2ViZ3B1UmVxdWlyZWQiOiB0cnVlLAogICAgImxhdW5jaEFyZ3MiOiBbCiAgICAgICItLWVuYWJsZS11bnNhZmUtd2ViZ3B1IiwKICAgICAgIi0tdXNlLWFuZ2xlPWQzZDExIgogICAgXQogIH0sCiAgInByb2plY3RQb2xpY3lSZXF1aXJlZCI6IHRydWUsCiAgImFtYmllbnRSZXF1aXJlZCI6IGZhbHNlLAogICJyZXF1aXJlZCI6IHRydWUsCiAgImhhc05hdmlnYXRvckdwdSI6IHRydWUsCiAgImFkYXB0ZXJBdmFpbGFibGUiOiB0cnVlLAogICJzZWN1cmVDb250ZXh0IjogdHJ1ZSwKICAidXNlckFnZW50IjogIk1vemlsbGEvNS4wIChXaW5kb3dzIE5UIDEwLjA7IFdpbjY0OyB4NjQpIEFwcGxlV2ViS2l0LzUzNy4zNiAoS0hUTUwsIGxpa2UgR2Vja28pIEhlYWRsZXNzQ2hyb21lLzE0OC4wLjc3NzguOTYgU2FmYXJpLzUzNy4zNiIKfQ=="
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db01b54e712e1d61ebca-4e11d7eca3bc0454058c",
+              "file": "w18_mapscene.spec.ts",
+              "line": 182,
+              "column": 9
+            },
+            {
+              "title": "W18 dist: URL heightmap, image, vector, glyph records and OBJ render after preparation",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-preflight",
+                  "projectName": "chromium-preflight",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1677,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-12T19:09:48.054Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "forge3d-webgpu-probe.json",
+                          "contentType": "application/json",
+                          "body": "ewogICJwcm9qZWN0IjogewogICAgInByb2plY3QiOiAiY2hyb21pdW0tcHJlZmxpZ2h0IiwKICAgICJicm93c2VyTmFtZSI6ICJjaHJvbWl1bSIsCiAgICAiY2hhbm5lbCI6ICJwbGF5d3JpZ2h0IiwKICAgICJsYW5lIjogInByZWZsaWdodCIsCiAgICAibGF1bmNoT2JzZXJ2YXRpb24iOiAiY2hyb21pdW0tbGl2ZSIsCiAgICAid2ViZ3B1UmVxdWlyZWQiOiB0cnVlLAogICAgImxhdW5jaEFyZ3MiOiBbCiAgICAgICItLWVuYWJsZS11bnNhZmUtd2ViZ3B1IiwKICAgICAgIi0tdXNlLWFuZ2xlPWQzZDExIgogICAgXQogIH0sCiAgInByb2plY3RQb2xpY3lSZXF1aXJlZCI6IHRydWUsCiAgImFtYmllbnRSZXF1aXJlZCI6IGZhbHNlLAogICJyZXF1aXJlZCI6IHRydWUsCiAgImhhc05hdmlnYXRvckdwdSI6IHRydWUsCiAgImFkYXB0ZXJBdmFpbGFibGUiOiB0cnVlLAogICJzZWN1cmVDb250ZXh0IjogdHJ1ZSwKICAidXNlckFnZW50IjogIk1vemlsbGEvNS4wIChXaW5kb3dzIE5UIDEwLjA7IFdpbjY0OyB4NjQpIEFwcGxlV2ViS2l0LzUzNy4zNiAoS0hUTUwsIGxpa2UgR2Vja28pIEhlYWRsZXNzQ2hyb21lLzE0OC4wLjc3NzguOTYgU2FmYXJpLzUzNy4zNiIKfQ=="
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db01b54e712e1d61ebca-2f8dae1ef19cd4d749ee",
+              "file": "w18_mapscene.spec.ts",
+              "line": 196,
+              "column": 9
+            },
+            {
+              "title": "W18 dist: lighting and post-processing affect actual terrain output",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-preflight",
+                  "projectName": "chromium-preflight",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 1486,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-12T19:09:49.746Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "forge3d-webgpu-probe.json",
+                          "contentType": "application/json",
+                          "body": "ewogICJwcm9qZWN0IjogewogICAgInByb2plY3QiOiAiY2hyb21pdW0tcHJlZmxpZ2h0IiwKICAgICJicm93c2VyTmFtZSI6ICJjaHJvbWl1bSIsCiAgICAiY2hhbm5lbCI6ICJwbGF5d3JpZ2h0IiwKICAgICJsYW5lIjogInByZWZsaWdodCIsCiAgICAibGF1bmNoT2JzZXJ2YXRpb24iOiAiY2hyb21pdW0tbGl2ZSIsCiAgICAid2ViZ3B1UmVxdWlyZWQiOiB0cnVlLAogICAgImxhdW5jaEFyZ3MiOiBbCiAgICAgICItLWVuYWJsZS11bnNhZmUtd2ViZ3B1IiwKICAgICAgIi0tdXNlLWFuZ2xlPWQzZDExIgogICAgXQogIH0sCiAgInByb2plY3RQb2xpY3lSZXF1aXJlZCI6IHRydWUsCiAgImFtYmllbnRSZXF1aXJlZCI6IGZhbHNlLAogICJyZXF1aXJlZCI6IHRydWUsCiAgImhhc05hdmlnYXRvckdwdSI6IHRydWUsCiAgImFkYXB0ZXJBdmFpbGFibGUiOiB0cnVlLAogICJzZWN1cmVDb250ZXh0IjogdHJ1ZSwKICAidXNlckFnZW50IjogIk1vemlsbGEvNS4wIChXaW5kb3dzIE5UIDEwLjA7IFdpbjY0OyB4NjQpIEFwcGxlV2ViS2l0LzUzNy4zNiAoS0hUTUwsIGxpa2UgR2Vja28pIEhlYWRsZXNzQ2hyb21lLzE0OC4wLjc3NzguOTYgU2FmYXJpLzUzNy4zNiIKfQ=="
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db01b54e712e1d61ebca-e39238daa633c09f77ff",
+              "file": "w18_mapscene.spec.ts",
+              "line": 205,
+              "column": 9
+            },
+            {
+              "title": "W18 dist: dedicated GPU trace output has real hits and visible material color",
+              "ok": true,
+              "tags": [],
+              "tests": [
+                {
+                  "timeout": 30000,
+                  "annotations": [],
+                  "expectedStatus": "passed",
+                  "projectId": "chromium-preflight",
+                  "projectName": "chromium-preflight",
+                  "results": [
+                    {
+                      "workerIndex": 0,
+                      "parallelIndex": 0,
+                      "status": "passed",
+                      "duration": 949,
+                      "errors": [],
+                      "stdout": [],
+                      "stderr": [],
+                      "retry": 0,
+                      "startTime": "2026-10-12T19:09:51.246Z",
+                      "annotations": [],
+                      "attachments": [
+                        {
+                          "name": "forge3d-webgpu-probe.json",
+                          "contentType": "application/json",
+                          "body": "ewogICJwcm9qZWN0IjogewogICAgInByb2plY3QiOiAiY2hyb21pdW0tcHJlZmxpZ2h0IiwKICAgICJicm93c2VyTmFtZSI6ICJjaHJvbWl1bSIsCiAgICAiY2hhbm5lbCI6ICJwbGF5d3JpZ2h0IiwKICAgICJsYW5lIjogInByZWZsaWdodCIsCiAgICAibGF1bmNoT2JzZXJ2YXRpb24iOiAiY2hyb21pdW0tbGl2ZSIsCiAgICAid2ViZ3B1UmVxdWlyZWQiOiB0cnVlLAogICAgImxhdW5jaEFyZ3MiOiBbCiAgICAgICItLWVuYWJsZS11bnNhZmUtd2ViZ3B1IiwKICAgICAgIi0tdXNlLWFuZ2xlPWQzZDExIgogICAgXQogIH0sCiAgInByb2plY3RQb2xpY3lSZXF1aXJlZCI6IHRydWUsCiAgImFtYmllbnRSZXF1aXJlZCI6IGZhbHNlLAogICJyZXF1aXJlZCI6IHRydWUsCiAgImhhc05hdmlnYXRvckdwdSI6IHRydWUsCiAgImFkYXB0ZXJBdmFpbGFibGUiOiB0cnVlLAogICJzZWN1cmVDb250ZXh0IjogdHJ1ZSwKICAidXNlckFnZW50IjogIk1vemlsbGEvNS4wIChXaW5kb3dzIE5UIDEwLjA7IFdpbjY0OyB4NjQpIEFwcGxlV2ViS2l0LzUzNy4zNiAoS0hUTUwsIGxpa2UgR2Vja28pIEhlYWRsZXNzQ2hyb21lLzE0OC4wLjc3NzguOTYgU2FmYXJpLzUzNy4zNiIKfQ=="
+                        }
+                      ]
+                    }
+                  ],
+                  "status": "expected"
+                }
+              ],
+              "id": "db01b54e712e1d61ebca-e68c9584a104c9e6c7c0",
+              "file": "w18_mapscene.spec.ts",
+              "line": 211,
+              "column": 9
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "stats": {
+    "startTime": "2026-10-12T19:09:32.548Z",
+    "duration": 19780.361,
+    "expected": 15,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}
