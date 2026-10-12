@@ -375,10 +375,15 @@ export function validateMapRecipe(input: SceneRecipeInput, prepared: ReadonlyMap
         const plan = execution?.plans[layerId];
         summaries.push(new LayerSummary({ layer_id: layerId, layer_type: kind, support_level: level, diagnostic_codes: layerDiagnostics.map(d => d.code), object_count: objects, memory_estimate_bytes: bytes * 2, details: { resource_id: source?.id ?? null, ...(plan ? { compiled_label_plan: { accepted_count: plan.accepted.length, rejected_count: plan.rejected.length, seed: plan.seed } } : {}) } }));
     };
-    if (input.terrain)
-        inspect('terrain', 'terrain', terrainResource, terrain);
     if (input.terrain?.requestedStats?.length)
         diagnostics.push(unavailableCacheLodStatsDiagnostic('terrain', input.terrain.requestedStats, { layer_id: 'terrain' }));
+    const vt = terrain?.material?.virtualTexture;
+    if (vt?.enabled)
+        for (const family of vt.layers ?? [])
+            if (family.family !== undefined && family.family !== 'albedo')
+                diagnostics.push(vtUnsupportedFamilyDiagnostic(family.family, { layer_id: 'terrain' }));
+    if (input.terrain)
+        inspect('terrain', 'terrain', terrainResource, terrain);
     const layerFields: Record<string, string[]> = { raster: ['source', 'options'], vector: ['source'], labels: ['source', 'style', 'plan', 'priorityRules', 'typography', 'atlasGlyphs', 'keepouts', 'coordinateSpace'], buildings: ['source', 'options', 'transforms'], mesh: ['source', 'transforms'], 'point-cloud': ['source', 'style', 'traversal', 'origin'], tiles3d: ['source', 'traversal', 'origin'], nodes: ['nodes'], scatter: ['batches'], trace: ['triangles', 'sdf', 'materials', 'lights', 'environment', 'medium', 'samples', 'maxBounces'], diagnostic: ['feature'] };
     for (const [i, layer] of layers.entries()) {
         if (layer && typeof layer === 'object' && !Array.isArray(layer) && typeof layer.kind === 'string' && typeof layer.layerId === 'string') {
@@ -392,11 +397,6 @@ export function validateMapRecipe(input: SceneRecipeInput, prepared: ReadonlyMap
             summaries.push(new LayerSummary({ layer_id: id, layer_type: 'unknown', support_level: 'unsupported', diagnostic_codes: ['unsupported_layer_type'] }));
         }
     }
-    const vt = terrain?.material?.virtualTexture;
-    if (vt?.enabled)
-        for (const family of vt.layers ?? [])
-            if (family.family !== undefined && family.family !== 'albedo')
-                diagnostics.push(vtUnsupportedFamilyDiagnostic(family.family, { layer_id: 'terrain' }));
     if (estimate > budget)
         diagnostics.push(estimatedGpuMemoryDiagnostic(estimate, budget));
     if (input.diagnosticsPolicy?.largeSceneSummary) {

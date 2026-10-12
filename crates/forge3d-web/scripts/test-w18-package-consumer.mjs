@@ -126,7 +126,7 @@ const server = createServer((req, res) => {
           .replaceAll("/src-ts/index.ts", "/dist/index.js"),
       );
     const headers={
-      "content-type": {".html":"text/html", ".js":"text/javascript", ".json":"application/json", ".wasm":"application/wasm", ".ttf":"font/ttf", ".png":"image/png"}[extname(path)] ?? "application/octet-stream",
+      "content-type": {".html":"text/html", ".js":"text/javascript", ".mjs":"text/javascript", ".json":"application/json", ".wasm":"application/wasm", ".ttf":"font/ttf", ".png":"image/png"}[extname(path)] ?? "application/octet-stream",
       "cross-origin-opener-policy":"same-origin", "cross-origin-embedder-policy":"require-corp", "accept-ranges":"bytes"
     };
     const range=req.headers.range;

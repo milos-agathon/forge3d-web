@@ -146,6 +146,8 @@ describe('W18 typed recipes and pre-render validation', () => {
         expect(summary.details.unavailable_stats).toEqual([{ layer_id: 'instances', stats: ['lod'] }, { layer_id: 'terrain', stats: ['cache'] }]);
         expect(summary.details.instancing_status).toEqual({ instances: { path: 'product building instances', support_level: 'unsupported' } });
         expect(report.diagnostics.filter(d => d.code === 'unavailable_cache_lod_stats')).toHaveLength(2);
+        expect(report.layer_summaries.find(l => l.layer_id === 'terrain')).toMatchObject({ support_level: 'underdeveloped', diagnostic_codes: ['unavailable_cache_lod_stats'] });
+        expect(report.unsupported_features['layer:terrain']).toBe('underdeveloped');
         s.dispose();
     });
     it('preserves per-object missing glyphs in preflight and empty-layer summary codes', () => {
