@@ -1,0 +1,1145 @@
+{
+  "schemaVersion": 1,
+  "task": "W17",
+  "codeRevision": "8171a0dd5a7e6edca12cf83244576763b115ec0d",
+  "verifiedAt": "2026-10-11T21:08:29.815Z",
+  "branch": "codex/w17-tracing",
+  "baseRevision": "5a16ee511545fb4385be89c6c0b53bdb759466b7",
+  "status": {
+    "implementation": "G09-G11 implemented",
+    "localConformance": "passed",
+    "physicalProfiles": "pending"
+  },
+  "fixture": {
+    "path": "crates/forge3d-web/tests/fixtures/w17/trace-sdf-v1.json",
+    "sha256": "f755c58556aa637f7d9aede456f519f35247d8b395df0315ea5495f267d3a070",
+    "nativeSourceCount": 99,
+    "triangles": 65536,
+    "sdfPrimitives": 128,
+    "rays": 1048576,
+    "seed": 1597463007,
+    "spp": [
+      1,
+      4,
+      16,
+      64
+    ],
+    "observedWorkingBytesSha256": "9a732ee45d7ae5b62b134d0ce6f47a61e813141c3e73d37822f1423690365bdd",
+    "digestNote": "sha256 binds committed LF bytes; observedWorkingBytesSha256 retains the local CRLF byte observation. Parsed fixture contents are identical."
+  },
+  "package": {
+    "schemaVersion": 1,
+    "verifiedAt": "2026-10-11T21:08:29.815Z",
+    "revision": "8171a0dd5a7e6edca12cf83244576763b115ec0d",
+    "packageSha256": "53283374b7ae4d349c34ce0bce4264c85d94442b4885e1c83e00114481220c54",
+    "tarball": "forge3d-web-1.26.3.tgz",
+    "installed": "temporary consumer node_modules/@forge3d/web",
+    "exitCode": 0
+  },
+  "stressPackage": {
+    "schemaVersion": 1,
+    "verifiedAt": "2026-10-11T21:08:29.815Z",
+    "revision": "8171a0dd5a7e6edca12cf83244576763b115ec0d",
+    "packageSha256": "53283374b7ae4d349c34ce0bce4264c85d94442b4885e1c83e00114481220c54",
+    "tarball": "forge3d-web-1.26.3.tgz",
+    "installed": "temporary consumer node_modules/@forge3d/web",
+    "exitCode": 0
+  },
+  "browserReports": {
+    "final-source": {
+      "rawReport": "docs/parity/w17-runs/final-source.json",
+      "rawReportSha256": "6e76e161337986336f5f6d22b86635403aa3d35b6ea48f0921e2ac2c43f03831",
+      "stats": {
+        "startTime": "2026-10-11T20:52:57.539Z",
+        "duration": 62879.761999999995,
+        "expected": 9,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "cases": [
+        {
+          "title": "W17 source: interactive example renders a nonblank image",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 8405
+            }
+          ]
+        },
+        {
+          "title": "W17 source: ReSTIR reuse, online guiding, RGB media, GGX/glass and area lights",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 7721
+            }
+          ]
+        },
+        {
+          "title": "W17 source: review regressions cover irregular BVHs, lit media, reuse and guiding parity",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 13503
+            }
+          ]
+        },
+        {
+          "title": "W17 source: failed recovery and device loss during compilation release real buffers",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1173
+            }
+          ]
+        },
+        {
+          "title": "W17 source: full trace-sdf-v1 analytic CPU/WASM/GPU workload",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 13288
+            }
+          ]
+        },
+        {
+          "title": "W17 source: CPU/WASM/GPU BVH hits, LBVH radix and topology-preserving refit",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1165
+            }
+          ]
+        },
+        {
+          "title": "W17 source: all SDF primitives/CSG distances and material IDs match CPU/WASM/GPU",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1185
+            }
+          ]
+        },
+        {
+          "title": "W17 source: megakernel/wavefront exact hashes, covered AOVs and convergence ladder",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 8518
+            }
+          ]
+        },
+        {
+          "title": "W17 source: typed limits, cancellation, cache, device loss/replay and 30 disposals",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 3335
+            }
+          ]
+        }
+      ],
+      "observations": {
+        "trace-features.json": {
+          "varianceReduction": 0.9706364216557043,
+          "baseMse": 1063.220312696772,
+          "risMse": 31.2199529491182,
+          "reuseMse": 4.084821753408268,
+          "reuseChanged": true,
+          "guidingUpdates": 1472,
+          "guideRestored": true,
+          "guideContinuation": true,
+          "mediumMean": [
+            0.6696863626129925,
+            0.44889959460124373,
+            0.3009033203125
+          ],
+          "mediumExpected": [
+            0.6703200460356393,
+            0.44932896411722156,
+            0.3011942119122021
+          ],
+          "clampMax": 2,
+          "materials": [
+            {
+              "same": true,
+              "finite": true,
+              "covered": 52,
+              "cpuRelativeError": 2.205371856689453e-05,
+              "directMax": 0.5991160869598389
+            },
+            {
+              "same": true,
+              "finite": true,
+              "covered": 52,
+              "cpuRelativeError": 1.1920928955078125e-07,
+              "directMax": 0
+            },
+            {
+              "same": true,
+              "finite": true,
+              "covered": 52,
+              "cpuRelativeError": 8.121132850646973e-07,
+              "directMax": 0.6988561749458313
+            }
+          ],
+          "anisotropyChangesImage": true,
+          "zeroRoughness": true,
+          "areaMean": 0.4292183742703249,
+          "continuationMax": 0
+        },
+        "review-regressions.json": {
+          "probes": 567,
+          "invalidLeaves": 0,
+          "refitStable": true,
+          "maxT": 4.76837158203125e-07,
+          "maxBary": 2.384185791015625e-07,
+          "maxOracle": 2.654790878298119e-06,
+          "parity": [
+            {
+              "cpu": 6.258487701416016e-07,
+              "engines": 0,
+              "covered": 110
+            },
+            {
+              "cpu": 8.344650268554688e-07,
+              "engines": 0,
+              "covered": 110
+            }
+          ],
+          "reuseMean": 0.63738227263093,
+          "reuseVarianceRatio": 0.33217298291108766,
+          "reuseExpected": 0.6366197723675814,
+          "absorptionRatio": 0.13469904734408764,
+          "absorptionExpected": 0.1353352832366127,
+          "mediumParity": {
+            "cpu": 3.772560949632723e-06,
+            "engines": 0,
+            "mean": 3.6954938846174628
+          },
+          "positiveMass": 0.9543419596739113,
+          "negativeMass": 0.045658043352887034,
+          "guidingVarianceRatio": 0.1537783018164331,
+          "aovRoundtripError": 0,
+          "visibilityPng": true,
+          "tileCoverage": 187,
+          "guidingParity": 1.3050412569217758e-07,
+          "guidingWeightsError": 1.9574736883727335e-07,
+          "axisError": 0,
+          "residualBuffers": 0,
+          "residualBytes": 0,
+          "createdBuffers": 782,
+          "destroyedBuffers": 782,
+          "peakGpuAllocatedBytes": 4743528,
+          "leakNegativeControl": true
+        },
+        "recovery-compilation.json": {
+          "recovery": "WEBGPU_ADAPTER_UNAVAILABLE",
+          "blocked": "DEVICE_LOST",
+          "recoveryResidual": 0,
+          "loss": "DEVICE_LOST",
+          "created": 10,
+          "destroyed": 10,
+          "residual": 0
+        },
+        "trace-sdf-v1.json": {
+          "fixtureId": "trace-sdf-v1",
+          "triangles": 65536,
+          "sdfPrimitives": 128,
+          "rays": 1048576,
+          "triangleHash": "eabef0a6725f603c3055eed2816eb7390074c95020c6c5121cd098bcd0ca258c",
+          "expectedTriangleHash": "eabef0a6725f603c3055eed2816eb7390074c95020c6c5121cd098bcd0ca258c",
+          "lowerLayerProbes": 64,
+          "sdfHitProbes": 128,
+          "sdfOffCenterProbes": 512,
+          "rayHash": "28308ab5f030217375a430d37e0f90d0b3d56f7c519a51e5498f047374b102cc",
+          "cpuHitHash": "4ec45f30e0e02f690fa72eb18e5b8f07d2379a104035fc0db931e78c8813c136",
+          "wasmHitHash": "4ec45f30e0e02f690fa72eb18e5b8f07d2379a104035fc0db931e78c8813c136",
+          "gpuHitHash": "4ec45f30e0e02f690fa72eb18e5b8f07d2379a104035fc0db931e78c8813c136",
+          "expectedRayHash": "28308ab5f030217375a430d37e0f90d0b3d56f7c519a51e5498f047374b102cc",
+          "expectedHitHash": "4ec45f30e0e02f690fa72eb18e5b8f07d2379a104035fc0db931e78c8813c136",
+          "maxT": 0,
+          "maxBary": 0,
+          "maxSdf": 7.175868188546985e-08,
+          "idErrors": 0,
+          "analyticErrors": 0,
+          "materialErrors": 0,
+          "durationMs": 11884.099999964237,
+          "adapter": {
+            "vendor": "nvidia",
+            "architecture": "ampere",
+            "device": "",
+            "description": ""
+          },
+          "gpuTree": {
+            "triangleCount": 65536,
+            "nodeCount": 32767,
+            "leafCount": 16384,
+            "maxDepth": 14,
+            "memoryUsageBytes": 6029264,
+            "buildTimeMs": 133.20000004768372,
+            "backend": "webgpu",
+            "method": "lbvh"
+          },
+          "cpuTree": {
+            "triangleCount": 65536,
+            "nodeCount": 32767,
+            "leafCount": 16384,
+            "maxDepth": 14,
+            "memoryUsageBytes": 6029264,
+            "buildTimeMs": 350.30000001192093,
+            "backend": "cpu",
+            "method": "sah"
+          }
+        },
+        "trace-convergence.json": {
+          "hashes": [
+            "511c7be1af5509b2eb43dc098743e02022b4236e14c1ef5b40f688f80b58e660",
+            "4961b82b6c4367202043686c833087a8650ed7822696f4a7ca4dff871e209c6f",
+            "8ad9505ac85c4268f07578fb043da82fd79ee5310785a52f5bfe6a8565be510f",
+            "0602038d932a597981fd5216820236e4a045ae74ab983bfd5c9fe10ffdf8ec77"
+          ],
+          "waveHash": "0602038d932a597981fd5216820236e4a045ae74ab983bfd5c9fe10ffdf8ec77",
+          "repeatHash": "0602038d932a597981fd5216820236e4a045ae74ab983bfd5c9fe10ffdf8ec77",
+          "rmse": [
+            0.008724803119854373,
+            0.0025542440229115253,
+            0.0018339838010576906,
+            0.001218925102431982
+          ],
+          "ssim": 0.9992713751606518,
+          "blankSsim": 0.00016309134181821577,
+          "mse": 1.4857784053388178e-06,
+          "covered": 640,
+          "cpuMax": 5.960464477539063e-08,
+          "cpuIds": true,
+          "normal": [
+            0,
+            0,
+            1
+          ],
+          "depth": 6.293830871582031,
+          "varianceFinite": true
+        }
+      }
+    },
+    "final-installed": {
+      "rawReport": "docs/parity/w17-runs/final-installed.json",
+      "rawReportSha256": "8d4dc54b1abbd1ab113e55442efae43612cf5e6084dde5f4d4a19c55384c6730",
+      "stats": {
+        "startTime": "2026-10-11T20:57:17.106Z",
+        "duration": 672684.723,
+        "expected": 10,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "cases": [
+        {
+          "title": "W17 dist: 600-second installed full-scene local stress",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 606610
+            }
+          ]
+        },
+        {
+          "title": "W17 dist: interactive example renders a nonblank image",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 12180
+            }
+          ]
+        },
+        {
+          "title": "W17 dist: ReSTIR reuse, online guiding, RGB media, GGX/glass and area lights",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 10195
+            }
+          ]
+        },
+        {
+          "title": "W17 dist: review regressions cover irregular BVHs, lit media, reuse and guiding parity",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 13904
+            }
+          ]
+        },
+        {
+          "title": "W17 dist: failed recovery and device loss during compilation release real buffers",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1184
+            }
+          ]
+        },
+        {
+          "title": "W17 dist: full trace-sdf-v1 analytic CPU/WASM/GPU workload",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 13627
+            }
+          ]
+        },
+        {
+          "title": "W17 dist: CPU/WASM/GPU BVH hits, LBVH radix and topology-preserving refit",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 846
+            }
+          ]
+        },
+        {
+          "title": "W17 dist: all SDF primitives/CSG distances and material IDs match CPU/WASM/GPU",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1021
+            }
+          ]
+        },
+        {
+          "title": "W17 dist: megakernel/wavefront exact hashes, covered AOVs and convergence ladder",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 9423
+            }
+          ]
+        },
+        {
+          "title": "W17 dist: typed limits, cancellation, cache, device loss/replay and 30 disposals",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2757
+            }
+          ]
+        }
+      ],
+      "observations": {
+        "trace-soak.json": {
+          "fixtureId": "trace-sdf-v1",
+          "triangles": 65536,
+          "sdfPrimitives": 128,
+          "seed": 1597463007,
+          "width": 32,
+          "height": 20,
+          "sppPerFrame": 1,
+          "engine": "wavefront",
+          "elapsedMs": 600018.1999999881,
+          "frames": 35274,
+          "cameraKeys": 256,
+          "coverageMin": 127,
+          "replayErrors": 0,
+          "frameTimeP95Ms": 34,
+          "cpuPeak": 12269572,
+          "gpuPeak": 6624112,
+          "heapPeak": 109000000,
+          "residualBytes": 0,
+          "residualBuffers": 0,
+          "allocatedGpuPeak": 6624112,
+          "createdBuffers": 20,
+          "destroyedBuffers": 20,
+          "ledgerResidualBytes": 0,
+          "adapter": {
+            "vendor": "nvidia",
+            "architecture": "ampere",
+            "device": "",
+            "description": ""
+          },
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36",
+          "hardwareQualification": "unqualified-local-stress",
+          "physicalProfilesPending": [
+            "reference-discrete",
+            "reference-integrated"
+          ]
+        },
+        "trace-features.json": {
+          "varianceReduction": 0.9706364216557043,
+          "baseMse": 1063.220312696772,
+          "risMse": 31.2199529491182,
+          "reuseMse": 4.084821753408268,
+          "reuseChanged": true,
+          "guidingUpdates": 1472,
+          "guideRestored": true,
+          "guideContinuation": true,
+          "mediumMean": [
+            0.6696863626129925,
+            0.44889959460124373,
+            0.3009033203125
+          ],
+          "mediumExpected": [
+            0.6703200460356393,
+            0.44932896411722156,
+            0.3011942119122021
+          ],
+          "clampMax": 2,
+          "materials": [
+            {
+              "same": true,
+              "finite": true,
+              "covered": 52,
+              "cpuRelativeError": 2.205371856689453e-05,
+              "directMax": 0.5991160869598389
+            },
+            {
+              "same": true,
+              "finite": true,
+              "covered": 52,
+              "cpuRelativeError": 1.1920928955078125e-07,
+              "directMax": 0
+            },
+            {
+              "same": true,
+              "finite": true,
+              "covered": 52,
+              "cpuRelativeError": 8.121132850646973e-07,
+              "directMax": 0.6988561749458313
+            }
+          ],
+          "anisotropyChangesImage": true,
+          "zeroRoughness": true,
+          "areaMean": 0.4292183742703249,
+          "continuationMax": 0
+        },
+        "review-regressions.json": {
+          "probes": 567,
+          "invalidLeaves": 0,
+          "refitStable": true,
+          "maxT": 4.76837158203125e-07,
+          "maxBary": 2.384185791015625e-07,
+          "maxOracle": 2.654790878298119e-06,
+          "parity": [
+            {
+              "cpu": 6.258487701416016e-07,
+              "engines": 0,
+              "covered": 110
+            },
+            {
+              "cpu": 8.344650268554688e-07,
+              "engines": 0,
+              "covered": 110
+            }
+          ],
+          "reuseMean": 0.63738227263093,
+          "reuseVarianceRatio": 0.33217298291108766,
+          "reuseExpected": 0.6366197723675814,
+          "absorptionRatio": 0.13469904734408764,
+          "absorptionExpected": 0.1353352832366127,
+          "mediumParity": {
+            "cpu": 3.772560949632723e-06,
+            "engines": 0,
+            "mean": 3.6954938846174628
+          },
+          "positiveMass": 0.9543419596739113,
+          "negativeMass": 0.045658043352887034,
+          "guidingVarianceRatio": 0.1537783018164331,
+          "aovRoundtripError": 0,
+          "visibilityPng": true,
+          "tileCoverage": 187,
+          "guidingParity": 1.3050412569217758e-07,
+          "guidingWeightsError": 1.9574736883727335e-07,
+          "axisError": 0,
+          "residualBuffers": 0,
+          "residualBytes": 0,
+          "createdBuffers": 782,
+          "destroyedBuffers": 782,
+          "peakGpuAllocatedBytes": 4743528,
+          "leakNegativeControl": true
+        },
+        "recovery-compilation.json": {
+          "recovery": "WEBGPU_ADAPTER_UNAVAILABLE",
+          "blocked": "DEVICE_LOST",
+          "recoveryResidual": 0,
+          "loss": "DEVICE_LOST",
+          "created": 10,
+          "destroyed": 10,
+          "residual": 0
+        },
+        "trace-sdf-v1.json": {
+          "fixtureId": "trace-sdf-v1",
+          "triangles": 65536,
+          "sdfPrimitives": 128,
+          "rays": 1048576,
+          "triangleHash": "eabef0a6725f603c3055eed2816eb7390074c95020c6c5121cd098bcd0ca258c",
+          "expectedTriangleHash": "eabef0a6725f603c3055eed2816eb7390074c95020c6c5121cd098bcd0ca258c",
+          "lowerLayerProbes": 64,
+          "sdfHitProbes": 128,
+          "sdfOffCenterProbes": 512,
+          "rayHash": "28308ab5f030217375a430d37e0f90d0b3d56f7c519a51e5498f047374b102cc",
+          "cpuHitHash": "4ec45f30e0e02f690fa72eb18e5b8f07d2379a104035fc0db931e78c8813c136",
+          "wasmHitHash": "4ec45f30e0e02f690fa72eb18e5b8f07d2379a104035fc0db931e78c8813c136",
+          "gpuHitHash": "4ec45f30e0e02f690fa72eb18e5b8f07d2379a104035fc0db931e78c8813c136",
+          "expectedRayHash": "28308ab5f030217375a430d37e0f90d0b3d56f7c519a51e5498f047374b102cc",
+          "expectedHitHash": "4ec45f30e0e02f690fa72eb18e5b8f07d2379a104035fc0db931e78c8813c136",
+          "maxT": 0,
+          "maxBary": 0,
+          "maxSdf": 7.175868188546985e-08,
+          "idErrors": 0,
+          "analyticErrors": 0,
+          "materialErrors": 0,
+          "durationMs": 12396.199999988079,
+          "adapter": {
+            "vendor": "nvidia",
+            "architecture": "ampere",
+            "device": "",
+            "description": ""
+          },
+          "gpuTree": {
+            "triangleCount": 65536,
+            "nodeCount": 32767,
+            "leafCount": 16384,
+            "maxDepth": 14,
+            "memoryUsageBytes": 6029264,
+            "buildTimeMs": 132.89999997615814,
+            "backend": "webgpu",
+            "method": "lbvh"
+          },
+          "cpuTree": {
+            "triangleCount": 65536,
+            "nodeCount": 32767,
+            "leafCount": 16384,
+            "maxDepth": 14,
+            "memoryUsageBytes": 6029264,
+            "buildTimeMs": 314,
+            "backend": "cpu",
+            "method": "sah"
+          }
+        },
+        "trace-convergence.json": {
+          "hashes": [
+            "511c7be1af5509b2eb43dc098743e02022b4236e14c1ef5b40f688f80b58e660",
+            "4961b82b6c4367202043686c833087a8650ed7822696f4a7ca4dff871e209c6f",
+            "8ad9505ac85c4268f07578fb043da82fd79ee5310785a52f5bfe6a8565be510f",
+            "0602038d932a597981fd5216820236e4a045ae74ab983bfd5c9fe10ffdf8ec77"
+          ],
+          "waveHash": "0602038d932a597981fd5216820236e4a045ae74ab983bfd5c9fe10ffdf8ec77",
+          "repeatHash": "0602038d932a597981fd5216820236e4a045ae74ab983bfd5c9fe10ffdf8ec77",
+          "rmse": [
+            0.008724803119854373,
+            0.0025542440229115253,
+            0.0018339838010576906,
+            0.001218925102431982
+          ],
+          "ssim": 0.9992713751606518,
+          "blankSsim": 0.00016309134181821577,
+          "mse": 1.4857784053388178e-06,
+          "covered": 640,
+          "cpuMax": 5.960464477539063e-08,
+          "cpuIds": true,
+          "normal": [
+            0,
+            0,
+            1
+          ],
+          "depth": 6.293830871582031,
+          "varianceFinite": true
+        }
+      }
+    },
+    "stress-installed": {
+      "rawReport": "docs/parity/w17-runs/stress-installed.json",
+      "rawReportSha256": "8d4dc54b1abbd1ab113e55442efae43612cf5e6084dde5f4d4a19c55384c6730",
+      "stats": {
+        "startTime": "2026-10-11T20:57:17.106Z",
+        "duration": 672684.723,
+        "expected": 10,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "cases": [
+        {
+          "title": "W17 dist: 600-second installed full-scene local stress",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 606610
+            }
+          ]
+        },
+        {
+          "title": "W17 dist: interactive example renders a nonblank image",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 12180
+            }
+          ]
+        },
+        {
+          "title": "W17 dist: ReSTIR reuse, online guiding, RGB media, GGX/glass and area lights",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 10195
+            }
+          ]
+        },
+        {
+          "title": "W17 dist: review regressions cover irregular BVHs, lit media, reuse and guiding parity",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 13904
+            }
+          ]
+        },
+        {
+          "title": "W17 dist: failed recovery and device loss during compilation release real buffers",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1184
+            }
+          ]
+        },
+        {
+          "title": "W17 dist: full trace-sdf-v1 analytic CPU/WASM/GPU workload",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 13627
+            }
+          ]
+        },
+        {
+          "title": "W17 dist: CPU/WASM/GPU BVH hits, LBVH radix and topology-preserving refit",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 846
+            }
+          ]
+        },
+        {
+          "title": "W17 dist: all SDF primitives/CSG distances and material IDs match CPU/WASM/GPU",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 1021
+            }
+          ]
+        },
+        {
+          "title": "W17 dist: megakernel/wavefront exact hashes, covered AOVs and convergence ladder",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 9423
+            }
+          ]
+        },
+        {
+          "title": "W17 dist: typed limits, cancellation, cache, device loss/replay and 30 disposals",
+          "project": "chromium-preflight",
+          "results": [
+            {
+              "status": "passed",
+              "durationMs": 2757
+            }
+          ]
+        }
+      ],
+      "observations": {
+        "trace-soak.json": {
+          "fixtureId": "trace-sdf-v1",
+          "triangles": 65536,
+          "sdfPrimitives": 128,
+          "seed": 1597463007,
+          "width": 32,
+          "height": 20,
+          "sppPerFrame": 1,
+          "engine": "wavefront",
+          "elapsedMs": 600018.1999999881,
+          "frames": 35274,
+          "cameraKeys": 256,
+          "coverageMin": 127,
+          "replayErrors": 0,
+          "frameTimeP95Ms": 34,
+          "cpuPeak": 12269572,
+          "gpuPeak": 6624112,
+          "heapPeak": 109000000,
+          "residualBytes": 0,
+          "residualBuffers": 0,
+          "allocatedGpuPeak": 6624112,
+          "createdBuffers": 20,
+          "destroyedBuffers": 20,
+          "ledgerResidualBytes": 0,
+          "adapter": {
+            "vendor": "nvidia",
+            "architecture": "ampere",
+            "device": "",
+            "description": ""
+          },
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36",
+          "hardwareQualification": "unqualified-local-stress",
+          "physicalProfilesPending": [
+            "reference-discrete",
+            "reference-integrated"
+          ]
+        },
+        "trace-features.json": {
+          "varianceReduction": 0.9706364216557043,
+          "baseMse": 1063.220312696772,
+          "risMse": 31.2199529491182,
+          "reuseMse": 4.084821753408268,
+          "reuseChanged": true,
+          "guidingUpdates": 1472,
+          "guideRestored": true,
+          "guideContinuation": true,
+          "mediumMean": [
+            0.6696863626129925,
+            0.44889959460124373,
+            0.3009033203125
+          ],
+          "mediumExpected": [
+            0.6703200460356393,
+            0.44932896411722156,
+            0.3011942119122021
+          ],
+          "clampMax": 2,
+          "materials": [
+            {
+              "same": true,
+              "finite": true,
+              "covered": 52,
+              "cpuRelativeError": 2.205371856689453e-05,
+              "directMax": 0.5991160869598389
+            },
+            {
+              "same": true,
+              "finite": true,
+              "covered": 52,
+              "cpuRelativeError": 1.1920928955078125e-07,
+              "directMax": 0
+            },
+            {
+              "same": true,
+              "finite": true,
+              "covered": 52,
+              "cpuRelativeError": 8.121132850646973e-07,
+              "directMax": 0.6988561749458313
+            }
+          ],
+          "anisotropyChangesImage": true,
+          "zeroRoughness": true,
+          "areaMean": 0.4292183742703249,
+          "continuationMax": 0
+        },
+        "review-regressions.json": {
+          "probes": 567,
+          "invalidLeaves": 0,
+          "refitStable": true,
+          "maxT": 4.76837158203125e-07,
+          "maxBary": 2.384185791015625e-07,
+          "maxOracle": 2.654790878298119e-06,
+          "parity": [
+            {
+              "cpu": 6.258487701416016e-07,
+              "engines": 0,
+              "covered": 110
+            },
+            {
+              "cpu": 8.344650268554688e-07,
+              "engines": 0,
+              "covered": 110
+            }
+          ],
+          "reuseMean": 0.63738227263093,
+          "reuseVarianceRatio": 0.33217298291108766,
+          "reuseExpected": 0.6366197723675814,
+          "absorptionRatio": 0.13469904734408764,
+          "absorptionExpected": 0.1353352832366127,
+          "mediumParity": {
+            "cpu": 3.772560949632723e-06,
+            "engines": 0,
+            "mean": 3.6954938846174628
+          },
+          "positiveMass": 0.9543419596739113,
+          "negativeMass": 0.045658043352887034,
+          "guidingVarianceRatio": 0.1537783018164331,
+          "aovRoundtripError": 0,
+          "visibilityPng": true,
+          "tileCoverage": 187,
+          "guidingParity": 1.3050412569217758e-07,
+          "guidingWeightsError": 1.9574736883727335e-07,
+          "axisError": 0,
+          "residualBuffers": 0,
+          "residualBytes": 0,
+          "createdBuffers": 782,
+          "destroyedBuffers": 782,
+          "peakGpuAllocatedBytes": 4743528,
+          "leakNegativeControl": true
+        },
+        "recovery-compilation.json": {
+          "recovery": "WEBGPU_ADAPTER_UNAVAILABLE",
+          "blocked": "DEVICE_LOST",
+          "recoveryResidual": 0,
+          "loss": "DEVICE_LOST",
+          "created": 10,
+          "destroyed": 10,
+          "residual": 0
+        },
+        "trace-sdf-v1.json": {
+          "fixtureId": "trace-sdf-v1",
+          "triangles": 65536,
+          "sdfPrimitives": 128,
+          "rays": 1048576,
+          "triangleHash": "eabef0a6725f603c3055eed2816eb7390074c95020c6c5121cd098bcd0ca258c",
+          "expectedTriangleHash": "eabef0a6725f603c3055eed2816eb7390074c95020c6c5121cd098bcd0ca258c",
+          "lowerLayerProbes": 64,
+          "sdfHitProbes": 128,
+          "sdfOffCenterProbes": 512,
+          "rayHash": "28308ab5f030217375a430d37e0f90d0b3d56f7c519a51e5498f047374b102cc",
+          "cpuHitHash": "4ec45f30e0e02f690fa72eb18e5b8f07d2379a104035fc0db931e78c8813c136",
+          "wasmHitHash": "4ec45f30e0e02f690fa72eb18e5b8f07d2379a104035fc0db931e78c8813c136",
+          "gpuHitHash": "4ec45f30e0e02f690fa72eb18e5b8f07d2379a104035fc0db931e78c8813c136",
+          "expectedRayHash": "28308ab5f030217375a430d37e0f90d0b3d56f7c519a51e5498f047374b102cc",
+          "expectedHitHash": "4ec45f30e0e02f690fa72eb18e5b8f07d2379a104035fc0db931e78c8813c136",
+          "maxT": 0,
+          "maxBary": 0,
+          "maxSdf": 7.175868188546985e-08,
+          "idErrors": 0,
+          "analyticErrors": 0,
+          "materialErrors": 0,
+          "durationMs": 12396.199999988079,
+          "adapter": {
+            "vendor": "nvidia",
+            "architecture": "ampere",
+            "device": "",
+            "description": ""
+          },
+          "gpuTree": {
+            "triangleCount": 65536,
+            "nodeCount": 32767,
+            "leafCount": 16384,
+            "maxDepth": 14,
+            "memoryUsageBytes": 6029264,
+            "buildTimeMs": 132.89999997615814,
+            "backend": "webgpu",
+            "method": "lbvh"
+          },
+          "cpuTree": {
+            "triangleCount": 65536,
+            "nodeCount": 32767,
+            "leafCount": 16384,
+            "maxDepth": 14,
+            "memoryUsageBytes": 6029264,
+            "buildTimeMs": 314,
+            "backend": "cpu",
+            "method": "sah"
+          }
+        },
+        "trace-convergence.json": {
+          "hashes": [
+            "511c7be1af5509b2eb43dc098743e02022b4236e14c1ef5b40f688f80b58e660",
+            "4961b82b6c4367202043686c833087a8650ed7822696f4a7ca4dff871e209c6f",
+            "8ad9505ac85c4268f07578fb043da82fd79ee5310785a52f5bfe6a8565be510f",
+            "0602038d932a597981fd5216820236e4a045ae74ab983bfd5c9fe10ffdf8ec77"
+          ],
+          "waveHash": "0602038d932a597981fd5216820236e4a045ae74ab983bfd5c9fe10ffdf8ec77",
+          "repeatHash": "0602038d932a597981fd5216820236e4a045ae74ab983bfd5c9fe10ffdf8ec77",
+          "rmse": [
+            0.008724803119854373,
+            0.0025542440229115253,
+            0.0018339838010576906,
+            0.001218925102431982
+          ],
+          "ssim": 0.9992713751606518,
+          "blankSsim": 0.00016309134181821577,
+          "mse": 1.4857784053388178e-06,
+          "covered": 640,
+          "cpuMax": 5.960464477539063e-08,
+          "cpuIds": true,
+          "normal": [
+            0,
+            0,
+            1
+          ],
+          "depth": 6.293830871582031,
+          "varianceFinite": true
+        }
+      }
+    }
+  },
+  "otherChecks": [
+    {
+      "command": "cargo test -p forge3d-core --lib --no-default-features --features webgpu",
+      "passed": 430
+    },
+    {
+      "command": "cargo test -p forge3d-web --lib",
+      "passed": 192
+    },
+    {
+      "command": "cargo test -p forge3d-web w17_ --lib",
+      "passed": 2,
+      "note": "Final shader sources validated by Naga; these two tests are included in the web total."
+    },
+    {
+      "command": "node node_modules/vitest/vitest.mjs run --maxWorkers=2",
+      "filesPassed": 68,
+      "passed": 1148
+    },
+    {
+      "command": "npm run test:infrastructure",
+      "passed": 627,
+      "skipped": 1
+    },
+    {
+      "command": "npm run test:api",
+      "status": "passed"
+    },
+    {
+      "command": "npm run verify:parity",
+      "testsPassed": 15,
+      "unresolved": 0,
+      "schemaErrors": 0,
+      "lockViolations": 0
+    },
+    {
+      "command": "npm run test:release-hardening and node tests/api/package-contract.mjs",
+      "status": "passed",
+      "docsChecksPassed": 13
+    },
+    {
+      "command": "wasm-pack build (CARGO_TARGET_DIR=C:/devin-target/forge3d-web)",
+      "status": "passed"
+    },
+    {
+      "command": "Compare frozen manifest entries with their recorded native Git objects",
+      "status": "passed",
+      "files": 99
+    }
+  ],
+  "stressScope": {
+    "testedRevision": "8171a0dd5a7e6edca12cf83244576763b115ec0d",
+    "note": "Functional installed checks and the 600-second stress use the same committed package/code revision. Local viewport remains 32x20, with real GPU allocation/destruction tracking."
+  },
+  "hardwareQualification": {
+    "status": "not-qualified",
+    "requiredViewport": [
+      1920,
+      1080
+    ],
+    "localStressViewport": [
+      32,
+      20
+    ],
+    "pendingProfiles": [
+      "reference-discrete",
+      "reference-integrated"
+    ],
+    "reason": "The observed local adapter/session and 32x20 viewport are not attestations of the pinned W00 physical profiles. The recorded local p95 is not a profile acceptance result."
+  },
+  "example": {
+    "path": "docs/parity/w17-example.png",
+    "sha256": "b81962a06b35a7f80fe7bad156ceb35cf3b1b32e911d8d6a3da41a330b5b0099"
+  },
+  "resolvedChecks": [
+    {
+      "issue": "Guiding variance became unstable during early online training.",
+      "resolution": "Continuation-radiance training retains the inverse-PDF weight and adds 20% uniform exploration; trained variance regression passes."
+    },
+    {
+      "issue": "Reused estimates were biased by selected-light age expiry.",
+      "resolution": "Compatible zero-weight trials retain their counts; deterministic sample-window expiry passes the independent seed ensemble."
+    },
+    {
+      "issue": "Browser adapters were reused after consuming their one device request.",
+      "resolution": "The lifecycle harness requests fresh adapters for each new device."
+    }
+  ],
+  "reviewFixes": "docs/parity/w17-review-fixes.md",
+  "reviewRegressions": {
+    "probes": 567,
+    "invalidLeaves": 0,
+    "refitStable": true,
+    "maxT": 4.76837158203125e-07,
+    "maxBary": 2.384185791015625e-07,
+    "maxOracle": 2.654790878298119e-06,
+    "parity": [
+      {
+        "cpu": 6.258487701416016e-07,
+        "engines": 0,
+        "covered": 110
+      },
+      {
+        "cpu": 8.344650268554688e-07,
+        "engines": 0,
+        "covered": 110
+      }
+    ],
+    "reuseMean": 0.63738227263093,
+    "reuseVarianceRatio": 0.33217298291108766,
+    "reuseExpected": 0.6366197723675814,
+    "absorptionRatio": 0.13469904734408764,
+    "absorptionExpected": 0.1353352832366127,
+    "mediumParity": {
+      "cpu": 3.772560949632723e-06,
+      "engines": 0,
+      "mean": 3.6954938846174628
+    },
+    "positiveMass": 0.9543419596739113,
+    "negativeMass": 0.045658043352887034,
+    "guidingVarianceRatio": 0.1537783018164331,
+    "aovRoundtripError": 0,
+    "visibilityPng": true,
+    "tileCoverage": 187,
+    "guidingParity": 1.3050412569217758e-07,
+    "guidingWeightsError": 1.9574736883727335e-07,
+    "axisError": 0,
+    "residualBuffers": 0,
+    "residualBytes": 0,
+    "createdBuffers": 782,
+    "destroyedBuffers": 782,
+    "peakGpuAllocatedBytes": 4743528,
+    "leakNegativeControl": true
+  },
+  "previousVerification": {
+    "functionalRevision": "e456ff6f04f1dfb9992f1f3c1eccfb6bda1ceed2",
+    "stressRevision": "566e6f29d121471889cb96c921cc51267e18a1d0",
+    "evidenceCommit": "ab5e331",
+    "note": "Historical reports remain available in Git at the evidence commit; current reports replace those observations."
+  }
+}

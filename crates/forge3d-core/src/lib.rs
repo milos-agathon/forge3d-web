@@ -1,5 +1,11 @@
 pub mod feature_gates;
 
+#[cfg(feature = "webgpu")]
+pub mod accel;
+
+#[cfg(feature = "webgpu")]
+pub mod sdf;
+
 pub mod error;
 
 pub mod io;

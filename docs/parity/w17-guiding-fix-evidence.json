@@ -1,0 +1,163 @@
+{
+  "schemaVersion": 1,
+  "task": "W17 guiding CDF correction",
+  "codeRevision": "be8541288271c01397276a73c4bd887b5e0c492c",
+  "reviewBase": "28fdd74",
+  "verifiedAt": "2026-10-12T05:45:29.551Z",
+  "branch": "codex/w17-tracing",
+  "fix": {
+    "arithmetic": "Float32 total, 80/20 mixture probabilities, cumulative sums, azimuth remapping and importance weights.",
+    "gpu": "Both backends consume host-generated probabilities and cumulative boundaries. WGSL no longer recomputes the guiding divisions/CDF.",
+    "storage": "Each GPU cell holds raw weights, probabilities and CDF; raw snapshots remain part of cache keys. Packed size and transient sampling storage are admitted/reported.",
+    "api": "OnlineGuidingGrid.sample(x, y, v) returns bin, remapped azimuth variate v and importance weight; pdf remains the learned distribution."
+  },
+  "regression": {
+    "width": 32,
+    "height": 24,
+    "bins": 8,
+    "maxBounces": 3,
+    "samplesPerCase": 32,
+    "cases": [
+      {
+        "seed": 42,
+        "fovY": 45
+      },
+      {
+        "seed": 1597463007,
+        "fovY": 60
+      },
+      {
+        "seed": 118605492,
+        "fovY": 45
+      }
+    ],
+    "boundaryPixel": 400,
+    "boundaryWeights": [
+      1,
+      10,
+      1,
+      9,
+      1,
+      1,
+      4,
+      1
+    ],
+    "boundaryRandom": 0.9464285969734192,
+    "negativeControl": "Original production code at 28fdd74 with the added test harness: CPU trains bin 7; real GPU trains bin 6. The regression fails before the fix.",
+    "errorMetric": "max(abs(cpu - gpu) / max(1, abs(cpu))) across every component, checked after each sample."
+  },
+  "package": {
+    "schemaVersion": 1,
+    "verifiedAt": "2026-10-12T05:45:29.551Z",
+    "revision": "be8541288271c01397276a73c4bd887b5e0c492c",
+    "packageSha256": "07ac765c4c657ce781719653e9b2327f43ee9814b9aca79a99185579cbaf5854",
+    "tarball": "forge3d-web-1.26.3.tgz",
+    "installed": "temporary consumer node_modules/@forge3d/web",
+    "exitCode": 0
+  },
+  "reports": {
+    "before": {
+      "rawReport": "docs/parity/w17-runs/guiding-before.json",
+      "rawReportSha256": "bf079094cb34c36809ff8dd5d45c3ecdc1eb658e2dec768d5114522e9934b134",
+      "stats": {
+        "startTime": "2026-10-12T05:36:04.240Z",
+        "duration": 6551.114,
+        "expected": 0,
+        "skipped": 0,
+        "unexpected": 1,
+        "flaky": 0
+      },
+      "boundary": {
+        "pixel": 400,
+        "u": 0.9464285969734192,
+        "cpuBins": [
+          7
+        ],
+        "gpuBins": [
+          6
+        ]
+      },
+      "checkpoints": 96,
+      "maxColorError": 0.6153846531123925,
+      "maxWeightError": 20.474870681762695,
+      "maxEngineError": 0,
+      "maxEngineWeightError": 0,
+      "minimumCoverage": 768
+    },
+    "source": {
+      "rawReport": "docs/parity/w17-runs/guiding-source.json",
+      "rawReportSha256": "2e54ad179f0c1f92c5515984b2669a2add37d706186a8abd463afb842205f269",
+      "stats": {
+        "startTime": "2026-10-12T05:42:21.180Z",
+        "duration": 58595.066999999995,
+        "expected": 10,
+        "skipped": 0,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "boundary": {
+        "pixel": 400,
+        "u": 0.9464285969734192,
+        "cpuBins": [
+          7
+        ],
+        "gpuBins": [
+          7
+        ]
+      },
+      "checkpoints": 96,
+      "maxColorError": 1.4170549220021087e-07,
+      "maxWeightError": 1.4007491486596863e-07,
+      "maxEngineError": 0,
+      "maxEngineWeightError": 0,
+      "minimumCoverage": 768
+    },
+    "installed": {
+      "rawReport": "docs/parity/w17-runs/guiding-installed.json",
+      "rawReportSha256": "acd6a1301ed9926b213e69ea7af70f58759719b87fc227d4b1be9ca171c01038",
+      "stats": {
+        "startTime": "2026-10-12T05:44:35.934Z",
+        "duration": 53594.407,
+        "expected": 10,
+        "skipped": 1,
+        "unexpected": 0,
+        "flaky": 0
+      },
+      "boundary": {
+        "pixel": 400,
+        "u": 0.9464285969734192,
+        "cpuBins": [
+          7
+        ],
+        "gpuBins": [
+          7
+        ]
+      },
+      "checkpoints": 96,
+      "maxColorError": 1.4170549220021087e-07,
+      "maxWeightError": 1.4007491486596863e-07,
+      "maxEngineError": 0,
+      "maxEngineWeightError": 0,
+      "minimumCoverage": 768
+    }
+  },
+  "otherChecks": [
+    {
+      "command": "node node_modules/vitest/vitest.mjs run --maxWorkers=2",
+      "passed": 1151,
+      "filesPassed": 68
+    },
+    {
+      "command": "cargo test -p forge3d-web w17_ --lib --quiet",
+      "passed": 2,
+      "scope": "Final WGSL Naga validation and ABI member offsets"
+    },
+    {
+      "command": "npm run build:ts; npm run prepare-dist; npm run test:api",
+      "status": "passed"
+    }
+  ],
+  "previousEvidence": "docs/parity/w17-local-evidence.json",
+  "stress": "Not rerun for this correction. The prior 600-second run remains bound to 8171a0d in the previous evidence; it is not claimed for this revision.",
+  "hardwareQualification": "The W00 pinned 1080p physical profiles remain unqualified."
+}

@@ -4376,3 +4376,19 @@ export { decodeB3dm, decodePnts } from './tiles3d-content.js';
 export type { B3dmContent, PntsContent } from './tiles3d-content.js';
 export { Tiles3dLayer } from './tiles3d-layer.js';
 export type { TilePayload, LoadedTile, Tiles3dLayerOptions } from './tiles3d-layer.js';
+
+export type * from "./trace-types.js";
+export { BvhHandle, buildBvh, refitBvh } from "./bvh.js";
+export { buildBvhGpu, refitBvhGpu } from "./bvh-gpu.js";
+export { SdfPrimitive, SdfPrimitiveType, SdfScene, SdfSceneBuilder, CsgOperation, createSphere, createBox, evaluateCsg } from "./sdf.js";
+export type { SdfEvaluation, SdfNode, SdfSnapshot } from "./sdf.js";
+export { PathTracer, createPathTracer } from "./path-tracer.js";
+export { traceRaysGpu, evaluateSdfGpu } from "./trace-compute.js";
+export { AliasTable, RestirDI, OnlineGuidingGrid, hgPhase, sampleHg, normalizeRestirConfig } from "./trace-sampling.js";
+export type { RestirConfig, TraceReservoir } from "./trace-sampling.js";
+export { buildBvhWasm, evaluateSdfWasm, createTraceWorkerHandler } from "./trace-worker.js";
+
+export type { TraceWorkerHits, TraceWorkerDistances } from "./trace-worker.js";
+
+export { iterTraceTiles, encodeTraceAovs } from "./trace-output.js";
+export type { TraceTile } from "./trace-output.js";

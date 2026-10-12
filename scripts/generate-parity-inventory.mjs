@@ -1109,6 +1109,8 @@ function writeJson(path, value) {
 }
 
 function main() {
+  // Preserve independently maintained W15/W16 evidence when refreshing W17.
+  const previousTargets = new Map(JSON.parse(readFileSync(join(repositoryRoot,"docs/parity/forge3d-composite-baseline.json"),"utf8")).webTargets.filter(t=>["W15","W16"].includes(t.owner)).map(t=>[t.id,t]));
   for (const commit of Object.values(commits)) git(["cat-file", "-e", `${commit}^{commit}`]);
   const planText = readFileSync(join(repositoryRoot, planPath), "utf8").replaceAll("\r\n", "\n").replaceAll("\r", "\n");
   const rows = parsePlan(planText);
@@ -1159,6 +1161,10 @@ function main() {
       "crates/forge3d-web/tests/playwright/w12_camera.spec.ts",
       "npm run test:package-consumer:w12",
     ] : row.requiredTests,
+    ...(row.ownerTask==="W17"?{
+      evidence:["crates/forge3d-web/docs/w17-evidence.md","crates/forge3d-web/docs/tracing.md","crates/forge3d-core/src/accel.rs","crates/forge3d-core/src/sdf/mod.rs","crates/forge3d-web/src-ts/trace-wgsl.ts","crates/forge3d-web/src-ts/path-tracer.ts","crates/forge3d-web/tests/fixtures/w17/trace-sdf-v1.json"],
+      tests:["crates/forge3d-web/tests/unit/w17-tracing.test.ts","crates/forge3d-web/tests/unit/w17-provenance.test.ts","crates/forge3d-web/src/w17_shader_tests.rs","crates/forge3d-web/tests/playwright/w17_tracing.spec.ts","crates/forge3d-web/scripts/test-w17-package-consumer.mjs"],
+    }:{}),
     ...(row.ownerTask==="W14"?{
       evidence:["docs/parity/w14-implementation.md","docs/parity/w14-native-test-coverage.json","crates/forge3d-web/src-ts/crs.ts","crates/forge3d-web/src-ts/proj-kernel.ts","crates/forge3d-web/src-ts/datasets.ts","crates/forge3d-web/assets/proj/provenance.json","crates/forge3d-web/assets/datasets/provenance.json"],
       tests:["crates/forge3d-web/tests/unit/w14-crs.test.ts","crates/forge3d-web/tests/unit/w14-datasets.test.ts","crates/forge3d-web/tests/unit/w14-native-contract.test.ts","crates/forge3d-web/tests/playwright/w14_foundation.spec.ts","crates/forge3d-web/scripts/test-w14-package-consumer.mjs"],
@@ -1201,7 +1207,10 @@ function main() {
     },
     capabilities,
     constraints,
-    webTargets: [...targetRows, ...tombstoneTargets],
+    webTargets: [...targetRows, ...tombstoneTargets].map(target=>{
+      const previous=previousTargets.get(target.id);
+      return previous?{...target,evidence:previous.evidence,tests:previous.tests}:target;
+    }),
     tombstones,
     inventorySources: [
       { kind: "composite-inventory", path: inventoryFile.path, sha256: inventoryFile.sha256, recordCount: inventory.records.length },

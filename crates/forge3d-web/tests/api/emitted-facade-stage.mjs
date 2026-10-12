@@ -34,6 +34,7 @@ try {
   assert.deepEqual(
     Object.keys(facadeA).sort(),
     [
+      'BvhHandle','buildBvh','refitBvh','buildBvhGpu','refitBvhGpu','SdfPrimitive','SdfPrimitiveType','SdfScene','SdfSceneBuilder','CsgOperation','createSphere','createBox','evaluateCsg','PathTracer','createPathTracer','AliasTable','RestirDI','OnlineGuidingGrid','normalizeRestirConfig','hgPhase','sampleHg','traceRaysGpu','evaluateSdfGpu','buildBvhWasm','evaluateSdfWasm','createTraceWorkerHandler','iterTraceTiles','encodeTraceAovs',
       'AdaptivePointBudget','CopcDataset','EptDataset','LazDataset','OctreeKey','PointBuffer','PointCloudLayer','PointCloudRenderer','PointCloudTraverser','TileBoundingVolume','Tiles3dLayer','Tileset','TilesetTraverser',
       'computePointSse','computeTileSse','createPointCloudWorkerHandler','decodeB3dm','decodeLaz','decodeLazChunk','decodePnts','loadTileset','openCopc','openEpt','openLaz','openPointCloud','parseCopcHierarchy','parseEptBinary','parseLasHeader','parseLasRecords','pointDataBytes','reprojectPointData','transferPointData','wgs84ToEcef',
       'BuildingLayer','MAX_MESH_BYTES','MESH_IDENTITY','MeshIo','MeshLayer',

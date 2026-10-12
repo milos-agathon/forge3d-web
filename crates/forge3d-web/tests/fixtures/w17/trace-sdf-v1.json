@@ -1,0 +1,616 @@
+{
+  "schemaVersion": 1,
+  "fixtureId": "trace-sdf-v1",
+  "seed": 1597463007,
+  "triangles": 65536,
+  "sdfPrimitives": 128,
+  "rays": 1048576,
+  "spp": [
+    1,
+    4,
+    16,
+    64
+  ],
+  "generator": "scripts/generate-w17-fixture.py",
+  "triangleSha256": "eabef0a6725f603c3055eed2816eb7390074c95020c6c5121cd098bcd0ca258c",
+  "raySha256": "28308ab5f030217375a430d37e0f90d0b3d56f7c519a51e5498f047374b102cc",
+  "analyticHitsSha256": "4ec45f30e0e02f690fa72eb18e5b8f07d2379a104035fc0db931e78c8813c136",
+  "sdf": "128 unit spheres at (140+3*i,0,0), union in ascending order; 255 DAG nodes",
+  "imageOracle": "Lambert sheet with emission .5, albedo .08, environment .8: .5+.08*.8*(.5+1/(3*pi))",
+  "nativeSources": [
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/accel/cpu_bvh/build.rs",
+      "fixture": "native/bf8db93/src/accel/cpu_bvh/build.rs",
+      "sha256": "6d9cc2f931920f0c28c58cf28889823f8cd10f53c621f557af09f85f7d56630d"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/accel/cpu_bvh/mod.rs",
+      "fixture": "native/bf8db93/src/accel/cpu_bvh/mod.rs",
+      "sha256": "09172c71ddd3cbb24b4fa127ea8bb835e1d4c9defc268b5cd2719dc462347091"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/accel/cpu_bvh/tests.rs",
+      "fixture": "native/bf8db93/src/accel/cpu_bvh/tests.rs",
+      "sha256": "bbad0652cc781d8f50fabde5c7b5407595d11b935d8ca0aff0b8196899b2846c"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/accel/cpu_bvh/types.rs",
+      "fixture": "native/bf8db93/src/accel/cpu_bvh/types.rs",
+      "sha256": "1d3d24b2288b09e3a9bf9af20a339c4f07fb551708dd63e50736e1098ecc36d7"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/accel/instancing.rs",
+      "fixture": "native/bf8db93/src/accel/instancing.rs",
+      "sha256": "1f211a05cceecd75638d36dd3898f5cfd7711c5703b1d9a41a8b6ad4b76e30a4"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/accel/lbvh_gpu.rs",
+      "fixture": "native/bf8db93/src/accel/lbvh_gpu.rs",
+      "sha256": "f666fed8bdf29c4e670813b6c2756212a4146435f6c6e528e83c658afb70fad7"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/accel/lbvh_gpu/buffers.rs",
+      "fixture": "native/bf8db93/src/accel/lbvh_gpu/buffers.rs",
+      "sha256": "63bcdbaeb29e7686f38c19349f969314d84eea102ac7b5fd41ca29a1f135240f"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/accel/lbvh_gpu/build.rs",
+      "fixture": "native/bf8db93/src/accel/lbvh_gpu/build.rs",
+      "sha256": "36d9a09c815f0f79390f9ea264f9bca9b982bc4de854207f6136551137d5180c"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/accel/lbvh_gpu/morton.rs",
+      "fixture": "native/bf8db93/src/accel/lbvh_gpu/morton.rs",
+      "sha256": "fc12d799ee253fd24d5394be4373f0616bbcc96cacebe39442f46df7c56a6af6"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/accel/lbvh_gpu/refit.rs",
+      "fixture": "native/bf8db93/src/accel/lbvh_gpu/refit.rs",
+      "sha256": "a891542f92cb7f951328fcd83e0f23cd36401f85ea53318d882a34d8bb5f49f9"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/accel/lbvh_gpu/setup.rs",
+      "fixture": "native/bf8db93/src/accel/lbvh_gpu/setup.rs",
+      "sha256": "b11ea6b56be12d3f16d388a677fd87c23cd2887451b881a3b4c94a39a7b602d3"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/accel/lbvh_gpu/sort.rs",
+      "fixture": "native/bf8db93/src/accel/lbvh_gpu/sort.rs",
+      "sha256": "4ea0e60c71918f77674c668c11789c890d6ac9cfd989cfdc00588674db60cba3"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/accel/lbvh_gpu/sort_bitonic.rs",
+      "fixture": "native/bf8db93/src/accel/lbvh_gpu/sort_bitonic.rs",
+      "sha256": "32acf46da8b0426294d1fac4915adc77baecb36d402b49a7827cf5024198570d"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/accel/lbvh_gpu/topology.rs",
+      "fixture": "native/bf8db93/src/accel/lbvh_gpu/topology.rs",
+      "sha256": "1f6969915508cfc22196a63f0ff45c7ff890acfd1855a53201f4b114d8a4611f"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/accel/mod.rs",
+      "fixture": "native/bf8db93/src/accel/mod.rs",
+      "sha256": "8820466d1336df55c833659fef9ab911fc2bde01acfa7696ee9ae9f1db02da07"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/accel/sah_cpu.rs",
+      "fixture": "native/bf8db93/src/accel/sah_cpu.rs",
+      "sha256": "aa32146ec551594989698d81a56a3ecd241b58d2cbfe4c339295b0d533b5dc09"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/accel/types.rs",
+      "fixture": "native/bf8db93/src/accel/types.rs",
+      "sha256": "95bc607c69b4a1143dbe9c407e62c2eb7b9bfcbb1b45fb0f9b6ada0a66eefc30"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/accel.rs",
+      "fixture": "native/bf8db93/src/path_tracing/accel.rs",
+      "sha256": "5ca78dc7f1b1bcf2f3fde05ed0de177019248e4a28476a0a4fff54f87fd242d0"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/alias_table.rs",
+      "fixture": "native/bf8db93/src/path_tracing/alias_table.rs",
+      "sha256": "aa19215d9b088a0f94a03e70e6fcbb85a393964475f115348f519dc8baa5c9ce"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/aov.rs",
+      "fixture": "native/bf8db93/src/path_tracing/aov.rs",
+      "sha256": "594c8cdaef753a07e5e15d1f82d63493d2ee314437e39a661ad335871d184cd9"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/cache.rs",
+      "fixture": "native/bf8db93/src/path_tracing/cache.rs",
+      "sha256": "13cac76f775867d1c31acc4b75daa6008416c911735f78a027e6fc057422c020"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/compute/dispatch.rs",
+      "fixture": "native/bf8db93/src/path_tracing/compute/dispatch.rs",
+      "sha256": "8d563b9c18287ab26d3e95b90072fb6775c4860fdac874a167a6e270519083ea"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/compute/mod.rs",
+      "fixture": "native/bf8db93/src/path_tracing/compute/mod.rs",
+      "sha256": "6baa6ea71a8579a50fb6d23b596f826bd0687568ebe4d39fd022240c6e5c8441"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/compute/readback.rs",
+      "fixture": "native/bf8db93/src/path_tracing/compute/readback.rs",
+      "sha256": "467d57d495f2bb772eecbf19f25943b05fa4c390dc1e08f8c77e564cf7863375"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/compute/render.rs",
+      "fixture": "native/bf8db93/src/path_tracing/compute/render.rs",
+      "sha256": "9919ed10132dd415f225b9fed618fbbf4c80ac5eef67308cf3aa49da75ee176e"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/compute/setup.rs",
+      "fixture": "native/bf8db93/src/path_tracing/compute/setup.rs",
+      "sha256": "1ec8e6a76a3658fe7f9419ac79e5079a49afccf003d4045cadac6b2f983a756f"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/compute_types.rs",
+      "fixture": "native/bf8db93/src/path_tracing/compute_types.rs",
+      "sha256": "39445e419d3cf4d5afa3aa201f121086f530ac8eb01ece034605ba54e307516e"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/hybrid_compute/layouts.rs",
+      "fixture": "native/bf8db93/src/path_tracing/hybrid_compute/layouts.rs",
+      "sha256": "06750794eb48af77c0abe0182f6c7fc567073894e6a1e2c8ee552363cdabf347"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/hybrid_compute/mod.rs",
+      "fixture": "native/bf8db93/src/path_tracing/hybrid_compute/mod.rs",
+      "sha256": "4e23d31dc464e5ddd896f4b8b9d54c36568284ce264e646b22da0d051ea14927"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/hybrid_compute/render.rs",
+      "fixture": "native/bf8db93/src/path_tracing/hybrid_compute/render.rs",
+      "sha256": "a9afa692761515b3761195e19b9ac1fbdda6feb9e48aba13826331f31f7d84f5"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/hybrid_compute/setup.rs",
+      "fixture": "native/bf8db93/src/path_tracing/hybrid_compute/setup.rs",
+      "sha256": "5e6d4a12792411921ceae05aefd1e77a548220e37c7889a08d84c70c74de378a"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/importance.rs",
+      "fixture": "native/bf8db93/src/path_tracing/importance.rs",
+      "sha256": "f8d638f165e011496d6627ee6bd331dcb088d05b567fb1352dac5602532cd02f"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/io.rs",
+      "fixture": "native/bf8db93/src/path_tracing/io.rs",
+      "sha256": "a8245af3b226bd88a1991e2055c9ac4fdf6380a004565a4c0a3fbc74ce055fb3"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/lighting.rs",
+      "fixture": "native/bf8db93/src/path_tracing/lighting.rs",
+      "sha256": "bfa9edaac1a1234a8290967472bf5b8af34eb44898c1d6ca1337ed7b44b96a2b"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/mesh/bind_groups.rs",
+      "fixture": "native/bf8db93/src/path_tracing/mesh/bind_groups.rs",
+      "sha256": "ca895829f606bd8f8249cd86878dec00e88eb43dd850a8c14069419d762315ad"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/mesh/mod.rs",
+      "fixture": "native/bf8db93/src/path_tracing/mesh/mod.rs",
+      "sha256": "6b403d5a5bb53d30c1d964c992b734a50157e508385a4e15ed483a6a6fb91d15"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/mesh/tests.rs",
+      "fixture": "native/bf8db93/src/path_tracing/mesh/tests.rs",
+      "sha256": "d19ac237633cd0e764e6046a70a245f664cda86c78eff4fb5255c643d7f325e1"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/mesh/types.rs",
+      "fixture": "native/bf8db93/src/path_tracing/mesh/types.rs",
+      "sha256": "11e9c53daba59aaf368d8f0c519fa88dabe038c39df39bbb894d23274532263f"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/mesh/upload.rs",
+      "fixture": "native/bf8db93/src/path_tracing/mesh/upload.rs",
+      "sha256": "517a10ef31d5af628b72c68390ff7924a762d9dc84a681110758f1a27bd16791"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/mesh/validation.rs",
+      "fixture": "native/bf8db93/src/path_tracing/mesh/validation.rs",
+      "sha256": "05efc94a910fed71814ffefad6a4676564214087df3056e75d9c9dd17965337b"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/mod.rs",
+      "fixture": "native/bf8db93/src/path_tracing/mod.rs",
+      "sha256": "e3b7000372410dbc694d11c119eccb0b40daa410915f0494e1130ea6e3ccdfdc"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/restir/buffers.rs",
+      "fixture": "native/bf8db93/src/path_tracing/restir/buffers.rs",
+      "sha256": "0bb093891ee7ff58cacfb56a84a206c08b69c3b941c4d7759c52be655f4e44cd"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/restir/mod.rs",
+      "fixture": "native/bf8db93/src/path_tracing/restir/mod.rs",
+      "sha256": "537d8347eab59dfb1403cbeb20c85af396c42f1c130238a9a2e6b8c8a6c2d9ec"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/restir/system.rs",
+      "fixture": "native/bf8db93/src/path_tracing/restir/system.rs",
+      "sha256": "0f5b83a1f6f03778b03c2beac605d75630a044742d13f0a993f9d68df1e5d88e"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/restir/types.rs",
+      "fixture": "native/bf8db93/src/path_tracing/restir/types.rs",
+      "sha256": "b6bb1bee28ffecb6101e5a071669c8867d0c61063bab19e5aefefd27be686898"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/wavefront/aov.rs",
+      "fixture": "native/bf8db93/src/path_tracing/wavefront/aov.rs",
+      "sha256": "fb3f47e089c872e6a891e5b0c7954a8a800fb064b7201bd09f85b70d2799a74d"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/wavefront/bindings.rs",
+      "fixture": "native/bf8db93/src/path_tracing/wavefront/bindings.rs",
+      "sha256": "711f6cfc86dc57808c9d0fdd9455612904c5e63c85d48ca61653f4a38b80e171"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/wavefront/control.rs",
+      "fixture": "native/bf8db93/src/path_tracing/wavefront/control.rs",
+      "sha256": "ff7a83e696e39a016e8c9041ec58c77b791e68eb0c39e87b07563aa92b433482"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/wavefront/dispatch.rs",
+      "fixture": "native/bf8db93/src/path_tracing/wavefront/dispatch.rs",
+      "sha256": "93a1766ab5a2c3ecefa01cd19744a023578e25329cd35a953612f6ed464a346a"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/wavefront/instances.rs",
+      "fixture": "native/bf8db93/src/path_tracing/wavefront/instances.rs",
+      "sha256": "172e643d29565217dbc201a5437b7cfd19326c772ffcdea569ac7fdb7f0a4edc"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/wavefront/mod.rs",
+      "fixture": "native/bf8db93/src/path_tracing/wavefront/mod.rs",
+      "sha256": "9a8746420574875ce4cf07a3c3cc08d1e4c0e18b75e7139442cd8cedc03cfcb9"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/wavefront/pipeline.rs",
+      "fixture": "native/bf8db93/src/path_tracing/wavefront/pipeline.rs",
+      "sha256": "c0b56154961d5841e20e9c21bd8f2979659c4de44cad3b42238c3d834836757a"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/wavefront/pipeline/layouts.rs",
+      "fixture": "native/bf8db93/src/path_tracing/wavefront/pipeline/layouts.rs",
+      "sha256": "1e9fefa50d79e752e43a2406434b52a97a3c3b4a23f4289ef2b8df7a75b33192"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/wavefront/pipeline/restir.rs",
+      "fixture": "native/bf8db93/src/path_tracing/wavefront/pipeline/restir.rs",
+      "sha256": "b92ca69782c115eb77c7080b1c5f4780904100f849be5224577a13a4d9d03e2e"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/wavefront/pipeline/scene_layout.rs",
+      "fixture": "native/bf8db93/src/path_tracing/wavefront/pipeline/scene_layout.rs",
+      "sha256": "4b517ccff5c74014140ba0cfbde6fabdc4a2f9a8d65a73b577aa84a2c92ecdf7"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/wavefront/pipeline/stages_primary.rs",
+      "fixture": "native/bf8db93/src/path_tracing/wavefront/pipeline/stages_primary.rs",
+      "sha256": "57c477c8404f746be340fad99571d1c58f526ad3304de38715e7e0a99577a225"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/wavefront/pipeline/stages_secondary.rs",
+      "fixture": "native/bf8db93/src/path_tracing/wavefront/pipeline/stages_secondary.rs",
+      "sha256": "17565942b83d954bb98ba1f64a1c5d08b74342916008829f37c2be22466792e6"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/wavefront/queues.rs",
+      "fixture": "native/bf8db93/src/path_tracing/wavefront/queues.rs",
+      "sha256": "113285d96c7d8076f41d3fa9c5cbb79bf3dbe492e9f33e4f6d01a57442da0858"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/wavefront/queues/intersect_shade.rs",
+      "fixture": "native/bf8db93/src/path_tracing/wavefront/queues/intersect_shade.rs",
+      "sha256": "3f7f957e6fc35f9840b9c4c864502d3ffcefe2a9711cc5b7a33394cc621e63b3"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/wavefront/queues/raygen_shadow.rs",
+      "fixture": "native/bf8db93/src/path_tracing/wavefront/queues/raygen_shadow.rs",
+      "sha256": "202cb7955419fa89ba20930b47155bb16b64b877b280244b63cc37ee8871b397"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/wavefront/queues/scatter_compact.rs",
+      "fixture": "native/bf8db93/src/path_tracing/wavefront/queues/scatter_compact.rs",
+      "sha256": "4570a6763235335081f1d7d11a8f763d41710414af4351cbc74540a1cc6d4c45"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/wavefront/queues/types.rs",
+      "fixture": "native/bf8db93/src/path_tracing/wavefront/queues/types.rs",
+      "sha256": "03e800f8db4739d3613cf807febe86d48ad0218a212c2c20f96b42b75cb5e62c"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/wavefront/render.rs",
+      "fixture": "native/bf8db93/src/path_tracing/wavefront/render.rs",
+      "sha256": "44010a4ce0b7090947ef76cf8cee1b72b732e6ebaf160526913fc2869b4c2589"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/path_tracing/wavefront/restir.rs",
+      "fixture": "native/bf8db93/src/path_tracing/wavefront/restir.rs",
+      "sha256": "11d36a841b1384eb4fe8d4fc2abf09b8a69f0ff5ba2bf587ac00357b61ec4eeb"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/sdf/hybrid.rs",
+      "fixture": "native/bf8db93/src/sdf/hybrid.rs",
+      "sha256": "4edbb27614cc9f3790a687a04f638d71a4bfebde6983dde9659626c5f26500ee"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/sdf/hybrid_types.rs",
+      "fixture": "native/bf8db93/src/sdf/hybrid_types.rs",
+      "sha256": "c703d55f75d384f6b767942903e2d69b1fc190096a1dd57c5620f442524ae259"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/sdf/mod.rs",
+      "fixture": "native/bf8db93/src/sdf/mod.rs",
+      "sha256": "7b31bfc5bf61a26313f3dbb06b832c000c97b1f8ce243861694f3d1f19cd6528"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/sdf/operations.rs",
+      "fixture": "native/bf8db93/src/sdf/operations.rs",
+      "sha256": "08a13841957c0376d86bea4ae9c11ef453dc7f463f094eeaa8917c2180c5b664"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/sdf/primitives.rs",
+      "fixture": "native/bf8db93/src/sdf/primitives.rs",
+      "sha256": "b787ede0ad4e9cb47ded48772a8e2fb40c1a0e2ed52c8b3a68ada86081f0e21e"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/sdf/py.rs",
+      "fixture": "native/bf8db93/src/sdf/py.rs",
+      "sha256": "e95d35ea4b8276e66eb2433b72578ca727bdff1d9d0a73ac92ef618a54d9dc4b"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/shaders/ao_from_aovs.wgsl",
+      "fixture": "native/bf8db93/src/shaders/ao_from_aovs.wgsl",
+      "sha256": "58b928983a3401167a8a50defbb6e37d9bd790119dffb0c15a1bd6d5f5bbd622"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/shaders/bvh_refit.wgsl",
+      "fixture": "native/bf8db93/src/shaders/bvh_refit.wgsl",
+      "sha256": "f18f8235ec4ef16695944d5bc64045077c66cf4b6fa2a1221b680badcbef9b5f"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/shaders/hybrid_kernel.wgsl",
+      "fixture": "native/bf8db93/src/shaders/hybrid_kernel.wgsl",
+      "sha256": "963c685fdd0108c3920b11b41746e99230a934320c77fb7805e804480ecc8cfd"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/shaders/hybrid_traversal.wgsl",
+      "fixture": "native/bf8db93/src/shaders/hybrid_traversal.wgsl",
+      "sha256": "ade9885e8d835783952241841d145f844adbf9c4e0a54c1ae59f19732805535f"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/shaders/lbvh_link.wgsl",
+      "fixture": "native/bf8db93/src/shaders/lbvh_link.wgsl",
+      "sha256": "fbd0dc23af016da9b986bf344d3c69ee4ec2774d5f12e7e8c4ecc3baead99f00"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/shaders/lbvh_morton.wgsl",
+      "fixture": "native/bf8db93/src/shaders/lbvh_morton.wgsl",
+      "sha256": "503eae5123e120a9e77857faf2a80486cdd3b7bbb493dec7af4abf7dd3e1f959"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/shaders/pt_compact.wgsl",
+      "fixture": "native/bf8db93/src/shaders/pt_compact.wgsl",
+      "sha256": "cec32eddd8cb44ee1ad7a8040732ed84812e8f0c8cbd7d885b717a863d05de05"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/shaders/pt_intersect.wgsl",
+      "fixture": "native/bf8db93/src/shaders/pt_intersect.wgsl",
+      "sha256": "d5915d29e8b42d3d611b29cb6f344ecf186e0911a6b809a86a04e676d8399837"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/shaders/pt_kernel.wgsl",
+      "fixture": "native/bf8db93/src/shaders/pt_kernel.wgsl",
+      "sha256": "78ebfc67e28ea479de2e5722cde223c81a8c0999fc7d970fb44d57e90e23cebd"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/shaders/pt_raygen.wgsl",
+      "fixture": "native/bf8db93/src/shaders/pt_raygen.wgsl",
+      "sha256": "962ca9a03b7788b923198e26a2ee7c50b5d466038f77c26357cbb9e8f23be96d"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/shaders/pt_restir_init.wgsl",
+      "fixture": "native/bf8db93/src/shaders/pt_restir_init.wgsl",
+      "sha256": "6f29b752c160d5f1cf7a8fae072d15f732e321d878a6c13c242de3cb54811622"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/shaders/pt_restir_spatial.wgsl",
+      "fixture": "native/bf8db93/src/shaders/pt_restir_spatial.wgsl",
+      "sha256": "198726a772c220e6b598fd22e682b2a140886c80ba4b8ca00776294e61af4784"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/shaders/pt_restir_temporal.wgsl",
+      "fixture": "native/bf8db93/src/shaders/pt_restir_temporal.wgsl",
+      "sha256": "986712952b62119d0510aa38f4a10d94604f18e0147231852fdf4aa09ceed83c"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/shaders/pt_scatter.wgsl",
+      "fixture": "native/bf8db93/src/shaders/pt_scatter.wgsl",
+      "sha256": "9391373003968192aa3de35551c7d943f2a0c123104aa6b9a9f0e36610011812"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/shaders/pt_shade.wgsl",
+      "fixture": "native/bf8db93/src/shaders/pt_shade.wgsl",
+      "sha256": "17c6a112e56812beed991e284488c42a3b8f7e7b25a5191f7a493fb4597c79aa"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/shaders/pt_shadow.wgsl",
+      "fixture": "native/bf8db93/src/shaders/pt_shadow.wgsl",
+      "sha256": "7ddec2fe049ec44ad41a82427f256001077762f214817691ebb9a9a009f661b1"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/shaders/radix_sort_pairs.wgsl",
+      "fixture": "native/bf8db93/src/shaders/radix_sort_pairs.wgsl",
+      "sha256": "13786da6a70b8b21c43cbc916376b933618614858ba185d4ea6387e48fedf24a"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/shaders/sdf_operations.wgsl",
+      "fixture": "native/bf8db93/src/shaders/sdf_operations.wgsl",
+      "sha256": "00de46c941c2dd004199142371fdb47ed26f040b9d5621dfc083e51fe61509a4"
+    },
+    {
+      "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+      "source": "src/shaders/sdf_primitives.wgsl",
+      "fixture": "native/bf8db93/src/shaders/sdf_primitives.wgsl",
+      "sha256": "151e4bafa31912697487fa8bb19cb6c653b7145afb9e234a9fa274b72e478551"
+    },
+    {
+      "commit": "d14577a0bd0512ee84a0ceb142fbc4e67eefcda2",
+      "source": "tests/test_bvh_cpu_vs_gpu.py",
+      "fixture": "native/d14577a/tests/test_bvh_cpu_vs_gpu.py",
+      "sha256": "70e77a86a80a81478bca97d3973a4f7af6505791db52884d0e8138920cd62e2b"
+    },
+    {
+      "commit": "d14577a0bd0512ee84a0ceb142fbc4e67eefcda2",
+      "source": "tests/test_mesh_tracing_gpu.py",
+      "fixture": "native/d14577a/tests/test_mesh_tracing_gpu.py",
+      "sha256": "8fdf8fffd1908735e8bcd99a424577653dd5c56fcadd8caed82284ce2d8b8dde"
+    },
+    {
+      "commit": "d14577a0bd0512ee84a0ceb142fbc4e67eefcda2",
+      "source": "tests/test_path_tracing_api.py",
+      "fixture": "native/d14577a/tests/test_path_tracing_api.py",
+      "sha256": "cc780949a1a4c92001765d12bb64cb0df3f0e53a5d0763729015f82777208756"
+    },
+    {
+      "commit": "d14577a0bd0512ee84a0ceb142fbc4e67eefcda2",
+      "source": "tests/test_wavefront_parity.py",
+      "fixture": "native/d14577a/tests/test_wavefront_parity.py",
+      "sha256": "69f42d1efadfcd11b951ce051ed838aad16327909873e3531f80fd0a94443f8a"
+    },
+    {
+      "commit": "d14577a0bd0512ee84a0ceb142fbc4e67eefcda2",
+      "source": "tests/test_restir.py",
+      "fixture": "native/d14577a/tests/test_restir.py",
+      "sha256": "f400072fee91cb0739bcc9c74bf8008a4f8b0b084a76f1b2f19ff4812a422237"
+    },
+    {
+      "commit": "d14577a0bd0512ee84a0ceb142fbc4e67eefcda2",
+      "source": "tests/test_guiding.py",
+      "fixture": "native/d14577a/tests/test_guiding.py",
+      "sha256": "320146bc81943c8a4809d8739e101a2856f192325bec737db2846bf1b77af7bf"
+    },
+    {
+      "commit": "d14577a0bd0512ee84a0ceb142fbc4e67eefcda2",
+      "source": "tests/test_media_hg.py",
+      "fixture": "native/d14577a/tests/test_media_hg.py",
+      "sha256": "ccef87f852e098a5f039120e3895ad14cd2523b8e106bf524364068153b5049d"
+    },
+    {
+      "commit": "852b74d0a748632061bc5e72188c7240537ac03b",
+      "source": "tests/test_sdf_python.py",
+      "fixture": "native/852b74d/tests/test_sdf_python.py",
+      "sha256": "ede14638b224ad06560961227578991e916aa3406c9605e1f83856c72ca6b60a"
+    },
+    {
+      "commit": "1f4084af428dc699bdcd108b029736cb73903926",
+      "source": "python/forge3d/path_tracing.py",
+      "fixture": "native/1f4084a/python/forge3d/path_tracing.py",
+      "sha256": "1d2ff9e03653ca8d28f95cd252ccae0551450f46b215178545ed49e4a0779a6f"
+    },
+    {
+      "commit": "1f4084af428dc699bdcd108b029736cb73903926",
+      "source": "python/forge3d/sdf.py",
+      "fixture": "native/1f4084a/python/forge3d/sdf.py",
+      "sha256": "05d6ebb2c33770964197f4ee212700d6a8b31ed30852b00ce561a36fb664958f"
+    }
+  ]
+}

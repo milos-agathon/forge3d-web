@@ -57,6 +57,12 @@ const gpuField = await runtime.computeTerrainAnalysis(
 const resident = await runtime.readTerrainAnalysis("sun-visibility");
 ```
 
+CPU/WASM BVH construction, WebGPU LBVH/refit, SDF/CSG scenes and progressive
+path tracing are available through `buildBvh`, `SdfSceneBuilder` and `PathTracer`.
+The tracer exposes typed AOVs, both queue engines, ReSTIR, guiding, media and
+content-keyed caching. See the [tracing guide](docs/tracing.md) and
+[verification evidence](docs/w17-evidence.md).
+
 ## Install
 
 CRS transforms and the native dataset registry are available through
