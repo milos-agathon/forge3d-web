@@ -49,6 +49,14 @@ Fresh local gates run for this work:
 - clean installed tarball consumer with the same browser workflows;
 - parity manifest and exact dependency-lock validation.
 
+The full unit run passed 1,430 tests across 73 files, including 168 W19 cases.
+Fourteen source/dist browser cases and all seven installed cases passed. The
+first clean installed run used revision `310b1c80da23e138c5311c3461c7fac09f16e61b`
+and tarball SHA-256
+`4787312bfcb67af26382030db973c53461b25c9e6ca027ca465770f853cf3a8e`.
+The final installed run is repeated after ledger/documentation closure; its exact
+revision and digest are retained in `test-results/w19-package-consumer.json`.
+
 `fflate@0.8.3` matches the W00 version and npm integrity. Its module and MIT notice
 ship in `dist/vendor` and have package asset-manifest SHA-256 entries. The npm
 advisory query for this checkout returned no `fflate` advisory. Existing advisories
