@@ -1,12 +1,16 @@
 import { test, expect } from "../browser/webgpu-fixture";
 declare global { interface Window { __w19: any; } }
+const nativeLayerIds = ['native-base:raster:0', 'native-base:vector:0', 'native-base:vector:1', 'native-review-0:vector:0'];
 for (const dist of [false, true]) {
     const label = dist ? 'dist' : 'source';
     test.describe(label, () => {
         test.beforeEach(async ({ page }) => {
             const errors: string[] = [];
             page.on('pageerror', error => errors.push(error.message));
-            page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+            page.on('console', message => {
+                if (message.type() === 'error') errors.push(message.text());
+                if (message.text().startsWith('[W19-native-timing]')) console.info(`${label}: ${message.text()}`);
+            });
             await page.goto('/examples/style-bundle.html' + (dist ? '?dist' : '?source'));
             try { await page.waitForFunction(() => window.__w19?.ready); }
             catch (error) { throw new Error(`W19 example startup failed: ${errors.join('\n') || await page.locator('#status').textContent()}`, { cause: error }); }
@@ -73,24 +77,42 @@ for (const dist of [false, true]) {
             expect(r.prepared).toBe(true); expect(r.network).toBe(0); expect(r.results).toHaveLength(2);
             for (const result of r.results) { expect(result.missing).toEqual([]); expect(result.valid).toBe(true); expect(result.same).toBe(true); expect(result.coverage).toBeGreaterThan(1000); }
         });
-        test(`W19 ${label}: native-saver raster/vector assets prepare, affect pixels and resave offline`, async ({ page }) => {
+        test(`W19 ${label}: native-saver raster/vector assets prepare and resave offline`, async ({ page }) => {
             const r = await page.evaluate(async () => {
                 const { api, baseRecipe } = window.__w19;
+                const started = performance.now(), mark = (phase: string) => console.info('[W19-native-timing]', phase, Math.round(performance.now() - started));
+                mark('load-start');
                 const scene = await api.MapScene.loadBundle(location.origin + '/tests/fixtures/w19/native-renderable.forge3d', { nativeRecipe: baseRecipe() });
-                const validation = scene.validate(), prepared = await scene.prepare(), original = await scene.render(), recipe = scene.recipe.value, changes: Record<string, number> = {};
-                for (const layer of recipe.layers.filter((l: any) => ['raster', 'vector'].includes(l.kind))) {
-                    const candidate = new api.MapScene({ ...recipe, layers: recipe.layers.filter((l: any) => l.layerId !== layer.layerId) });
-                    const output = await candidate.render(); changes[layer.layerId] = original.frame.data.reduce((n: number, v: number, i: number) => n + Number(v !== output.frame.data[i]), 0); candidate.dispose();
-                }
-                const blob = await scene.saveBundle(); scene.dispose();
+                mark('loaded'); const validation = scene.validate(), prepared = await scene.prepare(); mark('prepared');
+                const original = await scene.render(); mark('original-rendered');
+                const layerIds = scene.recipe.value.layers.filter((l: any) => ['raster', 'vector'].includes(l.kind)).map((l: any) => l.layerId);
+                const blob = await scene.saveBundle(); scene.dispose(); mark('saved');
                 const fetcher = window.fetch; let network = 0; window.fetch = async (...args: any[]) => { if (String(args[0]).startsWith('blob:')) return fetcher(...args as [any]); network++; throw Error('offline native archive'); };
                 let same = false, coverage = 0, restoredValid = false;
-                try { const restored = await api.MapScene.loadBundle(blob); restoredValid = !restored.validate().hasErrors; const output = await restored.render(); same = original.frame.data.every((v: number, i: number) => v === output.frame.data[i]); coverage = output.metrics.coveragePixels; restored.dispose(); }
+                try { const restored = await api.MapScene.loadBundle(blob); mark('restored'); restoredValid = !restored.validate().hasErrors; const output = await restored.render(); mark('restored-rendered'); same = original.frame.data.every((v: number, i: number) => v === output.frame.data[i]); coverage = output.metrics.coveragePixels; restored.dispose(); }
                 finally { window.fetch = fetcher; }
-                return { valid: !validation.hasErrors && !prepared.hasErrors, restoredValid, same, coverage, changes, network };
+                return { valid: !validation.hasErrors && !prepared.hasErrors, restoredValid, same, coverage, layerIds, network };
             });
             expect(r.valid).toBe(true); expect(r.restoredValid).toBe(true); expect(r.same).toBe(true); expect(r.coverage).toBeGreaterThan(500); expect(r.network).toBe(0);
-            expect(Object.keys(r.changes)).toHaveLength(4); for (const changed of Object.values(r.changes)) expect(changed).toBeGreaterThan(0);
+            expect(r.layerIds).toEqual(nativeLayerIds);
+        });
+        // Keep each independent removal control within the same 30-second budget.
+        for (const layerId of nativeLayerIds) test(`W19 ${label}: native-saver ${layerId} changes pixels`, async ({ page }) => {
+            const r = await page.evaluate(async (removedId) => {
+                const { api, baseRecipe } = window.__w19;
+                const started = performance.now(), mark = (phase: string) => console.info('[W19-native-timing]', `${removedId}:${phase}`, Math.round(performance.now() - started));
+                mark('load-start');
+                const scene = await api.MapScene.loadBundle(location.origin + '/tests/fixtures/w19/native-renderable.forge3d', { nativeRecipe: baseRecipe() });
+                mark('loaded'); const original = await scene.render(); mark('original-rendered');
+                const recipe = scene.recipe.value, layers = recipe.layers.filter((l: any) => l.layerId !== removedId);
+                const candidate = new api.MapScene({ ...recipe, layers });
+                try {
+                    const output = await candidate.render(); mark('removed-rendered');
+                    return { removed: recipe.layers.length - layers.length, valid: !candidate.validate().hasErrors, coverage: original.metrics.coveragePixels,
+                        changed: original.frame.data.reduce((n: number, v: number, i: number) => n + Number(v !== output.frame.data[i]), 0) };
+                } finally { candidate.dispose(); scene.dispose(); }
+            }, layerId);
+            expect(r.removed).toBe(1); expect(r.valid).toBe(true); expect(r.coverage).toBeGreaterThan(500); expect(r.changed).toBeGreaterThan(0);
         });
         test(`W19 ${label}: HTTP loads and cold offline-cache renders preserve verified bundle state`, async ({ page }) => {
             const r = await page.evaluate(async () => {

@@ -886,7 +886,7 @@ task remains unambiguous when read or reviewed in isolation.
 
 ### W19 — Mapbox Style, Bundles, Variants, And Review Layers
 
-- Code status: **Implemented** — T18/M03/M04 pass per-test native API replay and explicit browser equivalents, real-native saver migration, 419 W19 unit cases, twenty-four source/dist browser cases and twelve strict-CSP installed-package workflows. Review corrections cover native coercions/mapping, unused glyph headers, valid native raster/vector preparation, style assets and resaving, HTTP/cache/quota/progress, and non-vacuous device-loss recovery. See [W19 evidence](../../../crates/forge3d-web/docs/w19-evidence.md) and [native test mapping](../../../crates/forge3d-web/docs/w19-native-test-coverage.json).
+- Code status: **Implemented** — T18/M03/M04 pass per-test native API replay and explicit browser equivalents, real-native saver migration, 419 W19 unit cases, thirty-two source/dist browser cases and sixteen strict-CSP installed-package cases. Review corrections cover native coercions/mapping, unused glyph headers, valid native raster/vector preparation, style assets and resaving, HTTP/cache/quota/progress, and non-vacuous device-loss recovery. See [W19 evidence](../../../crates/forge3d-web/docs/w19-evidence.md) and [native test mapping](../../../crates/forge3d-web/docs/w19-native-test-coverage.json).
 
 - Scope: T18 and M03-M04.
 - Files/APIs: port style/expression/sprite/glyph and bundle models; TS loader,

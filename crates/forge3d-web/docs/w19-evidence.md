@@ -29,7 +29,7 @@ settings, supplying native viewer terrain context for state-only saves.
 `native-renderable.forge3d` is a second real native-saver archive with executable
 PNG/TIFF bytes, base and review vectors, and supported presets. Browser tests
 validate, prepare and render it; removing each raster/vector changes pixels and
-its resaved archive renders identical pixels with network reads blocked. Native directory v1 and
+its resaved archive renders identical pixels with network reads blocked. The four removal controls have independent cases, each retaining the 30-second budget; native load/prepare/render timings distinguish slow rendering from stalled asset work. Focused macOS Chromium/Firefox probes run before the full corpus. Native directory v1 and
 browser recipe v1 have separate checked migration paths.
 
 The review fixes include native Python coercions/arity, scaled text offsets,
@@ -51,7 +51,7 @@ save/load. Disposal returns RUNTIME_DISPOSED consistently. Repeated saves do not
 duplicate missing-resource diagnostics; byte-view hashing excludes backing-buffer
 bytes outside the supplied view.
 
-`w19_style_bundle.spec.ts` runs twelve workflows against source and generated dist:
+`w19_style_bundle.spec.ts` runs sixteen cases against source and generated dist:
 covered geometry with removal controls; exact offline pixels; atomic variants;
 URL/File/Blob/stream/OPFS inputs; external asset leases; genuine HTTP bundle load;
 cold CacheStorage replay with network reads blocked; bounded progress, typed quota
@@ -65,12 +65,12 @@ clear and verifies active-variant recovery and released GPU owners.
 The installed gate requires a clean committed checkout, rebuilds WASM and TS,
 packs and installs a tarball in an independent project, and typechecks public
 imports. Its server resolves every example, fixture, runtime and asset exclusively
-from the installed package. The same twelve dist workflows run under hash-protected
+from the installed package. The same sixteen dist cases run under hash-protected
 HTML, script-src/worker-src self and the required WASM allowance. It records the
 revision, tarball SHA-256, newly built WASM SHA-256, installed serving root and exit
 status in `test-results/w19-package-consumer.json`.
 The required CI build/contract job also runs this installed W19 gate and uploads
-its revision/hash report and twelve-case Playwright report as `forge3d-web-w19-installed`.
+its revision/hash report and sixteen-case Playwright report as `forge3d-web-w19-installed`.
 The Windows CI checkout exposed a CRLF inline-script CSP hash mismatch. The server
 now hashes HTML-normalized script text while serving the installed bytes unchanged.
 A real Chromium control blocks the old CRLF hash and admits normalized CRLF/LF hashes;
@@ -79,8 +79,8 @@ Playwright output uses a dedicated `w19-installed-output` directory so its clean
 preserves the preceding gates' evidence; those W19 attachments are uploaded too.
 
 Validation for these corrections: 1,681 unit tests in 75 files, including 419
-W19 tests; 24 source/dist Chromium cases; API/declarations; package/infrastructure
-contracts; parity/dependency-lock checks; and the clean installed twelve-case gate.
+W19 tests; 32 source/dist Chromium cases; API/declarations; package/infrastructure
+contracts; parity/dependency-lock checks; and the clean installed sixteen-case gate.
 Exact final installed run metadata is retained in the generated report above.
 
 `fflate@0.8.3`, its integrity and bundled MIT notice are unchanged. Evidence is
