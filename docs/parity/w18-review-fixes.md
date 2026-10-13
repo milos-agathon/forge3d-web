@@ -60,4 +60,67 @@ historical evidence; their point/tiles promotion and broad coverage claim are
 superseded. Browser observations are local flagged Chromium preflight evidence,
 not physical W00 or cross-browser qualification. No subagents were used.
 
+
+## Completion after accepted W16 (2026-10-13)
+
+Merged accepted `origin/main` (`e8fc61d`) in `cd23ddc`. M02b keeps main's exact
+required outcome, W18's added native test references and status `C`. Plan and
+runtime wording now identify the missing MapScene integration of G02-G04 as the
+blocker. All current W18 support text uses the MapScene integration reason. Point-cloud and tiles3d retain their exact blocking codes.
+
+`map-validation.ts` now uses shared dataset field checks and one finite/range
+scan, without building percentile statistics. `prepareMapLayers` still builds
+the complete `TerrainDataset` once and shares it across label plans. Existing
+field-check ordering, nodata handling and diagnostic messages are preserved.
+The additive million-sample spy regression proves zero full builds across
+repeated validate/review calls and one full build per preparation; further cases
+check exact diagnostic equivalence and mutated/replaced resource data. No
+runtime limits, thresholds or goldens changed. Repository build/preparation
+scripts produced the assets used by the gates; no generated runtime file was
+edited by hand. Parity hashes were regenerated with
+`scripts/generate-parity-inventory.mjs`; existing W18 test/evidence metadata was
+preserved after generation without changing any hash by hand.
+
+Same Node v24.4.0/Windows x64/AMD Ryzen 9 5900X workload, four consecutive
+`validate()` calls per size, deterministic heights `(index % 4096) * 0.25`;
+construction is outside the timer. Means in milliseconds:
+
+| DEM | Before | After | Full dataset builds across four calls |
+|---|---:|---:|---|
+| 1024 x 1024 | 840.738 | 142.291 | 4 -> 0 |
+| 3000 x 3000 | 7587.514 | 1166.076 | 4 -> 0 |
+| 4200 x 4200 | 14787.403 | 1987.072 | 4 -> 0 |
+
+Validation still copies recipe resources and performs linear finite checks.
+The [observations](w18-runs/finish-20261013-observations.json) retain all individual
+measurements, the exact workload, changed files, development checks and gate
+counts. The [CLI transcript](w18-runs/finish-20261013-cli.txt) retains raw requested
+gate output. All requested gates ran:
+
+| Gate | Result |
+|---|---|
+| `npm run build:ts` then `npm run prepare-dist` then `npm run test:api` | Passed |
+| `npm run test:unit` (full) | 71 files, 1262 tests passed |
+| `npm run test:w18` | 101 unit, 7 documentation, 30 source/dist browser tests passed; no skips |
+| `npm run test:w16` | 67 unit, 14 source/dist browser tests passed; existing opt-in ten-minute soak skipped |
+| `npm run test:package` | Passed; 22 documentation, 118 browser-harness, 627 infrastructure passes; existing real Unix UID case skipped on Windows |
+| `npm run verify:parity` | 15 tests, 6531 mappings; zero untracked/duplicate/unresolved entries |
+| `npm run test:package-consumer:w18`, after commit from a clean tree | Strict consumer compiled; 15 browser tests passed; no failures, skips or flaky tests |
+
+The clean installed run is bound to the new implementation commit
+`6e4ce2d6590b850a1fdddf3d1b71e5a41bad047d` and tarball SHA-256
+`ecd16310b71f5f57fc4fc07c997bff5de654dbf9b86d4a5cd584619d05310bc7`,
+independently recomputed from the actual tarball. The
+[consumer record](w18-runs/finish-20261013-package-consumer.json) and
+[raw Playwright report](w18-runs/finish-20261013-installed-playwright.json) retain
+that binding and the observed results. The following evidence-only commit changes
+root documentation and retained reports; it changes no packaged source, types,
+assets or documentation from the tested implementation revision.
+
+Not run: the existing optional W16 ten-minute soak, the Windows-inapplicable
+Unix UID test, physical W00 profiles or cross-browser qualification. Browser
+evidence is local flagged Chromium preflight only. A separate agent inspected the
+merge, diagnostic contract and validation diff without finding an actionable
+defect. No push or pull request was made.
+
 Use the [review prompt](w18-review-prompt.md) to assess the final branch independently.

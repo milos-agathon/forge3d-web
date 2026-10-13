@@ -1,0 +1,255 @@
+{
+  "schemaVersion": 1,
+  "observedDate": "2026-10-13",
+  "implementationRevision": "6e4ce2d6590b850a1fdddf3d1b71e5a41bad047d",
+  "handoffRevision": "2e83b0b91a27e54890083d13d89744a76f9f226b",
+  "mergeCommit": "cd23ddc40d9bcd20fb8fc7d73f371006709ca9cc",
+  "acceptedMainParent": "e8fc61d13f418027b7bd0f20fa30239fb2538c53",
+  "packageSha256": "ecd16310b71f5f57fc4fc07c997bff5de654dbf9b86d4a5cd584619d05310bc7",
+  "tarballSha256IndependentlyRecomputed": true,
+  "installedConsumer": {
+    "schemaVersion": 1,
+    "verifiedAt": "2026-10-13T07:59:33.765Z",
+    "revision": "6e4ce2d6590b850a1fdddf3d1b71e5a41bad047d",
+    "packageSha256": "ecd16310b71f5f57fc4fc07c997bff5de654dbf9b86d4a5cd584619d05310bc7",
+    "tarball": "D:\\forge3d\\cache\\tmp\\forge3d-w18-consumer-g3mGx7\\pack\\forge3d-web-1.26.3.tgz",
+    "installed": "D:\\forge3d\\cache\\tmp\\forge3d-w18-consumer-g3mGx7\\consumer\\node_modules\\@forge3d\\web",
+    "exitCode": 0
+  },
+  "installedBrowserStats": {
+    "startTime": "2026-10-13T07:58:46.342Z",
+    "duration": 47396.770000000004,
+    "expected": 15,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "browserEvidenceScope": "Local flagged Chromium preflight only. No physical W00 or cross-browser qualification.",
+  "gates": [
+    {
+      "command": "npm run build:ts",
+      "exitCode": 0,
+      "rawLogSha256": "f8e19571ac1790aa135c4e2cd2b5c1b237bb4debbc41d5360eea377b7dd7404f",
+      "result": "passed"
+    },
+    {
+      "command": "npm run prepare-dist",
+      "exitCode": 0,
+      "rawLogSha256": "59c0899b7d60117ce5edfaa55655193f49ce0efbce64cd51eda75e038f7a23fc",
+      "result": "passed"
+    },
+    {
+      "command": "npm run test:api",
+      "exitCode": 0,
+      "rawLogSha256": "3e27b8ef8a390f846a40988337e35c1b82ec1c17ff87f389b64586e1df03331c",
+      "result": "passed"
+    },
+    {
+      "command": "npm run test:unit",
+      "exitCode": 0,
+      "rawLogSha256": "df407e6767f904df8090e2a5e68ac0aff2ccb21837e9e8c6163d464cc8464833",
+      "result": "passed",
+      "files": 71,
+      "passed": 1262,
+      "skipped": 0
+    },
+    {
+      "command": "npm run test:w18",
+      "exitCode": 0,
+      "rawLogSha256": "cf7a496ed330ad340fa20c00120db8bb2d6690038826fe0a894e8fe2a2fbcc0f",
+      "result": "passed",
+      "unitPassed": 101,
+      "docPassed": 7,
+      "browserPassed": 30,
+      "browserSkipped": 0
+    },
+    {
+      "command": "npm run test:w16",
+      "exitCode": 0,
+      "rawLogSha256": "291c1ef2541a7233bc2588b00cf01e9820e86314e91aecf12f9239afbc308159",
+      "result": "passed",
+      "unitPassed": 67,
+      "browserPassed": 14,
+      "browserSkipped": 1,
+      "skipReason": "Existing opt-in ten-minute W16 acceptance soak; FORGE3D_W16_SOAK was not enabled."
+    },
+    {
+      "command": "npm run test:package",
+      "exitCode": 0,
+      "rawLogSha256": "fe5f61a0d2e8dff4f66697cd8b82103c142c442bd9d5a7644a7df6855e29d3e5",
+      "result": "passed",
+      "documentationPassed": 22,
+      "browserHarnessPassed": 118,
+      "infrastructurePassed": 627,
+      "infrastructureSkipped": 1,
+      "skipReason": "Existing real Unix UID ACL case is inapplicable on Windows."
+    },
+    {
+      "command": "npm run verify:parity",
+      "exitCode": 0,
+      "rawLogSha256": "ce667aa1654fd076f978b0fa0c40a76e3b3030b1c5b2371631bd4aeb603217c0",
+      "result": "passed",
+      "passed": 15,
+      "mappings": 6531,
+      "untracked": 0,
+      "duplicates": 0,
+      "unresolved": 0
+    },
+    {
+      "command": "npm run test:package-consumer:w18",
+      "exitCode": 0,
+      "rawLogSha256": "a9451421208ab31b17d33057b1a0d9bdc655815a280e38fa44c23ddd8e6bbce0",
+      "result": "passed",
+      "cleanCommittedTree": true,
+      "strictConsumerCompiled": true,
+      "browserPassed": 15,
+      "browserSkipped": 0,
+      "browserFlaky": 0
+    }
+  ],
+  "notRun": [
+    "Opt-in ten-minute W16 acceptance soak",
+    "Real Unix UID ACL test (existing platform skip)",
+    "Physical W00 reference profiles",
+    "Cross-browser qualification"
+  ],
+  "developmentChecks": {
+    "focusedFinal": {
+      "files": 2,
+      "passed": 64,
+      "rawReportCaptured": false,
+      "reportedBy": "validation worker"
+    },
+    "initialFocused": {
+      "passed": 62,
+      "failed": 2,
+      "reason": "New malformed metadata fixtures were rejected by recipe serialization before reaching terrain validation. Fixtures were changed to use prepared resources; the final focused and full suites pass."
+    },
+    "independentReadOnlyReview": "Items 1-3 inspected by a separate agent; no actionable findings."
+  },
+  "validationBenchmark": {
+    "node": "v24.4.0",
+    "platform": "win32",
+    "architecture": "x64",
+    "cpu": "AMD Ryzen 9 5900X 12-Core Processor",
+    "callsPerSize": 4,
+    "heightFormula": "(index % 4096) * 0.25",
+    "scope": "MapScene.validate only; scene construction excluded; before and after run without concurrent heavy gates. Cheap finite checks and recipe copies still run; full statistics are deferred to prepare.",
+    "beforePerformanceSourcesAt": "cd23ddc40d9bcd20fb8fc7d73f371006709ca9cc",
+    "afterPerformanceSourcesAt": "6e4ce2d6590b850a1fdddf3d1b71e5a41bad047d",
+    "workloadScript": "import { performance } from 'node:perf_hooks';\nimport { MapScene } from './w18-validation-build/map-scene.js';\nimport { TerrainDataset } from './w18-validation-build/terrain-dataset.js';\nconst original = TerrainDataset.fromArray;\nlet builds = 0;\nTerrainDataset.fromArray = function (...args) { builds++; return original.apply(this, args); };\nfor (const width of [1024, 3000, 4200]) {\n  const heights = Float32Array.from({ length: width * width }, (_, i) => (i % 4096) * 0.25);\n  const scene = new MapScene({ crs: 'LOCAL', terrain: { source: { id: 'dem', format: 'heightmap', crs: 'LOCAL', maxBytes: 256 * 1024 * 1024, data: { width, height: width, heights, spacing: [10, 10] } } }, camera: { kind: 'orbit-camera', target: [0, 0, 0], distance: 50 }, output: { width: 32, height: 24 }, layers: [], diagnosticsPolicy: { maxResourceBytes: 256 * 1024 * 1024 } });\n  const startBuilds = builds, elapsed = [], statuses = [];\n  for (let call = 0; call < 4; call++) {\n    const start = performance.now();\n    const report = scene.validate();\n    elapsed.push(Number((performance.now() - start).toFixed(3)));\n    statuses.push(report.status);\n  }\n  console.log(JSON.stringify({ width, samples: heights.length, validateMs: elapsed, fullDatasetBuilds: builds - startBuilds, statuses }));\n  scene.dispose();\n}\nTerrainDataset.fromArray = original;\n",
+    "measurements": [
+      {
+        "width": 1024,
+        "height": 1024,
+        "samples": 1048576,
+        "beforeValidateMs": [
+          836.493,
+          820.54,
+          834.07,
+          871.85
+        ],
+        "afterValidateMs": [
+          158.562,
+          129.874,
+          143.02,
+          137.709
+        ],
+        "beforeMeanMs": 840.73825,
+        "afterMeanMs": 142.29125,
+        "beforeFullDatasetBuilds": 4,
+        "afterFullDatasetBuilds": 0
+      },
+      {
+        "width": 3000,
+        "height": 3000,
+        "samples": 9000000,
+        "beforeValidateMs": [
+          7576.45,
+          7555.713,
+          7651.011,
+          7566.883
+        ],
+        "afterValidateMs": [
+          1074.72,
+          1197.47,
+          1229.478,
+          1162.635
+        ],
+        "beforeMeanMs": 7587.51425,
+        "afterMeanMs": 1166.07575,
+        "beforeFullDatasetBuilds": 4,
+        "afterFullDatasetBuilds": 0
+      },
+      {
+        "width": 4200,
+        "height": 4200,
+        "samples": 17640000,
+        "beforeValidateMs": [
+          14753.415,
+          14658.718,
+          14676.243,
+          15061.234
+        ],
+        "afterValidateMs": [
+          2036.194,
+          1967.318,
+          1962.297,
+          1982.48
+        ],
+        "beforeMeanMs": 14787.4025,
+        "afterMeanMs": 1987.07225,
+        "beforeFullDatasetBuilds": 4,
+        "afterFullDatasetBuilds": 0
+      }
+    ]
+  },
+  "parityRegeneration": {
+    "generator": "node scripts/generate-parity-inventory.mjs",
+    "hashesManuallyEdited": false,
+    "preservedMetadata": "Existing independently maintained W18 requiredTests and target evidence/tests were restored from 2e83b0b after generation; no hash fields were edited. The generator refreshed the linked composite inventory.",
+    "verificationPassed": true
+  },
+  "changedFilesComparedToHandoff": [
+    "crates/forge3d-web/docs/mapscene-diagnostics.md",
+    "crates/forge3d-web/docs/pointcloud-tiles.md",
+    "crates/forge3d-web/docs/support-matrix.md",
+    "crates/forge3d-web/docs/w16-evidence.md",
+    "crates/forge3d-web/docs/w16-laz-perf-review.md",
+    "crates/forge3d-web/docs/w16-security/fuzz-review-20261012-header-validation.json",
+    "crates/forge3d-web/docs/w18-evidence.md",
+    "crates/forge3d-web/src-ts/laz-decoder-local.ts",
+    "crates/forge3d-web/src-ts/map-layer-adapters.ts",
+    "crates/forge3d-web/src-ts/map-support.ts",
+    "crates/forge3d-web/src-ts/map-validation.ts",
+    "crates/forge3d-web/src-ts/pointcloud-las.ts",
+    "crates/forge3d-web/src-ts/terrain-dataset.ts",
+    "crates/forge3d-web/tests/api/w18-docs.test.mjs",
+    "crates/forge3d-web/tests/parity/composite-inventory.json",
+    "crates/forge3d-web/tests/unit/w16-pointcloud.test.ts",
+    "crates/forge3d-web/tests/unit/w18-review-regressions.test.ts",
+    "crates/forge3d-web/types/pointcloud-las.d.ts",
+    "docs/parity/forge3d-composite-baseline.json",
+    "docs/parity/w18-review-fixes.md",
+    "docs/parity/w18-review-prompt.md",
+    "docs/parity/w18-runs/finish-20261013-cli.txt",
+    "docs/parity/w18-runs/finish-20261013-installed-playwright.json",
+    "docs/parity/w18-runs/finish-20261013-observations.json",
+    "docs/parity/w18-runs/finish-20261013-package-consumer.json",
+    "docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md"
+  ],
+  "rawEvidence": [
+    {
+      "path": "docs/parity/w18-runs/finish-20261013-cli.txt",
+      "sha256": "fbfd097a975e038bf41cf4d26b7cca760a07afc21b71a07c68531bcd40cb9341"
+    },
+    {
+      "path": "docs/parity/w18-runs/finish-20261013-installed-playwright.json",
+      "sha256": "6203f05db466917a00c45088f33c63246f7cc7f9efce937c13fcf6e3a7c9e369"
+    },
+    {
+      "path": "docs/parity/w18-runs/finish-20261013-package-consumer.json",
+      "sha256": "4dce0f352a016848124fc3a41f4b5768b0a3e07192ff69cd1d113cb834c7b73d"
+    }
+  ]
+}
