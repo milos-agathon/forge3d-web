@@ -1,10 +1,13 @@
 # W16 laz-perf 0.0.7 security review
 
-**Status: pending independent sign-off.** Prepared by Codex on 2026-10-10.
-Independent reviewer: pending. Sign-off date: pending. This document supplies
-review evidence; its author has not approved the dependency. W16 stays Partial
-and G02/G03/G04 stay P until an independent reviewer signs this review and the
-two W00 hardware lanes qualify.
+**Status: Approved.** Prepared by Codex on 2026-10-10.
+Independent reviewer: **Claude (non-author)**.
+Owner approval: **Milos, 2026-10-12**. laz-perf 0.0.7 is approved for consumption.
+Per owner decision D1, W16 is **Accepted (functional); W00 physical qualification
+pending**. G02/G03/G04 are C on real-data conformance, installed-package runs
+and codec sign-off. W00 physical qualification is a separate pending lab item,
+recorded like W09: integrated FW-WIN-I12-01 blocked (hardware not owned);
+discrete FW-LNX-NV-01 pending.
 
 ## Scope and provenance
 
@@ -192,7 +195,33 @@ and CRLF-normalized text hashes distinguish checkout bytes from line-ending
 normalization. The preceding historical report remains unchanged. These
 finite observations supply no independent approval or worst-case heap bound.
 
-## (d) Remaining risks and sign-off
+The [October 12 header-validation run](w16-security/fuzz-review-20261012-header-validation.json)
+passes **260 cases: 120 valid outputs, 129 INVALID_INPUT errors and
+11 RESOURCE_LIMIT_EXCEEDED errors**, with zero untyped errors. Maximum job
+time is 217.4 ms; peak observed WASM heap is 7,274,496 bytes. The real
+512-point root decodes after the corpus with zero active/queued jobs.
+The report's SHA-256 is
+`57ead8d4bd7a4c8aed3fdac673413aca20fbef0c19230f9af05b3e1d06c6c064`.
+It binds all 53 production source/dist files after the caller-header fix,
+the unchanged codec and the same deterministic corpus. It records base
+`cb82d0b2389c1e8da59612c4f97993948e0820d8` plus the measured working-tree
+source/dist hashes. The earlier reports, including
+`fuzz-review-ece3606.json`, remain unchanged.
+
+## (d) Accepted residual risks and sign-off
+
+The independent review and owner approval accept these residual risks:
+
+- Unchecked reads within the fresh per-job heap can yield wrong points;
+  no cross-job data exposure.
+- The per-worker WASM ceiling is 2 GiB, with one active job per realm.
+  Lowering that ceiling requires an ADR.
+- Admission is per JavaScript realm, so other tabs and direct handler use
+  are not gated.
+- The deterministic fuzz corpus is finite; no sanitizer or coverage-guided
+  fuzzing was performed.
+
+The detailed limits and evidence below remain part of the approved review.
 
 - `ChunkDecoder.open` receives an input pointer without a chunk byte length.
   Its C++ input callback advances that pointer without a logical input bound;
@@ -224,16 +253,16 @@ finite observations supply no independent approval or worst-case heap bound.
   admission/startup/decode; shorter configured pool deadlines apply from enqueue.
   Separate tabs/worker realms and manually dispatching directly through a custom
   worker handler remain outside the shared public/dataset gate and can multiply
-  native-memory exposure. Independent review must assess that scope, native
-  allocation exposure and residual denial-of-service risk.
+  native-memory exposure. That scope, native allocation exposure and residual
+  denial-of-service risk are accepted as recorded above.
 - This deterministic corpus is finite and does not replace coverage-guided
   native sanitizer fuzzing or analysis of all point formats/extra-byte paths.
   The audited build preserves the upstream Release flags, including `-DNDEBUG`.
 - Empty advisory queries and byte reproducibility do not eliminate unknown
-  defects. The dependency remains experimental and its newer upstream fixes
-  are not automatically available to the exact-version lock. Any replacement
-  build/version requires an owner-approved ADR and the same fixture suite.
+  defects. Newer upstream fixes are not automatically available to the
+  exact-version lock. Any laz-perf version or build change requires a new review,
+  an owner-approved ADR and the same fixture suite.
 
-An independent reviewer must inspect the above evidence and residual risks,
-record their name and date, and explicitly approve or reject consumption.
-Neither this document nor its generating agent supplies that approval.
+Independent reviewer: Claude (non-author). Owner approval: Milos, 2026-10-12.
+This approval records owner decision D2; the document's author is not the
+independent reviewer.

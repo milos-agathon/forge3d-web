@@ -1,5 +1,24 @@
 # W16 implementation and acceptance evidence
 
+Current status, 2026-10-12: **Accepted (functional); W00 physical qualification
+pending**. G02/G03/G04 are C on real-data conformance, installed-package runs
+and codec sign-off. [laz-perf 0.0.7 is approved](w16-laz-perf-review.md):
+independent reviewer Claude (non-author); owner approval Milos, 2026-10-12.
+The [dated owner decision](#owner-decisions-and-functional-acceptance-2026-10-12)
+below supersedes all pending/Partial/P status and open-sign-off statements in
+the retained historical record. W00 remains a separate pending lab item:
+integrated FW-WIN-I12-01 blocked (hardware not owned); discrete FW-LNX-NV-01
+pending. Local Windows/RTX 3070 Chromium timings are preflight: passes on a
+quiet host; variation unexplained. The 16.7/33.3 ms budgets are not claimed as met.
+MapScene point/tiles still block until MapScene integration is implemented
+and tested (M02b).
+
+## Retained historical record through 2026-10-11
+
+The following status claims describe their recording dates, not current
+acceptance. They are superseded by the October 12 decision above. Retained
+failures and historical runs remain valid observations and are unchanged.
+
 W16 acceptance is pending. G02, G03 and G04 remain `P`: the runtime and local
 conformance tests exist, but local p95 variation remains unexplained. Retained
 October 9 failures are 18.7/19.8/22.3/20.1/18.3 ms. October 10 installed passes
@@ -856,3 +875,69 @@ The [complete rerun log](w16-runs/raw-stdout/review-20261011-w16-heap-fix.log)
 includes both heap proofs and their full oracle hashes: 7,012 bytes, SHA-256
 `5edd74a428c3098974fa0546e90d2aba01d2998e391d381ee9e4e471798fb5e5`.
 Fresh independent review found no issue with the replacement instrumentation.
+
+## Owner decisions and functional acceptance, 2026-10-12
+
+Owner decisions (Milos, 2026-10-12), recorded without reinterpretation:
+
+- D1. Split W16. Functional acceptance (G02–G04 → C) rests on real-data conformance, installed-package runs and codec sign-off. W00 physical qualification becomes a separate pending lab item, recorded like W09: integrated FW-WIN-I12-01 blocked (hardware not owned); discrete FW-LNX-NV-01 pending.
+- D2. laz-perf 0.0.7 is approved for consumption. Independent review: Claude (non-author). Owner approval: Milos, 2026-10-12.
+- D3. Local soak timings are Windows/RTX 3070 Chromium preflight: passes on a quiet host; variation unexplained. Do not claim the 16.7/33.3 ms budgets are met.
+- D4. No budget, W00 profile, hardware-inventory or test-weakening changes.
+
+W16 status is **Accepted (functional); W00 physical qualification pending**.
+G02/G03/G04 are C. The codec approval and accepted residual risks are recorded
+in [the laz-perf review](w16-laz-perf-review.md). All retained failures and
+historical runs above remain unchanged; their earlier pending-status statements
+are superseded by this decision, not by a new performance claim.
+
+M02b is unchanged: MapScene point/tiles still block until MapScene integration
+is implemented and tested. Only the wording of that precondition changes.
+
+Caller-supplied LAZ chunk headers now reject non-integer or out-of-range point
+formats and non-integer, below-format-minimum or greater-than-65535 record
+lengths with typed `INVALID_INPUT`, before any worker creation or native
+allocation. Validation shares the LAS parser's existing `LENGTHS` table.
+Ten additional public `decodeLazChunk` negative cases assert that no worker
+is created; existing tests are unchanged.
+
+The [new deterministic fuzz report](w16-security/fuzz-review-20261012-header-validation.json)
+passes 260 cases: 120 valid outputs, 129 `INVALID_INPUT` and 11
+`RESOURCE_LIMIT_EXCEEDED`; zero untyped errors. Maximum job time is 217.4 ms
+and peak observed WASM heap is 7,274,496 bytes. Real-data recovery decodes
+512 points with zero active/queued jobs. SHA-256:
+`57ead8d4bd7a4c8aed3fdac673413aca20fbef0c19230f9af05b3e1d06c6c064`.
+It binds base `cb82d0b` and the measured header-fix source/dist bytes.
+`fuzz-review-ece3606.json` and every other old report are unchanged.
+
+### Local gates for the acceptance change
+
+Exact reported test counts:
+
+| Gate | Passed | Failed | Skipped |
+| --- | ---: | ---: | ---: |
+| Full unit suite (`npm run test:unit`; 68 files) | 1,161 | 0 | 0 |
+| `npm run test:w16`: units (4 files) | 67 | 0 | 0 |
+| `npm run test:w16`: Chromium source/dist | 14 | 0 | 1 |
+| Documentation (`npm run test:docs`) | 13 | 0 | 0 |
+| Parity (`npm run verify:parity`) | 15 | 0 | 0 |
+| Package gate: documentation | 13 | 0 | 0 |
+| Package gate: browser harness | 118 | 0 | 0 |
+| Package gate: infrastructure | 627 | 0 | 1 |
+
+The package gate's counted suites total 758 passed, zero failed and one
+skipped. Its release-hardening and package-contract scripts also exit zero;
+they do not emit test counts. API/type snapshots (`npm run test:api`) and
+the installed-tarball conformance script (`npm run test:package-consumer:w16`)
+exit zero without a test tally. TypeScript/dist and the prerequisite WASM
+build succeed. The existing Unix-UID infrastructure check is skipped on Windows;
+the browser skip is the explicitly unrun ten-minute soak.
+
+The installed tarball has SHA-256
+`ddd9e066545ba34430cc50063cc01ebddec4796b9c7481a42fe21a033ad3331c`.
+Its real-data counts are LAZ 110,000, COPC 100,000, EPT 128 and workload EPT
+1,000,000. Ranged overview fetches 2.6244226428474193% of fixture bytes;
+device-loss recovery passes, with zero page errors and external requests.
+This is Windows/RTX 3070 Chromium preflight conformance evidence.
+
+The ten-minute soak and physical W00 qualification are unrun in this change.

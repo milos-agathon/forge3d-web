@@ -12,6 +12,7 @@ export interface LasHeader {
     offset: PointVec3;
     bounds: PointBounds;
 }
+export declare const LENGTHS: readonly [20, 28, 26, 34, 57, 63, 30, 36, 38, 59, 67];
 export declare function parseLasHeader(bytes: Uint8Array): LasHeader;
 export declare function parseLasRecords(bytes: Uint8Array, count: number, header: LasHeader, options?: {
     maxBytes?: number;

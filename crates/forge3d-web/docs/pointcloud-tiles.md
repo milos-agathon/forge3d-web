@@ -4,13 +4,20 @@ W16 provides browser datasets, bounded caches, octree/SSE selection, GPU point
 rendering and OGC tile content. All decoder assets are self-hosted in the npm
 package. See [W16 evidence](w16-evidence.md) for fixtures, limits and verification.
 
-W16 acceptance remains pending: physical reference-profile qualification and
-the dependency lock's mandatory laz-perf security review are open. Current
-codec consumption is experimental conformance testing.
+W16 status: **Accepted (functional); W00 physical qualification pending**.
+G02/G03/G04 are C on real-data conformance, installed-package runs and codec
+sign-off. [laz-perf 0.0.7 is approved](w16-laz-perf-review.md): independent
+reviewer Claude (non-author); owner approval Milos, 2026-10-12.
+W00 is a separate pending lab item: integrated FW-WIN-I12-01 is blocked
+(hardware not owned); discrete FW-LNX-NV-01 is pending. Local Windows/RTX 3070
+Chromium soak timings are preflight: passes on a quiet host; variation
+unexplained. The 16.7/33.3 ms budgets are not claimed as met.
+MapScene point/tiles still block until MapScene integration is implemented
+and tested (M02b).
 
 `renderer.getStats(false)` reads allocation counters without computing the
 timing percentile. Use it when polling each frame; call `getStats()` when a
-timing report is needed. The acceptance soak still times the complete update,
+timing report is needed. The W00 qualification soak still times the complete update,
 cache misses, upload and GPU completion path.
 
 ## Load and render points
