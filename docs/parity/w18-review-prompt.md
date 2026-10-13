@@ -1,11 +1,11 @@
-Review current HEAD of `codex/w18-mapscene` against `65a4551` in
+Review current HEAD of `codex/w18-mapscene` against `e8fc61d` in
 `C:\Users\milos\.codex\worktrees\w18-mapscene\forge3d-web`. Assess M01/M02a/M02b
 against `docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md`.
 Do not trust completion claims or historical passing logs.
 
 Verify M02b keeps exact blocking point-cloud/tiles diagnostics even for nonempty
-data and explicit supported intent: G02-G04/W16 acceptance and independent
-laz-perf sign-off remain pending. Audit all 106 native definitions against the
+data and explicit supported intent: MapScene integration of G02-G04 is not yet
+implemented and tested. Audit all 106 native definitions against the
 specific ledger test assertions, not file existence; check the four added suites,
 documented codes, native layer types, texture IDs, cache/LOD/instancing details,
 memory uncertainty and explicit W19/W23 exclusions. Retained native blobs must

@@ -1,8 +1,8 @@
 # W18 review corrections
 
 The review's six defects are repaired on `codex/w18-mapscene`. M01/M02a remain
-implemented; M02b conforms by retaining diagnostics. Its precondition was not
-changed: G02-G04/W16 acceptance and independent laz-perf sign-off remain open.
+implemented; M02b conforms by retaining diagnostics. W16 is accepted;
+MapScene integration of G02-G04 is not yet implemented and tested.
 All MapScene point-cloud and tiles3d recipes block before resource fetching or
 GPU work, including nonempty points and explicit supported intent. Standalone
 W16 APIs retain their separate scope.

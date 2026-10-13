@@ -1,5 +1,5 @@
 import { Camera } from './camera.js';
-import { TerrainDataset } from './terrain-dataset.js';
+import { validateTerrainDatasetInput } from './terrain-dataset.js';
 import { VectorLayers } from './vector-layers.js';
 import { BuildingLayer } from './buildings.js';
 import { checkMesh, meshBytes } from './mesh.js';
@@ -272,7 +272,7 @@ export function validateMapRecipe(input: SceneRecipeInput, prepared: ReadonlyMap
                     switch (kind) {
                         case 'terrain': {
                             const t = value as TerrainHeightmapInput;
-                            TerrainDataset.fromArray(t);
+                            validateTerrainDatasetInput(t);
                             const s = Forge3DScene.create();
                             try {
                                 s.addTerrain(t);

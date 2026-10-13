@@ -93,8 +93,8 @@ warning, while explicit experimental recipe intent also receives a blocking
 unavailable requested product paths cannot produce a successful output record.
 All-background raster output and traces without visible hits fail after rendering.
 W09 scatter uses its accepted adapter. M02b keeps point-cloud and tiles diagnostics
-until G02-G04/W16 acceptance is complete, including independent laz-perf security
-sign-off. Rendering some points does not satisfy that gate. This is not full Cesium runtime parity.
+because MapScene integration of G02-G04 is not yet implemented and tested.
+Rendering some points does not satisfy that gate. This is not full Cesium runtime parity.
 `instancingPath`, `requestedStats`, native metadata intents and optional
 `diagnosticsPolicy.largeSceneSummary` retain unavailable product telemetry diagnostics.
 
@@ -203,7 +203,7 @@ Native factory codes retain messages, remediation, IDs, details and severity:
 | MapScene.render PNG path | `supported` | Covered geometry, shaped glyphs, deterministic LabelPlan and review JSON; M02a/W18. |
 | Style assessment | `supported` | Local fill/line/circle diagnostic assessment; style render mapping M03/W19. |
 | MapSceneBuildingLayer | `supported` | Scalar buildings; missing_external_asset and unsupported_asset_format remain errors; W15/M02a. |
-| Point-cloud MapScene path | `placeholder/fallback` | M02b retained gate; G02-G04/W16 acceptance pending. |
+| Point-cloud MapScene path | `placeholder/fallback` | M02b retained gate; MapScene integration of G02-G04 is not yet implemented and tested. |
 | Tiles3D MapScene path | `underdeveloped` | python_public_3dtiles_incomplete retained by M02b. |
 | VT families | `supported` | albedo-only; vt_unsupported_family blocks normal/mask; W08. |
 | Requested unavailable cache/LOD stats | `underdeveloped` | unavailable_cache_lod_stats; M02b. |

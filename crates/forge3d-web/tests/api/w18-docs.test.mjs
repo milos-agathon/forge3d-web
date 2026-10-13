@@ -8,7 +8,7 @@ test('documents the public MapScene API with truthful browser support levels', (
   assert.match(doc, /MapScene.render PNG path \| `supported`/);
   assert.match(doc, /Point-cloud MapScene path \| `placeholder\/fallback`/);
   assert.match(doc, /Tiles3D MapScene path \| `underdeveloped`/);
-  assert.match(doc, /G02-G04\/W16 acceptance/);
+  assert.match(doc, /MapScene integration of G02-G04 is not yet implemented and tested/);
 });
 test('removes stale completion and feature ownership wording from the MapScene guide', () => {
   for (const text of ['TBD', 'later-owned', 'Owned by feature `004`', 'Owned by feature `003`', 'points/tiles are promoted']) assert.ok(!doc.includes(text), text);

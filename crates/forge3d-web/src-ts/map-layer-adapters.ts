@@ -45,8 +45,10 @@ export async function prepareMapLayers(input: SceneRecipeInput, resources: Reado
         const overlays = mapTerrainOverlays(input, terrain, resources);
         if (overlays) terrain.overlays = overlays;
     }
+    let terrainDataset: TerrainDataset | undefined;
     try {
         if (terrain) {
+            terrainDataset = TerrainDataset.fromArray(terrain);
             scene.addTerrain(terrain);
             layerObjects.terrain = terrain.width * terrain.height;
         }
@@ -139,7 +141,7 @@ export async function prepareMapLayers(input: SceneRecipeInput, resources: Reado
                         const label = new LabelLayer(atlas!);
                         releases.push(() => label.dispose());
                         const original = value as readonly LabelRecord[], projected = l.coordinateSpace === 'world' ? projectLabels(original, camera, input) : original;
-                        const dataset = terrain ? TerrainDataset.fromArray(terrain) : undefined;
+                        const dataset = terrainDataset;
                         const plan = l.plan ? LabelPlan.fromJSON(l.plan) : LabelPlan.compile({ labels: projected, viewport: input.output, fontAtlas: atlas!, seed: input.reproducibility?.seed ?? 0, ...(l.atlasGlyphs ? { glyph_atlas: l.atlasGlyphs } : {}), ...(l.keepouts ? { keepouts: l.keepouts } : {}), ...(l.priorityRules ? { priority_rules: l.priorityRules } : {}), ...(l.typography ? { typography: l.typography } : {}), ...(dataset ? { terrain: { sample: (x: number, y: number, z: number) => { const world = camera.screenToWorld(x, y, z, input.output), q = dataset.query(world[0], world[2]); return q && Number.isFinite(q.elevation) ? q : undefined; } } } : {}) });
                         plans[l.layerId] = plan.toJSON();
                         const rejectionCounts: Record<string, number> = {};

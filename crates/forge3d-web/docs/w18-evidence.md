@@ -38,7 +38,7 @@ are replaced with decoded asset buffers and real rendering. Accepted W12 vector
 and W15 scalar building adapters render actual buffers. M02b preserves the exact
 point-cloud placeholder_fallback and tiles python_public_3dtiles_incomplete errors
 for every MapScene recipe, including nonempty data and explicit supported intent.
-G02-G04/W16 acceptance and independent laz-perf security sign-off remain pending.
+MapScene integration of G02-G04 is not yet implemented and tested.
 The gate was not changed. Unavailable texture/product instancing/cache telemetry,
 non-albedo VT, legacy Python 3D Tiles and explicit experimental intent retain
 structured blocking diagnostics. Native standalone experimental/glyph warnings

@@ -472,23 +472,62 @@ function computeStatistics(
   };
 }
 
+// Validation only needs a finite sample and range, without percentile searches.
+function validateSampleRange(
+  heights: Float32Array,
+  nodata: number | undefined,
+): Pick<TerrainStatistics, "min" | "max"> {
+  let min = Infinity;
+  let max = -Infinity;
+  for (const value of heights) {
+    if (value === Infinity || value === -Infinity) {
+      throw invalid("terrain heights must not contain Infinity");
+    }
+    if (isValidSample(value, nodata)) {
+      min = Math.min(min, value);
+      max = Math.max(max, value);
+    }
+  }
+  if (min === Infinity) {
+    throw invalid("terrain heights must contain at least one valid sample");
+  }
+  return { min, max };
+}
+
+/** Internal preflight: identical dataset constraints without building statistics. */
+export function validateTerrainDatasetInput(input: TerrainDatasetInput): void {
+  validateDatasetFields(input, undefined, false);
+}
+
+type DatasetFieldsInput = {
+  width: number;
+  height: number;
+  heights: Float32Array;
+  spacing?: [number, number] | undefined;
+  exaggeration?: number | undefined;
+  domain?: [number, number] | undefined;
+  nodata?: number | undefined;
+  crs?: string | undefined;
+  transform?: [number, number, number, number, number, number] | undefined;
+  bounds?: [number, number, number, number] | undefined;
+  colormap?: TerrainColormapInput | undefined;
+  renderMode?: TerrainRenderMode | undefined;
+};
+
 function validateDatasetFields(
-  input: {
-    width: number;
-    height: number;
-    heights: Float32Array;
-    spacing?: [number, number] | undefined;
-    exaggeration?: number | undefined;
-    domain?: [number, number] | undefined;
-    nodata?: number | undefined;
-    crs?: string | undefined;
-    transform?: [number, number, number, number, number, number] | undefined;
-    bounds?: [number, number, number, number] | undefined;
-    colormap?: TerrainColormapInput | undefined;
-    renderMode?: TerrainRenderMode | undefined;
-  },
+  input: DatasetFieldsInput,
   signal?: AbortSignal,
-): NormalizedDatasetFields {
+): NormalizedDatasetFields;
+function validateDatasetFields(
+  input: DatasetFieldsInput,
+  signal: AbortSignal | undefined,
+  fullStatistics: false,
+): Omit<NormalizedDatasetFields, "statistics">;
+function validateDatasetFields(
+  input: DatasetFieldsInput,
+  signal?: AbortSignal,
+  fullStatistics = true,
+): NormalizedDatasetFields | Omit<NormalizedDatasetFields, "statistics"> {
   if (typeof input !== "object" || input === null) {
     throw invalid("terrain dataset input must be an object");
   }
@@ -548,7 +587,10 @@ function validateDatasetFields(
     nodata = input.nodata;
   }
 
-  const { statistics } = computeStatistics(heights, nodata, signal);
+  const statistics = fullStatistics
+    ? computeStatistics(heights, nodata, signal).statistics
+    : undefined;
+  const range = statistics ?? validateSampleRange(heights, nodata);
 
   let domain: [number, number];
   if (input.domain !== undefined) {
@@ -558,7 +600,7 @@ function validateDatasetFields(
     }
     domain = [value[0]!, value[1]!];
   } else {
-    domain = [statistics.min, statistics.max];
+    domain = [range.min, range.max];
   }
   if (domain[0] === domain[1]) {
     domain = [domain[0] - 0.5, domain[1] + 0.5];
@@ -605,7 +647,7 @@ function validateDatasetFields(
     bounds,
     colormap,
     renderMode: input.renderMode,
-    statistics,
+    ...(statistics ? { statistics } : {}),
   };
 }
 

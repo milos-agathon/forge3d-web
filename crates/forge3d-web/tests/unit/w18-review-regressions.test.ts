@@ -2,6 +2,8 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { MapScene } from '../../src-ts/map-scene.js';
 import { SceneRecipe } from '../../src-ts/map-recipe.js';
+import { TerrainDataset, validateTerrainDatasetInput } from '../../src-ts/terrain-dataset.js';
+import { validateMapRecipe } from '../../src-ts/map-validation.js';
 import * as models from '../../src-ts/map-recipe.js';
 import { getMapSceneSupportMatrix } from '../../src-ts/map-support.js';
 import { LabelPlan } from '../../src-ts/label-plan.js';
@@ -175,4 +177,59 @@ describe('W18 review regression contracts', () => {
         const scene = new MapScene(restored); expect(scene.validate().diagnostics.some(d => d.code === 'resource_limit_exceeded')).toBe(false); scene.dispose();
         r.diagnosticsPolicy.maxRecipeBytes = 1024; expect(() => new SceneRecipe(r)).toThrow('serialized byte limit');
     }, 60000);
+    it('preflights a large DEM repeatedly without full dataset builds and keeps the full prepare check', async () => {
+        const r = recipe(), width = 1024;
+        r.terrain!.source.data = { width, height: width, heights: Float32Array.from({ length: width * width }, (_, i) => (i % 4096) * .25), spacing: [10, 10] };
+        const scene = new MapScene(r), builds = vi.spyOn(TerrainDataset, 'fromArray');
+        try {
+            const first = scene.validate().toJSON();
+            for (let i = 0; i < 3; i++) expect(scene.validate().toJSON()).toEqual(first);
+            expect((await scene.reviewRecord()).validation_report).toEqual(first);
+            expect(builds).not.toHaveBeenCalled();
+            expect((await scene.prepare()).status).toBe('ok');
+            expect(builds).toHaveBeenCalledTimes(1);
+            for (let i = 0; i < 4; i++) expect(scene.validate().status).toBe('ok');
+            expect(builds).toHaveBeenCalledTimes(1);
+            expect((await scene.prepare()).status).toBe('ok');
+            expect(builds).toHaveBeenCalledTimes(2);
+        } finally { builds.mockRestore(); scene.dispose(); }
+    }, 60000);
+    it('preserves full dataset diagnostics and their ordering in cheap terrain preflight', () => {
+        const base = { width: 2, height: 2, heights: new Float32Array([1, 2, 3, 4]) };
+        const malformed = [
+            { ...base, width: 0 }, { ...base, heights: [1, 2, 3, 4] }, { ...base, heights: new Float32Array(3) },
+            { ...base, spacing: [1] }, { ...base, spacing: [0, 1] }, { ...base, exaggeration: 0 }, { ...base, crs: '' },
+            { ...base, nodata: 'missing' }, { ...base, nodata: Infinity }, { ...base, heights: new Float32Array([1, Infinity, 3, 4]) },
+            { ...base, heights: new Float32Array(4).fill(NaN) }, { ...base, heights: new Float32Array(4).fill(7), nodata: 7 },
+            { ...base, domain: [1] }, { ...base, domain: [4, 1] }, { ...base, transform: [0, 1] },
+            { ...base, bounds: [2, 0, 1, 1] }, { ...base, colormap: 'bogus' }, { ...base, colormap: { stops: [] } },
+            { ...base, renderMode: 'bogus' }, { ...base, spacing: [0, 1], heights: new Float32Array(4).fill(Infinity) },
+        ];
+        expect(() => validateTerrainDatasetInput(null as any)).toThrow('terrain dataset input must be an object');
+        for (const data of malformed) {
+            let expected = '';
+            try { TerrainDataset.fromArray(data as any); } catch (error) { expected = String(error); }
+            expect(expected).not.toBe('');
+            let actual = '';
+            try { validateTerrainDatasetInput(data as any); } catch (error) { actual = String(error); }
+            expect(actual).toBe(expected);
+            const r = recipe(); delete r.terrain!.source.data; r.terrain!.source.url = 'https://example.test/dem.json';
+            const prepared = new Map([['dem', { resource: r.terrain!.source, value: data, bytes: 0 }]]);
+            expect(validateMapRecipe(r, prepared).report.diagnostics.find(d => d.code === 'invalid_layer' && d.layer_id === 'terrain')?.message).toBe(expected);
+        }
+    });
+    it('rechecks replaced and mutated DEM samples and metadata without stale preflight results', () => {
+        const r = recipe(), data = r.terrain!.source.data!;
+        delete r.terrain!.source.data; r.terrain!.source.url = 'https://example.test/dem.json';
+        const prepared = new Map([['dem', { resource: r.terrain!.source, value: data, bytes: 0 }]]);
+        expect(validateMapRecipe(r, prepared).report.status).toBe('ok');
+        data.heights[0] = Infinity;
+        expect(validateMapRecipe(r, prepared).report.diagnostics.find(d => d.code === 'invalid_layer')?.message).toContain('terrain heights must not contain Infinity');
+        data.heights = new Float32Array(16).fill(7); data.nodata = 7;
+        expect(validateMapRecipe(r, prepared).report.diagnostics.find(d => d.code === 'invalid_layer')?.message).toContain('terrain heights must contain at least one valid sample');
+        data.nodata = NaN; data.heights[0] = NaN;
+        expect(validateMapRecipe(r, prepared).report.status).toBe('ok');
+        data.bounds = [2, 0, 1, 1];
+        expect(validateMapRecipe(r, prepared).report.diagnostics.find(d => d.code === 'invalid_layer')?.message).toContain('terrain bounds must be ordered');
+    });
 });
