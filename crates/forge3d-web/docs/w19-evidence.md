@@ -71,6 +71,10 @@ revision, tarball SHA-256, newly built WASM SHA-256, installed serving root and 
 status in `test-results/w19-package-consumer.json`.
 The required CI build/contract job also runs this installed W19 gate and uploads
 its revision/hash report and twelve-case Playwright report as `forge3d-web-w19-installed`.
+The Windows CI checkout exposed a CRLF inline-script CSP hash mismatch. The server
+now hashes HTML-normalized script text while serving the installed bytes unchanged.
+A real Chromium control blocks the old CRLF hash and admits normalized CRLF/LF hashes;
+startup errors are captured and failed CI runs retain the installed reports.
 
 Validation for these corrections: 1,681 unit tests in 75 files, including 419
 W19 tests; 24 source/dist Chromium cases; API/declarations; package/infrastructure

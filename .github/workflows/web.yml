@@ -119,10 +119,12 @@ jobs:
         run: npm run test:package-consumer:w16
 
       - name: Test W19 installed styles, bundles and review variants
+        id: w19-installed
         working-directory: crates/forge3d-web
         run: npm run test:package-consumer:w19
 
       - name: Upload W19 installed-tarball evidence
+        if: always() && steps.w19-installed.outcome != 'skipped'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: forge3d-web-w19-installed

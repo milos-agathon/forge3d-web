@@ -3,7 +3,14 @@ declare global { interface Window { __w19: any; } }
 for (const dist of [false, true]) {
     const label = dist ? 'dist' : 'source';
     test.describe(label, () => {
-        test.beforeEach(async ({ page }) => { await page.goto('/examples/style-bundle.html' + (dist ? '?dist' : '?source')); await page.waitForFunction(() => window.__w19?.ready); });
+        test.beforeEach(async ({ page }) => {
+            const errors: string[] = [];
+            page.on('pageerror', error => errors.push(error.message));
+            page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+            await page.goto('/examples/style-bundle.html' + (dist ? '?dist' : '?source'));
+            try { await page.waitForFunction(() => window.__w19?.ready); }
+            catch (error) { throw new Error(`W19 example startup failed: ${errors.join('\n') || await page.locator('#status').textContent()}`, { cause: error }); }
+        });
         test(`W19 ${label}: supported styles draw covered geometry and every style layer changes pixels`, async ({ page }, info) => {
             const r = await page.evaluate(async () => {
                 const { api, makeState, renderScene } = window.__w19, state = makeState().value, scene = api.MapScene.fromSceneState(state), whole = await renderScene(scene), changes: Record<string, number> = {};

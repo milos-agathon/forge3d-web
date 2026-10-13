@@ -106,7 +106,8 @@ const server = createServer((req, res) => {
     const path = resolve(installed, '.' + pathname), rel = relative(installed, path);
     if (rel.startsWith('..') || isAbsolute(rel)) throw Error('outside consumer');
     let bytes = readFileSync(path);
-    const scriptHashes = extname(path) === '.html' ? [...bytes.toString('utf8').matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map(m => "'sha256-" + createHash('sha256').update(m[1]).digest('base64') + "'") : [];
+    // HTML parsing normalizes CRLF and lone CR before CSP hashes inline scripts.
+    const scriptHashes = extname(path) === '.html' ? [...bytes.toString('utf8').matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map(m => "'sha256-" + createHash('sha256').update(m[1].replace(/\r\n?/g, '\n')).digest('base64') + "'") : [];
     const headers={
       "content-type": {".html":"text/html", ".js":"text/javascript", ".mjs":"text/javascript", ".json":"application/json", ".wasm":"application/wasm", ".ttf":"font/ttf", ".png":"image/png"}[extname(path)] ?? "application/octet-stream",
       "cross-origin-opener-policy":"same-origin", "cross-origin-embedder-policy":"require-corp", "accept-ranges":"bytes"
@@ -145,6 +146,7 @@ try {
         "--grep",
         "W19 dist",
         "--workers=1",
+        "--max-failures=1",
       ],
       {
         cwd: root,
