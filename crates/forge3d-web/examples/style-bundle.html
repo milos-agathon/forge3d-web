@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>Forge3D styles and review bundles</title>
+<style>body{margin:24px;background:#f5f3ee;color:#252525;font:16px system-ui;max-width:760px}canvas{display:block;width:576px;height:432px;max-width:100%;margin:20px 0;background:#ddd}button{padding:10px 16px;margin:4px;border:1px solid #777;background:white;color:inherit;border-radius:4px}#status{white-space:pre-wrap;font:13px monospace}</style>
+<h1>Styles, variants and offline bundles</h1><p>A local Mapbox style draws polygons, roads and points. Review annotations belong to a named variant. Save the complete state and reload it without a network connection.</p>
+<button id="render">Render map</button><button id="variant">Show review</button><button id="save">Save .forge3d</button><input id="load" type="file" accept=".forge3d"><canvas width="192" height="144"></canvas><p id="status">Preparing…</p>
+<script type="module">
+const api = await import(/* @vite-ignore */ location.search.includes('source') ? '../src-ts/index.ts' : '/dist/index.js');
+const features = [
+ {id:11,kind:'polygon',rings:[[[-5,.2,-4],[0,.2,-4],[0,.2,3],[-5,.2,3],[-5,.2,-4]]],properties:{class:'water'}},
+ {id:12,kind:'line',positions:[[-6,.4,-2],[6,.4,2]],properties:{class:'road'}},
+ {id:13,kind:'point',position:[3,.6,-2],properties:{class:'town',name:'Town'}}
+];
+const style = api.parseStyle({version:8,name:'Local map',sources:{local:{type:'geojson'}},layers:[
+ {id:'water',type:'fill',source:'local',paint:{'fill-color':'#2070dd','fill-opacity':.9,'fill-outline-color':'#ffffff'}},
+ {id:'roads',type:'line',source:'local',paint:{'line-color':['match',['get','class'],'road','#ffb020','#808080'],'line-width':['interpolate',['linear'],['zoom'],0,2,20,8]}},
+ {id:'towns',type:'circle',source:'local',paint:{'circle-color':'#e54354','circle-radius':6}}
+]});
+function baseRecipe(){return {crs:'LOCAL',camera:{position:[0,15,12],target:[0,0,0],up:[0,1,0],fovYDegrees:45,near:.1,far:100},output:{width:192,height:144},lighting:{name:'daylight'},layers:[{kind:'nodes',layerId:'ground',nodes:[{kind:'ground-plane',name:'ground',size:[16,12],height:0,color:[.25,.35,.25,1]}]}]};}
+function makeState(){const compiled=api.compileStyle(style,{local:features},{crs:'LOCAL'});if(compiled.report.hasErrors)throw Error('Style validation failed');const base=baseRecipe();base.layers.push(...compiled.layers);return new api.SceneState({base,style:style.value,reviewLayers:[{id:'annotation',name:'Review',layers:[{kind:'nodes',layerId:'review-overlay',nodes:[{kind:'overlay',name:'review-panel',bounds:[12,12,34,18],color:[1,.15,.05,.9]}]},{kind:'labels',layerId:'review-labels',coordinateSpace:'screen',source:{id:'review-text',format:'labels',crs:'LOCAL',data:[{id:'town-name',text:'Town',world_pos:[100,90,0],geometry_type:'Point'}]},atlasGlyphs:[...'Town'],style:{fontSize:12,color:[1,1,1,1]}}]}],variants:[{id:'plain',name:'Map',activeLayerIds:[]},{id:'review',name:'Review',activeLayerIds:['annotation']}],activeVariantId:'plain',cameraBookmarks:[{name:'Overview',eye:[0,15,12],target:[0,0,0]}]});}
+let scene=api.MapScene.fromSceneState(makeState());
+const status=document.querySelector('#status'),canvas=document.querySelector('canvas');
+async function renderScene(target=scene){const result=await target.render();canvas.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(result.frame.data),result.frame.width,result.frame.height),0,0);status.textContent=`${result.report.status}\n${result.executedLayerIds.join(', ')}\n${result.metrics.coveragePixels} covered pixels`;return result;}
+async function renderExample(){const r=await renderScene();return {coverage:r.metrics.coveragePixels,layers:r.executedLayerIds,data:Array.from(r.frame.data),status:r.report.status};}
+document.querySelector('#render').onclick=()=>renderScene().catch(e=>status.textContent=e.message);
+document.querySelector('#variant').onclick=async()=>{try{await scene.applyVariant(scene.getActiveVariantId()==='plain'?'review':'plain');await renderScene();}catch(e){status.textContent=e.message;}};
+document.querySelector('#save').onclick=()=>scene.saveBundle({name:'Local map review',sink:{kind:'download',filename:'local-map.forge3d'}}).catch(e=>status.textContent=e.message);
+document.querySelector('#load').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const replacement=await api.MapScene.loadBundle(file);await replacement.prepare();scene.dispose();scene=replacement;await renderScene();}catch(error){status.textContent=error.message;}};
+window.__w19={api,features,style,baseRecipe,makeState,renderScene,renderExample,get scene(){return scene;},ready:true};status.textContent='Ready';
+addEventListener('pagehide',()=>scene.dispose(),{once:true});
+</script></html>

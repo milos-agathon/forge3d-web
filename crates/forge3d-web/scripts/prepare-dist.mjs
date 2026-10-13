@@ -46,6 +46,10 @@ if (ktxVersion !== "1.1.0") {
 }
 const vendor = join(dist, "vendor");
 mkdirSync(vendor, { recursive: true });
+const fflateRoot = join(root, 'node_modules', 'fflate');
+if (JSON.parse(readRequired(join(fflateRoot, 'package.json'))).version !== '0.8.3') throw Error('fflate must match the W00 lock: 0.8.3');
+copyVendoredScript(join(fflateRoot, 'esm', 'browser.js'), join(vendor, 'fflate.js'));
+copyRequired(join(fflateRoot, 'LICENSE'), join(vendor, 'fflate.LICENSE'));
 copyVendoredScript(join(ktxRoot, "dist", "ktx-parse.modern.js"), join(vendor, "ktx-parse.js"));
 copyRequired(join(ktxRoot, "LICENSE"), join(vendor, "ktx-parse.LICENSE"));
 // mediabunny is lock-controlled as bundled-self-hosted too: the exact
@@ -116,6 +120,8 @@ for (const file of readdirSync(dist)) {
   const path = join(dist, file);
   const source = readFileSync(path, "utf8");
   const rewritten = source
+    .replaceAll("from 'fflate'", "from './vendor/fflate.js'")
+    .replaceAll('from "fflate"', 'from "./vendor/fflate.js"')
     .replaceAll("from \"ktx-parse\"", "from \"./vendor/ktx-parse.js\"")
     .replaceAll("import(\"mediabunny\")", "import(\"./vendor/mediabunny.js\")")
     .replaceAll("import(\"geotiff\")", "import(\"./vendor/geotiff.js\")");
@@ -137,6 +143,8 @@ for (const file of readdirSync(dist)) {
 
 // Package asset manifest: SHA-256 of every emitted self-hosted third-party asset.
 const assetManifest = [
+  ['dist/vendor/fflate.js', 'fflate@0.8.3'],
+  ['dist/vendor/fflate.LICENSE', 'fflate@0.8.3'],
   ...['laz-perf.js','laz-perf.wasm','laz-perf.LICENSE'].map(file=>['assets/laz/'+file,'laz-perf@0.0.7']),
   ['dist/crs-worker.js', 'proj-wasm@0.1.0-alpha9 (verified embedded factory)'],
   ...['proj-emscripten.js','proj-emscripten.wasm','proj.db','proj.ini'].map(file=>['assets/proj/'+file,'proj-wasm@0.1.0-alpha9']),
@@ -199,4 +207,7 @@ for (const file of ['pointcloud-types','pointcloud-common','pointcloud-octree','
 
 for (const file of ['trace-types','trace-math','bvh-build','bvh','bvh-gpu','sdf-primitive','sdf','trace-scene','trace-cpu','trace-bsdf','trace-light','trace-sampling','trace-compute','trace-gpu','path-tracer','trace-worker','trace-output']) {
   writeFileSync(join(root,'types',file+'.d.ts'),readRequired(join(dist,file+'.d.ts')).replace(/from (["'])\.\/frames\.js\1/g,'from "./index.js"'));
+}
+for (const file of ['style-expressions','map-style','style-assets','scene-review','bundle','bundle-archive','bundle-output','bundle-migration']) {
+  copyRequired(join(dist,file+'.d.ts'),join(root,'types',file+'.d.ts'));
 }

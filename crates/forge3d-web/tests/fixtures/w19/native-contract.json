@@ -1,0 +1,898 @@
+{
+  "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+  "context": {
+    "properties": {
+      "n": 7,
+      "kind": "a",
+      "name": "Road"
+    },
+    "zoom": 10,
+    "geometryType": "LineString"
+  },
+  "expressions": [
+    {
+      "input": [
+        "get",
+        "n"
+      ],
+      "expected": 7
+    },
+    {
+      "input": [
+        "has",
+        "missing"
+      ],
+      "expected": false
+    },
+    {
+      "input": [
+        "at",
+        1,
+        [
+          "literal",
+          [
+            5,
+            6
+          ]
+        ]
+      ],
+      "expected": 6
+    },
+    {
+      "input": [
+        "length",
+        "é🚀"
+      ],
+      "expected": 2
+    },
+    {
+      "input": [
+        "zoom"
+      ],
+      "expected": 10
+    },
+    {
+      "input": [
+        "geometry-type"
+      ],
+      "expected": "LineString"
+    },
+    {
+      "input": [
+        "interpolate",
+        [
+          "linear"
+        ],
+        [
+          "zoom"
+        ],
+        5,
+        1,
+        15,
+        10
+      ],
+      "expected": 5.5
+    },
+    {
+      "input": [
+        "interpolate",
+        [
+          "exponential",
+          2
+        ],
+        1,
+        0,
+        0,
+        2,
+        12
+      ],
+      "expected": 4.0
+    },
+    {
+      "input": [
+        "interpolate-lab",
+        [
+          "linear"
+        ],
+        5,
+        0,
+        [
+          "literal",
+          [
+            1,
+            2,
+            3
+          ]
+        ],
+        10,
+        [
+          "literal",
+          [
+            3,
+            4,
+            5
+          ]
+        ]
+      ],
+      "expected": [
+        2.0,
+        3.0,
+        4.0
+      ]
+    },
+    {
+      "input": [
+        "step",
+        [
+          "zoom"
+        ],
+        1,
+        10,
+        2,
+        15,
+        3
+      ],
+      "expected": 2
+    },
+    {
+      "input": [
+        "match",
+        [
+          "get",
+          "kind"
+        ],
+        [
+          "a",
+          "b"
+        ],
+        5,
+        0
+      ],
+      "expected": 5
+    },
+    {
+      "input": [
+        "case",
+        [
+          ">",
+          [
+            "get",
+            "n"
+          ],
+          5
+        ],
+        "yes",
+        "no"
+      ],
+      "expected": "yes"
+    },
+    {
+      "input": [
+        "coalesce",
+        [
+          "get",
+          "missing"
+        ],
+        [
+          "get",
+          "name"
+        ]
+      ],
+      "expected": "Road"
+    },
+    {
+      "input": [
+        "+",
+        1,
+        2,
+        3
+      ],
+      "expected": 6.0
+    },
+    {
+      "input": [
+        "-",
+        2
+      ],
+      "expected": -2
+    },
+    {
+      "input": [
+        "-",
+        5,
+        2
+      ],
+      "expected": 3
+    },
+    {
+      "input": [
+        "*",
+        2,
+        3
+      ],
+      "expected": 6.0
+    },
+    {
+      "input": [
+        "/",
+        12,
+        3
+      ],
+      "expected": 4.0
+    },
+    {
+      "input": [
+        "/",
+        1,
+        0
+      ],
+      "expected": null
+    },
+    {
+      "input": [
+        "%",
+        -7,
+        3
+      ],
+      "expected": 2
+    },
+    {
+      "input": [
+        "^",
+        2,
+        3
+      ],
+      "expected": 8
+    },
+    {
+      "input": [
+        "abs",
+        -3
+      ],
+      "expected": 3
+    },
+    {
+      "input": [
+        "ceil",
+        2.1
+      ],
+      "expected": 3
+    },
+    {
+      "input": [
+        "floor",
+        2.9
+      ],
+      "expected": 2
+    },
+    {
+      "input": [
+        "round",
+        2.5
+      ],
+      "expected": 2
+    },
+    {
+      "input": [
+        "round",
+        -1.5
+      ],
+      "expected": -2
+    },
+    {
+      "input": [
+        "min",
+        3,
+        "invalid",
+        1
+      ],
+      "expected": 1
+    },
+    {
+      "input": [
+        "max",
+        3,
+        1
+      ],
+      "expected": 3
+    },
+    {
+      "input": [
+        "ln",
+        1
+      ],
+      "expected": 0.0
+    },
+    {
+      "input": [
+        "log10",
+        100
+      ],
+      "expected": 2.0
+    },
+    {
+      "input": [
+        "log2",
+        8
+      ],
+      "expected": 3.0
+    },
+    {
+      "input": [
+        "sin",
+        0
+      ],
+      "expected": 0.0
+    },
+    {
+      "input": [
+        "cos",
+        0
+      ],
+      "expected": 1.0
+    },
+    {
+      "input": [
+        "tan",
+        0
+      ],
+      "expected": 0.0
+    },
+    {
+      "input": [
+        "sqrt",
+        4
+      ],
+      "expected": 2.0
+    },
+    {
+      "input": [
+        "sqrt",
+        -1
+      ],
+      "expected": null
+    },
+    {
+      "input": [
+        "==",
+        2,
+        "2"
+      ],
+      "expected": false
+    },
+    {
+      "input": [
+        "!=",
+        2,
+        3
+      ],
+      "expected": true
+    },
+    {
+      "input": [
+        "<",
+        2,
+        3
+      ],
+      "expected": true
+    },
+    {
+      "input": [
+        "<=",
+        2,
+        2
+      ],
+      "expected": true
+    },
+    {
+      "input": [
+        ">",
+        2,
+        3
+      ],
+      "expected": false
+    },
+    {
+      "input": [
+        ">=",
+        2,
+        2
+      ],
+      "expected": true
+    },
+    {
+      "input": [
+        "all",
+        true,
+        1
+      ],
+      "expected": true
+    },
+    {
+      "input": [
+        "any",
+        false,
+        true
+      ],
+      "expected": true
+    },
+    {
+      "input": [
+        "!",
+        false
+      ],
+      "expected": true
+    },
+    {
+      "input": [
+        "concat",
+        "a",
+        [
+          "get",
+          "missing"
+        ],
+        "b"
+      ],
+      "expected": "ab"
+    },
+    {
+      "input": [
+        "downcase",
+        "ROAD"
+      ],
+      "expected": "road"
+    },
+    {
+      "input": [
+        "upcase",
+        "road"
+      ],
+      "expected": "ROAD"
+    },
+    {
+      "input": [
+        "to-number",
+        "12"
+      ],
+      "expected": 12.0
+    },
+    {
+      "input": [
+        "to-number",
+        "bad"
+      ],
+      "expected": null
+    },
+    {
+      "input": [
+        "to-boolean",
+        0
+      ],
+      "expected": false
+    },
+    {
+      "input": [
+        "typeof",
+        [
+          "literal",
+          []
+        ]
+      ],
+      "expected": "array"
+    },
+    {
+      "input": [
+        "to-string",
+        12
+      ],
+      "expected": "12"
+    },
+    {
+      "input": [
+        "rgb",
+        255,
+        0,
+        0
+      ],
+      "expected": [
+        1.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "input": [
+        "rgba",
+        0,
+        255,
+        0,
+        0.5
+      ],
+      "expected": [
+        0.0,
+        1.0,
+        0.0,
+        0.5
+      ]
+    },
+    {
+      "input": [
+        "unknown",
+        5
+      ],
+      "expected": null
+    }
+  ],
+  "colors": [
+    {
+      "input": "#fff",
+      "expected": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "input": "#000",
+      "expected": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "input": "#f008",
+      "expected": [
+        1.0,
+        0.0,
+        0.0,
+        0.5333333333333333
+      ]
+    },
+    {
+      "input": "#ff0000",
+      "expected": [
+        1.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "input": "#00ff0080",
+      "expected": [
+        0.0,
+        1.0,
+        0.0,
+        0.5019607843137255
+      ]
+    },
+    {
+      "input": "rgb(255, 0, 0)",
+      "expected": [
+        1.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "input": "rgba(0, 255, 0, 0.5)",
+      "expected": [
+        0.0,
+        1.0,
+        0.0,
+        0.5
+      ]
+    },
+    {
+      "input": "rgb(100%,0%,0%)",
+      "expected": [
+        1.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "input": "hsl(0,100%,50%)",
+      "expected": [
+        1.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "input": "hsla(120,100%,50%,0.2)",
+      "expected": [
+        0.0,
+        1.0,
+        0.0,
+        0.2
+      ]
+    },
+    {
+      "input": "black",
+      "expected": [
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "input": "white",
+      "expected": [
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "input": "red",
+      "expected": [
+        1.0,
+        0.0,
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "input": "green",
+      "expected": [
+        0.0,
+        0.5,
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "input": "gray",
+      "expected": [
+        0.5,
+        0.5,
+        0.5,
+        1.0
+      ]
+    },
+    {
+      "input": "orange",
+      "expected": [
+        1.0,
+        0.647,
+        0.0,
+        1.0
+      ]
+    },
+    {
+      "input": "transparent",
+      "expected": [
+        0.0,
+        0.0,
+        0.0,
+        0.0
+      ]
+    },
+    {
+      "input": "invalid",
+      "expected": null
+    }
+  ],
+  "sources": [
+    {
+      "path": "python/forge3d/style.py",
+      "sha256": "6e0b772ec170a849597145f7c82c5552d03d5b5518c77bd2fe0079ca2841e25b",
+      "tests": []
+    },
+    {
+      "path": "python/forge3d/style_expressions.py",
+      "sha256": "e2040ed013b36c3a02191ba797f70f989082da1ac1fbd45108ab4aa60f3cf9a7",
+      "tests": []
+    },
+    {
+      "path": "python/forge3d/bundle.py",
+      "sha256": "3cc44ab26c26292e0e7d5dfdf04f3792d28469d52a1a3af1c21e5d20ed3234e4",
+      "tests": []
+    },
+    {
+      "path": "python/forge3d/map_scene.py",
+      "sha256": "b6fec466b1629137919975d861c2079909596494a5b97c26bf2760c5217326c5",
+      "tests": []
+    },
+    {
+      "path": "src/style/sprite.rs",
+      "sha256": "25a6e10d1a3755479e5f6e975578866605fd4afdd8a22a5e7b508bba87d1643e",
+      "tests": []
+    },
+    {
+      "path": "src/style/expressions/tests.rs",
+      "sha256": "13eecaf00cca596583bec29953e8e302c155f723cda95ea36b6979385f9904c9",
+      "tests": []
+    },
+    {
+      "path": "src/viewer/scene_review.rs",
+      "sha256": "fc04bdab87fd25008b32f43d84e729fc2c78d85b04770cef4b6d91ba336f361b",
+      "tests": []
+    },
+    {
+      "path": "tests/test_style_parser.py",
+      "sha256": "4157d7ef21c81f2a530013861fe6f86ddc92b85642accd5c94bfcec2eb5e24c8",
+      "tests": [
+        "test_parse_minimal_style",
+        "test_parse_style_from_file",
+        "test_layers_by_type",
+        "test_layer_by_id",
+        "test_layer_visibility",
+        "test_fill_paint_props",
+        "test_line_paint_props",
+        "test_symbol_layout_props",
+        "test_filter_extraction",
+        "test_invalid_version",
+        "test_parse_hex_colors",
+        "test_parse_rgb_colors",
+        "test_parse_hsl_colors",
+        "test_parse_named_colors",
+        "test_paint_to_vector_style_fill",
+        "test_paint_to_vector_style_line",
+        "test_layout_to_label_style",
+        "test_filter_evaluation_equality",
+        "test_filter_evaluation_all",
+        "test_filter_evaluation_any",
+        "test_filter_evaluation_has",
+        "test_apply_style_to_features",
+        "test_layers_for_source_layer",
+        "test_zoom_range_filter",
+        "test_style_spec_layer_count"
+      ]
+    },
+    {
+      "path": "tests/test_style_render.py",
+      "sha256": "507c39ba02026ef6f2486966ee8a9b8140b8ba385262f0567144604afbeea3e5",
+      "tests": [
+        "test_style_has_multiple_layers",
+        "test_water_layer_produces_non_default_style",
+        "test_road_layer_produces_non_default_style",
+        "test_label_layer_produces_non_default_style",
+        "test_apply_style_water_features",
+        "test_apply_style_landuse_filtering",
+        "test_apply_style_road_filtering",
+        "test_style_vs_default_produces_different_output"
+      ]
+    },
+    {
+      "path": "tests/test_style_pixel_diff.py",
+      "sha256": "e44d1b12474ab7dc622c2364a68f72510b664eb8190f4cdd40d3befb030afbae",
+      "tests": [
+        "test_style_produces_different_colors",
+        "test_apply_style_changes_feature_colors",
+        "test_style_color_values_in_expected_range",
+        "test_pixel_diff_styled_vs_default",
+        "test_multiple_layers_produce_distinct_styles",
+        "test_style_integration_workflow"
+      ]
+    },
+    {
+      "path": "tests/test_style_visual.py",
+      "sha256": "046ed98c51353256b0a104af16aac975fa3dd4e6330a636a116a78e63869f6f1",
+      "tests": [
+        "test_interpolate_linear_zoom",
+        "test_interpolate_exponential",
+        "test_step_function",
+        "test_match_expression",
+        "test_match_with_array_labels",
+        "test_case_expression",
+        "test_coalesce",
+        "test_math_expressions",
+        "test_comparison_expressions",
+        "test_logic_expressions",
+        "test_string_expressions",
+        "test_color_rgb_rgba",
+        "test_road_color_by_class",
+        "test_road_width_by_zoom",
+        "test_building_color_by_height",
+        "test_styled_vs_default_produces_different_colors",
+        "test_zoom_produces_different_widths",
+        "test_property_produces_different_colors",
+        "test_expression_style_hash_differs_from_default",
+        "test_zoom_change_changes_hash"
+      ]
+    },
+    {
+      "path": "tests/test_bundle_roundtrip.py",
+      "sha256": "37e68e282213e9bb88dae89079b824285c38ed5f90e66c4145c456834552a3e9",
+      "tests": [
+        "test_manifest_roundtrip",
+        "test_save_load_bundle_minimal",
+        "test_save_load_bundle_with_preset",
+        "test_save_load_bundle_with_camera_bookmarks",
+        "test_is_bundle_false_for_nonexistent",
+        "test_is_bundle_false_for_file",
+        "test_is_bundle_false_for_dir_without_manifest",
+        "test_load_bundle_rejects_invalid",
+        "test_manifest_version_check",
+        "test_checksum_verification",
+        "test_scene_state_v2_roundtrip_preserves_variants_and_assets",
+        "test_scene_bundle_roundtrip_preserves_validation_report",
+        "test_effective_scene_state_respects_variant_layers_and_manual_overrides",
+        "test_loaded_bundle_rejects_unknown_variant_and_layer_mutations",
+        "test_load_v1_bundle_synthesizes_empty_review_registry"
+      ]
+    },
+    {
+      "path": "tests/test_bundle_render.py",
+      "sha256": "d505102f88b600d08a4d90921cb603feec8bd89f2f231f487152920ddfacc94d",
+      "tests": [
+        "test_bundle_manifest_version",
+        "test_bundle_roundtrip_preserves_preset",
+        "test_bundle_image_hash_verification"
+      ]
+    },
+    {
+      "path": "tests/test_bundle_cli.py",
+      "sha256": "4615ac86ee08fb74791b476cefedf1dac1f65394306b2c7b52edd6205a2f4e3f",
+      "tests": [
+        "test_save_bundle_flag_exists",
+        "test_load_bundle_flag_exists",
+        "test_was_cli_set_detects_explicit_flags",
+        "test_bundle_directory_structure",
+        "test_manifest_has_version_2",
+        "test_bundle_extension_added_if_missing"
+      ]
+    },
+    {
+      "path": "tests/test_diagnostics_bundle_serialization.py",
+      "sha256": "44fb51d47e2bb28c074836222c2b282169617bb038bf88aac8e1b8eb933f3804",
+      "tests": [
+        "test_diagnostic_from_dict_roundtrip_preserves_bundle_ready_fields",
+        "test_validation_report_serialization_is_lossless_and_deterministic",
+        "test_validation_report_orders_diagnostics_by_stable_sort_key",
+        "test_diagnostic_details_are_json_serializable_and_sorted",
+        "test_empty_report_is_bundle_ready_ok_status"
+      ]
+    },
+    {
+      "path": "tests/test_diagnostics_style_support.py",
+      "sha256": "580f4744d7306381ef9f174c62dacac80d959070d9b448befdf614c76fea27c5",
+      "tests": [
+        "test_style_support_accepts_local_fill_line_and_circle_layers",
+        "test_style_support_reports_unsupported_layer_types_and_fields",
+        "test_style_support_accepts_parsed_style_spec_without_claiming_mvt",
+        "test_parsed_style_support_reports_preserved_unsupported_fields",
+        "test_symbol_style_support_matches_underdeveloped_matrix_truth",
+        "test_supported_style_output_feeds_vector_overlay_config",
+        "test_symbol_style_output_feeds_future_label_layer_contract"
+      ]
+    },
+    {
+      "path": "tests/test_mapscene_save_bundle.py",
+      "sha256": "14b8c530468e10616b10e70d351e03b730b9575dad2bde348486affc1b3c9217",
+      "tests": [
+        "test_save_bundle_writes_deterministic_review_bundle_with_label_plan",
+        "test_save_bundle_preserves_blocking_diagnostics_without_render_success_claim",
+        "test_save_bundle_preserves_missing_asset_diagnostics_without_renderability"
+      ]
+    },
+    {
+      "path": "tests/test_p1_bundle_guardrails.py",
+      "sha256": "6de49b7876332b35507ad534f4f0165fb815e3f80f13c57f3e5dc4af9d4ce4a1",
+      "tests": [
+        "test_p1_bundle_persists_asset_layers_label_sources_and_diagnostics",
+        "test_p1_bundle_missing_external_assets_remain_diagnostic_bearing"
+      ]
+    },
+    {
+      "path": "tests/test_p1_bundle_roundtrip.py",
+      "sha256": "714fe602d9d89ccf45188bb44e59d18b7d9fffdd5c714fe48afad3fd9e086e47",
+      "tests": [
+        "test_bundle_persists_required_p1_review_fields_and_label_payloads",
+        "test_bundle_load_reconstructs_renderable_scene_when_assets_are_available",
+        "test_bundle_load_reports_missing_external_assets_with_structured_diagnostics"
+      ]
+    }
+  ]
+}

@@ -16,6 +16,8 @@ export interface FontAtlasOptions {
     signal?: AbortSignal;
     maxBytes?: number;
 }
+/** Internal W19 snapshot source list; callers receive no mutable defaults. */
+export declare function bundledFontSources(): FontSource[];
 export declare class FontFallbackRange {
     readonly name: string;
     readonly start: number;

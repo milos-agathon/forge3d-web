@@ -77,6 +77,8 @@ const DEFAULT_FONTS: readonly FontSource[] = [
   },
 ];
 let hbPromise: Promise<Hb> | undefined;
+/** Internal W19 snapshot source list; callers receive no mutable defaults. */
+export function bundledFontSources(): FontSource[] { return DEFAULT_FONTS.map(source => ({ id: source.id, url: String(source.url), ...(source.sha256 ? { sha256: source.sha256 } : {}) })); }
 function loadHb(): Promise<Hb> {
   return (hbPromise ??= import("../assets/harfbuzz/index.mjs") as Promise<Hb>);
 }

@@ -86,7 +86,7 @@ async function load(resource: MapResource, input: SceneRecipeInput, signal: Abor
                             for (let row = 0; row < Math.min(m.tileHeight, m.height - y * m.tileHeight); row++)
                                 heights.set(tile.subarray(row * m.tileWidth, row * m.tileWidth + Math.min(m.tileWidth, m.width - x * m.tileWidth)), (y * m.tileHeight + row) * m.width + x * m.tileWidth);
                         }
-                    value = { width: m.width, height: m.height, heights, ...(crs ?? cog.crs ? { crs: crs ?? cog.crs } : {}), ...(cog.geoTransform ? { transform: cog.geoTransform } : {}), ...(cog.nodata === null ? {} : { nodata: cog.nodata }) };
+                    value = { ...resource.parameters, width: m.width, height: m.height, heights, ...(crs ?? cog.crs ? { crs: crs ?? cog.crs } : {}), ...(cog.geoTransform ? { transform: cog.geoTransform } : {}), ...(cog.nodata === null ? {} : { nodata: cog.nodata }) };
                 }
                 finally {
                     cog.dispose();
