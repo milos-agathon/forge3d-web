@@ -69,6 +69,8 @@ from the installed package. The same twelve dist workflows run under hash-protec
 HTML, script-src/worker-src self and the required WASM allowance. It records the
 revision, tarball SHA-256, newly built WASM SHA-256, installed serving root and exit
 status in `test-results/w19-package-consumer.json`.
+The required CI build/contract job also runs this installed W19 gate and uploads
+its revision/hash report and twelve-case Playwright report as `forge3d-web-w19-installed`.
 
 Validation for these corrections: 1,681 unit tests in 75 files, including 419
 W19 tests; 24 source/dist Chromium cases; API/declarations; package/infrastructure
