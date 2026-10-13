@@ -37,7 +37,11 @@ export interface SceneStateInput {
         data: Uint8Array;
         sha256?: string;
     }[];
-    style?: StyleSpecInput;
+    style?: StyleSpecInput; /** Additional finite glyph requests for offline loaders. */
+    styleGlyphRequests?: readonly {
+        fontStack: string;
+        text: string;
+    }[];
     missingAssets?: readonly string[];
     nativeSceneState?: JsonValue;
     reviewRecord?: {

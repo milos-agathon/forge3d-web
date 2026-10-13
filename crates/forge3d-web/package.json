@@ -38,6 +38,7 @@
     "docs",
     "types",
     "examples/style-bundle.html",
+    "tests/fixtures/w19/native-v2.forge3d",
     "README.md",
     "LICENSE",
     "LICENSE-APACHE"
@@ -95,7 +96,7 @@
     "test:package-consumer:w17": "node scripts/test-w17-package-consumer.mjs",
     "test:w18": "vitest run tests/unit/w18-diagnostics.test.ts tests/unit/w18-mapscene.test.ts tests/unit/w18-review-regressions.test.ts && node --test tests/api/w18-docs.test.mjs && playwright test tests/playwright/w18_mapscene.spec.ts --project=chromium-preflight",
     "test:package-consumer:w18": "node scripts/test-w18-package-consumer.mjs",
-    "test:w19": "vitest run tests/unit/w19-style-bundle.test.ts tests/unit/w19-native-contract.test.ts && playwright test tests/playwright/w19_style_bundle.spec.ts --project=chromium-preflight",
+    "test:w19": "vitest run tests/unit/w19-style-bundle.test.ts tests/unit/w19-native-contract.test.ts tests/unit/w19-native-replay.test.ts tests/unit/w19-native-equivalents.test.ts && playwright test tests/playwright/w19_style_bundle.spec.ts --project=chromium-preflight",
     "test:package-consumer:w19": "node scripts/test-w19-package-consumer.mjs"
   },
   "devDependencies": {

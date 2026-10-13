@@ -8,7 +8,7 @@ export interface CameraBookmark { name: string; eye: [number, number, number]; t
 export type ScenePreset = Pick<SceneRecipeInput, 'camera' | 'output' | 'lighting' | 'environment' | 'postFx' | 'shadows' | 'cascadedShadows' | 'lightingProbes' | 'materials' | 'ibl' | 'timeSeconds' | 'runtimeOptions'>;
 export interface ReviewLayer { id: string; name?: string; description?: string; layers: readonly MapSceneLayerInput[]; }
 export interface SceneVariant { id: string; name?: string; description?: string; activeLayerIds: readonly string[]; preset?: Partial<ScenePreset>; }
-export interface SceneStateInput { base: SceneRecipeInput; reviewLayers?: readonly ReviewLayer[]; variants?: readonly SceneVariant[]; activeVariantId?: string | null; visibilityOverrides?: Record<string, boolean>; cameraBookmarks?: readonly CameraBookmark[]; validationReport?: ValidationReportData | null; compiledLabelPlans?: Record<string, LabelPlanData>; fonts?: readonly { id: string; data: Uint8Array; sha256?: string }[]; style?: StyleSpecInput; missingAssets?: readonly string[]; nativeSceneState?: JsonValue; reviewRecord?: { renderable: boolean; render_status: 'ready_for_render' | 'blocked_by_diagnostics' | 'requires_preparation'; last_render: { backend: string; recipe_hash: string; executed_layer_ids: string[] } | null }; }
+export interface SceneStateInput { base: SceneRecipeInput; reviewLayers?: readonly ReviewLayer[]; variants?: readonly SceneVariant[]; activeVariantId?: string | null; visibilityOverrides?: Record<string, boolean>; cameraBookmarks?: readonly CameraBookmark[]; validationReport?: ValidationReportData | null; compiledLabelPlans?: Record<string, LabelPlanData>; fonts?: readonly { id: string; data: Uint8Array; sha256?: string }[]; style?: StyleSpecInput; /** Additional finite glyph requests for offline loaders. */ styleGlyphRequests?: readonly { fontStack: string; text: string }[]; missingAssets?: readonly string[]; nativeSceneState?: JsonValue; reviewRecord?: { renderable: boolean; render_status: 'ready_for_render' | 'blocked_by_diagnostics' | 'requires_preparation'; last_render: { backend: string; recipe_hash: string; executed_layer_ids: string[] } | null }; }
 const presetFields = new Set('camera output lighting environment postFx shadows cascadedShadows lightingProbes materials ibl timeSeconds runtimeOptions'.split(' '));
 function invalid(message: string): never { throw new Forge3DError('INVALID_INPUT', message, { reason: 'invalid-scene-state' }); }
 function bytes(value: unknown): number { if (ArrayBuffer.isView(value)) return value.byteLength; if (Array.isArray(value)) return value.reduce((n, v) => n + bytes(v), 0); if (value && typeof value === 'object') return Object.values(value).reduce<number>((n, v) => n + bytes(v), 0); return typeof value === 'string' ? value.length * 2 : typeof value === 'number' ? 8 : 0; }
@@ -75,7 +75,10 @@ export class SceneState {
         const recipe = this.value.base, visible = new Set(this.visibleLayerIds()), variant = this.#state.variants!.find(v => v.id === this.activeVariantId);
         recipe.layers = [...recipe.layers ?? [], ...this.#state.reviewLayers!.filter(l => visible.has(l.id)).flatMap(l => structuredClone([...l.layers]))];
         // A variant replaces the preset; it never merges with the previously selected variant.
-        if (variant?.preset) Object.assign(recipe, structuredClone(variant.preset));
+        if (variant?.preset !== undefined) {
+            for (const key of presetFields) if (key !== 'camera' && key !== 'output') delete (recipe as unknown as Record<string, unknown>)[key];
+            Object.assign(recipe, structuredClone(variant.preset));
+        }
         return new SceneRecipe(recipe).value;
     }
     toJSON(): JsonValue { return encodeMapData({ schema: 'forge3d.scene-state.v2', state: this.value }, mapRecipeByteLimit(this.#state.base)); }

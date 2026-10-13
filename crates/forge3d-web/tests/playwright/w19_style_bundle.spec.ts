@@ -47,6 +47,39 @@ for (const dist of [false, true]) {
             });
             expect(r.coverage).toBeGreaterThan(1000); expect(r.before.cpuBytes).toBeGreaterThan(0); expect(r.after.cpuBytes).toBe(0);
         });
+        test(`W19 ${label}: HTTP loads and cold offline-cache renders preserve verified bundle state`, async ({ page }) => {
+            const r = await page.evaluate(async () => {
+                const { api, makeState } = window.__w19;
+                const http = await api.loadBundle(location.origin + '/tests/fixtures/w19/native-v2.forge3d');
+                const native = { variants: http.listVariants().map((v: any) => v.id), exposure: http.sceneState.value.base.postFx.effects[0].exposure }; http.dispose();
+                const scene = api.MapScene.fromSceneState(makeState().applyVariant('review')), original = await scene.render(), blob = await scene.saveBundle(); scene.dispose();
+                const key = location.origin + '/cached-w19.forge3d', cache = await caches.open('w19-offline'); await cache.put(key, new Response(blob));
+                const fetcher = window.fetch; let network = 0; window.fetch = async (...args: any[]) => { if (String(args[0]).startsWith('blob:')) return fetcher(...args as [any]); network++; throw Error('cold offline'); };
+                let same = false, coverage = 0;
+                try { const response = await cache.match(key), replacement = await api.MapScene.loadBundle(await response!.blob()), output = await replacement.render(); same = original.frame.data.every((v: number, i: number) => v === output.frame.data[i]); coverage = output.metrics.coveragePixels; replacement.dispose(); }
+                finally { window.fetch = fetcher; await caches.delete('w19-offline'); }
+                return { native, same, coverage, network };
+            });
+            expect(r.native).toEqual({ variants: ['review', 'empty', 'other'], exposure: 2.5 }); expect(r.same).toBe(true); expect(r.coverage).toBeGreaterThan(1000); expect(r.network).toBe(0);
+        });
+        test(`W19 ${label}: progress, quota and staged OPFS cancellation have observable outcomes`, async ({ page }) => {
+            const r = await page.evaluate(async () => {
+                const { api, makeState } = window.__w19, progress: any[] = [], initial = await api.saveBundle(makeState(), { onProgress: (p: any) => progress.push(p) });
+                const loaded = await api.loadBundle(initial, { onProgress: (p: any) => progress.push(p) }); loaded.dispose();
+                let quota; const handle = { createWritable: async () => { throw new DOMException('full', 'QuotaExceededError'); } };
+                try { await api.saveBundle(makeState(), { sink: { kind: 'file-system', handle } }); } catch (e: any) { quota = [e.code, e.details.reason]; }
+                const directory = await navigator.storage.getDirectory(), path = 'w19-staged.forge3d', file = await directory.getFileHandle(path, { create: true });
+                const original = new Uint8Array([11, 12, 13]); const writer = await file.createWritable(); await writer.write(original); await writer.close();
+                const abort = new AbortController(); let staged: FileSystemWritableFileStream | undefined, cancelled;
+                const wrapped = { createWritable: async () => { staged = await file.createWritable(); return { write: async (bytes: Uint8Array) => { await staged!.write(bytes); abort.abort(); }, close: () => staged!.close(), abort: (e: any) => staged!.abort(e) }; } };
+                try { await api.saveBundle(makeState(), { signal: abort.signal, sink: { kind: 'file-system', handle: wrapped } }); } catch (e: any) { cancelled = e.code; }
+                // Await the writer's abort before reading the committed file.
+                try { await staged?.abort(); } catch { /* already aborted */ }
+                const remaining = Array.from(new Uint8Array(await (await file.getFile()).arrayBuffer())); await directory.removeEntry(path);
+                return { quota, cancelled, remaining, phases: [...new Set(progress.map(p => p.phase))], bounded: progress.every(p => p.completed >= 0 && p.completed <= p.total), verify: progress.filter(p => p.phase === 'verify').map(p => p.completed) };
+            });
+            expect(r.quota).toEqual(['RESOURCE_LIMIT_EXCEEDED', 'quota-exceeded']); expect(r.cancelled).toBe('REQUEST_CANCELLED'); expect(r.remaining).toEqual([11, 12, 13]); expect(r.bounded).toBe(true); expect(r.phases).toEqual(expect.arrayContaining(['verify', 'archive'])); expect(r.verify).toEqual(r.verify.map((_, i) => i + 1));
+        });
         test(`W19 ${label}: cancellation, resource failure and unsupported style intent cannot change an active variant`, async ({ page }) => {
             const r = await page.evaluate(async () => {
                 const { api, makeState } = window.__w19, state = makeState().value; state.reviewLayers.push({ id: 'missing', layers: [{ kind: 'vector', layerId: 'missing-data', source: { id: 'missing-resource', format: 'vector', crs: 'LOCAL', url: location.origin + '/missing-w19.json' } }] }); state.variants.push({ id: 'broken', activeLayerIds: ['missing'] });
@@ -62,19 +95,25 @@ for (const dist of [false, true]) {
             const r = await page.evaluate(async () => {
                 const { api, makeState } = window.__w19, c = new OffscreenCanvas(2, 2), context = c.getContext('2d')!; context.fillStyle = '#ff0000'; context.fillRect(0, 0, 2, 2); const png = await c.convertToBlob({ type: 'image/png' });
                 const glyph = [8, 65, 24, 0, 32, 0, 40, 3, 48, 4, 56, 7], name = [...new TextEncoder().encode('Test')], range = [...new TextEncoder().encode('0-255')], stack = [10, name.length, ...name, 18, range.length, ...range, 26, glyph.length, ...glyph], pbf = new Uint8Array([10, stack.length, ...stack]);
-                const blob = await api.saveBundle(makeState(), { assets: { 'sprite.json': new Blob([JSON.stringify({ red: { x: 0, y: 0, width: 2, height: 2, pixelRatio: 1 } })]), 'sprite.png': png, 'glyphs/Test/0-255.pbf': pbf } }); const bundle = await api.loadBundle(blob), options = { resolveUrl: (url: string) => bundle.resolveAsset(url) };
+                const state = makeState().value; state.style.sprite = 'sprite'; state.style.glyphs = 'glyphs/{fontstack}/{range}.pbf'; state.styleGlyphRequests = [{fontStack:'Test',text:'AA'}]; const initial = await api.saveBundle(state, { assets: { 'sprite.json': new Blob([JSON.stringify({ red: { x: 0, y: 0, width: 2, height: 2, pixelRatio: 1 } })]), 'sprite.png': png, 'glyphs/Test/0-255.pbf': pbf } }); const scene = await api.MapScene.loadBundle(initial); const blob = await scene.saveBundle(); scene.dispose(); const bundle = await api.loadBundle(blob), options = { resolveUrl: (url: string) => bundle.resolveAsset(url) };
                 const atlas = await api.loadSpriteAtlas('sprite', options), ranges = await api.loadGlyphRanges('glyphs/{fontstack}/{range}.pbf', 'Test', 'AA', options), pixel = Array.from(atlas.extractSprite('red').rgba.slice(0, 4)); atlas.dispose(); bundle.dispose(); return { pixel, glyph: ranges[0].glyphs[0].left, memory: bundle.getMemoryReport() };
             });
             expect(r.pixel).toEqual([255, 0, 0, 255]); expect(r.glyph).toBe(-2); expect(r.memory.objectUrlCount).toBe(0); expect(r.memory.cpuBytes).toBe(0);
         });
+        test(`W19 ${label}: example download and file input replace native CLI paths`, async ({ page }) => {
+            const downloadEvent = page.waitForEvent('download'); await page.locator('#save').click(); const download = await downloadEvent;
+            expect(download.suggestedFilename()).toBe('local-map.forge3d'); const path = await download.path(); expect(path).not.toBeNull();
+            await page.locator('#load').setInputFiles(path!); await expect(page.locator('#status')).toContainText('covered pixels');
+            expect(await page.evaluate(() => window.__w19.scene.getActiveVariantId())).toBe('plain');
+        });
         test(`W19 ${label}: device loss replays the loaded active variant and releases transient owners`, async ({ page }) => {
             const r = await page.evaluate(async () => {
-                const { api, makeState } = window.__w19, scene = await api.MapScene.loadBundle(await api.saveBundle(makeState().applyVariant('review'))), gpu = navigator.gpu, request = gpu.requestAdapter.bind(gpu); let killed = false, lost = false;
+                const { api, makeState } = window.__w19, scene = await api.MapScene.loadBundle(await api.saveBundle(makeState().applyVariant('review'))), prior = await scene.render(), priorRecord = await scene.reviewRecord(), gpu = navigator.gpu, request = gpu.requestAdapter.bind(gpu); let killed = false, lost = false;
                 gpu.requestAdapter = async options => { const adapter = await request(options); if (adapter) { const create = adapter.requestDevice.bind(adapter); adapter.requestDevice = async options => { const device = await create(options); if (!killed) { killed = true; const submit = device.queue.submit.bind(device.queue); device.queue.submit = commands => { submit(commands); if (!lost) { lost = true; device.destroy(); } }; } return device; }; } return adapter; };
                 let code; try { await scene.render(); } catch (e: any) { code = e.code; } finally { gpu.requestAdapter = request; }
-                const failed = await scene.reviewRecord(), memory = scene.getMemoryReport(), recovered = await scene.render(), active = scene.getActiveVariantId(); scene.dispose(); return { code, lost, failed, memory, active, coverage: recovered.metrics.coveragePixels, after: scene.getMemoryReport() };
+                const failed = await scene.reviewRecord(), memory = scene.getMemoryReport(), recovered = await scene.render(), active = scene.getActiveVariantId(); scene.dispose(); return { priorCoverage: prior.metrics.coveragePixels, priorRender: priorRecord.last_render, code, lost, failed, memory, active, coverage: recovered.metrics.coveragePixels, after: scene.getMemoryReport() };
             });
-            expect(r.lost).toBe(true); expect(r.code).toBeTruthy(); expect(r.failed.last_render).toBeNull(); expect(r.failed.renderable).toBe(false); expect(r.memory.gpuBytes).toBe(0); expect(r.active).toBe('review'); expect(r.coverage).toBeGreaterThan(1000); expect(r.after.cpuBytes).toBe(0); expect(r.after.reviewStateBytes).toBe(0);
+            expect(r.priorCoverage).toBeGreaterThan(1000); expect(r.priorRender).not.toBeNull(); expect(r.lost).toBe(true); expect(r.code).toBeTruthy(); expect(r.failed.last_render).toBeNull(); expect(r.failed.renderable).toBe(false); expect(r.memory.gpuBytes).toBe(0); expect(r.active).toBe('review'); expect(r.coverage).toBeGreaterThan(1000); expect(r.after.cpuBytes).toBe(0); expect(r.after.reviewStateBytes).toBe(0);
         });
     });
 }

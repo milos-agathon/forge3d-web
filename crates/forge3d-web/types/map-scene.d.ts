@@ -71,6 +71,8 @@ export declare class MapScene {
     setReviewLayerVisible(id: string, visible: boolean, options?: {
         signal?: AbortSignal;
     }): Promise<void>;
+    /** Resolve a logical sprite/glyph URL from the archive adopted by loadBundle. */
+    resolveBundleAsset(url: string): string;
     saveBundle(options?: SaveBundleOptions): Promise<Blob>;
     static loadBundle(source: BrowserByteSource | FileSystemFileHandle, options?: BundleOptions): Promise<MapScene>;
     dispose(): void;

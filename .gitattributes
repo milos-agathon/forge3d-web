@@ -47,8 +47,15 @@ crates/forge3d-web/assets/datasets/** -text
 crates/forge3d-web/assets/proj/provenance.json text eol=lf
 crates/forge3d-web/assets/datasets/provenance.json text eol=lf
 crates/forge3d-web/tests/golden/w14/native/** -text
-crates/forge3d-web/tests/fixtures/w19/native/** -text
+crates/forge3d-web/tests/fixtures/w19/native/** -text -whitespace
 crates/forge3d-web/tests/fixtures/w19/*.json text eol=lf
+crates/forge3d-web/tests/fixtures/w19/**/*.forge3d binary
+crates/forge3d-web/tests/fixtures/w19/*.forge3d binary
+crates/forge3d-web/tests/fixtures/w19/*.png binary
+crates/forge3d-web/types/bundle*.d.ts text eol=lf
+crates/forge3d-web/types/style*.d.ts text eol=lf
+crates/forge3d-web/types/scene-review.d.ts text eol=lf
+crates/forge3d-web/docs/w19-*.json text eol=lf
 crates/forge3d-web/tests/fixtures/w14/*.json text eol=lf
 crates/forge3d-web/types/crs*.d.ts text eol=lf
 crates/forge3d-web/types/dataset*.d.ts text eol=lf

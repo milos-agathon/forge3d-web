@@ -49,9 +49,8 @@ export class StyleSpec {
             const filterCheck = (v: unknown, depth = 0): void => {
                 if (!Array.isArray(v)) return;
                 if (depth > 64) throw new Forge3DError('RESOURCE_LIMIT_EXCEEDED', 'Filter depth exceeds limit');
-                if (['all', 'any', 'none'].includes(v[0])) v.slice(1).forEach(f => filterCheck(f, depth + 1));
-                else if (typeof v[1] !== 'string') check(v, l.id, 'filter');
-                else if (!['==', '!=', '<', '<=', '>', '>=', 'in', '!in', 'has', '!has'].includes(v[0])) warn(l.id, 'filter', v[0]);
+                if (['all', 'any', '!', 'not'].includes(v[0])) v.slice(1).forEach(f => filterCheck(f, depth + 1));
+                else if (!['==', 'eq', '!=', 'neq', 'in', 'has'].includes(v[0])) warn(l.id, 'filter', v[0]);
             };
             filterCheck(l.filter);
         }
@@ -81,16 +80,20 @@ export function parseStyleColor(input: unknown): VectorColor | null {
 }
 export function styleLayerVisible(layer: StyleLayer, zoom = 10): boolean { return layer.layout?.visibility !== 'none' && zoom >= (layer.minzoom ?? -Infinity) && zoom <= (layer.maxzoom ?? Infinity); }
 export function styleToVectorStyle(layer: StyleLayer, context: StyleEvalContext = {}): VectorStyle {
-    const p = layer.paint ?? {}, prefix = layer.type === 'line' ? 'line' : layer.type === 'circle' ? 'circle' : 'fill';
-    const color = parseStyleColor(evaluateStyleExpression(p[`${prefix}-color`], context)) ?? [.2, .4, .8, 1];
-    const number = (key: string, fallback: number) => { const v = evaluateStyleExpression(p[key], context); return typeof v === 'number' && Number.isFinite(v) ? v : fallback; };
-    return { color, opacity: number(`${prefix}-opacity`, 1), lineWidth: number('line-width', 1), pointSize: 2 * number('circle-radius', 2), shape: 'circle' };
+    const p = layer.paint ?? {}, number = (key: string, fallback: number) => { const v = evaluateStyleExpression(p[key], context); return (typeof v === 'number' || typeof v === 'boolean') && Number.isFinite(Number(v)) ? Number(v) : fallback; };
+    let fill: VectorColor = [.2, .4, .8, 1], stroke: VectorColor = [0, 0, 0, 1];
+    const color = (key: string) => parseStyleColor(evaluateStyleExpression(p[key], context));
+    fill = color('fill-color') ?? fill; fill[3] *= number('fill-opacity', 1);
+    stroke = color('fill-outline-color') ?? stroke;
+    const line = color('line-color'); if (line) { fill = [...line]; stroke = [...line]; }
+    stroke[3] *= number('line-opacity', 1); fill = color('circle-color') ?? fill;
+    return { color: layer.type === 'line' ? stroke : fill, opacity: 1, lineWidth: number('line-width', 1), pointSize: 2 * number('circle-radius', 2), shape: 'circle' };
 }
 export function styleToLabelStyle(layer: StyleLayer, context: StyleEvalContext = {}): LabelStyleInput {
     const p = layer.paint ?? {}, l = layer.layout ?? {}, value = (e: unknown, fallback: number) => { const v = evaluateStyleExpression(e, context); return typeof v === 'number' && Number.isFinite(v) ? v : fallback; };
     const color = parseStyleColor(evaluateStyleExpression(p['text-color'], context)) ?? [.1, .1, .1, 1]; color[3] *= value(p['text-opacity'], 1);
-    const offset = evaluateStyleExpression(l['text-offset'], context);
-    return { fontSize: value(l['text-size'], 14), color, haloColor: parseStyleColor(evaluateStyleExpression(p['text-halo-color'], context)) ?? [1, 1, 1, .8], haloWidth: value(p['text-halo-width'], 1.5), offset: Array.isArray(offset) && offset.length === 2 ? [Number(offset[0]), Number(offset[1])] : [0, 0] };
+    const size = value(l['text-size'], 14), offset = l['text-offset'];
+    return { fontSize: size, color, haloColor: parseStyleColor(evaluateStyleExpression(p['text-halo-color'], context)) ?? [1, 1, 1, .8], haloWidth: value(p['text-halo-width'], 1.5), offset: Array.isArray(offset) && offset.length >= 2 && offset.slice(0, 2).every(v => typeof v === 'number') ? [Number(offset[0]) * size, Number(offset[1]) * size] : [0, 0] };
 }
 export function styleLabelRecords(layer: StyleLayer, features: readonly VectorFeature[], zoom = 10): LabelRecord[] {
     if (!styleLayerVisible(layer, zoom)) return [];
@@ -99,9 +102,9 @@ export function styleLabelRecords(layer: StyleLayer, features: readonly VectorFe
         return { id: f.id, text, world_pos: f.kind === 'point' ? f.position : [], typography: { font_size: styleToLabelStyle(layer, { properties: props, zoom }).fontSize } };
     });
 }
-/** Maps every supported style layer into ordered W12 layers. Symbols retain their native diagnostic. */
+/** Each feature uses its first matching native layer. Symbols retain their native diagnostic. */
 export function compileStyle(spec: StyleSpec, sources: Record<string, readonly VectorFeature[]>, options: { zoom?: number; crs?: string } = {}): { layers: MapSceneLayerInput[]; report: ValidationReport } {
-    const zoom = options.zoom ?? 10, layers: MapSceneLayerInput[] = [], report = spec.validate(), diagnostics: Diagnostic[] = []; let id = 1;
+    const zoom = options.zoom ?? 10, layers: MapSceneLayerInput[] = [], report = spec.validate(), diagnostics: Diagnostic[] = [], assigned = new Map<string, Set<number>>(); let id = 1;
     for (const [zOrder, layer] of spec.layers.entries()) {
         if (!styleLayerVisible(layer, zoom) || !['fill', 'line', 'circle'].includes(layer.type)) continue;
         const key = layer['source-layer'] ?? layer.source ?? '', source = sources[key];
@@ -109,12 +112,12 @@ export function compileStyle(spec: StyleSpec, sources: Record<string, readonly V
         const features: VectorFeature[] = [];
         for (const feature of source) {
             const geometryType = feature.kind === 'point' ? 'Point' : feature.kind === 'line' ? 'LineString' : 'Polygon', ctx = { properties: feature.properties ?? {}, zoom, geometryType };
-            if (feature.kind !== (layer.type === 'fill' ? 'polygon' : layer.type === 'line' ? 'line' : 'point') || !evaluateStyleFilter(layer.filter, ctx)) continue;
-            const copy = structuredClone(feature); copy.id = id++; copy.properties = { ...copy.properties, forge3d_source_id: feature.id, forge3d_style_layer: layer.id }; copy.style = { ...copy.style, ...styleToVectorStyle(layer, ctx) }; features.push(copy);
-            const outline = layer.paint?.['fill-outline-color'];
-            if (feature.kind === 'polygon' && outline !== undefined) for (const ring of feature.rings) features.push({ id: id++, kind: 'line', positions: [...structuredClone(ring), structuredClone(ring[0]!)], style: { color: parseStyleColor(evaluateStyleExpression(outline, ctx)) ?? [0, 0, 0, 1], lineWidth: 1 }, properties: { ...copy.properties } });
+            if (assigned.get(key)?.has(feature.id) || feature.kind !== (layer.type === 'fill' ? 'polygon' : layer.type === 'line' ? 'line' : 'point') || !evaluateStyleFilter(layer.filter, ctx)) continue;
+            if (!assigned.has(key)) assigned.set(key, new Set()); assigned.get(key)!.add(feature.id);
+            const copy = structuredClone(feature); copy.id = id++; copy.properties = { ...copy.properties, forge3d_source_id: feature.id, forge3d_style_layer: layer.id }; copy.style = { ...copy.style, ...styleToVectorStyle(layer) }; features.push(copy);
+            copy.style.lineWidth = Math.max(copy.style.lineWidth ?? 1, .1); copy.style.pointSize = Math.max(copy.style.pointSize ?? 4, .1);
         }
-        layers.push({ kind: 'vector', layerId: layer.id, source: { id: `style:${layer.id}`, format: 'vector', ...(options.crs ? { crs: options.crs } : {}), data: { name: layer.id, features, zOrder } } });
+        if (features.length) layers.push({ kind: 'vector', layerId: layer.id, source: { id: `style:${layer.id}`, format: 'vector', ...(options.crs ? { crs: options.crs } : {}), data: { name: layer.id, features, zOrder } } });
     }
     return { layers, report: new ValidationReport({ ...report.toJSON(), diagnostics: [...report.diagnostics, ...diagnostics] }) };
 }

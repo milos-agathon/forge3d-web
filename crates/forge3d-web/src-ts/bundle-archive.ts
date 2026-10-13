@@ -13,7 +13,7 @@ export function bundlePath(path: string): string {
 export function bundleFailure(message: string, reason = 'invalid-bundle'): never { throw new Forge3DError('IO_ERROR', message, { reason }); }
 function zipPath(path: string): string { return path.endsWith('/') ? bundlePath(path.slice(0, -1)) + '/' : bundlePath(path); }
 export function bundleCancelled(signal?: AbortSignal): void { if (signal?.aborted) throw new Forge3DError('REQUEST_CANCELLED', 'Bundle operation cancelled'); }
-export async function bundleHash(data: Uint8Array): Promise<string> { return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', data.slice().buffer)), n => n.toString(16).padStart(2, '0')).join(''); }
+export async function bundleHash(data: Uint8Array): Promise<string> { return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', Uint8Array.from(data).buffer)), n => n.toString(16).padStart(2, '0')).join(''); }
 /** Reject ZIP64, duplicate names, oversized central declarations and malformed/trailing data before inflate. */
 export function decodeBundleArchive(bytes: Uint8Array, input: BundleLimits = {}, signal?: AbortSignal): Record<string, Uint8Array> {
     const limits = bundleLimits(input); bundleCancelled(signal);

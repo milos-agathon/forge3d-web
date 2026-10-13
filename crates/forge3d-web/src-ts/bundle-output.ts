@@ -3,6 +3,14 @@ import { writeByteSink } from './browser-io.js';
 import { bundleCancelled, bundlePath } from './bundle-archive.js';
 /** Abortable output with stream backpressure and staged filesystem writes. */
 export async function writeBundleOutput(bytes: Uint8Array, sink: BrowserByteSink, signal?: AbortSignal): Promise<void> {
+    try { await writeOutput(bytes, sink, signal); } catch (e) {
+        bundleCancelled(signal);
+        if (e instanceof Forge3DError) throw e;
+        if (e instanceof DOMException && e.name === 'QuotaExceededError') throw new Forge3DError('RESOURCE_LIMIT_EXCEEDED', 'Bundle storage quota exceeded', { reason: 'quota-exceeded' });
+        throw new Forge3DError('IO_ERROR', `Bundle output failed: ${String(e)}`);
+    }
+}
+async function writeOutput(bytes: Uint8Array, sink: BrowserByteSink, signal?: AbortSignal): Promise<void> {
     bundleCancelled(signal);
     if (sink.kind === 'blob' || sink.kind === 'download' || sink.kind === 'file-system' && !sink.handle) { await writeByteSink(bytes.slice().buffer, sink); bundleCancelled(signal); return; }
     let handle: FileSystemFileHandle | undefined;
@@ -24,6 +32,6 @@ export async function writeBundleOutput(bytes: Uint8Array, sink: BrowserByteSink
         bundleCancelled(signal);
         for (let i = 0; i < bytes.length; i += 64 * 1024) { bundleCancelled(signal); await Promise.race([writer.write(bytes.slice(i, i + 64 * 1024)), aborted]); }
         bundleCancelled(signal); await Promise.race([writer.close(), aborted]);
-    } catch (e) { void writer.abort(e).catch(() => undefined); throw e; }
+    } catch (e) { const cleanup = writer.abort(e).catch(() => undefined); if (sink.kind !== 'stream') await cleanup; throw e; }
     finally { signal?.removeEventListener('abort', abort); if ('releaseLock' in writer) writer.releaseLock(); }
 }

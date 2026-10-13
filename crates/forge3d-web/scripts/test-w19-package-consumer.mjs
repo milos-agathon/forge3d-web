@@ -37,6 +37,7 @@ assert.equal(
   "",
   "W19 installed gate requires a clean committed worktree",
 );
+run("npm", ["run", "build:wasm"]);
 run("npm", ["run", "build:ts"]);
 run("npm", ["run", "prepare-dist"]);
 run("npm", ["run", "test:api"]);
@@ -101,28 +102,10 @@ const server = createServer((req, res) => {
   try {
     const url = new URL(req.url, "http://localhost"),
       pathname = decodeURIComponent(url.pathname);
-    let path;
-    if (pathname.startsWith("/dist/") || pathname.startsWith("/assets/"))
-      path = resolve(installed, "." + pathname);
-    else if (
-      pathname.startsWith("/examples/") ||
-      pathname.startsWith("/tests/fixtures/w16/") ||
-      pathname.startsWith("/tests/fixtures/w19/")
-    )
-      path = resolve(root, "." + pathname);
-    else throw Error("consumer route unavailable");
-    const allowed = path.startsWith(installed) ? installed : root,
-      rel = relative(allowed, path);
-    if (rel.startsWith("..") || isAbsolute(rel))
-      throw Error("outside consumer");
+    if (!['/dist/', '/assets/', '/examples/', '/tests/fixtures/w19/'].some(prefix => pathname.startsWith(prefix))) throw Error('consumer route unavailable');
+    const path = resolve(installed, '.' + pathname), rel = relative(installed, path);
+    if (rel.startsWith('..') || isAbsolute(rel)) throw Error('outside consumer');
     let bytes = readFileSync(path);
-    if (extname(path) === ".html")
-      bytes = Buffer.from(
-        bytes
-          .toString("utf8")
-          .replaceAll("../src-ts/index.ts", "/dist/index.js")
-          .replaceAll("/src-ts/index.ts", "/dist/index.js"),
-      );
     const scriptHashes = extname(path) === '.html' ? [...bytes.toString('utf8').matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)].map(m => "'sha256-" + createHash('sha256').update(m[1]).digest('base64') + "'") : [];
     const headers={
       "content-type": {".html":"text/html", ".js":"text/javascript", ".mjs":"text/javascript", ".json":"application/json", ".wasm":"application/wasm", ".ttf":"font/ttf", ".png":"image/png"}[extname(path)] ?? "application/octet-stream",
@@ -181,6 +164,9 @@ try {
     verifiedAt: new Date().toISOString(),
     revision: run("git", ["rev-parse", "HEAD"]).trim(),
     packageSha256,
+    wasmSha256: createHash("sha256").update(readFileSync(join(installed, "dist/forge3d_web_bg.wasm"))).digest("hex"),
+    wasmRebuilt: true,
+    servedRoot: installed,
     tarball,
     installed,
     exitCode: result,

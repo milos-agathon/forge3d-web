@@ -43,11 +43,21 @@ scene.dispose(); restored.dispose();
 `loadStyleLayers` loads bounded GeoJSON sources; `styleFeaturesFromGeoJson`
 converts Point, LineString, Polygon and their Multi variants. GeoJSON coordinates
 `[x,z,elevation]` become engine coordinates `[x,elevation,z]`; use W14 CRS
-transforms when coordinates require reprojection. `compileStyle` maps fill,
-outline, line and circle to ordered W12 layers. It assigns unique pick IDs and
+transforms when coordinates require reprojection. `compileStyle` assigns each feature to its first matching geometry-compatible
+fill, line or circle layer, as the native overlay converter does. Fill outline
+color is available to the paint helper; the native converter does not draw an
+extra outline. Default lines are black. It assigns unique pick IDs and
 retains the original identity in feature properties. Native `maxzoom` is
-inclusive. Expressions cover native property, control, interpolation, arithmetic,
-comparison, logic, string, conversion and color families. Like the native numeric
+inclusive. Converter paint evaluation uses the native default context: empty
+properties and zoom 10; the supplied zoom selects visible layers. For explicit
+data-driven paint evaluation, call `styleToVectorStyle(layer, {properties, zoom})`.
+Legacy filters preserve native pass-through for unknown operators and diagnose
+the unsupported intent. Text offsets are em values multiplied by text size.
+Expressions cover native property, control, interpolation, arithmetic,
+comparison, logic, string, conversion and color families, including Python
+boolean/numeric coercion and computed float formatting. JavaScript cannot
+distinguish literal `3` from literal `3.0`; integral literals follow integer
+formatting, while computed native float results retain their kind. Like the native numeric
 evaluator, HCL/LAB aliases use numeric interpolation; the parser explicitly
 diagnoses unavailable perceptual color interpolation. Invalid/unknown fields and
 operators never disappear from the support report. `MapScene.fromStyle` retains
@@ -80,9 +90,15 @@ No runtime dependency CDN is required: `fflate@0.8.3` and its MIT notice ship un
 file handle, download or OPFS sink. `loadBundle` accepts URL/File/Blob/stream/
 bytes/file handles, including OPFS handles. `LoadedBundle` exposes defensive
 manifest/state snapshots, named variants, visibility, verified bytes and asset
-resolution. Supply sprite/glyph assets through `assets`, keyed by their original
-resource URLs; then pass `resolveUrl: url => bundle.resolveAsset(url)` to the
-style asset loaders. `LoadedBundle.dispose` revokes every lease and releases
+resolution. A style sprite base acquires its `.json`/`.png` pair. Glyph ranges
+come from inline symbol text, `styleGlyphRequests: [{fontStack, text}]`, or an
+explicit inventory in `assets` keyed by resolved original URLs. Supply `@2x`
+assets explicitly when needed. An unresolved glyph template cannot claim offline
+completeness. Pass `resolveUrl: url => bundle.resolveAsset(url)` to the loaders,
+or `url => scene.resolveBundleAsset(url)` for an adopted MapScene. Both save
+paths retain supplemental assets and logical aliases. Streamed MVT/raster source
+URLs and tile templates remain unsupported intent with warnings; they are never
+fetched or promoted into executable content during packaging. `LoadedBundle.dispose` revokes every lease and releases
 archive/state buffers. `MapScene.loadBundle` adopts this ownership and releases it
 when the scene is disposed. Worker-compatible array/Blob APIs avoid DOM use.
 
@@ -92,13 +108,19 @@ render claim; included assets still verify. Use `allowMissingAssets: false` for 
 strict export. Standalone `saveBundle` defaults to strict asset acquisition.
 MapScene snapshots use a fixed default archive timestamp for deterministic output;
 `createdAt` can override it. Cancellation and disposal abort pending acquisition
-and stream/file writes. Variant changes prepare a candidate before replacing any
+and stream/file writes. Staged filesystem cancellation preserves the previously
+committed file. Storage quota failures return `RESOURCE_LIMIT_EXCEEDED` with
+`reason: quota-exceeded`; `onProgress` reports asset, archive and verification
+work with bounded completed/total counters. Variant changes prepare a candidate before replacing any
 active resources. Failure, cancellation or disposal leaves no partial commit;
 applying a variant clears manual visibility overrides and replaces its preset.
 
 Migration accepts checksum-verified browser v1 recipe archives and zipped native
 v1/v2 directories. Native legacy mirrors synthesize a review registry; native v2
-variants retain their IDs and ordering. `nativeRecipe` can supply camera/output
+variants retain their IDs and ordering. The native `base_state` key is read
+directly; preset/bookmark mirrors override it when present. Variant presets
+replace base preset fields even when empty. Terrain colormaps and native label
+anchors are preserved in their typed adapters. `nativeRecipe` can supply camera/output
 context. Native vector payloads, labels, raster overlays and GeoTIFF terrain map
 to browser layers. Original native state/manifest are retained as
 `nativeSceneState`; fields needing a browser adapter return blocking
@@ -107,7 +129,7 @@ Native filesystem paths, scatter configuration and opaque preset fields retain
 their data even when the browser adapter cannot execute them.
 
 Run the example at `examples/style-bundle.html`. The checks are `npm run test:w19`
-and `npm run test:package-consumer:w19`. Native expression/color references are
+and `npm run test:package-consumer:w19`. Native expression/color/mapping and real-saver references are
 executed independently from hash-pinned `bf8db93` sources by
 `scripts/generate-w19-native-fixtures.py`; web output is not the oracle. Browser
 tests assert covered geometry and measure removal of each styled layer, exact

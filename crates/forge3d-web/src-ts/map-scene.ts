@@ -263,11 +263,13 @@ export class MapScene {
     }
     applyVariant(id: string, options: { signal?: AbortSignal } = {}): Promise<void> { this.#live(); return this.#transition(this.#review.applyVariant(id), options.signal); }
     setReviewLayerVisible(id: string, visible: boolean, options: { signal?: AbortSignal } = {}): Promise<void> { this.#live(); return this.#transition(this.#review.setReviewLayerVisible(id, visible), options.signal); }
+    /** Resolve a logical sprite/glyph URL from the archive adopted by loadBundle. */
+    resolveBundleAsset(url: string): string { this.#live(); if (!this.#bundle) throw new Forge3DError('INVALID_INPUT', 'Scene has no adopted bundle'); return this.#bundle.resolveAsset(url); }
     async saveBundle(options: SaveBundleOptions = {}): Promise<Blob> {
         this.#live(); if (this.#busy) throw new Forge3DError('INVALID_INPUT', 'MapScene operation already in progress');
         this.#busy = true; const abort = new AbortController(); this.#abort = abort;
         const signal = options.signal ? AbortSignal.any([options.signal, abort.signal]) : abort.signal;
-        try { mapCancelled(signal); const state = this.#review.value, review = await this.reviewRecord(); state.validationReport = review.validation_report; state.compiledLabelPlans = this.compiledLabelPlans; state.reviewRecord = { renderable: review.renderable, render_status: review.render_status, last_render: review.last_render }; const result = await saveBundle(state, { allowMissingAssets: true, createdAt: '2000-01-01T00:00:00Z', ...options, signal }); this.#live(); return result; }
+        try { mapCancelled(signal); const state = this.#review.value, review = await this.reviewRecord(); state.validationReport = review.validation_report; state.compiledLabelPlans = this.compiledLabelPlans; state.reviewRecord = { renderable: review.renderable, render_status: review.render_status, last_render: review.last_render }; const result = await saveBundle(state, { allowMissingAssets: true, createdAt: '2000-01-01T00:00:00Z', ...options, signal, assets: { ...this.#bundle?.retainedAssets(), ...options.assets } }); this.#live(); return result; }
         finally { this.#busy = false; this.#abort = undefined; }
     }
     static async loadBundle(source: BrowserByteSource | FileSystemFileHandle, options: BundleOptions = {}): Promise<MapScene> {

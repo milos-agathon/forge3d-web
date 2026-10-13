@@ -29,7 +29,7 @@ describe('W19 native style expressions', () => {
         expect(ev(['all', false, nested])).toBe(false);
     });
     it.each([
-        [['==', 'kind', 'a'], true], [['!=', 'kind', 'b'], true], [['all', ['has', 'name'], ['>', 'n', 6]], true], [['any', ['==', 'n', 2], ['in', 'kind', 'a', 'b']], true], [['none', ['==', 'n', 2]], true], [['!has', 'absent'], true], [['!in', 'kind', 'b'], true], [['==', '$type', 'LineString'], true], [['==', ['get', 'name'], 'Road'], true],
+        [['==', 'kind', 'a'], true], [['!=', 'kind', 'b'], true], [['all', ['has', 'name'], ['>', 'n', 6]], true], [['any', ['==', 'n', 2], ['in', 'kind', 'a', 'b']], true], [['none', ['==', 'n', 2]], true], [['!has', 'absent'], true], [['!in', 'kind', 'b'], true], [['==', '$type', 'LineString'], false], [['==', ['get', 'name'], 'Road'], true],
     ])('supports property and expression filter %j', (filter, expected) => expect(evaluateStyleFilter(filter, ctx)).toBe(expected));
 });
 describe('W19 local feature styles and honest support', () => {
@@ -38,14 +38,14 @@ describe('W19 local feature styles and honest support', () => {
         const style = await loadStyle(new Blob([JSON.stringify({ version: 8, name: 'test', layers: [{ id: 'water', type: 'fill', 'source-layer': 'water', paint: { 'fill-color': '#ff0000', 'fill-opacity': .5 } }] })]));
         expect(style.layerById('water')?.type).toBe('fill'); expect(style.layersForSourceLayer('water')).toHaveLength(1); expect(style.layersByType('fill')).toHaveLength(1);
         const copy = style.value; copy.layers![0]!.id = 'changed'; expect(style.layerById('water')).toBeDefined();
-        expect(styleToVectorStyle(style.layers[0]!).color).toEqual([1, 0, 0, 1]); expect(styleToVectorStyle(style.layers[0]!).opacity).toBe(.5);
+        expect(styleToVectorStyle(style.layers[0]!).color).toEqual([1, 0, 0, .5]); expect(styleToVectorStyle(style.layers[0]!).opacity).toBe(1);
         expect(() => parseStyle({ version: 7 })).toThrow('version'); expect(() => parseStyle({ layers: [{ id: 'x', type: 'line' }, { id: 'x', type: 'fill' }] })).toThrow('unique');
     });
     it('maps fill, outline, line and circle with expressions, IDs, ordering and zoom visibility', () => {
         const features: VectorFeature[] = [{ id: 7, kind: 'polygon', rings: [[[-2, 0, -2], [2, 0, -2], [2, 0, 2]]], properties: { n: 3 } }, { id: 8, kind: 'line', positions: [[-2, 1, 0], [2, 1, 0]], properties: { class: 'road' } }, { id: 9, kind: 'point', position: [0, 2, 0] }];
         const spec = parseStyle({ layers: [{ id: 'area', type: 'fill', source: 'local', paint: { 'fill-color': ['match', ['get', 'n'], 3, '#ff0000', '#000000'], 'fill-outline-color': '#ffffff' } }, { id: 'road', type: 'line', source: 'local', filter: ['==', 'class', 'road'], paint: { 'line-color': '#00ff00', 'line-width': 3 } }, { id: 'point', type: 'circle', source: 'local', paint: { 'circle-radius': 8 } }, { id: 'hidden', type: 'circle', source: 'local', layout: { visibility: 'none' } }] });
         const result = compileStyle(spec, { local: features }, { crs: 'LOCAL' }); expect(result.report.status).toBe('ok'); expect(result.layers.map(l => l.layerId)).toEqual(['area', 'road', 'point']);
-        const rendered = result.layers.flatMap(l => l.kind === 'vector' ? l.source.data!.features : []); expect(rendered.map(f => f.id)).toEqual([1, 2, 3, 4]); expect(rendered[0]!.properties?.forge3d_source_id).toBe(7); expect(rendered[2]!.style?.lineWidth).toBe(3); expect(rendered[3]!.style?.pointSize).toBe(16);
+        const rendered = result.layers.flatMap(l => l.kind === 'vector' ? l.source.data!.features : []); expect(rendered.map(f => f.id)).toEqual([1, 2, 3]); expect(rendered[0]!.properties?.forge3d_source_id).toBe(7); expect(rendered[1]!.style?.lineWidth).toBe(3); expect(rendered[2]!.style?.pointSize).toBe(16);
         expect(styleLayerVisible({ id: 'x', type: 'line', minzoom: 5, maxzoom: 15 }, 15)).toBe(true); expect(styleLayerVisible({ id: 'x', type: 'line', maxzoom: 15 }, 16)).toBe(false);
     });
     it('diagnoses unknown fields/operators/sources and retains exact native symbol diagnostic', () => {
@@ -110,7 +110,7 @@ describe('W19 bundles, review registry and migration', () => {
         const data = new TextEncoder().encode(new SceneRecipe(recipe()).serialize()), files = { 'scene/recipe.json': data, 'manifest.json': new TextEncoder().encode(JSON.stringify({ version: 1, name: 'legacy', checksums: { 'scene/recipe.json': await bundleHash(data) } })) }, loaded = await loadBundle(encodeBundleArchive(files));
         expect(loaded.migratedFrom).toBe(1); expect(loaded.listVariants()).toEqual([]); expect(loaded.listReviewLayers()).toEqual([]); const resaved = await loadBundle(await loaded.save()); expect(resaved.manifest.version).toBe(2); loaded.dispose(); resaved.dispose();
     });
-    it.each([1, 2])('migrates actual native v%s directory manifests, mirrors and review registries without losing raw state', async version => {
+    it.each([1])('migrates legacy native v%s directory manifests, mirrors and review registries without losing raw state', async version => {
         vi.stubGlobal('fetch', vi.fn(async url => new Response(readFileSync(new URL('../../assets/fonts/' + new URL(String(url)).pathname.split('/').at(-1), import.meta.url)))));
         const encode = (v: unknown) => new TextEncoder().encode(JSON.stringify(v)), base = { preset: { exposure: 2 }, camera_bookmarks: [{ name: 'legacy', eye: [1, 2, 3], target: [0, 0, 0], up: [0, 1, 0], fov_deg: 45 }], vector_overlays: [{ vertices: [[0, 0, 0, 1, 0, 0, 1]], indices: [0], primitive: 'points' }], labels: [{ text: 'Legacy', world_pos: [0, 0, 0] }] }, native = { base, review_layers: [{ id: 'notes', labels: [{ text: 'Review', world_pos: [1, 0, 0] }] }], variants: [{ id: 'review', active_layer_ids: ['notes'] }], active_variant_id: 'review' };
         const files: Record<string, Uint8Array> = version === 1 ? { 'render/preset.json': encode(base.preset), 'camera/bookmarks.json': encode(base.camera_bookmarks), 'overlays/vectors.geojson': encode(base.vector_overlays), 'overlays/labels.json': encode(base.labels) } : { 'scene/state.json': encode(native) };
@@ -153,6 +153,41 @@ describe('W19 bundles, review registry and migration', () => {
     });
 });
 describe('W19 sprite and glyph asset contracts', () => {
+    it('archives style sprite/glyph URLs and retains all supplied payloads through both save paths', async () => {
+        const style = { version: 8, sprite: 'https://style.test/sprite', glyphs: 'https://style.test/{fontstack}/{range}.pbf', layers: [] };
+        const assets = { 'https://style.test/sprite.json': new Uint8Array([1]), 'https://style.test/sprite.png': new Uint8Array([2]), 'https://style.test/Test/0-255.pbf': new Uint8Array([3]) };
+        vi.stubGlobal('fetch', vi.fn(() => { throw Error('No fetch permitted'); }));
+        const blob = await saveBundle({ base: recipe(), style, styleGlyphRequests: [{ fontStack: 'Test', text: 'A' }] }, { assets });
+        const bundle = await loadBundle(blob), scene = await MapScene.loadBundle(blob);
+        const resaved = [await bundle.save(), await scene.saveBundle()];
+        for (const data of resaved) {
+            const loaded = await loadBundle(data); expect(Object.keys(loaded.manifest.asset_aliases!)).toEqual(Object.keys(assets));
+            for (const [url, bytes] of Object.entries(assets)) expect(loaded.asset(loaded.manifest.asset_aliases![url]!)).toEqual(bytes);
+            expect(loaded.sceneState.value.missingAssets).toBeUndefined(); loaded.dispose();
+        }
+        expect(scene.resolveBundleAsset('https://style.test/sprite.json')).toMatch(/^blob:/);
+        scene.dispose(); bundle.dispose();
+    });
+    it('fetches required style assets and blocks unresolved glyph templates instead of claiming offline success', async () => {
+        const fetcher = vi.fn(async () => new Response(new Uint8Array([1]))); vi.stubGlobal('fetch', fetcher);
+        const loaded = await loadBundle(await saveBundle({ base: recipe(), style: { sprite: 'https://style.test/sprite', layers: [] } }));
+        expect(fetcher.mock.calls.map(c => String(c[0]))).toEqual(['https://style.test/sprite.json', 'https://style.test/sprite.png']); loaded.dispose();
+        const unresolved = await loadBundle(await saveBundle({ base: recipe(), style: { glyphs: 'https://style.test/{fontstack}/{range}.pbf', layers: [] } }, { allowMissingAssets: true }));
+        expect(unresolved.validationReport?.hasErrors).toBe(true); expect(unresolved.sceneState.value.reviewRecord?.renderable).toBe(false); unresolved.dispose();
+    });
+    it('retains unsupported streamed-source URLs as warning-only intent without fetching TileJSON or tiles', async () => {
+        const style = parseStyle({ sources: { tiles: { type: 'vector', url: 'https://missing.test/tiles.json', tiles: ['https://missing.test/{z}/{x}/{y}.pbf'] } }, layers: [] });
+        const fetcher = vi.fn(() => { throw Error('Unused source fetched'); }); vi.stubGlobal('fetch', fetcher);
+        const loaded = await loadBundle(await saveBundle({ base: recipe(), style: style.value }));
+        expect(fetcher).not.toHaveBeenCalled(); expect(loaded.sceneState.value.style).toEqual(style.value); expect(loaded.validationReport?.hasErrors).toBe(false); expect(loaded.validationReport?.diagnostics.length).toBeGreaterThan(0); loaded.dispose();
+    });
+    it('reports bounded progress and maps storage quota failures to a typed resource error', async () => {
+        const progress: any[] = [], loaded = await loadBundle(await saveBundle({ base: recipe() }, { assets: { one: new Uint8Array([1]), two: new Uint8Array([2]) }, onProgress: p => progress.push(p) }), { onProgress: p => progress.push(p) });
+        for (const p of progress) { expect(p.completed).toBeGreaterThanOrEqual(0); expect(p.completed).toBeLessThanOrEqual(p.total); }
+        expect(progress.filter(p => p.phase === 'verify').map(p => p.completed)).toEqual([1, 2, 3]); expect(progress.filter(p => p.phase === 'archive').map(p => p.completed)).toEqual([0, 1]); loaded.dispose();
+        const stream = new WritableStream<Uint8Array>({ write() { throw new DOMException('quota', 'QuotaExceededError'); } });
+        await expect(saveBundle({ base: recipe() }, { sink: { kind: 'stream', stream } })).rejects.toMatchObject({ code: 'RESOURCE_LIMIT_EXCEEDED', details: { reason: 'quota-exceeded' } });
+    });
     it('extracts exact atlas pixels/UVs, DPI and checks malformed rectangles', () => {
         const atlas = new SpriteAtlas({ icon: { x: 1, y: 0, width: 1, height: 2, pixelRatio: 2 } }, 2, 2, new Uint8Array([0, 0, 0, 0, 255, 0, 0, 255, 0, 0, 0, 0, 0, 255, 0, 128]));
         expect(atlas.extractSprite('icon')?.rgba).toEqual(new Uint8Array([255, 0, 0, 255, 0, 255, 0, 128])); expect(atlas.getUvs('icon')).toEqual([.5, 0, 1, 1]); expect(atlas.get('missing')).toBeNull(); atlas.dispose(); expect(atlas.getMemoryReport().cpuBytes).toBe(0);

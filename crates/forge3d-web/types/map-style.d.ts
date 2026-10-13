@@ -45,7 +45,7 @@ export declare function styleLayerVisible(layer: StyleLayer, zoom?: number): boo
 export declare function styleToVectorStyle(layer: StyleLayer, context?: StyleEvalContext): VectorStyle;
 export declare function styleToLabelStyle(layer: StyleLayer, context?: StyleEvalContext): LabelStyleInput;
 export declare function styleLabelRecords(layer: StyleLayer, features: readonly VectorFeature[], zoom?: number): LabelRecord[];
-/** Maps every supported style layer into ordered W12 layers. Symbols retain their native diagnostic. */
+/** Each feature uses its first matching native layer. Symbols retain their native diagnostic. */
 export declare function compileStyle(spec: StyleSpec, sources: Record<string, readonly VectorFeature[]>, options?: {
     zoom?: number;
     crs?: string;

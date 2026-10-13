@@ -57,6 +57,8 @@ export declare class LoadedBundle {
     };
     /** URL leases belong to this bundle and are revoked by dispose. MapScene.loadBundle adopts that lifetime. */
     runtimeSceneState(): Promise<SceneState>;
+    /** Defensive payload copies used when a MapScene adopts and re-saves this archive. */
+    retainedAssets(): Record<string, Uint8Array>;
     save(options?: SaveBundleOptions): Promise<Blob>;
     dispose(): void;
 }

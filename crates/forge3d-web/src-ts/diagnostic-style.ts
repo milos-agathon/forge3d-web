@@ -31,7 +31,7 @@ export function validateStyleSupport(style: {
         }
         else
             for (const section of ['paint', 'layout'] as const) {
-                const allowed = section === 'paint' ? paint[type]! : ['visibility'], fields = layer[section] === undefined ? [...layer[section === 'paint' ? 'unsupported_paint_fields' : 'unsupported_layout_fields'] ?? []] : Object.keys(layer[section]!).filter(k => !allowed.includes(k));
+                const allowed = section === 'paint' ? paint[type]! : ['visibility'], fields = [...new Set([...layer[section === 'paint' ? 'unsupported_paint_fields' : 'unsupported_layout_fields'] ?? [], ...Object.keys(layer[section] ?? {}).filter(k => !allowed.includes(k))])];
                 if (fields.length) {
                     diagnostics.push(unsupportedStyleFieldDiagnostic(id, fields, section));
                     codes.push('unsupported_style_field');

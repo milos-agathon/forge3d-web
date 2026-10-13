@@ -1,5 +1,6 @@
 import { Forge3DError, type BrowserByteSource, type BrowserByteSink } from './index.js';
 import { readByteSource } from './browser-io.js';
+import { styleAssetUrls, assessBundleStyle } from './bundle-style-assets.js';
 import { writeBundleOutput } from './bundle-output.js';
 import { SceneState, type SceneStateInput } from './scene-review.js';
 import { SceneRecipe, encodeMapData, decodeMapData } from './map-recipe.js';
@@ -17,6 +18,11 @@ const encoder = new TextEncoder(), marker = 'forge3d-asset:';
 function parseJson(bytes: Uint8Array): unknown { try { return JSON.parse(new TextDecoder('utf-8', { fatal: true }).decode(bytes)); } catch { return bundleFailure('Invalid bundle JSON'); } }
 async function visitAssets(value: unknown, transform: (value: string, key: string, parent: Record<string, unknown>) => Promise<string>, key = '', parent: Record<string, unknown> = {}): Promise<unknown> {
     if (key === 'nativeSceneState') return value;
+    if (key === 'sources' && value && typeof value === 'object') {
+        const output: Record<string, unknown> = {};
+        for (const [id, source] of Object.entries(value)) output[id] = source?.type === 'geojson' ? await visitAssets(source, transform) : structuredClone(source);
+        return output;
+    }
     if (typeof value === 'string') return transform(value, key, parent);
     if (ArrayBuffer.isView(value)) return value;
     if (Array.isArray(value)) { const out = []; for (const item of value) out.push(await visitAssets(item, transform)); return out; }
@@ -44,12 +50,13 @@ export async function saveBundle(state: SceneState | SceneStateInput, options: S
         return marker + path;
     };
     const remaining = () => limits.maxExpandedBytes - size;
-    for (const [name, source] of Object.entries(options.assets ?? {})) {
-        const data = source instanceof Uint8Array ? source.slice() : await readByteSource(source, { maxBytes: remaining(), ...(options.signal ? { signal: options.signal } : {}) });
-        const reference = await add(data, source instanceof Blob ? source.type : 'application/octet-stream'); aliases[name] = reference.slice(marker.length);
-        const hash = await bundleHash(data); cache.set(name, { reference, hash, originalHash: hash });
+    const supplied = Object.entries(options.assets ?? {});
+    for (const [i, [name, source]] of supplied.entries()) {
+        const data = source instanceof Uint8Array ? Uint8Array.from(source) : await readByteSource(source, { maxBytes: remaining(), ...(options.signal ? { signal: options.signal } : {}) });
+        const reference = await add(data, source instanceof Blob ? source.type : 'application/octet-stream'); if (!name.startsWith(marker) && !name.startsWith('blob:')) aliases[name] = reference.slice(marker.length);
+        const hash = await bundleHash(data); cache.set(name, { reference, hash, originalHash: hash }); options.onProgress?.({ phase: 'assets', completed: i + 1, total: supplied.length, path: name });
     }
-    const portable = canonical.value;
+    const portable = canonical.value; assessBundleStyle(portable);
     if (!portable.fonts && [...portable.base.layers ?? [], ...portable.reviewLayers?.flatMap(l => [...l.layers]) ?? []].some(l => l.kind === 'labels')) {
         const fonts: NonNullable<SceneStateInput['fonts']>[number][] = []; let fontBytes = 0;
         for (const source of bundledFontSources()) {
@@ -60,14 +67,14 @@ export async function saveBundle(state: SceneState | SceneStateInput, options: S
         portable.fonts = fonts;
     }
     const missing = new Set(portable.missingAssets ?? []);
-    const rewritten = await visitAssets(portable, async (value, key, parent) => {
+    const assetTransform = async (value: string, key: string, parent: Record<string, unknown>) => {
         const explicit = Object.hasOwn(options.assets ?? {}, value), external = (['url', 'hdr', 'hdrPath', 'hdr_path'].includes(key) || key === 'data' && parent.type === 'geojson') && !value.startsWith(marker);
         if (!explicit && !external) return value;
         if (cache.has(value)) { const cached = cache.get(value)!; if (typeof parent.sha256 === 'string' && cached.originalHash !== parent.sha256.toLowerCase()) bundleFailure(`Asset checksum mismatch: ${value}`, 'checksum-mismatch'); if (parent.sha256 !== undefined) parent.sha256 = cached.hash; return cached.reference; }
         options.onProgress?.({ phase: 'assets', completed: cache.size, total: cache.size + 1, path: value });
         const source = options.assets?.[value] ?? value;
         let data: Uint8Array;
-        try { data = source instanceof Uint8Array ? source.slice() : await readByteSource(source, { maxBytes: remaining(), ...(options.signal ? { signal: options.signal } : {}) }); }
+        try { data = source instanceof Uint8Array ? Uint8Array.from(source) : await readByteSource(source, { maxBytes: remaining(), ...(options.signal ? { signal: options.signal } : {}) }); }
         catch (e) { bundleCancelled(options.signal); if (!options.allowMissingAssets || e instanceof Forge3DError && e.code === 'RESOURCE_LIMIT_EXCEEDED') throw e; missing.add(value); return value; }
         const originalHash = await bundleHash(data);
         if (typeof parent.sha256 === 'string' && originalHash !== parent.sha256.toLowerCase()) bundleFailure(`Asset checksum mismatch: ${value}`, 'checksum-mismatch');
@@ -77,10 +84,15 @@ export async function saveBundle(state: SceneState | SceneStateInput, options: S
             if (parent.sha256 !== undefined) parent.sha256 = await bundleHash(data);
         }
         const result = await add(data, source instanceof Blob ? source.type || 'application/octet-stream' : 'application/octet-stream'), hash = await bundleHash(data); cache.set(value, { reference: result, originalHash, hash }); aliases[value] = result.slice(marker.length); missing.delete(value); return result;
-    }) as SceneStateInput;
+    };
+    for (const url of styleAssetUrls(portable, Object.keys(options.assets ?? {}))) {
+        if (url.includes('{range}') || url.includes('{fontstack}')) { if (!options.allowMissingAssets) bundleFailure('Glyph template needs a finite text/font request or supplied glyph inventory'); missing.add(url); continue; }
+        await assetTransform(url, 'url', {});
+    }
+    const rewritten = await visitAssets(portable, assetTransform) as SceneStateInput;
     if (missing.size) {
         rewritten.missingAssets = [...missing].sort();
-        const report = new ValidationReport({ ...(rewritten.validationReport ?? {}), diagnostics: [...rewritten.validationReport?.diagnostics ?? [], ...[...missing].sort().map(path => missingExternalAssetDiagnostic('bundle asset', path))] });
+        const report = new ValidationReport({ ...(rewritten.validationReport ?? {}), diagnostics: [...rewritten.validationReport?.diagnostics ?? [], ...[...missing].sort().filter(path => !rewritten.validationReport?.diagnostics.some(d => d.code === 'missing_external_asset' && d.details.path === path && ['error', 'fatal'].includes(d.severity))).map(path => missingExternalAssetDiagnostic('bundle asset', path))] });
         rewritten.validationReport = report.toJSON();
         rewritten.reviewRecord = { renderable: false, render_status: 'blocked_by_diagnostics', last_render: null };
     }
@@ -114,7 +126,7 @@ export class LoadedBundle {
     applyVariant(id: string): void { this.#live(); this.#state = this.#state.applyVariant(id); }
     setReviewLayerVisible(id: string, visible: boolean): void { this.#live(); this.#state = this.#state.setReviewLayerVisible(id, visible); }
     effectiveSceneState() { this.#live(); return this.#state.effectiveRecipe(); }
-    get validationReport(): ValidationReport | null { const report = this.#state.value.validationReport; return report ? ValidationReport.fromJSON(report) : null; }
+    get validationReport(): ValidationReport | null { this.#live(); const report = this.#state.value.validationReport; return report ? ValidationReport.fromJSON(report) : null; }
     asset(path: string): Uint8Array { this.#live(); const bytes = this.#files[bundlePath(path)]; if (!bytes) bundleFailure(`Missing bundle asset: ${path}`); return bytes.slice(); }
     resolveAsset(url: string): string {
         this.#live(); const path = this.#manifest.asset_aliases?.[url]; if (!path || !Object.hasOwn(this.#files, path)) bundleFailure(`Asset is absent from offline bundle: ${url}`);
@@ -135,9 +147,16 @@ export class LoadedBundle {
         }) as SceneStateInput;
         this.#live(); return new SceneState(input);
     }
+    /** Defensive payload copies used when a MapScene adopts and re-saves this archive. */
+    retainedAssets(): Record<string, Uint8Array> {
+        this.#live(); const assets: Record<string, Uint8Array> = Object.create(null);
+        for (const [path, bytes] of Object.entries(this.#files)) if (path !== 'manifest.json' && path !== this.#manifest.scene && !['scene/state.json', 'scene/recipe.json'].includes(path)) assets[marker + path] = bytes.slice();
+        for (const [alias, path] of Object.entries(this.#manifest.asset_aliases ?? {})) assets[alias] = this.#files[path]!.slice();
+        for (const [path, url] of this.#urls) assets[url] = this.#files[path]!.slice();
+        return assets;
+    }
     async save(options: SaveBundleOptions = {}): Promise<Blob> {
-        this.#live(); const assets = Object.fromEntries(Object.entries(this.#files).filter(([p]) => p !== 'manifest.json' && p !== this.#manifest.scene && !['scene/state.json','scene/recipe.json'].includes(p)).map(([p, b]) => [marker + p, b]));
-        for (const [alias, path] of Object.entries(this.#manifest.asset_aliases ?? {})) assets[alias] = this.#files[path]!;
+        this.#live(); const assets = this.retainedAssets();
         const signal = options.signal ? AbortSignal.any([options.signal, this.#lifetime.signal]) : this.#lifetime.signal;
         return saveBundle(this.#state, { name: this.#manifest.name, allowMissingAssets: !!this.#state.value.missingAssets?.length, ...options, signal, assets: { ...assets, ...options.assets } });
     }
@@ -172,16 +191,21 @@ async function loadVerifiedBundle(source: BrowserByteSource | FileSystemFileHand
         const path = bundlePath(manifest.scene ?? 'scene/recipe.json'); if (!files[path]) bundleFailure('Legacy recipe missing');
         state = new SceneState({ base: SceneRecipe.fromJSON(parseJson(files[path]!)).value });
     } else { const path = bundlePath(manifest.scene); if (!files[path]) bundleFailure('Canonical scene state missing'); state = SceneState.fromJSON(parseJson(files[path]!), limits.maxExpandedBytes); }
+    const assessed = state.value; assessBundleStyle(assessed); state = new SceneState(assessed);
     if (state.value.validationReport) ValidationReport.fromJSON(state.value.validationReport);
     // Reject dangling asset references and raw external URLs: a loaded bundle is offline by construction.
-    await visitAssets(state.value, async (value, key) => {
+    await visitAssets(state.value, async (value, key, parent) => {
         if (value.startsWith(marker) && !Object.hasOwn(files, bundlePath(value.slice(marker.length)))) bundleFailure('Dangling bundle asset reference');
-        if (['url', 'hdr', 'hdrPath', 'hdr_path'].includes(key) && !value.startsWith(marker)) {
+        if ((['url', 'hdr', 'hdrPath', 'hdr_path'].includes(key) || key === 'data' && parent.type === 'geojson') && !value.startsWith(marker)) {
             const s = state.value;
             if (!s.missingAssets?.includes(value) || !s.validationReport?.diagnostics.some(d => d.code === 'missing_external_asset' && d.details.path === value && ['error', 'fatal'].includes(d.severity))) bundleFailure('External asset reference without blocking missing-asset diagnostics');
         }
         return value;
     });
+    for (const url of styleAssetUrls(state.value, Object.keys(manifest.asset_aliases ?? {}))) {
+        if (manifest.asset_aliases?.[url]) continue;
+        if (!state.value.missingAssets?.includes(url) || !state.value.validationReport?.diagnostics.some(d => d.code === 'missing_external_asset' && d.details.path === url && ['error', 'fatal'].includes(d.severity))) bundleFailure('Style asset without offline payload or blocking diagnostics');
+    }
     bundleCancelled(options.signal);
     return new LoadedBundle(manifest, state, files, manifest.version === 1 || state.value.nativeSceneState ? manifest.version : null);
 }

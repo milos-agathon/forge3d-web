@@ -4,7 +4,7 @@ export interface StyleEvalContext {
     geometryType?: string;
 }
 export declare const STYLE_EXPRESSION_OPERATORS: Set<string>;
-/** Native expression subset. Failure returns null; unknown operators are diagnosed by the style parser. */
+/** The native Python evaluator's supported behavior, including arity and Python coercions. */
 export declare function evaluateStyleExpression(expression: unknown, context?: StyleEvalContext): unknown;
-/** Legacy property filters are separate from expression literals. Native maxzoom is inclusive. */
-export declare function evaluateStyleFilter(filter: unknown, context?: StyleEvalContext): boolean;
+/** Native legacy filters pass unknown operators through; validation still diagnoses them. */
+export declare function evaluateStyleFilter(filter: unknown, context?: StyleEvalContext, depth?: number): boolean;

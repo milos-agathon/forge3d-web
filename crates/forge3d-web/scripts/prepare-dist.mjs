@@ -208,6 +208,6 @@ for (const file of ['pointcloud-types','pointcloud-common','pointcloud-octree','
 for (const file of ['trace-types','trace-math','bvh-build','bvh','bvh-gpu','sdf-primitive','sdf','trace-scene','trace-cpu','trace-bsdf','trace-light','trace-sampling','trace-compute','trace-gpu','path-tracer','trace-worker','trace-output']) {
   writeFileSync(join(root,'types',file+'.d.ts'),readRequired(join(dist,file+'.d.ts')).replace(/from (["'])\.\/frames\.js\1/g,'from "./index.js"'));
 }
-for (const file of ['style-expressions','map-style','style-assets','scene-review','bundle','bundle-archive','bundle-output','bundle-migration']) {
+for (const file of ['style-native-values','bundle-style-assets','style-expressions','map-style','style-assets','scene-review','bundle','bundle-archive','bundle-output','bundle-migration']) {
   copyRequired(join(dist,file+'.d.ts'),join(root,'types',file+'.d.ts'));
 }
