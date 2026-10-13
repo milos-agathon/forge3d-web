@@ -39,6 +39,7 @@
     "types",
     "examples/style-bundle.html",
     "tests/fixtures/w19/native-v2.forge3d",
+    "tests/fixtures/w19/native-renderable.forge3d",
     "README.md",
     "LICENSE",
     "LICENSE-APACHE"

@@ -5,7 +5,7 @@
   "nativeOriginalTestsExecuted": 89,
   "nativeApiReplayTests": 80,
   "browserEquivalentTests": 23,
-  "fixtureSha256": "a463564ab695cb1a6b7f7e977bc4520248b8080c94dccbe8a468be139c581815",
+  "fixtureSha256": "99242129fe03bcc8497df03e070e000107b2c8f43213ce57430c962bf666eef3",
   "note": "Source pinning is provenance only. Replays compare observed native API inputs/results per original test; they do not claim to execute Python test bodies in TypeScript. CLI, filesystem and MapScene facade substitutions have explicit outcome assertions. The only native execution shim bypasses the W21 license check.",
   "tests": [
     {
@@ -1260,7 +1260,7 @@
         "file": "tests/unit/w19-native-equivalents.test.ts",
         "title": "tests/test_bundle_cli.py :: test_was_cli_set_detects_explicit_flags"
       },
-      "substitution": "Typed explicit variant preset selection wins over base settings and leaves the base snapshot intact."
+      "substitution": "Browser export options replace CLI arguments: omitting allowMissingAssets uses the diagnostic-bearing default, while an explicit false selects strict failure and an explicit true preserves missing-asset diagnostics."
     },
     {
       "source": "tests/test_bundle_cli.py",
@@ -1293,7 +1293,7 @@
         "file": "tests/unit/w19-native-equivalents.test.ts",
         "title": "tests/test_bundle_cli.py :: test_bundle_extension_added_if_missing"
       },
-      "substitution": "The browser caller names its File/download .forge3d explicitly; there is no path-suffix inference API."
+      "substitution": "Bundle download/picker names append .forge3d when no suffix was supplied, preserve existing suffixes, and produce a verified archive through the actual output sink."
     },
     {
       "source": "tests/test_diagnostics_bundle_serialization.py",

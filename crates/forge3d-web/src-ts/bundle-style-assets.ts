@@ -41,6 +41,7 @@ export function styleAssetUrls(state: SceneStateInput, supplied: readonly string
     const pattern = new RegExp('^' + style.glyphs.split(/(\{fontstack\}|\{range\})/).map(p => p === '{fontstack}' ? '[^/]+' : p === '{range}' ? '\\d+-\\d+' : p.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('') + '$');
     const glyphs = supplied.filter(url => pattern.test(url));
     glyphs.forEach(url => urls.add(url));
-    if (!requests.length && !glyphs.length) urls.add(style.glyphs); // unresolved templates diagnose
+    // A declared template is metadata until text actually needs a glyph range.
+    // In particular, fill/line styles do not acquire or require font assets.
     return [...urls].sort();
 }

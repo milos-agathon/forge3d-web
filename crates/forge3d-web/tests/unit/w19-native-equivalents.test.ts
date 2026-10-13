@@ -2,7 +2,6 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { saveBundle, loadBundle, isBundle, BUNDLE_VERSION } from '../../src-ts/bundle.js';
 import { bundleHash, decodeBundleArchive, encodeBundleArchive } from '../../src-ts/bundle-archive.js';
-import { SceneState } from '../../src-ts/scene-review.js';
 import { MapScene } from '../../src-ts/map-scene.js';
 import { missingExternalAssetDiagnostic } from '../../src-ts/diagnostic-paths.js';
 import { ValidationReport } from '../../src-ts/diagnostics.js';
@@ -41,16 +40,27 @@ describe('W19 explicit native filesystem and facade equivalents', () => {
     // browser spec separately exercises the actual download and file input.
     it(key('test_bundle_cli', 'test_save_bundle_flag_exists'), async () => { const scene = new MapScene(recipe()); expect(await scene.saveBundle()).toBeInstanceOf(Blob); scene.dispose(); });
     it(key('test_bundle_cli', 'test_load_bundle_flag_exists'), async () => { const blob = await saveBundle({ base: recipe() }), scene = await MapScene.loadBundle(new File([blob], 'review.forge3d')); expect(scene.recipe.value.output).toEqual(recipe().output); scene.dispose(); });
-    it(key('test_bundle_cli', 'test_was_cli_set_detects_explicit_flags'), () => {
-        const state = new SceneState({ base: { ...recipe(), postFx: { effects: [{ kind: 'tonemap', operator: 'exposure', exposure: 1 }] } }, variants: [{ id: 'explicit', activeLayerIds: [], preset: { postFx: { effects: [{ kind: 'tonemap', operator: 'exposure', exposure: 2 }] } } }], activeVariantId: 'explicit' });
-        expect(state.effectiveRecipe().postFx?.effects[0]).toMatchObject({ exposure: 2 }); expect(state.value.base.postFx?.effects[0]).toMatchObject({ exposure: 1 });
+    it(key('test_bundle_cli', 'test_was_cli_set_detects_explicit_flags'), async () => {
+        vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 404 })));
+        const scene = new MapScene({ ...recipe(), layers: [{ kind: 'vector', layerId: 'roads', source: { id: 'roads', crs: 'LOCAL', format: 'vector', url: 'https://missing.test/roads.json' } }] });
+        const omitted = await loadBundle(await scene.saveBundle());
+        expect(omitted.sceneState.value.missingAssets).toEqual(['https://missing.test/roads.json']);
+        await expect(scene.saveBundle({ allowMissingAssets: false })).rejects.toMatchObject({ code: 'IO_ERROR' });
+        const explicit = await loadBundle(await scene.saveBundle({ allowMissingAssets: true }));
+        expect(explicit.validationReport!.hasErrors).toBe(true); omitted.dispose(); explicit.dispose(); scene.dispose();
     });
     it(key('test_bundle_cli', 'test_bundle_directory_structure'), async () => {
         const bytes = new Uint8Array(await (await saveBundle({ base: recipe() }, { assets: { fixture: new Uint8Array([1]) } })).arrayBuffer()), files = decodeBundleArchive(bytes);
         expect(Object.keys(files).sort()).toEqual(['assets/' + await bundleHash(new Uint8Array([1])), 'manifest.json', 'scene/state.json'].sort());
     });
     it(key('test_bundle_cli', 'test_manifest_has_version_2'), async () => { const files = decodeBundleArchive(new Uint8Array(await (await saveBundle({ base: recipe() })).arrayBuffer())); expect(JSON.parse(new TextDecoder().decode(files['manifest.json'])).version).toBe(2); });
-    it(key('test_bundle_cli', 'test_bundle_extension_added_if_missing'), async () => { const file = new File([await saveBundle({ base: recipe() })], 'review.forge3d'); expect(file.name).toBe('review.forge3d'); expect(await isBundle(file)).toBe(true); });
+    it(key('test_bundle_cli', 'test_bundle_extension_added_if_missing'), async () => {
+        const names: string[] = []; vi.stubGlobal('document', { createElement: () => ({ href: '', download: '', click() { names.push(this.download); }, remove() {} }) });
+        for (const [input, expected] of [['review', 'review.forge3d'], ['review.forge3d', 'review.forge3d'], ['custom.zip', 'custom.zip']]) {
+            const blob = await saveBundle({ base: recipe() }, { sink: { kind: 'download', filename: input! } });
+            expect(names.at(-1)).toBe(expected); expect(await isBundle(blob)).toBe(true);
+        }
+    });
 
     const review = () => ({ base: { ...recipe(), terrain: { source: { id: 'dem', crs: 'LOCAL', format: 'heightmap', data: { width: 2, height: 2, heights: new Float32Array([0,1,2,3]) } } }, layers: [{ kind: 'vector' as const, layerId: 'roads', source: { id: 'roads-data', crs: 'LOCAL', format: 'vector', data: { name: 'roads', features: [{ id: 1, kind: 'line' as const, positions: [[0,0,0],[1,0,1]] as [number,number,number][] }] } } }] }, cameraBookmarks: [{ name: 'overview', eye: [1,2,3] as [number,number,number], target: [0,0,0] as [number,number,number] }], reviewRecord: { renderable: false, render_status: 'requires_preparation' as const, last_render: null } });
     it(key('test_mapscene_save_bundle', 'test_save_bundle_writes_deterministic_review_bundle_with_label_plan'), async () => {

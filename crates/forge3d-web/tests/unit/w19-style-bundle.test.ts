@@ -153,6 +153,20 @@ describe('W19 bundles, review registry and migration', () => {
     });
 });
 describe('W19 sprite and glyph asset contracts', () => {
+    it('prepares and round-trips fill/line styles with an unused glyph header without acquiring fonts', async () => {
+        const fetcher = vi.fn(() => { throw Error('Unused glyph request'); }); vi.stubGlobal('fetch', fetcher);
+        const style = parseStyle({ glyphs: 'https://cdn.test/{fontstack}/{range}.pbf', sources: { s: { type: 'geojson' } }, layers: [{ id: 'roads', type: 'line', source: 's' }] });
+        const scene = MapScene.fromStyle(recipe(), style, { s: [{ id: 1, kind: 'line', positions: [[-1,1,0],[1,1,0]] }] });
+        expect((await scene.prepare()).hasErrors).toBe(false);
+        const blobs = [await scene.saveBundle(), await saveBundle({ base: scene.recipe.value, style: style.value })];
+        for (const blob of blobs) {
+            const archive = await loadBundle(blob), restored = await MapScene.loadBundle(blob);
+            expect(archive.sceneState.value.missingAssets).toBeUndefined(); expect(archive.validationReport!.hasErrors).toBe(false);
+            expect(restored.validate().hasErrors).toBe(false); expect((await restored.prepare()).hasErrors).toBe(false);
+            archive.dispose(); restored.dispose();
+        }
+        expect(fetcher).not.toHaveBeenCalled(); scene.dispose();
+    });
     it('archives style sprite/glyph URLs and retains all supplied payloads through both save paths', async () => {
         const style = { version: 8, sprite: 'https://style.test/sprite', glyphs: 'https://style.test/{fontstack}/{range}.pbf', layers: [] };
         const assets = { 'https://style.test/sprite.json': new Uint8Array([1]), 'https://style.test/sprite.png': new Uint8Array([2]), 'https://style.test/Test/0-255.pbf': new Uint8Array([3]) };
@@ -168,11 +182,15 @@ describe('W19 sprite and glyph asset contracts', () => {
         expect(scene.resolveBundleAsset('https://style.test/sprite.json')).toMatch(/^blob:/);
         scene.dispose(); bundle.dispose();
     });
-    it('fetches required style assets and blocks unresolved glyph templates instead of claiming offline success', async () => {
+    it('fetches required style assets and blocks missing requested glyph ranges', async () => {
         const fetcher = vi.fn(async () => new Response(new Uint8Array([1]))); vi.stubGlobal('fetch', fetcher);
         const loaded = await loadBundle(await saveBundle({ base: recipe(), style: { sprite: 'https://style.test/sprite', layers: [] } }));
         expect(fetcher.mock.calls.map(c => String(c[0]))).toEqual(['https://style.test/sprite.json', 'https://style.test/sprite.png']); loaded.dispose();
-        const unresolved = await loadBundle(await saveBundle({ base: recipe(), style: { glyphs: 'https://style.test/{fontstack}/{range}.pbf', layers: [] } }, { allowMissingAssets: true }));
+        vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 404 })));
+        const input = { base: recipe(), style: { glyphs: 'https://style.test/{fontstack}/{range}.pbf', layers: [] }, styleGlyphRequests: [{ fontStack: 'Test', text: 'A' }] };
+        await expect(saveBundle(input)).rejects.toMatchObject({ code: 'IO_ERROR' });
+        const unresolved = await loadBundle(await saveBundle(input, { allowMissingAssets: true }));
+        expect(unresolved.sceneState.value.missingAssets).toEqual(['https://style.test/Test/0-255.pbf']);
         expect(unresolved.validationReport?.hasErrors).toBe(true); expect(unresolved.sceneState.value.reviewRecord?.renderable).toBe(false); unresolved.dispose();
     });
     it('retains unsupported streamed-source URLs as warning-only intent without fetching TileJSON or tiles', async () => {

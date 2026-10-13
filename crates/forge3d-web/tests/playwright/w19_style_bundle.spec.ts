@@ -47,6 +47,44 @@ for (const dist of [false, true]) {
             });
             expect(r.coverage).toBeGreaterThan(1000); expect(r.before.cpuBytes).toBeGreaterThan(0); expect(r.after.cpuBytes).toBe(0);
         });
+        test(`W19 ${label}: an unused glyph template preserves supported style pixels in strict and default exports`, async ({ page }) => {
+            const r = await page.evaluate(async () => {
+                const { api, features, baseRecipe } = window.__w19;
+                const style = api.parseStyle({ glyphs: 'https://cdn.example/{fontstack}/{range}.pbf', sources: { local: { type: 'geojson' } }, layers: [{ id: 'roads', type: 'line', source: 'local', paint: { 'line-color': '#ffaa00', 'line-width': 4 } }] });
+                const scene = api.MapScene.fromStyle(baseRecipe(), style, { local: features }), prepared = await scene.prepare(), original = await scene.render();
+                const fetcher = window.fetch; let network = 0; window.fetch = async (...args: any[]) => { if (String(args[0]).startsWith('blob:')) return fetcher(...args as [any]); network++; throw Error('offline glyph metadata'); };
+                const results = [];
+                try {
+                    for (const blob of [await scene.saveBundle(), await api.saveBundle({ base: scene.recipe.value, style: style.value })]) {
+                        const metadata = await api.loadBundle(blob), restored = await api.MapScene.loadBundle(blob), validation = restored.validate(), ready = await restored.prepare(), output = await restored.render();
+                        results.push({ missing: metadata.sceneState.value.missingAssets ?? [], valid: !validation.hasErrors && !ready.hasErrors, same: original.frame.data.every((v: number, i: number) => v === output.frame.data[i]), coverage: output.metrics.coveragePixels });
+                        metadata.dispose(); restored.dispose();
+                    }
+                } finally { window.fetch = fetcher; scene.dispose(); }
+                return { prepared: !prepared.hasErrors, network, results };
+            });
+            expect(r.prepared).toBe(true); expect(r.network).toBe(0); expect(r.results).toHaveLength(2);
+            for (const result of r.results) { expect(result.missing).toEqual([]); expect(result.valid).toBe(true); expect(result.same).toBe(true); expect(result.coverage).toBeGreaterThan(1000); }
+        });
+        test(`W19 ${label}: native-saver raster/vector assets prepare, affect pixels and resave offline`, async ({ page }) => {
+            const r = await page.evaluate(async () => {
+                const { api, baseRecipe } = window.__w19;
+                const scene = await api.MapScene.loadBundle(location.origin + '/tests/fixtures/w19/native-renderable.forge3d', { nativeRecipe: baseRecipe() });
+                const validation = scene.validate(), prepared = await scene.prepare(), original = await scene.render(), recipe = scene.recipe.value, changes: Record<string, number> = {};
+                for (const layer of recipe.layers.filter((l: any) => ['raster', 'vector'].includes(l.kind))) {
+                    const candidate = new api.MapScene({ ...recipe, layers: recipe.layers.filter((l: any) => l.layerId !== layer.layerId) });
+                    const output = await candidate.render(); changes[layer.layerId] = original.frame.data.reduce((n: number, v: number, i: number) => n + Number(v !== output.frame.data[i]), 0); candidate.dispose();
+                }
+                const blob = await scene.saveBundle(); scene.dispose();
+                const fetcher = window.fetch; let network = 0; window.fetch = async (...args: any[]) => { if (String(args[0]).startsWith('blob:')) return fetcher(...args as [any]); network++; throw Error('offline native archive'); };
+                let same = false, coverage = 0, restoredValid = false;
+                try { const restored = await api.MapScene.loadBundle(blob); restoredValid = !restored.validate().hasErrors; const output = await restored.render(); same = original.frame.data.every((v: number, i: number) => v === output.frame.data[i]); coverage = output.metrics.coveragePixels; restored.dispose(); }
+                finally { window.fetch = fetcher; }
+                return { valid: !validation.hasErrors && !prepared.hasErrors, restoredValid, same, coverage, changes, network };
+            });
+            expect(r.valid).toBe(true); expect(r.restoredValid).toBe(true); expect(r.same).toBe(true); expect(r.coverage).toBeGreaterThan(500); expect(r.network).toBe(0);
+            expect(Object.keys(r.changes)).toHaveLength(4); for (const changed of Object.values(r.changes)) expect(changed).toBeGreaterThan(0);
+        });
         test(`W19 ${label}: HTTP loads and cold offline-cache renders preserve verified bundle state`, async ({ page }) => {
             const r = await page.evaluate(async () => {
                 const { api, makeState } = window.__w19;

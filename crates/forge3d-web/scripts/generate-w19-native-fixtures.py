@@ -117,6 +117,25 @@ with tempfile.TemporaryDirectory() as temporary:
     info=zipfile.ZipInfo(file.relative_to(path).as_posix(),date_time=(2026,6,4,0,0,0)); info.compress_type=zipfile.ZIP_DEFLATED; archive.writestr(info,file.read_bytes())
 from PIL import Image
 Image.new('RGB', (8,8), (64,128,192)).save(OUTPUT/'native-snapshot.png')
+# A second real-saver archive uses executable image/terrain assets and only
+# supported presets, so the browser must validate, prepare and render it.
+with tempfile.TemporaryDirectory() as temporary:
+ directory = Path(temporary)
+ dem = directory/'valid-dem.tif'; terrain = Image.new('F',(8,8)); terrain.putdata([float((x+y)/8) for y in range(8) for x in range(8)]); terrain.save(dem)
+ raster = directory/'valid-overlay.png'; Image.new('RGBA',(4,4),(32,96,220,255)).save(raster)
+ scene = bundle.SceneState(base=bundle.SceneBaseState(
+  preset={'exposure':1.25}, camera_bookmarks=[bundle.CameraBookmark(name='render',eye=(0,10,10),target=(0,0,0))],
+  raster_overlays=[bundle.RasterOverlaySpec(name='ortho',path=str(raster),extent=(.1,.2,.8,.9),opacity=.75,z_order=2)],
+  vector_overlays=[{'name':'triangle','vertices':[[-2,0,-2],[2,0,-2],[0,0,2]],'indices':[0,1,2]}, {'name':'road','primitive':'lines','vertices':[[-3,0,-1],[3,0,1]],'indices':[0,1],'line_width':4,'depth_bias':.04}],
+  labels=[{'text':'Base','world_pos':[0,2,0]}]), review_layers=[bundle.ReviewLayer(id='markers',vector_overlays=[{'name':'marker','primitive':'points','vertices':[[2,0,-2,0,1,0,1]],'indices':[0],'point_size':8}])], variants=[bundle.SceneVariant(id='review',active_layer_ids=['markers']),bundle.SceneVariant(id='plain',active_layer_ids=[])],active_variant_id='review')
+ path=directory/'renderable.forge3d'; bundle.save_bundle(path,name='renderable-native',scene_state=scene,dem_path=dem,crs='LOCAL',colormap_name='viridis')
+ manifest=json.loads((path/'manifest.json').read_text()); manifest['created_at']='2026-06-04T00:00:00Z'; (path/'manifest.json').write_text(json.dumps(manifest))
+ loaded=bundle.load_bundle(path); effective=loaded.effective_scene_state()
+ fixture['renderableNativeBundle']={'preset':effective.preset,'extent':list(effective.raster_overlays[0].extent),'rasterCount':len(effective.raster_overlays),'vectorCount':len(effective.vector_overlays),'labels':effective.labels}
+ with zipfile.ZipFile(OUTPUT/'native-renderable.forge3d','w',zipfile.ZIP_DEFLATED) as archive:
+  for file in sorted(path.rglob('*')):
+   if file.is_file():
+    info=zipfile.ZipInfo(file.relative_to(path).as_posix(),date_time=(2026,6,4,0,0,0)); info.compress_type=zipfile.ZIP_DEFLATED; archive.writestr(info,file.read_bytes())
 from w19_native_replay import record_native_tests
 fixture['testReplays'] = record_native_tests(sys.modules[__name__], style, expressions, bundle, OUTPUT)
 (OUTPUT / 'native-contract.json').write_text(json.dumps(fixture, ensure_ascii=False, indent=2)+'\n', encoding='utf-8', newline='\n')

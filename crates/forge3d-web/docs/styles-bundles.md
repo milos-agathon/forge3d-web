@@ -88,13 +88,16 @@ No runtime dependency CDN is required: `fflate@0.8.3` and its MIT notice ship un
 
 `saveBundle` accepts a `SceneState` and can write to a Blob, backpressured stream,
 file handle, download or OPFS sink. `loadBundle` accepts URL/File/Blob/stream/
-bytes/file handles, including OPFS handles. `LoadedBundle` exposes defensive
+bytes/file handles, including OPFS handles. Download and file-picker names
+append `.forge3d` when no suffix was supplied; existing suffixes and explicit
+OPFS paths are preserved. `LoadedBundle` exposes defensive
 manifest/state snapshots, named variants, visibility, verified bytes and asset
 resolution. A style sprite base acquires its `.json`/`.png` pair. Glyph ranges
 come from inline symbol text, `styleGlyphRequests: [{fontStack, text}]`, or an
 explicit inventory in `assets` keyed by resolved original URLs. Supply `@2x`
-assets explicitly when needed. An unresolved glyph template cannot claim offline
-completeness. Pass `resolveUrl: url => bundle.resolveAsset(url)` to the loaders,
+assets explicitly when needed. A glyph template alone stays as metadata when no text requests a range, so
+fill/line styles round-trip without font fetches. Requested ranges must be
+archived or carry blocking missing-asset diagnostics. Pass `resolveUrl: url => bundle.resolveAsset(url)` to the loaders,
 or `url => scene.resolveBundleAsset(url)` for an adopted MapScene. Both save
 paths retain supplemental assets and logical aliases. Streamed MVT/raster source
 URLs and tile templates remain unsupported intent with warnings; they are never
@@ -120,7 +123,11 @@ v1/v2 directories. Native legacy mirrors synthesize a review registry; native v2
 variants retain their IDs and ordering. The native `base_state` key is read
 directly; preset/bookmark mirrors override it when present. Variant presets
 replace base preset fields even when empty. Terrain colormaps and native label
-anchors are preserved in their typed adapters. `nativeRecipe` can supply camera/output
+anchors are preserved in their typed adapters. Native raster extents map
+directly to the UV `extent` field. Native vector depth bias below W12's 0.01
+minimum is raised to 0.01; supported values remain unchanged and the original
+value stays in `nativeSceneState`. Migrated feature IDs are unique across base
+and review overlays, so activating a review vector cannot collide with the base. `nativeRecipe` can supply camera/output
 context. Native vector payloads, labels, raster overlays and GeoTIFF terrain map
 to browser layers. Original native state/manifest are retained as
 `nativeSceneState`; fields needing a browser adapter return blocking

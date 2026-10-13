@@ -3,6 +3,11 @@ import { writeByteSink } from './browser-io.js';
 import { bundleCancelled, bundlePath } from './bundle-archive.js';
 /** Abortable output with stream backpressure and staged filesystem writes. */
 export async function writeBundleOutput(bytes: Uint8Array, sink: BrowserByteSink, signal?: AbortSignal): Promise<void> {
+    const filename = (name: string) => { const leaf = name.split(/[\\/]/).at(-1)!; return leaf.lastIndexOf('.') > 0 && !leaf.endsWith('.') ? name : name + '.forge3d'; };
+    // Bundle-specific names mirror native suffix inference. W02 generic sinks
+    // and explicit OPFS paths keep their existing byte-output contract.
+    if (sink.kind === 'download') sink = { ...sink, filename: filename(sink.filename) };
+    if (sink.kind === 'file-system' && !sink.handle && sink.suggestedName) sink = { ...sink, suggestedName: filename(sink.suggestedName) };
     try { await writeOutput(bytes, sink, signal); } catch (e) {
         bundleCancelled(signal);
         if (e instanceof Forge3DError) throw e;

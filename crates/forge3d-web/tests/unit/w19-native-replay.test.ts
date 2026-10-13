@@ -5,6 +5,7 @@ import { evaluateStyleExpression, evaluateStyleFilter } from '../../src-ts/style
 import { Diagnostic, ValidationReport } from '../../src-ts/diagnostics.js';
 import { validateStyleSupport } from '../../src-ts/diagnostic-style.js';
 import { loadBundle } from '../../src-ts/bundle.js';
+import { MapScene } from '../../src-ts/map-scene.js';
 const fixture = JSON.parse(readFileSync(new URL('../fixtures/w19/native-contract.json', import.meta.url), 'utf8'));
 const paintKeys = 'fill-color fill-opacity fill-outline-color line-color line-width line-opacity text-color text-halo-color text-halo-width text-opacity circle-color circle-radius circle-opacity background-color'.split(' ');
 const layoutKeys = 'visibility text-field text-size text-font text-anchor text-offset text-max-width line-cap line-join'.split(' ');
@@ -71,6 +72,11 @@ async function replay(call: any) {
                 expect(loaded.manifest.version).toBe(call.manifest.version); expect(loaded.manifest.name).toBe(call.manifest.name);
                 expect((loaded.sceneState.value.nativeSceneState as any).scene).toEqual(call.expected);
                 const base = call.expected.base_state, state = loaded.sceneState.value;
+                // Native state-only saves can rely on the viewer's pre-existing
+                // terrain. Supply that context, then validate every mapped layer.
+                const context = state.base.terrain ? state.base : { ...state.base, terrain: { source: { id: 'native-context', format: 'heightmap', crs: state.base.crs ?? 'LOCAL', data: { width: 2, height: 2, heights: new Float32Array([0,1,1,0]) } } } };
+                const scene = MapScene.fromSceneState({ ...state, base: context });
+                expect(scene.validate().diagnostics.filter(d => ['invalid_layer', 'unsupported_recipe_field'].includes(d.code))).toEqual([]); scene.dispose();
                 expect(state.base.layers!.filter(l => l.kind === 'raster')).toHaveLength(base.raster_overlays?.length ?? 0);
                 expect(state.base.layers!.filter(l => l.kind === 'vector')).toHaveLength(base.vector_overlays?.length ?? 0);
                 expect(state.base.layers!.flatMap(l => l.kind === 'labels' ? (l.source.data as any[]).map(d => d.text) : [])).toEqual((base.labels ?? []).map((l: any) => l.text));

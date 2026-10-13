@@ -1,7 +1,7 @@
 import { Diagnostic, ValidationReport, type JsonValue } from './diagnostics.js';
 import { SceneState, type SceneStateInput, type CameraBookmark, type ScenePreset } from './scene-review.js';
-import type { MapSceneLayerInput, SceneRecipeInput } from './map-scene-types.js';
-import type { VectorFeature, VectorPosition, VectorColor } from './vector-types.js';
+import type { MapSceneLayerInput, SceneRecipeInput, RasterOverlayInput } from './map-scene-types.js';
+import type { VectorFeature, VectorPosition, VectorColor, VectorStyle } from './vector-types.js';
 import { bundleFailure, bundlePath } from './bundle-archive.js';
 type RecordValue = Record<string, any>;
 /** Native directories can be zipped without altering their checked payloads. Unknown native intent is preserved and diagnosed. */
@@ -25,9 +25,18 @@ export function migrateNativeBundle(manifest: RecordValue, files: Record<string,
         for (const [key, value] of Object.entries(p)) if (key !== 'exposure') unsupported(`preset.${key}`, value);
         return converted;
     };
+    // W12 IDs are global across the active graph, including review overlays.
+    const usedIds = new Set((recipe.layers ?? []).flatMap(l => l.kind === 'vector' ? l.source.data?.features.map(f => f.id) ?? [] : []));
+    let next = 1;
+    const vectorId = () => { while (usedIds.has(next)) next++; if (next > 0xffffffff) bundleFailure('Native vector ID space exhausted'); usedIds.add(next); return next++; };
     const layers = (raw: RecordValue, prefix: string): MapSceneLayerInput[] => {
-        const result: MapSceneLayerInput[] = []; let next = 1;
-        for (const [i, overlay] of (raw.raster_overlays ?? []).entries()) result.push({ kind: 'raster', layerId: `${prefix}:raster:${i}`, source: { id: `${prefix}:raster-data:${i}`, format: /\.jpe?g$/i.test(overlay.path) ? 'jpg' : 'png', crs: recipe.crs ?? 'LOCAL', url: asset(overlay.path) }, options: { opacity: overlay.opacity ?? 1, zOrder: overlay.z_order ?? i, ...(overlay.extent ? { bounds: overlay.extent } : {}) } });
+        const result: MapSceneLayerInput[] = [];
+        for (const [i, overlay] of (raw.raster_overlays ?? []).entries()) {
+            const options: NonNullable<RasterOverlayInput['options']> = { opacity: overlay.opacity ?? 1, zOrder: overlay.z_order ?? i };
+            // Native OverlayLayer.extent is already terrain UV space.
+            if (overlay.extent != null) options.extent = overlay.extent;
+            result.push({ kind: 'raster', layerId: `${prefix}:raster:${i}`, source: { id: `${prefix}:raster-data:${i}`, format: /\.jpe?g$/i.test(overlay.path) ? 'jpg' : 'png', crs: recipe.crs ?? 'LOCAL', url: asset(overlay.path) }, options });
+        }
         for (const [i, overlay] of (raw.vector_overlays ?? []).entries()) {
             const vertices = overlay.vertices as unknown[], indices = overlay.indices as number[], primitive = String(overlay.primitive ?? 'triangles').toLowerCase(), features: VectorFeature[] = [];
             if (!Array.isArray(vertices) || !Array.isArray(indices)) { unsupported(`vector_overlays.${i}`, overlay); continue; }
@@ -39,11 +48,15 @@ export function migrateNativeBundle(manifest: RecordValue, files: Record<string,
             const step = primitive === 'triangles' ? 3 : primitive === 'lines' ? 2 : primitive === 'points' ? 1 : 0;
             if (!step || indices.length % step) { unsupported(`vector_overlays.${i}.primitive`, primitive); continue; }
             for (let j = 0; j < indices.length; j += step) {
-                const group = indices.slice(j, j + step).map(vertex), first = group[0]!, style = { color: first.color, opacity: overlay.opacity ?? 1, pointSize: overlay.point_size ?? 5, lineWidth: overlay.line_width ?? 2, drape: overlay.drape ?? true, drapeOffset: overlay.drape_offset ?? .5, depthBias: overlay.depth_bias ?? .001 };
+                const group = indices.slice(j, j + step).map(vertex), first = group[0]!;
+                // The native IPC default .001 is below W12's supported minimum.
+                // Keep its intent at the minimum representable browser bias;
+                // the original value remains available in nativeSceneState.
+                const style: VectorStyle = { color: first.color, opacity: overlay.opacity ?? 1, pointSize: overlay.point_size ?? 5, lineWidth: overlay.line_width ?? 2, drape: overlay.drape ?? true, drapeOffset: overlay.drape_offset ?? .5, depthBias: Math.max(.01, overlay.depth_bias ?? .001) };
                 if (group.some(g => g.color.some((v, k) => v !== first.color[k]))) unsupported(`vector_overlays.${i}.vertex_colors`, 'Per-vertex colors preserved in nativeSceneState');
-                if (step === 1) features.push({ id: next++, kind: 'point', position: first.position, style });
-                if (step === 2) features.push({ id: next++, kind: 'line', positions: group.map(g => g.position), style });
-                if (step === 3) features.push({ id: next++, kind: 'polygon', rings: [group.map(g => g.position)], style });
+                if (step === 1) features.push({ id: vectorId(), kind: 'point', position: first.position, style });
+                if (step === 2) features.push({ id: vectorId(), kind: 'line', positions: group.map(g => g.position), style });
+                if (step === 3) features.push({ id: vectorId(), kind: 'polygon', rings: [group.map(g => g.position)], style });
             }
             result.push({ kind: 'vector', layerId: `${prefix}:vector:${i}`, source: { id: `${prefix}:vector-data:${i}`, format: 'vector', crs: recipe.crs ?? 'LOCAL', data: { name: overlay.name ?? `${prefix}:${i}`, features, zOrder: overlay.z_order ?? i } } });
         }

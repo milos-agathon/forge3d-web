@@ -23,7 +23,7 @@ async function renderScene(target=scene){const result=await target.render();canv
 async function renderExample(){const r=await renderScene();return {coverage:r.metrics.coveragePixels,layers:r.executedLayerIds,data:Array.from(r.frame.data),status:r.report.status};}
 document.querySelector('#render').onclick=()=>renderScene().catch(e=>status.textContent=e.message);
 document.querySelector('#variant').onclick=async()=>{try{await scene.applyVariant(scene.getActiveVariantId()==='plain'?'review':'plain');await renderScene();}catch(e){status.textContent=e.message;}};
-document.querySelector('#save').onclick=()=>scene.saveBundle({name:'Local map review',sink:{kind:'download',filename:'local-map.forge3d'}}).catch(e=>status.textContent=e.message);
+document.querySelector('#save').onclick=()=>scene.saveBundle({name:'Local map review',sink:{kind:'download',filename:'local-map'}}).catch(e=>status.textContent=e.message);
 document.querySelector('#load').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const replacement=await api.MapScene.loadBundle(file);await replacement.prepare();scene.dispose();scene=replacement;await renderScene();}catch(error){status.textContent=error.message;}};
 window.__w19={api,features,style,baseRecipe,makeState,renderScene,renderExample,get scene(){return scene;},ready:true};status.textContent='Ready';
 addEventListener('pagehide',()=>scene.dispose(),{once:true});

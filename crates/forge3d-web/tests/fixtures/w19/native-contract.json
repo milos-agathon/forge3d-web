@@ -4332,6 +4332,30 @@
       }
     ]
   },
+  "renderableNativeBundle": {
+    "preset": {
+      "exposure": 1.25
+    },
+    "extent": [
+      0.1,
+      0.2,
+      0.8,
+      0.9
+    ],
+    "rasterCount": 1,
+    "vectorCount": 3,
+    "labels": [
+      {
+        "text": "Base",
+        "world_pos": [
+          0,
+          2,
+          0
+        ],
+        "kind": "point"
+      }
+    ]
+  },
   "testReplays": [
     {
       "source": "tests/test_style_parser.py",

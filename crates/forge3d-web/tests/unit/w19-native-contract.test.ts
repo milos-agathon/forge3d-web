@@ -5,6 +5,7 @@ import { evaluateStyleExpression } from '../../src-ts/style-expressions.js';
 import { parseStyleColor, styleToVectorStyle, styleToLabelStyle, compileStyle, parseStyle, styleFeaturesFromGeoJson } from '../../src-ts/map-style.js';
 import { evaluateStyleFilter } from '../../src-ts/style-expressions.js';
 import { loadBundle } from '../../src-ts/bundle.js';
+import { MapScene } from '../../src-ts/map-scene.js';
 const fixture = JSON.parse(readFileSync(new URL('../fixtures/w19/native-contract.json', import.meta.url), 'utf8'));
 describe('W19 independently executed native contracts', () => {
     for (const test of fixture.expressions) it(`native expression ${JSON.stringify(test.input)}`, () => expect(evaluateStyleExpression(test.input, fixture.context)).toEqual(test.expected));
@@ -39,9 +40,23 @@ describe('W19 independently executed native contracts', () => {
             if (expected.preset?.exposure !== undefined) expect(effective.postFx?.effects[0]).toMatchObject({ exposure: expected.preset.exposure }); else expect(effective.postFx).toBeUndefined();
         }
         expect(loaded.validationReport?.diagnostics.some(d => d.details.field === 'preset.unknown')).toBe(true);
+        const migrated = MapScene.fromSceneState(loaded.sceneState);
+        expect(migrated.validate().diagnostics.filter(d => ['invalid_layer', 'unsupported_recipe_field'].includes(d.code))).toEqual([]);
+        migrated.dispose();
         vi.stubGlobal('fetch', vi.fn(async url => new Response(readFileSync(new URL('../../assets/fonts/' + new URL(String(url)).pathname.split('/').at(-1), import.meta.url)))));
         try { const resaved = await loadBundle(await loaded.save()); const url = resaved.sceneState.value.base.terrain!.source.url!; expect(resaved.asset(url.replace('forge3d-asset:', ''))).toEqual(new TextEncoder().encode('native-dem')); expect(Object.keys(resaved.manifest.asset_aliases!).some(k => k.startsWith('forge3d-asset:'))).toBe(false); resaved.dispose(); } finally { vi.unstubAllGlobals(); }
         loaded.dispose(); expect(() => loaded.validationReport).toThrow(expect.objectContaining({ code: 'RUNTIME_DISPOSED' }));
+    });
+    it('validates executable native raster/vector adapters and preserves explicit supported depth bias', async () => {
+        const scene = await MapScene.loadBundle(readFileSync(new URL('../fixtures/w19/native-renderable.forge3d', import.meta.url)));
+        expect(scene.validate().hasErrors).toBe(false);
+        const layers = scene.recipe.value.layers!, raster = layers.find(l => l.kind === 'raster')!;
+        if (raster.kind !== 'raster') throw Error('Missing native raster');
+        expect(raster.options).toEqual({ extent: fixture.renderableNativeBundle.extent, opacity: .75, zOrder: 2 });
+        const vectors = layers.filter(l => l.kind === 'vector');
+        expect(vectors.map(l => l.kind === 'vector' ? l.source.data!.features[0]!.style!.depthBias : null)).toEqual([.01, .04, .01]);
+        expect(vectors.flatMap(l => l.kind === 'vector' ? l.source.data!.features.map(f => f.id) : [])).toEqual([1,2,3]);
+        scene.dispose();
     });
     for (const test of fixture.colors) it(`native color ${test.input}`, () => {
         const output = parseStyleColor(test.input); if (test.expected === null) expect(output).toBeNull(); else test.expected.forEach((n: number, i: number) => expect(output![i]).toBeCloseTo(n, 12));
