@@ -128,3 +128,5 @@ npm run test:browser:chrome
 
 If `navigator.gpu` or adapter acquisition fails in that lane, the release is
 blocked until the environment issue is documented or the runtime issue is fixed.
+
+W18 typed MapScene and deterministic diagnostics are implemented for the completed layer adapters. See [MapScene contracts](mapscene-diagnostics.md) and [verification](w18-evidence.md). Product-only texture/instancing/cache summaries remain explicit diagnostics; browser release qualification is unchanged.

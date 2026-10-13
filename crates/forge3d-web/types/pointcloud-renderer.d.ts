@@ -24,8 +24,12 @@ export declare class PointCloudRenderer {
     static create(canvas: HTMLCanvasElement | OffscreenCanvas, options?: PointRendererOptions): Promise<PointCloudRenderer>;
     resize(width: number, height: number): void;
     setLayers(layers: readonly PointCloudLayer[]): void;
+    /** W18: seed hardware depth before point draws, including translucent points. */
+    setOcclusionDepth(depth: Float32Array | null): void;
     render(view: PointView, signal?: AbortSignal): Promise<void>;
     readRgba(signal?: AbortSignal): Promise<Uint8Array>;
+    /** W18: depth in WebGPU clip space for composition with raster scene AOVs. */
+    readDepth(signal?: AbortSignal): Promise<Float32Array>;
     pick(x: number, y: number, signal?: AbortSignal): Promise<PointPickResult | null>;
     /** Recreates device resources and replays retained CPU layers without dataset IO. */
     recover(): Promise<void>;

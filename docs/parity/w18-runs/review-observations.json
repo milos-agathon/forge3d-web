@@ -1,0 +1,29 @@
+{
+  "verifiedAt": "2026-10-12T19:11:08.578123+00:00",
+  "implementationRevision": "5c6f79a9bb406eb45103b6f661a9714d19de14d2",
+  "sourceDist": {
+    "command": "npx playwright test tests/playwright/w18_mapscene.spec.ts --project=chromium-preflight --workers=1",
+    "passed": 30,
+    "failed": 0,
+    "skipped": 0,
+    "origin": "Observed CLI completion; full raw report is retained for the installed suite."
+  },
+  "unit": {
+    "command": "npm run test:unit",
+    "files": 71,
+    "passed": 1249,
+    "failed": 0
+  },
+  "sharedW16": {
+    "passed": 14,
+    "skipped": 1,
+    "skipReason": "Optional ten-minute acceptance soak was not requested or run."
+  },
+  "installed": {
+    "passed": 15,
+    "failed": 0,
+    "skipped": 0,
+    "packageSha256": "a8745af1266acbe33b48c0c28e0b67aeb408dc1dfd059eab5c71cda7033b6fe8",
+    "tarballDigestIndependentlyVerified": true
+  }
+}

@@ -1,0 +1,1176 @@
+W18 completion gates; implementation revision 6e4ce2d6590b850a1fdddf3d1b71e5a41bad047d; 2026-10-13
+
+COMMAND: npm run build:ts
+EXIT CODE: 0
+
+> @forge3d/web@1.26.3 build:ts
+> tsc -p tsconfig.json && node scripts/embed-proj-worker.mjs
+
+
+COMMAND: npm run prepare-dist
+EXIT CODE: 0
+
+> @forge3d/web@1.26.3 prepare-dist
+> node scripts/prepare-dist.mjs
+
+W13 exact dependency, shaping assets, deterministic fonts and licenses verified
+W14 exact PROJ, grid, native dataset assets and notices verified
+
+COMMAND: npm run test:api
+EXIT CODE: 0
+
+> @forge3d/web@1.26.3 test:api
+> npm run typecheck && node tests/api/public-api-snapshot.mjs && node tests/api/emitted-facade-stage.mjs
+
+
+> @forge3d/web@1.26.3 typecheck
+> tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.api.json
+
+
+COMMAND: npm run test:unit
+EXIT CODE: 0
+
+> @forge3d/web@1.26.3 test:unit
+> vitest run
+
+
+ RUN  v4.0.18 C:/Users/milos/.codex/worktrees/w18-mapscene/forge3d-web/crates/forge3d-web
+
+ ✓ tests/unit/w17-provenance.test.ts (1 test) 198ms
+ ✓ tests/unit/w11-native-provenance.test.ts (5 tests) 128ms
+ ✓ tests/unit/w12-native-provenance.test.ts (1 test) 182ms
+ ✓ tests/unit/orbit-controller.test.ts (6 tests) 744ms
+     ✓ keeps ten thousand randomized finite deltas valid  733ms
+ ✓ tests/unit/w18-diagnostics.test.ts (47 tests) 826ms
+     ✓ accounts for every retained native definition with named assertion tests or an explicit deferred owner  671ms
+ ✓ tests/unit/terrain-scatter.test.ts (14 tests) 249ms
+ ✓ tests/unit/message-protocol.test.ts (12 tests) 278ms
+ ✓ tests/unit/terrain-streaming.test.ts (20 tests) 275ms
+ ✓ tests/unit/display-adapters.test.ts (7 tests) 324ms
+ ✓ tests/unit/w16-laz-admission.test.ts (10 tests) 321ms
+ ✓ tests/unit/label-workflows.test.ts (52 tests) 424ms
+ ✓ tests/unit/w18-mapscene.test.ts (28 tests) 418ms
+ ✓ tests/unit/w15-geometry.test.ts (33 tests) 484ms
+ ✓ tests/unit/w16-tiles.test.ts (18 tests) 528ms
+     ✓ matches 256 branching native tile camera records across ADD, REPLACE, mixed and inherited refinement  324ms
+ ✓ tests/unit/label-contract-record.test.ts (3 tests) 590ms
+     ✓ maps every pinned native label definition to an existing browser outcome port  486ms
+ ✓ tests/unit/cog.test.ts (19 tests) 951ms
+ ✓ tests/unit/w10-reflection-metrics.test.ts (2 tests) 117ms
+ ✓ tests/unit/viewer-camera.test.ts (5 tests) 76ms
+ ✓ tests/unit/w14-native-contract.test.ts (2 tests) 149ms
+ ✓ tests/unit/environment.test.ts (20 tests) 1911ms
+     ✓ matches six independently executed native fields including ground locking  869ms
+   ✓ locks reference fixtures to pinned native source snapshots  377ms
+   ✓ locks installed-native scene references and historical PNG provenance  547ms
+ ✓ tests/unit/range-scheduler.test.ts (27 tests) 162ms
+ ✓ tests/unit/w15-buildings.test.ts (26 tests) 158ms
+ ✓ tests/unit/session.test.ts (24 tests) 101ms
+ ✓ tests/unit/browser-resources.test.ts (36 tests) 312ms
+ ✓ tests/unit/w15-io.test.ts (19 tests) 289ms
+ ✓ tests/unit/w06-frames.test.ts (8 tests) 198ms
+ ✓ tests/unit/remote-dataset-retry.test.ts (8 tests) 95ms
+ ✓ tests/unit/camera-rigs.test.ts (38 tests) 2855ms
+     ✓ never violates the minimum at any playback time  2218ms
+ ✓ tests/unit/ibl.test.ts (34 tests) 3215ms
+     ✓ round-trips prepared payloads through cache storage byte-identically  463ms
+     ✓ round-trips through OPFS  793ms
+     ✓ reports a miss then a hit with byte-identical payloads  373ms
+     ✓ treats a higher-quality cached entry as a miss  784ms
+ ✓ tests/unit/terrain-probes.test.ts (6 tests) 77ms
+ ✓ tests/unit/w14-crs.test.ts (27 tests) 3338ms
+     ✓ aligns north-up and rotated raster origins, preserving elevation and caller data  343ms
+     ✓ supports empty arrays, copied identity, XYZ/T and 10000 points  720ms
+     ✓ does not leak native allocations on repeated success and failure  855ms
+     ✓ recomputes bounds for large geometry without argument-spread limits  399ms
+ ✓ tests/unit/vector.test.ts (13 tests) 39ms
+ ✓ tests/unit/browser-io.test.ts (20 tests) 97ms
+ ✓ tests/unit/viewer-controls.test.ts (15 tests) 50ms
+ ✓ tests/unit/byte-cache.test.ts (16 tests) 81ms
+ ✓ tests/unit/scene.test.ts (33 tests) 53ms
+ ✓ tests/unit/camera.test.ts (18 tests) 32ms
+ ✓ tests/unit/w17-tracing.test.ts (32 tests) 3745ms
+     ✓ renders geometry, stable AOVs, HDR, cache and bounded deterministic replay  454ms
+     ✓ lit absorption attenuates camera and shadow paths, and scattering sees analytic lights  2822ms
+ ✓ tests/unit/textures.test.ts (42 tests) 69ms
+ ✓ tests/unit/terrain-dataset.test.ts (38 tests) 100ms
+ ✓ tests/unit/w16-pointcloud.test.ts (38 tests) 3623ms
+     ✓ matches recorded real-data native camera keys/counts and quantized SSE exactly  3295ms
+ ✓ tests/unit/offscreen-renderer.test.ts (9 tests) 29ms
+ ✓ tests/unit/worker-renderer.test.ts (12 tests) 4111ms
+     ✓ leaves no listeners or pointers after 30 cycles  3381ms
+ ✓ tests/unit/labels.test.ts (74 tests) 4177ms
+     ✓ makes world glyph triangles with depth and actual camera projection  508ms
+     ✓ compiles a 200000-vertex polygon without spreading vertices into the JS stack  2930ms
+ ✓ tests/unit/camera-controllers.test.ts (14 tests) 28ms
+ ✓ tests/unit/camera-animation.test.ts (14 tests) 31ms
+ ✓ tests/unit/playwright-project-metadata.test.ts (16 tests) 13ms
+ ✓ tests/unit/source-launch-observation.test.ts (3 tests) 9ms
+ ✓ tests/unit/viewer-interaction-observation.test.ts (12 tests) 13ms
+ ✓ tests/unit/materials.test.ts (18 tests) 22ms
+ ✓ tests/unit/w14-datasets.test.ts (10 tests) 4818ms
+     ✓ loads native DEM and boundaries exactly, with defensive typed buffers  2622ms
+     ✓ caches exact bytes across instances, refuses offline misses and corrupted entries  2087ms
+ ✓ tests/unit/viewer.test.ts (45 tests) 4758ms
+     ✓ clears failed labels and uses only the caller channel for capture and replacement errors  2985ms
+     ✓ retries failed labels after recovery without repeating the handled error  314ms
+ ✓ tests/unit/ownership.test.ts (6 tests) 11ms
+ ✓ tests/unit/resize-controller.test.ts (5 tests) 12ms
+ ✓ tests/unit/terrain-overlays.test.ts (14 tests) 15ms
+ ✓ tests/unit/memory-policy.test.ts (9 tests) 10ms
+ ✓ tests/unit/postfx.test.ts (20 tests) 21ms
+ ✓ tests/unit/lighting.test.ts (23 tests) 27ms
+ ✓ tests/unit/renderer-config.test.ts (16 tests) 25ms
+ ✓ tests/unit/terrain-material.test.ts (7 tests) 19ms
+ ✓ tests/unit/terrain-vt.test.ts (10 tests) 11ms
+ ✓ tests/unit/viewer-visibility-lifecycle.test.ts (10 tests) 8ms
+ ✓ tests/unit/w06-offline.test.ts (9 tests) 18ms
+ ✓ tests/unit/shadows.test.ts (23 tests) 24ms
+ ✓ tests/unit/evidence-mode.test.ts (3 tests) 3ms
+ ✓ tests/unit/render-scheduler.test.ts (4 tests) 5ms
+ ✓ tests/unit/playwright-config.test.ts (7 tests) 10ms
+ ✓ tests/unit/playwright-launch-diagnostics.test.ts (5 tests) 6ms
+ ✓ tests/unit/w16-provenance.test.ts (1 test) 4687ms
+   ✓ W16 fixtures and deepest native sources retain independent provenance  4684ms
+ ✓ tests/unit/w15-native-contracts.test.ts (14 tests) 6263ms
+     ✓ batch history compares exact binary views and rejects missing or changed available blobs  1356ms
+     ✓ optional history rejects changed bytes and skips unavailable commits  700ms
+     ✓ pins every native suite and requires concrete browser ports  4029ms
+ ✓ tests/unit/w18-review-regressions.test.ts (26 tests) 21349ms
+     ✓ raises recipe serialization limits consistently for large DEM construction validation and JSON replay  16801ms
+     ✓ preflights a large DEM repeatedly without full dataset builds and keeps the full prepare check  4103ms
+
+ Test Files  71 passed (71)
+      Tests  1262 passed (1262)
+   Start at  09:53:44
+   Duration  24.74s (transform 35.86s, setup 0ms, import 88.20s, tests 78.40s, environment 13ms)
+
+
+COMMAND: npm run test:w18
+EXIT CODE: 0
+
+> @forge3d/web@1.26.3 test:w18
+> vitest run tests/unit/w18-diagnostics.test.ts tests/unit/w18-mapscene.test.ts tests/unit/w18-review-regressions.test.ts && node --test tests/api/w18-docs.test.mjs && playwright test tests/playwright/w18_mapscene.spec.ts --project=chromium-preflight
+
+
+ RUN  v4.0.18 C:/Users/milos/.codex/worktrees/w18-mapscene/forge3d-web/crates/forge3d-web
+
+ ✓ tests/unit/w18-diagnostics.test.ts (47 tests) 783ms
+     ✓ accounts for every retained native definition with named assertion tests or an explicit deferred owner  747ms
+ ✓ tests/unit/w18-mapscene.test.ts (28 tests) 193ms
+ ✓ tests/unit/w18-review-regressions.test.ts (26 tests) 14748ms
+     ✓ raises recipe serialization limits consistently for large DEM construction validation and JSON replay  10412ms
+     ✓ preflights a large DEM repeatedly without full dataset builds and keeps the full prepare check  4176ms
+
+ Test Files  3 passed (3)
+      Tests  101 passed (101)
+   Start at  09:54:37
+   Duration  20.32s (transform 7.82s, setup 0ms, import 13.71s, tests 15.72s, environment 0ms)
+
+✔ documents the public MapScene API with truthful browser support levels (1.3427ms)
+✔ removes stale completion and feature ownership wording from the MapScene guide (0.13ms)
+✔ documents every emitted MapScene validation code and the native required codes (1.0777ms)
+✔ links canonical browser examples and the actual layer support guides (0.3438ms)
+✔ records current MapScene diagnostics and explicit support ownership (0.1598ms)
+✔ uses only the PRD taxonomy in the MapScene support table (0.2007ms)
+✔ states the native product boundaries and incomplete Cesium workflow (0.1202ms)
+ℹ tests 7
+ℹ suites 0
+ℹ pass 7
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 79.902
+[WebServer] (node:60080) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 30 tests using 1 worker
+
+(node:60824) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:60824) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  1 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:10:9 › source › W18 source: post-processing cannot conceal empty geometry and overlay-only output is covered (1.5s)
+  ok  2 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:14:9 › source › W18 source: multilayer example renders real geometry, glyphs and PNG (1.8s)
+  ok  3 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:23:9 › source › W18 source: each completed raster layer changes covered pixels (3.5s)
+  ok  4 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:34:9 › source › W18 source: M02b blocks nonempty points and tiles before network or GPU creation (476ms)
+  ok  5 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:59:9 › source › W18 source: JSON settings errors block during preflight without GPU work (511ms)
+  ok  6 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:81:9 › source › W18 source: validation and policies block before GPU creation (457ms)
+  ok  7 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:94:9 › source › W18 source: recipe replay, repeated render, resize and disposal are deterministic (1.5s)
+  ok  8 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:104:9 › source › W18 source: cancellation and output sink failures never produce a success record (1.1s)
+  ok  9 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:122:9 › source › W18 source: warning policy retains label rejection reports and blocks strict output (1.2s)
+  ok 10 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:134:9 › source › W18 source: compiled plans preserve priority, keepouts, rejection diagnostics and replay (1.2s)
+  ok 11 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:145:9 › source › W18 source: GPU loss clears success and a later render recreates owners (1.1s)
+  ok 12 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:182:9 › source › W18 source: cancellation after GPU work clears an earlier success record (1.1s)
+  ok 13 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:196:9 › source › W18 source: URL heightmap, image, vector, glyph records and OBJ render after preparation (1.9s)
+  ok 14 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:205:9 › source › W18 source: lighting and post-processing affect actual terrain output (1.8s)
+  ok 15 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:211:9 › source › W18 source: dedicated GPU trace output has real hits and visible material color (1.2s)
+  ok 16 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:10:9 › dist › W18 dist: post-processing cannot conceal empty geometry and overlay-only output is covered (2.1s)
+  ok 17 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:14:9 › dist › W18 dist: multilayer example renders real geometry, glyphs and PNG (2.4s)
+  ok 18 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:23:9 › dist › W18 dist: each completed raster layer changes covered pixels (3.1s)
+  ok 19 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:34:9 › dist › W18 dist: M02b blocks nonempty points and tiles before network or GPU creation (536ms)
+  ok 20 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:59:9 › dist › W18 dist: JSON settings errors block during preflight without GPU work (523ms)
+  ok 21 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:81:9 › dist › W18 dist: validation and policies block before GPU creation (522ms)
+  ok 22 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:94:9 › dist › W18 dist: recipe replay, repeated render, resize and disposal are deterministic (1.6s)
+  ok 23 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:104:9 › dist › W18 dist: cancellation and output sink failures never produce a success record (1.2s)
+  ok 24 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:122:9 › dist › W18 dist: warning policy retains label rejection reports and blocks strict output (1.1s)
+  ok 25 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:134:9 › dist › W18 dist: compiled plans preserve priority, keepouts, rejection diagnostics and replay (1.2s)
+  ok 26 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:145:9 › dist › W18 dist: GPU loss clears success and a later render recreates owners (1.2s)
+  ok 27 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:182:9 › dist › W18 dist: cancellation after GPU work clears an earlier success record (1.3s)
+  ok 28 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:196:9 › dist › W18 dist: URL heightmap, image, vector, glyph records and OBJ render after preparation (1.8s)
+  ok 29 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:205:9 › dist › W18 dist: lighting and post-processing affect actual terrain output (1.7s)
+  ok 30 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:211:9 › dist › W18 dist: dedicated GPU trace output has real hits and visible material color (1.2s)
+
+  30 passed (48.6s)
+
+COMMAND: npm run test:w16
+EXIT CODE: 0
+
+> @forge3d/web@1.26.3 test:w16
+> vitest run tests/unit/w16-pointcloud.test.ts tests/unit/w16-tiles.test.ts tests/unit/w16-provenance.test.ts tests/unit/w16-laz-admission.test.ts && playwright test tests/playwright/w16_pointcloud.spec.ts --project=chromium-preflight
+
+
+ RUN  v4.0.18 C:/Users/milos/.codex/worktrees/w18-mapscene/forge3d-web/crates/forge3d-web
+
+ ✓ tests/unit/w16-provenance.test.ts (1 test) 138ms
+ ✓ tests/unit/w16-tiles.test.ts (18 tests) 224ms
+ ✓ tests/unit/w16-laz-admission.test.ts (10 tests) 283ms
+ ✓ tests/unit/w16-pointcloud.test.ts (38 tests) 919ms
+     ✓ matches recorded real-data native camera keys/counts and quantized SSE exactly  788ms
+
+ Test Files  4 passed (4)
+      Tests  67 passed (67)
+   Start at  09:55:47
+   Duration  5.00s (transform 7.26s, setup 0ms, import 11.68s, tests 1.56s, environment 0ms)
+
+[WebServer] (node:55648) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 15 tests using 1 worker
+
+(node:19664) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:19664) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  1 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:20:3 › W16 source: independent LAZ/COPC/EPT counts, positions, colors and W15 b3dm (2.2s)
+  ok  2 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:49:3 › W16 source: abort and deadline terminate stuck WASM workers, then decode real LAZ (2.8s)
+  ok  3 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:119:3 › W16 source: initial view uses <=25% ranged bytes and typed failures (1.3s)
+  ok  4 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:146:3 › W16 source: public file and chunk decoders hard-stop stuck WASM and bound waiting callers (4.7s)
+W16 native heap proof {"mode":"source","runs":[{"cached":false,"created":1,"heaps":[{"module":1,"memory":1,"buffer":1,"heapBytes":7274496},{"module":2,"memory":2,"buffer":2,"heapBytes":7274496}],"results":[{"count":110000,"positions":"73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23","colors":"d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"},{"count":110000,"positions":"73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23","colors":"d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"}]},{"cached":true,"created":1,"heaps":[{"module":1,"memory":1,"buffer":1,"heapBytes":7274496},{"module":1,"memory":1,"buffer":1,"heapBytes":7274496}],"results":[{"count":110000,"positions":"73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23","colors":"d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"},{"count":110000,"positions":"73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23","colors":"d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"}]}],"expected":{"count":110000,"positionsSha256":"73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23","colorsSha256":"d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b","bounds":{"min":[636001.76,848935.2000000001,406.26],"max":[637179.22,849497.9,520.51]},"firstPositions":[637177.98,849393.9500000001,411.19,637177.3,849396.9500000001,411.25,637176.34,849400.84,411.01],"firstColors":[0,0,0,0,0,0,0,0,0]}}
+  ok  5 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:216:3 › W16 source: a supplied worker pool creates a fresh native heap for every decode (1.1s)
+  ok  6 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:269:3 › W16 source: covered point colors, aligned GPU picking, resize, recovery and allocation cycles (929ms)
+  ok  7 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:328:3 › W16 source: branching native REPLACE and independent ADD/frustum cameras, B3DM integration (10.2s)
+  ok  8 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:20:3 › W16 dist: independent LAZ/COPC/EPT counts, positions, colors and W15 b3dm (2.1s)
+  ok  9 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:49:3 › W16 dist: abort and deadline terminate stuck WASM workers, then decode real LAZ (2.9s)
+  ok 10 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:119:3 › W16 dist: initial view uses <=25% ranged bytes and typed failures (1.2s)
+  ok 11 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:146:3 › W16 dist: public file and chunk decoders hard-stop stuck WASM and bound waiting callers (4.8s)
+W16 native heap proof {"mode":"dist","runs":[{"cached":false,"created":1,"heaps":[{"module":1,"memory":1,"buffer":1,"heapBytes":7274496},{"module":2,"memory":2,"buffer":2,"heapBytes":7274496}],"results":[{"count":110000,"positions":"73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23","colors":"d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"},{"count":110000,"positions":"73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23","colors":"d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"}]},{"cached":true,"created":1,"heaps":[{"module":1,"memory":1,"buffer":1,"heapBytes":7274496},{"module":1,"memory":1,"buffer":1,"heapBytes":7274496}],"results":[{"count":110000,"positions":"73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23","colors":"d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"},{"count":110000,"positions":"73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23","colors":"d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"}]}],"expected":{"count":110000,"positionsSha256":"73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23","colorsSha256":"d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b","bounds":{"min":[636001.76,848935.2000000001,406.26],"max":[637179.22,849497.9,520.51]},"firstPositions":[637177.98,849393.9500000001,411.19,637177.3,849396.9500000001,411.25,637176.34,849400.84,411.01],"firstColors":[0,0,0,0,0,0,0,0,0]}}
+  ok 12 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:216:3 › W16 dist: a supplied worker pool creates a fresh native heap for every decode (1.2s)
+  ok 13 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:269:3 › W16 dist: covered point colors, aligned GPU picking, resize, recovery and allocation cycles (930ms)
+  ok 14 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:328:3 › W16 dist: branching native REPLACE and independent ADD/frustum cameras, B3DM integration (9.1s)
+  -  15 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:366:1 › W16 10-minute real-data camera traversal retains budget and records adapter
+
+  1 skipped
+  14 passed (51.9s)
+
+COMMAND: npm run test:package
+EXIT CODE: 0
+
+> @forge3d/web@1.26.3 test:package
+> npm run test:release-hardening && npm run test:browser-harness && npm run test:infrastructure && node tests/api/package-contract.mjs
+
+
+> @forge3d/web@1.26.3 test:release-hardening
+> node tests/api/release-hardening.mjs && npm run test:docs
+
+
+> @forge3d/web@1.26.3 test:docs
+> node --test tests/api/docs-links.test.mjs tests/api/w18-docs.test.mjs
+
+✔ README.md has no broken repository documentation links (6.3749ms)
+✔ docs/superpowers/specs/2026-06-05-forge3d-browser-webgpu-wasm-migration-goals.md has no broken repository documentation links (2.0398ms)
+✔ crates/forge3d-web/README.md has no broken repository documentation links (15.9403ms)
+✔ crates/forge3d-web/docs/labels.md has no broken repository documentation links (14.0677ms)
+✔ crates/forge3d-web/docs/crs-datasets.md has no broken repository documentation links (16.6959ms)
+✔ crates/forge3d-web/docs/pointcloud-tiles.md has no broken repository documentation links (11.2515ms)
+✔ crates/forge3d-web/docs/w16-evidence.md has no broken repository documentation links (19.5429ms)
+✔ crates/forge3d-web/docs/tracing.md has no broken repository documentation links (10.1004ms)
+✔ crates/forge3d-web/docs/mapscene-diagnostics.md has no broken repository documentation links (1.4813ms)
+✔ crates/forge3d-web/docs/w18-evidence.md has no broken repository documentation links (7.2243ms)
+✔ crates/forge3d-web/docs/w17-evidence.md has no broken repository documentation links (6.1957ms)
+✔ docs/parity/w14-implementation.md has no broken repository documentation links (10.0084ms)
+✔ crates/forge3d-web/docs/support-matrix.md has no broken repository documentation links (9.4599ms)
+✔ crates/forge3d-web/docs/release-checklist.md has no broken repository documentation links (1.8525ms)
+✔ documented feature gaps link to a capability row and owning task (0.9718ms)
+✔ documents the public MapScene API with truthful browser support levels (5.0683ms)
+✔ removes stale completion and feature ownership wording from the MapScene guide (0.3496ms)
+✔ documents every emitted MapScene validation code and the native required codes (2.6558ms)
+✔ links canonical browser examples and the actual layer support guides (0.6128ms)
+✔ records current MapScene diagnostics and explicit support ownership (0.4058ms)
+✔ uses only the PRD taxonomy in the MapScene support table (0.3306ms)
+✔ states the native product boundaries and incomplete Cesium workflow (0.3355ms)
+ℹ tests 22
+ℹ suites 0
+ℹ pass 22
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 268.3323
+
+> @forge3d/web@1.26.3 test:browser-harness
+> node --test tests/browser/benchmark/benchmark-golden.test.mjs tests/browser/evidence-validator.test.mjs tests/browser/resource-assertions.test.mjs tests/browser/chr03-hardware-proof-validator.test.mjs tests/browser/chr04-hardware-proof-validator.test.mjs tests/browser/ffx03-proof-validator.test.mjs tests/browser/saf03-proof-validator.test.mjs tests/browser/saf04-hardware-proof-validator.test.mjs tests/browser/viewer-benchmark-module.test.mjs tests/webdriver/safari-viewer.test.mjs
+
+✔ benchmark v1 regenerates byte-for-byte with frozen hashes (133.9836ms)
+✔ validates exact CHR-03 behavior, lifecycle, and benchmark proof (9.315ms)
+✔ production entrypoint applies the same strict schema and semantic checks (5.9761ms)
+✔ rejects no-op control (2.7287ms)
+✔ rejects wrong asset (2.9151ms)
+✔ rejects duplicate runtime (1.6249ms)
+✔ rejects leaked resource (5.9212ms)
+✔ rejects missing measured frame (1.2396ms)
+✔ rejects skipped frame (0.9284ms)
+✔ rejects malformed raw timing (2.1333ms)
+✔ rejects p95 above threshold (2.5028ms)
+✔ rejects injected two-owned-RAF observation (2.0486ms)
+✔ rejects duplicate RAF (1.7699ms)
+✔ rejects fractional queue sample (1.9407ms)
+✔ rejects missing scheduler field (1.2612ms)
+✔ rejects queue not empty (0.6661ms)
+✔ rejects wrong canonical hash (0.8685ms)
+✔ rejects missing signal provenance (1.0887ms)
+✔ rejects wrong pointer identity (1.5272ms)
+✔ rejects undocumented keyboard key (0.8096ms)
+✔ rejects hidden benchmark (1.2068ms)
+✔ rejects missing SystemInfo reason (0.854ms)
+✔ validates exact CHR-04 Edge proof and outer provenance (13.4987ms)
+✔ rejects borrowed Chrome proof and mutated Edge bindings/provenance (43.861ms)
+✔ rejects every policy argument with and without a value (23.0314ms)
+✔ schema closes nested payloads and Edge observations (12.3437ms)
+✔ rejects missing or mutated touch and unsupported diagnostics (7.6816ms)
+✔ reuses full FND-07 payload validation (3.4556ms)
+✔ validates a complete record and recomputes index-569 p95/FPS (9.6411ms)
+✔ keeps optional Firefox classification fields backward-compatible (3.6236ms)
+✔ rejects null browser preference override scalars (3.858ms)
+✔ validates exact firefox-preflight source-browser classification (0.6903ms)
+✔ validates exact firefox-nightly-experimental source-browser classification (0.8767ms)
+✔ rejects missing preflight support level (0.8081ms)
+✔ rejects missing preflight preference label (0.6186ms)
+✔ rejects preflight branded support level (0.6833ms)
+✔ rejects preflight exact-tarball artifact (0.6862ms)
+✔ rejects preflight PASS result (1.3108ms)
+✔ rejects preflight override mode (0.4921ms)
+✔ rejects preflight preference override (0.4221ms)
+✔ rejects experimental engine support level (0.7644ms)
+✔ rejects experimental exact-tarball artifact (0.4524ms)
+✔ rejects experimental PASS result (0.3895ms)
+✔ rejects experimental default mode (0.4634ms)
+✔ rejects experimental missing WebGPU override (0.4517ms)
+✔ rejects experimental false WebGPU override (0.3529ms)
+✔ rejects experimental extra preference override (0.3396ms)
+✔ rejects Firefox project with Chromium identity (0.3337ms)
+✔ rejects Firefox project with branded channel (1.0406ms)
+✔ rejects Firefox project with required lane (0.3628ms)
+✔ retains a 500-ms stall in duration and raw intervals (0.9556ms)
+✔ fails closed for skipped frame (1.718ms)
+✔ fails closed for dropped trace sample (3.6271ms)
+✔ fails closed for background transition (1.464ms)
+✔ fails closed for known thermal throttle (2.0781ms)
+✔ fails closed for known low-power mode (1.1484ms)
+✔ rejects supplied derived values that disagree with raw timing (1.1137ms)
+✔ PASS evidence rejects observed viewer or validation errors (2.3186ms)
+✔ probe evidence may omit benchmark but cannot satisfy a required lane (0.9286ms)
+✔ required evidence rejects PROBE even with benchmark data (1.4597ms)
+✔ required evidence rejects FAIL even with benchmark data (1.6105ms)
+✔ required evidence rejects INFRA_ERROR even with benchmark data (0.6804ms)
+✔ required evidence rejects a fallback adapter (0.601ms)
+✔ required release evidence rejects a source WASM digest (2.0072ms)
+✔ required release evidence rejects a dirty source revision (1.1841ms)
+✔ PASS evidence requires the mouse interaction (2.0981ms)
+✔ PASS evidence requires the wheel interaction (2.9848ms)
+✔ PASS evidence requires the touch interaction (1.6406ms)
+✔ PASS evidence requires the keyboard interaction (1.0636ms)
+✔ PASS evidence requires the resize interaction (1.0055ms)
+✔ PASS evidence requires the disposal interaction (1.0659ms)
+✔ accepts complete stable FFX-03 proof and closed Nightly outcomes (11.007ms)
+✔ stable validator rejects wrong architecture (0.8764ms)
+✔ stable validator rejects wrong workload schema (0.5237ms)
+✔ stable validator rejects numeric behavior (4.4459ms)
+✔ stable validator rejects numeric driver boolean (2.5797ms)
+✔ stable validator rejects zero pointer id (7.9825ms)
+✔ stable validator rejects numeric keyboard boolean (3.7689ms)
+✔ stable validator rejects numeric focus boolean (2.5608ms)
+✔ stable validator rejects unknown thermal state (2.5652ms)
+✔ stable validator rejects unknown low power state (3.2971ms)
+✔ stable validator rejects fabricated Firefox SystemInfo (1.3471ms)
+✔ stable validator rejects release preference override (0.4986ms)
+✔ stable validator rejects 49 cleanup cycles (0.3372ms)
+✔ stable validator rejects observer leak (1.916ms)
+✔ stable validator rejects trimmed benchmark (1.8398ms)
+✔ stable validator rejects altered hash (1.5761ms)
+✔ stable validator rejects cleanup failure (0.2483ms)
+✔ stable validator rejects unknown nested field (0.3508ms)
+✔ stable validator rejects unknown adapter field (0.5483ms)
+✔ stable validator rejects misbound adapter (0.602ms)
+✔ stable validator rejects unknown behavior field (2.3009ms)
+✔ stable validator rejects unknown lifecycle field (3.0204ms)
+✔ Nightly validator rejects unsafe preferences and fabricated unsuccessful adapter (0.9813ms)
+✔ accepts a fully released viewer (1.2938ms)
+✔ negative control detects leaked ownedListeners (2.0873ms)
+✔ negative control detects leaked activeObservers (0.2124ms)
+✔ negative control detects leaked activeRuntimes (0.1939ms)
+✔ negative control detects leaked pendingAnimationFrame (0.2288ms)
+✔ negative control detects leaked activePointers (0.1534ms)
+✔ SAF-03 validates the complete stable Safari proof and separate STP result (14.3075ms)
+✔ SAF-03 records optional STP absence without fabricating a session cleanup (0.9842ms)
+✔ SAF-03 rejects every binding, action, screenshot, lifecycle, benchmark, and cleanup edge (189.4013ms)
+✔ SAF-03 closes every STP product-failure provenance and cleanup state (0.888ms)
+✔ SAF-04 proof validates the versioned exact binding and complete cycles (7.4696ms)
+✔ SAF-04 proof rejects substitution, stale lifecycle, premature capture loss, no-op zoom, and transient Gesture Events (46.0111ms)
+✔ transpiled benchmark wrapper imports its copied browser dependency and uses origin-root assets (139.7802ms)
+✔ browser benchmark admits only HTTPS or loopback HTTP asset URLs (0.8411ms)
+✔ serialized benchmark callback retains its URL validation helper (2.9535ms)
+✔ benchmark viewer errors reach the shared hardware list and reject CHR-03 and CHR-04 proofs (11.6333ms)
+✔ SAF-03 uses the pinned Selenium client and decodes native PNG terrain pixels (3.5435ms)
+✔ SAF-03 rejects corrupt and unsupported native screenshots (1.0282ms)
+✔ SAF-03 hashes decoded pixels independently from PNG encoding (1.052ms)
+✔ SAF-03 visibility and Retina resize use the packaged same-origin controls (22.6953ms)
+✔ SAF-03 retains pagehide console and runtime errors across the hard reload boundary (0.5664ms)
+✔ SAF-03 initializes the durable collector before tested fixture navigation (1.4414ms)
+✔ SAF-03 fixture collector rehydrates startup and callback-only reload errors (3.7213ms)
+✔ SAF-03 fixture collector surfaces durable storage write failure across documents (1.9969ms)
+ℹ tests 118
+ℹ suites 0
+ℹ pass 118
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5561.6814
+
+> @forge3d/web@1.26.3 test:infrastructure
+> node scripts/run-infrastructure-tests.mjs
+
+✔ page adapter attestation matches its strict schema (1.3751ms)
+✔ required attestation joins exact run/job/asset/commit/package bindings (0.2607ms)
+✔ fallback and missing fallback information fail before browser acceptance (0.3071ms)
+✔ device, surface, luma, host GPU, session, and exact binding are all required (0.4047ms)
+✔ Linux evidence rejects missing Wayland/driver data and old NVIDIA drivers (0.4206ms)
+✔ Intel Linux host evidence does not require NVIDIA tooling (0.2211ms)
+✔ attached mobile evidence remains bound to its fixed controller host (0.3356ms)
+✔ macOS host GPU capture removes display serial and device identifiers (0.9481ms)
+✔ pending repository trust gates privileged packaging without credentials (1.8091ms)
+✔ observer exposes only the exact four non-secret handoff outputs (0.8637ms)
+✔ only the GitHub-hosted observer job can reference observer credentials (0.1484ms)
+✔ observer upload is immutable, exact-name, error-on-missing, and attested (0.1932ms)
+✔ packager consumes all four values only through needs and uses exact-ID verifier (0.1819ms)
+✔ packager includes the checked controller health endpoint configuration (0.4955ms)
+✔ automated and manual sources derive closed matrix keys without artifact claims (136.0166ms)
+✔ infrastructure canary, fallback adapter, failed identity, and unattested artifact fail (0.612ms)
+✔ finalization rejects stale embedded workflow run identity (0.3947ms)
+✔ browser-neutral harness runs the browser-owned payload after adapter smoke (2.1358ms)
+✔ infrastructure canary cannot execute browser support assertions (0.3286ms)
+✔ only Firefox lanes require and validate the FFX-04 lifecycle proof (28.4104ms)
+✔ challenged infrastructure canary remains adapter-only (3.8203ms)
+✔ fallback adapter and unreviewed drivers fail closed while cleanup still runs (0.7394ms)
+✔ production lane executor opens a headed browser and captures live page evidence (18.4514ms)
+✔ production Safari lane dispatches the authorized SAF-02 binding and validates its proof (28.6615ms)
+✔ opened browser session closes when provenance validation rejects it (0.7672ms)
+✔ Edge runtime routes exact CHR-04 proof and rejects borrowed Chrome proof before PASS (25.6871ms)
+✔ manual mobile runtime calls Appium class and retains the visible challenge window (13.2311ms)
+✔ Safari product manual lane reaches page composition without changing attestation binding (3.2205ms)
+✔ stable Safari lane requires and retains exact SAF-04 proof (18.9746ms)
+✔ unconditional cleanup stops route/driver/Appium processes and restores updates (247.5445ms)
+✔ assembly binds one tarball, clean exact HEAD, evidence, schemas, and fixture (5495.9882ms)
+✔ Selenium closure assembly fails when a lock-bound installed package is missing (8.2251ms)
+✔ promoted Selenium closure materializes artifact-only and rejects missing or tampered inputs (3930.2088ms)
+✔ assembly dependency guard rejects file, link, and workspace protocols (0.6054ms)
+✔ browser package runs only for protected-main push or manual dispatch (2.1135ms)
+✔ pending repository trust gates privileged packaging without credentials (0.2241ms)
+✔ only observer receives the trust environment and four-output handoff (0.2597ms)
+✔ builder verifies exact-ID observation before target checkout or execution (0.2078ms)
+✔ builder creates one tarball consumer artifact with 90-day retention (0.2006ms)
+✔ observer and builder use least privilege without writes to repository contents (0.1283ms)
+✔ INF-01 policy freezes the required shipping and probe browser channels (1.6802ms)
+✔ capture records an unlocked headed shipping browser with exact tool versions (2.7105ms)
+✔ unsafe WebGPU, backend, blocklist, certificate, and software flags fail (1.5302ms)
+✔ capture preserves the exact observed launch argument strings (0.3934ms)
+✔ required host capture fails for locked, remote, non-Wayland, old, or drifted tools (0.417ms)
+✔ update window resolves exact versions, expires at 24 hours, and always closes (0.6903ms)
+✔ macOS and Windows session state is observed instead of synthesized (0.6763ms)
+✔ update window invokes an absolute enforcement helper and validates its receipt (0.4288ms)
+✔ freeze attempts persist enough exact state for unconditional restoration (0.2899ms)
+✔ host runtime helper supplies versions while the trusted script observes OS and lock state (2.7551ms)
+✔ Chromium provenance comes from the live CDP browser command line (2.1231ms)
+✔ WebKit source configuration never enters Chromium CDP or process observation (0.3248ms)
+✔ Chromium source observation rejects a fabricated non-live source (0.1707ms)
+✔ Chromium provenance falls back to the exact live process arguments when CDP denies command-line access (0.6336ms)
+✔ macOS Chromium fallback strips the exact executable path with spaces and retains positional arguments (0.8234ms)
+✔ macOS Chromium fallback fails closed when executable and command observations disagree (0.9271ms)
+✔ Chromium provenance fails closed when neither CDP nor a live browser PID can prove arguments (0.3507ms)
+✔ checked automation version is read from the installed package record (13.1879ms)
+✔ installed Appium driver versions are resolved from supported CLI JSON shapes (0.4651ms)
+✔ live Windows and POSIX command lines retain exact browser arguments (0.4305ms)
+✔ run provenance rejects placeholder drivers and prohibited observed flags (1.3137ms)
+✔ Playwright cleanup closes context before browser (1.6963ms)
+✔ Playwright cleanup still closes browser when context close fails (0.6763ms)
+✔ Playwright cleanup retains both nested close failures (0.316ms)
+✔ Firefox production session binds the pinned client, driver, binary, and closed lane (0.7278ms)
+✔ Firefox production session rejects an unpinned Selenium client before launch (0.6837ms)
+✔ required Firefox session attaches FFX-04 lifecycle to the same Selenium session (0.5952ms)
+✔ Nightly Firefox probe session is returned without FFX-04 lifecycle attachment (0.3465ms)
+✔ CHR-03 applicability is exact and preserves the Windows Chrome lane (1.7349ms)
+✔ CHR-04 registry is closed over exact Edge assets, platforms, and requirement modes (1.3675ms)
+✔ support publication is deterministic across record order and closes all 24 runs (84.1701ms)
+✔ support publication fails closed on readiness, set, target, package, run, digest, artifact, and attempt substitutions (480.0614ms)
+✔ raw manifest bytes and the laboratory same-commit tuple cannot be bypassed (65.0679ms)
+✔ primary Chromium provenance rejects nonstable, placeholder, malformed, unsafe, fallback, platform, display, and injected hardware rows (1564.2132ms)
+✔ Safari publication requires the complete independently bound SAF-02 proof (302.4748ms)
+✔ a semantically changed record with stale readiness bindings fails closed (33.7977ms)
+✔ dynamic evidence is Markdown-escaped and cannot add rows or links (25.553ms)
+✔ CLI consumes canonical readiness and finalized records and writes exact deterministic bytes (228.5683ms)
+✔ controller package is manual protected-main only (0.7967ms)
+✔ observer secret is isolated and packager verifies exact-ID handoff (0.3212ms)
+✔ controller is tested, versioned, retained, and GitHub-hosted attested (0.2836ms)
+✔ isolated Edge diagnostic closes its context once when init fails (1.8405ms)
+✔ isolated Edge diagnostic closes its context once when page fails (1.3077ms)
+✔ isolated Edge diagnostic closes its context once when navigation fails (0.2618ms)
+✔ isolated Edge diagnostic closes its context once when assertion fails (0.2641ms)
+✔ isolated Edge diagnostic closes its context once after success (0.5087ms)
+✔ FFX-03 registry closes stable and Nightly lane identities (2.0776ms)
+✔ rejects mismatched lane {"lane":"firefox-macos-m2","assetId":"FW-MAC-M2-01","platform":"darwin","architecture":"x64","required":true} (1.4019ms)
+✔ rejects mismatched lane {"lane":"firefox-nightly-linux-intel12","assetId":"FW-LNX-I12-01","platform":"linux","architecture":"x64","required":true} (0.1416ms)
+✔ rejects mismatched lane {"lane":"firefox-release-linux-intel12","assetId":"FW-LNX-I12-01","platform":"linux","architecture":"x64","required":true} (0.1334ms)
+✔ Firefox versions use channel-specific release and Nightly syntax (0.6769ms)
+✔ stable Firefox writes PASS only after successful observed cleanup (19.4067ms)
+✔ stable Firefox cleanup failure emits no acceptable PASS (1.8367ms)
+✔ stable Firefox runtime consumer rejects malformed nested workload evidence (2.1122ms)
+✔ Nightly Firefox emits only the closed PROBE_PASS record after cleanup (11.0414ms)
+✔ Nightly Firefox emits only the closed UNAVAILABLE record after cleanup (11.0221ms)
+✔ Nightly Firefox emits only the closed PRODUCT_FAILURE record after cleanup (10.2568ms)
+✔ Nightly Firefox cleanup failure retains no typed outcome (0.9376ms)
+✔ Firefox runtime rejects authorization classification drift before opening a session (0.3088ms)
+✔ FFX-04 validator accepts only the closed three-cycle Firefox proof (7.5846ms)
+✔ stock Firefox lifecycle runner performs exactly three BFCache cycles and cleanup (2.7315ms)
+✔ stock Firefox lifecycle runner fails closed and attempts cleanup on malformed restore (0.7212ms)
+✔ stock Firefox lifecycle runner validates the complete proof before returning PASS (0.6694ms)
+✔ stock Firefox lifecycle runner rejects non-Firefox and non-live provenance before navigation (0.6721ms)
+✔ Firefox acceptance module exposes the exact Selenium client contract (1.3232ms)
+✔ Firefox profile observation retains only targeted WebGPU preferences (14.9934ms)
+✔ Firefox profile observation rejects malformed, conflicting, and linked relevant sources (105.6154ms)
+✔ Firefox keyboard path sends a supported literal minus and observes every action (1.3943ms)
+✔ outside pointer capture compares its own immediate snapshot and rejects a no-op drag (0.7367ms)
+✔ Firefox process inspection fails closed for command and malformed output (0.8603ms)
+✔ Windows process inspection accepts enumerated PID 0 but never treats it as actionable (0.3005ms)
+✔ Firefox process absence rejects permission errors and still-running PIDs (1.2349ms)
+✔ Firefox cleanup marks the process stopped only after absence is proven (1.1857ms)
+✔ package promotion resolves one exact successful main artifact by run ID (1.0749ms)
+✔ package manifest provenance joins the exact resolved API run (0.6348ms)
+✔ package manifest provenance rejects stale run, attempt, SHA, and workflow identity (0.5267ms)
+✔ package manifest provenance rejects missing or malformed run attempts on both records (1.184ms)
+✔ package promotion rejects missing or malformed API run attempts (0.6314ms)
+✔ package promotion rejects prior SHA, wrong workflow, failed, duplicate, or expired artifact (0.5191ms)
+✔ authorization waits through environment approval then selects exactly one queued job (2.2339ms)
+✔ validates all eleven public assets and exact static routing labels (1.9985ms)
+✔ checked matrix cannot satisfy live readiness while controllers are unprovisioned (0.7064ms)
+✔ rejects a changed host label (0.2828ms)
+✔ rejects a changed JIT label (0.2166ms)
+✔ rejects a changed device (0.2237ms)
+✔ rejects a changed duplicate asset (0.1538ms)
+✔ rejects a changed unknown attachment (0.2393ms)
+✔ rejects a changed Appium ID (0.2855ms)
+✔ closed dispatch rules separate canary, browser, and manual lanes (1.6118ms)
+✔ Chrome Beta probes are optional, asset-bound, and never required rows (0.2617ms)
+✔ Firefox dispatch preserves the closed stable-required and Nightly-optional classifications (0.2027ms)
+✔ all mobile, trackpad, and desktop Safari work serialize on the Mac host (1.1244ms)
+✔ promotion generates only the derived hardware and nonce labels (0.9235ms)
+✔ authorization freezes exact queued job, labels, expiry, and package/readiness (3.222ms)
+✔ promotion rejects missing, mismatched, or malformed readiness identities (0.4089ms)
+✔ manual viewer remains live for controller capture while automated and failed viewers dispose (2.2948ms)
+✔ adapter attestation receives exactly the five-field binding schema (1.0525ms)
+✔ all 50 lifecycle viewers wait for their own deferred submitted frame (1.8685ms)
+✔ lifecycle viewer timeout fails and disposes the unrendered runtime (0.9011ms)
+✔ hardware page invokes the public runtime loader in a fresh iframe realm (1.1403ms)
+✔ page product classifier accepts only the two closed manual lanes (0.1473ms)
+✔ page route uses isolated installed-package loader probes for all WASM controls (27.0024ms)
+✔ page route rejects insecure context and non-normalized loader failures (1.6324ms)
+✔ page route rejects unsuccessful WASM responses even with the expected MIME (3.9897ms)
+✔ hanging browser fixture fetch aborts at its bounded inner deadline (9.8698ms)
+✔ release readiness accepts only exact target, lab run, and sorted evidence run IDs (1.1641ms)
+✔ only observer has trust secret and computation never schedules hardware (0.224ms)
+✔ exact lab/evidence attestations, merger, negative controls, and fixed artifact are required (0.4661ms)
+✔ hardware workflow is manual-only with closed inputs and protected main guard (1.4942ms)
+✔ only observer and hosted finalizers receive trust secrets (0.2475ms)
+✔ promotion validates exact base SHA/package and never rebuilds it (0.1818ms)
+✔ authorization polls exactly one queued job and attests a ten-minute record (0.2124ms)
+✔ hardware routes only on three derived labels, serializes by host, and has read-only token (0.2293ms)
+✔ hardware executes only verified promoted artifacts and always cleans up (0.4185ms)
+✔ Firefox Nightly stays optional and uses only validated typed probe outcomes (0.3832ms)
+✔ manual finalizer verifies signed session and exact runner absence before attestation (0.4337ms)
+✔ automated evidence is copied by exact artifact ID and GitHub-hosted attested (0.4075ms)
+✔ host finalizer joins controller signature, exact job, and independent absence (7.9559ms)
+✔ host finalizer rejects a substituted runner or missing absence (4.9531ms)
+✔ Mac canary producer emits the exact seven-asset schema-valid signed inventory (7.4012ms)
+✔ SAF-03 captures the same exact Mac and trackpad inventory contract (1.5907ms)
+✔ exact capture rejects missing substituted and duplicate attachment observations (2.115ms)
+✔ controller input and hosted validation reject missing and unsafe trackpad evidence (1.8232ms)
+✔ controller evidence reader preserves the producer attachment set and rejects omissions (121.4873ms)
+✔ runtime rejects forbidden stable identifier fields instead of sanitizing them (0.6118ms)
+✔ SAF-02 retry route changes MIME only after the first identical GET (3.8859ms)
+✔ SAF-02 terrain range controls distinguish exact, ignored, and unsatisfied ranges (1.4189ms)
+✔ nonce generation consumes exactly 16 bytes and rejects malformed or reused output (2.3562ms)
+✔ application host, nonce path, MIME, cache, and method policy fail closed (2.76ms)
+✔ trusted lifecycle-away route serves exact GET and HEAD HTML responses (0.6916ms)
+✔ asset allow route returns exact CORS and range headers (0.7465ms)
+✔ only exact nonce-scoped lifecycle routes are cache compatible (1.3009ms)
+✔ deny and wrong-origin terrain and WASM policies remain browser-enforced (0.9122ms)
+✔ raw readiness joins public-route policy to the promoted package digest (2.2695ms)
+✔ route orchestration starts both fixture origins and host-scoped cloudflared then proves cleanup (57.7885ms)
+✔ materialized import map remains inside the nonce-bound base path (222.1942ms)
+✔ implementation actors include direct authors/committers and every associated merged PR author (3.3432ms)
+✔ unresolved direct or merged-PR GitHub identities fail closed (1.0141ms)
+✔ resolver paginates all releases and selects only a published immutable stable SemVer (0.8612ms)
+✔ resolver paginates the complete comparison and every commit PR list (0.9916ms)
+✔ truncated, inconsistent, duplicated, or unresolved comparison pages fail closed (1.3286ms)
+✔ pagination rejects cycles and next links outside the repository API (0.7583ms)
+✔ browser-policy matches its checked JSON schema (16.3611ms)
+✔ controller-health-endpoints matches its checked JSON schema (34.7695ms)
+✔ hardware-matrix matches its checked JSON schema (13.6327ms)
+✔ https-origin-policy matches its checked JSON schema (9.8177ms)
+✔ repository-trust-policy matches its checked JSON schema (23.4056ms)
+✔ runner-distribution-manifest matches its checked JSON schema (203.2352ms)
+✔ runner-transient-path-policy matches its checked JSON schema (19.6501ms)
+✔ workflow-actions-lock matches its checked JSON schema (32.0427ms)
+✔ controller protocol schema rejects unreviewed operations (14.4465ms)
+✔ schemas reject unknown policy fields (0.9653ms)
+✔ runner manifest contains all three pinned platform distributions (35.8366ms)
+✔ broker protocol schema accepts only a frozen JIT request shape (13.6869ms)
+✔ broker protocol freezes signed quarantine recovery evidence (1.0423ms)
+✔ broker protocol rejects internal ledger fields in cleanup responses (17.1659ms)
+✔ broker lifecycle schema freezes cleanup and redacted-ledger fields (18.7049ms)
+✔ required exact-tarball profile is unflagged branded Chrome on win32 (5.4845ms)
+✔ probe exact-tarball profile defaults to flagged bundled Chromium on win32 (0.5727ms)
+✔ required exact-tarball profile is unflagged branded Chrome on darwin (0.2096ms)
+✔ probe exact-tarball profile defaults to flagged bundled Chromium on darwin (0.1701ms)
+✔ required exact-tarball profile is unflagged branded Chrome on linux (0.2085ms)
+✔ probe exact-tarball profile defaults to flagged bundled Chromium on linux (0.1794ms)
+✔ explicit probe Chrome is labeled as a flagged Chrome preflight (0.3369ms)
+✔ required exact-tarball evidence rejects bundled Chromium (0.6103ms)
+✔ exact-tarball profile rejects unknown modes and channels (0.3104ms)
+✔ publication contract inputs use canonical LF bytes (1.7061ms)
+✔ canary accepts only fixed host/manual IDs and derives candidate and tag (28.6711ms)
+✔ each canary selector rejects surrounding or embedded whitespace (2075.2301ms)
+✔ observer secret is isolated and canary cannot claim support readiness (0.5019ms)
+✔ immutable-release administration stays in the attested observer boundary (0.3828ms)
+✔ publisher has no checkout and carries an attested closed trust proof (0.3505ms)
+✔ publisher revalidates the complete observation and exact release environment approvals (0.3294ms)
+✔ separate least-privilege job verifies and attests the exact canary record (0.6588ms)
+✔ canary publication and readiness share the exact record filename and schema (7.0085ms)
+✔ preflight, race, deletion, and readiness absence gates use 404-only validation (0.4848ms)
+✔ publisher closes fresh intake bytes, publishes once, then verifies immutable API bytes (0.914ms)
+✔ canary publisher rechecks both handoff expiries around the final absence race (0.18ms)
+✔ every protected canary publisher inline module is syntactically valid (1507.9906ms)
+✔ every gh release subcommand has explicit repository context without checkout (2.301ms)
+✔ final verification precedes exact intake cleanup and the retained record is postpublication (0.3502ms)
+✔ fresh manual intake identity, metadata, API digests, and bytes close exactly (1.8553ms)
+✔ only an explicit GitHub 404 proves resource absence (0.6324ms)
+✔ post-publication record is non-support, immutable, paginated, and schema-valid (22.0638ms)
+✔ prepublication identity drift, incomplete pagination, API mismatch, and early deletion fail (3.5704ms)
+✔ laboratory readiness accepts one package, four hosts, one manual canary, and one release (1.1231ms)
+✔ all nine numeric selectors are gated before checkout and API path use (1.284ms)
+✔ the workflow selector gate accepts only positive-decimal syntax at runtime (5754.2134ms)
+✔ only observer receives trust secret and computation cannot schedule product lanes (0.3085ms)
+✔ immutable computation name, permissions, fixed artifact, and attestation are pinned (0.2199ms)
+✔ selected API run identities are carried into shared readiness validation (0.4177ms)
+✔ fresh CLI verification is closed and retained in the readiness input (0.2443ms)
+✔ production computation validates the final manifest schema before writing (0.161ms)
+✔ lab digest binds plan-named files and the production dependency closure (4.4853ms)
+✔ lab configuration rejects omitted dependencies and stale workflow inventories (125.1449ms)
+✔ readiness closes four hosts, generic manual canary, and immutable canary release (166.666ms)
+✔ host evidence freshness accepts the exact window boundary and rejects stale or future instants (0.1941ms)
+✔ manual canary freshness accepts 24h and rejects 24h plus 1ms (279.9961ms)
+✔ readiness recomputes diagnostic file and receipt hashes (186.9186ms)
+✔ readiness rejects stale host inventory and substituted mobile route declarations (401.9415ms)
+✔ readiness rejects caller-selected or swapped host route pairs (269.9251ms)
+✔ readiness rejects runner policies before clean JIT canary activation (161.6683ms)
+✔ product promotion consumes only same-SHA package-bound attested readiness (96.9773ms)
+✔ unprovisioned inventory, product assertions, stale media, and wrong release fail (442.119ms)
+✔ readiness rejects stale selected or embedded host/manual/publication identities (1698.6841ms)
+✔ manual submission accepts only numeric IDs and canonical scalar JSON (2.1609ms)
+✔ paths, noncanonical JSON, duplicate IDs, and arbitrary identity fields fail (0.4721ms)
+✔ device matrix freezes six public Appium IDs without serials or UDIDs (3.9372ms)
+✔ checked manual checklists expose unique complete step IDs and isolate canary scope (18.8357ms)
+✔ intake binds authenticated actor, exact package/checklist/asset, 128-bit challenge, and 24 hours (7.1708ms)
+✔ intake selection requires exact active matrix, host, controller, attachment, and public device binding (17.0525ms)
+✔ manual session is exactly 20 minutes, controller-signed, and cleanup-complete (25.3598ms)
+✔ all six mobile runtime observations survive signed-session schema validation (31.8706ms)
+✔ media and evidence require exact inventory, uploader, digest, window, steps, and independent actors (3.3046ms)
+✔ finalizer verifies controller signature, exact job tuple, and absent runner (8.4578ms)
+✔ wrong job tuple, unpinned key, missing token, and five-minute presence fail (7.5877ms)
+✔ manual promotion derives only challenge and intake digest from verified draft (2.7623ms)
+✔ wrong actor, lane, expiry, package, or attestation fails before promotion (0.3697ms)
+✔ submission produces closed evidence from draft, session, media, approval, and actors (18.2613ms)
+✔ genuine producer, finalizer, preparer, and validator preserve signed record bytes (10.056ms)
+✔ infrastructure submission produces a non-support manual canary, not a product row (5.2543ms)
+✔ expired draft, self approval, implementation approval, or wrong finalizer fails (3.4555ms)
+✔ manual evidence preserves every exact target-environment approval (0.964ms)
+✔ merger closes every required automated, mobile, and manual matrix row (60.7072ms)
+✔ evidence run ID input rejects whitespace, duplicates, and unsorted values (0.465ms)
+✔ prior head, other package, expired manual, missing, duplicate, and infra error fail (293.0782ms)
+✔ six physical Appium devices prove the exact nonce-bound browser route (21.8787ms)
+✔ declarations, incomplete device closure, and incomplete browser proof fail closed (2.1622ms)
+✔ WebDriver executes route verification inside the navigated physical browser (7.8994ms)
+✔ pending bootstrap skips automatic protected-main packaging (2.076ms)
+✔ pending bootstrap rejects manual packaging (0.5269ms)
+✔ active bootstrap enables automatic and manual packaging (0.2641ms)
+✔ rejects pending bootstrap with an epoch (0.2072ms)
+✔ rejects active bootstrap without an epoch (0.16ms)
+✔ rejects unknown bootstrap state (0.1461ms)
+✔ every bootstrap state rejects an untrusted trigger (0.5633ms)
+✔ Playwright health probes the original live capture page and permits background state (2.5484ms)
+✔ Playwright health rejects closed, crashed, replacement, and unauthorized navigation (1.6408ms)
+✔ Playwright probe rejection and hang are bounded and sanitized (6.3927ms)
+✔ manual intake is protected-main dispatch with closed checklist and asset choices (5.1248ms)
+✔ observer secret is isolated from independently approved intake writer (0.3979ms)
+✔ intake resolves package hash, derives actor/challenge, attests, and writes one draft (0.338ms)
+✔ package manifest provenance is joined to the resolved API run before intake mutation (0.2619ms)
+✔ intake writer revalidates the exact unexpired observation immediately before attestation (0.2164ms)
+✔ supported and canary candidates require exact main, immutable setting, and absent tag (4.158ms)
+✔ publisher, self approval, implementer approval, drift, and existing release fail (0.9138ms)
+✔ publisher counts only exact forge3d-web-release approvals (0.8094ms)
+✔ preflight is exact-consumer, independently approved, and expires in 30 minutes (4.1291ms)
+✔ publication handoff rejects readiness, asset, mode, and lifetime substitutions (2.1554ms)
+✔ GitHub resource absence requires an explicit HTTP 404 (0.8092ms)
+✔ GitHub resource absence fails closed on transport and malformed status (0.5478ms)
+✔ supported manual media is re-bound to the exact still-draft intake and bytes (2.7126ms)
+✔ missing, swapped, overwritten, and API-digest-mismatched intake media fail closed (2.2251ms)
+✔ candidate record is schema-valid and makes no post-publication CLI claims (15.2448ms)
+✔ post-publication record retains exact CLI JSON digests and immutable release identity (4.657ms)
+✔ early intake deletion, absent CLI output, and publication schema drift fail (4.6293ms)
+✔ post-publication record rejects missing, non-positive, or drifted publication run identity (3.7498ms)
+✔ emits and verifies a canonical, exact-consumer observation (39.1768ms)
+✔ rejects observation with wrong operation (1.769ms)
+✔ rejects observation with wrong run attempt (1.2479ms)
+✔ rejects observation with wrong target (1.1761ms)
+✔ rejects observation with wrong consumer (2.3643ms)
+✔ rejects observation with extra consumer (6.2663ms)
+✔ rejects observation with expired validity (1.6562ms)
+✔ rejects observation with policy digest (1.3062ms)
+✔ rejects observation with stale required-check SHA (1.304ms)
+✔ rejects observation with wrong required-check app id (1.4572ms)
+✔ rejects observation with wrong required-check app slug (1.0721ms)
+✔ rejects observation with duplicate required-check id (0.9601ms)
+✔ rejects observation with missing check-runs live response (3.1164ms)
+✔ release observations bind immutable semantics and the exact live response (2.0701ms)
+✔ rejects release observation with disabled release immutability (1.1289ms)
+✔ rejects release observation with missing release immutability state (1.1532ms)
+✔ rejects release observation with malformed release immutability owner enforcement (1.072ms)
+✔ rejects release observation with missing immutable-releases live response (0.9388ms)
+✔ rejects release observation with mismatched immutable-releases endpoint (0.9546ms)
+✔ rejects immutable-release state on a non-release observation (1.0227ms)
+✔ rejects non-canonical observation bytes (1.0316ms)
+✔ rejects an otherwise valid observation after its independent expiry (0.8632ms)
+✔ validates the exact artifact ID/name/digest/content tuple (6.968ms)
+✔ rejects missing, zero, uppercase, and malformed observer outputs (0.2943ms)
+✔ rejects an archive with multiple members (0.7817ms)
+✔ publisher proof closes every nested observation binding (25.1118ms)
+✔ checked policy remains explicitly incomplete before the protected-main canary (2.633ms)
+✔ accepts the exact active protected-main snapshot (21.9019ms)
+✔ only exact publication and readiness operations require immutable releases (0.3471ms)
+✔ release-setting snapshots retain both immutable-release semantics (0.6525ms)
+✔ live release verification binds immutable releases through the observer-only current API (3.2326ms)
+✔ live non-release verification preserves the original nine-response contract (1.4758ms)
+✔ live verification requires distinct observer and workflow credentials (0.6227ms)
+✔ live verification rejects an incomplete workflow-run page (0.5458ms)
+✔ live verification rejects duplicate matching workflow runs (0.609ms)
+✔ live verification rejects a failed workflow run (0.759ms)
+✔ live verification rejects a workflow run without a positive integer id (0.7ms)
+✔ fails closed when repository id changes (0.3244ms)
+✔ fails closed when strict checks changes (0.2111ms)
+✔ fails closed when any-source check changes (0.2158ms)
+✔ fails closed when source app changes (0.2776ms)
+✔ fails closed when stale review dismissal changes (0.2633ms)
+✔ fails closed when required approving reviews changes (0.2528ms)
+✔ fails closed when latest push approval changes (0.2192ms)
+✔ fails closed when conversation resolution changes (0.2231ms)
+✔ fails closed when admin enforcement changes (0.2099ms)
+✔ fails closed when force pushes changes (0.2528ms)
+✔ fails closed when branch deletion changes (0.2329ms)
+✔ fails closed when bypass actor changes (0.2224ms)
+✔ fails closed when failed check changes (0.2836ms)
+✔ fails closed when missing check run changes (0.3078ms)
+✔ fails closed when duplicate check run changes (0.3098ms)
+✔ fails closed when duplicate workflow job changes (1.2378ms)
+✔ fails closed when stale check-run SHA changes (0.2549ms)
+✔ fails closed when stale workflow-job SHA changes (0.2247ms)
+✔ fails closed when check-run app id changes (0.2138ms)
+✔ fails closed when check-run app slug changes (0.2165ms)
+✔ fails closed when workflow-job/check-run binding changes (0.2046ms)
+✔ fails closed when partial check-run response changes (0.1933ms)
+✔ fails closed when checked required-check app identity changes (0.1951ms)
+✔ fails closed when SHA pinning changes (0.2252ms)
+✔ fails closed when epoch changes (0.5445ms)
+✔ fails closed when disabled release immutability changes (0.1558ms)
+✔ fails closed when missing release immutability state changes (0.1514ms)
+✔ fails closed when malformed release immutability owner enforcement changes (0.1488ms)
+✔ fails closed when immutable-release state on a non-release operation changes (0.1979ms)
+✔ fails closed when runner at rest changes (0.1861ms)
+✔ records an unavailable live SHA-pinning setting without relaxing static pins (0.3718ms)
+✔ live verification rejects a missing immutable-releases response (1.6938ms)
+✔ locks immutable files, modes, symlinks, and narrow transient paths (44.3199ms)
+✔ rejects a transient root changed to a symlink without walking it (12.6076ms)
+✔ detects modified immutable distribution content and mode (22.8564ms)
+✔ binds browser policy to manifest, archive, and transient digests (1.2178ms)
+✔ SAF-02 validator accepts only complete bound proof (20.82ms)
+✔ SAF-02 validator rejects independently unsafe or mismatched launch evidence and swapped route ids (4.9123ms)
+✔ SAF-02 quantitative comparison retains both luma ranges and RGB threshold (1.327ms)
+✔ SAF-02 whole-page deadline rejects unresolved work (18.2987ms)
+✔ Safari acceptance drives bounded W3C input and thirty true BFCache returns (14.5348ms)
+✔ Safari BFCache acceptance rejects a restored viewer whose controls do not respond (4.2823ms)
+✔ Safari acceptance rejects a complete second input-controller listener set added after initialization (4.6413ms)
+✔ SAF-03 production caller projects run/job bindings to the closed STP identity (14.9715ms)
+✔ manual Safari trackpad retains the neutral WebDriver path (0.3941ms)
+✔ automated Selenium Safari admits near-bound composed work and rejects overrun (44.3745ms)
+✔ post-open launch observation failure closes and records SafariDriver cleanup (35.3566ms)
+✔ clean STP launch failure is warning-only while cleanup uncertainty is hard (25.7472ms)
+✔ STP rendered probe errors remain a cleaned product warning (38.4516ms)
+✔ manual submission exposes only closed scalar record selectors (2.9142ms)
+✔ observer secret is isolated from independently approved submission (0.314ms)
+✔ submission resolves numeric assets, controller session, actors, approvals, and attested bundle (0.4824ms)
+✔ submission writer revalidates the exact unexpired observation immediately before attestation (0.2737ms)
+✔ emits only the allowlisted trackpad inventory fields (4.8375ms)
+✔ fails when the charging topology includes a hub (0.8121ms)
+✔ fails unless both USB and Bluetooth captures contain the fixed asset (0.259ms)
+✔ fails closed on duplicate USB or Bluetooth trackpad records (0.3945ms)
+✔ does not double-count the same profile node reached twice (0.4663ms)
+✔ rejects out-of-range and non-integer battery evidence (0.4262ms)
+✔ rejects a different Magic Trackpad model (0.2794ms)
+✔ accepts only the exact read-only observer permissions and repository (20.4527ms)
+✔ rejects an observer App with write or excess permissions (5.3956ms)
+✔ rejects an observer installation with another repository (2.7832ms)
+✔ every observer workflow separates App administration/actions reads from job-token check runs (4.2864ms)
+✔ manual-submission draft lookup uses only the workflow job token (0.4696ms)
+✔ browser BFCache helper accepts one controlled persisted restore and rejects unsafe transitions (8.085ms)
+✔ w16-reference-discrete uses the existing exact-host promotion and headed Chrome runtime (2.5979ms)
+✔ w16-reference-integrated uses the existing exact-host promotion and headed Chrome runtime (0.2536ms)
+✔ W16 matrix remains pending and rejects reassignment to a different host (1.9088ms)
+✔ W16 failing, short, missing and wrong-package results cannot become passes (20.5969ms)
+✔ the existing nonce-bound fixture server serves W16 modules and exact byte ranges (4.134ms)
+✔ W16 Windows qualification requires the pinned Iris Xe driver and OS build (2.2499ms)
+✔ W16 dry runtime and artifact finalization retain proof and reject a failing p95 (49.4875ms)
+✔ W16 host capture measures actual gaps and rejects forged, incomplete or stale captures (2.1033ms)
+✔ W16 NVIDIA samples include graphics processes and fallback never fabricates unsupported metrics (2.4875ms)
+✔ W16 sampling spans the workload and retains host evidence when the workload throws (8.4718ms)
+✔ a new passing batch finds a matching failure even when the manually chosen predecessor has other bytes (28.7294ms)
+✔ a new failure stays failed and records variation with a previous pass (0.5454ms)
+✔ a later retained same-runtime failure corrects an earlier passing summary without inventing a rerun (0.3666ms)
+✔ unrelated-runtime failures and duplicate historical references do not affect a current pass (0.3177ms)
+✔ CPU means are computed from retained samples and no absence of concurrent work is inferred (2.2215ms)
+✔ retained run metrics and every correction reproduce from unchanged raw reports (373.1451ms)
+✔ a blank, short, leaking or over-budget soak cannot become a measured pass (30.3823ms)
+✔ history discovery rejects changed raw bytes, runtime digests and invented pass summaries (110.186ms)
+✔ supported publication is manual-only and requires target, readiness, and SemVer tag (1.5224ms)
+✔ release readiness selector rejects surrounding or embedded whitespace (422.8817ms)
+✔ publisher revalidates the complete observation and exact release environment approvals (0.4233ms)
+✔ observer secret is isolated from read-only preflight and protected publisher (0.2877ms)
+✔ immutable-release administration stays in the attested observer boundary (0.2355ms)
+✔ publisher has no checkout and performs approval, draft-first, byte, CLI, and intake gates (0.2255ms)
+✔ publisher rechecks both handoff expiries around the final absence race (0.2391ms)
+✔ separate least-privilege job verifies and attests the exact postpublication record (0.8906ms)
+✔ every no-checkout gh release command carries exact repository context (1.1106ms)
+✔ preflight, publisher race, and deletion prove absence only through the exact-404 helper (0.4124ms)
+✔ package manifest provenance is joined to the resolved API run before release assembly (0.1837ms)
+✔ manual media is fetched by numeric ID twice and rebound to exact intake metadata (0.2237ms)
+✔ candidate is schema-backed and contains no impossible post-publication claims (0.158ms)
+✔ Chromium support publication closes unique records before candidate and binds exact release bodies (0.6415ms)
+✔ publication proof is post-publish, closed, schema-validated, and retained without asset mutation (0.363ms)
+✔ every protected web publisher inline module is syntactically valid (1382.2714ms)
+✔ intake deletion derives only from the checked manual-media source plan (0.597ms)
+✔ web workflow exposes exactly the two immutable required checks (4.9847ms)
+✔ web workflow pins the package job to Windows and source-browser preflight to macOS 15 (1.2502ms)
+✔ web workflow keeps privileged triggers and self-hosted routing out (0.2436ms)
+✔ hosted source-browser workflow keeps Chromium and Firefox engine preflights explicit (1.3601ms)
+✔ hosted source-browser workflow rejects generic invocation and flagged Chrome wording (3.0596ms)
+✔ macOS source-browser diagnostics reject stale PowerShell environment syntax (0.4153ms)
+✔ hosted Firefox preflight rejects generic commands, preference overrides, and merged evidence (2.459ms)
+✔ Playwright WebKit engine preflight is the only non-blocking web job (1.1403ms)
+✔ Playwright WebKit engine preflight rejects blocking or wrong-host execution (1.0934ms)
+✔ Playwright WebKit engine preflight rejects the wrong project or engine wording (1.0823ms)
+✔ Playwright WebKit engine preflight rejects Chromium flags and support claims (1.6619ms)
+✔ Playwright WebKit report and classifier steps are mandatory (2.4728ms)
+✔ Playwright WebKit raw failure is classified but cannot unlock ENGINE_PASS (2.2606ms)
+✔ hosted exact-tarball probe explicitly selects bundled Chromium (0.2828ms)
+✔ hosted exact-tarball probe rejects an implicit or branded channel (0.5144ms)
+✔ web workflow verifier rejects renamed, duplicate, missing, and runner mutations (2.0089ms)
+✔ every external action is immutable and lockfile reviewed (452.8369ms)
+✔ action verifier rejects movable, local, unreviewed, and container references (1.3252ms)
+✔ action verifier structurally accepts only digest-pinned job and service images (0.2945ms)
+✔ WebDriver health reads live session URL on every probe (5.0637ms)
+✔ WebDriver health fails closed on disappearance, HTTP, malformed, and timeout (5.4818ms)
+✔ WebDriver W3C actions are bounded and use standard endpoints (17.2604ms)
+✔ WebDriver BFCache actions use the exact async-script and history endpoints (2.3536ms)
+✔ WebDriver BFCache actions fail closed on page failure and timeout (4.972ms)
+✔ raw success and a complete passing report are ENGINE_PASS eligible (18.9178ms)
+✔ only exact missing-WebGPU failures classify as NOT_PROVEN (1.7436ms)
+✔ a partial pass plus a capability failure cannot classify as NOT_PROVEN (0.9315ms)
+✔ zero, fewer, extra, duplicate, or incomplete tests fail closed (2.0531ms)
+✔ unexpected or mixed failures fail closed (0.9134ms)
+✔ retries and non-fixture error locations fail closed (0.6132ms)
+✔ missing, duplicate, or malformed WebGPU probe attachments fail closed (0.7293ms)
+✔ a WebGPU probe with the wrong capability facts fails closed (0.3286ms)
+✔ report stats disagreement fails closed (0.4438ms)
+✔ raw outcome and report disagreement fails closed (0.6182ms)
+✔ malformed reports, top-level errors, and project drift fail closed (0.5003ms)
+✔ classification outputs and summaries contain only bounded results (13.8295ms)
+✔ every Playwright spec uses the automatic shared WebGPU guard (788.6551ms)
+✔ issuance accepts the current canonical runner-authorization schema (30.9867ms)
+✔ cleanup mode verifies the exact completed ledger job without issuance-only gates (15.32ms)
+✔ authorization rejects missing or malformed laboratory manifest digests (25.4816ms)
+✔ authorization rejects a manifest digest changed after its canonical digest was bound (15.6956ms)
+✔ issuance mode still rejects a live job that is no longer queued (5.0033ms)
+✔ issuance rejects live review requirements that exceed checked policy (5.1037ms)
+✔ issuance rejects a required check run from the wrong app (4.0655ms)
+✔ issuance rejects a stale required-check SHA (9.1897ms)
+✔ issuance rejects a missing required workflow job (3.7138ms)
+✔ issuance rejects a missing required check run (5.7321ms)
+✔ issuance rejects a duplicate required workflow job (4.7693ms)
+✔ issuance rejects a duplicate required check run (7.7701ms)
+✔ issuance rejects a mismatched workflow-job/check-run URL (12.4879ms)
+✔ issuance rejects a mismatched check-run ID and URL (3.5163ms)
+✔ issuance rejects matching check-run URLs from a look-alike origin (4.2235ms)
+✔ issuance rejects a truncated workflow-runs response (3.5596ms)
+✔ issuance rejects a truncated workflow-jobs response (3.2677ms)
+✔ issuance rejects a truncated check-runs response (3.1069ms)
+✔ issuance rejects a failed Web Runtime workflow run (2.6638ms)
+✔ derives one exact JIT runner and never persists encoded configuration (9.6782ms)
+✔ lost JIT response reconciles one exact runner and never posts a second configuration (4.4811ms)
+✔ ambiguous JIT failure keeps an early zero quarantined and closes absent after the deadline (3.0307ms)
+✔ ambiguous JIT reconciliation quarantines multiple deterministic matches without deletion (3.7038ms)
+✔ ambiguous JIT reconciliation keeps incomplete listings and busy runners quarantined (3.5149ms)
+✔ ambiguous JIT reconciliation rejects changed identity and non-queued jobs (3.4082ms)
+✔ ambiguous JIT reconciliation quarantines when a listed runner disappears and the job is no longer queued (1.5335ms)
+✔ durable issuing intent survives restart and reconciles without another JIT POST (19.472ms)
+✔ initial host-canary mode accepts only a host-bound canary (2.5367ms)
+✔ rejects request nonce and authorization replay before another JIT call (2.2203ms)
+✔ rejects controller signature, mTLS identity, and returned-label mismatch (3.4788ms)
+✔ terminal cleanup deletes only the ledger runner without cancelling a run (1.9872ms)
+✔ watchdog exact-ID deletes a runner as soon as its job completes (1.0791ms)
+✔ watchdog retries exact-ID deletion from a persisted terminal state (1.2157ms)
+✔ launch failure and start timeout use exact-ID cleanup before online (2.4722ms)
+✔ online-unassigned cleanup requires stopped listener and queued non-busy job (3.4218ms)
+✔ absent runner cannot bypass the online-unassigned cleanup predicate (1.6871ms)
+✔ busy or no-longer-queued controls permit neither deletion nor cancellation (4.077ms)
+✔ already-absent cleanup is idempotent and does not cancel another run (1.4274ms)
+✔ retries bound-run cancellation after exact runner deletion (2.6002ms)
+✔ watchdog severs exact runner/run and quarantines an unreachable controller (1.5686ms)
+✔ accepted cancellation advances once per watchdog cycle until terminal (3.2581ms)
+✔ pending cancellation survives runner deletion and completes on a later tick (1.8644ms)
+✔ early runner absence remains nonterminal until watchdog quarantine is decidable (1.1222ms)
+✔ controller loss while busy remains quarantined after terminal cleanup (1.0031ms)
+✔ quarantined host blocks new issuance until signed stop and wipe recovery (4.8542ms)
+✔ queued runner assignment is persisted separately from active work (1.2378ms)
+✔ first-observed assignment gets an escape deadline before disappearance (0.9304ms)
+✔ first-observed active job gets an escape deadline before requeue (0.9341ms)
+✔ offline non-busy runner is quarantined after the assignment deadline (0.9797ms)
+✔ re-queued assigned runner disappearance uses the persisted deadline (1.0489ms)
+✔ re-queued busy runner offline uses the persisted deadline (0.9939ms)
+✔ unexpected live runner label fails closed before cleanup (0.7495ms)
+✔ watchdog never deletes an unassigned runner while its controller is reachable (0.7772ms)
+✔ watchdog deletes, cancels, and quarantines when controller disappears before runner online (1.1131ms)
+✔ accepts only exact checked mTLS controller health targets (1.6479ms)
+✔ valid exact-identity health responses keep the controller reachable (1.9531ms)
+✔ watchdog sees unreachable only after consecutive failed health proofs (0.5344ms)
+✔ a healthy response resets accumulated reachability failures (1.9425ms)
+✔ broker token is exact-permission and single-repository scoped (661.3674ms)
+✔ broker token rejects excess permission and repository scope (284.8ms)
+✔ runner reconciliation lists the fixed repository and deletes only one exact numeric ID (1.8886ms)
+✔ repository trust fetches all check runs for one exact commit SHA (0.7001ms)
+✔ binds broker archive, exact source, configuration, and protocols (50.876ms)
+✔ production server verifies separately provisioned authorizations (2.32ms)
+✔ broker startup exposes only active or initial host-canary modes (0.7833ms)
+✔ production watchdog uses the live controller reachability result (1.2245ms)
+✔ production watchdog probes issued records before the runner is online (0.3425ms)
+✔ production watchdog keeps issuing, terminal, and cancellation-pending records out of health probes (14.0222ms)
+✔ a slow record cannot suppress five-second work for other records (6.6929ms)
+✔ pinned Android Appium opens exact HTTPS route without exposing serial (2.0082ms)
+✔ iOS requires dedicated signing and disconnected/trust-prompt states fail (2.59ms)
+✔ Appium cannot weaken public certificate verification (0.3791ms)
+✔ Appium must expose current physical platform and browser versions (0.3643ms)
+✔ controller resolves one exact-ID authorization and cross-checks every API job (2.8349ms)
+✔ controller rejects duplicate queued jobs, name lookup substitution, and API mismatch (1.3716ms)
+✔ controller rejects a selected API run or attempt that disagrees with the attested record (1.1656ms)
+✔ controller rejects a signed workflow SHA that disagrees with the selected API run (1.5953ms)
+✔ controller rejects missing, extra, or duplicate API labels (1.5223ms)
+✔ controller rejects the wrong attempt-derived authorization artifact name (0.5401ms)
+✔ controller rejects an authorization whose attestation signature is invalid (0.6005ms)
+✔ controller-resolved authorization satisfies the current broker field contract (1.4482ms)
+✔ controller broker client signs mTLS issue and cleanup requests (5.4593ms)
+✔ controller polling resolves an attested authorization and executes it (5.095ms)
+✔ controller health record exposes only public identity and version (4.3083ms)
+✔ broker mTLS health probe delivers the exact assignment lifecycle (1.5001ms)
+✔ lifecycle headers from any non-broker mTLS identity fail closed (0.2405ms)
+✔ controller receipt store binds immutable run and record identity (14.5177ms)
+✔ manual-session receipt is immutable and bound to the exact run attempt (14.0692ms)
+✔ controller signs RFC8785-compatible canonical bytes with P-256 SHA-256 (6.7748ms)
+✔ controller validates exact host, workflow, nonce labels, and ten-minute expiry (3.9716ms)
+✔ runner receives only checked runtime controls including dedicated WDA signing (0.4437ms)
+✔ controller starts only run.sh --jitconfig, scrubs argv, and proves cleanup (6.0295ms)
+✔ controller stores a signed host canary only after broker-proven runner absence (9.5476ms)
+✔ controller creates the signed manual session after hardware and runner cleanup (8.8283ms)
+✔ manual terminal success cannot precede the controller capture deadline (0.3384ms)
+✔ online-unassigned requires stopped listener, queued job, non-busy runner, and cancellation (1.9689ms)
+✔ busy or unproven broker cleanup quarantines and retains the host lock (0.982ms)
+✔ unproven local runner absence quarantines without wiping its job root (1.0451ms)
+✔ diagnostic retention failures quarantine without wipe, unlock, or receipt (2.0451ms)
+✔ lost JIT issuance response reconciles the broker before wipe and lock release (0.8428ms)
+✔ unreconciled JIT issuance quarantines without wipe or lock release (0.8457ms)
+✔ failed launch handshake cannot clean the broker or wipe without bridge absence proof (0.7949ms)
+✔ failed launch handshake cleans only after checked bridge termination evidence (1.5022ms)
+✔ failed unconditional host cleanup cannot release the lock (0.7928ms)
+✔ runner diagnostics are copied externally and produce a bound hash receipt (71.0584ms)
+✔ required diagnostic classes are redacted before receipt hashes are computed (42.9802ms)
+✔ namespaced mobile IDs and environment token keys are redacted exactly (28.1669ms)
+✔ diagnostic redaction is idempotent (59.0366ms)
+✔ absent, empty, and unknown runner diagnostics fail closed (11.4436ms)
+✔ write failure removes the partial external destination without leaking details (5.2873ms)
+✔ non-text diagnostics and ambiguous residual secret syntax fail closed (148.0031ms)
+✔ post-write changes fail validation and remove retained diagnostics (12.7403ms)
+✔ receipt validation recomputes digests and rejects extra or private fields (8.2218ms)
+✔ controller requests one-repository read-only Actions and Attestations token (272.932ms)
+✔ production client maps the exact API run attempt and ignores malformed candidates (4.1484ms)
+✔ production artifact mapper does not use optional workflow run-attempt metadata (0.7189ms)
+✔ active helper allowlist closes every external identity on every platform (2.4645ms)
+✔ checked helper policy has a closed schema (1.548ms)
+✔ pending or incomplete helper allowlists fail closed (0.3024ms)
+✔ cleanup receipt requires explicit closure of every requested capability (3.669ms)
+✔ cleanup receipt rejects incomplete requests and unrelated hosts (0.2847ms)
+✔ exclusive host lock serializes every asset owned by one host (6.0846ms)
+✔ reviewed helper digest rejects a substituted file and self-rewritten receipt (38.4343ms)
+✔ host canary is controller-signed, non-support, and signature-verifiable (28.942ms)
+✔ fallback adapter cannot produce a host canary (0.4521ms)
+✔ Mac controller cannot sign without the complete mobile route evidence (2.2217ms)
+✔ controller-record verifier rejects non-host record contracts (0.2604ms)
+✔ native signer requires the pinned Windows CNG non-exportable key (14.7508ms)
+✔ native signer never surfaces provider stderr (3.3056ms)
+✔ native signer rejects exportable, wrong-backend, and substituted providers (11.7061ms)
+✔ Unix run.sh launches only through the digest-pinned graphical-session bridge (5.1225ms)
+✔ Unix runner rejects a missing, modified, or wrong-user session bridge (1.3846ms)
+✔ Unix failed launch returns only checked process-group absence evidence (1.7985ms)
+✔ Windows run.cmd launches only through the digest-pinned console bridge (1.2192ms)
+✔ Windows runner rejects a missing or modified session bridge (0.4241ms)
+✔ Windows failed launch returns job-object tree termination evidence (0.7914ms)
+✔ Windows stop terminates the interactive runner tree before its bridge (0.5269ms)
+✔ assignment timeout waits for broker-observed online-idle deadline evidence (11.3365ms)
+✔ assignment timeout rejects stale or ever-busy broker observations (4.7788ms)
+✔ Unix stop terminates the interactive runner group through its bridge (0.5769ms)
+✔ Unix stop checks the runner group after the launch bridge exits (0.3466ms)
+✔ Unix stop escalates to checked process-group SIGKILL after timeout (0.2712ms)
+✔ Unix stop bounds force-kill absence and leaves cleanup unproven (0.4839ms)
+✔ Unix stop rejects an unproven force kill even if the bridge exits (0.396ms)
+✔ every installed service launches polling orchestration, not health-only mode (1.9385ms)
+✔ Windows service delegates runner launch to the pinned physical-console bridge (15.6979ms)
+✔ macOS and Linux services delegate to the pinned graphical-login bridge (2.1935ms)
+✔ loaded service runtime controls cross the sanitized JIT boundary (39.8252ms)
+✔ Linux discovery requires the checked unlocked local GNOME Wayland login (2.5961ms)
+✔ macOS discovery requires the checked unlocked on-console Aqua login (0.6833ms)
+✔ interactive environment keeps runtime controls but replaces controller identity (0.4915ms)
+✔ runner handoff preserves the verified distribution ownership boundary (14.8983ms)
+✔ job-root traversal is granted only to the checked graphical identity (3.8848ms)
+﹣ job-root ACL supports launch and cleanup across real Unix UIDs (0.1433ms) # SKIP
+✔ transient handoff has no privileged recursive reclamation surface (0.6655ms)
+✔ forced runner cleanup requires bounded process-group absence (0.7445ms)
+ℹ tests 628
+ℹ suites 0
+ℹ pass 627
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 1
+ℹ todo 0
+ℹ duration_ms 9654.8702
+
+COMMAND: npm run verify:parity
+EXIT CODE: 0
+
+> @forge3d/web@1.26.3 verify:parity
+> node --test tests/parity/verify-parity-manifest.test.mjs && node ../../scripts/verify-parity-manifest.mjs
+
+✔ accepts the exhaustive stored W00 baseline (191.2611ms)
+✔ locks npm and CI to the required pre-build parity gate (0.8288ms)
+✔ rejects a duplicate artifact mapping (174.2252ms)
+✔ rejects an inventory artifact without a mapping (170.7473ms)
+✔ rejects a mapping to an unresolved capability (169.0302ms)
+✔ rejects blank owner, evidence, and test fields (191.8413ms)
+✔ rejects a lock-controlled consumer without its dependency entry (159.3649ms)
+✔ rejects a non-exact lock-controlled consumer version (159.5638ms)
+✔ rejects a missing fixture tolerance and profile budget (151.6606ms)
+✔ rejects a fixture generator digest that does not match its contract (184.9527ms)
+✔ rejects incomplete reference hardware contracts (158.1136ms)
+✔ rejects a discrete profile without timestamp-query (164.5622ms)
+✔ rejects stale stored evidence digests (159.2958ms)
+✔ rejects experimental dependency entries without risk reviews (159.2759ms)
+✔ rejects EXR when the WASM rayon exclusion drifts (171.0228ms)
+ℹ tests 15
+ℹ suites 0
+ℹ pass 15
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2483.3895
+{
+  "ok": true,
+  "capabilities": 84,
+  "constraints": 7,
+  "inventoryRecords": 6531,
+  "mappings": 6531,
+  "fixtures": 10,
+  "hardwareProfiles": 2,
+  "dependencyAssets": 12,
+  "lockControlledConsumers": 64,
+  "untracked": 0,
+  "duplicates": 0,
+  "unresolved": 0,
+  "schemaErrors": 0,
+  "lockViolations": 0
+}
+
+COMMAND: npm run test:package-consumer:w18
+EXIT CODE: 0
+
+> @forge3d/web@1.26.3 test:package-consumer:w18
+> node scripts/test-w18-package-consumer.mjs
+
+
+Running 15 tests using 1 worker
+
+(node:50168) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:50168) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  1 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:10:9 › dist › W18 dist: post-processing cannot conceal empty geometry and overlay-only output is covered (6.3s)
+  ok  2 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:14:9 › dist › W18 dist: multilayer example renders real geometry, glyphs and PNG (5.4s)
+  ok  3 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:23:9 › dist › W18 dist: each completed raster layer changes covered pixels (7.1s)
+  ok  4 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:34:9 › dist › W18 dist: M02b blocks nonempty points and tiles before network or GPU creation (788ms)
+  ok  5 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:59:9 › dist › W18 dist: JSON settings errors block during preflight without GPU work (903ms)
+  ok  6 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:81:9 › dist › W18 dist: validation and policies block before GPU creation (1.4s)
+  ok  7 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:94:9 › dist › W18 dist: recipe replay, repeated render, resize and disposal are deterministic (1.8s)
+  ok  8 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:104:9 › dist › W18 dist: cancellation and output sink failures never produce a success record (4.3s)
+  ok  9 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:122:9 › dist › W18 dist: warning policy retains label rejection reports and blocks strict output (2.5s)
+  ok 10 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:134:9 › dist › W18 dist: compiled plans preserve priority, keepouts, rejection diagnostics and replay (2.8s)
+  ok 11 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:145:9 › dist › W18 dist: GPU loss clears success and a later render recreates owners (2.4s)
+  ok 12 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:182:9 › dist › W18 dist: cancellation after GPU work clears an earlier success record (1.1s)
+  ok 13 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:196:9 › dist › W18 dist: URL heightmap, image, vector, glyph records and OBJ render after preparation (1.9s)
+  ok 14 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:205:9 › dist › W18 dist: lighting and post-processing affect actual terrain output (3.8s)
+  ok 15 [chromium-preflight] › tests\playwright\w18_mapscene.spec.ts:211:9 › dist › W18 dist: dedicated GPU trace output has real hits and visible material color (2.4s)
+
+  15 passed (47.4s)
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-10-13T07:59:33.765Z",
+  "revision": "6e4ce2d6590b850a1fdddf3d1b71e5a41bad047d",
+  "packageSha256": "ecd16310b71f5f57fc4fc07c997bff5de654dbf9b86d4a5cd584619d05310bc7",
+  "tarball": "D:\\forge3d\\cache\\tmp\\forge3d-w18-consumer-g3mGx7\\pack\\forge3d-web-1.26.3.tgz",
+  "installed": "D:\\forge3d\\cache\\tmp\\forge3d-w18-consumer-g3mGx7\\consumer\\node_modules\\@forge3d\\web",
+  "exitCode": 0
+}

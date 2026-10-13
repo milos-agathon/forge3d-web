@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Forge3D MapScene</title>
+<style>body{max-width:960px;margin:40px auto;padding:0 24px;background:#f4f1eb;color:#262922;font:16px system-ui}h1{font-size:32px;margin-bottom:8px}button{padding:10px 16px;margin:12px 8px 20px 0;border:1px solid #777;background:white;cursor:pointer}canvas{width:512px;max-width:100%;height:auto;background:#151a20}pre{white-space:pre-wrap;font-size:13px}</style></head>
+<body><h1>A typed map, with a report</h1><p>Terrain, imagery, vector features, buildings and glyphs in one recipe.</p>
+<button id="render">Render map</button><button id="validate">Validate recipe</button><button id="download" disabled>Download PNG</button><p id="status">Loading…</p>
+<canvas width="256" height="192" aria-label="Rendered map"></canvas><pre id="report"></pre>
+<script type="module">
+const dist=new URLSearchParams(location.search).has('dist');
+const api=await import(/* @vite-ignore */(dist?'/dist/index.js':'/src-ts/index.ts'));
+const helpers=await import('/examples/w18-mapscene.js');
+let result;
+const render=async()=>{
+ document.querySelector('#status').textContent='Rendering…';const scene=new api.MapScene(helpers.fullRecipe(api));
+ try{result=await scene.render();const image=await createImageBitmap(result.blob);document.querySelector('canvas').getContext('2d').drawImage(image,0,0);image.close();document.querySelector('#report').textContent=JSON.stringify((await scene.reviewRecord()),null,2);document.querySelector('#status').textContent=`Rendered ${result.executedLayerIds.length} layers · ${result.report.status}`;document.querySelector('#download').disabled=false;return {status:result.report.status,layers:result.executedLayerIds,coverage:result.metrics.coveragePixels};}
+ catch(error){document.querySelector('#status').textContent=error.message;document.querySelector('#report').textContent=JSON.stringify(scene.lastValidationReport?.toJSON(),null,2);throw error;}
+ finally{scene.dispose();}
+};
+document.querySelector('#render').onclick=()=>render().catch(console.error);
+document.querySelector('#validate').onclick=()=>{const s=new api.MapScene(helpers.fullRecipe(api));document.querySelector('#report').textContent=JSON.stringify(s.validate().toJSON(),null,2);s.dispose();};
+document.querySelector('#download').onclick=()=>{const url=URL.createObjectURL(result.blob),a=document.createElement('a');a.href=url;a.download='forge3d-map.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),0);};
+window.__w18={api,...helpers,renderExample:render,ready:true};document.querySelector('#status').textContent='Ready';
+</script></body></html>

@@ -103,3 +103,10 @@ crates/forge3d-web/types/path-tracer.d.ts text eol=lf
 crates/forge3d-web/docs/w17-*.json text eol=lf
 docs/parity/w17-runs/*.json text eol=lf
 docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md text eol=lf
+
+# W18 native snapshots retain Git blob bytes; declarations regenerate with LF.
+crates/forge3d-web/tests/fixtures/w18/native/** -text -whitespace
+crates/forge3d-web/tests/fixtures/w18/*.json text eol=lf
+crates/forge3d-web/types/map-*.d.ts text eol=lf
+crates/forge3d-web/types/diagnostic*.d.ts text eol=lf
+crates/forge3d-web/docs/w18-*.json text eol=lf

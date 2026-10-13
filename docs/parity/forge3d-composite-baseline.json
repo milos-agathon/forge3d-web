@@ -4,7 +4,7 @@
   "manifestId": "forge3d-composite-baseline-v1",
   "sourcePlan": {
     "path": "docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md",
-    "sha256": "1494566b213f9e7a2454b1ebc3bd3eda867d400760a4baf1c33982f36e38522a"
+    "sha256": "6e96f1e0fd42d6762cf67aa8b2dab08b8b37939240fb05077eee2a69b1554be3"
   },
   "baselineLayers": [
     {
@@ -1850,7 +1850,7 @@
       "title": "Structured diagnostics, severity/failure policy and support matrices",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W18",
       "nativeCapability": "Structured diagnostics, severity/failure policy and support matrices: 1f4084a:python/forge3d/diagnostics.py, tests/test_diagnostics_contract.py, tests/test_diagnostics_no_op_policy.py, tests/test_diagnostics_support_paths.py",
       "requiredWebOutcome": "Add typed deterministic diagnostics, layer summaries, support entries and render-block policy",
@@ -1861,7 +1861,12 @@
         "tests/test_diagnostics_support_paths.py"
       ],
       "requiredTests": [
-        "port all diagnostics/MapScene tests; serialization, support matrices, failure policy, recipe validation, PNG render and no-op detection."
+        "crates/forge3d-web/tests/unit/w18-diagnostics.test.ts",
+        "crates/forge3d-web/tests/unit/w18-mapscene.test.ts",
+        "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
+        "npm run test:package-consumer:w18",
+        "crates/forge3d-web/tests/unit/w18-review-regressions.test.ts",
+        "crates/forge3d-web/tests/api/w18-docs.test.mjs"
       ],
       "acceptance": [
         "validation enumerates every layer/resource before rendering; unsupported/Pro/experimental paths cannot report success."
@@ -1874,19 +1879,25 @@
       "title": "Typed MapScene recipe, layers, camera, lighting, output, reproducibility, validation and render",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W18",
-      "nativeCapability": "Typed MapScene recipe, layers, camera, lighting, output, reproducibility, validation and render: 1f4084a:python/forge3d/map_scene.py, tests/test_mapscene_recipe_contract.py, tests/test_mapscene_validation.py, tests/test_mapscene_render_png.py",
+      "nativeCapability": "Typed MapScene recipe, layers, camera, lighting, output, reproducibility, validation and render: 1f4084a:python/forge3d/map_scene.py, tests/test_mapscene_recipe_contract.py, tests/test_mapscene_validation.py, tests/test_mapscene_render_png.py, tests/test_p2_determinism_noop.py",
       "requiredWebOutcome": "Add browser MapScene; bundle save/load adapters are owned by M04/W19",
       "nativeEvidence": [
         "MapScene",
         "1f4084a:python/forge3d/map_scene.py",
         "tests/test_mapscene_recipe_contract.py",
         "tests/test_mapscene_validation.py",
-        "tests/test_mapscene_render_png.py"
+        "tests/test_mapscene_render_png.py",
+        "tests/test_p2_determinism_noop.py"
       ],
       "requiredTests": [
-        "port all diagnostics/MapScene tests; serialization, support matrices, failure policy, recipe validation, PNG render and no-op detection."
+        "crates/forge3d-web/tests/unit/w18-diagnostics.test.ts",
+        "crates/forge3d-web/tests/unit/w18-mapscene.test.ts",
+        "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
+        "npm run test:package-consumer:w18",
+        "crates/forge3d-web/tests/unit/w18-review-regressions.test.ts",
+        "crates/forge3d-web/tests/api/w18-docs.test.mjs"
       ],
       "acceptance": [
         "validation enumerates every layer/resource before rendering; unsupported/Pro/experimental paths cannot report success."
@@ -1899,16 +1910,24 @@
       "title": "Point-cloud/P1, product-instancing and large-scene support summaries are underdeveloped diagnostics",
       "lifecycle": "DA",
       "evidenceGrade": "B",
-      "status": "G→C",
+      "status": "C",
       "ownerTask": "W18",
-      "nativeCapability": "Point-cloud/P1, product-instancing and large-scene support summaries are underdeveloped diagnostics: 1f4084a:tests/test_mapscene_support_status.py, tests/test_p2_large_scene_cache_lod_instancing.py",
+      "nativeCapability": "Point-cloud/P1, product-instancing and large-scene support summaries are underdeveloped diagnostics: 1f4084a:tests/test_mapscene_support_status.py, tests/test_p2_large_scene_cache_lod_instancing.py, tests/test_p1_tiles3d_support.py, tests/test_p2_large_scene_memory.py (MapScene summaries; allocator policy remains R07/W02), tests/test_p2_large_scene_bottlenecks.py",
       "requiredWebOutcome": "Preserve exact blocking diagnostics until MapScene integration of G02-G04/T13 is implemented and tested",
       "nativeEvidence": [
         "1f4084a:tests/test_mapscene_support_status.py",
-        "tests/test_p2_large_scene_cache_lod_instancing.py"
+        "tests/test_p2_large_scene_cache_lod_instancing.py",
+        "tests/test_p1_tiles3d_support.py",
+        "tests/test_p2_large_scene_memory.py",
+        "tests/test_p2_large_scene_bottlenecks.py"
       ],
       "requiredTests": [
-        "port all diagnostics/MapScene tests; serialization, support matrices, failure policy, recipe validation, PNG render and no-op detection."
+        "crates/forge3d-web/tests/unit/w18-diagnostics.test.ts",
+        "crates/forge3d-web/tests/unit/w18-mapscene.test.ts",
+        "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
+        "npm run test:package-consumer:w18",
+        "crates/forge3d-web/tests/unit/w18-review-regressions.test.ts",
+        "crates/forge3d-web/tests/api/w18-docs.test.mjs"
       ],
       "acceptance": [
         "validation enumerates every layer/resource before rendering; unsupported/Pro/experimental paths cannot report success."
@@ -3418,10 +3437,20 @@
       "contract": "Add typed deterministic diagnostics, layer summaries, support entries and render-block policy",
       "owner": "W18",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:M01"
+        "crates/forge3d-web/src-ts/diagnostics.ts",
+        "crates/forge3d-web/src-ts/map-scene.ts",
+        "crates/forge3d-web/docs/w18-evidence.md",
+        "crates/forge3d-web/docs/w18-native-test-coverage.json",
+        "crates/forge3d-web/src-ts/map-settings.ts",
+        "crates/forge3d-web/src-ts/map-support-details.ts"
       ],
       "tests": [
-        "port all diagnostics/MapScene tests; serialization, support matrices, failure policy, recipe validation, PNG render and no-op detection."
+        "crates/forge3d-web/tests/unit/w18-diagnostics.test.ts",
+        "crates/forge3d-web/tests/unit/w18-mapscene.test.ts",
+        "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
+        "npm run test:package-consumer:w18",
+        "crates/forge3d-web/tests/unit/w18-review-regressions.test.ts",
+        "crates/forge3d-web/tests/api/w18-docs.test.mjs"
       ]
     },
     {
@@ -3431,10 +3460,20 @@
       "contract": "Add browser MapScene; bundle save/load adapters are owned by M04/W19",
       "owner": "W18",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:M02a"
+        "crates/forge3d-web/src-ts/diagnostics.ts",
+        "crates/forge3d-web/src-ts/map-scene.ts",
+        "crates/forge3d-web/docs/w18-evidence.md",
+        "crates/forge3d-web/docs/w18-native-test-coverage.json",
+        "crates/forge3d-web/src-ts/map-settings.ts",
+        "crates/forge3d-web/src-ts/map-support-details.ts"
       ],
       "tests": [
-        "port all diagnostics/MapScene tests; serialization, support matrices, failure policy, recipe validation, PNG render and no-op detection."
+        "crates/forge3d-web/tests/unit/w18-diagnostics.test.ts",
+        "crates/forge3d-web/tests/unit/w18-mapscene.test.ts",
+        "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
+        "npm run test:package-consumer:w18",
+        "crates/forge3d-web/tests/unit/w18-review-regressions.test.ts",
+        "crates/forge3d-web/tests/api/w18-docs.test.mjs"
       ]
     },
     {
@@ -3444,10 +3483,20 @@
       "contract": "Preserve exact blocking diagnostics until MapScene integration of G02-G04/T13 is implemented and tested",
       "owner": "W18",
       "evidence": [
-        "tracked G→C closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:M02b"
+        "crates/forge3d-web/src-ts/diagnostics.ts",
+        "crates/forge3d-web/src-ts/map-scene.ts",
+        "crates/forge3d-web/docs/w18-evidence.md",
+        "crates/forge3d-web/docs/w18-native-test-coverage.json",
+        "crates/forge3d-web/src-ts/map-settings.ts",
+        "crates/forge3d-web/src-ts/map-support-details.ts"
       ],
       "tests": [
-        "port all diagnostics/MapScene tests; serialization, support matrices, failure policy, recipe validation, PNG render and no-op detection."
+        "crates/forge3d-web/tests/unit/w18-diagnostics.test.ts",
+        "crates/forge3d-web/tests/unit/w18-mapscene.test.ts",
+        "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
+        "npm run test:package-consumer:w18",
+        "crates/forge3d-web/tests/unit/w18-review-regressions.test.ts",
+        "crates/forge3d-web/tests/api/w18-docs.test.mjs"
       ]
     },
     {
@@ -4186,7 +4235,7 @@
     {
       "kind": "composite-inventory",
       "path": "crates/forge3d-web/tests/parity/composite-inventory.json",
-      "sha256": "a40bdd3de80afd4a1b24d06976d1e188de7076cfa19b674211dcaf82a26d9291",
+      "sha256": "9d6172270cc2ebc574dcfca398e86b1ecabea240bcbc346d466d3d6970c90b9b",
       "recordCount": 6531
     },
     {

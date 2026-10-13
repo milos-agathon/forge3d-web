@@ -1,0 +1,38 @@
+import { Diagnostic, type DiagnosticInput, type SupportLevel, ValidationReport } from './diagnostics.js';
+import { diagnosticTemplates } from './diagnostic-templates.js';
+export declare const REQUIRED_DIAGNOSTIC_CODES: readonly ["crs_mismatch", "missing_glyphs", "unsupported_style_field", "unsupported_style_layer_type", "pro_gated_path", "placeholder_fallback", "experimental_feature", "vt_unsupported_family", "python_public_3dtiles_incomplete", "estimated_gpu_memory", "label_rejection_summary"];
+export declare const P1_FEATURE_DIAGNOSTIC_CODES: readonly ["missing_label_field", "unicode_coverage_gap", "unsupported_tile_format", "unsupported_tile_feature", "missing_external_asset", "unavailable_terrain_sampler"];
+export declare const P2_FEATURE_DIAGNOSTIC_CODES: readonly ["missing_texture_path", "missing_uvs", "unsupported_texture_format", "unavailable_cache_lod_stats", "unsupported_instancing_path"];
+export type DiagnosticScope = Pick<DiagnosticInput, 'layer_id' | 'object_id'>;
+export declare function diagnosticFor(code: keyof typeof diagnosticTemplates, details?: Record<string, unknown>, scope?: DiagnosticScope): Diagnostic;
+export declare function crsMismatchDiagnostic(scene: string, layer: string, scope?: DiagnosticScope): Diagnostic;
+export declare function missingGlyphsDiagnostic(glyphs: readonly string[], scope?: DiagnosticScope): Diagnostic;
+export declare function unicodeCoverageGapDiagnostic(glyphs: readonly string[], scope?: DiagnosticScope): Diagnostic;
+export declare function unsupportedStyleFieldDiagnostic(layer: string, fields: readonly string[], section?: string): Diagnostic;
+export declare function unsupportedStyleLayerTypeDiagnostic(layer: string, type: string): Diagnostic;
+export declare function proGatedPathDiagnostic(feature: string, scope?: DiagnosticScope): Diagnostic;
+export declare function placeholderFallbackDiagnostic(feature: string, scope?: DiagnosticScope): Diagnostic;
+export declare function experimentalFeatureDiagnostic(feature: string, scope?: DiagnosticScope): Diagnostic;
+export declare function vtUnsupportedFamilyDiagnostic(family: string, scope?: DiagnosticScope, supportedFamily?: string): Diagnostic;
+export declare function pythonPublic3dtilesIncompleteDiagnostic(scope?: DiagnosticScope): Diagnostic;
+export declare function estimatedGpuMemoryDiagnostic(estimated: number, budget: number | null, scope?: DiagnosticScope): Diagnostic;
+export declare function labelRejectionSummaryDiagnostic(counts: Record<string, number>, scope?: DiagnosticScope): Diagnostic;
+export declare function missingLabelFieldDiagnostic(field: string, scope?: DiagnosticScope): Diagnostic;
+export declare function unsupportedTileFormatDiagnostic(format: string, scope?: DiagnosticScope, supported?: string[]): Diagnostic;
+export declare function unsupportedTileFeatureDiagnostic(feature: string, scope?: DiagnosticScope): Diagnostic;
+export declare function missingExternalAssetDiagnostic(type: string, path: string, scope?: DiagnosticScope): Diagnostic;
+export declare function missingTexturePathDiagnostic(path: string, scope?: DiagnosticScope, materialId?: string): Diagnostic;
+export declare function missingUvsDiagnostic(scope?: DiagnosticScope, materialId?: string): Diagnostic;
+export declare function unsupportedTextureFormatDiagnostic(format: string, scope?: DiagnosticScope, path?: string, supported?: string[]): Diagnostic;
+export declare function unavailableCacheLodStatsDiagnostic(type: string, stats: readonly string[], scope?: DiagnosticScope): Diagnostic;
+export declare function unsupportedInstancingPathDiagnostic(path: string, scope?: DiagnosticScope): Diagnostic;
+export declare function unavailableTerrainSamplerDiagnostic(scope?: DiagnosticScope): Diagnostic;
+export declare function supportDiagnostic(feature: string, level: SupportLevel, scope?: DiagnosticScope): Diagnostic | null;
+export declare function validateLabelSupport(labels: readonly {
+    id?: string | number;
+    kind?: string;
+    text: string;
+}[], options?: {
+    atlasGlyphs?: readonly string[];
+    layerId?: string;
+}): ValidationReport;
