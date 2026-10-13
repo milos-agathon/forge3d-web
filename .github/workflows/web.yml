@@ -131,6 +131,7 @@ jobs:
           path: |
             crates/forge3d-web/test-results/w19-package-consumer.json
             crates/forge3d-web/test-results/w19-installed-playwright.json
+            crates/forge3d-web/test-results/w19-installed-output
           if-no-files-found: error
           retention-days: 30
 

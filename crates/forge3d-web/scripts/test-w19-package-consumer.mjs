@@ -132,7 +132,7 @@ try {
   const config = join(temp, "w19-package.config.mts");
   writeFileSync(
     config,
-    `import config from ${JSON.stringify(pathToFileURL(join(root, "playwright.config.ts")).href)};export default {...config,testDir:${JSON.stringify(join(root, "tests/playwright"))},testMatch:'w19_style_bundle.spec.ts',webServer:undefined,use:{...config.use,baseURL:${JSON.stringify(origin)}},reporter:[['list'],['json',{outputFile:${JSON.stringify(join(out, "w19-installed-playwright.json"))}}]]};`,
+    `import config from ${JSON.stringify(pathToFileURL(join(root, "playwright.config.ts")).href)};export default {...config,testDir:${JSON.stringify(join(root, "tests/playwright"))},testMatch:'w19_style_bundle.spec.ts',outputDir:${JSON.stringify(join(out, "w19-installed-output"))},webServer:undefined,use:{...config.use,baseURL:${JSON.stringify(origin)}},reporter:[['list'],['json',{outputFile:${JSON.stringify(join(out, "w19-installed-playwright.json"))}}]]};`,
   );
   result = await new Promise((resolveResult, reject) => {
     const child = spawn(
