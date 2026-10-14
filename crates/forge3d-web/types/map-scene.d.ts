@@ -3,6 +3,11 @@ import { ValidationReport, type ValidationReportData, type JsonValue } from './d
 import { SceneRecipe } from './map-recipe.js';
 import type { SceneRecipeInput, MapSceneRenderOptions, MapSceneResourceSummary, MapFrameMetrics } from './map-scene-types.js';
 import type { LabelPlanData } from './label-types.js';
+import { SceneState, type SceneStateInput } from './scene-review.js';
+import { type SaveBundleOptions, type BundleOptions } from './bundle.js';
+import { StyleSpec } from './map-style.js';
+import type { VectorFeature } from './vector-types.js';
+import type { BrowserByteSource } from './index.js';
 export interface MapSceneRenderResult {
     blob: Blob;
     frame: Frame;
@@ -31,14 +36,20 @@ export interface MapSceneReviewRecord {
 /** Owns recipe resources, cancellation and output. GPU owners are disposed after each render. */
 export declare class MapScene {
     #private;
-    readonly recipe: SceneRecipe;
     constructor(recipe: SceneRecipe | SceneRecipeInput);
+    get recipe(): SceneRecipe;
+    get sceneState(): SceneState;
+    listVariants(): import("./scene-review.js").SceneVariant[];
+    listReviewLayers(): import("./scene-review.js").ReviewLayer[];
+    getActiveVariantId(): string | null;
+    getReviewLayerVisible(id: string): boolean;
     get disposed(): boolean;
     get lastValidationReport(): ValidationReport | null;
     get compiledLabelPlans(): Record<string, LabelPlanData>;
     get resources(): MapSceneResourceSummary[];
     getMemoryReport(): {
         cpuBytes: number;
+        reviewStateBytes: number;
         gpuBytes: number;
         peakGpuBytes: number;
         resourceCount: number;
@@ -50,5 +61,19 @@ export declare class MapScene {
     reviewRecord(): Promise<MapSceneReviewRecord>;
     toJSON(): JsonValue;
     static fromJSON(input: unknown): MapScene;
+    static fromSceneState(input: SceneState | SceneStateInput): MapScene;
+    static fromStyle(recipe: SceneRecipeInput, style: StyleSpec, sources: Record<string, readonly VectorFeature[]>, options?: {
+        zoom?: number;
+    }): MapScene;
+    applyVariant(id: string, options?: {
+        signal?: AbortSignal;
+    }): Promise<void>;
+    setReviewLayerVisible(id: string, visible: boolean, options?: {
+        signal?: AbortSignal;
+    }): Promise<void>;
+    /** Resolve a logical sprite/glyph URL from the archive adopted by loadBundle. */
+    resolveBundleAsset(url: string): string;
+    saveBundle(options?: SaveBundleOptions): Promise<Blob>;
+    static loadBundle(source: BrowserByteSource | FileSystemFileHandle, options?: BundleOptions): Promise<MapScene>;
     dispose(): void;
 }

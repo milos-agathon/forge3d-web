@@ -1,0 +1,1592 @@
+{
+  "schemaVersion": 2,
+  "baseline": "bf8db93233e5158f6d226991fc5d230832c2d806",
+  "nativeTestCount": 103,
+  "nativeOriginalTestsExecuted": 89,
+  "nativeApiReplayTests": 80,
+  "browserEquivalentTests": 23,
+  "fixtureSha256": "99242129fe03bcc8497df03e070e000107b2c8f43213ce57430c962bf666eef3",
+  "note": "Source pinning is provenance only. Replays compare observed native API inputs/results per original test; they do not claim to execute Python test bodies in TypeScript. CLI, filesystem and MapScene facade substitutions have explicit outcome assertions. The only native execution shim bypasses the W21 license check.",
+  "tests": [
+    {
+      "source": "tests/test_style_parser.py",
+      "test": "test_parse_minimal_style",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_parser.py :: test_parse_minimal_style",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 1,
+        "operations": [
+          "parse"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_parser.py",
+      "test": "test_parse_style_from_file",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_parser.py :: test_parse_style_from_file",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 1,
+        "operations": [
+          "parse"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_parser.py",
+      "test": "test_layers_by_type",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_parser.py :: test_layers_by_type",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 4,
+        "operations": [
+          "parse",
+          "query"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_parser.py",
+      "test": "test_layer_by_id",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_parser.py :: test_layer_by_id",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 3,
+        "operations": [
+          "parse",
+          "query"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_parser.py",
+      "test": "test_layer_visibility",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_parser.py :: test_layer_visibility",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 5,
+        "operations": [
+          "parse",
+          "query",
+          "visible"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_parser.py",
+      "test": "test_fill_paint_props",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_parser.py :: test_fill_paint_props",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 2,
+        "operations": [
+          "parse",
+          "query"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_parser.py",
+      "test": "test_line_paint_props",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_parser.py :: test_line_paint_props",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 2,
+        "operations": [
+          "parse",
+          "query"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_parser.py",
+      "test": "test_symbol_layout_props",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_parser.py :: test_symbol_layout_props",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 2,
+        "operations": [
+          "parse",
+          "query"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_parser.py",
+      "test": "test_filter_extraction",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_parser.py :: test_filter_extraction",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 2,
+        "operations": [
+          "parse",
+          "query"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_parser.py",
+      "test": "test_invalid_version",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_parser.py :: test_invalid_version",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 1,
+        "operations": [
+          "parse-error"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_parser.py",
+      "test": "test_parse_hex_colors",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_parser.py :: test_parse_hex_colors",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 4,
+        "operations": [
+          "color"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_parser.py",
+      "test": "test_parse_rgb_colors",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_parser.py :: test_parse_rgb_colors",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 2,
+        "operations": [
+          "color"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_parser.py",
+      "test": "test_parse_hsl_colors",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_parser.py :: test_parse_hsl_colors",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 1,
+        "operations": [
+          "color"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_parser.py",
+      "test": "test_parse_named_colors",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_parser.py :: test_parse_named_colors",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 4,
+        "operations": [
+          "color"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_parser.py",
+      "test": "test_paint_to_vector_style_fill",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_parser.py :: test_paint_to_vector_style_fill",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 2,
+        "operations": [
+          "color",
+          "paint"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_parser.py",
+      "test": "test_paint_to_vector_style_line",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_parser.py :: test_paint_to_vector_style_line",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 2,
+        "operations": [
+          "color",
+          "paint"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_parser.py",
+      "test": "test_layout_to_label_style",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_parser.py :: test_layout_to_label_style",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 3,
+        "operations": [
+          "color",
+          "label"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_parser.py",
+      "test": "test_filter_evaluation_equality",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_parser.py :: test_filter_evaluation_equality",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 4,
+        "operations": [
+          "filter",
+          "parse",
+          "query"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_parser.py",
+      "test": "test_filter_evaluation_all",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_parser.py :: test_filter_evaluation_all",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 8,
+        "operations": [
+          "filter"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_parser.py",
+      "test": "test_filter_evaluation_any",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_parser.py :: test_filter_evaluation_any",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 8,
+        "operations": [
+          "filter"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_parser.py",
+      "test": "test_filter_evaluation_has",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_parser.py :: test_filter_evaluation_has",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 2,
+        "operations": [
+          "filter"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_parser.py",
+      "test": "test_apply_style_to_features",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_parser.py :: test_apply_style_to_features",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 8,
+        "operations": [
+          "color",
+          "filter",
+          "paint",
+          "parse",
+          "query",
+          "visible",
+          "zoom-range"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_parser.py",
+      "test": "test_layers_for_source_layer",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_parser.py :: test_layers_for_source_layer",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 3,
+        "operations": [
+          "parse",
+          "query"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_parser.py",
+      "test": "test_zoom_range_filter",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_parser.py :: test_zoom_range_filter",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 3,
+        "operations": [
+          "zoom-range"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_parser.py",
+      "test": "test_style_spec_layer_count",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_parser.py :: test_style_spec_layer_count",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 1,
+        "operations": [
+          "parse"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_render.py",
+      "test": "test_style_has_multiple_layers",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_render.py :: test_style_has_multiple_layers",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 1,
+        "operations": [
+          "parse"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_render.py",
+      "test": "test_water_layer_produces_non_default_style",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_render.py :: test_water_layer_produces_non_default_style",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 4,
+        "operations": [
+          "color",
+          "paint",
+          "parse",
+          "query"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_render.py",
+      "test": "test_road_layer_produces_non_default_style",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_render.py :: test_road_layer_produces_non_default_style",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 7,
+        "operations": [
+          "color",
+          "paint",
+          "parse",
+          "query"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_render.py",
+      "test": "test_label_layer_produces_non_default_style",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_render.py :: test_label_layer_produces_non_default_style",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 5,
+        "operations": [
+          "color",
+          "label",
+          "parse",
+          "query"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_render.py",
+      "test": "test_apply_style_water_features",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_render.py :: test_apply_style_water_features",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 8,
+        "operations": [
+          "color",
+          "paint",
+          "parse",
+          "query",
+          "visible",
+          "zoom-range"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_render.py",
+      "test": "test_apply_style_landuse_filtering",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_render.py :: test_apply_style_landuse_filtering",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 13,
+        "operations": [
+          "color",
+          "filter",
+          "paint",
+          "parse",
+          "query",
+          "visible",
+          "zoom-range"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_render.py",
+      "test": "test_apply_style_road_filtering",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_render.py :: test_apply_style_road_filtering",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 13,
+        "operations": [
+          "color",
+          "filter",
+          "paint",
+          "parse",
+          "query",
+          "visible",
+          "zoom-range"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_render.py",
+      "test": "test_style_vs_default_produces_different_output",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_render.py :: test_style_vs_default_produces_different_output",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 9,
+        "operations": [
+          "color",
+          "filter",
+          "paint",
+          "parse",
+          "query",
+          "visible",
+          "zoom-range"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_pixel_diff.py",
+      "test": "test_style_produces_different_colors",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_pixel_diff.py :: test_style_produces_different_colors",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 7,
+        "operations": [
+          "color",
+          "paint",
+          "parse",
+          "query"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_pixel_diff.py",
+      "test": "test_apply_style_changes_feature_colors",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_pixel_diff.py :: test_apply_style_changes_feature_colors",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 11,
+        "operations": [
+          "color",
+          "paint",
+          "parse",
+          "query",
+          "visible",
+          "zoom-range"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_pixel_diff.py",
+      "test": "test_style_color_values_in_expected_range",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_pixel_diff.py :: test_style_color_values_in_expected_range",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 4,
+        "operations": [
+          "color",
+          "paint",
+          "parse",
+          "query"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_pixel_diff.py",
+      "test": "test_pixel_diff_styled_vs_default",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_pixel_diff.py :: test_pixel_diff_styled_vs_default",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 4,
+        "operations": [
+          "color",
+          "paint",
+          "parse",
+          "query"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_pixel_diff.py",
+      "test": "test_multiple_layers_produce_distinct_styles",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_pixel_diff.py :: test_multiple_layers_produce_distinct_styles",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 6,
+        "operations": [
+          "color",
+          "paint",
+          "parse",
+          "query"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_pixel_diff.py",
+      "test": "test_style_integration_workflow",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_pixel_diff.py :: test_style_integration_workflow",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 13,
+        "operations": [
+          "color",
+          "filter",
+          "paint",
+          "parse",
+          "query",
+          "visible",
+          "zoom-range"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_visual.py",
+      "test": "test_interpolate_linear_zoom",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_visual.py :: test_interpolate_linear_zoom",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 10,
+        "operations": [
+          "expression"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_visual.py",
+      "test": "test_interpolate_exponential",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_visual.py :: test_interpolate_exponential",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 6,
+        "operations": [
+          "expression"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_visual.py",
+      "test": "test_step_function",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_visual.py :: test_step_function",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 9,
+        "operations": [
+          "expression"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_visual.py",
+      "test": "test_match_expression",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_visual.py :: test_match_expression",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 9,
+        "operations": [
+          "expression"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_visual.py",
+      "test": "test_match_with_array_labels",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_visual.py :: test_match_with_array_labels",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 9,
+        "operations": [
+          "expression"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_visual.py",
+      "test": "test_case_expression",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_visual.py :: test_case_expression",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 21,
+        "operations": [
+          "expression"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_visual.py",
+      "test": "test_coalesce",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_visual.py :: test_coalesce",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 9,
+        "operations": [
+          "expression"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_visual.py",
+      "test": "test_math_expressions",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_visual.py :: test_math_expressions",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 19,
+        "operations": [
+          "expression"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_visual.py",
+      "test": "test_comparison_expressions",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_visual.py :: test_comparison_expressions",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 18,
+        "operations": [
+          "expression"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_visual.py",
+      "test": "test_logic_expressions",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_visual.py :: test_logic_expressions",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 18,
+        "operations": [
+          "expression"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_visual.py",
+      "test": "test_string_expressions",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_visual.py :: test_string_expressions",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 7,
+        "operations": [
+          "expression"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_visual.py",
+      "test": "test_color_rgb_rgba",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_visual.py :: test_color_rgb_rgba",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 9,
+        "operations": [
+          "expression"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_visual.py",
+      "test": "test_road_color_by_class",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_visual.py :: test_road_color_by_class",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 14,
+        "operations": [
+          "color",
+          "expression",
+          "parse",
+          "query"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_visual.py",
+      "test": "test_road_width_by_zoom",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_visual.py :: test_road_width_by_zoom",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 8,
+        "operations": [
+          "expression",
+          "parse",
+          "query"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_visual.py",
+      "test": "test_building_color_by_height",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_visual.py :: test_building_color_by_height",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 10,
+        "operations": [
+          "color",
+          "expression",
+          "parse",
+          "query"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_visual.py",
+      "test": "test_styled_vs_default_produces_different_colors",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_visual.py :: test_styled_vs_default_produces_different_colors",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 31,
+        "operations": [
+          "color",
+          "expression",
+          "paint",
+          "parse",
+          "query",
+          "visible",
+          "zoom-range"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_visual.py",
+      "test": "test_zoom_produces_different_widths",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_visual.py :: test_zoom_produces_different_widths",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 16,
+        "operations": [
+          "expression",
+          "parse",
+          "query"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_visual.py",
+      "test": "test_property_produces_different_colors",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_visual.py :: test_property_produces_different_colors",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 18,
+        "operations": [
+          "color",
+          "expression",
+          "parse",
+          "query"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_visual.py",
+      "test": "test_expression_style_hash_differs_from_default",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_visual.py :: test_expression_style_hash_differs_from_default",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 16,
+        "operations": [
+          "color",
+          "expression",
+          "parse",
+          "query"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_style_visual.py",
+      "test": "test_zoom_change_changes_hash",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_style_visual.py :: test_zoom_change_changes_hash",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 16,
+        "operations": [
+          "expression",
+          "parse",
+          "query"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_bundle_roundtrip.py",
+      "test": "test_manifest_roundtrip",
+      "disposition": "browser-equivalent",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-equivalents.test.ts",
+        "title": "tests/test_bundle_roundtrip.py :: test_manifest_roundtrip"
+      },
+      "substitution": "Browser manifest metadata and mandatory payload digests replace the native manifest class; terrain/bookmarks live in canonical scene state."
+    },
+    {
+      "source": "tests/test_bundle_roundtrip.py",
+      "test": "test_save_load_bundle_minimal",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_bundle_roundtrip.py :: test_save_load_bundle_minimal",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 1,
+        "operations": [
+          "bundle-save"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_bundle_roundtrip.py",
+      "test": "test_save_load_bundle_with_preset",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_bundle_roundtrip.py :: test_save_load_bundle_with_preset",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 1,
+        "operations": [
+          "bundle-save"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_bundle_roundtrip.py",
+      "test": "test_save_load_bundle_with_camera_bookmarks",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_bundle_roundtrip.py :: test_save_load_bundle_with_camera_bookmarks",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 1,
+        "operations": [
+          "bundle-save"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_bundle_roundtrip.py",
+      "test": "test_is_bundle_false_for_nonexistent",
+      "disposition": "browser-equivalent",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-equivalents.test.ts",
+        "title": "tests/test_bundle_roundtrip.py :: test_is_bundle_false_for_nonexistent"
+      },
+      "substitution": "HTTP 404 replaces a nonexistent filesystem directory."
+    },
+    {
+      "source": "tests/test_bundle_roundtrip.py",
+      "test": "test_is_bundle_false_for_file",
+      "disposition": "browser-equivalent",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-equivalents.test.ts",
+        "title": "tests/test_bundle_roundtrip.py :: test_is_bundle_false_for_file"
+      },
+      "substitution": "An ordinary File is rejected as a non-archive."
+    },
+    {
+      "source": "tests/test_bundle_roundtrip.py",
+      "test": "test_is_bundle_false_for_dir_without_manifest",
+      "disposition": "browser-equivalent",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-equivalents.test.ts",
+        "title": "tests/test_bundle_roundtrip.py :: test_is_bundle_false_for_dir_without_manifest"
+      },
+      "substitution": "An archive without manifest.json replaces a directory without a manifest."
+    },
+    {
+      "source": "tests/test_bundle_roundtrip.py",
+      "test": "test_load_bundle_rejects_invalid",
+      "disposition": "browser-equivalent",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-equivalents.test.ts",
+        "title": "tests/test_bundle_roundtrip.py :: test_load_bundle_rejects_invalid"
+      },
+      "substitution": "Malformed bytes reject with IO_ERROR."
+    },
+    {
+      "source": "tests/test_bundle_roundtrip.py",
+      "test": "test_manifest_version_check",
+      "disposition": "browser-equivalent",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-equivalents.test.ts",
+        "title": "tests/test_bundle_roundtrip.py :: test_manifest_version_check"
+      },
+      "substitution": "Future schema versions reject with bundle-version-mismatch."
+    },
+    {
+      "source": "tests/test_bundle_roundtrip.py",
+      "test": "test_checksum_verification",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_bundle_roundtrip.py :: test_checksum_verification",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 1,
+        "operations": [
+          "bundle-save"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_bundle_roundtrip.py",
+      "test": "test_scene_state_v2_roundtrip_preserves_variants_and_assets",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_bundle_roundtrip.py :: test_scene_state_v2_roundtrip_preserves_variants_and_assets",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 1,
+        "operations": [
+          "bundle-save"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_bundle_roundtrip.py",
+      "test": "test_scene_bundle_roundtrip_preserves_validation_report",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_bundle_roundtrip.py :: test_scene_bundle_roundtrip_preserves_validation_report",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 31,
+        "operations": [
+          "bundle-save",
+          "diagnostic",
+          "report"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_bundle_roundtrip.py",
+      "test": "test_effective_scene_state_respects_variant_layers_and_manual_overrides",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_bundle_roundtrip.py :: test_effective_scene_state_respects_variant_layers_and_manual_overrides",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 4,
+        "operations": [
+          "bundle-save",
+          "mutation"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_bundle_roundtrip.py",
+      "test": "test_loaded_bundle_rejects_unknown_variant_and_layer_mutations",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_bundle_roundtrip.py :: test_loaded_bundle_rejects_unknown_variant_and_layer_mutations",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 1,
+        "operations": [
+          "bundle-save"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_bundle_roundtrip.py",
+      "test": "test_load_v1_bundle_synthesizes_empty_review_registry",
+      "disposition": "browser-equivalent",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-equivalents.test.ts",
+        "title": "tests/test_bundle_roundtrip.py :: test_load_v1_bundle_synthesizes_empty_review_registry"
+      },
+      "substitution": "A checked native v1 mirror archive loads with an empty registry and preserved exposure."
+    },
+    {
+      "source": "tests/test_bundle_render.py",
+      "test": "test_bundle_manifest_version",
+      "disposition": "browser-equivalent",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-equivalents.test.ts",
+        "title": "tests/test_bundle_render.py :: test_bundle_manifest_version"
+      },
+      "substitution": "The public version and loaded manifest remain v2."
+    },
+    {
+      "source": "tests/test_bundle_render.py",
+      "test": "test_bundle_roundtrip_preserves_preset",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_bundle_render.py :: test_bundle_roundtrip_preserves_preset",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 1,
+        "operations": [
+          "bundle-save"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_bundle_render.py",
+      "test": "test_bundle_image_hash_verification",
+      "disposition": "browser-equivalent",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-equivalents.test.ts",
+        "title": "tests/test_bundle_render.py :: test_bundle_image_hash_verification"
+      },
+      "substitution": "Real PNG bytes survive archive save/load with matching SHA-256; browser pixel replay is separate supplemental evidence."
+    },
+    {
+      "source": "tests/test_bundle_cli.py",
+      "test": "test_save_bundle_flag_exists",
+      "disposition": "browser-equivalent",
+      "nativeOriginalExecuted": false,
+      "evidence": {
+        "file": "tests/unit/w19-native-equivalents.test.ts",
+        "title": "tests/test_bundle_cli.py :: test_save_bundle_flag_exists"
+      },
+      "substitution": "Public MapScene.saveBundle produces a Blob; the browser spec exercises the download button."
+    },
+    {
+      "source": "tests/test_bundle_cli.py",
+      "test": "test_load_bundle_flag_exists",
+      "disposition": "browser-equivalent",
+      "nativeOriginalExecuted": false,
+      "evidence": {
+        "file": "tests/unit/w19-native-equivalents.test.ts",
+        "title": "tests/test_bundle_cli.py :: test_load_bundle_flag_exists"
+      },
+      "substitution": "Public MapScene.loadBundle accepts a File; the browser spec exercises the file input."
+    },
+    {
+      "source": "tests/test_bundle_cli.py",
+      "test": "test_was_cli_set_detects_explicit_flags",
+      "disposition": "browser-equivalent",
+      "nativeOriginalExecuted": false,
+      "evidence": {
+        "file": "tests/unit/w19-native-equivalents.test.ts",
+        "title": "tests/test_bundle_cli.py :: test_was_cli_set_detects_explicit_flags"
+      },
+      "substitution": "Browser export options replace CLI arguments: omitting allowMissingAssets uses the diagnostic-bearing default, while an explicit false selects strict failure and an explicit true preserves missing-asset diagnostics."
+    },
+    {
+      "source": "tests/test_bundle_cli.py",
+      "test": "test_bundle_directory_structure",
+      "disposition": "browser-equivalent",
+      "nativeOriginalExecuted": false,
+      "evidence": {
+        "file": "tests/unit/w19-native-equivalents.test.ts",
+        "title": "tests/test_bundle_cli.py :: test_bundle_directory_structure"
+      },
+      "substitution": "manifest.json, canonical state and checked asset entries replace native on-disk directories."
+    },
+    {
+      "source": "tests/test_bundle_cli.py",
+      "test": "test_manifest_has_version_2",
+      "disposition": "browser-equivalent",
+      "nativeOriginalExecuted": false,
+      "evidence": {
+        "file": "tests/unit/w19-native-equivalents.test.ts",
+        "title": "tests/test_bundle_cli.py :: test_manifest_has_version_2"
+      },
+      "substitution": "The encoded manifest declares v2."
+    },
+    {
+      "source": "tests/test_bundle_cli.py",
+      "test": "test_bundle_extension_added_if_missing",
+      "disposition": "browser-equivalent",
+      "nativeOriginalExecuted": false,
+      "evidence": {
+        "file": "tests/unit/w19-native-equivalents.test.ts",
+        "title": "tests/test_bundle_cli.py :: test_bundle_extension_added_if_missing"
+      },
+      "substitution": "Bundle download/picker names append .forge3d when no suffix was supplied, preserve existing suffixes, and produce a verified archive through the actual output sink."
+    },
+    {
+      "source": "tests/test_diagnostics_bundle_serialization.py",
+      "test": "test_diagnostic_from_dict_roundtrip_preserves_bundle_ready_fields",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_diagnostics_bundle_serialization.py :: test_diagnostic_from_dict_roundtrip_preserves_bundle_ready_fields",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 1,
+        "operations": [
+          "diagnostic"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_diagnostics_bundle_serialization.py",
+      "test": "test_validation_report_serialization_is_lossless_and_deterministic",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_diagnostics_bundle_serialization.py :: test_validation_report_serialization_is_lossless_and_deterministic",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 15,
+        "operations": [
+          "diagnostic",
+          "report"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_diagnostics_bundle_serialization.py",
+      "test": "test_validation_report_orders_diagnostics_by_stable_sort_key",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_diagnostics_bundle_serialization.py :: test_validation_report_orders_diagnostics_by_stable_sort_key",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 6,
+        "operations": [
+          "diagnostic",
+          "report"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_diagnostics_bundle_serialization.py",
+      "test": "test_diagnostic_details_are_json_serializable_and_sorted",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_diagnostics_bundle_serialization.py :: test_diagnostic_details_are_json_serializable_and_sorted",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 1,
+        "operations": [
+          "diagnostic"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_diagnostics_bundle_serialization.py",
+      "test": "test_empty_report_is_bundle_ready_ok_status",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_diagnostics_bundle_serialization.py :: test_empty_report_is_bundle_ready_ok_status",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 1,
+        "operations": [
+          "report"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_diagnostics_style_support.py",
+      "test": "test_style_support_accepts_local_fill_line_and_circle_layers",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_diagnostics_style_support.py :: test_style_support_accepts_local_fill_line_and_circle_layers",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 3,
+        "operations": [
+          "parse",
+          "report",
+          "support"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_diagnostics_style_support.py",
+      "test": "test_style_support_reports_unsupported_layer_types_and_fields",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_diagnostics_style_support.py :: test_style_support_reports_unsupported_layer_types_and_fields",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 9,
+        "operations": [
+          "diagnostic",
+          "parse",
+          "report",
+          "support"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_diagnostics_style_support.py",
+      "test": "test_style_support_accepts_parsed_style_spec_without_claiming_mvt",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_diagnostics_style_support.py :: test_style_support_accepts_parsed_style_spec_without_claiming_mvt",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 3,
+        "operations": [
+          "parse",
+          "report",
+          "support"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_diagnostics_style_support.py",
+      "test": "test_parsed_style_support_reports_preserved_unsupported_fields",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_diagnostics_style_support.py :: test_parsed_style_support_reports_preserved_unsupported_fields",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 7,
+        "operations": [
+          "diagnostic",
+          "parse",
+          "report",
+          "support"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_diagnostics_style_support.py",
+      "test": "test_symbol_style_support_matches_underdeveloped_matrix_truth",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_diagnostics_style_support.py :: test_symbol_style_support_matches_underdeveloped_matrix_truth",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 4,
+        "operations": [
+          "diagnostic",
+          "parse",
+          "report",
+          "support"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_diagnostics_style_support.py",
+      "test": "test_supported_style_output_feeds_vector_overlay_config",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_diagnostics_style_support.py :: test_supported_style_output_feeds_vector_overlay_config",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 12,
+        "operations": [
+          "color",
+          "overlay",
+          "paint",
+          "parse",
+          "visible",
+          "zoom-range"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_diagnostics_style_support.py",
+      "test": "test_symbol_style_output_feeds_future_label_layer_contract",
+      "disposition": "native-api-replay",
+      "nativeOriginalExecuted": true,
+      "evidence": {
+        "file": "tests/unit/w19-native-replay.test.ts",
+        "title": "tests/test_diagnostics_style_support.py :: test_symbol_style_output_feeds_future_label_layer_contract",
+        "fixture": "tests/fixtures/w19/native-contract.json",
+        "observedCalls": 7,
+        "operations": [
+          "color",
+          "label",
+          "label-contract",
+          "parse",
+          "visible",
+          "zoom-range"
+        ]
+      }
+    },
+    {
+      "source": "tests/test_mapscene_save_bundle.py",
+      "test": "test_save_bundle_writes_deterministic_review_bundle_with_label_plan",
+      "disposition": "browser-equivalent",
+      "nativeOriginalExecuted": false,
+      "evidence": {
+        "file": "tests/unit/w19-native-equivalents.test.ts",
+        "title": "tests/test_mapscene_save_bundle.py :: test_save_bundle_writes_deterministic_review_bundle_with_label_plan"
+      },
+      "substitution": "Canonical serialization is deterministic and preserves an actual W13 compiled LabelPlan; browser preparation checks real fonts and rendered plans."
+    },
+    {
+      "source": "tests/test_mapscene_save_bundle.py",
+      "test": "test_save_bundle_preserves_blocking_diagnostics_without_render_success_claim",
+      "disposition": "browser-equivalent",
+      "nativeOriginalExecuted": false,
+      "evidence": {
+        "file": "tests/unit/w19-native-equivalents.test.ts",
+        "title": "tests/test_mapscene_save_bundle.py :: test_save_bundle_preserves_blocking_diagnostics_without_render_success_claim"
+      },
+      "substitution": "Reports and blocked review status persist without last_render."
+    },
+    {
+      "source": "tests/test_mapscene_save_bundle.py",
+      "test": "test_save_bundle_preserves_missing_asset_diagnostics_without_renderability",
+      "disposition": "browser-equivalent",
+      "nativeOriginalExecuted": false,
+      "evidence": {
+        "file": "tests/unit/w19-native-equivalents.test.ts",
+        "title": "tests/test_mapscene_save_bundle.py :: test_save_bundle_preserves_missing_asset_diagnostics_without_renderability"
+      },
+      "substitution": "A missing terrain URL produces a blocking missing_external_asset report."
+    },
+    {
+      "source": "tests/test_p1_bundle_guardrails.py",
+      "test": "test_p1_bundle_persists_asset_layers_label_sources_and_diagnostics",
+      "disposition": "browser-equivalent",
+      "nativeOriginalExecuted": false,
+      "evidence": {
+        "file": "tests/unit/w19-native-equivalents.test.ts",
+        "title": "tests/test_p1_bundle_guardrails.py :: test_p1_bundle_persists_asset_layers_label_sources_and_diagnostics"
+      },
+      "substitution": "Canonical typed layer sources replace separate native layer-source mirrors; vector, label, building and tileset source payloads and their support diagnostics survive."
+    },
+    {
+      "source": "tests/test_p1_bundle_guardrails.py",
+      "test": "test_p1_bundle_missing_external_assets_remain_diagnostic_bearing",
+      "disposition": "browser-equivalent",
+      "nativeOriginalExecuted": false,
+      "evidence": {
+        "file": "tests/unit/w19-native-equivalents.test.ts",
+        "title": "tests/test_p1_bundle_guardrails.py :: test_p1_bundle_missing_external_assets_remain_diagnostic_bearing"
+      },
+      "substitution": "Re-saving preserves the missing URL and its diagnostic without duplicating it."
+    },
+    {
+      "source": "tests/test_p1_bundle_roundtrip.py",
+      "test": "test_bundle_persists_required_p1_review_fields_and_label_payloads",
+      "disposition": "browser-equivalent",
+      "nativeOriginalExecuted": false,
+      "evidence": {
+        "file": "tests/unit/w19-native-equivalents.test.ts",
+        "title": "tests/test_p1_bundle_roundtrip.py :: test_bundle_persists_required_p1_review_fields_and_label_payloads"
+      },
+      "substitution": "Camera bookmarks, review status and all recipe fields survive canonical round trip; label payloads are checked in the adjacent guardrail case."
+    },
+    {
+      "source": "tests/test_p1_bundle_roundtrip.py",
+      "test": "test_bundle_load_reconstructs_renderable_scene_when_assets_are_available",
+      "disposition": "browser-equivalent",
+      "nativeOriginalExecuted": false,
+      "evidence": {
+        "file": "tests/unit/w19-native-equivalents.test.ts",
+        "title": "tests/test_p1_bundle_roundtrip.py :: test_bundle_load_reconstructs_renderable_scene_when_assets_are_available"
+      },
+      "substitution": "A complete inline terrain/vector recipe reconstructs and prepares; the browser spec asserts covered rendering and exact pixels."
+    },
+    {
+      "source": "tests/test_p1_bundle_roundtrip.py",
+      "test": "test_bundle_load_reports_missing_external_assets_with_structured_diagnostics",
+      "disposition": "browser-equivalent",
+      "nativeOriginalExecuted": false,
+      "evidence": {
+        "file": "tests/unit/w19-native-equivalents.test.ts",
+        "title": "tests/test_p1_bundle_roundtrip.py :: test_bundle_load_reports_missing_external_assets_with_structured_diagnostics"
+      },
+      "substitution": "MapScene retains path/severity/code and refuses preparation of missing assets."
+    }
+  ]
+}

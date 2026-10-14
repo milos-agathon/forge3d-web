@@ -8,6 +8,11 @@ import { prepareMapLayers, type PreparedMapLayers } from './map-layer-adapters.j
 import { renderMapFrame } from './map-render.js';
 import type { SceneRecipeInput, MapSceneRenderOptions, MapSceneResourceSummary, PreparedMapResource, MapSceneProgress, MapFrameMetrics } from './map-scene-types.js';
 import type { LabelPlanData } from './label-types.js';
+import { SceneState, type SceneStateInput } from './scene-review.js';
+import { saveBundle, loadBundle, type SaveBundleOptions, type BundleOptions, type LoadedBundle } from './bundle.js';
+import { StyleSpec, compileStyle } from './map-style.js';
+import type { VectorFeature } from './vector-types.js';
+import type { BrowserByteSource } from './index.js';
 export interface MapSceneRenderResult {
     blob: Blob;
     frame: Frame;
@@ -44,7 +49,10 @@ async function cancellable<T>(pending:Promise<T>,signal:AbortSignal):Promise<T>{
 }
 /** Owns recipe resources, cancellation and output. GPU owners are disposed after each render. */
 export class MapScene {
-    readonly recipe: SceneRecipe;
+    #recipe: SceneRecipe;
+    #review: SceneState;
+    #bundle: LoadedBundle | undefined;
+    #styleDiagnostics: Diagnostic[] = [];
     #prepared = new Map<string, PreparedMapResource>();
     #layers: PreparedMapLayers | undefined;
     #diagnostics: Diagnostic[] = [];
@@ -58,17 +66,23 @@ export class MapScene {
     #ready = false;
     #gpuBytes = 0;
     #peakGpuBytes = 0;
-    constructor(recipe: SceneRecipe | SceneRecipeInput) { this.recipe = recipe instanceof SceneRecipe ? new SceneRecipe(recipe.value) : new SceneRecipe(recipe); }
+    constructor(recipe: SceneRecipe | SceneRecipeInput) { this.#recipe = recipe instanceof SceneRecipe ? new SceneRecipe(recipe.value) : new SceneRecipe(recipe); this.#review = new SceneState({ base: this.#recipe.value }); }
+    get recipe(): SceneRecipe { this.#live(); return this.#recipe; }
+    get sceneState(): SceneState { this.#live(); return new SceneState(this.#review.value); }
+    listVariants() { this.#live(); return this.#review.listVariants(); }
+    listReviewLayers() { this.#live(); return this.#review.listReviewLayers(); }
+    getActiveVariantId(): string | null { this.#live(); return this.#review.activeVariantId; }
+    getReviewLayerVisible(id: string): boolean { this.#live(); if (!this.#review.listReviewLayers().some(l => l.id === id)) throw new Forge3DError('INVALID_INPUT', `Unknown review layer: ${id}`); return this.#review.visibleLayerIds().includes(id); }
     get disposed(): boolean { return this.#disposed; }
     get lastValidationReport(): ValidationReport | null { return this.#lastReport; }
     get compiledLabelPlans(): Record<string, LabelPlanData> { return structuredClone(this.#layers?.plans ?? {}); }
     get resources(): MapSceneResourceSummary[] { return structuredClone(this.#resources); }
-    getMemoryReport() { return { cpuBytes: this.#disposed ? 0 : Array.from(this.#prepared.values()).reduce((n, r) => n + r.bytes, 0) + (this.#layers?.fontBytes ?? 0) + (this.#layers?.cpuBytes ?? 0), gpuBytes: this.#gpuBytes, peakGpuBytes: this.#peakGpuBytes, resourceCount: this.#prepared.size, disposed: this.#disposed }; }
+    getMemoryReport() { return { cpuBytes: this.#disposed ? 0 : Array.from(this.#prepared.values()).reduce((n, r) => n + r.bytes, 0) + (this.#layers?.fontBytes ?? 0) + (this.#layers?.cpuBytes ?? 0) + (this.#bundle?.getMemoryReport().cpuBytes ?? 0), reviewStateBytes: this.#disposed ? 0 : this.#review.getMemoryReport().cpuBytes, gpuBytes: this.#gpuBytes, peakGpuBytes: this.#peakGpuBytes, resourceCount: this.#prepared.size, disposed: this.#disposed }; }
     #live() { if (this.#disposed)
         throw new Forge3DError('RUNTIME_DISPOSED', 'MapScene is disposed'); }
     validate(): ValidationReport {
         this.#live();
-        const result = validateMapRecipe(this.recipe.value, this.#prepared, [...this.#diagnostics, ...this.#layers?.diagnostics ?? []], this.#failed, this.#layers);
+        const result = validateMapRecipe(this.recipe.value, this.#prepared, [...this.#styleDiagnostics, ...this.#diagnostics, ...this.#layers?.diagnostics ?? []], this.#failed, this.#layers);
         this.#resources = result.resources;
         this.#lastReport = this.#lastRender ? new ValidationReport({ ...result.report.toJSON(), supported_features: { ...result.report.supported_features, 'mapscene.render_png': 'supported' } }) : result.report;
         return this.#lastReport;
@@ -122,7 +136,7 @@ export class MapScene {
             let report = this.validate();
             if (report.renderBlocked(this.recipe.value.renderPolicy))
                 return report;
-            this.#layers = await prepareMapLayers(this.recipe.value, this.#prepared, signal);
+            this.#layers = await prepareMapLayers(this.recipe.value, this.#prepared, signal, this.#review.fonts);
             this.#live();
             mapCancelled(signal);
             report = this.validate();
@@ -218,6 +232,51 @@ export class MapScene {
     }
     toJSON(): JsonValue { return this.recipe.toJSON(); }
     static fromJSON(input: unknown): MapScene { return new MapScene(SceneRecipe.fromJSON(input)); }
+    static fromSceneState(input: SceneState | SceneStateInput): MapScene {
+        const state = input instanceof SceneState ? new SceneState(input.value) : new SceneState(input), scene = new MapScene(state.effectiveRecipe());
+        scene.#review = state;
+        if (state.value.style) scene.#styleDiagnostics = [...new StyleSpec(state.value.style).validate().diagnostics];
+        if (state.value.validationReport) scene.#styleDiagnostics.push(...ValidationReport.fromJSON(state.value.validationReport).diagnostics.filter(d => d.code === 'unsupported_bundle_field' || state.value.missingAssets?.length && d.code === 'missing_external_asset'));
+        return scene;
+    }
+    static fromStyle(recipe: SceneRecipeInput, style: StyleSpec, sources: Record<string, readonly VectorFeature[]>, options: { zoom?: number } = {}): MapScene {
+        const compiled = compileStyle(style, sources, { ...options, ...(recipe.crs ? { crs: recipe.crs } : {}) }), scene = MapScene.fromSceneState({ base: { ...recipe, layers: [...recipe.layers ?? [], ...compiled.layers] }, style: style.value });
+        scene.#styleDiagnostics = [...compiled.report.diagnostics]; return scene;
+    }
+    async #transition(state: SceneState, signal?: AbortSignal): Promise<void> {
+        this.#live(); if (this.#busy) throw new Forge3DError('INVALID_INPUT', 'MapScene operation already in progress', { reason: 'operation-in-progress' });
+        const candidate = MapScene.fromSceneState(state);
+        this.#busy = true; const abort = new AbortController(); this.#abort = abort;
+        const combined = signal ? AbortSignal.any([signal, abort.signal]) : abort.signal;
+        try {
+            mapCancelled(combined);
+            const report = await candidate.prepare({ signal: combined });
+            this.#live(); mapCancelled(combined);
+            if (report.renderBlocked(candidate.recipe.value.renderPolicy)) throw new Forge3DError('UNSUPPORTED_FEATURE', 'Variant preparation blocked by diagnostics', { report: report.toJSON() });
+            this.#release();
+            this.#recipe = candidate.#recipe; this.#review = state; this.#prepared = candidate.#prepared; this.#layers = candidate.#layers;
+            this.#diagnostics = candidate.#diagnostics; this.#styleDiagnostics = candidate.#styleDiagnostics; this.#failed = candidate.#failed; this.#ready = candidate.#ready;
+            this.#lastRender = null; this.#lastReport = null;
+            candidate.#prepared = new Map(); candidate.#layers = undefined;
+            this.validate();
+        } finally { candidate.dispose(); this.#busy = false; this.#abort = undefined; }
+    }
+    applyVariant(id: string, options: { signal?: AbortSignal } = {}): Promise<void> { this.#live(); return this.#transition(this.#review.applyVariant(id), options.signal); }
+    setReviewLayerVisible(id: string, visible: boolean, options: { signal?: AbortSignal } = {}): Promise<void> { this.#live(); return this.#transition(this.#review.setReviewLayerVisible(id, visible), options.signal); }
+    /** Resolve a logical sprite/glyph URL from the archive adopted by loadBundle. */
+    resolveBundleAsset(url: string): string { this.#live(); if (!this.#bundle) throw new Forge3DError('INVALID_INPUT', 'Scene has no adopted bundle'); return this.#bundle.resolveAsset(url); }
+    async saveBundle(options: SaveBundleOptions = {}): Promise<Blob> {
+        this.#live(); if (this.#busy) throw new Forge3DError('INVALID_INPUT', 'MapScene operation already in progress');
+        this.#busy = true; const abort = new AbortController(); this.#abort = abort;
+        const signal = options.signal ? AbortSignal.any([options.signal, abort.signal]) : abort.signal;
+        try { mapCancelled(signal); const state = this.#review.value, review = await this.reviewRecord(); state.validationReport = review.validation_report; state.compiledLabelPlans = this.compiledLabelPlans; state.reviewRecord = { renderable: review.renderable, render_status: review.render_status, last_render: review.last_render }; const result = await saveBundle(state, { allowMissingAssets: true, createdAt: '2000-01-01T00:00:00Z', ...options, signal, assets: { ...this.#bundle?.retainedAssets(), ...options.assets } }); this.#live(); return result; }
+        finally { this.#busy = false; this.#abort = undefined; }
+    }
+    static async loadBundle(source: BrowserByteSource | FileSystemFileHandle, options: BundleOptions = {}): Promise<MapScene> {
+        const bundle = await loadBundle(source, options);
+        try { const state = await bundle.runtimeSceneState(); mapCancelled(options.signal); const scene = MapScene.fromSceneState(state); scene.#bundle = bundle; return scene; }
+        catch (e) { bundle.dispose(); throw e; }
+    }
     dispose(): void { if (this.#disposed)
-        return; this.#disposed = true; this.#abort?.abort(); this.#release(); this.#resources = []; this.#gpuBytes = 0; this.#lastRender = null; }
+        return; this.#disposed = true; this.#abort?.abort(); this.#release(); this.#bundle?.dispose(); this.#bundle = undefined; this.#resources = []; this.#gpuBytes = 0; this.#lastRender = null; this.#review = undefined!; this.#recipe = undefined!; this.#lastReport = null; this.#styleDiagnostics = []; this.#diagnostics = []; }
 }

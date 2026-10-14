@@ -533,7 +533,7 @@
         "fflate"
       ],
       "review": {
-        "security": "Run fixture conformance, corrupt-input tests and dependency advisory review before consumption",
+        "security": "W19 native expression/color fixtures, corrupt and bounded ZIP controls, SHA-256 tamper checks, offline fonts/assets, strict-CSP clean installed consumer, and npm advisory query completed; see crates/forge3d-web/docs/w19-evidence.md",
         "maintenance": "Exact version is frozen; substitution requires an ADR and the same fixtures",
         "license": "Retain MIT license text and notices in the published package"
       }

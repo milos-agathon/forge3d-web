@@ -14,6 +14,7 @@ a platform support claim.
 
 For typed recipes, validated multilayer PNG output, deterministic support reports,
 resource ownership and review records, see [MapScene and diagnostics](mapscene-diagnostics.md).
+For `MapScene.saveBundle`, `MapScene.loadBundle`, local Mapbox styles and atomic review variants, see [styles and bundles](styles-bundles.md).
 
 For W09 population, wind, local SH/reflection lighting, reports and recovery,
 see [Terrain scatter and probes](terrain-scatter-probes.md).

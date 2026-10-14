@@ -8,7 +8,7 @@ import { BuildingLayer } from './buildings.js';
 import { PointCloudLayer } from './pointcloud-layer.js';
 import { Tiles3dLayer } from './tiles3d-layer.js';
 import { Tileset } from './tiles3d.js';
-import { FontAtlas } from './typography.js';
+import { FontAtlas, type FontSource } from './typography.js';
 import { LabelLayer } from './labels.js';
 import { LabelPlan } from './label-plan.js';
 import { iblFromSnapshot } from './ibl.js';
@@ -30,7 +30,7 @@ export interface PreparedMapLayers {
     cpuBytes: number;
     dispose: () => void;
 }
-export async function prepareMapLayers(input: SceneRecipeInput, resources: ReadonlyMap<string, PreparedMapResource>, signal: AbortSignal): Promise<PreparedMapLayers> {
+export async function prepareMapLayers(input: SceneRecipeInput, resources: ReadonlyMap<string, PreparedMapResource>, signal: AbortSignal, fonts?: readonly FontSource[]): Promise<PreparedMapLayers> {
     const scene = Forge3DScene.create(), points: PointCloudLayer[] = [], diagnostics: Diagnostic[] = [], plans: Record<string, LabelPlanData> = {}, layerObjects: Record<string, number> = {};
     const releases: (() => void)[] = [() => scene.dispose()];
     let disposed = false, fontBytes = 0;
@@ -70,7 +70,7 @@ export async function prepareMapLayers(input: SceneRecipeInput, resources: Reado
         const labelLayers = (input.layers ?? []).filter(l => l.kind === 'labels');
         let atlas: FontAtlas | undefined;
         if (labelLayers.length) {
-            atlas = await FontAtlas.create({ signal });
+            atlas = await FontAtlas.create({ signal, ...(fonts ? { fonts } : {}) });
             releases.push(() => atlas!.dispose());
             mapCancelled(signal);
             fontBytes = atlas.memoryReport().fontBytes;

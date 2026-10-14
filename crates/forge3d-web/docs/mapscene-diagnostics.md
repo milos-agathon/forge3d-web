@@ -83,8 +83,8 @@ coordinates; `coordinateSpace: 'world'` projects through the recipe camera.
 native snake-case serialized fields, stable sorting, IDs, details and remediation.
 All 22 native factories, the required/P1/P2 inventories, `validateLabelSupport`,
 `validateStyleSupport` and `getMapSceneSupportMatrix` are public. Style support
-assessment preserves native diagnostic truth; the style loader/evaluator/render
-mapping remains W19. Reports cannot be downgraded through serialized status.
+assessment preserves native diagnostic truth; the M03/W19 style loader/evaluator/render
+mapping is described in [styles and bundles](styles-bundles.md). Reports cannot be downgraded through serialized status.
 
 Errors/fatals block both policies. `continue_on_warning` retains warning reports;
 `fail_on_warning` blocks them. The native `experimental_feature` factory remains a
@@ -138,9 +138,10 @@ prepared CPU buffers/font bytes, transient GPU bytes and their measured peak.
 JS object overhead and caller-owned result frames/Blobs are outside those counters.
 
 `reviewRecord()` returns deterministic recipe/report SHA-256, resource states,
-label plans and actual executed layer IDs/backend. `.forge3d` ZIP/save/load adapters
-are M04/W19; cartographic furniture and SVG/PDF composition are W20. Requests for
-those unavailable render paths diagnose rather than substitute an image.
+label plans and actual executed layer IDs/backend. M04/W19 provides `.forge3d`
+ZIP/save/load adapters, verified assets and atomic review variants; see
+[styles and bundles](styles-bundles.md). Cartographic furniture and SVG/PDF
+composition remain W20-owned diagnostic paths.
 
 ## Diagnostic reference
 
@@ -201,7 +202,7 @@ Native factory codes retain messages, remediation, IDs, details and severity:
 | Capability | Support level | Scope / owner |
 |---|---|---|
 | MapScene.render PNG path | `supported` | Covered geometry, shaped glyphs, deterministic LabelPlan and review JSON; M02a/W18. |
-| Style assessment | `supported` | Local fill/line/circle diagnostic assessment; style render mapping M03/W19. |
+| Style assessment | `supported` | Local fill/line/circle rendering and diagnostic assessment through M03/W19. |
 | MapSceneBuildingLayer | `supported` | Scalar buildings; missing_external_asset and unsupported_asset_format remain errors; W15/M02a. |
 | Point-cloud MapScene path | `placeholder/fallback` | M02b retained gate; MapScene integration of G02-G04 is not yet implemented and tested. |
 | Tiles3D MapScene path | `underdeveloped` | python_public_3dtiles_incomplete retained by M02b. |

@@ -303,3 +303,4 @@ Vector layers support point shapes/atlases, AA caps/joins, polygon extrusion, te
 See [Geometry, mesh IO and buildings](docs/geometry-mesh-io.md) for W15 typed meshes, transferable processing, browser import/export and building diagnostics.
 
 See [MapScene and structured diagnostics](docs/mapscene-diagnostics.md) for W18 typed recipes, actual multilayer PNG output, resource validation and bundle-ready reports.
+See [styles, bundles and review variants](docs/styles-bundles.md) for W19 local Mapbox styles, verified offline `.forge3d` archives, atomic variants and the [browser example](examples/style-bundle.html).

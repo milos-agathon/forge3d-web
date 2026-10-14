@@ -1,6 +1,17 @@
 export {validateStyleSupport} from './diagnostic-style.js';
 export type {DiagnosticStyleLayer} from './diagnostic-style.js';
 export { MapScene } from './map-scene.js';
+export { SceneState } from './scene-review.js';
+export type { SceneStateInput, SceneVariant, ReviewLayer, ScenePreset, CameraBookmark } from './scene-review.js';
+export { StyleSpec, parseStyle, loadStyle, parseStyleColor, styleLayerVisible, styleToVectorStyle, styleToLabelStyle, styleLabelRecords, compileStyle, styleFeaturesFromGeoJson, loadStyleLayers } from './map-style.js';
+export type { StyleSpecInput, StyleLayer } from './map-style.js';
+export { evaluateStyleExpression, evaluateStyleFilter } from './style-expressions.js';
+export type { StyleEvalContext } from './style-expressions.js';
+export { SpriteAtlas, loadSpriteAtlas, decodeGlyphRanges, loadGlyphRange, loadGlyphRanges } from './style-assets.js';
+export type { SpriteEntry, StyleAssetOptions, StyleGlyph, GlyphRange } from './style-assets.js';
+export { BUNDLE_VERSION, saveBundle, loadBundle, isBundle, LoadedBundle } from './bundle.js';
+export type { BundleManifest, BundleOptions, SaveBundleOptions } from './bundle.js';
+export type { BundleLimits } from './bundle-archive.js';
 export type { MapSceneRenderResult, MapSceneReviewRecord } from './map-scene.js';
 export { SceneRecipe, TerrainSource, RasterOverlay, VectorOverlay, MapSceneBuildingLayer, MapSceneLabelLayer, MapScenePointCloudLayer, MapSceneTiles3DLayer, OrbitCamera, LightingPreset, OutputSpec, ReproducibilityProfile, MAP_SCENE_RECIPE_SCHEMA } from './map-recipe.js';
 export type * from './map-scene-types.js';

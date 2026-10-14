@@ -4,7 +4,7 @@
   "manifestId": "forge3d-composite-baseline-v1",
   "sourcePlan": {
     "path": "docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md",
-    "sha256": "6e96f1e0fd42d6762cf67aa8b2dab08b8b37939240fb05077eee2a69b1554be3"
+    "sha256": "2ce9952d7ac75a5731f40c5f01089bf622a120dad0a4a761031d04c573137451"
   },
   "baselineLayers": [
     {
@@ -979,7 +979,7 @@
       "title": "Named variants/review layers",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W19",
       "nativeCapability": "Named variants/review layers: 1f4084a:python/forge3d/bundle.py, python/forge3d/viewer_ipc.py, tests/test_bundle_roundtrip.py",
       "requiredWebOutcome": "Add atomic list/apply/query/visibility integrated with scene state and bundles",
@@ -1940,7 +1940,7 @@
       "title": "Mapbox Style subset, expressions, sprites and glyph ranges",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "G",
+      "status": "I",
       "ownerTask": "W19",
       "nativeCapability": "Mapbox Style subset, expressions, sprites and glyph ranges: 1f4084a:python/forge3d/style.py, src/style/**, tests/test_style_parser.py, tests/test_style_render.py",
       "requiredWebOutcome": "Add JSON loader, evaluator, vector/label mapping and unsupported-field diagnostics",
@@ -1964,7 +1964,7 @@
       "title": ".forge3d manifests/checksums/assets/bookmarks/state/variants and MapScene.save_bundle/load_bundle",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "E",
+      "status": "I",
       "ownerTask": "W19",
       "nativeCapability": ".forge3d manifests/checksums/assets/bookmarks/state/variants and MapScene.save_bundle/load_bundle: 1f4084a:python/forge3d/bundle.py, python/forge3d/map_scene.py, tests/test_bundle_roundtrip.py, tests/test_mapscene_save_bundle.py",
       "requiredWebOutcome": "Add versioned ZIP/stream bundle with SHA-256, MapScene adapters and URL/File/OPFS round trip",
@@ -2787,10 +2787,19 @@
       "contract": "Add atomic list/apply/query/visibility integrated with scene state and bundles",
       "owner": "W19",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:T18"
+        "crates/forge3d-web/src-ts/map-style.ts",
+        "crates/forge3d-web/src-ts/style-expressions.ts",
+        "crates/forge3d-web/src-ts/style-assets.ts",
+        "crates/forge3d-web/src-ts/scene-review.ts",
+        "crates/forge3d-web/src-ts/bundle.ts",
+        "crates/forge3d-web/docs/w19-evidence.md",
+        "crates/forge3d-web/docs/w19-native-test-coverage.json"
       ],
       "tests": [
-        "port style/bundle suites; expression conformance, unsupported fields, sprite/glyphs, checksum tamper, asset rewrite, migration, round trip and atomic variants."
+        "crates/forge3d-web/tests/unit/w19-style-bundle.test.ts",
+        "crates/forge3d-web/tests/unit/w19-native-contract.test.ts",
+        "crates/forge3d-web/tests/playwright/w19_style_bundle.spec.ts",
+        "npm run test:package-consumer:w19"
       ]
     },
     {
@@ -3506,10 +3515,19 @@
       "contract": "Add JSON loader, evaluator, vector/label mapping and unsupported-field diagnostics",
       "owner": "W19",
       "evidence": [
-        "tracked G closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:M03"
+        "crates/forge3d-web/src-ts/map-style.ts",
+        "crates/forge3d-web/src-ts/style-expressions.ts",
+        "crates/forge3d-web/src-ts/style-assets.ts",
+        "crates/forge3d-web/src-ts/scene-review.ts",
+        "crates/forge3d-web/src-ts/bundle.ts",
+        "crates/forge3d-web/docs/w19-evidence.md",
+        "crates/forge3d-web/docs/w19-native-test-coverage.json"
       ],
       "tests": [
-        "port style/bundle suites; expression conformance, unsupported fields, sprite/glyphs, checksum tamper, asset rewrite, migration, round trip and atomic variants."
+        "crates/forge3d-web/tests/unit/w19-style-bundle.test.ts",
+        "crates/forge3d-web/tests/unit/w19-native-contract.test.ts",
+        "crates/forge3d-web/tests/playwright/w19_style_bundle.spec.ts",
+        "npm run test:package-consumer:w19"
       ]
     },
     {
@@ -3519,10 +3537,19 @@
       "contract": "Add versioned ZIP/stream bundle with SHA-256, MapScene adapters and URL/File/OPFS round trip",
       "owner": "W19",
       "evidence": [
-        "tracked E closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:M04"
+        "crates/forge3d-web/src-ts/map-style.ts",
+        "crates/forge3d-web/src-ts/style-expressions.ts",
+        "crates/forge3d-web/src-ts/style-assets.ts",
+        "crates/forge3d-web/src-ts/scene-review.ts",
+        "crates/forge3d-web/src-ts/bundle.ts",
+        "crates/forge3d-web/docs/w19-evidence.md",
+        "crates/forge3d-web/docs/w19-native-test-coverage.json"
       ],
       "tests": [
-        "port style/bundle suites; expression conformance, unsupported fields, sprite/glyphs, checksum tamper, asset rewrite, migration, round trip and atomic variants."
+        "crates/forge3d-web/tests/unit/w19-style-bundle.test.ts",
+        "crates/forge3d-web/tests/unit/w19-native-contract.test.ts",
+        "crates/forge3d-web/tests/playwright/w19_style_bundle.spec.ts",
+        "npm run test:package-consumer:w19"
       ]
     },
     {
@@ -53332,7 +53359,7 @@
   ],
   "dependencyLock": {
     "path": "docs/parity/dependency-lock.json",
-    "sha256": "6ffa4dce27ab79aca4b573ca53db2eff199792c87c2890d0713633830221b93d",
+    "sha256": "7bf352ea05e1ff57f6e4f42ddb7f5bda525df7d7d3311091c5a028e67875e94e",
     "requiredAssetIds": [
       "harfbuzzjs",
       "proj-wasm",
