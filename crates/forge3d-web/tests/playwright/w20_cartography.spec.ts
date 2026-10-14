@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { runNativePlateCase } from '../browser/w20-native-plate-cases.js';
 const native = JSON.parse(readFileSync(new URL('../fixtures/w20/native-oracle.json', import.meta.url), 'utf8'));
 const layoutOracle = JSON.parse(readFileSync(new URL('../fixtures/w20/layout-oracle.json', import.meta.url), 'utf8'));
+const textOracle = JSON.parse(readFileSync(new URL('../fixtures/w20/text-layout-oracle.json', import.meta.url), 'utf8'));
 declare global { interface Window { __w20: any } }
 for (const dist of [false, true]) {
   const label = dist ? 'dist' : 'source';
@@ -10,6 +11,29 @@ for (const dist of [false, true]) {
     test.beforeEach(async ({ page }) => {
       await page.goto('/examples/cartography.html?' + (dist ? 'dist' : 'source'));
       await page.waitForFunction(() => window.__w20?.ready);
+    });
+    test(`W20 ${label}: native title bounds cover the expanded text corpus`, async ({ page }, info) => {
+      const r = await page.evaluate(async rows => {
+        const a = window.__w20.api, results = [];
+        for (const c of rows) {
+          const p = new a.MapPlate({ width: 320, height: 200 }).addTitle(c.text, { fontSize: c.size });
+          const rect = (await p.layout()).elements[0].rect; p.dispose();
+          results.push({ text: c.text, size: c.size, widthError: Math.abs(rect.width - 20 - c.width), heightError: Math.abs(rect.height - 20 - c.height) });
+        }
+        return results;
+      }, textOracle.filter((c: any) => c.browser));
+      expect(r).toHaveLength(63);
+      for (const c of r) { expect(c.widthError, JSON.stringify(c)).toBe(0); expect(c.heightError, JSON.stringify(c)).toBeLessThanOrEqual(1); }
+      await info.attach('native-text-layout.json', { body: JSON.stringify(r), contentType: 'application/json' });
+    });
+    for (const [script, text] of [['arabic', 'مرحبا بالعالم'], ['devanagari', 'नमस्ते']]) test(`W20 ${label}: ${script} SVG/PDF exports`, async ({ page }, info) => {
+      const r = await page.evaluate(async text => {
+        const a = window.__w20.api, s = new a.VectorScene().addLabel(text, [50, 50], { fontSize: 28, haloWidth: 0 });
+        try { const opts = { width: 300, height: 100, bounds: new a.Bounds(), dpi: 96, background: [1, 1, 1, 1] }, pdf = await a.exportPdf(s, opts), svg = await a.exportSvg(s, opts), markup = await svg.text(); return { type: pdf.type, svg: svg.type, valid: a.validateSvg(markup), unicode: markup.includes(text), bytes: Array.from(new Uint8Array(await pdf.arrayBuffer())) }; }
+        finally { s.dispose(); }
+      }, text);
+      expect(r.type).toBe('application/pdf'); expect(r.svg).toBe('image/svg+xml'); expect(r.valid && r.unicode).toBe(true); expect(r.bytes.length).toBeGreaterThan(1000);
+      await info.attach(script + '.pdf', { body: Buffer.from(r.bytes), contentType: 'application/pdf' });
     });
     test(`W20 ${label}: all 33 native map plate cases`, async ({ page }) => {
       for (const c of native.tests.filter((c: any) => c.source === 'test_map_plate_layout.py')) await test.step(`${c.source}::${c.class}::${c.test}`, async () => {
@@ -165,12 +189,16 @@ for (const dist of [false, true]) {
         const a = window.__w20.api, legend = await new a.Legend(a.colormaps.get('forge3d:viridis'), [0, 100], { orientation: 'horizontal', barHeight: 100, barWidth: 15 }).render();
         const ticks = [10, 59, 109].map(x => legend.pixel(x, 30));
         const p = new a.MapPlate({ width: 32, height: 32, background: [1, 1, 1, 0], margin: [0, 0, 0, 0] });
-        const jpeg = await p.exportJpeg(), bmp = await createImageBitmap(jpeg), canvas = new OffscreenCanvas(32, 32), ctx = canvas.getContext('2d')!; ctx.drawImage(bmp, 0, 0); bmp.close(); p.dispose();
+        const alpha = (await p.compose()).pixel(16,16)[3], jpeg = await p.exportJpeg(), bmp = await createImageBitmap(jpeg), canvas = new OffscreenCanvas(32, 32), ctx = canvas.getContext('2d')!; ctx.drawImage(bmp, 0, 0); bmp.close(); p.dispose();
         const codes = []; for (const f of [new a.Legend(a.colormaps.get('forge3d:viridis'), [0, 1]), new a.ScaleBar(100), new a.NorthArrow()]) for (const opts of [{ signal: AbortSignal.abort() }, { maxBytes: 1 }]) try { await f.render(opts); codes.push('missing'); } catch (e: any) { codes.push(e.code); }
-        return { ticks, jpeg: Array.from(ctx.getImageData(16, 16, 1, 1).data), codes };
+        const white = Array.from(ctx.getImageData(16,16,1,1).data);
+        const colored = new a.MapPlate({ width: 32, height: 32, background: [64/255,128/255,192/255,0], margin: [0,0,0,0] });
+        const coloredJpeg = await colored.exportJpeg({ quality: 1 }), image = await createImageBitmap(coloredJpeg); ctx.drawImage(image,0,0); image.close(); colored.dispose();
+        return { ticks, alpha, jpeg: Array.from(ctx.getImageData(0,0,1,1).data), white, codes };
       });
       expect(r.ticks).toEqual([[0, 0, 0, 255], [0, 0, 0, 255], [0, 0, 0, 255]]);
-      expect(r.jpeg).toEqual([0, 0, 0, 255]);
+      expect(r.white).toEqual([255, 255, 255, 255]); expect(r.alpha).toBe(0);
+      [64,128,192,255].forEach((v,i)=>expect(Math.abs(r.jpeg[i]! - v)).toBeLessThanOrEqual(2));
       expect(r.codes).toEqual(Array.from({ length: 3 }, () => ['REQUEST_CANCELLED', 'RESOURCE_LIMIT_EXCEEDED']).flat());
     });
     test(`W20 ${label}: pending font loads cancel, fail structurally and retry`, async ({ page }) => {

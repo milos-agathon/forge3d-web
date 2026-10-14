@@ -12,6 +12,13 @@ export interface VectorPdfOptions extends VectorExportOptions {
 }
 /** Deterministic one-page PDF, true even-odd vector paths, embedded Unicode text and stroked halos. */
 export async function exportPdf(scene: VectorScene, options: VectorPdfOptions = {}): Promise<Blob> {
+  try { return await generatePdf(scene, options); }
+  catch (error) {
+    if (error instanceof Forge3DError) throw error;
+    throw new Forge3DError('INTERNAL_ERROR', 'PDF export failed', { reason: 'pdf-export-failed', cause: String(error) });
+  }
+}
+async function generatePdf(scene: VectorScene, options: VectorPdfOptions): Promise<Blob> {
   const s = exportSnapshot(scene, options), dpi = finite(options.dpi ?? 300, 'dpi', Number.MIN_VALUE, 9600), scale = 72 / dpi, sceneBytes = scene.getMemoryReport().cpuBytes;
   const lib = await import('pdf-lib'); cancelled(options.signal);
   const doc = await lib.PDFDocument.create({ updateMetadata: false });
@@ -34,7 +41,7 @@ export async function exportPdf(scene: VectorScene, options: VectorPdfOptions = 
   }
   const fonts = new Map<string, import('pdf-lib').PDFFont>(); let fontBytes = 0;
   if (s.labels.length) {
-    const kit = await import('@pdf-lib/fontkit'); doc.registerFontkit('default' in kit ? kit.default as typeof kit : kit);
+    const kit = await import('./vendor/fontkit-entry.js'); doc.registerFontkit(kit.default);
     const defaults: VectorPdfFont[] = cartographicFontSources().filter(f => f.weight === '400').map(f => ({ family: f.family, source: f.url }));
     const sources = [...(options.fonts ?? []), ...defaults];
     const getFont = async (family: string) => {
@@ -50,7 +57,7 @@ export async function exportPdf(scene: VectorScene, options: VectorPdfOptions = 
     for (const label of s.labels) {
       cancelled(options.signal); const c = label.style;
       let family = ['sans-serif', 'Arial', 'DejaVu Sans'].includes(c.fontFamily) ? 'DejaVu Sans' : c.fontFamily;
-      if (family === 'NotoSans' && /[\u0600-\u06ff]/u.test(label.text)) family = 'NotoSansArabic';
+      if (['NotoSans', 'DejaVu Sans'].includes(family) && /[\u0600-\u06ff]/u.test(label.text)) family = 'NotoSansArabic';
       if (['NotoSans', 'DejaVu Sans'].includes(family) && /[\u0900-\u097f]/u.test(label.text)) family = 'NotoSansDevanagari';
       const font = await getFont(family), charset = new Set(font.getCharacterSet());
       const missing = [...label.text].filter(c => !charset.has(c.codePointAt(0)!)); if (missing.length) cartographicError(`PDF font lacks glyphs: ${missing.join('')}`, 'missing-glyph');

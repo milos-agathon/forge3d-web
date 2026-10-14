@@ -1,6 +1,7 @@
 import { Forge3DError } from './index.js';
 import { Frame } from './frames.js';
 import { cancelled, checkBytes, integer } from './cartography-common.js';
+import { basicLatinLayout } from './cartography-text-layout.js';
 import { cartographicFontSources } from './cartography-fonts.js';
 export interface CartographicRenderOptions { signal?: AbortSignal; maxBytes?: number }
 export type PlateCanvas = OffscreenCanvas | HTMLCanvasElement;
@@ -62,25 +63,15 @@ export function font(ctx: PlateContext, size: number, bold = false): void { ctx.
 // The frozen PIL baseline uses BASIC layout (integer FreeType advances).
 // Keep browser shaping for complex scripts, which BASIC cannot shape correctly.
 const basicText = (text: string) => /^[\u0020-\u024f]*$/u.test(text);
-function basicWidth(ctx: PlateContext, text: string): number {
-  let advance = 0, left = 0, right = 0;
-  for (const glyph of text) {
-    const m = ctx.measureText(glyph);
-    left = Math.min(left, advance - Math.ceil(m.actualBoundingBoxLeft));
-    right = Math.max(right, advance + Math.ceil(m.actualBoundingBoxRight));
-    advance += Math.round(m.width);
-  }
-  return Math.max(advance, right) - left;
-}
 export function textBox(ctx: PlateContext, text: string): { width: number; height: number } {
-  const m = ctx.measureText(text);
-  return { width: basicText(text) ? basicWidth(ctx, text) : Math.round(Math.max(m.width, m.actualBoundingBoxLeft + m.actualBoundingBoxRight)), height: Math.round(m.actualBoundingBoxAscent + m.actualBoundingBoxDescent) };
+  const m = ctx.measureText(text), size = Number(/([\d.]+)px/.exec(ctx.font)![1]), bold = /^(bold|[6-9]00)\b/.test(ctx.font);
+  return { width: basicText(text) ? basicLatinLayout(text, size, bold) : Math.round(Math.max(m.width, m.actualBoundingBoxLeft + m.actualBoundingBoxRight)), height: Math.round(m.actualBoundingBoxAscent + m.actualBoundingBoxDescent) };
 }
 export function drawText(ctx: PlateContext, text: string, x: number, y: number): void {
   // DejaVu Sans hhea ascender is 1901/2048 em. PIL rounds it upward.
   const size = Number(/([\d.]+)px/.exec(ctx.font)![1]);
   const baseline = y + (basicText(text) ? Math.ceil(size * 1901 / 2048) : Math.ceil(ctx.measureText(text).fontBoundingBoxAscent));
-  if (basicText(text)) for (const glyph of text) { ctx.fillText(glyph, x, baseline); x += Math.round(ctx.measureText(glyph).width); }
+  if (basicText(text)) basicLatinLayout(text, size, /^(bold|[6-9]00)\b/.test(ctx.font), (glyph, dx) => ctx.fillText(glyph, x + dx, baseline));
   else ctx.fillText(text, x, baseline);
 }
 export async function renderFurniture(width: number, height: number, draw: (ctx: PlateContext) => void, options: CartographicRenderOptions = {}): Promise<Frame> {

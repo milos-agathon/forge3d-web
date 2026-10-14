@@ -2,3 +2,4 @@ PyMuPDF==1.26.7
 numpy==2.5.1
 Pillow==12.2.0
 pytest==9.0.2
+fonttools==4.58.5

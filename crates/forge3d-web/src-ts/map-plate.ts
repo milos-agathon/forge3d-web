@@ -70,7 +70,7 @@ export class MapPlate {
     }
     return { mapRegion: region, mapImage: this.#map ? fitPlateImage(this.#map.width, this.#map.height, region) : null, elements };
   }
-  async #compose<T>(output: (canvas: ReturnType<typeof canvas2d>['canvas'], ctx: ReturnType<typeof canvas2d>['ctx']) => Promise<T> | T, signal?: AbortSignal): Promise<T> {
+  async #compose<T>(output: (canvas: ReturnType<typeof canvas2d>['canvas'], ctx: ReturnType<typeof canvas2d>['ctx']) => Promise<T> | T, signal?: AbortSignal, opaqueBackground = false): Promise<T> {
     this.#live(true); this.#busy = true;
     try {
       cancelled(signal); const layout = await this.layout(signal ? { signal } : {}); this.#live(); cancelled(signal);
@@ -78,7 +78,7 @@ export class MapPlate {
       this.#admit(temporary); this.#workingBytes = this.config.width * this.config.height * 12 + temporary;
       const { canvas, ctx } = canvas2d(this.config.width, this.config.height, this.config.maxBytes);
       try {
-        ctx.fillStyle = css(this.config.background); ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = css(opaqueBackground ? [this.config.background[0], this.config.background[1], this.config.background[2], 1] : this.config.background); ctx.fillRect(0, 0, canvas.width, canvas.height);
         const blit = (image: Frame, r: PlateRegion) => { const source = imageCanvas(image); try { ctx.drawImage(source, r.x0, r.y0, r.width, r.height); } finally { source.width = source.height = 1; } };
         if (this.#map && layout.mapImage) blit(this.#map, layout.mapImage);
         const title = layout.elements.find(e => e.kind === 'title');
@@ -97,7 +97,7 @@ export class MapPlate {
   }
   compose(options: { signal?: AbortSignal } = {}): Promise<Frame> { return this.#compose((canvas, ctx) => canvasFrame(canvas, ctx), options.signal); }
   exportPng(options: { signal?: AbortSignal } = {}): Promise<Blob> { return this.#compose(canvas => canvasBlob(canvas, 'image/png'), options.signal); }
-  exportJpeg(options: { quality?: number; signal?: AbortSignal } = {}): Promise<Blob> { const quality = finite(options.quality ?? .9, 'JPEG quality', 0, 1); return this.#compose(canvas => canvasBlob(canvas, 'image/jpeg', quality), options.signal); }
+  exportJpeg(options: { quality?: number; signal?: AbortSignal } = {}): Promise<Blob> { const quality = finite(options.quality ?? .9, 'JPEG quality', 0, 1); return this.#compose(canvas => canvasBlob(canvas, 'image/jpeg', quality), options.signal, true); }
   clear(): void { this.#live(true); this.#map = undefined; this.#bbox = undefined; this.#title = undefined; this.#elements = []; }
   dispose(): void { this.#disposed = true; this.#map = undefined; this.#bbox = undefined; this.#title = undefined; this.#elements = []; }
 }

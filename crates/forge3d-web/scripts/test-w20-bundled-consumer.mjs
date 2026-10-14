@@ -14,6 +14,7 @@ await run('legend',async()=>{const f=await new api.Legend(api.colormaps.get('for
 await run('title',async()=>{const p=new api.MapPlate({width:320,height:200});try{p.addTitle('Bundled map');return(await p.exportPng()).type}finally{p.dispose()}});
 await run('svg',async()=>{const s=new api.VectorScene().addLabel('Montaña',[0,0]);try{return(await api.exportSvg(s)).type}finally{s.dispose()}});
 await run('pdf',async()=>{const s=new api.VectorScene().addLabel('Montaña',[0,0]);try{return(await api.exportPdf(s)).type}finally{s.dispose()}});
+for(const [language,text] of [['arabic','مرحبا بالعالم'],['devanagari','नमस्ते']])for(const [format,exporter] of [['svg',api.exportSvg],['pdf',api.exportPdf]])await run(format+'-'+language,async()=>{const s=new api.VectorScene().addLabel(text,[0,0]);try{return(await exporter(s)).type}finally{s.dispose()}});
 return {errors,types}}`;
 const main = `import * as api from ${packageModule};${workflows}
 window.result=(async()=>{const main=await workflows();const worker=new Worker(new URL('./worker.js',import.meta.url),{type:'module'});try{const result=await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('worker timeout')),30000);worker.onmessage=e=>{clearTimeout(timer);resolve(e.data)};worker.onerror=e=>{clearTimeout(timer);reject(Error(e.message))}});return {main,worker:result}}finally{worker.terminate()}})();`;
@@ -48,7 +49,7 @@ try {
       await page.goto(`http://127.0.0.1:${server.address().port}${base}`); const result = await page.evaluate(() => window.result);
       for (const context of ['main', 'worker']) {
         assert.deepEqual(result[context].errors, [], mode + ':' + context + ':' + JSON.stringify(result));
-        assert.deepEqual(result[context].types, [['legend', true], ['title', 'image/png'], ['svg', 'image/svg+xml'], ['pdf', 'application/pdf']]);
+        assert.deepEqual(result[context].types, [['legend', true], ['title', 'image/png'], ['svg', 'image/svg+xml'], ['pdf', 'application/pdf'], ['svg-arabic','image/svg+xml'], ['pdf-arabic','application/pdf'], ['svg-devanagari','image/svg+xml'], ['pdf-devanagari','application/pdf']]);
       }
       assert(requests.some(r => /\.ttf$/.test(r.path) && r.status === 200), 'consumer must request real font assets');
       assert(!requests.some(r => r.status === 404 && !r.path.includes('favicon')), JSON.stringify(requests.filter(r => r.status === 404)));
@@ -57,5 +58,5 @@ try {
   }
   mkdirSync(join(root, 'test-results'), { recursive: true });
   writeFileSync(join(root, 'test-results/w20-bundled-consumer.json'), JSON.stringify({ installed, report }, null, 2) + '\n');
-  console.log('W20 bundled root/subpath and CDN-style subpath: 24 main/worker workflows passed');
+  console.log('W20 bundled root/subpath and CDN-style subpath: 48 main/worker workflows passed');
 } finally { await browser.close(); }

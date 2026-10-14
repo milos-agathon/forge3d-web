@@ -37,7 +37,10 @@ rectangle and each furniture rectangle. Anchors include all four corners, the
 four edges and center. Insets draw their border outside the image and clip at
 the plate boundary. `addLegend` defaults to the reserved right margin.
 Title boxes use measured ink height. Latin text uses the frozen native Pillow
-BASIC integer advances and ascender anchor; complex scripts retain browser shaping.
+BASIC metrics: FreeType advances, hinted horizontal bounds, accumulated kerning
+and ascender anchor. The regular/bold metadata covers U+0020–U+024F at all
+supported integer sizes (1–16384), avoiding platform-dependent Canvas ink padding.
+Complex scripts retain browser shaping.
 The native comparison fixes the font bytes and BASIC engine rather than depending
 on system fallback fonts or optional RAQM. Furniture draws in native order:
 legend, scale bar, north arrow, then insets, regardless of insertion order.
@@ -100,6 +103,10 @@ accept `fonts: [{family,source}]` for custom sfnt/OTF fonts from browser byte
 sources. Missing font families, corrupt fonts and PDF glyph coverage failures
 raise structured input errors. Bold PDF weights use an additional glyph stroke.
 PDF and SVG output bytes are deterministic for identical inputs and fonts.
+Default Arabic and Devanagari PDF labels select their dedicated Noto fonts.
+The fontkit bundle includes its pinned generator runtime in every realm;
+unexpected shaping or serialization failures report `INTERNAL_ERROR` with reason
+`pdf-export-failed`, while input/IO/cancellation errors retain their own codes.
 SVG Blobs embed fonts under explicit private family names, including fallback
 families. `generateSvg` uses native `sans-serif` by default and leaves font
 resolution to its host.
@@ -150,15 +157,16 @@ These APIs own CPU data and Canvas objects, with no WebGPU device or renderer
 ownership. Device loss cannot invalidate a saved frame. Canvas and FontFace
 absence report `UNSUPPORTED_FEATURE`; disposal reports `RUNTIME_DISPOSED`.
 `MapPlate` and `VectorScene` support idempotent `dispose`, `clear` and memory
-reports. Plate mutations during composition are rejected. A shared font set is
+reports. Plate mutations during composition are rejected. A shared font set and native metric tables are
 retained per realm; per-operation canvases are released after exports.
 The default conservative CPU budget is 128 MiB, with admission before canvas or
 input-copy allocation. Images/plate dimensions are bounded at 16384 pixels per
 axis; font files at 16 MiB; colormap source loads at 4 MiB by default. AbortSignal
 rejects output, including while waiting for the shared font set. The shared load
 continues for other callers. Font load failures use `IO_ERROR` with reason
-`font-load-failed`; subsequent calls retry. JPEG drops transparency to black,
-following the Canvas JPEG encoder; choose an opaque plate background when needed.
+`font-load-failed`; subsequent calls retry. JPEG renders onto the configured background RGB with alpha set to one before
+encoding, retaining native background colors even when their configured alpha is
+zero. PNG and `compose()` retain transparency.
 
 Run `npm run test:w20` for the native semantic ports and source/dist browser
 suite. `npm run test:package-consumer:w20` rebuilds WASM, installs a clean npm

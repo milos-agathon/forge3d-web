@@ -129,3 +129,6 @@ crates/forge3d-web/types/vector-export*.d.ts text eol=lf
 crates/forge3d-web/types/vector-pdf.d.ts text eol=lf
 
 crates/forge3d-web/assets/fonts/DejaVu-LICENSE -text
+
+# W20 pinned native metric data.
+crates/forge3d-web/src-ts/cartography-font-metrics.ts text eol=lf

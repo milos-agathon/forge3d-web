@@ -68,7 +68,7 @@ run(
   consumer,
 );
 const installed = join(consumer, "node_modules/@forge3d/web");
-for (const file of ['dist/map-plate.js','dist/vector-export.js','dist/vector-pdf.js','dist/colormaps.js','dist/vendor/pdf-lib.js','dist/vendor/fontkit.js','dist/vendor/pdf-lib.LICENSE','dist/vendor/fontkit.LICENSE','dist/vendor/pako.LICENSE','assets/fonts/DejaVuSans.ttf','assets/fonts/DejaVuSans-Bold.ttf','assets/fonts/DejaVu-LICENSE','types/map-plate.d.ts','types/vector-export.d.ts','types/colormaps.d.ts','docs/cartography.md','examples/cartography.html','dist/forge3d_web_bg.wasm']) assert(statSync(join(installed,file)).size>0,file);
+for (const file of ['dist/map-plate.js','dist/vector-export.js','dist/vector-pdf.js','dist/colormaps.js','dist/vendor/pdf-lib.js','dist/vendor/fontkit.js','dist/vendor/pdf-lib.LICENSE','dist/vendor/fontkit.LICENSE','dist/vendor/pako.LICENSE','dist/vendor/regenerator-runtime.LICENSE','assets/fonts/DejaVuSans.ttf','assets/fonts/DejaVuSans-Bold.ttf','assets/fonts/DejaVu-LICENSE','types/map-plate.d.ts','types/vector-export.d.ts','types/colormaps.d.ts','docs/cartography.md','examples/cartography.html','dist/forge3d_web_bg.wasm']) assert(statSync(join(installed,file)).size>0,file);
 writeFileSync(join(consumer,'consumer.ts'),`import {MapPlate,BBox,Legend,ScaleBar,NorthArrow,ColormapRegistry,colormaps,parseColormapCpt,parseColormapJson,loadColormap,VectorScene,Bounds,exportSvg,exportPdf,type VectorPdfOptions,type MapPlateConfig,type CartographicRenderOptions,type ExportScreenLabel} from '@forge3d/web';
 const furnitureOptions:CartographicRenderOptions={signal:new AbortController().signal,maxBytes:1048576}; const labels:ExportScreenLabel[]=[{text:'Projected',screenPosition:[20,30],visible:true}];
 const config:MapPlateConfig={width:800,height:600}; const plate=new MapPlate(config),bbox=new BBox(0,0,1,1),cm=colormaps.get('forge3d:viridis');
@@ -163,7 +163,7 @@ try {
     packageSha256,
     wasmSha256: createHash("sha256").update(readFileSync(join(installed, "dist/forge3d_web_bg.wasm"))).digest("hex"),
     wasmRebuilt: true,
-    bundledAndCdnWorkflows: 24,
+    bundledAndCdnWorkflows: 48,
     servedRoot: installed,
     tarball,
     installed,
