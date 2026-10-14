@@ -31,7 +31,7 @@ python -m pip install -r scripts/requirements-w20.txt
 npm run test:package-consumer:w20
 ```
 
-The full unit run passes 1,784 tests across 78 files, including 103 W20 tests.
+The full unit run passes 1,785 tests across 78 files, including 104 W20 tests.
 The source/dist browser suite contains 18 cases, including all 33 native plate
 cases as named steps, exact PNG decode, JPEG smoke, 30 replacement/export cycles,
 standalone deterministic SVG/PDF, worker/main pixel equality, OPFS, file/URL/CPT/
@@ -52,3 +52,5 @@ Browser evidence is local Chromium preflight. Physical-browser release
 qualification remains the separate W24 gate. W20 uses CPU/Canvas resources and
 owns no WebGPU allocation. See [cartographic APIs and ownership](cartography.md)
 for font, image, source and memory limits and the native-to-browser adaptations.
+
+The first complete clean installed run is frozen in [installed evidence](w20-installed-evidence.json), bound to implementation revision `ed230e89cf648508748800fa4811163bdb7dfd92` and its package/WASM digests. The final gate rerun records current revision evidence under `test-results/w20-*`.

@@ -1016,4 +1016,4 @@ histories, formats, budgets and independent native verification.
 
 `VectorLayers` and stable `VectorLayer` handles batch styled points, AA lines, polygons, graphs and terrain-draped geometry. `VectorPicker` provides cancellable point/rect/lasso queries and pointer events. Scene/session, runtime, viewer and worker paths expose vector reports and pick maps. See [vector-layers.md](vector-layers.md) for OIT fallback, selection and lifecycle contracts.
 
-W20 cartography implements M05–M07: map plates, legends, geodetic scale bars, rotated north arrows, insets, standalone SVG and vector PDF Blob exports, plus the linear-sRGB colormap registry and CPT/JSON imports. See [cartography guide](cartography.md) and [example](../examples/cartography.html).
+W20 cartography implements M05â€“M07: map plates, legends, geodetic scale bars, rotated north arrows, insets, standalone SVG and vector PDF Blob exports, plus the linear-sRGB colormap registry and CPT/JSON imports. See [cartography guide](cartography.md) and [example](../examples/cartography.html).

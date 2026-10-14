@@ -305,4 +305,4 @@ See [Geometry, mesh IO and buildings](docs/geometry-mesh-io.md) for W15 typed me
 See [MapScene and structured diagnostics](docs/mapscene-diagnostics.md) for W18 typed recipes, actual multilayer PNG output, resource validation and bundle-ready reports.
 See [styles, bundles and review variants](docs/styles-bundles.md) for W19 local Mapbox styles, verified offline `.forge3d` archives, atomic variants and the [browser example](examples/style-bundle.html).
 
-W20 cartography implements M05–M07: map plates, legends, geodetic scale bars, rotated north arrows, insets, standalone SVG and vector PDF Blob exports, plus the linear-sRGB colormap registry and CPT/JSON imports. See [cartography guide](docs/cartography.md) and [example](examples/cartography.html).
+W20 cartography implements M05â€“M07: map plates, legends, geodetic scale bars, rotated north arrows, insets, standalone SVG and vector PDF Blob exports, plus the linear-sRGB colormap registry and CPT/JSON imports. See [cartography guide](docs/cartography.md) and [example](examples/cartography.html).

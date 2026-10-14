@@ -13,3 +13,9 @@ it('W20 ports all 82 original test identities with executable evidence', () => {
     expect(c.adaptation.length).toBeGreaterThan(30);
   }
 });
+it('W20 public guides are valid UTF-8 on every checkout platform', () => {
+  const decoder = new TextDecoder('utf-8', { fatal: true });
+  for (const file of ['README.md', 'docs/browser-api.md', 'docs/support-matrix.md', 'docs/cartography.md', 'docs/w20-evidence.md']) {
+    expect(() => decoder.decode(readFileSync(new URL('../../' + file, import.meta.url)))).not.toThrow();
+  }
+});

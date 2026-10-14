@@ -131,4 +131,4 @@ blocked until the environment issue is documented or the runtime issue is fixed.
 
 W18 typed MapScene and deterministic diagnostics are implemented for the completed layer adapters. See [MapScene contracts](mapscene-diagnostics.md) and [verification](w18-evidence.md). Product-only texture/instancing/cache summaries remain explicit diagnostics; browser release qualification is unchanged.
 
-W20 cartography implements M05–M07: map plates, legends, geodetic scale bars, rotated north arrows, insets, standalone SVG and vector PDF Blob exports, plus the linear-sRGB colormap registry and CPT/JSON imports. See [cartography guide](cartography.md) and [example](../examples/cartography.html).
+W20 cartography implements M05â€“M07: map plates, legends, geodetic scale bars, rotated north arrows, insets, standalone SVG and vector PDF Blob exports, plus the linear-sRGB colormap registry and CPT/JSON imports. See [cartography guide](cartography.md) and [example](../examples/cartography.html).
