@@ -1,15 +1,35 @@
 """Independent MuPDF parse/render smoke of exported installed-package PDFs."""
 import json
+import base64
 from pathlib import Path
 import sys
 import fitz
 
-paths = list(Path(sys.argv[1]).rglob('*.pdf'))
-if not paths:
+source = Path(sys.argv[1])
+exports = []
+if source.is_file() and source.suffix == '.json':
+    def collect(value):
+        if isinstance(value, dict):
+            for attachment in value.get('attachments', []):
+                if attachment.get('name') == 'cartography.pdf' and attachment.get('contentType') == 'application/pdf':
+                    if 'body' in attachment:
+                        exports.append((attachment['name'], base64.b64decode(attachment['body'], validate=True)))
+                    elif 'path' in attachment:
+                        path = Path(attachment['path'])
+                        exports.append((str(path), path.read_bytes()))
+            for child in value.values():
+                collect(child)
+        elif isinstance(value, list):
+            for child in value:
+                collect(child)
+    collect(json.loads(source.read_text()))
+else:
+    exports = [(str(path), path.read_bytes()) for path in source.rglob('*.pdf')]
+if not exports:
     raise SystemExit('No exported PDF attachments found')
 reports = []
-for path in paths:
-    with fitz.open(path) as pdf:
+for path, data in exports:
+    with fitz.open(stream=data, filetype='pdf') as pdf:
         assert len(pdf) == 1
         page = pdf[0]
         assert abs(page.rect.width - 150) < 1e-6 and abs(page.rect.height - 75) < 1e-6

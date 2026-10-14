@@ -153,7 +153,7 @@ try {
     child.on("error", reject);
     child.on("exit", (code) => resolveResult(code));
   });
-  if (result === 0) { const rendered = run('python', [join(root, 'scripts/verify-w20-pdf.py'), join(out, 'w20-installed-output')]); writeFileSync(join(out,'w20-pdf-render.json'),rendered); console.log(rendered); }
+  if (result === 0) { const rendered = run('python', [join(root, 'scripts/verify-w20-pdf.py'), join(out, 'w20-installed-playwright.json')]); writeFileSync(join(out,'w20-pdf-render.json'),rendered); console.log(rendered); }
   const report = {
     schemaVersion: 1,
     verifiedAt: new Date().toISOString(),
