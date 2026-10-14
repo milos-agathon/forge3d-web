@@ -167,12 +167,24 @@ for (const dist of [false, true]) {
             });
             expect(r.pixel).toEqual([255, 0, 0, 255]); expect(r.glyph).toBe(-2); expect(r.memory.objectUrlCount).toBe(0); expect(r.memory.cpuBytes).toBe(0);
         });
-        test(`W19 ${label}: example download and file input replace native CLI paths`, async ({ page }) => {
-            const downloadEvent = page.waitForEvent('download'); await page.locator('#save').click(); const download = await downloadEvent;
-            expect(download.suggestedFilename()).toBe('local-map.forge3d'); const path = await download.path(); expect(path).not.toBeNull();
-            await page.locator('#load').setInputFiles(path!); await expect(page.locator('#status')).toContainText('covered pixels');
-            expect(await page.evaluate(() => window.__w19.scene.getActiveVariantId())).toBe('plain');
-        });
+        for (const renderDelayMs of [0, 6_000]) {
+            test(`W19 ${label}: example download and file input replace native CLI paths${renderDelayMs ? ' with a slow render' : ''}`, async ({ page }, info) => {
+                // Reproduce a cold render exceeding the default five-second assertion timeout.
+                if (renderDelayMs) await page.evaluate(delay => {
+                    const originalRender = window.__w19.api.MapScene.prototype.render;
+                    window.__w19.api.MapScene.prototype.render = async function (...args: any[]) {
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        return originalRender.apply(this, args);
+                    };
+                }, renderDelayMs);
+                const downloadEvent = page.waitForEvent('download'); await page.locator('#save').click(); const download = await downloadEvent;
+                expect(download.suggestedFilename()).toBe('local-map.forge3d'); const path = await download.path(); expect(path).not.toBeNull();
+                await page.locator('#load').setInputFiles(path!);
+                // Upload includes bundle preparation, GPU initialization and readback; keep the existing test budget.
+                await expect(page.locator('#status')).toContainText('covered pixels', { timeout: info.timeout });
+                expect(await page.evaluate(() => window.__w19.scene.getActiveVariantId())).toBe('plain');
+            });
+        }
         test(`W19 ${label}: device loss replays the loaded active variant and releases transient owners`, async ({ page }) => {
             const r = await page.evaluate(async () => {
                 const { api, makeState } = window.__w19, scene = await api.MapScene.loadBundle(await api.saveBundle(makeState().applyVariant('review'))), prior = await scene.render(), priorRecord = await scene.reviewRecord(), gpu = navigator.gpu, request = gpu.requestAdapter.bind(gpu); let killed = false, lost = false;
