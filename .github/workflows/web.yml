@@ -159,8 +159,8 @@ jobs:
     name: Web Runtime / Browser Preflight
     needs: build-and-contract
     runs-on: macos-15
-    # Full Chromium and Firefox suites include W17 source/dist tracing after setup.
-    timeout-minutes: 120
+    # Allow runner variation across both full suites; per-test budgets stay unchanged.
+    timeout-minutes: 150
 
     steps:
       - name: Check out the protected source
