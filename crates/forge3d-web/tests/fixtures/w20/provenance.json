@@ -72,6 +72,20 @@
     {
       "path": "python/forge3d/colormaps/__init__.py",
       "sha256": "ad4b8fa6cde9b3f871fd7077b8c53f342a3e22da33dc4c77d673d175159f4334"
+    },
+    {
+      "path": "src/export/mod.rs",
+      "sha256": "3f94d3a603b3e0c18e0265bd480ddf6720b3221f30802831c6d111dfaea3e698"
+    },
+    {
+      "path": "tests/test_colormaps_core.py",
+      "sha256": "9bb3a5dcb730f2f9c3dcfba57802cb2995260cd513e6a518cc6e7292f733a541",
+      "commit": "d5f0b0df3766b7da9dc0d95c299afdbf2008b367"
+    },
+    {
+      "path": "tests/test_colormaps_cvd.py",
+      "sha256": "3ddf47b8e07e9dea1a6a35d52d6ea192ec0a7b8c15994e13ecb947297d988b46",
+      "commit": "d5f0b0df3766b7da9dc0d95c299afdbf2008b367"
     }
   ]
 }

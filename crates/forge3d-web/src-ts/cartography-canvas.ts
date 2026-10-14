@@ -1,6 +1,8 @@
 import { Forge3DError } from './index.js';
 import { Frame } from './frames.js';
-import { cancelled, checkBytes, integer, type CartographicColor } from './cartography-common.js';
+import { cancelled, checkBytes, integer } from './cartography-common.js';
+import { cartographicFontSources } from './cartography-fonts.js';
+export interface CartographicRenderOptions { signal?: AbortSignal; maxBytes?: number }
 export type PlateCanvas = OffscreenCanvas | HTMLCanvasElement;
 export type PlateContext = OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D;
 export interface PlatePixels { width: number; height: number; data: Uint8Array | Uint8ClampedArray; channels?: 1 | 3 | 4 }
@@ -34,14 +36,17 @@ export async function canvasBlob(canvas: PlateCanvas, type: 'image/png' | 'image
   const blob = 'convertToBlob' in canvas ? await canvas.convertToBlob({ type, quality }) : await new Promise<Blob>((resolve, reject) => canvas.toBlob(b => b ? resolve(b) : reject(new Forge3DError('IO_ERROR', 'Canvas encoding failed')), type, quality));
   if (blob.type !== type) throw new Forge3DError('UNSUPPORTED_FEATURE', `Canvas encoder unavailable: ${type}`); return blob;
 }
-const fontNames = ['NotoSans', 'NotoSansArabic', 'NotoSansDevanagari'] as const;
 let fontsReady: Promise<void> | undefined;
 /** Loads package fonts into Document.fonts or WorkerGlobalScope.fonts. Retryable on failure. */
 export function loadCartographicFonts(): Promise<void> {
   if (!fontsReady) fontsReady = (async () => {
     const fonts = (globalThis as unknown as { fonts?: FontFaceSet }).fonts ?? globalThis.document?.fonts;
     if (!fonts || typeof FontFace === 'undefined') throw new Forge3DError('UNSUPPORTED_FEATURE', 'FontFace/FontFaceSet unavailable');
-    const faces = await Promise.all(fontNames.map(async name => { const face = new FontFace(name, `url("${new URL('../assets/fonts/' + name + '-Regular.ttf', import.meta.url).href}")`); await face.load(); return face; }));
+    const faces = await Promise.all(cartographicFontSources().map(async source => {
+      const face = new FontFace(source.family, `url("${source.url.href}")`, { weight: source.weight });
+      try { await face.load(); } catch (error) { throw new Forge3DError('IO_ERROR', 'Cartographic font loading failed', { reason: 'font-load-failed', family: source.family, weight: source.weight, cause: String(error) }); }
+      return face;
+    }));
     faces.forEach(face => fonts.add(face));
   })().catch(e => { fontsReady = undefined; throw e; });
   return fontsReady;
@@ -52,11 +57,35 @@ export async function awaitCartographicFonts(signal?: AbortSignal): Promise<void
   const stopped = new Promise<never>((_resolve, reject) => { abort = () => reject(new Forge3DError('REQUEST_CANCELLED', 'Cartographic font loading cancelled')); signal.addEventListener('abort', abort, { once: true }); });
   try { await Promise.race([loadCartographicFonts(), stopped]); cancelled(signal); } finally { signal.removeEventListener('abort', abort); }
 }
-export const CARTOGRAPHIC_FONT_FAMILY = 'NotoSans, NotoSansArabic, NotoSansDevanagari';
-export function font(ctx: PlateContext, size: number): void { ctx.font = `${size}px ${CARTOGRAPHIC_FONT_FAMILY}`; ctx.textBaseline = 'top'; }
-export function rgbaBytes(c: CartographicColor): number[] { return c.map(v => Math.round(v * 255)); }
-export async function renderFurniture(width: number, height: number, draw: (ctx: PlateContext) => void, signal?: AbortSignal): Promise<Frame> {
-  cancelled(signal); await loadCartographicFonts(); cancelled(signal);
-  const { canvas, ctx } = canvas2d(width, height);
-  try { draw(ctx); return canvasFrame(canvas, ctx); } finally { canvas.width = canvas.height = 1; }
+export const CARTOGRAPHIC_FONT_FAMILY = '"DejaVu Sans", NotoSansArabic, NotoSansDevanagari, sans-serif';
+export function font(ctx: PlateContext, size: number, bold = false): void { ctx.font = `${bold ? '700' : '400'} ${size}px ${CARTOGRAPHIC_FONT_FAMILY}`; ctx.textBaseline = 'alphabetic'; }
+// The frozen PIL baseline uses BASIC layout (integer FreeType advances).
+// Keep browser shaping for complex scripts, which BASIC cannot shape correctly.
+const basicText = (text: string) => /^[\u0020-\u024f]*$/u.test(text);
+function basicWidth(ctx: PlateContext, text: string): number {
+  let advance = 0, left = 0, right = 0;
+  for (const glyph of text) {
+    const m = ctx.measureText(glyph);
+    left = Math.min(left, advance - Math.ceil(m.actualBoundingBoxLeft));
+    right = Math.max(right, advance + Math.ceil(m.actualBoundingBoxRight));
+    advance += Math.round(m.width);
+  }
+  return Math.max(advance, right) - left;
+}
+export function textBox(ctx: PlateContext, text: string): { width: number; height: number } {
+  const m = ctx.measureText(text);
+  return { width: basicText(text) ? basicWidth(ctx, text) : Math.round(Math.max(m.width, m.actualBoundingBoxLeft + m.actualBoundingBoxRight)), height: Math.round(m.actualBoundingBoxAscent + m.actualBoundingBoxDescent) };
+}
+export function drawText(ctx: PlateContext, text: string, x: number, y: number): void {
+  // DejaVu Sans hhea ascender is 1901/2048 em. PIL rounds it upward.
+  const size = Number(/([\d.]+)px/.exec(ctx.font)![1]);
+  const baseline = y + (basicText(text) ? Math.ceil(size * 1901 / 2048) : Math.ceil(ctx.measureText(text).fontBoundingBoxAscent));
+  if (basicText(text)) for (const glyph of text) { ctx.fillText(glyph, x, baseline); x += Math.round(ctx.measureText(glyph).width); }
+  else ctx.fillText(text, x, baseline);
+}
+export async function renderFurniture(width: number, height: number, draw: (ctx: PlateContext) => void, options: CartographicRenderOptions = {}): Promise<Frame> {
+  cancelled(options.signal); checkBytes(width * height * 12, options.maxBytes);
+  await awaitCartographicFonts(options.signal); cancelled(options.signal);
+  const { canvas, ctx } = canvas2d(width, height, options.maxBytes);
+  try { draw(ctx); cancelled(options.signal); return canvasFrame(canvas, ctx); } finally { canvas.width = canvas.height = 1; }
 }

@@ -68,10 +68,11 @@ run(
   consumer,
 );
 const installed = join(consumer, "node_modules/@forge3d/web");
-for (const file of ['dist/map-plate.js','dist/vector-export.js','dist/vector-pdf.js','dist/colormaps.js','dist/vendor/pdf-lib.js','dist/vendor/fontkit.umd.js','dist/vendor/fontkit.js','dist/vendor/pdf-lib.LICENSE','dist/vendor/fontkit.LICENSE','types/map-plate.d.ts','types/vector-export.d.ts','types/colormaps.d.ts','docs/cartography.md','examples/cartography.html','dist/forge3d_web_bg.wasm']) assert(statSync(join(installed,file)).size>0,file);
-writeFileSync(join(consumer,'consumer.ts'),`import {MapPlate,BBox,Legend,ScaleBar,NorthArrow,ColormapRegistry,colormaps,parseColormapCpt,parseColormapJson,loadColormap,VectorScene,Bounds,exportSvg,exportPdf,type VectorPdfOptions,type MapPlateConfig} from '@forge3d/web';
+for (const file of ['dist/map-plate.js','dist/vector-export.js','dist/vector-pdf.js','dist/colormaps.js','dist/vendor/pdf-lib.js','dist/vendor/fontkit.js','dist/vendor/pdf-lib.LICENSE','dist/vendor/fontkit.LICENSE','dist/vendor/pako.LICENSE','assets/fonts/DejaVuSans.ttf','assets/fonts/DejaVuSans-Bold.ttf','assets/fonts/DejaVu-LICENSE','types/map-plate.d.ts','types/vector-export.d.ts','types/colormaps.d.ts','docs/cartography.md','examples/cartography.html','dist/forge3d_web_bg.wasm']) assert(statSync(join(installed,file)).size>0,file);
+writeFileSync(join(consumer,'consumer.ts'),`import {MapPlate,BBox,Legend,ScaleBar,NorthArrow,ColormapRegistry,colormaps,parseColormapCpt,parseColormapJson,loadColormap,VectorScene,Bounds,exportSvg,exportPdf,type VectorPdfOptions,type MapPlateConfig,type CartographicRenderOptions,type ExportScreenLabel} from '@forge3d/web';
+const furnitureOptions:CartographicRenderOptions={signal:new AbortController().signal,maxBytes:1048576}; const labels:ExportScreenLabel[]=[{text:'Projected',screenPosition:[20,30],visible:true}];
 const config:MapPlateConfig={width:800,height:600}; const plate=new MapPlate(config),bbox=new BBox(0,0,1,1),cm=colormaps.get('forge3d:viridis');
-async function output(){plate.addLegend(await new Legend(cm,[0,1000]).render());plate.addScaleBar(await new ScaleBar(100).render());plate.addNorthArrow(await new NorthArrow().render());const png:Blob=await plate.exportPng();const jpeg:Blob=await plate.exportJpeg();const scene=new VectorScene().addLabel('Map',[0,0]);const svg:Blob=await exportSvg(scene);const opts:VectorPdfOptions={bounds:new Bounds()};const pdf:Blob=await exportPdf(scene,opts);plate.dispose();scene.dispose();return[png,jpeg,svg,pdf];}void output;void bbox;void ColormapRegistry;void parseColormapCpt;void parseColormapJson;void loadColormap;`);
+async function output(){plate.addLegend(await new Legend(cm,[0,1000]).render());plate.addScaleBar(await new ScaleBar(100).render());plate.addNorthArrow(await new NorthArrow().render(furnitureOptions));const png:Blob=await plate.exportPng();const jpeg:Blob=await plate.exportJpeg();const scene=new VectorScene().addLabel('Map',[0,0]);scene.addScreenLabels(labels,100);const svg:Blob=await exportSvg(scene);const opts:VectorPdfOptions={bounds:new Bounds()};const pdf:Blob=await exportPdf(scene,opts);plate.dispose();scene.dispose();return[png,jpeg,svg,pdf];}void output;void bbox;void ColormapRegistry;void parseColormapCpt;void parseColormapJson;void loadColormap;`);
 run(
   process.execPath,
   [
@@ -90,6 +91,7 @@ run(
   ],
   consumer,
 );
+console.log(run(process.execPath, [join(root, 'scripts/test-w20-bundled-consumer.mjs'), installed]));
 const server = createServer((req, res) => {
   try {
     const url = new URL(req.url, "http://localhost"),
@@ -161,6 +163,7 @@ try {
     packageSha256,
     wasmSha256: createHash("sha256").update(readFileSync(join(installed, "dist/forge3d_web_bg.wasm"))).digest("hex"),
     wasmRebuilt: true,
+    bundledAndCdnWorkflows: 24,
     servedRoot: installed,
     tarball,
     installed,

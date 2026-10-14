@@ -4,6 +4,7 @@ import { cancelled, checkBytes, finite, cartographicError, validateExportFont, t
 import { project2dToScreen, type ExportPoint, type VectorScene } from './vector-export-scene.js';
 import { exportSnapshot, type VectorExportOptions } from './vector-export.js';
 import type { BrowserByteSource } from './index.js';
+import { cartographicFontSources } from './cartography-fonts.js';
 export interface VectorPdfFont { family: string; source: BrowserByteSource }
 export interface VectorPdfOptions extends VectorExportOptions {
   /** Raster pixel dimensions are converted to PDF points at this DPI (native wrapper default 300). */
@@ -11,7 +12,7 @@ export interface VectorPdfOptions extends VectorExportOptions {
 }
 /** Deterministic one-page PDF, true even-odd vector paths, embedded Unicode text and stroked halos. */
 export async function exportPdf(scene: VectorScene, options: VectorPdfOptions = {}): Promise<Blob> {
-  const s = exportSnapshot(scene, options), dpi = finite(options.dpi ?? 300, 'dpi', Number.MIN_VALUE, 9600), scale = 72 / dpi;
+  const s = exportSnapshot(scene, options), dpi = finite(options.dpi ?? 300, 'dpi', Number.MIN_VALUE, 9600), scale = 72 / dpi, sceneBytes = scene.getMemoryReport().cpuBytes;
   const lib = await import('pdf-lib'); cancelled(options.signal);
   const doc = await lib.PDFDocument.create({ updateMetadata: false });
   doc.setCreationDate(new Date(0)); doc.setModificationDate(new Date(0)); doc.setCreator('Forge3D'); doc.setProducer('Forge3D W20');
@@ -34,13 +35,13 @@ export async function exportPdf(scene: VectorScene, options: VectorPdfOptions = 
   const fonts = new Map<string, import('pdf-lib').PDFFont>(); let fontBytes = 0;
   if (s.labels.length) {
     const kit = await import('@pdf-lib/fontkit'); doc.registerFontkit('default' in kit ? kit.default as typeof kit : kit);
-    const defaults: VectorPdfFont[] = ['NotoSans', 'NotoSansArabic', 'NotoSansDevanagari'].map(family => ({ family, source: new URL('../assets/fonts/' + family + '-Regular.ttf', import.meta.url) }));
+    const defaults: VectorPdfFont[] = cartographicFontSources().filter(f => f.weight === '400').map(f => ({ family: f.family, source: f.url }));
     const sources = [...(options.fonts ?? []), ...defaults];
     const getFont = async (family: string) => {
       if (fonts.has(family)) return fonts.get(family)!;
       const source = sources.find(f => f.family === family); if (!source) cartographicError(`PDF font family is unavailable: ${family}`, 'font-unavailable');
       const bytes = await readByteSource(source.source, { maxBytes: Math.min(options.maxBytes ?? 128 * 1024 * 1024, 16 * 1024 * 1024), ...(options.signal ? { signal: options.signal } : {}) });
-      fontBytes += bytes.length; checkBytes(scene.getMemoryReport().cpuBytes * 8 + fontBytes * 4, options.maxBytes);
+      fontBytes += bytes.length; checkBytes(sceneBytes * 8 + fontBytes * 4, options.maxBytes);
       validateExportFont(bytes);
       let font: import('pdf-lib').PDFFont;
       try { font = await doc.embedFont(bytes, { subset: true }); } catch (e) { throw new Forge3DError('INVALID_INPUT', `Invalid PDF font: ${String(e)}`, { reason: 'invalid-font' }); }
@@ -48,9 +49,9 @@ export async function exportPdf(scene: VectorScene, options: VectorPdfOptions = 
     };
     for (const label of s.labels) {
       cancelled(options.signal); const c = label.style;
-      let family = ['sans-serif', 'Arial', 'DejaVu Sans'].includes(c.fontFamily) ? 'NotoSans' : c.fontFamily;
+      let family = ['sans-serif', 'Arial', 'DejaVu Sans'].includes(c.fontFamily) ? 'DejaVu Sans' : c.fontFamily;
       if (family === 'NotoSans' && /[\u0600-\u06ff]/u.test(label.text)) family = 'NotoSansArabic';
-      if (family === 'NotoSans' && /[\u0900-\u097f]/u.test(label.text)) family = 'NotoSansDevanagari';
+      if (['NotoSans', 'DejaVu Sans'].includes(family) && /[\u0900-\u097f]/u.test(label.text)) family = 'NotoSansDevanagari';
       const font = await getFont(family), charset = new Set(font.getCharacterSet());
       const missing = [...label.text].filter(c => !charset.has(c.codePointAt(0)!)); if (missing.length) cartographicError(`PDF font lacks glyphs: ${missing.join('')}`, 'missing-glyph');
       const size = c.fontSize * scale, [px, py] = project(label.position), x = px - font.widthOfTextAtSize(label.text, size) / 2, y = py - font.heightAtSize(size, { descender: false }) / 2;

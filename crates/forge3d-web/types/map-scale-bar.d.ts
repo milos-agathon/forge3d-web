@@ -1,5 +1,6 @@
 import { BBox } from './map-layout.js';
 import { type CartographicColor } from './cartography-common.js';
+import { type CartographicRenderOptions } from './cartography-canvas.js';
 import type { Frame } from "./index.js";
 export interface ScaleBarConfig {
     units?: 'm' | 'km' | 'mi' | 'ft';
@@ -29,5 +30,5 @@ export declare class ScaleBar {
     /** Native WGS84 longitude approximation. Projected bounds require an explicit metres-per-unit. */
     static computeMetersPerPixel(bbox: BBox, imageWidth: number, metersPerUnit?: number): number;
     metrics(): ScaleBarMetrics;
-    render(): Promise<Frame>;
+    render(options?: CartographicRenderOptions): Promise<Frame>;
 }

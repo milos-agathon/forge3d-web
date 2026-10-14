@@ -103,7 +103,7 @@
     "test:package-consumer:w18": "node scripts/test-w18-package-consumer.mjs",
     "test:w19": "vitest run tests/unit/w19-style-bundle.test.ts tests/unit/w19-native-contract.test.ts tests/unit/w19-native-replay.test.ts tests/unit/w19-native-equivalents.test.ts && playwright test tests/playwright/w19_style_bundle.spec.ts --project=chromium-preflight",
     "test:package-consumer:w19": "node scripts/test-w19-package-consumer.mjs",
-    "test:w20": "vitest run tests/unit/w20-vector-export.test.ts tests/unit/w20-colormaps.test.ts tests/unit/w20-native-coverage.test.ts && playwright test tests/playwright/w20_cartography.spec.ts --project=chromium-preflight",
+    "test:w20": "vitest run tests/unit/w20-vector-export.test.ts tests/unit/w20-colormaps.test.ts tests/unit/w20-native-coverage.test.ts tests/unit/w20-native-extra.test.ts tests/unit/w20-review-regressions.test.ts && playwright test tests/playwright/w20_cartography.spec.ts --project=chromium-preflight",
     "test:package-consumer:w20": "node scripts/test-w20-package-consumer.mjs"
   },
   "devDependencies": {

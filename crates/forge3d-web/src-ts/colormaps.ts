@@ -48,18 +48,21 @@ export class Colormap {
 }
 export function colormapFromStops(name: string, stops: readonly ColormapStop[], size = 256): Colormap {
   integer(size, 'colormap size', 1, 1048576);
-  if (stops.length < 2) cartographicError('At least two colormap stops are required');
+  if (!stops.length) cartographicError('At least one colormap stop is required');
   const values = stops.map(([p, c], i) => {
-    finite(p, 'stop position', 0, 1);
-    if (i && p <= stops[i - 1]![0]) cartographicError('Stop positions must increase strictly');
-    const rgba = typeof c === 'string' ? hexToRgba(c) : color(c.length === 3 ? [...c, 1] : c);
-    return { p, c: rgba.map((v, j) => Math.fround(j === 3 ? v : srgbToLinear(v))) };
+    finite(p, 'stop position');
+    if (i && p < stops[i - 1]![0]) cartographicError('Stop positions must be nondecreasing');
+    // Native from_stops parses RGB from hex, deliberately ignoring a trailing alpha byte.
+    const rgba = typeof c === 'string' ? [...hexToRgba(c).slice(0, 3), 1] : color(c.length === 3 ? [...c, 1] : c);
+    return { p: Math.fround(p), c: rgba.map((v, j) => Math.fround(j === 3 ? v : srgbToLinear(v))) };
   });
   const out = new Float32Array(size * 4); let j = 0;
   for (let i = 0; i < size; i++) {
-    const t = size === 1 ? 0 : i / (size - 1);
-    while (j < values.length - 2 && t > values[j + 1]!.p) j++;
-    const a = values[j]!, b = values[j + 1]!, f = Math.max(0, Math.min(1, (t - a.p) / (b.p - a.p)));
+    const t = size === 1 ? 0 : Math.fround(i / (size - 1));
+    // np.interp chooses the last stop at an equal position (a right-continuous edge).
+    while (j < values.length - 1 && t >= values[j + 1]!.p) j++;
+    const a = values[j]!, b = values[Math.min(j + 1, values.length - 1)]!;
+    const f = b.p === a.p ? 0 : Math.max(0, Math.min(1, (t - a.p) / (b.p - a.p)));
     for (let c = 0; c < 4; c++) out[i * 4 + c] = a.c[c]! * (1 - f) + b.c[c]! * f;
   }
   return new Colormap(name, out);

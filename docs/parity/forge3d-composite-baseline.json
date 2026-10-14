@@ -4,7 +4,7 @@
   "manifestId": "forge3d-composite-baseline-v1",
   "sourcePlan": {
     "path": "docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md",
-    "sha256": "9779dcdf929173543391c09c15a0173dbc56066b2673262d5b55c48f56448b66"
+    "sha256": "dbc2d7168325ac346980236c5ed95118d0af9b8ef92721d6d856adef5a2e2151"
   },
   "baselineLayers": [
     {
@@ -3569,7 +3569,11 @@
         "crates/forge3d-web/tests/unit/w20-native-coverage.test.ts",
         "crates/forge3d-web/tests/playwright/w20_cartography.spec.ts",
         "crates/forge3d-web/scripts/test-w20-package-consumer.mjs",
-        "crates/forge3d-web/scripts/verify-w20-pdf.py"
+        "crates/forge3d-web/scripts/verify-w20-pdf.py",
+        "crates/forge3d-web/tests/unit/w20-native-extra.test.ts",
+        "crates/forge3d-web/tests/unit/w20-review-regressions.test.ts",
+        "crates/forge3d-web/tests/browser/w20-native-plate-cases.js",
+        "crates/forge3d-web/scripts/test-w20-bundled-consumer.mjs"
       ]
     },
     {
@@ -3589,7 +3593,11 @@
         "crates/forge3d-web/tests/unit/w20-native-coverage.test.ts",
         "crates/forge3d-web/tests/playwright/w20_cartography.spec.ts",
         "crates/forge3d-web/scripts/test-w20-package-consumer.mjs",
-        "crates/forge3d-web/scripts/verify-w20-pdf.py"
+        "crates/forge3d-web/scripts/verify-w20-pdf.py",
+        "crates/forge3d-web/tests/unit/w20-native-extra.test.ts",
+        "crates/forge3d-web/tests/unit/w20-review-regressions.test.ts",
+        "crates/forge3d-web/tests/browser/w20-native-plate-cases.js",
+        "crates/forge3d-web/scripts/test-w20-bundled-consumer.mjs"
       ]
     },
     {
@@ -3609,7 +3617,11 @@
         "crates/forge3d-web/tests/unit/w20-native-coverage.test.ts",
         "crates/forge3d-web/tests/playwright/w20_cartography.spec.ts",
         "crates/forge3d-web/scripts/test-w20-package-consumer.mjs",
-        "crates/forge3d-web/scripts/verify-w20-pdf.py"
+        "crates/forge3d-web/scripts/verify-w20-pdf.py",
+        "crates/forge3d-web/tests/unit/w20-native-extra.test.ts",
+        "crates/forge3d-web/tests/unit/w20-review-regressions.test.ts",
+        "crates/forge3d-web/tests/browser/w20-native-plate-cases.js",
+        "crates/forge3d-web/scripts/test-w20-bundled-consumer.mjs"
       ]
     },
     {

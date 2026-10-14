@@ -6,7 +6,7 @@ export { BBox, PlateRegion, fitPlateImage, positionPlateElement } from './map-la
 export type { PositionAnchor, MapPlateConfig, PlateLayout } from './map-layout.js';
 export { MapPlate } from './map-plate.js';
 export type { PlateTitleOptions, PlateInsetOptions } from './map-plate.js';
-export type { PlatePixels, PlateImage } from './cartography-canvas.js';
+export type { PlatePixels, PlateImage, CartographicRenderOptions } from './cartography-canvas.js';
 export { loadCartographicFonts, CARTOGRAPHIC_FONT_FAMILY } from './cartography-canvas.js';
 export { Legend } from './map-legend.js';
 export type { LegendConfig } from './map-legend.js';
@@ -15,7 +15,7 @@ export type { ScaleBarConfig, ScaleBarMetrics } from './map-scale-bar.js';
 export { NorthArrow } from './map-north-arrow.js';
 export type { NorthArrowConfig } from './map-north-arrow.js';
 export { Bounds, VectorScene, project2dToScreen, project3dTo2d, vectorSceneFromLayers } from './vector-export-scene.js';
-export type { ExportPoint, ExportVectorStyle, ExportLabelStyle, ExportPolygon, ExportPolyline, ExportLabel } from './vector-export-scene.js';
+export type { ExportPoint, ExportVectorStyle, ExportLabelStyle, ExportPolygon, ExportPolyline, ExportLabel, ExportScreenLabel } from './vector-export-scene.js';
 export { generateSvg, exportSvg, validateSvg } from './vector-export.js';
 export type { VectorExportOptions, VectorSvgOptions, VectorExportFont } from './vector-export.js';
 export { exportPdf } from './vector-pdf.js';

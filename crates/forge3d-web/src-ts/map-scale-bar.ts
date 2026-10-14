@@ -1,6 +1,6 @@
 import { BBox } from './map-layout.js';
-import { cartographicError, color, css, finite, integer, type CartographicColor } from './cartography-common.js';
-import { canvas2d, canvasFrame, font, loadCartographicFonts } from './cartography-canvas.js';
+import { cartographicError, color, css, finite, integer, cancelled, checkBytes, type CartographicColor } from './cartography-common.js';
+import { canvas2d, canvasFrame, font, awaitCartographicFonts, drawText, textBox, type CartographicRenderOptions } from './cartography-canvas.js';
 import type { Frame } from './frames.js';
 export interface ScaleBarConfig {
   units?: 'm' | 'km' | 'mi' | 'ft'; style?: 'simple' | 'alternating'; widthPx?: number; heightPx?: number; divisions?: number; fontSize?: number; padding?: number; barHeight?: number;
@@ -35,14 +35,27 @@ export class ScaleBar {
     const label = `${nice >= 1 ? Math.floor(nice) : nice >= .1 ? nice.toFixed(1) : Number(nice.toPrecision(3))} ${c.units}`;
     return { distanceMeters: meters, displayDistance: nice, actualBarPx: pixels, label };
   }
-  async render(): Promise<Frame> {
-    await loadCartographicFonts(); const c = this.config, m = this.metrics(), measure = canvas2d(1, 1); font(measure.ctx, c.fontSize);
-    const labelWidth = Math.ceil(measure.ctx.measureText(m.label).width), width = Math.max(m.actualBarPx, labelWidth) + 2 * c.padding, height = c.padding * 2 + c.barHeight + 4 + c.fontSize;
-    const { canvas, ctx } = canvas2d(width, height); ctx.fillStyle = css(c.background); ctx.fillRect(0, 0, width, height);
-    const x = c.padding + Math.floor((width - 2 * c.padding - m.actualBarPx) / 2), y = c.padding, divisions = c.style === 'alternating' ? c.divisions : 1;
-    for (let i = 0; i < divisions; i++) { const a = Math.floor(i * m.actualBarPx / divisions), b = Math.floor((i + 1) * m.actualBarPx / divisions); ctx.fillStyle = css(i % 2 ? c.barColor2 : c.barColor1); ctx.fillRect(x + a, y, b - a, c.barHeight); }
-    ctx.strokeStyle = css(c.borderColor); ctx.strokeRect(x + .5, y + .5, m.actualBarPx - 1, c.barHeight - 1);
-    font(ctx, c.fontSize); ctx.fillStyle = css(c.labelColor); ctx.fillText(m.label, (width - labelWidth) / 2, y + c.barHeight + 4);
-    try { return canvasFrame(canvas, ctx); } finally { canvas.width = canvas.height = measure.canvas.width = measure.canvas.height = 1; }
+  async render(options: CartographicRenderOptions = {}): Promise<Frame> {
+    const c = this.config, m = this.metrics();
+    cancelled(options.signal); checkBytes((m.actualBarPx + 2 * c.padding) * (2 * c.padding + c.barHeight + 4) * 12, options.maxBytes);
+    await awaitCartographicFonts(options.signal);
+    const measure = canvas2d(1, 1);
+    try {
+      font(measure.ctx, c.fontSize); const label = textBox(measure.ctx, m.label);
+      const width = Math.max(m.actualBarPx, label.width) + 2 * c.padding, height = c.padding * 2 + c.barHeight + 4 + label.height;
+      cancelled(options.signal); const { canvas, ctx } = canvas2d(width, height, options.maxBytes);
+      try {
+        ctx.fillStyle = css(c.background); ctx.fillRect(0, 0, width, height);
+        const x = c.padding, y = c.padding, divisions = c.style === 'alternating' ? c.divisions : 1, part = Math.floor(m.actualBarPx / divisions);
+        for (let i = 0; i < divisions; i++) {
+          ctx.fillStyle = css(i % 2 ? c.barColor2 : c.barColor1);
+          ctx.fillRect(x + i * part, y, part + 1, c.barHeight + 1);
+        }
+        ctx.strokeStyle = css(c.borderColor); ctx.lineWidth = 1; ctx.strokeRect(x + .5, y + .5, m.actualBarPx, c.barHeight);
+        font(ctx, c.fontSize); ctx.fillStyle = css(c.labelColor);
+        drawText(ctx, m.label, x + Math.floor((m.actualBarPx - label.width) / 2), y + c.barHeight + 4);
+        cancelled(options.signal); return canvasFrame(canvas, ctx);
+      } finally { canvas.width = canvas.height = 1; }
+    } finally { measure.canvas.width = measure.canvas.height = 1; }
   }
 }

@@ -24,6 +24,12 @@ export interface ExportPolyline {
     path: ExportPoint[];
     style: Required<ExportVectorStyle>;
 }
+export interface ExportScreenLabel {
+    text: string;
+    screenPosition?: ExportPoint | null;
+    visible?: boolean;
+    style?: ExportLabelStyle;
+}
 export interface ExportLabel {
     text: string;
     position: ExportPoint;
@@ -60,6 +66,8 @@ export declare class VectorScene {
     addPolyline(path: readonly ExportPoint[], options?: ExportVectorStyle): this;
     addLabel(text: string, position: ExportPoint, options?: ExportLabelStyle): this;
     computeBounds(padding?: number): Bounds;
+    /** Native projected-label adapter. Hidden labels and points behind the camera are omitted. */
+    addScreenLabels(labels: readonly ExportScreenLabel[], viewportHeight: number): this;
     /** Accepted W13 labels are already in screen space. Bounds must match this viewport with Y reversed. */
     addLabelPlan(plan: LabelPlanData, viewportHeight: number, options?: ExportLabelStyle): this;
     getMemoryReport(): {

@@ -127,3 +127,5 @@ crates/forge3d-web/types/*colormap*.d.ts text eol=lf
 crates/forge3d-web/types/cartography*.d.ts text eol=lf
 crates/forge3d-web/types/vector-export*.d.ts text eol=lf
 crates/forge3d-web/types/vector-pdf.d.ts text eol=lf
+
+crates/forge3d-web/assets/fonts/DejaVu-LICENSE -text

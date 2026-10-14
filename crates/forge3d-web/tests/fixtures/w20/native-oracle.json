@@ -5428,5 +5428,273 @@
     137,
     255
   ],
-  "svg": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 200 100\">\n  <path d=\"M0.00,100.00 L200.00,100.00 L200.00,0.00 L0.00,0.00 Z M50.00,75.00 L150.00,75.00 L150.00,25.00 L50.00,25.00 Z\" fill-rule=\"evenodd\" fill=\"#ff0000\" stroke=\"#000000\" stroke-width=\"0.00\" stroke-linejoin=\"round\"/>\n  <polyline points=\"0.00,50.00 200.00,50.00\" fill=\"none\" stroke=\"#0000ff\" stroke-width=\"2.00\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n  <text x=\"100.00\" y=\"20.00\" font-family=\"sans-serif\" font-size=\"14.00\" font-weight=\"normal\" text-anchor=\"middle\" dominant-baseline=\"middle\" fill=\"none\" stroke=\"rgba(255,255,255,0.80)\" stroke-width=\"3.00\" stroke-linejoin=\"round\">Monta\u00f1a &amp; &lt;Peak&gt;</text>\n  <text x=\"100.00\" y=\"20.00\" font-family=\"sans-serif\" font-size=\"14.00\" font-weight=\"normal\" text-anchor=\"middle\" dominant-baseline=\"middle\" fill=\"#191919\">Monta\u00f1a &amp; &lt;Peak&gt;</text>\n</svg>"
+  "svg": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 200 100\">\n  <path d=\"M0.00,100.00 L200.00,100.00 L200.00,0.00 L0.00,0.00 Z M50.00,75.00 L150.00,75.00 L150.00,25.00 L50.00,25.00 Z\" fill-rule=\"evenodd\" fill=\"#ff0000\" stroke=\"#000000\" stroke-width=\"0.00\" stroke-linejoin=\"round\"/>\n  <polyline points=\"0.00,50.00 200.00,50.00\" fill=\"none\" stroke=\"#0000ff\" stroke-width=\"2.00\" stroke-linecap=\"round\" stroke-linejoin=\"round\"/>\n  <text x=\"100.00\" y=\"20.00\" font-family=\"sans-serif\" font-size=\"14.00\" font-weight=\"normal\" text-anchor=\"middle\" dominant-baseline=\"middle\" fill=\"none\" stroke=\"rgba(255,255,255,0.80)\" stroke-width=\"3.00\" stroke-linejoin=\"round\">Monta\u00f1a &amp; &lt;Peak&gt;</text>\n  <text x=\"100.00\" y=\"20.00\" font-family=\"sans-serif\" font-size=\"14.00\" font-weight=\"normal\" text-anchor=\"middle\" dominant-baseline=\"middle\" fill=\"#191919\">Monta\u00f1a &amp; &lt;Peak&gt;</text>\n</svg>",
+  "stopCases": [
+    {
+      "name": "hex",
+      "stops": [
+        [
+          0,
+          "#ffffff80"
+        ],
+        [
+          1,
+          "#ffffff80"
+        ]
+      ],
+      "size": 3,
+      "rgba": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "numericAlpha",
+      "stops": [
+        [
+          0,
+          [
+            1,
+            1,
+            1,
+            0.5
+          ]
+        ],
+        [
+          1,
+          [
+            1,
+            1,
+            1,
+            0.5
+          ]
+        ]
+      ],
+      "size": 3,
+      "rgba": [
+        1.0,
+        1.0,
+        1.0,
+        0.5,
+        1.0,
+        1.0,
+        1.0,
+        0.5,
+        1.0,
+        1.0,
+        1.0,
+        0.5
+      ]
+    },
+    {
+      "name": "edge",
+      "stops": [
+        [
+          0,
+          "#000000"
+        ],
+        [
+          0.5,
+          "#000000"
+        ],
+        [
+          0.5,
+          "#ffffff"
+        ],
+        [
+          1,
+          "#ffffff"
+        ]
+      ],
+      "size": 5,
+      "rgba": [
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "float32Edge",
+      "stops": [
+        [
+          0,
+          "#000000"
+        ],
+        [
+          0.3,
+          "#000000"
+        ],
+        [
+          0.3,
+          "#ffffff"
+        ],
+        [
+          1,
+          "#ffffff"
+        ]
+      ],
+      "size": 11,
+      "rgba": [
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "name": "extended",
+      "stops": [
+        [
+          -0.5,
+          "#000000"
+        ],
+        [
+          1.5,
+          "#ffffff"
+        ]
+      ],
+      "size": 3,
+      "rgba": [
+        0.25,
+        0.25,
+        0.25,
+        1.0,
+        0.5,
+        0.5,
+        0.5,
+        1.0,
+        0.75,
+        0.75,
+        0.75,
+        1.0
+      ]
+    },
+    {
+      "name": "constant",
+      "stops": [
+        [
+          0.5,
+          "#336699"
+        ]
+      ],
+      "size": 3,
+      "rgba": [
+        0.03310476243495941,
+        0.13286833465099335,
+        0.3185468316078186,
+        1.0,
+        0.03310476243495941,
+        0.13286833465099335,
+        0.3185468316078186,
+        1.0,
+        0.03310476243495941,
+        0.13286833465099335,
+        0.3185468316078186,
+        1.0
+      ]
+    },
+    {
+      "name": "clamped",
+      "stops": [
+        [
+          0.25,
+          "#000000"
+        ],
+        [
+          0.75,
+          "#ffffff"
+        ]
+      ],
+      "size": 5,
+      "rgba": [
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.5,
+        0.5,
+        0.5,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    }
+  ]
 }

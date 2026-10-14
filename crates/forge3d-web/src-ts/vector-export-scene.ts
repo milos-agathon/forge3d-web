@@ -7,6 +7,7 @@ export interface ExportVectorStyle { fillColor?: CartographicColor; strokeColor?
 export interface ExportLabelStyle { fontSize?: number; color?: CartographicColor; haloColor?: CartographicColor; haloWidth?: number; fontFamily?: string; fontWeight?: string }
 export interface ExportPolygon { exterior: ExportPoint[]; holes: ExportPoint[][]; style: Required<ExportVectorStyle> }
 export interface ExportPolyline { path: ExportPoint[]; style: Required<ExportVectorStyle> }
+export interface ExportScreenLabel { text: string; screenPosition?: ExportPoint | null; visible?: boolean; style?: ExportLabelStyle }
 export interface ExportLabel { text: string; position: ExportPoint; style: Required<ExportLabelStyle> }
 function point(p: ExportPoint): [number, number] { if (p.length !== 2) cartographicError('Expected a 2D point'); return [finite(p[0], 'x'), finite(p[1], 'y')]; }
 function points(p: readonly ExportPoint[], min: number): ExportPoint[] { if (p.length < min) cartographicError(`Geometry requires at least ${min} points`); return p.map(point); }
@@ -45,10 +46,18 @@ export class VectorScene {
   }
   addPolyline(path: readonly ExportPoint[], options: ExportVectorStyle = {}): this { this.#live(); checkBytes(this.#bytes + path.length * 16 + 72, this.maxBytes); const line = { path: points(path, 2), style: style(options) }; this.#admit(line.path.length * 16 + 72); this.#polylines.push(line); return this; }
   addLabel(text: string, position: ExportPoint, options: ExportLabelStyle = {}): this {
-    this.#live(); if (typeof text !== 'string') cartographicError('Label text must be a string'); checkBytes(this.#bytes + text.length * 2 + 128, this.maxBytes); const label: ExportLabel = { text, position: point(position), style: { fontSize: finite(options.fontSize ?? 14, 'fontSize', Number.MIN_VALUE, 10000), color: color(options.color ?? [.1, .1, .1, 1]), haloColor: color(options.haloColor ?? [1, 1, 1, .8]), haloWidth: finite(options.haloWidth ?? 1.5, 'haloWidth', 0, 1000), fontFamily: options.fontFamily ?? 'NotoSans', fontWeight: options.fontWeight ?? 'normal' } };
+    this.#live(); if (typeof text !== 'string') cartographicError('Label text must be a string'); checkBytes(this.#bytes + text.length * 2 + 128, this.maxBytes); const label: ExportLabel = { text, position: point(position), style: { fontSize: finite(options.fontSize ?? 14, 'fontSize', Number.MIN_VALUE, 10000), color: color(options.color ?? [.1, .1, .1, 1]), haloColor: color(options.haloColor ?? [1, 1, 1, .8]), haloWidth: finite(options.haloWidth ?? 1.5, 'haloWidth', 0, 1000), fontFamily: options.fontFamily ?? 'sans-serif', fontWeight: options.fontWeight ?? 'normal' } };
     if (/[\r\n]/.test(text)) cartographicError('Export labels must be single-line'); this.#admit(text.length * 2 + 128); this.#labels.push(label); return this;
   }
   computeBounds(padding = 0): Bounds { this.#live(); const all = [...this.#polygons.flatMap(p => [p.exterior, ...p.holes].flat()), ...this.#polylines.flatMap(p => p.path), ...this.#labels.map(l => l.position)]; return (Bounds.fromPoints(all) ?? new Bounds()).withPadding(padding); }
+  /** Native projected-label adapter. Hidden labels and points behind the camera are omitted. */
+  addScreenLabels(labels: readonly ExportScreenLabel[], viewportHeight: number): this {
+    this.#live(); finite(viewportHeight, 'viewportHeight', Number.MIN_VALUE);
+    for (const label of labels) if (label.visible !== false && label.screenPosition != null) {
+      const [x, y] = point(label.screenPosition); this.addLabel(label.text, [x, viewportHeight - y], label.style);
+    }
+    return this;
+  }
   /** Accepted W13 labels are already in screen space. Bounds must match this viewport with Y reversed. */
   addLabelPlan(plan: LabelPlanData, viewportHeight: number, options: ExportLabelStyle = {}): this {
     finite(viewportHeight, 'viewportHeight', Number.MIN_VALUE);

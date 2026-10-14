@@ -2,7 +2,7 @@ import { Forge3DError } from './index.js';
 import { Frame } from './frames.js';
 import { BBox, PlateRegion, fitPlateImage, positionPlateElement, type MapPlateConfig, type PlateLayout, type PositionAnchor } from './map-layout.js';
 import { CARTOGRAPHY_MAX_BYTES, cancelled, checkBytes, color, css, finite, integer, cartographicError, type CartographicColor } from './cartography-common.js';
-import { canvas2d, canvasBlob, canvasFrame, copyPlateImage, font, imageCanvas, awaitCartographicFonts, type PlateImage } from './cartography-canvas.js';
+import { canvas2d, canvasBlob, canvasFrame, copyPlateImage, font, drawText, textBox, imageCanvas, awaitCartographicFonts, type PlateImage } from './cartography-canvas.js';
 
 export interface PlateTitleOptions { position?: PositionAnchor; fontSize?: number; color?: CartographicColor }
 export interface PlateInsetOptions { position?: PositionAnchor; size?: readonly [number, number]; borderWidth?: number; borderColor?: CartographicColor }
@@ -53,15 +53,16 @@ export class MapPlate {
   addScaleBar(image: PlateImage, position: PositionAnchor = 'bottom-left'): this { return this.#add('scale-bar', image, position, 20); }
   addNorthArrow(image: PlateImage, position: PositionAnchor = 'top-right'): this { return this.#add('north-arrow', image, position, 15); }
   addInset(image: PlateImage, options: PlateInsetOptions = {}): this { return this.#add('inset', image, options.position ?? 'bottom-right', 15, { ...options, borderWidth: options.borderWidth ?? 2 }); }
+  #orderedElements(): ImageElement[] { return ['legend', 'scale-bar', 'north-arrow', 'inset'].flatMap(kind => this.#elements.filter(e => e.kind === kind)); }
   mapRegion(): PlateRegion { const c = this.config, [t, r, b, l] = c.margin; return new PlateRegion(l, t, c.width - r, c.height - b); }
   /** Floor-rounded native placement. Includes the actual letterboxed map rectangle. */
   async layout(options: { signal?: AbortSignal } = {}): Promise<PlateLayout> {
     this.#live(); cancelled(options.signal); const c = this.config, region = this.mapRegion(), elements: PlateLayout['elements'] = [];
     if (this.#title) { await awaitCartographicFonts(options.signal); this.#live(); const { canvas, ctx } = canvas2d(1, 1); font(ctx, this.#title.fontSize);
-      const w = Math.ceil(ctx.measureText(this.#title.text).width) + 20, h = this.#title.fontSize + 20, [x, y] = positionPlateElement([w, h], this.#title.position, new PlateRegion(0, 0, c.width, c.height), 15);
+      const w = textBox(ctx, this.#title.text).width + 20, h = textBox(ctx, this.#title.text).height + 20, [x, y] = positionPlateElement([w, h], this.#title.position, new PlateRegion(0, 0, c.width, c.height), 15);
       canvas.width = canvas.height = 1; elements.push({ kind: 'title', rect: new PlateRegion(x, y, x + w, y + h) });
     }
-    for (const e of this.#elements) {
+    for (const e of this.#orderedElements()) {
       const w = e.size?.[0] ?? e.image.width, h = e.size?.[1] ?? e.image.height;
       const target = e.kind === 'legend' && e.position === 'right' ? new PlateRegion(c.width - c.margin[1], c.margin[0], c.width - 10, c.height - c.margin[2]) : region;
       const [x, y] = positionPlateElement([w, h], e.kind === 'legend' && e.position === 'right' ? 'center' : e.position, target, e.margin);
@@ -73,7 +74,7 @@ export class MapPlate {
     this.#live(true); this.#busy = true;
     try {
       cancelled(signal); const layout = await this.layout(signal ? { signal } : {}); this.#live(); cancelled(signal);
-      const temporary = Math.max(this.#map?.data.byteLength ?? 0, ...this.#elements.map(e => e.image.data.byteLength), 0) * 2;
+      const temporary = Math.max(this.#map?.data.byteLength ?? 0, ...this.#elements.map(e => e.image.data.byteLength), ...layout.elements.filter(e => e.kind === 'title').map(e => e.rect.width * e.rect.height * 4), 0) * 2;
       this.#admit(temporary); this.#workingBytes = this.config.width * this.config.height * 12 + temporary;
       const { canvas, ctx } = canvas2d(this.config.width, this.config.height, this.config.maxBytes);
       try {
@@ -81,9 +82,13 @@ export class MapPlate {
         const blit = (image: Frame, r: PlateRegion) => { const source = imageCanvas(image); try { ctx.drawImage(source, r.x0, r.y0, r.width, r.height); } finally { source.width = source.height = 1; } };
         if (this.#map && layout.mapImage) blit(this.#map, layout.mapImage);
         const title = layout.elements.find(e => e.kind === 'title');
-        if (this.#title && title) { font(ctx, this.#title.fontSize); ctx.fillStyle = css(this.#title.color); ctx.fillText(this.#title.text, title.rect.x0 + 10, title.rect.y0 + 10); }
+        if (this.#title && title) {
+          const layer = canvas2d(title.rect.width, title.rect.height, this.config.maxBytes);
+          try { font(layer.ctx, this.#title.fontSize); layer.ctx.fillStyle = css(this.#title.color); drawText(layer.ctx, this.#title.text, 10, 10); ctx.drawImage(layer.canvas, title.rect.x0, title.rect.y0); }
+          finally { layer.canvas.width = layer.canvas.height = 1; }
+        }
         let offset = title ? 1 : 0;
-        for (const e of this.#elements) { const r = layout.elements[offset++]!.rect;
+        for (const e of this.#orderedElements()) { const r = layout.elements[offset++]!.rect;
           if (e.borderWidth) { ctx.fillStyle = css(e.borderColor); ctx.fillRect(r.x0 - e.borderWidth, r.y0 - e.borderWidth, r.width + e.borderWidth * 2, r.height + e.borderWidth * 2); } blit(e.image, r);
         }
         cancelled(signal); const result = await output(canvas, ctx); this.#live(); cancelled(signal); return result;

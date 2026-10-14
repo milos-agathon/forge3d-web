@@ -1,6 +1,6 @@
 import { Colormap } from './colormaps.js';
-import { color, css, finite, integer, checkBytes, linearToSrgb, cartographicError, type CartographicColor } from './cartography-common.js';
-import { canvas2d, canvasFrame, font, loadCartographicFonts, rgbaBytes } from './cartography-canvas.js';
+import { color, css, finite, integer, checkBytes, cancelled, linearToSrgb, cartographicError, type CartographicColor } from './cartography-common.js';
+import { canvas2d, canvasFrame, font, awaitCartographicFonts, drawText, textBox, type CartographicRenderOptions } from './cartography-canvas.js';
 import { Frame } from './frames.js';
 export interface LegendConfig {
   orientation?: 'vertical' | 'horizontal'; barWidth?: number; barHeight?: number; tickCount?: number; tickLength?: number;
@@ -32,23 +32,44 @@ export class Legend {
     }
     return new Frame(w, h, data);
   }
-  async render(): Promise<Frame> {
-    await loadCartographicFonts(); const c = this.config, vertical = c.orientation === 'vertical', ticks = this.getTicks();
-    const measure = canvas2d(1, 1); font(measure.ctx, c.fontSize);
-    const maxLabel = Math.ceil(Math.max(0, ...ticks.map(([, text]) => measure.ctx.measureText(text).width)));
-    const titleH = c.title ? c.titleFontSize + c.padding : 0, bar = this.gradient();
-    font(measure.ctx, c.titleFontSize); const titleW = Math.ceil(measure.ctx.measureText(c.title).width) + 2 * c.padding;
-    const width = Math.max(titleW, 2 * c.padding + bar.width + (vertical ? c.tickLength + c.padding + maxLabel : maxLabel));
-    const height = 2 * c.padding + titleH + bar.height + (vertical ? c.fontSize : c.tickLength + c.padding + c.fontSize);
-    const { canvas, ctx } = canvas2d(width, height); ctx.fillStyle = css(c.background); ctx.fillRect(0, 0, width, height);
-    const bx = vertical ? c.padding : c.padding + Math.ceil(maxLabel / 2), by = c.padding + titleH + (vertical ? Math.ceil(c.fontSize / 2) : 0);
-    ctx.putImageData(new ImageData(new Uint8ClampedArray(bar.data), bar.width, bar.height), bx, by);
-    font(ctx, c.fontSize); ctx.fillStyle = css(c.labelColor); ctx.strokeStyle = css(c.tickColor);
-    for (let i = 0; i < ticks.length; i++) { const t = ticks.length > 1 ? i / (ticks.length - 1) : .5, label = ticks[i]![1]; ctx.beginPath();
-      if (vertical) { const y = by + Math.floor((1 - t) * (bar.height - 1)); ctx.moveTo(bx + bar.width, y); ctx.lineTo(bx + bar.width + c.tickLength, y); ctx.fillText(label, bx + bar.width + c.tickLength + Math.floor(c.padding / 2), y - c.fontSize / 2); }
-      else { const x = bx + Math.floor(t * (bar.width - 1)); ctx.moveTo(x, by + bar.height); ctx.lineTo(x, by + bar.height + c.tickLength); ctx.fillText(label, x - ctx.measureText(label).width / 2, by + bar.height + c.tickLength + 2); } ctx.stroke();
-    }
-    if (c.title) { font(ctx, c.titleFontSize); ctx.fillText(c.title, (width - ctx.measureText(c.title).width) / 2, c.padding / 2); }
-    try { return canvasFrame(canvas, ctx); } finally { canvas.width = canvas.height = measure.canvas.width = measure.canvas.height = 1; }
+  async render(options: CartographicRenderOptions = {}): Promise<Frame> {
+    const c = this.config, vertical = c.orientation === 'vertical', ticks = this.getTicks();
+    cancelled(options.signal); checkBytes(c.barWidth * c.barHeight * 12, options.maxBytes);
+    await awaitCartographicFonts(options.signal);
+    const measure = canvas2d(1, 1);
+    try {
+      font(measure.ctx, c.fontSize);
+      const labels = ticks.map(([, text]) => textBox(measure.ctx, text));
+      const maxLabel = Math.max(0, ...labels.map(b => b.width)), labelH = Math.max(0, ...labels.map(b => b.height));
+      font(measure.ctx, c.titleFontSize);
+      const titleH = c.title ? textBox(measure.ctx, c.title).height + c.padding : 0;
+      const barW = vertical ? c.barWidth : c.barHeight, barH = vertical ? c.barHeight : c.barWidth;
+      const width = 2 * c.padding + barW + (vertical ? c.tickLength + c.padding + maxLabel : 0);
+      const height = 2 * c.padding + titleH + barH + (vertical ? 0 : c.tickLength + c.padding + labelH);
+      checkBytes(width * height * 12 + barW * barH * 8, options.maxBytes); cancelled(options.signal);
+      const bar = this.gradient(), { canvas, ctx } = canvas2d(width, height, options.maxBytes);
+      try {
+        ctx.fillStyle = css(c.background); ctx.fillRect(0, 0, width, height);
+        const bx = c.padding, by = c.padding + titleH;
+        ctx.putImageData(new ImageData(new Uint8ClampedArray(bar.data), bar.width, bar.height), bx, by);
+        font(ctx, c.fontSize); ctx.fillStyle = css(c.labelColor);
+        for (let i = 0; i < ticks.length; i++) {
+          const t = ticks.length > 1 ? i / (ticks.length - 1) : .5, label = ticks[i]![1], box = labels[i]!;
+          // Integer rectangles reproduce Pillow's inclusive, one-pixel tick lines.
+          if (vertical) {
+            const y = by + Math.floor((1 - t) * (barH - 1));
+            ctx.fillStyle = css(c.tickColor); ctx.fillRect(bx + barW, y, c.tickLength + 1, 1);
+            ctx.fillStyle = css(c.labelColor); drawText(ctx, label, bx + barW + c.tickLength + Math.floor(c.padding / 2), y - Math.floor(box.height / 2));
+          } else {
+            // Correct the native horizontal branch's transposed bar_h/bar_w tick coordinates.
+            const x = bx + Math.floor(t * (barW - 1));
+            ctx.fillStyle = css(c.tickColor); ctx.fillRect(x, by + barH, 1, c.tickLength + 1);
+            ctx.fillStyle = css(c.labelColor); drawText(ctx, label, x - Math.floor(box.width / 2), by + barH + c.tickLength + 2);
+          }
+        }
+        if (c.title) { font(ctx, c.titleFontSize); drawText(ctx, c.title, Math.floor((width - textBox(ctx, c.title).width) / 2), Math.floor(c.padding / 2)); }
+        cancelled(options.signal); return canvasFrame(canvas, ctx);
+      } finally { canvas.width = canvas.height = 1; }
+    } finally { measure.canvas.width = measure.canvas.height = 1; }
   }
 }

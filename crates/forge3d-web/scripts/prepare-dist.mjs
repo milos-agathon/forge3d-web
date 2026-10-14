@@ -1,9 +1,12 @@
 import './verify-w13-assets.mjs';
 import './verify-w14-assets.mjs';
+import './verify-w20-assets.mjs';
+import { build as buildVendorModule } from 'vite';
 import './prepare-laz-assets.mjs';
 import { embedProjWorker } from './embed-proj-worker.mjs';
+import { createRequire } from 'node:module';
 import { createHash } from "node:crypto";
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, unlinkSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -47,15 +50,24 @@ if (ktxVersion !== "1.1.0") {
 const vendor = join(dist, "vendor");
 mkdirSync(vendor, { recursive: true });
 // W20: exact W00-pinned browser bundles; no bare imports or runtime CDN.
-for (const [name,version,source,output] of [['pdf-lib','1.17.1','dist/pdf-lib.esm.min.js','pdf-lib'],['@pdf-lib/fontkit','1.1.1','dist/fontkit.umd.min.js','fontkit.umd']]) {
+for (const [name,version,source,output] of [['pdf-lib','1.17.1','dist/pdf-lib.esm.min.js','pdf-lib']]) {
   const dependencyRoot=join(root,'node_modules',name);
   if(JSON.parse(readRequired(join(dependencyRoot,'package.json'))).version!==version) throw Error(name+' differs from the W00 lock');
   copyVendoredScript(join(dependencyRoot,source),join(vendor,output+'.js'));
   if(name==='pdf-lib') copyRequired(join(dependencyRoot,'LICENSE.md'),join(vendor,'pdf-lib.LICENSE'));
-  else copyRequired(join(root,'assets/licenses/fontkit.LICENSE'),join(vendor,'fontkit.LICENSE'));
+
 }
 
-writeFileSync(join(vendor,'fontkit.js'),`import './fontkit.umd.js';\nconst fontkit = globalThis.fontkit;\nif (!fontkit) throw Error('fontkit bundle did not initialize');\nexport default fontkit;\n`);
+// Remove the obsolete global UMD wrapper from incremental builds.
+if (existsSync(join(vendor, 'fontkit.umd.js'))) unlinkSync(join(vendor, 'fontkit.umd.js'));
+const fontkitRoot=join(root,'node_modules','@pdf-lib/fontkit');
+if(JSON.parse(readRequired(join(fontkitRoot,'package.json'))).version!=='1.1.1') throw Error('fontkit differs from W00 lock');
+const pakoRoot = dirname(createRequire(join(fontkitRoot, 'package.json')).resolve('pako/package.json'));
+if(JSON.parse(readRequired(join(pakoRoot, 'package.json'))).version !== '1.0.11') throw Error('fontkit pako differs from npm lock');
+// Bundle the real upstream ESM entry and its lock-pinned pako dependency.
+await buildVendorModule({configFile:false,publicDir:false,logLevel:'error',build:{lib:{entry:join(fontkitRoot,'dist/fontkit.es.min.js'),formats:['es'],fileName:()=> 'fontkit.js'},outDir:vendor,emptyOutDir:false,minify:true}});
+copyRequired(join(root,'assets/licenses/fontkit.LICENSE'),join(vendor,'fontkit.LICENSE'));
+copyRequired(join(pakoRoot,'LICENSE'),join(vendor,'pako.LICENSE'));
 const fflateRoot = join(root, 'node_modules', 'fflate');
 if (JSON.parse(readRequired(join(fflateRoot, 'package.json'))).version !== '0.8.3') throw Error('fflate must match the W00 lock: 0.8.3');
 copyVendoredScript(join(fflateRoot, 'esm', 'browser.js'), join(vendor, 'fflate.js'));
@@ -155,7 +167,8 @@ for (const file of readdirSync(dist)) {
 
 // Package asset manifest: SHA-256 of every emitted self-hosted third-party asset.
 const assetManifest = [
-  ['dist/vendor/fontkit.umd.js','@pdf-lib/fontkit@1.1.1'],
+  ['dist/vendor/pako.LICENSE','pako@1.0.11'],
+  ...['DejaVuSans.ttf','DejaVuSans-Bold.ttf','DejaVu-LICENSE'].map(file=>['assets/fonts/'+file,'dejavu-fonts@2.37']),
   ...['pdf-lib','fontkit'].flatMap(name=>[['dist/vendor/'+name+'.js',name==='pdf-lib'?'pdf-lib@1.17.1':'@pdf-lib/fontkit@1.1.1'],['dist/vendor/'+name+'.LICENSE',name==='pdf-lib'?'pdf-lib@1.17.1':'@pdf-lib/fontkit@1.1.1']]),
   ['dist/vendor/fflate.js', 'fflate@0.8.3'],
   ['dist/vendor/fflate.LICENSE', 'fflate@0.8.3'],
@@ -226,6 +239,6 @@ for (const file of ['style-native-values','bundle-style-assets','style-expressio
   copyRequired(join(dist,file+'.d.ts'),join(root,'types',file+'.d.ts'));
 }
 
-for (const file of ['cartography-common','cartography-canvas','colormaps','colormap-io','map-layout','map-legend','map-scale-bar','map-north-arrow','map-plate','vector-export-scene','vector-export','vector-pdf']) {
+for (const file of ['cartography-common','cartography-fonts','cartography-canvas','colormaps','colormap-io','map-layout','map-legend','map-scale-bar','map-north-arrow','map-plate','vector-export-scene','vector-export','vector-pdf']) {
   writeFileSync(join(root,'types',file+'.d.ts'),readRequired(join(dist,file+'.d.ts')).replace(/from (["'])\.\/(frames)\.js\1/g,'from "./index.js"'));
 }

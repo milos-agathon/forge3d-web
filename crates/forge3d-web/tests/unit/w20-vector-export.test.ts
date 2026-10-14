@@ -26,14 +26,14 @@ describe('W20 native vector exports', () => {
   native('TestSvgGeneration', 'test_polygon_svg', () => { const svg = generateSvg(new VectorScene().addPolygon(triangle, { fillColor: [1, 0, 0, 1] })); expect(svg).toContain('<polygon'); expect(svg).toContain('fill="#ff0000"'); expect(validateSvg(svg)).toBe(true); });
   native('TestSvgGeneration', 'test_polygon_with_holes_svg', () => { const svg = generateSvg(new VectorScene().addPolygon(square, { holes: [hole] })); expect(svg).toContain('<path'); expect(svg).toContain('fill-rule="evenodd"'); expect(validateSvg(svg)).toBe(true); });
   native('TestSvgGeneration', 'test_polyline_svg', () => { const svg = generateSvg(new VectorScene().addPolyline([[0, 50], [100, 50]], { strokeColor: [0, 0, 1, 1] })); expect(svg).toContain('<polyline'); expect(svg).toContain('stroke="#0000ff"'); expect(svg).toContain('fill="none"'); });
-  native('TestSvgGeneration', 'test_label_svg', () => { const svg = generateSvg(new VectorScene().addLabel('Mountain Peak', [50, 50])); expect(svg).toContain('Mountain Peak'); expect(svg).toContain('font-size="14.00"'); });
+  native('TestSvgGeneration', 'test_label_svg', () => { const svg = generateSvg(new VectorScene().addLabel('Mountain Peak', [50, 50])); expect(svg).toContain('Mountain Peak'); expect(svg).toContain('font-size="14.00"'); expect(validateSvg(svg)).toBe(true); });
   native('TestSvgGeneration', 'test_label_halo_svg', () => { const svg = generateSvg(new VectorScene().addLabel('Label', [50, 50], { haloWidth: 2 })); expect(svg.match(/<text /g)).toHaveLength(2); expect(svg).toContain('stroke-width="4.00"'); });
   native('TestSvgGeneration', 'test_labels_disabled', () => expect(generateSvg(new VectorScene().addLabel('Hidden', [50, 50]), { includeLabels: false })).not.toContain('Hidden'));
   native('TestSvgGeneration', 'test_background_color', () => expect(generateSvg(new VectorScene(), { background: [.9, .9, .9, 1] })).toContain('<rect'));
   native('TestSvgGeneration', 'test_viewbox', () => expect(generateSvg(scene())).toContain('viewBox="0 0 800 600"'));
   native('TestSvgGeneration', 'test_coordinate_precision', () => expect(generateSvg(new VectorScene().addPolygon([[.12345, .12345], [1, 0], [.5, 1]]), { precision: 2 })).not.toContain('.12345'));
   native('TestSvgGeneration', 'test_xml_escape', () => { const svg = generateSvg(new VectorScene().addLabel('<Test & Label>', [50, 50], { fontFamily: '" onload="alert(1)', haloWidth: 0 })); expect(svg).toContain('&lt;Test &amp; Label&gt;'); expect(svg).toContain('&quot; onload=&quot;'); expect(validateSvg(svg)).toBe(true); });
-  native('TestSvgExport', 'test_export_svg_file', async () => { const blob = await exportSvg(scene().addPolyline([[0, 50], [100, 50]]).addLabel('Test', [50, 50]), {fonts:[{family:'NotoSans',source:readFileSync(new URL('../../assets/fonts/NotoSans-Regular.ttf',import.meta.url))}]}); expect(blob.type).toBe('image/svg+xml'); expect(validateSvg(await blob.text())).toBe(true); });
+  native('TestSvgExport', 'test_export_svg_file', async () => { const blob = await exportSvg(scene().addPolyline([[0, 50], [100, 50]]).addLabel('Test', [50, 50]), {fonts:[{family:'DejaVu Sans',source:readFileSync(new URL('../../assets/fonts/DejaVuSans.ttf',import.meta.url))}]}); expect(blob.type).toBe('image/svg+xml'); expect(validateSvg(await blob.text())).toBe(true); });
   native('TestSvgExport', 'test_export_with_custom_bounds', async () => { const svg = await (await exportSvg(scene(), { bounds: new Bounds(-100, -100, 200, 200) })).text(); expect(svg).toContain('266.67,400.00'); });
   native('TestPdfExport', 'test_pdf_export_import_error', async () => { const blob = await exportPdf(scene()); expect(blob.type).toBe('application/pdf'); expect((await PDFDocument.load(await blob.arrayBuffer())).getPageCount()).toBe(1); });
   native('TestSvgValidation', 'test_valid_svg', () => expect(validateSvg('<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"></svg>')).toBe(true));
@@ -65,7 +65,7 @@ describe('W20 native projection', () => {
 });
 it('W20 PDF has even-odd vectors, Unicode font/text objects, halos, page scale and deterministic bytes', async () => {
   const s = new VectorScene().addPolygon(square, { holes: [hole], fillColor: [1, 0, 0, 1], strokeWidth: 0 }).addLabel('Montaña & Peak', [50, 80]);
-  const fonts = [{ family: 'NotoSans', source: readFileSync(new URL('../../assets/fonts/NotoSans-Regular.ttf', import.meta.url)) }];
+  const fonts = [{ family: 'DejaVu Sans', source: readFileSync(new URL('../../assets/fonts/DejaVuSans.ttf', import.meta.url)) }];
   const a = await exportPdf(s, { width: 200, height: 100, dpi: 96, fonts }), b = await exportPdf(s, { width: 200, height: 100, dpi: 96, fonts });
   expect(new Uint8Array(await a.arrayBuffer())).toEqual(new Uint8Array(await b.arrayBuffer()));
   const pdf = await PDFDocument.load(await a.arrayBuffer()); expect(pdf.getPage(0).getSize()).toEqual({ width: 150, height: 75 });
@@ -81,9 +81,9 @@ it('W20 validation, budgets, cancellation, scene copy ownership and disposal', a
   s.dispose(); expect(s.getMemoryReport()).toEqual({ cpuBytes: 0, disposed: true }); expect(() => generateSvg(s)).toThrow();
 });
 it('W20 corrupt font data fail structurally, and pending SVG exports retain their original scene snapshot', async () => {
-  const s = new VectorScene().addLabel('Original', [0, 0]), fonts = [{ family: 'NotoSans', source: new Uint8Array([0, 1, 2, 3]) }];
+  const s = new VectorScene().addLabel('Original', [0, 0]), fonts = [{ family: 'DejaVu Sans', source: new Uint8Array([0, 1, 2, 3]) }];
   await expect(exportPdf(s, { fonts })).rejects.toMatchObject({ code: 'INVALID_INPUT', details: { reason: 'invalid-font' } });
   await expect(exportSvg(s, { fonts })).rejects.toMatchObject({ code: 'INVALID_INPUT', details: { reason: 'invalid-font' } });
-  const original = exportSvg(s, { fonts: [{ family: 'NotoSans', source: readFileSync(new URL('../../assets/fonts/NotoSans-Regular.ttf', import.meta.url)) }] });
+  const original = exportSvg(s, { fonts: [{ family: 'DejaVu Sans', source: readFileSync(new URL('../../assets/fonts/DejaVuSans.ttf', import.meta.url)) }] });
   s.clear(); s.addLabel('Replacement', [10, 10]); const svg = await (await original).text(); expect(svg).toContain('Original'); expect(svg).not.toContain('Replacement'); s.dispose();
 });

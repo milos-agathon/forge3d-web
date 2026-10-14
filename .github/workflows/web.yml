@@ -153,6 +153,7 @@ jobs:
             crates/forge3d-web/test-results/w20-package-consumer.json
             crates/forge3d-web/test-results/w20-installed-playwright.json
             crates/forge3d-web/test-results/w20-pdf-render.json
+            crates/forge3d-web/test-results/w20-bundled-consumer.json
             crates/forge3d-web/test-results/w20-installed-output
           if-no-files-found: error
           retention-days: 30

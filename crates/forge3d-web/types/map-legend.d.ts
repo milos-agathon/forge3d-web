@@ -1,5 +1,6 @@
 import { Colormap } from './colormaps.js';
 import { type CartographicColor } from './cartography-common.js';
+import { type CartographicRenderOptions } from './cartography-canvas.js';
 import { Frame } from "./index.js";
 export interface LegendConfig {
     orientation?: 'vertical' | 'horizontal';
@@ -25,5 +26,5 @@ export declare class Legend {
     getTicks(): [number, string][];
     /** Exact native nearest-index gradient and linear-to-display conversion. */
     gradient(): Frame;
-    render(): Promise<Frame>;
+    render(options?: CartographicRenderOptions): Promise<Frame>;
 }

@@ -2,6 +2,7 @@ import { cartographicError, cancelled, checkBytes, color, css, integer, xml, val
 import { Bounds, VectorScene, project2dToScreen, type ExportPoint } from './vector-export-scene.js';
 import { readByteSource } from './browser-io.js';
 import type { BrowserByteSource } from './index.js';
+import { exportFontSource } from './cartography-fonts.js';
 export interface VectorExportFont { family: string; source: BrowserByteSource }
 export interface VectorExportOptions {
   width?: number; height?: number; bounds?: Bounds; background?: CartographicColor; precision?: number; includeLabels?: boolean; maxBytes?: number; signal?: AbortSignal;
@@ -18,7 +19,7 @@ export function generateSvg(scene: VectorScene, options: VectorExportOptions = {
   const coords = (p: ExportPoint) => project(p).map(fmt).join(','), path = (p: ExportPoint[]) => p.map((v, i) => `${i ? 'L' : 'M'} ${coords(v)}`).join(' ') + ' Z';
   const lines = ['<?xml version="1.0" encoding="UTF-8"?>', `<svg xmlns="http://www.w3.org/2000/svg" width="${s.width}" height="${s.height}" viewBox="0 0 ${s.width} ${s.height}">`];
   if (s.background) lines.push(`  <rect width="${s.width}" height="${s.height}" fill="${css(s.background)}"/>`);
-  for (const p of s.polygons) { const c = p.style, attrs = `fill="${c.fillColor[3] > .001 ? css(c.fillColor) : 'none'}" stroke="${c.strokeColor[3] > .001 && c.strokeWidth ? css(c.strokeColor) : 'none'}" stroke-width="${fmt(c.strokeWidth)}" stroke-linejoin="round"`;
+  for (const p of s.polygons) { const c = p.style, attrs = `fill="${c.fillColor[3] > .001 ? css(c.fillColor) : 'none'}" stroke="${c.strokeColor[3] > .001 ? css(c.strokeColor) : 'none'}" stroke-width="${fmt(c.strokeWidth)}" stroke-linejoin="round"`;
     lines.push(p.holes.length ? `  <path d="${[p.exterior, ...p.holes].map(path).join(' ')}" fill-rule="evenodd" ${attrs}/>` : `  <polygon points="${p.exterior.map(coords).join(' ')}" ${attrs}/>`);
   }
   for (const p of s.polylines) lines.push(`  <polyline points="${p.path.map(coords).join(' ')}" fill="none" stroke="${css(p.style.strokeColor)}" stroke-width="${fmt(p.style.strokeWidth)}" stroke-linecap="round" stroke-linejoin="round"/>`);
@@ -36,19 +37,23 @@ export async function exportSvg(scene: VectorScene, options: VectorSvgOptions = 
     if (/[\u0600-\u06ff]/u.test(label.text)) families.add('NotoSansArabic');
     if (/[\u0900-\u097f]/u.test(label.text)) families.add('NotoSansDevanagari');
   }
-  const cssRules: string[] = []; let bytesHeld = 0;
+  const cssRules: string[] = [], aliases = new Map([...families].sort().map((family, i) => [family, 'Forge3D-embedded-' + i])); let bytesHeld = 0;
   for (const family of [...families].sort()) {
-    const canonical = ['sans-serif', 'Arial', 'DejaVu Sans'].includes(family) ? 'NotoSans' : family;
-    const source = options.fonts?.find(f => f.family === family)?.source ?? (['NotoSans', 'NotoSansArabic', 'NotoSansDevanagari'].includes(canonical) ? new URL('../assets/fonts/' + canonical + '-Regular.ttf', import.meta.url) : undefined);
+    const canonical = ['sans-serif', 'Arial', 'DejaVu Sans'].includes(family) ? 'DejaVu Sans' : family;
+    const source = options.fonts?.find(f => f.family === family || f.family === canonical)?.source ?? exportFontSource(canonical);
     if (!source) cartographicError(`SVG font family is unavailable: ${family}`, 'font-unavailable');
     const bytes = await readByteSource(source, { maxBytes: Math.min(options.maxBytes ?? 128 * 1024 * 1024, 16 * 1024 * 1024), ...(options.signal ? { signal: options.signal } : {}) });
     validateExportFont(bytes); bytesHeld += bytes.length; checkBytes(bytesHeld * 6 + sceneBytes * 8, options.maxBytes);
     let binary = ''; for (let i = 0; i < bytes.length; i += 8192) binary += String.fromCharCode(...bytes.subarray(i, i + 8192));
     // CSS string escaping is separate from XML escaping.
-    const safeFamily = family.replaceAll('\\', '\\\\').replaceAll('"', '\\"').replace(/[\r\n\f]/g, ' ');
+    const safeFamily = aliases.get(family)!;
     cssRules.push(`@font-face{font-family:"${safeFamily}";src:url(data:font/ttf;base64,${btoa(binary)}) format("truetype")}`);
   }
   cancelled(options.signal); let svg = markup;
+  for (const [family, alias] of aliases) {
+    const fallback = ['NotoSansArabic', 'NotoSansDevanagari'].filter(f => f !== family && aliases.has(f)).map(f => aliases.get(f)!);
+    svg = svg.replaceAll(`font-family="${xml(family)}"`, `font-family="${[alias, ...fallback].join(', ')}"`);
+  }
   if (cssRules.length) { const index = svg.indexOf('>', svg.indexOf('<svg')) + 1; svg = svg.slice(0, index) + '\n<defs><style>' + xml(cssRules.join('\n')) + '</style></defs>' + svg.slice(index); }
   checkBytes(svg.length * 2, options.maxBytes); return new Blob([svg], { type: 'image/svg+xml' });
 }

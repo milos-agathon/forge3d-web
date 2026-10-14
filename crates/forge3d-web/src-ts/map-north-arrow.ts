@@ -1,5 +1,5 @@
 import { cartographicError, color, css, finite, integer, type CartographicColor } from './cartography-common.js';
-import { font, renderFurniture, type PlateContext } from './cartography-canvas.js';
+import { font, renderFurniture, drawText, textBox, type CartographicRenderOptions } from './cartography-canvas.js';
 import type { Frame } from './frames.js';
 export interface NorthArrowConfig {
   style?: 'arrow' | 'compass' | 'simple'; size?: number; rotationDeg?: number; color?: CartographicColor; background?: CartographicColor; showNLabel?: boolean; fontSize?: number; borderWidth?: number; borderColor?: CartographicColor;
@@ -14,7 +14,7 @@ export class NorthArrow {
   }
   /** North tip, in local image pixels, after clockwise rotation. */
   tip(): [number, number] { const c = this.config, mid = Math.floor((c.size + 16) / 2), len = Math.floor(c.size / 2) - (c.style === 'compass' ? 12 : 8), a = c.rotationDeg * Math.PI / 180; return [mid + len * Math.sin(a), mid - len * Math.cos(a)]; }
-  render(): Promise<Frame> {
+  render(options: CartographicRenderOptions = {}): Promise<Frame> {
     const c = this.config, total = c.size + 16, mid = Math.floor(total / 2), angle = c.rotationDeg * Math.PI / 180;
     return renderFurniture(total, total, ctx => {
       ctx.fillStyle = css(c.background); ctx.beginPath(); ctx.ellipse(total / 2, total / 2, total / 2 - 4, total / 2 - 4, 0, 0, Math.PI * 2); ctx.fill();
@@ -30,7 +30,7 @@ export class NorthArrow {
       } else if (c.style === 'compass') {
         for (let i = 0; i < 4; i++) { const a = angle + i * Math.PI / 2; poly([point(Math.floor(c.size / 2) - 12, a), point(6, a + Math.PI / 2), point(-6, a + Math.PI / 2)], c.color); }
       } else { line(point(-len * .5), tip, 3); poly([tip, [tip[0] - 10 * Math.sin(angle - Math.PI / 6), tip[1] + 10 * Math.cos(angle - Math.PI / 6)], [tip[0] - 10 * Math.sin(angle + Math.PI / 6), tip[1] + 10 * Math.cos(angle + Math.PI / 6)]], c.color); }
-      if (c.showNLabel) { font(ctx, c.fontSize); const p = point(Math.floor(c.size / 2) - 2); ctx.fillStyle = css(c.color); ctx.fillText('N', p[0] - ctx.measureText('N').width / 2, p[1] - c.fontSize / 2 - 2); }
-    });
+      if (c.showNLabel) { font(ctx, c.fontSize, true); const p = point(Math.floor(c.size / 2) - 2), b = textBox(ctx, 'N'); ctx.fillStyle = css(c.color); drawText(ctx, 'N', p[0] - Math.floor(b.width / 2), p[1] - Math.floor(b.height / 2) - 2); }
+    }, options);
   }
 }

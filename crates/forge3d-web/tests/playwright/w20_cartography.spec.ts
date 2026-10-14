@@ -1,6 +1,8 @@
 import { test, expect } from "../browser/webgpu-fixture";
 import { readFileSync } from 'node:fs';
+import { runNativePlateCase } from '../browser/w20-native-plate-cases.js';
 const native = JSON.parse(readFileSync(new URL('../fixtures/w20/native-oracle.json', import.meta.url), 'utf8'));
+const layoutOracle = JSON.parse(readFileSync(new URL('../fixtures/w20/layout-oracle.json', import.meta.url), 'utf8'));
 declare global { interface Window { __w20: any } }
 for (const dist of [false, true]) {
   const label = dist ? 'dist' : 'source';
@@ -11,7 +13,8 @@ for (const dist of [false, true]) {
     });
     test(`W20 ${label}: all 33 native map plate cases`, async ({ page }) => {
       for (const c of native.tests.filter((c: any) => c.source === 'test_map_plate_layout.py')) await test.step(`${c.source}::${c.class}::${c.test}`, async () => {
-        expect(await page.evaluate(async c => await window.__w20.nativePlateCase(c.class, c.test), c)).toBe(true);
+        const result = await page.evaluate(runNativePlateCase, { cls: c.class, test: c.test });
+        expect(result.id).toBe(c.class + '::' + c.test); expect(result.assertions).toBeGreaterThan(0);
       });
     });
     test(`W20 ${label}: plate PNG/JPEG pixels, inset border, layout and bounded replacements`, async ({ page }, info) => {
@@ -83,6 +86,109 @@ for (const dist of [false, true]) {
         } finally { URL.revokeObjectURL(url); }
       });
       expect(r.maps).toEqual([128, 128, 128, 128]); expect(r.midpoint).toEqual([.5, .5, .5, 1]); expect(r.texture).toEqual([3, 1, 'rgba8unorm']); expect(r.label).toMatchObject({ text: 'Accepted', position: [30, 80], style: { fontSize: 12 } }); expect(r.count).toBe(1);
+    });
+    test(`W20 ${label}: native glyphs, furniture and composed layout stay within one pixel`, async ({ page }, info) => {
+      const r = await page.evaluate(async control => {
+        const a = window.__w20.api; await a.loadCartographicFonts();
+        const canvas = new OffscreenCanvas(1, 1), ctx = canvas.getContext('2d')!;
+        const metrics = [];
+        for (const m of control.metrics) {
+          const title = new a.MapPlate({ width: 480, height: 320 }).addTitle(m.text, { fontSize: m.size });
+          const rect = (await title.layout()).elements[0].rect; title.dispose();
+          ctx.font = `700 ${m.size}px "DejaVu Sans"`; const b = ctx.measureText(m.text);
+          metrics.push({ text: m.text, widthError: Math.abs((m.bold ? Math.round(b.width) : rect.width - 20) - m.width), heightError: Math.abs((m.bold ? Math.round(b.actualBoundingBoxAscent + b.actualBoundingBoxDescent) : rect.height - 20) - m.height) });
+        }
+        const frames: Record<string, any> = {};
+        frames.legend = await new a.Legend(a.colormaps.get('forge3d:viridis'), [0, 3000], { barHeight: 140, fontSize: 10, title: 'Elevation' }).render();
+        frames.scale = await new a.ScaleBar(200, { widthPx: 140, fontSize: 10 }).render();
+        frames.wideScale = await new a.ScaleBar(1e5, { widthPx: 40, units: 'm' }).render();
+        for (const angle of [0, 30, 90, -45]) frames['arrow' + angle] = await new a.NorthArrow({ size: 40, rotationDeg: angle, fontSize: 10 }).render();
+        const p = new a.MapPlate({ width: 480, height: 320, margin: [45, 120, 35, 20] });
+        p.setMapRegion(window.__w20.pixels(120, 80, 4, [40, 130, 80, 255]), new a.BBox(-122, 46, -121, 47)).addTitle('Mountain atlas', { fontSize: 20 });
+        // Deliberately reverse calls: drawing order must still be native's fixed order.
+        p.addInset(window.__w20.pixels(30, 20, 4, [25, 50, 150, 255]), { size: [60, 40] });
+        p.addNorthArrow(frames.arrow30).addScaleBar(frames.scale).addLegend(frames.legend);
+        const layout = await p.layout(); frames.plate = await p.compose(); p.dispose();
+        const title = new a.MapPlate({ width: 480, height: 320, background: [0, 0, 0, 0] }).addTitle('Mountain atlas', { fontSize: 20 });
+        const tl = (await title.layout()).elements[0].rect, tf = await title.compose(); title.dispose();
+        const bytes = new Uint8Array(tl.width * tl.height * 4);
+        for (let y = 0; y < tl.height; y++) bytes.set(tf.data.subarray(((y + tl.y0) * tf.width + tl.x0) * 4, ((y + tl.y0) * tf.width + tl.x1) * 4), y * tl.width * 4);
+        frames.title = { width: tl.width, height: tl.height, data: bytes };
+        const mask = (f: any) => { const out = new Set<number>(); for (let y = 0; y < f.height; y++) for (let x = 0; x < f.width; x++) { const i = (y * f.width + x) * 4; if (f.data[i + 3] > 128 && Math.max(f.data[i], f.data[i + 1], f.data[i + 2]) < 120) out.add(y * 10000 + x); } return out; };
+        const withinOne = (left: Set<number>, right: Set<number>) => [...left].filter(k => [-1, 0, 1].some(dy => [-1, 0, 1].some(dx => right.has(k + dy * 10000 + dx)))).length / left.size;
+        const images = []; let wrongRotation = 1;
+        for (const [name, reference] of Object.entries(control.images) as [string, any][]) {
+          const bmp = await createImageBitmap(new Blob([Uint8Array.from(atob(reference.png), c => c.charCodeAt(0))], { type: 'image/png' }));
+          const surface = new OffscreenCanvas(bmp.width, bmp.height), cx = surface.getContext('2d')!; cx.drawImage(bmp, 0, 0); bmp.close();
+          const original = { width: surface.width, height: surface.height, data: cx.getImageData(0, 0, surface.width, surface.height).data }, actual = frames[name];
+          const expectedMask = mask(original), actualMask = mask(actual);
+          images.push({ name, sizeError: Math.max(Math.abs(actual.width - reference.width), Math.abs(actual.height - reference.height)), inkCount: actualMask.size, withinOne: Math.min(withinOne(expectedMask, actualMask), withinOne(actualMask, expectedMask)) });
+          if (name === 'arrow30') wrongRotation = Math.min(withinOne(expectedMask, mask(frames.arrow0)), withinOne(mask(frames.arrow0), expectedMask));
+        }
+        const rects = [{ kind: 'map', rect: layout.mapImage.rect }, ...layout.elements.map((e: any) => ({ kind: e.kind, rect: e.rect.rect }))];
+        const stack = new a.MapPlate({ width: 100, height: 100, margin: [0, 0, 0, 0] });
+        stack.addInset(window.__w20.pixels(50, 50, 4, [0, 0, 255, 255]), { position: 'center', borderWidth: 0 });
+        stack.addNorthArrow(window.__w20.pixels(50, 50, 4, [0, 255, 0, 255]), 'center');
+        stack.addScaleBar(window.__w20.pixels(50, 50, 4, [255, 0, 0, 255]), 'center');
+        stack.addLegend(window.__w20.pixels(50, 50, 4, [255, 255, 0, 255]), 'center');
+        const overlap = (await stack.compose()).pixel(50, 50); stack.dispose();
+        return { metrics, images, rects, wrongRotation, overlap };
+      }, layoutOracle);
+      await info.attach('native-layout.json', { body: JSON.stringify(r, null, 2), contentType: 'application/json' });
+      for (const m of r.metrics) { expect(m.widthError, JSON.stringify(m)).toBeLessThanOrEqual(1); expect(m.heightError, JSON.stringify(m)).toBeLessThanOrEqual(1); }
+      expect(r.rects.map((e: any) => e.kind)).toEqual(layoutOracle.rects.map((e: any) => e.kind));
+      r.rects.forEach((e: any, i: number) => e.rect.forEach((v: number, j: number) => expect(Math.abs(v - layoutOracle.rects[i].rect[j]), e.kind).toBeLessThanOrEqual(1)));
+      for (const im of r.images) { expect(im.sizeError, JSON.stringify(im)).toBeLessThanOrEqual(1); expect(im.inkCount).toBeGreaterThan(10); expect(im.withinOne, JSON.stringify(im)).toBeGreaterThan(.97); }
+      expect(r.wrongRotation).toBeLessThan(.9); expect(r.overlap).toEqual([0, 0, 255, 255]);
+    });
+    test(`W20 ${label}: actual GPU sampling consumes colormap texture bytes`, async ({ page }) => {
+      const r = await page.evaluate(async () => {
+        const gpu = (navigator as any).gpu, adapter = await gpu.requestAdapter(), device = await adapter.requestDevice(), a = window.__w20.api;
+        const provider = new a.ColormapRegistry(false); provider.registerProvider('app', (name: string) => a.parseColormapJson({ name, stops: [[0, [0, 0, 0, .25]], [1, [1, .5, .25, 1]]] }, 4));
+        const desc = provider.get('APP:gpu').toTexture();
+        const texture = device.createTexture({ size: [desc.width, desc.height], format: desc.format, usage: 2 | 4 });
+        const output = device.createBuffer({ size: 4 * 4 * 4, usage: 128 | 4 }), read = device.createBuffer({ size: 4 * 4 * 4, usage: 1 | 8 });
+        try {
+          device.queue.writeTexture({ texture }, desc.data, { bytesPerRow: 16 }, [4, 1]);
+          const module = device.createShaderModule({ code: `@group(0) @binding(0) var colors: texture_2d<f32>; @group(0) @binding(1) var nearest: sampler; @group(0) @binding(2) var<storage,read_write> result: array<vec4<f32>>; @compute @workgroup_size(4) fn main(@builtin(global_invocation_id) id: vec3<u32>) { result[id.x] = textureSampleLevel(colors, nearest, vec2<f32>((f32(id.x)+0.5)/4.0,0.5),0.0); }` });
+          const pipeline = device.createComputePipeline({ layout: 'auto', compute: { module, entryPoint: 'main' } });
+          const bind = device.createBindGroup({ layout: pipeline.getBindGroupLayout(0), entries: [{ binding: 0, resource: texture.createView() }, { binding: 1, resource: device.createSampler({ magFilter: 'nearest', minFilter: 'nearest' }) }, { binding: 2, resource: { buffer: output } }] });
+          const sample = async () => { const encoder = device.createCommandEncoder(), pass = encoder.beginComputePass(); pass.setPipeline(pipeline); pass.setBindGroup(0, bind); pass.dispatchWorkgroups(1); pass.end(); encoder.copyBufferToBuffer(output, 0, read, 0, 64); device.queue.submit([encoder.finish()]); await read.mapAsync(1); const values = Array.from(new Float32Array(read.getMappedRange().slice(0))); read.unmap(); return values.map((v: number) => Math.round(v * 255)); };
+          const actual = await sample(); const corrupted = desc.data.slice(); corrupted[0] = 255; device.queue.writeTexture({ texture }, corrupted, { bytesPerRow: 16 }, [4, 1]); const negative = await sample();
+          return { expected: Array.from(desc.data), actual, negative };
+        } finally { read.destroy(); output.destroy(); texture.destroy(); device.destroy(); }
+      });
+      expect(r.actual).toEqual(r.expected); expect(r.negative).not.toEqual(r.expected); expect(r.negative[0]).toBe(255);
+    });
+    test(`W20 ${label}: horizontal ticks, transparent JPEG and furniture cancellation`, async ({ page }) => {
+      const r = await page.evaluate(async () => {
+        const a = window.__w20.api, legend = await new a.Legend(a.colormaps.get('forge3d:viridis'), [0, 100], { orientation: 'horizontal', barHeight: 100, barWidth: 15 }).render();
+        const ticks = [10, 59, 109].map(x => legend.pixel(x, 30));
+        const p = new a.MapPlate({ width: 32, height: 32, background: [1, 1, 1, 0], margin: [0, 0, 0, 0] });
+        const jpeg = await p.exportJpeg(), bmp = await createImageBitmap(jpeg), canvas = new OffscreenCanvas(32, 32), ctx = canvas.getContext('2d')!; ctx.drawImage(bmp, 0, 0); bmp.close(); p.dispose();
+        const codes = []; for (const f of [new a.Legend(a.colormaps.get('forge3d:viridis'), [0, 1]), new a.ScaleBar(100), new a.NorthArrow()]) for (const opts of [{ signal: AbortSignal.abort() }, { maxBytes: 1 }]) try { await f.render(opts); codes.push('missing'); } catch (e: any) { codes.push(e.code); }
+        return { ticks, jpeg: Array.from(ctx.getImageData(16, 16, 1, 1).data), codes };
+      });
+      expect(r.ticks).toEqual([[0, 0, 0, 255], [0, 0, 0, 255], [0, 0, 0, 255]]);
+      expect(r.jpeg).toEqual([0, 0, 0, 255]);
+      expect(r.codes).toEqual(Array.from({ length: 3 }, () => ['REQUEST_CANCELLED', 'RESOURCE_LIMIT_EXCEEDED']).flat());
+    });
+    test(`W20 ${label}: pending font loads cancel, fail structurally and retry`, async ({ page }) => {
+      let held: any;
+      await page.route('**/DejaVuSans.ttf', route => { held = route; });
+      const cancelled = await page.evaluate(async () => {
+        const a = window.__w20.api, controller = new AbortController();
+        const pending = new a.Legend(a.colormaps.get('forge3d:viridis'), [0, 1]).render({ signal: controller.signal });
+        setTimeout(() => controller.abort(), 30);
+        try { await pending; return 'missing'; } catch (e: any) { return e.code; }
+      });
+      expect(cancelled).toBe('REQUEST_CANCELLED'); await expect.poll(() => Boolean(held)).toBe(true);
+      await page.evaluate(() => { window.__w20.fontLoadResult = window.__w20.api.loadCartographicFonts().then(() => null, (e: any) => ({ code: e.code, reason: e.details.reason })); });
+      await held.fulfill({ status: 404, body: 'missing font' });
+      const failed = await page.evaluate(() => window.__w20.fontLoadResult);
+      expect(failed).toEqual({ code: 'IO_ERROR', reason: 'font-load-failed' });
+      await page.unroute('**/DejaVuSans.ttf');
+      expect(await page.evaluate(async () => (await new window.__w20.api.NorthArrow().render()).data.length)).toBe(76 * 76 * 4);
     });
     test(`W20 ${label}: saved-frame composition survives device loss and unavailable WebGPU`, async ({ page }) => {
       const r = await page.evaluate(async label => {
