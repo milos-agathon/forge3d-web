@@ -17,6 +17,8 @@ const documents = [
   "crates/forge3d-web/docs/mapscene-diagnostics.md",
   "crates/forge3d-web/docs/w18-evidence.md",
   "crates/forge3d-web/docs/styles-bundles.md",
+  "crates/forge3d-web/docs/cartography.md",
+  "crates/forge3d-web/docs/w20-evidence.md",
   "crates/forge3d-web/docs/w19-evidence.md",
   "crates/forge3d-web/docs/w17-evidence.md",
   "docs/parity/w14-implementation.md",

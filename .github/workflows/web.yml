@@ -135,6 +135,28 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: Install independent W20 PDF renderer
+        working-directory: crates/forge3d-web
+        run: python -m pip install -r scripts/requirements-w20.txt
+
+      - name: Test W20 installed cartographic exports and worker composition
+        id: w20-installed
+        working-directory: crates/forge3d-web
+        run: npm run test:package-consumer:w20
+
+      - name: Upload W20 installed cartography evidence
+        if: always() && steps.w20-installed.outcome != 'skipped'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: forge3d-web-w20-installed
+          path: |
+            crates/forge3d-web/test-results/w20-package-consumer.json
+            crates/forge3d-web/test-results/w20-installed-playwright.json
+            crates/forge3d-web/test-results/w20-pdf-render.json
+            crates/forge3d-web/test-results/w20-installed-output
+          if-no-files-found: error
+          retention-days: 30
+
       - name: Fuzz pinned W16 LAZ chunks through owned workers
         working-directory: crates/forge3d-web
         env:

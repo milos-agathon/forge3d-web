@@ -46,6 +46,16 @@ if (ktxVersion !== "1.1.0") {
 }
 const vendor = join(dist, "vendor");
 mkdirSync(vendor, { recursive: true });
+// W20: exact W00-pinned browser bundles; no bare imports or runtime CDN.
+for (const [name,version,source,output] of [['pdf-lib','1.17.1','dist/pdf-lib.esm.min.js','pdf-lib'],['@pdf-lib/fontkit','1.1.1','dist/fontkit.umd.min.js','fontkit.umd']]) {
+  const dependencyRoot=join(root,'node_modules',name);
+  if(JSON.parse(readRequired(join(dependencyRoot,'package.json'))).version!==version) throw Error(name+' differs from the W00 lock');
+  copyVendoredScript(join(dependencyRoot,source),join(vendor,output+'.js'));
+  if(name==='pdf-lib') copyRequired(join(dependencyRoot,'LICENSE.md'),join(vendor,'pdf-lib.LICENSE'));
+  else copyRequired(join(root,'assets/licenses/fontkit.LICENSE'),join(vendor,'fontkit.LICENSE'));
+}
+
+writeFileSync(join(vendor,'fontkit.js'),`import './fontkit.umd.js';\nconst fontkit = globalThis.fontkit;\nif (!fontkit) throw Error('fontkit bundle did not initialize');\nexport default fontkit;\n`);
 const fflateRoot = join(root, 'node_modules', 'fflate');
 if (JSON.parse(readRequired(join(fflateRoot, 'package.json'))).version !== '0.8.3') throw Error('fflate must match the W00 lock: 0.8.3');
 copyVendoredScript(join(fflateRoot, 'esm', 'browser.js'), join(vendor, 'fflate.js'));
@@ -120,6 +130,8 @@ for (const file of readdirSync(dist)) {
   const path = join(dist, file);
   const source = readFileSync(path, "utf8");
   const rewritten = source
+    .replaceAll("import('pdf-lib')", "import('./vendor/pdf-lib.js')")
+    .replaceAll("import('@pdf-lib/fontkit')", "import('./vendor/fontkit.js')")
     .replaceAll("from 'fflate'", "from './vendor/fflate.js'")
     .replaceAll('from "fflate"', 'from "./vendor/fflate.js"')
     .replaceAll("from \"ktx-parse\"", "from \"./vendor/ktx-parse.js\"")
@@ -143,6 +155,8 @@ for (const file of readdirSync(dist)) {
 
 // Package asset manifest: SHA-256 of every emitted self-hosted third-party asset.
 const assetManifest = [
+  ['dist/vendor/fontkit.umd.js','@pdf-lib/fontkit@1.1.1'],
+  ...['pdf-lib','fontkit'].flatMap(name=>[['dist/vendor/'+name+'.js',name==='pdf-lib'?'pdf-lib@1.17.1':'@pdf-lib/fontkit@1.1.1'],['dist/vendor/'+name+'.LICENSE',name==='pdf-lib'?'pdf-lib@1.17.1':'@pdf-lib/fontkit@1.1.1']]),
   ['dist/vendor/fflate.js', 'fflate@0.8.3'],
   ['dist/vendor/fflate.LICENSE', 'fflate@0.8.3'],
   ...['laz-perf.js','laz-perf.wasm','laz-perf.LICENSE'].map(file=>['assets/laz/'+file,'laz-perf@0.0.7']),
@@ -210,4 +224,8 @@ for (const file of ['trace-types','trace-math','bvh-build','bvh','bvh-gpu','sdf-
 }
 for (const file of ['style-native-values','bundle-style-assets','style-expressions','map-style','style-assets','scene-review','bundle','bundle-archive','bundle-output','bundle-migration']) {
   copyRequired(join(dist,file+'.d.ts'),join(root,'types',file+'.d.ts'));
+}
+
+for (const file of ['cartography-common','cartography-canvas','colormaps','colormap-io','map-layout','map-legend','map-scale-bar','map-north-arrow','map-plate','vector-export-scene','vector-export','vector-pdf']) {
+  writeFileSync(join(root,'types',file+'.d.ts'),readRequired(join(dist,file+'.d.ts')).replace(/from (["'])\.\/(frames)\.js\1/g,'from "./index.js"'));
 }

@@ -1,0 +1,914 @@
+{
+  "schemaVersion": 1,
+  "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+  "fixtureSha256": "0ed26bb4a69e946e383d19b3055f6a07f3c6b6cc9ba1753413e895fb72d6df40",
+  "originalNativeRun": {
+    "passed": 80,
+    "skipped": 2,
+    "skipReason": "Rust extension imports unavailable; W20 ports both numeric functions"
+  },
+  "tests": [
+    {
+      "source": "test_export_projection.py",
+      "class": "TestPythonProjection",
+      "test": "test_2d_to_screen_corners",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_projection.py::TestPythonProjection::test_2d_to_screen_corners"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_projection.py",
+      "class": "TestPythonProjection",
+      "test": "test_2d_to_screen_aspect_ratio",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_projection.py::TestPythonProjection::test_2d_to_screen_aspect_ratio"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_projection.py",
+      "class": "TestPythonProjection",
+      "test": "test_2d_to_screen_negative_coords",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_projection.py::TestPythonProjection::test_2d_to_screen_negative_coords"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_projection.py",
+      "class": "TestPythonProjection",
+      "test": "test_2d_to_screen_degenerate_bounds",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_projection.py::TestPythonProjection::test_2d_to_screen_degenerate_bounds"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_projection.py",
+      "class": "TestBoundsCalculation",
+      "test": "test_bounds_from_polygons_and_lines",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_projection.py::TestBoundsCalculation::test_bounds_from_polygons_and_lines"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_projection.py",
+      "class": "TestBoundsCalculation",
+      "test": "test_bounds_with_labels",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_projection.py::TestBoundsCalculation::test_bounds_with_labels"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_projection.py",
+      "class": "TestBoundsCalculation",
+      "test": "test_bounds_empty_scene",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_projection.py::TestBoundsCalculation::test_bounds_empty_scene"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_projection.py",
+      "class": "TestProjectionIntegration",
+      "test": "test_round_trip_coordinates",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_projection.py::TestProjectionIntegration::test_round_trip_coordinates"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_projection.py",
+      "class": "TestProjectionIntegration",
+      "test": "test_coordinate_precision_loss",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_projection.py::TestProjectionIntegration::test_coordinate_precision_loss"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_projection.py",
+      "class": "TestRustProjection",
+      "test": "test_rust_3d_to_2d_center",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_projection.py::TestRustProjection::test_rust_3d_to_2d_center"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_projection.py",
+      "class": "TestRustProjection",
+      "test": "test_rust_3d_behind_camera",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_projection.py::TestRustProjection::test_rust_3d_behind_camera"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_projection.py",
+      "class": "TestProjectionEdgeCases",
+      "test": "test_very_small_bounds",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_projection.py::TestProjectionEdgeCases::test_very_small_bounds"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_projection.py",
+      "class": "TestProjectionEdgeCases",
+      "test": "test_very_large_bounds",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_projection.py::TestProjectionEdgeCases::test_very_large_bounds"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_projection.py",
+      "class": "TestProjectionEdgeCases",
+      "test": "test_viewport_one_pixel",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_projection.py::TestProjectionEdgeCases::test_viewport_one_pixel"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestBounds",
+      "test": "test_bounds_creation",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestBounds::test_bounds_creation"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestBounds",
+      "test": "test_bounds_from_points",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestBounds::test_bounds_from_points"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestBounds",
+      "test": "test_bounds_empty_points",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestBounds::test_bounds_empty_points"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestBounds",
+      "test": "test_bounds_expand",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestBounds::test_bounds_expand"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestBounds",
+      "test": "test_bounds_padding",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestBounds::test_bounds_padding"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestVectorScene",
+      "test": "test_empty_scene",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestVectorScene::test_empty_scene"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestVectorScene",
+      "test": "test_add_polygon",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestVectorScene::test_add_polygon"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestVectorScene",
+      "test": "test_add_polygon_with_holes",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestVectorScene::test_add_polygon_with_holes"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestVectorScene",
+      "test": "test_add_polyline",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestVectorScene::test_add_polyline"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestVectorScene",
+      "test": "test_add_label",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestVectorScene::test_add_label"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestVectorScene",
+      "test": "test_compute_bounds",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestVectorScene::test_compute_bounds"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestVectorScene",
+      "test": "test_clear",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestVectorScene::test_clear"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestSvgGeneration",
+      "test": "test_empty_svg",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestSvgGeneration::test_empty_svg"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestSvgGeneration",
+      "test": "test_polygon_svg",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestSvgGeneration::test_polygon_svg"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestSvgGeneration",
+      "test": "test_polygon_with_holes_svg",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestSvgGeneration::test_polygon_with_holes_svg"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestSvgGeneration",
+      "test": "test_polyline_svg",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestSvgGeneration::test_polyline_svg"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestSvgGeneration",
+      "test": "test_label_svg",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestSvgGeneration::test_label_svg"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestSvgGeneration",
+      "test": "test_label_halo_svg",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestSvgGeneration::test_label_halo_svg"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestSvgGeneration",
+      "test": "test_labels_disabled",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestSvgGeneration::test_labels_disabled"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestSvgGeneration",
+      "test": "test_background_color",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestSvgGeneration::test_background_color"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestSvgGeneration",
+      "test": "test_viewbox",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestSvgGeneration::test_viewbox"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestSvgGeneration",
+      "test": "test_coordinate_precision",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestSvgGeneration::test_coordinate_precision"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestSvgGeneration",
+      "test": "test_xml_escape",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestSvgGeneration::test_xml_escape"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestSvgExport",
+      "test": "test_export_svg_file",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestSvgExport::test_export_svg_file"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestSvgExport",
+      "test": "test_export_with_custom_bounds",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestSvgExport::test_export_with_custom_bounds"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestPdfExport",
+      "test": "test_pdf_export_import_error",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestPdfExport::test_pdf_export_import_error"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestSvgValidation",
+      "test": "test_valid_svg",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestSvgValidation::test_valid_svg"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestSvgValidation",
+      "test": "test_valid_svg_with_dimensions",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestSvgValidation::test_valid_svg_with_dimensions"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestSvgValidation",
+      "test": "test_invalid_xml",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestSvgValidation::test_invalid_xml"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestSvgValidation",
+      "test": "test_missing_viewbox_and_dimensions",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestSvgValidation::test_missing_viewbox_and_dimensions"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestColorConversion",
+      "test": "test_opaque_color",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestColorConversion::test_opaque_color"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestColorConversion",
+      "test": "test_transparent_color",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestColorConversion::test_transparent_color"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestColorConversion",
+      "test": "test_fully_transparent_no_fill",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestColorConversion::test_fully_transparent_no_fill"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestIntegration",
+      "test": "test_complex_scene",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestIntegration::test_complex_scene"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_export_svg.py",
+      "class": "TestIntegration",
+      "test": "test_large_coordinate_values",
+      "disposition": "native-semantic-port",
+      "evidence": {
+        "file": "tests/unit/w20-vector-export.test.ts",
+        "test": "test_export_svg.py::TestIntegration::test_large_coordinate_values"
+      },
+      "adaptation": "Typed arrays and Blob replace Python lists/files; both native Rust projection probes are numeric browser tests; PDF fonts and even-odd paths are functional."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestBBox",
+      "test": "test_bbox_properties",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestBBox::test_bbox_properties"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestBBox",
+      "test": "test_bbox_immutable",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestBBox::test_bbox_immutable"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestPlateRegion",
+      "test": "test_region_dimensions",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestPlateRegion::test_region_dimensions"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestMapPlateConfig",
+      "test": "test_default_config",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestMapPlateConfig::test_default_config"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestMapPlateConfig",
+      "test": "test_custom_config",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestMapPlateConfig::test_custom_config"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestMapPlateLayout",
+      "test": "test_plate_dimensions",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestMapPlateLayout::test_plate_dimensions"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestMapPlateLayout",
+      "test": "test_default_background_white",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestMapPlateLayout::test_default_background_white"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestMapPlateLayout",
+      "test": "test_custom_background",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestMapPlateLayout::test_custom_background"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestMapPlateLayout",
+      "test": "test_map_region_blitted",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestMapPlateLayout::test_map_region_blitted"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestMapPlateLayout",
+      "test": "test_rgb_image_converted_to_rgba",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestMapPlateLayout::test_rgb_image_converted_to_rgba"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestMapPlateLayout",
+      "test": "test_grayscale_image_converted_to_rgba",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestMapPlateLayout::test_grayscale_image_converted_to_rgba"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestMapPlateTitle",
+      "test": "test_add_title",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestMapPlateTitle::test_add_title"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestMapPlateExport",
+      "test": "test_export_png",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestMapPlateExport::test_export_png"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestMapPlateExport",
+      "test": "test_export_jpeg",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestMapPlateExport::test_export_jpeg"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestLegendConfig",
+      "test": "test_default_config",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestLegendConfig::test_default_config"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestLegendConfig",
+      "test": "test_custom_config",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestLegendConfig::test_custom_config"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestLegendGeneration",
+      "test": "test_legend_ticks_count",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestLegendGeneration::test_legend_ticks_count"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestLegendGeneration",
+      "test": "test_legend_ticks_values",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestLegendGeneration::test_legend_ticks_values"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestLegendGeneration",
+      "test": "test_legend_ticks_labels",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestLegendGeneration::test_legend_ticks_labels"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestLegendGeneration",
+      "test": "test_legend_render_shape",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestLegendGeneration::test_legend_render_shape"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestLegendGeneration",
+      "test": "test_legend_render_vertical",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestLegendGeneration::test_legend_render_vertical"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestLegendGeneration",
+      "test": "test_legend_render_horizontal",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestLegendGeneration::test_legend_render_horizontal"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestLegendGeneration",
+      "test": "test_legend_gradient_converts_linear_rgb_to_display_srgb",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestLegendGeneration::test_legend_gradient_converts_linear_rgb_to_display_srgb"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestScaleBarConfig",
+      "test": "test_default_config",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestScaleBarConfig::test_default_config"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestScaleBarConfig",
+      "test": "test_custom_units",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestScaleBarConfig::test_custom_units"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestScaleBarGeodetic",
+      "test": "test_meters_per_pixel_equator",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestScaleBarGeodetic::test_meters_per_pixel_equator"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestScaleBarGeodetic",
+      "test": "test_meters_per_pixel_mid_latitude",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestScaleBarGeodetic::test_meters_per_pixel_mid_latitude"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestScaleBarGeodetic",
+      "test": "test_meters_per_pixel_high_latitude",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestScaleBarGeodetic::test_meters_per_pixel_high_latitude"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestScaleBarGeodetic",
+      "test": "test_meters_per_pixel_scales_with_width",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestScaleBarGeodetic::test_meters_per_pixel_scales_with_width"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestScaleBarRender",
+      "test": "test_scale_bar_renders",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestScaleBarRender::test_scale_bar_renders"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestScaleBarRender",
+      "test": "test_scale_bar_simple_style",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestScaleBarRender::test_scale_bar_simple_style"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestScaleBarRender",
+      "test": "test_scale_bar_different_units",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestScaleBarRender::test_scale_bar_different_units"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    },
+    {
+      "source": "test_map_plate_layout.py",
+      "class": "TestMapPlateIntegration",
+      "test": "test_full_plate_composition",
+      "disposition": "browser-equivalent",
+      "evidence": {
+        "file": "examples/cartography-checks.js",
+        "test": "test_map_plate_layout.py::TestMapPlateIntegration::test_full_plate_composition"
+      },
+      "adaptation": "Canvas/OffscreenCanvas and Blob replace PIL/numpy/filesystem; fixed browser font metrics; native integer anchor and map-fit controls are independent."
+    }
+  ]
+}
