@@ -267,6 +267,11 @@ function rgbePixelToFloat(pixel: Uint8Array, out: Float32Array, offset: number) 
 }
 
 export function decodeRgbe(data: Uint8Array): RgbeImage {
+  return decodeRgbeWithLimit(data, MAX_SOURCE_PIXELS * 16);
+}
+
+/** Internal bounded entry point: the same header parser owns size admission and decode. */
+export function decodeRgbeWithLimit(data: Uint8Array, maxDecodedBytes: number): RgbeImage {
   if (!(data instanceof Uint8Array)) {
     throw invalid("RGBE input must be a Uint8Array");
   }
@@ -322,6 +327,12 @@ export function decodeRgbe(data: Uint8Array): RgbeImage {
   }
   if (width * height > MAX_SOURCE_PIXELS) {
     throw resourceLimit("RGBE pixel count exceeds the supported limit");
+  }
+  if (!Number.isSafeInteger(maxDecodedBytes) || maxDecodedBytes < 1) {
+    throw invalid("RGBE maxDecodedBytes must be a positive safe integer");
+  }
+  if (width * height * 16 > maxDecodedBytes) {
+    throw new Forge3DError("RESOURCE_LIMIT_EXCEEDED", "RGBE decoded image exceeds the byte limit", { reason: "decoded-byte-limit" });
   }
   const rgba = new Float32Array(width * height * 4);
   const pixel = new Uint8Array(4);

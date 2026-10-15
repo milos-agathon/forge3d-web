@@ -116,12 +116,7 @@ export async function dispatchCodec<F extends CodecFormat>(format: F, bytes: Uin
       value = await new Ktx2Loader().load(bytes, { semantic: parameters.semantic!, capabilities: parameters.capabilities!, signal, maxBytes: Math.max(bytes.length, limit) }); break;
     }
     case 'hdr': {
-      // Validate the header bound before W04 allocates its float image.
-      const header = new TextDecoder().decode(bytes.subarray(0, Math.min(bytes.length, 65536)));
-      const shape = /\n[+-]Y (\d+) [+-]X (\d+)(?:\r?\n|$)/.exec(header);
-      if (!shape) throw codecFailure('INVALID_INPUT', 'corrupt-input', 'HDR resolution header is absent or too long', format);
-      checkCodecBytes(Number(shape[1]) * Number(shape[2]) * 16, limit);
-      value = (await import('./ibl.js')).decodeRgbe(bytes); break;
+      value = (await import('./ibl.js')).decodeRgbeWithLimit(bytes, limit); break;
     }
     case 'exr': {
       exrBound(bytes, limit);

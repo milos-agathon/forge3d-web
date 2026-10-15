@@ -72,6 +72,30 @@
       }
     },
     {
+      "format": "tiff",
+      "file": "multiband-strips.tif",
+      "sha256": "1731c70c2736d4d97ae671b13e46131642902477d99de01ea741bb178761aff4",
+      "bytes": 223,
+      "provenance": "Analytic TIFF RGB8 with two strips including a partial final strip; scripts/w22-strip-fixture.mjs",
+      "expected": {
+        "width": 3,
+        "height": 3,
+        "pixels": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "crs": "EPSG:4326",
+        "nodata": 255
+      }
+    },
+    {
       "format": "ktx2",
       "file": "rgba.ktx2",
       "sha256": "6f5a421f71e893499e066ed3e1181bcb0355f1f369a9c5db05b422ff1a7694ce",

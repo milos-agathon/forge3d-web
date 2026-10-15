@@ -1,3 +1,4 @@
+import { multibandStripTiff } from './w22-strip-fixture.mjs';
 import { readFileSync, writeFileSync, copyFileSync, mkdirSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { createDefaultContainer, write } from 'ktx-parse';
@@ -17,6 +18,8 @@ for (const [format, source, target, expected] of [
   copyFileSync(new URL(source, root), new URL(target, directory));
   record(format, target, source, expected);
 }
+writeFileSync(new URL('multiband-strips.tif', directory), multibandStripTiff());
+record('tiff','multiband-strips.tif','Analytic TIFF RGB8 with two strips including a partial final strip; scripts/w22-strip-fixture.mjs', {width:3,height:3,pixels:[1,2,3,4,5,6,7,8,9],crs:'EPSG:4326',nodata:255});
 const container = createDefaultContainer();
 Object.assign(container, { vkFormat:37, pixelWidth:2, pixelHeight:2, pixelDepth:0, layerCount:0, faceCount:1, levelCount:1 });
 const pixels = Uint8Array.from([255,0,0,255,0,255,0,255,0,0,255,255,255,255,255,255]);

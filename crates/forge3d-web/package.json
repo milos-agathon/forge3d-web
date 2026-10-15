@@ -51,8 +51,7 @@
     "examples/cartography-checks.js",
     "examples/cartography-worker.js",
     "examples/codecs.html",
-    "examples/codecs.js",
-    "tests/fixtures/w22"
+    "examples/codecs.js"
   ],
   "exports": {
     ".": {
@@ -114,7 +113,7 @@
     "test:w20": "vitest run tests/unit/w20-vector-export.test.ts tests/unit/w20-colormaps.test.ts tests/unit/w20-native-coverage.test.ts tests/unit/w20-native-extra.test.ts tests/unit/w20-review-regressions.test.ts tests/unit/w20-pdf-errors.test.ts tests/unit/w20-text-layout.test.ts && playwright test tests/playwright/w20_cartography.spec.ts --project=chromium-preflight",
     "test:package-consumer:w20": "node scripts/test-w20-package-consumer.mjs",
     "generate:codecs": "node scripts/generate-codec-catalog.mjs",
-    "test:w22": "node scripts/test-w22-basis-csp.mjs && node scripts/generate-codec-catalog.mjs --check && vitest run tests/unit/w22-codecs.test.ts && playwright test tests/playwright/w22_codecs.spec.ts --project=chromium-preflight",
+    "test:w22": "node scripts/test-w22-basis-csp.mjs && node scripts/generate-codec-catalog.mjs --check && vitest run tests/unit/w22-codecs.test.ts tests/unit/w22-review-regressions.test.ts tests/unit/w22-fingerprint.test.ts tests/unit/w22-cache-w04-regressions.test.ts && playwright test tests/playwright/w22_codecs.spec.ts --project=chromium-preflight",
     "test:package-consumer:w22": "node scripts/test-w22-package-consumer.mjs"
   },
   "devDependencies": {

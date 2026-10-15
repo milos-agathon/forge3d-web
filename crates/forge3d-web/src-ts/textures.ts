@@ -1067,7 +1067,12 @@ function loadBasisModule(
         "basis transcoder script did not expose the BASIS factory",
       );
     }
-    const module = await factory({ locateFile: () => wasmUrl });
+    let module: BasisModule;
+    try { module = await factory({ locateFile: () => wasmUrl }); }
+    catch (error) { throw new Forge3DError("WASM_LOAD_FAILED", "Basis transcoder could not be instantiated", { reason: "basis-module-unavailable", cause: String(error) }); }
+    if (typeof module?.initializeBasis !== "function") {
+      throw new Forge3DError("UNSUPPORTED_FEATURE", "Basis module does not expose initializeBasis", { reason: "basis-initializer-unavailable" });
+    }
     module.initializeBasis();
     return module;
   });

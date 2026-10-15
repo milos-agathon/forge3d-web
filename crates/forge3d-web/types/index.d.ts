@@ -2786,7 +2786,7 @@ export declare class Forge3DSession {
   endOfflineAccumulation(): boolean;
   capture(options?: CaptureOptions): Promise<CaptureResult>;
   renderOffline(options?: OfflineRenderOptions): Promise<OfflineResult>;
-  denoiseHdrFrame(frame: HdrFrame, aov?: AovFrame, settings?: DenoiseSettingsInput): Promise<HdrFrame>;
+  denoiseHdrFrame(frame: HdrFrame, aov?: AovFrame, settings?: DenoiseSettingsInput, options?: { signal?: AbortSignal }): Promise<HdrFrame>;
   whenReady(): Promise<void>;
   dispose(): void;
 }
@@ -2910,7 +2910,7 @@ export declare class Forge3DRuntime {
   /** Native `render_offline` on this runtime. */
   renderOffline(options?: OfflineRenderOptions): Promise<OfflineResult>;
   /** WebGPU A-trous denoise guided by the frame's AOVs. */
-  denoiseHdrFrame(frame: HdrFrame, aov?: AovFrame, settings?: DenoiseSettingsInput): Promise<HdrFrame>;
+  denoiseHdrFrame(frame: HdrFrame, aov?: AovFrame, settings?: DenoiseSettingsInput, options?: { signal?: AbortSignal }): Promise<HdrFrame>;
   dispose(): void;
 }
 

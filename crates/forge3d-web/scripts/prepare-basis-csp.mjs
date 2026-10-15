@@ -20,11 +20,13 @@ for(const [startMarker,endMarker,template] of [
 if(/\bnew\s+Function\s*\(|\beval\s*\(/.test(source))throw Error('Basis CSP glue still generates JavaScript dynamically');
 const bytes=Buffer.from(source),digest=createHash('sha256').update(bytes).digest('hex');
 const recorded=asset.build.artifacts.find(a=>a.name==='basis_transcoder.csp.js');
+const sri='sha384-'+createHash('sha384').update(bytes).digest('base64');
+if(!process.argv.includes('--update-lock')&&recorded?.sri!==sri)throw Error('Basis CSP adapter SRI differs from W00 lock');
 if(!process.argv.includes('--update-lock')&&recorded?.sha256!==digest)throw Error('Basis CSP adapter differs from W00 lock; review and update the adapter digest');
 const output=new URL('assets/basis/basis_transcoder.csp.js',root);
 if(!existsSync(output)||!readFileSync(output).equals(bytes))writeFileSync(output,bytes);
 if(process.argv.includes('--update-lock')) {
-  const entry={name:'basis_transcoder.csp.js',sha256:digest};
+  const entry={name:'basis_transcoder.csp.js',sha256:digest,sri:'sha384-'+createHash('sha384').update(bytes).digest('base64')};
   if(recorded)Object.assign(recorded,entry);else asset.build.artifacts.push(entry);
   asset.build.flags=[...new Set([...asset.build.flags,'csp-static-closure-adapter'])];
   asset.consumerTokens=[...new Set([...asset.consumerTokens,'basis_transcoder.csp.js'])];

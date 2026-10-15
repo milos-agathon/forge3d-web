@@ -13,6 +13,7 @@ for (const mode of ['source','dist']) test.describe(`W22 ${mode}`, () => {
       const registry = new api.CodecRegistry({ store });
       const manifest = await (await fetch('/tests/fixtures/w22/manifest.json')).json(), results=[];
       const digest = async bytes => [...new Uint8Array(await crypto.subtle.digest('SHA-256',bytes))].map(n=>n.toString(16).padStart(2,'0')).join('');
+      const snapshot = value => ArrayBuffer.isView(value) ? {type:value.constructor.name,bytes:[...new Uint8Array(value.buffer,value.byteOffset,value.byteLength)]} : Array.isArray(value) ? value.map(snapshot) : value && typeof value==='object' ? Object.fromEntries(Object.entries(value).sort(([a],[b])=>a.localeCompare(b)).map(([k,v])=>[k,snapshot(v)])) : value === undefined ? {undefined:true} : value;
       const arrays = value => ArrayBuffer.isView(value) ? [new Uint8Array(value.buffer,value.byteOffset,value.byteLength)] : value && typeof value==='object' ? Object.values(value).flatMap(arrays) : [];
       for (const fixture of manifest.fixtures) {
         const bytes=new Uint8Array(await (await fetch('/tests/fixtures/w22/'+fixture.file)).arrayBuffer());
@@ -22,7 +23,7 @@ for (const mode of ['source','dist']) test.describe(`W22 ${mode}`, () => {
         const decoded=await registry.decode(fixture.format,bytes), v=decoded.value;
         let conforms=false;
         if(fixture.format==='hdr')conforms=JSON.stringify([...v.data])===JSON.stringify(fixture.expected.pixels);
-        if(fixture.format==='tiff')conforms=v.width===16&&v.height===16&&v.data.every((n,i)=>n===i*3+7);
+        if(fixture.format==='tiff')conforms=fixture.expected.pixels?v.width===3&&v.height===3&&v.crs===fixture.expected.crs&&v.nodata===fixture.expected.nodata&&JSON.stringify([...v.data])===JSON.stringify(fixture.expected.pixels):v.width===16&&v.height===16&&v.data.every((n,i)=>n===i*3+7);
         if(fixture.format==='laz')conforms=v.positions.length/3===fixture.expected.count && await digest(v.positions)===fixture.expected.positionsSha256 && await digest(v.colors)===fixture.expected.colorsSha256;
         if(fixture.format==='glb')conforms=v.primitives.length===1&&v.primitives[0].mesh.positions.length===9;
         if(fixture.format==='ktx2')conforms=v.width===fixture.expected.width&&v.height===fixture.expected.height&&v.levels[0].data.length===v.width*v.height*4&&(fixture.expected.pixels?JSON.stringify([...v.levels[0].data])===JSON.stringify(fixture.expected.pixels):await digest(v.levels[0].data)===fixture.expected.rgbaSha256);
@@ -30,16 +31,16 @@ for (const mode of ['source','dist']) test.describe(`W22 ${mode}`, () => {
         if(fixture.format==='exr')conforms=v.width===2&&v.height===1&&v.channels.every(c=>JSON.stringify([...c.data])===JSON.stringify(fixture.expected.channels[c.name]));
         const fresh=new api.CodecRegistry({store}); const replay=await fresh.replay(decoded.cacheKey);
         const a=arrays(v),b=arrays(replay.value);
-        const exact=a.length===b.length&&a.every((values,i)=>values.length===b[i].length&&values.every((n,j)=>n===b[i][j]));
+        const exact=JSON.stringify(snapshot(v))===JSON.stringify(snapshot(replay.value))&&a.length===b.length&&a.every((values,i)=>values.length===b[i].length&&values.every((n,j)=>n===b[i][j]));
         await fresh.dispose();
         results.push({file:fixture.file,codec:decoded.codec.id,conforms,exact});
       }
-      await registry.dispose();return {results,stats:registry.stats(),persisted:records.size};
+      await registry.dispose();return {results,stats:registry.stats(),persisted:[...records.keys()].filter(k=>!k.endsWith('/index')).length};
     });
-    expect(result.results).toHaveLength(8);
+    expect(result.results).toHaveLength(9);
     for(const fixture of result.results){expect(fixture.conforms,fixture.file).toBe(true);expect(fixture.exact,fixture.file).toBe(true);}
     expect(result.stats).toMatchObject({disposed:true,activeOperations:0,cacheBytes:0,cacheEntries:0});
-    expect(result.persisted).toBe(8);
+    expect(result.persisted).toBe(9);
     await info.attach('w22-fixture-conformance.json',{body:JSON.stringify(result,null,2),contentType:'application/json'});
   });
   test('corruption, capabilities, abort and disposal are typed', async ({ page }) => {
@@ -137,4 +138,94 @@ for (const mode of ['source','dist']) test.describe(`W22 ${mode}`, () => {
     expect(result.lost).toBe('DEVICE_LOST');expect(result.recovered).toBe(16);expect(result.disposed).toBe('RUNTIME_DISPOSED');
     expect(result.memory).toBe(result.baseline);expect(result.stats).toMatchObject({activeOperations:0,cacheBytes:0,disposed:true});
   });
+
+  test('real fixture truncation and structural bit flips reach typed decoder failures',async({page},info)=>{
+    const results=await page.evaluate(async()=>{
+      const {api}=window.__w22,manifest=await(await fetch('/tests/fixtures/w22/manifest.json')).json(),results=[];
+      for(const fixture of manifest.fixtures){
+        const original=new Uint8Array(await(await fetch('/tests/fixtures/w22/'+fixture.file)).arrayBuffer());
+        const changed=original.slice(),v=new DataView(changed.buffer);
+        if(fixture.format==='tiff')v.setUint32(4,0xfffffff0,true);
+        if(fixture.format==='laz')v.setUint32(96,0xfffffff0,true);
+        if(fixture.format==='glb')v.setUint32(4,3,true);
+        if(fixture.format==='ktx2')v.setUint32(80,0xfffffff0,true);
+        if(fixture.format==='hdr'){const marker=new TextDecoder().decode(changed).indexOf('-Y ');changed[marker+1]=90;}
+        if(fixture.format==='exr'){const marker=new TextDecoder().decode(changed).indexOf('compression\0compression\0');if(marker<0)throw Error('missing EXR compression');changed[marker+24+4]=255;}
+        if(fixture.format==='glyph-pbf')changed[0]=15;
+        for(const [kind,bytes] of [['truncated',original.slice(0,-1)],['structural-bit-flip',changed]]){
+          const registry=new api.CodecRegistry();let failure;
+          try{await registry.decode(fixture.format,bytes);}catch(e){failure={code:e.code,reason:e.details?.reason};}
+          await registry.dispose();results.push({file:fixture.file,kind,failure,stats:registry.stats()});
+        }
+      }
+      return results;
+    });
+    for(const r of results){expect(r.failure,`${r.file} ${r.kind}`).toBeDefined();expect(['INVALID_INPUT','UNSUPPORTED_FEATURE'],`${r.file} ${r.kind}`).toContain(r.failure.code);expect(r.failure.reason).toBeTruthy();expect(r.stats).toMatchObject({activeOperations:0,workingBytes:0,cacheBytes:0});}
+    await info.attach('w22-real-corruption.json',{body:JSON.stringify(results,null,2),contentType:'application/json'});
+  });
+  test('missing WASM and worker support return exact browser capability reasons',async({page})=>{
+    const result=await page.evaluate(async()=>{
+      const {api}=window.__w22,r=new api.CodecRegistry(),wasm=globalThis.WebAssembly,worker=globalThis.Worker;
+      let noWasm,noWorker;
+      try{globalThis.WebAssembly=undefined;noWasm=['ktx2','exr','laz'].map(format=>r.select(format));globalThis.WebAssembly=wasm;globalThis.Worker=undefined;noWorker=r.select('laz');}
+      finally{globalThis.WebAssembly=wasm;globalThis.Worker=worker;await r.dispose();}
+      return {noWasm,noWorker};
+    });
+    for(const selection of result.noWasm)expect(selection).toMatchObject({status:'unavailable',code:'UNSUPPORTED_FEATURE',reason:'webassembly-unavailable'});
+    expect(result.noWorker).toMatchObject({status:'unavailable',format:'laz',code:'UNSUPPORTED_FEATURE',reason:'worker-hard-stop-unavailable'});
+  });
+  test('example decodes, replays and denoises an embedded HDR input',async({page})=>{
+    const demo=await page.evaluate(()=>window.__w22.demo);
+    expect(demo.decodedPixel).toEqual([1,0.5,0.25,1]);expect(demo.replayedPixel).toEqual(demo.decodedPixel);expect(demo.denoisedPixel).toEqual(demo.decodedPixel);
+  });
+  test('bounded repeated workflows and injected adapter quota failures release owned memory',async({page},info)=>{
+    const iterations=process.env.FORGE3D_W22_SOAK==='1'?128:8;
+    const result=await page.evaluate(async iterations=>{
+      const {api}=window.__w22,records=new Map(),store={get:async k=>records.get(k),put:async(k,v)=>{records.set(k,v.slice());},delete:async k=>{records.delete(k);},clear:async()=>records.clear()};
+      const runtime=await api.Forge3DRuntime.create(document.querySelector('canvas'),{width:16,height:16,devicePixelRatio:1,diagnostics:true}),baseline=runtime.getMemoryReport().currentBytes;
+      const frame=new api.HdrFrame(16,16,new Float32Array(16*16*4).fill(0.5)),normal=new Float32Array(16*16*3);for(let i=1;i<normal.length;i+=3)normal[i]=1;
+      const guides=new api.AovFrame({width:16,height:16,near:0.1,far:10,albedo:new Float32Array(normal.length).fill(0.5),normal});
+      let maxPersistent=0;
+      try{for(let i=0;i<iterations;i++){
+        const r=new api.CodecRegistry({store,persistentCacheBytes:1300,maxInputBytes:1024,maxDecodedBytes:65536});
+        const bytes=new Uint8Array([...new TextEncoder().encode('#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y 1 +X 1\n'),100+i%128,64,32,129]);
+        try{const d=await r.decode('hdr',bytes);await r.replay(d.cacheKey);await r.denoise(runtime,frame,guides);}finally{await r.dispose();}
+        const stats=r.stats();if(stats.workingBytes||stats.activeOperations||stats.cacheBytes)throw Error('retained registry allocation');
+        maxPersistent=Math.max(maxPersistent,[...records.values()].reduce((n,b)=>n+b.length,0));
+        if(runtime.getMemoryReport().currentBytes!==baseline)throw Error('retained native allocation');
+      }}finally{runtime.dispose();}
+      const quota=[];
+      for(const Constructor of [api.CacheStorageByteCache,api.IndexedDbByteCache,api.OpfsByteCache]){
+        const s=new Constructor({name:'w22-quota-'+Constructor.name}),put=s.put;s.put=async()=>{throw new DOMException('injected storage quota','QuotaExceededError');};
+        const r=new api.CodecRegistry({store:s});let error;
+        try{await r.decode('hdr',new Uint8Array([...new TextEncoder().encode('#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y 1 +X 1\n'),128,64,32,129]));}catch(e){error={code:e.code,reason:e.details.reason};}
+        finally{await r.dispose();s.put=put;await s.clear();}
+        quota.push({adapter:Constructor.name,error,stats:r.stats()});
+      }
+      return {iterations,baseline,maxPersistent,quota};
+    },iterations);
+    expect(result.iterations).toBe(iterations);expect(result.maxPersistent).toBeLessThanOrEqual(1300);
+    for(const r of result.quota){expect(r.error).toEqual({code:'IO_ERROR',reason:'cache-store-failed'});expect(r.stats).toMatchObject({activeOperations:0,workingBytes:0,cacheBytes:0});}
+    await info.attach('w22-soak-quota.json',{body:JSON.stringify(result,null,2),contentType:'application/json'});
+  });
+
+  test('M3 offline-denoise-v1 runs the original fixture through CodecRegistry',async({page},info)=>{
+    test.setTimeout(600_000);
+    await page.goto('/examples/test-w06-capture.html?registry'+(mode==='dist'?'&dist':''));
+    await page.waitForFunction(()=>!!(window as any).__forge3dW06?.fixture);
+    const r=await page.evaluate(()=>(window as any).__forge3dW06.fixture());
+    expect(r.registry.calls).toBe(3);
+    expect(r.registry.stats).toMatchObject({disposed:true,activeOperations:0,workingBytes:0,cacheBytes:0});
+    expect(r.exact.size).toEqual([1920,1080]);expect(r.exact.covered).toBeGreaterThan(100_000);
+    expect(r.exact.colorMax).toBeLessThanOrEqual(1e-5);expect(r.exact.aovMax).toBeLessThanOrEqual(1e-5);expect(r.exact.depthMax).toBeLessThanOrEqual(1e-6);
+    expect(r.ladder[1].used).toBe(1);expect(r.ladder[4].used).toBe(4);expect(r.ladder[16].used).toBe(16);
+    expect(r.ladder[4].psnr).toBeGreaterThan(r.ladder[1].psnr);expect(r.ladder[16].psnr).toBeGreaterThan(r.ladder[4].psnr);
+    expect(r.denoise.size).toEqual([1920,1080]);
+    expect(r.denoise.after.ssim-r.denoise.before.ssim).toBeGreaterThanOrEqual(0.02);
+    expect(r.denoise.after.mse).toBeLessThanOrEqual(r.denoise.before.mse*0.8);
+    expect(1-r.denoise.regression.ssim).toBeLessThanOrEqual(0.005);expect(r.denoise.gpuCpuMaxAbs).toBeLessThanOrEqual(1e-4);
+    expect(r.stream).toMatchObject({count:120,blank:0,exact:true,last:Math.round(119*1e6/30)});expect(r.stream.memoryAfter).toBe(r.stream.memoryBefore);
+    await info.attach('w22-offline-denoise-v1.json',{body:JSON.stringify(r,null,2),contentType:'application/json'});
+  });
+
 });

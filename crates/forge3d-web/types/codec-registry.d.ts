@@ -1,7 +1,7 @@
 import type { CodecDenoiseTarget, CodecDenoiseOptions, CodecDenoiserSelection } from './codec-denoiser.js';
-import type { HdrFrame, AovFrame } from "./index.js";
+import { HdrFrame, AovFrame } from "./index.js";
 import type { CodecFormat, CodecDecodeOptions, CodecReplayOptions, CodecRegistryOptions, CodecRegistryStats, CodecResult, CodecSelection, CodecSource } from './codec-types.js';
-/** Integrated E05 dispatch. No platform adapter or feature decoder is replaced. */
+/** Integrated E05 dispatch. Platform adapters and feature codecs retain ownership. */
 export declare class CodecRegistry {
     #private;
     constructor(options?: CodecRegistryOptions);
@@ -13,6 +13,5 @@ export declare class CodecRegistry {
     denoiserCapability(target?: CodecDenoiseTarget, method?: 'atrous' | 'oidn'): CodecDenoiserSelection;
     denoise(target: CodecDenoiseTarget, frame: HdrFrame, guides: AovFrame, options?: CodecDenoiseOptions): Promise<HdrFrame>;
     stats(): CodecRegistryStats;
-    /** Aborts IO/workers, drains submitted GPU work, and releases owned cache memory. */
     dispose(): Promise<void>;
 }

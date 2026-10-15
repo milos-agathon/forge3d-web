@@ -4,7 +4,7 @@
   "manifestId": "forge3d-composite-baseline-v1",
   "sourcePlan": {
     "path": "docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md",
-    "sha256": "746c744ae5a0aa793c86f17662a85316805c97e5e1bef0230748e71ea98144e2"
+    "sha256": "890b21f83dbfd63394f2636302bc3ae62776666716e4ecad09d766999b24effc"
   },
   "baselineLayers": [
     {
@@ -103,7 +103,7 @@
         "clean Rust/wasm/TypeScript/API/package/consumer checks, every Playwright project, physical browser evidence, loss/visibility/BFCache, memory soak, goldens and real data."
       ],
       "acceptance": [
-        "no G, P, E or G\u00c3\u00a2\u00e2\u20ac\u00a0\u00e2\u20ac\u2122C; every verified C row returns the exact typed status and is not advertised as rendering; visuals meet SSIM >= 0.98 or stricter row-specific threshold; numeric contracts meet manifest tolerances; disposal returns to baseline."
+        "no G, P, E or G→C; every verified C row returns the exact typed status and is not advertised as rendering; visuals meet SSIM >= 0.98 or stricter row-specific threshold; numeric contracts meet manifest tolerances; disposal returns to baseline."
       ],
       "targetId": "target:R01",
       "xcLinks": []
@@ -53448,7 +53448,7 @@
   ],
   "dependencyLock": {
     "path": "docs/parity/dependency-lock.json",
-    "sha256": "0a6b640f0388cfa856e291714d756c8b0ab4ff309935209333ff34c45efb759a",
+    "sha256": "0eeef5d834dff7e7bd43ea755abeeff6904bba5ba0b037988143b11edc096971",
     "requiredAssetIds": [
       "harfbuzzjs",
       "proj-wasm",

@@ -2,7 +2,9 @@ import { HdrFrame, AovFrame } from "./index.js";
 import type { DenoiseSettingsInput } from './index.js';
 /** Implemented by W06 Forge3DRuntime and Forge3DSession. Application-owned. */
 export interface CodecDenoiseTarget {
-    denoiseHdrFrame(frame: HdrFrame, aov?: AovFrame, settings?: DenoiseSettingsInput): Promise<HdrFrame>;
+    denoiseHdrFrame(frame: HdrFrame, aov?: AovFrame, settings?: DenoiseSettingsInput, options?: {
+        signal?: AbortSignal;
+    }): Promise<HdrFrame>;
 }
 export type CodecDenoiserSelection = {
     status: 'selected';

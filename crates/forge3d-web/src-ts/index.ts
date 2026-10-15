@@ -3787,7 +3787,12 @@ export class Forge3DRuntime {
     frame: HdrFrame,
     aov?: AovFrame,
     settings: DenoiseSettingsInput = {},
+    options: { signal?: AbortSignal } = {},
   ): Promise<HdrFrame> {
+    const checkCancelled = () => {
+      if (options.signal?.aborted) throw new Forge3DError("REQUEST_CANCELLED", "HDR denoise was cancelled");
+    };
+    checkCancelled();
     this.#assertNotDisposed();
     const denoise = this.#inner.denoiseHdr;
     if (denoise === undefined) {
@@ -3812,7 +3817,11 @@ export class Forge3DRuntime {
     if (aov?.hasAlbedo === true && resolved.guides.albedo) input.albedo = aov.albedo();
     if (aov?.hasNormal === true && resolved.guides.normal) input.normal = aov.normal();
     if (aov?.hasDepth === true && resolved.guides.depth) input.depth = aov.depth();
-    const data = await this.#offlineReadback(() => denoise.call(this.#inner, input));
+    const data = await this.#offlineReadback(() => {
+      checkCancelled();
+      return denoise.call(this.#inner, input);
+    });
+    checkCancelled();
     return new HdrFrame(frame.width, frame.height, new Float32Array(data));
   }
 

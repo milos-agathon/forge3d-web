@@ -68,10 +68,11 @@ run(
   consumer,
 );
 const installed = join(consumer, "node_modules/@forge3d/web");
+assert(!metadata.files.some(file => file.path.startsWith('tests/fixtures/w22/')), 'W22 test data must not ship in the tarball');
 for (const file of [
   'dist/codec-registry.js','dist/codec-catalog.js','dist/codec-dispatch.js','dist/codec-denoiser.js',
   'types/codec-registry.d.ts','types/codec-types.d.ts','docs/codecs.md','examples/codecs.html',
-  'examples/codecs.js','tests/fixtures/w22/manifest.json','dist/forge3d_web_bg.wasm'
+  'examples/codecs.js','dist/forge3d_web_bg.wasm'
 ]) assert(statSync(join(installed,file)).size>0,file);
 writeFileSync(join(consumer,'consumer.ts'),`import { CodecRegistry, Forge3DSession, HdrFrame, AovFrame, type CodecResult, type CodecRegistryOptions } from '@forge3d/web';
 async function workflow(session:Forge3DSession,frame:HdrFrame,guides:AovFrame,options:CodecRegistryOptions){const r=new CodecRegistry(options);const value:CodecResult<'hdr'>=await r.decode('hdr',new Blob([]));const channel:number=value.value.data[0];await r.replay(value.cacheKey,{format:'hdr'});const result:HdrFrame=await r.denoise(session,frame,guides);await r.dispose();return result;}void workflow;`);
@@ -98,7 +99,11 @@ const server = createServer((req, res) => {
     const url = new URL(req.url, "http://localhost"),
       pathname = decodeURIComponent(url.pathname);
     if (!['/dist/', '/assets/', '/examples/', '/tests/fixtures/w22/'].some(prefix => pathname.startsWith(prefix))) throw Error('consumer route unavailable');
-    const path = resolve(installed, '.' + pathname), rel = relative(installed, path);
+    // Test inputs and the original W06 fixture harness are external to the tarball.
+    // Every implementation module/worker/WASM asset must resolve from installed.
+    const fixture = pathname.startsWith('/tests/fixtures/w22/') || pathname === '/examples/test-w06-capture.html';
+    const servedRoot = fixture ? root : installed;
+    const path = resolve(servedRoot, '.' + pathname), rel = relative(servedRoot, path);
     if (rel.startsWith('..') || isAbsolute(rel)) throw Error('outside consumer');
     let bytes = readFileSync(path);
     // HTML parsing normalizes CRLF and lone CR before CSP hashes inline scripts.
@@ -164,6 +169,7 @@ try {
     wasmSha256: createHash("sha256").update(readFileSync(join(installed, "dist/forge3d_web_bg.wasm"))).digest("hex"),
     wasmRebuilt: true,
     servedRoot: installed,
+    externalTestInputs: root,
     tarball,
     installed,
     exitCode: result,

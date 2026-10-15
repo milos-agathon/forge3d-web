@@ -350,7 +350,8 @@
           },
           {
             "name": "basis_transcoder.csp.js",
-            "sha256": "9bd1fe3260b32ea9641eae9c60ae966fd8166a94d76895bbf82d671b35b58ef2"
+            "sha256": "9bd1fe3260b32ea9641eae9c60ae966fd8166a94d76895bbf82d671b35b58ef2",
+            "sri": "sha384-UL27+PoLy1geuMZazGJgTo6BydZgfsfDYwkLG5tNgttzVq4t8cx1yTdK/tE+5Gv9"
           }
         ]
       },

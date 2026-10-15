@@ -61,7 +61,7 @@ describe('W22 integrated E05 registry', () => {
     a.value.data.fill(0);
     await registry.dispose();
     expect(registry.stats()).toMatchObject({ disposed: true, activeOperations: 0, cacheBytes: 0, cacheEntries: 0 });
-    expect(store.entries.size).toBe(1);
+    expect([...store.entries.keys()].filter(key=>key!=='forge3d-codec-v1/index')).toHaveLength(1);
     const fresh = new CodecRegistry({ store });
     const replay = await fresh.replay(key, {format:'hdr'});
     expect([...replay.value.data]).toEqual([1,0.5,0.25,1,0.25,0.5,1,1]);

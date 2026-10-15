@@ -55,6 +55,10 @@ export interface CodecReplayOptions<F extends CodecFormat = CodecFormat> {
 export interface CodecRegistryOptions {
   maxInputBytes?: number;
   maxDecodedBytes?: number;
+  /** Admission bound for registry-owned transient copies and decoded output. */
+  maxWorkingBytes?: number;
+  /** Includes the managed persistent index and artifacts; default 64 MiB. */
+  persistentCacheBytes?: number;
   cacheBytes?: number;
   maxConcurrent?: number;
   /** W02 storage adapter; owned by the application and retained after disposal. */
@@ -74,5 +78,10 @@ export interface CodecRegistryStats {
   cacheEntries: number;
   cacheHits: number;
   cacheMisses: number;
+  workingBytes: number;
+  peakWorkingBytes: number;
+  workingBudgetBytes: number;
+  persistentBytes: number;
+  persistentEntries: number;
 }
 export type CodecSource = BrowserByteSource;

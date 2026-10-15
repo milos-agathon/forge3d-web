@@ -171,6 +171,7 @@ function tileToFloat32(
   sampleFormat: number[],
   band: number,
   littleEndian: boolean,
+  validHeight = parameters.tileHeight,
 ): Float32Array {
   const { tileWidth, tileHeight, planarConfiguration, samplesPerPixel } = parameters;
   const out = new Float32Array(tileWidth * tileHeight);
@@ -212,7 +213,11 @@ function tileToFloat32(
             : (offset) => view.getUint32(offset, littleEndian);
     }
   }
-  for (let index = 0; index < out.length; index += 1) {
+  const validPixels = tileWidth * validHeight;
+  if (decoded.byteLength < validPixels * stride) {
+    throw new Forge3DError("IO_ERROR", "TIFF sample data is truncated", { reason: "cog-truncated-samples" });
+  }
+  for (let index = 0; index < validPixels; index += 1) {
     out[index] = read(base + index * stride);
   }
   return out;
@@ -540,6 +545,7 @@ export class CogDataset {
       level.sampleFormat,
       0,
       this.geotiff.littleEndian,
+      level.image.isTiled ? level.tileHeight : Math.min(level.tileHeight, level.height - y * level.tileHeight),
     );
     this.cachePut(cacheKey, float32);
     return float32.slice();
@@ -692,8 +698,8 @@ export class CogDataset {
         : sample * level.tilesAcross * level.tilesDown + planarIndex;
     const directory = level.directory;
     const [offset, byteCount] = await Promise.all([
-      directory.loadValueIndexed("TileOffsets", tileIndex),
-      directory.loadValueIndexed("TileByteCounts", tileIndex),
+      directory.loadValueIndexed(level.image.isTiled ? "TileOffsets" : "StripOffsets", tileIndex),
+      directory.loadValueIndexed(level.image.isTiled ? "TileByteCounts" : "StripByteCounts", tileIndex),
     ]);
     throwIfCancelled(options.signal);
     if (byteCount === undefined || byteCount === 0) return undefined;
@@ -756,6 +762,7 @@ export class CogDataset {
               level.sampleFormat,
               sample,
               this.geotiff.littleEndian,
+              level.image.isTiled ? level.tileHeight : Math.min(level.tileHeight, level.height - y * level.tileHeight),
             ),
           );
         }
@@ -776,6 +783,7 @@ export class CogDataset {
           level.sampleFormat,
           sample,
           this.geotiff.littleEndian,
+          level.image.isTiled ? level.tileHeight : Math.min(level.tileHeight, level.height - y * level.tileHeight),
         ),
       );
     }

@@ -7,7 +7,7 @@ import type { DenoiseSettingsInput } from './index.js';
 
 /** Implemented by W06 Forge3DRuntime and Forge3DSession. Application-owned. */
 export interface CodecDenoiseTarget {
-  denoiseHdrFrame(frame: HdrFrame, aov?: AovFrame, settings?: DenoiseSettingsInput): Promise<HdrFrame>;
+  denoiseHdrFrame(frame: HdrFrame, aov?: AovFrame, settings?: DenoiseSettingsInput, options?: { signal?: AbortSignal }): Promise<HdrFrame>;
 }
 export type CodecDenoiserSelection =
   | { status: 'selected'; id: 'webgpu-atrous'; requested: 'atrous' | 'oidn'; equivalent: boolean; revision: string; owner: 'W06' }
@@ -28,6 +28,6 @@ export async function dispatchCodecDenoiser(target: CodecDenoiseTarget, frame: H
   if ((settings.guides.albedo && !guides.hasAlbedo) || (settings.guides.normal && !guides.hasNormal) || (settings.guides.depth && !guides.hasDepth)) throw codecFailure('INVALID_INPUT', 'missing-denoise-guide', 'Every enabled AOV guide must be present');
   checkCodecBytes(frame.width * frame.height * 68, limit);
   // W06 owns GPU admission, exclusive readback, device-loss checks and buffer release.
-  try { return await target.denoiseHdrFrame(frame, guides, { ...settings.toJSON(), method: 'atrous' }); }
+  try { return await target.denoiseHdrFrame(frame, guides, { ...settings.toJSON(), method: 'atrous' }, options.signal ? { signal: options.signal } : {}); }
   catch (error) { throw Forge3DError.from(error); }
 }
