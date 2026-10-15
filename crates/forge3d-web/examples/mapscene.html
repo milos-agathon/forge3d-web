@@ -7,6 +7,7 @@
 <script type="module">
 const dist=new URLSearchParams(location.search).has('dist');
 const api=await import(/* @vite-ignore */(dist?'/dist/index.js':'/src-ts/index.ts'));
+await (await import('./example-license.js')).exampleLicense(api);
 const helpers=await import('/examples/w18-mapscene.js');
 let result;
 const render=async()=>{

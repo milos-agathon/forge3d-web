@@ -1,3 +1,4 @@
+import licenses from '../fixtures/w21/licenses.json' with { type: 'json' };
 import { test, expect } from "../browser/webgpu-fixture";
 declare global {
     interface Window {
@@ -10,7 +11,7 @@ for (const dist of [false, true]) {
         test(`W18 ${label}: post-processing cannot conceal empty geometry and overlay-only output is covered`,async({page})=>{
             const r=await page.evaluate(async()=>{const {api,baseRecipe}=window.__w18,r=baseRecipe();delete r.terrain;r.postFx={effects:[{kind:'tonemap',operator:'exposure',exposure:2}]};r.layers=[{kind:'nodes',layerId:'hidden',nodes:[{kind:'ground-plane',name:'hidden-plane',size:[4,4],height:0,color:[1,0,0,1],transform:{translation:[1000,0,0]}}]}];const empty=new api.MapScene(r),preflight=empty.validate().status;let code,reason;try{await empty.render();}catch(e:any){code=e.code;reason=e.details?.reason;}const review=await empty.reviewRecord();empty.dispose();r.layers=[{kind:'nodes',layerId:'overlay',nodes:[{kind:'overlay',name:'panel',bounds:[20,20,30,20],color:[1,.2,.1,1]}]}];const filled=new api.MapScene(r),result=await filled.render().catch((e:any)=>{throw Error(JSON.stringify(e.details));});filled.dispose();return {code,reason,preflight,review,coverage:result.metrics.coveragePixels};});expect(r.preflight).toBe('ok');expect(r.reason).toBe('empty-render-output');expect(r.code).toBe('UNSUPPORTED_FEATURE');expect(r.review.last_render).toBeNull();expect(r.coverage).toBe(600);
         });
-        test.beforeEach(async ({ page }) => { await page.goto('/examples/mapscene.html' + (dist ? '?dist' : '')); await page.waitForFunction(() => window.__w18?.ready); });
+        test.beforeEach(async ({ page }) => { await page.addInitScript(key=>sessionStorage.setItem('forge3d-example-license',key),licenses.active); await page.goto('/examples/mapscene.html' + (dist ? '?dist' : '')); await page.waitForFunction(() => window.__w18?.ready); });
         test(`W18 ${label}: multilayer example renders real geometry, glyphs and PNG`, async ({ page }, info) => {
             test.setTimeout(120000);
             const result = await page.evaluate(() => window.__w18.renderExample());

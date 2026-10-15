@@ -114,9 +114,13 @@ scene metadata. W16 owns b3dm extraction/traversal and will consume this decoder
 dispose cancels them. Source reads support progress, abort and byte budgets.
 Public `loadHdr` consumes W04's RGBE decoder; `exportHdr` writes Radiance RGBE
 with modern scanlines. RGBE is quantized HDR; it is not a lossless float format.
-`loadImage` and `exportImage` use browser bitmap/Canvas codecs for PNG/JPEG/WebP
-and release temporary ImageBitmaps. Browser alpha premultiplication and lossy
-formats can affect pixel fidelity; opaque PNG round trips are tested exactly.
+`loadImage` first uses the exact PNG decoder. IO_ERROR or
+RESOURCE_LIMIT_EXCEEDED falls back to the previous bitmap/Canvas path with the
+256 MiB mesh limit, preserving browser PNG compatibility. `pngToArray` remains
+strict with its 16,777,216-pixel cap. `exportImage` uses exact PNG encoding;
+JPEG/WebP use browser codecs. Temporary ImageBitmaps are released. Canvas
+premultiplication and lossy formats can affect fallback pixel fidelity. See
+[image utility contracts](utilities.md).
 
 ## Buildings and diagnostics
 

@@ -1,3 +1,5 @@
+import { encodePng } from './frames.js';
+import { decodePng, isPng } from './png-decode.js';
 import { decodeRgbe } from "./ibl.js";
 import { readByteSource } from "./browser-io.js";
 import { Forge3DError } from "./index.js";
@@ -82,15 +84,27 @@ export async function loadImage(
   o: ByteReadOptions = {},
 ): Promise<RasterImage> {
   const bytes = await readByteSource(source, o);
-  if (typeof createImageBitmap === "undefined")
-    throw new Forge3DError("UNSUPPORTED_FEATURE", "image decoder unavailable");
-  let bitmap: ImageBitmap;
+  if (isPng(bytes)) {
+    try { return decodePng(bytes); }
+    catch (error) {
+      // Preserve the pre-W21 general image loader's browser decoder compatibility
+      // and 256 MiB mesh limit. pngToArray remains the strict, bounded PNG API.
+      if (!(error instanceof Forge3DError) || !['IO_ERROR', 'RESOURCE_LIMIT_EXCEEDED'].includes(error.code)) throw error;
+    }
+  }
+  let bitmap: ImageBitmap | HTMLImageElement;
   try {
-    bitmap = await createImageBitmap(new Blob([bytes as BlobPart]), {
+    if (typeof createImageBitmap === "undefined") {
+      if (typeof Image === "undefined") throw new Forge3DError("UNSUPPORTED_FEATURE", "image decoder unavailable");
+      const url = URL.createObjectURL(new Blob([bytes as BlobPart]));
+      try { bitmap = await new Promise<HTMLImageElement>((resolve,reject) => { const image = new Image(); image.onload=()=>resolve(image); image.onerror=()=>reject(new Forge3DError("IO_ERROR","image decode failed")); image.src=url; }); }
+      finally { URL.revokeObjectURL(url); }
+    } else bitmap = await createImageBitmap(new Blob([bytes as BlobPart]), {
       premultiplyAlpha: "none",
       colorSpaceConversion: "none",
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof Forge3DError) throw error;
     throw new Forge3DError("IO_ERROR", "image decode failed");
   }
   try {
@@ -114,7 +128,7 @@ export async function loadImage(
       data: ctx.getImageData(0, 0, bitmap.width, bitmap.height).data,
     };
   } finally {
-    bitmap.close();
+    if ("close" in bitmap) bitmap.close();
   }
 }
 export async function exportImage(
@@ -136,6 +150,11 @@ export async function exportImage(
   if (o.signal?.aborted)
     throw new Forge3DError("REQUEST_CANCELLED", "image export cancelled");
   if (o.quality !== undefined) meshNumber(o.quality, "quality", 0, 1);
+  if ((o.type ?? "image/png") === "image/png") {
+    const blob = await encodePng(w, h, new Uint8Array(image.data));
+    if (o.signal?.aborted) throw new Forge3DError("REQUEST_CANCELLED", "image export cancelled");
+    return blob;
+  }
   const c = canvas(w, h),
     ctx = c.getContext("2d") as
       | OffscreenCanvasRenderingContext2D

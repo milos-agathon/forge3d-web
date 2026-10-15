@@ -2,6 +2,7 @@ const dist = new URLSearchParams(location.search).has("dist");
 const api = dist
   ? await import("../dist/index.js")
   : await import("../src-ts/index.ts");
+await (await import('./example-license.js')).exampleLicense(api);
 const canvas = document.querySelector("canvas");
 const fixture = (name) =>
   new URL(`../tests/fixtures/w15/${name}`, import.meta.url);

@@ -1,3 +1,4 @@
+import licenses from '../fixtures/w21/licenses.json' with { type: 'json' };
 import { test, expect } from "../browser/webgpu-fixture";
 declare global { interface Window { __w19: any; } }
 const nativeLayerIds = ['native-base:raster:0', 'native-base:vector:0', 'native-base:vector:1', 'native-review-0:vector:0'];
@@ -11,6 +12,7 @@ for (const dist of [false, true]) {
                 if (message.type() === 'error') errors.push(message.text());
                 if (message.text().startsWith('[W19-native-timing]')) console.info(`${label}: ${message.text()}`);
             });
+            await page.addInitScript(key => sessionStorage.setItem('forge3d-example-license',key), licenses.active);
             await page.goto('/examples/style-bundle.html' + (dist ? '?dist' : '?source'));
             try { await page.waitForFunction(() => window.__w19?.ready); }
             catch (error) { throw new Error(`W19 example startup failed: ${errors.join('\n') || await page.locator('#status').textContent()}`, { cause: error }); }

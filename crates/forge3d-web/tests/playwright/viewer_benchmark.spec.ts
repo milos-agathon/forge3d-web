@@ -14,7 +14,7 @@ import {
 } from "../browser/playwright-project-metadata";
 import { collectPlaywrightLaunchDiagnostics } from "../browser/playwright-launch-diagnostics";
 import { validateBrowserEvidence } from "../browser/evidence-validator.mjs";
-import { runViewerBenchmark } from "../browser/viewer-benchmark";
+import { runViewerBenchmark, runViewerOperationBenchmark } from "../browser/viewer-benchmark";
 import {
   runViewerInteractionObservation,
 } from "../browser/viewer-interaction-observation.mjs";
@@ -200,6 +200,11 @@ test("validates complete evidence from the frozen real-GPU benchmark", async ({
       requireReleaseArtifact: false,
     }),
   ).toBe(record);
+  // Keep the v1 evidence/schema untouched; attach the public operation report separately.
+  const operationBenchmark = await runViewerOperationBenchmark(page, { iterations: 3, warmup: 1 });
+  await testInfo.attach('forge3d-viewer-operation-benchmark.json', {
+    body: JSON.stringify(operationBenchmark, null, 2), contentType: 'application/json',
+  });
 });
 
 async function exerciseRequiredInteractions(

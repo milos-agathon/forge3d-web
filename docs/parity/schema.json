@@ -85,8 +85,8 @@
         "sha256": { "$ref": "#/$defs/sha256" },
         "requiredAssetIds": {
           "type": "array",
-          "minItems": 12,
-          "maxItems": 12,
+          "minItems": 13,
+          "maxItems": 13,
           "items": { "$ref": "#/$defs/nonBlank" }
         }
       }
@@ -467,8 +467,8 @@
         "policy": { "$ref": "#/$defs/nonBlank" },
         "assets": {
           "type": "array",
-          "minItems": 12,
-          "maxItems": 12,
+          "minItems": 13,
+          "maxItems": 13,
           "items": { "$ref": "#/$defs/dependencyAsset" }
         }
       }

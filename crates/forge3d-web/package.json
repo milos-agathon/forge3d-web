@@ -43,6 +43,9 @@
     "README.md",
     "LICENSE",
     "LICENSE-APACHE",
+    "examples/utilities.html",
+    "examples/utilities-worker.js",
+    "examples/example-license.js",
     "examples/cartography.html",
     "examples/cartography.js",
     "examples/cartography-checks.js",
@@ -103,11 +106,14 @@
     "test:package-consumer:w18": "node scripts/test-w18-package-consumer.mjs",
     "test:w19": "vitest run tests/unit/w19-style-bundle.test.ts tests/unit/w19-native-contract.test.ts tests/unit/w19-native-replay.test.ts tests/unit/w19-native-equivalents.test.ts && playwright test tests/playwright/w19_style_bundle.spec.ts --project=chromium-preflight",
     "test:package-consumer:w19": "node scripts/test-w19-package-consumer.mjs",
+    "test:w21": "vitest run tests/unit/w21-license.test.ts tests/unit/w21-images.test.ts tests/unit/w21-benchmark.test.ts tests/unit/w21-review-license.test.ts tests/unit/w21-review-benchmark.test.ts tests/unit/w21-review-status.test.ts && playwright test tests/playwright/w21_utilities.spec.ts --project=chromium-preflight",
+    "test:package-consumer:w21": "node scripts/test-w21-package-consumer.mjs",
     "test:w20": "vitest run tests/unit/w20-vector-export.test.ts tests/unit/w20-colormaps.test.ts tests/unit/w20-native-coverage.test.ts tests/unit/w20-native-extra.test.ts tests/unit/w20-review-regressions.test.ts tests/unit/w20-pdf-errors.test.ts tests/unit/w20-text-layout.test.ts && playwright test tests/playwright/w20_cartography.spec.ts --project=chromium-preflight",
     "test:package-consumer:w20": "node scripts/test-w20-package-consumer.mjs"
   },
   "devDependencies": {
-    "@pdf-lib/fontkit": "1.1.1",
+    "@noble/ed25519": "3.2.0",
+    "@noble/hashes": "2.0.1",
     "@playwright/test": "^1.56.1",
     "fflate": "0.8.3",
     "geotiff": "3.0.5",
@@ -115,14 +121,15 @@
     "ktx-parse": "1.1.0",
     "laz-perf": "0.0.7",
     "mediabunny": "1.58.0",
-    "pdf-lib": "1.17.1",
     "proj-wasm": "0.1.0-alpha9",
-    "regenerator-runtime": "0.14.1",
     "selenium-webdriver": "4.35.0",
     "typescript": "^6.0.3",
     "vite": "^8.0.16",
     "vitest": "4.0.18",
     "wasm-pack": "^0.15.0",
-    "yaml": "^2.8.1"
+    "yaml": "^2.8.1",
+    "@pdf-lib/fontkit": "1.1.1",
+    "pdf-lib": "1.17.1",
+    "regenerator-runtime": "0.14.1"
   }
 }

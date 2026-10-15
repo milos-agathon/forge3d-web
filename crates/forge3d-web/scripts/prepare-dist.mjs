@@ -49,6 +49,15 @@ if (ktxVersion !== "1.1.0") {
 }
 const vendor = join(dist, "vendor");
 mkdirSync(vendor, { recursive: true });
+const nobleRoot = join(root, 'node_modules', '@noble', 'ed25519');
+if (JSON.parse(readRequired(join(nobleRoot,'package.json'))).version !== '3.2.0') throw Error('noble-ed25519 version mismatch');
+copyVendoredScript(join(nobleRoot,'index.js'),join(vendor,'noble-ed25519.js'));
+copyRequired(join(nobleRoot,'LICENSE'),join(vendor,'noble-ed25519.LICENSE'));
+const hashesRoot = join(root,'node_modules','@noble','hashes');
+if (JSON.parse(readRequired(join(hashesRoot,'package.json'))).version !== '2.0.1') throw Error('noble-hashes version mismatch');
+mkdirSync(join(vendor,'noble-hashes'),{recursive:true});
+for (const file of ['sha2.js','_md.js','_u64.js','utils.js']) copyVendoredScript(join(hashesRoot,file),join(vendor,'noble-hashes',file));
+copyRequired(join(hashesRoot,'LICENSE'),join(vendor,'noble-hashes','LICENSE'));
 // W20: exact W00-pinned browser bundles; no bare imports or runtime CDN.
 for (const [name,version,source,output] of [['pdf-lib','1.17.1','dist/pdf-lib.esm.min.js','pdf-lib']]) {
   const dependencyRoot=join(root,'node_modules',name);
@@ -147,6 +156,8 @@ for (const file of readdirSync(dist)) {
   const path = join(dist, file);
   const source = readFileSync(path, "utf8");
   const rewritten = source
+    .replaceAll("from '@noble/ed25519'", "from './vendor/noble-ed25519.js'")
+    .replaceAll("from '@noble/hashes/sha2.js'", "from './vendor/noble-hashes/sha2.js'")
     .replaceAll("import('pdf-lib')", "import('./vendor/pdf-lib.js')")
     .replaceAll("import('./vendor/fontkit-entry.js')", "import('./vendor/fontkit.js')")
     .replaceAll("from 'fflate'", "from './vendor/fflate.js'")
@@ -172,6 +183,8 @@ for (const file of readdirSync(dist)) {
 
 // Package asset manifest: SHA-256 of every emitted self-hosted third-party asset.
 const assetManifest = [
+  ...['noble-ed25519.js','noble-ed25519.LICENSE'].map(file=>['dist/vendor/'+file,'@noble/ed25519@3.2.0']),
+  ...['sha2.js','_md.js','_u64.js','utils.js','LICENSE'].map(file=>['dist/vendor/noble-hashes/'+file,'@noble/hashes@2.0.1']),
   ['dist/vendor/pako.LICENSE','pako@1.0.11'],
   ['dist/cartography-font-metrics.js','dejavu-fonts@2.37 / Pillow BASIC metrics'],
   ['dist/vendor/regenerator-runtime.LICENSE','regenerator-runtime@0.14.1'],
@@ -246,6 +259,7 @@ for (const file of ['style-native-values','bundle-style-assets','style-expressio
   copyRequired(join(dist,file+'.d.ts'),join(root,'types',file+'.d.ts'));
 }
 
+for (const file of ['license','image-array','png-decode','benchmark']) writeFileSync(join(root,'types',file+'.d.ts'),readRequired(join(dist,file+'.d.ts')).replaceAll('./renderer-config.js','./index.js'));
 for (const file of ['cartography-common','cartography-fonts','cartography-canvas','colormaps','colormap-io','map-layout','map-legend','map-scale-bar','map-north-arrow','map-plate','vector-export-scene','vector-export','vector-pdf']) {
   writeFileSync(join(root,'types',file+'.d.ts'),readRequired(join(dist,file+'.d.ts')).replace(/from (["'])\.\/(frames)\.js\1/g,'from "./index.js"'));
 }

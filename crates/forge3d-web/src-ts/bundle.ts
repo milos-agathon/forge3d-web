@@ -1,3 +1,4 @@
+import { requirePro, PRO_FEATURES } from './license.js';
 import { Forge3DError, type BrowserByteSource, type BrowserByteSink } from './index.js';
 import { readByteSource } from './browser-io.js';
 import { styleAssetUrls, assessBundleStyle } from './bundle-style-assets.js';
@@ -42,6 +43,7 @@ async function embedGltf(bytes: Uint8Array, base: string, options: BundleOptions
 }
 /** Every payload, including canonical review state and diagnostics, is SHA-256 verified on load. */
 export async function saveBundle(state: SceneState | SceneStateInput, options: SaveBundleOptions = {}): Promise<Blob> {
+    requirePro(PRO_FEATURES.bundleSave);
     bundleCancelled(options.signal); const limits = bundleLimits(options), canonical = state instanceof SceneState ? state : new SceneState(state);
     const files: Record<string, Uint8Array> = Object.create(null), media: Record<string, string> = Object.create(null), aliases: Record<string, string> = Object.create(null), cache = new Map<string, { reference: string; originalHash: string; hash: string }>(); let size = 0;
     const add = async (data: Uint8Array, type: string) => {
@@ -210,6 +212,7 @@ async function loadVerifiedBundle(source: BrowserByteSource | FileSystemFileHand
     return new LoadedBundle(manifest, state, files, manifest.version === 1 || state.value.nativeSceneState ? manifest.version : null);
 }
 export async function loadBundle(source: BrowserByteSource | FileSystemFileHandle, options: BundleOptions = {}): Promise<LoadedBundle> {
+    requirePro(PRO_FEATURES.bundleLoad);
     try { return await loadVerifiedBundle(source, options); }
     catch (e) { bundleCancelled(options.signal); if (e instanceof Forge3DError) throw e; throw new Forge3DError('IO_ERROR', `Invalid bundle: ${String(e)}`, { reason: 'invalid-bundle' }); }
 }

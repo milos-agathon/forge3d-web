@@ -4847,3 +4847,11 @@ export type { TraceWorkerHits, TraceWorkerDistances } from "./trace-worker.js";
 
 export { iterTraceTiles, encodeTraceAovs } from "./trace-output.js";
 export type { TraceTile } from "./trace-output.js";
+
+export { LicenseManager, LicenseError, licenseManager, configureLicenseIssuer, setLicenseKey, getLicenseInfo, requirePro, requiresPro, LICENSE_PUBLIC_KEY_HEX, LICENSE_GRACE_DAYS, PRO_FEATURES } from './license.js';
+export type { LicenseInfo, LicenseStatus, LicenseManagerOptions } from './license.js';
+export { imageArrayToRgba, imageArrayToImageData, displayImageArray, arrayToPng, pngToArray, MAX_IMAGE_PIXELS } from './image-array.js';
+export type { ImageArray } from './image-array.js';
+export { decodePng } from './png-decode.js';
+export { BENCHMARK_SCHEMA_VERSION, benchmarkStatistics, benchmarkEnvironment, runBenchmark, runBenchmarkSuite } from './benchmark.js';
+export type { BenchmarkOperation, BenchmarkTarget, BenchmarkOptions, BenchmarkBudget, BenchmarkStatistics, BenchmarkEnvironment, BenchmarkResult } from './benchmark.js';
