@@ -70,7 +70,7 @@ npm run test:w22
 npm run test:api
 npm run test:package
 npm run verify:parity
-node scripts/test-w22-package-consumer.mjs --soak
+npm run test:package-consumer:w22 -- --soak
 ```
 
 The installed gate requires all implementation/generated declarations committed.
