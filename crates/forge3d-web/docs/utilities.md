@@ -1,7 +1,8 @@
 # Offline licensing, image arrays and benchmarks
 
 W21 remains Partial: M08 is E until W20 map plate, SVG and PDF product gates
-are integrated and tested. M09 and E07 have verified browser implementations.
+are integrated and tested. W20 is present after merging main, but its license
+gate integration remains outstanding. M09 and E07 have verified browser implementations.
 Import these APIs from
 `@forge3d/web`. Try [the browser example](../examples/utilities.html).
 
@@ -51,7 +52,8 @@ same gates. MapScene building recipes produce `pro_gated_path` diagnostics
 before loading unlicensed building sources. Plain style parsing, expressions,
 geometry operations, PNG helpers and benchmarks remain available without a key.
 `PRO_FEATURES` names map plate/SVG/PDF gates, but those names are not integrated
-or tested product gates. Their W20 implementations are absent from this base.
+or tested product gates. The W20 implementations are present after merging main;
+their license gate integration and tests remain outstanding.
 This is the explicit M08 blocker; its status remains E.
 
 `requiresPro(fn, feature, manager?)` preserves arguments, return type and `this`.

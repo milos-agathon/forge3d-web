@@ -5,7 +5,8 @@ applied to the W21 implementation at `f0c34be8`. Work was performed in the
 `codex/w21-utilities` worktree without subagents.
 
 W21 is **Partial**. M08 remains **E**: the map plate, SVG and PDF names in
-`PRO_FEATURES` are not integrated or tested product gates until W20. Existing
+`PRO_FEATURES` are not integrated or tested product gates. W20 is now present
+after merging main, but its license gate integration remains outstanding. Existing
 building, style and bundle gates are covered. M09 is **I** with cold timing,
 baseline comparison and FND-07 consumption of the public operation schema.
 E07 remains **I**. These statuses are recorded in the plan matrix, W21 ledger,
@@ -92,6 +93,15 @@ ignored files relative to the repository root under `.cache/w21-review/`.
 | Additional source FND-07 test, probe mode | 1 passed, 0 failed | `fnd07.log` |
 | Complete frozen FND-07 schedule and public companion, Chromium preflight | 1 passed, 0 failed | `followup-full-fnd07-rerun.log` |
 
+After merging main's W20 commit `676022b2`, the combined build and API checks
+passed, all 1920 unit tests passed in 88 files, parity passed 15/15, and the
+package gate passed 29 documentation, 118 browser-harness and 627 infrastructure
+tests with its one existing Windows-inapplicable skip. Raw logs are
+`merge-build.log`, `merge-api.log`, `merge-unit-rerun.log`, `merge-parity.log`
+and `merge-package.log`. The first unit run alongside build/package work hit
+the existing worker lifecycle test's five-second timeout (1919 passed, 1 failed;
+`merge-unit.log`); the isolated full rerun passed without changing that test.
+
 An initial Kiritimati run hit the default five-second cold-module-loading
 timeout while other tests ran concurrently (52 passed, 1 failed). Its raw log
 is retained as `tz-kiritimati-timeout.log`. The two cold issuer tests now allow
@@ -115,12 +125,15 @@ npx playwright test tests/playwright/w15_geometry.spec.ts tests/playwright/w18_m
 
 ## Installed consumer and limits of this evidence
 
-`npm run test:package-consumer:w21` requires a clean committed tree. The review
-fixes need Milos's explicit approval before a local commit; the installed gate
-has not yet run for these fixes at the time of this evidence update. No result
-from the earlier implementation is treated as verification of these changes.
+`npm run test:package-consumer:w21` passed all 8 installed-tarball Chromium
+cases under the same-origin CSP on review-fix commit
+`4bf561f5462dd0acf51429921c92b0e0c165b5d0` (0 failed). The raw log is
+`.cache/w21-review/installed-initial.log`; its revision-bound result and full
+browser report are retained alongside it as `installed-initial-result.json`
+and `installed-initial-playwright.json`. This run predates the subsequent
+merge of W20 from main; the gate is rerun on the combined revision for the PR.
 
-After the approved commit, the gate rebuilds WASM/TS, installs the tarball into
+The gate requires a clean committed tree, rebuilds WASM/TS, installs the tarball into
 a temporary consumer, typechecks installed declarations and exercises dist
 under a same-origin CSP. It writes the actual revision, tarball/WASM digests,
 outcome and raw browser results to `test-results/w21-package-consumer.json`

@@ -1312,3 +1312,11 @@ async function compileW14Declarations():Promise<void>{
   layers.dispose();registry.dispose();crs.dispose();
 }
 void compileW14Declarations;
+
+import { MapPlate, BBox, Legend, ScaleBar, NorthArrow, colormaps, ColormapRegistry, parseColormapJson, parseColormapCpt, loadColormap, VectorScene, Bounds, exportSvg, exportPdf, positionPlateElement, PlateRegion, project3dTo2d, type MapPlateConfig, type VectorExportOptions, type VectorSvgOptions, type VectorPdfOptions } from '../../types/index';
+async function compileW20Declarations():Promise<void>{
+  const config:MapPlateConfig={width:800,height:600}, plate=new MapPlate(config),bbox=new BBox(0,0,1,1);
+  const cm=colormaps.get('forge3d:viridis');plate.addLegend(await new Legend(cm,[0,1000]).render());plate.addScaleBar(await new ScaleBar(100).render());plate.addNorthArrow(await new NorthArrow({rotationDeg:30}).render());
+  const png:Blob=await plate.exportPng(),jpeg:Blob=await plate.exportJpeg();const vectors=new VectorScene().addLabel('Map',[0,0]);const opts:VectorExportOptions={bounds:new Bounds()};const svgOpts:VectorSvgOptions=opts,pdfOpts:VectorPdfOptions={...opts,dpi:300};const svg:Blob=await exportSvg(vectors,svgOpts),pdf:Blob=await exportPdf(vectors,pdfOpts);
+  void [bbox,png,jpeg,svg,pdf,new ColormapRegistry(),parseColormapJson,parseColormapCpt,loadColormap,positionPlateElement([10,10],'center',new PlateRegion(0,0,100,100)),project3dTo2d];plate.dispose();vectors.dispose();
+}void compileW20Declarations;
