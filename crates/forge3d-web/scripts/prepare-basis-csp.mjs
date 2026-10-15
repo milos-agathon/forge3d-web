@@ -1,6 +1,6 @@
 // Keep the upstream assets immutable. Replace only the two JS code-generation
 // bridges with closure equivalents; the WASM codec and wire converters are untouched.
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 const root=new URL('../',import.meta.url),lock=JSON.parse(readFileSync(new URL('../../docs/parity/dependency-lock.json',root),'utf8'));
 const asset=lock.assets.find(a=>a.id==='basis-universal');
@@ -21,7 +21,8 @@ if(/\bnew\s+Function\s*\(|\beval\s*\(/.test(source))throw Error('Basis CSP glue 
 const bytes=Buffer.from(source),digest=createHash('sha256').update(bytes).digest('hex');
 const recorded=asset.build.artifacts.find(a=>a.name==='basis_transcoder.csp.js');
 if(!process.argv.includes('--update-lock')&&recorded?.sha256!==digest)throw Error('Basis CSP adapter differs from W00 lock; review and update the adapter digest');
-writeFileSync(new URL('assets/basis/basis_transcoder.csp.js',root),bytes);
+const output=new URL('assets/basis/basis_transcoder.csp.js',root);
+if(!existsSync(output)||!readFileSync(output).equals(bytes))writeFileSync(output,bytes);
 if(process.argv.includes('--update-lock')) {
   const entry={name:'basis_transcoder.csp.js',sha256:digest};
   if(recorded)Object.assign(recorded,entry);else asset.build.artifacts.push(entry);

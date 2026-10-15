@@ -48,5 +48,9 @@ strict CSP (`worker-src 'self'`, no CDN). It records package/WASM digests and
 raw Playwright results under test-results. Local GPU runs are Chromium
 preflight evidence, without extending any physical hardware/browser claim.
 
+The clean installed-package gate passed all five cases on implementation
+commit `0e7c18e8`. Its package/WASM digests and per-case measurements are saved
+in the repository at `docs/parity/w22-installed-evidence.json`.
+
 Reproduce with `npm run test:w22`, `npm run test:api`,
 `npm run test:package-consumer:w22` and `npm run test:package`.
