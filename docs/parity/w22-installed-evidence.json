@@ -3,6 +3,18 @@
   "lane": "chromium-preflight",
   "packageConsumer": {
     "schemaVersion": 1,
+    "verifiedAt": "2026-10-15T15:44:43.637Z",
+    "revision": "9720aa304ae8e3c73b84141881c52d7b5e8bf6f1",
+    "packageSha256": "5a4491cd82ebe4b46ce045287d0d89a1802d6fee4a3220abb24ac48483b436dd",
+    "wasmSha256": "50dc3d9a9be830f71d05739820ee5a0e2d5c826c70481a3492edf9d3ac738068",
+    "wasmRebuilt": true,
+    "servedRoot": "D:\\forge3d\\cache\\tmp\\forge3d-w22-consumer-FyXNTx\\consumer\\node_modules\\@forge3d\\web",
+    "tarball": "D:\\forge3d\\cache\\tmp\\forge3d-w22-consumer-FyXNTx\\pack\\forge3d-web-1.26.3.tgz",
+    "installed": "D:\\forge3d\\cache\\tmp\\forge3d-w22-consumer-FyXNTx\\consumer\\node_modules\\@forge3d\\web",
+    "exitCode": 0
+  },
+  "previousPassingPackageConsumer": {
+    "schemaVersion": 1,
     "verifiedAt": "2026-10-15T15:39:56.257Z",
     "revision": "0e7c18e85b3afcc8c831534debf455aa3b7edd8d",
     "packageSha256": "87f658e0e3a483701359b89960c4a2ed9566a3ada2c527b82614dc4c1bcd2f3d",
@@ -14,8 +26,8 @@
     "exitCode": 0
   },
   "stats": {
-    "startTime": "2026-10-15T15:39:35.326Z",
-    "duration": 20907.605,
+    "startTime": "2026-10-15T15:44:26.737Z",
+    "duration": 16877.531,
     "expected": 5,
     "skipped": 0,
     "unexpected": 0,
@@ -26,7 +38,7 @@
       "title": "every E05 fixture selects one codec, conforms and replays exact decoded bytes",
       "project": "chromium-preflight",
       "status": "passed",
-      "durationMs": 2348,
+      "durationMs": 1229,
       "measurements": {
         "forge3d-webgpu-probe.json": {
           "project": {
@@ -116,7 +128,7 @@
       "title": "corruption, capabilities, abort and disposal are typed",
       "project": "chromium-preflight",
       "status": "passed",
-      "durationMs": 430,
+      "durationMs": 342,
       "measurements": {
         "forge3d-webgpu-probe.json": {
           "project": {
@@ -145,7 +157,7 @@
       "title": "AOV-guided WebGPU denoiser quality and native memory accounting",
       "project": "chromium-preflight",
       "status": "passed",
-      "durationMs": 14362,
+      "durationMs": 13307,
       "measurements": {
         "forge3d-webgpu-probe.json": {
           "project": {
@@ -226,7 +238,7 @@
       "title": "W02 persistent stores replay offline and reject corrupted artifacts",
       "project": "chromium-preflight",
       "status": "passed",
-      "durationMs": 467,
+      "durationMs": 424,
       "measurements": {
         "forge3d-webgpu-probe.json": {
           "project": {
@@ -255,7 +267,7 @@
       "title": "device loss, replacement runtime and disposal during GPU work release allocations",
       "project": "chromium-preflight",
       "status": "passed",
-      "durationMs": 861,
+      "durationMs": 803,
       "measurements": {
         "forge3d-webgpu-probe.json": {
           "project": {
