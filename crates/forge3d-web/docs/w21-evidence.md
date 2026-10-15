@@ -102,6 +102,15 @@ and `merge-package.log`. The first unit run alongside build/package work hit
 the existing worker lifecycle test's five-second timeout (1919 passed, 1 failed;
 `merge-unit.log`); the isolated full rerun passed without changing that test.
 
+PR CI exposed a missing W15 installed-consumer fixture asset: the example now
+imports `example-license.js`, but its copied example directory omitted that
+module. The original installed W15 script reproduced the startup timeout
+locally (`ci-w15-red.log`). The harness now copies the helper from the installed
+package, explicitly provisions the signed test key and asserts active license
+status before running its existing geometry/building checks. The full installed
+W15 check passed with no page errors or external requests (`ci-w15-green.log`).
+This corrects the fixture without bypassing product gates.
+
 An initial Kiritimati run hit the default five-second cold-module-loading
 timeout while other tests ran concurrently (52 passed, 1 failed). Its raw log
 is retained as `tz-kiritimati-timeout.log`. The two cold issuer tests now allow

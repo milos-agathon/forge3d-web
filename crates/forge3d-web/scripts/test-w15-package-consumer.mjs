@@ -111,6 +111,11 @@ const mesh:MeshBuffers=subdivideMesh(attachMeshTangents(generatePrimitive('plane
           "../node_modules/@forge3d/web/dist/index.js",
         ),
     );
+  // W21's example boot imports this sibling module; exercise its packed copy.
+  writeFileSync(
+    join(consumer, "examples/example-license.js"),
+    readFileSync(join(installed, "examples/example-license.js")),
+  );
   // Only installed files and copied data/example assets are served.
   server = createServer((req, res) => {
     try {
@@ -156,8 +161,11 @@ const mesh:MeshBuffers=subdivideMesh(attachMeshTangents(generatePrimitive('plane
   page.on("request", (r) => {
     if (!r.url().startsWith(origin)) remote.push(r.url());
   });
+  const license = JSON.parse(readFileSync(join(root, "tests/fixtures/w21/licenses.json"), "utf8")).active;
+  await page.addInitScript(key => sessionStorage.setItem('forge3d-example-license', key), license);
   await page.goto(origin + "/examples/mesh-buildings.html?dist");
   await page.waitForFunction(() => !!window.__w15);
+  assert.equal(await page.evaluate(() => window.__w15.api.getLicenseInfo().status), 'active');
   const io = await page.evaluate(() => window.__w15.io());
   assert.equal(io.familyRoundtrips.length, 15);
   for (const r of io.familyRoundtrips) {
