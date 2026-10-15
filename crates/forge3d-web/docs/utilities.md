@@ -210,3 +210,6 @@ expose a W02 RendererConfig. Neither report establishes W00 physical-browser
 qualification.
 
 See [W21 verification](w21-evidence.md) for native provenance and runnable gates.
+The clean installed-tarball check passed all eight Chromium preflight cases
+under the same-origin CSP; [the revision-bound record](w21-installed-evidence.json)
+identifies the tested package and WASM digests.

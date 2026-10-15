@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-10-15T11:37:10.711Z",
+  "revision": "0b97e886b7dc54907eded78c74fc56ee0ae05846",
+  "packageSha256": "9f011edcb7a8d8eef48b950d3c6164daa0778d5c290103541b87fdbc23edc9d8",
+  "wasmSha256": "50dc3d9a9be830f71d05739820ee5a0e2d5c826c70481a3492edf9d3ac738068",
+  "wasmRebuilt": true,
+  "exitCode": 0,
+  "project": "chromium-preflight",
+  "csp": "same-origin installed consumer",
+  "tests": {
+    "startTime": "2026-10-15T11:37:02.479Z",
+    "duration": 8205.475999999999,
+    "expected": 8,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  }
+}

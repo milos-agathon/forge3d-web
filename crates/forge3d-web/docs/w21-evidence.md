@@ -131,7 +131,15 @@ cases under the same-origin CSP on review-fix commit
 `.cache/w21-review/installed-initial.log`; its revision-bound result and full
 browser report are retained alongside it as `installed-initial-result.json`
 and `installed-initial-playwright.json`. This run predates the subsequent
-merge of W20 from main; the gate is rerun on the combined revision for the PR.
+merge of W20 from main.
+
+The gate also passed all 8 cases (0 failed) on the combined revision
+`0b97e886b7dc54907eded78c74fc56ee0ae05846`. The committed
+[installed evidence](w21-installed-evidence.json) records its actual revision,
+tarball/WASM digests and Playwright totals. Raw log/result/browser records are
+`.cache/w21-review/installed-merged.log`, `installed-merged-result.json` and
+`installed-merged-playwright.json`. The following evidence-only commit does not
+change the tested runtime; PR CI reruns the gate on the PR revision.
 
 The gate requires a clean committed tree, rebuilds WASM/TS, installs the tarball into
 a temporary consumer, typechecks installed declarations and exercises dist
