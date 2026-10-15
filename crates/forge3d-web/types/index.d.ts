@@ -1,3 +1,6 @@
+export { CodecRegistry } from './codec-registry.js';
+export type * from './codec-types.js';
+export type { CodecDenoiseTarget, CodecDenoiseOptions, CodecDenoiserSelection } from './codec-denoiser.js';
 export type { CartographicColor } from './cartography-common.js';
 export { Colormap, ColormapRegistry, colormaps, colormapFromStops, hexToRgb, hexToRgba, rgbToNormalized, interpolateHexColors, elevationStopsFromHexColors, OKABE_ITO, CORE_COLORMAP_STOPS } from './colormaps.js';
 export type { ColormapStop, ColormapEndcaps, ColormapProvider } from './colormaps.js';

@@ -1,0 +1,531 @@
+{
+  "schemaVersion": 1,
+  "lane": "chromium-preflight",
+  "started": "2026-10-15T15:29:40.348Z",
+  "stats": {
+    "startTime": "2026-10-15T15:29:40.348Z",
+    "duration": 43375.306,
+    "expected": 10,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "results": [
+    {
+      "title": "every E05 fixture selects one codec, conforms and replays exact decoded bytes",
+      "project": "chromium-preflight",
+      "status": "passed",
+      "durationMs": 1532,
+      "measurements": {
+        "forge3d-webgpu-probe.json": {
+          "project": {
+            "project": "chromium-preflight",
+            "browserName": "chromium",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": [
+              "--enable-unsafe-webgpu",
+              "--use-angle=d3d11"
+            ]
+          },
+          "projectPolicyRequired": true,
+          "ambientRequired": false,
+          "required": true,
+          "hasNavigatorGpu": true,
+          "adapterAvailable": true,
+          "secureContext": true,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36"
+        },
+        "w22-fixture-conformance.json": {
+          "results": [
+            {
+              "file": "predictor.tif",
+              "codec": "geotiff",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "autzen.laz",
+              "codec": "laz-perf",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "triangle.glb",
+              "codec": "gltf2",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "rgba.ktx2",
+              "codec": "ktx2-basis",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "kodim23.ktx2",
+              "codec": "ktx2-basis",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "linear.hdr",
+              "codec": "radiance-rgbe",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "linear.exr",
+              "codec": "exr-wasm",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "glyphs.pbf",
+              "codec": "mapbox-glyph-pbf",
+              "conforms": true,
+              "exact": true
+            }
+          ],
+          "stats": {
+            "disposed": true,
+            "activeOperations": 0,
+            "cacheBytes": 0,
+            "cacheEntries": 0,
+            "cacheHits": 0,
+            "cacheMisses": 0
+          },
+          "persisted": 8
+        }
+      }
+    },
+    {
+      "title": "corruption, capabilities, abort and disposal are typed",
+      "project": "chromium-preflight",
+      "status": "passed",
+      "durationMs": 520,
+      "measurements": {
+        "forge3d-webgpu-probe.json": {
+          "project": {
+            "project": "chromium-preflight",
+            "browserName": "chromium",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": [
+              "--enable-unsafe-webgpu",
+              "--use-angle=d3d11"
+            ]
+          },
+          "projectPolicyRequired": true,
+          "ambientRequired": false,
+          "required": true,
+          "hasNavigatorGpu": true,
+          "adapterAvailable": true,
+          "secureContext": true,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36"
+        }
+      }
+    },
+    {
+      "title": "AOV-guided WebGPU denoiser quality and native memory accounting",
+      "project": "chromium-preflight",
+      "status": "passed",
+      "durationMs": 13705,
+      "measurements": {
+        "forge3d-webgpu-probe.json": {
+          "project": {
+            "project": "chromium-preflight",
+            "browserName": "chromium",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": [
+              "--enable-unsafe-webgpu",
+              "--use-angle=d3d11"
+            ]
+          },
+          "projectPolicyRequired": true,
+          "ambientRequired": false,
+          "required": true,
+          "hasNavigatorGpu": true,
+          "adapterAvailable": true,
+          "secureContext": true,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36"
+        },
+        "w22-denoise-quality.json": {
+          "size": [
+            1920,
+            1080
+          ],
+          "before": {
+            "mse": 0.005208869547876926,
+            "psnr": 22.611590352446342,
+            "ssim": 0.16560542813759835,
+            "maxAbs": 0.125
+          },
+          "after": {
+            "mse": 6.097559632249831e-05,
+            "psnr": 41.11096357960291,
+            "ssim": 0.9645481557998347,
+            "maxAbs": 0.051729440689086914
+          },
+          "regression": {
+            "mse": 2.353862453889033e-15,
+            "psnr": 99,
+            "ssim": 0.9999999999999497,
+            "maxAbs": 2.980232238769531e-07
+          },
+          "baseline": 155340,
+          "afterMemory": 155340,
+          "maxAbs": 7.748603820800781e-07,
+          "selection": {
+            "status": "selected",
+            "id": "webgpu-atrous",
+            "requested": "oidn",
+            "equivalent": true,
+            "revision": "913447170854f5f456a730723b878c7951340d286851ab45759d49ba7bef91b9",
+            "owner": "W06"
+          },
+          "adapterInfo": {
+            "name": "",
+            "vendor": "0x00000000",
+            "device": "0x00000000",
+            "architecture": "",
+            "description": "",
+            "backend": "browser-web-gpu",
+            "deviceType": "other"
+          },
+          "stats": {
+            "disposed": true,
+            "activeOperations": 0,
+            "cacheBytes": 0,
+            "cacheEntries": 0,
+            "cacheHits": 0,
+            "cacheMisses": 0
+          }
+        }
+      }
+    },
+    {
+      "title": "W02 persistent stores replay offline and reject corrupted artifacts",
+      "project": "chromium-preflight",
+      "status": "passed",
+      "durationMs": 635,
+      "measurements": {
+        "forge3d-webgpu-probe.json": {
+          "project": {
+            "project": "chromium-preflight",
+            "browserName": "chromium",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": [
+              "--enable-unsafe-webgpu",
+              "--use-angle=d3d11"
+            ]
+          },
+          "projectPolicyRequired": true,
+          "ambientRequired": false,
+          "required": true,
+          "hasNavigatorGpu": true,
+          "adapterAvailable": true,
+          "secureContext": true,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36"
+        }
+      }
+    },
+    {
+      "title": "device loss, replacement runtime and disposal during GPU work release allocations",
+      "project": "chromium-preflight",
+      "status": "passed",
+      "durationMs": 1092,
+      "measurements": {
+        "forge3d-webgpu-probe.json": {
+          "project": {
+            "project": "chromium-preflight",
+            "browserName": "chromium",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": [
+              "--enable-unsafe-webgpu",
+              "--use-angle=d3d11"
+            ]
+          },
+          "projectPolicyRequired": true,
+          "ambientRequired": false,
+          "required": true,
+          "hasNavigatorGpu": true,
+          "adapterAvailable": true,
+          "secureContext": true,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36"
+        }
+      }
+    },
+    {
+      "title": "every E05 fixture selects one codec, conforms and replays exact decoded bytes",
+      "project": "chromium-preflight",
+      "status": "passed",
+      "durationMs": 1957,
+      "measurements": {
+        "forge3d-webgpu-probe.json": {
+          "project": {
+            "project": "chromium-preflight",
+            "browserName": "chromium",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": [
+              "--enable-unsafe-webgpu",
+              "--use-angle=d3d11"
+            ]
+          },
+          "projectPolicyRequired": true,
+          "ambientRequired": false,
+          "required": true,
+          "hasNavigatorGpu": true,
+          "adapterAvailable": true,
+          "secureContext": true,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36"
+        },
+        "w22-fixture-conformance.json": {
+          "results": [
+            {
+              "file": "predictor.tif",
+              "codec": "geotiff",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "autzen.laz",
+              "codec": "laz-perf",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "triangle.glb",
+              "codec": "gltf2",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "rgba.ktx2",
+              "codec": "ktx2-basis",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "kodim23.ktx2",
+              "codec": "ktx2-basis",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "linear.hdr",
+              "codec": "radiance-rgbe",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "linear.exr",
+              "codec": "exr-wasm",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "glyphs.pbf",
+              "codec": "mapbox-glyph-pbf",
+              "conforms": true,
+              "exact": true
+            }
+          ],
+          "stats": {
+            "disposed": true,
+            "activeOperations": 0,
+            "cacheBytes": 0,
+            "cacheEntries": 0,
+            "cacheHits": 0,
+            "cacheMisses": 0
+          },
+          "persisted": 8
+        }
+      }
+    },
+    {
+      "title": "corruption, capabilities, abort and disposal are typed",
+      "project": "chromium-preflight",
+      "status": "passed",
+      "durationMs": 818,
+      "measurements": {
+        "forge3d-webgpu-probe.json": {
+          "project": {
+            "project": "chromium-preflight",
+            "browserName": "chromium",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": [
+              "--enable-unsafe-webgpu",
+              "--use-angle=d3d11"
+            ]
+          },
+          "projectPolicyRequired": true,
+          "ambientRequired": false,
+          "required": true,
+          "hasNavigatorGpu": true,
+          "adapterAvailable": true,
+          "secureContext": true,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36"
+        }
+      }
+    },
+    {
+      "title": "AOV-guided WebGPU denoiser quality and native memory accounting",
+      "project": "chromium-preflight",
+      "status": "passed",
+      "durationMs": 14816,
+      "measurements": {
+        "forge3d-webgpu-probe.json": {
+          "project": {
+            "project": "chromium-preflight",
+            "browserName": "chromium",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": [
+              "--enable-unsafe-webgpu",
+              "--use-angle=d3d11"
+            ]
+          },
+          "projectPolicyRequired": true,
+          "ambientRequired": false,
+          "required": true,
+          "hasNavigatorGpu": true,
+          "adapterAvailable": true,
+          "secureContext": true,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36"
+        },
+        "w22-denoise-quality.json": {
+          "size": [
+            1920,
+            1080
+          ],
+          "before": {
+            "mse": 0.005208869547876926,
+            "psnr": 22.611590352446342,
+            "ssim": 0.16560542813759835,
+            "maxAbs": 0.125
+          },
+          "after": {
+            "mse": 6.097559632249831e-05,
+            "psnr": 41.11096357960291,
+            "ssim": 0.9645481557998347,
+            "maxAbs": 0.051729440689086914
+          },
+          "regression": {
+            "mse": 2.353862453889033e-15,
+            "psnr": 99,
+            "ssim": 0.9999999999999497,
+            "maxAbs": 2.980232238769531e-07
+          },
+          "baseline": 155340,
+          "afterMemory": 155340,
+          "maxAbs": 7.748603820800781e-07,
+          "selection": {
+            "status": "selected",
+            "id": "webgpu-atrous",
+            "requested": "oidn",
+            "equivalent": true,
+            "revision": "913447170854f5f456a730723b878c7951340d286851ab45759d49ba7bef91b9",
+            "owner": "W06"
+          },
+          "adapterInfo": {
+            "name": "",
+            "vendor": "0x00000000",
+            "device": "0x00000000",
+            "architecture": "",
+            "description": "",
+            "backend": "browser-web-gpu",
+            "deviceType": "other"
+          },
+          "stats": {
+            "disposed": true,
+            "activeOperations": 0,
+            "cacheBytes": 0,
+            "cacheEntries": 0,
+            "cacheHits": 0,
+            "cacheMisses": 0
+          }
+        }
+      }
+    },
+    {
+      "title": "W02 persistent stores replay offline and reject corrupted artifacts",
+      "project": "chromium-preflight",
+      "status": "passed",
+      "durationMs": 833,
+      "measurements": {
+        "forge3d-webgpu-probe.json": {
+          "project": {
+            "project": "chromium-preflight",
+            "browserName": "chromium",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": [
+              "--enable-unsafe-webgpu",
+              "--use-angle=d3d11"
+            ]
+          },
+          "projectPolicyRequired": true,
+          "ambientRequired": false,
+          "required": true,
+          "hasNavigatorGpu": true,
+          "adapterAvailable": true,
+          "secureContext": true,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36"
+        }
+      }
+    },
+    {
+      "title": "device loss, replacement runtime and disposal during GPU work release allocations",
+      "project": "chromium-preflight",
+      "status": "passed",
+      "durationMs": 1262,
+      "measurements": {
+        "forge3d-webgpu-probe.json": {
+          "project": {
+            "project": "chromium-preflight",
+            "browserName": "chromium",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": [
+              "--enable-unsafe-webgpu",
+              "--use-angle=d3d11"
+            ]
+          },
+          "projectPolicyRequired": true,
+          "ambientRequired": false,
+          "required": true,
+          "hasNavigatorGpu": true,
+          "adapterAvailable": true,
+          "secureContext": true,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36"
+        }
+      }
+    }
+  ]
+}

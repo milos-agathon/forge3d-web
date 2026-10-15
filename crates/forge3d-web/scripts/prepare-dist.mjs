@@ -259,6 +259,7 @@ for (const file of ['style-native-values','bundle-style-assets','style-expressio
   copyRequired(join(dist,file+'.d.ts'),join(root,'types',file+'.d.ts'));
 }
 
+for (const file of ['codec-types','codec-registry','codec-denoiser']) writeFileSync(join(root,'types',file+'.d.ts'),readRequired(join(dist,file+'.d.ts')).replace(/from (["'])\.\/(frames|byte-cache)\.js\1/g,'from "./index.js"'));
 for (const file of ['license','image-array','png-decode','benchmark']) writeFileSync(join(root,'types',file+'.d.ts'),readRequired(join(dist,file+'.d.ts')).replaceAll('./renderer-config.js','./index.js'));
 for (const file of ['cartography-common','cartography-fonts','cartography-canvas','colormaps','colormap-io','map-layout','map-legend','map-scale-bar','map-north-arrow','map-plate','vector-export-scene','vector-export','vector-pdf']) {
   writeFileSync(join(root,'types',file+'.d.ts'),readRequired(join(dist,file+'.d.ts')).replace(/from (["'])\.\/(frames)\.js\1/g,'from "./index.js"'));

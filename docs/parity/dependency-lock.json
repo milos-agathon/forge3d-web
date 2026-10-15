@@ -176,7 +176,8 @@
         ]
       },
       "fixtureProvenance": [
-        "1f4084a:tests/test_cog_streaming.py"
+        "1f4084a:tests/test_cog_streaming.py",
+        "crates/forge3d-web/tests/fixtures/w22/manifest.json"
       ],
       "manifestFixtureIds": [
         "clipmap-seam-v1"
@@ -231,7 +232,8 @@
         ]
       },
       "fixtureProvenance": [
-        "1f4084a:tests/test_copc_laz_fixture.py"
+        "1f4084a:tests/test_copc_laz_fixture.py",
+        "crates/forge3d-web/tests/fixtures/w22/manifest.json"
       ],
       "manifestFixtureIds": [
         "copc-ept-tiles-v1"
@@ -286,7 +288,8 @@
         ]
       },
       "fixtureProvenance": [
-        "1f4084a:tests/test_mesh_tbn.py"
+        "1f4084a:tests/test_mesh_tbn.py",
+        "crates/forge3d-web/tests/fixtures/w22/manifest.json"
       ],
       "manifestFixtureIds": [
         "terrain-material-v1"
@@ -348,7 +351,8 @@
       },
       "fixtureProvenance": [
         "1f4084a:src/loaders/ktx2",
-        "1f4084a:tests/test_mesh_tbn.py"
+        "1f4084a:tests/test_mesh_tbn.py",
+        "crates/forge3d-web/tests/fixtures/w22/manifest.json"
       ],
       "manifestFixtureIds": [
         "terrain-material-v1"
@@ -406,7 +410,8 @@
         ]
       },
       "fixtureProvenance": [
-        "1f4084a:tests/test_exr_output.py"
+        "1f4084a:tests/test_exr_output.py",
+        "crates/forge3d-web/tests/fixtures/w22/manifest.json"
       ],
       "manifestFixtureIds": [
         "offline-denoise-v1"
