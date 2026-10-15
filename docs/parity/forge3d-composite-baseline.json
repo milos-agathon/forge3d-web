@@ -53448,7 +53448,7 @@
   ],
   "dependencyLock": {
     "path": "docs/parity/dependency-lock.json",
-    "sha256": "9d6172d763c96038439a3d2130ffda37cec61aeaf6d4fd902de505950e2f8de7",
+    "sha256": "0a6b640f0388cfa856e291714d756c8b0ab4ff309935209333ff34c45efb759a",
     "requiredAssetIds": [
       "harfbuzzjs",
       "proj-wasm",
