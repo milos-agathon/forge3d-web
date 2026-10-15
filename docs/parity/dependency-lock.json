@@ -602,21 +602,27 @@
       },
       "license": {
         "spdx": "MIT",
-        "provenance": "registry package metadata and LICENSE content in @pdf-lib/fontkit@1.1.1",
+        "provenance": "Exact npm @pdf-lib/fontkit@1.1.1 metadata and MIT attribution notice; bundled pako and regenerator-runtime retain their standalone MIT licenses.",
         "review": "SPDX MIT is compatible with Forge3D distribution when notices are retained"
       },
       "build": {
-        "provenance": "immutable npm registry tarball @pdf-lib/fontkit@1.1.1",
+        "provenance": "Immutable fontkit@1.1.1 tarball, npm-lock pako@1.0.11, and regenerator-runtime@0.14.1 companion for its compiled Indic generator. The original shaper implementation is unchanged.",
         "toolchain": "npm 11 with package-lock integrity verification",
         "flags": [
           "exact-version",
-          "ignore-lifecycle-scripts-during-audit"
+          "ignore-lifecycle-scripts-during-audit",
+          "regenerator-runtime@0.14.1-bundled-in-every-realm"
         ],
         "artifacts": [
           {
             "name": "@pdf-lib/fontkit-1.1.1.tgz",
             "sha256": "6dd0ae9209fce419b2ed76c97166863167b4df56d75fbe3c7f1d1e6e49c85867",
             "sri": "sha512-KjMd7grNapIWS/Dm0gvfHEilSyAmeLvrEGVcqLGi0VYebuqqzTbgF29efCx7tvx+IEbG3zQciRSWl3GkUSvjZg=="
+          },
+          {
+            "name": "regenerator-runtime-0.14.1.tgz",
+            "sha256": "7e8df38fb205ed668cb38d9d9b154ba3ea14786b0480c21f26f3a95b90497c20",
+            "sri": "sha512-dYnhHh0nJoMfnkZs6GmmhFknAGRrLznOu5nc9ML+EJxGvrx6H7teuevqVqCuPcPK//3eDrrjQhehXVx9cnkGdw=="
           }
         ]
       },
@@ -637,8 +643,8 @@
         "@pdf-lib/fontkit"
       ],
       "review": {
-        "security": "Run fixture conformance, corrupt-input tests and dependency advisory review before consumption",
-        "maintenance": "Exact version is frozen; substitution requires an ADR and the same fixtures",
+        "security": "The runtime companion executes only bundled generator machinery, takes no external input and performs no network requests. Latin/Arabic/Devanagari exports run under self-only CSP in installed main/worker realms; fontkit errors remain structured.",
+        "maintenance": "Fontkit remains exactly 1.1.1. Its missing generator runtime is explicitly pinned to 0.14.1, integrity-checked by npm and prepare-dist, and bundled into the same self-hosted module.",
         "license": "Retain MIT license text and notices in the published package"
       }
     },

@@ -119,3 +119,16 @@ crates/forge3d-web/tests/fixtures/w18/*.json text eol=lf
 crates/forge3d-web/types/map-*.d.ts text eol=lf
 crates/forge3d-web/types/diagnostic*.d.ts text eol=lf
 crates/forge3d-web/docs/w18-*.json text eol=lf
+
+# W20 native references retain exact Git blob bytes and generated declarations use LF.
+crates/forge3d-web/tests/fixtures/w20/native/** -text -whitespace
+crates/forge3d-web/tests/fixtures/w20/*.json text eol=lf
+crates/forge3d-web/types/*colormap*.d.ts text eol=lf
+crates/forge3d-web/types/cartography*.d.ts text eol=lf
+crates/forge3d-web/types/vector-export*.d.ts text eol=lf
+crates/forge3d-web/types/vector-pdf.d.ts text eol=lf
+
+crates/forge3d-web/assets/fonts/DejaVu-LICENSE -text
+
+# W20 pinned native metric data.
+crates/forge3d-web/src-ts/cartography-font-metrics.ts text eol=lf

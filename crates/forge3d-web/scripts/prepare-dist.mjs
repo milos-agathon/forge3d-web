@@ -1,9 +1,12 @@
 import './verify-w13-assets.mjs';
 import './verify-w14-assets.mjs';
+import './verify-w20-assets.mjs';
+import { build as buildVendorModule } from 'vite';
 import './prepare-laz-assets.mjs';
 import { embedProjWorker } from './embed-proj-worker.mjs';
+import { createRequire } from 'node:module';
 import { createHash } from "node:crypto";
-import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, unlinkSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -46,6 +49,30 @@ if (ktxVersion !== "1.1.0") {
 }
 const vendor = join(dist, "vendor");
 mkdirSync(vendor, { recursive: true });
+// W20: exact W00-pinned browser bundles; no bare imports or runtime CDN.
+for (const [name,version,source,output] of [['pdf-lib','1.17.1','dist/pdf-lib.esm.min.js','pdf-lib']]) {
+  const dependencyRoot=join(root,'node_modules',name);
+  if(JSON.parse(readRequired(join(dependencyRoot,'package.json'))).version!==version) throw Error(name+' differs from the W00 lock');
+  copyVendoredScript(join(dependencyRoot,source),join(vendor,output+'.js'));
+  if(name==='pdf-lib') copyRequired(join(dependencyRoot,'LICENSE.md'),join(vendor,'pdf-lib.LICENSE'));
+
+}
+
+// Remove the obsolete global UMD wrapper from incremental builds.
+if (existsSync(join(vendor, 'fontkit.umd.js'))) unlinkSync(join(vendor, 'fontkit.umd.js'));
+const fontkitRoot=join(root,'node_modules','@pdf-lib/fontkit');
+if(JSON.parse(readRequired(join(fontkitRoot,'package.json'))).version!=='1.1.1') throw Error('fontkit differs from W00 lock');
+const pakoRoot = dirname(createRequire(join(fontkitRoot, 'package.json')).resolve('pako/package.json'));
+if(JSON.parse(readRequired(join(pakoRoot, 'package.json'))).version !== '1.0.11') throw Error('fontkit pako differs from npm lock');
+// Bundle the real upstream ESM entry and its lock-pinned pako dependency.
+await buildVendorModule({configFile:false,publicDir:false,logLevel:'error',build:{lib:{entry:join(root,'src-ts/vendor/fontkit-entry.ts'),formats:['es'],fileName:()=> 'fontkit.js'},outDir:vendor,emptyOutDir:false,minify:true}});
+copyRequired(join(root,'assets/licenses/fontkit.LICENSE'),join(vendor,'fontkit.LICENSE'));
+copyRequired(join(pakoRoot,'LICENSE'),join(vendor,'pako.LICENSE'));
+const regeneratorRoot = join(root, 'node_modules/regenerator-runtime');
+if (JSON.parse(readRequired(join(regeneratorRoot,'package.json'))).version !== '0.14.1') throw Error('fontkit runtime differs from npm lock');
+copyRequired(join(regeneratorRoot,'LICENSE'),join(vendor,'regenerator-runtime.LICENSE'));
+// The entry is published only as the complete self-hosted fontkit module.
+for (const file of ['fontkit-entry.js','fontkit-entry.d.ts']) if (existsSync(join(vendor,file))) unlinkSync(join(vendor,file));
 const fflateRoot = join(root, 'node_modules', 'fflate');
 if (JSON.parse(readRequired(join(fflateRoot, 'package.json'))).version !== '0.8.3') throw Error('fflate must match the W00 lock: 0.8.3');
 copyVendoredScript(join(fflateRoot, 'esm', 'browser.js'), join(vendor, 'fflate.js'));
@@ -120,6 +147,8 @@ for (const file of readdirSync(dist)) {
   const path = join(dist, file);
   const source = readFileSync(path, "utf8");
   const rewritten = source
+    .replaceAll("import('pdf-lib')", "import('./vendor/pdf-lib.js')")
+    .replaceAll("import('./vendor/fontkit-entry.js')", "import('./vendor/fontkit.js')")
     .replaceAll("from 'fflate'", "from './vendor/fflate.js'")
     .replaceAll('from "fflate"', 'from "./vendor/fflate.js"')
     .replaceAll("from \"ktx-parse\"", "from \"./vendor/ktx-parse.js\"")
@@ -143,6 +172,11 @@ for (const file of readdirSync(dist)) {
 
 // Package asset manifest: SHA-256 of every emitted self-hosted third-party asset.
 const assetManifest = [
+  ['dist/vendor/pako.LICENSE','pako@1.0.11'],
+  ['dist/cartography-font-metrics.js','dejavu-fonts@2.37 / Pillow BASIC metrics'],
+  ['dist/vendor/regenerator-runtime.LICENSE','regenerator-runtime@0.14.1'],
+  ...['DejaVuSans.ttf','DejaVuSans-Bold.ttf','DejaVu-LICENSE'].map(file=>['assets/fonts/'+file,'dejavu-fonts@2.37']),
+  ...['pdf-lib','fontkit'].flatMap(name=>[['dist/vendor/'+name+'.js',name==='pdf-lib'?'pdf-lib@1.17.1':'@pdf-lib/fontkit@1.1.1'],['dist/vendor/'+name+'.LICENSE',name==='pdf-lib'?'pdf-lib@1.17.1':'@pdf-lib/fontkit@1.1.1']]),
   ['dist/vendor/fflate.js', 'fflate@0.8.3'],
   ['dist/vendor/fflate.LICENSE', 'fflate@0.8.3'],
   ...['laz-perf.js','laz-perf.wasm','laz-perf.LICENSE'].map(file=>['assets/laz/'+file,'laz-perf@0.0.7']),
@@ -210,4 +244,8 @@ for (const file of ['trace-types','trace-math','bvh-build','bvh','bvh-gpu','sdf-
 }
 for (const file of ['style-native-values','bundle-style-assets','style-expressions','map-style','style-assets','scene-review','bundle','bundle-archive','bundle-output','bundle-migration']) {
   copyRequired(join(dist,file+'.d.ts'),join(root,'types',file+'.d.ts'));
+}
+
+for (const file of ['cartography-common','cartography-fonts','cartography-canvas','colormaps','colormap-io','map-layout','map-legend','map-scale-bar','map-north-arrow','map-plate','vector-export-scene','vector-export','vector-pdf']) {
+  writeFileSync(join(root,'types',file+'.d.ts'),readRequired(join(dist,file+'.d.ts')).replace(/from (["'])\.\/(frames)\.js\1/g,'from "./index.js"'));
 }

@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "verifiedAt": "2026-10-14T19:31:52.902Z",
+  "revision": "ed230e89cf648508748800fa4811163bdb7dfd92",
+  "packageSha256": "664209976e5d8b91a0bbae45998c72634abf5c579d6464567dec805fe6d60106",
+  "wasmSha256": "50dc3d9a9be830f71d05739820ee5a0e2d5c826c70481a3492edf9d3ac738068",
+  "wasmRebuilt": true,
+  "exitCode": 0,
+  "browserCases": 9,
+  "independentPdfRenderer": "PyMuPDF 1.26.7",
+  "independentPdfRender": {
+    "renderer": "PyMuPDF 1.26.7",
+    "results": [
+      {
+        "file": "cartography.pdf",
+        "pages": 1,
+        "fonts": 2,
+        "paths": 3,
+        "text": "Monta\u00f1a & Peak\nMonta\u00f1a & Peak",
+        "darkTextPixels": 158,
+        "renderPixels": [
+          200,
+          100
+        ]
+      }
+    ]
+  }
+}

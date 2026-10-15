@@ -91,3 +91,5 @@ BVH/LBVH, SDF/CSG and progressive WebGPU path tracing: [browser guide](crates/fo
 Measured W17 checks, tested revisions and package digests: [local evidence](docs/parity/w17-local-evidence.json). Corrections and regression coverage: [W17 review fixes](docs/parity/w17-review-fixes.md).
 
 Follow-up guiding CDF correction: [verification and boundary regression](docs/parity/w17-guiding-fix-evidence.json).
+
+W20 map plates, furniture, vector SVG/PDF exports and the colormap ecosystem are documented in the [cartography guide](crates/forge3d-web/docs/cartography.md), with an [installed-package example](crates/forge3d-web/examples/cartography.html).

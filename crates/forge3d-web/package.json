@@ -42,7 +42,11 @@
     "tests/fixtures/w19/native-renderable.forge3d",
     "README.md",
     "LICENSE",
-    "LICENSE-APACHE"
+    "LICENSE-APACHE",
+    "examples/cartography.html",
+    "examples/cartography.js",
+    "examples/cartography-checks.js",
+    "examples/cartography-worker.js"
   ],
   "exports": {
     ".": {
@@ -98,9 +102,12 @@
     "test:w18": "vitest run tests/unit/w18-diagnostics.test.ts tests/unit/w18-mapscene.test.ts tests/unit/w18-review-regressions.test.ts && node --test tests/api/w18-docs.test.mjs && playwright test tests/playwright/w18_mapscene.spec.ts --project=chromium-preflight",
     "test:package-consumer:w18": "node scripts/test-w18-package-consumer.mjs",
     "test:w19": "vitest run tests/unit/w19-style-bundle.test.ts tests/unit/w19-native-contract.test.ts tests/unit/w19-native-replay.test.ts tests/unit/w19-native-equivalents.test.ts && playwright test tests/playwright/w19_style_bundle.spec.ts --project=chromium-preflight",
-    "test:package-consumer:w19": "node scripts/test-w19-package-consumer.mjs"
+    "test:package-consumer:w19": "node scripts/test-w19-package-consumer.mjs",
+    "test:w20": "vitest run tests/unit/w20-vector-export.test.ts tests/unit/w20-colormaps.test.ts tests/unit/w20-native-coverage.test.ts tests/unit/w20-native-extra.test.ts tests/unit/w20-review-regressions.test.ts tests/unit/w20-pdf-errors.test.ts tests/unit/w20-text-layout.test.ts && playwright test tests/playwright/w20_cartography.spec.ts --project=chromium-preflight",
+    "test:package-consumer:w20": "node scripts/test-w20-package-consumer.mjs"
   },
   "devDependencies": {
+    "@pdf-lib/fontkit": "1.1.1",
     "@playwright/test": "^1.56.1",
     "fflate": "0.8.3",
     "geotiff": "3.0.5",
@@ -108,7 +115,9 @@
     "ktx-parse": "1.1.0",
     "laz-perf": "0.0.7",
     "mediabunny": "1.58.0",
+    "pdf-lib": "1.17.1",
     "proj-wasm": "0.1.0-alpha9",
+    "regenerator-runtime": "0.14.1",
     "selenium-webdriver": "4.35.0",
     "typescript": "^6.0.3",
     "vite": "^8.0.16",
