@@ -17,8 +17,9 @@ jobs:
   build-and-contract:
     name: Web Runtime / Build And Contract Tests
     runs-on: windows-latest
-    # Full corpus plus bounded live-download retries; test and runtime budgets are unchanged.
-    timeout-minutes: 40
+    # The full corpus and bounded live-download retries exceed 40m on slower runners.
+    # Only the outer job budget changes; per-test deadlines and runtime budgets stay fixed.
+    timeout-minutes: 60
 
     steps:
       - name: Check out the protected source
