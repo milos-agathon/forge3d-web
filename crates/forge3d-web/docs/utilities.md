@@ -1,13 +1,16 @@
 # Offline licensing, image arrays and benchmarks
 
-W21 implements M08, M09 and E07 in the browser. Import these APIs from
+W21 remains Partial: M08 is E until W20 map plate, SVG and PDF product gates
+are integrated and tested. M09 and E07 have verified browser implementations.
+Import these APIs from
 `@forge3d/web`. Try [the browser example](../examples/utilities.html).
 
 ## Licenses and Pro gates
 
 ```ts
-import { setLicenseKey, getLicenseInfo, requirePro, loadStyle } from '@forge3d/web';
+import { configureLicenseIssuer, setLicenseKey, getLicenseInfo, requirePro, loadStyle } from '@forge3d/web';
 
+configureLicenseIssuer(trustedIssuerPublicKeyHex); // Once, BEFORE any key is attempted.
 await setLicenseKey(keyFromYourApplication);
 requirePro('Mapbox style loading');
 const style = await loadStyle(new File([styleJson], 'style.json'));
@@ -25,10 +28,14 @@ invalid replacement leaves the preceding verified key unchanged.
 `LicenseInfo.valid` means that the signature verified. Access depends on
 `status`: `active` through the entire expiry day, `grace` through the following
 14 days, then `expired`. An empty manager reports `missing`. Expiry is rechecked
-on every gate using UTC calendar days, so a long-running tab loses access when
+on every gate using local calendar days, matching native `date.today()`, so a long-running tab loses access when
 grace ends. Grace calls emit a renewal warning. Returned reports are copies and
-exclude the key and signature. Clearing or setting a newer key wins over an
-older pending verification or storage read.
+exclude the key and signature. A clear or a newer successful key wins over an
+older pending verification or storage read. A failing newer key does not cancel
+an older pending valid verification.
+An explicit storage load still verifies its stored key if an earlier pending
+verification finishes during the read. Only a clear or a successful request
+issued after that read started can supersede it.
 
 Verification uses WebCrypto Ed25519 when supported. Unsupported WebCrypto
 falls back to the exact self-hosted `@noble/ed25519@3.2.0` and
@@ -43,8 +50,9 @@ and `loadBuildingTilesMetadata`. MapScene style and bundle adapters call these
 same gates. MapScene building recipes produce `pro_gated_path` diagnostics
 before loading unlicensed building sources. Plain style parsing, expressions,
 geometry operations, PNG helpers and benchmarks remain available without a key.
-`PRO_FEATURES` also names the map plate/SVG/PDF gates for W20-owned entrypoints;
-this branch's baseline does not contain those W20 implementations.
+`PRO_FEATURES` names map plate/SVG/PDF gates, but those names are not integrated
+or tested product gates. Their W20 implementations are absent from this base.
+This is the explicit M08 blocker; its status remains E.
 
 `requiresPro(fn, feature, manager?)` preserves arguments, return type and `this`.
 `requirePro(feature)` checks the package singleton. For isolated state, create
@@ -52,8 +60,16 @@ this branch's baseline does not contain those W20 implementations.
 `getInfo`, `requirePro` and `clear` methods. A manager with a different issuer
 does not modify the package singleton's product gates. The default issuer is
 the native **development** public key. Its test signing key is public in native
-test history; it does not represent a production entitlement. Provision the
-production issuer in a controlled distribution.
+test history; it does not represent a production entitlement. Production apps
+must call `configureLicenseIssuer(trustedPublicKeyHex)` before any nonempty
+`setLicenseKey` or singleton `setKey` attempt. This configures the actual
+package-wide product gates, not just an isolated manager. The issuer can be
+configured only once. A pending, successful or failed nonempty key attempt
+locks configuration; `clear()` does not unlock it. Invalid issuer hex fails
+without consuming the configuration opportunity. `licenseManager.configureIssuer`
+obeys the same one-time guard. Public keys are 32 bytes encoded as 64 hex digits.
+Ephemeral test issuers are generated at test time; no private signing key is
+embedded or copied for this configuration path.
 
 Persistence is explicit through existing W02 storage contracts:
 
@@ -96,7 +112,11 @@ opaque alpha. `imageArrayToImageData` returns an owned browser ImageData.
 `displayImageArray` resizes a caller-owned DOM canvas or OffscreenCanvas and
 uses a 2D context without retaining resources.
 
-`encodePng(width, height, rgba, options)` and `Frame.toPng` remain available.
+`encodePng(width, height, rgba, options)` accepts Uint8Array and
+Uint8ClampedArray byte views, including offsets, without copying the input view.
+It and `Frame.toPng` retain their existing dimension-based contract; they do not
+have the W21 image-array pixel cap. `imageArrayToRgba`/`arrayToPng` retain their
+16,777,216-pixel cap.
 `arrayToPng` defaults to browser CompressionStream deflate and falls back to
 deterministic stored zlib blocks. `{ compression: 'none' }` gives identical
 encoded bytes across engines. PNGs have filter 0 and no ancillary chunks.
@@ -111,10 +131,14 @@ CRCs, ordering, dimensions, zlib checksum and exact inflated length. The hard
 limit is 16,777,216 pixels and 128 MiB encoded input; `maxPixels` can lower the
 pixel limit. Invalid PNGs fail with IO_ERROR, limits with RESOURCE_LIMIT_EXCEEDED.
 
-`loadImage`/`exportImage` share the exact PNG path. Other image types use
-createImageBitmap and Canvas/OffscreenCanvas, with an HTMLImageElement/DOM
-canvas fallback where needed. JPEG is lossy; Canvas display may premultiply
-alpha. Always compare or retain the typed arrays for byte-level fidelity.
+`loadImage` first tries exact `decodePng`. On IO_ERROR or
+RESOURCE_LIMIT_EXCEEDED it preserves the previous bitmap/Canvas decoder path
+and its 256 MiB mesh limit. Browser-accepted trailing IEND bytes, oversized
+palette transparency and a 4097x4097 1-bit PNG are covered in source/dist tests.
+`pngToArray` stays strict and never falls back. `exportImage` uses the exact PNG
+encoder. Other image types use browser codecs, with an HTMLImageElement/DOM
+canvas fallback where needed. JPEG is lossy and Canvas may premultiply alpha;
+use the strict PNG typed-array path for exact bytes.
 
 ## Operation benchmarks and memory budgets
 
@@ -130,36 +154,57 @@ const report = await runBenchmark({
 console.log(JSON.stringify(report));
 ```
 
-Operations are `renderer_rgba`, `scene_rgba`, `renderer_png`, `array_to_png`,
+Operations are `renderer_rgba`, `renderer_png`, `array_to_png`,
 `png_to_array` and `custom`. Renderer operations take `target: session`, render
-the caller's committed scene, and await readback/screenshot completion. They
-record the session's actual typed W02 RendererConfig, capabilities, render
-statistics and memory reports. They never create a preset catalog or dataset
+the caller's committed scene through the readback/screenshot path's own scene
+pass, and await its completion. There is no extra target.render(). Native
+`scene_rgba` maps to `renderer_rgba` over the caller's committed scene; the
+unreleased duplicate operation was removed. Targeted operations record the
+session's actual W02 RendererConfig, capabilities and memory reports. They never create a preset catalog or dataset
 registry. PNG fixtures are generated deterministically from the recorded seed;
 fixture creation is outside timed samples. For `custom`, provide an operation
 returning a value or a Promise and optionally a W02 `memory` report callback.
-`runBenchmarkSuite` runs operations sequentially.
+`runBenchmarkSuite` runs operations sequentially. `renderer` is the actual
+target config, an explicitly requested `options.renderer` config, or null when
+neither was supplied. No default renderer config is invented for PNG/custom
+operations.
 
 The versioned `BenchmarkResult` has `schemaVersion: 1`, operation, dimensions,
-seed, warmup/iteration counts, raw `samplesMs`, `stats`, `throughput`, `renderer`,
-`environment`, `memory`, `rendererStats` and `budget`. Stats include min, p50,
+seed, `coldMs`, warmup/iteration counts, raw `samplesMs`, `stats`, `throughput`, `renderer`,
+`environment`, `memory`, `rendererStats`, `baseline` and `budget`. Stats include min, p50,
 mean, p95, max and population standard deviation, with NumPy linear percentile
-interpolation. Throughput is FPS and megapixels/second. Warmup and setup are
-excluded. `timing: 'cpu-completion'` includes encoding/readback overhead and
-must not be interpreted as GPU-only timing. Actual GPU timestamps, when
-available, remain identified in the W02 `rendererStats` pass reports.
+interpolation. Throughput is FPS and megapixels/second. The first operation
+is timed separately as `coldMs`; it and subsequent warmups and setup are
+excluded from steady samples/statistics/throughput. Operation count is exactly
+1 + warmup + iterations. `timing: 'cpu-completion'` includes encoding/readback overhead and
+must not be interpreted as GPU-only timing. `rendererStats` is explicitly null:
+current W02 readback/screenshot paths do not update the session statistics.
+Reporting the preceding explicit render would report a different frame.
 
 Environment records browser UA, concurrency, pixel ratio, secure/isolation
 signals and the target's adapter/features/limits. Unavailable capabilities or
 memory are `null`. Memory records before/after W02 reports, current-byte delta,
 and the greatest observed current/lifetime peak allocation. Budget checks
 report named violations for `maxP95Ms`/`maxMemoryBytes`; unavailable memory
-cannot pass a memory budget. Cancellation and operation failures reject the
+cannot pass a memory budget. Pass a prior `BenchmarkResult` as `baseline` to
+compare steady p95. `maxRegressionPercent` defaults to native perf_sanity's 50%;
+a larger increase adds the named `baselineP95Regression` violation. Baselines
+must match schema, operation, dimensions, seed, timing and renderer config.
+The report records baseline p95, tolerance, limit and percentage increase; the
+percentage is null for a positive measurement over a zero baseline. Compare
+environments separately before interpreting results. Cancellation and operation failures reject the
 run. `maxDurationMs` defaults to five minutes and is checked between awaited
 operations; it cannot preempt a Promise that the caller never resolves.
 
-The original FND-07 viewer interaction/recovery benchmark remains its own
-hardware evidence harness. These public per-operation reports extend the
-benchmark tooling; they do not establish W00 physical-browser qualification.
+FND-07's `tests/browser/viewer-benchmark.ts` now exposes
+`runViewerOperationBenchmark(page, options)`. It loads the existing frozen
+terrain/manifest and measures real viewer screenshot completion through public
+`runBenchmark`, returning its statistics, throughput, environment and budget
+schema. The existing source benchmark test attaches it separately after
+validating its v1 evidence. A real-browser test rejects uniform or incorrectly
+sized captured output. The frozen v1 manifest, trace, goldens and original scheduling report
+remain unchanged. The companion has renderer: null because the viewer does not
+expose a W02 RendererConfig. Neither report establishes W00 physical-browser
+qualification.
 
 See [W21 verification](w21-evidence.md) for native provenance and runnable gates.

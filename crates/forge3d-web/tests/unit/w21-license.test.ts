@@ -1,3 +1,5 @@
+import * as productApi from '../../src-ts/index.js';
+import { productGateCases, productUrlGateCases } from './w21-gate-cases.js';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LicenseManager, LicenseError, licenseManager, setLicenseKey, requirePro, requiresPro } from '../../src-ts/license.js';
 import { MapScene } from '../../src-ts/map-scene.js';
@@ -7,7 +9,7 @@ import { saveBundle, loadBundle } from '../../src-ts/bundle.js';
 import licenses from '../fixtures/w21/licenses.json';
 
 beforeEach(() => licenseManager.clear());
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
 describe('native Ed25519 license contract', () => {
   it.each(['auto', 'noble'] as const)('verifies the native issuer offline with %s', async verifier => {
     vi.stubGlobal('fetch', vi.fn(() => { throw Error('network forbidden'); }));
@@ -33,15 +35,15 @@ describe('native Ed25519 license contract', () => {
     expect(manager.getInfo().status).toBe('missing');
   });
   it('uses inclusive expiry and exactly 14 grace days, rechecked on every gate', async () => {
-    let now = new Date('2026-10-01T23:59:59Z'); const warnings: string[] = [];
+    let now = new Date(2026,9,1,23,59,59); const warnings: string[] = [];
     const manager = new LicenseManager({ now: () => now, onWarning: m => warnings.push(m) });
     await manager.setKey(licenses.grace);
     expect(manager.getInfo()).toMatchObject({ status: 'active', daysRemaining: 0, graceEnd: '2026-10-15' });
-    now = new Date('2026-10-02T00:00:00Z'); manager.requirePro('feature');
+    now = new Date(2026,9,2,0,0,0); manager.requirePro('feature');
     expect(manager.getInfo()).toMatchObject({ status: 'grace', daysRemaining: 13 });
-    now = new Date('2026-10-15T23:59:59Z'); manager.requirePro('feature');
+    now = new Date(2026,9,15,23,59,59); manager.requirePro('feature');
     expect(warnings).toHaveLength(2); expect(manager.getInfo().daysRemaining).toBe(0);
-    now = new Date('2026-10-16T00:00:00Z');
+    now = new Date(2026,9,16,0,0,0);
     expect(() => manager.requirePro('feature')).toThrow('grace period ended');
   });
   it('clears without implicit storage/environment reload and preserves wrapper this/arguments', async () => {
@@ -74,15 +76,21 @@ describe('native Ed25519 license contract', () => {
     const scene=new MapScene({crs:'LOCAL',camera:{kind:'orbit-camera',target:[0,0,0],distance:10},output:{width:8,height:8},layers:[{kind:'buildings',layerId:'city',source:{id:'city-data',format:'geojson',crs:'LOCAL',url:'https://example.invalid/buildings.geojson'}}]});
     try { expect(scene.validate().diagnostics.some(d=>d.code==='pro_gated_path')).toBe(true);expect((await scene.prepare()).renderBlocked()).toBe(true);await expect(scene.render()).rejects.toThrow();expect(fetchSpy).not.toHaveBeenCalled(); } finally { scene.dispose(); }
   });
-  it('gates native public product paths before fetch, parsing or writes', async () => {
-    const fetchSpy = vi.fn(() => { throw Error('unexpected fetch'); }); vi.stubGlobal('fetch', fetchSpy);
-    for (const invoke of [() => loadBuildings('https://example.invalid/x'), () => loadBuildings('x', { format: 'cityjson' }), () => loadBuildingTilesMetadata('x'), () => loadStyle('x'), () => loadStyleLayers(parseStyle({ layers: [] })), () => saveBundle({} as never), () => loadBundle('x')])
-      await expect(invoke()).rejects.toBeInstanceOf(LicenseError);
-    expect(() => compileStyle(parseStyle({ layers: [] }), {})).toThrow(LicenseError);
-    expect(() => parseGeoJsonBuildings({})).toThrow(LicenseError);
-    expect(() => parseCityJsonBuildings({})).toThrow(LicenseError);
-    expect(fetchSpy).not.toHaveBeenCalled();
-    await setLicenseKey(licenses.active); expect(compileStyle(parseStyle({ layers: [] }), {}).layers).toEqual([]);
-    await setLicenseKey(licenses.expired); expect(() => compileStyle(parseStyle({ layers: [] }), {})).toThrow('expired');
+
+  describe.each(['missing','expired','grace'] as const)('%s product gates',state=>{
+    const cases = [...productGateCases(productApi), ...(state === 'grace' ? [] : productUrlGateCases(productApi))];
+    it.each(cases)('%s enforces the current license state before IO',async(name,invoke)=>{
+      licenseManager.clear();
+      vi.useFakeTimers({toFake:['Date']});vi.setSystemTime(new Date(2026,9,15,23,59,59));
+      const warning=vi.spyOn(console,'warn').mockImplementation(()=>{}),fetchSpy=vi.fn(()=>{throw Error('unexpected fetch');});vi.stubGlobal('fetch',fetchSpy);
+      try {
+        if(state!=='missing')await setLicenseKey(licenses[state]);
+        if(state==='grace'){
+          const value:any=await Promise.resolve().then(invoke);value?.dispose?.();
+          expect(warning,name).toHaveBeenCalled();
+        }else await expect(Promise.resolve().then(invoke),name).rejects.toBeInstanceOf(LicenseError);
+        expect(fetchSpy,name).not.toHaveBeenCalled();
+      }finally{warning.mockRestore();}
+    });
   });
 });

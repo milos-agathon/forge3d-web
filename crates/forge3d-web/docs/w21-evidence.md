@@ -1,74 +1,135 @@
-# W21 verification
+# W21 review verification
 
-Scope: M08 offline licensing/gates, M09 benchmark/memory diagnostics and E07
-PNG/array/display utilities. Renderer configuration remains W02-owned and
-datasets remain W14-owned. No subagents were used.
+Review scope: the W21 section and M08/M09/E07 requirements at `c88f0699`,
+applied to the W21 implementation at `f0c34be8`. Work was performed in the
+`codex/w21-utilities` worktree without subagents.
 
-## Inspected native contracts
+W21 is **Partial**. M08 remains **E**: the map plate, SVG and PDF names in
+`PRO_FEATURES` are not integrated or tested product gates until W20. Existing
+building, style and bundle gates are covered. M09 is **I** with cold timing,
+baseline comparison and FND-07 consumption of the public operation schema.
+E07 remains **I**. These statuses are recorded in the plan matrix, W21 ledger,
+W21 code status and composite parity baseline.
 
-The exact native commit is recorded in
-[native-contract.json](../tests/fixtures/w21/native-contract.json). The retained
-[source files](../tests/fixtures/w21/native/) include `_license.py`, Rust's
-license verifier, `test_license.py`, `test_pro_gating.py`, `_png.py`,
-`test_png_io_fallback.py`, `bench.py`, `device_diagnostics.py` and `perf_sanity.py`.
-Each file has a SHA-256 assertion. The tests use signed native-development
-license fixtures, native date/grace behavior, independent PNG fixtures and
-independent known statistical expectations. No Python or Node rendering is
-used to execute the browser outcomes.
+## Native provenance and observed regressions
 
-The baseline includes W19 and does not contain the separate W20 implementation.
-Map plate/SVG/PDF feature names are available in the gate catalog; those APIs
-remain owned by W20. Existing building imports, styles and bundles are wired
-to the gates, including MapScene building preflight and product adapters.
+The native reference is `1f4084af428dc699bdcd108b029736cb73903926`.
+[native-contract.json](../tests/fixtures/w21/native-contract.json) records
+SHA-256 assertions for the retained [native sources](../tests/fixtures/w21/native/),
+including licensing, PNG helpers, benchmarks, diagnostics and `perf_sanity`.
+No native private signing key was copied. Issuer tests generate Ed25519
+keypairs at test time with the existing noble dependency.
 
-## Local verification on 2026-10-15
+Regression checks cover the following outcomes:
 
-The full unit suite passed 1,721 tests in 78 files. The combined W15/W18/W19/W21
-Chromium source/dist regression run passed all 86 cases, including all eight
-W21 cases. API/type declarations, documentation links, W00 parity, browser
-harness and package contracts passed. Infrastructure passed 627 tests with its
-one existing Unix cross-UID test skipped on Windows. The npm advisory response
-reported no advisories for either added noble dependency.
+- The one-time public issuer configuration controls the package singleton's
+  actual gates. All four development-signed fixtures are rejected under a
+  generated issuer, and every integrated gated entrypoint remains blocked.
+  A key signed by that generated issuer succeeds. Configuration locks after
+  configuration or any nonempty key attempt, including pending/failed attempts,
+  and stays locked after clear.
+- Local calendar expiry includes the entire expiry day and fourteen grace
+  days. Controlled interleaved verification proves that a newer failed key
+  preserves an older pending valid key, while clear and a newer successful key
+  win. Every integrated product entrypoint is exercised with missing, expired
+  and grace keys; grace must succeed and warn. Tests clear the setup key first.
+  Follow-up interleavings also prove that a storage load verifies its valid or
+  forged stored key when a verification started before the load completes
+  during the storage read. Clears and successful requests issued after the
+  read starts still win; a failed newer request does not cancel the load.
+  Missing/expired URL cases cover all five network-reading product loaders,
+  including `loadStyleLayers` with a GeoJSON URL inside a style specification.
+  All ten cases failed under temporary read-before-gate faults, which were
+  removed before validation.
+- `Frame.toPng` encodes 4097x4096 pixels with compression `none`, and
+  `encodePng` accepts an offset Uint8ClampedArray byte view. The image-array
+  pixel limit remains enforced. Exact RGBA8 tests include hidden RGB at zero
+  alpha.
+- Source and dist browser tests load PNGs with trailing bytes after IEND,
+  tRNS longer than PLTE, and 4097x4097 one-bit dimensions through `loadImage`'s
+  compatible browser fallback. `pngToArray` rejects these same fixtures. The
+  retained negative-control browser run failed all six compatibility cases
+  against the original loader and also failed the missing FND-07 companion.
+- Readback/screenshot operations capture once per operation without an extra
+  render. Real session statistics were observed to remain unchanged by capture;
+  benchmark `rendererStats` is therefore null. Renderer configuration is the
+  actual target config, an explicit requested config, or null. The duplicate
+  `scene_rgba` operation is removed; native `scene_rgba` maps to `renderer_rgba`
+  over the caller's committed scene.
+- The first operation is reported separately as `coldMs` and excluded from
+  steady samples. Baseline p95 comparison accepts the default 50% increase and
+  reports `baselineP95Regression` above it. Independent clock-controlled tests
+  check cold/warm/sample accounting, thresholds and a zero baseline.
 
-Raw unit/package logs and the advisory response are retained locally under
-`test-results/w21-*`. The installed gate writes its own raw JSON, runtime
-revision, tarball/WASM digests and outcome; inspect
-`test-results/w21-package-consumer.json` and
-`test-results/w21-installed-playwright.json` after running it.
+FND-07's existing source benchmark test now attaches a separate public
+`BenchmarkResult` after validating its original v1 evidence. The companion
+uses the frozen terrain and manifest and measures real viewer screenshots;
+it checks image dimensions and rejects uniform output. The requested W21
+browser run covers this companion. The existing source evidence test passed in
+`FORGE3D_SOURCE_BENCHMARK_MODE=probe`. A separate Chromium preflight test then
+ran the complete frozen 120-warmup/600-sample schedule and the public companion
+(1 passed, 0 failed). This supplements the engine evidence without claiming
+physical-browser qualification. No frozen manifest, trace, golden, determinism hash or W00
+dependency lock changed. The parity plan digest changed with the requested
+status corrections.
 
-## Verification commands
+## Local validation on 2026-10-15
 
-Run from `crates/forge3d-web`:
+Commands ran from `crates/forge3d-web` with
+`CARGO_TARGET_DIR=C:\devin-target\forge3d-web`. Raw logs below are local,
+ignored files relative to the repository root under `.cache/w21-review/`.
+
+| Gate | Observed result | Raw log |
+| --- | --- | --- |
+| `build:wasm` + `build:ts` + `prepare-dist` | All three commands passed | `followup-build.log` |
+| `test:unit` | 1780 passed, 0 failed; 81 files | `followup-unit.log` |
+| `test:api` | Typechecks, API snapshot and emitted-facade checks passed | `followup-api.log` |
+| `verify:parity` | 15 passed, 0 failed; manifest verifier reported no violations | `followup-parity.log` |
+| `test:package` | Docs 27 passed; browser harness 118 passed; infrastructure 627 passed, 1 existing Unix cross-UID skip on Windows; 0 failed; package/release scripts passed | `followup-package.log` |
+| Requested W15/W18/W19/W21 Chromium preflight | 95 passed, 0 failed, including 17 W21 cases | `followup-browser.log` |
+| License tests, `TZ=Pacific/Kiritimati` | 68 passed, 0 failed | `followup-tz-kiritimati.log` |
+| License tests, `TZ=America/Los_Angeles` | 68 passed, 0 failed | `followup-tz-los-angeles.log` |
+| Additional source FND-07 test, probe mode | 1 passed, 0 failed | `fnd07.log` |
+| Complete frozen FND-07 schedule and public companion, Chromium preflight | 1 passed, 0 failed | `followup-full-fnd07-rerun.log` |
+
+An initial Kiritimati run hit the default five-second cold-module-loading
+timeout while other tests ran concurrently (52 passed, 1 failed). Its raw log
+is retained as `tz-kiritimati-timeout.log`. The two cold issuer tests now allow
+fifteen seconds; both complete timezone reruns above passed. The browser
+negative-control log is retained as `red-browser.log`.
+The storage-load regressions failed before the follow-up fix (2 failed,
+10 passed) in `followup-red-load.log`, then all 68 license tests passed in
+`followup-green-license.log`. The ten URL mutation failures are retained in
+`followup-red-url-gates.log`.
+The first attempt to launch the supplemental full-schedule test served the
+temporary config directory instead of the package directory; it was stopped
+before any test ran. `followup-full-fnd07.log` retains that setup log. The
+corrected local config and test are retained in `.cache/w21-review/`, together
+with `full-fnd07-playwright.json` and its scheduling/operation attachment.
+
+The exact requested browser command was:
 
 ```text
-npm run build:wasm
-npm run build:ts
-npm run prepare-dist
-npm run test:unit
-npm run test:api
-npm run verify:parity
-npm run test:package
-npm run test:w21
-npm run test:package-consumer:w21
+npx playwright test tests/playwright/w15_geometry.spec.ts tests/playwright/w18_mapscene.spec.ts tests/playwright/w19_style_bundle.spec.ts tests/playwright/w21_utilities.spec.ts --project=chromium-preflight
 ```
 
-On Windows, set CARGO_TARGET_DIR to `C:\devin-target\forge3d-web`.
-The installed gate requires a clean committed tree, rebuilds WASM/TS, packs and
-installs the npm tarball into a temporary consumer, typechecks imports using
-only installed declarations, and serves only installed files with a restrictive
-same-origin CSP. It runs the dist W21 tests and retains package/WASM digests
-and raw Playwright evidence under `test-results/w21-*`. CI runs this gate and
-uploads its reports.
+## Installed consumer and limits of this evidence
 
-The browser suite checks offline WebCrypto/noble verification, malformed and
-expired keys, grace warnings, real OPFS persistence, product gating, exact PNG
-round trips including hidden RGB at zero alpha, ImageData/Canvas adapters,
-module-worker PNG use, HTMLImageElement/DOM fallback, interactive controls and
-real renderer readback benchmarks. Renderer output must cover the entire test
-region before its benchmark report is accepted.
+`npm run test:package-consumer:w21` requires a clean committed tree. The review
+fixes need Milos's explicit approval before a local commit; the installed gate
+has not yet run for these fixes at the time of this evidence update. No result
+from the earlier implementation is treated as verification of these changes.
 
-These checks are functional Chromium engine preflight on the local adapter.
-They do not satisfy physical Chrome/Firefox/Safari qualification or W00
-hardware performance budgets. Browser licensing is validity and client API
-gating, not tamper-resistant DRM. Sensitive server/data entitlements remain
-server-side. See [API contracts and limitations](utilities.md).
+After the approved commit, the gate rebuilds WASM/TS, installs the tarball into
+a temporary consumer, typechecks installed declarations and exercises dist
+under a same-origin CSP. It writes the actual revision, tarball/WASM digests,
+outcome and raw browser results to `test-results/w21-package-consumer.json`
+and `test-results/w21-installed-playwright.json`. Consult those records and
+the run's raw log for the installed outcome; it is not implied by the local
+source/dist results above.
+
+The checks above establish functional Chromium engine preflight on the local
+adapter. Physical Chrome/Firefox/Safari qualification and W00 hardware
+performance budgets were not run. Browser
+licensing provides offline validity, expiry/grace and client API gating, not
+tamper-resistant DRM. See [API contracts and limitations](utilities.md).

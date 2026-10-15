@@ -3526,7 +3526,7 @@ export declare class AovFrame {
 export declare function encodePng(
   width: number,
   height: number,
-  rgba: Uint8Array,
+  rgba: Uint8Array | Uint8ClampedArray,
   options?: PngEncodeOptions,
 ): Promise<Blob>;
 export declare function writeExr(image: {
@@ -4415,7 +4415,7 @@ export type { TraceWorkerHits, TraceWorkerDistances } from "./trace-worker.js";
 export { iterTraceTiles, encodeTraceAovs } from "./trace-output.js";
 export type { TraceTile } from "./trace-output.js";
 
-export { LicenseManager, LicenseError, licenseManager, setLicenseKey, getLicenseInfo, requirePro, requiresPro, LICENSE_PUBLIC_KEY_HEX, LICENSE_GRACE_DAYS, PRO_FEATURES } from './license.js';
+export { LicenseManager, LicenseError, licenseManager, configureLicenseIssuer, setLicenseKey, getLicenseInfo, requirePro, requiresPro, LICENSE_PUBLIC_KEY_HEX, LICENSE_GRACE_DAYS, PRO_FEATURES } from './license.js';
 export type { LicenseInfo, LicenseStatus, LicenseManagerOptions } from './license.js';
 export { imageArrayToRgba, imageArrayToImageData, displayImageArray, arrayToPng, pngToArray, MAX_IMAGE_PIXELS } from './image-array.js';
 export type { ImageArray } from './image-array.js';

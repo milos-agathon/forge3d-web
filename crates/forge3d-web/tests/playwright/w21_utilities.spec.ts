@@ -1,4 +1,7 @@
+import * as ed from '@noble/ed25519';
+import * as fnd07 from '../browser/viewer-benchmark';
 import { test, expect } from "../browser/webgpu-fixture";
+import { browserPngCompatibilityFixtures } from '../fixtures/w21/png-fixtures.mjs';
 import licenses from '../fixtures/w21/licenses.json' with { type: 'json' };
 
 declare global { interface Window { __w21: any; } }
@@ -6,6 +9,21 @@ for(const source of [true,false]){
   const label=source?'source':'dist';
   test.describe(label,()=>{
     test.beforeEach(async({page})=>{await page.goto('/examples/utilities.html'+(source?'?source':''));await page.waitForFunction(()=>window.__w21?.ready);});
+
+    test(`W21 ${label}: configured singleton issuer rejects development fixtures`,async({page})=>{
+      const secret=ed.utils.randomSecretKey(),publicKey=await ed.getPublicKeyAsync(secret),message='F3D-PRO-browser-issuer-20991231';
+      const hex=(bytes:Uint8Array)=>Array.from(bytes,b=>b.toString(16).padStart(2,'0')).join('');
+      const key=message+'-'+hex(await ed.signAsync(new TextEncoder().encode(message),secret));
+      const result=await page.evaluate(async input=>{
+        const {api}=window.__w21;api.licenseManager.clear();api.configureLicenseIssuer(input.publicKeyHex);
+        let rejected=0,blocked=false;for(const key of input.developmentKeys){try{await api.setLicenseKey(key);}catch(e:any){if(e.code==='LICENSE_REQUIRED')rejected++;}}
+        try{api.compileStyle(api.parseStyle({layers:[]}),{});}catch(e:any){blocked=e.code==='LICENSE_REQUIRED';}
+        const valid=await api.setLicenseKey(input.key);const layers=api.compileStyle(api.parseStyle({layers:[]}),{}).layers.length;
+        api.licenseManager.clear();let locked=false;try{api.configureLicenseIssuer(input.publicKeyHex);}catch{locked=true;}
+        return {rejected,blocked,status:valid.status,layers,locked};
+      },{publicKeyHex:hex(publicKey),key,developmentKeys:Object.values(licenses)});
+      expect(result).toEqual({rejected:4,blocked:true,status:'active',layers:0,locked:true});
+    });
     test(`W21 ${label}: offline WebCrypto and pure JS licensing, gates, persistence and expiry`,async({page,context})=>{
       await context.setOffline(true);
       const result=await page.evaluate(async keys=>{
@@ -13,7 +31,7 @@ for(const source of [true,false]){
         let blocked=false;try{api.compileStyle(api.parseStyle({layers:[]}),{});}catch(e:any){blocked=e.code==='LICENSE_REQUIRED';}
         const native=await api.setLicenseKey(keys.active),pure=new api.LicenseManager({verifier:'noble'}),fallback=await pure.setKey(keys.enterprise);
         let forged=false;try{await pure.setKey(keys.active.replace('20991231','20991230'));}catch(e:any){forged=e.code==='LICENSE_REQUIRED';}
-        const warnings:string[]=[],grace=new api.LicenseManager({now:()=>new Date('2026-10-15T23:59:59Z'),onWarning:(m:string)=>warnings.push(m)});await grace.setKey(keys.grace);grace.requirePro('test');
+        const warnings:string[]=[],grace=new api.LicenseManager({now:()=>new Date(2026,9,15,23,59,59),onWarning:(m:string)=>warnings.push(m)});await grace.setKey(keys.grace);grace.requirePro('test');
         const store=api.opfsByteStore('w21-license');await api.licenseManager.save(store);api.licenseManager.clear();await api.licenseManager.load(store);const restored=api.getLicenseInfo();await store.clear();
         const png=await api.arrayToPng({width:1,height:1,channels:4,data:new Uint8Array([12,34,56,0])});
         const offlinePixels=Array.from((await api.pngToArray(png)).data);
@@ -50,19 +68,41 @@ for(const source of [true,false]){
       const downloadPromise=page.waitForEvent('download');await page.locator('#png').click();const download=await downloadPromise;expect(download.suggestedFilename()).toBe('forge3d-pixels.png');
       await page.locator('#benchmark').click();await expect(page.locator('#result')).toContainText('"schemaVersion": 1');
     });
+
+    for(const fixture of browserPngCompatibilityFixtures()) test(`W21 ${label}: loadImage review regression ${fixture.name}`,async({page})=>{
+      const result=await page.evaluate(async input=>{
+        const {api}=window.__w21,bytes=new Uint8Array(input);
+        let strict;try{await api.pngToArray(bytes);}catch(error:any){strict=error.code;}
+        const image=await api.loadImage(bytes);return {width:image.width,height:image.height,pixel:Array.from(image.data.slice(0,4)),strict};
+      },Array.from(fixture.bytes));
+      expect(result).toMatchObject({width:fixture.width,height:fixture.height,pixel:fixture.pixel});
+      expect(['IO_ERROR','RESOURCE_LIMIT_EXCEEDED']).toContain(result.strict);
+    });
     test(`W21 ${label}: real renderer completion, W02 config, memory and stable benchmark schema`,async({page},info)=>{
       const result=await page.evaluate(async()=>{
         const {api}=window.__w21,canvas=document.createElement('canvas');canvas.width=32;canvas.height=24;document.body.append(canvas);
         const session=await api.Forge3DSession.create(canvas,{runtime:{width:32,height:24},renderer:new api.RendererConfig({quality:'low',memoryBudgetBytes:64*1024*1024})});
         try{
           const scene=api.Forge3DScene.create();scene.addOverlay({name:'coverage',bounds:[0,0,32,24],color:[.8,.2,.1,1]});session.setScene(scene);
-          const reports=await api.runBenchmarkSuite(['renderer_rgba','scene_rgba','renderer_png'].map(op=>({op,width:32,height:24,warmup:1,iterations:3,target:session,budget:{maxMemoryBytes:64*1024*1024}})));
+          session.render();const priorStats=session.getRenderStats();await session.readRgba();
+          if(JSON.stringify(priorStats)!==JSON.stringify(session.getRenderStats()))throw Error('Capture stats behavior changed: revisit unavailable rendererStats');
+          const reports=await api.runBenchmarkSuite(['renderer_rgba','renderer_png'].map(op=>({op,width:32,height:24,warmup:1,iterations:3,target:session,budget:{maxMemoryBytes:64*1024*1024}})));
           const rgba=await session.readRgba();return {reports,coverage:rgba.filter((v:number,i:number)=>i%4===0&&v>100).length};
         }finally{session.dispose();canvas.remove();}
       });
       expect(result.coverage).toBe(32*24);
-      for(const report of result.reports){expect(report.schemaVersion).toBe(1);expect(report.samplesMs).toHaveLength(3);expect(report.renderer.quality).toBe('low');expect(report.environment.capabilities.deviceState).toBe('ready');expect(report.memory.before.currentBytes).toBeGreaterThan(0);expect(report.budget.passed).toBe(true);expect(report.timing).toBe('cpu-completion');}
+      for(const report of result.reports){expect(report.rendererStats).toBeNull();expect(report.coldMs).toBeGreaterThanOrEqual(0);expect(report.schemaVersion).toBe(1);expect(report.samplesMs).toHaveLength(3);expect(report.renderer.quality).toBe('low');expect(report.environment.capabilities.deviceState).toBe('ready');expect(report.memory.before.currentBytes).toBeGreaterThan(0);expect(report.budget.passed).toBe(true);expect(report.timing).toBe('cpu-completion');}
       await info.attach(`w21-${label}-benchmark.json`,{body:JSON.stringify(result,null,2),contentType:'application/json'});
     });
   });
 }
+
+test('W21 FND-07 consumes the public operation schema without changing frozen v1 assets',async({page},info)=>{
+  expect((fnd07 as any).runViewerOperationBenchmark).toBeInstanceOf(Function);
+  await page.goto('/examples/test-interactive-viewer.html');await page.waitForFunction(()=>!!window.__forge3dInteractiveViewer);
+  const report=await (fnd07 as any).runViewerOperationBenchmark(page,{iterations:2,warmup:1});
+  expect(report.schemaVersion).toBe(1);expect(report.op).toBe('custom');expect(report.samplesMs).toHaveLength(2);
+  expect(report.coldMs).toBeGreaterThanOrEqual(0);expect(report.renderer).toBeNull();expect(report.stats.p95Ms).toBeGreaterThan(0);
+  expect(report.throughput.fps).toBeGreaterThan(0);expect(report.environment.userAgent).toBeTruthy();
+  await info.attach('w21-fnd07-operation.json',{body:JSON.stringify(report,null,2),contentType:'application/json'});
+});

@@ -585,13 +585,13 @@ async function deflateZlib(raw: Uint8Array): Promise<Uint8Array> {
 export async function encodePng(
   width: number,
   height: number,
-  rgba: Uint8Array,
+  rgba: Uint8Array | Uint8ClampedArray,
   options: PngEncodeOptions = {},
 ): Promise<Blob> {
   checkDimension("width", width);
   checkDimension("height", height);
-  if (!(rgba instanceof Uint8Array)) throw invalid("PNG pixels must be Uint8Array");
-  if (width * height > 16_777_216) throw new Forge3DError("RESOURCE_LIMIT_EXCEEDED", "PNG pixel limit exceeded");
+  if (!(rgba instanceof Uint8Array || rgba instanceof Uint8ClampedArray)) throw invalid("PNG pixels must be Uint8Array or Uint8ClampedArray");
+  const bytes = new Uint8Array(rgba.buffer, rgba.byteOffset, rgba.byteLength);
   expectLength("PNG pixels", rgba.length, width * height * 4);
   const compression = options.compression ?? "deflate";
   if (compression !== "deflate" && compression !== "none") {
@@ -601,7 +601,7 @@ export async function encodePng(
   const raw = new Uint8Array((stride + 1) * height);
   for (let y = 0; y < height; y += 1) {
     raw[y * (stride + 1)] = 0;
-    raw.set(rgba.subarray(y * stride, (y + 1) * stride), y * (stride + 1) + 1);
+    raw.set(bytes.subarray(y * stride, (y + 1) * stride), y * (stride + 1) + 1);
   }
   const zlib =
     compression === "deflate" && typeof CompressionStream !== "undefined"

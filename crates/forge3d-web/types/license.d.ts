@@ -1,5 +1,5 @@
 import type { PersistentByteStore } from './index.js';
-/** Native development issuer. Production distributions must provision their issuer key. */
+/** Development default only. Production apps must call configureLicenseIssuer before setting a key. */
 export declare const LICENSE_PUBLIC_KEY_HEX = "9a995d11c2da9df6b734e7aa98d7877bb326910998667bef349eb51e167382f7";
 export declare const LICENSE_GRACE_DAYS = 14;
 export declare const PRO_FEATURES: Readonly<{
@@ -28,7 +28,7 @@ export interface LicenseInfo {
 export interface LicenseManagerOptions {
     publicKeyHex?: string;
     verifier?: 'auto' | 'noble';
-    /** UTC calendar day; defaults to the local machine clock. Client clocks are not trusted entitlements. */
+    /** Local calendar day, matching native date.today(). Client clocks are not trusted entitlements. */
     now?: () => Date;
     onWarning?: (message: string) => void;
 }
@@ -40,6 +40,8 @@ export declare class LicenseError extends Error {
 export declare class LicenseManager {
     #private;
     constructor(options?: LicenseManagerOptions);
+    /** Configure once, before any nonempty key attempt. Clearing never unlocks the issuer. */
+    configureIssuer(publicKeyHex: string): void;
     clear(): void;
     setKey(key: string): Promise<LicenseInfo>;
     getInfo(): LicenseInfo;
@@ -49,6 +51,8 @@ export declare class LicenseManager {
     load(store: PersistentByteStore, name?: string): Promise<LicenseInfo>;
 }
 export declare const licenseManager: LicenseManager;
+/** Configure the package-wide product-gate issuer exactly once, before setting a key. */
+export declare function configureLicenseIssuer(publicKeyHex: string): void;
 export declare function setLicenseKey(key: string): Promise<LicenseInfo>;
 export declare function getLicenseInfo(): LicenseInfo;
 export declare function requirePro(feature?: string): void;

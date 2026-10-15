@@ -102,7 +102,7 @@
     "test:package-consumer:w18": "node scripts/test-w18-package-consumer.mjs",
     "test:w19": "vitest run tests/unit/w19-style-bundle.test.ts tests/unit/w19-native-contract.test.ts tests/unit/w19-native-replay.test.ts tests/unit/w19-native-equivalents.test.ts && playwright test tests/playwright/w19_style_bundle.spec.ts --project=chromium-preflight",
     "test:package-consumer:w19": "node scripts/test-w19-package-consumer.mjs",
-    "test:w21": "vitest run tests/unit/w21-license.test.ts tests/unit/w21-images.test.ts tests/unit/w21-benchmark.test.ts && playwright test tests/playwright/w21_utilities.spec.ts --project=chromium-preflight",
+    "test:w21": "vitest run tests/unit/w21-license.test.ts tests/unit/w21-images.test.ts tests/unit/w21-benchmark.test.ts tests/unit/w21-review-license.test.ts tests/unit/w21-review-benchmark.test.ts tests/unit/w21-review-status.test.ts && playwright test tests/playwright/w21_utilities.spec.ts --project=chromium-preflight",
     "test:package-consumer:w21": "node scripts/test-w21-package-consumer.mjs"
   },
   "devDependencies": {

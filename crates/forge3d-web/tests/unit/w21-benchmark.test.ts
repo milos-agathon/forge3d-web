@@ -17,9 +17,9 @@ describe('native benchmark workflows and W02 reports', () => {
     let clock=0,calls=0;vi.stubGlobal('performance',{now:()=>clock});
     const tracker=new SceneMemoryTracker(4096);
     const result=await runBenchmark({op:'custom',width:10,height:10,warmup:2,iterations:3,renderer:new RendererConfig({quality:'low'}),
-      operation:async()=>{await Promise.resolve();clock+=calls++<2?100:2*(calls-2);},memory:()=>tracker.report(),budget:{maxP95Ms:5,maxMemoryBytes:100}});
-    expect(Object.keys(result).sort()).toEqual(['schemaVersion','op','width','height','pixels','iterations','warmup','seed','samplesMs','timing','stats','throughput','renderer','environment','memory','rendererStats','budget'].sort());
-    expect(calls).toBe(5);expect(result.samplesMs).toEqual([2,4,6]);expect(result.stats.p50Ms).toBe(4);
+      operation:async()=>{await Promise.resolve();clock+=calls++<3?100:2*(calls-3);},memory:()=>tracker.report(),budget:{maxP95Ms:5,maxMemoryBytes:100}});
+    expect(Object.keys(result).sort()).toEqual(['schemaVersion','op','width','height','pixels','iterations','warmup','seed','coldMs','samplesMs','timing','stats','throughput','renderer','environment','memory','rendererStats','baseline','budget'].sort());
+    expect(calls).toBe(6);expect(result.samplesMs).toEqual([2,4,6]);expect(result.stats.p50Ms).toBe(4);
     expect(result.throughput.fps).toBe(250);expect(result.throughput.mpixPerSecond).toBe(.025);
     expect(result.renderer.quality).toBe('low');expect(result.environment.capabilities).toBeNull();
     expect(result.memory).toMatchObject({maxObservedBytes:0,deltaBytes:0});expect(result.budget).toMatchObject({passed:false,violations:['maxP95Ms']});
@@ -38,8 +38,8 @@ describe('native benchmark workflows and W02 reports', () => {
   it('fences renderer operations on readback and consumes the actual target config', async () => {
     let clock=0,readbacks=0;vi.stubGlobal('performance',{now:()=>clock});
     const target={render:()=>{clock+=1;return true;},readRgba:async()=>{await Promise.resolve();clock+=4;readbacks++;return new Uint8Array(16);},screenshot:async()=>new Blob(['png']),getConfig:()=>new RendererConfig({quality:'medium'}),getCapabilities:()=>({timingMode:'gpu-timestamp'} as never),getMemoryReport:()=>new SceneMemoryTracker(4096).report(),getRenderStats:()=>({frameIndex:1,frameTimeMs:1,drawCalls:1,triangles:1,passes:[]})};
-    const result=await runBenchmark({op:'scene_rgba',width:2,height:2,warmup:1,iterations:2,target});
-    expect(readbacks).toBe(3);expect(result.samplesMs).toEqual([5,5]);expect(result.renderer.quality).toBe('medium');expect(result.timing).toBe('cpu-completion');
+    const result=await runBenchmark({op:'renderer_rgba',width:2,height:2,warmup:1,iterations:2,target});
+    expect(readbacks).toBe(4);expect(result.samplesMs).toEqual([4,4]);expect(result.renderer.quality).toBe('medium');expect(result.timing).toBe('cpu-completion');
     await expect(runBenchmark({op:'renderer_rgba',width:1,height:1,warmup:0,iterations:1,target})).rejects.toThrow('dimensions');
   });
   it('runs seeded encode/decode operation suites without rendering, Python or network', async () => {

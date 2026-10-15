@@ -1,13 +1,11 @@
 import type { Forge3DSessionCapabilities, RendererConfigSource, RendererConfigData, MemoryReport, RenderStats } from './index.js';
 import { RendererConfig } from './index.js';
 export declare const BENCHMARK_SCHEMA_VERSION = 1;
-export type BenchmarkOperation = 'renderer_rgba' | 'renderer_png' | 'scene_rgba' | 'array_to_png' | 'png_to_array' | 'custom';
+export type BenchmarkOperation = 'renderer_rgba' | 'renderer_png' | 'array_to_png' | 'png_to_array' | 'custom';
 export interface BenchmarkTarget {
     getConfig(): RendererConfig;
     getCapabilities(): Forge3DSessionCapabilities;
     getMemoryReport(): MemoryReport;
-    getRenderStats(): RenderStats;
-    render(): boolean;
     readRgba(): Promise<Uint8Array>;
     screenshot(): Promise<Blob>;
 }
@@ -28,6 +26,9 @@ export interface BenchmarkOptions {
     operation?: () => unknown | Promise<unknown>;
     memory?: () => MemoryReport;
     budget?: BenchmarkBudget;
+    baseline?: BenchmarkResult;
+    /** Allowed steady p95 increase over baseline; defaults to native perf_sanity's 50%. */
+    maxRegressionPercent?: number;
     signal?: AbortSignal;
     /** Stops between operations; it cannot preempt a caller's pending Promise. */
     maxDurationMs?: number;
@@ -57,6 +58,7 @@ export interface BenchmarkResult {
     iterations: number;
     warmup: number;
     seed: number;
+    coldMs: number;
     samplesMs: number[];
     timing: 'cpu-completion';
     stats: BenchmarkStatistics;
@@ -64,7 +66,7 @@ export interface BenchmarkResult {
         fps: number;
         mpixPerSecond: number;
     };
-    renderer: RendererConfigData;
+    renderer: RendererConfigData | null;
     environment: BenchmarkEnvironment;
     memory: {
         before: MemoryReport | null;
@@ -72,7 +74,14 @@ export interface BenchmarkResult {
         maxObservedBytes: number | null;
         deltaBytes: number | null;
     };
+    /** Unavailable: current W02 capture paths do not update session render statistics. */
     rendererStats: RenderStats | null;
+    baseline: {
+        p95Ms: number;
+        maxRegressionPercent: number;
+        limitMs: number;
+        regressionPercent: number | null;
+    } | null;
     budget: {
         limits: BenchmarkBudget;
         passed: boolean;

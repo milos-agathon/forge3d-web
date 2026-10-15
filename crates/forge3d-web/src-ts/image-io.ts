@@ -84,7 +84,14 @@ export async function loadImage(
   o: ByteReadOptions = {},
 ): Promise<RasterImage> {
   const bytes = await readByteSource(source, o);
-  if (isPng(bytes)) return decodePng(bytes);
+  if (isPng(bytes)) {
+    try { return decodePng(bytes); }
+    catch (error) {
+      // Preserve the pre-W21 general image loader's browser decoder compatibility
+      // and 256 MiB mesh limit. pngToArray remains the strict, bounded PNG API.
+      if (!(error instanceof Forge3DError) || !['IO_ERROR', 'RESOURCE_LIMIT_EXCEEDED'].includes(error.code)) throw error;
+    }
+  }
   let bitmap: ImageBitmap | HTMLImageElement;
   try {
     if (typeof createImageBitmap === "undefined") {

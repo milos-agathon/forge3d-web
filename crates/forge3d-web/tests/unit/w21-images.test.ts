@@ -2,7 +2,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { deflateSync } from 'node:zlib';
 import { arrayToPng, pngToArray, imageArrayToRgba, imageArrayToImageData, displayImageArray } from '../../src-ts/image-array.js';
 import { decodePng } from '../../src-ts/png-decode.js';
-import { encodePng } from '../../src-ts/frames.js';
+import { Frame, encodePng } from '../../src-ts/frames.js';
 import { loadImage, exportImage } from '../../src-ts/image-io.js';
 
 // Independent PNG fixture writer: only standard zlib and PNG chunks, no production encoder.
@@ -79,4 +79,19 @@ describe('native PNG and array workflows', () => {
     const putImageData=vi.fn(),canvas={width:0,height:0,getContext:()=>({putImageData})};
     displayImageArray(canvas as never,image);expect(putImageData).toHaveBeenCalledOnce();expect(canvas.width).toBe(1);
   });
+});
+
+// W06's existing Frame API has no W21 image-array pixel ceiling.
+it('Frame.toPng still accepts 4097x4096 pixels', async () => {
+  const frame = new Frame(4097,4096,new Uint8Array(4097*4096*4));
+  const png = await frame.toPng({compression:'none'});
+  const header = new DataView(await png.slice(0,24).arrayBuffer());
+  expect(header.getUint32(16)).toBe(4097);expect(header.getUint32(20)).toBe(4096);expect(png.size).toBeGreaterThan(4097*4096*4);
+  expect(()=>imageArrayToRgba({width:4097,height:4096,channels:4,data:frame.data})).toThrow('pixel limit');
+},30000);
+it('encodePng accepts clamped byte views with nonzero offsets', async () => {
+  const backing=new Uint8ClampedArray([99,98,12,34,56,0,97]);
+  const png=await encodePng(1,1,backing.subarray(2,6) as never,{compression:'none'});
+  expect([...decodePng(new Uint8Array(await png.arrayBuffer())).data]).toEqual([12,34,56,0]);
+  expect([...backing]).toEqual([99,98,12,34,56,0,97]);
 });

@@ -1,5 +1,5 @@
 import {
-  LicenseManager, licenseManager, requiresPro, setLicenseKey, getLicenseInfo,
+  LicenseManager, licenseManager, configureLicenseIssuer, encodePng, requiresPro, setLicenseKey, getLicenseInfo,
   arrayToPng, pngToArray, decodePng, displayImageArray, runBenchmark, runBenchmarkSuite,
   RendererConfig, Forge3DSession,
   type BenchmarkOptions, type BenchmarkResult, type ImageArray, type LicenseInfo,
@@ -7,6 +7,8 @@ import {
 } from '../../types/index.js';
 
 async function contracts(canvas: HTMLCanvasElement, store: PersistentByteStore): Promise<void> {
+  configureLicenseIssuer('11'.repeat(32));
+  await encodePng(1, 1, new Uint8ClampedArray(4));
   const manager = new LicenseManager({ verifier: 'noble' });
   const info: LicenseInfo = await manager.setKey('');
   await manager.save(store); await licenseManager.load(store);
@@ -21,6 +23,11 @@ async function contracts(canvas: HTMLCanvasElement, store: PersistentByteStore):
   const options: BenchmarkOptions = { op: 'renderer_rgba', width: 1, height: 1, target, renderer: new RendererConfig() };
   const result: BenchmarkResult = await runBenchmark(options);
   const schema: 1 = result.schemaVersion; void schema;
+  const quality = result.renderer?.quality; void quality;
+  const cold: number = result.coldMs; void cold;
+  await runBenchmark({ ...options, baseline: result, maxRegressionPercent: 50 });
+  // @ts-expect-error unreleased duplicate operation removed; use renderer_rgba on the committed scene
+  void runBenchmark({op:'scene_rgba',width:1,height:1});
   await runBenchmarkSuite([options]); target.dispose();
   // @ts-expect-error float samples are not uint8 image arrays
   const floats: ImageArray = { width: 1, height: 1, channels: 4, data: new Float32Array(4) }; void floats;

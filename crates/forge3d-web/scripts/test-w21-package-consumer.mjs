@@ -74,9 +74,9 @@ for (const file of [
   "docs/utilities.md", "dist/forge3d_web_bg.wasm"
 ])
   assert(statSync(join(installed, file)).size > 0, file);
-writeFileSync(join(consumer,"consumer.ts"),`import {LicenseManager,setLicenseKey,requirePro,arrayToPng,pngToArray,decodePng,displayImageArray,runBenchmark,RendererConfig,type BenchmarkOptions,type BenchmarkResult,type PersistentByteStore} from '@forge3d/web';
+writeFileSync(join(consumer,"consumer.ts"),`import {configureLicenseIssuer,LicenseManager,setLicenseKey,requirePro,arrayToPng,pngToArray,decodePng,displayImageArray,runBenchmark,RendererConfig,type BenchmarkOptions,type BenchmarkResult,type PersistentByteStore} from '@forge3d/web';
 const image={width:2,height:1,channels:4 as const,data:new Uint8Array(8)};
-async function workflow(store:PersistentByteStore){await setLicenseKey('');const manager=new LicenseManager({verifier:'noble'});await manager.load(store);const png:Blob=await arrayToPng(image);await pngToArray(png);const opts:BenchmarkOptions={op:'array_to_png',width:2,height:1,renderer:new RendererConfig({quality:'low'})};const report:BenchmarkResult=await runBenchmark(opts);return report.schemaVersion;}void workflow;void requirePro;void decodePng;void displayImageArray;`);
+async function workflow(store:PersistentByteStore){configureLicenseIssuer('11'.repeat(32));await setLicenseKey('');const manager=new LicenseManager({verifier:'noble'});await manager.load(store);const png:Blob=await arrayToPng(image);await pngToArray(png);const opts:BenchmarkOptions={op:'array_to_png',width:2,height:1,renderer:new RendererConfig({quality:'low'})};const report:BenchmarkResult=await runBenchmark(opts);const cold:number=report.coldMs;const quality=report.renderer?.quality;await runBenchmark({...opts,baseline:report,maxRegressionPercent:50});void cold;void quality;return report.schemaVersion;}void workflow;void requirePro;void decodePng;void displayImageArray;`);
 run(
   process.execPath,
   [

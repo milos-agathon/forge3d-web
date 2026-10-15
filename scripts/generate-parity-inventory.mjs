@@ -1164,8 +1164,8 @@ function main() {
       "npm run test:package-consumer:w12",
     ] : row.requiredTests,
     ...(row.ownerTask==="W21"?{
-      evidence:["crates/forge3d-web/docs/w21-evidence.md","crates/forge3d-web/docs/utilities.md","crates/forge3d-web/tests/fixtures/w21/native-contract.json","crates/forge3d-web/src-ts/license.ts","crates/forge3d-web/src-ts/png-decode.ts","crates/forge3d-web/src-ts/benchmark.ts"],
-      tests:["crates/forge3d-web/tests/unit/w21-license.test.ts","crates/forge3d-web/tests/unit/w21-images.test.ts","crates/forge3d-web/tests/unit/w21-benchmark.test.ts","crates/forge3d-web/tests/playwright/w21_utilities.spec.ts","crates/forge3d-web/scripts/test-w21-package-consumer.mjs"],
+      evidence:["crates/forge3d-web/docs/w21-evidence.md","crates/forge3d-web/docs/utilities.md","crates/forge3d-web/tests/fixtures/w21/native-contract.json","crates/forge3d-web/src-ts/license.ts","crates/forge3d-web/src-ts/png-decode.ts","crates/forge3d-web/src-ts/benchmark.ts","crates/forge3d-web/tests/browser/viewer-benchmark.ts"],
+      tests:["crates/forge3d-web/tests/unit/w21-license.test.ts","crates/forge3d-web/tests/unit/w21-images.test.ts","crates/forge3d-web/tests/unit/w21-benchmark.test.ts","crates/forge3d-web/tests/playwright/w21_utilities.spec.ts","crates/forge3d-web/scripts/test-w21-package-consumer.mjs","crates/forge3d-web/tests/unit/w21-review-license.test.ts","crates/forge3d-web/tests/unit/w21-review-benchmark.test.ts","crates/forge3d-web/tests/unit/w21-review-status.test.ts","crates/forge3d-web/tests/playwright/viewer_benchmark.spec.ts"],
     }:{}),
     ...(row.ownerTask==="W17"?{
       evidence:["crates/forge3d-web/docs/w17-evidence.md","crates/forge3d-web/docs/tracing.md","crates/forge3d-core/src/accel.rs","crates/forge3d-core/src/sdf/mod.rs","crates/forge3d-web/src-ts/trace-wgsl.ts","crates/forge3d-web/src-ts/path-tracer.ts","crates/forge3d-web/tests/fixtures/w17/trace-sdf-v1.json"],

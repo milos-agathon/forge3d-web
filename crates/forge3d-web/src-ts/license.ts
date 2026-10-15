@@ -2,7 +2,7 @@ import { hashes, verify } from '@noble/ed25519';
 import { sha512 } from '@noble/hashes/sha2.js';
 import type { PersistentByteStore } from './index.js';
 
-/** Native development issuer. Production distributions must provision their issuer key. */
+/** Development default only. Production apps must call configureLicenseIssuer before setting a key. */
 export const LICENSE_PUBLIC_KEY_HEX = '9a995d11c2da9df6b734e7aa98d7877bb326910998667bef349eb51e167382f7';
 export const LICENSE_GRACE_DAYS = 14;
 export const PRO_FEATURES = Object.freeze({
@@ -25,7 +25,7 @@ export interface LicenseInfo {
 export interface LicenseManagerOptions {
   publicKeyHex?: string;
   verifier?: 'auto' | 'noble';
-  /** UTC calendar day; defaults to the local machine clock. Client clocks are not trusted entitlements. */
+  /** Local calendar day, matching native date.today(). Client clocks are not trusted entitlements. */
   now?: () => Date;
   onWarning?: (message: string) => void;
 }
@@ -49,21 +49,33 @@ function iso(day: number): string { return new Date(day * DAY).toISOString().sli
 
 /** Offline validity and client API gating. This is not tamper-resistant DRM. */
 export class LicenseManager {
-  readonly #publicKey: Uint8Array<ArrayBuffer>;
+  #publicKey: Uint8Array<ArrayBuffer>;
   readonly #options: LicenseManagerOptions;
   #license: SignedLicense | undefined;
-  #revision = 0;
+  #request = 0;
+  #committedRequest = 0;
+  #issuerConfigured: boolean;
+  #keyAttempted = false;
   constructor(options: LicenseManagerOptions = {}) {
     this.#publicKey = new Uint8Array(hex(options.publicKeyHex ?? LICENSE_PUBLIC_KEY_HEX, 32));
     if (options.verifier !== undefined && !['auto', 'noble'].includes(options.verifier)) throw new LicenseError('', 'Unknown license verifier.');
     this.#options = { ...options };
+    this.#issuerConfigured = options.publicKeyHex !== undefined;
   }
-  clear(): void { this.#revision++; this.#license = undefined; }
+  /** Configure once, before any nonempty key attempt. Clearing never unlocks the issuer. */
+  configureIssuer(publicKeyHex: string): void {
+    if (this.#issuerConfigured || this.#keyAttempted) throw new LicenseError('', 'License issuer is already configured or a key verification has started.');
+    const publicKey = new Uint8Array(hex(publicKeyHex, 32));
+    this.#publicKey = publicKey;
+    this.#issuerConfigured = true;
+  }
+  clear(): void { this.#committedRequest = ++this.#request; this.#license = undefined; }
   async setKey(key: string): Promise<LicenseInfo> {
-    const revision = ++this.#revision;
     if (typeof key !== 'string') throw new LicenseError('', 'Invalid key format.');
     key = key.trim();
     if (!key) { this.clear(); return this.getInfo(); }
+    this.#keyAttempted = true;
+    const request = ++this.#request;
     if (key.length > 4096) throw new LicenseError('', 'License key exceeds size limit.');
     const match = /^F3D-(PRO|ENTERPRISE)-(.+)-(\d{8})-([a-fA-F0-9]{128})$/i.exec(key);
     if (!match || !key.startsWith('F3D-')) throw new LicenseError('', 'Invalid key format. Expected F3D-TIER-CUSTOMER-YYYYMMDD-signature.');
@@ -86,16 +98,23 @@ export class LicenseManager {
       try { valid = verify(signature, message, this.#publicKey, { zip215: false }); } catch { valid = false; }
     }
     if (!valid) throw new LicenseError('', 'License signature verification failed.');
-    // A clear or a newer setKey must win over an older pending verification.
-    if (revision === this.#revision) this.#license = { key, tier: tier.toLowerCase() as 'pro' | 'enterprise', customerId, expiryDay: expiryMs / DAY, verifier };
+    // Only successful newer keys and explicit clears supersede a pending valid key.
+    if (request > this.#committedRequest) {
+      this.#license = { key, tier: tier.toLowerCase() as 'pro' | 'enterprise', customerId, expiryDay: expiryMs / DAY, verifier };
+      this.#committedRequest = request;
+    }
     return this.getInfo();
   }
   getInfo(): LicenseInfo {
     const value = this.#license;
     if (!value) return { status: 'missing', valid: false, tier: null, customerId: null, expiry: null, graceEnd: null, daysRemaining: 0, verifier: null };
-    const now = (this.#options.now ?? (() => new Date()))().getTime();
-    if (!Number.isFinite(now)) throw new LicenseError('', 'Invalid license clock.');
-    const elapsed = Math.floor(now / DAY) - value.expiryDay;
+    const now = (this.#options.now ?? (() => new Date()))();
+    if (!Number.isFinite(now.getTime())) throw new LicenseError('', 'Invalid license clock.');
+    // UTC is only the ordinal representation; the selected year/month/day are LOCAL.
+    // Avoid Date.UTC's special interpretation of years 0..99 and DST-length days.
+    const ordinal = new Date(0);
+    ordinal.setUTCFullYear(now.getFullYear(), now.getMonth(), now.getDate());
+    const elapsed = ordinal.getTime() / DAY - value.expiryDay;
     const status = elapsed <= 0 ? 'active' : elapsed <= LICENSE_GRACE_DAYS ? 'grace' : 'expired';
     return { status, valid: true, tier: value.tier, customerId: value.customerId, expiry: iso(value.expiryDay), graceEnd: iso(value.expiryDay + LICENSE_GRACE_DAYS), daysRemaining: elapsed <= 0 ? Math.max(0, -elapsed) : Math.max(0, LICENSE_GRACE_DAYS - elapsed), verifier: value.verifier };
   }
@@ -111,8 +130,10 @@ export class LicenseManager {
     else await store.delete(name);
   }
   async load(store: PersistentByteStore, name = 'forge3d-license'): Promise<LicenseInfo> {
-    const revision = this.#revision, bytes = await store.get(name);
-    if (revision !== this.#revision) return this.getInfo();
+    const marker = this.#request, bytes = await store.get(name);
+    // An older pending verification may finish during the read. Only a clear or
+    // successful request issued after this read started supersedes the stored key.
+    if (this.#committedRequest > marker) return this.getInfo();
     if (!bytes) { this.clear(); return this.getInfo(); }
     if (bytes.length > 4096) throw new LicenseError('', 'Stored license exceeds size limit.');
     let key: string;
@@ -122,6 +143,8 @@ export class LicenseManager {
   }
 }
 export const licenseManager = new LicenseManager();
+/** Configure the package-wide product-gate issuer exactly once, before setting a key. */
+export function configureLicenseIssuer(publicKeyHex: string): void { licenseManager.configureIssuer(publicKeyHex); }
 export function setLicenseKey(key: string): Promise<LicenseInfo> { return licenseManager.setKey(key); }
 export function getLicenseInfo(): LicenseInfo { return licenseManager.getInfo(); }
 export function requirePro(feature = ''): void { licenseManager.requirePro(feature); }
