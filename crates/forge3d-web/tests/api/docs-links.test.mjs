@@ -6,6 +6,9 @@ import { fileURLToPath } from "node:url";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const documents = [
+  "crates/forge3d-web/docs/utilities.md",
+  "crates/forge3d-web/docs/w21-evidence.md",
+  "docs/adr/2026-10-15-w21-pure-js-sha512.md",
   "README.md",
   "docs/superpowers/specs/2026-06-05-forge3d-browser-webgpu-wasm-migration-goals.md",
   "crates/forge3d-web/README.md",

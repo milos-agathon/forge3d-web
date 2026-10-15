@@ -45,6 +45,7 @@ const requiredFixtures = [
 ];
 const requiredProfiles = ["reference-discrete", "reference-integrated"];
 const lockedAssets = {
+  "noble-hashes": { package: "@noble/hashes", version: "2.0.1", tokens: ["@noble/hashes"] },
   harfbuzzjs: { package: "harfbuzzjs", version: "1.6.0", tokens: ["harfbuzzjs"] },
   "proj-wasm": { package: "proj-wasm", version: "0.1.0-alpha9", tokens: ["proj-wasm"] },
   geotiff: { package: "geotiff", version: "3.0.5", tokens: ["geotiff"] },

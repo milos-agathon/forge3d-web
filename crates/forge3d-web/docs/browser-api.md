@@ -10,6 +10,8 @@ policy, and engine-neutral test harness. Browser-family support remains subject
 to its own branded and physical release evidence; code completion alone is not
 a platform support claim.
 
+For offline Ed25519 licenses, Pro gates, exact PNG/array helpers and public operation benchmarks, see [browser utilities](utilities.md).
+
 ## Public API
 
 For typed recipes, validated multilayer PNG output, deterministic support reports,

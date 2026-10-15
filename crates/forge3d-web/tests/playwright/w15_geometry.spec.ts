@@ -1,3 +1,4 @@
+import licenses from '../fixtures/w21/licenses.json' with { type: 'json' };
 import {
   test,
   expect,
@@ -12,7 +13,7 @@ declare global {
 for (const dist of [false, true]) {
   const mode = dist ? "dist" : "source";
   const open = async (page: any) => {
-    await page.goto(`/examples/mesh-buildings.html${dist ? "?dist" : ""}`);
+    await page.addInitScript(key=>sessionStorage.setItem('forge3d-example-license',key),licenses.active); await page.goto(`/examples/mesh-buildings.html${dist ? "?dist" : ""}`);
     await page.waitForFunction(() => !!window.__w15);
   };
   test(`W15 ${mode}: browser format fidelity, image/HDR IO and typed failures`, async ({

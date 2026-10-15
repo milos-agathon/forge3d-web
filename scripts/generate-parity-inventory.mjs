@@ -40,6 +40,7 @@ const requiredDependencyIds = [
   "pdf-lib",
   "pdf-lib-fontkit",
   "noble-ed25519",
+  "noble-hashes",
 ];
 const equivalentCapabilityIds = new Set(["R09", "R11", "C06", "C08", "G01", "G08", "M04", "M05", "M06", "M08"]);
 const capabilityXcLinks = {
@@ -1026,6 +1027,7 @@ const npmSources = {
   fflate: ["fflate", "0.8.3", "MIT", "https://registry.npmjs.org/fflate/-/fflate-0.8.3.tgz", "38c2cd824402407b43153c782274aec2ea83ea688e4aa0b743c5f2c305857d92", "sha512-tbZNuJrLwGUp3zshBtdy4W+ORxZuIh8a5ilyIEQDC5rY1f3U20JMry0Ll3WBzU58EZKsEuJFXhb5gwv8CsPvgA==", ["W19", "W22"], ["1f4084a:tests/test_bundle_roundtrip.py"], []],
   "pdf-lib": ["pdf-lib", "1.17.1", "MIT", "https://registry.npmjs.org/pdf-lib/-/pdf-lib-1.17.1.tgz", "a7cc1eaf12e41e612a7be581162a63b18118aefc01e90f6a1f35347b1f324a1c", "sha512-V/mpyJAoTsN4cnP31vc0wfNA1+p20evqqnap0KLoRUN0Yk/p3wN52DOEsL4oBFcLdb76hlpKPtzJIgo67j/XLw==", ["W20", "W22"], ["1f4084a:tests/test_export_projection.py"], []],
   "pdf-lib-fontkit": ["@pdf-lib/fontkit", "1.1.1", "MIT", "https://registry.npmjs.org/@pdf-lib/fontkit/-/fontkit-1.1.1.tgz", "6dd0ae9209fce419b2ed76c97166863167b4df56d75fbe3c7f1d1e6e49c85867", "sha512-KjMd7grNapIWS/Dm0gvfHEilSyAmeLvrEGVcqLGi0VYebuqqzTbgF29efCx7tvx+IEbG3zQciRSWl3GkUSvjZg==", ["W20", "W22"], ["1f4084a:tests/test_export_svg.py"], []],
+  "noble-hashes": ["@noble/hashes", "2.0.1", "MIT", "https://registry.npmjs.org/@noble/hashes/-/hashes-2.0.1.tgz", "638ffb3053a7e7478c9e54a6e297f3601299ee570a41112e501af7050d086a0a", "sha512-XlOlEbQcE9fmuXxrVTXCTlG2nlRXa9Rj3rr5Ue/+tX+nmkgbX720YHh0VR3hBF9xDvwnb8D2shVGOwNx+ulArw==", ["W21"], ["1f4084a:tests/test_license.py"], []],
   "noble-ed25519": ["@noble/ed25519", "3.2.0", "MIT", "https://registry.npmjs.org/@noble/ed25519/-/ed25519-3.2.0.tgz", "aaae5d6bc1aa92b798dc2017f2ff1f834f6d8a1e339fdc3e08915ec336006bd8", "sha512-criDgRlnUA09hchYrTy/JUWPIEap5rZxQe6wDWzRx51oWWpDRcUpuNzlgPxDJaOK6AsW9c0wKcj3rKRv6t+bPQ==", ["W21", "W22"], ["1f4084a:tests/test_license.py"], []],
 };
 
@@ -1161,6 +1163,10 @@ function main() {
       "crates/forge3d-web/tests/playwright/w12_camera.spec.ts",
       "npm run test:package-consumer:w12",
     ] : row.requiredTests,
+    ...(row.ownerTask==="W21"?{
+      evidence:["crates/forge3d-web/docs/w21-evidence.md","crates/forge3d-web/docs/utilities.md","crates/forge3d-web/tests/fixtures/w21/native-contract.json","crates/forge3d-web/src-ts/license.ts","crates/forge3d-web/src-ts/png-decode.ts","crates/forge3d-web/src-ts/benchmark.ts"],
+      tests:["crates/forge3d-web/tests/unit/w21-license.test.ts","crates/forge3d-web/tests/unit/w21-images.test.ts","crates/forge3d-web/tests/unit/w21-benchmark.test.ts","crates/forge3d-web/tests/playwright/w21_utilities.spec.ts","crates/forge3d-web/scripts/test-w21-package-consumer.mjs"],
+    }:{}),
     ...(row.ownerTask==="W17"?{
       evidence:["crates/forge3d-web/docs/w17-evidence.md","crates/forge3d-web/docs/tracing.md","crates/forge3d-core/src/accel.rs","crates/forge3d-core/src/sdf/mod.rs","crates/forge3d-web/src-ts/trace-wgsl.ts","crates/forge3d-web/src-ts/path-tracer.ts","crates/forge3d-web/tests/fixtures/w17/trace-sdf-v1.json"],
       tests:["crates/forge3d-web/tests/unit/w17-tracing.test.ts","crates/forge3d-web/tests/unit/w17-provenance.test.ts","crates/forge3d-web/src/w17_shader_tests.rs","crates/forge3d-web/tests/playwright/w17_tracing.spec.ts","crates/forge3d-web/scripts/test-w17-package-consumer.mjs"],

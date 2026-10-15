@@ -288,8 +288,8 @@ constraints reaching `I`.
 | M05 | FP/A | Map plate/title/legend/scale/north arrow/inset: `1f4084a:python/forge3d/map_plate.py`, `legend.py`, `scale_bar.py`, `north_arrow.py`, `tests/test_map_plate_layout.py`, `examples/notebooks/map_plate.ipynb` | Add Canvas/OffscreenCanvas composition and PNG/JPEG Blob export | E | W20 |
 | M06 | FP/A | SVG/PDF vector export, labels and projection: `1f4084a:python/forge3d/export.py`, `src/export/**`, `tests/test_export_svg.py`, `tests/test_export_projection.py` | Add deterministic SVG and PDF Blobs with projection/validation | E | W20 |
 | M07 | FP/B | Colormap registry/stops/CPT/JSON/providers/colors/palettes: `1f4084a:python/forge3d/colormaps/{core,core_palettes,io,providers,registry}.py`, `python/forge3d/colors.py` | Add registry, built-ins, interpolation/import and texture export | G | W20 |
-| M08 | FP/A | Offline Ed25519 licensing and Pro gates: `1f4084a:python/forge3d/_license.py`, `src/license/mod.rs`, `tests/test_license.py`, `tests/test_pro_gating.py` | Add WebCrypto Ed25519 with `@noble/ed25519@3.2.0` pure-JS fallback, expiry/grace and feature gates; document browser verification as validity/gating, not tamper-resistant DRM | E | W21 |
-| M09 | FP/C | Benchmarks, memory/perf tools and reproducible diagnostics: `1f4084a:python/forge3d/bench.py`, `python/tools/device_diagnostics.py`, `python/tools/perf_sanity.py` | Extend FND-07 to per-operation warmup/stats/throughput/environment/budget API | P | W21 |
+| M08 | FP/A | Offline Ed25519 licensing and Pro gates: `1f4084a:python/forge3d/_license.py`, `src/license/mod.rs`, `tests/test_license.py`, `tests/test_pro_gating.py` | Add WebCrypto Ed25519 with `@noble/ed25519@3.2.0` pure-JS fallback, expiry/grace and feature gates; document browser verification as validity/gating, not tamper-resistant DRM | I | W21 |
+| M09 | FP/C | Benchmarks, memory/perf tools and reproducible diagnostics: `1f4084a:python/forge3d/bench.py`, `python/tools/device_diagnostics.py`, `python/tools/perf_sanity.py` | Extend FND-07 to per-operation warmup/stats/throughput/environment/budget API | I | W21 |
 
 ### Browser Equivalents And Ecosystem Interop
 
@@ -301,7 +301,7 @@ constraints reaching `I`.
 | E04 | XC/B | NumPy zero-copy, Matplotlib/IPython/Jupyter widgets: `1f4084a:python/forge3d/widgets.py`, `helpers/ipython_display.py`, `helpers/mpl_display.py`, `tests/test_widgets.py` | TypedArray ownership/shape, borrowed WASM views, `ImageBitmap`, custom element/notebook adapter | E | W02 |
 | E05 | XC/A | OS/native TIFF/LAZ/KTX2/HDR/EXR/OIDN/code caches: `1f4084a:src/terrain/cog/**`, `src/pointcloud/copc_decode.rs`, `src/loaders/ktx2/**`, `src/formats/hdr.rs`, `src/util/exr_write.rs`, `python/forge3d/denoise_oidn.py` | Pinned WASM codecs, browser caches and measurable WebGPU denoiser; typed capability errors | E | W22 |
 | E06 | XC/A | Dataset registry/fetch and bundled `mini_dem`/boundaries: `1f4084a:python/forge3d/datasets.py`, `python/forge3d/data/mini_dem.npy`, `tests/test_datasets.py` | ESM registry/assets, fetch/cache/integrity and reproducible fixtures | I | W14 |
-| E07 | XC/A | PNG/array/display helpers: `1f4084a:python/forge3d/_png.py`, `tests/test_png_io_fallback.py` | ImageData/typed-array PNG encode/decode and browser display adapters | E | W21 |
+| E07 | XC/A | PNG/array/display helpers: `1f4084a:python/forge3d/_png.py`, `tests/test_png_io_fallback.py` | ImageData/typed-array PNG encode/decode and browser display adapters | I | W21 |
 
 ### Browser-Equivalent Rationale
 
@@ -455,7 +455,7 @@ is still not functionally complete and does not change any matrix row to `I`.
 | W18 | Implemented | Typed deterministic diagnostics and native support factories; owned MapScene recipes, completed layer adapters, source validation, LabelPlan, actual raster/trace PNG output and bundle-ready review JSON. Native audit and unit/browser/package gates are recorded in `crates/forge3d-web/docs/w18-evidence.md`. | M02b retains point-cloud/tiles gates because MapScene integration of G02-G04 is not yet implemented and tested; unavailable product paths block. ZIP/style adapters are W19 and furniture/export is W20. Physical browser qualification remains separate. |
 | W19 | Implemented | Local style/expression mapping, bounded sprite/glyph loaders, SHA-256 ZIP bundles, native/browser migration, offline fonts/LabelPlans and atomic review variants. Fresh unit/browser/clean installed gates are recorded in `crates/forge3d-web/docs/w19-evidence.md`. | Native automatic symbols and unsupported native preset fields retain explicit diagnostics; physical browser qualification remains separate. |
 | W20 | None | The terrain-local `TerrainColorRampInput` is not an M07 registry; no map-plate, SVG or PDF export artifact exists. | Implement M05-M07 cartography/layout, vector export and colormap ecosystem. |
-| W21 | Partial | The checked-in FND-07 benchmark harness exists at `tests/browser/viewer-benchmark.ts` and `tests/browser/benchmark/**`; `ViewerResourcePreset` is only an MVP allocation policy. | Add offline licensing/gates, public PNG/array utilities/display adapters and public benchmark/memory API; renderer presets remain W02/R04-owned. |
+| W21 | Implemented | Offline native-format Ed25519 verification, 14-day grace and product gates; exact PNG/array/display APIs; versioned operation benchmarks with W02 configuration, completion timing, memory and budgets. Native provenance and source/dist/installed-package verification are recorded in `crates/forge3d-web/docs/w21-evidence.md`. | Renderer presets remain W02/R04-owned and datasets W14/E06-owned. W00 physical browser qualification remains separate. |
 | W22 | None | No direct integrated E05 codec registry, codec dispatch contract or AOV-guided denoiser artifact exists. | Integrate and verify the codec registry/denoiser after feature codecs land; platform adapters remain W02-owned. |
 | W23 | Partial | Browser docs, seven HTML fixtures, the Vite example and W00's exhaustive native-to-web inventory/provenance map exist. Converted goldens and runnable migrated evidence for every original workflow are not restored. | Add all-row documentation/example/test/golden migration evidence and enforce its coverage report. |
 | W24 | Partial | R01 runtime/recovery, package/browser contracts, support matrix, hardware workflows, FND-07 harness and W00 `verify:parity` gate are present. FFX-03/FFX-04 and SAF-04 add exact-package, hardware-bound, and fail-closed lifecycle source-proof contracts, but no qualifying physical Firefox or Safari execution; most matrix rows remain G/P/E. | Complete W01-W23, obtain the required physical browser evidence, then add the final parity report and close every package, browser, performance and recovery release gate. |
@@ -918,7 +918,7 @@ task remains unambiguous when read or reviewed in isolation.
 
 ### W21 — Licensing, Array/PNG Utilities, And Benchmarks
 
-- Code status: **Partial** — an internal browser benchmark harness exists, but licensing and public utilities do not; renderer presets are owned by W02/R04; see the working-tree ledger above.
+- Code status: **Implemented** — offline verification and product gates, exact PNG/array/display utilities and the versioned public operation benchmark/memory API are implemented; see `crates/forge3d-web/docs/w21-evidence.md`. Renderer presets remain W02/R04-owned.
 
 - Scope: M08-M09 and E07.
 - Files/APIs: TS license manager, image/array helpers and benchmark API. The

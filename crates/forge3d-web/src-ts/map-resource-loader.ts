@@ -1,3 +1,5 @@
+import { requirePro, LicenseError } from './license.js';
+import { proGatedPathDiagnostic } from './diagnostic-paths.js';
 import { Forge3DError } from './index.js';
 import type { TerrainHeightmapInput } from './index.js';
 import { readByteSource } from './browser-io.js';
@@ -31,6 +33,7 @@ export class InlinePointDataset implements PointCloudDataset {
 }
 async function sha256(bytes: Uint8Array): Promise<string> { return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256', bytes.slice().buffer)), x => x.toString(16).padStart(2, '0')).join(''); }
 async function load(resource: MapResource, input: SceneRecipeInput, signal: AbortSignal): Promise<PreparedMapResource> {
+    if (['geojson','cityjson'].includes(resource.format) && input.layers?.some(l => l.kind === 'buildings' && l.source.id === resource.id)) requirePro('Building import');
     const maxBytes = resource.maxBytes ?? input.diagnosticsPolicy?.maxResourceBytes ?? MAP_SCENE_DEFAULT_RESOURCE_LIMIT;
     mapCancelled(signal);
     const crs = resource.crs ?? input.crs;
@@ -149,6 +152,7 @@ export async function loadMapResources(input: SceneRecipeInput, signal: AbortSig
                 mapCancelled(signal);
                 failed.add(resource.id);
                 for (const ref of refs.filter(r => r.resource.id === resource.id)) {
+                    if (error instanceof LicenseError) { diagnostics.push(proGatedPathDiagnostic('Building import', { layer_id: ref.layerId })); continue; }
                     const e = Forge3DError.from(error), details = e.details as {
                         reason?: string;
                         status?: number;

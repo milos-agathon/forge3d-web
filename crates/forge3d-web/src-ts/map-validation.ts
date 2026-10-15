@@ -1,3 +1,5 @@
+import { getLicenseInfo } from './license.js';
+import { proGatedPathDiagnostic } from './diagnostic-paths.js';
 import { Camera } from './camera.js';
 import { validateTerrainDatasetInput } from './terrain-dataset.js';
 import { VectorLayers } from './vector-layers.js';
@@ -209,6 +211,9 @@ export function validateMapRecipe(input: SceneRecipeInput, prepared: ReadonlyMap
         }
         let textureSupport: SupportLevel | undefined;
         if (kind === 'buildings' && layer?.kind === 'buildings') {
+            if (['geojson','cityjson'].includes(layer.source.format) && ['missing','expired'].includes(getLicenseInfo().status)) {
+                diagnostics.push(proGatedPathDiagnostic('Building import', { layer_id: layerId }));
+            }
             const texture = diagnoseBuildingTextures(mapBuildingOptions(layer).textures ?? [], layer.options?.proGated);
             if (texture.texturedMaterials.length) {
                 diagnostics.push(...texture.diagnostics.map(d => mapBuildingDiagnostic(d, layerId)));

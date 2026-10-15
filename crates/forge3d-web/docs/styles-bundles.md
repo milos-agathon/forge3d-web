@@ -1,5 +1,7 @@
 # Styles, portable bundles and scene review
 
+Building import, style loading/application and bundle save/load require an active or grace-period Pro key. Call `await setLicenseKey(key)` before these workflows. See [offline licensing](utilities.md).
+
 W19 implements T18, M03 and M04. The browser API uses local/provided vector
 features and versioned ZIP Blobs. It preserves the native diagnostic boundary:
 automatic Mapbox symbol layers remain `experimental_feature` / `underdeveloped`.

@@ -46,6 +46,15 @@ if (ktxVersion !== "1.1.0") {
 }
 const vendor = join(dist, "vendor");
 mkdirSync(vendor, { recursive: true });
+const nobleRoot = join(root, 'node_modules', '@noble', 'ed25519');
+if (JSON.parse(readRequired(join(nobleRoot,'package.json'))).version !== '3.2.0') throw Error('noble-ed25519 version mismatch');
+copyVendoredScript(join(nobleRoot,'index.js'),join(vendor,'noble-ed25519.js'));
+copyRequired(join(nobleRoot,'LICENSE'),join(vendor,'noble-ed25519.LICENSE'));
+const hashesRoot = join(root,'node_modules','@noble','hashes');
+if (JSON.parse(readRequired(join(hashesRoot,'package.json'))).version !== '2.0.1') throw Error('noble-hashes version mismatch');
+mkdirSync(join(vendor,'noble-hashes'),{recursive:true});
+for (const file of ['sha2.js','_md.js','_u64.js','utils.js']) copyVendoredScript(join(hashesRoot,file),join(vendor,'noble-hashes',file));
+copyRequired(join(hashesRoot,'LICENSE'),join(vendor,'noble-hashes','LICENSE'));
 const fflateRoot = join(root, 'node_modules', 'fflate');
 if (JSON.parse(readRequired(join(fflateRoot, 'package.json'))).version !== '0.8.3') throw Error('fflate must match the W00 lock: 0.8.3');
 copyVendoredScript(join(fflateRoot, 'esm', 'browser.js'), join(vendor, 'fflate.js'));
@@ -120,6 +129,8 @@ for (const file of readdirSync(dist)) {
   const path = join(dist, file);
   const source = readFileSync(path, "utf8");
   const rewritten = source
+    .replaceAll("from '@noble/ed25519'", "from './vendor/noble-ed25519.js'")
+    .replaceAll("from '@noble/hashes/sha2.js'", "from './vendor/noble-hashes/sha2.js'")
     .replaceAll("from 'fflate'", "from './vendor/fflate.js'")
     .replaceAll('from "fflate"', 'from "./vendor/fflate.js"')
     .replaceAll("from \"ktx-parse\"", "from \"./vendor/ktx-parse.js\"")
@@ -143,6 +154,8 @@ for (const file of readdirSync(dist)) {
 
 // Package asset manifest: SHA-256 of every emitted self-hosted third-party asset.
 const assetManifest = [
+  ...['noble-ed25519.js','noble-ed25519.LICENSE'].map(file=>['dist/vendor/'+file,'@noble/ed25519@3.2.0']),
+  ...['sha2.js','_md.js','_u64.js','utils.js','LICENSE'].map(file=>['dist/vendor/noble-hashes/'+file,'@noble/hashes@2.0.1']),
   ['dist/vendor/fflate.js', 'fflate@0.8.3'],
   ['dist/vendor/fflate.LICENSE', 'fflate@0.8.3'],
   ...['laz-perf.js','laz-perf.wasm','laz-perf.LICENSE'].map(file=>['assets/laz/'+file,'laz-perf@0.0.7']),
@@ -211,3 +224,5 @@ for (const file of ['trace-types','trace-math','bvh-build','bvh','bvh-gpu','sdf-
 for (const file of ['style-native-values','bundle-style-assets','style-expressions','map-style','style-assets','scene-review','bundle','bundle-archive','bundle-output','bundle-migration']) {
   copyRequired(join(dist,file+'.d.ts'),join(root,'types',file+'.d.ts'));
 }
+
+for (const file of ['license','image-array','png-decode','benchmark']) writeFileSync(join(root,'types',file+'.d.ts'),readRequired(join(dist,file+'.d.ts')).replaceAll('./renderer-config.js','./index.js'));

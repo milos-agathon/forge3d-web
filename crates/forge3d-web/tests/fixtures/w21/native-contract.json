@@ -1,0 +1,41 @@
+{
+  "commit": "1f4084af428dc699bdcd108b029736cb73903926",
+  "files": [
+    {
+      "path": "python/forge3d/_license.py",
+      "sha256": "1ede427557ba007b62e4a150250ee505af33613aa0d5d51c00989a9bfdf456f0"
+    },
+    {
+      "path": "src/license/mod.rs",
+      "sha256": "64eef0471924651a01f71a5f5a586de90f021006bd42fde0255a77ea72d4c7bb"
+    },
+    {
+      "path": "tests/test_license.py",
+      "sha256": "29cd9ae2d6f2ad31ce4a53863cb08b28782741e98830042aac14714f77e5b86e"
+    },
+    {
+      "path": "tests/test_pro_gating.py",
+      "sha256": "35d860d637388a5a53cd04cd0aab5858bccf8cf19a2fdd9405c5280b74fa17e7"
+    },
+    {
+      "path": "python/forge3d/bench.py",
+      "sha256": "e4f49777323c21474b1a9884bc8393c1770349e05177567f9099a04bf09455b5"
+    },
+    {
+      "path": "python/forge3d/_png.py",
+      "sha256": "224baf3189bc33ea756432d13cdd74eda5ee404b3719ae4aa1fe323dbe1f8911"
+    },
+    {
+      "path": "tests/test_png_io_fallback.py",
+      "sha256": "4dd8b5fb212382ab13be700abebae767849fa72274e804a82f757db0046c0035"
+    },
+    {
+      "path": "python/tools/device_diagnostics.py",
+      "sha256": "dbddb4c2a3047813375a2bd7f3032ff8cb73ef8b19a7bb1fadca61e9a6a6b7e5"
+    },
+    {
+      "path": "python/tools/perf_sanity.py",
+      "sha256": "a4b63b7d12c2934886853487daaf42252a4c673069f1cdcfe9765935e6d73998"
+    }
+  ]
+}

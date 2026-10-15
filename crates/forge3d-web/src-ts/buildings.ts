@@ -1,3 +1,4 @@
+import { requirePro, PRO_FEATURES } from './license.js';
 import { Forge3DError } from "./index.js";
 import type {
   BrowserByteSource,
@@ -350,6 +351,7 @@ export function parseGeoJsonBuildings(
   value: unknown,
   o: BuildingLoadOptions = {},
 ): BuildingLayer {
+  requirePro(PRO_FEATURES.geoJsonBuildings);
   const root = object(value, "GeoJSON");
   if (root.type !== "FeatureCollection")
     meshError("buildings require a FeatureCollection");
@@ -474,6 +476,7 @@ export function parseCityJsonBuildings(
   value: unknown,
   o: BuildingLoadOptions = {},
 ): BuildingLayer {
+  requirePro(PRO_FEATURES.cityJsonBuildings);
   const root = object(value, "CityJSON");
   if (root.type !== "CityJSON") meshError("not a CityJSON document");
   const tr =
@@ -608,6 +611,7 @@ export async function loadBuildings(
   source: BrowserByteSource,
   o: BuildingLoadOptions = {},
 ): Promise<BuildingLayer> {
+  requirePro(o.format === 'cityjson' ? PRO_FEATURES.cityJsonBuildings : PRO_FEATURES.geoJsonBuildings);
   const bytes = await readByteSource(source, o);
   let root: unknown;
   try {
@@ -672,6 +676,7 @@ export async function loadBuildingTilesMetadata(
     severity: "error";
   }[];
 }> {
+  requirePro(PRO_FEATURES.tilesBuildings);
   const bytes = await readByteSource(source, o);
   let doc: unknown;
   try {

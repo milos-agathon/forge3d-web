@@ -590,6 +590,8 @@ export async function encodePng(
 ): Promise<Blob> {
   checkDimension("width", width);
   checkDimension("height", height);
+  if (!(rgba instanceof Uint8Array)) throw invalid("PNG pixels must be Uint8Array");
+  if (width * height > 16_777_216) throw new Forge3DError("RESOURCE_LIMIT_EXCEEDED", "PNG pixel limit exceeded");
   expectLength("PNG pixels", rgba.length, width * height * 4);
   const compression = options.compression ?? "deflate";
   if (compression !== "deflate" && compression !== "none") {

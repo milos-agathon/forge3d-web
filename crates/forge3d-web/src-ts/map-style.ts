@@ -1,3 +1,4 @@
+import { requirePro, PRO_FEATURES } from './license.js';
 import { Forge3DError, type BrowserByteSource } from './index.js';
 import { readByteSource } from './browser-io.js';
 import { validateStyleSupport } from './diagnostic-style.js';
@@ -60,6 +61,7 @@ export class StyleSpec {
 }
 export function parseStyle(input: StyleSpecInput | string): StyleSpec { return new StyleSpec(typeof input === 'string' ? JSON.parse(input) : input); }
 export async function loadStyle(source: BrowserByteSource | FileSystemFileHandle, options: { signal?: AbortSignal; maxBytes?: number } = {}): Promise<StyleSpec> {
+    requirePro(PRO_FEATURES.styleLoad);
     const bytes = await readByteSource(typeof source === 'object' && 'getFile' in source ? await source.getFile() : source, options);
     return parseStyle(new TextDecoder('utf-8', { fatal: true }).decode(bytes));
 }
@@ -104,6 +106,7 @@ export function styleLabelRecords(layer: StyleLayer, features: readonly VectorFe
 }
 /** Each feature uses its first matching native layer. Symbols retain their native diagnostic. */
 export function compileStyle(spec: StyleSpec, sources: Record<string, readonly VectorFeature[]>, options: { zoom?: number; crs?: string } = {}): { layers: MapSceneLayerInput[]; report: ValidationReport } {
+    requirePro(PRO_FEATURES.styleApply);
     const zoom = options.zoom ?? 10, layers: MapSceneLayerInput[] = [], report = spec.validate(), diagnostics: Diagnostic[] = [], assigned = new Map<string, Set<number>>(); let id = 1;
     for (const [zOrder, layer] of spec.layers.entries()) {
         if (!styleLayerVisible(layer, zoom) || !['fill', 'line', 'circle'].includes(layer.type)) continue;
@@ -144,6 +147,7 @@ export function styleFeaturesFromGeoJson(input: unknown): VectorFeature[] {
 }
 /** Load only GeoJSON sources. Streamed MVT sources retain the explicit unsupported contract. */
 export async function loadStyleLayers(spec: StyleSpec, options: { signal?: AbortSignal; maxBytes?: number; baseUrl?: string; zoom?: number; crs?: string } = {}): Promise<ReturnType<typeof compileStyle>> {
+    requirePro(PRO_FEATURES.styleApply);
     const provided: Record<string, VectorFeature[]> = Object.create(null); let used = 0;
     for (const [id, raw] of Object.entries(spec.value.sources ?? {})) {
         const source = raw as { type?: string; data?: unknown };

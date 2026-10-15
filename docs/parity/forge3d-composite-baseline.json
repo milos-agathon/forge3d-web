@@ -4,7 +4,7 @@
   "manifestId": "forge3d-composite-baseline-v1",
   "sourcePlan": {
     "path": "docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md",
-    "sha256": "2ce9952d7ac75a5731f40c5f01089bf622a120dad0a4a761031d04c573137451"
+    "sha256": "7e253ec0256fe345ed327d9db8c2ff9ee68d8d7a75777318aefaf0fa689383c3"
   },
   "baselineLayers": [
     {
@@ -2068,7 +2068,7 @@
       "title": "Offline Ed25519 licensing and Pro gates",
       "lifecycle": "FP",
       "evidenceGrade": "A",
-      "status": "E",
+      "status": "I",
       "ownerTask": "W21",
       "nativeCapability": "Offline Ed25519 licensing and Pro gates: 1f4084a:python/forge3d/_license.py, src/license/mod.rs, tests/test_license.py, tests/test_pro_gating.py",
       "requiredWebOutcome": "Add WebCrypto Ed25519 with @noble/ed25519@3.2.0 pure-JS fallback, expiry/grace and feature gates; document browser verification as validity/gating, not tamper-resistant DRM",
@@ -2094,7 +2094,7 @@
       "title": "Benchmarks, memory/perf tools and reproducible diagnostics",
       "lifecycle": "FP",
       "evidenceGrade": "C",
-      "status": "P",
+      "status": "I",
       "ownerTask": "W21",
       "nativeCapability": "Benchmarks, memory/perf tools and reproducible diagnostics: 1f4084a:python/forge3d/bench.py, python/tools/device_diagnostics.py, python/tools/perf_sanity.py",
       "requiredWebOutcome": "Extend FND-07 to per-operation warmup/stats/throughput/environment/budget API",
@@ -2258,7 +2258,7 @@
       "title": "PNG/array/display helpers",
       "lifecycle": "XC",
       "evidenceGrade": "A",
-      "status": "E",
+      "status": "I",
       "ownerTask": "W21",
       "nativeCapability": "PNG/array/display helpers: 1f4084a:python/forge3d/_png.py, tests/test_png_io_fallback.py",
       "requiredWebOutcome": "ImageData/typed-array PNG encode/decode and browser display adapters",
@@ -3598,10 +3598,19 @@
       "contract": "Add WebCrypto Ed25519 with @noble/ed25519@3.2.0 pure-JS fallback, expiry/grace and feature gates; document browser verification as validity/gating, not tamper-resistant DRM",
       "owner": "W21",
       "evidence": [
-        "tracked E closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:M08"
+        "crates/forge3d-web/docs/w21-evidence.md",
+        "crates/forge3d-web/docs/utilities.md",
+        "crates/forge3d-web/tests/fixtures/w21/native-contract.json",
+        "crates/forge3d-web/src-ts/license.ts",
+        "crates/forge3d-web/src-ts/png-decode.ts",
+        "crates/forge3d-web/src-ts/benchmark.ts"
       ],
       "tests": [
-        "port license/gating/PNG/benchmark tests; bad/expired/grace signatures, image round trip, warmup stats and environment."
+        "crates/forge3d-web/tests/unit/w21-license.test.ts",
+        "crates/forge3d-web/tests/unit/w21-images.test.ts",
+        "crates/forge3d-web/tests/unit/w21-benchmark.test.ts",
+        "crates/forge3d-web/tests/playwright/w21_utilities.spec.ts",
+        "crates/forge3d-web/scripts/test-w21-package-consumer.mjs"
       ]
     },
     {
@@ -3611,10 +3620,19 @@
       "contract": "Extend FND-07 to per-operation warmup/stats/throughput/environment/budget API",
       "owner": "W21",
       "evidence": [
-        "tracked P closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:M09"
+        "crates/forge3d-web/docs/w21-evidence.md",
+        "crates/forge3d-web/docs/utilities.md",
+        "crates/forge3d-web/tests/fixtures/w21/native-contract.json",
+        "crates/forge3d-web/src-ts/license.ts",
+        "crates/forge3d-web/src-ts/png-decode.ts",
+        "crates/forge3d-web/src-ts/benchmark.ts"
       ],
       "tests": [
-        "port license/gating/PNG/benchmark tests; bad/expired/grace signatures, image round trip, warmup stats and environment."
+        "crates/forge3d-web/tests/unit/w21-license.test.ts",
+        "crates/forge3d-web/tests/unit/w21-images.test.ts",
+        "crates/forge3d-web/tests/unit/w21-benchmark.test.ts",
+        "crates/forge3d-web/tests/playwright/w21_utilities.spec.ts",
+        "crates/forge3d-web/scripts/test-w21-package-consumer.mjs"
       ]
     },
     {
@@ -3712,10 +3730,19 @@
       "contract": "ImageData/typed-array PNG encode/decode and browser display adapters",
       "owner": "W21",
       "evidence": [
-        "tracked E closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:E07"
+        "crates/forge3d-web/docs/w21-evidence.md",
+        "crates/forge3d-web/docs/utilities.md",
+        "crates/forge3d-web/tests/fixtures/w21/native-contract.json",
+        "crates/forge3d-web/src-ts/license.ts",
+        "crates/forge3d-web/src-ts/png-decode.ts",
+        "crates/forge3d-web/src-ts/benchmark.ts"
       ],
       "tests": [
-        "port license/gating/PNG/benchmark tests; bad/expired/grace signatures, image round trip, warmup stats and environment."
+        "crates/forge3d-web/tests/unit/w21-license.test.ts",
+        "crates/forge3d-web/tests/unit/w21-images.test.ts",
+        "crates/forge3d-web/tests/unit/w21-benchmark.test.ts",
+        "crates/forge3d-web/tests/playwright/w21_utilities.spec.ts",
+        "crates/forge3d-web/scripts/test-w21-package-consumer.mjs"
       ]
     },
     {
@@ -53359,7 +53386,7 @@
   ],
   "dependencyLock": {
     "path": "docs/parity/dependency-lock.json",
-    "sha256": "7bf352ea05e1ff57f6e4f42ddb7f5bda525df7d7d3311091c5a028e67875e94e",
+    "sha256": "7c43925afeee0aebdfe91e61557072f890287431fe3e2521cd19dbde314da606",
     "requiredAssetIds": [
       "harfbuzzjs",
       "proj-wasm",
@@ -53372,7 +53399,8 @@
       "fflate",
       "pdf-lib",
       "pdf-lib-fontkit",
-      "noble-ed25519"
+      "noble-ed25519",
+      "noble-hashes"
     ]
   }
 }

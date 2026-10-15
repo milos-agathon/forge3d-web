@@ -48,7 +48,7 @@ test("accepts the exhaustive stored W00 baseline", () => {
     mappings: 6531,
     fixtures: 10,
     hardwareProfiles: 2,
-    dependencyAssets: 12,
+    dependencyAssets: 13,
     lockControlledConsumers: 0,
   });
   assert.equal(report.untracked.length, 0);

@@ -693,6 +693,57 @@
         "maintenance": "Exact version is frozen; substitution requires an ADR and the same fixtures",
         "license": "Retain MIT license text and notices in the published package"
       }
+    },
+    {
+      "id": "noble-hashes",
+      "package": "@noble/hashes",
+      "version": "2.0.1",
+      "ecosystem": "npm",
+      "source": {
+        "uri": "https://registry.npmjs.org/@noble/hashes/-/hashes-2.0.1.tgz",
+        "sha256": "638ffb3053a7e7478c9e54a6e297f3601299ee570a41112e501af7050d086a0a",
+        "integrity": "sha512-XlOlEbQcE9fmuXxrVTXCTlG2nlRXa9Rj3rr5Ue/+tX+nmkgbX720YHh0VR3hBF9xDvwnb8D2shVGOwNx+ulArw=="
+      },
+      "license": {
+        "spdx": "MIT",
+        "provenance": "registry package metadata and LICENSE in @noble/hashes@2.0.1",
+        "review": "SPDX MIT is compatible with Forge3D distribution when notices are retained"
+      },
+      "build": {
+        "provenance": "immutable npm registry tarball @noble/hashes@2.0.1",
+        "toolchain": "npm 11 with package-lock integrity verification",
+        "flags": [
+          "exact-version",
+          "ignore-lifecycle-scripts-during-audit"
+        ],
+        "artifacts": [
+          {
+            "name": "@noble/hashes-2.0.1.tgz",
+            "sha256": "638ffb3053a7e7478c9e54a6e297f3601299ee570a41112e501af7050d086a0a",
+            "sri": "sha512-XlOlEbQcE9fmuXxrVTXCTlG2nlRXa9Rj3rr5Ue/+tX+nmkgbX720YHh0VR3hBF9xDvwnb8D2shVGOwNx+ulArw=="
+          }
+        ]
+      },
+      "fixtureProvenance": [
+        "1f4084a:tests/test_license.py"
+      ],
+      "delivery": {
+        "mode": "bundled-self-hosted",
+        "cspRule": "Package code and WASM must be emitted under script-src 'self'; worker assets must use worker-src 'self'; no dependency CDN is permitted",
+        "sriRule": "Acquire only the registry tarball matching sha512-XlOlEbQcE9fmuXxrVTXCTlG2nlRXa9Rj3rr5Ue/+tX+nmkgbX720YHh0VR3hBF9xDvwnb8D2shVGOwNx+ulArw==; emitted assets retain package SHA-256 entries",
+        "runtimeRemoteFetch": false
+      },
+      "consumingTasks": [
+        "W21"
+      ],
+      "consumerTokens": [
+        "@noble/hashes"
+      ],
+      "review": {
+        "security": "Run fixture conformance, corrupt-input tests and dependency advisory review before consumption",
+        "maintenance": "Exact version is frozen; substitution requires an ADR and the same fixtures",
+        "license": "Retain MIT license text and notices in the published package"
+      }
     }
   ]
 }

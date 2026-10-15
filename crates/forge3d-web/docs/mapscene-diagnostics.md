@@ -1,5 +1,7 @@
 # MapScene and structured diagnostics
 
+Building import, style loading/application and bundle save/load require an active or grace-period Pro key. Call `await setLicenseKey(key)` before these workflows. See [offline licensing](utilities.md).
+
 `MapScene` owns a typed recipe, validates its resources, prepares completed layer
 adapters, and returns a PNG `Blob`, RGBA `Frame`, validation report and review hashes.
 Use the package entrypoint. The [browser example](../examples/mapscene.html) renders

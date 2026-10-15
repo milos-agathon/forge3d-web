@@ -1,5 +1,7 @@
 # @forge3d/web
 
+See [offline licenses, PNG arrays and benchmarks](docs/utilities.md) for W21 utilities and [verification](docs/w21-evidence.md).
+
 Browser-delivered Forge3D WebGPU/WASM runtime for JavaScript and TypeScript. The current release surface renders MVP terrain scenes while the tracked target covers the complete Forge3D capability baseline.
 
 ```ts
