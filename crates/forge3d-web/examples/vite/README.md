@@ -33,6 +33,10 @@ npm run build
 Use `npm --prefix examples/vite run build` from `crates/forge3d-web` when
 checking the example through the package build script.
 
+Keep Vite pinned to the version validated by the package's root lockfile.
+The package build installs this example without a lockfile, and a wider range
+can select a peer dependency graph that crashes npm 10.8.2 during the CI build.
+
 ## Browser Requirements
 
 The example requires browser WebGPU support through `navigator.gpu`. If WebGPU
