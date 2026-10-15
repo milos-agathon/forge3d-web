@@ -4,6 +4,7 @@ crates/forge3d-web/tests/fixtures/w22/** -text
 crates/forge3d-web/tests/fixtures/w22/manifest.json text eol=lf
 crates/forge3d-web/src-ts/codec-*.ts text eol=lf
 crates/forge3d-web/types/codec-*.d.ts text eol=lf
+crates/forge3d-web/assets/basis/basis_transcoder.csp.js -text
 .github/workflows/*.yml text eol=lf
 crates/forge3d-web/tests/infrastructure/*.json text eol=lf
 crates/forge3d-web/tests/infrastructure/*.mjs text eol=lf

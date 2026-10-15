@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { CodecRegistry, HdrFrame, AovFrame } from '../../src-ts/index.js';
 import { CODEC_CATALOG } from '../../src-ts/codec-catalog.js';
 import { CODEC_CACHE_PREFIX, codecDigest } from '../../src-ts/codec-cache.js';
@@ -28,6 +29,15 @@ describe('W22 integrated E05 registry', () => {
         expect(dep).toEqual({ id: pinned.id, version: pinned.version, sha256: pinned.source.sha256 });
         expect(pinned.consumingTasks).toContain('W22');
       }
+    }
+  });
+  it('keeps the original Basis JS/WASM and CSP adapter exact without dynamic code generation', () => {
+    const lock=JSON.parse(readFileSync(new URL('../../../../docs/parity/dependency-lock.json',import.meta.url),'utf8'));
+    const artifacts=lock.assets.find((a:any)=>a.id==='basis-universal').build.artifacts;
+    for(const name of ['basis_transcoder.js','basis_transcoder.wasm','basis_transcoder.csp.js']){
+      const bytes=readFileSync(new URL('../../assets/basis/'+name,import.meta.url));
+      expect(createHash('sha256').update(bytes).digest('hex')).toBe(artifacts.find((a:any)=>a.name===name).sha256);
+      if(name.includes('.csp.'))expect(bytes.toString()).not.toMatch(/\bnew\s+Function\s*\(|\beval\s*\(/);
     }
   });
   it('selects once, reports exact unavailable contracts and isolates mutable reports', async () => {

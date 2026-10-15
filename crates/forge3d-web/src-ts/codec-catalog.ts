@@ -31,7 +31,7 @@ export const CODEC_CATALOG: readonly CodecDescriptor[] = [
     "id": "ktx2-basis",
     "format": "ktx2",
     "owner": "W04",
-    "revision": "ca4d9243d723fa7d27dad9a370a149ab346b7965892eaa3b213adefa92018dfc",
+    "revision": "d55cbd28ac52876247e3f94ad51a8b9141713bbde6b0812784f5e8137709bf10",
     "dependencies": [
       {
         "id": "ktx-parse",

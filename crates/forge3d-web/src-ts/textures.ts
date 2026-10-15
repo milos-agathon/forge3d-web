@@ -1235,7 +1235,7 @@ export class Ktx2Loader {
   constructor(options?: Ktx2LoaderOptions) {
     this.#adapter = options?.basisTranscoder;
     const defaultJs = new URL(
-      "../assets/basis/basis_transcoder.js",
+      "../assets/basis/basis_transcoder.csp.js",
       import.meta.url,
     );
     this.#jsUrl = String(options?.basisJsUrl ?? defaultJs);

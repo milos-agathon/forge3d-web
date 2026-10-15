@@ -32,6 +32,12 @@ Embind `uint32_t startTranscoding()` success flag was compared with boolean
 `true`. The registry now exercises both the real WASM transcoder and its
 RGBA fallback. The decoder remains W04-owned.
 
+The installed strict-CSP gate also exposed dynamic JavaScript generation in
+the upstream Embind glue. The separately digest-pinned CSP adapter replaces
+those two bridges with static closures and preserves the original upstream
+JS/WASM assets. The decision and local implementation/security review are
+recorded at `docs/adr/2026-10-15-w22-basis-csp-glue.md` in the repository.
+
 The installed consumer gate builds WASM and TS from a clean committed tree,
 packs and installs the tarball into a separate directory, compiles a consumer
 against shipped declarations and serves only installed package files under

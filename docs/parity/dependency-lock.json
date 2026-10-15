@@ -334,7 +334,8 @@
         "flags": [
           "single-threaded",
           "webgl-transcoder",
-          "no-runtime-cdn"
+          "no-runtime-cdn",
+          "csp-static-closure-adapter"
         ],
         "artifacts": [
           {
@@ -346,6 +347,10 @@
             "name": "basis_transcoder.wasm",
             "sha256": "5139f8299b2c4ff691877e2e8809fabdd64d029af061bbb95d8ea8d1acabd522",
             "sri": "sha384-IzrxHljMzPSJUYnPQfAp46lGBIDE9h02UUF0W0WQqHY+Q65k+weklhRFX/FlxqWL"
+          },
+          {
+            "name": "basis_transcoder.csp.js",
+            "sha256": "f82a13e3fa921e05a7e68bdbc629002aad6bb5535dd760359752ee9ce824a3d8"
           }
         ]
       },
@@ -370,7 +375,8 @@
       "consumerTokens": [
         "basis_universal",
         "basis_transcoder.wasm",
-        "basis_transcoder.js"
+        "basis_transcoder.js",
+        "basis_transcoder.csp.js"
       ],
       "review": {
         "security": "Run KTX2 corrupt-input and decompression-bound tests before consumption",

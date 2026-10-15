@@ -3,6 +3,7 @@ import './verify-w14-assets.mjs';
 import './verify-w20-assets.mjs';
 import { build as buildVendorModule } from 'vite';
 import './prepare-laz-assets.mjs';
+import './prepare-basis-csp.mjs';
 import { embedProjWorker } from './embed-proj-worker.mjs';
 import { createRequire } from 'node:module';
 import { createHash } from "node:crypto";
@@ -202,6 +203,7 @@ const assetManifest = [
   ["dist/vendor/geotiff.umd.js", "geotiff@3.0.5"],
   ["dist/vendor/geotiff.js", "geotiff@3.0.5"],
   ["assets/basis/basis_transcoder.js", "basis_universal@2.0.3"],
+  ["assets/basis/basis_transcoder.csp.js", "basis_universal@2.0.3 CSP closure adapter"],
   ["assets/basis/basis_transcoder.wasm", "basis_universal@2.0.3"],
   ...["index.mjs","harfbuzz.js","harfbuzz.wasm"].map(file => ["assets/harfbuzz/" + file, "harfbuzzjs@1.6.0"]),
   ...["NotoSans","NotoSansArabic","NotoSansDevanagari"].map(font => ["assets/fonts/" + font + "-Regular.ttf", "noto-fonts@ffebf8c1ee449e544955a7e813c54f9b73848eac"]),
