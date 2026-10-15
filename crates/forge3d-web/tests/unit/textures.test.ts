@@ -1015,7 +1015,7 @@ describe("bundled basis loader source", () => {
   });
 
   it("keeps default URLs under ../assets/basis/", () => {
-    expect(source).toContain('"../assets/basis/basis_transcoder.js"');
+    expect(source).toContain('"../assets/basis/basis_transcoder.csp.js"');
     expect(source).toContain('"../assets/basis/basis_transcoder.wasm"');
   });
 

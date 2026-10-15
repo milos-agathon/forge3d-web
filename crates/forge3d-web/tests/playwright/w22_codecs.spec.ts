@@ -25,7 +25,7 @@ for (const mode of ['source','dist']) test.describe(`W22 ${mode}`, () => {
         if(fixture.format==='tiff')conforms=v.width===16&&v.height===16&&v.data.every((n,i)=>n===i*3+7);
         if(fixture.format==='laz')conforms=v.positions.length/3===fixture.expected.count && await digest(v.positions)===fixture.expected.positionsSha256 && await digest(v.colors)===fixture.expected.colorsSha256;
         if(fixture.format==='glb')conforms=v.primitives.length===1&&v.primitives[0].mesh.positions.length===9;
-        if(fixture.format==='ktx2')conforms=v.width===fixture.expected.width&&v.height===fixture.expected.height&&v.levels[0].data.length===v.width*v.height*4&&(fixture.expected.pixels?JSON.stringify([...v.levels[0].data])===JSON.stringify(fixture.expected.pixels):new Set(v.levels[0].data).size>200);
+        if(fixture.format==='ktx2')conforms=v.width===fixture.expected.width&&v.height===fixture.expected.height&&v.levels[0].data.length===v.width*v.height*4&&(fixture.expected.pixels?JSON.stringify([...v.levels[0].data])===JSON.stringify(fixture.expected.pixels):await digest(v.levels[0].data)===fixture.expected.rgbaSha256);
         if(fixture.format==='glyph-pbf')conforms=v[0].name===fixture.expected.name&&v[0].glyphs[0].id===65&&v[0].glyphs[0].bitmap.every(n=>n===123);
         if(fixture.format==='exr')conforms=v.width===2&&v.height===1&&v.channels.every(c=>JSON.stringify([...c.data])===JSON.stringify(fixture.expected.channels[c.name]));
         const fresh=new api.CodecRegistry({store}); const replay=await fresh.replay(decoded.cacheKey);

@@ -109,7 +109,8 @@
       "expected": {
         "width": 768,
         "height": 512,
-        "supercompression": "basislz"
+        "supercompression": "basislz",
+        "rgbaSha256": "d10f98edbecc601ce319ef357c6483d353fd2f09200a9ffb1154712ba51edcf5"
       }
     },
     {

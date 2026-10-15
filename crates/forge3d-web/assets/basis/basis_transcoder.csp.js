@@ -25,7 +25,7 @@ function craftInvokerFunction(humanName,argTypes,classType,cppInvokerFunc,cppTar
   var readers=argTypes.map(type=>type.readValueFromPointer.bind(type));
   var invokerFunction=function(handle,methodName,destructorsRef,args) {
     var values=readers.map((reader,i)=>reader(args+i*8));
-    var target=Emval.toValue(handle),result;
+    var target=kind===3?undefined:Emval.toValue(handle),result;
     switch(kind) {
       case 0: result=Reflect.apply(target,undefined,values);break;
       case 1: result=Reflect.apply(target[getStringOrSymbol(methodName)],target,values);break;

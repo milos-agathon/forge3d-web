@@ -23,7 +23,7 @@ const pixels = Uint8Array.from([255,0,0,255,0,255,0,255,0,0,255,255,255,255,255,
 container.levels = [{ levelData:pixels, uncompressedByteLength:pixels.length }];
 writeFileSync(new URL('rgba.ktx2', directory), write(container));
 record('ktx2','rgba.ktx2','W04 ktx-parse@1.1.0 uncompressed reference container', { width:2,height:2,pixels:[...pixels] });
-record('ktx2','kodim23.ktx2','https://github.com/BinomialLLC/basis_universal/blob/21fb6e242b1e425a7557c5655bb1b475f71933ca/test_files/kodim23.ktx2', { width:768,height:512, supercompression:'basislz' });
+record('ktx2','kodim23.ktx2','https://github.com/BinomialLLC/basis_universal/blob/21fb6e242b1e425a7557c5655bb1b475f71933ca/test_files/kodim23.ktx2', { width:768,height:512, supercompression:'basislz',rgbaSha256:'d10f98edbecc601ce319ef357c6483d353fd2f09200a9ffb1154712ba51edcf5' });
 const hdr = Buffer.concat([Buffer.from('#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y 1 +X 2\n'),Buffer.from([128,64,32,129,32,64,128,129])]);
 writeFileSync(new URL('linear.hdr', directory), hdr);
 record('hdr','linear.hdr','Radiance RGBE analytic powers of two; 1f4084a:src/formats/hdr.rs', { width:2,height:1, pixels:[1,0.5,0.25,1,0.25,0.5,1,1] });

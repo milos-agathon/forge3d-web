@@ -2,7 +2,7 @@
 
 Scope is E05. W02 retains all platform adapters and W04/W06/W08/W13/W15/W16
 retain their individual codecs and denoiser. Source verification passed:
-1,937 unit cases, ten W22 source/dist browser cases, the original W06
+1,938 unit cases, ten W22 source/dist browser cases, the original W06
 offline-denoise-v1 scene and denoiser acceptance cases, API/declaration checks,
 package/infrastructure checks, and parity-manifest verification.
 
@@ -37,6 +37,9 @@ the upstream Embind glue. The separately digest-pinned CSP adapter replaces
 those two bridges with static closures and preserves the original upstream
 JS/WASM assets. The decision and local implementation/security review are
 recorded at `docs/adr/2026-10-15-w22-basis-csp-glue.md` in the repository.
+An additional pure-codec oracle runs the pristine upstream glue and the CSP
+adapter with string compilation disabled, comparing all 1,572,864 RGBA bytes
+and their SHA-256 digest. Browser fixtures check that same output digest.
 
 The installed consumer gate builds WASM and TS from a clean committed tree,
 packs and installs the tarball into a separate directory, compiles a consumer

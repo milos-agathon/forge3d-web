@@ -5,7 +5,7 @@ export const CODEC_CATALOG: readonly CodecDescriptor[] = [
     "id": "geotiff",
     "format": "tiff",
     "owner": "W08",
-    "revision": "763770d948e0e8ab91fc83abf9d6819c135eab7d51de3709bfa3f892d490f6d3",
+    "revision": "73ccc9efdcbbca5b1c0d1a838a619dc5f217619eb0a2c4186e1e7cda97a9bb31",
     "dependencies": [
       {
         "id": "geotiff",
@@ -18,7 +18,7 @@ export const CODEC_CATALOG: readonly CodecDescriptor[] = [
     "id": "laz-perf",
     "format": "laz",
     "owner": "W16",
-    "revision": "4b86f8cd1587c8d3c4081efc59a792b42984bd2465018179bd5246e45edc6f8f",
+    "revision": "910f9b173b6cbaf1b5add96b8b180976366fed20423ae0360ad350e0b5f182b8",
     "dependencies": [
       {
         "id": "laz-perf",
@@ -31,7 +31,7 @@ export const CODEC_CATALOG: readonly CodecDescriptor[] = [
     "id": "ktx2-basis",
     "format": "ktx2",
     "owner": "W04",
-    "revision": "d55cbd28ac52876247e3f94ad51a8b9141713bbde6b0812784f5e8137709bf10",
+    "revision": "4e0ee0688b3ba5d6f2495b247b84515e6df7f4578ed139deb66d115776fe132d",
     "dependencies": [
       {
         "id": "ktx-parse",
@@ -56,7 +56,7 @@ export const CODEC_CATALOG: readonly CodecDescriptor[] = [
     "id": "exr-wasm",
     "format": "exr",
     "owner": "W06",
-    "revision": "cb01893c71580babc88435b885a2aa985a2aff2e04379f1994f66ae56dbcb897",
+    "revision": "54862c694eb7c8aca3a9eeb0725a0e47626c5ca40431014d95bf1d9c218e377f",
     "dependencies": [
       {
         "id": "exr",

@@ -21,6 +21,7 @@ const codecs = definitions.map(([format, id, owner, ids, sources]) => {
   const hash = createHash('sha256');
   for (const file of ['src-ts/codec-dispatch.ts', ...sources]) hash.update(readFileSync(new URL(file, root), 'utf8').replace(/\r\n?/g, '\n'));
   hash.update(JSON.stringify(dependencies));
+  for (const id of ids) hash.update(JSON.stringify(lock.assets.find(asset => asset.id === id).build.artifacts));
   return { id, format, owner, revision: hash.digest('hex'), dependencies };
 });
 const denoiser = createHash('sha256');
