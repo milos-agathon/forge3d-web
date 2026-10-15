@@ -1,4 +1,4 @@
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { build } from "vite";
@@ -27,13 +27,19 @@ export function realmFixturePlugin(root) {
       server.middlewares.use((request, response, next) => {
         const url = new URL(request.url ?? "/", "http://fixture.invalid");
         const bundleMatch = url.pathname.match(
-          /^\/tests\/realm-fixture\/(a|b)\/index\.js$/u,
+          /^\/tests\/realm-fixture\/(a|b)\/([a-zA-Z0-9_-][a-zA-Z0-9_.-]*\.js)$/u,
         );
         if (bundleMatch !== null) {
+          // W22's feature-owned dynamic imports split the real facade into
+          // chunks. Each copy must serve its complete emitted module graph.
+          const file = join(fixtureRoot, bundleMatch[1], bundleMatch[2]);
+          if (!existsSync(file)) {
+            response.statusCode = 404;
+            response.end("missing fixture module");
+            return;
+          }
           response.setHeader("content-type", "text/javascript");
-          response.end(
-            readFileSync(join(fixtureRoot, bundleMatch[1], "index.js")),
-          );
+          response.end(readFileSync(file));
           return;
         }
         if (url.pathname === "/tests/realm-fixture/pkg/forge3d_web.js") {
