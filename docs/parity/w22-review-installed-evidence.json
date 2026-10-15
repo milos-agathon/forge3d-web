@@ -1,0 +1,986 @@
+{
+  "schemaVersion": 1,
+  "lane": "chromium-preflight",
+  "reviewedRevision": "2612777bbf2b6dde376c75f93652d1696a11c2ec",
+  "specificationBase": "9086b37edc31fd3a038e6ca7672c4c21931cb980",
+  "implementationRevision": "b64db0132707dfdff53052eb57e1c1b2a3edcf0c",
+  "limits": [
+    "The adapter name is redacted; physical reference-discrete and reference-integrated profiles are unverified.",
+    "Other browser families are unverified.",
+    "Quota failures are injected at W02 adapter boundaries; actual origin disk-quota exhaustion is unverified.",
+    "128 repeated workflows verify the tested lifetime only; indefinite leak freedom is not claimed."
+  ],
+  "consumer": {
+    "schemaVersion": 1,
+    "verifiedAt": "2026-10-15T18:14:15.471Z",
+    "revision": "749972f2174119a5ebbcd38ce1f78e2f2a90fbcc",
+    "packageSha256": "c4c688e36d354e573dc5454749d53945af95bc949facba0076ef3b9c04b39230",
+    "wasmSha256": "50dc3d9a9be830f71d05739820ee5a0e2d5c826c70481a3492edf9d3ac738068",
+    "wasmRebuilt": true,
+    "servedRoot": "D:\\forge3d\\cache\\tmp\\forge3d-w22-consumer-T2C6Zj\\consumer\\node_modules\\@forge3d\\web",
+    "externalTestInputs": "C:\\Users\\milos\\.codex\\worktrees\\w22-codec-integration\\forge3d-web\\crates\\forge3d-web",
+    "tarball": "D:\\forge3d\\cache\\tmp\\forge3d-w22-consumer-T2C6Zj\\pack\\forge3d-web-1.26.3.tgz",
+    "installed": "D:\\forge3d\\cache\\tmp\\forge3d-w22-consumer-T2C6Zj\\consumer\\node_modules\\@forge3d\\web",
+    "exitCode": 0
+  },
+  "stats": {
+    "startTime": "2026-10-15T18:13:32.302Z",
+    "duration": 43148.407,
+    "expected": 10,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "rawReportSha256": "8ed5697bc2d34a679157b2ebc725f281a94480154d2a16a52dd5f1611f560d4a",
+  "results": [
+    {
+      "title": "w22_codecs.spec.ts > W22 dist > every E05 fixture selects one codec, conforms and replays exact decoded bytes",
+      "project": "chromium-preflight",
+      "status": "passed",
+      "durationMs": 2095,
+      "measurements": {
+        "forge3d-webgpu-probe.json": {
+          "project": {
+            "project": "chromium-preflight",
+            "browserName": "chromium",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": [
+              "--enable-unsafe-webgpu",
+              "--use-angle=d3d11"
+            ]
+          },
+          "projectPolicyRequired": true,
+          "ambientRequired": false,
+          "required": true,
+          "hasNavigatorGpu": true,
+          "adapterAvailable": true,
+          "secureContext": true,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36"
+        },
+        "w22-fixture-conformance.json": {
+          "results": [
+            {
+              "file": "predictor.tif",
+              "codec": "geotiff",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "autzen.laz",
+              "codec": "laz-perf",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "triangle.glb",
+              "codec": "gltf2",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "multiband-strips.tif",
+              "codec": "geotiff",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "rgba.ktx2",
+              "codec": "ktx2-basis",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "kodim23.ktx2",
+              "codec": "ktx2-basis",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "linear.hdr",
+              "codec": "radiance-rgbe",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "linear.exr",
+              "codec": "exr-wasm",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "glyphs.pbf",
+              "codec": "mapbox-glyph-pbf",
+              "conforms": true,
+              "exact": true
+            }
+          ],
+          "stats": {
+            "disposed": true,
+            "activeOperations": 0,
+            "cacheBytes": 0,
+            "cacheEntries": 0,
+            "cacheHits": 0,
+            "cacheMisses": 0,
+            "workingBytes": 0,
+            "peakWorkingBytes": 270865268,
+            "workingBudgetBytes": 671088640,
+            "persistentBytes": 705171,
+            "persistentEntries": 9
+          },
+          "persisted": 9
+        }
+      }
+    },
+    {
+      "title": "w22_codecs.spec.ts > W22 dist > corruption, capabilities, abort and disposal are typed",
+      "project": "chromium-preflight",
+      "status": "passed",
+      "durationMs": 712,
+      "measurements": {
+        "forge3d-webgpu-probe.json": {
+          "project": {
+            "project": "chromium-preflight",
+            "browserName": "chromium",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": [
+              "--enable-unsafe-webgpu",
+              "--use-angle=d3d11"
+            ]
+          },
+          "projectPolicyRequired": true,
+          "ambientRequired": false,
+          "required": true,
+          "hasNavigatorGpu": true,
+          "adapterAvailable": true,
+          "secureContext": true,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36"
+        }
+      }
+    },
+    {
+      "title": "w22_codecs.spec.ts > W22 dist > AOV-guided WebGPU denoiser quality and native memory accounting",
+      "project": "chromium-preflight",
+      "status": "passed",
+      "durationMs": 14769,
+      "measurements": {
+        "forge3d-webgpu-probe.json": {
+          "project": {
+            "project": "chromium-preflight",
+            "browserName": "chromium",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": [
+              "--enable-unsafe-webgpu",
+              "--use-angle=d3d11"
+            ]
+          },
+          "projectPolicyRequired": true,
+          "ambientRequired": false,
+          "required": true,
+          "hasNavigatorGpu": true,
+          "adapterAvailable": true,
+          "secureContext": true,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36"
+        },
+        "w22-denoise-quality.json": {
+          "size": [
+            1920,
+            1080
+          ],
+          "before": {
+            "mse": 0.005208869547876926,
+            "psnr": 22.611590352446342,
+            "ssim": 0.16560542813759835,
+            "maxAbs": 0.125
+          },
+          "after": {
+            "mse": 6.097559632249831e-05,
+            "psnr": 41.11096357960291,
+            "ssim": 0.9645481557998347,
+            "maxAbs": 0.051729440689086914
+          },
+          "regression": {
+            "mse": 2.353862453889033e-15,
+            "psnr": 99,
+            "ssim": 0.9999999999999497,
+            "maxAbs": 2.980232238769531e-07
+          },
+          "baseline": 155340,
+          "afterMemory": 155340,
+          "maxAbs": 7.748603820800781e-07,
+          "selection": {
+            "status": "selected",
+            "id": "webgpu-atrous",
+            "requested": "oidn",
+            "equivalent": true,
+            "revision": "02313122747a09b774277271c0edf03d36355dae1a04abe88957baef7ba6e4d4",
+            "owner": "W06"
+          },
+          "adapterInfo": {
+            "name": "",
+            "vendor": "0x00000000",
+            "device": "0x00000000",
+            "architecture": "",
+            "description": "",
+            "backend": "browser-web-gpu",
+            "deviceType": "other"
+          },
+          "stats": {
+            "disposed": true,
+            "activeOperations": 0,
+            "cacheBytes": 0,
+            "cacheEntries": 0,
+            "cacheHits": 1,
+            "cacheMisses": 0,
+            "workingBytes": 0,
+            "peakWorkingBytes": 469770248,
+            "workingBudgetBytes": 671088640,
+            "persistentBytes": 0,
+            "persistentEntries": 0
+          }
+        }
+      }
+    },
+    {
+      "title": "w22_codecs.spec.ts > W22 dist > W02 persistent stores replay offline and reject corrupted artifacts",
+      "project": "chromium-preflight",
+      "status": "passed",
+      "durationMs": 944,
+      "measurements": {
+        "forge3d-webgpu-probe.json": {
+          "project": {
+            "project": "chromium-preflight",
+            "browserName": "chromium",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": [
+              "--enable-unsafe-webgpu",
+              "--use-angle=d3d11"
+            ]
+          },
+          "projectPolicyRequired": true,
+          "ambientRequired": false,
+          "required": true,
+          "hasNavigatorGpu": true,
+          "adapterAvailable": true,
+          "secureContext": true,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36"
+        }
+      }
+    },
+    {
+      "title": "w22_codecs.spec.ts > W22 dist > device loss, replacement runtime and disposal during GPU work release allocations",
+      "project": "chromium-preflight",
+      "status": "passed",
+      "durationMs": 1049,
+      "measurements": {
+        "forge3d-webgpu-probe.json": {
+          "project": {
+            "project": "chromium-preflight",
+            "browserName": "chromium",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": [
+              "--enable-unsafe-webgpu",
+              "--use-angle=d3d11"
+            ]
+          },
+          "projectPolicyRequired": true,
+          "ambientRequired": false,
+          "required": true,
+          "hasNavigatorGpu": true,
+          "adapterAvailable": true,
+          "secureContext": true,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36"
+        }
+      }
+    },
+    {
+      "title": "w22_codecs.spec.ts > W22 dist > real fixture truncation and structural bit flips reach typed decoder failures",
+      "project": "chromium-preflight",
+      "status": "passed",
+      "durationMs": 1134,
+      "measurements": {
+        "forge3d-webgpu-probe.json": {
+          "project": {
+            "project": "chromium-preflight",
+            "browserName": "chromium",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": [
+              "--enable-unsafe-webgpu",
+              "--use-angle=d3d11"
+            ]
+          },
+          "projectPolicyRequired": true,
+          "ambientRequired": false,
+          "required": true,
+          "hasNavigatorGpu": true,
+          "adapterAvailable": true,
+          "secureContext": true,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36"
+        },
+        "w22-real-corruption.json": [
+          {
+            "file": "predictor.tif",
+            "kind": "truncated",
+            "failure": {
+              "code": "INVALID_INPUT",
+              "reason": "corrupt-input"
+            },
+            "stats": {
+              "disposed": true,
+              "activeOperations": 0,
+              "cacheBytes": 0,
+              "cacheEntries": 0,
+              "cacheHits": 0,
+              "cacheMisses": 0,
+              "workingBytes": 0,
+              "peakWorkingBytes": 268453164,
+              "workingBudgetBytes": 671088640,
+              "persistentBytes": 0,
+              "persistentEntries": 0
+            }
+          },
+          {
+            "file": "predictor.tif",
+            "kind": "structural-bit-flip",
+            "failure": {
+              "code": "INVALID_INPUT",
+              "reason": "corrupt-input"
+            },
+            "stats": {
+              "disposed": true,
+              "activeOperations": 0,
+              "cacheBytes": 0,
+              "cacheEntries": 0,
+              "cacheHits": 0,
+              "cacheMisses": 0,
+              "workingBytes": 0,
+              "peakWorkingBytes": 268453168,
+              "workingBudgetBytes": 671088640,
+              "persistentBytes": 0,
+              "persistentEntries": 0
+            }
+          },
+          {
+            "file": "autzen.laz",
+            "kind": "truncated",
+            "failure": {
+              "code": "INVALID_INPUT",
+              "reason": "invalid-laz"
+            },
+            "stats": {
+              "disposed": true,
+              "activeOperations": 0,
+              "cacheBytes": 0,
+              "cacheEntries": 0,
+              "cacheHits": 0,
+              "cacheMisses": 0,
+              "workingBytes": 0,
+              "peakWorkingBytes": 270865264,
+              "workingBudgetBytes": 671088640,
+              "persistentBytes": 0,
+              "persistentEntries": 0
+            }
+          },
+          {
+            "file": "autzen.laz",
+            "kind": "structural-bit-flip",
+            "failure": {
+              "code": "INVALID_INPUT",
+              "reason": "invalid-point-data"
+            },
+            "stats": {
+              "disposed": true,
+              "activeOperations": 0,
+              "cacheBytes": 0,
+              "cacheEntries": 0,
+              "cacheHits": 0,
+              "cacheMisses": 0,
+              "workingBytes": 0,
+              "peakWorkingBytes": 270865268,
+              "workingBudgetBytes": 671088640,
+              "persistentBytes": 0,
+              "persistentEntries": 0
+            }
+          },
+          {
+            "file": "triangle.glb",
+            "kind": "truncated",
+            "failure": {
+              "code": "INVALID_INPUT",
+              "reason": "corrupt-input"
+            },
+            "stats": {
+              "disposed": true,
+              "activeOperations": 0,
+              "cacheBytes": 0,
+              "cacheEntries": 0,
+              "cacheHits": 0,
+              "cacheMisses": 0,
+              "workingBytes": 0,
+              "peakWorkingBytes": 268455836,
+              "workingBudgetBytes": 671088640,
+              "persistentBytes": 0,
+              "persistentEntries": 0
+            }
+          },
+          {
+            "file": "triangle.glb",
+            "kind": "structural-bit-flip",
+            "failure": {
+              "code": "INVALID_INPUT",
+              "reason": "corrupt-input"
+            },
+            "stats": {
+              "disposed": true,
+              "activeOperations": 0,
+              "cacheBytes": 0,
+              "cacheEntries": 0,
+              "cacheHits": 0,
+              "cacheMisses": 0,
+              "workingBytes": 0,
+              "peakWorkingBytes": 268455840,
+              "workingBudgetBytes": 671088640,
+              "persistentBytes": 0,
+              "persistentEntries": 0
+            }
+          },
+          {
+            "file": "multiband-strips.tif",
+            "kind": "truncated",
+            "failure": {
+              "code": "INVALID_INPUT",
+              "reason": "cog-truncated-samples"
+            },
+            "stats": {
+              "disposed": true,
+              "activeOperations": 0,
+              "cacheBytes": 0,
+              "cacheEntries": 0,
+              "cacheHits": 0,
+              "cacheMisses": 0,
+              "workingBytes": 0,
+              "peakWorkingBytes": 268452744,
+              "workingBudgetBytes": 671088640,
+              "persistentBytes": 0,
+              "persistentEntries": 0
+            }
+          },
+          {
+            "file": "multiband-strips.tif",
+            "kind": "structural-bit-flip",
+            "failure": {
+              "code": "INVALID_INPUT",
+              "reason": "corrupt-input"
+            },
+            "stats": {
+              "disposed": true,
+              "activeOperations": 0,
+              "cacheBytes": 0,
+              "cacheEntries": 0,
+              "cacheHits": 0,
+              "cacheMisses": 0,
+              "workingBytes": 0,
+              "peakWorkingBytes": 268452748,
+              "workingBudgetBytes": 671088640,
+              "persistentBytes": 0,
+              "persistentEntries": 0
+            }
+          },
+          {
+            "file": "rgba.ktx2",
+            "kind": "truncated",
+            "failure": {
+              "code": "INVALID_INPUT",
+              "reason": "corrupt-input"
+            },
+            "stats": {
+              "disposed": true,
+              "activeOperations": 0,
+              "cacheBytes": 0,
+              "cacheEntries": 0,
+              "cacheHits": 0,
+              "cacheMisses": 0,
+              "workingBytes": 0,
+              "peakWorkingBytes": 268452572,
+              "workingBudgetBytes": 671088640,
+              "persistentBytes": 0,
+              "persistentEntries": 0
+            }
+          },
+          {
+            "file": "rgba.ktx2",
+            "kind": "structural-bit-flip",
+            "failure": {
+              "code": "INVALID_INPUT",
+              "reason": "corrupt-input"
+            },
+            "stats": {
+              "disposed": true,
+              "activeOperations": 0,
+              "cacheBytes": 0,
+              "cacheEntries": 0,
+              "cacheHits": 0,
+              "cacheMisses": 0,
+              "workingBytes": 0,
+              "peakWorkingBytes": 268452576,
+              "workingBudgetBytes": 671088640,
+              "persistentBytes": 0,
+              "persistentEntries": 0
+            }
+          },
+          {
+            "file": "kodim23.ktx2",
+            "kind": "truncated",
+            "failure": {
+              "code": "INVALID_INPUT",
+              "reason": "corrupt-input"
+            },
+            "stats": {
+              "disposed": true,
+              "activeOperations": 0,
+              "cacheBytes": 0,
+              "cacheEntries": 0,
+              "cacheHits": 0,
+              "cacheMisses": 0,
+              "workingBytes": 0,
+              "peakWorkingBytes": 268840404,
+              "workingBudgetBytes": 671088640,
+              "persistentBytes": 0,
+              "persistentEntries": 0
+            }
+          },
+          {
+            "file": "kodim23.ktx2",
+            "kind": "structural-bit-flip",
+            "failure": {
+              "code": "INVALID_INPUT",
+              "reason": "corrupt-input"
+            },
+            "stats": {
+              "disposed": true,
+              "activeOperations": 0,
+              "cacheBytes": 0,
+              "cacheEntries": 0,
+              "cacheHits": 0,
+              "cacheMisses": 0,
+              "workingBytes": 0,
+              "peakWorkingBytes": 268840408,
+              "workingBudgetBytes": 671088640,
+              "persistentBytes": 0,
+              "persistentEntries": 0
+            }
+          },
+          {
+            "file": "linear.hdr",
+            "kind": "truncated",
+            "failure": {
+              "code": "INVALID_INPUT",
+              "reason": "corrupt-input"
+            },
+            "stats": {
+              "disposed": true,
+              "activeOperations": 0,
+              "cacheBytes": 0,
+              "cacheEntries": 0,
+              "cacheHits": 0,
+              "cacheMisses": 0,
+              "workingBytes": 0,
+              "peakWorkingBytes": 268452064,
+              "workingBudgetBytes": 671088640,
+              "persistentBytes": 0,
+              "persistentEntries": 0
+            }
+          },
+          {
+            "file": "linear.hdr",
+            "kind": "structural-bit-flip",
+            "failure": {
+              "code": "INVALID_INPUT",
+              "reason": "corrupt-input"
+            },
+            "stats": {
+              "disposed": true,
+              "activeOperations": 0,
+              "cacheBytes": 0,
+              "cacheEntries": 0,
+              "cacheHits": 0,
+              "cacheMisses": 0,
+              "workingBytes": 0,
+              "peakWorkingBytes": 268452068,
+              "workingBudgetBytes": 671088640,
+              "persistentBytes": 0,
+              "persistentEntries": 0
+            }
+          },
+          {
+            "file": "linear.exr",
+            "kind": "truncated",
+            "failure": {
+              "code": "INVALID_INPUT",
+              "reason": "corrupt-input"
+            },
+            "stats": {
+              "disposed": true,
+              "activeOperations": 0,
+              "cacheBytes": 0,
+              "cacheEntries": 0,
+              "cacheHits": 0,
+              "cacheMisses": 0,
+              "workingBytes": 0,
+              "peakWorkingBytes": 268453716,
+              "workingBudgetBytes": 671088640,
+              "persistentBytes": 0,
+              "persistentEntries": 0
+            }
+          },
+          {
+            "file": "linear.exr",
+            "kind": "structural-bit-flip",
+            "failure": {
+              "code": "INVALID_INPUT",
+              "reason": "corrupt-input"
+            },
+            "stats": {
+              "disposed": true,
+              "activeOperations": 0,
+              "cacheBytes": 0,
+              "cacheEntries": 0,
+              "cacheHits": 0,
+              "cacheMisses": 0,
+              "workingBytes": 0,
+              "peakWorkingBytes": 268453720,
+              "workingBudgetBytes": 671088640,
+              "persistentBytes": 0,
+              "persistentEntries": 0
+            }
+          },
+          {
+            "file": "glyphs.pbf",
+            "kind": "truncated",
+            "failure": {
+              "code": "INVALID_INPUT",
+              "reason": "invalid-glyph-range"
+            },
+            "stats": {
+              "disposed": true,
+              "activeOperations": 0,
+              "cacheBytes": 0,
+              "cacheEntries": 0,
+              "cacheHits": 0,
+              "cacheMisses": 0,
+              "workingBytes": 0,
+              "peakWorkingBytes": 268452192,
+              "workingBudgetBytes": 671088640,
+              "persistentBytes": 0,
+              "persistentEntries": 0
+            }
+          },
+          {
+            "file": "glyphs.pbf",
+            "kind": "structural-bit-flip",
+            "failure": {
+              "code": "INVALID_INPUT",
+              "reason": "invalid-glyph-range"
+            },
+            "stats": {
+              "disposed": true,
+              "activeOperations": 0,
+              "cacheBytes": 0,
+              "cacheEntries": 0,
+              "cacheHits": 0,
+              "cacheMisses": 0,
+              "workingBytes": 0,
+              "peakWorkingBytes": 268452196,
+              "workingBudgetBytes": 671088640,
+              "persistentBytes": 0,
+              "persistentEntries": 0
+            }
+          }
+        ]
+      }
+    },
+    {
+      "title": "w22_codecs.spec.ts > W22 dist > missing WASM and worker support return exact browser capability reasons",
+      "project": "chromium-preflight",
+      "status": "passed",
+      "durationMs": 733,
+      "measurements": {
+        "forge3d-webgpu-probe.json": {
+          "project": {
+            "project": "chromium-preflight",
+            "browserName": "chromium",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": [
+              "--enable-unsafe-webgpu",
+              "--use-angle=d3d11"
+            ]
+          },
+          "projectPolicyRequired": true,
+          "ambientRequired": false,
+          "required": true,
+          "hasNavigatorGpu": true,
+          "adapterAvailable": true,
+          "secureContext": true,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36"
+        }
+      }
+    },
+    {
+      "title": "w22_codecs.spec.ts > W22 dist > example decodes, replays and denoises an embedded HDR input",
+      "project": "chromium-preflight",
+      "status": "passed",
+      "durationMs": 703,
+      "measurements": {
+        "forge3d-webgpu-probe.json": {
+          "project": {
+            "project": "chromium-preflight",
+            "browserName": "chromium",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": [
+              "--enable-unsafe-webgpu",
+              "--use-angle=d3d11"
+            ]
+          },
+          "projectPolicyRequired": true,
+          "ambientRequired": false,
+          "required": true,
+          "hasNavigatorGpu": true,
+          "adapterAvailable": true,
+          "secureContext": true,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36"
+        }
+      }
+    },
+    {
+      "title": "w22_codecs.spec.ts > W22 dist > bounded repeated workflows and injected adapter quota failures release owned memory",
+      "project": "chromium-preflight",
+      "status": "passed",
+      "durationMs": 1122,
+      "measurements": {
+        "forge3d-webgpu-probe.json": {
+          "project": {
+            "project": "chromium-preflight",
+            "browserName": "chromium",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": [
+              "--enable-unsafe-webgpu",
+              "--use-angle=d3d11"
+            ]
+          },
+          "projectPolicyRequired": true,
+          "ambientRequired": false,
+          "required": true,
+          "hasNavigatorGpu": true,
+          "adapterAvailable": true,
+          "secureContext": true,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36"
+        },
+        "w22-soak-quota.json": {
+          "iterations": 128,
+          "baseline": 155340,
+          "maxPersistent": 1211,
+          "quota": [
+            {
+              "adapter": "CacheStorageByteCache",
+              "error": {
+                "code": "IO_ERROR",
+                "reason": "cache-store-failed"
+              },
+              "stats": {
+                "disposed": true,
+                "activeOperations": 0,
+                "cacheBytes": 0,
+                "cacheEntries": 0,
+                "cacheHits": 0,
+                "cacheMisses": 0,
+                "workingBytes": 0,
+                "peakWorkingBytes": 268452052,
+                "workingBudgetBytes": 671088640,
+                "persistentBytes": 0,
+                "persistentEntries": 0
+              }
+            },
+            {
+              "adapter": "IndexedDbByteCache",
+              "error": {
+                "code": "IO_ERROR",
+                "reason": "cache-store-failed"
+              },
+              "stats": {
+                "disposed": true,
+                "activeOperations": 0,
+                "cacheBytes": 0,
+                "cacheEntries": 0,
+                "cacheHits": 0,
+                "cacheMisses": 0,
+                "workingBytes": 0,
+                "peakWorkingBytes": 268452052,
+                "workingBudgetBytes": 671088640,
+                "persistentBytes": 0,
+                "persistentEntries": 0
+              }
+            },
+            {
+              "adapter": "OpfsByteCache",
+              "error": {
+                "code": "IO_ERROR",
+                "reason": "cache-store-failed"
+              },
+              "stats": {
+                "disposed": true,
+                "activeOperations": 0,
+                "cacheBytes": 0,
+                "cacheEntries": 0,
+                "cacheHits": 0,
+                "cacheMisses": 0,
+                "workingBytes": 0,
+                "peakWorkingBytes": 268452052,
+                "workingBudgetBytes": 671088640,
+                "persistentBytes": 0,
+                "persistentEntries": 0
+              }
+            }
+          ]
+        }
+      }
+    },
+    {
+      "title": "w22_codecs.spec.ts > W22 dist > M3 offline-denoise-v1 runs the original fixture through CodecRegistry",
+      "project": "chromium-preflight",
+      "status": "passed",
+      "durationMs": 18888,
+      "measurements": {
+        "forge3d-webgpu-probe.json": {
+          "project": {
+            "project": "chromium-preflight",
+            "browserName": "chromium",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": [
+              "--enable-unsafe-webgpu",
+              "--use-angle=d3d11"
+            ]
+          },
+          "projectPolicyRequired": true,
+          "ambientRequired": false,
+          "required": true,
+          "hasNavigatorGpu": true,
+          "adapterAvailable": true,
+          "secureContext": true,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36"
+        },
+        "w22-offline-denoise-v1.json": {
+          "exact": {
+            "covered": 559504,
+            "colorMax": 0,
+            "aovMax": 0,
+            "depthMax": 0,
+            "motion": true,
+            "size": [
+              1920,
+              1080
+            ]
+          },
+          "ladder": {
+            "1": {
+              "used": 1,
+              "psnr": 45.63994593249129
+            },
+            "4": {
+              "used": 4,
+              "psnr": 52.38356745135792
+            },
+            "16": {
+              "used": 16,
+              "psnr": 57.7910777511772
+            }
+          },
+          "denoise": {
+            "size": [
+              1920,
+              1080
+            ],
+            "peak": 0.8721880316734314,
+            "before": {
+              "mse": 0.003945754184772918,
+              "psnr": 23.871238675833833,
+              "ssim": 0.1796036522034793,
+              "maxAbs": 0.10902346670627594
+            },
+            "after": {
+              "mse": 7.263267336099593e-05,
+              "psnr": 40.36530431781394,
+              "ssim": 0.9501600887418912,
+              "maxAbs": 0.10293939709663391
+            },
+            "regression": {
+              "mse": 1.555693929758526e-10,
+              "psnr": 96.89296326132862,
+              "ssim": 0.9999998013396981,
+              "maxAbs": 0.004517853260040283
+            },
+            "nativeRegression": {
+              "mse": 3.658445754636471e-05,
+              "psnr": 43.179236852314695,
+              "ssim": 0.9788788476964014,
+              "maxAbs": 0.11100290715694427
+            },
+            "gpuCpuMaxAbs": 6.833921426441685e-07
+          },
+          "registry": {
+            "calls": 3,
+            "stats": {
+              "disposed": true,
+              "activeOperations": 0,
+              "cacheBytes": 0,
+              "cacheEntries": 0,
+              "cacheHits": 0,
+              "cacheMisses": 0,
+              "workingBytes": 0,
+              "peakWorkingBytes": 141004800,
+              "workingBudgetBytes": 671088640,
+              "persistentBytes": 0,
+              "persistentEntries": 0
+            }
+          },
+          "stream": {
+            "count": 120,
+            "blank": 0,
+            "exact": true,
+            "last": 3966667,
+            "memoryBefore": 205916312,
+            "memoryAfter": 205916312
+          }
+        }
+      }
+    }
+  ]
+}
