@@ -357,6 +357,16 @@ jobs:
                   ? { ...record, packageRunId: input.labReadiness.packageRunId + 1 }
                   : record)
             }));
+            writeFileSync("negative-safari-legacy-checklist.json", JSON.stringify({
+              ...input,
+              records: input.records.map((record) => {
+                if (record.key !== "manual:FW-TRACKPAD-01:safari-trackpad") return record;
+                const stepResults = { ...record.stepResults };
+                delete stepResults.TRACKPAD_TWO_FINGER_SCROLL_ZOOM;
+                stepResults.TRACKPAD_PINCH_ZOOM = "pass";
+                return { ...record, stepResults };
+              })
+            }));
           ' "$(find lab-readiness -name browser-lab-infrastructure-readiness.json -type f)"
           node scripts/merge-browser-evidence.mjs \
             merge-input.json \
@@ -368,7 +378,8 @@ jobs:
             negative-missing.json \
             negative-old-readiness-record.json \
             negative-safari-substitution.json \
-            negative-safari-package-run.json
+            negative-safari-package-run.json \
+            negative-safari-legacy-checklist.json
           do
             if node scripts/merge-browser-evidence.mjs "${negative}" rejected.json; then
               echo "negative control unexpectedly passed: ${negative}" >&2

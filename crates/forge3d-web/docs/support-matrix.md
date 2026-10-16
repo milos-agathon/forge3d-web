@@ -28,7 +28,8 @@ records an explicit tombstone rather than a native capability omission.
 | Edge stable on Linux GNOME Wayland | Conditional physical lanes, `NOT_PROVEN` | CHR-04 accepts only exact assets `FW-LNX-I12-01` and `FW-LNX-NV-01` when live provenance observes GNOME Wayland, branded `msedge` stable, safe launch arguments, and non-fallback hardware presentation. No qualifying physical result exists. |
 | Firefox | `NOT_PROVEN` | `test:browser:firefox-preflight` exercises Playwright's patched Firefox in headed mode on GitHub-hosted Apple Silicon with default preferences and no Chromium flags. A passing run is `ENGINE_PASS` source-browser evidence only. Browser-family closure is owned by [W24](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w24--cross-browser-performance-recovery-packaging-and-final-closure). |
 | Playwright WebKit test engine | Engine preflight only | The non-blocking macOS `test:browser:webkit` lane uses no Chromium flags and may produce `ENGINE_PASS` only after the complete suite succeeds. Playwright WebKit is not shipping Safari and cannot establish a Safari support row. |
-| Safari | `NOT_PROVEN` | SAF-03 provides fail-closed stable SafariDriver/Selenium 4.35.0 acceptance and a separately inventoried, probe-only Technology Preview result, but no protected physical SAF-03 record is present. Browser-family closure is owned by [W24](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w24--cross-browser-performance-recovery-packaging-and-final-closure). |
+| Safari Technology Preview | Probe only, `NOT_PROVEN` | Non-blocking early warning only. Every result remains `NOT_PROVEN`; Safari Technology Preview cannot establish stable Safari support. |
+| Safari | `NOT_PROVEN` | `NOT_PROVEN`: source support is guarded for a future narrow row of stable Safari 26+ on macOS major 26 on the exact `FW-MAC-M2-01` Apple M2 host. Publication still requires same-commit SafariDriver automation, physical Magic Trackpad evidence, the complete 24-row matrix, `LAB_INFRA_READY`, and `RELEASE_MATRIX_READY`; none is currently proven. Older macOS, Intel Mac, Safari Technology Preview, and Playwright WebKit remain excluded. |
 | Mobile browsers | `NOT_PROVEN` | Touch and mobile resource behavior exist, but no required physical mobile support lane is complete. Cross-browser publication remains [W24](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w24--cross-browser-performance-recovery-packaging-and-final-closure). |
 | WebGL fallback | Product boundary | WebGPU browser execution is recorded by the [WebGL product-boundary tombstone](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#truthfulness-lifecycle-and-tombstone-ledger); final packaging enforcement belongs to [W24](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w24--cross-browser-performance-recovery-packaging-and-final-closure). Applications must feature-detect WebGPU and provide their own fallback UI. |
 | Node.js rendering | Product boundary | Node rendering is recorded by the [Node product-boundary tombstone](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#truthfulness-lifecycle-and-tombstone-ledger); browser-headless outcomes remain tracked by [R11/W02](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#runtime-gpu-and-platform-foundations). |
@@ -113,6 +114,14 @@ capability boundary reports `NOT_PROVEN` and uploads no artifact. Missing,
 malformed, incomplete, mixed, or unexpected reports fail the optional check.
 This engine result is not branded or physical Safari evidence, so Safari
 remains `NOT_PROVEN`.
+
+The guarded Safari publication path accepts only stable numeric Safari 26 or
+newer on macOS major exactly 26, observed as `macOS <product> build <build>`, on
+the exact Apple M2 inventory with `/usr/bin/safaridriver` and no launch flags.
+It replays all 24 finalized records at the readiness timestamp and separately
+rechecks current manual-evidence expiry. Its generated `safari-support.md`
+becomes release notes only after all gates pass; it does not broaden this
+current Unsupported/`NOT_PROVEN` row.
 
 ## Required Release Lane
 

@@ -50,6 +50,7 @@ test("exact lab/evidence attestations, merger, negative controls, and fixed arti
     "negative-old-readiness-record.json",
     "negative-safari-substitution.json",
     "negative-safari-package-run.json",
+    "negative-safari-legacy-checklist.json",
   ]) {
     assert.match(readiness, new RegExp(negative, "u"));
   }

@@ -9,8 +9,9 @@ the gesture steps.
 - [ ] `SESSION_CHALLENGE_VISIBLE` — Confirm the complete watermark is readable.
 - [ ] `TRACKPAD_ORBIT` — Orbit with a one-finger click-drag.
 - [ ] `TRACKPAD_PAN` — Pan with the checked secondary gesture.
-- [ ] `TRACKPAD_TWO_FINGER_SCROLL_ZOOM` — Zoom in both directions with
-  two-finger scrolling and confirm inertial wheel deltas settle cleanly.
+- [ ] `TRACKPAD_TWO_FINGER_SCROLL_ZOOM` — Two-finger scroll in both directions
+  over the focused canvas and confirm the viewer zoom changes. Trackpad pinch
+  is not a Forge3D viewer control and is neither required nor claimed.
 - [ ] `NO_SAFARI_GESTURE_EVENT_LISTENERS` — Confirm the installed viewer owns
   zero `gesturestart`, `gesturechange`, or `gestureend` listeners. Touch pinch
   remains implemented through Pointer Events on touch devices.

@@ -350,7 +350,7 @@ jobs:
             fi
             node --input-type=module --eval '
               import { readFileSync, writeFileSync } from "node:fs";
-              import { sha256Hex } from "./scripts/canonical-json.mjs";
+              import { canonicalJson, sha256Hex } from "./scripts/canonical-json.mjs";
               import { finalizeMatrixRecord } from "./scripts/create-browser-matrix-record.mjs";
               const selectedRun = JSON.parse(readFileSync(process.argv[4], "utf8"));
               const final = finalizeMatrixRecord({
@@ -364,7 +364,7 @@ jobs:
                 }
               });
               if (sha256Hex(final) !== process.argv[3]) throw new Error("readiness record digest mismatch");
-              writeFileSync(`verified-records/${process.argv[2]}.json`, JSON.stringify(final));
+              writeFileSync(`verified-records/${process.argv[2]}.json`, `${canonicalJson(final)}\n`);
             ' \
               "${source_record}" \
               "${artifact_id}" \
@@ -527,6 +527,48 @@ jobs:
             const plan = createManualMediaSourcePlan({ targetSha: process.env.TARGET_SHA, intakes });
             writeFileSync("release-assets/manual-media-sources.json", `${plan.canonical}\n`);
           '
+
+          node --input-type=module --eval '
+            import { readFileSync, readdirSync, writeFileSync } from "node:fs";
+            import { canonicalJson } from "./scripts/canonical-json.mjs";
+            const packageRun = JSON.parse(readFileSync("package-run.json", "utf8"));
+            writeFileSync("canonical-package-run.json", `${canonicalJson(packageRun)}\n`);
+            const tarballs = readdirSync("release-assets").filter((name) => /^package-[A-Za-z0-9][A-Za-z0-9._-]*\.tgz$/.test(name));
+            if (tarballs.length !== 1) throw new Error("release package tarball is not unique");
+            writeFileSync("package-tarball-name.txt", tarballs[0]);
+          '
+          node scripts/safari-support-publication.mjs \
+            --target-sha "${TARGET_SHA}" \
+            --tag "${{ inputs.tag }}" \
+            --readiness release-assets/browser-hardware-release-readiness.json \
+            --readiness-artifact readiness-artifact.json \
+            --readiness-run readiness-run.json \
+            --lab-readiness "$(find exact-lab-readiness -name browser-lab-infrastructure-readiness.json -type f)" \
+            --lab-readiness-run lab-readiness-run.json \
+            --package-run canonical-package-run.json \
+            --package-manifest package-assets/browser-package-manifest.json \
+            --package-asset-name "$(cat package-tarball-name.txt)" \
+            --package-asset "release-assets/$(cat package-tarball-name.txt)" \
+            --records-directory verified-records \
+            --matrix tests/infrastructure/hardware-matrix.json \
+            --policy tests/infrastructure/browser-policy.json \
+            --manual-media-plan release-assets/manual-media-sources.json \
+            --repository "${GITHUB_REPOSITORY}" \
+            --output release-assets/safari-support.md
+          test "$(find release-assets -maxdepth 1 -name safari-support.md -type f | wc -l)" -eq 1
+          node --input-type=module --eval '
+            import { readFileSync, writeFileSync } from "node:fs";
+            const chromium = readFileSync("release-assets/chromium-support.md", "utf8");
+            const safari = readFileSync("release-assets/safari-support.md", "utf8");
+            if (chromium.endsWith("\n") || safari.endsWith("\n")) {
+              throw new Error("support source documents must not end with LF");
+            }
+            writeFileSync("release-assets/browser-support.md", `${chromium}\n\n${safari}`, {
+              encoding: "utf8",
+              mode: 0o600
+            });
+          '
+          test "$(find release-assets -maxdepth 1 -name browser-support.md -type f | wc -l)" -eq 1
 
       - name: Resolve implementation actors and create closed preflight
         id: preflight
@@ -1147,7 +1189,22 @@ jobs:
           RELEASE_TAG: ${{ inputs.tag }}
         run: |
           node --input-type=module --eval '
-            import { readFileSync } from "node:fs";
+            import { readFileSync, readdirSync } from "node:fs";
+            const requireFreshManualEvidence = () => {
+              const evidence = readdirSync("preflight/release-assets")
+                .filter((name) => /^evidence-[1-9][0-9]*-browser-matrix-record-source\.json$/.test(name))
+                .map((name) => JSON.parse(readFileSync(`preflight/release-assets/${name}`, "utf8")))
+                .filter((record) => record.kind === "manual");
+              const now = Date.now();
+              const keys = new Set(evidence.map((record) => record.key));
+              if (
+                evidence.length !== 7 || keys.size !== 7 ||
+                evidence.some((record) => {
+                  const expiry = Date.parse(record.expiresAt);
+                  return !Number.isFinite(expiry) || now >= expiry;
+                })
+              ) throw new Error("manual evidence is incomplete or expired before draft mutation");
+            };
             const requireFreshHandoffs = () => {
               const observation = JSON.parse(readFileSync("observation/repository-trust-observation.json", "utf8"));
               const preflight = JSON.parse(readFileSync("preflight/release-publication-preflight.json", "utf8"));
@@ -1175,13 +1232,14 @@ jobs:
               if (response.status !== 404) throw new Error(`resource absence is not proven: ${response.status}`);
             };
             requireFreshHandoffs();
+            requireFreshManualEvidence();
             for (const resourcePath of [
               `releases/tags/${process.env.RELEASE_TAG}`,
               `git/ref/tags/${process.env.RELEASE_TAG}`
             ]) await assertAbsent(resourcePath);
           '
           node --input-type=module --eval '
-            import { readFileSync } from "node:fs";
+            import { readFileSync, readdirSync } from "node:fs";
             const observation = JSON.parse(readFileSync("observation/repository-trust-observation.json", "utf8"));
             const preflight = JSON.parse(readFileSync("preflight/release-publication-preflight.json", "utf8"));
             const now = Date.now();
@@ -1189,6 +1247,11 @@ jobs:
             const observationExpiresAt = Date.parse(observation.expiresAt);
             const preflightCreatedAt = Date.parse(preflight.createdAt);
             const preflightExpiresAt = Date.parse(preflight.expiresAt);
+            const manualEvidence = readdirSync("preflight/release-assets")
+              .filter((name) => /^evidence-[1-9][0-9]*-browser-matrix-record-source\.json$/.test(name))
+              .map((name) => JSON.parse(readFileSync(`preflight/release-assets/${name}`, "utf8")))
+              .filter((record) => record.kind === "manual");
+            const manualKeys = new Set(manualEvidence.map((record) => record.key));
             if (
               observation.repositorySettings?.immutableReleases?.enabled !== true ||
               typeof observation.repositorySettings.immutableReleases.enforcedByOwner !== "boolean" ||
@@ -1197,21 +1260,26 @@ jobs:
               now < observedAt || now >= observationExpiresAt ||
               !Number.isFinite(preflightCreatedAt) || !Number.isFinite(preflightExpiresAt) ||
               preflightExpiresAt <= preflightCreatedAt || preflightExpiresAt - preflightCreatedAt > 30 * 60 * 1000 ||
-              now < preflightCreatedAt || now >= preflightExpiresAt
+              now < preflightCreatedAt || now >= preflightExpiresAt ||
+              manualEvidence.length !== 7 || manualKeys.size !== 7 ||
+              manualEvidence.some((record) => {
+                const expiry = Date.parse(record.expiresAt);
+                return !Number.isFinite(expiry) || now >= expiry;
+              })
             ) throw new Error("publication handoff expired immediately before mutation");
           '
+          mkdir -p publication-proof
           gh release create "${RELEASE_TAG}" \
             --repo "${GITHUB_REPOSITORY}" \
             --target "${TARGET_SHA}" \
             --title "Forge3D Web ${RELEASE_TAG}" \
-            --notes-file preflight/release-assets/chromium-support.md \
+            --notes-file preflight/release-assets/browser-support.md \
             --draft
-          mkdir -p publication-proof
           gh api "/repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" > publication-proof/draft-release.json
           node --input-type=module --eval '
             import { readFileSync } from "node:fs";
             const release = JSON.parse(readFileSync("publication-proof/draft-release.json", "utf8"));
-            const supportBody = readFileSync("preflight/release-assets/chromium-support.md", "utf8");
+            const supportBody = readFileSync("preflight/release-assets/browser-support.md", "utf8");
             if (
               release.tag_name !== process.env.RELEASE_TAG ||
               release.target_commitish !== process.env.TARGET_SHA ||
@@ -1237,6 +1305,25 @@ jobs:
               const digest = createHash("sha256").update(readFileSync(`draft-download/${asset.name}`)).digest("hex");
               if (digest !== asset.sha256) throw new Error(`draft asset digest mismatch: ${asset.name}`);
             }
+          '
+          gh api "/repos/${GITHUB_REPOSITORY}/releases/tags/${RELEASE_TAG}" > publication-proof/final-draft-release.json
+          node --input-type=module --eval '
+            import { readFileSync, readdirSync } from "node:fs";
+            const release = JSON.parse(readFileSync("publication-proof/final-draft-release.json", "utf8"));
+            const supportBody = readFileSync("preflight/release-assets/browser-support.md", "utf8");
+            const manualEvidence = readdirSync("preflight/release-assets")
+              .filter((name) => /^evidence-[1-9][0-9]*-browser-matrix-record-source\.json$/.test(name))
+              .map((name) => JSON.parse(readFileSync(`preflight/release-assets/${name}`, "utf8")))
+              .filter((record) => record.kind === "manual");
+            const manualKeys = new Set(manualEvidence.map((record) => record.key));
+            if (
+              release.draft !== true || release.body !== supportBody ||
+              manualEvidence.length !== 7 || manualKeys.size !== 7 ||
+              manualEvidence.some((record) => {
+                const expiry = Date.parse(record.expiresAt);
+                return !Number.isFinite(expiry) || Date.now() >= expiry;
+              })
+            ) throw new Error("draft body changed or manual evidence expired before publication");
           '
           gh release edit "${RELEASE_TAG}" --repo "${GITHUB_REPOSITORY}" --draft=false
 
@@ -1277,7 +1364,7 @@ jobs:
             import { readFileSync, readdirSync, writeFileSync } from "node:fs";
             const digest = (bytes) => createHash("sha256").update(bytes).digest("hex");
             const release = JSON.parse(readFileSync("publication-proof/release.json", "utf8"));
-            const supportBody = readFileSync("preflight/release-assets/chromium-support.md", "utf8");
+            const supportBody = readFileSync("preflight/release-assets/browser-support.md", "utf8");
             const releaseAssets = JSON.parse(readFileSync(
               "publication-proof/release-assets-pages.json", "utf8"
             )).flat();

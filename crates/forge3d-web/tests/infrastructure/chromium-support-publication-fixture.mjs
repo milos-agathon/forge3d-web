@@ -13,6 +13,7 @@ import {
   mergeBrowserEvidence,
   requiredEvidenceRows,
 } from "../../scripts/merge-browser-evidence.mjs";
+import { checklistDefinition } from "../../scripts/manual-evidence.mjs";
 import { exactHostInventory } from "./host-inventory-fixture.mjs";
 
 export const targetSha = "a".repeat(40);
@@ -122,7 +123,9 @@ export function validPublicationInput({ skipMerge = false } = {}) {
     if (row.kind === "manual") {
       return {
         ...record,
-        stepResults: { A: "pass", B: "pass", C: "pass", D: "pass" },
+        stepResults: Object.fromEntries(
+          checklistDefinition(row.checklistId).stepIds.map((step) => [step, "pass"]),
+        ),
         session: {
           trustedSha: targetSha,
           packageRunId: 50,
