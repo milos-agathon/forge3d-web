@@ -21,6 +21,17 @@ def main():
     inventory = json.loads((ROOT / "crates/forge3d-web/tests/parity/composite-inventory.json").read_text(encoding="utf-8"))
     records = inventory["records"]
     result = {}
+    public_source = git("show", "a55911f021925a3264e476374ce43d1b204f1073:python/forge3d/__init__.py").decode("utf-8")
+    assignments = {}
+    for node in ast.walk(ast.parse(public_source)):
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id in ("__all__", "_BUNDLE_EXPORT_NAMES"):
+                    assignments[target.id] = ast.literal_eval(node.value)
+    exports = set(assignments["__all__"]) | set(assignments["_BUNDLE_EXPORT_NAMES"])
+    assert exports == {r["name"] for r in records if r["kind"] == "package-root-export"}
+    result["astPublicExports"] = len(exports)
+    assert result["astPublicExports"] == 220
     for directory, kind, expected in [("tests", "native-test-file", 211), ("examples", "native-example", 54), ("docs", "native-doc-asset", 88)]:
         paths = git("ls-tree", "-r", "--name-only", REF, "--", directory).decode().splitlines()
         actual = {r["source"]["path"] for r in records if r["kind"] == kind}

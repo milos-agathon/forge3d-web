@@ -17,6 +17,14 @@ test('invented TypeScript migration names are rejected', () => { assert(verifyPu
 test('stale test content is rejected', () => { assert(validateCoverage(mutate(d => d.tests[0].sha256 = '0'.repeat(64))).some(e => e.includes('Stale test digest'))); });
 test('native source provenance changes are rejected', () => { assert(validateCoverage(mutate(d => d.examples[0].source.sha256 = '0'.repeat(64))).some(e => e.includes('provenance mismatch'))); });
 test('a missing tombstone is rejected', () => { assert(validateCoverage(mutate(d => d.tombstones.pop())).some(e => e.includes('Unmapped tombstone'))); });
+test('every Python root export has a truthful browser destination', () => {
+  const data = load(manifestPath), byName = new Map(data.pythonExports.map(e => [e.native, e]));
+  assert.deepEqual(byName.get('numpy_to_png').apis, ['arrayToPng']);
+  assert.deepEqual(byName.get('Scene').apis, ['Forge3DScene']);
+  assert.deepEqual(byName.get('available_datasets').apis, ['DatasetRegistry']);
+  assert.equal(byName.get('__version__').kind, 'npm-metadata');
+  data.pythonExports.pop(); assert(validateCoverage(data).some(e => e.includes('Unmapped Python export')));
+});
 test('untracked golden bytes and fixture corruption are rejected', () => {
   const assets = load(assetManifestPath); assets.assets[0].sha256 = '0'.repeat(64);
   assert(validateAssets(assets).some(e => e.includes('digest mismatch')));

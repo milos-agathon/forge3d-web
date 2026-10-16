@@ -127,3 +127,27 @@ export const workflowCapabilities = {
   crs: ['G01'], scatter: ['T13'], mesh: ['G06', 'G07', 'G08'],
   style: ['M03'], environment: ['P08', 'P09', 'P10', 'T17'], water: ['T16'],
 };
+
+// Native names without a mechanical camelCase/same-name browser entry point.
+// Remaining names route explicitly to their capability workflow, never an alias.
+export const exportOverrides = {
+  __version__: [], version: [],
+  Scene: ['Forge3DScene'], Session: ['Forge3DSession'], Renderer: ['Forge3DRuntime'], TerrainRenderer: ['Forge3DSession'],
+  numpy_to_png: ['arrayToPng'], png_to_numpy: ['pngToArray'], rgba_to_png_bytes: ['encodePng'],
+  save_png_deterministic: ['Frame', 'writeByteSink'], render_offscreen_rgba: ['Forge3DOffscreenRenderer'],
+  oidn_available: ['CodecRegistry'], oidn_denoise: ['CodecRegistry', 'atrousDenoise'],
+  available_colormaps: ['colormaps'], Colormap1D: ['colormapFromStops'],
+  available_datasets: ['DatasetRegistry'], bundled_datasets: ['DatasetRegistry'], remote_datasets: ['DatasetRegistry'],
+  list_datasets: ['DatasetRegistry'], dataset_info: ['DatasetRegistry'], fetch_dataset: ['DatasetRegistry'],
+  fetch_dem: ['DatasetRegistry'], fetch_cityjson: ['DatasetRegistry'], fetch_copc: ['DatasetRegistry'],
+  mini_dem: ['DatasetRegistry'], mini_dem_path: ['DatasetRegistry'], sample_boundaries: ['DatasetRegistry'], sample_boundaries_path: ['DatasetRegistry'], datasets: ['DatasetRegistry'],
+  open_viewer: ['Forge3DViewer'], open_viewer_async: ['Forge3DViewer'], ViewerHandle: ['Forge3DViewer'],
+  ViewerWidget: ['createNotebookAdapter'], widgets: ['defineForge3DElement', 'createNotebookAdapter'], widgets_available: ['createNotebookAdapter'],
+  viewer_ipc: ['Forge3DMessageClient'], interactive: ['Forge3DViewer'],
+  add_buildings: ['BuildingLayer', 'parseGeoJsonBuildings'], add_buildings_cityjson: ['parseCityJsonBuildings'], add_buildings_3dtiles: ['loadBuildingTilesMetadata'],
+  material_from_name: ['buildingMaterialFromName'], material_from_tags: ['buildingMaterialFromTags'],
+  apply_style: ['compileStyle'], parse_color: ['parseStyleColor'],
+  get_crs_from_geopandas: ['crsFromGeoJson'], get_crs_from_rasterio: ['crsFromRasterMetadata'], transform_coords: ['CrsTransformer'], reproject_geom: ['CrsTransformer'],
+  get_device: ['Forge3DRuntime'], has_gpu: ['Forge3DRuntime'], device_probe: ['Forge3DRuntime'], enumerate_adapters: ['Forge3DRuntime'],
+  budget_remaining: ['Forge3DSession'], memory_metrics: ['Forge3DSession'], utilization_ratio: ['Forge3DSession'], override_memory_limit: ['RendererConfig'],
+};

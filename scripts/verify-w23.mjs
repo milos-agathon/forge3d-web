@@ -12,7 +12,7 @@ export function verifyPublicApis(data) {
   const program = ts.createProgram([entry], { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022, moduleResolution: ts.ModuleResolutionKind.Bundler, noEmit: true });
   const checker = program.getTypeChecker(), source = program.getSourceFile(entry);
   const exports = new Set(checker.getExportsOfModule(checker.getSymbolAtLocation(source)).map(s => s.name));
-  return data.rows.flatMap(r => r.apis.filter(name => !exports.has(name)).map(name => `Unknown public TypeScript API ${r.id}: ${name}`));
+  return [...data.rows.map(r => ({ id: r.id, apis: r.apis })), ...(data.pythonExports ?? []).map(r => ({ id: r.native, apis: r.apis }))].flatMap(r => r.apis.filter(name => !exports.has(name)).map(name => `Unknown public TypeScript API ${r.id}: ${name}`));
 }
 export function verifyDocs({ packageRoot = join(root, packagePrefix), checkCode = true } = {}) {
   const ts = createRequire(join(root, packagePrefix, 'package.json'))('typescript');
