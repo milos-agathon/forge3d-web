@@ -38,7 +38,13 @@ export function createWorkflows(api, canvas, signal) {
   async function withRuntime(work) {
     const element = document.createElement('canvas'); element.width = 192; element.height = 128;
     const runtime = await api.Forge3DRuntime.create(element, { width: 192, height: 128, devicePixelRatio: 1 });
-    try { runtime.setTerrain(input()); runtime.setCamera(camera); return await work(runtime); }
+    try {
+      runtime.setTerrain(input()); runtime.setCamera(camera); runtime.render();
+      const result = await work(runtime), pixels = await runtime.readRgba();
+      canvas.width = 192; canvas.height = 128;
+      canvas.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(pixels), 192, 128), 0, 0);
+      return result;
+    }
     finally { runtime.dispose(); element.remove(); }
   }
   const animation = () => new api.CameraAnimation([
@@ -224,6 +230,8 @@ export function createWorkflows(api, canvas, signal) {
           const pixels = await renderer.readRgba(signal); let covered = 0;
           for (let i = 0; i < pixels.length; i += 4) if (Math.max(pixels[i], pixels[i + 1], pixels[i + 2]) > 20) covered++;
           check(covered > 100, 'Point cloud GPU draw has no coverage');
+          canvas.width = 192; canvas.height = 128;
+          canvas.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(pixels), 192, 128), 0, 0);
           return { points: buffer.pointCount, bytes: buffer.gpuBytes, coveredPixels: covered };
         }
         finally { buffer.dispose(); }

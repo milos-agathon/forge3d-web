@@ -125,13 +125,13 @@ binary/source relationship, not correctness of all decoder paths.
 
 ## (c) Deterministic worker fuzz
 
-The committed [corpus seed](../tests/fixtures/w16-security/laz-corpus-seed.json)
+The committed [corpus seed](https://github.com/milos-agathon/forge3d/blob/d5cf3b578d7a946e2ca4008c42537380889537b3/crates/forge3d-web/tests/fixtures/w16-security/laz-corpus-seed.json)
 uses xorshift32 seed `1450659856`, 64 mutations and one untouched real-data
 control for each of four source slices. They are the coarse root and a detail
 chunk of overview COPC, an original ellipsoid COPC chunk and the original
 Autzen LAZ file. Every source file must match the independent fixture manifest.
 
-[The runnable script](../scripts/fuzz-w16-laz.mjs) drives the production worker
+[The runnable script](https://github.com/milos-agathon/forge3d/blob/d5cf3b578d7a946e2ca4008c42537380889537b3/crates/forge3d-web/scripts/fuzz-w16-laz.mjs) drives the production worker
 handler with the unchanged npm codec. Its diagnostic worker observes actual
 WASM instantiate/grow events; it does not substitute a decoder or alter memory.
 Mutations cover truncation, compressed-stream bit flips, zero/255 runs, count

@@ -112,8 +112,8 @@ resources. Runtime, scene/session, viewer and OffscreenCanvas worker paths share
 the renderer. Installed packages contain every module, shader in WASM, and the
 Luxembourg rail fixture.
 
-Examples: [Luxembourg rails](../examples/luxembourg-vector.html) and
-[picking](../examples/vector-picking.html). The Luxembourg network is converted
+Example sources: [Luxembourg rails](https://github.com/milos-agathon/forge3d/blob/d5cf3b578d7a946e2ca4008c42537380889537b3/crates/forge3d-web/examples/luxembourg-vector.html) and
+[picking](https://github.com/milos-agathon/forge3d/blob/d5cf3b578d7a946e2ca4008c42537380889537b3/crates/forge3d-web/examples/vector-picking.html). The Luxembourg network is converted
 from the pinned native GeoPackage; default relief is a clearly identified
 demonstration heightfield because the native example’s DEM was externally supplied.
 `scripts/generate-w12-native-fixtures.py --check` verifies the conversion and the

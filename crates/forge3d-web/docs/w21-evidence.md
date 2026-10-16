@@ -15,8 +15,8 @@ W21 code status and composite parity baseline.
 ## Native provenance and observed regressions
 
 The native reference is `1f4084af428dc699bdcd108b029736cb73903926`.
-[native-contract.json](../tests/fixtures/w21/native-contract.json) records
-SHA-256 assertions for the retained [native sources](../tests/fixtures/w21/native/),
+[native-contract.json](https://github.com/milos-agathon/forge3d/blob/d5cf3b578d7a946e2ca4008c42537380889537b3/crates/forge3d-web/tests/fixtures/w21/native-contract.json) records
+SHA-256 assertions for the retained [native sources](https://github.com/milos-agathon/forge3d/tree/d5cf3b578d7a946e2ca4008c42537380889537b3/crates/forge3d-web/tests/fixtures/w21/native/),
 including licensing, PNG helpers, benchmarks, diagnostics and `perf_sanity`.
 No native private signing key was copied. Issuer tests generate Ed25519
 keypairs at test time with the existing noble dependency.
