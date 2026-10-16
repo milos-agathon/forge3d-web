@@ -103,6 +103,8 @@ the native examples using small offline fixtures: terrain, overlays, vector
 geometry, labels, scalar buildings, scatter, picking, cameras, snapshots, video,
 CRS, datasets, style diagnostics, COG, LAZ and map furniture. Its per-example
 catalog records every selected workflow and the immutable native source hash.
+PNG frames, OBJ meshes, SVG/PDF maps, bundles and available MP4 outputs are
+downloadable from the gallery. Starting another run releases its previous URLs.
 Regional HTTP downloads, GIS/transport/climate analysis and editorial video
 production remain application inputs. The gallery does not claim visual
 reproduction of those regional publications.

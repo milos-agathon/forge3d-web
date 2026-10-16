@@ -48,6 +48,8 @@ round trips, deterministic frame timestamps, mesh output, CRS controls,
 dataset contents, bundle layers and disposal. WebCodecs may return its exact
 unavailable-codec diagnostic. Pro composition is tested with the test issuer
 fixture, and the user-facing gallery uses the normal license input.
+Generated artifacts remain downloadable until the next run or page hide;
+browser tests verify actual PNG bytes and release of prior download URLs.
 
 Run `npm run generate:w23`, `npm run verify:w23`, `npm run test:w23` and
 `npm run test:package-consumer:w23` to reproduce. Recorded run details live in

@@ -25,6 +25,23 @@ for (const source of [true, false]) test(`W23 ${source ? 'source' : 'dist'}: all
   expect(report.workflows.animation.timestamps).toEqual([0, 500000, 1000000]);
   expect(report.workflows.pointcloud.points).toBe(110000);
   expect(report.workflows.cog.values).toBe(256);
+  expect(report.artifacts.some((a: any) => a.name.endsWith('.png'))).toBe(true);
+  expect(report.artifacts.some((a: any) => a.name.endsWith('.pdf'))).toBe(true);
+  expect(report.artifacts.some((a: any) => a.name.endsWith('.svg'))).toBe(true);
+  expect(report.artifacts.some((a: any) => a.name.endsWith('.forge3d'))).toBe(true);
+  const download = await page.evaluate(async () => {
+    const link = document.querySelector<HTMLAnchorElement>('#downloads a[download$=".png"]')!;
+    const bytes = new Uint8Array(await (await fetch(link.href)).arrayBuffer());
+    return [...bytes.slice(0, 8)];
+  });
+  expect(download).toEqual([137, 80, 78, 71, 13, 10, 26, 10]);
+  const replay = await page.evaluate(async () => {
+    const previous = document.querySelector<HTMLAnchorElement>('#downloads a')!.href;
+    await window.__w23.run('png_numpy_roundtrip.py');
+    let released = false; try { await fetch(previous); } catch { released = true; }
+    return { released, downloads: document.querySelectorAll('#downloads a').length };
+  });
+  expect(replay).toEqual({ released: true, downloads: 1 });
   expect(failures).toEqual([]);
   await info.attach('w23-workflows.json', { body: JSON.stringify(report, null, 2), contentType: 'application/json' });
 });

@@ -98,7 +98,7 @@ function resolveDocumentationTarget(documentPath, href) {
 
   const [pathPart, fragment] = href.split("#", 2);
   return {
-    path: pathPart.length === 0 ? documentPath : resolve(dirname(documentPath), decodeURIComponent(pathPart)),
+    path: pathPart.length === 0 ? documentPath : resolve(dirname(documentPath), decodeURIComponent(pathPart.split('?')[0])),
     fragment,
   };
 }

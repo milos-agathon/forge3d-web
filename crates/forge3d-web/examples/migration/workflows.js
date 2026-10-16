@@ -2,8 +2,9 @@
 // Each function performs work and checks its output before returning a review record.
 /** @param {typeof import('../../types/index.js')} api
  * @param {HTMLCanvasElement} canvas
- * @param {AbortSignal} signal */
-export function createWorkflows(api, canvas, signal) {
+ * @param {AbortSignal} signal
+ * @param {(blob: Blob, name: string) => void} [onOutput] */
+export function createWorkflows(api, canvas, signal, onOutput) {
   const check = (ok, message) => { if (!ok) throw Error(message); };
   /** @type {import('../../types/index.js').CameraInput} */
   const camera = { position: [24, 32, 42], target: [0, 2, 0], up: [0, 1, 0], fovYDegrees: 42, near: .1, far: 500 };
@@ -31,6 +32,7 @@ export function createWorkflows(api, canvas, signal) {
       check(layers.every(l => result.executedLayerIds.includes(l.layerId)), 'A requested layer did not execute');
       canvas.width = result.frame.width; canvas.height = result.frame.height;
       canvas.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(result.frame.data), result.frame.width, result.frame.height), 0, 0);
+      onOutput?.(await result.frame.toPng(), 'scene.png');
       return { frame: result.frame, coveragePixels: result.metrics.coveragePixels, layers: result.executedLayerIds };
     } finally { scene.dispose(); check(scene.getMemoryReport().cpuBytes === 0 && scene.getMemoryReport().gpuBytes === 0, 'MapScene disposal retained memory'); }
   }
@@ -63,6 +65,7 @@ export function createWorkflows(api, canvas, signal) {
     async png() {
       const source = image(), blob = await api.arrayToPng({ ...source, channels: 4 }), output = await api.pngToArray(blob);
       check(output.data.every((v, i) => v === source.data[i]), 'PNG round trip changed RGBA bytes');
+      onOutput?.(blob, 'roundtrip.png');
       return { bytes: blob.size, exact: true };
     },
     async presets() {
@@ -105,6 +108,7 @@ export function createWorkflows(api, canvas, signal) {
     async mesh() {
       const mesh = api.generatePrimitive('box'), encoded = await api.exportMesh(mesh, 'obj');
       check(encoded.size > 100 && api.meshBounds(mesh).max[0] > api.meshBounds(mesh).min[0], 'Mesh export failed');
+      onOutput?.(encoded, 'mesh.obj');
       return { vertices: mesh.positions.length / 3, objBytes: encoded.size };
     },
     async scatter() {
@@ -146,7 +150,7 @@ export function createWorkflows(api, canvas, signal) {
     },
     async bundle() {
       const scene = new api.MapScene(recipe([vectorLayer()])); let loaded;
-      try { await scene.prepare({ signal }); const blob = await scene.saveBundle({ signal }); loaded = await api.MapScene.loadBundle(blob, { signal });
+      try { await scene.prepare({ signal }); const blob = await scene.saveBundle({ signal }); loaded = await api.MapScene.loadBundle(blob, { signal }); onOutput?.(blob, 'scene.forge3d');
         const r = await loaded.render({ signal }); check(r.executedLayerIds.includes('rivers'), 'Bundle lost vector layer');
         return { bytes: blob.size, restoredLayers: r.executedLayerIds };
       } finally { loaded?.dispose(); scene.dispose(); }
@@ -167,19 +171,20 @@ export function createWorkflows(api, canvas, signal) {
         vectors.addPolygon([[0, 0], [100, 0], [100, 60], [0, 60]], { fillColor: [.2, .6, .4, 1] }).addLabel('Map', [50, 30], { fontSize: 12 });
         const options = { width: 200, height: 120, bounds: new api.Bounds(0, 0, 100, 60) };
         const png = await plate.exportPng(), svg = await api.exportSvg(vectors, options), pdf = await api.exportPdf(vectors, options);
+        onOutput?.(png, 'plate.png'); onOutput?.(svg, 'vectors.svg'); onOutput?.(pdf, 'vectors.pdf');
         check(png.size > 100 && api.validateSvg(await svg.text()) && pdf.size > 100, 'Cartographic export empty or invalid'); return { pngBytes: png.size, svgBytes: svg.size, pdfBytes: pdf.size };
       } finally { plate.dispose(); vectors.dispose(); }
     },
     async animation() {
       return withRuntime(async runtime => {
-        const timestamps = []; for await (const rendered of api.renderFrames(runtime, { animation: animation(), fps: 2, signal })) timestamps.push(rendered.timestampUs);
+        const timestamps = []; for await (const rendered of api.renderFrames(runtime, { animation: animation(), fps: 2, signal })) { timestamps.push(rendered.timestampUs); onOutput?.(await rendered.frame.toPng(), `frame-${rendered.index}.png`); }
         check(JSON.stringify(timestamps) === '[0,500000,1000000]', 'Frame sequence is not deterministic'); return { timestamps };
       });
     },
     async video() {
       return withRuntime(async runtime => {
         try { const result = await api.encodeVideo(api.renderFrames(runtime, { animation: animation(), fps: 2, signal }), { fps: 2, container: 'mp4', signal });
-          check(result.blob.size > 100, 'Video mux produced an empty file'); return { bytes: result.blob.size, mime: result.blob.type };
+          check(result.blob.size > 100, 'Video mux produced an empty file'); onOutput?.(result.blob, 'animation.mp4'); return { bytes: result.blob.size, mime: result.blob.type };
         } catch (error) { if (error.code !== 'UNSUPPORTED_FEATURE' || error.details?.reason !== 'codec-unavailable') throw error; return { unavailable: { code: error.code, reason: error.details.reason } }; }
       });
     },
@@ -203,7 +208,7 @@ export function createWorkflows(api, canvas, signal) {
     async viewer() {
       const element = document.createElement('canvas'); element.width = 192; element.height = 128; element.setAttribute('aria-label', 'Migrated interactive viewer'); document.body.append(element);
       let viewer;
-      try { viewer = await api.Forge3DViewer.create(element, { runtime: { width: 192, height: 128, devicePixelRatio: 1 } }); await viewer.setTerrain(input()); const png = await viewer.screenshot(); check(png.size > 100, 'Viewer snapshot empty'); return { pngBytes: png.size }; }
+      try { viewer = await api.Forge3DViewer.create(element, { runtime: { width: 192, height: 128, devicePixelRatio: 1 } }); await viewer.setTerrain(input()); const png = await viewer.screenshot(); check(png.size > 100, 'Viewer snapshot empty'); onOutput?.(png, 'viewer.png'); return { pngBytes: png.size }; }
       finally { viewer?.dispose(); element.remove(); }
     },
     async picking() {
