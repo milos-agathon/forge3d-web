@@ -9,6 +9,7 @@ import { checklistDefinition } from "../../scripts/manual-evidence.mjs";
 import { CHR04_LANES } from "../../scripts/chr04-lanes.mjs";
 import { validChr03HardwareProof } from "../browser/chr03-hardware-proof-fixture.mjs";
 import { validChr04HardwareProof } from "../browser/chr04-hardware-proof-fixture.mjs";
+import { validSaf02Conformance } from "../browser/saf02-conformance-fixture.mjs";
 import { exactHostInventory } from "./host-inventory-fixture.mjs";
 
 export const targetSha = "a".repeat(40);
@@ -145,6 +146,14 @@ export function validSafariPublicationInput() {
       presentedFrameLumaDelta: 0.7,
       lumaChanged: true,
     };
+    const saf02Proof = row.lane === "safari-macos-m2"
+      ? validSaf02Conformance({
+          runId: workflow.runId,
+          jobId: 300 + index,
+          commit: targetSha,
+          packageSha256,
+        })
+      : null;
     return {
       ...base,
       effectiveLaunchArguments: [],
@@ -170,6 +179,16 @@ export function validSafariPublicationInput() {
         : {}),
       ...(edge
         ? { chr04Proof: validChr04HardwareProof({ lane: row.lane, assetId: row.assetId, platform, commit: targetSha, packageSha256 }) }
+        : {}),
+      ...(saf02Proof
+        ? {
+            hardwareJobId: saf02Proof.binding.jobId,
+            saf02Proof,
+            saf02Route: {
+              applicationUrl: `${saf02Proof.route.applicationOrigin}${saf02Proof.route.basePath}`,
+              assetUrl: `${saf02Proof.route.assetOrigin}${saf02Proof.route.basePath}`,
+            },
+          }
         : {}),
     };
   });
