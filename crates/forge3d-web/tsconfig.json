@@ -6,12 +6,17 @@
     "lib": ["DOM", "DOM.Iterable", "ES2022"],
     "strict": true,
     "declaration": true,
+    "newLine": "lf",
     "emitDeclarationOnly": false,
     "outDir": "dist",
     "rootDir": "src-ts",
     "skipLibCheck": false,
     "noUncheckedIndexedAccess": true,
-    "exactOptionalPropertyTypes": true
+    "exactOptionalPropertyTypes": true,
+    "types": [],
+    "paths": {
+      "mediabunny": ["./src-ts/vendor/mediabunny.d.ts"]
+    }
   },
   "include": ["src-ts/**/*.ts"],
   "exclude": ["dist", "pkg", "node_modules"]

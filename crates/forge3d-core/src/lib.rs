@@ -1,8 +1,21 @@
 pub mod feature_gates;
 
+#[cfg(feature = "webgpu")]
+pub mod accel;
+
+#[cfg(feature = "webgpu")]
+pub mod sdf;
+
 pub mod error;
 
 pub mod io;
+
+pub mod codecs;
+
+pub mod offline;
+
+#[cfg(feature = "webgpu")]
+pub mod postfx;
 
 #[cfg(feature = "gpu")]
 pub mod gpu;
@@ -15,6 +28,54 @@ pub mod terrain;
 
 #[cfg(feature = "webgpu")]
 pub mod readback;
+
+#[cfg(feature = "webgpu")]
+pub mod scene;
+
+#[cfg(feature = "webgpu")]
+pub mod render_graph;
+
+#[cfg(feature = "webgpu")]
+pub mod lighting;
+
+#[cfg(feature = "webgpu")]
+pub mod materials;
+
+#[cfg(feature = "webgpu")]
+pub mod mesh_tbn;
+
+#[cfg(feature = "webgpu")]
+pub mod memory;
+
+#[cfg(feature = "webgpu")]
+pub mod resources;
+
+#[cfg(feature = "webgpu")]
+pub mod shadowing;
+
+#[cfg(feature = "webgpu")]
+pub mod timing;
+
+#[cfg(feature = "webgpu")]
+pub mod terrain_material;
+
+#[cfg(feature = "webgpu")]
+pub mod terrain_clipmap;
+
+#[cfg(feature = "webgpu")]
+pub mod terrain_stream;
+
+#[cfg(feature = "webgpu")]
+pub mod terrain_overlay;
+
+#[cfg(feature = "webgpu")]
+pub mod terrain_vt;
+
+#[cfg(feature = "webgpu")]
+pub mod terrain_scatter;
+
+#[cfg(feature = "webgpu")]
+pub mod terrain_probes;
 
 pub const WORKSPACE_SPLIT_PHASE: u8 = 5;
 
@@ -372,3 +433,9 @@ mod tests {
         }
     }
 }
+
+#[cfg(feature = "webgpu")]
+pub mod environment;
+
+pub mod labels;
+pub mod vector;

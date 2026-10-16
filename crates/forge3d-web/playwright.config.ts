@@ -143,13 +143,15 @@ export function createBrowserProjects(
 export default defineConfig({
   testDir: "tests/playwright",
   webServer: {
-    command: "npm run dev",
-    url: "http://127.0.0.1:57883/examples/test-clear.html",
+    command: process.env.FORGE3D_TEST_PORT
+      ? `npx vite --host 127.0.0.1 --port ${Number(process.env.FORGE3D_TEST_PORT)} --strictPort`
+      : "npm run dev",
+    url: `http://127.0.0.1:${process.env.FORGE3D_TEST_PORT ?? "57883"}/examples/test-clear.html`,
     reuseExistingServer: false,
     timeout: 120_000
   },
   use: {
-    baseURL: "http://127.0.0.1:57883",
+    baseURL: `http://127.0.0.1:${process.env.FORGE3D_TEST_PORT ?? "57883"}`,
     headless: process.env.FORGE3D_HEADED !== "1"
   },
   projects: createBrowserProjects(process.platform, process.arch)

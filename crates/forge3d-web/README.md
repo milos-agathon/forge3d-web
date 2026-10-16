@@ -1,6 +1,8 @@
 # @forge3d/web
 
-Browser-only Forge3D WebGPU/WASM runtime for rendering MVP terrain scenes from JavaScript and TypeScript.
+See [offline licenses, PNG arrays and benchmarks](docs/utilities.md) for W21 utilities and [verification](docs/w21-evidence.md).
+
+Browser-delivered Forge3D WebGPU/WASM runtime for JavaScript and TypeScript. The current release surface renders MVP terrain scenes while the tracked target covers the complete Forge3D capability baseline.
 
 ```ts
 import { Forge3DRuntime } from "@forge3d/web";
@@ -21,13 +23,60 @@ runtime.setTerrain({
 runtime.render();
 ```
 
+```ts
+import { TerrainDataset } from "@forge3d/web";
+
+const dataset = TerrainDataset.fromArray({
+  width: 257,
+  height: 257,
+  heights,              // row-major little-endian f32 elevations in meters
+  spacing: [30, 30],    // physical cell size in meters
+  nodata: -9999,
+  crs: "EPSG:32633",
+  colormap: "terrain"
+});
+const loaded = await TerrainDataset.fromSource({
+  width: 257,
+  height: 257,
+  source: fileOrBlobOrArrayBufferOrUrl
+});
+
+dataset.statistics;            // min/max/mean/std/percentiles over valid cells
+const slope = dataset.slopeAspect();   // CPU radians
+const ao = dataset.heightAo({ enabled: true });
+const query = dataset.query(0, 0);     // bilinear world-space sample
+
+runtime.setTerrain({
+  ...dataset.toTerrainInput(),
+  heightAo: { enabled: true },
+  sunVisibility: { enabled: true },
+  debugView: "height-ao"
+});
+const gpuField = await runtime.computeTerrainAnalysis(
+  dataset.toTerrainInput(),
+  { kind: "height-ao", options: { enabled: true } }
+);
+const resident = await runtime.readTerrainAnalysis("sun-visibility");
+```
+
+CPU/WASM BVH construction, WebGPU LBVH/refit, SDF/CSG scenes and progressive
+path tracing are available through `buildBvh`, `SdfSceneBuilder` and `PathTracer`.
+The tracer exposes typed AOVs, both queue engines, ReSTIR, guiding, media and
+content-keyed caching. See the [tracing guide](docs/tracing.md) and
+[verification evidence](docs/w17-evidence.md).
+
 ## Install
+
+CRS transforms and the native dataset registry are available through
+`CrsTransformer` and `DatasetRegistry`. The package includes pinned PROJ
+WASM/database/grid assets, both bundled native datasets, and verified persistent
+offline caches. See the [CRS and dataset guide](docs/crs-datasets.md).
 
 ```bash
 npm install @forge3d/web
 ```
 
-The package is ESM-only and ships a JavaScript facade, a WebAssembly module, and hand-authored TypeScript declarations.
+The package is ESM-only and ships a JavaScript facade, a WebAssembly module, and hand-authored TypeScript declarations. It also ships the self-hosted Basis Universal 2.0.3 transcoder under `assets/basis/` for KTX2 textures. The lock-pinned `ktx-parse@1.1.0` module is vendored under `dist/vendor/`, so the package has no runtime dependencies. `dist/asset-manifest.json` records the SHA-256 of every self-hosted third-party asset.
 
 ## Interactive Viewer Status
 
@@ -78,7 +127,7 @@ WebGPU for that project and runs the complete source-browser suite in headed
 mode on a GitHub-hosted Apple-Silicon runner, but records the source benchmark
 as a probe. Its separately labelled artifact can establish at most
 `ENGINE_PASS`; it is not branded Firefox, physical-browser, or exact
-npm-tarball evidence and does not promote Firefox from `Unsupported`.
+npm-tarball evidence and leaves Firefox at `NOT_PROVEN`.
 
 `npm run test:browser:webkit` selects the bundled Playwright WebKit engine with
 no Chromium launch arguments. Hosted CI runs it only as a non-blocking macOS
@@ -87,8 +136,8 @@ for the `ENGINE_PASS` artifact. When the complete suite runs and every expected
 test fails at exactly the missing-`navigator.gpu` capability boundary, the
 optional check reports `NOT_PROVEN` and uploads no artifact; incomplete,
 malformed, mixed, or unexpected reports fail the optional check. Playwright
-WebKit is not shipping Safari: this preflight cannot establish Safari support,
-and Safari remains unsupported/`NOT_PROVEN`.
+WebKit is not shipping Safari. This preflight cannot establish Safari support,
+so Safari remains `NOT_PROVEN`.
 
 SAF-05 adds a fail-closed publication guard for a future narrow stable Safari
 26+ / macOS 26 / Apple M2 row. It does not change current support: Safari,
@@ -97,11 +146,25 @@ Unsupported/`NOT_PROVEN` until exact physical `RELEASE_MATRIX_READY` evidence is
 published. Desktop trackpad acceptance covers two-finger scroll zoom, inertial
 termination, and page isolation; trackpad pinch is explicitly not claimed.
 
-See `docs/support-matrix.md` for the browser support matrix, unsupported surfaces, and release-lane requirements.
+The protected browser-lab package also carries the SAF-03 stable-Safari
+acceptance mechanism. It uses the exact `selenium-webdriver` 4.35.0 client with
+Apple's `/usr/bin/safaridriver`, the installed tarball fixture, native pointer,
+wheel, keyboard, resize, screenshot, disposal, 30 real visibility cycles, 30
+persisted-true BFCache returns, a separate persisted-false reload control, and
+the complete frozen FND-07 benchmark. Its closed v1 evidence is validated again
+when the lane runs, when a matrix source is created, on the hosted finalizer,
+and during evidence merge. Safari Technology Preview uses its separately
+inventoried bundle driver and is probe-only; it can warn on product failure but
+cleanup uncertainty fails the job. These mechanisms do not claim a physical
+pass: Safari stays `NOT_PROVEN` until the protected physical matrix succeeds.
+
+See `docs/support-matrix.md` for browser evidence status, product boundaries, tracked feature gaps, and release-lane requirements.
 
 ## MIME, CORS, And Range Requirements
 
-Serve `.wasm` files with `Content-Type: application/wasm`. The package loads `dist/forge3d_web_bg.wasm` next to the generated bridge module, so bundlers and static hosts must preserve that asset URL.
+Serve `.wasm` files with `Content-Type: application/wasm`. The package loads `dist/forge3d_web_bg.wasm` next to the generated bridge module, so bundlers and static hosts must preserve that asset URL. `Ktx2Loader` resolves `assets/basis/basis_transcoder.{js,wasm}` relative to `dist/` by default. Preserve those files, or pass `basisJsUrl`/`basisWasmUrl` to point at self-hosted copies. No CDN fallback exists.
+
+`IblCache` stores precomputed IBL maps in CacheStorage, then OPFS. Where neither is available (for example, insecure contexts or strict storage policies), the report records `cacheBackend: "none"` and every load recomputes on the GPU.
 
 URL terrain sources use browser `fetch`. Cross-origin terrain URLs need normal CORS headers. Byte-range terrain reads request `Range` headers when `byteOffset` or `byteLength` is supplied; servers that do not support range responses may return the full object, which the browser adapter validates before upload.
 
@@ -114,8 +177,58 @@ Cache `.wasm` assets with immutable content hashing, or invalidate the wasm asse
 - `Forge3DViewer.create(canvas, options)`
 - viewer orbit, pan, zoom, automatic resize, invalidation rendering, recovery,
   diagnostics, resource budgets, screenshots, and deterministic disposal
-- `setTerrain({ width, height, heights })`
+- `setTerrain({ width, height, heights, spacing, exaggeration, domain, nodata, crs, colormap, heightAo, sunVisibility, debugView })`
 - `setTerrainFromSource({ width, height, source, byteOffset, byteLength, signal, onProgress })`
+- `TerrainDataset.fromArray` / `TerrainDataset.fromSource` typed DEM ingestion
+  with statistics, normalization, nodata fill, slope/aspect, contours, world
+  queries, CPU AO/sun fields, worker-pool decoding, and named colormaps
+- `readTerrainHeights()`, `computeTerrainAnalysis(terrain, request)`, and
+  `readTerrainAnalysis(kind)` GPU analysis/readback
+- `Forge3DScene` lighting, materials, textures, IBL, and shadows (W04):
+  `addLight` (directional/point/spot/LTC rect, presets, soft falloff, bounds),
+  `setMaterial` with 13 BRDF models and observable `resolveBrdfModel` routes,
+  `TextureSet`/`Ktx2Loader`/`generateMeshTangents`/`extractGltfMaterialChannels`,
+  `ImageBasedLighting` with GPU precompute and `IblCache`, and
+  `ShadowConfig` (six filters) with a separate `CascadedShadowConfig`
+- terrain `renderMode: "screen"` reproducing the native `terrain_pbr_pom`
+  screen path, matched against a native golden at SSIM >= 0.98
+- cameras, controllers, animation, and rigs (W05): perspective and
+  orthographic `CameraInput`, the `Camera` class with world/screen
+  conversion, native look-at/projection/TRS/DOF helpers, orbit and fly
+  controllers with mode switching, key bindings and deterministic input
+  replay, `CameraAnimation` keyframes, and clearance-verified
+  `TerrainOrbitRig`/`TerrainRailRig`/`TerrainTargetFollowRig` bakes, all
+  matched against a native oracle within 1e-5
+- readback, AOVs, offline quality, frames, and video (W06): `capture()` and
+  the offline session (`beginOfflineAccumulation`, `accumulateBatch`,
+  `readAccumulationMetrics`, `resolveOfflineHdr`) return `Frame`, float
+  `HdrFrame` and `AovFrame` (albedo, normal, depth, object ID, motion) with
+  exact float readback; `renderOffline` ports native jittered accumulation,
+  adaptive convergence and the AOV-guided A-trous denoiser on WebGPU; EXR
+  `Blob`s via `readExr`/`writeExr`; deterministic PNG frame sequences with
+  progress, cancellation and memory/OPFS/download sinks; and WebCodecs
+  MP4/WebM export with typed unavailable-codec diagnostics
+- terrain PBR/POM materials (W07): `terrain.material` ports the native
+  `terrain_pbr_pom` land shading (triplanar material set, POM, height curves,
+  clamps, snow/rock/wetness layers with TV4 variation and TV10 subsurface,
+  micro-detail, specular-AA tiers, debug views) with deterministic fallback
+  diagnostics in `getTerrainMaterialReport()`, matched against native
+  `terrain-material-v1` goldens at SSIM >= 0.98
+- terrain clipmaps, streaming, COGs, overlays, and virtual textures (W08):
+  `terrain.geometry` clipmap rings at a camera-invariant triangle budget,
+  `terrain.streaming` height pyramids driven by `TerrainStreamer` over
+  `ArrayHeightSource`/`FunctionHeightSource`/`CogHeightSource`,
+  `RangeScheduler` byte-range access with OPFS/IndexedDB/CacheStorage
+  persistent caches and vendored-geotiff `CogDataset` (worker or main
+  thread), composited `terrain.overlays` with CRS placement, and paged
+  `material.virtualTexture` albedo with source registration and stats —
+  matched against native `clipmap-seam-v1` and `terrain-vt-v1` goldens
+- terrain scatter and local probes (W09): `TerrainScatterSource` generators,
+  `TerrainScatterBatch` with QEM LOD/HLOD, wind, contact/blend and memory/stats,
+  and `TerrainLightingProbes.bake` with native SH L2/reflections, grid blending,
+  roughness mips, box projection and debug modes, retained across scene,
+  worker, viewer recovery and HDR/AOV capture; see
+  [terrain-scatter-probes.md](docs/terrain-scatter-probes.md)
 - `setCamera(camera)`
 - `resize({ width, height, devicePixelRatio })`
 - `render()`
@@ -125,11 +238,39 @@ Cache `.wasm` assets with immutable content hashing, or invalidate the wasm asse
 See `docs/browser-api.md` for the stable TypeScript contract, lifecycle rules,
 and error codes.
 
-## MVP Scope And Exclusions
+## Current Surface And Parity Gaps
 
-The browser MVP includes canvas-backed WebGPU rendering, camera and resize control, Float32 heightmaps, URL/File/Blob/ArrayBuffer terrain byte sources, screenshots, and TypeScript declarations.
+The current package includes canvas-backed WebGPU rendering, camera and resize
+control, Float32 heightmaps, URL/File/Blob/ArrayBuffer terrain byte sources,
+typed lights, BRDF materials, PBR/KTX2 textures, cached IBL, filtered and
+cascaded shadows, perspective/orthographic cameras with orbit/fly controls,
+camera keyframe animation and terrain camera rigs, screenshots, HDR/AOV/EXR
+capture, offline accumulation and denoising, frame sequences, video export,
+clipmap terrain geometry, streamed height pyramids, COG range reads with
+persistent byte caches, raster overlays, albedo virtual texturing,
+terrain scatter/LOD/HLOD/wind and local SH/reflection probes,
+and TypeScript declarations. This is the implemented release
+surface, not the final parity boundary.
 
-The MVP does not include Python APIs, native windows, TCP or stdin control, COPC/EPT/LAZ streaming, 3D Tiles, COG/raster streaming, Mapbox Style parity, WebGL fallback, or Python/native feature parity.
+| Capability | Current status | Parity owner |
+|---|---|---|
+| Worker `OffscreenCanvas` and browser-headless output | Current gap | [R10-R11](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#runtime-gpu-and-platform-foundations), [W02](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w02--general-scenerender-graph-resources-diagnostics-and-config) |
+| COPC/EPT/LAZ point streaming | Implemented; Chromium preflight evidence | [Typed datasets, bounded LOD, GPU points and picking](docs/pointcloud-tiles.md); W00 reference hardware qualification remains pending |
+| OGC 3D Tiles | Implemented; Chromium preflight evidence | [Relative loaders, bounds, SSE, PNTS and W15 B3DM](docs/pointcloud-tiles.md) |
+| COG, raster streaming/overlays, clipmaps, and virtual texturing | Supported | [T08-T11](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#terrain-and-large-raster-scenes), [W08](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w08--clipmaps-streaming-cog-raster-overlays-and-virtual-textures), [browser-api.md](docs/browser-api.md#terrain-clipmaps-streaming-cogs-overlays-and-virtual-textures-w08) |
+| Terrain scatter, LOD/HLOD, wind and local SH/reflection probes | Implemented and verified | [T13/T15](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#terrain-and-large-raster-scenes), [W09](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w09--terrain-scatter-lodhlod-wind-and-lighting-probes), [API guide](docs/terrain-scatter-probes.md) |
+| Mapbox Style subset | Current gap | [M03](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#product-scene-styling-packaging-cartography-and-utilities), [W19](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w19--mapbox-style-bundles-variants-and-review-layers) |
+
+Python wheels, PyO3/NumPy bindings, native windows, stdin/TCP control, and CMake
+are delivery mechanisms rather than feature gaps. Their observable outcomes map
+to browser equivalents in the
+[exhaustive parity matrix](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#exhaustive-parity-matrix).
+WebGL fallback and Node rendering are explicit entries in the
+[tombstone ledger](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#truthfulness-lifecycle-and-tombstone-ledger),
+not silent parity exclusions. Complete functional parity is not claimed while
+any active row in the
+[composite parity manifest](https://github.com/milos-agathon/forge3d/blob/main/docs/parity/forge3d-composite-baseline.json)
+remains open.
 
 ## Release Verification
 
@@ -138,6 +279,7 @@ See `docs/release-checklist.md` for the full prerelease checklist and
 package verification runs:
 
 ```bash
+npm run verify:parity
 npm run typecheck
 npm run build
 npm run test:api
@@ -150,3 +292,28 @@ npm pack --dry-run
 ## License
 
 Apache-2.0 OR MIT.
+
+### W10 environment and water
+
+UTC sun animation, Preetham/Hosek sky, depth-correct fog and bounded volumes, froxel/temporal paths, clouds/shadows and explicit water masks/waves/foam/reflections are implemented through `Forge3DEnvironment`. See the [environment and water guide](docs/environment-water.md) for APIs, limits and verification.
+
+Label layers, HarfBuzz shaping, native diagnostic boundaries and deterministic placement are documented in [the label guide](docs/labels.md).
+### W11 HDR and post-FX
+
+An ordered `PostFxChain` provides AO/GI/reflections, bloom, DoF, lens, motion
+blur, temporal/accumulation AA, denoise, tonemap and linear LUTs. Runtime,
+scene, session, viewer and module workers retain the typed graph. See the
+[HDR and post-FX guide](docs/postfx-hdr.md) and
+[example](examples/test-w11-postfx.html). Run `npm run test:w11` and
+`npm run test:package-consumer:w11` for native image and installed package gates.
+
+Vector layers support point shapes/atlases, AA caps/joins, polygon extrusion, terrain draping, capability-selected transparency, stable IDs, picking and named selections. See [vector layers](docs/vector-layers.md).
+
+See [Geometry, mesh IO and buildings](docs/geometry-mesh-io.md) for W15 typed meshes, transferable processing, browser import/export and building diagnostics.
+
+See [MapScene and structured diagnostics](docs/mapscene-diagnostics.md) for W18 typed recipes, actual multilayer PNG output, resource validation and bundle-ready reports.
+See [styles, bundles and review variants](docs/styles-bundles.md) for W19 local Mapbox styles, verified offline `.forge3d` archives, atomic variants and the [browser example](examples/style-bundle.html).
+
+W20 cartography implements M05–M07: map plates, legends, geodetic scale bars, rotated north arrows, insets, standalone SVG and vector PDF Blob exports, plus the linear-sRGB colormap registry and CPT/JSON imports. See [cartography guide](docs/cartography.md) and [example](examples/cartography.html).
+
+Codec integration and AOV-guided GPU denoising: [Codec registry](docs/codecs.md).

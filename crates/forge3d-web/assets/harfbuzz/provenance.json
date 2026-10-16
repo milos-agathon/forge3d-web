@@ -1,0 +1,25 @@
+{
+  "package": "harfbuzzjs",
+  "version": "1.6.0",
+  "upstreamIndexSha256": "04ece1914c8720ad96257728119c1bf24088ee4ef3ab2a2ca688c9a4895d4e7e",
+  "adapter": "Adds an idempotent dispose(obj) that unregisters the upstream finalizer and calls the same destroy function. Shaping, font and WASM bytes are unchanged.",
+  "source": "https://registry.npmjs.org/harfbuzzjs/-/harfbuzzjs-1.6.0.tgz",
+  "assets": [
+    {
+      "file": "index.mjs",
+      "sha256": "68ef5e0a8cb6c216ffd11ed4997173eb81e4b6c8a594de8666e984e1f57fbe1b"
+    },
+    {
+      "file": "harfbuzz.js",
+      "sha256": "ba43463df44851fd58211ef8c19aa7956965390857727ae867b70dc7b3682de1"
+    },
+    {
+      "file": "harfbuzz.wasm",
+      "sha256": "66f25d50cdf9942366498d0504d13096d567946cb1f6b5af6cdd87f392be99da"
+    },
+    {
+      "file": "LICENSE",
+      "sha256": "5d09767b2cc476f08028b56d9384dc45061c5a3e90f9ad966e44addc8d26c8b1"
+    }
+  ]
+}

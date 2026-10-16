@@ -1,0 +1,211 @@
+{
+  "date": "2026-10-01",
+  "command": "npm run test:package-consumer:w09",
+  "exitCode": 0,
+  "result": "PASS",
+  "commit": "5424bc7fd43f353574190b312c1921934f4542a7",
+  "tarball": "forge3d-web-1.26.3.tgz",
+  "packageSha256": "0fc393364d088d66b61f121f348d452e6b1f4388f59dbb8fc523b23b522c8e9f",
+  "fixture": "test-interactive-viewer.html",
+  "evidenceMode": "required",
+  "gateScope": "w09-package-acceptance",
+  "worktreeCleanAtRun": true,
+  "browser": {
+    "name": "chrome",
+    "version": "154.0.8037.58",
+    "channel": "chrome",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36"
+  },
+  "os": {
+    "name": "win32",
+    "version": "10.0.26300",
+    "build": "10.0.26300"
+  },
+  "headed": false,
+  "launchArguments": [],
+  "adapter": {
+    "available": true,
+    "fallback": false,
+    "identity": "nvidia / ampere",
+    "limits": {
+      "maxTextureDimension2D": 16384,
+      "maxBufferSize": 2147483648
+    }
+  },
+  "hardwareQualification": "Chromium preflight on Windows RTX 3070; neither reference hardware profile is qualified",
+  "checks": {
+    "api": "PASS",
+    "releaseHardening": "PASS",
+    "documentation": {
+      "passed": 6,
+      "skipped": 0
+    },
+    "browserHarness": {
+      "passed": 118,
+      "skipped": 0
+    },
+    "installedPackageW09": "PASS"
+  },
+  "viewerBenchmark": {
+    "id": "forge3d-viewer-benchmark-v1",
+    "warmupSamples": 120,
+    "measurementSamples": 600,
+    "traceSamplesApplied": 600,
+    "submittedFramesDelta": 600,
+    "skippedFramesDelta": 0,
+    "measuredDurationMs": 9999.900000000001,
+    "framesPerSecond": 60.00060000600005,
+    "p95RafIntervalMs": 16.799999999999272
+  },
+  "w09": {
+    "native": [
+      {
+        "name": "flat",
+        "ridge": false,
+        "maxAbs": 0,
+        "ssim": 1,
+        "mipSsim": [
+          1,
+          1,
+          1
+        ],
+        "faceControlSsim": 0.9754180189362951,
+        "reflectionHash": "79a7992f828dacfb9948c46f5cb67a8e1b6503c3c342c218662083b9580d6ccf",
+        "controlSsim": 0.31294806843369677
+      },
+      {
+        "name": "ridge",
+        "ridge": true,
+        "maxAbs": 0,
+        "ssim": 1,
+        "mipSsim": [
+          1,
+          1,
+          1
+        ],
+        "faceControlSsim": 0.954486283666992,
+        "reflectionHash": "c741113faf714bc2c37b747fc3375c24193d68d223129eda7f8a295734a27234",
+        "controlSsim": 0.2734399154601682
+      },
+      {
+        "name": "asymmetric",
+        "ridge": false,
+        "maxAbs": 0,
+        "ssim": 0.9999999999999994,
+        "mipSsim": [
+          0.9999999999999994,
+          0.9999999999999991,
+          0.999999999999999
+        ],
+        "faceControlSsim": 0.9356316417784664,
+        "reflectionHash": "33ebd980bdb0a922a872059f7fd5428540ee036d9bbaf18a0317f000a656ce87",
+        "controlSsim": 0.2912719480584493
+      },
+      {
+        "name": "asymmetric-rotated",
+        "ridge": false,
+        "maxAbs": 0,
+        "ssim": 0.9999999999999994,
+        "mipSsim": [
+          0.9999999999999994,
+          0.9999999999999991,
+          0.9999999999999996
+        ],
+        "faceControlSsim": 0.950659300566767,
+        "reflectionHash": "7abc6ef5d6f219649badc5911ec2e50856070843166f195b90758a5188218a46",
+        "controlSsim": 0.29127240958199335
+      }
+    ],
+    "irradiance": {
+      "count": 22528,
+      "maxAbs": 5.828577287481096e-08,
+      "ssim": 1,
+      "normalDirections": 1,
+      "center": 0.6374143362045288,
+      "flatNativeUp": 0.637414352141142
+    },
+    "ridge": {
+      "count": 24576,
+      "maxAbs": 4.657480112690848e-08,
+      "ssim": 0.9999999999999966,
+      "normalDirections": 3,
+      "center": 0.5657829642295837,
+      "flatNativeUp": 0.637414352141142
+    },
+    "reflections": {
+      "count": 18432,
+      "maxAbs": 3.275873510233396e-07,
+      "ssim": 0.9999999999996739,
+      "faces": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "cases": 18
+    },
+    "hlodPixels": {
+      "a": "68cbbf02ece42586919ccc50b3b446001bd24f46f2cf265a22d5af3269105bdd",
+      "b": "68cbbf02ece42586919ccc50b3b446001bd24f46f2cf265a22d5af3269105bdd",
+      "static": "68cbbf02ece42586919ccc50b3b446001bd24f46f2cf265a22d5af3269105bdd",
+      "ids": [
+        1048576
+      ],
+      "clustered": {
+        "batchCount": 1,
+        "totalInstances": 2,
+        "visibleInstances": 2,
+        "culledInstances": 0,
+        "lodInstanceCounts": [
+          0,
+          0
+        ],
+        "hlodClusterDraws": 1,
+        "hlodCoveredInstances": 2,
+        "effectiveDraws": 1
+      }
+    },
+    "probeBehavior": {
+      "center": 1,
+      "edge": 0.10224917531013489,
+      "outside": 0,
+      "stressCount": 64,
+      "stressResolution": 4,
+      "rejected": true,
+      "before": "8d019d76ece4c3388ca2d27f42fa61caadfe4ec01e0092d8a4936047bf25f969",
+      "after": "8d019d76ece4c3388ca2d27f42fa61caadfe4ec01e0092d8a4936047bf25f969",
+      "cleared": "29b74c9b5656a3742fd7fd769dd8db926b8040892b2c3677f6c784745d8a0b06"
+    },
+    "cancelBake": {
+      "responsive": true,
+      "code": "REQUEST_CANCELLED"
+    }
+  },
+  "referenceIntegrated": {
+    "status": "BLOCKED",
+    "blockedBy": "INF-00",
+    "assetId": "FW-WIN-I12-01",
+    "labels": [
+      "forge3d-web",
+      "hw-win-intel12"
+    ],
+    "reason": "Maintenance/unprovisioned. Exact adapter, driver and OS attestation required; no substitute permitted."
+  },
+  "referenceDiscrete": {
+    "status": "ABSENT",
+    "assetId": "FW-LNX-NV-01",
+    "requiredBackend": "Ubuntu/Vulkan"
+  },
+  "rawEvidence": [
+    {
+      "path": "D:\\forge3d\\.worktrees\\w09-remediation\\clean-package-5424bc7\\package-evidence.json",
+      "sha256": "8631d16d8c22775d7c74de32490412ea3d1f0aecee351db5afdc4887d8f7126e"
+    },
+    {
+      "path": "D:\\forge3d\\.worktrees\\w09-remediation\\clean-package-5424bc7\\browser-gate.json",
+      "sha256": "09efd89617b68a79dde3b75a309d90a1cf68a81f92b44d856c199ffa36439434"
+    }
+  ]
+}

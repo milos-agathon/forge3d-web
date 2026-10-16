@@ -1,5 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { assertSafeLaunchArguments } from "./capture-host-inventory.mjs";
+import { canonicalJson } from "./canonical-json.mjs";
 import { assertJsonSchema } from "./json-schema-validator.mjs";
 
 const source = new URL("../tests/browser/saf02-conformance.schema.json", import.meta.url);
@@ -10,6 +11,12 @@ const packagedPolicy = new URL("./browser-policy.json", import.meta.url);
 const browserPolicy = JSON.parse(
   readFileSync(existsSync(packagedPolicy) ? packagedPolicy : sourcePolicy, "utf8"),
 );
+
+export function assertExactSafariRoute(route, saf02Route) {
+  if (!route || !saf02Route || canonicalJson(route) !== canonicalJson(saf02Route)) {
+    throw new Error("Safari route and SAF-02 route must be the same exact authorized route");
+  }
+}
 
 export function validateSaf02Conformance(proof, expected) {
   assertJsonSchema(proof, schema);

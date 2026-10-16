@@ -1,0 +1,503 @@
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	﻿2026-10-11T08:39:40.6199377Z Current runner version: '2.337.0'
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6251189Z ##[group]Runner Image Provisioner
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6252082Z Hosted Compute Agent
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6252557Z Version: 20260901.588
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6253112Z Commit: f88ec8081b781fac6c440065ac7ff9e710ce3d0b
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6253691Z Build Date: 2026-09-01T19:56:44Z
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6254227Z Worker ID: {7fc4762e-82d7-4d8b-bd95-9980704a62c9}
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6254808Z Azure Region: eastus
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6255250Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6256477Z ##[group]Operating System
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6256981Z Microsoft Windows Server 2025
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6257622Z 10.0.26100
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6258079Z Datacenter
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6258487Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6258944Z ##[group]Runner Image
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6259421Z Image: windows-2025-vs2026
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6259882Z Version: 20260925.250.1
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6261412Z Included Software: https://github.com/actions/runner-images/blob/win25-vs2026/20260925.250/images/windows/Windows2025-VS2026-Readme.md
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6262741Z Image Release: https://github.com/actions/runner-images/releases/tag/win25-vs2026%2F20260925.250
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6263815Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6264738Z ##[group]GITHUB_TOKEN Permissions
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6266713Z Contents: read
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6267164Z Metadata: read
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6267637Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6269624Z Secret source: Actions
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6270606Z Cache mode: write
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6271220Z Prepare workflow directory
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6574564Z Prepare all required actions
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.6614624Z Getting action download info
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.8252291Z Download action repository 'actions/checkout@11d5960a326750d5838078e36cf38b85af677262' (SHA:11d5960a326750d5838078e36cf38b85af677262)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:40.9329957Z Download action repository 'dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4' (SHA:4cda84d5c5c54efe2404f9d843567869ab1699d4)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:41.0212132Z Download action repository 'actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:41.1724067Z Download action repository 'actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:41.4857257Z Complete job name: Web Runtime / Build And Contract Tests
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:41.6334095Z ##[group]Run actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:41.6335204Z with:
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:41.6335579Z   repository: milos-agathon/forge3d-web
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:41.6339090Z   token: ***
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:41.6339441Z   ssh-strict: true
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:41.6339786Z   ssh-user: git
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:41.6340144Z   persist-credentials: true
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:41.6340543Z   clean: true
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:41.6340894Z   sparse-checkout-cone-mode: true
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:41.6341317Z   fetch-depth: 1
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:41.6341688Z   fetch-tags: false
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:41.6342033Z   show-progress: true
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:41.6342388Z   lfs: false
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:41.6342729Z   submodules: false
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:41.6343089Z   set-safe-directory: true
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:41.6343495Z   allow-unsafe-pr-checkout: false
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:41.6344152Z env:
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:41.6344469Z   CARGO_TERM_COLOR: always
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:41.6344839Z   RUST_BACKTRACE: 1
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:41.6345209Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:41.8608848Z Syncing repository: milos-agathon/forge3d-web
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:41.8611087Z ##[group]Getting Git version info
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:41.8611654Z Working directory is 'D:\a\forge3d-web\forge3d-web'
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:41.9188101Z [command]"C:\Program Files\Git\bin\git.exe" version
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:42.3930925Z git version 2.55.0.windows.5
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:42.3974360Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:42.3990910Z Temporarily overriding HOME='D:\a\_temp\f70049a7-4922-4d74-b63b-513f124d3286' before making global git config changes
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:42.4000096Z Adding repository directory to the temporary git global config as a safe directory
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:42.4002249Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\forge3d-web\forge3d-web
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:42.4570470Z Deleting the contents of 'D:\a\forge3d-web\forge3d-web'
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:42.4575020Z ##[group]Initializing the repository
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:42.4582137Z [command]"C:\Program Files\Git\bin\git.exe" init D:\a\forge3d-web\forge3d-web
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:42.5757628Z Initialized empty Git repository in D:/a/forge3d-web/forge3d-web/.git/
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:42.5799900Z [command]"C:\Program Files\Git\bin\git.exe" remote add origin https://github.com/milos-agathon/forge3d-web
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:42.6395659Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:42.6397125Z ##[group]Disabling automatic garbage collection
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:42.6404429Z [command]"C:\Program Files\Git\bin\git.exe" config --local gc.auto 0
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:42.6660274Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:42.6661759Z ##[group]Setting up auth
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:42.6670143Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:42.6955213Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:44.1405419Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:44.1675800Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:44.6623984Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:44.6898994Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:45.1860409Z [command]"C:\Program Files\Git\bin\git.exe" config --local http.https://github.com/.extraheader "AUTHORIZATION: basic ***"
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:45.2147349Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:45.2147998Z ##[group]Fetching the repository
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:45.2161717Z [command]"C:\Program Files\Git\bin\git.exe" -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +46a2d4068cd89b52e33a5f3b00a7867e0f0266bc:refs/remotes/pull/46/merge
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:47.2308629Z From https://github.com/milos-agathon/forge3d-web
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:47.2309335Z  * [new ref]         46a2d4068cd89b52e33a5f3b00a7867e0f0266bc -> pull/46/merge
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:47.2346768Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:47.2347228Z ##[group]Determining the checkout info
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:47.2349343Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:47.2357161Z [command]"C:\Program Files\Git\bin\git.exe" sparse-checkout disable
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:47.2738232Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all extensions.worktreeConfig
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:47.2996931Z ##[group]Checking out the ref
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:47.3008351Z [command]"C:\Program Files\Git\bin\git.exe" checkout --progress --force refs/remotes/pull/46/merge
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.3785331Z Updating files:  87% (2957/3378)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.3950108Z Updating files:  88% (2973/3378)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4032803Z Updating files:  89% (3007/3378)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4105678Z Updating files:  90% (3041/3378)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4182845Z Updating files:  91% (3074/3378)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4253530Z Updating files:  92% (3108/3378)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4358752Z Updating files:  93% (3142/3378)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4442575Z Updating files:  94% (3176/3378)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4493648Z Updating files:  95% (3210/3378)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4548187Z Updating files:  96% (3243/3378)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4620273Z Updating files:  97% (3277/3378)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4696408Z Updating files:  98% (3311/3378)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4760429Z Updating files:  99% (3345/3378)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4760946Z Updating files: 100% (3378/3378)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4761217Z Updating files: 100% (3378/3378), done.
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4871959Z Note: switching to 'refs/remotes/pull/46/merge'.
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4872225Z 
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4872517Z You are in 'detached HEAD' state. You can look around, make experimental
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4872891Z changes and commit them, and you can discard any commits you make in this
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4873411Z state without impacting any branches by switching back to a branch.
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4873622Z 
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4873761Z If you want to create a new branch to retain commits you create, you may
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4874193Z do so (now or later) by using -c with the switch command. Example:
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4874498Z 
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4874630Z   git switch -c <new-branch-name>
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4874859Z 
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4874976Z Or undo this operation with:
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4875112Z 
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4875176Z   git switch -
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4875330Z 
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4875525Z Turn off this advice by setting config variable advice.detachedHead to false
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4875757Z 
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.4876128Z HEAD is now at 46a2d40 Merge 493a14aaa4df163f43ce403f5a4def48bf809a55 into fafac36f4061f8a9e556d70c4be5d5a33e052239
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.5036800Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8069158Z [command]"C:\Program Files\Git\bin\git.exe" log -1 --format=%H
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8297609Z 46a2d4068cd89b52e33a5f3b00a7867e0f0266bc
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8753599Z ##[group]Run dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8753991Z with:
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8754152Z   targets: wasm32-unknown-unknown
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8754342Z   toolchain: stable
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8754493Z env:
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8754644Z   CARGO_TERM_COLOR: always
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8754805Z   RUST_BACKTRACE: 1
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8754944Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8832033Z ##[start-action display=Run : parse toolchain version;id=__dtolnay_rust-toolchain.parse]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8966668Z ##[group]Run : parse toolchain version
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8966965Z [36;1m: parse toolchain version[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8967179Z [36;1mif [[ -z $toolchain ]]; then[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8967612Z [36;1m  # GitHub does not enforce `required: true` inputs itself. https://github.com/actions/runner/issues/1070[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8968036Z [36;1m  echo "'toolchain' is a required input" >&2[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8968307Z [36;1m  exit 1[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8968559Z [36;1melif [[ $toolchain =~ ^stable' '[0-9]+' '(year|month|week|day)s?' 'ago$ ]]; then[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8968869Z [36;1m  if [[ Windows == macOS ]]; then[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8969264Z [36;1m    echo "toolchain=1.$((($(date -v-$(sed 's/stable \([0-9]*\) \(.\).*/\1\2/' <<< $toolchain) +%s)/60/60/24-16569)/7/6))" >> $GITHUB_OUTPUT[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8969643Z [36;1m  else[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8969940Z [36;1m    echo "toolchain=1.$((($(date --date "${toolchain#stable }" +%s)/60/60/24-16569)/7/6))" >> $GITHUB_OUTPUT[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8970266Z [36;1m  fi[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8970482Z [36;1melif [[ $toolchain =~ ^stable' 'minus' '[0-9]+' 'releases?$ ]]; then[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8970863Z [36;1m  echo "toolchain=1.$((($(date +%s)/60/60/24-16569)/7/6-${toolchain//[^0-9]/}))" >> $GITHUB_OUTPUT[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8971191Z [36;1melif [[ $toolchain =~ ^1\.[0-9]+$ ]]; then[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8971567Z [36;1m  echo "toolchain=1.$((i=${toolchain#1.}, c=($(date +%s)/60/60/24-16569)/7/6, i+9*i*(10*i<=c)+90*i*(100*i<=c)))" >> $GITHUB_OUTPUT[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8971921Z [36;1melse[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8972097Z [36;1m  echo "toolchain=$toolchain" >> $GITHUB_OUTPUT[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8972315Z [36;1mfi[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8990747Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8991074Z env:
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8991234Z   CARGO_TERM_COLOR: always
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8991488Z   RUST_BACKTRACE: 1
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8991662Z   toolchain: stable
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:48.8991804Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.1102782Z ##[end-action id=__dtolnay_rust-toolchain.parse;outcome=success;conclusion=success;duration_ms=226]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.1124655Z ##[start-action display=Run : construct rustup command line;id=__dtolnay_rust-toolchain.flags]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.1791539Z ##[group]Run : construct rustup command line
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.1791842Z [36;1m: construct rustup command line[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.1792190Z [36;1mecho "targets=$(for t in ${targets//,/ }; do echo -n ' --target' $t; done)" >> $GITHUB_OUTPUT[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.1792658Z [36;1mecho "components=$(for c in ${components//,/ }; do echo -n ' --component' $c; done)" >> $GITHUB_OUTPUT[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.1793024Z [36;1mecho "downgrade=" >> $GITHUB_OUTPUT[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.1804428Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.1804742Z env:
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.1804897Z   CARGO_TERM_COLOR: always
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.1805068Z   RUST_BACKTRACE: 1
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.1805247Z   targets: wasm32-unknown-unknown
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.1805436Z   components: 
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.1805580Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.5159009Z ##[end-action id=__dtolnay_rust-toolchain.flags;outcome=success;conclusion=success;duration_ms=403]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.5164356Z ##[start-action display=Run : set $CARGO_HOME;id=__dtolnay_rust-toolchain.__run]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.5269400Z ##[group]Run : set $CARGO_HOME
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.5269606Z [36;1m: set $CARGO_HOME[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.5269861Z [36;1mecho CARGO_HOME=${CARGO_HOME:-"$USERPROFILE\.cargo"} >> $GITHUB_ENV[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.5280017Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.5280337Z env:
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.5280481Z   CARGO_TERM_COLOR: always
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.5280645Z   RUST_BACKTRACE: 1
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.5280791Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.5609880Z ##[end-action id=__dtolnay_rust-toolchain.__run;outcome=success;conclusion=success;duration_ms=44]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.5612116Z ##[start-action display=Run : install rustup if needed;id=__dtolnay_rust-toolchain.__run_2]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.5621292Z ##[end-action id=__dtolnay_rust-toolchain.__run_2;outcome=skipped;conclusion=skipped;duration_ms=0]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.5624980Z ##[start-action display=Run : install rustup if needed on windows;id=__dtolnay_rust-toolchain.__run_3]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.5732822Z ##[group]Run : install rustup if needed on windows
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.5733099Z [36;1m: install rustup if needed on windows[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.5733333Z [36;1mif ! command -v rustup &>/dev/null; then[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.5733941Z [36;1m  curl --proto '=https' --tlsv1.2 --retry 10 --retry-connrefused --location --silent --show-error --fail https://win.rustup.rs/x86_64 --output 'D:\a\_temp\rustup-init.exe'[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.5734592Z [36;1m  'D:\a\_temp\rustup-init.exe' --default-toolchain none --no-modify-path -y[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.5734910Z [36;1m  echo "$CARGO_HOME\bin" >> $GITHUB_PATH[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.5735110Z [36;1mfi[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.5745519Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.5745827Z env:
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.5745973Z   CARGO_TERM_COLOR: always
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.5746146Z   RUST_BACKTRACE: 1
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.5746322Z   CARGO_HOME: C:\Users\runneradmin\.cargo
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.5746520Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.6177181Z ##[end-action id=__dtolnay_rust-toolchain.__run_3;outcome=success;conclusion=success;duration_ms=55]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.6181133Z ##[start-action display=rustup toolchain install stable;id=__dtolnay_rust-toolchain.__run_4]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.6297421Z ##[group]Run rustup toolchain install stable --target wasm32-unknown-unknown --profile minimal --no-self-update
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.6298019Z [36;1mrustup toolchain install stable --target wasm32-unknown-unknown --profile minimal --no-self-update[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.6308283Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.6308586Z env:
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.6308734Z   CARGO_TERM_COLOR: always
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.6308904Z   RUST_BACKTRACE: 1
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.6309068Z   CARGO_HOME: C:\Users\runneradmin\.cargo
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.6309275Z   RUSTUP_PERMIT_COPY_RENAME: 1
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:49.6309461Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:55.4007928Z info: syncing channel updates for stable-x86_64-pc-windows-msvc
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:56.0786351Z info: latest update on 2026-10-01 for version 1.99.0 (b940084d7 2026-09-28)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:56.1237437Z info: removing previous version of component rustfmt
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:56.1446021Z info: removing previous version of component clippy
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:56.1699481Z info: removing previous version of component rust-std for target x86_64-pc-windows-gnu
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:56.3076589Z info: removing previous version of component rust-std for target i686-pc-windows-msvc
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:56.4554791Z info: removing previous version of component cargo
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:56.7684602Z info: removing previous version of component rust-std
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:56.9248517Z info: removing previous version of component rustc
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:39:57.1530337Z info: downloading 8 components
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:12.7186037Z 
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:12.7476416Z   stable-x86_64-pc-windows-msvc updated - rustc 1.99.0 (b940084d7 2026-09-28) (from rustc 1.98.1 (48a229cea 2026-09-01))
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:12.7476866Z 
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:12.7576795Z ##[end-action id=__dtolnay_rust-toolchain.__run_4;outcome=success;conclusion=success;duration_ms=23139]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:12.7582564Z ##[start-action display=Run rustup default stable;id=__dtolnay_rust-toolchain.__run_5]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:12.7697483Z ##[group]Run rustup default stable
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:12.7697706Z [36;1mrustup default stable[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:12.7707373Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:12.7707684Z env:
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:12.7707833Z   CARGO_TERM_COLOR: always
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:12.7708005Z   RUST_BACKTRACE: 1
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:12.7708169Z   CARGO_HOME: C:\Users\runneradmin\.cargo
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:12.7708370Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:12.8923546Z info: using existing install for stable-x86_64-pc-windows-msvc
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:12.8988256Z info: default toolchain set to stable-x86_64-pc-windows-msvc
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:12.9032723Z 
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:12.9225391Z   stable-x86_64-pc-windows-msvc unchanged - rustc 1.99.0 (b940084d7 2026-09-28)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:12.9225698Z 
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:12.9960457Z ##[end-action id=__dtolnay_rust-toolchain.__run_5;outcome=success;conclusion=success;duration_ms=237]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:12.9964423Z ##[start-action display=Run : create cachekey;id=__dtolnay_rust-toolchain.rustc-version]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:13.0078711Z ##[group]Run : create cachekey
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:13.0078942Z [36;1m: create cachekey[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:13.0079326Z [36;1mDATE=$(rustc +stable --version --verbose | sed -ne 's/^commit-date: \(20[0-9][0-9]\)-\([01][0-9]\)-\([0-3][0-9]\)$/\1\2\3/p')[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:13.0079828Z [36;1mHASH=$(rustc +stable --version --verbose | sed -ne 's/^commit-hash: //p')[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:13.0080198Z [36;1mecho "cachekey=$(echo $DATE$HASH | head -c12)" >> $GITHUB_OUTPUT[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:13.0090982Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:13.0091274Z env:
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:13.0091422Z   CARGO_TERM_COLOR: always
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:13.0091596Z   RUST_BACKTRACE: 1
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:13.0091763Z   CARGO_HOME: C:\Users\runneradmin\.cargo
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:13.0091964Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.7785625Z ##[end-action id=__dtolnay_rust-toolchain.rustc-version;outcome=success;conclusion=success;duration_ms=1782]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.7788930Z ##[start-action display=Run : disable incremental compilation;id=__dtolnay_rust-toolchain.__run_6]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.7920855Z ##[group]Run : disable incremental compilation
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.7921153Z [36;1m: disable incremental compilation[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.7921405Z [36;1mif [ -z "${CARGO_INCREMENTAL+set}" ]; then[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.7921656Z [36;1m  echo CARGO_INCREMENTAL=0 >> $GITHUB_ENV[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.7921866Z [36;1mfi[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.7932438Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.7932749Z env:
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.7932896Z   CARGO_TERM_COLOR: always
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.7933067Z   RUST_BACKTRACE: 1
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.7933237Z   CARGO_HOME: C:\Users\runneradmin\.cargo
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.7933441Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8314023Z ##[end-action id=__dtolnay_rust-toolchain.__run_6;outcome=success;conclusion=success;duration_ms=52]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8316332Z ##[start-action display=Run : enable colors in Cargo output;id=__dtolnay_rust-toolchain.__run_7]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8427327Z ##[group]Run : enable colors in Cargo output
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8427619Z [36;1m: enable colors in Cargo output[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8427862Z [36;1mif [ -z "${CARGO_TERM_COLOR+set}" ]; then[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8428116Z [36;1m  echo CARGO_TERM_COLOR=always >> $GITHUB_ENV[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8428336Z [36;1mfi[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8438090Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8438391Z env:
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8438702Z   CARGO_TERM_COLOR: always
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8438882Z   RUST_BACKTRACE: 1
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8439052Z   CARGO_HOME: C:\Users\runneradmin\.cargo
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8439256Z   CARGO_INCREMENTAL: 0
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8439418Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8773768Z ##[end-action id=__dtolnay_rust-toolchain.__run_7;outcome=success;conclusion=success;duration_ms=45]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8778321Z ##[start-action display=Run : enable Cargo sparse registry;id=__dtolnay_rust-toolchain.__run_8]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8886777Z ##[group]Run : enable Cargo sparse registry
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8887058Z [36;1m: enable Cargo sparse registry[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8887335Z [36;1m# implemented in 1.66, stabilized in 1.68, made default in 1.70[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8887827Z [36;1mif [ -z "${CARGO_REGISTRIES_CRATES_IO_PROTOCOL+set}" -o -f "D:\a\_temp"/.implicit_cargo_registries_crates_io_protocol ]; then[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8888333Z [36;1m  if rustc +stable --version --verbose | grep -q '^release: 1\.6[89]\.'; then[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8888720Z [36;1m    touch "D:\a\_temp"/.implicit_cargo_registries_crates_io_protocol || true[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8889081Z [36;1m    echo CARGO_REGISTRIES_CRATES_IO_PROTOCOL=sparse >> $GITHUB_ENV[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8889449Z [36;1m  elif rustc +stable --version --verbose | grep -q '^release: 1\.6[67]\.'; then[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8889845Z [36;1m    touch "D:\a\_temp"/.implicit_cargo_registries_crates_io_protocol || true[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8890188Z [36;1m    echo CARGO_REGISTRIES_CRATES_IO_PROTOCOL=git >> $GITHUB_ENV[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8890443Z [36;1m  fi[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8890586Z [36;1mfi[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8903120Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8903416Z env:
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8903561Z   CARGO_TERM_COLOR: always
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8903731Z   RUST_BACKTRACE: 1
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8903900Z   CARGO_HOME: C:\Users\runneradmin\.cargo
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8904108Z   CARGO_INCREMENTAL: 0
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:14.8904266Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.1237885Z ##[end-action id=__dtolnay_rust-toolchain.__run_8;outcome=success;conclusion=success;duration_ms=245]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.1241467Z ##[start-action display=Run : work around spurious network errors in curl 8.0;id=__dtolnay_rust-toolchain.__run_9]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.1358254Z ##[group]Run : work around spurious network errors in curl 8.0
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.1358599Z [36;1m: work around spurious network errors in curl 8.0[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.1359024Z [36;1m# https://rust-lang.zulipchat.com/#narrow/stream/246057-t-cargo/topic/timeout.20investigation[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.1359502Z [36;1mif rustc +stable --version --verbose | grep -q '^release: 1\.7[01]\.'; then[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.1359844Z [36;1m  echo CARGO_HTTP_MULTIPLEXING=false >> $GITHUB_ENV[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.1360079Z [36;1mfi[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.1370973Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.1371284Z env:
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.1371435Z   CARGO_TERM_COLOR: always
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.1371601Z   RUST_BACKTRACE: 1
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.1371766Z   CARGO_HOME: C:\Users\runneradmin\.cargo
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.1371964Z   CARGO_INCREMENTAL: 0
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.1372135Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.2503079Z ##[end-action id=__dtolnay_rust-toolchain.__run_9;outcome=success;conclusion=success;duration_ms=126]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.2506270Z ##[start-action display=Run rustc +stable --version --verbose;id=__dtolnay_rust-toolchain.__run_10]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.2618611Z ##[group]Run rustc +stable --version --verbose
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.2618873Z [36;1mrustc +stable --version --verbose[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.2628631Z shell: C:\Program Files\Git\bin\bash.EXE --noprofile --norc -e -o pipefail {0}
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.2628961Z env:
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.2629109Z   CARGO_TERM_COLOR: always
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.2629282Z   RUST_BACKTRACE: 1
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.2629618Z   CARGO_HOME: C:\Users\runneradmin\.cargo
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.2629823Z   CARGO_INCREMENTAL: 0
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.2629981Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.3451249Z rustc 1.99.0 (b940084d7 2026-09-28)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.3451614Z binary: rustc
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.3451831Z commit-hash: b940084d7eb6a299eb4bfeb8e34901bc051e7ac4
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.3452101Z commit-date: 2026-09-28
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.3452285Z host: x86_64-pc-windows-msvc
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.3452464Z release: 1.99.0
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.3453432Z LLVM version: 23.1.1
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.3578881Z ##[end-action id=__dtolnay_rust-toolchain.__run_10;outcome=success;conclusion=success;duration_ms=107]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.3754052Z ##[group]Run actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.3754414Z with:
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.3754565Z   node-version: 20.19.0
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.3754728Z   cache: npm
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.3754940Z   cache-dependency-path: crates/forge3d-web/package-lock.json
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.3755200Z   always-auth: false
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.3755354Z   check-latest: false
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.3757253Z   token: ***
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.3757405Z env:
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.3757541Z   CARGO_TERM_COLOR: always
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.3757712Z   RUST_BACKTRACE: 1
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.3757879Z   CARGO_HOME: C:\Users\runneradmin\.cargo
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.3758098Z   CARGO_INCREMENTAL: 0
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.3758255Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.5150210Z Attempting to download 20.19.0...
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.5295884Z (node:4532) [DEP0040] DeprecationWarning: The `punycode` module is deprecated. Please use a userland alternative instead.
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.5297015Z (Use `node --trace-deprecation ...` to show where the warning was created)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:15.9849596Z Acquiring 20.19.0 - x64 from https://github.com/actions/node-versions/releases/download/20.19.0-13838090974/node-20.19.0-win32-x64.7z
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:16.2167850Z Extracting ...
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:18.0072587Z Adding to the cache ...
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:24.1699245Z ##[group]Environment details
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:28.6400376Z node: v20.19.0
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:28.6400676Z npm: 10.8.2
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:28.6400820Z yarn: 1.22.22
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:28.6401240Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:28.6900958Z [command]C:\Windows\system32\cmd.exe /D /S /C "C:\hostedtoolcache\windows\node\20.19.0\x64\npm.cmd config get cache"
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:28.9500720Z C:\npm\cache
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:29.2790169Z Cache hit for: node-cache-Windows-x64-npm-6eab7470fdf65070d11082aea6a3abafbfdd116475f06484d7321326761b0956
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:29.2880401Z (node:4532) [DEP0169] DeprecationWarning: `url.parse()` behavior is not standardized and prone to errors that have security implications. Use the WHATWG URL API instead. CVEs are not issued for `url.parse()` vulnerabilities.
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:30.0358814Z Received 85862153 of 85862153 (100.0%), 116.6 MBs/sec
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:30.0416194Z Cache Size: ~82 MB (85862153 B)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:30.0437241Z [command]"C:\Program Files\Git\usr\bin\tar.exe" -xf D:/a/_temp/63675c10-8ab6-4d82-a273-7e934ea4bfe2/cache.tzst -P -C D:/a/forge3d-web/forge3d-web --force-local --use-compress-program "zstd -d"
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:38.9504005Z Cache restored successfully
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:38.9564832Z Cache restored from key: node-cache-Windows-x64-npm-6eab7470fdf65070d11082aea6a3abafbfdd116475f06484d7321326761b0956
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:38.9827213Z ##[group]Run npm run verify:parity
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:38.9827520Z [36;1mnpm run verify:parity[0m
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:39.1064891Z shell: C:\Program Files\PowerShell\7\pwsh.EXE -command ". '{0}'"
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:39.1065341Z env:
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:39.1065577Z   CARGO_TERM_COLOR: always
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:39.1065830Z   RUST_BACKTRACE: 1
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:39.1066092Z   CARGO_HOME: C:\Users\runneradmin\.cargo
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:39.1066429Z   CARGO_INCREMENTAL: 0
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:39.1066661Z ##[endgroup]
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:39.6843329Z 
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:39.6849966Z > @forge3d/web@1.26.3 verify:parity
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:39.6850915Z > node --test tests/parity/verify-parity-manifest.test.mjs && node ../../scripts/verify-parity-manifest.mjs
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:39.6851496Z 
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:39.7487926Z TAP version 13
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9207984Z # Subtest: accepts the exhaustive stored W00 baseline
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9225085Z not ok 1 - accepts the exhaustive stored W00 baseline
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9225826Z   ---
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9226304Z   duration_ms: 258.2907
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9227159Z   location: 'D:\\a\\forge3d-web\\forge3d-web\\crates\\forge3d-web\\tests\\parity\\verify-parity-manifest.test.mjs:41:1'
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9227881Z   failureType: 'testCodeFailure'
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9228398Z   error: |-
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9234286Z     Parity manifest verification failed:
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9250734Z     - docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md digest ad6ce5acaa422b40fb4b6e6c191e28b3cc572d6297b8c5f4da6a1141cc8f81e1 does not match manifest 910e47f1b67993ca480b0a9e72a2c1d0232502a2928b0b7437e41a9ae85f1d21
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9256982Z   code: 'ERR_TEST_FAILURE'
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9259881Z   name: 'ParityVerificationError'
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9260600Z   stack: |-
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9266825Z     verifyParityData (file:///D:/a/forge3d-web/forge3d-web/scripts/verify-parity-manifest.mjs:127:25)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9270943Z     TestContext.<anonymous> (file:///D:/a/forge3d-web/forge3d-web/crates/forge3d-web/tests/parity/verify-parity-manifest.test.mjs:42:18)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9272309Z     Test.runInAsyncScope (node:async_hooks:206:9)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9272764Z     Test.run (node:internal/test_runner/test:796:25)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9273310Z     Test.processPendingSubtests (node:internal/test_runner/test:526:18)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9274465Z     node:internal/test_runner/harness:255:12
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9274854Z     node:internal/process/task_queues:140:7
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9275318Z     AsyncResource.runInAsyncScope (node:async_hooks:206:9)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9275913Z     AsyncResource.runMicrotask (node:internal/process/task_queues:137:8)
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9276370Z   ...
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9276789Z # Subtest: locks npm and CI to the required pre-build parity gate
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9277615Z ok 2 - locks npm and CI to the required pre-build parity gate
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9278005Z   ---
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9278953Z   duration_ms: 0.8716
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9279228Z   ...
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9279539Z # Subtest: rejects a duplicate artifact mapping
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9280210Z ok 3 - rejects a duplicate artifact mapping
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9280624Z   ---
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9281040Z   duration_ms: 236.3151
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9289468Z   ...
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9289878Z # Subtest: rejects an inventory artifact without a mapping
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9290620Z ok 4 - rejects an inventory artifact without a mapping
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9291004Z   ---
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9291246Z   duration_ms: 221.7361
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9291653Z   ...
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9292182Z # Subtest: rejects a mapping to an unresolved capability
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9292707Z ok 5 - rejects a mapping to an unresolved capability
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9293090Z   ---
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9293468Z   duration_ms: 210.9062
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9293726Z   ...
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9294085Z # Subtest: rejects blank owner, evidence, and test fields
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9298865Z ok 6 - rejects blank owner, evidence, and test fields
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9299351Z   ---
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9299595Z   duration_ms: 219.8062
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9299846Z   ...
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9300346Z # Subtest: rejects a lock-controlled consumer without its dependency entry
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9301045Z ok 7 - rejects a lock-controlled consumer without its dependency entry
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9301497Z   ---
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9301717Z   duration_ms: 222.0604
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9301968Z   ...
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9302370Z # Subtest: rejects a non-exact lock-controlled consumer version
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9302940Z ok 8 - rejects a non-exact lock-controlled consumer version
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9303346Z   ---
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9303566Z   duration_ms: 219.1351
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9303808Z   ...
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9304291Z # Subtest: rejects a missing fixture tolerance and profile budget
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9305017Z ok 9 - rejects a missing fixture tolerance and profile budget
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9305518Z   ---
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9305797Z   duration_ms: 210.6188
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9306078Z   ...
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9306950Z # Subtest: rejects a fixture generator digest that does not match its contract
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9307812Z ok 10 - rejects a fixture generator digest that does not match its contract
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9308324Z   ---
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9308698Z   duration_ms: 225.6762
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9309040Z   ...
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9309499Z # Subtest: rejects incomplete reference hardware contracts
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9310052Z ok 11 - rejects incomplete reference hardware contracts
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9310480Z   ---
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9310902Z   duration_ms: 212.2758
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9311213Z   ...
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9311621Z # Subtest: rejects a discrete profile without timestamp-query
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9312232Z ok 12 - rejects a discrete profile without timestamp-query
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9312665Z   ---
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9312975Z   duration_ms: 223.394
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9313503Z   ...
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9313944Z # Subtest: rejects stale stored evidence digests
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9314449Z ok 13 - rejects stale stored evidence digests
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9314848Z   ---
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9315183Z   duration_ms: 217.8335
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9315494Z   ...
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9316011Z # Subtest: rejects experimental dependency entries without risk reviews
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9316738Z ok 14 - rejects experimental dependency entries without risk reviews
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9317249Z   ---
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9317540Z   duration_ms: 219.2625
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9317889Z   ...
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9318316Z # Subtest: rejects EXR when the WASM rayon exclusion drifts
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9318896Z ok 15 - rejects EXR when the WASM rayon exclusion drifts
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9319375Z   ---
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9319658Z   duration_ms: 213.7346
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9319965Z   ...
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9450575Z 1..15
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9450886Z # tests 15
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9459607Z # suites 0
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9460154Z # pass 14
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9460737Z # fail 1
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9461080Z # cancelled 0
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9461793Z # skipped 0
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9462055Z # todo 0
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:42.9462322Z # duration_ms 3208.7377
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:43.0767724Z ##[error]Process completed with exit code 1.
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:43.1035983Z Post job cleanup.
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:43.2414289Z [command]"C:\Program Files\Git\bin\git.exe" version
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:43.2639328Z git version 2.55.0.windows.5
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:43.2691268Z Temporarily overriding HOME='D:\a\_temp\777a778f-4dd8-41e4-8f41-993d90d92e5f' before making global git config changes
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:43.2691921Z Adding repository directory to the temporary git global config as a safe directory
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:43.2700363Z [command]"C:\Program Files\Git\bin\git.exe" config --global --add safe.directory D:\a\forge3d-web\forge3d-web
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:43.2962749Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp core\.sshCommand
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:43.3212857Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :\""
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:43.8002692Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:43.8261585Z http.https://github.com/.extraheader
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:43.8305766Z [command]"C:\Program Files\Git\bin\git.exe" config --local --unset-all http.https://github.com/.extraheader
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:43.8573119Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "sh -c \"git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :\""
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:44.3139579Z [command]"C:\Program Files\Git\bin\git.exe" config --local --name-only --get-regexp ^includeIf\.gitdir:
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:44.3384260Z [command]"C:\Program Files\Git\bin\git.exe" submodule foreach --recursive "git config --local --show-origin --name-only --get-regexp remote.origin.url"
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:44.8383547Z Cleaning up orphan processes
+Web Runtime / Build And Contract Tests	UNKNOWN STEP	2026-10-11T08:40:44.8551102Z ##[warning]Node.js 20 is deprecated. The following actions target Node.js 20 but are being forced to run on Node.js 24: actions/checkout@11d5960a326750d5838078e36cf38b85af677262, actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020. For more information see: https://github.blog/changelog/2025-09-19-deprecation-of-node-20-on-github-actions-runners/

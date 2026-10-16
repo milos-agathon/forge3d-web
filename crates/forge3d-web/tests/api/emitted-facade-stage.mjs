@@ -5,6 +5,8 @@ import {
   readdirSync,
   readFileSync,
   rmSync,
+  symlinkSync,
+  unlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -15,21 +17,225 @@ import ts from "typescript";
 
 const root = dirname(dirname(dirname(fileURLToPath(import.meta.url))));
 const temp = mkdtempSync(join(tmpdir(), "forge3d-facade-"));
+// Emitted modules import runtime dependencies (ktx-parse) by bare specifier;
+// resolve them from the package's installed dependencies like a consumer would.
+symlinkSync(join(root, "node_modules"), join(temp, "node_modules"), "junction");
 
 try {
   const facadeAPath = emitFacadeCopy("copy-a");
   const facadeBPath = emitFacadeCopy("copy-b");
   const facadeA = await import(pathToFileURL(facadeAPath));
   const facadeB = await import(pathToFileURL(facadeBPath));
+  for (const name of ["packTerrainProbes", "validateProbeSnapshot", "normalizeProbeGrid", "normalizeScatterBatches", "selectScatterLods", "scatterMemoryReport", "probeShBasis", "probeCubeDirection"]) assert.equal(name in facadeA, false, `internal W09 helper exported: ${name}`);
   const internalsA = await import(
     pathToFileURL(join(dirname(facadeAPath), "runtime-internals.js"))
   );
 
   assert.deepEqual(
     Object.keys(facadeA).sort(),
-    ["Forge3DError", "Forge3DRuntime", "Forge3DViewer"],
-    "the implemented facade must export the frozen runtime and viewer classes",
+    [
+      'CodecRegistry',
+      'LicenseManager','LicenseError','licenseManager','configureLicenseIssuer','setLicenseKey','getLicenseInfo','requirePro','requiresPro','LICENSE_PUBLIC_KEY_HEX','LICENSE_GRACE_DAYS','PRO_FEATURES','imageArrayToRgba','imageArrayToImageData','displayImageArray','arrayToPng','pngToArray','MAX_IMAGE_PIXELS','decodePng','BENCHMARK_SCHEMA_VERSION','benchmarkStatistics','benchmarkEnvironment','runBenchmark','runBenchmarkSuite',
+      'Colormap','ColormapRegistry','colormaps','colormapFromStops','hexToRgb','hexToRgba','rgbToNormalized','interpolateHexColors','elevationStopsFromHexColors','OKABE_ITO','CORE_COLORMAP_STOPS','parseColormapJson','parseColormapCpt','loadColormap','BBox','PlateRegion','fitPlateImage','positionPlateElement','MapPlate','loadCartographicFonts','CARTOGRAPHIC_FONT_FAMILY','Legend','ScaleBar','NorthArrow','Bounds','VectorScene','project2dToScreen','project3dTo2d','vectorSceneFromLayers','generateSvg','exportSvg','validateSvg','exportPdf',
+      'SceneState','StyleSpec','parseStyle','loadStyle','parseStyleColor','styleLayerVisible','styleToVectorStyle','styleToLabelStyle','styleLabelRecords','compileStyle','styleFeaturesFromGeoJson','loadStyleLayers','evaluateStyleExpression','evaluateStyleFilter','SpriteAtlas','loadSpriteAtlas','decodeGlyphRanges','loadGlyphRange','loadGlyphRanges','BUNDLE_VERSION','saveBundle','loadBundle','isBundle','LoadedBundle','validateStyleSupport','MapScene','SceneRecipe','TerrainSource','RasterOverlay','VectorOverlay','MapSceneBuildingLayer','MapSceneLabelLayer','MapScenePointCloudLayer','MapSceneTiles3DLayer','OrbitCamera','LightingPreset','OutputSpec','ReproducibilityProfile','MAP_SCENE_RECIPE_SCHEMA','Diagnostic','LayerSummary','SupportMatrixEntry','ValidationReport','RenderFailurePolicy','SeverityPolicy','SEVERITIES','SUPPORT_LEVELS','stableDiagnosticJson','REQUIRED_DIAGNOSTIC_CODES','P1_FEATURE_DIAGNOSTIC_CODES','P2_FEATURE_DIAGNOSTIC_CODES','diagnosticFor','crsMismatchDiagnostic','missingGlyphsDiagnostic','unicodeCoverageGapDiagnostic','unsupportedStyleFieldDiagnostic','unsupportedStyleLayerTypeDiagnostic','proGatedPathDiagnostic','placeholderFallbackDiagnostic','experimentalFeatureDiagnostic','vtUnsupportedFamilyDiagnostic','pythonPublic3dtilesIncompleteDiagnostic','estimatedGpuMemoryDiagnostic','labelRejectionSummaryDiagnostic','missingLabelFieldDiagnostic','unsupportedTileFormatDiagnostic','unsupportedTileFeatureDiagnostic','missingExternalAssetDiagnostic','missingTexturePathDiagnostic','missingUvsDiagnostic','unsupportedTextureFormatDiagnostic','unavailableCacheLodStatsDiagnostic','unsupportedInstancingPathDiagnostic','unavailableTerrainSamplerDiagnostic','validateLabelSupport','getMapSceneSupportMatrix','MAP_SCENE_LAYER_KINDS',
+      'BvhHandle','buildBvh','refitBvh','buildBvhGpu','refitBvhGpu','SdfPrimitive','SdfPrimitiveType','SdfScene','SdfSceneBuilder','CsgOperation','createSphere','createBox','evaluateCsg','PathTracer','createPathTracer','AliasTable','RestirDI','OnlineGuidingGrid','normalizeRestirConfig','hgPhase','sampleHg','traceRaysGpu','evaluateSdfGpu','buildBvhWasm','evaluateSdfWasm','createTraceWorkerHandler','iterTraceTiles','encodeTraceAovs',
+      'AdaptivePointBudget','CopcDataset','EptDataset','LazDataset','OctreeKey','PointBuffer','PointCloudLayer','PointCloudRenderer','PointCloudTraverser','TileBoundingVolume','Tiles3dLayer','Tileset','TilesetTraverser',
+      'computePointSse','computeTileSse','createPointCloudWorkerHandler','decodeB3dm','decodeLaz','decodeLazChunk','decodePnts','loadTileset','openCopc','openEpt','openLaz','openPointCloud','parseCopcHierarchy','parseEptBinary','parseLasHeader','parseLasRecords','pointDataBytes','reprojectPointData','transferPointData','wgs84ToEcef',
+      'BuildingLayer','MAX_MESH_BYTES','MESH_IDENTITY','MeshIo','MeshLayer',
+      'attachMeshTangents','buildingMaterialFromName','buildingMaterialFromTags','centerMesh','cloneMesh','createMeshWorkerHandler','decodeGltf','diagnoseBuildingTextures','displaceHeightmap','displaceProcedural',
+      'encodeGlb','encodeMtl','encodeObj','encodeStl','exportHdr','exportImage','exportMesh','exportMeshToSink','extrudePolygon','flipMeshAxis','generateMeshLods','generatePrimitive','generateRibbon','generateThickPolyline','generateTube',
+      'inferRoofType','loadBuildingTilesMetadata','loadBuildings','loadGltf','loadHdr','loadImage','loadMesh','loadObj','mergeMeshes','meshBounds','meshBytes','meshFromMultiPolygonZ','parseBuildingColor','parseCityJsonBuildings','parseGeoJsonBuildings','parseMtl','parseObj','parseStl','planarMeshUv','recomputeMeshNormals','roofMaterialFromTags','scaleMesh','simplifyMesh','sphericalMeshUv','subdivideMesh','subdivideMeshAdaptive','swapMeshAxes','transferMesh','transformMesh','validateMesh','weldMesh',
+      'CrsTransformer', 'crsToEpsg', 'crsFromRasterMetadata', 'crsFromGeoJson', 'projAvailable',
+      'DatasetRegistry', 'DATASET_BASE_URL', 'decodeDatasetNpy', 'reprojectVectorLayer', 'reprojectLabelFeatures',
+      "LabelFeatureSource", "LabelCollisionIndex", "declutterLabels",
+      "FontAtlas", "FontFallbackRange", "TypographySettings", "LabelLayer", "LabelManager", "LabelStyle", "LabelFlags", "LabelPlan", "KeepoutRegion", "PriorityClass", "LABEL_REJECTION_REASONS",
+      "VectorLayers",
+      "VectorLayer",
+      "VectorPicker",
+      "pickVectorTerrain",
+      "PostFxChain",
+      "normalizePostFx",
+      "createIdentityColorLut",
+      "Forge3DEnvironment",
+      "sunPosition",
+      "environmentMemoryReport",
+      "generateDensityVolume",
+      "ScatterWindSettings",
+      "TerrainLightingProbes",
+      "TerrainScatterBatch",
+      "TerrainScatterSource",
+      "autoScatterLodLevels",
+      "bilinearScatterSample",
+      "getTerrainProbeMaterialDefaults",
+      "gridScatterTransforms",
+      "makeScatterTransform",
+      "scatterMeshBounds",
+      "scatterTransformBounds",
+      "seededScatterTransforms",
+      "simplifyScatterMesh",
+      "AOV_ID_BACKGROUND",
+      "AOV_ID_WATER_BASE",
+      "AOV_ID_SCENE_NODE_BASE",
+      "AOV_ID_TERRAIN",
+      "AOV_ID_VECTOR",
+      "AovFrame",
+      "ArrayHeightSource",
+      "BorrowedWasmView",
+      "CacheStorageByteCache",
+      "Camera",
+      "CameraAnimation",
+      "CameraController",
+      "CameraKeyframe",
+      "CascadedShadowConfig",
+      "CogDataset",
+      "CogHeightSource",
+      "DEFAULT_CAMERA_KEY_BINDINGS",
+      "DenoiseSettings",
+      "DigestCheckedByteCache",
+      "EXR_MIME_TYPE",
+      "FlyController",
+      "Forge3DError",
+      "Forge3DMessageClient",
+      "Forge3DOffscreenRenderer",
+      "Forge3DRuntime",
+      "Forge3DScene",
+      "Forge3DSession",
+      "Forge3DViewer",
+      "Forge3DWebSocketAdapter",
+      "Forge3DWorkerPool",
+      "Forge3DWorkerRenderer",
+      "Frame",
+      "FrameDumper",
+      "FunctionHeightSource",
+      "HdrFrame",
+      "IblCache",
+      "ImageBasedLighting",
+      "IndexedDbByteCache",
+      "Ktx2Loader",
+      "LightCollection",
+      "MaterialCollection",
+      "MemoryByteCache",
+      "OfflineProgress",
+      "OfflineQualitySettings",
+      "OpfsByteCache",
+      "OrbitController",
+      "RangeScheduler",
+      "RenderConfig",
+      "RenderProgress",
+      "RendererConfig",
+      "ShadowConfig",
+      "TERRAIN_CLEARANCE_TOLERANCE",
+      "TerrainClearance",
+      "TerrainDataset",
+      "TerrainOrbitRig",
+      "TerrainRailRig",
+      "TerrainRigSource",
+      "TerrainStreamer",
+      "TerrainTargetFollowRig",
+      "TextureSet",
+      "aovObjectId",
+      "apertureToFStop",
+      "atrousDenoise",
+      "cacheStorageByteStore",
+      "calculateTriangleReduction",
+      "cameraDirection",
+      "cameraDofParams",
+      "cameraStateEye",
+      "cameraStateToInput",
+      "circleOfConfusion",
+      "compareImages",
+      "composeTrs",
+      "createCogWorkerHandler",
+      "createDownloadFrameSink",
+      "createFrameStream",
+      "createMemoryFrameSink",
+      "createNotebookAdapter",
+      "createOpfsFrameSink",
+      "createPersistentByteCache",
+      "createTerrainDatasetWorkerHandler",
+      "cubicHermite",
+      "decodeOverlayImage",
+      "decodeRgbe",
+      "defineForge3DElement",
+      "depthOfFieldRange",
+      "dumpFrameSequence",
+      "encodePng",
+      "encodeVideo",
+      "extractGltfMaterialChannels",
+      "fStopToAperture",
+      "frameTimestampUs",
+      "generateClipmapMesh",
+      "generateMeshTangents",
+      "getLightPreset",
+      "getRendererPreset",
+      "getTerrainColormap",
+      "getTerrainColormapLut",
+      "getTerrainMaterialDefaults",
+      "getTerrainOverlayDefaults",
+      "hasUpwardConvergenceTrend",
+      "heightPyramidLodCount",
+      "hyperfocalDistance",
+      "indexedDbByteStore",
+      "installForge3DWorkerHost",
+      "invertMatrix",
+      "isTerrainOverlayLayerVisible",
+      "lightPresetNames",
+      "lookAt",
+      "lookAtTransform",
+      "makeCamera",
+      "mat4FromRows",
+      "mat4ToRows",
+      "multiplyMatrices",
+      "muxEncodedVideo",
+      "normalMatrix",
+      "normalizeTerrainMaterial",
+      "normalizeTerrainOverlays",
+      "normalizeTerrainVirtualTexture",
+      "opfsByteStore",
+      "orthographic",
+      "perspective",
+      "probeVideoCodecs",
+      "readByteSource",
+      "readExr",
+      "renderFrames",
+      "renderOffline",
+      "rendererPresetNames",
+      "replayCameraInput",
+      "resolveBrdfModel",
+      "rotateX",
+      "rotateY",
+      "rotateZ",
+      "scale",
+      "scaleUniform",
+      "screenRay",
+      "screenToWorld",
+      "selectLodTilesReference",
+      "selectWorkerExecutionMode",
+      "serveForge3DMessagePort",
+      "terrainOverlayVisibleLayers",
+      "terrainRigFromJSON",
+      "translate",
+      "validateTerrainVtSupport",
+      "viewProjection",
+      "viewerOrbitRadius",
+      "worldToScreen",
+      "writeByteSink",
+      "writeExr",
+      "writeFrames",
+      "yawPitchFromDirection",
+    ].sort(),
+    "the implemented facade must export the frozen runtime, viewer, scene, session, and config surface",
   );
+  // W05 camera math runs from the emitted package without WebGPU or WASM.
+  assert.deepEqual(Array.from(facadeA.translate(1, 2, 3)).slice(12, 15), [1, 2, 3]);
+  assert.equal(
+    new facadeA.CameraAnimation([
+      { time: 0, phiDeg: 0, thetaDeg: 45, radius: 10, fovDeg: 50 },
+      { time: 1, phiDeg: 90, thetaDeg: 45, radius: 10, fovDeg: 50 },
+    ]).getFrameCount(30),
+    31,
+  );
+  assert.equal(new facadeA.CameraController().mode, "orbit");
   assert.equal(
     typeof facadeA.Forge3DRuntime.prototype.getCapabilities,
     "function",
@@ -136,6 +342,47 @@ try {
   assert.equal(initCount, 1, "duplicate bundles must initialize WASM once");
   assert.equal(runtimeA.getCapabilities().deviceState, "ready");
   assert.equal(runtimeB.getCapabilities().surfaceFormat, "bgra8unorm-srgb");
+
+  const capabilitiesA = runtimeA.getCapabilities();
+  capabilitiesA.adapterInfo.name = "mutated";
+  capabilitiesA.features.push("mutated");
+  capabilitiesA.limits.maxBindGroups = 1;
+  capabilitiesA.surfaceFormats.push("mutated");
+  const capabilitiesAgain = runtimeA.getCapabilities();
+  assert.equal(
+    capabilitiesAgain.adapterInfo.name,
+    "fake-adapter",
+    "adapter info must be a defensive copy",
+  );
+  assert.equal(
+    capabilitiesAgain.features.includes("mutated"),
+    false,
+    "features must be a defensive copy",
+  );
+  assert.equal(capabilitiesAgain.limits.maxBindGroups, 4);
+  assert.equal(
+    capabilitiesAgain.surfaceFormats.includes("mutated"),
+    false,
+    "surface formats must be a defensive copy",
+  );
+  const nativeStats = runtimeA.getRenderStats();
+  assert.equal(nativeStats.passes[0].timing, "gpu-timestamp");
+  nativeStats.passes.length = 0;
+  assert.equal(
+    runtimeA.getRenderStats().passes.length,
+    1,
+    "render stats must be a defensive copy",
+  );
+  const nativeMemory = runtimeA.getMemoryReport();
+  nativeMemory.categories["scene:vertices"] = 1;
+  assert.equal(
+    runtimeA.getMemoryReport().categories["scene:vertices"],
+    undefined,
+    "memory categories must be a defensive copy",
+  );
+  runtimeA.setScene({ id: "scene", nodes: [], passes: [] });
+  const facadeRgba = await runtimeA.readRgba();
+  assert.equal(facadeRgba.length, 4);
   assert.equal(
     fetchCount,
     2,
@@ -283,6 +530,8 @@ try {
   delete globalThis.__forge3dTestNativeDisposeCount;
   delete globalThis.__forge3dTestCallbackCount;
   delete globalThis.__forge3dTestSynchronousRegistrationLoss;
+  // Remove the dependency junction itself so recursive cleanup never follows it.
+  unlinkSync(join(temp, "node_modules"));
   rmSync(temp, { recursive: true, force: true });
 }
 
@@ -311,19 +560,65 @@ function emitFacadeCopy(name) {
         (globalThis.__forge3dTestNativeRuntimes ??= []).push(runtime);
         return runtime;
       }
+      static async createOffscreen() {
+        const runtime = new Forge3DRuntime();
+        (globalThis.__forge3dTestNativeRuntimes ??= []).push(runtime);
+        return runtime;
+      }
       disposed = false;
       width = 64;
       height = 64;
       diagnosticsEnabled = false;
+      capabilities = {
+        maxTextureDimension2D: 4096,
+        maxBufferSize: 1073741824,
+        surfaceFormat: "bgra8unorm-srgb",
+        adapterInfo: {
+          name: "fake-adapter",
+          vendor: "0x1234",
+          architecture: "",
+          device: "0x5678",
+          description: "fake driver",
+          backend: "webgpu",
+          deviceType: "discrete-gpu"
+        },
+        isFallbackAdapter: false,
+        features: ["timestamp-query"],
+        limits: { maxTextureDimension2D: 4096, maxBindGroups: 4 },
+        surfaceFormats: ["rgba8unorm", "bgra8unorm-srgb"],
+        preferredCanvasFormat: "bgra8unorm-srgb",
+        timestampQuery: true
+      };
       clearColor() { return [0, 0, 0, 1]; }
       getCapabilities() {
         return {
-          deviceState: this.disposed ? "disposed" : "ready",
-          maxTextureDimension2D: 4096,
-          maxBufferSize: 1073741824,
-          surfaceFormat: "bgra8unorm-srgb"
+          ...this.capabilities,
+          deviceState: this.disposed ? "disposed" : "ready"
         };
       }
+      getRenderStats() {
+        return {
+          frameIndex: 1,
+          frameTimeMs: 1,
+          drawCalls: 1,
+          triangles: 2,
+          passes: [{ name: "terrain", milliseconds: 1, timing: "gpu-timestamp" }]
+        };
+      }
+      getMemoryReport() {
+        return {
+          currentBytes: 0,
+          peakBytes: 1024,
+          budgetBytes: 536870912,
+          utilization: 0,
+          allocationCount: 0,
+          categories: {},
+          effectiveQuality: "high",
+          downgrades: []
+        };
+      }
+      setScene(scene) { this.scene = scene; }
+      async readRgba() { return new Uint8Array([1, 2, 3, 255]); }
       setDeviceLostCallback(callback) { this.callback = callback; }
       registerDeviceLostCallback(callback) {
         this.callback = (error) => {

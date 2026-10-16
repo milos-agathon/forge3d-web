@@ -39,6 +39,12 @@ import { resolvePackageGateMode } from "./package-gate-mode.mjs";
 
 const packageRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const repositoryRoot = resolve(packageRoot, "..", "..");
+const w11Only = process.argv.slice(2).includes("--w11");
+const w10Only = process.argv.slice(2).includes("--w10") || w11Only;
+const w09Only = process.argv.slice(2).includes("--w09") || w10Only;
+if (process.argv.slice(2).some(argument => argument !== "--w09" && argument !== "--w10" && argument !== "--w11")) {
+  throw new Error("Only --w09, --w10 and --w11 are supported; omit it for the full release gate");
+}
 const evidenceMode = resolvePackageGateMode(
   process.env.FORGE3D_PACKAGE_GATE_MODE,
 );
@@ -58,7 +64,16 @@ const consumerDirectory = join(temporaryRoot, "consumer");
 
 try {
   run("npm", ["run", "build"], packageRoot);
-  run("npm", ["run", "test:package"], packageRoot);
+  if (w09Only) {
+    // A portable W09 package acceptance lane. The full release command still
+    // requires the infrastructure suite (including POSIX runner/host tests).
+    run("npm", ["run", "test:api"], packageRoot);
+    run("npm", ["run", "test:release-hardening"], packageRoot);
+    run("npm", ["run", "test:browser-harness"], packageRoot);
+    run(process.execPath, ["tests/api/package-contract.mjs"], packageRoot);
+  } else {
+    run("npm", ["run", "test:package"], packageRoot);
+  }
   mkdirSync(packDirectory);
   const packResult = JSON.parse(
     run(
@@ -82,6 +97,9 @@ try {
         name: "forge3d-browser-tarball-consumer",
         private: true,
         type: "module",
+        devDependencies: {
+          "selenium-webdriver": "4.35.0",
+        },
       },
       null,
       2,
@@ -93,7 +111,7 @@ try {
     [
       "--input-type=module",
       "--eval",
-      'import { Forge3DViewer } from "@forge3d/web"; if (typeof Forge3DViewer !== "function") throw new Error("Forge3DViewer export missing");',
+      'import { Forge3DViewer, TerrainDataset } from "@forge3d/web"; if (typeof Forge3DViewer !== "function") throw new Error("Forge3DViewer export missing"); if (typeof TerrainDataset !== "function") throw new Error("TerrainDataset export missing");',
     ],
     consumerDirectory,
   );
@@ -105,6 +123,10 @@ try {
   );
   const consumerFixture = join(consumerDirectory, "test-interactive-viewer.html");
   copyFileSync(sourceFixture, consumerFixture);
+  copyFileSync(
+    join(packageRoot, "examples", "test-lifecycle-away.html"),
+    join(consumerDirectory, "test-lifecycle-away.html"),
+  );
   let fixture = readFileSync(consumerFixture, "utf8");
   fixture = fixture.replace(
     '<script type="module">',
@@ -120,6 +142,182 @@ try {
     `packageSha256: "${packageSha256}"`,
   );
   writeFileSync(consumerFixture, fixture);
+  const w03SourceFixture = join(
+    packageRoot,
+    "examples",
+    "test-w03-terrain.html",
+  );
+  const w03ConsumerFixture = join(consumerDirectory, "test-w03-terrain.html");
+  let w03Fixture = readFileSync(w03SourceFixture, "utf8");
+  w03Fixture = w03Fixture.replace(
+    '<script type="module">',
+    `<script type="importmap">{"imports":{"@forge3d/web":"/node_modules/@forge3d/web/dist/index.js"}}</script>
+    <script type="module">`,
+  );
+  w03Fixture = w03Fixture.replace(
+    'from "../src-ts/index.ts"',
+    'from "@forge3d/web"',
+  );
+  w03Fixture = w03Fixture.replace(
+    "packageSha256 = null",
+    `packageSha256 = "${packageSha256}"`,
+  );
+  writeFileSync(w03ConsumerFixture, w03Fixture);
+  const w04ConsumerFixture = join(consumerDirectory, "test-w04-package.html");
+  let w04Fixture = readFileSync(
+    join(packageRoot, "examples", "test-w04-package.html"),
+    "utf8",
+  );
+  w04Fixture = w04Fixture.replace(
+    '<script type="module">',
+    `<script type="importmap">{"imports":{"@forge3d/web":"/node_modules/@forge3d/web/dist/index.js"}}</script>
+    <script type="module">`,
+  );
+  w04Fixture = w04Fixture.replace(
+    'from "../src-ts/index.ts"',
+    'from "@forge3d/web"',
+  );
+  w04Fixture = w04Fixture.replace(
+    'new URL("../src-ts/index.ts", import.meta.url).href',
+    'new URL("/node_modules/@forge3d/web/dist/index.js", import.meta.url).href',
+  );
+  w04Fixture = w04Fixture.replace(
+    "packageSha256 = null",
+    `packageSha256 = "${packageSha256}"`,
+  );
+  writeFileSync(w04ConsumerFixture, w04Fixture);
+  const w05ConsumerFixture = join(consumerDirectory, "test-w05-package.html");
+  let w05Fixture = readFileSync(
+    join(packageRoot, "examples", "test-w05-package.html"),
+    "utf8",
+  );
+  w05Fixture = w05Fixture.replace(
+    '<script type="module">',
+    `<script type="importmap">{"imports":{"@forge3d/web":"/node_modules/@forge3d/web/dist/index.js"}}</script>
+    <script type="module">`,
+  );
+  w05Fixture = w05Fixture.replace(
+    'from "../src-ts/index.ts"',
+    'from "@forge3d/web"',
+  );
+  w05Fixture = w05Fixture.replace(
+    "packageSha256 = null",
+    `packageSha256 = "${packageSha256}"`,
+  );
+  writeFileSync(w05ConsumerFixture, w05Fixture);
+  const w06ConsumerFixture = join(consumerDirectory, "test-w06-package.html");
+  let w06Fixture = readFileSync(
+    join(packageRoot, "examples", "test-w06-package.html"),
+    "utf8",
+  );
+  w06Fixture = w06Fixture.replace(
+    '<script type="module">',
+    `<script type="importmap">{"imports":{"@forge3d/web":"/node_modules/@forge3d/web/dist/index.js"}}</script>
+    <script type="module">`,
+  );
+  w06Fixture = w06Fixture.replace(
+    'from "../src-ts/index.ts"',
+    'from "@forge3d/web"',
+  );
+  w06Fixture = w06Fixture.replace(
+    "packageSha256 = null",
+    `packageSha256 = "${packageSha256}"`,
+  );
+  writeFileSync(w06ConsumerFixture, w06Fixture);
+  const w07ConsumerFixture = join(consumerDirectory, "test-w07-package.html");
+  let w07Fixture = readFileSync(
+    join(packageRoot, "examples", "test-w07-package.html"),
+    "utf8",
+  );
+  w07Fixture = w07Fixture.replace(
+    '<script type="module">',
+    `<script type="importmap">{"imports":{"@forge3d/web":"/node_modules/@forge3d/web/dist/index.js"}}</script>
+    <script type="module">`,
+  );
+  w07Fixture = w07Fixture.replace(
+    'from "../src-ts/index.ts"',
+    'from "@forge3d/web"',
+  );
+  w07Fixture = w07Fixture.replace(
+    "packageSha256 = null",
+    `packageSha256 = "${packageSha256}"`,
+  );
+  writeFileSync(w07ConsumerFixture, w07Fixture);
+  const w08ConsumerFixture = join(consumerDirectory, "test-w08-package.html");
+  let w08Fixture = readFileSync(
+    join(packageRoot, "examples", "test-w08-package.html"),
+    "utf8",
+  );
+  w08Fixture = w08Fixture.replace(
+    '<script type="module">',
+    `<script type="importmap">{"imports":{"@forge3d/web":"/node_modules/@forge3d/web/dist/index.js"}}</script>
+    <script type="module">`,
+  );
+  w08Fixture = w08Fixture.replace(
+    'from "../src-ts/index.ts"',
+    'from "@forge3d/web"',
+  );
+  w08Fixture = w08Fixture.replace(
+    "packageSha256 = null",
+    `packageSha256 = "${packageSha256}"`,
+  );
+  writeFileSync(w08ConsumerFixture, w08Fixture);
+  // COG decode worker: in the consumer it imports the packaged dist module
+  // (worker-src 'self'), which in turn loads the vendored geotiff bundle.
+  const w08WorkerFixture = join(consumerDirectory, "test-w08-cog-worker.js");
+  let w08Worker = readFileSync(
+    join(packageRoot, "examples", "test-w08-cog-worker.js"),
+    "utf8",
+  );
+  w08Worker = w08Worker.replace(
+    'from "../src-ts/index.ts"',
+    'from "/node_modules/@forge3d/web/dist/index.js"',
+  );
+  writeFileSync(w08WorkerFixture, w08Worker);
+  const w08FixtureDirectory = join(consumerDirectory, "fixtures", "w08");
+  mkdirSync(w08FixtureDirectory, { recursive: true });
+  copyFileSync(
+    join(
+      packageRoot,
+      "tests",
+      "golden",
+      "w08",
+      "predictor-deflate-u16.tif",
+    ),
+    join(w08FixtureDirectory, "predictor-deflate-u16.tif"),
+  );
+  const w09Fixture = readFileSync(join(packageRoot, "examples", "test-w09.html"), "utf8")
+    .replace('const api = new URLSearchParams(location.search).has("dist") ? await import("../dist/index.js") : await import("../src-ts/index.ts");', 'const api = await import("/node_modules/@forge3d/web/dist/index.js");');
+  writeFileSync(join(consumerDirectory, "test-w09.html"), w09Fixture);
+  writeFileSync(join(consumerDirectory, "test-w09-worker.js"), readFileSync(join(packageRoot, "examples", "test-w09-worker.js"), "utf8").replace('../src-ts/index.ts', '/node_modules/@forge3d/web/dist/index.js'));
+  const w09GoldenDirectory = join(consumerDirectory, "tests", "golden", "w09");
+  mkdirSync(w09GoldenDirectory, {recursive:true});
+  copyFileSync(join(packageRoot, "tests", "golden", "w09", "probes.json"), join(w09GoldenDirectory, "probes.json"));
+  const w10Fixture = readFileSync(join(packageRoot, "examples", "test-w10.html"), "utf8")
+    .replaceAll("../dist/index.js", "/node_modules/@forge3d/web/dist/index.js")
+    .replaceAll("../src-ts/index.ts", "/node_modules/@forge3d/web/dist/index.js")
+    .replace("../src-ts/viewer.ts", "/node_modules/@forge3d/web/dist/viewer.js");
+  writeFileSync(join(consumerDirectory, "test-w10.html"), w10Fixture);
+  copyFileSync(join(packageRoot,"examples","w10-acceptance.js"),join(consumerDirectory,"w10-acceptance.js"));
+  writeFileSync(join(consumerDirectory,"test-w10-native.html"),readFileSync(join(packageRoot,"examples","test-w07-materials.html"),"utf8")
+    .replaceAll("../src-ts/index.ts","/node_modules/@forge3d/web/dist/index.js")
+    .replaceAll("../src-ts/session.ts","/node_modules/@forge3d/web/dist/session.js")
+    .replaceAll("../src-ts/runtime-internals.ts","/node_modules/@forge3d/web/dist/runtime-internals.js"));
+
+  copyFileSync(join(packageRoot, "examples", "w10-reflection-metrics.js"), join(consumerDirectory, "w10-reflection-metrics.js"));
+  copyFileSync(join(packageRoot, "examples", "w10-native-probes.js"), join(consumerDirectory, "w10-native-probes.js"));
+  writeFileSync(join(consumerDirectory, "test-w10-worker.js"), readFileSync(join(packageRoot, "examples", "test-w10-worker.js"), "utf8").replace("../src-ts/index.ts", "/node_modules/@forge3d/web/dist/index.js"));
+  cpSync(join(packageRoot, "tests", "golden", "w10"), join(consumerDirectory, "tests", "golden", "w10"), {recursive:true});
+  for (const name of ["sky", "effects"]) copyFileSync(join(packageRoot, "src", "runtime", "environment", `${name}.wgsl`), join(consumerDirectory, `w10-runtime-${name}.wgsl`));
+  const w11Fixture = readFileSync(join(packageRoot,"examples","test-w11-postfx.html"),"utf8")
+    .replaceAll("../src-ts/index.ts","/node_modules/@forge3d/web/dist/index.js")
+    .replaceAll("../src-ts/runtime-internals.ts","/node_modules/@forge3d/web/dist/runtime-internals.js")
+    .replaceAll("../src-ts/viewer.ts","/node_modules/@forge3d/web/dist/viewer.js");
+  writeFileSync(join(consumerDirectory,"test-w11-postfx.html"),w11Fixture);
+  writeFileSync(join(consumerDirectory,"test-w11-worker.js"),readFileSync(join(packageRoot,"examples","test-w11-worker.js"),"utf8").replace("../src-ts/index.ts","/node_modules/@forge3d/web/dist/index.js"));
+  mkdirSync(join(consumerDirectory,"tests","browser"),{recursive:true});
+  copyFileSync(join(packageRoot,"tests","browser","w11-native-oracle.js"),join(consumerDirectory,"tests","browser","w11-native-oracle.js"));
+  cpSync(join(packageRoot,"tests","golden","w11"),join(consumerDirectory,"tests","golden","w11"),{recursive:true});
   const benchmarkDirectory = join(
     consumerDirectory,
     "tests",
@@ -167,6 +365,7 @@ try {
     packageSha256,
     fixture: "test-interactive-viewer.html",
     evidenceMode,
+    gateScope: w11Only ? "w11-package-acceptance" : w10Only ? "w10-package-acceptance" : w09Only ? "w09-package-acceptance" : "full-release",
   };
   writeFileSync(
     join(consumerDirectory, "package-evidence.json"),
@@ -212,6 +411,7 @@ try {
       runViewerBenchmark,
       browserProfile,
     );
+    browserResult.gateScope = w11Only ? "w11-package-acceptance" : w10Only ? "w10-package-acceptance" : w09Only ? "w09-package-acceptance" : "full-release";
     const browserEvidenceJson = JSON.stringify(browserResult, null, 2);
     writeFileSync(join(consumerDirectory, "browser-gate.json"), browserEvidenceJson);
     mkdirSync(evidenceDirectory, { recursive: true });
@@ -223,10 +423,24 @@ try {
     copyFileSync(tarball, join(evidenceDirectory, basename(tarball)));
     const retainedFixture = join(evidenceDirectory, "consumer-fixture");
     mkdirSync(retainedFixture, { recursive: true });
+    mkdirSync(join(retainedFixture, 'examples'), { recursive: true });
+    for (const file of ['pointcloud-tiles.html', 'w16-pointcloud.js', 'w16-worker.js'])
+      writeFileSync(join(retainedFixture, 'examples', file), readFileSync(join(packageRoot, 'examples', file), 'utf8')
+        .replaceAll('../dist/', '../node_modules/@forge3d/web/dist/'));
     for (const file of [
       "package.json",
       "package-evidence.json",
       "test-interactive-viewer.html",
+      "test-lifecycle-away.html",
+      "test-w03-terrain.html",
+      "test-w04-package.html",
+      "test-w05-package.html",
+      "test-w06-package.html",
+      "test-w07-package.html",
+      "test-w08-package.html",
+      "test-w08-cog-worker.js",
+      ...(w11Only ? ["test-w11-postfx.html", "test-w11-worker.js"] : []),
+      ...(w10Only ? ["test-w10.html", "test-w10-native.html", "w10-acceptance.js", "test-w10-worker.js", "w10-native-probes.js", "w10-reflection-metrics.js", "w10-runtime-sky.wgsl", "w10-runtime-effects.wgsl"] : []),
     ]) {
       copyFileSync(join(consumerDirectory, file), join(retainedFixture, file));
     }
@@ -235,6 +449,7 @@ try {
       join(retainedFixture, "tests"),
       { recursive: true, force: false },
     );
+    cpSync(join(packageRoot, 'tests/fixtures/w16'), join(retainedFixture, 'tests/fixtures/w16'), { recursive: true });
     writeFileSync(
       join(retainedFixture, "tests", "browser", "adapter-attestation.js"),
       ts.transpileModule(
@@ -254,6 +469,11 @@ try {
       join(packageRoot, "tests", "browser", "hardware-page-harness.js"),
       join(retainedFixture, "tests", "browser", "hardware-page-harness.js"),
     );
+    mkdirSync(join(retainedFixture, "tests", "webdriver"), { recursive: true });
+    copyFileSync(
+      join(packageRoot, "tests", "webdriver", "safari-viewer.mjs"),
+      join(retainedFixture, "tests", "webdriver", "safari-viewer.mjs"),
+    );
     copyFileSync(
       join(packageRoot, "tests", "browser", "saf02-conformance.js"),
       join(retainedFixture, "tests", "browser", "saf02-conformance.js"),
@@ -263,12 +483,20 @@ try {
       join(retainedFixture, "tests", "browser", "viewer-benchmark-browser.js"),
     );
     copyFileSync(
+      join(packageRoot, "tests", "browser", "viewer-bfcache-lifecycle.js"),
+      join(retainedFixture, "tests", "browser", "viewer-bfcache-lifecycle.js"),
+    );
+    copyFileSync(
       join(packageRoot, "scripts", "chr03-lanes.mjs"),
       join(retainedFixture, "tests", "browser", "chr03-lanes.js"),
     );
     copyFileSync(
       join(packageRoot, "scripts", "chr04-lanes.mjs"),
       join(retainedFixture, "tests", "browser", "chr04-lanes.js"),
+    );
+    copyFileSync(
+      join(packageRoot, "scripts", "ffx03-lanes.mjs"),
+      join(retainedFixture, "tests", "browser", "ffx03-lanes.js"),
     );
     copyFileSync(
       benchmarkModulePath,
@@ -563,6 +791,275 @@ async function runInstalledPackageBrowserGate(
         requireReleaseArtifact: true,
       });
     }
+    await page.goto(`${origin}/test-w03-terrain.html`, {
+      waitUntil: "networkidle",
+    });
+    const terrainDataset = await page.evaluate(() =>
+      window.__forge3dW03Probe(),
+    );
+    if (terrainDataset.supported !== true || terrainDataset.ok !== true) {
+      throw new Error(
+        `installed-package terrain dataset probe failed: ${JSON.stringify(terrainDataset.error ?? terrainDataset)}`,
+      );
+    }
+    if (terrainDataset.packageSha256 !== packageSha256) {
+      throw new Error(
+        "installed-package terrain fixture did not execute the expected tarball",
+      );
+    }
+    for (const mode of ["direct", "file", "url"]) {
+      const sourceResult = terrainDataset.sources?.[mode];
+      if (
+        !sourceResult ||
+        sourceResult.maxError > 1e-6 ||
+        sourceResult.nanMismatch !== 0
+      ) {
+        throw new Error(
+          `installed-package terrain dataset ${mode} source mode failed: ${JSON.stringify(sourceResult)}`,
+        );
+      }
+    }
+    await page.goto(`${origin}/test-w04-package.html`, {
+      waitUntil: "networkidle",
+    });
+    const w04Package = await page.evaluate(() =>
+      window.__forge3dW04PackageProbe(),
+    );
+    if (w04Package.supported !== true || w04Package.ok !== true) {
+      throw new Error(
+        `installed-package W04 probe failed: ${JSON.stringify(w04Package.error ?? w04Package)}`,
+      );
+    }
+    if (w04Package.packageSha256 !== packageSha256) {
+      throw new Error(
+        "installed-package W04 fixture did not execute the expected tarball",
+      );
+    }
+    if (
+      w04Package.shadow?.effectiveFilter !== "pcf" ||
+      w04Package.shadow?.cascadeCount !== 2 ||
+      w04Package.disabledShadow?.csmEnabled !== false ||
+      w04Package.ibl?.effectiveMode !== "prepared-upload" ||
+      w04Package.csmRejection?.code !== "INVALID_INPUT" ||
+      w04Package.basisAsset?.status !== 200 ||
+      !(w04Package.basisAsset?.bytes > 0) ||
+      !(w04Package.lightingChange > 0.1)
+    ) {
+      throw new Error(
+        `installed-package W04 lighting/material/IBL/shadow surface failed: ${JSON.stringify(w04Package)}`,
+      );
+    }
+    await page.goto(`${origin}/test-w05-package.html`, {
+      waitUntil: "networkidle",
+    });
+    const w05Package = await page.evaluate(() =>
+      window.__forge3dW05PackageProbe(),
+    );
+    if (w05Package.supported !== true || w05Package.ok !== true) {
+      throw new Error(
+        `installed-package W05 probe failed: ${JSON.stringify(w05Package.error ?? w05Package)}`,
+      );
+    }
+    if (w05Package.packageSha256 !== packageSha256) {
+      throw new Error(
+        "installed-package W05 fixture did not execute the expected tarball",
+      );
+    }
+    if (
+      !(w05Package.projection?.orthographicCovered > 1000) ||
+      !(w05Package.projection?.projectionDiffers > 1) ||
+      !(w05Package.projection?.orthographicDistanceChange < 0.01) ||
+      w05Package.animation?.frames !== 61 ||
+      !(w05Package.rig?.minClearance >= 2 - 1e-9) ||
+      w05Package.replay?.equal !== true ||
+      w05Package.orthographicRejection !== "INVALID_INPUT"
+    ) {
+      throw new Error(
+        `installed-package W05 camera/animation/rig surface failed: ${JSON.stringify(w05Package)}`,
+      );
+    }
+    await page.goto(`${origin}/test-w06-package.html`, {
+      waitUntil: "networkidle",
+    });
+    const w06Package = await page.evaluate(() =>
+      window.__forge3dW06PackageProbe(),
+    );
+    if (w06Package.supported !== true || w06Package.ok !== true) {
+      throw new Error(
+        `installed-package W06 probe failed: ${JSON.stringify(w06Package.error ?? w06Package)}`,
+      );
+    }
+    if (w06Package.packageSha256 !== packageSha256) {
+      throw new Error(
+        "installed-package W06 fixture did not execute the expected tarball",
+      );
+    }
+    if (
+      !(w06Package.capture?.hdrError <= 1e-5) ||
+      w06Package.capture?.id !== true ||
+      w06Package.offline?.samplesUsed !== 4 ||
+      w06Package.offline?.denoiser !== "atrous" ||
+      w06Package.exr?.channels !== 14 ||
+      w06Package.exr?.mse !== 0 ||
+      w06Package.frames?.count !== 6 ||
+      (w06Package.video?.ok !== true &&
+        w06Package.video?.kind !== "video-codec-unavailable")
+    ) {
+      throw new Error(
+        `installed-package W06 capture/offline/EXR/frame/video surface failed: ${JSON.stringify(w06Package)}`,
+      );
+    }
+    await page.goto(`${origin}/test-w07-package.html`, {
+      waitUntil: "networkidle",
+    });
+    const w07Package = await page.evaluate(() =>
+      window.__forge3dW07PackageProbe(),
+    );
+    if (w07Package.supported !== true || w07Package.ok !== true) {
+      throw new Error(
+        `installed-package W07 probe failed: ${JSON.stringify(w07Package.error ?? w07Package)}`,
+      );
+    }
+    if (w07Package.packageSha256 !== packageSha256) {
+      throw new Error(
+        "installed-package W07 fixture did not execute the expected tarball",
+      );
+    }
+    if (
+      w07Package.defaults?.albedoMode !== "colormap" ||
+      w07Package.rejection !== "INVALID_INPUT" ||
+      !(w07Package.zeroMaxDiff <= 1) ||
+      !(w07Package.fullDelta > 1) ||
+      w07Package.report?.enabled !== true ||
+      w07Package.report?.layerCount !== 2 ||
+      w07Package.report?.maskChannels?.[0] !== "wetness"
+    ) {
+      throw new Error(
+        `installed-package W07 terrain material surface failed: ${JSON.stringify(w07Package)}`,
+      );
+    }
+    // The packaged dist must resolve geotiff only through the vendored
+    // bundle — a bare "geotiff" specifier would fail for consumers.
+    const distCogResponse = await fetch(
+      `${origin}/node_modules/@forge3d/web/dist/cog.js`,
+    );
+    if (!distCogResponse.ok) {
+      throw new Error("installed-package dist cog.js was not served");
+    }
+    const distCogSource = await distCogResponse.text();
+    if (
+      /(?:from|import)\s*[(]?\s*["']geotiff["']/.test(distCogSource) ||
+      distCogSource.includes('import("geotiff")') ||
+      distCogSource.includes("import('geotiff')")
+    ) {
+      throw new Error(
+        "installed-package dist cog.js retains a bare geotiff specifier",
+      );
+    }
+    await page.goto(`${origin}/test-w08-package.html`, {
+      waitUntil: "networkidle",
+    });
+    const w08Package = await page.evaluate(async (fixtureUrl) => {
+      await new Promise((resolve) => {
+        const poll = () =>
+          window.__forge3dW08PackageProbe === undefined
+            ? setTimeout(poll, 25)
+            : resolve();
+        poll();
+      });
+      return window.__forge3dW08PackageProbe(fixtureUrl);
+    }, `${origin}/fixtures/w08/predictor-deflate-u16.tif`);
+    if (w08Package.supported !== true || w08Package.ok !== true) {
+      throw new Error(
+        `installed-package W08 probe failed: ${JSON.stringify(w08Package.error ?? w08Package)}`,
+      );
+    }
+    if (w08Package.packageSha256 !== packageSha256) {
+      throw new Error(
+        "installed-package W08 fixture did not execute the expected tarball",
+      );
+    }
+    // The vendored geotiff must decode the predictor tile exactly on the
+    // main thread and in the packaged module worker, and the clipmap must
+    // render at its triangle budget.
+    if (
+      w08Package.mainThread?.sha256 !==
+        "18e1b10ecc37597db28376dd9a533ccb6a03c075d7a3b4e448be562abff740fb" ||
+      w08Package.decodeParity !== true ||
+      w08Package.worker?.mode === "main-thread" ||
+      w08Package.render?.geometry?.triangleCount !==
+        w08Package.render?.geometry?.triangleBudget ||
+      !(w08Package.render?.nonClearPixels > 0)
+    ) {
+      throw new Error(
+        `installed-package W08 decode/render contract failed: ${JSON.stringify({
+          mainThread: w08Package.mainThread,
+          decodeParity: w08Package.decodeParity,
+          worker: w08Package.worker,
+          geometry: w08Package.render?.geometry,
+        })}`,
+      );
+    }
+    if (
+      w08Package.mainThread?.sha256 !==
+        "18e1b10ecc37597db28376dd9a533ccb6a03c075d7a3b4e448be562abff740fb" ||
+      w08Package.decodeParity !== true ||
+      w08Package.worker?.mode === "main-thread" ||
+      w08Package.render?.nonClearPixels <= 0 ||
+      w08Package.render?.geometry?.mode !== "clipmap" ||
+      w08Package.render?.geometry?.triangleCount !==
+        w08Package.render?.geometry?.triangleBudget ||
+      w08Package.render?.overlays?.enabled !== true ||
+      w08Package.render?.overlays?.layerCount !== 1 ||
+      w08Package.render?.vt === null ||
+      w08Package.render?.vt === undefined
+    ) {
+      throw new Error(
+        `installed-package W08 COG/clipmap/overlay/VT surface failed: ${JSON.stringify(w08Package)}`,
+      );
+    }
+    await page.goto(`${origin}/test-w09.html`, {waitUntil:"networkidle"});
+    await page.waitForFunction(()=>window.__w09!==undefined);
+    const w09Package = await page.evaluate(async()=>({render:await window.__w09.render(),scene:await window.__w09.scene(),native:await window.__w09.native(),worker:await window.__w09.worker(),hlodPixels:await window.__w09.hlodPixels(),probeBehavior:await window.__w09.probeBehavior(),cancelBake:await window.__w09.cancelBake(),ridge:await window.__w09.irradiance(1),budgets:await window.__w09.budgets(),irradiance:await window.__w09.irradiance(),reflections:await window.__w09.reflections()}));
+    const w09=w09Package.render;
+    if (!(w09.scatterDelta>.2 && w09.windDelta>.05 && w09.stats.visibleInstances===2 && w09.scatterIds.length===2 && w09.bakeExact && w09.reflectionExact && w09.zeroHash===w09.noProbeHash && w09.baselineHash===w09.clearedHash && w09.hlod.hlodCoveredInstances===2 && w09Package.scene.ids.length===2 && w09Package.worker.nonempty && w09Package.worker.hash!==w09Package.worker.staticHash && w09Package.worker.hash!==w09Package.worker.timeHash && w09Package.scene.hash!==w09Package.scene.timeHash && w09Package.hlodPixels.a===w09Package.hlodPixels.b && w09Package.hlodPixels.a===w09Package.hlodPixels.static && w09Package.hlodPixels.ids.length===1 && w09Package.probeBehavior.outside===0 && w09Package.probeBehavior.center>w09Package.probeBehavior.edge && w09Package.probeBehavior.edge>0 && w09Package.probeBehavior.stressCount===64 && w09Package.probeBehavior.rejected && w09Package.probeBehavior.before===w09Package.probeBehavior.after && w09Package.probeBehavior.cleared!==w09Package.probeBehavior.before && w09Package.cancelBake.responsive && w09Package.cancelBake.code==="REQUEST_CANCELLED" && w09Package.native.every(c=>c.maxAbs<=1e-3 && c.ssim>=.98 && c.controlSsim<.98) && w09Package.irradiance.maxAbs<=1e-3 && w09Package.irradiance.ssim>=.98 && w09Package.ridge.maxAbs<=1e-3 && w09Package.ridge.ssim>=.98 && w09Package.ridge.normalDirections>1 && w09Package.ridge.center<w09Package.ridge.flatNativeUp && w09Package.reflections.count===18*1024 && w09Package.reflections.faces.length===6 && w09Package.reflections.maxAbs<=1e-3 && w09Package.reflections.ssim>=.98 && w09Package.budgets.failures.length===3 && w09Package.budgets.before===w09Package.budgets.after)) {
+      throw new Error(`installed-package W09 contract failed: ${JSON.stringify(w09Package)}`);
+    }
+    await page.goto(`${origin}/test-w10.html`, {waitUntil:"networkidle"});
+    await page.waitForFunction(()=>window.__w10!==undefined);
+    const w10Package = await page.evaluate(async()=>({render:await window.__w10.render(),bounds:await window.__w10.bounds(),masks:await window.__w10.masks(),budget:await window.__w10.budget(),offline:await window.__w10.offline(),recovery:await window.__w10.recovery(),quality:await window.__w10.quality(),native:await window.__w10.native(),worker:await window.__w10.worker(),downscale:await window.__w10.downscale(),cloudsAndWaves:await window.__w10.cloudsAndWaves(),goldens:await window.__w10.goldens(),restoreLights:await window.__w10.restoreLights(),aerial:await window.__w10.aerial(),waterControls:await window.__w10.waterControls(),preservation:await window.__w10.preservation(),volumeTemporal:await (async()=>{const c=await(await fetch("/tests/golden/w10/volume-temporal-v1.json")).json();return window.__w10.bounds(c.width,c.height,c);})()}));
+    const e=w10Package;
+    if (!(e.aerial.covered>1000 && Object.values(e.aerial.controls).every(x=>x>.15) && e.aerial.disabledDelta===0 && e.aerial.zeroDelta===0 && e.aerial.sunriseDelta>.15 && e.aerial.sunriseHash===e.aerial.sunriseRepeat && e.waterControls.disabledMatches && Object.entries(e.waterControls).filter(([k])=>k!=="disabledMatches").every(([,v])=>v>.001) && e.volumeTemporal.width===1920 && e.volumeTemporal.height===1080 && e.volumeTemporal.historyValid && e.volumeTemporal.outsideMax<=1 && e.volumeTemporal.insideChanged>100000 && e.volumeTemporal.insideChanged/(1920*1080)>.05))throw new Error(`W10 added acceptance contracts failed: ${JSON.stringify(e)}`);
+    const preservation=JSON.parse(readFileSync(join(packageRoot,"tests/golden/w10/w09-preservation.json"),"utf8"));
+    const identity=await page.evaluate(async()=>{const a=await navigator.gpu.requestAdapter();if(!a)throw new Error("No WebGPU adapter");return {vendor:a.info.vendor,architecture:a.info.architecture,device:a.info.device,description:a.info.description,fallback:a.info.isFallbackAdapter};});
+    const {checkPreservationProfile}=await import("../tests/browser/w10-preservation-profile.mjs");
+    e.preservationPinned=checkPreservationProfile(preservation,process.env.FORGE3D_W10_PINNED_HASH_PROFILE,{platform:process.platform,browser:await browser.version(),adapter:identity});
+    if(e.preservationPinned && JSON.stringify(e.preservation)!==JSON.stringify(preservation.frames))throw new Error("W10 absent environment changed W09 bytes");
+    if(JSON.stringify(e.preservation)!==JSON.stringify(await page.evaluate(()=>window.__w10.preservation())))throw new Error("W10 absent environment is nondeterministic");
+    await page.goto(`${origin}/test-w10-native.html`,{waitUntil:"networkidle"});
+    await page.waitForFunction(()=>typeof window.__w10NativeTerrain==="function");
+    e.nativeScenes=await page.evaluate(()=>window.__w10NativeTerrain());
+    e.maskedTerrain=await page.evaluate(()=>window.__w10MaskedTerrain());
+    if(!(e.maskedTerrain.delta>.1 && e.maskedTerrain.changed>100 && e.maskedTerrain.landMax===0 && e.maskedTerrain.repeat===0 && e.maskedTerrain.cleared===0 && e.maskedTerrain.hdrDelta>1e-4 && e.maskedTerrain.hdrRepeat===0 && e.maskedTerrain.guidesStable && e.maskedTerrain.covered>1000))throw new Error("W10 masked-terrain reflection contract failed");
+    const {reflectionContributionPasses}=await import("../examples/w10-reflection-metrics.js");
+    if(!e.nativeScenes["terrain-water-planar"])throw new Error("W10 native planar contribution oracle missing");
+    for(const [name,r] of Object.entries(e.nativeScenes)) {
+      delete r.actual;
+      if(name==="terrain-water-planar" && !(reflectionContributionPasses(r.reflectionContribution) && r.reflectionNegativeControls.halfAmplitudeRejected && r.reflectionNegativeControls.displacedRejected && r.disabledNativeSsim>=.98))throw new Error(`W10 native planar contribution contract failed: ${JSON.stringify(r.reflectionContribution)}`);
+      if(!(r.ssim>=.98 && r.historicalSsim>=.98 && (r.controlSsim===undefined || r.controlSsim<.98)))throw new Error(`Native W10 scene ${name} failed: ${JSON.stringify(r)}`);
+    }
+
+    if (!(e.render.covered>1000 && e.render.generalCovered>1000 && e.render.generalDelta>.1 && e.render.plain===e.render.cleared && e.render.cloud.hash===e.render.cloud.repeat && e.render.cloud.timeDelta>.01 && e.bounds.max<=1 && e.bounds.outsideMax<=1 && e.bounds.outsidePixels>10000 && e.bounds.insideChanged>20 && e.masks.zero===0 && e.masks.transparent && e.budget.code==="RESOURCE_LIMIT_EXCEEDED" && e.budget.before===e.budget.after && e.budget.bytes===e.budget.afterBytes && e.budget.report.width===224 && e.offline.nonzero && e.offline.captureRepeat && e.offline.waterIds.includes(4294967280) && e.recovery.same && e.recovery.attempts===1 && e.quality.halfDelta<2 && e.quality.froxelDelta<1 && e.quality.cameraReset===false && e.quality.occlusionDelta>.01 && e.native.every(c=>c.maxAbs<1e-3&&c.ssim>=.98&&c.controlSsim<.98) && e.worker.delta>.1 && e.downscale.selected.resolutionScale===.5 && e.downscale.before===e.downscale.after && e.cloudsAndWaves.firstSeed!==e.cloudsAndWaves.secondSeed && e.cloudsAndWaves.shadowDelta>.1 && e.cloudsAndWaves.planarDelta>.01 && e.cloudsAndWaves.waveDelta>.01 && e.restoreLights.baseline===e.restoreLights.cleared && e.restoreLights.baseline===e.restoreLights.sceneCleared && e.goldens.cloud.disabledSsim<.98 && e.goldens.water.disabledSsim<.98 && Object.values(e.goldens).every(c=>c.ssim>=.98&&c.controlSsim<.98))) throw new Error(`installed-package W10 contract failed: ${JSON.stringify(e)}`);
+    let w11Package;
+    if(w11Only){
+      await page.goto(`${origin}/test-w11-postfx.html`,{waitUntil:"networkidle"});
+      await page.waitForFunction(()=>window.__w11Ready===true);
+      w11Package=await page.evaluate(async()=>({effects:await window.__w11Effects(),temporal:await window.__w11Temporal(),recovery:await window.__w11Recovery(),native:await window.__w11Native(),lifecycle:await window.__w11Lifecycle(),contracts:await window.__w11Contracts(),worker:await window.__w11Worker()}));
+      const w=w11Package,t=w.temporal,c=w.contracts;
+      if(!(w.native["ssr-ibl-fallback"].roughnessControl<.98))throw new Error(`installed-package SSR roughness control failed: ${JSON.stringify(w.native["ssr-ibl-fallback"])}`);
+      {const ssr=w.native["ssr-ibl-fallback"];if(!(ssr.covered>1000&&ssr.missPixels===ssr.covered&&ssr.analytic.runtime.ssim>=.98&&ssr.analytic.native.ssim>=.98))throw new Error(`installed-package SSR analytic reference failed: ${JSON.stringify(ssr)}`);}
+      if(!(w.effects.covered>1000 && w.effects.maxHdr>1 && w.effects.disabledDelta===0 && ["ssao","gtao","ssgi","ssr","bloom","dof","lens"].every(k=>w.effects[k].delta>.02) && Object.values(w.effects).filter(v=>v&&typeof v==="object").every(v=>v.finite) && t.initialError>.01 && t.errors[7]<=.05*t.initialError && t.flicker<=1/255 && t.jitterFlicker<=1/255 && t.maxHzbError===0 && t.freezeDelta===0 && t.cameraMotion>1 && t.blurDelta>.0001 && w.recovery.delta===0 && w.recovery.attempts===1 && !w.recovery.invalid.historyValid && Object.values(w.native).every(v=>typeof v==="number"?v<.0005:v.ssim>=.98&&v.control<.98) && w.lifecycle.cycles.every(v=>v===0) && w.lifecycle.readDelta===0 && w.lifecycle.moved>1 && w.lifecycle.stationary<1e-5 && Object.values(c.views).every(Boolean) && c.transferError<=1 && c.budgetCode==="RESOURCE_LIMIT_EXCEEDED" && c.rollbackDelta===0 && c.bytes===c.afterBytes && c.invalidCode==="INVALID_INPUT" && c.format.gbufferFormat==="rgba16float" && c.windMotion>1 && c.windStationary<1e-5 && w.worker.delta===0 && w.worker.disabledDelta>1))throw new Error(`installed-package W11 contract failed: ${JSON.stringify(w)}`);
+    }
     if (pageErrors.length > 0) {
       throw new Error(`installed-package page errors: ${pageErrors.join("; ")}`);
     }
@@ -579,6 +1076,47 @@ async function runInstalledPackageBrowserGate(
       visibilityLifecycle,
       interactionObservation,
       evidence,
+      w04Package: {
+        shadow: w04Package.shadow,
+        disabledShadow: w04Package.disabledShadow,
+        ibl: w04Package.ibl,
+        routes: w04Package.routes,
+        basisAsset: w04Package.basisAsset,
+      },
+      w05Package: {
+        projection: w05Package.projection,
+        animation: w05Package.animation,
+        rig: w05Package.rig,
+        replay: w05Package.replay,
+      },
+      w06Package: {
+        capture: w06Package.capture,
+        offline: w06Package.offline,
+        exr: w06Package.exr,
+        frames: w06Package.frames,
+        video: w06Package.video,
+      },
+      w09Package,
+      w10Package,
+      ...(w11Package ? {w11Package} : {}),
+      w08Package: {
+        mainThread: w08Package.mainThread,
+        worker: w08Package.worker,
+        decodeParity: w08Package.decodeParity,
+        render: w08Package.render,
+      },
+      terrainDataset: {
+        direct: terrainDataset.sources.direct,
+        file: terrainDataset.sources.file,
+        url: terrainDataset.sources.url,
+        demReadback: terrainDataset.demReadback,
+        gpuParity: terrainDataset.gpuParity,
+        resident: terrainDataset.resident,
+        disabledAoCode: terrainDataset.disabledAoCode,
+        disabledSunCode: terrainDataset.disabledSunCode,
+        renderDiffers: terrainDataset.renderDiffers,
+        memory: terrainDataset.memory,
+      },
     };
   } finally {
     await browser.close();
@@ -648,10 +1186,46 @@ function createStaticServer(root) {
       ".json": "application/json; charset=utf-8",
       ".wasm": "application/wasm",
     };
-    response.writeHead(200, {
+    const headers = {
       "content-type": contentTypes[extname(path)] ?? "application/octet-stream",
       "cache-control": "no-store",
-    });
+      "accept-ranges": "bytes",
+    };
+    // W08 COG streaming reads byte ranges and rejects a 200 full-body reply,
+    // so serve single `bytes=` ranges as 206 like a range-capable host.
+    const range = request.headers.range;
+    if (range !== undefined) {
+      const slice = parseByteRange(range, bytes.length);
+      if (slice === null) {
+        response
+          .writeHead(416, { "content-range": `bytes */${bytes.length}` })
+          .end();
+        return;
+      }
+      response.writeHead(206, {
+        ...headers,
+        "content-range": `bytes ${slice.start}-${slice.end}/${bytes.length}`,
+        "content-length": String(slice.end - slice.start + 1),
+      });
+      response.end(bytes.subarray(slice.start, slice.end + 1));
+      return;
+    }
+    response.writeHead(200, headers);
     response.end(bytes);
   });
+}
+
+function parseByteRange(header, size) {
+  const match = /^bytes=(\d*)-(\d*)$/u.exec(header.trim());
+  if (match === null || (match[1] === "" && match[2] === "")) return null;
+  let start;
+  let end;
+  if (match[1] === "") {
+    start = Math.max(0, size - Number(match[2]));
+    end = size - 1;
+  } else {
+    start = Number(match[1]);
+    end = match[2] === "" ? size - 1 : Math.min(Number(match[2]), size - 1);
+  }
+  return start <= end && start < size ? { start, end } : null;
 }

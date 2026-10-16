@@ -87,7 +87,8 @@
       "properties": {
         "mimeType": { "const": "image/png" }, "byteLength": { "type": "integer", "minimum": 1 },
         "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
-        "width": { "type": "integer", "minimum": 1 }, "height": { "type": "integer", "minimum": 1 }
+        "width": { "type": "integer", "minimum": 1 }, "height": { "type": "integer", "minimum": 1 },
+        "pixels": { "type": "object", "additionalProperties": false, "required": ["decoded", "nonBlank"], "properties": { "decoded": { "const": true }, "nonBlank": { "const": true } } }
       }
     },
     "lifecycleCycles": {

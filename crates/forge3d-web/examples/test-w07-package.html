@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forge3D W07 Package Consumer Test</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+      }
+
+      canvas {
+        display: block;
+        width: 96px;
+        height: 64px;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="forge3d-w07-package-canvas" width="96" height="64"></canvas>
+    <script type="module">
+      // Public-API-only W07 consumer: the installed-tarball harness rewrites
+      // the facade import to "@forge3d/web" and runs this page unchanged.
+      import {
+        Forge3DError,
+        Forge3DScene,
+        Forge3DSession,
+        getTerrainMaterialDefaults,
+        normalizeTerrainMaterial,
+      } from "../src-ts/index.ts";
+
+      const canvas = document.querySelector("#forge3d-w07-package-canvas");
+      const packageSha256 = null;
+      const WIDTH = 96;
+      const HEIGHT = 64;
+      const SIZE = 48;
+
+      function hill() {
+        const heights = new Float32Array(SIZE * SIZE);
+        for (let row = 0; row < SIZE; row += 1) {
+          for (let col = 0; col < SIZE; col += 1) {
+            const x = -1 + (2 * col) / (SIZE - 1);
+            const y = -1 + (2 * row) / (SIZE - 1);
+            heights[row * SIZE + col] =
+              0.7 * Math.exp(-(x * x * 3 + y * y * 5)) + 0.2 * (1 - y) * 0.5;
+          }
+        }
+        return heights;
+      }
+
+      function terrain(material) {
+        const input = {
+          width: SIZE,
+          height: SIZE,
+          heights: hill(),
+          spacing: [2.8 / (SIZE - 1), 2.8 / (SIZE - 1)],
+          exaggeration: 1.45,
+          domain: [0, 1],
+          colormap: "terrain",
+          renderMode: "screen",
+        };
+        if (material !== undefined) {
+          input.material = material;
+        }
+        return input;
+      }
+
+      function checker(size) {
+        const data = new Uint8Array(size * size * 4);
+        for (let index = 0; index < size * size; index += 1) {
+          const on = (Math.floor((index % size) / 4) + Math.floor(index / size / 4)) % 2 === 0;
+          data.set(on ? [200, 180, 150, 255] : [60, 80, 40, 255], index * 4);
+        }
+        return { width: size, height: size, data };
+      }
+
+      async function frame(session, material) {
+        const scene = Forge3DScene.create();
+        scene.addTerrain(terrain(material));
+        session.setScene(scene);
+        session.setCamera({
+          position: [3.2, 3.4, 2.6],
+          target: [0, 0.3, 0],
+          up: [0, 1, 0],
+          fovYDegrees: 50,
+          near: 0.1,
+          far: 50,
+        });
+        session.render();
+        return session.readRgba();
+      }
+
+      function meanAbs(a, b) {
+        let total = 0;
+        for (let index = 0; index < a.length; index += 1) {
+          total += Math.abs(a[index] - b[index]);
+        }
+        return total / a.length;
+      }
+
+      window.__forge3dW07PackageProbe = async () => {
+        if (!navigator.gpu) {
+          return { supported: false, packageSha256 };
+        }
+        let session;
+        try {
+          const defaults = getTerrainMaterialDefaults();
+          let rejection = "NONE";
+          try {
+            normalizeTerrainMaterial({ pom: { maxSteps: 500 } });
+          } catch (error) {
+            rejection = Forge3DError.from(error).code;
+          }
+          session = await Forge3DSession.create(canvas, {
+            runtime: { width: WIDTH, height: HEIGHT, devicePixelRatio: 1, clearColor: [0, 0, 0, 1] },
+          });
+          const plain = await frame(session, undefined);
+          const zero = await frame(session, {});
+          const full = await frame(session, {
+            albedoMode: "mix",
+            colormapStrength: 0.4,
+            materialSet: [
+              { baseColor: [0.3, 0.3, 0.3], roughness: 0.6, texture: checker(16) },
+              { baseColor: [0.2, 0.4, 0.1], roughness: 0.85 },
+            ],
+            pom: { enabled: true, scale: 0.04 },
+            layers: {
+              snow: { enabled: true, altitudeMin: 0.6, altitudeBlend: 0.2, subsurfaceStrength: 0.6 },
+              wetness: {
+                enabled: true,
+                strength: 0.4,
+                mask: { width: 2, height: 1, data: new Uint8Array([0, 255]) },
+              },
+              variation: { snowMacroAmplitude: 0.2 },
+            },
+            detail: { enabled: true, scale: 0.05, normalStrength: 0.8, albedoNoise: 0.3 },
+            specularAa: { quality: "high" },
+          });
+          const report = session.getTerrainMaterialReport();
+          return {
+            supported: true,
+            ok: true,
+            packageSha256,
+            defaults: { albedoMode: defaults.albedoMode, pom: defaults.pom.enabled },
+            rejection,
+            zeroMaxDiff: plain.reduce((max, value, index) => Math.max(max, Math.abs(value - zero[index])), 0),
+            fullDelta: meanAbs(plain, full),
+            report: {
+              enabled: report.enabled,
+              layerCount: report.layerCount,
+              texturedLayers: report.texturedLayers,
+              maskChannels: report.maskChannels,
+              gpuBytes: report.gpuBytes,
+            },
+          };
+        } catch (error) {
+          const normalized = Forge3DError.from(error);
+          return {
+            supported: true,
+            ok: false,
+            packageSha256,
+            error: { code: normalized.code, message: normalized.message },
+          };
+        } finally {
+          if (session !== undefined && !session.disposed) {
+            session.dispose();
+          }
+        }
+      };
+    </script>
+  </body>
+</html>

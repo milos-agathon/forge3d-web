@@ -1,4 +1,5 @@
 import { execSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { dirname, join } from "node:path";
@@ -28,6 +29,27 @@ assertEqual(
 );
 assertEqual(packageJson.exports["./wasm"], "./dist/forge3d_web_bg.wasm", "wasm export must point at packaged dist asset");
 assertIncludes(packageJson.files, "dist", "package files must include dist");
+assertIncludes(packageJson.files, "assets", "package files must include self-hosted Basis assets");
+assertEqual(
+  packageJson.devDependencies?.["ktx-parse"],
+  "1.1.0",
+  "ktx-parse must stay pinned to the dependency-lock version",
+);
+assertEqual(
+  packageJson.devDependencies?.mediabunny,
+  "1.58.0",
+  "mediabunny must stay pinned to the dependency-lock version",
+);
+assertEqual(
+  packageJson.devDependencies?.geotiff,
+  "3.0.5",
+  "geotiff must stay pinned to the dependency-lock version",
+);
+assertEqual(
+  packageJson.dependencies,
+  undefined,
+  "lock-controlled ktx-parse, mediabunny and geotiff are vendored into dist, so the package has no runtime dependencies",
+);
 assertIncludes(packageJson.files, "docs", "package files must include docs");
 assertIncludes(packageJson.files, "types", "package files must include types");
 assertIncludes(packageJson.files, "README.md", "package files must include README");
@@ -127,6 +149,14 @@ for (const relative of [
   "examples/vite/index.html",
   "examples/vite/src/main.ts",
   "examples/test-interactive-viewer.html",
+  "examples/test-lifecycle-away.html",
+  "examples/test-w03-terrain.html",
+  "examples/test-w04-package.html",
+  "examples/test-w05-package.html",
+  "examples/test-w06-package.html",
+  "assets/basis/basis_transcoder.js",
+  "assets/basis/basis_transcoder.wasm",
+  "assets/basis/LICENSE",
   "tests/browser/browser-evidence.schema.json",
   "tests/browser/evidence-validator.mjs",
   "tests/browser/viewer-interaction-observation.mjs",
@@ -135,11 +165,19 @@ for (const relative of [
   "tests/browser/viewer-benchmark-browser.js",
   "tests/browser/chr03-hardware-proof.schema.json",
   "tests/browser/chr04-hardware-proof.schema.json",
+  "tests/browser/ffx03-hardware-proof.schema.json",
+  "tests/webdriver/firefox-viewer.mjs",
+  "tests/browser/saf03-safari-proof.schema.json",
+  "tests/webdriver/safari-viewer.mjs",
   "scripts/chrome-hardware-acceptance.mjs",
   "scripts/edge-browser-acceptance.mjs",
   "scripts/chr03-hardware-proof-validator.mjs",
   "scripts/chr04-hardware-proof-validator.mjs",
   "scripts/chr04-lanes.mjs",
+  "scripts/ffx03-hardware-proof-validator.mjs",
+  "scripts/ffx03-lanes.mjs",
+  "scripts/saf03-proof-validator.mjs",
+  "scripts/saf03-lanes.mjs",
   "tests/browser/benchmark/benchmark-manifest-v1.json",
   "tests/browser/benchmark/benchmark-terrain-v1.f32le",
   "tests/browser/benchmark/benchmark-trace-v1.json"
@@ -149,7 +187,7 @@ for (const relative of [
 
 const supportMatrix = readText(join(root, "docs", "support-matrix.md"));
 for (const expected of [
-  "| Safari Technology Preview | Unsupported |",
+  "| Safari Technology Preview | Probe only, `NOT_PROVEN` |",
   "Non-blocking early warning only",
   "Every result remains `NOT_PROVEN`",
   "Safari Technology Preview cannot establish stable Safari support",
@@ -176,7 +214,7 @@ for (const expected of [
 for (const expected of [
   "## Browser Support",
   "## MIME, CORS, And Range Requirements",
-  "## MVP Scope And Exclusions",
+  "## Current Surface And Parity Gaps",
   "import { Forge3DRuntime } from \"@forge3d/web\"",
   "SAF-05 adds a fail-closed publication guard",
   "Unsupported/`NOT_PROVEN`",
@@ -193,6 +231,81 @@ const distWasmPath = join(root, "dist", "forge3d_web_bg.wasm");
 assert(existsSync(distIndexPath), "dist/index.js must exist after npm run build");
 assert(existsSync(distWasmJsPath), "dist/forge3d_web.js must exist after npm run build");
 assert(existsSync(distWasmPath), "dist/forge3d_web_bg.wasm must exist after npm run build");
+
+const distTextures = readText(join(root, "dist", "textures.js"));
+assertIncludes(
+  distTextures,
+  "from \"./vendor/ktx-parse.js\"",
+  "dist textures must import the vendored ktx-parse module",
+);
+assertNotIncludes(
+  distTextures,
+  "from \"ktx-parse\"",
+  "dist must not leave a bare ktx-parse specifier for no-bundler consumers",
+);
+const distVideo = readText(join(root, "dist", "video.js"));
+assertIncludes(
+  distVideo,
+  "import(\"./vendor/mediabunny.js\")",
+  "dist video must lazily import the vendored mediabunny module",
+);
+assertNotIncludes(
+  distVideo,
+  "import(\"mediabunny\")",
+  "dist must not leave a bare mediabunny specifier for no-bundler consumers",
+);
+const distCog = readText(join(root, "dist", "cog.js"));
+assertIncludes(
+  distCog,
+  "import(\"./vendor/geotiff.js\")",
+  "dist cog must lazily import the vendored geotiff wrapper",
+);
+assertNotIncludes(
+  distCog,
+  "import(\"geotiff\")",
+  "dist must not leave a bare geotiff specifier for no-bundler consumers",
+);
+// The generated geotiff ESM wrapper must evaluate, not merely exist.
+globalThis.self ??= globalThis;
+const vendoredGeotiff = await import(
+  pathToFileURL(join(root, "dist", "vendor", "geotiff.js")).href
+);
+for (const name of ["default", "GeoTIFF", "fromUrl", "fromArrayBuffer", "getDecoder"]) {
+  assertEqual(
+    typeof vendoredGeotiff[name] === "function" || typeof vendoredGeotiff[name] === "object",
+    true,
+    `dist/vendor/geotiff.js must export ${name}`,
+  );
+}
+for (const vendored of ["ktx-parse.js", "geotiff.umd.js"]) {
+  assertNotIncludes(
+    readText(join(root, "dist", "vendor", vendored)),
+    "sourceMappingURL",
+    `dist/vendor/${vendored} must not reference an unshipped source map`,
+  );
+}
+const assetManifest = readJson(join(root, "dist", "asset-manifest.json"));
+assertIncludes(
+  assetManifest.assets.map((asset) => asset.path),
+  "dist/vendor/mediabunny.js",
+  "asset manifest must pin the vendored mediabunny bundle",
+);
+assertIncludes(
+  assetManifest.assets.map((asset) => asset.path),
+  "dist/vendor/geotiff.umd.js",
+  "asset manifest must pin the vendored geotiff UMD bundle",
+);
+assertIncludes(
+  assetManifest.assets.map((asset) => asset.path),
+  "dist/vendor/geotiff.js",
+  "asset manifest must pin the generated geotiff ESM wrapper",
+);
+for (const asset of assetManifest.assets) {
+  const digest = createHash("sha256")
+    .update(readFileSync(join(root, asset.path)))
+    .digest("hex");
+  assertEqual(digest, asset.sha256, `asset manifest digest mismatch for ${asset.path}`);
+}
 
 const distIndex = readText(distIndexPath);
 assertIncludes(distIndex, "\"./forge3d_web.js\"", "dist facade must load packaged wasm bridge locally");
@@ -220,14 +333,39 @@ for (const expected of [
   "dist/index.js",
   "dist/forge3d_web.js",
   "dist/forge3d_web_bg.wasm",
+  "dist/vendor/ktx-parse.js",
+  "dist/vendor/ktx-parse.LICENSE",
+  "dist/vendor/mediabunny.js",
+  "dist/vendor/mediabunny.LICENSE",
+  "dist/vendor/geotiff.umd.js",
+  "dist/vendor/geotiff.js",
+  "dist/vendor/geotiff.LICENSE",
+  "dist/asset-manifest.json",
   "docs/support-matrix.md",
   "docs/release-checklist.md",
   "types/index.d.ts",
+  "assets/basis/basis_transcoder.js",
+  "assets/basis/basis_transcoder.wasm",
+  "assets/basis/LICENSE",
   "README.md",
   "LICENSE",
   "LICENSE-APACHE"
 ]) {
   assert(files.has(expected), `npm pack dry-run missing ${expected}`);
+}
+for (const expected of [
+  "test-w04-package.html",
+  "__forge3dW04PackageProbe",
+  "test-w05-package.html",
+  "__forge3dW05PackageProbe",
+  "test-w06-package.html",
+  "__forge3dW06PackageProbe",
+]) {
+  assertIncludes(
+    consumerHarness,
+    expected,
+    `package consumer must run the W04 public-API fixture: ${expected}`,
+  );
 }
 
 function readJson(path) {

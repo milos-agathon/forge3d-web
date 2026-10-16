@@ -1,19 +1,56 @@
+import { Forge3DScene } from "./scene.js";
+import { LightCollection } from "./lighting.js";
+import type { LabelLayer, LabelPlacementReport, LabelRenderOptions } from './labels.js';
+import { VectorLayers } from "./vector-layers.js";
+import type { VectorSnapshot, VectorReport, VectorPickMap, VectorPickRegion } from "./vector-types.js";
+import { Forge3DEnvironment, normalizeEnvironment } from "./environment.js";
+import type { EnvironmentInput, EnvironmentSnapshot, EnvironmentMemoryReport } from "./environment.js";
+import { PostFxChain, resolvePostFx } from "./postfx.js";
+import type { PostFxChainInput, PostFxInput, PostFxSnapshot, PostFxReport, PostFxFrame } from "./postfx-types.js";
 import {
+  type SceneSnapshot,
+  type CameraControllerMode,
+  type CameraInput,
+  type CameraInputEvent,
+  type CameraProjectionKind,
   Forge3DError,
   Forge3DRuntime,
+  normalizeTerrainMaterial,
+  type FlyView,
   type Forge3DRuntimeCapabilities,
   type Forge3DRuntimeOptions,
   type Forge3DViewerOptions,
+  type HeightAoOptions,
+  type HeightStreamingStats,
+  type HeightTileCompletion,
+  type HeightTilePlan,
+  type LodSelectionReport,
+  type MaterialVtSourceImage,
   type OrbitView,
   type ResizeInput,
+  type SunVisibilityOptions,
+  type TerrainColorRampInput,
+  type TerrainColormapInput,
+  type TerrainDebugView,
+  type TerrainGeometryInput,
+  type TerrainGeometryReport,
   type TerrainHeightmapInput,
   type TerrainHeightmapSourceInput,
+  type TerrainMaterialInput,
+  type TerrainMaterialVtStats,
+  type TerrainOverlayReport,
+  type TerrainOverlaysInput,
+  type TerrainStreamingInput,
   type ViewerCapabilities,
   type ViewerDiagnostics,
   type ViewerResourceBudget,
   type ViewerStatus,
 } from "./index.js";
 import { OrbitController } from "./orbit-controller.js";
+import { TerrainScatterBatch, normalizeScatterBatches, type ScatterBatchInput, type ScatterBatchSnapshot, type ScatterFrameStats, type ScatterMemoryReport } from "./terrain-scatter.js";
+import { TerrainLightingProbes, validateProbeSnapshot, type TerrainProbeSnapshot, type TerrainProbeMemoryReport } from "./terrain-probes.js";
+import { CameraController } from "./camera-controllers.js";
+import { validateCameraInput } from "./camera.js";
 import { RenderScheduler } from "./render-scheduler.js";
 import { ResizeController, computeBackingSize } from "./resize-controller.js";
 import { OwnedDomResources, ViewerControls } from "./viewer-controls.js";
@@ -39,11 +76,47 @@ interface ViewerRuntime {
   ): void;
   simulateDeviceLossForTesting?(): void;
   setTerrain(terrain: TerrainHeightmapInput): void;
+  setScene?(scene: SceneSnapshot): void;
+  setEnvironment?(snapshot: EnvironmentSnapshot|null):void;
+  getEnvironmentMemoryReport?():EnvironmentMemoryReport;
+  setVectorLayers?(input:VectorLayers|VectorSnapshot|null,terrain?:TerrainHeightmapInput):void|Promise<void>;
+  getVectorReport?():VectorReport;
+  readVectorPickMap?(region?:VectorPickRegion):Promise<VectorPickMap>;
+  setPostFx?(snapshot:PostFxSnapshot|null):void;
+  getPostFxReport?():PostFxReport;
+  resetPostFxHistory?():void;
+  readPostFxIntermediate?(name:string):Promise<PostFxFrame>;
+  setScatterBatches?(batches: ScatterBatchSnapshot[]): void;
+  setLightingProbes?(probes: TerrainProbeSnapshot | null): void;
+  setTimeSeconds?(seconds: number): void;
+  getScatterStats?(): ScatterFrameStats;
+  getScatterMemoryReport?(): ScatterMemoryReport;
+  getProbeMemoryReport?(): TerrainProbeMemoryReport;
   setTerrainFromSource(terrain: TerrainHeightmapSourceInput): Promise<void>;
-  setCamera(camera: ReturnType<OrbitController["getCamera"]>): void;
+  setCamera(camera: CameraInput): void;
   resize(size: ResizeInput): void;
   render(): boolean;
   screenshot(): Promise<Blob>;
+  getTerrainGeometryReport?(): TerrainGeometryReport;
+  getTerrainOverlayReport?(): TerrainOverlayReport;
+  planHeightTiles?(maxRequests: number): HeightTilePlan;
+  completeHeightTile?(
+    lod: number,
+    x: number,
+    y: number,
+    heights: Float32Array,
+  ): HeightTileCompletion;
+  failHeightTile?(lod: number, x: number, y: number): void;
+  getHeightStreamingStats?(): HeightStreamingStats;
+  getLodSelection?(): LodSelectionReport | null;
+  registerMaterialVtSource?(
+    materialIndex: number,
+    family: string,
+    image: MaterialVtSourceImage,
+    fallback?: [number, number, number, number],
+  ): void;
+  clearMaterialVtSources?(): void;
+  getMaterialVtStats?(): TerrainMaterialVtStats;
   dispose(): void;
 }
 
@@ -86,6 +159,9 @@ export class Forge3DViewer {
   readonly #runtimeOptions: Forge3DRuntimeOptions;
   readonly #runtimeFactory: ViewerRuntimeFactory;
   readonly #controller: OrbitController;
+  readonly #camera: CameraController;
+  #projection: CameraProjectionKind = "perspective";
+  #orthographicHeight: number | undefined;
   readonly #budget: ViewerResourceBudget;
   readonly #maxDevicePixelRatio: number;
   readonly #recoveryMode: "none" | "once";
@@ -95,6 +171,27 @@ export class Forge3DViewer {
   #controls: ViewerControls | undefined;
   #scheduler: RenderScheduler | undefined;
   #resizeController: ResizeController | undefined;
+  /** W08: registered VT sources retained across device-loss replay. */
+  readonly #vtSources = new Map<
+    string,
+    {
+      materialIndex: number;
+      family: string;
+      image: MaterialVtSourceImage;
+      fallback?: [number, number, number, number];
+    }
+  >();
+  readonly #frameListeners = new Set<
+    (timestamp: number) => boolean | void
+  >();
+  readonly #recoveryListeners = new Set<() => void>();
+  #labelLayer: LabelLayer | undefined;
+  #labelScene: Forge3DScene | undefined;
+  #labelOptions: Omit<LabelRenderOptions,"viewport"|"camera"> = {};
+  #labelSignature = "";
+  #labelErrorKey = "";
+  #labelUnsubscribe: (()=>void) | undefined;
+  #labelReport: LabelPlacementReport | undefined;
   #status: ViewerStatus = "initializing";
   #terminalError: Forge3DError | undefined;
   #capabilities: Forge3DRuntimeCapabilities;
@@ -106,6 +203,12 @@ export class Forge3DViewer {
   #generation = 0;
   #activeRuntimes = 0;
   #recoveryAttempts = 0;
+  #environmentReplay:EnvironmentSnapshot|null|undefined;
+  #vectorsReplay:{snapshot:VectorSnapshot|null;terrain?:TerrainHeightmapInput}|undefined;
+  #postFxReplay:PostFxSnapshot|null|undefined;
+  #scatterReplay: ScatterBatchSnapshot[] | undefined;
+  #probeReplay: TerrainProbeSnapshot | null | undefined;
+  #scatterTime = 0;
   #recoveryPromise: Promise<void> | undefined;
   #recoveryController: AbortController | undefined;
   #recoveringFromGeneration: number | undefined;
@@ -133,6 +236,16 @@ export class Forge3DViewer {
     this.#controller = new OrbitController(
       options.initialView ?? cloneView(DEFAULT_VIEW),
       options.controls === false ? undefined : options.controls,
+    );
+    const controls = options.controls === false ? undefined : options.controls;
+    this.#camera = new CameraController(
+      {
+        ...(controls?.mode !== undefined ? { mode: controls.mode } : {}),
+        ...(controls?.fly !== undefined ? { flyOptions: controls.fly } : {}),
+        ...(controls?.bindings !== undefined ? { bindings: controls.bindings } : {}),
+        ...(options.initialFlyView !== undefined ? { fly: options.initialFlyView } : {}),
+      },
+      this.#controller,
     );
     this.#capabilities = {
       deviceState: "disposed",
@@ -212,6 +325,159 @@ export class Forge3DViewer {
 
   getView(): OrbitView {
     return this.#controller.getView();
+  }
+
+  /** Active controller mode (`"orbit"` or `"fly"`). */
+  getCameraMode(): CameraControllerMode {
+    return this.#camera.mode;
+  }
+
+  /** Switches between orbit and fly control, keeping the view continuous. */
+  setCameraMode(mode: CameraControllerMode): void {
+    const runtime = this.#operationalRuntime();
+    if (this.#camera.setMode(mode)) {
+      this.#pushCamera(runtime);
+    }
+  }
+
+  getFlyView(): FlyView {
+    return this.#camera.fly.getView();
+  }
+
+  setFlyView(view: FlyView): void {
+    const runtime = this.#operationalRuntime();
+    this.#camera.fly.setView(view);
+    this.#pushCamera(runtime);
+  }
+
+  setLabels(layer: LabelLayer | null, options: Omit<LabelRenderOptions, "viewport" | "camera"> = {}): void {
+    const runtime = this.#operationalRuntime();
+    if (!runtime.setScene) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime cannot render label layers");
+    if (this.#labelLayer && this.#labelScene) this.#labelLayer.detach(this.#labelScene);
+    this.#labelUnsubscribe?.();
+    this.#labelUnsubscribe = undefined;
+    this.#labelLayer = layer ?? undefined;
+    if (layer) this.#labelUnsubscribe = layer.addChangeListener(() => this.#scheduler?.requestRender());
+    this.#labelOptions = {...options};
+    this.#labelSignature = "";
+    this.#labelErrorKey = "";
+    if (!this.#labelScene) {
+      this.#labelScene = Forge3DScene.create();
+      // A scene starts with only the key; the viewer runtime also has a fill.
+      for (const light of LightCollection.defaults().values().slice(1)) {
+        this.#labelScene.addLight(light);
+      }
+    }
+    try {
+      this.#callRuntime(() => this.#refreshLabels(runtime));
+    } finally {
+      this.#scheduler?.requestRender();
+    }
+  }
+
+  getLabelReport(): LabelPlacementReport | undefined {
+    return this.#labelReport ? structuredClone(this.#labelReport) : undefined;
+  }
+
+  #commitLabelScene(runtime: ViewerRuntime): void {
+    const scene = this.#labelScene!;
+    if (this.#environmentReplay !== undefined) scene.setEnvironment(this.#environmentReplay);
+    if (this.#scatterReplay !== undefined) scene.setScatterBatches(this.#scatterReplay);
+    if (this.#probeReplay !== undefined) scene.setLightingProbes(this.#probeReplay);
+    scene.setTimeSeconds(this.#scatterTime);
+    runtime.setScene!(scene.snapshot());
+  }
+  #clearLabelScene(): void {
+    const scene = this.#labelScene!;
+    this.#labelLayer?.detach(scene);
+    for (const node of scene.getNodes()) scene.removeNode(node.id);
+    this.#labelReport = undefined;
+  }
+  #refreshLabels(runtime: ViewerRuntime, reportOnly = false): void {
+    if (!this.#labelScene || !runtime.setScene) return;
+    const camera = this.#effectiveCamera();
+    const state = JSON.stringify([this.#labelLayer?.revision ?? -1, this.#labelLayer?.disposed ?? false]);
+    const signature = JSON.stringify([state, camera, runtime.width, runtime.height]);
+    if (signature === this.#labelSignature) return;
+    // Camera/viewport changes can make a previously over-budget layout fit.
+    // Cache the full attempted input; the error key only deduplicates reporting.
+    try {
+      let report: LabelPlacementReport | undefined;
+      if (this.#labelLayer && !this.#labelLayer.disposed) {
+        report = this.#labelLayer.attach(this.#labelScene, {
+          ...this.#labelOptions, camera, viewport: {width: runtime.width, height: runtime.height},
+        });
+      } else {
+        this.#clearLabelScene();
+      }
+      this.#commitLabelScene(runtime);
+      this.#labelReport = report;
+      this.#labelSignature = signature;
+      this.#labelErrorKey = "";
+    } catch (error) {
+      const normalized = Forge3DError.from(error);
+      if (normalized.code === "DEVICE_LOST") throw normalized;
+      this.#clearLabelScene();
+      // If clearing itself fails, propagate the runtime error; stale GPU nodes
+      // cannot be treated as a successfully recovered label state.
+      this.#commitLabelScene(runtime);
+      const errorKey = JSON.stringify([state, normalized.code, normalized.message]);
+      const notify = reportOnly && errorKey !== this.#labelErrorKey;
+      this.#labelErrorKey = errorKey;
+      this.#labelSignature = signature;
+      if (!reportOnly) throw normalized;
+      if (notify) this.#emitError(normalized);
+    }
+  }
+  #refreshLabelsSafely(runtime: ViewerRuntime): void {
+    // Only label errors followed by a successful empty-scene commit are caught.
+    // Runtime/device errors during the clear still reach the runtime handler.
+    this.#refreshLabels(runtime, true);
+  }
+  /** Camera currently rendered (active controller plus projection). */
+  getCamera(): CameraInput {
+    return this.#effectiveCamera();
+  }
+
+  /**
+   * Points both controllers at `camera` and adopts its projection; the
+   * active mode is kept. Controllers are Y-up, so `camera.up` must be +Y.
+   */
+  setCamera(camera: CameraInput): void {
+    const runtime = this.#operationalRuntime();
+    const checked = validateCameraInput(camera);
+    const upLength = Math.hypot(checked.up[0], checked.up[1], checked.up[2]);
+    if (
+      Math.abs(checked.up[0]) > 1e-6 * upLength ||
+      Math.abs(checked.up[2]) > 1e-6 * upLength ||
+      checked.up[1] <= 0
+    ) {
+      throw new Forge3DError(
+        "INVALID_INPUT",
+        "viewer cameras are Y-up; camera.up must point along +Y",
+      );
+    }
+    this.#camera.setCamera(checked);
+    this.#projection = checked.projection ?? "perspective";
+    this.#orthographicHeight = checked.orthographicHeight;
+    this.#pushCamera(runtime);
+  }
+
+  /** Records every camera input event applied from now on. */
+  startCameraRecording(): void {
+    this.#camera.startRecording();
+  }
+
+  /** Stops recording and returns the recorded, serializable events. */
+  stopCameraRecording(): CameraInputEvent[] {
+    return this.#camera.stopRecording();
+  }
+
+  /** Applies recorded camera input events deterministically. */
+  replayCameraInput(events: readonly CameraInputEvent[]): void {
+    const runtime = this.#operationalRuntime();
+    this.#camera.replay(events);
+    this.#pushCamera(runtime);
   }
 
   getCapabilities(): ViewerCapabilities {
@@ -307,17 +573,302 @@ export class Forge3DViewer {
     }
   }
 
-  setView(view: OrbitView): void {
+  /** W08: forward `getTerrainGeometryReport` to the live runtime. */
+  getTerrainGeometryReport(): TerrainGeometryReport {
     const runtime = this.#operationalRuntime();
-    this.#controller.setView(view);
-    this.#callRuntime(() => runtime.setCamera(this.#controller.getCamera()));
+    return this.#callRuntime(() => {
+      const report = runtime.getTerrainGeometryReport?.();
+      if (report === undefined) {
+        throw new Forge3DError(
+          "UNSUPPORTED_FEATURE",
+          "Runtime does not report terrain geometry",
+        );
+      }
+      return report;
+    });
+  }
+
+  /** W08: forward `getTerrainOverlayReport` to the live runtime. */
+  getTerrainOverlayReport(): TerrainOverlayReport {
+    const runtime = this.#operationalRuntime();
+    return this.#callRuntime(() => {
+      const report = runtime.getTerrainOverlayReport?.();
+      if (report === undefined) {
+        throw new Forge3DError(
+          "UNSUPPORTED_FEATURE",
+          "Runtime does not report terrain overlays",
+        );
+      }
+      return report;
+    });
+  }
+
+  /** W08: forward `planHeightTiles` — used by `TerrainStreamer`. */
+  planHeightTiles(maxRequests: number): HeightTilePlan {
+    const runtime = this.#operationalRuntime();
+    return this.#callRuntime(() => {
+      const plan = runtime.planHeightTiles?.(maxRequests);
+      if (plan === undefined) {
+        throw new Forge3DError(
+          "UNSUPPORTED_FEATURE",
+          "Runtime does not implement height streaming",
+        );
+      }
+      return plan;
+    });
+  }
+
+  /** W08: forward `completeHeightTile` — used by `TerrainStreamer`. */
+  completeHeightTile(
+    lod: number,
+    x: number,
+    y: number,
+    heights: Float32Array,
+  ): HeightTileCompletion {
+    const runtime = this.#operationalRuntime();
+    return this.#callRuntime(() => {
+      const completion = runtime.completeHeightTile?.(lod, x, y, heights);
+      if (completion === undefined) {
+        throw new Forge3DError(
+          "UNSUPPORTED_FEATURE",
+          "Runtime does not implement height streaming",
+        );
+      }
+      return completion;
+    });
+  }
+
+  /** W08: forward `failHeightTile` — used by `TerrainStreamer`. */
+  failHeightTile(lod: number, x: number, y: number): void {
+    const runtime = this.#operationalRuntime();
+    this.#callRuntime(() => {
+      if (runtime.failHeightTile === undefined) {
+        throw new Forge3DError(
+          "UNSUPPORTED_FEATURE",
+          "Runtime does not implement height streaming",
+        );
+      }
+      runtime.failHeightTile(lod, x, y);
+    });
+  }
+
+  /** W08: forward `getHeightStreamingStats`. */
+  getHeightStreamingStats(): HeightStreamingStats {
+    const runtime = this.#operationalRuntime();
+    return this.#callRuntime(() => {
+      const stats = runtime.getHeightStreamingStats?.();
+      if (stats === undefined) {
+        throw new Forge3DError(
+          "UNSUPPORTED_FEATURE",
+          "Runtime does not implement height streaming",
+        );
+      }
+      return stats;
+    });
+  }
+
+  /** W08: forward `getLodSelection`. */
+  getLodSelection(): LodSelectionReport | null {
+    const runtime = this.#operationalRuntime();
+    return this.#callRuntime(() => {
+      if (runtime.getLodSelection === undefined) {
+        throw new Forge3DError(
+          "UNSUPPORTED_FEATURE",
+          "Runtime does not implement height streaming",
+        );
+      }
+      return runtime.getLodSelection();
+    });
+  }
+
+  setEnvironment(
+    input: Forge3DEnvironment | EnvironmentInput | EnvironmentSnapshot | null,
+  ): void {
+    const runtime = this.#operationalRuntime();
+    const snapshot =
+      input === null
+        ? null
+        : input instanceof Forge3DEnvironment
+          ? input.snapshot()
+          : normalizeEnvironment(input);
+    this.#callRuntime(() => {
+      if (!runtime.setEnvironment)
+        throw new Forge3DError(
+          "UNSUPPORTED_FEATURE",
+          "Runtime does not support environment",
+        );
+      runtime.setEnvironment(snapshot);
+    });
+    this.#environmentReplay = structuredClone(snapshot);
+    this.#scheduler?.requestRender();
+  }
+  getEnvironmentMemoryReport(): EnvironmentMemoryReport {
+    const runtime = this.#operationalRuntime();
+    return this.#callRuntime(() => {
+      if (!runtime.getEnvironmentMemoryReport)
+        throw new Forge3DError(
+          "UNSUPPORTED_FEATURE",
+          "Runtime does not report environment memory",
+        );
+      return runtime.getEnvironmentMemoryReport();
+    });
+  }
+  setVectorLayers(input:VectorLayers|VectorSnapshot|null,terrain?:TerrainHeightmapInput):void|Promise<void> {
+    const runtime=this.#operationalRuntime();const snapshot=input instanceof VectorLayers?input.snapshot():input;
+    const result=this.#callRuntime(()=>{if(!runtime.setVectorLayers)throw new Forge3DError("UNSUPPORTED_FEATURE","Vector layers unavailable");return runtime.setVectorLayers(input,terrain);});
+    const commit=()=>{this.#vectorsReplay={snapshot:structuredClone(snapshot),...(terrain?{terrain:structuredClone(terrain)}:{})};this.#scheduler?.requestRender();};
+    if(result instanceof Promise)return result.then(commit);commit();
+  }
+  getVectorReport():VectorReport {const runtime=this.#operationalRuntime();if(!runtime.getVectorReport)throw new Forge3DError("UNSUPPORTED_FEATURE","Vector report unavailable");return runtime.getVectorReport();}
+  async readVectorPickMap(region?:VectorPickRegion):Promise<VectorPickMap> {const runtime=this.#operationalRuntime();if(!runtime.readVectorPickMap)throw new Forge3DError("UNSUPPORTED_FEATURE","Vector picking unavailable");return runtime.readVectorPickMap(region);}
+  setPostFx(input:PostFxChain|PostFxChainInput|PostFxSnapshot|readonly PostFxInput[]|null):void {
+    const runtime=this.#operationalRuntime(), snapshot=resolvePostFx(input);
+    this.#callRuntime(()=>{if(!runtime.setPostFx)throw new Forge3DError("UNSUPPORTED_FEATURE","Runtime does not support post-FX");runtime.setPostFx(snapshot);});
+    this.#postFxReplay=structuredClone(snapshot);this.#scheduler?.requestRender();
+  }
+  getPostFxReport():PostFxReport {
+    const runtime=this.#operationalRuntime();return this.#callRuntime(()=>{if(!runtime.getPostFxReport)throw new Forge3DError("UNSUPPORTED_FEATURE","Runtime does not report post-FX");return runtime.getPostFxReport();});
+  }
+  resetPostFxHistory():void {
+    const runtime=this.#operationalRuntime();this.#callRuntime(()=>{if(!runtime.resetPostFxHistory)throw new Forge3DError("UNSUPPORTED_FEATURE","Runtime does not support temporal history");runtime.resetPostFxHistory();});this.#scheduler?.requestRender();
+  }
+  async readPostFxIntermediate(name:string):Promise<PostFxFrame> {
+    const runtime=this.#operationalRuntime();if(!runtime.readPostFxIntermediate)throw new Forge3DError("UNSUPPORTED_FEATURE","Runtime does not expose post-FX intermediates");
+    try{return await runtime.readPostFxIntermediate(name);}catch(error){const normalized=Forge3DError.from(error);this.#routeDeviceLoss(normalized);throw normalized;}
+  }
+  setScatterBatches(batches: readonly (TerrainScatterBatch | ScatterBatchInput | ScatterBatchSnapshot)[]): void {
+    const runtime = this.#operationalRuntime(), snapshot = normalizeScatterBatches(batches);
+    this.#callRuntime(() => { if (!runtime.setScatterBatches) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support terrain scatter"); runtime.setScatterBatches(snapshot); });
+    this.#scatterReplay = structuredClone(snapshot); this.#scheduler?.requestRender();
+  }
+
+  setLightingProbes(probes: TerrainLightingProbes | TerrainProbeSnapshot | null): void {
+    const runtime = this.#operationalRuntime(), snapshot = probes instanceof TerrainLightingProbes ? probes.snapshot() : structuredClone(probes);
+    if (snapshot) validateProbeSnapshot(snapshot);
+    this.#callRuntime(() => { if (!runtime.setLightingProbes) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support terrain probes"); runtime.setLightingProbes(snapshot); });
+    this.#probeReplay = structuredClone(snapshot); this.#scheduler?.requestRender();
+  }
+
+  setTimeSeconds(seconds: number): void {
+    const runtime = this.#operationalRuntime();
+    if (!Number.isFinite(seconds)) throw new Forge3DError("INVALID_INPUT", "timeSeconds must be finite");
+    this.#callRuntime(() => { if (!runtime.setTimeSeconds) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not support scatter time"); runtime.setTimeSeconds(seconds); });
+    this.#scatterTime = seconds; this.#scheduler?.requestRender();
+  }
+
+  getScatterStats(): ScatterFrameStats { const runtime = this.#operationalRuntime(); return this.#callRuntime(() => { if (!runtime.getScatterStats) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not report scatter"); return runtime.getScatterStats(); }); }
+  getScatterMemoryReport(): ScatterMemoryReport { const runtime = this.#operationalRuntime(); return this.#callRuntime(() => { if (!runtime.getScatterMemoryReport) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not report scatter"); return runtime.getScatterMemoryReport(); }); }
+  getProbeMemoryReport(): TerrainProbeMemoryReport { const runtime = this.#operationalRuntime(); return this.#callRuntime(() => { if (!runtime.getProbeMemoryReport) throw new Forge3DError("UNSUPPORTED_FEATURE", "Runtime does not report probes"); return runtime.getProbeMemoryReport(); }); }
+
+  /** W08: forward `registerMaterialVtSource`; the registration is
+   * retained and replayed after device-loss recovery. */
+  registerMaterialVtSource(
+    materialIndex: number,
+    family: string,
+    image: MaterialVtSourceImage,
+    fallback?: [number, number, number, number],
+  ): void {
+    const runtime = this.#operationalRuntime();
+    this.#callRuntime(() => {
+      if (runtime.registerMaterialVtSource === undefined) {
+        throw new Forge3DError(
+          "UNSUPPORTED_FEATURE",
+          "Runtime does not implement material virtual texturing",
+        );
+      }
+      runtime.registerMaterialVtSource(materialIndex, family, image, fallback);
+    });
+    this.#vtSources.set(`${materialIndex}:${family}`, {
+      materialIndex,
+      family,
+      image: cloneVtSourceImage(image),
+      ...(fallback !== undefined ? { fallback: [...fallback] } : {}),
+    });
+  }
+
+  /** W08: forward `clearMaterialVtSources`; also clears the retained
+   * replay set. */
+  clearMaterialVtSources(): void {
+    const runtime = this.#operationalRuntime();
+    this.#callRuntime(() => {
+      if (runtime.clearMaterialVtSources === undefined) {
+        throw new Forge3DError(
+          "UNSUPPORTED_FEATURE",
+          "Runtime does not implement material virtual texturing",
+        );
+      }
+      runtime.clearMaterialVtSources();
+    });
+    this.#vtSources.clear();
+  }
+
+  /** W08: forward `getMaterialVtStats`. */
+  getMaterialVtStats(): TerrainMaterialVtStats {
+    const runtime = this.#operationalRuntime();
+    return this.#callRuntime(() => {
+      const stats = runtime.getMaterialVtStats?.();
+      if (stats === undefined) {
+        throw new Forge3DError(
+          "UNSUPPORTED_FEATURE",
+          "Runtime does not implement material virtual texturing",
+        );
+      }
+      return stats;
+    });
+  }
+
+  /** Registers `listener` invoked once per successfully completed
+   * device-loss recovery (after the terrain/VT replay). Returns an
+   * unsubscribe function. Used by `TerrainStreamer`. */
+  addRecoveryListener(listener: () => void): () => void {
+    this.#recoveryListeners.add(listener);
+    return () => {
+      this.#recoveryListeners.delete(listener);
+    };
+  }
+
+  /** Registers `listener` invoked each submitted frame; returning
+   * `true` keeps the render loop alive. Used by `TerrainStreamer`'s
+   * `autoUpdate`. Returns an unsubscribe function. */
+  addFrameListener(
+    listener: (timestamp: number) => boolean | void,
+  ): () => void {
+    this.#frameListeners.add(listener);
+    return () => {
+      this.#frameListeners.delete(listener);
+    };
+  }
+
+  /** Schedules a render on the viewer's scheduler (no-op when the
+   * scheduler is suspended or the viewer is recovering). */
+  requestRender(): void {
     this.#scheduler?.requestRender();
   }
 
+  setView(view: OrbitView): void {
+    const runtime = this.#operationalRuntime();
+    this.#controller.setView(view);
+    this.#pushCamera(runtime);
+  }
+
+  /** Resets the active controller (orbit or fly) to its initial view. */
   resetView(): void {
     const runtime = this.#operationalRuntime();
-    this.#controller.reset();
-    this.#callRuntime(() => runtime.setCamera(this.#controller.getCamera()));
+    this.#camera.apply({ type: "reset" });
+    this.#pushCamera(runtime);
+  }
+
+  #effectiveCamera(): CameraInput {
+    const camera = this.#camera.getCamera();
+    if (this.#projection === "orthographic") {
+      camera.projection = "orthographic";
+      camera.orthographicHeight = this.#orthographicHeight ?? 1;
+    }
+    return camera;
+  }
+
+  #pushCamera(runtime: ViewerRuntime): void {
+    this.#callRuntime(() => runtime.setCamera(this.#effectiveCamera()));
     this.#scheduler?.requestRender();
   }
 
@@ -356,8 +907,11 @@ export class Forge3DViewer {
       return this.#screenshotPromise;
     }
     validateScreenshotBudget(runtime.width, runtime.height, this.#budget);
-    this.#callRuntime(() => runtime.setCamera(this.#controller.getCamera()));
-    const promise = runtime.screenshot().catch((error: unknown) => {
+    this.#callRuntime(() => runtime.setCamera(this.#effectiveCamera()));
+    const promise = Promise.resolve().then(() => {
+      this.#refreshLabels(runtime);
+      return runtime.screenshot();
+    }).catch((error: unknown) => {
       const normalized = Forge3DError.from(error);
       this.#routeDeviceLoss(normalized);
       throw normalized;
@@ -374,6 +928,12 @@ export class Forge3DViewer {
     if (this.disposed) {
       return;
     }
+    if(this.#labelLayer&&this.#labelScene)this.#labelLayer.detach(this.#labelScene);
+    this.#labelUnsubscribe?.();this.#labelUnsubscribe=undefined;
+    this.#labelScene?.dispose();this.#labelScene=undefined;this.#labelLayer=undefined;
+    this.#vtSources.clear();
+    this.#frameListeners.clear();
+    this.#recoveryListeners.clear();
     this.#disposeOwnedResources(true);
     this.#transition("disposed");
   }
@@ -401,7 +961,7 @@ export class Forge3DViewer {
     }
     runtime = this.#ownedRuntimeOrThrow();
     const initializedGeneration = this.#generation;
-    runtime.setCamera(this.#controller.getCamera());
+    runtime.setCamera(this.#effectiveCamera());
     if (
       this.#runtime !== runtime ||
       this.#generation !== initializedGeneration ||
@@ -421,6 +981,7 @@ export class Forge3DViewer {
         if (current === undefined || this.#status !== "ready") {
           return false;
         }
+        this.#refreshLabelsSafely(current);
         return current.render();
       },
       canRender: () =>
@@ -428,13 +989,25 @@ export class Forge3DViewer {
         this.#runtime !== undefined &&
         !this.#resizeController?.suspended,
       onError: (error) => this.#handleRuntimeError(Forge3DError.from(error)),
+      onFrame: (timestamp) => {
+        let pending =
+          this.#controls?.onAnimationFrame(timestamp) ?? false;
+        for (const listener of this.#frameListeners) {
+          try {
+            pending = listener(timestamp) === true || pending;
+          } catch {
+            // A frame listener must not break the render loop.
+          }
+        }
+        return pending;
+      },
       resources: this.#resources,
     });
 
     if (this.#options.controls !== false) {
       this.#controls = new ViewerControls(
         this.#canvas,
-        this.#controller,
+        this.#camera,
         this.#options.controls ?? {},
         () => {
           if (this.#status !== "ready") {
@@ -446,7 +1019,7 @@ export class Forge3DViewer {
           }
           if (
             !this.#callRuntimeFromCallback(() =>
-              current.setCamera(this.#controller.getCamera()),
+              current.setCamera(this.#effectiveCamera()),
             )
           ) {
             return;
@@ -639,7 +1212,9 @@ export class Forge3DViewer {
         }
         return;
       }
-      replacement.setCamera(this.#controller.getCamera());
+      replacement.setCamera(this.#effectiveCamera());
+      this.#labelSignature="";
+      this.#refreshLabelsSafely(replacement);
       if (this.#runtime !== replacement || recoveryController.signal.aborted) {
         return;
       }
@@ -648,6 +1223,19 @@ export class Forge3DViewer {
       }
       if (this.#runtime !== replacement || recoveryController.signal.aborted) {
         return;
+      }
+      // W08: replay the retained VT sources before the terrain: the runtime
+      // snapshots VT sources when a terrain is committed, so sources
+      // registered after `setTerrain` would never reach the replayed frame.
+      for (const source of this.#vtSources.values()) {
+        replacement.registerMaterialVtSource?.(
+          source.materialIndex,
+          source.family,
+          cloneVtSourceImage(source.image),
+          source.fallback === undefined
+            ? undefined
+            : [...source.fallback],
+        );
       }
       if (this.#terrainReplay?.kind === "direct") {
         replacement.setTerrain(this.#terrainReplay.value);
@@ -667,12 +1255,30 @@ export class Forge3DViewer {
       ) {
         return;
       }
+      if(this.#environmentReplay!==undefined){if(!replacement.setEnvironment)throw new Forge3DError("UNSUPPORTED_FEATURE","Recovery runtime does not support environment");replacement.setEnvironment(structuredClone(this.#environmentReplay));}
+      if(this.#vectorsReplay!==undefined){if(!replacement.setVectorLayers)throw new Forge3DError("UNSUPPORTED_FEATURE","Recovery vectors unavailable");await replacement.setVectorLayers(structuredClone(this.#vectorsReplay.snapshot),this.#vectorsReplay.terrain);}
+      if(this.#postFxReplay!==undefined){if(!replacement.setPostFx)throw new Forge3DError("UNSUPPORTED_FEATURE","Recovery runtime does not support post-FX");replacement.setPostFx(structuredClone(this.#postFxReplay));}
+      if (this.#scatterReplay !== undefined) {
+        if (!replacement.setScatterBatches || !replacement.setTimeSeconds) throw new Forge3DError("UNSUPPORTED_FEATURE", "Recovery runtime does not support terrain scatter");
+        replacement.setScatterBatches(structuredClone(this.#scatterReplay)); replacement.setTimeSeconds(this.#scatterTime);
+      }
+      if (this.#probeReplay !== undefined) {
+        if (!replacement.setLightingProbes) throw new Forge3DError("UNSUPPORTED_FEATURE", "Recovery runtime does not support terrain probes");
+        replacement.setLightingProbes(structuredClone(this.#probeReplay));
+      }
       this.#terminalError = undefined;
       if (this.#initializationComplete) {
         this.#transition("ready");
         this.#controls?.resume();
         this.#scheduler?.resume();
         this.#scheduler?.requestRender();
+        for (const listener of this.#recoveryListeners) {
+          try {
+            listener();
+          } catch {
+            // A recovery listener must not break the replay.
+          }
+        }
       }
     } catch (error) {
       if (
@@ -807,6 +1413,8 @@ export class Forge3DViewer {
   }
 
   #disposeOwnedResources(transitionRuntime: boolean): void {
+    this.#environmentReplay = undefined;
+    this.#scatterReplay = undefined; this.#probeReplay = undefined;
     this.#sourceController?.abort();
     this.#sourceController = undefined;
     this.#recoveryController?.abort();
@@ -917,20 +1525,165 @@ function cloneView(view: Readonly<OrbitView>): OrbitView {
   };
 }
 
+interface TerrainMetadataCarrier {
+  colorRamp?: TerrainColorRampInput;
+  colormap?: TerrainColormapInput;
+  spacing?: [number, number];
+  exaggeration?: number;
+  domain?: [number, number];
+  nodata?: number;
+  crs?: string;
+  transform?: [number, number, number, number, number, number];
+  heightAo?: HeightAoOptions;
+  sunVisibility?: SunVisibilityOptions;
+  debugView?: TerrainDebugView;
+  geometry?: TerrainGeometryInput;
+  bounds?: [number, number, number, number];
+  streaming?: TerrainStreamingInput;
+  overlays?: TerrainOverlaysInput;
+  material?: TerrainMaterialInput;
+}
+
+function cloneColorRamp(ramp: TerrainColorRampInput): TerrainColorRampInput {
+  return {
+    stops: ramp.stops.map((stop) => ({
+      position: stop.position,
+      color: [stop.color[0], stop.color[1], stop.color[2]],
+    })),
+  };
+}
+
+function cloneSunVisibility(
+  options: SunVisibilityOptions,
+): SunVisibilityOptions {
+  const clone: SunVisibilityOptions = { ...options };
+  if (options.direction !== undefined) {
+    clone.direction = [
+      options.direction[0],
+      options.direction[1],
+      options.direction[2],
+    ];
+  }
+  return clone;
+}
+
+function copyTerrainMetadata(
+  source: TerrainMetadataCarrier,
+  target: TerrainMetadataCarrier,
+): void {
+  if (source.colorRamp !== undefined) {
+    target.colorRamp = cloneColorRamp(source.colorRamp);
+  }
+  if (source.colormap !== undefined) {
+    target.colormap =
+      typeof source.colormap === "string"
+        ? source.colormap
+        : cloneColorRamp(source.colormap);
+  }
+  if (source.spacing !== undefined) {
+    target.spacing = [source.spacing[0], source.spacing[1]];
+  }
+  if (source.exaggeration !== undefined) {
+    target.exaggeration = source.exaggeration;
+  }
+  if (source.domain !== undefined) {
+    target.domain = [source.domain[0], source.domain[1]];
+  }
+  if (source.nodata !== undefined) {
+    target.nodata = source.nodata;
+  }
+  if (source.crs !== undefined) {
+    target.crs = source.crs;
+  }
+  if(source.transform!==undefined)target.transform=[...source.transform];
+  if (source.heightAo !== undefined) {
+    target.heightAo = { ...source.heightAo };
+  }
+  if (source.sunVisibility !== undefined) {
+    target.sunVisibility = cloneSunVisibility(source.sunVisibility);
+  }
+  if (source.debugView !== undefined) {
+    target.debugView = source.debugView;
+  }
+  if (source.geometry !== undefined) {
+    const clipmap = source.geometry.clipmap;
+    target.geometry = {
+      ...(source.geometry.mode !== undefined
+        ? { mode: source.geometry.mode }
+        : {}),
+      ...(clipmap !== undefined
+        ? {
+            clipmap: {
+              ...clipmap,
+              ...(clipmap.baseCellSize !== undefined
+                ? {
+                    baseCellSize: [
+                      clipmap.baseCellSize[0],
+                      clipmap.baseCellSize[1],
+                    ],
+                  }
+                : {}),
+            },
+          }
+        : {}),
+    };
+  }
+  if (source.bounds !== undefined) {
+    target.bounds = [
+      source.bounds[0],
+      source.bounds[1],
+      source.bounds[2],
+      source.bounds[3],
+    ];
+  }
+  if (source.streaming !== undefined) {
+    target.streaming = { ...source.streaming };
+  }
+  if (source.overlays !== undefined) {
+    target.overlays = {
+      ...source.overlays,
+      ...(source.overlays.layers !== undefined
+        ? {
+            layers: source.overlays.layers.map((layer) => ({
+              ...layer,
+              image: {
+                width: layer.image.width,
+                height: layer.image.height,
+                data: layer.image.data.slice(),
+              },
+              ...(layer.extent !== undefined
+                ? { extent: [...layer.extent] as typeof layer.extent }
+                : {}),
+              ...(layer.crsBounds !== undefined
+                ? {
+                    crsBounds: [...layer.crsBounds] as typeof layer.crsBounds,
+                  }
+                : {}),
+            })),
+          }
+        : {}),
+    };
+  }
+  if (source.material !== undefined) {
+    target.material = normalizeTerrainMaterial(source.material);
+  }
+}
+
+function cloneVtSourceImage(image: MaterialVtSourceImage): MaterialVtSourceImage {
+  return {
+    width: image.width,
+    height: image.height,
+    data: image.data.slice(),
+  };
+}
+
 function cloneTerrain(terrain: TerrainHeightmapInput): TerrainHeightmapInput {
   const clone: TerrainHeightmapInput = {
     width: terrain.width,
     height: terrain.height,
     heights: new Float32Array(terrain.heights),
   };
-  if (terrain.colorRamp !== undefined) {
-    clone.colorRamp = {
-      stops: terrain.colorRamp.stops.map((stop) => ({
-        position: stop.position,
-        color: [stop.color[0], stop.color[1], stop.color[2]],
-      })),
-    };
-  }
+  copyTerrainMetadata(terrain, clone);
   return clone;
 }
 
@@ -950,6 +1703,7 @@ function cloneSourceRequest(
   if (terrain.byteLength !== undefined) {
     clone.byteLength = terrain.byteLength;
   }
+  copyTerrainMetadata(terrain, clone);
   if (signal !== undefined) {
     clone.signal = signal;
   }

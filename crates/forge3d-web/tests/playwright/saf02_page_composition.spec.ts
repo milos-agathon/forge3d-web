@@ -14,8 +14,10 @@ test("real SAF-02 hardware page continues into generic installed-fixture creatio
   request,
   webgpuAvailability,
 }) => {
+  // Creates several WebGPU runtimes; each compiles the W04 shared-lighting
+  // terrain/scene pipelines, which uncached CI GPUs compile slowly.
+  test.slow();
   skipRenderAssertionsWhenProbing(webgpuAvailability);
-  const facade = await (await request.get("/tests/realm-fixture/a/index.js")).body();
   const bridge = await (await request.get("/tests/realm-fixture/pkg/forge3d_web.js")).body();
   const wasm = await (await request.get("/tests/realm-fixture/runtime.wasm?id=saf02-page")).body();
   const terrain = Buffer.alloc(512 * 512 * 4);
@@ -27,6 +29,7 @@ test("real SAF-02 hardware page continues into generic installed-fixture creatio
     ["viewer-benchmark-browser.js", readFileSync(new URL("../browser/viewer-benchmark-browser.js", import.meta.url), "utf8")],
     ["chr03-lanes.js", readFileSync(new URL("../../scripts/chr03-lanes.mjs", import.meta.url), "utf8")],
     ["chr04-lanes.js", readFileSync(new URL("../../scripts/chr04-lanes.mjs", import.meta.url), "utf8")],
+    ["ffx03-lanes.js", readFileSync(new URL("../../scripts/ffx03-lanes.mjs", import.meta.url), "utf8")],
     ["adapter-attestation.js", ts.transpileModule(
       readFileSync(new URL("../browser/adapter-attestation.ts", import.meta.url), "utf8"),
       { compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 } },
@@ -45,8 +48,11 @@ test("real SAF-02 hardware page continues into generic installed-fixture creatio
       await route.fulfill({ status: 200, contentType: "text/javascript", body: module });
       return;
     }
-    if (relative === "node_modules/@forge3d/web/dist/index.js") {
-      await route.fulfill({ status: 200, contentType: "text/javascript", body: facade });
+    const facadeModule = relative.match(/^node_modules\/@forge3d\/web\/dist\/([a-zA-Z0-9_-][a-zA-Z0-9_.-]*\.js)$/u);
+    if (facadeModule !== null) {
+      const module = await request.get(`/tests/realm-fixture/a/${facadeModule[1]}`);
+      expect(module.ok()).toBe(true);
+      await route.fulfill({ status: module.status(), contentType: "text/javascript", body: await module.body() });
       return;
     }
     if (relative === "node_modules/@forge3d/web/pkg/forge3d_web.js") {

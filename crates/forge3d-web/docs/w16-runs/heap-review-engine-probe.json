@@ -1,0 +1,434 @@
+[
+  {
+    "engine": "chromium",
+    "mode": "source",
+    "positiveFresh": true,
+    "cachedControlFresh": false,
+    "runs": [
+      {
+        "cached": false,
+        "created": 1,
+        "heaps": [
+          {
+            "module": 1,
+            "memory": 1,
+            "buffer": 1,
+            "heapBytes": 7274496
+          },
+          {
+            "module": 2,
+            "memory": 2,
+            "buffer": 2,
+            "heapBytes": 7274496
+          }
+        ],
+        "outputs": [
+          {
+            "count": 110000,
+            "positions": "73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23",
+            "colors": "d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"
+          },
+          {
+            "count": 110000,
+            "positions": "73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23",
+            "colors": "d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"
+          }
+        ]
+      },
+      {
+        "cached": true,
+        "created": 1,
+        "heaps": [
+          {
+            "module": 1,
+            "memory": 1,
+            "buffer": 1,
+            "heapBytes": 7274496
+          },
+          {
+            "module": 1,
+            "memory": 1,
+            "buffer": 1,
+            "heapBytes": 7274496
+          }
+        ],
+        "outputs": [
+          {
+            "count": 110000,
+            "positions": "73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23",
+            "colors": "d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"
+          },
+          {
+            "count": 110000,
+            "positions": "73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23",
+            "colors": "d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"
+          }
+        ]
+      }
+    ],
+    "expected": {
+      "count": 110000,
+      "positionsSha256": "73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23",
+      "colorsSha256": "d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b",
+      "bounds": {
+        "min": [
+          636001.76,
+          848935.2000000001,
+          406.26
+        ],
+        "max": [
+          637179.22,
+          849497.9,
+          520.51
+        ]
+      },
+      "firstPositions": [
+        637177.98,
+        849393.9500000001,
+        411.19,
+        637177.3,
+        849396.9500000001,
+        411.25,
+        637176.34,
+        849400.84,
+        411.01
+      ],
+      "firstColors": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "webGpuAdapterAvailable": false
+  },
+  {
+    "engine": "chromium",
+    "mode": "dist",
+    "positiveFresh": true,
+    "cachedControlFresh": false,
+    "runs": [
+      {
+        "cached": false,
+        "created": 1,
+        "heaps": [
+          {
+            "module": 1,
+            "memory": 1,
+            "buffer": 1,
+            "heapBytes": 7274496
+          },
+          {
+            "module": 2,
+            "memory": 2,
+            "buffer": 2,
+            "heapBytes": 7274496
+          }
+        ],
+        "outputs": [
+          {
+            "count": 110000,
+            "positions": "73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23",
+            "colors": "d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"
+          },
+          {
+            "count": 110000,
+            "positions": "73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23",
+            "colors": "d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"
+          }
+        ]
+      },
+      {
+        "cached": true,
+        "created": 1,
+        "heaps": [
+          {
+            "module": 1,
+            "memory": 1,
+            "buffer": 1,
+            "heapBytes": 7274496
+          },
+          {
+            "module": 1,
+            "memory": 1,
+            "buffer": 1,
+            "heapBytes": 7274496
+          }
+        ],
+        "outputs": [
+          {
+            "count": 110000,
+            "positions": "73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23",
+            "colors": "d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"
+          },
+          {
+            "count": 110000,
+            "positions": "73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23",
+            "colors": "d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"
+          }
+        ]
+      }
+    ],
+    "expected": {
+      "count": 110000,
+      "positionsSha256": "73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23",
+      "colorsSha256": "d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b",
+      "bounds": {
+        "min": [
+          636001.76,
+          848935.2000000001,
+          406.26
+        ],
+        "max": [
+          637179.22,
+          849497.9,
+          520.51
+        ]
+      },
+      "firstPositions": [
+        637177.98,
+        849393.9500000001,
+        411.19,
+        637177.3,
+        849396.9500000001,
+        411.25,
+        637176.34,
+        849400.84,
+        411.01
+      ],
+      "firstColors": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "webGpuAdapterAvailable": false
+  },
+  {
+    "engine": "firefox",
+    "mode": "source",
+    "positiveFresh": true,
+    "cachedControlFresh": false,
+    "runs": [
+      {
+        "cached": false,
+        "created": 1,
+        "heaps": [
+          {
+            "module": 1,
+            "memory": 1,
+            "buffer": 1,
+            "heapBytes": 7274496
+          },
+          {
+            "module": 2,
+            "memory": 2,
+            "buffer": 2,
+            "heapBytes": 7274496
+          }
+        ],
+        "outputs": [
+          {
+            "count": 110000,
+            "positions": "73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23",
+            "colors": "d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"
+          },
+          {
+            "count": 110000,
+            "positions": "73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23",
+            "colors": "d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"
+          }
+        ]
+      },
+      {
+        "cached": true,
+        "created": 1,
+        "heaps": [
+          {
+            "module": 1,
+            "memory": 1,
+            "buffer": 1,
+            "heapBytes": 7274496
+          },
+          {
+            "module": 1,
+            "memory": 1,
+            "buffer": 1,
+            "heapBytes": 7274496
+          }
+        ],
+        "outputs": [
+          {
+            "count": 110000,
+            "positions": "73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23",
+            "colors": "d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"
+          },
+          {
+            "count": 110000,
+            "positions": "73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23",
+            "colors": "d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"
+          }
+        ]
+      }
+    ],
+    "expected": {
+      "count": 110000,
+      "positionsSha256": "73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23",
+      "colorsSha256": "d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b",
+      "bounds": {
+        "min": [
+          636001.76,
+          848935.2000000001,
+          406.26
+        ],
+        "max": [
+          637179.22,
+          849497.9,
+          520.51
+        ]
+      },
+      "firstPositions": [
+        637177.98,
+        849393.9500000001,
+        411.19,
+        637177.3,
+        849396.9500000001,
+        411.25,
+        637176.34,
+        849400.84,
+        411.01
+      ],
+      "firstColors": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "webGpuAdapterAvailable": false
+  },
+  {
+    "engine": "firefox",
+    "mode": "dist",
+    "positiveFresh": true,
+    "cachedControlFresh": false,
+    "runs": [
+      {
+        "cached": false,
+        "created": 1,
+        "heaps": [
+          {
+            "module": 1,
+            "memory": 1,
+            "buffer": 1,
+            "heapBytes": 7274496
+          },
+          {
+            "module": 2,
+            "memory": 2,
+            "buffer": 2,
+            "heapBytes": 7274496
+          }
+        ],
+        "outputs": [
+          {
+            "count": 110000,
+            "positions": "73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23",
+            "colors": "d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"
+          },
+          {
+            "count": 110000,
+            "positions": "73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23",
+            "colors": "d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"
+          }
+        ]
+      },
+      {
+        "cached": true,
+        "created": 1,
+        "heaps": [
+          {
+            "module": 1,
+            "memory": 1,
+            "buffer": 1,
+            "heapBytes": 7274496
+          },
+          {
+            "module": 1,
+            "memory": 1,
+            "buffer": 1,
+            "heapBytes": 7274496
+          }
+        ],
+        "outputs": [
+          {
+            "count": 110000,
+            "positions": "73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23",
+            "colors": "d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"
+          },
+          {
+            "count": 110000,
+            "positions": "73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23",
+            "colors": "d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b"
+          }
+        ]
+      }
+    ],
+    "expected": {
+      "count": 110000,
+      "positionsSha256": "73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23",
+      "colorsSha256": "d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b",
+      "bounds": {
+        "min": [
+          636001.76,
+          848935.2000000001,
+          406.26
+        ],
+        "max": [
+          637179.22,
+          849497.9,
+          520.51
+        ]
+      },
+      "firstPositions": [
+        637177.98,
+        849393.9500000001,
+        411.19,
+        637177.3,
+        849396.9500000001,
+        411.25,
+        637176.34,
+        849400.84,
+        411.01
+      ],
+      "firstColors": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    "webGpuAdapterAvailable": false
+  }
+]

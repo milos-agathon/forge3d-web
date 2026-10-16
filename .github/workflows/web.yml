@@ -17,7 +17,9 @@ jobs:
   build-and-contract:
     name: Web Runtime / Build And Contract Tests
     runs-on: windows-latest
-    timeout-minutes: 30
+    # The full corpus and bounded live-download retries exceed 40m on slower runners.
+    # Only the outer job budget changes; per-test deadlines and runtime budgets stay fixed.
+    timeout-minutes: 60
 
     steps:
       - name: Check out the protected source
@@ -35,6 +37,10 @@ jobs:
           cache: npm
           cache-dependency-path: crates/forge3d-web/package-lock.json
 
+      - name: Verify composite parity manifest
+        working-directory: crates/forge3d-web
+        run: npm run verify:parity
+
       - name: Check core no-default wasm build
         run: cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-features
 
@@ -43,6 +49,9 @@ jobs:
 
       - name: Test core GPU contracts
         run: cargo test -p forge3d-core --features gpu
+
+      - name: Test core WebGPU contracts (camera, lighting, shadows, native oracles)
+        run: cargo test -p forge3d-core --features webgpu
 
       - name: Test web crate contracts
         run: cargo test -p forge3d-web
@@ -94,6 +103,91 @@ jobs:
           FORGE3D_PACKAGE_GATE_MODE: probe
         run: npm run test:package-consumer
 
+      - name: Test W13 installed labels and shaping assets
+        working-directory: crates/forge3d-web
+        run: npm run test:package-consumer:w13
+
+      - name: Test W14 installed CRS, dataset integrity and offline workers
+        working-directory: crates/forge3d-web
+        run: npm run test:package-consumer:w14
+
+      - name: Test W15 installed geometry, mesh IO and building workflows
+        working-directory: crates/forge3d-web
+        run: npm run test:package-consumer:w15
+
+      - name: Test W16 installed point clouds and 3D Tiles conformance
+        working-directory: crates/forge3d-web
+        run: npm run test:package-consumer:w16
+
+      - name: Test W21 installed offline licensing, PNG utilities and benchmarks
+        id: w21-installed
+        working-directory: crates/forge3d-web
+        run: npm run test:package-consumer:w21
+
+      - name: Upload W21 installed-tarball evidence
+        if: always() && steps.w21-installed.outcome != 'skipped'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: forge3d-web-w21-installed
+          path: |
+            crates/forge3d-web/test-results/w21-package-consumer.json
+            crates/forge3d-web/test-results/w21-installed-playwright.json
+            crates/forge3d-web/test-results/w21-installed-output
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Test W19 installed styles, bundles and review variants
+        id: w19-installed
+        working-directory: crates/forge3d-web
+        run: npm run test:package-consumer:w19
+
+      - name: Upload W19 installed-tarball evidence
+        if: always() && steps.w19-installed.outcome != 'skipped'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: forge3d-web-w19-installed
+          path: |
+            crates/forge3d-web/test-results/w19-package-consumer.json
+            crates/forge3d-web/test-results/w19-installed-playwright.json
+            crates/forge3d-web/test-results/w19-installed-output
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Install independent W20 PDF renderer
+        working-directory: crates/forge3d-web
+        run: python -m pip install -r scripts/requirements-w20.txt
+
+      - name: Test W20 installed cartographic exports and worker composition
+        id: w20-installed
+        working-directory: crates/forge3d-web
+        run: npm run test:package-consumer:w20
+
+      - name: Upload W20 installed cartography evidence
+        if: always() && steps.w20-installed.outcome != 'skipped'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: forge3d-web-w20-installed
+          path: |
+            crates/forge3d-web/test-results/w20-package-consumer.json
+            crates/forge3d-web/test-results/w20-installed-playwright.json
+            crates/forge3d-web/test-results/w20-pdf-render.json
+            crates/forge3d-web/test-results/w20-bundled-consumer.json
+            crates/forge3d-web/test-results/w20-installed-output
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Fuzz pinned W16 LAZ chunks through owned workers
+        working-directory: crates/forge3d-web
+        env:
+          FORGE3D_REVIEW_SHA: ${{ github.sha }}
+          FORGE3D_W16_FUZZ_REPORT: test-results/w16-laz-fuzz.json
+        run: node scripts/fuzz-w16-laz.mjs
+
+      - name: Fetch all W14 remote datasets through default registry URLs
+        working-directory: crates/forge3d-web
+        timeout-minutes: 10
+        run: npm run test:datasets:remote
+
       - name: Upload exact-tarball browser evidence
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
@@ -106,7 +200,9 @@ jobs:
     name: Web Runtime / Browser Preflight
     needs: build-and-contract
     runs-on: macos-15
-    timeout-minutes: 25
+    # The pre-W22 two-engine corpus already takes about 123 minutes on hosted macOS.
+    # Allow W22 full-resolution coverage and runner variation; per-test budgets stay fixed.
+    timeout-minutes: 180
 
     steps:
       - name: Check out the protected source
@@ -147,6 +243,12 @@ jobs:
           echo "Playwright tests evaluate navigator.gpu before render assertions"
           npm run test:browser:chromium -- --grep "reports browser WebGPU diagnostics"
 
+      - name: Probe W19 native migration in Chromium before the full corpus
+        working-directory: crates/forge3d-web
+        env:
+          FORGE3D_WEBGPU_REQUIRED: "1"
+        run: npx playwright test tests/playwright/w19_style_bundle.spec.ts --project=chromium-preflight --grep native-saver --max-failures=1
+
       - name: Run bundled Chromium preflight (ENGINE_PASS only)
         working-directory: crates/forge3d-web
         env:
@@ -174,6 +276,13 @@ jobs:
           echo "Bundled Playwright Firefox runs with default preferences and can produce ENGINE_PASS-only evidence"
           echo "It is not branded Firefox, physical-browser, or exact-tarball support evidence"
           npm run test:browser:firefox-preflight -- --grep "reports browser WebGPU diagnostics"
+
+      - name: Probe W19 native migration in Firefox before the full corpus
+        working-directory: crates/forge3d-web
+        env:
+          FORGE3D_HEADED: "1"
+          FORGE3D_WEBGPU_REQUIRED: "1"
+        run: npx playwright test tests/playwright/w19_style_bundle.spec.ts --project=firefox-preflight --grep native-saver --max-failures=1
 
       - name: Run bundled Firefox preflight with default preferences (ENGINE_PASS only)
         working-directory: crates/forge3d-web

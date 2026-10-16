@@ -1,0 +1,1269 @@
+{
+  "fixture": "terrain-material-v1",
+  "provenance": {
+    "generator": "crates/forge3d-web/scripts/generate-w07-material-goldens.py",
+    "native": "forge3d 1.34.0 TerrainRenderer.render_terrain_pbr_pom (screen mode)",
+    "nativeTests": [
+      "1f4084a:tests/test_terrain_viewer_pbr.py",
+      "1f4084a:tests/test_terrain_materials.py",
+      "1f4084a:tests/test_terrain_tv4_material_variation.py",
+      "1f4084a:tests/test_terrain_tv10_subsurface_materials.py"
+    ],
+    "materialSet": "MaterialSet.terrain_default()"
+  },
+  "tolerances": {
+    "ssimMin": 0.98,
+    "deltaFraction": 0.5
+  },
+  "scenes": {
+    "w04": {
+      "width": 192,
+      "height": 128,
+      "terrainSpan": 2.8,
+      "zScale": 1.45,
+      "sun": {
+        "azimuthDeg": 135.0,
+        "elevationDeg": 24.0,
+        "intensity": 2.4
+      },
+      "camera": {
+        "radius": 5.0,
+        "phiDeg": 138.0,
+        "thetaDeg": 63.0,
+        "fovDeg": 54.0
+      },
+      "stops": [
+        [
+          0.0,
+          "#18391f"
+        ],
+        [
+          0.38,
+          "#4e7c35"
+        ],
+        [
+          0.65,
+          "#8f7a4a"
+        ],
+        [
+          0.82,
+          "#b8ac88"
+        ],
+        [
+          1.0,
+          "#f2f4f7"
+        ]
+      ],
+      "hdrBlue": 128,
+      "clip": [
+        0.1,
+        6000.0
+      ],
+      "heightsFile": "w04_heights.f32",
+      "terrainSize": 96,
+      "heightsSha256": "31ee3f97e6593e72edba8fa77777815c8bc614b67a3ec3e9ae15eab74f86d1b1"
+    },
+    "tv4": {
+      "width": 224,
+      "height": 160,
+      "terrainSpan": 2.8,
+      "zScale": 1.35,
+      "sun": {
+        "azimuthDeg": 136.0,
+        "elevationDeg": 20.0,
+        "intensity": 2.3
+      },
+      "camera": {
+        "radius": 5.2,
+        "phiDeg": 140.0,
+        "thetaDeg": 58.0,
+        "fovDeg": 52.0
+      },
+      "stops": [
+        [
+          0.0,
+          "#17351b"
+        ],
+        [
+          0.2,
+          "#3a632d"
+        ],
+        [
+          0.48,
+          "#69733d"
+        ],
+        [
+          0.68,
+          "#8f7b53"
+        ],
+        [
+          0.86,
+          "#c2b29a"
+        ],
+        [
+          1.0,
+          "#f4f7fb"
+        ]
+      ],
+      "hdrBlue": 164,
+      "clip": [
+        0.1,
+        6000.0
+      ],
+      "heightsFile": "tv4_heights.f32",
+      "terrainSize": 128,
+      "heightsSha256": "d6f587fb101c59272848a7c7a52fa157067d12316081f782237dafd7e39ff771"
+    },
+    "tv10-snow": {
+      "width": 224,
+      "height": 160,
+      "terrainSpan": 3.2,
+      "zScale": 1.45,
+      "sun": {
+        "azimuthDeg": 132.0,
+        "elevationDeg": 11.0,
+        "intensity": 2.8
+      },
+      "camera": {
+        "radius": 5.6,
+        "phiDeg": 306.0,
+        "thetaDeg": 58.0,
+        "fovDeg": 50.0
+      },
+      "stops": [
+        [
+          0.0,
+          "#23371f"
+        ],
+        [
+          0.22,
+          "#476438"
+        ],
+        [
+          0.46,
+          "#77805a"
+        ],
+        [
+          0.7,
+          "#b1a07c"
+        ],
+        [
+          0.86,
+          "#d8d4ce"
+        ],
+        [
+          1.0,
+          "#f6f9ff"
+        ]
+      ],
+      "hdrBlue": 164,
+      "clip": [
+        0.1,
+        6000.0
+      ],
+      "heightsFile": "snow_heights.f32",
+      "terrainSize": 160,
+      "heightsSha256": "ba2b790b575967ba9e16280410a18cbc2e9e5aefa563b3233350ac8b37ad2dba"
+    },
+    "tv10-wet": {
+      "width": 224,
+      "height": 160,
+      "terrainSpan": 3.2,
+      "zScale": 1.45,
+      "sun": {
+        "azimuthDeg": 118.0,
+        "elevationDeg": 10.0,
+        "intensity": 2.6
+      },
+      "camera": {
+        "radius": 5.6,
+        "phiDeg": 300.0,
+        "thetaDeg": 56.0,
+        "fovDeg": 50.0
+      },
+      "stops": [
+        [
+          0.0,
+          "#23371f"
+        ],
+        [
+          0.22,
+          "#476438"
+        ],
+        [
+          0.46,
+          "#77805a"
+        ],
+        [
+          0.7,
+          "#b1a07c"
+        ],
+        [
+          0.86,
+          "#d8d4ce"
+        ],
+        [
+          1.0,
+          "#f6f9ff"
+        ]
+      ],
+      "hdrBlue": 164,
+      "clip": [
+        0.1,
+        6000.0
+      ],
+      "heightsFile": "snow_heights.f32",
+      "terrainSize": 160,
+      "heightsSha256": "ba2b790b575967ba9e16280410a18cbc2e9e5aefa563b3233350ac8b37ad2dba"
+    },
+    "tv10-glacier": {
+      "width": 224,
+      "height": 160,
+      "terrainSpan": 3.2,
+      "zScale": 1.45,
+      "sun": {
+        "azimuthDeg": 42.0,
+        "elevationDeg": 8.0,
+        "intensity": 3.1
+      },
+      "camera": {
+        "radius": 5.6,
+        "phiDeg": 222.0,
+        "thetaDeg": 54.0,
+        "fovDeg": 50.0
+      },
+      "stops": [
+        [
+          0.0,
+          "#23371f"
+        ],
+        [
+          0.22,
+          "#476438"
+        ],
+        [
+          0.46,
+          "#77805a"
+        ],
+        [
+          0.7,
+          "#b1a07c"
+        ],
+        [
+          0.86,
+          "#d8d4ce"
+        ],
+        [
+          1.0,
+          "#f6f9ff"
+        ]
+      ],
+      "hdrBlue": 164,
+      "clip": [
+        0.1,
+        6000.0
+      ],
+      "heightsFile": "glacier_heights.f32",
+      "terrainSize": 160,
+      "heightsSha256": "610c1a7f5aec04610c19941bdc8a89dc3c4e04a2975a1a69f6aff10a730504c3"
+    },
+    "tv10h-a": {
+      "width": 240,
+      "height": 160,
+      "terrainSpan": 2.9,
+      "zScale": 1.45,
+      "sun": {
+        "azimuthDeg": 132.0,
+        "elevationDeg": 11.0,
+        "intensity": 2.6
+      },
+      "camera": {
+        "radius": 4.2,
+        "phiDeg": 138.0,
+        "thetaDeg": 42.0,
+        "fovDeg": 42.0
+      },
+      "stops": [
+        [
+          0.0,
+          "#1b381d"
+        ],
+        [
+          0.22,
+          "#416a30"
+        ],
+        [
+          0.5,
+          "#7d7a4b"
+        ],
+        [
+          0.72,
+          "#b6a98d"
+        ],
+        [
+          1.0,
+          "#f4f7fb"
+        ]
+      ],
+      "hdrBlue": 180,
+      "clip": [
+        0.1,
+        6000.0
+      ],
+      "heightsFile": "tv10_golden_heights.f32",
+      "terrainSize": 144,
+      "heightsSha256": "7e03b69c95995167a85be809c4c7730307abffacdba60209f6a8e54558dad3ae"
+    },
+    "tv10h-b": {
+      "width": 240,
+      "height": 160,
+      "terrainSpan": 2.9,
+      "zScale": 1.45,
+      "sun": {
+        "azimuthDeg": 214.0,
+        "elevationDeg": 9.0,
+        "intensity": 2.8
+      },
+      "camera": {
+        "radius": 4.5,
+        "phiDeg": 218.0,
+        "thetaDeg": 38.0,
+        "fovDeg": 40.0
+      },
+      "stops": [
+        [
+          0.0,
+          "#1b381d"
+        ],
+        [
+          0.22,
+          "#416a30"
+        ],
+        [
+          0.5,
+          "#7d7a4b"
+        ],
+        [
+          0.72,
+          "#b6a98d"
+        ],
+        [
+          1.0,
+          "#f4f7fb"
+        ]
+      ],
+      "hdrBlue": 180,
+      "clip": [
+        0.1,
+        6000.0
+      ],
+      "heightsFile": "tv10_golden_heights.f32",
+      "terrainSize": 144,
+      "heightsSha256": "7e03b69c95995167a85be809c4c7730307abffacdba60209f6a8e54558dad3ae"
+    },
+    "pomh": {
+      "renderScale": 1.25,
+      "msaa": 4,
+      "width": 256,
+      "height": 160,
+      "terrainSpan": 2.8,
+      "zScale": 1.45,
+      "sun": {
+        "azimuthDeg": 135.0,
+        "elevationDeg": 22.0,
+        "intensity": 2.4
+      },
+      "camera": {
+        "radius": 4.2,
+        "phiDeg": 142.0,
+        "thetaDeg": 38.0,
+        "fovDeg": 54.0
+      },
+      "stops": [
+        [
+          0.0,
+          "#18391f"
+        ],
+        [
+          0.38,
+          "#4e7c35"
+        ],
+        [
+          0.65,
+          "#8f7a4a"
+        ],
+        [
+          0.82,
+          "#b8ac88"
+        ],
+        [
+          1.0,
+          "#f2f4f7"
+        ]
+      ],
+      "hdrBlue": 128,
+      "clip": [
+        0.1,
+        6000.0
+      ],
+      "heightsFile": "w04_heights.f32",
+      "terrainSize": 96,
+      "heightsSha256": "31ee3f97e6593e72edba8fa77777815c8bc614b67a3ec3e9ae15eab74f86d1b1"
+    }
+  },
+  "variants": [
+    {
+      "id": "w04-baseline",
+      "scene": "w04",
+      "baseline": null,
+      "material": {},
+      "note": "zero-feature material; equals the W04 golden",
+      "png": "w04-baseline.png",
+      "sha256": "783202b7fdc68a58f8b6f290b281090433ec07c7442f329fede6c0769dafd866"
+    },
+    {
+      "id": "w04-albedo-material",
+      "scene": "w04",
+      "baseline": "w04-baseline",
+      "material": {
+        "albedoMode": "material"
+      },
+      "note": "",
+      "png": "w04-albedo-material.png",
+      "sha256": "b39cd477947ccb3b8f728e4d9ee2e8ca5f5f9ef725dc1428c087efefb26a8a64",
+      "nativeDelta": 52.9392,
+      "minDelta": 26.4696
+    },
+    {
+      "id": "w04-albedo-mix",
+      "scene": "w04",
+      "baseline": "w04-baseline",
+      "material": {
+        "albedoMode": "mix",
+        "colormapStrength": 0.5
+      },
+      "note": "",
+      "png": "w04-albedo-mix.png",
+      "sha256": "ab1d69658ef9b1a68df6e921dc8f9373efba2c50b1ef5a4658bcd9aa6ddc498f",
+      "nativeDelta": 21.6123,
+      "minDelta": 10.8061
+    },
+    {
+      "id": "w04-pom",
+      "scene": "w04",
+      "baseline": "w04-baseline",
+      "material": {
+        "pom": {
+          "enabled": true,
+          "mode": "occlusion",
+          "scale": 0.04,
+          "minSteps": 12,
+          "maxSteps": 40,
+          "refineSteps": 4,
+          "shadow": true,
+          "occlusion": true
+        }
+      },
+      "note": "",
+      "png": "w04-pom.png",
+      "sha256": "d9e6b4dbb6b4d85a6fdf501f6e9b4659f6f115a295b455bbdc42039df52aba1e",
+      "nativeDelta": 19.7861,
+      "minDelta": 9.893
+    },
+    {
+      "id": "w04-height-curve-smoothstep",
+      "scene": "w04",
+      "baseline": "w04-baseline",
+      "material": {
+        "heightCurve": {
+          "mode": "smoothstep",
+          "strength": 1.0
+        }
+      },
+      "note": "",
+      "png": "w04-height-curve-smoothstep.png",
+      "sha256": "8afbcc47d98ef4a154bf0ee64d239699cdef7ecff87836410021e4e9c4700478",
+      "nativeDelta": 1.0729,
+      "minDelta": 0.5364
+    },
+    {
+      "id": "w04-height-curve-pow",
+      "scene": "w04",
+      "baseline": "w04-baseline",
+      "material": {
+        "heightCurve": {
+          "mode": "pow",
+          "strength": 0.8,
+          "power": 2.2
+        }
+      },
+      "note": "",
+      "png": "w04-height-curve-pow.png",
+      "sha256": "328d637a04e34dcca51319f58078986fe5d9cad4999feeeb141f1d656d05d47b",
+      "nativeDelta": 0.4808,
+      "minDelta": 0.2404
+    },
+    {
+      "id": "w04-height-curve-lut",
+      "scene": "w04",
+      "baseline": "w04-baseline",
+      "material": {
+        "heightCurve": {
+          "mode": "lut",
+          "strength": 1.0,
+          "lut": [
+            0.0,
+            0.062622,
+            0.088561,
+            0.108465,
+            0.125245,
+            0.140028,
+            0.153393,
+            0.165683,
+            0.177123,
+            0.187867,
+            0.19803,
+            0.207695,
+            0.21693,
+            0.225788,
+            0.234312,
+            0.242536,
+            0.25049,
+            0.258199,
+            0.265684,
+            0.272965,
+            0.280056,
+            0.286972,
+            0.293725,
+            0.300327,
+            0.306786,
+            0.313112,
+            0.319313,
+            0.325396,
+            0.331367,
+            0.337232,
+            0.342997,
+            0.348667,
+            0.354246,
+            0.359738,
+            0.365148,
+            0.370479,
+            0.375735,
+            0.380917,
+            0.386031,
+            0.391077,
+            0.396059,
+            0.400979,
+            0.40584,
+            0.410643,
+            0.41539,
+            0.420084,
+            0.424726,
+            0.429318,
+            0.433861,
+            0.438357,
+            0.442807,
+            0.447214,
+            0.451577,
+            0.455898,
+            0.460179,
+            0.46442,
+            0.468623,
+            0.472789,
+            0.476918,
+            0.481012,
+            0.485071,
+            0.489097,
+            0.493089,
+            0.49705,
+            0.500979,
+            0.504878,
+            0.508747,
+            0.512587,
+            0.516398,
+            0.520181,
+            0.523937,
+            0.527666,
+            0.531369,
+            0.535046,
+            0.538699,
+            0.542326,
+            0.54593,
+            0.54951,
+            0.553066,
+            0.5566,
+            0.560112,
+            0.563602,
+            0.56707,
+            0.570517,
+            0.573944,
+            0.57735,
+            0.580737,
+            0.584103,
+            0.58745,
+            0.590779,
+            0.594089,
+            0.59738,
+            0.600653,
+            0.603909,
+            0.607147,
+            0.610368,
+            0.613572,
+            0.616759,
+            0.61993,
+            0.623085,
+            0.626224,
+            0.629348,
+            0.632456,
+            0.635548,
+            0.638626,
+            0.641689,
+            0.644737,
+            0.647771,
+            0.650791,
+            0.653797,
+            0.65679,
+            0.659768,
+            0.662733,
+            0.665686,
+            0.668625,
+            0.671551,
+            0.674464,
+            0.677365,
+            0.680254,
+            0.68313,
+            0.685994,
+            0.688847,
+            0.691687,
+            0.694516,
+            0.697334,
+            0.70014,
+            0.702935,
+            0.705719,
+            0.708492,
+            0.711254,
+            0.714006,
+            0.716746,
+            0.719477,
+            0.722197,
+            0.724907,
+            0.727607,
+            0.730297,
+            0.732977,
+            0.735647,
+            0.738308,
+            0.740959,
+            0.7436,
+            0.746232,
+            0.748855,
+            0.751469,
+            0.754074,
+            0.75667,
+            0.759257,
+            0.761835,
+            0.764404,
+            0.766965,
+            0.769517,
+            0.772061,
+            0.774597,
+            0.777124,
+            0.779643,
+            0.782154,
+            0.784657,
+            0.787152,
+            0.789639,
+            0.792118,
+            0.79459,
+            0.797053,
+            0.79951,
+            0.801958,
+            0.8044,
+            0.806834,
+            0.80926,
+            0.811679,
+            0.814092,
+            0.816497,
+            0.818895,
+            0.821285,
+            0.823669,
+            0.826047,
+            0.828417,
+            0.83078,
+            0.833137,
+            0.835487,
+            0.837831,
+            0.840168,
+            0.842499,
+            0.844823,
+            0.847141,
+            0.849452,
+            0.851757,
+            0.854056,
+            0.856349,
+            0.858635,
+            0.860916,
+            0.863191,
+            0.865459,
+            0.867722,
+            0.869979,
+            0.87223,
+            0.874475,
+            0.876714,
+            0.878948,
+            0.881176,
+            0.883398,
+            0.885615,
+            0.887826,
+            0.890032,
+            0.892232,
+            0.894427,
+            0.896617,
+            0.898801,
+            0.90098,
+            0.903154,
+            0.905322,
+            0.907485,
+            0.909643,
+            0.911796,
+            0.913944,
+            0.916087,
+            0.918225,
+            0.920358,
+            0.922486,
+            0.924609,
+            0.926727,
+            0.928841,
+            0.930949,
+            0.933053,
+            0.935152,
+            0.937247,
+            0.939336,
+            0.941422,
+            0.943502,
+            0.945578,
+            0.947649,
+            0.949716,
+            0.951779,
+            0.953836,
+            0.95589,
+            0.957939,
+            0.959984,
+            0.962024,
+            0.96406,
+            0.966092,
+            0.968119,
+            0.970143,
+            0.972162,
+            0.974176,
+            0.976187,
+            0.978194,
+            0.980196,
+            0.982194,
+            0.984189,
+            0.986179,
+            0.988165,
+            0.990148,
+            0.992126,
+            0.9941,
+            0.996071,
+            0.998037,
+            1.0
+          ]
+        }
+      },
+      "note": "",
+      "png": "w04-height-curve-lut.png",
+      "sha256": "2cb0433f15fdb8398dcd2b928f4398c2c0803368bb9b0a51d19c44c4ed962cf6",
+      "nativeDelta": 2.0508,
+      "minDelta": 1.0254
+    },
+    {
+      "id": "w04-normal-strength",
+      "scene": "w04",
+      "baseline": "w04-baseline",
+      "material": {
+        "triplanar": {
+          "scale": 6.0,
+          "blendSharpness": 4.0,
+          "normalStrength": 2.5
+        }
+      },
+      "note": "",
+      "png": "w04-normal-strength.png",
+      "sha256": "a64c14a3355d2fbe3048414aee0011ec1aa42783ffc077d24d3a2032e7582388",
+      "nativeDelta": 8.7774,
+      "minDelta": 4.3887
+    },
+    {
+      "id": "w04-clamp-height",
+      "scene": "w04",
+      "baseline": "w04-baseline",
+      "material": {
+        "clamp": {
+          "heightRange": [
+            0.15,
+            0.8
+          ]
+        }
+      },
+      "note": "",
+      "png": "w04-clamp-height.png",
+      "sha256": "44f0827e74a9cb25e7c92288163997b8da7590834b23e34a66b2386cebc84cc7",
+      "nativeDelta": 0.7365,
+      "minDelta": 0.3683
+    },
+    {
+      "id": "w04-detail",
+      "scene": "w04",
+      "baseline": "w04-baseline",
+      "material": {
+        "detail": {
+          "enabled": true,
+          "scale": 0.05,
+          "normalStrength": 0.8,
+          "albedoNoise": 0.3,
+          "fadeStart": 50.0,
+          "fadeEnd": 200.0
+        }
+      },
+      "note": "",
+      "png": "w04-detail.png",
+      "sha256": "f5c90e4033f81c1140f5a9f871d6e51e67e460fc840043054c5dd920e8728c17",
+      "nativeDelta": 16.6211,
+      "minDelta": 8.3105
+    },
+    {
+      "id": "tv4-baseline",
+      "scene": "tv4",
+      "baseline": null,
+      "material": {},
+      "note": "zero-feature material",
+      "png": "tv4-baseline.png",
+      "sha256": "057021c9d56d953396baf20a74b04866fa91e42826303e1f11598dfe983fd02c"
+    },
+    {
+      "id": "tv4-snow",
+      "scene": "tv4",
+      "baseline": "tv4-baseline",
+      "material": {
+        "layers": {
+          "snow": {
+            "enabled": true,
+            "altitudeMin": 0.72,
+            "altitudeBlend": 0.14
+          }
+        }
+      },
+      "note": "",
+      "png": "tv4-snow.png",
+      "sha256": "21052c2a6a5f962ea6843ae1dee4cbfbe47efe19187b4bf64db9e2bc17bdef00",
+      "nativeDelta": 9.9847,
+      "minDelta": 4.9924
+    },
+    {
+      "id": "tv4-snow-variation",
+      "scene": "tv4",
+      "baseline": "tv4-snow",
+      "material": {
+        "layers": {
+          "snow": {
+            "enabled": true,
+            "altitudeMin": 0.72,
+            "altitudeBlend": 0.14
+          },
+          "variation": {
+            "macroScale": 4.5,
+            "detailScale": 22.0,
+            "octaves": 5,
+            "snowMacroAmplitude": 0.26,
+            "snowDetailAmplitude": 0.12
+          }
+        }
+      },
+      "note": "",
+      "png": "tv4-snow-variation.png",
+      "sha256": "ef398c381c310f5c81058d12d619fd73c298505d32ff691fd876f49c83b89606",
+      "nativeDelta": 1.9333,
+      "minDelta": 0.9666
+    },
+    {
+      "id": "tv4-rock-variation",
+      "scene": "tv4",
+      "baseline": "tv4-baseline",
+      "material": {
+        "layers": {
+          "rock": {
+            "enabled": true,
+            "slopeMin": 36.0,
+            "slopeBlend": 11.0
+          },
+          "variation": {
+            "macroScale": 3.2,
+            "detailScale": 18.0,
+            "octaves": 4,
+            "rockMacroAmplitude": 0.24,
+            "rockDetailAmplitude": 0.18
+          }
+        }
+      },
+      "note": "",
+      "png": "tv4-rock-variation.png",
+      "sha256": "68b2aa0703579162217933fc42684139290cc33dcd08bce4a421e4c6f1a89262",
+      "nativeDelta": 0.4087,
+      "minDelta": 0.2044
+    },
+    {
+      "id": "tv4-wetness",
+      "scene": "tv4",
+      "baseline": "tv4-baseline",
+      "material": {
+        "layers": {
+          "wetness": {
+            "enabled": true,
+            "strength": 0.45,
+            "slopeInfluence": 0.9
+          }
+        }
+      },
+      "note": "",
+      "png": "tv4-wetness.png",
+      "sha256": "ef1c9251c9f0a71cb08b43f5d0f36013607d4f0550b07b2dc44f40e53da7de9d",
+      "nativeDelta": 25.4389,
+      "minDelta": 12.7194
+    },
+    {
+      "id": "tv4-wetness-variation",
+      "scene": "tv4",
+      "baseline": "tv4-wetness",
+      "material": {
+        "layers": {
+          "wetness": {
+            "enabled": true,
+            "strength": 0.45,
+            "slopeInfluence": 0.9
+          },
+          "variation": {
+            "macroScale": 2.8,
+            "detailScale": 16.0,
+            "octaves": 5,
+            "wetnessMacroAmplitude": 0.3,
+            "wetnessDetailAmplitude": 0.14
+          }
+        }
+      },
+      "note": "",
+      "png": "tv4-wetness-variation.png",
+      "sha256": "36f29fa72f122c0903aff8b1e7d4d1a6fd43bd59f8d2b018efb2fdddf6e718aa",
+      "nativeDelta": 1.5782,
+      "minDelta": 0.7891
+    },
+    {
+      "id": "tv10-snow",
+      "scene": "tv10-snow",
+      "baseline": null,
+      "material": {
+        "layers": {
+          "snow": {
+            "enabled": true,
+            "altitudeMin": 0.6,
+            "altitudeBlend": 0.18,
+            "slopeMax": 58.0,
+            "slopeBlend": 18.0
+          }
+        }
+      },
+      "note": "",
+      "png": "tv10-snow.png",
+      "sha256": "92dbcb4d1239ea2ffa95ffe095e05bf93a63e4e6812d347113926ad3a27f0d1c"
+    },
+    {
+      "id": "tv10-snow-sss",
+      "scene": "tv10-snow",
+      "baseline": "tv10-snow",
+      "material": {
+        "layers": {
+          "snow": {
+            "enabled": true,
+            "altitudeMin": 0.6,
+            "altitudeBlend": 0.18,
+            "slopeMax": 58.0,
+            "slopeBlend": 18.0,
+            "subsurfaceStrength": 0.82,
+            "subsurfaceTint": [
+              0.78,
+              0.88,
+              1.0
+            ]
+          }
+        }
+      },
+      "note": "",
+      "png": "tv10-snow-sss.png",
+      "sha256": "8b882c148f71a0095244932df1b655ac95b75a5a8461686b94c093dddc56119c",
+      "nativeDelta": 6.5068,
+      "minDelta": 3.2534
+    },
+    {
+      "id": "tv10-wetness",
+      "scene": "tv10-wet",
+      "baseline": null,
+      "material": {
+        "layers": {
+          "wetness": {
+            "enabled": true,
+            "strength": 0.6,
+            "slopeInfluence": 1.0
+          }
+        }
+      },
+      "note": "",
+      "png": "tv10-wetness.png",
+      "sha256": "ad810403c523114d42403b3567e5e8b832eef1ba2d391d22ffd62c8459e1c6f4"
+    },
+    {
+      "id": "tv10-wetness-sss",
+      "scene": "tv10-wet",
+      "baseline": "tv10-wetness",
+      "material": {
+        "layers": {
+          "wetness": {
+            "enabled": true,
+            "strength": 0.6,
+            "slopeInfluence": 1.0,
+            "subsurfaceStrength": 0.6,
+            "subsurfaceTint": [
+              0.72,
+              0.8,
+              0.88
+            ]
+          }
+        }
+      },
+      "note": "",
+      "png": "tv10-wetness-sss.png",
+      "sha256": "2dd04b31729dc68c0e36c1bf21b95bf85f4f961bda2267db3fded0a816cae61e",
+      "nativeDelta": 4.1717,
+      "minDelta": 2.0858
+    },
+    {
+      "id": "tv10-glacier",
+      "scene": "tv10-glacier",
+      "baseline": null,
+      "material": {
+        "layers": {
+          "snow": {
+            "enabled": true,
+            "altitudeMin": 0.34,
+            "altitudeBlend": 0.26,
+            "slopeMax": 64.0,
+            "slopeBlend": 22.0,
+            "color": [
+              0.88,
+              0.92,
+              0.96
+            ]
+          }
+        }
+      },
+      "note": "",
+      "png": "tv10-glacier.png",
+      "sha256": "bdbd3cd2cecbee2599470d576fc8187bbc27e264248edd882322d3c53fc43487"
+    },
+    {
+      "id": "tv10-glacier-sss",
+      "scene": "tv10-glacier",
+      "baseline": "tv10-glacier",
+      "material": {
+        "layers": {
+          "snow": {
+            "enabled": true,
+            "altitudeMin": 0.34,
+            "altitudeBlend": 0.26,
+            "slopeMax": 64.0,
+            "slopeBlend": 22.0,
+            "color": [
+              0.88,
+              0.92,
+              0.96
+            ],
+            "subsurfaceStrength": 0.92,
+            "subsurfaceTint": [
+              0.58,
+              0.8,
+              1.0
+            ]
+          }
+        }
+      },
+      "note": "",
+      "png": "tv10-glacier-sss.png",
+      "sha256": "002e6cebe340f36e61efa4fcfe8af0e4cfe7ead15fc8ec2f27c3eddc13090301",
+      "nativeDelta": 18.0018,
+      "minDelta": 9.0009
+    },
+    {
+      "id": "tv10h-zero-sss",
+      "scene": "tv10h-a",
+      "baseline": null,
+      "material": {
+        "albedoMode": "mix",
+        "colormapStrength": 0.25,
+        "layers": {
+          "snow": {
+            "enabled": true,
+            "altitudeMin": 0.78,
+            "altitudeBlend": 0.24,
+            "slopeMax": 58.0,
+            "slopeBlend": 18.0,
+            "subsurfaceStrength": 0.0
+          },
+          "rock": {
+            "enabled": true,
+            "slopeMin": 38.0,
+            "slopeBlend": 10.0,
+            "subsurfaceStrength": 0.0
+          },
+          "wetness": {
+            "enabled": true,
+            "strength": 0.18,
+            "slopeInfluence": 0.45,
+            "subsurfaceStrength": 0.0
+          }
+        }
+      },
+      "note": "",
+      "png": "tv10h-zero-sss.png",
+      "sha256": "6d5a0ea53d894d47bdec42112bdb863d9bf87c0f4414b37436406173a754b90b",
+      "historical": "1f4084a:tests/golden/terrain/terrain_tv10_zero_sss.png",
+      "oracleSsim": 0.999953
+    },
+    {
+      "id": "tv10h-a-sss",
+      "scene": "tv10h-a",
+      "baseline": "tv10h-zero-sss",
+      "material": {
+        "albedoMode": "mix",
+        "colormapStrength": 0.25,
+        "layers": {
+          "snow": {
+            "enabled": true,
+            "altitudeMin": 0.78,
+            "altitudeBlend": 0.24,
+            "slopeMax": 58.0,
+            "slopeBlend": 18.0,
+            "subsurfaceStrength": 0.58,
+            "subsurfaceTint": [
+              0.72,
+              0.85,
+              0.98
+            ]
+          },
+          "rock": {
+            "enabled": true,
+            "slopeMin": 38.0,
+            "slopeBlend": 10.0,
+            "subsurfaceStrength": 0.04,
+            "subsurfaceTint": [
+              0.45,
+              0.38,
+              0.3
+            ]
+          },
+          "wetness": {
+            "enabled": true,
+            "strength": 0.18,
+            "slopeInfluence": 0.45,
+            "subsurfaceStrength": 0.16,
+            "subsurfaceTint": [
+              0.38,
+              0.27,
+              0.18
+            ]
+          }
+        }
+      },
+      "note": "",
+      "png": "tv10h-a-sss.png",
+      "sha256": "d8e983fb95443dc80247dbb1dc4cf024cc292ae688c2a614f503fa3cf2b27dda",
+      "historical": "1f4084a:tests/golden/terrain/terrain_tv10_scene_a_sss.png",
+      "oracleSsim": 0.998503,
+      "nativeDelta": 0.5544,
+      "minDelta": 0.2772
+    },
+    {
+      "id": "tv10h-b-sss",
+      "scene": "tv10h-b",
+      "baseline": null,
+      "material": {
+        "albedoMode": "mix",
+        "colormapStrength": 0.25,
+        "layers": {
+          "snow": {
+            "enabled": true,
+            "altitudeMin": 0.78,
+            "altitudeBlend": 0.24,
+            "slopeMax": 58.0,
+            "slopeBlend": 18.0,
+            "subsurfaceStrength": 0.58,
+            "subsurfaceTint": [
+              0.72,
+              0.85,
+              0.98
+            ]
+          },
+          "rock": {
+            "enabled": true,
+            "slopeMin": 38.0,
+            "slopeBlend": 10.0,
+            "subsurfaceStrength": 0.04,
+            "subsurfaceTint": [
+              0.45,
+              0.38,
+              0.3
+            ]
+          },
+          "wetness": {
+            "enabled": true,
+            "strength": 0.18,
+            "slopeInfluence": 0.45,
+            "subsurfaceStrength": 0.16,
+            "subsurfaceTint": [
+              0.38,
+              0.27,
+              0.18
+            ]
+          }
+        }
+      },
+      "note": "",
+      "png": "tv10h-b-sss.png",
+      "sha256": "2c78d58642cc6d03eef3e4191ae4ace6894953aba91de36adc6ae21886108a76",
+      "historical": "1f4084a:tests/golden/terrain/terrain_tv10_scene_b_sss.png",
+      "oracleSsim": 0.999983
+    },
+    {
+      "id": "pomh-material",
+      "scene": "pomh",
+      "baseline": null,
+      "material": {
+        "albedoMode": "material",
+        "colormapStrength": 0.0,
+        "pom": {
+          "enabled": true,
+          "mode": "occlusion",
+          "scale": 0.05,
+          "minSteps": 12,
+          "maxSteps": 40,
+          "refineSteps": 4,
+          "shadow": true,
+          "occlusion": true
+        }
+      },
+      "note": "",
+      "png": "pomh-material.png",
+      "sha256": "a87cb7e513eda4f79b44ebcc40437dd12a8600db807cad29c8979c719c01146c",
+      "historical": "1f4084a:tests/golden/terrain/terrain_pom.png",
+      "oracleSsim": 0.984938
+    }
+  ]
+}

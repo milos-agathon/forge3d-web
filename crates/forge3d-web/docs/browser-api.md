@@ -10,7 +10,19 @@ policy, and engine-neutral test harness. Browser-family support remains subject
 to its own branded and physical release evidence; code completion alone is not
 a platform support claim.
 
+For offline Ed25519 licenses, Pro gates, exact PNG/array helpers and public operation benchmarks, see [browser utilities](utilities.md).
+
 ## Public API
+
+For typed recipes, validated multilayer PNG output, deterministic support reports,
+resource ownership and review records, see [MapScene and diagnostics](mapscene-diagnostics.md).
+For `MapScene.saveBundle`, `MapScene.loadBundle`, local Mapbox styles and atomic review variants, see [styles and bundles](styles-bundles.md).
+
+For W09 population, wind, local SH/reflection lighting, reports and recovery,
+see [Terrain scatter and probes](terrain-scatter-probes.md).
+`Forge3DWorkerRenderer.setCamera(camera): Promise<void>` copies the camera to
+the worker session. Await it before `render()` or `readRgba()`; the retained
+camera is replayed with the scene after worker recovery.
 
 ```ts
 import {
@@ -97,6 +109,9 @@ surface is:
 - `runtime.render(): boolean` (`true` only when commands were submitted and
   presented; `false` for a timeout/occluded surface)
 - `runtime.screenshot(): Promise<Blob>`
+- `runtime.readTerrainHeights(): Promise<Float32Array>`
+- `runtime.computeTerrainAnalysis(terrain, request): Promise<TerrainComputeResult>`
+- `runtime.readTerrainAnalysis(kind): Promise<TerrainScalarField>`
 - `runtime.dispose(): void`
 - `runtime.disposed`, `runtime.width`, `runtime.height`, and `runtime.diagnosticsEnabled`
 - `runtime.clearColor(): [number, number, number, number]`
@@ -166,6 +181,14 @@ normal page or browser gesture, and Forge3D neither intercepts nor claims it as
 viewer zoom. Shipping Safari remains Unsupported/`NOT_PROVEN` until the guarded
 physical release matrix is actually published.
 
+Pressing `KeyV` (configurable through `controls.bindings.toggleMode`)
+switches between orbit and fly (FPS) control without moving the view. In fly
+mode, dragging looks around, `W`/`S` or Up/Down move along the view direction,
+`A`/`D` or Left/Right strafe, `E`/`Q` rise and descend, Shift doubles the
+speed, and Home resets the fly view. Held movement keys keep the viewer's single
+owned animation frame alive and stop it when released, blurred, suspended, or
+disposed; one frame never applies more than 0.1 s of movement.
+
 `Forge3DViewer.render()` marks the viewer dirty and schedules at most one
 animation frame; it does not submit synchronously. `setTerrain()`, a successfully
 resolved `setTerrainFromSource()`, `setView()`, `resetView()`, and `resize()`
@@ -198,6 +221,16 @@ states whether actual document transitions occurred and always marks itself as
 non-promotional. Synthetic proof establishes
 source/package behavior only; even a headed result must be incorporated into the separately attested branded, physical browser
 and GPU matrix before it can contribute to a support claim.
+
+The physical SAF-03 lane is distinct. It drives shipping Safari with the exact
+Selenium 4.35.0 client and Apple's SafariDriver, records every native action
+with camera/frame/decoded-pixel before-and-after evidence, and runs separate
+30-cycle real-tab visibility and persisted-true BFCache sequences. A separately
+labelled persisted-false refresh proves cold initialization is not counted as a
+restore. The versioned proof retains native and viewer screenshot digests plus
+the complete raw FND-07 benchmark and is revalidated across each evidence
+boundary. Safari Technology Preview is an optional, separately inventoried
+probe and never substitutes for shipping Safari.
 
 ## Viewer Lifecycle And Recovery
 
@@ -272,7 +305,659 @@ Byte-source terrain inputs are asynchronously read before the same terrain
 validation and GPU upload path is used.
 
 `setTerrain(terrain)` accepts an optional `colorRamp` with 2-8 ordered stops.
-Stop positions and RGB channels use normalized `0..1` values.
+Stop positions and RGB channels use normalized `0..1` values. The named
+`colormap` input (`"viridis"`, `"magma"`, `"terrain"`, or `"grayscale"`) is
+normalized to explicit stops by the facade before crossing the WASM boundary;
+supplying `colormap` and `colorRamp` together is `INVALID_INPUT`.
+
+## Terrain Datasets (W03)
+
+`TerrainDataset` is a typed DEM container with validated metadata and CPU
+analysis. Heights are little-endian f32 elevation samples in row-major order
+(row 0 is z-min; rows increase toward north/+z). `spacing` is the physical
+cell size in meters
+(default `[1, 1]`), `exaggeration` scales rendered height above the domain
+minimum (default `1`), and `domain` is the valid `[min, max]` elevation range
+used for normalization and color mapping (default: observed valid minimum and
+maximum). `nodata` marks invalid samples; `NaN` and the numeric marker are
+excluded from statistics while positive and negative infinity are
+`INVALID_INPUT`. `crs`, `transform`, and `bounds` are retained metadata.
+
+```ts
+import { TerrainDataset } from "@forge3d/web";
+
+const dataset = TerrainDataset.fromArray({
+  width: 257,
+  height: 257,
+  heights,
+  spacing: [30, 30],
+  nodata: -9999,
+  crs: "EPSG:32633",
+  colormap: "terrain",
+});
+
+const fromBytes = await TerrainDataset.fromSource({
+  width: 257,
+  height: 257,
+  source: fileOrBlobOrArrayBufferOrUrl,
+  signal: controller.signal,
+  onProgress: ({ loaded, total, done }) => {},
+  maxBytes: 64 * 1024 * 1024,
+});
+```
+
+- `TerrainDataset.fromArray(input)` retains the input `Float32Array`
+  (`dataset.heights === input.heights`) and performs no second full-sized
+  allocation.
+- `TerrainDataset.fromSource(input, { workerPool })` decodes exact
+  little-endian f32 bytes from a `string`/`URL` (fetched), `File`, `Blob`, or
+  `ArrayBuffer`. Wrong byte counts reject
+  with `IO_ERROR`, cancellation with `REQUEST_CANCELLED`, `maxBytes` overflow
+  with `RESOURCE_LIMIT_EXCEEDED`, and invalid metadata or source types with
+  `INVALID_INPUT`. With a `Forge3DWorkerPool` the owned byte buffer is
+  transferred into the worker and back without an extra clone;
+  `createTerrainDatasetWorkerHandler()` serves that payload.
+- `dataset.statistics` reports `min`, `max`, `mean`, population `std`,
+  `median`, `p01`, `p99`, valid `count`, and `nodataCount` over valid samples.
+- `dataset.validMask()`, `dataset.normalize(options)`, and
+  `dataset.fillNodata("nearest" | "mean")` never mutate the source; the
+  derived calls return new datasets. `nearest` fill is deterministic nearest
+  Euclidean valid cell with row-major tie-breaking.
+- `dataset.slopeAspect()` returns per-cell slope and downslope aspect in
+  radians (x = east, grid row = north, aspect clockwise from north in
+  `[0, 2π)`, flat cells `0`; invalid cells `NaN`). Central differences are
+  used in the interior and one-sided differences at boundaries, in physical
+  spacing units.
+- `dataset.contours(levels)` runs marching squares in physical centered
+  coordinates and returns deterministic segment polylines.
+- `dataset.query(x, z)` bilinearly interpolates elevation in physical world
+  coordinates and reports `slopeRadians`, `aspectRadians`, `worldPosition`,
+  `normal`, and `gridPosition`; outside the extent it returns `undefined`.
+- `dataset.heightAo(options)` and `dataset.sunVisibility(options)` return
+  scalar fields mirroring the GPU formulas (nearest height sampling over
+  `spacing * dimensions` world extent). AO averages
+  `1 - clamp(atan(maxTangent) / (π/2))` over evenly spaced directions then
+  applies `mix(1, ao, strength)`; sun marches toward the sun direction in
+  `hard` or `soft` mode. Invalid output cells are `NaN`.
+- `dataset.estimatedCpuBytes()` counts owned f32 bytes plus a materialized
+  mask if present.
+- `getTerrainColormap(name)` returns the named control stops and
+  `getTerrainColormapLut(input, size = 256)` returns an RGBA8 lookup table.
+
+`dataset.toTerrainInput()` converts a dataset into a `TerrainHeightmapInput`
+for `setTerrain`/`computeTerrainAnalysis`. `TerrainHeightmapInput` additionally
+accepts `spacing`, `exaggeration`, `domain`, `nodata`, `crs`, `heightAo`,
+`sunVisibility`, and `debugView` (`"none"`, `"height-ao"`, or
+`"sun-visibility"`). Enabled AO and sun visibility run WebGPU compute passes
+that modulate terrain shading; a `debugView` renders the resident field as
+grayscale. Disabled passes bind a constant `1.0` fallback.
+
+`runtime.readTerrainHeights()` copies the resident R32Float height texture
+back to a `Float32Array`, reproducing source scalars including `NaN` nodata.
+`runtime.computeTerrainAnalysis(terrain, request)` dispatches WebGPU compute
+for `{ kind: "slope-aspect" }`, `{ kind: "height-ao", options }`, and
+`{ kind: "sun-visibility", options }` and resolves to the discriminated
+`TerrainComputeResult`. `runtime.readTerrainAnalysis("height-ao" |
+"sun-visibility")` reads the resident analysis texture and rejects with
+`UNSUPPORTED_FEATURE` when that pass was not enabled on the committed
+terrain. All three obey the same disposal and readback-serialization rules
+as screenshots.
+
+## Lights, Materials, Textures, IBL, And Shadows
+
+W04 adds typed lighting, material, texture, image-based-lighting, and shadow
+state to `Forge3DScene`. Every selection is validated in TypeScript and again
+by the runtime, and every report states the *effective* choice, never only
+the requested one.
+
+```ts
+import {
+  Forge3DScene,
+  ImageBasedLighting,
+  IblCache,
+  resolveBrdfModel,
+} from "@forge3d/web";
+
+const scene = Forge3DScene.create();
+scene.addTerrain({ ...terrain, renderMode: "screen" });
+scene.clearLights(); // every scene starts with a default key + fill light
+scene.addLight({ type: "directional", color: [1, 1, 1], intensity: 2.4, direction: [0.65, -0.41, 0.65] });
+scene.setMaterial("default", { id: "default", brdf: "cooktorrance-ggx", roughness: 0.52 });
+const ibl = await ImageBasedLighting.fromRGBE(hdrBytes, { quality: "medium" });
+scene.setImageBasedLighting(await ibl.prepare(session, new IblCache()));
+scene.setShadows({ enabled: true, filter: "pcss", mapSize: 2048 }, { enabled: true, cascadeCount: 3 });
+session.setScene(scene);
+```
+
+- **Lights.** `addLight`/`updateLight`/`removeLight`/`clearLights` manage up
+  to 64 `directional`, `point`, `spot`, and `rect` lights (`LightCollection`
+  exposes the same API standalone). Point and spot lights take a soft
+  `innerRadius`, `edgeSoftness`, and `falloff`. The default `inverse-square`
+  is the native light-buffer attenuation `(1 - (d/range)^2) / max(d^2, 1e-4)`;
+  `linear`, `quadratic` (`(1 - t)^falloffExponent`), `cubic` (`1 - t^3`) and
+  `exponential` are the native soft-light-radius curves, reaching zero at
+  `range` with `edgeSoftness` widening a smoothstep window. `getLightBounds(id)` and
+  `lightAffectsPoint(id, point)` report the effective range. Rect lights use
+  LTC by default; `setAreaLightApproximation({ mode: "sampled", sampleCount })`
+  selects the sampled approximation. `getLightPreset(name)` returns the
+  `spotlight`, `area-light`, `ambient-light`, `candle`, and `street-lamp`
+  presets with the native `SoftLightPreset` values (`area-light` is a soft
+  point light, not a rect light).
+- **Materials and BRDF routing.** `setMaterial(slot, input)` accepts all 13
+  native BRDF models. `resolveBrdfModel(name)` and `getMaterialRoute(slot)`
+  report the observable route: `blinn-phong` is an `alias` of `phong`;
+  `subsurface` (→ `disney-principled`) and `hair` (→ `ashikhmin-shirley`) are
+  `approximation`s with a `diagnostic`. Every other model is `exact`. Unknown
+  model names reject with `INVALID_INPUT`.
+- **Textures.** `TextureSet` holds base-color, normal, metallic-roughness,
+  occlusion, and emissive images with explicit `colorSpace`, mip levels, and
+  sampler state. `generateMeshTangents(input)` returns per-vertex `xyzw`
+  tangents: per-triangle accumulation, Gram–Schmidt orthogonalization against
+  the normal, and handedness in `w`. `extractGltfMaterialChannels(rgba, w, h)`
+  splits a glTF ORM texture into occlusion (R), roughness (G), and
+  metallic (B).
+  `Ktx2Loader.load(source, { semantic, capabilities })` parses KTX2 with
+  `ktx-parse`. Natively compressed BC/ETC2/ASTC payloads upload only when the
+  matching `capabilities` flag is set. Otherwise the load rejects; it is never
+  silently decompressed. Basis Universal payloads transcode through the
+  configured `basisTranscoder` in `astc` → `bc7` → `etc2` → RGBA8 order. The resulting
+  image records `effectiveQuality` (`native`, `transcoded`, or
+  `rgba8-fallback`). An unsupported container rejects with
+  `UNSUPPORTED_FEATURE`, and `getLastReport()` still describes the attempt
+  with `effectiveQuality: "unsupported"`.
+- **IBL.** `ImageBasedLighting.fromRGBE(bytes, options)` decodes Radiance
+  RGBE in-repo. Irradiance, the specular prefilter, and the split-sum GGX BRDF
+  LUT are computed on the GPU at the native `IBLQuality` tiers (irradiance/
+  specular/mips: low 64/128/5, medium 128/256/6, high 256/512/7, ultra
+  256/1024/8; a 512 BRDF LUT; 128/1024/1024 samples) with verbatim ports of
+  the native shaders. `prefilter` defaults to `per-mip`; `prefilter: "native"`
+  reproduces a native bug (every prefilter pass reads the last mip's
+  parameters, leaving most specular texels zero) and is meant only for
+  comparisons against native renders. `ibl.prepare(session, cache)` stores the
+  precomputed maps in an `IblCache` keyed by source hash and settings. The
+  `auto` backend chooses CacheStorage, then OPFS, then `none`. `ibl.report`
+  records `effectiveMode` (`runtime-precompute` or `prepared-upload`),
+  `cacheBackend`, and `cacheHit`.
+- **Shadows.** Shadows are off until `enabled: true`. `ShadowConfig` selects one filter: `hard`, `pcf`, `pcss`,
+  `vsm`, `evsm`, or `msm`. Cascades are a separate pipeline configured by
+  `CascadedShadowConfig` (2–4 cascades, split lambda, blend range,
+  stabilization). The filter parser rejects `"csm"` with `INVALID_INPUT`:
+  "csm is a cascade pipeline, not a shadow filter". The map size is admitted
+  against the memory budget. `getShadowReport()` returns the requested and
+  effective filter and map size, the effective cascade state (`csmEnabled` is
+  `false` and `cascadeCount` is `1` while shadows are disabled), the moment
+  format, the caster light id, and a `reason` (`requested configuration`,
+  `memory budget`, `shadows disabled`, or
+  `no shadow-casting directional light`).
+- **Atomic commits.** `session.setScene(scene)` validates and admits lighting,
+  materials, IBL, and shadows together. A rejected commit leaves the
+  previously committed frame, memory report, and shadow report unchanged, and
+  device-loss recovery replays the last accepted scene.
+
+`renderMode: "screen"` on a terrain reproduces the historical native
+`terrain_pbr_pom` screen path: a fullscreen triangle, nearest-texel height
+sampling, stylized hillshade composition, and a filmic tonemap. In this mode
+the shadow pass uses the native fixed orthographic light matrix and the native
+depth-caster packing. The native caster collapses when the height-domain
+minimum is `0`, so such scenes are unshadowed, exactly as in native. The
+general P07 filter/CSM path serves `renderMode: "perspective"` (the default).
+
+## Cameras, Controllers, Animation, And Rigs
+
+W05 ports the native camera surface (C01-C04). Every numeric path is checked
+against `tests/golden/w05-camera-native.json`, recorded from the native
+Forge3D oracle, within 1e-5 (relative above magnitude 1).
+
+- **Cameras and projections.** `CameraInput` accepts `projection:
+  "orthographic"` with a required `orthographicHeight` (vertical world extent;
+  width follows the viewport aspect). The runtime, session, viewer, shadows and
+  lighting all honour it, and device-loss recovery replays it. The immutable
+  `Camera` class adds `viewMatrix()`, `projectionMatrix(aspect, clipSpace)`,
+  `worldToScreen`, `screenToWorld`, `screenRay` and versioned JSON. Free
+  functions `lookAt`, `perspective`, `orthographic` and `viewProjection` take a
+  `clipSpace` of `"wgpu"` (depth `0..1`, default) or `"gl"` (`-1..1`) like the
+  native `camera_*` functions. Matrices are column-major `Float32Array(16)`;
+  `mat4ToRows`/`mat4FromRows` convert to the native row-major layout.
+  `translate`, `rotateX/Y/Z`, `scale`, `scaleUniform`, `composeTrs`
+  (`T * R * S`, Euler X then Y then Z), `lookAtTransform`, `multiplyMatrices`,
+  `invertMatrix` and `normalMatrix` port the native transforms. Screen space is
+  pixels from the top-left corner with WebGPU NDC depth. Depth-of-field
+  helpers (`depthOfFieldRange`, `hyperfocalDistance`, `circleOfConfusion`,
+  `fStopToAperture`, `cameraDofParams`) and `makeCamera` match native.
+  Validation keeps the native wording but names the browser parameters, for
+  example "fovYDegrees must be finite and in (0, 180)".
+- **Controllers.** `OrbitController` keeps the frozen viewer orbit behaviour.
+  `FlyController` is the native FPS camera: `update(dt, input)` moves
+  `moveSpeed` (default 5) units per second along forward/right/up with a boost
+  multiplier (default 2). `CameraController` combines both, switches modes
+  continuously, resolves `KeyboardEvent.code` bindings (defaults above; the
+  native Tab binding is available but not the default because it would trap
+  keyboard focus), and expresses every change as a serializable
+  `CameraInputEvent`. `startRecording()`/`stopRecording()` capture events and
+  `replayCameraInput(options, events)` reproduces the camera bit-for-bit. The
+  viewer exposes `getCameraMode()`, `setCameraMode()`, `getFlyView()`,
+  `setFlyView()`, `getCamera()`, `setCamera()` (Y-up cameras only),
+  `startCameraRecording()`, `stopCameraRecording()` and
+  `replayCameraInput()`; `resetView()` resets the active controller.
+- **Keyframe animation.** `CameraAnimation` stores target-aware
+  `CameraKeyframe`s (azimuth `phiDeg`, polar `thetaDeg` from +Y, `radius`,
+  `fovDeg`, optional `target`) sorted by time and interpolates them with the
+  native Catmull-Rom (cubic Hermite) basis in f32. `evaluate(time)` clamps to
+  the keyframe range, `getFrameCount(fps)` is `ceil(duration * fps) + 1`, and
+  `cameraAt(time)` returns a renderer `CameraInput` (eye
+  `target + r (sin θ cos φ, cos θ, sin θ sin φ)`). `RenderConfig` names frame
+  sequences (`frame_0042.png`) and `ensureOutputDir()` creates the directory
+  below a File System Access or OPFS handle; `RenderProgress.percent` reports
+  completion. Animations serialize with `toJSON()`/`CameraAnimation.fromJSON()`.
+- **Terrain rigs.** `TerrainOrbitRig`, `TerrainRailRig` and
+  `TerrainTargetFollowRig` bake deterministic, clearance-verified animations
+  from a `TerrainRigSource` (the native contract: terrain spans
+  `[0, terrainWidth]`, heights rebased to the minimum and scaled by `zScale`).
+  After the initial bake at `samplesPerSecond`, the path is verified at
+  `max(32 * samplesPerSecond, 240)` Hz and refined for up to
+  `clearance.maxRefinePasses` passes; a path whose eye would still dip below
+  terrain + `minimumHeight` or leave the terrain is rejected with
+  `INVALID_INPUT`. Baked keyframes match native; because Catmull-Rom can
+  still dip between verification samples, rig playback through
+  `rig.cameraAt(source, animation, time)` or `source.eyeAt(animation, time,
+  { minimumHeight })` lifts the eye to terrain + `minimumHeight`, so played-back
+  cameras never violate the minimum at any time.
+  `TerrainRigSource.fromDataset(dataset)` samples a W03 `TerrainDataset` and
+  `source.cameraAt(animation, time)` maps rig space onto the renderer's world
+  space. Rigs serialize with `toJSON()`/`terrainRigFromJSON()`.
+
+## Readback, AOVs, Offline Quality, Frames, And Video
+
+W06 ports native readback and offline output (R02, C05-C08). Captures never
+touch the display frame: they render the committed scene through dedicated
+capture pipelines into float targets and read them back with padded rows
+decoded in WASM.
+
+- **Frames.** `Frame` is tight RGBA8 (rows top to bottom), `HdrFrame` is
+  linear float RGBA and `AovFrame` carries linear `albedo()` RGB, world-space
+  shading `normal()` XYZ, `depth()` (linear view depth normalized by the camera
+  clip planes, background `1`; `linearDepth()` converts back), object `id()`
+  (`0` background, `AOV_ID_TERRAIN`, scene nodes `aovObjectId(node)`) and pixel
+  `motion()` (`current - previous`, +x right, +y down, from `previousCamera`).
+  Missing channels throw `INVALID_INPUT` with the native wording ("Normal AOV
+  not available"). `Frame.toPng()` is deterministic (`compression: "none"` is
+  byte-identical everywhere).
+- **Capture.** `runtime.capture(options)` / `session.capture(options)` returns
+  `{ frame, hdrFrame, aovFrame }`; `aovs` defaults to the native albedo,
+  normal and depth (`"all"` adds ID and motion). HDR color is unclamped scene
+  radiance with overlays composited premultiplied; the default `display`
+  tonemap reproduces the realtime frame within one unit per channel.
+- **Offline accumulation.** `beginOfflineAccumulation({ samples, seed, aovs,
+  previousCamera })`, `accumulateBatch(n)`, `readAccumulationMetrics(targetVariance,
+  tileSize)`, `resolveOfflineHdr({ tonemap, denoise })` and
+  `endOfflineAccumulation()` follow the native session: jitter is the native
+  R2 sequence (seeded), metrics are native relative tile-luminance deltas
+  against the last three readings, a second begin fails with "already active",
+  and metrics before any sample fail. While a session is open `render()`
+  returns `false`, `screenshot()`/`readRgba()` reject, and scene/camera
+  mutations queue until it ends. `renderOffline(target, options)` (also a
+  runtime/session method) ports `render_offline`: `settings.enabled` must be
+  true, adaptive runs stop after `minSamples` on an upward convergence trend,
+  `onProgress` receives `OfflineProgress`, `signal` cancels with
+  `REQUEST_CANCELLED`, and the session always ends. Depth, ID and motion come
+  from one unjittered reference pass. A device loss surfaces `DEVICE_LOST`.
+- **Denoise.** `DenoiseSettings` validates like native (`atrous`, `oidn`,
+  `none`; 1-10 iterations). The WebGPU A-trous denoiser uses the native
+  B3-spline weights with albedo, normal-angle and optional depth guides plus a
+  luminance edge-stopping term (`edgeStopping`, default 1) scaled by a robust
+  noise estimate, so converged frames stay unchanged; `edgeStopping: 0`
+  reproduces the native NumPy weights. `oidn` is unavailable in browsers and
+  falls back to A-trous with the native warning in `metadata.warnings`.
+  `runtime.denoiseHdrFrame(hdr, aov)` denoises any frame on the GPU and
+  `atrousDenoise(input)` is the CPU/WASM reference; `compareImages` reports
+  MSE, PSNR (native definition) and SSIM.
+- **Tonemap.** `display` plus the native `reinhard`, `reinhard-extended`,
+  `aces`, `uncharted2`, `exposure` and `filmic-terrain` operators run on the
+  GPU in `resolveOfflineHdr` and on the CPU in `HdrFrame.tonemap()`.
+- **EXR.** `HdrFrame.toExr()`, `AovFrame.toExr(beauty)` and `writeExr()`
+  produce `image/x-exr` `Blob`s with native channel names (`beauty.R/G/B/A`,
+  `albedo.R/G/B`, `normal.X/Y/Z`, `depth.Z`, `id` as uint, `motion.X/Y`),
+  optional text metadata and `none`/`rle`/`zip`/`zips`/`piz` compression.
+  `readExr()` validates the header before decoding, so malformed files fail
+  with `INVALID_INPUT` and oversized ones with `RESOURCE_LIMIT_EXCEEDED`.
+- **Frame sequences.** `renderFrames(target, { animation | cameraAt, fps,
+  mode })` yields frames at exact times `i / fps` with microsecond timestamps
+  `round(i * 1e6 / fps)`; `mode` is `capture` (default), `display` or
+  `offline`. `createFrameStream` wraps it as a `ReadableStream`. `writeFrames`
+  drains into a sink: `createMemoryFrameSink`, `createOpfsFrameSink` (below a
+  `RenderConfig.outputDir` in OPFS or a File System Access directory) or
+  `createDownloadFrameSink`; names follow `RenderConfig.frameFileName`.
+  `FrameDumper` and `dumpFrameSequence` port the native dumper.
+- **Video.** `encodeVideo(frames, { fps, container, codec })` encodes with
+  WebCodecs (`avc`, `vp9`, `av1`, `hevc`, `vp8`, first supported wins) and
+  muxes MP4 or WebM with the lock-pinned mediabunny 1.58.0; frame `i` has
+  timestamp `round(i * 1e6 / fps)` and muxing is deterministic (the MP4
+  creation time is pinned). When no codec can encode, the error is
+  `UNSUPPORTED_FEATURE` with `VideoCodecUnavailableDetails`
+  (`kind: "video-codec-unavailable"` plus per-codec probes);
+  `probeVideoCodecs` reports support up front and `muxEncodedVideo` muxes
+  caller-encoded chunks.
+
+## Terrain PBR/POM Materials
+
+W07 ports the native `terrain_pbr_pom` land shading (T05-T07). Set
+`terrain.material` on any terrain input to switch the terrain to the material
+pipeline; omit it to keep the existing terrain. Every field is optional and
+takes the native default, and the all-default material (`material: {}`)
+renders byte-identically to the unmaterialed terrain: colormap albedo at full
+strength with POM, detail and every layer off. (Native `make_terrain_params_config`
+defaults to `albedo_mode="mix"` and POM on; request those explicitly.)
+
+```ts
+scene.addTerrain({
+  ...terrain,
+  renderMode: "screen",
+  material: {
+    albedoMode: "mix",
+    colormapStrength: 0.25,
+    pom: { enabled: true, scale: 0.04 },
+    layers: {
+      snow: { enabled: true, altitudeMin: 0.78, subsurfaceStrength: 0.58 },
+      rock: { enabled: true, slopeMin: 38 },
+      variation: { snowMacroAmplitude: 0.2 },
+    },
+    detail: { enabled: true, scale: 2, normalStrength: 0.3 },
+    specularAa: { quality: "high" },
+  },
+});
+session.setScene(scene);
+const report = session.getTerrainMaterialReport();
+```
+
+- **Albedo and material set.** `albedoMode` is `colormap`, `material` (the
+  triplanar material set) or `mix` (`colormapStrength` blends toward the
+  colormap). `materialSet` holds 1-4 layers (default: the native
+  rock/grass/dirt/snow `MaterialSet.terrain_default`), each with `baseColor`,
+  `roughness` in [0.04, 1], `metallic` and an optional sRGB RGBA8 `texture`.
+  Layers blend by height and slope with the native Gaussian weights and are
+  sampled triplanar (`triplanar.scale`, `blendSharpness`, `normalStrength`).
+- **POM, curves and clamps.** `pom` runs the native occlusion ray march with
+  binary refinement (`scale`, `minSteps`, `maxSteps` <= 100, `refineSteps`,
+  `occlusion`). Native renders every `mode` with that march, so `relief` and
+  `parallax` report `terrain-material-pom-mode-approximated`. `heightCurve`
+  (`linear`, `pow`, `smoothstep`, or `lut` with 256 values) reshapes geometry
+  and normals; `clamp` holds the native height/slope/ambient/shadow/occlusion
+  ranges (`heightRange` defaults to the terrain domain). `colormapSrgb`,
+  `outputSrgbEotf`, `gamma` and `hueVariation` keep the native color controls.
+- **Material layers.** `layers.snow` (altitude, slope and aspect), `rock`
+  (slope) and `wetness` (flatness darkening) port native M4; `variation` adds
+  the TV4 FBM/ridged/cellular noise per layer (all amplitudes 0 by default);
+  `subsurfaceStrength`/`subsurfaceTint` add the TV10 wrap/backscatter term.
+  Each layer also accepts a `mask` (single-channel coverage in terrain UV).
+- **Micro-detail and specular AA.** `detail` adds the native triplanar
+  detail normals and albedo noise with a distance fade, plus an optional
+  tangent-space `normalMap` blended by `strength` (native binds but never
+  samples this map). `specularAa.quality` selects the Toksvig variance
+  threshold: `native` (1.0, the native default, which leaves ordinary terrain
+  untouched), `medium` (0.25), `high` (0), or `off`.
+- **Debug views.** `debugView` renders `material-albedo`,
+  `triplanar-weights`, `triplanar-checker`, `pom-offset`,
+  `specular-aa-variance`, `roughness`, `layer-weights` or `subsurface`.
+- **Report and diagnostics.** `getTerrainMaterialReport()` (session or
+  runtime) returns what the GPU bound: layer count, textured layers, texture
+  size and mips, mask channels, the detail-map flag, GPU bytes and
+  diagnostics. Invalid or missing images never fail the commit: they fall back
+  to the base color or neutral map and report
+  `terrain-material-texture-invalid`, `-texture-missing`, `-texture-resampled`,
+  `-texture-downscaled` (memory budget or `maxTextureDimension2D`),
+  `-mask-invalid`, `-detail-normal-invalid` or `-detail-normal-missing`.
+  Invalid settings reject with `INVALID_INPUT` and the native wording (for
+  example `max_steps must be <= 100`).
+- **Screen and perspective.** Screen mode keeps the native fullscreen frame
+  quirks (constant base normal, so slope-driven rock appears only through
+  variation noise) so native goldens compare directly. Perspective mode feeds
+  the same shading from the true heightfield normal and a world-to-tangent
+  POM frame, so slope-driven layers follow the terrain.
+- **Parity evidence.** `tests/golden/w07/` holds the `terrain-material-v1`
+  fixture: 22 native forge3d 1.34 renders plus the verbatim `1f4084a`
+  `terrain_pom` and `terrain_tv10_*` goldens. Every variant matches at SSIM
+  >= 0.98; the historical POM golden passes with the least margin (about
+  0.980, against 0.985 between native 1.34 and `1f4084a` themselves).
+
+## Terrain Clipmaps, Streaming, COGs, Overlays, And Virtual Textures (W08)
+
+W08 ports the native terrain-scale systems (T08-T11, T14): clipmap ring
+geometry, streamed height pyramids, COG range access and byte caches,
+composited overlay stacks, and paged albedo virtual texturing. Every
+piece is opt-in on the terrain input; a terrain without `geometry`,
+`streaming`, `overlays`, or `material.virtualTexture` renders the
+unfeatured path byte-identically. `capabilities` reports per-feature
+support booleans (`terrainClipmap`, `terrainStreaming`, `terrainOverlays`,
+`terrainVirtualTexture`) plus the negotiated per-stage limits
+(`maxSampledTexturesPerShaderStage`, `maxStorageBuffersPerShaderStage`)
+the commits were validated against — a commit exceeding the negotiated
+sampled-texture limit rejects at validation, not at draw. Untextured
+terrain fits every W08 feature in the WebGPU default of 16 sampled textures
+per stage, so the booleans are `true` on every WebGPU device (VT also needs
+3 storage buffers per stage). Terrain shading reads material 0, and a
+textured material 0 binds five more sampled textures: with it, streaming
+needs 17, overlays 18 and virtual texturing 19. Such commits, including a
+later `setMaterials` that textures material 0 under an active W08 terrain,
+fail atomically with `UNSUPPORTED_FEATURE` naming the textured material.
+
+### Clipmap Geometry
+
+`terrain.geometry = { mode: "clipmap", clipmap }` swaps the dense grid
+for the native clipmap rings (`ringCount`, `ringResolution`,
+`centerResolution`, `skirtDepth`, `morphRange`, `baseCellSize` —
+`streaming` implies clipmap geometry). Clipmaps require
+`renderMode: "perspective"`. `getTerrainGeometryReport()` reports the
+committed geometry: `vertexCount`, `indexCount`, `triangleCount` (always
+equal to `triangleBudget` and camera-invariant), `fullResolutionTriangles`,
+`triangleReductionPercent`, ring `centers`, and `shadowCasterResolution`
+— clipmap terrains cast shadows through a coarse proxy caster rather than
+the full ring mesh. The free functions
+`generateClipmapMesh(config, center, terrainExtent)` and
+`calculateTriangleReduction(full, clipmap)` expose the same mesh and
+reduction math off-GPU, and `selectLodTilesReference(input)` is the CPU
+mirror of the GPU `clipmap_lod_select` pass (view-projection, camera,
+fov, pixel error budget, tile bounds → the same visible set sorted by
+`(distance, tileId)`).
+
+### Height Streaming
+
+`terrain.streaming = { width, height, tileSize, maxResidentBytes, lodBias,
+prefetchMarginTiles, maxInFlight, coalescePolicy }` declares a virtual
+height pyramid; `heights` then carries the coarsest pyramid level and
+finer tiles page in around the view center. The runtime contract is
+explicit: `planHeightTiles(maxRequests)` returns `{requests, cancelled}`,
+`completeHeightTile(lod, x, y, heights)` uploads a fetched tile and
+reports `{accepted, evicted}` (LRU), `failHeightTile(lod, x, y)` cancels
+a request, `getHeightStreamingStats()` reports residency, budget,
+`converged`, and the latest `lodSelection`, and `getLodSelection()`
+returns the GPU-selected tile set (`null` before the first readback).
+
+`TerrainStreamer` drives that contract from a `HeightTileSource`:
+
+```ts
+const streamer = await TerrainStreamer.create(runtimeOrViewer, source, {
+  maxResidentBytes: 8 * 1024 * 1024,
+  maxInFlight: 4,
+});
+await streamer.whenConverged();
+```
+
+- Sources: `ArrayHeightSource` (dense array, point subsample),
+  `FunctionHeightSource` (`sample(lod, x, y)`), and `CogHeightSource`
+  (a `CogDataset`; IFD `l` maps to pyramid lod `l` when dimensions match,
+  coarser missing levels point-subsample the coarsest IFD). Custom sources
+  implement `readTile(lod, x, y, {signal, priority}) -> Float32Array`;
+  `heightPyramidLodCount(w, h, tileSize)` gives the pyramid depth.
+- `streamer.update()` advances one frame of planning/upload,
+  `whenConverged({timeoutFrames})` resolves when the working set is
+  resident, `stats()` folds runtime stats with source counters, and
+  `dispose()` aborts in-flight fetches. `autoUpdate` drives updates from
+  the viewer's frame loop.
+- A viewer-bound streamer keeps the coarse base and its source caches
+  across device-loss recovery: resident tiles re-upload to the recovered
+  device without any network refetch.
+
+### Range Scheduling, CORS, And Byte Caches
+
+`RangeScheduler` is the HTTP range engine under `CogDataset`: dedupe,
+bounded-gap coalescing, priority queue, `maxConcurrent` in-flight limit,
+per-subscriber `AbortSignal` cancellation, and memory → persistent →
+network lookup order. `request(source, offset, length, {priority,
+signal})` resolves a `Uint8Array`; `stats()` counts `httpRequests`,
+`bytesRequested`, `bytesTransferred`, `memoryHits`, `persistentHits`,
+`deduplicated`, `coalesced`, `cancelled`, `offlineServed`. Servers must
+honor byte ranges: responses need `Accept-Ranges: bytes`, and cross-origin
+reads additionally need
+`Access-Control-Expose-Headers: Content-Range, Content-Length, ETag`. A
+`200` to a range request is `IO_ERROR` with reason `range-not-supported`
+(the underlying fetch is aborted so the full body is never downloaded),
+and a `416` is `IO_ERROR` with reason `range-not-satisfiable`. Every
+`206` must carry `Content-Range: bytes a-b/total` with `a` equal to the
+requested offset and `b` equal to its last byte (`b` may be smaller only
+when the range stops at the end of the file); a missing or mismatched
+header is `IO_ERROR` with reason `content-range-mismatch`, and a body
+shorter than that range is `IO_ERROR` as well. Each of these failures
+counts once in `stats().failed`. Once a response has supplied a strong
+`ETag`, later requests to that source send it as `If-Match`; a `412`, or
+a `200` to such a conditional request, means the resource changed: the
+scheduler drops the stored validator together with every cache entry
+written under it and retries the request once without `If-Match`.
+Cancelled requests reject `REQUEST_CANCELLED` (also after their range was
+coalesced into a larger fetch, which is aborted once all of its
+subscribers cancel).
+
+Persistent byte caches give the scheduler offline replay. All three
+adapters — `OpfsByteCache`, `IndexedDbByteCache`,
+`CacheStorageByteCache` — extend a SHA-256 digest-checked base: every
+stored entry is verified on read, and a checksum failure deletes the
+entry (bumped into `stats().checksumFailures`) and falls through to
+refetch. Cache keys embed the source validator (`ETag`, else
+`Last-Modified`, else the file size), so bytes stored under a validator
+the server no longer reports are never served. A throwing store is
+treated as a miss. `createPersistentByteCache({name, prefer})`
+picks the first available backend in `prefer` order (default OPFS →
+IndexedDB → CacheStorage) or `null`; `opfsByteStore`,
+`indexedDbByteStore`, and `cacheStorageByteStore` are the raw stores for
+custom adapters. Entries survive reload, so a second session serves the
+same ranges with `persistentHits`/`offlineServed` and zero network bytes.
+
+### Cloud-Optimized GeoTIFFs
+
+`CogDataset.open(url, {cacheSizeMb, scheduler, persistentCache,
+workerPool})` reads tiled COGs entirely through the `RangeScheduler`
+(header, IFDs and tile bytes alike — a single tile read touches a few
+percent of the file) using the vendored geotiff 3.0.5 decoder.
+
+- Metadata: `width`, `height`, `overviewCount`, `bounds`, `geoTransform`,
+  `crs`, `nodata`, `bitsPerSample`, `sampleFormat`, `samplesPerPixel`,
+  `compression`; `ifdInfo(level)` reports tile geometry per IFD and
+  `selectOverview`/`selectOverviewForResolution` map lods/resolutions to
+  overview levels.
+- `readTile(x, y, lod)` returns the decoded tile as `Float32Array`,
+  `readTileRgba` the RGBA8 form (palette/expansion applied), and
+  `readOverviewRgba(level)` a whole overview image; all honor
+  `{signal, priority}` and the decoded-tile byte-budgeted LRU
+  (`stats()` → `cacheHits`, `memoryUsedBytes`, `range`, `persistent`).
+- With a `Forge3DWorkerPool`, decode jobs run in a real module worker
+  registering `createCogWorkerHandler()` — CSP requires
+  `worker-src 'self'` (no `blob:` workers). The main-thread fallback
+  produces identical bytes.
+- `dispose()` aborts in-flight range requests; a disposed dataset rejects
+  `RUNTIME_DISPOSED`.
+
+### Terrain Overlays
+
+`terrain.overlays = { enabled, globalOpacity, resolutionScale, layers }`
+drapes raster imagery onto the terrain. Layers composite onto the fully
+composited albedo before lighting, so draped overlays receive the same
+sun, IBL and shadowing as the terrain albedo. Each layer accepts an
+`image` (browser image source or `{width, height, data}` RGBA8 via
+`decodeOverlayImage`), `opacity`, `blendMode`, `visible`, `zOrder`, and
+exactly one placement: `extent` `[u0, v0, u1, v1]` UV rect, or
+`crs` + `crsBounds` `[minx, miny, maxx, maxy]` for geographic placement.
+Layers sort by `zOrder` (stable by input order) and blend in linear space
+with `a = layerAlpha * globalOpacity`: `normal` = `b(1-a) + s a`,
+`multiply` = `b(1-a) + b s a`, `overlay` = `b(1-a) + ov a` with
+`ov = b < 0.5 ? 2bs : 1 - 2(1-b)(1-s)`. CRS ids normalize
+(`epsg:4326`/`CRS:84` → `EPSG:4326`, `EPSG:900913` → `EPSG:3857`); a layer
+CRS may differ from the terrain CRS only when the pair is transformable —
+identical CRS or `EPSG:4326` ↔ `EPSG:3857` — anything else rejects with
+the native `crs_mismatch` error. `getTerrainOverlayReport()` reports the
+planned stack (`layerCount`, planned `width`/`height`, `downscaled`,
+`gpuBytes`, per-layer `{name, blendMode, zOrder}`); the pure-TS
+`normalizeTerrainOverlays`, `getTerrainOverlayDefaults`,
+`isTerrainOverlayLayerVisible`, and `terrainOverlayVisibleLayers` mirror
+the commit-path validation exactly.
+
+### Virtual Texturing
+
+`terrain.material.virtualTexture` adds paged albedo texturing to the W07
+material path (native tv20 contract):
+
+```ts
+material: {
+  virtualTexture: {
+    enabled: true,
+    atlasSize: 2048,
+    residencyBudgetMb: 64,
+    maxMipLevels: 6,
+    useFeedback: true,
+    layers: [{ family: "albedo", virtualSizePx: [2048, 2048] }],
+  },
+}
+runtime.registerMaterialVtSource(materialIndex, "albedo", {width, height, data}, fallback);
+```
+
+- Per the 1f4084a contract only `albedo` is paged: `normal`/`mask`
+  families surface the `vt_unsupported_family` diagnostic in
+  `validateTerrainVtSupport` (the pure-TS report is identical to the wasm
+  free function for the same input) and reject the terrain commit with a
+  blocking `UNSUPPORTED_FEATURE`-class error before any allocation.
+- `material.virtualTexture: { enabled: false }` renders byte-identically
+  to omitting the block entirely, even with sources registered.
+- `getMaterialVtStats()` reports `enabled`, `residentPages`,
+  `totalPages`, `cacheBudgetPages`/`cacheBudgetMb`, `cacheHits`,
+  `cacheMisses`, `missRate`, `tilesStreamed`, `evictions`,
+  `avgUploadMs`/`lastUploadMs`, `residentMegabytes`, `sourceCount`, and
+  `feedbackRequests`. With `useFeedback` the shader writes its required
+  pages into a feedback buffer the runtime drains each frame, so requests
+  are demand-driven and non-blocking.
+- The public pyramid contract stays floor-based
+  (`floor(log2(max(pagesX, pagesY))) + 1`, matching native 1.38's
+  `VTLayerFamily::full_pyramid_levels`), while the runtime page-table
+  pyramid runs the complete mip chain to 1×1 (`ceil(log2(max_dim)) + 1`),
+  clamped only by `maxMipLevels` — the same split the native 1.38
+  runtime exhibits (at the `terrain-vt-v1` golden params both sides page
+  480 total / 20 resident pages).
+
+### Device-Loss Replay And Memory
+
+`Forge3DViewer` and `Forge3DSession` retain the full terrain input —
+geometry, bounds, streaming declaration, overlays and
+`material.virtualTexture` — plus the registered VT sources. After a
+`DEVICE_LOST` recovery they rebuild the runtime, restore camera and size,
+register the retained VT sources first (the runtime reads VT sources when
+a terrain is committed), then replay the terrain. The viewer then calls
+every listener added with `viewer.addRecoveryListener(listener)` (it
+returns a detach function); `TerrainStreamer` registers one to resume
+streaming, and
+streamed tiles re-upload from its retained tile cache with zero new
+network bytes.
+
+`getMemoryReport().categories` charges the W08 allocations to the
+existing categories: `textures` holds the streamed height atlas + page
+table (`terrain:height-stream`), the overlay composite array
+(`terrain:overlays`) and the VT atlas, page table and feedback ring
+(`terrain:vt`); `buffers` holds the clipmap mesh, geometry uniform and
+shadow proxy (`terrain:clipmap`) and the GPU LOD-selection buffers
+(`terrain:lod-select`). The streaming charge is the whole allocated
+`slotsPerRow × rows` atlas. A terrain commit sizes all of these from the
+validated inputs and admits them together before anything is allocated:
+over budget it throws `RESOURCE_LIMIT_EXCEEDED` and leaves the ledger and
+the committed terrain untouched. A streaming atlas or VT `atlasSize`
+larger than `maxTextureDimension2D` is `RESOURCE_LIMIT_EXCEEDED` too.
+`commit → render → release` cycles return the ledger to the empty-scene
+state.
 
 ## Browser IO
 
@@ -319,3 +1004,26 @@ Invalid dimensions, non-finite camera values, unsupported runtime options,
 wrong typed-array lengths, and invalid byte ranges use `INVALID_INPUT`. Browser
 IO uses `IO_ERROR` for fetch/CORS/body/range failures and `REQUEST_CANCELLED`
 for aborted source reads.
+
+## W10 environment and water
+
+`Forge3DEnvironment`, `sunPosition`, `generateDensityVolume`, and `environmentMemoryReport` provide UTC sun animation, shared atmosphere, clouds and explicit water layers. Runtime, scene, session and viewer expose `setEnvironment`; runtime, session and viewer expose `getEnvironmentMemoryReport`. See [environment and water](environment-water.md) for configuration, budgets, capture guides and native verification.
+
+## Labels and typography
+
+See [Labels, typography and deterministic placement](labels.md) for FontAtlas, LabelLayer, LabelPlan, stable IDs, actual glyph rendering, native diagnostics and the installed-tarball W13 verification workflow.
+## W11 ordered HDR and post-FX
+
+`PostFxChain`, `normalizePostFx` and `createIdentityColorLut` expose SSAO/GTAO,
+SSGI/SSR with IBL fallback, bloom, DoF/tilt, lens, motion blur, temporal and
+accumulation AA, denoise and selectable HDR tonemap. Runtime, session and viewer
+provide `setPostFx`, `getPostFxReport`, `resetPostFxHistory` and
+`readPostFxIntermediate`; scene snapshots retain the graph for worker replay.
+See the [HDR and post-FX guide](postfx-hdr.md) for ordering, defaults, transfer,
+histories, formats, budgets and independent native verification.
+
+## Vector layers and picking
+
+`VectorLayers` and stable `VectorLayer` handles batch styled points, AA lines, polygons, graphs and terrain-draped geometry. `VectorPicker` provides cancellable point/rect/lasso queries and pointer events. Scene/session, runtime, viewer and worker paths expose vector reports and pick maps. See [vector-layers.md](vector-layers.md) for OIT fallback, selection and lifecycle contracts.
+
+W20 cartography implements M05–M07: map plates, legends, geodetic scale bars, rotated north arrows, insets, standalone SVG and vector PDF Blob exports, plus the linear-sRGB colormap registry and CPT/JSON imports. See [cartography guide](cartography.md) and [example](../examples/cartography.html).

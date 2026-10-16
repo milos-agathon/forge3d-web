@@ -36,6 +36,7 @@ const semanticSteps = Object.freeze([
   "NO_SAFARI_GESTURE_EVENT_LISTENERS",
   "TRACKPAD_MOMENTUM_END",
   "TRACKPAD_PAGE_SCROLL_ISOLATION",
+  "TRACKPAD_OUTSIDE_CANVAS_PAGE_SCROLL",
   "TRACKPAD_CLEANUP",
 ]);
 
@@ -230,9 +231,10 @@ function validateSafariPair({
   const host = matrix.hosts?.find((entry) => entry.assetId === "FW-MAC-M2-01");
   const version = parseStableVersion(automated?.browser?.version);
   const manualVersion = parseStableVersion(manual?.browser?.version);
-  const mac = /^(macOS) ([1-9][0-9]*(?:\.[0-9]+){1,2}) build ([0-9]{2}[A-Z][0-9A-Z]+)$/u.exec(
+  const mac = /^macOS build ([0-9]{2}[A-Z][0-9A-Z]+)$/u.exec(
     automated?.system?.osBuild ?? "",
   );
+  const macVersion = parseStableVersion(automated?.system?.osVersion);
   const checklist = checklistDefinition("safari-trackpad");
   validateHostInventory(automated?.hostInventory, {
     matrix,
@@ -266,7 +268,10 @@ function validateSafariPair({
     automated.driver.version !== manual.driver.version ||
     automated.system.platform !== "darwin" ||
     !mac ||
-    Number(mac[2].split(".")[0]) !== 26 ||
+    macVersion.major !== 26 ||
+    automated.system.osVersion !== automated.hostInventory.osVersion ||
+    automated.system.architecture !== "arm64" ||
+    automated.hostInventory.architecture !== "arm64" ||
     manual.system.os !== "darwin" ||
     manual.system.build !== automated.system.osBuild ||
     host?.model !== "Mac mini (2023)" ||
@@ -294,8 +299,8 @@ function validateSafariPair({
   }
   return {
     version: version.text,
-    macOSVersion: mac[2],
-    macOSBuild: mac[3],
+    macOSVersion: macVersion.text,
+    macOSBuild: mac[1],
     model: host.model,
     cpu: host.cpu,
     gpu: host.gpu,
@@ -477,7 +482,9 @@ function stableHostIdentity(inventory) {
     cpu: inventory?.cpu,
     gpu: inventory?.gpu,
     ramGiB: inventory?.ramGiB,
+    osVersion: inventory?.osVersion,
     osBuild: inventory?.osBuild,
+    architecture: inventory?.architecture,
     headed: inventory?.headed,
     displayServer: inventory?.displayServer,
     attachedAssetIds,

@@ -1,0 +1,821 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><title>W13 label acceptance</title
+  ><canvas width="384" height="256"></canvas>
+  <script type="module">
+    const api = new URLSearchParams(location.search).has("dist")
+      ? await import("../dist/index.js")
+      : await import("../src-ts/index.ts");
+    const {
+      FontAtlas,
+      LabelLayer,
+      LabelPlan,
+      Forge3DScene,
+      Forge3DRuntime,
+      Forge3DSession,
+      Camera,
+    } = api;
+    const canvas = document.querySelector("canvas"),
+      viewport = { width: 384, height: 256 };
+    const camera = {
+      position: [0, 0, 8],
+      target: [0, 0, 0],
+      up: [0, 1, 0],
+      near: 0.1,
+      far: 100,
+      fovYDegrees: 45,
+    };
+    const hash = async (a) =>
+      Array.from(
+        new Uint8Array(await crypto.subtle.digest("SHA-256", a.buffer ?? a)),
+        (v) => v.toString(16).padStart(2, "0"),
+      ).join("");
+    const covered = (rgba) => {
+      let n = 0;
+      for (let i = 0; i < rgba.length; i += 4)
+        if (rgba[i] + rgba[i + 1] + rgba[i + 2] > 20) n++;
+      return n;
+    };
+    const diff = (a, b) => {
+      let sum = 0,
+        max = 0;
+      for (let i = 0; i < a.length; i++) {
+        const d = Math.abs(a[i] - b[i]);
+        sum += d;
+        max = Math.max(max, d);
+      }
+      return { sum, max };
+    };
+    async function create() {
+      const runtime = await Forge3DRuntime.create(canvas, {
+        ...viewport,
+        devicePixelRatio: 1,
+        clearColor: [0, 0, 0, 1],
+      });
+      runtime.setCamera(camera);
+      return runtime;
+    }
+    window.__w13 = {
+      async render() {
+        const atlas = await FontAtlas.create(),
+          layer = new LabelLayer(atlas),
+          scene = Forge3DScene.create(),
+          runtime = await create();
+        try {
+          const plain = await runtime.readRgba();
+          layer.addLabel("AV office", [20, 70, 0], {
+            color: [1, 1, 1, 1],
+            haloWidth: 0,
+            horizonFadeAngle: 0,
+            fontSize: 42,
+          });
+          layer.addLabel("مرحبا", [20, 130, 0], {
+            color: [1, 1, 1, 1],
+            haloWidth: 0,
+            horizonFadeAngle: 0,
+            fontSize: 40,
+          });
+          layer.addLabel("नमस्ते", [20, 195, 0], {
+            color: [1, 1, 1, 1],
+            haloWidth: 0,
+            horizonFadeAngle: 0,
+            fontSize: 40,
+          });
+          layer.addCallout("Peak", [275, 215, 0], {
+            color: [1, 1, 1, 1],
+            haloWidth: 0,
+            horizonFadeAngle: 0,
+            fontSize: 20,
+            haloWidth: 1,
+            underline: true,
+          });
+          const report = layer.attach(scene, { viewport });
+          runtime.setScene(scene.snapshot());
+          const pixels = await runtime.readRgba(),
+            repeat = await runtime.readRgba();
+          const capture = await runtime.capture({ samples: 1 });
+          const capturePixels = capture.frame.toRgba8();
+          const before = runtime.getMemoryReport();
+          const replay = LabelLayer.fromJSON(atlas, layer.snapshot()),
+            scene2 = Forge3DScene.create();
+          replay.attach(scene2, { viewport });
+          runtime.setScene(scene2.snapshot());
+          const replayPixels = await runtime.readRgba();
+          runtime.resize({ width: 768, height: 512, devicePixelRatio: 1 });
+          const resized = await runtime.readRgba();
+          runtime.resize({ ...viewport, devicePixelRatio: 1 });
+          const back = await runtime.readRgba();
+          layer.dispose();
+          replay.dispose();
+          runtime.setScene(scene.snapshot());
+          const cleared = await runtime.readRgba(),
+            after = runtime.getMemoryReport();
+          const shaped = atlas.shape("مرحبا"),
+            shapingHash = await hash(
+              new TextEncoder().encode(JSON.stringify(shaped)),
+            );
+          return {
+            covered: covered(pixels),
+            accepted: report.accepted,
+            glyphCount: report.glyphCount,
+            bytes: report.vertexBytes,
+            deterministic: (await hash(pixels)) === (await hash(repeat)),
+            replay: (await hash(pixels)) === (await hash(replayPixels)),
+            resizeRoundTrip: (await hash(pixels)) === (await hash(back)),
+            resizedCovered: covered(resized),
+            captureCovered: covered(capturePixels),
+            captureDiff: diff(pixels, capturePixels),
+            clearMatches: (await hash(plain)) === (await hash(cleared)),
+            before,
+            after,
+            shapingHash,
+          };
+        } finally {
+          layer.dispose();
+          atlas.dispose();
+          runtime.dispose();
+          scene.dispose();
+        }
+      },
+      async outline() {
+        const atlas = await FontAtlas.defaultLatin(),
+          layer = new LabelLayer(atlas),
+          scene = Forge3DScene.create(),
+          runtime = await create();
+        try {
+          layer.addLabel("AO", [40, 170, 0], {
+            color: [1, 1, 1, 1],
+            haloWidth: 0,
+            horizonFadeAngle: 0,
+            fontSize: 120,
+          });
+          layer.attach(scene, { viewport });
+          runtime.setScene(scene.snapshot());
+          const pixels = await runtime.readRgba();
+          const reference = new OffscreenCanvas(384, 256),
+            ctx = reference.getContext("2d");
+          ctx.fillStyle = "black";
+          ctx.fillRect(0, 0, 384, 256);
+          ctx.fillStyle = "white";
+          const shape = atlas.shape("AO", {
+            color: [1, 1, 1, 1],
+            haloWidth: 0,
+            horizonFadeAngle: 0,
+            fontSize: 120,
+          });
+          for (const glyph of shape.glyphs) {
+            ctx.save();
+            ctx.translate(40 + glyph.x, 170 + glyph.y);
+            ctx.scale(1, -1);
+            const path = new Path2D(
+              glyph.path
+                .map((c) => c.type + " " + c.values.join(" "))
+                .join(" "),
+            );
+            ctx.fill(path);
+            ctx.restore();
+          }
+          const expected = ctx.getImageData(0, 0, 384, 256).data;
+          let agree = 0,
+            count = 0,
+            holes = 0,
+            expectedCount = 0;
+          for (let y = 70; y < 180; y++)
+            for (let x = 35; x < 225; x++) {
+              const i = (y * 384 + x) * 4,
+                a = pixels[i] > 127,
+                b = expected[i] > 127;
+              if (a === b) agree++;
+              if (a) count++;
+              if (b) expectedCount++;
+              else if (x > 120 && x < 175 && y > 100 && y < 150) holes++;
+            }
+          return {
+            agreement: agree / (110 * 190),
+            covered: count,
+            expectedCovered: expectedCount,
+            holes,
+            negativeControlAgreement: 1 - expectedCount / (110 * 190),
+          };
+        } finally {
+          layer.dispose();
+          atlas.dispose();
+          runtime.dispose();
+          scene.dispose();
+        }
+      },
+      async depth() {
+        const atlas = await FontAtlas.defaultLatin(),
+          layer = new LabelLayer(atlas),
+          scene = Forge3DScene.create(),
+          runtime = await create();
+        try {
+          const id = layer.addLabel("VISIBLE", [0, 0, -2], {
+            color: [1, 1, 1, 1],
+            haloWidth: 0,
+            horizonFadeAngle: 0,
+            fontSize: 48,
+            depthTest: true,
+          });
+          layer.attach(scene, { viewport, camera: Camera.fromInput(camera) });
+          runtime.setScene(scene.snapshot());
+          const visible = await runtime.readRgba();
+          // Commit the occluder BEFORE the glyphs: draw order cannot hide the
+          // label unless the world pipeline actually tests its depth.
+          layer.detach(scene);
+          scene.addNode({
+            kind: "text-mesh",
+            name: "occluder",
+            text: "X",
+            size: 12,
+            color: [0, 0, 0, 1],
+            transform: { translation: [-6, -6, 0] },
+          });
+          layer.attach(scene, { viewport, camera: Camera.fromInput(camera) });
+          runtime.setScene(scene.snapshot());
+          const hidden = await runtime.readRgba();
+          const capture = await runtime.capture({ samples: 1, aovs: ["id"] });
+          layer.updateLabel(id.id, { style: { depthTest: false } });
+          layer.attach(scene, { viewport, camera: Camera.fromInput(camera) });
+          runtime.setScene(scene.snapshot());
+          const negativeControlVisible = covered(await runtime.readRgba());
+          return {
+            negativeControlVisible,
+            visible: covered(visible),
+            hidden: covered(hidden),
+            capture: covered(capture.frame.toRgba8()),
+            id: id.id,
+          };
+        } finally {
+          layer.dispose();
+          atlas.dispose();
+          runtime.dispose();
+          scene.dispose();
+        }
+      },
+      async session() {
+        const atlas = await FontAtlas.defaultLatin(),
+          layer = new LabelLayer(atlas),
+          scene = Forge3DScene.create(),
+          session = await Forge3DSession.create(canvas, {
+            runtime: {
+              ...viewport,
+              devicePixelRatio: 1,
+              clearColor: [0, 0, 0, 1],
+            },
+          });
+        try {
+          layer.addLabel("Session", [30, 100, 0], {
+            color: [1, 1, 1, 1],
+            haloWidth: 0,
+            horizonFadeAngle: 0,
+            fontSize: 40,
+          });
+          layer.attach(scene, { viewport });
+          session.setScene(scene);
+          session.setCamera(camera);
+          const a = await session.capture({ samples: 1 });
+          const copy = session.getScene();
+          const before = covered(a.frame.toRgba8());
+          layer.setLabelsEnabled(false);
+          layer.attach(scene, { viewport });
+          const b = await session.capture({ samples: 1 });
+          return {
+            before,
+            disabled: covered(b.frame.toRgba8()),
+            copiedNodes: copy.getNodes().length,
+          };
+        } finally {
+          layer.dispose();
+          atlas.dispose();
+          session.dispose();
+          scene.dispose();
+        }
+      },
+      async viewer() {
+        const atlas = await FontAtlas.defaultLatin(),
+          layer = new LabelLayer(atlas),
+          viewer = await api.Forge3DViewer.create(canvas, {
+            runtime: {
+              width: 384,
+              height: 256,
+              devicePixelRatio: 1,
+              clearColor: [0, 0, 0, 1],
+              diagnostics: true,
+            },
+            controls: false,
+            resize: false,
+          });
+        try {
+          layer.addLabel("Viewer", [0, 0, 0], {
+            color: [1, 1, 1, 1],
+            haloWidth: 0,
+            horizonFadeAngle: 0,
+            fontSize: 40,
+          });
+          viewer.setCamera(camera);
+          viewer.setLabels(layer);
+          const image = async (blob) => {
+            const bitmap = await createImageBitmap(blob),
+              c = new OffscreenCanvas(bitmap.width, bitmap.height),
+              ctx = c.getContext("2d");
+            ctx.drawImage(bitmap, 0, 0);
+            bitmap.close();
+            return ctx.getImageData(0, 0, c.width, c.height).data;
+          };
+          const before = covered(await image(await viewer.screenshot()));
+          layer.setLabelsEnabled(false);
+          const disabled = covered(await image(await viewer.screenshot()));
+          layer.setLabelsEnabled(true);
+          viewer.resize({ width: 512, height: 320, devicePixelRatio: 1 });
+          const resized = covered(await image(await viewer.screenshot()));
+          const { simulateViewerDeviceLossForTests } = await import(
+            "../src-ts/viewer.ts"
+          );
+          const recovery = new Promise((resolve) => {
+            const unsubscribe = viewer.addRecoveryListener(() => {
+              unsubscribe();
+              resolve();
+            });
+          });
+          simulateViewerDeviceLossForTests(viewer);
+          await recovery;
+          const recovered = covered(await image(await viewer.screenshot()));
+          const report = viewer.getLabelReport();
+          viewer.dispose();
+          return {
+            before,
+            disabled,
+            resized,
+            recovered,
+            accepted: report.accepted,
+            viewerDisposed: viewer.disposed,
+            fontStillAlive: !atlas.disposed,
+          };
+        } finally {
+          viewer.dispose();
+          layer.dispose();
+          atlas.dispose();
+        }
+      },
+      async viewerReview() {
+        const atlas = await FontAtlas.defaultLatin(),
+          layer = new LabelLayer(atlas),
+          errors = [];
+        let rejectLabelError;
+        const labelError = new Promise(
+          (resolve) => (rejectLabelError = resolve),
+        );
+        const viewer = await api.Forge3DViewer.create(canvas, {
+          runtime: {
+            ...viewport,
+            diagnostics: true,
+            devicePixelRatio: 1,
+            clearColor: [0, 0, 0, 1],
+          },
+          controls: false,
+          resize: false,
+          onError: (error) => {
+            errors.push(error.code);
+            rejectLabelError(error);
+          },
+        });
+        const terrain = {
+          width: 32,
+          height: 32,
+          bounds: [-2, -2, 2, 2],
+          domain: [0, 1],
+          heights: Float32Array.from(
+            { length: 32 * 32 },
+            (_, i) =>
+              0.4 +
+              0.2 * Math.sin((i % 32) / 5) * Math.cos(Math.floor(i / 32) / 5),
+          ),
+        };
+        const image = async (blob) => {
+          const bitmap = await createImageBitmap(blob),
+            c = new OffscreenCanvas(bitmap.width, bitmap.height),
+            ctx = c.getContext("2d");
+          ctx.drawImage(bitmap, 0, 0);
+          bitmap.close();
+          return ctx.getImageData(0, 0, c.width, c.height).data;
+        };
+        let actualCamera,
+          baseline,
+          terrainCovered,
+          attachedDiff,
+          detachedDiff,
+          stateAfterError,
+          repaired,
+          cleared,
+          clearedDiff,
+          cameraClearDiff,
+          reportAfterMotion,
+          recoveryCleared,
+          screenshotRejected,
+          replacementCleared,
+          goodPixels;
+        try {
+          viewer.setCamera({
+            position: [4, 4, 6],
+            target: [0, 0.3, 0],
+            up: [0, 1, 0],
+            near: 0.1,
+            far: 100,
+            fovYDegrees: 45,
+          });
+          actualCamera = viewer.getCamera();
+          viewer.setTerrain(terrain);
+          baseline = await image(await viewer.screenshot());
+          terrainCovered = covered(baseline);
+          viewer.setLabels(layer);
+          attachedDiff = diff(baseline, await image(await viewer.screenshot()));
+          viewer.setLabels(null);
+          detachedDiff = diff(baseline, await image(await viewer.screenshot()));
+          viewer.setLabels(layer, { maxVertexBytes: 100000 });
+          const good = layer.addLabel("A", [0, 1, 0], {
+            fontSize: 20,
+            haloWidth: 0,
+            horizonFadeAngle: 0,
+          });
+          const goodFrame = await image(await viewer.screenshot());
+          goodPixels = diff(baseline, goodFrame).sum;
+          if (!viewer.getLabelReport().accepted.includes(good.id))
+            throw Error("Good label was not visible");
+          const bad = layer.addLabel("W".repeat(1000), [0, 1, 0], {
+            fontSize: 20,
+            haloWidth: 0,
+            horizonFadeAngle: 0,
+          });
+          await labelError;
+          stateAfterError = viewer.status;
+          cleared = viewer.getLabelReport() === undefined;
+          clearedDiff = diff(baseline, await image(await viewer.screenshot()));
+          for (let i = 1; i <= 10; i++) {
+            viewer.setCamera({
+              ...actualCamera,
+              position: [4 + i, 4, 6],
+              target: [i, 0.3, 0],
+            });
+            try {
+              await viewer.screenshot();
+            } catch (e) {
+              if (!e.message.includes("budget")) throw e;
+            }
+          }
+          reportAfterMotion = viewer.getLabelReport() === undefined;
+          const moved = await image(await viewer.screenshot());
+          viewer.setLabels(null);
+          cameraClearDiff = diff(moved, await image(await viewer.screenshot()));
+          viewer.setCamera(actualCamera);
+          // Force a new attempted invalid state, and call capture before RAF.
+          layer.removeLabel(bad.id);
+          viewer.setLabels(layer, { maxVertexBytes: 100000 });
+          const badAgain = layer.addLabel("W".repeat(1000), [0, 1, 0], {
+            fontSize: 20,
+            haloWidth: 0,
+            horizonFadeAngle: 0,
+          });
+          let capture;
+          try {
+            capture = viewer.screenshot();
+          } catch {
+            throw Error("Capture threw synchronously");
+          }
+          screenshotRejected = capture instanceof Promise;
+          try {
+            await capture;
+            screenshotRejected = false;
+          } catch (e) {
+            screenshotRejected &&= e.message.includes("budget");
+          }
+          const { simulateViewerDeviceLossForTests } = await import(
+            "../src-ts/viewer.ts"
+          );
+          const recovery = new Promise((resolve) => {
+            const unsubscribe = viewer.addRecoveryListener(() => {
+              unsubscribe();
+              resolve();
+            });
+          });
+          simulateViewerDeviceLossForTests(viewer);
+          await recovery;
+          recoveryCleared =
+            viewer.getLabelReport() === undefined && viewer.status === "ready";
+          layer.removeLabel(badAgain.id);
+          await viewer.screenshot();
+          repaired =
+            viewer.getLabelReport().accepted.includes(good.id) &&
+            viewer.status === "ready";
+          const replacement = new LabelLayer(atlas);
+          try {
+            replacement.addLabel("W".repeat(1000), [0, 1, 0], {
+              fontSize: 20,
+              haloWidth: 0,
+              horizonFadeAngle: 0,
+            });
+            try {
+              viewer.setLabels(replacement, { maxVertexBytes: 100000 });
+            } catch (e) {
+              if (!e.message.includes("budget")) throw e;
+            }
+            replacementCleared =
+              viewer.getLabelReport() === undefined &&
+              diff(baseline, await image(await viewer.screenshot())).max === 0;
+          } finally {
+            viewer.setLabels(null);
+            replacement.dispose();
+          }
+        } finally {
+          viewer.dispose();
+          layer.dispose();
+          atlas.dispose();
+        }
+        // Recreate the original one-light failure on the SAME terrain/camera.
+        const runtime = await create();
+        let oneLightDiff;
+        try {
+          runtime.setCamera(actualCamera);
+          runtime.setTerrain(terrain);
+          const one = new api.LightCollection();
+          one.add(api.LightCollection.defaults().values()[0]);
+          runtime.setLighting(one.snapshot());
+          oneLightDiff = diff(baseline, await runtime.readRgba());
+        } finally {
+          runtime.dispose();
+        }
+        return {
+          terrainCovered,
+          attachedDiff,
+          detachedDiff,
+          oneLightDiff,
+          stateAfterError,
+          repaired,
+          cleared,
+          clearedDiff,
+          cameraClearDiff,
+          reportAfterMotion,
+          recoveryCleared,
+          screenshotRejected,
+          replacementCleared,
+          goodPixels,
+          errors,
+        };
+      },
+      async viewerBudget() {
+        const atlas = await FontAtlas.defaultLatin(),
+          layer = new LabelLayer(atlas),
+          errors = [];
+        const viewer = await api.Forge3DViewer.create(canvas, {
+          runtime: {
+            ...viewport,
+            devicePixelRatio: 1,
+            clearColor: [0, 0, 0, 1],
+          },
+          controls: false,
+          resize: false,
+          onError: (e) => errors.push(e.code),
+        });
+        const cameraA = {
+          position: [0, 10, 100],
+          target: [0, 0, 0],
+          up: [0, 1, 0],
+          near: 0.1,
+          far: 1000,
+          fovYDegrees: 45,
+          projection: "orthographic",
+          orthographicHeight: 50,
+        };
+        const cameraB = {
+          ...cameraA,
+          position: [50, 10, 100],
+          target: [50, 0, 0],
+          orthographicHeight: 160,
+        };
+        const image = async (blob) => {
+          const bitmap = await createImageBitmap(blob),
+            c = new OffscreenCanvas(bitmap.width, bitmap.height),
+            ctx = c.getContext("2d");
+          ctx.drawImage(bitmap, 0, 0);
+          bitmap.close();
+          return ctx.getImageData(0, 0, c.width, c.height).data;
+        };
+        const rejectCapture = async () => {
+          let promise;
+          try {
+            promise = viewer.screenshot();
+          } catch {
+            throw Error("Label capture threw synchronously");
+          }
+          try {
+            await promise;
+            return false;
+          } catch (e) {
+            if (!e.message.includes("Label mesh byte budget exceeded")) throw e;
+            return promise instanceof Promise;
+          }
+        };
+        const frame = () =>
+          new Promise((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(resolve)),
+          );
+        try {
+          viewer.setCamera(cameraA);
+          const style = {
+            fontSize: 36,
+            color: [1, 1, 1, 1],
+            haloWidth: 0,
+            horizonFadeAngle: 0,
+          };
+          const id = layer.addLabel("W", [0, 0, 0], style).id;
+          layer.addLabel("W", [100, 0, 0], style);
+          const revision = layer.revision;
+          viewer.setLabels(layer);
+          const singleBytes = viewer.getLabelReport().vertexBytes;
+          const before = await image(await viewer.screenshot());
+          viewer.setLabels(layer, { maxVertexBytes: singleBytes * 1.5 });
+          viewer.setCamera(cameraB);
+          const cameraRejected = await rejectCapture();
+          const hidden = covered(await image(await viewer.screenshot()));
+          const callerErrors = errors.length;
+          viewer.setCamera(cameraA);
+          const restored = await image(await viewer.screenshot());
+          const restoredAccepted = viewer.getLabelReport()?.accepted ?? [];
+          viewer.resize({ width: 1400, height: 256, devicePixelRatio: 1 });
+          const resizeRejected = await rejectCapture();
+          const resizeCallerErrors = errors.length;
+          viewer.resize({ ...viewport, devicePixelRatio: 1 });
+          const resizedBack = await image(await viewer.screenshot());
+          viewer.setCamera(cameraB);
+          await frame();
+          const frameErrors = errors.length;
+          for (let i = 1; i <= 3; i++) {
+            viewer.setCamera({
+              ...cameraB,
+              position: [50 + i, 10, 100],
+              target: [50 + i, 0, 0],
+            });
+            await frame();
+          }
+          const repeatedFrameErrors = errors.length;
+          viewer.setCamera(cameraA);
+          const frameRestored = await image(await viewer.screenshot());
+          return {
+            singleBytes,
+            budget: singleBytes * 1.5,
+            beforeCovered: covered(before),
+            cameraRejected,
+            hidden,
+            callerErrors,
+            restoredCovered: covered(restored),
+            restoredDiff: diff(before, restored),
+            restoredAccepted,
+            id,
+            resizeRejected,
+            resizeCallerErrors,
+            resizeRestoredDiff: diff(before, resizedBack),
+            frameErrors,
+            repeatedFrameErrors,
+            frameRestoredDiff: diff(before, frameRestored),
+            unchangedRevision: layer.revision === revision,
+            status: viewer.status,
+          };
+        } finally {
+          viewer.dispose();
+          layer.dispose();
+          atlas.dispose();
+        }
+      },
+      async lineReview() {
+        const atlas = await FontAtlas.create(),
+          layer = new LabelLayer(atlas),
+          scene = Forge3DScene.create(),
+          runtime = await create();
+        try {
+          const style = { fontSize: 32, color: [1, 1, 1, 1], haloWidth: 0 };
+          layer.addLineLabel(
+            "AB",
+            [
+              [70, 100, 0],
+              [310, 100, 0],
+            ],
+            style,
+          );
+          layer.attach(scene, { viewport });
+          runtime.setScene(scene.snapshot());
+          const forward = await runtime.readRgba();
+          layer.clearLabels();
+          layer.addLineLabel(
+            "AB",
+            [
+              [310, 100, 0],
+              [70, 100, 0],
+            ],
+            style,
+          );
+          layer.attach(scene, { viewport });
+          runtime.setScene(scene.snapshot());
+          const reverse = await runtime.readRgba();
+          layer.clearLabels();
+          layer.addLineLabel(
+            "ROAD",
+            [
+              [100, 180, 0],
+              [200, 180, 0],
+            ],
+            {
+              ...style,
+              fontSize: 18,
+              repeatDistance: 200,
+            },
+          );
+          const report = layer.attach(scene, { viewport });
+          runtime.setScene(scene.snapshot());
+          return {
+            forwardCovered: covered(forward),
+            reverseDiff: diff(forward, reverse),
+            repeatedCovered: covered(await runtime.readRgba()),
+            accepted: report.accepted,
+            rejected: report.rejected,
+          };
+        } finally {
+          runtime.dispose();
+          scene.dispose();
+          layer.dispose();
+          atlas.dispose();
+        }
+      },
+      async contracts() {
+        const atlas = await FontAtlas.create(),
+          layer = new LabelLayer(atlas);
+        try {
+          const id = layer.addLineLabel(
+              "ROAD",
+              [
+                [10, 60, 0],
+                [370, 60, 0],
+              ],
+              {
+                color: [1, 1, 1, 1],
+                haloWidth: 0,
+                horizonFadeAngle: 0,
+                repeatDistance: 90,
+                fontSize: 18,
+                placement: "along",
+              },
+            ).id,
+            report = layer.render({ viewport });
+          const plan = LabelPlan.compile({
+            labels: [
+              {
+                id: "terrain",
+                text: "Peak",
+                position: [20, 30, 0],
+                requires_terrain: true,
+              },
+            ],
+            viewport: [384, 256],
+            terrain: {
+              sample: (x, y, z) => ({
+                elevation: 40 + x * 0.1,
+                source: "fixture-dem",
+                visible: true,
+              }),
+            },
+          });
+          return {
+            id,
+            glyphCount: report.glyphCount,
+            nodes: report.nodes.length,
+            curved: layer.addCurvedLabel("River", [
+              [0, 0, 0],
+              [1, 2, 0],
+              [4, 0, 0],
+            ]),
+            elevated: layer.addLineLabel(
+              "Ridge",
+              [
+                [0, 0, 0],
+                [10, 0, 1],
+              ],
+              {},
+              "sample",
+            ),
+            terrain: plan.accepted[0].candidate.anchor,
+            pick: layer.pick(15, 55),
+            serialized:
+              LabelPlan.fromJSON(plan.serialize()).serialize() ===
+              plan.serialize(),
+            fonts: atlas.fontIds,
+            shapingHash: await hash(
+              new TextEncoder().encode(JSON.stringify(atlas.shape("مرحبا"))),
+            ),
+          };
+        } finally {
+          layer.dispose();
+          atlas.dispose();
+        }
+      },
+    };
+  </script>
+</html>

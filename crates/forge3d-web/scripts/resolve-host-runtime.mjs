@@ -7,7 +7,9 @@ import { fileURLToPath } from "node:url";
 import {
   assertNoStableIdentifiers,
   captureHostInventory,
+  observeLiveArchitecture,
   observeLiveOsBuild,
+  observeLiveOsVersion,
   observeLiveSession,
 } from "./capture-host-inventory.mjs";
 
@@ -50,7 +52,9 @@ export function resolveHostRuntime({
     observed.lane !== lane ||
     observed.platform !== platform ||
     observed.session !== undefined ||
+    observed.osVersion !== undefined ||
     observed.osBuild !== undefined ||
+    observed.architecture !== undefined ||
     !Object.hasOwn(observed, "launchArguments") ||
     !Array.isArray(observed.launchArguments) ||
     observed.launchArguments.some((argument) => typeof argument !== "string")
@@ -71,7 +75,9 @@ export function resolveHostRuntime({
   const inventory = captureHostInventory({
     assetId: hostId,
     platform,
+    osVersion: observeLiveOsVersion(platform, { execute }),
     osBuild: observeLiveOsBuild(platform, { execute }),
+    architecture: observeLiveArchitecture(platform, { execute }),
     displayServer: observed.displayServer,
     session: observeLiveSession(platform, { execute, environment }),
     browsers: observed.browsers,

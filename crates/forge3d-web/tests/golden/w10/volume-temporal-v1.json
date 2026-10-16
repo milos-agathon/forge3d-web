@@ -1,0 +1,28 @@
+{
+  "fixture": "volume-temporal-v1",
+  "width": 1920,
+  "height": 1080,
+  "bounds": [
+    -10,
+    -5,
+    -10,
+    10,
+    20,
+    10
+  ],
+  "densityPreset": "localized_haze",
+  "dimensions": [
+    8,
+    6,
+    8
+  ],
+  "densityScale": 8,
+  "resolutionScale": 1,
+  "steps": 32,
+  "temporalWeight": 0.8,
+  "outsideMaxByteDifference": 1,
+  "minimumContributingPixels": 100000,
+  "test": "tests/playwright/w10_environment.spec.ts",
+  "minimumContributingFraction": 0.05,
+  "scope": "W10 bounded contribution only; W11 owns 64-frame convergence, disocclusion, decay and flicker tolerances"
+}

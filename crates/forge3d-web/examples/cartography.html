@@ -1,0 +1,6 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Forge3D · Cartographic output</title>
+<style>body{margin:40px auto;max-width:980px;padding:0 24px;background:#f6f5f0;color:#232923;font:16px system-ui}h1{font:44px Georgia,serif;letter-spacing:-1px;margin-bottom:8px}p{line-height:1.6;max-width:650px}canvas{display:block;width:min(100%,720px);height:auto;background:white;border:1px solid #d3d5cd;margin:24px 0}button,a{color:inherit;font:inherit}button{background:#253f33;color:white;border:0;padding:12px 20px;cursor:pointer}nav{display:flex;gap:24px;align-items:center}#status{min-height:24px;color:#526052}</style>
+<h1>A map, ready to share.</h1><p>Compose a terrain frame with a title, elevation legend, scale, north arrow and inset. Export a plate image or a vector drawing with labels.</p>
+<nav><button id="compose">Compose map</button><a id="png" hidden>PNG plate</a><a id="jpeg" hidden>JPEG plate</a><a id="svg" hidden>SVG drawing</a><a id="pdf" hidden>PDF drawing</a></nav><p id="status" role="status">Loading…</p><canvas width="480" height="320"></canvas>
+<script type="module" src="./cartography.js"></script></html>

@@ -1,0 +1,66 @@
+{
+  "qualification": "Chromium preflight only",
+  "date": "2026-10-01",
+  "hardware": {
+    "adapter": "NVIDIA GeForce RTX 3070",
+    "driverVersion": "32.0.16.1060",
+    "osVersion": "10.0.26300.9550",
+    "displayVersion": "26H2",
+    "backend": "ANGLE D3D11"
+  },
+  "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36",
+  "testedTarballSha256": "b8c8cf43d761189b2f279eafac8505db1f1ca378193b2fba772607baccb6d821",
+  "workload": {
+    "width": 192,
+    "height": 128,
+    "terrainSamples": [
+      33,
+      33
+    ],
+    "instances": 2,
+    "probeDims": [
+      4,
+      4
+    ],
+    "reflectionResolution": 4,
+    "rayCount": 64,
+    "durationSeconds": 60
+  },
+  "observed": {
+    "durationSeconds": 60.43870000000298,
+    "frames": 15538,
+    "p95Ms": 5.9000000059604645,
+    "gpuBytes": 250172,
+    "wasmBytes": 3145728,
+    "ownedArrayBytes": 43136,
+    "covered": 1035,
+    "jsHeapBytes": 16506598,
+    "adapter": {
+      "vendor": "nvidia",
+      "architecture": "ampere",
+      "device": "",
+      "description": ""
+    }
+  },
+  "cpuComponentSumBytes": 19695462,
+  "cpuMeasurementScope": "Reported JS heap plus main-realm WASM linear memory plus enumerated owned typed arrays. Not OS resident memory, a full allocation census, or worker bake peak.",
+  "referenceBudgets": [
+    {
+      "profileId": "reference-integrated",
+      "status": "BLOCKED",
+      "blockedBy": "INF-00",
+      "assetId": "FW-WIN-I12-01",
+      "labels": [
+        "forge3d-web",
+        "hw-win-intel12"
+      ],
+      "reason": "Owner reports maintenance/unprovisioned. No substitute permitted. Exact adapter, driver and OS attestation required."
+    },
+    {
+      "profileId": "reference-discrete",
+      "status": "ABSENT",
+      "assetId": "FW-LNX-NV-01",
+      "reason": "Ubuntu/Vulkan machine not available in this session. Windows RTX 3070 does not qualify this profile."
+    }
+  ]
+}

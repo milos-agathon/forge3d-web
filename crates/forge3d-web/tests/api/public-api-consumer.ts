@@ -6,21 +6,77 @@
  * unavailable until their owning FND-01..FND-07 implementation tasks land.
  */
 import {
+  BorrowedWasmView,
+  createNotebookAdapter,
+  defineForge3DElement,
   Forge3DError,
+  Forge3DMessageClient,
+  Forge3DOffscreenRenderer,
   Forge3DRuntime,
+  Forge3DScene,
+  Forge3DSession,
   Forge3DViewer,
+  Forge3DWebSocketAdapter,
+  Forge3DWorkerPool,
+  Forge3DWorkerRenderer,
+  getRendererPreset,
+  installForge3DWorkerHost,
+  readByteSource,
+  RendererConfig,
+  rendererPresetNames,
+  selectWorkerExecutionMode,
+  serveForge3DMessagePort,
+  writeByteSink,
+  type AdapterInfo,
+  type BrowserByteSink,
+  type BrowserByteSource,
+  type ByteReadOptions,
+  type ByteReadProgress,
+  type ByteWriteResult,
   type CameraInput,
+  type Forge3DDType,
   type Forge3DErrorCode,
+  type Forge3DMessageCallOptions,
+  type Forge3DMessageContext,
+  type Forge3DMessageHandler,
+  type Forge3DMessageHandlers,
+  type Forge3DNotebookAdapter,
+  type Forge3DOffscreenRendererOptions,
   type Forge3DRuntimeCapabilities,
   type Forge3DRuntimeOptions,
+  type Forge3DSessionCapabilities,
+  type Forge3DSessionOptions,
+  type Forge3DTypedArray,
   type Forge3DViewerOptions,
+  type Forge3DWorkerPoolOptions,
+  type Forge3DWorkerRendererOptions,
+  type MemoryCategory,
+  type MemoryOverflowPolicy,
+  type MemoryReport,
+  type PassRenderStats,
+  type QualityDowngrade,
   type OrbitControlsOptions,
   type OrbitView,
+  type OffscreenOutput,
+  type RendererConfigData,
+  type RendererConfigInput,
+  type RendererConfigSource,
+  type RenderQuality,
+  type RenderStats,
   type ResizeInput,
+  type SceneNodeInput,
+  type SceneNodeSnapshot,
+  type ScenePassInput,
+  type SceneRenderPlan,
+  type SceneSnapshot,
+  type SceneTransform,
+  type SessionStatus,
   type TerrainColorRampInput,
   type TerrainHeightmapInput,
   type TerrainHeightmapSourceInput,
   type TerrainSourceProgress,
+  type TransferableTypedArray,
+  type TypedArrayShape,
   type ViewerCapabilities,
   type ViewerDiagnostics,
   type ViewerRecoveryOptions,
@@ -30,7 +86,12 @@ import {
   type ViewerResourcePreset,
   type ViewerStatus,
   type ViewerStatusChange,
+  type WorkerExecutionMode,
+  type WorkerPoolDiagnostics,
+  type WorkerRendererDiagnostics,
 } from "../../types/index";
+
+declare const offscreenCanvas: OffscreenCanvas;
 
 declare const canvas: HTMLCanvasElement;
 
@@ -43,6 +104,10 @@ const options = {
   alphaMode: "premultiplied",
   colorSpace: "srgb",
   diagnostics: true,
+  quality: "high",
+  memoryBudgetBytes: 512 * 1024 * 1024,
+  overflowPolicy: "downscale",
+  timestampMode: "auto",
 } satisfies Forge3DRuntimeOptions;
 
 const viewerRuntimeOptions = {
@@ -169,6 +234,12 @@ const resize = {
 } satisfies ResizeInput;
 
 async function compileRuntimeDeclarations(): Promise<void> {
+  const offscreenRuntime = await Forge3DRuntime.create(
+    offscreenCanvas,
+    options,
+  );
+  offscreenRuntime.dispose();
+
   const runtime = await Forge3DRuntime.create(canvas, options);
   const width: number = runtime.width;
   const height: number = runtime.height;
@@ -177,14 +248,24 @@ async function compileRuntimeDeclarations(): Promise<void> {
   const color: [number, number, number, number] = runtime.clearColor();
   const runtimeCapabilities: Forge3DRuntimeCapabilities =
     runtime.getCapabilities();
+  const adapterInfo: AdapterInfo | undefined =
+    runtimeCapabilities.adapterInfo;
+  const surfaceFormats: string[] | undefined =
+    runtimeCapabilities.surfaceFormats;
+  const timestampQuery: boolean | undefined =
+    runtimeCapabilities.timestampQuery;
 
   runtime.setTerrain(terrain);
   await runtime.setTerrainFromSource(sourceTerrain);
+  runtime.setScene(Forge3DScene.create().snapshot());
   runtime.setCamera(camera);
   runtime.resize(resize);
   runtime.render();
 
+  const runtimeStats: RenderStats = runtime.getRenderStats();
+  const runtimeMemory: MemoryReport = runtime.getMemoryReport();
   const screenshot: Blob = await runtime.screenshot();
+  const runtimeRgba: Uint8Array = await runtime.readRgba();
   runtime.dispose();
 
   void [
@@ -194,7 +275,13 @@ async function compileRuntimeDeclarations(): Promise<void> {
     diagnosticsEnabled,
     color,
     runtimeCapabilities,
+    adapterInfo,
+    surfaceFormats,
+    timestampQuery,
+    runtimeStats,
+    runtimeMemory,
     screenshot,
+    runtimeRgba,
   ];
 }
 
@@ -270,9 +357,966 @@ const allViewerStatuses = [
   "disposed",
 ] satisfies ViewerStatus[];
 
+const rendererInput = {
+  quality: "high",
+  memoryBudgetBytes: 512 * 1024 * 1024,
+  overflowPolicy: "downscale",
+  timestampMode: "auto",
+  sampleCount: 4,
+  lighting: {
+    exposure: 1.2,
+    lights: [
+      {
+        type: "directional",
+        intensity: 5,
+        color: [1, 0.97, 0.92],
+        direction: [-0.35, -1, -0.25],
+      },
+    ],
+  },
+  materials: {
+    terrain: {
+      id: "terrain-default",
+      model: "pbr",
+      parameters: { roughness: 0.6, flat: false, label: "terrain" },
+    },
+  },
+  shading: {
+    brdf: "cooktorrance-ggx",
+    roughness: 0.5,
+    metallic: 0,
+    normalMaps: true,
+  },
+  shadows: { enabled: true, technique: "pcss", mapSize: 2048, cascades: 3 },
+  gi: { modes: ["ibl"], ambientOcclusionStrength: 0.4 },
+  atmosphere: { enabled: true, sky: "hosek-wilkie" },
+  brdfOverride: "disney-principled",
+} satisfies RendererConfigInput;
+
+const configFromInput = new RendererConfig(rendererInput);
+const configFromSource: RendererConfigSource = configFromInput;
+const configFromPreset = getRendererPreset("rainier-showcase");
+const presetNames: readonly string[] = rendererPresetNames();
+const configData: RendererConfigData = configFromPreset.toJSON();
+const configCopy = RendererConfig.from(configFromSource).copy({
+  brdfOverride: null,
+});
+configCopy.validate();
+const renderQuality: RenderQuality = configData.quality;
+const overflowPolicy: MemoryOverflowPolicy = configData.overflowPolicy;
+
+const groupNode = {
+  kind: "group",
+  name: "root",
+} satisfies SceneNodeInput;
+
+const terrainNode = {
+  kind: "terrain",
+  name: "terrain",
+  terrain,
+  transform: {
+    translation: [0, 0, 0],
+    rotation: [0, 0, 0, 1],
+    scale: [1, 1, 1],
+  } satisfies Partial<SceneTransform>,
+} satisfies SceneNodeInput;
+
+const groundPlaneNode = {
+  kind: "ground-plane",
+  name: "ground",
+  size: [100, 100],
+  color: [0.4, 0.5, 0.6, 1],
+  height: 0,
+} satisfies SceneNodeInput;
+
+const textNode = {
+  kind: "text-mesh",
+  name: "label",
+  text: "summit",
+  size: 12,
+  color: [1, 1, 1, 1],
+} satisfies SceneNodeInput;
+
+const overlayNode = {
+  kind: "overlay",
+  name: "hud",
+  bounds: [0, 0, 200, 80],
+  color: [0, 0, 0, 0.5],
+  zIndex: 2,
+} satisfies SceneNodeInput;
+
+const customNode = {
+  kind: "custom",
+  name: "custom",
+  layerType: "points",
+  payload: { count: 3 },
+} satisfies SceneNodeInput;
+
+const scenePass = {
+  name: "composite",
+  kind: "render",
+  reads: ["color"],
+  writes: ["graded"],
+  dependsOn: ["terrain"],
+} satisfies ScenePassInput;
+
+const sessionOptions = {
+  runtime: viewerRuntimeOptions,
+  renderer: configFromSource,
+  recovery: { deviceLoss: "once" },
+} satisfies Forge3DSessionOptions;
+
+function compileSceneDeclarations(): void {
+  const scene = Forge3DScene.create();
+  const group = scene.addNode(groupNode);
+  const terrainId = scene.addTerrain(terrain, { name: "terrain" });
+  scene.setParent(terrainId, group);
+  scene.addGroundPlane(groundPlaneNode);
+  scene.addTextMesh(textNode);
+  scene.addOverlay(overlayNode);
+  scene.addNode(customNode);
+  scene.addNode(terrainNode);
+  scene.setTransform(group, { translation: [0, 0, 0] });
+  scene.setVisible(group, true);
+  scene.addPass(scenePass);
+  scene.removePass("composite");
+  const plan: SceneRenderPlan = scene.getRenderPlan();
+  const snapshot: SceneSnapshot = scene.snapshot();
+  const nodeSnapshot: SceneNodeSnapshot | undefined = scene.getNode(group);
+  const nodes: SceneNodeSnapshot[] = scene.getNodes();
+  const removed: number[] = scene.removeNode(terrainId);
+  const estimate: number = scene.estimatedGpuBytes();
+  const copied: Forge3DScene = scene.copy();
+  const revision: number = scene.revision;
+  const sceneDisposed: boolean = scene.disposed;
+  copied.dispose();
+  void [
+    plan,
+    snapshot,
+    nodeSnapshot,
+    nodes,
+    removed,
+    estimate,
+    revision,
+    sceneDisposed,
+  ];
+}
+
+async function compileSessionDeclarations(): Promise<void> {
+  const session = await Forge3DSession.create(offscreenCanvas, sessionOptions);
+  const sessionStatus: SessionStatus = session.status;
+  const sessionDisposed: boolean = session.disposed;
+  const sessionConfig: RendererConfig = session.getConfig();
+  const capabilities: Forge3DSessionCapabilities = session.getCapabilities();
+  const adapterInfo: AdapterInfo = capabilities.adapterInfo;
+  const timingMode: "gpu-timestamp" | "cpu" = capabilities.timingMode;
+  const offscreenCanvasSupport: boolean = capabilities.offscreenCanvas;
+  const workersSupport: boolean = capabilities.workers;
+  const sharedArrayBufferSupport: boolean =
+    capabilities.sharedArrayBuffer;
+  const fileSystemAccessSupport: boolean = capabilities.fileSystemAccess;
+  const opfsSupport: boolean = capabilities.opfs;
+  const stats: RenderStats = session.getRenderStats();
+  const passStats: PassRenderStats[] = stats.passes;
+  const memory: MemoryReport = session.getMemoryReport();
+  const categoryBytes: number = memory.categories[
+    "buffers" satisfies MemoryCategory
+  ];
+  const downgrades: QualityDowngrade[] = memory.downgrades;
+
+  const scene = Forge3DScene.create();
+  session.setScene(scene);
+  const currentScene: Forge3DScene | undefined = session.getScene();
+  session.render();
+  session.setCamera({
+    position: [0, 0, 5],
+    target: [0, 0, 0],
+    up: [0, 1, 0],
+    fovYDegrees: 45,
+    near: 0.1,
+    far: 100,
+  });
+  const rgba: Uint8Array = await session.readRgba();
+  session.resize(resize);
+  const sessionScreenshot: Blob = await session.screenshot();
+  await session.whenReady();
+  session.dispose();
+  void rgba;
+
+  void [
+    sessionStatus,
+    sessionDisposed,
+    sessionConfig,
+    adapterInfo,
+    timingMode,
+    offscreenCanvasSupport,
+    workersSupport,
+    sharedArrayBufferSupport,
+    fileSystemAccessSupport,
+    opfsSupport,
+    passStats,
+    categoryBytes,
+    downgrades,
+    currentScene,
+    sessionScreenshot,
+  ];
+}
+
+declare const messagePort: MessagePort;
+declare const socket: WebSocket;
+declare const container: HTMLElement;
+declare const worker: Worker;
+
+async function compileAdapterDeclarations(): Promise<void> {
+  const dtype: Forge3DDType = "f32";
+  const shape: TypedArrayShape = { dtype, shape: [2, 2] };
+  const backing = new Float32Array(4);
+  const view = new BorrowedWasmView(() => backing, shape);
+  const viewDisposed: boolean = view.disposed;
+  const generation: number = view.generation;
+  const descriptor: TypedArrayShape = view.descriptor;
+  const resolved: Float32Array = view.view();
+  const owned: Float32Array = view.copy();
+  const transferable: TransferableTypedArray<Float32Array> =
+    view.transfer();
+  view.dispose();
+
+  const readOptions: ByteReadOptions = {
+    signal: new AbortController().signal,
+    maxBytes: 1024,
+    onProgress: (progress: ByteReadProgress) => {
+      void progress.loaded;
+      void progress.done;
+    },
+  };
+  const ownedBytes = new Uint8Array(owned);
+  const sources: BrowserByteSource[] = [
+    "https://example.test/data.bin",
+    new URL("https://example.test/data.bin"),
+    new Blob([ownedBytes]),
+    new ArrayBuffer(4),
+    ownedBytes,
+    new ReadableStream<Uint8Array>(),
+    new Response(ownedBytes),
+  ];
+  const bytes: Uint8Array = await readByteSource(sources[3]!, readOptions);
+
+  const sinks: BrowserByteSink[] = [
+    { kind: "blob", type: "application/octet-stream" },
+    { kind: "stream", stream: new WritableStream<Uint8Array>() },
+    { kind: "file-system", suggestedName: "out.bin" },
+    { kind: "opfs", path: "forge3d/out.bin" },
+    { kind: "download", filename: "out.bin" },
+  ];
+  const written: ByteWriteResult = await writeByteSink(
+    bytes.slice(),
+    sinks[0]!,
+  );
+  void written.bytesWritten;
+
+  const echoHandler = ((payload: unknown, context: Forge3DMessageContext) => {
+    void context.requestId;
+    void context.signal;
+    return payload;
+  }) satisfies Forge3DMessageHandler;
+  const messageHandlers: Forge3DMessageHandlers = {
+    echo: echoHandler,
+  };
+  const unserve = serveForge3DMessagePort(messagePort, messageHandlers);
+  const client = new Forge3DMessageClient(messagePort);
+  const callOptions: Forge3DMessageCallOptions = {
+    transfer: transferable.transfer,
+  };
+  const echoed = await client.call<unknown>("echo", null, callOptions);
+  client.dispose();
+  unserve();
+  void echoed;
+
+  const socketAdapter = new Forge3DWebSocketAdapter(socket);
+  const adapterPort: MessagePort = socketAdapter.port;
+  socketAdapter.dispose();
+  void adapterPort;
+
+  const mode: WorkerExecutionMode = selectWorkerExecutionMode({
+    workerAvailable: true,
+    crossOriginIsolated: true,
+    sharedArrayBufferAvailable: true,
+    preferSharedArrayBuffer: true,
+  });
+  const poolOptions: Forge3DWorkerPoolOptions = {
+    size: 2,
+    maxQueued: 8,
+    preferSharedArrayBuffer: false,
+    workerFactory: () => messagePort,
+    mainThreadHandler: echoHandler,
+  };
+  const pool = new Forge3DWorkerPool(poolOptions);
+  const pooled = await pool.run<number>(1);
+  const poolDiagnostics: WorkerPoolDiagnostics = pool.getDiagnostics();
+  pool.dispose();
+  void [mode, pooled, poolDiagnostics];
+
+  const rendererOptions: Forge3DWorkerRendererOptions = {
+    worker,
+    session: sessionOptions,
+    controls,
+    ariaLabel: "terrain",
+  };
+  const renderer = await Forge3DWorkerRenderer.create(
+    canvas,
+    rendererOptions,
+  );
+  await renderer.setScene(Forge3DScene.create());
+  const submitted: boolean = await renderer.render();
+  await renderer.resize(resize);
+  const workerBlob: Blob = await renderer.screenshot();
+  const workerRgba: Uint8Array = await renderer.readRgba();
+  const workerDiagnostics: WorkerRendererDiagnostics =
+    renderer.getDiagnostics();
+  const activeObservers: number = workerDiagnostics.activeObservers;
+  renderer.dispose();
+  const unhost = installForge3DWorkerHost(worker);
+  unhost();
+  void [submitted, workerBlob, workerRgba, workerDiagnostics, activeObservers];
+
+  const offscreenOptions: Forge3DOffscreenRendererOptions = {
+    width: 64,
+    height: 64,
+    runtime: viewerRuntimeOptions,
+  };
+  const offscreen =
+    await Forge3DOffscreenRenderer.create(offscreenOptions);
+  offscreen.setScene(Forge3DScene.create());
+  const offscreenRendered: boolean = offscreen.render();
+  const output: OffscreenOutput = await offscreen.capture("blob");
+  const sinkResult: ByteWriteResult = await offscreen.write(sinks[0]!);
+  offscreen.dispose();
+  void [offscreenRendered, output, sinkResult];
+
+  const elementCtor: CustomElementConstructor = defineForge3DElement();
+  void elementCtor;
+  const adapter: Forge3DNotebookAdapter = createNotebookAdapter(
+    container,
+    sessionOptions,
+  );
+  const adapterCanvas: HTMLCanvasElement = adapter.canvas;
+  const adapterSession: Promise<Forge3DSession> = adapter.session;
+  await adapter.display(Forge3DScene.create());
+  const adapterBlob: Blob = await adapter.capture();
+  adapter.dispose();
+  void [adapterCanvas, adapterSession, adapterBlob, resolved, viewDisposed, generation, descriptor];
+}
+
 void compileRuntimeDeclarations;
 void compileViewerDeclarations;
+void compileSceneDeclarations;
+void compileSessionDeclarations;
+void compileAdapterDeclarations;
 void code;
 void addedErrorCodes;
 void allViewerStatuses;
 void manuallyManagedViewerOptions;
+void presetNames;
+void renderQuality;
+void overflowPolicy;
+
+import {
+  CascadedShadowConfig,
+  decodeRgbe,
+  extractGltfMaterialChannels,
+  generateMeshTangents,
+  getLightPreset,
+  IblCache,
+  ImageBasedLighting,
+  Ktx2Loader,
+  LightCollection,
+  lightPresetNames,
+  MaterialCollection,
+  resolveBrdfModel,
+  ShadowConfig,
+  TextureSet,
+  type BrdfRoute,
+  type GltfMaterialChannels,
+  type IblReport,
+  type IblSnapshot,
+  type LightBounds,
+  type LightId,
+  type LightingSnapshot,
+  type LightInput,
+  type LightPresetName,
+  type MaterialCollectionSnapshot,
+  type MeshTbnResult,
+  type RgbeImage,
+  type ShadowCascadeInfo,
+  type ShadowFilter,
+  type ShadowReport,
+  type ShadowSnapshot,
+  type TerrainRenderMode,
+  type TextureImageSnapshot,
+  type TextureSetSnapshot,
+} from "../../types/index";
+
+async function compileW04Declarations(): Promise<void> {
+  const renderMode: TerrainRenderMode = "screen";
+  const scene = Forge3DScene.create();
+  scene.addTerrain({ ...terrain, renderMode });
+  scene.clearLights();
+  const sun = {
+    type: "directional",
+    color: [1, 1, 1],
+    intensity: 2.4,
+    direction: [0.65, -0.41, 0.65],
+    castsShadow: true,
+  } satisfies LightInput;
+  const lightId: LightId = scene.addLight(sun);
+  scene.updateLight(lightId, { ...sun, intensity: 2 });
+  const bounds: LightBounds = scene.getLightBounds(lightId);
+  const affects: boolean = scene.lightAffectsPoint(lightId, [0, 0, 0]);
+  scene.setLightingExposure(1);
+  scene.setLightDebugBounds(false);
+  scene.setAreaLightApproximation({ mode: "sampled", sampleCount: 8 });
+  const presetNames: readonly LightPresetName[] = lightPresetNames();
+  const preset: LightInput = getLightPreset("candle");
+  const lights = LightCollection.defaults();
+  const lightingSnapshot: LightingSnapshot = lights.snapshot();
+
+  scene.setMaterial("default", { id: "default", brdf: "hair", roughness: 0.5 });
+  const route: BrdfRoute = resolveBrdfModel("blinn-phong");
+  const materialRoute: BrdfRoute = scene.getMaterialRoute("default");
+  const materials: MaterialCollectionSnapshot = new MaterialCollection().snapshot();
+
+  const textures = new TextureSet({
+    baseColor: {
+      width: 1,
+      height: 1,
+      format: "rgba8unorm-srgb",
+      colorSpace: "srgb",
+      data: new Uint8Array(4),
+    },
+  });
+  const textureSnapshot: TextureSetSnapshot = textures.snapshot();
+  const tangents: MeshTbnResult = generateMeshTangents({
+    positions: new Float32Array(9),
+    normals: new Float32Array(9),
+    uvs: new Float32Array(6),
+    indices: new Uint32Array([0, 1, 2]),
+  });
+  const channels: GltfMaterialChannels = extractGltfMaterialChannels(new Uint8Array(4), 1, 1);
+  const image: TextureImageSnapshot = await new Ktx2Loader().load(new Uint8Array(0), {
+    semantic: "base-color",
+    capabilities: { bc: false, etc2: false, astc: true },
+  });
+
+  const rgbe: RgbeImage = decodeRgbe(new Uint8Array(0));
+  const ibl = await ImageBasedLighting.fromLinear(rgbe, { quality: "low" });
+  const session = await Forge3DSession.create(offscreenCanvas, sessionOptions);
+  const prepared = await ibl.prepare(session, new IblCache({ backend: "auto" }));
+  const iblReport: IblReport = prepared.report;
+  const iblSnapshot: IblSnapshot = await session.precomputeIbl(prepared.snapshot());
+  scene.setImageBasedLighting(prepared);
+
+  const filter: ShadowFilter = "pcss";
+  scene.setShadows(new ShadowConfig({ filter }), new CascadedShadowConfig({ cascadeCount: 3 }));
+  const cascades: ShadowCascadeInfo[] = scene.getShadowCascadeInfo(0.1, 100);
+  session.setScene(scene);
+  const shadowReport: ShadowReport = session.getShadowReport();
+  const shadowSnapshot: ShadowSnapshot = scene.snapshot().shadows;
+
+  const runtime = await Forge3DRuntime.create(canvas);
+  runtime.setLighting(lightingSnapshot);
+  runtime.setMaterials(materials);
+  runtime.setIbl(null);
+  runtime.setShadows(shadowSnapshot);
+  const runtimeShadowReport: ShadowReport = runtime.getShadowReport();
+  void [
+    bounds,
+    affects,
+    presetNames,
+    preset,
+    route,
+    materialRoute,
+    textureSnapshot,
+    tangents,
+    channels,
+    image,
+    iblReport,
+    iblSnapshot,
+    cascades,
+    shadowReport,
+    runtimeShadowReport,
+  ];
+}
+
+void compileW04Declarations;
+
+import {
+  Camera,
+  CameraAnimation,
+  CameraController,
+  CameraKeyframe,
+  composeTrs,
+  DEFAULT_CAMERA_KEY_BINDINGS,
+  depthOfFieldRange,
+  FlyController,
+  invertMatrix,
+  lookAt,
+  makeCamera,
+  mat4ToRows,
+  OrbitController,
+  orthographic,
+  perspective,
+  RenderConfig,
+  RenderProgress,
+  replayCameraInput,
+  screenRay,
+  TERRAIN_CLEARANCE_TOLERANCE,
+  TerrainClearance,
+  TerrainOrbitRig,
+  TerrainRailRig,
+  TerrainRigSource,
+  TerrainTargetFollowRig,
+  terrainRigFromJSON,
+  viewerOrbitRadius,
+  worldToScreen,
+  type CameraControllerMode,
+  type CameraInputEvent,
+  type CameraJSON,
+  type CameraState,
+  type ClipSpace,
+  type FlyView,
+  type ScreenPoint,
+  type TerrainRig,
+  type TerrainRigJSON,
+  type Vec3,
+} from "../../types/index";
+import {
+  AOV_ID_TERRAIN,
+  AovFrame,
+  aovObjectId,
+  atrousDenoise,
+  compareImages,
+  createDownloadFrameSink,
+  createFrameStream,
+  createMemoryFrameSink,
+  createOpfsFrameSink,
+  DenoiseSettings,
+  dumpFrameSequence,
+  encodePng,
+  encodeVideo,
+  EXR_MIME_TYPE,
+  Frame,
+  FrameDumper,
+  frameTimestampUs,
+  HdrFrame,
+  hasUpwardConvergenceTrend,
+  muxEncodedVideo,
+  OfflineProgress,
+  OfflineQualitySettings,
+  probeVideoCodecs,
+  readExr,
+  renderFrames,
+  renderOffline,
+  writeExr,
+  writeFrames,
+  type CaptureResult,
+  type EncodedVideoResult,
+  type ExrImage,
+  type ImageComparison,
+  type OfflineMetrics,
+  type OfflineResult,
+  type RenderedFrame,
+  type VideoCodecSupport,
+  type VideoCodecUnavailableDetails,
+} from "../../types/index";
+
+async function compileW06Declarations(runtime: Forge3DRuntime, session: Forge3DSession): Promise<void> {
+  runtime.beginOfflineAccumulation({ samples: 8, seed: 1, aovs: "all" });
+  await runtime.accumulateBatch(4);
+  const metrics: OfflineMetrics = await runtime.readAccumulationMetrics(0.002, 8);
+  const resolved: CaptureResult = await runtime.resolveOfflineHdr({
+    tonemap: { operator: "aces", whitePoint: 4 },
+    denoise: new DenoiseSettings({ enabled: true, iterations: 2 }),
+  });
+  const ended: boolean = runtime.endOfflineAccumulation() && runtime.offlineActive;
+  const capture = await session.capture({ aovs: ["depth", "id", "motion"], previousCamera: session.getCamera() ?? { position: [0, 1, 2], target: [0, 0, 0], up: [0, 1, 0], fovYDegrees: 45, near: 0.1, far: 100 } });
+  const offline: OfflineResult = await renderOffline(session, {
+    settings: new OfflineQualitySettings({ enabled: true, adaptive: true }),
+    denoise: { enabled: true, method: "oidn" },
+    onProgress: (progress: OfflineProgress) => void progress.p95Delta,
+  });
+  const trend: boolean = hasUpwardConvergenceTrend([metrics]);
+  const denoised: HdrFrame = await runtime.denoiseHdrFrame(resolved.hdrFrame, resolved.aovFrame, { edgeStopping: 0 });
+  const tonemapped: Frame = await denoised.tonemap({ operator: "filmic-terrain" });
+  const exr: Blob = await capture.aovFrame.toExr(capture.hdrFrame, { compression: "piz" });
+  const image: ExrImage = await readExr(exr, { maxDimension: 4096 });
+  const written: Blob = await writeExr({ width: 1, height: 1, channels: [{ name: "id", data: new Uint32Array([AOV_ID_TERRAIN]) }] });
+  const fromExr: HdrFrame = await HdrFrame.fromExr(written);
+  const aov = new AovFrame({ width: 1, height: 1, near: 0.1, far: 10, id: new Uint32Array([aovObjectId(3)]) });
+  const png: Blob = await encodePng(1, 1, new Uint8Array(4), { compression: "none" });
+  const cpu: Float32Array = await atrousDenoise({ width: 1, height: 1, color: new Float32Array(4) });
+  const comparison: ImageComparison = await compareImages(cpu, cpu, { width: 1, height: 1, channels: 4 });
+  const sink = createMemoryFrameSink({ format: "png" });
+  const frames: AsyncGenerator<RenderedFrame> = renderFrames(runtime, { cameraAt: () => ({ position: [0, 1, 2], target: [0, 0, 0], up: [0, 1, 0], fovYDegrees: 45, near: 0.1, far: 100 }), frameCount: 2, fps: 30 });
+  const summary = await writeFrames(frames, sink);
+  const stream: ReadableStream<RenderedFrame> = createFrameStream(session, { cameraAt: () => ({ position: [0, 1, 2], target: [0, 0, 0], up: [0, 1, 0], fovYDegrees: 45, near: 0.1, far: 100 }), frameCount: 1, mode: "display" });
+  const opfs = await createOpfsFrameSink();
+  const download = createDownloadFrameSink({ download: () => undefined });
+  const dumper = new FrameDumper(download, { prefix: "render" });
+  const dumped: number = await dumpFrameSequence([tonemapped], opfs);
+  const probes: VideoCodecSupport[] = await probeVideoCodecs({ width: 16, height: 16, fps: 30, container: "webm" });
+  const video: EncodedVideoResult = await encodeVideo([tonemapped], { fps: 30, codec: ["avc", "vp9"] });
+  const muxed: Blob = await muxEncodedVideo([{ data: new Uint8Array(1), type: "key", timestampUs: 0, durationUs: frameTimestampUs(1, 30) }], { codec: "vp9", width: 16, height: 16, fps: 30 });
+  const details: VideoCodecUnavailableDetails | undefined = undefined;
+  const mime: "image/x-exr" = EXR_MIME_TYPE;
+  void [ended, offline, trend, image, fromExr, aov, png, comparison, summary, stream, dumper, dumped, probes, video, muxed, details, mime, sink.files.size];
+}
+
+void compileW06Declarations;
+
+async function compileW05Declarations(viewer: Forge3DViewer, session: Forge3DSession): Promise<void> {
+  const clip: ClipSpace = "gl";
+  const eye: Vec3 = [3, 4, 5];
+  const view: Float32Array = lookAt(eye, [0, 0, 0], [0, 1, 0]);
+  const projection: Float32Array = perspective(45, 1.5, 0.1, 100, clip);
+  const ortho: Float32Array = orthographic(-1, 1, -1, 1, 0.1, 10);
+  const rows: number[][] = mat4ToRows(composeTrs([1, 2, 3], [0, 90, 0], [1, 1, 1]));
+  const camera = new Camera({ position: eye, target: [0, 0, 0], projection: "orthographic", orthographicHeight: 4 });
+  const json: CameraJSON = camera.toJSON();
+  const point: ScreenPoint | undefined = camera.worldToScreen([0, 0, 0], { width: 10, height: 10 });
+  const projected = worldToScreen(camera.viewProjectionMatrix(1), [0, 0, 0], { width: 10, height: 10 });
+  const ray = screenRay(invertMatrix(camera.viewProjectionMatrix(1)), 5, 5, { width: 10, height: 10 });
+  const range = depthOfFieldRange(50, 2.8, 3000);
+  const pathTracing = makeCamera({ origin: eye, lookAt: [0, 0, 0], up: [0, 1, 0], fovY: 40, aspect: 1, exposure: 1 });
+
+  const animation = new CameraAnimation([new CameraKeyframe({ time: 0, phiDeg: 0, thetaDeg: 45, radius: 10, fovDeg: 50 })]);
+  animation.addKeyframe({ time: 2, phiDeg: 90, thetaDeg: 40, radius: 12, fovDeg: 45, target: [0, 1, 0] });
+  const state: CameraState | undefined = animation.evaluate(1);
+  const frames: number = animation.getFrameCount(30);
+  const naming = new RenderConfig({ fps: 24 }).framePath(3);
+  const percent: number = new RenderProgress(1, 2, 0.5, naming).percent;
+
+  const controller = new CameraController({ mode: "fly", bindings: { toggleMode: ["Tab"] } }, new OrbitController());
+  const mode: CameraControllerMode = controller.toggleMode();
+  const fly: FlyView = new FlyController().getView();
+  const events: CameraInputEvent[] = [{ type: "key", code: DEFAULT_CAMERA_KEY_BINDINGS.forward[0] ?? "KeyW", pressed: true }];
+  const replayed = replayCameraInput({}, events);
+
+  const source = new TerrainRigSource({ heights: new Float32Array(4), width: 2, height: 2, terrainWidth: 10 });
+  const rigs: TerrainRig[] = [
+    new TerrainOrbitRig({ targetXZ: [5, 5], duration: 1, radius: 3, phiStartDeg: 0, phiEndDeg: 90, clearance: new TerrainClearance({ minimumHeight: 1 }) }),
+    new TerrainRailRig({ pathXZ: [[1, 1], [9, 1]], duration: 1, cameraHeightOffset: 2, lookAheadDistance: 1 }),
+    new TerrainTargetFollowRig({ targetPathXZ: [[2, 2], [8, 8]], duration: 1, radius: 1 }),
+  ];
+  const rigJson: TerrainRigJSON = rigs[0]!.toJSON();
+  const baked: CameraAnimation = terrainRigFromJSON(rigJson).bake(source, { samplesPerSecond: 4 });
+  const worldCamera = source.cameraAt(baked, 0.5, { near: 0.1, far: 100 });
+  const radius: number = viewerOrbitRadius(source) + TERRAIN_CLEARANCE_TOLERANCE;
+
+  viewer.setCameraMode("fly");
+  viewer.setCamera({ ...replayed, projection: "orthographic", orthographicHeight: 5 });
+  viewer.startCameraRecording();
+  viewer.replayCameraInput(viewer.stopCameraRecording());
+  const current = viewer.getCamera();
+  const lastSessionCamera = session.getCamera();
+
+  void [view, projection, ortho, rows, json, point, projected, ray, range, pathTracing, state, frames, percent, mode, fly, worldCamera, radius, current, lastSessionCamera];
+}
+
+void compileW05Declarations;
+
+import {
+  getTerrainMaterialDefaults,
+  ImageBasedLighting as W07ImageBasedLighting,
+  normalizeTerrainMaterial,
+  type IblPrefilterMode,
+  type TerrainAlbedoMode,
+  type TerrainMaterialDiagnosticCode,
+  type TerrainMaterialInput,
+  type TerrainMaterialReport,
+  type TerrainMaterialSnapshot,
+  type TerrainSpecularAaQuality,
+} from "../../types/index";
+
+async function compileW07Declarations(runtime: Forge3DRuntime, session: Forge3DSession): Promise<void> {
+  const albedoMode: TerrainAlbedoMode = "mix";
+  const quality: TerrainSpecularAaQuality = "high";
+  const material: TerrainMaterialInput = {
+    albedoMode,
+    colormapStrength: 0.25,
+    materialSet: [{ baseColor: [0.3, 0.3, 0.3], roughness: 0.5, texture: { width: 1, height: 1, data: new Uint8Array(4) } }],
+    triplanar: { scale: 6, blendSharpness: 4, normalStrength: 1 },
+    pom: { enabled: true, mode: "occlusion", scale: 0.04, minSteps: 12, maxSteps: 40, refineSteps: 4 },
+    heightCurve: { mode: "lut", strength: 1, lut: new Float32Array(256) },
+    layers: {
+      snow: { enabled: true, altitudeMin: 0.7, subsurfaceStrength: 0.5, mask: { width: 1, height: 1, data: new Uint8Array(1) } },
+      rock: { enabled: true, slopeMin: 36 },
+      wetness: { enabled: true, strength: 0.4 },
+      variation: { snowMacroAmplitude: 0.2, octaves: 5 },
+    },
+    detail: { enabled: true, scale: 2, strength: 0.5, normalMap: { width: 1, height: 1, data: new Uint8Array(4) } },
+    specularAa: { quality, sigmaScale: 1 },
+    debugView: "layer-weights",
+  };
+  const terrain: TerrainHeightmapInput = { width: 2, height: 2, heights: new Float32Array(4), renderMode: "screen", material };
+  const snapshot: TerrainMaterialSnapshot = normalizeTerrainMaterial(terrain.material);
+  const defaults: TerrainMaterialSnapshot = getTerrainMaterialDefaults();
+  const sessionReport: TerrainMaterialReport = session.getTerrainMaterialReport();
+  const runtimeReport: TerrainMaterialReport = runtime.getTerrainMaterialReport();
+  const code: TerrainMaterialDiagnosticCode | undefined = runtimeReport.diagnostics[0]?.code;
+  const prefilter: IblPrefilterMode = "native";
+  const ibl = await W07ImageBasedLighting.fromLinear({ width: 1, height: 1, data: new Float32Array(4) }, { prefilter });
+  const schedule: IblPrefilterMode = ibl.prefilter;
+  void [snapshot.pom.maxSteps, defaults.albedoMode, sessionReport.gpuBytes, code, schedule];
+}
+
+void compileW07Declarations;
+
+// W08 (F1-F5): terrain streaming / COG / overlay / VT declarations.
+import {
+  ArrayHeightSource,
+  CacheStorageByteCache,
+  cacheStorageByteStore,
+  calculateTriangleReduction,
+  CogDataset,
+  CogHeightSource,
+  createCogWorkerHandler,
+  createPersistentByteCache,
+  decodeOverlayImage,
+  DigestCheckedByteCache,
+  FunctionHeightSource,
+  generateClipmapMesh,
+  getTerrainOverlayDefaults,
+  heightPyramidLodCount,
+  IndexedDbByteCache,
+  indexedDbByteStore,
+  isTerrainOverlayLayerVisible,
+  MemoryByteCache,
+  normalizeTerrainOverlays,
+  normalizeTerrainVirtualTexture,
+  OpfsByteCache,
+  opfsByteStore,
+  RangeScheduler,
+  selectLodTilesReference,
+  TerrainStreamer,
+  terrainOverlayVisibleLayers,
+  validateTerrainVtSupport,
+  type ClipmapMeshResult,
+  type CogStats,
+  type HeightStreamingStats,
+  type HeightTileCompletion,
+  type HeightTilePlan,
+  type HeightTileSource,
+  type IfdInfo,
+  type LodSelectionReport,
+  type MemoryByteCacheStats,
+  type NormalizedTerrainOverlays,
+  type NormalizedTerrainVirtualTexture,
+  type OverlayBlendMode,
+  type PersistentByteCache,
+  type RangeSchedulerStats,
+  type TerrainStreamerOptions,
+  type TerrainStreamerStats,
+  type TerrainVtSupportReport,
+} from "../../types/index";
+
+async function compileW08Declarations(
+  runtime: Forge3DRuntime,
+  viewer: Forge3DViewer,
+  session: Forge3DSession,
+): Promise<void> {
+  const memory = new MemoryByteCache(1024);
+  memory.put("k", new Uint8Array(4));
+  const memStats: MemoryByteCacheStats = memory.stats();
+
+  const scheduler = new RangeScheduler({ memoryCache: memory });
+  const bytes: Uint8Array = await scheduler.request(
+    "https://example.test/dem.tif",
+    0,
+    16,
+    { priority: 1, signal: new AbortController().signal },
+  );
+  const rangeStats: RangeSchedulerStats = scheduler.stats();
+  scheduler.dispose();
+
+  const persistent: PersistentByteCache = new OpfsByteCache({ name: "w08" });
+  void new IndexedDbByteCache({ name: "w08" });
+  void new CacheStorageByteCache({ name: "w08" });
+  void new DigestCheckedByteCache("custom", opfsByteStore("w08"));
+  void indexedDbByteStore("w08");
+  void cacheStorageByteStore("w08");
+  await persistent.put("k", bytes);
+  const fallback = await createPersistentByteCache({ name: "w08" });
+
+  const cog = await CogDataset.open("https://example.test/dem.tif", {
+    cacheSizeMb: 32,
+    scheduler,
+    persistentCache: persistent,
+    signal: new AbortController().signal,
+  });
+  const info: IfdInfo = cog.ifdInfo(0);
+  const tile: Float32Array = await cog.readTile(0, 0, 0);
+  const rgbaTile: Uint8ClampedArray = await cog.readOverviewRgba(0);
+  const cogStats: CogStats = cog.stats();
+
+  const handler = createCogWorkerHandler();
+  const arraySource: HeightTileSource = new ArrayHeightSource(
+    new Float32Array(4),
+    2,
+    2,
+  );
+  const functionSource = new FunctionHeightSource({
+    width: 2,
+    height: 2,
+    sample: () => 0,
+  });
+  const cogSource = new CogHeightSource(cog);
+  const lodCount: number = heightPyramidLodCount(1025, 1025, 256);
+
+  const streamerOptions: TerrainStreamerOptions = {
+    maxResidentBytes: 64 * 1024 * 1024,
+    maxInFlight: 8,
+    lodBias: 0,
+  };
+  const streamer = await TerrainStreamer.create(
+    viewer,
+    cogSource,
+    streamerOptions,
+  );
+  await TerrainStreamer.create(runtime, arraySource);
+  await streamer.update();
+  await streamer.whenConverged();
+  const streamerStats: TerrainStreamerStats = streamer.stats();
+  streamer.dispose();
+
+  const blend: OverlayBlendMode = "multiply";
+  const overlays: NormalizedTerrainOverlays = normalizeTerrainOverlays({
+    enabled: true,
+    layers: [
+      {
+        image: { width: 1, height: 1, data: new Uint8Array(4) },
+        extent: [0, 0, 1, 1],
+        blendMode: blend,
+      },
+    ],
+  });
+  const overlayDefaults: NormalizedTerrainOverlays =
+    getTerrainOverlayDefaults();
+  const visible = terrainOverlayVisibleLayers(overlays);
+  const layerVisible: boolean = isTerrainOverlayLayerVisible(visible[0]!);
+  const image = await decodeOverlayImage(new ImageData(1, 1));
+
+  const vt: NormalizedTerrainVirtualTexture =
+    normalizeTerrainVirtualTexture({
+      layers: [{ family: "albedo", virtualSizePx: [2048, 2048] }],
+    });
+  const vtReport: TerrainVtSupportReport =
+    await validateTerrainVtSupport({
+      layers: [{ family: "albedo", virtualSizePx: [2048, 2048] }],
+    });
+
+  const clipmap: ClipmapMeshResult = await generateClipmapMesh(
+    { ringCount: 4, ringResolution: 64, centerResolution: 64 },
+    [0, 0],
+    256,
+  );
+  const reduction: number = await calculateTriangleReduction(100_000, 4_000);
+  const lod = await selectLodTilesReference({
+    viewProj: new Array(16).fill(0),
+    cameraPos: [0, 0, 0],
+    viewportHeight: 720,
+    fovY: 0.8,
+    maxLod: 4,
+    tiles: [
+      { lod: 0, x: 0, y: 0, boundsMin: [0, 0], boundsMax: [1, 1] },
+    ],
+  });
+  void lod;
+
+  const plan: HeightTilePlan = runtime.planHeightTiles(4);
+  const completion: HeightTileCompletion = runtime.completeHeightTile(
+    0,
+    0,
+    0,
+    new Float32Array(4),
+  );
+  runtime.failHeightTile(0, 0, 0);
+  const stats: HeightStreamingStats = runtime.getHeightStreamingStats();
+  const selection: LodSelectionReport | null = runtime.getLodSelection();
+  runtime.registerMaterialVtSource(0, "albedo", {
+    width: 1,
+    height: 1,
+    data: new Uint8Array(4),
+  });
+  runtime.clearMaterialVtSources();
+  void session.getTerrainGeometryReport();
+  void session.getTerrainOverlayReport();
+  void viewer.getHeightStreamingStats();
+  void viewer.getMaterialVtStats();
+  const removeRecovery = viewer.addRecoveryListener(() => {});
+  const removeFrame = viewer.addFrameListener(() => true);
+  removeRecovery();
+  removeFrame();
+  viewer.requestRender();
+
+  void [
+    memStats,
+    rangeStats,
+    persistent,
+    fallback,
+    info,
+    tile,
+    rgbaTile,
+    cogStats,
+    handler,
+    functionSource,
+    lodCount,
+    streamerStats,
+    overlayDefaults,
+    layerVisible,
+    image,
+    vt,
+    vtReport,
+    clipmap,
+    reduction,
+    plan,
+    completion,
+    stats,
+    selection,
+  ];
+}
+
+void compileW08Declarations;
+
+import {PostFxChain,normalizePostFx,createIdentityColorLut,type PostFxInput,type PostFxSnapshot,type PostFxReport,type PostFxFrame,type PostFxQuality,type PostFxDebugView,type PostFxHistoryReason} from "../../types/index";
+async function compileW11Declarations(runtime:Forge3DRuntime,session:Forge3DSession,viewer:Forge3DViewer,scene:Forge3DScene):Promise<void>{
+  const quality:PostFxQuality="high",debug:PostFxDebugView="effect";
+  const effects:PostFxInput[]=[{kind:"gtao",id:"ao"},{kind:"ssgi"},{kind:"ssr"},{kind:"bloom",quality},{kind:"dof",tiltPitch:.2},{kind:"motion-blur",shutter:.5},{kind:"taa",jitter:true},{kind:"accumulation-aa",enabled:false},{kind:"denoise"},{kind:"tonemap",operator:"aces",lut:createIdentityColorLut(4)},{kind:"lens",chromaticAberration:.01}];
+  const chain=new PostFxChain({effects,debug:{view:debug,effectId:"ao"}});chain.copy().setEnabled("ao",false);const snapshot:PostFxSnapshot=normalizePostFx(chain.toJSON());
+  scene.setPostFx(chain);const owned=scene.getPostFx();runtime.setPostFx(snapshot);session.setPostFx(chain);viewer.setPostFx(effects);
+  for(const target of [runtime,session,viewer]){const report:PostFxReport=target.getPostFxReport();const reason:PostFxHistoryReason=report.historyReason;target.resetPostFxHistory();const frame:PostFxFrame=await target.readPostFxIntermediate("color");void [frame.data,frame.channels,reason];target.setPostFx(null);}
+  void [owned,snapshot];
+}
+void compileW11Declarations;
+
+import {CrsTransformer,DatasetRegistry,VectorLayers,crsFromRasterMetadata,reprojectLabelFeatures,type CrsMetadata,type DatasetMetadata} from "../../types/index";
+async function compileW14Declarations():Promise<void>{
+  const crs=await CrsTransformer.create({bundledGrids:true,maxPoints:10000});
+  const metadata:CrsMetadata=await crs.parseCrs("EPSG:32632");
+  const coordinates:Float64Array=await crs.transformCoords(new Float32Array([9,40]),"EPSG:4326","EPSG:32632");
+  const points:number[][]=await crs.transformCoords([[9,40]],"EPSG:4326","EPSG:32632");
+  const registry=new DatasetRegistry(),dataset:DatasetMetadata=registry.info("mini_dem");
+  const dem=await registry.miniDem({offline:true});
+  const layers=new VectorLayers();await layers.addGeospatial({name:"point",crs:"EPSG:4326",features:[{id:1,kind:"point",position:[9,0,40]}]}, {crs:"EPSG:32632"},crs);
+  const labels=await reprojectLabelFeatures(crs,[{id:"point",type:"Point",position:[9,40]}],"EPSG:4326","EPSG:32632");
+  void [metadata,coordinates,points,dataset,dem,labels,crsFromRasterMetadata({epsg:32632})];
+  layers.dispose();registry.dispose();crs.dispose();
+}
+void compileW14Declarations;
+
+import { MapPlate, BBox, Legend, ScaleBar, NorthArrow, colormaps, ColormapRegistry, parseColormapJson, parseColormapCpt, loadColormap, VectorScene, Bounds, exportSvg, exportPdf, positionPlateElement, PlateRegion, project3dTo2d, type MapPlateConfig, type VectorExportOptions, type VectorSvgOptions, type VectorPdfOptions } from '../../types/index';
+async function compileW20Declarations():Promise<void>{
+  const config:MapPlateConfig={width:800,height:600}, plate=new MapPlate(config),bbox=new BBox(0,0,1,1);
+  const cm=colormaps.get('forge3d:viridis');plate.addLegend(await new Legend(cm,[0,1000]).render());plate.addScaleBar(await new ScaleBar(100).render());plate.addNorthArrow(await new NorthArrow({rotationDeg:30}).render());
+  const png:Blob=await plate.exportPng(),jpeg:Blob=await plate.exportJpeg();const vectors=new VectorScene().addLabel('Map',[0,0]);const opts:VectorExportOptions={bounds:new Bounds()};const svgOpts:VectorSvgOptions=opts,pdfOpts:VectorPdfOptions={...opts,dpi:300};const svg:Blob=await exportSvg(vectors,svgOpts),pdf:Blob=await exportPdf(vectors,pdfOpts);
+  void [bbox,png,jpeg,svg,pdf,new ColormapRegistry(),parseColormapJson,parseColormapCpt,loadColormap,positionPlateElement([10,10],'center',new PlateRegion(0,0,100,100)),project3dTo2d];plate.dispose();vectors.dispose();
+}void compileW20Declarations;

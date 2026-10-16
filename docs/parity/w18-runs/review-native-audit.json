@@ -1,0 +1,254 @@
+{
+  "verifiedAt": "2026-10-12T19:06:46.171877+00:00",
+  "commits": [
+    "a55911f021925a3264e476374ce43d1b204f1073",
+    "1f4084af428dc699bdcd108b029736cb73903926"
+  ],
+  "files": 27,
+  "definitions": 106,
+  "sources": [
+    {
+      "path": "python/forge3d/diagnostics.py",
+      "sha256": "c573112c6d13ee80b76854c292f260c57748359adb731af98f08459c1bd0a145",
+      "definitions": 0,
+      "matches": {
+        "a55911f021925a3264e476374ce43d1b204f1073": true,
+        "1f4084af428dc699bdcd108b029736cb73903926": true
+      }
+    },
+    {
+      "path": "python/forge3d/map_scene.py",
+      "sha256": "b6fec466b1629137919975d861c2079909596494a5b97c26bf2760c5217326c5",
+      "definitions": 0,
+      "matches": {
+        "a55911f021925a3264e476374ce43d1b204f1073": true,
+        "1f4084af428dc699bdcd108b029736cb73903926": true
+      }
+    },
+    {
+      "path": "python/forge3d/style.py",
+      "sha256": "6e0b772ec170a849597145f7c82c5552d03d5b5518c77bd2fe0079ca2841e25b",
+      "definitions": 0,
+      "matches": {
+        "a55911f021925a3264e476374ce43d1b204f1073": true,
+        "1f4084af428dc699bdcd108b029736cb73903926": true
+      }
+    },
+    {
+      "path": "tests/test_diagnostics_bundle_serialization.py",
+      "sha256": "44fb51d47e2bb28c074836222c2b282169617bb038bf88aac8e1b8eb933f3804",
+      "definitions": 5,
+      "matches": {
+        "a55911f021925a3264e476374ce43d1b204f1073": true,
+        "1f4084af428dc699bdcd108b029736cb73903926": true
+      }
+    },
+    {
+      "path": "tests/test_diagnostics_contract.py",
+      "sha256": "ec775527b1400d421fe18a3824706451a4001772e000c5f264af50a2a15f5be9",
+      "definitions": 8,
+      "matches": {
+        "a55911f021925a3264e476374ce43d1b204f1073": true,
+        "1f4084af428dc699bdcd108b029736cb73903926": true
+      }
+    },
+    {
+      "path": "tests/test_diagnostics_no_op_policy.py",
+      "sha256": "17e89833cc2f53f4ef39ba85e68f943ffc99cefb402b09b681379aafff3b0f28",
+      "definitions": 2,
+      "matches": {
+        "a55911f021925a3264e476374ce43d1b204f1073": true,
+        "1f4084af428dc699bdcd108b029736cb73903926": true
+      }
+    },
+    {
+      "path": "tests/test_diagnostics_quickstart.py",
+      "sha256": "0244dbc2440d74c692ec87c817827cf7e6107cc8d358a6919564cd69f4496d15",
+      "definitions": 3,
+      "matches": {
+        "a55911f021925a3264e476374ce43d1b204f1073": true,
+        "1f4084af428dc699bdcd108b029736cb73903926": true
+      }
+    },
+    {
+      "path": "tests/test_diagnostics_style_support.py",
+      "sha256": "580f4744d7306381ef9f174c62dacac80d959070d9b448befdf614c76fea27c5",
+      "definitions": 7,
+      "matches": {
+        "a55911f021925a3264e476374ce43d1b204f1073": true,
+        "1f4084af428dc699bdcd108b029736cb73903926": true
+      }
+    },
+    {
+      "path": "tests/test_diagnostics_support_paths.py",
+      "sha256": "8a651ef4149bdd1e3858b01d39c3d30a43117c26ce22e31d69218c568f8cf53a",
+      "definitions": 7,
+      "matches": {
+        "a55911f021925a3264e476374ce43d1b204f1073": true,
+        "1f4084af428dc699bdcd108b029736cb73903926": true
+      }
+    },
+    {
+      "path": "tests/test_mapscene_docs.py",
+      "sha256": "e54e01359c1b3146713d0cf7bd1f535cda3207716e051f3e6a920b56109e5245",
+      "definitions": 7,
+      "matches": {
+        "a55911f021925a3264e476374ce43d1b204f1073": true,
+        "1f4084af428dc699bdcd108b029736cb73903926": true
+      }
+    },
+    {
+      "path": "tests/test_mapscene_examples.py",
+      "sha256": "a39ba4f932f5843bbf1ecb20764b27686f60686cddbfa7c9ecc1db774b95c700",
+      "definitions": 6,
+      "matches": {
+        "a55911f021925a3264e476374ce43d1b204f1073": true,
+        "1f4084af428dc699bdcd108b029736cb73903926": true
+      }
+    },
+    {
+      "path": "tests/test_mapscene_label_plan_integration.py",
+      "sha256": "46d5d98d218b2278b1886612f3c9b1d045e5428c5a7ebc157add4ab866c3afce",
+      "definitions": 1,
+      "matches": {
+        "a55911f021925a3264e476374ce43d1b204f1073": true,
+        "1f4084af428dc699bdcd108b029736cb73903926": true
+      }
+    },
+    {
+      "path": "tests/test_mapscene_quickstart.py",
+      "sha256": "f294d9e78978fbad3d9898a868e913070664dc7db95d234739f98609d5269ae6",
+      "definitions": 4,
+      "matches": {
+        "a55911f021925a3264e476374ce43d1b204f1073": true,
+        "1f4084af428dc699bdcd108b029736cb73903926": true
+      }
+    },
+    {
+      "path": "tests/test_mapscene_recipe_contract.py",
+      "sha256": "cae34a9dcd317169b0108b338039f63bc2fa747a57e0aabd8a5ab9796d3ecb82",
+      "definitions": 2,
+      "matches": {
+        "a55911f021925a3264e476374ce43d1b204f1073": true,
+        "1f4084af428dc699bdcd108b029736cb73903926": true
+      }
+    },
+    {
+      "path": "tests/test_mapscene_render_png.py",
+      "sha256": "765ccab823f4c3386eb54b564aadb99a2c915061a5b92243fe60ac4d338c8480",
+      "definitions": 5,
+      "matches": {
+        "a55911f021925a3264e476374ce43d1b204f1073": true,
+        "1f4084af428dc699bdcd108b029736cb73903926": true
+      }
+    },
+    {
+      "path": "tests/test_mapscene_render_policy.py",
+      "sha256": "92ad378a8d7a621ffaf9289dc9b616eb06ae4d96f50c2703423ebb24268082ee",
+      "definitions": 4,
+      "matches": {
+        "a55911f021925a3264e476374ce43d1b204f1073": true,
+        "1f4084af428dc699bdcd108b029736cb73903926": true
+      }
+    },
+    {
+      "path": "tests/test_mapscene_save_bundle.py",
+      "sha256": "14b8c530468e10616b10e70d351e03b730b9575dad2bde348486affc1b3c9217",
+      "definitions": 3,
+      "matches": {
+        "a55911f021925a3264e476374ce43d1b204f1073": true,
+        "1f4084af428dc699bdcd108b029736cb73903926": true
+      }
+    },
+    {
+      "path": "tests/test_mapscene_support_status.py",
+      "sha256": "5e4fd055d7fe912197dfa5e61b60c49448a9cc141d9fbac93b4e7bbd50f5f0e2",
+      "definitions": 5,
+      "matches": {
+        "a55911f021925a3264e476374ce43d1b204f1073": true,
+        "1f4084af428dc699bdcd108b029736cb73903926": true
+      }
+    },
+    {
+      "path": "tests/test_mapscene_validation.py",
+      "sha256": "8e22b33720fdb9cc9eb6641720d4ecfcdebd44cb37d4cf629c00d48f7c2650f4",
+      "definitions": 14,
+      "matches": {
+        "a55911f021925a3264e476374ce43d1b204f1073": true,
+        "1f4084af428dc699bdcd108b029736cb73903926": true
+      }
+    },
+    {
+      "path": "tests/test_p1_diagnostics_contract.py",
+      "sha256": "65c6165609c9b16dbcc77caf9d1db7e48af0764fa5a54d068577e88aac08d197",
+      "definitions": 3,
+      "matches": {
+        "a55911f021925a3264e476374ce43d1b204f1073": true,
+        "1f4084af428dc699bdcd108b029736cb73903926": true
+      }
+    },
+    {
+      "path": "tests/test_p1_tiles3d_support.py",
+      "sha256": "261620a13651b591c646ce5c02083d2d4b3059f043f8143698b502eebc0e3b8b",
+      "definitions": 6,
+      "matches": {
+        "a55911f021925a3264e476374ce43d1b204f1073": true,
+        "1f4084af428dc699bdcd108b029736cb73903926": true
+      }
+    },
+    {
+      "path": "tests/test_p2_determinism_noop.py",
+      "sha256": "0635089af5458895b53523301365fe60a70a73441388068c5e76fed4ca351817",
+      "definitions": 3,
+      "matches": {
+        "a55911f021925a3264e476374ce43d1b204f1073": true,
+        "1f4084af428dc699bdcd108b029736cb73903926": true
+      }
+    },
+    {
+      "path": "tests/test_p2_diagnostics_contract.py",
+      "sha256": "12cb72b7da97b1f6dc7cb618d0f029c69de703d9847bc412ab9db79ab5276d59",
+      "definitions": 4,
+      "matches": {
+        "a55911f021925a3264e476374ce43d1b204f1073": true,
+        "1f4084af428dc699bdcd108b029736cb73903926": true
+      }
+    },
+    {
+      "path": "tests/test_p2_large_scene_bottlenecks.py",
+      "sha256": "fb1785a86c5234e77ad9389fd68f3c836a90f07ef1d176c5df28005b7ccc18be",
+      "definitions": 1,
+      "matches": {
+        "a55911f021925a3264e476374ce43d1b204f1073": true,
+        "1f4084af428dc699bdcd108b029736cb73903926": true
+      }
+    },
+    {
+      "path": "tests/test_p2_large_scene_cache_lod_instancing.py",
+      "sha256": "f9c9d53c542744c8e85ff7c8a0b053037c73866becca46bcd44039064205607e",
+      "definitions": 2,
+      "matches": {
+        "a55911f021925a3264e476374ce43d1b204f1073": true,
+        "1f4084af428dc699bdcd108b029736cb73903926": true
+      }
+    },
+    {
+      "path": "tests/test_p2_large_scene_memory.py",
+      "sha256": "f7fc9ae6fbb091aae4dde42add7d07c565e17fd45b32389e5a9a8991d037cf70",
+      "definitions": 2,
+      "matches": {
+        "a55911f021925a3264e476374ce43d1b204f1073": true,
+        "1f4084af428dc699bdcd108b029736cb73903926": true
+      }
+    },
+    {
+      "path": "tests/test_p2_textured_building_mapscene.py",
+      "sha256": "37707ef9075299c6c0504e38876a8add3526012f9235f240a1980202ea3d8842",
+      "definitions": 2,
+      "matches": {
+        "a55911f021925a3264e476374ce43d1b204f1073": true,
+        "1f4084af428dc699bdcd108b029736cb73903926": true
+      }
+    }
+  ]
+}

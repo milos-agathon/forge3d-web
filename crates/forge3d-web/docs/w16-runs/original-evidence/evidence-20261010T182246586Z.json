@@ -1,0 +1,238 @@
+{
+  "schemaVersion": 3,
+  "task": "W16",
+  "evidenceStatus": "Latest local installed-package conformance passed but ten-minute performance gate failed with unchanged runtime; previous passing and failed reports retained; independent security sign-off and hardware pending",
+  "referenceHardwareQualified": false,
+  "capabilityStatus": {
+    "G02": "P",
+    "G03": "P",
+    "G04": "P"
+  },
+  "openAcceptance": [
+    "Latest local discrete-target soak failed: p95 33.7 ms exceeds 16.7 ms; failure retained, runtime unchanged",
+    "Pending independent sign-off of mandatory laz-perf review (reviewer/date unset)",
+    "FW-LNX-NV-01: not provisioned",
+    "FW-WIN-I12-01: INF-00 blocked"
+  ],
+  "historicalEvidence": {
+    "file": "w16-oct07-evidence.json",
+    "observedP95Ms": 14.2,
+    "acceptanceClaimWithdrawn": true,
+    "reason": "Not reproduced by the reviewer or the independent ten-minute source run"
+  },
+  "reviewerReportedRuns": [
+    {
+      "harness": "source/dist",
+      "hostCondition": "unit tests concurrent",
+      "p95Ms": 18.7,
+      "measuredPass": false,
+      "acceptanceEligible": false
+    },
+    {
+      "harness": "source/dist",
+      "hostCondition": "idle",
+      "p95Ms": 19.8,
+      "measuredPass": false,
+      "acceptanceEligible": true
+    },
+    {
+      "harness": "official installed tarball",
+      "hostCondition": "idle",
+      "p95Ms": 22.3,
+      "frames": 26768,
+      "measuredPass": false,
+      "acceptanceEligible": true
+    }
+  ],
+  "reproducedBeforeOptimization": {
+    "reportedAt": "2026-10-09",
+    "runtimeCommit": "4efd5e7",
+    "harness": "source with phase instrumentation; ten-minute profile-w16.mjs run",
+    "concurrentTestsOrBuilds": false,
+    "minimumDurationMs": 600000,
+    "frameP95Ms": 20.099999994039536,
+    "frames": 28301,
+    "measuredPass": false,
+    "limitMs": 16.7,
+    "adapter": {
+      "vendor": "nvidia",
+      "architecture": "ampere",
+      "device": "",
+      "description": ""
+    },
+    "phases": {
+      "update": {
+        "p50Ms": 5.799999982118607,
+        "p95Ms": 10.599999994039536,
+        "maxMs": 641.0999999940395
+      },
+      "upload": {
+        "p50Ms": 0.09999999403953552,
+        "p95Ms": 2.0999999940395355,
+        "maxMs": 181.5
+      },
+      "render": {
+        "p50Ms": 6.5,
+        "p95Ms": 9.699999988079071,
+        "maxMs": 106.09999999403954
+      }
+    },
+    "provenance": "Metrics retained from benchmark stdout. Playwright subsequently cleared test-results, including its full temporary JSON; unretained duration/browser/memory fields are not reconstructed. Subsequent full reports are retained separately under docs/w16-runs."
+  },
+  "optimizedRuns": [
+    {
+      "file": "w16-runs/installed-20261010T182246586Z-1.json",
+      "sha256": "ece42c0b88fac4007fabbc9cb18854c49c36f3316400ddacd1806bc85b8b292c",
+      "verifiedAt": "2026-10-10T18:32:47.710Z",
+      "browserVersion": "148.0.7778.96",
+      "durationMs": 600086.9000000358,
+      "frames": 29276,
+      "frameP95Ms": 33.700000047683716,
+      "limitMs": 16.7,
+      "measuredPass": false,
+      "selectionCount": 693,
+      "keyframesVisited": 64,
+      "maxCpuBytes": 42918791,
+      "peakGpuBytes": 42770544,
+      "phases": {
+        "update": {
+          "p50Ms": 2.699999988079071,
+          "p95Ms": 20.200000047683716,
+          "maxMs": 863.5
+        },
+        "upload": {
+          "p50Ms": 0.19999998807907104,
+          "p95Ms": 1.2999999523162842,
+          "maxMs": 123.60000002384186
+        },
+        "render": {
+          "p50Ms": 7,
+          "p95Ms": 12.800000011920929,
+          "maxMs": 173.5
+        }
+      },
+      "hostState": {
+        "sampleCount": 121,
+        "maxObservedGapMs": 5041.112000000023,
+        "startedAt": "2026-10-10T18:22:46.673Z",
+        "endedAt": "2026-10-10T18:32:47.710Z",
+        "sources": [
+          "nvidia-smi"
+        ]
+      },
+      "concurrentTestsOrBuilds": false,
+      "referenceHardwareQualified": false
+    }
+  ],
+  "runtimeBinding": {
+    "packageSha256": "436cf662e16a1dfe148255b3612e2f1cf0f41f52d55bc1cd8ec48902209d8d5c",
+    "fileCount": 273,
+    "sha256": "6c046d4ace930909ec93b8efee9b89b14b89ef3fe2f5079beb6713eb773eef7a",
+    "file": "w16-runs/runtime-files-20261010T182246586Z.json",
+    "fixtureSha256": "580cc9241e850f3e83c4b82cb17e3acd7cc5fba2e42ed68509fa39234c2fd5ad",
+    "cameraHarnessSha256": "3e227abef6101c180d5393af92f1973eae15c168c933679178c6aaf100b91c2e",
+    "statement": "Every current dist/asset file matches the measured installed tarball. Later documentation edits do not change these runtime bytes."
+  },
+  "conformance": {
+    "file": "w16-runs/conformance-20261010T182246586Z.json",
+    "verifiedAt": "2026-10-10T18:22:46.319Z",
+    "browserVersion": "148.0.7778.96",
+    "platform": "win32",
+    "rangeFraction": 0.026244226428474193,
+    "tileCoverage": {
+      "records": 256,
+      "camerasPerDocument": 64,
+      "nodesPerDocument": 85,
+      "uniqueSelections": 40,
+      "refineNegativeControl": true
+    },
+    "deviceLoss": true,
+    "pageErrors": [],
+    "externalRequests": [],
+    "sha256": "148d4b775aa81f1ffa540e4354679778cf8be48d1164721198113bd83de82563"
+  },
+  "checks": {
+    "installedPackage": {
+      "conformance": "passed",
+      "soak": "failed",
+      "repeatRequest": {
+        "requested": 1,
+        "completed": 1,
+        "aborted": "First failing run stopped the strict acceptance harness"
+      },
+      "logSha256": "b6422a4ad7c27b7de301b5ea4bc35a969301a41c8930a1eeb288162bc891e1ae"
+    },
+    "api": "passed as part of installed consumer",
+    "unit": {
+      "passed": 1082,
+      "files": 64,
+      "failed": 0,
+      "logSha256": "fa07d446c6adabf997556849f7580cea5c22991419a7d3870027f69a70fbeb62"
+    },
+    "parity": {
+      "passed": 15,
+      "lockControlledConsumers": 53,
+      "logSha256": "1375c199b3312ec006ae68dfaaf360d00e712e43d595903dc29bdff0f56b4196"
+    },
+    "infrastructure": {
+      "passed": 619,
+      "failed": 0,
+      "skipped": 1,
+      "logSha256": "d8f4295c787b1c619871eee588759fa460fac99e3062e6bcb28eaf02290461f4"
+    },
+    "w16": {
+      "unitPassed": 47,
+      "browserPassed": 10,
+      "optionalSourceSoakSkipped": 1,
+      "logSha256": "7ec0fd65af070e4969e153767164c1b082d9dac03544512e07676fbaad2bb07a"
+    }
+  },
+  "previousOptimizationEvidence": {
+    "file": "w16-oct09-evidence.json",
+    "observedP95Ms": 18.3,
+    "measuredPass": false
+  },
+  "renderPathInvestigation": {
+    "file": "w16-runs/render-path-probes-oct10.json",
+    "sha256": "658021789f11058d2dcc354f0749eb52bc7adc7b9ab9145a3d46f2f2c6ef4282",
+    "prototypePatch": "w16-runs/render-path-prototype.patch",
+    "prototypePatchSha256": "7e96c2be83c9fa18f8290e2d6adba2a2bcdb27c606bc5bf809ac00eef0dd56be",
+    "productionChange": false,
+    "shortDiagnosticOnly": true,
+    "baselineP95Ms": 10.399999976158142,
+    "alternativeP95Ms": [
+      10.900000005960464,
+      11,
+      10.599999994039536
+    ],
+    "observedImprovement": false,
+    "statement": "Four sequential 60-second probes showed no improvement from direct presentation or on-demand picking on this host; these are not acceptance runs."
+  },
+  "performanceReproducibility": {
+    "unchangedDistAndAssets": true,
+    "passingEvidence": "w16-runs/evidence-20261010T135319734Z.json",
+    "passingP95Ms": 10,
+    "failingP95Ms": 33.700000047683716,
+    "hostCpuMeanPercent": {
+      "passing": 11.83698551319976,
+      "failing": 86.06815228243137
+    },
+    "explanationEstablished": false,
+    "statement": "Same 273 runtime/asset hashes, browser, viewport, fixture and camera harness. Failed run measured higher system CPU load. Post-run CPU attribution is separate and cannot prove causation or explain October 9."
+  },
+  "previousChecks": {
+    "file": "w16-local-evidence.json",
+    "statement": "Historical gate counts are retained in the original report and are not fresh measurements for this batch."
+  },
+  "gitHead": "809457528bafc5ce11f490dd7dff58ace99acc23",
+  "cleanStart": true,
+  "review": {
+    "status": "pending independent sign-off",
+    "reviewer": null,
+    "date": null
+  },
+  "hardware": {
+    "discrete": "pending: FW-LNX-NV-01 not provisioned",
+    "integrated": "pending: FW-WIN-I12-01 / INF-00 blocked"
+  }
+}

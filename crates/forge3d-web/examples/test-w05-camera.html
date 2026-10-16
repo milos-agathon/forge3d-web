@@ -1,0 +1,473 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forge3D W05 Camera Test</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+      }
+
+      canvas {
+        display: block;
+        width: 160px;
+        height: 120px;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="w05-runtime" width="160" height="120"></canvas>
+    <canvas id="w05-session" width="160" height="120"></canvas>
+    <canvas id="w05-viewer" width="160" height="120" aria-label="W05 viewer"></canvas>
+    <canvas id="w05-replay" width="160" height="120"></canvas>
+    <script type="module">
+      import {
+        Camera,
+        CameraAnimation,
+        Forge3DError,
+        Forge3DRuntime,
+        Forge3DScene,
+        Forge3DSession,
+        Forge3DViewer,
+        TerrainDataset,
+        TerrainOrbitRig,
+        TerrainRailRig,
+        TerrainRigSource,
+        TerrainTargetFollowRig,
+        cameraStateEye,
+      } from "../src-ts/index.ts";
+      import { setSessionRuntimeFactoryForTests } from "../src-ts/session.ts";
+      import { simulateRuntimeDeviceLossForTests } from "../src-ts/runtime-internals.ts";
+      import { simulateViewerDeviceLossForTests } from "../src-ts/viewer.ts";
+
+      const WIDTH = 160;
+      const HEIGHT = 120;
+      const VIEWPORT = { width: WIDTH, height: HEIGHT };
+      const RUNTIME_OPTIONS = {
+        diagnostics: true,
+        width: WIDTH,
+        height: HEIGHT,
+        devicePixelRatio: 1,
+        clearColor: [0, 0, 0, 1],
+      };
+
+      function flatDataset() {
+        return TerrainDataset.fromArray({
+          width: 33,
+          height: 33,
+          heights: new Float32Array(33 * 33),
+          spacing: [1, 1],
+          colormap: "terrain",
+        });
+      }
+
+      function hillDataset() {
+        const size = 65;
+        const heights = new Float32Array(size * size);
+        for (let row = 0; row < size; row += 1) {
+          for (let col = 0; col < size; col += 1) {
+            const dx = col - 40;
+            const dz = row - 24;
+            heights[row * size + col] = Math.fround(
+              14 * Math.exp(-(dx * dx + dz * dz) / 90) + 0.05 * col,
+            );
+          }
+        }
+        return TerrainDataset.fromArray({
+          width: size,
+          height: size,
+          heights,
+          spacing: [1, 1],
+          colormap: "viridis",
+        });
+      }
+
+      // Terrain shading darkens toward the grid border, so silhouettes use
+      // any non-black pixel while content checks use a visible threshold.
+      function coverage(rgba, threshold = 12) {
+        let count = 0;
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        for (let y = 0; y < HEIGHT; y += 1) {
+          for (let x = 0; x < WIDTH; x += 1) {
+            const offset = (y * WIDTH + x) * 4;
+            if (rgba[offset] + rgba[offset + 1] + rgba[offset + 2] > threshold) {
+              count += 1;
+              minX = Math.min(minX, x);
+              minY = Math.min(minY, y);
+              maxX = Math.max(maxX, x);
+              maxY = Math.max(maxY, y);
+            }
+          }
+        }
+        return { count, minX, minY, maxX: maxX + 1, maxY: maxY + 1 };
+      }
+
+      function projectedBounds(camera, corners) {
+        const points = corners.map((corner) => camera.worldToScreen(corner, VIEWPORT));
+        return {
+          minX: Math.min(...points.map((p) => p.x)),
+          maxX: Math.max(...points.map((p) => p.x)),
+          minY: Math.min(...points.map((p) => p.y)),
+          maxY: Math.max(...points.map((p) => p.y)),
+        };
+      }
+
+      function meanAbsDiff(a, b) {
+        let total = 0;
+        let max = 0;
+        for (let index = 0; index < a.length; index += 1) {
+          const diff = Math.abs(a[index] - b[index]);
+          total += diff;
+          max = Math.max(max, diff);
+        }
+        return { mean: total / a.length, max };
+      }
+
+      function bytesEqual(a, b) {
+        if (a.length !== b.length) return false;
+        for (let index = 0; index < a.length; index += 1) {
+          if (a[index] !== b[index]) return false;
+        }
+        return true;
+      }
+
+      async function renderRgba(runtime, camera) {
+        runtime.setCamera(camera);
+        runtime.render();
+        return runtime.readRgba();
+      }
+
+      async function waitFor(predicate, timeoutMs = 15_000) {
+        const deadline = performance.now() + timeoutMs;
+        while (!predicate()) {
+          if (performance.now() > deadline) {
+            throw new Error("timed out waiting for condition");
+          }
+          await new Promise((resolve) => setTimeout(resolve, 10));
+        }
+      }
+
+      async function errorCode(operation) {
+        try {
+          await operation();
+          return "NONE";
+        } catch (error) {
+          return Forge3DError.from(error).code;
+        }
+      }
+
+      /** Projection, animation and rig checks on a runtime. */
+      window.__forge3dW05RenderProbe = async () => {
+        if (!navigator.gpu) {
+          return { supported: false };
+        }
+        const result = { supported: true, ok: true };
+        let runtime;
+        let session;
+        const created = [];
+        try {
+          runtime = await Forge3DRuntime.create(
+            document.querySelector("#w05-runtime"),
+            RUNTIME_OPTIONS,
+          );
+          const flat = flatDataset();
+          runtime.setTerrain(flat.toTerrainInput());
+          const corners = [
+            [-16, 0, -16],
+            [16, 0, -16],
+            [16, 0, 16],
+            [-16, 0, 16],
+          ];
+
+          // C01: rendered silhouettes match Camera.worldToScreen for both
+          // projections (top-down, so terrain skirts stay hidden).
+          const topDown = { position: [0, 30, 0], target: [0, 0, 0], up: [0, 0, -1], near: 1, far: 100 };
+          const ortho = new Camera({ ...topDown, projection: "orthographic", orthographicHeight: 40 });
+          const persp = new Camera({ ...topDown, fovYDegrees: 70 });
+          result.silhouettes = {};
+          for (const [name, camera] of [["orthographic", ortho], ["perspective", persp]]) {
+            const rendered = coverage(await renderRgba(runtime, camera.toInput()), 0);
+            const predicted = projectedBounds(camera, corners);
+            result.silhouettes[name] = {
+              rendered,
+              predicted,
+              maxEdgeError: Math.max(
+                Math.abs(rendered.minX - predicted.minX),
+                Math.abs(rendered.maxX - predicted.maxX),
+                Math.abs(rendered.minY - predicted.minY),
+                Math.abs(rendered.maxY - predicted.maxY),
+              ),
+            };
+          }
+
+          // Orthographic scale follows orthographicHeight; distance does not.
+          const oblique = { position: [18, 22, 26], target: [0, 0, 0], up: [0, 1, 0], near: 0.5, far: 400 };
+          const hill = hillDataset();
+          runtime.setTerrain(hill.toTerrainInput());
+          const orthoNear = await renderRgba(runtime, { ...oblique, fovYDegrees: 45, projection: "orthographic", orthographicHeight: 80 });
+          const orthoFar = await renderRgba(runtime, {
+            ...oblique,
+            position: [36, 44, 52],
+            fovYDegrees: 45,
+            projection: "orthographic",
+            orthographicHeight: 80,
+          });
+          const orthoZoomed = await renderRgba(runtime, { ...oblique, fovYDegrees: 45, projection: "orthographic", orthographicHeight: 160 });
+          const perspNear = await renderRgba(runtime, { ...oblique, fovYDegrees: 45 });
+          const perspFar = await renderRgba(runtime, { ...oblique, position: [36, 44, 52], fovYDegrees: 45 });
+          result.orthographic = {
+            distanceInvariance: meanAbsDiff(orthoNear, orthoFar),
+            perspectiveDistanceChange: meanAbsDiff(perspNear, perspFar),
+            coverageRatio: coverage(orthoNear).count / coverage(orthoZoomed).count,
+            differsFromPerspective: meanAbsDiff(orthoNear, perspNear).mean,
+          };
+
+          // Ported test_perspective_projection: FOV, theta and phi change the frame.
+          const animation = new CameraAnimation([
+            { time: 0, phiDeg: 135, thetaDeg: 45, radius: 70, fovDeg: 30, target: [0, 0, 0] },
+            { time: 1, phiDeg: 135, thetaDeg: 45, radius: 70, fovDeg: 90, target: [0, 0, 0] },
+            { time: 2, phiDeg: 135, thetaDeg: 25, radius: 70, fovDeg: 55, target: [0, 0, 0] },
+            { time: 3, phiDeg: 135, thetaDeg: 75, radius: 70, fovDeg: 55, target: [0, 0, 0] },
+            { time: 4, phiDeg: 0, thetaDeg: 45, radius: 70, fovDeg: 55, target: [0, 0, 0] },
+            { time: 5, phiDeg: 90, thetaDeg: 45, radius: 70, fovDeg: 55, target: [0, 0, 0] },
+          ]);
+          const frameAt = (time) => renderRgba(runtime, animation.cameraAt(time, { near: 0.5, far: 500 }));
+          const fov30 = await frameAt(0);
+          const fov90 = await frameAt(1);
+          const theta25 = await frameAt(2);
+          const theta75 = await frameAt(3);
+          const phi0 = await frameAt(4);
+          const phi90 = await frameAt(5);
+          const fov30Again = await frameAt(0);
+          result.animationFrames = {
+            fov: meanAbsDiff(fov30, fov90).mean,
+            theta: meanAbsDiff(theta25, theta75).mean,
+            phi: meanAbsDiff(phi0, phi90).mean,
+            deterministic: bytesEqual(fov30, fov30Again),
+          };
+
+          // C04: rigs baked on the dataset play back in renderer world space
+          // without violating clearance, and identical times render identically.
+          const source = TerrainRigSource.fromDataset(hill);
+          const rigs = {
+            orbit: new TerrainOrbitRig({
+              targetXZ: [40, 24],
+              duration: 2,
+              radius: 22,
+              phiStartDeg: 0,
+              phiEndDeg: 200,
+              thetaStartDeg: 70,
+              clearance: { minimumHeight: 3 },
+            }),
+            rail: new TerrainRailRig({
+              pathXZ: [[4, 60], [30, 40], [60, 10]],
+              duration: 2,
+              cameraHeightOffset: 2,
+              lookAheadDistance: 8,
+              clearance: { minimumHeight: 4 },
+            }),
+            follow: new TerrainTargetFollowRig({
+              targetPathXZ: [[10, 10], [50, 50]],
+              duration: 2,
+              radius: 12,
+              thetaDeg: 80,
+              clearance: { minimumHeight: 2.5 },
+            }),
+          };
+          result.rigs = {};
+          for (const [name, rig] of Object.entries(rigs)) {
+            const baked = rig.bake(source, { samplesPerSecond: 8 });
+            let minClearance = Infinity;
+            let rawMinClearance = Infinity;
+            let frames = 0;
+            let blank = 0;
+            // Off-grid playback times (12 fps and a 997 Hz sweep) exercise the
+            // spans between the rig's dense verification samples.
+            const times = [
+              ...Array.from({ length: baked.getFrameCount(12) }, (_, frame) => frame / 12),
+              ...Array.from({ length: 1995 }, (_, index) => index / 997),
+            ];
+            for (const [index, time] of times.entries()) {
+              const raw = cameraStateEye(baked.evaluate(time));
+              rawMinClearance = Math.min(rawMinClearance, raw[1] - source.heightAt(raw[0], raw[2]));
+              const { eye } = source.eyeAt(baked, time, { minimumHeight: rig.clearance.minimumHeight });
+              minClearance = Math.min(minClearance, eye[1] - source.heightAt(eye[0], eye[2]));
+              if (index < baked.getFrameCount(12) && index % 6 === 0) {
+                const rgba = await renderRgba(runtime, rig.cameraAt(source, baked, time, { near: 0.1, far: 500 }));
+                frames += 1;
+                if (coverage(rgba).count === 0) blank += 1;
+              }
+            }
+            const first = await renderRgba(runtime, rig.cameraAt(source, baked, 1, { near: 0.1, far: 500 }));
+            const second = await renderRgba(
+              runtime,
+              rig.cameraAt(source, rig.bake(source, { samplesPerSecond: 8 }), 1, { near: 0.1, far: 500 }),
+            );
+            result.rigs[name] = {
+              keyframes: baked.keyframeCount,
+              minimumHeight: rig.clearance.minimumHeight,
+              minClearance,
+              rawMinClearance,
+              frames,
+              blank,
+              deterministic: bytesEqual(first, second),
+            };
+          }
+
+          // Orthographic cameras drive cascaded shadows without errors.
+          const scene = Forge3DScene.create();
+          scene.addTerrain(hill.toTerrainInput());
+          scene.setShadows({ enabled: true, filter: "pcf", mapSize: 512 }, { enabled: true, cascadeCount: 3 });
+          runtime.setScene(scene.snapshot());
+          const shadowed = await renderRgba(runtime, { ...oblique, fovYDegrees: 45, projection: "orthographic", orthographicHeight: 80 });
+          const shadowReport = runtime.getShadowReport();
+          result.orthographicShadows = {
+            covered: coverage(shadowed).count,
+            csmEnabled: shadowReport.csmEnabled,
+            cascadeCount: shadowReport.cascadeCount,
+          };
+
+          result.invalid = {
+            missingHeight: await errorCode(() => runtime.setCamera({ ...oblique, fovYDegrees: 45, projection: "orthographic" })),
+            strayHeight: await errorCode(() => runtime.setCamera({ ...oblique, fovYDegrees: 45, orthographicHeight: 3 })),
+            colinearUp: await errorCode(() => runtime.setCamera({ position: [0, 5, 0], target: [0, 0, 0], up: [0, 1, 0], fovYDegrees: 45, near: 0.1, far: 10 })),
+          };
+
+          // Loss replay: a session re-creates the runtime and re-applies the
+          // same orthographic camera, producing an identical frame.
+          setSessionRuntimeFactoryForTests(async (canvas, options) => {
+            const next = await Forge3DRuntime.create(canvas, options);
+            created.push(next);
+            return next;
+          });
+          session = await Forge3DSession.create(document.querySelector("#w05-session"), {
+            runtime: RUNTIME_OPTIONS,
+            recovery: { deviceLoss: "once" },
+          });
+          const sessionScene = Forge3DScene.create();
+          sessionScene.addTerrain(hill.toTerrainInput());
+          session.setScene(sessionScene);
+          session.setCamera({ ...oblique, fovYDegrees: 45, projection: "orthographic", orthographicHeight: 70 });
+          session.render();
+          const before = await session.readRgba();
+          const generation = created.length;
+          simulateRuntimeDeviceLossForTests(created.at(-1));
+          await waitFor(() => (created.length > generation && session.status === "ready") || session.status === "failed");
+          session.render();
+          const after = await session.readRgba();
+          result.sessionRecovery = {
+            status: session.status,
+            generations: created.length,
+            camera: session.getCamera(),
+            byteEqual: bytesEqual(before, after),
+          };
+        } catch (error) {
+          result.ok = false;
+          const normalized = Forge3DError.from(error);
+          result.error = { code: normalized.code, message: normalized.message, stack: error?.stack };
+        } finally {
+          setSessionRuntimeFactoryForTests(undefined);
+          session?.dispose();
+          runtime?.dispose();
+        }
+        return result;
+      };
+
+      let viewer;
+      let events;
+      const INITIAL_VIEW = {
+        target: [0, 4, 0],
+        distance: 70,
+        yawDegrees: 30,
+        pitchDegrees: 35,
+        fovYDegrees: 50,
+        near: 0.5,
+        far: 600,
+      };
+
+      async function createViewer(canvas) {
+        const created = await Forge3DViewer.create(canvas, {
+          initialView: INITIAL_VIEW,
+          resize: false,
+          runtime: RUNTIME_OPTIONS,
+          controls: { fly: { moveSpeed: 20 } },
+        });
+        created.setTerrain(hillDataset().toTerrainInput());
+        return created;
+      }
+
+      /** Creates the interactive viewer and starts recording its input. */
+      window.__forge3dW05ViewerSetup = async () => {
+        if (!navigator.gpu) {
+          return { supported: false };
+        }
+        viewer = await createViewer(document.querySelector("#w05-viewer"));
+        viewer.startCameraRecording();
+        return { supported: true, mode: viewer.getCameraMode(), camera: viewer.getCamera() };
+      };
+
+      window.__forge3dW05ViewerState = () => ({
+        mode: viewer.getCameraMode(),
+        camera: viewer.getCamera(),
+        fly: viewer.getFlyView(),
+        diagnostics: viewer.getDiagnostics(),
+      });
+
+      /** Replays the recorded input into a second viewer and checks recovery. */
+      window.__forge3dW05ViewerFinish = async () => {
+        const result = { ok: true };
+        let replay;
+        try {
+          events = viewer.stopCameraRecording();
+          result.eventTypes = [...new Set(events.map((event) => event.type))].sort();
+          result.eventCount = events.length;
+          const liveCamera = viewer.getCamera();
+          replay = await createViewer(document.querySelector("#w05-replay"));
+          replay.replayCameraInput(JSON.parse(JSON.stringify(events)));
+          result.replayMode = replay.getCameraMode();
+          result.replayCameraEqual = JSON.stringify(replay.getCamera()) === JSON.stringify(liveCamera);
+          const liveShot = new Uint8Array(await (await viewer.screenshot()).arrayBuffer());
+          const replayShot = new Uint8Array(await (await replay.screenshot()).arrayBuffer());
+          result.replayScreenshotEqual = bytesEqual(liveShot, replayShot);
+
+          // Orthographic fly camera survives device loss unchanged.
+          viewer.setCamera({ ...liveCamera, projection: "orthographic", orthographicHeight: 90 });
+          const beforeCamera = viewer.getCamera();
+          const before = new Uint8Array(await (await viewer.screenshot()).arrayBuffer());
+          const generation = viewer.getDiagnostics().generation;
+          simulateViewerDeviceLossForTests(viewer);
+          await waitFor(
+            () =>
+              (viewer.getDiagnostics().generation > generation && viewer.status === "ready") ||
+              viewer.status === "failed",
+          );
+          const after = new Uint8Array(await (await viewer.screenshot()).arrayBuffer());
+          result.recovery = {
+            status: viewer.status,
+            mode: viewer.getCameraMode(),
+            cameraEqual: JSON.stringify(viewer.getCamera()) === JSON.stringify(beforeCamera),
+            screenshotEqual: bytesEqual(before, after),
+          };
+          viewer.dispose();
+          replay.dispose();
+          result.disposed = viewer.getDiagnostics();
+        } catch (error) {
+          result.ok = false;
+          const normalized = Forge3DError.from(error);
+          result.error = { code: normalized.code, message: normalized.message, stack: error?.stack };
+          viewer?.dispose();
+          replay?.dispose();
+        }
+        return result;
+      };
+    </script>
+  </body>
+</html>

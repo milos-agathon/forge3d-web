@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 
@@ -21,6 +21,14 @@ pub struct RuntimeOptions {
     pub color_space: ColorSpaceOption,
     #[serde(default)]
     pub diagnostics: bool,
+    #[serde(default)]
+    pub quality: QualityOption,
+    #[serde(default)]
+    pub memory_budget_bytes: Option<u64>,
+    #[serde(default)]
+    pub overflow_policy: OverflowPolicyOption,
+    #[serde(default)]
+    pub timestamp_mode: TimestampModeOption,
 }
 
 impl RuntimeOptions {
@@ -67,6 +75,11 @@ impl RuntimeOptions {
         self.clear_color.unwrap_or([0.0, 0.0, 0.0, 1.0])
     }
 
+    pub fn memory_budget_bytes(&self) -> u64 {
+        self.memory_budget_bytes
+            .unwrap_or(forge3d_core::memory::DEFAULT_MEMORY_BUDGET_BYTES)
+    }
+
     fn validate(&self) -> Result<(), WebError> {
         if let Some(width) = self.width {
             validate_positive_dimension("width", width)?;
@@ -92,6 +105,14 @@ impl RuntimeOptions {
                 }
             }
         }
+        if let Some(budget) = self.memory_budget_bytes {
+            if budget == 0 {
+                return Err(WebError::new(
+                    Forge3DErrorCode::InvalidInput,
+                    "memoryBudgetBytes must be greater than zero",
+                ));
+            }
+        }
         Ok(())
     }
 }
@@ -102,6 +123,584 @@ pub struct TerrainHeightmapOptions {
     pub height: u32,
     pub heights: Vec<f32>,
     pub color_ramp: TerrainColorRampOptions,
+    pub spacing: Option<[f32; 2]>,
+    pub exaggeration: Option<f32>,
+    pub domain: Option<[f32; 2]>,
+    pub nodata: Option<f32>,
+    pub crs: Option<String>,
+    pub height_ao: HeightAoJsOptions,
+    pub sun_visibility: SunVisibilityJsOptions,
+    pub debug_view: Option<TerrainDebugViewOption>,
+    pub render_mode: Option<TerrainRenderModeOption>,
+    pub material: Option<crate::terrain_material_input::TerrainMaterialOptions>,
+    pub geometry: Option<TerrainGeometryJsOptions>,
+    pub bounds: Option<[f32; 4]>,
+    pub streaming: Option<TerrainStreamingJsOptions>,
+    pub overlays: Option<forge3d_core::terrain_overlay::OverlaySettings>,
+}
+
+#[derive(Debug)]
+pub struct ValidatedTerrain {
+    pub input: forge3d_core::terrain::TerrainHeightmapInput,
+    pub color_ramp: TerrainColorRampOptions,
+    pub height_ao: forge3d_core::terrain::HeightfieldAoConfig,
+    pub sun_visibility: forge3d_core::terrain::SunVisibilityConfig,
+    pub debug_view: forge3d_core::terrain::TerrainDebugView,
+}
+
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct HeightAoJsOptions {
+    #[serde(default)]
+    pub enabled: Option<bool>,
+    #[serde(default)]
+    pub resolution_scale: Option<f32>,
+    #[serde(default)]
+    pub directions: Option<u32>,
+    #[serde(default)]
+    pub steps: Option<u32>,
+    #[serde(default)]
+    pub max_distance: Option<f32>,
+    #[serde(default)]
+    pub strength: Option<f32>,
+}
+
+impl HeightAoJsOptions {
+    pub fn to_config(&self) -> Result<forge3d_core::terrain::HeightfieldAoConfig, WebError> {
+        let defaults = forge3d_core::terrain::HeightfieldAoConfig::default();
+        forge3d_core::terrain::HeightfieldAoConfig {
+            enabled: self.enabled.unwrap_or(defaults.enabled),
+            resolution_scale: self.resolution_scale.unwrap_or(defaults.resolution_scale),
+            directions: self.directions.unwrap_or(defaults.directions),
+            steps: self.steps.unwrap_or(defaults.steps),
+            max_distance: self.max_distance.unwrap_or(defaults.max_distance),
+            strength: self.strength.unwrap_or(defaults.strength),
+        }
+        .validate()
+        .map_err(crate::error::map_core_error)
+    }
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum SunModeOption {
+    Hard,
+    Soft,
+}
+
+impl SunModeOption {
+    pub(crate) fn to_core(self) -> forge3d_core::terrain::SunVisibilityMode {
+        match self {
+            Self::Hard => forge3d_core::terrain::SunVisibilityMode::Hard,
+            Self::Soft => forge3d_core::terrain::SunVisibilityMode::Soft,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct SunVisibilityJsOptions {
+    #[serde(default)]
+    pub enabled: Option<bool>,
+    #[serde(default)]
+    pub mode: Option<SunModeOption>,
+    #[serde(default)]
+    pub resolution_scale: Option<f32>,
+    #[serde(default)]
+    pub samples: Option<u32>,
+    #[serde(default)]
+    pub steps: Option<u32>,
+    #[serde(default)]
+    pub max_distance: Option<f32>,
+    #[serde(default)]
+    pub softness: Option<f32>,
+    #[serde(default)]
+    pub bias: Option<f32>,
+    #[serde(default)]
+    pub direction: Option<[f32; 3]>,
+}
+
+impl SunVisibilityJsOptions {
+    pub fn to_config(&self) -> Result<forge3d_core::terrain::SunVisibilityConfig, WebError> {
+        let defaults = forge3d_core::terrain::SunVisibilityConfig::default();
+        forge3d_core::terrain::SunVisibilityConfig {
+            enabled: self.enabled.unwrap_or(defaults.enabled),
+            mode: self
+                .mode
+                .map(SunModeOption::to_core)
+                .unwrap_or(defaults.mode),
+            resolution_scale: self.resolution_scale.unwrap_or(defaults.resolution_scale),
+            samples: self.samples.unwrap_or(defaults.samples),
+            steps: self.steps.unwrap_or(defaults.steps),
+            max_distance: self.max_distance.unwrap_or(defaults.max_distance),
+            softness: self.softness.unwrap_or(defaults.softness),
+            bias: self.bias.unwrap_or(defaults.bias),
+            direction: self.direction.unwrap_or(defaults.direction),
+        }
+        .validate()
+        .map_err(crate::error::map_core_error)
+    }
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum TerrainDebugViewOption {
+    None,
+    HeightAo,
+    SunVisibility,
+}
+
+impl TerrainDebugViewOption {
+    pub(crate) fn to_core(self) -> forge3d_core::terrain::TerrainDebugView {
+        match self {
+            Self::None => forge3d_core::terrain::TerrainDebugView::None,
+            Self::HeightAo => forge3d_core::terrain::TerrainDebugView::HeightAo,
+            Self::SunVisibility => forge3d_core::terrain::TerrainDebugView::SunVisibility,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum TerrainRenderModeOption {
+    Perspective,
+    Screen,
+}
+
+impl TerrainRenderModeOption {
+    pub(crate) fn to_core(self) -> forge3d_core::terrain::TerrainRenderMode {
+        match self {
+            Self::Perspective => forge3d_core::terrain::TerrainRenderMode::Perspective,
+            Self::Screen => forge3d_core::terrain::TerrainRenderMode::Screen,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TerrainClipmapJsOptions {
+    #[serde(default)]
+    pub ring_count: Option<u32>,
+    #[serde(default)]
+    pub ring_resolution: Option<u32>,
+    #[serde(default)]
+    pub center_resolution: Option<u32>,
+    #[serde(default)]
+    pub skirt_depth: Option<f32>,
+    #[serde(default)]
+    pub morph_range: Option<f32>,
+    #[serde(default)]
+    pub base_cell_size: Option<[f32; 2]>,
+}
+
+impl TerrainClipmapJsOptions {
+    pub(crate) fn to_core(&self) -> forge3d_core::terrain::TerrainClipmapOptions {
+        forge3d_core::terrain::TerrainClipmapOptions {
+            ring_count: self.ring_count,
+            ring_resolution: self.ring_resolution,
+            center_resolution: self.center_resolution,
+            skirt_depth: self.skirt_depth,
+            morph_range: self.morph_range,
+            base_cell_size: self.base_cell_size,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TerrainGeometryJsOptions {
+    #[serde(default)]
+    pub mode: Option<TerrainGeometryModeOption>,
+    #[serde(default)]
+    pub clipmap: Option<TerrainClipmapJsOptions>,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum TerrainGeometryModeOption {
+    Grid,
+    Clipmap,
+}
+
+impl TerrainGeometryModeOption {
+    pub(crate) fn to_core(self) -> forge3d_core::terrain::TerrainGeometryMode {
+        match self {
+            Self::Grid => forge3d_core::terrain::TerrainGeometryMode::Grid,
+            Self::Clipmap => forge3d_core::terrain::TerrainGeometryMode::Clipmap,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum StreamCoalescePolicyOption {
+    PreferCoarse,
+    PreferFine,
+}
+
+impl StreamCoalescePolicyOption {
+    pub(crate) fn to_core(self) -> forge3d_core::terrain::TerrainCoalescePolicy {
+        match self {
+            Self::PreferCoarse => forge3d_core::terrain::TerrainCoalescePolicy::PreferCoarse,
+            Self::PreferFine => forge3d_core::terrain::TerrainCoalescePolicy::PreferFine,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Default, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TerrainStreamingJsOptions {
+    #[serde(default)]
+    pub width: Option<u32>,
+    #[serde(default)]
+    pub height: Option<u32>,
+    #[serde(default)]
+    pub tile_size: Option<u32>,
+    #[serde(default)]
+    pub max_resident_bytes: Option<u64>,
+    #[serde(default)]
+    pub lod_bias: Option<i32>,
+    #[serde(default)]
+    pub prefetch_margin_tiles: Option<u32>,
+    #[serde(default)]
+    pub max_in_flight: Option<u32>,
+    #[serde(default)]
+    pub coalesce_policy: Option<StreamCoalescePolicyOption>,
+}
+
+// ---------------------------------------------------------------------------
+// W08 (E1/E5): `terrain.overlays` — the scalar shape parses through serde,
+// the per-layer `image.data` Uint8Array is read by reflection (like the
+// material textures).
+// ---------------------------------------------------------------------------
+
+/// Serde view of `overlays.layers[i].image` (data is skipped here and read
+/// by reflection in `read_terrain_overlays`).
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[allow(dead_code)]
+pub struct OverlayImageJs {
+    width: u32,
+    height: u32,
+    #[serde(default)]
+    data: serde::de::IgnoredAny,
+}
+
+/// Serde view of one overlay layer; `extent` and `crs`/`crsBounds` are
+/// mutually exclusive. `image` is validated for shape here and decoded by
+/// reflection in `read_terrain_overlays`.
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+#[allow(dead_code)]
+pub struct OverlayLayerJs {
+    name: Option<String>,
+    image: OverlayImageJs,
+    #[serde(default)]
+    extent: Option<Vec<f64>>,
+    #[serde(default)]
+    crs: Option<String>,
+    #[serde(default)]
+    crs_bounds: Option<Vec<f64>>,
+    #[serde(default)]
+    opacity: Option<f32>,
+    #[serde(default)]
+    blend_mode: Option<String>,
+    #[serde(default)]
+    visible: Option<bool>,
+    #[serde(default)]
+    z_order: Option<i32>,
+}
+
+/// Serde view of `terrain.overlays`.
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+pub struct TerrainOverlaysJsOptions {
+    #[serde(default)]
+    pub enabled: Option<bool>,
+    #[serde(default)]
+    pub global_opacity: Option<f32>,
+    #[serde(default)]
+    pub resolution_scale: Option<f32>,
+    #[serde(default)]
+    pub layers: Option<Vec<OverlayLayerJs>>,
+}
+
+fn read_terrain_overlays(
+    value: &JsValue,
+) -> Result<Option<forge3d_core::terrain_overlay::OverlaySettings>, WebError> {
+    use forge3d_core::terrain_overlay::{
+        OverlayBlendMode, OverlayImage, OverlayLayer, OverlayPlacement, OverlaySettings,
+    };
+
+    let Some(overlays_value) = read_optional_property(value, "overlays")? else {
+        return Ok(None);
+    };
+    if !overlays_value.is_object() || js_sys::Array::is_array(&overlays_value) {
+        return Err(WebError::new(
+            Forge3DErrorCode::InvalidInput,
+            "Invalid terrain overlays input: must be an object",
+        ));
+    }
+    let parsed: TerrainOverlaysJsOptions = serde_wasm_bindgen::from_value(overlays_value.clone())
+        .map_err(|error| {
+        WebError::new(
+            Forge3DErrorCode::InvalidInput,
+            format!("Invalid terrain overlays input: {error}"),
+        )
+    })?;
+
+    let js_layers = read_optional_property(&overlays_value, "layers")?
+        .map(|layers| js_sys::Array::from(&layers));
+    let mut layers = Vec::with_capacity(parsed.layers.as_deref().unwrap_or(&[]).len());
+    for (index, layer) in parsed.layers.as_deref().unwrap_or(&[]).iter().enumerate() {
+        let field = format!("overlays.layers[{index}]");
+        let layer_value = js_layers
+            .as_ref()
+            .map(|array| array.get(index as u32))
+            .filter(|v| v.is_object());
+        let image_value = layer_value
+            .as_ref()
+            .and_then(|layer_value| {
+                js_sys::Reflect::get(layer_value, &JsValue::from_str("image")).ok()
+            })
+            .filter(|v| v.is_object())
+            .ok_or_else(|| {
+                WebError::new(
+                    Forge3DErrorCode::InvalidInput,
+                    format!("Invalid terrain {field}.image: missing image object"),
+                )
+            })?;
+        let (width, height, rgba) =
+            crate::terrain_material_input::read_image(&image_value, &field)?;
+        let image = OverlayImage::new(width, height, rgba).map_err(crate::error::map_core_error)?;
+
+        if layer.extent.is_some() && (layer.crs.is_some() || layer.crs_bounds.is_some()) {
+            return Err(WebError::new(
+                Forge3DErrorCode::InvalidInput,
+                format!("Invalid terrain {field}: extent and crs/crsBounds are mutually exclusive"),
+            ));
+        }
+        let placement = if let Some(extent) = &layer.extent {
+            if extent.len() != 4 {
+                return Err(WebError::new(
+                    Forge3DErrorCode::InvalidInput,
+                    format!("Invalid terrain {field}: extent must be (u_min, v_min, u_max, v_max)"),
+                ));
+            }
+            OverlayPlacement::uv([
+                extent[0] as f32,
+                extent[1] as f32,
+                extent[2] as f32,
+                extent[3] as f32,
+            ])
+            .map_err(crate::error::map_core_error)?
+        } else if let Some(crs) = &layer.crs {
+            let bounds = layer.crs_bounds.as_ref().ok_or_else(|| {
+                WebError::new(
+                    Forge3DErrorCode::InvalidInput,
+                    format!("Invalid terrain {field}: crs requires crsBounds"),
+                )
+            })?;
+            if bounds.len() != 4 {
+                return Err(WebError::new(
+                    Forge3DErrorCode::InvalidInput,
+                    format!("Invalid terrain {field}.crsBounds: must be [minx, miny, maxx, maxy]"),
+                ));
+            }
+            OverlayPlacement::Crs {
+                crs: crs.clone(),
+                bounds: [bounds[0], bounds[1], bounds[2], bounds[3]],
+            }
+        } else {
+            OverlayPlacement::default()
+        };
+
+        let name = layer
+            .name
+            .clone()
+            .unwrap_or_else(|| format!("layer{index}"));
+        let mut resolved = OverlayLayer::new(name, image).map_err(crate::error::map_core_error)?;
+        resolved = resolved
+            .with_placement(placement)
+            .with_opacity(layer.opacity.unwrap_or(1.0))
+            .with_blend_mode(match layer.blend_mode.as_deref() {
+                None => OverlayBlendMode::Normal,
+                Some(mode) => {
+                    OverlayBlendMode::parse(mode).map_err(crate::error::map_core_error)?
+                }
+            })
+            .with_visible(layer.visible.unwrap_or(true))
+            .with_z_order(layer.z_order.unwrap_or(0));
+        resolved.validate().map_err(crate::error::map_core_error)?;
+        layers.push(resolved);
+    }
+
+    let settings = OverlaySettings {
+        enabled: parsed.enabled.unwrap_or(true),
+        global_opacity: parsed.global_opacity.unwrap_or(1.0),
+        layers,
+        resolution_scale: parsed.resolution_scale.unwrap_or(1.0),
+    };
+    settings.validate().map_err(crate::error::map_core_error)?;
+    Ok(Some(settings))
+}
+
+#[derive(Debug, Default)]
+pub struct TerrainMetadataFields {
+    pub spacing: Option<[f32; 2]>,
+    pub exaggeration: Option<f32>,
+    pub domain: Option<[f32; 2]>,
+    pub nodata: Option<f32>,
+    pub crs: Option<String>,
+    pub height_ao: HeightAoJsOptions,
+    pub sun_visibility: SunVisibilityJsOptions,
+    pub debug_view: Option<TerrainDebugViewOption>,
+    pub render_mode: Option<TerrainRenderModeOption>,
+    pub geometry: Option<TerrainGeometryJsOptions>,
+    pub bounds: Option<[f32; 4]>,
+    pub streaming: Option<TerrainStreamingJsOptions>,
+    pub overlays: Option<forge3d_core::terrain_overlay::OverlaySettings>,
+}
+
+pub fn read_terrain_metadata(value: &JsValue) -> Result<TerrainMetadataFields, WebError> {
+    let spacing = read_optional_f32_pair_property(value, "spacing")?;
+    let exaggeration =
+        read_optional_f64_property(value, "exaggeration")?.map(|number| number as f32);
+    let domain = read_optional_f32_pair_property(value, "domain")?;
+    let nodata = read_optional_f64_property(value, "nodata")?.map(|number| number as f32);
+    let crs = read_optional_string_property(value, "crs")?;
+    let height_ao =
+        read_optional_object_property::<HeightAoJsOptions>(value, "heightAo")?.unwrap_or_default();
+    let sun_visibility =
+        read_optional_object_property::<SunVisibilityJsOptions>(value, "sunVisibility")?
+            .unwrap_or_default();
+    let debug_view = read_optional_object_property::<TerrainDebugViewOption>(value, "debugView")?;
+    let render_mode =
+        read_optional_object_property::<TerrainRenderModeOption>(value, "renderMode")?;
+    let geometry = read_optional_object_property::<TerrainGeometryJsOptions>(value, "geometry")?;
+    let bounds = read_optional_f32_quad_property(value, "bounds")?;
+    let streaming = read_optional_object_property::<TerrainStreamingJsOptions>(value, "streaming")?;
+    let overlays = read_terrain_overlays(value)?;
+    Ok(TerrainMetadataFields {
+        spacing,
+        exaggeration,
+        domain,
+        nodata,
+        crs,
+        height_ao,
+        sun_visibility,
+        debug_view,
+        render_mode,
+        geometry,
+        bounds,
+        streaming,
+        overlays,
+    })
+}
+
+fn read_optional_property(value: &JsValue, name: &str) -> Result<Option<JsValue>, WebError> {
+    let property = js_sys::Reflect::get(value, &JsValue::from_str(name)).map_err(|error| {
+        WebError::with_details(
+            Forge3DErrorCode::InvalidInput,
+            format!("terrain {name} could not be read"),
+            error,
+        )
+    })?;
+    if property.is_undefined() || property.is_null() {
+        Ok(None)
+    } else {
+        Ok(Some(property))
+    }
+}
+
+fn read_optional_f64_property(value: &JsValue, name: &str) -> Result<Option<f64>, WebError> {
+    let Some(property) = read_optional_property(value, name)? else {
+        return Ok(None);
+    };
+    property.as_f64().map(Some).ok_or_else(|| {
+        WebError::new(
+            Forge3DErrorCode::InvalidInput,
+            format!("terrain {name} must be a number"),
+        )
+    })
+}
+
+fn read_optional_f32_pair_property(
+    value: &JsValue,
+    name: &str,
+) -> Result<Option<[f32; 2]>, WebError> {
+    let Some(property) = read_optional_property(value, name)? else {
+        return Ok(None);
+    };
+    let pair: Vec<f64> = serde_wasm_bindgen::from_value(property).map_err(|error| {
+        WebError::new(
+            Forge3DErrorCode::InvalidInput,
+            format!("terrain {name} must be a two-element number array: {error}"),
+        )
+    })?;
+    if pair.len() != 2 {
+        return Err(WebError::new(
+            Forge3DErrorCode::InvalidInput,
+            format!("terrain {name} must contain exactly two numbers"),
+        ));
+    }
+    Ok(Some([pair[0] as f32, pair[1] as f32]))
+}
+
+fn read_optional_f32_quad_property(
+    value: &JsValue,
+    name: &str,
+) -> Result<Option<[f32; 4]>, WebError> {
+    let Some(property) = read_optional_property(value, name)? else {
+        return Ok(None);
+    };
+    let quad: Vec<f64> = serde_wasm_bindgen::from_value(property).map_err(|error| {
+        WebError::new(
+            Forge3DErrorCode::InvalidInput,
+            format!("terrain {name} must be a four-element number array: {error}"),
+        )
+    })?;
+    if quad.len() != 4 {
+        return Err(WebError::new(
+            Forge3DErrorCode::InvalidInput,
+            format!("terrain {name} must contain exactly four numbers"),
+        ));
+    }
+    Ok(Some([
+        quad[0] as f32,
+        quad[1] as f32,
+        quad[2] as f32,
+        quad[3] as f32,
+    ]))
+}
+
+fn read_optional_string_property(value: &JsValue, name: &str) -> Result<Option<String>, WebError> {
+    let Some(property) = read_optional_property(value, name)? else {
+        return Ok(None);
+    };
+    property.as_string().map(Some).ok_or_else(|| {
+        WebError::new(
+            Forge3DErrorCode::InvalidInput,
+            format!("terrain {name} must be a string"),
+        )
+    })
+}
+
+fn read_optional_object_property<T: for<'de> Deserialize<'de>>(
+    value: &JsValue,
+    name: &str,
+) -> Result<Option<T>, WebError> {
+    let Some(property) = read_optional_property(value, name)? else {
+        return Ok(None);
+    };
+    serde_wasm_bindgen::from_value(property)
+        .map(Some)
+        .map_err(|error| {
+            WebError::new(
+                Forge3DErrorCode::InvalidInput,
+                format!("Invalid terrain {name} input: {error}"),
+            )
+        })
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -154,10 +753,23 @@ impl TerrainHeightmapOptions {
                     "heights must be a Float32Array",
                 )
             })?;
-        validate_terrain_allocation(width, height, heights_array.length() as usize, limits)?;
+        let metadata = read_terrain_metadata(&value)?;
+        let clipmap = metadata
+            .geometry
+            .as_ref()
+            .is_some_and(|geometry| geometry.mode == Some(TerrainGeometryModeOption::Clipmap))
+            || metadata.streaming.is_some();
+        validate_terrain_allocation(
+            width,
+            height,
+            heights_array.length() as usize,
+            limits,
+            !clipmap,
+        )?;
         let color_ramp_value = js_sys::Reflect::get(&value, &JsValue::from_str("colorRamp"))
             .map_err(|_| WebError::new(Forge3DErrorCode::InvalidInput, "invalid colorRamp"))?;
         let color_ramp = TerrainColorRampOptions::from_js_value(color_ramp_value)?;
+        let material = crate::terrain_material_input::read_terrain_material(&value)?;
 
         let mut heights = vec![0.0; heights_array.length() as usize];
         heights_array.copy_to(&mut heights);
@@ -167,21 +779,90 @@ impl TerrainHeightmapOptions {
             height,
             heights,
             color_ramp,
+            spacing: metadata.spacing,
+            exaggeration: metadata.exaggeration,
+            domain: metadata.domain,
+            nodata: metadata.nodata,
+            crs: metadata.crs,
+            height_ao: metadata.height_ao,
+            sun_visibility: metadata.sun_visibility,
+            debug_view: metadata.debug_view,
+            render_mode: metadata.render_mode,
+            material,
+            geometry: metadata.geometry,
+            bounds: metadata.bounds,
+            streaming: metadata.streaming,
+            overlays: metadata.overlays,
         })
     }
 
-    pub fn validate(self) -> Result<forge3d_core::terrain::TerrainHeightmapInput, WebError> {
+    pub fn validate(self) -> Result<ValidatedTerrain, WebError> {
         self.color_ramp.validate()?;
-        forge3d_core::terrain::TerrainHeightmapInput::new(self.width, self.height, self.heights)
-            .map_err(crate::error::map_core_error)
+        let height_ao = self.height_ao.to_config()?;
+        let sun_visibility = self.sun_visibility.to_config()?;
+        let input = forge3d_core::terrain::TerrainHeightmapInput::with_options(
+            self.width,
+            self.height,
+            self.heights,
+            forge3d_core::terrain::TerrainGridOptions {
+                spacing: self.spacing,
+                exaggeration: self.exaggeration,
+                domain: self.domain,
+                nodata: self.nodata,
+                crs: self.crs,
+                render_mode: self.render_mode.map(TerrainRenderModeOption::to_core),
+                geometry: self.geometry.map(|geometry| {
+                    forge3d_core::terrain::TerrainGeometryOptions {
+                        mode: geometry
+                            .mode
+                            .map(TerrainGeometryModeOption::to_core)
+                            .unwrap_or(forge3d_core::terrain::TerrainGeometryMode::Grid),
+                        clipmap: geometry
+                            .clipmap
+                            .as_ref()
+                            .map(TerrainClipmapJsOptions::to_core),
+                    }
+                }),
+                bounds: self.bounds,
+                streaming: self.streaming.map(|streaming| {
+                    forge3d_core::terrain::TerrainStreamingOptions {
+                        width: streaming.width,
+                        height: streaming.height,
+                        tile_size: streaming.tile_size,
+                        max_resident_bytes: streaming.max_resident_bytes,
+                        lod_bias: streaming.lod_bias,
+                        prefetch_margin_tiles: streaming.prefetch_margin_tiles,
+                        max_in_flight: streaming.max_in_flight,
+                        coalesce_policy: streaming
+                            .coalesce_policy
+                            .map(StreamCoalescePolicyOption::to_core),
+                    }
+                }),
+            },
+        )
+        .map_err(crate::error::map_core_error)?;
+        Ok(ValidatedTerrain {
+            input,
+            color_ramp: self.color_ramp,
+            height_ao,
+            sun_visibility,
+            debug_view: self
+                .debug_view
+                .map(TerrainDebugViewOption::to_core)
+                .unwrap_or(forge3d_core::terrain::TerrainDebugView::None),
+        })
     }
 }
 
+/// Validates the committed heightfield payload and, when `grid_mesh` is true,
+/// the grid vertex/index buffers it implies. Clipmap geometry generates its
+/// own fixed-size mesh, so `grid_mesh` is false for clipmap/streaming inputs.
 pub fn validate_terrain_allocation(
     width: u32,
     height: u32,
     heights_length: usize,
     limits: TerrainPhysicalLimits,
+    grid_mesh: bool,
 ) -> Result<TerrainAllocation, WebError> {
     if width == 0 || height == 0 {
         return Err(WebError::new(
@@ -220,46 +901,51 @@ pub fn validate_terrain_allocation(
         .checked_mul(std::mem::size_of::<f32>() as u64)
         .ok_or_else(|| resource_overflow("terrain sample bytes"))?;
 
-    let skirt_vertices = u64::from(width)
-        .checked_mul(2)
-        .and_then(|value| value.checked_add(u64::from(height).checked_mul(2)?))
-        .ok_or_else(|| resource_overflow("terrain skirt vertex count"))?;
-    let vertex_count = sample_count_u64
-        .checked_add(skirt_vertices)
-        .ok_or_else(|| resource_overflow("terrain vertex count"))?;
-    if vertex_count > u64::from(u32::MAX) {
-        return Err(WebError::new(
-            Forge3DErrorCode::ResourceLimitExceeded,
-            "terrain mesh exceeds the u32 vertex-index address space",
-        ));
-    }
-    let vertex_bytes = vertex_count
-        .checked_mul((std::mem::size_of::<[f32; 3]>() + std::mem::size_of::<[f32; 2]>()) as u64)
-        .ok_or_else(|| resource_overflow("terrain vertex bytes"))?;
+    let (vertex_count, vertex_bytes, index_count, index_bytes) = if grid_mesh {
+        let skirt_vertices = u64::from(width)
+            .checked_mul(2)
+            .and_then(|value| value.checked_add(u64::from(height).checked_mul(2)?))
+            .ok_or_else(|| resource_overflow("terrain skirt vertex count"))?;
+        let vertex_count = sample_count_u64
+            .checked_add(skirt_vertices)
+            .ok_or_else(|| resource_overflow("terrain vertex count"))?;
+        if vertex_count > u64::from(u32::MAX) {
+            return Err(WebError::new(
+                Forge3DErrorCode::ResourceLimitExceeded,
+                "terrain mesh exceeds the u32 vertex-index address space",
+            ));
+        }
+        let vertex_bytes = vertex_count
+            .checked_mul((std::mem::size_of::<[f32; 3]>() + std::mem::size_of::<[f32; 2]>()) as u64)
+            .ok_or_else(|| resource_overflow("terrain vertex bytes"))?;
 
-    let cells = u64::from(width - 1)
-        .checked_mul(u64::from(height - 1))
-        .ok_or_else(|| resource_overflow("terrain cell count"))?;
-    let base_indices = cells
-        .checked_mul(6)
-        .ok_or_else(|| resource_overflow("terrain index count"))?;
-    let skirt_edges = u64::from(width - 1)
-        .checked_mul(2)
-        .and_then(|value| value.checked_add(u64::from(height - 1).checked_mul(2)?))
-        .ok_or_else(|| resource_overflow("terrain skirt edge count"))?;
-    let index_count = skirt_edges
-        .checked_mul(6)
-        .and_then(|value| value.checked_add(base_indices))
-        .ok_or_else(|| resource_overflow("terrain index count"))?;
-    if index_count > u64::from(u32::MAX) {
-        return Err(WebError::new(
-            Forge3DErrorCode::ResourceLimitExceeded,
-            "terrain mesh has more indices than a single u32 draw range can address",
-        ));
-    }
-    let index_bytes = index_count
-        .checked_mul(std::mem::size_of::<u32>() as u64)
-        .ok_or_else(|| resource_overflow("terrain index bytes"))?;
+        let cells = u64::from(width - 1)
+            .checked_mul(u64::from(height - 1))
+            .ok_or_else(|| resource_overflow("terrain cell count"))?;
+        let base_indices = cells
+            .checked_mul(6)
+            .ok_or_else(|| resource_overflow("terrain index count"))?;
+        let skirt_edges = u64::from(width - 1)
+            .checked_mul(2)
+            .and_then(|value| value.checked_add(u64::from(height - 1).checked_mul(2)?))
+            .ok_or_else(|| resource_overflow("terrain skirt edge count"))?;
+        let index_count = skirt_edges
+            .checked_mul(6)
+            .and_then(|value| value.checked_add(base_indices))
+            .ok_or_else(|| resource_overflow("terrain index count"))?;
+        if index_count > u64::from(u32::MAX) {
+            return Err(WebError::new(
+                Forge3DErrorCode::ResourceLimitExceeded,
+                "terrain mesh has more indices than a single u32 draw range can address",
+            ));
+        }
+        let index_bytes = index_count
+            .checked_mul(std::mem::size_of::<u32>() as u64)
+            .ok_or_else(|| resource_overflow("terrain index bytes"))?;
+        (vertex_count, vertex_bytes, index_count, index_bytes)
+    } else {
+        (0, 0, 0, 0)
+    };
 
     if vertex_bytes > limits.max_buffer_size {
         return Err(WebError::new(
@@ -424,6 +1110,17 @@ pub struct CameraOptions {
     pub fov_y_degrees: f32,
     pub near: f32,
     pub far: f32,
+    #[serde(default)]
+    pub projection: Option<CameraProjectionKind>,
+    #[serde(default)]
+    pub orthographic_height: Option<f32>,
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "lowercase")]
+pub enum CameraProjectionKind {
+    Perspective,
+    Orthographic,
 }
 
 impl CameraOptions {
@@ -444,13 +1141,34 @@ impl CameraOptions {
     }
 
     pub fn validate(&self) -> Result<forge3d_core::camera::CameraInput, WebError> {
-        forge3d_core::camera::CameraInput::new(
+        use forge3d_core::camera::CameraProjection;
+
+        let projection = match (self.projection, self.orthographic_height) {
+            (None | Some(CameraProjectionKind::Perspective), None) => CameraProjection::Perspective,
+            (Some(CameraProjectionKind::Orthographic), Some(height)) => {
+                CameraProjection::Orthographic { height }
+            }
+            (Some(CameraProjectionKind::Orthographic), None) => {
+                return Err(WebError::new(
+                    Forge3DErrorCode::InvalidInput,
+                    "camera.orthographicHeight is required for orthographic projection",
+                ));
+            }
+            (None | Some(CameraProjectionKind::Perspective), Some(_)) => {
+                return Err(WebError::new(
+                    Forge3DErrorCode::InvalidInput,
+                    "camera.orthographicHeight is only valid for orthographic projection",
+                ));
+            }
+        };
+        forge3d_core::camera::CameraInput::with_projection(
             self.position,
             self.target,
             self.up,
             self.fov_y_degrees,
             self.near,
             self.far,
+            projection,
         )
         .map_err(crate::error::map_core_error)
     }
@@ -515,7 +1233,78 @@ impl Default for RuntimeOptions {
             alpha_mode: AlphaModeOption::Premultiplied,
             color_space: ColorSpaceOption::Srgb,
             diagnostics: false,
+            quality: QualityOption::High,
+            memory_budget_bytes: None,
+            overflow_policy: OverflowPolicyOption::Downscale,
+            timestamp_mode: TimestampModeOption::Auto,
         }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum QualityOption {
+    Ultra,
+    High,
+    Medium,
+    Low,
+}
+
+impl QualityOption {
+    pub fn to_core(self) -> forge3d_core::memory::QualityLevel {
+        match self {
+            Self::Ultra => forge3d_core::memory::QualityLevel::Ultra,
+            Self::High => forge3d_core::memory::QualityLevel::High,
+            Self::Medium => forge3d_core::memory::QualityLevel::Medium,
+            Self::Low => forge3d_core::memory::QualityLevel::Low,
+        }
+    }
+}
+
+impl Default for QualityOption {
+    fn default() -> Self {
+        Self::High
+    }
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum OverflowPolicyOption {
+    Reject,
+    Downscale,
+}
+
+impl OverflowPolicyOption {
+    pub fn to_core(self) -> forge3d_core::memory::OverflowPolicy {
+        match self {
+            Self::Reject => forge3d_core::memory::OverflowPolicy::Reject,
+            Self::Downscale => forge3d_core::memory::OverflowPolicy::Downscale,
+        }
+    }
+}
+
+impl Default for OverflowPolicyOption {
+    fn default() -> Self {
+        Self::Downscale
+    }
+}
+
+#[derive(Debug, Clone, Copy, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "kebab-case")]
+pub enum TimestampModeOption {
+    Auto,
+    Disabled,
+}
+
+impl TimestampModeOption {
+    pub fn timestamp_queries_requested(self) -> bool {
+        matches!(self, Self::Auto)
+    }
+}
+
+impl Default for TimestampModeOption {
+    fn default() -> Self {
+        Self::Auto
     }
 }
 
@@ -625,8 +1414,8 @@ fn read_u32_property(value: &JsValue, name: &str) -> Result<u32, WebError> {
 #[cfg(test)]
 mod tests {
     use super::{
-        AlphaModeOption, CameraOptions, PowerPreferenceOption, ResizeOptions, RuntimeOptions,
-        TerrainColorRampOptions, TerrainColorStopOptions, TerrainHeightmapOptions,
+        AlphaModeOption, CameraOptions, CameraProjectionKind, PowerPreferenceOption, ResizeOptions,
+        RuntimeOptions, TerrainColorRampOptions, TerrainColorStopOptions, TerrainHeightmapOptions,
         TerrainPhysicalLimits,
     };
 
@@ -701,6 +1490,20 @@ mod tests {
             height: 2,
             heights: vec![0.0, 0.1, 0.2, 0.3, 0.4],
             color_ramp: TerrainColorRampOptions::default(),
+            spacing: None,
+            exaggeration: None,
+            domain: None,
+            nodata: None,
+            crs: None,
+            height_ao: super::HeightAoJsOptions::default(),
+            sun_visibility: super::SunVisibilityJsOptions::default(),
+            debug_view: None,
+            render_mode: None,
+            material: None,
+            geometry: None,
+            bounds: None,
+            streaming: None,
+            overlays: None,
         };
 
         let error = options.validate().unwrap_err();
@@ -714,8 +1517,22 @@ mod tests {
         let options = TerrainHeightmapOptions {
             width: 2,
             height: 2,
-            heights: vec![0.0, f32::NAN, 0.5, 1.0],
+            heights: vec![0.0, f32::INFINITY, 0.5, 1.0],
             color_ramp: TerrainColorRampOptions::default(),
+            spacing: None,
+            exaggeration: None,
+            domain: None,
+            nodata: None,
+            crs: None,
+            height_ao: super::HeightAoJsOptions::default(),
+            sun_visibility: super::SunVisibilityJsOptions::default(),
+            debug_view: None,
+            render_mode: None,
+            material: None,
+            geometry: None,
+            bounds: None,
+            streaming: None,
+            overlays: None,
         };
 
         let error = options.validate().unwrap_err();
@@ -732,11 +1549,11 @@ mod tests {
         };
 
         let dimension_error =
-            super::validate_terrain_allocation(2048, 2, 4096, limits).unwrap_err();
+            super::validate_terrain_allocation(2048, 2, 4096, limits, true).unwrap_err();
         assert_eq!(dimension_error.code().as_str(), "RESOURCE_LIMIT_EXCEEDED");
 
         let buffer_error =
-            super::validate_terrain_allocation(100, 100, 10_000, limits).unwrap_err();
+            super::validate_terrain_allocation(100, 100, 10_000, limits, true).unwrap_err();
         assert_eq!(buffer_error.code().as_str(), "RESOURCE_LIMIT_EXCEEDED");
     }
 
@@ -750,6 +1567,7 @@ mod tests {
                 max_texture_dimension_2d: 8192,
                 max_buffer_size: u64::MAX,
             },
+            true,
         )
         .unwrap();
 
@@ -807,12 +1625,55 @@ mod tests {
             fov_y_degrees: 45.0,
             near: 0.01,
             far: 100.0,
+            projection: None,
+            orthographic_height: None,
         };
 
         let error = options.validate().unwrap_err();
 
         assert_eq!(error.code().as_str(), "INVALID_INPUT");
         assert!(error.message().contains("position"));
+    }
+
+    #[test]
+    fn camera_options_select_orthographic_projection() {
+        let base = CameraOptions {
+            position: [0.0, 4.0, 6.0],
+            target: [0.0, 0.0, 0.0],
+            up: [0.0, 1.0, 0.0],
+            fov_y_degrees: 45.0,
+            near: 0.1,
+            far: 100.0,
+            projection: Some(CameraProjectionKind::Orthographic),
+            orthographic_height: Some(5.0),
+        };
+        let camera = base.validate().unwrap();
+        assert_eq!(
+            camera.projection,
+            forge3d_core::camera::CameraProjection::Orthographic { height: 5.0 }
+        );
+
+        let missing = CameraOptions {
+            orthographic_height: None,
+            ..base
+        };
+        assert!(missing
+            .validate()
+            .unwrap_err()
+            .message()
+            .contains("orthographicHeight"));
+
+        let stray = CameraOptions {
+            projection: Some(CameraProjectionKind::Perspective),
+            ..base
+        };
+        assert!(stray.validate().is_err());
+
+        let zero = CameraOptions {
+            orthographic_height: Some(0.0),
+            ..base
+        };
+        assert!(zero.validate().is_err());
     }
 
     #[test]
@@ -837,6 +1698,188 @@ mod tests {
         assert_eq!(
             options.pixel_size().unwrap_err().code().as_str(),
             "INVALID_INPUT"
+        );
+    }
+
+    fn terrain_options_fixture() -> TerrainHeightmapOptions {
+        TerrainHeightmapOptions {
+            width: 4,
+            height: 4,
+            heights: vec![1.0; 16],
+            color_ramp: TerrainColorRampOptions::default(),
+            spacing: Some([1.0, 1.0]),
+            exaggeration: None,
+            domain: None,
+            nodata: None,
+            crs: None,
+            height_ao: super::HeightAoJsOptions::default(),
+            sun_visibility: super::SunVisibilityJsOptions::default(),
+            debug_view: None,
+            render_mode: None,
+            material: None,
+            geometry: None,
+            bounds: None,
+            streaming: None,
+            overlays: None,
+        }
+    }
+
+    #[test]
+    fn terrain_geometry_clipmap_options_map_to_core() {
+        let mut options = terrain_options_fixture();
+        options.geometry = Some(super::TerrainGeometryJsOptions {
+            mode: Some(super::TerrainGeometryModeOption::Clipmap),
+            clipmap: Some(super::TerrainClipmapJsOptions {
+                ring_count: Some(6),
+                base_cell_size: Some([3.0, 5.0]),
+                ..super::TerrainClipmapJsOptions::default()
+            }),
+        });
+
+        let validated = options.validate().unwrap();
+        let clipmap = validated.input.clipmap_geometry().unwrap();
+        assert_eq!(clipmap.ring_count, 6);
+        assert_eq!(clipmap.ring_resolution, 64);
+        assert_eq!(clipmap.center_resolution, 64);
+        assert_eq!(clipmap.base_cell_size, [3.0, 5.0]);
+    }
+
+    #[test]
+    fn terrain_geometry_mode_defaults_to_grid_inside_geometry_block() {
+        let mut options = terrain_options_fixture();
+        options.geometry = Some(super::TerrainGeometryJsOptions {
+            mode: None,
+            clipmap: None,
+        });
+
+        let validated = options.validate().unwrap();
+        assert_eq!(
+            validated.input.geometry,
+            forge3d_core::terrain::TerrainGeometry::Grid
+        );
+    }
+
+    #[test]
+    fn terrain_geometry_rejects_screen_mode_clipmap() {
+        let mut options = terrain_options_fixture();
+        options.render_mode = Some(super::TerrainRenderModeOption::Screen);
+        options.geometry = Some(super::TerrainGeometryJsOptions {
+            mode: Some(super::TerrainGeometryModeOption::Clipmap),
+            clipmap: None,
+        });
+
+        let error = options.validate().unwrap_err();
+        assert_eq!(error.code().as_str(), "INVALID_INPUT");
+        assert!(error.message().contains("renderMode perspective"));
+    }
+
+    #[test]
+    fn terrain_streaming_options_map_and_imply_clipmap() {
+        let mut options = terrain_options_fixture();
+        // Committed heights are the coarsest pyramid level (129x129).
+        options.width = 129;
+        options.height = 129;
+        options.heights = vec![1.0; 129 * 129];
+        options.streaming = Some(super::TerrainStreamingJsOptions {
+            width: Some(16385),
+            height: Some(16385),
+            tile_size: Some(256),
+            max_resident_bytes: None,
+            lod_bias: Some(-1),
+            prefetch_margin_tiles: Some(2),
+            max_in_flight: Some(8),
+            coalesce_policy: Some(super::StreamCoalescePolicyOption::PreferFine),
+        });
+
+        let validated = options.validate().unwrap();
+        let streaming = validated.input.streaming.as_ref().unwrap();
+        assert_eq!(streaming.lod_count, 8);
+        assert_eq!(streaming.lod_bias, -1);
+        assert_eq!(streaming.prefetch_margin_tiles, 2);
+        assert_eq!(streaming.max_in_flight, 8);
+        assert_eq!(
+            streaming.coalesce_policy,
+            forge3d_core::terrain::TerrainCoalescePolicy::PreferFine
+        );
+        assert!(validated.input.clipmap_geometry().is_some());
+    }
+
+    #[test]
+    fn terrain_streaming_requires_dimensions() {
+        let mut options = terrain_options_fixture();
+        options.streaming = Some(super::TerrainStreamingJsOptions {
+            width: Some(4096),
+            ..super::TerrainStreamingJsOptions::default()
+        });
+
+        let error = options.validate().unwrap_err();
+        assert_eq!(error.code().as_str(), "INVALID_INPUT");
+        assert!(error.message().contains("requires width and height"));
+    }
+
+    #[test]
+    fn terrain_streaming_rejects_explicit_grid_mode() {
+        let mut options = terrain_options_fixture();
+        options.width = 129;
+        options.height = 129;
+        options.heights = vec![1.0; 129 * 129];
+        options.geometry = Some(super::TerrainGeometryJsOptions {
+            mode: Some(super::TerrainGeometryModeOption::Grid),
+            clipmap: None,
+        });
+        options.streaming = Some(super::TerrainStreamingJsOptions {
+            width: Some(16385),
+            height: Some(16385),
+            ..super::TerrainStreamingJsOptions::default()
+        });
+
+        let error = options.validate().unwrap_err();
+        assert_eq!(error.code().as_str(), "INVALID_INPUT");
+        assert!(error.message().contains("requires clipmap geometry"));
+    }
+
+    #[test]
+    fn terrain_bounds_validate_order() {
+        let mut options = terrain_options_fixture();
+        options.bounds = Some([1.0, 0.0, -1.0, 1.0]);
+
+        let error = options.validate().unwrap_err();
+        assert_eq!(error.code().as_str(), "INVALID_INPUT");
+        assert!(error.message().contains("terrain bounds must be finite"));
+    }
+
+    #[test]
+    fn terrain_js_option_structs_reject_unknown_fields() {
+        let error = serde_json::from_str::<super::TerrainGeometryJsOptions>(
+            r#"{"mode":"clipmap","bogus":1}"#,
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("bogus"));
+
+        let error = serde_json::from_str::<super::TerrainStreamingJsOptions>(
+            r#"{"width":1024,"tileSize":256,"bogus":true}"#,
+        )
+        .unwrap_err();
+        assert!(error.to_string().contains("bogus"));
+
+        let geometry: super::TerrainGeometryJsOptions =
+            serde_json::from_str(r#"{"mode":"clipmap","clipmap":{"ringCount":8}}"#).unwrap();
+        assert_eq!(
+            geometry.mode,
+            Some(super::TerrainGeometryModeOption::Clipmap)
+        );
+        assert_eq!(geometry.clipmap.unwrap().ring_count, Some(8));
+
+        let streaming: super::TerrainStreamingJsOptions = serde_json::from_str(
+            r#"{"width":16385,"height":16385,"tileSize":256,"maxResidentBytes":67108864,"coalescePolicy":"prefer-fine"}"#,
+        )
+        .unwrap();
+        assert_eq!(streaming.width, Some(16385));
+        assert_eq!(streaming.tile_size, Some(256));
+        assert_eq!(streaming.max_resident_bytes, Some(67108864));
+        assert_eq!(
+            streaming.coalesce_policy,
+            Some(super::StreamCoalescePolicyOption::PreferFine)
         );
     }
 }

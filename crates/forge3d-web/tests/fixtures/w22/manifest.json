@@ -1,0 +1,201 @@
+{
+  "schemaVersion": 1,
+  "capability": "E05",
+  "fixtures": [
+    {
+      "format": "tiff",
+      "file": "predictor.tif",
+      "sha256": "68c6c2be099b9f06adc28d4e17e712f7a9b005f3ba35a415275da1d7c5cd1b78",
+      "bytes": 328,
+      "provenance": "tests/golden/w08/predictor-deflate-u16.tif",
+      "expected": {
+        "width": 16,
+        "height": 16,
+        "formula": "index * 3 + 7"
+      }
+    },
+    {
+      "format": "laz",
+      "file": "autzen.laz",
+      "sha256": "75867b3e75cfc3c2e96da9f753c04c9fbaa6a59468dea13e2859f3109b38bd66",
+      "bytes": 603353,
+      "provenance": "tests/fixtures/w16/autzen_trim.laz",
+      "expected": {
+        "count": 110000,
+        "positionsSha256": "73d8617c283d6697461376817101f92896d4c79baeda587f51356a1337ed3b23",
+        "colorsSha256": "d6d82b32b7f90edb31a40a9fc2d0910f03ed6d10cc405271372c0cf11eab537b",
+        "bounds": {
+          "min": [
+            636001.76,
+            848935.2000000001,
+            406.26
+          ],
+          "max": [
+            637179.22,
+            849497.9,
+            520.51
+          ]
+        },
+        "firstPositions": [
+          637177.98,
+          849393.9500000001,
+          411.19,
+          637177.3,
+          849396.9500000001,
+          411.25,
+          637176.34,
+          849400.84,
+          411.01
+        ],
+        "firstColors": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    {
+      "format": "glb",
+      "file": "triangle.glb",
+      "sha256": "fac1b89cb641109a796ab9c1e84df3c894e395ac78ef41ec581e8622badf4682",
+      "bytes": 996,
+      "provenance": "tests/fixtures/w15/triangle.glb",
+      "expected": {
+        "primitives": 1,
+        "vertices": 3
+      }
+    },
+    {
+      "format": "tiff",
+      "file": "multiband-strips.tif",
+      "sha256": "1731c70c2736d4d97ae671b13e46131642902477d99de01ea741bb178761aff4",
+      "bytes": 223,
+      "provenance": "Analytic TIFF RGB8 with two strips including a partial final strip; scripts/w22-strip-fixture.mjs",
+      "expected": {
+        "width": 3,
+        "height": 3,
+        "pixels": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7,
+          8,
+          9
+        ],
+        "crs": "EPSG:4326",
+        "nodata": 255
+      }
+    },
+    {
+      "format": "ktx2",
+      "file": "rgba.ktx2",
+      "sha256": "6f5a421f71e893499e066ed3e1181bcb0355f1f369a9c5db05b422ff1a7694ce",
+      "bytes": 180,
+      "provenance": "W04 ktx-parse@1.1.0 uncompressed reference container",
+      "expected": {
+        "width": 2,
+        "height": 2,
+        "pixels": [
+          255,
+          0,
+          0,
+          255,
+          0,
+          255,
+          0,
+          255,
+          0,
+          0,
+          255,
+          255,
+          255,
+          255,
+          255,
+          255
+        ]
+      }
+    },
+    {
+      "format": "ktx2",
+      "file": "kodim23.ktx2",
+      "sha256": "0eb567d4e19be85562c74a77067631b7804d4042cc2ff78e161dc5915f8390a8",
+      "bytes": 97138,
+      "provenance": "https://github.com/BinomialLLC/basis_universal/blob/21fb6e242b1e425a7557c5655bb1b475f71933ca/test_files/kodim23.ktx2",
+      "expected": {
+        "width": 768,
+        "height": 512,
+        "supercompression": "basislz",
+        "rgbaSha256": "d10f98edbecc601ce319ef357c6483d353fd2f09200a9ffb1154712ba51edcf5"
+      }
+    },
+    {
+      "format": "hdr",
+      "file": "linear.hdr",
+      "sha256": "2c4aad999e54eee39a4fee7a44edcbafdd11ff10559debeb47beddd93430f2b3",
+      "bytes": 53,
+      "provenance": "Radiance RGBE analytic powers of two; 1f4084a:src/formats/hdr.rs",
+      "expected": {
+        "width": 2,
+        "height": 1,
+        "pixels": [
+          1,
+          0.5,
+          0.25,
+          1,
+          0.25,
+          0.5,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "format": "exr",
+      "file": "linear.exr",
+      "sha256": "dde5495b4cb92990db97b79310ee0bdfde9df1f1c0832ecae87d1d7180582233",
+      "bytes": 466,
+      "provenance": "Pinned exr@1.74.2 encoder; explicit analytic channel values; 1f4084a:tests/test_exr_output.py",
+      "expected": {
+        "width": 2,
+        "height": 1,
+        "channels": {
+          "R": [
+            0.25,
+            2
+          ],
+          "G": [
+            0.5,
+            4
+          ],
+          "B": [
+            1,
+            8
+          ]
+        }
+      }
+    },
+    {
+      "format": "glyph-pbf",
+      "file": "glyphs.pbf",
+      "sha256": "15d760b2538cee983249962342d4bd6804e83113960dbbc26746bb62dad6245e",
+      "bytes": 85,
+      "provenance": "W13/W19 Mapbox glyph protocol: U+0041, 1x1 ink plus 3px border",
+      "expected": {
+        "name": "Noto Sans",
+        "range": "0-255",
+        "id": 65,
+        "bitmap": 123,
+        "advance": 8
+      }
+    }
+  ]
+}

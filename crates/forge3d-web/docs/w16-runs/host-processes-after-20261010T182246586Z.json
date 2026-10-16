@@ -1,0 +1,81 @@
+{
+  "schemaVersion": 1,
+  "kind": "post-soak-cpu-process-snapshot",
+  "batchId": "20261010T182246586Z",
+  "statement": "Captured after the failed soak; this snapshot does not attribute earlier CPU load samples to individual processes.",
+  "processes": [
+    {
+      "Name": "python#1",
+      "IDProcess": 41288,
+      "PercentProcessorTime": 101,
+      "WorkingSet": 770187264
+    },
+    {
+      "Name": "python#3",
+      "IDProcess": 7212,
+      "PercentProcessorTime": 101,
+      "WorkingSet": 1733812224
+    },
+    {
+      "Name": "rustc",
+      "IDProcess": 41120,
+      "PercentProcessorTime": 101,
+      "WorkingSet": 1794379776
+    },
+    {
+      "Name": "WmiPrvSE#1",
+      "IDProcess": 18340,
+      "PercentProcessorTime": 16,
+      "WorkingSet": 18657280
+    },
+    {
+      "Name": "claude#19",
+      "IDProcess": 24476,
+      "PercentProcessorTime": 10,
+      "WorkingSet": 295055360
+    },
+    {
+      "Name": "ChatGPT#2",
+      "IDProcess": 24752,
+      "PercentProcessorTime": 5,
+      "WorkingSet": 155381760
+    },
+    {
+      "Name": "AggregatorHost",
+      "IDProcess": 6800,
+      "PercentProcessorTime": 0,
+      "WorkingSet": 19296256
+    },
+    {
+      "Name": "powershell",
+      "IDProcess": 31700,
+      "PercentProcessorTime": 0,
+      "WorkingSet": 53264384
+    },
+    {
+      "Name": "postgres#9",
+      "IDProcess": 7748,
+      "PercentProcessorTime": 0,
+      "WorkingSet": 11649024
+    },
+    {
+      "Name": "postgres#8",
+      "IDProcess": 7728,
+      "PercentProcessorTime": 0,
+      "WorkingSet": 11796480
+    },
+    {
+      "Name": "postgres#7",
+      "IDProcess": 7720,
+      "PercentProcessorTime": 0,
+      "WorkingSet": 15400960
+    },
+    {
+      "Name": "postgres#6",
+      "IDProcess": 7424,
+      "PercentProcessorTime": 0,
+      "WorkingSet": 12390400
+    }
+  ],
+  "capturedAt": "2026-10-10T18:37:58.1461799Z"
+}

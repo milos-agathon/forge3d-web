@@ -1,6 +1,8 @@
 import { Forge3DError } from "./index.js";
 import type {
   ResizeInput,
+  TerrainColorRampInput,
+  TerrainColormapInput,
   TerrainHeightmapInput,
   TerrainHeightmapSourceInput,
   ViewerResourceBudget,
@@ -69,17 +71,7 @@ export function validateTerrainAgainstBudget(
   if (samples > budget.maxTerrainSamples) {
     throw limitError("terrain samples", samples, budget.maxTerrainSamples);
   }
-  if (
-    terrain.colorRamp !== undefined &&
-    (!Array.isArray(terrain.colorRamp.stops) ||
-      terrain.colorRamp.stops.length < 2 ||
-      terrain.colorRamp.stops.length > 8)
-  ) {
-    throw new Forge3DError(
-      "INVALID_INPUT",
-      "colorRamp.stops must contain between 2 and 8 stops",
-    );
-  }
+  validateTerrainColorFields(terrain);
   return samples;
 }
 
@@ -127,7 +119,42 @@ export function validateSourceAgainstBudget(
       );
     }
   }
+  validateTerrainColorFields(terrain);
   return expectedBytes;
+}
+
+function validateTerrainColorFields(terrain: {
+  colorRamp?: TerrainColorRampInput;
+  colormap?: TerrainColormapInput;
+}): void {
+  if (terrain.colorRamp !== undefined && terrain.colormap !== undefined) {
+    throw new Forge3DError(
+      "INVALID_INPUT",
+      "colorRamp and colormap cannot both be provided",
+    );
+  }
+  const ramps: [string, TerrainColorRampInput | undefined][] = [
+    ["colorRamp", terrain.colorRamp],
+    [
+      "colormap",
+      typeof terrain.colormap === "object" && terrain.colormap !== null
+        ? terrain.colormap
+        : undefined,
+    ],
+  ];
+  for (const [name, ramp] of ramps) {
+    if (
+      ramp !== undefined &&
+      (!Array.isArray(ramp.stops) ||
+        ramp.stops.length < 2 ||
+        ramp.stops.length > 8)
+    ) {
+      throw new Forge3DError(
+        "INVALID_INPUT",
+        `${name}.stops must contain between 2 and 8 stops`,
+      );
+    }
+  }
 }
 
 export function validateScreenshotBudget(

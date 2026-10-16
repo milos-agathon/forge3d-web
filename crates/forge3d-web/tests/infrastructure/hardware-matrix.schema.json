@@ -67,6 +67,11 @@
             "minItems": 1,
             "items": { "type": "string", "minLength": 1 }
           },
+          "acceptanceLanes": {
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "enum": ["w16-reference-discrete", "w16-reference-integrated"] }
+          },
           "controller": {
             "type": "object",
             "additionalProperties": false,

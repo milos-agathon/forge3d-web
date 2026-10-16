@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { FontAtlas } from "../../src-ts/typography.js";
+import { LabelLayer } from "../../src-ts/labels.js";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   type CameraInput,
@@ -5,6 +8,7 @@ import {
   type Forge3DRuntimeCapabilities,
   type Forge3DRuntimeOptions,
   type ResizeInput,
+  type SceneSnapshot,
   type TerrainHeightmapInput,
   type TerrainHeightmapSourceInput,
 } from "../../src-ts/index.js";
@@ -30,6 +34,8 @@ class FakeRuntime {
   readonly sizes: ResizeInput[] = [];
   renderError: Forge3DError | undefined;
   cameraError: Forge3DError | undefined;
+  sceneError: Forge3DError | undefined;
+  scenes: SceneSnapshot[] = [];
   resizeError: Forge3DError | undefined;
   renderSubmitted = true;
   screenshotError: Forge3DError | undefined;
@@ -70,6 +76,11 @@ class FakeRuntime {
 
   lose(error = new Forge3DError("DEVICE_LOST", "test loss")): void {
     this.lossHandler?.(error);
+  }
+
+  setScene(scene: SceneSnapshot): void {
+    if (this.sceneError) throw this.sceneError;
+    this.scenes.push(scene);
   }
 
   setTerrain(terrain: TerrainHeightmapInput): void {
@@ -843,6 +854,153 @@ describe("Forge3DViewer", () => {
     expect(viewer.getDiagnostics().recoveryAttempts).toBe(1);
   });
 
+  it("clears failed labels and uses only the caller channel for capture and replacement errors", async () => {
+    const runtime = new FakeRuntime(), errors: Forge3DError[] = [];
+    setViewerRuntimeFactoryForTests({create: async () => runtime});
+    const viewer = await Forge3DViewer.create({} as HTMLCanvasElement, {
+      controls: false, resize: false, onError: (e) => errors.push(e),
+    });
+    const atlas = await reviewAtlas(), layer = new LabelLayer(atlas), replacement = new LabelLayer(atlas);
+    try {
+      viewer.setLabels(layer, {maxVertexBytes: 100000});
+      const good = layer.addLabel("A", [0, 0, 0], {fontSize: 20, horizonFadeAngle: 0}).id;
+      await viewer.screenshot();
+      expect(viewer.getLabelReport()?.accepted).toContain(good);
+      const bad = layer.addLabel("W".repeat(1000), [0, 0, 0], {fontSize: 20, horizonFadeAngle: 0}).id;
+      const capture = viewer.screenshot();
+      expect(capture).toBeInstanceOf(Promise);
+      await expect(capture).rejects.toThrow("budget");
+      expect(viewer.status).toBe("ready");
+      expect(viewer.getLabelReport()).toBeUndefined();
+      expect(runtime.scenes.at(-1)?.nodes).toEqual([]);
+      for (let i = 1; i <= 10; i++) {
+        viewer.setView({...viewer.getView(), target: [i, 0, 0]});
+        rafCallbacks.shift()?.(i * 16);
+        await viewer.screenshot();
+      }
+      viewer.resize({width: 128, height: 96, devicePixelRatio: 1});
+      await expect(viewer.screenshot()).rejects.toThrow("budget");
+      await viewer.screenshot();
+      expect(viewer.getLabelReport()).toBeUndefined();
+      expect(errors).toHaveLength(0);
+      expect(runtime.scenes.at(-1)?.nodes).toEqual([]);
+      layer.removeLabel(bad!);
+      viewer.setView({...viewer.getView(), target: [0, 0, 0]});
+      await viewer.screenshot();
+      expect(viewer.getLabelReport()?.accepted).toContain(good);
+      replacement.addLabel("W".repeat(1000), [0, 0, 0], {horizonFadeAngle: 0});
+      expect(() => viewer.setLabels(replacement, {maxVertexBytes: 100000})).toThrow("budget");
+      expect(viewer.getLabelReport()).toBeUndefined();
+      expect(runtime.scenes.at(-1)?.nodes).toEqual([]);
+      await viewer.screenshot();
+      expect(errors).toHaveLength(0);
+    } finally {viewer.dispose(); layer.dispose(); replacement.dispose(); atlas.dispose();}
+  });
+
+  it("retries failed labels after recovery without repeating the handled error", async () => {
+    const runtimes = [new FakeRuntime(), new FakeRuntime()], errors: Forge3DError[] = [];
+    let index = 0;
+    setViewerRuntimeFactoryForTests({create: async () => runtimes[index++]!});
+    const viewer = await Forge3DViewer.create({} as HTMLCanvasElement, {
+      controls: false, resize: false, onError: (e) => errors.push(e),
+    });
+    const atlas = await reviewAtlas(), layer = new LabelLayer(atlas);
+    try {
+      viewer.setLabels(layer, {maxVertexBytes: 100000});
+      const bad = layer.addLabel("W".repeat(1000), [0, 0, 0], {horizonFadeAngle: 0}).id;
+      await expect(viewer.screenshot()).rejects.toThrow("budget");
+      runtimes[0]!.lose();
+      await vi.waitFor(() => expect(viewer.status).toBe("ready"));
+      expect(index).toBe(2);
+      expect(runtimes[1]!.scenes.at(-1)?.nodes).toEqual([]);
+      expect(viewer.getLabelReport()).toBeUndefined();
+      expect(errors.filter(e => e.code !== "DEVICE_LOST")).toHaveLength(0);
+      layer.removeLabel(bad!);
+      const id = layer.addLabel("A", [0, 0, 0], {horizonFadeAngle: 0}).id;
+      await viewer.screenshot();
+      expect(viewer.getLabelReport()?.accepted).toContain(id);
+    } finally {viewer.dispose(); layer.dispose(); atlas.dispose();}
+  });
+
+  it("retries budget failures on camera and size changes, deduplicating only frame notifications", async () => {
+    const runtime = new FakeRuntime(), errors: Forge3DError[] = [];
+    setViewerRuntimeFactoryForTests({create: async () => runtime});
+    const viewer = await Forge3DViewer.create({} as HTMLCanvasElement, {
+      controls: false, resize: false, onError: (e) => errors.push(e),
+    });
+    const atlas = await reviewAtlas(), layer = new LabelLayer(atlas);
+    const cameraA: CameraInput = {
+      position: [0, 10, 100], target: [0, 0, 0], up: [0, 1, 0],
+      near: 0.1, far: 1000, fovYDegrees: 45,
+      projection: "orthographic", orthographicHeight: 50,
+    };
+    const cameraB: CameraInput = {...cameraA,
+      position: [50, 10, 100], target: [50, 0, 0], orthographicHeight: 160,
+    };
+    try {
+      viewer.resize({width: 384, height: 256, devicePixelRatio: 1});
+      viewer.setCamera(cameraA);
+      const id = layer.addLabel("W", [0, 0, 0], {fontSize: 36, haloWidth: 0, horizonFadeAngle: 0}).id;
+      layer.addLabel("W", [100, 0, 0], {fontSize: 36, haloWidth: 0, horizonFadeAngle: 0});
+      const revision = layer.revision;
+      viewer.setLabels(layer);
+      const bytes = viewer.getLabelReport()!.vertexBytes;
+      expect(viewer.getLabelReport()!.accepted).toEqual([id]);
+      viewer.setLabels(layer, {maxVertexBytes: bytes * 1.5});
+      viewer.setCamera(cameraB);
+      await expect(viewer.screenshot()).rejects.toThrow("Label mesh byte budget exceeded");
+      expect(viewer.getLabelReport()).toBeUndefined();
+      expect(runtime.scenes.at(-1)?.nodes).toEqual([]);
+      expect(errors).toHaveLength(0);
+      viewer.setCamera(cameraA);
+      await viewer.screenshot();
+      expect(viewer.getLabelReport()?.accepted).toEqual([id]);
+      expect(viewer.getLabelReport()?.vertexBytes).toBe(bytes);
+      // Frame failures use onError once; changed inputs still retry placement.
+      viewer.setCamera(cameraB);
+      rafCallbacks.shift()?.(16);
+      expect(errors).toHaveLength(1);
+      expect(viewer.getLabelReport()).toBeUndefined();
+      for (let i = 1; i <= 3; i++) {
+        viewer.setCamera({...cameraB, position: [50+i, 10, 100], target: [50+i, 0, 0]});
+        rafCallbacks.shift()?.(16 + i*16);
+      }
+      expect(errors).toHaveLength(1);
+      viewer.setCamera(cameraA);
+      await viewer.screenshot();
+      expect(viewer.getLabelReport()?.accepted).toEqual([id]);
+      // With the same camera, widening the canvas admits the second label.
+      viewer.resize({width: 1400, height: 256, devicePixelRatio: 1});
+      await expect(viewer.screenshot()).rejects.toThrow("Label mesh byte budget exceeded");
+      expect(errors).toHaveLength(1);
+      viewer.resize({width: 384, height: 256, devicePixelRatio: 1});
+      await viewer.screenshot();
+      expect(viewer.getLabelReport()?.accepted).toEqual([id]);
+      expect(layer.revision).toBe(revision);
+      expect(viewer.status).toBe("ready");
+    } finally {viewer.dispose(); layer.dispose(); atlas.dispose();}
+  });
+
+  it("routes label scene device loss from screenshot into recovery through a rejected promise", async () => {
+    const first = new FakeRuntime(), second = new FakeRuntime();
+    let index = 0;
+    setViewerRuntimeFactoryForTests({create: async () => [first, second][index++]!});
+    const viewer = await Forge3DViewer.create({} as HTMLCanvasElement, {controls: false, resize: false});
+    const atlas = await reviewAtlas(), layer = new LabelLayer(atlas);
+    try {
+      viewer.setLabels(layer);
+      layer.addLabel("A", [0, 0, 0], {horizonFadeAngle: 0});
+      first.sceneError = new Forge3DError("DEVICE_LOST", "label scene commit loss");
+      const capture = viewer.screenshot();
+      expect(capture).toBeInstanceOf(Promise);
+      await expect(capture).rejects.toMatchObject({code: "DEVICE_LOST"});
+      await vi.waitFor(() => expect(viewer.status).toBe("ready"));
+      expect(index).toBe(2);
+      expect(viewer.getDiagnostics().recoveryAttempts).toBe(1);
+      expect(second.scenes.at(-1)?.nodes.length).toBeGreaterThan(0);
+    } finally {viewer.dispose(); layer.dispose(); atlas.dispose();}
+  });
+
   it("handles rejected screenshot cleanup without an unhandled branch", async () => {
     const runtime = new FakeRuntime();
     runtime.screenshotError = new Forge3DError(
@@ -897,27 +1055,95 @@ describe("Forge3DViewer", () => {
         onError: (error) => errors.push(error.code),
       });
     const callerHeights = new Float32Array([2, 3, 5, 7]);
+    const callerDirection: [number, number, number] = [0.3, 0.7, 0.2];
+    const callerColormap = {
+      stops: [
+        { position: 0, color: [0, 0, 0] as [number, number, number] },
+        { position: 1, color: [1, 1, 1] as [number, number, number] },
+      ],
+    };
     try {
       viewer.setTerrain({
         width: 2,
         height: 2,
         heights: new Float32Array([0, 1, 1, 0]),
       });
-      viewer.setTerrain({ width: 2, height: 2, heights: callerHeights });
+      viewer.setTerrain({
+        width: 2,
+        height: 2,
+        heights: callerHeights,
+        spacing: [30, 20],
+        exaggeration: 2.5,
+        domain: [1, 9],
+        nodata: NaN,
+        crs: "EPSG:32633",
+        colormap: callerColormap,
+        heightAo: {
+          enabled: true,
+          resolutionScale: 0.5,
+          directions: 8,
+          steps: 16,
+          maxDistance: 200,
+          strength: 1,
+        },
+        sunVisibility: {
+          enabled: true,
+          mode: "soft",
+          resolutionScale: 1,
+          samples: 4,
+          steps: 24,
+          maxDistance: 400,
+          softness: 1,
+          bias: 0.01,
+          direction: callerDirection,
+        },
+        debugView: "sun-visibility",
+      });
       const committed = runtimes[0]?.terrains[1];
       expect(committed?.heights).not.toBe(callerHeights);
       expect(Array.from(committed?.heights ?? [])).toEqual([2, 3, 5, 7]);
       callerHeights.fill(99);
+      callerDirection[0] = -9;
+      callerColormap.stops[0]!.position = 0.5;
 
       runtimes[0]?.lose();
       await vi.waitFor(() => expect(viewer.status).toBe("ready"));
       expect(index).toBe(2);
       expect(runtimes[1]?.terrains).toHaveLength(1);
       expect(runtimes[1]?.terrains[0]).toBe(committed);
-      expect(runtimes[1]?.terrains[0]?.heights).toBe(committed?.heights);
-      expect(Array.from(runtimes[1]?.terrains[0]?.heights ?? [])).toEqual([
-        2, 3, 5, 7,
-      ]);
+      const replayed = runtimes[1]?.terrains[0];
+      expect(Array.from(replayed?.heights ?? [])).toEqual([2, 3, 5, 7]);
+      expect(replayed?.spacing).toEqual([30, 20]);
+      expect(replayed?.exaggeration).toBe(2.5);
+      expect(replayed?.domain).toEqual([1, 9]);
+      expect(Number.isNaN(replayed?.nodata)).toBe(true);
+      expect(replayed?.crs).toBe("EPSG:32633");
+      expect(replayed?.colormap).toEqual({
+        stops: [
+          { position: 0, color: [0, 0, 0] },
+          { position: 1, color: [1, 1, 1] },
+        ],
+      });
+      expect(replayed?.heightAo).toEqual({
+        enabled: true,
+        resolutionScale: 0.5,
+        directions: 8,
+        steps: 16,
+        maxDistance: 200,
+        strength: 1,
+      });
+      expect(replayed?.sunVisibility).toEqual({
+        enabled: true,
+        mode: "soft",
+        resolutionScale: 1,
+        samples: 4,
+        steps: 24,
+        maxDistance: 400,
+        softness: 1,
+        bias: 0.01,
+        direction: [0.3, 0.7, 0.2],
+      });
+      expect(replayed?.debugView).toBe("sun-visibility");
       expect(viewer.getDiagnostics().recoveryAttempts).toBe(1);
 
       runtimes[1]?.lose();
@@ -1201,8 +1427,29 @@ describe("Forge3DViewer", () => {
       width: 2,
       height: 2,
       source: new ArrayBuffer(16),
+      spacing: [25, 40] as [number, number],
+      exaggeration: 1.5,
+      domain: [0, 8] as [number, number],
+      nodata: -9999,
+      crs: "EPSG:4326",
+      colorRamp: {
+        stops: [
+          { position: 0, color: [0, 0, 0] as [number, number, number] },
+          { position: 1, color: [1, 1, 1] as [number, number, number] },
+        ],
+      },
+      heightAo: { enabled: true, directions: 6 },
+      sunVisibility: {
+        enabled: true,
+        mode: "hard" as const,
+        direction: [1, 0.35, 0] as [number, number, number],
+      },
+      debugView: "height-ao" as const,
     };
     await viewer.setTerrainFromSource(source);
+    source.spacing[0] = -1;
+    source.colorRamp.stops[1]!.color[0] = 0.25;
+    source.sunVisibility.direction[1] = 9;
     frames.flush();
     const committedCamera = first.cameras.at(-1);
 
@@ -1223,6 +1470,25 @@ describe("Forge3DViewer", () => {
     expect(replacement.sources).toHaveLength(1);
     expect(replacement.sources[0]?.source).toBe(source.source);
     expect(replacement.sources[0]?.signal?.aborted).toBe(false);
+    const replayedSource = replacement.sources[0];
+    expect(replayedSource?.spacing).toEqual([25, 40]);
+    expect(replayedSource?.exaggeration).toBe(1.5);
+    expect(replayedSource?.domain).toEqual([0, 8]);
+    expect(replayedSource?.nodata).toBe(-9999);
+    expect(replayedSource?.crs).toBe("EPSG:4326");
+    expect(replayedSource?.colorRamp).toEqual({
+      stops: [
+        { position: 0, color: [0, 0, 0] },
+        { position: 1, color: [1, 1, 1] },
+      ],
+    });
+    expect(replayedSource?.heightAo).toEqual({ enabled: true, directions: 6 });
+    expect(replayedSource?.sunVisibility).toEqual({
+      enabled: true,
+      mode: "hard",
+      direction: [1, 0.35, 0],
+    });
+    expect(replayedSource?.debugView).toBe("height-ao");
     expect(replacement.renderCalls).toBe(0);
     expect(frames.pending).toBe(0);
 
@@ -1826,7 +2092,7 @@ async function createViewer(
 }
 
 class FakeViewerCanvas extends EventTarget {
-  readonly style = { touchAction: "" };
+  readonly style = new FakeViewerStyle();
   readonly captures = new Set<number>();
   readonly #attributes = new Map<string, string>();
   cssWidth = 400;
@@ -1870,6 +2136,27 @@ class FakeViewerCanvas extends EventTarget {
       left: 0,
       toJSON: () => ({}),
     };
+  }
+}
+
+class FakeViewerStyle {
+  readonly #properties = new Map<string, { value: string; priority: string }>();
+  get length(): number { return this.#properties.size; }
+  get touchAction(): string { return this.getPropertyValue("touch-action"); }
+  set touchAction(value: string) {
+    if (value) this.setProperty("touch-action", value);
+    else this.removeProperty("touch-action");
+  }
+  item(index: number): string { return [...this.#properties.keys()][index] ?? ""; }
+  getPropertyValue(property: string): string { return this.#properties.get(property)?.value ?? ""; }
+  getPropertyPriority(property: string): string { return this.#properties.get(property)?.priority ?? ""; }
+  setProperty(property: string, value: string, priority = ""): void {
+    this.#properties.set(property, { value, priority });
+  }
+  removeProperty(property: string): string {
+    const previous = this.getPropertyValue(property);
+    this.#properties.delete(property);
+    return previous;
   }
 }
 
@@ -2059,4 +2346,10 @@ function pointerEvent(
     Object.defineProperty(event, name, { configurable: true, value });
   }
   return event;
+}
+
+async function reviewAtlas(): Promise<FontAtlas> {
+  return FontAtlas.create({fonts: [{id: "NotoSans", data: new Uint8Array(readFileSync(
+    new URL("../../assets/fonts/NotoSans-Regular.ttf", import.meta.url),
+  ))}]});
 }

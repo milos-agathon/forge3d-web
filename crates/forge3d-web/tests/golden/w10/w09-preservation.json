@@ -1,0 +1,38 @@
+{
+  "fixture": "w09-environment-absent-v1",
+  "provenance": {
+    "commit": "7b738f9",
+    "method": "git archive export, independent W09 wasm build",
+    "generator": "examples/w10-acceptance.js preservation",
+    "browser": "154.0.8037.93"
+  },
+  "tolerances": {
+    "maxByteDifference": 0
+  },
+  "frames": {
+    "terrain-material-ground": {
+      "display": "c8e2781590fb277357ecba77ff094db0b2dab839e2eccaa676b648e425143673",
+      "hdr": "ea6ada97cad2c32a6146a25146d0f3aac0443d46047565c8dd4904896a320b8f",
+      "covered": 14386
+    },
+    "scatter-probes": {
+      "display": "0b76033224d51b455cbbc5bc1a80df8dbf2f52ca50d38263c840e85fad79cd2e",
+      "hdr": "cb31422b5b375dbe984871b68d7a3779dadac44555a13d02acea4bc29e56f878",
+      "covered": 14552
+    }
+  },
+  "profile": {
+    "id": "windows-nvidia-ampere-chrome154",
+    "platform": "win32",
+    "browser": "154.0.8037.93",
+    "adapter": {
+      "vendor": "nvidia",
+      "architecture": "ampere",
+      "device": "",
+      "description": "",
+      "fallback": false
+    },
+    "hardware": "NVIDIA GeForce RTX 3070 (operator identified); WebGPU redacts device/description",
+    "qualification": "Local regression profile; not a pinned reference-hardware qualification"
+  }
+}

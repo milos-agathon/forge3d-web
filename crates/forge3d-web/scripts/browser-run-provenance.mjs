@@ -1,5 +1,6 @@
 import { assertSafeLaunchArguments } from "./capture-host-inventory.mjs";
 import { isLiveChromiumLaunchArgumentSource } from "./browser-launch-provenance.mjs";
+import { assertFfx03BrowserVersion, resolveFfx03Lane } from "./ffx03-lanes.mjs";
 
 const browserInventoryIds = {
   chrome: "chrome-stable",
@@ -25,7 +26,9 @@ export function validateBrowserRunProvenance({
     inventory.session?.interactive !== true ||
     inventory.session?.locked !== false ||
     inventory.session?.remote !== false ||
+    !nonEmpty(inventory.osVersion) ||
     !nonEmpty(inventory.osBuild) ||
+    !nonEmpty(inventory.architecture) ||
     !nonEmpty(inventory.displayServer) ||
     !nonEmpty(inventory.session.identifier) ||
     !nonEmpty(inventory.capturedAt)
@@ -47,6 +50,11 @@ export function validateBrowserRunProvenance({
   ) {
     throw new Error("browser launch did not expose exact runtime provenance");
   }
+  if (runtime.driver === "selenium-firefox" &&
+      session.observedExecutable !== inventory.browsers?.find((browser) =>
+        browser.id === (runtime.channel === "nightly" ? "firefox-nightly" : "firefox-release"))?.executable) {
+    throw new Error("observed Firefox executable does not match checked inventory");
+  }
   assertSafeLaunchArguments(
     session.effectiveLaunchArguments,
     browserPolicy,
@@ -56,7 +64,9 @@ export function validateBrowserRunProvenance({
   return {
     system: {
       platform: inventory.platform,
+      osVersion: inventory.osVersion,
       osBuild: inventory.osBuild,
+      architecture: inventory.architecture,
       displayServer: inventory.displayServer,
     },
     loginSession: { ...inventory.session },
@@ -76,7 +86,8 @@ export function validateBrowserRunProvenance({
 
 function validateBrowserVersion(runtime, browser, inventory) {
   if (runtime.mobile) return;
-  const inventoryId = browserInventoryIds[runtime.browser];
+  const inventoryId = runtime.browser === "firefox" && runtime.channel === "nightly"
+    ? "firefox-nightly" : browserInventoryIds[runtime.browser];
   const installed = inventory.browsers?.find(({ id }) => id === inventoryId);
   if (
     !installed ||
@@ -84,6 +95,12 @@ function validateBrowserVersion(runtime, browser, inventory) {
     !nonEmpty(installed.executable)
   ) {
     throw new Error("running browser version does not match live checked inventory");
+  }
+  if (runtime.driver === "selenium-firefox") {
+    const contract = resolveFfx03Lane({ lane: runtime.lane ?? installed.lane,
+      assetId: installed.assetId ?? inventory.assetId, platform: inventory.platform,
+      architecture: inventory.architecture, required: runtime.required });
+    assertFfx03BrowserVersion(browser.version, contract);
   }
 }
 

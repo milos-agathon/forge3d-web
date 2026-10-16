@@ -1,0 +1,77 @@
+{
+  "schemaVersion": 1,
+  "profiles": [
+    {
+      "id": "reference-discrete",
+      "hardwareMatrixAssetId": "FW-LNX-NV-01",
+      "adapter": {
+        "name": "NVIDIA GeForce RTX 3070",
+        "vendor": "NVIDIA",
+        "architecture": "Ampere GA104",
+        "dedicatedMemory": "8 GiB"
+      },
+      "driver": {
+        "name": "NVIDIA Linux x86_64",
+        "version": "580.82.09",
+        "api": "Vulkan 1.4.313"
+      },
+      "os": {
+        "name": "Ubuntu",
+        "version": "24.04.3 LTS",
+        "build": "2025-08-07 amd64",
+        "kernel": "6.8.0-79-generic"
+      },
+      "adapterBudgetBytes": 8589934592,
+      "effectiveBudgetBytes": 6442450944,
+      "requiredFeatures": [
+        "timestamp-query",
+        "texture-compression-bc"
+      ],
+      "viewport": {
+        "width": 1920,
+        "height": 1080,
+        "devicePixelRatio": 1
+      },
+      "provenance": [
+        "crates/forge3d-web/tests/infrastructure/hardware-matrix.json:FW-LNX-NV-01",
+        "qualification baseline pinned by W00; each run must attest exact adapter/driver/OS before evidence is accepted"
+      ]
+    },
+    {
+      "id": "reference-integrated",
+      "hardwareMatrixAssetId": "FW-WIN-I12-01",
+      "adapter": {
+        "name": "Intel Iris Xe Graphics (Core i5-1240P)",
+        "vendor": "Intel",
+        "architecture": "Xe-LP Gen12.2",
+        "sharedMemory": "16 GiB"
+      },
+      "driver": {
+        "name": "Intel Graphics Windows DCH",
+        "version": "32.0.101.6987",
+        "api": "Direct3D 12 feature level 12_1"
+      },
+      "os": {
+        "name": "Windows 11 Pro",
+        "version": "25H2",
+        "build": "26200.6584",
+        "kernel": "Windows NT 10.0.26200.6584"
+      },
+      "adapterBudgetBytes": 17179869184,
+      "effectiveBudgetBytes": 4294967296,
+      "requiredFeatures": [
+        "shader-f16-or-fallback",
+        "timestamp-query-or-cpu-fallback"
+      ],
+      "viewport": {
+        "width": 1920,
+        "height": 1080,
+        "devicePixelRatio": 1
+      },
+      "provenance": [
+        "crates/forge3d-web/tests/infrastructure/hardware-matrix.json:FW-WIN-I12-01",
+        "qualification baseline pinned by W00; each run must attest exact adapter/driver/OS before evidence is accepted"
+      ]
+    }
+  ]
+}

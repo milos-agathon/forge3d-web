@@ -1,0 +1,465 @@
+//! Feature-specialized WGSL for the shared lighting stack.
+//!
+//! The terrain and world shaders carry every BRDF model, light kind, texture
+//! channel, shadow filter and IBL path, each selected at runtime by a uniform or
+//! a per-material lane. Compiling all of them for every pipeline is the dominant
+//! runtime-creation cost on GPUs without a warm shader cache. The WGSL sources
+//! mark optional regions with `// #if <feature>` / `// #else` / `// #endif`, and
+//! each pipeline is compiled from a variant that keeps only the regions its
+//! current scene state can reach. A region is gated only where the same runtime
+//! condition already skips it, so every variant renders identically to the full
+//! template for the state it was generated from.
+
+use forge3d_core::lighting::{Light, LightingState};
+use forge3d_core::materials::MaterialState;
+
+use crate::error::{Forge3DErrorCode, WebError};
+
+/// Bit set of reachable shader regions.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub(crate) struct ShaderFeatures(u64);
+
+const BRDF_MODEL_COUNT: u32 = 13;
+const SHADOW_FILTER_COUNT: u32 = 6;
+
+const LIGHT_DIRECTIONAL: u64 = 1 << 13;
+const LIGHT_POINT_SPOT: u64 = 1 << 14;
+const LIGHT_RECT: u64 = 1 << 15;
+const TEX_BASE: u64 = 1 << 16;
+const TEX_NORMAL: u64 = 1 << 17;
+const TEX_METALLIC_ROUGHNESS: u64 = 1 << 18;
+const TEX_OCCLUSION: u64 = 1 << 19;
+const TEX_EMISSIVE: u64 = 1 << 20;
+const TEX_ALL: u64 = TEX_BASE | TEX_NORMAL | TEX_METALLIC_ROUGHNESS | TEX_OCCLUSION | TEX_EMISSIVE;
+/// Material `flags` bits that select a scene `TextureSet` texture
+/// (base, normal, metallic-roughness, occlusion, emissive).
+pub(crate) const SCENE_TEXTURE_FLAGS: u32 = 0x1f;
+const LIGHT_DEBUG_BOUNDS: u64 = 1 << 21;
+const IBL: u64 = 1 << 22;
+const SHADOWS: u64 = 1 << 23;
+const SHADOW_FILTER_BASE: u32 = 24;
+const SHADOW_DEBUG_CASCADES: u64 = 1 << 30;
+const SHADOW_DEBUG_FACTOR: u64 = 1 << 31;
+const TERRAIN_SCREEN: u64 = 1 << 32;
+const TERRAIN_PERSPECTIVE: u64 = 1 << 33;
+/// Offline/AOV capture entry points (never part of display pipelines).
+const CAPTURE: u64 = 1 << 34;
+/// Terrain PBR/POM material pipeline (W07).
+const TERRAIN_MATERIAL: u64 = 1 << 35;
+/// Optional terrain-material regions (W07).
+const TM_POM: u64 = 1 << 36;
+const TM_DETAIL: u64 = 1 << 37;
+const TM_LAYERS: u64 = 1 << 38;
+const TM_DEBUG: u64 = 1 << 39;
+const TM_ALBEDO: u64 = 1 << 40;
+const TM_WATER: u64 = 1 << 47;
+const TM_AERIAL: u64 = 1 << 48;
+const MASKED_REFLECTION: u64 = 1 << 49;
+const TM_ALL: u64 = TM_WATER | TM_POM | TM_DETAIL | TM_LAYERS | TM_DEBUG | TM_ALBEDO;
+/// W08 clipmap geometry branch (geometry uniform + clipmap vs_main).
+const TERRAIN_CLIPMAP: u64 = 1 << 41;
+/// W08 streamed heightfield (atlas + page-table height helpers).
+const TERRAIN_STREAMING: u64 = 1 << 42;
+/// W08 terrain overlays (group-0 bindings 14-16 + `terrain_apply_overlays`).
+const TERRAIN_OVERLAYS: u64 = 1 << 43;
+/// W08 terrain virtual texturing (group-0 bindings 17-19 + binding 8 atlas).
+const TERRAIN_VT: u64 = 1 << 44;
+/// W09 transparent scatter needs a core-WebGPU blendable HDR capture target.
+const CAPTURE_BLEND: u64 = 1 << 45;
+/// W09 local irradiance/reflection probes and their storage binding.
+const PROBES: u64 = 1 << 46;
+#[cfg(test)]
+const ALL_BITS: u64 = (1 << 50) - 1;
+
+impl ShaderFeatures {
+    pub(crate) fn capture_blend(self) -> bool {
+        self.0 & CAPTURE_BLEND != 0
+    }
+    pub(crate) fn with_capture_blend(self, enabled: bool) -> Self {
+        Self((self.0 & !CAPTURE_BLEND) | if enabled { CAPTURE_BLEND } else { 0 })
+    }
+    pub(crate) fn probes(self) -> bool {
+        self.0 & PROBES != 0
+    }
+    pub(crate) fn with_probes(self, enabled: bool) -> Self {
+        Self(self.0 & !PROBES).with(PROBES, enabled)
+    }
+    /// Every region: the unspecialized template.
+    #[cfg(test)]
+    pub(crate) const ALL: Self = Self(ALL_BITS);
+
+    pub(crate) fn aerial(self) -> bool {
+        self.0 & TM_AERIAL != 0
+    }
+    pub(crate) fn masked_reflection(self) -> bool {
+        self.0 & MASKED_REFLECTION != 0
+    }
+    pub(crate) fn with_masked_reflection(self, enabled: bool) -> Self {
+        Self(self.0 & !MASKED_REFLECTION).with(MASKED_REFLECTION, enabled)
+    }
+    pub(crate) fn with_aerial(self, enabled: bool) -> Self {
+        Self(self.0 & !TM_AERIAL).with(TM_AERIAL, enabled)
+    }
+
+    pub(crate) fn bits(self) -> u64 {
+        self.0
+    }
+
+    #[cfg(test)]
+    pub(crate) fn from_bits(bits: u64) -> Self {
+        Self(bits & ALL_BITS)
+    }
+
+    fn with(self, bit: u64, enabled: bool) -> Self {
+        if enabled {
+            Self(self.0 | bit)
+        } else {
+            self
+        }
+    }
+
+    /// Regions reachable by the shared lighting code for this runtime state.
+    ///
+    /// `shadow_control` is the `control` lane of the shadow uniform the GPU
+    /// reads: `[enabled, filter lane, cascade count, debug mode]`.
+    pub(crate) fn for_lighting(
+        lighting: &LightingState,
+        materials: &MaterialState,
+        ibl_enabled: bool,
+        shadow_control: [u32; 4],
+    ) -> Self {
+        let mut bits = 0u64;
+        let mut texture_flags = 0u32;
+        for material in materials.pack_materials() {
+            if material.effective_brdf < BRDF_MODEL_COUNT {
+                bits |= 1 << material.effective_brdf;
+            }
+            texture_flags |= material.flags;
+        }
+        for light in &lighting.lights {
+            bits |= match light {
+                Light::Directional(_) => LIGHT_DIRECTIONAL,
+                Light::Point(_) | Light::Spot(_) => LIGHT_POINT_SPOT,
+                Light::Rect(_) => LIGHT_RECT,
+            };
+        }
+        let shadows_on = shadow_control[0] != 0;
+        let mut features = Self(bits)
+            .with(TEX_BASE, texture_flags & 1 != 0)
+            .with(TEX_NORMAL, texture_flags & 2 != 0)
+            .with(TEX_METALLIC_ROUGHNESS, texture_flags & 4 != 0)
+            .with(TEX_OCCLUSION, texture_flags & 8 != 0)
+            .with(TEX_EMISSIVE, texture_flags & 16 != 0)
+            .with(LIGHT_DEBUG_BOUNDS, lighting.debug_bounds)
+            .with(IBL, ibl_enabled)
+            .with(SHADOWS, shadows_on)
+            .with(SHADOW_DEBUG_CASCADES, shadow_control[3] == 1)
+            .with(SHADOW_DEBUG_FACTOR, shadow_control[3] == 2);
+        if shadows_on {
+            // Lanes past the last filter fall through to the switch default (MSM).
+            let lane = shadow_control[1].min(SHADOW_FILTER_COUNT - 1);
+            features = features.with(1 << (SHADOW_FILTER_BASE + lane), true);
+        }
+        features
+    }
+
+    /// Replaces the scene-texture regions with the ones `flags` selects.
+    /// Terrain shading reads material 0 only, so its variants use material
+    /// 0's flags instead of the union over every material.
+    pub(crate) fn with_texture_flags(self, flags: u32) -> Self {
+        Self(self.0 & !TEX_ALL)
+            .with(TEX_BASE, flags & 1 != 0)
+            .with(TEX_NORMAL, flags & 2 != 0)
+            .with(TEX_METALLIC_ROUGHNESS, flags & 4 != 0)
+            .with(TEX_OCCLUSION, flags & 8 != 0)
+            .with(TEX_EMISSIVE, flags & 16 != 0)
+    }
+
+    /// Whether the variant samples the scene `TextureSet` (group 2). Only
+    /// such variants need group 2 in their pipeline layout.
+    pub(crate) fn samples_scene_textures(self) -> bool {
+        self.0 & TEX_ALL != 0
+    }
+
+    /// Adds the terrain render-mode region (`0` perspective, `1` screen).
+    pub(crate) fn with_terrain_mode(self, render_mode: u32) -> Self {
+        let cleared = Self(self.0 & !(TERRAIN_SCREEN | TERRAIN_PERSPECTIVE));
+        if render_mode == 1 {
+            cleared.with(TERRAIN_SCREEN, true)
+        } else {
+            cleared.with(TERRAIN_PERSPECTIVE, true)
+        }
+    }
+
+    /// Adds or clears the terrain material region.
+    pub(crate) fn with_terrain_material(self, enabled: bool) -> Self {
+        Self(self.0 & !TERRAIN_MATERIAL).with(TERRAIN_MATERIAL, enabled)
+    }
+
+    /// Replaces the optional terrain-material regions.
+    pub(crate) fn with_terrain_material_regions(
+        self,
+        regions: super::terrain_material::TerrainMaterialRegions,
+    ) -> Self {
+        Self(self.0 & !TM_ALL)
+            .with(TM_POM, regions.pom)
+            .with(TM_DETAIL, regions.detail)
+            .with(TM_LAYERS, regions.layers)
+            .with(TM_DEBUG, regions.debug)
+            .with(TM_ALBEDO, regions.albedo)
+            .with(TM_WATER, regions.water)
+    }
+
+    /// Adds or clears the W08 terrain clipmap/streaming regions.
+    pub(crate) fn with_terrain_w08(self, clipmap: bool, streaming: bool) -> Self {
+        Self(self.0 & !(TERRAIN_CLIPMAP | TERRAIN_STREAMING))
+            .with(TERRAIN_CLIPMAP, clipmap)
+            .with(TERRAIN_STREAMING, streaming)
+    }
+
+    /// Adds or clears the W08 overlay / virtual-texturing regions (H2b). VT
+    /// is only meaningful on the material path (`TERRAIN_MATERIAL`).
+    pub(crate) fn with_terrain_w08_h2b(self, overlays: bool, vt: bool) -> Self {
+        Self(self.0 & !(TERRAIN_OVERLAYS | TERRAIN_VT))
+            .with(TERRAIN_OVERLAYS, overlays)
+            .with(TERRAIN_VT, vt)
+    }
+
+    /// Adds the offline capture entry points and capture-only uniform fields.
+    #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+    pub(crate) fn with_capture(self) -> Self {
+        self.with(CAPTURE, true)
+    }
+
+    fn enabled(self, name: &str) -> bool {
+        let bit = match name {
+            "light_directional" => LIGHT_DIRECTIONAL,
+            "light_point_spot" => LIGHT_POINT_SPOT,
+            "light_rect" => LIGHT_RECT,
+            "tex_base" => TEX_BASE,
+            "tex_normal" => TEX_NORMAL,
+            "tex_metallic_roughness" => TEX_METALLIC_ROUGHNESS,
+            "tex_occlusion" => TEX_OCCLUSION,
+            "tex_emissive" => TEX_EMISSIVE,
+            "light_debug_bounds" => LIGHT_DEBUG_BOUNDS,
+            "ibl" => IBL,
+            "shadows" => SHADOWS,
+            "shadow_debug_cascades" => SHADOW_DEBUG_CASCADES,
+            "shadow_debug_factor" => SHADOW_DEBUG_FACTOR,
+            "terrain_screen" => TERRAIN_SCREEN,
+            "terrain_perspective" => TERRAIN_PERSPECTIVE,
+            "capture" => CAPTURE,
+            "terrain_material" => TERRAIN_MATERIAL,
+            "tm_pom" => TM_POM,
+            "tm_detail" => TM_DETAIL,
+            "tm_layers" => TM_LAYERS,
+            "tm_debug" => TM_DEBUG,
+            "tm_albedo" => TM_ALBEDO,
+            "tm_water" => TM_WATER,
+            "tm_aerial" => TM_AERIAL,
+            "tm_environment" => TM_AERIAL | MASKED_REFLECTION,
+            "masked_reflection" => MASKED_REFLECTION,
+            "terrain_clipmap" => TERRAIN_CLIPMAP,
+            "terrain_streaming" => TERRAIN_STREAMING,
+            "terrain_overlay" | "terrain_overlays" => TERRAIN_OVERLAYS,
+            "terrain_vt" => TERRAIN_VT,
+            "probes" => PROBES,
+            other => {
+                if let Some(model) = other.strip_prefix("brdf_") {
+                    let model: u32 = model.parse().expect("brdf feature index");
+                    assert!(model < BRDF_MODEL_COUNT, "unknown brdf feature {other}");
+                    1 << model
+                } else if let Some(lane) = other.strip_prefix("shadow_filter_") {
+                    let lane: u32 = lane.parse().expect("shadow filter feature index");
+                    assert!(lane < SHADOW_FILTER_COUNT, "unknown shadow filter {other}");
+                    1 << (SHADOW_FILTER_BASE + lane)
+                } else {
+                    panic!("unknown shader feature {other}");
+                }
+            }
+        };
+        self.0 & bit != 0
+    }
+
+    /// Evaluates `name`, `!name`, or `a || b || ...`.
+    fn condition(self, expression: &str) -> bool {
+        expression.split("||").any(|term| {
+            let term = term.trim();
+            match term.strip_prefix('!') {
+                Some(name) => !self.enabled(name.trim()),
+                None => self.enabled(term),
+            }
+        })
+    }
+}
+
+/// Expands `// #if` / `// #else` / `// #endif` markers for `features`.
+///
+/// Marker lines are dropped; nesting is supported. Panics on malformed
+/// markers, which are compile-time constants covered by unit tests.
+pub(crate) fn specialize(template: &str, features: ShaderFeatures) -> String {
+    // (branch taken for this level, parent active)
+    let mut stack: Vec<(bool, bool)> = Vec::new();
+    let mut output = String::with_capacity(template.len());
+    for line in template.lines() {
+        let trimmed = line.trim();
+        let active = stack
+            .last()
+            .map(|&(taken, parent)| taken && parent)
+            .unwrap_or(true);
+        if let Some(expression) = trimmed.strip_prefix("// #if ") {
+            stack.push((features.condition(expression), active));
+            continue;
+        }
+        if trimmed == "// #else" {
+            let (taken, parent) = stack.pop().expect("#else without #if");
+            stack.push((!taken, parent));
+            continue;
+        }
+        if trimmed == "// #endif" {
+            stack.pop().expect("#endif without #if");
+            continue;
+        }
+        if active {
+            output.push_str(line);
+            output.push('\n');
+        }
+    }
+    assert!(stack.is_empty(), "unterminated #if in shader template");
+    output
+}
+
+/// Shared-lighting features for the given resources.
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+pub(super) fn lighting_features(
+    lighting: &super::lighting::LightingResources,
+    ibl: &super::ibl::IblResources,
+    shadows: &super::shadows::ShadowResources,
+) -> ShaderFeatures {
+    ShaderFeatures::for_lighting(
+        &lighting.state,
+        &lighting.material_state,
+        ibl.enabled,
+        shadows.control,
+    )
+}
+
+/// Texture flags of material 0 — the only material terrain shading reads.
+pub(super) fn terrain_texture_flags(
+    material_state: &forge3d_core::materials::MaterialState,
+) -> u32 {
+    material_state
+        .pack_materials()
+        .first()
+        .map_or(0, |material| material.flags & SCENE_TEXTURE_FLAGS)
+}
+
+/// Shared-lighting features for terrain pipelines: the scene-texture regions
+/// follow material 0 alone (see [`ShaderFeatures::with_texture_flags`]).
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+pub(super) fn terrain_lighting_features(
+    lighting: &super::lighting::LightingResources,
+    ibl: &super::ibl::IblResources,
+    shadows: &super::shadows::ShadowResources,
+) -> ShaderFeatures {
+    lighting_features(lighting, ibl, shadows)
+        .with_texture_flags(terrain_texture_flags(&lighting.material_state))
+}
+
+/// [`terrain_lighting_features`] for the runtime's committed state.
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+pub(super) fn runtime_terrain_lighting_features(
+    runtime: &super::Forge3DRuntime,
+) -> Result<ShaderFeatures, WebError> {
+    let features = runtime_lighting_features(runtime)?;
+    let flags = runtime.lighting.as_ref().map_or(0, |lighting| {
+        terrain_texture_flags(&lighting.material_state)
+    });
+    Ok(terrain_environment_features(
+        runtime,
+        features.with_texture_flags(flags),
+    ))
+}
+
+fn terrain_environment_features(
+    runtime: &super::Forge3DRuntime,
+    features: ShaderFeatures,
+) -> ShaderFeatures {
+    features
+        .with_aerial(runtime.environment.as_ref().is_some_and(|e| {
+            e.snapshot
+                .sky
+                .as_ref()
+                .is_some_and(|s| s.aerial_perspective && s.aerial_density > 0.)
+        }))
+        .with_masked_reflection(runtime.environment.as_ref().is_some_and(|e| {
+            e.snapshot
+                .water
+                .iter()
+                .any(|w| w.terrain_mask && w.mode != "disabled" && w.reflection == "planar")
+        }))
+}
+
+/// Shared-lighting features for the runtime's committed state.
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+pub(super) fn runtime_lighting_features(
+    runtime: &super::Forge3DRuntime,
+) -> Result<ShaderFeatures, WebError> {
+    match (
+        runtime.lighting.as_ref(),
+        runtime.ibl.as_ref(),
+        runtime.shadows.as_ref(),
+    ) {
+        (Some(lighting), Some(ibl), Some(shadows)) => Ok(lighting_features(lighting, ibl, shadows)
+            .with_probes(runtime.probe_count > 0)
+            .with(
+                CAPTURE_BLEND,
+                runtime.scatter.as_ref().is_some_and(|s| s.transparent()),
+            )),
+        _ => Err(WebError::new(
+            Forge3DErrorCode::RuntimeDisposed,
+            "Runtime lighting resources are not available",
+        )),
+    }
+}
+
+/// Points the terrain and world pipelines at the variants for the current
+/// state. Called before every frame and readback; a no-op when nothing that
+/// selects a shader region changed since the last call.
+#[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
+pub(super) fn sync_pipelines(runtime: &mut super::Forge3DRuntime) -> Result<(), WebError> {
+    if runtime.lighting.is_none() {
+        return Ok(());
+    }
+    let features = runtime_lighting_features(runtime)?;
+    let (Some(context), Some(surface)) = (runtime.context.clone(), runtime.surface_state.as_ref())
+    else {
+        return Ok(());
+    };
+    let format = surface.config.format;
+    let terrain_features = terrain_environment_features(
+        runtime,
+        runtime.lighting.as_ref().map_or(features, |lighting| {
+            features.with_texture_flags(terrain_texture_flags(&lighting.material_state))
+        }),
+    );
+    if let (Some(terrain), Some(cache)) = (
+        runtime.terrain.as_mut(),
+        runtime.terrain_pipeline_cache.as_mut(),
+    ) {
+        if terrain.features != terrain.specialize(terrain_features) {
+            terrain.use_variant(&context, cache, terrain_features, format);
+        }
+    }
+    if let (Some(scene), Some(textures), Some(ibl)) = (
+        runtime.scene.as_mut(),
+        runtime.textures.as_ref(),
+        runtime.ibl.as_ref(),
+    ) {
+        scene.use_world_variant(&context, features, textures, ibl);
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests;

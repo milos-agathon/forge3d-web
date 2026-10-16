@@ -1,0 +1,296 @@
+{
+  "schemaVersion": 1,
+  "lane": "chromium-preflight",
+  "packageConsumer": {
+    "schemaVersion": 1,
+    "verifiedAt": "2026-10-15T15:44:43.637Z",
+    "revision": "9720aa304ae8e3c73b84141881c52d7b5e8bf6f1",
+    "packageSha256": "5a4491cd82ebe4b46ce045287d0d89a1802d6fee4a3220abb24ac48483b436dd",
+    "wasmSha256": "50dc3d9a9be830f71d05739820ee5a0e2d5c826c70481a3492edf9d3ac738068",
+    "wasmRebuilt": true,
+    "servedRoot": "D:\\forge3d\\cache\\tmp\\forge3d-w22-consumer-FyXNTx\\consumer\\node_modules\\@forge3d\\web",
+    "tarball": "D:\\forge3d\\cache\\tmp\\forge3d-w22-consumer-FyXNTx\\pack\\forge3d-web-1.26.3.tgz",
+    "installed": "D:\\forge3d\\cache\\tmp\\forge3d-w22-consumer-FyXNTx\\consumer\\node_modules\\@forge3d\\web",
+    "exitCode": 0
+  },
+  "previousPassingPackageConsumer": {
+    "schemaVersion": 1,
+    "verifiedAt": "2026-10-15T15:39:56.257Z",
+    "revision": "0e7c18e85b3afcc8c831534debf455aa3b7edd8d",
+    "packageSha256": "87f658e0e3a483701359b89960c4a2ed9566a3ada2c527b82614dc4c1bcd2f3d",
+    "wasmSha256": "50dc3d9a9be830f71d05739820ee5a0e2d5c826c70481a3492edf9d3ac738068",
+    "wasmRebuilt": true,
+    "servedRoot": "D:\\forge3d\\cache\\tmp\\forge3d-w22-consumer-RwaqXZ\\consumer\\node_modules\\@forge3d\\web",
+    "tarball": "D:\\forge3d\\cache\\tmp\\forge3d-w22-consumer-RwaqXZ\\pack\\forge3d-web-1.26.3.tgz",
+    "installed": "D:\\forge3d\\cache\\tmp\\forge3d-w22-consumer-RwaqXZ\\consumer\\node_modules\\@forge3d\\web",
+    "exitCode": 0
+  },
+  "stats": {
+    "startTime": "2026-10-15T15:44:26.737Z",
+    "duration": 16877.531,
+    "expected": 5,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "results": [
+    {
+      "title": "every E05 fixture selects one codec, conforms and replays exact decoded bytes",
+      "project": "chromium-preflight",
+      "status": "passed",
+      "durationMs": 1229,
+      "measurements": {
+        "forge3d-webgpu-probe.json": {
+          "project": {
+            "project": "chromium-preflight",
+            "browserName": "chromium",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": [
+              "--enable-unsafe-webgpu",
+              "--use-angle=d3d11"
+            ]
+          },
+          "projectPolicyRequired": true,
+          "ambientRequired": false,
+          "required": true,
+          "hasNavigatorGpu": true,
+          "adapterAvailable": true,
+          "secureContext": true,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36"
+        },
+        "w22-fixture-conformance.json": {
+          "results": [
+            {
+              "file": "predictor.tif",
+              "codec": "geotiff",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "autzen.laz",
+              "codec": "laz-perf",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "triangle.glb",
+              "codec": "gltf2",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "rgba.ktx2",
+              "codec": "ktx2-basis",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "kodim23.ktx2",
+              "codec": "ktx2-basis",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "linear.hdr",
+              "codec": "radiance-rgbe",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "linear.exr",
+              "codec": "exr-wasm",
+              "conforms": true,
+              "exact": true
+            },
+            {
+              "file": "glyphs.pbf",
+              "codec": "mapbox-glyph-pbf",
+              "conforms": true,
+              "exact": true
+            }
+          ],
+          "stats": {
+            "disposed": true,
+            "activeOperations": 0,
+            "cacheBytes": 0,
+            "cacheEntries": 0,
+            "cacheHits": 0,
+            "cacheMisses": 0
+          },
+          "persisted": 8
+        }
+      }
+    },
+    {
+      "title": "corruption, capabilities, abort and disposal are typed",
+      "project": "chromium-preflight",
+      "status": "passed",
+      "durationMs": 342,
+      "measurements": {
+        "forge3d-webgpu-probe.json": {
+          "project": {
+            "project": "chromium-preflight",
+            "browserName": "chromium",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": [
+              "--enable-unsafe-webgpu",
+              "--use-angle=d3d11"
+            ]
+          },
+          "projectPolicyRequired": true,
+          "ambientRequired": false,
+          "required": true,
+          "hasNavigatorGpu": true,
+          "adapterAvailable": true,
+          "secureContext": true,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36"
+        }
+      }
+    },
+    {
+      "title": "AOV-guided WebGPU denoiser quality and native memory accounting",
+      "project": "chromium-preflight",
+      "status": "passed",
+      "durationMs": 13307,
+      "measurements": {
+        "forge3d-webgpu-probe.json": {
+          "project": {
+            "project": "chromium-preflight",
+            "browserName": "chromium",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": [
+              "--enable-unsafe-webgpu",
+              "--use-angle=d3d11"
+            ]
+          },
+          "projectPolicyRequired": true,
+          "ambientRequired": false,
+          "required": true,
+          "hasNavigatorGpu": true,
+          "adapterAvailable": true,
+          "secureContext": true,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36"
+        },
+        "w22-denoise-quality.json": {
+          "size": [
+            1920,
+            1080
+          ],
+          "before": {
+            "mse": 0.005208869547876926,
+            "psnr": 22.611590352446342,
+            "ssim": 0.16560542813759835,
+            "maxAbs": 0.125
+          },
+          "after": {
+            "mse": 6.097559632249831e-05,
+            "psnr": 41.11096357960291,
+            "ssim": 0.9645481557998347,
+            "maxAbs": 0.051729440689086914
+          },
+          "regression": {
+            "mse": 2.353862453889033e-15,
+            "psnr": 99,
+            "ssim": 0.9999999999999497,
+            "maxAbs": 2.980232238769531e-07
+          },
+          "baseline": 155340,
+          "afterMemory": 155340,
+          "maxAbs": 7.748603820800781e-07,
+          "selection": {
+            "status": "selected",
+            "id": "webgpu-atrous",
+            "requested": "oidn",
+            "equivalent": true,
+            "revision": "913447170854f5f456a730723b878c7951340d286851ab45759d49ba7bef91b9",
+            "owner": "W06"
+          },
+          "adapterInfo": {
+            "name": "",
+            "vendor": "0x00000000",
+            "device": "0x00000000",
+            "architecture": "",
+            "description": "",
+            "backend": "browser-web-gpu",
+            "deviceType": "other"
+          },
+          "stats": {
+            "disposed": true,
+            "activeOperations": 0,
+            "cacheBytes": 0,
+            "cacheEntries": 0,
+            "cacheHits": 0,
+            "cacheMisses": 0
+          }
+        }
+      }
+    },
+    {
+      "title": "W02 persistent stores replay offline and reject corrupted artifacts",
+      "project": "chromium-preflight",
+      "status": "passed",
+      "durationMs": 424,
+      "measurements": {
+        "forge3d-webgpu-probe.json": {
+          "project": {
+            "project": "chromium-preflight",
+            "browserName": "chromium",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": [
+              "--enable-unsafe-webgpu",
+              "--use-angle=d3d11"
+            ]
+          },
+          "projectPolicyRequired": true,
+          "ambientRequired": false,
+          "required": true,
+          "hasNavigatorGpu": true,
+          "adapterAvailable": true,
+          "secureContext": true,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36"
+        }
+      }
+    },
+    {
+      "title": "device loss, replacement runtime and disposal during GPU work release allocations",
+      "project": "chromium-preflight",
+      "status": "passed",
+      "durationMs": 803,
+      "measurements": {
+        "forge3d-webgpu-probe.json": {
+          "project": {
+            "project": "chromium-preflight",
+            "browserName": "chromium",
+            "channel": "playwright",
+            "lane": "preflight",
+            "launchObservation": "chromium-live",
+            "webgpuRequired": true,
+            "launchArgs": [
+              "--enable-unsafe-webgpu",
+              "--use-angle=d3d11"
+            ]
+          },
+          "projectPolicyRequired": true,
+          "ambientRequired": false,
+          "required": true,
+          "hasNavigatorGpu": true,
+          "adapterAvailable": true,
+          "secureContext": true,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/148.0.7778.96 Safari/537.36"
+        }
+      }
+    }
+  ]
+}

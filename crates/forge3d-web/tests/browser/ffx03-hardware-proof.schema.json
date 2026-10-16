@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://forge3d.dev/schemas/ffx03-hardware-proof-v1.json",
+  "title": "Forge3D FFX-03 branded Firefox hardware proof v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "kind", "classification", "required", "experimental", "binding", "browser", "driver", "system", "launch", "configuration", "adapter", "workload", "errors", "cleanup"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "kind": { "const": "forge3d-ffx03-firefox-hardware-proof-v1" },
+    "classification": { "const": "required" },
+    "required": { "const": true },
+    "experimental": { "const": false },
+    "binding": { "type": "object", "additionalProperties": false, "required": ["lane", "assetId", "platform", "architecture", "channel", "commit", "packageSha256"], "properties": {
+      "lane": { "enum": ["firefox-macos-m2", "firefox-windows-intel12"] }, "assetId": { "enum": ["FW-MAC-M2-01", "FW-WIN-I12-01"] }, "platform": { "enum": ["darwin", "win32"] }, "architecture": { "enum": ["arm64", "x64"] }, "channel": { "const": "release" }, "commit": { "type": "string", "pattern": "^[0-9a-f]{40}$" }, "packageSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }
+    } },
+    "browser": { "type": "object", "additionalProperties": false, "required": ["name", "channel", "version"], "properties": { "name": { "const": "firefox" }, "channel": { "const": "release" }, "version": { "type": "string" } } },
+    "driver": { "type": "object", "additionalProperties": false, "required": ["name", "version", "executable", "clientName", "clientVersion"], "properties": { "name": { "const": "selenium-firefox" }, "version": { "const": "0.36.0" }, "executable": { "type": "string", "minLength": 1 }, "clientName": { "const": "selenium-webdriver" }, "clientVersion": { "const": "4.35.0" } } },
+    "system": { "type": "object", "additionalProperties": false, "required": ["platform", "architecture", "osBuild"], "properties": { "platform": { "enum": ["darwin", "win32"] }, "architecture": { "enum": ["arm64", "x64"] }, "osBuild": { "type": "string", "minLength": 1 } } },
+    "launch": { "type": "object", "additionalProperties": false, "required": ["observed", "source", "browserProcessId", "executable", "arguments"], "properties": { "observed": { "const": true }, "source": { "enum": ["darwin-live-browser-process", "win32-live-browser-process"] }, "browserProcessId": { "type": "integer", "minimum": 1 }, "executable": { "type": "string", "minLength": 1 }, "arguments": { "type": "array", "items": { "type": "string" } } } },
+    "configuration": { "type": "object", "additionalProperties": false, "required": ["source", "freshProfile", "profilePathSha256", "requestedOverrides", "observedWebGpuUserOverrides", "afterWorkload"], "properties": { "source": { "const": "geckodriver-generated-profile-observation" }, "freshProfile": { "const": true }, "profilePathSha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" }, "requestedOverrides": { "type": "object", "maxProperties": 0 }, "observedWebGpuUserOverrides": { "type": "object", "maxProperties": 0 }, "afterWorkload": { "type": "object", "maxProperties": 0 } } },
+    "adapter": { "type": "object" },
+    "workload": { "type": "object", "additionalProperties": false, "required": ["schemaVersion", "kind", "binding", "behaviors", "driver", "visibility", "terrainSource", "screenshot", "lifecycleCycles", "errors", "benchmark", "systemInfo"], "properties": {
+      "schemaVersion": { "const": 1 }, "kind": { "const": "forge3d-ffx03-firefox-workload-v1" }, "binding": { "type": "object" }, "behaviors": { "type": "object" }, "driver": { "type": "object" }, "visibility": { "type": "object" }, "terrainSource": { "type": "object" }, "screenshot": { "type": "object" }, "lifecycleCycles": { "type": "array", "minItems": 50, "maxItems": 50 }, "errors": { "type": "array", "maxItems": 0 }, "benchmark": { "type": "object" }, "systemInfo": { "type": "object" }
+    } },
+    "errors": { "type": "array", "maxItems": 0 },
+    "cleanup": { "type": "object", "additionalProperties": false, "required": ["sessionDeleted", "driverStopped", "driverAbsent", "browserAbsent", "ok"], "properties": { "sessionDeleted": { "const": true }, "driverStopped": { "const": true }, "driverAbsent": { "const": true }, "browserAbsent": { "const": true }, "ok": { "const": true } } }
+  }
+}

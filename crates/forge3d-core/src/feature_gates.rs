@@ -16,7 +16,6 @@ pub const CORE_FEATURE_GATES: &[CoreFeatureGate] = &[
 ];
 
 pub const DEFAULT_WASM_INACTIVE_MODULE_ROOTS: &[&str] = &[
-    "accel",
     "animation",
     "bin",
     "bundle",
@@ -32,7 +31,6 @@ pub const DEFAULT_WASM_INACTIVE_MODULE_ROOTS: &[&str] = &[
     "import",
     "labels",
     "license",
-    "lighting",
     "loaders",
     "mesh",
     "offscreen",
@@ -46,15 +44,12 @@ pub const DEFAULT_WASM_INACTIVE_MODULE_ROOTS: &[&str] = &[
     "py_module",
     "py_types",
     "render",
-    "scene",
-    "sdf",
     "shaders",
     "shadows",
     "style",
     "tiles3d",
     "util",
     "uv",
-    "vector",
     "viewer",
 ];
 

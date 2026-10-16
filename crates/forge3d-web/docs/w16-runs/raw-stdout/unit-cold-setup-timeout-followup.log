@@ -1,0 +1,144 @@
+
+> @forge3d/web@1.26.3 test:unit
+> vitest run
+
+
+ RUN  v4.0.18 D:/forge3d-web/.worktrees/w16/crates/forge3d-web
+
+ ✓ tests/unit/orbit-controller.test.ts (6 tests) 655ms
+     ✓ keeps ten thousand randomized finite deltas valid  648ms
+ ✓ tests/unit/browser-resources.test.ts (19 tests) 133ms
+ ✓ tests/unit/range-scheduler.test.ts (27 tests) 117ms
+ ✓ tests/unit/w16-tiles.test.ts (18 tests) 192ms
+ ✓ tests/unit/w15-buildings.test.ts (26 tests) 267ms
+ ✓ tests/unit/message-protocol.test.ts (12 tests) 286ms
+ ✓ tests/unit/display-adapters.test.ts (7 tests) 321ms
+ ✓ tests/unit/terrain-scatter.test.ts (14 tests) 329ms
+ ✓ tests/unit/scene.test.ts (33 tests) 48ms
+ ✓ tests/unit/terrain-dataset.test.ts (38 tests) 107ms
+ ✓ tests/unit/label-workflows.test.ts (52 tests) 887ms
+ ✓ tests/unit/w10-reflection-metrics.test.ts (2 tests) 83ms
+ ✓ tests/unit/terrain-probes.test.ts (6 tests) 49ms
+ ✓ tests/unit/browser-io.test.ts (20 tests) 77ms
+ ✓ tests/unit/w15-io.test.ts (19 tests) 272ms
+ ✓ tests/unit/session.test.ts (24 tests) 99ms
+ ✓ tests/unit/viewer-camera.test.ts (5 tests) 95ms
+ ✓ tests/unit/camera-rigs.test.ts (38 tests) 1499ms
+     ✓ never violates the minimum at any playback time  1237ms
+ ✓ tests/unit/byte-cache.test.ts (16 tests) 46ms
+ ✓ tests/unit/w16-pointcloud.test.ts (28 tests) 1778ms
+     ✓ matches recorded real-data native camera keys/counts and quantized SSE exactly  1660ms
+ ✓ tests/unit/offscreen-renderer.test.ts (9 tests) 25ms
+ ✓ tests/unit/textures.test.ts (42 tests) 36ms
+ ✓ tests/unit/remote-dataset-retry.test.ts (8 tests) 70ms
+ ✓ tests/unit/vector.test.ts (13 tests) 54ms
+ ✓ tests/unit/viewer-controls.test.ts (15 tests) 56ms
+ ✓ tests/unit/environment.test.ts (20 tests) 2101ms
+     ✓ matches six independently executed native fields including ground locking  692ms
+   ✓ locks reference fixtures to pinned native source snapshots  510ms
+   ✓ locks installed-native scene references and historical PNG provenance  712ms
+ ✓ tests/unit/camera.test.ts (18 tests) 25ms
+ ✓ tests/unit/shadows.test.ts (23 tests) 33ms
+ ✓ tests/unit/camera-animation.test.ts (14 tests) 31ms
+ ✓ tests/unit/terrain-overlays.test.ts (14 tests) 15ms
+ ✓ tests/unit/camera-controllers.test.ts (14 tests) 19ms
+ ✓ tests/unit/lighting.test.ts (23 tests) 25ms
+ ✓ tests/unit/labels.test.ts (74 tests) 2885ms
+     ✓ compiles a 200000-vertex polygon without spreading vertices into the JS stack  1524ms
+ ✓ tests/unit/w14-crs.test.ts (27 tests) 2546ms
+     ✓ supports empty arrays, copied identity, XYZ/T and 10000 points  355ms
+     ✓ does not leak native allocations on repeated success and failure  547ms
+ ✓ tests/unit/materials.test.ts (18 tests) 18ms
+ ✓ tests/unit/w11-native-provenance.test.ts (5 tests) 907ms
+   ✓ pins every independent W11 native shader source  882ms
+ ✓ tests/unit/w15-geometry.test.ts (33 tests) 3096ms
+     ✓ pins compiled source hashes rather than prior claims  3016ms
+ ✓ tests/unit/renderer-config.test.ts (16 tests) 18ms
+ ✓ tests/unit/worker-renderer.test.ts (12 tests) 3247ms
+     ✓ leaves no listeners or pointers after 30 cycles  2614ms
+ ✓ tests/unit/w14-datasets.test.ts (10 tests) 3275ms
+     ✓ preserves the complete native registry, kinds, descriptions and known hashes  314ms
+     ✓ loads native DEM and boundaries exactly, with defensive typed buffers  1875ms
+     ✓ caches exact bytes across instances, refuses offline misses and corrupted entries  1024ms
+ ✓ tests/unit/postfx.test.ts (20 tests) 19ms
+ ✓ tests/unit/w14-native-contract.test.ts (2 tests) 682ms
+     ✓ maps every exact native test definition to a named browser test  664ms
+ ✓ tests/unit/w06-offline.test.ts (9 tests) 16ms
+ ✓ tests/unit/playwright-project-metadata.test.ts (16 tests) 12ms
+ ✓ tests/unit/terrain-vt.test.ts (10 tests) 10ms
+ ✓ tests/unit/viewer.test.ts (45 tests) 3551ms
+     ✓ clears failed labels and uses only the caller channel for capture and replacement errors  1839ms
+     ✓ retries failed labels after recovery without repeating the handled error  308ms
+ ✓ tests/unit/terrain-material.test.ts (7 tests) 18ms
+ ✓ tests/unit/resize-controller.test.ts (5 tests) 7ms
+ ✓ tests/unit/ownership.test.ts (6 tests) 7ms
+ ✓ tests/unit/source-launch-observation.test.ts (3 tests) 7ms
+ ✓ tests/unit/viewer-interaction-observation.test.ts (12 tests) 9ms
+ ✓ tests/unit/memory-policy.test.ts (9 tests) 12ms
+ ✓ tests/unit/viewer-visibility-lifecycle.test.ts (10 tests) 10ms
+ ✓ tests/unit/evidence-mode.test.ts (3 tests) 3ms
+ ✓ tests/unit/render-scheduler.test.ts (4 tests) 8ms
+ ✓ tests/unit/label-contract-record.test.ts (3 tests) 2212ms
+     ✓ maps every pinned native label definition to an existing browser outcome port  1833ms
+ ✓ tests/unit/ibl.test.ts (34 tests) 4135ms
+     ✓ round-trips prepared payloads through cache storage byte-identically  2334ms
+     ✓ round-trips through OPFS  388ms
+     ✓ reports a miss then a hit with byte-identical payloads  639ms
+     ✓ treats a higher-quality cached entry as a miss  430ms
+ ✓ tests/unit/playwright-config.test.ts (7 tests) 7ms
+ ✓ tests/unit/playwright-launch-diagnostics.test.ts (5 tests) 5ms
+ ✓ tests/unit/w12-native-provenance.test.ts (1 test) 986ms
+   ✓ pins native vector/shader/picking/test sources independently of web output  984ms
+ ✓ tests/unit/terrain-streaming.test.ts (20 tests) 4404ms
+     ✓ commits the COG nodata when options.terrain.nodata is unset  4384ms
+ ✓ tests/unit/cog.test.ts (19 tests) 4747ms
+     ✓ parses metadata matching the truth JSON  4282ms
+ ❯ tests/unit/w06-frames.test.ts (8 tests | 1 failed) 5476ms
+     ✓ validates sizes and exposes native accessors 3ms
+     ✓ reports missing AOVs with native wording and converts linear depth 1ms
+     ✓ encodes deterministic lossless PNGs in both zlib modes 43ms
+     ✓ renders exact timestamps, chains previous cameras and reports progress 2ms
+     ✓ validates ranges, cancels and names sink files natively 8ms
+     ✓ implements the native FrameDumper contract 4ms
+     ✓ returns a typed unavailable-codec diagnostic without WebCodecs 1ms
+     × muxes identical chunks to identical bytes regardless of wall-clock time 5412ms
+ ✓ tests/unit/w15-native-contracts.test.ts (13 tests) 6199ms
+     ✓ optional history rejects changed bytes and skips unavailable commits  1140ms
+     ✓ pins every native suite and requires concrete browser ports  4789ms
+ ❯ tests/unit/w16-provenance.test.ts (1 test | 1 failed) 32155ms
+   × W16 fixtures and deepest native sources retain independent provenance 32154ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  tests/unit/w06-frames.test.ts > W06 video export diagnostics > muxes identical chunks to identical bytes regardless of wall-clock time
+Error: Test timed out in 5000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/unit/w06-frames.test.ts:195:3
+    193|   });
+    194| 
+    195|   it("muxes identical chunks to identical bytes regardless of wall-clo…
+       |   ^
+    196|     const chunk = { data: new Uint8Array([1, 2, 3, 4]), type: "key" as…
+    197|     // Exercise different muxer creation times without waiting for the…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  tests/unit/w16-provenance.test.ts > W16 fixtures and deepest native sources retain independent provenance
+Error: Test timed out in 30000ms.
+If this is a long-running test, pass a timeout value as the last argument or configure it globally with "testTimeout".
+ ❯ tests/unit/w16-provenance.test.ts:10:1
+      8| // This integrity audit reads every fixture; its timeout is a cold-sto…
+      9| // allowance, separate from the W00 performance budgets and soak gates.
+     10| it("W16 fixtures and deepest native sources retain independent provena…
+       | ^
+     11|   expect(manifest.fixtureId).toBe("copc-ept-tiles-v1");
+     12|   expect(manifest.nativeSources).toHaveLength(21);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  2 failed | 63 passed (65)
+      Tests  2 failed | 1088 passed (1090)
+   Start at  00:36:47
+   Duration  33.17s (transform 22.22s, setup 0ms, import 64.90s, tests 90.52s, environment 10ms)
+

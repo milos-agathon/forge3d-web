@@ -1,0 +1,467 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forge3D W04 Shadows Test</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+      }
+
+      canvas {
+        display: block;
+        width: 160px;
+        height: 120px;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="forge3d-w04-shadows-canvas" width="160" height="120"></canvas>
+    <script type="module">
+      import {
+        Forge3DError,
+        Forge3DRuntime,
+        Forge3DScene,
+        Forge3DSession,
+        ShadowConfig,
+        CascadedShadowConfig,
+      } from "../src-ts/index.ts";
+      import { setSessionRuntimeFactoryForTests } from "../src-ts/session.ts";
+      import { simulateRuntimeDeviceLossForTests } from "../src-ts/runtime-internals.ts";
+
+      const canvas = document.querySelector("#forge3d-w04-shadows-canvas");
+      const WIDTH = 160;
+      const HEIGHT = 120;
+      const CAMERA = {
+        position: [0, 4.5, 7],
+        target: [0, 0.6, 0],
+        up: [0, 1, 0],
+        fovYDegrees: 50,
+        near: 0.1,
+        far: 100,
+      };
+      const FILTERS = ["hard", "pcf", "pcss", "vsm", "evsm", "msm"];
+
+      function buildScene() {
+        const scene = Forge3DScene.create();
+        const size = 17;
+        const heights = new Float32Array(size * size);
+        for (let row = 0; row < size; row += 1) {
+          for (let col = 0; col < size; col += 1) {
+            heights[row * size + col] = col === 8 || col === 9 ? 1.5 : 0.0;
+          }
+        }
+        scene.addTerrain(
+          {
+            width: size,
+            height: size,
+            heights,
+            spacing: [0.5, 0.5],
+            domain: [0, 1.5],
+            exaggeration: 1,
+          },
+          { name: "terrain" },
+        );
+        scene.addGroundPlane({
+          name: "ground",
+          size: [10, 10],
+          height: -0.06,
+          color: [0.75, 0.75, 0.72, 1],
+        });
+        scene.addTextMesh({
+          name: "peg",
+          text: "W04",
+          size: 0.45,
+          color: [0.9, 0.85, 0.7, 1],
+          transform: { translation: [-2.2, 0.03, -1.4] },
+        });
+        scene.addLight({
+          type: "directional",
+          color: [1, 1, 1],
+          intensity: 1.6,
+          direction: [0.55, -1.0, 0.3],
+          castsShadow: true,
+        });
+        return scene;
+      }
+
+      function shadowInput(filter) {
+        return {
+          enabled: true,
+          filter,
+          mapSize: 256,
+          depthBias: 0.002,
+          normalBias: 0.02,
+          slopeBias: 0.01,
+          softness: 1.5,
+          pcssBlockerRadius: 3,
+          pcssFilterRadius: 4,
+          lightSize: 0.5,
+          momentBias: 0.0005,
+          lightBleedReduction: 0.2,
+          evsmPositiveExponent: 5,
+          evsmNegativeExponent: 5,
+          peterPanningOffset: 0.001,
+        };
+      }
+
+      function csmInput(overrides) {
+        return {
+          enabled: true,
+          cascadeCount: 3,
+          maxDistance: 60,
+          splitLambda: 0.75,
+          blendRange: 0.15,
+          stabilize: true,
+          debugView: "none",
+          ...overrides,
+        };
+      }
+
+      function compareRgba(a, b, threshold = 0) {
+        let changed = 0;
+        const pixels = Math.min(a.length, b.length) / 4;
+        for (let pixel = 0; pixel < pixels; pixel += 1) {
+          const base = pixel * 4;
+          const delta = Math.max(
+            Math.abs(a[base] - b[base]),
+            Math.abs(a[base + 1] - b[base + 1]),
+            Math.abs(a[base + 2] - b[base + 2]),
+          );
+          if (delta > threshold) {
+            changed += 1;
+          }
+        }
+        return { changedFraction: pixels > 0 ? changed / pixels : 0 };
+      }
+
+      function shadowedFraction(enabled, disabled) {
+        let shadowed = 0;
+        const pixels = enabled.length / 4;
+        for (let pixel = 0; pixel < pixels; pixel += 1) {
+          const base = pixel * 4;
+          const lumOn =
+            0.2126 * enabled[base] +
+            0.7152 * enabled[base + 1] +
+            0.0722 * enabled[base + 2];
+          const lumOff =
+            0.2126 * disabled[base] +
+            0.7152 * disabled[base + 1] +
+            0.0722 * disabled[base + 2];
+          if (lumOff - lumOn > 8) {
+            shadowed += 1;
+          }
+        }
+        return pixels > 0 ? shadowed / pixels : 0;
+      }
+
+      function nonconstantFraction(rgba) {
+        let changed = 0;
+        const pixels = rgba.length / 4;
+        for (let pixel = 1; pixel < pixels; pixel += 1) {
+          const base = pixel * 4;
+          if (
+            rgba[base] !== rgba[0] ||
+            rgba[base + 1] !== rgba[1] ||
+            rgba[base + 2] !== rgba[2]
+          ) {
+            changed += 1;
+          }
+        }
+        return pixels > 0 ? changed / pixels : 0;
+      }
+
+      function bytesEqual(a, b) {
+        if (a.byteLength !== b.byteLength) {
+          return false;
+        }
+        for (let index = 0; index < a.length; index += 1) {
+          if (a[index] !== b[index]) {
+            return false;
+          }
+        }
+        return true;
+      }
+
+      function tintCategories(rgba) {
+        const categories = new Set();
+        const pixels = rgba.length / 4;
+        for (let pixel = 0; pixel < pixels; pixel += 1) {
+          const base = pixel * 4;
+          const r = rgba[base];
+          const g = rgba[base + 1];
+          const b = rgba[base + 2];
+          if (r > g + 30 && r > b + 30 && b > g + 10) {
+            categories.add("magenta");
+          } else if (r > g + 30 && r > b + 30) {
+            categories.add("red");
+          } else if (g > r + 30 && g > b + 30) {
+            categories.add("green");
+          } else if (b > r + 30 && b > g + 10) {
+            categories.add("blue");
+          } else if (r > b + 30 && g > b + 30) {
+            categories.add("yellow");
+          }
+        }
+        return categories.size;
+      }
+
+      function projectWorld(point, camera) {
+        const sub = (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+        const dot = (a, b) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+        const cross = (a, b) => [
+          a[1] * b[2] - a[2] * b[1],
+          a[2] * b[0] - a[0] * b[2],
+          a[0] * b[1] - a[1] * b[0],
+        ];
+        const norm = (a) => {
+          const len = Math.hypot(a[0], a[1], a[2]) || 1;
+          return [a[0] / len, a[1] / len, a[2] / len];
+        };
+        const forward = norm(sub(camera.target, camera.position));
+        const right = norm(cross(forward, camera.up));
+        const up = cross(right, forward);
+        const rel = sub(point, camera.position);
+        const x = dot(rel, right);
+        const y = dot(rel, up);
+        const z = Math.max(dot(rel, forward), 1e-5);
+        const f = 1 / Math.tan((camera.fovYDegrees * Math.PI) / 360);
+        const aspect = WIDTH / HEIGHT;
+        const ndcX = (x * f) / (aspect * z);
+        const ndcY = (y * f) / z;
+        return [(ndcX * 0.5 + 0.5) * WIDTH, (0.5 - ndcY * 0.5) * HEIGHT];
+      }
+
+      function contactGapPixels(enabled, disabled, camera, contacts) {
+        let best = Infinity;
+        const pixels = enabled.length / 4;
+        for (let pixel = 0; pixel < pixels; pixel += 1) {
+          const base = pixel * 4;
+          const diff =
+            Math.abs(enabled[base] - disabled[base]) +
+            Math.abs(enabled[base + 1] - disabled[base + 1]) +
+            Math.abs(enabled[base + 2] - disabled[base + 2]);
+          if (diff <= 10) {
+            continue;
+          }
+          const px = pixel % WIDTH;
+          const py = Math.floor(pixel / WIDTH);
+          for (const contact of contacts) {
+            const [cx, cy] = projectWorld(contact, camera);
+            const gap = Math.hypot(px - cx, py - cy);
+            if (gap < best) {
+              best = gap;
+            }
+          }
+        }
+        return best;
+      }
+
+      window.__forge3dW04ShadowsProbe = async () => {
+        if (!navigator.gpu) {
+          return { supported: false };
+        }
+        const result = { supported: true, ok: true };
+        let session;
+        const createdRuntimes = [];
+        setSessionRuntimeFactoryForTests(async (runtimeCanvas, options) => {
+          const runtime = await Forge3DRuntime.create(runtimeCanvas, options);
+          createdRuntimes.push(runtime);
+          return runtime;
+        });
+        try {
+          const csmCheck = (() => {
+            try {
+              new ShadowConfig({ filter: "csm" });
+              return { code: "NONE", message: "" };
+            } catch (error) {
+              const normalized = Forge3DError.from(error);
+              return { code: normalized.code, message: normalized.message };
+            }
+          })();
+          result.csmFilterRejection = csmCheck;
+          result.csmObjectValid = (() => {
+            try {
+              new CascadedShadowConfig({ enabled: true, cascadeCount: 3 });
+              return true;
+            } catch {
+              return false;
+            }
+          })();
+
+          const scene = buildScene();
+          const config = new ShadowConfig(shadowInput("pcf"));
+          result.peterPanningSafe = config.peterPanningSafe();
+
+          session = await Forge3DSession.create(canvas, {
+            runtime: {
+              diagnostics: true,
+              width: WIDTH,
+              height: HEIGHT,
+              devicePixelRatio: 1,
+              clearColor: [0, 0, 0, 1],
+            },
+            recovery: { deviceLoss: "once" },
+          });
+          session.setScene(scene);
+          session.setCamera(CAMERA);
+          session.render();
+          const disabledRgba = await session.readRgba();
+          const memoryBefore = session.getMemoryReport();
+
+          const csm = csmInput();
+          const sweep = {};
+          let previous = null;
+          for (const filter of FILTERS) {
+            scene.setShadows(shadowInput(filter), csm);
+            session.render();
+            const rgba = await session.readRgba();
+            const report = session.getShadowReport();
+            sweep[filter] = {
+              nonconstant: nonconstantFraction(rgba),
+              shadowFraction: shadowedFraction(rgba, disabledRgba),
+              adjacentChange:
+                previous === null ? null : compareRgba(previous.rgba, rgba),
+              report: {
+                requestedFilter: report.requestedFilter,
+                effectiveFilter: report.effectiveFilter,
+                requestedMapSize: report.requestedMapSize,
+                effectiveMapSize: report.effectiveMapSize,
+                csmEnabled: report.csmEnabled,
+                cascadeCount: report.cascadeCount,
+                momentFormat: report.momentFormat,
+                casterLightId: report.casterLightId,
+                reason: report.reason,
+              },
+              rgba,
+            };
+            previous = { filter, rgba };
+          }
+          result.filters = Object.fromEntries(
+            Object.entries(sweep).map(([filter, entry]) => [
+              filter,
+              {
+                nonconstant: entry.nonconstant,
+                shadowFraction: entry.shadowFraction,
+                adjacentChange: entry.adjacentChange,
+                report: entry.report,
+              },
+            ]),
+          );
+
+          const memoryAfter = session.getMemoryReport();
+          result.memory = {
+            sessionIncrease:
+              memoryAfter.currentBytes - memoryBefore.currentBytes,
+            expectedMax:
+              256 * 256 * 3 * 4 +
+              256 * 256 * 3 * 16 +
+              368 +
+              3 * 64 +
+              16 +
+              1024,
+          };
+
+          scene.setShadows(
+            shadowInput("pcf"),
+            csmInput({ debugView: "cascades", maxDistance: 30 }),
+          );
+          session.render();
+          const cascadeRgba = await session.readRgba();
+          const csmReport = session.getShadowReport();
+          result.csm = {
+            cascadeCount: csmReport.cascadeCount,
+            tintCategories: tintCategories(cascadeRgba),
+          };
+
+          scene.setShadows(
+            shadowInput("hard"),
+            csmInput({ debugView: "shadow-factor" }),
+          );
+          session.render();
+          const stableBase = await session.readRgba();
+          const info = scene.getShadowCascadeInfo(CAMERA.near, CAMERA.far);
+          const texel = info[0].texelSize;
+          const subTexelCamera = {
+            ...CAMERA,
+            position: [CAMERA.position[0] + texel * 0.15, 4.5, 7],
+          };
+          session.setCamera(subTexelCamera);
+          session.render();
+          const subTexelRgba = await session.readRgba();
+          const texelCamera = {
+            ...CAMERA,
+            position: [CAMERA.position[0] + texel * 3, 4.5, 7],
+          };
+          session.setCamera(texelCamera);
+          session.render();
+          const texelRgba = await session.readRgba();
+          result.stabilization = {
+            texelSize: texel,
+            subTexel: compareRgba(stableBase, subTexelRgba, 16),
+            overTexel: compareRgba(stableBase, texelRgba, 16),
+          };
+          session.setCamera(CAMERA);
+          scene.setShadows(shadowInput("pcf"), csmInput());
+          session.render();
+          const contactOn = await session.readRgba();
+          const contacts = [
+            [-2.45, 0, -1.4],
+            [-2.2, 0, -1.4],
+            [-1.95, 0, -1.4],
+          ];
+          result.peterPanning = {
+            safe: result.peterPanningSafe,
+            contactGap: contactGapPixels(
+              contactOn,
+              disabledRgba,
+              CAMERA,
+              contacts,
+            ),
+          };
+
+          const generation = createdRuntimes.length;
+          simulateRuntimeDeviceLossForTests(createdRuntimes.at(-1));
+          const deadline = performance.now() + 15_000;
+          while (
+            (createdRuntimes.length === generation ||
+              session.status !== "ready") &&
+            session.status !== "failed" &&
+            session.status !== "disposed" &&
+            performance.now() < deadline
+          ) {
+            await new Promise((resolve) => setTimeout(resolve, 10));
+          }
+          session.render();
+          const recoveredRgba = await session.readRgba();
+          result.recovered = {
+            status: session.status,
+            byteEqual: bytesEqual(recoveredRgba, contactOn),
+            generations: createdRuntimes.length,
+          };
+
+          session.dispose();
+          session = undefined;
+        } catch (error) {
+          result.ok = false;
+          const normalized = Forge3DError.from(error);
+          result.error = {
+            code: normalized.code,
+            message: normalized.message,
+          };
+          if (session !== undefined && !session.disposed) {
+            session.dispose();
+          }
+        } finally {
+          setSessionRuntimeFactoryForTests(undefined);
+        }
+        return result;
+      };
+    </script>
+  </body>
+</html>

@@ -1,6 +1,8 @@
 # Forge3D Web
 
-Browser-only WebGPU/WASM terrain rendering for the `@forge3d/web` npm package.
+Browser-delivered WebGPU/WASM rendering for the `@forge3d/web` npm package. The
+checked-in runtime currently provides the terrain foundation; the repository's
+functional target is the complete Forge3D capability baseline.
 
 ## Package
 
@@ -25,20 +27,29 @@ runtime.setTerrain({
 runtime.render();
 ```
 
-## Repository Scope
+## Delivery Format And Functional Target
 
-This repository is scoped to browser/npm/WASM delivery:
+This repository publishes browser/npm/WASM artifacts:
 
-- `crates/forge3d-core`: browser-safe Rust support for error mapping, GPU
-  context ownership, camera validation, terrain heightmaps, readback helpers,
-  and byte-source IO.
-- `crates/forge3d-web`: wasm-bindgen runtime, TypeScript facade, Vite example,
-  package docs, API/package contracts, and Playwright browser tests.
-- `.github/workflows/web.yml`: browser CI for wasm checks, package build,
-  typecheck, and Chromium WebGPU tests.
+- `crates/forge3d-core`: browser-safe Rust algorithms, data models, resource
+  owners, and GPU support.
+- `crates/forge3d-web`: wasm-bindgen runtime, TypeScript facade, package docs,
+  examples, API/package contracts, and browser tests.
+- `.github/workflows/web.yml`: wasm, package, parity, and browser verification.
 
-Python wheels, PyO3 bindings, native viewers, desktop IPC, root Python tests,
-and legacy examples/docs are intentionally out of scope for this repo.
+Python wheels, PyO3/NumPy bindings, native executables, desktop IPC, and CMake
+are not shipped delivery mechanisms. Native Forge3D outcomes remain in the
+functional target and must be implemented through browser-native APIs or an
+explicitly tested equivalent.
+
+The [functional-parity plan](docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#exhaustive-parity-matrix)
+and [composite manifest](docs/parity/forge3d-composite-baseline.json) map every
+active capability to a matrix row and W00-W24 owner. Explicit retirements and
+product boundaries are kept in the plan's
+[tombstone ledger](docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#truthfulness-lifecycle-and-tombstone-ledger).
+Current `P`, `G`, `E`, and `G→C` rows are feature gaps, not exclusions. See the
+[functional-parity goals spec](docs/superpowers/specs/2026-06-05-forge3d-browser-webgpu-wasm-migration-goals.md)
+for the status vocabulary.
 
 ## Verification
 
@@ -49,6 +60,7 @@ cargo check -p forge3d-core --target wasm32-unknown-unknown --no-default-feature
 cargo check -p forge3d-web --target wasm32-unknown-unknown
 cd crates\forge3d-web
 npm ci
+npm run verify:parity
 npm run typecheck
 npm run build
 npm run test:api
@@ -78,3 +90,12 @@ remain outside primary support.
 ## License
 
 Apache-2.0 OR MIT.
+
+Geometry, mesh processing, OBJ/STL/glTF, image/HDR IO and building layers: [browser guide](crates/forge3d-web/docs/geometry-mesh-io.md).
+
+BVH/LBVH, SDF/CSG and progressive WebGPU path tracing: [browser guide](crates/forge3d-web/docs/tracing.md).
+Measured W17 checks, tested revisions and package digests: [local evidence](docs/parity/w17-local-evidence.json). Corrections and regression coverage: [W17 review fixes](docs/parity/w17-review-fixes.md).
+
+Follow-up guiding CDF correction: [verification and boundary regression](docs/parity/w17-guiding-fix-evidence.json).
+
+W20 map plates, furniture, vector SVG/PDF exports and the colormap ecosystem are documented in the [cartography guide](crates/forge3d-web/docs/cartography.md), with an [installed-package example](crates/forge3d-web/examples/cartography.html).

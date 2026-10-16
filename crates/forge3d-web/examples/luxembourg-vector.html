@@ -1,0 +1,19 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Luxembourg rail · Forge3D vectors</title>
+<style>body{margin:32px;background:#f3f1eb;color:#262923;font:16px system-ui}main{max-width:960px;margin:auto}h1{font-size:32px;font-weight:500}canvas{width:100%;background:#17221f;border-radius:4px}button{padding:8px 14px;margin:12px 8px 12px 0}small{display:block;line-height:1.5;color:#60645e}pre{white-space:pre-wrap}</style></head><body><main>
+<h1>Luxembourg, by rail</h1><p>Click a railway to inspect its native feature ID. The orange network follows the terrain surface.</p>
+<canvas width="640" height="480" aria-label="Luxembourg railway network draped on terrain"></canvas><button id="clear">Clear selection</button><button id="download">Download PNG</button><small>The network comes from Forge3D’s historical Luxembourg GeoPackage. Relief is a deterministic demonstration heightfield; the original Luxembourg DEM was an external input. Source coordinates were converted offline to EPSG:3035, centered, and scaled. See the fixture’s source metadata for that transform.</small><pre role="status">Loading the network…</pre>
+<script type="module">
+import {Forge3DRuntime,VectorLayers,VectorPicker} from "../src-ts/index.ts";
+const canvas=document.querySelector("canvas"),status=document.querySelector("pre");
+try{
+ const data=await (await fetch("../assets/w12/luxembourg-rail.json")).json();
+ const width=65,height=65,terrain={width,height,spacing:[8,8],domain:[0,60],heights:Float32Array.from({length:width*height},(_,i)=>20+15*Math.sin((i%width)/10)*Math.cos(Math.floor(i/width)/12)+8*Math.cos(i%width/5))};
+ const runtime=await Forge3DRuntime.create(canvas,{devicePixelRatio:1,clearColor:[.06,.1,.08,1]});runtime.setTerrain(terrain);runtime.setCamera({position:[350,430,450],target:[0,20,0],up:[0,1,0],fovYDegrees:45,near:1,far:2000});
+ const layers=new VectorLayers();layers.add({name:"Luxembourg rail",features:data.features,style:{drape:true,drapeOffset:2,lineWidth:2,cap:"round",join:"round",color:[1,.3,.06,1]}});runtime.setVectorLayers(layers,terrain);runtime.render();
+ const picker=new VectorPicker(runtime,layers);picker.bind(canvas,{select:true,invalidate:()=>{runtime.setVectorLayers(layers,terrain);runtime.render();},onPick:hit=>{status.textContent=hit?JSON.stringify(hit,null,2):"No railway at this pixel.";},onError:error=>{status.textContent=String(error);}});
+ document.querySelector("#clear").onclick=()=>{layers.removeSelection("active");runtime.setVectorLayers(layers,terrain);runtime.render();};
+ document.querySelector("#download").onclick=async()=>{const url=URL.createObjectURL(await runtime.screenshot()),a=document.createElement("a");a.href=url;a.download="luxembourg-rail.png";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+ status.textContent=`${data.features.length} railway paths · ${runtime.getVectorReport().effectiveOit}`;window.__luxembourg={runtime,layers,picker,terrain};
+ window.addEventListener("pagehide",()=>{picker.dispose();runtime.dispose();layers.dispose();},{once:true});
+}catch(error){status.textContent=String(error);throw error;}
+</script></main></body></html>

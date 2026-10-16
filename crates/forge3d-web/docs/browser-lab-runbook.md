@@ -304,3 +304,42 @@ inclusive window and occur in that order; exactly 24 hours old is accepted and
 24 hours plus 1 millisecond is rejected. The Mac record additionally carries
 the exact six-device Appium route evidence and its digest into the readiness
 manifest.
+
+## FFX-03 Branded Firefox WebDriver Source Contract
+
+FFX-03 has two required release lanes and two experimental probes. The closed
+release mappings are `firefox-windows-intel12` on `FW-WIN-I12-01` (`win32`,
+`x64`, Firefox 142 or newer) and `firefox-macos-m2` on `FW-MAC-M2-01`
+(`darwin`, `arm64`, Firefox 147 or newer). The optional Nightly mappings are
+`firefox-nightly-linux-intel12` on `FW-LNX-I12-01` and
+`firefox-nightly-linux-rtx3070` on `FW-LNX-NV-01`; both are Linux `x64`
+`classification: probe`, `required: false`, and never create a release-matrix
+record.
+
+The controller supplies the absolute Firefox inventory executable and pinned
+geckodriver 0.36.0. The promoted harness uses exact `selenium-webdriver`
+4.35.0 with Selenium environment overrides disabled, an exact loopback driver
+server, finite 120-second page/script timeouts, and a new profile confined to
+the job temporary root. Release Firefox carries no explicit `dom.webgpu.*`
+user override. Nightly carries exactly `dom.webgpu.enabled=true`. Evidence
+records only the requested override set and bounded relevant observations from
+the generated profile; it does not claim that absence of a user preference is
+an independently queried browser default.
+
+Required proof contains the exact lane/asset/commit/package and observed
+platform/architecture, browser/driver/client versions, live executable and
+arguments, secure nonfallback adapter presentation, native mouse/pointer/
+keyboard/resize/visibility observations, cross-origin 512x512 terrain load,
+decoded nonblank PNG evidence, 50 ordered rendered cleanup cycles, and the
+complete frozen FND-07 benchmark (120 warmups, 600 measured submissions, 601
+RAF timestamps). The proof is validated and written only after Selenium
+session deletion and driver/browser process absence are observed. Nightly
+emits only `PROBE_PASS`, `UNAVAILABLE`, or `PRODUCT_FAILURE`; transport,
+identity, trust, schema, and cleanup failures remain fatal.
+
+Source verification commands are `npm run typecheck`, `npm run test:unit`,
+`npm run test:browser-harness`, `npm run test:infrastructure`,
+`npm run test:release-hardening`, `npm run build`, `npm run test:package`, and
+`npm pack --dry-run --json`. Local source closure does not prove a physical
+Windows/macOS Firefox run, a Linux Nightly probe, lab readiness, or support
+publication. Those remain separate authorized hardware and publication work.

@@ -1,0 +1,439 @@
+{
+  "schemaVersion": 2,
+  "task": "W16",
+  "evidenceStatus": "Local conformance and sustained traversal verified; acceptance pending",
+  "baseCommit": "f0287e5b1594542635f8b088e2ae88d7be8ec435",
+  "fixtureSha256": "0c801dbe8f36cdf3d9f2e3c74b9cb0c08518a7e6c3c400859c30fbce3d89a0cf",
+  "referenceHardwareQualified": false,
+  "openAcceptance": [
+    "Pinned W00 physical reference-profile runs",
+    "Mandatory laz-perf security review"
+  ],
+  "supersededEvidence": "w16-initial-evidence.json",
+  "runtimeBinding": {
+    "fileCount": 269,
+    "sha256": "f27ea661c66c5483a3a15315b61061466f8dff760271d15fe15b9952f6579575",
+    "statement": "Every current dist/asset file matches the observed installed tarball. Documentation updated after this run is not part of this runtime-byte binding."
+  },
+  "checks": {
+    "unit": {
+      "passed": 1077,
+      "files": 64
+    },
+    "browser": {
+      "w16Passed": 8,
+      "neighborW14W15Passed": 26,
+      "defaultSoakSkipped": true
+    },
+    "api": "passed",
+    "parity": {
+      "passed": 15,
+      "lockConsumers": 51
+    },
+    "pinnedGitIndexStreams": 1902,
+    "package": {
+      "docsPassed": 11,
+      "browserHarnessPassed": 118,
+      "infrastructurePassed": 609,
+      "infrastructureSkipped": 1,
+      "contract": "passed",
+      "shell": "Git Bash; Windows Store bash stub cannot run the unrelated selector test"
+    }
+  },
+  "conformance": {
+    "verifiedAt": "2026-10-07T20:41:02.275Z",
+    "browserVersion": "148.0.7778.96",
+    "platform": "win32",
+    "packageSha256": "a6a6e54c20c1c02c38e517858ed998e3a4a7b46c3e65ad61a8f62cc2ef49c994",
+    "counts": {
+      "laz": 110000,
+      "copc": 100000,
+      "ept": 128,
+      "workloadEpt": 1000000,
+      "overviewCopc": 200000
+    },
+    "originalCopcChunks": 5,
+    "workload": {
+      "nodeCount": 1865,
+      "branchNodes": 457,
+      "nodesByDepth": [
+        1,
+        8,
+        64,
+        128,
+        128,
+        256,
+        256,
+        512,
+        512
+      ],
+      "uniqueAdditiveSets": 64,
+      "minCulledNodes": 354,
+      "maxCulledNodes": 1154,
+      "orphanNegativeControl": true,
+      "decodedNodes": 1865,
+      "layerCameras": 64,
+      "cullingDifferences": 64,
+      "referenceOracle": "64 native REPLACE and 64 independent Python ADD/frustum policy records"
+    },
+    "ranges": {
+      "expected": {
+        "count": 200000,
+        "chunks": 9,
+        "root": {
+          "count": 512,
+          "positionsSha256": "677050a451c1a19e2abb00b5ac9f07a8a100c2d06987496df01da1d8ea912949",
+          "colorsSha256": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca",
+          "bounds": {
+            "min": [
+              636075.3,
+              848935.2000000001,
+              406.46000000000004
+            ],
+            "max": [
+              638556.68,
+              849469.42,
+              520.51
+            ]
+          },
+          "firstPositions": [
+            637177.98,
+            849393.9500000001,
+            411.19,
+            637161.74,
+            849197.99,
+            411.09000000000003,
+            637168.99,
+            849065.74,
+            413.62
+          ],
+          "firstColors": [
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0
+          ]
+        },
+        "bounds": {
+          "min": [
+            636075.3,
+            848935.2000000001,
+            406.46000000000004
+          ],
+          "max": [
+            638556.68,
+            849469.42,
+            520.51
+          ]
+        },
+        "view": {
+          "position": [
+            637315.99,
+            849202.31,
+            10389.00500000002
+          ],
+          "viewportHeight": 480,
+          "fovY": 0.7853981633974483,
+          "viewProjection": [
+            1.8106601717798212,
+            0,
+            0,
+            0,
+            0,
+            2.414213562373095,
+            0,
+            0,
+            0,
+            0,
+            -1.0012515644555695,
+            -1,
+            -1153962.679931427,
+            -2050155.7340005615,
+            10302.628085106402,
+            10389.00500000002
+          ]
+        },
+        "options": {
+          "mode": "add",
+          "pointBudget": 5000
+        },
+        "derivation": "Two real Autzen patches; second translated in X. Coarse 512-point sample contains all XYZ extrema and every occupied octant; eight additive leaf buckets. Independently compressed and decoded by laspy/lazrs.",
+        "nodes": [
+          {
+            "key": "0-0-0-0",
+            "pointCount": 512,
+            "sse": 125.446216511
+          },
+          {
+            "key": "1-0-0-1",
+            "pointCount": 1113,
+            "sse": 66.6092626
+          },
+          {
+            "key": "1-1-0-1",
+            "pointCount": 1114,
+            "sse": 66.6092626
+          }
+        ]
+      },
+      "rootPositions": "677050a451c1a19e2abb00b5ac9f07a8a100c2d06987496df01da1d8ea912949",
+      "rootColors": "80422bc3d307b4a25bdafcc84ac7fb01cb55a09810e8b0f37bb12e0edb5c48ca",
+      "coveredPixels": 1913,
+      "points": 2739,
+      "keys": [
+        "0-0-0-0",
+        "1-0-0-1",
+        "1-1-0-1"
+      ],
+      "requests": [
+        {
+          "range": "bytes=0-374",
+          "status": 206,
+          "bytes": 375
+        },
+        {
+          "range": "bytes=375-1828",
+          "status": 206,
+          "bytes": 1454
+        },
+        {
+          "range": "bytes=1263228-1263515",
+          "status": 206,
+          "bytes": 288
+        },
+        {
+          "range": "bytes=1837-10318",
+          "status": 206,
+          "bytes": 8482
+        },
+        {
+          "range": "bytes=1181586-1192861",
+          "status": 206,
+          "bytes": 11276
+        },
+        {
+          "range": "bytes=1192862-1204146",
+          "status": 206,
+          "bytes": 11285
+        }
+      ],
+      "bytes": 33160,
+      "total": 1263516,
+      "fraction": 0.026244226428474193,
+      "negativeKeys": [],
+      "negativeCoveredPixels": 0
+    },
+    "deviceLoss": true,
+    "picks": [
+      {
+        "id": 1,
+        "layerName": "pointcloud",
+        "nodeKey": "0-0-0-0",
+        "pointIndex": 0,
+        "position": [
+          -0.6000000238418579,
+          0,
+          0
+        ],
+        "color": [
+          255,
+          0,
+          0,
+          255
+        ]
+      },
+      {
+        "id": 2,
+        "layerName": "pointcloud",
+        "nodeKey": "0-0-0-0",
+        "pointIndex": 1,
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "color": [
+          0,
+          255,
+          0,
+          255
+        ]
+      },
+      {
+        "id": 3,
+        "layerName": "pointcloud",
+        "nodeKey": "0-0-0-0",
+        "pointIndex": 2,
+        "position": [
+          0.6000000238418579,
+          0,
+          0
+        ],
+        "color": [
+          0,
+          0,
+          255,
+          255
+        ]
+      }
+    ],
+    "styles": {
+      "rgb": [
+        0,
+        255,
+        0
+      ],
+      "elevation": [
+        0,
+        0,
+        255
+      ],
+      "intensity": [
+        127,
+        127,
+        127
+      ],
+      "classification": [
+        51,
+        102,
+        153
+      ]
+    },
+    "pressure": {
+      "code": "RESOURCE_LIMIT_EXCEEDED",
+      "before": "0b52f7c1bf2e7815f915301c38bd59e753cdd4c67bea7c2115505d5f2798d7b7",
+      "after": "0b52f7c1bf2e7815f915301c38bd59e753cdd4c67bea7c2115505d5f2798d7b7",
+      "recovered": "0b52f7c1bf2e7815f915301c38bd59e753cdd4c67bea7c2115505d5f2798d7b7",
+      "baseline": 49360,
+      "bytes": 49360,
+      "pick": {
+        "id": 2,
+        "layerName": "pointcloud",
+        "nodeKey": "0-0-0-0",
+        "pointIndex": 1,
+        "position": [
+          0,
+          0,
+          0
+        ],
+        "color": [
+          0,
+          255,
+          0,
+          255
+        ]
+      },
+      "peak": 65744,
+      "budget": 81920
+    },
+    "meshes": {
+      "covered": 4323,
+      "negative": 0,
+      "triangles": 1
+    },
+    "pageErrors": [],
+    "externalRequests": []
+  },
+  "soak": {
+    "durationMs": 600049.400000006,
+    "frames": 33268,
+    "baseline": 34483120,
+    "maxBytes": 34483120,
+    "maxCpuBytes": 42918791,
+    "stats": {
+      "frames": 33268,
+      "pointsRendered": 299806,
+      "gpuBytes": 34477104,
+      "peakGpuBytes": 42771504,
+      "memoryBudgetBytes": 268435456,
+      "bufferCreations": 27935,
+      "p95Ms": 7.299999997019768,
+      "disposed": false,
+      "deviceLost": false
+    },
+    "frameP95Ms": 14.200000002980232,
+    "selectionCount": 693,
+    "keyframesVisited": 64,
+    "totalPoints": 1000000,
+    "minPoints": 299520,
+    "maxPoints": 299994,
+    "coveredPixels": 97073,
+    "dataset": {
+      "ranges": {
+        "requested": 0,
+        "deduplicated": 0,
+        "coalesced": 0,
+        "httpRequests": 0,
+        "bytesRequested": 0,
+        "bytesTransferred": 0,
+        "memoryHits": 0,
+        "persistentHits": 0,
+        "misses": 0,
+        "cancelled": 0,
+        "failed": 0,
+        "inFlight": 0,
+        "peakInFlight": 0,
+        "queued": 0,
+        "offlineServed": 0
+      },
+      "compressed": {
+        "hits": 0,
+        "misses": 970,
+        "evictions": 0,
+        "bytes": 12742331,
+        "budgetBytes": 33554432,
+        "entries": 970
+      },
+      "decoded": {
+        "cacheUsed": 21176640,
+        "cacheBudget": 33554432,
+        "entryCount": 968,
+        "hits": 26967,
+        "misses": 968,
+        "evictions": 0,
+        "peakBytes": 21176640
+      },
+      "disposed": false,
+      "nodeCount": 1865,
+      "totalPoints": 1000000
+    },
+    "viewport": [
+      1920,
+      1080
+    ],
+    "adapter": {
+      "vendor": "nvidia",
+      "architecture": "ampere",
+      "device": "",
+      "description": ""
+    },
+    "profile": "local-chromium-preflight",
+    "targetProfile": "reference-discrete",
+    "budgets": {
+      "p95Ms": 16.7,
+      "cpuBudgetBytes": 1610612736,
+      "gpuBudgetBytes": 3221225472
+    },
+    "referenceHardwareQualified": false,
+    "qualification": "W00 reference hardware is not inferred from a preflight run",
+    "disposed": {
+      "frames": 33268,
+      "pointsRendered": 0,
+      "gpuBytes": 0,
+      "peakGpuBytes": 42771504,
+      "memoryBudgetBytes": 268435456,
+      "bufferCreations": 27935,
+      "p95Ms": 0,
+      "disposed": true,
+      "deviceLost": false
+    },
+    "verifiedAt": "2026-10-07T20:51:02.574Z",
+    "browserVersion": "148.0.7778.96",
+    "packageSha256": "a6a6e54c20c1c02c38e517858ed998e3a4a7b46c3e65ad61a8f62cc2ef49c994"
+  }
+}

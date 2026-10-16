@@ -5,8 +5,8 @@ use web_sys::{Blob, ReadableStreamDefaultReader, Request, RequestInit, RequestMo
 
 use crate::error::{Forge3DErrorCode, WebError};
 use crate::inputs::{
-    validate_terrain_allocation, TerrainColorRampOptions, TerrainHeightmapOptions,
-    TerrainPhysicalLimits,
+    read_terrain_metadata, validate_terrain_allocation, TerrainColorRampOptions,
+    TerrainHeightmapOptions, TerrainPhysicalLimits,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -38,7 +38,11 @@ pub async fn load_terrain_heightmap_source(
                 "terrain source width * height overflowed",
             )
         })?;
-    let allocation = validate_terrain_allocation(width, height, expected_count, limits)?;
+    let metadata = read_terrain_metadata(&input)?;
+    let clipmap = metadata.geometry.as_ref().is_some_and(|geometry| {
+        geometry.mode == Some(crate::inputs::TerrainGeometryModeOption::Clipmap)
+    }) || metadata.streaming.is_some();
+    let allocation = validate_terrain_allocation(width, height, expected_count, limits, !clipmap)?;
     let expected_bytes = usize::try_from(allocation.sample_bytes).map_err(|_| {
         WebError::new(
             Forge3DErrorCode::ResourceLimitExceeded,
@@ -71,6 +75,20 @@ pub async fn load_terrain_heightmap_source(
         height,
         heights,
         color_ramp,
+        spacing: metadata.spacing,
+        exaggeration: metadata.exaggeration,
+        domain: metadata.domain,
+        nodata: metadata.nodata,
+        crs: metadata.crs,
+        height_ao: metadata.height_ao,
+        sun_visibility: metadata.sun_visibility,
+        debug_view: metadata.debug_view,
+        render_mode: metadata.render_mode,
+        material: None,
+        geometry: metadata.geometry,
+        bounds: metadata.bounds,
+        streaming: metadata.streaming,
+        overlays: metadata.overlays,
     })
 }
 

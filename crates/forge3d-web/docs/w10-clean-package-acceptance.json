@@ -1,0 +1,489 @@
+{
+  "date": "2026-10-01",
+  "command": "npm run test:package-consumer:w10",
+  "exitCode": 0,
+  "result": "PASS",
+  "commit": "abfdfa195da14fa74376090861f92c9a3f74c574",
+  "tarball": "forge3d-web-1.26.3.tgz",
+  "packageSha256": "f74f0fcd8c9109a6a93227676d5831c8f406eaaf0ca3767e7c18a8a0147efba3",
+  "fixture": "test-interactive-viewer.html",
+  "evidenceMode": "required",
+  "gateScope": "w10-package-acceptance",
+  "worktreeCleanAtRun": true,
+  "browser": {
+    "name": "chrome",
+    "version": "154.0.8037.93",
+    "channel": "chrome",
+    "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/154.0.0.0 Safari/537.36"
+  },
+  "os": {
+    "name": "win32",
+    "version": "10.0.26300",
+    "build": "10.0.26300"
+  },
+  "architecture": "x64",
+  "headed": false,
+  "launchArguments": [],
+  "adapter": {
+    "available": true,
+    "fallback": false,
+    "identity": "nvidia / ampere",
+    "limits": {
+      "maxTextureDimension2D": 16384,
+      "maxBufferSize": 2147483648
+    }
+  },
+  "qualification": "Local installed-tarball acceptance including recorded native scene SSIM. Masked-terrain planar reflections and world-cloud divergences remain documented; pinned physical hardware and non-Chromium qualification remain open.",
+  "checks": {
+    "api": "PASS",
+    "releaseHardening": "PASS",
+    "documentation": {
+      "passed": 6,
+      "skipped": 0
+    },
+    "browserHarness": {
+      "passed": 118,
+      "skipped": 0
+    },
+    "installedPackageW03W09": "PASS",
+    "installedPackageW10": "PASS"
+  },
+  "w10": {
+    "render": {
+      "covered": 13248,
+      "plain": "ffc19150ac6069be16854d38f791a6ef95ae712bfed3844860b2f07bf29cca80",
+      "sky": {
+        "delta": 67.4941914876302,
+        "hash": "4bb3ece55234e142fcaa4e900a54991613a0bf32c29d142adc72ab73a82f78be",
+        "report": {
+          "effectHeight": 128,
+          "effectWidth": 192,
+          "gpuBytes": 591632,
+          "height": 128,
+          "historyValid": true,
+          "resolutionScale": 1,
+          "steps": 32,
+          "volumeCount": 0,
+          "waterCount": 0,
+          "width": 192
+        }
+      },
+      "fog": {
+        "delta": 63.23223876953125,
+        "hash": "c171774c11161c2fb288fcc799a8fe8ee89ada3cd56a9136f792ba563b65dc8a",
+        "report": {
+          "effectHeight": 128,
+          "effectWidth": 192,
+          "gpuBytes": 591632,
+          "height": 128,
+          "historyValid": true,
+          "resolutionScale": 1,
+          "steps": 32,
+          "volumeCount": 0,
+          "waterCount": 0,
+          "width": 192
+        }
+      },
+      "volume": {
+        "delta": 66.6704610188802,
+        "hash": "2cb44a0f76c3c3f875444c1a71d7607eea895c96317227a1728f4dcac30e3e8c",
+        "report": {
+          "effectHeight": 128,
+          "effectWidth": 192,
+          "gpuBytes": 591636,
+          "height": 128,
+          "historyValid": true,
+          "resolutionScale": 1,
+          "steps": 32,
+          "volumeCount": 1,
+          "waterCount": 0,
+          "width": 192
+        }
+      },
+      "cloud": {
+        "delta": 57.10344441731771,
+        "hash": "6bef52885656e1b854e6656a5d4b5144c6e8d16d67643b3e623226560838b297",
+        "report": {
+          "effectHeight": 128,
+          "effectWidth": 192,
+          "gpuBytes": 591632,
+          "height": 128,
+          "historyValid": true,
+          "resolutionScale": 1,
+          "steps": 32,
+          "volumeCount": 0,
+          "waterCount": 0,
+          "width": 192
+        },
+        "timeDelta": 0.792694091796875,
+        "repeat": "6bef52885656e1b854e6656a5d4b5144c6e8d16d67643b3e623226560838b297"
+      },
+      "water": {
+        "delta": 67.64823404947917,
+        "hash": "fd4363d398999301218bb8d9031ad0307d286ed574d4e938c63119fbded68be0",
+        "report": {
+          "effectHeight": 128,
+          "effectWidth": 192,
+          "gpuBytes": 788332,
+          "height": 128,
+          "historyValid": true,
+          "resolutionScale": 1,
+          "steps": 32,
+          "volumeCount": 0,
+          "waterCount": 1,
+          "width": 192
+        }
+      },
+      "cleared": "ffc19150ac6069be16854d38f791a6ef95ae712bfed3844860b2f07bf29cca80",
+      "released": 0,
+      "generalCovered": 13336,
+      "generalDelta": 36.27709458108378
+    },
+    "bounds": {
+      "max": 0,
+      "width": 192,
+      "height": 128,
+      "historyValid": true,
+      "outsideMax": 0,
+      "outsidePixels": 21806,
+      "insideChanged": 2228,
+      "baseline": "4bb3ece55234e142fcaa4e900a54991613a0bf32c29d142adc72ab73a82f78be",
+      "outside": "4bb3ece55234e142fcaa4e900a54991613a0bf32c29d142adc72ab73a82f78be"
+    },
+    "masks": {
+      "transparent": true,
+      "frames": {
+        "water-mask": {
+          "nonzero": 35667,
+          "hash": "93a419381af2cceb4f586931e40c33ccdca40f5bd4fea590b37ea30d29feec5e"
+        },
+        "foam": {
+          "nonzero": 12741,
+          "hash": "471bc53891112135eccba078def26ab1a6484638c1e8ebfa03fe380a99c2de7e"
+        },
+        "reflection": {
+          "nonzero": 35667,
+          "hash": "f95201c9eaa69780aebe93db5c7976797c0e13f487d71fbd07df5389020bec33"
+        }
+      },
+      "zero": 0
+    },
+    "budget": {
+      "code": "RESOURCE_LIMIT_EXCEEDED",
+      "before": "1e4e2f6272dc0a1beec02a290b86980c5a303c4111048f946208ee881a5208e4",
+      "after": "1e4e2f6272dc0a1beec02a290b86980c5a303c4111048f946208ee881a5208e4",
+      "bytes": 805332,
+      "afterBytes": 805332,
+      "report": {
+        "effectHeight": 144,
+        "effectWidth": 224,
+        "gpuBytes": 775952,
+        "height": 144,
+        "historyValid": true,
+        "resolutionScale": 1,
+        "steps": 32,
+        "volumeCount": 0,
+        "waterCount": 0,
+        "width": 224
+      },
+      "released": 0,
+      "ledger": {
+        "currentBytes": 342724,
+        "peakBytes": 1118676,
+        "budgetBytes": 2097152,
+        "utilization": 0.1634235382080078,
+        "allocationCount": 14,
+        "categories": {
+          "buffers": 76516,
+          "textures": 266208,
+          "staging": 0,
+          "readback": 0,
+          "tile-cache": 0,
+          "render-bundles": 0,
+          "other": 0
+        },
+        "effectiveQuality": "high",
+        "downgrades": []
+      }
+    },
+    "offline": {
+      "captureRepeat": true,
+      "display": "36ee14f5d1604523c439bd926795f4b1808b698e35d6b254086a16f9f370fbff",
+      "keys": [
+        "frame",
+        "hdrFrame",
+        "aovFrame",
+        "totalSamples",
+        "denoised",
+        "denoiseGuides",
+        "tonemapOperator"
+      ],
+      "nonzero": true,
+      "waterIds": [
+        4294967280
+      ],
+      "report": {
+        "effectHeight": 128,
+        "effectWidth": 192,
+        "gpuBytes": 788332,
+        "height": 128,
+        "historyValid": false,
+        "resolutionScale": 1,
+        "steps": 32,
+        "volumeCount": 0,
+        "waterCount": 1,
+        "width": 192
+      }
+    },
+    "recovery": {
+      "same": true,
+      "report": {
+        "effectHeight": 128,
+        "effectWidth": 192,
+        "gpuBytes": 591636,
+        "height": 128,
+        "historyValid": true,
+        "resolutionScale": 1,
+        "steps": 32,
+        "volumeCount": 0,
+        "waterCount": 1,
+        "width": 192
+      },
+      "attempts": 1
+    },
+    "quality": {
+      "halfDelta": 0.070709228515625,
+      "froxelDelta": 0.13578287760416666,
+      "froxelReport": {
+        "effectHeight": 128,
+        "effectWidth": 192,
+        "gpuBytes": 788232,
+        "height": 128,
+        "historyValid": true,
+        "resolutionScale": 1,
+        "steps": 64,
+        "volumeCount": 0,
+        "waterCount": 0,
+        "width": 192
+      },
+      "valid": true,
+      "cameraReset": false,
+      "freshDelta": 0,
+      "occlusionDelta": 0.024851481119791668,
+      "darkened": 938
+    },
+    "native": [
+      {
+        "name": "sky-0-2",
+        "mse": 0,
+        "psnr": 99,
+        "ssim": 1,
+        "maxAbs": 0,
+        "controlSsim": 0.0005772085576689101
+      },
+      {
+        "name": "sky-0-8",
+        "mse": 0,
+        "psnr": 99,
+        "ssim": 1,
+        "maxAbs": 0,
+        "controlSsim": 0.0005820876554521864
+      },
+      {
+        "name": "sky-1-2",
+        "mse": 0,
+        "psnr": 99,
+        "ssim": 1,
+        "maxAbs": 0,
+        "controlSsim": 0.0002408411212936539
+      },
+      {
+        "name": "sky-1-8",
+        "mse": 0,
+        "psnr": 99,
+        "ssim": 1,
+        "maxAbs": 0,
+        "controlSsim": 0.0018045925432328379
+      },
+      {
+        "name": "cloud-scattering",
+        "mse": 0,
+        "psnr": 99,
+        "ssim": 1,
+        "maxAbs": 0,
+        "controlSsim": 0.0003656488177997676
+      },
+      {
+        "name": "water-waves",
+        "mse": 4.549583366292298e-16,
+        "psnr": 99,
+        "ssim": 0.9999999999996955,
+        "maxAbs": 1.1920928955078125e-07,
+        "controlSsim": 0.00017169380950034073
+      }
+    ],
+    "worker": {
+      "covered": 24576,
+      "delta": 14.028310139973959
+    },
+    "downscale": {
+      "selected": {
+        "effectHeight": 64,
+        "effectWidth": 96,
+        "gpuBytes": 222992,
+        "height": 128,
+        "historyValid": false,
+        "resolutionScale": 0.5,
+        "steps": 32,
+        "volumeCount": 0,
+        "waterCount": 0,
+        "width": 192
+      },
+      "code": "RESOURCE_LIMIT_EXCEEDED",
+      "before": "7a0993b32d6a898889a09dd6c8e0365fbda686f065f66ade89d0b60a0bee37cf",
+      "after": "7a0993b32d6a898889a09dd6c8e0365fbda686f065f66ade89d0b60a0bee37cf",
+      "bytes": 436692,
+      "afterBytes": 436692,
+      "width": 192,
+      "height": 128
+    },
+    "cloudsAndWaves": {
+      "modes": {
+        "billboard": "383901c4d8134024af9555d3d1608c9464bbe46fac7ec2eee46b0ac8c92e5486",
+        "volumetric": "6bef52885656e1b854e6656a5d4b5144c6e8d16d67643b3e623226560838b297",
+        "hybrid": "6bef52885656e1b854e6656a5d4b5144c6e8d16d67643b3e623226560838b297"
+      },
+      "firstSeed": "a1fac6bb19dc0a9ccb919b5cd2642cfb0b11ee9851d6d7fcaaed859be2e412a1",
+      "secondSeed": "b8c15406d6cb586139e16c8fa5c3fd945dd7bd7e8157a7b810d866c226ec61b5",
+      "shadowDelta": 2.7104288736979165,
+      "planarDelta": 0.013956705729166666,
+      "waveDelta": 3.708892822265625
+    },
+    "goldens": {
+      "sky": {
+        "mse": 0,
+        "psnr": 99,
+        "ssim": 1,
+        "maxAbs": 0,
+        "controlSsim": 0.0005400470148813307,
+        "disabledSsim": 1
+      },
+      "cloud": {
+        "mse": 0,
+        "psnr": 99,
+        "ssim": 1,
+        "maxAbs": 0,
+        "controlSsim": 0.0007271424866206961,
+        "disabledSsim": 0.8910005267347758
+      },
+      "water": {
+        "mse": 0,
+        "psnr": 99,
+        "ssim": 1,
+        "maxAbs": 0,
+        "controlSsim": 0.000448973075344394,
+        "disabledSsim": 0.8785820847695697
+      }
+    },
+    "restoreLights": {
+      "baseline": "604531ca9676f8890204f633bae74a98009311bc54bcea0a5de0e3d3be60ac31",
+      "sun": "c6b1663e4687eb8f7380adda5338fa1a141565331f312b215829fded89e741b7",
+      "cleared": "604531ca9676f8890204f633bae74a98009311bc54bcea0a5de0e3d3be60ac31",
+      "sceneCleared": "604531ca9676f8890204f633bae74a98009311bc54bcea0a5de0e3d3be60ac31"
+    },
+    "aerial": {
+      "covered": 13336,
+      "controls": {
+        "turbidity": 43.907268546290744,
+        "groundAlbedo": 5.781318736252749,
+        "sunIntensity": 26.312962407518498,
+        "sunSize": 8.781918616276744,
+        "exposure": 17.799515096980603,
+        "aerialDensity": 3.269146170765847
+      },
+      "disabledDelta": 0,
+      "zeroDelta": 0,
+      "sunriseElevation": 1.24499430948093,
+      "sunriseDelta": 33.11977604479104,
+      "sunriseHash": "79b21c40c86c2c293124594572664241f25866455a66828afae5f044635812a0",
+      "sunriseRepeat": "79b21c40c86c2c293124594572664241f25866455a66828afae5f044635812a0"
+    },
+    "waterControls": {
+      "fresnelPower": 5.685068766276042,
+      "hueShift": 21.255055745442707,
+      "tintStrength": 22.057942708333332,
+      "rippleScale": 0.5191141764322916,
+      "refractionStrength": 4.812774658203125,
+      "shoreAttenuationWidth": 7.921539306640625,
+      "waveDistortionStrength": 0.009368896484375,
+      "disabledMatches": true
+    },
+    "preservation": {
+      "terrain-material-ground": {
+        "display": "c8e2781590fb277357ecba77ff094db0b2dab839e2eccaa676b648e425143673",
+        "hdr": "ea6ada97cad2c32a6146a25146d0f3aac0443d46047565c8dd4904896a320b8f",
+        "covered": 14386
+      },
+      "scatter-probes": {
+        "display": "0b76033224d51b455cbbc5bc1a80df8dbf2f52ca50d38263c840e85fad79cd2e",
+        "hdr": "cb31422b5b375dbe984871b68d7a3779dadac44555a13d02acea4bc29e56f878",
+        "covered": 14552
+      }
+    },
+    "volumeTemporal": {
+      "max": 0,
+      "width": 1920,
+      "height": 1080,
+      "historyValid": true,
+      "outsideMax": 0,
+      "outsidePixels": 1878324,
+      "insideChanged": 158318,
+      "baseline": "8ff80817f961b6c833d0346d4bc7ad62b55db5f278655177357332810d669a17",
+      "outside": "8ff80817f961b6c833d0346d4bc7ad62b55db5f278655177357332810d669a17"
+    },
+    "nativeScenes": {
+      "baseline": {
+        "ssim": 0.9995479547953252,
+        "historicalSsim": null,
+        "meanAbs": 0.016818576388888888
+      },
+      "terrain-atmosphere": {
+        "ssim": 0.9986466335048471,
+        "historicalSsim": 0.9986466335048471,
+        "meanAbs": 0.1698676215277778
+      },
+      "terrain-water": {
+        "ssim": 0.999281012496438,
+        "historicalSsim": 0.999281012496438,
+        "meanAbs": 0.5213216145833334,
+        "controlSsim": 0.8658320965899792
+      },
+      "terrain-water-reflection": {
+        "ssim": 0.9994747329507291,
+        "historicalSsim": 0.9994747329507291,
+        "meanAbs": 0.6159993489583333,
+        "controlSsim": 0.7849509825985352
+      },
+      "cloud": {
+        "ssim": 0.999782751863035,
+        "historicalSsim": null,
+        "meanAbs": 0.015611436631944444,
+        "controlSsim": 0.96162916715274
+      }
+    }
+  },
+  "nativeSceneProvenance": {
+    "terrain": "Installed pinned-source forge3d 1.26.0, with three historical native terrain PNG comparisons",
+    "cloud": "Separately installed official forge3d 1.34.0; pinned 1.26.0 cloud shader cannot execute",
+    "manifest": "tests/golden/w10/native/manifest.json",
+    "historicalScenes": [
+      "terrain-atmosphere",
+      "terrain-water",
+      "terrain-water-reflection"
+    ]
+  },
+  "retainedEvidence": {
+    "browser-gate.json": "43c3986b636d21f10e392c4b478263510ad0d93bca993dc4a5efc70b26e4a4d0",
+    "package-evidence.json": "7063814c660bd6d1b7c41c7506cda0469cda170403ed095be19663afba2d1deb"
+  }
+}

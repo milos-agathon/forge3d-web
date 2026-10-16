@@ -14,7 +14,9 @@ const defaultPolicyPath = join(
 export function captureHostInventory({
   assetId,
   platform,
+  osVersion,
   osBuild,
+  architecture,
   displayServer,
   session,
   browsers,
@@ -45,7 +47,9 @@ export function captureHostInventory({
     schemaVersion: 1,
     assetId,
     platform,
+    osVersion: nonEmpty(osVersion, "osVersion"),
     osBuild: nonEmpty(osBuild, "osBuild"),
+    architecture: nonEmpty(architecture, "architecture"),
     headed: true,
     displayServer: nonEmpty(displayServer, "displayServer"),
     session: {
@@ -118,7 +122,9 @@ export function validateHostInventory(
       "cpu",
       "gpu",
       "ramGiB",
+      "osVersion",
       "osBuild",
+      "architecture",
       "headed",
       "displayServer",
       "session",
@@ -154,7 +160,9 @@ export function validateHostInventory(
     inventory.session?.interactive !== true ||
     inventory.session.locked !== false ||
     inventory.session.remote !== false ||
-    !isObservedOsBuild(inventory.platform, inventory.osBuild) ||
+    typeof inventory.osVersion !== "string" || inventory.osVersion.trim() === "" ||
+    typeof inventory.osBuild !== "string" || inventory.osBuild.trim() === "" ||
+    typeof inventory.architecture !== "string" || inventory.architecture.trim() === "" ||
     !nonEmptyOrFalse(inventory.session.identifier) ||
     !isCanonicalTimestamp(inventory.capturedAt) ||
     !Array.isArray(inventory.browsers) ||
@@ -399,6 +407,16 @@ function validateToolVersions(tools, policy, platform) {
       tools.safaridriverVersion,
       "safaridriverVersion",
     );
+    const stpPath = tools.safariTechnologyPreviewDriverPath;
+    const stpVersion = tools.safariTechnologyPreviewDriverVersion;
+    if ((stpPath === false) !== (stpVersion === false) ||
+        (stpPath !== false && stpPath !== expected.safariTechnologyPreviewDriverPath)) {
+      throw new Error("Safari Technology Preview bundle driver inventory is inconsistent with checked policy");
+    }
+    result.safariTechnologyPreviewDriverPath = stpPath === false
+      ? false : nonEmpty(stpPath, "safariTechnologyPreviewDriverPath");
+    result.safariTechnologyPreviewDriverVersion = stpVersion === false
+      ? false : nonEmpty(stpVersion, "safariTechnologyPreviewDriverVersion");
   }
   return result;
 }
@@ -498,6 +516,8 @@ function assertInventoryTools(tools) {
     "appiumXcuitest",
     "safaridriverPath",
     "safaridriverVersion",
+    "safariTechnologyPreviewDriverPath",
+    "safariTechnologyPreviewDriverVersion",
   ]);
   if (
     !tools ||
@@ -571,15 +591,6 @@ function nonEmptyOrFalse(value) {
   return typeof value === "string" && value.trim() !== "";
 }
 
-function isObservedOsBuild(platform, value) {
-  if (platform === "darwin") {
-    return /^macOS [1-9][0-9]*(?:\.[0-9]+){1,2} build [0-9]{2}[A-Z][0-9A-Z]+$/u.test(
-      value ?? "",
-    );
-  }
-  return nonEmptyOrFalse(value);
-}
-
 function isCanonicalTimestamp(value) {
   if (!nonEmptyOrFalse(value)) return false;
   const parsed = new Date(value);
@@ -631,25 +642,36 @@ export function observeLiveOsBuild(
     ).trim();
   }
   if (platform === "darwin") {
-    const productVersion = execute(
-      "/usr/bin/sw_vers",
-      ["-productVersion"],
-      { encoding: "utf8" },
-    ).trim();
-    const buildVersion = execute(
+    return `macOS build ${execute(
       "/usr/bin/sw_vers",
       ["-buildVersion"],
       { encoding: "utf8" },
-    ).trim();
-    if (
-      !/^[1-9][0-9]*(?:\.[0-9]+){1,2}$/u.test(productVersion) ||
-      !/^[0-9]{2}[A-Z][0-9A-Z]+$/u.test(buildVersion)
-    ) {
-      throw new Error("macOS product version or build observation is invalid");
-    }
-    return `macOS ${productVersion} build ${buildVersion}`;
+    ).trim()}`;
   }
   return execute("/usr/bin/lsb_release", ["-ds"], { encoding: "utf8" }).trim();
+}
+
+export function observeLiveOsVersion(
+  platform,
+  { execute = execFileSync } = {},
+) {
+  if (platform === "win32") {
+    return execute("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", "(Get-CimInstance Win32_OperatingSystem).Version"], { encoding: "utf8" }).trim();
+  }
+  if (platform === "darwin") {
+    return execute("/usr/bin/sw_vers", ["-productVersion"], { encoding: "utf8" }).trim();
+  }
+  return execute("/usr/bin/uname", ["-r"], { encoding: "utf8" }).trim();
+}
+
+export function observeLiveArchitecture(
+  platform,
+  { execute = execFileSync } = {},
+) {
+  if (platform === "win32") {
+    return execute("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", "[System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()"], { encoding: "utf8" }).trim().toLowerCase();
+  }
+  return execute("/usr/bin/uname", ["-m"], { encoding: "utf8" }).trim();
 }
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
@@ -671,7 +693,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
     ...resolved,
     assetId: args.get("--asset-id"),
     platform,
+    osVersion: observeLiveOsVersion(platform),
     osBuild: observeLiveOsBuild(platform),
+    architecture: observeLiveArchitecture(platform),
     session: observeLiveSession(platform),
     policy,
   });

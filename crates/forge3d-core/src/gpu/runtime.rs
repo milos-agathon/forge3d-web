@@ -8,6 +8,7 @@ use crate::error::{Forge3dError, Result};
 pub struct GpuRuntimeOptions {
     pub power_preference: wgpu::PowerPreference,
     pub required_features: wgpu::Features,
+    pub optional_features: wgpu::Features,
     pub required_limits: wgpu::Limits,
     pub label: Option<String>,
 }
@@ -17,6 +18,7 @@ impl Default for GpuRuntimeOptions {
         Self {
             power_preference: wgpu::PowerPreference::HighPerformance,
             required_features: wgpu::Features::empty(),
+            optional_features: wgpu::Features::empty(),
             required_limits: wgpu::Limits::downlevel_webgl2_defaults(),
             label: None,
         }
@@ -208,11 +210,27 @@ impl GpuRuntime {
             .await
             .map_err(|_| Forge3dError::AdapterUnavailable)?;
 
+        // W08 (E0): the extended terrain bind-group layout needs more than
+        // the WebGPU default of 16 fragment-visible sampled textures, and
+        // the virtual-texture feedback path needs at least 3 storage buffers
+        // per stage. wgpu's WebGPU backend passes `required_limits` verbatim
+        // into `GPUDeviceDescriptor.requiredLimits`, so request no more than
+        // the adapter reports; every other limit stays exactly as requested.
+        let adapter_limits = adapter.limits();
+        let mut required_limits = options.required_limits.clone();
+        required_limits.max_sampled_textures_per_shader_stage = required_limits
+            .max_sampled_textures_per_shader_stage
+            .max(adapter_limits.max_sampled_textures_per_shader_stage.min(24));
+        required_limits.max_storage_buffers_per_shader_stage = required_limits
+            .max_storage_buffers_per_shader_stage
+            .max(adapter_limits.max_storage_buffers_per_shader_stage.min(3));
+
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
                 label: options.label.as_deref(),
-                required_features: options.required_features,
-                required_limits: options.required_limits.clone(),
+                required_features: options.required_features
+                    | (options.optional_features & adapter.features()),
+                required_limits,
                 experimental_features: wgpu::ExperimentalFeatures::disabled(),
                 memory_hints: wgpu::MemoryHints::Performance,
                 trace: wgpu::Trace::Off,
@@ -267,6 +285,7 @@ mod tests {
             wgpu::PowerPreference::HighPerformance
         );
         assert!(options.required_features.is_empty());
+        assert!(options.optional_features.is_empty());
         assert_eq!(
             options.required_limits.max_texture_dimension_2d,
             wgpu::Limits::downlevel_webgl2_defaults().max_texture_dimension_2d

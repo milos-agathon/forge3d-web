@@ -1,0 +1,9 @@
+{
+  "capture": "Exact JSON records from worker-route-probe.mjs stdout, session 9349; default launch preferences and real 110000-point fixture",
+  "results": [
+    {"engine":"chromium","surface":"page","hits":1,"count":110000,"telemetry":1},
+    {"engine":"chromium","surface":"context","hits":1,"count":110000,"telemetry":1},
+    {"engine":"firefox","surface":"page","hits":0,"count":110000,"telemetry":0},
+    {"engine":"firefox","surface":"context","hits":0,"count":110000,"telemetry":0}
+  ]
+}

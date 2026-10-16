@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Forge3D W02 Runtime Test</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+      }
+
+      canvas {
+        display: block;
+        width: 96px;
+        height: 64px;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="forge3d-w02-canvas" width="96" height="64"></canvas>
+    <canvas id="forge3d-w02-worker-canvas" width="96" height="64"></canvas>
+    <script type="module">
+      import {
+        Forge3DError,
+        Forge3DOffscreenRenderer,
+        Forge3DRuntime,
+        Forge3DScene,
+        Forge3DSession,
+        Forge3DWorkerRenderer,
+      } from "../src-ts/index.ts";
+      import { setSessionRuntimeFactoryForTests } from "../src-ts/session.ts";
+
+      const WIDTH = 96;
+      const HEIGHT = 64;
+      const mainCanvas = document.querySelector("#forge3d-w02-canvas");
+      const workerCanvas = document.querySelector(
+        "#forge3d-w02-worker-canvas",
+      );
+
+      const CAMERA = {
+        position: [0, 4, 9],
+        target: [0, 0, 0],
+        up: [0, 1, 0],
+        fovYDegrees: 50,
+        near: 0.1,
+        far: 100,
+      };
+
+      function buildScene(terrainSize) {
+        const scene = Forge3DScene.create();
+        const heights = new Float32Array(terrainSize * terrainSize);
+        for (let index = 0; index < heights.length; index += 1) {
+          heights[index] = Math.sin(index * 1.7) * 0.5 + 0.5;
+        }
+        scene.addTerrain(
+          { width: terrainSize, height: terrainSize, heights },
+          { name: "terrain" },
+        );
+        scene.addGroundPlane({
+          name: "ground",
+          size: [8, 8],
+          height: -0.5,
+          color: [0.2, 0.4, 0.25, 1],
+        });
+        scene.addTextMesh({
+          name: "label",
+          text: "W02",
+          size: 0.5,
+          color: [1, 1, 1, 1],
+          transform: { translation: [-1.5, 1, 0] },
+        });
+        scene.addOverlay({
+          name: "hud",
+          bounds: [4, 4, 48, 20],
+          color: [1, 0, 0, 0.75],
+          zIndex: 0,
+        });
+        scene.addPass({
+          name: "custom-noop",
+          kind: "render",
+          reads: ["color"],
+        });
+        return scene;
+      }
+
+      function countAlpha(bytes) {
+        let count = 0;
+        for (let index = 3; index < bytes.length; index += 4) {
+          if (bytes[index] > 0) {
+            count += 1;
+          }
+        }
+        return count;
+      }
+
+      async function drainStream(stream) {
+        const reader = stream.getReader();
+        let bytes = 0;
+        let chunks = 0;
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) {
+            return { bytes, chunks };
+          }
+          bytes += value.byteLength;
+          chunks += 1;
+        }
+      }
+
+      window.__forge3dW02Probe = async () => {
+        if (!navigator.gpu) {
+          return { supported: false };
+        }
+
+        const scene = buildScene(3);
+        const session = await Forge3DSession.create(mainCanvas, {
+          runtime: {
+            width: WIDTH,
+            height: HEIGHT,
+            devicePixelRatio: 1,
+            diagnostics: true,
+          },
+          recovery: { deviceLoss: "once" },
+        });
+        await session.whenReady();
+        session.setScene(scene);
+        session.setCamera(CAMERA);
+        const mainRendered = session.render();
+        const mainRgba = await session.readRgba();
+        const capabilities = session.getCapabilities();
+        const stats = session.getRenderStats();
+        const memory = session.getMemoryReport();
+        const plan = session.getScene().getRenderPlan();
+
+        const offscreen = await Forge3DOffscreenRenderer.create({
+          width: WIDTH,
+          height: HEIGHT,
+          runtime: { diagnostics: true },
+        });
+        offscreen.setScene(scene);
+        const offscreenRendered = offscreen.render();
+        const rgbaOutput = await offscreen.capture("rgba8");
+        const blobOutput = await offscreen.capture("blob");
+        const bitmapOutput = await offscreen.capture("image-bitmap");
+        const bitmapInfo = {
+          width: bitmapOutput.value.width,
+          height: bitmapOutput.value.height,
+        };
+        bitmapOutput.value.close();
+        const streamOutput = await offscreen.capture("stream");
+        const stream = await drainStream(streamOutput.value);
+        offscreen.dispose();
+
+        const worker = new Worker(
+          new URL("./test-w02-worker.ts", import.meta.url),
+          { type: "module" },
+        );
+        let workerResult;
+        try {
+          const renderer = await Forge3DWorkerRenderer.create(
+            workerCanvas,
+            { worker },
+          );
+          await renderer.setScene(scene);
+          await renderer.resize({
+            width: WIDTH,
+            height: HEIGHT,
+            devicePixelRatio: 1,
+          });
+          const workerRendered = await renderer.render();
+          const workerRgba = await renderer.readRgba();
+          const workerBlob = await renderer.screenshot();
+          const diagnostics = renderer.getDiagnostics();
+          renderer.dispose();
+          const disposedDiagnostics = renderer.getDiagnostics();
+          workerResult = {
+            rendered: workerRendered,
+            rgbaBytes: workerRgba.byteLength,
+            rgbaAlpha: countAlpha(workerRgba),
+            blobType: workerBlob.type,
+            blobSize: workerBlob.size,
+            diagnostics,
+            disposedDiagnostics,
+          };
+        } finally {
+          worker.terminate();
+        }
+
+        const postDisposeMemory = session.getMemoryReport();
+        session.dispose();
+        return {
+          supported: true,
+          main: {
+            rendered: mainRendered,
+            rgbaBytes: mainRgba.byteLength,
+            rgbaAlpha: countAlpha(mainRgba),
+          },
+          capabilities,
+          stats,
+          memory,
+          postDisposeMemory,
+          planPasses: plan.passes,
+          offscreen: {
+            rendered: offscreenRendered,
+            rgbaBytes: rgbaOutput.value.byteLength,
+            rgbaAlpha: countAlpha(rgbaOutput.value),
+            rgbaWidth: rgbaOutput.width,
+            rgbaHeight: rgbaOutput.height,
+            blobType: blobOutput.value.type,
+            blobSize: blobOutput.value.size,
+            bitmap: bitmapInfo,
+            streamBytes: stream.bytes,
+            streamChunks: stream.chunks,
+            disposed: offscreen.disposed,
+          },
+          worker: workerResult,
+        };
+      };
+
+      window.__forge3dW02LossProbe = async (cycles = 30) => {
+        if (!navigator.gpu) {
+          return { supported: false };
+        }
+        const wrappers = [];
+        setSessionRuntimeFactoryForTests(async (canvasElement, options) => {
+          const inner = await Forge3DRuntime.create(canvasElement, options);
+          const wrapper = {
+            inner,
+            loss: undefined,
+            get disposed() {
+              return inner.disposed;
+            },
+            getCapabilities: () => inner.getCapabilities(),
+            setScene: (snapshot) => inner.setScene(snapshot),
+            setCamera: (camera) => inner.setCamera(camera),
+            setDeviceLostHandler: (handler) => {
+              wrapper.loss = handler;
+            },
+            resize: (size) => inner.resize(size),
+            render: () => inner.render(),
+            screenshot: () => inner.screenshot(),
+            readRgba: () => inner.readRgba(),
+            getRenderStats: () => inner.getRenderStats(),
+            getMemoryReport: () => inner.getMemoryReport(),
+            dispose: () => inner.dispose(),
+            lose: () => {
+              wrapper.loss?.(
+                new Forge3DError("DEVICE_LOST", "simulated device loss"),
+              );
+            },
+          };
+          wrappers.push(wrapper);
+          return wrapper;
+        });
+        try {
+          let lastSession;
+          for (let cycle = 0; cycle < cycles; cycle += 1) {
+            const canvas = document.createElement("canvas");
+            canvas.width = 32;
+            canvas.height = 32;
+            const session = await Forge3DSession.create(canvas, {
+              runtime: {
+                width: 32,
+                height: 32,
+                devicePixelRatio: 1,
+                diagnostics: true,
+              },
+              recovery: { deviceLoss: "once" },
+            });
+            await session.whenReady();
+            session.setScene(buildScene(2));
+            session.render();
+            wrappers[wrappers.length - 1].lose();
+            await session.whenReady();
+            session.render();
+            session.dispose();
+            lastSession = session;
+            const report = session.getMemoryReport();
+            const categoryTotal = Object.values(report.categories).reduce(
+              (sum, value) => sum + value,
+              0,
+            );
+            if (
+              report.currentBytes !== 0 ||
+              report.allocationCount !== 0 ||
+              categoryTotal !== 0
+            ) {
+              return {
+                supported: true,
+                ok: false,
+                cycle,
+                report,
+              };
+            }
+          }
+          const last = wrappers[wrappers.length - 1];
+          const nativeMemory = last.inner.getMemoryReport();
+          const sessionMemory = lastSession.getMemoryReport();
+          return {
+            supported: true,
+            ok: true,
+            cycles,
+            runtimeCount: wrappers.length,
+            activeRuntimes: wrappers.filter(
+              (wrapper) => !wrapper.inner.disposed,
+            ).length,
+            nativeMemory,
+            sessionMemory,
+          };
+        } finally {
+          setSessionRuntimeFactoryForTests(undefined);
+        }
+      };
+    </script>
+  </body>
+</html>

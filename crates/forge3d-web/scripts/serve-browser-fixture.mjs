@@ -5,7 +5,23 @@ import { fileURLToPath } from "node:url";
 
 const applicationRoutes = new Map([
   ["index.html", { file: "index.html", contentType: "text/html; charset=utf-8" }],
+  [
+    "test-lifecycle-away.html",
+    { file: "test-lifecycle-away.html", contentType: "text/html; charset=utf-8" },
+  ],
   ["app.js", { file: "app.js", contentType: "text/javascript; charset=utf-8" }],
+  [
+    "lifecycle-viewer.html",
+    { file: "lifecycle-viewer.html", contentType: "text/html; charset=utf-8", lifecycle: true },
+  ],
+  [
+    "lifecycle-away.html",
+    { file: "lifecycle-away.html", contentType: "text/html; charset=utf-8", lifecycle: true },
+  ],
+  [
+    "viewer-bfcache-lifecycle.js",
+    { file: "viewer-bfcache-lifecycle.js", contentType: "text/javascript; charset=utf-8", lifecycle: true },
+  ],
   [
     "adapter-attestation.js",
     { file: "adapter-attestation.js", contentType: "text/javascript; charset=utf-8" },
@@ -29,6 +45,10 @@ const applicationRoutes = new Map([
   [
     "chr04-lanes.js",
     { file: "chr04-lanes.js", contentType: "text/javascript; charset=utf-8" },
+  ],
+  [
+    "ffx03-lanes.js",
+    { file: "ffx03-lanes.js", contentType: "text/javascript; charset=utf-8" },
   ],
   [
     "package.sha256",
@@ -153,7 +173,7 @@ function applicationResponse({ fixtureRoot, relativePath, request, applicationHo
     route,
     request,
     headers: {
-      ...commonHeaders(),
+      ...commonHeaders(route.lifecycle === true),
       "Content-Type": route.contentType,
       "Cross-Origin-Resource-Policy": "same-origin",
     },
@@ -265,6 +285,10 @@ function fileResponse({ fixtureRoot, route, request, headers }) {
 function resolveApplicationRoute(relativePath) {
   const fixed = applicationRoutes.get(relativePath);
   if (fixed) return fixed;
+  if (/^examples\/(?:pointcloud-tiles\.html|w16-(?:pointcloud|worker)\.js)$/u.test(relativePath))
+    return { file: relativePath, contentType: relativePath.endsWith('.html') ? 'text/html; charset=utf-8' : 'text/javascript; charset=utf-8' };
+  if (/^tests\/fixtures\/w16\/(?:[a-z0-9_-]+\/)*[a-zA-Z0-9_.-]+\.(?:json|bin|laz|pnts|b3dm)$/u.test(relativePath))
+    return { file: relativePath, contentType: relativePath.endsWith('.json') ? 'application/json; charset=utf-8' : 'application/octet-stream', ranges: true };
   if (
     /^node_modules\/@forge3d\/web\/dist\/[a-z0-9_-]+\.(?:js|wasm)$/u.test(
       relativePath,
@@ -305,9 +329,9 @@ function parseRange(value, length) {
   return { start, end };
 }
 
-function commonHeaders() {
+function commonHeaders(cacheCompatible = false) {
   return {
-    "Cache-Control": "no-store",
+    "Cache-Control": cacheCompatible ? "private, max-age=0" : "no-store",
     "X-Content-Type-Options": "nosniff",
   };
 }

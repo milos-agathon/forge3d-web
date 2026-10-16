@@ -1,0 +1,46 @@
+
+> @forge3d/web@1.26.3 test:w16
+> vitest run tests/unit/w16-pointcloud.test.ts tests/unit/w16-tiles.test.ts tests/unit/w16-provenance.test.ts tests/unit/w16-laz-admission.test.ts && playwright test tests/playwright/w16_pointcloud.spec.ts --project=chromium-preflight
+
+
+ RUN  v4.0.18 D:/forge3d-web/.worktrees/w16/crates/forge3d-web
+
+ ✓ tests/unit/w16-provenance.test.ts (1 test) 143ms
+ ✓ tests/unit/w16-tiles.test.ts (18 tests) 174ms
+ ✓ tests/unit/w16-pointcloud.test.ts (28 tests) 840ms
+     ✓ matches recorded real-data native camera keys/counts and quantized SSE exactly  713ms
+ ✓ tests/unit/w16-laz-admission.test.ts (10 tests) 1697ms
+     ✓ rejects public and supplied-pool subviews whose cloned backing stores exceed the remaining budget  1466ms
+
+ Test Files  4 passed (4)
+      Tests  57 passed (57)
+   Start at  10:11:50
+   Duration  4.18s (transform 3.16s, setup 0ms, import 7.03s, tests 2.85s, environment 0ms)
+
+[WebServer] (node:42788) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 15 tests using 1 worker
+
+(node:48140) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:48140) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ok  1 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:20:3 › W16 source: independent LAZ/COPC/EPT counts, positions, colors and W15 b3dm (2.6s)
+  ok  2 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:49:3 › W16 source: abort and deadline terminate stuck WASM workers, then decode real LAZ (2.8s)
+  ok  3 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:119:3 › W16 source: initial view uses <=25% ranged bytes and typed failures (1.2s)
+  ok  4 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:146:3 › W16 source: public file and chunk decoders hard-stop stuck WASM and bound waiting callers (4.6s)
+  ok  5 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:216:3 › W16 source: a supplied worker pool creates a fresh native heap for every decode (898ms)
+  ok  6 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:274:3 › W16 source: covered point colors, aligned GPU picking, resize, recovery and allocation cycles (997ms)
+  ok  7 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:333:3 › W16 source: branching native REPLACE and independent ADD/frustum cameras, B3DM integration (12.2s)
+  ok  8 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:20:3 › W16 dist: independent LAZ/COPC/EPT counts, positions, colors and W15 b3dm (2.4s)
+  ok  9 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:49:3 › W16 dist: abort and deadline terminate stuck WASM workers, then decode real LAZ (2.9s)
+  ok 10 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:119:3 › W16 dist: initial view uses <=25% ranged bytes and typed failures (1.3s)
+  ok 11 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:146:3 › W16 dist: public file and chunk decoders hard-stop stuck WASM and bound waiting callers (4.8s)
+  ok 12 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:216:3 › W16 dist: a supplied worker pool creates a fresh native heap for every decode (1.1s)
+  ok 13 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:274:3 › W16 dist: covered point colors, aligned GPU picking, resize, recovery and allocation cycles (1.1s)
+  ok 14 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:333:3 › W16 dist: branching native REPLACE and independent ADD/frustum cameras, B3DM integration (11.7s)
+  -  15 [chromium-preflight] › tests\playwright\w16_pointcloud.spec.ts:371:1 › W16 10-minute real-data camera traversal retains budget and records adapter
+
+  1 skipped
+  14 passed (56.6s)

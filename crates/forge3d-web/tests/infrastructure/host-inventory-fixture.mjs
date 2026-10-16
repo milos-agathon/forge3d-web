@@ -23,10 +23,9 @@ export function exactHostInventory(matrix, hostId) {
     cpu: host.cpu,
     gpu: host.gpu,
     ramGiB: host.ramGiB,
-    osBuild:
-      host.os.family === "macOS"
-        ? "macOS 26.0 build 25A456"
-        : `${host.os.family} fixture build`,
+    osVersion: host.os.family === "macOS" ? "26.0" : "fixture-version",
+    osBuild: `${host.os.family} fixture build`,
+    architecture: host.os.family === "macOS" ? "arm64" : "x64",
     headed: true,
     displayServer: host.displayServer,
     session: {

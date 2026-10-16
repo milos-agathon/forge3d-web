@@ -1,0 +1,91 @@
+{
+  "commit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+  "files": [
+    {
+      "path": "python/forge3d/map_plate.py",
+      "sha256": "189f2d8bb046269e30291c2e959edf48102e950c55cec83342702b95931d123e"
+    },
+    {
+      "path": "python/forge3d/legend.py",
+      "sha256": "c21a2a6734232001f2268902df201577ffdf30c22e03fe9406ba11d3fbef3f1f"
+    },
+    {
+      "path": "python/forge3d/scale_bar.py",
+      "sha256": "97307ed6bd0674dec904711afa0a593d63fae27793ec2fca01bff2269119fb35"
+    },
+    {
+      "path": "python/forge3d/north_arrow.py",
+      "sha256": "0368d413faad935d769f146d5cf16e7fc31ccb209e0caa2ce06cfd555d4db543"
+    },
+    {
+      "path": "python/forge3d/export.py",
+      "sha256": "4106e31d330167e123fcf5d9158d6816ae85e948d146228755d27f3e07653f0c"
+    },
+    {
+      "path": "python/forge3d/colors.py",
+      "sha256": "e007dca4fbf1dc01b19f55fc2b320d6022f32f17e31f049d43f2cec10ce47470"
+    },
+    {
+      "path": "python/forge3d/colormaps/core.py",
+      "sha256": "3b5764e619949ed05f612b338764e3b0e766289b9bf117cf6b54fb2b5114da84"
+    },
+    {
+      "path": "python/forge3d/colormaps/core_palettes.py",
+      "sha256": "52f0904c3cd642c0be39d10d54f5694a56431e2f074fd8077a1b15094ce6c3e2"
+    },
+    {
+      "path": "python/forge3d/colormaps/providers.py",
+      "sha256": "95884b33232f2f7ec907b04531d27a10fea11db81cb07f56408da90b9bd3191c"
+    },
+    {
+      "path": "python/forge3d/colormaps/registry.py",
+      "sha256": "788d3605fcbafcb278105609f8d101dcefed62b173ad8fba6f015ee92d1abf11"
+    },
+    {
+      "path": "python/forge3d/colormaps/io.py",
+      "sha256": "4165cea2ce1a1b049c075e76e02d4162dad3fcab2972e62766d8f706961e721b"
+    },
+    {
+      "path": "src/export/projection.rs",
+      "sha256": "571c4ac846dc24c0e9ecf26e04f0511505f306f4aa321707534eaece4e713304"
+    },
+    {
+      "path": "src/export/svg.rs",
+      "sha256": "009b5cda7b640ce1a3f743222ee849d3f29df0df5cd15b0f65f458841315d277"
+    },
+    {
+      "path": "src/export/svg_labels.rs",
+      "sha256": "c357b36fce63e332b4bf4b7d5f1f57dff17bfb71502695a67efe0bde672a6aa7"
+    },
+    {
+      "path": "tests/test_map_plate_layout.py",
+      "sha256": "0f0c1c328dde93eac3849c0314b4e50f88259cc496862275cb2076ac6b37e2c6"
+    },
+    {
+      "path": "tests/test_export_svg.py",
+      "sha256": "99fda85697d2d5fe2ee52aab17e032b9ce488ec680c4f0dbaf8e9cbd4c2e9981"
+    },
+    {
+      "path": "tests/test_export_projection.py",
+      "sha256": "7b2853db596d8e10eb55d46d6d911da94bc37acb2766f0697eb6fa85925d9655"
+    },
+    {
+      "path": "python/forge3d/colormaps/__init__.py",
+      "sha256": "ad4b8fa6cde9b3f871fd7077b8c53f342a3e22da33dc4c77d673d175159f4334"
+    },
+    {
+      "path": "src/export/mod.rs",
+      "sha256": "3f94d3a603b3e0c18e0265bd480ddf6720b3221f30802831c6d111dfaea3e698"
+    },
+    {
+      "path": "tests/test_colormaps_core.py",
+      "sha256": "9bb3a5dcb730f2f9c3dcfba57802cb2995260cd513e6a518cc6e7292f733a541",
+      "commit": "d5f0b0df3766b7da9dc0d95c299afdbf2008b367"
+    },
+    {
+      "path": "tests/test_colormaps_cvd.py",
+      "sha256": "3ddf47b8e07e9dea1a6a35d52d6ea192ec0a7b8c15994e13ecb947297d988b46",
+      "commit": "d5f0b0df3766b7da9dc0d95c299afdbf2008b367"
+    }
+  ]
+}

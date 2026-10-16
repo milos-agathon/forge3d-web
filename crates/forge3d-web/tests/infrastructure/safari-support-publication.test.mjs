@@ -17,7 +17,7 @@ test("full 24-row input emits one deterministic narrow Safari support document",
   assert.equal(first.sha256, second.sha256);
   assert.match(first.document, /Safari 26\.0 stable/u);
   assert.doesNotMatch(first.document, /minimum qualified/u);
-  assert.match(first.document, /macOS 26\.0 build 25A456/u);
+  assert.match(first.document, /macOS 26\.0 build 25A123/u);
   assert.match(first.document, /Apple M2/u);
   assert.match(first.document, /package-forge3d-web-1\.26\.3\.tgz/u);
   assert.match(first.document, /manual-media-701-703-safari-proof\.mp4/u);
@@ -147,8 +147,10 @@ test("each Safari record is bound to its own safe stable browser and driver inve
       if (side === "manual") {
         pair.manual.session.hostInventory = structuredClone(pair.manual.hostInventory);
       }
-      rebind(input);
-      assert.throws(() => createSafariSupportPublication(input));
+      assert.throws(() => {
+        rebind(input);
+        createSafariSupportPublication(input);
+      });
     }
   }
 });
@@ -239,6 +241,31 @@ test("automation/manual mismatch, legacy/missing/extra checklist, and media subs
   assert.throws(() => createSafariSupportPublication(media), /media/u);
 });
 
+test("Safari publication requires the observed macOS version, build and architecture", () => {
+  for (const [field, value] of [
+    ["osVersion", "25.7"],
+    ["osVersion", "latest"],
+    ["osBuild", "macOS 26.0 build 25A123"],
+    ["architecture", "x64"],
+  ]) {
+    const input = validSafariPublicationInput();
+    const { automated, manual } = safariPair(input);
+    automated.system[field] = value;
+    automated.hostInventory[field] = value;
+    automated.saf03Proof.system[field] = value;
+    manual.hostInventory[field] = value;
+    manual.session.hostInventory[field] = value;
+    if (field === "osBuild") {
+      manual.system.build = value;
+      manual.session.system.build = value;
+    }
+    assert.throws(() => {
+      rebind(input);
+      createSafariSupportPublication(input);
+    });
+  }
+});
+
 function safariPair(input) {
   return {
     automated: input.records.find((record) => record.key === "automated:FW-MAC-M2-01:safari-macos-m2"),
@@ -254,6 +281,7 @@ function setBrowser({ automated, manual }, browser) {
 
 function setDriverVersion({ automated, manual }, version) {
   automated.driver.version = version;
+  automated.saf03Proof.driver.version = version;
   manual.driver.version = version;
   manual.session.driver.version = version;
   automated.hostInventory.tools.safaridriverVersion = version;

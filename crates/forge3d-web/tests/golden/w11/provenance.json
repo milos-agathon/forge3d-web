@@ -1,0 +1,105 @@
+{
+  "baselineCommit": "bf8db93233e5158f6d226991fc5d230832c2d806",
+  "sources": [
+    {
+      "source": "src/shaders/ssao/common.wgsl",
+      "file": "src__shaders__ssao__common.wgsl",
+      "sha256": "b197d3a5c99d5d0de5fe571ccca911979d4c245ce37dcbfd94cbeb899a8f3d05"
+    },
+    {
+      "source": "src/shaders/ssao/ssao.wgsl",
+      "file": "src__shaders__ssao__ssao.wgsl",
+      "sha256": "6561740551ba2b5ddfe82abdb01dd6b680a869c0bb7d2db1a92a9c6b742e16e5"
+    },
+    {
+      "source": "src/shaders/ssao/gtao.wgsl",
+      "file": "src__shaders__ssao__gtao.wgsl",
+      "sha256": "7af55185707ac1bc2f030bffb8355fc3c36aca8797389fd79dd1083b460288fd"
+    },
+    {
+      "source": "src/shaders/bloom_brightpass.wgsl",
+      "file": "src__shaders__bloom_brightpass.wgsl",
+      "sha256": "1256a03da1ff1422544772dad4bb75cf64eacb307071971fc17d4989f444afc7"
+    },
+    {
+      "source": "src/shaders/bloom_blur_h.wgsl",
+      "file": "src__shaders__bloom_blur_h.wgsl",
+      "sha256": "4e82ddb8c382c9454d91e6e64e3ffbc1b7e2713144a552c6bd2110ce2cde6a1d"
+    },
+    {
+      "source": "src/shaders/bloom_blur_v.wgsl",
+      "file": "src__shaders__bloom_blur_v.wgsl",
+      "sha256": "a2f30e22fcbcfe54c9a6bc65f199a1d2cb4fcd1944504f0cbe2f4d286c8ebaeb"
+    },
+    {
+      "source": "src/shaders/bloom_composite.wgsl",
+      "file": "src__shaders__bloom_composite.wgsl",
+      "sha256": "1a98c953dd963e50264bb98455846eeccdff12ccf6f7a83cded609b60ac0e3b4"
+    },
+    {
+      "source": "src/shaders/dof.wgsl",
+      "file": "src__shaders__dof.wgsl",
+      "sha256": "dfe312f6252102e36300dc71d2f3099e41c475f709a258b2cb482d81a8725851"
+    },
+    {
+      "source": "src/shaders/lens_effects.wgsl",
+      "file": "src__shaders__lens_effects.wgsl",
+      "sha256": "ca031eaf68608bdf5f0261b5f1770b7b81d21ac3bef56fcda1e06cb03463c4f5"
+    },
+    {
+      "source": "src/core/tonemap.rs",
+      "file": "src__core__tonemap.rs",
+      "sha256": "d14f3476c9b29c5b25c0e289369f88ae7df0a3a994519a10fef429f3f580cbd4"
+    },
+    {
+      "source": "src/core/screen_space_effects/settings.rs",
+      "file": "src__core__screen_space_effects__settings.rs",
+      "sha256": "e26dbd923fc883b30d84c562b757ba599d7b9aadfedb304728e3ef3271a64ed8"
+    },
+    {
+      "source": "src/shaders/ssgi/shade.wgsl",
+      "file": "src__shaders__ssgi__shade.wgsl",
+      "sha256": "f0d522e55beae7457ee4d4fe5f483a06fd7e40ddb41e77e7a2053d53d0f96405"
+    },
+    {
+      "source": "src/shaders/ssr/fallback_env.wgsl",
+      "file": "src__shaders__ssr__fallback_env.wgsl",
+      "sha256": "92fef1c0358c37d23e0de032ad7586269d6f6ce40650a521f69db88371709ecc"
+    },
+    {
+      "source": "src/shaders/postprocess_tonemap.wgsl",
+      "file": "src__shaders__postprocess_tonemap.wgsl",
+      "sha256": "2c5832145509221a76c1b623bd54e32d97b532333354589627af17d5fef2f747"
+    },
+    {
+      "source": "src/shaders/taa.wgsl",
+      "file": "src__shaders__taa.wgsl",
+      "sha256": "1cbea4dd92b0698251c8d1f042129a0210ce45786ba59bd1877d96fb5e0443d6"
+    },
+    {
+      "source": "src/shaders/denoise_atrous.wgsl",
+      "file": "src__shaders__denoise_atrous.wgsl",
+      "sha256": "3cef374707555d24810f864230ef168d0f2ce269e77a47806bb9791393b0efe1"
+    },
+    {
+      "source": "src/viewer/terrain/motion_blur.rs",
+      "file": "src__viewer__terrain__motion_blur.rs",
+      "sha256": "cd9c884a044bca87418d27e2b5a2660e4a83bbf3a1787caadb91a4fe3c6775be"
+    }
+  ],
+  "adaptations": [
+    "Oracle bloom storage format is rgba16float to exercise the required linear HDR graph rather than native rgba8unorm clipping.",
+    "Oracle DoF replaces implicit textureSample with textureSampleLevel(..., 0) for compute-stage validation; its formula and kernels are unchanged.",
+    "AO inputs are converted from normalized linear depth/world normals to native linear view depth/packed view normals. Frame index is fixed to zero for deterministic sampling.",
+    "Lens oracle receives display-encoded colors; browser defers the transfer to the final output.",
+    "Native bloom blur needs an explicit f32 cast on its i32 offsets under current WGSL validation.",
+    "Native bloom composite uniform uses WGSL-required 32-byte allocation (vec3 alignment).",
+    "Denoise oracle reads normalized linear depth from r32float instead of a depth attachment; texture declaration and .r loads are the only shader changes. Browser additionally stops at object, normal and albedo boundaries.",
+    "TAA comparison uses stationary zero-jitter inputs. Browser adds ID/previous-depth rejection and resolves onto the unjittered pixel grid.",
+    "Realtime motion blur uses bounded depth-aware velocity sampling; the historical terrain shutter accumulator is retained as a provenance anchor. Offline temporal shutter sampling remains available via W06."
+  ],
+  "threshold": {
+    "ssim": 0.98,
+    "negativeControlRequired": true
+  }
+}

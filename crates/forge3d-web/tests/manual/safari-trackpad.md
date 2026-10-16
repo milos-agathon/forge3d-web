@@ -15,11 +15,16 @@ the gesture steps.
 - [ ] `NO_SAFARI_GESTURE_EVENT_LISTENERS` — Confirm the installed viewer owns
   zero `gesturestart`, `gesturechange`, or `gestureend` listeners. Touch pinch
   remains implemented through Pointer Events on touch devices.
-- [ ] `TRACKPAD_MOMENTUM_END` — Lift both fingers after a two-finger scroll and
-  confirm inertial wheel events terminate cleanly without an idle render loop.
-- [ ] `TRACKPAD_PAGE_SCROLL_ISOLATION` — Confirm two-finger scrolling over the
-  focused canvas changes viewer zoom without moving the surrounding page, then
-  move outside the canvas and confirm the same gesture scrolls the page normally.
+- [ ] `TRACKPAD_MOMENTUM_END` — Confirm momentum stops without an idle render
+  loop.
+- [ ] `TRACKPAD_PAGE_SCROLL_ISOLATION` — Confirm canvas gestures do not move the
+  surrounding page.
+- [ ] `TRACKPAD_OUTSIDE_CANVAS_PAGE_SCROLL` — Move the pointer outside the
+  canvas and confirm two-finger scrolling moves the surrounding page normally.
 - [ ] `TRACKPAD_CLEANUP` — Confirm Safari, fixture, Bluetooth gesture session,
   direct-USB pairing/charging state, update freeze, and host reservation
   cleanup.
+
+Trackpad pinch is outside the Forge3D v1 viewer-input contract. Safari may
+apply its normal page/browser gesture; this checklist neither intercepts that
+gesture nor treats it as mandatory Forge3D viewer acceptance.

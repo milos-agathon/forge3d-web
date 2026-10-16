@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "source": {
+    "repository": "https://github.com/hobuinc/laz-perf",
+    "commit": "d0d3047e05221421fa0b02b3da4e93797edb2c52",
+    "tree": "7345a176f1454c4cdcc33f037e272b10e8960a49"
+  },
+  "emsdk": {
+    "repository": "https://github.com/emscripten-core/emsdk",
+    "commit": "21611d2a507fad73385120d89e05a794666070ae",
+    "tree": "4e4de093bdb10b7c7513105b9cdd44a44549bb5b",
+    "version": "3.1.20",
+    "sdkReleaseRevision": "d92c8639f406582d70a5dde27855f74ecf602f45",
+    "emscriptenRevision": "5d878c99921ec247d34fb26a20b5a13d60d69e93",
+    "platform": "Linux x86_64",
+    "componentsSha256": {
+      "upstream/bin/clang": "d030baf6e1cb92bba926250611f82b559299b58f71764ac8076136d6a4d4aa87",
+      "upstream/bin/wasm-ld": "d2d9b34cef790d3c87957f2d88c9bb68de7f91b8abdcacb9d0cc0395034ffc5e",
+      "upstream/bin/wasm-opt": "6f51546e8f579bb3d179e787b59974f83bb210fc05c11cafd971880295e337a6",
+      "upstream/emscripten/emcc.py": "1a86c691c861bdc4606448c0de98936d3bb2dae173e13d8aba5586a1dbda9d0e"
+    }
+  },
+  "host": {
+    "os": "Ubuntu 24.04 under Windows WSL2",
+    "kernel": "6.6.87.2-microsoft-standard-WSL2",
+    "cmake": "3.28.3",
+    "python": "3.12.3"
+  },
+  "npmArchive": {
+    "uri": "https://registry.npmjs.org/laz-perf/-/laz-perf-0.0.7.tgz",
+    "sha256": "7585aa5e425443c639a2580548ebb8c3eed3124bacd7eebbf3ab0fbde2d8e0c4",
+    "freshDownloadMatchesLock": true
+  },
+  "rebuiltWasm": {
+    "bytes": 214351,
+    "sha256": "9c1802bc31b567dd4aa1ce9ab010e7e51e095dc42af8379b474ae6f221a9327f",
+    "matchesNpm": true
+  },
+  "rebuiltWebFactory": {
+    "bytes": 87228,
+    "sha256": "d9a91a08979dd9f717884e33c9f61997e79122da2c02be8414a5d7e99061985e",
+    "matchesNpm": true
+  },
+  "rebuildLogSha256": "1d0e077b5c1d8760e7c942dc8cbbcdd9ec6964937a1c10fc2f546cfe50e58a1f",
+  "productionAssetsSubstituted": false
+}

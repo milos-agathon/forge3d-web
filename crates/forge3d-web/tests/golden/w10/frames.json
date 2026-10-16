@@ -1,0 +1,16 @@
+{
+  "width": 192,
+  "height": 128,
+  "format": "RGBA8",
+  "generator": "examples/test-w10.html frames()",
+  "role": "Full browser compositor regression goldens; native primitive parity is independently exercised by w10-native-probes.js",
+  "threshold": {
+    "ssim": 0.98
+  },
+  "images": [
+    "sky",
+    "cloud",
+    "water"
+  ],
+  "regenerate": "W10_CAPTURE_GOLDENS=1 npx playwright test tests/playwright/w10_environment.spec.ts --grep \"golden images\" --project=chromium-preflight"
+}
