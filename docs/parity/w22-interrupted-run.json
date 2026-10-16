@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "reason": "Vite reloaded the active page when the concurrently running package checks regenerated the Basis glue asset; source tests rerun sequentially after all package checks completed.",
+  "stats": {
+    "startTime": "2026-10-15T15:40:35.115Z",
+    "duration": 11201.055,
+    "expected": 2,
+    "skipped": 7,
+    "unexpected": 1,
+    "flaky": 0
+  }
+}

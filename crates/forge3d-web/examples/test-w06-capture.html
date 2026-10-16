@@ -31,7 +31,9 @@
     <canvas id="w06-video" width="96" height="64"></canvas>
     <canvas id="w06-loss" width="96" height="64"></canvas>
     <script type="module">
-      import {
+      const useDist = new URL(location.href).searchParams.has("dist");
+      const {
+        CodecRegistry,
         Camera,
         CameraAnimation,
         Forge3DError,
@@ -56,9 +58,9 @@
         readExr,
         renderFrames,
         writeFrames,
-      } from "../src-ts/index.ts";
-      import { setSessionRuntimeFactoryForTests } from "../src-ts/session.ts";
-      import { simulateRuntimeDeviceLossForTests } from "../src-ts/runtime-internals.ts";
+      } = useDist ? await import("../dist/index.js") : await import("../src-ts/index.ts");
+      const { setSessionRuntimeFactoryForTests } = useDist ? await import("../dist/session.js") : await import("../src-ts/session.ts");
+      const { simulateRuntimeDeviceLossForTests } = useDist ? await import("../dist/runtime-internals.js") : await import("../src-ts/runtime-internals.ts");
 
       const WIDTH = 192;
       const HEIGHT = 128;
@@ -454,7 +456,7 @@
 
       const settings = (extra) => new OfflineQualitySettings({ enabled: true, ...extra });
 
-      async function denoiseAcceptance(session) {
+      async function denoiseAcceptance(session, denoise = (frame, aov, settings) => session.denoiseHdrFrame(frame, aov, settings)) {
         const reference = await session.capture({ aovs: ["albedo", "normal", "depth"] });
         const clean = reference.hdrFrame;
         const width = clean.width;
@@ -472,11 +474,11 @@
         const aov = reference.aovFrame;
         const metric = (a) => compareImages(a.data, clean.data, { width, height, channels: 4, compareChannels: 3, dataRange: peak });
         const before = await metric(noisy);
-        const denoised = await session.denoiseHdrFrame(noisy, aov);
+        const denoised = await denoise(noisy, aov);
         const after = await metric(denoised);
-        const converged = await session.denoiseHdrFrame(clean, aov);
+        const converged = await denoise(clean, aov);
         const regression = await metric(converged);
-        const native = await session.denoiseHdrFrame(clean, aov, { edgeStopping: 0 });
+        const native = await denoise(clean, aov, { edgeStopping: 0 });
         const nativeRegression = await metric(native);
         const cpu = await atrousDenoise({ width, height, color: noisy.data, albedo: aov.albedo(), normal: aov.normal() });
         return {
@@ -752,7 +754,17 @@
           result.ladder = ladder;
           session.setScene(await buildParityScene());
           session.setCamera(cameraInput());
-          result.denoise = await denoiseAcceptance(session);
+          if (new URL(location.href).searchParams.has("registry")) {
+            const registry = new CodecRegistry({ maxDecodedBytes: 512 * 1024 * 1024 });
+            let calls = 0;
+            try {
+              result.denoise = await denoiseAcceptance(session, (frame, aov, settings = {}) => {
+                calls += 1;
+                return registry.denoise(session, frame, aov, { settings });
+              });
+            } finally { await registry.dispose(); }
+            result.registry = { calls, stats: registry.stats() };
+          } else { result.denoise = await denoiseAcceptance(session); }
           // 120-frame deterministic stream with exact timestamps; memory stays flat.
           const animation = new CameraAnimation([
             { time: 0, phiDeg: 138, thetaDeg: 63, radius: 5, fovDeg: 54, target: [0, 0, 0] },

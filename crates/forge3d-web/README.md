@@ -308,3 +308,5 @@ See [MapScene and structured diagnostics](docs/mapscene-diagnostics.md) for W18 
 See [styles, bundles and review variants](docs/styles-bundles.md) for W19 local Mapbox styles, verified offline `.forge3d` archives, atomic variants and the [browser example](examples/style-bundle.html).
 
 W20 cartography implements M05–M07: map plates, legends, geodetic scale bars, rotated north arrows, insets, standalone SVG and vector PDF Blob exports, plus the linear-sRGB colormap registry and CPT/JSON imports. See [cartography guide](docs/cartography.md) and [example](examples/cartography.html).
+
+Codec integration and AOV-guided GPU denoising: [Codec registry](docs/codecs.md).

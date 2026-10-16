@@ -1,0 +1,18 @@
+var __emval_create_invoker=(argCount,argTypesPtr,kind)=>{
+  var [retType,...argTypes]=emval_lookupTypes(argCount,argTypesPtr);
+  var toReturnWire=retType.toWireType.bind(retType);
+  var readers=argTypes.map(type=>type.readValueFromPointer.bind(type));
+  var invokerFunction=function(handle,methodName,destructorsRef,args) {
+    var values=readers.map((reader,i)=>reader(args+i*8));
+    var target=kind===3?undefined:Emval.toValue(handle),result;
+    switch(kind) {
+      case 0: result=Reflect.apply(target,undefined,values);break;
+      case 1: result=Reflect.apply(target[getStringOrSymbol(methodName)],target,values);break;
+      case 2: result=Reflect.construct(target,values);break;
+      case 3: result=values[values.length-1];break;
+      default: throwBindingError('Unknown emval invoker kind');
+    }
+    if(!retType.isVoid) return emval_returnValue(toReturnWire,destructorsRef,result);
+  };
+  return emval_addMethodCaller(createNamedFunction('cspEmvalInvoker',invokerFunction));
+};

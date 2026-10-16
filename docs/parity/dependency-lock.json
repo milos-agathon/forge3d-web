@@ -176,7 +176,8 @@
         ]
       },
       "fixtureProvenance": [
-        "1f4084a:tests/test_cog_streaming.py"
+        "1f4084a:tests/test_cog_streaming.py",
+        "crates/forge3d-web/tests/fixtures/w22/manifest.json"
       ],
       "manifestFixtureIds": [
         "clipmap-seam-v1"
@@ -231,7 +232,8 @@
         ]
       },
       "fixtureProvenance": [
-        "1f4084a:tests/test_copc_laz_fixture.py"
+        "1f4084a:tests/test_copc_laz_fixture.py",
+        "crates/forge3d-web/tests/fixtures/w22/manifest.json"
       ],
       "manifestFixtureIds": [
         "copc-ept-tiles-v1"
@@ -286,7 +288,8 @@
         ]
       },
       "fixtureProvenance": [
-        "1f4084a:tests/test_mesh_tbn.py"
+        "1f4084a:tests/test_mesh_tbn.py",
+        "crates/forge3d-web/tests/fixtures/w22/manifest.json"
       ],
       "manifestFixtureIds": [
         "terrain-material-v1"
@@ -331,7 +334,8 @@
         "flags": [
           "single-threaded",
           "webgl-transcoder",
-          "no-runtime-cdn"
+          "no-runtime-cdn",
+          "csp-static-closure-adapter"
         ],
         "artifacts": [
           {
@@ -343,12 +347,18 @@
             "name": "basis_transcoder.wasm",
             "sha256": "5139f8299b2c4ff691877e2e8809fabdd64d029af061bbb95d8ea8d1acabd522",
             "sri": "sha384-IzrxHljMzPSJUYnPQfAp46lGBIDE9h02UUF0W0WQqHY+Q65k+weklhRFX/FlxqWL"
+          },
+          {
+            "name": "basis_transcoder.csp.js",
+            "sha256": "9bd1fe3260b32ea9641eae9c60ae966fd8166a94d76895bbf82d671b35b58ef2",
+            "sri": "sha384-UL27+PoLy1geuMZazGJgTo6BydZgfsfDYwkLG5tNgttzVq4t8cx1yTdK/tE+5Gv9"
           }
         ]
       },
       "fixtureProvenance": [
         "1f4084a:src/loaders/ktx2",
-        "1f4084a:tests/test_mesh_tbn.py"
+        "1f4084a:tests/test_mesh_tbn.py",
+        "crates/forge3d-web/tests/fixtures/w22/manifest.json"
       ],
       "manifestFixtureIds": [
         "terrain-material-v1"
@@ -366,7 +376,8 @@
       "consumerTokens": [
         "basis_universal",
         "basis_transcoder.wasm",
-        "basis_transcoder.js"
+        "basis_transcoder.js",
+        "basis_transcoder.csp.js"
       ],
       "review": {
         "security": "Run KTX2 corrupt-input and decompression-bound tests before consumption",
@@ -406,7 +417,8 @@
         ]
       },
       "fixtureProvenance": [
-        "1f4084a:tests/test_exr_output.py"
+        "1f4084a:tests/test_exr_output.py",
+        "crates/forge3d-web/tests/fixtures/w22/manifest.json"
       ],
       "manifestFixtureIds": [
         "offline-denoise-v1"

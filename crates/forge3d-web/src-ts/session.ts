@@ -123,7 +123,7 @@ export interface SessionRuntimeLike {
   readAccumulationMetrics?(targetVariance: number, tileSize?: number): Promise<OfflineMetrics>;
   resolveOfflineHdr?(options?: OfflineResolveOptions): Promise<CaptureResult>;
   endOfflineAccumulation?(): boolean;
-  denoiseHdrFrame?(frame: HdrFrame, aov?: AovFrame, settings?: DenoiseSettingsInput): Promise<HdrFrame>;
+  denoiseHdrFrame?(frame: HdrFrame, aov?: AovFrame, settings?: DenoiseSettingsInput, options?: { signal?: AbortSignal }): Promise<HdrFrame>;
   dispose(): void;
 }
 
@@ -599,9 +599,10 @@ export class Forge3DSession {
     frame: HdrFrame,
     aov?: AovFrame,
     settings?: DenoiseSettingsInput,
+    options?: { signal?: AbortSignal },
   ): Promise<HdrFrame> {
     const runtime = this.#runtimeOrThrow();
-    return this.#offlineRuntime(runtime.denoiseHdrFrame).call(runtime, frame, aov, settings);
+    return this.#offlineRuntime(runtime.denoiseHdrFrame).call(runtime, frame, aov, settings, options);
   }
 
   #offlineRuntime<T>(method: T | undefined): T {

@@ -18,7 +18,6 @@ test("real SAF-02 hardware page continues into generic installed-fixture creatio
   // terrain/scene pipelines, which uncached CI GPUs compile slowly.
   test.slow();
   skipRenderAssertionsWhenProbing(webgpuAvailability);
-  const facade = await (await request.get("/tests/realm-fixture/a/index.js")).body();
   const bridge = await (await request.get("/tests/realm-fixture/pkg/forge3d_web.js")).body();
   const wasm = await (await request.get("/tests/realm-fixture/runtime.wasm?id=saf02-page")).body();
   const terrain = Buffer.alloc(512 * 512 * 4);
@@ -49,8 +48,11 @@ test("real SAF-02 hardware page continues into generic installed-fixture creatio
       await route.fulfill({ status: 200, contentType: "text/javascript", body: module });
       return;
     }
-    if (relative === "node_modules/@forge3d/web/dist/index.js") {
-      await route.fulfill({ status: 200, contentType: "text/javascript", body: facade });
+    const facadeModule = relative.match(/^node_modules\/@forge3d\/web\/dist\/([a-zA-Z0-9_-][a-zA-Z0-9_.-]*\.js)$/u);
+    if (facadeModule !== null) {
+      const module = await request.get(`/tests/realm-fixture/a/${facadeModule[1]}`);
+      expect(module.ok()).toBe(true);
+      await route.fulfill({ status: module.status(), contentType: "text/javascript", body: await module.body() });
       return;
     }
     if (relative === "node_modules/@forge3d/web/pkg/forge3d_web.js") {

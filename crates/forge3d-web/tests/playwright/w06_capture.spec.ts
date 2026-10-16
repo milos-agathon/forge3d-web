@@ -10,6 +10,7 @@ async function probe(page: import("../browser/webgpu-fixture").Page, name: strin
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await page.goto("/examples/test-w06-capture.html");
+  await page.waitForFunction(() => !!window.__forge3dW06);
   const result = await page.evaluate((key) => window.__forge3dW06[key]!(), name);
   expect(errors, `page errors in ${name}`).toEqual([]);
   return result;

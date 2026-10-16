@@ -4,7 +4,7 @@
   "manifestId": "forge3d-composite-baseline-v1",
   "sourcePlan": {
     "path": "docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md",
-    "sha256": "36b1d47eabaf8e409921d4f1b78757ed87a6796fea53cce5e1c981075d75b8ae"
+    "sha256": "890b21f83dbfd63394f2636302bc3ae62776666716e4ecad09d766999b24effc"
   },
   "baselineLayers": [
     {
@@ -103,7 +103,7 @@
         "clean Rust/wasm/TypeScript/API/package/consumer checks, every Playwright project, physical browser evidence, loss/visibility/BFCache, memory soak, goldens and real data."
       ],
       "acceptance": [
-        "no G, P, E or Gâ†’C; every verified C row returns the exact typed status and is not advertised as rendering; visuals meet SSIM >= 0.98 or stricter row-specific threshold; numeric contracts meet manifest tolerances; disposal returns to baseline."
+        "no G, P, E or G→C; every verified C row returns the exact typed status and is not advertised as rendering; visuals meet SSIM >= 0.98 or stricter row-specific threshold; numeric contracts meet manifest tolerances; disposal returns to baseline."
       ],
       "targetId": "target:R01",
       "xcLinks": []
@@ -2210,7 +2210,7 @@
       "title": "OS/native TIFF/LAZ/KTX2/HDR/EXR/OIDN/code caches",
       "lifecycle": "XC",
       "evidenceGrade": "A",
-      "status": "E",
+      "status": "I",
       "ownerTask": "W22",
       "nativeCapability": "OS/native TIFF/LAZ/KTX2/HDR/EXR/OIDN/code caches: 1f4084a:src/terrain/cog/**, src/pointcloud/copc_decode.rs, src/loaders/ktx2/**, src/formats/hdr.rs, src/util/exr_write.rs, python/forge3d/denoise_oidn.py",
       "requiredWebOutcome": "Pinned WASM codecs, browser caches and measurable WebGPU denoiser; typed capability errors",
@@ -3743,10 +3743,18 @@
       "contract": "Pinned WASM codecs, browser caches and measurable WebGPU denoiser; typed capability errors",
       "owner": "W22",
       "evidence": [
-        "tracked E closure state in docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md:E05"
+        "crates/forge3d-web/src-ts/codec-registry.ts",
+        "crates/forge3d-web/src-ts/codec-dispatch.ts",
+        "crates/forge3d-web/src-ts/codec-denoiser.ts",
+        "crates/forge3d-web/tests/fixtures/w22/manifest.json",
+        "crates/forge3d-web/docs/codecs.md",
+        "crates/forge3d-web/docs/w22-evidence.md"
       ],
       "tests": [
-        "codec fixture conformance, corrupt-input capability errors, cache-key replay, denoiser SSIM delta and registry disposal."
+        "crates/forge3d-web/tests/unit/w22-codecs.test.ts",
+        "crates/forge3d-web/tests/playwright/w22_codecs.spec.ts",
+        "crates/forge3d-web/tests/playwright/w06_capture.spec.ts",
+        "crates/forge3d-web/scripts/test-w22-package-consumer.mjs"
       ]
     },
     {
@@ -53440,7 +53448,7 @@
   ],
   "dependencyLock": {
     "path": "docs/parity/dependency-lock.json",
-    "sha256": "0bb6afef2d4d5d63986e9ea3e6867c1220f9f4d9e4fceced49486bdaa6a7695a",
+    "sha256": "0eeef5d834dff7e7bd43ea755abeeff6904bba5ba0b037988143b11edc096971",
     "requiredAssetIds": [
       "harfbuzzjs",
       "proj-wasm",

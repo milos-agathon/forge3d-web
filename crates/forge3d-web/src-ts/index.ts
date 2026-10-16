@@ -20,6 +20,9 @@ export { generateSvg, exportSvg, validateSvg } from './vector-export.js';
 export type { VectorExportOptions, VectorSvgOptions, VectorExportFont } from './vector-export.js';
 export { exportPdf } from './vector-pdf.js';
 export type { VectorPdfOptions, VectorPdfFont } from './vector-pdf.js';
+export { CodecRegistry } from './codec-registry.js';
+export type * from './codec-types.js';
+export type { CodecDenoiseTarget, CodecDenoiseOptions, CodecDenoiserSelection } from './codec-denoiser.js';
 export {validateStyleSupport} from './diagnostic-style.js';
 export type {DiagnosticStyleLayer} from './diagnostic-style.js';
 export { MapScene } from './map-scene.js';
@@ -3784,7 +3787,12 @@ export class Forge3DRuntime {
     frame: HdrFrame,
     aov?: AovFrame,
     settings: DenoiseSettingsInput = {},
+    options: { signal?: AbortSignal } = {},
   ): Promise<HdrFrame> {
+    const checkCancelled = () => {
+      if (options.signal?.aborted) throw new Forge3DError("REQUEST_CANCELLED", "HDR denoise was cancelled");
+    };
+    checkCancelled();
     this.#assertNotDisposed();
     const denoise = this.#inner.denoiseHdr;
     if (denoise === undefined) {
@@ -3809,7 +3817,11 @@ export class Forge3DRuntime {
     if (aov?.hasAlbedo === true && resolved.guides.albedo) input.albedo = aov.albedo();
     if (aov?.hasNormal === true && resolved.guides.normal) input.normal = aov.normal();
     if (aov?.hasDepth === true && resolved.guides.depth) input.depth = aov.depth();
-    const data = await this.#offlineReadback(() => denoise.call(this.#inner, input));
+    const data = await this.#offlineReadback(() => {
+      checkCancelled();
+      return denoise.call(this.#inner, input);
+    });
+    checkCancelled();
     return new HdrFrame(frame.width, frame.height, new Float32Array(data));
   }
 

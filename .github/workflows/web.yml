@@ -17,8 +17,9 @@ jobs:
   build-and-contract:
     name: Web Runtime / Build And Contract Tests
     runs-on: windows-latest
-    # Full corpus plus bounded live-download retries; test and runtime budgets are unchanged.
-    timeout-minutes: 40
+    # The full corpus and bounded live-download retries exceed 40m on slower runners.
+    # Only the outer job budget changes; per-test deadlines and runtime budgets stay fixed.
+    timeout-minutes: 60
 
     steps:
       - name: Check out the protected source
@@ -199,8 +200,9 @@ jobs:
     name: Web Runtime / Browser Preflight
     needs: build-and-contract
     runs-on: macos-15
-    # Allow runner variation across both full suites; per-test budgets stay unchanged.
-    timeout-minutes: 150
+    # The pre-W22 two-engine corpus already takes about 123 minutes on hosted macOS.
+    # Allow W22 full-resolution coverage and runner variation; per-test budgets stay fixed.
+    timeout-minutes: 180
 
     steps:
       - name: Check out the protected source

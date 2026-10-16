@@ -158,3 +158,9 @@ test("rejects EXR when the WASM rayon exclusion drifts", () => {
   exr.build.flags = exr.build.flags.filter((flag) => flag !== "default-rayon-disabled");
   expectFailure(data, "lockViolations", /default rayon/u);
 });
+
+test("keeps parity rationale as intact UTF-8", () => {
+  const text = JSON.stringify(cleanData().manifest);
+  assert(text.includes("G\u2192C"));
+  assert(!text.includes("\u00c3\u00a2") && !text.includes("\u00e2\u2020\u2019"), "mojibake in parity rationale");
+});

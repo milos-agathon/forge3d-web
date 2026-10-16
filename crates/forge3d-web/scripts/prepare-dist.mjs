@@ -3,6 +3,7 @@ import './verify-w14-assets.mjs';
 import './verify-w20-assets.mjs';
 import { build as buildVendorModule } from 'vite';
 import './prepare-laz-assets.mjs';
+import './prepare-basis-csp.mjs';
 import { embedProjWorker } from './embed-proj-worker.mjs';
 import { createRequire } from 'node:module';
 import { createHash } from "node:crypto";
@@ -202,6 +203,7 @@ const assetManifest = [
   ["dist/vendor/geotiff.umd.js", "geotiff@3.0.5"],
   ["dist/vendor/geotiff.js", "geotiff@3.0.5"],
   ["assets/basis/basis_transcoder.js", "basis_universal@2.0.3"],
+  ["assets/basis/basis_transcoder.csp.js", "basis_universal@2.0.3 CSP closure adapter"],
   ["assets/basis/basis_transcoder.wasm", "basis_universal@2.0.3"],
   ...["index.mjs","harfbuzz.js","harfbuzz.wasm"].map(file => ["assets/harfbuzz/" + file, "harfbuzzjs@1.6.0"]),
   ...["NotoSans","NotoSansArabic","NotoSansDevanagari"].map(font => ["assets/fonts/" + font + "-Regular.ttf", "noto-fonts@ffebf8c1ee449e544955a7e813c54f9b73848eac"]),
@@ -259,6 +261,7 @@ for (const file of ['style-native-values','bundle-style-assets','style-expressio
   copyRequired(join(dist,file+'.d.ts'),join(root,'types',file+'.d.ts'));
 }
 
+for (const file of ['codec-types','codec-registry','codec-denoiser']) writeFileSync(join(root,'types',file+'.d.ts'),readRequired(join(dist,file+'.d.ts')).replace(/from (["'])\.\/(frames|byte-cache)\.js\1/g,'from "./index.js"'));
 for (const file of ['license','image-array','png-decode','benchmark']) writeFileSync(join(root,'types',file+'.d.ts'),readRequired(join(dist,file+'.d.ts')).replaceAll('./renderer-config.js','./index.js'));
 for (const file of ['cartography-common','cartography-fonts','cartography-canvas','colormaps','colormap-io','map-layout','map-legend','map-scale-bar','map-north-arrow','map-plate','vector-export-scene','vector-export','vector-pdf']) {
   writeFileSync(join(root,'types',file+'.d.ts'),readRequired(join(dist,file+'.d.ts')).replace(/from (["'])\.\/(frames)\.js\1/g,'from "./index.js"'));

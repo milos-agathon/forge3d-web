@@ -932,6 +932,7 @@ export function extractGltfMaterialChannels(
 }
 
 interface BasisModule {
+  initializeBasis(): void;
   KTX2File: new (data: Uint8Array) => BasisKtx2File;
   transcoder_texture_format: Record<string, unknown>;
 }
@@ -943,7 +944,7 @@ interface BasisKtx2File {
   getLevels(): number;
   getLayers?(): number;
   getFaces?(): number;
-  startTranscoding(): unknown;
+  startTranscoding(): number;
   getImageTranscodedSizeInBytes(
     level: number,
     layer: number,
@@ -1066,7 +1067,14 @@ function loadBasisModule(
         "basis transcoder script did not expose the BASIS factory",
       );
     }
-    return factory({ locateFile: () => wasmUrl });
+    let module: BasisModule;
+    try { module = await factory({ locateFile: () => wasmUrl }); }
+    catch (error) { throw new Forge3DError("WASM_LOAD_FAILED", "Basis transcoder could not be instantiated", { reason: "basis-module-unavailable", cause: String(error) }); }
+    if (typeof module?.initializeBasis !== "function") {
+      throw new Forge3DError("UNSUPPORTED_FEATURE", "Basis module does not expose initializeBasis", { reason: "basis-initializer-unavailable" });
+    }
+    module.initializeBasis();
+    return module;
   });
   store.tail = promise.then(
     () => undefined,
@@ -1117,7 +1125,8 @@ class BundledBasisTranscoder implements BasisTranscoderAdapter {
       if (file.isValid() !== true) {
         throw invalid("basis container is not a valid KTX2 file", "ktx2");
       }
-      if (file.startTranscoding() !== true) {
+      // The pinned Embind wrapper returns an integer success flag.
+      if (!file.startTranscoding()) {
         throw invalid("basis startTranscoding failed", "ktx2");
       }
       const width = file.getWidth();
@@ -1231,7 +1240,7 @@ export class Ktx2Loader {
   constructor(options?: Ktx2LoaderOptions) {
     this.#adapter = options?.basisTranscoder;
     const defaultJs = new URL(
-      "../assets/basis/basis_transcoder.js",
+      "../assets/basis/basis_transcoder.csp.js",
       import.meta.url,
     );
     this.#jsUrl = String(options?.basisJsUrl ?? defaultJs);

@@ -1,0 +1,21 @@
+function createJsInvoker(argTypes,isClassMethodFunc,returns,isAsync) {
+  var needsDestructorStack=usesDestructorStack(argTypes);
+  var count=argTypes.length-2;
+  return function(humanName,throwBindingError,invoker,fn,runDestructors,fromRetWire,toClassParamWire,...converters) {
+    return function(...args) {
+      var destructors=needsDestructorStack?[]:null;
+      var wired=[];
+      if(isClassMethodFunc) wired.push(toClassParamWire(destructors,this));
+      for(var i=0;i<count;i++) wired.push(converters[i](destructors,args[i]));
+      var rv=invoker(fn,...wired);
+      if(needsDestructorStack) runDestructors(destructors);
+      else {
+        var dtor=count;
+        for(var i=isClassMethodFunc?1:2;i<argTypes.length;i++) {
+          if(argTypes[i].destructorFunction!==null) converters[dtor++](wired[i-(isClassMethodFunc?1:2)]);
+        }
+      }
+      return returns?fromRetWire(rv):undefined;
+    };
+  };
+}
