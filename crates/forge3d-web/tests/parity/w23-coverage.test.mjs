@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { auditHistoricalSources, root, manifestPath, validateCoverage } from '../../../../scripts/w23-coverage.mjs';
+import { assetManifestPath, validateAssets } from '../../../../scripts/w23-assets.mjs';
+import { verifyW23, verifyPublicApis } from '../../../../scripts/verify-w23.mjs';
+const load = path => JSON.parse(readFileSync(join(root, path), 'utf8'));
+const mutate = edit => { const data = load(manifestPath); edit(data); return data; };
+test('W23 covers immutable sources, documentation, workflows, APIs and assets', () => { assert.equal(auditHistoricalSources().sources, 541); assert.equal(verifyW23().records, 6531); });
+test('an omitted native test definition is rejected', () => { const data = mutate(d => d.records.splice(d.records.findIndex(r => r.artifactId.startsWith('native-test-definition:')), 1)); assert(validateCoverage(data).some(e => e.includes('Unmapped artifact'))); });
+test('duplicate artifact ownership is rejected', () => { assert(validateCoverage(mutate(d => d.records.push(d.records[0]))).some(e => e.includes('Duplicate artifact'))); });
+test('each native example needs an executable workflow', () => { assert(validateCoverage(mutate(d => d.examples[0].workflows = [])).some(e => e.includes('Missing executable workflow'))); });
+test('invented workflow names are rejected', () => { assert(validateCoverage(mutate(d => d.examples[0].workflows = ['invented'])).some(e => e.includes('Missing executable workflow'))); });
+test('each row needs a real suite and API', () => { assert(validateCoverage(mutate(d => { d.rows[0].tests = []; d.rows[0].apis = []; })).some(e => e.includes('No concrete test evidence'))); });
+test('invented TypeScript migration names are rejected', () => { assert(verifyPublicApis(mutate(d => d.rows[0].apis.push('inventedAPI'))).some(e => e.includes('inventedAPI'))); });
+test('stale test content is rejected', () => { assert(validateCoverage(mutate(d => d.tests[0].sha256 = '0'.repeat(64))).some(e => e.includes('Stale test digest'))); });
+test('native source provenance changes are rejected', () => { assert(validateCoverage(mutate(d => d.examples[0].source.sha256 = '0'.repeat(64))).some(e => e.includes('provenance mismatch'))); });
+test('a missing tombstone is rejected', () => { assert(validateCoverage(mutate(d => d.tombstones.pop())).some(e => e.includes('Unmapped tombstone'))); });
+test('untracked golden bytes and fixture corruption are rejected', () => {
+  const assets = load(assetManifestPath); assets.assets[0].sha256 = '0'.repeat(64);
+  assert(validateAssets(assets).some(e => e.includes('digest mismatch')));
+  assets.assets.pop(); assert(validateAssets(assets).some(e => e.includes('Untracked asset')));
+});

@@ -1,0 +1,11 @@
+{
+  "nativeCommit": "1f4084af428dc699bdcd108b029736cb73903926",
+  "sourceExamples": [
+    "examples/sample_style.json",
+    "examples/presets/baseline_no_vector_overlays.json",
+    "examples/presets/rainier_showcase.json"
+  ],
+  "encodedInputs": "../../tests/fixtures/w22/manifest.json",
+  "terrain": "Analytic 16x16 Gaussian, seed-free, bounded browser example; no native visual parity claim.",
+  "overlay": "Analytic opaque 4x4 RGBA input; no external downloads."
+}

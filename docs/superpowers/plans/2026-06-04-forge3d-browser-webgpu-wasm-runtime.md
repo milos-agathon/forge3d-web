@@ -954,7 +954,7 @@ task remains unambiguous when read or reviewed in isolation.
 
 ### W23 — Restore Documentation, Examples, Goldens, And Migration Guides
 
-- Code status: **Partial** — MVP docs/examples exist, but no exhaustive migrated evidence/provenance coverage exists; see the working-tree ledger above.
+- Code status: **Implemented (W23 coverage)** — all 6,531 W00 artifacts, 91 rows and 21 tombstones have concrete documentation/test/workflow routes. All 54 final example assets map to the shipped consolidated browser gallery; 88 documentation assets/53 pages retain migration destinations and historical illustration provenance. Git-object and independent Python AST audits confirm the source inventory; 2,447 fixtures/goldens/assets are digest-pinned. Coverage routing does not claim one-for-one translation of every native assertion or reproduction of regional third-party data pipelines. See [W23 evidence](../../../crates/forge3d-web/docs/w23-evidence.md) and [coverage report](../../parity/w23-coverage-report.json).
 
 - Scope: evidence coverage for all rows and tombstones.
 - Files/APIs: expand package docs/examples; restore converted fixtures/goldens

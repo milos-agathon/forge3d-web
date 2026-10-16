@@ -1,5 +1,10 @@
 # @forge3d/web
 
+Start with the [Python migration guide](docs/migration.md), [all native example
+workflows](docs/examples.md), [feature evidence](docs/features.md) and
+[workflow support and tombstones](docs/workflow-support.md). The package includes
+an [offline workflow gallery](examples/migration/index.html).
+
 See [offline licenses, PNG arrays and benchmarks](docs/utilities.md) for W21 utilities and [verification](docs/w21-evidence.md).
 
 Browser-delivered Forge3D WebGPU/WASM runtime for JavaScript and TypeScript. The current release surface renders MVP terrain scenes while the tracked target covers the complete Forge3D capability baseline.

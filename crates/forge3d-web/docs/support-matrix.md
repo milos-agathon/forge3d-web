@@ -1,5 +1,9 @@
 # Forge3D Web Support Matrix
 
+The generated [feature evidence](features.md), [workflow support and
+tombstones](workflow-support.md) and [migration guide](migration.md) describe
+capability coverage separately from the physical browser evidence below.
+
 This matrix defines browser/OS/GPU evidence for the `@forge3d/web` prerelease,
 plus browser product boundaries and current feature gaps. Browser support
 status is independent of functional-parity scope: a `NOT_PROVEN` lane does not

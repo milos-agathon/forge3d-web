@@ -2,6 +2,13 @@
 
 Run this checklist from the repository root unless a command explicitly changes directory. It gates the incremental browser WebGPU/WASM package and, once every manifest row closes, the complete functional-parity release.
 
+W23 coverage has its own reproducible gates: `npm run verify:w23`,
+`npm run test:w23` and `npm run test:package-consumer:w23` from
+`crates/forge3d-web`. Run `python scripts/audit-w23-native.py` from the repository
+root to independently enumerate the historical examples, docs and native tests.
+See [migration evidence](w23-evidence.md). Passing coverage does not close the
+functional or physical-browser blockers below.
+
 ## Interactive Viewer Release Blocker
 
 The FND-01..FND-07 shared viewer foundation is implemented substantially, but

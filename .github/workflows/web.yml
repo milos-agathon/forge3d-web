@@ -24,6 +24,8 @@ jobs:
     steps:
       - name: Check out the protected source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable reviewed 2026-07-28
@@ -173,6 +175,24 @@ jobs:
             crates/forge3d-web/test-results/w20-pdf-render.json
             crates/forge3d-web/test-results/w20-bundled-consumer.json
             crates/forge3d-web/test-results/w20-installed-output
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Audit W23 native source completeness independently
+        working-directory: crates/forge3d-web
+        run: python ../../scripts/audit-w23-native.py
+
+      - name: Test W23 installed migration workflows and documentation
+        id: w23-installed
+        working-directory: crates/forge3d-web
+        run: npm run test:package-consumer:w23
+
+      - name: Upload W23 installed migration evidence
+        if: always() && steps.w23-installed.outcome != 'skipped'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: forge3d-web-w23-installed
+          path: crates/forge3d-web/test-results/w23-installed
           if-no-files-found: error
           retention-days: 30
 

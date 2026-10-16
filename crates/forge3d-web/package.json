@@ -51,7 +51,8 @@
     "examples/cartography-checks.js",
     "examples/cartography-worker.js",
     "examples/codecs.html",
-    "examples/codecs.js"
+    "examples/codecs.js",
+    "examples/migration"
   ],
   "exports": {
     ".": {
@@ -69,11 +70,11 @@
     "build": "npm run build:wasm && npm run build:ts && npm run prepare-dist && npm run build:example",
     "dev": "vite --host 127.0.0.1 --port 57883 --strictPort",
     "generate:parity": "node ../../scripts/generate-parity-inventory.mjs",
-    "verify:parity": "node --test tests/parity/verify-parity-manifest.test.mjs && node ../../scripts/verify-parity-manifest.mjs",
+    "verify:parity": "node --test tests/parity/verify-parity-manifest.test.mjs && node ../../scripts/verify-parity-manifest.mjs && node ../../scripts/verify-w23.mjs --coverage-only",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.api.json",
     "test:api": "npm run typecheck && node tests/api/public-api-snapshot.mjs && node tests/api/emitted-facade-stage.mjs",
     "test:release-hardening": "node tests/api/release-hardening.mjs && npm run test:docs",
-    "test:docs": "node --test tests/api/docs-links.test.mjs tests/api/w18-docs.test.mjs",
+    "test:docs": "node --test tests/api/docs-links.test.mjs tests/api/w18-docs.test.mjs tests/parity/w23-coverage.test.mjs",
     "test:browser-harness": "node --test tests/browser/benchmark/benchmark-golden.test.mjs tests/browser/evidence-validator.test.mjs tests/browser/resource-assertions.test.mjs tests/browser/chr03-hardware-proof-validator.test.mjs tests/browser/chr04-hardware-proof-validator.test.mjs tests/browser/ffx03-proof-validator.test.mjs tests/browser/saf03-proof-validator.test.mjs tests/browser/saf04-hardware-proof-validator.test.mjs tests/browser/viewer-benchmark-module.test.mjs tests/webdriver/safari-viewer.test.mjs",
     "test:infrastructure": "node scripts/run-infrastructure-tests.mjs",
     "test:package": "node scripts/test-w22-basis-csp.mjs && npm run test:release-hardening && npm run test:browser-harness && npm run test:infrastructure && node tests/api/package-contract.mjs",
@@ -114,7 +115,11 @@
     "test:package-consumer:w20": "node scripts/test-w20-package-consumer.mjs",
     "generate:codecs": "node scripts/generate-codec-catalog.mjs",
     "test:w22": "node scripts/test-w22-basis-csp.mjs && node scripts/generate-codec-catalog.mjs --check && vitest run tests/unit/w22-codecs.test.ts tests/unit/w22-review-regressions.test.ts tests/unit/w22-fingerprint.test.ts tests/unit/w22-cache-w04-regressions.test.ts && playwright test tests/playwright/w22_codecs.spec.ts --project=chromium-preflight",
-    "test:package-consumer:w22": "node scripts/test-w22-package-consumer.mjs"
+    "test:package-consumer:w22": "node scripts/test-w22-package-consumer.mjs",
+    "generate:w23": "node ../../scripts/generate-w23.mjs",
+    "verify:w23": "node --test tests/parity/w23-coverage.test.mjs && node ../../scripts/verify-w23.mjs && tsc -p tsconfig.migration.json",
+    "test:w23": "npm run verify:w23 && playwright test tests/playwright/w23_migration.spec.ts --project=chromium-preflight",
+    "test:package-consumer:w23": "node scripts/test-w23-package-consumer.mjs"
   },
   "devDependencies": {
     "@noble/ed25519": "3.2.0",
