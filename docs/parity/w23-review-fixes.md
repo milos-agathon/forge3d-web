@@ -18,6 +18,12 @@ in `D:/forge3d-web/.worktrees/w23`; other active checkouts are preserved.
 | Low: license visibility | The gallery accepts the normal Pro key and reports `blocked-license` explicitly when absent. Automated tests configure a test issuer; no test key is shipped as a product entitlement. |
 
 The verification record is [`w23-verification.json`](w23-verification.json).
+The final clean installed-package run at `d46d2368` verifies all 193 shipped
+asset hashes, including the 81 test-source snapshots under documentation.
+All 54 pipelines, five rendering fault controls and both complete guide
+examples pass in source, dist and installed Chromium. Repository checks pass:
+1,960 unit cases, 33 W23 cases, 64 documentation cases, 118 browser-harness
+cases and 628 infrastructure cases (one Unix UID ACL case is skipped on Windows).
 Browser runs use Chromium preflight; physical browser/GPU and final release
 qualification remain W24 work. Regional migrations use bounded offline data
 and preserve computational/rendering stages; they do not reproduce the original
