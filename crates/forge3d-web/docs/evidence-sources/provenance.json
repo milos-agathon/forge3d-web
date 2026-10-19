@@ -114,7 +114,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/parity/w23-application-analysis.test.mjs",
-      "sha256": "f8252a7a22a7789d1eb8e6d7ae880f135e028889fca2f69fc107860c9eea7487",
+      "sha256": "ceb29dcf0224d68d9ac2fdbc3fd1af81e603092e226132c56f980c5788cf49e7",
       "snapshot": "evidence-sources/tests/parity/w23-application-analysis.test.mjs.txt"
     },
     {
@@ -534,8 +534,33 @@
     },
     {
       "path": "crates/forge3d-web/scripts/generate-w23-application-fixtures.py",
-      "sha256": "1808942f77e15be5e45eca0513da899f93b205692424fc114899b10492a905ad",
+      "sha256": "83eb9691c660b5b498a6da5559a2161b85175a38f64a91b7107dbf309119bd57",
       "snapshot": "evidence-sources/scripts/generate-w23-application-fixtures.py.txt"
+    },
+    {
+      "path": "crates/forge3d-web/scripts/capture-w23-dem-inputs.py",
+      "sha256": "27494bd76172351870b91e76ef3efee047176589e4beaf5fcceb845a13a32492",
+      "snapshot": "evidence-sources/scripts/capture-w23-dem-inputs.py.txt"
+    },
+    {
+      "path": "crates/forge3d-web/scripts/w23_regional_fixtures.py",
+      "sha256": "be50baf6d2ca50d5eba3b006a43e86d81286f8bc54fe9d871d57e406f8ecaa76",
+      "snapshot": "evidence-sources/scripts/w23_regional_fixtures.py.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/playwright/w23_migration.spec.ts",
+      "sha256": "f7e07059277039642f67ef698079d08e676fe44eebe09d42c948ec08ca5d8613",
+      "snapshot": "evidence-sources/tests/playwright/w23_migration.spec.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/browser/w23-stage-observer.ts",
+      "sha256": "fa539e82637f09551d31221d8dd1386811866ff050141c12cc9b56623a5aa435",
+      "snapshot": "evidence-sources/tests/browser/w23-stage-observer.ts.txt"
+    },
+    {
+      "path": "crates/forge3d-web/tests/parity/w23-review-regressions.test.mjs",
+      "sha256": "6e9dfe94afd648deb993c12a89616933a888e2c99693a296bd2e5a0089f05f26",
+      "snapshot": "evidence-sources/tests/parity/w23-review-regressions.test.mjs.txt"
     }
   ]
 }

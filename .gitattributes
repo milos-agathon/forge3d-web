@@ -143,6 +143,7 @@ crates/forge3d-web/types/vector-export*.d.ts text eol=lf
 crates/forge3d-web/types/vector-pdf.d.ts text eol=lf
 
 crates/forge3d-web/assets/fonts/DejaVu-LICENSE -text
+crates/forge3d-web/assets/licenses/fontkit.LICENSE text eol=lf
 
 # W20 pinned native metric data.
 crates/forge3d-web/src-ts/cartography-font-metrics.ts text eol=lf
@@ -154,6 +155,7 @@ crates/forge3d-web/examples/migration/*.laz binary
 crates/forge3d-web/examples/migration/*.tif binary
 crates/forge3d-web/examples/migration/*.png binary
 crates/forge3d-web/tests/fixtures/w23/** -text
+crates/forge3d-web/tests/fixtures/w23/regional-dem-inputs.json text eol=lf
 crates/forge3d-web/tests/golden/w23/** text eol=lf
 crates/forge3d-web/tests/golden/w23/*.png binary
 crates/forge3d-web/docs/evidence-sources/** text eol=lf

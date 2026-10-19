@@ -1,27 +1,34 @@
 {
   "schemaVersion": 1,
-  "meaning": "Reviewed native source destinations, independent of the presentation catalog. Changes require review of the pinned native source and the corresponding browser assertions.",
+  "meaning": "Reviewed routing intent lock. This is generated from the catalog and does not independently prove native semantics or execution.",
+  "provenance": {
+    "generator": "scripts/capture-w23-routing-lock.mjs --capture",
+    "reviewRecord": "docs/parity/w23-routing-review.json",
+    "nativeAudit": "scripts/audit-w23-native.py",
+    "regressions": "crates/forge3d-web/tests/parity/w23-review-regressions.test.mjs",
+    "authority": "Original W23 acceptance at d5cf3b57; pinned composite native sources, numerical Python AST controls and independent browser API observations."
+  },
   "exports": {
     "enumerate_adapters": {
       "apis": [
         "Forge3DRuntime"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "ExportLabelStyle": {
       "apis": [
         "ExportLabelStyle"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "Legend": {
       "apis": [
         "Legend"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "geometry": {
       "apis": [
@@ -30,161 +37,161 @@
         "subdivideMesh",
         "generateMeshLods"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "available_datasets": {
       "apis": [
         "DatasetRegistry"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "SunPosition": {
       "apis": [
         "SunPosition"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "layout_to_label_style": {
       "apis": [
         "styleToLabelStyle"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "infer_roof_type": {
       "apis": [
         "inferRoofType"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "calculate_triangle_reduction_py": {
       "apis": [
         "calculateTriangleReduction"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "MaterialLayerSettings": {
       "apis": [
         "TerrainMaterialLayersInput"
       ],
-      "note": "Convert snake_case snow/rock/wetness fields into TerrainMaterialInput.layers (TerrainMaterialLayersInput).",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Convert snake_case snow/rock/wetness fields into TerrainMaterialInput.layers (TerrainMaterialLayersInput)."
     },
     "KeepoutRegion": {
       "apis": [
         "KeepoutRegion"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "FrameDumper": {
       "apis": [
         "FrameDumper"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "TriplanarSettings": {
       "apis": [
         "TerrainTriplanarInput"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "OfflineResult": {
       "apis": [
         "OfflineResult"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "apply_style": {
       "apis": [
         "compileStyle"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "TerrainMeta": {
       "apis": [
         "BundleManifest",
         "TerrainHeightmapInput"
       ],
-      "note": "Bundle manifest/recipe terrain metadata carries the resource, CRS, domain and colormap; use a browser byte source rather than dem_path.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Bundle manifest/recipe terrain metadata carries the resource, CRS, domain and colormap; use a browser byte source rather than dem_path."
     },
     "get_colormap": {
       "apis": [
         "colormaps"
       ],
-      "note": "Use colormaps.get(name); the registry object is not a same-signature function alias.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Use colormaps.get(name); the registry object is not a same-signature function alias."
     },
     "Renderer": {
       "apis": [
         "Forge3DRuntime"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "LayerSummary": {
       "apis": [
         "LayerSummary"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "PointCloudLayer": {
       "apis": [
         "PointCloudLayer"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "vt_unsupported_family_diagnostic": {
       "apis": [
         "vtUnsupportedFamilyDiagnostic"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "experimental_feature_diagnostic": {
       "apis": [
         "experimentalFeatureDiagnostic"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "LodSettings": {
       "apis": [
         "TerrainLodInput"
       ],
-      "note": "Terrain texture LOD fields level/bias/lod0_bias become TerrainMaterialInput.lod with lod0Bias; this is unrelated to clipmap geometry.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Terrain texture LOD fields level/bias/lod0_bias become TerrainMaterialInput.lod with lod0Bias; this is unrelated to clipmap geometry."
     },
     "ReproducibilityProfile": {
       "apis": [
         "ReproducibilityProfile"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "sample_boundaries_path": {
       "apis": [
         "DatasetRegistry"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "version": {
       "apis": [],
-      "note": "Read the installed npm package version metadata; no Python version function is exported.",
-      "kind": "npm-metadata"
+      "kind": "npm-metadata",
+      "note": "Read the installed npm package version metadata; no Python version function is exported."
     },
     "MapFurnitureLayer": {
       "apis": [
@@ -193,172 +200,172 @@
         "ScaleBar",
         "NorthArrow"
       ],
-      "note": "Compose MapPlate, Legend, ScaleBar and NorthArrow after rendering; recipe furniture intent retains its diagnostic boundary.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Compose MapPlate, Legend, ScaleBar and NorthArrow after rendering; recipe furniture intent retains its diagnostic boundary."
     },
     "vector_overlay_configs_from_style": {
       "apis": [
         "compileStyle"
       ],
-      "note": "compileStyle(spec, providedFeatures) returns typed vector layers and the support report; handle diagnostics before rendering.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "compileStyle(spec, providedFeatures) returns typed vector layers and the support report; handle diagnostics before rendering."
     },
     "REQUIRED_DIAGNOSTIC_CODES": {
       "apis": [
         "REQUIRED_DIAGNOSTIC_CODES"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "fetch_copc": {
       "apis": [
         "DatasetRegistry"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "ShadowSettings": {
       "apis": [
         "ShadowConfig",
         "CascadedShadowConfig"
       ],
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed.",
-      "kind": "capability-workflow"
+      "kind": "capability-workflow",
+      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
     },
     "fetch_dem": {
       "apis": [
         "DatasetRegistry"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "device_probe": {
       "apis": [
         "Forge3DRuntime"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "datasets": {
       "apis": [
         "DatasetRegistry"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "save_png_deterministic": {
       "apis": [
         "Frame",
         "writeByteSink"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "RasterOverlay": {
       "apis": [
         "RasterOverlay"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "StyleSpec": {
       "apis": [
         "StyleSpec"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "remote_datasets": {
       "apis": [
         "DatasetRegistry"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "parse_color": {
       "apis": [
         "parseStyleColor"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "material_from_tags": {
       "apis": [
         "buildingMaterialFromTags"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "make_camera": {
       "apis": [
         "makeCamera"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "LabelBatchResult": {
       "apis": [
         "LabelOperationResult"
       ],
-      "note": "Aggregate addLabels() LabelOperationResult[]: ordered id values and flattened diagnostics replace the Python batch dataclass.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Aggregate addLabels() LabelOperationResult[]: ordered id values and flattened diagnostics replace the Python batch dataclass."
     },
     "LabelPlan": {
       "apis": [
         "LabelPlan"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "SupportMatrixEntry": {
       "apis": [
         "SupportMatrixEntry"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "get_crs_from_rasterio": {
       "apis": [
         "crsFromRasterMetadata"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "PathTracer": {
       "apis": [
         "PathTracer"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "add_buildings": {
       "apis": [
         "BuildingLayer",
         "parseGeoJsonBuildings"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "SceneRecipe": {
       "apis": [
         "SceneRecipe"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "interactive": {
       "apis": [
         "Forge3DViewer"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "numpy_to_png": {
       "apis": [
         "arrayToPng"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "presets": {
       "apis": [
@@ -366,141 +373,141 @@
         "Forge3DSession",
         "rendererPresetNames"
       ],
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed.",
-      "kind": "capability-workflow"
+      "kind": "capability-workflow",
+      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
     },
     "load_bundle": {
       "apis": [
         "loadBundle"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "reproject_geom": {
       "apis": [
         "CrsTransformer"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "ViewerHandle": {
       "apis": [
         "Forge3DViewer"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "label_layer_contracts_from_style": {
       "apis": [
         "compileStyle"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "load_style": {
       "apis": [
         "loadStyle"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "FogSettings": {
       "apis": [
         "FogInput"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "fetch_cityjson": {
       "apis": [
         "DatasetRegistry"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "TerrainSource": {
       "apis": [
         "TerrainSource"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "ScaleBarConfig": {
       "apis": [
         "ScaleBarConfig"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "OfflineQualitySettings": {
       "apis": [
         "OfflineQualitySettings"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "OfflineProgress": {
       "apis": [
         "OfflineProgress"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "SeverityPolicy": {
       "apis": [
         "SeverityPolicy"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "OutputSpec": {
       "apis": [
         "OutputSpec"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "unsupported_texture_format_diagnostic": {
       "apis": [
         "unsupportedTextureFormatDiagnostic"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "export_svg": {
       "apis": [
         "exportSvg"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "LabelCandidate": {
       "apis": [
         "LabelCandidate"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "LicenseError": {
       "apis": [
         "LicenseError"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "png_to_numpy": {
       "apis": [
         "pngToArray"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "RasterOverlaySpec": {
       "apis": [
         "TerrainOverlayLayerInput"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "TerrainRenderParamsConfig": {
       "apis": [
@@ -510,494 +517,494 @@
         "EnvironmentInput",
         "PostFxChainInput"
       ],
-      "note": "Split the native aggregate across terrain/material/camera/environment/postFx typed inputs; there is no single-argument alias.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Split the native aggregate across terrain/material/camera/environment/postFx typed inputs; there is no single-argument alias."
     },
     "ClampSettings": {
       "apis": [
         "TerrainClampInput"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "dump_frame_sequence": {
       "apis": [
         "dumpFrameSequence"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "OrbitCamera": {
       "apis": [
         "OrbitCamera"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "terrain_scatter": {
       "apis": [
         "TerrainScatterBatch",
         "TerrainScatterSource"
       ],
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed.",
-      "kind": "capability-workflow"
+      "kind": "capability-workflow",
+      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
     },
     "ReflectionProbeSettings": {
       "apis": [
         "TerrainLightingProbes",
         "TerrainProbeBakeOptions"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "label_rejection_summary_diagnostic": {
       "apis": [
         "labelRejectionSummaryDiagnostic"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "viewer_ipc": {
       "apis": [
         "Forge3DMessageClient"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "AovFrame": {
       "apis": [
         "AovFrame"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "OverlayLayer": {
       "apis": [
         "TerrainOverlayLayerInput"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "NorthArrow": {
       "apis": [
         "NorthArrow"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "mini_dem": {
       "apis": [
         "DatasetRegistry"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "Building": {
       "apis": [
         "BuildingInput"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "ExportVectorStyle": {
       "apis": [
         "ExportVectorStyle"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "ScaleBar": {
       "apis": [
         "ScaleBar"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "AcceptedLabel": {
       "apis": [
         "AcceptedLabel"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "proj_available": {
       "apis": [
         "projAvailable"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "PomSettings": {
       "apis": [
         "TerrainPomInput"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "BuildingMaterial": {
       "apis": [
         "BuildingMaterial"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "get_crs_from_geopandas": {
       "apis": [
         "crsFromGeoJson"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "bundled_datasets": {
       "apis": [
         "DatasetRegistry"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "memory_metrics": {
       "apis": [
         "Forge3DSession"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "layer_to_vector_style": {
       "apis": [
         "styleToVectorStyle"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "set_license_key": {
       "apis": [
         "setLicenseKey"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "LabelLayer": {
       "apis": [
         "LabelLayer"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "unavailable_cache_lod_stats_diagnostic": {
       "apis": [
         "unavailableCacheLodStatsDiagnostic"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "override_memory_limit": {
       "apis": [
         "RendererConfig"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "animation": {
       "apis": [
         "CameraAnimation",
         "CameraKeyframe"
       ],
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed.",
-      "kind": "capability-workflow"
+      "kind": "capability-workflow",
+      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
     },
     "CameraState": {
       "apis": [
         "CameraState"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "transform_coords": {
       "apis": [
         "CrsTransformer"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "pro_gated_path_diagnostic": {
       "apis": [
         "proGatedPathDiagnostic"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "add_buildings_3dtiles": {
       "apis": [
         "loadBuildingTilesMetadata"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "LightSettings": {
       "apis": [
         "LightInput"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "add_buildings_cityjson": {
       "apis": [
         "parseCityJsonBuildings"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "TerrainRenderer": {
       "apis": [
         "Forge3DSession"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "unsupported_style_layer_type_diagnostic": {
       "apis": [
         "unsupportedStyleLayerTypeDiagnostic"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "RendererConfig": {
       "apis": [
         "RendererConfig"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "TerrainVTSettings": {
       "apis": [
         "TerrainVirtualTextureInput"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "VectorOverlay": {
       "apis": [
         "VectorOverlay"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "TypographySettings": {
       "apis": [
         "TypographySettings"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "dem_stats": {
       "apis": [
         "TerrainDataset"
       ],
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed.",
-      "kind": "capability-workflow"
+      "kind": "capability-workflow",
+      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
     },
     "PaintProps": {
       "apis": [
         "StyleLayer"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "layer_to_label_style": {
       "apis": [
         "styleToLabelStyle"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "SceneVariant": {
       "apis": [
         "SceneVariant"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "MaterialNoiseSettings": {
       "apis": [
         "TerrainMaterialNoiseInput"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "get_device": {
       "apis": [
         "Forge3DRuntime"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "MaterialSet": {
       "apis": [
         "TerrainMaterialInput"
       ],
-      "note": "Convert the terrain set to TerrainMaterialInput.materialSet, an array of TerrainMaterialLayerInput; this is not the scene TextureSet.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Convert the terrain set to TerrainMaterialInput.materialSet, an array of TerrainMaterialLayerInput; this is not the scene TextureSet."
     },
     "MapPlateConfig": {
       "apis": [
         "MapPlateConfig"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "Session": {
       "apis": [
         "Forge3DSession"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "MapSceneBuildingLayer": {
       "apis": [
         "MapSceneBuildingLayer"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "HeightAoSettings": {
       "apis": [
         "HeightAoOptions"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "SamplingSettings": {
       "apis": [
         "TerrainSamplingInput"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "IBL": {
       "apis": [
         "ImageBasedLighting",
         "IblCache"
       ],
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed.",
-      "kind": "capability-workflow"
+      "kind": "capability-workflow",
+      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
     },
     "MapScene": {
       "apis": [
         "MapScene"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "oidn_available": {
       "apis": [
         "CodecRegistry"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "ReflectionSettings": {
       "apis": [
         "WaterLayerInput"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "__version__": {
       "apis": [],
-      "note": "Read the installed npm package version metadata; no Python version function is exported.",
-      "kind": "npm-metadata"
+      "kind": "npm-metadata",
+      "note": "Read the installed npm package version metadata; no Python version function is exported."
     },
     "LegendConfig": {
       "apis": [
         "LegendConfig"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "unsupported_instancing_path_diagnostic": {
       "apis": [
         "unsupportedInstancingPathDiagnostic"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "missing_uvs_diagnostic": {
       "apis": [
         "missingUvsDiagnostic"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "widgets": {
       "apis": [
         "defineForge3DElement",
         "createNotebookAdapter"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "RejectedLabel": {
       "apis": [
         "RejectedLabel"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "DenoiseSettings": {
       "apis": [
         "DenoiseSettings"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "is_bundle": {
       "apis": [
         "isBundle"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "CameraAnimation": {
       "apis": [
         "CameraAnimation"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "ExportPolyline": {
       "apis": [
         "ExportPolyline"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "VTLayerFamily": {
       "apis": [
         "TerrainVtFamily"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "validate_label_support": {
       "apis": [
         "validateLabelSupport"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "available_colormaps": {
       "apis": [
         "colormaps"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "LoadedBundle": {
       "apis": [
         "LoadedBundle"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "camera_rigs": {
       "apis": [
@@ -1005,8 +1012,8 @@
         "TerrainRailRig",
         "TerrainTargetFollowRig"
       ],
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed.",
-      "kind": "capability-workflow"
+      "kind": "capability-workflow",
+      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
     },
     "TerrainRenderParams": {
       "apis": [
@@ -1016,424 +1023,424 @@
         "EnvironmentInput",
         "PostFxChainInput"
       ],
-      "note": "Split the native aggregate across terrain/material/camera/environment/postFx typed inputs; there is no single-argument alias.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Split the native aggregate across terrain/material/camera/environment/postFx typed inputs; there is no single-argument alias."
     },
     "list_datasets": {
       "apis": [
         "DatasetRegistry"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "LayoutProps": {
       "apis": [
         "StyleLayer"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "generate_svg": {
       "apis": [
         "generateSvg"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "ReviewLayer": {
       "apis": [
         "ReviewLayer"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "estimated_gpu_memory_diagnostic": {
       "apis": [
         "estimatedGpuMemoryDiagnostic"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "BuildingLayer": {
       "apis": [
         "BuildingLayer"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "ProbeSettings": {
       "apis": [
         "TerrainLightingProbes",
         "TerrainProbeBakeOptions"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "crs_mismatch_diagnostic": {
       "apis": [
         "crsMismatchDiagnostic"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "widgets_available": {
       "apis": [
         "createNotebookAdapter"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "colors": {
       "apis": [
         "ColormapRegistry",
         "parseColormapCpt"
       ],
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed.",
-      "kind": "capability-workflow"
+      "kind": "capability-workflow",
+      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
     },
     "has_gpu": {
       "apis": [
         "Forge3DRuntime"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "missing_glyphs_diagnostic": {
       "apis": [
         "missingGlyphsDiagnostic"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "SceneState": {
       "apis": [
         "SceneState"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "render_offline": {
       "apis": [
         "renderOffline"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "utilization_ratio": {
       "apis": [
         "Forge3DSession"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "placeholder_fallback_diagnostic": {
       "apis": [
         "placeholderFallbackDiagnostic"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "open_viewer": {
       "apis": [
         "Forge3DViewer"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "IblSettings": {
       "apis": [
         "IblOptions"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "validate_style_support": {
       "apis": [
         "validateStyleSupport"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "sun_position_utc": {
       "apis": [
         "sunPosition"
       ],
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed.",
-      "kind": "capability-workflow"
+      "kind": "capability-workflow",
+      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
     },
     "parse_style": {
       "apis": [
         "parseStyle"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "clipmap_generate_py": {
       "apis": [
         "generateClipmapMesh"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "fetch_dataset": {
       "apis": [
         "DatasetRegistry"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "ExportLabel": {
       "apis": [
         "ExportLabel"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "validate_svg": {
       "apis": [
         "validateSvg"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "CameraKeyframe": {
       "apis": [
         "CameraKeyframe"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "CameraBookmark": {
       "apis": [
         "CameraBookmark"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "ExportPolygon": {
       "apis": [
         "ExportPolygon"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "SunVisibilitySettings": {
       "apis": [
         "SunVisibilityOptions"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "FontFallbackRange": {
       "apis": [
         "FontFallbackRange"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "Scene": {
       "apis": [
         "Forge3DScene"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "save_bundle": {
       "apis": [
         "saveBundle"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "crs_to_epsg": {
       "apis": [
         "crsToEpsg"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "HdrFrame": {
       "apis": [
         "HdrFrame"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "StyleVectorStyle": {
       "apis": [
         "VectorStyle"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "PlateRegion": {
       "apis": [
         "PlateRegion"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "LightingPreset": {
       "apis": [
         "LightingPreset"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "SceneBaseState": {
       "apis": [
         "SceneState"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "ValidationReport": {
       "apis": [
         "ValidationReport"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "mini_dem_path": {
       "apis": [
         "DatasetRegistry"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "BundleManifest": {
       "apis": [
         "BundleManifest"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "Diagnostic": {
       "apis": [
         "Diagnostic"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "Colormap1D": {
       "apis": [
         "colormapFromStops"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "dataset_info": {
       "apis": [
         "DatasetRegistry"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "NorthArrowConfig": {
       "apis": [
         "NorthArrowConfig"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "P2_FEATURE_DIAGNOSTIC_CODES": {
       "apis": [
         "P2_FEATURE_DIAGNOSTIC_CODES"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "BBox": {
       "apis": [
         "BBox"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "Frame": {
       "apis": [
         "Frame"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "missing_texture_path_diagnostic": {
       "apis": [
         "missingTexturePathDiagnostic"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "FontAtlas": {
       "apis": [
         "FontAtlas"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "Tiles3DLayer": {
       "apis": [
         "Tileset",
         "Tiles3dLayer"
       ],
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed.",
-      "kind": "capability-workflow"
+      "kind": "capability-workflow",
+      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
     },
     "unsupported_style_field_diagnostic": {
       "apis": [
         "unsupportedStyleFieldDiagnostic"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "render_offscreen_rgba": {
       "apis": [
         "Forge3DOffscreenRenderer"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "validate_terrain_vt_support": {
       "apis": [
         "validateTerrainVtSupport"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "open_viewer_async": {
       "apis": [
         "Forge3DViewer"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "StyleLayer": {
       "apis": [
         "StyleLayer"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "python_public_3dtiles_incomplete_diagnostic": {
       "apis": [
         "pythonPublic3dtilesIncompleteDiagnostic"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "ClipmapMesh": {
       "apis": [
         "ClipmapMeshResult"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "sample_boundaries": {
       "apis": [
         "DatasetRegistry"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "io": {
       "apis": [
@@ -1441,136 +1448,136 @@
         "loadGltf",
         "loadHdr"
       ],
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed.",
-      "kind": "capability-workflow"
+      "kind": "capability-workflow",
+      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
     },
     "export_pdf": {
       "apis": [
         "exportPdf"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "paint_to_vector_style": {
       "apis": [
         "styleToVectorStyle"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "ExportBounds": {
       "apis": [
         "Bounds"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "sun_position": {
       "apis": [
         "sunPosition"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "PriorityClass": {
       "apis": [
         "PriorityClass"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "budget_remaining": {
       "apis": [
         "Forge3DSession"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "VectorScene": {
       "apis": [
         "VectorScene"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "oidn_denoise": {
       "apis": [
         "CodecRegistry",
         "atrousDenoise"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "BUNDLE_VERSION": {
       "apis": [
         "BUNDLE_VERSION"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "ClipmapConfig": {
       "apis": [
         "TerrainClipmapInput"
       ],
-      "note": "Pass a TerrainClipmapInput object to generateClipmapMesh or terrain.geometry.clipmap.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Pass a TerrainClipmapInput object to generateClipmapMesh or terrain.geometry.clipmap."
     },
     "MapPlate": {
       "apis": [
         "MapPlate"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "DetailSettings": {
       "apis": [
         "TerrainDetailInput"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "validate_building_layer_support": {
       "apis": [
         "MapScene",
         "diagnoseBuildingTextures"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "RenderFailurePolicy": {
       "apis": [
         "RenderFailurePolicy"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "rgba_to_png_bytes": {
       "apis": [
         "encodePng"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "ViewerWidget": {
       "apis": [
         "createNotebookAdapter"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "material_from_name": {
       "apis": [
         "buildingMaterialFromName"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     "StyleLabelStyle": {
       "apis": [
         "LabelStyle"
       ],
-      "note": "Browser entry point; use its typed asynchronous signature and lifecycle.",
-      "kind": "named-browser-entry"
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     }
   },
   "rows": {

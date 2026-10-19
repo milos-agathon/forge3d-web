@@ -5092,11 +5092,12 @@
   "tests": [
     {
       "path": "crates/forge3d-web/tests/parity/w23-application-analysis.test.mjs",
-      "sha256": "f8252a7a22a7789d1eb8e6d7ae880f135e028889fca2f69fc107860c9eea7487",
+      "sha256": "ceb29dcf0224d68d9ac2fdbc3fd1af81e603092e226132c56f980c5788cf49e7",
       "declarations": [
-        "W23 ${kind} analysis matches the unchanged native Python helper",
-        "regional analysis compares numeric results rather than accepting any nonempty output",
-        "IDW preserves exact river hits and Dijkstra respects inaccessible nodes"
+        "IDW preserves exact river hits and Dijkstra respects inaccessible nodes",
+        "original regional computation and dataflow: ${name}",
+        "Platte preserves its own one-meter exact-hit rule and PNOA never dispatches to REM",
+        "recorded source windows and spatial analysis outputs reach the rendered inputs"
       ]
     },
     {
@@ -7828,7 +7829,7 @@
     },
     {
       "artifactId": "changelog-addition:0210c89b69ce9eddc7998844",
-      "row": "G02",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -7878,7 +7879,7 @@
     },
     {
       "artifactId": "changelog-addition:03f224290bf1884f79e9007e",
-      "row": "G02",
+      "row": "R12",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -7888,7 +7889,7 @@
     },
     {
       "artifactId": "changelog-addition:043ba5817056f8f38ad0dde6",
-      "row": "G02",
+      "row": "P15",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -8085,7 +8086,7 @@
     },
     {
       "artifactId": "changelog-addition:0a271d8f568889003819b317",
-      "row": "T13",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -8100,7 +8101,7 @@
     },
     {
       "artifactId": "changelog-addition:0b3bd90babedc635eedfcae2",
-      "row": "G02",
+      "row": "P06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -8120,7 +8121,7 @@
     },
     {
       "artifactId": "changelog-addition:0bc43ab367b6121d8c8108bc",
-      "row": "G02",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -8200,7 +8201,7 @@
     },
     {
       "artifactId": "changelog-addition:10ac5f7cb6091e0e856d5749",
-      "row": "T13",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -8305,7 +8306,7 @@
     },
     {
       "artifactId": "changelog-addition:1488dcf781b377001ec9d780",
-      "row": "G02",
+      "row": "T02",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -8351,7 +8352,7 @@
     },
     {
       "artifactId": "changelog-addition:171561bebefb73b00d9a3111",
-      "row": "G02",
+      "row": "R12",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -8436,7 +8437,7 @@
     },
     {
       "artifactId": "changelog-addition:1a3a5a4b11100557b52f28cc",
-      "row": "T13",
+      "row": "P15",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -8461,7 +8462,7 @@
     },
     {
       "artifactId": "changelog-addition:1b130398280c44162ed36247",
-      "row": "G02",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -8501,7 +8502,7 @@
     },
     {
       "artifactId": "changelog-addition:1c7ae9006e2930b8420ec7e0",
-      "row": "G02",
+      "row": "P11",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -8632,7 +8633,7 @@
     },
     {
       "artifactId": "changelog-addition:2306508e6f41f026aa5ba7d5",
-      "row": "G02",
+      "row": "P13",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -8958,7 +8959,7 @@
     },
     {
       "artifactId": "changelog-addition:31e1863a3e6d3533b9eb817d",
-      "row": "G02",
+      "row": "T16",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -9160,7 +9161,7 @@
     },
     {
       "artifactId": "changelog-addition:3df63039a1f2998a97c11473",
-      "row": "T13",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -9185,7 +9186,7 @@
     },
     {
       "artifactId": "changelog-addition:3ede5f832fbef83654652a9a",
-      "row": "G02",
+      "row": "P11",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -9296,7 +9297,7 @@
     },
     {
       "artifactId": "changelog-addition:420e50bdff8662946ce3f864",
-      "row": "G02",
+      "row": "R01",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -9337,7 +9338,7 @@
     },
     {
       "artifactId": "changelog-addition:44a6545ddcc205b02d305ab1",
-      "row": "T13",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -9363,7 +9364,7 @@
     },
     {
       "artifactId": "changelog-addition:463894eb4e2373fc38dd02f3",
-      "row": "G02",
+      "row": "P13",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -9409,7 +9410,7 @@
     },
     {
       "artifactId": "changelog-addition:479d8136c6854b7ffd7507a5",
-      "row": "G02",
+      "row": "P07",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -9910,7 +9911,7 @@
     },
     {
       "artifactId": "changelog-addition:5a12115ea848a4a84a37e69b",
-      "row": "G02",
+      "row": "P13",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -9961,7 +9962,7 @@
     },
     {
       "artifactId": "changelog-addition:5ce9b2d50c5455867d24054d",
-      "row": "T13",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -10017,7 +10018,7 @@
     },
     {
       "artifactId": "changelog-addition:5e772fe83d1d279767291d58",
-      "row": "T13",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -10143,7 +10144,7 @@
     },
     {
       "artifactId": "changelog-addition:64b3ba22adace341838c0a61",
-      "row": "G02",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -10294,7 +10295,7 @@
     },
     {
       "artifactId": "changelog-addition:6d6e405cfec43aac8461e475",
-      "row": "G02",
+      "row": "R08",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -10354,7 +10355,7 @@
     },
     {
       "artifactId": "changelog-addition:70012e9490873217469ece96",
-      "row": "G02",
+      "row": "V07",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -10394,7 +10395,7 @@
     },
     {
       "artifactId": "changelog-addition:71bee171c857fd8ce6844826",
-      "row": "R12",
+      "row": "G02",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -10439,7 +10440,7 @@
     },
     {
       "artifactId": "changelog-addition:7364649efd608194b0e85892",
-      "row": "G05a",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -10564,7 +10565,7 @@
     },
     {
       "artifactId": "changelog-addition:788aa8993db7edf41bf6356d",
-      "row": "G02",
+      "row": "R01",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -10604,7 +10605,7 @@
     },
     {
       "artifactId": "changelog-addition:7a518721ad802f8258ef4bc0",
-      "row": "T13",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -10834,7 +10835,7 @@
     },
     {
       "artifactId": "changelog-addition:8445b403d4601f4247bd1522",
-      "row": "G02",
+      "row": "G07",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -10924,7 +10925,7 @@
     },
     {
       "artifactId": "changelog-addition:87798a34de8c16b45332cc43",
-      "row": "G02",
+      "row": "P07",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -11091,7 +11092,7 @@
     },
     {
       "artifactId": "changelog-addition:8f913bc84ee9e51e9fa14d13",
-      "row": "T13",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -11131,7 +11132,7 @@
     },
     {
       "artifactId": "changelog-addition:910aeaffda66a41344acf08a",
-      "row": "G02",
+      "row": "P13",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -11187,7 +11188,7 @@
     },
     {
       "artifactId": "changelog-addition:932b177e3b0457b395f1f45a",
-      "row": "G02",
+      "row": "P06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -11218,7 +11219,7 @@
     },
     {
       "artifactId": "changelog-addition:94952c0b9bd2b7e06cc3c92a",
-      "row": "G02",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -11294,12 +11295,12 @@
     },
     {
       "artifactId": "changelog-addition:9712165fae8dfd78b080026f",
-      "row": "T13",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
       "artifactId": "changelog-addition:9712ff52a4e493bfbc152b08",
-      "row": "G02",
+      "row": "P15",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -11424,7 +11425,7 @@
     },
     {
       "artifactId": "changelog-addition:9c5d7dc171d8824fca886ee1",
-      "row": "T13",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -11450,7 +11451,7 @@
     },
     {
       "artifactId": "changelog-addition:9d391919fc2a3642be035f77",
-      "row": "G02",
+      "row": "T13",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -11580,7 +11581,7 @@
     },
     {
       "artifactId": "changelog-addition:a26824b74d6e30d8ec6cb717",
-      "row": "G02",
+      "row": "R04",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -11590,7 +11591,7 @@
     },
     {
       "artifactId": "changelog-addition:a2f6192c72500bcedcfb0842",
-      "row": "G02",
+      "row": "P13",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -11733,7 +11734,7 @@
     },
     {
       "artifactId": "changelog-addition:a7047f03a5d97b26934bfcfc",
-      "row": "G02",
+      "row": "P11",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -11778,7 +11779,7 @@
     },
     {
       "artifactId": "changelog-addition:a8c0db6185b4727414dd24fe",
-      "row": "G02",
+      "row": "P13",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -11813,7 +11814,7 @@
     },
     {
       "artifactId": "changelog-addition:aa1fdbadd07bbb0c9fb6f5bb",
-      "row": "G02",
+      "row": "P11",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -11853,7 +11854,7 @@
     },
     {
       "artifactId": "changelog-addition:ab3bbd59faab82c4c2c148ce",
-      "row": "T13",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -11868,7 +11869,7 @@
     },
     {
       "artifactId": "changelog-addition:abbbce0dc6842a623cb1802d",
-      "row": "G02",
+      "row": "G01",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -11953,7 +11954,7 @@
     },
     {
       "artifactId": "changelog-addition:b03342a30a051a184f9bff4d",
-      "row": "T13",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -11963,7 +11964,7 @@
     },
     {
       "artifactId": "changelog-addition:b163093ffaf0170e67476394",
-      "row": "G02",
+      "row": "R12",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -11988,7 +11989,7 @@
     },
     {
       "artifactId": "changelog-addition:b2ac23c9622f7498120e3029",
-      "row": "G02",
+      "row": "R01",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -12008,7 +12009,7 @@
     },
     {
       "artifactId": "changelog-addition:b421783d1f17de2dc47014cb",
-      "row": "G02",
+      "row": "P13",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -12038,7 +12039,7 @@
     },
     {
       "artifactId": "changelog-addition:b56bb38811f48f473bfe0bd1",
-      "row": "G02",
+      "row": "P06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -12063,7 +12064,7 @@
     },
     {
       "artifactId": "changelog-addition:b653857dc6104a3d5285a578",
-      "row": "T13",
+      "row": "P14",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -12164,7 +12165,7 @@
     },
     {
       "artifactId": "changelog-addition:bb03abf89493113396035a5c",
-      "row": "G02",
+      "row": "V05",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -12199,12 +12200,12 @@
     },
     {
       "artifactId": "changelog-addition:bd4a12d145e314fa2f847c8e",
-      "row": "G02",
+      "row": "P07",
       "evidenceKind": "capability-evidence-route"
     },
     {
       "artifactId": "changelog-addition:bd8accbe1592c648cd5e70ba",
-      "row": "T13",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -12330,7 +12331,7 @@
     },
     {
       "artifactId": "changelog-addition:c38f712932df58576d6b5dfc",
-      "row": "G02",
+      "row": "V05",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -12385,7 +12386,7 @@
     },
     {
       "artifactId": "changelog-addition:c5167bd37e9c562bab551525",
-      "row": "G02",
+      "row": "T16",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -12465,7 +12466,7 @@
     },
     {
       "artifactId": "changelog-addition:c71e13cdd9909d50d2bb224c",
-      "row": "G02",
+      "row": "G01",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -12500,7 +12501,7 @@
     },
     {
       "artifactId": "changelog-addition:c869d7bfefa709fc94e67491",
-      "row": "T13",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -12530,7 +12531,7 @@
     },
     {
       "artifactId": "changelog-addition:c8f99dac04201bb4e5da3bba",
-      "row": "G02",
+      "row": "M07",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -12661,7 +12662,7 @@
     },
     {
       "artifactId": "changelog-addition:ced41eef03826173089883a3",
-      "row": "T13",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -12701,7 +12702,7 @@
     },
     {
       "artifactId": "changelog-addition:d059ff57b62899898011ca42",
-      "row": "G02",
+      "row": "T02",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -12816,7 +12817,7 @@
     },
     {
       "artifactId": "changelog-addition:d5abc583294a15dba9469790",
-      "row": "G02",
+      "row": "P11",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -12831,7 +12832,7 @@
     },
     {
       "artifactId": "changelog-addition:d65586b28dab6ea672328e52",
-      "row": "G02",
+      "row": "P13",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -13036,7 +13037,7 @@
     },
     {
       "artifactId": "changelog-addition:ded45f531bc007502471656c",
-      "row": "G02",
+      "row": "P13",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -13126,7 +13127,7 @@
     },
     {
       "artifactId": "changelog-addition:e3173756f7b90f3727a32ab2",
-      "row": "G02",
+      "row": "P15",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -13151,7 +13152,7 @@
     },
     {
       "artifactId": "changelog-addition:e3daa204af2977283b740d4d",
-      "row": "G02",
+      "row": "R02",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -13207,7 +13208,7 @@
     },
     {
       "artifactId": "changelog-addition:e645095824716a9adc6cbab6",
-      "row": "G02",
+      "row": "P15",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -13374,7 +13375,7 @@
     },
     {
       "artifactId": "changelog-addition:edaf054c5c284a604ee213b7",
-      "row": "T13",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -13384,7 +13385,7 @@
     },
     {
       "artifactId": "changelog-addition:ee185a3a453b6bc06bf959bb",
-      "row": "G02",
+      "row": "P15",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -13440,7 +13441,7 @@
     },
     {
       "artifactId": "changelog-addition:f089d2c884fcecb8339ad15b",
-      "row": "G02",
+      "row": "R12",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -13470,7 +13471,7 @@
     },
     {
       "artifactId": "changelog-addition:f1c46083ccfb9c25ef227a9d",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -13799,7 +13800,7 @@
     },
     {
       "artifactId": "changelog-heading:0257641e33c1b6455f5885ea",
-      "row": "G02",
+      "row": "P13",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -14724,7 +14725,7 @@
     },
     {
       "artifactId": "changelog-heading:8a1527dd631febd6f36e271c",
-      "row": "G02",
+      "row": "P13",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -14784,7 +14785,7 @@
     },
     {
       "artifactId": "changelog-heading:9329b59503d920429678ef63",
-      "row": "G02",
+      "row": "R12",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -15524,7 +15525,7 @@
     },
     {
       "artifactId": "changelog-heading:fab4577a756829d09cd49730",
-      "row": "G02",
+      "row": "R12",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -15729,7 +15730,7 @@
     },
     {
       "artifactId": "inactive-module-root:8eb5d2edd38f531d1b3e59a7",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -17649,7 +17650,7 @@
     },
     {
       "artifactId": "native-doc-feature:a62ffdf645ae42368ad6e200",
-      "row": "R12",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -18094,7 +18095,7 @@
     },
     {
       "artifactId": "native-doc-feature:da8a70205c605f0c58517043",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -19289,7 +19290,7 @@
     },
     {
       "artifactId": "native-test-definition:0c8368816c0474dfcdad5d98",
-      "row": "C08",
+      "row": "P09",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -19564,7 +19565,7 @@
     },
     {
       "artifactId": "native-test-definition:137afdd32e95f519d12f0f32",
-      "row": "C08",
+      "row": "P09",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -19609,7 +19610,7 @@
     },
     {
       "artifactId": "native-test-definition:14b4e180c419f7091f31a675",
-      "row": "C01",
+      "row": "P09",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -19644,7 +19645,7 @@
     },
     {
       "artifactId": "native-test-definition:1543c3e17cc1a713182bd5be",
-      "row": "G02",
+      "row": "M03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -19904,7 +19905,7 @@
     },
     {
       "artifactId": "native-test-definition:1c85b7101ca0a142858d983e",
-      "row": "C08",
+      "row": "P09",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -19964,7 +19965,7 @@
     },
     {
       "artifactId": "native-test-definition:1f11c3e139bf90ce5553d0e6",
-      "row": "V05",
+      "row": "M03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -20054,7 +20055,7 @@
     },
     {
       "artifactId": "native-test-definition:216db218cbe7e6e66802c90e",
-      "row": "C01",
+      "row": "P09",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -20264,7 +20265,7 @@
     },
     {
       "artifactId": "native-test-definition:26da5ca5a03835ac533f2ba6",
-      "row": "C08",
+      "row": "P09",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -20349,7 +20350,7 @@
     },
     {
       "artifactId": "native-test-definition:2972679069a719a184e84fd8",
-      "row": "G02",
+      "row": "M02a",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -20459,7 +20460,7 @@
     },
     {
       "artifactId": "native-test-definition:2d1a841a421907988ac359b4",
-      "row": "G09",
+      "row": "G10",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -20549,7 +20550,7 @@
     },
     {
       "artifactId": "native-test-definition:2ef5c432bba8f28da110e80d",
-      "row": "C01",
+      "row": "P09",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -20579,7 +20580,7 @@
     },
     {
       "artifactId": "native-test-definition:2f4601c1e29d989cfa7de705",
-      "row": "G09",
+      "row": "G10",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -20654,7 +20655,7 @@
     },
     {
       "artifactId": "native-test-definition:315c5fcd8e9fc9615b2fe5f9",
-      "row": "P06",
+      "row": "C03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -20779,7 +20780,7 @@
     },
     {
       "artifactId": "native-test-definition:34b77ecba528782ce14ca9ed",
-      "row": "G03",
+      "row": "G02",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -21110,7 +21111,7 @@
     },
     {
       "artifactId": "native-test-definition:3c1a88bcaf99387bfdfc04e4",
-      "row": "R04",
+      "row": "P14",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -21335,7 +21336,7 @@
     },
     {
       "artifactId": "native-test-definition:427a1d5028bcb9c16be05e9f",
-      "row": "M04",
+      "row": "M08",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -21385,7 +21386,7 @@
     },
     {
       "artifactId": "native-test-definition:440769a9a80d18b88ea93244",
-      "row": "V05",
+      "row": "M03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -21560,7 +21561,7 @@
     },
     {
       "artifactId": "native-test-definition:491419e072055964aa91123d",
-      "row": "M05",
+      "row": "M08",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -21675,7 +21676,7 @@
     },
     {
       "artifactId": "native-test-definition:4c8b0e33cd10457f96e1a962",
-      "row": "V05",
+      "row": "M03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -21725,7 +21726,7 @@
     },
     {
       "artifactId": "native-test-definition:4db4bf0f3efd0bb5ca3e1b0a",
-      "row": "P05",
+      "row": "P14",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -21840,7 +21841,7 @@
     },
     {
       "artifactId": "native-test-definition:50c4fe57a1a27b4dca53710d",
-      "row": "G02",
+      "row": "M01",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -21950,7 +21951,7 @@
     },
     {
       "artifactId": "native-test-definition:556c7fb445750e0841868224",
-      "row": "C08",
+      "row": "P09",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -22340,7 +22341,7 @@
     },
     {
       "artifactId": "native-test-definition:62b20964733953a82283c898",
-      "row": "T16",
+      "row": "M03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -22835,7 +22836,7 @@
     },
     {
       "artifactId": "native-test-definition:714e2c04b2a6fb2434b2d441",
-      "row": "M03",
+      "row": "M08",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -22920,7 +22921,7 @@
     },
     {
       "artifactId": "native-test-definition:74cf2ba92257a4fc38c828b7",
-      "row": "V05",
+      "row": "M03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23000,7 +23001,7 @@
     },
     {
       "artifactId": "native-test-definition:76b0f96ba328b36bae91ca9d",
-      "row": "C08",
+      "row": "P09",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23055,7 +23056,7 @@
     },
     {
       "artifactId": "native-test-definition:77cc96d4fee69a285c8fb8c3",
-      "row": "M04",
+      "row": "M08",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23080,7 +23081,7 @@
     },
     {
       "artifactId": "native-test-definition:78b52f19b58c2e2d12b91d35",
-      "row": "R04",
+      "row": "P14",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23360,7 +23361,7 @@
     },
     {
       "artifactId": "native-test-definition:81c7e82b0381f711975f13f4",
-      "row": "P05",
+      "row": "P14",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23540,7 +23541,7 @@
     },
     {
       "artifactId": "native-test-definition:86f45c90dd64579311c6f2d8",
-      "row": "G09",
+      "row": "G10",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23595,7 +23596,7 @@
     },
     {
       "artifactId": "native-test-definition:88fbab01e2ea6aa4ab2857e9",
-      "row": "R04",
+      "row": "P14",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23695,7 +23696,7 @@
     },
     {
       "artifactId": "native-test-definition:8ccd78bd20372c043612edcd",
-      "row": "G02",
+      "row": "G05a",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23985,7 +23986,7 @@
     },
     {
       "artifactId": "native-test-definition:94f3f69b111703132f30c96a",
-      "row": "G02",
+      "row": "G04",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24125,7 +24126,7 @@
     },
     {
       "artifactId": "native-test-definition:97dd2d37514f90d8f24d4d73",
-      "row": "G02",
+      "row": "M01",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24170,7 +24171,7 @@
     },
     {
       "artifactId": "native-test-definition:997425a3a5000184f58afe95",
-      "row": "C08",
+      "row": "P09",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24235,7 +24236,7 @@
     },
     {
       "artifactId": "native-test-definition:9c046ef0b431b1c9cb983dd0",
-      "row": "C08",
+      "row": "P09",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24365,7 +24366,7 @@
     },
     {
       "artifactId": "native-test-definition:9f14f0082bbe1aff45320d13",
-      "row": "T16",
+      "row": "M03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24465,7 +24466,7 @@
     },
     {
       "artifactId": "native-test-definition:a2ec67c0f96fef9308800d45",
-      "row": "G02",
+      "row": "M01",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24525,7 +24526,7 @@
     },
     {
       "artifactId": "native-test-definition:a42b7af7026d686cf0767479",
-      "row": "G02",
+      "row": "M08",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24620,7 +24621,7 @@
     },
     {
       "artifactId": "native-test-definition:a662a886dbab33683fc8b6ab",
-      "row": "G09",
+      "row": "G10",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24725,7 +24726,7 @@
     },
     {
       "artifactId": "native-test-definition:a8d08c1661894953a9fcfb35",
-      "row": "T16",
+      "row": "M03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24846,12 +24847,12 @@
     },
     {
       "artifactId": "native-test-definition:ac349328501c7f815ff33369",
-      "row": "T13",
+      "row": "P09",
       "evidenceKind": "capability-test-route"
     },
     {
       "artifactId": "native-test-definition:ac4514fe25674b29658b0f8c",
-      "row": "C08",
+      "row": "P09",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -25566,7 +25567,7 @@
     },
     {
       "artifactId": "native-test-definition:c1b9a45d4e2ca732047bfef4",
-      "row": "G02",
+      "row": "G04",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -25611,7 +25612,7 @@
     },
     {
       "artifactId": "native-test-definition:c33b4a2292bc30168a23c35e",
-      "row": "G05a",
+      "row": "M08",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -25751,7 +25752,7 @@
     },
     {
       "artifactId": "native-test-definition:c672a09031483c3074b100ec",
-      "row": "G02",
+      "row": "M08",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -25811,7 +25812,7 @@
     },
     {
       "artifactId": "native-test-definition:c7cbb2f2c24ffed9e48f3673",
-      "row": "P06",
+      "row": "G10",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -25956,7 +25957,7 @@
     },
     {
       "artifactId": "native-test-definition:cb476058a6e38d520c17039b",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -26011,7 +26012,7 @@
     },
     {
       "artifactId": "native-test-definition:ccb098a193cc905ca2a0f88d",
-      "row": "C03",
+      "row": "P14",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -26241,7 +26242,7 @@
     },
     {
       "artifactId": "native-test-definition:d49834e3f00160c5b322e876",
-      "row": "G09",
+      "row": "G10",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -26351,7 +26352,7 @@
     },
     {
       "artifactId": "native-test-definition:d7767aaa9b8e146f0d2646de",
-      "row": "M03",
+      "row": "M08",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -26516,7 +26517,7 @@
     },
     {
       "artifactId": "native-test-definition:db824cb899b5166c2a1685d0",
-      "row": "G04",
+      "row": "M08",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -26656,7 +26657,7 @@
     },
     {
       "artifactId": "native-test-definition:ded5320782dad95735281147",
-      "row": "C08",
+      "row": "P09",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -26686,7 +26687,7 @@
     },
     {
       "artifactId": "native-test-definition:dfcc83a5a96cb2c814842b21",
-      "row": "G05a",
+      "row": "M03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -26711,7 +26712,7 @@
     },
     {
       "artifactId": "native-test-definition:e0891ca0da2a6f3479e38605",
-      "row": "C01",
+      "row": "P09",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -26811,7 +26812,7 @@
     },
     {
       "artifactId": "native-test-definition:e353a08309685b0c8320d96a",
-      "row": "M06",
+      "row": "M08",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -27151,7 +27152,7 @@
     },
     {
       "artifactId": "native-test-definition:ec06608e13d93e4208004061",
-      "row": "C08",
+      "row": "P09",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -27321,7 +27322,7 @@
     },
     {
       "artifactId": "native-test-definition:f11c43eb4b4275668b4083af",
-      "row": "C08",
+      "row": "P09",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -27356,7 +27357,7 @@
     },
     {
       "artifactId": "native-test-definition:f25ff3e5afe52edac19b5ea1",
-      "row": "P06",
+      "row": "G10",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -27391,7 +27392,7 @@
     },
     {
       "artifactId": "native-test-definition:f3623c735078dae00aa4e775",
-      "row": "G05a",
+      "row": "M08",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -27546,7 +27547,7 @@
     },
     {
       "artifactId": "native-test-definition:f85e14b0c0eaad007c31626e",
-      "row": "C08",
+      "row": "P09",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -27671,7 +27672,7 @@
     },
     {
       "artifactId": "native-test-definition:fb3ac5a1d7ecc5b62f376c3c",
-      "row": "C08",
+      "row": "P09",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -27761,7 +27762,7 @@
     },
     {
       "artifactId": "native-test-definition:fd3596adffdeb76c52d9fd97",
-      "row": "C08",
+      "row": "P09",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -27796,7 +27797,7 @@
     },
     {
       "artifactId": "native-test-definition:fe663bab8fe4ecdcd7ecbbeb",
-      "row": "R04",
+      "row": "P14",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -27826,7 +27827,7 @@
     },
     {
       "artifactId": "native-test-definition:ff7cafcf3e9d2513e77a803e",
-      "row": "G02",
+      "row": "G04",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -28702,7 +28703,7 @@
     },
     {
       "artifactId": "native-test-file:cd9f5873c4f10ee30fe74f47",
-      "row": "C08",
+      "row": "P09",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -28932,7 +28933,7 @@
     },
     {
       "artifactId": "package-root-export:0355c7926037700da1281df8",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -29032,7 +29033,7 @@
     },
     {
       "artifactId": "package-root-export:134fff7d4aef60635c26a6da",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -29057,7 +29058,7 @@
     },
     {
       "artifactId": "package-root-export:1a23d7ceb9a1e246ed0a0828",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -29067,7 +29068,7 @@
     },
     {
       "artifactId": "package-root-export:1c8e41535ad6c02018ada6d5",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -29077,7 +29078,7 @@
     },
     {
       "artifactId": "package-root-export:2140062e3f021dac13863914",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -29097,7 +29098,7 @@
     },
     {
       "artifactId": "package-root-export:251a008eb4fb494991698fee",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -29157,7 +29158,7 @@
     },
     {
       "artifactId": "package-root-export:2d119ce3556724028c85e6cc",
-      "row": "R02",
+      "row": "E07",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -29197,7 +29198,7 @@
     },
     {
       "artifactId": "package-root-export:34fbabf46ee3ca6904df04ce",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -29252,7 +29253,7 @@
     },
     {
       "artifactId": "package-root-export:46c077fa61ae500f19b8b5a1",
-      "row": "R02",
+      "row": "E07",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -29317,7 +29318,7 @@
     },
     {
       "artifactId": "package-root-export:65853e0897599d44248e13d3",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -29362,7 +29363,7 @@
     },
     {
       "artifactId": "package-root-export:6cbd46b1d927ff420977e991",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -29622,7 +29623,7 @@
     },
     {
       "artifactId": "package-root-export:9fc5984afc4d9dd36dba0d98",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -29732,7 +29733,7 @@
     },
     {
       "artifactId": "package-root-export:b7e10ef145af30108c0b73d0",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -29817,7 +29818,7 @@
     },
     {
       "artifactId": "package-root-export:c9d7943c48138ebcbe946a98",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -29837,7 +29838,7 @@
     },
     {
       "artifactId": "package-root-export:d1d3b2a4f78a85b017a70729",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -29912,7 +29913,7 @@
     },
     {
       "artifactId": "package-root-export:e656746b6e42f1f244dca2a2",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -29992,7 +29993,7 @@
     },
     {
       "artifactId": "package-root-export:fbe46f471f0dbe7bb3da8504",
-      "row": "R02",
+      "row": "E07",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -30762,7 +30763,7 @@
     },
     {
       "artifactId": "python-public-definition:017f2b993eafea01f39bbed9",
-      "row": "R10",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -31782,7 +31783,7 @@
     },
     {
       "artifactId": "python-public-definition:24f32e06176a3d755e77dbb1",
-      "row": "G03",
+      "row": "G02",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -33602,7 +33603,7 @@
     },
     {
       "artifactId": "python-public-definition:64ba87bc94139bfdf55a7cc6",
-      "row": "G03",
+      "row": "G02",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -36227,7 +36228,7 @@
     },
     {
       "artifactId": "python-public-definition:b69509994ccb2fa52a92e2ae",
-      "row": "R10",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -36327,7 +36328,7 @@
     },
     {
       "artifactId": "python-public-definition:ba45aec264872da15885e9fe",
-      "row": "R10",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -36397,7 +36398,7 @@
     },
     {
       "artifactId": "python-public-definition:bccbbb2e96b0a4e4c9888b75",
-      "row": "M02a",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -37182,7 +37183,7 @@
     },
     {
       "artifactId": "python-public-definition:d5087f7dfc3515c0c3d0df3b",
-      "row": "G03",
+      "row": "G02",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -37442,7 +37443,7 @@
     },
     {
       "artifactId": "python-public-definition:de9b719c7f4a3d61517504c3",
-      "row": "R10",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {

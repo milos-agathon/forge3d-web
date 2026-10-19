@@ -87,10 +87,13 @@ def main():
     scenes = [SimpleNamespace(id='scene-' + str(i)) for i in range(3)]
     plan = transition['build_frame_plan'](scenes, fps=2, duration=4, preview_only=False, crossfade_frames=2)
     out['satellite'] = {'sceneIds': [s.id for s in scenes], 'fps': 2, 'duration': 4, 'crossfadeFrames': 2, 'plan': [{'index': p.index, 'scene': p.scene.id, 'labelScene': p.label_scene.id, 'peer': p.blend_scene.id if p.blend_scene else None, 'alpha': p.blend_alpha, 'opacity': p.label_opacity} for p in plan]}
+    from w23_regional_fixtures import build_cases
+    out['examples'], regional_sources = build_cases(out)
+    SOURCES.update(regional_sources)
     target = ROOT / 'tests/golden/w23'
     save(target / 'applications.json', out)
     save(target / 'applications-provenance.json', {'generator': 'crates/forge3d-web/scripts/generate-w23-application-fixtures.py', 'method': 'Original Python AST helper bodies executed with bounded typed data; independent of browser implementation.', 'sources': SOURCES})
-    print(json.dumps({'kernels': list(out), 'sources': len(SOURCES)}))
+    print(json.dumps({'legacyKernels': 5, 'examples':len(out['examples']),'operations':sum(len(v['operations'])for v in out['examples'].values()), 'sources': len(SOURCES)}))
 
 
 if __name__ == '__main__':

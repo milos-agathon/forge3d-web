@@ -1,17 +1,8 @@
 // Bounded browser ports of the original regional examples' analysis helpers.
 // Expected values come from Python AST execution, never from these functions.
+import { executeRegionalKernel } from './regional-kernels.js';
 export function applicationKind(name) {
-  if(/colorado_rem|platte_rem|pnoa_river/.test(name))return 'rem';
-  if(/belgium_bivariate/.test(name))return 'bivariate';
-  if(/barcelona_travel|helsinki_transit/.test(name))return 'travel';
-  if(/rotterdam_solar/.test(name))return 'solar';
-  if(/khumbu_icefall/.test(name))return 'satellite';
-  if(/osm_city/.test(name))return 'city';
-  if(/california_|bryce_canyon/.test(name))return 'weather';
-  if(/population_spikes/.test(name))return 'population';
-  if(/river_basins/.test(name))return 'basins';
-  if(/landcover|lighthouse_map|luxembourg_rail/.test(name))return 'landcover';
-  return null;
+  return ({'colorado_rem_forge3d.py':'rem','platte_rem_forge3d.py':'platte-rem','pnoa_river_showcase.py':'waterways','pnoa_river_showcase_video.py':'pnoa-video','belgium_bivariate_climate_map.py':'bivariate','barcelona_travel_time_3d.py':'travel','helsinki_transit_daycycle.py':'transit','rotterdam_solar_potential_shadow_study.py':'solar','khumbu_icefall_sentinel_timelapse.py':'satellite','osm_city_demo.py':'city','osm_city_daycycle.py':'daycycle','osm_city_flood_daycycle.py':'flood','california_fire_smoke_effect.py':'smoke','california_wildfire_smoke_video.py':'wildfire','bryce_canyon_storm_timelapse.py':'storm','poland_population_spikes_height_shade.py':'population','turkiye_river_basins_3d.py':'turkiye-basins','poland_river_basins_forge3d.py':'poland-basins','romania_terrain_landcover_viewer.py':'landcover','swiss_terrain_landcover_viewer.py':'landcover','germany_terrain_landcover_viewer.py':'landcover','bosnia_terrain_landcover_viewer.py':'landcover','uk_ireland_lighthouse_map.py':'lighthouses','luxembourg_rail_overlay.py':'rail'})[name]??null;
 }
 export function quantileBreaks(values, quantiles = [.25,.5,.75]) {
   const sorted=values.filter(Number.isFinite).sort((a,b)=>a-b);
@@ -60,29 +51,37 @@ export function satelliteFramePlan(sceneIds,fps,duration,crossfadeFrames) {
     }
   }return plan.slice(0,count);
 }
-function close(actual,expected,label,tolerance=1e-5) {
-  if(actual.length!==expected.length||actual.some((v,i)=>!Number.isFinite(v)||Math.abs(v-expected[i])>tolerance))throw Error(`Native ${label} oracle mismatch`);
+function assertControl(actual,expected,tolerance,path){
+  if(typeof expected==='number'){
+    if(!Number.isFinite(actual)||Math.abs(actual-expected)>tolerance)throw Error(`Native ${path} mismatch: ${actual} != ${expected}`);
+  }else if(expected===null||typeof expected!=='object'){
+    if(actual!==expected)throw Error(`Native ${path} mismatch`);
+  }else{
+    if(!actual||Array.isArray(expected)!==Array.isArray(actual)||Object.keys(actual).length!==Object.keys(expected).length)throw Error(`Native ${path} shape mismatch`);
+    for(const key of Object.keys(expected))assertControl(actual[key],expected[key],tolerance,path+'.'+key);
+  }
 }
-export function analyzeApplication(kind,oracle) {
-  const base=oracle.rem,output={kind,terrain:base.dem.slice(),width:4,height:4,scalar:base.dem.slice(),framePlan:null};
-  if(kind==='rem'){
-    const water=idwWaterSurface(base.coordinates,base.river,base.riverHeights),relative=base.dem.map((v,i)=>Math.fround(v-water[i]));
-    close(water,base.waterSurface,'IDW water surface');close(relative,base.relativeElevation,'relative elevation');output.scalar=relative;output.evidence={waterSurface:water,relativeElevation:relative};
-  }else if(kind==='bivariate'){
-    const b=oracle.bivariate,tb=quantileBreaks(b.temperature),pb=quantileBreaks(b.precipitation),tc=classify(b.temperature,tb),pc=classify(b.precipitation,pb);
-    close(tb,b.temperatureBreaks,'temperature quantiles');close(pb,b.precipitationBreaks,'rainfall quantiles');close(tc,b.temperatureClasses,'temperature classification');close(pc,b.precipitationClasses,'rainfall classification');
-    output.colors=tc.map((t,i)=>b.palette[pc[i]-1][t-1]);output.evidence={temperatureBreaks:tb,precipitationBreaks:pb,temperatureClasses:tc,precipitationClasses:pc};
-  }else if(kind==='travel'||kind==='city'){
-    const t=oracle.travel,seconds=dijkstraSeconds(t.graph,t.start),speeds=t.speeds.map(parseMaxspeed);
-    close(Object.values(seconds),Object.values(t.seconds),'Dijkstra travel times');if(JSON.stringify(speeds)!==JSON.stringify(t.parsedSpeeds))throw Error('Native speed parser mismatch');
-    output.scalar=output.scalar.map((_,i)=>Object.values(seconds)[i%Object.keys(seconds).length]);output.evidence={seconds,speeds};
-  }else if(kind==='solar'){
-    const s=oracle.solar,normals=s.roofs.map(roofNormal),factors=s.roofs.map(r=>orientationFactor(r,s.orientationPenalty,s.slopePenalty));
-    close(normals.flat(),s.normals.flat(),'roof normals',1e-6);close(factors,s.factors,'roof solar orientation');output.scalar=output.scalar.map((_,i)=>factors[i%factors.length]);output.evidence={normals,factors};
-  }else if(kind==='satellite'){
-    const s=oracle.satellite,plan=satelliteFramePlan(s.sceneIds,s.fps,s.duration,s.crossfadeFrames);
-    for(let i=0;i<plan.length;i++){close([plan[i].alpha,plan[i].opacity],[s.plan[i].alpha,s.plan[i].opacity],'satellite transition');for(const field of ['index','scene','labelScene','peer'])if(plan[i][field]!==s.plan[i][field])throw Error('Native satellite frame plan mismatch');}
-    output.framePlan=plan;output.evidence={frames:plan.length,transitions:plan.filter(p=>p.peer).length};
-  }else output.evidence={samples:base.dem.length};
+export function analyzeExample(name,fixtures,execute=executeRegionalKernel){
+  const control=fixtures.examples?.[name];
+  if(!control||control.source.path!=='examples/'+name||control.kind!==applicationKind(name)||!control.operations.length)throw Error('Missing original regional contract '+name);
+  const computed={},evidence={};
+  const legacy={quantileBreaks,classify,idwWaterSurface,parseMaxspeed,dijkstraSeconds,roofNormal,orientationFactor,satelliteFramePlan};
+  for(const operation of control.operations){
+    const result=execute(operation.kernel,structuredClone(operation.input),legacy);
+    assertControl(result,operation.expected,operation.tolerance,operation.native.path+'::'+operation.kernel);
+    computed[operation.kernel]=result;Object.assign(evidence,result);
+  }
+  const {width,height}=control.terrain,base=control.terrain.data.slice();
+  let terrain=control.render.terrain?evidence[control.render.terrain].slice():base;
+  const value=control.render.scalar?evidence[control.render.scalar]:null;
+  const scalar=Array.isArray(value?.[0])?value[0].slice():Array.isArray(value)?value.slice():terrain.slice();
+  const output={kind:control.kind,sourceExample:name,source:control.source,inputSource:control.terrain.source,width,height,terrain,scalar,evidence,computed,operations:control.operations.map(o=>({kernel:o.kernel,native:o.native})),framePlan:evidence.plan??null,sceneImages:evidence.images??null,densityFrames:evidence.densityFrames??null};
+  if(control.kind==='lighthouses')output.points=control.operations[0].input.points;
+  const rgba=evidence.rgba;
+  if(rgba){output.overlay={width:Math.round(Math.sqrt(rgba.length/4)),height:Math.round(Math.sqrt(rgba.length/4)),data:rgba.slice()};}
+  if(control.kind==='bivariate'){const palette=control.render.palette,size=Math.sqrt(evidence.temperatureClasses.length);output.colors=Array.from({length:width*height},(_,i)=>{const at=Math.floor(Math.floor(i/width)*size/height)*size+Math.floor((i%width)*size/width);return palette[evidence.precipitationClasses[at]-1][evidence.temperatureClasses[at]-1];});}
+  if(control.kind==='landcover'&&!rgba){const op=control.operations.find(o=>o.kernel==='bosnia-landcover'),palette=op.input.palette;output.overlay={width,height,data:evidence.classes.flatMap((v,i)=>{const index=op.input.classIds.indexOf(v),shade=.9+.1*evidence.shade[i];return index<0?[0,0,0,0]:[...palette[index].map(c=>Math.round(c*shade)),255];})};}
+  if(control.kind==='waterways')output.overlay={width,height,data:evidence.core.flatMap(v=>[Math.round(85+140*v),Math.round(125+100*v),Math.round(120+125*v),255])};
+  if(control.kind==='poland-basins'){const op=control.operations[0],ids=[...op.input.ids].sort((a,b)=>a-b);output.colors=Array.from({length:width*height},(_,i)=>evidence.palette[ids[(Math.floor(i/width/4)+Math.floor(i%width/4))%ids.length]]);}
   return output;
 }

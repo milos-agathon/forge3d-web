@@ -43,6 +43,24 @@
       "source": "CHANGELOG.md:1474:Demo: `examples/xarray_ingest_demo.py`; Docs: `docs/ingest/xarray.md`"
     },
     {
+      "artifactId": "changelog-addition:0210c89b69ce9eddc7998844",
+      "row": "P09",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:1004:`:fog-edges on|off` to enable/disable depth-aware bilateral upsample."
+    },
+    {
+      "artifactId": "changelog-addition:03f224290bf1884f79e9007e",
+      "row": "R12",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:1754:Reused T3 terrain pipeline and kept bind groups cached."
+    },
+    {
+      "artifactId": "changelog-addition:043ba5817056f8f38ad0dde6",
+      "row": "P15",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:689:Categories: VertexBuffers, IndexBuffers, UniformBuffers, Textures (RGBA8, RGBA16F, R32F, Depth), ShadowMaps, IBL Cubemaps, BRDF LUT, Froxel Grid, Screen-space Effects"
+    },
+    {
       "artifactId": "changelog-addition:06aa87342d4a65a3a487f435",
       "row": "V01",
       "tombstone": "render-polygons",
@@ -57,11 +75,65 @@
       "source": "CHANGELOG.md:1083:G1: Datashader Adapter v1 completed with premultiplied alpha support (`premultiply=True`), optional transform passthrough for alignment, zero-copy RGBA views where possible, and API exports in `adapters/__init__.py`."
     },
     {
+      "artifactId": "changelog-addition:0a271d8f568889003819b317",
+      "row": "P09",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:740:Exponential height fog: Denser near ground with configurable falloff"
+    },
+    {
+      "artifactId": "changelog-addition:0b3bd90babedc635eedfcae2",
+      "row": "P06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:707:Acceptance criteria: Renderer respects ≤512 MiB, stats accessible via `scene.get_stats()`, auto-downscaling prevents OOM"
+    },
+    {
+      "artifactId": "changelog-addition:0bc43ab367b6121d8c8108bc",
+      "row": "P09",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:956:Validation artifacts: `phase_p2.png`, `phase_p2_diff.png`, `p2_run.log`, `p2_result.json` including fog-on notes and SSIM vs P1 with fog off."
+    },
+    {
+      "artifactId": "changelog-addition:10ac5f7cb6091e0e856d5749",
+      "row": "P09",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:735:Ground albedo [0-1] for realistic ground bounce lighting influence"
+    },
+    {
+      "artifactId": "changelog-addition:1488dcf781b377001ec9d780",
+      "row": "T02",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:983:Acceptance one-liner: `python examples/terrain_demo.py --preset outdoor_sun --brdf cooktorrance-ggx --shadows csm --cascades 4 --hdr assets/sky.hdr`"
+    },
+    {
       "artifactId": "changelog-addition:14eb30063ad3f30510d6a33c",
       "row": "V01",
       "tombstone": "datashader",
       "evidenceKind": "tombstone",
       "source": "CHANGELOG.md:1428:Optional dependency handling: graceful skips when Datashader is missing; adapter availability probe."
+    },
+    {
+      "artifactId": "changelog-addition:171561bebefb73b00d9a3111",
+      "row": "R12",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:953:**P2 — Atmospheric Depth**"
+    },
+    {
+      "artifactId": "changelog-addition:1a3a5a4b11100557b52f28cc",
+      "row": "P15",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:738:Exposure control and simple tonemapping (Reinhard)"
+    },
+    {
+      "artifactId": "changelog-addition:1b130398280c44162ed36247",
+      "row": "P09",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:762:Acceptance criteria: Sunrise/sunset color shift visible, god-ray beams when sun occluded, temporally stable fog"
+    },
+    {
+      "artifactId": "changelog-addition:1c7ae9006e2930b8420ec7e0",
+      "row": "P11",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:790:Acceptance criteria: AO visibly darkens creases, SSGI adds diffuse bounce on walls, SSR reflects sky & bright objects"
     },
     {
       "artifactId": "changelog-addition:1caa566c315cd36f6027278f",
@@ -71,11 +143,23 @@
       "source": "CHANGELOG.md:1427:Docs: `docs/user/datashader_interop.rst` added to ToC; covers zero-copy, alignment, and memory guidance."
     },
     {
+      "artifactId": "changelog-addition:2306508e6f41f026aa5ba7d5",
+      "row": "P13",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:618:Quality presets for blur kernel radius"
+    },
+    {
       "artifactId": "changelog-addition:26551b12fc6c1fa56d06ece3",
       "row": "V01",
       "tombstone": "datashader",
       "evidenceKind": "tombstone",
       "source": "CHANGELOG.md:1431:Public API exposes `forge3d.adapters` with Datashader utilities guarded by availability."
+    },
+    {
+      "artifactId": "changelog-addition:31e1863a3e6d3533b9eb817d",
+      "row": "T16",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:1257:Water surface material with depth colors and alpha"
     },
     {
       "artifactId": "changelog-addition:352a60301572cd26452a61b4",
@@ -92,11 +176,29 @@
       "source": "CHANGELOG.md:1472:S4: xarray/rioxarray DataArray ingestion"
     },
     {
+      "artifactId": "changelog-addition:3df63039a1f2998a97c11473",
+      "row": "P09",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:743:Beer-Lambert extinction law for physically-based transmittance"
+    },
+    {
+      "artifactId": "changelog-addition:3ede5f832fbef83654652a9a",
+      "row": "P11",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:772:Ray marching in depth buffer for indirect diffuse lighting (16-32 steps/ray)"
+    },
+    {
       "artifactId": "changelog-addition:3ef0909c1aad23ac74fedf08",
       "row": "G08",
       "tombstone": "draco-decode",
       "evidenceKind": "tombstone",
       "source": "CHANGELOG.md:1122:F18: glTF 2.0 import (+Draco) — loader and PBR mapping."
+    },
+    {
+      "artifactId": "changelog-addition:420e50bdff8662946ce3f864",
+      "row": "R01",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:1797:`build_view_matrices()` now uses WGPU depth range [0,1] (was GL [-1,1])."
     },
     {
       "artifactId": "changelog-addition:4441b2fce59f0978c4e9ba6c",
@@ -106,6 +208,12 @@
       "source": "CHANGELOG.md:1435:Datashader unit/perf tests skip cleanly when optional deps absent."
     },
     {
+      "artifactId": "changelog-addition:44a6545ddcc205b02d305ab1",
+      "row": "P09",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:752:Precomputed froxel grid with scattering and extinction"
+    },
+    {
       "artifactId": "changelog-addition:45d98ea64d0cba20e687d33c",
       "row": "V01",
       "tombstone": "datashader",
@@ -113,11 +221,23 @@
       "source": "CHANGELOG.md:1424:V2: Performance and fidelity harness: deterministic dataset, zoom tests (Z0/Z4/Z8/Z12), SSIM checks vs goldens, and frame-time/memory metrics."
     },
     {
+      "artifactId": "changelog-addition:463894eb4e2373fc38dd02f3",
+      "row": "P13",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:588:CLI: `--dof --dof-f-stop 2.8 --dof-focus-distance 300 --dof-quality high`"
+    },
+    {
       "artifactId": "changelog-addition:46f993b14dd63762be38baf3",
       "row": "T10",
       "tombstone": "rasterio-adapters",
       "evidenceKind": "tombstone",
       "source": "CHANGELOG.md:553:Land cover resampled to match DEM resolution via rasterio/GDAL"
+    },
+    {
+      "artifactId": "changelog-addition:479d8136c6854b7ffd7507a5",
+      "row": "P07",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:461:Moment blur path properly integrated into shadow pipeline with depth-aware edge preservation."
     },
     {
       "artifactId": "changelog-addition:492d3b1083f3573e19083ba9",
@@ -162,11 +282,23 @@
       "source": "CHANGELOG.md:1459:`windowed_read(dataset, window, out_shape, resampling)` parity with requested window/out_shape"
     },
     {
+      "artifactId": "changelog-addition:5a12115ea848a4a84a37e69b",
+      "row": "P13",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:586:Tilt-shift support via tilted focal plane (pitch/yaw parameters)"
+    },
+    {
       "artifactId": "changelog-addition:5a4fe27fd6614b727948ed6e",
       "row": "V01",
       "tombstone": "datashader",
       "evidenceKind": "tombstone",
       "source": "CHANGELOG.md:1423:V1: Datashader adapter providing zero-copy RGBA views (`rgba_view_from_agg`) and alignment validation (`validate_alignment`), plus overlay packaging (`to_overlay_texture`) and convenience (`shade_to_overlay`)."
+    },
+    {
+      "artifactId": "changelog-addition:5ce9b2d50c5455867d24054d",
+      "row": "P09",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:573:Henyey-Greenstein phase function for realistic single-scattering"
     },
     {
       "artifactId": "changelog-addition:5cf2fdcf52a65a9fac1eee51",
@@ -176,6 +308,12 @@
       "source": "CHANGELOG.md:273:`get_crs_from_rasterio()`, `get_crs_from_geopandas()`: Extract CRS from geospatial files."
     },
     {
+      "artifactId": "changelog-addition:5e772fe83d1d279767291d58",
+      "row": "P09",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:737:Sunrise/sunset color shifts with proper solar elevation angle calculation"
+    },
+    {
       "artifactId": "changelog-addition:612c40912ede8f040b729f89",
       "row": "T10",
       "tombstone": "rasterio-adapters",
@@ -183,11 +321,65 @@
       "source": "CHANGELOG.md:1476:`ingest_dask_array`, streaming `materialize_dask_array_streaming`, planning & memory guardrails"
     },
     {
+      "artifactId": "changelog-addition:64b3ba22adace341838c0a61",
+      "row": "P09",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:955:CLI parameters `--fog-density`, `--fog-height-falloff`, `--fog-inscatter` (all default 0) keep baseline identical when fog is off."
+    },
+    {
       "artifactId": "changelog-addition:67a49aafe73d63411ed4aac1",
       "row": "T11",
       "tombstone": "xyz-wmts-cartopy",
       "evidenceKind": "tombstone",
       "source": "CHANGELOG.md:1452:Demo outputs saved to `reports/u1_tiles.png` and `reports/u3_cartopy.png`."
+    },
+    {
+      "artifactId": "changelog-addition:6d6e405cfec43aac8461e475",
+      "row": "R08",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:1593:Async compute prepass for depth optimization (`examples/async_compute_prepass.py`)"
+    },
+    {
+      "artifactId": "changelog-addition:70012e9490873217469ece96",
+      "row": "V07",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:35:Added deterministic label planning with priority classes, keepouts, accepted/rejected label summaries, and validation diagnostics."
+    },
+    {
+      "artifactId": "changelog-addition:71bee171c857fd8ce6844826",
+      "row": "G02",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:198:Added integration coverage for point-cloud GPU path and COPC/LAZ fixture gates."
+    },
+    {
+      "artifactId": "changelog-addition:7364649efd608194b0e85892",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:36:Added `MapScene`, `SceneRecipe`, typed terrain/raster/vector/label/building/point-cloud recipe objects, pre-render validation, PNG rendering, and deterministic review-bundle save support."
+    },
+    {
+      "artifactId": "changelog-addition:788aa8993db7edf41bf6356d",
+      "row": "R01",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:1798:GL→WGPU depth conversion refactored to `gl_to_wgpu()` helper."
+    },
+    {
+      "artifactId": "changelog-addition:7a518721ad802f8258ef4bc0",
+      "row": "P09",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:739:Volumetric fog with Henyey-Greenstein phase function for single-scattering"
+    },
+    {
+      "artifactId": "changelog-addition:8445b403d4601f4247bd1522",
+      "row": "G07",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:1576:N6: TBN generation — Per-vertex tangent/bitangent (MikkTSpace-like) and vertex attrs; pipeline layout accepts new attributes."
+    },
+    {
+      "artifactId": "changelog-addition:87798a34de8c16b45332cc43",
+      "row": "P07",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:450:Aligned Python configuration validation with Rust implementation: VSM, EVSM, and MSM now properly accepted in `ShadowSettings`."
     },
     {
       "artifactId": "changelog-addition:8a63101d1717a98e5ed3b814",
@@ -204,11 +396,29 @@
       "source": "CHANGELOG.md:1443:U3: Cartopy GeoAxes interop example (Agg backend), overlaying forge3d tile mosaic with extent alignment."
     },
     {
+      "artifactId": "changelog-addition:8f913bc84ee9e51e9fa14d13",
+      "row": "P09",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:571:Height-based fog with exponential density falloff and configurable absorption/scattering"
+    },
+    {
+      "artifactId": "changelog-addition:910aeaffda66a41344acf08a",
+      "row": "P13",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:585:Two-pass separable Gaussian blur weighted by CoC"
+    },
+    {
       "artifactId": "changelog-addition:92ca96fb0a77ef49a925f75f",
       "row": "T10",
       "tombstone": "rasterio-adapters",
       "evidenceKind": "tombstone",
       "source": "CHANGELOG.md:1461:Demo: `examples/raster_window_demo.py`; Docs: `docs/ingest/rasterio_tiles.md`"
+    },
+    {
+      "artifactId": "changelog-addition:932b177e3b0457b395f1f45a",
+      "row": "P06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:684:Acceptance: CI green on all platforms, golden image diffs stored as artifacts on failure"
     },
     {
       "artifactId": "changelog-addition:93bc918941df8150c0dea658",
@@ -218,6 +428,12 @@
       "source": "CHANGELOG.md:1422:Workstream V – Datashader Interop"
     },
     {
+      "artifactId": "changelog-addition:94952c0b9bd2b7e06cc3c92a",
+      "row": "P09",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:1005:`:fog-upsigma <float>` to tune bilateral depth sigma."
+    },
+    {
       "artifactId": "changelog-addition:964db3906199baa48ab29127",
       "row": "T10",
       "tombstone": "rasterio-adapters",
@@ -225,11 +441,47 @@
       "source": "CHANGELOG.md:1475:S5: Dask-chunked ingestion"
     },
     {
+      "artifactId": "changelog-addition:9712165fae8dfd78b080026f",
+      "row": "P09",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:731:Physical sky models: Hosek-Wilkie (2012) and Preetham (1999) analytic atmospheric scattering"
+    },
+    {
+      "artifactId": "changelog-addition:9712ff52a4e493bfbc152b08",
+      "row": "P15",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:1001:Half-resolution volumetric fog path with bilateral, depth-aware upsampling to full resolution."
+    },
+    {
+      "artifactId": "changelog-addition:9c5d7dc171d8824fca886ee1",
+      "row": "P09",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:733:Preetham: Classic Perez function-based sky with turbidity parameter"
+    },
+    {
       "artifactId": "changelog-addition:9ca193ca995740f52552075c",
       "row": "T10",
       "tombstone": "rasterio-adapters",
       "evidenceKind": "tombstone",
       "source": "CHANGELOG.md:376:Rasterio fallback path for comprehensive format support when native decoder unavailable."
+    },
+    {
+      "artifactId": "changelog-addition:9d391919fc2a3642be035f77",
+      "row": "T13",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:116:Added the adjacent terrain renderer updates required by the shipped TV12 path, including depth/readback plumbing, terrain data revision handling, reflection-probe terrain integration, and terrain-scatter blend controls that share the same renderer surface."
+    },
+    {
+      "artifactId": "changelog-addition:a26824b74d6e30d8ec6cb717",
+      "row": "R04",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:989:Validates all presets return valid mappings accepted by `RendererConfig.from_mapping()`"
+    },
+    {
+      "artifactId": "changelog-addition:a2f6192c72500bcedcfb0842",
+      "row": "P13",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:587:Quality presets (low=4, medium=8, high=16 samples)"
     },
     {
       "artifactId": "changelog-addition:a5251ebc88b63b2d74b3d565",
@@ -253,11 +505,95 @@
       "source": "CHANGELOG.md:1460:`block_iterator(dataset, blocksize)` covers extent without gaps/overlaps"
     },
     {
+      "artifactId": "changelog-addition:a7047f03a5d97b26934bfcfc",
+      "row": "P11",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:765:GBuffer pass: Depth, view-space normals, material properties (albedo, roughness, metallic) for screen-space techniques"
+    },
+    {
+      "artifactId": "changelog-addition:a8c0db6185b4727414dd24fe",
+      "row": "P13",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:583:**P3 — Depth of Field (Separable Blur)**"
+    },
+    {
+      "artifactId": "changelog-addition:aa1fdbadd07bbb0c9fb6f5bb",
+      "row": "P11",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:785:Depth reconstruction utilities: Fast view-space position reconstruction from linear depth"
+    },
+    {
+      "artifactId": "changelog-addition:ab3bbd59faab82c4c2c148ce",
+      "row": "P09",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:734:Turbidity range [1.0-10.0]: 2.0=clear sky, 6.0=hazy, 10.0=very hazy"
+    },
+    {
+      "artifactId": "changelog-addition:abbbce0dc6842a623cb1802d",
+      "row": "G01",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:428:TAA resolve pass with history color buffer reprojection using depth and camera matrices."
+    },
+    {
+      "artifactId": "changelog-addition:b03342a30a051a184f9bff4d",
+      "row": "P09",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:732:Hosek-Wilkie: More accurate sky model based on measured atmospheric data with turbidity-based coefficients"
+    },
+    {
+      "artifactId": "changelog-addition:b163093ffaf0170e67476394",
+      "row": "R12",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:1556:Python PBR: default parity math with optional perceptual gain gated by env `F3D_PBR_PERCEPTUAL` (enabled by default for specular luma tests; set to `0` to disable)."
+    },
+    {
+      "artifactId": "changelog-addition:b2ac23c9622f7498120e3029",
+      "row": "R01",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:1609:**R8**: Expanded texture size accounting to support all GPU formats including compressed and depth formats"
+    },
+    {
+      "artifactId": "changelog-addition:b421783d1f17de2dc47014cb",
+      "row": "P13",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:616:Separable blur DoF with Circle of Confusion calculation"
+    },
+    {
+      "artifactId": "changelog-addition:b56bb38811f48f473bfe0bd1",
+      "row": "P06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:695:`auto_downscale_froxel_grid()`: Froxel dimension reduction prioritizing Z-axis (depth) first"
+    },
+    {
+      "artifactId": "changelog-addition:b653857dc6104a3d5285a578",
+      "row": "P14",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:742:View-ray marching with jittered sampling (16-128 steps, configurable)"
+    },
+    {
       "artifactId": "changelog-addition:b880f0069d985d40e8d8a6f6",
       "row": "V01",
       "tombstone": "datashader",
       "evidenceKind": "tombstone",
       "source": "CHANGELOG.md:1432:`validate_alignment` usable without Datashader for basic extent checks."
+    },
+    {
+      "artifactId": "changelog-addition:bb03abf89493113396035a5c",
+      "row": "V05",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:529:Features high-quality PBR rendering presets, tonemapping, and depth-of-field integration."
+    },
+    {
+      "artifactId": "changelog-addition:bd4a12d145e314fa2f847c8e",
+      "row": "P07",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:169:Fixed the point/spot light shader to use depth-array shadow resource types that match the Rust bind-group layout, eliminating the `invalid function call` panic in `Scene.enable_point_spot_lights()`."
+    },
+    {
+      "artifactId": "changelog-addition:bd8accbe1592c648cd5e70ba",
+      "row": "P09",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:736:Sun disk rendering with limb darkening and corona/glow"
     },
     {
       "artifactId": "changelog-addition:c34700eb98f208e18a5188f5",
@@ -267,6 +603,36 @@
       "source": "CHANGELOG.md:1426:CI: `.github/workflows/datashader-perf.yml` runs perf tests, enforces thresholds, uploads artifacts."
     },
     {
+      "artifactId": "changelog-addition:c38f712932df58576d6b5dfc",
+      "row": "V05",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:525:Screen-space rendering with depth occlusion support."
+    },
+    {
+      "artifactId": "changelog-addition:c5167bd37e9c562bab551525",
+      "row": "T16",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:1256:Workstream C2 – Water material and depth-aware coloration"
+    },
+    {
+      "artifactId": "changelog-addition:c71e13cdd9909d50d2bb224c",
+      "row": "G01",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:1715:Full support for both GL [-1,1] and WGPU [0,1] depth ranges via `clip_space` parameter"
+    },
+    {
+      "artifactId": "changelog-addition:c869d7bfefa709fc94e67491",
+      "row": "P09",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:730:Implemented physical sky models and volumetric fog with single-scattering for realistic atmospheric rendering"
+    },
+    {
+      "artifactId": "changelog-addition:c8f99dac04201bb4e5da3bba",
+      "row": "M07",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:1873:**Colormap ‘magma’ rejected**: registry and asset mapping added; constructor accepts `\"magma\"`."
+    },
+    {
       "artifactId": "changelog-addition:cad690e0492c5a0babd4f82e",
       "row": "G08",
       "tombstone": "ply-import",
@@ -274,11 +640,59 @@
       "source": "CHANGELOG.md:1117:F13: PLY Import — attributes import (pos/nrm/uv/color) with bbox/stats parity."
     },
     {
+      "artifactId": "changelog-addition:ced41eef03826173089883a3",
+      "row": "P09",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:748:Directional in-scattering from sun with phase function"
+    },
+    {
+      "artifactId": "changelog-addition:d059ff57b62899898011ca42",
+      "row": "T02",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:728:Acceptance: Users can reproduce figures with single command: `python examples/terrain_demo.py --preset outdoor_sun --brdf cooktorrance-ggx --shadows csm`"
+    },
+    {
+      "artifactId": "changelog-addition:d5abc583294a15dba9469790",
+      "row": "P11",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:769:Bilateral blur: Edge-preserving denoising using depth and normal weights"
+    },
+    {
+      "artifactId": "changelog-addition:d65586b28dab6ea672328e52",
+      "row": "P13",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:584:Circle of Confusion (CoC) calculation with configurable f-stop, focus distance, focal length"
+    },
+    {
+      "artifactId": "changelog-addition:ded45f531bc007502471656c",
+      "row": "P13",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:617:Tilt-shift focal plane support for miniature effects"
+    },
+    {
+      "artifactId": "changelog-addition:e3173756f7b90f3727a32ab2",
+      "row": "P15",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:954:Height-based fog pipeline with uniform struct and bind group entries; applied after PBR and before tonemap."
+    },
+    {
+      "artifactId": "changelog-addition:e3daa204af2977283b740d4d",
+      "row": "R02",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:1759:T4.2: Fixed `numpy_to_png` to properly accept uint8 arrays of shape **(H,W,3)** (RGB) in addition to (H,W,4) and (H,W)."
+    },
+    {
       "artifactId": "changelog-addition:e5e49665a0771cc31a73faa3",
       "row": "V01",
       "tombstone": "datashader",
       "evidenceKind": "tombstone",
       "source": "CHANGELOG.md:1082:Workstream G — Datashader Interop"
+    },
+    {
+      "artifactId": "changelog-addition:e645095824716a9adc6cbab6",
+      "row": "P15",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:574:Half-resolution rendering option with bilateral depth-aware upsampling"
     },
     {
       "artifactId": "changelog-addition:e83ea98b26151d58b04a6965",
@@ -295,11 +709,35 @@
       "source": "CHANGELOG.md:1458:S1: RasterIO windowed reads and block iterator"
     },
     {
+      "artifactId": "changelog-addition:edaf054c5c284a604ee213b7",
+      "row": "P09",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:741:Henyey-Greenstein phase: Configurable asymmetry parameter g [-1 to 1] for forward/backward scattering"
+    },
+    {
+      "artifactId": "changelog-addition:ee185a3a453b6bc06bf959bb",
+      "row": "P15",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:1857:**T2.2 – Sun direction & tonemap:** Uniforms now carry `sun_dir` and `exposure`; shader computes diffuse `N·L` and applies Reinhard tonemap for perceptually non-flat output. Python helpers `set_sun(elevation_deg, azimuth_deg)` and `set_exposure(exposure)` (gated by `terrain_spike` feature)."
+    },
+    {
       "artifactId": "changelog-addition:ee73da9adce6f22092282f30",
       "row": "T10",
       "tombstone": "rasterio-adapters",
       "evidenceKind": "tombstone",
       "source": "CHANGELOG.md:1480:Optional dependency handling hardened; imports are lazy and degrade gracefully without rasterio/xarray/dask/pyproj"
+    },
+    {
+      "artifactId": "changelog-addition:f089d2c884fcecb8339ad15b",
+      "row": "R12",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:1558:Texture setters accept RGB/RGBA; base-color RGB upgraded to RGBA (alpha=255); metallic-roughness accepts RGB/RGBA (G=roughness, B=metallic)."
+    },
+    {
+      "artifactId": "changelog-addition:f1c46083ccfb9c25ef227a9d",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:337:`Tileset` and `CopcDataset` classes for asset management."
     },
     {
       "artifactId": "changelog-addition:f1cb090ff3d4b5d838be36c8",
@@ -328,6 +766,36 @@
       "tombstone": "datashader",
       "evidenceKind": "tombstone",
       "source": "CHANGELOG.md:1099:Expanded Datashader interop guide in `docs/user/datashader_interop.rst` with usage and benchmarking notes."
+    },
+    {
+      "artifactId": "changelog-heading:0257641e33c1b6455f5885ea",
+      "row": "P13",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:613:[1.5.0] - P3 Depth of Field"
+    },
+    {
+      "artifactId": "changelog-heading:8a1527dd631febd6f36e271c",
+      "row": "P13",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:615:Added"
+    },
+    {
+      "artifactId": "changelog-heading:9329b59503d920429678ef63",
+      "row": "R12",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:950:[0.90.0] - P2 Atmospheric Depth"
+    },
+    {
+      "artifactId": "changelog-heading:fab4577a756829d09cd49730",
+      "row": "R12",
+      "evidenceKind": "capability-evidence-route",
+      "source": "CHANGELOG.md:952:Added"
+    },
+    {
+      "artifactId": "inactive-module-root:8eb5d2edd38f531d1b3e59a7",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "inactive:pointcloud"
     },
     {
       "artifactId": "native-doc-asset:38a7cf0fe5e25f2ca7da74b8",
@@ -384,6 +852,12 @@
       "source": "docs/gallery/06-point-cloud.md:13:Sketch"
     },
     {
+      "artifactId": "native-doc-feature:a62ffdf645ae42368ad6e200",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "docs/examples/index.md:42:Point Clouds, Buildings, And Large Assets"
+    },
+    {
       "artifactId": "native-doc-feature:b02476480e59d80479b989b3",
       "row": "G03",
       "evidenceKind": "capability-evidence-route",
@@ -406,6 +880,12 @@
       "row": "G03",
       "evidenceKind": "capability-evidence-route",
       "source": "docs/gallery/06-point-cloud.md:1:Point Cloud"
+    },
+    {
+      "artifactId": "native-doc-feature:da8a70205c605f0c58517043",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "docs/guides/data_and_scene_workflows.md:120:Point Clouds"
     },
     {
       "artifactId": "native-example:d3843ce217b1ee120f2717a1",
@@ -468,6 +948,12 @@
       "source": "tests/test_pointcloud_lod.py:54:test_key_from_invalid_string"
     },
     {
+      "artifactId": "native-test-definition:0c8368816c0474dfcdad5d98",
+      "row": "P09",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_fog_offline.py:65:test_fog_default_disabled"
+    },
+    {
       "artifactId": "native-test-definition:0d1eb2fcccad6a6ff7abc7d3",
       "row": "P12",
       "evidenceKind": "capability-test-route",
@@ -486,16 +972,34 @@
       "source": "tests/test_datasets.py:71:test_fetch_cityjson_prefers_local_asset_checkout"
     },
     {
+      "artifactId": "native-test-definition:137afdd32e95f519d12f0f32",
+      "row": "P09",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_fog_offline.py:92:test_fog_height_falloff_validation"
+    },
+    {
       "artifactId": "native-test-definition:14005865c92067d5f643ff35",
       "row": "G03",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:1226:test_create_viewer_gpu_buffer_with_colors"
     },
     {
+      "artifactId": "native-test-definition:14b4e180c419f7091f31a675",
+      "row": "P09",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_fog_offline.py:290:test_fog_params_do_not_expose_aerial_perspective"
+    },
+    {
       "artifactId": "native-test-definition:1516ffcd1c01531b07fcdb10",
       "row": "T03",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:1120:test_contour_rejects_empty_levels"
+    },
+    {
+      "artifactId": "native-test-definition:1543c3e17cc1a713182bd5be",
+      "row": "M03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_diagnostics_style_support.py:55:test_style_support_accepts_parsed_style_spec_without_claiming_mvt"
     },
     {
       "artifactId": "native-test-definition:1956f29653d4711bcf5e8d0b",
@@ -522,6 +1026,12 @@
       "source": "tests/test_api_contracts.py:208:test_set_ssao_parameters_exists"
     },
     {
+      "artifactId": "native-test-definition:1c85b7101ca0a142858d983e",
+      "row": "P09",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_fog_offline.py:113:test_terrain_params_default_fog"
+    },
+    {
       "artifactId": "native-test-definition:1d6c29d9452a403e22def1a5",
       "row": "R04",
       "evidenceKind": "capability-test-route",
@@ -532,6 +1042,12 @@
       "row": "P11",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:900:test_ssr_settings_defaults"
+    },
+    {
+      "artifactId": "native-test-definition:1f11c3e139bf90ce5553d0e6",
+      "row": "M03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_style_render.py:108:test_label_layer_produces_non_default_style"
     },
     {
       "artifactId": "native-test-definition:1f83efd555f9d4ad769c788d",
@@ -558,6 +1074,12 @@
       "source": "tests/test_api_contracts.py:338:test_camera_animation_replace_and_clear"
     },
     {
+      "artifactId": "native-test-definition:216db218cbe7e6e66802c90e",
+      "row": "P09",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_fog_offline.py:104:test_fog_rejects_legacy_aerial_perspective_argument"
+    },
+    {
       "artifactId": "native-test-definition:21cc5cbf356347a38ff0db2f",
       "row": "G03",
       "evidenceKind": "capability-test-route",
@@ -582,10 +1104,22 @@
       "source": "tests/test_pointcloud_gpu_integration.py:40:test_fixture_exists"
     },
     {
+      "artifactId": "native-test-definition:26da5ca5a03835ac533f2ba6",
+      "row": "P09",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_fog_offline.py:257:test_fog_disabled_params"
+    },
+    {
       "artifactId": "native-test-definition:273f79b8c73997323aeeccea",
       "row": "E06",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_datasets.py:99:test_default_dataset_base_url_uses_live_repository_path"
+    },
+    {
+      "artifactId": "native-test-definition:2972679069a719a184e84fd8",
+      "row": "M02a",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_mapscene_recipe_contract.py:121:test_mapscene_constructor_accepts_recipe_keywords_without_raw_ipc"
     },
     {
       "artifactId": "native-test-definition:2c808845dc9e8703a6550daa",
@@ -595,13 +1129,19 @@
     },
     {
       "artifactId": "native-test-definition:2d1a841a421907988ac359b4",
-      "row": "G09",
+      "row": "G10",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:409:test_sdf_primitive_registered"
     },
     {
+      "artifactId": "native-test-definition:2ef5c432bba8f28da110e80d",
+      "row": "P09",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_volumetrics_sky.py:253:test_sky_has_aerial_perspective_property"
+    },
+    {
       "artifactId": "native-test-definition:2f4601c1e29d989cfa7de705",
-      "row": "G09",
+      "row": "G10",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:1538:test_sdf_classes_importable"
     },
@@ -613,7 +1153,7 @@
     },
     {
       "artifactId": "native-test-definition:315c5fcd8e9fc9615b2fe5f9",
-      "row": "P06",
+      "row": "C03",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:307:test_camera_keyframe_constructible"
     },
@@ -625,7 +1165,7 @@
     },
     {
       "artifactId": "native-test-definition:34b77ecba528782ce14ca9ed",
-      "row": "G03",
+      "row": "G02",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_pointcloud_gpu_integration.py:42:test_laz_decode_to_native_gpu_buffer"
     },
@@ -673,6 +1213,12 @@
       "source": "tests/test_dask_stub.py:42:test_local_dask_stub_exports_xarray_compat_surface"
     },
     {
+      "artifactId": "native-test-definition:3c1a88bcaf99387bfdfc04e4",
+      "row": "P14",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_taa_convergence.py:170:test_taa_renderer_execute_method"
+    },
+    {
       "artifactId": "native-test-definition:3dc4bb63187d9708bb31d872",
       "row": "G03",
       "evidenceKind": "capability-test-route",
@@ -695,6 +1241,18 @@
       "row": "P11",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:915:test_ssr_settings_all_fields_accessible"
+    },
+    {
+      "artifactId": "native-test-definition:427a1d5028bcb9c16be05e9f",
+      "row": "M08",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pro_gating.py:108:test_bundle_load_gated"
+    },
+    {
+      "artifactId": "native-test-definition:440769a9a80d18b88ea93244",
+      "row": "M03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_style_visual.py:148:test_match_with_array_labels"
     },
     {
       "artifactId": "native-test-definition:458eba28d03c64ec618fd08f",
@@ -721,10 +1279,22 @@
       "source": "tests/test_pointcloud_lod.py:92:test_create_node"
     },
     {
+      "artifactId": "native-test-definition:491419e072055964aa91123d",
+      "row": "M08",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pro_gating.py:18:test_map_plate_gated"
+    },
+    {
       "artifactId": "native-test-definition:4b07966a6e59599e83a9a722",
       "row": "P06",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:220:test_disable_ibl_exists"
+    },
+    {
+      "artifactId": "native-test-definition:4c8b0e33cd10457f96e1a962",
+      "row": "M03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_mapbox_streets_fixture.py:111:test_mapbox_streets_label_style"
     },
     {
       "artifactId": "native-test-definition:4d2a52079611c5d022e30851",
@@ -739,6 +1309,18 @@
       "source": "tests/test_api_contracts.py:1093:test_slope_rejects_small_grid"
     },
     {
+      "artifactId": "native-test-definition:4db4bf0f3efd0bb5ca3e1b0a",
+      "row": "P14",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_taa_convergence.py:82:test_history_texture_format"
+    },
+    {
+      "artifactId": "native-test-definition:50c4fe57a1a27b4dca53710d",
+      "row": "M01",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_diagnostics_style_support.py:3:test_style_support_accepts_local_fill_line_and_circle_layers"
+    },
+    {
       "artifactId": "native-test-definition:51897d2ec4f7592e4accbd2c",
       "row": "P11",
       "evidenceKind": "capability-test-route",
@@ -749,6 +1331,12 @@
       "row": "R02",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:391:test_frame_registered"
+    },
+    {
+      "artifactId": "native-test-definition:556c7fb445750e0841868224",
+      "row": "P09",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_fog_offline.py:188:test_extinction_curve"
     },
     {
       "artifactId": "native-test-definition:55d132361c74873d1d5976dd",
@@ -785,6 +1373,12 @@
       "row": "M02a",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_mapscene_docs.py:98:test_support_matrices_record_current_mapscene_diagnostics_and_ownership"
+    },
+    {
+      "artifactId": "native-test-definition:62b20964733953a82283c898",
+      "row": "M03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_mapbox_streets_fixture.py:82:test_mapbox_streets_water_style"
     },
     {
       "artifactId": "native-test-definition:649dac5dce460aaf7e33f06e",
@@ -835,10 +1429,40 @@
       "source": "tests/test_api_contracts.py:779:test_fallback_used_for_non_native_scene"
     },
     {
+      "artifactId": "native-test-definition:714e2c04b2a6fb2434b2d441",
+      "row": "M08",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pro_gating.py:78:test_style_load_gated"
+    },
+    {
+      "artifactId": "native-test-definition:74cf2ba92257a4fc38c828b7",
+      "row": "M03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_style_parser.py:226:test_layout_to_label_style"
+    },
+    {
+      "artifactId": "native-test-definition:76b0f96ba328b36bae91ca9d",
+      "row": "P09",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_fog_offline.py:239:test_psnr_helper"
+    },
+    {
       "artifactId": "native-test-definition:76d476802d6909d8fc0cc7a4",
       "row": "E07",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_png_io_fallback.py:73:test_public_png_roundtrip_without_pillow"
+    },
+    {
+      "artifactId": "native-test-definition:77cc96d4fee69a285c8fb8c3",
+      "row": "M08",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pro_gating.py:98:test_bundle_save_gated"
+    },
+    {
+      "artifactId": "native-test-definition:78b52f19b58c2e2d12b91d35",
+      "row": "P14",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_taa_convergence.py:30:test_viewer_has_taa_renderer"
     },
     {
       "artifactId": "native-test-definition:7ad117f3ba6c9f3c367df9b4",
@@ -889,6 +1513,12 @@
       "source": "tests/test_api_contracts.py:945:test_scene_has_ssr_methods"
     },
     {
+      "artifactId": "native-test-definition:81c7e82b0381f711975f13f4",
+      "row": "P14",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_motion_vectors.py:88:test_gbuffer_velocity_texture_created"
+    },
+    {
       "artifactId": "native-test-definition:84f4c2197caeb4735f385916",
       "row": "G02",
       "evidenceKind": "capability-test-route",
@@ -896,9 +1526,15 @@
     },
     {
       "artifactId": "native-test-definition:86f45c90dd64579311c6f2d8",
-      "row": "G09",
+      "row": "G10",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:416:test_sdf_scene_registered"
+    },
+    {
+      "artifactId": "native-test-definition:88fbab01e2ea6aa4ab2857e9",
+      "row": "P14",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_taa_convergence.py:181:test_taa_renderer_resize_method"
     },
     {
       "artifactId": "native-test-definition:89905c4a59f5f1d38ecb3db6",
@@ -917,6 +1553,12 @@
       "row": "G03",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:1158:test_create_gpu_buffer_empty"
+    },
+    {
+      "artifactId": "native-test-definition:8ccd78bd20372c043612edcd",
+      "row": "G05a",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_osm_city_demo.py:110:test_apply_depth_grade_rgba_moves_far_color_toward_background"
     },
     {
       "artifactId": "native-test-definition:91653e9bf5e6cf690be90c71",
@@ -949,6 +1591,12 @@
       "source": "tests/test_png_io_fallback.py:81:test_rgba_to_png_bytes_without_pillow"
     },
     {
+      "artifactId": "native-test-definition:94f3f69b111703132f30c96a",
+      "row": "G04",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_3dtiles_parse.py:225:test_max_depth_single"
+    },
+    {
       "artifactId": "native-test-definition:95a36d42d0da9b79f328e2e5",
       "row": "P05",
       "evidenceKind": "capability-test-route",
@@ -979,16 +1627,34 @@
       "source": "tests/test_api_contracts.py:1074:test_slope_east_ramp"
     },
     {
+      "artifactId": "native-test-definition:97dd2d37514f90d8f24d4d73",
+      "row": "M01",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_diagnostics_contract.py:64:test_diagnostic_accepts_prd_support_levels"
+    },
+    {
       "artifactId": "native-test-definition:9942f1398fe0a60f48afaa71",
       "row": "P13",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:1021:test_bloom_in_terrain_params"
     },
     {
+      "artifactId": "native-test-definition:997425a3a5000184f58afe95",
+      "row": "P09",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_fog_offline.py:127:test_terrain_params_with_fog"
+    },
+    {
       "artifactId": "native-test-definition:9b412050352d746783e340ab",
       "row": "R11",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:768:test_fallback_used_when_no_scene"
+    },
+    {
+      "artifactId": "native-test-definition:9c046ef0b431b1c9cb983dd0",
+      "row": "P09",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_fog_offline.py:170:test_blue_shift_logic"
     },
     {
       "artifactId": "native-test-definition:9c33100cfce5445df448bf14",
@@ -1003,16 +1669,34 @@
       "source": "tests/test_api_contracts.py:1085:test_slope_rejects_wrong_size"
     },
     {
+      "artifactId": "native-test-definition:9f14f0082bbe1aff45320d13",
+      "row": "M03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_style_render.py:84:test_water_layer_produces_non_default_style"
+    },
+    {
       "artifactId": "native-test-definition:a18923e607a4a71d6a407083",
       "row": "C01",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:670:test_camera_function_exists"
     },
     {
+      "artifactId": "native-test-definition:a2ec67c0f96fef9308800d45",
+      "row": "M01",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_diagnostics_contract.py:43:test_diagnostic_accepts_required_severities"
+    },
+    {
       "artifactId": "native-test-definition:a334c71a913a51a3b6a2b68d",
       "row": "P13",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:1003:test_bloom_settings_rejects_invalid_softness"
+    },
+    {
+      "artifactId": "native-test-definition:a42b7af7026d686cf0767479",
+      "row": "M08",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_license.py:83:test_set_license_key_accepts_well_formed_key"
     },
     {
       "artifactId": "native-test-definition:a4e6c65a21aec20d690fdd11",
@@ -1028,7 +1712,7 @@
     },
     {
       "artifactId": "native-test-definition:a662a886dbab33683fc8b6ab",
-      "row": "G09",
+      "row": "G10",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:423:test_sdf_scene_builder_registered"
     },
@@ -1037,6 +1721,12 @@
       "row": "P12",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:182:test_disable_oit_exists"
+    },
+    {
+      "artifactId": "native-test-definition:a8d08c1661894953a9fcfb35",
+      "row": "M03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_style_render.py:118:test_apply_style_water_features"
     },
     {
       "artifactId": "native-test-definition:a960fef16269f9bbfbeb32f8",
@@ -1062,6 +1752,18 @@
       "row": "R04",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:826:test_set_msaa_samples_on_scene_class"
+    },
+    {
+      "artifactId": "native-test-definition:ac349328501c7f815ff33369",
+      "row": "P09",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_volumetrics_sky.py:67:test_volumetrics_scattering_validation"
+    },
+    {
+      "artifactId": "native-test-definition:ac4514fe25674b29658b0f8c",
+      "row": "P09",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_fog_offline.py:74:test_fog_enabled_with_density"
     },
     {
       "artifactId": "native-test-definition:ac616e2fdadcbdae76b8f8dd",
@@ -1148,10 +1850,22 @@
       "source": "tests/test_api_contracts.py:477:test_cube_tbn_dict_keys"
     },
     {
+      "artifactId": "native-test-definition:c1b9a45d4e2ca732047bfef4",
+      "row": "G04",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_3dtiles_sse.py:149:test_max_depth_respected"
+    },
+    {
       "artifactId": "native-test-definition:c266c68116e6fec93ffe7e22",
       "row": "R04",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:1526:test_viewer_set_msaa_no_module_level_native_dependency"
+    },
+    {
+      "artifactId": "native-test-definition:c33b4a2292bc30168a23c35e",
+      "row": "M08",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pro_gating.py:48:test_buildings_add_gated"
     },
     {
       "artifactId": "native-test-definition:c4b78bd7f2f1591fb3a75727",
@@ -1170,6 +1884,12 @@
       "row": "R11",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:749:test_native_scene_detected_correctly"
+    },
+    {
+      "artifactId": "native-test-definition:c672a09031483c3074b100ec",
+      "row": "M08",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_license.py:73:test_enterprise_tier_accepted"
     },
     {
       "artifactId": "native-test-definition:c6a340fe5a332016728c9ff8",
@@ -1191,7 +1911,7 @@
     },
     {
       "artifactId": "native-test-definition:c7cbb2f2c24ffed9e48f3673",
-      "row": "P06",
+      "row": "G10",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:436:test_sdf_primitive_sphere_constructible"
     },
@@ -1208,10 +1928,22 @@
       "source": "tests/test_api_contracts.py:499:test_cube_vertex_dict_structure"
     },
     {
+      "artifactId": "native-test-definition:cb476058a6e38d520c17039b",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_mapscene_support_status.py:104:test_point_cloud_layer_reports_underdeveloped_render_path_before_render"
+    },
+    {
       "artifactId": "native-test-definition:cc8134b1f4eb895b57d2db22",
       "row": "P11",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:938:test_scene_has_ssgi_methods"
+    },
+    {
+      "artifactId": "native-test-definition:ccb098a193cc905ca2a0f88d",
+      "row": "P14",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_motion_vectors.py:143:test_motion_vectors_with_camera_animation"
     },
     {
       "artifactId": "native-test-definition:cf06e7e61cd82ea9ef9c77ab",
@@ -1233,7 +1965,7 @@
     },
     {
       "artifactId": "native-test-definition:d49834e3f00160c5b322e876",
-      "row": "G09",
+      "row": "G10",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:441:test_sdf_scene_builder_round_trip"
     },
@@ -1256,6 +1988,12 @@
       "source": "tests/test_api_contracts.py:164:test_set_camera_look_at_exists"
     },
     {
+      "artifactId": "native-test-definition:d7767aaa9b8e146f0d2646de",
+      "row": "M08",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pro_gating.py:88:test_style_apply_gated"
+    },
+    {
       "artifactId": "native-test-definition:d873aec88e0674cf16a593f0",
       "row": "G03",
       "evidenceKind": "capability-test-route",
@@ -1266,6 +2004,12 @@
       "row": "R02",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:148:test_render_png_is_instance_method"
+    },
+    {
+      "artifactId": "native-test-definition:db824cb899b5166c2a1685d0",
+      "row": "M08",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pro_gating.py:68:test_buildings_3dtiles_gated"
     },
     {
       "artifactId": "native-test-definition:dc173f6d84c99a9135b86b80",
@@ -1280,16 +2024,34 @@
       "source": "tests/test_api_contracts.py:216:test_enable_ibl_exists"
     },
     {
+      "artifactId": "native-test-definition:ded5320782dad95735281147",
+      "row": "P09",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_fog_offline.py:152:test_desaturation_logic"
+    },
+    {
       "artifactId": "native-test-definition:df1a3cb934331c5ae1e0fbb4",
       "row": "P05",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:489:test_cube_tbn_index_count"
     },
     {
+      "artifactId": "native-test-definition:dfcc83a5a96cb2c814842b21",
+      "row": "M03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_style_visual.py:292:test_building_color_by_height"
+    },
+    {
       "artifactId": "native-test-definition:e062e03efb8435e85726811d",
       "row": "R02",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:789:test_render_rgba_is_instance_method_not_module_function"
+    },
+    {
+      "artifactId": "native-test-definition:e0891ca0da2a6f3479e38605",
+      "row": "P09",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_volumetrics_sky.py:388:test_aerial_perspective_distance"
     },
     {
       "artifactId": "native-test-definition:e21580d60ab331e113c9b293",
@@ -1302,6 +2064,12 @@
       "row": "G03",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_pointcloud_lod.py:42:test_key_to_string"
+    },
+    {
+      "artifactId": "native-test-definition:e353a08309685b0c8320d96a",
+      "row": "M08",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pro_gating.py:28:test_export_svg_gated"
     },
     {
       "artifactId": "native-test-definition:e41cbf5e600627aad1dc725a",
@@ -1340,6 +2108,12 @@
       "source": "tests/test_api_contracts.py:266:test_enable_cloud_shadows_exists"
     },
     {
+      "artifactId": "native-test-definition:ec06608e13d93e4208004061",
+      "row": "P09",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_fog_offline.py:210:test_saturation_helper"
+    },
+    {
       "artifactId": "native-test-definition:ed9c02f3e24f7d39d0f052ea",
       "row": "P05",
       "evidenceKind": "capability-test-route",
@@ -1352,6 +2126,12 @@
       "source": "tests/test_api_contracts.py:1475:test_label_style_repr"
     },
     {
+      "artifactId": "native-test-definition:f11c43eb4b4275668b4083af",
+      "row": "P09",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_fog_offline.py:97:test_fog_inscatter_validation"
+    },
+    {
       "artifactId": "native-test-definition:f21d93350af4c5a655028a4e",
       "row": "G02",
       "evidenceKind": "capability-test-route",
@@ -1359,7 +2139,7 @@
     },
     {
       "artifactId": "native-test-definition:f25ff3e5afe52edac19b5ea1",
-      "row": "P06",
+      "row": "G10",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:430:test_sdf_scene_constructible"
     },
@@ -1374,6 +2154,12 @@
       "row": "R04",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:156:test_set_msaa_samples_is_instance_method"
+    },
+    {
+      "artifactId": "native-test-definition:f3623c735078dae00aa4e775",
+      "row": "M08",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pro_gating.py:58:test_buildings_cityjson_gated"
     },
     {
       "artifactId": "native-test-definition:f46a1fdbea20da6888970809",
@@ -1412,6 +2198,12 @@
       "source": "tests/test_api_contracts.py:1299:test_copc_laz_feature_flag_is_boolean"
     },
     {
+      "artifactId": "native-test-definition:f85e14b0c0eaad007c31626e",
+      "row": "P09",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_fog_offline.py:271:test_fog_enabled_params"
+    },
+    {
       "artifactId": "native-test-definition:fb201cf1134c988c730708d9",
       "row": "T03",
       "evidenceKind": "capability-test-route",
@@ -1422,6 +2214,30 @@
       "row": "P11",
       "evidenceKind": "capability-test-route",
       "source": "tests/test_api_contracts.py:863:test_ssgi_settings_defaults"
+    },
+    {
+      "artifactId": "native-test-definition:fb3ac5a1d7ecc5b62f376c3c",
+      "row": "P09",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_fog_offline.py:87:test_fog_density_validation"
+    },
+    {
+      "artifactId": "native-test-definition:fd3596adffdeb76c52d9fd97",
+      "row": "P09",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_fog_offline.py:227:test_luminance_helper"
+    },
+    {
+      "artifactId": "native-test-definition:fe663bab8fe4ecdcd7ecbbeb",
+      "row": "P14",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_taa_convergence.py:159:test_taa_renderer_struct"
+    },
+    {
+      "artifactId": "native-test-definition:ff7cafcf3e9d2513e77a803e",
+      "row": "G04",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_3dtiles_parse.py:232:test_max_depth_nested"
     },
     {
       "artifactId": "native-test-file:0ac77cb816cd3e6fb53789e7",
@@ -1461,6 +2277,12 @@
       "source": "tests/test_datasets.py"
     },
     {
+      "artifactId": "native-test-file:cd9f5873c4f10ee30fe74f47",
+      "row": "P09",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_fog_offline.py"
+    },
+    {
       "artifactId": "native-test-file:df1bb253d450401047c07758",
       "row": "G05b",
       "evidenceKind": "capability-test-route",
@@ -1473,10 +2295,22 @@
       "source": "tests/test_p2_building_texture_diagnostics.py"
     },
     {
+      "artifactId": "package-root-export:0355c7926037700da1281df8",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "available_datasets"
+    },
+    {
       "artifactId": "package-root-export:125c4e6fcca2dbf0d4107a88",
       "row": "T05",
       "evidenceKind": "capability-evidence-route",
       "source": "LodSettings"
+    },
+    {
+      "artifactId": "package-root-export:134fff7d4aef60635c26a6da",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "sample_boundaries_path"
     },
     {
       "artifactId": "package-root-export:15c39d1fb8408ccde2df55d6",
@@ -1491,16 +2325,70 @@
       "source": "vector_overlay_configs_from_style"
     },
     {
+      "artifactId": "package-root-export:1a23d7ceb9a1e246ed0a0828",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "fetch_copc"
+    },
+    {
+      "artifactId": "package-root-export:1c8e41535ad6c02018ada6d5",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "fetch_dem"
+    },
+    {
+      "artifactId": "package-root-export:2140062e3f021dac13863914",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "datasets"
+    },
+    {
+      "artifactId": "package-root-export:251a008eb4fb494991698fee",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "remote_datasets"
+    },
+    {
       "artifactId": "package-root-export:29022b2c1a380d210d7c3a26",
       "row": "V05",
       "evidenceKind": "capability-evidence-route",
       "source": "LabelBatchResult"
     },
     {
+      "artifactId": "package-root-export:2d119ce3556724028c85e6cc",
+      "row": "E07",
+      "evidenceKind": "capability-evidence-route",
+      "source": "numpy_to_png"
+    },
+    {
+      "artifactId": "package-root-export:34fbabf46ee3ca6904df04ce",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "fetch_cityjson"
+    },
+    {
+      "artifactId": "package-root-export:46c077fa61ae500f19b8b5a1",
+      "row": "E07",
+      "evidenceKind": "capability-evidence-route",
+      "source": "png_to_numpy"
+    },
+    {
       "artifactId": "package-root-export:4faf7b310c8d066c2315533e",
       "row": "T05",
       "evidenceKind": "capability-evidence-route",
       "source": "TerrainRenderParamsConfig"
+    },
+    {
+      "artifactId": "package-root-export:65853e0897599d44248e13d3",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "mini_dem"
+    },
+    {
+      "artifactId": "package-root-export:6cbd46b1d927ff420977e991",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "bundled_datasets"
     },
     {
       "artifactId": "package-root-export:8bf9feb452d0b0262bc9345b",
@@ -1515,16 +2403,52 @@
       "source": "TerrainRenderParams"
     },
     {
+      "artifactId": "package-root-export:9fc5984afc4d9dd36dba0d98",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "list_datasets"
+    },
+    {
+      "artifactId": "package-root-export:b7e10ef145af30108c0b73d0",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "fetch_dataset"
+    },
+    {
+      "artifactId": "package-root-export:c9d7943c48138ebcbe946a98",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "mini_dem_path"
+    },
+    {
+      "artifactId": "package-root-export:d1d3b2a4f78a85b017a70729",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "dataset_info"
+    },
+    {
       "artifactId": "package-root-export:e4601966f78fc6c0c624e612",
       "row": "M01",
       "evidenceKind": "capability-evidence-route",
       "source": "python_public_3dtiles_incomplete_diagnostic"
     },
     {
+      "artifactId": "package-root-export:e656746b6e42f1f244dca2a2",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "sample_boundaries"
+    },
+    {
       "artifactId": "package-root-export:f4a43c24627299302e9d7693",
       "row": "T08",
       "evidenceKind": "capability-evidence-route",
       "source": "ClipmapConfig"
+    },
+    {
+      "artifactId": "package-root-export:fbe46f471f0dbe7bb3da8504",
+      "row": "E07",
+      "evidenceKind": "capability-evidence-route",
+      "source": "rgba_to_png_bytes"
     },
     {
       "artifactId": "python-api-file:c534d6c8fb6281ed47583220",
@@ -1537,6 +2461,12 @@
       "row": "G03",
       "evidenceKind": "capability-evidence-route",
       "source": "python/forge3d/pointcloud.py"
+    },
+    {
+      "artifactId": "python-public-definition:017f2b993eafea01f39bbed9",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/viewer.pyi:149:load_point_cloud"
     },
     {
       "artifactId": "python-public-definition:10aca4ecb3de93c94bc0ffbd",
@@ -1557,12 +2487,6 @@
       "source": "python/forge3d/pointcloud.py:100:PointData"
     },
     {
-      "artifactId": "python-public-definition:24f32e06176a3d755e77dbb1",
-      "row": "G03",
-      "evidenceKind": "capability-evidence-route",
-      "source": "python/forge3d/pointcloud.py:215:is_copc"
-    },
-    {
       "artifactId": "python-public-definition:3a16c456148701376e01fe99",
       "row": "E06",
       "evidenceKind": "capability-evidence-route",
@@ -1579,12 +2503,6 @@
       "row": "E06",
       "evidenceKind": "capability-evidence-route",
       "source": "python/forge3d/datasets.py:228:available"
-    },
-    {
-      "artifactId": "python-public-definition:64ba87bc94139bfdf55a7cc6",
-      "row": "G03",
-      "evidenceKind": "capability-evidence-route",
-      "source": "python/forge3d/pointcloud.py:230:CopcDataset"
     },
     {
       "artifactId": "python-public-definition:6c820e58b1312d91603f9558",
@@ -1707,6 +2625,24 @@
       "source": "python/forge3d/pointcloud.py:41:child"
     },
     {
+      "artifactId": "python-public-definition:b69509994ccb2fa52a92e2ae",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/viewer.py:948:load_point_cloud"
+    },
+    {
+      "artifactId": "python-public-definition:ba45aec264872da15885e9fe",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/viewer.pyi:156:set_point_cloud_params"
+    },
+    {
+      "artifactId": "python-public-definition:bccbbb2e96b0a4e4c9888b75",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/map_scene.py:1696:PointCloudLayer"
+    },
+    {
       "artifactId": "python-public-definition:bd547293db47fc3072ab76fa",
       "row": "G03",
       "evidenceKind": "capability-evidence-route",
@@ -1743,12 +2679,6 @@
       "source": "python/forge3d/pointcloud.py:482:bounds"
     },
     {
-      "artifactId": "python-public-definition:d5087f7dfc3515c0c3d0df3b",
-      "row": "G03",
-      "evidenceKind": "capability-evidence-route",
-      "source": "python/forge3d/pointcloud.py:545:open_copc"
-    },
-    {
       "artifactId": "python-public-definition:d8a8cd376b0a808b03fabb32",
       "row": "G03",
       "evidenceKind": "capability-evidence-route",
@@ -1759,6 +2689,12 @@
       "row": "E06",
       "evidenceKind": "capability-evidence-route",
       "source": "python/forge3d/datasets.py:218:bundled"
+    },
+    {
+      "artifactId": "python-public-definition:de9b719c7f4a3d61517504c3",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/viewer.py:966:set_point_cloud_params"
     },
     {
       "artifactId": "python-public-definition:df21b1e080ca00da38b4ac5b",

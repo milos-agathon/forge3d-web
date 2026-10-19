@@ -1,8 +1,10 @@
 import { createWorkflows } from './workflows.js';
 import { executeGuideExamples } from './guide-examples.js';
+import { verifyMigrationInputs } from './integrity.js';
 import { exampleLicense } from '../example-license.js';
 const source = new URLSearchParams(location.search).has('source');
 const api = await (source ? import('../../src-ts/index.ts') : import('../../dist/index.js'));
+const integrity=await verifyMigrationInputs();
 await exampleLicense(api);
 const response = await fetch(new URL('./catalog.json', import.meta.url));
 if (!response.ok) throw Error('Migration catalog unavailable');
@@ -54,7 +56,7 @@ async function run(name = select.value) {
 }
 document.querySelector('#run').onclick = () => run().catch(error => { status.textContent = `${error.code ?? error.name}: ${error.message}`; });
 document.querySelector('#cancel').onclick = () => controller?.abort();
-window.__w23 = { ready: true, run, api, catalog, createWorkflows, inspectViewer:()=>activeViewer?.()??null,retainedViewers:()=>viewers.size, verifyGuideExamples:async()=>{
+window.__w23 = { ready: true, run, api, catalog, integrity, createWorkflows, inspectViewer:()=>activeViewer?.()??null,retainedViewers:()=>viewers.size, verifyGuideExamples:async()=>{
   const surface=document.createElement('canvas');
   try{return await executeGuideExamples(api,surface);}finally{surface.remove();}
 } };

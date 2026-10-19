@@ -1,0 +1,118 @@
+// Text subject rules adapted from the immutable W00 inventory classifier.
+// Transport names are whole words; scattering is not terrain instancing.
+const classified = (row, rule) => ({row, rule});
+export function classifyNativeSubject(text, namespace = "native-subject") {
+  const value = text.toLowerCase();
+  const directRules = [
+    ["T13", /tv13|lod_count|impostor/u, "scatter-lod"],
+    ["T15", /terrain_probe|terrain probe/u, "terrain-probe"],
+    ["T06", /tv10|tv4 terrain|terrain material workflow/u, "terrain-material-workflow"],
+    ["T02", /tv1.tv3|terrain.workflow|terrain normalization|terrain uniforms|terrainuniforms|terrainpipeline|height texture|r32float|grid generation/u, "terrain-foundation"],
+    ["T11", /draped terrain overlay|terrain_overlays|altitude overlay|overlays infrastructure|basemap|xyz_wmts|cartopy|tile mosaic/u, "terrain-overlay"],
+    ["T09", /real data ingestion|async tile|async io|async loader|cancellation and lod.aware|coalescing rules/u, "terrain-streaming"],
+    ["M05", /title.compass.scale.text|compass overlay|compass rose|text and scale overlay/u, "map-furniture"],
+    ["P13", /post.process infrastructure|full.screen post.process|ping.pong texture/u, "post-process-infrastructure"],
+    ["T04", /ambient occlusion enhancement/u, "terrain-ambient-occlusion"],
+    ["P09", /half.res mode|step.count heuristic/u, "volumetric-quality"],
+    ["V01", /datashader/u, "datashader-vector-outcome"],
+    ["G08", /geometry & io|geometry and io/u, "geometry-io-workstream"],
+    ["G07", /model transform|compose_trs|transform functions|matrix utilities|transforms\.rs|normal matrix|compute_normal_matrix|mathematical tests/u, "mesh-transform"],
+    ["G11", /queue compaction|progressive tiling|rng & determinism|rng plumbing|xorshift|participating media/u, "tracing-internals"],
+    ["R08", /scene cache|scene.dependent precomputation|descriptor indexing|texture array support/u, "resource-substrate"],
+    ["P04", /material.shader interop|pbr material constructor|cpu pbr|materials module policy/u, "material-routing"],
+    ["P05", /texture processing/u, "texture-processing"],
+    ["P15", /srgb color target/u, "color-target"],
+  ];
+  for (const [capabilityId, pattern, rule] of directRules) {
+    if (pattern.test(value)) return classified(capabilityId, `${namespace}:${rule}`);
+  }
+  if (/matplotlib|numpy interop|zero.copy|imshow_rgba|mpl_/u.test(value)) return classified("R11", `${namespace}:array-display-equivalent`, ["E04"]);
+  if (/pathlike|file.backed reader/u.test(value)) return classified("G08", `${namespace}:filesystem-equivalent`, ["E03"]);
+  if (/package version|version bump|bumped (?:the )?version|full test suite|packaging|wheel|pypi|maturin|abi3|python support floor|public api|api consolidation|test safety|documentation|docs & api|readme|changelog|ci\/cd|github actions|dependency monitoring|input validation|error handling|import path|pymodule|vshade|compatibility shim|no functional code changes|module docstring|api policy|launch readiness|pro.boundary|developer.platform/u.test(value)) {
+    return classified("R12", `${namespace}:release-engineering-metadata`);
+  }
+  const rules = [
+    ["G02", /\bcopc\b|\blaz\b|\bept\b|point cloud.*(?:load|decode|hierarch)/u, "pointcloud-io"],
+    ["G03", /point cloud|pointcloud|octree|sse budget/u, "pointcloud-render"],
+    ["G04", /3d tiles|tiles3d|b3dm|pnts/u, "tiles3d"],
+    ["G05b", /textured building/u, "building-diagnostic"],
+    ["G05a", /building|cityjson|roof/u, "buildings"],
+    ["G10", /\bsdf\b|signed distance|csg/u, "sdf"],
+    ["G11", /path trac|ray trac|restir|wavefront|firefly|guiding|bent.normal/u, "path-tracing"],
+    ["G01", /\bcrs\b|reproject|epsg|proj/u, "crs"],
+    ["G08", /\bgltf\b|\bglb\b|\bobj\b|\bstl\b|mesh io|image io|hdr io/u, "mesh-io"],
+    ["G06", /primitive|extrud|thick polyline|ribbon|tube/u, "geometry-construction"],
+    ["G07", /mesh|tangent|tbn|subdiv|simplif|weld|uv/u, "mesh-processing"],
+    ["V04", /pick|selection|lasso|highlight/u, "picking"],
+    ["V06b", /curved label|repeated.path|terrain.elevated/u, "advanced-label"],
+    ["V06a", /callout|line label/u, "line-label"],
+    ["V07", /typograph|harfbuzz|shaping|label plan|declutter|keepout/u, "typography"],
+    ["V05", /label|font atlas|text mesh/u, "labels"],
+    ["M04", /bundle|bookmark|variant|review layer/u, "bundle"],
+    ["M03", /mapbox|style spec|style parser|sprite|glyph/u, "style"],
+    ["M05", /map plate|legend|scale bar|north arrow|map furniture/u, "map-plate"],
+    ["M06", /\bsvg\b|\bpdf\b|vector export/u, "vector-export"],
+    ["M07", /colormap|palette|\bcpt\b/u, "colormap"],
+    ["M08", /license|ed25519|pro gat/u, "license"],
+    ["M09", /benchmark|performance tool|perf sanity/u, "benchmark"],
+    ["M02b", /underdeveloped|large.scene support|mapscene support/u, "mapscene-diagnostic"],
+    ["M02a", /mapscene|scene recipe/u, "mapscene"],
+    ["M01", /diagnostic|support matrix|failure policy|severity/u, "diagnostics"],
+    ["T14b", /vt.*(?:normal|mask).*unsupported|unsupported.*vt/u, "vt-diagnostic"],
+    ["T14a", /virtual textur|page table|residency/u, "virtual-texture"],
+    ["T16", /water|shoreline|foam|planar reflection/u, "water"],
+    ["T17", /terrain atmosphere|aerial perspective/u, "terrain-atmosphere"],
+    ["T15", /reflection probe|irradiance probe|\bsh l2\b/u, "terrain-probes"],
+    ["T13", /\bscatter\b|\bhlod\b|\bqem\b|\bwind\b/u, "scatter"],
+    ["T12", /vector.*drape|draped vector/u, "vector-drape"],
+    ["T11", /raster overlay|landcover|overlay stack/u, "raster-overlay"],
+    ["T10", /\bcog\b|geotiff|cloud.native/u, "cog"],
+    ["T09", /tile cache|prefetch|backpressure|streaming/u, "terrain-stream"],
+    ["T08", /clipmap|geomorph|gpu lod/u, "clipmap"],
+    ["T07", /micro.detail|normal anti|specular aa/u, "terrain-detail"],
+    ["T06", /material layer|subsurface|snow|rock|wetness|material variation/u, "terrain-layers"],
+    ["T05", /terrain pbr|pom|triplanar/u, "terrain-material"],
+    ["T04", /heightfield ao|sun visibility/u, "terrain-ao"],
+    ["T03", /slope|aspect|contour|terrain query/u, "terrain-analysis"],
+    ["T01", /\bdem\b|nodata|heightmap stats/u, "dem"],
+    ["T02", /terrain render|grid mesh|heightmap|terrain demo/u, "terrain-render"],
+    ["P12", /\boit\b|transparency/u, "oit"],
+    ["P14", /\btaa\b|motion vector|motion blur|jitter/u, "temporal"],
+    ["P13", /bloom|depth of field|\bdof\b|lens effect|vignette|chromatic/u, "post-fx"],
+    ["P15", /tonemap|tone map|\bhdr\b|color space|lut/u, "color"],
+    ["P11", /ssao|gtao|ssgi|ssr|screen.space|g.buffer|hzb/u, "screen-space"],
+    ["P10", /cloud/u, "cloud"],
+    ["P09", /volumetric|fog|god ray|preetham|hosek|sky/u, "atmosphere"],
+    ["P08", /ephemeris|sun position|time.of.day/u, "sun"],
+    ["P07", /shadow|csm|pcf|pcss|vsm|evsm|msm/u, "shadow"],
+    ["P06", /\bibl\b|irradiance|brdf lut|environment map/u, "ibl"],
+    ["P05", /ktx|basis|compressed texture|normal map|pbr texture/u, "texture"],
+    ["P04", /brdf|material routing|ggx|beckmann|lambert|phong/u, "brdf"],
+    ["P03", /ltc|rectangle light|rect area/u, "area-light"],
+    ["P02", /soft light|light radius|falloff/u, "soft-light"],
+    ["P01", /light|illumination/u, "lighting"],
+    ["C08", /offline|denois|oidn|accumulation/u, "offline"],
+    ["C07", /aov|exr|depth output/u, "aov"],
+    ["C06", /mp4|ffmpeg|webcodecs|video/u, "video"],
+    ["C05", /snapshot|frame sequence/u, "frames"],
+    ["C04", /camera rig|rail|follow|clearance/u, "camera-rig"],
+    ["C03", /camera animation|keyframe/u, "camera-animation"],
+    ["C02", /fps camera|fly camera|orbit control/u, "camera-control"],
+    ["C01", /camera|perspective|orthographic|projection/u, "camera"],
+    ["R11", /offscreen|headless/u, "offscreen"],
+    ["R10", /viewer|window|event loop|ipc/u, "viewer"],
+    ["R09", /thread pool|worker pool/u, "workers"],
+    ["R08", /staging|buffer|fence|async compute|sampler|mipmap/u, "resource-substrate"],
+    ["R07", /memory|budget|downscale/u, "memory"],
+    ["R06", /timing|render bundle|scene stats/u, "timing"],
+    ["R05", /scene graph|framegraph|render graph|resource tracker/u, "scene-graph"],
+    ["R04", /renderer|session|config|preset/u, "renderer-config"],
+    ["R03", /adapter|device probe/u, "device-probe"],
+    ["R02", /readback|render rgba|screenshot|png/u, "readback"],
+    ["R01", /gpu|device|webgpu|surface/u, "gpu"],
+  ];
+  for (const [capabilityId, pattern, rule] of rules) {
+    if (pattern.test(value)) return classified(capabilityId, `${namespace}:${rule}`);
+  }
+  return classified("R12", `${namespace}:release-engineering-metadata`);
+}

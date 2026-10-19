@@ -222,7 +222,7 @@ export function restoreDocumentationAssets() {
     save(`${packagePrefix}docs/native-assets/${r.source.path.slice(5)}`, git(['show', `${r.source.ref}:${r.source.path}`]));
 }
 function restoreEvidenceSources(data) {
-  const files=[...new Set([...data.rows.flatMap(r=>[r.example,...r.tests]),...['generate-w05-camera-fixture.py','generate-w06-aov-fixture.py','generate-w23-goldens.py','generate-w23-application-fixtures.py'].map(name=>packagePrefix+'scripts/'+name)])];
+  const files=[...new Set([...data.rows.flatMap(r=>[r.example,...r.tests]),...['generate-w05-camera-fixture.py','generate-w06-aov-fixture.py','generate-w23-goldens.py','generate-w23-application-fixtures.py','capture-w23-dem-inputs.py','w23_regional_fixtures.py'].map(name=>packagePrefix+'scripts/'+name),...['tests/playwright/w23_migration.spec.ts','tests/browser/w23-stage-observer.ts','tests/parity/w23-review-regressions.test.mjs'].map(name=>packagePrefix+name)])];
   for(const path of files)save(packagePrefix+'docs/'+currentSourceLink(path),text(path));
   saveJson(packagePrefix+'docs/evidence-sources/provenance.json',{generator:'scripts/w23-coverage.mjs',meaning:'Current browser evidence source snapshots, not native output goldens.',files:files.map(path=>({path,sha256:sha256(text(path)),snapshot:currentSourceLink(path)}))});
 }
@@ -247,7 +247,7 @@ function restoreExampleInputs() {
   const presets = Object.fromEntries(['baseline_no_vector_overlays.json', 'rainier_showcase.json'].map(name => [`presets/${name}`, JSON.parse(git(['show', `${ref}:examples/presets/${name}`]).toString('utf8'))]));
   saveJson(target + 'presets.json', presets);
   for (const name of ['autzen.laz', 'predictor.tif']) save(target + name, readFileSync(join(root, packagePrefix, 'tests/fixtures/w22', name)));
-  for (const name of ['rainier-cog.tif', 'rainier-cog.json']) save(target + name, readFileSync(join(root, packagePrefix, 'tests/golden/w08', name)));
+  for (const name of ['rainier-cog.tif', 'rainier-cog.json']) {const raw=readFileSync(join(root, packagePrefix, 'tests/golden/w08', name));save(target + name,name.endsWith('.json')?raw.toString('utf8').replace(/\r\n?/g,'\n'):raw);}
   saveJson(target + 'provenance.json', { nativeCommit: ref, sourceExamples: ['examples/sample_style.json', 'examples/presets/baseline_no_vector_overlays.json', 'examples/presets/rainier_showcase.json'],
     encodedInputs: '../../tests/fixtures/w22/manifest.json',
     derivedInputs:{'applications.json':'applications-provenance.json','terrain-single-tile.png':'single-tile-oracle.json','rainier-cog.tif':'rainier-cog.json'},

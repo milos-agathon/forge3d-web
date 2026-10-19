@@ -23,17 +23,17 @@ export function verifyDocs({ packageRoot = join(root, packagePrefix), checkCode 
   const docs = packageRoot === join(root, packagePrefix)
     ? [packagePrefix + 'README.md', ...filesBelow(packagePrefix + 'docs').filter(p => p.endsWith('.md'))].map(p => join(root, p))
     : [join(packageRoot, 'README.md'), ...walk(join(packageRoot, 'docs')).filter(p => p.endsWith('.md'))];
-  const errors = [], checked = [], sourceLinks = new Set();
+  const errors = [], checked = [], sourceLinks = new Map();
   let fences = 0, links = 0;
   for (const path of docs) {
     const markdown = readFileSync(path, 'utf8');
     for (const link of markdown.matchAll(/\[[^\]]*\]\(([^\s)]+)\)/g)) {
       const href = link[1];
       if (/^https:\/\/github\.com\/milos-agathon\//.test(href)) {
-        const parsed = /^https:\/\/github\.com\/milos-agathon\/([^/]+)\/blob\/([a-f0-9]{7,40})\/([^#?]+)/.exec(href);
+        if (!/^https:\/\/github\.com\/milos-agathon\/forge3d-web(?:\/|[#?]|$)/.test(href)) errors.push(`Wrong provenance repository ${path}: ${href}`);
+        const parsed = /^https:\/\/github\.com\/milos-agathon\/([^/]+)\/(blob|tree)\/([a-f0-9]{7,40})(?:\/([^#?]*))?/.exec(href);
         if (parsed) {
-          if (parsed[1] !== 'forge3d-web') errors.push(`Wrong provenance repository ${path}: ${href}`);
-          sourceLinks.add(`${parsed[2]}:${decodeURIComponent(parsed[3])}`);
+          sourceLinks.set(`${parsed[3]}:${decodeURIComponent(parsed[4]??'')}`, parsed[2]);
         }
       }
       if (/^(?:https?:|mailto:|data:)/.test(href)) continue;
@@ -73,8 +73,8 @@ export function verifyDocs({ packageRoot = join(root, packagePrefix), checkCode 
     for (const d of ts.getPreEmitDiagnostics(strict)) errors.push(`Strict documentation: ${ts.flattenDiagnosticMessageText(d.messageText, '\n')}`);
   }
   if (sourceLinks.size) {
-    const objects = execFileSync('git', ['cat-file', '--batch-check'], {cwd:root, input:[...sourceLinks].join('\n')+'\n', encoding:'utf8'}).trim().split('\n');
-    objects.forEach((line, i) => { if (!/^[a-f0-9]{40} blob \d+$/.test(line)) errors.push(`Missing immutable documentation source ${[...sourceLinks][i]}`); });
+    const keys=[...sourceLinks.keys()],objects = execFileSync('git', ['cat-file', '--batch-check'], {cwd:root, input:keys.join('\n')+'\n', encoding:'utf8'}).trim().split('\n');
+    objects.forEach((line, i) => { if (!new RegExp(`^[a-f0-9]{40} ${sourceLinks.get(keys[i])} \\d+$`).test(line)) errors.push(`Missing immutable documentation source ${keys[i]}`); });
   }
   return { errors, documents: docs.length, links, sourceLinks:sourceLinks.size, codeFences: fences, checkedCodeFences: checked.length };
 }
@@ -96,6 +96,7 @@ export function verifyW23() {
   const data = JSON.parse(readFileSync(join(root, manifestPath), 'utf8'));
   const assets = JSON.parse(readFileSync(join(root, assetManifestPath), 'utf8'));
   generateCoverage({ check: true });
+  execFileSync(process.execPath,['scripts/audit-w23-semantics.mjs'],{cwd:root,encoding:'utf8',maxBuffer:2*1024*1024});
   const docs = verifyDocs();
   const errors = [...validateCoverage(data), ...verifyPublicApis(data), ...validateAssets(assets), ...docs.errors];
   if (errors.length) throw Error(`W23 verification failed:\n${errors.join('\n')}`);

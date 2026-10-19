@@ -1,7 +1,7 @@
 // A consolidated, offline browser equivalent of the final native example workflows.
 // Each function performs work and checks its output before returning a review record.
 import { requirePixelChange, normalizeDemRgba, changedPixels } from './checks.js';
-import { applicationKind, analyzeApplication } from './application-analysis.js';
+import { applicationKind, analyzeExample } from './application-analysis.js';
 import { attachOrbitInput } from './interactive-view.js';
 /** @param {typeof import('../../types/index.js')} api
  * @param {HTMLCanvasElement} canvas
@@ -27,16 +27,25 @@ export function createWorkflows(api, canvas, signal, onOutput, example={}, retai
   /** @param {import('../../types/index.js').MapSceneLayerInput[]} [layers]
    * @returns {import('../../types/index.js').SceneRecipeInput} */
   const recipe = (layers = []) => ({ crs: 'LOCAL', terrain: { source: { id: 'dem', format: 'heightmap', crs: 'LOCAL', data: input() } }, camera,
-    lighting: { name: 'daylight' }, output: { width: 192, height: 128 }, reproducibility: { seed: 23 }, runtimeOptions: { clearColor: [.02, .03, .05, 1] }, layers,
+    lighting: application?.sunFrame?{sunDirection:application.sunFrame.map(v=>-v),intensity:1.4}:{ name: 'daylight' }, output: { width: 192, height: 128 }, reproducibility: { seed: 23 }, runtimeOptions: { clearColor: [.02, .03, .05, 1] }, layers,
     ...(state.ibl?{ibl:state.ibl}:{}),...(state.environment?{environment:state.environment}:{}),...(state.postFx?{postFx:state.postFx}:{}),...(state.shadows?{shadows:state.shadows}:{}),timeSeconds:simulationTime });
   /** @returns {import('../../types/index.js').VectorLayerInput} */
   const vectorData = () => {
-    if(application?.kind==='travel'||application?.kind==='city'){
+    if(application?.kind==='travel'){
       const times=Object.values(application.evidence.seconds),max=Math.max(...times),cmap=api.colormaps.get('forge3d:viridis');
       /** @type {import('../../types/index.js').VectorFeature[]} */const features=[];
       for(const [i,time]of times.slice(1).entries()){const c=cmap.sample(time/max);features.push({id:23+i,kind:'line',positions:[[-8+i*4,6,-6],[-4+i*4,6,6]],properties:{travelSeconds:time},style:{lineWidth:4,color:[c[0],c[1],c[2],c[3]]}});}
       features.push({id:100,kind:'point',position:[-8+Math.min(simulationTime/2,1)*16,7,0],style:{pointSize:12,color:[1,.5,.05,1]}});
       return {name:'routes',features};
+    }
+    if(application?.kind==='transit'){
+      const positions=application.evidence.positions,at=Math.min(positions.length-1,Math.round(simulationTime));
+      return {name:'GTFS transit',features:[{id:23,kind:'line',positions:positions.map(p=>[p[0],6,p[1]]),style:{lineWidth:4,color:[.1,.6,1,1]}},{id:100,kind:'point',position:[positions[at][0],7,positions[at][1]],style:{pointSize:14,color:[1,.5,.1,1]}}]};
+    }
+    if(application?.kind==='rail')return {name:'projected railway',features:[{id:23,kind:'line',positions:application.evidence.world.map(p=>[p[0]*24/terrainWidth-12,6,p[1]*24/terrainHeight-12]),style:{lineWidth:4,color:[1,.2,.1,1]}}]};
+    if(application?.kind==='lighthouses'){
+      const points=application.points,min=points[0][0],max=Math.max(...points.map(p=>p[0]));
+      return {name:'lighthouses',features:application.evidence.selected.map((id,i)=>({id:23+i,kind:'point',position:[-10+(points[id][0]-min)/Math.max(1,max-min)*20,7,points[id][1]/Math.max(1,max-min)*20],properties:{sourcePoint:points[id],glowWeight:application.evidence.weights[id]},style:{pointSize:12*application.evidence.weights[id],color:[1,.7,.1,1]}}))};
     }
     return { name: 'rivers', features: [{ id: 23, kind: 'line', positions: [[-9, 6, -2], [0, 6, 2], [9, 6, -2]], style: { lineWidth: 4, color: [.1, .4, 1, 1] } }] };
   };
@@ -92,24 +101,51 @@ export function createWorkflows(api, canvas, signal, onOutput, example={}, retai
       const time=index/2,s=path.evaluate(index/Math.max(1,frames.length-1)*path.getKeyframes().at(-1).time);camera={...original,position:api.cameraStateEye(s),target:s.target??original.target,fovYDegrees:s.fovDeg};
       simulationTime=time;
       if(baseEnvironment)state.environment={...baseEnvironment,volumes:baseEnvironment.volumes?.map(v=>({...v,bounds:[v.bounds[0]+time*.5,v.bounds[1],v.bounds[2]+time*.2,v.bounds[3]+time*.5,v.bounds[4],v.bounds[5]+time*.2]})),water:baseEnvironment.water?.map(w=>({...w,height:(w.height??0)+(/flood/.test(example.name??'')?time*.6:0)}))};
-      if(application?.kind==='travel'||application?.kind==='city')for(const layer of state.layers)if(layer.kind==='vector'&&layer.layerId==='rivers')layer.source.data=vectorData();
+      if(application?.kind==='travel'||application?.kind==='transit')for(const layer of state.layers)if(layer.kind==='vector'&&layer.layerId==='rivers')layer.source.data=vectorData();
       const plan=frames[index];if(plan){
-        const base=Number(plan.scene.slice(-1)),peer=plan.peer?Number(plan.peer.slice(-1)):base,tint=base*(1-plan.alpha)+peer*plan.alpha;
-        for(const layer of state.layers)if(layer.kind==='raster')layer.source.data={width:4,height:4,data:Uint8Array.from({length:64},(_,i)=>i%4===3?255:Math.round(40+tint*55+(i%4)*25))};
+        const base=Number(plan.scene.slice(-1)),peer=plan.peer?Number(plan.peer.slice(-1)):base,images=application.sceneImages;
+        for(const layer of state.layers)if(layer.kind==='raster')layer.source.data={width:terrainWidth,height:terrainHeight,data:Uint8Array.from(images[base],(v,i)=>Math.round(v*(1-plan.alpha)+images[peer][i]*plan.alpha))};
       }
+      if(application?.densityFrames){const density=application.densityFrames[Math.min(index,application.densityFrames.length-1)];for(const layer of state.layers)if(layer.kind==='raster')layer.source.data={width:terrainWidth,height:terrainHeight,data:Uint8Array.from(density.flatMap(v=>[Math.round(40+Math.min(v*800,180)),Math.round(55+Math.min(v*800,180)),Math.round(70+Math.min(v*800,180)),255]))};if(state.environment?.volumes?.[0])state.environment.volumes[0].data=volumeDensity(density);}
+      if(application?.evidence.sunFrames){const list=application.evidence.sunFrames,sun=list[Math.round(index/Math.max(1,frames.length-1)*(list.length-1))],a=sun[0]*Math.PI/180,e=sun[1]*Math.PI/180;application.sunFrame=[Math.cos(e)*Math.sin(a),Math.sin(e),-Math.cos(e)*Math.cos(a)];if(state.environment){state.environment.sunClock=null;state.environment.sunDirection=application.sunFrame;}}
+      if(application?.evidence.rain&&state.environment){const j=Math.round(index/Math.max(1,frames.length-1)*(application.evidence.rain.length-1));state.environment.fog={...state.environment.fog,density:.005+.025*application.evidence.rain[j]};state.environment.clouds={...state.environment.clouds,density:.2+.7*application.evidence.darkness[j]};}
+      if(application?.kind==='flood'&&state.environment?.water?.[0]){const level=application.evidence.waterLevels[index];state.environment.water[0].height=level;state.environment.water[0].mask=application.evidence.activation.map(v=>v<=level?1:0);}
       const result=await render();yield {index,time,timestampUs:api.frameTimestampUs(index,2),durationUs:500000,camera,frame:result.frame};
     }}finally{camera=original;simulationTime=0;state.environment=baseEnvironment;}
+  }
+  // Native density is an unbounded concentration; WebGPU volume samples are
+  // normalized opacity. Keep the numerical oracle untouched at this boundary.
+  function volumeDensity(density){return Float32Array.from({length:512},(_,i)=>{const x=i%8,y=Math.floor(i/8)%8,z=Math.floor(i/64),at=Math.floor(z*terrainHeight/8)*terrainWidth+Math.floor(x*terrainWidth/8);return Math.min(1,Math.max(0,density[at]*35*Math.exp(-y*.3)));});}
+  async function shadowControl(){
+    // A planar regional crop need not cast a visible shadow. This separate,
+    // declared occlusion fixture proves that the shadow pass changes RGB;
+    // the actual scene's delta is recorded separately and its DEM stays intact.
+    /** @type {import('../../types/index.js').TerrainHeightmapInput} */
+    const source={...input(),width:17,height:17,spacing:[1.5,1.5],heights:Float32Array.from({length:289},(_,i)=>i%17===8||i%17===9?5:0),domain:[0,5]};delete source.material;
+    const frames=[];
+    for(const enabled of [false,true]){
+      const control=recipe([]);delete control.environment;delete control.ibl;delete control.postFx;
+      const scene=new api.MapScene({...control,terrain:{source:{id:'shadow-control',format:'heightmap',crs:'LOCAL',data:source}},lighting:{sunDirection:[.55,-1,.3],intensity:1.6},shadows:{enabled,filter:'pcf'}});
+      try{const result=await scene.render({signal});check(result.metrics.coveragePixels>500,'Shadow control has no surface');frames.push(result.frame.data);}finally{scene.dispose();}
+    }
+    return requirePixelChange(frames[0],frames[1],'Shadows');
   }
   const workflows = {
     async application() {
       const kind=applicationKind(example.name??'');check(kind,'No regional analysis contract for '+example.name);
-      const oracle=await (await fetch(new URL('./applications.json',import.meta.url),{signal})).json();application=analyzeApplication(kind,oracle);
+      const oracle=await (await fetch(new URL('./applications.json',import.meta.url),{signal})).json();application=analyzeExample(example.name,oracle);
       terrainWidth=application.width;terrainHeight=application.height;const min=Math.min(...application.terrain),max=Math.max(...application.terrain);
       heights=Float32Array.from(application.terrain,v=>5*(v-min)/Math.max(max-min,1e-6));
-      const low=Math.min(...application.scalar),high=Math.max(...application.scalar),cmap=api.colormaps.get('forge3d:viridis');
-      const rgba=new Uint8Array(64);application.scalar.forEach((v,i)=>{const hex=application.colors?.[i],rgb=hex?[1,3,5].map(j=>parseInt(hex.slice(j,j+2),16)):cmap.sample((v-low)/Math.max(high-low,1e-6)).slice(0,3).map(c=>Math.round(c*255));rgba.set([...rgb,255],i*4);});
-      overlayImage={width:4,height:4,data:rgba};
-      return {kind,sourceExample:example.name,samples:heights.length,feeds:['terrain','raster',...(kind==='solar'||kind==='city'?['buildings']:[]),...(kind==='population'?['scatter']:[]),...(kind==='satellite'?['animation','video']:[])],...application.evidence};
+      const low=Math.min(...application.scalar),high=Math.max(...application.scalar),cmap=api.colormaps.get(application.kind==='population'?'forge3d:magma':'forge3d:viridis');
+      const rgba=new Uint8Array(terrainWidth*terrainHeight*4);for(let i=0;i<heights.length;i++){const v=application.scalar[i%application.scalar.length],hex=application.colors?.[i%application.colors.length],rgb=hex?[1,3,5].map(j=>parseInt(hex.slice(j,j+2),16)):cmap.sample((v-low)/Math.max(high-low,1e-6)).slice(0,3).map(c=>Math.round(c*255));rgba.set([...rgb,255],i*4);}
+      overlayImage=application.overlay?{...application.overlay,data:Uint8Array.from(application.overlay.data)}:{width:terrainWidth,height:terrainHeight,data:application.sceneImages?Uint8Array.from(application.sceneImages[0]):rgba};
+      if(kind==='travel'){
+        const surface=new OffscreenCanvas(16,16),context=surface.getContext('2d');
+        context.lineWidth=1.5;context.lineCap='round';
+        for(const [x0,y0,x1,y1,t]of application.evidence.pixels){const color=cmap.sample(t/1.4);context.strokeStyle=`rgb(${color.slice(0,3).map(v=>Math.round(v*255)).join(',')})`;context.beginPath();context.moveTo(x0,y0);context.lineTo(x1,y1);context.stroke();}
+        overlayImage={width:16,height:16,data:new Uint8Array(context.getImageData(0,0,16,16).data)};
+      }
+      return {kind,sourceExample:example.name,source:application.source,inputSource:application.inputSource,operations:application.operations,samples:heights.length,feeds:['terrain','raster',...(['solar','city','daycycle','flood','transit'].includes(kind)?['buildings']:[]),...(kind==='population'?['scatter']:[]),...(kind==='satellite'?['animation','video']:[])],...application.evidence};
     },
     async esm() { check(typeof api.Forge3DRuntime.create === 'function', 'ESM export resolution failed'); return { exports: Object.keys(api).length }; },
     async terrain() {
@@ -197,8 +233,8 @@ export function createWorkflows(api, canvas, signal, onOutput, example={}, retai
       const r = await render([...(state.layers.some(l=>l.kind==='vector')?[]:[vectorLayer()]),...(state.layers.some(l=>l.kind==='labels')?[]:[labelLayer()])]); return { layers: r.layers, coveragePixels: r.coveragePixels,changedPixels:r.changedPixels };
     },
     async buildings() {
-      if(application?.kind==='solar'||application?.kind==='city'){
-        const features=Array.from({length:4},(_,i)=>{const x=(i%2)*8-6,z=Math.floor(i/2)*8-6;return {type:'Feature',id:'roof-'+i,properties:{height:6+i,'roof:shape':'flat','building:colour':application?.kind==='solar'?(application.evidence.factors[i]>.9?'#f3b34b':'#4474b4'):'#ccaa88'},geometry:{type:'Polygon',coordinates:[[[x,z],[x+3,z],[x+3,z+3],[x,z+3],[x,z]]]}};});
+      if(['solar','city','daycycle','flood','transit'].includes(application?.kind)){
+        const features=Array.from({length:4},(_,i)=>{const x=(i%2)*8-6,z=Math.floor(i/2)*8-6;return {type:'Feature',id:'roof-'+i,properties:{height:application.evidence.heights?application.evidence.heights[i]*.16:6+i,'roof:shape':'flat','building:colour':application?.kind==='solar'?(application.evidence.factors[i]>.9?'#f3b34b':'#4474b4'):'#ccaa88'},geometry:{type:'Polygon',coordinates:[[[x,z],[x+3,z],[x+3,z+3],[x,z+3],[x,z]]]}};});
         const layer=api.parseGeoJsonBuildings({type:'FeatureCollection',features},{crs:'LOCAL'});
         try{const r=await render([{kind:'buildings',layerId:'buildings',source:{id:'buildings',format:'buildings',crs:'LOCAL',data:layer.buildings()}}]);return {buildings:layer.buildingCount,layers:r.layers,changedPixels:r.changedPixels.buildings,analysis:application.kind};}finally{layer.dispose();}
       }
@@ -224,7 +260,7 @@ export function createWorkflows(api, canvas, signal, onOutput, example={}, retai
     async scatter() {
       const mesh = meshPrototype??api.generatePrimitive('box');
       const transforms=application?.kind==='population'?application.scalar.map((v,i)=>{
-        const x=i%4*4-6,z=Math.floor(i/4)*4-6,bounds=api.meshBounds(mesh),height=Math.max(.5,v*.8),sy=height/(bounds.max[1]-bounds.min[1]);
+        const x=i%4*4-6,z=Math.floor(i/4)*4-6,bounds=api.meshBounds(mesh),height=Math.max(.15,application.evidence.heights[i]/Math.max(...application.evidence.heights)*8),sy=height/(bounds.max[1]-bounds.min[1]);
         const ground=new api.TerrainRigSource({heights,width:terrainWidth,height:terrainHeight,terrainWidth:24}).heightAt(x+12,z+12);
         return [.5,0,0,x,0,sy,0,ground-bounds.min[1]*sy,0,0,.5,z,0,0,0,1];
       }):[...transform(-4, 6, 0, 2),...transform(4,6,0,3)];
@@ -329,8 +365,8 @@ export function createWorkflows(api, canvas, signal, onOutput, example={}, retai
       const before=(await render()).frame.data;
       terrainMaterial={ ...api.getTerrainMaterialDefaults(), pom: { enabled: true }, layers: { snow: { enabled: true, altitudeMin: .3, altitudeBlend: .2 } } };
       const after=await render(),changed=requirePixelChange(before,after.frame.data,'Materials');
-      state.shadows={enabled:true,filter:'pcf'};await render();
-      return {bytes:after.frame.data.length,changedPixels:changed,shadowConfig:state.shadows};
+      state.shadows={enabled:true,filter:'pcf'};const shadowFrame=await render(),sceneShadowPixels=changedPixels(after.frame.data,shadowFrame.frame.data,1),shadowControlPixels=await shadowControl();
+      return {bytes:after.frame.data.length,changedPixels:changed,sceneShadowPixels,shadowControlPixels,shadowConfig:state.shadows};
     },
     async ibl() {
       const header=new TextEncoder().encode('#?RADIANCE\nFORMAT=32-bit_rle_rgbe\n\n-Y 2 +X 4\n'),bytes=new Uint8Array(header.length+32);bytes.set(header);
@@ -357,13 +393,14 @@ export function createWorkflows(api, canvas, signal, onOutput, example={}, retai
     },
     async environment() {
       const sun = api.sunPosition(52, 4, '2026-06-21T12:00:00Z');
-      const haze = await api.generateDensityVolume({ preset:application?.kind==='weather'?'plume':'localized_haze', bounds: [-12, 0, -12, 12, 10, 12], dimensions: [8, 8, 8], densityScale: 2, wind:[2,0,.5], seed: 23 });
+      const haze = await api.generateDensityVolume({ preset:['smoke','wildfire','storm'].includes(application?.kind)?'plume':'localized_haze', bounds: [-12, 0, -12, 12, 10, 12], dimensions: [8, 8, 8], densityScale: 2, wind:[2,0,.5], seed: 23 });
+      if(application?.densityFrames)haze.data=volumeDensity(application.densityFrames[0]);
       const environment = new api.Forge3DEnvironment({ sunClock: { latitude: 52, longitude: 4, unixSeconds: Date.parse('2026-06-21T12:00:00Z') / 1000, timeScale: /daycycle|transit|solar/.test(example.name??'')?6*3600:1 }, sky: { model: 'hosek-wilkie', turbidity: 2 }, fog: { mode: 'height', density: .01 }, clouds: { mode: 'hybrid', preset: 'gentle', height: 40, thickness: 20,wind:[2,.5],animationSpeed:1, seed: 23 }, volumes: [haze] });
       const before=(await render()).frame.data;state.environment=environment.snapshot();const after=await render();return {sun,bytes:after.frame.data.length,changedPixels:requirePixelChange(before,after.frame.data,'Environment')};
     },
     async water() {
       state.environment??=new api.Forge3DEnvironment({}).snapshot();
-      const before=(await render()).frame.data;state.environment={...state.environment,water:[{bounds:[-12,-12,12,12],height:2,mode:'animated'}]};const after=await render();return {bytes:after.frame.data.length,changedPixels:requirePixelChange(before,after.frame.data,'Water')};
+      const before=(await render()).frame.data;state.environment={...state.environment,water:[{bounds:[-12,-12,12,12],height:2,mode:'animated',...(application?.kind==='flood'?{maskDimensions:[8,8],mask:application.evidence.activation.map(v=>v<=2?1:0)}:{})}]};const after=await render();return {bytes:after.frame.data.length,changedPixels:requirePixelChange(before,after.frame.data,'Water')};
     },
     async viewer() {
       if(pointBounds){
@@ -383,7 +420,7 @@ export function createWorkflows(api, canvas, signal, onOutput, example={}, retai
       }
       const element = document.createElement('canvas'); element.width = 192; element.height = 128; element.setAttribute('aria-label', 'Migrated interactive viewer'); document.body.append(element);
       let viewer,retained=false;
-      try { viewer = await api.Forge3DViewer.create(element, { runtime: { width: 192, height: 128, devicePixelRatio: 1 } }); await viewer.setTerrain(input());viewer.setCamera(camera); const png = await viewer.screenshot(); check(png.size > 100, 'Viewer snapshot empty'); onOutput?.(png, 'viewer.png');
+      try { viewer = await api.Forge3DViewer.create(element, { runtime: { width: 192, height: 128, devicePixelRatio: 1 } }); await viewer.setTerrain(input());viewer.setCamera(camera); const png = await viewer.screenshot(); check(png.size > 100, 'Viewer snapshot empty'); const pixels=await api.pngToArray(png);state.frame=new api.Frame(pixels.width,pixels.height,new Uint8Array(pixels.data));onOutput?.(png, 'viewer.png');
         if(example.interactive&&retain){const live=viewer;element.dataset.workflowViewer='true';retain({dispose:()=>{live.dispose();element.remove();},inspect:()=>({view:live.getView(),disposed:live.disposed,pending:false})});retained=true;}
         return { pngBytes: png.size,viewerContent:'terrain' };
       } finally { if(!retained){viewer?.dispose(); element.remove();} }
