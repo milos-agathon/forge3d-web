@@ -152,6 +152,11 @@ crates/forge3d-web/docs/native-assets/** -text
 crates/forge3d-web/examples/migration/** text eol=lf
 crates/forge3d-web/examples/migration/*.laz binary
 crates/forge3d-web/examples/migration/*.tif binary
+crates/forge3d-web/examples/migration/*.png binary
+crates/forge3d-web/tests/fixtures/w23/** -text
+crates/forge3d-web/tests/golden/w23/** text eol=lf
+crates/forge3d-web/tests/golden/w23/*.png binary
+crates/forge3d-web/docs/evidence-sources/** text eol=lf
 crates/forge3d-web/docs/migration*.json text eol=lf
 crates/forge3d-web/docs/features.md text eol=lf
 crates/forge3d-web/docs/python-api-map.md text eol=lf

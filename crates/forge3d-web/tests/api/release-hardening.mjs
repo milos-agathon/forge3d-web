@@ -38,9 +38,9 @@ assertEqual(
 );
 assertEqual(packageJson.description, "Browser-only Forge3D WebGPU/WASM runtime for terrain rendering", "package description must match the browser MVP");
 assertEqual(packageJson.repository?.type, "git", "package repository type must be declared");
-assertEqual(packageJson.repository?.url, "git+https://github.com/milos-agathon/forge3d.git", "package repository URL must be declared");
+assertEqual(packageJson.repository?.url, "git+https://github.com/milos-agathon/forge3d-web.git", "package repository URL must identify the browser repository");
 assertEqual(packageJson.repository?.directory, "crates/forge3d-web", "package repository directory must point at the web crate");
-assertEqual(packageJson.bugs?.url, "https://github.com/milos-agathon/forge3d/issues", "package issue tracker must be declared");
+assertEqual(packageJson.bugs?.url, "https://github.com/milos-agathon/forge3d-web/issues", "package issue tracker must identify the browser repository");
 assertEqual(packageJson.homepage, "https://forge3d.dev", "package homepage must be declared");
 assertEqual(packageJson.engines?.node, ">=20.19.0", "package Node support floor must match Vite/CI");
 assertEqual(packageJson.forge3d?.interactiveViewer?.contractStage, "verification-incomplete", "viewer foundation stage must remain evidence-bound");

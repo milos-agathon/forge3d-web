@@ -7,11 +7,11 @@
   "homepage": "https://forge3d.dev",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/milos-agathon/forge3d.git",
+    "url": "git+https://github.com/milos-agathon/forge3d-web.git",
     "directory": "crates/forge3d-web"
   },
   "bugs": {
-    "url": "https://github.com/milos-agathon/forge3d/issues"
+    "url": "https://github.com/milos-agathon/forge3d-web/issues"
   },
   "keywords": [
     "webgpu",

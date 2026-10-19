@@ -1,10 +1,12 @@
 import { createRequire } from 'node:module';
+import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { root, manifestPath, validateCoverage, filesBelow, sha256, generateCoverage } from './w23-coverage.mjs';
+import { root, manifestPath, validateCoverage, filesBelow, sha256, generateCoverage, sourceContracts } from './w23-coverage.mjs';
 import { assetManifestPath, validateAssets } from './w23-assets.mjs';
 import { packagePrefix } from './w23-catalog.mjs';
+import { documentationContext } from './w23-doc-context.mjs';
 
 export function verifyPublicApis(data) {
   const ts = createRequire(join(root, packagePrefix, 'package.json'))('typescript');
@@ -12,19 +14,28 @@ export function verifyPublicApis(data) {
   const program = ts.createProgram([entry], { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022, moduleResolution: ts.ModuleResolutionKind.Bundler, noEmit: true });
   const checker = program.getTypeChecker(), source = program.getSourceFile(entry);
   const exports = new Set(checker.getExportsOfModule(checker.getSymbolAtLocation(source)).map(s => s.name));
-  return [...data.rows.map(r => ({ id: r.id, apis: r.apis })), ...(data.pythonExports ?? []).map(r => ({ id: r.native, apis: r.apis }))].flatMap(r => r.apis.filter(name => !exports.has(name)).map(name => `Unknown public TypeScript API ${r.id}: ${name}`));
+  const expected = sourceContracts().exports;
+  return [...(data.pythonExports ?? []).filter(r => JSON.stringify(r.apis) !== JSON.stringify(expected[r.native]?.apis)).map(r => `Semantic API destination mismatch ${r.native}`),
+    ...[...data.rows.map(r => ({ id: r.id, apis: r.apis })), ...(data.pythonExports ?? []).map(r => ({ id: r.native, apis: r.apis }))].flatMap(r => r.apis.filter(name => !exports.has(name)).map(name => `Unknown public TypeScript API ${r.id}: ${name}`))];
 }
 export function verifyDocs({ packageRoot = join(root, packagePrefix), checkCode = true } = {}) {
   const ts = createRequire(join(root, packagePrefix, 'package.json'))('typescript');
   const docs = packageRoot === join(root, packagePrefix)
     ? [packagePrefix + 'README.md', ...filesBelow(packagePrefix + 'docs').filter(p => p.endsWith('.md'))].map(p => join(root, p))
     : [join(packageRoot, 'README.md'), ...walk(join(packageRoot, 'docs')).filter(p => p.endsWith('.md'))];
-  const errors = [], checked = [];
+  const errors = [], checked = [], sourceLinks = new Set();
   let fences = 0, links = 0;
   for (const path of docs) {
     const markdown = readFileSync(path, 'utf8');
     for (const link of markdown.matchAll(/\[[^\]]*\]\(([^\s)]+)\)/g)) {
       const href = link[1];
+      if (/^https:\/\/github\.com\/milos-agathon\//.test(href)) {
+        const parsed = /^https:\/\/github\.com\/milos-agathon\/([^/]+)\/blob\/([a-f0-9]{7,40})\/([^#?]+)/.exec(href);
+        if (parsed) {
+          if (parsed[1] !== 'forge3d-web') errors.push(`Wrong provenance repository ${path}: ${href}`);
+          sourceLinks.add(`${parsed[2]}:${decodeURIComponent(parsed[3])}`);
+        }
+      }
       if (/^(?:https?:|mailto:|data:)/.test(href)) continue;
       const [targetPart, fragment] = href.split('#'), target = resolve(dirname(path), decodeURIComponent(targetPart.split('?')[0] || path));
       const rel = relative(root, target);
@@ -48,17 +59,24 @@ export function verifyDocs({ packageRoot = join(root, packagePrefix), checkCode 
         ts.forEachChild(node, visit);
       };
       visit(parsed);
-      if (/\bchecked\b/.test(fence[2])) checked.push({ path, code: fence[3] });
+      checked.push({ path, code: fence[3], context:documentationContext(ts,parsed,path), strict: /\bchecked\b/.test(fence[2]) });
     }
   }
   if (checkCode && checked.length) {
     const out = join(root, packagePrefix, 'test-results/w23-docs'); mkdirSync(out, { recursive: true });
-    const names = checked.map((c, i) => { const name = join(out, `snippet-${i}.ts`); writeFileSync(name, c.code); return name; });
+    const names = checked.map((c, i) => { const name = join(out, `snippet-${i}.ts`); writeFileSync(name, 'export {};\n' + (c.strict?'':c.context) + c.code); return name; });
     const program = ts.createProgram(names, { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ES2022, moduleResolution: ts.ModuleResolutionKind.Bundler,
-      strict: true, noEmit: true, types: [], paths: { '@forge3d/web': [join(packageRoot, 'types/index.d.ts')] } });
-    for (const d of ts.getPreEmitDiagnostics(program)) errors.push(`Checked documentation: ${ts.flattenDiagnosticMessageText(d.messageText, '\n')}`);
+      strict: false, noEmit: true, types: [], paths: { '@forge3d/web': [join(packageRoot, 'types/index.d.ts')] } });
+    for (const d of ts.getPreEmitDiagnostics(program)) errors.push(`Checked documentation ${d.file?.fileName}: ${ts.flattenDiagnosticMessageText(d.messageText, '\n')}`);
+    const strictNames = names.filter((_, i) => checked[i].strict);
+    const strict = ts.createProgram(strictNames, {...program.getCompilerOptions(), strict:true});
+    for (const d of ts.getPreEmitDiagnostics(strict)) errors.push(`Strict documentation: ${ts.flattenDiagnosticMessageText(d.messageText, '\n')}`);
   }
-  return { errors, documents: docs.length, links, codeFences: fences, checkedCodeFences: checked.length };
+  if (sourceLinks.size) {
+    const objects = execFileSync('git', ['cat-file', '--batch-check'], {cwd:root, input:[...sourceLinks].join('\n')+'\n', encoding:'utf8'}).trim().split('\n');
+    objects.forEach((line, i) => { if (!/^[a-f0-9]{40} blob \d+$/.test(line)) errors.push(`Missing immutable documentation source ${[...sourceLinks][i]}`); });
+  }
+  return { errors, documents: docs.length, links, sourceLinks:sourceLinks.size, codeFences: fences, checkedCodeFences: checked.length };
 }
 function verifyExportNames(ts, packageRoot) {
   // Re-export declarations are part of the public map, so use the checker.

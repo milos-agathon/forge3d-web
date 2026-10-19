@@ -252,22 +252,22 @@ surface, not the final parity boundary.
 
 | Capability | Current status | Parity owner |
 |---|---|---|
-| Worker `OffscreenCanvas` and browser-headless output | Current gap | [R10-R11](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#runtime-gpu-and-platform-foundations), [W02](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w02--general-scenerender-graph-resources-diagnostics-and-config) |
+| Worker `OffscreenCanvas` and browser-headless output | Current gap | [R10-R11](https://github.com/milos-agathon/forge3d-web/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#runtime-gpu-and-platform-foundations), [W02](https://github.com/milos-agathon/forge3d-web/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w02--general-scenerender-graph-resources-diagnostics-and-config) |
 | COPC/EPT/LAZ point streaming | Implemented; Chromium preflight evidence | [Typed datasets, bounded LOD, GPU points and picking](docs/pointcloud-tiles.md); W00 reference hardware qualification remains pending |
 | OGC 3D Tiles | Implemented; Chromium preflight evidence | [Relative loaders, bounds, SSE, PNTS and W15 B3DM](docs/pointcloud-tiles.md) |
-| COG, raster streaming/overlays, clipmaps, and virtual texturing | Supported | [T08-T11](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#terrain-and-large-raster-scenes), [W08](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w08--clipmaps-streaming-cog-raster-overlays-and-virtual-textures), [browser-api.md](docs/browser-api.md#terrain-clipmaps-streaming-cogs-overlays-and-virtual-textures-w08) |
-| Terrain scatter, LOD/HLOD, wind and local SH/reflection probes | Implemented and verified | [T13/T15](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#terrain-and-large-raster-scenes), [W09](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w09--terrain-scatter-lodhlod-wind-and-lighting-probes), [API guide](docs/terrain-scatter-probes.md) |
-| Mapbox Style subset | Current gap | [M03](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#product-scene-styling-packaging-cartography-and-utilities), [W19](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w19--mapbox-style-bundles-variants-and-review-layers) |
+| COG, raster streaming/overlays, clipmaps, and virtual texturing | Supported | [T08-T11](https://github.com/milos-agathon/forge3d-web/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#terrain-and-large-raster-scenes), [W08](https://github.com/milos-agathon/forge3d-web/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w08--clipmaps-streaming-cog-raster-overlays-and-virtual-textures), [browser-api.md](docs/browser-api.md#terrain-clipmaps-streaming-cogs-overlays-and-virtual-textures-w08) |
+| Terrain scatter, LOD/HLOD, wind and local SH/reflection probes | Implemented and verified | [T13/T15](https://github.com/milos-agathon/forge3d-web/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#terrain-and-large-raster-scenes), [W09](https://github.com/milos-agathon/forge3d-web/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w09--terrain-scatter-lodhlod-wind-and-lighting-probes), [API guide](docs/terrain-scatter-probes.md) |
+| Mapbox Style subset | Current gap | [M03](https://github.com/milos-agathon/forge3d-web/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#product-scene-styling-packaging-cartography-and-utilities), [W19](https://github.com/milos-agathon/forge3d-web/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#w19--mapbox-style-bundles-variants-and-review-layers) |
 
 Python wheels, PyO3/NumPy bindings, native windows, stdin/TCP control, and CMake
 are delivery mechanisms rather than feature gaps. Their observable outcomes map
 to browser equivalents in the
-[exhaustive parity matrix](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#exhaustive-parity-matrix).
+[exhaustive parity matrix](https://github.com/milos-agathon/forge3d-web/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#exhaustive-parity-matrix).
 WebGL fallback and Node rendering are explicit entries in the
-[tombstone ledger](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#truthfulness-lifecycle-and-tombstone-ledger),
+[tombstone ledger](https://github.com/milos-agathon/forge3d-web/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#truthfulness-lifecycle-and-tombstone-ledger),
 not silent parity exclusions. Complete functional parity is not claimed while
 any active row in the
-[composite parity manifest](https://github.com/milos-agathon/forge3d/blob/main/docs/parity/forge3d-composite-baseline.json)
+[composite parity manifest](https://github.com/milos-agathon/forge3d-web/blob/main/docs/parity/forge3d-composite-baseline.json)
 remains open.
 
 ## Release Verification
@@ -302,7 +302,7 @@ An ordered `PostFxChain` provides AO/GI/reflections, bloom, DoF, lens, motion
 blur, temporal/accumulation AA, denoise, tonemap and linear LUTs. Runtime,
 scene, session, viewer and module workers retain the typed graph. See the
 [HDR and post-FX guide](docs/postfx-hdr.md) and
-[example source](https://github.com/milos-agathon/forge3d/blob/d5cf3b578d7a946e2ca4008c42537380889537b3/crates/forge3d-web/examples/test-w11-postfx.html). Run `npm run test:w11` and
+[example source](https://github.com/milos-agathon/forge3d-web/blob/d5cf3b578d7a946e2ca4008c42537380889537b3/crates/forge3d-web/examples/test-w11-postfx.html). Run `npm run test:w11` and
 `npm run test:package-consumer:w11` for native image and installed package gates.
 
 Vector layers support point shapes/atlases, AA caps/joins, polygon extrusion, terrain draping, capability-selected transparency, stable IDs, picking and named selections. See [vector layers](docs/vector-layers.md).

@@ -1,0 +1,51 @@
+{
+  "generator": "crates/forge3d-web/scripts/generate-w23-application-fixtures.py",
+  "method": "Original Python AST helper bodies executed with bounded typed data; independent of browser implementation.",
+  "sources": {
+    "belgium_bivariate_climate_map.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/belgium_bivariate_climate_map.py",
+      "sha256": "ccde65a8feed55f32e2b57d1a930cc5d453f6a2f7207867e4d61275da75dd02b",
+      "helpers": [
+        "_quantile_breaks",
+        "_classify",
+        "_bivariate_palette_color"
+      ]
+    },
+    "colorado_rem_forge3d.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/colorado_rem_forge3d.py",
+      "sha256": "d374ab9ce224194ae07cb8eb0c30f50a109879455749763bd7882a95cffb63d3",
+      "helpers": [
+        "_apply_idw_from_neighbors"
+      ]
+    },
+    "barcelona_travel_time_3d.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/barcelona_travel_time_3d.py",
+      "sha256": "4ca92ae53a78b94b10ec442fd8a03117f1f527368ab58aae16fcd632681e716a",
+      "helpers": [
+        "parse_maxspeed",
+        "dijkstra_seconds"
+      ]
+    },
+    "rotterdam_solar_potential_shadow_study.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/rotterdam_solar_potential_shadow_study.py",
+      "sha256": "b7063e7f969cd75ec2fef34126b3baa769e34c61bf27970cdf5e801265e57613",
+      "helpers": [
+        "roof_normal_for_solar",
+        "orientation_factor"
+      ]
+    },
+    "khumbu_icefall_sentinel_timelapse.py": {
+      "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+      "path": "examples/khumbu_icefall_sentinel_timelapse.py",
+      "sha256": "7fffd91e3489a75327c6ffd2972b3805506e66422fb7a0cb7149b63e59144254",
+      "helpers": [
+        "FramePlanItem",
+        "build_frame_plan"
+      ]
+    }
+  }
+}

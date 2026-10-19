@@ -2,7 +2,7 @@ import { test, expect } from "../browser/webgpu-fixture";
 import * as ed from '@noble/ed25519';
 declare global { interface Window { __w23: any } }
 for (const source of [true, false]) test(`W23 ${source ? 'source' : 'dist'}: all 54 migrated example workflows execute`, async ({ page }, info) => {
-  test.setTimeout(300_000);
+  test.setTimeout(600_000);
   const failures: string[] = [];
   page.on('pageerror', error => failures.push(error.message));
   await page.goto('/examples/migration/index.html' + (source ? '?source' : ''));
@@ -16,15 +16,44 @@ for (const source of [true, false]) test(`W23 ${source ? 'source' : 'dist'}: all
   expect(new Set(report.examples.map((e: any) => e.name)).size).toBe(54);
   for (const example of report.examples) {
     expect(example.status).toBe('executed');
+    expect(example.steps.map((s:any)=>s.workflow)).toEqual(example.workflows);
     expect(example.source.sha256).toMatch(/^[a-f0-9]{64}$/);
     for (const workflow of example.workflows) expect(report.workflows[workflow], example.name + ': ' + workflow).toBeDefined();
   }
-  expect(Object.keys(report.workflows)).toHaveLength(29);
+  expect(Object.keys(report.workflows).length).toBeGreaterThanOrEqual(33);
+  const docs=await page.evaluate(()=>window.__w23.verifyGuideExamples());
+  expect(docs.snapshotBytes).toBeGreaterThan(100);
+  expect(docs.roundTripBytes).toBeGreaterThan(20);
+  expect(docs.snapshotCoverage).toBeGreaterThan(50);
+  expect(report.workflows.singleTile.oracleExact).toBe(true);
+  expect(report.workflows.triangle.changedPixels).toBeGreaterThan(8);
+  expect(report.workflows.rigs.rail.minimumClearance).toBeGreaterThanOrEqual(1.99);
+  expect(report.workflows.rigs.follow.minimumClearance).toBeGreaterThanOrEqual(1.99);
+  expect(report.workflows.ibl.prepared).toBe(true);
+  expect(report.workflows.effects.taaFrames).toBe(4);
+  expect(report.workflows.effects.orderIndependent).toBe(true);
+  expect(report.workflows.video.bytes).toBeGreaterThan(100);
+  expect(report.workflows.video.frameCount).toBe(3);
+  const byName=new Map<string,any>(report.examples.map((e:any)=>[e.name,e]));
+  const step=(name:string,workflow:string)=>byName.get(name).steps.find((s:any)=>s.workflow===workflow).result;
+  expect(step('terrain_single_tile.py','png').width).toBe(256);
+  expect(step('triangle_png.py','triangle').pngFromRenderedTriangle).toBe(true);
+  expect(step('colorado_rem_forge3d.py','raster').analysis).toBe('rem');
+  expect(step('belgium_bivariate_climate_map.py','raster').analysis).toBe('bivariate');
+  expect(step('barcelona_travel_time_3d.py','application').seconds['3']).toBe(90);
+  expect(step('rotterdam_solar_potential_shadow_study.py','buildings').analysis).toBe('solar');
+  expect(step('poland_population_spikes_height_shade.py','scatter').instances).toBe(16);
+  expect(step('khumbu_icefall_sentinel_timelapse.py','animation').timestamps).toHaveLength(8);
+  expect(step('khumbu_icefall_sentinel_timelapse.py','video').frameCount).toBe(8);
+  expect(step('sample_style.json','style').executedLayers).toEqual(expect.arrayContaining(['rail-lines','stations','station-labels']));
   expect(report.workflows.png.exact).toBe(true);
   expect(report.workflows.render.coveragePixels).toBeGreaterThan(500);
   expect(report.workflows.animation.timestamps).toEqual([0, 500000, 1000000]);
   expect(report.workflows.pointcloud.points).toBe(110000);
-  expect(report.workflows.cog.values).toBe(256);
+  expect(report.workflows.cog.values).toBe(65536);
+  expect(report.workflows.cog.grids).toBe(4);
+  expect(report.workflows.cog.streamed.uploadedTiles).toBeGreaterThan(0);
+  for(const name of ['materials','environment','water'])expect(report.workflows[name].changedPixels).toBeGreaterThan(8);
   expect(report.artifacts.some((a: any) => a.name.endsWith('.png'))).toBe(true);
   expect(report.artifacts.some((a: any) => a.name.endsWith('.pdf'))).toBe(true);
   expect(report.artifacts.some((a: any) => a.name.endsWith('.svg'))).toBe(true);
@@ -42,6 +71,47 @@ for (const source of [true, false]) test(`W23 ${source ? 'source' : 'dist'}: all
     return { released, downloads: document.querySelectorAll('#downloads a').length };
   });
   expect(replay).toEqual({ released: true, downloads: 1 });
+  const controls=await page.evaluate(async()=>{
+    const {api,createWorkflows}=window.__w23,outcomes=[];
+    for(const feature of ['materials','environment','water','vectors']){
+      class NoContributionScene extends api.MapScene {
+        requested:string[];
+        constructor(recipe:any){
+          const copy=structuredClone(recipe),requested=(copy.layers??[]).map((l:any)=>l.layerId);
+          if(feature==='materials'&&copy.terrain?.source.data)delete copy.terrain.source.data.material;
+          if(feature==='environment')delete copy.environment;
+          if(feature==='water'&&copy.environment)delete copy.environment.water;
+          if(feature==='vectors')copy.layers=copy.layers.filter((l:any)=>l.kind!=='vector');
+          super(copy);this.requested=requested;
+        }
+        async render(options:any){const result=await super.render(options);return {...result,executedLayerIds:[...new Set([...result.executedLayerIds,...this.requested])]};}
+      }
+      const workflows=createWorkflows({...api,MapScene:NoContributionScene},document.createElement('canvas'),new AbortController().signal);
+      try{await workflows[feature]();outcomes.push({feature,rejected:false,message:''});}catch(error:any){outcomes.push({feature,rejected:/RGB pixels/.test(error.message),message:error.message});}
+    }
+    const emptyPoints={...api,PointCloudRenderer:{create:async(...args:any[])=>{
+      const renderer=await api.PointCloudRenderer.create(...args);
+      return new Proxy(renderer,{get(target,key){if(key==='setLayers')return()=>{};const value=Reflect.get(target,key,target);return typeof value==='function'?value.bind(target):value;}});
+    }}};
+    try{await createWorkflows(emptyPoints,document.createElement('canvas'),new AbortController().signal).pointcloud();outcomes.push({feature:'pointcloud',rejected:false,message:''});}
+    catch(error:any){outcomes.push({feature:'pointcloud',rejected:/no coverage/.test(error.message),message:error.message});}
+    return outcomes;
+  });
+  await info.attach('w23-negative-controls.json',{body:JSON.stringify({controls,docs},null,2),contentType:'application/json'});
+  for(const control of controls)expect(control.rejected,control.feature+': '+control.message).toBe(true);
+  for(const [name,content]of [['buildings_viewer_interactive.py','mapscene'],['pointcloud_viewer_interactive.py','pointcloud']]){
+    const sample=await page.evaluate(name=>window.__w23.run(name),name);
+    expect(sample.workflows.viewer.viewerContent).toBe(content);
+    expect(await page.evaluate(()=>window.__w23.retainedViewers())).toBe(1);
+    const before=await page.evaluate(()=>window.__w23.inspectViewer().view.yawDegrees);
+    await page.locator('[data-workflow-viewer]').press('ArrowRight');
+    await page.waitForFunction(()=>{const view=window.__w23.inspectViewer();return view.renders>0&&!view.pending;});
+    const after=await page.evaluate(()=>window.__w23.inspectViewer());
+    expect(after.error).toBeNull();expect(after.view.yawDegrees).not.toBe(before);
+  }
+  await page.evaluate(()=>window.__w23.run('png_numpy_roundtrip.py'));
+  expect(await page.evaluate(()=>window.__w23.retainedViewers())).toBe(0);
+  expect(await page.evaluate(()=>window.__w23.inspectViewer())).toBeNull();
   expect(failures).toEqual([]);
   await info.attach('w23-workflows.json', { body: JSON.stringify(report, null, 2), contentType: 'application/json' });
 });

@@ -601,11 +601,11 @@ verified while a retained 33.7 ms failure had identical runtime bytes. Their
 status now preserves that unexplained variation. The recorder discovers every
 retained matching-runtime run instead of consulting only the manually selected
 October 9 predecessor. Derived status, acceptance items, matching runs and CPU
-means reproduce with [the reporting helper](https://github.com/milos-agathon/forge3d/blob/d5cf3b578d7a946e2ca4008c42537380889537b3/crates/forge3d-web/scripts/w16-local-evidence.mjs).
+means reproduce with [the reporting helper](https://github.com/milos-agathon/forge3d-web/blob/d5cf3b578d7a946e2ca4008c42537380889537b3/crates/forge3d-web/scripts/w16-local-evidence.mjs).
 Historical correction may consider later observations; it does not claim they
 were known at the original run time or that any additional run occurred.
 
-[The correction script](https://github.com/milos-agathon/forge3d/blob/d5cf3b578d7a946e2ca4008c42537380889537b3/crates/forge3d-web/scripts/repair-w16-evidence-reporting.mjs) retains
+[The correction script](https://github.com/milos-agathon/forge3d-web/blob/d5cf3b578d7a946e2ca4008c42537380889537b3/crates/forge3d-web/scripts/repair-w16-evidence-reporting.mjs) retains
 each original summary in `w16-runs/original-evidence/`, with its exact byte count
 and SHA-256 recorded in `reportingCorrection`. Raw soak/conformance reports,
 runtime manifests, historical measurements, gate results and stdout bindings

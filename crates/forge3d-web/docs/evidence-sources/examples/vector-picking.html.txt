@@ -1,0 +1,13 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Vector picking · Forge3D</title><style>body{font:16px system-ui;margin:32px;background:#f4f1eb;color:#292c26}canvas{width:640px;max-width:100%;background:#101b22}pre{white-space:pre-wrap}button{padding:8px 14px}</style></head><body>
+<h1>Pick, select, inspect</h1><p>Click a symbol or polygon. Use “Select visible” to run a lasso over the displayed pixels.</p><canvas width="640" height="480"></canvas><p><button id="lasso">Select visible</button></p><pre role="status">Starting WebGPU…</pre>
+<script type="module">
+import {Forge3DRuntime,VectorLayers,VectorPicker} from "../src-ts/index.ts";
+const canvas=document.querySelector("canvas"),status=document.querySelector("pre");
+try{const runtime=await Forge3DRuntime.create(canvas,{devicePixelRatio:1,clearColor:[.04,.08,.1,1]}),layers=new VectorLayers();
+ layers.add({name:"symbols",features:[{id:1,kind:"point",position:[-1,.2,0],style:{shape:"circle",pointSize:60,color:[.2,.7,1,1]},properties:{name:"Circle"}},{id:2,kind:"point",position:[1,.2,0],style:{shape:"diamond",pointSize:60,color:[1,.5,.1,1]},properties:{name:"Diamond"}},{id:3,kind:"polygon",rings:[[[-1,0,-1],[1,0,-1],[1,0,-2],[-1,0,-2]]],style:{color:[.4,.8,.4,.6]},properties:{name:"Polygon"}}]});
+ runtime.setCamera({position:[0,6,4],target:[0,0,-.5],up:[0,1,0],fovYDegrees:45,near:.1,far:30});const commit=()=>{runtime.setVectorLayers(layers);runtime.render();};commit();const picker=new VectorPicker(runtime,layers);
+ picker.bind(canvas,{select:true,onPick:hit=>{status.textContent=hit?JSON.stringify(hit,null,2):"No feature at this pixel";},onError:e=>{status.textContent=String(e);},invalidate:commit});
+ document.querySelector("#lasso").onclick=async()=>{const hits=await picker.lasso([[0,0],[640,0],[640,480],[0,480]]);layers.setSelection("active",hits.map(h=>h.id),{outline:true,glow:true,glowRadius:3});commit();status.textContent=JSON.stringify(hits,null,2);};
+ status.textContent="Ready. Feature IDs remain stable when their geometry or style changes.";window.__picking={runtime,layers,picker};window.addEventListener("pagehide",()=>{picker.dispose();runtime.dispose();layers.dispose();},{once:true});
+}catch(error){status.textContent=String(error);throw error;}
+</script></body></html>

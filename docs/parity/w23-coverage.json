@@ -68,10 +68,9 @@
       ],
       "guide": "crates/forge3d-web/docs/browser-api.md",
       "tests": [
-        "crates/forge3d-web/tests/unit/scene.test.ts",
+        "crates/forge3d-web/tests/unit/renderer-config.test.ts",
         "crates/forge3d-web/tests/unit/session.test.ts",
-        "crates/forge3d-web/tests/unit/browser-resources.test.ts",
-        "crates/forge3d-web/tests/playwright/w02_runtime.spec.ts"
+        "crates/forge3d-web/tests/unit/scene.test.ts"
       ],
       "example": "crates/forge3d-web/examples/test-w02-runtime.html",
       "disposition": "capability-evidence"
@@ -214,7 +213,10 @@
       ],
       "guide": "crates/forge3d-web/docs/browser-api.md",
       "tests": [
-        "crates/forge3d-web/tests/parity/verify-parity-manifest.test.mjs"
+        "crates/forge3d-web/tests/parity/w23-public-contracts.test.mjs",
+        "crates/forge3d-web/tests/unit/scene.test.ts",
+        "crates/forge3d-web/tests/unit/session.test.ts",
+        "crates/forge3d-web/tests/unit/w06-offline.test.ts"
       ],
       "example": "crates/forge3d-web/examples/test-w02-runtime.html",
       "disposition": "capability-evidence"
@@ -409,7 +411,8 @@
       "guide": "crates/forge3d-web/docs/browser-api.md",
       "tests": [
         "crates/forge3d-web/tests/unit/terrain-dataset.test.ts",
-        "crates/forge3d-web/tests/playwright/w03_terrain.spec.ts"
+        "crates/forge3d-web/tests/playwright/w03_terrain.spec.ts",
+        "crates/forge3d-web/tests/parity/w23-application-analysis.test.mjs"
       ],
       "example": "crates/forge3d-web/examples/test-w03-terrain.html",
       "disposition": "capability-evidence"
@@ -1692,6 +1695,7 @@
         "gitBlob": "abe639498638b2a0b13504e28a2ab9579b47ff88"
       },
       "workflows": [
+        "application",
         "terrain",
         "raster",
         "vectors",
@@ -1699,9 +1703,9 @@
         "render"
       ],
       "capabilities": [
+        "T03",
         "T01",
         "T02",
-        "T03",
         "T11",
         "V01",
         "T12",
@@ -1778,6 +1782,7 @@
         "gitBlob": "eb0765eebfbf07b3bedf2c0d8600a47252f1ba38"
       },
       "workflows": [
+        "application",
         "crs",
         "terrain",
         "raster",
@@ -1786,10 +1791,10 @@
         "furniture"
       ],
       "capabilities": [
+        "T03",
         "G01",
         "T01",
         "T02",
-        "T03",
         "T11",
         "M07",
         "R02",
@@ -1839,15 +1844,16 @@
         "gitBlob": "9000da472768d045611e03a0cf2c38c74eabae11"
       },
       "workflows": [
+        "application",
         "terrain",
         "raster",
         "environment",
         "render"
       ],
       "capabilities": [
+        "T03",
         "T01",
         "T02",
-        "T03",
         "T11",
         "P08",
         "P09",
@@ -1869,6 +1875,7 @@
         "gitBlob": "ba19fd479f48c0bc5f6d61dd0d0580692cc9c4bb"
       },
       "workflows": [
+        "application",
         "crs",
         "buildings",
         "vectors",
@@ -1877,6 +1884,7 @@
         "video"
       ],
       "capabilities": [
+        "T03",
         "G01",
         "G05a",
         "G05b",
@@ -1903,6 +1911,7 @@
         "gitBlob": "39bfbf69d62a6c8dc65be886f145ab3be68ee1a4"
       },
       "workflows": [
+        "application",
         "terrain",
         "raster",
         "materials",
@@ -1910,9 +1919,9 @@
         "furniture"
       ],
       "capabilities": [
+        "T03",
         "T01",
         "T02",
-        "T03",
         "T11",
         "T05",
         "P07",
@@ -1962,6 +1971,7 @@
         "gitBlob": "333ffbfdfe9443752a3ee0ffcdd4ec7400dd8e70"
       },
       "workflows": [
+        "application",
         "crs",
         "terrain",
         "raster",
@@ -1971,10 +1981,10 @@
         "furniture"
       ],
       "capabilities": [
+        "T03",
         "G01",
         "T01",
         "T02",
-        "T03",
         "T11",
         "T13",
         "T05",
@@ -2023,6 +2033,7 @@
         "gitBlob": "4a04f1f17bae672c791ab013422dfc39a929d472"
       },
       "workflows": [
+        "application",
         "terrain",
         "raster",
         "environment",
@@ -2030,9 +2041,9 @@
         "video"
       ],
       "capabilities": [
+        "T03",
         "T01",
         "T02",
-        "T03",
         "T11",
         "P08",
         "P09",
@@ -2055,6 +2066,7 @@
         "gitBlob": "e08d2328dc2124d1bce9cc1597913d01242bda59"
       },
       "workflows": [
+        "application",
         "crs",
         "terrain",
         "raster",
@@ -2063,10 +2075,10 @@
         "furniture"
       ],
       "capabilities": [
+        "T03",
         "G01",
         "T01",
         "T02",
-        "T03",
         "T11",
         "V01",
         "T12",
@@ -2092,6 +2104,7 @@
         "vectors",
         "labels",
         "mapscene",
+        "bundle",
         "furniture"
       ],
       "capabilities": [
@@ -2105,6 +2118,8 @@
         "V06b",
         "V07",
         "M02a",
+        "M04",
+        "T18",
         "M05",
         "M06"
       ],
@@ -2121,6 +2136,7 @@
         "gitBlob": "aa49679ac69980fc153777a8bba2a8c26b184585"
       },
       "workflows": [
+        "application",
         "terrain",
         "raster",
         "environment",
@@ -2129,9 +2145,9 @@
         "furniture"
       ],
       "capabilities": [
+        "T03",
         "T01",
         "T02",
-        "T03",
         "T11",
         "P08",
         "P09",
@@ -2156,16 +2172,11 @@
         "gitBlob": "a191744e776fb0d85458b71b27d8188e3c9b4bf6"
       },
       "workflows": [
-        "terrain",
-        "render",
+        "singleTile",
         "png"
       ],
       "capabilities": [
         "T01",
-        "T02",
-        "T03",
-        "R02",
-        "C07",
         "E07"
       ],
       "browser": "crates/forge3d-web/examples/migration/index.html?example=terrain_single_tile.py",
@@ -2181,6 +2192,7 @@
         "gitBlob": "c48ef6a869eae4457c306d899c8baaed726c286f"
       },
       "workflows": [
+        "application",
         "crs",
         "terrain",
         "raster",
@@ -2189,10 +2201,10 @@
         "furniture"
       ],
       "capabilities": [
+        "T03",
         "G01",
         "T01",
         "T02",
-        "T03",
         "T11",
         "T05",
         "P07",
@@ -2241,12 +2253,14 @@
         "gitBlob": "dd0d5d24542ce1bca4bb3b8440fefee6ca4363a7"
       },
       "workflows": [
+        "datasets",
         "terrain",
         "render",
         "furniture",
         "colormaps"
       ],
       "capabilities": [
+        "E06",
         "T01",
         "T02",
         "T03",
@@ -2295,6 +2309,7 @@
         "terrain",
         "raster",
         "mapscene",
+        "bundle",
         "png"
       ],
       "capabilities": [
@@ -2303,6 +2318,8 @@
         "T03",
         "T11",
         "M02a",
+        "M04",
+        "T18",
         "E07"
       ],
       "browser": "crates/forge3d-web/examples/migration/index.html?example=mapscene_terrain_raster.py",
@@ -2318,6 +2335,7 @@
         "gitBlob": "57c5154445371a587479dd36dec6ff25207ea3c2"
       },
       "workflows": [
+        "application",
         "terrain",
         "raster",
         "materials",
@@ -2325,9 +2343,9 @@
         "furniture"
       ],
       "capabilities": [
+        "T03",
         "T01",
         "T02",
-        "T03",
         "T11",
         "T05",
         "P07",
@@ -2389,6 +2407,7 @@
       },
       "workflows": [
         "terrain",
+        "ibl",
         "materials",
         "environment",
         "animation",
@@ -2398,6 +2417,7 @@
         "T01",
         "T02",
         "T03",
+        "P06",
         "T05",
         "P07",
         "P08",
@@ -2446,6 +2466,7 @@
         "gitBlob": "bebebd4912a30e35db21e0eb1680058e6499481b"
       },
       "workflows": [
+        "application",
         "crs",
         "buildings",
         "environment",
@@ -2455,6 +2476,7 @@
         "furniture"
       ],
       "capabilities": [
+        "T03",
         "G01",
         "G05a",
         "G05b",
@@ -2483,6 +2505,7 @@
         "gitBlob": "a223fdc2f9171cbf27fafd170f076d695a8c2c3d"
       },
       "workflows": [
+        "application",
         "crs",
         "terrain",
         "raster",
@@ -2491,10 +2514,10 @@
         "furniture"
       ],
       "capabilities": [
+        "T03",
         "G01",
         "T01",
         "T02",
-        "T03",
         "T11",
         "T05",
         "P07",
@@ -2534,6 +2557,7 @@
         "gitBlob": "1246d8b07767746680c5154fa6dcf79966d7af79"
       },
       "workflows": [
+        "application",
         "terrain",
         "mesh",
         "scatter",
@@ -2542,9 +2566,9 @@
         "furniture"
       ],
       "capabilities": [
+        "T03",
         "T01",
         "T02",
-        "T03",
         "G06",
         "G07",
         "G08",
@@ -2569,15 +2593,16 @@
         "gitBlob": "a58d9d8847b8bd35faac720f706b71b5795b9750"
       },
       "workflows": [
+        "application",
         "terrain",
         "vectors",
         "picking",
         "viewer"
       ],
       "capabilities": [
+        "T03",
         "T01",
         "T02",
-        "T03",
         "V01",
         "T12",
         "V04",
@@ -2623,16 +2648,12 @@
         "gitBlob": "c17002746a9eb521175c8b1ded25d4cab3bffebc"
       },
       "workflows": [
-        "mesh",
-        "render",
+        "triangle",
         "png"
       ],
       "capabilities": [
         "G06",
-        "G07",
-        "G08",
         "R02",
-        "C07",
         "E07"
       ],
       "browser": "crates/forge3d-web/examples/migration/index.html?example=triangle_png.py",
@@ -2728,6 +2749,7 @@
         "gitBlob": "40c5c00b1142c12395307e5b5e5a3b45e0e0ff8e"
       },
       "workflows": [
+        "application",
         "buildings",
         "environment",
         "animation",
@@ -2735,6 +2757,7 @@
         "furniture"
       ],
       "capabilities": [
+        "T03",
         "G05a",
         "G05b",
         "P08",
@@ -2760,6 +2783,7 @@
         "gitBlob": "6fe82ec94ea6dd17782720f75e25714093f6b1d2"
       },
       "workflows": [
+        "application",
         "crs",
         "terrain",
         "raster",
@@ -2768,10 +2792,10 @@
         "furniture"
       ],
       "capabilities": [
+        "T03",
         "G01",
         "T01",
         "T02",
-        "T03",
         "T11",
         "T05",
         "P07",
@@ -2793,18 +2817,21 @@
         "gitBlob": "3786c1bde84edee73d6243fa33efb04e9b3056c6"
       },
       "workflows": [
+        "application",
         "crs",
         "terrain",
         "raster",
+        "ibl",
         "materials",
         "render"
       ],
       "capabilities": [
+        "T03",
         "G01",
         "T01",
         "T02",
-        "T03",
         "T11",
+        "P06",
         "T05",
         "P07",
         "R02",
@@ -2823,6 +2850,7 @@
         "gitBlob": "87437c84f78ef97164161b4c4f54e7b9c2b12943"
       },
       "workflows": [
+        "application",
         "crs",
         "terrain",
         "raster",
@@ -2831,10 +2859,10 @@
         "furniture"
       ],
       "capabilities": [
+        "T03",
         "G01",
         "T01",
         "T02",
-        "T03",
         "T11",
         "M07",
         "R02",
@@ -2951,6 +2979,7 @@
         "gitBlob": "47d98b3d968dd3fadc9e2130621c71e754f753d5"
       },
       "workflows": [
+        "application",
         "terrain",
         "raster",
         "materials",
@@ -2959,9 +2988,9 @@
         "furniture"
       ],
       "capabilities": [
+        "T03",
         "T01",
         "T02",
-        "T03",
         "T11",
         "T05",
         "P07",
@@ -3017,6 +3046,7 @@
         "vectors",
         "labels",
         "mapscene",
+        "bundle",
         "furniture"
       ],
       "capabilities": [
@@ -3031,6 +3061,8 @@
         "V06b",
         "V07",
         "M02a",
+        "M04",
+        "T18",
         "M05",
         "M06"
       ],
@@ -3047,20 +3079,23 @@
         "gitBlob": "5031d9fbe785a4290651be48f04c8253e11de5f9"
       },
       "workflows": [
+        "application",
         "crs",
         "terrain",
         "vectors",
+        "ibl",
         "materials",
         "render",
         "furniture"
       ],
       "capabilities": [
+        "T03",
         "G01",
         "T01",
         "T02",
-        "T03",
         "V01",
         "T12",
+        "P06",
         "T05",
         "P07",
         "R02",
@@ -3081,6 +3116,7 @@
         "gitBlob": "ab88210aac2ad882122aabf8736d1f99f19b2af0"
       },
       "workflows": [
+        "application",
         "crs",
         "buildings",
         "vectors",
@@ -3088,6 +3124,7 @@
         "furniture"
       ],
       "capabilities": [
+        "T03",
         "G01",
         "G05a",
         "G05b",
@@ -3111,15 +3148,16 @@
         "gitBlob": "510c540eace603b1c3f6d8c4a63d2bd5510daada"
       },
       "workflows": [
+        "application",
         "terrain",
         "raster",
         "animation",
         "video"
       ],
       "capabilities": [
+        "T03",
         "T01",
         "T02",
-        "T03",
         "T11",
         "C03",
         "C05",
@@ -3164,6 +3202,7 @@
       "workflows": [
         "terrain",
         "materials",
+        "effects",
         "presets",
         "bundle",
         "render"
@@ -3174,6 +3213,8 @@
         "T03",
         "T05",
         "P07",
+        "P12",
+        "P14",
         "R04",
         "M04",
         "T18",
@@ -3193,6 +3234,7 @@
         "gitBlob": "2ac774c623800634b99001d2434dbded35034725"
       },
       "workflows": [
+        "application",
         "buildings",
         "vectors",
         "environment",
@@ -3202,6 +3244,7 @@
         "furniture"
       ],
       "capabilities": [
+        "T03",
         "G05a",
         "G05b",
         "V01",
@@ -3233,7 +3276,8 @@
         "terrain",
         "buildings",
         "labels",
-        "mapscene"
+        "mapscene",
+        "bundle"
       ],
       "capabilities": [
         "T01",
@@ -3245,7 +3289,9 @@
         "V06a",
         "V06b",
         "V07",
-        "M02a"
+        "M02a",
+        "M04",
+        "T18"
       ],
       "browser": "crates/forge3d-web/examples/migration/index.html?example=mapscene_buildings_labels.py",
       "adaptation": "Bounded offline fixtures exercise the Forge3D workflows; regional downloads and external Python preprocessing are replaced with typed browser inputs."
@@ -3279,12 +3325,13 @@
     {
       "native": "geometry",
       "apis": [
+        "generatePrimitive",
         "weldMesh",
         "subdivideMesh",
         "generateMeshLods"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "available_datasets",
@@ -3305,11 +3352,10 @@
     {
       "native": "layout_to_label_style",
       "apis": [
-        "StyleSpec",
-        "compileStyle"
+        "styleToLabelStyle"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "infer_roof_type",
@@ -3322,18 +3368,18 @@
     {
       "native": "calculate_triangle_reduction_py",
       "apis": [
-        "generateClipmapMesh"
+        "calculateTriangleReduction"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "MaterialLayerSettings",
       "apis": [
-        "normalizeTerrainMaterial"
+        "TerrainMaterialLayersInput"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Convert snake_case snow/rock/wetness fields into TerrainMaterialInput.layers (TerrainMaterialLayersInput)."
     },
     {
       "native": "KeepoutRegion",
@@ -3354,10 +3400,10 @@
     {
       "native": "TriplanarSettings",
       "apis": [
-        "normalizeTerrainMaterial"
+        "TerrainTriplanarInput"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "OfflineResult",
@@ -3378,21 +3424,19 @@
     {
       "native": "TerrainMeta",
       "apis": [
-        "saveBundle",
-        "loadBundle",
-        "SceneState"
+        "BundleManifest",
+        "TerrainHeightmapInput"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Bundle manifest/recipe terrain metadata carries the resource, CRS, domain and colormap; use a browser byte source rather than dem_path."
     },
     {
       "native": "get_colormap",
       "apis": [
-        "ColormapRegistry",
-        "parseColormapCpt"
+        "colormaps"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Use colormaps.get(name); the registry object is not a same-signature function alias."
     },
     {
       "native": "Renderer",
@@ -3437,10 +3481,10 @@
     {
       "native": "LodSettings",
       "apis": [
-        "generateClipmapMesh"
+        "TerrainLodInput"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Terrain texture LOD fields level/bias/lod0_bias become TerrainMaterialInput.lod with lod0Bias; this is unrelated to clipmap geometry."
     },
     {
       "native": "ReproducibilityProfile",
@@ -3467,21 +3511,21 @@
     {
       "native": "MapFurnitureLayer",
       "apis": [
-        "MapScene",
-        "SceneRecipe"
+        "MapPlate",
+        "Legend",
+        "ScaleBar",
+        "NorthArrow"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Compose MapPlate, Legend, ScaleBar and NorthArrow after rendering; recipe furniture intent retains its diagnostic boundary."
     },
     {
       "native": "vector_overlay_configs_from_style",
       "apis": [
-        "RendererConfig",
-        "Forge3DSession",
-        "rendererPresetNames"
+        "compileStyle"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "compileStyle(spec, providedFeatures) returns typed vector layers and the support report; handle diagnostics before rendering."
     },
     {
       "native": "REQUIRED_DIAGNOSTIC_CODES",
@@ -3592,11 +3636,10 @@
     {
       "native": "LabelBatchResult",
       "apis": [
-        "Forge3DViewer",
-        "Forge3DWorkerRenderer"
+        "LabelOperationResult"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Aggregate addLabels() LabelOperationResult[]: ordered id values and flattened diagnostics replace the Python batch dataclass."
     },
     {
       "native": "LabelPlan",
@@ -3700,11 +3743,10 @@
     {
       "native": "label_layer_contracts_from_style",
       "apis": [
-        "StyleSpec",
         "compileStyle"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "load_style",
@@ -3717,11 +3759,10 @@
     {
       "native": "FogSettings",
       "apis": [
-        "Forge3DEnvironment",
-        "generateDensityVolume"
+        "FogInput"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "fetch_cityjson",
@@ -3822,28 +3863,30 @@
     {
       "native": "RasterOverlaySpec",
       "apis": [
-        "normalizeTerrainOverlays"
+        "TerrainOverlayLayerInput"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "TerrainRenderParamsConfig",
       "apis": [
-        "RendererConfig",
-        "Forge3DSession",
-        "rendererPresetNames"
+        "TerrainHeightmapInput",
+        "TerrainMaterialInput",
+        "CameraInput",
+        "EnvironmentInput",
+        "PostFxChainInput"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Split the native aggregate across terrain/material/camera/environment/postFx typed inputs; there is no single-argument alias."
     },
     {
       "native": "ClampSettings",
       "apis": [
-        "normalizeTerrainMaterial"
+        "TerrainClampInput"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "dump_frame_sequence",
@@ -3873,10 +3916,11 @@
     {
       "native": "ReflectionProbeSettings",
       "apis": [
-        "TerrainLightingProbes"
+        "TerrainLightingProbes",
+        "TerrainProbeBakeOptions"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "label_rejection_summary_diagnostic",
@@ -3905,10 +3949,10 @@
     {
       "native": "OverlayLayer",
       "apis": [
-        "normalizeTerrainOverlays"
+        "TerrainOverlayLayerInput"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "NorthArrow",
@@ -3929,11 +3973,10 @@
     {
       "native": "Building",
       "apis": [
-        "BuildingLayer",
-        "parseCityJsonBuildings"
+        "BuildingInput"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "ExportVectorStyle",
@@ -3970,10 +4013,10 @@
     {
       "native": "PomSettings",
       "apis": [
-        "normalizeTerrainMaterial"
+        "TerrainPomInput"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "BuildingMaterial",
@@ -4010,11 +4053,10 @@
     {
       "native": "layer_to_vector_style",
       "apis": [
-        "StyleSpec",
-        "compileStyle"
+        "styleToVectorStyle"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "set_license_key",
@@ -4092,10 +4134,10 @@
     {
       "native": "LightSettings",
       "apis": [
-        "LightCollection"
+        "LightInput"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "add_buildings_cityjson",
@@ -4132,10 +4174,10 @@
     {
       "native": "TerrainVTSettings",
       "apis": [
-        "normalizeTerrainVirtualTexture"
+        "TerrainVirtualTextureInput"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "VectorOverlay",
@@ -4164,20 +4206,18 @@
     {
       "native": "PaintProps",
       "apis": [
-        "StyleSpec",
-        "compileStyle"
+        "StyleLayer"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "layer_to_label_style",
       "apis": [
-        "StyleSpec",
-        "compileStyle"
+        "styleToLabelStyle"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "SceneVariant",
@@ -4190,10 +4230,10 @@
     {
       "native": "MaterialNoiseSettings",
       "apis": [
-        "normalizeTerrainMaterial"
+        "TerrainMaterialNoiseInput"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "get_device",
@@ -4206,10 +4246,10 @@
     {
       "native": "MaterialSet",
       "apis": [
-        "TextureSet"
+        "TerrainMaterialInput"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Convert the terrain set to TerrainMaterialInput.materialSet, an array of TerrainMaterialLayerInput; this is not the scene TextureSet."
     },
     {
       "native": "MapPlateConfig",
@@ -4238,18 +4278,18 @@
     {
       "native": "HeightAoSettings",
       "apis": [
-        "TerrainDataset"
+        "HeightAoOptions"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "SamplingSettings",
       "apis": [
-        "normalizeTerrainMaterial"
+        "TerrainSamplingInput"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "IBL",
@@ -4279,10 +4319,10 @@
     {
       "native": "ReflectionSettings",
       "apis": [
-        "Forge3DEnvironment"
+        "WaterLayerInput"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "__version__",
@@ -4366,10 +4406,10 @@
     {
       "native": "VTLayerFamily",
       "apis": [
-        "normalizeTerrainVirtualTexture"
+        "TerrainVtFamily"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "validate_label_support",
@@ -4408,11 +4448,14 @@
     {
       "native": "TerrainRenderParams",
       "apis": [
-        "getTerrainColormap",
-        "TerrainDataset"
+        "TerrainHeightmapInput",
+        "TerrainMaterialInput",
+        "CameraInput",
+        "EnvironmentInput",
+        "PostFxChainInput"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Split the native aggregate across terrain/material/camera/environment/postFx typed inputs; there is no single-argument alias."
     },
     {
       "native": "list_datasets",
@@ -4425,11 +4468,10 @@
     {
       "native": "LayoutProps",
       "apis": [
-        "StyleSpec",
-        "compileStyle"
+        "StyleLayer"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "generate_svg",
@@ -4466,10 +4508,11 @@
     {
       "native": "ProbeSettings",
       "apis": [
-        "TerrainLightingProbes"
+        "TerrainLightingProbes",
+        "TerrainProbeBakeOptions"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "crs_mismatch_diagnostic",
@@ -4555,11 +4598,10 @@
     {
       "native": "IblSettings",
       "apis": [
-        "ImageBasedLighting",
-        "IblCache"
+        "IblOptions"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "validate_style_support",
@@ -4590,8 +4632,8 @@
       "apis": [
         "generateClipmapMesh"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "fetch_dataset",
@@ -4644,10 +4686,10 @@
     {
       "native": "SunVisibilitySettings",
       "apis": [
-        "TerrainDataset"
+        "SunVisibilityOptions"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "FontFallbackRange",
@@ -4692,11 +4734,10 @@
     {
       "native": "StyleVectorStyle",
       "apis": [
-        "StyleSpec",
-        "compileStyle"
+        "VectorStyle"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "PlateRegion",
@@ -4717,12 +4758,10 @@
     {
       "native": "SceneBaseState",
       "apis": [
-        "saveBundle",
-        "loadBundle",
         "SceneState"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "ValidationReport",
@@ -4872,19 +4911,18 @@
     {
       "native": "python_public_3dtiles_incomplete_diagnostic",
       "apis": [
-        "Tileset",
-        "Tiles3dLayer"
+        "pythonPublic3dtilesIncompleteDiagnostic"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "ClipmapMesh",
       "apis": [
-        "generateClipmapMesh"
+        "ClipmapMeshResult"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "sample_boundaries",
@@ -4915,20 +4953,18 @@
     {
       "native": "paint_to_vector_style",
       "apis": [
-        "StyleSpec",
-        "compileStyle"
+        "styleToVectorStyle"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "ExportBounds",
       "apis": [
-        "exportSvg",
-        "exportPdf"
+        "Bounds"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "sun_position",
@@ -4982,12 +5018,10 @@
     {
       "native": "ClipmapConfig",
       "apis": [
-        "RendererConfig",
-        "Forge3DSession",
-        "rendererPresetNames"
+        "TerrainClipmapInput"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Pass a TerrainClipmapInput object to generateClipmapMesh or terrain.geometry.clipmap."
     },
     {
       "native": "MapPlate",
@@ -5000,19 +5034,19 @@
     {
       "native": "DetailSettings",
       "apis": [
-        "normalizeTerrainMaterial"
+        "TerrainDetailInput"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "validate_building_layer_support",
       "apis": [
-        "BuildingLayer",
-        "parseCityJsonBuildings"
+        "MapScene",
+        "diagnoseBuildingTextures"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     },
     {
       "native": "RenderFailurePolicy",
@@ -5049,34 +5083,30 @@
     {
       "native": "StyleLabelStyle",
       "apis": [
-        "LabelLayer",
-        "LabelManager"
+        "LabelStyle"
       ],
-      "kind": "capability-workflow",
-      "note": "Follow the capability guide for the equivalent workflow; no same-name alias is claimed."
+      "kind": "named-browser-entry",
+      "note": "Browser entry point; use its typed asynchronous signature and lifecycle."
     }
   ],
   "tests": [
     {
-      "path": "crates/forge3d-web/tests/parity/verify-parity-manifest.test.mjs",
-      "sha256": "cddb6f01ee942c31d3dc56c2311c3d3045b86db13a385e19bde67ac13ea7ca31",
+      "path": "crates/forge3d-web/tests/parity/w23-application-analysis.test.mjs",
+      "sha256": "f8252a7a22a7789d1eb8e6d7ae880f135e028889fca2f69fc107860c9eea7487",
       "declarations": [
-        "accepts the exhaustive stored W00 baseline",
-        "locks npm and CI to the required pre-build parity gate",
-        "rejects a duplicate artifact mapping",
-        "rejects an inventory artifact without a mapping",
-        "rejects a mapping to an unresolved capability",
-        "rejects blank owner, evidence, and test fields",
-        "rejects a lock-controlled consumer without its dependency entry",
-        "rejects a non-exact lock-controlled consumer version",
-        "rejects a missing fixture tolerance and profile budget",
-        "rejects a fixture generator digest that does not match its contract",
-        "rejects incomplete reference hardware contracts",
-        "rejects a discrete profile without timestamp-query",
-        "rejects stale stored evidence digests",
-        "rejects experimental dependency entries without risk reviews",
-        "rejects EXR when the WASM rayon exclusion drifts",
-        "keeps parity rationale as intact UTF-8"
+        "W23 ${kind} analysis matches the unchanged native Python helper",
+        "regional analysis compares numeric results rather than accepting any nonempty output",
+        "IDW preserves exact river hits and Dijkstra respects inaccessible nodes"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/tests/parity/w23-public-contracts.test.mjs",
+      "sha256": "01965ba8eeaf921ac55d02c0d4f0ab1fbff5751aa9ab9ae23e0719e5429ff0f3",
+      "declarations": [
+        "R12 public declarations and facade retain the reviewed API snapshot",
+        "R12 browser classes and Scene instance methods are usable at their documented callsites",
+        "R12 removed Python delivery and rendering helpers are absent from browser ESM",
+        "restored Mapbox Streets native fixture is parsed and its unsupported layers remain diagnosed"
       ]
     },
     {
@@ -5778,6 +5808,23 @@
         "round trips every effect through the canonical worker snapshot",
         "rejects invalid settings ${JSON.stringify(input)}",
         "checks debug names, empty chains, and identity LUT ordering"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/tests/unit/renderer-config.test.ts",
+      "sha256": "7c081ddb402364e626aec062165e52094469812213b99a45f5d1ccfa87b5be7d",
+      "declarations": [
+        "round-trips defaults through toJSON",
+        "isolates input sources and toJSON output",
+        "deep merges sections on copy and removes brdfOverride with null",
+        "resolves shading and override brdfs through the shared route table",
+        "returns a defensive copy from RendererConfig.from on a config",
+        "rejects invalid numeric, vector, and shadow values",
+        "accepts baseColor tuples and scalar material parameters",
+        "rejects unknown light types and malformed type-specific fields",
+        "exposes the five presets in canonical order",
+        "returns independent defensive copies for each preset lookup",
+        "rejects unknown preset names at runtime"
       ]
     },
     {
@@ -7755,8 +7802,9 @@
     },
     {
       "artifactId": "changelog-addition:017b14f2e3df2ea8a7f0b957",
-      "row": "T09",
-      "evidenceKind": "capability-evidence-route"
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:018b782f0c10d9c177d6d24a",
@@ -7910,8 +7958,9 @@
     },
     {
       "artifactId": "changelog-addition:06aa87342d4a65a3a487f435",
-      "row": "G02",
-      "evidenceKind": "capability-evidence-route"
+      "row": "V01",
+      "tombstone": "render-polygons",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:06c7def21d76a10ddd7608ee",
@@ -8031,7 +8080,8 @@
     {
       "artifactId": "changelog-addition:0a0a05f8d1fa4b0bdcbc4555",
       "row": "V01",
-      "evidenceKind": "capability-evidence-route"
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:0a271d8f568889003819b317",
@@ -8266,7 +8316,8 @@
     {
       "artifactId": "changelog-addition:14eb30063ad3f30510d6a33c",
       "row": "V01",
-      "evidenceKind": "capability-evidence-route"
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:150c2639c9da9bcd24d8a477",
@@ -8461,7 +8512,8 @@
     {
       "artifactId": "changelog-addition:1caa566c315cd36f6027278f",
       "row": "V01",
-      "evidenceKind": "capability-evidence-route"
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:1cc353728ff95f3fad052c77",
@@ -8656,7 +8708,8 @@
     {
       "artifactId": "changelog-addition:26551b12fc6c1fa56d06ece3",
       "row": "V01",
-      "evidenceKind": "capability-evidence-route"
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:26aa55bc6dd4bee41a0563bf",
@@ -8961,7 +9014,8 @@
     {
       "artifactId": "changelog-addition:352a60301572cd26452a61b4",
       "row": "T11",
-      "evidenceKind": "capability-evidence-route"
+      "tombstone": "xyz-wmts-cartopy",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:3543c4c4fad277902aec5f15",
@@ -8975,8 +9029,9 @@
     },
     {
       "artifactId": "changelog-addition:36917337191f7e6a67df5e6e",
-      "row": "T09",
-      "evidenceKind": "capability-evidence-route"
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:3700297a9fa0eb5be06f2705",
@@ -9136,7 +9191,8 @@
     {
       "artifactId": "changelog-addition:3ef0909c1aad23ac74fedf08",
       "row": "G08",
-      "evidenceKind": "capability-evidence-route"
+      "tombstone": "draco-decode",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:3f430152ebd0314dd0ea0f35",
@@ -9266,7 +9322,8 @@
     {
       "artifactId": "changelog-addition:4441b2fce59f0978c4e9ba6c",
       "row": "V01",
-      "evidenceKind": "capability-evidence-route"
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:44621776ae0c822ebbc74255",
@@ -9296,7 +9353,8 @@
     {
       "artifactId": "changelog-addition:45d98ea64d0cba20e687d33c",
       "row": "V01",
-      "evidenceKind": "capability-evidence-route"
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:462252ac7eb4f2dc42c922bf",
@@ -9330,8 +9388,9 @@
     },
     {
       "artifactId": "changelog-addition:46f993b14dd63762be38baf3",
-      "row": "T11",
-      "evidenceKind": "capability-evidence-route"
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:4710742937edcca138049315",
@@ -9405,8 +9464,9 @@
     },
     {
       "artifactId": "changelog-addition:492d3b1083f3573e19083ba9",
-      "row": "G07",
-      "evidenceKind": "capability-evidence-route"
+      "row": "R04",
+      "tombstone": "render-raster",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:493d1f44610deaebbd454d8f",
@@ -9416,7 +9476,8 @@
     {
       "artifactId": "changelog-addition:49607c472f019c903e081b72",
       "row": "T11",
-      "evidenceKind": "capability-evidence-route"
+      "tombstone": "xyz-wmts-cartopy",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:49850befa98ad126554496bc",
@@ -9431,7 +9492,8 @@
     {
       "artifactId": "changelog-addition:49d7477073f8cc3b28587902",
       "row": "R12",
-      "evidenceKind": "capability-evidence-route"
+      "tombstone": "vshade-alias",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:49da448fad7ef429ed7b14ad",
@@ -9491,7 +9553,8 @@
     {
       "artifactId": "changelog-addition:4be4c610697334e9147e64bd",
       "row": "V01",
-      "evidenceKind": "capability-evidence-route"
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:4c28d898e9fcdb400b2eeef4",
@@ -9551,7 +9614,8 @@
     {
       "artifactId": "changelog-addition:4f51187d469e839f22ea710c",
       "row": "T16",
-      "evidenceKind": "capability-evidence-route"
+      "tombstone": "automatic-dem-water",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:4f58935c8e5aa88e30fad06e",
@@ -9745,8 +9809,9 @@
     },
     {
       "artifactId": "changelog-addition:570d4c840073fb6fb8ddf204",
-      "row": "T13",
-      "evidenceKind": "capability-evidence-route"
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:573ab27e7570bf43d1797e1c",
@@ -9856,7 +9921,8 @@
     {
       "artifactId": "changelog-addition:5a4fe27fd6614b727948ed6e",
       "row": "V01",
-      "evidenceKind": "capability-evidence-route"
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:5a7bdcfb834f5ba05d10f34d",
@@ -9900,8 +9966,9 @@
     },
     {
       "artifactId": "changelog-addition:5cf2fdcf52a65a9fac1eee51",
-      "row": "G01",
-      "evidenceKind": "capability-evidence-route"
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:5d0020f370555bfa2d9253c4",
@@ -10010,8 +10077,9 @@
     },
     {
       "artifactId": "changelog-addition:612c40912ede8f040b729f89",
-      "row": "T09",
-      "evidenceKind": "capability-evidence-route"
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:618c719099a8dde28e38e62a",
@@ -10156,7 +10224,8 @@
     {
       "artifactId": "changelog-addition:67a49aafe73d63411ed4aac1",
       "row": "T11",
-      "evidenceKind": "capability-evidence-route"
+      "tombstone": "xyz-wmts-cartopy",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:6809367b317770d3b3330d7c",
@@ -10911,7 +10980,8 @@
     {
       "artifactId": "changelog-addition:8a63101d1717a98e5ed3b814",
       "row": "T11",
-      "evidenceKind": "capability-evidence-route"
+      "tombstone": "xyz-wmts-cartopy",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:8a6ecf7af6b2616f8effb185",
@@ -10956,7 +11026,8 @@
     {
       "artifactId": "changelog-addition:8c418e1029f94027f8268af0",
       "row": "T11",
-      "evidenceKind": "capability-evidence-route"
+      "tombstone": "xyz-wmts-cartopy",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:8c4e8466cea8691e066ab5b5",
@@ -11105,8 +11176,9 @@
     },
     {
       "artifactId": "changelog-addition:92ca96fb0a77ef49a925f75f",
-      "row": "T13",
-      "evidenceKind": "capability-evidence-route"
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:92f587ff9bab2c9eb2508c13",
@@ -11126,7 +11198,8 @@
     {
       "artifactId": "changelog-addition:93bc918941df8150c0dea658",
       "row": "V01",
-      "evidenceKind": "capability-evidence-route"
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:93cfa5be49857c334f07ff83",
@@ -11200,8 +11273,9 @@
     },
     {
       "artifactId": "changelog-addition:964db3906199baa48ab29127",
-      "row": "T09",
-      "evidenceKind": "capability-evidence-route"
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:965711a0bc52d5cdd39b2d5a",
@@ -11366,7 +11440,8 @@
     {
       "artifactId": "changelog-addition:9ca193ca995740f52552075c",
       "row": "T10",
-      "evidenceKind": "capability-evidence-route"
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:9cc9e379f9c27ef05e45ab96",
@@ -11571,12 +11646,14 @@
     {
       "artifactId": "changelog-addition:a5251ebc88b63b2d74b3d565",
       "row": "T16",
-      "evidenceKind": "capability-evidence-route"
+      "tombstone": "automatic-dem-water",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:a52d4d7e3931298c90a34473",
-      "row": "T09",
-      "evidenceKind": "capability-evidence-route"
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:a532852bbdb8aa2d2efe0e7b",
@@ -11600,8 +11677,9 @@
     },
     {
       "artifactId": "changelog-addition:a57fc769509f42d310565b1b",
-      "row": "T13",
-      "evidenceKind": "capability-evidence-route"
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:a589264818891d94e031c60a",
@@ -12041,7 +12119,8 @@
     {
       "artifactId": "changelog-addition:b880f0069d985d40e8d8a6f6",
       "row": "V01",
-      "evidenceKind": "capability-evidence-route"
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:b8953c69db4017daee9d89c1",
@@ -12241,7 +12320,8 @@
     {
       "artifactId": "changelog-addition:c34700eb98f208e18a5188f5",
       "row": "V01",
-      "evidenceKind": "capability-evidence-route"
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:c38643e176252d2f5df95a90",
@@ -12491,7 +12571,8 @@
     {
       "artifactId": "changelog-addition:cad690e0492c5a0babd4f82e",
       "row": "G08",
-      "evidenceKind": "capability-evidence-route"
+      "tombstone": "ply-import",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:cb1772b21133d83b448467b7",
@@ -13116,7 +13197,8 @@
     {
       "artifactId": "changelog-addition:e5e49665a0771cc31a73faa3",
       "row": "V01",
-      "evidenceKind": "capability-evidence-route"
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:e63596116759e030cbb96bcf",
@@ -13156,7 +13238,8 @@
     {
       "artifactId": "changelog-addition:e83ea98b26151d58b04a6965",
       "row": "V01",
-      "evidenceKind": "capability-evidence-route"
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:e8417fb5a3a7e45b0876f7b5",
@@ -13250,8 +13333,9 @@
     },
     {
       "artifactId": "changelog-addition:eb994cf63258d16d8ecad6cd",
-      "row": "T13",
-      "evidenceKind": "capability-evidence-route"
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:ebc5ce48ed1e560878d3c49e",
@@ -13305,8 +13389,9 @@
     },
     {
       "artifactId": "changelog-addition:ee73da9adce6f22092282f30",
-      "row": "G02",
-      "evidenceKind": "capability-evidence-route"
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:ee7eb37cac2c0602f78f65b4",
@@ -13390,8 +13475,9 @@
     },
     {
       "artifactId": "changelog-addition:f1cb090ff3d4b5d838be36c8",
-      "row": "G01",
-      "evidenceKind": "capability-evidence-route"
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:f2237d941c4e9c2193bd262b",
@@ -13491,7 +13577,8 @@
     {
       "artifactId": "changelog-addition:f6079659619185990805a565",
       "row": "V01",
-      "evidenceKind": "capability-evidence-route"
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:f61301e4173fe97558e2bedf",
@@ -13610,8 +13697,9 @@
     },
     {
       "artifactId": "changelog-addition:fcdb8a79a063a22a5ceaeab4",
-      "row": "G07",
-      "evidenceKind": "capability-evidence-route"
+      "row": "R10",
+      "tombstone": "hud",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:fd1aa23f001c717f2f98fc6c",
@@ -13636,7 +13724,8 @@
     {
       "artifactId": "changelog-addition:fd7626c892879c774c04c742",
       "row": "V01",
-      "evidenceKind": "capability-evidence-route"
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "changelog-addition:fdae5ab1b220f96e0516da5c",
@@ -15845,7 +15934,7 @@
     },
     {
       "artifactId": "native-doc-asset:38a7cf0fe5e25f2ca7da74b8",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -15955,7 +16044,7 @@
     },
     {
       "artifactId": "native-doc-asset:8278dca5164ad4da214aa18f",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -16095,7 +16184,7 @@
     },
     {
       "artifactId": "native-doc-asset:dc0fe9b2ae020b34f323e2b9",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -16120,12 +16209,12 @@
     },
     {
       "artifactId": "native-doc-asset:e994dc62cd80d0871c79cd72",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
       "artifactId": "native-doc-asset:f1bc542a20b9d3a098bdcd8b",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -16375,7 +16464,7 @@
     },
     {
       "artifactId": "native-doc-feature:1b03702a6fdc081284be5a14",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -16385,7 +16474,7 @@
     },
     {
       "artifactId": "native-doc-feature:1b9d17088d4c03f661de2a9f",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -16970,7 +17059,7 @@
     },
     {
       "artifactId": "native-doc-feature:5ee72ba74a0e3a7c9d134a0e",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -17005,7 +17094,7 @@
     },
     {
       "artifactId": "native-doc-feature:6373a9ce3b62a8d49860bdd0",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -17655,7 +17744,7 @@
     },
     {
       "artifactId": "native-doc-feature:b02476480e59d80479b989b3",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -17725,7 +17814,7 @@
     },
     {
       "artifactId": "native-doc-feature:b761b42e744dafb5683765c5",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -17800,7 +17889,7 @@
     },
     {
       "artifactId": "native-doc-feature:bf74af6bef29491ce7a883ae",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -17950,7 +18039,7 @@
     },
     {
       "artifactId": "native-doc-feature:d139595807a824128bfde8aa",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -18720,7 +18809,7 @@
     },
     {
       "artifactId": "native-module-root:9641cae596f21e743505ed86",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -18805,7 +18894,7 @@
     },
     {
       "artifactId": "native-test-definition:003f646da0c08243b756c817",
-      "row": "R12",
+      "row": "R02",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -18825,7 +18914,7 @@
     },
     {
       "artifactId": "native-test-definition:018fad546ecf62dc46b28fe4",
-      "row": "R12",
+      "row": "P13",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -18940,7 +19029,7 @@
     },
     {
       "artifactId": "native-test-definition:04d9dae3aa4503b3e30c1109",
-      "row": "R12",
+      "row": "P05",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -19010,7 +19099,7 @@
     },
     {
       "artifactId": "native-test-definition:06d1f35ae71ef8a1a09e6ce6",
-      "row": "R12",
+      "row": "R04",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -19075,7 +19164,7 @@
     },
     {
       "artifactId": "native-test-definition:089d1236c5ac5cfe6162e3e2",
-      "row": "R12",
+      "row": "P13",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -19090,7 +19179,7 @@
     },
     {
       "artifactId": "native-test-definition:08f47b05bfe1e9c3c5f8ffbe",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -19155,7 +19244,7 @@
     },
     {
       "artifactId": "native-test-definition:0b45f5cd13e4591c2be34550",
-      "row": "R12",
+      "row": "P11",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -19180,7 +19269,7 @@
     },
     {
       "artifactId": "native-test-definition:0baf5a796275d85ac8fd8f0d",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -19215,7 +19304,7 @@
     },
     {
       "artifactId": "native-test-definition:0d1eb2fcccad6a6ff7abc7d3",
-      "row": "R12",
+      "row": "P12",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -19270,7 +19359,7 @@
     },
     {
       "artifactId": "native-test-definition:0e2fee18aa5a930803155944",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -19465,7 +19554,7 @@
     },
     {
       "artifactId": "native-test-definition:13695bc4229a1325988b64e7",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -19495,7 +19584,7 @@
     },
     {
       "artifactId": "native-test-definition:14005865c92067d5f643ff35",
-      "row": "R12",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -19545,7 +19634,7 @@
     },
     {
       "artifactId": "native-test-definition:1516ffcd1c01531b07fcdb10",
-      "row": "R12",
+      "row": "T03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -19690,7 +19779,7 @@
     },
     {
       "artifactId": "native-test-definition:1956f29653d4711bcf5e8d0b",
-      "row": "R12",
+      "row": "R11",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -19720,7 +19809,7 @@
     },
     {
       "artifactId": "native-test-definition:1a818968feb5fc862959e964",
-      "row": "R12",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -19755,7 +19844,7 @@
     },
     {
       "artifactId": "native-test-definition:1b35c768a935cc06805aa5d7",
-      "row": "M01",
+      "row": "M02a",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -19780,7 +19869,7 @@
     },
     {
       "artifactId": "native-test-definition:1bc70e2799135fca4eb10275",
-      "row": "R12",
+      "row": "P11",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -19845,7 +19934,7 @@
     },
     {
       "artifactId": "native-test-definition:1d6c29d9452a403e22def1a5",
-      "row": "R12",
+      "row": "R04",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -19870,7 +19959,7 @@
     },
     {
       "artifactId": "native-test-definition:1ec113c4d6ab7317ae11f9e3",
-      "row": "R12",
+      "row": "P11",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -19890,7 +19979,7 @@
     },
     {
       "artifactId": "native-test-definition:1f83efd555f9d4ad769c788d",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -19905,7 +19994,7 @@
     },
     {
       "artifactId": "native-test-definition:1fda22b7d12475d1ebeebc2d",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -19935,7 +20024,7 @@
     },
     {
       "artifactId": "native-test-definition:207147b076479c902bf29d90",
-      "row": "R12",
+      "row": "T03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -19950,7 +20039,7 @@
     },
     {
       "artifactId": "native-test-definition:20ab28a332786603a01ed649",
-      "row": "R12",
+      "row": "C03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -19980,7 +20069,7 @@
     },
     {
       "artifactId": "native-test-definition:21cc5cbf356347a38ff0db2f",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -20050,12 +20139,12 @@
     },
     {
       "artifactId": "native-test-definition:22c97edfd107dd666d90e0b0",
-      "row": "R12",
+      "row": "G02",
       "evidenceKind": "capability-test-route"
     },
     {
       "artifactId": "native-test-definition:230b9d6bf91a22c870f3b515",
-      "row": "R12",
+      "row": "V05",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -20135,7 +20224,7 @@
     },
     {
       "artifactId": "native-test-definition:25b923b2026590418d1e9527",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -20195,7 +20284,7 @@
     },
     {
       "artifactId": "native-test-definition:273f79b8c73997323aeeccea",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -20355,7 +20444,7 @@
     },
     {
       "artifactId": "native-test-definition:2c808845dc9e8703a6550daa",
-      "row": "R12",
+      "row": "G06",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -20370,7 +20459,7 @@
     },
     {
       "artifactId": "native-test-definition:2d1a841a421907988ac359b4",
-      "row": "R12",
+      "row": "G09",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -20490,7 +20579,7 @@
     },
     {
       "artifactId": "native-test-definition:2f4601c1e29d989cfa7de705",
-      "row": "R12",
+      "row": "G09",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -20535,7 +20624,7 @@
     },
     {
       "artifactId": "native-test-definition:3064f6f85c713765ec6bf14b",
-      "row": "R12",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -20565,12 +20654,12 @@
     },
     {
       "artifactId": "native-test-definition:315c5fcd8e9fc9615b2fe5f9",
-      "row": "R12",
+      "row": "P06",
       "evidenceKind": "capability-test-route"
     },
     {
       "artifactId": "native-test-definition:319ca36e918855bd93a855d1",
-      "row": "R12",
+      "row": "G06",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -20690,7 +20779,7 @@
     },
     {
       "artifactId": "native-test-definition:34b77ecba528782ce14ca9ed",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -20805,7 +20894,7 @@
     },
     {
       "artifactId": "native-test-definition:37231eb303fb08cace46bf8c",
-      "row": "R12",
+      "row": "R02",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -20860,12 +20949,12 @@
     },
     {
       "artifactId": "native-test-definition:387de5fce7548c69ea62d29b",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-test-route"
     },
     {
       "artifactId": "native-test-definition:389678fcee51c932825317db",
-      "row": "R12",
+      "row": "V05",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -20950,7 +21039,7 @@
     },
     {
       "artifactId": "native-test-definition:3a480b2221587041075b100a",
-      "row": "R12",
+      "row": "P01",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -20970,7 +21059,7 @@
     },
     {
       "artifactId": "native-test-definition:3b01e616bbbc4365d80115b5",
-      "row": "R12",
+      "row": "P05",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -20990,7 +21079,7 @@
     },
     {
       "artifactId": "native-test-definition:3b3f084120ca5b3d7aaf8723",
-      "row": "R12",
+      "row": "R04",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -21015,8 +21104,9 @@
     },
     {
       "artifactId": "native-test-definition:3bf30af029c8ff3a4a781fd4",
-      "row": "R10",
-      "evidenceKind": "capability-test-route"
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "native-test-definition:3c1a88bcaf99387bfdfc04e4",
@@ -21085,7 +21175,7 @@
     },
     {
       "artifactId": "native-test-definition:3dc4bb63187d9708bb31d872",
-      "row": "R12",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -21130,7 +21220,7 @@
     },
     {
       "artifactId": "native-test-definition:3ec6ec97a87069a97fb9861a",
-      "row": "R12",
+      "row": "G07",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -21140,7 +21230,7 @@
     },
     {
       "artifactId": "native-test-definition:3fc79670cbb17ff1c805d873",
-      "row": "R12",
+      "row": "V05",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -21180,7 +21270,7 @@
     },
     {
       "artifactId": "native-test-definition:40e7756e71cc4b9690695904",
-      "row": "R12",
+      "row": "P11",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -21345,12 +21435,12 @@
     },
     {
       "artifactId": "native-test-definition:458eba28d03c64ec618fd08f",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
       "artifactId": "native-test-definition:45a5a0bd4b3e4c89e27973ee",
-      "row": "R12",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -21370,7 +21460,7 @@
     },
     {
       "artifactId": "native-test-definition:46aa9fd8b6108091915570ed",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -21395,7 +21485,7 @@
     },
     {
       "artifactId": "native-test-definition:4718544d3833a09f50381ae8",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -21525,7 +21615,7 @@
     },
     {
       "artifactId": "native-test-definition:4b07966a6e59599e83a9a722",
-      "row": "R12",
+      "row": "P06",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -21605,7 +21695,7 @@
     },
     {
       "artifactId": "native-test-definition:4d2a52079611c5d022e30851",
-      "row": "R12",
+      "row": "G02",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -21620,7 +21710,7 @@
     },
     {
       "artifactId": "native-test-definition:4d868052cb2930f30c57629c",
-      "row": "R12",
+      "row": "T03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -21775,12 +21865,12 @@
     },
     {
       "artifactId": "native-test-definition:51897d2ec4f7592e4accbd2c",
-      "row": "R12",
+      "row": "P11",
       "evidenceKind": "capability-test-route"
     },
     {
       "artifactId": "native-test-definition:51a8b0ccfc2ec0d89051cc43",
-      "row": "R12",
+      "row": "R02",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -21870,17 +21960,17 @@
     },
     {
       "artifactId": "native-test-definition:55d132361c74873d1d5976dd",
-      "row": "R12",
+      "row": "P13",
       "evidenceKind": "capability-test-route"
     },
     {
       "artifactId": "native-test-definition:55efb440c2d68dc3cc91f469",
-      "row": "R12",
+      "row": "P05",
       "evidenceKind": "capability-test-route"
     },
     {
       "artifactId": "native-test-definition:55f49fceef39a0fd043f9326",
-      "row": "R12",
+      "row": "P01",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -21935,7 +22025,7 @@
     },
     {
       "artifactId": "native-test-definition:575e818c9d1ecdc69ab115e3",
-      "row": "V05",
+      "row": "M02a",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -22050,7 +22140,7 @@
     },
     {
       "artifactId": "native-test-definition:5bc46c432488475f47a8d575",
-      "row": "R12",
+      "row": "P13",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -22145,7 +22235,7 @@
     },
     {
       "artifactId": "native-test-definition:5e636b71045f3a9d3528073b",
-      "row": "M01",
+      "row": "M02a",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -22340,7 +22430,7 @@
     },
     {
       "artifactId": "native-test-definition:649dac5dce460aaf7e33f06e",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -22385,12 +22475,12 @@
     },
     {
       "artifactId": "native-test-definition:667e5b29f14da214dabd8d20",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-test-route"
     },
     {
       "artifactId": "native-test-definition:66ada85edfc41a53c0156d53",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -22415,7 +22505,7 @@
     },
     {
       "artifactId": "native-test-definition:673e911b38b1d84ef7f5413d",
-      "row": "R12",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -22500,7 +22590,7 @@
     },
     {
       "artifactId": "native-test-definition:68d7fadf80d02d77ea7e1c16",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -22525,7 +22615,7 @@
     },
     {
       "artifactId": "native-test-definition:6932c176e42d1644eb6f8d3e",
-      "row": "R12",
+      "row": "V05",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -22595,7 +22685,7 @@
     },
     {
       "artifactId": "native-test-definition:6bc780a79fe20bd0a3798a9d",
-      "row": "R12",
+      "row": "T03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -22725,7 +22815,7 @@
     },
     {
       "artifactId": "native-test-definition:70bca338649df55ca5f84654",
-      "row": "R12",
+      "row": "R11",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -22915,7 +23005,7 @@
     },
     {
       "artifactId": "native-test-definition:76d476802d6909d8fc0cc7a4",
-      "row": "R02",
+      "row": "E07",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23060,7 +23150,7 @@
     },
     {
       "artifactId": "native-test-definition:7ad117f3ba6c9f3c367df9b4",
-      "row": "R12",
+      "row": "G02",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23075,7 +23165,7 @@
     },
     {
       "artifactId": "native-test-definition:7b015caf82d24a76e3870dd7",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23190,7 +23280,7 @@
     },
     {
       "artifactId": "native-test-definition:7e503a170ff2c2dc1f3d110a",
-      "row": "R12",
+      "row": "T16",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23200,7 +23290,7 @@
     },
     {
       "artifactId": "native-test-definition:7e68845aae45edfc6295e3dd",
-      "row": "R12",
+      "row": "P05",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23215,7 +23305,7 @@
     },
     {
       "artifactId": "native-test-definition:7f101b3cb29722eb806adab1",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23225,7 +23315,7 @@
     },
     {
       "artifactId": "native-test-definition:7f2dc2043ea4965f783623ab",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23240,7 +23330,7 @@
     },
     {
       "artifactId": "native-test-definition:7ffff534acd17c1fb92aafc9",
-      "row": "R12",
+      "row": "P12",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23260,7 +23350,7 @@
     },
     {
       "artifactId": "native-test-definition:80cf14ca3e80680a20ab907b",
-      "row": "R12",
+      "row": "P11",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23405,7 +23495,7 @@
     },
     {
       "artifactId": "native-test-definition:84f4c2197caeb4735f385916",
-      "row": "R12",
+      "row": "G02",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23450,7 +23540,7 @@
     },
     {
       "artifactId": "native-test-definition:86f45c90dd64579311c6f2d8",
-      "row": "R12",
+      "row": "G09",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23525,7 +23615,7 @@
     },
     {
       "artifactId": "native-test-definition:89905c4a59f5f1d38ecb3db6",
-      "row": "R12",
+      "row": "R11",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23535,7 +23625,7 @@
     },
     {
       "artifactId": "native-test-definition:8a34826ea120664cbe17d273",
-      "row": "R12",
+      "row": "G02",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23600,7 +23690,7 @@
     },
     {
       "artifactId": "native-test-definition:8c9bbbe396acea52bbc68a80",
-      "row": "R12",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23790,7 +23880,7 @@
     },
     {
       "artifactId": "native-test-definition:91653e9bf5e6cf690be90c71",
-      "row": "R12",
+      "row": "T03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23830,7 +23920,7 @@
     },
     {
       "artifactId": "native-test-definition:9277a068b182baa9f02a25d8",
-      "row": "R12",
+      "row": "G02",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23845,7 +23935,7 @@
     },
     {
       "artifactId": "native-test-definition:92dfc0b68ebac3937285caed",
-      "row": "R12",
+      "row": "P12",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23855,7 +23945,7 @@
     },
     {
       "artifactId": "native-test-definition:930d54503f744dba3b15a2ef",
-      "row": "R12",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23875,7 +23965,7 @@
     },
     {
       "artifactId": "native-test-definition:9482620ce2380df245e909ba",
-      "row": "R02",
+      "row": "E07",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23925,7 +24015,7 @@
     },
     {
       "artifactId": "native-test-definition:95a36d42d0da9b79f328e2e5",
-      "row": "R12",
+      "row": "P05",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23945,7 +24035,7 @@
     },
     {
       "artifactId": "native-test-definition:95da06fd03babe46a2dbe4d4",
-      "row": "R12",
+      "row": "P05",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23990,7 +24080,7 @@
     },
     {
       "artifactId": "native-test-definition:966a7b255af45776bce7bacb",
-      "row": "M01",
+      "row": "M02a",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24010,12 +24100,12 @@
     },
     {
       "artifactId": "native-test-definition:9769451013523efd351db259",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
       "artifactId": "native-test-definition:976aba5137c967c718a548cd",
-      "row": "R12",
+      "row": "T03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24070,7 +24160,7 @@
     },
     {
       "artifactId": "native-test-definition:9942f1398fe0a60f48afaa71",
-      "row": "R12",
+      "row": "P13",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24130,7 +24220,7 @@
     },
     {
       "artifactId": "native-test-definition:9b412050352d746783e340ab",
-      "row": "R12",
+      "row": "R11",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24165,7 +24255,7 @@
     },
     {
       "artifactId": "native-test-definition:9c33100cfce5445df448bf14",
-      "row": "R12",
+      "row": "T03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24265,7 +24355,7 @@
     },
     {
       "artifactId": "native-test-definition:9e779509785042047725f4ad",
-      "row": "R12",
+      "row": "T03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24340,7 +24430,7 @@
     },
     {
       "artifactId": "native-test-definition:a18923e607a4a71d6a407083",
-      "row": "R12",
+      "row": "C01",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24385,7 +24475,7 @@
     },
     {
       "artifactId": "native-test-definition:a334c71a913a51a3b6a2b68d",
-      "row": "R12",
+      "row": "P13",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24470,7 +24560,7 @@
     },
     {
       "artifactId": "native-test-definition:a4e6c65a21aec20d690fdd11",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24510,7 +24600,7 @@
     },
     {
       "artifactId": "native-test-definition:a5be8693cd53c6333bff3fbc",
-      "row": "R12",
+      "row": "R11",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24530,7 +24620,7 @@
     },
     {
       "artifactId": "native-test-definition:a662a886dbab33683fc8b6ab",
-      "row": "R12",
+      "row": "G09",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24610,7 +24700,7 @@
     },
     {
       "artifactId": "native-test-definition:a85da9b58f7db1e21aa6560a",
-      "row": "R12",
+      "row": "P12",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24660,8 +24750,9 @@
     },
     {
       "artifactId": "native-test-definition:a960fef16269f9bbfbeb32f8",
-      "row": "G01",
-      "evidenceKind": "capability-test-route"
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "native-test-definition:a965153f80fd075cf87e3a03",
@@ -24695,7 +24786,7 @@
     },
     {
       "artifactId": "native-test-definition:aaba2bd8ff3356feeb89d7b4",
-      "row": "R12",
+      "row": "P11",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24710,7 +24801,7 @@
     },
     {
       "artifactId": "native-test-definition:ab25ba1de31e7e08477bbc82",
-      "row": "R12",
+      "row": "P13",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24745,7 +24836,7 @@
     },
     {
       "artifactId": "native-test-definition:abfbe05204d706428e97de8d",
-      "row": "R12",
+      "row": "R04",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24765,12 +24856,12 @@
     },
     {
       "artifactId": "native-test-definition:ac616e2fdadcbdae76b8f8dd",
-      "row": "C08",
+      "row": "M02a",
       "evidenceKind": "capability-test-route"
     },
     {
       "artifactId": "native-test-definition:ac74c2232a3f9caa64a1f96f",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24790,12 +24881,12 @@
     },
     {
       "artifactId": "native-test-definition:acf2a9a4f363fb55850555a4",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-test-route"
     },
     {
       "artifactId": "native-test-definition:ad04692b06b204ccb7a8f652",
-      "row": "R12",
+      "row": "G05b",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24805,12 +24896,12 @@
     },
     {
       "artifactId": "native-test-definition:ad1c0595f4dd234e0818ccbc",
-      "row": "R12",
+      "row": "P13",
       "evidenceKind": "capability-test-route"
     },
     {
       "artifactId": "native-test-definition:ad687d9073e58f9b9f5082fe",
-      "row": "G05a",
+      "row": "M02a",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24845,7 +24936,7 @@
     },
     {
       "artifactId": "native-test-definition:ae98face7e1eb8d239eec954",
-      "row": "R12",
+      "row": "P05",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24905,7 +24996,7 @@
     },
     {
       "artifactId": "native-test-definition:b0cc87910d09a4018c4b6adb",
-      "row": "R12",
+      "row": "V05",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -24925,7 +25016,7 @@
     },
     {
       "artifactId": "native-test-definition:b1893acfaa5f1e279b76262c",
-      "row": "R12",
+      "row": "V05",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -25025,7 +25116,7 @@
     },
     {
       "artifactId": "native-test-definition:b54d7914abf025d9c13f4882",
-      "row": "R12",
+      "row": "P11",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -25135,7 +25226,7 @@
     },
     {
       "artifactId": "native-test-definition:b8a4005d4f03d72410e79a80",
-      "row": "R12",
+      "row": "G02",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -25190,12 +25281,12 @@
     },
     {
       "artifactId": "native-test-definition:b9c946d3ec99e19d83d8f25b",
-      "row": "M01",
+      "row": "M02a",
       "evidenceKind": "capability-test-route"
     },
     {
       "artifactId": "native-test-definition:b9f57d5622f774d9e7db261b",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -25395,7 +25486,7 @@
     },
     {
       "artifactId": "native-test-definition:c03a6c96f469e69e8e40565f",
-      "row": "R12",
+      "row": "P05",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -25495,7 +25586,7 @@
     },
     {
       "artifactId": "native-test-definition:c266c68116e6fec93ffe7e22",
-      "row": "R12",
+      "row": "R04",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -25565,7 +25656,7 @@
     },
     {
       "artifactId": "native-test-definition:c4b78bd7f2f1591fb3a75727",
-      "row": "R12",
+      "row": "P13",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -25605,7 +25696,7 @@
     },
     {
       "artifactId": "native-test-definition:c550b486d06e9d727a7a05db",
-      "row": "R12",
+      "row": "V07",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -25650,7 +25741,7 @@
     },
     {
       "artifactId": "native-test-definition:c60f2f2a9d26d1b1fb9dd566",
-      "row": "R12",
+      "row": "R11",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -25675,12 +25766,12 @@
     },
     {
       "artifactId": "native-test-definition:c6a340fe5a332016728c9ff8",
-      "row": "R12",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
       "artifactId": "native-test-definition:c6ff313b372d9d7ff5b58874",
-      "row": "P05",
+      "row": "G05b",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -25710,7 +25801,7 @@
     },
     {
       "artifactId": "native-test-definition:c79a26ee40c8f75000870eaf",
-      "row": "R12",
+      "row": "G02",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -25720,7 +25811,7 @@
     },
     {
       "artifactId": "native-test-definition:c7cbb2f2c24ffed9e48f3673",
-      "row": "R12",
+      "row": "P06",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -25740,7 +25831,7 @@
     },
     {
       "artifactId": "native-test-definition:c80cc3ab156547f2de4adaa4",
-      "row": "R12",
+      "row": "P05",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -25785,7 +25876,7 @@
     },
     {
       "artifactId": "native-test-definition:c8bb5b9331e5fe38db2c9e07",
-      "row": "R12",
+      "row": "P05",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -25910,7 +26001,7 @@
     },
     {
       "artifactId": "native-test-definition:cc8134b1f4eb895b57d2db22",
-      "row": "R12",
+      "row": "P11",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -26020,12 +26111,12 @@
     },
     {
       "artifactId": "native-test-definition:cf06e7e61cd82ea9ef9c77ab",
-      "row": "R12",
+      "row": "P05",
       "evidenceKind": "capability-test-route"
     },
     {
       "artifactId": "native-test-definition:cf1de77bcdcf11b4c0720dee",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -26120,7 +26211,7 @@
     },
     {
       "artifactId": "native-test-definition:d3dc142b2c780f36137070f2",
-      "row": "R12",
+      "row": "R02",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -26150,7 +26241,7 @@
     },
     {
       "artifactId": "native-test-definition:d49834e3f00160c5b322e876",
-      "row": "R12",
+      "row": "G09",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -26205,7 +26296,7 @@
     },
     {
       "artifactId": "native-test-definition:d62733c232c71ff3398ec29a",
-      "row": "P05",
+      "row": "G05b",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -26230,12 +26321,12 @@
     },
     {
       "artifactId": "native-test-definition:d6850f9588652d7e2101038f",
-      "row": "R12",
+      "row": "P13",
       "evidenceKind": "capability-test-route"
     },
     {
       "artifactId": "native-test-definition:d687029a03d195af407f5073",
-      "row": "R12",
+      "row": "C01",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -26300,7 +26391,7 @@
     },
     {
       "artifactId": "native-test-definition:d873aec88e0674cf16a593f0",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -26345,7 +26436,7 @@
     },
     {
       "artifactId": "native-test-definition:d9aa489cb1d30fa9e352d836",
-      "row": "R12",
+      "row": "R02",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -26460,7 +26551,7 @@
     },
     {
       "artifactId": "native-test-definition:dc173f6d84c99a9135b86b80",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -26480,7 +26571,7 @@
     },
     {
       "artifactId": "native-test-definition:dc7038bd969df18dc3072b0e",
-      "row": "R12",
+      "row": "P06",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -26575,7 +26666,7 @@
     },
     {
       "artifactId": "native-test-definition:df1a3cb934331c5ae1e0fbb4",
-      "row": "R12",
+      "row": "P05",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -26615,7 +26706,7 @@
     },
     {
       "artifactId": "native-test-definition:e062e03efb8435e85726811d",
-      "row": "R12",
+      "row": "R02",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -26665,12 +26756,12 @@
     },
     {
       "artifactId": "native-test-definition:e21580d60ab331e113c9b293",
-      "row": "R12",
+      "row": "V05",
       "evidenceKind": "capability-test-route"
     },
     {
       "artifactId": "native-test-definition:e2876716f2249435617ba761",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -26755,7 +26846,7 @@
     },
     {
       "artifactId": "native-test-definition:e41cbf5e600627aad1dc725a",
-      "row": "P05",
+      "row": "G05b",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -26785,7 +26876,7 @@
     },
     {
       "artifactId": "native-test-definition:e4cd7095367da1a9eb22dd03",
-      "row": "R12",
+      "row": "M02a",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -26875,7 +26966,7 @@
     },
     {
       "artifactId": "native-test-definition:e7818dbba62c5e7063fe1568",
-      "row": "R12",
+      "row": "P11",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -26970,7 +27061,7 @@
     },
     {
       "artifactId": "native-test-definition:e8e160141b349c241e051e15",
-      "row": "R12",
+      "row": "P05",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -27035,7 +27126,7 @@
     },
     {
       "artifactId": "native-test-definition:eacf14d011e31f02bd634abf",
-      "row": "R12",
+      "row": "R11",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -27055,7 +27146,7 @@
     },
     {
       "artifactId": "native-test-definition:ebed0bdf24892af98cb5ce32",
-      "row": "R12",
+      "row": "P10",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -27125,7 +27216,7 @@
     },
     {
       "artifactId": "native-test-definition:ed9c02f3e24f7d39d0f052ea",
-      "row": "R12",
+      "row": "P05",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -27160,7 +27251,7 @@
     },
     {
       "artifactId": "native-test-definition:ee56ce73501d1be6a3c85e54",
-      "row": "R12",
+      "row": "V05",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -27245,7 +27336,7 @@
     },
     {
       "artifactId": "native-test-definition:f21d93350af4c5a655028a4e",
-      "row": "R12",
+      "row": "G02",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -27265,7 +27356,7 @@
     },
     {
       "artifactId": "native-test-definition:f25ff3e5afe52edac19b5ea1",
-      "row": "R12",
+      "row": "P06",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -27280,7 +27371,7 @@
     },
     {
       "artifactId": "native-test-definition:f2ddb93dfc3abb0152ed25f8",
-      "row": "R12",
+      "row": "C03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -27295,7 +27386,7 @@
     },
     {
       "artifactId": "native-test-definition:f31d07c4c5d95b3be3e5c8ba",
-      "row": "R12",
+      "row": "R04",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -27315,7 +27406,7 @@
     },
     {
       "artifactId": "native-test-definition:f46a1fdbea20da6888970809",
-      "row": "R12",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -27350,7 +27441,7 @@
     },
     {
       "artifactId": "native-test-definition:f54672781bc79363e5b70726",
-      "row": "M01",
+      "row": "M02a",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -27390,7 +27481,7 @@
     },
     {
       "artifactId": "native-test-definition:f61c78c18c689d15dc71232c",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -27400,7 +27491,7 @@
     },
     {
       "artifactId": "native-test-definition:f6408c51c61076944d895940",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -27435,7 +27526,7 @@
     },
     {
       "artifactId": "native-test-definition:f7db76d6568a3c10318f2519",
-      "row": "R12",
+      "row": "V05",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -27445,7 +27536,7 @@
     },
     {
       "artifactId": "native-test-definition:f835127d4c3b3a33ca12f586",
-      "row": "R12",
+      "row": "G02",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -27570,12 +27661,12 @@
     },
     {
       "artifactId": "native-test-definition:fb201cf1134c988c730708d9",
-      "row": "R12",
+      "row": "T03",
       "evidenceKind": "capability-test-route"
     },
     {
       "artifactId": "native-test-definition:fb2822ef860b5eac4004adc7",
-      "row": "R12",
+      "row": "P11",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -27805,8 +27896,9 @@
     },
     {
       "artifactId": "native-test-file:0ac77cb816cd3e6fb53789e7",
-      "row": "R10",
-      "evidenceKind": "capability-test-route"
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "native-test-file:0b8d4631f31ae0103ebc6e61",
@@ -28290,7 +28382,7 @@
     },
     {
       "artifactId": "native-test-file:8c61fb4335bdc81934c1470f",
-      "row": "R02",
+      "row": "E07",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -28335,7 +28427,7 @@
     },
     {
       "artifactId": "native-test-file:919962981709675df2dac124",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -28370,7 +28462,7 @@
     },
     {
       "artifactId": "native-test-file:95dfdc679bd349380f9eefde",
-      "row": "P10",
+      "row": "G03",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -28425,7 +28517,7 @@
     },
     {
       "artifactId": "native-test-file:a7903de0772e1e9e2e7be51a",
-      "row": "M01",
+      "row": "M02a",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -28470,7 +28562,7 @@
     },
     {
       "artifactId": "native-test-file:b16187b8e0fc9a582fd0830a",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -28710,7 +28802,7 @@
     },
     {
       "artifactId": "native-test-file:df1bb253d450401047c07758",
-      "row": "P05",
+      "row": "G05b",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -28780,7 +28872,7 @@
     },
     {
       "artifactId": "native-test-file:ef178df4868333b034d05334",
-      "row": "P05",
+      "row": "G05b",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -28930,7 +29022,7 @@
     },
     {
       "artifactId": "package-root-export:125c4e6fcca2dbf0d4107a88",
-      "row": "T08",
+      "row": "T05",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -28950,12 +29042,12 @@
     },
     {
       "artifactId": "package-root-export:15c39d1fb8408ccde2df55d6",
-      "row": "M02a",
+      "row": "M05",
       "evidenceKind": "capability-evidence-route"
     },
     {
       "artifactId": "package-root-export:15ea3c84746123b9ca6be2cf",
-      "row": "R04",
+      "row": "M03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -29025,7 +29117,7 @@
     },
     {
       "artifactId": "package-root-export:29022b2c1a380d210d7c3a26",
-      "row": "R10",
+      "row": "V05",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -29170,7 +29262,7 @@
     },
     {
       "artifactId": "package-root-export:4faf7b310c8d066c2315533e",
-      "row": "R04",
+      "row": "T05",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -29400,7 +29492,7 @@
     },
     {
       "artifactId": "package-root-export:8bf9feb452d0b0262bc9345b",
-      "row": "P05",
+      "row": "T05",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -29525,7 +29617,7 @@
     },
     {
       "artifactId": "package-root-export:9f18168d1b3aea944193101f",
-      "row": "T02",
+      "row": "T05",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -29810,7 +29902,7 @@
     },
     {
       "artifactId": "package-root-export:e4601966f78fc6c0c624e612",
-      "row": "G04",
+      "row": "M01",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -29875,7 +29967,7 @@
     },
     {
       "artifactId": "package-root-export:f4a43c24627299302e9d7693",
-      "row": "R04",
+      "row": "T08",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -30570,12 +30662,12 @@
     },
     {
       "artifactId": "python-api-file:c534d6c8fb6281ed47583220",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
       "artifactId": "python-api-file:c7778f678619bfc7397bc8ad",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -31120,7 +31212,7 @@
     },
     {
       "artifactId": "python-public-definition:10aca4ecb3de93c94bc0ffbd",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -31375,7 +31467,7 @@
     },
     {
       "artifactId": "python-public-definition:1912e1da403b78758ae57e46",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -31535,7 +31627,7 @@
     },
     {
       "artifactId": "python-public-definition:1f9b993864d6cd665700bfaa",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -31690,7 +31782,7 @@
     },
     {
       "artifactId": "python-public-definition:24f32e06176a3d755e77dbb1",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -32245,7 +32337,7 @@
     },
     {
       "artifactId": "python-public-definition:3a16c456148701376e01fe99",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -33050,7 +33142,7 @@
     },
     {
       "artifactId": "python-public-definition:56513c03627a88b369cd74ac",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -33480,7 +33572,7 @@
     },
     {
       "artifactId": "python-public-definition:63deda30941f270f8ad5dbda",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -33510,7 +33602,7 @@
     },
     {
       "artifactId": "python-public-definition:64ba87bc94139bfdf55a7cc6",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -33735,7 +33827,7 @@
     },
     {
       "artifactId": "python-public-definition:6c820e58b1312d91603f9558",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -33775,7 +33867,7 @@
     },
     {
       "artifactId": "python-public-definition:6dfc9625612c337d2cec3bcc",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -33915,7 +34007,7 @@
     },
     {
       "artifactId": "python-public-definition:722e8babfb17b304e0d90604",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -33940,7 +34032,7 @@
     },
     {
       "artifactId": "python-public-definition:72e63bb28839262b7a5d260b",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -34060,7 +34152,7 @@
     },
     {
       "artifactId": "python-public-definition:77078dd4c253cb80ef218d28",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -34150,7 +34242,7 @@
     },
     {
       "artifactId": "python-public-definition:79f88e11bee5907a16e2ecd2",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -34215,7 +34307,7 @@
     },
     {
       "artifactId": "python-public-definition:7b7795e91a3b364671a78fba",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -34575,7 +34667,7 @@
     },
     {
       "artifactId": "python-public-definition:872ede16572dcd147c204a32",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -34590,7 +34682,7 @@
     },
     {
       "artifactId": "python-public-definition:87dd2d2c68f91d2a9334c81c",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -34660,7 +34752,7 @@
     },
     {
       "artifactId": "python-public-definition:89f54c42b7b5eb39fbb4e62a",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -34670,7 +34762,7 @@
     },
     {
       "artifactId": "python-public-definition:8a330ffe90363c2372b9bd5b",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -34945,7 +35037,7 @@
     },
     {
       "artifactId": "python-public-definition:9392de93548b3d128a81be92",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -35185,7 +35277,7 @@
     },
     {
       "artifactId": "python-public-definition:9a961fce887b44c2a4cddd58",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -35285,7 +35377,7 @@
     },
     {
       "artifactId": "python-public-definition:9d93cbc027d65b1f4ba39497",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -35445,7 +35537,7 @@
     },
     {
       "artifactId": "python-public-definition:a170af4d656ce2241f255951",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -35600,7 +35692,7 @@
     },
     {
       "artifactId": "python-public-definition:a653d326de648ebfede32702",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -35625,7 +35717,7 @@
     },
     {
       "artifactId": "python-public-definition:a700cb709bdce8f6f5f34282",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -35660,7 +35752,7 @@
     },
     {
       "artifactId": "python-public-definition:a817d3db7795b264ff8ea9f6",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -35730,7 +35822,7 @@
     },
     {
       "artifactId": "python-public-definition:aba75af426ae3728eaf5bc63",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -35995,7 +36087,7 @@
     },
     {
       "artifactId": "python-public-definition:b3d6af5233b36d8fdc567826",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -36340,7 +36432,7 @@
     },
     {
       "artifactId": "python-public-definition:bd547293db47fc3072ab76fa",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -36825,7 +36917,7 @@
     },
     {
       "artifactId": "python-public-definition:cd3ec45dac55d84d1d432353",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -36995,7 +37087,7 @@
     },
     {
       "artifactId": "python-public-definition:d275558d80e8ef75a3562748",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -37020,7 +37112,7 @@
     },
     {
       "artifactId": "python-public-definition:d3302c6ac17e2a36eca8c75b",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -37040,7 +37132,7 @@
     },
     {
       "artifactId": "python-public-definition:d38454dc1ad69fc794670f87",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -37080,7 +37172,7 @@
     },
     {
       "artifactId": "python-public-definition:d49665a122b1a2100a4cde2e",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -37090,7 +37182,7 @@
     },
     {
       "artifactId": "python-public-definition:d5087f7dfc3515c0c3d0df3b",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -37185,7 +37277,7 @@
     },
     {
       "artifactId": "python-public-definition:d8a8cd376b0a808b03fabb32",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -37320,7 +37412,7 @@
     },
     {
       "artifactId": "python-public-definition:dd5f73590105f38391033f97",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -37360,12 +37452,12 @@
     },
     {
       "artifactId": "python-public-definition:df21b1e080ca00da38b4ac5b",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
       "artifactId": "python-public-definition:df2b34690c90ef7d72887de9",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -37455,7 +37547,7 @@
     },
     {
       "artifactId": "python-public-definition:e27da049cf9659886f6c4d0e",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -37485,7 +37577,7 @@
     },
     {
       "artifactId": "python-public-definition:e363ebddb0a8451aafabad3f",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -37635,7 +37727,7 @@
     },
     {
       "artifactId": "python-public-definition:e830df61779093c3c5870bf4",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -37655,7 +37747,7 @@
     },
     {
       "artifactId": "python-public-definition:e911860fb30ce7af7cbc8ff3",
-      "row": "G01",
+      "row": "E06",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -37680,12 +37772,12 @@
     },
     {
       "artifactId": "python-public-definition:e9c97594e6eaaeb776a51111",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
       "artifactId": "python-public-definition:e9e383ff3a71449cde6487f4",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -37795,7 +37887,7 @@
     },
     {
       "artifactId": "python-public-definition:ece080c6cb293f9a2e3816ff",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -37865,7 +37957,7 @@
     },
     {
       "artifactId": "python-public-definition:ef758f6eb894b3da4d9e7535",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -37940,7 +38032,7 @@
     },
     {
       "artifactId": "python-public-definition:f3590c20247837c442257ec9",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -38120,7 +38212,7 @@
     },
     {
       "artifactId": "python-public-definition:f9e1782591bc6a606778fdc7",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -38155,7 +38247,7 @@
     },
     {
       "artifactId": "python-public-definition:fb53d8733083fc5505c61945",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -38265,7 +38357,7 @@
     },
     {
       "artifactId": "python-public-definition:ff99c9b1de364c1f0fce1966",
-      "row": "G02",
+      "row": "G03",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -39361,128 +39453,128 @@
     {
       "artifactId": "tombstone:00ae9c4fe3eb38e7295cb319",
       "row": "T10",
-      "evidenceKind": "tombstone",
-      "tombstone": "rasterio-adapters"
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "tombstone:0d4d0cbe4982f5e0c3691a71",
       "row": "R11",
-      "evidenceKind": "tombstone",
-      "tombstone": "node-rendering"
+      "tombstone": "node-rendering",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "tombstone:1021ff008bffe87d080218ba",
       "row": "P07",
-      "evidenceKind": "tombstone",
-      "tombstone": "csm-filter-value"
+      "tombstone": "csm-filter-value",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "tombstone:228883a297e1463e616421a6",
       "row": "T14b",
-      "evidenceKind": "tombstone",
-      "tombstone": "vt-normal-mask"
+      "tombstone": "vt-normal-mask",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "tombstone:4877837d31e4e24788511e5e",
       "row": "T16",
-      "evidenceKind": "tombstone",
-      "tombstone": "automatic-dem-water"
+      "tombstone": "automatic-dem-water",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "tombstone:61df71f846afedf5a29977fd",
       "row": "G08",
-      "evidenceKind": "tombstone",
-      "tombstone": "ply-import"
+      "tombstone": "ply-import",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "tombstone:6cfaf30639c5e9b8a609310c",
       "row": "T11",
-      "evidenceKind": "tombstone",
-      "tombstone": "xyz-wmts-cartopy"
+      "tombstone": "xyz-wmts-cartopy",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "tombstone:6d7f856360cafdf6ea393ab9",
       "row": "V01",
-      "evidenceKind": "tombstone",
-      "tombstone": "render-polygons"
+      "tombstone": "render-polygons",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "tombstone:71be75d04b7fcff6fd882517",
       "row": "G11",
-      "evidenceKind": "tombstone",
-      "tombstone": "render-raytrace-mesh"
+      "tombstone": "render-raytrace-mesh",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "tombstone:78638f2659f9762271b720a2",
       "row": "V01",
-      "evidenceKind": "tombstone",
-      "tombstone": "datashader"
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "tombstone:813475ff95690b3c520ff8e2",
       "row": "R04",
-      "evidenceKind": "tombstone",
-      "tombstone": "render-raster"
+      "tombstone": "render-raster",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "tombstone:960efc33c64745afe7099ec4",
       "row": "G05b",
-      "evidenceKind": "tombstone",
-      "tombstone": "textured-buildings"
+      "tombstone": "textured-buildings",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "tombstone:98627f85b1876c72e8dd6d9a",
       "row": "R10",
-      "evidenceKind": "tombstone",
-      "tombstone": "hud"
+      "tombstone": "hud",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "tombstone:9c590427e623633437eef774",
       "row": "M02b",
-      "evidenceKind": "tombstone",
-      "tombstone": "mapscene-underdeveloped"
+      "tombstone": "mapscene-underdeveloped",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "tombstone:9c7af76172b6b73a35ca4176",
       "row": "R12",
-      "evidenceKind": "tombstone",
-      "tombstone": "vshade-alias"
+      "tombstone": "vshade-alias",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "tombstone:bfda91dfb0ba41297ae970b5",
       "row": "V06b",
-      "evidenceKind": "tombstone",
-      "tombstone": "experimental-label-cases"
+      "tombstone": "experimental-label-cases",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "tombstone:c6992aeb860653e594f12dc4",
       "row": "P07",
-      "evidenceKind": "tombstone",
-      "tombstone": "tv11-page-shadows"
+      "tombstone": "tv11-page-shadows",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "tombstone:ccba0187c6ac8a16c6f1ea34",
       "row": "R12",
-      "evidenceKind": "tombstone",
-      "tombstone": "python-native-packaging"
+      "tombstone": "python-native-packaging",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "tombstone:e7f9ff4783e47b400942c3ed",
       "row": "R01",
-      "evidenceKind": "tombstone",
-      "tombstone": "webgl-fallback"
+      "tombstone": "webgl-fallback",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "tombstone:f34d85604f28df11416cdc42",
       "row": "G08",
-      "evidenceKind": "tombstone",
-      "tombstone": "draco-decode"
+      "tombstone": "draco-decode",
+      "evidenceKind": "tombstone"
     },
     {
       "artifactId": "tombstone:ffac7e70ad7f7a10046bd22e",
       "row": "G11",
-      "evidenceKind": "tombstone",
-      "tombstone": "svgf-hair-anisotropic"
+      "tombstone": "svgf-hair-anisotropic",
+      "evidenceKind": "tombstone"
     }
   ]
 }

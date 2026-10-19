@@ -182,6 +182,13 @@ jobs:
         working-directory: crates/forge3d-web
         run: python ../../scripts/audit-w23-native.py
 
+      - name: Recompute W23 converted native oracles independently
+        working-directory: crates/forge3d-web
+        run: |
+          python -m pip install numpy==2.5.1
+          python scripts/generate-w23-goldens.py --check
+          python scripts/generate-w23-application-fixtures.py --check
+
       - name: Test W23 installed migration workflows and documentation
         id: w23-installed
         working-directory: crates/forge3d-web

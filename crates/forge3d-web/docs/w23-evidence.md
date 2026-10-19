@@ -1,58 +1,87 @@
 # W23 evidence coverage
 
-W23 restores migration documentation, example workflow routing, historical
-illustrations and digest-pinned fixture/golden provenance. It does not change
-the functional status of any capability or certify a browser/GPU profile.
+W23 supplies browser migration guides, executable example pipelines, converted
+numerical controls, preserved native illustrations and fixture provenance.
+Capability support and physical-browser qualification remain recorded by their
+owning tasks; documentation does not promote an unsupported feature.
 
-The generated [coverage ledger](migration-coverage.json) has one entry for every
-W00 artifact, including 1,792 native test definitions, 191 named native test
-files, 54 example assets, 88 documentation assets, 430 documentation features,
-220 root exports, 216 Scene methods and the public-definition/module/changelog
-inventory. All 91 rows and 21 tombstones have concrete destinations. The
-[feature index](features.md), [support index](workflow-support.md),
-[Python map](python-api-map.md), [examples](examples.md) and
-[documentation map](native-documentation.md) are generated from that ledger.
+The generated [coverage ledger](migration-coverage.json) routes every W00
+artifact: 1,792 native test definitions, 191 named native test files, 54 example
+assets, 88 documentation assets, 430 documentation features, 220 root exports,
+216 Scene methods, public definitions/modules and changelog records. All 91
+rows and 21 tombstones have destinations. [Features](features.md),
+[support](workflow-support.md), [Python migrations](python-api-map.md),
+[examples](examples.md) and [documentation](native-documentation.md) derive
+from this inventory.
 
-`capability-test-route` means that the individual native definition is routed
-to named current suites for its capability. It is not a claim that every
-native assertion has a one-for-one port or was executed by the W23 gate. Owner
-suites and their more detailed per-test coverage ledgers remain the behavioral
-evidence. `browser-workflow` identifies executable consolidated examples;
-`tombstone` preserves an explicit retired/diagnostic disposition. No evidence
-kind permits an unmapped record or a silent no-op.
+Source-based routing corrects W00 point-cloud/cloud confusion and sends removed
+or unverified PLY, Draco, TV11, HUD, automatic water and Python-adapter claims to
+their tombstones. R12 uses public declaration, live ESM/class/instance-method
+and removed-API contracts, alongside scene/session/offline suites.
+`capability-test-route` identifies relevant current tests; it does not assert
+one-for-one translation or execution of every historical Python assertion.
 
-`generate:w23` verifies all 541 immutable source objects against Git and SHA-256
-before generating coverage. It preserves the original native illustrations at
-their exact bytes. `verify:w23` validates unique/exhaustive ownership, concrete
-test declarations, public TypeScript entry points, all local documentation
-links, code-fence syntax/imports, checked TypeScript examples and asset digests.
-Its negative controls remove records, delete example routes, invent APIs,
-damage asset bytes and change test digests to prove the gates reject drift.
+The source contract is separate from the presentation catalog. Validation
+rejects rerouting to unrelated existing capabilities, replacing APIs with
+unrelated existing exports, erasing example operations, changing suite owners
+and truncating test declarations. The unmapped list is computed and generation
+fails on invalid coverage. Historical Git-object/SHA-256 and independent Python
+AST audits check the source inventory and critical example calls.
 
-The asset index records every checked-in fixture/golden and bundled runtime
-asset. It links byte-identical historical sources when available and keeps
-owner provenance files for converted/native-derived fixtures. Browser-only
-regression assets are labeled separately; they are not upgraded into native
-goldens. The gallery's 16x16 terrain and small overlay are analytic browser
-inputs. COG and LAZ inputs retain their existing W08/W16/W22 provenance.
+Each selected native example gets its own ordered pipeline. Dataset, analysis,
+terrain, overlays, geometry, lighting, frames and exports carry data forward.
+The single-tile pipeline normalizes the actual bundled DEM and compares every
+RGBA byte with an oracle executing the historical NumPy main(). The triangle
+pipeline renders its mesh. All three terrain rigs check sampled clearance.
+The COG pipeline reads overview/tile grids, checks cache hits and budget, and
+uploads a real Rainier COG through TerrainStreamer before drawing.
 
-The installed-package gate packs and installs the npm artifact into a temporary
-consumer, compiles the guide examples against its declarations, validates all
-shipped example resources and executes every gallery workflow from that
-installation. The server exposes only the installed package, supports byte
-ranges and enforces self-hosted workers/WASM with strict CSP. Source routes
-and repository fixtures are unavailable to the consumer.
+Regional analysis ports include IDW relative elevation, climate quantiles and
+classification, travel-time Dijkstra/speed parsing, roof solar orientation and
+satellite transition planning. Their numerical controls execute unchanged
+Python helper bodies extracted from pinned source. Browser negative controls
+damage those expectations and must fail. The rendered examples use bounded
+offline data; these are executable workflow migrations, not replacements for
+the original publications' geographic datasets or visual reference images.
 
-The gallery verifies rendered coverage, requested layer execution, PNG byte
-round trips, deterministic frame timestamps, mesh output, CRS controls,
-dataset contents, bundle layers and disposal. WebCodecs may return its exact
-unavailable-codec diagnostic. Pro composition is tested with the test issuer
-fixture, and the user-facing gallery uses the normal license input.
-Generated artifacts remain downloadable until the next run or page hide;
-browser tests verify actual PNG bytes and release of prior download URLs.
+Original style and preset inputs are consumed by their workflows. Unsupported
+style intent retains its exact diagnostics; explicit vector/label conversions
+produce browser layers. Presets are applied to sessions, terrain analysis,
+material, camera, lights and IBL. Prepared HDR lighting, weighted OIT and temporal
+AA run on the GPU. Layer, material, environment and water assertions compare RGB
+against controls, ignoring opaque alpha. Browser fault injection suppresses
+those contributions while claiming successful layer execution; it must fail.
+Video is counted as executed only when encoding produces a real artifact.
+An unavailable codec and a missing Pro license are explicit outcomes.
+
+Every tracked asset has a digest and concrete native, generator/manifest or Git
+ancestry provenance. Native text normalized to LF is distinguished from exact
+native bytes; W04/W05/W06 oracle controls retain their source/replay generators.
+The native Mapbox Streets fixture and new converted PNG/application controls
+are included. The 33 native illustrations retain exact bytes and remain labeled
+historical illustrations. Current example/test source snapshots are shipped
+with hashes for offline review; they are source text, not runnable installed
+repository test suites. Historical links target the actual forge3d-web repository
+and their Git objects are checked.
+
+All TS/JS code fences compile against public declarations. Application-owned
+context in fragments has explicit types; complete checked examples compile
+strictly and their generated functions execute in the browser. The installed
+gate builds, packs and installs into a clean temporary consumer, checks shipped
+links/types/assets, and executes the pipelines and negative controls under
+strict CSP with HTTP ranges. It serves only installed files, with no repository
+implementation or fixture routes.
+
+Single-example viewers retain controls for their actual scene/point-cloud
+content. Changing runs or hiding the page removes controls, disposes owners,
+cancels work and revokes download URLs. Browser checks exercise live controls,
+artifact bytes and release of prior owners/URLs. Pro examples use the normal
+license input; only tests configure the test issuer.
 
 Run `npm run generate:w23`, `npm run verify:w23`, `npm run test:w23` and
-`npm run test:package-consumer:w23` to reproduce. Recorded run details live in
-the repository's `docs/parity/w23-verification.json`. Physical reference
-hardware, long traversal budgets and final 100% functional closure remain W24
-release gates; a zero-unmapped coverage report does not satisfy those gates.
+`npm run test:package-consumer:w23`. Authoring oracles can be recomputed with
+`python scripts/generate-w23-goldens.py --check` and
+`python scripts/generate-w23-application-fixtures.py --check` (NumPy required
+for these authoring commands, never for browser runtime). Recorded runs live in
+repository `docs/parity/w23-verification.json`. W24 retains physical browser/GPU,
+long traversal and final functional/visual release qualification.

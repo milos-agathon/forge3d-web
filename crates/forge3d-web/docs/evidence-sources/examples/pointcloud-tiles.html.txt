@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+  /><title>Forge3D — point clouds and 3D Tiles</title>
+  <style>
+    body {
+      margin: 0;
+      background: #171a1d;
+      color: #e7e4dd;
+      font: 15px system-ui;
+    }
+    main {
+      max-width: 1040px;
+      margin: 40px auto;
+      padding: 0 24px;
+    }
+    h1 {
+      font-size: 30px;
+      font-weight: 500;
+    }
+    canvas {
+      width: 100%;
+      height: 480px;
+      background: #090e16;
+    }
+    button,
+    select,
+    input {
+      font: inherit;
+      margin: 8px 12px 8px 0;
+      padding: 8px;
+    }
+    pre {
+      white-space: pre-wrap;
+      font-size: 12px;
+    }
+  </style>
+  <main>
+    <h1>Point clouds · 3D Tiles</h1>
+    <p>
+      Range reads, measured residency, and point picking. Select a data view,
+      then click a point.
+    </p>
+    <button id="demo">Color and picking sample</button
+    ><button id="real">Real Autzen lidar</button
+    ><select id="style">
+      <option value="rgb">RGB</option>
+      <option value="elevation">Elevation</option>
+      <option value="intensity">Intensity</option>
+      <option value="classification">Classification</option></select
+    ><label
+      >Point size <input id="size" type="range" min="1" max="12" value="6"
+    /></label>
+    <canvas
+      id="canvas"
+      width="640"
+      height="480"
+      tabindex="0"
+      aria-label="Point cloud. Drag or use arrows to rotate; scroll or use plus and minus to zoom; click to pick."
+    ></canvas>
+    <pre id="status">Loading module…</pre>
+  </main>
+  <script type="module" src="./w16-pointcloud.js"></script>
+</html>

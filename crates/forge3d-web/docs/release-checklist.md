@@ -36,12 +36,12 @@ documentation must keep these categories separate:
 | Category | Required treatment |
 |---|---|
 | Delivery-format exclusion | Name the unshipped packaging/process mechanism and map its observable outcomes to E01-E07 browser equivalents. |
-| Tombstone or product boundary | Link the explicit [composite manifest](https://github.com/milos-agathon/forge3d/blob/main/docs/parity/forge3d-composite-baseline.json) or plan ledger entry; never present it as an implemented capability. |
+| Tombstone or product boundary | Link the explicit [composite manifest](https://github.com/milos-agathon/forge3d-web/blob/main/docs/parity/forge3d-composite-baseline.json) or plan ledger entry; never present it as an implemented capability. |
 | Feature gap | Link every current gap to its R/C/T/P/V/G/M row and W00-W24 task; never relabel an open row as excluded. |
 | Browser support evidence | Keep a lane `NOT_PROVEN` until its required attested physical evidence passes. |
 
-The [exhaustive parity matrix](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#exhaustive-parity-matrix)
-and [tombstone ledger](https://github.com/milos-agathon/forge3d/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#truthfulness-lifecycle-and-tombstone-ledger)
+The [exhaustive parity matrix](https://github.com/milos-agathon/forge3d-web/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#exhaustive-parity-matrix)
+and [tombstone ledger](https://github.com/milos-agathon/forge3d-web/blob/main/docs/superpowers/plans/2026-06-04-forge3d-browser-webgpu-wasm-runtime.md#truthfulness-lifecycle-and-tombstone-ledger)
 are authoritative. A release cannot claim complete functional parity while
 `npm run verify:parity` reports an open capability/constraint, plan drift,
 unmapped inventory, or missing evidence.

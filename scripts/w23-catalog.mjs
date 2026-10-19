@@ -26,6 +26,12 @@ export const families = {
   W24: ['support-matrix.md', ['tests/playwright/webgpu_diagnostics.spec.ts', 'tests/playwright/device_loss.spec.ts'], 'test-clear.html'],
 };
 
+export const rowEvidence = {
+  R12: ['tests/parity/w23-public-contracts.test.mjs', 'tests/unit/scene.test.ts', 'tests/unit/session.test.ts', 'tests/unit/w06-offline.test.ts'],
+  T03: [...families.W03[1], 'tests/parity/w23-application-analysis.test.mjs'],
+  R04: ['tests/unit/renderer-config.test.ts', 'tests/unit/session.test.ts', 'tests/unit/scene.test.ts'],
+};
+
 export const rowApis = {
   R01: ['Forge3DRuntime', 'Forge3DError'], R02: ['AovFrame', 'HdrFrame'],
   R03: ['Forge3DRuntime'], R04: ['RendererConfig', 'Forge3DSession', 'rendererPresetNames'],
@@ -67,23 +73,23 @@ export const rowApis = {
 // Each token names an executable function in examples/migration/workflows.js.
 export const exampleWorkflows = {
   '_import_shim.py': ['esm'], '_png.py': ['png'], 'png_numpy_roundtrip.py': ['png'],
-  'triangle_png.py': ['mesh', 'render', 'png'], 'terrain_single_tile.py': ['terrain', 'render', 'png'],
+  'triangle_png.py': ['triangle', 'png'], 'terrain_single_tile.py': ['singleTile', 'png'],
   'baseline_no_vector_overlays.json': ['presets', 'render'], 'rainier_showcase.json': ['presets', 'terrain', 'render'],
   'sample_style.json': ['style', 'vectors', 'render'],
   'quickstart.ipynb': ['datasets', 'terrain', 'viewer', 'png'],
   'terrain_explorer.ipynb': ['datasets', 'terrain', 'raster', 'viewer'],
-  'map_plate.ipynb': ['terrain', 'render', 'furniture', 'colormaps'],
-  'mapscene_terrain_raster.py': ['terrain', 'raster', 'mapscene', 'png'],
-  'mapscene_vector_labels.py': ['terrain', 'vectors', 'labels', 'mapscene', 'furniture'],
-  'mapscene_buildings_labels.py': ['terrain', 'buildings', 'labels', 'mapscene'],
-  'mapscene_bundled_datasets_showcase.py': ['datasets', 'terrain', 'vectors', 'labels', 'mapscene', 'furniture'],
+  'map_plate.ipynb': ['datasets', 'terrain', 'render', 'furniture', 'colormaps'],
+  'mapscene_terrain_raster.py': ['terrain', 'raster', 'mapscene', 'bundle', 'png'],
+  'mapscene_vector_labels.py': ['terrain', 'vectors', 'labels', 'mapscene', 'bundle', 'furniture'],
+  'mapscene_buildings_labels.py': ['terrain', 'buildings', 'labels', 'mapscene', 'bundle'],
+  'mapscene_bundled_datasets_showcase.py': ['datasets', 'terrain', 'vectors', 'labels', 'mapscene', 'bundle', 'furniture'],
   'mapscene_p1_assets_bundle_showcase.py': ['datasets', 'buildings', 'labels', 'diagnostics', 'bundle', 'mapscene', 'furniture'],
   'diagnostics_support_matrices_demo.py': ['diagnostics', 'style', 'buildings', 'labels'],
   'label_api_truth_basic.py': ['labels', 'vectors', 'diagnostics'],
   'camera_animation_demo.py': ['terrain', 'animation', 'video', 'render'],
   'terrain_camera_rigs_demo.py': ['terrain', 'rigs', 'animation', 'video'],
-  'terrain_atmosphere_path_demo.py': ['terrain', 'materials', 'environment', 'animation', 'render'],
-  'terrain_demo.py': ['terrain', 'materials', 'presets', 'bundle', 'render'],
+  'terrain_atmosphere_path_demo.py': ['terrain', 'ibl', 'materials', 'environment', 'animation', 'render'],
+  'terrain_demo.py': ['terrain', 'materials', 'effects', 'presets', 'bundle', 'render'],
   'terrain_viewer_interactive.py': ['terrain', 'materials', 'viewer', 'furniture'],
   'pointcloud_viewer_interactive.py': ['pointcloud', 'viewer'],
   'buildings_viewer_interactive.py': ['buildings', 'viewer', 'furniture'],
@@ -102,7 +108,7 @@ export const exampleWorkflows = {
   'pnoa_river_showcase.py': ['terrain', 'raster', 'materials', 'render', 'furniture'],
   'pnoa_river_showcase_video.py': ['terrain', 'raster', 'materials', 'animation', 'video', 'furniture'],
   'colorado_rem_forge3d.py': ['crs', 'terrain', 'raster', 'scatter', 'materials', 'render', 'furniture'],
-  'platte_rem_forge3d.py': ['crs', 'terrain', 'raster', 'materials', 'render'],
+  'platte_rem_forge3d.py': ['crs', 'terrain', 'raster', 'ibl', 'materials', 'render'],
   'barcelona_travel_time_3d.py': ['crs', 'terrain', 'raster', 'colormaps', 'render', 'furniture'],
   'bosnia_terrain_landcover_viewer.py': ['crs', 'terrain', 'raster', 'materials', 'render', 'furniture'],
   'romania_terrain_landcover_viewer.py': ['crs', 'terrain', 'raster', 'materials', 'render', 'furniture'],
@@ -110,7 +116,7 @@ export const exampleWorkflows = {
   'swiss_terrain_landcover_viewer.py': ['terrain', 'raster', 'materials', 'render', 'furniture'],
   'rotterdam_solar_potential_shadow_study.py': ['crs', 'buildings', 'environment', 'materials', 'animation', 'video', 'furniture'],
   'poland_population_spikes_height_shade.py': ['terrain', 'mesh', 'scatter', 'materials', 'render', 'furniture'],
-  'uk_ireland_lighthouse_map.py': ['crs', 'terrain', 'vectors', 'materials', 'render', 'furniture'],
+  'uk_ireland_lighthouse_map.py': ['crs', 'terrain', 'vectors', 'ibl', 'materials', 'render', 'furniture'],
   'osm_city_demo.py': ['crs', 'buildings', 'vectors', 'render', 'furniture'],
   'osm_city_daycycle.py': ['buildings', 'environment', 'animation', 'video', 'furniture'],
   'osm_city_flood_daycycle.py': ['buildings', 'vectors', 'environment', 'water', 'animation', 'video', 'furniture'],
@@ -118,19 +124,43 @@ export const exampleWorkflows = {
 };
 
 export const workflowCapabilities = {
-  esm: ['R12'], png: ['E07'], presets: ['R04'], terrain: ['T01', 'T02', 'T03'],
+  application:['T03'],
+  esm: ['R12'], png: ['E07'], singleTile:['T01','E07'], triangle:['G06','R02'], presets: ['R04'], terrain: ['T01', 'T02', 'T03'],
   render: ['R02', 'C07'], raster: ['T11'], vectors: ['V01', 'T12'], labels: ['V05', 'V06a', 'V06b', 'V07'],
   mapscene: ['M02a'], furniture: ['M05', 'M06'], colormaps: ['M07'], datasets: ['E06'],
   buildings: ['G05a', 'G05b'], diagnostics: ['M01', 'M02b'], bundle: ['M04', 'T18'],
   animation: ['C03', 'C05'], video: ['C06'], rigs: ['C04'], materials: ['T05', 'P07'],
   viewer: ['R10'], pointcloud: ['G02', 'G03'], picking: ['V04'], cog: ['T10'],
   crs: ['G01'], scatter: ['T13'], mesh: ['G06', 'G07', 'G08'],
-  style: ['M03'], environment: ['P08', 'P09', 'P10', 'T17'], water: ['T16'],
+  ibl:['P06'], effects:['P12','P14'], style: ['M03'], environment: ['P08', 'P09', 'P10', 'T17'], water: ['T16'],
 };
 
 // Native names without a mechanical camelCase/same-name browser entry point.
 // Remaining names route explicitly to their capability workflow, never an alias.
 export const exportOverrides = {
+  calculate_triangle_reduction_py: ['calculateTriangleReduction'],
+  clipmap_generate_py: ['generateClipmapMesh'], ClipmapConfig: ['TerrainClipmapInput'], ClipmapMesh: ['ClipmapMeshResult'],
+  LodSettings: ['TerrainLodInput'], MaterialSet: ['TerrainMaterialInput'], ExportBounds: ['Bounds'],
+  get_colormap: ['colormaps'], vector_overlay_configs_from_style: ['compileStyle'],
+  label_layer_contracts_from_style: ['compileStyle'], layout_to_label_style: ['styleToLabelStyle'],
+  layer_to_label_style: ['styleToLabelStyle'], layer_to_vector_style: ['styleToVectorStyle'], paint_to_vector_style: ['styleToVectorStyle'],
+  StyleVectorStyle: ['VectorStyle'], StyleLabelStyle: ['LabelStyle'],
+  PaintProps: ['StyleLayer'], LayoutProps: ['StyleLayer'],
+  MaterialLayerSettings: ['TerrainMaterialLayersInput'], TriplanarSettings: ['TerrainTriplanarInput'],
+  MaterialNoiseSettings: ['TerrainMaterialNoiseInput'], SamplingSettings: ['TerrainSamplingInput'],
+  ClampSettings: ['TerrainClampInput'], PomSettings: ['TerrainPomInput'], DetailSettings: ['TerrainDetailInput'],
+  TerrainRenderParams: ['TerrainHeightmapInput','TerrainMaterialInput','CameraInput','EnvironmentInput','PostFxChainInput'], TerrainRenderParamsConfig: ['TerrainHeightmapInput','TerrainMaterialInput','CameraInput','EnvironmentInput','PostFxChainInput'],
+  HeightAoSettings: ['HeightAoOptions'], SunVisibilitySettings: ['SunVisibilityOptions'],
+  FogSettings: ['FogInput'], ReflectionSettings: ['WaterLayerInput'],
+  python_public_3dtiles_incomplete_diagnostic: ['pythonPublic3dtilesIncompleteDiagnostic'],
+  LabelBatchResult:['LabelOperationResult'], LightSettings:['LightInput'],
+  TerrainVTSettings:['TerrainVirtualTextureInput'], OverlayLayer:['TerrainOverlayLayerInput'],
+  Building:['BuildingInput'], IblSettings:['IblOptions'],
+  TerrainMeta:['BundleManifest','TerrainHeightmapInput'], MapFurnitureLayer:['MapPlate','Legend','ScaleBar','NorthArrow'],
+  SceneBaseState:['SceneState'], VTLayerFamily:['TerrainVtFamily'],
+  RasterOverlaySpec:['TerrainOverlayLayerInput'], ReflectionProbeSettings:['TerrainLightingProbes','TerrainProbeBakeOptions'], ProbeSettings:['TerrainLightingProbes','TerrainProbeBakeOptions'],
+  validate_building_layer_support:['MapScene','diagnoseBuildingTextures'],
+  geometry:['generatePrimitive','weldMesh','subdivideMesh','generateMeshLods'],
   __version__: [], version: [],
   Scene: ['Forge3DScene'], Session: ['Forge3DSession'], Renderer: ['Forge3DRuntime'], TerrainRenderer: ['Forge3DSession'],
   numpy_to_png: ['arrayToPng'], png_to_numpy: ['pngToArray'], rgba_to_png_bytes: ['encodePng'],
@@ -150,4 +180,18 @@ export const exportOverrides = {
   get_crs_from_geopandas: ['crsFromGeoJson'], get_crs_from_rasterio: ['crsFromRasterMetadata'], transform_coords: ['CrsTransformer'], reproject_geom: ['CrsTransformer'],
   get_device: ['Forge3DRuntime'], has_gpu: ['Forge3DRuntime'], device_probe: ['Forge3DRuntime'], enumerate_adapters: ['Forge3DRuntime'],
   budget_remaining: ['Forge3DSession'], memory_metrics: ['Forge3DSession'], utilization_ratio: ['Forge3DSession'], override_memory_limit: ['RendererConfig'],
+};
+
+export const exportNotes = {
+  get_colormap:'Use colormaps.get(name); the registry object is not a same-signature function alias.',
+  MaterialSet:'Convert the terrain set to TerrainMaterialInput.materialSet, an array of TerrainMaterialLayerInput; this is not the scene TextureSet.',
+  MaterialLayerSettings:'Convert snake_case snow/rock/wetness fields into TerrainMaterialInput.layers (TerrainMaterialLayersInput).',
+  LodSettings:'Terrain texture LOD fields level/bias/lod0_bias become TerrainMaterialInput.lod with lod0Bias; this is unrelated to clipmap geometry.',
+  ClipmapConfig:'Pass a TerrainClipmapInput object to generateClipmapMesh or terrain.geometry.clipmap.',
+  LabelBatchResult:'Aggregate addLabels() LabelOperationResult[]: ordered id values and flattened diagnostics replace the Python batch dataclass.',
+  TerrainMeta:'Bundle manifest/recipe terrain metadata carries the resource, CRS, domain and colormap; use a browser byte source rather than dem_path.',
+  MapFurnitureLayer:'Compose MapPlate, Legend, ScaleBar and NorthArrow after rendering; recipe furniture intent retains its diagnostic boundary.',
+  vector_overlay_configs_from_style:'compileStyle(spec, providedFeatures) returns typed vector layers and the support report; handle diagnostics before rendering.',
+  TerrainRenderParams:'Split the native aggregate across terrain/material/camera/environment/postFx typed inputs; there is no single-argument alias.',
+  TerrainRenderParamsConfig:'Split the native aggregate across terrain/material/camera/environment/postFx typed inputs; there is no single-argument alias.',
 };

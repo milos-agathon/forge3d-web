@@ -379,3 +379,5 @@ landuse/landuse/glad_cropland_2019.tif
 !crates/forge3d-web/docs/native-assets/**/*.png
 !crates/forge3d-web/docs/native-assets/**/*.jpg
 !crates/forge3d-web/docs/native-assets/**/*.jpeg
+!crates/forge3d-web/tests/golden/w23/*.png
+!crates/forge3d-web/examples/migration/terrain-single-tile.png

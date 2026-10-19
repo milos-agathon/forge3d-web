@@ -32,7 +32,1817 @@
   "tombstones": 21,
   "records": 6531,
   "unmapped": [],
-  "testSuites": 79,
+  "testSuites": 81,
   "testDefinitionsAre": "Individually routed to capability evidence, not assertions of one-for-one test translation or execution.",
-  "correction": "pointcloud_viewer_interactive.py routes to G03, replacing the W00 clouds classification."
+  "corrections": [
+    {
+      "artifactId": "changelog-addition:017b14f2e3df2ea8a7f0b957",
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1474:Demo: `examples/xarray_ingest_demo.py`; Docs: `docs/ingest/xarray.md`"
+    },
+    {
+      "artifactId": "changelog-addition:06aa87342d4a65a3a487f435",
+      "row": "V01",
+      "tombstone": "render-polygons",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:274:`render_polygons()` now accepts `target_crs` parameter for automatic reprojection."
+    },
+    {
+      "artifactId": "changelog-addition:0a0a05f8d1fa4b0bdcbc4555",
+      "row": "V01",
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1083:G1: Datashader Adapter v1 completed with premultiplied alpha support (`premultiply=True`), optional transform passthrough for alignment, zero-copy RGBA views where possible, and API exports in `adapters/__init__.py`."
+    },
+    {
+      "artifactId": "changelog-addition:14eb30063ad3f30510d6a33c",
+      "row": "V01",
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1428:Optional dependency handling: graceful skips when Datashader is missing; adapter availability probe."
+    },
+    {
+      "artifactId": "changelog-addition:1caa566c315cd36f6027278f",
+      "row": "V01",
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1427:Docs: `docs/user/datashader_interop.rst` added to ToC; covers zero-copy, alignment, and memory guidance."
+    },
+    {
+      "artifactId": "changelog-addition:26551b12fc6c1fa56d06ece3",
+      "row": "V01",
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1431:Public API exposes `forge3d.adapters` with Datashader utilities guarded by availability."
+    },
+    {
+      "artifactId": "changelog-addition:352a60301572cd26452a61b4",
+      "row": "T11",
+      "tombstone": "xyz-wmts-cartopy",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1445:Optional extras: `tiles` (Pillow) and `cartopy` (Cartopy + Matplotlib) added to `pyproject.toml`."
+    },
+    {
+      "artifactId": "changelog-addition:36917337191f7e6a67df5e6e",
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1472:S4: xarray/rioxarray DataArray ingestion"
+    },
+    {
+      "artifactId": "changelog-addition:3ef0909c1aad23ac74fedf08",
+      "row": "G08",
+      "tombstone": "draco-decode",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1122:F18: glTF 2.0 import (+Draco) — loader and PBR mapping."
+    },
+    {
+      "artifactId": "changelog-addition:4441b2fce59f0978c4e9ba6c",
+      "row": "V01",
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1435:Datashader unit/perf tests skip cleanly when optional deps absent."
+    },
+    {
+      "artifactId": "changelog-addition:45d98ea64d0cba20e687d33c",
+      "row": "V01",
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1424:V2: Performance and fidelity harness: deterministic dataset, zoom tests (Z0/Z4/Z8/Z12), SSIM checks vs goldens, and frame-time/memory metrics."
+    },
+    {
+      "artifactId": "changelog-addition:46f993b14dd63762be38baf3",
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:553:Land cover resampled to match DEM resolution via rasterio/GDAL"
+    },
+    {
+      "artifactId": "changelog-addition:492d3b1083f3573e19083ba9",
+      "row": "R04",
+      "tombstone": "render-raster",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:178:Removed the legacy `render_raster`, `render_polygons`, and `render_raytrace_mesh` Python API in favor of the viewer/IPC rendering path."
+    },
+    {
+      "artifactId": "changelog-addition:49607c472f019c903e081b72",
+      "row": "T11",
+      "tombstone": "xyz-wmts-cartopy",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1446:Docs: `docs/tiles/xyz_wmts.md` and `docs/integration/cartopy.md` added; Sphinx ToC updated."
+    },
+    {
+      "artifactId": "changelog-addition:49d7477073f8cc3b28587902",
+      "row": "R12",
+      "tombstone": "vshade-alias",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1925:Legacy alias **`vshade`** re-exports the public API for compatibility."
+    },
+    {
+      "artifactId": "changelog-addition:4be4c610697334e9147e64bd",
+      "row": "V01",
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1425:Demo: `examples/datashader_overlay_demo.py` writes `examples/output/datashader_overlay_demo.png` and prints `OK`."
+    },
+    {
+      "artifactId": "changelog-addition:4f51187d469e839f22ea710c",
+      "row": "T16",
+      "tombstone": "automatic-dem-water",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1262:Workstream C1 – Water detection & masking"
+    },
+    {
+      "artifactId": "changelog-addition:570d4c840073fb6fb8ddf204",
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1459:`windowed_read(dataset, window, out_shape, resampling)` parity with requested window/out_shape"
+    },
+    {
+      "artifactId": "changelog-addition:5a4fe27fd6614b727948ed6e",
+      "row": "V01",
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1423:V1: Datashader adapter providing zero-copy RGBA views (`rgba_view_from_agg`) and alignment validation (`validate_alignment`), plus overlay packaging (`to_overlay_texture`) and convenience (`shade_to_overlay`)."
+    },
+    {
+      "artifactId": "changelog-addition:5cf2fdcf52a65a9fac1eee51",
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:273:`get_crs_from_rasterio()`, `get_crs_from_geopandas()`: Extract CRS from geospatial files."
+    },
+    {
+      "artifactId": "changelog-addition:612c40912ede8f040b729f89",
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1476:`ingest_dask_array`, streaming `materialize_dask_array_streaming`, planning & memory guardrails"
+    },
+    {
+      "artifactId": "changelog-addition:67a49aafe73d63411ed4aac1",
+      "row": "T11",
+      "tombstone": "xyz-wmts-cartopy",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1452:Demo outputs saved to `reports/u1_tiles.png` and `reports/u3_cartopy.png`."
+    },
+    {
+      "artifactId": "changelog-addition:8a63101d1717a98e5ed3b814",
+      "row": "T11",
+      "tombstone": "xyz-wmts-cartopy",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1441:U1: XYZ/WMTS tile client with on-disk cache, offline mode, and conditional GET (ETag/Last-Modified). Mosaic composition to RGBA via Pillow."
+    },
+    {
+      "artifactId": "changelog-addition:8c418e1029f94027f8268af0",
+      "row": "T11",
+      "tombstone": "xyz-wmts-cartopy",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1443:U3: Cartopy GeoAxes interop example (Agg backend), overlaying forge3d tile mosaic with extent alignment."
+    },
+    {
+      "artifactId": "changelog-addition:92ca96fb0a77ef49a925f75f",
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1461:Demo: `examples/raster_window_demo.py`; Docs: `docs/ingest/rasterio_tiles.md`"
+    },
+    {
+      "artifactId": "changelog-addition:93bc918941df8150c0dea658",
+      "row": "V01",
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1422:Workstream V – Datashader Interop"
+    },
+    {
+      "artifactId": "changelog-addition:964db3906199baa48ab29127",
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1475:S5: Dask-chunked ingestion"
+    },
+    {
+      "artifactId": "changelog-addition:9ca193ca995740f52552075c",
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:376:Rasterio fallback path for comprehensive format support when native decoder unavailable."
+    },
+    {
+      "artifactId": "changelog-addition:a5251ebc88b63b2d74b3d565",
+      "row": "T16",
+      "tombstone": "automatic-dem-water",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1263:`detect_water_from_dem(method='auto'|'flat', smooth_iters)` and external mask support with validation"
+    },
+    {
+      "artifactId": "changelog-addition:a52d4d7e3931298c90a34473",
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1477:Demo: `examples/dask_ingest_demo.py`; Docs: `docs/ingest/dask.md`"
+    },
+    {
+      "artifactId": "changelog-addition:a57fc769509f42d310565b1b",
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1460:`block_iterator(dataset, blocksize)` covers extent without gaps/overlaps"
+    },
+    {
+      "artifactId": "changelog-addition:b880f0069d985d40e8d8a6f6",
+      "row": "V01",
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1432:`validate_alignment` usable without Datashader for basic extent checks."
+    },
+    {
+      "artifactId": "changelog-addition:c34700eb98f208e18a5188f5",
+      "row": "V01",
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1426:CI: `.github/workflows/datashader-perf.yml` runs perf tests, enforces thresholds, uploads artifacts."
+    },
+    {
+      "artifactId": "changelog-addition:cad690e0492c5a0babd4f82e",
+      "row": "G08",
+      "tombstone": "ply-import",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1117:F13: PLY Import — attributes import (pos/nrm/uv/color) with bbox/stats parity."
+    },
+    {
+      "artifactId": "changelog-addition:e5e49665a0771cc31a73faa3",
+      "row": "V01",
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1082:Workstream G — Datashader Interop"
+    },
+    {
+      "artifactId": "changelog-addition:e83ea98b26151d58b04a6965",
+      "row": "V01",
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1095:Datashader performance tests referenced via `tests/perf/test_datashader_zoom.py`."
+    },
+    {
+      "artifactId": "changelog-addition:eb994cf63258d16d8ecad6cd",
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1458:S1: RasterIO windowed reads and block iterator"
+    },
+    {
+      "artifactId": "changelog-addition:ee73da9adce6f22092282f30",
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1480:Optional dependency handling hardened; imports are lazy and degrade gracefully without rasterio/xarray/dask/pyproj"
+    },
+    {
+      "artifactId": "changelog-addition:f1cb090ff3d4b5d838be36c8",
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1473:`ingest_dataarray(da)` preserves dims `(y,x[,band])`, dtype conversions, CRS/transform passthrough"
+    },
+    {
+      "artifactId": "changelog-addition:f6079659619185990805a565",
+      "row": "V01",
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1084:G2: Bench & Docs completed — `docs/user/datashader_interop.rst` updated with benchmarking playbook, usage, and plotting guidance."
+    },
+    {
+      "artifactId": "changelog-addition:fcdb8a79a063a22a5ceaeab4",
+      "row": "R10",
+      "tombstone": "hud",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:516:Removed HUD overlay to simplify viewer."
+    },
+    {
+      "artifactId": "changelog-addition:fd7626c892879c774c04c742",
+      "row": "V01",
+      "tombstone": "datashader",
+      "evidenceKind": "tombstone",
+      "source": "CHANGELOG.md:1099:Expanded Datashader interop guide in `docs/user/datashader_interop.rst` with usage and benchmarking notes."
+    },
+    {
+      "artifactId": "native-doc-asset:38a7cf0fe5e25f2ca7da74b8",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "docs/gallery/images/06-point-cloud.png"
+    },
+    {
+      "artifactId": "native-doc-asset:8278dca5164ad4da214aa18f",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "docs/tutorials/images/python-03-point-clouds.svg"
+    },
+    {
+      "artifactId": "native-doc-asset:dc0fe9b2ae020b34f323e2b9",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "docs/tutorials/python-track/03-point-clouds.md"
+    },
+    {
+      "artifactId": "native-doc-asset:e994dc62cd80d0871c79cd72",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "docs/gallery/06-point-cloud.md"
+    },
+    {
+      "artifactId": "native-doc-asset:f1bc542a20b9d3a098bdcd8b",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "docs/tutorials/images/python-03-point-clouds.png"
+    },
+    {
+      "artifactId": "native-doc-feature:1b03702a6fdc081284be5a14",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "docs/tutorials/python-track/03-point-clouds.md:36:Gallery-backed script"
+    },
+    {
+      "artifactId": "native-doc-feature:1b9d17088d4c03f661de2a9f",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "docs/tutorials/python-track/03-point-clouds.md:24:Blend terrain and point cloud"
+    },
+    {
+      "artifactId": "native-doc-feature:5ee72ba74a0e3a7c9d134a0e",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "docs/gallery/06-point-cloud.md:7:Ingredients"
+    },
+    {
+      "artifactId": "native-doc-feature:6373a9ce3b62a8d49860bdd0",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "docs/gallery/06-point-cloud.md:13:Sketch"
+    },
+    {
+      "artifactId": "native-doc-feature:b02476480e59d80479b989b3",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "docs/tutorials/python-track/03-point-clouds.md:6:Load a LAZ sample"
+    },
+    {
+      "artifactId": "native-doc-feature:b761b42e744dafb5683765c5",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "docs/tutorials/python-track/03-point-clouds.md:1:Point Clouds"
+    },
+    {
+      "artifactId": "native-doc-feature:bf74af6bef29491ce7a883ae",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "docs/tutorials/python-track/03-point-clouds.md:54:Expected output"
+    },
+    {
+      "artifactId": "native-doc-feature:d139595807a824128bfde8aa",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "docs/gallery/06-point-cloud.md:1:Point Cloud"
+    },
+    {
+      "artifactId": "native-example:d3843ce217b1ee120f2717a1",
+      "row": "G03",
+      "evidenceKind": "browser-workflow",
+      "source": "examples/pointcloud_viewer_interactive.py"
+    },
+    {
+      "artifactId": "native-module-root:9641cae596f21e743505ed86",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "src/pointcloud"
+    },
+    {
+      "artifactId": "native-test-definition:003f646da0c08243b756c817",
+      "row": "R02",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1534:test_frame_importable"
+    },
+    {
+      "artifactId": "native-test-definition:018fad546ecf62dc46b28fe4",
+      "row": "P13",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:976:test_bloom_settings_default_disabled"
+    },
+    {
+      "artifactId": "native-test-definition:04d9dae3aa4503b3e30c1109",
+      "row": "P05",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:494:test_cube_tbn_data_count"
+    },
+    {
+      "artifactId": "native-test-definition:06d1f35ae71ef8a1a09e6ce6",
+      "row": "R04",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:832:test_viewer_set_msaa_validates_samples"
+    },
+    {
+      "artifactId": "native-test-definition:089d1236c5ac5cfe6162e3e2",
+      "row": "P13",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:244:test_disable_dof_exists"
+    },
+    {
+      "artifactId": "native-test-definition:08f47b05bfe1e9c3c5f8ffbe",
+      "row": "E06",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_datasets.py:57:test_fetch_returns_bundled_path_for_bundled_dataset"
+    },
+    {
+      "artifactId": "native-test-definition:0b45f5cd13e4591c2be34550",
+      "row": "P11",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:202:test_set_ssao_enabled_exists"
+    },
+    {
+      "artifactId": "native-test-definition:0baf5a796275d85ac8fd8f0d",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pointcloud_lod.py:54:test_key_from_invalid_string"
+    },
+    {
+      "artifactId": "native-test-definition:0d1eb2fcccad6a6ff7abc7d3",
+      "row": "P12",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:192:test_get_oit_mode_exists"
+    },
+    {
+      "artifactId": "native-test-definition:0e2fee18aa5a930803155944",
+      "row": "E06",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_datasets.py:38:test_registry_lists_bundled_and_remote_datasets"
+    },
+    {
+      "artifactId": "native-test-definition:13695bc4229a1325988b64e7",
+      "row": "E06",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_datasets.py:71:test_fetch_cityjson_prefers_local_asset_checkout"
+    },
+    {
+      "artifactId": "native-test-definition:14005865c92067d5f643ff35",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1226:test_create_viewer_gpu_buffer_with_colors"
+    },
+    {
+      "artifactId": "native-test-definition:1516ffcd1c01531b07fcdb10",
+      "row": "T03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1120:test_contour_rejects_empty_levels"
+    },
+    {
+      "artifactId": "native-test-definition:1956f29653d4711bcf5e8d0b",
+      "row": "R11",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1521:test_offscreen_fallback_without_scene"
+    },
+    {
+      "artifactId": "native-test-definition:1a818968feb5fc862959e964",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1167:test_create_gpu_buffer_positions_only"
+    },
+    {
+      "artifactId": "native-test-definition:1b35c768a935cc06805aa5d7",
+      "row": "M02a",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_mapscene_docs.py:121:test_support_matrix_rows_use_prd_support_taxonomy"
+    },
+    {
+      "artifactId": "native-test-definition:1bc70e2799135fca4eb10275",
+      "row": "P11",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:208:test_set_ssao_parameters_exists"
+    },
+    {
+      "artifactId": "native-test-definition:1d6c29d9452a403e22def1a5",
+      "row": "R04",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:841:test_viewer_set_msaa_accepts_valid_samples"
+    },
+    {
+      "artifactId": "native-test-definition:1ec113c4d6ab7317ae11f9e3",
+      "row": "P11",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:900:test_ssr_settings_defaults"
+    },
+    {
+      "artifactId": "native-test-definition:1f83efd555f9d4ad769c788d",
+      "row": "E06",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_datasets.py:93:test_fetch_kind_validation_rejects_wrong_registry_kind"
+    },
+    {
+      "artifactId": "native-test-definition:1fda22b7d12475d1ebeebc2d",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pointcloud_lod.py:18:test_root_key"
+    },
+    {
+      "artifactId": "native-test-definition:207147b076479c902bf29d90",
+      "row": "T03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1139:test_no_module_level_slope_function"
+    },
+    {
+      "artifactId": "native-test-definition:20ab28a332786603a01ed649",
+      "row": "C03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:338:test_camera_animation_replace_and_clear"
+    },
+    {
+      "artifactId": "native-test-definition:21cc5cbf356347a38ff0db2f",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pointcloud_lod.py:71:test_size"
+    },
+    {
+      "artifactId": "native-test-definition:22c97edfd107dd666d90e0b0",
+      "row": "G02",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1293:test_copc_laz_enabled_function_exists"
+    },
+    {
+      "artifactId": "native-test-definition:230b9d6bf91a22c870f3b515",
+      "row": "V05",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1392:test_label_style_defaults"
+    },
+    {
+      "artifactId": "native-test-definition:25b923b2026590418d1e9527",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pointcloud_gpu_integration.py:40:test_fixture_exists"
+    },
+    {
+      "artifactId": "native-test-definition:273f79b8c73997323aeeccea",
+      "row": "E06",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_datasets.py:99:test_default_dataset_base_url_uses_live_repository_path"
+    },
+    {
+      "artifactId": "native-test-definition:2c808845dc9e8703a6550daa",
+      "row": "G06",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:258:test_enable_ground_plane_exists"
+    },
+    {
+      "artifactId": "native-test-definition:2d1a841a421907988ac359b4",
+      "row": "G09",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:409:test_sdf_primitive_registered"
+    },
+    {
+      "artifactId": "native-test-definition:2f4601c1e29d989cfa7de705",
+      "row": "G09",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1538:test_sdf_classes_importable"
+    },
+    {
+      "artifactId": "native-test-definition:3064f6f85c713765ec6bf14b",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1188:test_gpu_byte_size"
+    },
+    {
+      "artifactId": "native-test-definition:315c5fcd8e9fc9615b2fe5f9",
+      "row": "P06",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:307:test_camera_keyframe_constructible"
+    },
+    {
+      "artifactId": "native-test-definition:319ca36e918855bd93a855d1",
+      "row": "G06",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:647:test_geometry_function_exists"
+    },
+    {
+      "artifactId": "native-test-definition:34b77ecba528782ce14ca9ed",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pointcloud_gpu_integration.py:42:test_laz_decode_to_native_gpu_buffer"
+    },
+    {
+      "artifactId": "native-test-definition:37231eb303fb08cace46bf8c",
+      "row": "R02",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:141:test_render_rgba_is_instance_method"
+    },
+    {
+      "artifactId": "native-test-definition:387de5fce7548c69ea62d29b",
+      "row": "E06",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_datasets.py:87:test_fetch_rejects_unknown_dataset"
+    },
+    {
+      "artifactId": "native-test-definition:389678fcee51c932825317db",
+      "row": "V05",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1482:test_label_style_from_kwargs"
+    },
+    {
+      "artifactId": "native-test-definition:3a480b2221587041075b100a",
+      "row": "P01",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:280:test_add_point_light_exists"
+    },
+    {
+      "artifactId": "native-test-definition:3b01e616bbbc4365d80115b5",
+      "row": "P05",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:484:test_cube_tbn_vertex_count"
+    },
+    {
+      "artifactId": "native-test-definition:3b3f084120ca5b3d7aaf8723",
+      "row": "R04",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:819:test_set_msaa_samples_not_on_module"
+    },
+    {
+      "artifactId": "native-test-definition:3bf30af029c8ff3a4a781fd4",
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone",
+      "source": "tests/test_dask_stub.py:42:test_local_dask_stub_exports_xarray_compat_surface"
+    },
+    {
+      "artifactId": "native-test-definition:3dc4bb63187d9708bb31d872",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1177:test_create_gpu_buffer_with_colors"
+    },
+    {
+      "artifactId": "native-test-definition:3ec6ec97a87069a97fb9861a",
+      "row": "G07",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:711:test_transform_function_exists"
+    },
+    {
+      "artifactId": "native-test-definition:3fc79670cbb17ff1c805d873",
+      "row": "V05",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1458:test_label_flags_set"
+    },
+    {
+      "artifactId": "native-test-definition:40e7756e71cc4b9690695904",
+      "row": "P11",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:915:test_ssr_settings_all_fields_accessible"
+    },
+    {
+      "artifactId": "native-test-definition:458eba28d03c64ec618fd08f",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pointcloud_lod.py:209:test_budget_scaling"
+    },
+    {
+      "artifactId": "native-test-definition:45a5a0bd4b3e4c89e27973ee",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1152:test_point_buffer_registered"
+    },
+    {
+      "artifactId": "native-test-definition:46aa9fd8b6108091915570ed",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pointcloud_lod.py:194:test_closer_camera_more_nodes"
+    },
+    {
+      "artifactId": "native-test-definition:4718544d3833a09f50381ae8",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pointcloud_lod.py:92:test_create_node"
+    },
+    {
+      "artifactId": "native-test-definition:4b07966a6e59599e83a9a722",
+      "row": "P06",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:220:test_disable_ibl_exists"
+    },
+    {
+      "artifactId": "native-test-definition:4d2a52079611c5d022e30851",
+      "row": "G02",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1327:test_decoded_point_count"
+    },
+    {
+      "artifactId": "native-test-definition:4d868052cb2930f30c57629c",
+      "row": "T03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1093:test_slope_rejects_small_grid"
+    },
+    {
+      "artifactId": "native-test-definition:51897d2ec4f7592e4accbd2c",
+      "row": "P11",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:879:test_ssgi_settings_all_fields_accessible"
+    },
+    {
+      "artifactId": "native-test-definition:51a8b0ccfc2ec0d89051cc43",
+      "row": "R02",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:391:test_frame_registered"
+    },
+    {
+      "artifactId": "native-test-definition:55d132361c74873d1d5976dd",
+      "row": "P13",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:997:test_bloom_settings_rejects_negative_threshold"
+    },
+    {
+      "artifactId": "native-test-definition:55efb440c2d68dc3cc91f469",
+      "row": "P05",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:527:test_plane_tbn_4x4_tbn_count"
+    },
+    {
+      "artifactId": "native-test-definition:55f49fceef39a0fd043f9326",
+      "row": "P01",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:274:test_enable_point_spot_lights_exists"
+    },
+    {
+      "artifactId": "native-test-definition:575e818c9d1ecdc69ab115e3",
+      "row": "M02a",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_mapscene_quickstart.py:28:test_quickstart_vector_labels_scenario_is_executable"
+    },
+    {
+      "artifactId": "native-test-definition:5bc46c432488475f47a8d575",
+      "row": "P13",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:240:test_enable_dof_exists"
+    },
+    {
+      "artifactId": "native-test-definition:5e636b71045f3a9d3528073b",
+      "row": "M02a",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_mapscene_docs.py:98:test_support_matrices_record_current_mapscene_diagnostics_and_ownership"
+    },
+    {
+      "artifactId": "native-test-definition:649dac5dce460aaf7e33f06e",
+      "row": "E06",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_datasets.py:48:test_list_datasets_returns_named_records"
+    },
+    {
+      "artifactId": "native-test-definition:667e5b29f14da214dabd8d20",
+      "row": "E06",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_datasets.py:62:test_fetch_dem_prefers_local_asset_checkout"
+    },
+    {
+      "artifactId": "native-test-definition:66ada85edfc41a53c0156d53",
+      "row": "E06",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_datasets.py:20:test_mini_dem_path_exists"
+    },
+    {
+      "artifactId": "native-test-definition:673e911b38b1d84ef7f5413d",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1195:test_create_viewer_gpu_buffer_empty"
+    },
+    {
+      "artifactId": "native-test-definition:68d7fadf80d02d77ea7e1c16",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pointcloud_lod.py:114:test_set_point_budget"
+    },
+    {
+      "artifactId": "native-test-definition:6932c176e42d1644eb6f8d3e",
+      "row": "V05",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1468:test_label_style_color_tuple"
+    },
+    {
+      "artifactId": "native-test-definition:6bc780a79fe20bd0a3798a9d",
+      "row": "T03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1065:test_slope_flat_surface"
+    },
+    {
+      "artifactId": "native-test-definition:70bca338649df55ca5f84654",
+      "row": "R11",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:779:test_fallback_used_for_non_native_scene"
+    },
+    {
+      "artifactId": "native-test-definition:76d476802d6909d8fc0cc7a4",
+      "row": "E07",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_png_io_fallback.py:73:test_public_png_roundtrip_without_pillow"
+    },
+    {
+      "artifactId": "native-test-definition:7ad117f3ba6c9f3c367df9b4",
+      "row": "G02",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1321:test_read_laz_returns_tuple"
+    },
+    {
+      "artifactId": "native-test-definition:7b015caf82d24a76e3870dd7",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pointcloud_lod.py:25:test_child_key"
+    },
+    {
+      "artifactId": "native-test-definition:7e503a170ff2c2dc1f3d110a",
+      "row": "T16",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:250:test_enable_water_surface_exists"
+    },
+    {
+      "artifactId": "native-test-definition:7e68845aae45edfc6295e3dd",
+      "row": "P05",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:507:test_cube_tbn_dict_structure"
+    },
+    {
+      "artifactId": "native-test-definition:7f101b3cb29722eb806adab1",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pointcloud_lod.py:79:test_radius"
+    },
+    {
+      "artifactId": "native-test-definition:7f2dc2043ea4965f783623ab",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pointcloud_lod.py:119:test_set_viewport"
+    },
+    {
+      "artifactId": "native-test-definition:7ffff534acd17c1fb92aafc9",
+      "row": "P12",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:178:test_enable_oit_exists"
+    },
+    {
+      "artifactId": "native-test-definition:80cf14ca3e80680a20ab907b",
+      "row": "P11",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:945:test_scene_has_ssr_methods"
+    },
+    {
+      "artifactId": "native-test-definition:84f4c2197caeb4735f385916",
+      "row": "G02",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1360:test_read_laz_nonexistent_file_raises"
+    },
+    {
+      "artifactId": "native-test-definition:86f45c90dd64579311c6f2d8",
+      "row": "G09",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:416:test_sdf_scene_registered"
+    },
+    {
+      "artifactId": "native-test-definition:89905c4a59f5f1d38ecb3db6",
+      "row": "R11",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:760:test_non_native_scene_rejected"
+    },
+    {
+      "artifactId": "native-test-definition:8a34826ea120664cbe17d273",
+      "row": "G02",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1303:test_read_laz_points_info_function_exists"
+    },
+    {
+      "artifactId": "native-test-definition:8c9bbbe396acea52bbc68a80",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1158:test_create_gpu_buffer_empty"
+    },
+    {
+      "artifactId": "native-test-definition:91653e9bf5e6cf690be90c71",
+      "row": "T03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1128:test_contour_no_crossing"
+    },
+    {
+      "artifactId": "native-test-definition:9277a068b182baa9f02a25d8",
+      "row": "G02",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1333:test_sample_coordinates_valid"
+    },
+    {
+      "artifactId": "native-test-definition:92dfc0b68ebac3937285caed",
+      "row": "P12",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:186:test_is_oit_enabled_exists"
+    },
+    {
+      "artifactId": "native-test-definition:930d54503f744dba3b15a2ef",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1234:test_viewer_buffer_byte_count"
+    },
+    {
+      "artifactId": "native-test-definition:9482620ce2380df245e909ba",
+      "row": "E07",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_png_io_fallback.py:81:test_rgba_to_png_bytes_without_pillow"
+    },
+    {
+      "artifactId": "native-test-definition:95a36d42d0da9b79f328e2e5",
+      "row": "P05",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:463:test_mesh_generate_cube_tbn_registered"
+    },
+    {
+      "artifactId": "native-test-definition:95da06fd03babe46a2dbe4d4",
+      "row": "P05",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:517:test_plane_tbn_4x4_vertex_count"
+    },
+    {
+      "artifactId": "native-test-definition:966a7b255af45776bce7bacb",
+      "row": "M02a",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_mapscene_docs.py:70:test_mapscene_validation_diagnostic_codes_are_documented"
+    },
+    {
+      "artifactId": "native-test-definition:9769451013523efd351db259",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pointcloud_lod.py:181:test_visible_nodes_respect_budget"
+    },
+    {
+      "artifactId": "native-test-definition:976aba5137c967c718a548cd",
+      "row": "T03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1074:test_slope_east_ramp"
+    },
+    {
+      "artifactId": "native-test-definition:9942f1398fe0a60f48afaa71",
+      "row": "P13",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1021:test_bloom_in_terrain_params"
+    },
+    {
+      "artifactId": "native-test-definition:9b412050352d746783e340ab",
+      "row": "R11",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:768:test_fallback_used_when_no_scene"
+    },
+    {
+      "artifactId": "native-test-definition:9c33100cfce5445df448bf14",
+      "row": "T03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1052:test_terrain_spike_analysis_methods_exist_on_class"
+    },
+    {
+      "artifactId": "native-test-definition:9e779509785042047725f4ad",
+      "row": "T03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1085:test_slope_rejects_wrong_size"
+    },
+    {
+      "artifactId": "native-test-definition:a18923e607a4a71d6a407083",
+      "row": "C01",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:670:test_camera_function_exists"
+    },
+    {
+      "artifactId": "native-test-definition:a334c71a913a51a3b6a2b68d",
+      "row": "P13",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1003:test_bloom_settings_rejects_invalid_softness"
+    },
+    {
+      "artifactId": "native-test-definition:a4e6c65a21aec20d690fdd11",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pointcloud_lod.py:46:test_key_from_string"
+    },
+    {
+      "artifactId": "native-test-definition:a5be8693cd53c6333bff3fbc",
+      "row": "R11",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1267:test_cpu_fallback_intact"
+    },
+    {
+      "artifactId": "native-test-definition:a662a886dbab33683fc8b6ab",
+      "row": "G09",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:423:test_sdf_scene_builder_registered"
+    },
+    {
+      "artifactId": "native-test-definition:a85da9b58f7db1e21aa6560a",
+      "row": "P12",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:182:test_disable_oit_exists"
+    },
+    {
+      "artifactId": "native-test-definition:a960fef16269f9bbfbeb32f8",
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone",
+      "source": "tests/test_dask_stub.py:58:test_real_xarray_dataset_creation_works_with_local_dask_stub"
+    },
+    {
+      "artifactId": "native-test-definition:aaba2bd8ff3356feeb89d7b4",
+      "row": "P11",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:906:test_ssr_settings_custom_values_differ"
+    },
+    {
+      "artifactId": "native-test-definition:ab25ba1de31e7e08477bbc82",
+      "row": "P13",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1009:test_bloom_settings_rejects_negative_intensity"
+    },
+    {
+      "artifactId": "native-test-definition:abfbe05204d706428e97de8d",
+      "row": "R04",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:826:test_set_msaa_samples_on_scene_class"
+    },
+    {
+      "artifactId": "native-test-definition:ac616e2fdadcbdae76b8f8dd",
+      "row": "M02a",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_mapscene_docs.py:77:test_offline_mapscene_guide_links_canonical_examples_and_support_guides"
+    },
+    {
+      "artifactId": "native-test-definition:ac74c2232a3f9caa64a1f96f",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pointcloud_gpu_integration.py:58:test_viewer_interleaved_layout_stride"
+    },
+    {
+      "artifactId": "native-test-definition:acf2a9a4f363fb55850555a4",
+      "row": "E06",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_datasets.py:9:test_mini_dem_loads_with_expected_shape_and_dtype"
+    },
+    {
+      "artifactId": "native-test-definition:ad04692b06b204ccb7a8f652",
+      "row": "G05b",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_p2_building_texture_docs.py:11:test_building_texture_matrix_documents_prerequisites_and_fallbacks"
+    },
+    {
+      "artifactId": "native-test-definition:ad1c0595f4dd234e0818ccbc",
+      "row": "P13",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:986:test_bloom_settings_enabled_custom"
+    },
+    {
+      "artifactId": "native-test-definition:ad687d9073e58f9b9f5082fe",
+      "row": "M02a",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_mapscene_quickstart.py:92:test_quickstart_building_scenario_preserves_blocking_diagnostics_in_bundle"
+    },
+    {
+      "artifactId": "native-test-definition:ae98face7e1eb8d239eec954",
+      "row": "P05",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:532:test_plane_tbn_rejects_small_dimensions"
+    },
+    {
+      "artifactId": "native-test-definition:b0cc87910d09a4018c4b6adb",
+      "row": "V05",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1388:test_label_flags_registered"
+    },
+    {
+      "artifactId": "native-test-definition:b1893acfaa5f1e279b76262c",
+      "row": "V05",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1384:test_label_style_registered"
+    },
+    {
+      "artifactId": "native-test-definition:b54d7914abf025d9c13f4882",
+      "row": "P11",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:198:test_ssao_enabled_exists"
+    },
+    {
+      "artifactId": "native-test-definition:b8a4005d4f03d72410e79a80",
+      "row": "G02",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1365:test_read_laz_invalid_file_raises"
+    },
+    {
+      "artifactId": "native-test-definition:b9c946d3ec99e19d83d8f25b",
+      "row": "M02a",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_mapscene_quickstart.py:18:test_mapscene_quickstart_points_to_canonical_examples"
+    },
+    {
+      "artifactId": "native-test-definition:b9f57d5622f774d9e7db261b",
+      "row": "E06",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_datasets.py:29:test_sample_boundaries_load_as_geojson"
+    },
+    {
+      "artifactId": "native-test-definition:c03a6c96f469e69e8e40565f",
+      "row": "P05",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:477:test_cube_tbn_dict_keys"
+    },
+    {
+      "artifactId": "native-test-definition:c266c68116e6fec93ffe7e22",
+      "row": "R04",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1526:test_viewer_set_msaa_no_module_level_native_dependency"
+    },
+    {
+      "artifactId": "native-test-definition:c4b78bd7f2f1591fb3a75727",
+      "row": "P13",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1015:test_bloom_settings_rejects_zero_radius"
+    },
+    {
+      "artifactId": "native-test-definition:c550b486d06e9d727a7a05db",
+      "row": "V07",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_label_plan_docs.py:56:test_label_plan_support_matrix_and_api_reference_are_current"
+    },
+    {
+      "artifactId": "native-test-definition:c60f2f2a9d26d1b1fb9dd566",
+      "row": "R11",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:749:test_native_scene_detected_correctly"
+    },
+    {
+      "artifactId": "native-test-definition:c6a340fe5a332016728c9ff8",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1201:test_create_viewer_gpu_buffer_layout"
+    },
+    {
+      "artifactId": "native-test-definition:c6ff313b372d9d7ff5b58874",
+      "row": "G05b",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_p2_building_texture_diagnostics.py:18:test_missing_uv_path_format_and_scalar_fallback_are_diagnosed"
+    },
+    {
+      "artifactId": "native-test-definition:c79a26ee40c8f75000870eaf",
+      "row": "G02",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1354:test_multiple_points_decoded"
+    },
+    {
+      "artifactId": "native-test-definition:c7cbb2f2c24ffed9e48f3673",
+      "row": "P06",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:436:test_sdf_primitive_sphere_constructible"
+    },
+    {
+      "artifactId": "native-test-definition:c80cc3ab156547f2de4adaa4",
+      "row": "P05",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:522:test_plane_tbn_4x4_index_count"
+    },
+    {
+      "artifactId": "native-test-definition:c8bb5b9331e5fe38db2c9e07",
+      "row": "P05",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:499:test_cube_vertex_dict_structure"
+    },
+    {
+      "artifactId": "native-test-definition:cc8134b1f4eb895b57d2db22",
+      "row": "P11",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:938:test_scene_has_ssgi_methods"
+    },
+    {
+      "artifactId": "native-test-definition:cf06e7e61cd82ea9ef9c77ab",
+      "row": "P05",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:470:test_mesh_generate_plane_tbn_registered"
+    },
+    {
+      "artifactId": "native-test-definition:cf1de77bcdcf11b4c0720dee",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pointcloud_lod.py:109:test_default_params"
+    },
+    {
+      "artifactId": "native-test-definition:d3dc142b2c780f36137070f2",
+      "row": "R02",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:400:test_hdr_frame_registered"
+    },
+    {
+      "artifactId": "native-test-definition:d49834e3f00160c5b322e876",
+      "row": "G09",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:441:test_sdf_scene_builder_round_trip"
+    },
+    {
+      "artifactId": "native-test-definition:d62733c232c71ff3398ec29a",
+      "row": "G05b",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_p2_building_texture_diagnostics.py:55:test_pro_gated_textured_import_remains_explicitly_pro_gated"
+    },
+    {
+      "artifactId": "native-test-definition:d6850f9588652d7e2101038f",
+      "row": "P13",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:967:test_scene_has_bloom_methods"
+    },
+    {
+      "artifactId": "native-test-definition:d687029a03d195af407f5073",
+      "row": "C01",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:164:test_set_camera_look_at_exists"
+    },
+    {
+      "artifactId": "native-test-definition:d873aec88e0674cf16a593f0",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pointcloud_lod.py:63:test_center"
+    },
+    {
+      "artifactId": "native-test-definition:d9aa489cb1d30fa9e352d836",
+      "row": "R02",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:148:test_render_png_is_instance_method"
+    },
+    {
+      "artifactId": "native-test-definition:dc173f6d84c99a9135b86b80",
+      "row": "E06",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_datasets.py:79:test_fetch_copc_prefers_local_asset_checkout"
+    },
+    {
+      "artifactId": "native-test-definition:dc7038bd969df18dc3072b0e",
+      "row": "P06",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:216:test_enable_ibl_exists"
+    },
+    {
+      "artifactId": "native-test-definition:df1a3cb934331c5ae1e0fbb4",
+      "row": "P05",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:489:test_cube_tbn_index_count"
+    },
+    {
+      "artifactId": "native-test-definition:e062e03efb8435e85726811d",
+      "row": "R02",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:789:test_render_rgba_is_instance_method_not_module_function"
+    },
+    {
+      "artifactId": "native-test-definition:e21580d60ab331e113c9b293",
+      "row": "V05",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1409:test_label_flags_defaults"
+    },
+    {
+      "artifactId": "native-test-definition:e2876716f2249435617ba761",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pointcloud_lod.py:42:test_key_to_string"
+    },
+    {
+      "artifactId": "native-test-definition:e41cbf5e600627aad1dc725a",
+      "row": "G05b",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_p2_building_texture_docs.py:24:test_building_docs_do_not_present_scalar_fallback_as_textured_success"
+    },
+    {
+      "artifactId": "native-test-definition:e4cd7095367da1a9eb22dd03",
+      "row": "M02a",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_mapscene_docs.py:135:test_competitive_positioning_lists_required_non_goal_boundaries"
+    },
+    {
+      "artifactId": "native-test-definition:e7818dbba62c5e7063fe1568",
+      "row": "P11",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:870:test_ssgi_settings_custom_values_differ"
+    },
+    {
+      "artifactId": "native-test-definition:e8e160141b349c241e051e15",
+      "row": "P05",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1549:test_mesh_tbn_native_exports"
+    },
+    {
+      "artifactId": "native-test-definition:eacf14d011e31f02bd634abf",
+      "row": "R11",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1517:test_offscreen_prefers_scene_method"
+    },
+    {
+      "artifactId": "native-test-definition:ebed0bdf24892af98cb5ce32",
+      "row": "P10",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:266:test_enable_cloud_shadows_exists"
+    },
+    {
+      "artifactId": "native-test-definition:ed9c02f3e24f7d39d0f052ea",
+      "row": "P05",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1555:test_mesh_tbn_native_shape_contract"
+    },
+    {
+      "artifactId": "native-test-definition:ee56ce73501d1be6a3c85e54",
+      "row": "V05",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1475:test_label_style_repr"
+    },
+    {
+      "artifactId": "native-test-definition:f21d93350af4c5a655028a4e",
+      "row": "G02",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1344:test_sample_coordinates_in_expected_range"
+    },
+    {
+      "artifactId": "native-test-definition:f25ff3e5afe52edac19b5ea1",
+      "row": "P06",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:430:test_sdf_scene_constructible"
+    },
+    {
+      "artifactId": "native-test-definition:f2ddb93dfc3abb0152ed25f8",
+      "row": "C03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:324:test_camera_animation_target_round_trip"
+    },
+    {
+      "artifactId": "native-test-definition:f31d07c4c5d95b3be3e5c8ba",
+      "row": "R04",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:156:test_set_msaa_samples_is_instance_method"
+    },
+    {
+      "artifactId": "native-test-definition:f46a1fdbea20da6888970809",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1253:test_point_count"
+    },
+    {
+      "artifactId": "native-test-definition:f54672781bc79363e5b70726",
+      "row": "M02a",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_mapscene_quickstart.py:42:test_quickstart_negative_diagnostics_are_available_before_render"
+    },
+    {
+      "artifactId": "native-test-definition:f61c78c18c689d15dc71232c",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pointcloud_gpu_integration.py:70:test_python_lod_traversal_with_fixture"
+    },
+    {
+      "artifactId": "native-test-definition:f6408c51c61076944d895940",
+      "row": "E06",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_datasets.py:106:test_default_dataset_base_url_uses_github_lfs_media_endpoint"
+    },
+    {
+      "artifactId": "native-test-definition:f7db76d6568a3c10318f2519",
+      "row": "V05",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1416:test_label_style_set_fields"
+    },
+    {
+      "artifactId": "native-test-definition:f835127d4c3b3a33ca12f586",
+      "row": "G02",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1299:test_copc_laz_feature_flag_is_boolean"
+    },
+    {
+      "artifactId": "native-test-definition:fb201cf1134c988c730708d9",
+      "row": "T03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:1103:test_contour_gaussian"
+    },
+    {
+      "artifactId": "native-test-definition:fb2822ef860b5eac4004adc7",
+      "row": "P11",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_api_contracts.py:863:test_ssgi_settings_defaults"
+    },
+    {
+      "artifactId": "native-test-file:0ac77cb816cd3e6fb53789e7",
+      "row": "T10",
+      "tombstone": "rasterio-adapters",
+      "evidenceKind": "tombstone",
+      "source": "tests/test_dask_stub.py"
+    },
+    {
+      "artifactId": "native-test-file:8c61fb4335bdc81934c1470f",
+      "row": "E07",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_png_io_fallback.py"
+    },
+    {
+      "artifactId": "native-test-file:919962981709675df2dac124",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pointcloud_lod.py"
+    },
+    {
+      "artifactId": "native-test-file:95dfdc679bd349380f9eefde",
+      "row": "G03",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_pointcloud_gpu_integration.py"
+    },
+    {
+      "artifactId": "native-test-file:a7903de0772e1e9e2e7be51a",
+      "row": "M02a",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_mapscene_quickstart.py"
+    },
+    {
+      "artifactId": "native-test-file:b16187b8e0fc9a582fd0830a",
+      "row": "E06",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_datasets.py"
+    },
+    {
+      "artifactId": "native-test-file:df1bb253d450401047c07758",
+      "row": "G05b",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_p2_building_texture_docs.py"
+    },
+    {
+      "artifactId": "native-test-file:ef178df4868333b034d05334",
+      "row": "G05b",
+      "evidenceKind": "capability-test-route",
+      "source": "tests/test_p2_building_texture_diagnostics.py"
+    },
+    {
+      "artifactId": "package-root-export:125c4e6fcca2dbf0d4107a88",
+      "row": "T05",
+      "evidenceKind": "capability-evidence-route",
+      "source": "LodSettings"
+    },
+    {
+      "artifactId": "package-root-export:15c39d1fb8408ccde2df55d6",
+      "row": "M05",
+      "evidenceKind": "capability-evidence-route",
+      "source": "MapFurnitureLayer"
+    },
+    {
+      "artifactId": "package-root-export:15ea3c84746123b9ca6be2cf",
+      "row": "M03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "vector_overlay_configs_from_style"
+    },
+    {
+      "artifactId": "package-root-export:29022b2c1a380d210d7c3a26",
+      "row": "V05",
+      "evidenceKind": "capability-evidence-route",
+      "source": "LabelBatchResult"
+    },
+    {
+      "artifactId": "package-root-export:4faf7b310c8d066c2315533e",
+      "row": "T05",
+      "evidenceKind": "capability-evidence-route",
+      "source": "TerrainRenderParamsConfig"
+    },
+    {
+      "artifactId": "package-root-export:8bf9feb452d0b0262bc9345b",
+      "row": "T05",
+      "evidenceKind": "capability-evidence-route",
+      "source": "MaterialSet"
+    },
+    {
+      "artifactId": "package-root-export:9f18168d1b3aea944193101f",
+      "row": "T05",
+      "evidenceKind": "capability-evidence-route",
+      "source": "TerrainRenderParams"
+    },
+    {
+      "artifactId": "package-root-export:e4601966f78fc6c0c624e612",
+      "row": "M01",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python_public_3dtiles_incomplete_diagnostic"
+    },
+    {
+      "artifactId": "package-root-export:f4a43c24627299302e9d7693",
+      "row": "T08",
+      "evidenceKind": "capability-evidence-route",
+      "source": "ClipmapConfig"
+    },
+    {
+      "artifactId": "python-api-file:c534d6c8fb6281ed47583220",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/datasets.py"
+    },
+    {
+      "artifactId": "python-api-file:c7778f678619bfc7397bc8ad",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py"
+    },
+    {
+      "artifactId": "python-public-definition:10aca4ecb3de93c94bc0ffbd",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:493:children"
+    },
+    {
+      "artifactId": "python-public-definition:1912e1da403b78758ae57e46",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:586:VisibleNode"
+    },
+    {
+      "artifactId": "python-public-definition:1f9b993864d6cd665700bfaa",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:100:PointData"
+    },
+    {
+      "artifactId": "python-public-definition:24f32e06176a3d755e77dbb1",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:215:is_copc"
+    },
+    {
+      "artifactId": "python-public-definition:3a16c456148701376e01fe99",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/datasets.py:269:mini_dem"
+    },
+    {
+      "artifactId": "python-public-definition:56513c03627a88b369cd74ac",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/datasets.py:238:dataset_info"
+    },
+    {
+      "artifactId": "python-public-definition:63deda30941f270f8ad5dbda",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/datasets.py:228:available"
+    },
+    {
+      "artifactId": "python-public-definition:64ba87bc94139bfdf55a7cc6",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:230:CopcDataset"
+    },
+    {
+      "artifactId": "python-public-definition:6c820e58b1312d91603f9558",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:226:children"
+    },
+    {
+      "artifactId": "python-public-definition:6dfc9625612c337d2cec3bcc",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:211:bounds"
+    },
+    {
+      "artifactId": "python-public-definition:722e8babfb17b304e0d90604",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/datasets.py:320:fetch_copc"
+    },
+    {
+      "artifactId": "python-public-definition:72e63bb28839262b7a5d260b",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:474:total_points"
+    },
+    {
+      "artifactId": "python-public-definition:77078dd4c253cb80ef218d28",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/datasets.py:285:fetch"
+    },
+    {
+      "artifactId": "python-public-definition:79f88e11bee5907a16e2ecd2",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:484:root_node"
+    },
+    {
+      "artifactId": "python-public-definition:7b7795e91a3b364671a78fba",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:90:OctreeNode"
+    },
+    {
+      "artifactId": "python-public-definition:872ede16572dcd147c204a32",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:207:node_count"
+    },
+    {
+      "artifactId": "python-public-definition:87dd2d2c68f91d2a9334c81c",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:83:radius"
+    },
+    {
+      "artifactId": "python-public-definition:89f54c42b7b5eb39fbb4e62a",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:374:root_node"
+    },
+    {
+      "artifactId": "python-public-definition:8a330ffe90363c2372b9bd5b",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:199:version"
+    },
+    {
+      "artifactId": "python-public-definition:9392de93548b3d128a81be92",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:39:root"
+    },
+    {
+      "artifactId": "python-public-definition:9a961fce887b44c2a4cddd58",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:559:open_ept"
+    },
+    {
+      "artifactId": "python-public-definition:9d93cbc027d65b1f4ba39497",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:383:children"
+    },
+    {
+      "artifactId": "python-public-definition:a170af4d656ce2241f255951",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/datasets.py:223:remote"
+    },
+    {
+      "artifactId": "python-public-definition:a653d326de648ebfede32702",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:612:set_viewport"
+    },
+    {
+      "artifactId": "python-public-definition:a700cb709bdce8f6f5f34282",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:69:center"
+    },
+    {
+      "artifactId": "python-public-definition:a817d3db7795b264ff8ea9f6",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:107:point_count"
+    },
+    {
+      "artifactId": "python-public-definition:aba75af426ae3728eaf5bc63",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:31:OctreeKey"
+    },
+    {
+      "artifactId": "python-public-definition:b3d6af5233b36d8fdc567826",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:41:child"
+    },
+    {
+      "artifactId": "python-public-definition:bd547293db47fc3072ab76fa",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:54:from_str"
+    },
+    {
+      "artifactId": "python-public-definition:cd3ec45dac55d84d1d432353",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/datasets.py:315:fetch_cityjson"
+    },
+    {
+      "artifactId": "python-public-definition:d275558d80e8ef75a3562748",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:429:EptDataset"
+    },
+    {
+      "artifactId": "python-public-definition:d3302c6ac17e2a36eca8c75b",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:217:root_node"
+    },
+    {
+      "artifactId": "python-public-definition:d38454dc1ad69fc794670f87",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:540:open_laz"
+    },
+    {
+      "artifactId": "python-public-definition:d49665a122b1a2100a4cde2e",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:482:bounds"
+    },
+    {
+      "artifactId": "python-public-definition:d5087f7dfc3515c0c3d0df3b",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:545:open_copc"
+    },
+    {
+      "artifactId": "python-public-definition:d8a8cd376b0a808b03fabb32",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:203:total_points"
+    },
+    {
+      "artifactId": "python-public-definition:dd5f73590105f38391033f97",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/datasets.py:218:bundled"
+    },
+    {
+      "artifactId": "python-public-definition:df21b1e080ca00da38b4ac5b",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/datasets.py:275:sample_boundaries_path"
+    },
+    {
+      "artifactId": "python-public-definition:df2b34690c90ef7d72887de9",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:616:get_visible_nodes"
+    },
+    {
+      "artifactId": "python-public-definition:e27da049cf9659886f6c4d0e",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/datasets.py:233:list_datasets"
+    },
+    {
+      "artifactId": "python-public-definition:e363ebddb0a8451aafabad3f",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/datasets.py:264:mini_dem_path"
+    },
+    {
+      "artifactId": "python-public-definition:e830df61779093c3c5870bf4",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/datasets.py:280:sample_boundaries"
+    },
+    {
+      "artifactId": "python-public-definition:e911860fb30ce7af7cbc8ff3",
+      "row": "E06",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/datasets.py:310:fetch_dem"
+    },
+    {
+      "artifactId": "python-public-definition:e9c97594e6eaaeb776a51111",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:372:bounds"
+    },
+    {
+      "artifactId": "python-public-definition:e9e383ff3a71449cde6487f4",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:76:size"
+    },
+    {
+      "artifactId": "python-public-definition:ece080c6cb293f9a2e3816ff",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:564:open_pointcloud"
+    },
+    {
+      "artifactId": "python-public-definition:ef758f6eb894b3da4d9e7535",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:109:LazDataset"
+    },
+    {
+      "artifactId": "python-public-definition:f3590c20247837c442257ec9",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:478:node_count"
+    },
+    {
+      "artifactId": "python-public-definition:f9e1782591bc6a606778fdc7",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:368:node_count"
+    },
+    {
+      "artifactId": "python-public-definition:fb53d8733083fc5505c61945",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:364:total_points"
+    },
+    {
+      "artifactId": "python-public-definition:ff99c9b1de364c1f0fce1966",
+      "row": "G03",
+      "evidenceKind": "capability-evidence-route",
+      "source": "python/forge3d/pointcloud.py:65:OctreeBounds"
+    }
+  ]
 }

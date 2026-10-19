@@ -9,7 +9,9 @@
       "hashMode": "raw",
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
-      "provenance": []
+      "provenance": [
+        "git:baf995df4166839b34a16507520e3dcacc55f05b:crates/forge3d-web/assets/basis/.gitattributes"
+      ]
     },
     {
       "path": "crates/forge3d-web/assets/basis/LICENSE",
@@ -18,7 +20,9 @@
       "hashMode": "raw",
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
-      "provenance": []
+      "provenance": [
+        "git:9b80846bcd408067870cdf4f6b13d57a45035581:crates/forge3d-web/assets/basis/LICENSE"
+      ]
     },
     {
       "path": "crates/forge3d-web/assets/basis/basis_transcoder.csp.js",
@@ -27,7 +31,9 @@
       "hashMode": "utf8-lf",
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
-      "provenance": []
+      "provenance": [
+        "git:006f02ad193a85917ef92e72d4713cfc5b186263:crates/forge3d-web/assets/basis/basis_transcoder.csp.js"
+      ]
     },
     {
       "path": "crates/forge3d-web/assets/basis/basis_transcoder.js",
@@ -36,7 +42,9 @@
       "hashMode": "utf8-lf",
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
-      "provenance": []
+      "provenance": [
+        "git:9b80846bcd408067870cdf4f6b13d57a45035581:crates/forge3d-web/assets/basis/basis_transcoder.js"
+      ]
     },
     {
       "path": "crates/forge3d-web/assets/basis/basis_transcoder.wasm",
@@ -45,7 +53,9 @@
       "hashMode": "raw",
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
-      "provenance": []
+      "provenance": [
+        "git:9b80846bcd408067870cdf4f6b13d57a45035581:crates/forge3d-web/assets/basis/basis_transcoder.wasm"
+      ]
     },
     {
       "path": "crates/forge3d-web/assets/datasets/mini_dem.npy",
@@ -56,7 +66,7 @@
       "origin": "browser-owned-see-provenance",
       "provenance": [
         "crates/forge3d-web/assets/datasets/provenance.json",
-        "crates/forge3d-web/assets/datasets/provenance.json"
+        "git:16bcdb29168325b9fd0248bdf794b2eee87103f9:crates/forge3d-web/assets/datasets/mini_dem.npy"
       ]
     },
     {
@@ -68,7 +78,7 @@
       "origin": "browser-owned-see-provenance",
       "provenance": [
         "crates/forge3d-web/assets/datasets/provenance.json",
-        "crates/forge3d-web/assets/datasets/provenance.json"
+        "git:16bcdb29168325b9fd0248bdf794b2eee87103f9:crates/forge3d-web/assets/datasets/provenance.json"
       ]
     },
     {
@@ -80,7 +90,7 @@
       "origin": "browser-owned-see-provenance",
       "provenance": [
         "crates/forge3d-web/assets/datasets/provenance.json",
-        "crates/forge3d-web/assets/datasets/provenance.json"
+        "git:6dcf61a301cee3d4dcb3ab431fb6844c94baab9a:crates/forge3d-web/assets/datasets/remote-storage.json"
       ]
     },
     {
@@ -92,7 +102,7 @@
       "origin": "browser-owned-see-provenance",
       "provenance": [
         "crates/forge3d-web/assets/datasets/provenance.json",
-        "crates/forge3d-web/assets/datasets/provenance.json"
+        "git:16bcdb29168325b9fd0248bdf794b2eee87103f9:crates/forge3d-web/assets/datasets/sample_boundaries.geojson"
       ]
     },
     {
@@ -104,7 +114,7 @@
       "origin": "browser-owned-see-provenance",
       "provenance": [
         "crates/forge3d-web/assets/fonts/provenance.json",
-        "crates/forge3d-web/assets/fonts/provenance.json"
+        "git:676022b2fa2840471afa69895ff4bef400f55fb2:crates/forge3d-web/assets/fonts/DejaVu-LICENSE"
       ]
     },
     {
@@ -116,7 +126,7 @@
       "origin": "browser-owned-see-provenance",
       "provenance": [
         "crates/forge3d-web/assets/fonts/provenance.json",
-        "crates/forge3d-web/assets/fonts/provenance.json"
+        "git:676022b2fa2840471afa69895ff4bef400f55fb2:crates/forge3d-web/assets/fonts/DejaVuSans-Bold.ttf"
       ]
     },
     {
@@ -128,7 +138,7 @@
       "origin": "browser-owned-see-provenance",
       "provenance": [
         "crates/forge3d-web/assets/fonts/provenance.json",
-        "crates/forge3d-web/assets/fonts/provenance.json"
+        "git:676022b2fa2840471afa69895ff4bef400f55fb2:crates/forge3d-web/assets/fonts/DejaVuSans.ttf"
       ]
     },
     {
@@ -140,7 +150,7 @@
       "origin": "browser-owned-see-provenance",
       "provenance": [
         "crates/forge3d-web/assets/fonts/provenance.json",
-        "crates/forge3d-web/assets/fonts/provenance.json"
+        "git:9b4519517db3c4d86f21f31c3ab5441ba000282b:crates/forge3d-web/assets/fonts/NotoSans-Regular.ttf"
       ]
     },
     {
@@ -152,7 +162,7 @@
       "origin": "browser-owned-see-provenance",
       "provenance": [
         "crates/forge3d-web/assets/fonts/provenance.json",
-        "crates/forge3d-web/assets/fonts/provenance.json"
+        "git:9b4519517db3c4d86f21f31c3ab5441ba000282b:crates/forge3d-web/assets/fonts/NotoSansArabic-Regular.ttf"
       ]
     },
     {
@@ -164,7 +174,7 @@
       "origin": "browser-owned-see-provenance",
       "provenance": [
         "crates/forge3d-web/assets/fonts/provenance.json",
-        "crates/forge3d-web/assets/fonts/provenance.json"
+        "git:9b4519517db3c4d86f21f31c3ab5441ba000282b:crates/forge3d-web/assets/fonts/NotoSansDevanagari-Regular.ttf"
       ]
     },
     {
@@ -176,7 +186,7 @@
       "origin": "browser-owned-see-provenance",
       "provenance": [
         "crates/forge3d-web/assets/fonts/provenance.json",
-        "crates/forge3d-web/assets/fonts/provenance.json"
+        "git:9b4519517db3c4d86f21f31c3ab5441ba000282b:crates/forge3d-web/assets/fonts/OFL.txt"
       ]
     },
     {
@@ -188,7 +198,7 @@
       "origin": "browser-owned-see-provenance",
       "provenance": [
         "crates/forge3d-web/assets/fonts/provenance.json",
-        "crates/forge3d-web/assets/fonts/provenance.json"
+        "git:676022b2fa2840471afa69895ff4bef400f55fb2:crates/forge3d-web/assets/fonts/dejavu-provenance.json"
       ]
     },
     {
@@ -200,7 +210,7 @@
       "origin": "browser-owned-see-provenance",
       "provenance": [
         "crates/forge3d-web/assets/fonts/provenance.json",
-        "crates/forge3d-web/assets/fonts/provenance.json"
+        "git:9b4519517db3c4d86f21f31c3ab5441ba000282b:crates/forge3d-web/assets/fonts/provenance.json"
       ]
     },
     {
@@ -211,7 +221,8 @@
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/assets/harfbuzz/provenance.json"
+        "crates/forge3d-web/assets/harfbuzz/provenance.json",
+        "git:9b4519517db3c4d86f21f31c3ab5441ba000282b:crates/forge3d-web/assets/harfbuzz/LICENSE"
       ]
     },
     {
@@ -222,7 +233,8 @@
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/assets/harfbuzz/provenance.json"
+        "crates/forge3d-web/assets/harfbuzz/provenance.json",
+        "git:9b4519517db3c4d86f21f31c3ab5441ba000282b:crates/forge3d-web/assets/harfbuzz/harfbuzz.js"
       ]
     },
     {
@@ -233,7 +245,8 @@
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/assets/harfbuzz/provenance.json"
+        "crates/forge3d-web/assets/harfbuzz/provenance.json",
+        "git:9b4519517db3c4d86f21f31c3ab5441ba000282b:crates/forge3d-web/assets/harfbuzz/harfbuzz.wasm"
       ]
     },
     {
@@ -244,7 +257,8 @@
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/assets/harfbuzz/provenance.json"
+        "crates/forge3d-web/assets/harfbuzz/provenance.json",
+        "git:9b4519517db3c4d86f21f31c3ab5441ba000282b:crates/forge3d-web/assets/harfbuzz/index.d.mts"
       ]
     },
     {
@@ -255,7 +269,8 @@
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/assets/harfbuzz/provenance.json"
+        "crates/forge3d-web/assets/harfbuzz/provenance.json",
+        "git:9b4519517db3c4d86f21f31c3ab5441ba000282b:crates/forge3d-web/assets/harfbuzz/index.mjs"
       ]
     },
     {
@@ -266,7 +281,8 @@
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/assets/harfbuzz/provenance.json"
+        "crates/forge3d-web/assets/harfbuzz/provenance.json",
+        "git:9b4519517db3c4d86f21f31c3ab5441ba000282b:crates/forge3d-web/assets/harfbuzz/provenance.json"
       ]
     },
     {
@@ -277,7 +293,8 @@
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/assets/laz/provenance.json"
+        "crates/forge3d-web/assets/laz/provenance.json",
+        "git:8c8f1baf494286731378fb87935bffaae9ccd8a7:crates/forge3d-web/assets/laz/laz-perf.LICENSE"
       ]
     },
     {
@@ -288,7 +305,8 @@
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/assets/laz/provenance.json"
+        "crates/forge3d-web/assets/laz/provenance.json",
+        "git:8c8f1baf494286731378fb87935bffaae9ccd8a7:crates/forge3d-web/assets/laz/laz-perf.js"
       ]
     },
     {
@@ -299,7 +317,8 @@
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/assets/laz/provenance.json"
+        "crates/forge3d-web/assets/laz/provenance.json",
+        "git:8c8f1baf494286731378fb87935bffaae9ccd8a7:crates/forge3d-web/assets/laz/laz-perf.wasm"
       ]
     },
     {
@@ -310,7 +329,8 @@
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/assets/laz/provenance.json"
+        "crates/forge3d-web/assets/laz/provenance.json",
+        "git:8c8f1baf494286731378fb87935bffaae9ccd8a7:crates/forge3d-web/assets/laz/provenance.json"
       ]
     },
     {
@@ -320,7 +340,9 @@
       "hashMode": "raw",
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
-      "provenance": []
+      "provenance": [
+        "git:676022b2fa2840471afa69895ff4bef400f55fb2:crates/forge3d-web/assets/licenses/fontkit.LICENSE"
+      ]
     },
     {
       "path": "crates/forge3d-web/assets/proj/GRID-LICENSE.txt",
@@ -330,7 +352,8 @@
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/assets/proj/provenance.json"
+        "crates/forge3d-web/assets/proj/provenance.json",
+        "git:16bcdb29168325b9fd0248bdf794b2eee87103f9:crates/forge3d-web/assets/proj/GRID-LICENSE.txt"
       ]
     },
     {
@@ -341,7 +364,8 @@
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/assets/proj/provenance.json"
+        "crates/forge3d-web/assets/proj/provenance.json",
+        "git:16bcdb29168325b9fd0248bdf794b2eee87103f9:crates/forge3d-web/assets/proj/LICENSE"
       ]
     },
     {
@@ -352,7 +376,8 @@
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/assets/proj/provenance.json"
+        "crates/forge3d-web/assets/proj/provenance.json",
+        "git:16bcdb29168325b9fd0248bdf794b2eee87103f9:crates/forge3d-web/assets/proj/PROJ-COPYING"
       ]
     },
     {
@@ -363,7 +388,8 @@
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/assets/proj/provenance.json"
+        "crates/forge3d-web/assets/proj/provenance.json",
+        "git:16bcdb29168325b9fd0248bdf794b2eee87103f9:crates/forge3d-web/assets/proj/proj-emscripten.js"
       ]
     },
     {
@@ -374,7 +400,8 @@
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/assets/proj/provenance.json"
+        "crates/forge3d-web/assets/proj/provenance.json",
+        "git:16bcdb29168325b9fd0248bdf794b2eee87103f9:crates/forge3d-web/assets/proj/proj-emscripten.wasm"
       ]
     },
     {
@@ -385,7 +412,8 @@
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/assets/proj/provenance.json"
+        "crates/forge3d-web/assets/proj/provenance.json",
+        "git:16bcdb29168325b9fd0248bdf794b2eee87103f9:crates/forge3d-web/assets/proj/proj.db"
       ]
     },
     {
@@ -396,7 +424,8 @@
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/assets/proj/provenance.json"
+        "crates/forge3d-web/assets/proj/provenance.json",
+        "git:16bcdb29168325b9fd0248bdf794b2eee87103f9:crates/forge3d-web/assets/proj/proj.ini"
       ]
     },
     {
@@ -407,7 +436,8 @@
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/assets/proj/provenance.json"
+        "crates/forge3d-web/assets/proj/provenance.json",
+        "git:16bcdb29168325b9fd0248bdf794b2eee87103f9:crates/forge3d-web/assets/proj/provenance.json"
       ]
     },
     {
@@ -418,7 +448,8 @@
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/assets/proj/provenance.json"
+        "crates/forge3d-web/assets/proj/provenance.json",
+        "git:16bcdb29168325b9fd0248bdf794b2eee87103f9:crates/forge3d-web/assets/proj/us_noaa_conus.tif"
       ]
     },
     {
@@ -428,7 +459,306 @@
       "hashMode": "utf8-lf",
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
-      "provenance": []
+      "provenance": [
+        "git:64d591fc36d2f72c69f62e7f4ed92a045b822df8:crates/forge3d-web/assets/w12/luxembourg-rail.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/examples/cartography.html.txt",
+      "sha256": "d8541f4b6780f7b60102e4dfcc99d11f2ae1f995676e84adf0251692af1d7011",
+      "bytes": 1210,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/examples/codecs.html.txt",
+      "sha256": "9d6e2f6ed38243923f4b4458b756c74851fc06bd957ba0cf856020f9e6c89388",
+      "bytes": 375,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/examples/crs-datasets.html.txt",
+      "sha256": "28fbccd10a2511e6a749603cad97c2c610184c51f9ed7eae15bda0fc0b00c829",
+      "bytes": 695,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/examples/mapscene.html.txt",
+      "sha256": "e2cd00a6ee265e983b9caf7c94fe0487e9341a381837e2b83511e8277834bc6e",
+      "bytes": 2770,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/examples/mesh-buildings.html.txt",
+      "sha256": "68fbaac457fe2f16db6799ae5cffd7c237b94fb0ffc40772806d7a5207e68f30",
+      "bytes": 849,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/examples/pointcloud-tiles.html.txt",
+      "sha256": "2fc179045386d293c9ae7a52ea1215436703fb66e92c945ace24520da3d43a3d",
+      "bytes": 1690,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/examples/style-bundle.html.txt",
+      "sha256": "35b2622d854eb201dcefa06eedd7d37521c60c60dd5c74bb5b6df8bdd7c0b461",
+      "bytes": 5641,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/examples/test-clear.html.txt",
+      "sha256": "68ec4cbc307251785aff15d546f2ff4bc5eb593300bb02528fdad2d802ec905f",
+      "bytes": 2378,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/examples/test-w02-runtime.html.txt",
+      "sha256": "bb1eb879be3c563ee9232d28d35781d48ae43c9238206e82d74813405225f543",
+      "bytes": 10071,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/examples/test-w03-terrain.html.txt",
+      "sha256": "42bd41bd4fdde57330a49c5123a12ff9ed59422b5ec84a99d586b268404ebf55",
+      "bytes": 18920,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/examples/test-w04-materials.html.txt",
+      "sha256": "86c31bc1a28840833f117d115f57b8479b6b2c8a7f0d50ffc14e2863c558a375",
+      "bytes": 12037,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/examples/test-w05-camera.html.txt",
+      "sha256": "881038d388cbd29d1d356117d7266e3ab60cbd017e1d902d322863628fd4eb96",
+      "bytes": 19307,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/examples/test-w06-capture.html.txt",
+      "sha256": "104dd3188857d7e0750c77e895db1b7baa367c848bdcac8ce1786586342b2fa6",
+      "bytes": 50422,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/examples/test-w07-materials.html.txt",
+      "sha256": "98f3a974f568a779f55ba3b1ed740b185d9110cf6ff2ca48f1c1016a70b208f9",
+      "bytes": 48103,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/examples/test-w08-terrain.html.txt",
+      "sha256": "189b77b3ab9901fae540a9dfb0ca560cded8bc66aeada7dd92cba65d4862735c",
+      "bytes": 52087,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/examples/test-w09.html.txt",
+      "sha256": "5b740fb4c7be155598193dc04dde688e96c1b89ee7cc3180b446834199f88981",
+      "bytes": 24440,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/examples/test-w10.html.txt",
+      "sha256": "d5dad9c1dec2a2f73fe0dff3fe934b2f5f7e716bc169d713a94f1583f46c1ed3",
+      "bytes": 27432,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/examples/test-w11-postfx.html.txt",
+      "sha256": "19b6cb08758b3bf13a5a9b6385b56bf61b3c13ee0b72099b0c7186a2d31d6c13",
+      "bytes": 13737,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/examples/test-w13-labels.html.txt",
+      "sha256": "adb599db2cf63b2a951ff709118cfd6e2192733491eb371ae7193920084e22ad",
+      "bytes": 28018,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/examples/tracing.html.txt",
+      "sha256": "4ad2743a5dc5fdd01ac16b7ea2b303e2d922b95a850e9e736f1ae80106428a1d",
+      "bytes": 3792,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/examples/utilities.html.txt",
+      "sha256": "48907381cee4b1db16fa61e3d1f61991704bc30595fe076fb2e484df96961961",
+      "bytes": 2549,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/examples/vector-picking.html.txt",
+      "sha256": "77e036d08acd3ba849606f1a60d497deb5d387562423b0d8bcec4d87955ba9dd",
+      "bytes": 2286,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/provenance.json",
+      "sha256": "4c82c5c57d7f07e7bf44d8a03f1afe9a4f1058f6c83e08c3faba91ad1c0a5a41",
+      "bytes": 25889,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/scripts/generate-w05-camera-fixture.py.txt",
+      "sha256": "e2b9cd386115f236ef7e797445a4e48a93d271574535ef8de270454d775cd298",
+      "bytes": 29210,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/scripts/generate-w06-aov-fixture.py.txt",
+      "sha256": "91aa52c24a35969ee1fc8fd98c7329f67769814652eb7f8ac5b26d5835b89217",
+      "bytes": 6034,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/scripts/generate-w23-application-fixtures.py.txt",
+      "sha256": "1808942f77e15be5e45eca0513da899f93b205692424fc114899b10492a905ad",
+      "bytes": 6056,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/scripts/generate-w23-goldens.py.txt",
+      "sha256": "5586bdc91fb3a2cfc45cef228bb4a8fd0b484dc85f0aaf42176a9f88117a9824",
+      "bytes": 2536,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/assets/highres.png",
@@ -443,7 +773,9 @@
         "sha256": "caaad307e1cb6198607f1c604881859f5f047100cf40763ce320a04c86f6f84a",
         "gitBlob": "2bc455376aad3146f833c723d037a102470b2bfa"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/assets/highres.png"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/assets/logo/forge3d_dark.svg",
@@ -458,7 +790,9 @@
         "sha256": "21b7ca4022b7e5f13c90e4836cf9a47c1a4be620b9ab2de43b6c59318227f7f1",
         "gitBlob": "ca69215beff9d7487b9fdeb9a7b1af3245e1f37d"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/assets/logo/forge3d_dark.svg"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/assets/logo/forge3d_light.svg",
@@ -473,7 +807,9 @@
         "sha256": "11a4fe95fcf0ceddf86c98e0fbed49d0597ba8d02e51a04d8e5aaa3eb90e6ba0",
         "gitBlob": "0911b7e43b80f5eb031f78d9885c81147d41165d"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/assets/logo/forge3d_light.svg"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/assets/thumbnails/f16_instancing.svg",
@@ -488,7 +824,9 @@
         "sha256": "7d30bad077db736c2275313ce8f6e0f48aa7f2696125d9f562549b63b9e74fbb",
         "gitBlob": "9c947dcf647e6b4eafaf4830b65d2057784b9c31"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/assets/thumbnails/f16_instancing.svg"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/assets/thumbnails/f18_gltf.svg",
@@ -503,7 +841,9 @@
         "sha256": "88fd87ae2842e817802dd573f68f176c9ab867a14febea51a315395ba633ff73",
         "gitBlob": "a6e42e7c6aa5d48c4d34c434a25f17c487de60db"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/assets/thumbnails/f18_gltf.svg"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/assets/thumbnails/f2_city_demo.svg",
@@ -518,7 +858,9 @@
         "sha256": "1dff26d0249d6651956ef6ac47320ad39c39e6a238c8bfc83a10daae3b2ed938",
         "gitBlob": "fbb2f95c4953bb1d7e203a66ca5a9e471092134a"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/assets/thumbnails/f2_city_demo.svg"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/assets/thumbnails/f3_thick_polyline.svg",
@@ -533,7 +875,9 @@
         "sha256": "1064b01e9dcc3cc7cba9583b2556c2a0baa7f18d24457c033ce4d7326a417d14",
         "gitBlob": "2cc795d9960428932c6e54b306d8aa9314a90ad5"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/assets/thumbnails/f3_thick_polyline.svg"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/gallery/images/01-mount-rainier.png",
@@ -548,7 +892,9 @@
         "sha256": "ce38e31d3953f6eb2a4c596c66cc317a70d59df263009b3109ffa538fb9b0c18",
         "gitBlob": "f9bd4f6606568aad1100af2e9f394ceb0efbf050"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/gallery/images/01-mount-rainier.png"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/gallery/images/02-mount-fuji-labels.png",
@@ -563,7 +909,9 @@
         "sha256": "a35ab0114c39afd6ebd8184be6a1f65d2270a1f3f6c17b91c026588b8c1ce91a",
         "gitBlob": "317252e7fed1b857e2e2c63ae68203c00bc0f812"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/gallery/images/02-mount-fuji-labels.png"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/gallery/images/03-swiss-landcover.png",
@@ -578,7 +926,9 @@
         "sha256": "6b2847582f3d27214ee9d8e3a7dfc2fe05bbfb649c066773ae039a56d098dba0",
         "gitBlob": "de96dce7686f6c8e13b3e846d44440630f8b0bb7"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/gallery/images/03-swiss-landcover.png"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/gallery/images/04-luxembourg-rail-network.png",
@@ -593,7 +943,9 @@
         "sha256": "d7da17807761ae996b90ebd43406177164e4b5d1dd8642068a7c4b725d4981f9",
         "gitBlob": "983654bf712c3ec71b6e11a7a161b187e329b188"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/gallery/images/04-luxembourg-rail-network.png"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/gallery/images/05-3d-buildings.png",
@@ -608,7 +960,9 @@
         "sha256": "817c88e27b67c3fba51ce24d40d2d5d883f3912b5b8c3e6479c2f5f44dfa8c09",
         "gitBlob": "81690e947f5a644eaffd2fb19d50b97077aa4ece"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/gallery/images/05-3d-buildings.png"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/gallery/images/06-point-cloud.png",
@@ -623,7 +977,9 @@
         "sha256": "7beea5a391930a70ba7b6f9db6878c673061a3a9ce12656496a934da0fedfbd7",
         "gitBlob": "c79ef865010745b14efd2b62ccaf315114f751a7"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/gallery/images/06-point-cloud.png"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/gallery/images/07-camera-flyover.png",
@@ -638,7 +994,9 @@
         "sha256": "f7f977eaae86dc2baeeb370c17c75a14577ee049b723f5d6bcc1dba31457b4ee",
         "gitBlob": "af9f2b99e4a801cd037042c9f7ca917bc7caaf9e"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/gallery/images/07-camera-flyover.png"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/gallery/images/08-vector-export.png",
@@ -653,7 +1011,9 @@
         "sha256": "d99770c104388623233490146c8ae4be832216a347cc1baf71cfecd48af4dd9f",
         "gitBlob": "7869eda548cf0c46513760f132fe5d24aee6c963"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/gallery/images/08-vector-export.png"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/gallery/images/09-shadow-comparison.png",
@@ -668,7 +1028,9 @@
         "sha256": "4bc6f213db90b4f4c39772c46bd16bd2af5744bbf56a234f9f4820bbf93c772c",
         "gitBlob": "5a5c03bee16a774318bbcad42c9322a3e490592f"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/gallery/images/09-shadow-comparison.png"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/gallery/images/10-map-plate.png",
@@ -683,7 +1045,9 @@
         "sha256": "2bdc4b327efe16dcefbc82db9b22554ed851e2f516b0c385733c30889aa9ce66",
         "gitBlob": "b959b46ca03c495d534f5b70435521417cec4d61"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/gallery/images/10-map-plate.png"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/tutorials/images/gis-01-first-dem.png",
@@ -698,7 +1062,9 @@
         "sha256": "dbdb1234ddc0ff449273a7d7fb9eb278ca5900cb1ee36a7218c2332176e818f9",
         "gitBlob": "ca2aa7ae5baceae02df0a32dd7ab1d61ea635989"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/tutorials/images/gis-01-first-dem.png"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/tutorials/images/gis-01-first-dem.svg",
@@ -713,7 +1079,9 @@
         "sha256": "75e98362f81197ef36740ef23acb888e09aa275b8162d62cf536b3734ff56263",
         "gitBlob": "7b1c126aff95700bf0e8255d199e3d1a4cfef522"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/tutorials/images/gis-01-first-dem.svg"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/tutorials/images/gis-02-overlays.png",
@@ -728,7 +1096,9 @@
         "sha256": "3a63bc069392f2d6bfc5a1fef9cba5ece8ee2ae5270b06418212b92aa3a71478",
         "gitBlob": "5e68721ec7c62f4659bf564201aedf78487641b3"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/tutorials/images/gis-02-overlays.png"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/tutorials/images/gis-02-overlays.svg",
@@ -743,7 +1113,9 @@
         "sha256": "a9bba063e7a134af7d57d760119a611a38825a7347ac4b00b9f3338e74fb2c2e",
         "gitBlob": "2d7466322d057cb2e4bd2308c7170f1c2fc3b2de"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/tutorials/images/gis-02-overlays.svg"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/tutorials/images/gis-03-map-plate.png",
@@ -758,7 +1130,9 @@
         "sha256": "215fd88cb5d2890a9e3f484b8a2c48947366533b599d44a19435b105b2c98fae",
         "gitBlob": "ca8c999d1e559798840f5e74f450007d2e199f48"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/tutorials/images/gis-03-map-plate.png"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/tutorials/images/gis-03-map-plate.svg",
@@ -773,7 +1147,9 @@
         "sha256": "e85419c6417067dd612caf86b50980b3a0ab7dba9eb29b3fb0a3b94bc16fc266",
         "gitBlob": "b47cd1d0cee7fda99e648d22bbc9c9e36c41e619"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/tutorials/images/gis-03-map-plate.svg"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/tutorials/images/gis-04-buildings.png",
@@ -788,7 +1164,9 @@
         "sha256": "f72a7d4c55c081c99f5858b465c5113d9ae2dcabb0a64f837f5575ba27fb6a21",
         "gitBlob": "dcaf3b74f123fc79c4e33c8ab06749e1503c9c69"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/tutorials/images/gis-04-buildings.png"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/tutorials/images/gis-04-buildings.svg",
@@ -803,7 +1181,9 @@
         "sha256": "7a8df57f8f0c68a5a11ea0ad69b60970ea8e6fa5c4e8c11b14b5df5c74911ef4",
         "gitBlob": "d21afdc147a5d51ef6b6a545f58a5dc8206c9645"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/tutorials/images/gis-04-buildings.svg"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/tutorials/images/python-01-first-terrain.png",
@@ -818,7 +1198,9 @@
         "sha256": "483866b35a51f2f3577f281ce59fa5cc657c4d33c60650b401c3901fcd30f27c",
         "gitBlob": "20778d6ba4e374a403ac6715603be55f75559c72"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/tutorials/images/python-01-first-terrain.png"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/tutorials/images/python-01-first-terrain.svg",
@@ -833,7 +1215,9 @@
         "sha256": "75e98362f81197ef36740ef23acb888e09aa275b8162d62cf536b3734ff56263",
         "gitBlob": "7b1c126aff95700bf0e8255d199e3d1a4cfef522"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/tutorials/images/python-01-first-terrain.svg"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/tutorials/images/python-02-camera-lighting.png",
@@ -848,7 +1232,9 @@
         "sha256": "8416e2e6e9043fa3e33355d4f077be030258d0fcd724d48dc8df4022677dab7c",
         "gitBlob": "56ba9dcb03cddf15aa309c67926f36e25b271f0b"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/tutorials/images/python-02-camera-lighting.png"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/tutorials/images/python-02-camera-lighting.svg",
@@ -863,7 +1249,9 @@
         "sha256": "eea91d1b1ca23494bfae813d4b319d4db247f3fe4aaa5b0764d31dd94f5f25a3",
         "gitBlob": "24633d44581dd8e493601df579b0ff30328b73ff"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/tutorials/images/python-02-camera-lighting.svg"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/tutorials/images/python-03-point-clouds.png",
@@ -878,7 +1266,9 @@
         "sha256": "5b887b5a6c1306f48fecb747ccd889a72cdac8251223e98f3925289e8dc6a33b",
         "gitBlob": "d8fd74391f42d5371659ab108dff20675e96d50b"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/tutorials/images/python-03-point-clouds.png"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/tutorials/images/python-03-point-clouds.svg",
@@ -893,7 +1283,9 @@
         "sha256": "1ffa4ee774f39a5161df6b2b2d9856351aaa21529d7448009701655a355a8b13",
         "gitBlob": "f86098d72e6b669868fcbc3b22bc61111eef1c83"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/tutorials/images/python-03-point-clouds.svg"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/tutorials/images/python-04-scene-bundles.png",
@@ -908,7 +1300,9 @@
         "sha256": "624d1dc3501e420b0390868e2ad661a350feb1e13f167e6d9b99ea3f062733fa",
         "gitBlob": "5835d1f54cc8e47d2d642ea03c469b623249b4ff"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/tutorials/images/python-04-scene-bundles.png"
+      ]
     },
     {
       "path": "crates/forge3d-web/docs/native-assets/tutorials/images/python-04-scene-bundles.svg",
@@ -923,7 +1317,35 @@
         "sha256": "75e98362f81197ef36740ef23acb888e09aa275b8162d62cf536b3734ff56263",
         "gitBlob": "7b1c126aff95700bf0e8255d199e3d1a4cfef522"
       },
-      "provenance": []
+      "provenance": [
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/docs/native-assets/tutorials/images/python-04-scene-bundles.svg"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/examples/migration/applications-provenance.json",
+      "sha256": "aa9304685321035f0774b420d310465a0b41aaaec07d8046fdb0fd972a611895",
+      "bytes": 1891,
+      "hashMode": "utf8-lf",
+      "role": "browser-runtime-or-example-input",
+      "origin": "native-derived",
+      "provenance": [
+        "crates/forge3d-web/examples/migration/applications-provenance.json",
+        "crates/forge3d-web/scripts/generate-w23-application-fixtures.py",
+        "crates/forge3d-web/examples/migration/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/examples/migration/applications.json",
+      "sha256": "5f92204a707d7d0a907960b049446bd005663ff4f6ff028628b1edc41d34b9b9",
+      "bytes": 6986,
+      "hashMode": "utf8-lf",
+      "role": "browser-runtime-or-example-input",
+      "origin": "native-derived",
+      "provenance": [
+        "crates/forge3d-web/examples/migration/applications-provenance.json",
+        "crates/forge3d-web/scripts/generate-w23-application-fixtures.py",
+        "crates/forge3d-web/examples/migration/provenance.json"
+      ]
     },
     {
       "path": "crates/forge3d-web/examples/migration/autzen.laz",
@@ -934,16 +1356,33 @@
       "origin": "browser-owned-see-provenance",
       "provenance": [
         "crates/forge3d-web/examples/migration/provenance.json",
-        "crates/forge3d-web/tests/fixtures/w22/manifest.json"
+        "crates/forge3d-web/tests/fixtures/w22/manifest.json",
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/examples/migration/autzen.laz"
       ]
     },
     {
       "path": "crates/forge3d-web/examples/migration/catalog.json",
-      "sha256": "018c0c5f14740bab5b4a6521d7cd3f4cd673b61dde55ab3ae2da9c0ade89ad48",
-      "bytes": 43022,
+      "sha256": "13442bde374e7ec0d4d118522b68ebcf9922c8a0fd59d70a346e236097b50163",
+      "bytes": 43795,
       "hashMode": "utf8-lf",
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/examples/migration/provenance.json",
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/examples/migration/catalog.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/examples/migration/mapbox-streets-v8.json",
+      "sha256": "58e2e319174083b7d85150a498f7faf2b2176d9e2fce73484b4e580bf0a846c2",
+      "bytes": 3719,
+      "hashMode": "utf8-lf",
+      "role": "browser-runtime-or-example-input",
+      "origin": "native-byte-preserved",
+      "native": {
+        "ref": "bf8db93233e5158f6d226991fc5d230832c2d806",
+        "path": "tests/fixtures/mapbox_streets_v8.json"
+      },
       "provenance": [
         "crates/forge3d-web/examples/migration/provenance.json"
       ]
@@ -957,7 +1396,8 @@
       "origin": "browser-owned-see-provenance",
       "provenance": [
         "crates/forge3d-web/examples/migration/provenance.json",
-        "crates/forge3d-web/tests/fixtures/w22/manifest.json"
+        "crates/forge3d-web/tests/fixtures/w22/manifest.json",
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/examples/migration/predictor.tif"
       ]
     },
     {
@@ -968,14 +1408,38 @@
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/examples/migration/provenance.json"
+        "crates/forge3d-web/examples/migration/provenance.json",
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/examples/migration/presets.json"
       ]
     },
     {
       "path": "crates/forge3d-web/examples/migration/provenance.json",
-      "sha256": "1c37c1f410185cea5f61f5b116b778e3e2ee0d327872ca5cac0a2cf8afe5c9a9",
-      "bytes": 468,
+      "sha256": "f5739cc99521f2ef075f0a9e1aadcc892fbf95862773f673b0645f31960747a8",
+      "bytes": 734,
       "hashMode": "utf8-lf",
+      "role": "browser-runtime-or-example-input",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/examples/migration/provenance.json",
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/examples/migration/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/examples/migration/rainier-cog.json",
+      "sha256": "fcd1b162f08761a9e0bc55a7b8a38ec33323d16e7a88634647c514ddddb8d4c2",
+      "bytes": 2059,
+      "hashMode": "utf8-lf",
+      "role": "browser-runtime-or-example-input",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/examples/migration/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/examples/migration/rainier-cog.tif",
+      "sha256": "ca8db82d906056938c8f56f286f6c8f323be5d6173f07a712292955cce7a0e21",
+      "bytes": 1536165,
+      "hashMode": "raw",
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
       "provenance": [
@@ -993,6 +1457,29 @@
         "ref": "bf8db93233e5158f6d226991fc5d230832c2d806",
         "path": "examples/sample_style.json"
       },
+      "provenance": [
+        "crates/forge3d-web/examples/migration/provenance.json",
+        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/examples/migration/sample-style.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/examples/migration/single-tile-oracle.json",
+      "sha256": "909922b5c52b690821bd5d35b5f44d5b443f6d1b621a97d0095b5d5f5cd226c2",
+      "bytes": 548,
+      "hashMode": "utf8-lf",
+      "role": "browser-runtime-or-example-input",
+      "origin": "native-derived",
+      "provenance": [
+        "crates/forge3d-web/examples/migration/provenance.json"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/examples/migration/terrain-single-tile.png",
+      "sha256": "9defb663d7088b84940aef6a0495199a15b67fa548a04ddf2e513e42803cb5f5",
+      "bytes": 26115,
+      "hashMode": "raw",
+      "role": "browser-runtime-or-example-input",
+      "origin": "native-derived",
       "provenance": [
         "crates/forge3d-web/examples/migration/provenance.json"
       ]

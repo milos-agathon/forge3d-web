@@ -58,6 +58,33 @@ def main():
         result["astTestDefinitions"] = sum(functions.values())
         assert result["namedTestFiles"] == 191
         assert result["astTestDefinitions"] == 1792
+    coverage = json.loads((ROOT / 'docs/parity/w23-coverage.json').read_text(encoding='utf8'))
+    examples = {e['nativePath']: set(e['workflows']) for e in coverage['examples']}
+    critical = {
+        'mini_dem': {'datasets', 'singleTile'}, 'render_triangle_png': {'triangle'},
+        'from_hdr': {'ibl'}, 'TerrainOrbitRig': {'rigs'}, 'TerrainRailRig': {'rigs'}, 'TerrainTargetFollowRig': {'rigs'},
+        'apply_preset': {'presets'}, 'render_terrain_pbr_pom': {'materials'},
+        'MapPlate': {'furniture'}, 'export_svg': {'furniture'}, 'export_pdf': {'furniture'},
+        'load_style': {'style'}, 'save_bundle': {'bundle'},
+    }
+    missing = []
+    call_requirements = 0
+    for record in records:
+        path = record['source']['path']
+        if record['kind'] != 'native-example' or not path.endswith(('.py', '.ipynb')):
+            continue
+        source = git('show', f"{record['source']['ref']}:{path}").decode('utf8')
+        if path.endswith('.ipynb'):
+            source = '\n'.join(''.join(c['source']) for c in json.loads(source)['cells'] if c['cell_type'] == 'code')
+            source = '\n'.join(line for line in source.splitlines() if not line.lstrip().startswith(('%', '!')))
+        calls = {n.func.attr if isinstance(n.func, ast.Attribute) else n.func.id for n in ast.walk(ast.parse(source)) if isinstance(n, ast.Call) and isinstance(n.func, (ast.Attribute, ast.Name))}
+        for name, destinations in critical.items():
+            if name in calls:
+                call_requirements += 1
+                if not destinations & examples[path]:
+                    missing.append({'example': path, 'nativeCall': name, 'requiredBrowserStep': sorted(destinations)})
+    assert not missing, missing
+    result['criticalExampleCallRequirements'] = call_requirements
     print(json.dumps({"method": "independent Git tree and Python AST enumeration", "commit": REF, **result}))
 
 

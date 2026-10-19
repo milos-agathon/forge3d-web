@@ -5,8 +5,8 @@ Building import, style loading/application and bundle save/load require an activ
 `MapScene` owns a typed recipe, validates its resources, prepares completed layer
 adapters, and returns a PNG `Blob`, RGBA `Frame`, validation report and review hashes.
 Use the package entrypoint. The [browser example](../examples/migration/index.html?example=mapscene_vector_labels.py) renders
-terrain, imagery, vector roads, scalar buildings, mesh/scatter geometry,
-real shaped glyphs and an annotation. Run `npm run dev` to open that example.
+terrain, vector roads and shaped glyph labels. Other migrated examples cover
+imagery, scalar buildings and scatter geometry. Run `npm run dev` to open that example.
 
 ## Quickstart
 
@@ -53,7 +53,7 @@ and exactly one of `data` or `url`. A resource identity covers all buffers in th
 asset. Validation lists every declared source and global material/IBL/probe asset;
 shared IDs require identical payloads. `scene:` IDs are reserved. Unresolved URL
 assets remain marked `unresolved` until asynchronous preparation verifies them.
-The full example's [recipe helpers](https://github.com/milos-agathon/forge3d/blob/d5cf3b578d7a946e2ca4008c42537380889537b3/crates/forge3d-web/examples/w18-mapscene.js) show concrete inputs.
+The full example's [recipe helpers](https://github.com/milos-agathon/forge3d-web/blob/d5cf3b578d7a946e2ca4008c42537380889537b3/crates/forge3d-web/examples/w18-mapscene.js) show concrete inputs.
 
 | Layer | Adapter and formats |
 |---|---|
@@ -214,7 +214,7 @@ Native factory codes retain messages, remediation, IDs, details and severity:
 | Pro import intent | `Pro-gated` | pro_gated_path; keep blocked. |
 
 Canonical examples and support guides: [MapScene](../examples/migration/index.html?example=mapscene_vector_labels.py),
-[recipe helpers](https://github.com/milos-agathon/forge3d/blob/d5cf3b578d7a946e2ca4008c42537380889537b3/crates/forge3d-web/examples/w18-mapscene.js), [LabelPlan](labels.md),
+[recipe helpers](https://github.com/milos-agathon/forge3d-web/blob/d5cf3b578d7a946e2ca4008c42537380889537b3/crates/forge3d-web/examples/w18-mapscene.js), [LabelPlan](labels.md),
 [vector/style scope](vector-layers.md), [building scope](geometry-mesh-io.md),
 [tiles scope](pointcloud-tiles.md), [VT and product boundaries](support-matrix.md).
 Run `npm run test:w18` for their executable regression tests.

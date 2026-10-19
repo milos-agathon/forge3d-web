@@ -98,16 +98,22 @@ input and does not embed an entitlement. See [cartography](cartography.md) and
 
 ## Regional example adaptations
 
-The [gallery](../examples/migration/index.html) runs the Forge3D operations from
-the native examples using small offline fixtures: terrain, overlays, vector
-geometry, labels, scalar buildings, scatter, picking, cameras, snapshots, video,
-CRS, datasets, style diagnostics, COG, LAZ and map furniture. Its per-example
-catalog records every selected workflow and the immutable native source hash.
-PNG frames, OBJ meshes, SVG/PDF maps, bundles and available MP4 outputs are
-downloadable from the gallery. Starting another run releases its previous URLs.
-Regional HTTP downloads, GIS/transport/climate analysis and editorial video
-production remain application inputs. The gallery does not claim visual
-reproduction of those regional publications.
+The [gallery](../examples/migration/index.html) executes a separate ordered
+pipeline for each native example. Dataset and analysis results feed terrain,
+raster/vector/building/scatter layers; the resulting scene feeds snapshots,
+frame sequences, video, bundles and map furniture. It includes native-oracle
+ports of relative elevation, climate quantiles, travel-time routing, roof solar
+orientation and satellite transitions. COG examples stream real tile pyramids;
+the single-tile and triangle examples produce their own PNGs.
+
+HTTP inputs use bounded offline fixtures in place of regional services and
+large publication datasets. Source hashes and numerical-oracle provenance make
+these adaptations reviewable. Historical illustrations remain native output,
+and physical/visual qualification retains its owning feature and W24 gates.
+PNG, OBJ, SVG/PDF, bundle and encoded MP4 outputs are downloadable. Individual
+viewers retain controls for their current content; changing runs releases prior
+controls, resources and URLs. Missing licenses and unavailable codecs are
+reported explicitly, rather than being counted as executed examples.
 
 ## Removed APIs and explicit diagnostics
 
