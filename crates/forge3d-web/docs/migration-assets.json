@@ -471,7 +471,8 @@
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/examples/cartography.html.txt"
       ]
     },
     {
@@ -482,7 +483,8 @@
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/examples/codecs.html.txt"
       ]
     },
     {
@@ -493,7 +495,8 @@
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/examples/crs-datasets.html.txt"
       ]
     },
     {
@@ -504,7 +507,8 @@
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/examples/mapscene.html.txt"
       ]
     },
     {
@@ -515,7 +519,8 @@
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/examples/mesh-buildings.html.txt"
       ]
     },
     {
@@ -526,7 +531,8 @@
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/examples/pointcloud-tiles.html.txt"
       ]
     },
     {
@@ -537,7 +543,8 @@
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/examples/style-bundle.html.txt"
       ]
     },
     {
@@ -548,7 +555,8 @@
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/examples/test-clear.html.txt"
       ]
     },
     {
@@ -559,7 +567,8 @@
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/examples/test-w02-runtime.html.txt"
       ]
     },
     {
@@ -570,7 +579,8 @@
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/examples/test-w03-terrain.html.txt"
       ]
     },
     {
@@ -581,7 +591,8 @@
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/examples/test-w04-materials.html.txt"
       ]
     },
     {
@@ -592,7 +603,8 @@
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/examples/test-w05-camera.html.txt"
       ]
     },
     {
@@ -603,7 +615,8 @@
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/examples/test-w06-capture.html.txt"
       ]
     },
     {
@@ -614,7 +627,8 @@
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/examples/test-w07-materials.html.txt"
       ]
     },
     {
@@ -625,7 +639,8 @@
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/examples/test-w08-terrain.html.txt"
       ]
     },
     {
@@ -636,7 +651,8 @@
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/examples/test-w09.html.txt"
       ]
     },
     {
@@ -647,7 +663,8 @@
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/examples/test-w10.html.txt"
       ]
     },
     {
@@ -658,7 +675,8 @@
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/examples/test-w11-postfx.html.txt"
       ]
     },
     {
@@ -669,7 +687,8 @@
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/examples/test-w13-labels.html.txt"
       ]
     },
     {
@@ -680,7 +699,8 @@
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/examples/tracing.html.txt"
       ]
     },
     {
@@ -691,7 +711,8 @@
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/examples/utilities.html.txt"
       ]
     },
     {
@@ -702,7 +723,8 @@
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/examples/vector-picking.html.txt"
       ]
     },
     {
@@ -713,7 +735,8 @@
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/provenance.json"
       ]
     },
     {
@@ -724,7 +747,8 @@
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/scripts/generate-w05-camera-fixture.py.txt"
       ]
     },
     {
@@ -735,7 +759,8 @@
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/scripts/generate-w06-aov-fixture.py.txt"
       ]
     },
     {
@@ -746,7 +771,8 @@
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/scripts/generate-w23-application-fixtures.py.txt"
       ]
     },
     {
@@ -757,7 +783,980 @@
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/scripts/generate-w23-goldens.py.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/parity/w23-application-analysis.test.mjs.txt",
+      "sha256": "f8252a7a22a7789d1eb8e6d7ae880f135e028889fca2f69fc107860c9eea7487",
+      "bytes": 1248,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/parity/w23-application-analysis.test.mjs.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/parity/w23-public-contracts.test.mjs.txt",
+      "sha256": "01965ba8eeaf921ac55d02c0d4f0ab1fbff5751aa9ab9ae23e0719e5429ff0f3",
+      "bytes": 2723,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/parity/w23-public-contracts.test.mjs.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/device_loss.spec.ts.txt",
+      "sha256": "ee2ef5bbcf22e015ead0d15965a749ff4f4d602f901e8ef6e92938868183630c",
+      "bytes": 13613,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/device_loss.spec.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w02_runtime.spec.ts.txt",
+      "sha256": "63a8b7afb881e43360ee85c20aa62451644cd510085fb71cdef3b087f7cd2beb",
+      "bytes": 5959,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/w02_runtime.spec.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w03_terrain.spec.ts.txt",
+      "sha256": "5f785e4a0a4442fefec743fde726bb9b9d30f88a33e8e838ec393332890d54b4",
+      "bytes": 4969,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/w03_terrain.spec.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w04_materials.spec.ts.txt",
+      "sha256": "753bd8330a391eb487bcdbff1a29820f082848734f27f7dbcb192c6ccbe10b51",
+      "bytes": 5002,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/w04_materials.spec.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w04_shadows.spec.ts.txt",
+      "sha256": "f33f3cc14b0a99b4b7e65661ecbdb38256bf8e82c5d20347c328bd9d9fab1f1b",
+      "bytes": 2755,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/w04_shadows.spec.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w05_camera.spec.ts.txt",
+      "sha256": "820eff9818374c89b1b09d8e6740353af3c9d37803867cd684eadfca7a5fc825",
+      "bytes": 7906,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/w05_camera.spec.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w06_capture.spec.ts.txt",
+      "sha256": "8ccc654bb526c5d69f23f88757f2f725f7d6ebc7a0a544e5d5d2adb37bd94ae2",
+      "bytes": 12216,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/w06_capture.spec.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w07_materials.spec.ts.txt",
+      "sha256": "b5253ee04f744865af3b33b5790c650a096ec705e6823d7fb812722a86a4dadf",
+      "bytes": 7940,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/w07_materials.spec.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w08_cog.spec.ts.txt",
+      "sha256": "7a8128fbee6178bf5d5790b4c09761c14bdba829ec547f858ae669a3e0c11b13",
+      "bytes": 16768,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/w08_cog.spec.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w08_terrain.spec.ts.txt",
+      "sha256": "a06f3549c061c5bf901f57e2a0327ab11d0e69981e8f9890ef05ec66ac3f4086",
+      "bytes": 9422,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/w08_terrain.spec.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w08_vt.spec.ts.txt",
+      "sha256": "f459c096bceb4f85a6611b339b336ea00d5e51993003b6d523f538abb7f274c6",
+      "bytes": 10211,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/w08_vt.spec.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w09_scatter_probes.spec.ts.txt",
+      "sha256": "4341415bed9f878ad695eb100dbd033c39c61a1426e2579dbed2dc1c689794c7",
+      "bytes": 10030,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/w09_scatter_probes.spec.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w10_environment.spec.ts.txt",
+      "sha256": "f965889fb6f09f5847422219948e4e78d572da37872034326fd3422494a030b3",
+      "bytes": 13199,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/w10_environment.spec.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w10_native.spec.ts.txt",
+      "sha256": "397e557a8f3d3dcc323c4b0f55cd333413dabc64535050f962cad07fc390a466",
+      "bytes": 4689,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/w10_native.spec.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w11_postfx.spec.ts.txt",
+      "sha256": "08d55fb5e5ea124cd2c96e2eb8f734fdd77d550993b6b170a599f9fa18075151",
+      "bytes": 6434,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/w11_postfx.spec.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w12_vector.spec.ts.txt",
+      "sha256": "968cae780a802f1fc1806e9428255985ac73abd3efae6964ef9c6f5ba5d921f3",
+      "bytes": 15986,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/w12_vector.spec.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w13_labels.spec.ts.txt",
+      "sha256": "14f8aa81e6c5cd526892944f7664673aa364369b22109c07b4c3d8465baa81dc",
+      "bytes": 5669,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/w13_labels.spec.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w14_foundation.spec.ts.txt",
+      "sha256": "27ccf13f3672a604c679bd789f002388ab4d72309fe5cd590d08231f56fa3bc5",
+      "bytes": 12031,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/w14_foundation.spec.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w15_geometry.spec.ts.txt",
+      "sha256": "779fb8e5d1557a18414feedd52231eb9dc2b8f21d8daeacaa753b1daffb9d666",
+      "bytes": 6952,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/w15_geometry.spec.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w16_pointcloud.spec.ts.txt",
+      "sha256": "d7fac966ab613527925c1ef7e41fea5568661ddfe31d8e629044b1ba731e9d0e",
+      "bytes": 21691,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/w16_pointcloud.spec.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w17_tracing.spec.ts.txt",
+      "sha256": "abadd857b8686499fbc2898bf1953c53cb6a4da49565c926ae87c5de7b742f03",
+      "bytes": 29782,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/w17_tracing.spec.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w18_mapscene.spec.ts.txt",
+      "sha256": "2fb6885ebda4d0818c3f27f414f2165c47f9c0ab4cf28d97373fab328bc5df0b",
+      "bytes": 21653,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/w18_mapscene.spec.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w19_style_bundle.spec.ts.txt",
+      "sha256": "eba5438d16dbaaccc4c9b433ec3d049b257b34124887e295ff84569ea537b9b6",
+      "bytes": 25243,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/w19_style_bundle.spec.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w20_cartography.spec.ts.txt",
+      "sha256": "7cce9127aed87f9726e9aef0797983e2971a11d55ddcbd416456872a307ea56c",
+      "bytes": 25612,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/w20_cartography.spec.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w21_utilities.spec.ts.txt",
+      "sha256": "7f7208327353eefbb95e59a00002a9f7904e8b271da8fb7be50189330a0b28db",
+      "bytes": 10884,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/w21_utilities.spec.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w22_codecs.spec.ts.txt",
+      "sha256": "9c3c19cb034ad95f7312acb33cacda58c7649782aa1d757a5dee20085ecfbec0",
+      "bytes": 20539,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/w22_codecs.spec.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/webgpu_diagnostics.spec.ts.txt",
+      "sha256": "4bd15ef4ccc8fae817b8da6eb80379de156d6c481fdc58fbb3eb5f6d6f071577",
+      "bytes": 3307,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/playwright/webgpu_diagnostics.spec.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/browser-resources.test.ts.txt",
+      "sha256": "c27fcbbc90122a0549462fe433d2311f24204f58b80d501b4707dc25dc5ad441",
+      "bytes": 24916,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/browser-resources.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/camera-animation.test.ts.txt",
+      "sha256": "746c486a1de463e2324517e9368f249e37fdd424f6fde821c1e7adb9f1ea1c5d",
+      "bytes": 12136,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/camera-animation.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/camera-rigs.test.ts.txt",
+      "sha256": "9e27c3fdde8900ec842c4df13e61e0900dc12ae19fcd592597d2cbfb39026c42",
+      "bytes": 16497,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/camera-rigs.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/camera.test.ts.txt",
+      "sha256": "6dce786b913e33cbaa23606b31b40e7b5466a6381c8a510b7a8bd474350edc9d",
+      "bytes": 14655,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/camera.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/cog.test.ts.txt",
+      "sha256": "a771e012beddc857fb26932ea661989521ed902f1da5c950fafd4697a552cc16",
+      "bytes": 15311,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/cog.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/environment.test.ts.txt",
+      "sha256": "d0aab3c9f3475ed65996403acd60eada951c2c43f8362eeea05fef9a6c4b31f8",
+      "bytes": 12404,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/environment.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/ibl.test.ts.txt",
+      "sha256": "b740d5fc8add415861f0a697639f417b9bb5b16ee5d204b2dea34e61ba4b5bd9",
+      "bytes": 32998,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/ibl.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/label-contract-record.test.ts.txt",
+      "sha256": "e9a7d69f282155c397ccfe5bd444225bb44a97fc3f43ebb005fd0ece7d5b6903",
+      "bytes": 3928,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/label-contract-record.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/label-workflows.test.ts.txt",
+      "sha256": "885fdee83aeee8da7275cf73ab4d2e1fbdecf5bca54d0d1e10e3ebf9066b6d7a",
+      "bytes": 23133,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/label-workflows.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/labels.test.ts.txt",
+      "sha256": "b87beb78110eda484fd1c55cfe1176a4321a461a3882aa7dbbab4b112991ffad",
+      "bytes": 17537,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/labels.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/lighting.test.ts.txt",
+      "sha256": "19938b45b4db14e2cd0ac563dbaa2385a1ec1bfc9b2fe5d53ece778517b6e19a",
+      "bytes": 20359,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/lighting.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/materials.test.ts.txt",
+      "sha256": "072503b7ed499d2b5c73c73263aecdbf02229607cbd7c8301599a71cd63b395d",
+      "bytes": 14443,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/materials.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/postfx.test.ts.txt",
+      "sha256": "a8b956aa8bf0d844d9b1b6599a46f66cf76a04e33b6f2938a8644cda1852a097",
+      "bytes": 3358,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/postfx.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/renderer-config.test.ts.txt",
+      "sha256": "7c081ddb402364e626aec062165e52094469812213b99a45f5d1ccfa87b5be7d",
+      "bytes": 15027,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/renderer-config.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/scene.test.ts.txt",
+      "sha256": "fad66b1cbe592cee538d73322ff34021b0b54262ba44c6d245c9edecf794dade",
+      "bytes": 31239,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/scene.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/session.test.ts.txt",
+      "sha256": "b4f38f4daf1f1965b15a9eb15875fc02f7f71acad721930df51f612573349ba0",
+      "bytes": 33611,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/session.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/shadows.test.ts.txt",
+      "sha256": "f2d73facca3da753f82c0dc7323ba8a071f0f93f1e5d4297ee76df1776fbf130",
+      "bytes": 14938,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/shadows.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/terrain-dataset.test.ts.txt",
+      "sha256": "06c23bfc0e45b11e07332282bb5c37fa59e7cdc5755e88c4b35a9e27069efb1a",
+      "bytes": 28888,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/terrain-dataset.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/terrain-material.test.ts.txt",
+      "sha256": "9bc1cc4848fda75ab183177921aeaffa2bb43c8f6b0618bc29dc7d63a1321903",
+      "bytes": 7854,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/terrain-material.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/terrain-overlays.test.ts.txt",
+      "sha256": "74c894d8958e08bab2f543767f5fec261164556b8e2d7a9ccc9ae85c8556e2b5",
+      "bytes": 8424,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/terrain-overlays.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/terrain-probes.test.ts.txt",
+      "sha256": "7b822a5dcc68e5230744ff1288433c633b86a2f4379d1ca4f2e81c02a97bb50a",
+      "bytes": 4410,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/terrain-probes.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/terrain-scatter.test.ts.txt",
+      "sha256": "1af3ba184b5ad59aefb801c87bdd51d63250bd78cafb2213689916003315862f",
+      "bytes": 11540,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/terrain-scatter.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/terrain-streaming.test.ts.txt",
+      "sha256": "a752fc266036c6d668be3cc91b7a0d713d51bed7930614c962cadc7622bfb5e8",
+      "bytes": 20739,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/terrain-streaming.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/terrain-vt.test.ts.txt",
+      "sha256": "3202f6cd3e37a90c555ba9976f05b326d8ae50e44161d58e72cbaac7ec93b435",
+      "bytes": 5296,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/terrain-vt.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/textures.test.ts.txt",
+      "sha256": "04a7e3578a653f3282ed8224e878196acd0fdaeb697dbab014695b35689b9171",
+      "bytes": 32994,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/textures.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/vector.test.ts.txt",
+      "sha256": "8fa4f7dbee6db682cb836c86553d6941a8c68d4316627ff4fa505f4ddb8c4106",
+      "bytes": 8917,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/vector.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w06-frames.test.ts.txt",
+      "sha256": "a463f97ec17bcf4605e5540f4b0d87e15884fb31e7908c0f5761ff9fe56b10a9",
+      "bytes": 10340,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/w06-frames.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w06-offline.test.ts.txt",
+      "sha256": "87ff7544f057a38f0360357f739de8845242124ba40dc39e5fb8c6f8c913e061",
+      "bytes": 8899,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/w06-offline.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w11-native-provenance.test.ts.txt",
+      "sha256": "22b33f10aa0315cc7631943b27ca5abe8f126632f9be15d51b0acd89d90fb598",
+      "bytes": 4473,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/w11-native-provenance.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w12-native-provenance.test.ts.txt",
+      "sha256": "ed7b5c8db1717637bda97f1516fcf6a4ae10b2d6258f768b48a8e2c7f79436c9",
+      "bytes": 1243,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/w12-native-provenance.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w14-crs.test.ts.txt",
+      "sha256": "afebd5648a0cf5507c974bc29bd3cb94e425deebfdc0941201a0fb2cd24ba63d",
+      "bytes": 14457,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/w14-crs.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w14-datasets.test.ts.txt",
+      "sha256": "a426d3347413f51e934289762e5a7246e27acc4242a9fcd1848d4600db07fb56",
+      "bytes": 12704,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/w14-datasets.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w15-buildings.test.ts.txt",
+      "sha256": "bdc8b60b94067a7ec852347cecb84dbfebc4019b5d42389ac1e3820b347a0976",
+      "bytes": 11423,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/w15-buildings.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w15-geometry.test.ts.txt",
+      "sha256": "9614de98064e303b83f6d05eb0edc83f002fdc160070f551346134ed12a0d98b",
+      "bytes": 15318,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/w15-geometry.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w15-io.test.ts.txt",
+      "sha256": "113cd512da63c9ad439b7e26a0b5618faa57f41929dbaaddec263cdf03af1677",
+      "bytes": 12224,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/w15-io.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w15-native-contracts.test.ts.txt",
+      "sha256": "67c7447e3c49cb5ef2c8b361faff2ee67dbea2fbddbe6d599e98819281cc801e",
+      "bytes": 15409,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/w15-native-contracts.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w16-pointcloud.test.ts.txt",
+      "sha256": "f604b27cbd6f81437f76de2eb87147c4208abb9a0097a62f96539e534f579573",
+      "bytes": 23601,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/w16-pointcloud.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w16-tiles.test.ts.txt",
+      "sha256": "d96f24f95b97f3243ed3051c3c08cc94ac477a38736e588cb52bce683f522f12",
+      "bytes": 16816,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/w16-tiles.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w17-tracing.test.ts.txt",
+      "sha256": "174e0e3a8cff9e48969416d88032994d34fb86ef39c06c7399ae67ca8f98d386",
+      "bytes": 30967,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/w17-tracing.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w18-diagnostics.test.ts.txt",
+      "sha256": "79ac0ae5841ead16fd96d085b73c6b9a26d5b0eafe1e59fe6645daab1dfd79f5",
+      "bytes": 12354,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/w18-diagnostics.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w18-mapscene.test.ts.txt",
+      "sha256": "71a1b8ef874faf19efad198c0c55a6a3b4e48ec75a15d0e18bf656782ad14fa1",
+      "bytes": 21452,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/w18-mapscene.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w19-native-contract.test.ts.txt",
+      "sha256": "bf2651d4d63d0ff09efe8476366b2a368dcc576824e1a96722ffdb9a1dfd084b",
+      "bytes": 8705,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/w19-native-contract.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w19-native-replay.test.ts.txt",
+      "sha256": "63009defba5b861111c86e4a5d88e672e5c88ea25afc66b12168554ec8c1bad5",
+      "bytes": 10047,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/w19-native-replay.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w19-style-bundle.test.ts.txt",
+      "sha256": "dd92f81fefabd1a46a9fe32dc5c4eb1a1ceed3a15caba6bf6c46d008876b3010",
+      "bytes": 30928,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/w19-style-bundle.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w20-colormaps.test.ts.txt",
+      "sha256": "d65c16071f35f6261909d8c6caa4189601b59b539ba276690794818955f5bad8",
+      "bytes": 7338,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/w20-colormaps.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w20-native-coverage.test.ts.txt",
+      "sha256": "3599f9a9c47c5cc5eaf13e8cfb94161e8924053a5b545fd5888baad3179eba9a",
+      "bytes": 3940,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/w20-native-coverage.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w20-vector-export.test.ts.txt",
+      "sha256": "0cc415082a60436170c34b5ea4635da7c87b188065ace1b6fc439b38b3bcd7ac",
+      "bytes": 13891,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/w20-vector-export.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w21-benchmark.test.ts.txt",
+      "sha256": "f01a99ee37e7f925eb0224c457633f12e193ed758b1b48b603e68c142ed8e1f7",
+      "bytes": 5889,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/w21-benchmark.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w21-images.test.ts.txt",
+      "sha256": "8949222bafbe584d454e222cba92bbf5496002440e4467106224f86418ad5774",
+      "bytes": 7438,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/w21-images.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w21-license.test.ts.txt",
+      "sha256": "279a949332e50089af99ffb446b15a6d2ff5bc622e90a178e6f7b6f087bb20b3",
+      "bytes": 7113,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/w21-license.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w22-codecs.test.ts.txt",
+      "sha256": "823fdc2f0e72e648adace9cc07b46f4b2404564029f9eded9d9c8d61b6ffb009",
+      "bytes": 11663,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/w22-codecs.test.ts.txt"
+      ]
+    },
+    {
+      "path": "crates/forge3d-web/docs/evidence-sources/tests/unit/w22-review-regressions.test.ts.txt",
+      "sha256": "8b846a6cf264295a6bb0438961c79fed0b04b0845f5e6f7fb59f826bdf3bcd50",
+      "bytes": 3788,
+      "hashMode": "utf8-lf",
+      "role": "evidence-source-snapshot",
+      "origin": "browser-owned-see-provenance",
+      "provenance": [
+        "crates/forge3d-web/docs/evidence-sources/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/docs/evidence-sources/tests/unit/w22-review-regressions.test.ts.txt"
       ]
     },
     {
@@ -1331,7 +2330,8 @@
       "provenance": [
         "crates/forge3d-web/examples/migration/applications-provenance.json",
         "crates/forge3d-web/scripts/generate-w23-application-fixtures.py",
-        "crates/forge3d-web/examples/migration/provenance.json"
+        "crates/forge3d-web/examples/migration/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/examples/migration/applications-provenance.json"
       ]
     },
     {
@@ -1344,7 +2344,8 @@
       "provenance": [
         "crates/forge3d-web/examples/migration/applications-provenance.json",
         "crates/forge3d-web/scripts/generate-w23-application-fixtures.py",
-        "crates/forge3d-web/examples/migration/provenance.json"
+        "crates/forge3d-web/examples/migration/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/examples/migration/applications.json"
       ]
     },
     {
@@ -1369,7 +2370,7 @@
       "origin": "browser-owned-see-provenance",
       "provenance": [
         "crates/forge3d-web/examples/migration/provenance.json",
-        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/examples/migration/catalog.json"
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/examples/migration/catalog.json"
       ]
     },
     {
@@ -1384,7 +2385,8 @@
         "path": "tests/fixtures/mapbox_streets_v8.json"
       },
       "provenance": [
-        "crates/forge3d-web/examples/migration/provenance.json"
+        "crates/forge3d-web/examples/migration/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/examples/migration/mapbox-streets-v8.json"
       ]
     },
     {
@@ -1421,7 +2423,7 @@
       "origin": "browser-owned-see-provenance",
       "provenance": [
         "crates/forge3d-web/examples/migration/provenance.json",
-        "git:24c312cf7e931e955bf1e0a2b4e00e1c44a6f66e:crates/forge3d-web/examples/migration/provenance.json"
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/examples/migration/provenance.json"
       ]
     },
     {
@@ -1432,7 +2434,8 @@
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/examples/migration/provenance.json"
+        "crates/forge3d-web/examples/migration/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/examples/migration/rainier-cog.json"
       ]
     },
     {
@@ -1443,7 +2446,8 @@
       "role": "browser-runtime-or-example-input",
       "origin": "browser-owned-see-provenance",
       "provenance": [
-        "crates/forge3d-web/examples/migration/provenance.json"
+        "crates/forge3d-web/examples/migration/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/examples/migration/rainier-cog.tif"
       ]
     },
     {
@@ -1470,7 +2474,8 @@
       "role": "browser-runtime-or-example-input",
       "origin": "native-derived",
       "provenance": [
-        "crates/forge3d-web/examples/migration/provenance.json"
+        "crates/forge3d-web/examples/migration/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/examples/migration/single-tile-oracle.json"
       ]
     },
     {
@@ -1481,7 +2486,8 @@
       "role": "browser-runtime-or-example-input",
       "origin": "native-derived",
       "provenance": [
-        "crates/forge3d-web/examples/migration/provenance.json"
+        "crates/forge3d-web/examples/migration/provenance.json",
+        "git:e681dedafd4b134807e2718c6e3fe603e4ba99f2:crates/forge3d-web/examples/migration/terrain-single-tile.png"
       ]
     }
   ]

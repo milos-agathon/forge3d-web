@@ -110,3 +110,10 @@ test('an existing but unrelated native source cannot be used as asset provenance
   const data=load(assetManifestPath),native=data.assets.filter(a=>a.origin==='native-byte-preserved'&&a.native?.gitBlob),first=native[0],other=native.find(a=>a.sha256!==first.sha256);
   first.native=other.native;assert(validateAssets(data).some(e=>e.includes('Native source bytes mismatch')));
 });
+
+test('installed asset hashes include shipped test-source snapshots and exclude repository test controls', () => {
+  const all=load(assetManifestPath).assets,shipped=load('crates/forge3d-web/docs/migration-assets.json').assets;
+  assert(shipped.some(a=>a.path.includes('/docs/evidence-sources/tests/')), 'Shipped evidence snapshots need installed hash verification');
+  assert(!shipped.some(a=>a.path.startsWith('crates/forge3d-web/tests/')), 'Repository-only controls must not enter the installed manifest');
+  assert.deepEqual(shipped.map(a=>a.path),all.filter(a=>!a.path.startsWith('crates/forge3d-web/tests/')).map(a=>a.path));
+});

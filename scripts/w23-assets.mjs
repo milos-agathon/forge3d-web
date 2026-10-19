@@ -91,6 +91,6 @@ export function generateAssetManifest() {
   const data = createAssetManifest();
   writeFileSync(join(root, assetManifestPath), JSON.stringify(data, null, 2) + '\n');
   // Only runtime/example and historical doc assets ship; test controls stay in the repo.
-  writeFileSync(join(root, prefix, 'docs/migration-assets.json'), JSON.stringify({ ...data, assets: data.assets.filter(a => !a.path.includes('/tests/')) }, null, 2) + '\n');
+  writeFileSync(join(root, prefix, 'docs/migration-assets.json'), JSON.stringify({ ...data, assets: data.assets.filter(a => !a.path.startsWith(prefix + 'tests/')) }, null, 2) + '\n');
   return data;
 }
