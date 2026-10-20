@@ -544,7 +544,7 @@
     },
     {
       "path": "crates/forge3d-web/scripts/w23_regional_fixtures.py",
-      "sha256": "be50baf6d2ca50d5eba3b006a43e86d81286f8bc54fe9d871d57e406f8ecaa76",
+      "sha256": "8e6fe88e6db16b1cd80b6860e3eff32c27d91a667b4bc9f89a23b7efefffec09",
       "snapshot": "evidence-sources/scripts/w23_regional_fixtures.py.txt"
     },
     {

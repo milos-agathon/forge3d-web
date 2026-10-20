@@ -1883,7 +1883,7 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/provenance.json",
-      "sha256": "8a1fadd28a010864cd9f950f617532ce8f06246915c3c4af75a1f58b10954009",
+      "sha256": "435eb4ea92f5f1cf5496ecf69338322d5b20c56254c7ff3305caabb0ed31f52d",
       "bytes": 27133,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
@@ -1907,7 +1907,7 @@
       "provenance": [
         "scripts/w23-coverage.mjs",
         "scripts/w23-catalog.mjs",
-        "git:391c84362ecfc8f54588f45dd38aad8e2f0fc184:crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "git:b587c4891d39bc17e9eb3c422635ba7041a90f52:crates/forge3d-web/docs/evidence-sources/provenance.json"
       ]
     },
     {
@@ -2007,7 +2007,7 @@
       "provenance": [
         "crates/forge3d-web/docs/evidence-sources/provenance.json",
         "crates/forge3d-web/scripts/generate-w23-application-fixtures.py",
-        "git:391c84362ecfc8f54588f45dd38aad8e2f0fc184:crates/forge3d-web/docs/evidence-sources/scripts/generate-w23-application-fixtures.py.txt"
+        "git:b587c4891d39bc17e9eb3c422635ba7041a90f52:crates/forge3d-web/docs/evidence-sources/scripts/generate-w23-application-fixtures.py.txt"
       ]
     },
     {
@@ -2037,8 +2037,8 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/scripts/w23_regional_fixtures.py.txt",
-      "sha256": "be50baf6d2ca50d5eba3b006a43e86d81286f8bc54fe9d871d57e406f8ecaa76",
-      "bytes": 24293,
+      "sha256": "8e6fe88e6db16b1cd80b6860e3eff32c27d91a667b4bc9f89a23b7efefffec09",
+      "bytes": 24353,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
@@ -2048,7 +2048,7 @@
         "inputs": [
           {
             "path": "crates/forge3d-web/scripts/w23_regional_fixtures.py",
-            "sha256": "be50baf6d2ca50d5eba3b006a43e86d81286f8bc54fe9d871d57e406f8ecaa76",
+            "sha256": "8e6fe88e6db16b1cd80b6860e3eff32c27d91a667b4bc9f89a23b7efefffec09",
             "hashMode": "utf8-lf"
           }
         ],
@@ -4772,7 +4772,7 @@
           },
           {
             "path": "crates/forge3d-web/scripts/w23_regional_fixtures.py",
-            "sha256": "be50baf6d2ca50d5eba3b006a43e86d81286f8bc54fe9d871d57e406f8ecaa76",
+            "sha256": "8e6fe88e6db16b1cd80b6860e3eff32c27d91a667b4bc9f89a23b7efefffec09",
             "hashMode": "utf8-lf"
           },
           {
@@ -4814,7 +4814,7 @@
           },
           {
             "path": "crates/forge3d-web/scripts/w23_regional_fixtures.py",
-            "sha256": "be50baf6d2ca50d5eba3b006a43e86d81286f8bc54fe9d871d57e406f8ecaa76",
+            "sha256": "8e6fe88e6db16b1cd80b6860e3eff32c27d91a667b4bc9f89a23b7efefffec09",
             "hashMode": "utf8-lf"
           },
           {

@@ -76,6 +76,7 @@ def input_dem(filename,index):
     return {'width':size,'height':size,'data':flat(crop),'source':{'ref':REF,'path':'python/forge3d/data/mini_dem.npy','sha256':hashlib.sha256((ROOT/'assets/datasets/mini_dem.npy').read_bytes()).hexdigest(),'window':[col,row,size,size],'use':'bounded numerical/rendering control; not the regional publication DEM'}},crop
 
 def build_cases(legacy):
+    (ROOT/'test-results').mkdir(parents=True,exist_ok=True)
     catalog=__import__('json').loads((ROOT/'examples/migration/catalog.json').read_text(encoding='utf8'))
     cases={}
     for index,entry in enumerate(e for e in catalog if 'application' in e['workflows']):

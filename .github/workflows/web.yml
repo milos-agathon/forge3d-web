@@ -52,6 +52,7 @@ jobs:
         working-directory: crates/forge3d-web
         run: |
           python -m pip install numpy==2.5.1 pillow==12.2.0 scipy==1.16.0 rasterio==1.4.3
+          python -c "import sys, numpy as np; print(sys.version); print(np.__version__); print(np._core._multiarray_umath.__cpu_features__)"
           python scripts/generate-w23-goldens.py --check
           python scripts/generate-w23-application-fixtures.py --check
 
