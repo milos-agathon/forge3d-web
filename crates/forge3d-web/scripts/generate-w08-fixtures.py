@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# W23_OUTPUTS: ["crates/forge3d-web/tests/golden/w08/landcover-rgba-cog.json","crates/forge3d-web/tests/golden/w08/landcover-rgba-cog.tif","crates/forge3d-web/tests/golden/w08/predictor-deflate-u16.json","crates/forge3d-web/tests/golden/w08/predictor-deflate-u16.tif","crates/forge3d-web/tests/golden/w08/rainier-cog.json","crates/forge3d-web/tests/golden/w08/rainier-cog.tif","crates/forge3d-web/tests/golden/w08/w08-fixtures.json"]
 """Generate the deterministic W08 golden fixtures for crates/forge3d-web.
 
 Outputs land in ``crates/forge3d-web/tests/golden/w08/``:

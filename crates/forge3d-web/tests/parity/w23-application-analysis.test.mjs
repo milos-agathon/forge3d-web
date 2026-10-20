@@ -29,6 +29,8 @@ test('Platte preserves its own one-meter exact-hit rule and PNOA never dispatche
 test('recorded source windows and spatial analysis outputs reach the rendered inputs',()=>{
   const captured=JSON.parse(readFileSync(new URL('../fixtures/w23/regional-dem-inputs.json',import.meta.url)));
   assert.equal(Object.keys(captured.examples).length,7);
+  assert.equal(captured.examples['pnoa_river_showcase.py'].source.path,'assets/tif/Bryce_Canyon.tif');
+  assert.equal(oracle.examples['pnoa_river_showcase.py'].terrain.source.path,'assets/tif/Bryce_Canyon.tif');
   for(const [name,input]of Object.entries(captured.examples)){
     const bytes=Buffer.alloc(input.data.length*4);input.data.forEach((v,i)=>bytes.writeFloatLE(v,i*4));
     assert.equal(createHash('sha256').update(bytes).digest('hex'),input.source.convertedSha256,name);

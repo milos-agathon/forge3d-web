@@ -1,6 +1,29 @@
 // Source-based corrections to W00. Keep these independent of the presentation
 // catalog: moving a generated record to another existing row must fail validation.
 import { classifyNativeSubject } from './w23-source-rules.mjs';
+
+// A release can contain unrelated workstreams. Try the line's leading subject
+// before its supporting clauses, then its containing bullet, and only finally
+// the release title. Generic headings such as "Quality presets" need their
+// containing bullet to distinguish DoF quality from renderer configuration.
+export function changelogRoute(record) {
+  const classify = value => classifyNativeSubject(value.replaceAll('_', ' ').toLowerCase(), 'changelog-subject', null);
+  const own = record.name.replaceAll('**', '').replace(/^\s*(?:added|fixed)\s+/i, '');
+  const generic = /^(?:categories:|quality presets?\b|features\b|cli\b|acceptance(?: criteria| one-liner)?:|validation artifacts:|aligned python configuration validation\b|screen-space rendering\b|bilateral blur:|ray marching in depth buffer\b)/i.test(own);
+  const leading = own.split(/\s+(?:with|using|via|for)\s+|;/i)[0];
+  let route = generic ? null : classify(leading);
+  // Numeric memory constraints and CI acceptance have an intrinsic subject even
+  // when they use a generic acceptance/category prefix.
+  if (!route && (!generic || /\bmib\b|\bci green\b/i.test(own))) route = classify(own);
+  if (route) return route;
+  const details = record.details ?? {};
+  let parent = details.context ?? '';
+  if (parent.endsWith(record.name)) parent = parent.slice(0, -record.name.length);
+  if (details.release && parent.startsWith(details.release)) parent = parent.slice(details.release.length);
+  if (details.subsection && parent.trimStart().startsWith(details.subsection)) parent = parent.trimStart().slice(details.subsection.length);
+  return classify(parent) ?? classify(details.release ?? '') ?? { row: 'R12', rule: 'changelog-subject:release-engineering-metadata' };
+}
+
 export function semanticRoute(record, original, tombstones) {
   const path = record.source.path.toLowerCase(), name = record.name.toLowerCase();
   const subject=(name+' '+(record.details?.context??'')).replaceAll('_',' ').toLowerCase();
@@ -18,15 +41,17 @@ export function semanticRoute(record, original, tombstones) {
       [/render_raster/, 'render-raster'], [/render_polygons/, 'render-polygons'], [/render_raytrace_mesh/, 'render-raytrace-mesh'],
     ]) if (pattern.test(subject)) return tombstone(id);
   }
+  if (record.kind.startsWith('changelog-') && /^(?:added\s+)?`?mapscene\b/.test(name)) return { row: 'M02a' };
+  if (record.kind.startsWith('changelog-') && /\bcopcdataset\b/.test(name)) return { row: 'G02' };
   if (/point[-_ ]?cloud/.test(path+' '+name)) return { row: /copc|laz_fixture|decode/.test(path+' '+name) ? 'G02' : 'G03' };
   if (record.kind.startsWith('native-test')) {
-    for(const [pattern,row]of [[/test_license|pro_gating/,'M08'],[/test_3dtiles|test_tiles3d/,'G04'],[/test_diagnostics_contract/,'M01'],[/test_taa|test_motion_vectors/,'P14'],[/test_volumetrics|test_fog/,'P09'],[/test_style|test_mapbox/,'M03'],[/test_osm_city/,'G05a']])if(pattern.test(path))return {row};
+    for(const [pattern,row]of [[/test_license|pro_gating/,'M08'],[/test_3dtiles|test_tiles3d/,'G04'],[/test_diagnostics_contract/,'M01'],[/test_taa|test_motion_vectors/,'P14'],[/test_volumetrics|test_fog/,'P09'],[/test_style|test_mapbox/,'M03'],[/test_osm_city/,'G05a'],[/test_rotterdam_solar_potential_shadow_study/,'P07']])if(pattern.test(path))return {row};
   }
   if(record.kind.startsWith('native-test')&&original.capabilityId==='G02'&&!/(?:^|[\/_ -])(?:copc|laz|ept)(?:[\/_. -]|$)/.test(path+' '+name))return {row:classifyNativeSubject((path+' '+subject).replaceAll('_',' '))?.row??'R12'};
   if(record.kind.startsWith('changelog-')){
     const transport=/\b(?:copc|laz|ept)\b/.test(subject);
     if(original.capabilityId==='G02'&&!transport || original.capabilityId==='T13'&&/\bscattering\b/.test(subject)){
-      return {row:classifyNativeSubject(subject)?.row??'R12'};
+      return {row:changelogRoute(record).row};
     }
   }
   if (/test_datasets\.py|python\/forge3d\/datasets\.py/.test(path)) return { row: 'E06' };

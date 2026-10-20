@@ -11,7 +11,7 @@ from rasterio.windows import Window
 ROOT=Path(__file__).resolve().parents[1]
 ARCHIVE=Path('D:/forge3d')
 sources={
-    'pnoa_river_showcase.py':'assets/tif/dem_rainier.tif',
+    'pnoa_river_showcase.py':'assets/tif/Bryce_Canyon.tif',
     'pnoa_river_showcase_video.py':'assets/tif/dem_rainier.tif',
     'bryce_canyon_storm_timelapse.py':'assets/tif/Bryce_Canyon.tif',
     'luxembourg_rail_overlay.py':'assets/tif/luxembourg_dem.tif',

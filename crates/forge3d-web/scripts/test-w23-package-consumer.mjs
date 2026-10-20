@@ -35,10 +35,18 @@ assert(!existsSync(join(installed, 'tests/fixtures/w22')), 'Gallery must not rel
 const documentation = verifyDocs({ packageRoot: installed });
 assert.deepEqual(documentation.errors, [], 'Installed documentation links/code blocks failed');
 const inputs = JSON.parse(readFileSync(join(installed, 'docs/migration-assets.json'))).assets;
+let migrationTextHeadBlobsVerified = 0;
 for (const asset of inputs) {
   const path = join(installed, asset.path.slice('crates/forge3d-web/'.length));
   const raw = readFileSync(path), bytes = asset.hashMode === 'utf8-lf' ? Buffer.from(raw.toString('utf8').replace(/\r\n?/g, '\n')) : raw;
   assert.equal(hash(bytes), asset.sha256, `Installed asset changed: ${asset.path}`);
+  if (asset.path.startsWith('crates/forge3d-web/examples/migration/') && asset.hashMode === 'utf8-lf') {
+    const head = spawnSync('git', ['show', `HEAD:${asset.path}`], { cwd: root, maxBuffer: 32 * 1024 * 1024 });
+    assert.equal(head.status, 0, `Missing migration HEAD blob: ${asset.path}`);
+    assert.deepEqual(readFileSync(resolve(root, '../..', asset.path)), head.stdout, `Checkout migration bytes differ from HEAD: ${asset.path}`);
+    assert.deepEqual(raw, head.stdout, `Shipped migration bytes differ from HEAD: ${asset.path}`);
+    migrationTextHeadBlobsVerified++;
+  }
 }
 const requests = [], server = createServer((req, res) => {
   try {
@@ -74,7 +82,7 @@ try {
   assert(!requests.some(p => p.startsWith('/src-ts/') || p.startsWith('/tests/')), 'Installed gallery requested repository sources/fixtures');
   const report = { schemaVersion: 1, revision: run('git', ['rev-parse', 'HEAD']).trim(), verifiedAt: new Date().toISOString(),
     exitCode, packageSha256: hash(readFileSync(tarball)), wasmSha256: hash(readFileSync(join(installed, 'dist/forge3d_web_bg.wasm'))),
-    installed, tarball, browserLane: 'chromium-preflight', assetsVerified: inputs.length, documents: documentation.documents,
+    installed, tarball, browserLane: 'chromium-preflight', assetsVerified: inputs.length, migrationTextHeadBlobsVerified, documents: documentation.documents,
     requests: [...new Set(requests)].sort(), sourceImplementationAvailable: false, strictCsp: true, rangeSupport: true };
   writeFileSync(join(output, 'consumer.json'), JSON.stringify(report, null, 2) + '\n');
   console.log(JSON.stringify(report, null, 2)); assert.equal(exitCode, 0, 'Installed W23 workflows failed');

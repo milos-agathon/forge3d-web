@@ -1,3 +1,4 @@
+# W23_OUTPUTS: ["crates/forge3d-web/tests/fixtures/w16/workload-ept/ept-data/*.bin","crates/forge3d-web/tests/fixtures/w16/workload-ept/ept.json","crates/forge3d-web/tests/fixtures/w16/workload-ept/ept-hierarchy/0-0-0-0.json"]
 """W16-designed spatial stress fixtures; W00 pins dimensions, not this layout."""
 import hashlib
 import io

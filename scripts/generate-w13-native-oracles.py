@@ -1,3 +1,4 @@
+# W23_OUTPUTS: ["crates/forge3d-web/tests/fixtures/w13/native-label-features.json","crates/forge3d-web/tests/fixtures/w13/native-label-plan.json"]
 """Regenerate W13 contract oracles by running the original native Python tests.
 Requires Python + pytest only. Native code is read from immutable Git objects;
 no GPU, installed forge3d extension, or browser implementation is consulted.

@@ -1,3 +1,4 @@
+# W23_OUTPUTS: ["crates/forge3d-web/examples/migration/applications-provenance.json","crates/forge3d-web/examples/migration/applications.json","crates/forge3d-web/tests/golden/w23/applications-provenance.json","crates/forge3d-web/tests/golden/w23/applications.json"]
 """Run pure analysis helpers extracted from the original regional examples.
 
 Bounded inputs exercise the original numerical algorithms without downloading

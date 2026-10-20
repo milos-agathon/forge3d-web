@@ -462,9 +462,9 @@ export function createWorkflows(api, canvas, signal, onOutput, example={}, retai
     async cog() {
       const scheduler = new api.RangeScheduler(), cog = await api.CogDataset.open(new URL('./rainier-cog.tif', import.meta.url), { scheduler,cacheSizeMb:4 });
       try {
-        check(cog.overviewCount>1,'COG has no overview pyramid');const overview=cog.selectOverview(2),tile=await cog.readTile(overview,0,0,{signal});
-        await cog.readTile(overview,0,0,{signal}); check(cog.stats().cacheHits>0,'COG decoded cache was not exercised');
-        const start=performance.now();let grids=0;for(let y=0;y<2;y++)for(let x=0;x<2;x++){await cog.readTile(0,x,y,{signal});grids++;}
+        check(cog.overviewCount>1,'COG has no overview pyramid');const overview=cog.selectOverview(2),tile=await cog.readTile(0,0,overview,{signal});
+        await cog.readTile(0,0,overview,{signal}); check(cog.stats().cacheHits>0,'COG decoded cache was not exercised');
+        const start=performance.now();let grids=0;for(let y=0;y<2;y++)for(let x=0;x<2;x++){await cog.readTile(x,y,0,{signal});grids++;}
         const raw=tile.filter(v=>v!==cog.nodata);let min=Infinity,max=-Infinity;for(const v of raw){min=Math.min(min,v);max=Math.max(max,v);}
         heights=Float32Array.from(tile,v=>v===cog.nodata?0:5*(v-min)/Math.max(max-min,1e-6));terrainWidth=terrainHeight=256;
         const streamed=await withRuntime(async runtime=>{

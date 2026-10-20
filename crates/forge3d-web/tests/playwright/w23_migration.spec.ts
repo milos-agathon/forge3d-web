@@ -1,6 +1,7 @@
 import { test, expect } from "../browser/webgpu-fixture";
 import * as ed from '@noble/ed25519';
-import { observeStages, assertStageEvidence } from '../browser/w23-stage-observer';
+import { createHash } from 'node:crypto';
+import { observeStages, readStageEvidence, assertStageEvidence } from '../browser/w23-stage-observer';
 declare global { interface Window { __w23: any } }
 for (const source of [true, false]) test(`W23 ${source ? 'source' : 'dist'}: all 54 migrated example workflows execute`, async ({ page }, info) => {
   test.setTimeout(600_000);
@@ -20,9 +21,9 @@ for (const source of [true, false]) test(`W23 ${source ? 'source' : 'dist'}: all
   await page.evaluate(async value => { const { api } = window.__w23; api.configureLicenseIssuer(value.publicKey); await api.setLicenseKey(value.key); }, license);
   await observeStages(page);
   const report = await page.evaluate(() => window.__w23.run('all'));
-  const observed=await page.evaluate(()=>window.__w23.observed);
+  const observed=await readStageEvidence(page);
   assertStageEvidence(report.examples,observed);
-  for(const stage of ['ibl','effects','rigs'])expect(()=>assertStageEvidence(report.examples,observed.filter((e:any)=>!e.label.includes(': '+stage+'…')))).toThrow();
+  for(const stage of ['triangle','cog','video','ibl','effects','rigs'])expect(()=>assertStageEvidence(report.examples,observed.filter((e:any)=>!e.label.includes(': '+stage+'…')))).toThrow();
   await info.attach('w23-independent-stage-observations.json',{body:JSON.stringify(observed,null,2),contentType:'application/json'});
   expect(report.examples).toHaveLength(54);
   expect(new Set(report.examples.map((e: any) => e.name)).size).toBe(54);
@@ -149,5 +150,38 @@ for (const source of [true, false]) test(`W23 ${source ? 'source' : 'dist'}: all
     await expect.poll(()=>integrityErrors.some(e=>e.includes('Migration input integrity mismatch:')&&e.includes('workflows.js'))).toBe(true);
     expect(await tampered.evaluate(()=>window.__w23?.ready??false)).toBe(false);
   }finally{await tampered.close();}
+  // Integrity alone cannot prove execution: serve a replacement with its own
+  // matching manifest hash, then require each independent observer to reject it.
+  const literals=await page.context().newPage();
+  const literalWorkflows=`export function createWorkflows(){return new Proxy({
+    triangle:async()=>({triangles:1,changedPixels:100,pngFromRenderedTriangle:true}),
+    cog:async()=>({values:65536,grids:4,overview:1,streamed:{uploadedTiles:1,coveragePixels:1000,converged:true}}),
+    video:async()=>({bytes:1000,mime:'video/mp4',frameCount:3,codec:'avc',timestamps:[0,500000,1000000]})
+  },{get:(target,name)=>target[name]??(async()=>({}))});}`;
+  const literalSha256=createHash('sha256').update(literalWorkflows).digest('hex');
+  try{
+    await literals.route('**/examples/migration/workflows.js*',route=>route.fulfill({contentType:'text/javascript',body:new URL(route.request().url()).searchParams.has('raw')?'export default '+JSON.stringify(literalWorkflows):literalWorkflows}));
+    await literals.route('**/docs/migration-assets.json',async route=>{
+      const response=await route.fetch(),manifest=await response.json();
+      manifest.assets.find((a:any)=>a.path==='crates/forge3d-web/examples/migration/workflows.js').sha256=literalSha256;
+      await route.fulfill({response,json:manifest});
+    });
+    await literals.goto('/examples/migration/index.html'+(source?'?source':''));
+    await literals.waitForFunction(()=>window.__w23?.ready);
+    const integrityVerified=await literals.evaluate(()=>window.__w23.integrity.verified);
+    expect(integrityVerified).toBeGreaterThan(10);
+    await observeStages(literals);
+    const outcomes=[];
+    for(const [workflow,name]of [['triangle','triangle_png.py'],['cog','cog_streaming_demo.py'],['video','camera_animation_demo.py']]){
+      const result=await literals.evaluate(name=>window.__w23.run(name),name),events=await readStageEvidence(literals);
+      const example={...result.examples[0],steps:result.examples[0].steps.filter((s:any)=>s.workflow===workflow)};
+      expect(example.steps).toHaveLength(1);
+      expect(()=>assertStageEvidence([example],events),workflow+' literal stage must fail independent execution evidence').toThrow();
+      let message='';try{assertStageEvidence([example],events);}catch(error:any){message=error.message;}
+      expect(message,workflow+' literal stage must fail independent execution evidence').not.toBe('');
+      outcomes.push({workflow,name,rejected:true,message,observedEvents:events.filter((e:any)=>e.label===`Running ${name}: ${workflow}…`).length});
+    }
+    await info.attach('w23-literal-stage-negative-controls.json',{body:JSON.stringify({matchingManifest:true,workflowsSha256:literalSha256,integrityVerified,outcomes},null,2),contentType:'application/json'});
+  }finally{await literals.close();}
   await info.attach('w23-workflows.json', { body: JSON.stringify(report, null, 2), contentType: 'application/json' });
 });

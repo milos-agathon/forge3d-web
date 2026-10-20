@@ -1,3 +1,4 @@
+# W23_OUTPUTS: ["crates/forge3d-web/tests/golden/w06-aov-native.bin","crates/forge3d-web/tests/golden/w06-aov-native.json"]
 """Generate the W06 native AOV oracle fixture.
 
 Renders the W04 `terrain_pbr_pom` screen-mode parity scene with the installed

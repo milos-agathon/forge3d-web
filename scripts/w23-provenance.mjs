@@ -1,5 +1,5 @@
 import { readFileSync, existsSync } from 'node:fs';
-import { join, basename } from 'node:path';
+import { join, basename, posix } from 'node:path';
 import { createHash } from 'node:crypto';
 const prefix='crates/forge3d-web/';
 const digest=b=>createHash('sha256').update(b).digest('hex');
@@ -14,7 +14,8 @@ const generators=[
   [/tests\/golden\/w07\//,'scripts/generate-w07-material-goldens.py',[],'native material scene definitions, float32 height fields and native render variants'],
   [/tests\/golden\/w08\/(vt-|vt\.)/,'scripts/generate-w08-vt-goldens.py',[],'native virtual-texture render and albedo controls'],
   [/tests\/golden\/w08\//,'scripts/generate-w08-fixtures.py',[],'GDAL COG conversion, predictor fixtures and independent raster truth'],
-  [/tests\/golden\/w10\/(cloud|sky|water|volumetric)/,'scripts/generate-w10-render-goldens.py',[],'native WGSL render/readback controls'],
+  [/tests\/golden\/w10\/native\//,'scripts/generate-w10-render-goldens.py',[],'native WGSL render/readback controls, including the separately installed native cloud renderer invoked by this generator'],
+  [/tests\/golden\/w10\/(?:clouds|sky|water_surface|volumetric)\.json$/,'scripts/generate-w10-native-fixtures.py',[],'unchanged historical native WGSL source captures'],
   [/tests\/golden\/w10\//,'scripts/generate-w10-native-fixtures.py',[],'native ephemeris, density and environment controls'],
   [/tests\/fixtures\/w15\//,'scripts/generate-w15-fixtures.mjs',[],'byte-defined mesh formats, CityJSON and native test snapshots'],
   [/tests\/fixtures\/w17\//,'scripts/generate-w17-fixture.py',[],'historical native source and tracing/SDF reference cases'],
@@ -32,6 +33,28 @@ const generators=[
 
 export function assetDerivation(path,{root,nativeByDigest=new Map()}={}){
   const rel=path.slice(prefix.length),name=basename(path);
+  const authoredInputs = {
+    'tests/fixtures/w18/ortho.png':['tests/playwright/w18_mapscene.spec.ts'],
+    'tests/fixtures/w18/dem.f32':['tests/playwright/w18_mapscene.spec.ts'],
+    'tests/fixtures/w18/triangle.obj':['tests/playwright/w18_mapscene.spec.ts'],
+    'tests/fixtures/w18/labels.json':['tests/playwright/w18_mapscene.spec.ts'],
+    'tests/fixtures/w18/roads.json':['tests/playwright/w18_mapscene.spec.ts'],
+    'tests/golden/w10/frames.json':['tests/playwright/w10_environment.spec.ts'],
+    'tests/golden/w10/volume-temporal-v1.json':['tests/playwright/w10_environment.spec.ts'],
+    'tests/fixtures/w16/upstream.json':['scripts/generate-w16-fixtures.py'],
+    'tests/fixtures/w14/w00-crs-contract.json':['tests/parity/fixture-contracts.json'],
+    'tests/golden/w11/provenance.json':['scripts/generate-w11-native-fixtures.py'],
+    'tests/golden/w12/provenance.json':['scripts/generate-w12-native-fixtures.py'],
+    'tests/fixtures/w20/native/tests/test_colormaps_core.py':['scripts/generate-w20-native-fixture.py','tests/fixtures/w20/provenance.json'],
+    'tests/fixtures/w20/native/tests/test_colormaps_cvd.py':['scripts/generate-w20-native-fixture.py','tests/fixtures/w20/provenance.json'],
+    'tests/fixtures/w20/provenance.json':['scripts/generate-w20-native-fixture.py'],
+  };
+  if(authoredInputs[rel]||rel.startsWith('tests/golden/w10/harness/'))return {kind:'authored-contract-input',inputs:(authoredInputs[rel]??['scripts/generate-w10-native-fixtures.py']).map(p=>source(root,prefix+p)),recipe:`Authored input consumed by the named contract suite or capture script; ${name} is not an output of that script. W18 resources are bounded URL-loading/rendering controls; W20 colormap tests retain explicit browser adaptations of the historical tests.`};
+  if(/^tests\/golden\/w10\/(?:cloud|sky|water)\.(?:png|rgba)$/.test(rel))return {kind:'browser-observation',inputs:[source(root,prefix+'tests/playwright/w10_environment.spec.ts'),source(root,prefix+'examples/test-w10.html')],recipe:'Browser compositor frames captured with W10_CAPTURE_GOLDENS=1 by the named Playwright golden-images test. These browser regression frames are separate from installed-native render controls in native/.'};
+  if(rel==='tests/golden/w10/w09-preservation.json')return {kind:'generated-control',generator:source(root,prefix+'scripts/generate-w10-w09-preservation.mjs'),inputs:[],recipe:'Independently built W09 browser baseline capture, with recorded adapter and source commit; this is a browser preservation control.'};
+  if(rel==='tests/fixtures/w15/mesh-io-v1.json')return {kind:'generated-control',generator:source(root,'scripts/generate-w15-native.py'),inputs:[],recipe:'Compile and execute the archived native geometry kernels independently of browser implementations.'};
+  if(rel.startsWith('tests/fixtures/w15/native/7b08af8/'))return {kind:'generated-control',generator:source(root,'scripts/generate-w15-native-audit.py'),inputs:[],recipe:'Exact historical test-source snapshots written by the native suite audit from pinned Git objects.'};
+  if(rel==='tests/fixtures/w22/kodim23.ktx2')return {kind:'upstream-dependency',inputs:[source(root,prefix+'tests/fixtures/w22/manifest.json')],recipe:'Preserved BinomialLLC/basis_universal test_files/kodim23.ktx2 from commit 21fb6e242b1e425a7557c5655bb1b475f71933ca; the adjacent manifest records its URL and digest. The fixture generator reads this upstream file without writing it.'};
   if(rel==='assets/w12/luxembourg-rail.json'){
     const value=JSON.parse(readFileSync(join(root,path),'utf8'));
     return {kind:'converted-native-data',generator:source(root,prefix+'scripts/generate-w12-native-fixtures.py'),inputs:[{ref:value.source.commit,path:value.source.path,sha256:value.source.sha256}],recipe:'Read native GeoPackage WKB rail lines, project to EPSG:3035, center/scale to 500 world units and round positions to six decimal places, as specified by the archived generator.'};
@@ -78,4 +101,34 @@ export function assetDerivation(path,{root,nativeByDigest=new Map()}={}){
   // Explicitly distinguish authored API/format test inputs from converted
   // native goldens. A creation commit is storage history, not their oracle.
   return {kind:'authored-contract-input',inputs:[source(root,prefix+'types/index.d.ts'),source(root,'docs/parity/forge3d-composite-baseline.json')],recipe:`Hand-authored ${rel.startsWith('tests/golden/')?'browser regression control':'typed fixture'} for ${rel.split('/').slice(0,3).join('/')}; ${name} is not presented as a native-derived oracle. Native behavior is established by the owning capability tests and source references, not this file's Git ancestry.`};
+}
+
+// Output declarations live with the writing code. A '*' may cover one dynamic
+// filename segment (EPT node keys or replay cases), never an arbitrary subtree.
+// Directory manifests are an alternative only when they name the same generator
+// and explicitly list the output file, rather than merely mentioning its name.
+export function generatorOutputProof(assetPath,generatorPath,repositoryRoot,cache=new Map()){
+  const read=p=>{if(!cache.has(p))cache.set(p,existsSync(join(repositoryRoot,p))?readFileSync(join(repositoryRoot,p),'utf8'):null);return cache.get(p);};
+  const code=read(generatorPath);
+  for(const match of code?.matchAll(/^\s*(?:#|\/\/) W23_OUTPUTS: (\[.*\])\s*$/gm)??[]){
+    let outputs;try{outputs=JSON.parse(match[1]);}catch{continue;}
+    for(const output of outputs){
+      if(typeof output!=='string'||!output.startsWith(prefix)||output.includes('..')||output.includes('**'))continue;
+      const pattern=output.split('*').map(v=>v.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')).join('[^/]+');
+      if(new RegExp('^'+pattern+'$').test(assetPath))return {declaration:generatorPath,output};
+    }
+  }
+  const directories=[];for(let directory=posix.dirname(assetPath);directory.startsWith(prefix);directory=posix.dirname(directory))directories.push(directory);
+  for(const directory of directories)for(const name of ['manifest.json','provenance.json','assets.json']){
+    const path=directory+'/'+name,raw=read(path);if(!raw)continue;
+    let value;try{value=JSON.parse(raw);}catch{continue;}
+    const declared=value.generator??value.provenance?.generator;
+    if(![declared,prefix+declared].includes(generatorPath))continue;
+    const listed=[value.files,value.assets,value.fixtures,value.outputs].filter(Boolean);
+    for(const entries of listed){
+      const names=Array.isArray(entries)?entries.flatMap(e=>typeof e==='string'?[e]:e&&typeof e==='object'?[e.file,e.path,e.name,e.fixture].filter(Boolean):[]):typeof entries==='object'?Object.keys(entries):[];
+      if(names.some(file=>typeof file==='string'&&(file===assetPath||posix.normalize(posix.join(directory,file))===assetPath)))return {manifest:path,file:posix.basename(assetPath)};
+    }
+  }
+  return null;
 }

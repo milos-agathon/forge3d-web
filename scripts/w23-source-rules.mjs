@@ -1,13 +1,25 @@
 // Text subject rules adapted from the immutable W00 inventory classifier.
 // Transport names are whole words; scattering is not terrain instancing.
 const classified = (row, rule) => ({row, rule});
-export function classifyNativeSubject(text, namespace = "native-subject") {
+export function classifyNativeSubject(text, namespace = "native-subject", fallback = "R12") {
   const value = text.toLowerCase();
   const directRules = [
+    ["R07", /\bmemory\b|\bbudget\b|\bdownscal|\bmib\b|texture size accounting/u, "memory-policy"],
+    ["R12", /\bci green\b/u, "release-acceptance"],
+    ["C01", /build.view.matrices|gl.to.wgpu|\bdepth ranges?\b|\bclip.space\b/u, "camera-depth-convention"],
+    ["P09", /atmospheric depth|\bfroxel\b|henyey.greenstein|beer.lambert|\bextinction\b|sun disk|sunrise\/sunset|ground albedo|view.ray marching/u, "atmospheric-subject"],
+    ["P13", /circle of confusion|\bcoc\b|tilt.shift/u, "depth-of-field-subject"],
+    ["P04", /python pbr/u, "pbr-math"],
+    ["P05", /^texture setters|tbn generation/u, "texture-input"],
+    ["P01", /point\/spot light/u, "point-spot-light"],
+    ["P11", /\bgbuffer\b|ray marching.*indirect diffuse/u, "screen-space-subject"],
+    ["G04", /\btileset(?:traverser)?\b/u, "tileset-subject"],
+    ["E07", /\b(?:numpy to png|png to numpy)\b/u, "png-array-helper"],
+    ["R04", /python ux polish|high.level presets/u, "renderer-presets"],
     ["T13", /tv13|lod_count|impostor/u, "scatter-lod"],
     ["T15", /terrain_probe|terrain probe/u, "terrain-probe"],
     ["T06", /tv10|tv4 terrain|terrain material workflow/u, "terrain-material-workflow"],
-    ["T02", /tv1.tv3|terrain.workflow|terrain normalization|terrain uniforms|terrainuniforms|terrainpipeline|height texture|r32float|grid generation/u, "terrain-foundation"],
+    ["T02", /tv1.tv3|terrain.workflow|t3 terrain pipeline|terrain normalization|terrain uniforms|terrainuniforms|terrainpipeline|height texture|r32float|grid generation/u, "terrain-foundation"],
     ["T11", /draped terrain overlay|terrain_overlays|altitude overlay|overlays infrastructure|basemap|xyz_wmts|cartopy|tile mosaic/u, "terrain-overlay"],
     ["T09", /real data ingestion|async tile|async io|async loader|cancellation and lod.aware|coalescing rules/u, "terrain-streaming"],
     ["M05", /title.compass.scale.text|compass overlay|compass rose|text and scale overlay/u, "map-furniture"],
@@ -39,7 +51,7 @@ export function classifyNativeSubject(text, namespace = "native-subject") {
     ["G05a", /building|cityjson|roof/u, "buildings"],
     ["G10", /\bsdf\b|signed distance|csg/u, "sdf"],
     ["G11", /path trac|ray trac|restir|wavefront|firefly|guiding|bent.normal/u, "path-tracing"],
-    ["G01", /\bcrs\b|reproject|epsg|proj/u, "crs"],
+    ["G01", /\bcrs\b|\breproject(?:ion)?\b|epsg|\bproj\b/u, "crs"],
     ["G08", /\bgltf\b|\bglb\b|\bobj\b|\bstl\b|mesh io|image io|hdr io/u, "mesh-io"],
     ["G06", /primitive|extrud|thick polyline|ribbon|tube/u, "geometry-construction"],
     ["G07", /mesh|tangent|tbn|subdiv|simplif|weld|uv/u, "mesh-processing"],
@@ -79,7 +91,7 @@ export function classifyNativeSubject(text, namespace = "native-subject") {
     ["P12", /\boit\b|transparency/u, "oit"],
     ["P14", /\btaa\b|motion vector|motion blur|jitter/u, "temporal"],
     ["P13", /bloom|depth of field|\bdof\b|lens effect|vignette|chromatic/u, "post-fx"],
-    ["P15", /tonemap|tone map|\bhdr\b|color space|lut/u, "color"],
+    ["P15", /tonemap|tone map|\bhdr\b|color space|\blut\b/u, "color"],
     ["P11", /ssao|gtao|ssgi|ssr|screen.space|g.buffer|hzb/u, "screen-space"],
     ["P10", /cloud/u, "cloud"],
     ["P09", /volumetric|fog|god ray|preetham|hosek|sky/u, "atmosphere"],
@@ -114,5 +126,5 @@ export function classifyNativeSubject(text, namespace = "native-subject") {
   for (const [capabilityId, pattern, rule] of rules) {
     if (pattern.test(value)) return classified(capabilityId, `${namespace}:${rule}`);
   }
-  return classified("R12", `${namespace}:release-engineering-metadata`);
+  return fallback === null ? null : classified(fallback, `${namespace}:release-engineering-metadata`);
 }

@@ -1,3 +1,4 @@
+# W23_OUTPUTS: ["crates/forge3d-web/examples/migration/single-tile-oracle.json","crates/forge3d-web/examples/migration/terrain-single-tile.png","crates/forge3d-web/tests/golden/w23/provenance.json","crates/forge3d-web/tests/golden/w23/terrain-single-tile.png"]
 """Execute the original single-tile NumPy workflow with browser-delivered input.
 
 Only the file destination and I/O boundary are adapted; the historical main()

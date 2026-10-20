@@ -1,9 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { readFileSync } from 'node:fs';
+import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { root, inventory, manifestPath } from '../../../../scripts/w23-coverage.mjs';
-import { assetFiles, assetManifestPath,validateAssets } from '../../../../scripts/w23-assets.mjs';
+import { assetFiles, assetBytes, assetManifestPath,validateAssets } from '../../../../scripts/w23-assets.mjs';
+import { assetDerivation, generatorOutputProof } from '../../../../scripts/w23-provenance.mjs';
+import { createHash } from 'node:crypto';
 const load=p=>JSON.parse(readFileSync(join(root,p),'utf8'));
 const prefix='crates/forge3d-web/';
 
@@ -48,6 +51,47 @@ test('derivation is required in addition to a file creation commit',()=>{
   const data=load(assetManifestPath),target=data.assets.find(a=>a.path.endsWith('/glacier_heights.f32'));
   assert(target.derivation.generator.path.endsWith('/generate-w07-material-goldens.py'));
   delete target.derivation;assert(validateAssets(data).some(e=>e.includes('Missing asset derivation')));
+});
+
+test('an existing unrelated generator cannot substitute for the writer',()=>{
+  const target=structuredClone(load(assetManifestPath).assets.find(a=>a.path.endsWith('/glacier_heights.f32')));
+  const path=prefix+'scripts/generate-w18-native.py';
+  target.derivation.generator={path,hashMode:'utf8-lf',sha256:createHash('sha256').update(assetBytes(path)).digest('hex')};
+  const errors=validateAssets({assets:[target]},{paths:[target.path]});
+  assert(errors.some(e=>e.includes('Generator does not declare asset output')));
+  assert(!errors.some(e=>e.includes('Derivation input digest mismatch')),'negative control uses a real current script and matching digest');
+});
+
+test('a directory manifest proves output only with both its generator and exact listed file',()=>{
+  const temporary=mkdtempSync(join(tmpdir(),'w23-output-proof-'));
+  try{
+    const generator=prefix+'scripts/writer.py',other=prefix+'scripts/unrelated.py',asset=prefix+'tests/fixtures/control/frame.png';
+    mkdirSync(join(temporary,prefix+'scripts'),{recursive:true});
+    mkdirSync(join(temporary,prefix+'tests/fixtures/control'),{recursive:true});
+    writeFileSync(join(temporary,generator),'# writer with directory manifest\n');
+    writeFileSync(join(temporary,other),'# unrelated script\n');
+    const manifest=join(temporary,prefix+'tests/fixtures/control/manifest.json');
+    writeFileSync(manifest,JSON.stringify({generator:'scripts/writer.py',files:[{path:'frame.png'}]}));
+    assert(generatorOutputProof(asset,generator,temporary));
+    assert.equal(generatorOutputProof(asset,other,temporary),null);
+    writeFileSync(manifest,JSON.stringify({generator:'scripts/writer.py',files:[{path:'other.png'}]}));
+    assert.equal(generatorOutputProof(asset,generator,temporary),null);
+  }finally{assert(temporary.startsWith(join(tmpdir(),'w23-output-proof-')));rmSync(temporary,{recursive:true,force:true});}
+});
+
+test('W10 native renders name their writer and W18 URL inputs do not claim a native generator',()=>{
+  const assets=load(assetManifestPath).assets;
+  for(const name of ['baseline.png','cloud.png','heights.f32','manifest.json']){
+    const path=prefix+'tests/golden/w10/native/'+name;
+    assert.equal(assetDerivation(path,{root}).generator.path,prefix+'scripts/generate-w10-render-goldens.py');
+    assert.equal(assets.find(a=>a.path===path).origin,'native-derived');
+  }
+  for(const name of ['ortho.png','dem.f32','triangle.obj','labels.json','roads.json']){
+    const derivation=assetDerivation(prefix+'tests/fixtures/w18/'+name,{root});
+    assert.equal(derivation.kind,'authored-contract-input');
+    assert.equal(derivation.generator,undefined);
+    assert(derivation.inputs.some(i=>i.path.endsWith('/tests/playwright/w18_mapscene.spec.ts')));
+  }
 });
 
 test('native kernel capture references cannot substitute an unrelated existing Git source',()=>{

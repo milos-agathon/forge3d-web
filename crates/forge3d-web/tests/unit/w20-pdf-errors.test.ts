@@ -2,6 +2,10 @@ import { it, expect, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { VectorScene } from '../../src-ts/vector-export-scene.js';
 import { exportPdf } from '../../src-ts/vector-pdf.js';
+// Load the real PDF/font backends (and the mock's importOriginal) during module
+// collection. Cold transforms must not consume the shaping assertion's 5 s.
+import 'pdf-lib';
+import '../../src-ts/vendor/fontkit-entry.js';
 vi.mock('../../src-ts/vendor/fontkit-entry.js', async importOriginal => {
   const { default: real } = await importOriginal<typeof import('../../src-ts/vendor/fontkit-entry.js')>();
   return { default: { ...real, create(bytes: Uint8Array) { const font = real.create(bytes); font.layout = () => { throw Error('backend shaping failed'); }; return font; } } };

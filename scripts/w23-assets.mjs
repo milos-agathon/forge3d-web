@@ -4,7 +4,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { extname, join } from 'node:path';
 import { root, filesBelow, sha256, inventory, baseline } from './w23-coverage.mjs';
 import { packagePrefix as prefix } from './w23-catalog.mjs';
-import { assetDerivation, resetDerivationInputs } from './w23-provenance.mjs';
+import { assetDerivation, resetDerivationInputs, generatorOutputProof } from './w23-provenance.mjs';
 
 export const assetManifestPath = 'docs/parity/w23-assets.json';
 const directories = ['assets', 'tests/fixtures', 'tests/golden', 'docs/native-assets', 'docs/evidence-sources', 'examples/migration'];
@@ -58,12 +58,12 @@ export function createAssetManifest() {
       else if (!native && !provenance.length && !derivation) throw Error(`New asset needs an explicit generator/provenance manifest before admission: ${path}`);
       return { path, sha256: sha256(bytes), bytes: bytes.length, hashMode: textExtensions.has(extname(path)) ? 'utf8-lf' : 'raw',
         role: path.includes('/docs/native-assets/') ? 'historical-native-illustration' : path.includes('/docs/evidence-sources/') ? 'evidence-source-snapshot' : path.includes('/tests/golden/') ? 'regression-control' : path.includes('/tests/fixtures/') ? 'test-input' : 'browser-runtime-or-example-input',
-        origin: native ? preserved ? 'native-byte-preserved' : 'native-text-normalized' : /w05-camera-native|w06-aov-native|w04-terrain-pbr-native|terrain-single-tile|single-tile-oracle|applications(-provenance)?\.json/.test(path) || path.includes('/tests/golden/w23/') || /tests\/golden\/w07\//.test(path) || derivation.kind==='native-kernel-capture' || derivation.kind==='converted-native-data' ? 'native-derived' : 'browser-owned-see-provenance',
+        origin: native ? preserved ? 'native-byte-preserved' : 'native-text-normalized' : /w05-camera-native|w06-aov-native|w04-terrain-pbr-native|terrain-single-tile|single-tile-oracle|applications(-provenance)?\.json/.test(path) || path.includes('/tests/golden/w23/') || /tests\/golden\/(?:w07\/|w10\/native\/)/.test(path) || derivation.kind==='native-kernel-capture' || derivation.kind==='converted-native-data' ? 'native-derived' : 'browser-owned-see-provenance',
         ...(native ? { native } : {derivation}), provenance };
     }) };
 }
 export function validateAssets(data, { repositoryRoot = root, paths = assetFiles() } = {}) {
-  const errors = [], seen = new Set(), gitSources = new Set(), inputDigests=new Map(),derivationDigests=new Map();
+  const errors = [], seen = new Set(), gitSources = new Set(), inputDigests=new Map(),derivationDigests=new Map(),outputProofCache=new Map();
   for (const a of data.assets) {
     if (seen.has(a.path)) errors.push(`Duplicate asset ${a.path}`);
     seen.add(a.path);
@@ -76,6 +76,7 @@ export function validateAssets(data, { repositoryRoot = root, paths = assetFiles
     if(a.derivation){
       const d=a.derivation;
       if(!d.kind||!(d.recipe??d.purpose)?.trim()||!d.inputs?.length&&!d.generator)errors.push(`Incomplete asset derivation ${a.path}`);
+      if(d.kind==='generated-control'&&(!d.generator?.path||!generatorOutputProof(a.path,d.generator.path,repositoryRoot,outputProofCache)))errors.push(`Generator does not declare asset output ${a.path}: ${d.generator?.path}`);
       for(const input of [...(d.inputs??[]),...(d.generator?[d.generator]:[])]){
         if(input.ref){const key=`${input.ref}:${input.path}`;gitSources.add(key);derivationDigests.set(key,input.sha256);continue;}
         const full=join(repositoryRoot,input.path??'');

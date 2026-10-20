@@ -1,3 +1,4 @@
+# W23_OUTPUTS: ["crates/forge3d-web/tests/golden/w05-camera-native.json"]
 """Generate the W05 native camera oracle fixture.
 
 Runs against an installed native ``forge3d`` (1.34.x, whose ``animation.py``

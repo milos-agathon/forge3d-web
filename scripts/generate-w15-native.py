@@ -1,3 +1,4 @@
+# W23_OUTPUTS: ["crates/forge3d-web/tests/fixtures/w15/mesh-io-v1.json"]
 """Compile archived native kernels, independently of the browser implementation."""
 import hashlib
 import json

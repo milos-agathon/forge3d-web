@@ -5092,7 +5092,7 @@
   "tests": [
     {
       "path": "crates/forge3d-web/tests/parity/w23-application-analysis.test.mjs",
-      "sha256": "ceb29dcf0224d68d9ac2fdbc3fd1af81e603092e226132c56f980c5788cf49e7",
+      "sha256": "fb2b161e26524db2b7233c3d8347d5ead9742330d26aec0d7a744616604f5caa",
       "declarations": [
         "IDW preserves exact river hits and Dijkstra respects inaccessible nodes",
         "original regional computation and dataflow: ${name}",
@@ -7879,7 +7879,7 @@
     },
     {
       "artifactId": "changelog-addition:03f224290bf1884f79e9007e",
-      "row": "R12",
+      "row": "T02",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -7889,7 +7889,7 @@
     },
     {
       "artifactId": "changelog-addition:043ba5817056f8f38ad0dde6",
-      "row": "P15",
+      "row": "R07",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -7899,7 +7899,7 @@
     },
     {
       "artifactId": "changelog-addition:04484a246666916f50cbba8e",
-      "row": "G02",
+      "row": "G04",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -8101,7 +8101,7 @@
     },
     {
       "artifactId": "changelog-addition:0b3bd90babedc635eedfcae2",
-      "row": "P06",
+      "row": "R07",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -8306,7 +8306,7 @@
     },
     {
       "artifactId": "changelog-addition:1488dcf781b377001ec9d780",
-      "row": "T02",
+      "row": "R04",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -8352,7 +8352,7 @@
     },
     {
       "artifactId": "changelog-addition:171561bebefb73b00d9a3111",
-      "row": "R12",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -9297,7 +9297,7 @@
     },
     {
       "artifactId": "changelog-addition:420e50bdff8662946ce3f864",
-      "row": "R01",
+      "row": "C01",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -10440,7 +10440,7 @@
     },
     {
       "artifactId": "changelog-addition:7364649efd608194b0e85892",
-      "row": "G03",
+      "row": "M02a",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -10565,7 +10565,7 @@
     },
     {
       "artifactId": "changelog-addition:788aa8993db7edf41bf6356d",
-      "row": "R01",
+      "row": "C01",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -10835,7 +10835,7 @@
     },
     {
       "artifactId": "changelog-addition:8445b403d4601f4247bd1522",
-      "row": "G07",
+      "row": "P05",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -11188,7 +11188,7 @@
     },
     {
       "artifactId": "changelog-addition:932b177e3b0457b395f1f45a",
-      "row": "P06",
+      "row": "R12",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -11300,7 +11300,7 @@
     },
     {
       "artifactId": "changelog-addition:9712ff52a4e493bfbc152b08",
-      "row": "P15",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -11869,7 +11869,7 @@
     },
     {
       "artifactId": "changelog-addition:abbbce0dc6842a623cb1802d",
-      "row": "G01",
+      "row": "P14",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -11964,7 +11964,7 @@
     },
     {
       "artifactId": "changelog-addition:b163093ffaf0170e67476394",
-      "row": "R12",
+      "row": "P04",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -11989,7 +11989,7 @@
     },
     {
       "artifactId": "changelog-addition:b2ac23c9622f7498120e3029",
-      "row": "R01",
+      "row": "R07",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -12039,7 +12039,7 @@
     },
     {
       "artifactId": "changelog-addition:b56bb38811f48f473bfe0bd1",
-      "row": "P06",
+      "row": "R07",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -12064,7 +12064,7 @@
     },
     {
       "artifactId": "changelog-addition:b653857dc6104a3d5285a578",
-      "row": "P14",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -12200,7 +12200,7 @@
     },
     {
       "artifactId": "changelog-addition:bd4a12d145e314fa2f847c8e",
-      "row": "P07",
+      "row": "P01",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -12466,7 +12466,7 @@
     },
     {
       "artifactId": "changelog-addition:c71e13cdd9909d50d2bb224c",
-      "row": "G01",
+      "row": "C01",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -12702,7 +12702,7 @@
     },
     {
       "artifactId": "changelog-addition:d059ff57b62899898011ca42",
-      "row": "T02",
+      "row": "R04",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -12877,7 +12877,7 @@
     },
     {
       "artifactId": "changelog-addition:d8b71789a4c2758f337d4732",
-      "row": "G02",
+      "row": "G04",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -13112,7 +13112,7 @@
     },
     {
       "artifactId": "changelog-addition:e2aa08ba1897bed138842509",
-      "row": "G02",
+      "row": "G04",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -13127,7 +13127,7 @@
     },
     {
       "artifactId": "changelog-addition:e3173756f7b90f3727a32ab2",
-      "row": "P15",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -13152,7 +13152,7 @@
     },
     {
       "artifactId": "changelog-addition:e3daa204af2977283b740d4d",
-      "row": "R02",
+      "row": "E07",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -13208,7 +13208,7 @@
     },
     {
       "artifactId": "changelog-addition:e645095824716a9adc6cbab6",
-      "row": "P15",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -13441,7 +13441,7 @@
     },
     {
       "artifactId": "changelog-addition:f089d2c884fcecb8339ad15b",
-      "row": "R12",
+      "row": "P05",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -13471,7 +13471,7 @@
     },
     {
       "artifactId": "changelog-addition:f1c46083ccfb9c25ef227a9d",
-      "row": "G03",
+      "row": "G02",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -14785,7 +14785,7 @@
     },
     {
       "artifactId": "changelog-heading:9329b59503d920429678ef63",
-      "row": "R12",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -15525,7 +15525,7 @@
     },
     {
       "artifactId": "changelog-heading:fab4577a756829d09cd49730",
-      "row": "R12",
+      "row": "P09",
       "evidenceKind": "capability-evidence-route"
     },
     {
@@ -20390,7 +20390,7 @@
     },
     {
       "artifactId": "native-test-definition:2adf6f7006d90520705e1ea3",
-      "row": "T16",
+      "row": "P07",
       "evidenceKind": "capability-test-route"
     },
     {
@@ -23611,7 +23611,7 @@
     },
     {
       "artifactId": "native-test-definition:8981fa40f83f47b418baa7b5",
-      "row": "T16",
+      "row": "P07",
       "evidenceKind": "capability-test-route"
     },
     {

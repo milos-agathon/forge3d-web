@@ -1,3 +1,4 @@
+# W23_OUTPUTS: ["crates/forge3d-web/tests/golden/w10/density.json","crates/forge3d-web/tests/golden/w10/sun.json","crates/forge3d-web/tests/golden/w10/clouds.json","crates/forge3d-web/tests/golden/w10/sky.json","crates/forge3d-web/tests/golden/w10/volumetric.json","crates/forge3d-web/tests/golden/w10/water_surface.json"]
 """Regenerate W10 truth by running pinned native sources, never web implementations.
 Run after cargo test has built glam in CARGO_TARGET_DIR (or pass --cargo-target-dir).
 """
