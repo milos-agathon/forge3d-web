@@ -308,6 +308,12 @@ jobs:
           FORGE3D_WEBGPU_REQUIRED: "1"
         run: npx playwright test tests/playwright/w19_style_bundle.spec.ts --project=chromium-preflight --grep native-saver --max-failures=1
 
+      - name: Probe all W23 source workflows before the full Chromium corpus
+        working-directory: crates/forge3d-web
+        env:
+          FORGE3D_WEBGPU_REQUIRED: "1"
+        run: npx playwright test tests/playwright/w23_migration.spec.ts --project=chromium-preflight --grep "W23 source" --max-failures=1
+
       - name: Run bundled Chromium preflight (ENGINE_PASS only)
         working-directory: crates/forge3d-web
         env:

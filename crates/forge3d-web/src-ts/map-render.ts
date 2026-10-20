@@ -9,6 +9,7 @@ import { SdfScene } from './sdf.js';
 import { mapCamera } from './map-recipe.js';
 import { mapCancelled } from './map-resource-loader.js';
 import { MAP_SCENE_DEFAULT_BUDGET } from './map-validation.js';
+import { tryReadMapFrame } from './runtime-internals.js';
 import type { PreparedMapLayers } from './map-layer-adapters.js';
 import type { SceneRecipeInput, MapSceneRenderOptions, MapFrameMetrics } from './map-scene-types.js';
 /** Convert the point renderer's hardware depth to W06 normalized view-space depth. */
@@ -111,11 +112,17 @@ export async function renderMapFrame(input: SceneRecipeInput, layers: PreparedMa
         let rgba: Uint8Array, baseBytes = runtime.getMemoryReport().currentBytes, pointCount = 0,pointBytes=0;
         memory(baseBytes);
         const stats = runtime.getRenderStats();
-        const capture = await runtime.capture({ samples: 1, aovs: ['depth'], signal });
+        const direct = !options.canvas && !layers.points.length ? await tryReadMapFrame(runtime) : undefined;
+        let baseDepth: Float32Array, covered: Float32Array;
+        if (direct) {
+            rgba = direct.rgba; covered = Float32Array.from(direct.coverage); baseDepth = new Float32Array();
+        } else {
+            const capture = await runtime.capture({ samples: 1, aovs: ['depth'], signal });
+            mapCancelled(signal);
+            rgba = await runtime.readRgba();
+            baseDepth = capture.aovFrame.depth(); covered = baseDepth.map(d => d < 1 ? 1 : 0);
+        }
         mapCancelled(signal);
-        rgba = await runtime.readRgba();
-        mapCancelled(signal);
-        const baseDepth=capture.aovFrame.depth(),covered=baseDepth.map(d=>d<1?1:0);
         baseBytes=runtime.getMemoryReport().currentBytes;memory(baseBytes);
         if (layers.points.length) {
             const pointBudget = budget - baseBytes;
@@ -125,7 +132,7 @@ export async function renderMapFrame(input: SceneRecipeInput, layers: PreparedMa
             releases.push(() => points.dispose());
             mapCancelled(signal);
             points.setLayers(layers.points);
-            points.setOcclusionDepth(mapHardwareDepth(capture.aovFrame.depth(), camera));
+            points.setOcclusionDepth(mapHardwareDepth(baseDepth, camera));
             const c = new Camera(camera);
             await points.render({ position: camera.position, viewportHeight: height, fovY: camera.fovYDegrees * Math.PI / 180, viewProjection: c.viewProjectionMatrix(width / height) }, signal);
             const pointPixels = await points.readRgba(signal), depth = await points.readDepth(signal);

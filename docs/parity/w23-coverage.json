@@ -5408,8 +5408,9 @@
     },
     {
       "path": "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
-      "sha256": "2fb6885ebda4d0818c3f27f414f2165c47f9c0ab4cf28d97373fab328bc5df0b",
+      "sha256": "c2925cb21e0c9d033ea4f6b809a682005851dc0f58237f8cd5ff3b9867f73b60",
       "declarations": [
+        "W18 ${label}: opaque readback preserves exact pixels and coverage without an offline capture",
         "W18 ${label}: post-processing cannot conceal empty geometry and overlay-only output is covered",
         "W18 ${label}: multilayer example renders real geometry, glyphs and PNG",
         "W18 ${label}: each completed raster layer changes covered pixels",

@@ -194,6 +194,16 @@ impl Forge3DRuntime {
         Ok(js_sys::Uint8Array::from(rgba.as_slice()))
     }
 
+    // Private facade bridge: coverage from the same draw as readRgba, when the
+    // display depth attachment represents all of the scene's opaque geometry.
+    #[wasm_bindgen(js_name = readMapFrame)]
+    pub async fn read_map_frame(&mut self) -> Result<JsValue, JsValue> {
+        self.guard_mutation()?;
+        readback::read_map_frame_runtime(self)
+            .await
+            .map_err(to_js_error)
+    }
+
     #[wasm_bindgen(js_name = setScene)]
     pub fn set_scene(&mut self, snapshot: JsValue) -> Result<(), JsValue> {
         self.guard_mutation()?;

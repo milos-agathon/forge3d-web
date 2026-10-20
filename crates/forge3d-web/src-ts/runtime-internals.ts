@@ -1,11 +1,19 @@
 export type RuntimeDeviceLostHandler = (error: unknown) => void;
 
 interface RuntimeInternalAccess {
+  readMapFrame?(): Promise<MapFrameReadback | undefined>;
   setDeviceLostHandler(handler: RuntimeDeviceLostHandler | undefined): void;
   simulateDeviceLossForTests(): void;
 }
 
 const runtimeInternals = new WeakMap<object, RuntimeInternalAccess>();
+
+export interface MapFrameReadback { rgba: Uint8Array; coverage: Uint8Array }
+
+/** Optional private bridge; older bridges and test runtimes keep the capture path. */
+export async function tryReadMapFrame(runtime: object): Promise<MapFrameReadback | undefined> {
+  return runtimeInternals.get(runtime)?.readMapFrame?.();
+}
 
 export function registerRuntimeInternals(
   runtime: object,

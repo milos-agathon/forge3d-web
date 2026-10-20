@@ -8,6 +8,48 @@ declare global {
 for (const dist of [false, true]) {
     const label = dist ? 'dist' : 'source';
     test.describe(label, () => {
+        test(`W18 ${label}: opaque readback preserves exact pixels and coverage without an offline capture`, async ({ page }, info) => {
+            await page.addInitScript(() => {
+                (window as any).__mapOfflineCompilations = [];
+                const original = GPUDevice.prototype.createComputePipeline;
+                GPUDevice.prototype.createComputePipeline = function (descriptor) {
+                    if (descriptor.label?.startsWith('forge3d-web-offline-')) (window as any).__mapOfflineCompilations.push(descriptor.label);
+                    return original.call(this, descriptor);
+                };
+            });
+            // The hook must be installed before the WASM bridge binds WebGPU.
+            await page.reload(); await page.waitForFunction(() => window.__w18?.ready);
+            const result = await page.evaluate(async () => {
+                const { api, baseRecipe } = window.__w18, rows = [];
+                for (const terrain of [false, true]) {
+                    const recipe = baseRecipe();
+                    recipe.layers = [{ kind: 'nodes', layerId: 'ground', nodes: [{ kind: 'ground-plane', name: 'ground', size: [20, 20], height: 0, color: [.25, .4, .6, 1] }] }];
+                    if (!terrain) delete recipe.terrain;
+                    const baseline = new api.MapScene(recipe), candidate = new api.MapScene(recipe);
+                    try {
+                        const before = await baseline.render({ canvas: document.createElement('canvas') });
+                        (window as any).__mapOfflineCompilations.length = 0;
+                        const after = await candidate.render();
+                        rows.push({ terrain, same: before.frame.data.every((v: number, i: number) => v === after.frame.data[i]),
+                            beforeCoverage: before.metrics.coveragePixels, afterCoverage: after.metrics.coveragePixels,
+                            drawCalls: after.metrics.drawCalls, gpuBytes: candidate.getMemoryReport().gpuBytes,
+                            offlineCompilations: [...(window as any).__mapOfflineCompilations] });
+                    } finally { baseline.dispose(); candidate.dispose(); }
+                }
+                const hidden = baseRecipe(); delete hidden.terrain;
+                hidden.layers = [{ kind: 'nodes', layerId: 'hidden', nodes: [{ kind: 'ground-plane', name: 'hidden', size: [4, 4], height: 0, color: [1, 0, 0, 1], transform: { translation: [1000, 0, 0] } }] }];
+                const empty = new api.MapScene(hidden); let reason: string | undefined;
+                try { await empty.render(); } catch (error: any) { reason = error.details?.reason; } finally { empty.dispose(); }
+                return { rows, emptyReason: reason, emptyGpuBytes: empty.getMemoryReport().gpuBytes };
+            });
+            await info.attach('map-frame-readback.json', { body: JSON.stringify(result, null, 2), contentType: 'application/json' });
+            expect(result.emptyReason).toBe('empty-render-output'); expect(result.emptyGpuBytes).toBe(0);
+            for (const row of result.rows) {
+                expect(row.same).toBe(true); expect(row.afterCoverage).toBe(row.beforeCoverage);
+                expect(row.afterCoverage).toBeGreaterThan(500); expect(row.drawCalls).toBeGreaterThan(0);
+                expect(row.gpuBytes).toBe(0); expect(row.offlineCompilations).toEqual([]);
+            }
+        });
         test(`W18 ${label}: post-processing cannot conceal empty geometry and overlay-only output is covered`,async({page})=>{
             const r=await page.evaluate(async()=>{const {api,baseRecipe}=window.__w18,r=baseRecipe();delete r.terrain;r.postFx={effects:[{kind:'tonemap',operator:'exposure',exposure:2}]};r.layers=[{kind:'nodes',layerId:'hidden',nodes:[{kind:'ground-plane',name:'hidden-plane',size:[4,4],height:0,color:[1,0,0,1],transform:{translation:[1000,0,0]}}]}];const empty=new api.MapScene(r),preflight=empty.validate().status;let code,reason;try{await empty.render();}catch(e:any){code=e.code;reason=e.details?.reason;}const review=await empty.reviewRecord();empty.dispose();r.layers=[{kind:'nodes',layerId:'overlay',nodes:[{kind:'overlay',name:'panel',bounds:[20,20,30,20],color:[1,.2,.1,1]}]}];const filled=new api.MapScene(r),result=await filled.render().catch((e:any)=>{throw Error(JSON.stringify(e.details));});filled.dispose();return {code,reason,preflight,review,coverage:result.metrics.coveragePixels};});expect(r.preflight).toBe('ok');expect(r.reason).toBe('empty-render-output');expect(r.code).toBe('UNSUPPORTED_FEATURE');expect(r.review.last_render).toBeNull();expect(r.coverage).toBe(600);
         });

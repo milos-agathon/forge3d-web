@@ -2731,6 +2731,7 @@ interface WasmRuntime {
   render(): boolean;
   screenshot(): Promise<Blob>;
   readRgba?(): Promise<Uint8Array>;
+  readMapFrame?(): Promise<{ rgba: Uint8Array; coverage: Uint8Array } | undefined>;
   readTerrainHeights?(): Promise<Float32Array>;
   computeTerrainAnalysis?(
     terrain: TerrainHeightmapInput,
@@ -2895,6 +2896,18 @@ export class Forge3DRuntime {
       };
     }
     registerRuntimeInternals(this, {
+      readMapFrame: async () => {
+        this.#assertNotDisposed();
+        this.#assertNoOffline();
+        const read = this.#inner.readMapFrame;
+        if (read === undefined) return undefined;
+        const result = await this.#exclusiveReadback(() => read.call(this.#inner));
+        if (result === undefined) return undefined;
+        if (result.rgba.length !== this.width * this.height * 4 || result.coverage.length !== this.width * this.height) {
+          throw new Forge3DError('INTERNAL_ERROR', 'Map frame readback dimensions differ');
+        }
+        return { rgba: new Uint8Array(result.rgba), coverage: new Uint8Array(result.coverage) };
+      },
       setDeviceLostHandler: (handler) => {
         if (this.#disposeRequested) {
           this.#deviceLostHandler = undefined;

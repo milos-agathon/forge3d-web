@@ -4,11 +4,19 @@ import type { Page } from '@playwright/test';
 // Instrument public calls and actual download links outside workflows.js. Stage-returned statistics are
 // deliberately not inputs to the execution verdict.
 export async function observeStages(page:Page){
+  page.on('console',message=>{if(message.text().startsWith('W23 stage timing: '))console.log(message.text());});
   await page.evaluate(()=>{
     const api=window.__w23.api,events:any[]=[],pending:Promise<void>[]=[],pixels=new WeakMap<object,Uint8Array>();
     const runtimeIds=new WeakMap<object,number>(),datasetIds=new WeakMap<object,number>(),triangleFrames:any[]=[];
     let runtimeCounter=0;
     const stage=()=>document.querySelector('#status')?.textContent??'';
+    // Independent timing diagnostics survive a run timeout without changing the
+    // workflow or contributing any execution evidence to the verdict.
+    let previousStage=stage(),started=performance.now();
+    new MutationObserver(()=>{const current=stage();if(current!==previousStage){
+      console.info('W23 stage timing: '+JSON.stringify({stage:previousStage,milliseconds:Math.round(performance.now()-started),next:current}));
+      previousStage=current;started=performance.now();
+    }}).observe(document.querySelector('#status')!,{childList:true,characterData:true,subtree:true});
     const record=(kind:string,data:any={},label=stage())=>{if(label.startsWith('Running ')){const event={label,kind,...data};events.push(event);return event;}};
     const runtimeId=(self:object)=>{if(!runtimeIds.has(self))runtimeIds.set(self,++runtimeCounter);return runtimeIds.get(self);};
     const delta=(a:Uint8Array,b:Uint8Array)=>{let changed=0;for(let i=0;i<b.length;i+=4)if([0,1,2].some(c=>Math.abs(b[i+c]-a[i+c])>1))changed++;return changed;};

@@ -444,7 +444,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
-      "sha256": "2fb6885ebda4d0818c3f27f414f2165c47f9c0ab4cf28d97373fab328bc5df0b",
+      "sha256": "c2925cb21e0c9d033ea4f6b809a682005851dc0f58237f8cd5ff3b9867f73b60",
       "snapshot": "evidence-sources/tests/playwright/w18_mapscene.spec.ts.txt"
     },
     {
@@ -554,7 +554,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/browser/w23-stage-observer.ts",
-      "sha256": "e92bcc13b4890f269a949d37dcea32c0bb415154e6350d05ef053b0976493441",
+      "sha256": "86a59745a7416095fcc04f0412b864d3ca0247f07575a66b358a9214374d9f70",
       "snapshot": "evidence-sources/tests/browser/w23-stage-observer.ts.txt"
     },
     {
