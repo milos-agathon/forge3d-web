@@ -2,6 +2,7 @@
 //! pipelines with explicit layouts, and buffer/readback helpers.
 
 use forge3d_core::gpu::GpuContext;
+use std::cell::OnceCell;
 use wgpu::util::DeviceExt;
 
 use super::{
@@ -272,10 +273,10 @@ impl ComputeStage {
 /// Compute pipelines shared by every offline session of a runtime.
 pub(crate) struct OfflinePipelines {
     pub accumulate: ComputeStage,
-    pub luminance: ComputeStage,
+    luminance: OnceCell<ComputeStage>,
     pub resolve: ComputeStage,
     pub tonemap: ComputeStage,
-    pub denoise: ComputeStage,
+    denoise: OnceCell<ComputeStage>,
 }
 
 impl OfflinePipelines {
@@ -297,12 +298,7 @@ impl OfflinePipelines {
                     Slot::Uniform,
                 ],
             ),
-            luminance: ComputeStage::new(
-                device,
-                "forge3d-web-offline-luminance",
-                LUMINANCE_SHADER,
-                &[Slot::StorageRead, Slot::StorageRw, Slot::Uniform],
-            ),
+            luminance: OnceCell::new(),
             resolve: ComputeStage::new(
                 device,
                 "forge3d-web-offline-resolve",
@@ -330,7 +326,26 @@ impl OfflinePipelines {
                     Slot::Uniform,
                 ],
             ),
-            denoise: ComputeStage::new(
+            denoise: OnceCell::new(),
+        }
+    }
+
+    /// Ordinary captures do not request convergence metrics or denoising.
+    /// Compile these kernels once, only when their operation is used.
+    pub(crate) fn luminance(&self, device: &wgpu::Device) -> &ComputeStage {
+        self.luminance.get_or_init(|| {
+            ComputeStage::new(
+                device,
+                "forge3d-web-offline-luminance",
+                LUMINANCE_SHADER,
+                &[Slot::StorageRead, Slot::StorageRw, Slot::Uniform],
+            )
+        })
+    }
+
+    pub(crate) fn denoise(&self, device: &wgpu::Device) -> &ComputeStage {
+        self.denoise.get_or_init(|| {
+            ComputeStage::new(
                 device,
                 "forge3d-web-offline-denoise",
                 DENOISE_SHADER,
@@ -342,8 +357,8 @@ impl OfflinePipelines {
                     Slot::StorageRead,
                     Slot::Uniform,
                 ],
-            ),
-        }
+            )
+        })
     }
 }
 

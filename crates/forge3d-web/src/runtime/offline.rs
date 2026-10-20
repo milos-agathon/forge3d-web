@@ -536,7 +536,7 @@ fn create_session(
         .is_some_and(|terrain| terrain.render_mode == 1);
     let scene_camera = match runtime.scene.as_mut() {
         Some(scene) => {
-            scene.prepare_capture(context);
+            scene.prepare_capture(context, surface);
             Some(scene.capture_camera_bind_group(device, &camera_buffer))
         }
         None => None,
@@ -1045,7 +1045,8 @@ async fn read_metrics(
             flags: 0,
         }),
     );
-    let bind_group = pipelines.luminance.bind_group(
+    let luminance_pipeline = pipelines.luminance(&context.device);
+    let bind_group = luminance_pipeline.bind_group(
         &context.device,
         "forge3d-web-offline-luminance",
         &[
@@ -1059,7 +1060,7 @@ async fn read_metrics(
         .create_command_encoder(&wgpu::CommandEncoderDescriptor {
             label: Some("forge3d-web-offline-metrics"),
         });
-    pipelines.luminance.dispatch(
+    luminance_pipeline.dispatch(
         &mut encoder,
         "forge3d-web-offline-luminance",
         &bind_group,
@@ -1473,7 +1474,8 @@ fn encode_denoise(
                 _pad: [0.0; 3],
             }),
         );
-        let group = pipelines.denoise.bind_group(
+        let denoise_pipeline = pipelines.denoise(device);
+        let group = denoise_pipeline.bind_group(
             device,
             "forge3d-web-offline-denoise",
             &[
@@ -1485,7 +1487,7 @@ fn encode_denoise(
                 uniform.as_entire_binding(),
             ],
         );
-        pipelines.denoise.dispatch(
+        denoise_pipeline.dispatch(
             encoder,
             "forge3d-web-offline-denoise",
             &group,

@@ -5160,8 +5160,9 @@
     },
     {
       "path": "crates/forge3d-web/tests/playwright/w06_capture.spec.ts",
-      "sha256": "8ccc654bb526c5d69f23f88757f2f725f7d6ebc7a0a544e5d5d2adb37bd94ae2",
+      "sha256": "f372f7d9b735f03b179f8449f5c78f6c32965fdfc00045365da86d7b3e046ad0",
       "declarations": [
+        "C08 ${dist ? 'dist' : 'source'}: capture compiles optional kernels only when requested",
         "R02/C07: exact HDR, AOV, depth, ID and motion readback with padded rows",
         "C08: offline accumulation, adaptive convergence and native session semantics",
         "C08: AOV-guided WebGPU denoiser meets the acceptance and matches the CPU reference",

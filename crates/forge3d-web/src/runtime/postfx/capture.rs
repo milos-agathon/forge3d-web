@@ -49,7 +49,7 @@ impl CaptureFrame {
             _ => None,
         };
         let scene_camera = runtime.scene.as_mut().map(|s| {
-            s.prepare_capture(context);
+            s.prepare_capture(context, true);
             s.capture_camera_bind_group(device, &camera_buffer)
         });
         let targets =

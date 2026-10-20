@@ -39,6 +39,13 @@ pub(super) struct BuiltGeometry {
     pub overlays: Vec<OverlayGeometry>,
 }
 
+struct WorldCapturePipelines {
+    features: ShaderFeatures,
+    shader: wgpu::ShaderModule,
+    primary: wgpu::RenderPipeline,
+    surface: Option<wgpu::RenderPipeline>,
+}
+
 pub(crate) struct NativeScene {
     motion_vertices: Vec<LitVertex>,
     camera_layout: wgpu::BindGroupLayout,
@@ -63,9 +70,8 @@ pub(crate) struct NativeScene {
     pub(crate) overlay_ranges: Vec<DrawRange>,
     pub(crate) overlays: Vec<OverlayGeometry>,
     pub(crate) pass_names: Vec<String>,
-    /// Offline capture pipelines `(features, primary, surface)`, compiled on
-    /// the first capture and reused until the lighting features change.
-    capture_world: Option<(ShaderFeatures, wgpu::RenderPipeline, wgpu::RenderPipeline)>,
+    /// Reused until lighting features change; surface AOVs compile on demand.
+    capture_world: Option<WorldCapturePipelines>,
     capture_overlay: Option<wgpu::RenderPipeline>,
 }
 
@@ -442,12 +448,12 @@ impl NativeScene {
 
     /// Ensures capture pipelines exist for the current world specialization.
     #[cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
-    pub(crate) fn prepare_capture(&mut self, context: &GpuContext) {
+    pub(crate) fn prepare_capture(&mut self, context: &GpuContext, surface: bool) {
         let current = self.world_features;
         let stale = self
             .capture_world
             .as_ref()
-            .map_or(true, |(features, _, _)| *features != current);
+            .map_or(true, |capture| capture.features != current);
         if stale && self.world_vertex_buffer.is_some() {
             let features = current.with_capture();
             let shader = context
@@ -469,14 +475,30 @@ impl NativeScene {
                 CapturePass::Primary,
                 features.capture_blend(),
             );
-            let surface = create_world_capture_pipeline(
-                &context.device,
-                layouts,
-                &shader,
-                CapturePass::Surface,
-                features.capture_blend(),
-            );
-            self.capture_world = Some((current, primary, surface));
+            self.capture_world = Some(WorldCapturePipelines {
+                features: current,
+                shader,
+                primary,
+                surface: None,
+            });
+        }
+        if surface {
+            if let Some(capture) = self.capture_world.as_mut() {
+                capture.surface.get_or_insert_with(|| {
+                    create_world_capture_pipeline(
+                        &context.device,
+                        [
+                            &self.camera_layout,
+                            &self.lighting_layout,
+                            &self.texture_layout,
+                            &self.ibl_layout,
+                        ],
+                        &capture.shader,
+                        CapturePass::Surface,
+                        current.capture_blend(),
+                    )
+                });
+            }
         }
         if self.capture_overlay.is_none() && self.overlay_vertex_buffer.is_some() {
             self.capture_overlay = Some(create_overlay_pipeline(
@@ -521,16 +543,20 @@ impl NativeScene {
         textures: &TextureResources,
         ibl: &IblResources,
     ) {
-        let (Some((_, primary, surface)), Some(buffer)) = (
+        let (Some(capture), Some(buffer)) = (
             self.capture_world.as_ref(),
             self.world_vertex_buffer.as_ref(),
         ) else {
             return;
         };
-        pass.set_pipeline(match which {
-            CapturePass::Primary => primary,
-            CapturePass::Surface => surface,
-        });
+        let pipeline = match which {
+            CapturePass::Primary => &capture.primary,
+            CapturePass::Surface => match capture.surface.as_ref() {
+                Some(pipeline) => pipeline,
+                None => return,
+            },
+        };
+        pass.set_pipeline(pipeline);
         pass.set_bind_group(0, camera_bind_group, &[]);
         pass.set_bind_group(1, &self.lighting_bind_group, &[]);
         pass.set_bind_group(3, &ibl.bind_group, &[]);

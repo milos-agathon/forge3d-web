@@ -1883,7 +1883,7 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/provenance.json",
-      "sha256": "b062426816962ff6c11243aa1d7dcc303dbf378cb5ab54d1fca254c8cbaefa6d",
+      "sha256": "77356aa204ee60fdcf2b719f7d1e981f5a18de193bcb5a7d2ea24043e9f4c09e",
       "bytes": 27133,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
@@ -1907,7 +1907,7 @@
       "provenance": [
         "scripts/w23-coverage.mjs",
         "scripts/w23-catalog.mjs",
-        "git:675c8c590fd3da86b9c8e35075b7821ae76fb9e6:crates/forge3d-web/docs/evidence-sources/provenance.json"
+        "git:c79ce62fb068bc3fd59c0d5316be431de4a3d72c:crates/forge3d-web/docs/evidence-sources/provenance.json"
       ]
     },
     {
@@ -2312,8 +2312,8 @@
     },
     {
       "path": "crates/forge3d-web/docs/evidence-sources/tests/playwright/w06_capture.spec.ts.txt",
-      "sha256": "8ccc654bb526c5d69f23f88757f2f725f7d6ebc7a0a544e5d5d2adb37bd94ae2",
-      "bytes": 12216,
+      "sha256": "f372f7d9b735f03b179f8449f5c78f6c32965fdfc00045365da86d7b3e046ad0",
+      "bytes": 14939,
       "hashMode": "utf8-lf",
       "role": "evidence-source-snapshot",
       "origin": "browser-owned-see-provenance",
@@ -2323,7 +2323,7 @@
         "inputs": [
           {
             "path": "crates/forge3d-web/tests/playwright/w06_capture.spec.ts",
-            "sha256": "8ccc654bb526c5d69f23f88757f2f725f7d6ebc7a0a544e5d5d2adb37bd94ae2",
+            "sha256": "f372f7d9b735f03b179f8449f5c78f6c32965fdfc00045365da86d7b3e046ad0",
             "hashMode": "utf8-lf"
           }
         ],
@@ -2832,7 +2832,7 @@
       "provenance": [
         "crates/forge3d-web/docs/evidence-sources/provenance.json",
         "crates/forge3d-web/tests/playwright/w23_migration.spec.ts",
-        "git:391c84362ecfc8f54588f45dd38aad8e2f0fc184:crates/forge3d-web/docs/evidence-sources/tests/playwright/w23_migration.spec.ts.txt"
+        "git:c79ce62fb068bc3fd59c0d5316be431de4a3d72c:crates/forge3d-web/docs/evidence-sources/tests/playwright/w23_migration.spec.ts.txt"
       ]
     },
     {
