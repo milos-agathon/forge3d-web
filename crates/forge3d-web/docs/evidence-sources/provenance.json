@@ -549,7 +549,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/playwright/w23_migration.spec.ts",
-      "sha256": "9b102402f3284bb5216c476e64436e0233941a582f629cde2ebf1503e80cbe9b",
+      "sha256": "4553419c0541b11f47524be3982045bb420016ee6605dd640d4c1a62f9572924",
       "snapshot": "evidence-sources/tests/playwright/w23_migration.spec.ts.txt"
     },
     {

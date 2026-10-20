@@ -114,8 +114,12 @@ for (const source of [true, false]) test(`W23 ${source ? 'source' : 'dist'}: all
     catch(error:any){outcomes.push({feature:'pointcloud',rejected:/no coverage/.test(error.message),message:error.message});}
     for(const [feature,owner,method,workflow,pattern]of [
       ['taa',api.Forge3DRuntime.prototype,'setPostFx','effects',/TAA did not accumulate/],
-      ['oit',api.VectorLayers.prototype,'setOit','effects',/Weighted OIT/],
     ]as any[]){const original=owner[method];owner[method]=()=>{};try{await createWorkflows(api,document.createElement('canvas'),new AbortController().signal)[workflow]();outcomes.push({feature,rejected:false});}catch(error:any){outcomes.push({feature,rejected:pattern.test(error.message),message:error.message});}finally{owner[method]=original;}}
+    // A no-op leaves the default 'auto' mode, which can still choose WBOIT.
+    // Force standard blending to remove the contribution on every adapter.
+    const vectors=api.VectorLayers.prototype,setOit=vectors.setOit;
+    try{vectors.setOit=function(){setOit.call(this,'standard');};await createWorkflows(api,document.createElement('canvas'),new AbortController().signal).effects();outcomes.push({feature:'oit',rejected:false});}
+    catch(error:any){outcomes.push({feature:'oit',rejected:/Weighted OIT/.test(error.message),message:error.message});}finally{vectors.setOit=setOit;}
     // Native precomputation also binds IBL. Clear that real side effect and
     // suppress the explicit bind, while retaining a genuinely prepared result.
     const runtime=api.Forge3DRuntime.prototype,setIbl=runtime.setIbl,precompute=runtime.precomputeIbl;
