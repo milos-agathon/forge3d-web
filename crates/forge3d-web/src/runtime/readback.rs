@@ -10,6 +10,7 @@ use crate::error::{map_core_error, Forge3DErrorCode, WebError};
 
 const READBACK_MEMORY_KEY: &str = "readback:frame";
 mod coverage;
+mod reference;
 
 struct FrameReadback {
     rgba: Vec<u8>,
@@ -28,16 +29,11 @@ pub(super) async fn read_rgba_runtime(runtime: &mut Forge3DRuntime) -> Result<Ve
 pub(super) async fn read_map_frame_runtime(
     runtime: &mut Forge3DRuntime,
 ) -> Result<JsValue, WebError> {
-    // Complex scenes retain the offline capture's full normalized depth path.
-    if runtime.postfx.is_some()
-        || runtime.environment.is_some()
-        || runtime.vectors.is_some()
-        || runtime.scatter.is_some()
-        || runtime.depth_attachment.is_none()
-        || runtime
-            .terrain
-            .as_ref()
-            .is_some_and(|t| t.clipmap.is_some() || t.streaming.is_some() || t.vt.is_some())
+    // W08 keeps the complete capture lifecycle, including its residency maps.
+    if runtime
+        .terrain
+        .as_ref()
+        .is_some_and(|t| t.clipmap.is_some() || t.streaming.is_some() || t.vt.is_some())
     {
         return Ok(JsValue::UNDEFINED);
     }
@@ -49,7 +45,19 @@ pub(super) async fn read_map_frame_runtime(
     {
         return Ok(JsValue::UNDEFINED);
     }
-    let frame = read_frame_runtime(runtime, true).await?;
+    let frame = if runtime.postfx.is_some()
+        || runtime.environment.is_some()
+        || runtime.vectors.is_some()
+        || runtime.scatter.is_some()
+        || runtime.depth_attachment.is_none()
+    {
+        let depth = reference::read_depth(runtime).await?;
+        let mut frame = read_frame_runtime(runtime, false).await?;
+        frame.coverage = Some(depth.into_iter().map(|d| u8::from(d < 1.0)).collect());
+        frame
+    } else {
+        read_frame_runtime(runtime, true).await?
+    };
     let result = js_sys::Object::new();
     for (name, bytes) in [("rgba", frame.rgba), ("coverage", frame.coverage.unwrap())] {
         js_sys::Reflect::set(

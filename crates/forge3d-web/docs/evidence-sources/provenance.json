@@ -444,7 +444,7 @@
     },
     {
       "path": "crates/forge3d-web/tests/playwright/w18_mapscene.spec.ts",
-      "sha256": "c2925cb21e0c9d033ea4f6b809a682005851dc0f58237f8cd5ff3b9867f73b60",
+      "sha256": "f9046d00ec46034866a75f71b13d9fc3fe17d7641dfd903ecd3b29183132e0e8",
       "snapshot": "evidence-sources/tests/playwright/w18_mapscene.spec.ts.txt"
     },
     {

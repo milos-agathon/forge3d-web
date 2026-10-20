@@ -8,6 +8,40 @@ declare global {
 for (const dist of [false, true]) {
     const label = dist ? 'dist' : 'source';
     test.describe(label, () => {
+        for (const kind of ['layers', 'effects', 'water', 'environment']) test(`W18 ${label}: ${kind} coverage needs no offline accumulation and preserves exact output`, async ({ page }, info) => {
+            test.setTimeout(60000);
+            await page.addInitScript(() => {
+                (window as any).__mapOfflineCompilations = [];
+                const original = GPUDevice.prototype.createComputePipeline;
+                GPUDevice.prototype.createComputePipeline = function (descriptor) {
+                    if (descriptor.label?.startsWith('forge3d-web-offline-')) (window as any).__mapOfflineCompilations.push(descriptor.label);
+                    return original.call(this, descriptor);
+                };
+            });
+            await page.reload(); await page.waitForFunction(() => window.__w18?.ready);
+            const result = await page.evaluate(async kind => {
+                const { api, fullRecipe } = window.__w18, recipe = fullRecipe(api);
+                if (kind === 'effects') recipe.postFx = { effects: [{ kind: 'taa' }, { kind: 'tonemap', operator: 'exposure', exposure: 2 }] };
+                if (kind === 'water') recipe.environment = new api.Forge3DEnvironment({ water: [{ bounds: [-12, -12, 12, 12], height: 2, mode: 'animated' }] }).snapshot();
+                if (kind === 'environment') {
+                    const haze = await api.generateDensityVolume({ preset: 'localized_haze', bounds: [-12, 0, -12, 12, 10, 12], dimensions: [8, 8, 8], densityScale: 2, wind: [2, 0, .5], seed: 23 });
+                    recipe.environment = new api.Forge3DEnvironment({ sky: { model: 'hosek-wilkie', turbidity: 2 }, fog: { mode: 'height', density: .01 }, clouds: { mode: 'hybrid', preset: 'gentle', height: 40, thickness: 20, wind: [2, .5], animationSpeed: 1, seed: 23 }, volumes: [haze] }).snapshot();
+                }
+                const baseline = new api.MapScene(recipe), candidate = new api.MapScene(recipe);
+                try {
+                    const before = await baseline.render({ canvas: document.createElement('canvas') });
+                    (window as any).__mapOfflineCompilations.length = 0;
+                    const after = await candidate.render();
+                    return { kind, same: before.frame.data.every((v: number, i: number) => v === after.frame.data[i]),
+                        beforeCoverage: before.metrics.coveragePixels, afterCoverage: after.metrics.coveragePixels,
+                        offlineCompilations: [...(window as any).__mapOfflineCompilations], gpuBytes: candidate.getMemoryReport().gpuBytes };
+                } finally { baseline.dispose(); candidate.dispose(); }
+            }, kind);
+            await info.attach('map-reference-depth.json', { body: JSON.stringify(result, null, 2), contentType: 'application/json' });
+            expect(result.same).toBe(true); expect(result.afterCoverage).toBe(result.beforeCoverage);
+            expect(result.afterCoverage).toBeGreaterThan(1000); expect(result.gpuBytes).toBe(0);
+            expect(result.offlineCompilations).toEqual([]);
+        });
         test(`W18 ${label}: opaque readback preserves exact pixels and coverage without an offline capture`, async ({ page }, info) => {
             await page.addInitScript(() => {
                 (window as any).__mapOfflineCompilations = [];

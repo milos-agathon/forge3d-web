@@ -1,5 +1,5 @@
 #![cfg_attr(not(target_arch = "wasm32"), allow(dead_code))]
-mod capture;
+pub(super) mod capture;
 mod gpu;
 mod plan;
 mod render;

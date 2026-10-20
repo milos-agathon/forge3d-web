@@ -7,7 +7,7 @@ use offline::{
     CapturePass, CaptureView, TerrainCapture,
 };
 
-pub(super) struct CaptureFrame {
+pub(in crate::runtime) struct CaptureFrame {
     pub targets: CaptureTargets,
     pub camera_buffer: wgpu::Buffer,
     terrain: Option<TerrainCapture>,
@@ -15,9 +15,22 @@ pub(super) struct CaptureFrame {
     environment_source: Option<Target>,
     width: u32,
     height: u32,
+    surface: bool,
 }
 impl CaptureFrame {
     pub fn new(runtime: &mut Forge3DRuntime, context: &GpuContext) -> Result<Self, WebError> {
+        Self::create(runtime, context, true)
+    }
+
+    pub fn reference(runtime: &mut Forge3DRuntime, context: &GpuContext) -> Result<Self, WebError> {
+        Self::create(runtime, context, false)
+    }
+
+    fn create(
+        runtime: &mut Forge3DRuntime,
+        context: &GpuContext,
+        surface: bool,
+    ) -> Result<Self, WebError> {
         let (width, height) = (runtime.width, runtime.height);
         let device = &context.device;
         let initial = super::super::terrain::create_capture_camera_uniform(
@@ -42,18 +55,25 @@ impl CaptureFrame {
                 let f = t.specialize(features);
                 Some(TerrainCapture {
                     primary: cache.capture_variant(device, f, CapturePass::Primary),
-                    surface: Some(cache.capture_variant(device, f, CapturePass::Surface)),
+                    surface: surface
+                        .then(|| cache.capture_variant(device, f, CapturePass::Surface)),
                     bind_group: t.capture_bind_group(device, cache.group0_for(f), &camera_buffer),
                 })
             }
             _ => None,
         };
         let scene_camera = runtime.scene.as_mut().map(|s| {
-            s.prepare_capture(context, true);
+            s.prepare_capture(context, surface);
             s.capture_camera_bind_group(device, &camera_buffer)
         });
-        let targets =
-            CaptureTargets::new(device, width, height, true, true, features.capture_blend());
+        let targets = CaptureTargets::new(
+            device,
+            width,
+            height,
+            surface,
+            surface,
+            features.capture_blend(),
+        );
         let environment_source = runtime.environment.as_ref().map(|_| {
             Target::new(
                 device,
@@ -71,6 +91,7 @@ impl CaptureFrame {
             environment_source,
             width,
             height,
+            surface,
         })
     }
     pub fn update(
@@ -98,6 +119,25 @@ impl CaptureFrame {
         Ok(())
     }
     pub fn encode(&self, runtime: &Forge3DRuntime, encoder: &mut wgpu::CommandEncoder) {
+        self.encode_view(runtime, encoder, true, None);
+    }
+
+    pub fn encode_reference(
+        &self,
+        runtime: &Forge3DRuntime,
+        encoder: &mut wgpu::CommandEncoder,
+        view_projection: [[f32; 4]; 4],
+    ) {
+        self.encode_view(runtime, encoder, false, Some(view_projection));
+    }
+
+    fn encode_view(
+        &self,
+        runtime: &Forge3DRuntime,
+        encoder: &mut wgpu::CommandEncoder,
+        realtime: bool,
+        vector_view_projection: Option<[[f32; 4]; 4]>,
+    ) {
         offline::encode_capture_view(
             runtime,
             &CaptureView {
@@ -107,13 +147,13 @@ impl CaptureFrame {
                 terrain: self.terrain.as_ref(),
                 scene_camera: self.scene_camera.as_ref(),
                 environment_source: self.environment_source.as_ref(),
-                surface: true,
+                surface: self.surface,
                 overlay: false,
-                realtime: true,
-                vector_view_projection: None,
+                realtime,
+                vector_view_projection,
             },
             encoder,
-            true,
+            self.surface,
         );
     }
 }

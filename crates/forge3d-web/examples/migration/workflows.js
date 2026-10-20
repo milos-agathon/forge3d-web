@@ -20,6 +20,8 @@ export function createWorkflows(api, canvas, signal, onOutput, example={}, retai
   /** @type {{layers:import('../../types/index.js').MapSceneLayerInput[],frame:import('../../types/index.js').Frame|null,deltas:Record<string,number>,pngSource:any,animation:import('../../types/index.js').CameraAnimation|null,ibl:import('../../types/index.js').IblSnapshot|null,environment:import('../../types/index.js').EnvironmentInput|null,postFx:import('../../types/index.js').PostFxChainInput|null,shadows:import('../../types/index.js').ShadowConfigInput|null}} */
   const state = { layers: [], frame: null, deltas: {}, pngSource: null, animation: null,ibl:null,environment:null,postFx:null,shadows:null };
   let application,overlayImage,meshPrototype,simulationTime=0,pointBounds,pointOrbit;
+  /** @type {Array<{frame:import('../../types/index.js').Frame,index:number,timestampUs:number,durationUs:number}>|undefined} */
+  let animationFrames;
   /** @returns {import('../../types/index.js').TerrainHeightmapInput} */
   const input = () => ({ width: terrainWidth, height: terrainHeight, heights: heights.slice(), spacing: [24 / (terrainWidth - 1), 24 / (terrainHeight - 1)], bounds: [-12, -12, 12, 12], domain, crs: 'LOCAL', ...terrainSettings, ...(terrainMaterial ? {material:terrainMaterial} : {}) });
   const image = () => ({ width: 4, height: 4, data: Uint8Array.from({ length: 64 }, (_, i) => i % 4 === 3 ? 255 : i % 4 === 0 ? 210 : 90) });
@@ -55,6 +57,7 @@ export function createWorkflows(api, canvas, signal, onOutput, example={}, retai
   const labelLayer = () => ({ kind: 'labels', layerId: 'labels', source: { id: 'labels', format: 'labels', crs: 'LOCAL', data: [{ id: 'summit', text: 'Summit', geometry: { type: 'Point', coordinates: [32, 24, 0] } }] }, style: { fontSize: 14, color: [1, 1, 1, 1], haloWidth: 0 } });
   /** @param {import('../../types/index.js').MapSceneLayerInput[]} [layers] @param {boolean} [publish] */
   async function render(layers = [], publish = true) {
+    animationFrames=undefined;
     for (const layer of layers) { state.layers = state.layers.filter(l => l.layerId !== layer.layerId); state.layers.push(layer); }
     const scene = new api.MapScene(recipe(state.layers));
     try {
@@ -112,6 +115,14 @@ export function createWorkflows(api, canvas, signal, onOutput, example={}, retai
       if(application?.kind==='flood'&&state.environment?.water?.[0]){const level=application.evidence.waterLevels[index];state.environment.water[0].height=level;state.environment.water[0].mask=application.evidence.activation.map(v=>v<=level?1:0);}
       const result=await render();yield {index,time,timestampUs:api.frameTimestampUs(index,2),durationUs:500000,camera,frame:result.frame};
     }}finally{camera=original;simulationTime=0;state.environment=baseEnvironment;}
+  }
+  /** Replay the completed animation's real frames, including the same PNG outputs. */
+  async function* replayFrames(frames) {
+    for(const rendered of frames){
+      signal.throwIfAborted();state.frame=rendered.frame;canvas.width=rendered.frame.width;canvas.height=rendered.frame.height;
+      canvas.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(rendered.frame.data),rendered.frame.width,rendered.frame.height),0,0);
+      onOutput?.(await rendered.frame.toPng(),'scene.png');yield rendered;
+    }
   }
   // Native density is an unbounded concentration; WebGPU volume samples are
   // normalized opacity. Keep the numerical oracle untouched at this boundary.
@@ -336,11 +347,13 @@ export function createWorkflows(api, canvas, signal, onOutput, example={}, retai
       } finally { plate.dispose(); vectors.dispose(); }
     },
     async animation() {
-        const timestamps = []; for await (const rendered of pipelineFrames()) { timestamps.push(rendered.timestampUs); onOutput?.(await rendered.frame.toPng(), `frame-${rendered.index}.png`); }
+        const timestamps = [], frames = []; for await (const rendered of pipelineFrames()) { frames.push(rendered);timestamps.push(rendered.timestampUs); onOutput?.(await rendered.frame.toPng(), `frame-${rendered.index}.png`); }
+        animationFrames=frames;
         check(timestamps.every((t,i)=>t===api.frameTimestampUs(i,2)), 'Frame sequence is not deterministic'); return { timestamps,sourceFrames:application?.framePlan?.length??3 };
     },
     async video() {
-        try { const result = await api.encodeVideo(pipelineFrames(), { fps: 2, container: 'mp4', signal });
+        const frames=animationFrames;animationFrames=undefined;
+        try { const result = await api.encodeVideo(frames?replayFrames(frames):pipelineFrames(), { fps: 2, container: 'mp4', signal });
           check(result.blob.size > 100, 'Video mux produced an empty file'); onOutput?.(result.blob, 'animation.mp4'); return { bytes: result.blob.size, mime: result.blob.type,frameCount:result.frameCount,timestamps:result.timestampsUs,codec:result.codec };
         } catch (error) { if (error.code !== 'UNSUPPORTED_FEATURE' || error.details?.reason !== 'codec-unavailable') throw error; return { status:'unavailable', unavailable: { code: error.code, reason: error.details.reason } }; }
     },
@@ -480,5 +493,10 @@ export function createWorkflows(api, canvas, signal, onOutput, example={}, retai
       finally { cog.dispose(); scheduler.dispose(); }
     },
   };
-  return workflows;
+  // Only an immediately following video may consume the completed sequence.
+  // Any other operation can change the recipe or its source data.
+  return Object.fromEntries(Object.entries(workflows).map(([name,run])=>[name,async()=>{
+    if(name!=='video')animationFrames=undefined;
+    return run();
+  }]));
 }
