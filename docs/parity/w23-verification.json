@@ -8673,5 +8673,776 @@
         "command": "node ../../scripts/generate-w23.mjs"
       }
     ]
+  },
+  "numericBackendFollowup": {
+    "recordedAt": "2026-10-20T22:36:47.969464+00:00",
+    "implementationRevision": "500f927931c2db85fc845b29145422d50a67f4df",
+    "environment": {
+      "CARGO_TARGET_DIR": "C:\\devin-target\\forge3d-web"
+    },
+    "browserEnvironment": {
+      "FORGE3D_TEST_PORT": "57923"
+    },
+    "ciReproduction": {
+      "run": "https://github.com/milos-agathon/forge3d-web/actions/runs/39505427250",
+      "result": "Exact-byte regional oracle check failed on the AVX-512 runner. All 78 differing float32 shades reproduce exactly with sequential fused multiply-add; ordinary local matmul reproduces every committed shade. Differences: Romania 6, Germany 47, Bosnia 25. Other numerical fixture bytes are unchanged."
+    },
+    "reproductionCommand": "python scripts/audit-w23-numerics.py --candidate test-results/ci39505427250/applications.json",
+    "reproduction": {
+      "native": {
+        "ref": "1f4084af428dc699bdcd108b029736cb73903926",
+        "path": "examples/bosnia_terrain_landcover_viewer.py",
+        "sha256": "591d456862c207947bcf355e436a2a20945ec2708040b7c39e0ba8cf3cdf14b3",
+        "helpers": [
+          "_hillshade"
+        ]
+      },
+      "goldenSha256": "1eb6acbaabe0f860b0e02083ae2a905f61d149ab4252acf340c87ff1a6585ad4",
+      "ciCandidateSha256": "27277fab586aad68f33d3e460df8415c6345aca19bd295c2efe4be6c4c6f1348",
+      "allOtherCandidateFieldsUnchanged": true,
+      "cases": [
+        {
+          "example": "romania_terrain_landcover_viewer.py",
+          "changedFloat32Values": 6,
+          "maximumAbsoluteDifference": 2.9802322387695312e-08,
+          "maximumUlpDifference": 7,
+          "nativeSha256": "5baa7399d944d18ae039ee9c66cbef3a59a64b49a3479bcfea21ed1343e3a3ff",
+          "fusedSha256": "be251308f1bf2e37805659f15b56d40fb3fe86c13a503d53a224d7f6fe96d43c"
+        },
+        {
+          "example": "germany_terrain_landcover_viewer.py",
+          "changedFloat32Values": 47,
+          "maximumAbsoluteDifference": 5.960464477539063e-08,
+          "maximumUlpDifference": 28,
+          "nativeSha256": "d831704633ef528737f11016f41434d0463e1ad0e73147a0e34461ec65ed5dc1",
+          "fusedSha256": "56ea395c7163c8caf0573a18f4b9a3cd3580ab3d9827555031ee6df81503539d"
+        },
+        {
+          "example": "bosnia_terrain_landcover_viewer.py",
+          "changedFloat32Values": 25,
+          "maximumAbsoluteDifference": 5.960464477539063e-08,
+          "maximumUlpDifference": 61,
+          "nativeSha256": "f88c1692a3646767cb76edd41e028fff91750d0c9eab0e130d8f44eecd22ca9e",
+          "fusedSha256": "51a5127bce328cc454c8c736434679d9a8daf82f72f24c0356762af03489ebb7"
+        }
+      ]
+    },
+    "diagnosticVariants": [
+      {
+        "name": "romania_terrain_landcover_viewer.py",
+        "variants": {
+          "numpy": {
+            "head": 0,
+            "ci": 6
+          },
+          "sum": {
+            "head": 0,
+            "ci": 6
+          },
+          "double": {
+            "head": 5,
+            "ci": 5
+          },
+          "fma(0, 1, 2)": {
+            "head": 6,
+            "ci": 0
+          },
+          "fma(2, 1, 0)": {
+            "head": 3,
+            "ci": 6
+          },
+          "fma(1, 0, 2)": {
+            "head": 6,
+            "ci": 0
+          },
+          "fma(1, 2, 0)": {
+            "head": 4,
+            "ci": 6
+          }
+        }
+      },
+      {
+        "name": "germany_terrain_landcover_viewer.py",
+        "variants": {
+          "numpy": {
+            "head": 0,
+            "ci": 47
+          },
+          "sum": {
+            "head": 0,
+            "ci": 47
+          },
+          "double": {
+            "head": 113,
+            "ci": 115
+          },
+          "fma(0, 1, 2)": {
+            "head": 47,
+            "ci": 0
+          },
+          "fma(2, 1, 0)": {
+            "head": 112,
+            "ci": 125
+          },
+          "fma(1, 0, 2)": {
+            "head": 94,
+            "ci": 59
+          },
+          "fma(1, 2, 0)": {
+            "head": 110,
+            "ci": 118
+          }
+        }
+      },
+      {
+        "name": "bosnia_terrain_landcover_viewer.py",
+        "variants": {
+          "numpy": {
+            "head": 0,
+            "ci": 25
+          },
+          "sum": {
+            "head": 0,
+            "ci": 25
+          },
+          "double": {
+            "head": 98,
+            "ci": 95
+          },
+          "fma(0, 1, 2)": {
+            "head": 25,
+            "ci": 0
+          },
+          "fma(2, 1, 0)": {
+            "head": 91,
+            "ci": 90
+          },
+          "fma(1, 0, 2)": {
+            "head": 96,
+            "ci": 82
+          },
+          "fma(1, 2, 0)": {
+            "head": 91,
+            "ci": 88
+          }
+        }
+      }
+    ],
+    "fix": "Select OPENBLAS_CORETYPE=Haswell and OPENBLAS_NUM_THREADS=1 before importing NumPy; assert exact non-fused GEMV bits for all 16 rows of a captured hillshade normal/light pair. Original native AST bodies, existing fixture numbers, operation tolerances and exact-byte oracle comparisons are unchanged. Record backend metadata in provenance.",
+    "backendReference": "https://www.openmathlib.org/OpenBLAS/docs/runtime_variables/",
+    "conflictingEnvironmentControl": {
+      "command": "python scripts/generate-w23-application-fixtures.py --check",
+      "result": "Pass; loaded cores report Haswell, configured threads are 1, and the exact-bit probe is 1062074350.",
+      "cwd": "crates/forge3d-web",
+      "environment": {
+        "OPENBLAS_CORETYPE": "SkylakeX",
+        "OPENBLAS_NUM_THREADS": "4",
+        "OPENBLAS_VERBOSE": "2"
+      }
+    },
+    "samePythonVersionCommand": "& test-results/python31316/python.exe -c \"import sys,runpy; sys.path.insert(0,'scripts'); sys.argv=['scripts/generate-w23-application-fixtures.py','--check']; runpy.run_path(sys.argv[0],run_name='__main__')\"",
+    "ciEarlyCheck": {
+      "run": "https://github.com/milos-agathon/forge3d-web/actions/runs/39506661835",
+      "headSha": "a811d6e96e23745a4ef0d9560090dfba74cd97ce",
+      "jobs": [
+        {
+          "name": "Web Runtime / Build And Contract Tests",
+          "steps": [
+            {
+              "completedAt": "2026-10-20T22:16:14Z",
+              "conclusion": "success",
+              "name": "Check W23 oracles before the full corpus",
+              "startedAt": "2026-10-20T22:15:48Z",
+              "status": "completed"
+            }
+          ]
+        }
+      ]
+    },
+    "unchangedNumericalFixtures": [
+      {
+        "path": "crates/forge3d-web/tests/golden/w23/applications.json",
+        "sha256": "1eb6acbaabe0f860b0e02083ae2a905f61d149ab4252acf340c87ff1a6585ad4"
+      },
+      {
+        "path": "crates/forge3d-web/examples/migration/applications.json",
+        "sha256": "1eb6acbaabe0f860b0e02083ae2a905f61d149ab4252acf340c87ff1a6585ad4"
+      }
+    ],
+    "logs": [
+      {
+        "path": "crates/forge3d-web/test-results/w23-pr-readback-ci-failure.log",
+        "sha256": "a9c09e41125cb5e2e2ee18ad31cfae416d20e2e0fd25e0dfcce5813ee3a3954b"
+      },
+      {
+        "path": "crates/forge3d-web/test-results/ci39505427250/applications.json",
+        "sha256": "27277fab586aad68f33d3e460df8415c6345aca19bd295c2efe4be6c4c6f1348"
+      },
+      {
+        "path": "crates/forge3d-web/test-results/w23-gemv-reproduction.json",
+        "sha256": "0e5191e6cccbb25a3292f7a27e35039c0cc8651d60a7804522de728839d3fb85"
+      },
+      {
+        "path": "crates/forge3d-web/test-results/w23-gemv-public-reproduction.json",
+        "sha256": "64fc9ee37dc603fc1ecc0a73b700883ebc3aa95d3817365ba36a7a8781123983"
+      },
+      {
+        "path": "crates/forge3d-web/test-results/w23-gemv-public-default.json",
+        "sha256": "e2def4b15a30ce3ae33622457111c397b5906a0360611b34abcc5c6224773539"
+      },
+      {
+        "path": "crates/forge3d-web/test-results/w23-gemv-generate.log",
+        "sha256": "7ee061d9f8ce34b9290c6cc071c4f893dd54c3ed2f3e4a1c8007a47a3c759a8c"
+      },
+      {
+        "path": "crates/forge3d-web/test-results/w23-gemv-check.log",
+        "sha256": "7ee061d9f8ce34b9290c6cc071c4f893dd54c3ed2f3e4a1c8007a47a3c759a8c"
+      },
+      {
+        "path": "crates/forge3d-web/test-results/w23-gemv-conflicting-environment.log",
+        "sha256": "d6660890ce686a3903e1801fd5f90d93abb53fbe024dd5606b349aa37ce36f4d"
+      },
+      {
+        "path": "crates/forge3d-web/test-results/w23-gemv-python31316-final.log",
+        "sha256": "174700903fa15996234210069851e1a8513fa092775f7fa7ad6bab491f2941b6"
+      },
+      {
+        "path": "crates/forge3d-web/test-results/w23-gemv-public-audit-manifests.log",
+        "sha256": "82a985e62565c834d537902f182666f371c0057998552afc5f235a0ee76d1cb8"
+      },
+      {
+        "path": "crates/forge3d-web/test-results/w23-gemv-ci-early-oracles.json",
+        "sha256": "e32f31393e18a02f12a2c19fe4802c624f6e43068a9982923fe3ced2706905d4"
+      }
+    ],
+    "commands": [
+      {
+        "name": "verify",
+        "command": "npm run verify:w23",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-20T22:26:48.536Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T22:27:25.647Z",
+        "log": "crates/forge3d-web/test-results/w23-review9-verify.log",
+        "sha256": "985fccee526d6735f4c656246539e674585501b60873a33815e113ca6f96e307"
+      },
+      {
+        "name": "parity",
+        "command": "npm run verify:parity",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-20T22:27:25.706Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T22:27:29.256Z",
+        "log": "crates/forge3d-web/test-results/w23-review9-parity.log",
+        "sha256": "60c7f6301d9ffc0c19d099e707450da031b90591d5b8fa8c5c1027e58e27e454"
+      },
+      {
+        "name": "api",
+        "command": "npm run test:api",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-20T22:27:29.308Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T22:27:41.144Z",
+        "log": "crates/forge3d-web/test-results/w23-review9-api.log",
+        "sha256": "7400eb2e75890505b9c2aea600711378db12d52db4385ac97e9530a338a0f2d0"
+      },
+      {
+        "name": "unit-1",
+        "command": "npm run test:unit",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-20T22:27:41.197Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T22:28:11.006Z",
+        "log": "crates/forge3d-web/test-results/w23-review9-unit-1.log",
+        "sha256": "429dca61dfeee26226cc8de1b03e70428b9442662a2b3bf6124d5c2bad339a4c"
+      },
+      {
+        "name": "unit-2",
+        "command": "npm run test:unit",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-20T22:28:11.056Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T22:28:38.965Z",
+        "log": "crates/forge3d-web/test-results/w23-review9-unit-2.log",
+        "sha256": "1378ff2db017a134fdc867ba72a58e22e0ad70afaac9355ab048a0c005c93c57"
+      },
+      {
+        "name": "unit-3",
+        "command": "npm run test:unit",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-20T22:28:39.018Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T22:29:06.799Z",
+        "log": "crates/forge3d-web/test-results/w23-review9-unit-3.log",
+        "sha256": "e100af36282bf8be77862d352ec2e50491582ecbe22e6e42b5f5d783f41657f5"
+      },
+      {
+        "name": "example-build",
+        "command": "npm run build:example",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-20T22:29:06.852Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T22:29:10.893Z",
+        "log": "crates/forge3d-web/test-results/w23-review9-example-build.log",
+        "sha256": "9222d0db51ff7b924d089a558a203178ed3d08921d6b959aa218a0d5092a7581"
+      },
+      {
+        "name": "package",
+        "command": "npm run test:package",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-20T22:29:10.944Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T22:29:52.268Z",
+        "log": "crates/forge3d-web/test-results/w23-review9-package.log",
+        "sha256": "91e5de0b9667df876d74a181d5ce1fb69520cefb616d4db1e1f9901126efab3e"
+      },
+      {
+        "name": "browser",
+        "command": "npm run test:w23 -- --reporter=list,json --output=test-results/w23-review9-browser-output",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-20T22:29:52.323Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T22:33:19.879Z",
+        "log": "crates/forge3d-web/test-results/w23-review9-browser.log",
+        "sha256": "b01276b3af9505b5aaf20ab65d5009aa87e9e417ff8ab07963cb510a979f2034"
+      },
+      {
+        "name": "installed",
+        "command": "npm run test:package-consumer:w23",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-20T22:33:19.933Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T22:36:08.120Z",
+        "log": "crates/forge3d-web/test-results/w23-review9-installed.log",
+        "sha256": "e69afc1c770499bedd06e9bdbb4578f673fee74450a8770c39eaaad27d3b23bf"
+      },
+      {
+        "name": "single-tile-oracle",
+        "command": "python scripts/generate-w23-goldens.py --check",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-20T22:36:08.172Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T22:36:08.515Z",
+        "log": "crates/forge3d-web/test-results/w23-review9-single-tile-oracle.log",
+        "sha256": "67b6cd00347972bb347a8b49a197c0a37e1f5a0e93addf8e5d942ae9daf5f8e0"
+      },
+      {
+        "name": "regional-oracle",
+        "command": "python scripts/generate-w23-application-fixtures.py --check",
+        "cwd": "D:\\forge3d-web\\.worktrees\\w23\\crates\\forge3d-web",
+        "startedAt": "2026-10-20T22:36:08.566Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T22:36:12.775Z",
+        "log": "crates/forge3d-web/test-results/w23-review9-regional-oracle.log",
+        "sha256": "174700903fa15996234210069851e1a8513fa092775f7fa7ad6bab491f2941b6"
+      },
+      {
+        "name": "native-audit",
+        "command": "python scripts/audit-w23-native.py",
+        "cwd": "D:/forge3d-web/.worktrees/w23",
+        "startedAt": "2026-10-20T22:36:12.822Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T22:36:22.732Z",
+        "log": "crates/forge3d-web/test-results/w23-review9-native-audit.log",
+        "sha256": "0672845d937280a57e8d4aac6ccecc51c13e7b772b3f363d09bb3eb89f014d94"
+      },
+      {
+        "name": "semantic-audit",
+        "command": "node scripts/audit-w23-semantics.mjs",
+        "cwd": "D:/forge3d-web/.worktrees/w23",
+        "startedAt": "2026-10-20T22:36:22.780Z",
+        "exitCode": 0,
+        "finishedAt": "2026-10-20T22:36:24.640Z",
+        "log": "crates/forge3d-web/test-results/w23-review9-semantic-audit.log",
+        "sha256": "63c6c51d1818dd7c8cc9a53a1a2781cf6ad76c5e3262f52563ae6628f5666dd8"
+      }
+    ],
+    "unit": [
+      {
+        "run": 1,
+        "filesPassed": 92,
+        "testsPassed": 1960,
+        "fontShapingAssertionMs": 34
+      },
+      {
+        "run": 2,
+        "filesPassed": 92,
+        "testsPassed": 1960,
+        "fontShapingAssertionMs": 29
+      },
+      {
+        "run": 3,
+        "filesPassed": 92,
+        "testsPassed": 1960,
+        "fontShapingAssertionMs": 31
+      }
+    ],
+    "browserCases": [
+      {
+        "title": "W23 source: all 54 migrated example workflows execute",
+        "status": "passed",
+        "durationMs": 83036,
+        "attachments": [
+          {
+            "name": "forge3d-webgpu-probe.json",
+            "sha256": "f92290f090a842d5702fdbc774b6a838682606fa8022e6d679cb32c04974c0a6"
+          },
+          {
+            "name": "w23-independent-stage-observations.json",
+            "sha256": "592f0b137c3d45074a302a3db780a9207fcf71fd7aee0c001b84910f6b216d00"
+          },
+          {
+            "name": "w23-negative-controls.json",
+            "sha256": "a74e8526d580c464138f9d6b5bd1baea39c83d344825de9bd5686110a8d7388c"
+          },
+          {
+            "name": "w23-literal-stage-negative-controls.json",
+            "sha256": "9fd7f8865c3a70bd97766893bb7f506b83ec623975fc42a92527a0877e1864a6"
+          },
+          {
+            "name": "w23-workflows.json",
+            "sha256": "9d3daae2895b525acc2d363fc7512b046cc00758482651f7e0f0e492543024c2"
+          }
+        ],
+        "negativeControls": [
+          {
+            "feature": "materials",
+            "rejected": true,
+            "message": "Materials contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "environment",
+            "rejected": true,
+            "message": "Environment contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "water",
+            "rejected": true,
+            "message": "Water contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "vectors",
+            "rejected": true,
+            "message": "rivers contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "shadows",
+            "rejected": true,
+            "message": "Shadows contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "pointcloud",
+            "rejected": true,
+            "message": "Point cloud GPU draw has no coverage"
+          },
+          {
+            "feature": "taa",
+            "rejected": true,
+            "message": "TAA did not accumulate temporal history"
+          },
+          {
+            "feature": "oit",
+            "rejected": true,
+            "message": "Weighted OIT depends on draw order"
+          },
+          {
+            "feature": "ibl",
+            "rejected": true,
+            "message": "HDR IBL contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "rigs",
+            "rejected": true,
+            "message": "Rig clearance failed: orbit"
+          }
+        ],
+        "literalStages": {
+          "matchingManifest": true,
+          "workflowsSha256": "6362abe9f8a5ec0e4a3de04d6f8a7d05548fb963707da091f357f05ca3af70dd",
+          "integrityVerified": 17,
+          "outcomes": [
+            {
+              "workflow": "triangle",
+              "name": "triangle_png.py",
+              "rejected": true,
+              "message": "Triangle mesh/removal RGB contribution missing: triangle_png.py",
+              "observedEvents": 0
+            },
+            {
+              "workflow": "cog",
+              "name": "cog_streaming_demo.py",
+              "rejected": true,
+              "message": "COG open/read across overview levels missing: cog_streaming_demo.py",
+              "observedEvents": 0
+            },
+            {
+              "workflow": "video",
+              "name": "camera_animation_demo.py",
+              "rejected": true,
+              "message": "VideoEncoder frame count mismatch: camera_animation_demo.py\n\n0 !== 3\n",
+              "observedEvents": 0
+            }
+          ]
+        }
+      },
+      {
+        "title": "W23 dist: all 54 migrated example workflows execute",
+        "status": "passed",
+        "durationMs": 81074,
+        "attachments": [
+          {
+            "name": "forge3d-webgpu-probe.json",
+            "sha256": "f92290f090a842d5702fdbc774b6a838682606fa8022e6d679cb32c04974c0a6"
+          },
+          {
+            "name": "w23-independent-stage-observations.json",
+            "sha256": "48acafc5d55f36a995e148423cb4e79ce3add5870b8fc49a3b6e8e0284682c83"
+          },
+          {
+            "name": "w23-negative-controls.json",
+            "sha256": "a74e8526d580c464138f9d6b5bd1baea39c83d344825de9bd5686110a8d7388c"
+          },
+          {
+            "name": "w23-literal-stage-negative-controls.json",
+            "sha256": "9fd7f8865c3a70bd97766893bb7f506b83ec623975fc42a92527a0877e1864a6"
+          },
+          {
+            "name": "w23-workflows.json",
+            "sha256": "189118c36d5dbb8305e3975b577d00df677015e32de9093ccb5169377841e296"
+          }
+        ],
+        "negativeControls": [
+          {
+            "feature": "materials",
+            "rejected": true,
+            "message": "Materials contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "environment",
+            "rejected": true,
+            "message": "Environment contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "water",
+            "rejected": true,
+            "message": "Water contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "vectors",
+            "rejected": true,
+            "message": "rivers contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "shadows",
+            "rejected": true,
+            "message": "Shadows contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "pointcloud",
+            "rejected": true,
+            "message": "Point cloud GPU draw has no coverage"
+          },
+          {
+            "feature": "taa",
+            "rejected": true,
+            "message": "TAA did not accumulate temporal history"
+          },
+          {
+            "feature": "oit",
+            "rejected": true,
+            "message": "Weighted OIT depends on draw order"
+          },
+          {
+            "feature": "ibl",
+            "rejected": true,
+            "message": "HDR IBL contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "rigs",
+            "rejected": true,
+            "message": "Rig clearance failed: orbit"
+          }
+        ],
+        "literalStages": {
+          "matchingManifest": true,
+          "workflowsSha256": "6362abe9f8a5ec0e4a3de04d6f8a7d05548fb963707da091f357f05ca3af70dd",
+          "integrityVerified": 17,
+          "outcomes": [
+            {
+              "workflow": "triangle",
+              "name": "triangle_png.py",
+              "rejected": true,
+              "message": "Triangle mesh/removal RGB contribution missing: triangle_png.py",
+              "observedEvents": 0
+            },
+            {
+              "workflow": "cog",
+              "name": "cog_streaming_demo.py",
+              "rejected": true,
+              "message": "COG open/read across overview levels missing: cog_streaming_demo.py",
+              "observedEvents": 0
+            },
+            {
+              "workflow": "video",
+              "name": "camera_animation_demo.py",
+              "rejected": true,
+              "message": "VideoEncoder frame count mismatch: camera_animation_demo.py\n\n0 !== 3\n",
+              "observedEvents": 0
+            }
+          ]
+        }
+      },
+      {
+        "title": "W23 dist: all 54 migrated example workflows execute",
+        "status": "passed",
+        "durationMs": 81382,
+        "attachments": [
+          {
+            "name": "forge3d-webgpu-probe.json",
+            "sha256": "f92290f090a842d5702fdbc774b6a838682606fa8022e6d679cb32c04974c0a6"
+          },
+          {
+            "name": "w23-independent-stage-observations.json",
+            "sha256": "49645980610dae9f8db9c85f681e039a1e92de05d70f757000a8518298a361c7"
+          },
+          {
+            "name": "w23-negative-controls.json",
+            "sha256": "a74e8526d580c464138f9d6b5bd1baea39c83d344825de9bd5686110a8d7388c"
+          },
+          {
+            "name": "w23-literal-stage-negative-controls.json",
+            "sha256": "9fd7f8865c3a70bd97766893bb7f506b83ec623975fc42a92527a0877e1864a6"
+          },
+          {
+            "name": "w23-workflows.json",
+            "sha256": "29904a85b1ae2b51441095af319f6362ace7cd9296e3bb2d785aa3c122b92b04"
+          }
+        ],
+        "negativeControls": [
+          {
+            "feature": "materials",
+            "rejected": true,
+            "message": "Materials contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "environment",
+            "rejected": true,
+            "message": "Environment contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "water",
+            "rejected": true,
+            "message": "Water contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "vectors",
+            "rejected": true,
+            "message": "rivers contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "shadows",
+            "rejected": true,
+            "message": "Shadows contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "pointcloud",
+            "rejected": true,
+            "message": "Point cloud GPU draw has no coverage"
+          },
+          {
+            "feature": "taa",
+            "rejected": true,
+            "message": "TAA did not accumulate temporal history"
+          },
+          {
+            "feature": "oit",
+            "rejected": true,
+            "message": "Weighted OIT depends on draw order"
+          },
+          {
+            "feature": "ibl",
+            "rejected": true,
+            "message": "HDR IBL contributed only 0 RGB pixels (need 8)"
+          },
+          {
+            "feature": "rigs",
+            "rejected": true,
+            "message": "Rig clearance failed: orbit"
+          }
+        ],
+        "literalStages": {
+          "matchingManifest": true,
+          "workflowsSha256": "6362abe9f8a5ec0e4a3de04d6f8a7d05548fb963707da091f357f05ca3af70dd",
+          "integrityVerified": 17,
+          "outcomes": [
+            {
+              "workflow": "triangle",
+              "name": "triangle_png.py",
+              "rejected": true,
+              "message": "Triangle mesh/removal RGB contribution missing: triangle_png.py",
+              "observedEvents": 0
+            },
+            {
+              "workflow": "cog",
+              "name": "cog_streaming_demo.py",
+              "rejected": true,
+              "message": "COG open/read across overview levels missing: cog_streaming_demo.py",
+              "observedEvents": 0
+            },
+            {
+              "workflow": "video",
+              "name": "camera_animation_demo.py",
+              "rejected": true,
+              "message": "VideoEncoder frame count mismatch: camera_animation_demo.py\n\n0 !== 3\n",
+              "observedEvents": 0
+            }
+          ]
+        }
+      }
+    ],
+    "installed": {
+      "revision": "500f927931c2db85fc845b29145422d50a67f4df",
+      "exitCode": 0,
+      "packageSha256": "cc5b26adb4a462c46b900e054c963163b4c52355c95a15f8b3bb8dfe8b0f61a2",
+      "wasmSha256": "e060c0d260c38074c00827b31d974a9a808e50e3c99d47c20e7ec885bbe6b457",
+      "assetsVerified": 207,
+      "migrationTextHeadBlobsVerified": 18,
+      "documents": 38,
+      "browserLane": "chromium-preflight",
+      "sourceImplementationAvailable": false,
+      "strictCsp": true,
+      "rangeSupport": true
+    },
+    "manifestDigests": {
+      "docs/parity/w23-coverage.json": "bd8afc67e85f34483f41e8edea3585cc7a6d94830ce84bb45e3c0d00c879c55f",
+      "docs/parity/w23-assets.json": "57ec32a979a177a236ac39f091e3f2eea343197549c1130f6cd243b9f061746b"
+    },
+    "checksRetained": {
+      "rawOracleByteEquality": true,
+      "originalLateOracleGate": true,
+      "unchangedNativeHelperBodies": true,
+      "unchangedNumericalFixtureBytes": true,
+      "w23TestTimeoutMs": 600000,
+      "nativeProbeTimeoutMs": 30000,
+      "fontTestTimeoutMs": 5000,
+      "runner": "macos-15",
+      "threeJobsAndRequiredContextsUnchanged": true,
+      "declaredLimitsRetained": true
+    },
+    "candidateDownload": {
+      "cwd": ".",
+      "command": "gh run download 39505427250 --name forge3d-web-w23-oracle-diff --dir crates/forge3d-web/test-results/ci39505427250"
+    },
+    "additionalAuditCommands": [
+      {
+        "cwd": "crates/forge3d-web",
+        "command": "python scripts/audit-w23-numerics.py"
+      },
+      {
+        "cwd": "crates/forge3d-web",
+        "command": "python scripts/audit-w23-numerics.py --candidate test-results/ci39505427250/applications.json"
+      }
+    ],
+    "changesAfterEarlyCiBackendCheck": "A precise generator comment and public numerical audit, plus corresponding source snapshot/provenance hashes; runtime and numerical outputs unchanged."
   }
 }
